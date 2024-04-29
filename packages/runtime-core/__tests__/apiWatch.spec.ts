@@ -1,35 +1,38 @@
 import {
-  watch,
-  watchEffect,
-  reactive,
+  type ComponentInternalInstance,
+  type ComponentPublicInstance,
   computed,
-  nextTick,
-  ref,
   defineComponent,
   getCurrentInstance,
-  ComponentInternalInstance,
-  ComponentPublicInstance
+  nextTick,
+  reactive,
+  ref,
+  watch,
+  watchEffect,
 } from '../src/index'
 import {
-  render,
-  nodeOps,
-  serializeInner,
-  TestElement,
-  h,
+  type TestElement,
   createApp,
+  h,
+  nodeOps,
+  onMounted,
+  render,
+  serializeInner,
   watchPostEffect,
   watchSyncEffect,
-  onMounted
 } from '@vue/runtime-test'
 import {
+  type DebuggerEvent,
   ITERATE_KEY,
-  DebuggerEvent,
+  type Ref,
+  type ShallowRef,
   TrackOpTypes,
   TriggerOpTypes,
-  triggerRef,
+  effectScope,
+  shallowReactive,
   shallowRef,
-  Ref,
-  effectScope
+  toRef,
+  triggerRef,
 } from '@vue/reactivity'
 
 // reference: https://vue-composition-api-rfc.netlify.com/api.html#watch
@@ -60,7 +63,7 @@ describe('api: watch', () => {
         if (prevCount) {
           prevCount + 1
         }
-      }
+      },
     )
     state.count++
     await nextTick()
@@ -85,16 +88,16 @@ describe('api: watch', () => {
 
   it('watching single source: array', async () => {
     const array = reactive([] as number[])
-    const spy = jest.fn()
+    const spy = vi.fn()
     watch(array, spy)
     array.push(1)
     await nextTick()
     expect(spy).toBeCalledTimes(1)
-    expect(spy).toBeCalledWith([1], expect.anything(), expect.anything())
+    expect(spy).toBeCalledWith([1], [1], expect.anything())
   })
 
   it('should not fire if watched getter result did not change', async () => {
-    const spy = jest.fn()
+    const spy = vi.fn()
     const n = ref(0)
     watch(() => n.value % 2, spy)
 
@@ -134,8 +137,8 @@ describe('api: watch', () => {
         dummy = [c, prevCount]
       },
       {
-        deep: true
-      }
+        deep: true,
+      },
     )
     count.value++
     await nextTick()
@@ -144,7 +147,7 @@ describe('api: watch', () => {
 
   it('directly watching reactive object (with automatic deep: true)', async () => {
     const src = reactive({
-      count: 0
+      count: 0,
     })
     let dummy
     watch(src, ({ count }) => {
@@ -153,6 +156,77 @@ describe('api: watch', () => {
     src.count++
     await nextTick()
     expect(dummy).toBe(1)
+  })
+
+  it('directly watching reactive object with explicit deep: false', async () => {
+    const src = reactive({
+      state: {
+        count: 0,
+      },
+    })
+    let dummy
+    watch(
+      src,
+      ({ state }) => {
+        dummy = state?.count
+      },
+      {
+        deep: false,
+      },
+    )
+
+    // nested should not trigger
+    src.state.count++
+    await nextTick()
+    expect(dummy).toBe(undefined)
+
+    // root level should trigger
+    src.state = { count: 1 }
+    await nextTick()
+    expect(dummy).toBe(1)
+  })
+
+  // #9916
+  it('watching shallow reactive array with deep: false', async () => {
+    class foo {
+      prop1: ShallowRef<string> = shallowRef('')
+      prop2: string = ''
+    }
+
+    const obj1 = new foo()
+    const obj2 = new foo()
+
+    const collection = shallowReactive([obj1, obj2])
+    const cb = vi.fn()
+    watch(collection, cb, { deep: false })
+
+    collection[0].prop1.value = 'foo'
+    await nextTick()
+    // should not trigger
+    expect(cb).toBeCalledTimes(0)
+
+    collection.push(new foo())
+    await nextTick()
+    // should trigger on array self mutation
+    expect(cb).toBeCalledTimes(1)
+  })
+
+  it('should still respect deep: true on shallowReactive source', async () => {
+    const obj = reactive({ a: 1 })
+    const arr = shallowReactive([obj])
+
+    let dummy
+    watch(
+      arr,
+      () => {
+        dummy = arr[0].a
+      },
+      { deep: true },
+    )
+
+    obj.a++
+    await nextTick()
+    expect(dummy).toBe(2)
   })
 
   it('watching multiple sources', async () => {
@@ -173,8 +247,25 @@ describe('api: watch', () => {
     await nextTick()
     expect(dummy).toMatchObject([
       [2, 2, 3],
-      [1, 1, 2]
+      [1, 1, 2],
     ])
+  })
+
+  it('watching multiple sources: undefined initial values and immediate: true', async () => {
+    const a = ref()
+    const b = ref()
+    let called = false
+    watch(
+      [a, b],
+      ([newA, newB], [oldA, oldB]) => {
+        called = true
+        expect([newA, newB]).toMatchObject([undefined, undefined])
+        expect([oldA, oldB]).toMatchObject([undefined, undefined])
+      },
+      { immediate: true },
+    )
+    await nextTick()
+    expect(called).toBe(true)
   })
 
   it('watching multiple sources: readonly array', async () => {
@@ -196,7 +287,7 @@ describe('api: watch', () => {
     await nextTick()
     expect(dummy).toMatchObject([
       [2, true],
-      [1, false]
+      [1, false],
     ])
   })
 
@@ -214,7 +305,7 @@ describe('api: watch', () => {
   })
 
   it('warn invalid watch source', () => {
-    // @ts-ignore
+    // @ts-expect-error
     watch(1, () => {})
     expect(`Invalid watch source`).toHaveBeenWarned()
   })
@@ -246,7 +337,7 @@ describe('api: watch', () => {
       () => state.count,
       count => {
         dummy = count
-      }
+      },
     )
 
     state.count++
@@ -262,7 +353,7 @@ describe('api: watch', () => {
 
   it('cleanup registration (effect)', async () => {
     const state = reactive({ count: 0 })
-    const cleanup = jest.fn()
+    const cleanup = vi.fn()
     let dummy
     const stop = watchEffect(onCleanup => {
       onCleanup(cleanup)
@@ -281,7 +372,7 @@ describe('api: watch', () => {
 
   it('cleanup registration (with source)', async () => {
     const count = ref(0)
-    const cleanup = jest.fn()
+    const cleanup = vi.fn()
     let dummy
     const stop = watch(count, (count, prevCount, onCleanup) => {
       onCleanup(cleanup)
@@ -309,7 +400,7 @@ describe('api: watch', () => {
     let callCount = 0
     let result1
     let result2
-    const assertion = jest.fn((count, count2Value) => {
+    const assertion = vi.fn((count, count2Value) => {
       callCount++
       // on mount, the watcher callback should be called before DOM render
       // on update, should be called before the count is updated
@@ -327,7 +418,7 @@ describe('api: watch', () => {
           assertion(count.value, count2.value)
         })
         return () => count.value
-      }
+      },
     }
     const root = nodeOps.createElement('div')
     render(h(Comp), root)
@@ -347,7 +438,7 @@ describe('api: watch', () => {
   it('flush timing: post', async () => {
     const count = ref(0)
     let result
-    const assertion = jest.fn(count => {
+    const assertion = vi.fn(count => {
       result = serializeInner(root) === `${count}`
     })
 
@@ -357,10 +448,10 @@ describe('api: watch', () => {
           () => {
             assertion(count.value)
           },
-          { flush: 'post' }
+          { flush: 'post' },
         )
         return () => count.value
-      }
+      },
     }
     const root = nodeOps.createElement('div')
     render(h(Comp), root)
@@ -376,7 +467,7 @@ describe('api: watch', () => {
   it('watchPostEffect', async () => {
     const count = ref(0)
     let result
-    const assertion = jest.fn(count => {
+    const assertion = vi.fn(count => {
       result = serializeInner(root) === `${count}`
     })
 
@@ -386,7 +477,7 @@ describe('api: watch', () => {
           assertion(count.value)
         })
         return () => count.value
-      }
+      },
     }
     const root = nodeOps.createElement('div')
     render(h(Comp), root)
@@ -406,7 +497,7 @@ describe('api: watch', () => {
     let callCount = 0
     let result1
     let result2
-    const assertion = jest.fn(count => {
+    const assertion = vi.fn(count => {
       callCount++
       // on mount, the watcher callback should be called before DOM render
       // on update, should be called before the count is updated
@@ -426,11 +517,11 @@ describe('api: watch', () => {
             assertion(count.value)
           },
           {
-            flush: 'sync'
-          }
+            flush: 'sync',
+          },
         )
         return () => count.value
-      }
+      },
     }
     const root = nodeOps.createElement('div')
     render(h(Comp), root)
@@ -453,7 +544,7 @@ describe('api: watch', () => {
     let callCount = 0
     let result1
     let result2
-    const assertion = jest.fn(count => {
+    const assertion = vi.fn(count => {
       callCount++
       // on mount, the watcher callback should be called before DOM render
       // on update, should be called before the count is updated
@@ -472,7 +563,7 @@ describe('api: watch', () => {
           assertion(count.value)
         })
         return () => count.value
-      }
+      },
     }
     const root = nodeOps.createElement('div')
     render(h(Comp), root)
@@ -490,17 +581,17 @@ describe('api: watch', () => {
 
   it('should not fire on component unmount w/ flush: post', async () => {
     const toggle = ref(true)
-    const cb = jest.fn()
+    const cb = vi.fn()
     const Comp = {
       setup() {
         watch(toggle, cb, { flush: 'post' })
       },
-      render() {}
+      render() {},
     }
     const App = {
       render() {
         return toggle.value ? h(Comp) : null
-      }
+      },
     }
     render(h(App), nodeOps.createElement('div'))
     expect(cb).not.toHaveBeenCalled()
@@ -509,25 +600,118 @@ describe('api: watch', () => {
     expect(cb).not.toHaveBeenCalled()
   })
 
-  it('should fire on component unmount w/ flush: pre', async () => {
+  // #2291
+  it('should not fire on component unmount w/ flush: pre', async () => {
     const toggle = ref(true)
-    const cb = jest.fn()
+    const cb = vi.fn()
     const Comp = {
       setup() {
         watch(toggle, cb, { flush: 'pre' })
       },
-      render() {}
+      render() {},
     }
     const App = {
       render() {
         return toggle.value ? h(Comp) : null
-      }
+      },
     }
     render(h(App), nodeOps.createElement('div'))
     expect(cb).not.toHaveBeenCalled()
     toggle.value = false
     await nextTick()
-    expect(cb).toHaveBeenCalledTimes(1)
+    expect(cb).not.toHaveBeenCalled()
+  })
+
+  // #7030
+  it('should not fire on child component unmount w/ flush: pre', async () => {
+    const visible = ref(true)
+    const cb = vi.fn()
+    const Parent = defineComponent({
+      props: ['visible'],
+      render() {
+        return visible.value ? h(Comp) : null
+      },
+    })
+    const Comp = {
+      setup() {
+        watch(visible, cb, { flush: 'pre' })
+      },
+      render() {},
+    }
+    const App = {
+      render() {
+        return h(Parent, {
+          visible: visible.value,
+        })
+      },
+    }
+    render(h(App), nodeOps.createElement('div'))
+    expect(cb).not.toHaveBeenCalled()
+    visible.value = false
+    await nextTick()
+    expect(cb).not.toHaveBeenCalled()
+  })
+
+  // #7030
+  it('flush: pre watcher in child component should not fire before parent update', async () => {
+    const b = ref(0)
+    const calls: string[] = []
+
+    const Comp = {
+      setup() {
+        watch(
+          () => b.value,
+          val => {
+            calls.push('watcher child')
+          },
+          { flush: 'pre' },
+        )
+        return () => {
+          b.value
+          calls.push('render child')
+        }
+      },
+    }
+
+    const Parent = {
+      props: ['a'],
+      setup() {
+        watch(
+          () => b.value,
+          val => {
+            calls.push('watcher parent')
+          },
+          { flush: 'pre' },
+        )
+        return () => {
+          b.value
+          calls.push('render parent')
+          return h(Comp)
+        }
+      },
+    }
+
+    const App = {
+      render() {
+        return h(Parent, {
+          a: b.value,
+        })
+      },
+    }
+
+    render(h(App), nodeOps.createElement('div'))
+    expect(calls).toEqual(['render parent', 'render child'])
+
+    b.value++
+    await nextTick()
+    expect(calls).toEqual([
+      'render parent',
+      'render child',
+      'watcher parent',
+      'render parent',
+      'watcher child',
+      'render child',
+    ])
   })
 
   // #1763
@@ -546,7 +730,7 @@ describe('api: watch', () => {
             calls.push('watcher 1')
             c.value++
           },
-          { flush: 'pre' }
+          { flush: 'pre' },
         )
 
         // #1777 chained pre-watcher
@@ -555,19 +739,19 @@ describe('api: watch', () => {
           () => {
             calls.push('watcher 2')
           },
-          { flush: 'pre' }
+          { flush: 'pre' },
         )
         return () => {
           c.value
           calls.push('render')
         }
-      }
+      },
     }
 
     const App = {
       render() {
         return h(Comp, { a: a.value, b: b.value })
-      }
+      },
     }
 
     render(h(App), nodeOps.createElement('div'))
@@ -594,7 +778,7 @@ describe('api: watch', () => {
           () => {
             calls.push('watch ' + count.value)
           },
-          { flush: 'pre' }
+          { flush: 'pre' },
         )
         onMounted(() => {
           calls.push('mounted')
@@ -603,7 +787,7 @@ describe('api: watch', () => {
         count.value++
         count.value++
         count.value++
-      }
+      },
     }
     render(h(App), nodeOps.createElement('div'))
     expect(calls).toMatchObject(['watch 3', 'mounted'])
@@ -623,13 +807,13 @@ describe('api: watch', () => {
           () => {
             dom = domRef.value
           },
-          { flush: 'post' }
+          { flush: 'post' },
         )
 
         return () => {
           return toggle.value ? h('p', { ref: domRef }) : null
         }
-      }
+      },
     }
 
     render(h(App), nodeOps.createElement('div'))
@@ -643,14 +827,14 @@ describe('api: watch', () => {
   it('deep', async () => {
     const state = reactive({
       nested: {
-        count: ref(0)
+        count: ref(0),
       },
       array: [1, 2, 3],
       map: new Map([
         ['a', 1],
-        ['b', 2]
+        ['b', 2],
       ]),
-      set: new Set([1, 2, 3])
+      set: new Set([1, 2, 3]),
     })
 
     let dummy
@@ -661,10 +845,10 @@ describe('api: watch', () => {
           state.nested.count,
           state.array[0],
           state.map.get('a'),
-          state.set.has(1)
+          state.set.has(1),
         ]
       },
-      { deep: true }
+      { deep: true },
     )
 
     state.nested.count++
@@ -698,7 +882,7 @@ describe('api: watch', () => {
       state => {
         dummy = [state[0].value, state[1].value]
       },
-      { deep: true }
+      { deep: true },
     )
 
     count.value++
@@ -708,7 +892,7 @@ describe('api: watch', () => {
 
   it('immediate', async () => {
     const count = ref(0)
-    const cb = jest.fn()
+    const cb = vi.fn()
     watch(count, cb, { immediate: true })
     expect(cb).toHaveBeenCalledTimes(1)
     count.value++
@@ -718,16 +902,16 @@ describe('api: watch', () => {
 
   it('immediate: triggers when initial value is null', async () => {
     const state = ref(null)
-    const spy = jest.fn()
+    const spy = vi.fn()
     watch(() => state.value, spy, { immediate: true })
     expect(spy).toHaveBeenCalled()
   })
 
   it('immediate: triggers when initial value is undefined', async () => {
     const state = ref()
-    const spy = jest.fn()
+    const spy = vi.fn()
     watch(() => state.value, spy, { immediate: true })
-    expect(spy).toHaveBeenCalled()
+    expect(spy).toHaveBeenCalledWith(undefined, undefined, expect.any(Function))
     state.value = 3
     await nextTick()
     expect(spy).toHaveBeenCalledTimes(2)
@@ -748,8 +932,8 @@ describe('api: watch', () => {
       () => {
         dummy = count.value
       },
-      // @ts-ignore
-      { immediate: false }
+      // @ts-expect-error
+      { immediate: false },
     )
     expect(dummy).toBe(0)
     expect(`"immediate" option is only respected`).toHaveBeenWarned()
@@ -761,14 +945,14 @@ describe('api: watch', () => {
 
   it('warn and not respect deep option when using effect', async () => {
     const arr = ref([1, [2]])
-    const spy = jest.fn()
+    const spy = vi.fn()
     watchEffect(
       () => {
         spy()
         return arr
       },
-      // @ts-ignore
-      { deep: true }
+      // @ts-expect-error
+      { deep: true },
     )
     expect(spy).toHaveBeenCalledTimes(1)
     ;(arr.value[1] as Array<number>)[0] = 3
@@ -780,7 +964,7 @@ describe('api: watch', () => {
   it('onTrack', async () => {
     const events: DebuggerEvent[] = []
     let dummy
-    const onTrack = jest.fn((e: DebuggerEvent) => {
+    const onTrack = vi.fn((e: DebuggerEvent) => {
       events.push(e)
     })
     const obj = reactive({ foo: 1, bar: 2 })
@@ -788,7 +972,7 @@ describe('api: watch', () => {
       () => {
         dummy = [obj.foo, 'bar' in obj, Object.keys(obj)]
       },
-      { onTrack }
+      { onTrack },
     )
     await nextTick()
     expect(dummy).toEqual([1, true, ['foo', 'bar']])
@@ -797,38 +981,38 @@ describe('api: watch', () => {
       {
         target: obj,
         type: TrackOpTypes.GET,
-        key: 'foo'
+        key: 'foo',
       },
       {
         target: obj,
         type: TrackOpTypes.HAS,
-        key: 'bar'
+        key: 'bar',
       },
       {
         target: obj,
         type: TrackOpTypes.ITERATE,
-        key: ITERATE_KEY
-      }
+        key: ITERATE_KEY,
+      },
     ])
   })
 
   it('onTrigger', async () => {
     const events: DebuggerEvent[] = []
     let dummy
-    const onTrigger = jest.fn((e: DebuggerEvent) => {
+    const onTrigger = vi.fn((e: DebuggerEvent) => {
       events.push(e)
     })
-    const obj = reactive({ foo: 1 })
+    const obj = reactive<{ foo?: number }>({ foo: 1 })
     watchEffect(
       () => {
         dummy = obj.foo
       },
-      { onTrigger }
+      { onTrigger },
     )
     await nextTick()
     expect(dummy).toBe(1)
 
-    obj.foo++
+    obj.foo!++
     await nextTick()
     expect(dummy).toBe(2)
     expect(onTrigger).toHaveBeenCalledTimes(1)
@@ -836,10 +1020,9 @@ describe('api: watch', () => {
       type: TriggerOpTypes.SET,
       key: 'foo',
       oldValue: 1,
-      newValue: 2
+      newValue: 2,
     })
 
-    // @ts-ignore
     delete obj.foo
     await nextTick()
     expect(dummy).toBeUndefined()
@@ -847,7 +1030,7 @@ describe('api: watch', () => {
     expect(events[1]).toMatchObject({
       type: TriggerOpTypes.DELETE,
       key: 'foo',
-      oldValue: 2
+      oldValue: 2,
     })
   })
 
@@ -861,8 +1044,8 @@ describe('api: watch', () => {
         ++calls
       },
       {
-        flush: 'sync'
-      }
+        flush: 'sync',
+      },
     )
 
     expect(calls).toBe(0)
@@ -893,9 +1076,43 @@ describe('api: watch', () => {
     expect(sideEffect).toBe(2)
   })
 
+  test('should force trigger on triggerRef when watching multiple sources: shallow ref array', async () => {
+    const v = shallowRef([] as any)
+    const spy = vi.fn()
+    watch([v], () => {
+      spy()
+    })
+
+    v.value.push(1)
+    triggerRef(v)
+
+    await nextTick()
+    // should trigger now
+    expect(spy).toHaveBeenCalledTimes(1)
+  })
+
+  test('should force trigger on triggerRef with toRef from reactive', async () => {
+    const foo = reactive({ bar: 1 })
+    const bar = toRef(foo, 'bar')
+    const spy = vi.fn()
+
+    watchEffect(() => {
+      bar.value
+      spy()
+    })
+
+    expect(spy).toHaveBeenCalledTimes(1)
+
+    triggerRef(bar)
+
+    await nextTick()
+    // should trigger now
+    expect(spy).toHaveBeenCalledTimes(2)
+  })
+
   // #2125
   test('watchEffect should not recursively trigger itself', async () => {
-    const spy = jest.fn()
+    const spy = vi.fn()
     const price = ref(10)
     const history = ref<number[]>([])
     watchEffect(() => {
@@ -908,7 +1125,7 @@ describe('api: watch', () => {
 
   // #2231
   test('computed refs should not trigger watch if value has no change', async () => {
-    const spy = jest.fn()
+    const spy = vi.fn()
     const source = ref(0)
     const price = computed(() => source.value === 0)
     watch(price, spy)
@@ -929,7 +1146,7 @@ describe('api: watch', () => {
       mounted() {
         instance = getCurrentInstance()
       },
-      unmounted() {}
+      unmounted() {},
     })
 
     const Comp = defineComponent({
@@ -942,18 +1159,18 @@ describe('api: watch', () => {
       render() {
         return this.show
           ? h(Child, {
-              ref: vm => void (this.comp = vm as ComponentPublicInstance)
+              ref: vm => void (this.comp = vm as ComponentPublicInstance),
             })
           : null
       },
       mounted() {
         // this call runs while Comp is currentInstance, but
-        // the effect for this `$watch` should nontheless be registered with Child
+        // the effect for this `$watch` should nonetheless be registered with Child
         this.comp!.$watch(
           () => this.show,
-          () => void 0
+          () => void 0,
         )
-      }
+      },
     })
 
     render(h(Comp), nodeOps.createElement('div'))
@@ -973,31 +1190,31 @@ describe('api: watch', () => {
 
   test('this.$watch should pass `this.proxy` to watch source as the first argument ', () => {
     let instance: any
-    const source = jest.fn()
+    const source = vi.fn()
 
     const Comp = defineComponent({
       render() {},
       created(this: any) {
         instance = this
         this.$watch(source, function () {})
-      }
+      },
     })
 
     const root = nodeOps.createElement('div')
     createApp(Comp).mount(root)
 
     expect(instance).toBeDefined()
-    expect(source).toHaveBeenCalledWith(instance)
+    expect(source.mock.calls.some(args => args.includes(instance)))
   })
 
   test('should not leak `this.proxy` to setup()', () => {
-    const source = jest.fn()
+    const source = vi.fn()
 
     const Comp = defineComponent({
       render() {},
       setup() {
         watch(source, () => {})
-      }
+      },
     })
 
     const root = nodeOps.createElement('div')
@@ -1010,7 +1227,7 @@ describe('api: watch', () => {
   test('pre watcher callbacks should not track dependencies', async () => {
     const a = ref(0)
     const b = ref(0)
-    const updated = jest.fn()
+    const updated = vi.fn()
 
     const Child = defineComponent({
       props: ['a'],
@@ -1018,17 +1235,17 @@ describe('api: watch', () => {
       watch: {
         a() {
           b.value
-        }
+        },
       },
       render() {
         return h('div', this.a)
-      }
+      },
     })
 
     const Parent = defineComponent({
       render() {
         return h(Child, { a: a.value })
-      }
+      },
     })
 
     const root = nodeOps.createElement('div')
@@ -1045,25 +1262,25 @@ describe('api: watch', () => {
   })
 
   test('watching keypath', async () => {
-    const spy = jest.fn()
+    const spy = vi.fn()
     const Comp = defineComponent({
       render() {},
       data() {
         return {
           a: {
-            b: 1
-          }
+            b: 1,
+          },
         }
       },
       watch: {
-        'a.b': spy
+        'a.b': spy,
       },
       created(this: any) {
         this.$watch('a.b', spy)
       },
       mounted(this: any) {
         this.a.b++
-      }
+      },
     })
 
     const root = nodeOps.createElement('div')
@@ -1075,7 +1292,7 @@ describe('api: watch', () => {
 
   it('watching sources: ref<any[]>', async () => {
     const foo = ref([1])
-    const spy = jest.fn()
+    const spy = vi.fn()
     watch(foo, () => {
       spy()
     })
@@ -1106,16 +1323,155 @@ describe('api: watch', () => {
         effectScope(true).run(() => {
           watch(
             () => 1,
-            () => {}
+            () => {},
           )
         })
         return () => ''
-      }
+      },
     }
     const root = nodeOps.createElement('div')
     createApp(Comp).mount(root)
     // should not record watcher in detached scope and only the instance's
     // own update effect
     expect(instance!.scope.effects.length).toBe(1)
+  })
+
+  test('watchEffect should keep running if created in a detached scope', async () => {
+    const trigger = ref(0)
+    let countWE = 0
+    let countW = 0
+    const Comp = {
+      setup() {
+        effectScope(true).run(() => {
+          watchEffect(() => {
+            trigger.value
+            countWE++
+          })
+          watch(trigger, () => countW++)
+        })
+        return () => ''
+      },
+    }
+    const root = nodeOps.createElement('div')
+    render(h(Comp), root)
+    // only watchEffect as ran so far
+    expect(countWE).toBe(1)
+    expect(countW).toBe(0)
+    trigger.value++
+    await nextTick()
+    // both watchers run while component is mounted
+    expect(countWE).toBe(2)
+    expect(countW).toBe(1)
+    render(null, root) // unmount
+    await nextTick()
+    trigger.value++
+    await nextTick()
+    // both watchers run again event though component has been unmounted
+    expect(countWE).toBe(3)
+    expect(countW).toBe(2)
+  })
+
+  const options = [
+    { name: 'only trigger once watch' },
+    {
+      deep: true,
+      name: 'only trigger once watch with deep',
+    },
+    {
+      flush: 'sync',
+      name: 'only trigger once watch with flush: sync',
+    },
+    {
+      flush: 'pre',
+      name: 'only trigger once watch with flush: pre',
+    },
+    {
+      immediate: true,
+      name: 'only trigger once watch with immediate',
+    },
+  ] as const
+  test.each(options)('$name', async option => {
+    const count = ref(0)
+    const cb = vi.fn()
+
+    watch(count, cb, { once: true, ...option })
+
+    count.value++
+    await nextTick()
+
+    expect(count.value).toBe(1)
+    expect(cb).toHaveBeenCalledTimes(1)
+
+    count.value++
+    await nextTick()
+
+    expect(count.value).toBe(2)
+    expect(cb).toHaveBeenCalledTimes(1)
+  })
+
+  // #5151
+  test('OnCleanup also needs to be cleaned，', async () => {
+    const spy1 = vi.fn()
+    const spy2 = vi.fn()
+    const num = ref(0)
+
+    watch(num, (value, oldValue, onCleanup) => {
+      if (value > 1) {
+        return
+      }
+      spy1()
+      onCleanup(() => {
+        // OnCleanup also needs to be cleaned
+        spy2()
+      })
+    })
+
+    num.value++
+    await nextTick()
+    expect(spy1).toHaveBeenCalledTimes(1)
+    expect(spy2).toHaveBeenCalledTimes(0)
+
+    num.value++
+    await nextTick()
+
+    expect(spy1).toHaveBeenCalledTimes(1)
+    expect(spy2).toHaveBeenCalledTimes(1)
+
+    num.value++
+    await nextTick()
+    // would not be calld when value>1
+    expect(spy1).toHaveBeenCalledTimes(1)
+    expect(spy2).toHaveBeenCalledTimes(1)
+  })
+
+  test("effect should be removed from scope's effects after it is stopped", () => {
+    const num = ref(0)
+    let unwatch: () => void
+
+    let instance: ComponentInternalInstance
+    const Comp = {
+      setup() {
+        instance = getCurrentInstance()!
+        unwatch = watch(num, () => {
+          console.log(num.value)
+        })
+        return () => null
+      },
+    }
+    const root = nodeOps.createElement('div')
+    createApp(Comp).mount(root)
+    expect(instance!.scope.effects.length).toBe(2)
+    unwatch!()
+    expect(instance!.scope.effects.length).toBe(1)
+
+    const scope = effectScope()
+    scope.run(() => {
+      unwatch = watch(num, () => {
+        console.log(num.value)
+      })
+    })
+    expect(scope.effects.length).toBe(1)
+    unwatch!()
+    expect(scope.effects.length).toBe(0)
   })
 })

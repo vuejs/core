@@ -1,55 +1,66 @@
 import {
-  NodeTransform,
-  NodeTypes,
-  ElementTypes,
-  createCallExpression,
-  resolveComponentType,
-  buildProps,
-  ComponentNode,
-  SlotFnBuilder,
-  createFunctionExpression,
-  buildSlots,
-  FunctionExpression,
-  TemplateChildNode,
-  createIfStatement,
-  createSimpleExpression,
-  getBaseTransformPreset,
-  DOMNodeTransforms,
-  DOMDirectiveTransforms,
-  createReturnStatement,
-  ReturnStatement,
-  Namespaces,
-  locStub,
-  RootNode,
-  TransformContext,
-  CompilerOptions,
-  TransformOptions,
-  createRoot,
-  createTransformContext,
-  traverseNode,
-  ExpressionNode,
-  TemplateNode,
-  SUSPENSE,
-  TELEPORT,
-  TRANSITION_GROUP,
   CREATE_VNODE,
-  CallExpression,
-  JSChildNode
+  type CallExpression,
+  type CompilerOptions,
+  type ComponentNode,
+  DOMDirectiveTransforms,
+  DOMNodeTransforms,
+  type DirectiveNode,
+  ElementTypes,
+  type ExpressionNode,
+  type FunctionExpression,
+  type JSChildNode,
+  Namespaces,
+  type NodeTransform,
+  NodeTypes,
+  RESOLVE_DYNAMIC_COMPONENT,
+  type ReturnStatement,
+  type RootNode,
+  SUSPENSE,
+  type SlotFnBuilder,
+  TELEPORT,
+  TRANSITION,
+  TRANSITION_GROUP,
+  type TemplateChildNode,
+  type TemplateNode,
+  type TransformContext,
+  type TransformOptions,
+  buildProps,
+  buildSlots,
+  createCallExpression,
+  createFunctionExpression,
+  createIfStatement,
+  createReturnStatement,
+  createRoot,
+  createSimpleExpression,
+  createTransformContext,
+  getBaseTransformPreset,
+  locStub,
+  resolveComponentType,
+  stringifyExpression,
+  traverseNode,
 } from '@vue/compiler-dom'
 import { SSR_RENDER_COMPONENT, SSR_RENDER_VNODE } from '../runtimeHelpers'
 import {
-  SSRTransformContext,
+  type SSRTransformContext,
   processChildren,
-  processChildrenAsStatement
+  processChildrenAsStatement,
 } from '../ssrCodegenTransform'
 import { ssrProcessTeleport } from './ssrTransformTeleport'
 import {
   ssrProcessSuspense,
-  ssrTransformSuspense
+  ssrTransformSuspense,
 } from './ssrTransformSuspense'
-import { ssrProcessTransitionGroup } from './ssrTransformTransitionGroup'
-import { isSymbol, isObject, isArray } from '@vue/shared'
+import {
+  ssrProcessTransitionGroup,
+  ssrTransformTransitionGroup,
+} from './ssrTransformTransitionGroup'
+import { extend, isArray, isObject, isPlainObject, isSymbol } from '@vue/shared'
 import { buildSSRProps } from './ssrTransformElement'
+import {
+  ssrProcessTransition,
+  ssrTransformTransition,
+} from './ssrTransformTransition'
 
 // We need to construct the slot functions in the 1st pass to ensure proper
 // scope tracking, but the children of each slot cannot be processed until
@@ -57,7 +68,10 @@ import { buildSSRProps } from './ssrTransformElement'
 // pass and complete them in the 2nd pass.
 const wipMap = new WeakMap<ComponentNode, WIPSlotEntry[]>()
 
+const WIP_SLOT = Symbol()
+
 interface WIPSlotEntry {
+  type: typeof WIP_SLOT
   fn: FunctionExpression
   children: TemplateChildNode[]
   vnodeBranch: ReturnStatement
@@ -83,13 +97,19 @@ export const ssrTransformComponent: NodeTransform = (node, context) => {
   }
 
   const component = resolveComponentType(node, context, true /* ssr */)
+  const isDynamicComponent =
+    isObject(component) && component.callee === RESOLVE_DYNAMIC_COMPONENT
   componentTypeMap.set(node, component)
 
   if (isSymbol(component)) {
     if (component === SUSPENSE) {
       return ssrTransformSuspense(node, context)
+    } else if (component === TRANSITION_GROUP) {
+      return ssrTransformTransitionGroup(node, context)
+    } else if (component === TRANSITION) {
+      return ssrTransformTransition(node, context)
     }
-    return // built-in component: fallthrough
+    return // other built-in components: fallthrough
   }
 
   // Build the fallback vnode-based branch for the component's slots.
@@ -106,8 +126,10 @@ export const ssrTransformComponent: NodeTransform = (node, context) => {
     // fallback in case the child is render-fn based). Store them in an array
     // for later use.
     if (clonedNode.children.length) {
-      buildSlots(clonedNode, context, (props, children) => {
-        vnodeBranches.push(createVNodeSlotBranch(props, children, context))
+      buildSlots(clonedNode, context, (props, vFor, children) => {
+        vnodeBranches.push(
+          createVNodeSlotBranch(props, vFor, children, context),
+        )
         return createFunctionExpression(undefined)
       })
     }
@@ -116,7 +138,13 @@ export const ssrTransformComponent: NodeTransform = (node, context) => {
     if (node.props.length) {
       // note we are not passing ssr: true here because for components, v-on
       // handlers should still be passed
-      const { props, directives } = buildProps(node, context)
+      const { props, directives } = buildProps(
+        node,
+        context,
+        undefined,
+        true,
+        isDynamicComponent,
+      )
       if (props || directives.length) {
         propsExp = buildSSRProps(props, directives, context)
       }
@@ -125,19 +153,21 @@ export const ssrTransformComponent: NodeTransform = (node, context) => {
     const wipEntries: WIPSlotEntry[] = []
     wipMap.set(node, wipEntries)
 
-    const buildSSRSlotFn: SlotFnBuilder = (props, children, loc) => {
+    const buildSSRSlotFn: SlotFnBuilder = (props, _vForExp, children, loc) => {
+      const param0 = (props && stringifyExpression(props)) || `_`
       const fn = createFunctionExpression(
-        [props || `_`, `_push`, `_parent`, `_scopeId`],
+        [param0, `_push`, `_parent`, `_scopeId`],
         undefined, // no return, assign body later
         true, // newline
         true, // isSlot
-        loc
+        loc,
       )
       wipEntries.push({
+        type: WIP_SLOT,
         fn,
         children,
         // also collect the corresponding vnode branch built earlier
-        vnodeBranch: vnodeBranches[wipEntries.length]
+        vnodeBranch: vnodeBranches[wipEntries.length],
       })
       return fn
     }
@@ -157,15 +187,15 @@ export const ssrTransformComponent: NodeTransform = (node, context) => {
           createCallExpression(context.helper(CREATE_VNODE), [
             component,
             propsExp,
-            slots
+            slots,
           ]),
-          `_parent`
-        ]
+          `_parent`,
+        ],
       )
     } else {
       node.ssrCodegenNode = createCallExpression(
         context.helper(SSR_RENDER_COMPONENT),
-        [component, propsExp, slots, `_parent`]
+        [component, propsExp, slots, `_parent`],
       )
     }
   }
@@ -173,7 +203,8 @@ export const ssrTransformComponent: NodeTransform = (node, context) => {
 
 export function ssrProcessComponent(
   node: ComponentNode,
-  context: SSRTransformContext
+  context: SSRTransformContext,
+  parent: { children: TemplateChildNode[] },
 ) {
   const component = componentTypeMap.get(node)!
   if (!node.ssrCodegenNode) {
@@ -187,13 +218,22 @@ export function ssrProcessComponent(
     } else {
       // real fall-through: Transition / KeepAlive
       // just render its children.
-      processChildren(node.children, context)
+      // #5352: if is at root level of a slot, push an empty string.
+      // this does not affect the final output, but avoids all-comment slot
+      // content of being treated as empty by ssrRenderSlot().
+      if ((parent as WIPSlotEntry).type === WIP_SLOT) {
+        context.pushStringPart(``)
+      }
+      if (component === TRANSITION) {
+        return ssrProcessTransition(node, context)
+      }
+      processChildren(node, context)
     }
   } else {
     // finish up slot function expressions from the 1st pass.
     const wipEntries = wipMap.get(node) || []
     for (let i = 0; i < wipEntries.length; i++) {
-      const { fn, children, vnodeBranch } = wipEntries[i]
+      const { fn, vnodeBranch } = wipEntries[i]
       // For each slot, we generate two branches: one SSR-optimized branch and
       // one normal vnode-based branch. The branches are taken based on the
       // presence of the 2nd `_push` argument (which is only present if the slot
@@ -201,12 +241,12 @@ export function ssrProcessComponent(
       fn.body = createIfStatement(
         createSimpleExpression(`_push`, false),
         processChildrenAsStatement(
-          children,
+          wipEntries[i],
           context,
           false,
-          true /* withSlotScopeId */
+          true /* withSlotScopeId */,
         ),
-        vnodeBranch
+        vnodeBranch,
       )
     }
 
@@ -218,7 +258,7 @@ export function ssrProcessComponent(
     if (typeof component === 'string') {
       // static component
       context.pushStatement(
-        createCallExpression(`_push`, [node.ssrCodegenNode])
+        createCallExpression(`_push`, [node.ssrCodegenNode]),
       )
     } else {
       // dynamic component (`resolveDynamicComponent` call)
@@ -235,13 +275,14 @@ const [baseNodeTransforms, baseDirectiveTransforms] =
 const vnodeNodeTransforms = [...baseNodeTransforms, ...DOMNodeTransforms]
 const vnodeDirectiveTransforms = {
   ...baseDirectiveTransforms,
-  ...DOMDirectiveTransforms
+  ...DOMDirectiveTransforms,
 }
 
 function createVNodeSlotBranch(
-  props: ExpressionNode | undefined,
+  slotProps: ExpressionNode | undefined,
+  vFor: DirectiveNode | undefined,
   children: TemplateChildNode[],
-  parentContext: TransformContext
+  parentContext: TransformContext,
 ): ReturnStatement {
   // apply a sub-transform using vnode-based transforms.
   const rawOptions = rawOptionsMap.get(parentContext.root)!
@@ -251,36 +292,40 @@ function createVNodeSlotBranch(
     // overwrite with vnode-based transforms
     nodeTransforms: [
       ...vnodeNodeTransforms,
-      ...(rawOptions.nodeTransforms || [])
+      ...(rawOptions.nodeTransforms || []),
     ],
     directiveTransforms: {
       ...vnodeDirectiveTransforms,
-      ...(rawOptions.directiveTransforms || {})
-    }
+      ...(rawOptions.directiveTransforms || {}),
+    },
   }
 
   // wrap the children with a wrapper template for proper children treatment.
+  // important: provide v-slot="props" and v-for="exp" on the wrapper for
+  // proper scope analysis
+  const wrapperProps: TemplateNode['props'] = []
+  if (slotProps) {
+    wrapperProps.push({
+      type: NodeTypes.DIRECTIVE,
+      name: 'slot',
+      exp: slotProps,
+      arg: undefined,
+      modifiers: [],
+      loc: locStub,
+    })
+  }
+  if (vFor) {
+    wrapperProps.push(extend({}, vFor))
+  }
   const wrapperNode: TemplateNode = {
     type: NodeTypes.ELEMENT,
     ns: Namespaces.HTML,
     tag: 'template',
     tagType: ElementTypes.TEMPLATE,
-    isSelfClosing: false,
-    // important: provide v-slot="props" on the wrapper for proper
-    // scope analysis
-    props: [
-      {
-        type: NodeTypes.DIRECTIVE,
-        name: 'slot',
-        exp: props,
-        arg: undefined,
-        modifiers: [],
-        loc: locStub
-      }
-    ],
+    props: wrapperProps,
     children,
     loc: locStub,
-    codegenNode: undefined
+    codegenNode: undefined,
   }
   subTransform(wrapperNode, subOptions, parentContext)
   return createReturnStatement(children)
@@ -289,7 +334,7 @@ function createVNodeSlotBranch(
 function subTransform(
   node: TemplateChildNode,
   options: TransformOptions,
-  parentContext: TransformContext
+  parentContext: TransformContext,
 ) {
   const childRoot = createRoot([node])
   const childContext = createTransformContext(childRoot, options)
@@ -326,10 +371,10 @@ function subTransform(
 function clone(v: any): any {
   if (isArray(v)) {
     return v.map(clone)
-  } else if (isObject(v)) {
+  } else if (isPlainObject(v)) {
     const res: any = {}
     for (const key in v) {
-      res[key] = clone(v[key])
+      res[key] = clone(v[key as keyof typeof v])
     }
     return res
   } else {

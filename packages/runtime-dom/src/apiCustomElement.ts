@@ -1,25 +1,27 @@
 import {
-  ComponentOptionsMixin,
-  ComponentOptionsWithArrayProps,
-  ComponentOptionsWithObjectProps,
-  ComponentOptionsWithoutProps,
-  ComponentPropsOptions,
-  ComponentPublicInstance,
-  ComputedOptions,
-  EmitsOptions,
-  MethodOptions,
-  RenderFunction,
-  SetupContext,
-  ComponentInternalInstance,
-  VNode,
-  RootHydrateFunction,
-  ExtractPropTypes,
+  type ComponentInjectOptions,
+  type ComponentInternalInstance,
+  type ComponentOptions,
+  type ComponentOptionsMixin,
+  type ComponentOptionsWithArrayProps,
+  type ComponentOptionsWithObjectProps,
+  type ComponentOptionsWithoutProps,
+  type ComponentPropsOptions,
+  type ComputedOptions,
+  type ConcreteComponent,
+  type DefineComponent,
+  type EmitsOptions,
+  type ExtractPropTypes,
+  type MethodOptions,
+  type RenderFunction,
+  type RootHydrateFunction,
+  type SetupContext,
+  type SlotsType,
+  type VNode,
   createVNode,
   defineComponent,
   nextTick,
   warn,
-  ConcreteComponent,
-  ComponentOptions
 } from '@vue/runtime-core'
 import { camelize, extend, hyphenate, isArray, toNumber } from '@vue/shared'
 import { hydrate, render } from '.'
@@ -35,8 +37,8 @@ export type VueElementConstructor<P = {}> = {
 export function defineCustomElement<Props, RawBindings = object>(
   setup: (
     props: Readonly<Props>,
-    ctx: SetupContext
-  ) => RawBindings | RenderFunction
+    ctx: SetupContext,
+  ) => RawBindings | RenderFunction,
 ): VueElementConstructor<Props>
 
 // overload 2: object format with no props
@@ -49,7 +51,10 @@ export function defineCustomElement<
   Mixin extends ComponentOptionsMixin = ComponentOptionsMixin,
   Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
   E extends EmitsOptions = EmitsOptions,
-  EE extends string = string
+  EE extends string = string,
+  I extends ComponentInjectOptions = {},
+  II extends string = string,
+  S extends SlotsType = {},
 >(
   options: ComponentOptionsWithoutProps<
     Props,
@@ -60,8 +65,11 @@ export function defineCustomElement<
     Mixin,
     Extends,
     E,
-    EE
-  > & { styles?: string[] }
+    EE,
+    I,
+    II,
+    S
+  > & { styles?: string[] },
 ): VueElementConstructor<Props>
 
 // overload 3: object format with array props declaration
@@ -74,7 +82,10 @@ export function defineCustomElement<
   Mixin extends ComponentOptionsMixin = ComponentOptionsMixin,
   Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
   E extends EmitsOptions = Record<string, any>,
-  EE extends string = string
+  EE extends string = string,
+  I extends ComponentInjectOptions = {},
+  II extends string = string,
+  S extends SlotsType = {},
 >(
   options: ComponentOptionsWithArrayProps<
     PropNames,
@@ -85,8 +96,11 @@ export function defineCustomElement<
     Mixin,
     Extends,
     E,
-    EE
-  > & { styles?: string[] }
+    EE,
+    I,
+    II,
+    S
+  > & { styles?: string[] },
 ): VueElementConstructor<{ [K in PropNames]: any }>
 
 // overload 4: object format with object props declaration
@@ -99,7 +113,10 @@ export function defineCustomElement<
   Mixin extends ComponentOptionsMixin = ComponentOptionsMixin,
   Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
   E extends EmitsOptions = Record<string, any>,
-  EE extends string = string
+  EE extends string = string,
+  I extends ComponentInjectOptions = {},
+  II extends string = string,
+  S extends SlotsType = {},
 >(
   options: ComponentOptionsWithObjectProps<
     PropsOptions,
@@ -110,33 +127,38 @@ export function defineCustomElement<
     Mixin,
     Extends,
     E,
-    EE
-  > & { styles?: string[] }
+    EE,
+    I,
+    II,
+    S
+  > & { styles?: string[] },
 ): VueElementConstructor<ExtractPropTypes<PropsOptions>>
 
 // overload 5: defining a custom element from the returned value of
 // `defineComponent`
-export function defineCustomElement(options: {
-  new (...args: any[]): ComponentPublicInstance
-}): VueElementConstructor
+export function defineCustomElement<P>(
+  options: DefineComponent<P, any, any, any>,
+): VueElementConstructor<ExtractPropTypes<P>>
 
+/*! #__NO_SIDE_EFFECTS__ */
 export function defineCustomElement(
   options: any,
-  hydate?: RootHydrateFunction
+  hydrate?: RootHydrateFunction,
 ): VueElementConstructor {
-  const Comp = defineComponent(options as any)
+  const Comp = defineComponent(options) as any
   class VueCustomElement extends VueElement {
     static def = Comp
     constructor(initialProps?: Record<string, any>) {
-      super(Comp, initialProps, hydate)
+      super(Comp, initialProps, hydrate)
     }
   }
 
   return VueCustomElement
 }
 
+/*! #__NO_SIDE_EFFECTS__ */
 export const defineSSRCustomElement = ((options: any) => {
-  // @ts-ignore
+  // @ts-expect-error
   return defineCustomElement(options, hydrate)
 }) as typeof defineCustomElement
 
@@ -156,11 +178,11 @@ export class VueElement extends BaseClass {
   private _resolved = false
   private _numberProps: Record<string, true> | null = null
   private _styles?: HTMLStyleElement[]
-
+  private _ob?: MutationObserver | null = null
   constructor(
     private _def: InnerComponentDef,
     private _props: Record<string, any> = {},
-    hydrate?: RootHydrateFunction
+    hydrate?: RootHydrateFunction,
   ) {
     super()
     if (this.shadowRoot && hydrate) {
@@ -169,22 +191,34 @@ export class VueElement extends BaseClass {
       if (__DEV__ && this.shadowRoot) {
         warn(
           `Custom element has pre-rendered declarative shadow root but is not ` +
-            `defined as hydratable. Use \`defineSSRCustomElement\`.`
+            `defined as hydratable. Use \`defineSSRCustomElement\`.`,
         )
       }
       this.attachShadow({ mode: 'open' })
+      if (!(this._def as ComponentOptions).__asyncLoader) {
+        // for sync component defs we can immediately resolve props
+        this._resolveProps(this._def)
+      }
     }
   }
 
   connectedCallback() {
     this._connected = true
     if (!this._instance) {
-      this._resolveDef()
+      if (this._resolved) {
+        this._update()
+      } else {
+        this._resolveDef()
+      }
     }
   }
 
   disconnectedCallback() {
     this._connected = false
+    if (this._ob) {
+      this._ob.disconnect()
+      this._ob = null
+    }
     nextTick(() => {
       if (!this._connected) {
         render(null, this.shadowRoot!)
@@ -197,9 +231,6 @@ export class VueElement extends BaseClass {
    * resolve inner component definition (handle possible async component)
    */
   private _resolveDef() {
-    if (this._resolved) {
-      return
-    }
     this._resolved = true
 
     // set initial attrs
@@ -208,47 +239,38 @@ export class VueElement extends BaseClass {
     }
 
     // watch future attr changes
-    new MutationObserver(mutations => {
+    this._ob = new MutationObserver(mutations => {
       for (const m of mutations) {
         this._setAttr(m.attributeName!)
       }
-    }).observe(this, { attributes: true })
+    })
 
-    const resolve = (def: InnerComponentDef) => {
+    this._ob.observe(this, { attributes: true })
+
+    const resolve = (def: InnerComponentDef, isAsync = false) => {
       const { props, styles } = def
-      const hasOptions = !isArray(props)
-      const rawKeys = props ? (hasOptions ? Object.keys(props) : props) : []
 
       // cast Number-type props set before resolve
       let numberProps
-      if (hasOptions) {
-        for (const key in this._props) {
+      if (props && !isArray(props)) {
+        for (const key in props) {
           const opt = props[key]
           if (opt === Number || (opt && opt.type === Number)) {
-            this._props[key] = toNumber(this._props[key])
-            ;(numberProps || (numberProps = Object.create(null)))[key] = true
+            if (key in this._props) {
+              this._props[key] = toNumber(this._props[key])
+            }
+            ;(numberProps || (numberProps = Object.create(null)))[
+              camelize(key)
+            ] = true
           }
         }
       }
       this._numberProps = numberProps
 
-      // check if there are props set pre-upgrade or connect
-      for (const key of Object.keys(this)) {
-        if (key[0] !== '_') {
-          this._setProp(key, this[key as keyof this], true, false)
-        }
-      }
-
-      // defining getter/setters on prototype
-      for (const key of rawKeys.map(camelize)) {
-        Object.defineProperty(this, key, {
-          get() {
-            return this._getProp(key)
-          },
-          set(val) {
-            this._setProp(key, val)
-          }
-        })
+      if (isAsync) {
+        // defining getter/setters on prototype
+        // for sync defs, this already happened in the constructor
+        this._resolveProps(def)
       }
 
       // apply CSS
@@ -260,18 +282,43 @@ export class VueElement extends BaseClass {
 
     const asyncDef = (this._def as ComponentOptions).__asyncLoader
     if (asyncDef) {
-      asyncDef().then(resolve)
+      asyncDef().then(def => resolve(def, true))
     } else {
       resolve(this._def)
     }
   }
 
+  private _resolveProps(def: InnerComponentDef) {
+    const { props } = def
+    const declaredPropKeys = isArray(props) ? props : Object.keys(props || {})
+
+    // check if there are props set pre-upgrade or connect
+    for (const key of Object.keys(this)) {
+      if (key[0] !== '_' && declaredPropKeys.includes(key)) {
+        this._setProp(key, this[key as keyof this], true, false)
+      }
+    }
+
+    // defining getter/setters on prototype
+    for (const key of declaredPropKeys.map(camelize)) {
+      Object.defineProperty(this, key, {
+        get() {
+          return this._getProp(key)
+        },
+        set(val) {
+          this._setProp(key, val)
+        },
+      })
+    }
+  }
+
   protected _setAttr(key: string) {
-    let value = this.getAttribute(key)
-    if (this._numberProps && this._numberProps[key]) {
+    let value = this.hasAttribute(key) ? this.getAttribute(key) : undefined
+    const camelKey = camelize(key)
+    if (this._numberProps && this._numberProps[camelKey]) {
       value = toNumber(value)
     }
-    this._setProp(camelize(key), value, false)
+    this._setProp(camelKey, value, false)
   }
 
   /**
@@ -288,7 +335,7 @@ export class VueElement extends BaseClass {
     key: string,
     val: any,
     shouldReflect = true,
-    shouldUpdate = true
+    shouldUpdate = true,
   ) {
     if (val !== this._props[key]) {
       this._props[key] = val
@@ -327,23 +374,27 @@ export class VueElement extends BaseClass {
               this._styles.length = 0
             }
             this._applyStyles(newStyles)
-            // if this is an async component, ceReload is called from the inner
-            // component so no need to reload the async wrapper
-            if (!(this._def as ComponentOptions).__asyncLoader) {
-              // reload
-              this._instance = null
-              this._update()
-            }
+            this._instance = null
+            this._update()
           }
+        }
+
+        const dispatch = (event: string, args: any[]) => {
+          this.dispatchEvent(
+            new CustomEvent(event, {
+              detail: args,
+            }),
+          )
         }
 
         // intercept emit
         instance.emit = (event: string, ...args: any[]) => {
-          this.dispatchEvent(
-            new CustomEvent(event, {
-              detail: args
-            })
-          )
+          // dispatch both the raw and hyphenated versions of an event
+          // to match Vue behavior
+          dispatch(event, args)
+          if (hyphenate(event) !== event) {
+            dispatch(hyphenate(event), args)
+          }
         }
 
         // locate nearest Vue custom element parent for provide/inject
@@ -354,6 +405,7 @@ export class VueElement extends BaseClass {
         ) {
           if (parent instanceof VueElement) {
             instance.parent = parent._instance
+            instance.provides = parent._instance!.provides
             break
           }
         }

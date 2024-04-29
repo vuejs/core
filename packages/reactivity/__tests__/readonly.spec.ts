@@ -1,14 +1,14 @@
 import {
-  reactive,
-  readonly,
-  toRaw,
+  computed,
+  effect,
+  isProxy,
   isReactive,
   isReadonly,
   markRaw,
-  effect,
+  reactive,
+  readonly,
   ref,
-  isProxy,
-  computed
+  toRaw,
 } from '../src'
 
 /**
@@ -44,49 +44,49 @@ describe('reactivity/readonly', () => {
       const original = {
         foo: 1,
         bar: {
-          baz: 2
+          baz: 2,
         },
-        [qux]: 3
+        [qux]: 3,
       }
       const wrapped: Writable<typeof original> = readonly(original)
 
       wrapped.foo = 2
       expect(wrapped.foo).toBe(1)
       expect(
-        `Set operation on key "foo" failed: target is readonly.`
+        `Set operation on key "foo" failed: target is readonly.`,
       ).toHaveBeenWarnedLast()
 
       wrapped.bar.baz = 3
       expect(wrapped.bar.baz).toBe(2)
       expect(
-        `Set operation on key "baz" failed: target is readonly.`
+        `Set operation on key "baz" failed: target is readonly.`,
       ).toHaveBeenWarnedLast()
 
       wrapped[qux] = 4
       expect(wrapped[qux]).toBe(3)
       expect(
-        `Set operation on key "Symbol(qux)" failed: target is readonly.`
+        `Set operation on key "Symbol(qux)" failed: target is readonly.`,
       ).toHaveBeenWarnedLast()
 
-      // @ts-ignore
+      // @ts-expect-error
       delete wrapped.foo
       expect(wrapped.foo).toBe(1)
       expect(
-        `Delete operation on key "foo" failed: target is readonly.`
+        `Delete operation on key "foo" failed: target is readonly.`,
       ).toHaveBeenWarnedLast()
 
-      // @ts-ignore
+      // @ts-expect-error
       delete wrapped.bar.baz
       expect(wrapped.bar.baz).toBe(2)
       expect(
-        `Delete operation on key "baz" failed: target is readonly.`
+        `Delete operation on key "baz" failed: target is readonly.`,
       ).toHaveBeenWarnedLast()
 
-      // @ts-ignore
+      // @ts-expect-error
       delete wrapped[qux]
       expect(wrapped[qux]).toBe(3)
       expect(
-        `Delete operation on key "Symbol(qux)" failed: target is readonly.`
+        `Delete operation on key "Symbol(qux)" failed: target is readonly.`,
       ).toHaveBeenWarnedLast()
     })
 
@@ -131,12 +131,12 @@ describe('reactivity/readonly', () => {
       wrapped[0] = 1
       expect(wrapped[0]).not.toBe(1)
       expect(
-        `Set operation on key "0" failed: target is readonly.`
+        `Set operation on key "0" failed: target is readonly.`,
       ).toHaveBeenWarned()
       wrapped[0].foo = 2
       expect(wrapped[0].foo).toBe(1)
       expect(
-        `Set operation on key "foo" failed: target is readonly.`
+        `Set operation on key "foo" failed: target is readonly.`,
       ).toHaveBeenWarned()
 
       // should block length mutation
@@ -144,7 +144,7 @@ describe('reactivity/readonly', () => {
       expect(wrapped.length).toBe(1)
       expect(wrapped[0].foo).toBe(1)
       expect(
-        `Set operation on key "length" failed: target is readonly.`
+        `Set operation on key "length" failed: target is readonly.`,
       ).toHaveBeenWarned()
 
       // mutation methods invoke set/length internally and thus are blocked as well
@@ -180,7 +180,7 @@ describe('reactivity/readonly', () => {
         const key2 = {}
         const original = new Collection([
           [key1, {}],
-          [key2, {}]
+          [key2, {}],
         ])
         const wrapped = readonly(original)
         expect(wrapped).not.toBe(original)
@@ -207,7 +207,7 @@ describe('reactivity/readonly', () => {
         expect(dummy).toBeUndefined()
         expect(map.has(key)).toBe(false)
         expect(
-          `Set operation on key "${key}" failed: target is readonly.`
+          `Set operation on key "${key}" failed: target is readonly.`,
         ).toHaveBeenWarned()
       })
 
@@ -233,7 +233,7 @@ describe('reactivity/readonly', () => {
           const key2 = {}
           const original = new Map([
             [key1, {}],
-            [key2, {}]
+            [key2, {}],
           ])
           const wrapped: any = readonly(original)
           expect(wrapped.size).toBe(2)
@@ -255,8 +255,8 @@ describe('reactivity/readonly', () => {
           const original = reactive(
             new Map([
               [key1, {}],
-              [key2, {}]
-            ])
+              [key2, {}],
+            ]),
           )
           const wrapped: any = readonly(original)
           expect(wrapped.size).toBe(2)
@@ -274,6 +274,14 @@ describe('reactivity/readonly', () => {
             expect(isReadonly(value)).toBe(true)
             expect(isReactive(value)).toBe(true)
           }
+        })
+
+        test('should return undefined from Map.clear() call', () => {
+          const wrapped = readonly(new Collection())
+          expect(wrapped.clear()).toBeUndefined()
+          expect(
+            `Clear operation failed: target is readonly.`,
+          ).toHaveBeenWarned()
         })
       }
     })
@@ -309,7 +317,7 @@ describe('reactivity/readonly', () => {
         expect(dummy).toBe(false)
         expect(set.has(key)).toBe(false)
         expect(
-          `Add operation on key "${key}" failed: target is readonly.`
+          `Add operation on key "${key}" failed: target is readonly.`,
         ).toHaveBeenWarned()
       })
 
@@ -331,6 +339,14 @@ describe('reactivity/readonly', () => {
             expect(isReadonly(v1)).toBe(true)
             expect(isReadonly(v2)).toBe(true)
           }
+        })
+
+        test('should return undefined from Set.clear() call', () => {
+          const wrapped = readonly(new Collection())
+          expect(wrapped.clear()).toBeUndefined()
+          expect(
+            `Clear operation failed: target is readonly.`,
+          ).toHaveBeenWarned()
         })
       }
     })
@@ -431,7 +447,7 @@ describe('reactivity/readonly', () => {
   test('markRaw', () => {
     const obj = readonly({
       foo: { a: 1 },
-      bar: markRaw({ b: 2 })
+      bar: markRaw({ b: 2 }),
     })
     expect(isReadonly(obj.foo)).toBe(true)
     expect(isReactive(obj.bar)).toBe(false)
@@ -443,7 +459,7 @@ describe('reactivity/readonly', () => {
     n.value = 2
     expect(n.value).toBe(1)
     expect(
-      `Set operation on key "value" failed: target is readonly.`
+      `Set operation on key "value" failed: target is readonly.`,
     ).toHaveBeenWarned()
   })
 
@@ -457,13 +473,13 @@ describe('reactivity/readonly', () => {
 
     expect(rC.value).toBe(true)
     expect(
-      'Set operation on key "_dirty" failed: target is readonly.'
+      'Set operation on key "_dirty" failed: target is readonly.',
     ).not.toHaveBeenWarned()
-    // @ts-expect-error - non-existant property
+    // @ts-expect-error - non-existent property
     rC.randomProperty = true
 
     expect(
-      'Set operation on key "randomProperty" failed: target is readonly.'
+      'Set operation on key "randomProperty" failed: target is readonly.',
     ).toHaveBeenWarned()
   })
 
@@ -476,25 +492,31 @@ describe('reactivity/readonly', () => {
     expect(isReadonly(rr.foo)).toBe(true)
   })
 
-  test('attemptingt to write plain value to a readonly ref nested in a reactive object should fail', () => {
+  test('attempting to write plain value to a readonly ref nested in a reactive object should fail', () => {
     const r = ref(false)
     const ror = readonly(r)
     const obj = reactive({ ror })
-    try {
+    expect(() => {
       obj.ror = true
-    } catch (e) {}
-
+    }).toThrow()
     expect(obj.ror).toBe(false)
   })
+
   test('replacing a readonly ref nested in a reactive object with a new ref', () => {
     const r = ref(false)
     const ror = readonly(r)
     const obj = reactive({ ror })
-    try {
-      obj.ror = ref(true) as unknown as boolean
-    } catch (e) {}
-
+    obj.ror = ref(true) as unknown as boolean
     expect(obj.ror).toBe(true)
     expect(toRaw(obj).ror).not.toBe(ror) // ref successfully replaced
+  })
+
+  test('setting readonly object to writable nested ref', () => {
+    const r = ref<any>()
+    const obj = reactive({ r })
+    const ro = readonly({})
+    obj.r = ro
+    expect(obj.r).toBe(ro)
+    expect(r.value).toBe(ro)
   })
 })

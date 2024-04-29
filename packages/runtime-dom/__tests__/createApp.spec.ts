@@ -7,38 +7,36 @@ describe('createApp for dom', () => {
     createApp({
       render() {
         return h('g')
-      }
+      },
     }).mount(root)
     expect(root.children.length).toBe(1)
-    expect(root.children[0] instanceof SVGElement).toBe(true)
+    expect(root.children[0]).toBeInstanceOf(SVGElement)
   })
 
   // #4398
   test('should not mutate original root component options object', () => {
-    
-    const originalObj =  {
+    const originalObj = {
       data() {
         return {
-          counter: 0
+          counter: 0,
         }
-      }
+      },
     }
 
-    const handler = jest.fn(msg => {
+    const handler = vi.fn(msg => {
       expect(msg).toMatch(`Component is missing template or render function`)
     })
 
-    const Root = { ...originalObj}
-    
+    const Root = { ...originalObj }
+
     const app = createApp(Root)
     app.config.warnHandler = handler
-    app.mount(document.createElement('div')) 
- 
-    // ensure mount is based on a copy of Root object rather than Root object itself 
+    app.mount(document.createElement('div'))
+
+    // ensure mount is based on a copy of Root object rather than Root object itself
     expect(app._component).not.toBe(Root)
-    
+
     // ensure no mutation happened to Root object
     expect(originalObj).toMatchObject(Root)
-    
   })
 })

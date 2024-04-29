@@ -1,5 +1,5 @@
-import { reactive, isReactive, toRaw } from '../src/reactive'
-import { ref, isRef } from '../src/ref'
+import { isReactive, reactive, toRaw } from '../src/reactive'
+import { isRef, ref } from '../src/ref'
 import { effect } from '../src/effect'
 
 describe('reactivity/reactive/Array', () => {
@@ -90,7 +90,7 @@ describe('reactivity/reactive/Array', () => {
 
   test('delete on Array should not trigger length dependency', () => {
     const arr = reactive([1, 2, 3])
-    const fn = jest.fn()
+    const fn = vi.fn()
     effect(() => {
       fn(arr.length)
     })
@@ -99,10 +99,58 @@ describe('reactivity/reactive/Array', () => {
     expect(fn).toHaveBeenCalledTimes(1)
   })
 
+  test('should track hasOwnProperty call with index', () => {
+    const original = [1, 2, 3]
+    const observed = reactive(original)
+
+    let dummy
+    effect(() => {
+      dummy = observed.hasOwnProperty(0)
+    })
+
+    expect(dummy).toBe(true)
+
+    delete observed[0]
+    expect(dummy).toBe(false)
+  })
+
+  test('shift on Array should trigger dependency once', () => {
+    const arr = reactive([1, 2, 3])
+    const fn = vi.fn()
+    effect(() => {
+      for (let i = 0; i < arr.length; i++) {
+        arr[i]
+      }
+      fn()
+    })
+    expect(fn).toHaveBeenCalledTimes(1)
+    arr.shift()
+    expect(fn).toHaveBeenCalledTimes(2)
+  })
+
+  //#6018
+  test('edge case: avoid trigger effect in deleteProperty when array length-decrease mutation methods called', () => {
+    const arr = ref([1])
+    const fn1 = vi.fn()
+    const fn2 = vi.fn()
+    effect(() => {
+      fn1()
+      if (arr.value.length > 0) {
+        arr.value.slice()
+        fn2()
+      }
+    })
+    expect(fn1).toHaveBeenCalledTimes(1)
+    expect(fn2).toHaveBeenCalledTimes(1)
+    arr.value.splice(0)
+    expect(fn1).toHaveBeenCalledTimes(2)
+    expect(fn2).toHaveBeenCalledTimes(1)
+  })
+
   test('add existing index on Array should not trigger length dependency', () => {
     const array = new Array(3)
     const observed = reactive(array)
-    const fn = jest.fn()
+    const fn = vi.fn()
     effect(() => {
       fn(observed.length)
     })
@@ -112,14 +160,13 @@ describe('reactivity/reactive/Array', () => {
   })
 
   test('add non-integer prop on Array should not trigger length dependency', () => {
-    const array = new Array(3)
+    const array: any[] & { x?: string } = new Array(3)
     const observed = reactive(array)
-    const fn = jest.fn()
+    const fn = vi.fn()
     effect(() => {
       fn(observed.length)
     })
     expect(fn).toHaveBeenCalledTimes(1)
-    // @ts-ignore
     observed.x = 'x'
     expect(fn).toHaveBeenCalledTimes(1)
     observed[-1] = 'x'
@@ -143,6 +190,15 @@ describe('reactivity/reactive/Array', () => {
     expect(length).toBe('01')
   })
 
+  // #9742
+  test('mutation on user proxy of reactive Array', () => {
+    const array = reactive<number[]>([])
+    const proxy = new Proxy(array, {})
+    proxy.push(1)
+    expect(array).toHaveLength(1)
+    expect(proxy).toHaveLength(1)
+  })
+
   describe('Array methods w/ refs', () => {
     let original: any[]
     beforeEach(() => {
@@ -151,8 +207,7 @@ describe('reactivity/reactive/Array', () => {
 
     // read + copy
     test('read only copy methods', () => {
-      const res = original.concat([3, ref(4)])
-      const raw = toRaw(res)
+      const raw = original.concat([3, ref(4)])
       expect(isRef(raw[1])).toBe(true)
       expect(isRef(raw[3])).toBe(true)
     })

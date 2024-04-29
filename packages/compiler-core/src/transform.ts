@@ -1,44 +1,45 @@
-import { TransformOptions } from './options'
+import type { TransformOptions } from './options'
 import {
-  RootNode,
-  NodeTypes,
-  ParentNode,
-  TemplateChildNode,
-  ElementNode,
-  DirectiveNode,
-  Property,
-  ExpressionNode,
-  createSimpleExpression,
-  JSChildNode,
-  SimpleExpressionNode,
-  ElementTypes,
-  CacheExpression,
-  createCacheExpression,
-  TemplateLiteral,
-  createVNodeCall,
+  type ArrayExpression,
+  type CacheExpression,
   ConstantTypes,
-  ArrayExpression
+  type DirectiveNode,
+  type ElementNode,
+  ElementTypes,
+  type ExpressionNode,
+  type JSChildNode,
+  NodeTypes,
+  type ParentNode,
+  type Property,
+  type RootNode,
+  type SimpleExpressionNode,
+  type TemplateChildNode,
+  type TemplateLiteral,
+  convertToBlock,
+  createCacheExpression,
+  createSimpleExpression,
+  createVNodeCall,
 } from './ast'
 import {
-  isString,
-  isArray,
-  NOOP,
-  PatchFlags,
-  PatchFlagNames,
   EMPTY_OBJ,
+  NOOP,
+  PatchFlagNames,
+  PatchFlags,
+  camelize,
   capitalize,
-  camelize
+  isArray,
+  isString,
 } from '@vue/shared'
 import { defaultOnError, defaultOnWarn } from './errors'
 import {
-  TO_DISPLAY_STRING,
+  CREATE_COMMENT,
   FRAGMENT,
+  TO_DISPLAY_STRING,
   helperNameMap,
-  CREATE_COMMENT
 } from './runtimeHelpers'
-import { isVSlot, makeBlock } from './utils'
+import { isVSlot } from './utils'
 import { hoistStatic, isSingleElementRoot } from './transforms/hoistStatic'
-import { CompilerCompatOptions } from './compat/compatConfig'
+import type { CompilerCompatOptions } from './compat/compatConfig'
 
 // There are two types of transforms:
 //
@@ -47,7 +48,7 @@ import { CompilerCompatOptions } from './compat/compatConfig'
 //   replace or remove the node being processed.
 export type NodeTransform = (
   node: RootNode | TemplateChildNode,
-  context: TransformContext
+  context: TransformContext,
 ) => void | (() => void) | (() => void)[]
 
 // - DirectiveTransform:
@@ -59,7 +60,7 @@ export type DirectiveTransform = (
   context: TransformContext,
   // a platform specific compiler can import the base transform and augment
   // it by passing in this optional argument.
-  augmentor?: (ret: DirectiveTransformResult) => DirectiveTransformResult
+  augmentor?: (ret: DirectiveTransformResult) => DirectiveTransformResult,
 ) => DirectiveTransformResult
 
 export interface DirectiveTransformResult {
@@ -68,12 +69,12 @@ export interface DirectiveTransformResult {
   ssrTagParts?: TemplateLiteral['elements']
 }
 
-// A structural directive transform is a technically a NodeTransform;
+// A structural directive transform is technically also a NodeTransform;
 // Only v-if and v-for fall into this category.
 export type StructuralDirectiveTransform = (
   node: ElementNode,
   dir: DirectiveNode,
-  context: TransformContext
+  context: TransformContext,
 ) => void | (() => void)
 
 export interface ImportItem {
@@ -82,9 +83,7 @@ export interface ImportItem {
 }
 
 export interface TransformContext
-  extends Required<
-      Omit<TransformOptions, 'filename' | keyof CompilerCompatOptions>
-    >,
+  extends Required<Omit<TransformOptions, keyof CompilerCompatOptions>>,
     CompilerCompatOptions {
   selfName: string | null
   root: RootNode
@@ -103,6 +102,9 @@ export interface TransformContext
     vOnce: number
   }
   parent: ParentNode | null
+  // we could use a stack but in practice we've only ever needed two layers up
+  // so this is more efficient
+  grandParent: ParentNode | null
   childIndex: number
   currentNode: RootNode | TemplateChildNode | null
   inVOnce: boolean
@@ -116,7 +118,7 @@ export interface TransformContext
   removeIdentifiers(exp: ExpressionNode | string): void
   hoist(exp: string | JSChildNode | ArrayExpression): SimpleExpressionNode
   cache<T extends JSChildNode>(exp: T, isVNode?: boolean): CacheExpression | T
-  constantCache: Map<TemplateChildNode, ConstantTypes>
+  constantCache: WeakMap<TemplateChildNode, ConstantTypes>
 
   // 2.x Compat only
   filters?: Set<string>
@@ -128,6 +130,7 @@ export function createTransformContext(
     filename = '',
     prefixIdentifiers = false,
     hoistStatic = false,
+    hmr = false,
     cacheHandlers = false,
     nodeTransforms = [],
     directiveTransforms = {},
@@ -145,15 +148,17 @@ export function createTransformContext(
     isTS = false,
     onError = defaultOnError,
     onWarn = defaultOnWarn,
-    compatConfig
-  }: TransformOptions
+    compatConfig,
+  }: TransformOptions,
 ): TransformContext {
   const nameMatch = filename.replace(/\?.*$/, '').match(/([^/\\]+)\.\w+$/)
   const context: TransformContext = {
     // options
+    filename,
     selfName: nameMatch && capitalize(camelize(nameMatch[1])),
     prefixIdentifiers,
     hoistStatic,
+    hmr,
     cacheHandlers,
     nodeTransforms,
     directiveTransforms,
@@ -180,7 +185,7 @@ export function createTransformContext(
     directives: new Set(),
     hoists: [],
     imports: [],
-    constantCache: new Map(),
+    constantCache: new WeakMap(),
     temps: 0,
     cached: 0,
     identifiers: Object.create(null),
@@ -188,9 +193,10 @@ export function createTransformContext(
       vFor: 0,
       vSlot: 0,
       vPre: 0,
-      vOnce: 0
+      vOnce: 0,
     },
     parent: null,
+    grandParent: null,
     currentNode: root,
     childIndex: 0,
     inVOnce: false,
@@ -235,8 +241,8 @@ export function createTransformContext(
       const removalIndex = node
         ? list.indexOf(node)
         : context.currentNode
-        ? context.childIndex
-        : -1
+          ? context.childIndex
+          : -1
       /* istanbul ignore if */
       if (__DEV__ && removalIndex < 0) {
         throw new Error(`node being removed is not a child of current parent`)
@@ -254,7 +260,7 @@ export function createTransformContext(
       }
       context.parent!.children.splice(removalIndex, 1)
     },
-    onNodeRemoved: () => {},
+    onNodeRemoved: NOOP,
     addIdentifiers(exp) {
       // identifier tracking only happens in non-browser builds.
       if (!__BROWSER__) {
@@ -285,14 +291,14 @@ export function createTransformContext(
         `_hoisted_${context.hoists.length}`,
         false,
         exp.loc,
-        ConstantTypes.CAN_HOIST
+        ConstantTypes.CAN_HOIST,
       )
       identifier.hoisted = exp
       return identifier
     },
     cache(exp, isVNode = false) {
       return createCacheExpression(context.cached++, exp, isVNode)
-    }
+    },
   }
 
   if (__COMPAT__) {
@@ -324,13 +330,14 @@ export function transform(root: RootNode, options: TransformOptions) {
     createRootCodegen(root, context)
   }
   // finalize meta information
-  root.helpers = [...context.helpers.keys()]
+  root.helpers = new Set([...context.helpers.keys()])
   root.components = [...context.components]
   root.directives = [...context.directives]
   root.imports = context.imports
   root.hoists = context.hoists
   root.temps = context.temps
   root.cached = context.cached
+  root.transformed = true
 
   if (__COMPAT__) {
     root.filters = [...context.filters!]
@@ -348,7 +355,7 @@ function createRootCodegen(root: RootNode, context: TransformContext) {
       // SimpleExpressionNode
       const codegenNode = child.codegenNode
       if (codegenNode.type === NodeTypes.VNODE_CALL) {
-        makeBlock(codegenNode, context)
+        convertToBlock(codegenNode, context)
       }
       root.codegenNode = codegenNode
     } else {
@@ -380,7 +387,7 @@ function createRootCodegen(root: RootNode, context: TransformContext) {
       undefined,
       true,
       undefined,
-      false /* isComponent */
+      false /* isComponent */,
     )
   } else {
     // no children = noop. codegen will return null.
@@ -389,7 +396,7 @@ function createRootCodegen(root: RootNode, context: TransformContext) {
 
 export function traverseChildren(
   parent: ParentNode,
-  context: TransformContext
+  context: TransformContext,
 ) {
   let i = 0
   const nodeRemoved = () => {
@@ -398,6 +405,7 @@ export function traverseChildren(
   for (; i < parent.children.length; i++) {
     const child = parent.children[i]
     if (isString(child)) continue
+    context.grandParent = context.parent
     context.parent = parent
     context.childIndex = i
     context.onNodeRemoved = nodeRemoved
@@ -407,7 +415,7 @@ export function traverseChildren(
 
 export function traverseNode(
   node: RootNode | TemplateChildNode,
-  context: TransformContext
+  context: TransformContext,
 ) {
   context.currentNode = node
   // apply transform plugins
@@ -470,7 +478,7 @@ export function traverseNode(
 
 export function createStructuralDirectiveTransform(
   name: string | RegExp,
-  fn: StructuralDirectiveTransform
+  fn: StructuralDirectiveTransform,
 ): NodeTransform {
   const matches = isString(name)
     ? (n: string) => n === name

@@ -4,6 +4,7 @@ export const SSR_INTERPOLATE = Symbol(`ssrInterpolate`)
 export const SSR_RENDER_VNODE = Symbol(`ssrRenderVNode`)
 export const SSR_RENDER_COMPONENT = Symbol(`ssrRenderComponent`)
 export const SSR_RENDER_SLOT = Symbol(`ssrRenderSlot`)
+export const SSR_RENDER_SLOT_INNER = Symbol(`ssrRenderSlotInner`)
 export const SSR_RENDER_CLASS = Symbol(`ssrRenderClass`)
 export const SSR_RENDER_STYLE = Symbol(`ssrRenderStyle`)
 export const SSR_RENDER_ATTRS = Symbol(`ssrRenderAttrs`)
@@ -24,6 +25,7 @@ export const ssrHelpers = {
   [SSR_RENDER_VNODE]: `ssrRenderVNode`,
   [SSR_RENDER_COMPONENT]: `ssrRenderComponent`,
   [SSR_RENDER_SLOT]: `ssrRenderSlot`,
+  [SSR_RENDER_SLOT_INNER]: `ssrRenderSlotInner`,
   [SSR_RENDER_CLASS]: `ssrRenderClass`,
   [SSR_RENDER_STYLE]: `ssrRenderStyle`,
   [SSR_RENDER_ATTRS]: `ssrRenderAttrs`,
@@ -37,7 +39,7 @@ export const ssrHelpers = {
   [SSR_GET_DYNAMIC_MODEL_PROPS]: `ssrGetDynamicModelProps`,
   [SSR_RENDER_TELEPORT]: `ssrRenderTeleport`,
   [SSR_RENDER_SUSPENSE]: `ssrRenderSuspense`,
-  [SSR_GET_DIRECTIVE_PROPS]: `ssrGetDirectiveProps`
+  [SSR_GET_DIRECTIVE_PROPS]: `ssrGetDirectiveProps`,
 }
 
 // Note: these are helpers imported from @vue/server-renderer

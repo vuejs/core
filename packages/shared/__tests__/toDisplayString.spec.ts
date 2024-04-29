@@ -1,3 +1,6 @@
+/**
+ * @vitest-environment jsdom
+ */
 import { computed, ref } from '@vue/reactivity'
 import { toDisplayString } from '../src'
 
@@ -24,19 +27,19 @@ describe('toDisplayString', () => {
       foo: 555,
       toString() {
         return 'override'
-      }
+      },
     }
     expect(toDisplayString(objWithToStringOverride)).toBe('override')
 
-    const objWithNonInvokeableToString = {
+    const objWithNonInvokableToString = {
       foo: 555,
-      toString: null
+      toString: null,
     }
-    expect(toDisplayString(objWithNonInvokeableToString)).toBe(
+    expect(toDisplayString(objWithNonInvokableToString)).toBe(
       `{
   "foo": 555,
   "toString": null
-}`
+}`,
     )
 
     // object created from null does not have .toString in its prototype
@@ -45,7 +48,7 @@ describe('toDisplayString', () => {
     expect(toDisplayString(nullObjectWithoutToString)).toBe(
       `{
   "bar": 1
-}`
+}`,
     )
 
     // array toString override is ignored
@@ -57,7 +60,7 @@ describe('toDisplayString', () => {
   1,
   2,
   3
-]`
+]`,
     )
   })
 
@@ -67,8 +70,8 @@ describe('toDisplayString', () => {
     expect(
       toDisplayString({
         n,
-        np
-      })
+        np,
+      }),
     ).toBe(JSON.stringify({ n: 1, np: 2 }, null, 2))
   })
 
@@ -86,10 +89,10 @@ describe('toDisplayString', () => {
 
   test('native objects', () => {
     const div = document.createElement('div')
-    expect(toDisplayString(div)).toBe('[object HTMLDivElement]')
+    expect(toDisplayString(div)).toMatch('[object HTMLDivElement]')
     expect(toDisplayString({ div })).toMatchInlineSnapshot(`
       "{
-        \\"div\\": \\"[object HTMLDivElement]\\"
+        "div": "[object HTMLDivElement]"
       }"
     `)
   })
@@ -97,34 +100,34 @@ describe('toDisplayString', () => {
   test('Map and Set', () => {
     const m = new Map<any, any>([
       [1, 'foo'],
-      [{ baz: 1 }, { foo: 'bar', qux: 2 }]
+      [{ baz: 1 }, { foo: 'bar', qux: 2 }],
     ])
     const s = new Set<any>([1, { foo: 'bar' }, m])
 
     expect(toDisplayString(m)).toMatchInlineSnapshot(`
       "{
-        \\"Map(2)\\": {
-          \\"1 =>\\": \\"foo\\",
-          \\"[object Object] =>\\": {
-            \\"foo\\": \\"bar\\",
-            \\"qux\\": 2
+        "Map(2)": {
+          "1 =>": "foo",
+          "[object Object] =>": {
+            "foo": "bar",
+            "qux": 2
           }
         }
       }"
     `)
     expect(toDisplayString(s)).toMatchInlineSnapshot(`
       "{
-        \\"Set(3)\\": [
+        "Set(3)": [
           1,
           {
-            \\"foo\\": \\"bar\\"
+            "foo": "bar"
           },
           {
-            \\"Map(2)\\": {
-              \\"1 =>\\": \\"foo\\",
-              \\"[object Object] =>\\": {
-                \\"foo\\": \\"bar\\",
-                \\"qux\\": 2
+            "Map(2)": {
+              "1 =>": "foo",
+              "[object Object] =>": {
+                "foo": "bar",
+                "qux": 2
               }
             }
           }
@@ -135,36 +138,81 @@ describe('toDisplayString', () => {
     expect(
       toDisplayString({
         m,
-        s
-      })
+        s,
+      }),
     ).toMatchInlineSnapshot(`
       "{
-        \\"m\\": {
-          \\"Map(2)\\": {
-            \\"1 =>\\": \\"foo\\",
-            \\"[object Object] =>\\": {
-              \\"foo\\": \\"bar\\",
-              \\"qux\\": 2
+        "m": {
+          "Map(2)": {
+            "1 =>": "foo",
+            "[object Object] =>": {
+              "foo": "bar",
+              "qux": 2
             }
           }
         },
-        \\"s\\": {
-          \\"Set(3)\\": [
+        "s": {
+          "Set(3)": [
             1,
             {
-              \\"foo\\": \\"bar\\"
+              "foo": "bar"
             },
             {
-              \\"Map(2)\\": {
-                \\"1 =>\\": \\"foo\\",
-                \\"[object Object] =>\\": {
-                  \\"foo\\": \\"bar\\",
-                  \\"qux\\": 2
+              "Map(2)": {
+                "1 =>": "foo",
+                "[object Object] =>": {
+                  "foo": "bar",
+                  "qux": 2
                 }
               }
             }
           ]
         }
+      }"
+    `)
+  })
+
+  //#9727
+  test('Map with Symbol keys', () => {
+    const m = new Map<any, any>([
+      [Symbol(), 'foo'],
+      [Symbol(), 'bar'],
+      [Symbol('baz'), 'baz'],
+    ])
+    expect(toDisplayString(m)).toMatchInlineSnapshot(`
+      "{
+        "Map(3)": {
+          "Symbol(0) =>": "foo",
+          "Symbol(1) =>": "bar",
+          "Symbol(baz) =>": "baz"
+        }
+      }"
+    `)
+    // confirming the symbol renders Symbol(foo)
+    expect(toDisplayString(new Map([[Symbol('foo'), 'foo']]))).toContain(
+      String(Symbol('foo')),
+    )
+  })
+
+  test('Set with Symbol values', () => {
+    const s = new Set([Symbol('foo'), Symbol('bar'), Symbol()])
+    expect(toDisplayString(s)).toMatchInlineSnapshot(`
+      "{
+        "Set(3)": [
+          "Symbol(foo)",
+          "Symbol(bar)",
+          "Symbol()"
+        ]
+      }"
+    `)
+  })
+
+  test('Object with Symbol values', () => {
+    expect(toDisplayString({ foo: Symbol('x'), bar: Symbol() }))
+      .toMatchInlineSnapshot(`
+      "{
+        "foo": "Symbol(x)",
+        "bar": "Symbol()"
       }"
     `)
   })

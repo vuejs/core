@@ -1,6 +1,6 @@
 <template>
-  <svg width="1.7em" height="1.7em" viewBox="0 0 24 24">
-    <g fill="#666">
+  <svg width="1.7em" height="1.7em" viewBox="0 0 24 24" fill="currentColor">
+    <g>
       <rect x="4" y="18" width="16" height="2" rx="1" ry="1" />
       <rect
         x="3"
