@@ -21,7 +21,8 @@ export const enum ErrorCodes {
   APP_WARN_HANDLER,
   FUNCTION_REF,
   ASYNC_COMPONENT_LOADER,
-  SCHEDULER
+  SCHEDULER,
+  APP_UNMOUNT_CLEANUP
 }
 
 export const ErrorTypeStrings: Record<LifecycleHooks | ErrorCodes, string> = {
@@ -55,7 +56,8 @@ export const ErrorTypeStrings: Record<LifecycleHooks | ErrorCodes, string> = {
   [ErrorCodes.ASYNC_COMPONENT_LOADER]: 'async component loader',
   [ErrorCodes.SCHEDULER]:
     'scheduler flush. This is likely a Vue internals bug. ' +
-    'Please open an issue at https://new-issue.vuejs.org/?repo=vuejs/core'
+    'Please open an issue at https://github.com/vuejs/core .',
+  [ErrorCodes.APP_UNMOUNT_CLEANUP]: 'app unmount cleanup function'
 }
 
 export type ErrorTypes = LifecycleHooks | ErrorCodes

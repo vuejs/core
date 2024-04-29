@@ -25,8 +25,9 @@ import { devtoolsInitApp, devtoolsUnmountApp } from './devtools'
 import { isFunction, NO, isObject, extend } from '@vue/shared'
 import { version } from '.'
 import { installAppCompatProperties } from './compat/global'
-import { NormalizedPropsOptions } from './componentProps'
-import { ObjectEmitsOptions } from './componentEmits'
+import type { NormalizedPropsOptions } from './componentProps'
+import type { ObjectEmitsOptions } from './componentEmits'
+import { ErrorCodes, callWithAsyncErrorHandling } from './errorHandling'
 
 export interface App<HostElement = any> {
   version: string
@@ -212,24 +213,8 @@ export function createAppAPI<HostElement>(
     }
 
     const context = createAppContext()
-    const pluginCleanupFns: Array<() => any> = []
-
-    // TODO remove in 3.4
-    if (__DEV__) {
-      Object.defineProperty(context.config, 'unwrapInjectedRef', {
-        get() {
-          return true
-        },
-        set() {
-          warn(
-            `app.config.unwrapInjectedRef has been deprecated. ` +
-              `3.3 now always unwraps injected refs in Options API.`
-          )
-        }
-      })
-    }
-
     const installedPlugins = new WeakSet()
+    const pluginCleanupFns: Array<() => any> = []
 
     let isMounted = false
 
@@ -371,22 +356,23 @@ export function createAppAPI<HostElement>(
       },
 
       onUnmount(cleanupFn: () => void) {
-        if (typeof cleanupFn === 'function') pluginCleanupFns.push(cleanupFn)
-        else if (__DEV__) {
+        if (__DEV__ && typeof cleanupFn !== 'function') {
           warn(
-            `Expected function as first argument to app.onUnmount(), but got ${typeof cleanupFn}`
+            `Expected function as first argument to app.onUnmount(), ` +
+              `but got ${typeof cleanupFn}`
           )
         }
+        pluginCleanupFns.push(cleanupFn)
       },
 
       unmount() {
         if (isMounted) {
+          callWithAsyncErrorHandling(
+            pluginCleanupFns,
+            app._instance,
+            ErrorCodes.APP_UNMOUNT_CLEANUP
+          )
           render(null, app._container)
-          pluginCleanupFns.map(fn => {
-            try {
-              fn()
-            } catch {}
-          })
           if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
             app._instance = null
             devtoolsUnmountApp(app)
