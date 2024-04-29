@@ -5,7 +5,7 @@ import { expectType } from './utils'
 provide('foo', 123)
 provide(123, 123)
 
-const key: InjectionKey<number> = Symbol()
+const key = Symbol() as InjectionKey<number>
 
 provide(key, 1)
 // @ts-expect-error

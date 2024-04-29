@@ -50,7 +50,7 @@ export interface App<HostElement = any> {
     namespace?: boolean | ElementNamespace,
   ): ComponentPublicInstance
   unmount(): void
-  provide<T>(key: InjectionKey<T> | string, value: T): this
+  provide<T>(key: InjectionKey<T> | string | symbol, value: T): this
 
   /**
    * Runs a function with the app as active instance. This allows using of `inject()` within the function to get access
