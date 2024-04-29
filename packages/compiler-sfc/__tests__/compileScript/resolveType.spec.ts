@@ -265,6 +265,27 @@ describe('resolveType', () => {
     })
   })
 
+  test('utility type: ReadonlyArray', () => {
+    expect(
+      resolve(`
+    defineProps<{ foo: ReadonlyArray<string> }>()
+    `).props,
+    ).toStrictEqual({
+      foo: ['Array'],
+    })
+  })
+
+  test('utility type: ReadonlyMap & Readonly Set', () => {
+    expect(
+      resolve(`
+    defineProps<{ foo: ReadonlyMap<string, unknown>, bar: ReadonlySet<string> }>()
+    `).props,
+    ).toStrictEqual({
+      foo: ['Map'],
+      bar: ['Set'],
+    })
+  })
+
   test('indexed access type (literal)', () => {
     expect(
       resolve(`
@@ -413,6 +434,16 @@ describe('resolveType', () => {
     `).props,
     ).toStrictEqual({
       foo: ['String'],
+    })
+  })
+
+  test('readonly', () => {
+    expect(
+      resolve(`
+    defineProps<{ foo: readonly unknown[] }>()
+    `).props,
+    ).toStrictEqual({
+      foo: ['Array'],
     })
   })
 
