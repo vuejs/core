@@ -421,6 +421,16 @@ describe('compiler: expression transform', () => {
     })
   })
 
+  // #10807
+  test('should not bail constant on strings w/ ()', () => {
+    const node = parseWithExpressionTransform(
+      `{{ { foo: 'ok()' } }}`,
+    ) as InterpolationNode
+    expect(node.content).toMatchObject({
+      constType: ConstantTypes.CAN_STRINGIFY,
+    })
+  })
+
   describe('ES Proposals support', () => {
     test('bigInt', () => {
       const node = parseWithExpressionTransform(
