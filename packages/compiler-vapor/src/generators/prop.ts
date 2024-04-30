@@ -4,11 +4,12 @@ import {
   isSimpleIdentifier,
 } from '@vue/compiler-core'
 import type { CodegenContext } from '../generate'
-import type {
-  IRProp,
-  SetDynamicPropsIRNode,
-  SetPropIRNode,
-  VaporHelper,
+import {
+  IRDynamicPropsKind,
+  type IRProp,
+  type SetDynamicPropsIRNode,
+  type SetPropIRNode,
+  type VaporHelper,
 } from '../ir'
 import { genExpression } from './expression'
 import {
@@ -73,7 +74,9 @@ export function genDynamicProps(
         props =>
           Array.isArray(props)
             ? genLiteralObjectProps(props, context) // static and dynamic arg props
-            : genExpression(props.value, context), // v-bind=""
+            : props.kind === IRDynamicPropsKind.ATTRIBUTE
+              ? genLiteralObjectProps([props], context) // dynamic arg props
+              : genExpression(props.value, context), // v-bind=""
       ),
     ),
   ]

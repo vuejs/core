@@ -57,6 +57,11 @@ export function genMulti(
   }
 }
 export const SEGMENTS_ARRAY: Segments = ['[', ']', ', ']
+export const SEGMENTS_ARRAY_NEWLINE: Segments = [
+  ['[', INDENT_START, NEWLINE],
+  [INDENT_END, NEWLINE, ']'],
+  [', ', NEWLINE],
+]
 export const SEGMENTS_OBJECT: Segments = ['{ ', ' }', ', ']
 export const SEGMENTS_OBJECT_NEWLINE: Segments = [
   ['{', INDENT_START, NEWLINE],

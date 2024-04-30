@@ -1,5 +1,6 @@
 import { makeCompile } from './_utils'
 import {
+  IRDynamicPropsKind,
   IRNodeTypes,
   transformChildren,
   transformElement,
@@ -198,10 +199,12 @@ describe('compiler: element transform', () => {
       )
 
       expect(code).toMatchSnapshot()
-      expect(code).contains('_createComponent(_component_Foo, [{')
-      expect(code).contains('  id: () => ("foo")')
-      expect(code).contains('  class: () => ("bar")')
-      expect(code).contains('}], true)')
+      expect(code).contains(`[
+    {
+      id: () => ("foo"), 
+      class: () => ("bar")
+    }
+  ]`)
 
       expect(ir.block.operation).toMatchObject([
         {
@@ -248,12 +251,19 @@ describe('compiler: element transform', () => {
     test('v-bind="obj"', () => {
       const { code, ir } = compileWithElementTransform(`<Foo v-bind="obj" />`)
       expect(code).toMatchSnapshot()
-      expect(code).contains('[() => (_ctx.obj)]')
+      expect(code).contains(`[
+    () => (_ctx.obj)
+  ]`)
       expect(ir.block.operation).toMatchObject([
         {
           type: IRNodeTypes.CREATE_COMPONENT_NODE,
           tag: 'Foo',
-          props: [{ value: { content: 'obj', isStatic: false } }],
+          props: [
+            {
+              kind: IRDynamicPropsKind.EXPRESSION,
+              value: { content: 'obj', isStatic: false },
+            },
+          ],
         },
       ])
     })
@@ -263,15 +273,20 @@ describe('compiler: element transform', () => {
         `<Foo id="foo" v-bind="obj" />`,
       )
       expect(code).toMatchSnapshot()
-      expect(code).contains('id: () => ("foo")')
-      expect(code).contains('}, () => (_ctx.obj)]')
+      expect(code).contains(`[
+    { id: () => ("foo") }, 
+    () => (_ctx.obj)
+  ]`)
       expect(ir.block.operation).toMatchObject([
         {
           type: IRNodeTypes.CREATE_COMPONENT_NODE,
           tag: 'Foo',
           props: [
             [{ key: { content: 'id' }, values: [{ content: 'foo' }] }],
-            { value: { content: 'obj' } },
+            {
+              kind: IRDynamicPropsKind.EXPRESSION,
+              value: { content: 'obj' },
+            },
           ],
         },
       ])
@@ -282,14 +297,19 @@ describe('compiler: element transform', () => {
         `<Foo v-bind="obj" id="foo" />`,
       )
       expect(code).toMatchSnapshot()
-      expect(code).contains('[() => (_ctx.obj), {')
-      expect(code).contains('id: () => ("foo")')
+      expect(code).contains(`[
+    () => (_ctx.obj), 
+    { id: () => ("foo") }
+  ]`)
       expect(ir.block.operation).toMatchObject([
         {
           type: IRNodeTypes.CREATE_COMPONENT_NODE,
           tag: 'Foo',
           props: [
-            { value: { content: 'obj' } },
+            {
+              kind: IRDynamicPropsKind.EXPRESSION,
+              value: { content: 'obj' },
+            },
             [{ key: { content: 'id' }, values: [{ content: 'foo' }] }],
           ],
         },
@@ -301,16 +321,21 @@ describe('compiler: element transform', () => {
         `<Foo id="foo" v-bind="obj" class="bar" />`,
       )
       expect(code).toMatchSnapshot()
-      expect(code).contains('id: () => ("foo")')
-      expect(code).contains('}, () => (_ctx.obj), {')
-      expect(code).contains('class: () => ("bar")')
+      expect(code).contains(`[
+    { id: () => ("foo") }, 
+    () => (_ctx.obj), 
+    { class: () => ("bar") }
+  ]`)
       expect(ir.block.operation).toMatchObject([
         {
           type: IRNodeTypes.CREATE_COMPONENT_NODE,
           tag: 'Foo',
           props: [
             [{ key: { content: 'id' }, values: [{ content: 'foo' }] }],
-            { value: { content: 'obj' } },
+            {
+              kind: IRDynamicPropsKind.EXPRESSION,
+              value: { content: 'obj' },
+            },
             [{ key: { content: 'class' }, values: [{ content: 'bar' }] }],
           ],
         },
@@ -356,12 +381,20 @@ describe('compiler: element transform', () => {
     test('v-on="obj"', () => {
       const { code, ir } = compileWithElementTransform(`<Foo v-on="obj" />`)
       expect(code).toMatchSnapshot()
-      expect(code).contains('[() => (_toHandlers(_ctx.obj))]')
+      expect(code).contains(`[
+    () => (_toHandlers(_ctx.obj))
+  ]`)
       expect(ir.block.operation).toMatchObject([
         {
           type: IRNodeTypes.CREATE_COMPONENT_NODE,
           tag: 'Foo',
-          props: [{ value: { content: 'obj' }, handler: true }],
+          props: [
+            {
+              kind: IRDynamicPropsKind.EXPRESSION,
+              value: { content: 'obj' },
+              handler: true,
+            },
+          ],
         },
       ])
     })
@@ -432,6 +465,7 @@ describe('compiler: element transform', () => {
             element: 0,
             props: [
               {
+                kind: IRDynamicPropsKind.EXPRESSION,
                 value: {
                   type: NodeTypes.SIMPLE_EXPRESSION,
                   content: 'obj',
@@ -467,6 +501,7 @@ describe('compiler: element transform', () => {
             props: [
               [{ key: { content: 'id' }, values: [{ content: 'foo' }] }],
               {
+                kind: IRDynamicPropsKind.EXPRESSION,
                 value: {
                   type: NodeTypes.SIMPLE_EXPRESSION,
                   content: 'obj',
@@ -494,7 +529,10 @@ describe('compiler: element transform', () => {
             type: IRNodeTypes.SET_DYNAMIC_PROPS,
             element: 0,
             props: [
-              { value: { content: 'obj' } },
+              {
+                kind: IRDynamicPropsKind.EXPRESSION,
+                value: { content: 'obj' },
+              },
               [{ key: { content: 'id' }, values: [{ content: 'foo' }] }],
             ],
           },
@@ -518,7 +556,10 @@ describe('compiler: element transform', () => {
             element: 0,
             props: [
               [{ key: { content: 'id' }, values: [{ content: 'foo' }] }],
-              { value: { content: 'obj' } },
+              {
+                kind: IRDynamicPropsKind.EXPRESSION,
+                value: { content: 'obj' },
+              },
               [{ key: { content: 'class' }, values: [{ content: 'bar' }] }],
             ],
           },
@@ -689,6 +730,58 @@ describe('compiler: element transform', () => {
       },
     ])
     expect(code).contains('_setDynamicEvents(n0, _ctx.obj)')
+  })
+
+  test('component with dynamic prop arguments', () => {
+    const { code, ir } = compileWithElementTransform(
+      `<Foo :[foo-bar]="bar" :[baz]="qux" />`,
+    )
+    expect(code).toMatchSnapshot()
+    expect(ir.block.operation).toMatchObject([
+      {
+        type: IRNodeTypes.CREATE_COMPONENT_NODE,
+        tag: 'Foo',
+        props: [
+          {
+            kind: IRDynamicPropsKind.ATTRIBUTE,
+            key: { content: 'foo-bar' },
+            values: [{ content: 'bar' }],
+          },
+          {
+            kind: IRDynamicPropsKind.ATTRIBUTE,
+            key: { content: 'baz' },
+            values: [{ content: 'qux' }],
+          },
+        ],
+      },
+    ])
+  })
+
+  test('component with dynamic event arguments', () => {
+    const { code, ir } = compileWithElementTransform(
+      `<Foo @[foo-bar]="bar" @[baz]="qux" />`,
+    )
+    expect(code).toMatchSnapshot()
+    expect(ir.block.operation).toMatchObject([
+      {
+        type: IRNodeTypes.CREATE_COMPONENT_NODE,
+        tag: 'Foo',
+        props: [
+          {
+            kind: IRDynamicPropsKind.ATTRIBUTE,
+            key: { content: 'foo-bar' },
+            values: [{ content: 'bar' }],
+            handler: true,
+          },
+          {
+            kind: IRDynamicPropsKind.ATTRIBUTE,
+            key: { content: 'baz' },
+            values: [{ content: 'qux' }],
+            handler: true,
+          },
+        ],
+      },
+    ])
   })
 
   test('invalid html nesting', () => {

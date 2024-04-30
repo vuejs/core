@@ -5,11 +5,11 @@ exports[`compiler: vModel transform > component > v-model for component should g
 
 export function render(_ctx) {
   const _component_Comp = _resolveComponent("Comp")
-  const n0 = _createComponent(_component_Comp, [{
-    modelValue: () => (_ctx.foo),
+  const n0 = _createComponent(_component_Comp, [
+    { modelValue: () => (_ctx.foo),
     "onUpdate:modelValue": () => $event => (_ctx.foo = $event),
-    modelModifiers: () => ({ trim: true, "bar-baz": true })
-  }], true)
+    modelModifiers: () => ({ trim: true, "bar-baz": true }) }
+  ], true)
   return n0
 }"
 `;
@@ -19,10 +19,10 @@ exports[`compiler: vModel transform > component > v-model for component should w
 
 export function render(_ctx) {
   const _component_Comp = _resolveComponent("Comp")
-  const n0 = _createComponent(_component_Comp, [{
-    modelValue: () => (_ctx.foo),
-    "onUpdate:modelValue": () => $event => (_ctx.foo = $event)
-  }], true)
+  const n0 = _createComponent(_component_Comp, [
+    { modelValue: () => (_ctx.foo),
+    "onUpdate:modelValue": () => $event => (_ctx.foo = $event) }
+  ], true)
   return n0
 }"
 `;
@@ -32,14 +32,16 @@ exports[`compiler: vModel transform > component > v-model with arguments for com
 
 export function render(_ctx) {
   const _component_Comp = _resolveComponent("Comp")
-  const n0 = _createComponent(_component_Comp, [{
-    foo: () => (_ctx.foo),
-    "onUpdate:foo": () => $event => (_ctx.foo = $event),
-    fooModifiers: () => ({ trim: true }), 
-    bar: () => (_ctx.bar),
-    "onUpdate:bar": () => $event => (_ctx.bar = $event),
-    barModifiers: () => ({ number: true })
-  }], true)
+  const n0 = _createComponent(_component_Comp, [
+    {
+      foo: () => (_ctx.foo),
+      "onUpdate:foo": () => $event => (_ctx.foo = $event),
+      fooModifiers: () => ({ trim: true }), 
+      bar: () => (_ctx.bar),
+      "onUpdate:bar": () => $event => (_ctx.bar = $event),
+      barModifiers: () => ({ number: true })
+    }
+  ], true)
   return n0
 }"
 `;
@@ -49,10 +51,10 @@ exports[`compiler: vModel transform > component > v-model with arguments for com
 
 export function render(_ctx) {
   const _component_Comp = _resolveComponent("Comp")
-  const n0 = _createComponent(_component_Comp, [{
-    bar: () => (_ctx.foo),
-    "onUpdate:bar": () => $event => (_ctx.foo = $event)
-  }], true)
+  const n0 = _createComponent(_component_Comp, [
+    { bar: () => (_ctx.foo),
+    "onUpdate:bar": () => $event => (_ctx.foo = $event) }
+  ], true)
   return n0
 }"
 `;
@@ -62,14 +64,14 @@ exports[`compiler: vModel transform > component > v-model with dynamic arguments
 
 export function render(_ctx) {
   const _component_Comp = _resolveComponent("Comp")
-  const n0 = _createComponent(_component_Comp, [{
-    [_ctx.foo]: () => (_ctx.foo),
+  const n0 = _createComponent(_component_Comp, [
+    () => ({ [_ctx.foo]: _ctx.foo,
     ["onUpdate:" + _ctx.foo]: () => $event => (_ctx.foo = $event),
-    [_ctx.foo + "Modifiers"]: () => ({ trim: true }), 
-    [_ctx.bar]: () => (_ctx.bar),
+    [_ctx.foo + "Modifiers"]: () => ({ trim: true }) }), 
+    () => ({ [_ctx.bar]: _ctx.bar,
     ["onUpdate:" + _ctx.bar]: () => $event => (_ctx.bar = $event),
-    [_ctx.bar + "Modifiers"]: () => ({ number: true })
-  }], true)
+    [_ctx.bar + "Modifiers"]: () => ({ number: true }) })
+  ], true)
   return n0
 }"
 `;
@@ -79,10 +81,10 @@ exports[`compiler: vModel transform > component > v-model with dynamic arguments
 
 export function render(_ctx) {
   const _component_Comp = _resolveComponent("Comp")
-  const n0 = _createComponent(_component_Comp, [{
-    [_ctx.arg]: () => (_ctx.foo),
-    ["onUpdate:" + _ctx.arg]: () => $event => (_ctx.foo = $event)
-  }], true)
+  const n0 = _createComponent(_component_Comp, [
+    () => ({ [_ctx.arg]: _ctx.foo,
+    ["onUpdate:" + _ctx.arg]: () => $event => (_ctx.foo = $event) })
+  ], true)
   return n0
 }"
 `;

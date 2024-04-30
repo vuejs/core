@@ -24,9 +24,11 @@ import type {
 } from '../transform'
 import {
   DynamicFlag,
+  IRDynamicPropsKind,
   IRNodeTypes,
   type IRProp,
   type IRProps,
+  type IRPropsDynamicAttribute,
   type VaporDirectiveNode,
 } from '../ir'
 import { EMPTY_EXPRESSION } from './utils'
@@ -205,7 +207,10 @@ function buildProps(
         if (prop.exp) {
           dynamicExpr.push(prop.exp)
           pushMergeArg()
-          dynamicArgs.push({ value: prop.exp })
+          dynamicArgs.push({
+            kind: IRDynamicPropsKind.EXPRESSION,
+            value: prop.exp,
+          })
         } else {
           context.options.onError(
             createCompilerError(ErrorCodes.X_V_BIND_NO_EXPRESSION, prop.loc),
@@ -218,7 +223,11 @@ function buildProps(
           if (isComponent) {
             dynamicExpr.push(prop.exp)
             pushMergeArg()
-            dynamicArgs.push({ value: prop.exp, handler: true })
+            dynamicArgs.push({
+              kind: IRDynamicPropsKind.EXPRESSION,
+              value: prop.exp,
+              handler: true,
+            })
           } else {
             context.registerEffect(
               [prop.exp],
@@ -241,8 +250,19 @@ function buildProps(
 
     const result = transformProp(prop, node, context)
     if (result) {
-      results.push(result)
       dynamicExpr.push(result.key, result.value)
+      if (isComponent && !result.key.isStatic) {
+        // v-bind:[name]="value" or v-on:[name]="value"
+        pushMergeArg()
+        dynamicArgs.push(
+          extend(resolveDirectiveResult(result), {
+            kind: IRDynamicPropsKind.ATTRIBUTE,
+          }) as IRPropsDynamicAttribute,
+        )
+      } else {
+        // other static props
+        results.push(result)
+      }
     }
   }
 
@@ -297,7 +317,7 @@ function dedupeProperties(results: DirectiveTransformResult[]): IRProp[] {
   const deduped: IRProp[] = []
 
   for (const result of results) {
-    const prop = normalizeIRProp(result)
+    const prop = resolveDirectiveResult(result)
     // dynamic keys are always allowed
     if (!prop.key.isStatic) {
       deduped.push(prop)
@@ -307,7 +327,7 @@ function dedupeProperties(results: DirectiveTransformResult[]): IRProp[] {
     const existing = knownProps.get(name)
     if (existing) {
       if (name === 'style' || name === 'class') {
-        mergeAsArray(existing, prop)
+        mergePropValues(existing, prop)
       }
       // unexpected duplicate, should have emitted error during parse
     } else {
@@ -318,11 +338,14 @@ function dedupeProperties(results: DirectiveTransformResult[]): IRProp[] {
   return deduped
 }
 
-function normalizeIRProp(prop: DirectiveTransformResult): IRProp {
-  return extend({}, prop, { value: undefined, values: [prop.value] })
+function resolveDirectiveResult(prop: DirectiveTransformResult): IRProp {
+  return extend({}, prop, {
+    value: undefined,
+    values: [prop.value],
+  })
 }
 
-function mergeAsArray(existing: IRProp, incoming: IRProp) {
+function mergePropValues(existing: IRProp, incoming: IRProp) {
   const newValues = incoming.values
   existing.values.push(...newValues)
 }

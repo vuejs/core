@@ -259,7 +259,7 @@ describe('compiler: vModel transform', () => {
       const { code, ir } = compileWithVModel('<Comp v-model:[arg]="foo" />')
       expect(code).toMatchSnapshot()
       expect(code).contains(
-        `[_ctx.arg]: () => (_ctx.foo),
+        `[_ctx.arg]: _ctx.foo,
     ["onUpdate:" + _ctx.arg]: () => $event => (_ctx.foo = $event)`,
       )
       expect(ir.block.operation).toMatchObject([
@@ -267,14 +267,12 @@ describe('compiler: vModel transform', () => {
           type: IRNodeTypes.CREATE_COMPONENT_NODE,
           tag: 'Comp',
           props: [
-            [
-              {
-                key: { content: 'arg', isStatic: false },
-                values: [{ content: 'foo', isStatic: false }],
-                model: true,
-                modelModifiers: [],
-              },
-            ],
+            {
+              key: { content: 'arg', isStatic: false },
+              values: [{ content: 'foo', isStatic: false }],
+              model: true,
+              modelModifiers: [],
+            },
           ],
         },
       ])
@@ -349,20 +347,18 @@ describe('compiler: vModel transform', () => {
           type: IRNodeTypes.CREATE_COMPONENT_NODE,
           tag: 'Comp',
           props: [
-            [
-              {
-                key: { content: 'foo', isStatic: false },
-                values: [{ content: 'foo', isStatic: false }],
-                model: true,
-                modelModifiers: ['trim'],
-              },
-              {
-                key: { content: 'bar', isStatic: false },
-                values: [{ content: 'bar', isStatic: false }],
-                model: true,
-                modelModifiers: ['number'],
-              },
-            ],
+            {
+              key: { content: 'foo', isStatic: false },
+              values: [{ content: 'foo', isStatic: false }],
+              model: true,
+              modelModifiers: ['trim'],
+            },
+            {
+              key: { content: 'bar', isStatic: false },
+              values: [{ content: 'bar', isStatic: false }],
+              model: true,
+              modelModifiers: ['number'],
+            },
           ],
         },
       ])
