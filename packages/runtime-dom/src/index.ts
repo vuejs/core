@@ -123,7 +123,7 @@ export const createApp = ((...args) => {
     }
 
     // clear content before mounting
-    container.innerHTML = ''
+    container.replaceChildren()
     const proxy = mount(container, false, resolveRootNamespace(container))
     if (container instanceof Element) {
       container.removeAttribute('v-cloak')
