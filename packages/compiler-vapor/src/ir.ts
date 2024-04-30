@@ -32,6 +32,7 @@ export enum IRNodeTypes {
   CREATE_COMPONENT_NODE,
 
   WITH_DIRECTIVE,
+  DECLARE_OLD_REF, // consider make it more general
 
   IF,
   FOR,
@@ -158,6 +159,7 @@ export interface SetTemplateRefIRNode extends BaseIRNode {
   element: number
   value: SimpleExpressionNode
   refFor: boolean
+  effect: boolean
 }
 
 export interface SetModelValueIRNode extends BaseIRNode {
@@ -207,6 +209,11 @@ export interface CreateComponentIRNode extends BaseIRNode {
   root: boolean
 }
 
+export interface DeclareOldRefIRNode extends BaseIRNode {
+  type: IRNodeTypes.DECLARE_OLD_REF
+  id: number
+}
+
 export type IRNode = OperationNode | RootIRNode
 export type OperationNode =
   | SetPropIRNode
@@ -224,6 +231,7 @@ export type OperationNode =
   | IfIRNode
   | ForIRNode
   | CreateComponentIRNode
+  | DeclareOldRefIRNode
 
 export enum DynamicFlag {
   NONE = 0,

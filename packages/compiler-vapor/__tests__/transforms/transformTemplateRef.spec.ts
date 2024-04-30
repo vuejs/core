@@ -43,7 +43,6 @@ describe('compiler: template ref transform', () => {
         },
       },
     })
-
     expect(code).matchSnapshot()
     expect(code).contains('_setRef(n0, "foo")')
   })
@@ -56,21 +55,28 @@ describe('compiler: template ref transform', () => {
       flags: DynamicFlag.REFERENCED,
     })
     expect(ir.template).toEqual(['<div></div>'])
-    expect(ir.block.operation).lengthOf(1)
-    expect(ir.block.operation[0]).toMatchObject({
-      type: IRNodeTypes.SET_TEMPLATE_REF,
-      element: 0,
-      value: {
-        content: 'foo',
-        isStatic: false,
-        loc: {
-          start: { line: 1, column: 12, offset: 11 },
-          end: { line: 1, column: 15, offset: 14 },
-        },
+    expect(ir.block.operation).toMatchObject([
+      {
+        type: IRNodeTypes.DECLARE_OLD_REF,
+        id: 0,
       },
-    })
+    ])
+    expect(ir.block.effect).toMatchObject([
+      {
+        operations: [
+          {
+            type: IRNodeTypes.SET_TEMPLATE_REF,
+            element: 0,
+            value: {
+              content: 'foo',
+              isStatic: false,
+            },
+          },
+        ],
+      },
+    ])
     expect(code).matchSnapshot()
-    expect(code).contains('_setRef(n0, _ctx.foo)')
+    expect(code).contains('_setRef(n0, _ctx.foo, r0)')
   })
 
   test('ref + v-if', () => {
@@ -82,21 +88,17 @@ describe('compiler: template ref transform', () => {
     expect(ir.block.operation[0].type).toBe(IRNodeTypes.IF)
 
     const { positive } = ir.block.operation[0] as IfIRNode
-
-    expect(positive.operation).lengthOf(1)
-    expect(positive.operation[0]).toMatchObject({
-      type: IRNodeTypes.SET_TEMPLATE_REF,
-      element: 2,
-      value: {
-        content: 'foo',
-        isStatic: true,
-        loc: {
-          start: { line: 1, column: 10, offset: 9 },
-          end: { line: 1, column: 15, offset: 14 },
+    expect(positive.operation).toMatchObject([
+      {
+        type: IRNodeTypes.SET_TEMPLATE_REF,
+        element: 2,
+        value: {
+          content: 'foo',
+          isStatic: true,
         },
+        effect: false,
       },
-    })
-
+    ])
     expect(code).matchSnapshot()
     expect(code).contains('_setRef(n2, "foo")')
   })
@@ -107,21 +109,19 @@ describe('compiler: template ref transform', () => {
     )
 
     const { render } = ir.block.operation[0] as ForIRNode
-    expect(render.operation).lengthOf(1)
-    expect(render.operation[0]).toMatchObject({
-      type: IRNodeTypes.SET_TEMPLATE_REF,
-      element: 2,
-      value: {
-        content: 'foo',
-        isStatic: true,
-        loc: {
-          start: { line: 1, column: 10, offset: 9 },
-          end: { line: 1, column: 15, offset: 14 },
+    expect(render.operation).toMatchObject([
+      {
+        type: IRNodeTypes.SET_TEMPLATE_REF,
+        element: 2,
+        value: {
+          content: 'foo',
+          isStatic: true,
         },
+        refFor: true,
+        effect: false,
       },
-      refFor: true,
-    })
+    ])
     expect(code).matchSnapshot()
-    expect(code).contains('_setRef(n2, "foo", true)')
+    expect(code).contains('_setRef(n2, "foo", void 0, true)')
   })
 })

@@ -27,7 +27,12 @@ export type RefEl = Element | ComponentInternalInstance
 /**
  * Function for handling a template ref
  */
-export function setRef(el: RefEl, ref: NodeRef, refFor = false) {
+export function setRef(
+  el: RefEl,
+  ref: NodeRef,
+  oldRef?: NodeRef,
+  refFor = false,
+) {
   if (!currentInstance) return
   const { setupState, isUnmounted } = currentInstance
 
@@ -41,6 +46,18 @@ export function setRef(el: RefEl, ref: NodeRef, refFor = false) {
     currentInstance.refs === EMPTY_OBJ
       ? (currentInstance.refs = {})
       : currentInstance.refs
+
+  // dynamic ref changed. unset old ref
+  if (oldRef != null && oldRef !== ref) {
+    if (isString(oldRef)) {
+      refs[oldRef] = null
+      if (hasOwn(setupState, oldRef)) {
+        setupState[oldRef] = null
+      }
+    } else if (isRef(oldRef)) {
+      oldRef.value = null
+    }
+  }
 
   if (isFunction(ref)) {
     const invokeRefSetter = (value?: Element | Record<string, any>) => {
@@ -117,4 +134,5 @@ export function setRef(el: RefEl, ref: NodeRef, refFor = false) {
       warn('Invalid template ref type:', ref, `(${typeof ref})`)
     }
   }
+  return ref
 }

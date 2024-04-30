@@ -1,12 +1,13 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
 exports[`compiler: template ref transform > dynamic ref 1`] = `
-"import { setRef as _setRef, template as _template } from 'vue/vapor';
+"import { renderEffect as _renderEffect, setRef as _setRef, template as _template } from 'vue/vapor';
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
-  _setRef(n0, _ctx.foo)
+  let r0
+  _renderEffect(() => r0 = _setRef(n0, _ctx.foo, r0))
   return n0
 }"
 `;
@@ -18,7 +19,7 @@ const t0 = _template("<div></div>")
 export function render(_ctx) {
   const n0 = _createFor(() => ([1,2,3]), (_block) => {
     const n2 = t0()
-    _setRef(n2, "foo", true)
+    _setRef(n2, "foo", void 0, true)
     return [n2, () => {}]
   })
   return n0
