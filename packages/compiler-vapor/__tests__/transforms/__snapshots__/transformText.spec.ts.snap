@@ -1,0 +1,19 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`compiler: text transform > consecutive text 1`] = `
+"import { createTextNode as _createTextNode } from 'vue/vapor';
+
+export function render(_ctx) {
+  const n0 = _createTextNode(() => [_ctx.msg])
+  return n0
+}"
+`;
+
+exports[`compiler: text transform > no consecutive text 1`] = `
+"import { createTextNode as _createTextNode } from 'vue/vapor';
+
+export function render(_ctx) {
+  const n0 = _createTextNode(["hello world"])
+  return n0
+}"
+`;
