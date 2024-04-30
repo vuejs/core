@@ -12,20 +12,20 @@ export function patchAttrs(instance: ComponentInternalInstance) {
     propsOptions: [options],
   } = instance
 
+  if (!rawProps.length) return
   const keys = new Set<string>()
-  if (rawProps.length)
-    for (const props of Array.from(rawProps).reverse()) {
-      if (isFunction(props)) {
-        const resolved = props()
-        for (const rawKey in resolved) {
-          registerAttr(rawKey, () => resolved[rawKey])
-        }
-      } else {
-        for (const rawKey in props) {
-          registerAttr(rawKey, props[rawKey])
-        }
+  for (const props of Array.from(rawProps).reverse()) {
+    if (isFunction(props)) {
+      const resolved = props()
+      for (const rawKey in resolved) {
+        registerAttr(rawKey, resolved[rawKey])
+      }
+    } else {
+      for (const rawKey in props) {
+        registerAttr(rawKey, props[rawKey], true)
       }
     }
+  }
 
   for (const key in attrs) {
     if (!keys.has(key)) {
@@ -33,18 +33,22 @@ export function patchAttrs(instance: ComponentInternalInstance) {
     }
   }
 
-  function registerAttr(key: string, getter: () => unknown) {
+  function registerAttr(key: string, value: any, getter?: boolean) {
     if (
       (!options || !(camelize(key) in options)) &&
-      !isEmitListener(instance.emitsOptions, key)
+      !isEmitListener(instance.emitsOptions, key) &&
+      !keys.has(key)
     ) {
       keys.add(key)
-      if (key in attrs) return
-      Object.defineProperty(attrs, key, {
-        get: getter,
-        enumerable: true,
-        configurable: true,
-      })
+      if (getter) {
+        Object.defineProperty(attrs, key, {
+          get: value,
+          enumerable: true,
+          configurable: true,
+        })
+      } else {
+        attrs[key] = value
+      }
     }
   }
 }
