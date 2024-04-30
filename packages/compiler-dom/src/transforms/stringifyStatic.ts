@@ -225,6 +225,19 @@ function analyzeNode(node: StringifiableNode): [number, number] | false {
         ) {
           return bail()
         }
+        if (
+          p.arg &&
+          p.arg.isStatic &&
+          p.exp &&
+          p.exp.ast &&
+          p.exp.ast.type !== 'StringLiteral' &&
+          node.ns === Namespaces.HTML
+        ) {
+          // <option :value="1"> cannot be safely stringified
+          if (node.tag === 'option' && p.arg.content === 'value') {
+            return bail()
+          }
+        }
       }
     }
     for (let i = 0; i < node.children.length; i++) {
