@@ -33,11 +33,11 @@ exports[`compiler: transform component slots > implicit default slot for comment
 "const { createCommentVNode: _createCommentVNode, resolveComponent: _resolveComponent, withCtx: _withCtx, openBlock: _openBlock, createBlock: _createBlock } = Vue
 
 return function render(_ctx, _cache) {
-  const _component_Comp = _resolveComponent(\\"Comp\\")
+  const _component_Comp = _resolveComponent("Comp")
 
   return (_openBlock(), _createBlock(_component_Comp, null, {
     default: _withCtx(() => [
-      _createCommentVNode(\\"foo\\")
+      _createCommentVNode("foo")
     ]),
     _: 1 /* STABLE */
   }))
@@ -234,12 +234,12 @@ exports[`compiler: transform component slots > template named slots and an impli
 "const { createCommentVNode: _createCommentVNode, resolveComponent: _resolveComponent, withCtx: _withCtx, openBlock: _openBlock, createBlock: _createBlock } = Vue
 
 return function render(_ctx, _cache) {
-  const _component_Comp = _resolveComponent(\\"Comp\\")
+  const _component_Comp = _resolveComponent("Comp")
 
   return (_openBlock(), _createBlock(_component_Comp, null, {
     one: _withCtx(() => []),
     default: _withCtx(() => [
-      _createCommentVNode(\\"foo\\")
+      _createCommentVNode("foo")
     ]),
     _: 1 /* STABLE */
   }))
