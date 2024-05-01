@@ -17,6 +17,7 @@ import {
   type TextCallNode,
   type TransformContext,
   createCallExpression,
+  isStaticArgOf,
 } from '@vue/compiler-core'
 import {
   escapeHtml,
@@ -200,6 +201,7 @@ function analyzeNode(node: StringifiableNode): [number, number] | false {
   // probably only need to check for most common case
   // i.e. non-phrasing-content tags inside `<p>`
   function walk(node: ElementNode): boolean {
+    const isOptionTag = node.tag === 'option' && node.ns === Namespaces.HTML
     for (let i = 0; i < node.props.length; i++) {
       const p = node.props[i]
       // bail on non-attr bindings
@@ -225,18 +227,15 @@ function analyzeNode(node: StringifiableNode): [number, number] | false {
         ) {
           return bail()
         }
+        // <option :value="1"> cannot be safely stringified
         if (
-          p.arg &&
-          p.arg.isStatic &&
+          isOptionTag &&
+          isStaticArgOf(p.arg, 'value') &&
           p.exp &&
           p.exp.ast &&
-          p.exp.ast.type !== 'StringLiteral' &&
-          node.ns === Namespaces.HTML
+          p.exp.ast.type !== 'StringLiteral'
         ) {
-          // <option :value="1"> cannot be safely stringified
-          if (node.tag === 'option' && p.arg.content === 'value') {
-            return bail()
-          }
+          return bail()
         }
       }
     }
