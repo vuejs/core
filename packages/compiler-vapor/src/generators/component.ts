@@ -59,6 +59,7 @@ export function genCreateComponent(
 }
 
 export function genRawProps(props: IRProps[], context: CodegenContext) {
+  const { vaporHelper } = context
   const frag = props
     .map(props => {
       if (isArray(props)) {
@@ -70,7 +71,7 @@ export function genRawProps(props: IRProps[], context: CodegenContext) {
           expr = genMulti(SEGMENTS_OBJECT, genProp(props, context))
         else {
           expr = genExpression(props.value, context)
-          if (props.handler) expr = genCall(context.helper('toHandlers'), expr)
+          if (props.handler) expr = genCall(vaporHelper('toHandlers'), expr)
         }
         return ['() => (', ...expr, ')']
       }

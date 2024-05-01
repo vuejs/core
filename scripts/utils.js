@@ -28,6 +28,10 @@ export function fuzzyMatchTarget(partialTargets, includeAllMatching) {
   /** @type {Array<string>} */
   const matched = []
   partialTargets.forEach(partialTarget => {
+    if (!includeAllMatching && targets.includes(partialTarget)) {
+      matched.push(partialTarget)
+      return
+    }
     for (const target of targets) {
       if (target.match(partialTarget)) {
         matched.push(target)

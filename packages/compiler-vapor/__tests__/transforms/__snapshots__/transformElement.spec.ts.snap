@@ -175,8 +175,7 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: element transform > component > v-on="obj" 1`] = `
-"import { toHandlers as _toHandlers } from 'vue';
-import { resolveComponent as _resolveComponent, createComponent as _createComponent } from 'vue/vapor';
+"import { resolveComponent as _resolveComponent, toHandlers as _toHandlers, createComponent as _createComponent } from 'vue/vapor';
 
 export function render(_ctx) {
   const _component_Foo = _resolveComponent("Foo")

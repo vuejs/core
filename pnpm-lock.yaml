@@ -319,6 +319,9 @@ importers:
       '@vue/reactivity':
         specifier: workspace:*
         version: link:../reactivity
+      '@vue/runtime-shared':
+        specifier: workspace:*
+        version: link:../runtime-shared
       '@vue/shared':
         specifier: workspace:*
         version: link:../shared
@@ -335,6 +338,8 @@ importers:
         specifier: ^3.1.3
         version: 3.1.3
 
+  packages/runtime-shared: {}
+
   packages/runtime-test:
     dependencies:
       '@vue/runtime-core':
@@ -349,6 +354,9 @@ importers:
       '@vue/reactivity':
         specifier: workspace:*
         version: link:../reactivity
+      '@vue/runtime-shared':
+        specifier: workspace:*
+        version: link:../runtime-shared
       '@vue/shared':
         specifier: workspace:*
         version: link:../shared
