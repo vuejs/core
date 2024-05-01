@@ -128,7 +128,7 @@ export class ReactiveEffect<T = any> {
     if (this.active) {
       preCleanupEffect(this)
       postCleanupEffect(this)
-      this.onStop?.()
+      this.onStop && this.onStop()
       this.active = false
     }
   }
