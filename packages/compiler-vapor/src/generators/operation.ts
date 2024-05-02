@@ -17,6 +17,7 @@ import {
   buildCodeFragment,
 } from './utils'
 import { genCreateComponent } from './component'
+import { genSlotOutlet } from './slotOutlet'
 
 export function genOperations(opers: OperationNode[], context: CodegenContext) {
   const [frag, push] = buildCodeFragment()
@@ -61,6 +62,8 @@ export function genOperation(
       return genCreateComponent(oper, context)
     case IRNodeTypes.DECLARE_OLD_REF:
       return genDeclareOldRef(oper)
+    case IRNodeTypes.SLOT_OUTLET_NODE:
+      return genSlotOutlet(oper, context)
   }
 
   return []

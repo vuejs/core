@@ -30,6 +30,7 @@ export enum IRNodeTypes {
   PREPEND_NODE,
   CREATE_TEXT_NODE,
   CREATE_COMPONENT_NODE,
+  SLOT_OUTLET_NODE,
 
   WITH_DIRECTIVE,
   DECLARE_OLD_REF, // consider make it more general
@@ -214,6 +215,14 @@ export interface DeclareOldRefIRNode extends BaseIRNode {
   id: number
 }
 
+export interface SlotOutletIRNode extends BaseIRNode {
+  type: IRNodeTypes.SLOT_OUTLET_NODE
+  id: number
+  name: SimpleExpressionNode
+  props: IRProps[]
+  fallback?: BlockIRNode
+}
+
 export type IRNode = OperationNode | RootIRNode
 export type OperationNode =
   | SetPropIRNode
@@ -232,6 +241,7 @@ export type OperationNode =
   | ForIRNode
   | CreateComponentIRNode
   | DeclareOldRefIRNode
+  | SlotOutletIRNode
 
 export enum DynamicFlag {
   NONE = 0,

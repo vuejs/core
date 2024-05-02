@@ -29,6 +29,7 @@ import {
   type IRProp,
   type IRProps,
   type IRPropsDynamicAttribute,
+  type IRPropsStatic,
   type VaporDirectiveNode,
 } from '../ir'
 import { EMPTY_EXPRESSION } from './utils'
@@ -125,7 +126,7 @@ function resolveSetupReference(name: string, context: TransformContext) {
 
 function transformNativeElement(
   tag: string,
-  propsResult: ReturnType<typeof buildProps>,
+  propsResult: PropsResult,
   context: TransformContext<ElementNode>,
 ) {
   const { scopeId } = context.options
@@ -179,9 +180,9 @@ function transformNativeElement(
 
 export type PropsResult =
   | [dynamic: true, props: IRProps[], expressions: SimpleExpressionNode[]]
-  | [dynamic: false, props: IRProp[]]
+  | [dynamic: false, props: IRPropsStatic]
 
-function buildProps(
+export function buildProps(
   node: ElementNode,
   context: TransformContext<ElementNode>,
   isComponent: boolean,

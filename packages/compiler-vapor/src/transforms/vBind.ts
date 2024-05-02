@@ -5,7 +5,7 @@ import {
   createCompilerError,
   createSimpleExpression,
 } from '@vue/compiler-dom'
-import { camelize } from '@vue/shared'
+import { camelize, extend } from '@vue/shared'
 import type { DirectiveTransform, TransformContext } from '../transform'
 import { resolveExpression } from '../utils'
 import { isReservedProp } from './transformElement'
@@ -58,7 +58,7 @@ export const transformVBind: DirectiveTransform = (dir, node, context) => {
   let camel = false
   if (modifiers.includes('camel')) {
     if (arg.isStatic) {
-      arg.content = camelize(arg.content)
+      arg = extend({}, arg, { content: camelize(arg.content) })
     } else {
       camel = true
     }

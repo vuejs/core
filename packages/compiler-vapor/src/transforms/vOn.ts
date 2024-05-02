@@ -20,6 +20,7 @@ const delegatedEvents = /*#__PURE__*/ makeMap(
 export const transformVOn: DirectiveTransform = (dir, node, context) => {
   let { arg, exp, loc, modifiers } = dir
   const isComponent = node.tagType === ElementTypes.COMPONENT
+  const isSlotOutlet = node.tag === 'slot'
 
   if (!exp && !modifiers.length) {
     context.options.onError(
@@ -60,7 +61,7 @@ export const transformVOn: DirectiveTransform = (dir, node, context) => {
     }
   }
 
-  if (isComponent) {
+  if (isComponent || isSlotOutlet) {
     const handler = exp || EMPTY_EXPRESSION
     return {
       key: arg,
