@@ -22,10 +22,9 @@ type ModifierGuardsKeys =
   | 'middle'
   | 'right'
   | 'exact'
-  | ''
 
 const modifierGuards: Record<
-  string,
+  ModifierGuardsKeys,
   (e: Event, modifiers: string[]) => void | boolean
 > = {
   stop: e => e.stopPropagation(),
