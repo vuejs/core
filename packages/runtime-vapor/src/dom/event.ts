@@ -131,7 +131,7 @@ export function setDynamicEvents(
   el: HTMLElement,
   events: Record<string, (...args: any[]) => any>,
 ) {
-  for (const [event, eventHandler] of Object.entries(events)) {
-    on(el, event, () => eventHandler, { effect: true })
+  for (const name in events) {
+    on(el, name, () => events[name], { effect: true })
   }
 }
