@@ -22,6 +22,7 @@ type ModifierGuardsKeys =
   | 'middle'
   | 'right'
   | 'exact'
+  | ''
 
 const modifierGuards: Record<
   string,
