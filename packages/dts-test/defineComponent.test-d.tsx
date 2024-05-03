@@ -1959,3 +1959,17 @@ declare const ErrorMessage: {
     }
   })
 ;<ErrorMessage name="password" class="error" />
+
+// #10843
+createApp({}).component(
+  'SomeComponent',
+  defineComponent({
+    props: {
+      title: String,
+    },
+    setup(props) {
+      expectType<string | undefined>(props.title)
+      return {}
+    },
+  }),
+)

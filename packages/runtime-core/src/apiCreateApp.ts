@@ -42,7 +42,10 @@ export interface App<HostElement = any> {
 
   mixin(mixin: ComponentOptions): this
   component(name: string): Component | undefined
-  component(name: string, component: Component | DefineComponent): this
+  component<T extends Component | DefineComponent>(
+    name: string,
+    component: T,
+  ): this
   directive<T = any, V = any>(name: string): Directive<T, V> | undefined
   directive<T = any, V = any>(name: string, directive: Directive<T, V>): this
   mount(
