@@ -213,6 +213,13 @@ export function render(_ctx) {
 }"
 `;
 
+exports[`compiler: element transform > empty template 1`] = `
+"
+export function render(_ctx) {
+  return null
+}"
+`;
+
 exports[`compiler: element transform > invalid html nesting 1`] = `
 "import { insert as _insert, template as _template } from 'vue/vapor';
 const t0 = _template("<div>123</div>")

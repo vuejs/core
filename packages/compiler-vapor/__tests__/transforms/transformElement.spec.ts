@@ -803,4 +803,10 @@ describe('compiler: element transform', () => {
       { type: IRNodeTypes.INSERT_NODE, parent: 3, elements: [2] },
     ])
   })
+
+  test('empty template', () => {
+    const { code } = compileWithElementTransform('')
+    expect(code).toMatchSnapshot()
+    expect(code).contain('return null')
+  })
 })

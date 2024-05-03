@@ -42,7 +42,7 @@ export function genBlockContent(
   const { dynamic, effect, operation, returns } = block
   const resetBlock = context.enterBlock(block)
 
-  if (root)
+  if (root) {
     for (const name of context.ir.component) {
       push(
         NEWLINE,
@@ -53,6 +53,7 @@ export function genBlockContent(
         ),
       )
     }
+  }
 
   for (const child of dynamic.children) {
     push(...genChildren(child, context, child.id!))
@@ -67,10 +68,11 @@ export function genBlockContent(
 
   push(NEWLINE, `return `)
 
+  const returnNodes = returns.map(n => `n${n}`)
   const returnsCode: CodeFragment[] =
-    returns.length > 1
-      ? genMulti(SEGMENTS_ARRAY, ...returns.map(n => `n${n}`))
-      : [`n${returns[0]}`]
+    returnNodes.length > 1
+      ? genMulti(SEGMENTS_ARRAY, ...returnNodes)
+      : [returnNodes[0] || 'null']
   push(...(customReturns ? customReturns(returnsCode) : returnsCode))
 
   resetBlock()
