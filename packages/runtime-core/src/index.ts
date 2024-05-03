@@ -269,6 +269,10 @@ export type {
   ComputedOptions,
   RuntimeCompilerOptions,
   ComponentInjectOptions,
+  // deprecated
+  ComponentOptionsWithoutProps,
+  ComponentOptionsWithArrayProps,
+  ComponentOptionsWithObjectProps,
 } from './componentOptions'
 export type {
   EmitsOptions,
