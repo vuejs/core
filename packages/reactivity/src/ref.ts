@@ -94,7 +94,6 @@ export function triggerRefValue(
  * @param r - The value to inspect.
  * @see {@link https://vuejs.org/api/reactivity-utilities.html#isref}
  */
-export function isRef<T>(r: Ref<T> | unknown): r is Ref<T>
 export function isRef(r: any): r is Ref {
   return !!(r && r.__v_isRef === true)
 }
