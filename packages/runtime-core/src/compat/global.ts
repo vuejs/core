@@ -548,7 +548,7 @@ function installCompatMount(
       }
 
       // clear content before mounting
-      container.replaceChildren()
+      container.innerHTML = ''
 
       // TODO hydration
       render(vnode, container, namespace)

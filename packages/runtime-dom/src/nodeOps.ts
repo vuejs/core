@@ -1,4 +1,41 @@
+import { warn } from '@vue/runtime-core'
 import type { RendererOptions } from '@vue/runtime-core'
+import type {
+  TrustedHTML,
+  TrustedTypePolicy,
+  TrustedTypesWindow,
+} from 'trusted-types/lib'
+
+let policy: TrustedTypePolicy | undefined = undefined
+function getPolicy(): TrustedTypePolicy | undefined {
+  const ttWindow = window as unknown as TrustedTypesWindow
+  if (ttWindow.trustedTypes && !policy) {
+    try {
+      policy = ttWindow.trustedTypes.createPolicy('vue', {
+        createHTML: val => val,
+        createScript: val => val,
+        createScriptURL: val => val,
+      })
+    } catch (e: unknown) {
+      // `createPolicy` throws a TypeError if the name is a duplicate
+      // and the CSP trusted-types directive is not using `allow-duplicates`.
+      // So we have to catch that error.
+      warn(`Error creating trusted types policy: ${e}`)
+    }
+  }
+  return policy
+}
+
+// __UNSAFE__
+// Reason: potentially setting innerHTML.
+// This function merely perform a type-level trusted type conversion
+// for use in `innerHTML` assignment, etc.
+// Be careful of whatever value passed to this function.
+function unsafeToTrustedHTML(value: string): TrustedHTML | string {
+  return getPolicy()?.createHTML(value) || value
+}
+
+export { getPolicy, unsafeToTrustedHTML }
 
 export const svgNS = 'http://www.w3.org/2000/svg'
 export const mathmlNS = 'http://www.w3.org/1998/Math/MathML'

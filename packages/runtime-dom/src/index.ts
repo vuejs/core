@@ -15,7 +15,7 @@ import {
   isRuntimeOnly,
   warn,
 } from '@vue/runtime-core'
-import { nodeOps } from './nodeOps'
+import { nodeOps, unsafeToTrustedHTML } from './nodeOps'
 import { patchProp } from './patchProp'
 // Importing from the compiler, will be tree-shaken in prod
 import {
@@ -123,7 +123,7 @@ export const createApp = ((...args) => {
     }
 
     // clear content before mounting
-    container.replaceChildren()
+    container.innerHTML = unsafeToTrustedHTML('') as string
     const proxy = mount(container, false, resolveRootNamespace(container))
     if (container instanceof Element) {
       container.removeAttribute('v-cloak')

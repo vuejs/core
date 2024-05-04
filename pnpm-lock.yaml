@@ -316,6 +316,10 @@ importers:
       csstype:
         specifier: ^3.1.3
         version: 3.1.3
+    devDependencies:
+      '@types/trusted-types':
+        specifier: ^2.0.7
+        version: 2.0.7
 
   packages/runtime-test:
     dependencies:
@@ -1148,6 +1152,9 @@ packages:
 
   '@types/semver@7.5.8':
     resolution: {integrity: sha512-I8EUhyrgfLrcTkzV3TSsGyl1tSuPrEDzr0yd5m90UgNxQkyDXULk3b6MlQqTCpZpNtWe1K0hzclnZkTcLBe2UQ==}
+
+  '@types/trusted-types@2.0.7':
+    resolution: {integrity: sha512-ScaPdn1dQczgbl0QFTeTOmVHFULt394XJgOQNoyVhZ6r2vLnMLJfBPd53SB52T/3G36VI1/g2MZaX0cwDuXsfw==}
 
   '@types/yauzl@2.10.3':
     resolution: {integrity: sha512-oJoftv0LSuaDZE3Le4DbKX+KS9G36NzOeSap90UIK0yMA/NhKJhqlSGtNDORNRaIbQfzjXDrQa0ytJ6mNRGz/Q==}
@@ -4178,6 +4185,8 @@ snapshots:
   '@types/resolve@1.20.2': {}
 
   '@types/semver@7.5.8': {}
+
+  '@types/trusted-types@2.0.7': {}
 
   '@types/yauzl@2.10.3':
     dependencies:
