@@ -111,12 +111,13 @@ export const nodeOps: Omit<RendererOptions<Node, Element>, 'patchProp'> = {
       }
     } else {
       // fresh insert
-      templateContainer.innerHTML =
+      templateContainer.innerHTML = unsafeToTrustedHTML(
         namespace === 'svg'
           ? `<svg>${content}</svg>`
           : namespace === 'mathml'
             ? `<math>${content}</math>`
-            : content
+            : content,
+      ) as string
 
       const template = templateContainer.content
       if (namespace === 'svg' || namespace === 'mathml') {
