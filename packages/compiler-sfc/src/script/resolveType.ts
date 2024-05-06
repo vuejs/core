@@ -1448,10 +1448,8 @@ export function inferRuntimeType(
   ctx: TypeResolveContext,
   node: Node & MaybeWithScope,
   scope = node._ownerScope || ctxToScope(ctx),
-  options: { isKeyof?: boolean } = {},
+  isKeyOf = false,
 ): string[] {
-  const { isKeyof } = options
-
   try {
     switch (node.type) {
       case 'TSStringKeyword':
@@ -1471,30 +1469,24 @@ export function inferRuntimeType(
         const members =
           node.type === 'TSTypeLiteral' ? node.members : node.body.body
 
-        const handler = isKeyof
-          ? (m: TSTypeElement) => {
-              if (
-                m.type === 'TSPropertySignature' &&
-                m.key.type === 'NumericLiteral'
-              ) {
-                types.add('Number')
-              } else {
-                types.add('String')
-              }
-            }
-          : (m: TSTypeElement) => {
-              if (
-                m.type === 'TSCallSignatureDeclaration' ||
-                m.type === 'TSConstructSignatureDeclaration'
-              ) {
-                types.add('Function')
-              } else {
-                types.add('Object')
-              }
-            }
-
         for (const m of members) {
-          handler(m)
+          if (isKeyOf) {
+            if (
+              m.type === 'TSPropertySignature' &&
+              m.key.type === 'NumericLiteral'
+            ) {
+              types.add('Number')
+            } else {
+              types.add('String')
+            }
+          } else if (
+            m.type === 'TSCallSignatureDeclaration' ||
+            m.type === 'TSConstructSignatureDeclaration'
+          ) {
+            types.add('Function')
+          } else {
+            types.add('Object')
+          }
         }
 
         return types.size ? Array.from(types) : ['Object']
@@ -1532,11 +1524,11 @@ export function inferRuntimeType(
       case 'TSTypeReference': {
         const resolved = resolveTypeReference(ctx, node, scope)
         if (resolved) {
-          return inferRuntimeType(ctx, resolved, resolved._ownerScope, options)
+          return inferRuntimeType(ctx, resolved, resolved._ownerScope, isKeyOf)
         }
 
         if (node.typeName.type === 'Identifier') {
-          if (isKeyof) {
+          if (isKeyOf) {
             switch (node.typeName.name) {
               case 'String':
               case 'Array':
@@ -1667,7 +1659,7 @@ export function inferRuntimeType(
           // typeof only support identifier in local scope
           const matched = scope.declares[id.name]
           if (matched) {
-            return inferRuntimeType(ctx, matched, matched._ownerScope, options)
+            return inferRuntimeType(ctx, matched, matched._ownerScope, isKeyOf)
           }
         }
         break
@@ -1675,9 +1667,12 @@ export function inferRuntimeType(
 
       // e.g. readonly
       case 'TSTypeOperator': {
-        return inferRuntimeType(ctx, node.typeAnnotation, scope, {
-          isKeyof: node.operator === 'keyof',
-        })
+        return inferRuntimeType(
+          ctx,
+          node.typeAnnotation,
+          scope,
+          node.operator === 'keyof',
+        )
       }
     }
   } catch (e) {

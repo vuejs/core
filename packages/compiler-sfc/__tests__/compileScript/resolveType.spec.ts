@@ -265,42 +265,6 @@ describe('resolveType', () => {
     })
   })
 
-  test('utility type: keyof', () => {
-    const files = {
-      '/foo.ts': `export type IMP = { ${1}: 1 };`,
-    }
-
-    const { props } = resolve(
-      `
-      import { IMP } from './foo'
-      interface Foo { foo: 1, ${1}: 1 } 
-      type Bar = { bar: 1 }
-      declare const obj: Bar
-      declare const set: Set<any>
-      declare const arr: Array<any>
-
-      defineProps<{ 
-        imp: keyof IMP,
-        foo: keyof Foo,
-        bar: keyof Bar,
-        obj: keyof typeof obj,
-        set: keyof typeof set,
-        arr: keyof typeof arr
-      }>()
-      `,
-      files,
-    )
-
-    expect(props).toStrictEqual({
-      imp: ['Number'],
-      foo: ['String', 'Number'],
-      bar: ['String'],
-      obj: ['String'],
-      set: ['String'],
-      arr: ['String', 'Number'],
-    })
-  })
-
   test('utility type: ReadonlyArray', () => {
     expect(
       resolve(`
@@ -480,6 +444,42 @@ describe('resolveType', () => {
     `).props,
     ).toStrictEqual({
       foo: ['Array'],
+    })
+  })
+
+  test('keyof', () => {
+    const files = {
+      '/foo.ts': `export type IMP = { ${1}: 1 };`,
+    }
+
+    const { props } = resolve(
+      `
+      import { IMP } from './foo'
+      interface Foo { foo: 1, ${1}: 1 } 
+      type Bar = { bar: 1 }
+      declare const obj: Bar
+      declare const set: Set<any>
+      declare const arr: Array<any>
+
+      defineProps<{ 
+        imp: keyof IMP,
+        foo: keyof Foo,
+        bar: keyof Bar,
+        obj: keyof typeof obj,
+        set: keyof typeof set,
+        arr: keyof typeof arr
+      }>()
+      `,
+      files,
+    )
+
+    expect(props).toStrictEqual({
+      imp: ['Number'],
+      foo: ['String', 'Number'],
+      bar: ['String'],
+      obj: ['String'],
+      set: ['String'],
+      arr: ['String', 'Number'],
     })
   })
 
