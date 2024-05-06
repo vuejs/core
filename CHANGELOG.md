@@ -1,3 +1,16 @@
+## [3.4.27](https://github.com/vuejs/core/compare/v3.4.26...v3.4.27) (2024-05-06)
+
+
+### Bug Fixes
+
+* **compat:** include legacy scoped slots ([#10868](https://github.com/vuejs/core/issues/10868)) ([8366126](https://github.com/vuejs/core/commit/83661264a4ced3cb2ff6800904a86dd9e82bbfe2)), closes [#8869](https://github.com/vuejs/core/issues/8869)
+* **compiler-core:** add support for arrow aysnc function with unbracketed ([#5789](https://github.com/vuejs/core/issues/5789)) ([ca7d421](https://github.com/vuejs/core/commit/ca7d421e8775f6813f8943d32ab485e0c542f98b)), closes [#5788](https://github.com/vuejs/core/issues/5788)
+* **compiler-dom:** restrict createStaticVNode usage with option elements ([#10846](https://github.com/vuejs/core/issues/10846)) ([0e3d617](https://github.com/vuejs/core/commit/0e3d6178b02d0386d779720ae2cc4eac1d1ec990)), closes [#6568](https://github.com/vuejs/core/issues/6568) [#7434](https://github.com/vuejs/core/issues/7434)
+* **compiler-sfc:** handle keyof operator ([#10874](https://github.com/vuejs/core/issues/10874)) ([10d34a5](https://github.com/vuejs/core/commit/10d34a5624775f20437ccad074a97270ef74c3fb)), closes [#10871](https://github.com/vuejs/core/issues/10871)
+* **hydration:** handle edge case of style mismatch without style attribute ([f2c1412](https://github.com/vuejs/core/commit/f2c1412e46a8fad3e13403bfa78335c4f704f21c)), closes [#10786](https://github.com/vuejs/core/issues/10786)
+
+
+
 ## [3.4.26](https://github.com/vuejs/core/compare/v3.4.25...v3.4.26) (2024-04-29)
 
 
