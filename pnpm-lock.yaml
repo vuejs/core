@@ -47,6 +47,9 @@ importers:
       '@types/semver':
         specifier: ^7.5.8
         version: 7.5.8
+      '@types/serve-handler':
+        specifier: ^6.1.4
+        version: 6.1.4
       '@vitest/coverage-istanbul':
         specifier: ^1.5.2
         version: 1.5.2(vitest@1.5.2(@types/node@20.12.12)(jsdom@24.0.0)(sass@1.77.2)(terser@5.31.0))
@@ -140,6 +143,9 @@ importers:
       serve:
         specifier: ^14.2.3
         version: 14.2.3
+      serve-handler:
+        specifier: ^6.1.5
+        version: 6.1.5
       simple-git-hooks:
         specifier: ^2.11.1
         version: 2.11.1
@@ -1152,6 +1158,9 @@ packages:
 
   '@types/semver@7.5.8':
     resolution: {integrity: sha512-I8EUhyrgfLrcTkzV3TSsGyl1tSuPrEDzr0yd5m90UgNxQkyDXULk3b6MlQqTCpZpNtWe1K0hzclnZkTcLBe2UQ==}
+
+  '@types/serve-handler@6.1.4':
+    resolution: {integrity: sha512-aXy58tNie0NkuSCY291xUxl0X+kGYy986l4kqW6Gi4kEXgr6Tx0fpSH7YwUSa5usPpG3s9DBeIR6hHcDtL2IvQ==}
 
   '@types/trusted-types@2.0.7':
     resolution: {integrity: sha512-ScaPdn1dQczgbl0QFTeTOmVHFULt394XJgOQNoyVhZ6r2vLnMLJfBPd53SB52T/3G36VI1/g2MZaX0cwDuXsfw==}
@@ -4185,6 +4194,10 @@ snapshots:
   '@types/resolve@1.20.2': {}
 
   '@types/semver@7.5.8': {}
+
+  '@types/serve-handler@6.1.4':
+    dependencies:
+      '@types/node': 20.12.7
 
   '@types/trusted-types@2.0.7': {}
 
