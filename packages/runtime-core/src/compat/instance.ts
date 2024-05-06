@@ -37,7 +37,6 @@ import {
 } from './renderHelpers'
 import { resolveFilter } from '../helpers/resolveAssets'
 import type { InternalSlots, Slots } from '../componentSlots'
-import type { ContextualRenderFn } from '../componentRenderContext'
 import { resolveMergedOptions } from '../componentOptions'
 
 export type LegacyPublicInstance = ComponentPublicInstance &
@@ -109,9 +108,7 @@ export function installCompatInstanceProperties(map: PublicPropertiesMap) {
       const res: InternalSlots = {}
       for (const key in i.slots) {
         const fn = i.slots[key]!
-        if (!(fn as ContextualRenderFn)._ns /* non-scoped slot */) {
-          res[key] = fn
-        }
+        res[key] = fn
       }
       return res
     },
