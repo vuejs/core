@@ -105,12 +105,7 @@ export function installCompatInstanceProperties(map: PublicPropertiesMap) {
 
     $scopedSlots: i => {
       assertCompatEnabled(DeprecationTypes.INSTANCE_SCOPED_SLOTS, i)
-      const res: InternalSlots = {}
-      for (const key in i.slots) {
-        const fn = i.slots[key]!
-        res[key] = fn
-      }
-      return res
+      return __DEV__ ? shallowReadonly(i.slots) : i.slots
     },
 
     $on: i => on.bind(null, i),
