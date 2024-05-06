@@ -44,7 +44,7 @@ describe('e2e: trusted types', () => {
   })
 
   test(
-    'hello world app',
+    'should render the hello world app',
     async () => {
       await page().evaluate(() => {
         const { createApp, ref, h } = (window as any).Vue
@@ -63,7 +63,7 @@ describe('e2e: trusted types', () => {
   )
 
   test(
-    'static vnode',
+    'should render static vnode without error',
     async () => {
       await page().evaluate(() => {
         const { createApp, createStaticVNode } = (window as any).Vue
@@ -78,10 +78,26 @@ describe('e2e: trusted types', () => {
     E2E_TIMEOUT,
   )
 
-  test.todo('v-html with custom policy')
-  test.todo(
-    'other sensitive props (<iframe srcdoc> <embed src>, <object data>, and <object codebase>) with custom policy',
-  )
+  test(
+    'should accept v-html with custom policy',
+    async () => {
+      await page().evaluate(() => {
+        const testPolicy = (window as any).trustedTypes.createPolicy('test', {
+          createHTML: (input: string): string => input,
+        })
 
-  test.todo('hydration? I am not sure if it is necessary')
+        const { createApp, ref, h } = (window as any).Vue
+        createApp({
+          setup() {
+            const msg = ref('✅success: v-html')
+            return function render() {
+              return h('div', { innerHTML: testPolicy.createHTML(msg.value) })
+            }
+          },
+        }).mount('#app')
+      })
+      expect(await html('#app')).toContain('<div>✅success: v-html</div>')
+    },
+    E2E_TIMEOUT,
+  )
 })
