@@ -36,7 +36,7 @@ import {
   legacyresolveScopedSlots,
 } from './renderHelpers'
 import { resolveFilter } from '../helpers/resolveAssets'
-import type { InternalSlots, Slots } from '../componentSlots'
+import type { Slots } from '../componentSlots'
 import { resolveMergedOptions } from '../componentOptions'
 
 export type LegacyPublicInstance = ComponentPublicInstance &
