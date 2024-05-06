@@ -35,8 +35,6 @@ function unsafeToTrustedHTML(value: string): TrustedHTML | string {
   return getPolicy()?.createHTML(value) || value
 }
 
-export { getPolicy, unsafeToTrustedHTML }
-
 export const svgNS = 'http://www.w3.org/2000/svg'
 export const mathmlNS = 'http://www.w3.org/1998/Math/MathML'
 
