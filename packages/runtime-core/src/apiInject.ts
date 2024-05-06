@@ -6,10 +6,11 @@ import { warn } from './warning'
 
 export interface InjectionKey<T> extends Symbol {}
 
-export function provide<T, K = InjectionKey<T> | string | number>(
+export type Provide = <T, K = InjectionKey<T> | string | number>(
   key: K,
   value: K extends InjectionKey<infer V> ? V : T,
-) {
+) => void
+export const provide: Provide = (key, value) => {
   if (!currentInstance) {
     if (__DEV__) {
       warn(`provide() can only be used inside setup().`)

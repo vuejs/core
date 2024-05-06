@@ -1,5 +1,7 @@
 import {
+  type InjectionKey,
   type Plugin,
+  type Ref,
   createApp,
   defineComponent,
   getCurrentInstance,
@@ -111,7 +113,28 @@ describe('api: createApp', () => {
     app2.provide('bar', 2)
     expect(`App already provides property with key "bar".`).toHaveBeenWarned()
   })
-
+  test('app.provide should be safe type', () => {
+    type Cube = {
+      size: number
+    }
+    const injectionKeyRef: InjectionKey<Ref<Cube>> = Symbol('key')
+    const Root = {
+      setup() {
+        return () => h(Child)
+      },
+    }
+    const Child = {
+      setup() {
+        const foo = inject(injectionKeyRef)
+        return () => `${foo?.value.size}`
+      },
+    }
+    const app = createApp(Root)
+    app.provide(injectionKeyRef, ref({ size: 10 }))
+    const root = nodeOps.createElement('div')
+    app.mount(root)
+    expect(serializeInner(root)).toBe(`10`)
+  })
   test('runWithContext', () => {
     const app = createApp({
       setup() {

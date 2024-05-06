@@ -17,7 +17,7 @@ import type {
 } from './componentPublicInstance'
 import { type Directive, validateDirectiveName } from './directives'
 import type { ElementNamespace, RootRenderFunction } from './renderer'
-import type { InjectionKey } from './apiInject'
+import type { Provide } from './apiInject'
 import { warn } from './warning'
 import { type VNode, cloneVNode, createVNode } from './vnode'
 import type { RootHydrateFunction } from './hydration'
@@ -50,7 +50,7 @@ export interface App<HostElement = any> {
     namespace?: boolean | ElementNamespace,
   ): ComponentPublicInstance
   unmount(): void
-  provide<T>(key: InjectionKey<T> | string, value: T): this
+  provide: Provide
 
   /**
    * Runs a function with the app as active instance. This allows using of `inject()` within the function to get access
