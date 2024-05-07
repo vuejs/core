@@ -727,8 +727,8 @@ function propHasMismatch(
 ): boolean {
   let mismatchType: string | undefined
   let mismatchKey: string | undefined
-  let actual: any
-  let expected: any
+  let actual: string | boolean | null | undefined
+  let expected: string | boolean | null | undefined
   if (key === 'class') {
     // classes might be in different order, but that doesn't affect cascade
     // so we just need to check if the class lists contain the same classes.
@@ -739,7 +739,7 @@ function propHasMismatch(
     }
   } else if (key === 'style') {
     // style might be in different order, but that doesn't affect cascade
-    actual = el.getAttribute('style')
+    actual = el.getAttribute('style') || ''
     expected = isString(clientValue)
       ? clientValue
       : stringifyStyle(normalizeStyle(clientValue))
