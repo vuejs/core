@@ -6,15 +6,17 @@ import type {
   TrustedTypesWindow,
 } from 'trusted-types/lib'
 
-let policy: TrustedTypePolicy | undefined = undefined
-function getPolicy(): TrustedTypePolicy | undefined {
+type VueTrustedTypePolicy =
+  | Pick<TrustedTypePolicy, 'name' | 'createHTML'>
+  | undefined
+
+let policy: VueTrustedTypePolicy = undefined
+function getPolicy(): VueTrustedTypePolicy {
   const ttWindow = window as unknown as TrustedTypesWindow
   if (ttWindow.trustedTypes && !policy) {
     try {
       policy = ttWindow.trustedTypes.createPolicy('vue', {
         createHTML: val => val,
-        createScript: val => val,
-        createScriptURL: val => val,
       })
     } catch (e: unknown) {
       // `createPolicy` throws a TypeError if the name is a duplicate
