@@ -919,6 +919,36 @@ describe('vModel', () => {
     expect(data.value).toEqual(1)
   })
 
+  it('v-model.number should work with input(type radio)', async () => {
+    const component = defineComponent({
+      data() {
+        return { value: null }
+      },
+      render() {
+        return [
+          withVModel(
+            h('input', {
+              type: 'radio',
+              class: 'foo',
+              value: '1',
+              'onUpdate:modelValue': setValue.bind(this),
+            }),
+            this.value,
+            { number: true },
+          ),
+        ]
+      },
+    })
+    render(h(component), root)
+
+    const input = root.querySelector('.foo')
+    const data = root._vnode.component.data
+    triggerEvent('change', input)
+    await nextTick()
+    expect(typeof data.value).toEqual('number')
+    expect(data.value).toBe(1)
+  })
+
   it('v-model.number should work with multiple select', async () => {
     const component = defineComponent({
       data() {
