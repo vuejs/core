@@ -13,7 +13,11 @@ type VueTrustedTypePolicy =
 let policy: VueTrustedTypePolicy = undefined
 function getPolicy(): VueTrustedTypePolicy {
   const ttWindow = window as unknown as TrustedTypesWindow
-  if (ttWindow.trustedTypes && !policy) {
+  if (
+    (__DEV__ || __FEATURE_PROD_TRUSTED_TYPES__) &&
+    ttWindow.trustedTypes &&
+    !policy
+  ) {
     try {
       policy = ttWindow.trustedTypes.createPolicy('vue', {
         createHTML: val => val,
