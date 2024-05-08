@@ -210,6 +210,52 @@ describe('compiler: transform <slot> outlets', () => {
     ])
   })
 
+  test('default slot outlet with props & fallback', () => {
+    const { ir, code } = compileWithSlotsOutlet(
+      `<slot :foo="bar"><div/></slot>`,
+    )
+    expect(code).toMatchSnapshot()
+    expect(ir.template[0]).toMatchObject('<div></div>')
+    expect(ir.block.operation).toMatchObject([
+      {
+        type: IRNodeTypes.SLOT_OUTLET_NODE,
+        id: 0,
+        name: { content: 'default' },
+        props: [[{ key: { content: 'foo' }, values: [{ content: 'bar' }] }]],
+        fallback: {
+          type: IRNodeTypes.BLOCK,
+          dynamic: {
+            children: [{ template: 0, id: 2 }],
+          },
+          returns: [2],
+        },
+      },
+    ])
+  })
+
+  test('named slot outlet with props & fallback', () => {
+    const { ir, code } = compileWithSlotsOutlet(
+      `<slot name="foo" :foo="bar"><div/></slot>`,
+    )
+    expect(code).toMatchSnapshot()
+    expect(ir.template[0]).toMatchObject('<div></div>')
+    expect(ir.block.operation).toMatchObject([
+      {
+        type: IRNodeTypes.SLOT_OUTLET_NODE,
+        id: 0,
+        name: { content: 'foo' },
+        props: [[{ key: { content: 'foo' }, values: [{ content: 'bar' }] }]],
+        fallback: {
+          type: IRNodeTypes.BLOCK,
+          dynamic: {
+            children: [{ template: 0, id: 2 }],
+          },
+          returns: [2],
+        },
+      },
+    ])
+  })
+
   test('error on unexpected custom directive on <slot>', () => {
     const onError = vi.fn()
     const source = `<slot v-foo />`

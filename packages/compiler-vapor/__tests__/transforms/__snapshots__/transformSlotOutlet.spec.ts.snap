@@ -22,6 +22,21 @@ export function render(_ctx) {
 }"
 `;
 
+exports[`compiler: transform <slot> outlets > default slot outlet with props & fallback 1`] = `
+"import { createSlot as _createSlot, template as _template } from 'vue/vapor';
+const t0 = _template("<div></div>")
+
+export function render(_ctx) {
+  const n0 = _createSlot("default", [
+    { foo: () => (_ctx.bar) }
+  ], () => {
+    const n2 = t0()
+    return n2
+  })
+  return n0
+}"
+`;
+
 exports[`compiler: transform <slot> outlets > default slot outlet with props 1`] = `
 "import { createSlot as _createSlot } from 'vue/vapor';
 
@@ -79,6 +94,21 @@ const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = _createSlot("foo", null, () => {
+    const n2 = t0()
+    return n2
+  })
+  return n0
+}"
+`;
+
+exports[`compiler: transform <slot> outlets > named slot outlet with props & fallback 1`] = `
+"import { createSlot as _createSlot, template as _template } from 'vue/vapor';
+const t0 = _template("<div></div>")
+
+export function render(_ctx) {
+  const n0 = _createSlot("foo", [
+    { foo: () => (_ctx.bar) }
+  ], () => {
     const n2 = t0()
     return n2
   })
