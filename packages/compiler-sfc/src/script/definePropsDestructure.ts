@@ -22,22 +22,16 @@ import { genPropsAccessExp } from '@vue/shared'
 import { isCallOf, resolveObjectKey } from './utils'
 import type { ScriptCompileContext } from './context'
 import { DEFINE_PROPS } from './defineProps'
-import { warnOnce } from '../warn'
 
 export function processPropsDestructure(
   ctx: ScriptCompileContext,
   declId: ObjectPattern,
 ) {
-  if (!ctx.options.propsDestructure) {
+  if (ctx.options.propsDestructure === 'error') {
+    ctx.error(`Props destructure is explicitly prohibited via config.`, declId)
+  } else if (ctx.options.propsDestructure === false) {
     return
   }
-
-  warnOnce(
-    `This project is using reactive props destructure, which is an experimental ` +
-      `feature. It may receive breaking changes or be removed in the future, so ` +
-      `use at your own risk.\n` +
-      `To stay updated, follow the RFC at https://github.com/vuejs/rfcs/discussions/502.`,
-  )
 
   ctx.propsDestructureDecl = declId
 
@@ -104,7 +98,7 @@ export function transformDestructuredProps(
   ctx: ScriptCompileContext,
   vueImportAliases: Record<string, string>,
 ) {
-  if (!ctx.options.propsDestructure) {
+  if (ctx.options.propsDestructure === false) {
     return
   }
 

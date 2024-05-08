@@ -190,13 +190,8 @@ function doWatch(
     }
   }
 
-  // TODO remove in 3.5
-  if (__DEV__ && deep !== void 0 && typeof deep === 'number') {
-    warn(
-      `watch() "deep" option with number value will be used as watch depth in future versions. ` +
-        `Please use a boolean instead to avoid potential breakage.`,
-    )
-  }
+  // Convert the `deep` option to a number type.
+  deep = deep === true ? Infinity : deep === false ? 0 : deep
 
   if (__DEV__ && !cb) {
     if (immediate !== undefined) {
@@ -232,8 +227,8 @@ function doWatch(
   const reactiveGetter = (source: object) => {
     // traverse will happen in wrapped getter below
     if (deep) return source
-    // for `deep: false` or shallow reactive, only traverse root-level properties
-    if (isShallow(source) || deep === false) return traverse(source, 1)
+    // for `deep: false | 0` or shallow reactive, only traverse root-level properties
+    if (isShallow(source) || deep === 0) return traverse(source, 1)
     // for `deep: undefined` on a reactive object, deeply traverse all properties
     return traverse(source)
   }
@@ -475,19 +470,11 @@ export function createPathGetter(ctx: any, path: string) {
 
 export function traverse(
   value: unknown,
-  depth?: number | boolean,
-  currentDepth = 0,
+  depth = Infinity,
   seen?: Set<unknown>,
 ) {
-  if (!isObject(value) || (value as any)[ReactiveFlags.SKIP]) {
+  if (depth <= 0 || !isObject(value) || (value as any)[ReactiveFlags.SKIP]) {
     return value
-  }
-
-  if (typeof depth === 'number' && depth > 0) {
-    if (currentDepth >= depth) {
-      return value
-    }
-    currentDepth++
   }
 
   seen = seen || new Set()
@@ -495,19 +482,20 @@ export function traverse(
     return value
   }
   seen.add(value)
+  depth--
   if (isRef(value)) {
-    traverse(value.value, depth, currentDepth, seen)
+    traverse(value.value, depth, seen)
   } else if (isArray(value)) {
     for (let i = 0; i < value.length; i++) {
-      traverse(value[i], depth, currentDepth, seen)
+      traverse(value[i], depth, seen)
     }
   } else if (isSet(value) || isMap(value)) {
     value.forEach((v: any) => {
-      traverse(v, depth, currentDepth, seen)
+      traverse(v, depth, seen)
     })
   } else if (isPlainObject(value)) {
     for (const key in value) {
-      traverse(value[key], depth, currentDepth, seen)
+      traverse(value[key], depth, seen)
     }
   }
   return value

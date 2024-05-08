@@ -344,6 +344,36 @@ describe('api: createApp', () => {
     ).toHaveBeenWarnedTimes(1)
   })
 
+  test('onUnmount', () => {
+    const cleanup = vi.fn().mockName('plugin cleanup')
+    const PluginA: Plugin = app => {
+      app.provide('foo', 1)
+      app.onUnmount(cleanup)
+    }
+    const PluginB: Plugin = {
+      install: (app, arg1, arg2) => {
+        app.provide('bar', arg1 + arg2)
+        app.onUnmount(cleanup)
+      },
+    }
+
+    const app = createApp({
+      render: () => `Test`,
+    })
+    app.use(PluginA)
+    app.use(PluginB)
+
+    const root = nodeOps.createElement('div')
+    app.mount(root)
+
+    //also can be added after mount
+    app.onUnmount(cleanup)
+
+    app.unmount()
+
+    expect(cleanup).toHaveBeenCalledTimes(3)
+  })
+
   test('config.errorHandler', () => {
     const error = new Error()
     const count = ref(0)

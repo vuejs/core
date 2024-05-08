@@ -12,7 +12,6 @@ import {
   PatchFlags,
   camelize,
   capitalize,
-  def,
   extend,
   hasOwn,
   hyphenate,
@@ -34,12 +33,12 @@ import {
   setCurrentInstance,
 } from './component'
 import { isEmitListener } from './componentEmits'
-import { InternalObjectKey } from './vnode'
 import type { AppContext } from './apiCreateApp'
 import { createPropsDefaultThis } from './compat/props'
 import { isCompatEnabled, softAssertCompatEnabled } from './compat/compatConfig'
 import { DeprecationTypes } from './compat/compatConfig'
 import { shouldSkipAttr } from './compat/attrsFallthrough'
+import { createInternalObject } from './internalObject'
 
 export type ComponentPropsOptions<P = Data> =
   | ComponentObjectPropsOptions<P>
@@ -68,7 +67,7 @@ export interface PropOptions<T = any, D = T> {
   skipFactory?: boolean
 }
 
-export type PropType<T> = PropConstructor<T> | PropConstructor<T>[]
+export type PropType<T> = PropConstructor<T> | (PropConstructor<T> | null)[]
 
 type PropConstructor<T = any> =
   | { new (...args: any[]): T & {} }
@@ -108,8 +107,10 @@ type DefaultKeys<T> = {
     : never
 }[keyof T]
 
-type InferPropType<T> = [T] extends [null]
-  ? any // null & true would fail to infer
+type InferPropType<T, NullAsAny = true> = [T] extends [null]
+  ? NullAsAny extends true
+    ? any
+    : null
   : [T] extends [{ type: null | true }]
     ? any // As TS issue https://github.com/Microsoft/TypeScript/issues/14829 // somehow `ObjectConstructor` when inferred from { (): T } becomes `any` // `BooleanConstructor` when inferred from PropConstructor(with PropMethod) becomes `Boolean`
     : [T] extends [ObjectConstructor | { type: ObjectConstructor }]
@@ -120,8 +121,8 @@ type InferPropType<T> = [T] extends [null]
           ? Date
           : [T] extends [(infer U)[] | { type: (infer U)[] }]
             ? U extends DateConstructor
-              ? Date | InferPropType<U>
-              : InferPropType<U>
+              ? Date | InferPropType<U, false>
+              : InferPropType<U, false>
             : [T] extends [Prop<infer V, infer D>]
               ? unknown extends V
                 ? IfAny<V, V, D>
@@ -194,8 +195,7 @@ export function initProps(
   isSSR = false,
 ) {
   const props: Data = {}
-  const attrs: Data = {}
-  def(attrs, InternalObjectKey, 1)
+  const attrs: Data = createInternalObject()
 
   instance.propsDefaults = Object.create(null)
 
@@ -361,7 +361,7 @@ export function updateProps(
 
   // trigger updates for $attrs in case it's used in component slots
   if (hasAttrsChanged) {
-    trigger(instance, TriggerOpTypes.SET, '$attrs')
+    trigger(instance.attrs, TriggerOpTypes.SET, '')
   }
 
   if (__DEV__) {
@@ -596,7 +596,7 @@ function validatePropName(key: string) {
 
 // use function string name to check type constructors
 // so that it works across vms / iframes.
-function getType(ctor: Prop<any>): string {
+function getType(ctor: Prop<any> | null): string {
   // Early return for null to avoid unnecessary computations
   if (ctor === null) {
     return 'null'
@@ -616,7 +616,7 @@ function getType(ctor: Prop<any>): string {
   return ''
 }
 
-function isSameType(a: Prop<any>, b: Prop<any>): boolean {
+function isSameType(a: Prop<any> | null, b: Prop<any> | null): boolean {
   return getType(a) === getType(b)
 }
 
@@ -709,24 +709,27 @@ type AssertionResult = {
 /**
  * dev only
  */
-function assertType(value: unknown, type: PropConstructor): AssertionResult {
+function assertType(
+  value: unknown,
+  type: PropConstructor | null,
+): AssertionResult {
   let valid
   const expectedType = getType(type)
-  if (isSimpleType(expectedType)) {
+  if (expectedType === 'null') {
+    valid = value === null
+  } else if (isSimpleType(expectedType)) {
     const t = typeof value
     valid = t === expectedType.toLowerCase()
     // for primitive wrapper objects
     if (!valid && t === 'object') {
-      valid = value instanceof type
+      valid = value instanceof (type as PropConstructor)
     }
   } else if (expectedType === 'Object') {
     valid = isObject(value)
   } else if (expectedType === 'Array') {
     valid = isArray(value)
-  } else if (expectedType === 'null') {
-    valid = value === null
   } else {
-    valid = value instanceof type
+    valid = value instanceof (type as PropConstructor)
   }
   return {
     valid,

@@ -123,6 +123,7 @@ export const devtoolsComponentRemoved = (
   }
 }
 
+/*! #__NO_SIDE_EFFECTS__ */
 function createDevtoolsComponentHook(hook: DevtoolsHooks) {
   return (component: ComponentInternalInstance) => {
     emit(

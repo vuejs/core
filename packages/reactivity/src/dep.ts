@@ -27,12 +27,23 @@ export class Dep {
    * Link between this dep and the current active effect
    */
   activeLink?: Link = undefined
+
   /**
    * Doubly linked list representing the subscribing effects (tail)
    */
   subs?: Link = undefined
 
-  constructor(public computed?: ComputedRefImpl) {}
+  /**
+   * Doubly linked list representing the subscribing effects (head)
+   * DEV only, for invoking onTrigger hooks in correct order
+   */
+  subsHead?: Link
+
+  constructor(public computed?: ComputedRefImpl) {
+    if (__DEV__) {
+      this.subsHead = undefined
+    }
+  }
 
   track(debugInfo?: DebuggerEventExtraInfo): Link | undefined {
     if (!activeSub || !shouldTrack) {
@@ -113,21 +124,28 @@ export class Dep {
   notify(debugInfo?: DebuggerEventExtraInfo) {
     startBatch()
     try {
-      for (let link = this.subs; link; link = link.prevSub) {
-        if (
-          __DEV__ &&
-          link.sub.onTrigger &&
-          !(link.sub.flags & EffectFlags.NOTIFIED)
-        ) {
-          link.sub.onTrigger(
-            extend(
-              {
-                effect: link.sub,
-              },
-              debugInfo,
-            ),
-          )
+      if (__DEV__) {
+        // subs are notified and batched in reverse-order and then invoked in
+        // original order at the end of the batch, but onTrigger hooks should
+        // be invoked in original order here.
+        for (let head = this.subsHead; head; head = head.nextSub) {
+          if (
+            __DEV__ &&
+            head.sub.onTrigger &&
+            !(head.sub.flags & EffectFlags.NOTIFIED)
+          ) {
+            head.sub.onTrigger(
+              extend(
+                {
+                  effect: head.sub,
+                },
+                debugInfo,
+              ),
+            )
+          }
         }
+      }
+      for (let link = this.subs; link; link = link.prevSub) {
         link.sub.notify()
       }
     } finally {
@@ -152,6 +170,11 @@ function addSub(link: Link) {
     link.prevSub = currentTail
     if (currentTail) currentTail.nextSub = link
   }
+
+  if (__DEV__ && link.dep.subsHead === undefined) {
+    link.dep.subsHead = link
+  }
+
   link.dep.subs = link
 }
 
