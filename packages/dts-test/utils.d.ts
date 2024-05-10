@@ -17,3 +17,5 @@ export type IsUnion<T, U extends T = T> = (
   : true
 
 export type IsAny<T> = 0 extends 1 & T ? true : false
+
+export type Prettify<T> = { [K in keyof T]: T[K] } & {}
