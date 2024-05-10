@@ -47,6 +47,32 @@ describe('scopeId runtime support', () => {
     )
   })
 
+  test('should attach scopeId to fragment components in parent component', () => {
+    const App = {
+      __scopeId: 'parent',
+      render: () => h('div', [h(Foo), h(Bar)]),
+    }
+    const Foo = {
+      __scopeId: 'foo',
+      render: () => h(FragmentComp),
+    }
+    const Bar = {
+      __scopeId: 'bar',
+      render: () => h('div', [h(FragmentComp)]),
+    }
+    const FragmentComp = {
+      __scopeId: 'fragmentComp',
+      render: () => h(Fragment, [h('span', [h('p')]), h('p')]),
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(App), root)
+
+    expect(serializeInner(root)).toBe(
+      `<div parent><span fragmentComp foo parent><p fragmentComp></p></span><p fragmentComp foo parent></p><div bar parent><span fragmentComp bar><p fragmentComp></p></span><p fragmentComp bar></p></div></div>`,
+    )
+  })
+
   // :slotted basic
   test('should work on slots', () => {
     const Child = {

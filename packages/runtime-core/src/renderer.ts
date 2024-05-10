@@ -752,7 +752,11 @@ function baseCreateRenderer(
         subTree =
           filterSingleRoot(subTree.children as VNodeArrayChildren) || subTree
       }
-      if (vnode === subTree) {
+      if (
+        vnode === subTree ||
+        (subTree.type === Fragment &&
+          (subTree.children as VNodeArrayChildren).includes(vnode))
+      ) {
         const parentVNode = parentComponent.vnode
         setScopeId(
           el,
