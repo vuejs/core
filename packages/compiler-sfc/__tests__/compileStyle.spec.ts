@@ -213,7 +213,7 @@ describe('SFC scoped CSS', () => {
       }"
     `)
     expect(
-      compileScoped(`.baz .qux ::v-global(.foo .bar, .bar) { color: red; }`)
+      compileScoped(`.baz .qux ::v-global(.foo .bar, .bar) { color: red; }`),
     ).toMatchInlineSnapshot(`
       ".foo .bar, .bar { color: red;
       }"
@@ -225,7 +225,7 @@ describe('SFC scoped CSS', () => {
       }"
     `)
     expect(
-      compileScoped(`.baz ::v-global(.foo .bar,.faa) .qux { color: red; }`)
+      compileScoped(`.baz ::v-global(.foo .bar,.faa) .qux { color: red; }`),
     ).toMatchInlineSnapshot(`
       ".foo .bar,.faa { color: red;
       }"

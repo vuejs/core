@@ -132,7 +132,7 @@ function rewriteSelector(
               }
               const newList = prevList.map(s => {
                 const _newNode = s.clone(
-                  {}
+                  {},
                 ) as selectorParser.Selector['nodes'][0]
                 if (nodes.includes(s)) {
                   nodes.push(_newNode)
@@ -211,7 +211,7 @@ function rewriteSelector(
               })
             }
             const newList = prevList.map(
-              s => s.clone({}) as selectorParser.Selector['nodes'][0]
+              s => s.clone({}) as selectorParser.Selector['nodes'][0],
             )
 
             newList.unshift(selectorParser.combinator({ value: ',' }))
@@ -316,8 +316,8 @@ function rewriteSelector(
           attribute: idToAdd,
           value: idToAdd,
           raws: {},
-          quoteMark: `"`
-        })
+          quoteMark: `"`,
+        }),
       )
     })
   }
