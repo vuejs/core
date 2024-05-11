@@ -1,3 +1,33 @@
+# [3.5.0-alpha.2](https://github.com/vuejs/core/compare/v3.4.26...v3.5.0-alpha.2) (2024-05-04)
+
+
+### Bug Fixes
+
+* **types:** fix app.component() typing with inline defineComponent ([908f70a](https://github.com/vuejs/core/commit/908f70adc06038d1ea253d96f4024367f4a7545d)), closes [#10843](https://github.com/vuejs/core/issues/10843)
+* **types:** fix compat with generated types that rely on CreateComponentPublicInstance ([c146186](https://github.com/vuejs/core/commit/c146186396d0c1a65423b8c9a21251c5a6467336)), closes [#10842](https://github.com/vuejs/core/issues/10842)
+* **types:** props in defineOptions type should be optional ([124c4ca](https://github.com/vuejs/core/commit/124c4cac833a28ae9bc8edc576c1d0c7c41f5985)), closes [#10841](https://github.com/vuejs/core/issues/10841)
+
+
+### Features
+
+* **runtime-core:** add app.onUnmount() for registering cleanup functions ([#4619](https://github.com/vuejs/core/issues/4619)) ([582a3a3](https://github.com/vuejs/core/commit/582a3a382b1adda565bac576b913a88d9e8d7a9e)), closes [#4516](https://github.com/vuejs/core/issues/4516)
+
+
+
+## [3.4.26](https://github.com/vuejs/core/compare/v3.4.25...v3.4.26) (2024-04-29)
+
+
+### Bug Fixes
+
+* **compiler-core:** fix bail constant for globals ([fefce06](https://github.com/vuejs/core/commit/fefce06b41e3b75de3d748dc6399628ec5056e78))
+* **compiler-core:** remove unnecessary constant bail check ([09b4df8](https://github.com/vuejs/core/commit/09b4df809e59ef5f4bc91acfc56dc8f82a8e243a)), closes [#10807](https://github.com/vuejs/core/issues/10807)
+* **runtime-core:** attrs should be readonly in functional components ([#10767](https://github.com/vuejs/core/issues/10767)) ([e8fd644](https://github.com/vuejs/core/commit/e8fd6446d14a6899e5e8ab1ee394d90088e01844))
+* **runtime-core:** ensure slot compiler marker writable ([#10825](https://github.com/vuejs/core/issues/10825)) ([9c2de62](https://github.com/vuejs/core/commit/9c2de6244cd44bc5fbfd82b5850c710ce725044f)), closes [#10818](https://github.com/vuejs/core/issues/10818)
+* **runtime-core:** properly handle inherit transition during clone VNode ([#10809](https://github.com/vuejs/core/issues/10809)) ([638a79f](https://github.com/vuejs/core/commit/638a79f64a7e184f2a2c65e21d764703f4bda561)), closes [#3716](https://github.com/vuejs/core/issues/3716) [#10497](https://github.com/vuejs/core/issues/10497) [#4091](https://github.com/vuejs/core/issues/4091)
+* **Transition:** re-fix [#10620](https://github.com/vuejs/core/issues/10620) ([#10832](https://github.com/vuejs/core/issues/10832)) ([accf839](https://github.com/vuejs/core/commit/accf8396ae1c9dd49759ba0546483f1d2c70c9bc)), closes [#10632](https://github.com/vuejs/core/issues/10632) [#10827](https://github.com/vuejs/core/issues/10827)
+
+
+
 # [3.5.0-alpha.1](https://github.com/vuejs/core/compare/v3.4.25...v3.5.0-alpha.1) (2024-04-29)
 
 

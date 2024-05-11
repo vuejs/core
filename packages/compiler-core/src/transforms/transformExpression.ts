@@ -48,10 +48,6 @@ export const isLiteralWhitelisted = /*#__PURE__*/ makeMap(
   'true,false,null,this',
 )
 
-// a heuristic safeguard to bail constant expressions on presence of
-// likely function invocation and member access
-const constantBailRE = /\w\s*\(|\.[^\d]/
-
 export const transformExpression: NodeTransform = (node, context) => {
   if (node.type === NodeTypes.INTERPOLATION) {
     node.content = processExpression(
@@ -228,8 +224,6 @@ export function processExpression(
 
   // fast path if expression is a simple identifier.
   const rawExp = node.content
-  // bail constant on parens (function invocation) and dot (member access)
-  const bailConstant = constantBailRE.test(rawExp)
 
   let ast = node.ast
 
@@ -319,7 +313,12 @@ export function processExpression(
       } else {
         // The identifier is considered constant unless it's pointing to a
         // local scope variable (a v-for alias, or a v-slot prop)
-        if (!(needPrefix && isLocal) && !bailConstant) {
+        if (
+          !(needPrefix && isLocal) &&
+          parent.type !== 'CallExpression' &&
+          parent.type !== 'NewExpression' &&
+          parent.type !== 'MemberExpression'
+        ) {
           ;(node as QualifiedId).isConstant = true
         }
         // also generate sub-expressions for other identifiers for better
@@ -373,9 +372,7 @@ export function processExpression(
     ret.ast = ast
   } else {
     ret = node
-    ret.constType = bailConstant
-      ? ConstantTypes.NOT_CONSTANT
-      : ConstantTypes.CAN_STRINGIFY
+    ret.constType = ConstantTypes.CAN_STRINGIFY
   }
   ret.identifiers = Object.keys(knownIds)
   return ret

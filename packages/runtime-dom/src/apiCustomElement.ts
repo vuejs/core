@@ -9,7 +9,7 @@ import {
   type ComponentProvideOptions,
   type ComputedOptions,
   type ConcreteComponent,
-  type CreateComponentPublicInstance,
+  type CreateComponentPublicInstanceWithMixins,
   type DefineComponent,
   type Directive,
   type EmitsOptions,
@@ -97,7 +97,7 @@ export function defineCustomElement<
     Provide
   > &
     ThisType<
-      CreateComponentPublicInstance<
+      CreateComponentPublicInstanceWithMixins<
         Readonly<ResolvedProps>,
         SetupBindings,
         Data,

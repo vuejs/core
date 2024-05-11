@@ -10,6 +10,9 @@ import type {
 } from '@babel/types'
 import { walk } from 'estree-walker'
 
+/**
+ * Return value indicates whether the AST walked can be a constant
+ */
 export function walkIdentifiers(
   root: Node,
   onIdentifier: (

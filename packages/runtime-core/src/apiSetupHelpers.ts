@@ -210,7 +210,7 @@ export function defineOptions<
     /**
      * props should be defined via defineProps().
      */
-    props: never
+    props?: never
     /**
      * emits should be defined via defineEmits().
      */

@@ -26,6 +26,7 @@ import { version } from '.'
 import { installAppCompatProperties } from './compat/global'
 import type { NormalizedPropsOptions } from './componentProps'
 import type { ObjectEmitsOptions } from './componentEmits'
+import { ErrorCodes, callWithAsyncErrorHandling } from './errorHandling'
 import type { DefineComponent } from './apiDefineComponent'
 
 export interface App<HostElement = any> {
@@ -40,7 +41,10 @@ export interface App<HostElement = any> {
 
   mixin(mixin: ComponentOptions): this
   component(name: string): Component | undefined
-  component(name: string, component: Component | DefineComponent): this
+  component<T extends Component | DefineComponent>(
+    name: string,
+    component: T,
+  ): this
   directive<T = any, V = any>(name: string): Directive<T, V> | undefined
   directive<T = any, V = any>(name: string, directive: Directive<T, V>): this
   mount(
@@ -49,6 +53,7 @@ export interface App<HostElement = any> {
     namespace?: boolean | ElementNamespace,
   ): ComponentPublicInstance
   unmount(): void
+  onUnmount(cb: () => void): void
   provide<T>(key: InjectionKey<T> | string, value: T): this
 
   /**
@@ -213,6 +218,7 @@ export function createAppAPI<HostElement>(
 
     const context = createAppContext()
     const installedPlugins = new WeakSet()
+    const pluginCleanupFns: Array<() => any> = []
 
     let isMounted = false
 
@@ -365,8 +371,23 @@ export function createAppAPI<HostElement>(
         }
       },
 
+      onUnmount(cleanupFn: () => void) {
+        if (__DEV__ && typeof cleanupFn !== 'function') {
+          warn(
+            `Expected function as first argument to app.onUnmount(), ` +
+              `but got ${typeof cleanupFn}`,
+          )
+        }
+        pluginCleanupFns.push(cleanupFn)
+      },
+
       unmount() {
         if (isMounted) {
+          callWithAsyncErrorHandling(
+            pluginCleanupFns,
+            app._instance,
+            ErrorCodes.APP_UNMOUNT_CLEANUP,
+          )
           render(null, app._container)
           if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
             app._instance = null

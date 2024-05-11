@@ -270,6 +270,10 @@ export type {
   ComputedOptions,
   RuntimeCompilerOptions,
   ComponentInjectOptions,
+  // deprecated
+  ComponentOptionsWithoutProps,
+  ComponentOptionsWithArrayProps,
+  ComponentOptionsWithObjectProps,
 } from './componentOptions'
 export type {
   EmitsOptions,
@@ -280,6 +284,7 @@ export type {
   ComponentPublicInstance,
   ComponentCustomProperties,
   CreateComponentPublicInstance,
+  CreateComponentPublicInstanceWithMixins,
 } from './componentPublicInstance'
 export type {
   Renderer,

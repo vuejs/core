@@ -52,8 +52,12 @@ export type DirectiveHook<
   prevVNode: Prev,
 ) => void
 
-export type SSRDirectiveHook = (
-  binding: DirectiveBinding,
+export type SSRDirectiveHook<
+  Value = any,
+  Modifiers extends string = string,
+  Arg extends string = string,
+> = (
+  binding: DirectiveBinding<Value, Modifiers, Arg>,
   vnode: VNode,
 ) => Data | undefined
 
@@ -63,6 +67,12 @@ export interface ObjectDirective<
   Modifiers extends string = string,
   Arg extends string = string,
 > {
+  /**
+   * @internal without this, ts-expect-error in directives.test-d.ts somehow
+   * fails when running tsc, but passes in IDE and when testing against built
+   * dts. Could be a TS bug.
+   */
+  __mod?: Modifiers
   created?: DirectiveHook<HostElement, null, Value, Modifiers, Arg>
   beforeMount?: DirectiveHook<HostElement, null, Value, Modifiers, Arg>
   mounted?: DirectiveHook<HostElement, null, Value, Modifiers, Arg>
@@ -82,7 +92,7 @@ export interface ObjectDirective<
   >
   beforeUnmount?: DirectiveHook<HostElement, null, Value, Modifiers, Arg>
   unmounted?: DirectiveHook<HostElement, null, Value, Modifiers, Arg>
-  getSSRProps?: SSRDirectiveHook
+  getSSRProps?: SSRDirectiveHook<Value, Modifiers, Arg>
   deep?: boolean
 }
 
