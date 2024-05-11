@@ -2021,7 +2021,7 @@ describe('Suspense', () => {
     viewRef.value = 0
     await nextTick()
 
-    expect(serializeInner(root)).toBe('<!---->')
+    expect(serializeInner(root)).toBe('<div>sync</div>')
 
     await Promise.all(deps)
     await nextTick()

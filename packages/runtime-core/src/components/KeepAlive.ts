@@ -228,7 +228,14 @@ const KeepAliveImpl: ComponentOptions = {
     const cacheSubtree = () => {
       // fix #1621, the pendingCacheKey could be 0
       if (pendingCacheKey != null) {
-        cache.set(pendingCacheKey, getInnerChild(instance.subTree))
+        if (isSuspense(instance.subTree.type)) {
+          const cacheKey = pendingCacheKey
+          queuePostRenderEffect(() => {
+            cache.set(cacheKey, getInnerChild(instance.subTree))
+          }, instance.subTree.suspense)
+        } else {
+          cache.set(pendingCacheKey, getInnerChild(instance.subTree))
+        }
       }
     }
     onMounted(cacheSubtree)
