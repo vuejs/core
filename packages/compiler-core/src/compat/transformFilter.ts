@@ -169,7 +169,7 @@ function parseFilter(node: SimpleExpressionNode, context: TransformContext) {
     }
     node.content = expression
     // reset ast since the content is replaced
-    node.ast = null
+    node.ast = undefined
   }
 }
 
