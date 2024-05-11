@@ -259,10 +259,10 @@ let uid = 0
 export function createComponentInstance(
   component: ObjectComponent | FunctionalComponent,
   rawProps: RawProps | null,
-  slots: Slots | null = null,
-  dynamicSlots: DynamicSlots | null = null,
+  slots: Slots | null,
+  dynamicSlots: DynamicSlots | null,
   // application root node only
-  appContext: AppContext | null = null,
+  appContext?: AppContext,
 ): ComponentInternalInstance {
   const parent = getCurrentInstance()
   const _appContext =
