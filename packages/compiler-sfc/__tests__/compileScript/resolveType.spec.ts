@@ -946,6 +946,53 @@ describe('resolveType', () => {
       expect(deps && [...deps]).toStrictEqual(['/user.ts'])
     })
 
+    test('ts module resolve w/ project reference folder', () => {
+      const files = {
+        '/tsconfig.json': JSON.stringify({
+          references: [
+            {
+              path: './web',
+            },
+            {
+              path: './empty',
+            },
+            {
+              path: './noexists-should-ignore',
+            },
+          ],
+        }),
+        '/web/tsconfig.json': JSON.stringify({
+          include: ['../**/*.ts', '../**/*.vue'],
+          compilerOptions: {
+            composite: true,
+            paths: {
+              bar: ['../user.ts'],
+            },
+          },
+        }),
+        // tsconfig with no include / paths defined, should match nothing
+        '/empty/tsconfig.json': JSON.stringify({
+          compilerOptions: {
+            composite: true,
+          },
+        }),
+        '/user.ts': 'export type User = { bar: string }',
+      }
+
+      const { props, deps } = resolve(
+        `
+        import { User } from 'bar'
+        defineProps<User>() 
+        `,
+        files,
+      )
+
+      expect(props).toStrictEqual({
+        bar: ['String'],
+      })
+      expect(deps && [...deps]).toStrictEqual(['/user.ts'])
+    })
+
     test('ts module resolve w/ path aliased vue file', () => {
       const files = {
         '/tsconfig.json': JSON.stringify({

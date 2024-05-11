@@ -1009,7 +1009,7 @@ function resolveWithTS(
         const excluded: string[] = c.config.raw?.exclude
         if (
           (!included && (!base || containingFile.startsWith(base))) ||
-          included.some(p => isMatch(containingFile, joinPaths(base, p)))
+          included?.some(p => isMatch(containingFile, joinPaths(base, p)))
         ) {
           if (
             excluded &&
@@ -1080,8 +1080,12 @@ function loadTSConfig(
   const res = [config]
   if (config.projectReferences) {
     for (const ref of config.projectReferences) {
-      tsConfigRefMap.set(ref.path, configPath)
-      res.unshift(...loadTSConfig(ref.path, ts, fs))
+      const refPath = ts.resolveProjectReferencePath(ref)
+      if (!fs.fileExists(refPath)) {
+        continue
+      }
+      tsConfigRefMap.set(refPath, configPath)
+      res.unshift(...loadTSConfig(refPath, ts, fs))
     }
   }
   return res
