@@ -12,12 +12,8 @@ return withDirectives(h(comp), [
 */
 
 import type { VNode } from './vnode'
-import {
-  type Data,
-  EMPTY_OBJ,
-  isBuiltInDirective,
-  isFunction,
-} from '@vue/shared'
+import { EMPTY_OBJ, isBuiltInDirective, isFunction } from '@vue/shared'
+import type { Data } from '@vue/runtime-shared'
 import { warn } from './warning'
 import { type ComponentInternalInstance, getExposeProxy } from './component'
 import { currentRenderingInstance } from './componentRenderContext'

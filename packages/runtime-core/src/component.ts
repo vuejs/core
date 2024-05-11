@@ -60,7 +60,6 @@ import {
   normalizeEmitsOptions,
 } from './componentEmits'
 import {
-  type Data,
   EMPTY_OBJ,
   type IfAny,
   NOOP,
@@ -73,6 +72,7 @@ import {
   isPromise,
   makeMap,
 } from '@vue/shared'
+import type { Data } from '@vue/runtime-shared'
 import type { SuspenseBoundary } from './components/Suspense'
 import type { CompilerOptions } from '@vue/compiler-core'
 import { markAttrsAccessed } from './componentRenderUtils'

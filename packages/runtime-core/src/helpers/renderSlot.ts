@@ -12,7 +12,8 @@ import {
   isVNode,
   openBlock,
 } from '../vnode'
-import { type Data, PatchFlags, SlotFlags } from '@vue/shared'
+import { PatchFlags, SlotFlags } from '@vue/shared'
+import type { Data } from '@vue/runtime-shared'
 import { warn } from '../warning'
 import { createVNode } from '@vue/runtime-core'
 import { isAsyncWrapper } from '../apiAsyncComponent'

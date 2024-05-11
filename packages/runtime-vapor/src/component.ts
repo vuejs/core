@@ -26,7 +26,7 @@ import {
 import { VaporLifecycleHooks } from './apiLifecycle'
 import { warn } from './warning'
 import { type AppContext, createAppContext } from './apiCreateVaporApp'
-import type { Data } from '@vue/shared'
+import type { Data } from '@vue/runtime-shared'
 
 export type Component = FunctionalComponent | ObjectComponent
 

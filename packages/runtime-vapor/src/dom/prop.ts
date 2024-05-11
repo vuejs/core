@@ -1,5 +1,4 @@
 import {
-  type Data,
   includeBooleanAttr,
   isArray,
   isFunction,
@@ -18,6 +17,7 @@ import {
   recordPropMetadata,
 } from '../componentMetadata'
 import { on } from './event'
+import type { Data } from '@vue/runtime-shared'
 
 export function setClass(el: Element, value: any) {
   const prev = recordPropMetadata(el, 'class', (value = normalizeClass(value)))

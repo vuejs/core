@@ -1,5 +1,4 @@
 import {
-  type Data,
   EMPTY_ARR,
   PatchFlags,
   ShapeFlags,
@@ -13,6 +12,7 @@ import {
   normalizeClass,
   normalizeStyle,
 } from '@vue/shared'
+import type { Data } from '@vue/runtime-shared'
 import {
   type ClassComponent,
   type Component,

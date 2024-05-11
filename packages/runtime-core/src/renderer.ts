@@ -26,7 +26,6 @@ import {
   updateHOCHostEl,
 } from './componentRenderUtils'
 import {
-  type Data,
   EMPTY_ARR,
   EMPTY_OBJ,
   NOOP,
@@ -37,6 +36,7 @@ import {
   isArray,
   isReservedProp,
 } from '@vue/shared'
+import type { Data } from '@vue/runtime-shared'
 import {
   type SchedulerFactory,
   type SchedulerJob,

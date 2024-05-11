@@ -1,5 +1,4 @@
 import {
-  type Data,
   EMPTY_ARR,
   EMPTY_OBJ,
   camelize,
@@ -9,6 +8,7 @@ import {
   isArray,
   isFunction,
 } from '@vue/shared'
+import type { Data } from '@vue/runtime-shared'
 import { shallowReactive } from '@vue/reactivity'
 import { warn } from './warning'
 import {

@@ -4,7 +4,8 @@ import {
   type ConcreteComponent,
   formatComponentName,
 } from './component'
-import { type Data, isFunction, isString } from '@vue/shared'
+import { isFunction, isString } from '@vue/shared'
+import type { Data } from '@vue/runtime-shared'
 import { isRef, pauseTracking, resetTracking, toRaw } from '@vue/reactivity'
 import { ErrorCodes, callWithErrorHandling } from './errorHandling'
 

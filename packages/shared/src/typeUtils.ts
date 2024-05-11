@@ -22,8 +22,6 @@ export type Awaited<T> = T extends null | undefined
       : never // the argument to `then` was not callable
     : T // non-object or non-thenable
 
-export type Data = Record<string, unknown>
-
 /**
  * Utility for extracting the parameters from a function overload (for typed emits)
  * https://github.com/microsoft/TypeScript/issues/32164#issuecomment-1146737709

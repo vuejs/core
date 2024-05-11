@@ -6,7 +6,6 @@ import {
   trigger,
 } from '@vue/reactivity'
 import {
-  type Data,
   EMPTY_ARR,
   EMPTY_OBJ,
   type IfAny,
@@ -25,6 +24,7 @@ import {
   makeMap,
   toRawType,
 } from '@vue/shared'
+import type { Data } from '@vue/runtime-shared'
 import { warn } from './warning'
 import {
   type ComponentInternalInstance,

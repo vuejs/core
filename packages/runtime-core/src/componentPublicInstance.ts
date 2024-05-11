@@ -11,7 +11,6 @@ import {
   instanceWatch,
 } from './apiWatch'
 import {
-  type Data,
   EMPTY_OBJ,
   type IfAny,
   NOOP,
@@ -23,6 +22,7 @@ import {
   isGloballyAllowed,
   isString,
 } from '@vue/shared'
+import type { Data } from '@vue/runtime-shared'
 import {
   ReactiveFlags,
   type ShallowUnwrapRef,

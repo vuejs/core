@@ -1,4 +1,5 @@
-import { type Data, isArray } from '@vue/shared'
+import { isArray } from '@vue/shared'
+import type { Data } from '@vue/runtime-shared'
 import { inject } from '../apiInject'
 import type { ComponentInternalInstance } from '../component'
 import {
