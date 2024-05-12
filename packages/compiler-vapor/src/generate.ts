@@ -13,8 +13,8 @@ import {
   LF,
   NEWLINE,
   buildCodeFragment,
+  codeFragmentToString,
   genCall,
-  genCodeFragment,
 } from './generators/utils'
 
 export type CodegenOptions = Omit<BaseCodegenOptions, 'optimizeImports'>
@@ -132,7 +132,7 @@ export function generate(
     frag.unshift(...new Array<CodeFragment>(newlineCount).fill(LF))
   }
 
-  let [code, map] = genCodeFragment(frag, context)
+  let [code, map] = codeFragmentToString(frag, context)
   if (!inline) {
     code = preamble + code
   }

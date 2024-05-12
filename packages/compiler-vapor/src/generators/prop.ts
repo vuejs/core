@@ -14,9 +14,9 @@ import {
 import { genExpression } from './expression'
 import {
   type CodeFragment,
+  DELIMITERS_ARRAY,
+  DELIMITERS_OBJECT,
   NEWLINE,
-  SEGMENTS_ARRAY,
-  SEGMENTS_OBJECT,
   genCall,
   genMulti,
 } from './utils'
@@ -51,7 +51,7 @@ export function genSetProp(
   return [
     NEWLINE,
     ...genCall(
-      vaporHelper(helperName),
+      [vaporHelper(helperName), null],
       `n${oper.element}`,
       omitKey ? false : genExpression(key, context),
       genPropValue(values, context),
@@ -87,7 +87,7 @@ function genLiteralObjectProps(
   context: CodegenContext,
 ): CodeFragment[] {
   return genMulti(
-    SEGMENTS_OBJECT,
+    DELIMITERS_OBJECT,
     ...props.map(prop => [
       ...genPropKey(prop, context),
       `: `,
@@ -130,7 +130,7 @@ function genPropValue(values: SimpleExpressionNode[], context: CodegenContext) {
     return genExpression(values[0], context)
   }
   return genMulti(
-    SEGMENTS_ARRAY,
+    DELIMITERS_ARRAY,
     ...values.map(expr => genExpression(expr, context)),
   )
 }

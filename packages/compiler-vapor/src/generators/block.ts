@@ -1,10 +1,10 @@
 import type { BlockIRNode } from '../ir'
 import {
   type CodeFragment,
+  DELIMITERS_ARRAY,
   INDENT_END,
   INDENT_START,
   NEWLINE,
-  SEGMENTS_ARRAY,
   buildCodeFragment,
   genCall,
   genMulti,
@@ -71,7 +71,7 @@ export function genBlockContent(
   const returnNodes = returns.map(n => `n${n}`)
   const returnsCode: CodeFragment[] =
     returnNodes.length > 1
-      ? genMulti(SEGMENTS_ARRAY, ...returnNodes)
+      ? genMulti(DELIMITERS_ARRAY, ...returnNodes)
       : [returnNodes[0] || 'null']
   push(...(customReturns ? customReturns(returnsCode) : returnsCode))
 

@@ -17,7 +17,7 @@ export {
   genCall,
   genMulti,
   buildCodeFragment,
-  genCodeFragment,
+  codeFragmentToString,
   type CodeFragment,
 } from './generators/utils'
 export {

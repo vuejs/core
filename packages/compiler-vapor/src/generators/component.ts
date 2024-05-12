@@ -11,11 +11,11 @@ import {
 } from '../ir'
 import {
   type CodeFragment,
+  DELIMITERS_ARRAY,
+  DELIMITERS_ARRAY_NEWLINE,
+  DELIMITERS_OBJECT,
+  DELIMITERS_OBJECT_NEWLINE,
   NEWLINE,
-  SEGMENTS_ARRAY,
-  SEGMENTS_ARRAY_NEWLINE,
-  SEGMENTS_OBJECT,
-  SEGMENTS_OBJECT_NEWLINE,
   genCall,
   genMulti,
 } from './utils'
@@ -43,13 +43,9 @@ export function genCreateComponent(
     ...genCall(
       vaporHelper('createComponent'),
       tag,
-      rawProps || (slots || dynamicSlots || root ? 'null' : false),
-      slots ? genSlots(slots, context) : dynamicSlots || root ? 'null' : false,
-      dynamicSlots
-        ? genDynamicSlots(dynamicSlots, context)
-        : root
-          ? 'null'
-          : false,
+      rawProps,
+      slots && genSlots(slots, context),
+      dynamicSlots && genDynamicSlots(dynamicSlots, context),
       root && 'true',
     ),
     ...genDirectivesForElement(oper.id, context),
@@ -77,7 +73,7 @@ export function genRawProps(props: IRProps[], context: CodegenContext) {
       } else {
         let expr: CodeFragment[]
         if (props.kind === IRDynamicPropsKind.ATTRIBUTE)
-          expr = genMulti(SEGMENTS_OBJECT, genProp(props, context))
+          expr = genMulti(DELIMITERS_OBJECT, genProp(props, context))
         else {
           expr = genExpression(props.value, context)
           if (props.handler) expr = genCall(vaporHelper('toHandlers'), expr)
@@ -89,7 +85,7 @@ export function genRawProps(props: IRProps[], context: CodegenContext) {
       Boolean as any as (v: CodeFragment[] | undefined) => v is CodeFragment[],
     )
   if (frag.length) {
-    return genMulti(SEGMENTS_ARRAY_NEWLINE, ...frag)
+    return genMulti(DELIMITERS_ARRAY_NEWLINE, ...frag)
   }
 }
 
@@ -98,7 +94,7 @@ function genStaticProps(
   context: CodegenContext,
 ): CodeFragment[] {
   return genMulti(
-    props.length > 1 ? SEGMENTS_OBJECT_NEWLINE : SEGMENTS_OBJECT,
+    props.length > 1 ? DELIMITERS_OBJECT_NEWLINE : DELIMITERS_OBJECT,
     ...props.map(prop => genProp(prop, context, true)),
   )
 }
@@ -147,7 +143,7 @@ function genModelModifiers(
 function genSlots(slots: ComponentSlots, context: CodegenContext) {
   const slotList = Object.entries(slots)
   return genMulti(
-    slotList.length > 1 ? SEGMENTS_OBJECT_NEWLINE : SEGMENTS_OBJECT,
+    slotList.length > 1 ? DELIMITERS_OBJECT_NEWLINE : DELIMITERS_OBJECT,
     ...slotList.map(([name, slot]) => [name, ': ', ...genBlock(slot, context)]),
   )
 }
@@ -157,10 +153,10 @@ function genDynamicSlots(
   context: CodegenContext,
 ) {
   const slotsExpr = genMulti(
-    dynamicSlots.length > 1 ? SEGMENTS_ARRAY_NEWLINE : SEGMENTS_ARRAY,
+    dynamicSlots.length > 1 ? DELIMITERS_ARRAY_NEWLINE : DELIMITERS_ARRAY,
     ...dynamicSlots.map(({ name, fn }) =>
       genMulti(
-        SEGMENTS_OBJECT_NEWLINE,
+        DELIMITERS_OBJECT_NEWLINE,
         ['name: ', ...genExpression(name, context)],
         ['fn: ', ...genBlock(fn, context)],
       ),

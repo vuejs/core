@@ -3,8 +3,8 @@ import type { CreateTextNodeIRNode, SetTextIRNode } from '../ir'
 import { genExpression } from './expression'
 import {
   type CodeFragment,
+  DELIMITERS_ARRAY,
   NEWLINE,
-  SEGMENTS_ARRAY,
   genCall,
   genMulti,
 } from './utils'
@@ -37,7 +37,7 @@ export function genCreateTextNode(
     ...genCall(vaporHelper('createTextNode'), [
       effect && '() => ',
       ...genMulti(
-        SEGMENTS_ARRAY,
+        DELIMITERS_ARRAY,
         ...values.map(value => genExpression(value, context)),
       ),
     ]),

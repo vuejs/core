@@ -27,22 +27,34 @@ export type CodeFragment =
   | FalsyValue
 export type CodeFragments = Exclude<CodeFragment, any[]> | CodeFragment[]
 
-export function buildCodeFragment(...frag: CodeFragment[]) {
+export function buildCodeFragment(
+  ...frag: CodeFragment[]
+): [CodeFragment[], (...items: CodeFragment[]) => number] {
   const push = frag.push.bind(frag)
-  return [frag, push] as const
+  return [frag, push]
 }
 
-type Segments = [
+export type CodeFragmentDelimiters = [
   left: CodeFragments,
   right: CodeFragments,
-  segment: CodeFragments,
+  delimiter: CodeFragments,
+  placeholder?: CodeFragments,
 ]
+
 export function genMulti(
-  [left, right, seg]: Segments,
+  [left, right, seg, placeholder]: CodeFragmentDelimiters,
   ...frags: CodeFragments[]
 ): CodeFragment[] {
+  if (placeholder) {
+    while (!frags[frags.length - 1]) {
+      frags.pop()
+    }
+    frags = frags.map(frag => frag || placeholder)
+  } else {
+    frags = frags.filter(Boolean)
+  }
+
   const frag: CodeFragment[] = []
-  frags = frags.filter(Boolean)
   push(left)
   for (let [i, fn] of (
     frags as Array<Exclude<CodeFragments, FalsyValue>>
@@ -58,27 +70,30 @@ export function genMulti(
     frag.push(...fn)
   }
 }
-export const SEGMENTS_ARRAY: Segments = ['[', ']', ', ']
-export const SEGMENTS_ARRAY_NEWLINE: Segments = [
+export const DELIMITERS_ARRAY: CodeFragmentDelimiters = ['[', ']', ', ']
+export const DELIMITERS_ARRAY_NEWLINE: CodeFragmentDelimiters = [
   ['[', INDENT_START, NEWLINE],
   [INDENT_END, NEWLINE, ']'],
   [', ', NEWLINE],
 ]
-export const SEGMENTS_OBJECT: Segments = ['{ ', ' }', ', ']
-export const SEGMENTS_OBJECT_NEWLINE: Segments = [
+export const DELIMITERS_OBJECT: CodeFragmentDelimiters = ['{ ', ' }', ', ']
+export const DELIMITERS_OBJECT_NEWLINE: CodeFragmentDelimiters = [
   ['{', INDENT_START, NEWLINE],
   [INDENT_END, NEWLINE, '}'],
   [', ', NEWLINE],
 ]
 
 export function genCall(
-  name: string,
+  name: string | [name: string, placeholder?: CodeFragments],
   ...frags: CodeFragments[]
 ): CodeFragment[] {
-  return [name, ...genMulti(['(', ')', ', '], ...frags)]
+  const hasPlaceholder = isArray(name)
+  const fnName = hasPlaceholder ? name[0] : name
+  const placeholder = hasPlaceholder ? name[1] : 'null'
+  return [fnName, ...genMulti(['(', ')', ', ', placeholder], ...frags)]
 }
 
-export function genCodeFragment(
+export function codeFragmentToString(
   code: CodeFragment[],
   context: CodegenContext,
 ): [code: string, map: CodegenSourceMapGenerator | undefined] {
