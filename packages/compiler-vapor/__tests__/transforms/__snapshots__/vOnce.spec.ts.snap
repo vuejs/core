@@ -46,3 +46,33 @@ export function render(_ctx) {
   return n1
 }"
 `;
+
+exports[`compiler: v-once > with v-if 1`] = `
+"import { createIf as _createIf, template as _template } from 'vue/vapor';
+const t0 = _template("<div></div>")
+
+export function render(_ctx) {
+  const n0 = _createIf(() => (_ctx.expr), () => {
+    const n2 = t0()
+    return n2
+  }, null, true)
+  return n0
+}"
+`;
+
+exports[`compiler: v-once > with v-if/else 1`] = `
+"import { createIf as _createIf, template as _template } from 'vue/vapor';
+const t0 = _template("<div></div>")
+const t1 = _template("<p></p>")
+
+export function render(_ctx) {
+  const n0 = _createIf(() => (_ctx.expr), () => {
+    const n2 = t0()
+    return n2
+  }, () => {
+    const n4 = t1()
+    return n4
+  }, true)
+  return n0
+}"
+`;

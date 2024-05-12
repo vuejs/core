@@ -146,6 +146,64 @@ describe('compiler: v-once', () => {
   })
 
   test.todo('with hoistStatic: true')
-  test.todo('with v-if/else')
+
+  test('with v-if', () => {
+    const { ir, code, helpers } = compileWithOnce(`<div v-if="expr" v-once />`)
+    expect(code).toMatchSnapshot()
+    expect(helpers).lengthOf(0)
+    expect(ir.block.effect).lengthOf(0)
+    expect(ir.block.operation).toMatchObject([
+      {
+        type: IRNodeTypes.IF,
+        id: 0,
+        once: true,
+        condition: {
+          type: NodeTypes.SIMPLE_EXPRESSION,
+          content: 'expr',
+          isStatic: false,
+        },
+        positive: {
+          type: IRNodeTypes.BLOCK,
+          dynamic: {
+            children: [{ template: 0 }],
+          },
+        },
+      },
+    ])
+  })
+
+  test('with v-if/else', () => {
+    const { ir, code, helpers } = compileWithOnce(
+      `<div v-if="expr" v-once /><p v-else/>`,
+    )
+    expect(code).toMatchSnapshot()
+    expect(helpers).lengthOf(0)
+    expect(ir.block.effect).lengthOf(0)
+    expect(ir.block.operation).toMatchObject([
+      {
+        type: IRNodeTypes.IF,
+        id: 0,
+        once: true,
+        condition: {
+          type: NodeTypes.SIMPLE_EXPRESSION,
+          content: 'expr',
+          isStatic: false,
+        },
+        positive: {
+          type: IRNodeTypes.BLOCK,
+          dynamic: {
+            children: [{ template: 0 }],
+          },
+        },
+        negative: {
+          type: IRNodeTypes.BLOCK,
+          dynamic: {
+            children: [{ template: 1 }],
+          },
+        },
+      },
+    ])
+  })
+
   test.todo('with v-for')
 })

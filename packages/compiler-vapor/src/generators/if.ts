@@ -10,7 +10,7 @@ export function genIf(
   isNested = false,
 ): CodeFragment[] {
   const { vaporHelper } = context
-  const { condition, positive, negative } = oper
+  const { condition, positive, negative, once } = oper
   const [frag, push] = buildCodeFragment()
 
   const conditionExpr: CodeFragment[] = [
@@ -36,7 +36,8 @@ export function genIf(
       vaporHelper('createIf'),
       conditionExpr,
       positiveArg,
-      negativeArg,
+      negativeArg || (once ? 'null' : false),
+      once && 'true',
     ),
   )
 

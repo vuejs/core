@@ -69,6 +69,7 @@ export interface IfIRNode extends BaseIRNode {
   condition: SimpleExpressionNode
   positive: BlockIRNode
   negative?: BlockIRNode | IfIRNode
+  once?: boolean
 }
 
 export interface ForIRNode extends BaseIRNode {

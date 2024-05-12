@@ -49,6 +49,7 @@ export function processIf(
         id,
         condition: dir.exp!,
         positive: branch,
+        once: context.inVOnce,
       })
     }
   } else {
@@ -101,6 +102,7 @@ export function processIf(
         id: -1,
         condition: dir.exp!,
         positive: branch,
+        once: context.inVOnce,
       }
     }
 
