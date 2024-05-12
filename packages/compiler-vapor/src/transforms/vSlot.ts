@@ -112,9 +112,6 @@ function createSlotBlock(
 }
 
 function isNonWhitespaceContent(node: TemplateChildNode): boolean {
-  if (node.type !== NodeTypes.TEXT && node.type !== NodeTypes.TEXT_CALL)
-    return true
-  return node.type === NodeTypes.TEXT
-    ? !!node.content.trim()
-    : isNonWhitespaceContent(node.content)
+  if (node.type !== NodeTypes.TEXT) return true
+  return !!node.content.trim()
 }
