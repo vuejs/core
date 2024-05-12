@@ -15,7 +15,9 @@ import { DynamicFlag, type IRDynamicInfo, IRNodeTypes } from '../ir'
 export const transformChildren: NodeTransform = (node, context) => {
   const isFragment =
     node.type === NodeTypes.ROOT ||
-    (node.type === NodeTypes.ELEMENT && node.tagType === ElementTypes.TEMPLATE)
+    (node.type === NodeTypes.ELEMENT &&
+      (node.tagType === ElementTypes.TEMPLATE ||
+        node.tagType === ElementTypes.COMPONENT))
 
   if (!isFragment && node.type !== NodeTypes.ELEMENT) return
 

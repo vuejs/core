@@ -16,6 +16,8 @@ import {
 import { EMPTY_OBJ, NOOP, extend, isArray, isString } from '@vue/shared'
 import {
   type BlockIRNode,
+  type ComponentDynamicSlot,
+  type ComponentSlots,
   DynamicFlag,
   type HackOptions,
   type IRDynamicInfo,
@@ -77,11 +79,13 @@ export class TransformContext<T extends AllNode = AllNode> {
 
   comment: CommentNode[] = []
   component: Set<string> = this.ir.component
+  slots?: ComponentSlots
+  dynamicSlots?: ComponentDynamicSlot[]
 
   private globalId = 0
 
   constructor(
-    private ir: RootIRNode,
+    public ir: RootIRNode,
     public node: T,
     options: TransformOptions = {},
   ) {
@@ -90,11 +94,14 @@ export class TransformContext<T extends AllNode = AllNode> {
   }
 
   enterBlock(ir: BlockIRNode, isVFor: boolean = false): () => void {
-    const { block, template, dynamic, childrenTemplate } = this
+    const { block, template, dynamic, childrenTemplate, slots, dynamicSlots } =
+      this
     this.block = ir
     this.dynamic = ir.dynamic
     this.template = ''
     this.childrenTemplate = []
+    this.slots = undefined
+    this.dynamicSlots = undefined
     isVFor && this.inVFor++
     return () => {
       // exit
@@ -103,6 +110,8 @@ export class TransformContext<T extends AllNode = AllNode> {
       this.template = template
       this.dynamic = dynamic
       this.childrenTemplate = childrenTemplate
+      this.slots = slots
+      this.dynamicSlots = dynamicSlots
       isVFor && this.inVFor--
     }
   }

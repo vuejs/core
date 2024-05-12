@@ -9,7 +9,7 @@ export function render(_ctx) {
     { modelValue: () => (_ctx.foo),
     "onUpdate:modelValue": () => $event => (_ctx.foo = $event),
     modelModifiers: () => ({ trim: true, "bar-baz": true }) }
-  ], true)
+  ], null, null, true)
   return n0
 }"
 `;
@@ -22,7 +22,7 @@ export function render(_ctx) {
   const n0 = _createComponent(_component_Comp, [
     { modelValue: () => (_ctx.foo),
     "onUpdate:modelValue": () => $event => (_ctx.foo = $event) }
-  ], true)
+  ], null, null, true)
   return n0
 }"
 `;
@@ -41,7 +41,7 @@ export function render(_ctx) {
       "onUpdate:bar": () => $event => (_ctx.bar = $event),
       barModifiers: () => ({ number: true })
     }
-  ], true)
+  ], null, null, true)
   return n0
 }"
 `;
@@ -54,7 +54,7 @@ export function render(_ctx) {
   const n0 = _createComponent(_component_Comp, [
     { bar: () => (_ctx.foo),
     "onUpdate:bar": () => $event => (_ctx.foo = $event) }
-  ], true)
+  ], null, null, true)
   return n0
 }"
 `;
@@ -71,7 +71,7 @@ export function render(_ctx) {
     () => ({ [_ctx.bar]: _ctx.bar,
     ["onUpdate:" + _ctx.bar]: () => $event => (_ctx.bar = $event),
     [_ctx.bar + "Modifiers"]: () => ({ number: true }) })
-  ], true)
+  ], null, null, true)
   return n0
 }"
 `;
@@ -84,7 +84,7 @@ export function render(_ctx) {
   const n0 = _createComponent(_component_Comp, [
     () => ({ [_ctx.arg]: _ctx.foo,
     ["onUpdate:" + _ctx.arg]: () => $event => (_ctx.foo = $event) })
-  ], true)
+  ], null, null, true)
   return n0
 }"
 `;

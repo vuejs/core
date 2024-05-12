@@ -182,7 +182,9 @@ describe('compiler: element transform', () => {
         bindingMetadata: { Comp: BindingTypes.SETUP_CONST },
       })
       expect(code).toMatchSnapshot()
-      expect(code).contains('_createComponent(_ctx.Comp, null, true)')
+      expect(code).contains(
+        '_createComponent(_ctx.Comp, null, null, null, true)',
+      )
     })
 
     test('generate multi root component', () => {

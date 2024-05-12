@@ -29,15 +29,16 @@ const t0 = _template("<div></div>")
 export function render(_ctx) {
   const _component_Bar = _resolveComponent("Bar")
   const _component_Comp = _resolveComponent("Comp")
-  const n0 = _createIf(() => (true), () => {
-    const n3 = t0()
-    const n2 = _createComponent(_component_Bar)
-    _withDirectives(n2, [[_resolveDirective("vHello"), void 0, void 0, { world: true }]])
-    _insert(n2, n3)
-    return n3
-  })
-  _insert(n0, n4)
-  const n4 = _createComponent(_component_Comp, null, true)
+  const n4 = _createComponent(_component_Comp, null, { default: () => {
+    const n0 = _createIf(() => (true), () => {
+      const n3 = t0()
+      const n2 = _createComponent(_component_Bar)
+      _withDirectives(n2, [[_resolveDirective("vHello"), void 0, void 0, { world: true }]])
+      _insert(n2, n3)
+      return n3
+    })
+    return n0
+  } }, null, true)
   _withDirectives(n4, [[_resolveDirective("vTest")]])
   return n4
 }"

@@ -1,0 +1,73 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`compiler: transform slot > dynamic slots name 1`] = `
+"import { resolveComponent as _resolveComponent, createComponent as _createComponent, template as _template } from 'vue/vapor';
+const t0 = _template("foo")
+
+export function render(_ctx) {
+  const _component_Comp = _resolveComponent("Comp")
+  const n2 = _createComponent(_component_Comp, null, null, () => [{
+    name: _ctx.name, 
+    fn: () => {
+      const n0 = t0()
+      return n0
+    }
+  }], true)
+  return n2
+}"
+`;
+
+exports[`compiler: transform slot > implicit default slot 1`] = `
+"import { resolveComponent as _resolveComponent, createComponent as _createComponent, template as _template } from 'vue/vapor';
+const t0 = _template("<div></div>")
+
+export function render(_ctx) {
+  const _component_Comp = _resolveComponent("Comp")
+  const n1 = _createComponent(_component_Comp, null, { default: () => {
+    const n0 = t0()
+    return n0
+  } }, null, true)
+  return n1
+}"
+`;
+
+exports[`compiler: transform slot > named slots w/ implicit default slot 1`] = `
+"import { resolveComponent as _resolveComponent, createComponent as _createComponent, template as _template } from 'vue/vapor';
+const t0 = _template("foo")
+const t1 = _template("bar")
+const t2 = _template("<span></span>")
+
+export function render(_ctx) {
+  const _component_Comp = _resolveComponent("Comp")
+  const n4 = _createComponent(_component_Comp, null, {
+    one: () => {
+      const n0 = t0()
+      return n0
+    }, 
+    default: () => {
+      const n2 = t1()
+      const n3 = t2()
+      return [n2, n3]
+    }
+  }, null, true)
+  return n4
+}"
+`;
+
+exports[`compiler: transform slot > nested slots 1`] = `
+"import { resolveComponent as _resolveComponent, createComponent as _createComponent, template as _template } from 'vue/vapor';
+const t0 = _template("<div></div>")
+
+export function render(_ctx) {
+  const _component_Bar = _resolveComponent("Bar")
+  const _component_Foo = _resolveComponent("Foo")
+  const n3 = _createComponent(_component_Foo, null, { one: () => {
+    const n1 = _createComponent(_component_Bar, null, { default: () => {
+      const n0 = t0()
+      return n0
+    } })
+    return n1
+  } }, null, true)
+  return n3
+}"
+`;

@@ -5,6 +5,7 @@ import {
   type ElementNode,
   NodeTypes,
   type SimpleExpressionNode,
+  findDir as _findDir,
   findProp as _findProp,
   createSimpleExpression,
   isLiteralWhitelisted,
@@ -18,6 +19,13 @@ export const findProp = _findProp as (
   dynamicOnly?: boolean,
   allowEmpty?: boolean,
 ) => AttributeNode | VaporDirectiveNode | undefined
+
+/** find directive */
+export const findDir = _findDir as (
+  node: ElementNode,
+  name: string | RegExp,
+  allowEmpty?: boolean,
+) => VaporDirectiveNode | undefined
 
 export function propToExpression(prop: AttributeNode | VaporDirectiveNode) {
   return prop.type === NodeTypes.ATTRIBUTE

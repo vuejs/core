@@ -1,6 +1,8 @@
 import { camelize, extend, isArray } from '@vue/shared'
 import type { CodegenContext } from '../generate'
 import {
+  type ComponentDynamicSlot,
+  type ComponentSlots,
   type CreateComponentIRNode,
   IRDynamicPropsKind,
   type IRProp,
@@ -10,6 +12,7 @@ import {
 import {
   type CodeFragment,
   NEWLINE,
+  SEGMENTS_ARRAY,
   SEGMENTS_ARRAY_NEWLINE,
   SEGMENTS_OBJECT,
   SEGMENTS_OBJECT_NEWLINE,
@@ -22,8 +25,8 @@ import { createSimpleExpression } from '@vue/compiler-dom'
 import { genEventHandler } from './event'
 import { genDirectiveModifiers, genDirectivesForElement } from './directive'
 import { genModelHandler } from './modelValue'
+import { genBlock } from './block'
 
-// TODO: generate component slots
 export function genCreateComponent(
   oper: CreateComponentIRNode,
   context: CodegenContext,
@@ -31,7 +34,7 @@ export function genCreateComponent(
   const { vaporHelper } = context
 
   const tag = genTag()
-  const isRoot = oper.root
+  const { root, slots, dynamicSlots } = oper
   const rawProps = genRawProps(oper.props, context)
 
   return [
@@ -40,8 +43,14 @@ export function genCreateComponent(
     ...genCall(
       vaporHelper('createComponent'),
       tag,
-      rawProps || (isRoot ? 'null' : false),
-      isRoot && 'true',
+      rawProps || (slots || dynamicSlots || root ? 'null' : false),
+      slots ? genSlots(slots, context) : dynamicSlots || root ? 'null' : false,
+      dynamicSlots
+        ? genDynamicSlots(dynamicSlots, context)
+        : root
+          ? 'null'
+          : false,
+      root && 'true',
     ),
     ...genDirectivesForElement(oper.id, context),
   ]
@@ -133,4 +142,29 @@ function genModelModifiers(
 
   const modifiersVal = genDirectiveModifiers(modelModifiers)
   return [',', NEWLINE, ...modifiersKey, `: () => ({ ${modifiersVal} })`]
+}
+
+function genSlots(slots: ComponentSlots, context: CodegenContext) {
+  const slotList = Object.entries(slots)
+  return genMulti(
+    slotList.length > 1 ? SEGMENTS_OBJECT_NEWLINE : SEGMENTS_OBJECT,
+    ...slotList.map(([name, slot]) => [name, ': ', ...genBlock(slot, context)]),
+  )
+}
+
+function genDynamicSlots(
+  dynamicSlots: ComponentDynamicSlot[],
+  context: CodegenContext,
+) {
+  const slotsExpr = genMulti(
+    dynamicSlots.length > 1 ? SEGMENTS_ARRAY_NEWLINE : SEGMENTS_ARRAY,
+    ...dynamicSlots.map(({ name, fn }) =>
+      genMulti(
+        SEGMENTS_OBJECT_NEWLINE,
+        ['name: ', ...genExpression(name, context)],
+        ['fn: ', ...genBlock(fn, context)],
+      ),
+    ),
+  )
+  return ['() => ', ...slotsExpr]
 }
