@@ -25,7 +25,7 @@ export function renderEffect(cb: () => void) {
       return
     }
 
-    if (instance?.isMounted && !instance.isUpdating) {
+    if (instance && instance.isMounted && !instance.isUpdating) {
       instance.isUpdating = true
 
       const { bu, u, dirs } = instance
@@ -76,11 +76,11 @@ export function renderEffect(cb: () => void) {
     if (instance) job.id = instance.uid
     queueJob(job)
   }
-  if (__DEV__) {
-    effect.onTrack = instance?.rtc
+  if (__DEV__ && instance) {
+    effect.onTrack = instance.rtc
       ? e => invokeArrayFns(instance.rtc!, e)
       : void 0
-    effect.onTrigger = instance?.rtg
+    effect.onTrigger = instance.rtg
       ? e => invokeArrayFns(instance.rtg!, e)
       : void 0
   }

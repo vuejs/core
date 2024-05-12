@@ -33,13 +33,14 @@ const resolvedPromise = /*#__PURE__*/ Promise.resolve() as Promise<any>
 let currentFlushPromise: Promise<void> | null = null
 
 export function queueJob(job: SchedulerJob) {
+  let lastOne: SchedulerJob | undefined
   if (!(job.flags! & SchedulerJobFlags.QUEUED)) {
     if (job.id == null) {
       queue.push(job)
     } else if (
       // fast path when the job id is larger than the tail
       !(job.flags! & SchedulerJobFlags.PRE) &&
-      job.id >= (queue[queue.length - 1]?.id || 0)
+      job.id >= (((lastOne = queue[queue.length - 1]) && lastOne.id) || 0)
     ) {
       queue.push(job)
     } else {

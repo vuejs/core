@@ -249,7 +249,7 @@ export const setCurrentInstance = (instance: ComponentInternalInstance) => {
 }
 
 export const unsetCurrentInstance = () => {
-  currentInstance?.scope.off()
+  currentInstance && currentInstance.scope.off()
   currentInstance = null
 }
 

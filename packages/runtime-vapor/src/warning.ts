@@ -30,7 +30,10 @@ export function warn(msg: string, ...args: any[]) {
       instance,
       VaporErrorCodes.APP_WARN_HANDLER,
       [
-        msg + args.map(a => a.toString?.() ?? JSON.stringify(a)).join(''),
+        msg +
+          args
+            .map(a => (a.toString && a.toString()) ?? JSON.stringify(a))
+            .join(''),
         instance,
         trace
           .map(

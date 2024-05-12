@@ -86,7 +86,9 @@ export function initSlots(
       for (const key in dynamicSlotKeys) {
         if (
           !_dynamicSlots.some(slot =>
-            isArray(slot) ? slot.some(s => s.name === key) : slot?.name === key,
+            slot && isArray(slot)
+              ? slot.some(s => s.name === key)
+              : slot.name === key,
           )
         ) {
           delete slots[key]
