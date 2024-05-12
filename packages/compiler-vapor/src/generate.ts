@@ -1,10 +1,8 @@
 import type {
   CodegenOptions as BaseCodegenOptions,
   BaseCodegenResult,
-  CodegenSourceMapGenerator,
 } from '@vue/compiler-dom'
 import type { BlockIRNode, IREffect, RootIRNode, VaporHelper } from './ir'
-import { SourceMapGenerator } from 'source-map-js'
 import { extend, remove } from '@vue/shared'
 import { genBlockContent } from './generators/block'
 import { genTemplates } from './generators/template'
@@ -23,10 +21,6 @@ export type CodegenOptions = Omit<BaseCodegenOptions, 'optimizeImports'>
 
 export class CodegenContext {
   options: Required<CodegenOptions>
-
-  code: CodeFragment[]
-  map?: CodegenSourceMapGenerator
-  push: (...args: CodeFragment[]) => void
 
   helpers = new Set<string>([])
   vaporHelpers = new Set<string>([])
@@ -92,21 +86,6 @@ export class CodegenContext {
     }
     this.options = extend(defaultOptions, options)
     this.block = ir.block
-
-    const [code, push] = buildCodeFragment()
-    this.code = code
-    this.push = push
-
-    const {
-      options: { filename, sourceMap },
-    } = this
-    if (!__BROWSER__ && sourceMap) {
-      // lazy require source-map implementation, only in non-browser builds
-      this.map =
-        new SourceMapGenerator() as unknown as CodegenSourceMapGenerator
-      this.map.setSourceContent(filename, ir.source)
-      this.map._sources.add(filename)
-    }
   }
 }
 
@@ -121,12 +100,13 @@ export function generate(
   ir: RootIRNode,
   options: CodegenOptions = {},
 ): VaporCodegenResult {
+  const [frag, push] = buildCodeFragment()
   const context = new CodegenContext(ir, options)
-  const { push, helpers, vaporHelpers } = context
-
+  const { helpers, vaporHelpers } = context
+  const { inline } = options
   const functionName = 'render'
-  const isSetupInlined = options.inline
-  if (isSetupInlined) {
+
+  if (inline) {
     push(`(() => {`)
   } else {
     push(NEWLINE, `export function ${functionName}(_ctx) {`)
@@ -136,33 +116,32 @@ export function generate(
   push(...genBlockContent(ir.block, context, true))
   push(INDENT_END, NEWLINE)
 
-  if (isSetupInlined) {
+  if (inline) {
     push('})()')
   } else {
     push('}')
   }
 
   const deligates = genDeligates(context)
-  // TODO source map?
   const templates = genTemplates(ir.template, context)
   const imports = genHelperImports(context)
   const preamble = imports + templates + deligates
 
   const newlineCount = [...preamble].filter(c => c === '\n').length
-  if (newlineCount && !isSetupInlined) {
-    context.code.unshift(...new Array<CodeFragment>(newlineCount).fill(LF))
+  if (newlineCount && !inline) {
+    frag.unshift(...new Array<CodeFragment>(newlineCount).fill(LF))
   }
 
-  let codegen = genCodeFragment(context)
-  if (!isSetupInlined) {
-    codegen = preamble + codegen
+  let [code, map] = genCodeFragment(frag, context)
+  if (!inline) {
+    code = preamble + code
   }
 
   return {
-    code: codegen,
+    code,
     ast: ir,
     preamble,
-    map: context.map ? context.map.toJSON() : undefined,
+    map: map && map.toJSON(),
     helpers,
     vaporHelpers,
   }

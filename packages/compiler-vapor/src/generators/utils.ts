@@ -1,4 +1,6 @@
+import { SourceMapGenerator } from 'source-map-js'
 import {
+  type CodegenSourceMapGenerator,
   NewlineType,
   type Position,
   type SourceLocation,
@@ -76,12 +78,27 @@ export function genCall(
   return [name, ...genMulti(['(', ')', ', '], ...frags)]
 }
 
-export function genCodeFragment(context: CodegenContext) {
+export function genCodeFragment(
+  code: CodeFragment[],
+  context: CodegenContext,
+): [code: string, map: CodegenSourceMapGenerator | undefined] {
+  const {
+    options: { filename, sourceMap },
+  } = context
+
+  let map: CodegenSourceMapGenerator | undefined
+  if (!__BROWSER__ && sourceMap) {
+    // lazy require source-map implementation, only in non-browser builds
+    map = new SourceMapGenerator() as unknown as CodegenSourceMapGenerator
+    map.setSourceContent(filename, context.ir.source)
+    map._sources.add(filename)
+  }
+
   let codegen = ''
   const pos = { line: 1, column: 1, offset: 0 }
   let indentLevel = 0
 
-  for (let frag of context.code) {
+  for (let frag of code) {
     if (!frag) continue
 
     if (frag === NEWLINE) {
@@ -104,7 +121,7 @@ export function genCodeFragment(context: CodegenContext) {
     let [code, newlineIndex = NewlineType.None, loc, name] = frag
     codegen += code
 
-    if (!__BROWSER__ && context.map) {
+    if (!__BROWSER__ && map) {
       if (loc) addMapping(loc.start, name)
       if (newlineIndex === NewlineType.Unknown) {
         // multiple newlines, full iteration
@@ -147,20 +164,20 @@ export function genCodeFragment(context: CodegenContext) {
     }
   }
 
-  return codegen
+  return [codegen, map]
 
   function addMapping(loc: Position, name: string | null = null) {
     // we use the private property to directly add the mapping
     // because the addMapping() implementation in source-map-js has a bunch of
     // unnecessary arg and validation checks that are pure overhead in our case.
-    const { _names, _mappings } = context.map!
+    const { _names, _mappings } = map!
     if (name !== null && !_names.has(name)) _names.add(name)
     _mappings.add({
       originalLine: loc.line,
       originalColumn: loc.column - 1, // source-map column is 0 based
       generatedLine: pos.line,
       generatedColumn: pos.column - 1,
-      source: context.options.filename,
+      source: filename,
       name,
     })
   }
