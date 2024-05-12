@@ -5,16 +5,16 @@ import {
   transformChildren,
   transformComment,
   transformElement,
-  transformOnce,
   transformText,
   transformVIf,
+  transformVOnce,
   transformVText,
 } from '../../src'
 import { NodeTypes } from '@vue/compiler-core'
 
 const compileWithVIf = makeCompile({
   nodeTransforms: [
-    transformOnce,
+    transformVOnce,
     transformVIf,
     transformText,
     transformElement,
