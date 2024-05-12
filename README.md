@@ -9,8 +9,9 @@ This repository is a fork of [vuejs/core](https://github.com/vuejs/core) and is 
 
 - [Evan You](https://github.com/yyx990803) - Creator and designer of Vue.js and Vue Vapor.
 - [Kevin Deng 三咲智子](https://github.com/sxzz) - Lead contributor and developer for Vue Vapor.
-- [Rizumu Ayaka](https://github.com/LittleSound) - Key contributor to compiler and reactivity.
-- [Ubugeeei](https://github.com/Ubugeeei) - Key contributor to components.
+- [Rizumu Ayaka](https://github.com/LittleSound) - Active contributor.
+- [Ubugeeei](https://github.com/Ubugeeei) - Active contributor.
+- [Doctor Wu](https://github.com/doctor-wu) - Active contributor.
 
 ## TODO
 
