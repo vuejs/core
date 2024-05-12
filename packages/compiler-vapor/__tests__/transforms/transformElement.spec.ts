@@ -36,7 +36,7 @@ describe('compiler: element transform', () => {
           type: IRNodeTypes.CREATE_COMPONENT_NODE,
           id: 0,
           tag: 'Foo',
-          resolve: true,
+          asset: true,
           root: true,
           props: [[]],
         },
@@ -66,7 +66,7 @@ describe('compiler: element transform', () => {
         {
           type: IRNodeTypes.CREATE_COMPONENT_NODE,
           tag: 'Example',
-          resolve: false,
+          asset: false,
         },
       ])
     })
@@ -172,7 +172,7 @@ describe('compiler: element transform', () => {
           type: IRNodeTypes.CREATE_COMPONENT_NODE,
           id: 0,
           tag: 'Example',
-          resolve: true,
+          asset: true,
         },
       ])
     })
@@ -212,7 +212,7 @@ describe('compiler: element transform', () => {
         {
           type: IRNodeTypes.CREATE_COMPONENT_NODE,
           tag: 'Foo',
-          resolve: true,
+          asset: true,
           root: true,
           props: [
             [

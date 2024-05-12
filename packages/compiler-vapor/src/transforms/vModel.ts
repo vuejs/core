@@ -62,8 +62,6 @@ export const transformVModel: DirectiveTransform = (dir, node, context) => {
   }
 
   const isComponent = node.tagType === ElementTypes.COMPONENT
-  let runtimeDirective: VaporHelper | undefined
-
   if (isComponent) {
     return {
       key: arg ? arg : createSimpleExpression('modelValue', true),
@@ -71,74 +69,74 @@ export const transformVModel: DirectiveTransform = (dir, node, context) => {
       model: true,
       modelModifiers: dir.modifiers,
     }
-  } else {
-    if (dir.arg)
-      context.options.onError(
-        createDOMCompilerError(
-          DOMErrorCodes.X_V_MODEL_ARG_ON_ELEMENT,
-          dir.arg.loc,
-        ),
-      )
-    const { tag } = node
-    const isCustomElement = context.options.isCustomElement(tag)
-    runtimeDirective = 'vModelText'
-    if (
-      tag === 'input' ||
-      tag === 'textarea' ||
-      tag === 'select' ||
-      isCustomElement
-    ) {
-      if (tag === 'input' || isCustomElement) {
-        const type = findProp(node, 'type')
-        if (type) {
-          if (type.type === NodeTypes.DIRECTIVE) {
-            // :type="foo"
-            runtimeDirective = 'vModelDynamic'
-          } else if (type.value) {
-            switch (type.value.content) {
-              case 'radio':
-                runtimeDirective = 'vModelRadio'
-                break
-              case 'checkbox':
-                runtimeDirective = 'vModelCheckbox'
-                break
-              case 'file':
-                runtimeDirective = undefined
-                context.options.onError(
-                  createDOMCompilerError(
-                    DOMErrorCodes.X_V_MODEL_ON_FILE_INPUT_ELEMENT,
-                    dir.loc,
-                  ),
-                )
-                break
-              default:
-                // text type
-                __DEV__ && checkDuplicatedValue()
-                break
-            }
-          }
-        } else if (hasDynamicKeyVBind(node)) {
-          // element has bindings with dynamic keys, which can possibly contain
-          // "type".
+  }
+
+  if (dir.arg)
+    context.options.onError(
+      createDOMCompilerError(
+        DOMErrorCodes.X_V_MODEL_ARG_ON_ELEMENT,
+        dir.arg.loc,
+      ),
+    )
+  const { tag } = node
+  const isCustomElement = context.options.isCustomElement(tag)
+  let runtimeDirective: VaporHelper | undefined = 'vModelText'
+  if (
+    tag === 'input' ||
+    tag === 'textarea' ||
+    tag === 'select' ||
+    isCustomElement
+  ) {
+    if (tag === 'input' || isCustomElement) {
+      const type = findProp(node, 'type')
+      if (type) {
+        if (type.type === NodeTypes.DIRECTIVE) {
+          // :type="foo"
           runtimeDirective = 'vModelDynamic'
-        } else {
-          // text type
-          __DEV__ && checkDuplicatedValue()
+        } else if (type.value) {
+          switch (type.value.content) {
+            case 'radio':
+              runtimeDirective = 'vModelRadio'
+              break
+            case 'checkbox':
+              runtimeDirective = 'vModelCheckbox'
+              break
+            case 'file':
+              runtimeDirective = undefined
+              context.options.onError(
+                createDOMCompilerError(
+                  DOMErrorCodes.X_V_MODEL_ON_FILE_INPUT_ELEMENT,
+                  dir.loc,
+                ),
+              )
+              break
+            default:
+              // text type
+              __DEV__ && checkDuplicatedValue()
+              break
+          }
         }
-      } else if (tag === 'select') {
-        runtimeDirective = 'vModelSelect'
+      } else if (hasDynamicKeyVBind(node)) {
+        // element has bindings with dynamic keys, which can possibly contain
+        // "type".
+        runtimeDirective = 'vModelDynamic'
       } else {
-        // textarea
+        // text type
         __DEV__ && checkDuplicatedValue()
       }
+    } else if (tag === 'select') {
+      runtimeDirective = 'vModelSelect'
     } else {
-      context.options.onError(
-        createDOMCompilerError(
-          DOMErrorCodes.X_V_MODEL_ON_INVALID_ELEMENT,
-          dir.loc,
-        ),
-      )
+      // textarea
+      __DEV__ && checkDuplicatedValue()
     }
+  } else {
+    context.options.onError(
+      createDOMCompilerError(
+        DOMErrorCodes.X_V_MODEL_ON_INVALID_ELEMENT,
+        dir.loc,
+      ),
+    )
   }
 
   context.registerOperation({
@@ -154,7 +152,8 @@ export const transformVModel: DirectiveTransform = (dir, node, context) => {
       type: IRNodeTypes.WITH_DIRECTIVE,
       element: context.reference(),
       dir,
-      builtin: runtimeDirective,
+      name: runtimeDirective,
+      builtin: true,
     })
 
   function checkDuplicatedValue() {

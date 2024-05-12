@@ -79,6 +79,8 @@ export class TransformContext<T extends AllNode = AllNode> {
 
   comment: CommentNode[] = []
   component: Set<string> = this.ir.component
+  directive: Set<string> = this.ir.directive
+
   slots?: ComponentSlots
   dynamicSlots?: ComponentDynamicSlot[]
 
@@ -220,6 +222,7 @@ export function transform(
     source: node.source,
     template: [],
     component: new Set(),
+    directive: new Set(),
     block: newBlock(node),
   }
 

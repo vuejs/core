@@ -16,30 +16,34 @@ exports[`compile > custom directive > basic 1`] = `
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
+  const _directive_test = _resolveDirective("test")
+  const _directive_hello = _resolveDirective("hello")
   const n0 = t0()
-  _withDirectives(n0, [[_resolveDirective("vTest")], [_resolveDirective("vHello"), void 0, void 0, { world: true }]])
+  _withDirectives(n0, [[_directive_test], [_directive_hello, void 0, void 0, { world: true }]])
   return n0
 }"
 `;
 
 exports[`compile > custom directive > component 1`] = `
-"import { resolveComponent as _resolveComponent, createComponent as _createComponent, resolveDirective as _resolveDirective, withDirectives as _withDirectives, insert as _insert, createIf as _createIf, template as _template } from 'vue/vapor';
+"import { resolveComponent as _resolveComponent, resolveDirective as _resolveDirective, createComponent as _createComponent, withDirectives as _withDirectives, insert as _insert, createIf as _createIf, template as _template } from 'vue/vapor';
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const _component_Bar = _resolveComponent("Bar")
   const _component_Comp = _resolveComponent("Comp")
+  const _directive_hello = _resolveDirective("hello")
+  const _directive_test = _resolveDirective("test")
   const n4 = _createComponent(_component_Comp, null, { default: () => {
     const n0 = _createIf(() => (true), () => {
       const n3 = t0()
       const n2 = _createComponent(_component_Bar)
-      _withDirectives(n2, [[_resolveDirective("vHello"), void 0, void 0, { world: true }]])
+      _withDirectives(n2, [[_directive_hello, void 0, void 0, { world: true }]])
       _insert(n2, n3)
       return n3
     })
     return n0
   } }, null, true)
-  _withDirectives(n4, [[_resolveDirective("vTest")]])
+  _withDirectives(n4, [[_directive_test]])
   return n4
 }"
 `;

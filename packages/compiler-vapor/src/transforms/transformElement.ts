@@ -72,24 +72,24 @@ function transformComponentElement(
   propsResult: PropsResult,
   context: TransformContext,
 ) {
-  let resolve = true
+  let asset = true
 
   if (!__BROWSER__) {
     const fromSetup = resolveSetupReference(tag, context)
     if (fromSetup) {
       tag = fromSetup
-      resolve = false
+      asset = false
     }
     const dotIndex = tag.indexOf('.')
     if (dotIndex > 0) {
       const ns = resolveSetupReference(tag.slice(0, dotIndex), context)
       if (ns) {
         tag = ns + tag.slice(dotIndex)
-        resolve = false
+        asset = false
       }
     }
   }
-  if (resolve) {
+  if (asset) {
     context.component.add(tag)
   }
 
@@ -102,7 +102,7 @@ function transformComponentElement(
     id: context.reference(),
     tag,
     props: propsResult[0] ? propsResult[1] : [propsResult[1]],
-    resolve,
+    asset,
     root,
     slots: context.slots,
     dynamicSlots: context.dynamicSlots,
@@ -287,7 +287,7 @@ function transformProp(
   node: ElementNode,
   context: TransformContext<ElementNode>,
 ): DirectiveTransformResult | void {
-  const { name } = prop
+  let { name } = prop
 
   if (prop.type === NodeTypes.ATTRIBUTE) {
     if (isReservedProp(name)) return
@@ -305,10 +305,20 @@ function transformProp(
   }
 
   if (!isBuiltInDirective(name)) {
+    const fromSetup =
+      !__BROWSER__ && resolveSetupReference(`v-${name}`, context)
+    if (fromSetup) {
+      name = fromSetup
+    } else {
+      context.directive.add(name)
+    }
+
     context.registerOperation({
       type: IRNodeTypes.WITH_DIRECTIVE,
       element: context.reference(),
       dir: prop,
+      name,
+      asset: !fromSetup,
     })
   }
 }

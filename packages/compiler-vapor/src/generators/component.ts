@@ -21,7 +21,7 @@ import {
 } from './utils'
 import { genExpression } from './expression'
 import { genPropKey } from './prop'
-import { createSimpleExpression } from '@vue/compiler-dom'
+import { createSimpleExpression, toValidAssetId } from '@vue/compiler-dom'
 import { genEventHandler } from './event'
 import { genDirectiveModifiers, genDirectivesForElement } from './directive'
 import { genModelHandler } from './modelValue'
@@ -52,8 +52,8 @@ export function genCreateComponent(
   ]
 
   function genTag() {
-    if (oper.resolve) {
-      return [`_component_${oper.tag}`]
+    if (oper.asset) {
+      return toValidAssetId(oper.tag, 'component')
     } else {
       return genExpression(
         extend(createSimpleExpression(oper.tag, false), { ast: null }),

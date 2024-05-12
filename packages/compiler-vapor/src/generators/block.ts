@@ -1,4 +1,4 @@
-import type { BlockIRNode } from '../ir'
+import type { BlockIRNode, VaporHelper } from '../ir'
 import {
   type CodeFragment,
   DELIMITERS_ARRAY,
@@ -12,6 +12,7 @@ import {
 import type { CodegenContext } from '../generate'
 import { genEffects, genOperations } from './operation'
 import { genChildren } from './template'
+import { toValidAssetId } from '@vue/compiler-dom'
 
 export function genBlock(
   oper: BlockIRNode,
@@ -43,16 +44,8 @@ export function genBlockContent(
   const resetBlock = context.enterBlock(block)
 
   if (root) {
-    for (const name of context.ir.component) {
-      push(
-        NEWLINE,
-        `const _component_${name} = `,
-        ...genCall(
-          context.vaporHelper('resolveComponent'),
-          JSON.stringify(name),
-        ),
-      )
-    }
+    genResolveAssets('component', 'resolveComponent')
+    genResolveAssets('directive', 'resolveDirective')
   }
 
   for (const child of dynamic.children) {
@@ -77,4 +70,17 @@ export function genBlockContent(
 
   resetBlock()
   return frag
+
+  function genResolveAssets(
+    kind: 'component' | 'directive',
+    helper: VaporHelper,
+  ) {
+    for (const name of context.ir[kind]) {
+      push(
+        NEWLINE,
+        `const ${toValidAssetId(name, kind)} = `,
+        ...genCall(context.vaporHelper(helper), JSON.stringify(name)),
+      )
+    }
+  }
 }

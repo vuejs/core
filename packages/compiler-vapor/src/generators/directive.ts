@@ -1,5 +1,9 @@
-import { createSimpleExpression, isSimpleIdentifier } from '@vue/compiler-dom'
-import { camelize } from '@vue/shared'
+import {
+  createSimpleExpression,
+  isSimpleIdentifier,
+  toValidAssetId,
+} from '@vue/compiler-dom'
+import { extend } from '@vue/shared'
 import { genExpression } from './expression'
 import type { CodegenContext } from '../generate'
 import {
@@ -36,7 +40,12 @@ export function genWithDirective(
     ...genCall(vaporHelper('withDirectives'), element, directives),
   ]
 
-  function genDirective({ dir, builtin }: WithDirectiveIRNode): CodeFragment[] {
+  function genDirective({
+    dir,
+    name,
+    builtin,
+    asset,
+  }: WithDirectiveIRNode): CodeFragment[] {
     const directive = genDirective()
     const value = dir.exp && ['() => ', ...genExpression(dir.exp, context)]
     const argument = dir.arg && genExpression(dir.arg, context)
@@ -55,24 +64,15 @@ export function genWithDirective(
     )
 
     function genDirective() {
-      const {
-        vaporHelper,
-        options: { bindingMetadata },
-      } = context
-      if (dir.name === 'show') {
-        return [vaporHelper('vShow')]
-      } else if (builtin) {
-        return [vaporHelper(builtin)]
+      if (builtin) {
+        return vaporHelper(name as any)
+      } else if (asset) {
+        return toValidAssetId(name, 'directive')
       } else {
-        const directiveReference = camelize(`v-${dir.name}`)
-        // TODO resolve directive
-        if (bindingMetadata[directiveReference]) {
-          const directiveExpression = createSimpleExpression(directiveReference)
-          directiveExpression.ast = null
-          return genExpression(directiveExpression, context)
-        } else {
-          return `${vaporHelper('resolveDirective')}("${directiveReference}")`
-        }
+        return genExpression(
+          extend(createSimpleExpression(name, false), { ast: null }),
+          context,
+        )
       }
     }
   }

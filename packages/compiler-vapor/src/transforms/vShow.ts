@@ -14,5 +14,7 @@ export const transformVShow: DirectiveTransform = (dir, node, context) => {
     type: IRNodeTypes.WITH_DIRECTIVE,
     element: context.reference(),
     dir,
+    name: 'vShow',
+    builtin: true,
   })
 }
