@@ -10,10 +10,10 @@
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^5.0.4",
-    "vite": "^5.2.7"
+    "vite": "^5.2.11"
   },
   "dependencies": {
-    "@vue/repl": "^4.1.1",
+    "@vue/repl": "^4.1.2",
     "file-saver": "^2.0.5",
     "jszip": "^3.10.1",
     "vue": "workspace:*"

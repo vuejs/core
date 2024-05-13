@@ -1527,6 +1527,13 @@ describe('SSR hydration', () => {
       expect(`Hydration style mismatch`).toHaveBeenWarnedTimes(1)
     })
 
+    test('style mismatch when no style attribute is present', () => {
+      mountWithHydration(`<div></div>`, () =>
+        h('div', { style: { color: 'red' } }),
+      )
+      expect(`Hydration style mismatch`).toHaveBeenWarnedTimes(1)
+    })
+
     test('style mismatch w/ v-show', () => {
       mountWithHydration(`<div style="color:red;display:none"></div>`, () =>
         withDirectives(createVNode('div', { style: 'color: red' }, ''), [
