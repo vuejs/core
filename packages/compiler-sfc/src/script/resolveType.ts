@@ -1540,6 +1540,8 @@ export function inferRuntimeType(
               case 'String':
               case 'Array':
               case 'ArrayLike':
+              case 'Parameters':
+              case 'ConstructorParameters':
               case 'ReadonlyArray':
                 return ['String', 'Number']
 
@@ -1558,78 +1560,93 @@ export function inferRuntimeType(
                 }
                 break
 
-              default:
+              case 'Function':
+              case 'Object':
+              case 'Set':
+              case 'Map':
+              case 'WeakSet':
+              case 'WeakMap':
+              case 'Date':
+              case 'Promise':
+              case 'Error':
+              case 'Uppercase':
+              case 'Lowercase':
+              case 'Capitalize':
+              case 'Uncapitalize':
+              case 'ReadonlyMap':
+              case 'ReadonlySet':
                 return ['String']
             }
-          }
-          switch (node.typeName.name) {
-            case 'Array':
-            case 'Function':
-            case 'Object':
-            case 'Set':
-            case 'Map':
-            case 'WeakSet':
-            case 'WeakMap':
-            case 'Date':
-            case 'Promise':
-            case 'Error':
-              return [node.typeName.name]
+          } else {
+            switch (node.typeName.name) {
+              case 'Array':
+              case 'Function':
+              case 'Object':
+              case 'Set':
+              case 'Map':
+              case 'WeakSet':
+              case 'WeakMap':
+              case 'Date':
+              case 'Promise':
+              case 'Error':
+                return [node.typeName.name]
 
-            // TS built-in utility types
-            // https://www.typescriptlang.org/docs/handbook/utility-types.html
-            case 'Partial':
-            case 'Required':
-            case 'Readonly':
-            case 'Record':
-            case 'Pick':
-            case 'Omit':
-            case 'InstanceType':
-              return ['Object']
+              // TS built-in utility types
+              // https://www.typescriptlang.org/docs/handbook/utility-types.html
+              case 'Partial':
+              case 'Required':
+              case 'Readonly':
+              case 'Record':
+              case 'Pick':
+              case 'Omit':
+              case 'InstanceType':
+                return ['Object']
 
-            case 'Uppercase':
-            case 'Lowercase':
-            case 'Capitalize':
-            case 'Uncapitalize':
-              return ['String']
+              case 'Uppercase':
+              case 'Lowercase':
+              case 'Capitalize':
+              case 'Uncapitalize':
+                return ['String']
 
-            case 'Parameters':
-            case 'ConstructorParameters':
-            case 'ReadonlyArray':
-              return ['Array']
+              case 'Parameters':
+              case 'ConstructorParameters':
+              case 'ReadonlyArray':
+                return ['Array']
 
-            case 'ReadonlyMap':
-              return ['Map']
-            case 'ReadonlySet':
-              return ['Set']
+              case 'ReadonlyMap':
+                return ['Map']
+              case 'ReadonlySet':
+                return ['Set']
 
-            case 'NonNullable':
-              if (node.typeParameters && node.typeParameters.params[0]) {
-                return inferRuntimeType(
-                  ctx,
-                  node.typeParameters.params[0],
-                  scope,
-                ).filter(t => t !== 'null')
-              }
-              break
-            case 'Extract':
-              if (node.typeParameters && node.typeParameters.params[1]) {
-                return inferRuntimeType(
-                  ctx,
-                  node.typeParameters.params[1],
-                  scope,
-                )
-              }
-              break
-            case 'Exclude':
-            case 'OmitThisParameter':
-              if (node.typeParameters && node.typeParameters.params[0]) {
-                return inferRuntimeType(
-                  ctx,
-                  node.typeParameters.params[0],
-                  scope,
-                )
-              }
-              break
+              case 'NonNullable':
+                if (node.typeParameters && node.typeParameters.params[0]) {
+                  return inferRuntimeType(
+                    ctx,
+                    node.typeParameters.params[0],
+                    scope,
+                  ).filter(t => t !== 'null')
+                }
+                break
+              case 'Extract':
+                if (node.typeParameters && node.typeParameters.params[1]) {
+                  return inferRuntimeType(
+                    ctx,
+                    node.typeParameters.params[1],
+                    scope,
+                  )
+                }
+                break
+              case 'Exclude':
+              case 'OmitThisParameter':
+                if (node.typeParameters && node.typeParameters.params[0]) {
+                  return inferRuntimeType(
+                    ctx,
+                    node.typeParameters.params[0],
+                    scope,
+                  )
+                }
+                break
+            }
           }
         }
         // cannot infer, fallback to UNKNOWN: ThisParameterType
