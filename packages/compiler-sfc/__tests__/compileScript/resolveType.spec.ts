@@ -483,6 +483,27 @@ describe('resolveType', () => {
     })
   })
 
+  test('keyof: index signature', () => {
+    const { props } = resolve(
+      `
+      declare const num: number;
+      interface Foo {
+        [key: symbol]: 1
+        [key: string]: 1
+        [key: typeof num]: 1,
+      }
+
+      defineProps<{
+        foo: keyof Foo 
+      }>()
+      `,
+    )
+
+    expect(props).toStrictEqual({
+      foo: ['Symbol', 'String', 'Number'],
+    })
+  })
+
   test('keyof: Record utility type', () => {
     const { props } = resolve(
       `

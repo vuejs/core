@@ -1476,6 +1476,13 @@ export function inferRuntimeType(
               m.key.type === 'NumericLiteral'
             ) {
               types.add('Number')
+            } else if (m.type === 'TSIndexSignature') {
+              const annotation = m.parameters[0].typeAnnotation
+              if (annotation && annotation.type !== 'Noop') {
+                inferRuntimeType(ctx, annotation.typeAnnotation, scope).forEach(
+                  t => types.add(t),
+                )
+              }
             } else {
               types.add('String')
             }
