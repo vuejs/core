@@ -78,7 +78,7 @@
     "enquirer": "^2.4.1",
     "esbuild": "^0.20.2",
     "esbuild-plugin-polyfill-node": "^0.3.0",
-    "eslint": "^9.1.1",
+    "eslint": "^9.2.0",
     "eslint-plugin-import-x": "^0.5.0",
     "eslint-plugin-vitest": "^0.5.4",
     "estree-walker": "^2.0.2",
@@ -109,7 +109,7 @@
     "tslib": "^2.6.2",
     "tsx": "^4.10.1",
     "typescript": "~5.4.5",
-    "typescript-eslint": "^7.7.1",
+    "typescript-eslint": "^7.8.0",
     "vite": "^5.2.11",
     "vitest": "^1.5.2"
   },
