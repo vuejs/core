@@ -903,7 +903,7 @@ function baseCreateRenderer(
             const prev = oldProps[key]
             const next = newProps[key]
             // #1471 force patch value
-            if (next !== prev || key === 'value') {
+            if (next !== prev || key === 'value' || key === 'checked') {
               hostPatchProp(
                 el,
                 key,
