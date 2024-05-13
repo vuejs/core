@@ -455,13 +455,13 @@ describe('resolveType', () => {
     const { props } = resolve(
       `
       import { IMP } from './foo'
-      interface Foo { foo: 1, ${1}: 1 } 
+      interface Foo { foo: 1, ${1}: 1 }
       type Bar = { bar: 1 }
       declare const obj: Bar
       declare const set: Set<any>
       declare const arr: Array<any>
 
-      defineProps<{ 
+      defineProps<{
         imp: keyof IMP,
         foo: keyof Foo,
         bar: keyof Bar,
@@ -480,6 +480,25 @@ describe('resolveType', () => {
       obj: ['String'],
       set: ['String'],
       arr: ['String', 'Number'],
+    })
+  })
+
+  test('keyof: Record utility type', () => {
+    const { props } = resolve(
+      `
+      type Foo = Record<symbol | string, any>
+      type AnyRecord = Record<keyof any, any>
+
+      defineProps<{
+        foo: keyof Foo,
+        anyRecord: keyof AnyRecord 
+      }>()
+      `,
+    )
+
+    expect(props).toStrictEqual({
+      foo: ['Symbol', 'String'],
+      anyRecord: ['Unknown'],
     })
   })
 

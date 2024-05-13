@@ -1535,6 +1535,12 @@ export function inferRuntimeType(
               case 'ArrayLike':
               case 'ReadonlyArray':
                 return ['String', 'Number']
+              case 'Record':
+                return inferRuntimeType(
+                  ctx,
+                  node.typeParameters!.params[0],
+                  scope,
+                )
               default:
                 return ['String']
             }
