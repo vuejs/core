@@ -35,6 +35,7 @@ export function DevPlugin({ browser = false } = {}) {
 
             '@vue/reactivity': resolve('reactivity/src'),
             '@vue/shared': resolve('shared/src'),
+            '@vue/runtime-shared': resolve('runtime-shared/src'),
           },
         },
         define: {
