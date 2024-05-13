@@ -1542,17 +1542,26 @@ export function inferRuntimeType(
               case 'ArrayLike':
               case 'ReadonlyArray':
                 return ['String', 'Number']
+
+              // TS built-in utility types
               case 'Record':
-                return inferRuntimeType(
-                  ctx,
-                  node.typeParameters!.params[0],
-                  scope,
-                )
+              case 'Partial':
+              case 'Required':
+              case 'Readonly':
+                if (node.typeParameters && node.typeParameters.params[0]) {
+                  return inferRuntimeType(
+                    ctx,
+                    node.typeParameters.params[0],
+                    scope,
+                    true,
+                  )
+                }
+                break
+
               default:
                 return ['String']
             }
           }
-
           switch (node.typeName.name) {
             case 'Array':
             case 'Function':

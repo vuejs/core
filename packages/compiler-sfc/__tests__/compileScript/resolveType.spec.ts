@@ -504,22 +504,29 @@ describe('resolveType', () => {
     })
   })
 
-  test('keyof: Record utility type', () => {
+  test('keyof: utility type', () => {
     const { props } = resolve(
       `
       type Foo = Record<symbol | string, any>
+      type Bar = { [key: string]: any }
       type AnyRecord = Record<keyof any, any>
 
       defineProps<{
-        foo: keyof Foo,
+        record: keyof Foo,
         anyRecord: keyof AnyRecord 
+        partial: keyof Partial<Bar>,
+        required: keyof Required<Bar>,
+        readonly: keyof Readonly<Bar>,
       }>()
       `,
     )
 
     expect(props).toStrictEqual({
-      foo: ['Symbol', 'String'],
+      record: ['Symbol', 'String'],
       anyRecord: ['Unknown'],
+      partial: ['String'],
+      required: ['String'],
+      readonly: ['String'],
     })
   })
 
