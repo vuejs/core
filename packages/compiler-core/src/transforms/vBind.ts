@@ -1,5 +1,6 @@
-import type { DirectiveTransform } from '../transform'
+import type { DirectiveTransform, TransformContext } from '../transform'
 import {
+  type DirectiveNode,
   type ExpressionNode,
   NodeTypes,
   type SimpleExpressionNode,
@@ -41,25 +42,11 @@ export const transformBind: DirectiveTransform = (dir, _node, context) => {
 
   // same-name shorthand - :arg is expanded to :arg="arg"
   if (!exp) {
-    if (arg.type !== NodeTypes.SIMPLE_EXPRESSION || !arg.isStatic) {
-      // only simple expression is allowed for same-name shorthand
-      context.onError(
-        createCompilerError(
-          ErrorCodes.X_V_BIND_INVALID_SAME_NAME_ARGUMENT,
-          arg.loc,
-        ),
-      )
-      return {
-        props: [
-          createObjectProperty(arg, createSimpleExpression('', true, loc)),
-        ],
-      }
-    }
+    if (!exp) {
+      const returned = transformBindShorthand(dir, context)
+      if (returned) return returned
 
-    const propName = camelize((arg as SimpleExpressionNode).content)
-    exp = dir.exp = createSimpleExpression(propName, false, arg.loc)
-    if (!__BROWSER__) {
-      exp = dir.exp = processExpression(exp, context)
+      exp = dir.exp!
     }
   }
 
@@ -95,6 +82,32 @@ export const transformBind: DirectiveTransform = (dir, _node, context) => {
 
   return {
     props: [createObjectProperty(arg, exp)],
+  }
+}
+
+export const transformBindShorthand = (
+  dir: DirectiveNode,
+  context: TransformContext,
+) => {
+  const arg = dir.arg!
+  const { loc } = dir
+  if (arg.type !== NodeTypes.SIMPLE_EXPRESSION || !arg.isStatic) {
+    // only simple expression is allowed for same-name shorthand
+    context.onError(
+      createCompilerError(
+        ErrorCodes.X_V_BIND_INVALID_SAME_NAME_ARGUMENT,
+        arg.loc,
+      ),
+    )
+    return {
+      props: [createObjectProperty(arg, createSimpleExpression('', true, loc))],
+    }
+  }
+
+  const propName = camelize((arg as SimpleExpressionNode).content)
+  dir.exp = createSimpleExpression(propName, false, arg.loc)
+  if (!__BROWSER__) {
+    dir.exp = processExpression(dir.exp, context)
   }
 }
 
