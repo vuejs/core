@@ -60,7 +60,8 @@ export const transformFor = createStructuralDirectiveTransform(
       ]) as ForRenderListExpression
       const isTemplate = isTemplateNode(node)
       const memo = findDir(node, 'memo')
-      const keyProp = findProp(node, `key`)
+      // allowEmpty for check shorthand
+      const keyProp = findProp(node, `key`, false, true)
       const keyExp =
         keyProp &&
         (keyProp.type === NodeTypes.ATTRIBUTE
