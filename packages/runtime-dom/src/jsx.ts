@@ -406,7 +406,7 @@ export interface DataHTMLAttributes extends HTMLAttributes {
 
 export interface DetailsHTMLAttributes extends HTMLAttributes {
   open?: Booleanish
-  onToggle?: (payload: MouseEvent) => void
+  onToggle?: (payload: ToggleEvent) => void
 }
 
 export interface DelHTMLAttributes extends HTMLAttributes {
