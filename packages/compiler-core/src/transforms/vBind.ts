@@ -42,12 +42,10 @@ export const transformBind: DirectiveTransform = (dir, _node, context) => {
 
   // same-name shorthand - :arg is expanded to :arg="arg"
   if (!exp) {
-    if (!exp) {
-      const returned = transformBindShorthand(dir, context)
-      if (returned) return returned
+    const returned = transformBindShorthand(dir, context)
+    if (returned) return returned
 
-      exp = dir.exp!
-    }
+    exp = dir.exp!
   }
 
   if (arg.type !== NodeTypes.SIMPLE_EXPRESSION) {
