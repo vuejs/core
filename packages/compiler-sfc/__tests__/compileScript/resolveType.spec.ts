@@ -510,6 +510,7 @@ describe('resolveType', () => {
       type Foo = Record<symbol | string, any>
       type Bar = { [key: string]: any }
       type AnyRecord = Record<keyof any, any>
+      type Baz = { a: 1, ${1}: 2, b: 3}
 
       defineProps<{
         record: keyof Foo,
@@ -517,6 +518,8 @@ describe('resolveType', () => {
         partial: keyof Partial<Bar>,
         required: keyof Required<Bar>,
         readonly: keyof Readonly<Bar>,
+        pick: keyof Pick<Baz, 'a' | 1>
+        extract: keyof Extract<keyof Baz, 'a' | 1>
       }>()
       `,
     )
@@ -527,6 +530,8 @@ describe('resolveType', () => {
       partial: ['String'],
       required: ['String'],
       readonly: ['String'],
+      pick: ['String', 'Number'],
+      extract: ['String', 'Number'],
     })
   })
 

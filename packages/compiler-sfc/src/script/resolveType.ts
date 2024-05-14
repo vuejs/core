@@ -1559,6 +1559,16 @@ export function inferRuntimeType(
                   )
                 }
                 break
+              case 'Pick':
+              case 'Extract':
+                if (node.typeParameters && node.typeParameters.params[1]) {
+                  return inferRuntimeType(
+                    ctx,
+                    node.typeParameters.params[1],
+                    scope,
+                  )
+                }
+                break
 
               case 'Function':
               case 'Object':
