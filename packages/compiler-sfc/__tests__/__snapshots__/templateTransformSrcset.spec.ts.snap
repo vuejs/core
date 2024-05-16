@@ -1,7 +1,7 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
 exports[`compiler sfc: transform srcset > srcset w/ explicit base option 1`] = `
-"import { createElementVNode as _createElementVNode, hoistLazy as _hoistLazy, Fragment as _Fragment, openBlock as _openBlock, createElementBlock as _createElementBlock } from "vue"
+"import { hoistLazy as _hoistLazy, createElementVNode as _createElementVNode, Fragment as _Fragment, openBlock as _openBlock, createElementBlock as _createElementBlock } from "vue"
 import _imports_0 from '@/logo.png'
 
 

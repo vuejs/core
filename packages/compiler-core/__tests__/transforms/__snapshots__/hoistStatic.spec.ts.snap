@@ -105,7 +105,7 @@ const _hoisted_1 = /*#__PURE__*/ _hoistLazy(() => ({ id: "foo" }))
 
 return function render(_ctx, _cache) {
   with (_ctx) {
-    const { resolveDirective: _resolveDirective, createElementVNode: _createElementVNode, withDirectives: _withDirectives, openBlock: _openBlock, createElementBlock: _createElementBlock } = _Vue
+    const { resolveDirective: _resolveDirective, createElementVNode: _createElementVNode, withDirectives: _withDirectives, hoistLazy: _hoistLazy, openBlock: _openBlock, createElementBlock: _createElementBlock } = _Vue
 
     const _directive_foo = _resolveDirective("foo")
 
@@ -126,7 +126,7 @@ const _hoisted_1 = /*#__PURE__*/ _hoistLazy(() => ({ id: "foo" }))
 
 return function render(_ctx, _cache) {
   with (_ctx) {
-    const { toDisplayString: _toDisplayString, createElementVNode: _createElementVNode, openBlock: _openBlock, createElementBlock: _createElementBlock } = _Vue
+    const { toDisplayString: _toDisplayString, createElementVNode: _createElementVNode, hoistLazy: _hoistLazy, openBlock: _openBlock, createElementBlock: _createElementBlock } = _Vue
 
     return (_openBlock(), _createElementBlock("div", null, [
       _createElementVNode("div", _hoisted_1(), _toDisplayString(hello), 1 /* TEXT */)
@@ -143,7 +143,7 @@ const _hoisted_1 = /*#__PURE__*/ _hoistLazy(() => ({ id: "foo" }))
 
 return function render(_ctx, _cache) {
   with (_ctx) {
-    const { resolveComponent: _resolveComponent, createVNode: _createVNode, createElementVNode: _createElementVNode, openBlock: _openBlock, createElementBlock: _createElementBlock } = _Vue
+    const { resolveComponent: _resolveComponent, createVNode: _createVNode, createElementVNode: _createElementVNode, hoistLazy: _hoistLazy, openBlock: _openBlock, createElementBlock: _createElementBlock } = _Vue
 
     const _component_Comp = _resolveComponent("Comp")
 
@@ -166,7 +166,7 @@ const _hoisted_1 = /*#__PURE__*/ _hoistLazy(() => ({
 
 return function render(_ctx, _cache) {
   with (_ctx) {
-    const { toDisplayString: _toDisplayString, normalizeClass: _normalizeClass, createElementVNode: _createElementVNode, openBlock: _openBlock, createElementBlock: _createElementBlock } = _Vue
+    const { toDisplayString: _toDisplayString, normalizeClass: _normalizeClass, createElementVNode: _createElementVNode, hoistLazy: _hoistLazy, openBlock: _openBlock, createElementBlock: _createElementBlock } = _Vue
 
     return (_openBlock(), _createElementBlock("div", null, [
       _createElementVNode("span", _hoisted_1(), _toDisplayString(_ctx.bar), 1 /* TEXT */)
@@ -373,7 +373,7 @@ const _hoisted_1 = /*#__PURE__*/ _hoistLazy(() => (["id"]))
 
 return function render(_ctx, _cache) {
   with (_ctx) {
-    const { createElementVNode: _createElementVNode, openBlock: _openBlock, createElementBlock: _createElementBlock } = _Vue
+    const { createElementVNode: _createElementVNode, hoistLazy: _hoistLazy, openBlock: _openBlock, createElementBlock: _createElementBlock } = _Vue
 
     return (_openBlock(), _createElementBlock("div", null, [
       _createElementVNode("div", { id: foo }, null, 8 /* PROPS */, _hoisted_1())

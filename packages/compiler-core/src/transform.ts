@@ -34,6 +34,7 @@ import { defaultOnError, defaultOnWarn } from './errors'
 import {
   CREATE_COMMENT,
   FRAGMENT,
+  HOIST_LAZY,
   TO_DISPLAY_STRING,
   helperNameMap,
 } from './runtimeHelpers'
@@ -285,6 +286,7 @@ export function createTransformContext(
       }
     },
     hoist(exp) {
+      context.helper(HOIST_LAZY)
       if (isString(exp)) exp = createSimpleExpression(exp)
       context.hoists.push(exp)
       const identifier = createSimpleExpression(
