@@ -1,5 +1,5 @@
-import { AwaitExpression } from '@babel/types'
-import { ScriptCompileContext } from './context'
+import type { AwaitExpression } from '@babel/types'
+import type { ScriptCompileContext } from './context'
 
 /**
  * Support context-persistence between top-level await expressions:
@@ -38,7 +38,7 @@ export function processAwait(
   ctx: ScriptCompileContext,
   node: AwaitExpression,
   needSemi: boolean,
-  isStatement: boolean
+  isStatement: boolean,
 ) {
   const argumentStart =
     node.argument.extra && node.argument.extra.parenthesized
@@ -48,7 +48,7 @@ export function processAwait(
   const startOffset = ctx.startOffset!
   const argumentStr = ctx.descriptor.source.slice(
     argumentStart + startOffset,
-    node.argument.end! + startOffset
+    node.argument.end! + startOffset,
   )
 
   const containsNestedAwait = /\bawait\b/.test(argumentStr)
@@ -57,13 +57,13 @@ export function processAwait(
     node.start! + startOffset,
     argumentStart + startOffset,
     `${needSemi ? `;` : ``}(\n  ([__temp,__restore] = ${ctx.helper(
-      `withAsyncContext`
-    )}(${containsNestedAwait ? `async ` : ``}() => `
+      `withAsyncContext`,
+    )}(${containsNestedAwait ? `async ` : ``}() => `,
   )
   ctx.s.appendLeft(
     node.end! + startOffset,
     `)),\n  ${isStatement ? `` : `__temp = `}await __temp,\n  __restore()${
       isStatement ? `` : `,\n  __temp`
-    }\n)`
+    }\n)`,
   )
 }
