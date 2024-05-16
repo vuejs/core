@@ -42,6 +42,7 @@ import {
   CREATE_STATIC,
   CREATE_TEXT,
   CREATE_VNODE,
+  HOIST_LAZY,
   OPEN_BLOCK,
   POP_SCOPE_ID,
   PUSH_SCOPE_ID,
@@ -476,6 +477,7 @@ function genModulePreamble(
   if (genScopeId && ast.hoists.length) {
     ast.helpers.add(PUSH_SCOPE_ID)
     ast.helpers.add(POP_SCOPE_ID)
+    ast.helpers.add(HOIST_LAZY)
   }
 
   // generate import statements for helpers
@@ -585,14 +587,15 @@ function genHoists(hoists: (JSChildNode | null)[], context: CodegenContext) {
     if (exp) {
       const needScopeIdWrapper = genScopeId && exp.type === NodeTypes.VNODE_CALL
       push(
-        `const _hoisted_${i + 1} = ${
-          needScopeIdWrapper ? `${PURE_ANNOTATION} _withScopeId(() => ` : ``
+        `const _hoisted_${i + 1} = ${PURE_ANNOTATION} ${helper(HOIST_LAZY)}(() => (${
+          needScopeIdWrapper ? `_withScopeId(() => ` : ``
         }`,
       )
       genNode(exp, context)
       if (needScopeIdWrapper) {
         push(`)`)
       }
+      push('))')
       newline()
     }
   }

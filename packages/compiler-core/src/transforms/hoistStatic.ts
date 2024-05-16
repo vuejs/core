@@ -21,6 +21,7 @@ import { PatchFlags, isArray, isString, isSymbol } from '@vue/shared'
 import { isSlotOutlet } from '../utils'
 import {
   GUARD_REACTIVE_PROPS,
+  HOIST_LAZY,
   NORMALIZE_CLASS,
   NORMALIZE_PROPS,
   NORMALIZE_STYLE,
@@ -70,6 +71,7 @@ function walk(
         : getConstantType(child, context)
       if (constantType > ConstantTypes.NOT_CONSTANT) {
         if (constantType >= ConstantTypes.CAN_HOIST) {
+          context.helper(HOIST_LAZY)
           ;(child.codegenNode as VNodeCall).patchFlag =
             PatchFlags.HOISTED + (__DEV__ ? ` /* HOISTED */` : ``)
           child.codegenNode = context.hoist(child.codegenNode!)

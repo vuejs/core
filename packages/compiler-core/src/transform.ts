@@ -288,7 +288,7 @@ export function createTransformContext(
       if (isString(exp)) exp = createSimpleExpression(exp)
       context.hoists.push(exp)
       const identifier = createSimpleExpression(
-        `_hoisted_${context.hoists.length}`,
+        `_hoisted_${context.hoists.length}()`,
         false,
         exp.loc,
         ConstantTypes.CAN_HOIST,

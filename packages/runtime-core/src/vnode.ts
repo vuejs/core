@@ -875,3 +875,13 @@ export function invokeVNodeHook(
     prevVNode,
   ])
 }
+
+export function hoistLazy<T>(fn: () => T): () => T {
+  let cache: T | undefined
+  return (): T => {
+    if (!cache) {
+      cache = fn()
+    }
+    return cache
+  }
+}

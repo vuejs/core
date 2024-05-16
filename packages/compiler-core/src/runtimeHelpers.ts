@@ -9,6 +9,7 @@ export const CREATE_ELEMENT_BLOCK = Symbol(__DEV__ ? `createElementBlock` : ``)
 export const CREATE_VNODE = Symbol(__DEV__ ? `createVNode` : ``)
 export const CREATE_ELEMENT_VNODE = Symbol(__DEV__ ? `createElementVNode` : ``)
 export const CREATE_COMMENT = Symbol(__DEV__ ? `createCommentVNode` : ``)
+export const HOIST_LAZY = Symbol(__DEV__ ? `hoistLazy` : ``)
 export const CREATE_TEXT = Symbol(__DEV__ ? `createTextVNode` : ``)
 export const CREATE_STATIC = Symbol(__DEV__ ? `createStaticVNode` : ``)
 export const RESOLVE_COMPONENT = Symbol(__DEV__ ? `resolveComponent` : ``)
@@ -79,6 +80,7 @@ export const helperNameMap: Record<symbol, string> = {
   [POP_SCOPE_ID]: `popScopeId`,
   [WITH_CTX]: `withCtx`,
   [UNREF]: `unref`,
+  [HOIST_LAZY]: `hoistLazy`,
   [IS_REF]: `isRef`,
   [WITH_MEMO]: `withMemo`,
   [IS_MEMO_SAME]: `isMemoSame`,
