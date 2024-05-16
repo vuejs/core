@@ -849,9 +849,9 @@ return (_ctx, _cache) => {
 `;
 
 exports[`SFC compile <script setup> > inlineTemplate mode > should work 1`] = `
-"import { toDisplayString as _toDisplayString, createElementVNode as _createElementVNode, Fragment as _Fragment, openBlock as _openBlock, createElementBlock as _createElementBlock } from "vue"
+"import { toDisplayString as _toDisplayString, createElementVNode as _createElementVNode, hoistLazy as _hoistLazy, Fragment as _Fragment, openBlock as _openBlock, createElementBlock as _createElementBlock } from "vue"
 
-const _hoisted_1 = /*#__PURE__*/_createElementVNode("div", null, "static", -1 /* HOISTED */)
+const _hoisted_1 = /*#__PURE__*/ _hoistLazy(() => (/*#__PURE__*/_createElementVNode("div", null, "static", -1 /* HOISTED */)))
 
 import { ref } from 'vue'
         
@@ -863,7 +863,7 @@ export default {
 return (_ctx, _cache) => {
   return (_openBlock(), _createElementBlock(_Fragment, null, [
     _createElementVNode("div", null, _toDisplayString(count.value), 1 /* TEXT */),
-    _hoisted_1
+    _hoisted_1()
   ], 64 /* STABLE_FRAGMENT */))
 }
 }

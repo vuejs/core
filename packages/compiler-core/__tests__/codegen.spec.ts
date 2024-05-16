@@ -154,8 +154,12 @@ describe('compiler: codegen', () => {
       ],
     })
     const { code } = generate(root)
-    expect(code).toMatch(`const _hoisted_1 = hello`)
-    expect(code).toMatch(`const _hoisted_2 = { id: "foo" }`)
+    expect(code).toMatch(
+      `const _hoisted_1 = /*#__PURE__*/ _hoistLazy(() => (hello))`,
+    )
+    expect(code).toMatch(
+      `const _hoisted_2 = /*#__PURE__*/ _hoistLazy(() => ({ id: "foo" }))`,
+    )
     expect(code).toMatchSnapshot()
   })
 

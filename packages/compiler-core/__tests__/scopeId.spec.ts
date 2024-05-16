@@ -72,12 +72,12 @@ describe('scopeId compiler support', () => {
     expect(ast.hoists.length).toBe(2)
     ;[
       `const _withScopeId = n => (_pushScopeId("test"),n=n(),_popScopeId(),n)`,
-      `const _hoisted_1 = /*#__PURE__*/ _withScopeId(() => /*#__PURE__*/_createElementVNode("div", null, "hello", ${genFlagText(
+      `const _hoisted_1 = /*#__PURE__*/ _hoistLazy(() => (_withScopeId(() => /*#__PURE__*/_createElementVNode("div", null, "hello", ${genFlagText(
         PatchFlags.HOISTED,
-      )}))`,
-      `const _hoisted_2 = /*#__PURE__*/ _withScopeId(() => /*#__PURE__*/_createElementVNode("div", null, "world", ${genFlagText(
+      )})))`,
+      `const _hoisted_2 = /*#__PURE__*/ _hoistLazy(() => (_withScopeId(() => /*#__PURE__*/_createElementVNode("div", null, "world", ${genFlagText(
         PatchFlags.HOISTED,
-      )}))`,
+      )})))`,
     ].forEach(c => expect(code).toMatch(c))
     expect(code).toMatchSnapshot()
   })

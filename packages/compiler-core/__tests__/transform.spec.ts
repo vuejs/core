@@ -197,8 +197,8 @@ describe('compiler: transform', () => {
       nodeTransforms: [mock],
     })
     expect(ast.hoists).toMatchObject(hoisted)
-    expect((ast as any).children[0].props[0].exp.content).toBe(`_hoisted_1`)
-    expect((ast as any).children[1].props[0].exp.content).toBe(`_hoisted_2`)
+    expect((ast as any).children[0].props[0].exp.content).toBe(`_hoisted_1()`)
+    expect((ast as any).children[1].props[0].exp.content).toBe(`_hoisted_2()`)
   })
 
   test('context.filename and selfName', () => {

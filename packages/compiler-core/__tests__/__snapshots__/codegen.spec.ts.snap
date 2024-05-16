@@ -134,8 +134,8 @@ return function render(_ctx, _cache) {
 
 exports[`compiler: codegen > hoists 1`] = `
 "
-const _hoisted_1 = hello
-const _hoisted_2 = { id: "foo" }
+const _hoisted_1 = /*#__PURE__*/ _hoistLazy(() => (hello))
+const _hoisted_2 = /*#__PURE__*/ _hoistLazy(() => ({ id: "foo" }))
 
 return function render(_ctx, _cache) {
   with (_ctx) {
