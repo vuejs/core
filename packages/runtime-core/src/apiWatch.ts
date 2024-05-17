@@ -493,6 +493,11 @@ export function traverse(
     for (const key in value) {
       traverse(value[key], depth, seen)
     }
+    for (const key of Object.getOwnPropertySymbols(value)) {
+      if (Object.prototype.propertyIsEnumerable.call(value, key)) {
+        traverse(value[key as any], depth, seen)
+      }
+    }
   }
   return value
 }
