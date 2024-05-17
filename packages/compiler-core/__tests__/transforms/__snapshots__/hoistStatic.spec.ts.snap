@@ -2,7 +2,7 @@
 
 exports[`compiler: hoistStatic transform > hoist element with static key 1`] = `
 "const _Vue = Vue
-const { createElementVNode: _createElementVNode } = _Vue
+const { createElementVNode: _createElementVNode, hoistLazy: _hoistLazy } = _Vue
 
 const _hoisted_1 = /*#__PURE__*/ _hoistLazy(() => (/*#__PURE__*/_createElementVNode("div", { key: "foo" }, null, -1 /* HOISTED */)))
 const _hoisted_2 = /*#__PURE__*/ _hoistLazy(() => ([
@@ -20,7 +20,7 @@ return function render(_ctx, _cache) {
 
 exports[`compiler: hoistStatic transform > hoist nested static tree 1`] = `
 "const _Vue = Vue
-const { createElementVNode: _createElementVNode } = _Vue
+const { createElementVNode: _createElementVNode, hoistLazy: _hoistLazy } = _Vue
 
 const _hoisted_1 = /*#__PURE__*/ _hoistLazy(() => (/*#__PURE__*/_createElementVNode("p", null, [
   /*#__PURE__*/_createElementVNode("span"),
@@ -41,7 +41,7 @@ return function render(_ctx, _cache) {
 
 exports[`compiler: hoistStatic transform > hoist nested static tree with comments 1`] = `
 "const _Vue = Vue
-const { createElementVNode: _createElementVNode, createCommentVNode: _createCommentVNode } = _Vue
+const { createElementVNode: _createElementVNode, createCommentVNode: _createCommentVNode, hoistLazy: _hoistLazy } = _Vue
 
 const _hoisted_1 = /*#__PURE__*/ _hoistLazy(() => (/*#__PURE__*/_createElementVNode("div", null, [
   /*#__PURE__*/_createCommentVNode("comment")
@@ -61,7 +61,7 @@ return function render(_ctx, _cache) {
 
 exports[`compiler: hoistStatic transform > hoist siblings with common non-hoistable parent 1`] = `
 "const _Vue = Vue
-const { createElementVNode: _createElementVNode } = _Vue
+const { createElementVNode: _createElementVNode, hoistLazy: _hoistLazy } = _Vue
 
 const _hoisted_1 = /*#__PURE__*/ _hoistLazy(() => (/*#__PURE__*/_createElementVNode("span", null, null, -1 /* HOISTED */)))
 const _hoisted_2 = /*#__PURE__*/ _hoistLazy(() => (/*#__PURE__*/_createElementVNode("div", null, null, -1 /* HOISTED */)))
@@ -81,7 +81,7 @@ return function render(_ctx, _cache) {
 
 exports[`compiler: hoistStatic transform > hoist simple element 1`] = `
 "const _Vue = Vue
-const { createElementVNode: _createElementVNode } = _Vue
+const { createElementVNode: _createElementVNode, hoistLazy: _hoistLazy } = _Vue
 
 const _hoisted_1 = /*#__PURE__*/ _hoistLazy(() => (/*#__PURE__*/_createElementVNode("span", { class: "inline" }, "hello", -1 /* HOISTED */)))
 const _hoisted_2 = /*#__PURE__*/ _hoistLazy(() => ([
@@ -99,7 +99,7 @@ return function render(_ctx, _cache) {
 
 exports[`compiler: hoistStatic transform > hoist static props for elements with directives 1`] = `
 "const _Vue = Vue
-const { createElementVNode: _createElementVNode } = _Vue
+const { createElementVNode: _createElementVNode, hoistLazy: _hoistLazy } = _Vue
 
 const _hoisted_1 = /*#__PURE__*/ _hoistLazy(() => ({ id: "foo" }))
 
@@ -120,7 +120,7 @@ return function render(_ctx, _cache) {
 
 exports[`compiler: hoistStatic transform > hoist static props for elements with dynamic text children 1`] = `
 "const _Vue = Vue
-const { createElementVNode: _createElementVNode } = _Vue
+const { createElementVNode: _createElementVNode, hoistLazy: _hoistLazy } = _Vue
 
 const _hoisted_1 = /*#__PURE__*/ _hoistLazy(() => ({ id: "foo" }))
 
@@ -137,7 +137,7 @@ return function render(_ctx, _cache) {
 
 exports[`compiler: hoistStatic transform > hoist static props for elements with unhoistable children 1`] = `
 "const _Vue = Vue
-const { createVNode: _createVNode, createElementVNode: _createElementVNode } = _Vue
+const { createVNode: _createVNode, createElementVNode: _createElementVNode, hoistLazy: _hoistLazy } = _Vue
 
 const _hoisted_1 = /*#__PURE__*/ _hoistLazy(() => ({ id: "foo" }))
 
@@ -158,7 +158,7 @@ return function render(_ctx, _cache) {
 
 exports[`compiler: hoistStatic transform > prefixIdentifiers > hoist class with static object value 1`] = `
 "const _Vue = Vue
-const { createElementVNode: _createElementVNode } = _Vue
+const { createElementVNode: _createElementVNode, hoistLazy: _hoistLazy } = _Vue
 
 const _hoisted_1 = /*#__PURE__*/ _hoistLazy(() => ({
   class: /*#__PURE__*/_normalizeClass({ foo: true })
@@ -177,7 +177,7 @@ return function render(_ctx, _cache) {
 
 exports[`compiler: hoistStatic transform > prefixIdentifiers > hoist nested static tree with static interpolation 1`] = `
 "const _Vue = Vue
-const { createElementVNode: _createElementVNode } = _Vue
+const { createElementVNode: _createElementVNode, hoistLazy: _hoistLazy } = _Vue
 
 const _hoisted_1 = /*#__PURE__*/ _hoistLazy(() => (/*#__PURE__*/_createElementVNode("span", null, "foo " + /*#__PURE__*/_toDisplayString(1) + " " + /*#__PURE__*/_toDisplayString(true), -1 /* HOISTED */)))
 const _hoisted_2 = /*#__PURE__*/ _hoistLazy(() => ([
@@ -195,7 +195,7 @@ return function render(_ctx, _cache) {
 
 exports[`compiler: hoistStatic transform > prefixIdentifiers > hoist nested static tree with static prop value 1`] = `
 "const _Vue = Vue
-const { createElementVNode: _createElementVNode } = _Vue
+const { createElementVNode: _createElementVNode, hoistLazy: _hoistLazy } = _Vue
 
 const _hoisted_1 = /*#__PURE__*/ _hoistLazy(() => (/*#__PURE__*/_createElementVNode("span", { foo: 0 }, /*#__PURE__*/_toDisplayString(1), -1 /* HOISTED */)))
 const _hoisted_2 = /*#__PURE__*/ _hoistLazy(() => ([
@@ -213,7 +213,7 @@ return function render(_ctx, _cache) {
 
 exports[`compiler: hoistStatic transform > prefixIdentifiers > should NOT hoist SVG with directives 1`] = `
 "const _Vue = Vue
-const { createElementVNode: _createElementVNode } = _Vue
+const { createElementVNode: _createElementVNode, hoistLazy: _hoistLazy } = _Vue
 
 const _hoisted_1 = /*#__PURE__*/ _hoistLazy(() => (/*#__PURE__*/_createElementVNode("path", { d: "M2,3H5.5L12" }, null, -1 /* HOISTED */)))
 const _hoisted_2 = /*#__PURE__*/ _hoistLazy(() => ([
@@ -367,7 +367,7 @@ return function render(_ctx, _cache) {
 
 exports[`compiler: hoistStatic transform > should NOT hoist element with dynamic props (but hoist the props list) 1`] = `
 "const _Vue = Vue
-const { createElementVNode: _createElementVNode } = _Vue
+const { createElementVNode: _createElementVNode, hoistLazy: _hoistLazy } = _Vue
 
 const _hoisted_1 = /*#__PURE__*/ _hoistLazy(() => (["id"]))
 
@@ -410,7 +410,7 @@ return function render(_ctx, _cache) {
 
 exports[`compiler: hoistStatic transform > should hoist v-for children if static 1`] = `
 "const _Vue = Vue
-const { createElementVNode: _createElementVNode } = _Vue
+const { createElementVNode: _createElementVNode, hoistLazy: _hoistLazy } = _Vue
 
 const _hoisted_1 = /*#__PURE__*/ _hoistLazy(() => ({ id: "foo" }))
 const _hoisted_2 = /*#__PURE__*/ _hoistLazy(() => (/*#__PURE__*/_createElementVNode("span", null, null, -1 /* HOISTED */)))
@@ -433,7 +433,7 @@ return function render(_ctx, _cache) {
 
 exports[`compiler: hoistStatic transform > should hoist v-if props/children if static 1`] = `
 "const _Vue = Vue
-const { createElementVNode: _createElementVNode, createCommentVNode: _createCommentVNode } = _Vue
+const { createElementVNode: _createElementVNode, createCommentVNode: _createCommentVNode, hoistLazy: _hoistLazy } = _Vue
 
 const _hoisted_1 = /*#__PURE__*/ _hoistLazy(() => ({
   key: 0,
