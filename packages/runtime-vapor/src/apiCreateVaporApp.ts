@@ -21,6 +21,8 @@ export function createVaporApp(
   }
 
   const context = createAppContext()
+  const installedPlugins = new WeakSet()
+
   let instance: ComponentInternalInstance
 
   const app: App = {
@@ -38,6 +40,24 @@ export function createVaporApp(
           `app.config cannot be replaced. Modify individual options instead.`,
         )
       }
+    },
+
+    use(plugin: Plugin, ...options: any[]) {
+      if (installedPlugins.has(plugin)) {
+        __DEV__ && warn(`Plugin has already been applied to target app.`)
+      } else if (plugin && isFunction(plugin.install)) {
+        installedPlugins.add(plugin)
+        plugin.install(app, ...options)
+      } else if (isFunction(plugin)) {
+        installedPlugins.add(plugin)
+        plugin(app, ...options)
+      } else if (__DEV__) {
+        warn(
+          `A plugin must either be a function or an object with an "install" ` +
+            `function.`,
+        )
+      }
+      return app
     },
 
     mount(rootContainer): any {
@@ -107,9 +127,29 @@ export function createAppContext(): AppContext {
   }
 }
 
+type PluginInstallFunction<Options = any[]> = Options extends unknown[]
+  ? (app: App, ...options: Options) => any
+  : (app: App, options: Options) => any
+
+export type ObjectPlugin<Options = any[]> = {
+  install: PluginInstallFunction<Options>
+}
+export type FunctionPlugin<Options = any[]> = PluginInstallFunction<Options> &
+  Partial<ObjectPlugin<Options>>
+
+export type Plugin<Options = any[]> =
+  | FunctionPlugin<Options>
+  | ObjectPlugin<Options>
+
 export interface App {
   version: string
   config: AppConfig
+
+  use<Options extends unknown[]>(
+    plugin: Plugin<Options>,
+    ...options: Options
+  ): this
+  use<Options>(plugin: Plugin<Options>, options: Options): this
 
   mount(
     rootContainer: ParentNode | string,

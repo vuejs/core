@@ -121,6 +121,9 @@ export {
   type App,
   type AppConfig,
   type AppContext,
+  type Plugin,
+  type ObjectPlugin,
+  type FunctionPlugin,
 } from './apiCreateVaporApp'
 export { createIf } from './apiCreateIf'
 export { createFor } from './apiCreateFor'
