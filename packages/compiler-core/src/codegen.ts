@@ -437,6 +437,7 @@ function genFunctionPreamble(ast: RootNode, context: CodegenContext) {
           CREATE_COMMENT,
           CREATE_TEXT,
           CREATE_STATIC,
+          HOIST_LAZY,
         ]
           .filter(helper => helpers.includes(helper))
           .map(aliasHelper)
