@@ -22,6 +22,7 @@ export const createFor = (
   getKey?: (item: any, key: any, index?: number) => any,
   getMemo?: (item: any, key: any, index?: number) => any[],
   hydrationNode?: Node,
+  once?: boolean,
 ): Fragment => {
   let isMounted = false
   let oldBlocks: ForBlock[] = []
@@ -32,9 +33,12 @@ export const createFor = (
     nodes: oldBlocks,
     [fragmentKey]: true,
   }
-
   const update = getMemo ? updateWithMemo : updateWithoutMemo
-  renderEffect(() => {
+  once ? renderList() : renderEffect(renderList)
+
+  return ref
+
+  function renderList() {
     const source = src()
     const newLength = getLength(source)
     const oldLength = oldBlocks.length
@@ -213,9 +217,7 @@ export const createFor = (
     }
 
     ref.nodes = [(oldBlocks = newBlocks), parentAnchor]
-  })
-
-  return ref
+  }
 
   function mount(
     source: any,

@@ -14,6 +14,7 @@ export function createComponent(
   slots: Slots | null = null,
   dynamicSlots: DynamicSlots | null = null,
   singleRoot: boolean = false,
+  once: boolean = false,
 ) {
   const current = currentInstance!
   const instance = createComponentInstance(
@@ -21,6 +22,7 @@ export function createComponent(
     singleRoot ? withAttrs(rawProps) : rawProps,
     slots,
     dynamicSlots,
+    once,
   )
   setupComponent(instance, singleRoot)
 

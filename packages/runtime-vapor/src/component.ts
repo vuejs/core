@@ -261,6 +261,7 @@ export function createComponentInstance(
   rawProps: RawProps | null,
   slots: Slots | null,
   dynamicSlots: DynamicSlots | null,
+  once: boolean = false,
   // application root node only
   appContext?: AppContext,
 ): ComponentInternalInstance {
@@ -354,7 +355,7 @@ export function createComponentInstance(
      */
     // [VaporLifecycleHooks.SERVER_PREFETCH]: null,
   }
-  initProps(instance, rawProps, !isFunction(component))
+  initProps(instance, rawProps, !isFunction(component), once)
   initSlots(instance, slots, dynamicSlots)
   instance.emit = emit.bind(null, instance)
 

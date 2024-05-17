@@ -47,6 +47,7 @@ export function createVaporApp(
           rootProps,
           null,
           null,
+          false,
           context,
         )
         setupComponent(instance)

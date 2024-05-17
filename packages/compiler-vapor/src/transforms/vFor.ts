@@ -63,6 +63,7 @@ export function processFor(
       index: index as SimpleExpressionNode | undefined,
       keyProp: keyProperty,
       render,
+      once: context.inVOnce,
     })
   }
 }

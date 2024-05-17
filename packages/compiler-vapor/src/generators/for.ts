@@ -19,7 +19,7 @@ export function genFor(
   context: CodegenContext,
 ): CodeFragment[] {
   const { vaporHelper, genEffects } = context
-  const { source, value, key, index, render, keyProp } = oper
+  const { source, value, key, index, render, keyProp, once } = oper
 
   const rawValue = value && value.content
   const rawKey = key && key.content
@@ -67,11 +67,18 @@ export function genFor(
   }
 
   genEffects.pop()
-
   return [
     NEWLINE,
     `const n${oper.id} = `,
-    ...genCall(vaporHelper('createFor'), sourceExpr, blockFn, getKeyFn),
+    ...genCall(
+      vaporHelper('createFor'),
+      sourceExpr,
+      blockFn,
+      getKeyFn,
+      false, // todo: getMemo
+      false, // todo: hydrationNode
+      once && 'true',
+    ),
   ]
 
   function genEffectInFor(effects: IREffect[]): CodeFragment[] {

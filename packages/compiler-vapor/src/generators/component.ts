@@ -34,7 +34,7 @@ export function genCreateComponent(
   const { vaporHelper } = context
 
   const tag = genTag()
-  const { root, slots, dynamicSlots } = oper
+  const { root, slots, dynamicSlots, once } = oper
   const rawProps = genRawProps(oper.props, context)
 
   return [
@@ -46,7 +46,8 @@ export function genCreateComponent(
       rawProps,
       slots && genSlots(slots, context),
       dynamicSlots && genDynamicSlots(dynamicSlots, context),
-      root && 'true',
+      root ? 'true' : false,
+      once && 'true',
     ),
     ...genDirectivesForElement(oper.id, context),
   ]

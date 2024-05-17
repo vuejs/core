@@ -106,6 +106,7 @@ function transformComponentElement(
     root,
     slots: context.slots,
     dynamicSlots: context.dynamicSlots,
+    once: context.inVOnce,
   })
   context.slots = undefined
   context.dynamicSlots = undefined

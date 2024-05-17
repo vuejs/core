@@ -131,7 +131,25 @@ describe('compiler: v-once', () => {
     ])
   })
 
-  test.todo('on component')
+  test('on component', () => {
+    const { ir, code } = compileWithOnce(`<div><Comp :id="foo" v-once /></div>`)
+    expect(code).toMatchSnapshot()
+    expect(ir.block.effect).lengthOf(0)
+    expect(ir.block.operation).toMatchObject([
+      {
+        type: IRNodeTypes.CREATE_COMPONENT_NODE,
+        id: 0,
+        tag: 'Comp',
+        once: true,
+      },
+      {
+        type: IRNodeTypes.INSERT_NODE,
+        elements: [0],
+        parent: 1,
+      },
+    ])
+  })
+
   test.todo('on slot outlet')
 
   test('inside v-once', () => {
@@ -205,5 +223,16 @@ describe('compiler: v-once', () => {
     ])
   })
 
-  test.todo('with v-for')
+  test('with v-for', () => {
+    const { ir, code } = compileWithOnce(`<div v-for="i in list" v-once />`)
+    expect(code).toMatchSnapshot()
+    expect(ir.block.effect).lengthOf(0)
+    expect(ir.block.operation).toMatchObject([
+      {
+        type: IRNodeTypes.FOR,
+        id: 0,
+        once: true,
+      },
+    ])
+  })
 })

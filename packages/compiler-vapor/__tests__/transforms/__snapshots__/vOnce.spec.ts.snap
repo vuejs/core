@@ -35,6 +35,21 @@ export function render(_ctx) {
 }"
 `;
 
+exports[`compiler: v-once > on component 1`] = `
+"import { resolveComponent as _resolveComponent, createComponent as _createComponent, insert as _insert, template as _template } from 'vue/vapor';
+const t0 = _template("<div></div>")
+
+export function render(_ctx) {
+  const _component_Comp = _resolveComponent("Comp")
+  const n1 = t0()
+  const n0 = _createComponent(_component_Comp, [
+    { id: () => (_ctx.foo) }
+  ], null, null, null, true)
+  _insert(n0, n1)
+  return n1
+}"
+`;
+
 exports[`compiler: v-once > on nested plain element 1`] = `
 "import { setDynamicProp as _setDynamicProp, template as _template } from 'vue/vapor';
 const t0 = _template("<div><div></div></div>")
@@ -44,6 +59,19 @@ export function render(_ctx) {
   const n0 = n1.firstChild
   _setDynamicProp(n0, "id", _ctx.foo)
   return n1
+}"
+`;
+
+exports[`compiler: v-once > with v-for 1`] = `
+"import { createFor as _createFor, template as _template } from 'vue/vapor';
+const t0 = _template("<div></div>")
+
+export function render(_ctx) {
+  const n0 = _createFor(() => (_ctx.list), (_block) => {
+    const n2 = t0()
+    return [n2, () => {}]
+  }, null, null, null, true)
+  return n0
 }"
 `;
 
