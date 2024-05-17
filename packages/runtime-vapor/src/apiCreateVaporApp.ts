@@ -100,6 +100,7 @@ export function createAppContext(): AppContext {
     config: {
       errorHandler: undefined,
       warnHandler: undefined,
+      globalProperties: {},
     },
     provides: Object.create(null),
   }
@@ -131,6 +132,7 @@ export interface AppConfig {
     instance: ComponentInternalInstance | null,
     trace: string,
   ) => void
+  globalProperties: ComponentCustomProperties & Record<string, any>
 }
 
 export interface AppContext {
@@ -144,3 +146,30 @@ export interface AppContext {
  * `app.runWithContext()`.
  */
 export let currentApp: App | null = null
+
+/**
+ * Custom properties added to component instances in any way and can be accessed through `this`
+ *
+ * @example
+ * Here is an example of adding a property `$router` to every component instance:
+ * ```ts
+ * import { createApp } from 'vue'
+ * import { Router, createRouter } from 'vue-router'
+ *
+ * declare module '@vue/runtime-core' {
+ *   interface ComponentCustomProperties {
+ *     $router: Router
+ *   }
+ * }
+ *
+ * // effectively adding the router to every component instance
+ * const app = createApp({})
+ * const router = createRouter()
+ * app.config.globalProperties.$router = router
+ *
+ * const vm = app.mount('#app')
+ * // we can access the router from the instance
+ * vm.$router.push('/')
+ * ```
+ */
+export interface ComponentCustomProperties {}
