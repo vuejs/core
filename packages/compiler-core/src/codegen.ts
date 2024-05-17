@@ -478,7 +478,6 @@ function genModulePreamble(
   if (genScopeId && ast.hoists.length) {
     ast.helpers.add(PUSH_SCOPE_ID)
     ast.helpers.add(POP_SCOPE_ID)
-    ast.helpers.add(HOIST_LAZY)
   }
 
   // generate import statements for helpers
