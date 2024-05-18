@@ -523,8 +523,14 @@ export function compileScript(
             )
           }
 
-          // defineProps / defineEmits
+          // defineProps
           const isDefineProps = processDefineProps(ctx, init, decl.id)
+          if (ctx.propsDestructureRestId) {
+            setupBindings[ctx.propsDestructureRestId] =
+              BindingTypes.SETUP_REACTIVE_CONST
+          }
+
+          // defineEmits
           const isDefineEmits =
             !isDefineProps && processDefineEmits(ctx, init, decl.id)
           !isDefineEmits &&
