@@ -733,5 +733,18 @@ describe('compiler: transform v-on', () => {
         },
       })
     })
+    it('Popover api @beforetoggle', () => {
+      const { node } = parseWithVOn(`<div @beforetoggle="test"></div>`, {
+        prefixIdentifiers: true,
+      })
+      const vnodeCall = node.codegenNode as VNodeCall
+      const properties = (vnodeCall.props as ObjectExpression).properties[0]
+        .value
+      expect(properties).toMatchObject({
+        type: NodeTypes.SIMPLE_EXPRESSION,
+        content: '_ctx.test',
+        isStatic: false,
+      })
+    })
   })
 })

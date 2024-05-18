@@ -323,6 +323,11 @@ export interface HTMLAttributes extends AriaAttributes, EventHandlers<Events> {
    * @see https://html.spec.whatwg.org/multipage/custom-elements.html#attr-is
    */
   is?: string
+
+  // Popover API: https://developer.mozilla.org/en-US/docs/Web/API/Popover_API
+  popover?: true | 'auto' | 'manual'
+  onBeforetoggle?: Event
+  onToggle?: Event
 }
 
 type HTMLAttributeReferrerPolicy =
@@ -372,7 +377,7 @@ export interface BlockquoteHTMLAttributes extends HTMLAttributes {
   cite?: string
 }
 
-export interface ButtonHTMLAttributes extends HTMLAttributes {
+export interface ButtonHTMLAttributes extends PopoverHTMLAttributes {
   autofocus?: Booleanish
   disabled?: Booleanish
   form?: string
@@ -402,6 +407,12 @@ export interface ColgroupHTMLAttributes extends HTMLAttributes {
 
 export interface DataHTMLAttributes extends HTMLAttributes {
   value?: string | ReadonlyArray<string> | number
+}
+
+/* Popover API: https://developer.mozilla.org/en-US/docs/Web/API/Popover_API */
+export interface PopoverHTMLAttributes extends HTMLAttributes {
+  popovertarget?: string
+  popovertargetaction?: 'hide' | 'show' | 'toggle'
 }
 
 export interface DetailsHTMLAttributes extends HTMLAttributes {
@@ -512,7 +523,7 @@ export type InputTypeHTMLAttribute =
   | 'week'
   | (string & {})
 
-export interface InputHTMLAttributes extends HTMLAttributes {
+export interface InputHTMLAttributes extends PopoverHTMLAttributes {
   accept?: string
   alt?: string
   autocomplete?: string

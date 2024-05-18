@@ -10,9 +10,13 @@ import { makeMap } from './makeMap'
  * - nomodule -> noModule
  * - novalidate -> noValidate
  * - readonly -> readOnly
+ * - popovertarget -> popoverTargetElement (TODO: how to map this?)
+ * - popovertargetaction -> popoverTargetAction
  */
 const specialBooleanAttrs = `itemscope,allowfullscreen,formnovalidate,ismap,nomodule,novalidate,readonly`
-export const isSpecialBooleanAttr = /*#__PURE__*/ makeMap(specialBooleanAttrs)
+export const isSpecialBooleanAttr = /*#__PURE__*/ makeMap(
+  `${specialBooleanAttrs},popovertarget,popovertargetaction`,
+)
 
 /**
  * The full list is needed during SSR to produce the correct initial markup.
@@ -20,7 +24,7 @@ export const isSpecialBooleanAttr = /*#__PURE__*/ makeMap(specialBooleanAttrs)
 export const isBooleanAttr = /*#__PURE__*/ makeMap(
   specialBooleanAttrs +
     `,async,autofocus,autoplay,controls,default,defer,disabled,hidden,` +
-    `inert,loop,open,required,reversed,scoped,seamless,` +
+    `inert,loop,open,popover,required,reversed,scoped,seamless,` +
     `checked,muted,multiple,selected`,
 )
 
@@ -70,7 +74,8 @@ export const isKnownHtmlAttr = /*#__PURE__*/ makeMap(
     `height,hidden,high,href,hreflang,http-equiv,icon,id,importance,inert,integrity,` +
     `ismap,itemprop,keytype,kind,label,lang,language,loading,list,loop,low,` +
     `manifest,max,maxlength,minlength,media,min,multiple,muted,name,novalidate,` +
-    `open,optimum,pattern,ping,placeholder,poster,preload,radiogroup,readonly,` +
+    `open,optimum,pattern,ping,placeholder,popover,popovertarget,popovertargetaction,` +
+    `poster,preload,radiogroup,readonly,` +
     `referrerpolicy,rel,required,reversed,rows,rowspan,sandbox,scope,scoped,` +
     `selected,shape,size,sizes,slot,span,spellcheck,src,srcdoc,srclang,srcset,` +
     `start,step,style,summary,tabindex,target,title,translate,type,usemap,` +
