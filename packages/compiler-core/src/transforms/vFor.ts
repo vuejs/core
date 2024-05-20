@@ -63,7 +63,7 @@ export const transformFor = createStructuralDirectiveTransform(
       const memo = findDir(node, 'memo')
       const keyProp = findProp(node, `key`, false, true)
       if (keyProp && keyProp.type === NodeTypes.DIRECTIVE && !keyProp.exp) {
-        // try to resolve :key shorthand #10882
+        // resolve :key shorthand #10882
         transformBindShorthand(keyProp, context)
       }
       const keyExp =
