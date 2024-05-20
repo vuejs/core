@@ -42,9 +42,23 @@ export const transformBind: DirectiveTransform = (dir, _node, context) => {
 
   // same-name shorthand - :arg is expanded to :arg="arg"
   if (!exp) {
-    const returned = transformBindShorthand(dir, context)
-    if (returned) return returned
+    const { loc } = dir
+    if (arg.type !== NodeTypes.SIMPLE_EXPRESSION || !arg.isStatic) {
+      // only simple expression is allowed for same-name shorthand
+      context.onError(
+        createCompilerError(
+          ErrorCodes.X_V_BIND_INVALID_SAME_NAME_ARGUMENT,
+          arg.loc,
+        ),
+      )
+      return {
+        props: [
+          createObjectProperty(arg, createSimpleExpression('', true, loc)),
+        ],
+      }
+    }
 
+    transformBindShorthand(dir, context)
     exp = dir.exp!
   }
 
@@ -88,19 +102,6 @@ export const transformBindShorthand = (
   context: TransformContext,
 ) => {
   const arg = dir.arg!
-  const { loc } = dir
-  if (arg.type !== NodeTypes.SIMPLE_EXPRESSION || !arg.isStatic) {
-    // only simple expression is allowed for same-name shorthand
-    context.onError(
-      createCompilerError(
-        ErrorCodes.X_V_BIND_INVALID_SAME_NAME_ARGUMENT,
-        arg.loc,
-      ),
-    )
-    return {
-      props: [createObjectProperty(arg, createSimpleExpression('', true, loc))],
-    }
-  }
 
   const propName = camelize((arg as SimpleExpressionNode).content)
   dir.exp = createSimpleExpression(propName, false, arg.loc)
