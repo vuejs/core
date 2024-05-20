@@ -42,7 +42,6 @@ export const transformBind: DirectiveTransform = (dir, _node, context) => {
 
   // same-name shorthand - :arg is expanded to :arg="arg"
   if (!exp) {
-    const { loc } = dir
     if (arg.type !== NodeTypes.SIMPLE_EXPRESSION || !arg.isStatic) {
       // only simple expression is allowed for same-name shorthand
       context.onError(
