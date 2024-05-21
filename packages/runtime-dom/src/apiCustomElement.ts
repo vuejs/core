@@ -215,12 +215,12 @@ export class VueElement extends BaseClass {
 
   disconnectedCallback() {
     this._connected = false
-    if (this._ob) {
-      this._ob.disconnect()
-      this._ob = null
-    }
     nextTick(() => {
       if (!this._connected) {
+        if (this._ob) {
+          this._ob.disconnect()
+          this._ob = null
+        }
         render(null, this.shadowRoot!)
         this._instance = null
       }
