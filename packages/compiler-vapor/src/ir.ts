@@ -73,13 +73,16 @@ export interface IfIRNode extends BaseIRNode {
   once?: boolean
 }
 
-export interface ForIRNode extends BaseIRNode {
-  type: IRNodeTypes.FOR
-  id: number
+export interface IRFor {
   source: SimpleExpressionNode
   value?: SimpleExpressionNode
   key?: SimpleExpressionNode
   index?: SimpleExpressionNode
+}
+
+export interface ForIRNode extends BaseIRNode, IRFor {
+  type: IRNodeTypes.FOR
+  id: number
   keyProp?: SimpleExpressionNode
   render: BlockIRNode
   once: boolean
@@ -208,11 +211,38 @@ export interface ComponentSlotBlockIRNode extends BlockIRNode {
   // TODO slot props
 }
 export type ComponentSlots = Record<string, ComponentSlotBlockIRNode>
-export interface ComponentDynamicSlot {
+
+export enum DynamicSlotType {
+  BASIC,
+  LOOP,
+  CONDITIONAL,
+}
+
+export interface ComponentBasicDynamicSlot {
+  slotType: DynamicSlotType.BASIC
   name: SimpleExpressionNode
   fn: ComponentSlotBlockIRNode
-  key?: string
+  key?: number
 }
+
+export interface ComponentLoopDynamicSlot {
+  slotType: DynamicSlotType.LOOP
+  name: SimpleExpressionNode
+  fn: ComponentSlotBlockIRNode
+  loop: IRFor
+}
+
+export interface ComponentConditionalDynamicSlot {
+  slotType: DynamicSlotType.CONDITIONAL
+  condition: SimpleExpressionNode
+  positive: ComponentBasicDynamicSlot
+  negative?: ComponentBasicDynamicSlot | ComponentConditionalDynamicSlot
+}
+
+export type ComponentDynamicSlot =
+  | ComponentBasicDynamicSlot
+  | ComponentLoopDynamicSlot
+  | ComponentConditionalDynamicSlot
 
 export interface CreateComponentIRNode extends BaseIRNode {
   type: IRNodeTypes.CREATE_COMPONENT_NODE

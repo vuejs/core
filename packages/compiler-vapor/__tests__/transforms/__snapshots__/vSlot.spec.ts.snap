@@ -17,6 +17,78 @@ export function render(_ctx) {
 }"
 `;
 
+exports[`compiler: transform slot > dynamic slots name w/ v-for 1`] = `
+"import { resolveComponent as _resolveComponent, createComponent as _createComponent, createForSlots as _createForSlots, template as _template } from 'vue/vapor';
+const t0 = _template("foo")
+
+export function render(_ctx) {
+  const _component_Comp = _resolveComponent("Comp")
+  const n2 = _createComponent(_component_Comp, null, null, () => [_createForSlots(_ctx.list, (item) => ({
+    name: item, 
+    fn: () => {
+      const n0 = t0()
+      return n0
+    }
+  }))], true)
+  return n2
+}"
+`;
+
+exports[`compiler: transform slot > dynamic slots name w/ v-for and provide absent key 1`] = `
+"import { resolveComponent as _resolveComponent, createComponent as _createComponent, createForSlots as _createForSlots, template as _template } from 'vue/vapor';
+const t0 = _template("foo")
+
+export function render(_ctx) {
+  const _component_Comp = _resolveComponent("Comp")
+  const n2 = _createComponent(_component_Comp, null, null, () => [_createForSlots(_ctx.list, (_, __, index) => ({
+    name: index, 
+    fn: () => {
+      const n0 = t0()
+      return n0
+    }
+  }))], true)
+  return n2
+}"
+`;
+
+exports[`compiler: transform slot > dynamic slots name w/ v-if / v-else[-if] 1`] = `
+"import { resolveComponent as _resolveComponent, createComponent as _createComponent, template as _template } from 'vue/vapor';
+const t0 = _template("condition slot")
+const t1 = _template("another condition")
+const t2 = _template("else condition")
+
+export function render(_ctx) {
+  const _component_Comp = _resolveComponent("Comp")
+  const n6 = _createComponent(_component_Comp, null, null, () => [_ctx.condition
+    ? {
+      name: "condition", 
+      fn: () => {
+        const n0 = t0()
+        return n0
+      }, 
+      key: "0"
+    }
+    : _ctx.anotherCondition
+      ? {
+        name: "condition", 
+        fn: () => {
+          const n2 = t1()
+          return n2
+        }, 
+        key: "1"
+      }
+      : {
+        name: "condition", 
+        fn: () => {
+          const n4 = t2()
+          return n4
+        }, 
+        key: "2"
+      }], true)
+  return n6
+}"
+`;
+
 exports[`compiler: transform slot > implicit default slot 1`] = `
 "import { resolveComponent as _resolveComponent, createComponent as _createComponent, template as _template } from 'vue/vapor';
 const t0 = _template("<div></div>")

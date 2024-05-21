@@ -1,9 +1,13 @@
 import { camelize, extend, isArray } from '@vue/shared'
 import type { CodegenContext } from '../generate'
 import {
+  type ComponentBasicDynamicSlot,
+  type ComponentConditionalDynamicSlot,
   type ComponentDynamicSlot,
+  type ComponentLoopDynamicSlot,
   type ComponentSlots,
   type CreateComponentIRNode,
+  DynamicSlotType,
   IRDynamicPropsKind,
   type IRProp,
   type IRProps,
@@ -15,6 +19,8 @@ import {
   DELIMITERS_ARRAY_NEWLINE,
   DELIMITERS_OBJECT,
   DELIMITERS_OBJECT_NEWLINE,
+  INDENT_END,
+  INDENT_START,
   NEWLINE,
   genCall,
   genMulti,
@@ -155,13 +161,90 @@ function genDynamicSlots(
 ) {
   const slotsExpr = genMulti(
     dynamicSlots.length > 1 ? DELIMITERS_ARRAY_NEWLINE : DELIMITERS_ARRAY,
-    ...dynamicSlots.map(({ name, fn }) =>
-      genMulti(
-        DELIMITERS_OBJECT_NEWLINE,
-        ['name: ', ...genExpression(name, context)],
-        ['fn: ', ...genBlock(fn, context)],
-      ),
-    ),
+    ...dynamicSlots.map(slot => genDynamicSlot(slot, context)),
   )
   return ['() => ', ...slotsExpr]
+}
+
+function genDynamicSlot(
+  slot: ComponentDynamicSlot,
+  context: CodegenContext,
+): CodeFragment[] {
+  switch (slot.slotType) {
+    case DynamicSlotType.BASIC:
+      return genBasicDynamicSlot(slot, context)
+    case DynamicSlotType.LOOP:
+      return genLoopSlot(slot, context)
+    case DynamicSlotType.CONDITIONAL:
+      return genConditionalSlot(slot, context)
+  }
+}
+
+function genBasicDynamicSlot(
+  slot: ComponentBasicDynamicSlot,
+  context: CodegenContext,
+): CodeFragment[] {
+  const { name, fn, key } = slot
+  return genMulti(
+    DELIMITERS_OBJECT_NEWLINE,
+    ['name: ', ...genExpression(name, context)],
+    ['fn: ', ...genBlock(fn, context)],
+    ...(key !== undefined ? [`key: "${key}"`] : []),
+  )
+}
+
+function genLoopSlot(
+  slot: ComponentLoopDynamicSlot,
+  context: CodegenContext,
+): CodeFragment[] {
+  const { name, fn, loop } = slot
+  const { value, key, index, source } = loop
+  const rawValue = value && value.content
+  const rawKey = key && key.content
+  const rawIndex = index && index.content
+
+  const idMap: Record<string, string> = {}
+  if (rawValue) idMap[rawValue] = rawValue
+  if (rawKey) idMap[rawKey] = rawKey
+  if (rawIndex) idMap[rawIndex] = rawIndex
+  const slotExpr = genMulti(
+    DELIMITERS_OBJECT_NEWLINE,
+    ['name: ', ...context.withId(() => genExpression(name, context), idMap)],
+    ['fn: ', ...context.withId(() => genBlock(fn, context), idMap)],
+  )
+  return [
+    ...genCall(
+      context.vaporHelper('createForSlots'),
+      genExpression(source, context),
+      [
+        ...genMulti(
+          ['(', ')', ', '],
+          rawValue ? rawValue : rawKey || rawIndex ? '_' : undefined,
+          rawKey ? rawKey : rawIndex ? '__' : undefined,
+          rawIndex,
+        ),
+        ' => (',
+        ...slotExpr,
+        ')',
+      ],
+    ),
+  ]
+}
+
+function genConditionalSlot(
+  slot: ComponentConditionalDynamicSlot,
+  context: CodegenContext,
+): CodeFragment[] {
+  const { condition, positive, negative } = slot
+  return [
+    ...genExpression(condition, context),
+    INDENT_START,
+    NEWLINE,
+    '? ',
+    ...genDynamicSlot(positive, context),
+    NEWLINE,
+    ': ',
+    ...(negative ? [...genDynamicSlot(negative, context)] : ['void 0']),
+    INDENT_END,
+  ]
 }

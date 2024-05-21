@@ -10,7 +10,15 @@ import {
 } from '@vue/compiler-core'
 import type { NodeTransform, TransformContext } from '../transform'
 import { newBlock } from './utils'
-import { type BlockIRNode, DynamicFlag, type VaporDirectiveNode } from '../ir'
+import {
+  type BlockIRNode,
+  type ComponentBasicDynamicSlot,
+  type ComponentConditionalDynamicSlot,
+  DynamicFlag,
+  DynamicSlotType,
+  type IRFor,
+  type VaporDirectiveNode,
+} from '../ir'
 import { findDir, resolveExpression } from '../utils'
 
 // TODO dynamic slots
@@ -69,6 +77,9 @@ export const transformVSlot: NodeTransform = (node, context) => {
 
     context.dynamic.flags |= DynamicFlag.NON_TEMPLATE
 
+    const vFor = findDir(node, 'for')
+    const vIf = findDir(node, 'if')
+    const vElse = findDir(node, /^else(-if)?$/, true /* allowEmpty */)
     const slots = context.slots!
     const dynamicSlots = context.dynamicSlots!
 
@@ -79,7 +90,7 @@ export const transformVSlot: NodeTransform = (node, context) => {
 
     arg &&= resolveExpression(arg)
 
-    if (!arg || arg.isStatic) {
+    if ((!arg || arg.isStatic) && !vFor && !vIf && !vElse) {
       const slotName = arg ? arg.content : 'default'
 
       if (slots[slotName]) {
@@ -92,12 +103,75 @@ export const transformVSlot: NodeTransform = (node, context) => {
       } else {
         slots[slotName] = block
       }
+    } else if (vIf) {
+      dynamicSlots.push({
+        slotType: DynamicSlotType.CONDITIONAL,
+        condition: vIf.exp!,
+        positive: {
+          slotType: DynamicSlotType.BASIC,
+          name: arg!,
+          fn: block,
+          key: 0,
+        },
+      })
+    } else if (vElse) {
+      const vIfIR = dynamicSlots[dynamicSlots.length - 1]
+      if (vIfIR.slotType === DynamicSlotType.CONDITIONAL) {
+        let ifNode = vIfIR
+        while (
+          ifNode.negative &&
+          ifNode.negative.slotType === DynamicSlotType.CONDITIONAL
+        )
+          ifNode = ifNode.negative
+        const negative:
+          | ComponentBasicDynamicSlot
+          | ComponentConditionalDynamicSlot = vElse.exp
+          ? {
+              slotType: DynamicSlotType.CONDITIONAL,
+              condition: vElse.exp,
+              positive: {
+                slotType: DynamicSlotType.BASIC,
+                name: arg!,
+                fn: block,
+                key: ifNode.positive.key! + 1,
+              },
+            }
+          : {
+              slotType: DynamicSlotType.BASIC,
+              name: arg!,
+              fn: block,
+              key: ifNode.positive.key! + 1,
+            }
+        ifNode.negative = negative
+      } else {
+        context.options.onError(
+          createCompilerError(ErrorCodes.X_V_ELSE_NO_ADJACENT_IF, vElse.loc),
+        )
+      }
+    } else if (vFor) {
+      if (vFor.forParseResult) {
+        dynamicSlots.push({
+          slotType: DynamicSlotType.LOOP,
+          name: arg!,
+          fn: block,
+          loop: vFor.forParseResult as IRFor,
+        })
+      } else {
+        context.options.onError(
+          createCompilerError(
+            ErrorCodes.X_V_FOR_MALFORMED_EXPRESSION,
+            vFor.loc,
+          ),
+        )
+      }
     } else {
       dynamicSlots.push({
-        name: arg,
+        slotType: DynamicSlotType.BASIC,
+        name: arg!,
         fn: block,
       })
     }
+
     return () => onExit()
   }
 }

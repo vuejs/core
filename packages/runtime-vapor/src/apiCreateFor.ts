@@ -5,6 +5,7 @@ import { renderEffect } from './renderEffect'
 import { type Block, type Fragment, fragmentKey } from './apiRender'
 import { warn } from './warning'
 import { componentKey } from './component'
+import type { DynamicSlot } from './componentSlots'
 
 interface ForBlock extends Fragment {
   scope: EffectScope
@@ -301,44 +302,57 @@ export const createFor = (
     remove(nodes, parent!)
     scope.stop()
   }
+}
 
-  function getLength(source: any): number {
-    if (isArray(source) || isString(source)) {
-      return source.length
-    } else if (typeof source === 'number') {
-      if (__DEV__ && !Number.isInteger(source)) {
-        warn(`The v-for range expect an integer value but got ${source}.`)
-      }
-      return source
-    } else if (isObject(source)) {
-      if (source[Symbol.iterator as any]) {
-        return Array.from(source as Iterable<any>).length
-      } else {
-        return Object.keys(source).length
-      }
-    }
-    return 0
+export function createForSlots(
+  source: any[] | Record<any, any> | number | Set<any> | Map<any, any>,
+  getSlot: (item: any, key: any, index?: number) => DynamicSlot,
+): DynamicSlot[] {
+  const sourceLength = getLength(source)
+  const slots = new Array<DynamicSlot>(sourceLength)
+  for (let i = 0; i < sourceLength; i++) {
+    const [item, key, index] = getItem(source, i)
+    slots[i] = getSlot(item, key, index)
   }
+  return slots
+}
 
-  function getItem(
-    source: any,
-    idx: number,
-  ): [item: any, key: any, index?: number] {
-    if (isArray(source) || isString(source)) {
+function getLength(source: any): number {
+  if (isArray(source) || isString(source)) {
+    return source.length
+  } else if (typeof source === 'number') {
+    if (__DEV__ && !Number.isInteger(source)) {
+      warn(`The v-for range expect an integer value but got ${source}.`)
+    }
+    return source
+  } else if (isObject(source)) {
+    if (source[Symbol.iterator as any]) {
+      return Array.from(source as Iterable<any>).length
+    } else {
+      return Object.keys(source).length
+    }
+  }
+  return 0
+}
+
+function getItem(
+  source: any,
+  idx: number,
+): [item: any, key: any, index?: number] {
+  if (isArray(source) || isString(source)) {
+    return [source[idx], idx, undefined]
+  } else if (typeof source === 'number') {
+    return [idx + 1, idx, undefined]
+  } else if (isObject(source)) {
+    if (source && source[Symbol.iterator as any]) {
+      source = Array.from(source as Iterable<any>)
       return [source[idx], idx, undefined]
-    } else if (typeof source === 'number') {
-      return [idx + 1, idx, undefined]
-    } else if (isObject(source)) {
-      if (source && source[Symbol.iterator as any]) {
-        source = Array.from(source as Iterable<any>)
-        return [source[idx], idx, undefined]
-      } else {
-        const key = Object.keys(source)[idx]
-        return [source[key], key, idx]
-      }
+    } else {
+      const key = Object.keys(source)[idx]
+      return [source[key], key, idx]
     }
-    return null!
   }
+  return null!
 }
 
 function normalizeAnchor(node: Block): Node {
