@@ -1005,8 +1005,8 @@ function resolveWithTS(
           (c.config.options.pathsBasePath as string) ||
             dirname(c.config.options.configFilePath as string),
         )
-        const included: string[] = c.config.raw?.include
-        const excluded: string[] = c.config.raw?.exclude
+        const included: string[] | undefined = c.config.raw?.include
+        const excluded: string[] | undefined = c.config.raw?.exclude
         if (
           (!included && (!base || containingFile.startsWith(base))) ||
           included?.some(p => isMatch(containingFile, joinPaths(base, p)))
