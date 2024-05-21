@@ -254,7 +254,7 @@ const KeepAliveImpl: ComponentOptions = {
       pendingCacheKey = null
 
       if (!slots.default) {
-        return (current = null)
+        return null
       }
 
       const children = slots.default()
