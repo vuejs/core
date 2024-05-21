@@ -163,6 +163,13 @@ export function parse(
   })
   ast.children.forEach(node => {
     if (node.type !== NodeTypes.ELEMENT) {
+      if (node.type !== NodeTypes.COMMENT) {
+        errors.push(
+          new SyntaxError(
+            'should not have non-element children in a single file component.',
+          ),
+        )
+      }
       return
     }
     // we only want to keep the nodes that are not empty

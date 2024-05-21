@@ -425,5 +425,14 @@ h1 { color: red }
         `At least one <template> or <script> is required in a single file component`,
       )
     })
+
+    test('should throw error if have non-element children in a single file component.', () => {
+      assertWarning(
+        parse(
+          `<template></template><script></script><script></script>const a = 10;`,
+        ).errors,
+        `should not have non-element children in a single file component.`,
+      )
+    })
   })
 })
