@@ -18,7 +18,7 @@
     "format-check": "prettier --check --cache .",
     "test": "vitest",
     "test-unit": "vitest -c vitest.unit.config.ts",
-    "test-e2e": "node scripts/build.js vue -f global -d && vitest -c vitest.e2e.config.ts",
+    "test-e2e": "node scripts/build.js vue vue-vapor -f global -d && vitest -c vitest.e2e.config.ts",
     "test-dts": "run-s build-dts test-dts-only",
     "test-dts-only": "tsc -p packages/dts-built-test/tsconfig.json && tsc -p ./packages/dts-test/tsconfig.test.json",
     "test-coverage": "vitest -c vitest.unit.config.ts --coverage",
