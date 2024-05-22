@@ -663,7 +663,7 @@ function baseCreateRenderer(
     // props
     if (props) {
       for (const key in props) {
-        if (key !== 'value' && !isReservedProp(key)) {
+        if (key !== 'value' && key !== 'checked' && !isReservedProp(key)) {
           hostPatchProp(
             el,
             key,
@@ -688,6 +688,9 @@ function baseCreateRenderer(
        */
       if ('value' in props) {
         hostPatchProp(el, 'value', null, props.value, namespace)
+      }
+      if ('checked' in props) {
+        hostPatchProp(el, 'checked', null, props.checked, namespace)
       }
       if ((vnodeHook = props.onVnodeBeforeMount)) {
         invokeVNodeHook(vnodeHook, parentComponent, vnode)
@@ -903,7 +906,7 @@ function baseCreateRenderer(
             const prev = oldProps[key]
             const next = newProps[key]
             // #1471 force patch value
-            if (next !== prev || key === 'value') {
+            if (next !== prev || key === 'value' || key === 'checked') {
               hostPatchProp(
                 el,
                 key,
@@ -1025,7 +1028,7 @@ function baseCreateRenderer(
         const next = newProps[key]
         const prev = oldProps[key]
         // defer patching value
-        if (next !== prev && key !== 'value') {
+        if (next !== prev && key !== 'value' && key !== 'checked') {
           hostPatchProp(
             el,
             key,
@@ -1041,6 +1044,15 @@ function baseCreateRenderer(
       }
       if ('value' in newProps) {
         hostPatchProp(el, 'value', oldProps.value, newProps.value, namespace)
+      }
+      if ('checked' in newProps) {
+        hostPatchProp(
+          el,
+          'checked',
+          oldProps.checked,
+          newProps.checked,
+          namespace,
+        )
       }
     }
   }
