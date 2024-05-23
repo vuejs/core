@@ -14,6 +14,7 @@ import {
   isShallow,
   toRaw,
   toReactive,
+  reactive,
 } from './reactive'
 import type { ComputedRef } from './computed'
 import { TrackOpTypes, TriggerOpTypes } from './constants'
@@ -55,6 +56,33 @@ export function ref<T = any>(): Ref<T | undefined>
 export function ref(value?: unknown) {
   return createRef(value, false)
 }
+
+/**
+ * Creates a reactive and mutable ref object that wraps the provided value.
+ * The ref object contains a value property that points to the inner value.
+ * It also includes a reset method that sets the value back to its original value.
+ * @param value - The initial value to be wrapped in the ref.
+ * @returns A ref object with the initial value and a reset method.
+ * @see {@link https://vuejs.org/api/reactivity-core.html#ref}
+ */
+
+export interface Ref<T> {
+  value: T
+  reset: () => void
+}
+
+export function ref<T>(value: T): Ref<T> {
+  const refValue = reactive({ value })
+  const reset = () => {
+    refValue.value = value
+  }
+  return {
+    ...refValue,
+    reset
+  }
+}
+
+
 
 declare const ShallowRefMarker: unique symbol
 
