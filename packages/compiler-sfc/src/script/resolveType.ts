@@ -1496,7 +1496,9 @@ export function inferRuntimeType(
           }
         }
 
-        return types.size ? Array.from(types) : ['Object']
+        return types.size
+          ? Array.from(types)
+          : [isKeyOf ? UNKNOWN_TYPE : 'Object']
       }
       case 'TSPropertySignature':
         if (node.typeAnnotation) {

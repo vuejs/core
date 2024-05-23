@@ -535,6 +535,21 @@ describe('resolveType', () => {
     })
   })
 
+  test('keyof: fallback to Unknown', () => {
+    const { props } = resolve(
+      `
+      interface Barr {}
+      interface Bar extends Barr {}
+      type Foo = keyof Bar
+      defineProps<{ foo: Foo }>()
+      `,
+    )
+
+    expect(props).toStrictEqual({
+      foo: ['Unknown'],
+    })
+  })
+
   test('ExtractPropTypes (element-plus)', () => {
     const { props, raw } = resolve(
       `
