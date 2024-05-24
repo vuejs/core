@@ -9,8 +9,9 @@ import {
   registerTS,
   resolveTypeElements,
 } from '../../src/script/resolveType'
-
+import { UNKNOWN_TYPE } from '../../src/script/utils'
 import ts from 'typescript'
+
 registerTS(() => ts)
 
 describe('resolveType', () => {
@@ -128,7 +129,7 @@ describe('resolveType', () => {
     defineProps<{ self: any } & Foo & Bar & Baz>()
     `).props,
     ).toStrictEqual({
-      self: ['Unknown'],
+      self: [UNKNOWN_TYPE],
       foo: ['Number'],
       // both Bar & Baz has 'bar', but Baz['bar] is wider so it should be
       // preferred
@@ -526,7 +527,7 @@ describe('resolveType', () => {
 
     expect(props).toStrictEqual({
       record: ['Symbol', 'String'],
-      anyRecord: ['Unknown'],
+      anyRecord: [UNKNOWN_TYPE],
       partial: ['String'],
       required: ['String'],
       readonly: ['String'],
@@ -546,7 +547,7 @@ describe('resolveType', () => {
     )
 
     expect(props).toStrictEqual({
-      foo: ['Unknown'],
+      foo: [UNKNOWN_TYPE],
     })
   })
 
