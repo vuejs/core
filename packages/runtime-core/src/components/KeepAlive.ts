@@ -313,11 +313,11 @@ const KeepAliveImpl: ComponentOptions = {
           rawVNode.ssContent = vnode
         }
       }
-      // #1513 it's possible for the returned vnode to be cloned due to attr
+      // #1511 it's possible for the returned vnode to be cloned due to attr
       // fallthrough or scopeId, so the vnode here may not be the final vnode
       // that is mounted. Instead of caching it directly, we store the pending
       // key and cache `instance.subTree` (the normalized vnode) in
-      // beforeMount/beforeUpdate hooks.
+      // mounted/updated hooks.
       pendingCacheKey = key
 
       if (cachedVNode) {
