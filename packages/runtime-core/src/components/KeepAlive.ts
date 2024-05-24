@@ -231,9 +231,8 @@ const KeepAliveImpl: ComponentOptions = {
         // if KeepAlive child is a Suspense, it needs to be cached after Suspense resolves
         // avoid caching vnode that not been mounted
         if (isSuspense(instance.subTree.type)) {
-          const cacheKey = pendingCacheKey
           queuePostRenderEffect(() => {
-            cache.set(cacheKey, getInnerChild(instance.subTree))
+            cache.set(pendingCacheKey!, getInnerChild(instance.subTree))
           }, instance.subTree.suspense)
         } else {
           cache.set(pendingCacheKey, getInnerChild(instance.subTree))
