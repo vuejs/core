@@ -494,14 +494,22 @@ describe('resolveType', () => {
         [key: typeof num]: 1,
       }
 
+      type Test<T> = T
+      type Bar = {
+        [key: string]: 1
+        [key: Test<number>]: 1
+      }
+
       defineProps<{
         foo: keyof Foo 
+        bar: keyof Bar
       }>()
       `,
     )
 
     expect(props).toStrictEqual({
       foo: ['Symbol', 'String', 'Number'],
+      bar: [UNKNOWN_TYPE],
     })
   })
 

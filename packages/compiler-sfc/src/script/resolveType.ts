@@ -1479,9 +1479,13 @@ export function inferRuntimeType(
             } else if (m.type === 'TSIndexSignature') {
               const annotation = m.parameters[0].typeAnnotation
               if (annotation && annotation.type !== 'Noop') {
-                inferRuntimeType(ctx, annotation.typeAnnotation, scope).forEach(
-                  t => types.add(t),
-                )
+                const type = inferRuntimeType(
+                  ctx,
+                  annotation.typeAnnotation,
+                  scope,
+                )[0]
+                if (type === UNKNOWN_TYPE) return [UNKNOWN_TYPE]
+                types.add(type)
               }
             } else {
               types.add('String')
