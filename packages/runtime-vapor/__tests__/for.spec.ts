@@ -1,5 +1,16 @@
-import { createFor, nextTick, ref, renderEffect } from '../src'
+import { NOOP } from '@vue/shared'
+import {
+  type Directive,
+  children,
+  createFor,
+  nextTick,
+  ref,
+  renderEffect,
+  template,
+  withDirectives,
+} from '../src'
 import { makeRender } from './_utils'
+import { unmountComponent } from '../src/apiRender'
 
 const define = makeRender()
 
@@ -183,5 +194,93 @@ describe('createFor', () => {
     data.value = {}
     await nextTick()
     expect(host.innerHTML).toBe('<!--for-->')
+  })
+
+  test('should work with directive hooks', async () => {
+    const calls: string[] = []
+    const list = ref([0])
+    const update = ref(0)
+    const add = () => list.value.push(list.value.length)
+    const spySrcFn = vi.fn(() => list.value)
+
+    const vDirective: Directive = {
+      created: (el, { value }) => calls.push(`${value} created`),
+      beforeMount: (el, { value }) => calls.push(`${value} beforeMount`),
+      mounted: (el, { value }) => calls.push(`${value} mounted`),
+      beforeUpdate: (el, { value }) => calls.push(`${value} beforeUpdate`),
+      updated: (el, { value }) => calls.push(`${value} updated`),
+      beforeUnmount: (el, { value }) => calls.push(`${value} beforeUnmount`),
+      unmounted: (el, { value }) => calls.push(`${value} unmounted`),
+    }
+
+    const t0 = template('<p></p>')
+    const { instance } = define(() => {
+      const n1 = createFor(spySrcFn, block => {
+        const n2 = t0()
+        const n3 = children(n2, 0)
+        withDirectives(n3, [[vDirective, () => block.s[0]]])
+        return [n2, NOOP]
+      })
+      renderEffect(() => update.value)
+      return [n1]
+    }).render()
+
+    await nextTick()
+    // `${item index} ${hook name}`
+    expect(calls).toEqual(['0 created', '0 beforeMount', '0 mounted'])
+    calls.length = 0
+    expect(spySrcFn).toHaveBeenCalledTimes(1)
+
+    add()
+    await nextTick()
+    expect(calls).toEqual([
+      '0 beforeUpdate',
+      '1 created',
+      '1 beforeMount',
+      '0 updated',
+      '1 mounted',
+    ])
+    calls.length = 0
+    expect(spySrcFn).toHaveBeenCalledTimes(2)
+
+    list.value.reverse()
+    await nextTick()
+    expect(calls).toEqual([
+      '1 beforeUpdate',
+      '0 beforeUpdate',
+      '1 updated',
+      '0 updated',
+    ])
+    expect(spySrcFn).toHaveBeenCalledTimes(3)
+    list.value.reverse()
+    await nextTick()
+    calls.length = 0
+    expect(spySrcFn).toHaveBeenCalledTimes(4)
+
+    update.value++
+    await nextTick()
+    expect(calls).toEqual([
+      '0 beforeUpdate',
+      '1 beforeUpdate',
+      '0 updated',
+      '1 updated',
+    ])
+    calls.length = 0
+    expect(spySrcFn).toHaveBeenCalledTimes(4)
+
+    list.value.pop()
+    await nextTick()
+    expect(calls).toEqual([
+      '0 beforeUpdate',
+      '1 beforeUnmount',
+      '0 updated',
+      '1 unmounted',
+    ])
+    calls.length = 0
+    expect(spySrcFn).toHaveBeenCalledTimes(5)
+
+    unmountComponent(instance)
+    expect(calls).toEqual(['0 beforeUnmount', '0 unmounted'])
+    expect(spySrcFn).toHaveBeenCalledTimes(5)
   })
 })

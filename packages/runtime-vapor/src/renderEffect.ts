@@ -18,41 +18,6 @@ import { invokeDirectiveHook } from './directives'
 export function renderEffect(cb: () => void) {
   const instance = getCurrentInstance()
   const scope = getCurrentScope()
-  let effect: ReactiveEffect
-
-  const job: SchedulerJob = () => {
-    if (!(effect.flags & EffectFlags.ACTIVE) || !effect.dirty) {
-      return
-    }
-
-    if (instance && instance.isMounted && !instance.isUpdating) {
-      instance.isUpdating = true
-
-      const { bu, u, dirs } = instance
-      // beforeUpdate hook
-      if (bu) {
-        invokeArrayFns(bu)
-      }
-      if (dirs) {
-        invokeDirectiveHook(instance, 'beforeUpdate')
-      }
-
-      effect.run()
-
-      queuePostFlushCb(() => {
-        instance.isUpdating = false
-        if (dirs) {
-          invokeDirectiveHook(instance, 'updated')
-        }
-        // updated hook
-        if (u) {
-          queuePostFlushCb(u)
-        }
-      })
-    } else {
-      effect.run()
-    }
-  }
 
   if (scope) {
     const baseCb = cb
@@ -66,16 +31,14 @@ export function renderEffect(cb: () => void) {
       baseCb()
       reset()
     }
+    job.id = instance.uid
   }
 
-  effect = new ReactiveEffect(() =>
+  const effect = new ReactiveEffect(() =>
     callWithAsyncErrorHandling(cb, instance, VaporErrorCodes.RENDER_FUNCTION),
   )
 
-  effect.scheduler = () => {
-    if (instance) job.id = instance.uid
-    queueJob(job)
-  }
+  effect.scheduler = () => queueJob(job)
   if (__DEV__ && instance) {
     effect.onTrack = instance.rtc
       ? e => invokeArrayFns(instance.rtc!, e)
@@ -85,6 +48,47 @@ export function renderEffect(cb: () => void) {
       : void 0
   }
   effect.run()
+
+  function job() {
+    if (!(effect.flags & EffectFlags.ACTIVE) || !effect.dirty) {
+      return
+    }
+
+    const reset = instance && setCurrentInstance(instance)
+
+    if (instance && instance.isMounted && !instance.isUpdating) {
+      instance.isUpdating = true
+
+      const { bu, u, scope } = instance
+      const { dirs } = scope
+      // beforeUpdate hook
+      if (bu) {
+        invokeArrayFns(bu)
+      }
+      if (dirs) {
+        invokeDirectiveHook(instance, 'beforeUpdate', scope)
+      }
+
+      effect.run()
+
+      queuePostFlushCb(() => {
+        instance.isUpdating = false
+        const reset = setCurrentInstance(instance)
+        if (dirs) {
+          invokeDirectiveHook(instance, 'updated', scope)
+        }
+        // updated hook
+        if (u) {
+          queuePostFlushCb(u)
+        }
+        reset()
+      })
+    } else {
+      effect.run()
+    }
+
+    reset && reset()
+  }
 }
 
 export function firstEffect(

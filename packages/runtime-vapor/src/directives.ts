@@ -1,32 +1,48 @@
-import { isFunction } from '@vue/shared'
+import { invokeArrayFns, isFunction } from '@vue/shared'
 import {
   type ComponentInternalInstance,
   currentInstance,
   isVaporComponent,
+  setCurrentInstance,
 } from './component'
-import { pauseTracking, resetTracking, traverse } from '@vue/reactivity'
-import { VaporErrorCodes, callWithAsyncErrorHandling } from './errorHandling'
-import { renderEffect } from './renderEffect'
+import {
+  EffectFlags,
+  ReactiveEffect,
+  type SchedulerJob,
+  getCurrentScope,
+  pauseTracking,
+  resetTracking,
+  traverse,
+} from '@vue/reactivity'
+import {
+  VaporErrorCodes,
+  callWithAsyncErrorHandling,
+  callWithErrorHandling,
+} from './errorHandling'
+import { queueJob, queuePostFlushCb } from './scheduler'
 import { warn } from './warning'
+import { type BlockEffectScope, isRenderEffectScope } from './blockEffectScope'
 import { normalizeBlock } from './dom/element'
 
 export type DirectiveModifiers<M extends string = string> = Record<M, boolean>
 
-export interface DirectiveBinding<V = any, M extends string = string> {
+export interface DirectiveBinding<T = any, V = any, M extends string = string> {
   instance: ComponentInternalInstance
   source?: () => V
   value: V
   oldValue: V | null
   arg?: string
   modifiers?: DirectiveModifiers<M>
-  dir: ObjectDirective<any, V>
+  dir: ObjectDirective<T, V, M>
 }
+
+export type DirectiveBindingsMap = Map<Node, DirectiveBinding[]>
 
 export type DirectiveHook<
   T = any | null,
   V = any,
   M extends string = string,
-> = (node: T, binding: DirectiveBinding<V, M>) => void
+> = (node: T, binding: DirectiveBinding<T, V, M>) => void
 
 // create node -> `created` -> node operation -> `beforeMount` -> node mounted -> `mounted`
 // effect update -> `beforeUpdate` -> node updated -> `updated`
@@ -43,7 +59,7 @@ export type ObjectDirective<T = any, V = any, M extends string = string> = {
   [K in DirectiveHookName]?: DirectiveHook<T, V, M> | undefined
 } & {
   /** Watch value deeply */
-  deep?: boolean
+  deep?: boolean | number
 }
 
 export type FunctionDirective<
@@ -86,9 +102,18 @@ export function withDirectives<T extends ComponentInternalInstance | Node>(
     node = nodeOrComponent
   }
 
-  const instance = currentInstance
-  if (!instance.dirs.has(node)) instance.dirs.set(node, [])
-  const bindings = instance.dirs.get(node)!
+  let bindings: DirectiveBinding[]
+  const instance = currentInstance!
+  const parentScope = getCurrentScope() as BlockEffectScope
+
+  if (__DEV__ && !isRenderEffectScope(parentScope)) {
+    warn(`Directives should be used inside of RenderEffectScope.`)
+  }
+
+  const directivesMap = (parentScope.dirs ||= new Map())
+  if (!(bindings = directivesMap.get(node))) {
+    directivesMap.set(node, (bindings = []))
+  }
 
   for (const directive of directives) {
     let [dir, source, arg, modifiers] = directive
@@ -103,25 +128,38 @@ export function withDirectives<T extends ComponentInternalInstance | Node>(
     const binding: DirectiveBinding = {
       dir,
       instance,
-      source,
       value: null, // set later
       oldValue: undefined,
       arg,
       modifiers,
     }
-    bindings.push(binding)
 
-    callDirectiveHook(node, binding, instance, 'created')
-
-    // register source
     if (source) {
       if (dir.deep) {
         const deep = dir.deep === true ? undefined : dir.deep
         const baseSource = source
         source = () => traverse(baseSource(), deep)
       }
-      renderEffect(source)
+
+      const effect = new ReactiveEffect(() =>
+        callWithErrorHandling(
+          source!,
+          instance,
+          VaporErrorCodes.RENDER_FUNCTION,
+        ),
+      )
+      const triggerRenderingUpdate = createRenderingUpdateTrigger(
+        instance,
+        effect,
+      )
+      effect.scheduler = () => queueJob(triggerRenderingUpdate)
+
+      binding.source = effect.run.bind(effect)
     }
+
+    bindings.push(binding)
+
+    callDirectiveHook(node, binding, instance, 'created')
   }
 
   return nodeOrComponent
@@ -145,13 +183,14 @@ function getComponentNode(component: ComponentInternalInstance) {
 export function invokeDirectiveHook(
   instance: ComponentInternalInstance | null,
   name: DirectiveHookName,
-  nodes?: IterableIterator<Node>,
+  scope: BlockEffectScope,
 ) {
-  if (!instance) return
-  nodes = nodes || instance.dirs.keys()
-  for (const node of nodes) {
-    const directives = instance.dirs.get(node) || []
-    for (const binding of directives) {
+  const { dirs } = scope
+  if (name === 'mounted') scope.im = true
+  if (!dirs) return
+  const iterator = dirs.entries()
+  for (const [node, bindings] of iterator) {
+    for (const binding of bindings) {
       callDirectiveHook(node, binding, instance, name)
     }
   }
@@ -178,4 +217,44 @@ function callDirectiveHook(
     binding,
   ])
   resetTracking()
+}
+
+export function createRenderingUpdateTrigger(
+  instance: ComponentInternalInstance,
+  effect: ReactiveEffect,
+): SchedulerJob {
+  job.id = instance.uid
+  return job
+  function job() {
+    if (!(effect.flags & EffectFlags.ACTIVE) || !effect.dirty) {
+      return
+    }
+
+    if (instance.isMounted && !instance.isUpdating) {
+      instance.isUpdating = true
+      const reset = setCurrentInstance(instance)
+
+      const { bu, u, scope } = instance
+      const { dirs } = scope
+      // beforeUpdate hook
+      if (bu) {
+        invokeArrayFns(bu)
+      }
+      invokeDirectiveHook(instance, 'beforeUpdate', scope)
+
+      queuePostFlushCb(() => {
+        instance.isUpdating = false
+        const reset = setCurrentInstance(instance)
+        if (dirs) {
+          invokeDirectiveHook(instance, 'updated', scope)
+        }
+        // updated hook
+        if (u) {
+          queuePostFlushCb(u)
+        }
+        reset()
+      })
+      reset()
+    }
+  }
 }

@@ -25,7 +25,7 @@ export function invokeLifecycle(
       post ? queuePostFlushCb(fn) : fn()
     }
 
-    invokeDirectiveHook(instance, directive)
+    invokeDirectiveHook(instance, directive, instance.scope)
   }
 
   function invokeSub() {

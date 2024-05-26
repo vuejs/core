@@ -77,7 +77,7 @@ describe('directive: v-show', () => {
     }).render()
 
     expect(host.innerHTML).toBe('<button>toggle</button><div>child</div>')
-    expect(instance.dirs.get(n0)![0].dir).toBe(vShow)
+    expect(instance.scope.dirs!.get(n0)![0].dir).toBe(vShow)
 
     const btn = host.querySelector('button')
     btn?.click()
