@@ -4,6 +4,9 @@ export const version = __VERSION__
 export {
   // core
   type Ref,
+  type DebuggerEvent,
+  TrackOpTypes,
+  TriggerOpTypes,
   reactive,
   ref,
   readonly,
