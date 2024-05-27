@@ -59,8 +59,8 @@
     "node": ">=18.12.0"
   },
   "devDependencies": {
-    "@babel/parser": "^7.24.5",
-    "@babel/types": "^7.24.5",
+    "@babel/parser": "^7.24.6",
+    "@babel/types": "^7.24.6",
     "@codspeed/vitest-plugin": "^3.1.0",
     "@rollup/plugin-alias": "^5.1.0",
     "@rollup/plugin-commonjs": "^25.0.7",
