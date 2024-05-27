@@ -1,14 +1,17 @@
 import {
-  h,
-  defineComponent,
-  ref,
+  type Component,
+  type DefineComponent,
   Fragment,
-  Teleport,
+  type FunctionalComponent,
   Suspense,
-  Component,
-  resolveComponent
+  Teleport,
+  type VNode,
+  defineComponent,
+  h,
+  ref,
+  resolveComponent,
 } from 'vue'
-import { describe, expectAssignable } from './utils'
+import { describe, expectAssignable, expectType } from './utils'
 
 describe('h inference w/ element', () => {
   // key
@@ -31,6 +34,17 @@ describe('h inference w/ element', () => {
   // slots
   const slots = { default: () => {} } // RawSlots
   h('div', {}, slots)
+  // events
+  h('div', {
+    onClick: e => {
+      expectType<MouseEvent>(e)
+    },
+  })
+  h('input', {
+    onFocus(e) {
+      expectType<FocusEvent>(e)
+    },
+  })
 })
 
 describe('h inference w/ Fragment', () => {
@@ -59,12 +73,25 @@ describe('h inference w/ Suspense', () => {
   h(Suspense, 'foo')
   h(Suspense, () => 'foo')
   h(Suspense, null, {
-    default: () => 'foo'
+    default: () => 'foo',
   })
   //  @ts-expect-error
   h(Suspense, { onResolve: 1 })
 })
 
+declare const fc: FunctionalComponent<
+  {
+    foo: string
+    bar?: number
+    onClick: (evt: MouseEvent) => void
+  },
+  ['click'],
+  {
+    default: () => VNode
+    title: (scope: { id: number }) => VNode
+  }
+>
+declare const vnode: VNode
 describe('h inference w/ functional component', () => {
   const Func = (_props: { foo: string; bar?: number }) => ''
   h(Func, { foo: 'hello' })
@@ -75,13 +102,22 @@ describe('h inference w/ functional component', () => {
   h(Func, {})
   //  @ts-expect-error
   h(Func, { bar: 123 })
+
+  h(
+    fc,
+    { foo: 'hello', onClick: () => {} },
+    {
+      default: () => vnode,
+      title: ({ id }: { id: number }) => vnode,
+    },
+  )
 })
 
 describe('h support w/ plain object component', () => {
   const Foo = {
     props: {
-      foo: String
-    }
+      foo: String,
+    },
   }
   h(Foo, { foo: 'ok' })
   h(Foo, { foo: 'ok', class: 'extra' })
@@ -94,9 +130,9 @@ describe('h inference w/ defineComponent', () => {
       foo: String,
       bar: {
         type: Number,
-        required: true
-      }
-    }
+        required: true,
+      },
+    },
   })
 
   h(Foo, { bar: 1 })
@@ -157,7 +193,7 @@ describe('h support for generic component type', () => {
 describe('describeComponent extends Component', () => {
   // functional
   expectAssignable<Component>(
-    defineComponent((_props: { foo?: string; bar: number }) => () => {})
+    defineComponent((_props: { foo?: string; bar: number }) => () => {}),
   )
 
   // typed props
@@ -166,8 +202,8 @@ describe('describeComponent extends Component', () => {
   // prop arrays
   expectAssignable<Component>(
     defineComponent({
-      props: ['a', 'b']
-    })
+      props: ['a', 'b'],
+    }),
   )
 
   // prop object
@@ -177,10 +213,10 @@ describe('describeComponent extends Component', () => {
         foo: String,
         bar: {
           type: Number,
-          required: true
-        }
-      }
-    })
+          required: true,
+        },
+      },
+    }),
   )
 })
 
@@ -190,9 +226,9 @@ describe('component w/ props w/ default value', () => {
     props: {
       message: {
         type: String,
-        default: 'hello'
-      }
-    }
+        default: 'hello',
+      },
+    },
   })
 
   h(MyComponent, {})
@@ -202,8 +238,8 @@ describe('component w/ props w/ default value', () => {
 describe('Boolean prop implicit false', () => {
   const MyComponent = defineComponent({
     props: {
-      visible: Boolean
-    }
+      visible: Boolean,
+    },
   })
 
   h(MyComponent, {})
@@ -212,13 +248,13 @@ describe('Boolean prop implicit false', () => {
     props: {
       visible: {
         type: Boolean,
-        required: true
-      }
-    }
+        required: true,
+      },
+    },
   })
 
   h(RequiredComponent, {
-    visible: true
+    visible: true,
   })
   // @ts-expect-error
   h(RequiredComponent, {})
@@ -228,6 +264,21 @@ describe('Boolean prop implicit false', () => {
 describe('resolveComponent should work', () => {
   h(resolveComponent('test'))
   h(resolveComponent('test'), {
-    message: '1'
+    message: '1',
   })
+})
+
+// #5431
+describe('h should work with multiple types', () => {
+  const serializers = {
+    Paragraph: 'p',
+    Component: {} as Component,
+    DefineComponent: {} as DefineComponent,
+  }
+
+  const sampleComponent = serializers['' as keyof typeof serializers]
+
+  h(sampleComponent)
+  h(sampleComponent, {})
+  h(sampleComponent, {}, [])
 })

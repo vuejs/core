@@ -8,7 +8,7 @@
     "useDefineForClassFields": false,
     "module": "esnext",
     "moduleResolution": "bundler",
-    "allowJs": false,
+    "allowJs": true,
     "strict": true,
     "noUnusedLocals": true,
     "experimentalDecorators": true,
@@ -18,7 +18,7 @@
     "esModuleInterop": true,
     "removeComments": false,
     "jsx": "preserve",
-    "lib": ["esnext", "dom"],
+    "lib": ["es2016", "dom"],
     "types": ["vitest/globals", "puppeteer", "node"],
     "rootDir": ".",
     "paths": {
@@ -34,6 +34,7 @@
     "packages/*/__tests__",
     "packages/dts-test",
     "packages/vue/jsx-runtime",
-    "scripts/setupVitest.ts"
+    "scripts/*",
+    "rollup.*.js"
   ]
 }

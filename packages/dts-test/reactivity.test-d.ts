@@ -1,4 +1,11 @@
-import { ref, readonly, shallowReadonly, Ref, reactive, markRaw } from 'vue'
+import {
+  type Ref,
+  markRaw,
+  reactive,
+  readonly,
+  ref,
+  shallowReadonly,
+} from 'vue'
 import { describe, expectType } from './utils'
 
 describe('should support DeepReadonly', () => {
@@ -21,18 +28,18 @@ describe('should support markRaw', () => {
   }
   const test = new Test<number>()
   const plain = {
-    ref: ref(1)
+    ref: ref(1),
   }
 
   const r = reactive({
     class: {
       raw: markRaw(test),
-      reactive: test
+      reactive: test,
     },
     plain: {
       raw: markRaw(plain),
-      reactive: plain
-    }
+      reactive: plain,
+    },
   })
 
   expectType<Test<number>>(r.class.raw)
@@ -61,4 +68,55 @@ describe('should unwrap tuple correctly', () => {
   const tuple: [Ref<number>] = [ref(0)]
   const reactiveTuple = reactive(tuple)
   expectType<Ref<number>>(reactiveTuple[0])
+})
+
+describe('should unwrap Map correctly', () => {
+  const map = reactive(new Map<string, Ref<number>>())
+  expectType<Ref<number>>(map.get('a')!)
+
+  const map2 = reactive(new Map<string, { wrap: Ref<number> }>())
+  expectType<number>(map2.get('a')!.wrap)
+
+  const wm = reactive(new WeakMap<object, Ref<number>>())
+  expectType<Ref<number>>(wm.get({})!)
+
+  const wm2 = reactive(new WeakMap<object, { wrap: Ref<number> }>())
+  expectType<number>(wm2.get({})!.wrap)
+})
+
+describe('should unwrap extended Map correctly', () => {
+  class ExtendendMap1 extends Map<string, { wrap: Ref<number> }> {
+    foo = ref('foo')
+    bar = 1
+  }
+
+  const emap1 = reactive(new ExtendendMap1())
+  expectType<string>(emap1.foo)
+  expectType<number>(emap1.bar)
+  expectType<number>(emap1.get('a')!.wrap)
+})
+
+describe('should unwrap Set correctly', () => {
+  const set = reactive(new Set<Ref<number>>())
+  expectType<Set<Ref<number>>>(set)
+
+  const set2 = reactive(new Set<{ wrap: Ref<number> }>())
+  expectType<Set<{ wrap: number }>>(set2)
+
+  const ws = reactive(new WeakSet<Ref<number>>())
+  expectType<WeakSet<Ref<number>>>(ws)
+
+  const ws2 = reactive(new WeakSet<{ wrap: Ref<number> }>())
+  expectType<WeakSet<{ wrap: number }>>(ws2)
+})
+
+describe('should unwrap extended Set correctly', () => {
+  class ExtendendSet1 extends Set<{ wrap: Ref<number> }> {
+    foo = ref('foo')
+    bar = 1
+  }
+
+  const eset1 = reactive(new ExtendendSet1())
+  expectType<string>(eset1.foo)
+  expectType<number>(eset1.bar)
 })
