@@ -1,10 +1,9 @@
-import { vi } from 'vitest'
 import Vue from '@vue/compat'
 import { nextTick } from '../../runtime-core/src/scheduler'
 import {
   DeprecationTypes,
   deprecationData,
-  toggleDeprecationWarning
+  toggleDeprecationWarning,
 } from '../../runtime-core/src/compat/compatConfig'
 import { triggerEvent } from './utils'
 import { h } from '@vue/runtime-core'
@@ -13,7 +12,7 @@ beforeEach(() => {
   toggleDeprecationWarning(true)
   Vue.configureCompat({
     MODE: 2,
-    GLOBAL_MOUNT: 'suppress-warning'
+    GLOBAL_MOUNT: 'suppress-warning',
   })
 })
 
@@ -25,25 +24,26 @@ afterEach(() => {
 test('mode as function', () => {
   const Foo = {
     name: 'Foo',
-    render: (h: any) => h('div', 'foo')
+    render: (h: any) => h('div', 'foo'),
   }
 
   const Bar = {
     name: 'Bar',
     data: () => ({ msg: 'bar' }),
-    render: (ctx: any) => h('div', ctx.msg)
+    render: (ctx: any) => h('div', ctx.msg),
   }
 
   toggleDeprecationWarning(false)
   Vue.configureCompat({
-    MODE: comp => (comp && comp.name === 'Bar' ? 3 : 2)
+    MODE: comp => (comp && comp.name === 'Bar' ? 3 : 2),
   })
 
   const vm = new Vue({
     components: { Foo, Bar },
-    template: `<div><foo/><bar/></div>`
+    template: `<div><foo/><bar/></div>`,
   }).$mount()
 
+  expect(vm.$el).toBeInstanceOf(HTMLDivElement)
   expect(vm.$el.innerHTML).toBe(`<div>foo</div><div>bar</div>`)
 })
 
@@ -52,15 +52,15 @@ test('WATCH_ARRAY', async () => {
   const vm = new Vue({
     data() {
       return {
-        foo: []
+        foo: [],
       }
     },
     watch: {
-      foo: spy
-    }
+      foo: spy,
+    },
   }) as any
   expect(
-    deprecationData[DeprecationTypes.WATCH_ARRAY].message
+    deprecationData[DeprecationTypes.WATCH_ARRAY].message,
   ).toHaveBeenWarned()
 
   expect(spy).not.toHaveBeenCalled()
@@ -82,21 +82,21 @@ test('PROPS_DEFAULT_THIS', () => {
           thisCtx = {
             foo: this.foo,
             $options: this.$options,
-            provided: this.provided
+            provided: this.provided,
           }
           return this.foo + 1
-        }
-      }
+        },
+      },
     },
-    template: `{{ bar }}`
+    template: `{{ bar }}`,
   }
 
   const vm = new Vue({
     components: { Child },
     provide: {
-      provided: 2
+      provided: 2,
     },
-    template: `<child :foo="0" />`
+    template: `<child :foo="0" />`,
   }).$mount()
 
   expect(vm.$el.textContent).toBe('1')
@@ -109,8 +109,8 @@ test('PROPS_DEFAULT_THIS', () => {
 
   expect(
     (deprecationData[DeprecationTypes.PROPS_DEFAULT_THIS].message as Function)(
-      'bar'
-    )
+      'bar',
+    ),
   ).toHaveBeenWarned()
 })
 
@@ -118,15 +118,16 @@ test('V_ON_KEYCODE_MODIFIER', () => {
   const spy = vi.fn()
   const vm = new Vue({
     template: `<input @keyup.1="spy">`,
-    methods: { spy }
+    methods: { spy },
   }).$mount()
+  expect(vm.$el).toBeInstanceOf(HTMLInputElement)
   triggerEvent(vm.$el, 'keyup', e => {
     e.key = '_'
     e.keyCode = 1
   })
   expect(spy).toHaveBeenCalled()
   expect(
-    deprecationData[DeprecationTypes.V_ON_KEYCODE_MODIFIER].message
+    deprecationData[DeprecationTypes.V_ON_KEYCODE_MODIFIER].message,
   ).toHaveBeenWarned()
 })
 
@@ -136,7 +137,7 @@ test('CUSTOM_DIR', async () => {
     inserted: vi.fn(),
     update: vi.fn(),
     componentUpdated: vi.fn(),
-    unbind: vi.fn()
+    unbind: vi.fn(),
   } as any
 
   const getCalls = () =>
@@ -146,13 +147,13 @@ test('CUSTOM_DIR', async () => {
     data() {
       return {
         ok: true,
-        foo: 1
+        foo: 1,
       }
     },
     template: `<div v-if="ok" v-my-dir="foo"/>`,
     directives: {
-      myDir
-    }
+      myDir,
+    },
   }).$mount() as any
 
   expect(getCalls()).toMatchObject([1, 1, 0, 0, 0])
@@ -160,14 +161,14 @@ test('CUSTOM_DIR', async () => {
   expect(
     (deprecationData[DeprecationTypes.CUSTOM_DIR].message as Function)(
       'bind',
-      'beforeMount'
-    )
+      'beforeMount',
+    ),
   ).toHaveBeenWarned()
   expect(
     (deprecationData[DeprecationTypes.CUSTOM_DIR].message as Function)(
       'inserted',
-      'mounted'
-    )
+      'mounted',
+    ),
   ).toHaveBeenWarned()
 
   vm.foo++
@@ -177,39 +178,42 @@ test('CUSTOM_DIR', async () => {
   expect(
     (deprecationData[DeprecationTypes.CUSTOM_DIR].message as Function)(
       'update',
-      'updated'
-    )
+      'updated',
+    ),
   ).toHaveBeenWarned()
   expect(
     (deprecationData[DeprecationTypes.CUSTOM_DIR].message as Function)(
       'componentUpdated',
-      'updated'
-    )
+      'updated',
+    ),
   ).toHaveBeenWarned()
 })
 
 test('ATTR_FALSE_VALUE', () => {
   const vm = new Vue({
-    template: `<div :id="false" :foo="false"/>`
+    template: `<div :id="false" :foo="false"/>`,
   }).$mount()
+  expect(vm.$el).toBeInstanceOf(HTMLDivElement)
   expect(vm.$el.hasAttribute('id')).toBe(false)
   expect(vm.$el.hasAttribute('foo')).toBe(false)
   expect(
     (deprecationData[DeprecationTypes.ATTR_FALSE_VALUE].message as Function)(
-      'id'
-    )
+      'id',
+    ),
   ).toHaveBeenWarned()
   expect(
     (deprecationData[DeprecationTypes.ATTR_FALSE_VALUE].message as Function)(
-      'foo'
-    )
+      'foo',
+    ),
   ).toHaveBeenWarned()
 })
 
 test('ATTR_ENUMERATED_COERCION', () => {
   const vm = new Vue({
-    template: `<div :draggable="null" :spellcheck="0" contenteditable="foo" />`
+    template: `<div :draggable="null" :spellcheck="0" contenteditable="foo" />`,
   }).$mount()
+
+  expect(vm.$el).toBeInstanceOf(HTMLDivElement)
   expect(vm.$el.getAttribute('draggable')).toBe('false')
   expect(vm.$el.getAttribute('spellcheck')).toBe('true')
   expect(vm.$el.getAttribute('contenteditable')).toBe('true')
@@ -217,18 +221,18 @@ test('ATTR_ENUMERATED_COERCION', () => {
     (
       deprecationData[DeprecationTypes.ATTR_ENUMERATED_COERCION]
         .message as Function
-    )('draggable', null, 'false')
+    )('draggable', null, 'false'),
   ).toHaveBeenWarned()
   expect(
     (
       deprecationData[DeprecationTypes.ATTR_ENUMERATED_COERCION]
         .message as Function
-    )('spellcheck', 0, 'true')
+    )('spellcheck', 0, 'true'),
   ).toHaveBeenWarned()
   expect(
     (
       deprecationData[DeprecationTypes.ATTR_ENUMERATED_COERCION]
         .message as Function
-    )('contenteditable', 'foo', 'true')
+    )('contenteditable', 'foo', 'true'),
   ).toHaveBeenWarned()
 })

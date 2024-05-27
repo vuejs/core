@@ -4,234 +4,234 @@ export default {
   rules: [
     {
       foreground: 'de935f',
-      token: 'number'
+      token: 'number',
     },
     {
       foreground: '969896',
-      token: 'comment'
+      token: 'comment',
     },
     {
       foreground: 'ced1cf',
-      token: 'keyword.operator.class'
+      token: 'keyword.operator.class',
     },
     {
       foreground: 'ced1cf',
-      token: 'constant.other'
+      token: 'constant.other',
     },
     {
       foreground: 'ced1cf',
-      token: 'source.php.embedded.line'
+      token: 'source.php.embedded.line',
     },
     {
       foreground: 'cc6666',
-      token: 'variable'
+      token: 'variable',
     },
     {
       foreground: 'cc6666',
-      token: 'support.other.variable'
+      token: 'support.other.variable',
     },
     {
       foreground: 'cc6666',
-      token: 'string.other.link'
+      token: 'string.other.link',
     },
     {
       foreground: 'cc6666',
-      token: 'string.regexp'
+      token: 'string.regexp',
     },
     {
       foreground: 'cc6666',
-      token: 'entity.name.tag'
+      token: 'entity.name.tag',
     },
     {
       foreground: 'cc6666',
-      token: 'entity.other.attribute-name'
+      token: 'entity.other.attribute-name',
     },
     {
       foreground: 'cc6666',
-      token: 'meta.tag'
+      token: 'meta.tag',
     },
     {
       foreground: 'cc6666',
-      token: 'declaration.tag'
+      token: 'declaration.tag',
     },
     {
       foreground: 'cc6666',
-      token: 'markup.deleted.git_gutter'
+      token: 'markup.deleted.git_gutter',
     },
     {
       foreground: 'de935f',
-      token: 'constant.numeric'
+      token: 'constant.numeric',
     },
     {
       foreground: 'de935f',
-      token: 'constant.language'
+      token: 'constant.language',
     },
     {
       foreground: 'de935f',
-      token: 'support.constant'
+      token: 'support.constant',
     },
     {
       foreground: 'de935f',
-      token: 'constant.character'
+      token: 'constant.character',
     },
     {
       foreground: 'de935f',
-      token: 'variable.parameter'
+      token: 'variable.parameter',
     },
     {
       foreground: 'de935f',
-      token: 'punctuation.section.embedded'
+      token: 'punctuation.section.embedded',
     },
     {
       foreground: 'de935f',
-      token: 'keyword.other.unit'
+      token: 'keyword.other.unit',
     },
     {
       foreground: 'f0c674',
-      token: 'entity.name.class'
+      token: 'entity.name.class',
     },
     {
       foreground: 'f0c674',
-      token: 'entity.name.type.class'
+      token: 'entity.name.type.class',
     },
     {
       foreground: 'f0c674',
-      token: 'support.type'
+      token: 'support.type',
     },
     {
       foreground: 'f0c674',
-      token: 'support.class'
+      token: 'support.class',
     },
     {
       foreground: 'b5bd68',
-      token: 'string'
+      token: 'string',
     },
     {
       foreground: 'b5bd68',
-      token: 'constant.other.symbol'
+      token: 'constant.other.symbol',
     },
     {
       foreground: 'b5bd68',
-      token: 'entity.other.inherited-class'
+      token: 'entity.other.inherited-class',
     },
     {
       foreground: 'b5bd68',
-      token: 'markup.heading'
+      token: 'markup.heading',
     },
     {
       foreground: 'b5bd68',
-      token: 'markup.inserted.git_gutter'
+      token: 'markup.inserted.git_gutter',
     },
     {
       foreground: '8abeb7',
-      token: 'keyword.operator'
+      token: 'keyword.operator',
     },
     {
       foreground: '8abeb7',
-      token: 'constant.other.color'
+      token: 'constant.other.color',
     },
     {
       foreground: '81a2be',
-      token: 'entity.name.function'
+      token: 'entity.name.function',
     },
     {
       foreground: '81a2be',
-      token: 'meta.function-call'
+      token: 'meta.function-call',
     },
     {
       foreground: '81a2be',
-      token: 'support.function'
+      token: 'support.function',
     },
     {
       foreground: '81a2be',
-      token: 'keyword.other.special-method'
+      token: 'keyword.other.special-method',
     },
     {
       foreground: '81a2be',
-      token: 'meta.block-level'
+      token: 'meta.block-level',
     },
     {
       foreground: '81a2be',
-      token: 'markup.changed.git_gutter'
+      token: 'markup.changed.git_gutter',
     },
     {
       foreground: 'b294bb',
-      token: 'keyword'
+      token: 'keyword',
     },
     {
       foreground: 'b294bb',
-      token: 'storage'
+      token: 'storage',
     },
     {
       foreground: 'b294bb',
-      token: 'storage.type'
+      token: 'storage.type',
     },
     {
       foreground: 'b294bb',
-      token: 'entity.name.tag.css'
+      token: 'entity.name.tag.css',
     },
     {
       foreground: 'ced2cf',
       background: 'df5f5f',
-      token: 'invalid'
+      token: 'invalid',
     },
     {
       foreground: 'ced2cf',
       background: '82a3bf',
-      token: 'meta.separator'
+      token: 'meta.separator',
     },
     {
       foreground: 'ced2cf',
       background: 'b798bf',
-      token: 'invalid.deprecated'
+      token: 'invalid.deprecated',
     },
     {
       foreground: 'ffffff',
-      token: 'markup.inserted.diff'
+      token: 'markup.inserted.diff',
     },
     {
       foreground: 'ffffff',
-      token: 'markup.deleted.diff'
+      token: 'markup.deleted.diff',
     },
     {
       foreground: 'ffffff',
-      token: 'meta.diff.header.to-file'
+      token: 'meta.diff.header.to-file',
     },
     {
       foreground: 'ffffff',
-      token: 'meta.diff.header.from-file'
+      token: 'meta.diff.header.from-file',
     },
     {
       foreground: '718c00',
-      token: 'markup.inserted.diff'
+      token: 'markup.inserted.diff',
     },
     {
       foreground: '718c00',
-      token: 'meta.diff.header.to-file'
+      token: 'meta.diff.header.to-file',
     },
     {
       foreground: 'c82829',
-      token: 'markup.deleted.diff'
+      token: 'markup.deleted.diff',
     },
     {
       foreground: 'c82829',
-      token: 'meta.diff.header.from-file'
+      token: 'meta.diff.header.from-file',
     },
     {
       foreground: 'ffffff',
       background: '4271ae',
-      token: 'meta.diff.header.from-file'
+      token: 'meta.diff.header.from-file',
     },
     {
       foreground: 'ffffff',
       background: '4271ae',
-      token: 'meta.diff.header.to-file'
+      token: 'meta.diff.header.to-file',
     },
     {
       foreground: '3e999f',
       fontStyle: 'italic',
-      token: 'meta.diff.range'
-    }
+      token: 'meta.diff.range',
+    },
   ],
   colors: {
     'editor.foreground': '#C5C8C6',
@@ -239,6 +239,6 @@ export default {
     'editor.selectionBackground': '#373B41',
     'editor.lineHighlightBackground': '#282A2E',
     'editorCursor.foreground': '#AEAFAD',
-    'editorWhitespace.foreground': '#4B4E55'
-  }
+    'editorWhitespace.foreground': '#4B4E55',
+  },
 }
