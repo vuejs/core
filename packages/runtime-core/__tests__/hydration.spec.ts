@@ -1165,7 +1165,7 @@ describe('SSR hydration', () => {
     const Comp = {
       render(this: any) {
         return h('p', [''])
-      }
+      },
     }
     const { container } = mountWithHydration('<p></p>', () => h(Comp))
     expect(container.childNodes.length).toBe(1)
