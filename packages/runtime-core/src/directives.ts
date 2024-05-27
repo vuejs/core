@@ -44,7 +44,7 @@ export type DirectiveHook<T = any, Prev = VNode<any, T> | null, V = any> = (
 
 export type SSRDirectiveHook<V> = (
   binding: DirectiveBinding<V>,
-  vnode: VNode
+  vnode: VNode,
 ) => Data | undefined
 
 export interface ObjectDirective<T = any, V = any> {
