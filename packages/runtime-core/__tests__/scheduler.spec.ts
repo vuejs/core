@@ -610,4 +610,25 @@ describe('scheduler', () => {
     expect(await p).toBe(1)
     expect(fn).toHaveBeenCalledTimes(1)
   })
+
+  // #10003
+  test('nested flushPostFlushCbs', async () => {
+    const calls: string[] = []
+    const cb1 = () => calls.push('cb1')
+    // cb1 has no id
+    const cb2 = () => calls.push('cb2')
+    cb2.id = -1
+    const queueAndFlush = (hook: Function) => {
+      queuePostFlushCb(hook)
+      flushPostFlushCbs()
+    }
+
+    queueAndFlush(() => {
+      queuePostFlushCb([cb1, cb2])
+      flushPostFlushCbs()
+    })
+
+    await nextTick()
+    expect(calls).toEqual(['cb2', 'cb1'])
+  })
 })

@@ -8,6 +8,8 @@ import {
   type FunctionalComponent,
   createBlock,
   createCommentVNode,
+  createElementBlock,
+  createElementVNode,
   defineComponent,
   h,
   mergeProps,
@@ -18,6 +20,7 @@ import {
   render,
   withModifiers,
 } from '@vue/runtime-dom'
+import { createApp } from 'vue'
 import { PatchFlags } from '@vue/shared'
 
 describe('attribute fallthrough', () => {
@@ -673,6 +676,58 @@ describe('attribute fallthrough', () => {
     expect(click).toHaveBeenCalled()
   })
 
+  it('should support fallthrough for nested dev root fragments', async () => {
+    const toggle = ref(false)
+
+    const Child = {
+      setup() {
+        return () => (
+          openBlock(),
+          createElementBlock(
+            Fragment,
+            null,
+            [
+              createCommentVNode(' comment A '),
+              toggle.value
+                ? (openBlock(), createElementBlock('span', { key: 0 }, 'Foo'))
+                : (openBlock(),
+                  createElementBlock(
+                    Fragment,
+                    { key: 1 },
+                    [
+                      createCommentVNode(' comment B '),
+                      createElementVNode('div', null, 'Bar'),
+                    ],
+                    PatchFlags.STABLE_FRAGMENT | PatchFlags.DEV_ROOT_FRAGMENT,
+                  )),
+            ],
+            PatchFlags.STABLE_FRAGMENT | PatchFlags.DEV_ROOT_FRAGMENT,
+          )
+        )
+      },
+    }
+
+    const Root = {
+      setup() {
+        return () => (openBlock(), createBlock(Child, { class: 'red' }))
+      },
+    }
+
+    const root = document.createElement('div')
+    document.body.appendChild(root)
+    render(h(Root), root)
+
+    expect(root.innerHTML).toBe(
+      `<!-- comment A --><!-- comment B --><div class="red">Bar</div>`,
+    )
+
+    toggle.value = true
+    await nextTick()
+    expect(root.innerHTML).toBe(
+      `<!-- comment A --><span class=\"red\">Foo</span>`,
+    )
+  })
+
   // #1989
   it('should not fallthrough v-model listeners with corresponding declared prop', () => {
     let textFoo = ''
@@ -728,5 +783,32 @@ describe('attribute fallthrough', () => {
     expect(click).toHaveBeenCalled()
     expect(textBar).toBe('from GrandChild')
     expect(textFoo).toBe('from Child')
+  })
+
+  // covers uncaught regression #10710
+  it('should track this.$attrs access in slots', async () => {
+    const GrandChild = {
+      template: `<slot/>`,
+    }
+    const Child = {
+      components: { GrandChild },
+      template: `<div><GrandChild>{{ $attrs.foo }}</GrandChild></div>`,
+    }
+
+    const obj = ref(1)
+    const App = {
+      render() {
+        return h(Child, { foo: obj.value })
+      },
+    }
+
+    const root = document.createElement('div')
+    createApp(App).mount(root)
+
+    expect(root.innerHTML).toBe('<div foo="1">1</div>')
+
+    obj.value = 2
+    await nextTick()
+    expect(root.innerHTML).toBe('<div foo="2">2</div>')
   })
 })

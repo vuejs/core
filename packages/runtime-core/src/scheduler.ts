@@ -164,7 +164,9 @@ export function flushPreFlushCbs(
 
 export function flushPostFlushCbs(seen?: CountMap) {
   if (pendingPostFlushCbs.length) {
-    const deduped = [...new Set(pendingPostFlushCbs)]
+    const deduped = [...new Set(pendingPostFlushCbs)].sort(
+      (a, b) => getId(a) - getId(b),
+    )
     pendingPostFlushCbs.length = 0
 
     // #1947 already has active queue, nested flushPostFlushCbs call
@@ -177,8 +179,6 @@ export function flushPostFlushCbs(seen?: CountMap) {
     if (__DEV__) {
       seen = seen || new Map()
     }
-
-    activePostFlushCbs.sort((a, b) => getId(a) - getId(b))
 
     for (
       postFlushIndex = 0;
@@ -242,7 +242,6 @@ function flushJobs(seen?: CountMap) {
         if (__DEV__ && check(job)) {
           continue
         }
-        // console.log(`running:`, job.id)
         callWithErrorHandling(job, null, ErrorCodes.SCHEDULER)
       }
     }

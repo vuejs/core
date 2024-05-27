@@ -114,7 +114,7 @@ async function main() {
   if (!(await isInSyncWithRemote())) {
     return
   } else {
-    console.log(`${pico.green(`✓`)} commit is up-to-date with rmeote.\n`)
+    console.log(`${pico.green(`✓`)} commit is up-to-date with remote.\n`)
   }
 
   let targetVersion = args._[0]
@@ -239,7 +239,7 @@ async function main() {
   if (!skipTests) {
     step('\nRunning tests...')
     if (!isDryRun) {
-      await run('pnpm', ['test', 'run'])
+      await run('pnpm', ['run', 'test', '--run'])
     } else {
       console.log(`Skipped (dry run)`)
     }
@@ -307,7 +307,7 @@ async function main() {
   if (isDryRun) {
     additionalPublishFlags.push('--dry-run')
   }
-  if (skipGit) {
+  if (isDryRun || skipGit) {
     additionalPublishFlags.push('--no-git-checks')
   }
   // bypass the pnpm --publish-branch restriction which isn't too useful to us
@@ -354,7 +354,7 @@ async function getCIResult() {
     )
     const data = await res.json()
     return data.workflow_runs.length > 0
-  } catch (e) {
+  } catch {
     console.error('Failed to get CI status for current commit.')
     return false
   }
@@ -380,7 +380,7 @@ async function isInSyncWithRemote() {
       })
       return yes
     }
-  } catch (e) {
+  } catch {
     console.error(
       pico.red('Failed to check whether local HEAD is up-to-date with remote.'),
     )
