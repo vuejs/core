@@ -250,8 +250,8 @@ function createReactiveObject(
     if (__DEV__) {
       warn(
         `value cannot be made ${isReadonly ? 'readonly' : 'reactive'}: ${String(
-          target
-        )}`
+          target,
+        )}`,
       )
     }
     return target
