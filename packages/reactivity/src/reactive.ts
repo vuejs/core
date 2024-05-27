@@ -248,15 +248,11 @@ function createReactiveObject(
 ) {
   if (!isObject(target)) {
     if (__DEV__) {
-<<<<<<< chore/hint
-      console.warn(
+      warn(
         `value cannot be made ${isReadonly ? 'readonly' : 'reactive'}: ${String(
           target
         )}`
       )
-=======
-      warn(`value cannot be made reactive: ${String(target)}`)
->>>>>>> main
     }
     return target
   }
