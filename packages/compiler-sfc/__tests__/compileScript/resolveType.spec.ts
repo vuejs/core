@@ -41,6 +41,24 @@ describe('resolveType', () => {
     })
   })
 
+  test('wiht declare global', () => {
+    expect(
+      resolve(`
+    declare global {
+      type MyNumber = number
+      interface X {
+        foo: number
+      }
+    }
+    defineProps<{
+      num: X
+    }>()
+    `).props,
+    ).toStrictEqual({
+      num: ['Object'],
+    })
+  })
+
   test('reference exported type', () => {
     expect(
       resolve(`

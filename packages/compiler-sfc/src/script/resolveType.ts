@@ -733,6 +733,20 @@ function innerResolveTypeReference(
             : scope.types
       if (lookupSource[name]) {
         return lookupSource[name]
+      } else if (lookupSource.global) {
+        const globalNode = lookupSource.global as TSModuleDeclaration
+        if (globalNode.body.type === 'TSModuleBlock') {
+          const bodyNode = globalNode.body.body
+          for (const node of bodyNode) {
+            switch (node.type) {
+              case 'TSTypeAliasDeclaration':
+                if (node.id.name === name)
+                  return node.typeAnnotation as ScopeTypeNode
+              case 'TSInterfaceDeclaration':
+                if (node.id.name === name) return node as ScopeTypeNode
+            }
+          }
+        }
       } else {
         // fallback to global
         const globalScopes = resolveGlobalScope(ctx)
