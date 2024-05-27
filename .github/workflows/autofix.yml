@@ -1,0 +1,33 @@
+name: autofix.ci
+
+on:
+  pull_request:
+permissions:
+  contents: read
+
+jobs:
+  autofix:
+    runs-on: ubuntu-latest
+    env:
+      PUPPETEER_SKIP_DOWNLOAD: 'true'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3.0.0
+
+      - name: Set node version to 18
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: pnpm
+
+      - run: pnpm install
+
+      - name: Run eslint
+        run: pnpm run lint --fix
+
+      - name: Run prettier
+        run: pnpm run format
+
+      - uses: autofix-ci/action@ea32e3a12414e6d3183163c3424a7d7a8631ad84
