@@ -463,7 +463,15 @@ function createBaseVNode(
     appContext: null,
     ctx: currentRenderingInstance,
   } as VNode
-
+  if (vnode.ctx && vnode.ctx.parent && currentRenderingInstance?.parent?.ut) {
+    vnode.ctx.parentUtData = {
+      ut: currentRenderingInstance.parent.ut,
+      uid: currentRenderingInstance.parent.uid,
+    }
+  }
+  if (vnode.ctx && vnode.ctx.parent && vnode.ctx.parent.parentUtData) {
+    vnode.ctx.parentUtData = vnode.ctx?.parent.parentUtData
+  }
   if (needFullChildrenNormalization) {
     normalizeChildren(vnode, children)
     // normalize suspense children
