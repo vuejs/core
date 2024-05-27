@@ -6,6 +6,7 @@ import {
 } from './component'
 import { nextTick, queueJob } from './scheduler'
 import {
+  type OnCleanup,
   type WatchOptions,
   type WatchStopHandle,
   instanceWatch,
@@ -229,8 +230,8 @@ export type ComponentPublicInstance<
   $watch<T extends string | ((...args: any) => any)>(
     source: T,
     cb: T extends (...args: any) => infer R
-      ? (...args: [R, R]) => any
-      : (...args: any) => any,
+      ? (...args: [R, R, OnCleanup]) => any
+      : (...args: [any, any, OnCleanup]) => any,
     options?: WatchOptions,
   ): WatchStopHandle
 } & IfAny<P, P, Omit<P, keyof ShallowUnwrapRef<B>>> &
