@@ -1,5 +1,5 @@
 import { patchProp } from '../src/patchProp'
-import { render, h } from '../src'
+import { h, render } from '../src'
 
 describe('runtime-dom: props patching', () => {
   test('basic', () => {
@@ -23,6 +23,14 @@ describe('runtime-dom: props patching', () => {
     patchProp(el, 'value', null, obj)
     expect(el.value).toBe(obj.toString())
     expect((el as any)._value).toBe(obj)
+
+    const option = document.createElement('option')
+    patchProp(option, 'textContent', null, 'foo')
+    expect(option.value).toBe('foo')
+    expect(option.getAttribute('value')).toBe(null)
+    patchProp(option, 'value', null, 'foo')
+    expect(option.value).toBe('foo')
+    expect(option.getAttribute('value')).toBe('foo')
   })
 
   test('value for custom elements', () => {
@@ -44,8 +52,8 @@ describe('runtime-dom: props patching', () => {
 
       public setterCalled: number = 0
     }
-    window.customElements.define('test-element', TestElement)
-    const el = document.createElement('test-element') as TestElement
+    window.customElements.define('patch-props-test-element', TestElement)
+    const el = document.createElement('patch-props-test-element') as TestElement
     patchProp(el, 'value', null, 'foo')
     expect(el.value).toBe('foo')
     expect(el.setterCalled).toBe(1)
@@ -95,10 +103,10 @@ describe('runtime-dom: props patching', () => {
   })
 
   test('innerHTML unmount prev children', () => {
-    const fn = jest.fn()
+    const fn = vi.fn()
     const comp = {
       render: () => 'foo',
-      unmounted: fn
+      unmounted: fn,
     }
     const root = document.createElement('div')
     render(h('div', null, [h(comp)]), root)
@@ -111,10 +119,10 @@ describe('runtime-dom: props patching', () => {
 
   // #954
   test('(svg) innerHTML unmount prev children', () => {
-    const fn = jest.fn()
+    const fn = vi.fn()
     const comp = {
       render: () => 'foo',
-      unmounted: fn
+      unmounted: fn,
     }
     const root = document.createElement('div')
     render(h('div', null, [h(comp)]), root)
@@ -126,10 +134,10 @@ describe('runtime-dom: props patching', () => {
   })
 
   test('textContent unmount prev children', () => {
-    const fn = jest.fn()
+    const fn = vi.fn()
     const comp = {
       render: () => 'foo',
-      unmounted: fn
+      unmounted: fn,
     }
     const root = document.createElement('div')
     render(h('div', null, [h(comp)]), root)
@@ -161,7 +169,7 @@ describe('runtime-dom: props patching', () => {
     Object.defineProperty(el, 'someProp', {
       set() {
         throw new TypeError('Invalid type')
-      }
+      },
     })
     patchProp(el, 'someProp', null, 'foo')
 
@@ -205,7 +213,7 @@ describe('runtime-dom: props patching', () => {
   test('form attribute', () => {
     const el = document.createElement('input')
     patchProp(el, 'form', null, 'foo')
-    // non existant element
+    // non existent element
     expect(el.form).toBe(null)
     expect(el.getAttribute('form')).toBe('foo')
     // remove attribute
@@ -234,12 +242,31 @@ describe('runtime-dom: props patching', () => {
     expect(el.getAttribute('x')).toBe('2')
   })
 
-  test('input with size', () => {
+  test('input with size (number property)', () => {
     const el = document.createElement('input')
     patchProp(el, 'size', null, 100)
     expect(el.size).toBe(100)
     patchProp(el, 'size', 100, null)
     expect(el.getAttribute('size')).toBe(null)
+    expect('Failed setting prop "size" on <input>').not.toHaveBeenWarned()
+    patchProp(el, 'size', null, 'foobar')
+    expect('Failed setting prop "size" on <input>').toHaveBeenWarnedLast()
+  })
+
+  test('select with type (string property)', () => {
+    const el = document.createElement('select')
+    patchProp(el, 'type', null, 'test')
+    expect(el.type).toBe('select-one')
+    expect('Failed setting prop "type" on <select>').toHaveBeenWarnedLast()
+  })
+
+  test('select with willValidate (boolean property)', () => {
+    const el = document.createElement('select')
+    patchProp(el, 'willValidate', true, null)
+    expect(el.willValidate).toBe(true)
+    expect(
+      'Failed setting prop "willValidate" on <select>',
+    ).toHaveBeenWarnedLast()
   })
 
   test('patch value for select', () => {
@@ -247,9 +274,9 @@ describe('runtime-dom: props patching', () => {
     render(
       h('select', { value: 'foo' }, [
         h('option', { value: 'foo' }, 'foo'),
-        h('option', { value: 'bar' }, 'bar')
+        h('option', { value: 'bar' }, 'bar'),
       ]),
-      root
+      root,
     )
     const el = root.children[0] as HTMLSelectElement
     expect(el.value).toBe('foo')
@@ -257,10 +284,45 @@ describe('runtime-dom: props patching', () => {
     render(
       h('select', { value: 'baz' }, [
         h('option', { value: 'foo' }, 'foo'),
-        h('option', { value: 'baz' }, 'baz')
+        h('option', { value: 'baz' }, 'baz'),
       ]),
-      root
+      root,
     )
     expect(el.value).toBe('baz')
+  })
+
+  test('init empty value for option', () => {
+    const root = document.createElement('div')
+    render(
+      h('select', { value: 'foo' }, [h('option', { value: '' }, 'foo')]),
+      root,
+    )
+    const select = root.children[0] as HTMLSelectElement
+    const option = select.children[0] as HTMLOptionElement
+    expect(select.value).toBe('')
+    expect(option.value).toBe('')
+  })
+
+  // #8780
+  test('embedded tag with width and height', () => {
+    // Width and height of some embedded element such as img、video、source、canvas
+    // must be set as attribute
+    const el = document.createElement('img')
+    patchProp(el, 'width', null, '24px')
+    expect(el.getAttribute('width')).toBe('24px')
+  })
+
+  // # 9762 should fallthrough to `key in el` logic for non embedded tags
+  test('width and height on custom elements', () => {
+    const el = document.createElement('foobar')
+    patchProp(el, 'width', null, '24px')
+    expect(el.getAttribute('width')).toBe('24px')
+  })
+
+  test('translate attribute', () => {
+    const el = document.createElement('div')
+    patchProp(el, 'translate', null, 'no')
+    expect(el.translate).toBeFalsy()
+    expect(el.getAttribute('translate')).toBe('no')
   })
 })

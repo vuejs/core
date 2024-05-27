@@ -2,39 +2,41 @@
  * This module is Node-only.
  */
 import {
-  NodeTypes,
-  ElementNode,
-  TransformContext,
-  TemplateChildNode,
-  SimpleExpressionNode,
-  createCallExpression,
-  HoistTransform,
   CREATE_STATIC,
-  ExpressionNode,
+  ConstantTypes,
+  type ElementNode,
   ElementTypes,
-  PlainElementNode,
-  JSChildNode,
-  TextCallNode,
-  ConstantTypes
+  type ExpressionNode,
+  type HoistTransform,
+  type JSChildNode,
+  Namespaces,
+  NodeTypes,
+  type PlainElementNode,
+  type SimpleExpressionNode,
+  type TemplateChildNode,
+  type TextCallNode,
+  type TransformContext,
+  createCallExpression,
+  isStaticArgOf,
 } from '@vue/compiler-core'
 import {
-  isVoidTag,
+  escapeHtml,
+  isBooleanAttr,
+  isKnownHtmlAttr,
+  isKnownSvgAttr,
   isString,
   isSymbol,
-  isKnownHtmlAttr,
-  escapeHtml,
-  toDisplayString,
+  isVoidTag,
+  makeMap,
   normalizeClass,
   normalizeStyle,
   stringifyStyle,
-  makeMap,
-  isKnownSvgAttr
+  toDisplayString,
 } from '@vue/shared'
-import { DOMNamespaces } from '../parserOptions'
 
-export const enum StringifyThresholds {
+export enum StringifyThresholds {
   ELEMENT_WITH_BINDING_COUNT = 5,
-  NODE_COUNT = 20
+  NODE_COUNT = 20,
 }
 
 type StringifiableNode = PlainElementNode | TextCallNode
@@ -86,11 +88,11 @@ export const stringifyStatic: HoistTransform = (children, context, parent) => {
       // combine all currently eligible nodes into a single static vnode call
       const staticCall = createCallExpression(context.helper(CREATE_STATIC), [
         JSON.stringify(
-          currentChunk.map(node => stringifyNode(node, context)).join('')
+          currentChunk.map(node => stringifyNode(node, context)).join(''),
         ).replace(expReplaceRE, `" + $1 + "`),
         // the 2nd argument indicates the number of DOM nodes this static vnode
         // will insert / hydrate
-        String(currentChunk.length)
+        String(currentChunk.length),
       ])
       // replace the first node's hoisted expression with the static vnode call
       replaceHoist(currentChunk[0], staticCall, context)
@@ -147,27 +149,27 @@ const getHoistedNode = (node: TemplateChildNode) =>
   node.codegenNode.hoisted
 
 const dataAriaRE = /^(data|aria)-/
-const isStringifiableAttr = (name: string, ns: DOMNamespaces) => {
+const isStringifiableAttr = (name: string, ns: Namespaces) => {
   return (
-    (ns === DOMNamespaces.HTML
+    (ns === Namespaces.HTML
       ? isKnownHtmlAttr(name)
-      : ns === DOMNamespaces.SVG
-      ? isKnownSvgAttr(name)
-      : false) || dataAriaRE.test(name)
+      : ns === Namespaces.SVG
+        ? isKnownSvgAttr(name)
+        : false) || dataAriaRE.test(name)
   )
 }
 
 const replaceHoist = (
   node: StringifiableNode,
   replacement: JSChildNode | null,
-  context: TransformContext
+  context: TransformContext,
 ) => {
   const hoistToReplace = (node.codegenNode as SimpleExpressionNode).hoisted!
   context.hoists[context.hoists.indexOf(hoistToReplace)] = replacement
 }
 
 const isNonStringifiable = /*#__PURE__*/ makeMap(
-  `caption,thead,tr,th,tbody,td,tfoot,colgroup,col`
+  `caption,thead,tr,th,tbody,td,tfoot,colgroup,col`,
 )
 
 /**
@@ -199,6 +201,7 @@ function analyzeNode(node: StringifiableNode): [number, number] | false {
   // probably only need to check for most common case
   // i.e. non-phrasing-content tags inside `<p>`
   function walk(node: ElementNode): boolean {
+    const isOptionTag = node.tag === 'option' && node.ns === Namespaces.HTML
     for (let i = 0; i < node.props.length; i++) {
       const p = node.props[i]
       // bail on non-attr bindings
@@ -221,6 +224,16 @@ function analyzeNode(node: StringifiableNode): [number, number] | false {
           p.exp &&
           (p.exp.type === NodeTypes.COMPOUND_EXPRESSION ||
             p.exp.constType < ConstantTypes.CAN_STRINGIFY)
+        ) {
+          return bail()
+        }
+        // <option :value="1"> cannot be safely stringified
+        if (
+          isOptionTag &&
+          isStaticArgOf(p.arg, 'value') &&
+          p.exp &&
+          p.exp.ast &&
+          p.exp.ast.type !== 'StringLiteral'
         ) {
           return bail()
         }
@@ -247,7 +260,7 @@ function analyzeNode(node: StringifiableNode): [number, number] | false {
 
 function stringifyNode(
   node: string | TemplateChildNode,
-  context: TransformContext
+  context: TransformContext,
 ): string {
   if (isString(node)) {
     return node
@@ -276,9 +289,10 @@ function stringifyNode(
 
 function stringifyElement(
   node: ElementNode,
-  context: TransformContext
+  context: TransformContext,
 ): string {
   let res = `<${node.tag}`
+  let innerHTML = ''
   for (let i = 0; i < node.props.length; i++) {
     const p = node.props[i]
     if (p.type === NodeTypes.ATTRIBUTE) {
@@ -286,28 +300,45 @@ function stringifyElement(
       if (p.value) {
         res += `="${escapeHtml(p.value.content)}"`
       }
-    } else if (p.type === NodeTypes.DIRECTIVE && p.name === 'bind') {
-      const exp = p.exp as SimpleExpressionNode
-      if (exp.content[0] === '_') {
-        // internally generated string constant references
-        // e.g. imported URL strings via compiler-sfc transformAssetUrl plugin
-        res += ` ${(p.arg as SimpleExpressionNode).content}="__VUE_EXP_START__${
-          exp.content
-        }__VUE_EXP_END__"`
-        continue
-      }
-      // constant v-bind, e.g. :foo="1"
-      let evaluated = evaluateConstant(exp)
-      if (evaluated != null) {
-        const arg = p.arg && (p.arg as SimpleExpressionNode).content
-        if (arg === 'class') {
-          evaluated = normalizeClass(evaluated)
-        } else if (arg === 'style') {
-          evaluated = stringifyStyle(normalizeStyle(evaluated))
+    } else if (p.type === NodeTypes.DIRECTIVE) {
+      if (p.name === 'bind') {
+        const exp = p.exp as SimpleExpressionNode
+        if (exp.content[0] === '_') {
+          // internally generated string constant references
+          // e.g. imported URL strings via compiler-sfc transformAssetUrl plugin
+          res += ` ${
+            (p.arg as SimpleExpressionNode).content
+          }="__VUE_EXP_START__${exp.content}__VUE_EXP_END__"`
+          continue
         }
-        res += ` ${(p.arg as SimpleExpressionNode).content}="${escapeHtml(
-          evaluated
-        )}"`
+        // #6568
+        if (
+          isBooleanAttr((p.arg as SimpleExpressionNode).content) &&
+          exp.content === 'false'
+        ) {
+          continue
+        }
+        // constant v-bind, e.g. :foo="1"
+        let evaluated = evaluateConstant(exp)
+        if (evaluated != null) {
+          const arg = p.arg && (p.arg as SimpleExpressionNode).content
+          if (arg === 'class') {
+            evaluated = normalizeClass(evaluated)
+          } else if (arg === 'style') {
+            evaluated = stringifyStyle(normalizeStyle(evaluated))
+          }
+          res += ` ${(p.arg as SimpleExpressionNode).content}="${escapeHtml(
+            evaluated,
+          )}"`
+        }
+      } else if (p.name === 'html') {
+        // #5439 v-html with constant value
+        // not sure why would anyone do this but it can happen
+        innerHTML = evaluateConstant(p.exp as SimpleExpressionNode)
+      } else if (p.name === 'text') {
+        innerHTML = escapeHtml(
+          toDisplayString(evaluateConstant(p.exp as SimpleExpressionNode)),
+        )
       }
     }
   }
@@ -315,8 +346,12 @@ function stringifyElement(
     res += ` ${context.scopeId}`
   }
   res += `>`
-  for (let i = 0; i < node.children.length; i++) {
-    res += stringifyNode(node.children[i], context)
+  if (innerHTML) {
+    res += innerHTML
+  } else {
+    for (let i = 0; i < node.children.length; i++) {
+      res += stringifyNode(node.children[i], context)
+    }
   }
   if (!isVoidTag(node.tag)) {
     res += `</${node.tag}>`
@@ -330,10 +365,10 @@ function stringifyElement(
 // here, e.g. `{{ 1 }}` or `{{ 'foo' }}`
 // in addition, constant exps bail on presence of parens so you can't even
 // run JSFuck in here. But we mark it unsafe for security review purposes.
-// (see compiler-core/src/transformExpressions)
+// (see compiler-core/src/transforms/transformExpression)
 function evaluateConstant(exp: ExpressionNode): string {
   if (exp.type === NodeTypes.SIMPLE_EXPRESSION) {
-    return new Function(`return ${exp.content}`)()
+    return new Function(`return (${exp.content})`)()
   } else {
     // compound
     let res = ``

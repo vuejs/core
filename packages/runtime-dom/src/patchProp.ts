@@ -3,10 +3,15 @@ import { patchStyle } from './modules/style'
 import { patchAttr } from './modules/attrs'
 import { patchDOMProp } from './modules/props'
 import { patchEvent } from './modules/events'
-import { isOn, isString, isFunction, isModelListener } from '@vue/shared'
-import { RendererOptions } from '@vue/runtime-core'
+import { isFunction, isModelListener, isOn, isString } from '@vue/shared'
+import type { RendererOptions } from '@vue/runtime-core'
 
-const nativeOnRE = /^on[a-z]/
+const isNativeOn = (key: string) =>
+  key.charCodeAt(0) === 111 /* o */ &&
+  key.charCodeAt(1) === 110 /* n */ &&
+  // lowercase letter
+  key.charCodeAt(2) > 96 &&
+  key.charCodeAt(2) < 123
 
 type DOMRendererOptions = RendererOptions<Node, Element>
 
@@ -15,12 +20,13 @@ export const patchProp: DOMRendererOptions['patchProp'] = (
   key,
   prevValue,
   nextValue,
-  isSVG = false,
+  namespace,
   prevChildren,
   parentComponent,
   parentSuspense,
-  unmountChildren
+  unmountChildren,
 ) => {
+  const isSVG = namespace === 'svg'
   if (key === 'class') {
     patchClass(el, nextValue, isSVG)
   } else if (key === 'style') {
@@ -34,8 +40,8 @@ export const patchProp: DOMRendererOptions['patchProp'] = (
     key[0] === '.'
       ? ((key = key.slice(1)), true)
       : key[0] === '^'
-      ? ((key = key.slice(1)), false)
-      : shouldSetAsProp(el, key, nextValue, isSVG)
+        ? ((key = key.slice(1)), false)
+        : shouldSetAsProp(el, key, nextValue, isSVG)
   ) {
     patchDOMProp(
       el,
@@ -44,7 +50,7 @@ export const patchProp: DOMRendererOptions['patchProp'] = (
       prevChildren,
       parentComponent,
       parentSuspense,
-      unmountChildren
+      unmountChildren,
     )
   } else {
     // special case for <input v-model type="checkbox"> with
@@ -64,7 +70,7 @@ function shouldSetAsProp(
   el: Element,
   key: string,
   value: unknown,
-  isSVG: boolean
+  isSVG: boolean,
 ) {
   if (isSVG) {
     // most keys must be set as attribute on svg elements to work
@@ -73,19 +79,19 @@ function shouldSetAsProp(
       return true
     }
     // or native onclick with function values
-    if (key in el && nativeOnRE.test(key) && isFunction(value)) {
+    if (key in el && isNativeOn(key) && isFunction(value)) {
       return true
     }
     return false
   }
 
-  // spellcheck and draggable are numerated attrs, however their
-  // corresponding DOM properties are actually booleans - this leads to
-  // setting it with a string "false" value leading it to be coerced to
-  // `true`, so we need to always treat them as attributes.
+  // these are enumerated attrs, however their corresponding DOM properties
+  // are actually booleans - this leads to setting it with a string "false"
+  // value leading it to be coerced to `true`, so we need to always treat
+  // them as attributes.
   // Note that `contentEditable` doesn't have this problem: its DOM
   // property is also enumerated string values.
-  if (key === 'spellcheck' || key === 'draggable') {
+  if (key === 'spellcheck' || key === 'draggable' || key === 'translate') {
     return false
   }
 
@@ -105,8 +111,21 @@ function shouldSetAsProp(
     return false
   }
 
+  // #8780 the width or height of embedded tags must be set as attribute
+  if (key === 'width' || key === 'height') {
+    const tag = el.tagName
+    if (
+      tag === 'IMG' ||
+      tag === 'VIDEO' ||
+      tag === 'CANVAS' ||
+      tag === 'SOURCE'
+    ) {
+      return false
+    }
+  }
+
   // native onclick with string value, must be set as attribute
-  if (nativeOnRE.test(key) && isString(value)) {
+  if (isNativeOn(key) && isString(value)) {
     return false
   }
 

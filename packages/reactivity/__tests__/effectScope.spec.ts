@@ -1,32 +1,42 @@
 import { nextTick, watch, watchEffect } from '@vue/runtime-core'
 import {
-  reactive,
-  effect,
+  type ComputedRef,
   EffectScope,
-  onScopeDispose,
   computed,
+  effect,
+  effectScope,
+  getCurrentScope,
+  onScopeDispose,
+  reactive,
   ref,
-  ComputedRef
 } from '../src'
 
 describe('reactivity/effect/scope', () => {
   it('should run', () => {
-    const fnSpy = jest.fn(() => {})
-    new EffectScope().run(fnSpy)
+    const fnSpy = vi.fn(() => {})
+    effectScope().run(fnSpy)
     expect(fnSpy).toHaveBeenCalledTimes(1)
   })
 
   it('should accept zero argument', () => {
-    const scope = new EffectScope()
+    const scope = effectScope()
     expect(scope.effects.length).toBe(0)
   })
 
   it('should return run value', () => {
-    expect(new EffectScope().run(() => 1)).toBe(1)
+    expect(effectScope().run(() => 1)).toBe(1)
+  })
+
+  it('should work w/ active property', () => {
+    const scope = effectScope()
+    scope.run(() => 1)
+    expect(scope.active).toBe(true)
+    scope.stop()
+    expect(scope.active).toBe(false)
   })
 
   it('should collect the effects', () => {
-    const scope = new EffectScope()
+    const scope = effectScope()
     scope.run(() => {
       let dummy
       const counter = reactive({ num: 0 })
@@ -44,7 +54,7 @@ describe('reactivity/effect/scope', () => {
     let dummy, doubled
     const counter = reactive({ num: 0 })
 
-    const scope = new EffectScope()
+    const scope = effectScope()
     scope.run(() => {
       effect(() => (dummy = counter.num))
       effect(() => (doubled = counter.num * 2))
@@ -68,11 +78,11 @@ describe('reactivity/effect/scope', () => {
     let dummy, doubled
     const counter = reactive({ num: 0 })
 
-    const scope = new EffectScope()
+    const scope = effectScope()
     scope.run(() => {
       effect(() => (dummy = counter.num))
       // nested scope
-      new EffectScope().run(() => {
+      effectScope().run(() => {
         effect(() => (doubled = counter.num * 2))
       })
     })
@@ -98,11 +108,11 @@ describe('reactivity/effect/scope', () => {
     let dummy, doubled
     const counter = reactive({ num: 0 })
 
-    const scope = new EffectScope()
+    const scope = effectScope()
     scope.run(() => {
       effect(() => (dummy = counter.num))
       // nested scope
-      new EffectScope(true).run(() => {
+      effectScope(true).run(() => {
         effect(() => (doubled = counter.num * 2))
       })
     })
@@ -119,7 +129,7 @@ describe('reactivity/effect/scope', () => {
     counter.num = 6
     expect(dummy).toBe(7)
 
-    // nested scope should not be stoped
+    // nested scope should not be stopped
     expect(doubled).toBe(12)
   })
 
@@ -127,7 +137,7 @@ describe('reactivity/effect/scope', () => {
     let dummy, doubled
     const counter = reactive({ num: 0 })
 
-    const scope = new EffectScope()
+    const scope = effectScope()
     scope.run(() => {
       effect(() => (dummy = counter.num))
     })
@@ -151,7 +161,7 @@ describe('reactivity/effect/scope', () => {
     let dummy, doubled
     const counter = reactive({ num: 0 })
 
-    const scope = new EffectScope()
+    const scope = effectScope()
     scope.run(() => {
       effect(() => (dummy = counter.num))
     })
@@ -176,7 +186,7 @@ describe('reactivity/effect/scope', () => {
   it('should fire onScopeDispose hook', () => {
     let dummy = 0
 
-    const scope = new EffectScope()
+    const scope = effectScope()
     scope.run(() => {
       onScopeDispose(() => (dummy += 1))
       onScopeDispose(() => (dummy += 2))
@@ -193,8 +203,8 @@ describe('reactivity/effect/scope', () => {
   })
 
   it('should warn onScopeDispose() is called when there is no active effect scope', () => {
-    const spy = jest.fn()
-    const scope = new EffectScope()
+    const spy = vi.fn()
+    const scope = effectScope()
     scope.run(() => {
       onScopeDispose(spy)
     })
@@ -204,16 +214,16 @@ describe('reactivity/effect/scope', () => {
     onScopeDispose(spy)
 
     expect(
-      '[Vue warn] onScopeDispose() is called when there is no active effect scope to be associated with.'
+      '[Vue warn] onScopeDispose() is called when there is no active effect scope to be associated with.',
     ).toHaveBeenWarned()
 
     scope.stop()
     expect(spy).toHaveBeenCalledTimes(1)
   })
 
-  it('should derefence child scope from parent scope after stopping child scope (no memleaks)', () => {
-    const parent = new EffectScope()
-    const child = parent.run(() => new EffectScope())!
+  it('should dereference child scope from parent scope after stopping child scope (no memleaks)', () => {
+    const parent = effectScope()
+    const child = parent.run(() => effectScope())!
     expect(parent.scopes!.includes(child)).toBe(true)
     child.stop()
     expect(parent.scopes!.includes(child)).toBe(false)
@@ -222,12 +232,12 @@ describe('reactivity/effect/scope', () => {
   it('test with higher level APIs', async () => {
     const r = ref(1)
 
-    const computedSpy = jest.fn()
-    const watchSpy = jest.fn()
-    const watchEffectSpy = jest.fn()
+    const computedSpy = vi.fn()
+    const watchSpy = vi.fn()
+    const watchEffectSpy = vi.fn()
 
     let c: ComputedRef
-    const scope = new EffectScope()
+    const scope = effectScope()
     scope.run(() => {
       c = computed(() => {
         computedSpy()
@@ -262,5 +272,29 @@ describe('reactivity/effect/scope', () => {
     expect(computedSpy).toHaveBeenCalledTimes(2)
     expect(watchSpy).toHaveBeenCalledTimes(1)
     expect(watchEffectSpy).toHaveBeenCalledTimes(2)
+  })
+
+  it('getCurrentScope() stays valid when running a detached nested EffectScope', () => {
+    const parentScope = effectScope()
+
+    parentScope.run(() => {
+      const currentScope = getCurrentScope()
+      expect(currentScope).toBeDefined()
+      const detachedScope = effectScope(true)
+      detachedScope.run(() => {})
+
+      expect(getCurrentScope()).toBe(currentScope)
+    })
+  })
+
+  it('calling .off() of a detached scope inside an active scope should not break currentScope', () => {
+    const parentScope = effectScope()
+
+    parentScope.run(() => {
+      const childScope = effectScope(true)
+      childScope.on()
+      childScope.off()
+      expect(getCurrentScope()).toBe(parentScope)
+    })
   })
 })

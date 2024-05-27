@@ -1,4 +1,4 @@
-import { render, h, nodeOps } from '@vue/runtime-test'
+import { h, nodeOps, render } from '@vue/runtime-test'
 import { useCssModule } from '../../src/helpers/useCssModule'
 
 describe('useCssModule', () => {
@@ -10,9 +10,9 @@ describe('useCssModule', () => {
         __cssModules: modules,
         setup() {
           res = useCssModule(name)
-        }
+        },
       }),
-      nodeOps.createElement('div')
+      nodeOps.createElement('div'),
     )
     return res
   }
@@ -20,8 +20,8 @@ describe('useCssModule', () => {
   test('basic usage', () => {
     const modules = {
       $style: {
-        red: 'red'
-      }
+        red: 'red',
+      },
     }
     expect(mountWithModule(modules)).toMatchObject(modules.$style)
   })
@@ -29,8 +29,8 @@ describe('useCssModule', () => {
   test('basic usage', () => {
     const modules = {
       foo: {
-        red: 'red'
-      }
+        red: 'red',
+      },
     }
     expect(mountWithModule(modules, 'foo')).toMatchObject(modules.foo)
   })

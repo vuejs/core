@@ -1,10 +1,11 @@
 import {
+  createApp,
+  getCurrentInstance,
+  h,
+  nextTick,
+  nodeOps,
   ref,
   render,
-  h,
-  nodeOps,
-  nextTick,
-  getCurrentInstance
 } from '@vue/runtime-test'
 import { normalizeVNode } from '../src/vnode'
 import { createSlots } from '../src/helpers/createSlots'
@@ -16,7 +17,7 @@ describe('component: slots', () => {
       render() {
         instance = getCurrentInstance()
         return h('div')
-      }
+      },
     }
 
     render(h(Comp, null, slots), nodeOps.createElement('div'))
@@ -33,15 +34,15 @@ describe('component: slots', () => {
       _inner: '_inner',
       foo: null,
       header: 'header',
-      footer: ['f1', 'f2']
+      footer: ['f1', 'f2'],
     })
 
     expect(
-      '[Vue warn]: Non-function value encountered for slot "header". Prefer function slots for better performance.'
+      '[Vue warn]: Non-function value encountered for slot "header". Prefer function slots for better performance.',
     ).toHaveBeenWarned()
 
     expect(
-      '[Vue warn]: Non-function value encountered for slot "footer". Prefer function slots for better performance.'
+      '[Vue warn]: Non-function value encountered for slot "footer". Prefer function slots for better performance.',
     ).toHaveBeenWarned()
 
     expect(slots).not.toHaveProperty('_inner')
@@ -49,7 +50,7 @@ describe('component: slots', () => {
     expect(slots.header()).toMatchObject([normalizeVNode('header')])
     expect(slots.footer()).toMatchObject([
       normalizeVNode('f1'),
-      normalizeVNode('f2')
+      normalizeVNode('f2'),
     ])
   })
 
@@ -59,14 +60,14 @@ describe('component: slots', () => {
       render() {
         proxy = getCurrentInstance()
         return h('div')
-      }
+      },
     }
 
     render(
       h(Comp, null, {
-        header: () => 'header'
+        header: () => 'header',
       }),
-      nodeOps.createElement('div')
+      nodeOps.createElement('div'),
     )
 
     expect(proxy.slots.header()).toMatchObject([normalizeVNode('header')])
@@ -76,7 +77,7 @@ describe('component: slots', () => {
     const { slots } = renderWithSlots([h('span')])
 
     expect(
-      '[Vue warn]: Non-function value encountered for default slot. Prefer function slots for better performance.'
+      '[Vue warn]: Non-function value encountered for default slot. Prefer function slots for better performance.',
     ).toHaveBeenWarned()
 
     expect(slots.default()).toMatchObject([normalizeVNode(h('span'))])
@@ -101,16 +102,16 @@ describe('component: slots', () => {
               flag1.value
                 ? {
                     name: 'one',
-                    fn: () => [h('span')]
+                    fn: () => [h('span')],
                   }
                 : {
                     name: 'two',
-                    fn: () => [h('div')]
-                  }
-            ])
-          )
+                    fn: () => [h('div')],
+                  },
+            ]),
+          ),
         ]
-      }
+      },
     }
     render(h(Comp), nodeOps.createElement('div'))
 
@@ -134,18 +135,20 @@ describe('component: slots', () => {
     }
 
     const oldSlots = {
-      header: 'header'
+      header: 'header',
+      footer: undefined,
     }
     const newSlots = {
-      footer: 'footer'
+      header: undefined,
+      footer: 'footer',
     }
 
     const Comp = {
       setup() {
         return () => [
-          h(Child, { n: flag1.value }, flag1.value ? oldSlots : newSlots)
+          h(Child, { n: flag1.value }, flag1.value ? oldSlots : newSlots),
         ]
-      }
+      },
     }
     render(h(Comp), nodeOps.createElement('div'))
 
@@ -156,11 +159,11 @@ describe('component: slots', () => {
     await nextTick()
 
     expect(
-      '[Vue warn]: Non-function value encountered for slot "header". Prefer function slots for better performance.'
+      '[Vue warn]: Non-function value encountered for slot "header". Prefer function slots for better performance.',
     ).toHaveBeenWarned()
 
     expect(
-      '[Vue warn]: Non-function value encountered for slot "footer". Prefer function slots for better performance.'
+      '[Vue warn]: Non-function value encountered for slot "footer". Prefer function slots for better performance.',
     ).toHaveBeenWarned()
 
     expect(instance.slots).not.toHaveProperty('header')
@@ -179,9 +182,9 @@ describe('component: slots', () => {
     const Comp = {
       setup() {
         return () => [
-          h(Child, { n: flag1.value }, flag1.value ? ['header'] : ['footer'])
+          h(Child, { n: flag1.value }, flag1.value ? ['header'] : ['footer']),
         ]
-      }
+      },
     }
     render(h(Comp), nodeOps.createElement('div'))
 
@@ -191,7 +194,7 @@ describe('component: slots', () => {
     await nextTick()
 
     expect(
-      '[Vue warn]: Non-function value encountered for default slot. Prefer function slots for better performance.'
+      '[Vue warn]: Non-function value encountered for default slot. Prefer function slots for better performance.',
     ).toHaveBeenWarned()
 
     expect(instance.slots.default()).toMatchObject([normalizeVNode('footer')])
@@ -200,7 +203,7 @@ describe('component: slots', () => {
   test('should respect $stable flag', async () => {
     const flag1 = ref(1)
     const flag2 = ref(2)
-    const spy = jest.fn()
+    const spy = vi.fn()
 
     const Child = () => {
       spy()
@@ -216,11 +219,11 @@ describe('component: slots', () => {
             { n: flag2.value },
             {
               foo: () => 'foo',
-              $stable: true
-            }
-          )
+              $stable: true,
+            },
+          ),
         ]
-      }
+      },
     }
 
     render(h(App), nodeOps.createElement('div'))
@@ -237,5 +240,33 @@ describe('component: slots', () => {
     flag2.value++
     await nextTick()
     expect(spy).toHaveBeenCalledTimes(2)
+  })
+
+  test('should not warn when mounting another app in setup', () => {
+    const Comp = {
+      setup(_: any, { slots }: any) {
+        return () => slots.default?.()
+      },
+    }
+
+    const mountComp = () => {
+      createApp({
+        setup() {
+          return () => h(Comp, () => 'msg')
+        },
+      }).mount(nodeOps.createElement('div'))
+    }
+
+    const App = {
+      setup() {
+        mountComp()
+        return () => null
+      },
+    }
+
+    createApp(App).mount(nodeOps.createElement('div'))
+    expect(
+      'Slot "default" invoked outside of the render function',
+    ).not.toHaveBeenWarned()
   })
 })

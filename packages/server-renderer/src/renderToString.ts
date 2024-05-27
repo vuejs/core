@@ -1,13 +1,13 @@
 import {
-  App,
+  type App,
+  type VNode,
   createApp,
   createVNode,
   ssrContextKey,
   ssrUtils,
-  VNode
 } from 'vue'
 import { isPromise, isString } from '@vue/shared'
-import { SSRContext, renderComponentVNode, SSRBuffer } from './render'
+import { type SSRBuffer, type SSRContext, renderComponentVNode } from './render'
 
 const { isVNode } = ssrUtils
 
@@ -49,7 +49,7 @@ function unrollBufferSync(buffer: SSRBuffer): string {
 
 export async function renderToString(
   input: App | VNode,
-  context: SSRContext = {}
+  context: SSRContext = {},
 ): Promise<string> {
   if (isVNode(input)) {
     // raw vnode, wrap with app (for context)
@@ -63,19 +63,27 @@ export async function renderToString(
   input.provide(ssrContextKey, context)
   const buffer = await renderComponentVNode(vnode)
 
+  const result = await unrollBuffer(buffer as SSRBuffer)
+
   await resolveTeleports(context)
 
-  return unrollBuffer(buffer as SSRBuffer)
+  if (context.__watcherHandles) {
+    for (const unwatch of context.__watcherHandles) {
+      unwatch()
+    }
+  }
+
+  return result
 }
 
-async function resolveTeleports(context: SSRContext) {
+export async function resolveTeleports(context: SSRContext) {
   if (context.__teleportBuffers) {
     context.teleports = context.teleports || {}
     for (const key in context.__teleportBuffers) {
       // note: it's OK to await sequentially here because the Promises were
       // created eagerly in parallel.
       context.teleports[key] = await unrollBuffer(
-        (await Promise.all(context.__teleportBuffers[key])) as SSRBuffer
+        await Promise.all([context.__teleportBuffers[key]]),
       )
     }
   }

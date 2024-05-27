@@ -1,12 +1,8 @@
-/**
- * @jest-environment node
- */
-
 import {
+  ssrRenderAttr,
   ssrRenderAttrs,
   ssrRenderClass,
   ssrRenderStyle,
-  ssrRenderAttr
 } from '../src/helpers/ssrRenderAttrs'
 import { escapeHtml } from '@vue/shared'
 
@@ -15,9 +11,11 @@ describe('ssr: renderAttrs', () => {
     expect(
       ssrRenderAttrs({
         key: 1,
+        ref_key: 'foo',
+        ref_for: 'bar',
         ref: () => {},
-        onClick: () => {}
-      })
+        onClick: () => {},
+      }),
     ).toBe('')
   })
 
@@ -25,24 +23,24 @@ describe('ssr: renderAttrs', () => {
     expect(
       ssrRenderAttrs({
         id: 'foo',
-        title: 'bar'
-      })
+        title: 'bar',
+      }),
     ).toBe(` id="foo" title="bar"`)
   })
 
   test('empty value attrs', () => {
     expect(
       ssrRenderAttrs({
-        'data-v-abc': ''
-      })
+        'data-v-abc': '',
+      }),
     ).toBe(` data-v-abc`)
   })
 
   test('escape attrs', () => {
     expect(
       ssrRenderAttrs({
-        id: '"><script'
-      })
+        id: '"><script',
+      }),
     ).toBe(` id="&quot;&gt;&lt;script"`)
   })
 
@@ -52,8 +50,8 @@ describe('ssr: renderAttrs', () => {
         checked: true,
         multiple: false,
         readonly: 0,
-        disabled: ''
-      })
+        disabled: '',
+      }),
     ).toBe(` checked disabled`) // boolean attr w/ false should be ignored
   })
 
@@ -62,8 +60,8 @@ describe('ssr: renderAttrs', () => {
       ssrRenderAttrs({
         foo: false,
         title: null,
-        baz: undefined
-      })
+        baz: undefined,
+      }),
     ).toBe(` foo="false"`) // non boolean should render `false` as is
   })
 
@@ -72,8 +70,8 @@ describe('ssr: renderAttrs', () => {
       ssrRenderAttrs({
         foo: {},
         bar: [],
-        baz: () => {}
-      })
+        baz: () => {},
+      }),
     ).toBe(``)
   })
 
@@ -81,8 +79,8 @@ describe('ssr: renderAttrs', () => {
     expect(
       ssrRenderAttrs({
         readOnly: true, // simple lower case conversion
-        htmlFor: 'foobar' // special cases
-      })
+        htmlFor: 'foobar', // special cases
+      }),
     ).toBe(` readonly for="foobar"`)
   })
 
@@ -90,11 +88,22 @@ describe('ssr: renderAttrs', () => {
     expect(
       ssrRenderAttrs(
         {
-          fooBar: 'ok'
+          fooBar: 'ok',
         },
-        'my-el'
-      )
+        'my-el',
+      ),
     ).toBe(` fooBar="ok"`)
+  })
+
+  test('preserve name on svg elements', () => {
+    expect(
+      ssrRenderAttrs(
+        {
+          viewBox: 'foo',
+        },
+        'svg',
+      ),
+    ).toBe(` viewBox="foo"`)
   })
 })
 
@@ -110,7 +119,7 @@ describe('ssr: renderAttr', () => {
 
   test('escape', () => {
     expect(ssrRenderAttr('foo', '<script>')).toBe(
-      ` foo="${escapeHtml(`<script>`)}"`
+      ` foo="${escapeHtml(`<script>`)}"`,
     )
   })
 })
@@ -119,8 +128,8 @@ describe('ssr: renderClass', () => {
   test('via renderProps', () => {
     expect(
       ssrRenderAttrs({
-        class: ['foo', 'bar']
-      })
+        class: ['foo', 'bar'],
+      }),
     ).toBe(` class="foo bar"`)
   })
 
@@ -141,33 +150,35 @@ describe('ssr: renderStyle', () => {
     expect(
       ssrRenderAttrs({
         style: {
-          color: 'red'
-        }
-      })
-    ).toBe(` style="color:red;"`)
+          color: 'red',
+          '--a': 2,
+          '-webkit-line-clamp': 1,
+        },
+      }),
+    ).toBe(` style="color:red;--a:2;-webkit-line-clamp:1;"`)
   })
 
   test('standalone', () => {
     expect(ssrRenderStyle(`color:red`)).toBe(`color:red`)
     expect(
       ssrRenderStyle({
-        color: `red`
-      })
+        color: `red`,
+      }),
     ).toBe(`color:red;`)
     expect(
       ssrRenderStyle([
         { color: `red` },
-        { fontSize: `15px` } // case conversion
-      ])
+        { fontSize: `15px` }, // case conversion
+      ]),
     ).toBe(`color:red;font-size:15px;`)
   })
 
   test('number handling', () => {
     expect(
       ssrRenderStyle({
-        fontSize: 15, // should be ignored since font-size requires unit
-        opacity: 0.5
-      })
+        fontSize: null, // invalid value should be ignored
+        opacity: 0.5,
+      }),
     ).toBe(`opacity:0.5;`)
   })
 
@@ -175,8 +186,8 @@ describe('ssr: renderStyle', () => {
     expect(ssrRenderStyle(`"><script`)).toBe(`&quot;&gt;&lt;script`)
     expect(
       ssrRenderStyle({
-        color: `"><script`
-      })
+        color: `"><script`,
+      }),
     ).toBe(`color:&quot;&gt;&lt;script;`)
   })
 })
