@@ -1,4 +1,4 @@
-import { invokeArrayFns, isFunction } from '@vue/shared'
+import { invokeArrayFns, isBuiltInDirective, isFunction } from '@vue/shared'
 import {
   type ComponentInternalInstance,
   currentInstance,
@@ -71,6 +71,12 @@ export type FunctionDirective<
 export type Directive<T = any, V = any, M extends string = string> =
   | ObjectDirective<T, V, M>
   | FunctionDirective<T, V, M>
+
+export function validateDirectiveName(name: string) {
+  if (isBuiltInDirective(name)) {
+    warn('Do not use built-in directive ids as custom directive id: ' + name)
+  }
+}
 
 export type DirectiveArguments = Array<
   | [Directive | undefined]

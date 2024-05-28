@@ -1,5 +1,11 @@
 import { isRef } from '@vue/reactivity'
-import { EMPTY_OBJ, hasOwn, isArray, isFunction } from '@vue/shared'
+import {
+  EMPTY_OBJ,
+  hasOwn,
+  isArray,
+  isBuiltInTag,
+  isFunction,
+} from '@vue/shared'
 import type { Block } from './apiRender'
 import {
   type ComponentPropsOptions,
@@ -24,7 +30,11 @@ import {
 } from './componentSlots'
 import { VaporLifecycleHooks } from './apiLifecycle'
 import { warn } from './warning'
-import { type AppContext, createAppContext } from './apiCreateVaporApp'
+import {
+  type AppConfig,
+  type AppContext,
+  createAppContext,
+} from './apiCreateVaporApp'
 import type { Data } from '@vue/runtime-shared'
 import { BlockEffectScope } from './blockEffectScope'
 
@@ -233,7 +243,6 @@ export interface ComponentInternalInstance {
   // [VaporLifecycleHooks.SERVER_PREFETCH]: LifecycleHook<() => Promise<unknown>>
 }
 
-// TODO
 export let currentInstance: ComponentInternalInstance | null = null
 
 export const getCurrentInstance: () => ComponentInternalInstance | null = () =>
@@ -256,7 +265,7 @@ const emptyAppContext = createAppContext()
 
 let uid = 0
 export function createComponentInstance(
-  component: ObjectComponent | FunctionalComponent,
+  component: Component,
   rawProps: RawProps | null,
   slots: Slots | null,
   dynamicSlots: DynamicSlots | null,
@@ -365,6 +374,17 @@ export function isVaporComponent(
   val: unknown,
 ): val is ComponentInternalInstance {
   return !!val && hasOwn(val, componentKey)
+}
+
+export function validateComponentName(
+  name: string,
+  { isNativeTag }: AppConfig,
+) {
+  if (isBuiltInTag(name) || isNativeTag(name)) {
+    warn(
+      'Do not use built-in or reserved HTML elements as component id: ' + name,
+    )
+  }
 }
 
 function getAttrsProxy(instance: ComponentInternalInstance): Data {
