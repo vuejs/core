@@ -148,10 +148,10 @@ function genModelModifiers(
 }
 
 function genSlots(slots: ComponentSlots, context: CodegenContext) {
-  const slotList = Object.entries(slots)
+  const names = Object.keys(slots)
   return genMulti(
-    slotList.length > 1 ? DELIMITERS_OBJECT_NEWLINE : DELIMITERS_OBJECT,
-    ...slotList.map(([name, slot]) => [name, ': ', ...genBlock(slot, context)]),
+    names.length > 1 ? DELIMITERS_OBJECT_NEWLINE : DELIMITERS_OBJECT,
+    ...names.map(name => [name, ': ', ...genBlock(slots[name], context)]),
   )
 }
 
