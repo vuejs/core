@@ -28,7 +28,7 @@ describe('ssr compile: suspense', () => {
       <template #fallback>
         loading...
       </template>
-    </suspense>`).code
+    </suspense>`).code,
     ).toMatchInlineSnapshot(`
       "const { resolveComponent: _resolveComponent, withCtx: _withCtx } = require("vue")
       const { ssrRenderComponent: _ssrRenderComponent, ssrRenderSuspense: _ssrRenderSuspense } = require("vue/server-renderer")

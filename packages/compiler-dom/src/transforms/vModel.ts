@@ -1,20 +1,20 @@
 import {
-  transformModel as baseTransform,
-  DirectiveTransform,
+  type DirectiveTransform,
   ElementTypes,
-  findProp,
   NodeTypes,
-  hasDynamicKeyVBind,
+  transformModel as baseTransform,
   findDir,
-  isStaticArgOf
+  findProp,
+  hasDynamicKeyVBind,
+  isStaticArgOf,
 } from '@vue/compiler-core'
-import { createDOMCompilerError, DOMErrorCodes } from '../errors'
+import { DOMErrorCodes, createDOMCompilerError } from '../errors'
 import {
   V_MODEL_CHECKBOX,
+  V_MODEL_DYNAMIC,
   V_MODEL_RADIO,
   V_MODEL_SELECT,
   V_MODEL_TEXT,
-  V_MODEL_DYNAMIC
 } from '../runtimeHelpers'
 
 export const transformModel: DirectiveTransform = (dir, node, context) => {
@@ -28,8 +28,8 @@ export const transformModel: DirectiveTransform = (dir, node, context) => {
     context.onError(
       createDOMCompilerError(
         DOMErrorCodes.X_V_MODEL_ARG_ON_ELEMENT,
-        dir.arg.loc
-      )
+        dir.arg.loc,
+      ),
     )
   }
 
@@ -39,8 +39,8 @@ export const transformModel: DirectiveTransform = (dir, node, context) => {
       context.onError(
         createDOMCompilerError(
           DOMErrorCodes.X_V_MODEL_UNNECESSARY_VALUE,
-          value.loc
-        )
+          value.loc,
+        ),
       )
     }
   }
@@ -74,8 +74,8 @@ export const transformModel: DirectiveTransform = (dir, node, context) => {
               context.onError(
                 createDOMCompilerError(
                   DOMErrorCodes.X_V_MODEL_ON_FILE_INPUT_ELEMENT,
-                  dir.loc
-                )
+                  dir.loc,
+                ),
               )
               break
             default:
@@ -108,8 +108,8 @@ export const transformModel: DirectiveTransform = (dir, node, context) => {
     context.onError(
       createDOMCompilerError(
         DOMErrorCodes.X_V_MODEL_ON_INVALID_ELEMENT,
-        dir.loc
-      )
+        dir.loc,
+      ),
     )
   }
 
@@ -120,7 +120,7 @@ export const transformModel: DirectiveTransform = (dir, node, context) => {
       !(
         p.key.type === NodeTypes.SIMPLE_EXPRESSION &&
         p.key.content === 'modelValue'
-      )
+      ),
   )
 
   return baseResult

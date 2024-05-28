@@ -4,7 +4,7 @@
 
 // since v-memo really is a compiler + runtime combo feature, we are performing
 // more of an integration test here.
-import { ComponentOptions, createApp, nextTick } from 'vue'
+import { type ComponentOptions, createApp, nextTick } from 'vue'
 
 describe('v-memo', () => {
   function mount(options: ComponentOptions): [HTMLElement, any] {
@@ -17,7 +17,7 @@ describe('v-memo', () => {
   test('on with external array', async () => {
     const [el, vm] = mount({
       template: `<div v-memo="arr">{{ arr[0] }} {{ arr[1] }} {{arr[2] ?? '_' }} ({{c}})</div>{{c}}`,
-      data: () => ({ arr: [0, 0], c: 0 })
+      data: () => ({ arr: [0, 0], c: 0 }),
     })
     expect(el.innerHTML).toBe(`<div>0 0 _ (0)</div>0`)
 
@@ -58,7 +58,7 @@ describe('v-memo', () => {
   test('on normal element', async () => {
     const [el, vm] = mount({
       template: `<div v-memo="[x]">{{ x }} {{ y }}</div>`,
-      data: () => ({ x: 0, y: 0 })
+      data: () => ({ x: 0, y: 0 }),
     })
     expect(el.innerHTML).toBe(`<div>0 0</div>`)
 
@@ -85,9 +85,9 @@ describe('v-memo', () => {
       components: {
         Comp: {
           props: ['x', 'y'],
-          template: `<div>{{x}} {{y}}</div>`
-        }
-      }
+          template: `<div>{{x}} {{y}}</div>`,
+        },
+      },
     })
     expect(el.innerHTML).toBe(`<div>0 0</div>`)
 
@@ -111,7 +111,7 @@ describe('v-memo', () => {
     const [el, vm] = mount({
       template: `<div v-if="ok" v-memo="[x]">{{ x }} {{ y }}</div>
         <div v-else v-memo="[y]">{{ y }} {{ x }}</div>`,
-      data: () => ({ ok: true, x: 0, y: 0 })
+      data: () => ({ ok: true, x: 0, y: 0 }),
     })
     expect(el.innerHTML).toBe(`<div>0 0</div>`)
 
@@ -159,37 +159,37 @@ describe('v-memo', () => {
       data: () => ({
         list: [{ x: 1 }, { x: 2 }, { x: 3 }],
         y: 1,
-        z: 'z'
-      })
+        z: 'z',
+      }),
     })
     expect(el.innerHTML).toBe(
-      `<div>1 yes z</div><div>2 no z</div><div>3 no z</div>`
+      `<div>1 yes z</div><div>2 no z</div><div>3 no z</div>`,
     )
 
     vm.y = 2
     await nextTick()
     expect(el.innerHTML).toBe(
-      `<div>1 no z</div><div>2 yes z</div><div>3 no z</div>`
+      `<div>1 no z</div><div>2 yes z</div><div>3 no z</div>`,
     )
 
     vm.list[0].x = 4
     await nextTick()
     expect(el.innerHTML).toBe(
-      `<div>4 no z</div><div>2 yes z</div><div>3 no z</div>`
+      `<div>4 no z</div><div>2 yes z</div><div>3 no z</div>`,
     )
 
     vm.list[0].x = 5
     vm.y = 5
     await nextTick()
     expect(el.innerHTML).toBe(
-      `<div>5 yes z</div><div>2 no z</div><div>3 no z</div>`
+      `<div>5 yes z</div><div>2 no z</div><div>3 no z</div>`,
     )
 
     vm.z = 'zz'
     await nextTick()
     // should not update
     expect(el.innerHTML).toBe(
-      `<div>5 yes z</div><div>2 no z</div><div>3 no z</div>`
+      `<div>5 yes z</div><div>2 no z</div><div>3 no z</div>`,
     )
   })
 
@@ -199,8 +199,8 @@ describe('v-memo', () => {
           {{count}}
         </div>`,
       data: () => ({
-        count: 0
-      })
+        count: 0,
+      }),
     })
     expect(el.innerHTML).toBe(`<div>0</div><div>0</div><div>0</div>`)
 
@@ -218,7 +218,7 @@ describe('v-memo', () => {
   test('v-memo dependency is NaN should be equal', async () => {
     const [el, vm] = mount({
       template: `<div v-memo="[x]">{{ y }}</div>`,
-      data: () => ({ x: NaN, y: 0 })
+      data: () => ({ x: NaN, y: 0 }),
     })
     expect(el.innerHTML).toBe(`<div>0</div>`)
 

@@ -1,5 +1,9 @@
 import {
-  ComponentInternalInstance,
+  type ComponentInternalInstance,
+  type ComputedRef,
+  type SetupContext,
+  Suspense,
+  computed,
   createApp,
   defineComponent,
   getCurrentInstance,
@@ -8,26 +12,19 @@ import {
   onMounted,
   render,
   serializeInner,
-  SetupContext,
-  Suspense,
-  computed,
-  ComputedRef,
   shallowReactive,
-  nextTick,
-  ref
 } from '@vue/runtime-test'
 import {
+  createPropsRestProxy,
   defineEmits,
-  defineProps,
   defineExpose,
-  withDefaults,
+  defineProps,
+  mergeDefaults,
+  mergeModels,
   useAttrs,
   useSlots,
-  mergeDefaults,
   withAsyncContext,
-  createPropsRestProxy,
-  mergeModels,
-  useModel
+  withDefaults,
 } from '../src/apiSetupHelpers'
 
 describe('SFC <script setup> helpers', () => {
@@ -53,12 +50,12 @@ describe('SFC <script setup> helpers', () => {
         slots = useSlots()
         attrs = useAttrs()
         return () => {}
-      }
+      },
     }
     const passedAttrs = { id: 'foo' }
     const passedSlots = {
       default: () => {},
-      x: () => {}
+      x: () => {},
     }
     render(h(Comp, passedAttrs, passedSlots), nodeOps.createElement('div'))
     expect(typeof slots!.default).toBe('function')
@@ -76,7 +73,7 @@ describe('SFC <script setup> helpers', () => {
         attrs = useAttrs()
         ctx = _ctx
         return () => {}
-      }
+      },
     })
     render(h(Comp), nodeOps.createElement('div'))
     expect(slots).toBe(ctx!.slots)
@@ -89,18 +86,18 @@ describe('SFC <script setup> helpers', () => {
         {
           foo: null,
           bar: { type: String, required: false },
-          baz: String
+          baz: String,
         },
         {
           foo: 1,
           bar: 'baz',
-          baz: 'qux'
-        }
+          baz: 'qux',
+        },
       )
       expect(merged).toMatchObject({
         foo: { default: 1 },
         bar: { type: String, required: false, default: 'baz' },
-        baz: { type: String, default: 'qux' }
+        baz: { type: String, default: 'qux' },
       })
     })
 
@@ -108,12 +105,12 @@ describe('SFC <script setup> helpers', () => {
       const merged = mergeDefaults(['foo', 'bar', 'baz'], {
         foo: 1,
         bar: 'baz',
-        baz: 'qux'
+        baz: 'qux',
       })
       expect(merged).toMatchObject({
         foo: { default: 1 },
         bar: { default: 'baz' },
-        baz: { default: 'qux' }
+        baz: { default: 'qux' },
       })
     })
 
@@ -121,17 +118,17 @@ describe('SFC <script setup> helpers', () => {
       const fn = () => {}
       const merged = mergeDefaults(['foo', 'bar', 'baz'], {
         foo: fn,
-        __skip_foo: true
+        __skip_foo: true,
       })
       expect(merged).toMatchObject({
-        foo: { default: fn, skipFactory: true }
+        foo: { default: fn, skipFactory: true },
       })
     })
 
     test('should warn missing', () => {
       mergeDefaults({}, { foo: 1 })
       expect(
-        `props default key "foo" has no corresponding declaration`
+        `props default key "foo" has no corresponding declaration`,
       ).toHaveBeenWarned()
     })
   })
@@ -141,25 +138,25 @@ describe('SFC <script setup> helpers', () => {
       expect(mergeModels(['foo', 'bar'], ['baz'])).toMatchObject([
         'foo',
         'bar',
-        'baz'
+        'baz',
       ])
     })
 
     test('object syntax', () => {
       expect(
-        mergeModels({ foo: null, bar: { required: true } }, ['baz'])
+        mergeModels({ foo: null, bar: { required: true } }, ['baz']),
       ).toMatchObject({
         foo: null,
         bar: { required: true },
-        baz: {}
+        baz: {},
       })
 
       expect(
-        mergeModels(['baz'], { foo: null, bar: { required: true } })
+        mergeModels(['baz'], { foo: null, bar: { required: true } }),
       ).toMatchObject({
         foo: null,
         bar: { required: true },
-        baz: {}
+        baz: {},
       })
     })
 
@@ -167,115 +164,13 @@ describe('SFC <script setup> helpers', () => {
       expect(
         mergeModels(
           { foo: null, bar: { required: true } },
-          { bar: {}, baz: {} }
-        )
+          { bar: {}, baz: {} },
+        ),
       ).toMatchObject({
         foo: null,
         bar: {},
-        baz: {}
+        baz: {},
       })
-    })
-  })
-
-  describe('useModel', () => {
-    test('basic', async () => {
-      let foo: any
-      const update = () => {
-        foo.value = 'bar'
-      }
-
-      const Comp = defineComponent({
-        props: ['modelValue'],
-        emits: ['update:modelValue'],
-        setup(props) {
-          foo = useModel(props, 'modelValue')
-        },
-        render() {}
-      })
-
-      const msg = ref('')
-      const setValue = vi.fn(v => (msg.value = v))
-      const root = nodeOps.createElement('div')
-      createApp(() =>
-        h(Comp, {
-          modelValue: msg.value,
-          'onUpdate:modelValue': setValue
-        })
-      ).mount(root)
-
-      expect(foo.value).toBe('')
-      expect(msg.value).toBe('')
-      expect(setValue).not.toBeCalled()
-
-      // update from child
-      update()
-
-      await nextTick()
-      expect(msg.value).toBe('bar')
-      expect(foo.value).toBe('bar')
-      expect(setValue).toBeCalledTimes(1)
-
-      // update from parent
-      msg.value = 'qux'
-
-      await nextTick()
-      expect(msg.value).toBe('qux')
-      expect(foo.value).toBe('qux')
-      expect(setValue).toBeCalledTimes(1)
-    })
-
-    test('local', async () => {
-      let foo: any
-      const update = () => {
-        foo.value = 'bar'
-      }
-
-      const Comp = defineComponent({
-        props: ['foo'],
-        emits: ['update:foo'],
-        setup(props) {
-          foo = useModel(props, 'foo', { local: true })
-        },
-        render() {}
-      })
-
-      const root = nodeOps.createElement('div')
-      const updateFoo = vi.fn()
-      render(h(Comp, { 'onUpdate:foo': updateFoo }), root)
-
-      expect(foo.value).toBeUndefined()
-      update()
-
-      expect(foo.value).toBe('bar')
-
-      await nextTick()
-      expect(updateFoo).toBeCalledTimes(1)
-    })
-
-    test('default value', async () => {
-      let count: any
-      const inc = () => {
-        count.value++
-      }
-      const Comp = defineComponent({
-        props: { count: { default: 0 } },
-        emits: ['update:count'],
-        setup(props) {
-          count = useModel(props, 'count', { local: true })
-        },
-        render() {}
-      })
-
-      const root = nodeOps.createElement('div')
-      const updateCount = vi.fn()
-      render(h(Comp, { 'onUpdate:count': updateCount }), root)
-
-      expect(count.value).toBe(0)
-
-      inc()
-      expect(count.value).toBe(1)
-      await nextTick()
-      expect(updateCount).toBeCalledTimes(1)
     })
   })
 
@@ -283,7 +178,7 @@ describe('SFC <script setup> helpers', () => {
     const original = shallowReactive({
       foo: 1,
       bar: 2,
-      baz: 3
+      baz: 3,
     })
     const rest = createPropsRestProxy(original, ['foo', 'bar'])
     expect('foo' in rest).toBe(false)
@@ -324,7 +219,7 @@ describe('SFC <script setup> helpers', () => {
               () =>
                 new Promise(r => {
                   resolve = r
-                })
+                }),
             )),
             (__temp = await __temp),
             __restore(),
@@ -334,13 +229,13 @@ describe('SFC <script setup> helpers', () => {
           onMounted(spy)
           afterInstance = getCurrentInstance()
           return () => msg
-        }
+        },
       })
 
       const root = nodeOps.createElement('div')
       render(
         h(() => h(Suspense, () => h(Comp))),
-        root
+        root,
       )
 
       expect(spy).not.toHaveBeenCalled()
@@ -371,7 +266,7 @@ describe('SFC <script setup> helpers', () => {
               () =>
                 new Promise((_, rj) => {
                   reject = rj
-                })
+                }),
             )
             __temp = await __temp
             __restore()
@@ -382,13 +277,13 @@ describe('SFC <script setup> helpers', () => {
           onMounted(spy)
           afterInstance = getCurrentInstance()
           return () => ''
-        }
+        },
       })
 
       const root = nodeOps.createElement('div')
       render(
         h(() => h(Suspense, () => h(Comp))),
-        root
+        root,
       )
 
       expect(spy).not.toHaveBeenCalled()
@@ -441,13 +336,13 @@ describe('SFC <script setup> helpers', () => {
             resolve()
             return ''
           }
-        }
+        },
       })
 
       const root = nodeOps.createElement('div')
       render(
         h(() => h(Suspense, () => h(Comp))),
-        root
+        root,
       )
 
       await ready
@@ -473,7 +368,7 @@ describe('SFC <script setup> helpers', () => {
           __temp = await __temp
           __restore()
         },
-        render() {}
+        render() {},
       })
 
       const app = createApp(() => h(Suspense, () => h(Comp)))
@@ -493,7 +388,7 @@ describe('SFC <script setup> helpers', () => {
     test('race conditions', async () => {
       const uids = {
         one: { before: NaN, after: NaN },
-        two: { before: NaN, after: NaN }
+        two: { before: NaN, after: NaN },
       }
 
       const Comp = defineComponent({
@@ -508,13 +403,13 @@ describe('SFC <script setup> helpers', () => {
 
           uids[props.name].after = getCurrentInstance()!.uid
           return () => ''
-        }
+        },
       })
 
       const app = createApp(() =>
         h(Suspense, () =>
-          h('div', [h(Comp, { name: 'one' }), h(Comp, { name: 'two' })])
-        )
+          h('div', [h(Comp, { name: 'one' }), h(Comp, { name: 'two' })]),
+        ),
       )
       const root = nodeOps.createElement('div')
       app.mount(root)
@@ -544,7 +439,7 @@ describe('SFC <script setup> helpers', () => {
           // register the lifecycle after an await statement
           onMounted(resolve)
           return () => ''
-        }
+        },
       })
 
       const app = createApp(() => h(Suspense, () => h(Comp)))
