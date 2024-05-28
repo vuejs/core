@@ -1516,7 +1516,7 @@ describe('api: watch', () => {
     unwatch!()
     expect(scope.effects.length).toBe(0)
   })
-  
+
   test('circular reference', async () => {
     const obj = { a: 1 }
     // @ts-expect-error
