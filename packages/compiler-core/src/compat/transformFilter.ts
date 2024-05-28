@@ -168,6 +168,8 @@ function parseFilter(node: SimpleExpressionNode, context: TransformContext) {
       expression = wrapFilter(expression, filters[i], context)
     }
     node.content = expression
+    // reset ast since the content is replaced
+    node.ast = undefined
   }
 }
 

@@ -1,3 +1,4 @@
+import { h, nextTick, nodeOps, render, serializeInner } from '@vue/runtime-test'
 import {
   type DebuggerEvent,
   ITERATE_KEY,
@@ -9,8 +10,11 @@ import {
   isReadonly,
   reactive,
   ref,
+  shallowRef,
   toRaw,
 } from '../src'
+import { DirtyLevels } from '../src/constants'
+import { COMPUTED_SIDE_EFFECT_WARN } from '../src/computed'
 
 describe('reactivity/computed', () => {
   it('should return updated value', () => {
@@ -450,5 +454,168 @@ describe('reactivity/computed', () => {
     expect(fnSpy).toBeCalledTimes(1)
     v.value = 2
     expect(fnSpy).toBeCalledTimes(2)
+  })
+
+  it('should chained recurse effects clear dirty after trigger', () => {
+    const v = ref(1)
+    const c1 = computed(() => v.value)
+    const c2 = computed(() => c1.value)
+
+    c1.effect.allowRecurse = true
+    c2.effect.allowRecurse = true
+    c2.value
+
+    expect(c1.effect._dirtyLevel).toBe(DirtyLevels.NotDirty)
+    expect(c2.effect._dirtyLevel).toBe(DirtyLevels.NotDirty)
+  })
+
+  it('should chained computeds dirtyLevel update with first computed effect', () => {
+    const v = ref(0)
+    const c1 = computed(() => {
+      if (v.value === 0) {
+        v.value = 1
+      }
+      return v.value
+    })
+    const c2 = computed(() => c1.value)
+    const c3 = computed(() => c2.value)
+
+    c3.value
+
+    expect(c1.effect._dirtyLevel).toBe(DirtyLevels.Dirty)
+    expect(c2.effect._dirtyLevel).toBe(
+      DirtyLevels.MaybeDirty_ComputedSideEffect,
+    )
+    expect(c3.effect._dirtyLevel).toBe(
+      DirtyLevels.MaybeDirty_ComputedSideEffect,
+    )
+    expect(COMPUTED_SIDE_EFFECT_WARN).toHaveBeenWarned()
+  })
+
+  it('should work when chained(ref+computed)', () => {
+    const v = ref(0)
+    const c1 = computed(() => {
+      if (v.value === 0) {
+        v.value = 1
+      }
+      return 'foo'
+    })
+    const c2 = computed(() => v.value + c1.value)
+    expect(c2.value).toBe('0foo')
+    expect(c2.effect._dirtyLevel).toBe(DirtyLevels.Dirty)
+    expect(c2.value).toBe('1foo')
+    expect(COMPUTED_SIDE_EFFECT_WARN).toHaveBeenWarned()
+  })
+
+  it('should trigger effect even computed already dirty', () => {
+    const fnSpy = vi.fn()
+    const v = ref(0)
+    const c1 = computed(() => {
+      if (v.value === 0) {
+        v.value = 1
+      }
+      return 'foo'
+    })
+    const c2 = computed(() => v.value + c1.value)
+
+    effect(() => {
+      fnSpy()
+      c2.value
+    })
+    expect(fnSpy).toBeCalledTimes(1)
+    expect(c1.effect._dirtyLevel).toBe(DirtyLevels.Dirty)
+    expect(c2.effect._dirtyLevel).toBe(DirtyLevels.Dirty)
+    v.value = 2
+    expect(fnSpy).toBeCalledTimes(2)
+    expect(COMPUTED_SIDE_EFFECT_WARN).toHaveBeenWarned()
+  })
+
+  // #10185
+  it('should not override queried MaybeDirty result', () => {
+    class Item {
+      v = ref(0)
+    }
+    const v1 = shallowRef()
+    const v2 = ref(false)
+    const c1 = computed(() => {
+      let c = v1.value
+      if (!v1.value) {
+        c = new Item()
+        v1.value = c
+      }
+      return c.v.value
+    })
+    const c2 = computed(() => {
+      if (!v2.value) return 'no'
+      return c1.value ? 'yes' : 'no'
+    })
+    const c3 = computed(() => c2.value)
+
+    c3.value
+    v2.value = true
+    expect(c2.effect._dirtyLevel).toBe(DirtyLevels.Dirty)
+    expect(c3.effect._dirtyLevel).toBe(DirtyLevels.MaybeDirty)
+
+    c3.value
+    expect(c1.effect._dirtyLevel).toBe(DirtyLevels.Dirty)
+    expect(c2.effect._dirtyLevel).toBe(
+      DirtyLevels.MaybeDirty_ComputedSideEffect,
+    )
+    expect(c3.effect._dirtyLevel).toBe(
+      DirtyLevels.MaybeDirty_ComputedSideEffect,
+    )
+
+    v1.value.v.value = 999
+    expect(c1.effect._dirtyLevel).toBe(DirtyLevels.Dirty)
+    expect(c2.effect._dirtyLevel).toBe(DirtyLevels.MaybeDirty)
+    expect(c3.effect._dirtyLevel).toBe(DirtyLevels.MaybeDirty)
+
+    expect(c3.value).toBe('yes')
+    expect(COMPUTED_SIDE_EFFECT_WARN).toHaveBeenWarned()
+  })
+
+  it('should be not dirty after deps mutate (mutate deps in computed)', async () => {
+    const state = reactive<any>({})
+    const consumer = computed(() => {
+      if (!('a' in state)) state.a = 1
+      return state.a
+    })
+    const Comp = {
+      setup: () => {
+        nextTick().then(() => {
+          state.a = 2
+        })
+        return () => consumer.value
+      },
+    }
+    const root = nodeOps.createElement('div')
+    render(h(Comp), root)
+    await nextTick()
+    await nextTick()
+    expect(serializeInner(root)).toBe(`2`)
+    expect(COMPUTED_SIDE_EFFECT_WARN).toHaveBeenWarned()
+  })
+
+  it('should not trigger effect scheduler by recurse computed effect', async () => {
+    const v = ref('Hello')
+    const c = computed(() => {
+      v.value += ' World'
+      return v.value
+    })
+    const Comp = {
+      setup: () => {
+        return () => c.value
+      },
+    }
+    const root = nodeOps.createElement('div')
+
+    render(h(Comp), root)
+    await nextTick()
+    expect(serializeInner(root)).toBe('Hello World')
+
+    v.value += ' World'
+    await nextTick()
+    expect(serializeInner(root)).toBe('Hello World World World World')
+    expect(COMPUTED_SIDE_EFFECT_WARN).toHaveBeenWarned()
   })
 })

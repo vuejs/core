@@ -1,14 +1,17 @@
 import {
   type BindingMetadata,
+  type CodegenSourceMapGenerator,
   type CompilerError,
   type ElementNode,
   NodeTypes,
+  type ParserOptions,
+  type RawSourceMap,
   type RootNode,
   type SourceLocation,
   createRoot,
 } from '@vue/compiler-core'
 import * as CompilerDOM from '@vue/compiler-dom'
-import { type RawSourceMap, SourceMapGenerator } from 'source-map-js'
+import { SourceMapGenerator } from 'source-map-js'
 import type { TemplateCompiler } from './compileTemplate'
 import { parseCssVars } from './style/cssVars'
 import { createCache } from './cache'
@@ -24,6 +27,11 @@ export interface SFCParseOptions {
   pad?: boolean | 'line' | 'space'
   ignoreEmpty?: boolean
   compiler?: TemplateCompiler
+  templateParseOptions?: ParserOptions
+  /**
+   * TODO remove in 3.5
+   * @deprecated use `templateParseOptions: { prefixIdentifiers: false }` instead
+   */
   parseExpressions?: boolean
 }
 
@@ -97,24 +105,39 @@ export interface SFCParseResult {
 
 export const parseCache = createCache<SFCParseResult>()
 
+function genCacheKey(source: string, options: SFCParseOptions): string {
+  return (
+    source +
+    JSON.stringify(
+      {
+        ...options,
+        compiler: { parse: options.compiler?.parse },
+      },
+      (_, val) => (typeof val === 'function' ? val.toString() : val),
+    )
+  )
+}
+
 export function parse(
   source: string,
-  {
+  options: SFCParseOptions = {},
+): SFCParseResult {
+  const sourceKey = genCacheKey(source, options)
+  const cache = parseCache.get(sourceKey)
+  if (cache) {
+    return cache
+  }
+
+  const {
     sourceMap = true,
     filename = DEFAULT_FILENAME,
     sourceRoot = '',
     pad = false,
     ignoreEmpty = true,
     compiler = CompilerDOM,
+    templateParseOptions = {},
     parseExpressions = true,
-  }: SFCParseOptions = {},
-): SFCParseResult {
-  const sourceKey =
-    source + sourceMap + filename + sourceRoot + pad + compiler.parse
-  const cache = parseCache.get(sourceKey)
-  if (cache) {
-    return cache
-  }
+  } = options
 
   const descriptor: SFCDescriptor = {
     filename,
@@ -133,6 +156,7 @@ export function parse(
   const ast = compiler.parse(source, {
     parseMode: 'sfc',
     prefixIdentifiers: parseExpressions,
+    ...templateParseOptions,
     onError: e => {
       errors.push(e)
     },
@@ -353,7 +377,7 @@ function generateSourceMap(
   const map = new SourceMapGenerator({
     file: filename.replace(/\\/g, '/'),
     sourceRoot: sourceRoot.replace(/\\/g, '/'),
-  })
+  }) as unknown as CodegenSourceMapGenerator
   map.setSourceContent(filename, source)
   map._sources.add(filename)
   generated.split(splitRE).forEach((line, index) => {
@@ -368,7 +392,6 @@ function generateSourceMap(
             generatedLine,
             generatedColumn: i,
             source: filename,
-            // @ts-expect-error
             name: null,
           })
         }

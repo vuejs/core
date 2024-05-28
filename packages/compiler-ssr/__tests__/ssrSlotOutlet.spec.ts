@@ -127,4 +127,36 @@ describe('ssr: <slot>', () => {
       }"
     `)
   })
+
+  test('inside transition-group', () => {
+    const { code } = compile(
+      `<TransitionGroup tag="div"><slot/></TransitionGroup>`,
+    )
+    expect(code).toMatch(ssrHelpers[SSR_RENDER_SLOT_INNER])
+    expect(code).toMatchInlineSnapshot(`
+      "const { ssrRenderSlotInner: _ssrRenderSlotInner, ssrRenderAttrs: _ssrRenderAttrs } = require("vue/server-renderer")
+
+      return function ssrRender(_ctx, _push, _parent, _attrs) {
+        _push(\`<div\${_ssrRenderAttrs(_attrs)}>\`)
+        _ssrRenderSlotInner(_ctx.$slots, "default", {}, null, _push, _parent, null, true)
+        _push(\`</div>\`)
+      }"
+    `)
+  })
+
+  test('with v-if inside transition', () => {
+    const { code } = compile(`<transition><slot v-if="true"/></transition>`)
+    expect(code).toMatch(ssrHelpers[SSR_RENDER_SLOT_INNER])
+    expect(code).toMatchInlineSnapshot(`
+      "const { ssrRenderSlotInner: _ssrRenderSlotInner } = require("vue/server-renderer")
+
+      return function ssrRender(_ctx, _push, _parent, _attrs) {
+        if (true) {
+          _ssrRenderSlotInner(_ctx.$slots, "default", {}, null, _push, _parent, null, true)
+        } else {
+          _push(\`<!---->\`)
+        }
+      }"
+    `)
+  })
 })

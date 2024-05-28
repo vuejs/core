@@ -356,7 +356,7 @@ describe('hot module replacement', () => {
     triggerEvent(root.children[1] as TestElement, 'click')
     await nextTick()
     await new Promise(r => setTimeout(r, 0))
-    expect(serializeInner(root)).toBe(`<button></button><!---->`)
+    expect(serializeInner(root)).toBe(`<button></button><!--v-if-->`)
     expect(unmountSpy).toHaveBeenCalledTimes(1)
     expect(mountSpy).toHaveBeenCalledTimes(1)
     expect(activeSpy).toHaveBeenCalledTimes(1)
