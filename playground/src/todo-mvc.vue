@@ -13,7 +13,7 @@ const remaining = computed(() => {
   return tasks.value.filter(task => !task.completed).length
 })
 
-function handleAdd(evt: MouseEvent) {
+function handleAdd(evt: KeyboardEvent | MouseEvent) {
   console.log(evt)
   tasks.value.push({
     title: value.value,
