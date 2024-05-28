@@ -35,19 +35,6 @@ jobs:
       - name: Install dependencies
         run: pnpm install
 
-      - name: Download PR number
-        uses: dawidd6/action-download-artifact@v3
-        with:
-          name: pr-number
-          run_id: ${{ github.event.workflow_run.id }}
-          path: /tmp/pr-number
-
-      - name: Read PR Number
-        id: pr-number
-        uses: juliangruber/read-file-action@v1
-        with:
-          path: /tmp/pr-number/pr.txt
-
       - name: Download Size Data
         uses: dawidd6/action-download-artifact@v3
         with:
@@ -78,7 +65,6 @@ jobs:
         uses: actions-cool/maintain-one-comment@v3
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          number: ${{ steps.pr-number.outputs.content }}
           body: |
             ${{ steps.size-report.outputs.content }}
             <!-- VUE_CORE_SIZE -->
