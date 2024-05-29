@@ -10,11 +10,11 @@ import {
 } from '../src/index'
 import { computed } from '@vue/runtime-dom'
 import {
-  shallowRef,
-  unref,
   customRef,
+  shallowRef,
+  toShallowRef,
   triggerRef,
-  toShallowRef
+  unref,
 } from '../src/ref'
 import {
   isReadonly,
@@ -464,7 +464,7 @@ describe('reactivity/ref', () => {
 describe('toShallowRef', () => {
   it('should convert a function value to a Readonly Ref', () => {
     const value = () => ({
-      a: 1
+      a: 1,
     })
 
     const result = toShallowRef(value)
