@@ -1,10 +1,10 @@
 import { isOn } from '@vue/shared'
-import { ComponentInternalInstance } from '../component'
+import type { ComponentInternalInstance } from '../component'
 import { DeprecationTypes, isCompatEnabled } from './compatConfig'
 
 export function shouldSkipAttr(
   key: string,
-  instance: ComponentInternalInstance
+  instance: ComponentInternalInstance,
 ): boolean {
   if (key === 'is') {
     return true

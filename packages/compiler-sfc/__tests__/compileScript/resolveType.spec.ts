@@ -1,13 +1,13 @@
 import { normalize } from 'node:path'
-import { Identifier } from '@babel/types'
-import { SFCScriptCompileOptions, parse } from '../../src'
+import type { Identifier } from '@babel/types'
+import { type SFCScriptCompileOptions, parse } from '../../src'
 import { ScriptCompileContext } from '../../src/script/context'
 import {
   inferRuntimeType,
   invalidateTypeCache,
   recordImports,
+  registerTS,
   resolveTypeElements,
-  registerTS
 } from '../../src/script/resolveType'
 
 import ts from 'typescript'
@@ -25,7 +25,7 @@ describe('resolveType', () => {
     expect(props).toStrictEqual({
       foo: ['Number'],
       bar: ['Function'],
-      baz: ['String']
+      baz: ['String'],
     })
     expect(calls?.length).toBe(2)
   })
@@ -35,9 +35,9 @@ describe('resolveType', () => {
       resolve(`
     type Aliased = { foo: number }
     defineProps<Aliased>()
-    `).props
+    `).props,
     ).toStrictEqual({
-      foo: ['Number']
+      foo: ['Number'],
     })
   })
 
@@ -46,9 +46,9 @@ describe('resolveType', () => {
       resolve(`
     export type Aliased = { foo: number }
     defineProps<Aliased>()
-    `).props
+    `).props,
     ).toStrictEqual({
-      foo: ['Number']
+      foo: ['Number'],
     })
   })
 
@@ -57,9 +57,9 @@ describe('resolveType', () => {
       resolve(`
     interface Aliased { foo: number }
     defineProps<Aliased>()
-    `).props
+    `).props,
     ).toStrictEqual({
-      foo: ['Number']
+      foo: ['Number'],
     })
   })
 
@@ -68,9 +68,9 @@ describe('resolveType', () => {
       resolve(`
     export interface Aliased { foo: number }
     defineProps<Aliased>()
-    `).props
+    `).props,
     ).toStrictEqual({
-      foo: ['Number']
+      foo: ['Number'],
     })
   })
 
@@ -82,12 +82,12 @@ describe('resolveType', () => {
     interface C { c: string }
     interface Aliased extends B, C { foo: number }
     defineProps<Aliased>()
-    `).props
+    `).props,
     ).toStrictEqual({
       a: ['Function'],
       b: ['Boolean'],
       c: ['String'],
-      foo: ['Number']
+      foo: ['Number'],
     })
   })
 
@@ -96,9 +96,9 @@ describe('resolveType', () => {
       resolve(`
     class Foo {}
     defineProps<{ foo: Foo }>()
-    `).props
+    `).props,
     ).toStrictEqual({
-      foo: ['Object']
+      foo: ['Object'],
     })
   })
 
@@ -106,7 +106,7 @@ describe('resolveType', () => {
     expect(
       resolve(`
     defineProps<(e: 'foo') => void>()
-    `).calls?.length
+    `).calls?.length,
     ).toBe(1)
   })
 
@@ -115,7 +115,7 @@ describe('resolveType', () => {
       resolve(`
     type Fn = (e: 'foo') => void
     defineProps<Fn>()
-    `).calls?.length
+    `).calls?.length,
     ).toBe(1)
   })
 
@@ -126,13 +126,13 @@ describe('resolveType', () => {
     type Bar = { bar: string }
     type Baz = { bar: string | boolean }
     defineProps<{ self: any } & Foo & Bar & Baz>()
-    `).props
+    `).props,
     ).toStrictEqual({
       self: ['Unknown'],
       foo: ['Number'],
       // both Bar & Baz has 'bar', but Baz['bar] is wider so it should be
       // preferred
-      bar: ['String', 'Boolean']
+      bar: ['String', 'Boolean'],
     })
   })
 
@@ -156,12 +156,12 @@ describe('resolveType', () => {
         }
 
     defineProps<CommonProps & ConditionalProps>()
-    `).props
+    `).props,
     ).toStrictEqual({
       size: ['String'],
       color: ['String', 'Number'],
       appearance: ['String'],
-      note: ['String']
+      note: ['String'],
     })
   })
 
@@ -173,12 +173,12 @@ describe('resolveType', () => {
     defineProps<{
       [\`_\${T}_\${S}_\`]: string
     }>()
-    `).props
+    `).props,
     ).toStrictEqual({
       _foo_x_: ['String'],
       _foo_y_: ['String'],
       _bar_x_: ['String'],
-      _bar_y_: ['String']
+      _bar_y_: ['String'],
     })
   })
 
@@ -195,7 +195,7 @@ describe('resolveType', () => {
     } & {
       [K in \`x\${T}\`]: string
     }>()
-    `).props
+    `).props,
     ).toStrictEqual({
       foo: ['String', 'Number'],
       bar: ['String', 'Number'],
@@ -204,7 +204,7 @@ describe('resolveType', () => {
       FOO: ['String'],
       xfoo: ['String'],
       xbar: ['String'],
-      optional: ['Boolean']
+      optional: ['Boolean'],
     })
   })
 
@@ -213,14 +213,14 @@ describe('resolveType', () => {
       resolve(`
     type T = { foo: number, bar: string }
     defineProps<Partial<T>>()
-    `).raw.props
+    `).raw.props,
     ).toMatchObject({
       foo: {
-        optional: true
+        optional: true,
       },
       bar: {
-        optional: true
-      }
+        optional: true,
+      },
     })
   })
 
@@ -229,14 +229,14 @@ describe('resolveType', () => {
       resolve(`
     type T = { foo?: number, bar?: string }
     defineProps<Required<T>>()
-    `).raw.props
+    `).raw.props,
     ).toMatchObject({
       foo: {
-        optional: false
+        optional: false,
       },
       bar: {
-        optional: false
-      }
+        optional: false,
+      },
     })
   })
 
@@ -246,10 +246,10 @@ describe('resolveType', () => {
     type T = { foo: number, bar: string, baz: boolean }
     type K = 'foo' | 'bar'
     defineProps<Pick<T, K>>()
-    `).props
+    `).props,
     ).toStrictEqual({
       foo: ['Number'],
-      bar: ['String']
+      bar: ['String'],
     })
   })
 
@@ -259,9 +259,30 @@ describe('resolveType', () => {
     type T = { foo: number, bar: string, baz: boolean }
     type K = 'foo' | 'bar'
     defineProps<Omit<T, K>>()
-    `).props
+    `).props,
     ).toStrictEqual({
-      baz: ['Boolean']
+      baz: ['Boolean'],
+    })
+  })
+
+  test('utility type: ReadonlyArray', () => {
+    expect(
+      resolve(`
+    defineProps<{ foo: ReadonlyArray<string> }>()
+    `).props,
+    ).toStrictEqual({
+      foo: ['Array'],
+    })
+  })
+
+  test('utility type: ReadonlyMap & Readonly Set', () => {
+    expect(
+      resolve(`
+    defineProps<{ foo: ReadonlyMap<string, unknown>, bar: ReadonlySet<string> }>()
+    `).props,
+    ).toStrictEqual({
+      foo: ['Map'],
+      bar: ['Set'],
     })
   })
 
@@ -271,9 +292,9 @@ describe('resolveType', () => {
     type T = { bar: number }
     type S = { nested: { foo: T['bar'] }}
     defineProps<S['nested']>()
-    `).props
+    `).props,
     ).toStrictEqual({
-      foo: ['Number']
+      foo: ['Number'],
     })
   })
 
@@ -284,10 +305,10 @@ describe('resolveType', () => {
     type T = { foo: string, bar: number }
     type S = { foo: { foo: T[string] }, bar: { bar: string } }
     defineProps<S[K]>()
-    `).props
+    `).props,
     ).toStrictEqual({
       foo: ['String', 'Number'],
-      bar: ['String']
+      bar: ['String'],
     })
   })
 
@@ -299,12 +320,12 @@ describe('resolveType', () => {
     type T = [1, 'foo']
     type TT = [foo: 1, bar: 'foo']
     defineProps<{ foo: A[number], bar: AA[number], tuple: T[number], namedTuple: TT[number] }>()
-    `).props
+    `).props,
     ).toStrictEqual({
       foo: ['String', 'Number'],
       bar: ['String'],
       tuple: ['Number', 'String'],
-      namedTuple: ['Number', 'String']
+      namedTuple: ['Number', 'String'],
     })
   })
 
@@ -321,9 +342,9 @@ describe('resolveType', () => {
         }
       }
       defineProps<Foo.Bar.A>()
-    `).props
+    `).props,
     ).toStrictEqual({
-      foo: ['Number']
+      foo: ['Number'],
     })
   })
 
@@ -340,10 +361,10 @@ describe('resolveType', () => {
         foo: Foo['a'],
         bar: Foo['b']
       }>()
-    `).props
+    `).props,
     ).toStrictEqual({
       foo: ['String'],
-      bar: ['Number']
+      bar: ['Number'],
     })
   })
 
@@ -360,10 +381,10 @@ describe('resolveType', () => {
         foo: Foo.A,
         bar: Foo.B
       }>()
-    `).props
+    `).props,
     ).toStrictEqual({
       foo: ['String'],
-      bar: ['Number']
+      bar: ['Number'],
     })
   })
 
@@ -380,10 +401,10 @@ describe('resolveType', () => {
         foo: Foo.A,
         bar: Foo['b']
       }>()
-    `).props
+    `).props,
     ).toStrictEqual({
       foo: ['String'],
-      bar: ['Number']
+      bar: ['Number'],
     })
   })
 
@@ -399,9 +420,9 @@ describe('resolveType', () => {
       defineProps<{
         foo: Foo
       }>()
-    `).props
+    `).props,
     ).toStrictEqual({
-      foo: ['Number', 'String']
+      foo: ['Number', 'String'],
     })
   })
 
@@ -410,9 +431,19 @@ describe('resolveType', () => {
       resolve(`
       declare const a: string
       defineProps<{ foo: typeof a }>()
-    `).props
+    `).props,
     ).toStrictEqual({
-      foo: ['String']
+      foo: ['String'],
+    })
+  })
+
+  test('readonly', () => {
+    expect(
+      resolve(`
+    defineProps<{ foo: readonly unknown[] }>()
+    `).props,
+    ).toStrictEqual({
+      foo: ['Array'],
     })
   })
 
@@ -429,11 +460,11 @@ describe('resolveType', () => {
       }
       type Props = ExtractPropTypes<typeof props>
       defineProps<Props>()
-    `
+    `,
     )
     expect(props).toStrictEqual({
       foo: ['String'],
-      bar: ['Boolean']
+      bar: ['Boolean'],
     })
     expect(raw.props.bar.optional).toBe(false)
   })
@@ -447,11 +478,93 @@ describe('resolveType', () => {
       }
       type Props = Partial<import('vue').ExtractPropTypes<ReturnType<typeof props>>>
       defineProps<Props>()
-    `
+    `,
     )
     expect(props).toStrictEqual({
       foo: ['String'],
-      bar: ['Boolean']
+      bar: ['Boolean'],
+    })
+  })
+
+  describe('generics', () => {
+    test('generic with type literal', () => {
+      expect(
+        resolve(`
+        type Props<T> = T
+        defineProps<Props<{ foo: string }>>()
+      `).props,
+      ).toStrictEqual({
+        foo: ['String'],
+      })
+    })
+
+    test('generic used in intersection', () => {
+      expect(
+        resolve(`
+        type Foo = { foo: string; }
+        type Bar = { bar: number; }
+        type Props<T,U> = T & U & { baz: boolean }
+        defineProps<Props<Foo, Bar>>()
+      `).props,
+      ).toStrictEqual({
+        foo: ['String'],
+        bar: ['Number'],
+        baz: ['Boolean'],
+      })
+    })
+
+    test('generic type /w generic type alias', () => {
+      expect(
+        resolve(`
+        type Aliased<T> = Readonly<Partial<T>>
+        type Props<T> = Aliased<T>
+        type Foo = { foo: string; }
+        defineProps<Props<Foo>>()
+      `).props,
+      ).toStrictEqual({
+        foo: ['String'],
+      })
+    })
+
+    test('generic type /w aliased type literal', () => {
+      expect(
+        resolve(`
+        type Aliased<T> = { foo: T }
+        defineProps<Aliased<string>>()
+      `).props,
+      ).toStrictEqual({
+        foo: ['String'],
+      })
+    })
+
+    test('generic type /w interface', () => {
+      expect(
+        resolve(`
+        interface Props<T> {
+          foo: T
+        }
+        type Foo = string
+        defineProps<Props<Foo>>()
+      `).props,
+      ).toStrictEqual({
+        foo: ['String'],
+      })
+    })
+
+    test('generic from external-file', () => {
+      const files = {
+        '/foo.ts': 'export type P<T> = { foo: T }',
+      }
+      const { props } = resolve(
+        `
+        import { P } from './foo'
+        defineProps<P<string>>()
+      `,
+        files,
+      )
+      expect(props).toStrictEqual({
+        foo: ['String'],
+      })
     })
   })
 
@@ -462,7 +575,7 @@ describe('resolveType', () => {
         '/bar.d.ts':
           'type X = { bar: string }; export { X as Y };' +
           // verify that we can parse syntax that is only valid in d.ts
-          'export const baz: boolean'
+          'export const baz: boolean',
       }
       const { props, deps } = resolve(
         `
@@ -470,56 +583,80 @@ describe('resolveType', () => {
         import { Y as PP } from './bar'
         defineProps<P & PP>()
       `,
-        files
+        files,
       )
       expect(props).toStrictEqual({
         foo: ['Number'],
-        bar: ['String']
+        bar: ['String'],
+      })
+      expect(deps && [...deps]).toStrictEqual(Object.keys(files))
+    })
+
+    // #10635
+    test('relative tsx', () => {
+      const files = {
+        '/foo.tsx': 'export type P = { foo: number }',
+        '/bar/index.tsx': 'export type PP = { bar: string }',
+      }
+      const { props, deps } = resolve(
+        `
+        import { P } from './foo'
+        import { PP } from './bar'
+        defineProps<P & PP>()
+        `,
+        files,
+      )
+      expect(props).toStrictEqual({
+        foo: ['Number'],
+        bar: ['String'],
       })
       expect(deps && [...deps]).toStrictEqual(Object.keys(files))
     })
 
     test.runIf(process.platform === 'win32')('relative ts on Windows', () => {
       const files = {
-        'C:\\Test\\foo.ts': 'export type P = { foo: number }',
-        'C:\\Test\\bar.d.ts':
+        'C:\\Test\\FolderA\\foo.ts': 'export type P = { foo: number }',
+        'C:\\Test\\FolderA\\bar.d.ts':
           'type X = { bar: string }; export { X as Y };' +
           // verify that we can parse syntax that is only valid in d.ts
-          'export const baz: boolean'
+          'export const baz: boolean',
+        'C:\\Test\\FolderB\\buz.ts': 'export type Z = { buz: string }',
       }
       const { props, deps } = resolve(
         `
       import { P } from './foo'
       import { Y as PP } from './bar'
-      defineProps<P & PP>()
+      import { Z as PPP } from '../FolderB/buz'
+      defineProps<P & PP & PPP>()
     `,
         files,
         {},
-        'C:\\Test\\Test.vue'
+        'C:\\Test\\FolderA\\Test.vue',
       )
       expect(props).toStrictEqual({
         foo: ['Number'],
-        bar: ['String']
+        bar: ['String'],
+        buz: ['String'],
       })
       expect(deps && [...deps].map(normalize)).toStrictEqual(
-        Object.keys(files).map(normalize)
+        Object.keys(files).map(normalize),
       )
     })
 
     // #8244
     test('utility type in external file', () => {
       const files = {
-        '/foo.ts': 'type A = { n?: number }; export type B = Required<A>'
+        '/foo.ts': 'type A = { n?: number }; export type B = Required<A>',
       }
       const { props } = resolve(
         `
         import { B } from './foo'
         defineProps<B>()
       `,
-        files
+        files,
       )
       expect(props).toStrictEqual({
-        n: ['Number']
+        n: ['Number'],
       })
     })
 
@@ -528,7 +665,7 @@ describe('resolveType', () => {
         '/foo.vue':
           '<script lang="ts">export type P = { foo: number }</script>',
         '/bar.vue':
-          '<script setup lang="tsx">export type P = { bar: string }</script>'
+          '<script setup lang="tsx">export type P = { bar: string }</script>',
       }
       const { props, deps } = resolve(
         `
@@ -536,11 +673,11 @@ describe('resolveType', () => {
         import { P as PP } from './bar.vue'
         defineProps<P & PP>()
       `,
-        files
+        files,
       )
       expect(props).toStrictEqual({
         foo: ['Number'],
-        bar: ['String']
+        bar: ['String'],
       })
       expect(deps && [...deps]).toStrictEqual(Object.keys(files))
     })
@@ -550,18 +687,18 @@ describe('resolveType', () => {
         '/foo.ts': `import type { P as PP } from './nested/bar.vue'
           export type P = { foo: number } & PP`,
         '/nested/bar.vue':
-          '<script setup lang="ts">export type P = { bar: string }</script>'
+          '<script setup lang="ts">export type P = { bar: string }</script>',
       }
       const { props, deps } = resolve(
         `
         import { P } from './foo'
         defineProps<P>()
       `,
-        files
+        files,
       )
       expect(props).toStrictEqual({
         foo: ['Number'],
-        bar: ['String']
+        bar: ['String'],
       })
       expect(deps && [...deps]).toStrictEqual(Object.keys(files))
     })
@@ -569,17 +706,17 @@ describe('resolveType', () => {
     test('relative (chained, re-export)', () => {
       const files = {
         '/foo.ts': `export { P as PP } from './bar'`,
-        '/bar.ts': 'export type P = { bar: string }'
+        '/bar.ts': 'export type P = { bar: string }',
       }
       const { props, deps } = resolve(
         `
         import { PP as P } from './foo'
         defineProps<P>()
       `,
-        files
+        files,
       )
       expect(props).toStrictEqual({
-        bar: ['String']
+        bar: ['String'],
       })
       expect(deps && [...deps]).toStrictEqual(Object.keys(files))
     })
@@ -587,17 +724,17 @@ describe('resolveType', () => {
     test('relative (chained, export *)', () => {
       const files = {
         '/foo.ts': `export * from './bar'`,
-        '/bar.ts': 'export type P = { bar: string }'
+        '/bar.ts': 'export type P = { bar: string }',
       }
       const { props, deps } = resolve(
         `
         import { P } from './foo'
         defineProps<P>()
       `,
-        files
+        files,
       )
       expect(props).toStrictEqual({
-        bar: ['String']
+        bar: ['String'],
       })
       expect(deps && [...deps]).toStrictEqual(Object.keys(files))
     })
@@ -605,7 +742,7 @@ describe('resolveType', () => {
     test('relative (default export)', () => {
       const files = {
         '/foo.ts': `export default interface P { foo: string }`,
-        '/bar.ts': `type X = { bar: string }; export default X`
+        '/bar.ts': `type X = { bar: string }; export default X`,
       }
       const { props, deps } = resolve(
         `
@@ -613,11 +750,11 @@ describe('resolveType', () => {
         import X from './bar'
         defineProps<P & X>()
       `,
-        files
+        files,
       )
       expect(props).toStrictEqual({
         foo: ['String'],
-        bar: ['String']
+        bar: ['String'],
       })
       expect(deps && [...deps]).toStrictEqual(Object.keys(files))
     })
@@ -626,7 +763,7 @@ describe('resolveType', () => {
       const files = {
         '/bar.ts': `export { default } from './foo'`,
         '/foo.ts': `export default interface P { foo: string }; export interface PP { bar: number }`,
-        '/baz.ts': `export { PP as default } from './foo'`
+        '/baz.ts': `export { PP as default } from './foo'`,
       }
       const { props, deps } = resolve(
         `
@@ -634,11 +771,11 @@ describe('resolveType', () => {
         import PP from './baz'
         defineProps<P & PP>()
       `,
-        files
+        files,
       )
       expect(props).toStrictEqual({
         foo: ['String'],
-        bar: ['Number']
+        bar: ['Number'],
       })
       expect(deps && [...deps]).toStrictEqual(Object.keys(files))
     })
@@ -647,17 +784,17 @@ describe('resolveType', () => {
       const files = {
         '/foo.ts': `export default interface P { foo: string }`,
         '/bar.ts': `export default interface PP { bar: number }`,
-        '/baz.ts': `export { default as X } from './foo'; export { default as XX } from './bar'; `
+        '/baz.ts': `export { default as X } from './foo'; export { default as XX } from './bar'; `,
       }
       const { props, deps } = resolve(
         `import { X, XX } from './baz'
         defineProps<X & XX>()
       `,
-        files
+        files,
       )
       expect(props).toStrictEqual({
         foo: ['String'],
-        bar: ['Number']
+        bar: ['Number'],
       })
       expect(deps && [...deps]).toStrictEqual(['/baz.ts', '/foo.ts', '/bar.ts'])
     })
@@ -665,17 +802,17 @@ describe('resolveType', () => {
     test('relative (dynamic import)', () => {
       const files = {
         '/foo.ts': `export type P = { foo: string, bar: import('./bar').N }`,
-        '/bar.ts': 'export type N = number'
+        '/bar.ts': 'export type N = number',
       }
       const { props, deps } = resolve(
         `
         defineProps<import('./foo').P>()
       `,
-        files
+        files,
       )
       expect(props).toStrictEqual({
         foo: ['String'],
-        bar: ['Number']
+        bar: ['Number'],
       })
       expect(deps && [...deps]).toStrictEqual(Object.keys(files))
     })
@@ -685,17 +822,17 @@ describe('resolveType', () => {
       const files = {
         '/foo.d.ts':
           'import { PP } from "./bar.js"; export type P = { foo: PP }',
-        '/bar.d.ts': 'export type PP = "foo" | "bar"'
+        '/bar.d.ts': 'export type PP = "foo" | "bar"',
       }
       const { props, deps } = resolve(
         `
         import { P } from './foo'
         defineProps<P>()
       `,
-        files
+        files,
       )
       expect(props).toStrictEqual({
-        foo: ['String']
+        foo: ['String'],
       })
       expect(deps && [...deps]).toStrictEqual(Object.keys(files))
     })
@@ -703,17 +840,17 @@ describe('resolveType', () => {
     test('ts module resolve', () => {
       const files = {
         '/node_modules/foo/package.json': JSON.stringify({
-          types: 'index.d.ts'
+          types: 'index.d.ts',
         }),
         '/node_modules/foo/index.d.ts': 'export type P = { foo: number }',
         '/tsconfig.json': JSON.stringify({
           compilerOptions: {
             paths: {
-              bar: ['./pp.ts']
-            }
-          }
+              bar: ['./pp.ts'],
+            },
+          },
         }),
-        '/pp.ts': 'export type PP = { bar: string }'
+        '/pp.ts': 'export type PP = { bar: string }',
       }
 
       const { props, deps } = resolve(
@@ -722,16 +859,16 @@ describe('resolveType', () => {
         import { PP } from 'bar'
         defineProps<P & PP>()
         `,
-        files
+        files,
       )
 
       expect(props).toStrictEqual({
         foo: ['Number'],
-        bar: ['String']
+        bar: ['String'],
       })
       expect(deps && [...deps]).toStrictEqual([
         '/node_modules/foo/index.d.ts',
-        '/pp.ts'
+        '/pp.ts',
       ])
     })
 
@@ -740,23 +877,23 @@ describe('resolveType', () => {
         '/tsconfig.json': JSON.stringify({
           references: [
             {
-              path: './tsconfig.app.json'
-            }
-          ]
+              path: './tsconfig.app.json',
+            },
+          ],
         }),
         '/tsconfig.app.json': JSON.stringify({
           include: ['**/*.ts', '**/*.vue'],
-          extends: './tsconfig.web.json'
+          extends: './tsconfig.web.json',
         }),
         '/tsconfig.web.json': JSON.stringify({
           compilerOptions: {
             composite: true,
             paths: {
-              bar: ['./user.ts']
-            }
-          }
+              bar: ['./user.ts'],
+            },
+          },
         }),
-        '/user.ts': 'export type User = { bar: string }'
+        '/user.ts': 'export type User = { bar: string }',
       }
 
       const { props, deps } = resolve(
@@ -764,11 +901,11 @@ describe('resolveType', () => {
         import { User } from 'bar'
         defineProps<User>()
         `,
-        files
+        files,
       )
 
       expect(props).toStrictEqual({
-        bar: ['String']
+        bar: ['String'],
       })
       expect(deps && [...deps]).toStrictEqual(['/user.ts'])
     })
@@ -779,12 +916,12 @@ describe('resolveType', () => {
           compilerOptions: {
             include: ['**/*.ts', '**/*.vue'],
             paths: {
-              '@/*': ['./src/*']
-            }
-          }
+              '@/*': ['./src/*'],
+            },
+          },
         }),
         '/src/Foo.vue':
-          '<script lang="ts">export type P = { bar: string }</script>'
+          '<script lang="ts">export type P = { bar: string }</script>',
       }
 
       const { props, deps } = resolve(
@@ -792,11 +929,11 @@ describe('resolveType', () => {
         import { P } from '@/Foo.vue'
         defineProps<P>()
         `,
-        files
+        files,
       )
 
       expect(props).toStrictEqual({
-        bar: ['String']
+        bar: ['String'],
       })
       expect(deps && [...deps]).toStrictEqual(['/src/Foo.vue'])
     })
@@ -813,16 +950,16 @@ describe('resolveType', () => {
             type PP = { bar: string }
           }
           export {}
-        `
+        `,
       }
 
       const { props, deps } = resolve(`defineProps<App.User & PP>()`, files, {
-        globalTypeFiles: Object.keys(files)
+        globalTypeFiles: Object.keys(files),
       })
 
       expect(props).toStrictEqual({
         name: ['String'],
-        bar: ['String']
+        bar: ['String'],
       })
       expect(deps && [...deps]).toStrictEqual(Object.keys(files))
     })
@@ -842,16 +979,44 @@ describe('resolveType', () => {
               id: string
             }
           }
-        `
+        `,
       }
 
       const { props } = resolve(`defineProps<App.Data.AircraftData>()`, files, {
-        globalTypeFiles: Object.keys(files)
+        globalTypeFiles: Object.keys(files),
       })
 
       expect(props).toStrictEqual({
         id: ['String'],
-        manufacturer: ['Object']
+        manufacturer: ['Object'],
+      })
+    })
+
+    // #9871
+    test('shared generics with different args', () => {
+      const files = {
+        '/foo.ts': `export interface Foo<T> { value: T }`,
+      }
+      const { props } = resolve(
+        `import type { Foo } from './foo'
+        defineProps<Foo<string>>()`,
+        files,
+        undefined,
+        `/One.vue`,
+      )
+      expect(props).toStrictEqual({
+        value: ['String'],
+      })
+      const { props: props2 } = resolve(
+        `import type { Foo } from './foo'
+        defineProps<Foo<number>>()`,
+        files,
+        undefined,
+        `/Two.vue`,
+        false /* do not invalidate cache */,
+      )
+      expect(props2).toStrictEqual({
+        value: ['Number'],
       })
     })
   })
@@ -859,25 +1024,25 @@ describe('resolveType', () => {
   describe('errors', () => {
     test('failed type reference', () => {
       expect(() => resolve(`defineProps<X>()`)).toThrow(
-        `Unresolvable type reference`
+        `Unresolvable type reference`,
       )
     })
 
     test('unsupported computed keys', () => {
       expect(() => resolve(`defineProps<{ [Foo]: string }>()`)).toThrow(
-        `Unsupported computed key in type referenced by a macro`
+        `Unsupported computed key in type referenced by a macro`,
       )
     })
 
     test('unsupported index type', () => {
       expect(() => resolve(`defineProps<X[K]>()`)).toThrow(
-        `Unsupported type when resolving index type`
+        `Unsupported type when resolving index type`,
       )
     })
 
     test('failed import source resolve', () => {
       expect(() =>
-        resolve(`import { X } from './foo'; defineProps<X>()`)
+        resolve(`import { X } from './foo'; defineProps<X>()`),
       ).toThrow(`Failed to resolve import source "./foo"`)
     })
 
@@ -888,7 +1053,7 @@ describe('resolveType', () => {
         resolve(`
         import type P from 'unknown'
         defineProps<{ foo: P }>()
-      `)
+      `),
       ).not.toThrow()
     })
 
@@ -898,7 +1063,7 @@ describe('resolveType', () => {
         import type Base from 'unknown'
         interface Props extends Base {}
         defineProps<Props>()
-      `)
+      `),
       ).toThrow(`@vue-ignore`)
     })
 
@@ -913,11 +1078,11 @@ describe('resolveType', () => {
           foo: string
         }
         defineProps<Props>()
-      `))
+      `)),
       ).not.toThrow(`@vue-ignore`)
 
       expect(res.props).toStrictEqual({
-        foo: ['String']
+        foo: ['String'],
       })
     })
   })
@@ -927,10 +1092,11 @@ function resolve(
   code: string,
   files: Record<string, string> = {},
   options?: Partial<SFCScriptCompileOptions>,
-  sourceFileName: string = '/Test.vue'
+  sourceFileName: string = '/Test.vue',
+  invalidateCache = true,
 ) {
   const { descriptor } = parse(`<script setup lang="ts">\n${code}\n</script>`, {
-    filename: sourceFileName
+    filename: sourceFileName,
   })
   const ctx = new ScriptCompileContext(descriptor, {
     id: 'test',
@@ -940,13 +1106,15 @@ function resolve(
       },
       readFile(file) {
         return files[file] ?? files[normalize(file)]
-      }
+      },
     },
-    ...options
+    ...options,
   })
 
-  for (const file in files) {
-    invalidateTypeCache(file)
+  if (invalidateCache) {
+    for (const file in files) {
+      invalidateTypeCache(file)
+    }
   }
 
   // ctx.userImports is collected when calling compileScript(), but we are
@@ -972,6 +1140,6 @@ function resolve(
     props,
     calls: raw.calls,
     deps: ctx.deps,
-    raw
+    raw,
   }
 }

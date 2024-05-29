@@ -1,12 +1,12 @@
 import {
-  ref,
+  type Ref,
   effect,
-  reactive,
+  isReactive,
   isRef,
+  reactive,
+  ref,
   toRef,
   toRefs,
-  Ref,
-  isReactive
 } from '../src/index'
 import { computed } from '@vue/runtime-dom'
 import {
@@ -20,7 +20,7 @@ import {
   isReadonly,
   isShallow,
   readonly,
-  shallowReactive
+  shallowReactive,
 } from '../src/reactive'
 
 describe('reactivity/ref', () => {
@@ -50,7 +50,7 @@ describe('reactivity/ref', () => {
 
   it('should make nested properties reactive', () => {
     const a = ref({
-      count: 1
+      count: 1,
     })
     let dummy
     effect(() => {
@@ -77,8 +77,8 @@ describe('reactivity/ref', () => {
     const obj = reactive({
       a,
       b: {
-        c: a
-      }
+        c: a,
+      },
     })
 
     let dummy1: number
@@ -110,7 +110,7 @@ describe('reactivity/ref', () => {
 
   it('should unwrap nested values in types', () => {
     const a = {
-      b: ref(0)
+      b: ref(0),
     }
 
     const c = ref(a)
@@ -144,7 +144,7 @@ describe('reactivity/ref', () => {
       '1',
       { a: 1 },
       () => 0,
-      ref(0)
+      ref(0),
     ]
     const tupleRef = ref(tuple)
 
@@ -175,7 +175,7 @@ describe('reactivity/ref', () => {
       [Symbol.toPrimitive]: new WeakMap<Ref<boolean>, string>(),
       [Symbol.toStringTag]: { weakSet: new WeakSet<Ref<boolean>>() },
       [Symbol.unscopables]: { weakMap: new WeakMap<Ref<boolean>, string>() },
-      [customSymbol]: { arr: [ref(1)] }
+      [customSymbol]: { arr: [ref(1)] },
     }
 
     const objRef = ref(obj)
@@ -194,7 +194,7 @@ describe('reactivity/ref', () => {
       Symbol.toPrimitive,
       Symbol.toStringTag,
       Symbol.unscopables,
-      customSymbol
+      customSymbol,
     ]
 
     keys.forEach(key => {
@@ -254,7 +254,7 @@ describe('reactivity/ref', () => {
 
   test('toRef', () => {
     const a = reactive({
-      x: 1
+      x: 1,
     })
     const x = toRef(a, 'x')
     expect(isRef(x)).toBe(true)
@@ -319,7 +319,7 @@ describe('reactivity/ref', () => {
   test('toRefs', () => {
     const a = reactive({
       x: 1,
-      y: 2
+      y: 2,
     })
 
     const { x, y } = toRefs(a)
@@ -392,7 +392,7 @@ describe('reactivity/ref', () => {
       set(newValue: number) {
         value = newValue
         _trigger = trigger
-      }
+      },
     }))
 
     expect(isRef(custom)).toBe(true)
@@ -447,6 +447,17 @@ describe('reactivity/ref', () => {
     a.value = rr
     expect(a.value).toBe(rr)
     expect(a.value).not.toBe(r)
+  })
+
+  test('should not trigger when setting the same raw object', () => {
+    const obj = {}
+    const r = ref(obj)
+    const spy = vi.fn()
+    effect(() => spy(r.value))
+    expect(spy).toHaveBeenCalledTimes(1)
+
+    r.value = obj
+    expect(spy).toHaveBeenCalledTimes(1)
   })
 })
 
