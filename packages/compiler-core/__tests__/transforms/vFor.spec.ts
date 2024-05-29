@@ -304,7 +304,7 @@ describe('compiler: v-for', () => {
 
     test('missing source', () => {
       const onError = vi.fn()
-      parseWithForTransform('<span v-for="item in" />', { onError })
+      parseWithForTransform('<span v-for="item in " />', { onError })
 
       expect(onError).toHaveBeenCalledTimes(1)
       expect(onError).toHaveBeenCalledWith(
@@ -328,7 +328,7 @@ describe('compiler: v-for', () => {
 
     test('missing value', () => {
       const onError = vi.fn()
-      parseWithForTransform('<span v-for="in items" />', { onError })
+      parseWithForTransform('<span v-for=" in items" />', { onError })
 
       expect(onError).toHaveBeenCalledTimes(1)
       expect(onError).toHaveBeenCalledWith(
