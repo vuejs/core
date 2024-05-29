@@ -607,8 +607,8 @@ describe('compiler: transform v-on', () => {
         `<div v-for="value in items" :key="value"><div v-on:click="foo(value)"/></div>`,
         {
           prefixIdentifiers: true,
-          cacheHandlers: true
-        }
+          cacheHandlers: true,
+        },
       )
       expect(root.cached).not.toBe(2)
       expect(root.cached).toBe(1)
