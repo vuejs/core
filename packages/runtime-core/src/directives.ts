@@ -42,8 +42,8 @@ export type DirectiveHook<T = any, Prev = VNode<any, T> | null, V = any> = (
   prevVNode: Prev,
 ) => void
 
-export type SSRDirectiveHook = (
-  binding: DirectiveBinding,
+export type SSRDirectiveHook<V> = (
+  binding: DirectiveBinding<V>,
   vnode: VNode,
 ) => Data | undefined
 
@@ -55,7 +55,7 @@ export interface ObjectDirective<T = any, V = any> {
   updated?: DirectiveHook<T, VNode<any, T>, V>
   beforeUnmount?: DirectiveHook<T, null, V>
   unmounted?: DirectiveHook<T, null, V>
-  getSSRProps?: SSRDirectiveHook
+  getSSRProps?: SSRDirectiveHook<V>
   deep?: boolean
 }
 
@@ -88,14 +88,13 @@ export function withDirectives<T extends VNode>(
   vnode: T,
   directives: DirectiveArguments,
 ): T {
-  const internalInstance = currentRenderingInstance
-  if (internalInstance === null) {
+  if (currentRenderingInstance === null) {
     __DEV__ && warn(`withDirectives can only be used inside render functions.`)
     return vnode
   }
   const instance =
-    (getExposeProxy(internalInstance) as ComponentPublicInstance) ||
-    internalInstance.proxy
+    (getExposeProxy(currentRenderingInstance) as ComponentPublicInstance) ||
+    currentRenderingInstance.proxy
   const bindings: DirectiveBinding[] = vnode.dirs || (vnode.dirs = [])
   for (let i = 0; i < directives.length; i++) {
     let [dir, value, arg, modifiers = EMPTY_OBJ] = directives[i]

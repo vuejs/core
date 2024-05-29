@@ -3,6 +3,7 @@ import {
   type DirectiveHook,
   type ObjectDirective,
   type VNode,
+  nextTick,
   warn,
 } from '@vue/runtime-core'
 import { addEventListener } from '../modules/events'
@@ -38,7 +39,9 @@ function onCompositionEnd(e: Event) {
 
 const assignKey = Symbol('_assign')
 
-type ModelDirective<T> = ObjectDirective<T & { [assignKey]: AssignerFn }>
+type ModelDirective<T> = ObjectDirective<
+  T & { [assignKey]: AssignerFn; _assigning?: boolean }
+>
 
 // We are exporting the v-model runtime directly as vnode hooks so that it can
 // be tree-shaken in case v-model is never used.
@@ -83,9 +86,10 @@ export const vModelText: ModelDirective<
     el[assignKey] = getModelAssigner(vnode)
     // avoid clearing unresolved text. #2302
     if ((el as any).composing) return
-
     const elValue =
-      number || el.type === 'number' ? looseToNumber(el.value) : el.value
+      (number || el.type === 'number') && !/^0\d/.test(el.value)
+        ? looseToNumber(el.value)
+        : el.value
     const newValue = value == null ? '' : value
 
     if (elValue === newValue) {
@@ -199,28 +203,33 @@ export const vModelSelect: ModelDirective<HTMLSelectElement> = {
             : selectedVal
           : selectedVal[0],
       )
+      el._assigning = true
+      nextTick(() => {
+        el._assigning = false
+      })
     })
     el[assignKey] = getModelAssigner(vnode)
   },
   // set value in mounted & updated because <select> relies on its children
   // <option>s.
-  mounted(el, { value }) {
-    setSelected(el, value)
+  mounted(el, { value, modifiers: { number } }) {
+    setSelected(el, value, number)
   },
   beforeUpdate(el, _binding, vnode) {
     el[assignKey] = getModelAssigner(vnode)
   },
-  updated(el, { value, oldValue }) {
+  updated(el, { value, oldValue, modifiers: { number } }) {
     // #8579
-    if (value !== oldValue) {
+    if (!el._assigning && value !== oldValue) {
       setSelected(el, value)
     }
   },
 }
 
-function setSelected(el: HTMLSelectElement, value: any) {
+function setSelected(el: HTMLSelectElement, value: any, number: boolean) {
   const isMultiple = el.multiple
-  if (isMultiple && !isArray(value) && !isSet(value)) {
+  const isArrayValue = isArray(value)
+  if (isMultiple && !isArrayValue && !isSet(value)) {
     __DEV__ &&
       warn(
         `<select multiple v-model> expects an Array or Set value for its binding, ` +
@@ -228,20 +237,25 @@ function setSelected(el: HTMLSelectElement, value: any) {
       )
     return
   }
+
   for (let i = 0, l = el.options.length; i < l; i++) {
     const option = el.options[i]
     const optionValue = getValue(option)
     if (isMultiple) {
-      if (isArray(value)) {
-        option.selected = looseIndexOf(value, optionValue) > -1
+      if (isArrayValue) {
+        const optionType = typeof optionValue
+        // fast path for string / number values
+        if (optionType === 'string' || optionType === 'number') {
+          option.selected = value.some(v => String(v) === String(optionValue))
+        } else {
+          option.selected = looseIndexOf(value, optionValue) > -1
+        }
       } else {
         option.selected = value.has(optionValue)
       }
-    } else {
-      if (looseEqual(getValue(option), value)) {
-        if (el.selectedIndex !== i) el.selectedIndex = i
-        return
-      }
+    } else if (looseEqual(getValue(option), value)) {
+      if (el.selectedIndex !== i) el.selectedIndex = i
+      return
     }
   }
   if (!isMultiple && el.selectedIndex !== -1) {

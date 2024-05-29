@@ -6,14 +6,11 @@ import {
   type NodeTransform,
   NodeTypes,
   type ParserOptions,
+  type RawSourceMap,
   type RootNode,
   createRoot,
 } from '@vue/compiler-core'
-import {
-  type RawSourceMap,
-  SourceMapConsumer,
-  SourceMapGenerator,
-} from 'source-map-js'
+import { SourceMapConsumer, SourceMapGenerator } from 'source-map-js'
 import {
   type AssetURLOptions,
   type AssetURLTagConfig,
@@ -219,6 +216,7 @@ function doCompileTemplate({
     // We need to parse a fresh one. Can't just use `source` here since we need
     // the AST location info to be relative to the entire SFC.
     const newAST = (ssr ? CompilerDOM : compiler).parse(inAST.source, {
+      prefixIdentifiers: true,
       ...compilerOptions,
       parseMode: 'sfc',
       onError: e => errors.push(e),
