@@ -174,7 +174,8 @@ export function getConstantType(
       if (
         codegenNode.isBlock &&
         node.tag !== 'svg' &&
-        node.tag !== 'foreignObject'
+        node.tag !== 'foreignObject' &&
+        node.tag !== 'math'
       ) {
         return ConstantTypes.NOT_CONSTANT
       }
