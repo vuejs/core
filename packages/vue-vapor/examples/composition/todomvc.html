@@ -149,10 +149,10 @@ const _sfc_main = defineComponent({
   },
 })
 
-const { children: _children, vModelText: _vModelText, withDirectives: _withDirectives, vShow: _vShow, next: _next, delegate: _delegate, on: _on, setDynamicProp: _setDynamicProp, setText: _setText, setClass: _setClass, renderEffect: _renderEffect, createFor: _createFor, insert: _insert, delegateEvents: _delegateEvents, template: _template } = VueVapor
+const { children: _children, vModelText: _vModelText, withDirectives: _withDirectives, vShow: _vShow, next: _next, delegate: _delegate, on: _on, renderEffect: _renderEffect, setDynamicProp: _setDynamicProp, setText: _setText, setClass: _setClass, createFor: _createFor, insert: _insert, delegateEvents: _delegateEvents, template: _template } = VueVapor
 const t0 = _template("<li><div class=\"view\"><input class=\"toggle\" type=\"checkbox\"><label></label><button class=\"destroy\"></button></div><input class=\"edit\" type=\"text\"></li>")
 const t1 = _template("<section class=\"todoapp\"><header class=\"header\"><h1>todos</h1><input class=\"new-todo\" autofocus autocomplete=\"off\" placeholder=\"What needs to be done?\"></header><section class=\"main\"><input id=\"toggle-all\" class=\"toggle-all\" type=\"checkbox\"><label for=\"toggle-all\">Mark all as complete</label><ul class=\"todo-list\"></ul></section><footer class=\"footer\"><span class=\"todo-count\"><strong></strong><span></span></span><ul class=\"filters\"><li><a href=\"#/all\">All</a></li><li><a href=\"#/active\">Active</a></li><li><a href=\"#/completed\">Completed</a></li></ul><button class=\"clear-completed\"> Clear completed </button></footer></section>")
-_delegateEvents("keyup", "dblclick", "click")
+_delegateEvents("keyup", "dblclick", "click", "input")
 
 function _sfc_render(_ctx) {
   const n18 = t1()
@@ -176,36 +176,34 @@ function _sfc_render(_ctx) {
     keys: ["enter"]
   })
   _on(n1, "change", () => $event => (_ctx.state.allDone = $event.target.checked))
-  const n2 = _createFor(() => (_ctx.state.filteredTodos), (_block) => {
+  const n2 = _createFor(() => (_ctx.state.filteredTodos), (_ctx2) => {
     const n8 = t0()
     const n4 = _children(n8, 0, 0)
     const n5 = n4.nextSibling
     const n6 = n5.nextSibling
     const n7 = _children(n8, 1)
-    _on(n4, "change", () => $event => (_block.s[0].completed = $event.target.checked))
-    _delegate(n5, "dblclick", () => $event => (_ctx.editTodo(_block.s[0])))
-    _delegate(n6, "click", () => $event => (_ctx.removeTodo(_block.s[0])))
-    _on(n7, "input", () => $event => (_block.s[0].title = $event.target.value))
-    _on(n7, "blur", () => $event => (_ctx.doneEdit(_block.s[0])))
-    _delegate(n7, "keyup", () => $event => (_ctx.doneEdit(_block.s[0])), {
+    _on(n4, "change", () => $event => (_ctx2[0].completed = $event.target.checked))
+    _delegate(n5, "dblclick", () => $event => (_ctx.editTodo(_ctx2[0])))
+    _delegate(n6, "click", () => $event => (_ctx.removeTodo(_ctx2[0])))
+    _delegate(n7, "input", () => $event => (_ctx2[0].title = $event.target.value))
+    _on(n7, "blur", () => $event => (_ctx.doneEdit(_ctx2[0])))
+    _delegate(n7, "keyup", () => $event => (_ctx.doneEdit(_ctx2[0])), {
       keys: ["enter"]
     })
-    _delegate(n7, "keyup", () => $event => (_ctx.cancelEdit(_block.s[0])), {
+    _delegate(n7, "keyup", () => $event => (_ctx.cancelEdit(_ctx2[0])), {
       keys: ["escape"]
     })
-    const _updateEffect = () => {
-      const [todo] = _block.s
-      _setDynamicProp(n4, "checked", todo.completed)
-      _setText(n5, todo.title)
-      _setDynamicProp(n7, "value", todo.title)
-      _setDynamicProp(n7, "id", `todo-${todo.id}-input`)
-      _setClass(n8, ["todo", {
-        completed: todo.completed,
-        editing: todo === _ctx.state.editedTodo,
-      }])
-    }
-    _renderEffect(_updateEffect)
-    return [n8, _updateEffect]
+    _renderEffect(() => _setDynamicProp(n4, "checked", _ctx2[0].completed))
+    _renderEffect(() => {
+      _setText(n5, _ctx2[0].title)
+      _setDynamicProp(n7, "value", _ctx2[0].title)
+    })
+    _renderEffect(() => _setDynamicProp(n7, "id", `todo-${_ctx2[0].id}-input`))
+    _renderEffect(() => _setClass(n8, ["todo", {
+            completed: _ctx2[0].completed,
+            editing: _ctx2[0] === _ctx.state.editedTodo,
+          }]))
+    return n8
   }, (todo) => (todo.id))
   _insert(n2, n9)
   _delegate(n16, "click", () => _ctx.removeCompleted)

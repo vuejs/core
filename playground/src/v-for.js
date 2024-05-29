@@ -26,18 +26,16 @@ export default defineComponent({
     return (() => {
       const li = createFor(
         () => list.value,
-        block => {
+        ctx0 => {
           const node = document.createTextNode('')
           const container = document.createElement('li')
           insert(node, container)
 
-          const update = () => {
-            const [item, index] = block.s
+          renderEffect(() => {
+            const [item, index] = ctx0
             node.textContent = `${index}. ${item}`
-          }
-
-          renderEffect(update)
-          return [container, update]
+          })
+          return container
         },
         (item, index) => index,
       )

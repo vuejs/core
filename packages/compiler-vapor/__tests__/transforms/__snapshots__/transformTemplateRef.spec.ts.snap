@@ -17,10 +17,10 @@ exports[`compiler: template ref transform > ref + v-for 1`] = `
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
-  const n0 = _createFor(() => ([1,2,3]), (_block) => {
+  const n0 = _createFor(() => ([1,2,3]), (_ctx0) => {
     const n2 = t0()
     _setRef(n2, "foo", void 0, true)
-    return [n2, () => {}]
+    return n2
   })
   return n0
 }"

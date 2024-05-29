@@ -355,15 +355,14 @@ describe('api: template ref', () => {
             const n1 = t0()
             const n2 = createFor(
               () => list,
-              _block => {
+              state => {
                 const n1 = t1()
                 setRef(n1 as Element, listRefs, undefined, true)
-                const updateEffect = () => {
-                  const [item] = _block.s
+                renderEffect(() => {
+                  const [item] = state
                   setText(n1, item)
-                }
-                renderEffect(updateEffect)
-                return [n1, updateEffect]
+                })
+                return n1
               },
             )
             insert(n2, n1 as ParentNode)
@@ -414,15 +413,14 @@ describe('api: template ref', () => {
             const n1 = t0()
             const n2 = createFor(
               () => list,
-              _block => {
+              state => {
                 const n1 = t1()
                 setRef(n1 as Element, 'listRefs', undefined, true)
-                const updateEffect = () => {
-                  const [item] = _block.s
+                renderEffect(() => {
+                  const [item] = state
                   setText(n1, item)
-                }
-                renderEffect(updateEffect)
-                return [n1, updateEffect]
+                })
+                return n1
               },
             )
             insert(n2, n1 as ParentNode)
@@ -471,15 +469,14 @@ describe('api: template ref', () => {
         const n2 = n1!.nextSibling!
         const n3 = createFor(
           () => list.value,
-          _block => {
+          state => {
             const n4 = t1()
             setRef(n4 as Element, 'listRefs', undefined, true)
-            const updateEffect = () => {
-              const [item] = _block.s
+            renderEffect(() => {
+              const [item] = state
               setText(n4, item)
-            }
-            renderEffect(updateEffect)
-            return [n4, updateEffect]
+            })
+            return n4
           },
         )
         insert(n3, n2 as unknown as ParentNode)

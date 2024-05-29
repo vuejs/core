@@ -1,4 +1,12 @@
-import { getCurrentScope, isReactive, traverse } from '@vue/reactivity'
+import {
+  type ShallowRef,
+  getCurrentScope,
+  isReactive,
+  proxyRefs,
+  shallowRef,
+  traverse,
+  triggerRef,
+} from '@vue/reactivity'
 import { isArray, isObject, isString } from '@vue/shared'
 import {
   createComment,
@@ -18,12 +26,15 @@ import {
   invokeWithUpdate,
 } from './directivesChildFragment'
 import type { DynamicSlot } from './componentSlots'
+import { destructuring } from './destructuring'
 
 interface ForBlock extends Fragment {
   scope: BlockEffectScope
-  /** state, use short key since it's used a lot in generated code */
-  s: [item: any, key: any, index?: number]
-  update: () => void
+  state: [
+    item: ShallowRef<any>,
+    key: ShallowRef<any>,
+    index: ShallowRef<number | undefined>,
+  ]
   key: any
   memo: any[] | undefined
 }
@@ -33,11 +44,12 @@ type Source = any[] | Record<any, any> | number | Set<any> | Map<any, any>
 /*! #__NO_SIDE_EFFECTS__ */
 export const createFor = (
   src: () => Source,
-  renderItem: (block: ForBlock) => [Block, () => void],
+  renderItem: (block: any) => Block,
   getKey?: (item: any, key: any, index?: number) => any,
   getMemo?: (item: any, key: any, index?: number) => any[],
   hydrationNode?: Node,
   once?: boolean,
+  assignment?: (state: any[]) => any[],
 ): Fragment => {
   let isMounted = false
   let oldBlocks: ForBlock[] = []
@@ -258,21 +270,28 @@ export const createFor = (
     const scope = new BlockEffectScope(instance, parentScope)
 
     const [item, key, index] = getItem(source, idx)
+    const state = [
+      shallowRef(item),
+      shallowRef(key),
+      shallowRef(index),
+    ] as ForBlock['state']
     const block: ForBlock = (newBlocks[idx] = {
       nodes: null!, // set later
-      update: null!, // set later
       scope,
-      s: [item, key, index],
+      state,
       key: getKey && getKey(item, key, index),
       memo: getMemo && getMemo(item, key, index),
       [fragmentKey]: true,
     })
-    const res = scope.run(() => renderItem(block))!
-    block.nodes = res[0]
-    block.update = res[1]
+    const proxyState = proxyRefs(state)
+    const itemCtx = assignment
+      ? destructuring(scope, proxyState, assignment)
+      : proxyState
+    block.nodes = scope.run(() => renderItem(itemCtx))!
 
     invokeWithMount(scope, () => {
-      if (getMemo) block.update()
+      // TODO v-memo
+      // if (getMemo) block.update()
       if (parent) insert(block.nodes, parent, anchor)
     })
 
@@ -297,10 +316,11 @@ export const createFor = (
   function updateWithMemo(
     block: ForBlock,
     newItem: any,
-    newKey = block.s[1],
-    newIndex = block.s[2],
+    newKey = block.state[1].value,
+    newIndex = block.state[2].value,
   ) {
-    let needsUpdate = newKey !== block.s[1] || newIndex !== block.s[2]
+    const [, key, index] = block.state
+    let needsUpdate = newKey !== key.value || newIndex !== index.value
     if (!needsUpdate) {
       const oldMemo = block.memo!
       const newMemo = (block.memo = getMemo!(newItem, newKey, newIndex))
@@ -311,38 +331,49 @@ export const createFor = (
       }
     }
 
-    block.s = [newItem, newKey, newIndex]
-    invokeWithUpdate(block.scope, () => {
-      if (needsUpdate) {
-        block.update()
-      }
-    })
+    if (needsUpdate) setState(block, newItem, newKey, newIndex)
+    invokeWithUpdate(block.scope)
   }
 
   function updateWithoutMemo(
     block: ForBlock,
     newItem: any,
-    newKey = block.s[1],
-    newIndex = block.s[2],
+    newKey = block.state[1].value,
+    newIndex = block.state[2].value,
   ) {
+    const [item, key, index] = block.state
     let needsUpdate =
-      newItem !== block.s[0] ||
-      newKey !== block.s[1] ||
-      newIndex !== block.s[2] ||
-      !isReactive(newItem)
+      newItem !== item.value ||
+      newKey !== key.value ||
+      newIndex !== index.value ||
+      // shallowRef list
+      (!isReactive(newItem) && isObject(newItem))
 
-    block.s = [newItem, newKey, newIndex]
-    invokeWithUpdate(block.scope, () => {
-      if (needsUpdate) {
-        block.update()
-      }
-    })
+    if (needsUpdate) setState(block, newItem, newKey, newIndex)
+    invokeWithUpdate(block.scope)
   }
 
   function unmount({ nodes, scope }: ForBlock) {
     invokeWithUnmount(scope, () => {
       removeBlock(nodes, parent!)
     })
+  }
+}
+
+function setState(
+  block: ForBlock,
+  newItem: any,
+  newKey: any,
+  newIndex: number | undefined,
+) {
+  const [item, key, index] = block.state
+  const oldItem = item.value
+  item.value = newItem
+  key.value = newKey
+  index.value = newIndex
+
+  if (oldItem === newItem && !isReactive(oldItem)) {
+    triggerRef(item)
   }
 }
 

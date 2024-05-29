@@ -67,9 +67,9 @@ exports[`compiler: v-once > with v-for 1`] = `
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
-  const n0 = _createFor(() => (_ctx.list), (_block) => {
+  const n0 = _createFor(() => (_ctx.list), (_ctx0) => {
     const n2 = t0()
-    return [n2, () => {}]
+    return n2
   }, null, null, null, true)
   return n0
 }"

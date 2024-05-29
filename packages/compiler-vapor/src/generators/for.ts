@@ -1,15 +1,14 @@
-import { NewlineType } from '@vue/compiler-dom'
+import { walkIdentifiers } from '@vue/compiler-dom'
 import { genBlock } from './block'
 import { genExpression } from './expression'
 import type { CodegenContext } from '../generate'
-import type { ForIRNode, IREffect } from '../ir'
-import { genOperations } from './operation'
+import type { ForIRNode } from '../ir'
 import {
   type CodeFragment,
+  DELIMITERS_ARRAY,
   INDENT_END,
   INDENT_START,
   NEWLINE,
-  buildCodeFragment,
   genCall,
   genMulti,
 } from './utils'
@@ -18,40 +17,52 @@ export function genFor(
   oper: ForIRNode,
   context: CodegenContext,
 ): CodeFragment[] {
-  const { vaporHelper, genEffects } = context
-  const { source, value, key, index, render, keyProp, once } = oper
+  const { vaporHelper } = context
+  const { source, value, key, index, render, keyProp, once, id } = oper
 
-  const rawValue = value && value.content
+  let isDestructureAssignment = false
+  let rawValue: string | null = null
   const rawKey = key && key.content
   const rawIndex = index && index.content
 
   const sourceExpr = ['() => (', ...genExpression(source, context), ')']
-  let updateFn = '_updateEffect'
 
-  genEffects.push(genEffectInFor)
+  const idsOfValue = new Set<string>()
+  if (value) {
+    rawValue = value && value.content
+    if ((isDestructureAssignment = !!value.ast)) {
+      walkIdentifiers(
+        value.ast,
+        (id, _, __, ___, isLocal) => {
+          if (isLocal) idsOfValue.add(id.name)
+        },
+        true,
+      )
+    } else {
+      idsOfValue.add(rawValue)
+    }
+  }
 
-  const idMap: Record<string, string> = {}
-  if (rawValue) idMap[rawValue] = `_block.s[0]`
-  if (rawKey) idMap[rawKey] = `_block.s[1]`
-  if (rawIndex) idMap[rawIndex] = `_block.s[2]`
-
-  const blockReturns = (returns: CodeFragment[]): CodeFragment[] => [
-    '[',
-    ...returns,
-    `, ${updateFn}]`,
-  ]
+  const propsName = `_ctx${id}`
+  const idMap: Record<string, string | null> = {}
+  Array.from(idsOfValue).forEach(
+    (id, idIndex) => (idMap[id] = `${propsName}[${idIndex}]`),
+  )
+  if (rawKey) idMap[rawKey] = `${propsName}[${idsOfValue.size}]`
+  if (rawIndex) idMap[rawIndex] = `${propsName}[${idsOfValue.size + 1}]`
 
   const blockFn = context.withId(
-    () => genBlock(render, context, ['_block'], false, blockReturns),
+    () => genBlock(render, context, [propsName]),
     idMap,
   )
 
   let getKeyFn: CodeFragment[] | false = false
   if (keyProp) {
     const idMap: Record<string, null> = {}
-    if (rawValue) idMap[rawValue] = null
     if (rawKey) idMap[rawKey] = null
     if (rawIndex) idMap[rawIndex] = null
+    idsOfValue.forEach(id => (idMap[id] = null))
+
     const expr = context.withId(() => genExpression(keyProp, context), idMap)
     getKeyFn = [
       ...genMulti(
@@ -66,7 +77,33 @@ export function genFor(
     ]
   }
 
-  genEffects.pop()
+  let destructureAssignmentFn: CodeFragment[] | false = false
+  if (isDestructureAssignment) {
+    const idMap: Record<string, null> = {}
+    idsOfValue.forEach(id => (idMap[id] = null))
+    if (rawKey) idMap[rawKey] = null
+    if (rawIndex) idMap[rawIndex] = null
+    destructureAssignmentFn = [
+      '_state => {',
+      INDENT_START,
+      NEWLINE,
+      'const ',
+      ...genMulti(
+        DELIMITERS_ARRAY,
+        rawValue ? rawValue : rawKey || rawIndex ? '_' : undefined,
+        rawKey ? rawKey : rawIndex ? '__' : undefined,
+        rawIndex,
+      ),
+      ' = _state',
+      NEWLINE,
+      'return ',
+      ...genMulti(DELIMITERS_ARRAY, ...idsOfValue, rawKey, rawIndex),
+      INDENT_END,
+      NEWLINE,
+      '}',
+    ]
+  }
+
   return [
     NEWLINE,
     `const n${oper.id} = `,
@@ -77,49 +114,8 @@ export function genFor(
       getKeyFn,
       false, // todo: getMemo
       false, // todo: hydrationNode
-      once && 'true',
+      (once && 'true') || (destructureAssignmentFn && 'false'),
+      destructureAssignmentFn,
     ),
   ]
-
-  function genEffectInFor(effects: IREffect[]): CodeFragment[] {
-    if (!effects.length) {
-      updateFn = '() => {}'
-      return []
-    }
-
-    const [frag, push] = buildCodeFragment(INDENT_START)
-    // const [value, key] = _block.s
-    if (rawValue || rawKey) {
-      push(
-        NEWLINE,
-        'const ',
-        '[',
-        rawValue && [rawValue, NewlineType.None, value.loc],
-        rawKey && ', ',
-        rawKey && [rawKey, NewlineType.None, key.loc],
-        '] = _block.s',
-      )
-    }
-
-    const idMap: Record<string, string | null> = {}
-    if (value) idMap[value.content] = null
-    if (key) idMap[key.content] = null
-    context.withId(() => {
-      effects.forEach(effect =>
-        push(...genOperations(effect.operations, context)),
-      )
-    }, idMap)
-
-    push(INDENT_END)
-
-    return [
-      NEWLINE,
-      `const ${updateFn} = () => {`,
-      ...frag,
-      NEWLINE,
-      '}',
-      NEWLINE,
-      `${vaporHelper('renderEffect')}(${updateFn})`,
-    ]
-  }
 }

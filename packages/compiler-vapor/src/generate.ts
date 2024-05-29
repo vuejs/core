@@ -2,7 +2,7 @@ import type {
   CodegenOptions as BaseCodegenOptions,
   BaseCodegenResult,
 } from '@vue/compiler-dom'
-import type { BlockIRNode, IREffect, RootIRNode, VaporHelper } from './ir'
+import type { BlockIRNode, RootIRNode, VaporHelper } from './ir'
 import { extend, remove } from '@vue/shared'
 import { genBlockContent } from './generators/block'
 import { genTemplates } from './generators/template'
@@ -38,10 +38,6 @@ export class CodegenContext {
   identifiers: Record<string, string[]> = Object.create(null)
 
   block: BlockIRNode
-  genEffects: Array<
-    (effects: IREffect[], context: CodegenContext) => CodeFragment[]
-  > = []
-
   withId<T>(fn: () => T, map: Record<string, string | null>): T {
     const { identifiers } = this
     const ids = Object.keys(map)
