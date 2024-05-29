@@ -45,6 +45,12 @@ export default tseslint.config(
           message:
             'Our output target is ES2016, so async/await syntax should be avoided.',
         },
+        {
+          selector: 'ChainExpression',
+          message:
+            'Our output target is ES2016, and optional chaining results in ' +
+            'verbose helpers and should be avoided.',
+        },
       ],
       'sort-imports': ['error', { ignoreDeclarationSort: true }],
 
@@ -134,7 +140,7 @@ export default tseslint.config(
   {
     files: [
       'eslint.config.js',
-      'rollup.config.js',
+      'rollup*.config.js',
       'scripts/**',
       './*.{js,ts}',
       'packages/*/*.js',
