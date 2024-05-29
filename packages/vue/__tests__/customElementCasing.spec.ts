@@ -12,14 +12,14 @@ test('custom element event casing', () => {
         this.dispatchEvent(new Event('CAPScase'))
         this.dispatchEvent(new Event('PascalCase'))
       }
-    }
+    },
   )
 
   const container = document.createElement('div')
   document.body.appendChild(container)
 
-  const handler = jest.fn()
-  const handler2 = jest.fn()
+  const handler = vi.fn()
+  const handler2 = vi.fn()
   createApp({
     template: `
     <custom-event-casing
@@ -33,8 +33,8 @@ test('custom element event casing', () => {
       }" />`,
     methods: {
       handler,
-      handler2
-    }
+      handler2,
+    },
   }).mount(container)
 
   expect(handler).toHaveBeenCalledTimes(3)
