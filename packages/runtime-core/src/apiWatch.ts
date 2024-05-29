@@ -4,6 +4,7 @@ import {
   type EffectScheduler,
   ReactiveEffect,
   ReactiveFlags,
+  type ReactiveMarker,
   type Ref,
   getCurrentScope,
   isReactive,
@@ -53,15 +54,13 @@ export type WatchCallback<V = any, OV = any> = (
   onCleanup: OnCleanup,
 ) => any
 
+type MaybeUndefined<T, I> = I extends true ? T | undefined : T
+
 type MapSources<T, Immediate> = {
   [K in keyof T]: T[K] extends WatchSource<infer V>
-    ? Immediate extends true
-      ? V | undefined
-      : V
+    ? MaybeUndefined<V, Immediate>
     : T[K] extends object
-      ? Immediate extends true
-        ? T[K] | undefined
-        : T[K]
+      ? MaybeUndefined<T[K], Immediate>
       : never
 }
 
@@ -117,7 +116,19 @@ type MultiWatchSources = (WatchSource<unknown> | object)[]
 // overload: single source + cb
 export function watch<T, Immediate extends Readonly<boolean> = false>(
   source: WatchSource<T>,
-  cb: WatchCallback<T, Immediate extends true ? T | undefined : T>,
+  cb: WatchCallback<T, MaybeUndefined<T, Immediate>>,
+  options?: WatchOptions<Immediate>,
+): WatchStopHandle
+
+// overload: reactive array or tuple of multiple sources + cb
+export function watch<
+  T extends Readonly<MultiWatchSources>,
+  Immediate extends Readonly<boolean> = false,
+>(
+  sources: readonly [...T] | T,
+  cb: [T] extends [ReactiveMarker]
+    ? WatchCallback<T, MaybeUndefined<T, Immediate>>
+    : WatchCallback<MapSources<T, false>, MapSources<T, Immediate>>,
   options?: WatchOptions<Immediate>,
 ): WatchStopHandle
 
@@ -149,7 +160,7 @@ export function watch<
   Immediate extends Readonly<boolean> = false,
 >(
   source: T,
-  cb: WatchCallback<T, Immediate extends true ? T | undefined : T>,
+  cb: WatchCallback<T, MaybeUndefined<T, Immediate>>,
   options?: WatchOptions<Immediate>,
 ): WatchStopHandle
 
