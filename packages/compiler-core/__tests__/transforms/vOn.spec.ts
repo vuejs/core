@@ -10,6 +10,7 @@ import {
   baseParse as parse,
   transform,
 } from '../../src'
+import { transformFor } from '../../src/transforms/vFor'
 import { transformOn } from '../../src/transforms/vOn'
 import { transformElement } from '../../src/transforms/transformElement'
 import { transformExpression } from '../../src/transforms/transformExpression'
@@ -17,7 +18,7 @@ import { transformExpression } from '../../src/transforms/transformExpression'
 function parseWithVOn(template: string, options: CompilerOptions = {}) {
   const ast = parse(template, options)
   transform(ast, {
-    nodeTransforms: [transformExpression, transformElement],
+    nodeTransforms: [transformExpression, transformElement, transformFor],
     directiveTransforms: {
       on: transformOn,
     },
@@ -602,16 +603,16 @@ describe('compiler: transform v-on', () => {
       expect(root.cached).toBe(1)
     })
 
-    test('should not be cached if the function references closure variables (v-for, v-slot)', () => {
+    test('unicode identifier should not be cached (v-for, v-slot)', () => {
       const { root } = parseWithVOn(
-        `<div v-for="value in items" :key="value"><div v-on:click="foo(value)"/></div>`,
+        `<div v-for="项 in items" :key="value"><div v-on:click="foo(项)"/></div>`,
         {
           prefixIdentifiers: true,
           cacheHandlers: true,
         },
       )
-      expect(root.cached).not.toBe(2)
-      expect(root.cached).toBe(1)
+      expect(root.cached).not.toBe(1)
+      expect(root.cached).toBe(0)
     })
 
     test('inline function expression handler', () => {
