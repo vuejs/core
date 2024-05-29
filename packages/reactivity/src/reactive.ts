@@ -74,7 +74,7 @@ export type UnwrapNestedRefs<T> = T extends Ref ? T : UnwrapRefSimple<T>
  * @see {@link https://vuejs.org/api/reactivity-core.html#reactive}
  */
 export function reactive<T extends Record<any, any>>(
-  target: T
+  target: T,
 ): UnwrapNestedRefs<T>
 export function reactive(target: Record<any, any>) {
   // if trying to observe a readonly proxy, return the readonly version.

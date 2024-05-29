@@ -174,7 +174,7 @@ class MutableReactiveHandler extends BaseReactiveHandler {
     target: Record<keyof any, any>,
     key: string | symbol,
     value: unknown,
-    receiver: Record<string | symbol, any>
+    receiver: Record<string | symbol, any>,
   ): boolean {
     let oldValue = target[key]
     if (!this._isShallow) {
@@ -213,7 +213,7 @@ class MutableReactiveHandler extends BaseReactiveHandler {
 
   deleteProperty(
     target: Record<string | symbol, any>,
-    key: string | symbol
+    key: string | symbol,
   ): boolean {
     const hadKey = hasOwn(target, key)
     const oldValue = target[key]
