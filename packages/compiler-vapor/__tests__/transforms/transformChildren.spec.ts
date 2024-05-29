@@ -21,10 +21,10 @@ describe('compiler: children transform', () => {
   test('children & sibling references', () => {
     const { code, vaporHelpers } = compileWithElementTransform(
       `<div>
-        <p>{{'first'}}</p>
-        {{'second'}}
-        {{'third'}}
-        <p>{{'forth'}}</p>
+        <p>{{ first }}</p>
+        {{ second }}
+        {{ third }}
+        <p>{{ forth }}</p>
       </div>`,
     )
     expect(code).toMatchSnapshot()

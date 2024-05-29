@@ -1,4 +1,4 @@
-import type { NumericLiteral, StringLiteral } from '@babel/types'
+import type { BigIntLiteral, NumericLiteral, StringLiteral } from '@babel/types'
 import { isGloballyAllowed } from '@vue/shared'
 import {
   type AttributeNode,
@@ -55,13 +55,20 @@ export function resolveExpression(exp: SimpleExpressionNode) {
 
 export function getLiteralExpressionValue(
   exp: SimpleExpressionNode,
-): number | string | null {
-  if (
-    !__BROWSER__ &&
-    exp.ast &&
-    ['StringLiteral', 'NumericLiteral'].includes(exp.ast.type)
-  ) {
-    return (exp.ast as StringLiteral | NumericLiteral).value
+): number | string | boolean | null {
+  if (!__BROWSER__ && exp.ast) {
+    if (
+      ['StringLiteral', 'NumericLiteral', 'BigIntLiteral'].includes(
+        exp.ast.type,
+      )
+    ) {
+      return (exp.ast as StringLiteral | NumericLiteral | BigIntLiteral).value
+    } else if (
+      exp.ast.type === 'TemplateLiteral' &&
+      exp.ast.expressions.length === 0
+    ) {
+      return exp.ast.quasis[0].value.cooked!
+    }
   }
   return exp.isStatic ? exp.content : null
 }

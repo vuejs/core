@@ -2,6 +2,7 @@ import { DOMErrorCodes, createDOMCompilerError } from '@vue/compiler-dom'
 import { IRNodeTypes } from '../ir'
 import { EMPTY_EXPRESSION } from './utils'
 import type { DirectiveTransform } from '../transform'
+import { getLiteralExpressionValue } from '../utils'
 
 export const transformVText: DirectiveTransform = (dir, node, context) => {
   let { exp, loc } = dir
@@ -18,9 +19,14 @@ export const transformVText: DirectiveTransform = (dir, node, context) => {
     context.childrenTemplate.length = 0
   }
 
-  context.registerEffect([exp], {
-    type: IRNodeTypes.SET_TEXT,
-    element: context.reference(),
-    values: [exp],
-  })
+  const literal = getLiteralExpressionValue(exp)
+  if (literal != null) {
+    context.childrenTemplate = [String(literal)]
+  } else {
+    context.registerEffect([exp], {
+      type: IRNodeTypes.SET_TEXT,
+      element: context.reference(),
+      values: [exp],
+    })
+  }
 }

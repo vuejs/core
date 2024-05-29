@@ -23,12 +23,11 @@ export function render(_ctx) {
 `;
 
 exports[`v-text > should raise error if has no expression 1`] = `
-"import { setText as _setText, template as _template } from 'vue/vapor';
+"import { template as _template } from 'vue/vapor';
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
-  _setText(n0, "")
   return n0
 }"
 `;
