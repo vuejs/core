@@ -17,8 +17,9 @@ const source3 = () => 1
 
 type Bar = Ref<string> | ComputedRef<string> | (() => number)
 type Foo = readonly [Ref<string>, ComputedRef<string>, () => number]
-
 type OnCleanup = (fn: () => void) => void
+
+const readonlyArr: Foo = [source, source2, source3]
 
 // lazy watcher will have consistent types for oldValue.
 watch(source, (value, oldValue, onCleanup) => {
@@ -49,6 +50,13 @@ watch(reactive([source, source2, source3] as const), (value, oldValues) => {
   expectType<Foo>(value)
   expectType<Foo>(oldValues)
 })
+
+// readonly array
+watch(readonlyArr, (values, oldValues) => {
+  expectType<Readonly<[string, string, number]>>(values)
+  expectType<Readonly<[string, string, number]>>(oldValues)
+})
+
 // immediate watcher's oldValue will be undefined on first run.
 watch(
   source,
@@ -97,6 +105,19 @@ watch(reactive([source, source2, source3] as const), (value, oldVals) => {
   expectType<Foo>(value)
   expectType<Foo | undefined>(oldVals)
 })
+
+// readonly array
+watch(
+  readonlyArr,
+  (values, oldValues) => {
+    expectType<Readonly<[string, string, number]>>(values)
+    expectType<
+      Readonly<[string | undefined, string | undefined, number | undefined]>
+    >(oldValues)
+  },
+  { immediate: true },
+)
+
 // should provide correct ref.value inner type to callbacks
 const nestedRefSource = ref({
   foo: ref(1),

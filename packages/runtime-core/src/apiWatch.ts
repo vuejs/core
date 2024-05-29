@@ -142,18 +142,6 @@ export function watch<
   options?: WatchOptions<Immediate>,
 ): WatchStopHandle
 
-// overload: multiple sources w/ `as const`
-// watch([foo, bar] as const, () => {})
-// somehow [...T] breaks when the type is readonly
-export function watch<
-  T extends Readonly<MultiWatchSources>,
-  Immediate extends Readonly<boolean> = false,
->(
-  source: T,
-  cb: WatchCallback<MapSources<T, false>, MapSources<T, Immediate>>,
-  options?: WatchOptions<Immediate>,
-): WatchStopHandle
-
 // overload: watching reactive object w/ cb
 export function watch<
   T extends object,
