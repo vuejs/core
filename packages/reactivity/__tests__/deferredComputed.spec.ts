@@ -1,57 +1,32 @@
-import { computed, deferredComputed, effect, ref } from '../src'
+import { computed, effect, ref } from '../src'
 
 describe('deferred computed', () => {
-  const tick = Promise.resolve()
-
-  test('should only trigger once on multiple mutations', async () => {
+  test('should not trigger if value did not change', () => {
     const src = ref(0)
-    const c = deferredComputed(() => src.value)
-    const spy = jest.fn()
+    const c = computed(() => src.value % 2)
+    const spy = vi.fn()
     effect(() => {
       spy(c.value)
     })
     expect(spy).toHaveBeenCalledTimes(1)
-    src.value = 1
-    src.value = 2
-    src.value = 3
-    // not called yet
-    expect(spy).toHaveBeenCalledTimes(1)
-    await tick
-    // should only trigger once
-    expect(spy).toHaveBeenCalledTimes(2)
-    expect(spy).toHaveBeenCalledWith(c.value)
-  })
-
-  test('should not trigger if value did not change', async () => {
-    const src = ref(0)
-    const c = deferredComputed(() => src.value % 2)
-    const spy = jest.fn()
-    effect(() => {
-      spy(c.value)
-    })
-    expect(spy).toHaveBeenCalledTimes(1)
-    src.value = 1
     src.value = 2
 
-    await tick
     // should not trigger
     expect(spy).toHaveBeenCalledTimes(1)
 
     src.value = 3
-    src.value = 4
     src.value = 5
-    await tick
     // should trigger because latest value changes
     expect(spy).toHaveBeenCalledTimes(2)
   })
 
-  test('chained computed trigger', async () => {
-    const effectSpy = jest.fn()
-    const c1Spy = jest.fn()
-    const c2Spy = jest.fn()
+  test('chained computed trigger', () => {
+    const effectSpy = vi.fn()
+    const c1Spy = vi.fn()
+    const c2Spy = vi.fn()
 
     const src = ref(0)
-    const c1 = deferredComputed(() => {
+    const c1 = computed(() => {
       c1Spy()
       return src.value % 2
     })
@@ -69,19 +44,18 @@ describe('deferred computed', () => {
     expect(effectSpy).toHaveBeenCalledTimes(1)
 
     src.value = 1
-    await tick
     expect(c1Spy).toHaveBeenCalledTimes(2)
     expect(c2Spy).toHaveBeenCalledTimes(2)
     expect(effectSpy).toHaveBeenCalledTimes(2)
   })
 
-  test('chained computed avoid re-compute', async () => {
-    const effectSpy = jest.fn()
-    const c1Spy = jest.fn()
-    const c2Spy = jest.fn()
+  test('chained computed avoid re-compute', () => {
+    const effectSpy = vi.fn()
+    const c1Spy = vi.fn()
+    const c2Spy = vi.fn()
 
     const src = ref(0)
-    const c1 = deferredComputed(() => {
+    const c1 = computed(() => {
       c1Spy()
       return src.value % 2
     })
@@ -98,26 +72,24 @@ describe('deferred computed', () => {
     src.value = 2
     src.value = 4
     src.value = 6
-    await tick
-    // c1 should re-compute once.
-    expect(c1Spy).toHaveBeenCalledTimes(2)
+    expect(c1Spy).toHaveBeenCalledTimes(4)
     // c2 should not have to re-compute because c1 did not change.
     expect(c2Spy).toHaveBeenCalledTimes(1)
     // effect should not trigger because c2 did not change.
     expect(effectSpy).toHaveBeenCalledTimes(1)
   })
 
-  test('chained computed value invalidation', async () => {
-    const effectSpy = jest.fn()
-    const c1Spy = jest.fn()
-    const c2Spy = jest.fn()
+  test('chained computed value invalidation', () => {
+    const effectSpy = vi.fn()
+    const c1Spy = vi.fn()
+    const c2Spy = vi.fn()
 
     const src = ref(0)
-    const c1 = deferredComputed(() => {
+    const c1 = computed(() => {
       c1Spy()
       return src.value % 2
     })
-    const c2 = deferredComputed(() => {
+    const c2 = computed(() => {
       c2Spy()
       return c1.value + 1
     })
@@ -139,17 +111,17 @@ describe('deferred computed', () => {
     expect(c2Spy).toHaveBeenCalledTimes(2)
   })
 
-  test('sync access of invalidated chained computed should not prevent final effect from running', async () => {
-    const effectSpy = jest.fn()
-    const c1Spy = jest.fn()
-    const c2Spy = jest.fn()
+  test('sync access of invalidated chained computed should not prevent final effect from running', () => {
+    const effectSpy = vi.fn()
+    const c1Spy = vi.fn()
+    const c2Spy = vi.fn()
 
     const src = ref(0)
-    const c1 = deferredComputed(() => {
+    const c1 = computed(() => {
       c1Spy()
       return src.value % 2
     })
-    const c2 = deferredComputed(() => {
+    const c2 = computed(() => {
       c2Spy()
       return c1.value + 1
     })
@@ -162,14 +134,13 @@ describe('deferred computed', () => {
     src.value = 1
     // sync access c2
     c2.value
-    await tick
     expect(effectSpy).toHaveBeenCalledTimes(2)
   })
 
-  test('should not compute if deactivated before scheduler is called', async () => {
-    const c1Spy = jest.fn()
+  test('should not compute if deactivated before scheduler is called', () => {
+    const c1Spy = vi.fn()
     const src = ref(0)
-    const c1 = deferredComputed(() => {
+    const c1 = computed(() => {
       c1Spy()
       return src.value % 2
     })
@@ -179,7 +150,6 @@ describe('deferred computed', () => {
     c1.effect.stop()
     // trigger
     src.value++
-    await tick
     expect(c1Spy).toHaveBeenCalledTimes(1)
   })
 })

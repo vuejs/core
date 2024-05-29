@@ -1,8 +1,15 @@
-const fs = require('fs')
-const chalk = require('chalk')
+// @ts-check
+import fs from 'node:fs'
+import pico from 'picocolors'
+import { createRequire } from 'node:module'
 
-const targets = (exports.targets = fs.readdirSync('packages').filter(f => {
-  if (!fs.statSync(`packages/${f}`).isDirectory()) {
+const require = createRequire(import.meta.url)
+
+export const targets = fs.readdirSync('packages').filter(f => {
+  if (
+    !fs.statSync(`packages/${f}`).isDirectory() ||
+    !fs.existsSync(`packages/${f}/package.json`)
+  ) {
     return false
   }
   const pkg = require(`../packages/${f}/package.json`)
@@ -10,9 +17,15 @@ const targets = (exports.targets = fs.readdirSync('packages').filter(f => {
     return false
   }
   return true
-}))
+})
 
-exports.fuzzyMatchTarget = (partialTargets, includeAllMatching) => {
+/**
+ *
+ * @param {ReadonlyArray<string>} partialTargets
+ * @param {boolean | undefined} includeAllMatching
+ */
+export function fuzzyMatchTarget(partialTargets, includeAllMatching) {
+  /** @type {Array<string>} */
   const matched = []
   partialTargets.forEach(partialTarget => {
     for (const target of targets) {
@@ -29,9 +42,9 @@ exports.fuzzyMatchTarget = (partialTargets, includeAllMatching) => {
   } else {
     console.log()
     console.error(
-      `  ${chalk.bgRed.white(' ERROR ')} ${chalk.red(
-        `Target ${chalk.underline(partialTargets)} not found!`
-      )}`
+      `  ${pico.white(pico.bgRed(' ERROR '))} ${pico.red(
+        `Target ${pico.underline(partialTargets.toString())} not found!`,
+      )}`,
     )
     console.log()
 

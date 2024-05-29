@@ -13,7 +13,7 @@ export const CREATE_TEXT = Symbol(__DEV__ ? `createTextVNode` : ``)
 export const CREATE_STATIC = Symbol(__DEV__ ? `createStaticVNode` : ``)
 export const RESOLVE_COMPONENT = Symbol(__DEV__ ? `resolveComponent` : ``)
 export const RESOLVE_DYNAMIC_COMPONENT = Symbol(
-  __DEV__ ? `resolveDynamicComponent` : ``
+  __DEV__ ? `resolveDynamicComponent` : ``,
 )
 export const RESOLVE_DIRECTIVE = Symbol(__DEV__ ? `resolveDirective` : ``)
 export const RESOLVE_FILTER = Symbol(__DEV__ ? `resolveFilter` : ``)
@@ -42,8 +42,7 @@ export const IS_MEMO_SAME = Symbol(__DEV__ ? `isMemoSame` : ``)
 
 // Name mapping for runtime helpers that need to be imported from 'vue' in
 // generated code. Make sure these are correctly exported in the runtime!
-// Using `any` here because TS doesn't allow symbols as index type.
-export const helperNameMap: any = {
+export const helperNameMap: Record<symbol, string> = {
   [FRAGMENT]: `Fragment`,
   [TELEPORT]: `Teleport`,
   [SUSPENSE]: `Suspense`,
@@ -82,10 +81,10 @@ export const helperNameMap: any = {
   [UNREF]: `unref`,
   [IS_REF]: `isRef`,
   [WITH_MEMO]: `withMemo`,
-  [IS_MEMO_SAME]: `isMemoSame`
+  [IS_MEMO_SAME]: `isMemoSame`,
 }
 
-export function registerRuntimeHelpers(helpers: any) {
+export function registerRuntimeHelpers(helpers: Record<symbol, string>) {
   Object.getOwnPropertySymbols(helpers).forEach(s => {
     helperNameMap[s] = helpers[s]
   })

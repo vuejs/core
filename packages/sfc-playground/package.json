@@ -1,20 +1,21 @@
 {
   "name": "@vue/sfc-playground",
-  "version": "3.2.40",
   "private": true,
+  "version": "0.0.0",
+  "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "serve": "vite preview"
   },
   "devDependencies": {
-    "@vitejs/plugin-vue": "^3.0.0",
-    "vite": "^3.0.0"
+    "@vitejs/plugin-vue": "^5.0.4",
+    "vite": "^5.2.11"
   },
   "dependencies": {
-    "vue": "3.2.40",
-    "@vue/repl": "^1.3.0",
+    "@vue/repl": "^4.1.2",
     "file-saver": "^2.0.5",
-    "jszip": "^3.6.0"
+    "jszip": "^3.10.1",
+    "vue": "workspace:*"
   }
 }
