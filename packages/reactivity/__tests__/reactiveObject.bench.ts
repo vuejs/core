@@ -1,5 +1,5 @@
 import { bench } from 'vitest'
-import { ComputedRef, computed, reactive } from '../src'
+import { type ComputedRef, computed, reactive } from '../src'
 
 bench('create reactive obj', () => {
   reactive({ a: 1 })
