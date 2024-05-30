@@ -1214,6 +1214,111 @@ describe('e2e: Transition', () => {
       },
       E2E_TIMEOUT,
     )
+
+    // #3716
+    test(
+      'wrapping transition + fallthrough attrs',
+      async () => {
+        await page().goto(baseUrl)
+        await page().waitForSelector('#app')
+        await page().evaluate(() => {
+          const { createApp, ref } = (window as any).Vue
+          createApp({
+            components: {
+              'my-transition': {
+                template: `
+                  <transition foo="1" name="test">
+                    <slot></slot>
+                  </transition>
+                `,
+              },
+            },
+            template: `
+            <div id="container">
+              <my-transition>
+                <div v-if="toggle">content</div>
+              </my-transition>
+            </div>
+            <button id="toggleBtn" @click="click">button</button>
+          `,
+            setup: () => {
+              const toggle = ref(true)
+              const click = () => (toggle.value = !toggle.value)
+              return { toggle, click }
+            },
+          }).mount('#app')
+        })
+        expect(await html('#container')).toBe('<div foo="1">content</div>')
+
+        await click('#toggleBtn')
+        // toggle again before leave finishes
+        await nextTick()
+        await click('#toggleBtn')
+
+        await transitionFinish()
+        expect(await html('#container')).toBe(
+          '<div foo="1" class="">content</div>',
+        )
+      },
+      E2E_TIMEOUT,
+    )
+
+    test(
+      'w/ KeepAlive + unmount innerChild',
+      async () => {
+        const unmountSpy = vi.fn()
+        await page().exposeFunction('unmountSpy', unmountSpy)
+        await page().evaluate(() => {
+          const { unmountSpy } = window as any
+          const { createApp, ref, h, onUnmounted } = (window as any).Vue
+          createApp({
+            template: `
+            <div id="container">
+              <transition mode="out-in">
+                <KeepAlive :include="includeRef">
+                  <TrueBranch v-if="toggle"></TrueBranch>
+                </KeepAlive>
+              </transition>
+            </div>
+            <button id="toggleBtn" @click="click">button</button>
+          `,
+            components: {
+              TrueBranch: {
+                name: 'TrueBranch',
+                setup() {
+                  onUnmounted(unmountSpy)
+                  const count = ref(0)
+                  return () => h('div', count.value)
+                },
+              },
+            },
+            setup: () => {
+              const includeRef = ref(['TrueBranch'])
+              const toggle = ref(true)
+              const click = () => {
+                toggle.value = !toggle.value
+                if (toggle.value) {
+                  includeRef.value = ['TrueBranch']
+                } else {
+                  includeRef.value = []
+                }
+              }
+              return { toggle, click, unmountSpy, includeRef }
+            },
+          }).mount('#app')
+        })
+
+        await transitionFinish()
+        expect(await html('#container')).toBe('<div>0</div>')
+
+        await click('#toggleBtn')
+
+        await transitionFinish()
+        expect(await html('#container')).toBe('<!--v-if-->')
+        expect(unmountSpy).toBeCalledTimes(1)
+      },
+      E2E_TIMEOUT,
+    )
   })
 
   describe('transition with Suspense', () => {

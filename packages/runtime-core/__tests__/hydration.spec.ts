@@ -7,7 +7,10 @@ import {
   Teleport,
   Transition,
   type VNode,
+  createBlock,
   createCommentVNode,
+  createElementBlock,
+  createElementVNode,
   createSSRApp,
   createStaticVNode,
   createTextVNode,
@@ -17,16 +20,19 @@ import {
   h,
   nextTick,
   onMounted,
+  openBlock,
   ref,
   renderSlot,
   useCssVars,
   vModelCheckbox,
   vShow,
+  withCtx,
   withDirectives,
 } from '@vue/runtime-dom'
 import { type SSRContext, renderToString } from '@vue/server-renderer'
 import { PatchFlags } from '@vue/shared'
 import { vShowOriginalDisplay } from '../../runtime-dom/src/directives/vShow'
+import { expect } from 'vitest'
 
 function mountWithHydration(html: string, render: () => any) {
   const container = document.createElement('div')
@@ -1154,6 +1160,21 @@ describe('SSR hydration', () => {
     expect((vnode as any).component?.subTree.children[0].el).toBe(text)
   })
 
+  // #7215
+  test('empty text node', () => {
+    const Comp = {
+      render(this: any) {
+        return h('p', [''])
+      },
+    }
+    const { container } = mountWithHydration('<p></p>', () => h(Comp))
+    expect(container.childNodes.length).toBe(1)
+    const p = container.childNodes[0]
+    expect(p.childNodes.length).toBe(1)
+    const text = p.childNodes[0]
+    expect(text.nodeType).toBe(3)
+  })
+
   test('app.unmount()', async () => {
     const container = document.createElement('DIV')
     container.innerHTML = '<button></button>'
@@ -1290,6 +1311,81 @@ describe('SSR hydration', () => {
         1
       </button>
     `)
+  })
+
+  // #10607
+  test('update component stable slot (prod + optimized mode)', async () => {
+    __DEV__ = false
+    const container = document.createElement('div')
+    container.innerHTML = `<template><div show="false"><!--[--><div><div><!----></div></div><div>0</div><!--]--></div></template>`
+    const Comp = {
+      render(this: any) {
+        return (
+          openBlock(),
+          createElementBlock('div', null, [renderSlot(this.$slots, 'default')])
+        )
+      },
+    }
+    const show = ref(false)
+    const clicked = ref(false)
+
+    const Wrapper = {
+      setup() {
+        const items = ref<number[]>([])
+        onMounted(() => {
+          items.value = [1]
+        })
+        return () => {
+          return (
+            openBlock(),
+            createBlock(Comp, null, {
+              default: withCtx(() => [
+                createElementVNode('div', null, [
+                  createElementVNode('div', null, [
+                    clicked.value
+                      ? (openBlock(),
+                        createElementBlock('div', { key: 0 }, 'foo'))
+                      : createCommentVNode('v-if', true),
+                  ]),
+                ]),
+                createElementVNode(
+                  'div',
+                  null,
+                  items.value.length,
+                  1 /* TEXT */,
+                ),
+              ]),
+              _: 1 /* STABLE */,
+            })
+          )
+        }
+      },
+    }
+    createSSRApp({
+      components: { Wrapper },
+      data() {
+        return { show }
+      },
+      template: `<Wrapper :show="show"/>`,
+    }).mount(container)
+
+    await nextTick()
+    expect(container.innerHTML).toBe(
+      `<div show="false"><!--[--><div><div><!----></div></div><div>1</div><!--]--></div>`,
+    )
+
+    show.value = true
+    await nextTick()
+    expect(async () => {
+      clicked.value = true
+      await nextTick()
+    }).not.toThrow("Cannot read properties of null (reading 'insertBefore')")
+
+    await nextTick()
+    expect(container.innerHTML).toBe(
+      `<div show="true"><!--[--><div><div><div>foo</div></div></div><div>1</div><!--]--></div>`,
+    )
+    __DEV__ = true
   })
 
   describe('mismatch handling', () => {
@@ -1442,6 +1538,13 @@ describe('SSR hydration', () => {
       expect(`Hydration style mismatch`).not.toHaveBeenWarned()
       mountWithHydration(`<div style="color:red;"></div>`, () =>
         h('div', { style: { color: 'green' } }),
+      )
+      expect(`Hydration style mismatch`).toHaveBeenWarnedTimes(1)
+    })
+
+    test('style mismatch when no style attribute is present', () => {
+      mountWithHydration(`<div></div>`, () =>
+        h('div', { style: { color: 'red' } }),
       )
       expect(`Hydration style mismatch`).toHaveBeenWarnedTimes(1)
     })

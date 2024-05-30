@@ -508,4 +508,126 @@ describe('e2e: TransitionGroup', () => {
 
     expect(`<TransitionGroup> children must be keyed`).toHaveBeenWarned()
   })
+
+  // #5168, #7898, #9067
+  test(
+    'avoid set transition hooks for comment node',
+    async () => {
+      await page().evaluate(duration => {
+        const { createApp, ref, h, createCommentVNode } = (window as any).Vue
+
+        const show = ref(false)
+        createApp({
+          template: `
+            <div id="container">
+              <transition-group name="test">
+                <div v-for="item in items" :key="item" class="test">{{item}}</div>
+                <Child key="child"/>
+              </transition-group>
+            </div>
+            <button id="toggleBtn" @click="click">button</button>
+          `,
+          components: {
+            Child: {
+              setup() {
+                return () =>
+                  show.value
+                    ? h('div', { class: 'test' }, 'child')
+                    : createCommentVNode('v-if', true)
+              },
+            },
+          },
+          setup: () => {
+            const items = ref([])
+            const click = () => {
+              items.value = ['a', 'b', 'c']
+              setTimeout(() => {
+                show.value = true
+              }, duration)
+            }
+            return { click, items }
+          },
+        }).mount('#app')
+      }, duration)
+
+      expect(await html('#container')).toBe(`<!--v-if-->`)
+
+      expect(await htmlWhenTransitionStart()).toBe(
+        `<div class="test test-enter-from test-enter-active">a</div>` +
+          `<div class="test test-enter-from test-enter-active">b</div>` +
+          `<div class="test test-enter-from test-enter-active">c</div>` +
+          `<!--v-if-->`,
+      )
+
+      await transitionFinish(duration)
+      await nextFrame()
+      expect(await html('#container')).toBe(
+        `<div class="test">a</div>` +
+          `<div class="test">b</div>` +
+          `<div class="test">c</div>` +
+          `<div class="test test-enter-active test-enter-to">child</div>`,
+      )
+
+      await transitionFinish(duration)
+      expect(await html('#container')).toBe(
+        `<div class="test">a</div>` +
+          `<div class="test">b</div>` +
+          `<div class="test">c</div>` +
+          `<div class="test">child</div>`,
+      )
+    },
+    E2E_TIMEOUT,
+  )
+
+  // #4621, #4622, #5153
+  test(
+    'avoid set transition hooks for text node',
+    async () => {
+      await page().evaluate(() => {
+        const { createApp, ref } = (window as any).Vue
+        const app = createApp({
+          template: `
+            <div id="container">
+              <transition-group name="test">
+                <div class="test">foo</div>
+                <div class="test" v-if="show">bar</div>
+              </transition-group>
+            </div>
+            <button id="toggleBtn" @click="click">button</button>
+          `,
+          setup: () => {
+            const show = ref(false)
+            const click = () => {
+              show.value = true
+            }
+            return { show, click }
+          },
+        })
+
+        app.config.compilerOptions.whitespace = 'preserve'
+        app.mount('#app')
+      })
+
+      expect(await html('#container')).toBe(`<div class="test">foo</div>` + ` `)
+
+      expect(await htmlWhenTransitionStart()).toBe(
+        `<div class="test">foo</div>` +
+          ` ` +
+          `<div class="test test-enter-from test-enter-active">bar</div>`,
+      )
+
+      await nextFrame()
+      expect(await html('#container')).toBe(
+        `<div class="test">foo</div>` +
+          ` ` +
+          `<div class="test test-enter-active test-enter-to">bar</div>`,
+      )
+
+      await transitionFinish(duration)
+      expect(await html('#container')).toBe(
+        `<div class="test">foo</div>` + ` ` + `<div class="test">bar</div>`,
+      )
+    },
+    E2E_TIMEOUT,
+  )
 })

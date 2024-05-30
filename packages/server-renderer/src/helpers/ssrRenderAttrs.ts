@@ -17,7 +17,7 @@ import {
 } from '@vue/shared'
 
 // leading comma for empty string ""
-const shouldIgnoreProp = makeMap(
+const shouldIgnoreProp = /*#__PURE__*/ makeMap(
   `,key,ref,innerHTML,textContent,ref_key,ref_for`,
 )
 

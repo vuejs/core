@@ -118,6 +118,63 @@ describe('useCssVars', () => {
     }
   })
 
+  test('with v-if & async component & suspense', async () => {
+    const state = reactive({ color: 'red' })
+    const root = document.createElement('div')
+    const show = ref(false)
+    let resolveAsync: any
+    let asyncPromise: any
+
+    const AsyncComp = {
+      setup() {
+        useCssVars(() => state)
+        asyncPromise = new Promise(r => {
+          resolveAsync = () => {
+            r(() => h('p', 'default'))
+          }
+        })
+        return asyncPromise
+      },
+    }
+
+    const App = {
+      setup() {
+        return () =>
+          h(Suspense, null, {
+            default: h('div', {}, show.value ? h(AsyncComp) : h('p')),
+          })
+      },
+    }
+
+    render(h(App), root)
+    await nextTick()
+    // AsyncComp resolve
+    show.value = true
+    await nextTick()
+    resolveAsync()
+    await asyncPromise.then(() => {})
+    // Suspense effects flush
+    await nextTick()
+    // css vars use with default tree
+    for (const c of [].slice.call(root.children as any)) {
+      expect(
+        ((c as any).children[0] as HTMLElement).style.getPropertyValue(
+          `--color`,
+        ),
+      ).toBe(`red`)
+    }
+
+    state.color = 'green'
+    await nextTick()
+    for (const c of [].slice.call(root.children as any)) {
+      expect(
+        ((c as any).children[0] as HTMLElement).style.getPropertyValue(
+          `--color`,
+        ),
+      ).toBe('green')
+    }
+  })
+
   test('with subTree changed', async () => {
     const state = reactive({ color: 'red' })
     const value = ref(true)
