@@ -541,7 +541,9 @@ export function createHydrationFunctions(
           optimized,
         )
       } else if (vnode.type === Text && !vnode.children) {
-        continue
+        // #7215 create a TextNode for empty text node
+        // because server rendered HTML won't contain a text node
+        insert((vnode.el = createText('')), container)
       } else {
         hasMismatch = true
         if (
@@ -727,8 +729,8 @@ function propHasMismatch(
 ): boolean {
   let mismatchType: string | undefined
   let mismatchKey: string | undefined
-  let actual: any
-  let expected: any
+  let actual: string | boolean | null | undefined
+  let expected: string | boolean | null | undefined
   if (key === 'class') {
     // classes might be in different order, but that doesn't affect cascade
     // so we just need to check if the class lists contain the same classes.
@@ -739,7 +741,7 @@ function propHasMismatch(
     }
   } else if (key === 'style') {
     // style might be in different order, but that doesn't affect cascade
-    actual = el.getAttribute('style')
+    actual = el.getAttribute('style') || ''
     expected = isString(clientValue)
       ? clientValue
       : stringifyStyle(normalizeStyle(clientValue))
@@ -755,11 +757,14 @@ function propHasMismatch(
       }
     }
 
+    // eslint-disable-next-line no-restricted-syntax
     const root = instance?.subTree
     if (
       vnode === root ||
+      // eslint-disable-next-line no-restricted-syntax
       (root?.type === Fragment && (root.children as VNode[]).includes(vnode))
     ) {
+      // eslint-disable-next-line no-restricted-syntax
       const cssVars = instance?.getCssVars?.()
       for (const key in cssVars) {
         expectedMap.set(`--${key}`, String(cssVars[key]))
@@ -840,7 +845,9 @@ function toStyleMap(str: string): Map<string, string> {
   const styleMap: Map<string, string> = new Map()
   for (const item of str.split(';')) {
     let [key, value] = item.split(':')
+    // eslint-disable-next-line no-restricted-syntax
     key = key?.trim()
+    // eslint-disable-next-line no-restricted-syntax
     value = value?.trim()
     if (key && value) {
       styleMap.set(key, value)

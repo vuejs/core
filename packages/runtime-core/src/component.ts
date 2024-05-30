@@ -1057,7 +1057,7 @@ export function finishComponentSetup(
                 : ``) /* should not happen */,
       )
     } else {
-      warn(`Component is missing template or render function.`)
+      warn(`Component is missing template or render function: `, Component)
     }
   }
 }

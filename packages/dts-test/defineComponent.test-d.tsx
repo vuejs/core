@@ -1501,8 +1501,7 @@ describe('should work when props type is incompatible with setup returned type '
 
 describe('withKeys and withModifiers as pro', () => {
   const onKeydown = withKeys(e => {}, [''])
-  // @ts-expect-error invalid modifiers
-  const onClick = withModifiers(e => {}, [''])
+  const onClick = withModifiers(e => {}, [])
   ;<input onKeydown={onKeydown} onClick={onClick} />
 })
 
