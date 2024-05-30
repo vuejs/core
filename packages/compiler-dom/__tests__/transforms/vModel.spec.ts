@@ -1,8 +1,8 @@
 import {
+  type CompilerOptions,
+  generate,
   baseParse as parse,
   transform,
-  CompilerOptions,
-  generate
 } from '@vue/compiler-core'
 import { transformModel } from '../../src/transforms/vModel'
 import { transformElement } from '../../../compiler-core/src/transforms/transformElement'
@@ -12,7 +12,7 @@ import {
   V_MODEL_DYNAMIC,
   V_MODEL_RADIO,
   V_MODEL_SELECT,
-  V_MODEL_TEXT
+  V_MODEL_TEXT,
 } from '../../src/runtimeHelpers'
 
 function transformWithModel(template: string, options: CompilerOptions = {}) {
@@ -20,9 +20,9 @@ function transformWithModel(template: string, options: CompilerOptions = {}) {
   transform(ast, {
     nodeTransforms: [transformElement],
     directiveTransforms: {
-      model: transformModel
+      model: transformModel,
     },
-    ...options
+    ...options,
   })
   return ast
 }
@@ -70,7 +70,7 @@ describe('compiler: transform v-model', () => {
     expect(generate(root).code).toMatchSnapshot()
 
     const root2 = transformWithModel(
-      '<input v-bind:[key]="val" v-model="model" />'
+      '<input v-bind:[key]="val" v-model="model" />',
     )
     expect(root2.helpers).toContain(V_MODEL_DYNAMIC)
     expect(generate(root2).code).toMatchSnapshot()
@@ -92,34 +92,34 @@ describe('compiler: transform v-model', () => {
 
   describe('errors', () => {
     test('plain elements with argument', () => {
-      const onError = jest.fn()
+      const onError = vi.fn()
       transformWithModel('<input v-model:value="model" />', { onError })
 
       expect(onError).toHaveBeenCalledTimes(1)
       expect(onError).toHaveBeenCalledWith(
         expect.objectContaining({
-          code: DOMErrorCodes.X_V_MODEL_ARG_ON_ELEMENT
-        })
+          code: DOMErrorCodes.X_V_MODEL_ARG_ON_ELEMENT,
+        }),
       )
     })
 
     test('invalid element', () => {
-      const onError = jest.fn()
+      const onError = vi.fn()
       transformWithModel('<span v-model="model" />', { onError })
 
       expect(onError).toHaveBeenCalledTimes(1)
       expect(onError).toHaveBeenCalledWith(
         expect.objectContaining({
-          code: DOMErrorCodes.X_V_MODEL_ON_INVALID_ELEMENT
-        })
+          code: DOMErrorCodes.X_V_MODEL_ON_INVALID_ELEMENT,
+        }),
       )
     })
 
     test('should allow usage on custom element', () => {
-      const onError = jest.fn()
+      const onError = vi.fn()
       const root = transformWithModel('<my-input v-model="model" />', {
         onError,
-        isCustomElement: tag => tag.startsWith('my-')
+        isCustomElement: tag => tag.startsWith('my-'),
       })
       expect(root.helpers).toContain(V_MODEL_TEXT)
       expect(onError).not.toHaveBeenCalled()
@@ -127,15 +127,36 @@ describe('compiler: transform v-model', () => {
     })
 
     test('should raise error if used file input element', () => {
-      const onError = jest.fn()
+      const onError = vi.fn()
       transformWithModel(`<input type="file" v-model="test"/>`, {
-        onError
+        onError,
       })
       expect(onError).toHaveBeenCalledWith(
         expect.objectContaining({
-          code: DOMErrorCodes.X_V_MODEL_ON_FILE_INPUT_ELEMENT
-        })
+          code: DOMErrorCodes.X_V_MODEL_ON_FILE_INPUT_ELEMENT,
+        }),
       )
+    })
+
+    test('should error on dynamic value binding alongside v-model', () => {
+      const onError = vi.fn()
+      transformWithModel(`<input v-model="test" :value="test" />`, {
+        onError,
+      })
+      expect(onError).toHaveBeenCalledWith(
+        expect.objectContaining({
+          code: DOMErrorCodes.X_V_MODEL_UNNECESSARY_VALUE,
+        }),
+      )
+    })
+
+    // #3596
+    test('should NOT error on static value binding alongside v-model', () => {
+      const onError = vi.fn()
+      transformWithModel(`<input v-model="test" value="test" />`, {
+        onError,
+      })
+      expect(onError).not.toHaveBeenCalled()
     })
   })
 

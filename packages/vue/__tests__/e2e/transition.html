@@ -1,0 +1,51 @@
+<script src="../../dist/vue.global.js"></script>
+
+<div id="app"></div>
+<style>
+  .test {
+    -webkit-transition: opacity 50ms ease;
+    transition: opacity 50ms ease;
+  }
+  .group-move {
+    -webkit-transition: -webkit-transform 50ms ease;
+    transition: transform 50ms ease;
+  }
+  .v-appear, .v-enter, .v-leave-active,
+  .test-appear, .test-enter, .test-leave-active,
+  .hello, .bye.active,
+  .changed-enter {
+    opacity: 0;
+  }
+  .test-anim-enter-active {
+    animation: test-enter 50ms;
+    -webkit-animation: test-enter 50ms;
+  }
+  .test-anim-leave-active {
+    animation: test-leave 50ms;
+    -webkit-animation: test-leave 50ms;
+  }
+  .test-anim-long-enter-active {
+    animation: test-enter 100ms;
+    -webkit-animation: test-enter 100ms;
+  }
+  .test-anim-long-leave-active {
+    animation: test-leave 100ms;
+    -webkit-animation: test-leave 100ms;
+  }
+  @keyframes test-enter {
+    from { opacity: 0 }
+    to { opacity: 1 }
+  }
+  @-webkit-keyframes test-enter {
+    from { opacity: 0 }
+    to { opacity: 1 }
+  }
+  @keyframes test-leave {
+    from { opacity: 1 }
+    to { opacity: 0 }
+  }
+  @-webkit-keyframes test-leave {
+    from { opacity: 1 }
+    to { opacity: 0 }
+  }
+</style>

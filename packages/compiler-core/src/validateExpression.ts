@@ -1,20 +1,19 @@
+import type { SimpleExpressionNode } from './ast'
+import type { TransformContext } from './transform'
+import { ErrorCodes, createCompilerError } from './errors'
+
 // these keywords should not appear inside expressions, but operators like
-
-import { SimpleExpressionNode } from './ast'
-import { TransformContext } from './transform'
-import { createCompilerError, ErrorCodes } from './errors'
-
-// typeof, instanceof and in are allowed
+// 'typeof', 'instanceof', and 'in' are allowed
 const prohibitedKeywordRE = new RegExp(
   '\\b' +
     (
-      'do,if,for,let,new,try,var,case,else,with,await,break,catch,class,const,' +
-      'super,throw,while,yield,delete,export,import,return,switch,default,' +
-      'extends,finally,continue,debugger,function,arguments,typeof,void'
+      'arguments,await,break,case,catch,class,const,continue,debugger,default,' +
+      'delete,do,else,export,extends,finally,for,function,if,import,let,new,' +
+      'return,super,switch,throw,try,var,void,while,with,yield'
     )
       .split(',')
       .join('\\b|\\b') +
-    '\\b'
+    '\\b',
 )
 
 // strip strings in expressions
@@ -30,7 +29,7 @@ export function validateBrowserExpression(
   node: SimpleExpressionNode,
   context: TransformContext,
   asParams = false,
-  asRawStatements = false
+  asRawStatements = false,
 ) {
   const exp = node.content
 
@@ -44,7 +43,7 @@ export function validateBrowserExpression(
     new Function(
       asRawStatements
         ? ` ${exp} `
-        : `return ${asParams ? `(${exp}) => {}` : `(${exp})`}`
+        : `return ${asParams ? `(${exp}) => {}` : `(${exp})`}`,
     )
   } catch (e: any) {
     let message = e.message
@@ -59,8 +58,8 @@ export function validateBrowserExpression(
         ErrorCodes.X_INVALID_EXPRESSION,
         node.loc,
         undefined,
-        message
-      )
+        message,
+      ),
     )
   }
 }
