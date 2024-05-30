@@ -7,7 +7,10 @@ import {
   Teleport,
   Transition,
   type VNode,
+  createBlock,
   createCommentVNode,
+  createElementBlock,
+  createElementVNode,
   createSSRApp,
   createStaticVNode,
   createTextVNode,
@@ -17,15 +20,19 @@ import {
   h,
   nextTick,
   onMounted,
+  openBlock,
   ref,
   renderSlot,
+  useCssVars,
   vModelCheckbox,
   vShow,
+  withCtx,
   withDirectives,
 } from '@vue/runtime-dom'
 import { type SSRContext, renderToString } from '@vue/server-renderer'
 import { PatchFlags } from '@vue/shared'
-import { vShowOldKey } from '../../runtime-dom/src/directives/vShow'
+import { vShowOriginalDisplay } from '../../runtime-dom/src/directives/vShow'
+import { expect } from 'vitest'
 
 function mountWithHydration(html: string, render: () => any) {
   const container = document.createElement('div')
@@ -1153,6 +1160,21 @@ describe('SSR hydration', () => {
     expect((vnode as any).component?.subTree.children[0].el).toBe(text)
   })
 
+  // #7215
+  test('empty text node', () => {
+    const Comp = {
+      render(this: any) {
+        return h('p', [''])
+      },
+    }
+    const { container } = mountWithHydration('<p></p>', () => h(Comp))
+    expect(container.childNodes.length).toBe(1)
+    const p = container.childNodes[0]
+    expect(p.childNodes.length).toBe(1)
+    const text = p.childNodes[0]
+    expect(text.nodeType).toBe(3)
+  })
+
   test('app.unmount()', async () => {
     const container = document.createElement('DIV')
     container.innerHTML = '<button></button>'
@@ -1251,7 +1273,7 @@ describe('SSR hydration', () => {
         foo
       </div>
     `)
-    expect((container.firstChild as any)[vShowOldKey]).toBe('')
+    expect((container.firstChild as any)[vShowOriginalDisplay]).toBe('')
     expect(vnode.el).toBe(container.firstChild)
     expect(`mismatch`).not.toHaveBeenWarned()
   })
@@ -1289,6 +1311,81 @@ describe('SSR hydration', () => {
         1
       </button>
     `)
+  })
+
+  // #10607
+  test('update component stable slot (prod + optimized mode)', async () => {
+    __DEV__ = false
+    const container = document.createElement('div')
+    container.innerHTML = `<template><div show="false"><!--[--><div><div><!----></div></div><div>0</div><!--]--></div></template>`
+    const Comp = {
+      render(this: any) {
+        return (
+          openBlock(),
+          createElementBlock('div', null, [renderSlot(this.$slots, 'default')])
+        )
+      },
+    }
+    const show = ref(false)
+    const clicked = ref(false)
+
+    const Wrapper = {
+      setup() {
+        const items = ref<number[]>([])
+        onMounted(() => {
+          items.value = [1]
+        })
+        return () => {
+          return (
+            openBlock(),
+            createBlock(Comp, null, {
+              default: withCtx(() => [
+                createElementVNode('div', null, [
+                  createElementVNode('div', null, [
+                    clicked.value
+                      ? (openBlock(),
+                        createElementBlock('div', { key: 0 }, 'foo'))
+                      : createCommentVNode('v-if', true),
+                  ]),
+                ]),
+                createElementVNode(
+                  'div',
+                  null,
+                  items.value.length,
+                  1 /* TEXT */,
+                ),
+              ]),
+              _: 1 /* STABLE */,
+            })
+          )
+        }
+      },
+    }
+    createSSRApp({
+      components: { Wrapper },
+      data() {
+        return { show }
+      },
+      template: `<Wrapper :show="show"/>`,
+    }).mount(container)
+
+    await nextTick()
+    expect(container.innerHTML).toBe(
+      `<div show="false"><!--[--><div><div><!----></div></div><div>1</div><!--]--></div>`,
+    )
+
+    show.value = true
+    await nextTick()
+    expect(async () => {
+      clicked.value = true
+      await nextTick()
+    }).not.toThrow("Cannot read properties of null (reading 'insertBefore')")
+
+    await nextTick()
+    expect(container.innerHTML).toBe(
+      `<div show="true"><!--[--><div><div><div>foo</div></div></div><div>1</div><!--]--></div>`,
+    )
+    __DEV__ = true
   })
 
   describe('mismatch handling', () => {
@@ -1445,6 +1542,13 @@ describe('SSR hydration', () => {
       expect(`Hydration style mismatch`).toHaveBeenWarnedTimes(1)
     })
 
+    test('style mismatch when no style attribute is present', () => {
+      mountWithHydration(`<div></div>`, () =>
+        h('div', { style: { color: 'red' } }),
+      )
+      expect(`Hydration style mismatch`).toHaveBeenWarnedTimes(1)
+    })
+
     test('style mismatch w/ v-show', () => {
       mountWithHydration(`<div style="color:red;display:none"></div>`, () =>
         withDirectives(createVNode('div', { style: 'color: red' }, ''), [
@@ -1537,6 +1641,38 @@ describe('SSR hydration', () => {
         h('select', [h('option', { value: ['foo'] }, 'hello')]),
       )
       expect(`Hydration attribute mismatch`).not.toHaveBeenWarned()
+    })
+
+    test('should not warn css v-bind', () => {
+      const container = document.createElement('div')
+      container.innerHTML = `<div style="--foo:red;color:var(--foo);" />`
+      const app = createSSRApp({
+        setup() {
+          useCssVars(() => ({
+            foo: 'red',
+          }))
+          return () => h('div', { style: { color: 'var(--foo)' } })
+        },
+      })
+      app.mount(container)
+      expect(`Hydration style mismatch`).not.toHaveBeenWarned()
+    })
+
+    // #10317 - test case from #10325
+    test('css vars should only be added to expected on component root dom', () => {
+      const container = document.createElement('div')
+      container.innerHTML = `<div style="--foo:red;"><div style="color:var(--foo);" /></div>`
+      const app = createSSRApp({
+        setup() {
+          useCssVars(() => ({
+            foo: 'red',
+          }))
+          return () =>
+            h('div', null, [h('div', { style: { color: 'var(--foo)' } })])
+        },
+      })
+      app.mount(container)
+      expect(`Hydration style mismatch`).not.toHaveBeenWarned()
     })
   })
 })

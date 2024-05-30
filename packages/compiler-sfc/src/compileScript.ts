@@ -530,8 +530,14 @@ export function compileScript(
             )
           }
 
-          // defineProps / defineEmits
+          // defineProps
           const isDefineProps = processDefineProps(ctx, init, decl.id)
+          if (ctx.propsDestructureRestId) {
+            setupBindings[ctx.propsDestructureRestId] =
+              BindingTypes.SETUP_REACTIVE_CONST
+          }
+
+          // defineEmits
           const isDefineEmits =
             !isDefineProps && processDefineEmits(ctx, init, decl.id)
           !isDefineEmits &&
@@ -997,10 +1003,15 @@ export function compileScript(
 
   // 11. finalize Vue helper imports
   if (ctx.helperImports.size > 0) {
+    const runtimeModuleName =
+      options.templateOptions?.compilerOptions?.runtimeModuleName
+    const importSrc = runtimeModuleName
+      ? JSON.stringify(runtimeModuleName)
+      : `'vue'`
     ctx.s.prepend(
       `import { ${[...ctx.helperImports]
         .map(h => `${h} as _${h}`)
-        .join(', ')} } from 'vue'\n`,
+        .join(', ')} } from ${importSrc}\n`,
     )
   }
 

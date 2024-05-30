@@ -6,14 +6,11 @@ import {
   type NodeTransform,
   NodeTypes,
   type ParserOptions,
+  type RawSourceMap,
   type RootNode,
   createRoot,
 } from '@vue/compiler-core'
-import {
-  type RawSourceMap,
-  SourceMapConsumer,
-  SourceMapGenerator,
-} from 'source-map-js'
+import { SourceMapConsumer, SourceMapGenerator } from 'source-map-js'
 import {
   type AssetURLOptions,
   type AssetURLTagConfig,

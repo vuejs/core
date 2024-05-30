@@ -10,9 +10,21 @@ import { hyphenate, isArray } from '@vue/shared'
 const systemModifiers = ['ctrl', 'shift', 'alt', 'meta']
 
 type KeyedEvent = KeyboardEvent | MouseEvent | TouchEvent
+type ModifierGuardsKeys =
+  | 'stop'
+  | 'prevent'
+  | 'self'
+  | 'ctrl'
+  | 'shift'
+  | 'alt'
+  | 'meta'
+  | 'left'
+  | 'middle'
+  | 'right'
+  | 'exact'
 
 const modifierGuards: Record<
-  string,
+  ModifierGuardsKeys,
   (e: Event, modifiers: string[]) => void | boolean
 > = {
   stop: e => e.stopPropagation(),
@@ -36,7 +48,7 @@ export const withModifiers = <
   T extends (event: Event, ...args: unknown[]) => any,
 >(
   fn: T & { _withMods?: { [key: string]: T } },
-  modifiers: string[],
+  modifiers: ModifierGuardsKeys[],
 ) => {
   const cache = fn._withMods || (fn._withMods = {})
   const cacheKey = modifiers.join('.')
