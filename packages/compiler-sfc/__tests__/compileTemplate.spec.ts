@@ -1,4 +1,5 @@
 import { type RawSourceMap, SourceMapConsumer } from 'source-map-js'
+import { parse as babelParse } from '@babel/parser'
 import {
   type SFCTemplateCompileOptions,
   compileTemplate,
@@ -450,6 +451,36 @@ test('prefixing edge case for reused AST ssr mode', () => {
       ssr: true,
     }),
   ).not.toThrowError()
+})
+
+// #10852
+test('non-identifier expression in legacy filter syntax', () => {
+  const src = `
+  <template>
+    <div>
+      Today is
+      {{ new Date() | formatDate }}
+    </div>
+  </template>
+  `
+
+  const { descriptor } = parse(src)
+  const compilationResult = compileTemplate({
+    id: 'xxx',
+    filename: 'test.vue',
+    ast: descriptor.template!.ast,
+    source: descriptor.template!.content,
+    ssr: false,
+    compilerOptions: {
+      compatConfig: {
+        MODE: 2,
+      },
+    },
+  })
+
+  expect(() => {
+    babelParse(compilationResult.code, { sourceType: 'module' })
+  }).not.toThrow()
 })
 
 interface Pos {

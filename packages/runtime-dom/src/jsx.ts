@@ -406,7 +406,7 @@ export interface DataHTMLAttributes extends HTMLAttributes {
 
 export interface DetailsHTMLAttributes extends HTMLAttributes {
   open?: Booleanish
-  onToggle?: Event
+  onToggle?: (payload: ToggleEvent) => void
 }
 
 export interface DelHTMLAttributes extends HTMLAttributes {
@@ -1348,8 +1348,9 @@ export interface Events {
   // selection events
   onSelect: Event
 
-  // UI events
-  onScroll: UIEvent
+  // scroll events
+  onScroll: Event
+  onScrollend: Event
 
   // touch events
   onTouchcancel: TouchEvent

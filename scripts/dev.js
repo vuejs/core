@@ -14,7 +14,7 @@ import { polyfillNode } from 'esbuild-plugin-polyfill-node'
 const require = createRequire(import.meta.url)
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const args = minimist(process.argv.slice(2))
-const targets = args._ || ['vue']
+const targets = args._.length ? args._ : ['vue']
 const format = args.f || 'global'
 const prod = args.p || false
 const inlineDeps = args.i || args.inline

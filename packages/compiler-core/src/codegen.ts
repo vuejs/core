@@ -28,7 +28,7 @@ import {
   getVNodeHelper,
   locStub,
 } from './ast'
-import { type RawSourceMap, SourceMapGenerator } from 'source-map-js'
+import { SourceMapGenerator } from 'source-map-js'
 import {
   advancePositionWithMutation,
   assert,
@@ -55,6 +55,45 @@ import {
   helperNameMap,
 } from './runtimeHelpers'
 import type { ImportItem } from './transform'
+
+/**
+ * The `SourceMapGenerator` type from `source-map-js` is a bit incomplete as it
+ * misses `toJSON()`. We also need to add types for internal properties which we
+ * need to access for better performance.
+ *
+ * Since TS 5.3, dts generation starts to strangely include broken triple slash
+ * references for source-map-js, so we are inlining all source map related types
+ * here to to workaround that.
+ */
+export interface CodegenSourceMapGenerator {
+  setSourceContent(sourceFile: string, sourceContent: string): void
+  // SourceMapGenerator has this method but the types do not include it
+  toJSON(): RawSourceMap
+  _sources: Set<string>
+  _names: Set<string>
+  _mappings: {
+    add(mapping: MappingItem): void
+  }
+}
+
+export interface RawSourceMap {
+  file?: string
+  sourceRoot?: string
+  version: string
+  sources: string[]
+  names: string[]
+  sourcesContent?: string[]
+  mappings: string
+}
+
+interface MappingItem {
+  source: string
+  generatedLine: number
+  generatedColumn: number
+  originalLine: number
+  originalColumn: number
+  name: string | null
+}
 
 const PURE_ANNOTATION = `/*#__PURE__*/`
 
@@ -85,7 +124,7 @@ export interface CodegenContext
   offset: number
   indentLevel: number
   pure: boolean
-  map?: SourceMapGenerator
+  map?: CodegenSourceMapGenerator
   helper(key: symbol): string
   push(code: string, newlineIndex?: number, node?: CodegenNode): void
   indent(): void
@@ -218,14 +257,14 @@ function createCodegenContext(
       generatedLine: context.line,
       generatedColumn: context.column - 1,
       source: filename,
-      // @ts-expect-error it is possible to be null
       name,
     })
   }
 
   if (!__BROWSER__ && sourceMap) {
     // lazy require source-map implementation, only in non-browser builds
-    context.map = new SourceMapGenerator()
+    context.map =
+      new SourceMapGenerator() as unknown as CodegenSourceMapGenerator
     context.map.setSourceContent(filename, context.source)
     context.map._sources.add(filename)
   }
