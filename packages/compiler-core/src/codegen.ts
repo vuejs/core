@@ -572,9 +572,9 @@ function genHoists(hoists: (JSChildNode | null)[], context: CodegenContext) {
 
   // generate inlined withScopeId helper
   if (genScopeId) {
-    const functionDeclaration = context.isTS ? '(n: any)' : 'n'
+    const param = context.isTS ? '(n: any)' : 'n'
     push(
-      `const _withScopeId = ${functionDeclaration} => (${helper(
+      `const _withScopeId = ${param} => (${helper(
         PUSH_SCOPE_ID,
       )}("${scopeId}"),n=n(),${helper(POP_SCOPE_ID)}(),n)`,
     )
