@@ -16,7 +16,7 @@ import {
   toReactive,
 } from './reactive'
 import type { ComputedRef } from './computed'
-import { TrackOpTypes, TriggerOpTypes } from './constants'
+import { ReactiveFlags, TrackOpTypes, TriggerOpTypes } from './constants'
 import { warn } from './warning'
 
 declare const RefSymbol: unique symbol
@@ -40,7 +40,7 @@ export interface Ref<T = any> {
  */
 export function isRef<T>(r: Ref<T> | unknown): r is Ref<T>
 export function isRef(r: any): r is Ref {
-  return r ? r.__v_isRef === true : false
+  return r ? r[ReactiveFlags.IS_REF] === true : false
 }
 
 /**
@@ -105,14 +105,13 @@ class RefImpl<T = any> {
 
   dep: Dep = new Dep()
 
-  public readonly __v_isRef = true
+  public readonly [ReactiveFlags.IS_REF] = true
+  public readonly [ReactiveFlags.IS_SHALLOW]: boolean = false
 
-  constructor(
-    value: T,
-    public readonly __v_isShallow: boolean,
-  ) {
-    this._rawValue = __v_isShallow ? value : toRaw(value)
-    this._value = __v_isShallow ? value : toReactive(value)
+  constructor(value: T, isShallow: boolean) {
+    this._rawValue = isShallow ? value : toRaw(value)
+    this._value = isShallow ? value : toReactive(value)
+    this[ReactiveFlags.IS_SHALLOW] = isShallow
   }
 
   get value() {
@@ -131,7 +130,9 @@ class RefImpl<T = any> {
   set value(newValue) {
     const oldValue = this._rawValue
     const useDirectValue =
-      this.__v_isShallow || isShallow(newValue) || isReadonly(newValue)
+      this[ReactiveFlags.IS_SHALLOW] ||
+      isShallow(newValue) ||
+      isReadonly(newValue)
     newValue = useDirectValue ? newValue : toRaw(newValue)
     if (hasChanged(newValue, oldValue)) {
       this._rawValue = newValue
@@ -277,7 +278,7 @@ class CustomRefImpl<T> {
   private readonly _get: ReturnType<CustomRefFactory<T>>['get']
   private readonly _set: ReturnType<CustomRefFactory<T>>['set']
 
-  public readonly __v_isRef = true
+  public readonly [ReactiveFlags.IS_REF] = true
 
   constructor(factory: CustomRefFactory<T>) {
     const dep = (this.dep = new Dep())
@@ -330,7 +331,7 @@ export function toRefs<T extends object>(object: T): ToRefs<T> {
 }
 
 class ObjectRefImpl<T extends object, K extends keyof T> {
-  public readonly __v_isRef = true
+  public readonly [ReactiveFlags.IS_REF] = true
 
   constructor(
     private readonly _object: T,
@@ -353,8 +354,8 @@ class ObjectRefImpl<T extends object, K extends keyof T> {
 }
 
 class GetterRefImpl<T> {
-  public readonly __v_isRef = true
-  public readonly __v_isReadonly = true
+  public readonly [ReactiveFlags.IS_REF] = true
+  public readonly [ReactiveFlags.IS_READONLY] = true
   constructor(private readonly _getter: () => T) {}
   get value() {
     return this._getter()
