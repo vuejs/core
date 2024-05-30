@@ -46,11 +46,11 @@ export interface LegacyPublicProperties {
   $set<T extends Record<keyof any, any>, K extends keyof T>(
     target: T,
     key: K,
-    value: T[K]
+    value: T[K],
   ): void
   $delete<T extends Record<keyof any, any>, K extends keyof T>(
     target: T,
-    key: K
+    key: K,
   ): void
   $mount(el?: string | Element): this
   $destroy(): void
