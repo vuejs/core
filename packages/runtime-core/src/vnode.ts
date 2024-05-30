@@ -464,13 +464,13 @@ function createBaseVNode(
     ctx: currentRenderingInstance,
   } as VNode
   if (vnode.ctx && currentRenderingInstance?.parent?.ut) {
-    vnode.ctx.parentUtData = {
+    vnode.ctx.parentUt = {
       ut: currentRenderingInstance.parent.ut,
       uid: currentRenderingInstance.parent.uid,
     }
   }
-  if (vnode.ctx && vnode.ctx.parent && vnode.ctx.parent.parentUtData) {
-    vnode.ctx.parentUtData = vnode.ctx.parent.parentUtData
+  if (vnode.ctx && vnode.ctx.parent && vnode.ctx.parent.parentUt) {
+    vnode.ctx.parentUt = vnode.ctx.parent.parentUt
   }
   if (needFullChildrenNormalization) {
     normalizeChildren(vnode, children)

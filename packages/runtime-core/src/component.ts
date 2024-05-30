@@ -523,7 +523,7 @@ export interface ComponentInternalInstance {
    * `update nested teleport css vars`
    * @internal
    */
-  parentUtData?: {
+  parentUt?: {
     uid: number
     ut: (vars?: Record<string, string>) => void
   }
