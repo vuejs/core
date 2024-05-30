@@ -205,12 +205,14 @@ describe('compiler: v-for', () => {
 
     test('source containing string expression with spaces', () => {
       const { node: forNode } = parseWithForTransform(
-        `<span v-for="item in state ['my items']" />`
+        `<span v-for="item in state ['my items']" />`,
       )
       expect(forNode.keyAlias).toBeUndefined()
       expect(forNode.objectIndexAlias).toBeUndefined()
       expect((forNode.valueAlias as SimpleExpressionNode).content).toBe('item')
-      expect((forNode.source as SimpleExpressionNode).content).toBe("state ['my items']")
+      expect((forNode.source as SimpleExpressionNode).content).toBe(
+        "state ['my items']",
+      )
     })
   })
 
@@ -270,8 +272,8 @@ describe('compiler: v-for', () => {
       expect(onError).toHaveBeenCalledTimes(1)
       expect(onError).toHaveBeenCalledWith(
         expect.objectContaining({
-          code: ErrorCodes.X_V_FOR_MALFORMED_EXPRESSION
-        })
+          code: ErrorCodes.X_V_FOR_MALFORMED_EXPRESSION,
+        }),
       )
     })
 
