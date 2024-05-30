@@ -117,7 +117,7 @@ export const transformElement: NodeTransform = (node, context) => {
         // updates inside get proper isSVG flag at runtime. (#639, #643)
         // This is technically web-specific, but splitting the logic out of core
         // leads to too much unnecessary complexity.
-        (tag === 'svg' || tag === 'foreignObject'))
+        (tag === 'svg' || tag === 'foreignObject' || tag === 'math'))
 
     // props
     if (props.length > 0) {

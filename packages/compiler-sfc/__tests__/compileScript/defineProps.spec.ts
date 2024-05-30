@@ -597,9 +597,27 @@ const props = defineProps({ foo: String })
         foo: Foo
       }>()
       </script>`,
+      {
+        propsDestructure: false,
+      },
     )
     expect(content).toMatch(`const { foo } = __props`)
     assertCode(content)
+  })
+
+  test('prohibiting reactive destructure', () => {
+    expect(() =>
+      compile(
+        `<script setup lang="ts">
+      const { foo } = defineProps<{
+        foo: Foo
+      }>()
+      </script>`,
+        {
+          propsDestructure: 'error',
+        },
+      ),
+    ).toThrow()
   })
 
   describe('errors', () => {

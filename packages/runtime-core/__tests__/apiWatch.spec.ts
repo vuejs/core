@@ -23,6 +23,7 @@ import {
 } from '@vue/runtime-test'
 import {
   type DebuggerEvent,
+  EffectFlags,
   ITERATE_KEY,
   type Ref,
   type ShallowRef,
@@ -932,6 +933,52 @@ describe('api: watch', () => {
     expect(dummy).toEqual([1, 2])
   })
 
+  it('deep with symbols', async () => {
+    const symbol1 = Symbol()
+    const symbol2 = Symbol()
+    const symbol3 = Symbol()
+    const symbol4 = Symbol()
+
+    const raw: any = {
+      [symbol1]: {
+        [symbol2]: 1,
+      },
+    }
+
+    Object.defineProperty(raw, symbol3, {
+      writable: true,
+      enumerable: false,
+      value: 1,
+    })
+
+    const state = reactive(raw)
+    const spy = vi.fn()
+
+    watch(() => state, spy, { deep: true })
+
+    await nextTick()
+    expect(spy).toHaveBeenCalledTimes(0)
+
+    state[symbol1][symbol2] = 2
+    await nextTick()
+    expect(spy).toHaveBeenCalledTimes(1)
+
+    // Non-enumerable properties don't trigger deep watchers
+    state[symbol3] = 3
+    await nextTick()
+    expect(spy).toHaveBeenCalledTimes(1)
+
+    // Adding a new symbol property
+    state[symbol4] = 1
+    await nextTick()
+    expect(spy).toHaveBeenCalledTimes(2)
+
+    // Removing a symbol property
+    delete state[symbol4]
+    await nextTick()
+    expect(spy).toHaveBeenCalledTimes(3)
+  })
+
   it('immediate', async () => {
     const count = ref(0)
     const cb = vi.fn()
@@ -1227,7 +1274,7 @@ describe('api: watch', () => {
     await nextTick()
     await nextTick()
 
-    expect(instance!.scope.effects[0].active).toBe(false)
+    expect(instance!.scope.effects[0].flags & EffectFlags.ACTIVE).toBeFalsy()
   })
 
   test('this.$watch should pass `this.proxy` to watch source as the first argument ', () => {
@@ -1515,5 +1562,63 @@ describe('api: watch', () => {
     expect(scope.effects.length).toBe(1)
     unwatch!()
     expect(scope.effects.length).toBe(0)
+  })
+
+  // simplified case of VueUse syncRef
+  test('sync watcher should not be batched', () => {
+    const a = ref(0)
+    const b = ref(0)
+    let pauseB = false
+    watch(
+      a,
+      () => {
+        pauseB = true
+        b.value = a.value + 1
+        pauseB = false
+      },
+      { flush: 'sync' },
+    )
+    watch(
+      b,
+      () => {
+        if (!pauseB) {
+          throw new Error('should not be called')
+        }
+      },
+      { flush: 'sync' },
+    )
+
+    a.value = 1
+    expect(b.value).toBe(2)
+  })
+
+  test('watchEffect should not fire on computed deps that did not change', async () => {
+    const a = ref(0)
+    const c = computed(() => a.value % 2)
+    const spy = vi.fn()
+    watchEffect(() => {
+      spy()
+      c.value
+    })
+    expect(spy).toHaveBeenCalledTimes(1)
+    a.value += 2
+    await nextTick()
+    expect(spy).toHaveBeenCalledTimes(1)
+  })
+
+  test('circular reference', async () => {
+    const obj = { a: 1 }
+    // @ts-expect-error
+    obj.b = obj
+    const foo = ref(obj)
+    const spy = vi.fn()
+
+    watch(foo, spy, { deep: true })
+
+    // @ts-expect-error
+    foo.value.b.a = 2
+    await nextTick()
+    expect(spy).toHaveBeenCalledTimes(1)
+    expect(foo.value.a).toBe(2)
   })
 })

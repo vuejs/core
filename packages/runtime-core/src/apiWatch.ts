@@ -1,6 +1,7 @@
 import {
   type ComputedRef,
   type DebuggerOptions,
+  EffectFlags,
   type EffectScheduler,
   ReactiveEffect,
   ReactiveFlags,
@@ -10,7 +11,7 @@ import {
   isRef,
   isShallow,
 } from '@vue/reactivity'
-import { type SchedulerJob, queueJob } from './scheduler'
+import { type SchedulerJob, SchedulerJobFlags, queueJob } from './scheduler'
 import {
   EMPTY_OBJ,
   NOOP,
@@ -65,7 +66,7 @@ type MapSources<T, Immediate> = {
       : never
 }
 
-type OnCleanup = (cleanupFn: () => void) => void
+export type OnCleanup = (cleanupFn: () => void) => void
 
 export interface WatchOptionsBase extends DebuggerOptions {
   flush?: 'pre' | 'post' | 'sync'
@@ -337,8 +338,11 @@ function doWatch(
   let oldValue: any = isMultiSource
     ? new Array((source as []).length).fill(INITIAL_WATCHER_VALUE)
     : INITIAL_WATCHER_VALUE
-  const job: SchedulerJob = () => {
-    if (!effect.active || !effect.dirty) {
+  const job: SchedulerJob = (immediateFirstRun?: boolean) => {
+    if (
+      !(effect.flags & EffectFlags.ACTIVE) ||
+      (!effect.dirty && !immediateFirstRun)
+    ) {
       return
     }
     if (cb) {
@@ -378,21 +382,23 @@ function doWatch(
 
   // important: mark the job as a watcher callback so that scheduler knows
   // it is allowed to self-trigger (#1727)
-  job.allowRecurse = !!cb
+  if (cb) job.flags! |= SchedulerJobFlags.ALLOW_RECURSE
+
+  const effect = new ReactiveEffect(getter)
 
   let scheduler: EffectScheduler
   if (flush === 'sync') {
+    effect.flags |= EffectFlags.NO_BATCH
     scheduler = job as any // the scheduler function gets called directly
   } else if (flush === 'post') {
     scheduler = () => queuePostRenderEffect(job, instance && instance.suspense)
   } else {
     // default: 'pre'
-    job.pre = true
+    job.flags! |= SchedulerJobFlags.PRE
     if (instance) job.id = instance.uid
     scheduler = () => queueJob(job)
   }
-
-  const effect = new ReactiveEffect(getter, NOOP, scheduler)
+  effect.scheduler = scheduler
 
   const scope = getCurrentScope()
   const unwatch = () => {
@@ -410,7 +416,7 @@ function doWatch(
   // initial run
   if (cb) {
     if (immediate) {
-      job()
+      job(true)
     } else {
       oldValue = effect.run()
     }
@@ -492,6 +498,11 @@ export function traverse(
   } else if (isPlainObject(value)) {
     for (const key in value) {
       traverse(value[key], depth, seen)
+    }
+    for (const key of Object.getOwnPropertySymbols(value)) {
+      if (Object.prototype.propertyIsEnumerable.call(value, key)) {
+        traverse(value[key as any], depth, seen)
+      }
     }
   }
   return value

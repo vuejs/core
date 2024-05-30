@@ -256,7 +256,13 @@ describe('vModel', () => {
   it('should support modifiers', async () => {
     const component = defineComponent({
       data() {
-        return { number: null, trim: null, lazy: null, trimNumber: null }
+        return {
+          number: null,
+          trim: null,
+          lazy: null,
+          trimNumber: null,
+          trimLazy: null,
+        }
       },
       render() {
         return [
@@ -282,6 +288,19 @@ describe('vModel', () => {
             this.trim,
             {
               trim: true,
+            },
+          ),
+          withVModel(
+            h('input', {
+              class: 'trim-lazy',
+              'onUpdate:modelValue': (val: any) => {
+                this.trimLazy = val
+              },
+            }),
+            this.trim,
+            {
+              trim: true,
+              lazy: true,
             },
           ),
           withVModel(
@@ -317,6 +336,7 @@ describe('vModel', () => {
     const number = root.querySelector('.number')
     const trim = root.querySelector('.trim')
     const trimNumber = root.querySelector('.trim-number')
+    const trimLazy = root.querySelector('.trim-lazy')
     const lazy = root.querySelector('.lazy')
     const data = root._vnode.component.data
 
@@ -339,6 +359,11 @@ describe('vModel', () => {
     triggerEvent('input', trimNumber)
     await nextTick()
     expect(data.trimNumber).toEqual(1.2)
+
+    trimLazy.value = '   ddd    '
+    triggerEvent('change', trimLazy)
+    await nextTick()
+    expect(data.trimLazy).toEqual('ddd')
 
     lazy.value = 'foo'
     triggerEvent('change', lazy)

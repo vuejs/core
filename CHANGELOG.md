@@ -11,6 +11,22 @@
 
 
 
+# [3.5.0-alpha.2](https://github.com/vuejs/core/compare/v3.4.26...v3.5.0-alpha.2) (2024-05-04)
+
+
+### Bug Fixes
+
+* **types:** fix app.component() typing with inline defineComponent ([908f70a](https://github.com/vuejs/core/commit/908f70adc06038d1ea253d96f4024367f4a7545d)), closes [#10843](https://github.com/vuejs/core/issues/10843)
+* **types:** fix compat with generated types that rely on CreateComponentPublicInstance ([c146186](https://github.com/vuejs/core/commit/c146186396d0c1a65423b8c9a21251c5a6467336)), closes [#10842](https://github.com/vuejs/core/issues/10842)
+* **types:** props in defineOptions type should be optional ([124c4ca](https://github.com/vuejs/core/commit/124c4cac833a28ae9bc8edc576c1d0c7c41f5985)), closes [#10841](https://github.com/vuejs/core/issues/10841)
+
+
+### Features
+
+* **runtime-core:** add app.onUnmount() for registering cleanup functions ([#4619](https://github.com/vuejs/core/issues/4619)) ([582a3a3](https://github.com/vuejs/core/commit/582a3a382b1adda565bac576b913a88d9e8d7a9e)), closes [#4516](https://github.com/vuejs/core/issues/4516)
+
+
+
 ## [3.4.26](https://github.com/vuejs/core/compare/v3.4.25...v3.4.26) (2024-04-29)
 
 
@@ -22,6 +38,29 @@
 * **runtime-core:** ensure slot compiler marker writable ([#10825](https://github.com/vuejs/core/issues/10825)) ([9c2de62](https://github.com/vuejs/core/commit/9c2de6244cd44bc5fbfd82b5850c710ce725044f)), closes [#10818](https://github.com/vuejs/core/issues/10818)
 * **runtime-core:** properly handle inherit transition during clone VNode ([#10809](https://github.com/vuejs/core/issues/10809)) ([638a79f](https://github.com/vuejs/core/commit/638a79f64a7e184f2a2c65e21d764703f4bda561)), closes [#3716](https://github.com/vuejs/core/issues/3716) [#10497](https://github.com/vuejs/core/issues/10497) [#4091](https://github.com/vuejs/core/issues/4091)
 * **Transition:** re-fix [#10620](https://github.com/vuejs/core/issues/10620) ([#10832](https://github.com/vuejs/core/issues/10832)) ([accf839](https://github.com/vuejs/core/commit/accf8396ae1c9dd49759ba0546483f1d2c70c9bc)), closes [#10632](https://github.com/vuejs/core/issues/10632) [#10827](https://github.com/vuejs/core/issues/10827)
+
+
+
+# [3.5.0-alpha.1](https://github.com/vuejs/core/compare/v3.4.25...v3.5.0-alpha.1) (2024-04-29)
+
+
+### Bug Fixes
+
+* **reactivity:** fix call sequence of ontrigger in effect ([#10501](https://github.com/vuejs/core/issues/10501)) ([28841fe](https://github.com/vuejs/core/commit/28841fee43a45c37905c2c1ed9ace23067539045))
+
+
+### Features
+
+* **compiler-sfc:** enable reactive props destructure by default ([d2dac0e](https://github.com/vuejs/core/commit/d2dac0e359c47d1ed0aa77eda488e76fd6466d2d))
+* **reactivity:** `onEffectCleanup` API ([2cc5615](https://github.com/vuejs/core/commit/2cc5615590de77126e8df46136de0240dbde5004)), closes [#10173](https://github.com/vuejs/core/issues/10173)
+* **reactivity:** add failSilently argument for onScopeDispose ([9a936aa](https://github.com/vuejs/core/commit/9a936aaec489c79433a32791ecf5ddb1739a62bd))
+* **transition:** support directly nesting Teleport inside Transition ([#6548](https://github.com/vuejs/core/issues/6548)) ([0e6e3c7](https://github.com/vuejs/core/commit/0e6e3c7eb0e5320b7c1818e025cb4a490fede9c0)), closes [#5836](https://github.com/vuejs/core/issues/5836)
+* **types:** provide internal options for directly using user types in language tools ([#10801](https://github.com/vuejs/core/issues/10801)) ([75c8cf6](https://github.com/vuejs/core/commit/75c8cf63a1ef30ac84f91282d66ad3f57c6612e9))
+
+
+### Performance Improvements
+
+* **reactivity:** optimize array tracking ([#9511](https://github.com/vuejs/core/issues/9511)) ([70196a4](https://github.com/vuejs/core/commit/70196a40cc078f50fcc1110c38c06fbcc70b205e)), closes [#4318](https://github.com/vuejs/core/issues/4318)
 
 
 
