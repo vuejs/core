@@ -842,7 +842,9 @@ export function createWatcher(
   const options: WatchOptions = {}
   if (__COMPAT__) {
     const instance =
-      getCurrentScope() === currentInstance?.scope ? currentInstance : null
+      currentInstance && getCurrentScope() === currentInstance.scope
+        ? currentInstance
+        : null
 
     const newValue = getter()
     if (

@@ -215,13 +215,13 @@ export function baseWatch(
       const _cb = cb
       cb = (...args) => {
         _cb(...args)
-        effect?.stop()
+        effect.stop()
       }
     } else {
       const _getter = getter
       getter = () => {
         _getter()
-        effect?.stop()
+        effect.stop()
       }
     }
   }
