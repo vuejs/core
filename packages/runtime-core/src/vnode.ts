@@ -463,6 +463,7 @@ function createBaseVNode(
     appContext: null,
     ctx: currentRenderingInstance,
   } as VNode
+
   if (vnode.ctx && currentRenderingInstance?.parent?.ut) {
     vnode.ctx.parentUt = {
       ut: currentRenderingInstance.parent.ut,
