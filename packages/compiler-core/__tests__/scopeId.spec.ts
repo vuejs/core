@@ -96,7 +96,7 @@ describe('scopeId compiler support', () => {
     expect(ast.helpers).toContain(POP_SCOPE_ID)
     expect(ast.hoists.length).toBe(2)
     ;[
-      `const _withScopeId = (n: () => any) => (_pushScopeId("test"),n=n(),_popScopeId(),n)`,
+      `const _withScopeId = (n: any) => (_pushScopeId("test"),n=n(),_popScopeId(),n)`,
       `const _hoisted_1 = /*#__PURE__*/ _withScopeId(() => /*#__PURE__*/_createElementVNode("div", null, "hello", ${genFlagText(
         PatchFlags.HOISTED,
       )}))`,
