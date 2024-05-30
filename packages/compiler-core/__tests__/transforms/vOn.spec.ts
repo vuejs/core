@@ -603,7 +603,7 @@ describe('compiler: transform v-on', () => {
       expect(root.cached).toBe(1)
     })
 
-    test('unicode identifier should not be cached (v-for, v-slot)', () => {
+    test('unicode identifier should not be cached (v-for)', () => {
       const { root } = parseWithVOn(
         `<div v-for="项 in items" :key="value"><div v-on:click="foo(项)"/></div>`,
         {
@@ -611,7 +611,6 @@ describe('compiler: transform v-on', () => {
           cacheHandlers: true,
         },
       )
-      expect(root.cached).not.toBe(1)
       expect(root.cached).toBe(0)
     })
 
