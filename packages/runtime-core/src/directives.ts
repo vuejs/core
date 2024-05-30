@@ -42,8 +42,8 @@ export type DirectiveHook<T = any, Prev = VNode<any, T> | null, V = any> = (
   prevVNode: Prev,
 ) => void
 
-export type SSRDirectiveHook = (
-  binding: DirectiveBinding,
+export type SSRDirectiveHook<V> = (
+  binding: DirectiveBinding<V>,
   vnode: VNode,
 ) => Data | undefined
 
@@ -55,7 +55,7 @@ export interface ObjectDirective<T = any, V = any> {
   updated?: DirectiveHook<T, VNode<any, T>, V>
   beforeUnmount?: DirectiveHook<T, null, V>
   unmounted?: DirectiveHook<T, null, V>
-  getSSRProps?: SSRDirectiveHook
+  getSSRProps?: SSRDirectiveHook<V>
   deep?: boolean
 }
 
