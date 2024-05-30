@@ -578,7 +578,7 @@ export interface ForRenderListExpression extends CallExpression {
 }
 
 export interface ForIteratorExpression extends FunctionExpression {
-  returns: BlockCodegenNode
+  returns?: BlockCodegenNode
 }
 
 // AST Utilities ---------------------------------------------------------------

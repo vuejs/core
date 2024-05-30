@@ -1,6 +1,7 @@
 import {
   type Ref,
   type VueElement,
+  createApp,
   defineAsyncComponent,
   defineComponent,
   defineCustomElement,
@@ -58,6 +59,54 @@ describe('defineCustomElement', () => {
       await nextTick()
       expect(e._instance).toBe(null)
       expect(e.shadowRoot!.innerHTML).toBe('')
+    })
+
+    // #10610
+    test('When elements move, avoid prematurely disconnecting MutationObserver', async () => {
+      const CustomInput = defineCustomElement({
+        props: ['value'],
+        emits: ['update'],
+        setup(props, { emit }) {
+          return () =>
+            h('input', {
+              type: 'number',
+              value: props.value,
+              onInput: (e: InputEvent) => {
+                const num = (e.target! as HTMLInputElement).valueAsNumber
+                emit('update', Number.isNaN(num) ? null : num)
+              },
+            })
+        },
+      })
+      customElements.define('my-el-input', CustomInput)
+      const num = ref('12')
+      const containerComp = defineComponent({
+        setup() {
+          return () => {
+            return h('div', [
+              h('my-el-input', {
+                value: num.value,
+                onUpdate: ($event: CustomEvent) => {
+                  num.value = $event.detail[0]
+                },
+              }),
+              h('div', { id: 'move' }),
+            ])
+          }
+        },
+      })
+      const app = createApp(containerComp)
+      app.mount(container)
+      const myInputEl = container.querySelector('my-el-input')!
+      const inputEl = myInputEl.shadowRoot!.querySelector('input')!
+      await nextTick()
+      expect(inputEl.value).toBe('12')
+      const moveEl = container.querySelector('#move')!
+      moveEl.append(myInputEl)
+      await nextTick()
+      myInputEl.removeAttribute('value')
+      await nextTick()
+      expect(inputEl.value).toBe('')
     })
 
     test('should not unmount on move', async () => {

@@ -76,7 +76,7 @@ export function queueJob(job: SchedulerJob) {
     } else if (
       // fast path when the job id is larger than the tail
       !(job.flags! & SchedulerJobFlags.PRE) &&
-      job.id >= (queue[queue.length - 1]?.id || 0)
+      job.id >= ((queue[queue.length - 1] && queue[queue.length - 1].id) || 0)
     ) {
       queue.push(job)
     } else {

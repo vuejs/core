@@ -142,9 +142,9 @@ export const toHandlerKey = cacheStringFunction(<T extends string>(str: T) => {
 export const hasChanged = (value: any, oldValue: any): boolean =>
   !Object.is(value, oldValue)
 
-export const invokeArrayFns = (fns: Function[], arg?: any) => {
+export const invokeArrayFns = (fns: Function[], ...arg: any[]) => {
   for (let i = 0; i < fns.length; i++) {
-    fns[i](arg)
+    fns[i](...arg)
   }
 }
 
