@@ -24,7 +24,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Install pnpm
-        uses: pnpm/action-setup@v2
+        uses: pnpm/action-setup@v3.0.0
 
       - name: Install Node.js
         uses: actions/setup-node@v4
@@ -34,18 +34,6 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install
-
-      - name: Download PR number
-        uses: dawidd6/action-download-artifact@v3
-        with:
-          name: pr-number
-          run_id: ${{ github.event.workflow_run.id }}
-
-      - name: Read PR Number
-        id: pr-number
-        uses: juliangruber/read-file-action@v1
-        with:
-          path: ./pr.txt
 
       - name: Download Size Data
         uses: dawidd6/action-download-artifact@v3
@@ -77,7 +65,6 @@ jobs:
         uses: actions-cool/maintain-one-comment@v3
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          number: ${{ steps.pr-number.outputs.content }}
           body: |
             ${{ steps.size-report.outputs.content }}
             <!-- VUE_CORE_SIZE -->

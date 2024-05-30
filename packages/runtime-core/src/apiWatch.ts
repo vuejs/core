@@ -66,7 +66,7 @@ type MapSources<T, Immediate> = {
       : never
 }
 
-type OnCleanup = (cleanupFn: () => void) => void
+export type OnCleanup = (cleanupFn: () => void) => void
 
 export interface WatchOptionsBase extends DebuggerOptions {
   flush?: 'pre' | 'post' | 'sync'
@@ -472,19 +472,11 @@ export function createPathGetter(ctx: any, path: string) {
 
 export function traverse(
   value: unknown,
-  depth?: number,
-  currentDepth = 0,
+  depth = Infinity,
   seen?: Set<unknown>,
 ) {
-  if (!isObject(value) || (value as any)[ReactiveFlags.SKIP]) {
+  if (depth <= 0 || !isObject(value) || (value as any)[ReactiveFlags.SKIP]) {
     return value
-  }
-
-  if (depth && depth > 0) {
-    if (currentDepth >= depth) {
-      return value
-    }
-    currentDepth++
   }
 
   seen = seen || new Set()
@@ -492,19 +484,25 @@ export function traverse(
     return value
   }
   seen.add(value)
+  depth--
   if (isRef(value)) {
-    traverse(value.value, depth, currentDepth, seen)
+    traverse(value.value, depth, seen)
   } else if (isArray(value)) {
     for (let i = 0; i < value.length; i++) {
-      traverse(value[i], depth, currentDepth, seen)
+      traverse(value[i], depth, seen)
     }
   } else if (isSet(value) || isMap(value)) {
     value.forEach((v: any) => {
-      traverse(v, depth, currentDepth, seen)
+      traverse(v, depth, seen)
     })
   } else if (isPlainObject(value)) {
     for (const key in value) {
-      traverse(value[key], depth, currentDepth, seen)
+      traverse(value[key], depth, seen)
+    }
+    for (const key of Object.getOwnPropertySymbols(value)) {
+      if (Object.prototype.propertyIsEnumerable.call(value, key)) {
+        traverse(value[key as any], depth, seen)
+      }
     }
   }
   return value

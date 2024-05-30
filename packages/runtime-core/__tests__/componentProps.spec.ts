@@ -11,6 +11,7 @@ import {
   getCurrentInstance,
   h,
   inject,
+  nextTick,
   nodeOps,
   provide,
   ref,
@@ -19,7 +20,7 @@ import {
   toRefs,
   watch,
 } from '@vue/runtime-test'
-import { render as domRender, nextTick } from 'vue'
+import { render as domRender } from 'vue'
 
 describe('component props', () => {
   test('stateful', () => {

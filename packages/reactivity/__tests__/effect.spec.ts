@@ -23,6 +23,7 @@ import {
 } from '@vue/runtime-test'
 import {
   endBatch,
+  onEffectCleanup,
   pauseTracking,
   resetTracking,
   startBatch,
@@ -768,6 +769,32 @@ describe('reactivity/effect', () => {
     ])
   })
 
+  it('debug: the call sequence of onTrack', () => {
+    const seq: number[] = []
+    const s = ref(0)
+
+    const track1 = () => seq.push(1)
+    const track2 = () => seq.push(2)
+
+    effect(
+      () => {
+        s.value
+      },
+      {
+        onTrack: track1,
+      },
+    )
+    effect(
+      () => {
+        s.value
+      },
+      {
+        onTrack: track2,
+      },
+    )
+    expect(seq.toString()).toBe('1,2')
+  })
+
   it('events: onTrigger', () => {
     let events: DebuggerEvent[] = []
     let dummy
@@ -804,6 +831,51 @@ describe('reactivity/effect', () => {
       key: 'foo',
       oldValue: 2,
     })
+  })
+
+  it('debug: the call sequence of onTrigger', () => {
+    const seq: number[] = []
+    const s = ref(0)
+
+    const trigger1 = () => seq.push(1)
+    const trigger2 = () => seq.push(2)
+    const trigger3 = () => seq.push(3)
+    const trigger4 = () => seq.push(4)
+
+    effect(
+      () => {
+        s.value
+      },
+      {
+        onTrigger: trigger1,
+      },
+    )
+    effect(
+      () => {
+        s.value
+        effect(
+          () => {
+            s.value
+            effect(
+              () => {
+                s.value
+              },
+              {
+                onTrigger: trigger4,
+              },
+            )
+          },
+          {
+            onTrigger: trigger3,
+          },
+        )
+      },
+      {
+        onTrigger: trigger2,
+      },
+    )
+    s.value++
+    expect(seq.toString()).toBe('1,2,3,4')
   })
 
   it('stop', () => {
@@ -1129,6 +1201,44 @@ describe('reactivity/effect', () => {
       expect(getSubCount(getDepFromReactive(toRaw(obj), 'b'))).toBe(1)
       expect(getDepFromReactive(toRaw(obj), 'c')).toBe(depC)
       expect(getSubCount(depC)).toBe(1)
+    })
+  })
+
+  describe('onEffectCleanup', () => {
+    it('should get called correctly', async () => {
+      const count = ref(0)
+      const cleanupEffect = vi.fn()
+
+      const e = effect(() => {
+        onEffectCleanup(cleanupEffect)
+        count.value
+      })
+
+      count.value++
+      await nextTick()
+      expect(cleanupEffect).toHaveBeenCalledTimes(1)
+
+      count.value++
+      await nextTick()
+      expect(cleanupEffect).toHaveBeenCalledTimes(2)
+
+      // call it on stop
+      e.effect.stop()
+      expect(cleanupEffect).toHaveBeenCalledTimes(3)
+    })
+
+    it('should warn if called without active effect', () => {
+      onEffectCleanup(() => {})
+      expect(
+        `onEffectCleanup() was called when there was no active effect`,
+      ).toHaveBeenWarned()
+    })
+
+    it('should not warn without active effect when failSilently argument is passed', () => {
+      onEffectCleanup(() => {}, true)
+      expect(
+        `onEffectCleanup() was called when there was no active effect`,
+      ).not.toHaveBeenWarned()
     })
   })
 })
