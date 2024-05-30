@@ -57,6 +57,11 @@ watch(readonlyArr, (values, oldValues) => {
   expectType<Readonly<[string, string, number]>>(oldValues)
 })
 
+// no type error, case from vueuse
+declare const aAny: any
+watch(aAny, (v, ov) => {})
+watch(aAny, (v, ov) => {}, { immediate: true })
+
 // immediate watcher's oldValue will be undefined on first run.
 watch(
   source,
