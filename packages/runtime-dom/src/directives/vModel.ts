@@ -221,7 +221,7 @@ export const vModelSelect: ModelDirective<HTMLSelectElement> = {
   updated(el, { value, oldValue, modifiers: { number } }) {
     // #8579
     if (!el._assigning && value !== oldValue) {
-      setSelected(el, value)
+      setSelected(el, value, number)
     }
   },
 }
