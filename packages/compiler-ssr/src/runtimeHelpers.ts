@@ -1,24 +1,32 @@
 import { registerRuntimeHelpers } from '@vue/compiler-dom'
 
-export const SSR_INTERPOLATE = Symbol(`ssrInterpolate`)
-export const SSR_RENDER_VNODE = Symbol(`ssrRenderVNode`)
-export const SSR_RENDER_COMPONENT = Symbol(`ssrRenderComponent`)
-export const SSR_RENDER_SLOT = Symbol(`ssrRenderSlot`)
-export const SSR_RENDER_SLOT_INNER = Symbol(`ssrRenderSlotInner`)
-export const SSR_RENDER_CLASS = Symbol(`ssrRenderClass`)
-export const SSR_RENDER_STYLE = Symbol(`ssrRenderStyle`)
-export const SSR_RENDER_ATTRS = Symbol(`ssrRenderAttrs`)
-export const SSR_RENDER_ATTR = Symbol(`ssrRenderAttr`)
-export const SSR_RENDER_DYNAMIC_ATTR = Symbol(`ssrRenderDynamicAttr`)
-export const SSR_RENDER_LIST = Symbol(`ssrRenderList`)
-export const SSR_INCLUDE_BOOLEAN_ATTR = Symbol(`ssrIncludeBooleanAttr`)
-export const SSR_LOOSE_EQUAL = Symbol(`ssrLooseEqual`)
-export const SSR_LOOSE_CONTAIN = Symbol(`ssrLooseContain`)
-export const SSR_RENDER_DYNAMIC_MODEL = Symbol(`ssrRenderDynamicModel`)
-export const SSR_GET_DYNAMIC_MODEL_PROPS = Symbol(`ssrGetDynamicModelProps`)
-export const SSR_RENDER_TELEPORT = Symbol(`ssrRenderTeleport`)
-export const SSR_RENDER_SUSPENSE = Symbol(`ssrRenderSuspense`)
-export const SSR_GET_DIRECTIVE_PROPS = Symbol(`ssrGetDirectiveProps`)
+export const SSR_INTERPOLATE: unique symbol = Symbol(`ssrInterpolate`)
+export const SSR_RENDER_VNODE: unique symbol = Symbol(`ssrRenderVNode`)
+export const SSR_RENDER_COMPONENT: unique symbol = Symbol(`ssrRenderComponent`)
+export const SSR_RENDER_SLOT: unique symbol = Symbol(`ssrRenderSlot`)
+export const SSR_RENDER_SLOT_INNER: unique symbol = Symbol(`ssrRenderSlotInner`)
+export const SSR_RENDER_CLASS: unique symbol = Symbol(`ssrRenderClass`)
+export const SSR_RENDER_STYLE: unique symbol = Symbol(`ssrRenderStyle`)
+export const SSR_RENDER_ATTRS: unique symbol = Symbol(`ssrRenderAttrs`)
+export const SSR_RENDER_ATTR: unique symbol = Symbol(`ssrRenderAttr`)
+export const SSR_RENDER_DYNAMIC_ATTR: unique symbol =
+  Symbol(`ssrRenderDynamicAttr`)
+export const SSR_RENDER_LIST: unique symbol = Symbol(`ssrRenderList`)
+export const SSR_INCLUDE_BOOLEAN_ATTR: unique symbol = Symbol(
+  `ssrIncludeBooleanAttr`,
+)
+export const SSR_LOOSE_EQUAL: unique symbol = Symbol(`ssrLooseEqual`)
+export const SSR_LOOSE_CONTAIN: unique symbol = Symbol(`ssrLooseContain`)
+export const SSR_RENDER_DYNAMIC_MODEL: unique symbol = Symbol(
+  `ssrRenderDynamicModel`,
+)
+export const SSR_GET_DYNAMIC_MODEL_PROPS: unique symbol = Symbol(
+  `ssrGetDynamicModelProps`,
+)
+export const SSR_RENDER_TELEPORT: unique symbol = Symbol(`ssrRenderTeleport`)
+export const SSR_RENDER_SUSPENSE: unique symbol = Symbol(`ssrRenderSuspense`)
+export const SSR_GET_DIRECTIVE_PROPS: unique symbol =
+  Symbol(`ssrGetDirectiveProps`)
 
 export const ssrHelpers = {
   [SSR_INTERPOLATE]: `ssrInterpolate`,

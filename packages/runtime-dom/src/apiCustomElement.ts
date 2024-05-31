@@ -219,7 +219,7 @@ export class VueElement
   /**
    * @internal
    */
-  _nonce = this._def.nonce
+  _nonce: string | undefined = this._def.nonce
 
   private _connected = false
   private _resolved = false
@@ -272,7 +272,7 @@ export class VueElement
     }
   }
 
-  connectedCallback() {
+  connectedCallback(): void {
     if (!this.shadowRoot) {
       this._parseSlots()
     }
@@ -313,7 +313,7 @@ export class VueElement
     }
   }
 
-  disconnectedCallback() {
+  disconnectedCallback(): void {
     this._connected = false
     nextTick(() => {
       if (!this._connected) {
@@ -456,7 +456,7 @@ export class VueElement
     }
   }
 
-  protected _setAttr(key: string) {
+  protected _setAttr(key: string): void {
     if (key.startsWith('data-v-')) return
     const has = this.hasAttribute(key)
     let value = has ? this.getAttribute(key) : REMOVAL
@@ -470,14 +470,19 @@ export class VueElement
   /**
    * @internal
    */
-  protected _getProp(key: string) {
+  protected _getProp(key: string): any {
     return this._props[key]
   }
 
   /**
    * @internal
    */
-  _setProp(key: string, val: any, shouldReflect = true, shouldUpdate = false) {
+  _setProp(
+    key: string,
+    val: any,
+    shouldReflect = true,
+    shouldUpdate = false,
+  ): void {
     if (val !== this._props[key]) {
       if (val === REMOVAL) {
         delete this._props[key]
@@ -640,7 +645,7 @@ export class VueElement
   /**
    * @internal
    */
-  _injectChildStyle(comp: ConcreteComponent & CustomElementOptions) {
+  _injectChildStyle(comp: ConcreteComponent & CustomElementOptions): void {
     this._applyStyles(comp.styles, comp)
   }
 

@@ -23,10 +23,16 @@ export interface Target {
   [ReactiveFlags.RAW]?: any
 }
 
-export const reactiveMap = new WeakMap<Target, any>()
-export const shallowReactiveMap = new WeakMap<Target, any>()
-export const readonlyMap = new WeakMap<Target, any>()
-export const shallowReadonlyMap = new WeakMap<Target, any>()
+export const reactiveMap: WeakMap<Target, any> = new WeakMap<Target, any>()
+export const shallowReactiveMap: WeakMap<Target, any> = new WeakMap<
+  Target,
+  any
+>()
+export const readonlyMap: WeakMap<Target, any> = new WeakMap<Target, any>()
+export const shallowReadonlyMap: WeakMap<Target, any> = new WeakMap<
+  Target,
+  any
+>()
 
 enum TargetType {
   INVALID = 0,

@@ -228,7 +228,7 @@ export function resolveComponentType(
   node: ComponentNode,
   context: TransformContext,
   ssr = false,
-) {
+): string | symbol | CallExpression {
   let { tag } = node
 
   // 1. dynamic component

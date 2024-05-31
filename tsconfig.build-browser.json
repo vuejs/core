@@ -4,7 +4,8 @@
     "types": [],
     "declaration": true,
     "emitDeclarationOnly": true,
-    "stripInternal": true
+    "stripInternal": true,
+    "composite": false
   },
   "include": [
     "packages/global.d.ts",

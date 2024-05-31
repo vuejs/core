@@ -153,8 +153,11 @@ export const isMemberExpressionBrowser = (path: string): boolean => {
   return !currentOpenBracketCount && !currentOpenParensCount
 }
 
-export const isMemberExpressionNode = __BROWSER__
-  ? (NOOP as any as (path: string, context: TransformContext) => boolean)
+export const isMemberExpressionNode: (
+  path: string,
+  context: TransformContext,
+) => boolean = __BROWSER__
+  ? (NOOP as any)
   : (path: string, context: TransformContext): boolean => {
       try {
         let ret: Expression = parseExpression(path, {
@@ -171,9 +174,10 @@ export const isMemberExpressionNode = __BROWSER__
       }
     }
 
-export const isMemberExpression = __BROWSER__
-  ? isMemberExpressionBrowser
-  : isMemberExpressionNode
+export const isMemberExpression: (
+  path: string,
+  context: TransformContext,
+) => boolean = __BROWSER__ ? isMemberExpressionBrowser : isMemberExpressionNode
 
 export function advancePositionWithClone(
   pos: Position,
@@ -217,7 +221,7 @@ export function advancePositionWithMutation(
   return pos
 }
 
-export function assert(condition: boolean, msg?: string) {
+export function assert(condition: boolean, msg?: string): void {
   /* istanbul ignore if */
   if (!condition) {
     throw new Error(msg || `unexpected compiler condition`)
@@ -331,7 +335,7 @@ export function injectProp(
   node: VNodeCall | RenderSlotCall,
   prop: Property,
   context: TransformContext,
-) {
+): void {
   let propsWithInjection: ObjectExpression | CallExpression | undefined
   /**
    * 1. mergeProps(...)
@@ -498,7 +502,9 @@ export function hasScopeRef(
   }
 }
 
-export function getMemoedVNodeCall(node: BlockCodegenNode | MemoExpression) {
+export function getMemoedVNodeCall(
+  node: BlockCodegenNode | MemoExpression,
+): VNodeCall | RenderSlotCall {
   if (node.type === NodeTypes.JS_CALL_EXPRESSION && node.callee === WITH_MEMO) {
     return node.arguments[1].returns as VNodeCall
   } else {
@@ -506,4 +512,4 @@ export function getMemoedVNodeCall(node: BlockCodegenNode | MemoExpression) {
   }
 }
 
-export const forAliasRE = /([\s\S]*?)\s+(?:in|of)\s+(\S[\s\S]*)/
+export const forAliasRE: RegExp = /([\s\S]*?)\s+(?:in|of)\s+(\S[\s\S]*)/

@@ -4,12 +4,13 @@
     "types": ["node"],
     "declaration": true,
     "emitDeclarationOnly": true,
-    "stripInternal": true
+    "stripInternal": true,
+    "composite": false
   },
   "include": [
     "packages/global.d.ts",
-    "packages/compiler-sfc/src",
-    "packages/compiler-ssr/src",
-    "packages/server-renderer/src"
+    "packages/compiler-sfc/src"
+    // "packages/compiler-ssr/src",
+    // "packages/server-renderer/src"
   ]
 }
