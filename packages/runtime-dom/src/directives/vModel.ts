@@ -82,7 +82,11 @@ export const vModelText: ModelDirective<
   mounted(el, { value }) {
     el.value = value == null ? '' : value
   },
-  beforeUpdate(el, { value, modifiers: { lazy, trim, number } }, vnode) {
+  beforeUpdate(
+    el,
+    { value, oldValue, modifiers: { lazy, trim, number } },
+    vnode
+  ) {
     el[assignKey] = getModelAssigner(vnode)
     // avoid clearing unresolved text. #2302
     if ((el as any).composing) return
@@ -97,7 +101,8 @@ export const vModelText: ModelDirective<
     }
 
     if (document.activeElement === el && el.type !== 'range') {
-      if (lazy) {
+      // #8546
+      if (lazy && value === oldValue) {
         return
       }
       if (trim && el.value.trim() === newValue) {
