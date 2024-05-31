@@ -38,6 +38,9 @@ function getPolicy(): VueTrustedTypePolicy {
 // for use in `innerHTML` assignment, etc.
 // Be careful of whatever value passed to this function.
 function unsafeToTrustedHTML(value: string): TrustedHTML | string {
+  /* eslint-disable-next-line no-restricted-syntax --
+   * the minified compilation result of a single `()?.` isn't very verbose,
+   * we use the syntax for readability here. */
   return getPolicy()?.createHTML(value) || value
 }
 
