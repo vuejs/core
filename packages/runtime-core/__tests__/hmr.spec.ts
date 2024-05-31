@@ -430,7 +430,7 @@ describe('hot module replacement', () => {
       },
       expose: ['count'],
       unmounted: unmountSpy,
-      render: compileToFunction(`<div @click="count++">{{ count }}</div>`)
+      render: compileToFunction(`<div @click="count++">{{ count }}</div>`),
     }
     createRecord(childId, Child)
 
@@ -442,7 +442,7 @@ describe('hot module replacement', () => {
         }
 
         return () => [h(Child, { ref: changeRef }), com.value?.count]
-      }
+      },
     }
 
     render(h(Parent), root)
@@ -455,7 +455,7 @@ describe('hot module replacement', () => {
         return { count: 1 }
       },
       mounted: mountSpy,
-      render: compileToFunction(`<div @click="count++">{{ count }}</div>`)
+      render: compileToFunction(`<div @click="count++">{{ count }}</div>`),
     })
     await nextTick()
     expect(serializeInner(root)).toBe(`<div>1</div>1`)
