@@ -1,4 +1,10 @@
-import { h, Text, FunctionalComponent, Component } from 'vue'
+import {
+  type Component,
+  type FunctionalComponent,
+  Text,
+  type VNode,
+  h,
+} from 'vue'
 import { expectType } from './utils'
 
 // simple function signature
@@ -33,19 +39,19 @@ const Bar: FunctionalComponent<
 
 // assigning runtime options
 Bar.props = {
-  foo: Number
+  foo: Number,
 }
 //  @ts-expect-error
 Bar.props = { foo: String }
 
 Bar.emits = {
-  update: value => value > 1
+  update: value => value > 1,
 }
 //  @ts-expect-error
 Bar.emits = { baz: () => void 0 }
 
 // TSX
-expectType<JSX.Element>(<Bar foo={1} />)
+expectType<JSX.Element>(<Bar foo={1} onUpdate={() => {}} />)
 //  @ts-expect-error
 ;<Foo />
 //  @ts-expect-error
@@ -68,3 +74,29 @@ const Qux: FunctionalComponent<{}, ['foo', 'bar']> = (props, { emit }) => {
 }
 
 expectType<Component>(Qux)
+
+const Quux: FunctionalComponent<
+  {},
+  {},
+  {
+    default: { foo: number }
+    optional?: { foo: number }
+  }
+> = (props, { emit, slots }) => {
+  expectType<{
+    default: (scope: { foo: number }) => VNode[]
+    optional?: (scope: { foo: number }) => VNode[]
+  }>(slots)
+
+  slots.default({ foo: 123 })
+  // @ts-expect-error
+  slots.default({ foo: 'fesf' })
+
+  slots.optional?.({ foo: 123 })
+  // @ts-expect-error
+  slots.optional?.({ foo: 'fesf' })
+  // @ts-expect-error
+  slots.optional({ foo: 123 })
+}
+expectType<Component>(Quux)
+;<Quux />

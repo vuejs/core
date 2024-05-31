@@ -1,11 +1,11 @@
 import { ShapeFlags } from '@vue/shared'
-import { ComponentInternalInstance } from '../component'
-import { ComponentPublicInstance } from '../componentPublicInstance'
-import { VNode } from '../vnode'
-import { assertCompatEnabled, DeprecationTypes } from './compatConfig'
+import type { ComponentInternalInstance } from '../component'
+import type { ComponentPublicInstance } from '../componentPublicInstance'
+import type { VNode } from '../vnode'
+import { DeprecationTypes, assertCompatEnabled } from './compatConfig'
 
 export function getCompatChildren(
-  instance: ComponentInternalInstance
+  instance: ComponentInternalInstance,
 ): ComponentPublicInstance[] {
   assertCompatEnabled(DeprecationTypes.INSTANCE_CHILDREN, instance)
   const root = instance.subTree

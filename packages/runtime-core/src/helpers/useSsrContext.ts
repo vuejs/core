@@ -1,7 +1,7 @@
 import { inject } from '../apiInject'
 import { warn } from '../warning'
 
-export const ssrContextKey = Symbol(__DEV__ ? `ssrContext` : ``)
+export const ssrContextKey = Symbol.for('v-scx')
 
 export const useSSRContext = <T = Record<string, any>>() => {
   if (!__GLOBAL__) {
@@ -10,7 +10,7 @@ export const useSSRContext = <T = Record<string, any>>() => {
       __DEV__ &&
         warn(
           `Server rendering context not provided. Make sure to only call ` +
-            `useSSRContext() conditionally in the server build.`
+            `useSSRContext() conditionally in the server build.`,
         )
     }
     return ctx
