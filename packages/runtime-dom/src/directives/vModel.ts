@@ -85,7 +85,7 @@ export const vModelText: ModelDirective<
   beforeUpdate(
     el,
     { value, oldValue, modifiers: { lazy, trim, number } },
-    vnode
+    vnode,
   ) {
     el[assignKey] = getModelAssigner(vnode)
     // avoid clearing unresolved text. #2302
