@@ -21,10 +21,11 @@ import {
   toRaw,
   toReactive,
 } from './reactive'
-import type { ShallowReactiveMarker } from './reactive'
+import type { Builtin, ShallowReactiveMarker } from './reactive'
 import { type Dep, createDep } from './dep'
 import { ComputedRefImpl } from './computed'
 import { getDepFromReactive } from './reactiveEffect'
+import { warn } from './warning'
 
 declare const RefSymbol: unique symbol
 export declare const RawSymbol: unique symbol
@@ -49,11 +50,10 @@ export function trackRefValue(ref: RefBase<any>) {
     ref = toRaw(ref)
     trackEffect(
       activeEffect,
-      ref.dep ||
-        (ref.dep = createDep(
-          () => (ref.dep = undefined),
-          ref instanceof ComputedRefImpl ? ref : undefined,
-        )),
+      (ref.dep ??= createDep(
+        () => (ref.dep = undefined),
+        ref instanceof ComputedRefImpl ? ref : undefined,
+      )),
       __DEV__
         ? {
             target: ref,
@@ -346,7 +346,7 @@ export type ToRefs<T = any> = {
  */
 export function toRefs<T extends object>(object: T): ToRefs<T> {
   if (__DEV__ && !isProxy(object)) {
-    console.warn(`toRefs() expects a reactive object but received a plain one.`)
+    warn(`toRefs() expects a reactive object but received a plain one.`)
   }
   const ret: any = isArray(object) ? new Array(object.length) : {}
   for (const key in object) {
@@ -475,11 +475,6 @@ function propertyToRef(
     : (new ObjectRefImpl(source, key, defaultValue) as any)
 }
 
-// corner case when use narrows type
-// Ex. type RelativePath = string & { __brand: unknown }
-// RelativePath extends object -> true
-type BaseTypes = string | number | boolean
-
 /**
  * This is a special exported interface for other packages to declare
  * additional types that should bail out for ref unwrapping. For example
@@ -496,20 +491,20 @@ type BaseTypes = string | number | boolean
 export interface RefUnwrapBailTypes {}
 
 export type ShallowUnwrapRef<T> = {
-  [K in keyof T]: DistrubuteRef<T[K]>
+  [K in keyof T]: DistributeRef<T[K]>
 }
 
-type DistrubuteRef<T> = T extends Ref<infer V> ? V : T
+type DistributeRef<T> = T extends Ref<infer V> ? V : T
 
-export type UnwrapRef<T> = T extends ShallowRef<infer V>
-  ? V
-  : T extends Ref<infer V>
-    ? UnwrapRefSimple<V>
-    : UnwrapRefSimple<T>
+export type UnwrapRef<T> =
+  T extends ShallowRef<infer V>
+    ? V
+    : T extends Ref<infer V>
+      ? UnwrapRefSimple<V>
+      : UnwrapRefSimple<T>
 
 export type UnwrapRefSimple<T> = T extends
-  | Function
-  | BaseTypes
+  | Builtin
   | Ref
   | RefUnwrapBailTypes[keyof RefUnwrapBailTypes]
   | { [RawSymbol]?: true }

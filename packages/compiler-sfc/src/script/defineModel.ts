@@ -1,12 +1,7 @@
 import type { LVal, Node, TSType } from '@babel/types'
 import type { ScriptCompileContext } from './context'
 import { inferRuntimeType } from './resolveType'
-import {
-  UNKNOWN_TYPE,
-  concatStrings,
-  isCallOf,
-  toRuntimeTypeString,
-} from './utils'
+import { UNKNOWN_TYPE, isCallOf, toRuntimeTypeString } from './utils'
 import { BindingTypes, unwrapTSNode } from '@vue/compiler-dom'
 
 export const DEFINE_MODEL = 'defineModel'
@@ -15,6 +10,7 @@ export interface ModelDecl {
   type: TSType | undefined
   options: string | undefined
   identifier: string | undefined
+  runtimeOptionNodes: Node[]
 }
 
 export function processDefineModel(
@@ -48,6 +44,7 @@ export function processDefineModel(
 
   let optionsString = options && ctx.getString(options)
   let optionsRemoved = !options
+  const runtimeOptionNodes: Node[] = []
 
   if (
     options &&
@@ -75,6 +72,8 @@ export function processDefineModel(
         // remove prop options from runtime options
         removed++
         ctx.s.remove(ctx.startOffset! + start, ctx.startOffset! + end)
+        // record prop options for invalid scope var reference check
+        runtimeOptionNodes.push(p)
       }
     }
     if (removed === options.properties.length) {
@@ -89,6 +88,7 @@ export function processDefineModel(
   ctx.modelDecls[modelName] = {
     type,
     options: optionsString,
+    runtimeOptionNodes,
     identifier:
       declId && declId.type === 'Identifier' ? declId.name : undefined,
   }
@@ -119,40 +119,50 @@ export function genModelProps(ctx: ScriptCompileContext) {
 
   const isProd = !!ctx.options.isProd
   let modelPropsDecl = ''
-  for (const [name, { type, options }] of Object.entries(ctx.modelDecls)) {
+  for (const [name, { type, options: runtimeOptions }] of Object.entries(
+    ctx.modelDecls,
+  )) {
     let skipCheck = false
-
+    let codegenOptions = ``
     let runtimeTypes = type && inferRuntimeType(ctx, type)
     if (runtimeTypes) {
+      const hasBoolean = runtimeTypes.includes('Boolean')
+      const hasFunction = runtimeTypes.includes('Function')
       const hasUnknownType = runtimeTypes.includes(UNKNOWN_TYPE)
 
-      runtimeTypes = runtimeTypes.filter(el => {
-        if (el === UNKNOWN_TYPE) return false
-        return isProd
-          ? el === 'Boolean' || (el === 'Function' && options)
-          : true
-      })
-      skipCheck = !isProd && hasUnknownType && runtimeTypes.length > 0
+      if (hasUnknownType) {
+        if (hasBoolean || hasFunction) {
+          runtimeTypes = runtimeTypes.filter(t => t !== UNKNOWN_TYPE)
+          skipCheck = true
+        } else {
+          runtimeTypes = ['null']
+        }
+      }
+
+      if (!isProd) {
+        codegenOptions =
+          `type: ${toRuntimeTypeString(runtimeTypes)}` +
+          (skipCheck ? ', skipCheck: true' : '')
+      } else if (hasBoolean || (runtimeOptions && hasFunction)) {
+        // preserve types if contains boolean, or
+        // function w/ runtime options that may contain default
+        codegenOptions = `type: ${toRuntimeTypeString(runtimeTypes)}`
+      } else {
+        // able to drop types in production
+      }
     }
 
-    let runtimeType =
-      (runtimeTypes &&
-        runtimeTypes.length > 0 &&
-        toRuntimeTypeString(runtimeTypes)) ||
-      undefined
-
-    const codegenOptions = concatStrings([
-      runtimeType && `type: ${runtimeType}`,
-      skipCheck && 'skipCheck: true',
-    ])
-
     let decl: string
-    if (runtimeType && options) {
+    if (codegenOptions && runtimeOptions) {
       decl = ctx.isTS
-        ? `{ ${codegenOptions}, ...${options} }`
-        : `Object.assign({ ${codegenOptions} }, ${options})`
+        ? `{ ${codegenOptions}, ...${runtimeOptions} }`
+        : `Object.assign({ ${codegenOptions} }, ${runtimeOptions})`
+    } else if (codegenOptions) {
+      decl = `{ ${codegenOptions} }`
+    } else if (runtimeOptions) {
+      decl = runtimeOptions
     } else {
-      decl = options || (runtimeType ? `{ ${codegenOptions} }` : '{}')
+      decl = `{}`
     }
     modelPropsDecl += `\n    ${JSON.stringify(name)}: ${decl},`
 

@@ -1,5 +1,24 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
+exports[`stringify static html > should bail for <option> elements with number values 1`] = `
+"const { createElementVNode: _createElementVNode, openBlock: _openBlock, createElementBlock: _createElementBlock } = Vue
+
+const _hoisted_1 = /*#__PURE__*/_createElementVNode("select", null, [
+  /*#__PURE__*/_createElementVNode("option", { value: 1 }),
+  /*#__PURE__*/_createElementVNode("option", { value: 1 }),
+  /*#__PURE__*/_createElementVNode("option", { value: 1 }),
+  /*#__PURE__*/_createElementVNode("option", { value: 1 }),
+  /*#__PURE__*/_createElementVNode("option", { value: 1 })
+], -1 /* HOISTED */)
+const _hoisted_2 = [
+  _hoisted_1
+]
+
+return function render(_ctx, _cache) {
+  return (_openBlock(), _createElementBlock("div", null, _hoisted_2))
+}"
+`;
+
 exports[`stringify static html > should bail on bindings that are hoisted but not stringifiable 1`] = `
 "const { createElementVNode: _createElementVNode, openBlock: _openBlock, createElementBlock: _createElementBlock } = Vue
 
@@ -11,6 +30,19 @@ const _hoisted_1 = /*#__PURE__*/_createElementVNode("div", null, [
   /*#__PURE__*/_createElementVNode("span", { class: "foo" }, "foo"),
   /*#__PURE__*/_createElementVNode("img", { src: _imports_0_ })
 ], -1 /* HOISTED */)
+const _hoisted_2 = [
+  _hoisted_1
+]
+
+return function render(_ctx, _cache) {
+  return (_openBlock(), _createElementBlock("div", null, _hoisted_2))
+}"
+`;
+
+exports[`stringify static html > should work for <option> elements with string values 1`] = `
+"const { createElementVNode: _createElementVNode, createStaticVNode: _createStaticVNode, openBlock: _openBlock, createElementBlock: _createElementBlock } = Vue
+
+const _hoisted_1 = /*#__PURE__*/_createStaticVNode("<select><option value=\\"1\\"></option><option value=\\"1\\"></option><option value=\\"1\\"></option><option value=\\"1\\"></option><option value=\\"1\\"></option></select>", 1)
 const _hoisted_2 = [
   _hoisted_1
 ]

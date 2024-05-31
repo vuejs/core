@@ -22,6 +22,7 @@ import {
   isKnownHtmlAttr,
   isKnownSvgAttr,
   isOn,
+  isRenderableAttrValue,
   isReservedProp,
   isString,
   normalizeClass,
@@ -119,6 +120,7 @@ export function createHydrationFunctions(
     slotScopeIds: string[] | null,
     optimized = false,
   ): Node | null => {
+    optimized = optimized || !!vnode.dynamicChildren
     const isFragmentStart = isComment(node) && node.data === '['
     const onMismatch = () =>
       handleMismatch(
@@ -442,13 +444,17 @@ export function createHydrationFunctions(
       if (props) {
         if (
           __DEV__ ||
+          __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__ ||
           forcePatch ||
           !optimized ||
           patchFlag & (PatchFlags.FULL_PROPS | PatchFlags.NEED_HYDRATION)
         ) {
           for (const key in props) {
             // check hydration mismatch
-            if (__DEV__ && propHasMismatch(el, key, props[key], vnode)) {
+            if (
+              (__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
+              propHasMismatch(el, key, props[key], vnode, parentComponent)
+            ) {
               hasMismatch = true
             }
             if (
@@ -535,7 +541,9 @@ export function createHydrationFunctions(
           optimized,
         )
       } else if (vnode.type === Text && !vnode.children) {
-        continue
+        // #7215 create a TextNode for empty text node
+        // because server rendered HTML won't contain a text node
+        insert((vnode.el = createText('')), container)
       } else {
         hasMismatch = true
         if (
@@ -717,56 +725,78 @@ function propHasMismatch(
   key: string,
   clientValue: any,
   vnode: VNode,
+  instance: ComponentInternalInstance | null,
 ): boolean {
   let mismatchType: string | undefined
   let mismatchKey: string | undefined
-  let actual: any
-  let expected: any
+  let actual: string | boolean | null | undefined
+  let expected: string | boolean | null | undefined
   if (key === 'class') {
     // classes might be in different order, but that doesn't affect cascade
     // so we just need to check if the class lists contain the same classes.
-    actual = toClassSet(el.getAttribute('class') || '')
-    expected = toClassSet(normalizeClass(clientValue))
-    if (!isSetEqual(actual, expected)) {
+    actual = el.getAttribute('class')
+    expected = normalizeClass(clientValue)
+    if (!isSetEqual(toClassSet(actual || ''), toClassSet(expected))) {
       mismatchType = mismatchKey = `class`
     }
   } else if (key === 'style') {
     // style might be in different order, but that doesn't affect cascade
-    actual = toStyleMap(el.getAttribute('style') || '')
-    expected = toStyleMap(
-      isString(clientValue)
-        ? clientValue
-        : stringifyStyle(normalizeStyle(clientValue)),
-    )
+    actual = el.getAttribute('style') || ''
+    expected = isString(clientValue)
+      ? clientValue
+      : stringifyStyle(normalizeStyle(clientValue))
+    const actualMap = toStyleMap(actual)
+    const expectedMap = toStyleMap(expected)
     // If `v-show=false`, `display: 'none'` should be added to expected
     if (vnode.dirs) {
       for (const { dir, value } of vnode.dirs) {
         // @ts-expect-error only vShow has this internal name
         if (dir.name === 'show' && !value) {
-          expected.set('display', 'none')
+          expectedMap.set('display', 'none')
         }
       }
     }
-    if (!isMapEqual(actual, expected)) {
+
+    // eslint-disable-next-line no-restricted-syntax
+    const root = instance?.subTree
+    if (
+      vnode === root ||
+      // eslint-disable-next-line no-restricted-syntax
+      (root?.type === Fragment && (root.children as VNode[]).includes(vnode))
+    ) {
+      // eslint-disable-next-line no-restricted-syntax
+      const cssVars = instance?.getCssVars?.()
+      for (const key in cssVars) {
+        expectedMap.set(`--${key}`, String(cssVars[key]))
+      }
+    }
+
+    if (!isMapEqual(actualMap, expectedMap)) {
       mismatchType = mismatchKey = 'style'
     }
   } else if (
     (el instanceof SVGElement && isKnownSvgAttr(key)) ||
     (el instanceof HTMLElement && (isBooleanAttr(key) || isKnownHtmlAttr(key)))
   ) {
-    // #10000 some attrs such as textarea.value can't be get by `hasAttribute`
-    actual = el.hasAttribute(key)
-      ? el.getAttribute(key)
-      : key in el
-        ? el[key as keyof typeof el]
-        : ''
-    expected = isBooleanAttr(key)
-      ? includeBooleanAttr(clientValue)
-        ? ''
+    if (isBooleanAttr(key)) {
+      actual = el.hasAttribute(key)
+      expected = includeBooleanAttr(clientValue)
+    } else if (clientValue == null) {
+      actual = el.hasAttribute(key)
+      expected = false
+    } else {
+      if (el.hasAttribute(key)) {
+        actual = el.getAttribute(key)
+      } else if (key === 'value' && el.tagName === 'TEXTAREA') {
+        // #10000 textarea.value can't be retrieved by `hasAttribute`
+        actual = (el as HTMLTextAreaElement).value
+      } else {
+        actual = false
+      }
+      expected = isRenderableAttrValue(clientValue)
+        ? String(clientValue)
         : false
-      : clientValue == null
-        ? ''
-        : String(clientValue)
+    }
     if (actual !== expected) {
       mismatchType = `attribute`
       mismatchKey = key
@@ -776,15 +806,20 @@ function propHasMismatch(
   if (mismatchType) {
     const format = (v: any) =>
       v === false ? `(not rendered)` : `${mismatchKey}="${v}"`
-    warn(
-      `Hydration ${mismatchType} mismatch on`,
-      el,
+    const preSegment = `Hydration ${mismatchType} mismatch on`
+    const postSegment =
       `\n  - rendered on server: ${format(actual)}` +
-        `\n  - expected on client: ${format(expected)}` +
-        `\n  Note: this mismatch is check-only. The DOM will not be rectified ` +
-        `in production due to performance overhead.` +
-        `\n  You should fix the source of the mismatch.`,
-    )
+      `\n  - expected on client: ${format(expected)}` +
+      `\n  Note: this mismatch is check-only. The DOM will not be rectified ` +
+      `in production due to performance overhead.` +
+      `\n  You should fix the source of the mismatch.`
+    if (__TEST__) {
+      // during tests, log the full message in one single string for easier
+      // debugging.
+      warn(`${preSegment} ${el.tagName}${postSegment}`)
+    } else {
+      warn(preSegment, el, postSegment)
+    }
     return true
   }
   return false
@@ -810,7 +845,9 @@ function toStyleMap(str: string): Map<string, string> {
   const styleMap: Map<string, string> = new Map()
   for (const item of str.split(';')) {
     let [key, value] = item.split(':')
+    // eslint-disable-next-line no-restricted-syntax
     key = key?.trim()
+    // eslint-disable-next-line no-restricted-syntax
     value = value?.trim()
     if (key && value) {
       styleMap.set(key, value)

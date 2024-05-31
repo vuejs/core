@@ -1,8 +1,9 @@
-import { hyphenate, isArray } from '@vue/shared'
+import { NOOP, hyphenate, isArray, isFunction } from '@vue/shared'
 import {
   type ComponentInternalInstance,
   ErrorCodes,
   callWithAsyncErrorHandling,
+  warn,
 } from '@vue/runtime-core'
 
 interface Invoker extends EventListener {
@@ -36,7 +37,7 @@ export function patchEvent(
   el: Element & { [veiKey]?: Record<string, Invoker | undefined> },
   rawName: string,
   prevValue: EventValue | null,
-  nextValue: EventValue | null,
+  nextValue: EventValue | unknown,
   instance: ComponentInternalInstance | null = null,
 ) {
   // vei = vue event invokers
@@ -44,12 +45,19 @@ export function patchEvent(
   const existingInvoker = invokers[rawName]
   if (nextValue && existingInvoker) {
     // patch
-    existingInvoker.value = nextValue
+    existingInvoker.value = __DEV__
+      ? sanitizeEventValue(nextValue, rawName)
+      : (nextValue as EventValue)
   } else {
     const [name, options] = parseName(rawName)
     if (nextValue) {
       // add
-      const invoker = (invokers[rawName] = createInvoker(nextValue, instance))
+      const invoker = (invokers[rawName] = createInvoker(
+        __DEV__
+          ? sanitizeEventValue(nextValue, rawName)
+          : (nextValue as EventValue),
+        instance,
+      ))
       addEventListener(el, name, invoker, options)
     } else if (existingInvoker) {
       // remove
@@ -116,6 +124,17 @@ function createInvoker(
   return invoker
 }
 
+function sanitizeEventValue(value: unknown, propName: string): EventValue {
+  if (isFunction(value) || isArray(value)) {
+    return value as EventValue
+  }
+  warn(
+    `Wrong type passed as event handler to ${propName} - did you forget @ or : ` +
+      `in front of your prop?\nExpected function or array of functions, received type ${typeof value}.`,
+  )
+  return NOOP
+}
+
 function patchStopImmediatePropagation(
   e: Event,
   value: EventValue,
@@ -126,7 +145,9 @@ function patchStopImmediatePropagation(
       originalStop.call(e)
       ;(e as any)._stopped = true
     }
-    return value.map(fn => (e: Event) => !(e as any)._stopped && fn && fn(e))
+    return (value as Function[]).map(
+      fn => (e: Event) => !(e as any)._stopped && fn && fn(e),
+    )
   } else {
     return value
   }

@@ -40,6 +40,8 @@ describe('api: lifecycle hooks', () => {
     }
     render(h(Comp), root)
     expect(fn).toHaveBeenCalledTimes(1)
+    // #10863
+    expect(fn).toHaveBeenCalledWith()
   })
 
   it('onMounted', () => {

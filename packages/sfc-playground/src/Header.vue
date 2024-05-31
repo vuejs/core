@@ -1,13 +1,13 @@
 <script setup lang="ts">
+import { computed } from 'vue'
+import type { ReplStore } from '@vue/repl'
 import { downloadProject } from './download/download'
-import { ref } from 'vue'
 import Sun from './icons/Sun.vue'
 import Moon from './icons/Moon.vue'
 import Share from './icons/Share.vue'
 import Download from './icons/Download.vue'
 import GitHub from './icons/GitHub.vue'
 import Reload from './icons/Reload.vue'
-import type { ReplStore } from '@vue/repl'
 import VersionSelect from './VersionSelect.vue'
 
 const props = defineProps<{
@@ -25,23 +25,20 @@ const emit = defineEmits([
 const { store } = props
 
 const currentCommit = __COMMIT__
-const vueVersion = ref(`@${currentCommit}`)
 
-const vueURL = store.getImportMap().imports.vue
-if (vueURL && !vueURL.startsWith(location.origin)) {
-  const versionMatch = vueURL.match(/runtime-dom@([^/]+)/)
-  if (versionMatch) vueVersion.value = versionMatch[1]
-}
+const vueVersion = computed(() => {
+  if (store.loading) {
+    return 'loading...'
+  }
+  return store.vueVersion || `@${__COMMIT__}`
+})
 
 async function setVueVersion(v: string) {
-  vueVersion.value = `loading...`
-  await store.setVueVersion(v)
-  vueVersion.value = v
+  store.vueVersion = v
 }
 
 function resetVueVersion() {
-  store.resetVueVersion()
-  vueVersion.value = `@${currentCommit}`
+  store.vueVersion = null
 }
 
 async function copyLink(e: MouseEvent) {
@@ -73,7 +70,7 @@ function toggleDark() {
     </h1>
     <div class="links">
       <VersionSelect
-        v-model="store.state.typescriptVersion"
+        v-model="store.typescriptVersion"
         pkg="typescript"
         label="TypeScript Version"
       />

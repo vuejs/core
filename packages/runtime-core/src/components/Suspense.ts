@@ -91,6 +91,24 @@ export const SuspenseImpl = {
         rendererInternals,
       )
     } else {
+      // #8678 if the current suspense needs to be patched and parentSuspense has
+      // not been resolved. this means that both the current suspense and parentSuspense
+      // need to be patched. because parentSuspense's pendingBranch includes the
+      // current suspense, it will be processed twice:
+      //  1. current patch
+      //  2. mounting along with the pendingBranch of parentSuspense
+      // it is necessary to skip the current patch to avoid multiple mounts
+      // of inner components.
+      if (
+        parentSuspense &&
+        parentSuspense.deps > 0 &&
+        !n1.suspense!.isInFallback
+      ) {
+        n2.suspense = n1.suspense!
+        n2.suspense.vnode = n2
+        n2.el = n1.el
+        return
+      }
       patchSuspense(
         n1,
         n2,
@@ -420,6 +438,7 @@ export interface SuspenseBoundary {
   registerDep(
     instance: ComponentInternalInstance,
     setupRenderEffect: SetupRenderEffectFn,
+    optimized: boolean,
   ): void
   unmount(parentSuspense: SuspenseBoundary | null, doRemove?: boolean): void
 }
@@ -461,7 +480,7 @@ function createSuspenseBoundary(
   let parentSuspenseId: number | undefined
   const isSuspensible = isVNodeSuspensible(vnode)
   if (isSuspensible) {
-    if (parentSuspense?.pendingBranch) {
+    if (parentSuspense && parentSuspense.pendingBranch) {
       parentSuspenseId = parentSuspense.pendingId
       parentSuspense.deps++
     }
@@ -661,7 +680,7 @@ function createSuspenseBoundary(
       return suspense.activeBranch && next(suspense.activeBranch)
     },
 
-    registerDep(instance, setupRenderEffect) {
+    registerDep(instance, setupRenderEffect, optimized) {
       const isInPendingSuspense = !!suspense.pendingBranch
       if (isInPendingSuspense) {
         suspense.deps++
@@ -796,7 +815,6 @@ function hydrateSuspense(
     suspense.resolve(false, true)
   }
   return result
-  /* eslint-enable no-restricted-globals */
 }
 
 function normalizeSuspenseChildren(vnode: VNode) {
@@ -864,7 +882,14 @@ export function queueEffectWithSuspense(
 function setActiveBranch(suspense: SuspenseBoundary, branch: VNode) {
   suspense.activeBranch = branch
   const { vnode, parentComponent } = suspense
-  const el = (vnode.el = branch.el)
+  let el = branch.el
+  // if branch has no el after patch, it's a HOC wrapping async components
+  // drill and locate the placeholder comment node
+  while (!el && branch.component) {
+    branch = branch.component.subTree
+    el = branch.el
+  }
+  vnode.el = el
   // in case suspense is the root node of a component,
   // recursively update the HOC el
   if (parentComponent && parentComponent.subTree === vnode) {
@@ -874,5 +899,6 @@ function setActiveBranch(suspense: SuspenseBoundary, branch: VNode) {
 }
 
 function isVNodeSuspensible(vnode: VNode) {
-  return vnode.props?.suspensible != null && vnode.props.suspensible !== false
+  const suspensible = vnode.props && vnode.props.suspensible
+  return suspensible != null && suspensible !== false
 }

@@ -49,7 +49,7 @@ import {
 } from './script/defineEmits'
 import { DEFINE_EXPOSE, processDefineExpose } from './script/defineExpose'
 import { DEFINE_OPTIONS, processDefineOptions } from './script/defineOptions'
-import { processDefineSlots } from './script/defineSlots'
+import { DEFINE_SLOTS, processDefineSlots } from './script/defineSlots'
 import { DEFINE_MODEL, processDefineModel } from './script/defineModel'
 import { getImportedName, isCallOf, isLiteralNode } from './script/utils'
 import { analyzeScriptBindings } from './script/analyzeScriptBindings'
@@ -118,6 +118,7 @@ export interface SFCScriptCompileOptions {
   fs?: {
     fileExists(file: string): boolean
     readFile(file: string): string | undefined
+    realpath?(file: string): string
   }
   /**
    * Transform Vue SFCs into custom elements.
@@ -133,6 +134,16 @@ export interface ImportBinding {
   isFromSetup: boolean
   isUsedInTemplate: boolean
 }
+
+const MACROS = [
+  DEFINE_PROPS,
+  DEFINE_EMITS,
+  DEFINE_EXPOSE,
+  DEFINE_OPTIONS,
+  DEFINE_SLOTS,
+  DEFINE_MODEL,
+  WITH_DEFAULTS,
+]
 
 /**
  * Compile `<script setup>`
@@ -316,15 +327,18 @@ export function compileScript(
         const imported = getImportedName(specifier)
         const source = node.source.value
         const existing = ctx.userImports[local]
-        if (
-          source === 'vue' &&
-          (imported === DEFINE_PROPS ||
-            imported === DEFINE_EMITS ||
-            imported === DEFINE_EXPOSE)
-        ) {
-          warnOnce(
-            `\`${imported}\` is a compiler macro and no longer needs to be imported.`,
-          )
+        if (source === 'vue' && MACROS.includes(imported)) {
+          if (local === imported) {
+            warnOnce(
+              `\`${imported}\` is a compiler macro and no longer needs to be imported.`,
+            )
+          } else {
+            ctx.error(
+              `\`${imported}\` is a compiler macro and cannot be aliased to ` +
+                `a different name.`,
+              specifier,
+            )
+          }
           removeSpecifier(i)
         } else if (existing) {
           if (existing.source === source && existing.imported === imported) {
@@ -522,8 +536,14 @@ export function compileScript(
             )
           }
 
-          // defineProps / defineEmits
+          // defineProps
           const isDefineProps = processDefineProps(ctx, init, decl.id)
+          if (ctx.propsDestructureRestId) {
+            setupBindings[ctx.propsDestructureRestId] =
+              BindingTypes.SETUP_REACTIVE_CONST
+          }
+
+          // defineEmits
           const isDefineEmits =
             !isDefineProps && processDefineEmits(ctx, init, decl.id)
           !isDefineEmits &&
@@ -671,6 +691,11 @@ export function compileScript(
   checkInvalidScopeReference(ctx.propsDestructureDecl, DEFINE_PROPS)
   checkInvalidScopeReference(ctx.emitsRuntimeDecl, DEFINE_EMITS)
   checkInvalidScopeReference(ctx.optionsRuntimeDecl, DEFINE_OPTIONS)
+  for (const { runtimeOptionNodes } of Object.values(ctx.modelDecls)) {
+    for (const node of runtimeOptionNodes) {
+      checkInvalidScopeReference(node, DEFINE_MODEL)
+    }
+  }
 
   // 5. remove non-script content
   if (script) {
@@ -983,10 +1008,15 @@ export function compileScript(
 
   // 11. finalize Vue helper imports
   if (ctx.helperImports.size > 0) {
+    const runtimeModuleName =
+      options.templateOptions?.compilerOptions?.runtimeModuleName
+    const importSrc = runtimeModuleName
+      ? JSON.stringify(runtimeModuleName)
+      : `'vue'`
     ctx.s.prepend(
       `import { ${[...ctx.helperImports]
         .map(h => `${h} as _${h}`)
-        .join(', ')} } from 'vue'\n`,
+        .join(', ')} } from ${importSrc}\n`,
     )
   }
 
@@ -1037,13 +1067,16 @@ function walkDeclaration(
     // export const foo = ...
     for (const { id, init: _init } of node.declarations) {
       const init = _init && unwrapTSNode(_init)
-      const isDefineCall = !!(
+      const isConstMacroCall =
         isConst &&
         isCallOf(
           init,
-          c => c === DEFINE_PROPS || c === DEFINE_EMITS || c === WITH_DEFAULTS,
+          c =>
+            c === DEFINE_PROPS ||
+            c === DEFINE_EMITS ||
+            c === WITH_DEFAULTS ||
+            c === DEFINE_SLOTS,
         )
-      )
       if (id.type === 'Identifier') {
         let bindingType
         const userReactiveBinding = userImportAliases['reactive']
@@ -1060,7 +1093,7 @@ function walkDeclaration(
         } else if (
           // if a declaration is a const literal, we can mark it so that
           // the generated render fn code doesn't need to unref() it
-          isDefineCall ||
+          isConstMacroCall ||
           (isConst && canNeverBeRef(init!, userReactiveBinding))
         ) {
           bindingType = isCallOf(init, DEFINE_PROPS)
@@ -1092,9 +1125,9 @@ function walkDeclaration(
           continue
         }
         if (id.type === 'ObjectPattern') {
-          walkObjectPattern(id, bindings, isConst, isDefineCall)
+          walkObjectPattern(id, bindings, isConst, isConstMacroCall)
         } else if (id.type === 'ArrayPattern') {
-          walkArrayPattern(id, bindings, isConst, isDefineCall)
+          walkArrayPattern(id, bindings, isConst, isConstMacroCall)
         }
       }
     }
