@@ -129,7 +129,9 @@ describe('compiler: v-for', () => {
       `<div v-for="(  { id, ...other }, index) in list" :key="id">{{ id + other + index }}</div>`,
     )
     expect(code).matchSnapshot()
-    expect(code).contains(`return [id, other, index]`)
+    expect(code).contains(
+      `(_state, [{ id, ...other }, index] = _state) => [id, other, index]`,
+    )
     expect(code).contains(`_ctx0[0] + _ctx0[1] + _ctx0[2]`)
     expect(ir.block.operation[0]).toMatchObject({
       type: IRNodeTypes.FOR,
@@ -162,7 +164,9 @@ describe('compiler: v-for', () => {
       `<div v-for="([id, ...other], index) in list" :key="id">{{ id + other + index }}</div>`,
     )
     expect(code).matchSnapshot()
-    expect(code).contains(`return [id, other, index]`)
+    expect(code).contains(
+      `(_state, [[id, ...other], index] = _state) => [id, other, index]`,
+    )
     expect(code).contains(`_ctx0[0] + _ctx0[1] + _ctx0[2]`)
     expect(ir.block.operation[0]).toMatchObject({
       type: IRNodeTypes.FOR,
@@ -197,7 +201,9 @@ describe('compiler: v-for', () => {
       </div>`,
     )
     expect(code).matchSnapshot()
-    expect(code).contains(`return [foo, qux]`)
+    expect(code).contains(
+      `(_state, [{ foo = bar, baz: [qux = quux] }] = _state) => [foo, qux]`,
+    )
     expect(code).contains(
       `_ctx0[0] + _ctx.bar + _ctx.baz + _ctx0[1] + _ctx.quux`,
     )

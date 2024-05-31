@@ -26,7 +26,6 @@ import {
   invokeWithUpdate,
 } from './directivesChildFragment'
 import type { DynamicSlot } from './componentSlots'
-import { destructuring } from './destructuring'
 
 interface ForBlock extends Fragment {
   scope: BlockEffectScope
@@ -49,7 +48,6 @@ export const createFor = (
   getMemo?: (item: any, key: any, index?: number) => any[],
   hydrationNode?: Node,
   once?: boolean,
-  assignment?: (state: any[]) => any[],
 ): Fragment => {
   let isMounted = false
   let oldBlocks: ForBlock[] = []
@@ -283,11 +281,7 @@ export const createFor = (
       memo: getMemo && getMemo(item, key, index),
       [fragmentKey]: true,
     })
-    const proxyState = proxyRefs(state)
-    const itemCtx = assignment
-      ? destructuring(scope, proxyState, assignment)
-      : proxyState
-    block.nodes = scope.run(() => renderItem(itemCtx))!
+    block.nodes = scope.run(() => renderItem(proxyRefs(state)))!
 
     invokeWithMount(scope, () => {
       // TODO v-memo

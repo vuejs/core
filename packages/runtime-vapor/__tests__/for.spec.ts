@@ -7,6 +7,7 @@ import {
   renderEffect,
   shallowRef,
   template,
+  withDestructure,
   withDirectives,
 } from '../src'
 import { makeRender } from './_utils'
@@ -318,25 +319,24 @@ describe('createFor', () => {
     const { host } = define(() => {
       const n1 = createFor(
         () => list.value,
-        state => {
-          const span = document.createElement('li')
-          renderEffect(() => {
-            const [name, key, index] = state
-            span.innerHTML = `${key}. ${name}`
+        withDestructure(
+          state => {
+            const [{ name }, key, index] = state
+            return [name, key, index]
+          },
+          state => {
+            const span = document.createElement('li')
+            renderEffect(() => {
+              const [name, key, index] = state
+              span.innerHTML = `${key}. ${name}`
 
-            // index should be undefined if source is not an object
-            expect(index).toBe(undefined)
-          })
-          return span
-        },
+              // index should be undefined if source is not an object
+              expect(index).toBe(undefined)
+            })
+            return span
+          },
+        ),
         item => item.name,
-        undefined,
-        undefined,
-        false,
-        state => {
-          const [{ name }, key, index] = state
-          return [name, key, index]
-        },
       )
       return n1
     }).render()

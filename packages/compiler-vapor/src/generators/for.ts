@@ -6,8 +6,6 @@ import type { ForIRNode } from '../ir'
 import {
   type CodeFragment,
   DELIMITERS_ARRAY,
-  INDENT_END,
-  INDENT_START,
   NEWLINE,
   genCall,
   genMulti,
@@ -51,7 +49,7 @@ export function genFor(
   if (rawKey) idMap[rawKey] = `${propsName}[${idsOfValue.size}]`
   if (rawIndex) idMap[rawIndex] = `${propsName}[${idsOfValue.size + 1}]`
 
-  const blockFn = context.withId(
+  let blockFn = context.withId(
     () => genBlock(render, context, [propsName]),
     idMap,
   )
@@ -77,31 +75,28 @@ export function genFor(
     ]
   }
 
-  let destructureAssignmentFn: CodeFragment[] | false = false
   if (isDestructureAssignment) {
     const idMap: Record<string, null> = {}
     idsOfValue.forEach(id => (idMap[id] = null))
     if (rawKey) idMap[rawKey] = null
     if (rawIndex) idMap[rawIndex] = null
-    destructureAssignmentFn = [
-      '_state => {',
-      INDENT_START,
-      NEWLINE,
-      'const ',
+    const destructureAssignmentFn: CodeFragment[] = [
+      '(_state, ',
       ...genMulti(
         DELIMITERS_ARRAY,
         rawValue ? rawValue : rawKey || rawIndex ? '_' : undefined,
         rawKey ? rawKey : rawIndex ? '__' : undefined,
         rawIndex,
       ),
-      ' = _state',
-      NEWLINE,
-      'return ',
+      ' = _state) => ',
       ...genMulti(DELIMITERS_ARRAY, ...idsOfValue, rawKey, rawIndex),
-      INDENT_END,
-      NEWLINE,
-      '}',
     ]
+
+    blockFn = genCall(
+      vaporHelper('withDestructure'),
+      destructureAssignmentFn,
+      blockFn,
+    )
   }
 
   return [
@@ -114,8 +109,7 @@ export function genFor(
       getKeyFn,
       false, // todo: getMemo
       false, // todo: hydrationNode
-      (once && 'true') || (destructureAssignmentFn && 'false'),
-      destructureAssignmentFn,
+      once && 'true',
     ),
   ]
 }
