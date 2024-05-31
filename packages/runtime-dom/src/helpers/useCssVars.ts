@@ -1,15 +1,16 @@
 import {
-  getCurrentInstance,
-  warn,
-  VNode,
   Fragment,
   Static,
-  watchPostEffect,
+  type VNode,
+  getCurrentInstance,
   onMounted,
-  onUnmounted
+  onUnmounted,
+  warn,
+  watchPostEffect,
 } from '@vue/runtime-core'
 import { ShapeFlags } from '@vue/shared'
 
+export const CSS_VAR_TEXT = Symbol(__DEV__ ? 'CSS_VAR_TEXT' : '')
 /**
  * Runtime helper for SFC's CSS variable injection feature.
  * @private
@@ -27,9 +28,13 @@ export function useCssVars(getter: (ctx: any) => Record<string, string>) {
 
   const updateTeleports = (instance.ut = (vars = getter(instance.proxy)) => {
     Array.from(
-      document.querySelectorAll(`[data-v-owner="${instance.uid}"]`)
+      document.querySelectorAll(`[data-v-owner="${instance.uid}"]`),
     ).forEach(node => setVarsOnNode(node, vars))
   })
+
+  if (__DEV__) {
+    instance.getCssVars = () => getter(instance.proxy)
+  }
 
   const setVars = () => {
     const vars = getter(instance.proxy)
@@ -37,9 +42,8 @@ export function useCssVars(getter: (ctx: any) => Record<string, string>) {
     updateTeleports(vars)
   }
 
-  watchPostEffect(setVars)
-
   onMounted(() => {
+    watchPostEffect(setVars)
     const ob = new MutationObserver(setVars)
     ob.observe(instance.subTree.el!.parentNode, { childList: true })
     onUnmounted(() => ob.disconnect())
@@ -79,8 +83,11 @@ function setVarsOnVNode(vnode: VNode, vars: Record<string, string>) {
 function setVarsOnNode(el: Node, vars: Record<string, string>) {
   if (el.nodeType === 1) {
     const style = (el as HTMLElement).style
+    let cssText = ''
     for (const key in vars) {
       style.setProperty(`--${key}`, vars[key])
+      cssText += `--${key}: ${vars[key]};`
     }
+    ;(style as any)[CSS_VAR_TEXT] = cssText
   }
 }

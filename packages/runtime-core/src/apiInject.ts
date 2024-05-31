@@ -6,7 +6,10 @@ import { warn } from './warning'
 
 export interface InjectionKey<T> extends Symbol {}
 
-export function provide<T>(key: InjectionKey<T> | string | number, value: T) {
+export function provide<T, K = InjectionKey<T> | string | number>(
+  key: K,
+  value: K extends InjectionKey<infer V> ? V : T,
+) {
   if (!currentInstance) {
     if (__DEV__) {
       warn(`provide() can only be used inside setup().`)
@@ -32,17 +35,17 @@ export function inject<T>(key: InjectionKey<T> | string): T | undefined
 export function inject<T>(
   key: InjectionKey<T> | string,
   defaultValue: T,
-  treatDefaultAsFactory?: false
+  treatDefaultAsFactory?: false,
 ): T
 export function inject<T>(
   key: InjectionKey<T> | string,
   defaultValue: T | (() => T),
-  treatDefaultAsFactory: true
+  treatDefaultAsFactory: true,
 ): T
 export function inject(
   key: InjectionKey<any> | string,
   defaultValue?: unknown,
-  treatDefaultAsFactory = false
+  treatDefaultAsFactory = false,
 ) {
   // fallback to `currentRenderingInstance` so that this can be called in
   // a functional component
