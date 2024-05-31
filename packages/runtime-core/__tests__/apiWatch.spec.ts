@@ -932,6 +932,52 @@ describe('api: watch', () => {
     expect(dummy).toEqual([1, 2])
   })
 
+  it('deep with symbols', async () => {
+    const symbol1 = Symbol()
+    const symbol2 = Symbol()
+    const symbol3 = Symbol()
+    const symbol4 = Symbol()
+
+    const raw: any = {
+      [symbol1]: {
+        [symbol2]: 1,
+      },
+    }
+
+    Object.defineProperty(raw, symbol3, {
+      writable: true,
+      enumerable: false,
+      value: 1,
+    })
+
+    const state = reactive(raw)
+    const spy = vi.fn()
+
+    watch(() => state, spy, { deep: true })
+
+    await nextTick()
+    expect(spy).toHaveBeenCalledTimes(0)
+
+    state[symbol1][symbol2] = 2
+    await nextTick()
+    expect(spy).toHaveBeenCalledTimes(1)
+
+    // Non-enumerable properties don't trigger deep watchers
+    state[symbol3] = 3
+    await nextTick()
+    expect(spy).toHaveBeenCalledTimes(1)
+
+    // Adding a new symbol property
+    state[symbol4] = 1
+    await nextTick()
+    expect(spy).toHaveBeenCalledTimes(2)
+
+    // Removing a symbol property
+    delete state[symbol4]
+    await nextTick()
+    expect(spy).toHaveBeenCalledTimes(3)
+  })
+
   it('immediate', async () => {
     const count = ref(0)
     const cb = vi.fn()
