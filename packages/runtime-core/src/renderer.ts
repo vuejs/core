@@ -1238,7 +1238,8 @@ function baseCreateRenderer(
     // setup() is async. This component relies on async logic to be resolved
     // before proceeding
     if (__FEATURE_SUSPENSE__ && instance.asyncDep) {
-      parentSuspense && parentSuspense.registerDep(instance, setupRenderEffect)
+      parentSuspense &&
+        parentSuspense.registerDep(instance, setupRenderEffect, optimized)
 
       // Give it a placeholder if this is not hydration
       // TODO handle self-defined fallback

@@ -12,10 +12,13 @@ const source = ref('foo')
 const source2 = computed(() => source.value)
 const source3 = () => 1
 
+type OnCleanup = (fn: () => void) => void
+
 // lazy watcher will have consistent types for oldValue.
-watch(source, (value, oldValue) => {
+watch(source, (value, oldValue, onCleanup) => {
   expectType<string>(value)
   expectType<string>(oldValue)
+  expectType<OnCleanup>(onCleanup)
 })
 
 watch([source, source2, source3], (values, oldValues) => {
@@ -92,9 +95,10 @@ defineComponent({
   created() {
     this.$watch(
       () => this.a,
-      (v, ov) => {
+      (v, ov, onCleanup) => {
         expectType<number>(v)
         expectType<number>(ov)
+        expectType<OnCleanup>(onCleanup)
       },
     )
   },

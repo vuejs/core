@@ -135,7 +135,7 @@ export function shallowReactive<T extends object>(
 }
 
 type Primitive = string | number | boolean | bigint | symbol | undefined | null
-type Builtin = Primitive | Function | Date | Error | RegExp
+export type Builtin = Primitive | Function | Date | Error | RegExp
 export type DeepReadonly<T> = T extends Builtin
   ? T
   : T extends Map<infer K, infer V>
@@ -248,7 +248,11 @@ function createReactiveObject(
 ) {
   if (!isObject(target)) {
     if (__DEV__) {
-      warn(`value cannot be made reactive: ${String(target)}`)
+      warn(
+        `value cannot be made ${isReadonly ? 'readonly' : 'reactive'}: ${String(
+          target,
+        )}`,
+      )
     }
     return target
   }
