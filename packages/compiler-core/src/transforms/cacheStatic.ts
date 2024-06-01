@@ -55,9 +55,7 @@ function walk(
   doNotHoistNode: boolean = false,
 ) {
   const { children } = node
-  // const originalCount = children.length
-  const toHoist: PlainElementNode[] = []
-  let hoistedCount = 0
+  const toCache: PlainElementNode[] = []
 
   for (let i = 0; i < children.length; i++) {
     const child = children[i]
@@ -70,12 +68,8 @@ function walk(
         ? ConstantTypes.NOT_CONSTANT
         : getConstantType(child, context)
       if (constantType > ConstantTypes.NOT_CONSTANT) {
-        if (constantType >= ConstantTypes.CAN_HOIST) {
-          toHoist.push(child)
-          // ;(child.codegenNode as VNodeCall).patchFlag =
-          //   PatchFlags.HOISTED + (__DEV__ ? ` /* HOISTED */` : ``)
-          // child.codegenNode = context.cache(child.codegenNode!)
-          // hoistedCount++
+        if (constantType >= ConstantTypes.CAN_CACHE) {
+          toCache.push(child)
         }
       } else {
         // node may contain dynamic children, but its props may be eligible for
@@ -88,7 +82,7 @@ function walk(
               flag === PatchFlags.NEED_PATCH ||
               flag === PatchFlags.TEXT) &&
             getGeneratedPropsConstantType(child, context) >=
-              ConstantTypes.CAN_HOIST
+              ConstantTypes.CAN_CACHE
           ) {
             const props = getNodeProps(child)
             if (props) {
@@ -127,8 +121,20 @@ function walk(
     }
   }
 
-  if (hoistedCount && context.transformHoist) {
-    context.transformHoist(children, context, node)
+  // TODO update stringifyStatic
+  // if (hoistedCount && context.transformHoist) {
+  //   context.transformHoist(children, context, node)
+  // }
+
+  if (toCache.length === children.length) {
+    // TODO
+    // all children were hoisted - the entire children array is cacheable.
+  } else {
+    for (const child of toCache) {
+      ;(child.codegenNode as VNodeCall).patchFlag =
+        PatchFlags.CACHED + (__DEV__ ? ` /* CACHED */` : ``)
+      child.codegenNode = context.cache(child.codegenNode!)
+    }
   }
 
   // all children were hoisted - the entire children array is cacheable.

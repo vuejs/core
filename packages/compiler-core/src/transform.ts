@@ -291,7 +291,7 @@ export function createTransformContext(
         `_hoisted_${context.hoists.length}`,
         false,
         exp.loc,
-        ConstantTypes.CAN_HOIST,
+        ConstantTypes.CAN_CACHE,
       )
       identifier.hoisted = exp
       return identifier

@@ -195,7 +195,7 @@ describe('stringify static html', () => {
                 '_imports_0_',
                 false,
                 node.loc,
-                ConstantTypes.CAN_HOIST,
+                ConstantTypes.CAN_CACHE,
               )
               node.props[0] = {
                 type: NodeTypes.DIRECTIVE,

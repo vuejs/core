@@ -218,7 +218,7 @@ export interface DirectiveNode extends Node {
 export enum ConstantTypes {
   NOT_CONSTANT = 0,
   CAN_SKIP_PATCH,
-  CAN_HOIST,
+  CAN_CACHE,
   CAN_STRINGIFY,
 }
 
