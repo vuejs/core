@@ -76,6 +76,9 @@ export const createHook =
     ) {
       injectHook(lifecycle, (...args: unknown[]) => hook(...args), target)
     }
+    if (lifecycle === 'm' && target?.isMounted) {
+      hook()
+    }
   }
 
 export const onBeforeMount = createHook(LifecycleHooks.BEFORE_MOUNT)
