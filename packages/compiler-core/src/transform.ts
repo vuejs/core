@@ -38,7 +38,7 @@ import {
   helperNameMap,
 } from './runtimeHelpers'
 import { isVSlot } from './utils'
-import { hoistStatic, isSingleElementRoot } from './transforms/hoistStatic'
+import { cacheStatic, isSingleElementRoot } from './transforms/cacheStatic'
 import type { CompilerCompatOptions } from './compat/compatConfig'
 
 // There are two types of transforms:
@@ -324,7 +324,7 @@ export function transform(root: RootNode, options: TransformOptions) {
   const context = createTransformContext(root, options)
   traverseNode(root, context)
   if (options.hoistStatic) {
-    hoistStatic(root, context)
+    cacheStatic(root, context)
   }
   if (!options.ssr) {
     createRootCodegen(root, context)

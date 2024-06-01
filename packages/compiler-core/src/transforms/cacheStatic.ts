@@ -12,12 +12,12 @@ import {
   type TemplateChildNode,
   type TemplateNode,
   type VNodeCall,
-  createArrayExpression,
+  // createArrayExpression,
   getVNodeBlockHelper,
   getVNodeHelper,
 } from '../ast'
 import type { TransformContext } from '../transform'
-import { PatchFlags, isArray, isString, isSymbol } from '@vue/shared'
+import { PatchFlags, isString, isSymbol } from '@vue/shared'
 import { isSlotOutlet } from '../utils'
 import {
   GUARD_REACTIVE_PROPS,
@@ -27,7 +27,7 @@ import {
   OPEN_BLOCK,
 } from '../runtimeHelpers'
 
-export function hoistStatic(root: RootNode, context: TransformContext) {
+export function cacheStatic(root: RootNode, context: TransformContext) {
   walk(
     root,
     context,
@@ -55,7 +55,8 @@ function walk(
   doNotHoistNode: boolean = false,
 ) {
   const { children } = node
-  const originalCount = children.length
+  // const originalCount = children.length
+  const toHoist: PlainElementNode[] = []
   let hoistedCount = 0
 
   for (let i = 0; i < children.length; i++) {
@@ -70,11 +71,11 @@ function walk(
         : getConstantType(child, context)
       if (constantType > ConstantTypes.NOT_CONSTANT) {
         if (constantType >= ConstantTypes.CAN_HOIST) {
-          ;(child.codegenNode as VNodeCall).patchFlag =
-            PatchFlags.HOISTED + (__DEV__ ? ` /* HOISTED */` : ``)
-          child.codegenNode = context.hoist(child.codegenNode!)
-          hoistedCount++
-          continue
+          toHoist.push(child)
+          // ;(child.codegenNode as VNodeCall).patchFlag =
+          //   PatchFlags.HOISTED + (__DEV__ ? ` /* HOISTED */` : ``)
+          // child.codegenNode = context.cache(child.codegenNode!)
+          // hoistedCount++
         }
       } else {
         // node may contain dynamic children, but its props may be eligible for
@@ -130,27 +131,27 @@ function walk(
     context.transformHoist(children, context, node)
   }
 
-  // all children were hoisted - the entire children array is hoistable.
-  if (
-    hoistedCount &&
-    hoistedCount === originalCount &&
-    node.type === NodeTypes.ELEMENT &&
-    node.tagType === ElementTypes.ELEMENT &&
-    node.codegenNode &&
-    node.codegenNode.type === NodeTypes.VNODE_CALL &&
-    isArray(node.codegenNode.children)
-  ) {
-    const hoisted = context.hoist(
-      createArrayExpression(node.codegenNode.children),
-    )
-    // #6978, #7138, #7114
-    // a hoisted children array inside v-for can caused HMR errors since
-    // it might be mutated when mounting the v-for list
-    if (context.hmr) {
-      hoisted.content = `[...${hoisted.content}]`
-    }
-    node.codegenNode.children = hoisted
-  }
+  // all children were hoisted - the entire children array is cacheable.
+  // if (
+  //   hoistedCount &&
+  //   hoistedCount === originalCount &&
+  //   node.type === NodeTypes.ELEMENT &&
+  //   node.tagType === ElementTypes.ELEMENT &&
+  //   node.codegenNode &&
+  //   node.codegenNode.type === NodeTypes.VNODE_CALL &&
+  //   isArray(node.codegenNode.children)
+  // ) {
+  //   const hoisted = context.hoist(
+  //     createArrayExpression(node.codegenNode.children),
+  //   )
+  //   // #6978, #7138, #7114
+  //   // a hoisted children array inside v-for can caused HMR errors since
+  //   // it might be mutated when mounting the v-for list
+  //   if (context.hmr) {
+  //     hoisted.content = `[...${hoisted.content}]`
+  //   }
+  //   node.codegenNode.children = hoisted
+  // }
 }
 
 export function getConstantType(

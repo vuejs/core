@@ -73,10 +73,10 @@ describe('scopeId compiler support', () => {
     ;[
       `const _withScopeId = n => (_pushScopeId("test"),n=n(),_popScopeId(),n)`,
       `const _hoisted_1 = /*#__PURE__*/ _withScopeId(() => /*#__PURE__*/_createElementVNode("div", null, "hello", ${genFlagText(
-        PatchFlags.HOISTED,
+        PatchFlags.CACHED,
       )}))`,
       `const _hoisted_2 = /*#__PURE__*/ _withScopeId(() => /*#__PURE__*/_createElementVNode("div", null, "world", ${genFlagText(
-        PatchFlags.HOISTED,
+        PatchFlags.CACHED,
       )}))`,
     ].forEach(c => expect(code).toMatch(c))
     expect(code).toMatchSnapshot()
