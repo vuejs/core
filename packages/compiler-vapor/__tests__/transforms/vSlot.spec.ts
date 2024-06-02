@@ -58,6 +58,98 @@ describe('compiler: transform slot', () => {
     })
   })
 
+  test('on-component default slot', () => {
+    const { ir, code, vaporHelpers } = compileWithSlots(
+      `<Comp v-slot="{ foo }">{{ foo + bar }}</Comp>`,
+    )
+    expect(code).toMatchSnapshot()
+
+    expect(vaporHelpers).contains('withDestructure')
+    expect(code).contains(`({ foo }) => [foo]`)
+    expect(code).contains(`_ctx0[0] + _ctx.bar`)
+
+    expect(ir.block.operation).toMatchObject([
+      {
+        type: IRNodeTypes.CREATE_COMPONENT_NODE,
+        tag: 'Comp',
+        props: [[]],
+        slots: {
+          default: {
+            type: IRNodeTypes.BLOCK,
+            props: {
+              type: NodeTypes.SIMPLE_EXPRESSION,
+              content: '{ foo }',
+              ast: {
+                type: 'ArrowFunctionExpression',
+                params: [{ type: 'ObjectPattern' }],
+              },
+            },
+          },
+        },
+      },
+    ])
+  })
+
+  test('on component named slot', () => {
+    const { ir, code } = compileWithSlots(
+      `<Comp v-slot:named="{ foo }">{{ foo + bar }}</Comp>`,
+    )
+    expect(code).toMatchSnapshot()
+
+    expect(code).contains(`({ foo }) => [foo]`)
+    expect(code).contains(`_ctx0[0] + _ctx.bar`)
+
+    expect(ir.block.operation).toMatchObject([
+      {
+        type: IRNodeTypes.CREATE_COMPONENT_NODE,
+        tag: 'Comp',
+        slots: {
+          named: {
+            type: IRNodeTypes.BLOCK,
+            props: {
+              type: NodeTypes.SIMPLE_EXPRESSION,
+              content: '{ foo }',
+            },
+          },
+        },
+      },
+    ])
+  })
+
+  test('on component dynamically named slot', () => {
+    const { ir, code, vaporHelpers } = compileWithSlots(
+      `<Comp v-slot:[named]="{ foo }">{{ foo + bar }}</Comp>`,
+    )
+    expect(code).toMatchSnapshot()
+
+    expect(vaporHelpers).contains('withDestructure')
+    expect(code).contains(`({ foo }) => [foo]`)
+    expect(code).contains(`_ctx0[0] + _ctx.bar`)
+
+    expect(ir.block.operation).toMatchObject([
+      {
+        type: IRNodeTypes.CREATE_COMPONENT_NODE,
+        tag: 'Comp',
+        dynamicSlots: [
+          {
+            name: {
+              type: NodeTypes.SIMPLE_EXPRESSION,
+              content: 'named',
+              isStatic: false,
+            },
+            fn: {
+              type: IRNodeTypes.BLOCK,
+              props: {
+                type: NodeTypes.SIMPLE_EXPRESSION,
+                content: '{ foo }',
+              },
+            },
+          },
+        ],
+      },
+    ])
+  })
+
   test('named slots w/ implicit default slot', () => {
     const { ir, code } = compileWithSlots(
       `<Comp>
@@ -91,13 +183,56 @@ describe('compiler: transform slot', () => {
     ])
   })
 
-  test('nested slots', () => {
-    const { code } = compileWithSlots(
-      `<Foo>
-        <template #one><Bar><div/></Bar></template>
-      </Foo>`,
+  test('nested slots scoping', () => {
+    const { ir, code, vaporHelpers } = compileWithSlots(
+      `<Comp>
+        <template #default="{ foo }">
+          <Inner v-slot="{ bar }">
+            {{ foo + bar + baz }}
+          </Inner>
+          {{ foo + bar + baz }}
+        </template>
+      </Comp>`,
     )
     expect(code).toMatchSnapshot()
+
+    expect(vaporHelpers).contains('withDestructure')
+    expect(code).contains(`({ foo }) => [foo]`)
+    expect(code).contains(`({ bar }) => [bar]`)
+    expect(code).contains(`_ctx0[0] + _ctx1[0] + _ctx.baz`)
+    expect(code).contains(`_ctx0[0] + _ctx.bar + _ctx.baz`)
+
+    expect(ir.block.operation).toMatchObject([
+      {
+        type: IRNodeTypes.CREATE_COMPONENT_NODE,
+        tag: 'Comp',
+        props: [[]],
+        slots: {
+          default: {
+            type: IRNodeTypes.BLOCK,
+            props: {
+              type: NodeTypes.SIMPLE_EXPRESSION,
+              content: '{ foo }',
+            },
+          },
+        },
+      },
+    ])
+    expect(
+      (ir.block.operation[0] as any).slots.default.operation[0],
+    ).toMatchObject({
+      type: IRNodeTypes.CREATE_COMPONENT_NODE,
+      tag: 'Inner',
+      slots: {
+        default: {
+          type: IRNodeTypes.BLOCK,
+          props: {
+            type: NodeTypes.SIMPLE_EXPRESSION,
+            content: '{ bar }',
+          },
+        },
+      },
+    })
   })
 
   test('dynamic slots name', () => {
@@ -128,12 +263,16 @@ describe('compiler: transform slot', () => {
   })
 
   test('dynamic slots name w/ v-for', () => {
-    const { ir, code } = compileWithSlots(
+    const { ir, code, vaporHelpers } = compileWithSlots(
       `<Comp>
-        <template v-for="item in list" #[item]>foo</template>
+        <template v-for="item in list" #[item]="{ bar }">foo</template>
       </Comp>`,
     )
     expect(code).toMatchSnapshot()
+
+    expect(vaporHelpers).contains('withDestructure')
+    expect(code).contains(`({ bar }) => [bar]`)
+
     expect(ir.block.operation[0].type).toBe(IRNodeTypes.CREATE_COMPONENT_NODE)
     expect(ir.block.operation).toMatchObject([
       {
@@ -196,14 +335,18 @@ describe('compiler: transform slot', () => {
   })
 
   test('dynamic slots name w/ v-if / v-else[-if]', () => {
-    const { ir, code } = compileWithSlots(
+    const { ir, code, vaporHelpers } = compileWithSlots(
       `<Comp>
         <template v-if="condition" #condition>condition slot</template>
-        <template v-else-if="anotherCondition" #condition>another condition</template>
+        <template v-else-if="anotherCondition" #condition="{ foo, bar }">another condition</template>
         <template v-else #condition>else condition</template>
       </Comp>`,
     )
     expect(code).toMatchSnapshot()
+
+    expect(vaporHelpers).contains('withDestructure')
+    expect(code).contains(`({ foo, bar }) => [foo, bar]`)
+
     expect(ir.block.operation[0].type).toBe(IRNodeTypes.CREATE_COMPONENT_NODE)
     expect(ir.block.operation).toMatchObject([
       {
@@ -273,6 +416,50 @@ describe('compiler: transform slot', () => {
             offset: index + 4,
             line: 1,
             column: index + 5,
+          },
+        },
+      })
+    })
+
+    test('error on invalid mixed slot usage', () => {
+      const onError = vi.fn()
+      const source = `<Comp v-slot="foo"><template #foo></template></Comp>`
+      compileWithSlots(source, { onError })
+      const index = source.lastIndexOf('v-slot="foo"')
+      expect(onError.mock.calls[0][0]).toMatchObject({
+        code: ErrorCodes.X_V_SLOT_MIXED_SLOT_USAGE,
+        loc: {
+          start: {
+            offset: index,
+            line: 1,
+            column: index + 1,
+          },
+          end: {
+            offset: index + 12,
+            line: 1,
+            column: index + 13,
+          },
+        },
+      })
+    })
+
+    test('error on v-slot usage on plain elements', () => {
+      const onError = vi.fn()
+      const source = `<div v-slot/>`
+      compileWithSlots(source, { onError })
+      const index = source.indexOf('v-slot')
+      expect(onError.mock.calls[0][0]).toMatchObject({
+        code: ErrorCodes.X_V_SLOT_MISPLACED,
+        loc: {
+          start: {
+            offset: index,
+            line: 1,
+            column: index + 1,
+          },
+          end: {
+            offset: index + 6,
+            line: 1,
+            column: index + 7,
           },
         },
       })

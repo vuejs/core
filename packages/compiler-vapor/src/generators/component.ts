@@ -5,6 +5,7 @@ import {
   type ComponentConditionalDynamicSlot,
   type ComponentDynamicSlot,
   type ComponentLoopDynamicSlot,
+  type ComponentSlotBlockIRNode,
   type ComponentSlots,
   type CreateComponentIRNode,
   DynamicSlotType,
@@ -27,7 +28,11 @@ import {
 } from './utils'
 import { genExpression } from './expression'
 import { genPropKey } from './prop'
-import { createSimpleExpression, toValidAssetId } from '@vue/compiler-dom'
+import {
+  createSimpleExpression,
+  toValidAssetId,
+  walkIdentifiers,
+} from '@vue/compiler-core'
 import { genEventHandler } from './event'
 import { genDirectiveModifiers, genDirectivesForElement } from './directive'
 import { genModelHandler } from './modelValue'
@@ -151,7 +156,11 @@ function genSlots(slots: ComponentSlots, context: CodegenContext) {
   const names = Object.keys(slots)
   return genMulti(
     names.length > 1 ? DELIMITERS_OBJECT_NEWLINE : DELIMITERS_OBJECT,
-    ...names.map(name => [name, ': ', ...genBlock(slots[name], context)]),
+    ...names.map(name => [
+      name,
+      ': ',
+      ...genSlotBlockWithProps(slots[name], context),
+    ]),
   )
 }
 
@@ -188,7 +197,7 @@ function genBasicDynamicSlot(
   return genMulti(
     DELIMITERS_OBJECT_NEWLINE,
     ['name: ', ...genExpression(name, context)],
-    ['fn: ', ...genBlock(fn, context)],
+    ['fn: ', ...genSlotBlockWithProps(fn, context)],
     ...(key !== undefined ? [`key: "${key}"`] : []),
   )
 }
@@ -210,7 +219,10 @@ function genLoopSlot(
   const slotExpr = genMulti(
     DELIMITERS_OBJECT_NEWLINE,
     ['name: ', ...context.withId(() => genExpression(name, context), idMap)],
-    ['fn: ', ...context.withId(() => genBlock(fn, context), idMap)],
+    [
+      'fn: ',
+      ...context.withId(() => genSlotBlockWithProps(fn, context), idMap),
+    ],
   )
   return [
     ...genCall(
@@ -247,4 +259,59 @@ function genConditionalSlot(
     ...(negative ? [...genDynamicSlot(negative, context)] : ['void 0']),
     INDENT_END,
   ]
+}
+
+function genSlotBlockWithProps(
+  oper: ComponentSlotBlockIRNode,
+  context: CodegenContext,
+) {
+  let isDestructureAssignment = false
+  let rawProps: string | undefined
+  let propsName: string | undefined
+  let exitScope: (() => void) | undefined
+  let depth: number | undefined
+  const { props } = oper
+  const idsOfProps = new Set<string>()
+
+  if (props) {
+    rawProps = props.content
+    if ((isDestructureAssignment = !!props.ast)) {
+      ;[depth, exitScope] = context.enterScope()
+      propsName = `_ctx${depth}`
+      walkIdentifiers(
+        props.ast,
+        (id, _, __, ___, isLocal) => {
+          if (isLocal) idsOfProps.add(id.name)
+        },
+        true,
+      )
+    } else {
+      idsOfProps.add((propsName = rawProps))
+    }
+  }
+
+  const idMap: Record<string, string | null> = {}
+
+  Array.from(idsOfProps).forEach(
+    (id, idIndex) =>
+      (idMap[id] = isDestructureAssignment ? `${propsName}[${idIndex}]` : null),
+  )
+  let blockFn = context.withId(
+    () => genBlock(oper, context, [propsName]),
+    idMap,
+  )
+  exitScope && exitScope()
+
+  if (isDestructureAssignment) {
+    const idMap: Record<string, null> = {}
+    idsOfProps.forEach(id => (idMap[id] = null))
+
+    blockFn = genCall(
+      context.vaporHelper('withDestructure'),
+      ['(', rawProps, ') => ', ...genMulti(DELIMITERS_ARRAY, ...idsOfProps)],
+      blockFn,
+    )
+  }
+
+  return blockFn
 }

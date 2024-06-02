@@ -41,7 +41,8 @@ export function genFor(
     }
   }
 
-  const propsName = `_ctx${id}`
+  const [depth, exitScope] = context.enterScope()
+  const propsName = `_ctx${depth}`
   const idMap: Record<string, string | null> = {}
   Array.from(idsOfValue).forEach(
     (id, idIndex) => (idMap[id] = `${propsName}[${idIndex}]`),
@@ -53,6 +54,7 @@ export function genFor(
     () => genBlock(render, context, [propsName]),
     idMap,
   )
+  exitScope()
 
   let getKeyFn: CodeFragment[] | false = false
   if (keyProp) {
@@ -81,14 +83,14 @@ export function genFor(
     if (rawKey) idMap[rawKey] = null
     if (rawIndex) idMap[rawIndex] = null
     const destructureAssignmentFn: CodeFragment[] = [
-      '(_state, ',
+      '(',
       ...genMulti(
         DELIMITERS_ARRAY,
         rawValue ? rawValue : rawKey || rawIndex ? '_' : undefined,
         rawKey ? rawKey : rawIndex ? '__' : undefined,
         rawIndex,
       ),
-      ' = _state) => ',
+      ') => ',
       ...genMulti(DELIMITERS_ARRAY, ...idsOfValue, rawKey, rawIndex),
     ]
 
@@ -101,7 +103,7 @@ export function genFor(
 
   return [
     NEWLINE,
-    `const n${oper.id} = `,
+    `const n${id} = `,
     ...genCall(
       vaporHelper('createFor'),
       sourceExpr,

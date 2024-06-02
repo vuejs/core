@@ -208,7 +208,7 @@ export interface WithDirectiveIRNode extends BaseIRNode {
 }
 
 export interface ComponentSlotBlockIRNode extends BlockIRNode {
-  // TODO slot props
+  props?: SimpleExpressionNode
 }
 export type ComponentSlots = Record<string, ComponentSlotBlockIRNode>
 

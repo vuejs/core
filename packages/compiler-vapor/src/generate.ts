@@ -59,6 +59,11 @@ export class CodegenContext {
     return () => (this.block = parent)
   }
 
+  scopeLevel: number = 0
+  enterScope() {
+    return [this.scopeLevel++, () => this.scopeLevel--] as const
+  }
+
   constructor(
     public ir: RootIRNode,
     options: CodegenOptions,
