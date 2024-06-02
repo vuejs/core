@@ -11,6 +11,7 @@ import {
   getCurrentInstance,
   h,
   inject,
+  nextTick,
   nodeOps,
   provide,
   ref,
@@ -19,7 +20,7 @@ import {
   toRefs,
   watch,
 } from '@vue/runtime-test'
-import { render as domRender, nextTick } from 'vue'
+import { render as domRender } from 'vue'
 
 describe('component props', () => {
   test('stateful', () => {
@@ -728,5 +729,24 @@ describe('component props', () => {
     render(h(Comp, { msg: 'test' }), root)
 
     expect(Object.keys(props.msg).length).toBe(1)
+  })
+
+  test('should warn against reserved prop names', () => {
+    const Comp = defineComponent({
+      props: {
+        key: String,
+        ref: String,
+        $foo: String,
+      },
+      render() {},
+    })
+
+    const root = nodeOps.createElement('div')
+
+    render(h(Comp, { msg: 'test' }), root)
+
+    expect(`Invalid prop name: "key"`).toHaveBeenWarned()
+    expect(`Invalid prop name: "ref"`).toHaveBeenWarned()
+    expect(`Invalid prop name: "$foo"`).toHaveBeenWarned()
   })
 })

@@ -21,7 +21,7 @@ import { FRAGMENT, RENDER_LIST, RENDER_SLOT } from '../../src/runtimeHelpers'
 import { PatchFlags } from '@vue/shared'
 import { createObjectMatcher, genFlagText } from '../testUtils'
 
-function parseWithForTransform(
+export function parseWithForTransform(
   template: string,
   options: CompilerOptions = {},
 ) {
@@ -202,6 +202,18 @@ describe('compiler: v-for', () => {
       expect(forNode.valueAlias).toBeUndefined()
       expect((forNode.source as SimpleExpressionNode).content).toBe('items')
     })
+
+    test('source containing string expression with spaces', () => {
+      const { node: forNode } = parseWithForTransform(
+        `<span v-for="item in state ['my items']" />`,
+      )
+      expect(forNode.keyAlias).toBeUndefined()
+      expect(forNode.objectIndexAlias).toBeUndefined()
+      expect((forNode.valueAlias as SimpleExpressionNode).content).toBe('item')
+      expect((forNode.source as SimpleExpressionNode).content).toBe(
+        "state ['my items']",
+      )
+    })
   })
 
   describe('errors', () => {
@@ -244,6 +256,18 @@ describe('compiler: v-for', () => {
     test('missing source', () => {
       const onError = vi.fn()
       parseWithForTransform('<span v-for="item in" />', { onError })
+
+      expect(onError).toHaveBeenCalledTimes(1)
+      expect(onError).toHaveBeenCalledWith(
+        expect.objectContaining({
+          code: ErrorCodes.X_V_FOR_MALFORMED_EXPRESSION,
+        }),
+      )
+    })
+
+    test('missing source and have multiple spaces with', () => {
+      const onError = vi.fn()
+      parseWithForTransform('<span v-for="item in  " />', { onError })
 
       expect(onError).toHaveBeenCalledTimes(1)
       expect(onError).toHaveBeenCalledWith(

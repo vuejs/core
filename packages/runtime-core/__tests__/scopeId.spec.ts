@@ -1,14 +1,23 @@
 import {
+  Fragment,
+  createBlock,
+  createCommentVNode,
+  createVNode,
+  defineComponent,
   h,
+  nextTick,
   nodeOps,
+  openBlock,
   popScopeId,
   pushScopeId,
+  ref,
   render,
   renderSlot,
   serializeInner,
   withScopeId,
 } from '@vue/runtime-test'
 import { withCtx } from '../src/componentRenderContext'
+import { PatchFlags } from '@vue/shared'
 
 describe('scopeId runtime support', () => {
   test('should attach scopeId', () => {
@@ -183,6 +192,55 @@ describe('scopeId runtime support', () => {
     render(h(App), root)
 
     expect(serializeInner(root)).toBe(`<div parent></div>`)
+  })
+
+  test('should inherit scopeId through nested DEV_ROOT_FRAGMENT with inheritAttrs: false', async () => {
+    const Parent = {
+      __scopeId: 'parent',
+      render() {
+        return h(Child, { class: 'foo' })
+      },
+    }
+
+    const ok = ref(true)
+    const Child = defineComponent({
+      inheritAttrs: false,
+      render() {
+        return (
+          openBlock(),
+          createBlock(
+            Fragment,
+            null,
+            [
+              createCommentVNode('comment1'),
+              ok.value
+                ? (openBlock(), createBlock('div', { key: 0 }, 'div1'))
+                : (openBlock(),
+                  createBlock(
+                    Fragment,
+                    { key: 1 },
+                    [
+                      createCommentVNode('comment2'),
+                      createVNode('div', null, 'div2'),
+                    ],
+                    PatchFlags.STABLE_FRAGMENT | PatchFlags.DEV_ROOT_FRAGMENT,
+                  )),
+            ],
+            PatchFlags.STABLE_FRAGMENT | PatchFlags.DEV_ROOT_FRAGMENT,
+          )
+        )
+      },
+    })
+
+    const root = nodeOps.createElement('div')
+    render(h(Parent), root)
+    expect(serializeInner(root)).toBe(`<!--comment1--><div parent>div1</div>`)
+
+    ok.value = false
+    await nextTick()
+    expect(serializeInner(root)).toBe(
+      `<!--comment1--><!--comment2--><div parent>div2</div>`,
+    )
   })
 })
 

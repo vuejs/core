@@ -55,7 +55,7 @@ import {
   ssrProcessTransitionGroup,
   ssrTransformTransitionGroup,
 } from './ssrTransformTransitionGroup'
-import { extend, isArray, isObject, isSymbol } from '@vue/shared'
+import { extend, isArray, isObject, isPlainObject, isSymbol } from '@vue/shared'
 import { buildSSRProps } from './ssrTransformElement'
 import {
   ssrProcessTransition,
@@ -371,10 +371,10 @@ function subTransform(
 function clone(v: any): any {
   if (isArray(v)) {
     return v.map(clone)
-  } else if (isObject(v)) {
+  } else if (isPlainObject(v)) {
     const res: any = {}
     for (const key in v) {
-      res[key] = clone(v[key])
+      res[key] = clone(v[key as keyof typeof v])
     }
     return res
   } else {
