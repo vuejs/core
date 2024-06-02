@@ -285,12 +285,8 @@ function renderElementVNode(
   slotScopeId: string | undefined
 ) {
   const tag = vnode.type as string
-  let { props, children, shapeFlag, scopeId, dirs } = vnode
+  let { props, children, shapeFlag, scopeId } = vnode
   let openTag = `<${tag}`
-
-  if (dirs) {
-    props = applySSRDirectives(vnode, props, dirs)
-  }
 
   if (props) {
     openTag += ssrRenderAttrs(props, tag)
