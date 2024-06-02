@@ -186,6 +186,7 @@ export function parse(
             source,
             false,
           ) as SFCTemplateBlock)
+          descriptor.vapor ||= !!templateBlock.attrs.vapor
 
           if (!templateBlock.attrs.src) {
             templateBlock.ast = createRoot(node.children, source)
@@ -210,11 +211,8 @@ export function parse(
         break
       case 'script':
         const scriptBlock = createBlock(node, source, pad) as SFCScriptBlock
+        descriptor.vapor ||= !!scriptBlock.attrs.vapor
         const isSetup = !!scriptBlock.attrs.setup
-        const isVapor = !!scriptBlock.attrs.vapor
-        if (isVapor) {
-          descriptor.vapor = true
-        }
         if (isSetup && !descriptor.scriptSetup) {
           descriptor.scriptSetup = scriptBlock
           break
