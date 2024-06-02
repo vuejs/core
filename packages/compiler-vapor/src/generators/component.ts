@@ -168,24 +168,30 @@ function genDynamicSlots(
   dynamicSlots: ComponentDynamicSlot[],
   context: CodegenContext,
 ) {
-  const slotsExpr = genMulti(
+  return genMulti(
     dynamicSlots.length > 1 ? DELIMITERS_ARRAY_NEWLINE : DELIMITERS_ARRAY,
-    ...dynamicSlots.map(slot => genDynamicSlot(slot, context)),
+    ...dynamicSlots.map(slot => genDynamicSlot(slot, context, true)),
   )
-  return ['() => ', ...slotsExpr]
 }
 
 function genDynamicSlot(
   slot: ComponentDynamicSlot,
   context: CodegenContext,
+  top = false,
 ): CodeFragment[] {
   switch (slot.slotType) {
     case DynamicSlotType.BASIC:
-      return genBasicDynamicSlot(slot, context)
+      return top
+        ? ['() => (', ...genBasicDynamicSlot(slot, context), ')']
+        : genBasicDynamicSlot(slot, context)
     case DynamicSlotType.LOOP:
-      return genLoopSlot(slot, context)
+      return top
+        ? ['() => (', ...genLoopSlot(slot, context), ')']
+        : genLoopSlot(slot, context)
     case DynamicSlotType.CONDITIONAL:
-      return genConditionalSlot(slot, context)
+      return top
+        ? ['() => (', ...genConditionalSlot(slot, context), ')']
+        : genConditionalSlot(slot, context)
   }
 }
 

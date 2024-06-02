@@ -88,12 +88,12 @@ export function callWithErrorHandling(
   return res
 }
 
-export function callWithAsyncErrorHandling(
-  fn: Function | Function[],
+export function callWithAsyncErrorHandling<F extends Function | Function[]>(
+  fn: F,
   instance: ComponentInternalInstance | null,
   type: ErrorTypes,
   args?: unknown[],
-): any[] {
+): F extends Function ? any : any[] {
   if (isFunction(fn)) {
     const res = callWithErrorHandling(fn, instance, type, args)
     if (res && isPromise(res)) {

@@ -6,13 +6,13 @@ const t0 = _template("foo")
 
 export function render(_ctx) {
   const _component_Comp = _resolveComponent("Comp")
-  const n2 = _createComponent(_component_Comp, null, null, () => [{
+  const n2 = _createComponent(_component_Comp, null, null, [() => ({
     name: _ctx.name, 
     fn: () => {
       const n0 = t0()
       return n0
     }
-  }], true)
+  })], true)
   return n2
 }"
 `;
@@ -23,13 +23,13 @@ const t0 = _template("foo")
 
 export function render(_ctx) {
   const _component_Comp = _resolveComponent("Comp")
-  const n2 = _createComponent(_component_Comp, null, null, () => [_createForSlots(_ctx.list, (item) => ({
+  const n2 = _createComponent(_component_Comp, null, null, [() => (_createForSlots(_ctx.list, (item) => ({
     name: item, 
     fn: _withDestructure(({ bar }) => [bar], (_ctx0) => {
       const n0 = t0()
       return n0
     })
-  }))], true)
+  })))], true)
   return n2
 }"
 `;
@@ -40,13 +40,13 @@ const t0 = _template("foo")
 
 export function render(_ctx) {
   const _component_Comp = _resolveComponent("Comp")
-  const n2 = _createComponent(_component_Comp, null, null, () => [_createForSlots(_ctx.list, (_, __, index) => ({
+  const n2 = _createComponent(_component_Comp, null, null, [() => (_createForSlots(_ctx.list, (_, __, index) => ({
     name: index, 
     fn: () => {
       const n0 = t0()
       return n0
     }
-  }))], true)
+  })))], true)
   return n2
 }"
 `;
@@ -59,7 +59,7 @@ const t2 = _template("else condition")
 
 export function render(_ctx) {
   const _component_Comp = _resolveComponent("Comp")
-  const n6 = _createComponent(_component_Comp, null, null, () => [_ctx.condition
+  const n6 = _createComponent(_component_Comp, null, null, [() => (_ctx.condition
     ? {
       name: "condition", 
       fn: () => {
@@ -84,7 +84,7 @@ export function render(_ctx) {
           return n4
         }, 
         key: "2"
-      }], true)
+      })], true)
   return n6
 }"
 `;
@@ -151,13 +151,13 @@ exports[`compiler: transform slot > on component dynamically named slot 1`] = `
 
 export function render(_ctx) {
   const _component_Comp = _resolveComponent("Comp")
-  const n1 = _createComponent(_component_Comp, null, {  }, () => [{
+  const n1 = _createComponent(_component_Comp, null, {  }, [() => ({
     name: _ctx.named, 
     fn: _withDestructure(({ foo }) => [foo], (_ctx0) => {
       const n0 = _createTextNode(() => [_ctx0[0] + _ctx.bar])
       return n0
     })
-  }], true)
+  })], true)
   return n1
 }"
 `;
