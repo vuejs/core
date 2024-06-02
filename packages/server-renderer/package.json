@@ -1,6 +1,6 @@
 {
   "name": "@vue/server-renderer",
-  "version": "3.3.4",
+  "version": "3.4.27",
   "description": "@vue/server-renderer",
   "main": "index.js",
   "module": "dist/server-renderer.esm-bundler.js",
@@ -9,6 +9,20 @@
     "index.js",
     "dist"
   ],
+  "exports": {
+    ".": {
+      "types": "./dist/server-renderer.d.ts",
+      "node": {
+        "production": "./dist/server-renderer.cjs.prod.js",
+        "development": "./dist/server-renderer.cjs.js",
+        "default": "./index.js"
+      },
+      "module": "./dist/server-renderer.esm-bundler.js",
+      "import": "./dist/server-renderer.esm-bundler.js",
+      "require": "./index.js"
+    },
+    "./*": "./*"
+  },
   "buildOptions": {
     "name": "VueServerRenderer",
     "formats": [
@@ -32,10 +46,10 @@
   },
   "homepage": "https://github.com/vuejs/core/tree/main/packages/server-renderer#readme",
   "peerDependencies": {
-    "vue": "3.3.4"
+    "vue": "workspace:*"
   },
   "dependencies": {
-    "@vue/shared": "3.3.4",
-    "@vue/compiler-ssr": "3.3.4"
+    "@vue/shared": "workspace:*",
+    "@vue/compiler-ssr": "workspace:*"
   }
 }

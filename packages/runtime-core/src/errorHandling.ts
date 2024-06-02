@@ -1,12 +1,13 @@
-import { VNode } from './vnode'
-import { ComponentInternalInstance } from './component'
-import { warn, pushWarningContext, popWarningContext } from './warning'
-import { isPromise, isFunction } from '@vue/shared'
+import { pauseTracking, resetTracking } from '@vue/reactivity'
+import type { VNode } from './vnode'
+import type { ComponentInternalInstance } from './component'
+import { popWarningContext, pushWarningContext, warn } from './warning'
+import { isArray, isFunction, isPromise } from '@vue/shared'
 import { LifecycleHooks } from './enums'
 
 // contexts where user provided function may be executed, in addition to
 // lifecycle hooks.
-export const enum ErrorCodes {
+export enum ErrorCodes {
   SETUP_FUNCTION,
   RENDER_FUNCTION,
   WATCH_GETTER,
@@ -21,7 +22,7 @@ export const enum ErrorCodes {
   APP_WARN_HANDLER,
   FUNCTION_REF,
   ASYNC_COMPONENT_LOADER,
-  SCHEDULER
+  SCHEDULER,
 }
 
 export const ErrorTypeStrings: Record<LifecycleHooks | ErrorCodes, string> = {
@@ -55,7 +56,7 @@ export const ErrorTypeStrings: Record<LifecycleHooks | ErrorCodes, string> = {
   [ErrorCodes.ASYNC_COMPONENT_LOADER]: 'async component loader',
   [ErrorCodes.SCHEDULER]:
     'scheduler flush. This is likely a Vue internals bug. ' +
-    'Please open an issue at https://new-issue.vuejs.org/?repo=vuejs/core'
+    'Please open an issue at https://github.com/vuejs/core .',
 }
 
 export type ErrorTypes = LifecycleHooks | ErrorCodes
@@ -64,23 +65,21 @@ export function callWithErrorHandling(
   fn: Function,
   instance: ComponentInternalInstance | null,
   type: ErrorTypes,
-  args?: unknown[]
+  args?: unknown[],
 ) {
-  let res
   try {
-    res = args ? fn(...args) : fn()
+    return args ? fn(...args) : fn()
   } catch (err) {
     handleError(err, instance, type)
   }
-  return res
 }
 
 export function callWithAsyncErrorHandling(
   fn: Function | Function[],
   instance: ComponentInternalInstance | null,
   type: ErrorTypes,
-  args?: unknown[]
-): any[] {
+  args?: unknown[],
+): any {
   if (isFunction(fn)) {
     const res = callWithErrorHandling(fn, instance, type, args)
     if (res && isPromise(res)) {
@@ -91,18 +90,24 @@ export function callWithAsyncErrorHandling(
     return res
   }
 
-  const values = []
-  for (let i = 0; i < fn.length; i++) {
-    values.push(callWithAsyncErrorHandling(fn[i], instance, type, args))
+  if (isArray(fn)) {
+    const values = []
+    for (let i = 0; i < fn.length; i++) {
+      values.push(callWithAsyncErrorHandling(fn[i], instance, type, args))
+    }
+    return values
+  } else if (__DEV__) {
+    warn(
+      `Invalid value type passed to callWithAsyncErrorHandling(): ${typeof fn}`,
+    )
   }
-  return values
 }
 
 export function handleError(
   err: unknown,
   instance: ComponentInternalInstance | null,
   type: ErrorTypes,
-  throwInDev = true
+  throwInDev = true,
 ) {
   const contextVNode = instance ? instance.vnode : null
   if (instance) {
@@ -110,7 +115,9 @@ export function handleError(
     // the exposed instance is the render proxy to keep it consistent with 2.x
     const exposedInstance = instance.proxy
     // in production the hook receives only the error code
-    const errorInfo = __DEV__ ? ErrorTypeStrings[type] : type
+    const errorInfo = __DEV__
+      ? ErrorTypeStrings[type]
+      : `https://vuejs.org/error-reference/#runtime-${type}`
     while (cur) {
       const errorCapturedHooks = cur.ec
       if (errorCapturedHooks) {
@@ -127,12 +134,14 @@ export function handleError(
     // app-level handling
     const appErrorHandler = instance.appContext.config.errorHandler
     if (appErrorHandler) {
+      pauseTracking()
       callWithErrorHandling(
         appErrorHandler,
         null,
         ErrorCodes.APP_ERROR_HANDLER,
-        [err, exposedInstance, errorInfo]
+        [err, exposedInstance, errorInfo],
       )
+      resetTracking()
       return
     }
   }
@@ -143,7 +152,7 @@ function logError(
   err: unknown,
   type: ErrorTypes,
   contextVNode: VNode | null,
-  throwInDev = true
+  throwInDev = true,
 ) {
   if (__DEV__) {
     const info = ErrorTypeStrings[type]
