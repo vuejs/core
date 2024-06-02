@@ -10,6 +10,7 @@ const setVH = () => {
   document.documentElement.style.setProperty('--vh', window.innerHeight + `px`)
 }
 window.addEventListener('resize', setVH)
+
 setVH()
 
 const useSSRMode = ref(false)
