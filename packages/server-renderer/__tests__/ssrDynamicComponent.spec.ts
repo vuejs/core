@@ -23,14 +23,14 @@ describe('ssr: dynamic component', () => {
         createApp({
           components: {
             one: {
-              template: `<component is="div"><slot/></component>`
-            }
+              template: `<component is="div"><slot/></component>`,
+            },
           },
-          template: `<one><one v-show="false">hi</one></one>`
-        })
-      )
+          template: `<one><one v-show="false">hi</one></one>`,
+        }),
+      ),
     ).toBe(
-      `<div><!--[--><div style=\"display:none;\"><!--[-->hi<!--]--></div><!--]--></div>`
+      `<div><!--[--><div style=\"display:none;\"><!--[-->hi<!--]--></div><!--]--></div>`,
     )
   })
 
