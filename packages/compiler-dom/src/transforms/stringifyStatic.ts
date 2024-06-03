@@ -381,7 +381,7 @@ function evaluateConstant(exp: ExpressionNode): string {
       } else if (c.type === NodeTypes.INTERPOLATION) {
         res += toDisplayString(evaluateConstant(c.content))
       } else {
-        res += evaluateConstant(c)
+        res += evaluateConstant(c as ExpressionNode)
       }
     })
     return res

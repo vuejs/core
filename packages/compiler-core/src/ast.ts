@@ -263,6 +263,7 @@ export interface CompoundExpressionNode extends Node {
     | SimpleExpressionNode
     | CompoundExpressionNode
     | InterpolationNode
+    | CacheExpression
     | TextNode
     | string
     | symbol
@@ -330,6 +331,7 @@ export interface VNodeCall extends Node {
     | SlotsExpression // component slots
     | ForRenderListExpression // v-for fragment call
     | SimpleExpressionNode // hoisted
+    | CacheExpression // cached
     | undefined
   patchFlag: string | undefined
   dynamicProps: string | SimpleExpressionNode | undefined

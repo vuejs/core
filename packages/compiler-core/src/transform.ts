@@ -117,7 +117,7 @@ export interface TransformContext
   addIdentifiers(exp: ExpressionNode | string): void
   removeIdentifiers(exp: ExpressionNode | string): void
   hoist(exp: string | JSChildNode | ArrayExpression): SimpleExpressionNode
-  cache<T extends JSChildNode>(exp: T, isVNode?: boolean): CacheExpression | T
+  cache(exp: JSChildNode, isVNode?: boolean): CacheExpression
   constantCache: WeakMap<TemplateChildNode, ConstantTypes>
 
   // 2.x Compat only

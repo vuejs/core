@@ -1,4 +1,5 @@
 import {
+  type CacheExpression,
   type CallExpression,
   type ComponentNode,
   ConstantTypes,
@@ -12,12 +13,13 @@ import {
   type TemplateChildNode,
   type TemplateNode,
   type VNodeCall,
-  // createArrayExpression,
+  createArrayExpression,
+  createCompoundExpression,
   getVNodeBlockHelper,
   getVNodeHelper,
 } from '../ast'
 import type { TransformContext } from '../transform'
-import { PatchFlags, isString, isSymbol } from '@vue/shared'
+import { PatchFlags, isArray, isString, isSymbol } from '@vue/shared'
 import { isSlotOutlet } from '../utils'
 import {
   GUARD_REACTIVE_PROPS,
@@ -70,6 +72,7 @@ function walk(
       if (constantType > ConstantTypes.NOT_CONSTANT) {
         if (constantType >= ConstantTypes.CAN_CACHE) {
           toCache.push(child)
+          continue
         }
       } else {
         // node may contain dynamic children, but its props may be eligible for
@@ -127,8 +130,28 @@ function walk(
   // }
 
   if (toCache.length === children.length) {
-    // TODO
     // all children were hoisted - the entire children array is cacheable.
+    if (
+      node.type === NodeTypes.ELEMENT &&
+      node.tagType === ElementTypes.ELEMENT &&
+      node.codegenNode &&
+      node.codegenNode.type === NodeTypes.VNODE_CALL &&
+      isArray(node.codegenNode.children)
+    ) {
+      node.codegenNode.children = context.cache(
+        createArrayExpression(node.codegenNode.children),
+      )
+      // #6978, #7138, #7114
+      // a cached children array inside v-for can caused HMR errors since
+      // it might be mutated when mounting the first item
+      if (context.hmr) {
+        node.codegenNode.children = createCompoundExpression([
+          `[...(`,
+          node.codegenNode.children,
+          `)]`,
+        ])
+      }
+    }
   } else {
     for (const child of toCache) {
       ;(child.codegenNode as VNodeCall).patchFlag =
@@ -136,32 +159,10 @@ function walk(
       child.codegenNode = context.cache(child.codegenNode!)
     }
   }
-
-  // all children were hoisted - the entire children array is cacheable.
-  // if (
-  //   hoistedCount &&
-  //   hoistedCount === originalCount &&
-  //   node.type === NodeTypes.ELEMENT &&
-  //   node.tagType === ElementTypes.ELEMENT &&
-  //   node.codegenNode &&
-  //   node.codegenNode.type === NodeTypes.VNODE_CALL &&
-  //   isArray(node.codegenNode.children)
-  // ) {
-  //   const hoisted = context.hoist(
-  //     createArrayExpression(node.codegenNode.children),
-  //   )
-  //   // #6978, #7138, #7114
-  //   // a hoisted children array inside v-for can caused HMR errors since
-  //   // it might be mutated when mounting the v-for list
-  //   if (context.hmr) {
-  //     hoisted.content = `[...${hoisted.content}]`
-  //   }
-  //   node.codegenNode.children = hoisted
-  // }
 }
 
 export function getConstantType(
-  node: TemplateChildNode | SimpleExpressionNode,
+  node: TemplateChildNode | SimpleExpressionNode | CacheExpression,
   context: TransformContext,
 ): ConstantTypes {
   const { constantCache } = context
@@ -291,6 +292,8 @@ export function getConstantType(
         }
       }
       return returnType
+    case NodeTypes.JS_CACHE_EXPRESSION:
+      return ConstantTypes.CAN_CACHE
     default:
       if (__DEV__) {
         const exhaustiveCheck: never = node
