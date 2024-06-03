@@ -25,18 +25,21 @@ import { createObjectMatcher, genFlagText } from '../testUtils'
 import { transformText } from '../../src/transforms/transformText'
 import { PatchFlags } from '@vue/shared'
 
-const hoistedChildrenArrayMatcher = (startIndex = 1, length = 1) => ({
-  type: NodeTypes.JS_ARRAY_EXPRESSION,
-  elements: new Array(length).fill(0).map((_, i) => ({
-    type: NodeTypes.ELEMENT,
-    codegenNode: {
-      type: NodeTypes.SIMPLE_EXPRESSION,
-      content: `_hoisted_${startIndex + i}`,
-    },
-  })),
+const cachedChildrenArrayMatcher = (tags: string[]) => ({
+  type: NodeTypes.JS_CACHE_EXPRESSION,
+  value: {
+    type: NodeTypes.JS_ARRAY_EXPRESSION,
+    elements: tags.map(tag => ({
+      type: NodeTypes.ELEMENT,
+      codegenNode: {
+        type: NodeTypes.VNODE_CALL,
+        tag: JSON.stringify(tag),
+      },
+    })),
+  },
 })
 
-function transformWithHoist(template: string, options: CompilerOptions = {}) {
+function transformWithCache(template: string, options: CompilerOptions = {}) {
   const ast = parse(template)
   transform(ast, {
     hoistStatic: true,
@@ -60,101 +63,78 @@ function transformWithHoist(template: string, options: CompilerOptions = {}) {
   return ast
 }
 
-describe('compiler: hoistStatic transform', () => {
-  test('should NOT hoist root node', () => {
+describe('compiler: cacheStatic transform', () => {
+  test('should NOT cache root node', () => {
     // if the whole tree is static, the root still needs to be a block
     // so that it's patched in optimized mode to skip children
-    const root = transformWithHoist(`<div/>`)
-    expect(root.hoists.length).toBe(0)
+    const root = transformWithCache(`<div/>`)
     expect(root.codegenNode).toMatchObject({
+      type: NodeTypes.VNODE_CALL,
       tag: `"div"`,
     })
-    expect(generate(root).code).toMatchSnapshot()
+    expect(root.cached).toBe(0)
   })
 
-  test('hoist simple element', () => {
-    const root = transformWithHoist(
+  test('cache root node children', () => {
+    // we don't have access to the root codegenNode during the transform
+    // so we only cache each child individually
+    const root = transformWithCache(
+      `<span class="inline">hello</span><span class="inline">hello</span>`,
+    )
+    expect(root.codegenNode).toMatchObject({
+      type: NodeTypes.VNODE_CALL,
+      children: [
+        { codegenNode: { type: NodeTypes.JS_CACHE_EXPRESSION } },
+        { codegenNode: { type: NodeTypes.JS_CACHE_EXPRESSION } },
+      ],
+    })
+    expect(root.cached).toBe(2)
+  })
+
+  test('cache single children array', () => {
+    const root = transformWithCache(
       `<div><span class="inline">hello</span></div>`,
     )
-    expect(root.hoists).toMatchObject([
-      {
-        type: NodeTypes.VNODE_CALL,
-        tag: `"span"`,
-        props: createObjectMatcher({ class: 'inline' }),
-        children: {
-          type: NodeTypes.TEXT,
-          content: `hello`,
-        },
-      },
-      hoistedChildrenArrayMatcher(),
-    ])
     expect(root.codegenNode).toMatchObject({
       tag: `"div"`,
       props: undefined,
-      children: { content: `_hoisted_2` },
+      children: cachedChildrenArrayMatcher(['span']),
     })
+    expect(root.cached).toBe(1)
     expect(generate(root).code).toMatchSnapshot()
   })
 
-  test('hoist nested static tree', () => {
-    const root = transformWithHoist(`<div><p><span/><span/></p></div>`)
-    expect(root.hoists).toMatchObject([
-      {
-        type: NodeTypes.VNODE_CALL,
-        tag: `"p"`,
-        props: undefined,
-        children: [
-          { type: NodeTypes.ELEMENT, tag: `span` },
-          { type: NodeTypes.ELEMENT, tag: `span` },
-        ],
-      },
-      hoistedChildrenArrayMatcher(),
-    ])
-    expect((root.codegenNode as VNodeCall).children).toMatchObject({
-      content: '_hoisted_2',
-    })
+  test('cache nested children array', () => {
+    const root = transformWithCache(
+      `<div><p><span/><span/></p><p><span/><span/></p></div>`,
+    )
+    expect((root.codegenNode as VNodeCall).children).toMatchObject(
+      cachedChildrenArrayMatcher(['p', 'p']),
+    )
+    expect(root.cached).toBe(1)
     expect(generate(root).code).toMatchSnapshot()
   })
 
-  test('hoist nested static tree with comments', () => {
-    const root = transformWithHoist(`<div><div><!--comment--></div></div>`)
-    expect(root.hoists).toMatchObject([
-      {
-        type: NodeTypes.VNODE_CALL,
-        tag: `"div"`,
-        props: undefined,
-        children: [{ type: NodeTypes.COMMENT, content: `comment` }],
-      },
-      hoistedChildrenArrayMatcher(),
-    ])
-    expect((root.codegenNode as VNodeCall).children).toMatchObject({
-      content: `_hoisted_2`,
-    })
+  test('cache nested static tree with comments', () => {
+    const root = transformWithCache(`<div><div><!--comment--></div></div>`)
+    expect((root.codegenNode as VNodeCall).children).toMatchObject(
+      cachedChildrenArrayMatcher(['div']),
+    )
+    expect(root.cached).toBe(1)
     expect(generate(root).code).toMatchSnapshot()
   })
 
-  test('hoist siblings with common non-hoistable parent', () => {
-    const root = transformWithHoist(`<div><span/><div/></div>`)
-    expect(root.hoists).toMatchObject([
-      {
-        type: NodeTypes.VNODE_CALL,
-        tag: `"span"`,
-      },
-      {
-        type: NodeTypes.VNODE_CALL,
-        tag: `"div"`,
-      },
-      hoistedChildrenArrayMatcher(1, 2),
-    ])
-    expect((root.codegenNode as VNodeCall).children).toMatchObject({
-      content: '_hoisted_3',
-    })
+  test('cache siblings with common non-hoistable parent', () => {
+    const root = transformWithCache(`<div><span/><div/></div>`)
+    expect((root.codegenNode as VNodeCall).children).toMatchObject(
+      cachedChildrenArrayMatcher(['span', 'div']),
+    )
+    expect(root.cached).toBe(1)
     expect(generate(root).code).toMatchSnapshot()
   })
 
-  test('should NOT hoist components', () => {
-    const root = transformWithHoist(`<div><Comp/></div>`)
-    expect(root.hoists.length).toBe(0)
+  test('should NOT cache components', () => {
+    const root = transformWithCache(`<div><Comp/></div>`)
     expect((root.codegenNode as VNodeCall).children).toMatchObject([
       {
         type: NodeTypes.ELEMENT,
@@ -164,11 +144,12 @@ describe('compiler: hoistStatic transform', () => {
         },
       },
     ])
+    expect(root.cached).toBe(0)
     expect(generate(root).code).toMatchSnapshot()
   })
 
-  test('should NOT hoist element with dynamic props (but hoist the props list)', () => {
-    const root = transformWithHoist(`<div><div :id="foo"/></div>`)
+  test('should NOT cache element with dynamic props (but hoist the props list)', () => {
+    const root = transformWithCache(`<div><div :id="foo"/></div>`)
     expect(root.hoists.length).toBe(1)
     expect((root.codegenNode as VNodeCall).children).toMatchObject([
       {
@@ -189,31 +170,23 @@ describe('compiler: hoistStatic transform', () => {
         },
       },
     ])
+    expect(root.cached).toBe(0)
     expect(generate(root).code).toMatchSnapshot()
   })
 
-  test('hoist element with static key', () => {
-    const root = transformWithHoist(`<div><div key="foo"/></div>`)
-    expect(root.hoists.length).toBe(2)
-    expect(root.hoists).toMatchObject([
-      {
-        type: NodeTypes.VNODE_CALL,
-        tag: `"div"`,
-        props: createObjectMatcher({ key: 'foo' }),
-      },
-      hoistedChildrenArrayMatcher(),
-    ])
+  test('cache element with static key', () => {
+    const root = transformWithCache(`<div><div key="foo"/></div>`)
     expect(root.codegenNode).toMatchObject({
       tag: `"div"`,
       props: undefined,
-      children: { content: `_hoisted_2` },
+      children: cachedChildrenArrayMatcher(['div']),
     })
+    expect(root.cached).toBe(1)
     expect(generate(root).code).toMatchSnapshot()
   })
 
-  test('should NOT hoist element with dynamic key', () => {
-    const root = transformWithHoist(`<div><div :key="foo"/></div>`)
-    expect(root.hoists.length).toBe(0)
+  test('should NOT cache element with dynamic key', () => {
+    const root = transformWithCache(`<div><div :key="foo"/></div>`)
     expect((root.codegenNode as VNodeCall).children).toMatchObject([
       {
         type: NodeTypes.ELEMENT,
@@ -226,12 +199,12 @@ describe('compiler: hoistStatic transform', () => {
         },
       },
     ])
+    expect(root.cached).toBe(0)
     expect(generate(root).code).toMatchSnapshot()
   })
 
-  test('should NOT hoist element with dynamic ref', () => {
-    const root = transformWithHoist(`<div><div :ref="foo"/></div>`)
-    expect(root.hoists.length).toBe(0)
+  test('should NOT cache element with dynamic ref', () => {
+    const root = transformWithCache(`<div><div :ref="foo"/></div>`)
     expect((root.codegenNode as VNodeCall).children).toMatchObject([
       {
         type: NodeTypes.ELEMENT,
@@ -246,11 +219,12 @@ describe('compiler: hoistStatic transform', () => {
         },
       },
     ])
+    expect(root.cached).toBe(0)
     expect(generate(root).code).toMatchSnapshot()
   })
 
   test('hoist static props for elements with directives', () => {
-    const root = transformWithHoist(`<div><div id="foo" v-foo/></div>`)
+    const root = transformWithCache(`<div><div id="foo" v-foo/></div>`)
     expect(root.hoists).toMatchObject([createObjectMatcher({ id: 'foo' })])
     expect((root.codegenNode as VNodeCall).children).toMatchObject([
       {
@@ -270,11 +244,12 @@ describe('compiler: hoistStatic transform', () => {
         },
       },
     ])
+    expect(root.cached).toBe(0)
     expect(generate(root).code).toMatchSnapshot()
   })
 
   test('hoist static props for elements with dynamic text children', () => {
-    const root = transformWithHoist(
+    const root = transformWithCache(
       `<div><div id="foo">{{ hello }}</div></div>`,
     )
     expect(root.hoists).toMatchObject([createObjectMatcher({ id: 'foo' })])
@@ -290,11 +265,12 @@ describe('compiler: hoistStatic transform', () => {
         },
       },
     ])
+    expect(root.cached).toBe(0)
     expect(generate(root).code).toMatchSnapshot()
   })
 
   test('hoist static props for elements with unhoistable children', () => {
-    const root = transformWithHoist(`<div><div id="foo"><Comp/></div></div>`)
+    const root = transformWithCache(`<div><div id="foo"><Comp/></div></div>`)
     expect(root.hoists).toMatchObject([createObjectMatcher({ id: 'foo' })])
     expect((root.codegenNode as VNodeCall).children).toMatchObject([
       {
@@ -307,11 +283,12 @@ describe('compiler: hoistStatic transform', () => {
         },
       },
     ])
+    expect(root.cached).toBe(0)
     expect(generate(root).code).toMatchSnapshot()
   })
 
-  test('should hoist v-if props/children if static', () => {
-    const root = transformWithHoist(
+  test('should cache v-if props/children if static', () => {
+    const root = transformWithCache(
       `<div><div v-if="ok" id="foo"><span/></div></div>`,
     )
     expect(root.hoists).toMatchObject([
@@ -319,40 +296,31 @@ describe('compiler: hoistStatic transform', () => {
         key: `[0]`, // key injected by v-if branch
         id: 'foo',
       }),
-      {
-        type: NodeTypes.VNODE_CALL,
-        tag: `"span"`,
-      },
-      hoistedChildrenArrayMatcher(2),
     ])
     expect(
       ((root.children[0] as ElementNode).children[0] as IfNode).codegenNode,
     ).toMatchObject({
       type: NodeTypes.JS_CONDITIONAL_EXPRESSION,
       consequent: {
-        // blocks should NOT be hoisted
+        // blocks should NOT be cached
         type: NodeTypes.VNODE_CALL,
         tag: `"div"`,
         props: { content: `_hoisted_1` },
-        children: { content: `_hoisted_3` },
+        children: cachedChildrenArrayMatcher(['span']),
       },
     })
+    expect(root.cached).toBe(1)
     expect(generate(root).code).toMatchSnapshot()
   })
 
   test('should hoist v-for children if static', () => {
-    const root = transformWithHoist(
+    const root = transformWithCache(
       `<div><div v-for="i in list" id="foo"><span/></div></div>`,
     )
     expect(root.hoists).toMatchObject([
       createObjectMatcher({
         id: 'foo',
       }),
-      {
-        type: NodeTypes.VNODE_CALL,
-        tag: `"span"`,
-      },
-      hoistedChildrenArrayMatcher(2),
     ])
     const forBlockCodegen = (
       (root.children[0] as ElementNode).children[0] as ForNode
@@ -372,78 +340,47 @@ describe('compiler: hoistStatic transform', () => {
       type: NodeTypes.VNODE_CALL,
       tag: `"div"`,
       props: { content: `_hoisted_1` },
-      children: { content: `_hoisted_3` },
+      children: cachedChildrenArrayMatcher(['span']),
     })
+    expect(root.cached).toBe(1)
     expect(generate(root).code).toMatchSnapshot()
   })
 
   describe('prefixIdentifiers', () => {
-    test('hoist nested static tree with static interpolation', () => {
-      const root = transformWithHoist(
+    test('cache nested static tree with static interpolation', () => {
+      const root = transformWithCache(
         `<div><span>foo {{ 1 }} {{ true }}</span></div>`,
         {
           prefixIdentifiers: true,
         },
       )
-      expect(root.hoists).toMatchObject([
-        {
-          type: NodeTypes.VNODE_CALL,
-          tag: `"span"`,
-          props: undefined,
-          children: {
-            type: NodeTypes.COMPOUND_EXPRESSION,
-          },
-        },
-        hoistedChildrenArrayMatcher(),
-      ])
       expect(root.codegenNode).toMatchObject({
         tag: `"div"`,
         props: undefined,
-        children: {
-          type: NodeTypes.SIMPLE_EXPRESSION,
-          content: `_hoisted_2`,
-        },
+        children: cachedChildrenArrayMatcher(['span']),
       })
+      expect(root.cached).toBe(1)
       expect(generate(root).code).toMatchSnapshot()
     })
 
-    test('hoist nested static tree with static prop value', () => {
-      const root = transformWithHoist(
+    test('cache nested static tree with static prop value', () => {
+      const root = transformWithCache(
         `<div><span :foo="0">{{ 1 }}</span></div>`,
         {
           prefixIdentifiers: true,
         },
       )
-
-      expect(root.hoists).toMatchObject([
-        {
-          type: NodeTypes.VNODE_CALL,
-          tag: `"span"`,
-          props: createObjectMatcher({ foo: `[0]` }),
-          children: {
-            type: NodeTypes.INTERPOLATION,
-            content: {
-              content: `1`,
-              isStatic: false,
-              constType: ConstantTypes.CAN_STRINGIFY,
-            },
-          },
-        },
-        hoistedChildrenArrayMatcher(),
-      ])
       expect(root.codegenNode).toMatchObject({
         tag: `"div"`,
         props: undefined,
-        children: {
-          type: NodeTypes.SIMPLE_EXPRESSION,
-          content: `_hoisted_2`,
-        },
+        children: cachedChildrenArrayMatcher(['span']),
       })
+      expect(root.cached).toBe(1)
       expect(generate(root).code).toMatchSnapshot()
     })
 
     test('hoist class with static object value', () => {
-      const root = transformWithHoist(
+      const root = transformWithCache(
         `<div><span :class="{ foo: true }">{{ bar }}</span></div>`,
         {
           prefixIdentifiers: true,
@@ -504,44 +441,44 @@ describe('compiler: hoistStatic transform', () => {
       expect(generate(root).code).toMatchSnapshot()
     })
 
-    test('should NOT hoist expressions that refer scope variables', () => {
-      const root = transformWithHoist(
+    test('should NOT cache expressions that refer scope variables', () => {
+      const root = transformWithCache(
         `<div><p v-for="o in list"><span>{{ o }}</span></p></div>`,
         {
           prefixIdentifiers: true,
         },
       )
 
-      expect(root.hoists.length).toBe(0)
+      expect(root.cached).toBe(0)
       expect(generate(root).code).toMatchSnapshot()
     })
 
-    test('should NOT hoist expressions that refer scope variables (2)', () => {
-      const root = transformWithHoist(
+    test('should NOT cache expressions that refer scope variables (2)', () => {
+      const root = transformWithCache(
         `<div><p v-for="o in list"><span>{{ o + 'foo' }}</span></p></div>`,
         {
           prefixIdentifiers: true,
         },
       )
 
-      expect(root.hoists.length).toBe(0)
+      expect(root.cached).toBe(0)
       expect(generate(root).code).toMatchSnapshot()
     })
 
-    test('should NOT hoist expressions that refer scope variables (v-slot)', () => {
-      const root = transformWithHoist(
+    test('should NOT cache expressions that refer scope variables (v-slot)', () => {
+      const root = transformWithCache(
         `<Comp v-slot="{ foo }">{{ foo }}</Comp>`,
         {
           prefixIdentifiers: true,
         },
       )
 
-      expect(root.hoists.length).toBe(0)
+      expect(root.cached).toBe(0)
       expect(generate(root).code).toMatchSnapshot()
     })
 
-    test('should NOT hoist elements with cached handlers', () => {
-      const root = transformWithHoist(
+    test('should NOT cache elements with cached handlers', () => {
+      const root = transformWithCache(
         `<div><div><div @click="foo"/></div></div>`,
         {
           prefixIdentifiers: true,
@@ -559,8 +496,8 @@ describe('compiler: hoistStatic transform', () => {
       ).toMatchSnapshot()
     })
 
-    test('should NOT hoist elements with cached handlers + other bindings', () => {
-      const root = transformWithHoist(
+    test('should NOT cache elements with cached handlers + other bindings', () => {
+      const root = transformWithCache(
         `<div><div><div :class="{}" @click="foo"/></div></div>`,
         {
           prefixIdentifiers: true,
@@ -578,32 +515,66 @@ describe('compiler: hoistStatic transform', () => {
       ).toMatchSnapshot()
     })
 
-    test('should NOT hoist keyed template v-for with plain element child', () => {
-      const root = transformWithHoist(
+    test('should NOT cache keyed template v-for with plain element child', () => {
+      const root = transformWithCache(
         `<div><template v-for="item in items" :key="item"><span/></template></div>`,
       )
       expect(root.hoists.length).toBe(0)
       expect(generate(root).code).toMatchSnapshot()
     })
 
-    test('should NOT hoist SVG with directives', () => {
-      const root = transformWithHoist(
+    test('should NOT cache SVG with directives', () => {
+      const root = transformWithCache(
         `<div><svg v-foo><path d="M2,3H5.5L12"/></svg></div>`,
       )
-      expect(root.hoists.length).toBe(2)
+      expect(root.cached).toBe(1)
+      expect(root.codegenNode).toMatchObject({
+        children: [
+          {
+            tag: 'svg',
+            // only cache the children, not the svg tag itself
+            codegenNode: {
+              children: {
+                type: NodeTypes.JS_CACHE_EXPRESSION,
+              },
+            },
+          },
+        ],
+      })
       expect(generate(root).code).toMatchSnapshot()
     })
 
-    test('clone hoisted array children in HMR mode', () => {
-      const root = transformWithHoist(`<div><span class="hi"></span></div>`, {
-        hmr: true,
-      })
-      expect(root.hoists.length).toBe(2)
-      expect(root.codegenNode).toMatchObject({
+    test('clone hoisted array children in v-for + HMR mode', () => {
+      const root = transformWithCache(
+        `<div><div v-for="i in 1"><span class="hi"></span></div></div>`,
+        {
+          hmr: true,
+        },
+      )
+      expect(root.cached).toBe(1)
+      const forBlockCodegen = (
+        (root.children[0] as ElementNode).children[0] as ForNode
+      ).codegenNode
+      expect(forBlockCodegen).toMatchObject({
+        type: NodeTypes.VNODE_CALL,
+        tag: FRAGMENT,
+        props: undefined,
         children: {
-          content: '[..._hoisted_2]',
+          type: NodeTypes.JS_CALL_EXPRESSION,
+          callee: RENDER_LIST,
+        },
+        patchFlag: genFlagText(PatchFlags.UNKEYED_FRAGMENT),
+      })
+      const innerBlockCodegen = forBlockCodegen!.children.arguments[1]
+      expect(innerBlockCodegen.returns).toMatchObject({
+        type: NodeTypes.VNODE_CALL,
+        tag: `"div"`,
+        children: {
+          type: NodeTypes.COMPOUND_EXPRESSION,
+          children: [`[...(`, cachedChildrenArrayMatcher(['span']), `)]`],
         },
       })
+      expect(generate(root).code).toMatchSnapshot()
     })
   })
 })

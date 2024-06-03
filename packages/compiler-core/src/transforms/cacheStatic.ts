@@ -55,6 +55,7 @@ function walk(
   node: ParentNode,
   context: TransformContext,
   doNotHoistNode: boolean = false,
+  inFor = false,
 ) {
   const { children } = node
   const toCache: PlainElementNode[] = []
@@ -104,13 +105,13 @@ function walk(
       if (isComponent) {
         context.scopes.vSlot++
       }
-      walk(child, context)
+      walk(child, context, false, inFor)
       if (isComponent) {
         context.scopes.vSlot--
       }
     } else if (child.type === NodeTypes.FOR) {
       // Do not hoist v-for single child because it has to be a block
-      walk(child, context, child.children.length === 1)
+      walk(child, context, child.children.length === 1, true)
     } else if (child.type === NodeTypes.IF) {
       for (let i = 0; i < child.branches.length; i++) {
         // Do not hoist v-if single child because it has to be a block
@@ -118,6 +119,7 @@ function walk(
           child.branches[i],
           context,
           child.branches[i].children.length === 1,
+          inFor,
         )
       }
     }
@@ -143,7 +145,7 @@ function walk(
     // #6978, #7138, #7114
     // a cached children array inside v-for can caused HMR errors since
     // it might be mutated when mounting the first item
-    if (context.hmr) {
+    if (inFor && context.hmr) {
       node.codegenNode.children = createCompoundExpression([
         `[...(`,
         node.codegenNode.children,
