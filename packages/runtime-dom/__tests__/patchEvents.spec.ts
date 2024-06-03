@@ -248,4 +248,20 @@ describe(`runtime-dom: events patching`, () => {
     customElement.dispatchEvent(new CustomEvent('capture'))
     expect(onCapture).toHaveBeenCalledTimes(1)
   })
+
+  test('should support once event with the once modifier', async () => {
+    const el = document.createElement('div')
+
+    const onOnce = vi.fn()
+
+    patchProp(el, 'onOnceOnce', null, onOnce)
+
+    el.dispatchEvent(new Event('once'))
+    await timeout()
+    expect(onOnce).toHaveBeenCalledTimes(1)
+
+    el.dispatchEvent(new Event('once'))
+    await timeout()
+    expect(onOnce).toHaveBeenCalledTimes(1)
+  })
 })

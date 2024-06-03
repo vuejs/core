@@ -60,7 +60,7 @@ export function patchEvent(
 }
 
 const optionsModifierRE =
-  /^(?!onOnce|onPassive|onCapture).*?(Once|Passive|Capture)$/
+  /^(?!on(?:Once|Passive|Capture)$).*?(Once|Passive|Capture)$/
 
 function parseName(name: string): [string, EventListenerOptions | undefined] {
   let options: EventListenerOptions | undefined
