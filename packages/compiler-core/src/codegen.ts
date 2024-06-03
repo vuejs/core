@@ -43,8 +43,6 @@ import {
   CREATE_TEXT,
   CREATE_VNODE,
   OPEN_BLOCK,
-  POP_SCOPE_ID,
-  PUSH_SCOPE_ID,
   RESOLVE_COMPONENT,
   RESOLVE_DIRECTIVE,
   RESOLVE_FILTER,
@@ -473,11 +471,6 @@ function genModulePreamble(
     ssrRuntimeModuleName,
   } = context
 
-  if (genScopeId && ast.hoists.length) {
-    ast.helpers.add(PUSH_SCOPE_ID)
-    ast.helpers.add(POP_SCOPE_ID)
-  }
-
   // generate import statements for helpers
   if (ast.helpers.size) {
     const helpers = Array.from(ast.helpers)
@@ -566,33 +559,14 @@ function genHoists(hoists: (JSChildNode | null)[], context: CodegenContext) {
     return
   }
   context.pure = true
-  const { push, newline, helper, scopeId, mode } = context
-  const genScopeId = !__BROWSER__ && scopeId != null && mode !== 'function'
+  const { push, newline } = context
   newline()
-
-  // generate inlined withScopeId helper
-  if (genScopeId) {
-    push(
-      `const _withScopeId = n => (${helper(
-        PUSH_SCOPE_ID,
-      )}("${scopeId}"),n=n(),${helper(POP_SCOPE_ID)}(),n)`,
-    )
-    newline()
-  }
 
   for (let i = 0; i < hoists.length; i++) {
     const exp = hoists[i]
     if (exp) {
-      const needScopeIdWrapper = genScopeId && exp.type === NodeTypes.VNODE_CALL
-      push(
-        `const _hoisted_${i + 1} = ${
-          needScopeIdWrapper ? `${PURE_ANNOTATION} _withScopeId(() => ` : ``
-        }`,
-      )
+      push(`const _hoisted_${i + 1} = `)
       genNode(exp, context)
-      if (needScopeIdWrapper) {
-        push(`)`)
-      }
       newline()
     }
   }

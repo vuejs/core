@@ -154,6 +154,7 @@ describe('compiler: codegen', () => {
       ],
     })
     const { code } = generate(root)
+    console.log(code)
     expect(code).toMatch(`const _hoisted_1 = hello`)
     expect(code).toMatch(`const _hoisted_2 = { id: "foo" }`)
     expect(code).toMatchSnapshot()
