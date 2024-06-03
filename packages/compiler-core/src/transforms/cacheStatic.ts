@@ -58,7 +58,6 @@ function walk(
 ) {
   const { children } = node
   const toCache: PlainElementNode[] = []
-
   for (let i = 0; i < children.length; i++) {
     const child = children[i]
     // only plain elements & text calls are eligible for hoisting.
@@ -129,28 +128,27 @@ function walk(
   //   context.transformHoist(children, context, node)
   // }
 
-  if (toCache.length === children.length) {
+  if (
+    toCache.length === children.length &&
+    node.type === NodeTypes.ELEMENT &&
+    node.tagType === ElementTypes.ELEMENT &&
+    node.codegenNode &&
+    node.codegenNode.type === NodeTypes.VNODE_CALL &&
+    isArray(node.codegenNode.children)
+  ) {
     // all children were hoisted - the entire children array is cacheable.
-    if (
-      node.type === NodeTypes.ELEMENT &&
-      node.tagType === ElementTypes.ELEMENT &&
-      node.codegenNode &&
-      node.codegenNode.type === NodeTypes.VNODE_CALL &&
-      isArray(node.codegenNode.children)
-    ) {
-      node.codegenNode.children = context.cache(
-        createArrayExpression(node.codegenNode.children),
-      )
-      // #6978, #7138, #7114
-      // a cached children array inside v-for can caused HMR errors since
-      // it might be mutated when mounting the first item
-      if (context.hmr) {
-        node.codegenNode.children = createCompoundExpression([
-          `[...(`,
-          node.codegenNode.children,
-          `)]`,
-        ])
-      }
+    node.codegenNode.children = context.cache(
+      createArrayExpression(node.codegenNode.children),
+    )
+    // #6978, #7138, #7114
+    // a cached children array inside v-for can caused HMR errors since
+    // it might be mutated when mounting the first item
+    if (context.hmr) {
+      node.codegenNode.children = createCompoundExpression([
+        `[...(`,
+        node.codegenNode.children,
+        `)]`,
+      ])
     }
   } else {
     for (const child of toCache) {
