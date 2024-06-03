@@ -65,8 +65,7 @@ export function render(_ctx) {
       fn: () => {
         const n0 = t0()
         return n0
-      }, 
-      key: "0"
+      }
     }
     : _ctx.anotherCondition
       ? {
@@ -74,16 +73,14 @@ export function render(_ctx) {
         fn: _withDestructure(({ foo, bar }) => [foo, bar], (_ctx0) => {
           const n2 = t1()
           return n2
-        }), 
-        key: "1"
+        })
       }
       : {
         name: "condition", 
         fn: () => {
           const n4 = t2()
           return n4
-        }, 
-        key: "2"
+        }
       })], true)
   return n6
 }"

@@ -290,7 +290,6 @@ describe('compiler: transform slot', () => {
             loop: {
               source: { content: 'list' },
               value: { content: 'item' },
-              key: undefined,
               index: undefined,
             },
           },
@@ -323,7 +322,6 @@ describe('compiler: transform slot', () => {
             loop: {
               source: { content: 'list' },
               value: undefined,
-              key: undefined,
               index: {
                 type: NodeTypes.SIMPLE_EXPRESSION,
               },
@@ -359,16 +357,14 @@ describe('compiler: transform slot', () => {
             condition: { content: 'condition' },
             positive: {
               slotType: DynamicSlotType.BASIC,
-              key: 0,
             },
             negative: {
               slotType: DynamicSlotType.CONDITIONAL,
               condition: { content: 'anotherCondition' },
               positive: {
                 slotType: DynamicSlotType.BASIC,
-                key: 1,
               },
-              negative: { slotType: DynamicSlotType.BASIC, key: 2 },
+              negative: { slotType: DynamicSlotType.BASIC },
             },
           },
         ],

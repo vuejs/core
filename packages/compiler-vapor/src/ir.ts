@@ -222,7 +222,6 @@ export interface ComponentBasicDynamicSlot {
   slotType: DynamicSlotType.BASIC
   name: SimpleExpressionNode
   fn: ComponentSlotBlockIRNode
-  key?: number
 }
 
 export interface ComponentLoopDynamicSlot {

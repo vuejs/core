@@ -199,12 +199,11 @@ function genBasicDynamicSlot(
   slot: ComponentBasicDynamicSlot,
   context: CodegenContext,
 ): CodeFragment[] {
-  const { name, fn, key } = slot
+  const { name, fn } = slot
   return genMulti(
     DELIMITERS_OBJECT_NEWLINE,
     ['name: ', ...genExpression(name, context)],
     ['fn: ', ...genSlotBlockWithProps(fn, context)],
-    ...(key !== undefined ? [`key: "${key}"`] : []),
   )
 }
 

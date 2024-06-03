@@ -135,7 +135,6 @@ export const transformVSlot: NodeTransform = (node, context) => {
           slotType: DynamicSlotType.BASIC,
           name: arg!,
           fn: block,
-          key: 0,
         },
       })
     } else if (vElse) {
@@ -157,14 +156,12 @@ export const transformVSlot: NodeTransform = (node, context) => {
                 slotType: DynamicSlotType.BASIC,
                 name: arg!,
                 fn: block,
-                key: ifNode.positive.key! + 1,
               },
             }
           : {
               slotType: DynamicSlotType.BASIC,
               name: arg!,
               fn: block,
-              key: ifNode.positive.key! + 1,
             }
         ifNode.negative = negative
       } else {
