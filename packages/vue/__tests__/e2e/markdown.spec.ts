@@ -1,5 +1,5 @@
-import path from 'path'
-import { setupPuppeteer, expectByPolling, E2E_TIMEOUT } from './e2eUtils'
+import path from 'node:path'
+import { E2E_TIMEOUT, expectByPolling, setupPuppeteer } from './e2eUtils'
 
 describe('e2e: markdown', () => {
   const { page, isVisible, value, html } = setupPuppeteer()
@@ -7,7 +7,7 @@ describe('e2e: markdown', () => {
   async function testMarkdown(apiType: 'classic' | 'composition') {
     const baseUrl = `file://${path.resolve(
       __dirname,
-      `../../examples/${apiType}/markdown.html#test`
+      `../../examples/${apiType}/markdown.html#test`,
     )}`
 
     await page().goto(baseUrl)
@@ -25,7 +25,7 @@ describe('e2e: markdown', () => {
       () => html('#editor div'),
       '<h1>hello</h1>\n' +
         '<h2>foo</h2>\n' +
-        '<ul>\n<li>bar</li>\n<li>baz</li>\n</ul>\n'
+        '<ul>\n<li>bar</li>\n<li>baz</li>\n</ul>\n',
     )
   }
 
@@ -34,7 +34,7 @@ describe('e2e: markdown', () => {
     async () => {
       await testMarkdown('classic')
     },
-    E2E_TIMEOUT
+    E2E_TIMEOUT,
   )
 
   test(
@@ -42,6 +42,6 @@ describe('e2e: markdown', () => {
     async () => {
       await testMarkdown('composition')
     },
-    E2E_TIMEOUT
+    E2E_TIMEOUT,
   )
 })

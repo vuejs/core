@@ -1,13 +1,13 @@
 import {
   isArray,
+  isFunction,
   isMap,
   isObject,
-  isFunction,
   isPlainObject,
   isSet,
-  objectToString,
   isString,
-  isSymbol
+  isSymbol,
+  objectToString,
 } from './general'
 
 /**
@@ -37,12 +37,12 @@ const replacer = (_key: string, val: any): any => {
           entries[stringifySymbol(key, i) + ' =>'] = val
           return entries
         },
-        {} as Record<string, any>
-      )
+        {} as Record<string, any>,
+      ),
     }
   } else if (isSet(val)) {
     return {
-      [`Set(${val.size})`]: [...val.values()].map(v => stringifySymbol(v))
+      [`Set(${val.size})`]: [...val.values()].map(v => stringifySymbol(v)),
     }
   } else if (isSymbol(val)) {
     return stringifySymbol(val)
@@ -54,4 +54,6 @@ const replacer = (_key: string, val: any): any => {
 }
 
 const stringifySymbol = (v: unknown, i: number | string = ''): any =>
-  isSymbol(v) ? `Symbol(${v.description ?? i})` : v
+  // Symbol.description in es2019+ so we need to cast here to pass
+  // the lib: es2016 check
+  isSymbol(v) ? `Symbol(${(v as any).description ?? i})` : v

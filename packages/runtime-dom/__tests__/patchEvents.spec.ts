@@ -176,7 +176,7 @@ describe(`runtime-dom: events patching`, () => {
     }
     window.customElements.define('test-element', TestElement)
     const testElement = document.createElement('test-element', {
-      is: 'test-element'
+      is: 'test-element',
     })
     const fn1 = vi.fn()
     const fn2 = vi.fn()
@@ -263,5 +263,15 @@ describe(`runtime-dom: events patching`, () => {
     el.dispatchEvent(new Event('once'))
     await timeout()
     expect(onOnce).toHaveBeenCalledTimes(1)
+  })
+  
+  it('handles an unknown type', () => {
+    const el = document.createElement('div')
+    patchProp(el, 'onClick', null, 'test')
+    el.dispatchEvent(new Event('click'))
+    expect(
+      `Wrong type passed as event handler to onClick - did you forget @ or : ` +
+        `in front of your prop?\nExpected function or array of functions, received type string.`
+    ).toHaveBeenWarned()
   })
 })

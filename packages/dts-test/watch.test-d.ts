@@ -1,14 +1,24 @@
-import { ref, computed, watch, defineComponent, shallowRef } from 'vue'
+import {
+  computed,
+  defineComponent,
+  defineModel,
+  ref,
+  shallowRef,
+  watch,
+} from 'vue'
 import { expectType } from './utils'
 
 const source = ref('foo')
 const source2 = computed(() => source.value)
 const source3 = () => 1
 
+type OnCleanup = (fn: () => void) => void
+
 // lazy watcher will have consistent types for oldValue.
-watch(source, (value, oldValue) => {
+watch(source, (value, oldValue, onCleanup) => {
   expectType<string>(value)
   expectType<string>(oldValue)
+  expectType<OnCleanup>(onCleanup)
 })
 
 watch([source, source2, source3], (values, oldValues) => {
@@ -29,7 +39,7 @@ watch(
     expectType<string>(value)
     expectType<string | undefined>(oldValue)
   },
-  { immediate: true }
+  { immediate: true },
 )
 
 watch(
@@ -37,10 +47,10 @@ watch(
   (values, oldValues) => {
     expectType<[string, string, number]>(values)
     expectType<[string | undefined, string | undefined, number | undefined]>(
-      oldValues
+      oldValues,
     )
   },
-  { immediate: true }
+  { immediate: true },
 )
 
 // const array
@@ -52,12 +62,12 @@ watch(
       Readonly<[string | undefined, string | undefined, number | undefined]>
     >(oldValues)
   },
-  { immediate: true }
+  { immediate: true },
 )
 
 // should provide correct ref.value inner type to callbacks
 const nestedRefSource = ref({
-  foo: ref(1)
+  foo: ref(1),
 })
 
 watch(nestedRefSource, (v, ov) => {
@@ -85,12 +95,13 @@ defineComponent({
   created() {
     this.$watch(
       () => this.a,
-      (v, ov) => {
+      (v, ov, onCleanup) => {
         expectType<number>(v)
         expectType<number>(ov)
-      }
+        expectType<OnCleanup>(onCleanup)
+      },
     )
-  }
+  },
 })
 
 {
@@ -104,5 +115,33 @@ defineComponent({
   })
   watch(shallowUnionAsCast, value => {
     expectType<Steps>(value)
+  })
+}
+
+{
+  // defineModel
+  const bool = defineModel({ default: false })
+  watch(bool, value => {
+    expectType<boolean>(value)
+  })
+
+  const bool1 = defineModel<boolean>()
+  watch(bool1, value => {
+    expectType<boolean | undefined>(value)
+  })
+
+  const msg = defineModel<string>({ required: true })
+  watch(msg, value => {
+    expectType<string>(value)
+  })
+
+  const arr = defineModel<string[]>({ required: true })
+  watch(arr, value => {
+    expectType<string[]>(value)
+  })
+
+  const obj = defineModel<{ foo: string }>({ required: true })
+  watch(obj, value => {
+    expectType<{ foo: string }>(value)
   })
 }
