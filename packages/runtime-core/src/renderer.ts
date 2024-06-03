@@ -2221,10 +2221,10 @@ function baseCreateRenderer(
       return
     }
 
-    const performRemove = (isUnmounted?: boolean) => {
+    const performRemove = () => {
       hostRemove(el!)
       if (transition && !transition.persisted && transition.afterLeave) {
-        transition.afterLeave(isUnmounted)
+        transition.afterLeave()
       }
     }
 

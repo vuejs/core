@@ -542,7 +542,7 @@ function createSuspenseBoundary(
           pendingBranch!.transition &&
           pendingBranch!.transition.mode === 'out-in'
         if (delayEnter) {
-          activeBranch!.transition!.afterLeave = isUnmounted => {
+          activeBranch!.transition!.afterLeave = () => {
             if (pendingId === suspense.pendingId) {
               move(
                 pendingBranch!,
@@ -550,8 +550,9 @@ function createSuspenseBoundary(
                 anchor === initialAnchor ? next(activeBranch!) : anchor,
                 MoveType.ENTER,
               )
-              if (!isUnmounted) queuePostFlushCb(effects)
+              queuePostFlushCb(effects)
             }
+            activeBranch!.transition!.afterLeave = undefined
           }
         }
         // unmount current active tree

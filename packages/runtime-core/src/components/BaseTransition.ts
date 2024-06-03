@@ -60,10 +60,10 @@ export interface TransitionHooks<HostElement = RendererElement> {
   persisted: boolean
   beforeEnter(el: HostElement): void
   enter(el: HostElement): void
-  leave(el: HostElement, remove: (isUnmounting?: boolean) => void): void
+  leave(el: HostElement, remove: () => void): void
   clone(vnode: VNode): TransitionHooks<HostElement>
   // optional
-  afterLeave?(isUnmounting?: boolean): void
+  afterLeave?(): void
   delayLeave?(
     el: HostElement,
     earlyRemove: () => void,
@@ -412,7 +412,7 @@ export function resolveTransitionHooks(
         el[enterCbKey](true /* cancelled */)
       }
       if (state.isUnmounting) {
-        return remove(state.isUnmounting)
+        return remove()
       }
       callHook(onBeforeLeave, [el])
       let called = false
