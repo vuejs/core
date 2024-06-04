@@ -691,7 +691,7 @@ export function cloneVNode<T, U>(
   // to clone the transition to ensure that the vnode referenced within
   // the transition hooks is fresh.
   if (transition && cloneTransition) {
-    cloned.transition = transition.clone(cloned as VNode)
+    transition.cloneTo(cloned as VNode)
   }
 
   if (__COMPAT__) {
