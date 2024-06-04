@@ -1,13 +1,13 @@
 import { BindingTypes } from '@vue/compiler-core'
-import { SFCScriptCompileOptions } from '../../src'
-import { compileSFCScript, assertCode } from '../utils'
+import type { SFCScriptCompileOptions } from '../../src'
+import { assertCode, compileSFCScript } from '../utils'
 
 describe('sfc hoist static', () => {
   function compile(src: string, options?: Partial<SFCScriptCompileOptions>) {
     return compileSFCScript(src, {
       inlineTemplate: true,
       hoistStatic: true,
-      ...options
+      ...options,
     })
   }
 
@@ -19,7 +19,6 @@ describe('sfc hoist static', () => {
     const nil = null
     const bigint = 100n
     const template = \`str\`
-    const regex = /.*/g
     `.trim()
     const { content, bindings } = compile(`
     <script setup>
@@ -36,7 +35,6 @@ describe('sfc hoist static', () => {
       nil: BindingTypes.LITERAL_CONST,
       bigint: BindingTypes.LITERAL_CONST,
       template: BindingTypes.LITERAL_CONST,
-      regex: BindingTypes.LITERAL_CONST
     })
     assertCode(content)
   })
@@ -59,7 +57,7 @@ describe('sfc hoist static', () => {
       binary: BindingTypes.LITERAL_CONST,
       conditional: BindingTypes.LITERAL_CONST,
       unary: BindingTypes.LITERAL_CONST,
-      sequence: BindingTypes.LITERAL_CONST
+      sequence: BindingTypes.LITERAL_CONST,
     })
     assertCode(content)
   })
@@ -81,7 +79,7 @@ describe('sfc hoist static', () => {
     expect(content.startsWith(hoistCode)).toBe(true)
     expect(bindings).toStrictEqual({
       foo: BindingTypes.PROPS,
-      defaultValue: BindingTypes.LITERAL_CONST
+      defaultValue: BindingTypes.LITERAL_CONST,
     })
     assertCode(content)
   })
@@ -90,6 +88,8 @@ describe('sfc hoist static', () => {
     const code = `
     let KEY1 = 'default value'
     var KEY2 = 123
+    const regex = /.*/g
+    const undef = undefined
     `.trim()
     const { content, bindings } = compile(`
     <script setup>
@@ -98,7 +98,9 @@ describe('sfc hoist static', () => {
     `)
     expect(bindings).toStrictEqual({
       KEY1: BindingTypes.SETUP_LET,
-      KEY2: BindingTypes.SETUP_LET
+      KEY2: BindingTypes.SETUP_LET,
+      regex: BindingTypes.SETUP_CONST,
+      undef: BindingTypes.SETUP_MAYBE_REF,
     })
     expect(content).toMatch(`setup(__props) {\n\n    ${code}`)
     assertCode(content)
@@ -129,7 +131,7 @@ describe('sfc hoist static', () => {
       KEY4: BindingTypes.SETUP_CONST,
       KEY5: BindingTypes.SETUP_CONST,
       KEY6: BindingTypes.SETUP_CONST,
-      i: BindingTypes.SETUP_LET
+      i: BindingTypes.SETUP_LET,
     })
     expect(content).toMatch(`setup(__props) {\n\n    ${code}`)
     assertCode(content)
@@ -147,7 +149,7 @@ describe('sfc hoist static', () => {
     `)
     expect(bindings).toStrictEqual({
       arr: BindingTypes.SETUP_CONST,
-      obj: BindingTypes.SETUP_CONST
+      obj: BindingTypes.SETUP_CONST,
     })
     expect(content).toMatch(`setup(__props) {\n\n    ${code}`)
     assertCode(content)
@@ -167,7 +169,7 @@ describe('sfc hoist static', () => {
     expect(bindings).toStrictEqual({
       Foo: BindingTypes.SETUP_CONST,
       fn: BindingTypes.SETUP_CONST,
-      fn2: BindingTypes.SETUP_CONST
+      fn2: BindingTypes.SETUP_CONST,
     })
     expect(content).toMatch(`setup(__props) {\n\n    ${code}`)
     assertCode(content)
@@ -183,7 +185,7 @@ describe('sfc hoist static', () => {
     </script>
     `)
     expect(bindings).toStrictEqual({
-      foo: BindingTypes.SETUP_CONST
+      foo: BindingTypes.SETUP_CONST,
     })
     assertCode(content)
   })
@@ -195,11 +197,23 @@ describe('sfc hoist static', () => {
     const foo = 'bar'
     </script>
     `,
-      { hoistStatic: false }
+      { hoistStatic: false },
     )
     expect(bindings).toStrictEqual({
-      foo: BindingTypes.SETUP_CONST
+      foo: BindingTypes.SETUP_CONST,
     })
     assertCode(content)
+  })
+
+  test('template binding access in inline mode', () => {
+    const { content } = compile(
+      `
+    <script setup>
+    const foo = 'bar'
+    </script>
+    <template>{{ foo }}</template>
+    `,
+    )
+    expect(content).toMatch('_toDisplayString(foo)')
   })
 })

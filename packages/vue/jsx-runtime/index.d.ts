@@ -1,9 +1,5 @@
-import type {
-  VNode,
-  IntrinsicElementAttributes,
-  ReservedProps,
-  NativeElements
-} from '@vue/runtime-dom'
+/* eslint-disable @typescript-eslint/prefer-ts-expect-error */
+import type { NativeElements, ReservedProps, VNode } from '@vue/runtime-dom'
 
 /**
  * JSX namespace for usage with @jsxImportsSource directive
