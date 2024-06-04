@@ -135,6 +135,11 @@ export const BaseTransitionPropsValidators = {
   onAppearCancelled: TransitionHookValidator,
 }
 
+const recursiveGetSubtree = (instance: ComponentInternalInstance): VNode => {
+  const subTree = instance.subTree
+  return subTree.component ? recursiveGetSubtree(subTree.component) : subTree
+}
+
 const BaseTransitionImpl: ComponentOptions = {
   name: `BaseTransition`,
 
@@ -213,7 +218,8 @@ const BaseTransitionImpl: ComponentOptions = {
       if (
         oldInnerChild &&
         oldInnerChild.type !== Comment &&
-        !isSameVNodeType(innerChild, oldInnerChild)
+        !isSameVNodeType(innerChild, oldInnerChild) &&
+        recursiveGetSubtree(instance).type !== Comment
       ) {
         const leavingHooks = resolveTransitionHooks(
           oldInnerChild,
