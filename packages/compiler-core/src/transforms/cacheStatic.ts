@@ -77,6 +77,8 @@ function walk(
         : getConstantType(child, context)
       if (constantType > ConstantTypes.NOT_CONSTANT) {
         if (constantType >= ConstantTypes.CAN_CACHE) {
+          ;(child.codegenNode as VNodeCall).patchFlag =
+            PatchFlags.CACHED + (__DEV__ ? ` /* CACHED */` : ``)
           toCache.push(child)
           continue
         }
@@ -197,8 +199,6 @@ function walk(
 
   if (!cachedAsArray) {
     for (const child of toCache) {
-      ;(child.codegenNode as VNodeCall).patchFlag =
-        PatchFlags.CACHED + (__DEV__ ? ` /* CACHED */` : ``)
       child.codegenNode = context.cache(child.codegenNode!)
     }
   }

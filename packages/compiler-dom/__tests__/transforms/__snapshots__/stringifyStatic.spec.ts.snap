@@ -31,7 +31,7 @@ return function render(_ctx, _cache) {
       _createElementVNode("option", { value: 1 }),
       _createElementVNode("option", { value: 1 }),
       _createElementVNode("option", { value: 1 })
-    ])
+    ], -1 /* CACHED */)
   ])))
 }"
 `;
@@ -48,7 +48,7 @@ return function render(_ctx, _cache) {
       _createElementVNode("span", { class: "foo" }, "foo"),
       _createElementVNode("span", { class: "foo" }, "foo"),
       _createElementVNode("img", { src: _imports_0_ })
-    ])
+    ], -1 /* CACHED */)
   ])))
 }"
 `;
