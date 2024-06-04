@@ -1,5 +1,6 @@
-import type { DirectiveTransform } from '../transform'
+import type { DirectiveTransform, TransformContext } from '../transform'
 import {
+  type DirectiveNode,
   type ExpressionNode,
   NodeTypes,
   type SimpleExpressionNode,
@@ -56,11 +57,8 @@ export const transformBind: DirectiveTransform = (dir, _node, context) => {
       }
     }
 
-    const propName = camelize((arg as SimpleExpressionNode).content)
-    exp = dir.exp = createSimpleExpression(propName, false, arg.loc)
-    if (!__BROWSER__) {
-      exp = dir.exp = processExpression(exp, context)
-    }
+    transformBindShorthand(dir, context)
+    exp = dir.exp!
   }
 
   if (arg.type !== NodeTypes.SIMPLE_EXPRESSION) {
@@ -95,6 +93,19 @@ export const transformBind: DirectiveTransform = (dir, _node, context) => {
 
   return {
     props: [createObjectProperty(arg, exp)],
+  }
+}
+
+export const transformBindShorthand = (
+  dir: DirectiveNode,
+  context: TransformContext,
+) => {
+  const arg = dir.arg!
+
+  const propName = camelize((arg as SimpleExpressionNode).content)
+  dir.exp = createSimpleExpression(propName, false, arg.loc)
+  if (!__BROWSER__) {
+    dir.exp = processExpression(dir.exp, context)
   }
 }
 
