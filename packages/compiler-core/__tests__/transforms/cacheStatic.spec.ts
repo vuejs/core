@@ -29,13 +29,21 @@ const cachedChildrenArrayMatcher = (tags: string[]) => ({
   type: NodeTypes.JS_CACHE_EXPRESSION,
   value: {
     type: NodeTypes.JS_ARRAY_EXPRESSION,
-    elements: tags.map(tag => ({
-      type: NodeTypes.ELEMENT,
-      codegenNode: {
-        type: NodeTypes.VNODE_CALL,
-        tag: JSON.stringify(tag),
-      },
-    })),
+    elements: tags.map(tag => {
+      if (tag === '') {
+        return {
+          type: NodeTypes.TEXT_CALL,
+        }
+      } else {
+        return {
+          type: NodeTypes.ELEMENT,
+          codegenNode: {
+            type: NodeTypes.VNODE_CALL,
+            tag: JSON.stringify(tag),
+          },
+        }
+      }
+    }),
   },
 })
 
@@ -72,7 +80,7 @@ describe('compiler: cacheStatic transform', () => {
       type: NodeTypes.VNODE_CALL,
       tag: `"div"`,
     })
-    expect(root.cached).toBe(0)
+    expect(root.cached.length).toBe(0)
   })
 
   test('cache root node children', () => {
@@ -88,7 +96,7 @@ describe('compiler: cacheStatic transform', () => {
         { codegenNode: { type: NodeTypes.JS_CACHE_EXPRESSION } },
       ],
     })
-    expect(root.cached).toBe(2)
+    expect(root.cached.length).toBe(2)
   })
 
   test('cache single children array', () => {
@@ -100,7 +108,7 @@ describe('compiler: cacheStatic transform', () => {
       props: undefined,
       children: cachedChildrenArrayMatcher(['span']),
     })
-    expect(root.cached).toBe(1)
+    expect(root.cached.length).toBe(1)
     expect(generate(root).code).toMatchSnapshot()
   })
 
@@ -111,7 +119,7 @@ describe('compiler: cacheStatic transform', () => {
     expect((root.codegenNode as VNodeCall).children).toMatchObject(
       cachedChildrenArrayMatcher(['p', 'p']),
     )
-    expect(root.cached).toBe(1)
+    expect(root.cached.length).toBe(1)
     expect(generate(root).code).toMatchSnapshot()
   })
 
@@ -120,17 +128,192 @@ describe('compiler: cacheStatic transform', () => {
     expect((root.codegenNode as VNodeCall).children).toMatchObject(
       cachedChildrenArrayMatcher(['div']),
     )
-    expect(root.cached).toBe(1)
+    expect(root.cached.length).toBe(1)
     expect(generate(root).code).toMatchSnapshot()
   })
 
-  test('cache siblings with common non-hoistable parent', () => {
-    const root = transformWithCache(`<div><span/><div/></div>`)
+  test('cache siblings including text with common non-hoistable parent', () => {
+    const root = transformWithCache(`<div><span/>foo<div/></div>`)
     expect((root.codegenNode as VNodeCall).children).toMatchObject(
-      cachedChildrenArrayMatcher(['span', 'div']),
+      cachedChildrenArrayMatcher(['span', '', 'div']),
     )
-    expect(root.cached).toBe(1)
+    expect(root.cached.length).toBe(1)
     expect(generate(root).code).toMatchSnapshot()
+  })
+
+  test('cache inside default slot', () => {
+    const root = transformWithCache(`<Foo>{{x}}<span/></Foo>`)
+    expect((root.codegenNode as VNodeCall).children).toMatchObject({
+      properties: [
+        {
+          key: { content: 'default' },
+          value: {
+            type: NodeTypes.JS_FUNCTION_EXPRESSION,
+            returns: [
+              {
+                type: NodeTypes.TEXT_CALL,
+              },
+              // first slot child cached
+              {
+                type: NodeTypes.ELEMENT,
+                codegenNode: {
+                  type: NodeTypes.JS_CACHE_EXPRESSION,
+                },
+              },
+            ],
+          },
+        },
+        {
+          /* _ slot flag */
+        },
+      ],
+    })
+  })
+
+  test('cache default slot as a whole', () => {
+    const root = transformWithCache(`<Foo><span/><span/></Foo>`)
+    expect((root.codegenNode as VNodeCall).children).toMatchObject({
+      properties: [
+        {
+          key: { content: 'default' },
+          value: {
+            type: NodeTypes.JS_FUNCTION_EXPRESSION,
+            returns: {
+              type: NodeTypes.JS_CACHE_EXPRESSION,
+              value: {
+                type: NodeTypes.JS_ARRAY_EXPRESSION,
+                elements: [
+                  { type: NodeTypes.ELEMENT },
+                  { type: NodeTypes.ELEMENT },
+                ],
+              },
+            },
+          },
+        },
+        {
+          /* _ slot flag */
+        },
+      ],
+    })
+  })
+
+  test('cache inside named slot', () => {
+    const root = transformWithCache(
+      `<Foo><template #foo>{{x}}<span/></template></Foo>`,
+    )
+    expect((root.codegenNode as VNodeCall).children).toMatchObject({
+      properties: [
+        {
+          key: { content: 'foo' },
+          value: {
+            type: NodeTypes.JS_FUNCTION_EXPRESSION,
+            returns: [
+              {
+                type: NodeTypes.TEXT_CALL,
+              },
+              // first slot child cached
+              {
+                type: NodeTypes.ELEMENT,
+                codegenNode: {
+                  type: NodeTypes.JS_CACHE_EXPRESSION,
+                },
+              },
+            ],
+          },
+        },
+        {
+          /* _ slot flag */
+        },
+      ],
+    })
+  })
+
+  test('cache named slot as a whole', () => {
+    const root = transformWithCache(
+      `<Foo><template #foo><span/><span/></template></Foo>`,
+    )
+    expect((root.codegenNode as VNodeCall).children).toMatchObject({
+      properties: [
+        {
+          key: { content: 'foo' },
+          value: {
+            type: NodeTypes.JS_FUNCTION_EXPRESSION,
+            returns: {
+              type: NodeTypes.JS_CACHE_EXPRESSION,
+              value: {
+                type: NodeTypes.JS_ARRAY_EXPRESSION,
+                elements: [
+                  { type: NodeTypes.ELEMENT },
+                  { type: NodeTypes.ELEMENT },
+                ],
+              },
+            },
+          },
+        },
+        {
+          /* _ slot flag */
+        },
+      ],
+    })
+  })
+
+  test('cache dynamically named slot as a whole', () => {
+    const root = transformWithCache(
+      `<Foo><template #[foo]><span/><span/></template></Foo>`,
+    )
+    expect((root.codegenNode as VNodeCall).children).toMatchObject({
+      properties: [
+        {
+          key: { content: 'foo', isStatic: false },
+          value: {
+            type: NodeTypes.JS_FUNCTION_EXPRESSION,
+            returns: {
+              type: NodeTypes.JS_CACHE_EXPRESSION,
+              value: {
+                type: NodeTypes.JS_ARRAY_EXPRESSION,
+                elements: [
+                  { type: NodeTypes.ELEMENT },
+                  { type: NodeTypes.ELEMENT },
+                ],
+              },
+            },
+          },
+        },
+        {
+          /* _ slot flag */
+        },
+      ],
+    })
+  })
+
+  test('cache dynamically named (expression) slot as a whole', () => {
+    const root = transformWithCache(
+      `<Foo><template #[foo+1]><span/><span/></template></Foo>`,
+      { prefixIdentifiers: true },
+    )
+    expect((root.codegenNode as VNodeCall).children).toMatchObject({
+      properties: [
+        {
+          key: { type: NodeTypes.COMPOUND_EXPRESSION },
+          value: {
+            type: NodeTypes.JS_FUNCTION_EXPRESSION,
+            returns: {
+              type: NodeTypes.JS_CACHE_EXPRESSION,
+              value: {
+                type: NodeTypes.JS_ARRAY_EXPRESSION,
+                elements: [
+                  { type: NodeTypes.ELEMENT },
+                  { type: NodeTypes.ELEMENT },
+                ],
+              },
+            },
+          },
+        },
+        {
+          /* _ slot flag */
+        },
+      ],
+    })
   })
 
   test('should NOT cache components', () => {
@@ -144,7 +327,7 @@ describe('compiler: cacheStatic transform', () => {
         },
       },
     ])
-    expect(root.cached).toBe(0)
+    expect(root.cached.length).toBe(0)
     expect(generate(root).code).toMatchSnapshot()
   })
 
@@ -170,7 +353,7 @@ describe('compiler: cacheStatic transform', () => {
         },
       },
     ])
-    expect(root.cached).toBe(0)
+    expect(root.cached.length).toBe(0)
     expect(generate(root).code).toMatchSnapshot()
   })
 
@@ -181,7 +364,7 @@ describe('compiler: cacheStatic transform', () => {
       props: undefined,
       children: cachedChildrenArrayMatcher(['div']),
     })
-    expect(root.cached).toBe(1)
+    expect(root.cached.length).toBe(1)
     expect(generate(root).code).toMatchSnapshot()
   })
 
@@ -199,7 +382,7 @@ describe('compiler: cacheStatic transform', () => {
         },
       },
     ])
-    expect(root.cached).toBe(0)
+    expect(root.cached.length).toBe(0)
     expect(generate(root).code).toMatchSnapshot()
   })
 
@@ -219,7 +402,7 @@ describe('compiler: cacheStatic transform', () => {
         },
       },
     ])
-    expect(root.cached).toBe(0)
+    expect(root.cached.length).toBe(0)
     expect(generate(root).code).toMatchSnapshot()
   })
 
@@ -244,7 +427,7 @@ describe('compiler: cacheStatic transform', () => {
         },
       },
     ])
-    expect(root.cached).toBe(0)
+    expect(root.cached.length).toBe(0)
     expect(generate(root).code).toMatchSnapshot()
   })
 
@@ -265,7 +448,7 @@ describe('compiler: cacheStatic transform', () => {
         },
       },
     ])
-    expect(root.cached).toBe(0)
+    expect(root.cached.length).toBe(0)
     expect(generate(root).code).toMatchSnapshot()
   })
 
@@ -283,7 +466,7 @@ describe('compiler: cacheStatic transform', () => {
         },
       },
     ])
-    expect(root.cached).toBe(0)
+    expect(root.cached.length).toBe(0)
     expect(generate(root).code).toMatchSnapshot()
   })
 
@@ -309,7 +492,7 @@ describe('compiler: cacheStatic transform', () => {
         children: cachedChildrenArrayMatcher(['span']),
       },
     })
-    expect(root.cached).toBe(1)
+    expect(root.cached.length).toBe(1)
     expect(generate(root).code).toMatchSnapshot()
   })
 
@@ -342,7 +525,7 @@ describe('compiler: cacheStatic transform', () => {
       props: { content: `_hoisted_1` },
       children: cachedChildrenArrayMatcher(['span']),
     })
-    expect(root.cached).toBe(1)
+    expect(root.cached.length).toBe(1)
     expect(generate(root).code).toMatchSnapshot()
   })
 
@@ -359,7 +542,7 @@ describe('compiler: cacheStatic transform', () => {
         props: undefined,
         children: cachedChildrenArrayMatcher(['span']),
       })
-      expect(root.cached).toBe(1)
+      expect(root.cached.length).toBe(1)
       expect(generate(root).code).toMatchSnapshot()
     })
 
@@ -375,7 +558,7 @@ describe('compiler: cacheStatic transform', () => {
         props: undefined,
         children: cachedChildrenArrayMatcher(['span']),
       })
-      expect(root.cached).toBe(1)
+      expect(root.cached.length).toBe(1)
       expect(generate(root).code).toMatchSnapshot()
     })
 
@@ -449,7 +632,7 @@ describe('compiler: cacheStatic transform', () => {
         },
       )
 
-      expect(root.cached).toBe(0)
+      expect(root.cached.length).toBe(0)
       expect(generate(root).code).toMatchSnapshot()
     })
 
@@ -461,7 +644,7 @@ describe('compiler: cacheStatic transform', () => {
         },
       )
 
-      expect(root.cached).toBe(0)
+      expect(root.cached.length).toBe(0)
       expect(generate(root).code).toMatchSnapshot()
     })
 
@@ -473,7 +656,7 @@ describe('compiler: cacheStatic transform', () => {
         },
       )
 
-      expect(root.cached).toBe(0)
+      expect(root.cached.length).toBe(0)
       expect(generate(root).code).toMatchSnapshot()
     })
 
@@ -486,7 +669,7 @@ describe('compiler: cacheStatic transform', () => {
         },
       )
 
-      expect(root.cached).toBe(1)
+      expect(root.cached.length).toBe(1)
       expect(root.hoists.length).toBe(0)
       expect(
         generate(root, {
@@ -505,7 +688,7 @@ describe('compiler: cacheStatic transform', () => {
         },
       )
 
-      expect(root.cached).toBe(1)
+      expect(root.cached.length).toBe(1)
       expect(root.hoists.length).toBe(0)
       expect(
         generate(root, {
@@ -527,7 +710,7 @@ describe('compiler: cacheStatic transform', () => {
       const root = transformWithCache(
         `<div><svg v-foo><path d="M2,3H5.5L12"/></svg></div>`,
       )
-      expect(root.cached).toBe(1)
+      expect(root.cached.length).toBe(1)
       expect(root.codegenNode).toMatchObject({
         children: [
           {
@@ -551,7 +734,7 @@ describe('compiler: cacheStatic transform', () => {
           hmr: true,
         },
       )
-      expect(root.cached).toBe(1)
+      expect(root.cached.length).toBe(1)
       const forBlockCodegen = (
         (root.children[0] as ElementNode).children[0] as ForNode
       ).codegenNode

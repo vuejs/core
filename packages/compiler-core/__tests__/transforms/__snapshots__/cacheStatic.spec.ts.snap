@@ -51,15 +51,16 @@ return function render(_ctx, _cache) {
 }"
 `;
 
-exports[`compiler: cacheStatic transform > cache siblings with common non-hoistable parent 1`] = `
+exports[`compiler: cacheStatic transform > cache siblings including text with common non-hoistable parent 1`] = `
 "const _Vue = Vue
 
 return function render(_ctx, _cache) {
   with (_ctx) {
-    const { createElementVNode: _createElementVNode, openBlock: _openBlock, createElementBlock: _createElementBlock } = _Vue
+    const { createElementVNode: _createElementVNode, createTextVNode: _createTextVNode, openBlock: _openBlock, createElementBlock: _createElementBlock } = _Vue
 
     return (_openBlock(), _createElementBlock("div", null, _cache[0] || (_cache[0] = [
       _createElementVNode("span"),
+      _createTextVNode("foo"),
       _createElementVNode("div")
     ])))
   }

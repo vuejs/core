@@ -47,7 +47,7 @@ function createRoot(options: Partial<RootNode> = {}): RootNode {
     directives: [],
     imports: [],
     hoists: [],
-    cached: 0,
+    cached: [],
     temps: 0,
     codegenNode: createSimpleExpression(`null`, false),
     loc: locStub,
@@ -154,7 +154,6 @@ describe('compiler: codegen', () => {
       ],
     })
     const { code } = generate(root)
-    console.log(code)
     expect(code).toMatch(`const _hoisted_1 = hello`)
     expect(code).toMatch(`const _hoisted_2 = { id: "foo" }`)
     expect(code).toMatchSnapshot()
@@ -423,7 +422,7 @@ describe('compiler: codegen', () => {
   test('CacheExpression', () => {
     const { code } = generate(
       createRoot({
-        cached: 1,
+        cached: [],
         codegenNode: createCacheExpression(
           1,
           createSimpleExpression(`foo`, false),
@@ -441,7 +440,7 @@ describe('compiler: codegen', () => {
   test('CacheExpression w/ isVNode: true', () => {
     const { code } = generate(
       createRoot({
-        cached: 1,
+        cached: [],
         codegenNode: createCacheExpression(
           1,
           createSimpleExpression(`foo`, false),

@@ -2,16 +2,20 @@ import {
   type CacheExpression,
   type CallExpression,
   type ComponentNode,
+  type CompoundExpressionNode,
   ConstantTypes,
   ElementTypes,
+  type ExpressionNode,
   type JSChildNode,
   NodeTypes,
   type ParentNode,
   type PlainElementNode,
   type RootNode,
   type SimpleExpressionNode,
+  type SlotFunctionExpression,
   type TemplateChildNode,
   type TemplateNode,
+  type TextCallNode,
   type VNodeCall,
   createArrayExpression,
   createCompoundExpression,
@@ -20,7 +24,7 @@ import {
 } from '../ast'
 import type { TransformContext } from '../transform'
 import { PatchFlags, isArray, isString, isSymbol } from '@vue/shared'
-import { isSlotOutlet } from '../utils'
+import { findDir, isSlotOutlet } from '../utils'
 import {
   GUARD_REACTIVE_PROPS,
   NORMALIZE_CLASS,
@@ -32,6 +36,7 @@ import {
 export function cacheStatic(root: RootNode, context: TransformContext) {
   walk(
     root,
+    undefined,
     context,
     // Root node is unfortunately non-hoistable due to potential parent
     // fallthrough attributes.
@@ -53,15 +58,16 @@ export function isSingleElementRoot(
 
 function walk(
   node: ParentNode,
+  parent: ParentNode | undefined,
   context: TransformContext,
   doNotHoistNode: boolean = false,
   inFor = false,
 ) {
   const { children } = node
-  const toCache: PlainElementNode[] = []
+  const toCache: (PlainElementNode | TextCallNode)[] = []
   for (let i = 0; i < children.length; i++) {
     const child = children[i]
-    // only plain elements & text calls are eligible for hoisting.
+    // only plain elements & text calls are eligible for caching.
     if (
       child.type === NodeTypes.ELEMENT &&
       child.tagType === ElementTypes.ELEMENT
@@ -97,6 +103,14 @@ function walk(
           }
         }
       }
+    } else if (child.type === NodeTypes.TEXT_CALL) {
+      const constantType = doNotHoistNode
+        ? ConstantTypes.NOT_CONSTANT
+        : getConstantType(child, context)
+      if (constantType >= ConstantTypes.CAN_CACHE) {
+        toCache.push(child)
+        continue
+      }
     }
 
     // walk further
@@ -105,18 +119,19 @@ function walk(
       if (isComponent) {
         context.scopes.vSlot++
       }
-      walk(child, context, false, inFor)
+      walk(child, node, context, false, inFor)
       if (isComponent) {
         context.scopes.vSlot--
       }
     } else if (child.type === NodeTypes.FOR) {
       // Do not hoist v-for single child because it has to be a block
-      walk(child, context, child.children.length === 1, true)
+      walk(child, node, context, child.children.length === 1, true)
     } else if (child.type === NodeTypes.IF) {
       for (let i = 0; i < child.branches.length; i++) {
         // Do not hoist v-if single child because it has to be a block
         walk(
           child.branches[i],
+          node,
           context,
           child.branches[i].children.length === 1,
           inFor,
@@ -125,39 +140,100 @@ function walk(
     }
   }
 
-  // TODO update stringifyStatic
-  // if (hoistedCount && context.transformHoist) {
-  //   context.transformHoist(children, context, node)
-  // }
-
-  if (
-    toCache.length === children.length &&
-    node.type === NodeTypes.ELEMENT &&
-    node.tagType === ElementTypes.ELEMENT &&
-    node.codegenNode &&
-    node.codegenNode.type === NodeTypes.VNODE_CALL &&
-    isArray(node.codegenNode.children)
-  ) {
-    // all children were hoisted - the entire children array is cacheable.
-    node.codegenNode.children = context.cache(
-      createArrayExpression(node.codegenNode.children),
-    )
-    // #6978, #7138, #7114
-    // a cached children array inside v-for can caused HMR errors since
-    // it might be mutated when mounting the first item
-    if (inFor && context.hmr) {
-      node.codegenNode.children = createCompoundExpression([
-        `[...(`,
-        node.codegenNode.children,
-        `)]`,
-      ])
+  let cachedAsArray = false
+  if (toCache.length === children.length && node.type === NodeTypes.ELEMENT) {
+    if (
+      node.tagType === ElementTypes.ELEMENT &&
+      node.codegenNode &&
+      node.codegenNode.type === NodeTypes.VNODE_CALL &&
+      isArray(node.codegenNode.children)
+    ) {
+      // all children were hoisted - the entire children array is cacheable.
+      node.codegenNode.children = getCacheExpression(
+        createArrayExpression(node.codegenNode.children),
+      )
+      cachedAsArray = true
+    } else if (
+      node.tagType === ElementTypes.COMPONENT &&
+      node.codegenNode &&
+      node.codegenNode.type === NodeTypes.VNODE_CALL &&
+      node.codegenNode.children &&
+      !isArray(node.codegenNode.children) &&
+      node.codegenNode.children.type === NodeTypes.JS_OBJECT_EXPRESSION
+    ) {
+      // default slot
+      const slot = getSlotNode(node.codegenNode, 'default')
+      if (slot) {
+        slot.returns = getCacheExpression(
+          createArrayExpression(slot.returns as TemplateChildNode[]),
+        )
+        cachedAsArray = true
+      }
+    } else if (
+      node.tagType === ElementTypes.TEMPLATE &&
+      parent &&
+      parent.type === NodeTypes.ELEMENT &&
+      parent.tagType === ElementTypes.COMPONENT &&
+      parent.codegenNode &&
+      parent.codegenNode.type === NodeTypes.VNODE_CALL &&
+      parent.codegenNode.children &&
+      !isArray(parent.codegenNode.children) &&
+      parent.codegenNode.children.type === NodeTypes.JS_OBJECT_EXPRESSION
+    ) {
+      // named <template> slot
+      const slotName = findDir(node, 'slot', true)
+      const slot =
+        slotName &&
+        slotName.arg &&
+        getSlotNode(parent.codegenNode, slotName.arg)
+      if (slot) {
+        slot.returns = getCacheExpression(
+          createArrayExpression(slot.returns as TemplateChildNode[]),
+        )
+        cachedAsArray = true
+      }
     }
-  } else {
+  }
+
+  if (!cachedAsArray) {
     for (const child of toCache) {
       ;(child.codegenNode as VNodeCall).patchFlag =
         PatchFlags.CACHED + (__DEV__ ? ` /* CACHED */` : ``)
       child.codegenNode = context.cache(child.codegenNode!)
     }
+  }
+
+  function getCacheExpression(
+    value: JSChildNode,
+  ): CacheExpression | CompoundExpressionNode {
+    const exp = context.cache(value)
+    // #6978, #7138, #7114
+    // a cached children array inside v-for can caused HMR errors since
+    // it might be mutated when mounting the first item
+    if (inFor && context.hmr) {
+      return createCompoundExpression([`[...(`, exp, `)]`])
+    }
+    return exp
+  }
+
+  function getSlotNode(
+    node: VNodeCall,
+    name: string | ExpressionNode,
+  ): SlotFunctionExpression | undefined {
+    if (
+      node.children &&
+      !isArray(node.children) &&
+      node.children.type === NodeTypes.JS_OBJECT_EXPRESSION
+    ) {
+      const slot = node.children.properties.find(
+        p => p.key === name || (p.key as SimpleExpressionNode).content === name,
+      )
+      return slot && slot.value
+    }
+  }
+
+  if (toCache.length && context.transformHoist) {
+    context.transformHoist(children, context, node)
   }
 }
 

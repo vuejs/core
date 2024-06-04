@@ -93,7 +93,7 @@ export interface TransformContext
   hoists: (JSChildNode | null)[]
   imports: ImportItem[]
   temps: number
-  cached: number
+  cached: (CacheExpression | null)[]
   identifiers: { [name: string]: number | undefined }
   scopes: {
     vFor: number
@@ -185,9 +185,9 @@ export function createTransformContext(
     directives: new Set(),
     hoists: [],
     imports: [],
+    cached: [],
     constantCache: new WeakMap(),
     temps: 0,
-    cached: 0,
     identifiers: Object.create(null),
     scopes: {
       vFor: 0,
@@ -297,7 +297,13 @@ export function createTransformContext(
       return identifier
     },
     cache(exp, isVNode = false) {
-      return createCacheExpression(context.cached++, exp, isVNode)
+      const cacheExp = createCacheExpression(
+        context.cached.length,
+        exp,
+        isVNode,
+      )
+      context.cached.push(cacheExp)
+      return cacheExp
     },
   }
 

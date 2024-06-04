@@ -110,7 +110,7 @@ export interface RootNode extends Node {
   directives: string[]
   hoists: (JSChildNode | null)[]
   imports: ImportItem[]
-  cached: number
+  cached: (CacheExpression | null)[]
   temps: number
   ssrHelpers?: symbol[]
   codegenNode?: TemplateChildNode | JSChildNode | BlockStatement
@@ -513,7 +513,7 @@ export interface SlotsObjectProperty extends Property {
 }
 
 export interface SlotFunctionExpression extends FunctionExpression {
-  returns: TemplateChildNode[]
+  returns: TemplateChildNode[] | CacheExpression | CompoundExpressionNode
 }
 
 // createSlots({ ... }, [
@@ -600,7 +600,7 @@ export function createRoot(
     directives: [],
     hoists: [],
     imports: [],
-    cached: 0,
+    cached: [],
     temps: 0,
     codegenNode: undefined,
     loc: locStub,
