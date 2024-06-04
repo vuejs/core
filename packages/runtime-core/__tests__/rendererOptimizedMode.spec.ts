@@ -1,30 +1,29 @@
-import { vi } from 'vitest'
 import {
-  h,
   Fragment,
+  type FunctionalComponent,
+  type SetupContext,
   Teleport,
-  createVNode,
-  createCommentVNode,
-  openBlock,
-  createBlock,
-  render,
-  nodeOps,
-  TestElement,
-  serialize,
-  serializeInner as inner,
-  VNode,
-  ref,
-  nextTick,
-  defineComponent,
-  withCtx,
-  renderSlot,
-  onBeforeUnmount,
-  createTextVNode,
-  SetupContext,
+  type TestElement,
+  type VNode,
   createApp,
-  FunctionalComponent,
+  createBlock,
+  createCommentVNode,
+  createTextVNode,
+  createVNode,
+  defineComponent,
+  h,
+  serializeInner as inner,
+  nextTick,
+  nodeOps,
+  onBeforeUnmount,
+  onUnmounted,
+  openBlock,
+  ref,
+  render,
   renderList,
-  onUnmounted
+  renderSlot,
+  serialize,
+  withCtx,
 } from '@vue/runtime-test'
 import { PatchFlags, SlotFlags } from '@vue/shared'
 import { SuspenseImpl } from '../src/components/Suspense'
@@ -41,7 +40,7 @@ describe('renderer: optimized mode', () => {
   const renderWithBlock = (renderChildren: () => VNode[]) => {
     render(
       (openBlock(), (block = createBlock('div', null, renderChildren()))),
-      root
+      root,
     )
   }
 
@@ -55,7 +54,7 @@ describe('renderer: optimized mode', () => {
   test('block can appear anywhere in the vdom tree', () => {
     render(
       h('div', (openBlock(), (block = createBlock('p', null, 'foo')))),
-      root
+      root,
     )
 
     expect(block.dynamicChildren!.length).toBe(0)
@@ -65,12 +64,12 @@ describe('renderer: optimized mode', () => {
   test('block should collect dynamic vnodes', () => {
     renderWithBlock(() => [
       createVNode('p', null, 'foo', PatchFlags.TEXT),
-      createVNode('i')
+      createVNode('i'),
     ])
 
     expect(block!.dynamicChildren!.length).toBe(1)
     expect(serialize(block!.dynamicChildren![0].el as TestElement)).toBe(
-      '<p>foo</p>'
+      '<p>foo</p>',
     )
   })
 
@@ -79,9 +78,9 @@ describe('renderer: optimized mode', () => {
       // disable tracking
       (openBlock(true),
       (block = createBlock('div', null, [
-        createVNode('p', null, 'foo', PatchFlags.TEXT)
+        createVNode('p', null, 'foo', PatchFlags.TEXT),
       ]))),
-      root
+      root,
     )
 
     expect(block.dynamicChildren!.length).toBe(0)
@@ -89,23 +88,23 @@ describe('renderer: optimized mode', () => {
 
   test('block as dynamic children', () => {
     renderWithBlock(() => [
-      (openBlock(), createBlock('div', { key: 0 }, [h('p')]))
+      (openBlock(), createBlock('div', { key: 0 }, [h('p')])),
     ])
 
     expect(block!.dynamicChildren!.length).toBe(1)
     expect(block!.dynamicChildren![0].dynamicChildren!.length).toBe(0)
     expect(serialize(block!.dynamicChildren![0].el as TestElement)).toBe(
-      '<div><p></p></div>'
+      '<div><p></p></div>',
     )
 
     renderWithBlock(() => [
-      (openBlock(), createBlock('div', { key: 1 }, [h('i')]))
+      (openBlock(), createBlock('div', { key: 1 }, [h('i')])),
     ])
 
     expect(block!.dynamicChildren!.length).toBe(1)
     expect(block!.dynamicChildren![0].dynamicChildren!.length).toBe(0)
     expect(serialize(block!.dynamicChildren![0].el as TestElement)).toBe(
-      '<div><i></i></div>'
+      '<div><i></i></div>',
     )
   })
 
@@ -115,7 +114,7 @@ describe('renderer: optimized mode', () => {
     expect(inner(root)).toBe('<div><p>foo</p></div>')
     expect(block!.dynamicChildren!.length).toBe(1)
     expect(serialize(block!.dynamicChildren![0].el as TestElement)).toBe(
-      '<p>foo</p>'
+      '<p>foo</p>',
     )
 
     renderWithBlock(() => [createVNode('p', null, 'bar', PatchFlags.TEXT)])
@@ -123,73 +122,73 @@ describe('renderer: optimized mode', () => {
     expect(inner(root)).toBe('<div><p>bar</p></div>')
     expect(block!.dynamicChildren!.length).toBe(1)
     expect(serialize(block!.dynamicChildren![0].el as TestElement)).toBe(
-      '<p>bar</p>'
+      '<p>bar</p>',
     )
   })
 
   test('PatchFlags: PatchFlags.CLASS', async () => {
     renderWithBlock(() => [
-      createVNode('p', { class: 'foo' }, '', PatchFlags.CLASS)
+      createVNode('p', { class: 'foo' }, '', PatchFlags.CLASS),
     ])
 
     expect(inner(root)).toBe('<div><p class="foo"></p></div>')
     expect(block!.dynamicChildren!.length).toBe(1)
     expect(serialize(block!.dynamicChildren![0].el as TestElement)).toBe(
-      '<p class="foo"></p>'
+      '<p class="foo"></p>',
     )
 
     renderWithBlock(() => [
-      createVNode('p', { class: 'bar' }, '', PatchFlags.CLASS)
+      createVNode('p', { class: 'bar' }, '', PatchFlags.CLASS),
     ])
 
     expect(inner(root)).toBe('<div><p class="bar"></p></div>')
     expect(block!.dynamicChildren!.length).toBe(1)
     expect(serialize(block!.dynamicChildren![0].el as TestElement)).toBe(
-      '<p class="bar"></p>'
+      '<p class="bar"></p>',
     )
   })
 
   test('PatchFlags: PatchFlags.STYLE', async () => {
     renderWithBlock(() => [
-      createVNode('p', { style: 'color: red' }, '', PatchFlags.STYLE)
+      createVNode('p', { style: 'color: red' }, '', PatchFlags.STYLE),
     ])
 
     expect(inner(root)).toBe('<div><p style="color: red"></p></div>')
     expect(block!.dynamicChildren!.length).toBe(1)
     expect(serialize(block!.dynamicChildren![0].el as TestElement)).toBe(
-      '<p style="color: red"></p>'
+      '<p style="color: red"></p>',
     )
 
     renderWithBlock(() => [
-      createVNode('p', { style: 'color: green' }, '', PatchFlags.STYLE)
+      createVNode('p', { style: 'color: green' }, '', PatchFlags.STYLE),
     ])
 
     expect(inner(root)).toBe('<div><p style="color: green"></p></div>')
     expect(block!.dynamicChildren!.length).toBe(1)
     expect(serialize(block!.dynamicChildren![0].el as TestElement)).toBe(
-      '<p style="color: green"></p>'
+      '<p style="color: green"></p>',
     )
   })
 
   test('PatchFlags: PatchFlags.PROPS', async () => {
     renderWithBlock(() => [
-      createVNode('p', { id: 'foo' }, '', PatchFlags.PROPS, ['id'])
+      createVNode('p', { id: 'foo' }, '', PatchFlags.PROPS, ['id']),
     ])
 
     expect(inner(root)).toBe('<div><p id="foo"></p></div>')
     expect(block!.dynamicChildren!.length).toBe(1)
     expect(serialize(block!.dynamicChildren![0].el as TestElement)).toBe(
-      '<p id="foo"></p>'
+      '<p id="foo"></p>',
     )
 
     renderWithBlock(() => [
-      createVNode('p', { id: 'bar' }, '', PatchFlags.PROPS, ['id'])
+      createVNode('p', { id: 'bar' }, '', PatchFlags.PROPS, ['id']),
     ])
 
     expect(inner(root)).toBe('<div><p id="bar"></p></div>')
     expect(block!.dynamicChildren!.length).toBe(1)
     expect(serialize(block!.dynamicChildren![0].el as TestElement)).toBe(
-      '<p id="bar"></p>'
+      '<p id="bar"></p>',
     )
   })
 
@@ -197,24 +196,24 @@ describe('renderer: optimized mode', () => {
     let propName = 'foo'
 
     renderWithBlock(() => [
-      createVNode('p', { [propName]: 'dynamic' }, '', PatchFlags.FULL_PROPS)
+      createVNode('p', { [propName]: 'dynamic' }, '', PatchFlags.FULL_PROPS),
     ])
 
     expect(inner(root)).toBe('<div><p foo="dynamic"></p></div>')
     expect(block!.dynamicChildren!.length).toBe(1)
     expect(serialize(block!.dynamicChildren![0].el as TestElement)).toBe(
-      '<p foo="dynamic"></p>'
+      '<p foo="dynamic"></p>',
     )
 
     propName = 'bar'
     renderWithBlock(() => [
-      createVNode('p', { [propName]: 'dynamic' }, '', PatchFlags.FULL_PROPS)
+      createVNode('p', { [propName]: 'dynamic' }, '', PatchFlags.FULL_PROPS),
     ])
 
     expect(inner(root)).toBe('<div><p bar="dynamic"></p></div>')
     expect(block!.dynamicChildren!.length).toBe(1)
     expect(serialize(block!.dynamicChildren![0].el as TestElement)).toBe(
-      '<p bar="dynamic"></p>'
+      '<p bar="dynamic"></p>',
     )
   })
 
@@ -229,18 +228,18 @@ describe('renderer: optimized mode', () => {
         list.map(item => {
           return createVNode('p', null, item, PatchFlags.TEXT)
         }),
-        PatchFlags.STABLE_FRAGMENT
+        PatchFlags.STABLE_FRAGMENT,
       ))),
-      root
+      root,
     )
 
     expect(inner(root)).toBe('<p>foo</p><p>bar</p>')
     expect(block.dynamicChildren!.length).toBe(2)
     expect(serialize(block.dynamicChildren![0].el as TestElement)).toBe(
-      '<p>foo</p>'
+      '<p>foo</p>',
     )
     expect(serialize(block.dynamicChildren![1].el as TestElement)).toBe(
-      '<p>bar</p>'
+      '<p>bar</p>',
     )
 
     list = list.map(item => item.repeat(2))
@@ -252,18 +251,18 @@ describe('renderer: optimized mode', () => {
         list.map(item => {
           return createVNode('p', null, item, PatchFlags.TEXT)
         }),
-        PatchFlags.STABLE_FRAGMENT
+        PatchFlags.STABLE_FRAGMENT,
       )),
-      root
+      root,
     )
 
     expect(inner(root)).toBe('<p>foofoo</p><p>barbar</p>')
     expect(block.dynamicChildren!.length).toBe(2)
     expect(serialize(block.dynamicChildren![0].el as TestElement)).toBe(
-      '<p>foofoo</p>'
+      '<p>foofoo</p>',
     )
     expect(serialize(block.dynamicChildren![1].el as TestElement)).toBe(
-      '<p>barbar</p>'
+      '<p>barbar</p>',
     )
   })
 
@@ -279,9 +278,9 @@ describe('renderer: optimized mode', () => {
         list.map(item => {
           return createVNode(item.tag, null, item.text)
         }),
-        PatchFlags.UNKEYED_FRAGMENT
+        PatchFlags.UNKEYED_FRAGMENT,
       ))),
-      root
+      root,
     )
 
     expect(inner(root)).toBe('<p>foo</p>')
@@ -296,9 +295,9 @@ describe('renderer: optimized mode', () => {
         list.map(item => {
           return createVNode(item.tag, null, item.text)
         }),
-        PatchFlags.UNKEYED_FRAGMENT
+        PatchFlags.UNKEYED_FRAGMENT,
       )),
-      root
+      root,
     )
 
     expect(inner(root)).toBe('<i>bar</i><p>foo</p>')
@@ -317,9 +316,9 @@ describe('renderer: optimized mode', () => {
         list.map(item => {
           return createVNode(item.tag, { key: item.tag }, item.text)
         }),
-        PatchFlags.KEYED_FRAGMENT
+        PatchFlags.KEYED_FRAGMENT,
       ))),
-      root
+      root,
     )
 
     expect(inner(root)).toBe('<p>foo</p>')
@@ -334,9 +333,9 @@ describe('renderer: optimized mode', () => {
         list.map(item => {
           return createVNode(item.tag, { key: item.tag }, item.text)
         }),
-        PatchFlags.KEYED_FRAGMENT
+        PatchFlags.KEYED_FRAGMENT,
       )),
-      root
+      root,
     )
 
     expect(inner(root)).toBe('<i>bar</i><p>foo</p>')
@@ -358,12 +357,12 @@ describe('renderer: optimized mode', () => {
                 'p',
                 { onVnodeMounted: spyMounted, onVnodeBeforeUpdate: spyUpdated },
                 '',
-                PatchFlags.NEED_PATCH
-              )
+                PatchFlags.NEED_PATCH,
+              ),
             ]))
           )
         }
-      }
+      },
     }
 
     render(h(Comp), root)
@@ -371,7 +370,7 @@ describe('renderer: optimized mode', () => {
     expect(inner(root)).toBe('<div><p></p></div>')
     expect(block!.dynamicChildren!.length).toBe(1)
     expect(serialize(block!.dynamicChildren![0].el as TestElement)).toBe(
-      '<p></p>'
+      '<p></p>',
     )
     expect(spyMounted).toHaveBeenCalledTimes(1)
     expect(spyUpdated).toHaveBeenCalledTimes(0)
@@ -382,7 +381,7 @@ describe('renderer: optimized mode', () => {
     expect(inner(root)).toBe('<div><p></p></div>')
     expect(block!.dynamicChildren!.length).toBe(1)
     expect(serialize(block!.dynamicChildren![0].el as TestElement)).toBe(
-      '<p></p>'
+      '<p></p>',
     )
     expect(spyMounted).toHaveBeenCalledTimes(1)
     expect(spyUpdated).toHaveBeenCalledTimes(1)
@@ -392,7 +391,7 @@ describe('renderer: optimized mode', () => {
     render(
       (openBlock(),
       (block = createBlock('div', null, [createVNode('p', null, 'foo')]))),
-      root
+      root,
     )
 
     expect(inner(root)).toBe('<div><p>foo</p></div>')
@@ -404,9 +403,9 @@ describe('renderer: optimized mode', () => {
         'div',
         null,
         [createVNode('i', null, 'bar')],
-        PatchFlags.BAIL
+        PatchFlags.BAIL,
       ))),
-      root
+      root,
     )
 
     expect(inner(root)).toBe('<div><i>bar</i></div>')
@@ -423,12 +422,12 @@ describe('renderer: optimized mode', () => {
             (openBlock(),
             (block = createBlock('div', null, {
               default: withCtx(() => [renderSlot(slots, 'default')]),
-              _: SlotFlags.FORWARDED
+              _: SlotFlags.FORWARDED,
             })))
 
           return vnode
         }
-      }
+      },
     })
 
     const foo = ref(0)
@@ -437,13 +436,13 @@ describe('renderer: optimized mode', () => {
         return () => {
           return createVNode(Comp, null, {
             default: withCtx(() => [
-              createVNode('p', null, foo.value, PatchFlags.TEXT)
+              createVNode('p', null, foo.value, PatchFlags.TEXT),
             ]),
             // Indicates that this is a stable slot to avoid bail out
-            _: SlotFlags.STABLE
+            _: SlotFlags.STABLE,
           })
         }
-      }
+      },
     }
 
     render(h(App), root)
@@ -453,8 +452,8 @@ describe('renderer: optimized mode', () => {
     expect(block!.dynamicChildren![0].dynamicChildren!.length).toBe(1)
     expect(
       serialize(
-        block!.dynamicChildren![0].dynamicChildren![0].el as TestElement
-      )
+        block!.dynamicChildren![0].dynamicChildren![0].el as TestElement,
+      ),
     ).toBe('<p>0</p>')
 
     foo.value++
@@ -475,12 +474,12 @@ describe('renderer: optimized mode', () => {
       setup() {
         onBeforeUnmount(spy)
         return () => 'child'
-      }
+      },
     }
     const Parent = () => (
       openBlock(),
       createBlock('div', null, [
-        createVNode('div', { style: {} }, [createVNode(Child)], 4 /* STYLE */)
+        createVNode('div', { style: {} }, [createVNode(Child)], 4 /* STYLE */),
       ])
     )
     render(h(Parent), root)
@@ -497,13 +496,13 @@ describe('renderer: optimized mode', () => {
       setup() {
         onBeforeUnmount(spyA)
         return () => 'child'
-      }
+      },
     }
     const ChildB = {
       setup() {
         onBeforeUnmount(spyB)
         return () => 'child'
-      }
+      },
     }
     const Parent = () => (
       openBlock(),
@@ -513,15 +512,15 @@ describe('renderer: optimized mode', () => {
           Fragment,
           null,
           [createVNode(ChildA, { key: 0 })],
-          128 /* KEYED_FRAGMENT */
+          128 /* KEYED_FRAGMENT */,
         )),
         (openBlock(true),
         createBlock(
           Fragment,
           null,
           [createVNode(ChildB)],
-          256 /* UNKEYED_FRAGMENT */
-        ))
+          256 /* UNKEYED_FRAGMENT */,
+        )),
       ])
     )
     render(h(Parent), root)
@@ -542,7 +541,7 @@ describe('renderer: optimized mode', () => {
             createBlock('div', null, [renderSlot(slots, 'default')])
           )
         }
-      }
+      },
     }
 
     const Wrapper = {
@@ -552,7 +551,7 @@ describe('renderer: optimized mode', () => {
         return () => {
           return slots.default!()[state.value]
         }
-      }
+      },
     }
 
     const app = createApp({
@@ -564,18 +563,18 @@ describe('renderer: optimized mode', () => {
               default: withCtx(() => [
                 createVNode(CompA, null, {
                   default: withCtx(() => [createTextVNode('Hello')]),
-                  _: 1 /* STABLE */
+                  _: 1 /* STABLE */,
                 }),
                 createVNode(CompA, null, {
                   default: withCtx(() => [createTextVNode('World')]),
-                  _: 1 /* STABLE */
-                })
+                  _: 1 /* STABLE */,
+                }),
               ]),
-              _: 1 /* STABLE */
+              _: 1 /* STABLE */,
             })
           )
         }
-      }
+      },
     })
 
     app.mount(root)
@@ -598,7 +597,7 @@ describe('renderer: optimized mode', () => {
         createBlock(
           Teleport as any,
           {
-            to: target
+            to: target,
           },
           [
             createVNode('div', null, [
@@ -606,21 +605,21 @@ describe('renderer: optimized mode', () => {
               createBlock(
                 Teleport as any,
                 {
-                  to: target
+                  to: target,
                 },
-                [createVNode('div', null, 'foo')]
-              ))
-            ])
-          ]
-        ))
+                [createVNode('div', null, 'foo')],
+              )),
+            ]),
+          ],
+        )),
       ])),
-      root
+      root,
     )
     expect(inner(target)).toMatchInlineSnapshot(
-      `"<div><!--teleport start--><!--teleport end--></div><div>foo</div>"`
+      `"<div><!--teleport start--><!--teleport end--></div><div>foo</div>"`,
     )
     expect(inner(root)).toMatchInlineSnapshot(
-      `"<div><!--teleport start--><!--teleport end--></div>"`
+      `"<div><!--teleport start--><!--teleport end--></div>"`,
     )
 
     render(null, root)
@@ -635,11 +634,11 @@ describe('renderer: optimized mode', () => {
           return (
             openBlock(),
             (block = createBlock('section', null, [
-              renderSlot(slots, 'default')
+              renderSlot(slots, 'default'),
             ]))
           )
         }
-      }
+      },
     }
 
     let dynamicVNode: VNode
@@ -655,19 +654,19 @@ describe('renderer: optimized mode', () => {
                     'div',
                     {
                       class: {
-                        foo: !!slots.default!()
-                      }
+                        foo: !!slots.default!(),
+                      },
                     },
                     null,
-                    PatchFlags.CLASS
-                  ))
+                    PatchFlags.CLASS,
+                  )),
                 ]
               }),
-              _: 1
+              _: 1,
             })
           )
         }
-      }
+      },
     }
     const app = createApp({
       render() {
@@ -677,10 +676,10 @@ describe('renderer: optimized mode', () => {
             default: withCtx(() => {
               return [createVNode({}) /* component */]
             }),
-            _: 1
+            _: 1,
           })
         )
-      }
+      },
     })
 
     app.mount(root)
@@ -694,7 +693,7 @@ describe('renderer: optimized mode', () => {
     expect(block!.dynamicChildren!.length).toBe(1)
     expect(block!.dynamicChildren![0].dynamicChildren!.length).toBe(1)
     expect(block!.dynamicChildren![0].dynamicChildren![0]).toEqual(
-      dynamicVNode!
+      dynamicVNode!,
     )
   })
 
@@ -706,7 +705,7 @@ describe('renderer: optimized mode', () => {
         return () => {
           return slots.default!()[index.value]
         }
-      }
+      },
     }
 
     const app = createApp({
@@ -721,13 +720,13 @@ describe('renderer: optimized mode', () => {
                   : createCommentVNode('v-if', true),
                 true
                   ? (openBlock(), createBlock('p', { key: 0 }, '2'))
-                  : createCommentVNode('v-if', true)
+                  : createCommentVNode('v-if', true),
               ]),
-              _: 1 /* STABLE */
+              _: 1 /* STABLE */,
             })
           )
         }
-      }
+      },
     })
 
     app.mount(root)
@@ -747,7 +746,7 @@ describe('renderer: optimized mode', () => {
     const Middle = {
       setup(props: any, { slots }: any) {
         return slots.default!
-      }
+      },
     }
 
     const Comp = {
@@ -759,16 +758,16 @@ describe('renderer: optimized mode', () => {
               createVNode(Middle, null, {
                 default: withCtx(
                   () => [
-                    createVNode('div', null, [renderSlot(slots, 'default')])
+                    createVNode('div', null, [renderSlot(slots, 'default')]),
                   ],
-                  undefined
+                  undefined,
                 ),
-                _: 3 /* FORWARDED */
-              })
+                _: 3 /* FORWARDED */,
+              }),
             ])
           )
         }
-      }
+      },
     }
 
     const loading = ref(false)
@@ -778,10 +777,10 @@ describe('renderer: optimized mode', () => {
           // important: write the slot content here
           const content = h('span', loading.value ? 'loading' : 'loaded')
           return h(Comp, null, {
-            default: () => content
+            default: () => content,
           })
         }
-      }
+      },
     })
 
     app.mount(root)
@@ -808,16 +807,16 @@ describe('renderer: optimized mode', () => {
               createBlock(SuspenseImpl, null, {
                 default: withCtx(() => [
                   createVNode('div', null, [
-                    createVNode('div', null, show.value, PatchFlags.TEXT)
-                  ])
+                    createVNode('div', null, show.value, PatchFlags.TEXT),
+                  ]),
                 ]),
-                _: SlotFlags.STABLE
-              }))
+                _: SlotFlags.STABLE,
+              })),
             ],
-            PatchFlags.STABLE_FRAGMENT
+            PatchFlags.STABLE_FRAGMENT,
           )
         )
-      }
+      },
     })
 
     app.mount(root)
@@ -839,17 +838,17 @@ describe('renderer: optimized mode', () => {
           openBlock(),
           createBlock(SuspenseImpl, null, {
             default: withCtx(() => [renderSlot(slots, 'default')]),
-            _: SlotFlags.FORWARDED
+            _: SlotFlags.FORWARDED,
           })
         )
-      }
+      },
     }
 
     const Child = {
       setup() {
         onUnmounted(spyUnmounted)
         return () => createVNode('div', null, show.value, PatchFlags.TEXT)
-      }
+      },
     }
 
     const app = createApp({
@@ -861,11 +860,11 @@ describe('renderer: optimized mode', () => {
               { key: 0 },
               {
                 default: withCtx(() => [createVNode(Child)]),
-                _: SlotFlags.STABLE
-              }
+                _: SlotFlags.STABLE,
+              },
             ))
           : createCommentVNode('v-if', true)
-      }
+      },
     })
 
     app.mount(root)
@@ -908,17 +907,17 @@ describe('renderer: optimized mode', () => {
                     renderList(1, item => {
                       return createVNode('li', null, [createVNode(Dummy)])
                     }),
-                    64 /* STABLE_FRAGMENT */
-                  ))
-                ])
+                    64 /* STABLE_FRAGMENT */,
+                  )),
+                ]),
               ],
               undefined,
-              true
+              true,
             ),
-            _: 1 /* STABLE */
-          }
+            _: 1 /* STABLE */,
+          },
         )
-      }
+      },
     })
 
     app.mount(root)

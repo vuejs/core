@@ -1,4 +1,3 @@
-import { vi } from 'vitest'
 import { createApp } from '../src'
 
 // https://github.com/vuejs/docs/pull/1890
@@ -13,7 +12,7 @@ test('custom element event casing', () => {
         this.dispatchEvent(new Event('CAPScase'))
         this.dispatchEvent(new Event('PascalCase'))
       }
-    }
+    },
   )
 
   const container = document.createElement('div')
@@ -34,8 +33,8 @@ test('custom element event casing', () => {
       }" />`,
     methods: {
       handler,
-      handler2
-    }
+      handler2,
+    },
   }).mount(container)
 
   expect(handler).toHaveBeenCalledTimes(3)

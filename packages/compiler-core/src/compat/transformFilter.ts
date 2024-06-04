@@ -1,19 +1,18 @@
 import { RESOLVE_FILTER } from '../runtimeHelpers'
 import {
-  AttributeNode,
-  DirectiveNode,
-  NodeTransform,
+  type AttributeNode,
+  type DirectiveNode,
+  type ExpressionNode,
   NodeTypes,
-  SimpleExpressionNode,
-  toValidAssetId,
-  TransformContext
-} from '@vue/compiler-core'
+  type SimpleExpressionNode,
+} from '../ast'
 import {
   CompilerDeprecationTypes,
   isCompatEnabled,
-  warnDeprecation
+  warnDeprecation,
 } from './compatConfig'
-import { ExpressionNode } from '../ast'
+import type { NodeTransform, TransformContext } from '../transform'
+import { toValidAssetId } from '../utils'
 
 const validDivisionCharRE = /[\w).+\-_$\]]/
 
@@ -163,19 +162,21 @@ function parseFilter(node: SimpleExpressionNode, context: TransformContext) {
       warnDeprecation(
         CompilerDeprecationTypes.COMPILER_FILTERS,
         context,
-        node.loc
+        node.loc,
       )
     for (i = 0; i < filters.length; i++) {
       expression = wrapFilter(expression, filters[i], context)
     }
     node.content = expression
+    // reset ast since the content is replaced
+    node.ast = undefined
   }
 }
 
 function wrapFilter(
   exp: string,
   filter: string,
-  context: TransformContext
+  context: TransformContext,
 ): string {
   context.helper(RESOLVE_FILTER)
   const i = filter.indexOf('(')
