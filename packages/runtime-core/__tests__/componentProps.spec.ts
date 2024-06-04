@@ -749,7 +749,7 @@ describe('component props', () => {
     expect(`Invalid prop name: "ref"`).toHaveBeenWarned()
     expect(`Invalid prop name: "$foo"`).toHaveBeenWarned()
   })
-  
+
   // #5517
   test('events should not be props when component updating', async () => {
     let props: any
@@ -762,18 +762,18 @@ describe('component props', () => {
       },
       emits: ['event'],
       props: ['foo'],
-      template: `<div>{{ foo }}</div>`
+      template: `<div>{{ foo }}</div>`,
     })
 
     const Comp = defineComponent({
       setup() {
         return {
           foo,
-          eventHandler
+          eventHandler,
         }
       },
       components: { Child },
-      template: `<Child @event="eventHandler" :foo="foo" />`
+      template: `<Child @event="eventHandler" :foo="foo" />`,
     })
 
     const root = document.createElement('div')
