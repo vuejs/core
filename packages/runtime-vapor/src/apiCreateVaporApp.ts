@@ -7,7 +7,12 @@ import {
 } from './component'
 import { warn } from './warning'
 import { type Directive, version } from '.'
-import { render, setupComponent, unmountComponent } from './apiRender'
+import {
+  normalizeContainer,
+  render,
+  setupComponent,
+  unmountComponent,
+} from './apiRender'
 import type { InjectionKey } from './apiInject'
 import type { RawProps } from './componentProps'
 import { validateDirectiveName } from './directives'
@@ -29,6 +34,7 @@ export function createVaporApp(
 
   const app: App = {
     _context: context,
+    _container: null,
 
     version,
 
@@ -93,6 +99,15 @@ export function createVaporApp(
 
     mount(rootContainer): any {
       if (!instance) {
+        rootContainer = normalizeContainer(rootContainer)
+        // #5571
+        if (__DEV__ && (rootContainer as any).__vue_app__) {
+          warn(
+            `There is already an app instance mounted on the host container.\n` +
+              ` If you want to mount another app on the same host container,` +
+              ` you need to unmount the previous app by calling \`app.unmount()\` first.`,
+          )
+        }
         instance = createComponentInstance(
           rootComponent,
           rootProps,
@@ -103,6 +118,11 @@ export function createVaporApp(
         )
         setupComponent(instance)
         render(instance, rootContainer)
+
+        app._container = rootContainer
+        // for devtools and telemetry
+        ;(rootContainer as any).__vue_app__ = app
+
         return instance
       } else if (__DEV__) {
         warn(
@@ -116,6 +136,7 @@ export function createVaporApp(
     unmount() {
       if (instance) {
         unmountComponent(instance)
+        delete (app._container as any).__vue_app__
       } else if (__DEV__) {
         warn(`Cannot unmount an app that is not mounted.`)
       }
@@ -199,6 +220,7 @@ export interface App {
   runWithContext<T>(fn: () => T): T
 
   _context: AppContext
+  _container: ParentNode | null
 }
 
 export interface AppConfig {

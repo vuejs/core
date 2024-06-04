@@ -17,31 +17,50 @@ export function makeRender<Component = ObjectComponent | SetupFn>(
   },
 ) {
   let host: HTMLElement
+  function resetHost() {
+    return (host = initHost())
+  }
+
   beforeEach(() => {
-    host = initHost()
+    resetHost()
   })
   afterEach(() => {
     host.remove()
   })
 
-  const define = (comp: Component) => {
+  function define(comp: Component) {
     const component = defineComponent(comp as any)
-    let instance: ComponentInternalInstance
+    let instance: ComponentInternalInstance | undefined
     let app: App
-    const render = (
+
+    function render(
       props: RawProps = {},
-      container: string | ParentNode = '#host',
-    ) => {
+      container: string | ParentNode = host,
+    ) {
+      create(props)
+      return mount(container)
+    }
+
+    function create(props: RawProps = {}) {
+      app?.unmount()
       app = createVaporApp(component, props)
+      return res()
+    }
+
+    function mount(container: string | ParentNode = host) {
       instance = app.mount(container)
       return res()
     }
+
     const res = () => ({
       component,
       host,
       instance,
       app,
+      create,
+      mount,
       render,
+      resetHost,
     })
 
     return res()

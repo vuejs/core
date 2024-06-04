@@ -3,6 +3,7 @@ import {
   componentKey,
   createSetupContext,
   setCurrentInstance,
+  validateComponentName,
 } from './component'
 import { insert, querySelector, remove } from './dom/element'
 import { flushPostFlushCbs, queuePostFlushCb } from './scheduler'
@@ -35,6 +36,12 @@ export function setupComponent(
   instance.scope.run(() => {
     const { component, props } = instance
 
+    if (__DEV__) {
+      if (component.name) {
+        validateComponentName(component.name, instance.appContext.config)
+      }
+    }
+
     const setupFn = isFunction(component) ? component : component.setup
     let stateOrNode: Block | undefined
     if (setupFn) {
@@ -65,7 +72,12 @@ export function setupComponent(
     }
     if (!block && component.render) {
       pauseTracking()
-      block = component.render(instance.setupState)
+      block = callWithErrorHandling(
+        component.render,
+        instance,
+        VaporErrorCodes.RENDER_FUNCTION,
+        [instance.setupState],
+      )
       resetTracking()
     }
 
@@ -91,7 +103,7 @@ export function render(
   flushPostFlushCbs()
 }
 
-function normalizeContainer(container: string | ParentNode): ParentNode {
+export function normalizeContainer(container: string | ParentNode): ParentNode {
   return typeof container === 'string'
     ? (querySelector(container) as ParentNode)
     : container
