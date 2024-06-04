@@ -203,11 +203,13 @@ const BaseTransitionImpl: ComponentOptions = {
         return emptyPlaceholder(child)
       }
 
-      const enterHooks = resolveTransitionHooks(
+      let enterHooks = resolveTransitionHooks(
         innerChild,
         rawProps,
         state,
         instance,
+        // #11061, ensure enterHooks is fresh after clone
+        hooks => (enterHooks = hooks),
       )
       setTransitionHooks(innerChild, enterHooks)
 
@@ -305,6 +307,7 @@ export function resolveTransitionHooks(
   props: BaseTransitionProps<any>,
   state: TransitionState,
   instance: ComponentInternalInstance,
+  postClone?: (hooks: TransitionHooks) => void,
 ): TransitionHooks {
   const {
     appear,
@@ -445,7 +448,15 @@ export function resolveTransitionHooks(
     },
 
     clone(vnode) {
-      return resolveTransitionHooks(vnode, props, state, instance)
+      const hooks = resolveTransitionHooks(
+        vnode,
+        props,
+        state,
+        instance,
+        postClone,
+      )
+      if (postClone) postClone(hooks)
+      return hooks
     },
   }
 
