@@ -204,7 +204,6 @@ const BaseTransitionImpl: ComponentOptions = {
         state,
         instance,
         vnode => {
-          innerChild = vnode
           enterHooks = vnode.transition!
         },
       )
