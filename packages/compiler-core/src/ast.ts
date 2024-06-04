@@ -263,7 +263,6 @@ export interface CompoundExpressionNode extends Node {
     | SimpleExpressionNode
     | CompoundExpressionNode
     | InterpolationNode
-    | CacheExpression
     | TextNode
     | string
     | symbol
@@ -418,7 +417,8 @@ export interface CacheExpression extends Node {
   type: NodeTypes.JS_CACHE_EXPRESSION
   index: number
   value: JSChildNode
-  isVNode: boolean
+  needPauseTracking: boolean
+  needArraySpread: boolean
 }
 
 export interface MemoExpression extends CallExpression {
@@ -513,7 +513,7 @@ export interface SlotsObjectProperty extends Property {
 }
 
 export interface SlotFunctionExpression extends FunctionExpression {
-  returns: TemplateChildNode[] | CacheExpression | CompoundExpressionNode
+  returns: TemplateChildNode[] | CacheExpression
 }
 
 // createSlots({ ... }, [
@@ -773,13 +773,14 @@ export function createConditionalExpression(
 export function createCacheExpression(
   index: number,
   value: JSChildNode,
-  isVNode: boolean = false,
+  needPauseTracking: boolean = false,
 ): CacheExpression {
   return {
     type: NodeTypes.JS_CACHE_EXPRESSION,
     index,
     value,
-    isVNode,
+    needPauseTracking: needPauseTracking,
+    needArraySpread: false,
     loc: locStub,
   }
 }

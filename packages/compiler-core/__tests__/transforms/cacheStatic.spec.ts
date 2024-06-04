@@ -25,8 +25,12 @@ import { createObjectMatcher, genFlagText } from '../testUtils'
 import { transformText } from '../../src/transforms/transformText'
 import { PatchFlags } from '@vue/shared'
 
-const cachedChildrenArrayMatcher = (tags: string[]) => ({
+const cachedChildrenArrayMatcher = (
+  tags: string[],
+  needArraySpread = false,
+) => ({
   type: NodeTypes.JS_CACHE_EXPRESSION,
+  needArraySpread,
   value: {
     type: NodeTypes.JS_ARRAY_EXPRESSION,
     elements: tags.map(tag => {
@@ -752,10 +756,10 @@ describe('compiler: cacheStatic transform', () => {
       expect(innerBlockCodegen.returns).toMatchObject({
         type: NodeTypes.VNODE_CALL,
         tag: `"div"`,
-        children: {
-          type: NodeTypes.COMPOUND_EXPRESSION,
-          children: [`[...(`, cachedChildrenArrayMatcher(['span']), `)]`],
-        },
+        children: cachedChildrenArrayMatcher(
+          ['span'],
+          true /* needArraySpread */,
+        ),
       })
       expect(generate(root).code).toMatchSnapshot()
     })

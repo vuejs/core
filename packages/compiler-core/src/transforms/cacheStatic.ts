@@ -2,7 +2,6 @@ import {
   type CacheExpression,
   type CallExpression,
   type ComponentNode,
-  type CompoundExpressionNode,
   ConstantTypes,
   ElementTypes,
   type ExpressionNode,
@@ -18,7 +17,6 @@ import {
   type TextCallNode,
   type VNodeCall,
   createArrayExpression,
-  createCompoundExpression,
   getVNodeBlockHelper,
   getVNodeHelper,
 } from '../ast'
@@ -203,15 +201,13 @@ function walk(
     }
   }
 
-  function getCacheExpression(
-    value: JSChildNode,
-  ): CacheExpression | CompoundExpressionNode {
+  function getCacheExpression(value: JSChildNode): CacheExpression {
     const exp = context.cache(value)
     // #6978, #7138, #7114
     // a cached children array inside v-for can caused HMR errors since
     // it might be mutated when mounting the first item
     if (inFor && context.hmr) {
-      return createCompoundExpression([`[...(`, exp, `)]`])
+      exp.needArraySpread = true
     }
     return exp
   }

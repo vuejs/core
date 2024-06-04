@@ -981,15 +981,19 @@ function genConditionalExpression(
 
 function genCacheExpression(node: CacheExpression, context: CodegenContext) {
   const { push, helper, indent, deindent, newline } = context
+  const { needPauseTracking, needArraySpread } = node
+  if (needArraySpread) {
+    push(`[...(`)
+  }
   push(`_cache[${node.index}] || (`)
-  if (node.isVNode) {
+  if (needPauseTracking) {
     indent()
     push(`${helper(SET_BLOCK_TRACKING)}(-1),`)
     newline()
   }
   push(`_cache[${node.index}] = `)
   genNode(node.value, context)
-  if (node.isVNode) {
+  if (needPauseTracking) {
     push(`,`)
     newline()
     push(`${helper(SET_BLOCK_TRACKING)}(1),`)
@@ -998,6 +1002,9 @@ function genCacheExpression(node: CacheExpression, context: CodegenContext) {
     deindent()
   }
   push(`)`)
+  if (needArraySpread) {
+    push(`)]`)
+  }
 }
 
 function genTemplateLiteral(node: TemplateLiteral, context: CodegenContext) {
