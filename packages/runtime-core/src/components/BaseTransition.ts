@@ -442,7 +442,13 @@ export function resolveTransitionHooks(
     },
 
     clone(vnode) {
-      const hooks = resolveTransitionHooks(vnode, props, state, instance)
+      const hooks = resolveTransitionHooks(
+        vnode,
+        props,
+        state,
+        instance,
+        postClone,
+      )
       if (postClone) postClone(hooks)
       return hooks
     },
