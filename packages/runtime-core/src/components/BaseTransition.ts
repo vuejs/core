@@ -61,7 +61,7 @@ export interface TransitionHooks<HostElement = RendererElement> {
   beforeEnter(el: HostElement): void
   enter(el: HostElement): void
   leave(el: HostElement, remove: () => void): void
-  cloneTo(vnode: VNode): void
+  clone(vnode: VNode): TransitionHooks<HostElement>
   // optional
   afterLeave?(): void
   delayLeave?(
@@ -193,7 +193,7 @@ const BaseTransitionImpl: ComponentOptions = {
 
       // in the case of <transition><keep-alive/></transition>, we need to
       // compare the type of the kept-alive children.
-      let innerChild = getKeepAliveChild(child)
+      const innerChild = getKeepAliveChild(child)
       if (!innerChild) {
         return emptyPlaceholder(child)
       }
@@ -203,9 +203,8 @@ const BaseTransitionImpl: ComponentOptions = {
         rawProps,
         state,
         instance,
-        vnode => {
-          enterHooks = vnode.transition!
-        },
+        // #11061, ensure enterHooks is fresh after clone
+        hooks => (enterHooks = hooks),
       )
       setTransitionHooks(innerChild, enterHooks)
 
@@ -302,7 +301,7 @@ export function resolveTransitionHooks(
   props: BaseTransitionProps<any>,
   state: TransitionState,
   instance: ComponentInternalInstance,
-  postClone?: (vnode: VNode) => void,
+  postClone?: (hooks: TransitionHooks) => void,
 ): TransitionHooks {
   const {
     appear,
@@ -442,10 +441,10 @@ export function resolveTransitionHooks(
       }
     },
 
-    cloneTo(vnode) {
+    clone(vnode) {
       const hooks = resolveTransitionHooks(vnode, props, state, instance)
-      setTransitionHooks(vnode, hooks)
-      if (postClone) postClone(vnode)
+      if (postClone) postClone(hooks)
+      return hooks
     },
   }
 
@@ -494,8 +493,8 @@ export function setTransitionHooks(vnode: VNode, hooks: TransitionHooks) {
   if (vnode.shapeFlag & ShapeFlags.COMPONENT && vnode.component) {
     setTransitionHooks(vnode.component.subTree, hooks)
   } else if (__FEATURE_SUSPENSE__ && vnode.shapeFlag & ShapeFlags.SUSPENSE) {
-    hooks.cloneTo(vnode.ssContent!)
-    hooks.cloneTo(vnode.ssFallback!)
+    vnode.ssContent!.transition = hooks.clone(vnode.ssContent!)
+    vnode.ssFallback!.transition = hooks.clone(vnode.ssFallback!)
   } else {
     vnode.transition = hooks
   }

@@ -36,7 +36,10 @@ import {
   isSuspense,
 } from './components/Suspense'
 import type { DirectiveBinding } from './directives'
-import type { TransitionHooks } from './components/BaseTransition'
+import {
+  type TransitionHooks,
+  setTransitionHooks,
+} from './components/BaseTransition'
 import { warn } from './warning'
 import {
   type Teleport,
@@ -691,7 +694,10 @@ export function cloneVNode<T, U>(
   // to clone the transition to ensure that the vnode referenced within
   // the transition hooks is fresh.
   if (transition && cloneTransition) {
-    transition.cloneTo(cloned as VNode)
+    setTransitionHooks(
+      cloned as VNode,
+      transition.clone(cloned as VNode) as TransitionHooks,
+    )
   }
 
   if (__COMPAT__) {
