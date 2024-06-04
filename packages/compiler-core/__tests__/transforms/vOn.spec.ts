@@ -504,7 +504,7 @@ describe('compiler: transform v-on', () => {
         prefixIdentifiers: true,
         cacheHandlers: true,
       })
-      expect(root.cached).toBe(1)
+      expect(root.cached.length).toBe(1)
       const vnodeCall = node.codegenNode as VNodeCall
       // should not treat cached handler as dynamicProp, so no flags
       expect(vnodeCall.patchFlag).toBeUndefined()
@@ -525,7 +525,7 @@ describe('compiler: transform v-on', () => {
         prefixIdentifiers: true,
         cacheHandlers: true,
       })
-      expect(root.cached).toBe(1)
+      expect(root.cached.length).toBe(1)
       const vnodeCall = node.codegenNode as VNodeCall
       // should not treat cached handler as dynamicProp, so no flags
       expect(vnodeCall.patchFlag).toBeUndefined()
@@ -550,7 +550,7 @@ describe('compiler: transform v-on', () => {
         prefixIdentifiers: true,
         cacheHandlers: true,
       })
-      expect(root.cached).toBe(1)
+      expect(root.cached.length).toBe(1)
       const vnodeCall = node.codegenNode as VNodeCall
       // should not treat cached handler as dynamicProp, so no flags
       expect(vnodeCall.patchFlag).toBeUndefined()
@@ -587,7 +587,7 @@ describe('compiler: transform v-on', () => {
         cacheHandlers: true,
         isNativeTag: tag => tag === 'div',
       })
-      expect(root.cached).toBe(0)
+      expect(root.cached.length).toBe(0)
     })
 
     test('should not be cached inside v-once', () => {
@@ -599,7 +599,7 @@ describe('compiler: transform v-on', () => {
         },
       )
       expect(root.cached).not.toBe(2)
-      expect(root.cached).toBe(1)
+      expect(root.cached.length).toBe(1)
     })
 
     test('inline function expression handler', () => {
@@ -607,7 +607,7 @@ describe('compiler: transform v-on', () => {
         prefixIdentifiers: true,
         cacheHandlers: true,
       })
-      expect(root.cached).toBe(1)
+      expect(root.cached.length).toBe(1)
       const vnodeCall = node.codegenNode as VNodeCall
       // should not treat cached handler as dynamicProp, so no flags
       expect(vnodeCall.patchFlag).toBeUndefined()
@@ -631,7 +631,7 @@ describe('compiler: transform v-on', () => {
           cacheHandlers: true,
         },
       )
-      expect(root.cached).toBe(1)
+      expect(root.cached.length).toBe(1)
       const vnodeCall = node.codegenNode as VNodeCall
       // should not treat cached handler as dynamicProp, so no flags
       expect(vnodeCall.patchFlag).toBeUndefined()
@@ -656,7 +656,7 @@ describe('compiler: transform v-on', () => {
         },
       )
 
-      expect(root.cached).toBe(1)
+      expect(root.cached.length).toBe(1)
       const vnodeCall = node.codegenNode as VNodeCall
       // should not treat cached handler as dynamicProp, so no flags
       expect(vnodeCall.patchFlag).toBeUndefined()
@@ -688,7 +688,7 @@ describe('compiler: transform v-on', () => {
           cacheHandlers: true,
         },
       )
-      expect(root.cached).toBe(1)
+      expect(root.cached.length).toBe(1)
       const vnodeCall = node.codegenNode as VNodeCall
       // should not treat cached handler as dynamicProp, so no flags
       expect(vnodeCall.patchFlag).toBeUndefined()
@@ -713,8 +713,8 @@ describe('compiler: transform v-on', () => {
         prefixIdentifiers: true,
         cacheHandlers: true,
       })
-      expect(root.cached).toBe(1)
-      expect(root.cached).toBe(1)
+      expect(root.cached.length).toBe(1)
+      expect(root.cached.length).toBe(1)
       const vnodeCall = node.codegenNode as VNodeCall
       // should not treat cached handler as dynamicProp, so no flags
       expect(vnodeCall.patchFlag).toBeUndefined()

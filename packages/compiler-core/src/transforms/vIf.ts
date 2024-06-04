@@ -248,7 +248,7 @@ function createChildrenCodegenNode(
       `${keyIndex}`,
       false,
       locStub,
-      ConstantTypes.CAN_HOIST,
+      ConstantTypes.CAN_CACHE,
     ),
   )
   const { children } = branch

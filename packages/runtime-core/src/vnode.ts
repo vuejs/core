@@ -650,7 +650,7 @@ export function cloneVNode<T, U>(
     scopeId: vnode.scopeId,
     slotScopeIds: vnode.slotScopeIds,
     children:
-      __DEV__ && patchFlag === PatchFlags.HOISTED && isArray(children)
+      __DEV__ && patchFlag === PatchFlags.CACHED && isArray(children)
         ? (children as VNode[]).map(deepCloneVNode)
         : children,
     target: vnode.target,
@@ -663,7 +663,7 @@ export function cloneVNode<T, U>(
     // fast paths only.
     patchFlag:
       extraProps && vnode.type !== Fragment
-        ? patchFlag === PatchFlags.HOISTED // hoisted node
+        ? patchFlag === PatchFlags.CACHED // hoisted node
           ? PatchFlags.FULL_PROPS
           : patchFlag | PatchFlags.FULL_PROPS
         : patchFlag,
@@ -772,7 +772,7 @@ export function normalizeVNode(child: VNodeChild): VNode {
 
 // optimized normalization for template-compiled render fns
 export function cloneIfMounted(child: VNode): VNode {
-  return (child.el === null && child.patchFlag !== PatchFlags.HOISTED) ||
+  return (child.el === null && child.patchFlag !== PatchFlags.CACHED) ||
     child.memo
     ? child
     : cloneVNode(child)

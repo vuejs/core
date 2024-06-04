@@ -1122,7 +1122,7 @@ describe('SSR hydration', () => {
           'input',
           { type: 'checkbox', indeterminate: '' },
           null,
-          PatchFlags.HOISTED,
+          PatchFlags.CACHED,
         ),
     )
     expect((container.firstChild as any).indeterminate).toBe(true)
