@@ -1,5 +1,3 @@
-// NOTE: This test is implemented based on the case of `runtime-core/__test__/apiInject.spec.ts`.
-
 import {
   type InjectionKey,
   type Ref,
@@ -356,17 +354,15 @@ describe('api: provide/inject', () => {
   })
 
   // #2400
-  it.todo('should not self-inject', () => {
-    const Comp = define({
+  it('should not self-inject', () => {
+    const { host } = define({
       setup() {
         provide('foo', 'foo')
         const injection = inject('foo', null)
-        return () => injection
+        return createTextNode(() => [injection])
       },
-    })
-
-    Comp.render()
-    expect(Comp.host.innerHTML).toBe('')
+    }).render()
+    expect(host.innerHTML).toBe('')
   })
 
   describe('hasInjectionContext', () => {

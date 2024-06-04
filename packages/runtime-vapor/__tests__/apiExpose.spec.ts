@@ -6,11 +6,12 @@ import {
   type ComponentInternalInstance,
   getCurrentInstance,
 } from '../src/component'
+import { defineComponent } from '../src/apiDefineComponent'
 
 const define = makeRender()
 describe('api: expose', () => {
   test('via setup context', () => {
-    const { component: Child } = define({
+    const Child = defineComponent({
       setup(_, { expose }) {
         expose({
           foo: 1,
@@ -23,15 +24,14 @@ describe('api: expose', () => {
       },
     })
     const childRef = ref()
-    const { render } = define({
+    define({
       render: () => {
         const n0 = createComponent(Child)
         setRef(n0, childRef)
         return n0
       },
-    })
+    }).render()
 
-    render()
     expect(childRef.value).toBeTruthy()
     expect(childRef.value.foo).toBe(1)
     expect(childRef.value.bar).toBe(2)
@@ -40,56 +40,70 @@ describe('api: expose', () => {
 
   test('via setup context (expose empty)', () => {
     let childInstance: ComponentInternalInstance | null = null
-    const { component: Child } = define({
+    const Child = defineComponent({
       setup(_) {
         childInstance = getCurrentInstance()
       },
     })
     const childRef = shallowRef()
-    const { render } = define({
+    define({
       render: () => {
         const n0 = createComponent(Child)
         setRef(n0, childRef)
         return n0
       },
-    })
+    }).render()
 
-    render()
     expect(childInstance!.exposed).toBeUndefined()
     expect(childRef.value).toBe(childInstance!)
   })
 
+  test('with mount', () => {
+    const { instance } = define({
+      setup(_, { expose }) {
+        expose({
+          foo: 1,
+        })
+        return {
+          bar: 2,
+        }
+      },
+    }).render()
+    expect(instance!.exposed!.foo).toBe(1)
+    expect(instance!.exposed!.bar).toBe(undefined)
+  })
+
   test('warning for ref', () => {
-    const { render } = define({
+    define({
       setup(_, { expose }) {
         expose(ref(1))
       },
-    })
-    render()
+    }).render()
+
     expect(
       'expose() should be passed a plain object, received ref',
     ).toHaveBeenWarned()
   })
 
   test('warning for array', () => {
-    const { render } = define({
+    define({
       setup(_, { expose }) {
         expose(['focus'])
       },
-    })
-    render()
+    }).render()
+
     expect(
       'expose() should be passed a plain object, received array',
     ).toHaveBeenWarned()
   })
 
   test('warning for function', () => {
-    const { render } = define({
+    define({
       setup(_, { expose }) {
         expose(() => null)
       },
-    })
-    render()
+    }).render()
+
     expect(
       'expose() should be passed a plain object, received function',
     ).toHaveBeenWarned()
