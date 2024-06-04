@@ -69,7 +69,7 @@ export function triggerRefValue(
   ref: RefBase<any>,
   dirtyLevel: DirtyLevels = DirtyLevels.Dirty,
   newVal?: any,
-  oldVal?: any
+  oldVal?: any,
 ) {
   ref = toRaw(ref)
   const dep = ref.dep
@@ -83,7 +83,7 @@ export function triggerRefValue(
             type: TriggerOpTypes.SET,
             key: 'value',
             newValue: newVal,
-            oldValue: oldVal
+            oldValue: oldVal,
           }
         : void 0,
     )

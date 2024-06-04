@@ -640,7 +640,7 @@ describe('reactivity/computed', () => {
       type: TriggerOpTypes.SET,
       key: 'value',
       oldValue: 1,
-      newValue: 2
+      newValue: 2,
     })
   })
 })
