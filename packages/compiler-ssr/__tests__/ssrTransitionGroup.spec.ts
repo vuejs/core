@@ -102,7 +102,7 @@ describe('transition-group', () => {
         _push(\`<ul\${_ssrRenderAttrs(_mergeProps({
           class: "red",
           id: "ok"
-        }, _attrs))}></ul>\`)
+        }, _attrs))}> </ul>\`)
       }"
     `)
   })
