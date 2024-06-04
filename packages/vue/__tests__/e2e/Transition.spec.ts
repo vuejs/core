@@ -1263,6 +1263,98 @@ describe('e2e: Transition', () => {
       E2E_TIMEOUT,
     )
 
+    // #11061
+    test(
+      'transition + fallthrough attrs (in-out mode)',
+      async () => {
+        const beforeLeaveSpy = vi.fn()
+        const onLeaveSpy = vi.fn()
+        const afterLeaveSpy = vi.fn()
+        const beforeEnterSpy = vi.fn()
+        const onEnterSpy = vi.fn()
+        const afterEnterSpy = vi.fn()
+
+        await page().exposeFunction('onLeaveSpy', onLeaveSpy)
+        await page().exposeFunction('onEnterSpy', onEnterSpy)
+        await page().exposeFunction('beforeLeaveSpy', beforeLeaveSpy)
+        await page().exposeFunction('beforeEnterSpy', beforeEnterSpy)
+        await page().exposeFunction('afterLeaveSpy', afterLeaveSpy)
+        await page().exposeFunction('afterEnterSpy', afterEnterSpy)
+
+        await page().evaluate(() => {
+          const { onEnterSpy, onLeaveSpy } = window as any
+          const { createApp, ref } = (window as any).Vue
+          createApp({
+            components: {
+              one: {
+                template: '<div>one</div>',
+              },
+              two: {
+                template: '<div>two</div>',
+              },
+            },
+            template: `
+            <div id="container">
+              <transition foo="1" name="test" mode="in-out" 
+                @before-enter="beforeEnterSpy()"
+                @enter="onEnterSpy()"
+                @after-enter="afterEnterSpy()"
+                @before-leave="beforeLeaveSpy()"
+                @leave="onLeaveSpy()"
+                @after-leave="afterLeaveSpy()">
+                <component :is="view"></component>
+              </transition>
+            </div>
+            <button id="toggleBtn" @click="click">button</button>
+          `,
+            setup: () => {
+              const view = ref('one')
+              const click = () =>
+                (view.value = view.value === 'one' ? 'two' : 'one')
+              return {
+                view,
+                click,
+                beforeEnterSpy,
+                onEnterSpy,
+                afterEnterSpy,
+                beforeLeaveSpy,
+                onLeaveSpy,
+                afterLeaveSpy,
+              }
+            },
+          }).mount('#app')
+        })
+        expect(await html('#container')).toBe('<div foo="1">one</div>')
+
+        // toggle
+        await click('#toggleBtn')
+        await nextTick()
+        await transitionFinish()
+        expect(beforeEnterSpy).toBeCalledTimes(1)
+        expect(onEnterSpy).toBeCalledTimes(1)
+        expect(afterEnterSpy).toBeCalledTimes(1)
+        expect(beforeLeaveSpy).toBeCalledTimes(1)
+        expect(onLeaveSpy).toBeCalledTimes(1)
+        expect(afterLeaveSpy).toBeCalledTimes(1)
+
+        expect(await html('#container')).toBe('<div foo="1" class="">two</div>')
+
+        // toggle back
+        await click('#toggleBtn')
+        await nextTick()
+        await transitionFinish()
+        expect(beforeEnterSpy).toBeCalledTimes(2)
+        expect(onEnterSpy).toBeCalledTimes(2)
+        expect(afterEnterSpy).toBeCalledTimes(2)
+        expect(beforeLeaveSpy).toBeCalledTimes(2)
+        expect(onLeaveSpy).toBeCalledTimes(2)
+        expect(afterLeaveSpy).toBeCalledTimes(2)
+
+        expect(await html('#container')).toBe('<div foo="1" class="">one</div>')
+      },
+      E2E_TIMEOUT,
+    )
+
     test(
       'w/ KeepAlive + unmount innerChild',
       async () => {
