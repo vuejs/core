@@ -1,4 +1,48 @@
+import { warn } from '@vue/runtime-core'
 import type { RendererOptions } from '@vue/runtime-core'
+import type {
+  TrustedHTML,
+  TrustedTypePolicy,
+  TrustedTypesWindow,
+} from 'trusted-types/lib'
+
+type VueTrustedTypePolicy =
+  | Pick<TrustedTypePolicy, 'name' | 'createHTML'>
+  | undefined
+
+let policy: VueTrustedTypePolicy = undefined
+function getPolicy(): VueTrustedTypePolicy {
+  const ttWindow = window as unknown as TrustedTypesWindow
+  if (
+    (__DEV__ || __FEATURE_PROD_TRUSTED_TYPES__) &&
+    ttWindow.trustedTypes &&
+    !policy
+  ) {
+    try {
+      policy = ttWindow.trustedTypes.createPolicy('vue', {
+        createHTML: val => val,
+      })
+    } catch (e: unknown) {
+      // `createPolicy` throws a TypeError if the name is a duplicate
+      // and the CSP trusted-types directive is not using `allow-duplicates`.
+      // So we have to catch that error.
+      warn(`Error creating trusted types policy: ${e}`)
+    }
+  }
+  return policy
+}
+
+// __UNSAFE__
+// Reason: potentially setting innerHTML.
+// This function merely perform a type-level trusted type conversion
+// for use in `innerHTML` assignment, etc.
+// Be careful of whatever value passed to this function.
+function unsafeToTrustedHTML(value: string): TrustedHTML | string {
+  /* eslint-disable-next-line no-restricted-syntax --
+   * the minified compilation result of a single `()?.` isn't very verbose,
+   * we use the syntax for readability here. */
+  return getPolicy()?.createHTML(value) || value
+}
 
 export const svgNS = 'http://www.w3.org/2000/svg'
 export const mathmlNS = 'http://www.w3.org/1998/Math/MathML'
@@ -74,12 +118,13 @@ export const nodeOps: Omit<RendererOptions<Node, Element>, 'patchProp'> = {
       }
     } else {
       // fresh insert
-      templateContainer.innerHTML =
+      templateContainer.innerHTML = unsafeToTrustedHTML(
         namespace === 'svg'
           ? `<svg>${content}</svg>`
           : namespace === 'mathml'
             ? `<math>${content}</math>`
-            : content
+            : content,
+      ) as string
 
       const template = templateContainer.content
       if (namespace === 'svg' || namespace === 'mathml') {

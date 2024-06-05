@@ -17,6 +17,7 @@ export default defineConfig({
     __FEATURE_SUSPENSE__: true,
     __FEATURE_PROD_DEVTOOLS__: false,
     __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__: false,
+    __FEATURE_PROD_TRUSTED_TYPES__: false,
     __COMPAT__: true,
   },
   resolve: {

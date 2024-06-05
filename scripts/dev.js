@@ -127,6 +127,7 @@ for (const target of targets) {
         __FEATURE_OPTIONS_API__: `true`,
         __FEATURE_PROD_DEVTOOLS__: `false`,
         __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__: `false`,
+        __FEATURE_PROD_TRUSTED_TYPES__: `false`,
       },
     })
     .then(ctx => ctx.watch())
