@@ -21,7 +21,7 @@ import {
   toRaw,
   toReactive,
 } from './reactive'
-import type { Builtin, ShallowReactiveMarker } from './reactive'
+import type { ShallowReactiveMarker } from './reactive'
 import { type Dep, createDep } from './dep'
 import { ComputedRefImpl } from './computed'
 import { getDepFromReactive } from './reactiveEffect'
@@ -46,10 +46,13 @@ type RefBase<T> = {
 }
 
 export function trackRefValue(ref: RefBase<any>) {
+  // true && undefined
   if (shouldTrack && activeEffect) {
+    // 先转成原始对象
     ref = toRaw(ref)
     trackEffect(
       activeEffect,
+      // ref.dep 不存在就调用createDep赋值给ref.dep  本质上是一个Map
       (ref.dep ??= createDep(
         () => (ref.dep = undefined),
         ref instanceof ComputedRefImpl ? ref : undefined,
@@ -67,9 +70,8 @@ export function trackRefValue(ref: RefBase<any>) {
 
 export function triggerRefValue(
   ref: RefBase<any>,
-  dirtyLevel: DirtyLevels = DirtyLevels.Dirty,
+  dirtyLevel: DirtyLevels = DirtyLevels.Dirty,  // 4
   newVal?: any,
-  oldVal?: any,
 ) {
   ref = toRaw(ref)
   const dep = ref.dep
@@ -83,7 +85,6 @@ export function triggerRefValue(
             type: TriggerOpTypes.SET,
             key: 'value',
             newValue: newVal,
-            oldValue: oldVal,
           }
         : void 0,
     )
@@ -165,24 +166,31 @@ class RefImpl<T> {
     value: T,
     public readonly __v_isShallow: boolean,
   ) {
+    // 原始对象、原始值
     this._rawValue = __v_isShallow ? value : toRaw(value)
+    // proxy代理对象
     this._value = __v_isShallow ? value : toReactive(value)
   }
 
   get value() {
+    // 依赖收集
     trackRefValue(this)
     return this._value
   }
 
   set value(newVal) {
+    // 先判断 ，有真则真
+    // false || false || false (没有__v_isReadonly 那么就是undefined)
     const useDirectValue =
       this.__v_isShallow || isShallow(newVal) || isReadonly(newVal)
+    // 不是shallowRef会执行toRaw()
     newVal = useDirectValue ? newVal : toRaw(newVal)
     if (hasChanged(newVal, this._rawValue)) {
-      const oldVal = this._rawValue
+      // 重新赋值，还是会在这里toReactive赋值
       this._rawValue = newVal
       this._value = useDirectValue ? newVal : toReactive(newVal)
-      triggerRefValue(this, DirtyLevels.Dirty, newVal, oldVal)
+      // 依赖触发
+      triggerRefValue(this, DirtyLevels.Dirty, newVal)
     }
   }
 }
@@ -213,6 +221,7 @@ class RefImpl<T> {
  * @see {@link https://vuejs.org/api/reactivity-advanced.html#triggerref}
  */
 export function triggerRef(ref: Ref) {
+  // ref 4
   triggerRefValue(ref, DirtyLevels.Dirty, __DEV__ ? ref.value : void 0)
 }
 
@@ -478,6 +487,11 @@ function propertyToRef(
     : (new ObjectRefImpl(source, key, defaultValue) as any)
 }
 
+// corner case when use narrows type
+// Ex. type RelativePath = string & { __brand: unknown }
+// RelativePath extends object -> true
+type BaseTypes = string | number | boolean
+
 /**
  * This is a special exported interface for other packages to declare
  * additional types that should bail out for ref unwrapping. For example
@@ -494,10 +508,10 @@ function propertyToRef(
 export interface RefUnwrapBailTypes {}
 
 export type ShallowUnwrapRef<T> = {
-  [K in keyof T]: DistributeRef<T[K]>
+  [K in keyof T]: DistrubuteRef<T[K]>
 }
 
-type DistributeRef<T> = T extends Ref<infer V> ? V : T
+type DistrubuteRef<T> = T extends Ref<infer V> ? V : T
 
 export type UnwrapRef<T> =
   T extends ShallowRef<infer V>
@@ -507,7 +521,8 @@ export type UnwrapRef<T> =
       : UnwrapRefSimple<T>
 
 export type UnwrapRefSimple<T> = T extends
-  | Builtin
+  | Function
+  | BaseTypes
   | Ref
   | RefUnwrapBailTypes[keyof RefUnwrapBailTypes]
   | { [RawSymbol]?: true }
