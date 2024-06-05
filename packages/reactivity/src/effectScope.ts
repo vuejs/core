@@ -149,7 +149,16 @@ export function getCurrentScope() {
  */
 export function onScopeDispose(fn: () => void) {
   if (activeEffectScope) {
-    activeEffectScope.cleanups.push(fn)
+    activeEffectScope.cleanups.push(() => {
+      try {
+        fn()
+      } catch (e) {
+        console.error(
+          'An error occurred while executing a cleanup function:',
+          e,
+        )
+      }
+    })
   } else if (__DEV__) {
     warn(
       `onScopeDispose() is called when there is no active effect scope` +
