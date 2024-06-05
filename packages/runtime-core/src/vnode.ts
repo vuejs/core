@@ -36,7 +36,10 @@ import {
   isSuspense,
 } from './components/Suspense'
 import type { DirectiveBinding } from './directives'
-import type { TransitionHooks } from './components/BaseTransition'
+import {
+  type TransitionHooks,
+  setTransitionHooks,
+} from './components/BaseTransition'
 import { warn } from './warning'
 import {
   type Teleport,
@@ -55,6 +58,7 @@ import { convertLegacyVModelProps } from './compat/componentVModel'
 import { defineLegacyVNodeProperties } from './compat/renderFn'
 import { ErrorCodes, callWithAsyncErrorHandling } from './errorHandling'
 import type { ComponentPublicInstance } from './componentPublicInstance'
+import { isInternalObject } from './internalObject'
 
 export const Fragment = Symbol.for('v-fgt') as any as {
   __isFragment: true
@@ -404,8 +408,6 @@ const createVNodeWithArgsTransform = (
   )
 }
 
-export const InternalObjectKey = `__vInternal`
-
 const normalizeKey = ({ key }: VNodeProps): VNode['key'] =>
   key != null ? key : null
 
@@ -618,19 +620,18 @@ function _createVNode(
 
 export function guardReactiveProps(props: (Data & VNodeProps) | null) {
   if (!props) return null
-  return isProxy(props) || InternalObjectKey in props
-    ? extend({}, props)
-    : props
+  return isProxy(props) || isInternalObject(props) ? extend({}, props) : props
 }
 
 export function cloneVNode<T, U>(
   vnode: VNode<T, U>,
   extraProps?: (Data & VNodeProps) | null,
   mergeRef = false,
+  cloneTransition = false,
 ): VNode<T, U> {
   // This is intentionally NOT using spread or extend to avoid the runtime
   // key enumeration cost.
-  const { props, ref, patchFlag, children } = vnode
+  const { props, ref, patchFlag, children, transition } = vnode
   const mergedProps = extraProps ? mergeProps(props || {}, extraProps) : props
   const cloned: VNode<T, U> = {
     __v_isVNode: true,
@@ -665,7 +666,7 @@ export function cloneVNode<T, U>(
     // fast paths only.
     patchFlag:
       extraProps && vnode.type !== Fragment
-        ? patchFlag === -1 // hoisted node
+        ? patchFlag === PatchFlags.HOISTED // hoisted node
           ? PatchFlags.FULL_PROPS
           : patchFlag | PatchFlags.FULL_PROPS
         : patchFlag,
@@ -673,7 +674,7 @@ export function cloneVNode<T, U>(
     dynamicChildren: vnode.dynamicChildren,
     appContext: vnode.appContext,
     dirs: vnode.dirs,
-    transition: vnode.transition,
+    transition,
 
     // These should technically only be non-null on mounted VNodes. However,
     // they *should* be copied for kept-alive vnodes. So we just always copy
@@ -688,9 +689,21 @@ export function cloneVNode<T, U>(
     ctx: vnode.ctx,
     ce: vnode.ce,
   }
+
+  // if the vnode will be replaced by the cloned one, it is necessary
+  // to clone the transition to ensure that the vnode referenced within
+  // the transition hooks is fresh.
+  if (transition && cloneTransition) {
+    setTransitionHooks(
+      cloned as VNode,
+      transition.clone(cloned as VNode) as TransitionHooks,
+    )
+  }
+
   if (__COMPAT__) {
     defineLegacyVNodeProperties(cloned as VNode)
   }
+
   return cloned
 }
 
@@ -792,7 +805,7 @@ export function normalizeChildren(vnode: VNode, children: unknown) {
     } else {
       type = ShapeFlags.SLOTS_CHILDREN
       const slotFlag = (children as RawSlots)._
-      if (!slotFlag && !(InternalObjectKey in children!)) {
+      if (!slotFlag && !isInternalObject(children)) {
         // if slots are not normalized, attach context instance
         // (compiled / normalized slots already have context)
         ;(children as RawSlots)._ctx = currentRenderingInstance

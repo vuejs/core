@@ -217,12 +217,12 @@ export class VueElement extends BaseClass {
 
   disconnectedCallback() {
     this._connected = false
-    if (this._ob) {
-      this._ob.disconnect()
-      this._ob = null
-    }
     nextTick(() => {
       if (!this._connected) {
+        if (this._ob) {
+          this._ob.disconnect()
+          this._ob = null
+        }
         render(null, this.shadowRoot!)
         this._instance = null
       }
@@ -315,7 +315,7 @@ export class VueElement extends BaseClass {
   }
 
   protected _setAttr(key: string) {
-    let value = this.getAttribute(key)
+    let value = this.hasAttribute(key) ? this.getAttribute(key) : undefined
     const camelKey = camelize(key)
     if (this._numberProps && this._numberProps[camelKey]) {
       value = toNumber(value)
