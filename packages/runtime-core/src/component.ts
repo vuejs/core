@@ -234,7 +234,9 @@ export type SetupContext<
       attrs: Data
       slots: UnwrapSlotsType<S>
       emit: EmitFn<E>
-      expose: <Exposed extends Record<string, any> = Record<string, any>>(exposed?: Exposed) => void
+      expose: <Exposed extends Record<string, any> = Record<string, any>>(
+        exposed?: Exposed,
+      ) => void
     }
   : never
 
