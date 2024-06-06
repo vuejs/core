@@ -18,6 +18,7 @@ export function patchAttr(
   value: any,
   isSVG: boolean,
   instance?: ComponentInternalInstance | null,
+  isBoolean = isSpecialBooleanAttr(key),
 ) {
   if (isSVG && key.startsWith('xlink:')) {
     if (value == null) {
@@ -32,7 +33,6 @@ export function patchAttr(
 
     // note we are only checking boolean attributes that don't have a
     // corresponding dom prop of the same name here.
-    const isBoolean = isSpecialBooleanAttr(key)
     if (value == null || (isBoolean && !includeBooleanAttr(value))) {
       el.removeAttribute(key)
     } else {

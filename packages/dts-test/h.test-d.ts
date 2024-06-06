@@ -2,8 +2,10 @@ import {
   type Component,
   type DefineComponent,
   Fragment,
+  type FunctionalComponent,
   Suspense,
   Teleport,
+  type VNode,
   defineComponent,
   h,
   ref,
@@ -77,6 +79,19 @@ describe('h inference w/ Suspense', () => {
   h(Suspense, { onResolve: 1 })
 })
 
+declare const fc: FunctionalComponent<
+  {
+    foo: string
+    bar?: number
+    onClick: (evt: MouseEvent) => void
+  },
+  ['click'],
+  {
+    default: () => VNode
+    title: (scope: { id: number }) => VNode
+  }
+>
+declare const vnode: VNode
 describe('h inference w/ functional component', () => {
   const Func = (_props: { foo: string; bar?: number }) => ''
   h(Func, { foo: 'hello' })
@@ -87,6 +102,15 @@ describe('h inference w/ functional component', () => {
   h(Func, {})
   //  @ts-expect-error
   h(Func, { bar: 123 })
+
+  h(
+    fc,
+    { foo: 'hello', onClick: () => {} },
+    {
+      default: () => vnode,
+      title: ({ id }: { id: number }) => vnode,
+    },
+  )
 })
 
 describe('h support w/ plain object component', () => {

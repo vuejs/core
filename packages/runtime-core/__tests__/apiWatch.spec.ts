@@ -25,9 +25,11 @@ import {
   type DebuggerEvent,
   ITERATE_KEY,
   type Ref,
+  type ShallowRef,
   TrackOpTypes,
   TriggerOpTypes,
   effectScope,
+  shallowReactive,
   shallowRef,
   toRef,
   triggerRef,
@@ -94,6 +96,30 @@ describe('api: watch', () => {
     expect(spy).toBeCalledWith([1], [1], expect.anything())
   })
 
+  it('should not call functions inside a reactive source array', () => {
+    const spy1 = vi.fn()
+    const array = reactive([spy1])
+    const spy2 = vi.fn()
+    watch(array, spy2, { immediate: true })
+    expect(spy1).toBeCalledTimes(0)
+    expect(spy2).toBeCalledWith([spy1], undefined, expect.anything())
+  })
+
+  it('should not unwrap refs in a reactive source array', async () => {
+    const val = ref({ foo: 1 })
+    const array = reactive([val])
+    const spy = vi.fn()
+    watch(array, spy, { immediate: true })
+    expect(spy).toBeCalledTimes(1)
+    expect(spy).toBeCalledWith([val], undefined, expect.anything())
+
+    // deep by default
+    val.value.foo++
+    await nextTick()
+    expect(spy).toBeCalledTimes(2)
+    expect(spy).toBeCalledWith([val], [val], expect.anything())
+  })
+
   it('should not fire if watched getter result did not change', async () => {
     const spy = vi.fn()
     const n = ref(0)
@@ -154,6 +180,95 @@ describe('api: watch', () => {
     src.count++
     await nextTick()
     expect(dummy).toBe(1)
+  })
+
+  it('directly watching reactive object with explicit deep: false', async () => {
+    const src = reactive({
+      state: {
+        count: 0,
+      },
+    })
+    let dummy
+    watch(
+      src,
+      ({ state }) => {
+        dummy = state?.count
+      },
+      {
+        deep: false,
+      },
+    )
+
+    // nested should not trigger
+    src.state.count++
+    await nextTick()
+    expect(dummy).toBe(undefined)
+
+    // root level should trigger
+    src.state = { count: 1 }
+    await nextTick()
+    expect(dummy).toBe(1)
+  })
+
+  it('directly watching reactive array with explicit deep: false', async () => {
+    const val = ref(1)
+    const array: any[] = reactive([val])
+    const spy = vi.fn()
+    watch(array, spy, { immediate: true, deep: false })
+    expect(spy).toBeCalledTimes(1)
+    expect(spy).toBeCalledWith([val], undefined, expect.anything())
+
+    val.value++
+    await nextTick()
+    expect(spy).toBeCalledTimes(1)
+
+    array[1] = 2
+    await nextTick()
+    expect(spy).toBeCalledTimes(2)
+    expect(spy).toBeCalledWith([val, 2], [val, 2], expect.anything())
+  })
+
+  // #9916
+  it('watching shallow reactive array with deep: false', async () => {
+    class foo {
+      prop1: ShallowRef<string> = shallowRef('')
+      prop2: string = ''
+    }
+
+    const obj1 = new foo()
+    const obj2 = new foo()
+
+    const collection = shallowReactive([obj1, obj2])
+    const cb = vi.fn()
+    watch(collection, cb, { deep: false })
+
+    collection[0].prop1.value = 'foo'
+    await nextTick()
+    // should not trigger
+    expect(cb).toBeCalledTimes(0)
+
+    collection.push(new foo())
+    await nextTick()
+    // should trigger on array self mutation
+    expect(cb).toBeCalledTimes(1)
+  })
+
+  it('should still respect deep: true on shallowReactive source', async () => {
+    const obj = reactive({ a: 1 })
+    const arr = shallowReactive([obj])
+
+    let dummy
+    watch(
+      arr,
+      () => {
+        dummy = arr[0].a
+      },
+      { deep: true },
+    )
+
+    obj.a++
+    await nextTick()
+    expect(dummy).toBe(2)
   })
 
   it('watching multiple sources', async () => {
@@ -817,6 +932,52 @@ describe('api: watch', () => {
     expect(dummy).toEqual([1, 2])
   })
 
+  it('deep with symbols', async () => {
+    const symbol1 = Symbol()
+    const symbol2 = Symbol()
+    const symbol3 = Symbol()
+    const symbol4 = Symbol()
+
+    const raw: any = {
+      [symbol1]: {
+        [symbol2]: 1,
+      },
+    }
+
+    Object.defineProperty(raw, symbol3, {
+      writable: true,
+      enumerable: false,
+      value: 1,
+    })
+
+    const state = reactive(raw)
+    const spy = vi.fn()
+
+    watch(() => state, spy, { deep: true })
+
+    await nextTick()
+    expect(spy).toHaveBeenCalledTimes(0)
+
+    state[symbol1][symbol2] = 2
+    await nextTick()
+    expect(spy).toHaveBeenCalledTimes(1)
+
+    // Non-enumerable properties don't trigger deep watchers
+    state[symbol3] = 3
+    await nextTick()
+    expect(spy).toHaveBeenCalledTimes(1)
+
+    // Adding a new symbol property
+    state[symbol4] = 1
+    await nextTick()
+    expect(spy).toHaveBeenCalledTimes(2)
+
+    // Removing a symbol property
+    delete state[symbol4]
+    await nextTick()
+    expect(spy).toHaveBeenCalledTimes(3)
+  })
+
   it('immediate', async () => {
     const count = ref(0)
     const cb = vi.fn()
@@ -1369,5 +1530,52 @@ describe('api: watch', () => {
     // would not be calld when value>1
     expect(spy1).toHaveBeenCalledTimes(1)
     expect(spy2).toHaveBeenCalledTimes(1)
+  })
+
+  test("effect should be removed from scope's effects after it is stopped", () => {
+    const num = ref(0)
+    let unwatch: () => void
+
+    let instance: ComponentInternalInstance
+    const Comp = {
+      setup() {
+        instance = getCurrentInstance()!
+        unwatch = watch(num, () => {
+          console.log(num.value)
+        })
+        return () => null
+      },
+    }
+    const root = nodeOps.createElement('div')
+    createApp(Comp).mount(root)
+    expect(instance!.scope.effects.length).toBe(2)
+    unwatch!()
+    expect(instance!.scope.effects.length).toBe(1)
+
+    const scope = effectScope()
+    scope.run(() => {
+      unwatch = watch(num, () => {
+        console.log(num.value)
+      })
+    })
+    expect(scope.effects.length).toBe(1)
+    unwatch!()
+    expect(scope.effects.length).toBe(0)
+  })
+
+  test('circular reference', async () => {
+    const obj = { a: 1 }
+    // @ts-expect-error
+    obj.b = obj
+    const foo = ref(obj)
+    const spy = vi.fn()
+
+    watch(foo, spy, { deep: true })
+
+    // @ts-expect-error
+    foo.value.b.a = 2
+    await nextTick()
+    expect(spy).toHaveBeenCalledTimes(1)
+    expect(foo.value.a).toBe(2)
   })
 })

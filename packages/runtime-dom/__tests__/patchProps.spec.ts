@@ -291,6 +291,18 @@ describe('runtime-dom: props patching', () => {
     expect(el.value).toBe('baz')
   })
 
+  test('init empty value for option', () => {
+    const root = document.createElement('div')
+    render(
+      h('select', { value: 'foo' }, [h('option', { value: '' }, 'foo')]),
+      root,
+    )
+    const select = root.children[0] as HTMLSelectElement
+    const option = select.children[0] as HTMLOptionElement
+    expect(select.value).toBe('')
+    expect(option.value).toBe('')
+  })
+
   // #8780
   test('embedded tag with width and height', () => {
     // Width and height of some embedded element such as img、video、source、canvas
