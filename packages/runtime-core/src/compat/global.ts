@@ -102,11 +102,11 @@ export type CompatVue = Pick<App, 'version' | 'component' | 'directive'> & {
   /**
    * @deprecated Vue 3 no longer needs set() for adding new properties.
    */
-  set(target: any, key: string | number | symbol, value: any): void
+  set(target: any, key: PropertyKey, value: any): void
   /**
    * @deprecated Vue 3 no longer needs delete() for property deletions.
    */
-  delete(target: any, key: string | number | symbol): void
+  delete(target: any, key: PropertyKey): void
   /**
    * @deprecated use `reactive` instead.
    */

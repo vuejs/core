@@ -215,7 +215,7 @@ export function defineSlots<
   return null as any
 }
 
-export type ModelRef<T, M extends string | number | symbol = string> = Ref<T> &
+export type ModelRef<T, M extends PropertyKey = string> = Ref<T> &
   [ModelRef<T, M>, Record<M, true | undefined>]
 
 export type DefineModelOptions<T = any> = {
@@ -256,24 +256,24 @@ export type DefineModelOptions<T = any> = {
  * const count = defineModel<number>('count', { default: 0 })
  * ```
  */
-export function defineModel<T, M extends string | number | symbol = string>(
+export function defineModel<T, M extends PropertyKey = string>(
   options: { required: true } & PropOptions<T> & DefineModelOptions<T>,
 ): ModelRef<T, M>
-export function defineModel<T, M extends string | number | symbol = string>(
+export function defineModel<T, M extends PropertyKey = string>(
   options: { default: any } & PropOptions<T> & DefineModelOptions<T>,
 ): ModelRef<T, M>
-export function defineModel<T, M extends string | number | symbol = string>(
+export function defineModel<T, M extends PropertyKey = string>(
   options?: PropOptions<T> & DefineModelOptions<T>,
 ): ModelRef<T | undefined, M>
-export function defineModel<T, M extends string | number | symbol = string>(
+export function defineModel<T, M extends PropertyKey = string>(
   name: string,
   options: { required: true } & PropOptions<T> & DefineModelOptions<T>,
 ): ModelRef<T, M>
-export function defineModel<T, M extends string | number | symbol = string>(
+export function defineModel<T, M extends PropertyKey = string>(
   name: string,
   options: { default: any } & PropOptions<T> & DefineModelOptions<T>,
 ): ModelRef<T, M>
-export function defineModel<T, M extends string | number | symbol = string>(
+export function defineModel<T, M extends PropertyKey = string>(
   name: string,
   options?: PropOptions<T> & DefineModelOptions<T>,
 ): ModelRef<T | undefined, M>
