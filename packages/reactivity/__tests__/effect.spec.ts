@@ -255,7 +255,7 @@ describe('reactivity/effect', () => {
   it('should not observe well-known symbol keyed properties in has operation', () => {
     const key = Symbol.isConcatSpreadable
     const obj = reactive({
-      [key]: true
+      [key]: true,
     }) as any
 
     const spy = vi.fn(() => {
