@@ -26,7 +26,6 @@ export const patchProp: DOMRendererOptions['patchProp'] = (
   parentSuspense,
   unmountChildren,
 ) => {
-    debugger
   const isSVG = namespace === 'svg'
   if (key === 'class') {
     patchClass(el, nextValue, isSVG)
