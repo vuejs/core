@@ -1,4 +1,4 @@
-import { reactive, effect, isReactive, toRaw } from '../../src'
+import { effect, isReactive, reactive, toRaw } from '../../src'
 
 describe('reactivity/collections', () => {
   function coverCollectionFn(collection: Set<any>, fnName: string) {
@@ -125,7 +125,6 @@ describe('reactivity/collections', () => {
       const set = reactive(new Set<number>())
       effect(() => {
         dummy = 0
-        // eslint-disable-next-line no-unused-vars
         for (let [key, num] of set.entries()) {
           key
           dummy += num
@@ -413,7 +412,7 @@ describe('reactivity/collections', () => {
       const set = reactive(raw)
       set.delete(key)
       expect(
-        `Reactive Set contains both the raw and reactive`
+        `Reactive Set contains both the raw and reactive`,
       ).toHaveBeenWarned()
     })
 
