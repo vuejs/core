@@ -7,7 +7,7 @@ import type { NormalizedProps } from '../componentProps'
 import { watchSyncEffect } from '../apiWatch'
 
 export function useModel<
-  M extends string | number | symbol,
+  M extends PropertyKey,
   T extends Record<string, any>,
   K extends keyof T,
 >(props: T, name: K, options?: DefineModelOptions<T[K]>): ModelRef<T[K], M>
