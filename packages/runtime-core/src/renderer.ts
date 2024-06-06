@@ -661,23 +661,10 @@ function baseCreateRenderer(
     // scopeId
     setScopeId(el, vnode, vnode.scopeId, slotScopeIds, parentComponent)
     // props
-    if (props) {
-      for (const key in props) {
-        if (key !== 'value' && !isReservedProp(key)) {
-          if(el._ce && el._def && el._def.__asyncLoader) {
-            (el._asyncPatchProps) = hostPatchProp.bind(
-              this,
-              el,
-              key,
-              null,
-              props[key],
-              namespace,
-              vnode.children as VNode[],
-              parentComponent,
-              parentSuspense,
-              unmountChildren,
-            )
-          } else {
+    function handleProps(){
+      if (props) {
+        for (const key in props) {
+          if (key !== 'value' && !isReservedProp(key)) {
             hostPatchProp(
               el,
               key,
@@ -690,24 +677,28 @@ function baseCreateRenderer(
               unmountChildren,
             )
           }
-
+        }
+        /**
+         * Special case for setting value on DOM elements:
+         * - it can be order-sensitive (e.g. should be set *after* min/max, #2325, #4024)
+         * - it needs to be forced (#1471)
+         * #2353 proposes adding another renderer option to configure this, but
+         * the properties affects are so finite it is worth special casing it
+         * here to reduce the complexity. (Special casing it also should not
+         * affect non-DOM renderers)
+         */
+        if ('value' in props) {
+          hostPatchProp(el, 'value', null, props.value, namespace)
+        }
+        if ((vnodeHook = props.onVnodeBeforeMount)) {
+          invokeVNodeHook(vnodeHook, parentComponent, vnode)
         }
       }
-      /**
-       * Special case for setting value on DOM elements:
-       * - it can be order-sensitive (e.g. should be set *after* min/max, #2325, #4024)
-       * - it needs to be forced (#1471)
-       * #2353 proposes adding another renderer option to configure this, but
-       * the properties affects are so finite it is worth special casing it
-       * here to reduce the complexity. (Special casing it also should not
-       * affect non-DOM renderers)
-       */
-      if ('value' in props) {
-        hostPatchProp(el, 'value', null, props.value, namespace)
-      }
-      if ((vnodeHook = props.onVnodeBeforeMount)) {
-        invokeVNodeHook(vnodeHook, parentComponent, vnode)
-      }
+    }
+    if(el._ce && el._def && el._def.__asyncLoader){
+      el._asyncPatchProps = handleProps
+    } else {
+      handleProps()
     }
 
     if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {

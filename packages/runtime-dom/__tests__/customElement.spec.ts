@@ -747,5 +747,51 @@ describe('defineCustomElement', () => {
         `<div><slot><div>fallback</div></slot></div><div><slot name="named"></slot></div>`,
       )
     })
+
+
+    /*test('child components in shadow dom should have styles & async', async () => {
+      const Child = {
+        styles: [`.Child { color: blue; }`],
+        render() {
+          return h('div', { class: 'Child' }, 'hello')
+        },
+      }
+      const Foo = defineCustomElement(
+        // defineAsyncComponent(() => {
+        //   return Promise.resolve({
+        //     props: ['testFn', 'testTx'],
+        //     components: { Child },
+        //     styles: [`div { color: red; }`],
+        //     render(ctx) {
+        //       debugger
+        //       return h('div', {}, ['hello', h(Child)])
+        //     },
+        //   })
+        // }),
+        {
+          props: ['testFn', 'testTx'],
+          components: { Child },
+          styles: [`div { color: red; }`],
+          render(ctx) {
+            debugger
+            return h('div', {}, ['hello', h(Child)])
+          },
+        }
+      )
+      const App = {
+        render: () => {
+          return h('div', {}, [h('my-el-with-child-styles-async', {
+              testFn: () => console.log('test'),
+              testTx: 'testTx'
+            })]
+          )
+        }
+      }
+
+      customElements.define('my-el-with-child-styles-async', Foo)
+      const app = createApp(App)
+      app.mount(container)
+      await new Promise(r => setTimeout(r))
+    })*/
   })
 })

@@ -294,6 +294,7 @@ export class VueElement extends BaseClass {
   }
 
   private _resolveProps(def: InnerComponentDef) {
+    debugger
     const { props } = def
     const declaredPropKeys = isArray(props) ? props : Object.keys(props || {})
 
