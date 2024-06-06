@@ -664,17 +664,33 @@ function baseCreateRenderer(
     if (props) {
       for (const key in props) {
         if (key !== 'value' && !isReservedProp(key)) {
-          hostPatchProp(
-            el,
-            key,
-            null,
-            props[key],
-            namespace,
-            vnode.children as VNode[],
-            parentComponent,
-            parentSuspense,
-            unmountChildren,
-          )
+          if(el._ce && el._def && el._def.__asyncLoader) {
+            (el._asyncPatchProps) = hostPatchProp.bind(
+              this,
+              el,
+              key,
+              null,
+              props[key],
+              namespace,
+              vnode.children as VNode[],
+              parentComponent,
+              parentSuspense,
+              unmountChildren,
+            )
+          } else {
+            hostPatchProp(
+              el,
+              key,
+              null,
+              props[key],
+              namespace,
+              vnode.children as VNode[],
+              parentComponent,
+              parentSuspense,
+              unmountChildren,
+            )
+          }
+
         }
       }
       /**
