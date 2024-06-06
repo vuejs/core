@@ -252,6 +252,22 @@ describe('reactivity/effect', () => {
     expect(dummy).toBe(undefined)
   })
 
+  it('should not observe well-known symbol keyed properties in has operation', () => {
+    const key = Symbol.isConcatSpreadable
+    const obj = reactive({
+      [key]: true,
+    }) as any
+
+    const spy = vi.fn(() => {
+      key in obj
+    })
+    effect(spy)
+    expect(spy).toHaveBeenCalledTimes(1)
+
+    obj[key] = false
+    expect(spy).toHaveBeenCalledTimes(1)
+  })
+
   it('should support manipulating an array while observing symbol keyed properties', () => {
     const key = Symbol()
     let dummy
