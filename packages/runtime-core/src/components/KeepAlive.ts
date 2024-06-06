@@ -46,6 +46,7 @@ import { devtoolsComponentAdded } from '../devtools'
 import { isAsyncWrapper } from '../apiAsyncComponent'
 import { isSuspense } from './Suspense'
 import { LifecycleHooks } from '../enums'
+import { invalidatePostJob } from '../scheduler'
 
 type MatchPattern = string | RegExp | (string | RegExp)[]
 
@@ -166,6 +167,11 @@ const KeepAliveImpl: ComponentOptions = {
 
     sharedContext.deactivate = (vnode: VNode) => {
       const instance = vnode.component!
+      const { m, a } = instance
+      // #9264 invalidate queued lifecycle hooks
+      if (m) m.forEach(invalidatePostJob)
+      if (a) a.forEach(invalidatePostJob)
+
       move(vnode, storageContainer, null, MoveType.LEAVE, parentSuspense)
       queuePostRenderEffect(() => {
         if (instance.da) {
