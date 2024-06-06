@@ -135,6 +135,11 @@ export const BaseTransitionPropsValidators = {
   onAppearCancelled: TransitionHookValidator,
 }
 
+const recursiveGetSubtree = (instance: ComponentInternalInstance): VNode => {
+  const subTree = instance.subTree
+  return subTree.component ? recursiveGetSubtree(subTree.component) : subTree
+}
+
 const BaseTransitionImpl: ComponentOptions = {
   name: `BaseTransition`,
 
@@ -198,11 +203,13 @@ const BaseTransitionImpl: ComponentOptions = {
         return emptyPlaceholder(child)
       }
 
-      const enterHooks = resolveTransitionHooks(
+      let enterHooks = resolveTransitionHooks(
         innerChild,
         rawProps,
         state,
         instance,
+        // #11061, ensure enterHooks is fresh after clone
+        hooks => (enterHooks = hooks),
       )
       setTransitionHooks(innerChild, enterHooks)
 
@@ -213,7 +220,8 @@ const BaseTransitionImpl: ComponentOptions = {
       if (
         oldInnerChild &&
         oldInnerChild.type !== Comment &&
-        !isSameVNodeType(innerChild, oldInnerChild)
+        !isSameVNodeType(innerChild, oldInnerChild) &&
+        recursiveGetSubtree(instance).type !== Comment
       ) {
         const leavingHooks = resolveTransitionHooks(
           oldInnerChild,
@@ -299,6 +307,7 @@ export function resolveTransitionHooks(
   props: BaseTransitionProps<any>,
   state: TransitionState,
   instance: ComponentInternalInstance,
+  postClone?: (hooks: TransitionHooks) => void,
 ): TransitionHooks {
   const {
     appear,
@@ -439,7 +448,15 @@ export function resolveTransitionHooks(
     },
 
     clone(vnode) {
-      return resolveTransitionHooks(vnode, props, state, instance)
+      const hooks = resolveTransitionHooks(
+        vnode,
+        props,
+        state,
+        instance,
+        postClone,
+      )
+      if (postClone) postClone(hooks)
+      return hooks
     },
   }
 

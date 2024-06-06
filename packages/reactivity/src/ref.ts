@@ -69,6 +69,7 @@ export function triggerRefValue(
   ref: RefBase<any>,
   dirtyLevel: DirtyLevels = DirtyLevels.Dirty,
   newVal?: any,
+  oldVal?: any,
 ) {
   ref = toRaw(ref)
   const dep = ref.dep
@@ -82,6 +83,7 @@ export function triggerRefValue(
             type: TriggerOpTypes.SET,
             key: 'value',
             newValue: newVal,
+            oldValue: oldVal,
           }
         : void 0,
     )
@@ -177,9 +179,10 @@ class RefImpl<T> {
       this.__v_isShallow || isShallow(newVal) || isReadonly(newVal)
     newVal = useDirectValue ? newVal : toRaw(newVal)
     if (hasChanged(newVal, this._rawValue)) {
+      const oldVal = this._rawValue
       this._rawValue = newVal
       this._value = useDirectValue ? newVal : toReactive(newVal)
-      triggerRefValue(this, DirtyLevels.Dirty, newVal)
+      triggerRefValue(this, DirtyLevels.Dirty, newVal, oldVal)
     }
   }
 }
