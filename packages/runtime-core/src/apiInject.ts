@@ -31,19 +31,19 @@ export function provide<T, K = InjectionKey<T> | string | number>(
   }
 }
 
-export function inject<T>(key: InjectionKey<T> | string): T | undefined
+export function inject<T>(key: InjectionKey<T> | string | number): T | undefined
 export function inject<T>(
-  key: InjectionKey<T> | string,
+  key: InjectionKey<T> | string | number,
   defaultValue: T,
   treatDefaultAsFactory?: false,
 ): T
 export function inject<T>(
-  key: InjectionKey<T> | string,
+  key: InjectionKey<T> | string | number,
   defaultValue: T | (() => T),
   treatDefaultAsFactory: true,
 ): T
 export function inject(
-  key: InjectionKey<any> | string,
+  key: InjectionKey<any> | string | number,
   defaultValue?: unknown,
   treatDefaultAsFactory = false,
 ) {

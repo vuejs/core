@@ -40,3 +40,6 @@ provide<Cube>(injectionKeyRef, { size: 123 })
 provide<Cube>('cube', { size: 'foo' })
 // @ts-expect-error
 provide<Cube>(123, { size: 'foo' })
+
+// inject supports numeric type parameters
+inject(123)
