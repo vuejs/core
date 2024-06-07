@@ -50,19 +50,15 @@ enum DOMNodeTypes {
   COMMENT = 8,
 }
 
-// This log function is built this way to guarantee it's only triggered once.
-const logMismatchError = (function () {
-  let alreadyLogged = false
-
-  return () => {
-    if (alreadyLogged) {
-      return
-    }
-
-    console.error('Hydration completed but contains mismatches.')
-    alreadyLogged = true
+let hasLoggedMismatchError = false
+const logMismatchError = () => {
+  if (__TEST__ || hasLoggedMismatchError) {
+    return
   }
-})()
+  // this error should show up in production
+  console.error('Hydration completed but contains mismatches.')
+  hasLoggedMismatchError = true
+}
 
 const isSVGContainer = (container: Element) =>
   container.namespaceURI!.includes('svg') &&
@@ -187,8 +183,7 @@ export function createHydrationFunctions(
                 )}` +
                   `\n  - expected on client: ${JSON.stringify(vnode.children)}`,
               )
-
-            !__TEST__ && logMismatchError()
+            logMismatchError()
             ;(node as Text).data = vnode.children as string
           }
           nextNode = nextSibling(node)
@@ -429,8 +424,7 @@ export function createHydrationFunctions(
             )
             hasWarned = true
           }
-
-          !__TEST__ && logMismatchError()
+          logMismatchError()
 
           // The SSRed DOM contains more nodes than it should. Remove them.
           const cur = next
@@ -446,8 +440,7 @@ export function createHydrationFunctions(
               `\n  - rendered on server: ${el.textContent}` +
                 `\n  - expected on client: ${vnode.children as string}`,
             )
-
-          !__TEST__ && logMismatchError()
+          logMismatchError()
 
           el.textContent = vnode.children as string
         }
@@ -468,7 +461,7 @@ export function createHydrationFunctions(
               (__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
               propHasMismatch(el, key, props[key], vnode, parentComponent)
             ) {
-              !__TEST__ && logMismatchError()
+              logMismatchError()
             }
             if (
               (forcePatch &&
@@ -569,8 +562,7 @@ export function createHydrationFunctions(
           )
           hasWarned = true
         }
-
-        !__TEST__ && logMismatchError()
+        logMismatchError()
 
         // the SSRed DOM didn't contain enough nodes. Mount the missing ones.
         patch(
@@ -618,7 +610,7 @@ export function createHydrationFunctions(
     } else {
       // fragment didn't hydrate successfully, since we didn't get a end anchor
       // back. This should have led to node/children mismatch warnings.
-      !__TEST__ && logMismatchError()
+      logMismatchError()
 
       // since the anchor is missing, we need to create one and insert it
       insert((vnode.anchor = createComment(`]`)), container, next)
@@ -646,8 +638,7 @@ export function createHydrationFunctions(
         `\n- expected on client:`,
         vnode.type,
       )
-
-    !__TEST__ && logMismatchError()
+    logMismatchError()
 
     vnode.el = null
 
