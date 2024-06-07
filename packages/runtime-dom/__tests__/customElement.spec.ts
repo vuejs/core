@@ -720,6 +720,44 @@ describe('defineCustomElement', () => {
       expect(e.shadowRoot!.innerHTML).toBe(`<div>20,number</div>`)
     })
 
+    test('Props can be casted when mounting custom elements in component rendering functions', async () => {
+      const E = defineCustomElement(
+        defineAsyncComponent(() => {
+          return Promise.resolve({
+            props: ['fooValue'],
+            setup(props) {
+              expect(props.fooValue).toBe('fooValue')
+            },
+            render(this: any) {
+              return h('div', this.fooValue)
+            },
+          })
+        }),
+      )
+      customElements.define('my-el-async-4', E)
+      const R = defineComponent({
+        setup() {
+          const fooValue = ref('fooValue')
+          return {
+            fooValue,
+          }
+        },
+        render: (props: any, _: any, __: any, $setup: unknown) => {
+          return h('div', null, [
+            h('my-el-async-4', {
+              fooValue: ($setup as any).fooValue,
+            }),
+          ])
+        },
+      })
+
+      const app = createApp(R)
+      app.mount(container)
+      await new Promise(r => setTimeout(r))
+      const e = container.querySelector('my-el-async-4') as VueElement
+      expect(e.shadowRoot!.innerHTML).toBe(`<div>fooValue</div>`)
+    })
+
     test('with slots', async () => {
       const E = defineCustomElement(
         defineAsyncComponent(() => {
@@ -747,51 +785,5 @@ describe('defineCustomElement', () => {
         `<div><slot><div>fallback</div></slot></div><div><slot name="named"></slot></div>`,
       )
     })
-
-
-    /*test('child components in shadow dom should have styles & async', async () => {
-      const Child = {
-        styles: [`.Child { color: blue; }`],
-        render() {
-          return h('div', { class: 'Child' }, 'hello')
-        },
-      }
-      const Foo = defineCustomElement(
-        // defineAsyncComponent(() => {
-        //   return Promise.resolve({
-        //     props: ['testFn', 'testTx'],
-        //     components: { Child },
-        //     styles: [`div { color: red; }`],
-        //     render(ctx) {
-        //       debugger
-        //       return h('div', {}, ['hello', h(Child)])
-        //     },
-        //   })
-        // }),
-        {
-          props: ['testFn', 'testTx'],
-          components: { Child },
-          styles: [`div { color: red; }`],
-          render(ctx) {
-            debugger
-            return h('div', {}, ['hello', h(Child)])
-          },
-        }
-      )
-      const App = {
-        render: () => {
-          return h('div', {}, [h('my-el-with-child-styles-async', {
-              testFn: () => console.log('test'),
-              testTx: 'testTx'
-            })]
-          )
-        }
-      }
-
-      customElements.define('my-el-with-child-styles-async', Foo)
-      const app = createApp(App)
-      app.mount(container)
-      await new Promise(r => setTimeout(r))
-    })*/
   })
 })
