@@ -17,6 +17,7 @@ import {
   type ComponentInternalInstance,
   type ComponentOptions,
   type Data,
+  type LifecycleHook,
   createComponentInstance,
   setupComponent,
 } from './component'
@@ -2266,7 +2267,9 @@ function baseCreateRenderer(
       unregisterHMR(instance)
     }
 
-    const { bum, scope, update, subTree, um } = instance
+    const { bum, scope, update, subTree, um, m, a } = instance
+    invalidateMount(m)
+    invalidateMount(a)
 
     // beforeUnmount hook
     if (bum) {
@@ -2531,5 +2534,11 @@ function locateNonHydratedAsyncRoot(
     } else {
       return locateNonHydratedAsyncRoot(subComponent)
     }
+  }
+}
+
+export function invalidateMount(hooks: LifecycleHook) {
+  if (hooks) {
+    for (let i = 0; i < hooks.length; i++) hooks[i].active = false
   }
 }
