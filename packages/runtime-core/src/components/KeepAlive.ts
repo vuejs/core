@@ -38,6 +38,7 @@ import {
   type RendererElement,
   type RendererInternals,
   type RendererNode,
+  invalidateMount,
   queuePostRenderEffect,
 } from '../renderer'
 import { setTransitionHooks } from './BaseTransition'
@@ -46,7 +47,6 @@ import { devtoolsComponentAdded } from '../devtools'
 import { isAsyncWrapper } from '../apiAsyncComponent'
 import { isSuspense } from './Suspense'
 import { LifecycleHooks } from '../enums'
-import { invalidatePostJob } from '../scheduler'
 
 type MatchPattern = string | RegExp | (string | RegExp)[]
 
@@ -167,10 +167,8 @@ const KeepAliveImpl: ComponentOptions = {
 
     sharedContext.deactivate = (vnode: VNode) => {
       const instance = vnode.component!
-      const { m, a } = instance
-      // #9264 invalidate queued lifecycle hooks
-      if (m) m.forEach(invalidatePostJob)
-      if (a) a.forEach(invalidatePostJob)
+      invalidateMount(instance.m)
+      invalidateMount(instance.a)
 
       move(vnode, storageContainer, null, MoveType.LEAVE, parentSuspense)
       queuePostRenderEffect(() => {

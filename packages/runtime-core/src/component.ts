@@ -223,7 +223,7 @@ export type Component<
 
 export type { ComponentOptions }
 
-type LifecycleHook<TFn = Function> = TFn[] | null
+export type LifecycleHook<TFn = Function> = (TFn & SchedulerJob)[] | null
 
 // use `E extends any` to force evaluating type to fix #2362
 export type SetupContext<
