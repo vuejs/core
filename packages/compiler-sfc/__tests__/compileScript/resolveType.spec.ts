@@ -9,8 +9,9 @@ import {
   registerTS,
   resolveTypeElements,
 } from '../../src/script/resolveType'
-
+import { UNKNOWN_TYPE } from '../../src/script/utils'
 import ts from 'typescript'
+
 registerTS(() => ts)
 
 describe('resolveType', () => {
@@ -128,7 +129,7 @@ describe('resolveType', () => {
     defineProps<{ self: any } & Foo & Bar & Baz>()
     `).props,
     ).toStrictEqual({
-      self: ['Unknown'],
+      self: [UNKNOWN_TYPE],
       foo: ['Number'],
       // both Bar & Baz has 'bar', but Baz['bar] is wider so it should be
       // preferred
@@ -455,13 +456,13 @@ describe('resolveType', () => {
     const { props } = resolve(
       `
       import { IMP } from './foo'
-      interface Foo { foo: 1, ${1}: 1 } 
+      interface Foo { foo: 1, ${1}: 1 }
       type Bar = { bar: 1 }
       declare const obj: Bar
       declare const set: Set<any>
       declare const arr: Array<any>
 
-      defineProps<{ 
+      defineProps<{
         imp: keyof IMP,
         foo: keyof Foo,
         bar: keyof Bar,
@@ -480,6 +481,81 @@ describe('resolveType', () => {
       obj: ['String'],
       set: ['String'],
       arr: ['String', 'Number'],
+    })
+  })
+
+  test('keyof: index signature', () => {
+    const { props } = resolve(
+      `
+      declare const num: number;
+      interface Foo {
+        [key: symbol]: 1
+        [key: string]: 1
+        [key: typeof num]: 1,
+      }
+
+      type Test<T> = T
+      type Bar = {
+        [key: string]: 1
+        [key: Test<number>]: 1
+      }
+
+      defineProps<{
+        foo: keyof Foo 
+        bar: keyof Bar
+      }>()
+      `,
+    )
+
+    expect(props).toStrictEqual({
+      foo: ['Symbol', 'String', 'Number'],
+      bar: [UNKNOWN_TYPE],
+    })
+  })
+
+  test('keyof: utility type', () => {
+    const { props } = resolve(
+      `
+      type Foo = Record<symbol | string, any>
+      type Bar = { [key: string]: any }
+      type AnyRecord = Record<keyof any, any>
+      type Baz = { a: 1, ${1}: 2, b: 3}
+
+      defineProps<{
+        record: keyof Foo,
+        anyRecord: keyof AnyRecord 
+        partial: keyof Partial<Bar>,
+        required: keyof Required<Bar>,
+        readonly: keyof Readonly<Bar>,
+        pick: keyof Pick<Baz, 'a' | 1>
+        extract: keyof Extract<keyof Baz, 'a' | 1>
+      }>()
+      `,
+    )
+
+    expect(props).toStrictEqual({
+      record: ['Symbol', 'String'],
+      anyRecord: ['String', 'Number', 'Symbol'],
+      partial: ['String'],
+      required: ['String'],
+      readonly: ['String'],
+      pick: ['String', 'Number'],
+      extract: ['String', 'Number'],
+    })
+  })
+
+  test('keyof: fallback to Unknown', () => {
+    const { props } = resolve(
+      `
+      interface Barr {}
+      interface Bar extends Barr {}
+      type Foo = keyof Bar
+      defineProps<{ foo: Foo }>()
+      `,
+    )
+
+    expect(props).toStrictEqual({
+      foo: [UNKNOWN_TYPE],
     })
   })
 
