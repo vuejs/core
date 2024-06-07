@@ -2110,10 +2110,16 @@ function baseCreateRenderer(
       shapeFlag,
       patchFlag,
       dirs,
+      memoIndex,
     } = vnode
     // unset ref
     if (ref != null) {
       setRef(ref, null, parentSuspense, vnode, true)
+    }
+
+    // #6593 should clean memo cache when unmount
+    if (memoIndex != null) {
+      parentComponent!.renderCache[memoIndex] = undefined
     }
 
     if (shapeFlag & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE) {
