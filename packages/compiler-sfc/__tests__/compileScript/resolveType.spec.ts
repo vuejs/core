@@ -535,7 +535,7 @@ describe('resolveType', () => {
 
     expect(props).toStrictEqual({
       record: ['Symbol', 'String'],
-      anyRecord: [UNKNOWN_TYPE],
+      anyRecord: ['String', 'Number', 'Symbol'],
       partial: ['String'],
       required: ['String'],
       readonly: ['String'],

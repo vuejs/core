@@ -1729,6 +1729,13 @@ export function inferRuntimeType(
           node.operator === 'keyof',
         )
       }
+
+      case 'TSAnyKeyword': {
+        if (isKeyOf) {
+          return ['String', 'Number', 'Symbol']
+        }
+        break
+      }
     }
   } catch (e) {
     // always soft fail on failed runtime type inference
