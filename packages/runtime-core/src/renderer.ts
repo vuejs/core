@@ -661,7 +661,7 @@ function baseCreateRenderer(
     // scopeId
     setScopeId(el, vnode, vnode.scopeId, slotScopeIds, parentComponent)
     // props
-    function handleProps(){
+    function handleProps() {
       if (props) {
         for (const key in props) {
           if (key !== 'value' && !isReservedProp(key)) {
@@ -695,7 +695,7 @@ function baseCreateRenderer(
         }
       }
     }
-    if(el._ce && el._def && el._def.__asyncLoader){
+    if (el._ce && el._def && el._def.__asyncLoader) {
       el._asyncPatchProps = handleProps
     } else {
       handleProps()
