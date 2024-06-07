@@ -59,6 +59,11 @@ export function patchDOMProp(
       value = includeBooleanAttr(value)
     } else if (value == null && type === 'string') {
       // e.g. <div :id="null">
+      if (tag === 'IMG' && key === 'src' && value === null) {
+        // e.g. <img :src="null">
+        // should allow set img src to null, that will trigger <img> error
+        return
+      }
       value = ''
       needRemove = true
     } else if (type === 'number') {
