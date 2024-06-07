@@ -107,6 +107,7 @@ describe('defineCustomElement', () => {
       myInputEl.removeAttribute('value')
       await nextTick()
       expect(inputEl.value).toBe('')
+      app.unmount()
     })
 
     test('should not unmount on move', async () => {
@@ -756,6 +757,7 @@ describe('defineCustomElement', () => {
       await new Promise(r => setTimeout(r))
       const e = container.querySelector('my-el-async-4') as VueElement
       expect(e.shadowRoot!.innerHTML).toBe(`<div>fooValue</div>`)
+      app.unmount()
     })
 
     test('with slots', async () => {
