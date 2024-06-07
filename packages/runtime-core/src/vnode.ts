@@ -229,9 +229,9 @@ export interface VNode<
    */
   memo?: any[]
   /**
-   * @internal clean v-memo cache
+   * @internal index for cleaning v-memo cache
    */
-  cleanMemoCache?: Function
+  memoIndex?: number
   /**
    * @internal __COMPAT__ only
    */

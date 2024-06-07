@@ -15,8 +15,7 @@ export function withMemo(
 
   // shallow clone
   ret.memo = memo.slice()
-
-  ret.cleanMemoCache = () => (cache[index] = undefined)
+  ret.memoIndex = index
 
   return (cache[index] = ret)
 }
