@@ -710,12 +710,15 @@ describe('resolveType', () => {
 
     test('relative (import * as)', () => {
       const files = {
-        '/bar.ts': 'export type P = { bar: string }',
+        '/foo.ts': `
+        export namespace Foo { 
+          export type Bar = { bar: string } 
+        }`,
       }
       const { props, deps } = resolve(
         `
-        import * as PP from './bar'
-        defineProps<PP.P>()
+        import * as F from './foo'
+        defineProps<F.Foo.Bar>()
       `,
         files,
       )
