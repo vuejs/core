@@ -1082,8 +1082,7 @@ function baseCreateRenderer(
     if (
       __DEV__ &&
       // #5523 dev root fragment may inherit directives
-      (isHmrUpdating ||
-        (patchFlag > 0 && patchFlag & PatchFlags.DEV_ROOT_FRAGMENT))
+      (isHmrUpdating || patchFlag & PatchFlags.DEV_ROOT_FRAGMENT)
     ) {
       // HMR updated / Dev root fragment (w/ comments), force full diff
       patchFlag = 0

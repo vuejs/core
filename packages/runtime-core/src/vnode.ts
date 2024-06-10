@@ -234,7 +234,7 @@ export interface VNode<
    */
   ce?: (instance: ComponentInternalInstance) => void
   /**
-   * @interface is slot fallback node
+   * @internal is slot fallback node
    */
   isSlotFallback?: boolean
 }
