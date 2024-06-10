@@ -1,4 +1,8 @@
-import type { ComponentPublicInstance, Directive } from '@vue/runtime-core'
+import {
+  type ComponentPublicInstance,
+  type Directive,
+  ssrUtils,
+} from '@vue/runtime-core'
 
 export function ssrGetDirectiveProps(
   instance: ComponentPublicInstance,
@@ -12,7 +16,7 @@ export function ssrGetDirectiveProps(
       dir.getSSRProps(
         {
           dir,
-          instance,
+          instance: ssrUtils.getComponentPublicInstance(instance.$),
           value,
           oldValue: undefined,
           arg,
