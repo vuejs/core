@@ -699,7 +699,7 @@ describe('renderer: optimized mode', () => {
     )
   })
 
-  test('force full diff slot and fallback nodes', async () => {
+  test('diff slot and slot fallback node', async () => {
     const Comp = {
       props: ['show'],
       setup(props: any, { slots }: SetupContext) {
