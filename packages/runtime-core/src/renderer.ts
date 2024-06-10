@@ -1059,27 +1059,36 @@ function baseCreateRenderer(
     const fragmentStartAnchor = (n2.el = n1 ? n1.el : hostCreateText(''))!
     const fragmentEndAnchor = (n2.anchor = n1 ? n1.anchor : hostCreateText(''))!
 
-    let { patchFlag, dynamicChildren, slotScopeIds: fragmentSlotScopeIds } = n2
+    let {
+      patchFlag,
+      dynamicChildren,
+      slotScopeIds: fragmentSlotScopeIds,
+      isSlotFallback,
+    } = n2
 
-    // #9200 slot and fallback node has different patchFlag, force full diff
-    const forceDiffSlot = n1 && n1.patchFlag !== n2.patchFlag
+    // #9200 when patching the slot vnode and the slot fallback vnode
+    // cannot take the fast path, nor can reuse the old vnode because they
+    // are from different templates
     if (
-      (__DEV__ &&
-        // #5523 dev root fragment may inherit directives
-        // HMR updated / Dev root fragment (w/ comments), force full diff
-        (isHmrUpdating ||
-          (patchFlag > 0 && patchFlag & PatchFlags.DEV_ROOT_FRAGMENT))) ||
-      forceDiffSlot
+      n1 &&
+      n1.isSlotFallback !== undefined &&
+      isSlotFallback !== undefined &&
+      n1.isSlotFallback !== isSlotFallback
     ) {
+      unmount(n1!, parentComponent, parentSuspense, true)
+      n1 = null
+    }
+
+    if (
+      __DEV__ &&
+      // #5523 dev root fragment may inherit directives
+      (isHmrUpdating ||
+        (patchFlag > 0 && patchFlag & PatchFlags.DEV_ROOT_FRAGMENT))
+    ) {
+      // HMR updated / Dev root fragment (w/ comments), force full diff
       patchFlag = 0
       optimized = false
       dynamicChildren = null
-
-      // avoid re-using n1 if force diff slot
-      if (forceDiffSlot) {
-        unmount(n1!, parentComponent, parentSuspense, true)
-        n1 = null
-      }
     }
 
     // check if this is a slot fragment with :slotted scope ids

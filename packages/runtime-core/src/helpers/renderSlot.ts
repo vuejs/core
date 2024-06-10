@@ -38,12 +38,14 @@ export function renderSlot(
       currentRenderingInstance!.parent.isCE)
   ) {
     if (name !== 'default') props.name = name
-    return createVNode(
+    const vnode = createVNode(
       'slot',
       props,
       fallback && fallback(),
       fallback ? PatchFlags.BAIL : undefined,
     )
+    vnode.isSlotFallback = true
+    return vnode
   }
 
   let slot = slots[name]
@@ -87,6 +89,7 @@ export function renderSlot(
   if (slot && (slot as ContextualRenderFn)._c) {
     ;(slot as ContextualRenderFn)._d = true
   }
+  rendered.isSlotFallback = !!validSlotContent
   return rendered
 }
 
