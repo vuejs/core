@@ -1198,6 +1198,37 @@ describe('resolveType', () => {
       })
     })
   })
+
+  describe('template literals', () => {
+    test('mapped types with string type', () => {
+      expect(
+        resolve(`
+      type X = 'a' | 'b'
+      defineProps<{[K in X as \`\${K}_foo\`]: string}>()
+      `).props,
+      ).toStrictEqual({
+        a_foo: ['String'],
+        b_foo: ['String'],
+      })
+    })
+
+    // #10962
+    test('mapped types with generic parameters', () => {
+      const { props } = resolve(`
+      type Breakpoints = 'sm' | 'md' | 'lg'
+      type BreakpointFactory<T extends string, V> = {
+        [K in Breakpoints as \`\${T}\${Capitalize<K>}\`]: V
+      }
+      type ColsBreakpoints = BreakpointFactory<'cols', number>
+      defineProps<ColsBreakpoints>()
+      `)
+      expect(props).toStrictEqual({
+        colsSm: ['Number'],
+        colsMd: ['Number'],
+        colsLg: ['Number'],
+      })
+    })
+  })
 })
 
 function resolve(

@@ -188,7 +188,7 @@ function innerResolveTypeElements(
         node.type,
       )
     case 'TSMappedType':
-      return resolveMappedType(ctx, node, scope)
+      return resolveMappedType(ctx, node, scope, typeParameters)
     case 'TSIndexedAccessType': {
       const types = resolveIndexType(ctx, node, scope)
       return mergeElements(
@@ -450,9 +450,18 @@ function resolveMappedType(
   ctx: TypeResolveContext,
   node: TSMappedType,
   scope: TypeScope,
+  typeParameters?: Record<string, Node>,
 ): ResolvedElements {
   const res: ResolvedElements = { props: {} }
-  const keys = resolveStringType(ctx, node.typeParameter.constraint!, scope)
+  let keys: string[]
+  if (node.nameType) {
+    const { name, constraint } = node.typeParameter
+    scope = createChildScope(scope)
+    Object.assign(scope.types, { ...typeParameters, [name]: constraint })
+    keys = resolveStringType(ctx, node.nameType, scope)
+  } else {
+    keys = resolveStringType(ctx, node.typeParameter.constraint!, scope)
+  }
   for (const key of keys) {
     res.props[key] = createProperty(
       {
