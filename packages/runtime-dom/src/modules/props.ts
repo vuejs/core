@@ -3,7 +3,7 @@
 // This can come from explicit usage of v-html or innerHTML as a prop in render
 
 import { DeprecationTypes, compatUtils, warn } from '@vue/runtime-core'
-import { includeBooleanAttr } from '@vue/shared'
+import { includeBooleanAttr, isSymbol } from '@vue/shared'
 
 // functions. The user is responsible for using them with only trusted content.
 export function patchDOMProp(
@@ -40,12 +40,7 @@ export function patchDOMProp(
       tag === 'OPTION' ? el.getAttribute('value') || '' : el.value
     const newValue = value == null ? '' : value
     if (oldValue !== newValue || !('_value' in el)) {
-      if (typeof newValue === 'symbol') {
-        el.value = newValue.toString()
-      }
-      else {
-        el.value = newValue
-      }
+      el.value = isSymbol(newValue) ? String(newValue) : newValue
     }
     if (value == null) {
       el.removeAttribute(key)
