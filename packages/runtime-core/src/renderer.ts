@@ -829,7 +829,7 @@ function baseCreateRenderer(
       dynamicChildren = null
     }
 
-    if (optimized && dynamicChildren) {
+    if (dynamicChildren) {
       patchBlockChildren(
         n1.dynamicChildren!,
         dynamicChildren,
@@ -1061,18 +1061,25 @@ function baseCreateRenderer(
 
     let { patchFlag, dynamicChildren, slotScopeIds: fragmentSlotScopeIds } = n2
 
+    // #9200 slot and fallback node has different patchFlag, force full diff
+    const forceDiffSlot = n1 && n1.patchFlag !== n2.patchFlag
     if (
       (__DEV__ &&
         // #5523 dev root fragment may inherit directives
         // HMR updated / Dev root fragment (w/ comments), force full diff
         (isHmrUpdating ||
           (patchFlag > 0 && patchFlag & PatchFlags.DEV_ROOT_FRAGMENT))) ||
-      // #9200 slot and fallback node has different patchFlag, force full diff
-      (n1 && n1.patchFlag !== n2.patchFlag)
+      forceDiffSlot
     ) {
       patchFlag = 0
       optimized = false
       dynamicChildren = null
+
+      // avoid re-using n1 if force diff slot
+      if (forceDiffSlot) {
+        unmount(n1!, parentComponent, parentSuspense, true)
+        n1 = null
+      }
     }
 
     // check if this is a slot fragment with :slotted scope ids
@@ -1104,7 +1111,6 @@ function baseCreateRenderer(
       )
     } else {
       if (
-        optimized &&
         patchFlag > 0 &&
         patchFlag & PatchFlags.STABLE_FRAGMENT &&
         dynamicChildren &&
