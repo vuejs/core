@@ -14,6 +14,9 @@ import { type Block, type Fragment, fragmentKey } from './apiRender'
 import { firstEffect, renderEffect } from './renderEffect'
 import { createComment, createTextNode, insert, remove } from './dom/element'
 import { VaporErrorCodes, callWithAsyncErrorHandling } from './errorHandling'
+import type { NormalizedRawProps } from './componentProps'
+import type { Data } from '@vue/runtime-shared'
+import { mergeProps } from './dom/prop'
 
 // TODO: SSR
 
@@ -106,7 +109,7 @@ export function initSlots(
 
 export function createSlot(
   name: string | (() => string),
-  binds?: Record<string, (() => unknown) | undefined>,
+  binds?: NormalizedRawProps,
   fallback?: () => Block,
 ): Block {
   let block: Block | undefined
@@ -120,7 +123,7 @@ export function createSlot(
 
   // When not using dynamic slots, simplify the process to improve performance
   if (!isDynamicName && !isReactive(slots)) {
-    if ((branch = slots[name] || fallback)) {
+    if ((branch = withProps(slots[name]) || fallback)) {
       return branch(binds)
     } else {
       return []
@@ -137,7 +140,7 @@ export function createSlot(
 
   // TODO lifecycle hooks
   renderEffect(() => {
-    if ((branch = getSlot() || fallback) !== oldBranch) {
+    if ((branch = withProps(getSlot()) || fallback) !== oldBranch) {
       parent ||= anchor.parentNode
       if (block) {
         scope!.stop()
@@ -155,4 +158,62 @@ export function createSlot(
   })
 
   return fragment
+
+  function withProps<T extends (p: any) => any>(fn?: T) {
+    if (fn)
+      return (binds?: NormalizedRawProps): ReturnType<T> =>
+        fn(binds && normalizeSlotProps(binds))
+  }
+}
+
+function normalizeSlotProps(rawPropsList: NormalizedRawProps) {
+  const { length } = rawPropsList
+  const mergings = length > 1 ? shallowReactive<Data[]>([]) : undefined
+  const result = shallowReactive<Data>({})
+
+  for (let i = 0; i < length; i++) {
+    const rawProps = rawPropsList[i]
+    if (isFunction(rawProps)) {
+      // dynamic props
+      renderEffect(() => {
+        const props = rawProps()
+        if (mergings) {
+          mergings[i] = props
+        } else {
+          setDynamicProps(props)
+        }
+      })
+    } else {
+      // static props
+      const props = mergings
+        ? (mergings[i] = shallowReactive<Data>({}))
+        : result
+      for (const key in rawProps) {
+        const valueSource = rawProps[key]
+        renderEffect(() => {
+          props[key] = valueSource()
+        })
+      }
+    }
+  }
+
+  if (mergings) {
+    renderEffect(() => {
+      setDynamicProps(mergeProps(...mergings))
+    })
+  }
+
+  return result
+
+  function setDynamicProps(props: Data) {
+    const otherExistingKeys = new Set(Object.keys(result))
+    for (const key in props) {
+      result[key] = props[key]
+      otherExistingKeys.delete(key)
+    }
+    // delete other stale props
+    for (const key of otherExistingKeys) {
+      delete result[key]
+    }
+  }
 }

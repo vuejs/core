@@ -154,7 +154,7 @@ export function setDynamicProps(el: Element, ...args: any) {
 }
 
 // TODO copied from runtime-core
-function mergeProps(...args: Data[]) {
+export function mergeProps(...args: Data[]) {
   const ret: Data = {}
   for (let i = 0; i < args.length; i++) {
     const toMerge = args[i]
