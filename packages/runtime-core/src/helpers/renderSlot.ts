@@ -44,7 +44,7 @@ export function renderSlot(
       fallback && fallback(),
       fallback ? PatchFlags.BAIL : undefined,
     )
-    vnode.isSlotFallback = true
+    vnode.isSlotFallback = !!fallback
     return vnode
   }
 
