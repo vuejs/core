@@ -44,8 +44,7 @@ This repository is a fork of [vuejs/core](https://github.com/vuejs/core) and is 
   - [ ] `v-memo` [on hold]
   - [x] `v-model`
   - [x] `v-if` / `v-else` / `v-else-if`
-  - [ ] `v-for`
-    - [ ] destructure
+  - [x] `v-for`
   - [x] `v-show`
 - [x] Fragment
 - [ ] Codegen
