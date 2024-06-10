@@ -69,5 +69,4 @@ describe('runtime-dom: attrs patching', () => {
     patchProp(el, 'value', null, symbol)
     expect(el.value).toBe(symbol.toString())
   })
-  
 })
