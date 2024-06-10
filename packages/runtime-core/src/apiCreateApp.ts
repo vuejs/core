@@ -3,7 +3,7 @@ import {
   type ComponentInternalInstance,
   type ConcreteComponent,
   type Data,
-  getExposeProxy,
+  getComponentPublicInstance,
   validateComponentName,
 } from './component'
 import type {
@@ -358,7 +358,7 @@ export function createAppAPI<HostElement>(
             devtoolsInitApp(app, version)
           }
 
-          return getExposeProxy(vnode.component!) || vnode.component!.proxy
+          return getComponentPublicInstance(vnode.component!)
         } else if (__DEV__) {
           warn(
             `App has already been mounted.\n` +
