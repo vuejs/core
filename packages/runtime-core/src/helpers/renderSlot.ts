@@ -89,7 +89,7 @@ export function renderSlot(
   if (slot && (slot as ContextualRenderFn)._c) {
     ;(slot as ContextualRenderFn)._d = true
   }
-  rendered.isSlotFallback = !!validSlotContent
+  rendered.isSlotFallback = !validSlotContent
   return rendered
 }
 
