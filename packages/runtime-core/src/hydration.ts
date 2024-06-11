@@ -432,13 +432,19 @@ export function createHydrationFunctions(
           remove(cur)
         }
       } else if (shapeFlag & ShapeFlags.TEXT_CHILDREN) {
-        if (el.textContent !== vnode.children) {
+        const { textContent } = el
+        const { children } = vnode
+        if (
+          textContent !== children &&
+          // innerHTML normalize \r\n or \r into a single \n in the DOM
+          textContent !== (children as string).replace(/\r\n|\r/g, '\n')
+        ) {
           ;(__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
             warn(
               `Hydration text content mismatch on`,
               el,
-              `\n  - rendered on server: ${el.textContent}` +
-                `\n  - expected on client: ${vnode.children as string}`,
+              `\n  - rendered on server: ${textContent}` +
+                `\n  - expected on client: ${children as string}`,
             )
           logMismatchError()
 
