@@ -17,6 +17,7 @@ import {
   type ComponentInternalInstance,
   type ComponentOptions,
   type Data,
+  type LifecycleHook,
   createComponentInstance,
   setupComponent,
 } from './component'
@@ -2116,10 +2117,16 @@ function baseCreateRenderer(
       shapeFlag,
       patchFlag,
       dirs,
+      memoIndex,
     } = vnode
     // unset ref
     if (ref != null) {
       setRef(ref, null, parentSuspense, vnode, true)
+    }
+
+    // #6593 should clean memo cache when unmount
+    if (memoIndex != null) {
+      parentComponent!.renderCache[memoIndex] = undefined
     }
 
     if (shapeFlag & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE) {
@@ -2273,7 +2280,9 @@ function baseCreateRenderer(
       unregisterHMR(instance)
     }
 
-    const { bum, scope, update, subTree, um } = instance
+    const { bum, scope, update, subTree, um, m, a } = instance
+    invalidateMount(m)
+    invalidateMount(a)
 
     // beforeUnmount hook
     if (bum) {
@@ -2538,5 +2547,11 @@ function locateNonHydratedAsyncRoot(
     } else {
       return locateNonHydratedAsyncRoot(subComponent)
     }
+  }
+}
+
+export function invalidateMount(hooks: LifecycleHook) {
+  if (hooks) {
+    for (let i = 0; i < hooks.length; i++) hooks[i].active = false
   }
 }
