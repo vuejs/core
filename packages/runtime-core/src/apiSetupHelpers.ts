@@ -116,7 +116,7 @@ type BooleanKey<T, K extends keyof T = keyof T> = K extends any
  * const emit = defineEmits<{
  *   // <eventName>: <expected arguments>
  *   change: []
- *   update: [value: string] // named tuple syntax
+ *   update: [value: number] // named tuple syntax
  * }>()
  *
  * emit('change')
