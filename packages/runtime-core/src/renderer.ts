@@ -2473,7 +2473,8 @@ export function traverseStaticChildren(n1: VNode, n2: VNode, shallow = false) {
           c2 = ch2[i] = cloneIfMounted(ch2[i] as VNode)
           c2.el = c1.el
         }
-        if (!shallow) traverseStaticChildren(c1, c2)
+        if (!shallow && c2.patchFlag !== PatchFlags.BAIL)
+          traverseStaticChildren(c1, c2)
       }
       // #6852 also inherit for text nodes
       if (c2.type === Text) {
