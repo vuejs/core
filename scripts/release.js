@@ -145,7 +145,7 @@ async function main() {
         ['view', `${pkgName}@~${canaryVersion}`, 'version', '--json'],
         { stdio: 'pipe' },
       )
-      let versions = JSON.parse(stdout)
+      let versions = JSON.parse(/** @type {string} */ (stdout))
       versions = Array.isArray(versions) ? versions : [versions]
       const latestSameDayPatch = /** @type {string} */ (
         semver.maxSatisfying(versions, `~${canaryVersion}`)

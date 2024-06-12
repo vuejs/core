@@ -38,6 +38,7 @@ import {
   type RendererElement,
   type RendererInternals,
   type RendererNode,
+  invalidateMount,
   queuePostRenderEffect,
 } from '../renderer'
 import { setTransitionHooks } from './BaseTransition'
@@ -55,7 +56,7 @@ export interface KeepAliveProps {
   max?: number | string
 }
 
-type CacheKey = string | number | symbol | ConcreteComponent
+type CacheKey = PropertyKey | ConcreteComponent
 type Cache = Map<CacheKey, VNode>
 type Keys = Set<CacheKey>
 
@@ -166,6 +167,9 @@ const KeepAliveImpl: ComponentOptions = {
 
     sharedContext.deactivate = (vnode: VNode) => {
       const instance = vnode.component!
+      invalidateMount(instance.m)
+      invalidateMount(instance.a)
+
       move(vnode, storageContainer, null, MoveType.LEAVE, parentSuspense)
       queuePostRenderEffect(() => {
         if (instance.da) {
@@ -228,7 +232,15 @@ const KeepAliveImpl: ComponentOptions = {
     const cacheSubtree = () => {
       // fix #1621, the pendingCacheKey could be 0
       if (pendingCacheKey != null) {
-        cache.set(pendingCacheKey, getInnerChild(instance.subTree))
+        // if KeepAlive child is a Suspense, it needs to be cached after Suspense resolves
+        // avoid caching vnode that not been mounted
+        if (isSuspense(instance.subTree.type)) {
+          queuePostRenderEffect(() => {
+            cache.set(pendingCacheKey!, getInnerChild(instance.subTree))
+          }, instance.subTree.suspense)
+        } else {
+          cache.set(pendingCacheKey, getInnerChild(instance.subTree))
+        }
       }
     }
     onMounted(cacheSubtree)
@@ -305,11 +317,11 @@ const KeepAliveImpl: ComponentOptions = {
           rawVNode.ssContent = vnode
         }
       }
-      // #1513 it's possible for the returned vnode to be cloned due to attr
+      // #1511 it's possible for the returned vnode to be cloned due to attr
       // fallthrough or scopeId, so the vnode here may not be the final vnode
       // that is mounted. Instead of caching it directly, we store the pending
       // key and cache `instance.subTree` (the normalized vnode) in
-      // beforeMount/beforeUpdate hooks.
+      // mounted/updated hooks.
       pendingCacheKey = key
 
       if (cachedVNode) {

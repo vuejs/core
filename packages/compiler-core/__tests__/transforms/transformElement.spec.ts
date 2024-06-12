@@ -1284,6 +1284,18 @@ describe('compiler: element transform', () => {
     })
   })
 
+  test('<math> should be forced into blocks', () => {
+    const ast = parse(`<div><math/></div>`)
+    transform(ast, {
+      nodeTransforms: [transformElement],
+    })
+    expect((ast as any).children[0].children[0].codegenNode).toMatchObject({
+      type: NodeTypes.VNODE_CALL,
+      tag: `"math"`,
+      isBlock: true,
+    })
+  })
+
   test('force block for runtime custom directive w/ children', () => {
     const { node } = parseWithElementTransform(`<div v-foo>hello</div>`)
     expect(node.isBlock).toBe(true)
