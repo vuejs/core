@@ -1,6 +1,6 @@
 {
   "name": "@vue/compat",
-  "version": "3.3.4",
+  "version": "3.4.27",
   "description": "Vue 3 compatibility build for Vue 2",
   "main": "index.js",
   "module": "dist/vue.runtime.esm-bundler.js",
@@ -10,6 +10,20 @@
     "index.js",
     "dist"
   ],
+  "exports": {
+    ".": {
+      "types": "./dist/vue.d.ts",
+      "node": {
+        "production": "./dist/vue.cjs.prod.js",
+        "development": "./dist/vue.cjs.js",
+        "default": "./index.js"
+      },
+      "module": "./dist/vue.esm-bundler.js",
+      "import": "./dist/vue.esm-bundler.js",
+      "require": "./index.js"
+    },
+    "./*": "./*"
+  },
   "buildOptions": {
     "name": "Vue",
     "filename": "vue",
@@ -38,11 +52,11 @@
   },
   "homepage": "https://github.com/vuejs/core/tree/main/packages/vue-compat#readme",
   "dependencies": {
-    "@babel/parser": "^7.21.3",
+    "@babel/parser": "^7.24.7",
     "estree-walker": "^2.0.2",
-    "source-map-js": "^1.0.2"
+    "source-map-js": "^1.2.0"
   },
   "peerDependencies": {
-    "vue": "3.3.4"
+    "vue": "workspace:*"
   }
 }

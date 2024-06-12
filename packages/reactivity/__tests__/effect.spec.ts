@@ -1,18 +1,27 @@
 import {
-  ref,
-  reactive,
-  effect,
-  stop,
-  toRaw,
+  type DebuggerEvent,
+  type ReactiveEffectRunner,
   TrackOpTypes,
   TriggerOpTypes,
-  DebuggerEvent,
+  effect,
   markRaw,
-  shallowReactive,
+  reactive,
   readonly,
-  ReactiveEffectRunner
+  shallowReactive,
+  stop,
+  toRaw,
 } from '../src/index'
-import { ITERATE_KEY } from '../src/effect'
+import { pauseScheduling, resetScheduling } from '../src/effect'
+import { ITERATE_KEY, getDepFromReactive } from '../src/reactiveEffect'
+import {
+  computed,
+  h,
+  nextTick,
+  nodeOps,
+  ref,
+  render,
+  serializeInner,
+} from '@vue/runtime-test'
 
 describe('reactivity/effect', () => {
   it('should run the passed function once (wrapped by a effect)', () => {
@@ -129,7 +138,7 @@ describe('reactivity/effect', () => {
       },
       get prop() {
         return hiddenValue
-      }
+      },
     })
     Object.setPrototypeOf(obj, parent)
     effect(() => (dummy = obj.prop))
@@ -243,6 +252,38 @@ describe('reactivity/effect', () => {
     expect(dummy).toBe(undefined)
   })
 
+  it('should not observe well-known symbol keyed properties in has operation', () => {
+    const key = Symbol.isConcatSpreadable
+    const obj = reactive({
+      [key]: true,
+    }) as any
+
+    const spy = vi.fn(() => {
+      key in obj
+    })
+    effect(spy)
+    expect(spy).toHaveBeenCalledTimes(1)
+
+    obj[key] = false
+    expect(spy).toHaveBeenCalledTimes(1)
+  })
+
+  it('should support manipulating an array while observing symbol keyed properties', () => {
+    const key = Symbol()
+    let dummy
+    const array: any = reactive([1, 2, 3])
+    effect(() => (dummy = array[key]))
+
+    expect(dummy).toBe(undefined)
+    array.pop()
+    array.shift()
+    array.splice(0, 1)
+    expect(dummy).toBe(undefined)
+    array[key] = 'value'
+    array.length = 0
+    expect(dummy).toBe('value')
+  })
+
   it('should observe function valued properties', () => {
     const oldFunc = () => {}
     const newFunc = () => {}
@@ -261,7 +302,7 @@ describe('reactivity/effect', () => {
       a: 1,
       get b() {
         return this.a
-      }
+      },
     })
 
     let dummy
@@ -276,7 +317,7 @@ describe('reactivity/effect', () => {
       a: 1,
       b() {
         return this.a
-      }
+      },
     })
 
     let dummy
@@ -333,7 +374,7 @@ describe('reactivity/effect', () => {
       },
       get prop() {
         return hiddenValue
-      }
+      },
     })
     Object.setPrototypeOf(obj, parent)
     effect(() => (dummy = obj.prop))
@@ -558,8 +599,8 @@ describe('reactivity/effect', () => {
     expect(output.fx2).toBe(1 + 3 + 3)
     expect(fx1Spy).toHaveBeenCalledTimes(1)
 
-    // Invoked twice due to change of fx1.
-    expect(fx2Spy).toHaveBeenCalledTimes(2)
+    // Invoked due to change of fx1.
+    expect(fx2Spy).toHaveBeenCalledTimes(1)
 
     fx1Spy.mockClear()
     fx2Spy.mockClear()
@@ -583,6 +624,14 @@ describe('reactivity/effect', () => {
     const otherRunner = effect(runner)
     expect(runner).not.toBe(otherRunner)
     expect(runner.effect.fn).toBe(otherRunner.effect.fn)
+  })
+
+  it('should wrap if the passed function is a fake effect', () => {
+    const fakeRunner = () => {}
+    fakeRunner.effect = {}
+    const runner = effect(fakeRunner)
+    expect(fakeRunner).not.toBe(runner)
+    expect(runner.effect.fn).toBe(fakeRunner)
   })
 
   it('should not run multiple times for a single mutation', () => {
@@ -688,7 +737,7 @@ describe('reactivity/effect', () => {
       () => {
         dummy = obj.foo
       },
-      { scheduler }
+      { scheduler },
     )
     expect(scheduler).not.toHaveBeenCalled()
     expect(dummy).toBe(1)
@@ -716,7 +765,7 @@ describe('reactivity/effect', () => {
         dummy = 'bar' in obj
         dummy = Object.keys(obj)
       },
-      { onTrack }
+      { onTrack },
     )
     expect(dummy).toEqual(['foo', 'bar'])
     expect(onTrack).toHaveBeenCalledTimes(3)
@@ -725,20 +774,20 @@ describe('reactivity/effect', () => {
         effect: runner.effect,
         target: toRaw(obj),
         type: TrackOpTypes.GET,
-        key: 'foo'
+        key: 'foo',
       },
       {
         effect: runner.effect,
         target: toRaw(obj),
         type: TrackOpTypes.HAS,
-        key: 'bar'
+        key: 'bar',
       },
       {
         effect: runner.effect,
         target: toRaw(obj),
         type: TrackOpTypes.ITERATE,
-        key: ITERATE_KEY
-      }
+        key: ITERATE_KEY,
+      },
     ])
   })
 
@@ -753,7 +802,7 @@ describe('reactivity/effect', () => {
       () => {
         dummy = obj.foo
       },
-      { onTrigger }
+      { onTrigger },
     )
 
     obj.foo!++
@@ -765,7 +814,7 @@ describe('reactivity/effect', () => {
       type: TriggerOpTypes.SET,
       key: 'foo',
       oldValue: 1,
-      newValue: 2
+      newValue: 2,
     })
 
     delete obj.foo
@@ -776,7 +825,7 @@ describe('reactivity/effect', () => {
       target: toRaw(obj),
       type: TriggerOpTypes.DELETE,
       key: 'foo',
-      oldValue: 2
+      oldValue: 2,
     })
   })
 
@@ -797,30 +846,35 @@ describe('reactivity/effect', () => {
     expect(dummy).toBe(3)
   })
 
-  // #5707
-  // when an effect completes its run, it should clear the tracking bits of
-  // its tracked deps. However, if the effect stops itself, the deps list is
-  // emptied so their bits are never cleared.
-  it('edge case: self-stopping effect tracking ref', () => {
-    const c = ref(true)
+  it('stop with multiple dependencies', () => {
+    let dummy1, dummy2
+    const obj1 = reactive({ prop: 1 })
+    const obj2 = reactive({ prop: 1 })
     const runner = effect(() => {
-      // reference ref
-      if (!c.value) {
-        // stop itself while running
-        stop(runner)
-      }
+      dummy1 = obj1.prop
+      dummy2 = obj2.prop
     })
-    // trigger run
-    c.value = !c.value
-    // should clear bits
-    expect((c as any).dep.w).toBe(0)
-    expect((c as any).dep.n).toBe(0)
+
+    obj1.prop = 2
+    expect(dummy1).toBe(2)
+
+    obj2.prop = 3
+    expect(dummy2).toBe(3)
+
+    stop(runner)
+
+    obj1.prop = 4
+    obj2.prop = 5
+
+    // Check that both dependencies have been cleared
+    expect(dummy1).toBe(2)
+    expect(dummy2).toBe(3)
   })
 
   it('events: onStop', () => {
     const onStop = vi.fn()
     const runner = effect(() => {}, {
-      onStop
+      onStop,
     })
 
     stop(runner)
@@ -852,8 +906,8 @@ describe('reactivity/effect', () => {
   it('markRaw', () => {
     const obj = reactive({
       foo: markRaw({
-        prop: 0
-      })
+        prop: 0,
+      }),
     })
     let dummy
     effect(() => {
@@ -868,7 +922,7 @@ describe('reactivity/effect', () => {
 
   it('should not be triggered when the value and the old value both are NaN', () => {
     const obj = reactive({
-      foo: NaN
+      foo: NaN,
     })
     const fnSpy = vi.fn(() => obj.foo)
     effect(fnSpy)
@@ -989,6 +1043,114 @@ describe('reactivity/effect', () => {
       obj.bar = 2
       expect(fnSpy).toHaveBeenCalledTimes(3)
       expect(has).toBe(false)
+    })
+  })
+
+  it('should be triggered once with pauseScheduling', () => {
+    const counter = reactive({ num: 0 })
+
+    const counterSpy = vi.fn(() => counter.num)
+    effect(counterSpy)
+
+    counterSpy.mockClear()
+
+    pauseScheduling()
+    counter.num++
+    counter.num++
+    resetScheduling()
+    expect(counterSpy).toHaveBeenCalledTimes(1)
+  })
+
+  // #10082
+  it('should set dirtyLevel when effect is allowRecurse and is running', async () => {
+    const s = ref(0)
+    const n = computed(() => s.value + 1)
+
+    const Child = {
+      setup() {
+        s.value++
+        return () => n.value
+      },
+    }
+
+    const renderSpy = vi.fn()
+    const Parent = {
+      setup() {
+        return () => {
+          renderSpy()
+          return [n.value, h(Child)]
+        }
+      },
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(Parent), root)
+    await nextTick()
+    expect(serializeInner(root)).toBe('22')
+    expect(renderSpy).toHaveBeenCalledTimes(2)
+  })
+
+  describe('empty dep cleanup', () => {
+    it('should remove the dep when the effect is stopped', () => {
+      const obj = reactive({ prop: 1 })
+      expect(getDepFromReactive(toRaw(obj), 'prop')).toBeUndefined()
+      const runner = effect(() => obj.prop)
+      const dep = getDepFromReactive(toRaw(obj), 'prop')
+      expect(dep).toHaveLength(1)
+      obj.prop = 2
+      expect(getDepFromReactive(toRaw(obj), 'prop')).toBe(dep)
+      expect(dep).toHaveLength(1)
+      stop(runner)
+      expect(getDepFromReactive(toRaw(obj), 'prop')).toBeUndefined()
+      obj.prop = 3
+      runner()
+      expect(getDepFromReactive(toRaw(obj), 'prop')).toBeUndefined()
+    })
+
+    it('should only remove the dep when the last effect is stopped', () => {
+      const obj = reactive({ prop: 1 })
+      expect(getDepFromReactive(toRaw(obj), 'prop')).toBeUndefined()
+      const runner1 = effect(() => obj.prop)
+      const dep = getDepFromReactive(toRaw(obj), 'prop')
+      expect(dep).toHaveLength(1)
+      const runner2 = effect(() => obj.prop)
+      expect(getDepFromReactive(toRaw(obj), 'prop')).toBe(dep)
+      expect(dep).toHaveLength(2)
+      obj.prop = 2
+      expect(getDepFromReactive(toRaw(obj), 'prop')).toBe(dep)
+      expect(dep).toHaveLength(2)
+      stop(runner1)
+      expect(getDepFromReactive(toRaw(obj), 'prop')).toBe(dep)
+      expect(dep).toHaveLength(1)
+      obj.prop = 3
+      expect(getDepFromReactive(toRaw(obj), 'prop')).toBe(dep)
+      expect(dep).toHaveLength(1)
+      stop(runner2)
+      expect(getDepFromReactive(toRaw(obj), 'prop')).toBeUndefined()
+      obj.prop = 4
+      runner1()
+      runner2()
+      expect(getDepFromReactive(toRaw(obj), 'prop')).toBeUndefined()
+    })
+
+    it('should remove the dep when it is no longer used by the effect', () => {
+      const obj = reactive<{ a: number; b: number; c: 'a' | 'b' }>({
+        a: 1,
+        b: 2,
+        c: 'a',
+      })
+      expect(getDepFromReactive(toRaw(obj), 'prop')).toBeUndefined()
+      effect(() => obj[obj.c])
+      const depC = getDepFromReactive(toRaw(obj), 'c')
+      expect(getDepFromReactive(toRaw(obj), 'a')).toHaveLength(1)
+      expect(getDepFromReactive(toRaw(obj), 'b')).toBeUndefined()
+      expect(depC).toHaveLength(1)
+      obj.c = 'b'
+      obj.a = 4
+      expect(getDepFromReactive(toRaw(obj), 'a')).toBeUndefined()
+      expect(getDepFromReactive(toRaw(obj), 'b')).toHaveLength(1)
+      expect(getDepFromReactive(toRaw(obj), 'c')).toBe(depC)
+      expect(depC).toHaveLength(1)
     })
   })
 })
