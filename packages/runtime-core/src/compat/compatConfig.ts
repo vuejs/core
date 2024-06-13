@@ -611,10 +611,13 @@ export function softAssertCompatEnabled(
   instance: ComponentInternalInstance | null,
   ...args: any[]
 ) {
-  if (__DEV__) {
+  const isEnabled = isCompatEnabled(key, instance)
+
+  if (isEnabled && __DEV__) {
     warnDeprecation(key, instance, ...args)
   }
-  return isCompatEnabled(key, instance)
+
+  return isEnabled
 }
 
 /**
