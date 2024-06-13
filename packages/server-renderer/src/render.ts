@@ -266,7 +266,7 @@ export function renderVNodeChildren(
   push: PushFn,
   children: VNodeArrayChildren,
   parentComponent: ComponentInternalInstance,
-  slotScopeId: string | undefined,
+  slotScopeId?: string,
 ) {
   for (let i = 0; i < children.length; i++) {
     renderVNode(push, normalizeVNode(children[i]), parentComponent, slotScopeId)
@@ -277,7 +277,7 @@ function renderElementVNode(
   push: PushFn,
   vnode: VNode,
   parentComponent: ComponentInternalInstance,
-  slotScopeId: string | undefined,
+  slotScopeId?: string,
 ) {
   const tag = vnode.type as string
   let { props, children, shapeFlag, scopeId, dirs } = vnode
@@ -362,7 +362,7 @@ function renderTeleportVNode(
   push: PushFn,
   vnode: VNode,
   parentComponent: ComponentInternalInstance,
-  slotScopeId: string | undefined,
+  slotScopeId?: string,
 ) {
   const target = vnode.props && vnode.props.to
   const disabled = vnode.props && vnode.props.disabled

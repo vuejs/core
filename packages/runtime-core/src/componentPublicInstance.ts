@@ -7,6 +7,7 @@ import {
 } from './component'
 import { nextTick, queueJob } from './scheduler'
 import {
+  type OnCleanup,
   type WatchOptions,
   type WatchStopHandle,
   instanceWatch,
@@ -291,7 +292,7 @@ export type ComponentPublicInstance<
   C extends ComputedOptions = {},
   M extends MethodOptions = {},
   E extends EmitsOptions = {},
-  PublicProps = P,
+  PublicProps = {},
   Defaults = {},
   MakeDefaultsOptional extends boolean = false,
   Options = ComponentOptionsBase<any, any, any, any, any, any, any, any, any>,
@@ -317,12 +318,16 @@ export type ComponentPublicInstance<
   $watch<T extends string | ((...args: any) => any)>(
     source: T,
     cb: T extends (...args: any) => infer R
-      ? (...args: [R, R]) => any
-      : (...args: any) => any,
+      ? (...args: [R, R, OnCleanup]) => any
+      : (...args: [any, any, OnCleanup]) => any,
     options?: WatchOptions,
   ): WatchStopHandle
 } & ExposedKeys<
-  IfAny<P, P, Omit<P, keyof ShallowUnwrapRef<B>>> &
+  IfAny<
+    P,
+    P,
+    Readonly<Defaults> & Omit<P, keyof ShallowUnwrapRef<B> | keyof Defaults>
+  > &
     ShallowUnwrapRef<B> &
     UnwrapNestedRefs<D> &
     ExtractComputedReturns<C> &
@@ -486,9 +491,7 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
           return desc.get.call(instance.proxy)
         } else {
           const val = globalProperties[key]
-          return isFunction(val)
-            ? Object.assign(val.bind(instance.proxy), val)
-            : val
+          return isFunction(val) ? extend(val.bind(instance.proxy), val) : val
         }
       } else {
         return globalProperties[key]

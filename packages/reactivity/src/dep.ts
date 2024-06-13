@@ -329,5 +329,6 @@ export function trigger(
  * Test only
  */
 export function getDepFromReactive(object: any, key: string | number | symbol) {
+  // eslint-disable-next-line
   return targetMap.get(object)?.get(key)
 }

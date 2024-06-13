@@ -47,11 +47,11 @@ export class ComputedRefImpl<T = any> implements Subscriber {
   /**
    * @internal
    */
-  readonly dep = new Dep(this)
+  readonly dep = new Dep(this);
   /**
    * @internal
    */
-  readonly __v_isRef = true;
+  readonly [ReactiveFlags.IS_REF] = true;
   /**
    * @internal
    */
@@ -96,7 +96,7 @@ export class ComputedRefImpl<T = any> implements Subscriber {
     private readonly setter: ComputedSetter<T> | undefined,
     isSSR: boolean,
   ) {
-    this.__v_isReadonly = !setter
+    this[ReactiveFlags.IS_READONLY] = !setter
     this.isSSR = isSSR
   }
 

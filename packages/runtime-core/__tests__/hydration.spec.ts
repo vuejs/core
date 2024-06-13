@@ -1122,7 +1122,7 @@ describe('SSR hydration', () => {
           'input',
           { type: 'checkbox', indeterminate: '' },
           null,
-          PatchFlags.HOISTED,
+          PatchFlags.CACHED,
         ),
     )
     expect((container.firstChild as any).indeterminate).toBe(true)
@@ -1158,6 +1158,21 @@ describe('SSR hydration', () => {
     expect(vnode.el).toBe(container.childNodes[0])
     // component => slot fragment => text node
     expect((vnode as any).component?.subTree.children[0].el).toBe(text)
+  })
+
+  // #7215
+  test('empty text node', () => {
+    const Comp = {
+      render(this: any) {
+        return h('p', [''])
+      },
+    }
+    const { container } = mountWithHydration('<p></p>', () => h(Comp))
+    expect(container.childNodes.length).toBe(1)
+    const p = container.childNodes[0]
+    expect(p.childNodes.length).toBe(1)
+    const text = p.childNodes[0]
+    expect(text.nodeType).toBe(3)
   })
 
   test('app.unmount()', async () => {
@@ -1523,6 +1538,13 @@ describe('SSR hydration', () => {
       expect(`Hydration style mismatch`).not.toHaveBeenWarned()
       mountWithHydration(`<div style="color:red;"></div>`, () =>
         h('div', { style: { color: 'green' } }),
+      )
+      expect(`Hydration style mismatch`).toHaveBeenWarnedTimes(1)
+    })
+
+    test('style mismatch when no style attribute is present', () => {
+      mountWithHydration(`<div></div>`, () =>
+        h('div', { style: { color: 'red' } }),
       )
       expect(`Hydration style mismatch`).toHaveBeenWarnedTimes(1)
     })

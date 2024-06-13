@@ -6,7 +6,7 @@
 
 Messages must be matched by the following regex:
 
-``` js
+```regexp
 /^(revert: )?(feat|fix|docs|dx|style|refactor|perf|test|workflow|build|ci|chore|types|wip)(\(.+\))?: .{1,50}/
 ```
 

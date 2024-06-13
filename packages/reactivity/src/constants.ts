@@ -20,6 +20,7 @@ export enum ReactiveFlags {
   IS_READONLY = '__v_isReadonly',
   IS_SHALLOW = '__v_isShallow',
   RAW = '__v_raw',
+  IS_REF = '__v_isRef',
 }
 
 export enum DirtyLevels {

@@ -66,7 +66,7 @@ type MapSources<T, Immediate> = {
       : never
 }
 
-type OnCleanup = (cleanupFn: () => void) => void
+export type OnCleanup = (cleanupFn: () => void) => void
 
 export interface WatchOptionsBase extends DebuggerOptions {
   flush?: 'pre' | 'post' | 'sync'
@@ -496,6 +496,11 @@ export function traverse(
   } else if (isPlainObject(value)) {
     for (const key in value) {
       traverse(value[key], depth, seen)
+    }
+    for (const key of Object.getOwnPropertySymbols(value)) {
+      if (Object.prototype.propertyIsEnumerable.call(value, key)) {
+        traverse(value[key as any], depth, seen)
+      }
     }
   }
   return value

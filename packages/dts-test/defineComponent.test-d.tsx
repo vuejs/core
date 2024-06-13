@@ -1501,8 +1501,7 @@ describe('should work when props type is incompatible with setup returned type '
 
 describe('withKeys and withModifiers as pro', () => {
   const onKeydown = withKeys(e => {}, [''])
-  // @ts-expect-error invalid modifiers
-  const onClick = withModifiers(e => {}, [''])
+  const onClick = withModifiers(e => {}, [])
   ;<input onKeydown={onKeydown} onClick={onClick} />
 })
 
@@ -1973,3 +1972,24 @@ createApp({}).component(
     },
   }),
 )
+
+const Comp = defineComponent({
+  props: {
+    actionText: {
+      type: {} as PropType<string>,
+      default: 'Become a sponsor',
+    },
+  },
+  __typeProps: {} as {
+    actionText?: string
+  },
+})
+
+const instance = new Comp()
+function expectString(s: string) {}
+// instance prop with default should be non-null
+expectString(instance.actionText)
+
+// public prop on $props should be optional
+// @ts-expect-error
+expectString(instance.$props.actionText)
