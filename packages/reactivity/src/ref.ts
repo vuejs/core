@@ -330,8 +330,10 @@ export function toRefs<T extends object>(object: T): ToRefs<T> {
     }
     return ret as any
   } else {
+    const keyMap = new Map()
     return new Proxy(object, {
       get(target, key: string) {
+        if (keyMap.has(key)) return keyMap.get(key)
         if (
           key === ReactiveFlags.IS_READONLY ||
           key === ReactiveFlags.RAW ||
@@ -340,6 +342,21 @@ export function toRefs<T extends object>(object: T): ToRefs<T> {
           return false
         }
         return propertyToRef(target, key)
+      },
+      set(
+        target: T,
+        p: string | symbol,
+        newValue: any,
+        receiver: any,
+      ): boolean {
+        const res = Reflect.set(target, p, newValue, receiver)
+        if (res) keyMap.set(p, newValue)
+        return res
+      },
+      deleteProperty(target: T, p: string | symbol): boolean {
+        const res = Reflect.deleteProperty(target, p)
+        if (res) keyMap.delete(p)
+        return res
       },
     }) as ToRefs<T>
   }

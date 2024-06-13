@@ -392,16 +392,20 @@ describe('reactivity/ref', () => {
       foo: 'foo',
     })
 
-    const { foo, bar } = toRefs(a)
-    expect(isRef(foo)).toBe(true)
-    expect(isRef(bar)).toBe(true)
+    const state = toRefs(a)
+    expect(isRef(state.foo)).toBe(true)
+    expect(isRef(state.bar)).toBe(true)
 
-    expect(foo.value).toBe('foo')
-    expect(bar.value).toBe(undefined)
+    expect(state.foo.value).toBe('foo')
+    expect(state.bar.value).toBe(undefined)
 
-    bar.value = 'bar'
+    state.bar.value = 'bar'
 
     expect(a.bar).toBe('bar')
+    // @ts-expect-error
+    state.b = 1
+    // @ts-expect-error
+    expect(state.b).toBe(1)
   })
 
   test('customRef', () => {
