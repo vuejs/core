@@ -480,6 +480,26 @@ describe('type inference w/ options API', () => {
   })
 })
 
+// #4051
+describe('type inference w/ empty prop object', () => {
+  const MyComponent = defineComponent({
+    props: {},
+    setup(props) {
+      return {}
+    },
+    render() {}
+  })
+  expectType<JSX.Element>(<MyComponent />)
+  // AllowedComponentProps
+  expectType<JSX.Element>(<MyComponent class={'foo'} />)
+  // ComponentCustomProps
+  expectType<JSX.Element>(<MyComponent custom={1} />)
+  // VNodeProps
+  expectType<JSX.Element>(<MyComponent key="1" />)
+  // @ts-expect-error
+  expectError(<MyComponent other="other" />)
+})
+
 describe('with mixins', () => {
   const MixinA = defineComponent({
     emits: ['bar'],
