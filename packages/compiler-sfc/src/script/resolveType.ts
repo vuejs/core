@@ -912,7 +912,7 @@ function importSourceToScope(
 
       const filename = osSpecificJoinFn(dirname(scope.filename), source)
       resolved = resolveExt(filename, fs)
-    } else if (source.startsWith('.')) {
+    } else if (source[0] === '.') {
       // relative import - fast path
       const filename = joinPaths(dirname(scope.filename), source)
       resolved = resolveExt(filename, fs)
