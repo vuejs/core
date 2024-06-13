@@ -27,8 +27,13 @@ import {
 } from '@vue/runtime-core'
 import { extend } from '@vue/shared'
 
-const positionMap = new WeakMap<VNode, DOMRect>()
-const newPositionMap = new WeakMap<VNode, DOMRect>()
+interface Position {
+  left: number
+  top: number
+}
+
+const positionMap = new WeakMap<VNode, Position>()
+const newPositionMap = new WeakMap<VNode, Position>()
 
 export type TransitionGroupProps = Omit<TransitionProps, 'mode'> & {
   tag?: string
@@ -132,10 +137,7 @@ const TransitionGroupImpl: ComponentOptions = {
             child,
             resolveTransitionHooks(child, cssTransitionProps, state, instance)
           )
-          positionMap.set(
-            child,
-            getRelativeBoundingClientRect(child.el as Element)
-          )
+          positionMap.set(child, getRelativePosition(child.el as Element))
         }
       }
 
@@ -173,21 +175,18 @@ function callPendingCbs(c: VNode) {
   }
 }
 
-function getRelativeBoundingClientRect(el: Element) {
+function getRelativePosition(el: Element): Position {
   const elRect = el.getBoundingClientRect()
-  if (!el.parentElement) return elRect
-  const parentRect = el.parentElement.getBoundingClientRect()
+  const parentRect = el.parentElement?.getBoundingClientRect()
 
-  return new DOMRectReadOnly(
-    elRect.x - parentRect.x,
-    elRect.y - parentRect.y,
-    elRect.width - parentRect.width,
-    elRect.height - parentRect.height
-  )
+  return {
+    left: elRect.left - (parentRect?.left || 0),
+    top: elRect.top - (parentRect?.top || 0)
+  }
 }
 
 function recordPosition(c: VNode) {
-  newPositionMap.set(c, getRelativeBoundingClientRect(c.el as Element))
+  newPositionMap.set(c, getRelativePosition(c.el as Element))
 }
 
 function applyTranslation(c: VNode): VNode | undefined {
