@@ -2,18 +2,19 @@ import {
   type Ref,
   type Slots,
   type VNode,
+  defineComponent,
   defineEmits,
   defineModel,
+  defineOptions,
   defineProps,
   defineSlots,
   toRefs,
   useAttrs,
+  useModel,
   useSlots,
   withDefaults,
 } from 'vue'
 import { describe, expectType } from './utils'
-import { defineComponent } from 'vue'
-import { useModel } from 'vue'
 
 describe('defineProps w/ type declaration', () => {
   // type declaration
@@ -100,6 +101,41 @@ describe('defineProps w/ union type declaration + withDefaults', () => {
       union4: () => 123,
     },
   )
+})
+
+describe('defineProps w/ object union + withDefaults', () => {
+  const props = withDefaults(
+    defineProps<
+      {
+        foo: string
+      } & (
+        | {
+            type: 'hello'
+            bar: string
+          }
+        | {
+            type: 'world'
+            bar: number
+          }
+      )
+    >(),
+    {
+      foo: 'default value!',
+    },
+  )
+
+  expectType<
+    | {
+        readonly type: 'hello'
+        readonly bar: string
+        readonly foo: string
+      }
+    | {
+        readonly type: 'world'
+        readonly bar: number
+        readonly foo: string
+      }
+  >(props)
 })
 
 describe('defineProps w/ generic type declaration + withDefaults', <T extends
@@ -465,4 +501,22 @@ describe('toRefs w/ type declaration', () => {
     file?: File | File[]
   }>()
   expectType<Ref<File | File[] | undefined>>(toRefs(props).file)
+})
+
+describe('defineOptions', () => {
+  defineOptions({
+    name: 'MyComponent',
+    inheritAttrs: true,
+  })
+
+  defineOptions({
+    // @ts-expect-error props should be defined via defineProps()
+    props: ['props'],
+    // @ts-expect-error emits should be defined via defineEmits()
+    emits: ['emits'],
+    // @ts-expect-error slots should be defined via defineSlots()
+    slots: { default: 'default' },
+    // @ts-expect-error expose should be defined via defineExpose()
+    expose: ['expose'],
+  })
 })

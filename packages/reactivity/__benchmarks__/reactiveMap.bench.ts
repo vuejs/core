@@ -79,7 +79,7 @@ bench('create reactive map', () => {
 
 {
   const r = reactive(createMap({ a: 1 }))
-  const computeds = []
+  const computeds: any[] = []
   for (let i = 0, n = 1000; i < n; i++) {
     const c = computed(() => {
       return r.get('a') * 2
@@ -94,7 +94,7 @@ bench('create reactive map', () => {
 
 {
   const r = reactive(createMap({ a: 1 }))
-  const computeds = []
+  const computeds: any[] = []
   for (let i = 0, n = 1000; i < n; i++) {
     const c = computed(() => {
       return r.get('a') * 2

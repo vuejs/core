@@ -14,6 +14,7 @@ beforeEach(() => {
   Vue.configureCompat({
     MODE: 2,
     GLOBAL_MOUNT: 'suppress-warning',
+    PRIVATE_APIS: 'suppress-warning',
   })
 })
 
@@ -283,7 +284,7 @@ describe('INSTANCE_SCOPED_SLOTS', () => {
     ).toHaveBeenWarned()
   })
 
-  test('should not include legacy slot usage in $scopedSlots', () => {
+  test('should include legacy slot usage in $scopedSlots', () => {
     let normalSlots: Slots
     let scopedSlots: Slots
     new Vue({
@@ -291,7 +292,7 @@ describe('INSTANCE_SCOPED_SLOTS', () => {
       components: {
         child: {
           compatConfig: { RENDER_FUNCTION: false },
-          render() {
+          render(this: LegacyPublicInstance) {
             normalSlots = this.$slots
             scopedSlots = this.$scopedSlots
           },
@@ -300,7 +301,7 @@ describe('INSTANCE_SCOPED_SLOTS', () => {
     }).$mount()
 
     expect('default' in normalSlots!).toBe(true)
-    expect('default' in scopedSlots!).toBe(false)
+    expect('default' in scopedSlots!).toBe(true)
 
     expect(
       deprecationData[DeprecationTypes.INSTANCE_SCOPED_SLOTS].message,
@@ -330,4 +331,44 @@ test('INSTANCE_ATTR_CLASS_STYLE', () => {
         .message as Function
     )('Anonymous'),
   ).toHaveBeenWarned()
+})
+
+test('$options mutation', () => {
+  const Comp = {
+    props: ['id'],
+    template: '<div/>',
+    data() {
+      return {
+        foo: '',
+      }
+    },
+    created(this: any) {
+      expect(this.$options.parent).toBeDefined()
+      expect(this.$options.test).toBeUndefined()
+      this.$options.test = this.id
+      expect(this.$options.test).toBe(this.id)
+    },
+  }
+
+  new Vue({
+    template: `<div><Comp id="1"/><Comp id="2"/></div>`,
+    components: { Comp },
+  }).$mount()
+})
+
+test('other private APIs', () => {
+  new Vue({
+    created() {
+      expect(this.$createElement).toBeTruthy()
+    },
+  })
+
+  new Vue({
+    compatConfig: {
+      PRIVATE_APIS: false,
+    },
+    created() {
+      expect(this.$createElement).toBeUndefined()
+    },
+  })
 })

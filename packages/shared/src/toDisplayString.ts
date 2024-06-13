@@ -1,3 +1,4 @@
+import { ReactiveFlags } from '@vue/reactivity'
 import {
   isArray,
   isFunction,
@@ -28,7 +29,7 @@ export const toDisplayString = (val: unknown): string => {
 
 const replacer = (_key: string, val: any): any => {
   // can't use isRef here since @vue/shared has no deps
-  if (val && val.__v_isRef) {
+  if (val && val[ReactiveFlags.IS_REF]) {
     return replacer(_key, val.value)
   } else if (isMap(val)) {
     return {
@@ -54,4 +55,6 @@ const replacer = (_key: string, val: any): any => {
 }
 
 const stringifySymbol = (v: unknown, i: number | string = ''): any =>
-  isSymbol(v) ? `Symbol(${v.description ?? i})` : v
+  // Symbol.description in es2019+ so we need to cast here to pass
+  // the lib: es2016 check
+  isSymbol(v) ? `Symbol(${(v as any).description ?? i})` : v

@@ -4,6 +4,7 @@ import {
   NodeTypes,
   type SlotOutletNode,
   TRANSITION,
+  TRANSITION_GROUP,
   createCallExpression,
   createFunctionExpression,
   isSlotOutlet,
@@ -37,23 +38,32 @@ export const ssrTransformSlotOutlet: NodeTransform = (node, context) => {
 
     let method = SSR_RENDER_SLOT
 
-    // #3989
+    // #3989, #9933
     // check if this is a single slot inside a transition wrapper - since
-    // transition will unwrap the slot fragment into a single vnode at runtime,
-    // we need to avoid rendering the slot as a fragment.
-    const parent = context.parent
-    if (
-      parent &&
-      parent.type === NodeTypes.ELEMENT &&
-      parent.tagType === ElementTypes.COMPONENT &&
-      resolveComponentType(parent, context, true) === TRANSITION &&
-      parent.children.filter(c => c.type === NodeTypes.ELEMENT).length === 1
-    ) {
-      method = SSR_RENDER_SLOT_INNER
-      if (!(context.scopeId && context.slotted !== false)) {
-        args.push('null')
+    // transition/transition-group will unwrap the slot fragment into vnode(s)
+    // at runtime, we need to avoid rendering the slot as a fragment.
+    let parent = context.parent!
+    if (parent) {
+      const children = parent.children
+      // #10743 <slot v-if> in <Transition>
+      if (parent.type === NodeTypes.IF_BRANCH) {
+        parent = context.grandParent!
       }
-      args.push('true')
+      let componentType
+      if (
+        parent.type === NodeTypes.ELEMENT &&
+        parent.tagType === ElementTypes.COMPONENT &&
+        ((componentType = resolveComponentType(parent, context, true)) ===
+          TRANSITION ||
+          componentType === TRANSITION_GROUP) &&
+        children.filter(c => c.type === NodeTypes.ELEMENT).length === 1
+      ) {
+        method = SSR_RENDER_SLOT_INNER
+        if (!(context.scopeId && context.slotted !== false)) {
+          args.push('null')
+        }
+        args.push('true')
+      }
     }
 
     node.ssrCodegenNode = createCallExpression(context.helper(method), args)

@@ -1214,6 +1214,111 @@ describe('e2e: Transition', () => {
       },
       E2E_TIMEOUT,
     )
+
+    // #3716
+    test(
+      'wrapping transition + fallthrough attrs',
+      async () => {
+        await page().goto(baseUrl)
+        await page().waitForSelector('#app')
+        await page().evaluate(() => {
+          const { createApp, ref } = (window as any).Vue
+          createApp({
+            components: {
+              'my-transition': {
+                template: `
+                  <transition foo="1" name="test">
+                    <slot></slot>
+                  </transition>
+                `,
+              },
+            },
+            template: `
+            <div id="container">
+              <my-transition>
+                <div v-if="toggle">content</div>
+              </my-transition>
+            </div>
+            <button id="toggleBtn" @click="click">button</button>
+          `,
+            setup: () => {
+              const toggle = ref(true)
+              const click = () => (toggle.value = !toggle.value)
+              return { toggle, click }
+            },
+          }).mount('#app')
+        })
+        expect(await html('#container')).toBe('<div foo="1">content</div>')
+
+        await click('#toggleBtn')
+        // toggle again before leave finishes
+        await nextTick()
+        await click('#toggleBtn')
+
+        await transitionFinish()
+        expect(await html('#container')).toBe(
+          '<div foo="1" class="">content</div>',
+        )
+      },
+      E2E_TIMEOUT,
+    )
+
+    test(
+      'w/ KeepAlive + unmount innerChild',
+      async () => {
+        const unmountSpy = vi.fn()
+        await page().exposeFunction('unmountSpy', unmountSpy)
+        await page().evaluate(() => {
+          const { unmountSpy } = window as any
+          const { createApp, ref, h, onUnmounted } = (window as any).Vue
+          createApp({
+            template: `
+            <div id="container">
+              <transition mode="out-in">
+                <KeepAlive :include="includeRef">
+                  <TrueBranch v-if="toggle"></TrueBranch>
+                </KeepAlive>
+              </transition>
+            </div>
+            <button id="toggleBtn" @click="click">button</button>
+          `,
+            components: {
+              TrueBranch: {
+                name: 'TrueBranch',
+                setup() {
+                  onUnmounted(unmountSpy)
+                  const count = ref(0)
+                  return () => h('div', count.value)
+                },
+              },
+            },
+            setup: () => {
+              const includeRef = ref(['TrueBranch'])
+              const toggle = ref(true)
+              const click = () => {
+                toggle.value = !toggle.value
+                if (toggle.value) {
+                  includeRef.value = ['TrueBranch']
+                } else {
+                  includeRef.value = []
+                }
+              }
+              return { toggle, click, unmountSpy, includeRef }
+            },
+          }).mount('#app')
+        })
+
+        await transitionFinish()
+        expect(await html('#container')).toBe('<div>0</div>')
+
+        await click('#toggleBtn')
+
+        await transitionFinish()
+        expect(await html('#container')).toBe('<!--v-if-->')
+        expect(unmountSpy).toBeCalledTimes(1)
+      },
+      E2E_TIMEOUT,
+    )
   })
 
   describe('transition with Suspense', () => {
@@ -1649,6 +1754,166 @@ describe('e2e: Transition', () => {
         await transitionFinish()
         await nextFrame()
         expect(await html('#container')).toBe('<div class="test">one</div>')
+      },
+      E2E_TIMEOUT,
+    )
+
+    // #9996
+    test(
+      'trigger again when transition is not finished & correctly anchor',
+      async () => {
+        await page().evaluate(duration => {
+          const { createApp, shallowRef, h } = (window as any).Vue
+          const One = {
+            async setup() {
+              return () => h('div', { class: 'test' }, 'one')
+            },
+          }
+          const Two = {
+            async setup() {
+              return () => h('div', { class: 'test' }, 'two')
+            },
+          }
+          createApp({
+            template: `
+            <div id="container">
+              <div>Top</div>
+              <transition name="test" mode="out-in" :duration="${duration}">
+                <Suspense>
+                  <component :is="view"/>
+                </Suspense>
+              </transition>
+              <div>Bottom</div>
+            </div>
+            <button id="toggleBtn" @click="click">button</button>
+          `,
+            setup: () => {
+              const view = shallowRef(One)
+              const click = () => {
+                view.value = view.value === One ? Two : One
+              }
+              return { view, click }
+            },
+          }).mount('#app')
+        }, duration)
+
+        await nextFrame()
+        expect(await html('#container')).toBe(
+          '<div>Top</div><div class="test test-enter-active test-enter-to">one</div><div>Bottom</div>',
+        )
+
+        await transitionFinish()
+        expect(await html('#container')).toBe(
+          '<div>Top</div><div class="test">one</div><div>Bottom</div>',
+        )
+
+        // trigger twice
+        classWhenTransitionStart()
+        await nextFrame()
+        expect(await html('#container')).toBe(
+          '<div>Top</div><div class="test test-leave-active test-leave-to">one</div><div>Bottom</div>',
+        )
+
+        await transitionFinish()
+        await nextFrame()
+        expect(await html('#container')).toBe(
+          '<div>Top</div><div class="test test-enter-active test-enter-to">two</div><div>Bottom</div>',
+        )
+
+        await transitionFinish()
+        await nextFrame()
+        expect(await html('#container')).toBe(
+          '<div>Top</div><div class="test">two</div><div>Bottom</div>',
+        )
+      },
+      E2E_TIMEOUT,
+    )
+  })
+
+  describe('transition with Teleport', () => {
+    test(
+      'apply transition to teleport child',
+      async () => {
+        await page().evaluate(() => {
+          const { createApp, ref, h } = (window as any).Vue
+          createApp({
+            template: `
+            <div id="target"></div>
+            <div id="container">
+              <transition>
+                <Teleport to="#target">
+                  <!-- comment -->
+                  <Comp v-if="toggle" class="test">content</Comp>
+                </Teleport>
+              </transition>
+            </div>
+            <button id="toggleBtn" @click="click">button</button>
+          `,
+            components: {
+              Comp: {
+                setup() {
+                  return () => h('div', { class: 'test' }, 'content')
+                },
+              },
+            },
+            setup: () => {
+              const toggle = ref(false)
+              const click = () => (toggle.value = !toggle.value)
+              return { toggle, click }
+            },
+          }).mount('#app')
+        })
+
+        expect(await html('#target')).toBe('<!-- comment --><!--v-if-->')
+        expect(await html('#container')).toBe(
+          '<!--teleport start--><!--teleport end-->',
+        )
+
+        const classWhenTransitionStart = () =>
+          page().evaluate(() => {
+            ;(document.querySelector('#toggleBtn') as any)!.click()
+            return Promise.resolve().then(() => {
+              // find the class of teleported node
+              return document
+                .querySelector('#target div')!
+                .className.split(/\s+/g)
+            })
+          })
+
+        // enter
+        expect(await classWhenTransitionStart()).toStrictEqual([
+          'test',
+          'v-enter-from',
+          'v-enter-active',
+        ])
+        await nextFrame()
+        expect(await classList('.test')).toStrictEqual([
+          'test',
+          'v-enter-active',
+          'v-enter-to',
+        ])
+        await transitionFinish()
+        expect(await html('#target')).toBe(
+          '<!-- comment --><div class="test">content</div>',
+        )
+
+        // leave
+        expect(await classWhenTransitionStart()).toStrictEqual([
+          'test',
+          'v-leave-from',
+          'v-leave-active',
+        ])
+        await nextFrame()
+        expect(await classList('.test')).toStrictEqual([
+          'test',
+          'v-leave-active',
+          'v-leave-to',
+        ])
+        await transitionFinish()
+        expect(await html('#target')).toBe('<!-- comment --><!--v-if-->')
+        expect(await html('#container')).toBe(
+          '<!--teleport start--><!--teleport end-->',
+        )
       },
       E2E_TIMEOUT,
     )

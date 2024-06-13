@@ -160,6 +160,7 @@ describe('shallowReactive', () => {
       shallowArray.pop()
       expect(size).toBe(0)
     })
+
     test('should not observe when iterating', () => {
       const shallowArray = shallowReactive<object[]>([])
       const a = {}

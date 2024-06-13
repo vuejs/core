@@ -639,190 +639,6 @@ return { foo, bar, baz, y, z }
 }"
 `;
 
-exports[`SFC compile <script setup> > dev mode import usage check > TS annotations 1`] = `
-"import { defineComponent as _defineComponent } from 'vue'
-import { Foo, Bar, Baz, Qux, Fred } from './x'
-        const a = 1
-        
-export default /*#__PURE__*/_defineComponent({
-  setup(__props, { expose: __expose }) {
-  __expose();
-
-        function b() {}
-        
-return { a, b, get Baz() { return Baz } }
-}
-
-})"
-`;
-
-exports[`SFC compile <script setup> > dev mode import usage check > attribute expressions 1`] = `
-"import { defineComponent as _defineComponent } from 'vue'
-import { bar, baz } from './x'
-        const cond = true
-        
-export default /*#__PURE__*/_defineComponent({
-  setup(__props, { expose: __expose }) {
-  __expose();
-
-        
-return { cond, get bar() { return bar }, get baz() { return baz } }
-}
-
-})"
-`;
-
-exports[`SFC compile <script setup> > dev mode import usage check > components 1`] = `
-"import { defineComponent as _defineComponent } from 'vue'
-import { FooBar, FooBaz, FooQux, foo } from './x'
-        const fooBar: FooBar = 1
-        
-export default /*#__PURE__*/_defineComponent({
-  setup(__props, { expose: __expose }) {
-  __expose();
-
-        
-return { fooBar, get FooBaz() { return FooBaz }, get FooQux() { return FooQux }, get foo() { return foo } }
-}
-
-})"
-`;
-
-exports[`SFC compile <script setup> > dev mode import usage check > directive 1`] = `
-"import { defineComponent as _defineComponent } from 'vue'
-import { vMyDir } from './x'
-        
-export default /*#__PURE__*/_defineComponent({
-  setup(__props, { expose: __expose }) {
-  __expose();
-
-        
-return { get vMyDir() { return vMyDir } }
-}
-
-})"
-`;
-
-exports[`SFC compile <script setup> > dev mode import usage check > dynamic arguments 1`] = `
-"import { defineComponent as _defineComponent } from 'vue'
-import { FooBar, foo, bar, unused, baz } from './x'
-        
-export default /*#__PURE__*/_defineComponent({
-  setup(__props, { expose: __expose }) {
-  __expose();
-
-        
-return { get FooBar() { return FooBar }, get foo() { return foo }, get bar() { return bar }, get baz() { return baz } }
-}
-
-})"
-`;
-
-exports[`SFC compile <script setup> > dev mode import usage check > js template string interpolations 1`] = `
-"import { defineComponent as _defineComponent } from 'vue'
-import { VAR, VAR2, VAR3 } from './x'
-        
-export default /*#__PURE__*/_defineComponent({
-  setup(__props, { expose: __expose }) {
-  __expose();
-
-        
-return { get VAR() { return VAR }, get VAR3() { return VAR3 } }
-}
-
-})"
-`;
-
-exports[`SFC compile <script setup> > dev mode import usage check > last tag 1`] = `
-"import { defineComponent as _defineComponent } from 'vue'
-import { FooBaz, Last } from './x'
-        
-export default /*#__PURE__*/_defineComponent({
-  setup(__props, { expose: __expose }) {
-  __expose();
-
-        
-return { get FooBaz() { return FooBaz }, get Last() { return Last } }
-}
-
-})"
-`;
-
-exports[`SFC compile <script setup> > dev mode import usage check > property access (whitespace) 1`] = `
-"import { defineComponent as _defineComponent } from 'vue'
-import { Foo, Bar, Baz } from './foo'
-        
-export default /*#__PURE__*/_defineComponent({
-  setup(__props, { expose: __expose }) {
-  __expose();
-
-          
-return { get Foo() { return Foo } }
-}
-
-})"
-`;
-
-exports[`SFC compile <script setup> > dev mode import usage check > property access 1`] = `
-"import { defineComponent as _defineComponent } from 'vue'
-import { Foo, Bar, Baz } from './foo'
-        
-export default /*#__PURE__*/_defineComponent({
-  setup(__props, { expose: __expose }) {
-  __expose();
-
-          
-return { get Foo() { return Foo } }
-}
-
-})"
-`;
-
-exports[`SFC compile <script setup> > dev mode import usage check > spread operator 1`] = `
-"import { defineComponent as _defineComponent } from 'vue'
-import { Foo, Bar, Baz } from './foo'
-        
-export default /*#__PURE__*/_defineComponent({
-  setup(__props, { expose: __expose }) {
-  __expose();
-
-          
-return { get Foo() { return Foo } }
-}
-
-})"
-`;
-
-exports[`SFC compile <script setup> > dev mode import usage check > template ref 1`] = `
-"import { defineComponent as _defineComponent } from 'vue'
-import { foo, bar, Baz } from './foo'
-        
-export default /*#__PURE__*/_defineComponent({
-  setup(__props, { expose: __expose }) {
-  __expose();
-
-          
-return { get foo() { return foo }, get bar() { return bar }, get Baz() { return Baz } }
-}
-
-})"
-`;
-
-exports[`SFC compile <script setup> > dev mode import usage check > vue interpolations 1`] = `
-"import { defineComponent as _defineComponent } from 'vue'
-import { x, y, z, x$y } from './x'
-      
-export default /*#__PURE__*/_defineComponent({
-  setup(__props, { expose: __expose }) {
-  __expose();
-
-      
-return { get x() { return x }, get z() { return z }, get x$y() { return x$y } }
-}
-
-})"
-`;
-
 exports[`SFC compile <script setup> > errors > should allow defineProps/Emit() referencing imported binding 1`] = `
 "import { bar } from './bar'
         
@@ -1035,8 +851,6 @@ return (_ctx, _cache) => {
 exports[`SFC compile <script setup> > inlineTemplate mode > should work 1`] = `
 "import { toDisplayString as _toDisplayString, createElementVNode as _createElementVNode, Fragment as _Fragment, openBlock as _openBlock, createElementBlock as _createElementBlock } from "vue"
 
-const _hoisted_1 = /*#__PURE__*/_createElementVNode("div", null, "static", -1 /* HOISTED */)
-
 import { ref } from 'vue'
         
 export default {
@@ -1047,7 +861,7 @@ export default {
 return (_ctx, _cache) => {
   return (_openBlock(), _createElementBlock(_Fragment, null, [
     _createElementVNode("div", null, _toDisplayString(count.value), 1 /* TEXT */),
-    _hoisted_1
+    _cache[0] || (_cache[0] = _createElementVNode("div", null, "static", -1 /* CACHED */))
   ], 64 /* STABLE_FRAGMENT */))
 }
 }
@@ -1205,6 +1019,26 @@ return (_ctx, _cache) => {
     _createElementVNode("div", {
       onClick: _cache[5] || (_cache[5] = $event => (_isRef(lett) ? --lett.value : --lett))
     })
+  ], 64 /* STABLE_FRAGMENT */))
+}
+}
+
+}"
+`;
+
+exports[`SFC compile <script setup> > inlineTemplate mode > unref + new expression 1`] = `
+"import { unref as _unref, toDisplayString as _toDisplayString, createElementVNode as _createElementVNode, Fragment as _Fragment, openBlock as _openBlock, createElementBlock as _createElementBlock } from "vue"
+
+import Foo from './foo'
+        
+export default {
+  setup(__props) {
+
+        
+return (_ctx, _cache) => {
+  return (_openBlock(), _createElementBlock(_Fragment, null, [
+    _createElementVNode("div", null, _toDisplayString(new (_unref(Foo))()), 1 /* TEXT */),
+    _createElementVNode("div", null, _toDisplayString(new (_unref(Foo)).Bar()), 1 /* TEXT */)
   ], 64 /* STABLE_FRAGMENT */))
 }
 }
@@ -1522,6 +1356,27 @@ export default {
 
         
 return { get foo() { return foo } }
+}
+
+}"
+`;
+
+exports[`compileScript > should care about runtimeModuleName 1`] = `
+"import { withAsyncContext as _withAsyncContext } from "npm:vue"
+
+export default {
+  async setup(__props, { expose: __expose }) {
+  __expose();
+
+let __temp, __restore
+
+        ;(
+  ([__temp,__restore] = _withAsyncContext(() => Promise.resolve(1))),
+  await __temp,
+  __restore()
+)
+      
+return {  }
 }
 
 }"

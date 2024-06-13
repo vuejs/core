@@ -1,5 +1,14 @@
 import { isRef, ref, toRefs } from '../src/ref'
-import { isReactive, markRaw, reactive, toRaw } from '../src/reactive'
+import {
+  isProxy,
+  isReactive,
+  markRaw,
+  reactive,
+  readonly,
+  shallowReactive,
+  shallowReadonly,
+  toRaw,
+} from '../src/reactive'
 import { computed } from '../src/computed'
 import { effect } from '../src/effect'
 
@@ -277,6 +286,11 @@ describe('reactivity/reactive', () => {
     expect(isReactive(obj.bar)).toBe(false)
   })
 
+  test('markRaw should skip non-extensible objects', () => {
+    const obj = Object.seal({ foo: 1 })
+    expect(() => markRaw(obj)).not.toThrowError()
+  })
+
   test('should not observe non-extensible objects', () => {
     const obj = reactive({
       foo: Object.preventExtensions({ a: 1 }),
@@ -296,6 +310,54 @@ describe('reactivity/reactive', () => {
     }
     const observed = reactive(original)
     expect(isReactive(observed)).toBe(false)
+  })
+
+  test('hasOwnProperty edge case: Symbol values', () => {
+    const key = Symbol()
+    const obj = reactive({ [key]: 1 }) as { [key]?: 1 }
+    let dummy
+    effect(() => {
+      dummy = obj.hasOwnProperty(key)
+    })
+    expect(dummy).toBe(true)
+
+    delete obj[key]
+    expect(dummy).toBe(false)
+  })
+
+  test('hasOwnProperty edge case: non-string values', () => {
+    const key = {}
+    const obj = reactive({ '[object Object]': 1 }) as { '[object Object]'?: 1 }
+    let dummy
+    effect(() => {
+      // @ts-expect-error
+      dummy = obj.hasOwnProperty(key)
+    })
+    expect(dummy).toBe(true)
+
+    // @ts-expect-error
+    delete obj[key]
+    expect(dummy).toBe(false)
+  })
+
+  test('isProxy', () => {
+    const foo = {}
+    expect(isProxy(foo)).toBe(false)
+
+    const fooRe = reactive(foo)
+    expect(isProxy(fooRe)).toBe(true)
+
+    const fooSRe = shallowReactive(foo)
+    expect(isProxy(fooSRe)).toBe(true)
+
+    const barRl = readonly(foo)
+    expect(isProxy(barRl)).toBe(true)
+
+    const barSRl = shallowReadonly(foo)
+    expect(isProxy(barSRl)).toBe(true)
+
+    const c = computed(() => {})
+    expect(isProxy(c)).toBe(false)
   })
 
   it('reactive(toRefs())', () => {
