@@ -338,6 +338,23 @@ describe('defineCustomElement', () => {
       expect(el.maxAge).toBe(50)
       expect(el.shadowRoot.innerHTML).toBe('max age: 50/type: number')
     })
+
+    test('support direct setup function syntax with extra options', () => {
+      const E = defineCustomElement(
+        props => {
+          return () => props.text
+        },
+        {
+          props: {
+            text: String,
+          },
+        },
+      )
+      customElements.define('my-el-setup-with-props', E)
+      container.innerHTML = `<my-el-setup-with-props text="hello"></my-el-setup-with-props>`
+      const e = container.childNodes[0] as VueElement
+      expect(e.shadowRoot!.innerHTML).toBe('hello')
+    })
   })
 
   describe('attrs', () => {
