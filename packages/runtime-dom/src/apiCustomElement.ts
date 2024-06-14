@@ -1,6 +1,7 @@
 import {
   type ComponentInjectOptions,
   type ComponentInternalInstance,
+  type ComponentObjectPropsOptions,
   type ComponentOptions,
   type ComponentOptionsMixin,
   type ComponentOptionsWithArrayProps,
