@@ -1139,12 +1139,12 @@ function parseFile(
   parserPlugins?: SFCScriptCompileOptions['babelParserPlugins'],
 ): Statement[] {
   const ext = extname(filename)
-  if (ext === '.ts' || ext === '.tsx') {
+  if (ext === '.ts' || ext === '.mts' || ext === '.tsx' || ext === '.mtsx') {
     return babelParse(content, {
       plugins: resolveParserPlugins(
         ext.slice(1),
         parserPlugins,
-        filename.endsWith('.d.ts'),
+        /\.d\.m?ts$/.test(filename),
       ),
       sourceType: 'module',
     }).program.body
