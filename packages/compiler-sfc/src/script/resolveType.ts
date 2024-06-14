@@ -165,6 +165,12 @@ function innerResolveTypeElements(
   scope: TypeScope,
   typeParameters?: Record<string, Node>,
 ): ResolvedElements {
+  if (
+    node.leadingComments &&
+    node.leadingComments.some(c => c.value.includes('@vue-ignore'))
+  ) {
+    return { props: {} }
+  }
   switch (node.type) {
     case 'TSTypeLiteral':
       return typeElementsToMap(ctx, node.members, scope, typeParameters)
@@ -414,12 +420,6 @@ function resolveInterfaceMembers(
   )
   if (node.extends) {
     for (const ext of node.extends) {
-      if (
-        ext.leadingComments &&
-        ext.leadingComments.some(c => c.value.includes('@vue-ignore'))
-      ) {
-        continue
-      }
       try {
         const { props, calls } = resolveTypeElements(ctx, ext, scope)
         for (const key in props) {
@@ -439,6 +439,7 @@ function resolveInterfaceMembers(
             `Note: both in 3.2 or with the ignore, the properties in the base ` +
             `type are treated as fallthrough attrs at runtime.`,
           ext,
+          scope,
         )
       }
     }
@@ -1138,12 +1139,12 @@ function parseFile(
   parserPlugins?: SFCScriptCompileOptions['babelParserPlugins'],
 ): Statement[] {
   const ext = extname(filename)
-  if (ext === '.ts' || ext === '.tsx') {
+  if (ext === '.ts' || ext === '.mts' || ext === '.tsx' || ext === '.mtsx') {
     return babelParse(content, {
       plugins: resolveParserPlugins(
         ext.slice(1),
         parserPlugins,
-        filename.endsWith('.d.ts'),
+        /\.d\.m?ts$/.test(filename),
       ),
       sourceType: 'module',
     }).program.body
