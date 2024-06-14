@@ -517,24 +517,24 @@ describe('resolveType', () => {
   test('keyof: intersection type', () => {
     const { props } = resolve(`
     type A = { name: string }
-    type B = A & { color: string }
+    type B = A & { [key: number]: string }
     defineProps<{
       foo: keyof B
     }>()`)
     expect(props).toStrictEqual({
-      foo: ['String'],
+      foo: ['String', 'Number'],
     })
   })
 
   test('keyof: union type', () => {
     const { props } = resolve(`
     type A = { name: string }
-    type B = A | { color: string }
+    type B = A | { [key: number]: string }
     defineProps<{
       foo: keyof B
     }>()`)
     expect(props).toStrictEqual({
-      foo: ['String'],
+      foo: ['String', 'Number'],
     })
   })
 
