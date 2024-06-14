@@ -2155,7 +2155,6 @@ function baseCreateRenderer(
           vnode,
           parentComponent,
           parentSuspense,
-          optimized,
           internals,
           doRemove,
         )
