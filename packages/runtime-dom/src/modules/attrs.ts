@@ -76,12 +76,13 @@ export function compatCoerceAttr(
   } else if (
     value === false &&
     !isSpecialBooleanAttr(key) &&
-    compatUtils.softAssertCompatEnabled(
+    compatUtils.isCompatEnabled(DeprecationTypes.ATTR_FALSE_VALUE, instance)
+  ) {
+    compatUtils.warnDeprecation(
       DeprecationTypes.ATTR_FALSE_VALUE,
       instance,
       key,
     )
-  ) {
     el.removeAttribute(key)
     return true
   }
