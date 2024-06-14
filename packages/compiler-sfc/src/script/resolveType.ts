@@ -165,6 +165,12 @@ function innerResolveTypeElements(
   scope: TypeScope,
   typeParameters?: Record<string, Node>,
 ): ResolvedElements {
+  if (
+    node.leadingComments &&
+    node.leadingComments.some(c => c.value.includes('@vue-ignore'))
+  ) {
+    return { props: {} }
+  }
   switch (node.type) {
     case 'TSTypeLiteral':
       return typeElementsToMap(ctx, node.members, scope, typeParameters)
@@ -414,12 +420,6 @@ function resolveInterfaceMembers(
   )
   if (node.extends) {
     for (const ext of node.extends) {
-      if (
-        ext.leadingComments &&
-        ext.leadingComments.some(c => c.value.includes('@vue-ignore'))
-      ) {
-        continue
-      }
       try {
         const { props, calls } = resolveTypeElements(ctx, ext, scope)
         for (const key in props) {

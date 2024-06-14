@@ -137,6 +137,18 @@ describe('resolveType', () => {
     })
   })
 
+  test('intersection type with ignore', () => {
+    expect(
+      resolve(`
+    type Foo = { foo: number }
+    type Bar = { bar: string }
+    defineProps<Foo & /* @vue-ignore */ Bar>()
+    `).props,
+    ).toStrictEqual({
+      foo: ['Number'],
+    })
+  })
+
   // #7553
   test('union type', () => {
     expect(
