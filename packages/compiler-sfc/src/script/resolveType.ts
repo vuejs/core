@@ -1686,9 +1686,9 @@ export function inferRuntimeType(
         return inferRuntimeType(ctx, node.typeAnnotation, scope)
 
       case 'TSUnionType':
-        return flattenTypes(ctx, node.types, scope)
+        return flattenTypes(ctx, node.types, scope, isKeyOf)
       case 'TSIntersectionType': {
-        return flattenTypes(ctx, node.types, scope).filter(
+        return flattenTypes(ctx, node.types, scope, isKeyOf).filter(
           t => t !== UNKNOWN_TYPE,
         )
       }
@@ -1760,14 +1760,15 @@ function flattenTypes(
   ctx: TypeResolveContext,
   types: TSType[],
   scope: TypeScope,
+  isKeyOf: boolean = false,
 ): string[] {
   if (types.length === 1) {
-    return inferRuntimeType(ctx, types[0], scope)
+    return inferRuntimeType(ctx, types[0], scope, isKeyOf)
   }
   return [
     ...new Set(
       ([] as string[]).concat(
-        ...types.map(t => inferRuntimeType(ctx, t, scope)),
+        ...types.map(t => inferRuntimeType(ctx, t, scope, isKeyOf)),
       ),
     ),
   ]
