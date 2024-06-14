@@ -1,3 +1,17 @@
+## [3.4.29](https://github.com/vuejs/core/compare/v3.4.28...v3.4.29) (2024-06-14)
+
+
+### Bug Fixes
+
+* **build:** fix accidental inclusion of runtime-core in server-renderer cjs build ([11cc12b](https://github.com/vuejs/core/commit/11cc12b915edfe0e4d3175e57464f73bc2c1cb04)), closes [#11137](https://github.com/vuejs/core/issues/11137)
+* **compiler-sfc:** fix missing scope for extends error message ([4ec387b](https://github.com/vuejs/core/commit/4ec387b100985b008cdcc4cd883a5b6328c05766))
+* **compiler-sfc:** fix parsing of mts, d.mts, and mtsx files ([a476692](https://github.com/vuejs/core/commit/a476692ed2d7308f2742d8ff3554cf97a392b0b7))
+* **compiler-sfc:** support [@vue-ignore](https://github.com/vue-ignore) comment on more type sources ([a23e99b](https://github.com/vuejs/core/commit/a23e99bedf1d65841d162951f10ce35b907a5680))
+* **custom-element:** support same direct setup function signature in defineCustomElement ([7c8b126](https://github.com/vuejs/core/commit/7c8b12620aad4969b8dc4944d4fc486d16c3033c)), closes [#11116](https://github.com/vuejs/core/issues/11116)
+* **reactivity:** avoid infinite loop when render access a side effect computed ([#11135](https://github.com/vuejs/core/issues/11135)) ([8296e19](https://github.com/vuejs/core/commit/8296e19855e369a7826f5ea26540a6da01dc7093)), closes [#11121](https://github.com/vuejs/core/issues/11121)
+
+
+
 ## [3.4.28](https://github.com/vuejs/core/compare/v3.4.27...v3.4.28) (2024-06-14)
 
 
