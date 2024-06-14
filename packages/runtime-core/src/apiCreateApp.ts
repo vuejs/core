@@ -4,7 +4,7 @@ import {
   type ComponentInternalInstance,
   type ConcreteComponent,
   type Data,
-  getExposeProxy,
+  getComponentPublicInstance,
   validateComponentName,
 } from './component'
 import type {
@@ -51,7 +51,10 @@ export interface App<HostElement = any> {
     namespace?: boolean | ElementNamespace,
   ): ComponentPublicInstance
   unmount(): void
-  provide<T>(key: InjectionKey<T> | string, value: T): this
+  provide<T, K = InjectionKey<T> | string | number>(
+    key: K,
+    value: K extends InjectionKey<infer V> ? V : T,
+  ): this
 
   /**
    * Runs a function with the app as active instance. This allows using of `inject()` within the function to get access
@@ -357,7 +360,7 @@ export function createAppAPI<HostElement>(
             devtoolsInitApp(app, version)
           }
 
-          return getExposeProxy(vnode.component!) || vnode.component!.proxy
+          return getComponentPublicInstance(vnode.component!)
         } else if (__DEV__) {
           warn(
             `App has already been mounted.\n` +

@@ -18,7 +18,7 @@ import {
 import { ErrorCodes } from '../../src/errors'
 import { type CompilerOptions, generate } from '../../src'
 import { FRAGMENT, RENDER_LIST, RENDER_SLOT } from '../../src/runtimeHelpers'
-import { PatchFlags } from '@vue/shared'
+import { PatchFlagNames, PatchFlags } from '@vue/shared'
 import { createObjectMatcher, genFlagText } from '../testUtils'
 
 export function parseWithForTransform(
@@ -1042,6 +1042,34 @@ describe('compiler: v-for', () => {
         directives: { type: NodeTypes.JS_ARRAY_EXPRESSION },
       })
       expect(generate(root).code).toMatchSnapshot()
+    })
+
+    test('template v-for key w/ :key shorthand on div', () => {
+      const {
+        node: { codegenNode },
+      } = parseWithForTransform('<div v-for="key in keys" :key>test</div>')
+      expect(codegenNode.patchFlag).toBe(
+        `${PatchFlags.KEYED_FRAGMENT} /* ${PatchFlagNames[PatchFlags.KEYED_FRAGMENT]} */`,
+      )
+    })
+
+    test('template v-for key w/ :key shorthand on template injected to the child', () => {
+      const {
+        node: { codegenNode },
+      } = parseWithForTransform(
+        '<template v-for="key in keys" :key><div>test</div></template>',
+      )
+      expect(assertSharedCodegen(codegenNode, true)).toMatchObject({
+        source: { content: `keys` },
+        params: [{ content: `key` }],
+        innerVNodeCall: {
+          type: NodeTypes.VNODE_CALL,
+          tag: `"div"`,
+          props: createObjectMatcher({
+            key: '[key]',
+          }),
+        },
+      })
     })
   })
 })

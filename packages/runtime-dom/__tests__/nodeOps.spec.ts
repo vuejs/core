@@ -18,6 +18,20 @@ describe('runtime-dom: node-ops', () => {
     expect(option2.selected).toBe(true)
   })
 
+  test('create custom elements', () => {
+    const spyCreateElement = vi.spyOn(document, 'createElement')
+
+    nodeOps.createElement('custom-element')
+    expect(spyCreateElement).toHaveBeenLastCalledWith('custom-element')
+
+    nodeOps.createElement('custom-element', undefined, 'li')
+    expect(spyCreateElement).toHaveBeenLastCalledWith('custom-element', {
+      is: 'li',
+    })
+
+    spyCreateElement.mockClear()
+  })
+
   describe('insertStaticContent', () => {
     test('fresh insertion', () => {
       const content = `<div>one</div><div>two</div>three`
