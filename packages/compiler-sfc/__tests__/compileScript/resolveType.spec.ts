@@ -526,6 +526,18 @@ describe('resolveType', () => {
     })
   })
 
+  test('keyof: union type', () => {
+    const { props } = resolve(`
+    type A = { name: string }
+    type B = A | { color: string }
+    defineProps<{
+      foo: keyof B
+    }>()`)
+    expect(props).toStrictEqual({
+      foo: ['String'],
+    })
+  })
+
   test('keyof: utility type', () => {
     const { props } = resolve(
       `

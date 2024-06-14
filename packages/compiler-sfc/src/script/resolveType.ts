@@ -1686,7 +1686,7 @@ export function inferRuntimeType(
         return inferRuntimeType(ctx, node.typeAnnotation, scope)
 
       case 'TSUnionType':
-        return flattenTypes(ctx, node.types, scope)
+        return flattenTypes(ctx, node.types, scope, isKeyOf)
       case 'TSIntersectionType': {
         return flattenTypes(ctx, node.types, scope, isKeyOf).filter(
           t => t !== UNKNOWN_TYPE,
