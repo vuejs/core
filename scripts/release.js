@@ -352,8 +352,11 @@ async function getCIResult() {
       `https://api.github.com/repos/vuejs/core/actions/runs?head_sha=${sha}` +
         `&status=success&exclude_pull_requests=true`,
     )
+    /** @type {{ workflow_runs: ({ name: string, conclusion: string })[] }} */
     const data = await res.json()
-    return data.workflow_runs.length > 0
+    return data.workflow_runs.some(({ name, conclusion }) => {
+      return name === 'ci' && conclusion === 'success'
+    })
   } catch {
     console.error('Failed to get CI status for current commit.')
     return false
