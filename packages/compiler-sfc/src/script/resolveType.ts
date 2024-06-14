@@ -439,6 +439,7 @@ function resolveInterfaceMembers(
             `Note: both in 3.2 or with the ignore, the properties in the base ` +
             `type are treated as fallthrough attrs at runtime.`,
           ext,
+          scope,
         )
       }
     }
