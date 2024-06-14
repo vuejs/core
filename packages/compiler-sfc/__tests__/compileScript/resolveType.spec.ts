@@ -513,6 +513,19 @@ describe('resolveType', () => {
     })
   })
 
+  // #11129
+  test('keyof: intersection type', () => {
+    const { props } = resolve(`
+    type A = { name: string }
+    type B = A & { color: string }
+    defineProps<{
+      foo: keyof B
+    }>()`)
+    expect(props).toStrictEqual({
+      foo: ['String'],
+    })
+  })
+
   test('keyof: utility type', () => {
     const { props } = resolve(
       `
