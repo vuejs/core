@@ -306,14 +306,19 @@ export function triggerEffects(
 ) {
   pauseScheduling()
   for (const effect of dep.keys()) {
+    // dep.get(effect) is very expensive, we need to calculate it lazily and reuse the result
+    let tracking: boolean | undefined
+
     if (!dep.computed && effect.computed) {
-      if (dep.get(effect) === effect._trackId && effect._runnings > 0) {
+      if (
+        (tracking ??= dep.get(effect) === effect._trackId) &&
+        effect._runnings > 0
+      ) {
         effect._dirtyLevel = DirtyLevels.MaybeDirty_ComputedSideEffect_Origin
         continue
       }
     }
-    // dep.get(effect) is very expensive, we need to calculate it lazily and reuse the result
-    let tracking: boolean | undefined
+
     if (
       effect._dirtyLevel < dirtyLevel &&
       (tracking ??= dep.get(effect) === effect._trackId)
