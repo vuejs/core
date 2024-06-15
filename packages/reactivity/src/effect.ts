@@ -311,8 +311,8 @@ export function triggerEffects(
 
     if (!dep.computed && effect.computed) {
       if (
-        (tracking ??= dep.get(effect) === effect._trackId) &&
-        effect._runnings > 0
+        effect._runnings > 0 &&
+        (tracking ??= dep.get(effect) === effect._trackId)
       ) {
         effect._dirtyLevel = DirtyLevels.MaybeDirty_ComputedSideEffect_Origin
         continue
