@@ -1,7 +1,7 @@
 import { camelize, capitalize } from '@vue/shared'
 import { type Directive, warn } from '..'
 import { type Component, currentInstance } from '../component'
-import { getComponentName } from '../warning'
+import { getComponentName } from '../component'
 
 export const COMPONENTS = 'components'
 export const DIRECTIVES = 'directives'

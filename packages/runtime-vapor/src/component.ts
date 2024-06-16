@@ -427,3 +427,44 @@ function getSlotsProxy(instance: ComponentInternalInstance): Slots {
     }))
   )
 }
+
+export function getComponentName(
+  Component: Component,
+  includeInferred = true,
+): string | false | undefined {
+  return isFunction(Component)
+    ? Component.displayName || Component.name
+    : Component.name || (includeInferred && Component.__name)
+}
+
+export function formatComponentName(
+  instance: ComponentInternalInstance | null,
+  Component: Component,
+  isRoot = false,
+): string {
+  let name = getComponentName(Component)
+  if (!name && Component.__file) {
+    const match = Component.__file.match(/([^/\\]+)\.\w+$/)
+    if (match) {
+      name = match[1]
+    }
+  }
+
+  if (!name && instance && instance.parent) {
+    // try to infer the name based on reverse resolution
+    const inferFromRegistry = (registry: Record<string, any> | undefined) => {
+      for (const key in registry) {
+        if (registry[key] === Component) {
+          return key
+        }
+      }
+    }
+    name = inferFromRegistry(instance.appContext.components)
+  }
+
+  return name ? classify(name) : isRoot ? `App` : `Anonymous`
+}
+
+const classifyRE = /(?:^|[-_])(\w)/g
+const classify = (str: string): string =>
+  str.replace(classifyRE, c => c.toUpperCase()).replace(/[-_]/g, '')

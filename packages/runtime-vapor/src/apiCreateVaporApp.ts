@@ -172,6 +172,7 @@ export function createAppContext(): AppContext {
     app: null as any,
     config: {
       isNativeTag: NO,
+      performance: false,
       errorHandler: undefined,
       warnHandler: undefined,
       globalProperties: {},
@@ -227,6 +228,7 @@ export interface AppConfig {
   // @private
   readonly isNativeTag: (tag: string) => boolean
 
+  performance: boolean
   errorHandler?: (
     err: unknown,
     instance: ComponentInternalInstance | null,
