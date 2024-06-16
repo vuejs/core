@@ -178,22 +178,17 @@ export function formatComponentName(
     }
   }
 
-  // TODO registry
-  // if (!name && instance && instance.parent) {
-  //   // try to infer the name based on reverse resolution
-  //   const inferFromRegistry = (registry: Record<string, any> | undefined) => {
-  //     for (const key in registry) {
-  //       if (registry[key] === Component) {
-  //         return key
-  //       }
-  //     }
-  //   }
-  //   name =
-  //     inferFromRegistry(
-  //       instance.components ||
-  //         (instance.parent.type as ComponentOptions).components,
-  //     ) || inferFromRegistry(instance.appContext.components)
-  // }
+  if (!name && instance && instance.parent) {
+    // try to infer the name based on reverse resolution
+    const inferFromRegistry = (registry: Record<string, any> | undefined) => {
+      for (const key in registry) {
+        if (registry[key] === Component) {
+          return key
+        }
+      }
+    }
+    name = inferFromRegistry(instance.appContext.components)
+  }
 
   return name ? classify(name) : isRoot ? `App` : `Anonymous`
 }
