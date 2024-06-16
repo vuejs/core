@@ -13,7 +13,7 @@ describe('component expose', () => {
       },
     })
     const { instance } = render()
-    expect(instance.exposed).toEqual(expxosedObj)
+    expect(instance?.exposed).toEqual(expxosedObj)
   })
 
   test('should warn when called multiple times', async () => {

@@ -7,7 +7,6 @@ import {
   template,
   watchEffect,
 } from '../src'
-import { setCurrentInstance } from '../src/component'
 import { makeRender } from './_utils'
 
 const define = makeRender<any>()
@@ -27,7 +26,7 @@ describe('attribute fallthrough', () => {
 
     const foo = ref(1)
     const id = ref('a')
-    const { instance, host } = define({
+    const { host } = define({
       setup() {
         return { foo, id }
       },
@@ -46,7 +45,6 @@ describe('attribute fallthrough', () => {
         )
       },
     }).render()
-    const reset = setCurrentInstance(instance)
     expect(host.innerHTML).toBe('<div id="a">1</div>')
 
     foo.value++
@@ -56,7 +54,6 @@ describe('attribute fallthrough', () => {
     id.value = 'b'
     await nextTick()
     expect(host.innerHTML).toBe('<div id="b">2</div>')
-    reset()
   })
 
   it('should not fallthrough if explicitly pass inheritAttrs: false', async () => {
@@ -74,7 +71,7 @@ describe('attribute fallthrough', () => {
 
     const foo = ref(1)
     const id = ref('a')
-    const { instance, host } = define({
+    const { host } = define({
       setup() {
         return { foo, id }
       },
@@ -93,7 +90,6 @@ describe('attribute fallthrough', () => {
         )
       },
     }).render()
-    const reset = setCurrentInstance(instance)
     expect(host.innerHTML).toBe('<div>1</div>')
 
     foo.value++
@@ -103,7 +99,6 @@ describe('attribute fallthrough', () => {
     id.value = 'b'
     await nextTick()
     expect(host.innerHTML).toBe('<div>2</div>')
-    reset()
   })
 
   it('should pass through attrs in nested single root components', async () => {
@@ -137,7 +132,7 @@ describe('attribute fallthrough', () => {
 
     const foo = ref(1)
     const id = ref('a')
-    const { instance, host } = define({
+    const { host } = define({
       setup() {
         return { foo, id }
       },
@@ -156,7 +151,6 @@ describe('attribute fallthrough', () => {
         )
       },
     }).render()
-    const reset = setCurrentInstance(instance)
     expect(host.innerHTML).toBe('<div foo="1" id="a">1</div>')
 
     foo.value++
@@ -166,6 +160,5 @@ describe('attribute fallthrough', () => {
     id.value = 'b'
     await nextTick()
     expect(host.innerHTML).toBe('<div foo="2" id="b">2</div>')
-    reset()
   })
 })

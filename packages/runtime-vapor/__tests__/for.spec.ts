@@ -305,7 +305,7 @@ describe('createFor', () => {
     calls.length = 0
     expect(spySrcFn).toHaveBeenCalledTimes(7)
 
-    unmountComponent(instance)
+    unmountComponent(instance!)
     expect(calls).toEqual(['0 beforeUnmount', '0 unmounted'])
     expect(spySrcFn).toHaveBeenCalledTimes(7)
   })

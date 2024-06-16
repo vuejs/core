@@ -1,6 +1,5 @@
 // NOTE: This test is implemented based on the case of `runtime-core/__test__/componentProps.spec.ts`.
 
-import { setCurrentInstance } from '../src/component'
 import {
   createComponent,
   defineComponent,
@@ -233,7 +232,7 @@ describe('component: props', () => {
 
     const foo = ref(1)
     const id = ref('a')
-    const { instance, host } = define({
+    const { host } = define({
       setup() {
         return { foo, id }
       },
@@ -250,7 +249,6 @@ describe('component: props', () => {
         )
       },
     }).render()
-    const reset = setCurrentInstance(instance)
     expect(host.innerHTML).toBe('<div id="a">1</div>')
 
     foo.value++
@@ -260,7 +258,6 @@ describe('component: props', () => {
     id.value = 'b'
     await nextTick()
     expect(host.innerHTML).toBe('<div id="b">2</div>')
-    reset()
   })
 
   describe('validator', () => {

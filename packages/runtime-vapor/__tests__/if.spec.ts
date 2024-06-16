@@ -237,7 +237,7 @@ describe('createIf', () => {
     expect(spyConditionFn1).toHaveBeenCalledTimes(3)
     expect(spyConditionFn2).toHaveBeenCalledTimes(2)
 
-    unmountComponent(instance)
+    unmountComponent(instance!)
     expect(calls).toEqual(['1 beforeUnmount', '1 unmounted'])
     expect(spyConditionFn1).toHaveBeenCalledTimes(3)
     expect(spyConditionFn2).toHaveBeenCalledTimes(2)

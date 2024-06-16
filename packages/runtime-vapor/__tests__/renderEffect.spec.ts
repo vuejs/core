@@ -110,7 +110,7 @@ describe('renderEffect', () => {
         })
       },
     ).render()
-    const { change, changeRender } = instance.setupState as any
+    const { change, changeRender } = instance?.setupState as any
 
     expect(calls).toEqual(['pre 0', 'sync 0', 'renderEffect 0', 'post 0'])
     calls.length = 0
@@ -173,7 +173,7 @@ describe('renderEffect', () => {
         })
       },
     ).render()
-    const { update } = instance.setupState as any
+    const { update } = instance?.setupState as any
     await expect(async () => {
       update()
       await nextTick()
@@ -203,7 +203,7 @@ describe('renderEffect', () => {
       },
     ).render()
 
-    const { update } = instance.setupState as any
+    const { update } = instance?.setupState as any
     await expect(async () => {
       update()
       await nextTick()
