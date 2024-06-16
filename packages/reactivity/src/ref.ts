@@ -7,6 +7,7 @@ import {
 } from '@vue/shared'
 import { Dep, getDepFromReactive } from './dep'
 import {
+  type Builtin,
   type ShallowReactiveMarker,
   isProxy,
   isReactive,
@@ -450,11 +451,6 @@ function propertyToRef(
     : (new ObjectRefImpl(source, key, defaultValue) as any)
 }
 
-// corner case when use narrows type
-// Ex. type RelativePath = string & { __brand: unknown }
-// RelativePath extends object -> true
-type BaseTypes = string | number | boolean
-
 /**
  * This is a special exported interface for other packages to declare
  * additional types that should bail out for ref unwrapping. For example
@@ -471,10 +467,10 @@ type BaseTypes = string | number | boolean
 export interface RefUnwrapBailTypes {}
 
 export type ShallowUnwrapRef<T> = {
-  [K in keyof T]: DistrubuteRef<T[K]>
+  [K in keyof T]: DistributeRef<T[K]>
 }
 
-type DistrubuteRef<T> = T extends Ref<infer V> ? V : T
+type DistributeRef<T> = T extends Ref<infer V> ? V : T
 
 export type UnwrapRef<T> =
   T extends ShallowRef<infer V>
@@ -484,8 +480,7 @@ export type UnwrapRef<T> =
       : UnwrapRefSimple<T>
 
 export type UnwrapRefSimple<T> = T extends
-  | Function
-  | BaseTypes
+  | Builtin
   | Ref
   | RefUnwrapBailTypes[keyof RefUnwrapBailTypes]
   | { [RawSymbol]?: true }

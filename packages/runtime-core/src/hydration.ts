@@ -50,7 +50,15 @@ enum DOMNodeTypes {
   COMMENT = 8,
 }
 
-let hasMismatch = false
+let hasLoggedMismatchError = false
+const logMismatchError = () => {
+  if (__TEST__ || hasLoggedMismatchError) {
+    return
+  }
+  // this error should show up in production
+  console.error('Hydration completed but contains mismatches.')
+  hasLoggedMismatchError = true
+}
 
 const isSVGContainer = (container: Element) =>
   container.namespaceURI!.includes('svg') &&
@@ -102,14 +110,10 @@ export function createHydrationFunctions(
       container._vnode = vnode
       return
     }
-    hasMismatch = false
+
     hydrateNode(container.firstChild!, vnode, null, null, null)
     flushPostFlushCbs()
     container._vnode = vnode
-    if (hasMismatch && !__TEST__) {
-      // this error should show up in production
-      console.error(`Hydration completed but contains mismatches.`)
-    }
   }
 
   const hydrateNode = (
@@ -170,7 +174,6 @@ export function createHydrationFunctions(
           }
         } else {
           if ((node as Text).data !== vnode.children) {
-            hasMismatch = true
             ;(__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
               warn(
                 `Hydration text mismatch in`,
@@ -180,6 +183,7 @@ export function createHydrationFunctions(
                 )}` +
                   `\n  - expected on client: ${JSON.stringify(vnode.children)}`,
               )
+            logMismatchError()
             ;(node as Text).data = vnode.children as string
           }
           nextNode = nextSibling(node)
@@ -366,7 +370,7 @@ export function createHydrationFunctions(
     const forcePatch = type === 'input' || type === 'option'
     // skip props & children if this is hoisted static nodes
     // #5405 in dev, always hydrate children for HMR
-    if (__DEV__ || forcePatch || patchFlag !== PatchFlags.HOISTED) {
+    if (__DEV__ || forcePatch || patchFlag !== PatchFlags.CACHED) {
       if (dirs) {
         invokeDirectiveHook(vnode, null, parentComponent, 'created')
       }
@@ -409,7 +413,6 @@ export function createHydrationFunctions(
         )
         let hasWarned = false
         while (next) {
-          hasMismatch = true
           if (
             (__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
             !hasWarned
@@ -421,6 +424,8 @@ export function createHydrationFunctions(
             )
             hasWarned = true
           }
+          logMismatchError()
+
           // The SSRed DOM contains more nodes than it should. Remove them.
           const cur = next
           next = next.nextSibling
@@ -428,7 +433,6 @@ export function createHydrationFunctions(
         }
       } else if (shapeFlag & ShapeFlags.TEXT_CHILDREN) {
         if (el.textContent !== vnode.children) {
-          hasMismatch = true
           ;(__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
             warn(
               `Hydration text content mismatch on`,
@@ -436,6 +440,8 @@ export function createHydrationFunctions(
               `\n  - rendered on server: ${el.textContent}` +
                 `\n  - expected on client: ${vnode.children as string}`,
             )
+          logMismatchError()
+
           el.textContent = vnode.children as string
         }
       }
@@ -455,7 +461,7 @@ export function createHydrationFunctions(
               (__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
               propHasMismatch(el, key, props[key], vnode, parentComponent)
             ) {
-              hasMismatch = true
+              logMismatchError()
             }
             if (
               (forcePatch &&
@@ -545,7 +551,6 @@ export function createHydrationFunctions(
         // because server rendered HTML won't contain a text node
         insert((vnode.el = createText('')), container)
       } else {
-        hasMismatch = true
         if (
           (__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
           !hasWarned
@@ -557,6 +562,8 @@ export function createHydrationFunctions(
           )
           hasWarned = true
         }
+        logMismatchError()
+
         // the SSRed DOM didn't contain enough nodes. Mount the missing ones.
         patch(
           null,
@@ -603,7 +610,8 @@ export function createHydrationFunctions(
     } else {
       // fragment didn't hydrate successfully, since we didn't get a end anchor
       // back. This should have led to node/children mismatch warnings.
-      hasMismatch = true
+      logMismatchError()
+
       // since the anchor is missing, we need to create one and insert it
       insert((vnode.anchor = createComment(`]`)), container, next)
       return next
@@ -618,7 +626,6 @@ export function createHydrationFunctions(
     slotScopeIds: string[] | null,
     isFragment: boolean,
   ): Node | null => {
-    hasMismatch = true
     ;(__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
       warn(
         `Hydration node mismatch:\n- rendered on server:`,
@@ -631,6 +638,8 @@ export function createHydrationFunctions(
         `\n- expected on client:`,
         vnode.type,
       )
+    logMismatchError()
+
     vnode.el = null
 
     if (isFragment) {

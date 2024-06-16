@@ -169,7 +169,7 @@ async function main() {
           ['view', `${pkgName}@~${newVersion}`, 'version', '--json'],
           { stdio: 'pipe' },
         )
-        let versions = JSON.parse(stdout)
+        let versions = JSON.parse(/** @type {string} */ (stdout))
         versions = Array.isArray(versions) ? versions : [versions]
         const latestSameDayPatch = /** @type {string} */ (
           semver.maxSatisfying(versions, `~${newVersion}`)
@@ -381,8 +381,11 @@ async function getCIResult() {
       `https://api.github.com/repos/vuejs/core-vapor/actions/runs?head_sha=${sha}` +
         `&status=success&exclude_pull_requests=true`,
     )
+    /** @type {{ workflow_runs: ({ name: string, conclusion: string })[] }} */
     const data = await res.json()
-    return data.workflow_runs.length > 0
+    return data.workflow_runs.some(({ name, conclusion }) => {
+      return name === 'ci' && conclusion === 'success'
+    })
   } catch {
     console.error('Failed to get CI status for current commit.')
     return false

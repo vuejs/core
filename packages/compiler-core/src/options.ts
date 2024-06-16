@@ -247,7 +247,16 @@ export interface TransformOptions
    */
   isCustomElement?: (tag: string) => boolean | void
   /**
-   * Hoist static VNodes and props objects to `_hoisted_x` constants
+   * Transform expressions like {{ foo }} to `_ctx.foo`.
+   * If this option is false, the generated code will be wrapped in a
+   * `with (this) { ... }` block.
+   * - This is force-enabled in module mode, since modules are by default strict
+   * and cannot use `with`
+   * @default mode === 'module'
+   */
+  prefixIdentifiers?: boolean
+  /**
+   * Cache static VNodes and props objects to `_hoisted_x` constants
    * @default false
    */
   hoistStatic?: boolean

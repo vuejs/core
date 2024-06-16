@@ -38,5 +38,6 @@
     "scripts/*",
     "rollup.*.js",
     "playground"
-  ]
+  ],
+  "exclude": ["packages/sfc-playground/src/vue-dev-proxy*"]
 }
