@@ -526,4 +526,44 @@ describe('useModel', () => {
     await nextTick()
     expect(msg.value).toBe('UGHH')
   })
+
+  test('set no change value', async () => {
+    let changeChildMsg: (() => void) | null = null
+
+    const compRender = vi.fn()
+    const Comp = defineComponent({
+      props: ['msg'],
+      emits: ['update:msg'],
+      setup(props) {
+        const childMsg = useModel(props, 'msg')
+        changeChildMsg = () => {
+          childMsg.value = childMsg.value
+        }
+        return () => {
+          return childMsg.value
+        }
+      },
+    })
+
+    const msg = ref('HI')
+    const Parent = defineComponent({
+      setup() {
+        return () =>
+          h(Comp, {
+            msg: msg.value,
+            'onUpdate:msg': val => {
+              msg.value = val
+              compRender()
+            },
+          })
+      },
+    })
+
+    const root = nodeOps.createElement('div')
+    render(h(Parent), root)
+
+    expect(compRender).toBeCalledTimes(0)
+    changeChildMsg!()
+    expect(compRender).toBeCalledTimes(0)
+  })
 })
