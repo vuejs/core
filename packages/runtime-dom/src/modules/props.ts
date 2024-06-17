@@ -9,20 +9,13 @@ import { includeBooleanAttr } from '@vue/shared'
 export function patchDOMProp(
   el: any,
   key: string,
-  value: any,
-  // the following args are passed only due to potential innerHTML/textContent
-  // overriding existing VNodes, in which case the old tree must be properly
-  // unmounted.
-  prevChildren: any,
+  prevValue: any,
+  nextValue: any,
   parentComponent: any,
-  parentSuspense: any,
-  unmountChildren: any,
 ) {
   if (key === 'innerHTML' || key === 'textContent') {
-    if (prevChildren) {
-      unmountChildren(prevChildren, parentComponent, parentSuspense)
-    }
-    el[key] = value == null ? '' : value
+    if (prevValue && nextValue == null) return
+    el[key] = nextValue == null ? '' : nextValue
     return
   }
 
@@ -38,38 +31,38 @@ export function patchDOMProp(
     // compare against its attribute value instead.
     const oldValue =
       tag === 'OPTION' ? el.getAttribute('value') || '' : el.value
-    const newValue = value == null ? '' : String(value)
+    const newValue = nextValue == null ? '' : String(nextValue)
     if (oldValue !== newValue || !('_value' in el)) {
       el.value = newValue
     }
-    if (value == null) {
+    if (nextValue == null) {
       el.removeAttribute(key)
     }
     // store value as _value as well since
     // non-string values will be stringified.
-    el._value = value
+    el._value = nextValue
     return
   }
 
   let needRemove = false
-  if (value === '' || value == null) {
+  if (nextValue === '' || nextValue == null) {
     const type = typeof el[key]
     if (type === 'boolean') {
       // e.g. <select multiple> compiles to { multiple: '' }
-      value = includeBooleanAttr(value)
-    } else if (value == null && type === 'string') {
+      nextValue = includeBooleanAttr(nextValue)
+    } else if (nextValue == null && type === 'string') {
       // e.g. <div :id="null">
-      value = ''
+      nextValue = ''
       needRemove = true
     } else if (type === 'number') {
       // e.g. <img :width="null">
-      value = 0
+      nextValue = 0
       needRemove = true
     }
   } else {
     if (
       __COMPAT__ &&
-      value === false &&
+      nextValue === false &&
       compatUtils.isCompatEnabled(
         DeprecationTypes.ATTR_FALSE_VALUE,
         parentComponent,
@@ -83,7 +76,7 @@ export function patchDOMProp(
             parentComponent,
             key,
           )
-        value = type === 'number' ? 0 : ''
+        nextValue = type === 'number' ? 0 : ''
         needRemove = true
       }
     }
@@ -93,13 +86,13 @@ export function patchDOMProp(
   // some properties has getter, no setter, will error in 'use strict'
   // eg. <select :type="null"></select> <select :willValidate="null"></select>
   try {
-    el[key] = value
+    el[key] = nextValue
   } catch (e: any) {
     // do not warn if value is auto-coerced from nullish values
     if (__DEV__ && !needRemove) {
       warn(
         `Failed setting prop "${key}" on <${tag.toLowerCase()}>: ` +
-          `value ${value} is invalid.`,
+          `value ${nextValue} is invalid.`,
         e,
       )
     }

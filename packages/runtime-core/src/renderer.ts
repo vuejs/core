@@ -832,6 +832,18 @@ function baseCreateRenderer(
       optimized = false
       dynamicChildren = null
     }
+    // the following args are passed only due to potential innerHTML/textContent
+    // overriding existing VNodes, in which case the old tree must be properly
+    // unmounted.
+    if (
+      oldProps.innerHTML !== undefined ||
+      oldProps.textContent !== undefined
+    ) {
+      hostSetElementText(n1.el!, '')
+      if (n1.children) {
+        unmountChildren(n1.children as VNode[], parentComponent, parentSuspense)
+      }
+    }
 
     if (dynamicChildren) {
       patchBlockChildren(
