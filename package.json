@@ -72,7 +72,7 @@
     "@types/minimist": "^1.2.5",
     "@types/node": "^20.14.2",
     "@types/semver": "^7.5.8",
-    "@vitest/coverage-istanbul": "^1.5.2",
+    "@vitest/coverage-istanbul": "^1.6.0",
     "@vue/consolidate": "1.0.0",
     "conventional-changelog-cli": "^4.1.0",
     "enquirer": "^2.4.1",
@@ -83,7 +83,7 @@
     "eslint-plugin-vitest": "^0.5.4",
     "estree-walker": "^2.0.2",
     "execa": "^9.2.0",
-    "jsdom": "^24.0.0",
+    "jsdom": "^24.1.0",
     "lint-staged": "^15.2.5",
     "lodash": "^4.17.21",
     "magic-string": "^0.30.10",
@@ -95,7 +95,7 @@
     "prettier": "^3.3.1",
     "pretty-bytes": "^6.1.1",
     "pug": "^3.0.3",
-    "puppeteer": "~22.7.1",
+    "puppeteer": "~22.11.0",
     "rimraf": "^5.0.7",
     "rollup": "^4.18.0",
     "rollup-plugin-dts": "^6.1.1",
@@ -111,7 +111,7 @@
     "typescript": "~5.4.5",
     "typescript-eslint": "^7.12.0",
     "vite": "^5.2.13",
-    "vitest": "^1.5.2"
+    "vitest": "^1.6.0"
   },
   "pnpm": {
     "peerDependencyRules": {
