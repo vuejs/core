@@ -96,11 +96,11 @@ function lexBinding(content: string, start: number): number | null {
           state = LexerState.inSingleQuoteString
         } else if (char === `"`) {
           state = LexerState.inDoubleQuoteString
-        } else if (char === `(`) {
+        } else if ('{[('.includes(char)) {
           parenDepth++
-        } else if (char === `)`) {
+        } else if ('}]),'.includes(char)) {
           if (parenDepth > 0) {
-            parenDepth--
+            char !== ',' && parenDepth--
           } else {
             return i
           }
@@ -146,8 +146,8 @@ export const cssVarsPlugin: PluginCreator<CssVarsPluginOptions> = opts => {
             const variable = normalizeExpression(value.slice(start, end))
             transformed +=
               value.slice(lastIndex, match.index) +
-              `var(--${genVarName(id, variable, isProd)})`
-            lastIndex = end + 1
+              `var(--${genVarName(id, variable, isProd)}`
+            lastIndex = end
           }
         }
         decl.value = transformed + value.slice(lastIndex)
