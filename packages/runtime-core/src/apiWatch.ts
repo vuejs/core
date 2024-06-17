@@ -180,7 +180,9 @@ function doWatch(
     onTrack,
     onTrigger,
   }: WatchOptions = EMPTY_OBJ,
+  // EMPTY_OBJ是一个Object.freeze({})冻结的空对象，也就是说当没有传options过来时，这个配置都会从这个{}解构得到
 ): WatchStopHandle {
+  // 当指定了once只执行一次，会执行一次cb（callback）然后unwatch结束监听
   if (cb && once) {
     const _cb = cb
     cb = (...args) => {
@@ -189,49 +191,11 @@ function doWatch(
     }
   }
 
-  // TODO remove in 3.5
-  if (__DEV__ && deep !== void 0 && typeof deep === 'number') {
-    warn(
-      `watch() "deep" option with number value will be used as watch depth in future versions. ` +
-        `Please use a boolean instead to avoid potential breakage.`,
-    )
-  }
-
-  if (__DEV__ && !cb) {
-    if (immediate !== undefined) {
-      warn(
-        `watch() "immediate" option is only respected when using the ` +
-          `watch(source, callback, options?) signature.`,
-      )
-    }
-    if (deep !== undefined) {
-      warn(
-        `watch() "deep" option is only respected when using the ` +
-          `watch(source, callback, options?) signature.`,
-      )
-    }
-    if (once !== undefined) {
-      warn(
-        `watch() "once" option is only respected when using the ` +
-          `watch(source, callback, options?) signature.`,
-      )
-    }
-  }
-
-  const warnInvalidSource = (s: unknown) => {
-    warn(
-      `Invalid watch source: `,
-      s,
-      `A watch source can only be a getter/effect function, a ref, ` +
-        `a reactive object, or an array of these types.`,
-    )
-  }
-
   const instance = currentInstance
   const reactiveGetter = (source: object) =>
     deep === true
-      ? source // traverse will happen in wrapped getter below
-      : // for deep: false, only traverse root-level properties
+      ? source // 遍历将发生在下面的包装getter中
+      : // 对于deep:false，仅遍历根级属性
         traverse(source, deep === false ? 1 : undefined)
 
   let getter: () => any
@@ -239,13 +203,18 @@ function doWatch(
   let isMultiSource = false
 
   if (isRef(source)) {
+    // ref对象的get直接访问value属性
     getter = () => source.value
+    // 判断是否是浅层ref
     forceTrigger = isShallow(source)
   } else if (isReactive(source)) {
+    // 对于reactive对象来说，是通过deep去控制是否需要深层监听的
     getter = () => reactiveGetter(source)
     forceTrigger = true
   } else if (isArray(source)) {
+    // 数组
     isMultiSource = true
+    // 看是否有深层监听
     forceTrigger = source.some(s => isReactive(s) || isShallow(s))
     getter = () =>
       source.map(s => {
@@ -256,7 +225,7 @@ function doWatch(
         } else if (isFunction(s)) {
           return callWithErrorHandling(s, instance, ErrorCodes.WATCH_GETTER)
         } else {
-          __DEV__ && warnInvalidSource(s)
+          // 不能监听
         }
       })
   } else if (isFunction(source)) {
@@ -280,10 +249,9 @@ function doWatch(
     }
   } else {
     getter = NOOP
-    __DEV__ && warnInvalidSource(source)
   }
 
-  // 2.x array mutation watch compat
+  // 有回调并且是单层监听
   if (__COMPAT__ && cb && !deep) {
     const baseGetter = getter
     getter = () => {
@@ -298,6 +266,7 @@ function doWatch(
     }
   }
 
+  // 深层监听
   if (cb && deep) {
     const baseGetter = getter
     getter = () => traverse(baseGetter())
@@ -311,11 +280,11 @@ function doWatch(
     }
   }
 
-  // in SSR there is no need to setup an actual effect, and it should be noop
-  // unless it's eager or sync flush
+  // 在SSR中，不需要设置实际效果，它应该是noop
+  // 除非它很急切或同步刷新
   let ssrCleanup: (() => void)[] | undefined
   if (__SSR__ && isInSSRComponentSetup) {
-    // we will also not call the invalidate callback (+ runner is not set up)
+    // 我们也不会调用 invalide 回调（没有设置+runner）
     onCleanup = NOOP
     if (!cb) {
       getter()
@@ -334,16 +303,20 @@ function doWatch(
     }
   }
 
+  // isMultiSource 用来标记是否是多数据监听
   let oldValue: any = isMultiSource
     ? new Array((source as []).length).fill(INITIAL_WATCHER_VALUE)
     : INITIAL_WATCHER_VALUE
+  // 开始调度
   const job: SchedulerJob = () => {
+    // 需要保证依赖收集是开启的
     if (!effect.active || !effect.dirty) {
       return
     }
     if (cb) {
-      // watch(source, cb)
       const newValue = effect.run()
+      // 有真则真
+      // 深层监听 || 对象监听 || （多数据监听 遍历通过Object.is(value, oldValue)去比较值是否改变）|| （是数组类型 && ？）
       if (
         deep ||
         forceTrigger ||
@@ -354,13 +327,13 @@ function doWatch(
           isArray(newValue) &&
           isCompatEnabled(DeprecationTypes.WATCH_ARRAY, instance))
       ) {
-        // cleanup before running cb again
+        // 再次运行cb之前的清理
         if (cleanup) {
           cleanup()
         }
         callWithAsyncErrorHandling(cb, instance, ErrorCodes.WATCH_CALLBACK, [
           newValue,
-          // pass undefined as the old value when it's changed for the first time
+          // 第一次更改时将undefined作为旧值传递，到这里oldVal才会有值
           oldValue === INITIAL_WATCHER_VALUE
             ? undefined
             : isMultiSource && oldValue[0] === INITIAL_WATCHER_VALUE
@@ -376,11 +349,16 @@ function doWatch(
     }
   }
 
-  // important: mark the job as a watcher callback so that scheduler knows
-  // it is allowed to self-trigger (#1727)
-  job.allowRecurse = !!cb
+  // 将job标记为观察程序回调，以便调度程序知道，它被允许自触发 先设置为false
+  job.allowRecurse = !!cb // !!undefined false
 
   let scheduler: EffectScheduler
+  /**
+   * flush: 'pre' | 'post' | 'sync'
+   * pre  在侦听器的回调函数运行之前立即运行更新函数
+   * post ------------------之后-------------
+   * sync 同步
+   * */
   if (flush === 'sync') {
     scheduler = job as any // the scheduler function gets called directly
   } else if (flush === 'post') {
@@ -388,27 +366,27 @@ function doWatch(
   } else {
     // default: 'pre'
     job.pre = true
+    // 把当前示例的id作为job任务id
     if (instance) job.id = instance.uid
+    // 开始调度
     scheduler = () => queueJob(job)
   }
 
+  // 和响应式那块是一样的，收集依赖
   const effect = new ReactiveEffect(getter, NOOP, scheduler)
 
   const scope = getCurrentScope()
   const unwatch = () => {
+    // 停止依赖收集，并且把这个effect剔除出去
     effect.stop()
     if (scope) {
       remove(scope.effects, effect)
     }
   }
 
-  if (__DEV__) {
-    effect.onTrack = onTrack
-    effect.onTrigger = onTrigger
-  }
-
   // initial run
   if (cb) {
+    // immediate 是否先调度一次
     if (immediate) {
       job()
     } else {
@@ -479,6 +457,9 @@ export function traverse(
   }
   seen.add(value)
   depth--
+
+  // 看是不是ref还包了ref
+  // 后面判断递归都是同理，把所有值都给加到seen当中
   if (isRef(value)) {
     traverse(value.value, depth, seen)
   } else if (isArray(value)) {
