@@ -14,7 +14,7 @@ execa('pnpm', ['build', 'vue', '-f', 'global-runtime']).then(() => {
     errors.push(
       'dev build contains unexpected esbuild object spread helper.\n' +
         'This means { ...obj } syntax is used in runtime code. This should be ' +
-        'refactoed to use the `extend` helper to avoid the extra code.',
+        'refactored to use the `extend` helper to avoid the extra code.',
     )
   }
 
