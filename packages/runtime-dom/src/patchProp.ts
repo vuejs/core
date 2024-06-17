@@ -43,7 +43,7 @@ export const patchProp: DOMRendererOptions['patchProp'] = (
         ? ((key = key.slice(1)), false)
         : shouldSetAsProp(el, key, nextValue, isSVG)
   ) {
-    patchDOMProp(el, key, prevValue, nextValue, parentComponent)
+    patchDOMProp(el, key, nextValue, parentComponent)
     // #6007 also set form state as attributes so they work with
     // <input type="reset"> or libs / extensions that expect attributes
     // #11163 custom elements may use value as an prop and set it as object
