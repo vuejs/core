@@ -52,6 +52,10 @@ export function makeRender<Component = ObjectComponent | SetupFn>(
       return res()
     }
 
+    function html() {
+      return host.innerHTML
+    }
+
     const res = () => ({
       component,
       host,
@@ -61,6 +65,7 @@ export function makeRender<Component = ObjectComponent | SetupFn>(
       mount,
       render,
       resetHost,
+      html,
     })
 
     return res()

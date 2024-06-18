@@ -123,10 +123,10 @@ export function generate(
     push('}')
   }
 
-  const deligates = genDeligates(context)
+  const delegates = genDelegates(context)
   const templates = genTemplates(ir.template, context)
   const imports = genHelperImports(context)
-  const preamble = imports + templates + deligates
+  const preamble = imports + templates + delegates
 
   const newlineCount = [...preamble].filter(c => c === '\n').length
   if (newlineCount && !inline) {
@@ -148,7 +148,7 @@ export function generate(
   }
 }
 
-function genDeligates({ delegates, vaporHelper }: CodegenContext) {
+function genDelegates({ delegates, vaporHelper }: CodegenContext) {
   return delegates.size
     ? genCall(
         vaporHelper('delegateEvents'),
