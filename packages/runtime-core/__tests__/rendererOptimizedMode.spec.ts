@@ -487,6 +487,32 @@ describe('renderer: optimized mode', () => {
     expect(spy).toHaveBeenCalledTimes(1)
   })
 
+  test('should call onUnmounted hook for dynamic components w/ component children', async () => {
+    const spy = vi.fn()
+    const show = ref(1)
+    const Child = {
+      setup() {
+        onUnmounted(spy)
+        return () => 'child'
+      },
+    }
+    const foo = h('div', null, h(Child))
+    const app = createApp({
+      render() {
+        return show.value
+          ? (openBlock(),
+            createBlock('div', null, [(openBlock(), createBlock(foo))]))
+          : createCommentVNode('v-if', true)
+      },
+    })
+
+    app.mount(root)
+    show.value = 0
+    await nextTick()
+
+    expect(spy).toHaveBeenCalledTimes(1)
+  })
+
   // #2444
   // `KEYED_FRAGMENT` and `UNKEYED_FRAGMENT` always need to diff its children
   test('non-stable Fragment always need to diff its children', () => {
