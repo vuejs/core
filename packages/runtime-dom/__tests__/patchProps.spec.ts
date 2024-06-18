@@ -139,9 +139,9 @@ describe('runtime-dom: props patching', () => {
     const Comp = {
       render: () => {
         if (state.value) {
-          return h('div', { key: 1 }, [h('del', null, 'baz')])
+          return h('div', [h('del', null, 'baz')])
         } else {
-          return h('div', { key: 1, innerHTML: 'baz' })
+          return h('div', { innerHTML: 'baz' })
         }
       },
     }
