@@ -16,17 +16,13 @@ export function provide<T, K = InjectionKey<T> | string | number>(
     }
   } else {
     let provides = currentInstance.provides
-    // by default an instance inherits its parent's provides object
-    // but when it needs to provide values of its own, it creates its
-    // own provides object using parent provides object as prototype.
-    // this way in `inject` we can simply look up injections from direct
-    // parent and let the prototype chain do the work.
+    // 默认情况下，实例继承其父对象的provides对象。但当它需要提供自己的价值观时，它会创建own提供对象使用parent提供对象作为原型。
+    // 通过这种方式，在inject中，我们可以简单地从direct中查找注射parent并让原型链来完成工作。
     const parentProvides =
       currentInstance.parent && currentInstance.parent.provides
     if (parentProvides === provides) {
       provides = currentInstance.provides = Object.create(parentProvides)
     }
-    // TS doesn't allow symbol as index type
     provides[key as string] = value
   }
 }
@@ -47,15 +43,11 @@ export function inject(
   defaultValue?: unknown,
   treatDefaultAsFactory = false,
 ) {
-  // fallback to `currentRenderingInstance` so that this can be called in
-  // a functional component
+  // 回退到 currentRenderingInstance。以便可以在中调用
   const instance = currentInstance || currentRenderingInstance
 
-  // also support looking up from app-level provides w/ `app.runWithContext()`
   if (instance || currentApp) {
-    // #2400
-    // to support `app.use` plugins,
-    // fallback to appContext's `provides` if the instance is at root
+    // 如果实例位于根目录，则回退到appContext的provides
     const provides = instance
       ? instance.parent == null
         ? instance.vnode.appContext && instance.vnode.appContext.provides
@@ -63,17 +55,12 @@ export function inject(
       : currentApp!._context.provides
 
     if (provides && (key as string | symbol) in provides) {
-      // TS doesn't allow symbol as index type
       return provides[key as string]
     } else if (arguments.length > 1) {
       return treatDefaultAsFactory && isFunction(defaultValue)
         ? defaultValue.call(instance && instance.proxy)
         : defaultValue
-    } else if (__DEV__) {
-      warn(`injection "${String(key)}" not found.`)
     }
-  } else if (__DEV__) {
-    warn(`inject() can only be used inside setup() or functional components.`)
   }
 }
 
