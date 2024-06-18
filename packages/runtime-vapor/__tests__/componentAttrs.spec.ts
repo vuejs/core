@@ -40,7 +40,6 @@ describe('attribute fallthrough', () => {
             },
           ],
           null,
-          null,
           true,
         )
       },
@@ -85,7 +84,6 @@ describe('attribute fallthrough', () => {
             },
           ],
           null,
-          null,
           true,
         )
       },
@@ -123,7 +121,6 @@ describe('attribute fallthrough', () => {
             },
           ],
           null,
-          null,
           true,
         )
         return n0
@@ -145,7 +142,6 @@ describe('attribute fallthrough', () => {
               id: () => _ctx.id,
             },
           ],
-          null,
           null,
           true,
         )

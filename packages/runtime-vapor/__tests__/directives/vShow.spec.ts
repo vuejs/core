@@ -69,7 +69,7 @@ describe('directive: v-show', () => {
     const { instance, host } = define({
       render() {
         const n1 = t1()
-        const n2 = createComponent(Child, [], null, null, true)
+        const n2 = createComponent(Child, [], null, true)
         withDirectives(n2, [[vShow, () => visible.value]])
         on(n1 as HTMLElement, 'click', () => handleClick)
         return [n1, n2]

@@ -105,11 +105,9 @@ function transformComponentElement(
     asset,
     root,
     slots: context.slots,
-    dynamicSlots: context.dynamicSlots,
     once: context.inVOnce,
   })
-  context.slots = undefined
-  context.dynamicSlots = undefined
+  context.slots = []
 }
 
 function resolveSetupReference(name: string, context: TransformContext) {

@@ -112,7 +112,6 @@ export function createVaporApp(
           rootComponent,
           rootProps,
           null,
-          null,
           false,
           context,
         )

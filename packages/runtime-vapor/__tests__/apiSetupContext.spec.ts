@@ -149,7 +149,7 @@ describe('api: setup context', () => {
 
     const { html } = define({
       render() {
-        return createComponent(Child, null, null, [
+        return createComponent(Child, null, [
           () => ({
             name: 'foo',
             fn: () => createTextNode(() => [id.value]),

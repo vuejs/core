@@ -33,16 +33,20 @@ export function render(_ctx) {
   const _component_Comp = _resolveComponent("Comp")
   const _directive_hello = _resolveDirective("hello")
   const _directive_test = _resolveDirective("test")
-  const n4 = _createComponent(_component_Comp, null, { default: () => {
-    const n0 = _createIf(() => (true), () => {
-      const n3 = t0()
-      const n2 = _createComponent(_component_Bar)
-      _withDirectives(n2, [[_directive_hello, void 0, void 0, { world: true }]])
-      _insert(n2, n3)
-      return n3
-    })
-    return n0
-  } }, null, true)
+  const n4 = _createComponent(_component_Comp, null, [
+    {
+      default: () => {
+        const n0 = _createIf(() => (true), () => {
+          const n3 = t0()
+          const n2 = _createComponent(_component_Bar)
+          _withDirectives(n2, [[_directive_hello, void 0, void 0, { world: true }]])
+          _insert(n2, n3)
+          return n3
+        })
+        return n0
+      }
+    }
+  ], true)
   _withDirectives(n4, [[_directive_test]])
   return n4
 }"

@@ -1,18 +1,19 @@
 import { camelize, extend, isArray } from '@vue/shared'
 import type { CodegenContext } from '../generate'
 import {
-  type ComponentBasicDynamicSlot,
-  type ComponentConditionalDynamicSlot,
-  type ComponentDynamicSlot,
-  type ComponentLoopDynamicSlot,
-  type ComponentSlotBlockIRNode,
-  type ComponentSlots,
   type CreateComponentIRNode,
-  DynamicSlotType,
   IRDynamicPropsKind,
   type IRProp,
   type IRProps,
   type IRPropsStatic,
+  type IRSlotDynamic,
+  type IRSlotDynamicBasic,
+  type IRSlotDynamicConditional,
+  type IRSlotDynamicLoop,
+  IRSlotType,
+  type IRSlots,
+  type IRSlotsStatic,
+  type SlotBlockIRNode,
 } from '../ir'
 import {
   type CodeFragment,
@@ -45,8 +46,9 @@ export function genCreateComponent(
   const { vaporHelper } = context
 
   const tag = genTag()
-  const { root, slots, dynamicSlots, once } = oper
-  const rawProps = genRawProps(oper.props, context)
+  const { root, props, slots, once } = oper
+  const rawProps = genRawProps(props, context)
+  const rawSlots = genRawSlots(slots, context)
 
   return [
     NEWLINE,
@@ -55,8 +57,7 @@ export function genCreateComponent(
       vaporHelper('createComponent'),
       tag,
       rawProps,
-      slots && genSlots(slots, context),
-      dynamicSlots && genDynamicSlots(dynamicSlots, context),
+      rawSlots,
       root ? 'true' : false,
       once && 'true',
     ),
@@ -152,51 +153,51 @@ function genModelModifiers(
   return [',', NEWLINE, ...modifiersKey, `: () => ({ ${modifiersVal} })`]
 }
 
-function genSlots(slots: ComponentSlots, context: CodegenContext) {
+function genRawSlots(slots: IRSlots[], context: CodegenContext) {
+  if (!slots.length) return
+  return genMulti(
+    DELIMITERS_ARRAY_NEWLINE,
+    ...slots.map(slot =>
+      slot.slotType === IRSlotType.STATIC
+        ? genStaticSlots(slot, context)
+        : genDynamicSlot(slot, context, true),
+    ),
+  )
+}
+
+function genStaticSlots({ slots }: IRSlotsStatic, context: CodegenContext) {
   const names = Object.keys(slots)
   return genMulti(
-    names.length > 1 ? DELIMITERS_OBJECT_NEWLINE : DELIMITERS_OBJECT,
+    DELIMITERS_OBJECT_NEWLINE,
     ...names.map(name => [
-      name,
-      ': ',
+      `${name}: `,
       ...genSlotBlockWithProps(slots[name], context),
     ]),
   )
 }
 
-function genDynamicSlots(
-  dynamicSlots: ComponentDynamicSlot[],
-  context: CodegenContext,
-) {
-  return genMulti(
-    dynamicSlots.length > 1 ? DELIMITERS_ARRAY_NEWLINE : DELIMITERS_ARRAY,
-    ...dynamicSlots.map(slot => genDynamicSlot(slot, context, true)),
-  )
-}
-
 function genDynamicSlot(
-  slot: ComponentDynamicSlot,
+  slot: IRSlotDynamic,
   context: CodegenContext,
-  top = false,
+  withFunction = false,
 ): CodeFragment[] {
+  let frag: CodeFragment[]
   switch (slot.slotType) {
-    case DynamicSlotType.BASIC:
-      return top
-        ? ['() => (', ...genBasicDynamicSlot(slot, context), ')']
-        : genBasicDynamicSlot(slot, context)
-    case DynamicSlotType.LOOP:
-      return top
-        ? ['() => (', ...genLoopSlot(slot, context), ')']
-        : genLoopSlot(slot, context)
-    case DynamicSlotType.CONDITIONAL:
-      return top
-        ? ['() => (', ...genConditionalSlot(slot, context), ')']
-        : genConditionalSlot(slot, context)
+    case IRSlotType.DYNAMIC:
+      frag = genBasicDynamicSlot(slot, context)
+      break
+    case IRSlotType.LOOP:
+      frag = genLoopSlot(slot, context)
+      break
+    case IRSlotType.CONDITIONAL:
+      frag = genConditionalSlot(slot, context)
+      break
   }
+  return withFunction ? ['() => (', ...frag, ')'] : frag
 }
 
 function genBasicDynamicSlot(
-  slot: ComponentBasicDynamicSlot,
+  slot: IRSlotDynamicBasic,
   context: CodegenContext,
 ): CodeFragment[] {
   const { name, fn } = slot
@@ -208,7 +209,7 @@ function genBasicDynamicSlot(
 }
 
 function genLoopSlot(
-  slot: ComponentLoopDynamicSlot,
+  slot: IRSlotDynamicLoop,
   context: CodegenContext,
 ): CodeFragment[] {
   const { name, fn, loop } = slot
@@ -249,7 +250,7 @@ function genLoopSlot(
 }
 
 function genConditionalSlot(
-  slot: ComponentConditionalDynamicSlot,
+  slot: IRSlotDynamicConditional,
   context: CodegenContext,
 ): CodeFragment[] {
   const { condition, positive, negative } = slot
@@ -266,10 +267,7 @@ function genConditionalSlot(
   ]
 }
 
-function genSlotBlockWithProps(
-  oper: ComponentSlotBlockIRNode,
-  context: CodegenContext,
-) {
+function genSlotBlockWithProps(oper: SlotBlockIRNode, context: CodegenContext) {
   let isDestructureAssignment = false
   let rawProps: string | undefined
   let propsName: string | undefined

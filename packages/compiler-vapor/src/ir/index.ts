@@ -7,11 +7,10 @@ import type {
   TemplateChildNode,
 } from '@vue/compiler-dom'
 import type { Prettify } from '@vue/shared'
-import type {
-  DirectiveTransform,
-  DirectiveTransformResult,
-  NodeTransform,
-} from './transform'
+import type { DirectiveTransform, NodeTransform } from '../transform'
+import type { IRProp, IRProps, IRSlots } from './component'
+
+export * from './component'
 
 export enum IRNodeTypes {
   ROOT,
@@ -87,29 +86,6 @@ export interface ForIRNode extends BaseIRNode, IRFor {
   render: BlockIRNode
   once: boolean
 }
-
-export interface IRProp extends Omit<DirectiveTransformResult, 'value'> {
-  values: SimpleExpressionNode[]
-}
-
-export enum IRDynamicPropsKind {
-  EXPRESSION, // v-bind="value"
-  ATTRIBUTE, // v-bind:[foo]="value"
-}
-
-export type IRPropsStatic = IRProp[]
-export interface IRPropsDynamicExpression {
-  kind: IRDynamicPropsKind.EXPRESSION
-  value: SimpleExpressionNode
-  handler?: boolean
-}
-export interface IRPropsDynamicAttribute extends IRProp {
-  kind: IRDynamicPropsKind.ATTRIBUTE
-}
-export type IRProps =
-  | IRPropsStatic
-  | IRPropsDynamicAttribute
-  | IRPropsDynamicExpression
 
 export interface SetPropIRNode extends BaseIRNode {
   type: IRNodeTypes.SET_PROP
@@ -207,51 +183,12 @@ export interface WithDirectiveIRNode extends BaseIRNode {
   asset?: boolean
 }
 
-export interface ComponentSlotBlockIRNode extends BlockIRNode {
-  props?: SimpleExpressionNode
-}
-export type ComponentSlots = Record<string, ComponentSlotBlockIRNode>
-
-export enum DynamicSlotType {
-  BASIC,
-  LOOP,
-  CONDITIONAL,
-}
-
-export interface ComponentBasicDynamicSlot {
-  slotType: DynamicSlotType.BASIC
-  name: SimpleExpressionNode
-  fn: ComponentSlotBlockIRNode
-}
-
-export interface ComponentLoopDynamicSlot {
-  slotType: DynamicSlotType.LOOP
-  name: SimpleExpressionNode
-  fn: ComponentSlotBlockIRNode
-  loop: IRFor
-}
-
-export interface ComponentConditionalDynamicSlot {
-  slotType: DynamicSlotType.CONDITIONAL
-  condition: SimpleExpressionNode
-  positive: ComponentBasicDynamicSlot
-  negative?: ComponentBasicDynamicSlot | ComponentConditionalDynamicSlot
-}
-
-export type ComponentDynamicSlot =
-  | ComponentBasicDynamicSlot
-  | ComponentLoopDynamicSlot
-  | ComponentConditionalDynamicSlot
-
 export interface CreateComponentIRNode extends BaseIRNode {
   type: IRNodeTypes.CREATE_COMPONENT_NODE
   id: number
   tag: string
   props: IRProps[]
-
-  slots?: ComponentSlots
-  dynamicSlots?: ComponentDynamicSlot[]
-
+  slots: IRSlots[]
   asset: boolean
   root: boolean
   once: boolean

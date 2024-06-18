@@ -5,14 +5,13 @@ import {
 } from './component'
 import { setupComponent } from './apiRender'
 import type { RawProps } from './componentProps'
-import type { DynamicSlots, Slots } from './componentSlots'
+import type { RawSlots } from './componentSlots'
 import { withAttrs } from './componentAttrs'
 
 export function createComponent(
   comp: Component,
   rawProps: RawProps | null = null,
-  slots: Slots | null = null,
-  dynamicSlots: DynamicSlots | null = null,
+  slots: RawSlots | null = null,
   singleRoot: boolean = false,
   once: boolean = false,
 ) {
@@ -21,7 +20,6 @@ export function createComponent(
     comp,
     singleRoot ? withAttrs(rawProps) : rawProps,
     slots,
-    dynamicSlots,
     once,
   )
   setupComponent(instance, singleRoot)
