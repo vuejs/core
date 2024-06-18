@@ -708,6 +708,33 @@ describe('reactivity/computed', () => {
     expect(COMPUTED_SIDE_EFFECT_WARN).toHaveBeenWarned()
   })
 
+  it('should chained computeds keep reactivity when computed effect happens', async () => {
+    const v = ref('Hello')
+    const c = computed(() => {
+      v.value += ' World'
+      return v.value
+    })
+    const d = computed(() => c.value)
+    const e = computed(() => d.value)
+    const Comp = {
+      setup: () => {
+        return () => d.value + ' | ' + e.value
+      },
+    }
+    const root = nodeOps.createElement('div')
+
+    render(h(Comp), root)
+    await nextTick()
+    expect(serializeInner(root)).toBe('Hello World | Hello World')
+
+    v.value += ' World'
+    await nextTick()
+    expect(serializeInner(root)).toBe(
+      'Hello World World World | Hello World World World',
+    )
+    expect(COMPUTED_SIDE_EFFECT_WARN).toHaveBeenWarned()
+  })
+
   it('debug: onTrigger (ref)', () => {
     let events: DebuggerEvent[] = []
     const onTrigger = vi.fn((e: DebuggerEvent) => {
