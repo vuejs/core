@@ -14,10 +14,8 @@ export function patchDOMProp(
 ) {
   if (key === 'innerHTML' || key === 'textContent') {
     if (value === null) return
-    else {
-      el[key] = value
-      return
-    }
+    el[key] = value
+    return
   }
 
   const tag = el.tagName
