@@ -15,6 +15,7 @@ export function provide<T, K = InjectionKey<T> | string | number>(
       warn(`provide() can only be used inside setup().`)
     }
   } else {
+    // 数据都会存到组件实例上 provides
     let provides = currentInstance.provides
     // 默认情况下，实例继承其父对象的provides对象。但当它需要提供自己的价值观时，它会创建own提供对象使用parent提供对象作为原型。
     // 通过这种方式，在inject中，我们可以简单地从direct中查找注射parent并让原型链来完成工作。
