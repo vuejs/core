@@ -832,9 +832,8 @@ function baseCreateRenderer(
       optimized = false
       dynamicChildren = null
     }
-    // the following args are passed only due to potential innerHTML/textContent
-    // overriding existing VNodes, in which case the old tree must be properly
-    // unmounted.
+    // due to potential innerHTML/textContent overriding existing VNodes,
+    // in which case the old tree must be properly unmounted.
     if (
       oldProps.innerHTML !== undefined ||
       oldProps.textContent !== undefined
