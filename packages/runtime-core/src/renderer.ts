@@ -2112,6 +2112,11 @@ function baseCreateRenderer(
       dirs,
       memoIndex,
     } = vnode
+
+    if (patchFlag === PatchFlags.BAIL) {
+      optimized = false
+    }
+
     // unset ref
     if (ref != null) {
       setRef(ref, null, parentSuspense, vnode, true)
@@ -2177,8 +2182,7 @@ function baseCreateRenderer(
         (type === Fragment &&
           patchFlag &
             (PatchFlags.KEYED_FRAGMENT | PatchFlags.UNKEYED_FRAGMENT)) ||
-        ((!optimized || patchFlag === PatchFlags.BAIL) &&
-          shapeFlag & ShapeFlags.ARRAY_CHILDREN)
+        (!optimized && shapeFlag & ShapeFlags.ARRAY_CHILDREN)
       ) {
         unmountChildren(children as VNode[], parentComponent, parentSuspense)
       }
