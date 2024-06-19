@@ -31,7 +31,7 @@ import { extend, isFunction } from '@vue/shared'
 import type { VNodeProps } from './vnode'
 import type {
   ComponentPublicInstanceConstructor,
-  CreateComponentPublicInstance,
+  CreateComponentPublicInstanceWithMixins,
 } from './componentPublicInstance'
 import type { SlotsType } from './componentSlots'
 import type { Directive } from './directives'
@@ -68,7 +68,7 @@ export type DefineComponent<
   Provide extends ComponentProvideOptions = ComponentProvideOptions,
   MakeDefaultsOptional extends boolean = true,
 > = ComponentPublicInstanceConstructor<
-  CreateComponentPublicInstance<
+  CreateComponentPublicInstanceWithMixins<
     Props,
     RawBindings,
     D,
@@ -116,7 +116,7 @@ export type DefineSetupFnComponent<
   PP = PublicProps,
 > = new (
   props: Props & PP,
-) => CreateComponentPublicInstance<
+) => CreateComponentPublicInstanceWithMixins<
   Props,
   {},
   {},
@@ -240,7 +240,7 @@ export function defineComponent<
     Provide
   > &
     ThisType<
-      CreateComponentPublicInstance<
+      CreateComponentPublicInstanceWithMixins<
         ResolvedProps,
         SetupBindings,
         Data,

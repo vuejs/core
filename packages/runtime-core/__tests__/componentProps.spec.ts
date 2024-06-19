@@ -17,7 +17,6 @@ import {
   ref,
   render,
   serializeInner,
-  toRaw,
   toRefs,
   watch,
 } from '@vue/runtime-test'
@@ -129,12 +128,12 @@ describe('component props', () => {
     render(h(Comp, { foo: 1 }), root)
     expect(props).toEqual({ foo: 1 })
     expect(attrs).toEqual({ foo: 1 })
-    expect(toRaw(props)).toBe(attrs)
+    expect(props).toBe(attrs)
 
     render(h(Comp, { bar: 2 }), root)
     expect(props).toEqual({ bar: 2 })
     expect(attrs).toEqual({ bar: 2 })
-    expect(toRaw(props)).toBe(attrs)
+    expect(props).toBe(attrs)
   })
 
   test('boolean casting', () => {
@@ -749,5 +748,40 @@ describe('component props', () => {
     expect(`Invalid prop name: "key"`).toHaveBeenWarned()
     expect(`Invalid prop name: "ref"`).toHaveBeenWarned()
     expect(`Invalid prop name: "$foo"`).toHaveBeenWarned()
+  })
+
+  // #5517
+  test('events should not be props when component updating', async () => {
+    let props: any
+    function eventHandler() {}
+    const foo = ref(1)
+
+    const Child = defineComponent({
+      setup(_props) {
+        props = _props
+      },
+      emits: ['event'],
+      props: ['foo'],
+      template: `<div>{{ foo }}</div>`,
+    })
+
+    const Comp = defineComponent({
+      setup() {
+        return {
+          foo,
+          eventHandler,
+        }
+      },
+      components: { Child },
+      template: `<Child @event="eventHandler" :foo="foo" />`,
+    })
+
+    const root = document.createElement('div')
+    domRender(h(Comp), root)
+    expect(props).not.toHaveProperty('onEvent')
+
+    foo.value++
+    await nextTick()
+    expect(props).not.toHaveProperty('onEvent')
   })
 })

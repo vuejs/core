@@ -63,6 +63,17 @@ describe('vnode', () => {
     })
   })
 
+  test('create from an existing text vnode', () => {
+    const vnode1 = createVNode('div', null, 'text', PatchFlags.TEXT)
+    const vnode2 = createVNode(vnode1)
+    expect(vnode2).toMatchObject({
+      type: 'div',
+      patchFlag: PatchFlags.BAIL,
+      children: 'text',
+      shapeFlag: ShapeFlags.ELEMENT | ShapeFlags.TEXT_CHILDREN,
+    })
+  })
+
   test('vnode keys', () => {
     for (const key of ['', 'a', 0, 1, NaN]) {
       expect(createVNode('div', { key }).key).toBe(key)
@@ -290,6 +301,16 @@ describe('vnode', () => {
     })
     const cloned8 = cloneVNode(original4)
     expect(cloned8.ref).toMatchObject({ i: mockInstance2, r, k: 'foo' })
+
+    // @ts-expect-error #8230
+    const original5 = createVNode('div', { ref: 111, ref_key: 'foo' })
+    expect(original5.ref).toMatchObject({
+      i: mockInstance2,
+      r: '111',
+      k: 'foo',
+    })
+    const cloned9 = cloneVNode(original5)
+    expect(cloned9.ref).toMatchObject({ i: mockInstance2, r: '111', k: 'foo' })
 
     setCurrentRenderingInstance(null)
   })

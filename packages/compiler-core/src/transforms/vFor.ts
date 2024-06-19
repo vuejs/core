@@ -47,6 +47,7 @@ import {
 import { processExpression } from './transformExpression'
 import { validateBrowserExpression } from '../validateExpression'
 import { PatchFlagNames, PatchFlags } from '@vue/shared'
+import { transformBindShorthand } from './vBind'
 
 export const transformFor = createStructuralDirectiveTransform(
   'for',
@@ -60,13 +61,20 @@ export const transformFor = createStructuralDirectiveTransform(
       ]) as ForRenderListExpression
       const isTemplate = isTemplateNode(node)
       const memo = findDir(node, 'memo')
-      const keyProp = findProp(node, `key`)
+      const keyProp = findProp(node, `key`, false, true)
+      if (keyProp && keyProp.type === NodeTypes.DIRECTIVE && !keyProp.exp) {
+        // resolve :key shorthand #10882
+        transformBindShorthand(keyProp, context)
+      }
       const keyExp =
         keyProp &&
         (keyProp.type === NodeTypes.ATTRIBUTE
-          ? createSimpleExpression(keyProp.value!.content, true)
-          : keyProp.exp!)
-      const keyProperty = keyProp ? createObjectProperty(`key`, keyExp!) : null
+          ? keyProp.value
+            ? createSimpleExpression(keyProp.value.content, true)
+            : undefined
+          : keyProp.exp)
+      const keyProperty =
+        keyProp && keyExp ? createObjectProperty(`key`, keyExp) : null
 
       if (!__BROWSER__ && isTemplate) {
         // #2085 / #5288 process :key and v-memo expressions need to be
@@ -224,8 +232,10 @@ export const transformFor = createStructuralDirectiveTransform(
           renderExp.arguments.push(
             loop as ForIteratorExpression,
             createSimpleExpression(`_cache`),
-            createSimpleExpression(String(context.cached++)),
+            createSimpleExpression(String(context.cached.length)),
           )
+          // increment cache count
+          context.cached.push(null)
         } else {
           renderExp.arguments.push(
             createFunctionExpression(

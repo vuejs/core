@@ -284,7 +284,7 @@ describe('INSTANCE_SCOPED_SLOTS', () => {
     ).toHaveBeenWarned()
   })
 
-  test('should not include legacy slot usage in $scopedSlots', () => {
+  test('should include legacy slot usage in $scopedSlots', () => {
     let normalSlots: Slots
     let scopedSlots: Slots
     new Vue({
@@ -301,7 +301,7 @@ describe('INSTANCE_SCOPED_SLOTS', () => {
     }).$mount()
 
     expect('default' in normalSlots!).toBe(true)
-    expect('default' in scopedSlots!).toBe(false)
+    expect('default' in scopedSlots!).toBe(true)
 
     expect(
       deprecationData[DeprecationTypes.INSTANCE_SCOPED_SLOTS].message,

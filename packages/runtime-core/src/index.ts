@@ -213,6 +213,7 @@ export type {
   DebuggerEvent,
   DebuggerEventExtraInfo,
   Raw,
+  Reactive,
 } from '@vue/reactivity'
 export type {
   WatchEffect,
@@ -269,16 +270,23 @@ export type {
   ComputedOptions,
   RuntimeCompilerOptions,
   ComponentInjectOptions,
+  // deprecated
+  ComponentOptionsWithoutProps,
+  ComponentOptionsWithArrayProps,
+  ComponentOptionsWithObjectProps,
 } from './componentOptions'
 export type {
   EmitsOptions,
   ObjectEmitsOptions,
   EmitsToProps,
+  ShortEmitsToObject,
+  EmitFn,
 } from './componentEmits'
 export type {
   ComponentPublicInstance,
   ComponentCustomProperties,
   CreateComponentPublicInstance,
+  CreateComponentPublicInstanceWithMixins,
 } from './componentPublicInstance'
 export type {
   Renderer,
@@ -366,7 +374,11 @@ export { transformVNodeArgs } from './vnode'
 // **IMPORTANT** These APIs are exposed solely for @vue/server-renderer and may
 // change without notice between versions. User code should never rely on them.
 
-import { createComponentInstance, setupComponent } from './component'
+import {
+  createComponentInstance,
+  getComponentPublicInstance,
+  setupComponent,
+} from './component'
 import { renderComponentRoot } from './componentRenderUtils'
 import { setCurrentRenderingInstance } from './componentRenderContext'
 import { isVNode, normalizeVNode } from './vnode'
@@ -378,6 +390,7 @@ const _ssrUtils = {
   setCurrentRenderingInstance,
   isVNode,
   normalizeVNode,
+  getComponentPublicInstance,
 }
 
 /**

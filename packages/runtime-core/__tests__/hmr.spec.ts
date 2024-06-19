@@ -6,6 +6,7 @@ import {
   h,
   nextTick,
   nodeOps,
+  ref,
   render,
   serializeInner,
   triggerEvent,
@@ -356,7 +357,7 @@ describe('hot module replacement', () => {
     triggerEvent(root.children[1] as TestElement, 'click')
     await nextTick()
     await new Promise(r => setTimeout(r, 0))
-    expect(serializeInner(root)).toBe(`<button></button><!---->`)
+    expect(serializeInner(root)).toBe(`<button></button><!--v-if-->`)
     expect(unmountSpy).toHaveBeenCalledTimes(1)
     expect(mountSpy).toHaveBeenCalledTimes(1)
     expect(activeSpy).toHaveBeenCalledTimes(1)
@@ -411,6 +412,53 @@ describe('hot module replacement', () => {
     reload(childId, UpdatedChild)
     await nextTick()
     expect(serializeInner(root)).toBe(`<div>1</div>`)
+    expect(unmountSpy).toHaveBeenCalledTimes(1)
+    expect(mountSpy).toHaveBeenCalledTimes(1)
+  })
+
+  // #6930
+  test('reload: avoid infinite recursion', async () => {
+    const root = nodeOps.createElement('div')
+    const childId = 'test-child-6930'
+    const unmountSpy = vi.fn()
+    const mountSpy = vi.fn()
+
+    const Child: ComponentOptions = {
+      __hmrId: childId,
+      data() {
+        return { count: 0 }
+      },
+      expose: ['count'],
+      unmounted: unmountSpy,
+      render: compileToFunction(`<div @click="count++">{{ count }}</div>`),
+    }
+    createRecord(childId, Child)
+
+    const Parent: ComponentOptions = {
+      setup() {
+        const com = ref()
+        const changeRef = (value: any) => {
+          com.value = value
+        }
+
+        return () => [h(Child, { ref: changeRef }), com.value?.count]
+      },
+    }
+
+    render(h(Parent), root)
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<div>0</div>0`)
+
+    reload(childId, {
+      __hmrId: childId,
+      data() {
+        return { count: 1 }
+      },
+      mounted: mountSpy,
+      render: compileToFunction(`<div @click="count++">{{ count }}</div>`),
+    })
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<div>1</div>1`)
     expect(unmountSpy).toHaveBeenCalledTimes(1)
     expect(mountSpy).toHaveBeenCalledTimes(1)
   })

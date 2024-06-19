@@ -98,7 +98,7 @@ export function queueJob(job: SchedulerJob) {
     } else if (
       // fast path when the job id is larger than the tail
       !(job.flags! & SchedulerJobFlags.PRE) &&
-      job.id >= (queue[queue.length - 1]?.id || 0)
+      job.id >= ((queue[queue.length - 1] && queue[queue.length - 1].id) || 0)
     ) {
       queue.push(job)
     } else {
@@ -192,14 +192,12 @@ export function flushPostFlushCbs(seen?: CountMap) {
       postFlushIndex < activePostFlushCbs.length;
       postFlushIndex++
     ) {
-      if (
-        __DEV__ &&
-        checkRecursiveUpdates(seen!, activePostFlushCbs[postFlushIndex])
-      ) {
+      const cb = activePostFlushCbs[postFlushIndex]
+      if (__DEV__ && checkRecursiveUpdates(seen!, cb)) {
         continue
       }
-      activePostFlushCbs[postFlushIndex]()
-      activePostFlushCbs[postFlushIndex].flags! &= ~SchedulerJobFlags.QUEUED
+      if (!(cb.flags! & SchedulerJobFlags.DISPOSED)) cb()
+      cb.flags! &= ~SchedulerJobFlags.QUEUED
     }
     activePostFlushCbs = null
     postFlushIndex = 0
