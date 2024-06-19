@@ -487,7 +487,7 @@ describe('renderer: optimized mode', () => {
     expect(spy).toHaveBeenCalledTimes(1)
   })
 
-  test('should call onUnmounted hook for dynamic components w/ component children', async () => {
+  test('should call onUnmounted hook for dynamic components receiving an existing vnode w/ component children', async () => {
     const spy = vi.fn()
     const show = ref(1)
     const Child = {
