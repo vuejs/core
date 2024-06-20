@@ -37,7 +37,10 @@ export function patchAttr(
       el.removeAttribute(key)
     } else {
       // attribute value is a string https://html.spec.whatwg.org/multipage/dom.html#attributes
-      el.setAttribute(key, isBoolean ? '' : String(value))
+      el.setAttribute(
+        key,
+        isBoolean ? '' : typeof value === 'symbol' ? String(value) : value,
+      )
     }
   }
 }
