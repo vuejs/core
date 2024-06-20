@@ -1,5 +1,6 @@
 import {
   type BlockCodegenNode,
+  type CacheExpression,
   type CallExpression,
   type DirectiveNode,
   type ElementNode,
@@ -491,11 +492,16 @@ export function hasScopeRef(
   }
 }
 
-export function getMemoedVNodeCall(node: BlockCodegenNode | MemoExpression) {
+export function getMemoedOrOnceVNodeCall(
+  node: BlockCodegenNode | MemoExpression | CacheExpression,
+) {
   if (node.type === NodeTypes.JS_CALL_EXPRESSION && node.callee === WITH_MEMO) {
     return node.arguments[1].returns as VNodeCall
   } else {
-    return node
+    // #7752
+    return node.type === NodeTypes.JS_CACHE_EXPRESSION
+      ? (node.value as VNodeCall)
+      : (node as VNodeCall)
   }
 }
 

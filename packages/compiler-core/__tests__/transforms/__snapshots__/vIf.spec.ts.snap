@@ -86,6 +86,20 @@ return function render(_ctx, _cache) {
 }"
 `;
 
+exports[`compiler: v-if > codegen > template v-if w/ v-once 1`] = `
+"const _Vue = Vue
+
+return function render(_ctx, _cache) {
+  with (_ctx) {
+    const { openBlock: _openBlock, createElementBlock: _createElementBlock, createCommentVNode: _createCommentVNode } = _Vue
+
+    return true
+      ? (_openBlock(), _createElementBlock("p", { key: 0 }, "foo"))
+      : _createCommentVNode("v-if", true)
+  }
+}"
+`;
+
 exports[`compiler: v-if > codegen > v-if + v-else 1`] = `
 "const _Vue = Vue
 
