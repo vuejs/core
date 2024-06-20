@@ -17,7 +17,7 @@ import { warn } from './warning'
 import {
   type ComponentInternalInstance,
   type Data,
-  getExposeProxy,
+  getComponentPublicInstance,
 } from './component'
 import { currentRenderingInstance } from './componentRenderContext'
 import { ErrorCodes, callWithAsyncErrorHandling } from './errorHandling'
@@ -27,7 +27,7 @@ import { pauseTracking, resetTracking } from '@vue/reactivity'
 import { traverse } from './apiWatch'
 
 export interface DirectiveBinding<V = any> {
-  instance: ComponentPublicInstance | null
+  instance: ComponentPublicInstance | Record<string, any> | null
   value: V
   oldValue: V | null
   arg?: string
@@ -92,9 +92,7 @@ export function withDirectives<T extends VNode>(
     __DEV__ && warn(`withDirectives can only be used inside render functions.`)
     return vnode
   }
-  const instance =
-    (getExposeProxy(currentRenderingInstance) as ComponentPublicInstance) ||
-    currentRenderingInstance.proxy
+  const instance = getComponentPublicInstance(currentRenderingInstance)
   const bindings: DirectiveBinding[] = vnode.dirs || (vnode.dirs = [])
   for (let i = 0; i < directives.length; i++) {
     let [dir, value, arg, modifiers = EMPTY_OBJ] = directives[i]
