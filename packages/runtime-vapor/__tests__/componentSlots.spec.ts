@@ -158,6 +158,40 @@ describe('component: slots', () => {
 
   test('the current instance should be kept in the slot', async () => {
     let instanceInDefaultSlot: any
+    let instanceInFooSlot: any
+
+    const Comp = defineComponent({
+      render() {
+        const instance = getCurrentInstance()
+        instance!.slots.default!()
+        instance!.slots.foo!()
+        return template('<div></div>')()
+      },
+    })
+
+    const { instance } = define({
+      render() {
+        return createComponent(Comp, {}, [
+          {
+            default: () => {
+              instanceInDefaultSlot = getCurrentInstance()
+              return template('content')()
+            },
+            foo: () => {
+              instanceInFooSlot = getCurrentInstance()
+              return template('content')()
+            },
+          },
+        ])
+      },
+    }).render()
+
+    expect(instanceInDefaultSlot).toBe(instance)
+    expect(instanceInFooSlot).toBe(instance)
+  })
+
+  test('the current instance should be kept in the dynamic slots', async () => {
+    let instanceInDefaultSlot: any
     let instanceInVForSlot: any
     let instanceInVIfSlot: any
 

@@ -40,12 +40,17 @@ export function initSlots(
   if (!rawSlots) return
   if (!isArray(rawSlots)) rawSlots = [rawSlots]
 
-  if (rawSlots.length === 1 && !isDynamicSlotFn(rawSlots[0])) {
-    instance.slots = rawSlots[0]
+  if (!rawSlots.some(slot => isDynamicSlotFn(slot))) {
+    instance.slots = {}
+    // with ctx
+    const slots = rawSlots[0] as StaticSlots
+    for (const name in slots) {
+      registerSlot(name, slots[name])
+    }
     return
   }
 
-  const resolved: StaticSlots = (instance.slots = shallowReactive({}))
+  instance.slots = shallowReactive({})
   const keys: Set<string>[] = []
   rawSlots.forEach((slots, index) => {
     const isDynamicSlot = isDynamicSlotFn(slots)
@@ -71,7 +76,7 @@ export function initSlots(
               : dynamicSlot && dynamicSlot.name === name)
           ) {
             recordNames.delete(name)
-            delete resolved[name]
+            delete instance.slots[name]
           }
         }
       })
@@ -83,7 +88,7 @@ export function initSlots(
   })
 
   function registerSlot(name: string, fn: Slot, recordNames?: Set<string>) {
-    resolved[name] = withCtx(fn)
+    instance.slots[name] = withCtx(fn)
     recordNames && recordNames.add(name)
   }
 
