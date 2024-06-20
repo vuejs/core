@@ -2,14 +2,14 @@ import Vue from '@vue/compat'
 import {
   DeprecationTypes,
   deprecationData,
-  toggleDeprecationWarning
+  toggleDeprecationWarning,
 } from '../../runtime-core/src/compat/compatConfig'
 
 beforeEach(() => {
   toggleDeprecationWarning(true)
   Vue.configureCompat({
     MODE: 2,
-    GLOBAL_MOUNT: 'suppress-warning'
+    GLOBAL_MOUNT: 'suppress-warning',
   })
 })
 
@@ -24,27 +24,27 @@ describe('COMPONENT_FUNCTIONAL', () => {
       name: 'Func',
       functional: true,
       props: {
-        x: String
+        x: String,
       },
       inject: ['foo'],
       render: (h: any, { data, props, injections, slots }: any) => {
         return h('div', { id: props.x, class: data.class }, [
           h('div', { class: 'inject' }, injections.foo),
-          h('div', { class: 'slot' }, slots().default)
+          h('div', { class: 'slot' }, slots().default),
         ])
-      }
+      },
     }
 
     const vm = new Vue({
       provide() {
         return {
-          foo: 123
+          foo: 123,
         }
       },
       components: {
-        func
+        func,
       },
-      template: `<func class="foo" x="foo">hello</func>`
+      template: `<func class="foo" x="foo">hello</func>`,
     }).$mount()
 
     expect(vm.$el.id).toBe('foo')
@@ -52,14 +52,14 @@ describe('COMPONENT_FUNCTIONAL', () => {
     expect(vm.$el.querySelector('.inject').textContent).toBe('123')
     expect(vm.$el.querySelector('.slot').textContent).toBe('hello')
     expect(vm.$el.outerHTML).toMatchInlineSnapshot(
-      `"<div id="foo" class="foo"><div class="inject">123</div><div class="slot">hello</div></div>"`
+      `"<div id="foo" class="foo"><div class="inject">123</div><div class="slot">hello</div></div>"`,
     )
 
     expect(
       (
         deprecationData[DeprecationTypes.COMPONENT_FUNCTIONAL]
           .message as Function
-      )(func)
+      )(func),
     ).toHaveBeenWarned()
   })
 
@@ -68,17 +68,17 @@ describe('COMPONENT_FUNCTIONAL', () => {
       name: 'Func',
       functional: true,
       compatConfig: {
-        ATTR_FALSE_VALUE: 'suppress-warning' as const
+        ATTR_FALSE_VALUE: 'suppress-warning' as const,
       },
       render: (h: any) => {
         // should not render required: false due to compatConfig
         return h('div', { 'data-some-attr': false })
-      }
+      },
     }
 
     const vm = new Vue({
       components: { func },
-      template: `<func class="foo" x="foo">hello</func>`
+      template: `<func class="foo" x="foo">hello</func>`,
     }).$mount()
 
     expect(vm.$el.outerHTML).toMatchInlineSnapshot(`"<div></div>"`)
@@ -86,12 +86,12 @@ describe('COMPONENT_FUNCTIONAL', () => {
       (
         deprecationData[DeprecationTypes.COMPONENT_FUNCTIONAL]
           .message as Function
-      )(func)
+      )(func),
     ).toHaveBeenWarned()
     expect(
       (deprecationData[DeprecationTypes.ATTR_FALSE_VALUE].message as Function)(
-        func
-      )
+        func,
+      ),
     ).not.toHaveBeenWarned()
   })
 })

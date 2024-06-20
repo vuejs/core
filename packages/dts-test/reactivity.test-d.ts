@@ -1,4 +1,11 @@
-import { ref, readonly, shallowReadonly, Ref, reactive, markRaw } from 'vue'
+import {
+  type Ref,
+  markRaw,
+  reactive,
+  readonly,
+  ref,
+  shallowReadonly,
+} from 'vue'
 import { describe, expectType } from './utils'
 
 describe('should support DeepReadonly', () => {
@@ -21,18 +28,18 @@ describe('should support markRaw', () => {
   }
   const test = new Test<number>()
   const plain = {
-    ref: ref(1)
+    ref: ref(1),
   }
 
   const r = reactive({
     class: {
       raw: markRaw(test),
-      reactive: test
+      reactive: test,
     },
     plain: {
       raw: markRaw(plain),
-      reactive: plain
-    }
+      reactive: plain,
+    },
   })
 
   expectType<Test<number>>(r.class.raw)
@@ -112,4 +119,14 @@ describe('should unwrap extended Set correctly', () => {
   const eset1 = reactive(new ExtendendSet1())
   expectType<string>(eset1.foo)
   expectType<number>(eset1.bar)
+})
+
+describe('should not error when assignment', () => {
+  const arr = reactive([''])
+  let record: Record<number, string>
+  record = arr
+  expectType<string>(record[0])
+  let record2: { [key: number]: string }
+  record2 = arr
+  expectType<string>(record2[0])
 })

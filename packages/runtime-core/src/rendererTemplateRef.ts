@@ -1,21 +1,21 @@
-import { SuspenseBoundary } from './components/Suspense'
-import { VNode, VNodeNormalizedRef, VNodeNormalizedRefAtom } from './vnode'
+import type { SuspenseBoundary } from './components/Suspense'
+import type { VNode, VNodeNormalizedRef, VNodeNormalizedRefAtom } from './vnode'
 import {
   EMPTY_OBJ,
+  ShapeFlags,
   hasOwn,
   isArray,
   isFunction,
   isString,
   remove,
-  ShapeFlags
 } from '@vue/shared'
 import { isAsyncWrapper } from './apiAsyncComponent'
-import { getExposeProxy } from './component'
 import { warn } from './warning'
 import { isRef } from '@vue/reactivity'
-import { callWithErrorHandling, ErrorCodes } from './errorHandling'
-import { SchedulerJob } from './scheduler'
+import { ErrorCodes, callWithErrorHandling } from './errorHandling'
+import type { SchedulerJob } from './scheduler'
 import { queuePostRenderEffect } from './renderer'
+import { getComponentPublicInstance } from './component'
 
 /**
  * Function for handling a template ref
@@ -25,7 +25,7 @@ export function setRef(
   oldRawRef: VNodeNormalizedRef | null,
   parentSuspense: SuspenseBoundary | null,
   vnode: VNode,
-  isUnmount = false
+  isUnmount = false,
 ) {
   if (isArray(rawRef)) {
     rawRef.forEach((r, i) =>
@@ -34,8 +34,8 @@ export function setRef(
         oldRawRef && (isArray(oldRawRef) ? oldRawRef[i] : oldRawRef),
         parentSuspense,
         vnode,
-        isUnmount
-      )
+        isUnmount,
+      ),
     )
     return
   }
@@ -48,7 +48,7 @@ export function setRef(
 
   const refValue =
     vnode.shapeFlag & ShapeFlags.STATEFUL_COMPONENT
-      ? getExposeProxy(vnode.component!) || vnode.component!.proxy
+      ? getComponentPublicInstance(vnode.component!)
       : vnode.el
   const value = isUnmount ? null : refValue
 
@@ -56,7 +56,7 @@ export function setRef(
   if (__DEV__ && !owner) {
     warn(
       `Missing ref owner context. ref cannot be used on hoisted vnodes. ` +
-        `A vnode with ref must be created inside the render function.`
+        `A vnode with ref must be created inside the render function.`,
     )
     return
   }
