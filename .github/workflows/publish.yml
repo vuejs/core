@@ -51,7 +51,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version-file: '.node-version'
-          cache: "pnpm"
+          cache: 'pnpm'
 
       - name: Install deps
         run: pnpm install
@@ -60,7 +60,6 @@ jobs:
         run: |
           git config user.name "vue-bot"
           git config user.email "<bot@vuejs.org>"
-
 
       - name: Release
         run: pnpm release ${{ inputs.bump != 'custom' && inputs.bump || inputs.custom_version }} --skip-prompts
