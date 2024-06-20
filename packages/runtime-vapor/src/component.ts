@@ -23,7 +23,7 @@ import {
   normalizeEmitsOptions,
 } from './componentEmits'
 import { type RawSlots, type StaticSlots, initSlots } from './componentSlots'
-import { VaporLifecycleHooks } from './apiLifecycle'
+import { VaporLifecycleHooks } from './enums'
 import { warn } from './warning'
 import {
   type AppConfig,

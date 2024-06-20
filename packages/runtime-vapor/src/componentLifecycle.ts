@@ -1,5 +1,5 @@
 import { invokeArrayFns } from '@vue/shared'
-import type { VaporLifecycleHooks } from './apiLifecycle'
+import type { VaporLifecycleHooks } from './enums'
 import { type ComponentInternalInstance, setCurrentInstance } from './component'
 import { queuePostFlushCb } from './scheduler'
 import { type DirectiveHookName, invokeDirectiveHook } from './directives'

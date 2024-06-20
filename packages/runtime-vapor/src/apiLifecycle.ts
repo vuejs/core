@@ -11,21 +11,7 @@ import {
 } from '@vue/reactivity'
 import { ErrorTypeStrings, callWithAsyncErrorHandling } from './errorHandling'
 import { toHandlerKey } from '@vue/shared'
-
-export enum VaporLifecycleHooks {
-  BEFORE_MOUNT = 'bm',
-  MOUNTED = 'm',
-  BEFORE_UPDATE = 'bu',
-  UPDATED = 'u',
-  BEFORE_UNMOUNT = 'bum',
-  UNMOUNTED = 'um',
-  DEACTIVATED = 'da',
-  ACTIVATED = 'a',
-  RENDER_TRIGGERED = 'rtg',
-  RENDER_TRACKED = 'rtc',
-  ERROR_CAPTURED = 'ec',
-  // SERVER_PREFETCH = 'sp',
-}
+import { VaporLifecycleHooks } from './enums'
 
 const injectHook = (
   type: VaporLifecycleHooks,

@@ -6,7 +6,7 @@
 import type { ComponentInternalInstance } from './component'
 import { isFunction, isPromise } from '@vue/shared'
 import { warn } from './warning'
-import { VaporLifecycleHooks } from './apiLifecycle'
+import { VaporLifecycleHooks } from './enums'
 import {
   BaseWatchErrorCodes,
   pauseTracking,

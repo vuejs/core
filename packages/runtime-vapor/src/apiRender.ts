@@ -8,7 +8,7 @@ import {
 import { insert, querySelector, remove } from './dom/element'
 import { flushPostFlushCbs, queuePostFlushCb } from './scheduler'
 import { invokeLifecycle } from './componentLifecycle'
-import { VaporLifecycleHooks } from './apiLifecycle'
+import { VaporLifecycleHooks } from './enums'
 import {
   pauseTracking,
   proxyRefs,
