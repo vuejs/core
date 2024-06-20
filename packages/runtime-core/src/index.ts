@@ -406,6 +406,7 @@ const _ssrUtils: {
   setCurrentRenderingInstance: typeof setCurrentRenderingInstance
   isVNode: typeof isVNode
   normalizeVNode: typeof normalizeVNode
+  getComponentPublicInstance: typeof getComponentPublicInstance
 } = {
   createComponentInstance,
   setupComponent,

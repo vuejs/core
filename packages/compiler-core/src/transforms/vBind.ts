@@ -99,7 +99,7 @@ export const transformBind: DirectiveTransform = (dir, _node, context) => {
 export const transformBindShorthand = (
   dir: DirectiveNode,
   context: TransformContext,
-) => {
+): void => {
   const arg = dir.arg!
 
   const propName = camelize((arg as SimpleExpressionNode).content)
