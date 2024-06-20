@@ -1,5 +1,6 @@
 import {
   type Ref,
+  type Ref,
   type VueElement,
   createApp,
   defineAsyncComponent,
@@ -8,6 +9,7 @@ import {
   h,
   inject,
   nextTick,
+  provide,
   ref,
   renderSlot,
 } from '../src'
@@ -512,6 +514,67 @@ describe('defineCustomElement', () => {
       },
     })
     customElements.define('my-consumer', Consumer)
+
+    // # 8127
+    test('correct injection of asynchronous custom elements', async () => {
+      const comp = {
+        setup() {
+          provide('message', 'hello')
+        },
+        render(this: any) {
+          return h('my-el-async-c')
+        },
+      }
+      const P = defineCustomElement(
+        defineAsyncComponent(() => {
+          return new Promise<typeof comp>(resolve => {
+            setTimeout(() => {
+              resolve(comp)
+            }, 200)
+          })
+        }),
+      )
+
+      const compChild = {
+        setup() {
+          const message = inject('message', 'vue')
+          return { message }
+        },
+        render(this: { message: string }) {
+          return h('div', this.message)
+        },
+      }
+
+      const C = defineCustomElement(
+        defineAsyncComponent(() => {
+          return new Promise<typeof compChild>(resolve => {
+            setTimeout(() => {
+              resolve(compChild)
+            }, 200)
+          })
+        }),
+      )
+      customElements.define('my-el-async-c', C)
+      customElements.define('my-el-async-p', P)
+
+      container.innerHTML = `<my-el-async-p><my-el-async-c></my-el-async-c></my-el-async-p><div id="anchor">anchor</div>`
+
+      setTimeout(() => {
+        const parentComponent = container.querySelector('my-el-async-p')
+        const anchor = container.querySelector('#anchor') as VueElement
+        anchor.appendChild(parentComponent as VueElement)
+      }, 100)
+
+      await new Promise(r => setTimeout(r, 500))
+
+      const e = container.childNodes[0].childNodes[1] as VueElement
+      const cInner = (e.shadowRoot!.childNodes[0] as VueElement).shadowRoot!
+        .innerHTML
+      expect(cInner).toBe(`<div>hello</div>`)
+      expect((container.childNodes[0].childNodes[0] as Text).data).toBe(
+        `anchor`,
+      )
+    })
 
     test('over nested usage', async () => {
       const foo = ref('injected!')

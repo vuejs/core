@@ -245,8 +245,6 @@ export class VueElement extends BaseClass {
    * resolve inner component definition (handle possible async component)
    */
   private _resolveDef() {
-    this._resolved = true
-
     // set initial attrs
     for (let i = 0; i < this.attributes.length; i++) {
       this._setAttr(this.attributes[i].name)
@@ -262,6 +260,7 @@ export class VueElement extends BaseClass {
     this._ob.observe(this, { attributes: true })
 
     const resolve = (def: InnerComponentDef, isAsync = false) => {
+      this._resolved = true
       const { props, styles } = def
 
       // cast Number-type props set before resolve
