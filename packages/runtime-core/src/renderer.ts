@@ -107,10 +107,7 @@ export interface RendererOptions<
     prevValue: any,
     nextValue: any,
     namespace?: ElementNamespace,
-    prevChildren?: VNode<HostNode, HostElement>[],
     parentComponent?: ComponentInternalInstance | null,
-    parentSuspense?: SuspenseBoundary | null,
-    unmountChildren?: UnmountChildrenFn,
   ): void
   insert(el: HostNode, parent: HostElement, anchor?: HostNode | null): void
   remove(el: HostNode): void
@@ -670,17 +667,7 @@ function baseCreateRenderer(
     if (props) {
       for (const key in props) {
         if (key !== 'value' && !isReservedProp(key)) {
-          hostPatchProp(
-            el,
-            key,
-            null,
-            props[key],
-            namespace,
-            vnode.children as VNode[],
-            parentComponent,
-            parentSuspense,
-            unmountChildren,
-          )
+          hostPatchProp(el, key, null, props[key], namespace, parentComponent)
         }
       }
       /**
@@ -919,17 +906,7 @@ function baseCreateRenderer(
             const next = newProps[key]
             // #1471 force patch value
             if (next !== prev || key === 'value') {
-              hostPatchProp(
-                el,
-                key,
-                prev,
-                next,
-                namespace,
-                n1.children as VNode[],
-                parentComponent,
-                parentSuspense,
-                unmountChildren,
-              )
+              hostPatchProp(el, key, prev, next, namespace, parentComponent)
             }
           }
         }
@@ -1026,10 +1003,7 @@ function baseCreateRenderer(
               oldProps[key],
               null,
               namespace,
-              vnode.children as VNode[],
               parentComponent,
-              parentSuspense,
-              unmountChildren,
             )
           }
         }
@@ -1041,17 +1015,7 @@ function baseCreateRenderer(
         const prev = oldProps[key]
         // defer patching value
         if (next !== prev && key !== 'value') {
-          hostPatchProp(
-            el,
-            key,
-            prev,
-            next,
-            namespace,
-            vnode.children as VNode[],
-            parentComponent,
-            parentSuspense,
-            unmountChildren,
-          )
+          hostPatchProp(el, key, prev, next, namespace, parentComponent)
         }
       }
       if ('value' in newProps) {
