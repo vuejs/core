@@ -66,8 +66,8 @@ export type UnwrapNestedRefs<T> = T extends Ref ? T : UnwrapRefSimple<T>
 
 declare const ReactiveMarkerSymbol: unique symbol
 
-export declare class ReactiveMarker {
-  private [ReactiveMarkerSymbol]?: void
+export interface ReactiveMarker {
+  [ReactiveMarkerSymbol]?: void
 }
 
 export type Reactive<T> = UnwrapNestedRefs<T> &

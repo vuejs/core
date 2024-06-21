@@ -28,7 +28,7 @@ export const SSR_RENDER_SUSPENSE: unique symbol = Symbol(`ssrRenderSuspense`)
 export const SSR_GET_DIRECTIVE_PROPS: unique symbol =
   Symbol(`ssrGetDirectiveProps`)
 
-export const ssrHelpers = {
+export const ssrHelpers: Record<symbol, string> = {
   [SSR_INTERPOLATE]: `ssrInterpolate`,
   [SSR_RENDER_VNODE]: `ssrRenderVNode`,
   [SSR_RENDER_COMPONENT]: `ssrRenderComponent`,
