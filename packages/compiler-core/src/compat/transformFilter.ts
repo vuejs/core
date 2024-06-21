@@ -25,9 +25,7 @@ export const transformFilter: NodeTransform = (node, context) => {
     // filter rewrite is applied before expression transform so only
     // simple expressions are possible at this stage
     rewriteFilter(node.content, context)
-  }
-
-  if (node.type === NodeTypes.ELEMENT) {
+  } else if (node.type === NodeTypes.ELEMENT) {
     node.props.forEach((prop: AttributeNode | DirectiveNode) => {
       if (
         prop.type === NodeTypes.DIRECTIVE &&
