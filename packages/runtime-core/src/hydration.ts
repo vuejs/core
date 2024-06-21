@@ -766,18 +766,31 @@ function propHasMismatch(
       }
     }
 
-    // eslint-disable-next-line no-restricted-syntax
-    const root = instance?.subTree
+    const root = instance ? instance.subTree : null
+    let cssVars: Record<string, string> | null | undefined
     if (
       vnode === root ||
-      // eslint-disable-next-line no-restricted-syntax
-      (root?.type === Fragment && (root.children as VNode[]).includes(vnode))
+      (root &&
+        root.type === Fragment &&
+        (root.children as VNode[]).includes(vnode))
     ) {
-      // eslint-disable-next-line no-restricted-syntax
-      const cssVars = instance?.getCssVars?.()
-      for (const key in cssVars) {
-        expectedMap.set(`--${key}`, String(cssVars[key]))
-      }
+      cssVars = instance && instance.getCssVars && instance.getCssVars()
+    }
+
+    const parentInstance = instance ? instance.parent : null
+    if (
+      instance &&
+      parentInstance &&
+      ((parentInstance.subTree.children &&
+        (parentInstance.subTree.children as VNode[]).includes(
+          instance.vnode,
+        )) ||
+        parentInstance.subTree.component === instance)
+    ) {
+      cssVars = parentInstance.getCssVars && parentInstance.getCssVars()
+    }
+    for (const key in cssVars) {
+      expectedMap.set(`--${key}`, String(cssVars[key]))
     }
 
     if (!isMapEqual(actualMap, expectedMap)) {
