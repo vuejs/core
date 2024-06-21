@@ -38,7 +38,7 @@ export function warn(msg: string, ...args: any[]) {
         trace
           .map(
             ({ instance }) =>
-              `at <${formatComponentName(instance, instance.component)}>`,
+              `at <${formatComponentName(instance, instance.type)}>`,
           )
           .join('\n'),
         trace,
@@ -97,11 +97,7 @@ function formatTraceEntry({ instance, recurseCount }: TraceEntry): any[] {
   const postfix =
     recurseCount > 0 ? `... (${recurseCount} recursive calls)` : ``
   const isRoot = instance ? instance.parent == null : false
-  const open = ` at <${formatComponentName(
-    instance,
-    instance.component,
-    isRoot,
-  )}`
+  const open = ` at <${formatComponentName(instance, instance.type, isRoot)}`
   const close = `>` + postfix
   return instance.rawProps.length
     ? [open, ...formatProps(instance.rawProps), close]

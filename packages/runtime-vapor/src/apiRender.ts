@@ -19,6 +19,7 @@ import { isArray, isFunction, isObject } from '@vue/shared'
 import { fallThroughAttrs } from './componentAttrs'
 import { VaporErrorCodes, callWithErrorHandling } from './errorHandling'
 import { endMeasure, startMeasure } from './profiling'
+import { devtoolsComponentAdded } from './devtools'
 
 export const fragmentKey = Symbol(__DEV__ ? `fragmentKey` : ``)
 
@@ -38,7 +39,7 @@ export function setupComponent(
   }
   const reset = setCurrentInstance(instance)
   instance.scope.run(() => {
-    const { component, props } = instance
+    const { type: component, props } = instance
 
     if (__DEV__) {
       if (component.name) {
@@ -139,6 +140,10 @@ function mountComponent(
     instance => (instance.isMounted = true),
     true,
   )
+
+  if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
+    devtoolsComponentAdded(instance)
+  }
 
   if (__DEV__) {
     endMeasure(instance, 'mount')

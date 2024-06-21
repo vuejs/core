@@ -146,3 +146,17 @@ export {
   vModelDynamic,
 } from './directives/vModel'
 export { vShow } from './directives/vShow'
+
+// For devtools
+import {
+  type DevtoolsHook,
+  devtools as _devtools,
+  setDevtoolsHook as _setDevtoolsHook,
+} from './devtools'
+
+export const devtools = (
+  __DEV__ || __ESM_BUNDLER__ ? _devtools : undefined
+) as DevtoolsHook
+export const setDevtoolsHook = (
+  __DEV__ || __ESM_BUNDLER__ ? _setDevtoolsHook : NOOP
+) as typeof _setDevtoolsHook

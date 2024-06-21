@@ -1,4 +1,4 @@
-import { NO, isFunction, isObject } from '@vue/shared'
+import { NO, getGlobalThis, isFunction, isObject } from '@vue/shared'
 import {
   type Component,
   type ComponentInternalInstance,
@@ -16,7 +16,9 @@ import {
 import type { InjectionKey } from './apiInject'
 import type { RawProps } from './componentProps'
 import { validateDirectiveName } from './directives'
+import { devtoolsInitApp, setDevtoolsHook } from './devtools'
 
+let uid = 0
 export function createVaporApp(
   rootComponent: Component,
   rootProps: RawProps | null = null,
@@ -27,14 +29,24 @@ export function createVaporApp(
     rootProps = null
   }
 
+  const target = getGlobalThis()
+  target.__VUE__ = true
+  if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
+    setDevtoolsHook(target.__VUE_DEVTOOLS_GLOBAL_HOOK__, target)
+  }
+
   const context = createAppContext()
   const installedPlugins = new WeakSet()
 
   let instance: ComponentInternalInstance
 
-  const app: App = {
-    _context: context,
+  const app: App = (context.app = {
+    _uid: uid++,
+    _component: rootComponent,
+    _props: rootProps,
     _container: null,
+    _context: context,
+    _instance: null,
 
     version,
 
@@ -122,6 +134,11 @@ export function createVaporApp(
         // for devtools and telemetry
         ;(rootContainer as any).__vue_app__ = app
 
+        if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
+          app._instance = instance
+          devtoolsInitApp(app, version)
+        }
+
         return instance
       } else if (__DEV__) {
         warn(
@@ -161,7 +178,7 @@ export function createVaporApp(
         currentApp = lastApp
       }
     },
-  }
+  })
 
   return app
 }
@@ -169,6 +186,7 @@ export function createVaporApp(
 export function createAppContext(): AppContext {
   return {
     app: null as any,
+    mixins: [],
     config: {
       isNativeTag: NO,
       performance: false,
@@ -219,8 +237,13 @@ export interface App {
   provide<T>(key: string | InjectionKey<T>, value: T): App
   runWithContext<T>(fn: () => T): T
 
-  _context: AppContext
+  // internal, but we need to expose these for the server-renderer and devtools
+  _uid: number
+  _component: Component
+  _props: RawProps | null
   _container: ParentNode | null
+  _context: AppContext
+  _instance: ComponentInternalInstance | null
 }
 
 export interface AppConfig {
@@ -244,6 +267,7 @@ export interface AppConfig {
 export interface AppContext {
   app: App // for devtools
   config: AppConfig
+  mixins: never[] // for devtools, but no longer supported
   provides: Record<string | symbol, any>
 
   /**

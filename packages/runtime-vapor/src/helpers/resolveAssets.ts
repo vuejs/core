@@ -40,7 +40,7 @@ function resolveAsset(
 ) {
   const instance = currentInstance
   if (instance) {
-    const Component = instance.component
+    const Component = instance.type
 
     // explicit self name has highest priority
     if (type === COMPONENTS) {

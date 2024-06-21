@@ -55,7 +55,7 @@ export function patchAttrs(instance: ComponentInternalInstance) {
 
 export function withAttrs(props: RawProps): RawProps {
   const instance = currentInstance!
-  if (instance.component.inheritAttrs === false) return props
+  if (instance.type.inheritAttrs === false) return props
   const attrsGetter = () => instance.attrs
   if (!props) return [attrsGetter]
   if (isArray(props)) {
@@ -67,7 +67,7 @@ export function withAttrs(props: RawProps): RawProps {
 export function fallThroughAttrs(instance: ComponentInternalInstance) {
   const {
     block,
-    component: { inheritAttrs },
+    type: { inheritAttrs },
   } = instance
   if (inheritAttrs === false) return
 

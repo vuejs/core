@@ -154,13 +154,14 @@ export interface ComponentInternalInstance {
   vapor: true
   appContext: AppContext
 
+  type: Component
   block: Block | null
   container: ParentNode
   parent: ComponentInternalInstance | null
+  root: ComponentInternalInstance
 
   provides: Data
   scope: BlockEffectScope
-  component: Component
   comps: Set<ComponentInternalInstance>
 
   rawProps: NormalizedRawProps
@@ -280,10 +281,11 @@ export function createComponentInstance(
     container: null!,
 
     parent,
+    root: null!, // set later
 
     scope: null!,
     provides: parent ? parent.provides : Object.create(_appContext.provides),
-    component,
+    type: component,
     comps: new Set(),
 
     // resolved props and emits options
@@ -355,6 +357,7 @@ export function createComponentInstance(
      */
     // [VaporLifecycleHooks.SERVER_PREFETCH]: null,
   }
+  instance.root = parent ? parent.root : instance
   instance.scope = new BlockEffectScope(instance, parent && parent.scope)
   initProps(instance, rawProps, !isFunction(component), once)
   initSlots(instance, slots)
