@@ -17,6 +17,7 @@ import { warn } from './warning'
 import {
   PatchFlags,
   ShapeFlags,
+  def,
   includeBooleanAttr,
   isBooleanAttr,
   isKnownHtmlAttr,
@@ -141,18 +142,8 @@ export function createHydrationFunctions(
     vnode.el = node
 
     if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
-      if (!('__vnode' in node)) {
-        Object.defineProperty(node, '__vnode', {
-          value: vnode,
-          enumerable: false,
-        })
-      }
-      if (!('__vueParentComponent' in node)) {
-        Object.defineProperty(node, '__vueParentComponent', {
-          value: parentComponent,
-          enumerable: false,
-        })
-      }
+      def(node, '__vnode', vnode, true)
+      def(node, '__vueParentComponent', parentComponent, true)
     }
 
     if (patchFlag === PatchFlags.BAIL) {
