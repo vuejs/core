@@ -165,6 +165,12 @@ function innerResolveTypeElements(
   scope: TypeScope,
   typeParameters?: Record<string, Node>,
 ): ResolvedElements {
+  if (
+    node.leadingComments &&
+    node.leadingComments.some(c => c.value.includes('@vue-ignore'))
+  ) {
+    return { props: {} }
+  }
   switch (node.type) {
     case 'TSTypeLiteral':
       return typeElementsToMap(ctx, node.members, scope, typeParameters)
@@ -414,12 +420,6 @@ function resolveInterfaceMembers(
   )
   if (node.extends) {
     for (const ext of node.extends) {
-      if (
-        ext.leadingComments &&
-        ext.leadingComments.some(c => c.value.includes('@vue-ignore'))
-      ) {
-        continue
-      }
       try {
         const { props, calls } = resolveTypeElements(ctx, ext, scope)
         for (const key in props) {
@@ -439,6 +439,7 @@ function resolveInterfaceMembers(
             `Note: both in 3.2 or with the ignore, the properties in the base ` +
             `type are treated as fallthrough attrs at runtime.`,
           ext,
+          scope,
         )
       }
     }
@@ -912,7 +913,7 @@ function importSourceToScope(
 
       const filename = osSpecificJoinFn(dirname(scope.filename), source)
       resolved = resolveExt(filename, fs)
-    } else if (source.startsWith('.')) {
+    } else if (source[0] === '.') {
       // relative import - fast path
       const filename = joinPaths(dirname(scope.filename), source)
       resolved = resolveExt(filename, fs)
@@ -1138,12 +1139,12 @@ function parseFile(
   parserPlugins?: SFCScriptCompileOptions['babelParserPlugins'],
 ): Statement[] {
   const ext = extname(filename)
-  if (ext === '.ts' || ext === '.tsx') {
+  if (ext === '.ts' || ext === '.mts' || ext === '.tsx' || ext === '.mtsx') {
     return babelParse(content, {
       plugins: resolveParserPlugins(
         ext.slice(1),
         parserPlugins,
-        filename.endsWith('.d.ts'),
+        /\.d\.m?ts$/.test(filename),
       ),
       sourceType: 'module',
     }).program.body
@@ -1686,9 +1687,9 @@ export function inferRuntimeType(
         return inferRuntimeType(ctx, node.typeAnnotation, scope)
 
       case 'TSUnionType':
-        return flattenTypes(ctx, node.types, scope)
+        return flattenTypes(ctx, node.types, scope, isKeyOf)
       case 'TSIntersectionType': {
-        return flattenTypes(ctx, node.types, scope).filter(
+        return flattenTypes(ctx, node.types, scope, isKeyOf).filter(
           t => t !== UNKNOWN_TYPE,
         )
       }
@@ -1760,14 +1761,15 @@ function flattenTypes(
   ctx: TypeResolveContext,
   types: TSType[],
   scope: TypeScope,
+  isKeyOf: boolean = false,
 ): string[] {
   if (types.length === 1) {
-    return inferRuntimeType(ctx, types[0], scope)
+    return inferRuntimeType(ctx, types[0], scope, isKeyOf)
   }
   return [
     ...new Set(
       ([] as string[]).concat(
-        ...types.map(t => inferRuntimeType(ctx, t, scope)),
+        ...types.map(t => inferRuntimeType(ctx, t, scope, isKeyOf)),
       ),
     ),
   ]
