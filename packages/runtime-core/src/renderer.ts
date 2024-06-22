@@ -17,6 +17,7 @@ import {
   type ComponentInternalInstance,
   type ComponentOptions,
   type Data,
+  type LifecycleHook,
   createComponentInstance,
   setupComponent,
 } from './component'
@@ -1256,7 +1257,8 @@ function baseCreateRenderer(
     // setup() is async. This component relies on async logic to be resolved
     // before proceeding
     if (__FEATURE_SUSPENSE__ && instance.asyncDep) {
-      parentSuspense && parentSuspense.registerDep(instance, setupRenderEffect)
+      parentSuspense &&
+        parentSuspense.registerDep(instance, setupRenderEffect, optimized)
 
       // Give it a placeholder if this is not hydration
       // TODO handle self-defined fallback
@@ -1925,7 +1927,7 @@ function baseCreateRenderer(
       const s2 = i // next starting index
 
       // 5.1 build key:index map for newChildren
-      const keyToNewIndexMap: Map<string | number | symbol, number> = new Map()
+      const keyToNewIndexMap: Map<PropertyKey, number> = new Map()
       for (i = s2; i <= e2; i++) {
         const nextChild = (c2[i] = optimized
           ? cloneIfMounted(c2[i] as VNode)
@@ -2126,10 +2128,16 @@ function baseCreateRenderer(
       shapeFlag,
       patchFlag,
       dirs,
+      memoIndex,
     } = vnode
     // unset ref
     if (ref != null) {
       setRef(ref, null, parentSuspense, vnode, true)
+    }
+
+    // #6593 should clean memo cache when unmount
+    if (memoIndex != null) {
+      parentComponent!.renderCache[memoIndex] = undefined
     }
 
     if (shapeFlag & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE) {
@@ -2283,7 +2291,9 @@ function baseCreateRenderer(
       unregisterHMR(instance)
     }
 
-    const { bum, scope, update, subTree, um } = instance
+    const { bum, scope, update, subTree, um, m, a } = instance
+    invalidateMount(m)
+    invalidateMount(a)
 
     // beforeUnmount hook
     if (bum) {
@@ -2481,7 +2491,8 @@ export function traverseStaticChildren(n1: VNode, n2: VNode, shallow = false) {
           c2 = ch2[i] = cloneIfMounted(ch2[i] as VNode)
           c2.el = c1.el
         }
-        if (!shallow) traverseStaticChildren(c1, c2)
+        if (!shallow && c2.patchFlag !== PatchFlags.BAIL)
+          traverseStaticChildren(c1, c2)
       }
       // #6852 also inherit for text nodes
       if (c2.type === Text) {
@@ -2548,5 +2559,11 @@ function locateNonHydratedAsyncRoot(
     } else {
       return locateNonHydratedAsyncRoot(subComponent)
     }
+  }
+}
+
+export function invalidateMount(hooks: LifecycleHook) {
+  if (hooks) {
+    for (let i = 0; i < hooks.length; i++) hooks[i].active = false
   }
 }

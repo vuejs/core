@@ -4,6 +4,7 @@ import {
   type EffectScheduler,
   ReactiveEffect,
   ReactiveFlags,
+  type ReactiveMarker,
   type Ref,
   getCurrentScope,
   isReactive,
@@ -53,19 +54,17 @@ export type WatchCallback<V = any, OV = any> = (
   onCleanup: OnCleanup,
 ) => any
 
+type MaybeUndefined<T, I> = I extends true ? T | undefined : T
+
 type MapSources<T, Immediate> = {
   [K in keyof T]: T[K] extends WatchSource<infer V>
-    ? Immediate extends true
-      ? V | undefined
-      : V
+    ? MaybeUndefined<V, Immediate>
     : T[K] extends object
-      ? Immediate extends true
-        ? T[K] | undefined
-        : T[K]
+      ? MaybeUndefined<T[K], Immediate>
       : never
 }
 
-type OnCleanup = (cleanupFn: () => void) => void
+export type OnCleanup = (cleanupFn: () => void) => void
 
 export interface WatchOptionsBase extends DebuggerOptions {
   flush?: 'pre' | 'post' | 'sync'
@@ -117,7 +116,19 @@ type MultiWatchSources = (WatchSource<unknown> | object)[]
 // overload: single source + cb
 export function watch<T, Immediate extends Readonly<boolean> = false>(
   source: WatchSource<T>,
-  cb: WatchCallback<T, Immediate extends true ? T | undefined : T>,
+  cb: WatchCallback<T, MaybeUndefined<T, Immediate>>,
+  options?: WatchOptions<Immediate>,
+): WatchStopHandle
+
+// overload: reactive array or tuple of multiple sources + cb
+export function watch<
+  T extends Readonly<MultiWatchSources>,
+  Immediate extends Readonly<boolean> = false,
+>(
+  sources: readonly [...T] | T,
+  cb: [T] extends [ReactiveMarker]
+    ? WatchCallback<T, MaybeUndefined<T, Immediate>>
+    : WatchCallback<MapSources<T, false>, MapSources<T, Immediate>>,
   options?: WatchOptions<Immediate>,
 ): WatchStopHandle
 
@@ -131,25 +142,13 @@ export function watch<
   options?: WatchOptions<Immediate>,
 ): WatchStopHandle
 
-// overload: multiple sources w/ `as const`
-// watch([foo, bar] as const, () => {})
-// somehow [...T] breaks when the type is readonly
-export function watch<
-  T extends Readonly<MultiWatchSources>,
-  Immediate extends Readonly<boolean> = false,
->(
-  source: T,
-  cb: WatchCallback<MapSources<T, false>, MapSources<T, Immediate>>,
-  options?: WatchOptions<Immediate>,
-): WatchStopHandle
-
 // overload: watching reactive object w/ cb
 export function watch<
   T extends object,
   Immediate extends Readonly<boolean> = false,
 >(
   source: T,
-  cb: WatchCallback<T, Immediate extends true ? T | undefined : T>,
+  cb: WatchCallback<T, MaybeUndefined<T, Immediate>>,
   options?: WatchOptions<Immediate>,
 ): WatchStopHandle
 
@@ -466,19 +465,11 @@ export function createPathGetter(ctx: any, path: string) {
 
 export function traverse(
   value: unknown,
-  depth?: number,
-  currentDepth = 0,
+  depth = Infinity,
   seen?: Set<unknown>,
 ) {
-  if (!isObject(value) || (value as any)[ReactiveFlags.SKIP]) {
+  if (depth <= 0 || !isObject(value) || (value as any)[ReactiveFlags.SKIP]) {
     return value
-  }
-
-  if (depth && depth > 0) {
-    if (currentDepth >= depth) {
-      return value
-    }
-    currentDepth++
   }
 
   seen = seen || new Set()
@@ -486,19 +477,25 @@ export function traverse(
     return value
   }
   seen.add(value)
+  depth--
   if (isRef(value)) {
-    traverse(value.value, depth, currentDepth, seen)
+    traverse(value.value, depth, seen)
   } else if (isArray(value)) {
     for (let i = 0; i < value.length; i++) {
-      traverse(value[i], depth, currentDepth, seen)
+      traverse(value[i], depth, seen)
     }
   } else if (isSet(value) || isMap(value)) {
     value.forEach((v: any) => {
-      traverse(v, depth, currentDepth, seen)
+      traverse(v, depth, seen)
     })
   } else if (isPlainObject(value)) {
     for (const key in value) {
-      traverse(value[key], depth, currentDepth, seen)
+      traverse(value[key], depth, seen)
+    }
+    for (const key of Object.getOwnPropertySymbols(value)) {
+      if (Object.prototype.propertyIsEnumerable.call(value, key)) {
+        traverse(value[key as any], depth, seen)
+      }
     }
   }
   return value

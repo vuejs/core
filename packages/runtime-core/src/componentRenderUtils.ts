@@ -26,6 +26,7 @@ import {
   isCompatEnabled,
   warnDeprecation,
 } from './compat/compatConfig'
+import { shallowReadonly } from '@vue/reactivity'
 
 /**
  * dev only flag to track whether $attrs was used during render.
@@ -48,22 +49,22 @@ export function renderComponentRoot(
     vnode,
     proxy,
     withProxy,
-    props,
     propsOptions: [propsOptions],
     slots,
     attrs,
     emit,
     render,
     renderCache,
+    props,
     data,
     setupState,
     ctx,
     inheritAttrs,
   } = instance
+  const prev = setCurrentRenderingInstance(instance)
 
   let result
   let fallthroughAttrs
-  const prev = setCurrentRenderingInstance(instance)
   if (__DEV__) {
     accessedAttrs = false
   }
@@ -93,7 +94,7 @@ export function renderComponentRoot(
           thisProxy,
           proxyToUse!,
           renderCache,
-          props,
+          __DEV__ ? shallowReadonly(props) : props,
           setupState,
           data,
           ctx,
@@ -110,19 +111,22 @@ export function renderComponentRoot(
       result = normalizeVNode(
         render.length > 1
           ? render(
-              props,
+              __DEV__ ? shallowReadonly(props) : props,
               __DEV__
                 ? {
                     get attrs() {
                       markAttrsAccessed()
-                      return attrs
+                      return shallowReadonly(attrs)
                     },
                     slots,
                     emit,
                   }
                 : { attrs, slots, emit },
             )
-          : render(props, null as any /* we know it doesn't need it */),
+          : render(
+              __DEV__ ? shallowReadonly(props) : props,
+              null as any /* we know it doesn't need it */,
+            ),
       )
       fallthroughAttrs = Component.props
         ? attrs
@@ -162,7 +166,7 @@ export function renderComponentRoot(
             propsOptions,
           )
         }
-        root = cloneVNode(root, fallthroughAttrs)
+        root = cloneVNode(root, fallthroughAttrs, false, true)
       } else if (__DEV__ && !accessedAttrs && root.type !== Comment) {
         const allAttrs = Object.keys(attrs)
         const eventAttrs: string[] = []
@@ -217,10 +221,15 @@ export function renderComponentRoot(
           getComponentName(instance.type),
         )
       }
-      root = cloneVNode(root, {
-        class: cls,
-        style: style,
-      })
+      root = cloneVNode(
+        root,
+        {
+          class: cls,
+          style: style,
+        },
+        false,
+        true,
+      )
     }
   }
 
@@ -233,7 +242,7 @@ export function renderComponentRoot(
       )
     }
     // clone before mutating since the root may be a hoisted vnode
-    root = cloneVNode(root)
+    root = cloneVNode(root, null, false, true)
     root.dirs = root.dirs ? root.dirs.concat(vnode.dirs) : vnode.dirs
   }
   // inherit transition data

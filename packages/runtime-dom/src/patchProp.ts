@@ -52,6 +52,11 @@ export const patchProp: DOMRendererOptions['patchProp'] = (
       parentSuspense,
       unmountChildren,
     )
+    // #6007 also set form state as attributes so they work with
+    // <input type="reset"> or libs / extensions that expect attributes
+    if (key === 'value' || key === 'checked' || key === 'selected') {
+      patchAttr(el, key, nextValue, isSVG, parentComponent, key !== 'value')
+    }
   } else {
     // special case for <input v-model type="checkbox"> with
     // :true-value & :false-value

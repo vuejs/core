@@ -212,6 +212,7 @@ export type {
   DebuggerEvent,
   DebuggerEventExtraInfo,
   Raw,
+  Reactive,
 } from '@vue/reactivity'
 export type {
   WatchEffect,
@@ -362,7 +363,11 @@ export { transformVNodeArgs } from './vnode'
 // **IMPORTANT** These APIs are exposed solely for @vue/server-renderer and may
 // change without notice between versions. User code should never rely on them.
 
-import { createComponentInstance, setupComponent } from './component'
+import {
+  createComponentInstance,
+  getComponentPublicInstance,
+  setupComponent,
+} from './component'
 import { renderComponentRoot } from './componentRenderUtils'
 import { setCurrentRenderingInstance } from './componentRenderContext'
 import { isVNode, normalizeVNode } from './vnode'
@@ -374,6 +379,7 @@ const _ssrUtils = {
   setCurrentRenderingInstance,
   isVNode,
   normalizeVNode,
+  getComponentPublicInstance,
 }
 
 /**

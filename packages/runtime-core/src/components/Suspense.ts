@@ -438,6 +438,7 @@ export interface SuspenseBoundary {
   registerDep(
     instance: ComponentInternalInstance,
     setupRenderEffect: SetupRenderEffectFn,
+    optimized: boolean,
   ): void
   unmount(parentSuspense: SuspenseBoundary | null, doRemove?: boolean): void
 }
@@ -479,7 +480,7 @@ function createSuspenseBoundary(
   let parentSuspenseId: number | undefined
   const isSuspensible = isVNodeSuspensible(vnode)
   if (isSuspensible) {
-    if (parentSuspense?.pendingBranch) {
+    if (parentSuspense && parentSuspense.pendingBranch) {
       parentSuspenseId = parentSuspense.pendingId
       parentSuspense.deps++
     }
@@ -679,7 +680,7 @@ function createSuspenseBoundary(
       return suspense.activeBranch && next(suspense.activeBranch)
     },
 
-    registerDep(instance, setupRenderEffect) {
+    registerDep(instance, setupRenderEffect, optimized) {
       const isInPendingSuspense = !!suspense.pendingBranch
       if (isInPendingSuspense) {
         suspense.deps++
@@ -814,7 +815,6 @@ function hydrateSuspense(
     suspense.resolve(false, true)
   }
   return result
-  /* eslint-enable no-restricted-globals */
 }
 
 function normalizeSuspenseChildren(vnode: VNode) {
@@ -899,5 +899,6 @@ function setActiveBranch(suspense: SuspenseBoundary, branch: VNode) {
 }
 
 function isVNodeSuspensible(vnode: VNode) {
-  return vnode.props?.suspensible != null && vnode.props.suspensible !== false
+  const suspensible = vnode.props && vnode.props.suspensible
+  return suspensible != null && suspensible !== false
 }
