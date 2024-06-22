@@ -33,6 +33,7 @@ import {
   NOOP,
   PatchFlags,
   ShapeFlags,
+  def,
   getGlobalThis,
   invokeArrayFns,
   isArray,
@@ -696,15 +697,10 @@ function baseCreateRenderer(
     }
 
     if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
-      Object.defineProperty(el, '__vnode', {
-        value: vnode,
-        enumerable: false,
-      })
-      Object.defineProperty(el, '__vueParentComponent', {
-        value: parentComponent,
-        enumerable: false,
-      })
+      def(el, '__vnode', vnode, true)
+      def(el, '__vueParentComponent', parentComponent, true)
     }
+
     if (dirs) {
       invokeDirectiveHook(vnode, null, parentComponent, 'beforeMount')
     }
@@ -805,6 +801,9 @@ function baseCreateRenderer(
     optimized: boolean,
   ) => {
     const el = (n2.el = n1.el!)
+    if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
+      el.__vnode = n2
+    }
     let { patchFlag, dynamicChildren, dirs } = n2
     // #1426 take the old vnode's patch flag into account since user may clone a
     // compiler-generated vnode, which de-opts to FULL_PROPS
@@ -2112,6 +2111,11 @@ function baseCreateRenderer(
       dirs,
       memoIndex,
     } = vnode
+
+    if (patchFlag === PatchFlags.BAIL) {
+      optimized = false
+    }
+
     // unset ref
     if (ref != null) {
       setRef(ref, null, parentSuspense, vnode, true)
@@ -2155,7 +2159,6 @@ function baseCreateRenderer(
           vnode,
           parentComponent,
           parentSuspense,
-          optimized,
           internals,
           doRemove,
         )
