@@ -36,8 +36,6 @@ import {
   triggerRef,
 } from '@vue/reactivity'
 
-// reference: https://vue-composition-api-rfc.netlify.com/api.html#watch
-
 describe('api: watch', () => {
   it('effect', async () => {
     const state = reactive({ count: 0 })

@@ -250,7 +250,6 @@ export const TeleportImpl = {
     vnode: VNode,
     parentComponent: ComponentInternalInstance | null,
     parentSuspense: SuspenseBoundary | null,
-    optimized: boolean,
     { um: unmount, o: { remove: hostRemove } }: RendererInternals,
     doRemove: boolean,
   ) {
