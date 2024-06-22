@@ -1,3 +1,24 @@
+## [3.4.30](https://github.com/vuejs/core/compare/v3.4.29...v3.4.30) (2024-06-22)
+
+
+### Bug Fixes
+
+* **compiler-core:** should not remove slot node with `v-else` ([#11150](https://github.com/vuejs/core/issues/11150)) ([e102670](https://github.com/vuejs/core/commit/e102670bde00417c3a5b0262c855b297c0e4169e))
+* **hydration:** fix css vars hydration mismatch false positive on attr-fallthrough ([#11190](https://github.com/vuejs/core/issues/11190)) ([7ad67ce](https://github.com/vuejs/core/commit/7ad67ced26e5f53a47cb42f4834496e4958cb53b)), closes [#11188](https://github.com/vuejs/core/issues/11188)
+* **hydration:** skip prop mismatch check for directives that mutate DOM in created ([3169c91](https://github.com/vuejs/core/commit/3169c914939d02a013b2938aff30dac8525923f8)), closes [#11189](https://github.com/vuejs/core/issues/11189)
+* **reactivity:** fix side effect computed dirty level ([#11183](https://github.com/vuejs/core/issues/11183)) ([3bd79e3](https://github.com/vuejs/core/commit/3bd79e3e5ed960fc42cbf77bc61a97d2c03557c0)), closes [#11181](https://github.com/vuejs/core/issues/11181) [#11169](https://github.com/vuejs/core/issues/11169)
+* **runtime-core:** ensure unmount dynamic components in optimized mode ([#11171](https://github.com/vuejs/core/issues/11171)) ([220fe24](https://github.com/vuejs/core/commit/220fe247484209e62c7f4991902c5335e29c5007)), closes [#11168](https://github.com/vuejs/core/issues/11168)
+* **runtime-core:** update devtool __vnode on patch, avoid memory leak during dev ([a959781](https://github.com/vuejs/core/commit/a959781dd6f609dcb6f16dd7fa47d3b16895e5ca)), closes [#11192](https://github.com/vuejs/core/issues/11192)
+* **runtime-dom:** ensure only symbols are explicitly stringified during attribute patching ([#11182](https://github.com/vuejs/core/issues/11182)) ([a2e35d6](https://github.com/vuejs/core/commit/a2e35d682db15a592f4270bb0cde70a0e7bdc4a6)), closes [#11177](https://github.com/vuejs/core/issues/11177)
+* **runtime-dom:** prevent setting state as attribute for custom elements ([#11165](https://github.com/vuejs/core/issues/11165)) ([8ae4c29](https://github.com/vuejs/core/commit/8ae4c293adcec28f18114cb6016230a86787e6a9)), closes [#11163](https://github.com/vuejs/core/issues/11163)
+
+
+### Performance Improvements
+
+* **reactivity:** cache tracking value ([#11145](https://github.com/vuejs/core/issues/11145)) ([7936dae](https://github.com/vuejs/core/commit/7936daebceab2ae9461c3b8f256e51020fb7d3ed))
+
+
+
 ## [3.4.29](https://github.com/vuejs/core/compare/v3.4.28...v3.4.29) (2024-06-14)
 
 
