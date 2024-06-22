@@ -38,14 +38,7 @@ export function renderSlot(
       currentRenderingInstance!.parent.isCE)
   ) {
     if (name !== 'default') props.name = name
-    const vnode = createVNode(
-      'slot',
-      props,
-      fallback && fallback(),
-      fallback ? PatchFlags.BAIL : undefined,
-    )
-    vnode.isSlotFallback = !!fallback
-    return vnode
+    return createVNode('slot', props, fallback && fallback())
   }
 
   let slot = slots[name]
