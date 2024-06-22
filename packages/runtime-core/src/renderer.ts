@@ -2112,6 +2112,11 @@ function baseCreateRenderer(
       dirs,
       memoIndex,
     } = vnode
+
+    if (patchFlag === PatchFlags.BAIL) {
+      optimized = false
+    }
+
     // unset ref
     if (ref != null) {
       setRef(ref, null, parentSuspense, vnode, true)
