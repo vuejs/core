@@ -766,18 +766,8 @@ function propHasMismatch(
       }
     }
 
-    // eslint-disable-next-line no-restricted-syntax
-    const root = instance?.subTree
-    if (
-      vnode === root ||
-      // eslint-disable-next-line no-restricted-syntax
-      (root?.type === Fragment && (root.children as VNode[]).includes(vnode))
-    ) {
-      // eslint-disable-next-line no-restricted-syntax
-      const cssVars = instance?.getCssVars?.()
-      for (const key in cssVars) {
-        expectedMap.set(`--${key}`, String(cssVars[key]))
-      }
+    if (instance) {
+      resolveCssVars(instance, vnode, expectedMap)
     }
 
     if (!isMapEqual(actualMap, expectedMap)) {
@@ -854,10 +844,8 @@ function toStyleMap(str: string): Map<string, string> {
   const styleMap: Map<string, string> = new Map()
   for (const item of str.split(';')) {
     let [key, value] = item.split(':')
-    // eslint-disable-next-line no-restricted-syntax
-    key = key?.trim()
-    // eslint-disable-next-line no-restricted-syntax
-    value = value?.trim()
+    key = key.trim()
+    value = value && value.trim()
     if (key && value) {
       styleMap.set(key, value)
     }
@@ -875,4 +863,27 @@ function isMapEqual(a: Map<string, string>, b: Map<string, string>): boolean {
     }
   }
   return true
+}
+
+function resolveCssVars(
+  instance: ComponentInternalInstance,
+  vnode: VNode,
+  expectedMap: Map<string, string>,
+) {
+  const root = instance.subTree
+  if (
+    instance.getCssVars &&
+    (vnode === root ||
+      (root &&
+        root.type === Fragment &&
+        (root.children as VNode[]).includes(vnode)))
+  ) {
+    const cssVars = instance.getCssVars()
+    for (const key in cssVars) {
+      expectedMap.set(`--${key}`, String(cssVars[key]))
+    }
+  }
+  if (vnode === root && instance.parent) {
+    resolveCssVars(instance.parent, instance.vnode, expectedMap)
+  }
 }
