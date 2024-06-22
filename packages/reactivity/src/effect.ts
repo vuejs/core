@@ -93,8 +93,10 @@ export class ReactiveEffect<T = any> {
           if (
             dep.computed.effect._dirtyLevel ===
             DirtyLevels.MaybeDirty_ComputedSideEffect_Origin
-          )
+          ) {
+            resetTracking()
             return true
+          }
           triggerComputed(dep.computed)
           if (this._dirtyLevel >= DirtyLevels.Dirty) {
             break
