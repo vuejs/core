@@ -708,15 +708,13 @@ describe('renderer: optimized mode', () => {
             openBlock(),
             createElementBlock('div', null, [
               renderSlot(slots, 'default', { hide: !props.show }, () => [
-                true
-                  ? (openBlock(),
-                    (block = createElementBlock(
-                      Fragment,
-                      { key: 0 },
-                      [createTextVNode('foo')],
-                      PatchFlags.STABLE_FRAGMENT,
-                    )))
-                  : createCommentVNode('v-if', true),
+                (openBlock(),
+                (block = createElementBlock(
+                  Fragment,
+                  { key: 0 },
+                  [createTextVNode('foo')],
+                  PatchFlags.STABLE_FRAGMENT,
+                ))),
               ]),
             ])
           )
