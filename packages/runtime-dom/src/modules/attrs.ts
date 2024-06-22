@@ -2,6 +2,7 @@ import {
   NOOP,
   includeBooleanAttr,
   isSpecialBooleanAttr,
+  isSymbol,
   makeMap,
 } from '@vue/shared'
 import {
@@ -39,7 +40,7 @@ export function patchAttr(
       // attribute value is a string https://html.spec.whatwg.org/multipage/dom.html#attributes
       el.setAttribute(
         key,
-        isBoolean ? '' : typeof value === 'symbol' ? String(value) : value,
+        isBoolean ? '' : isSymbol(value) ? String(value) : value,
       )
     }
   }
