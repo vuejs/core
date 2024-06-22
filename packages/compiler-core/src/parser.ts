@@ -865,15 +865,6 @@ function condenseWhitespace(
         node.content = node.content.replace(windowsNewlineRE, '\n')
       }
     }
-    // #9229 innerHTML normalize \r\n or \r into a single \n in the DOM
-    else if (
-      node.type === NodeTypes.INTERPOLATION &&
-      node.content.type === NodeTypes.SIMPLE_EXPRESSION &&
-      node.content.ast &&
-      node.content.ast.type === 'StringLiteral'
-    ) {
-      node.content.content = node.content.content.replace(/\\r\\n|\\r/g, '\\n')
-    }
   }
   if (inPre && tag && currentOptions.isPreTag(tag)) {
     // remove leading newline per html spec
