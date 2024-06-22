@@ -9,11 +9,11 @@ import pico from 'picocolors'
 import commonJS from '@rollup/plugin-commonjs'
 import polyfillNode from 'rollup-plugin-polyfill-node'
 import { nodeResolve } from '@rollup/plugin-node-resolve'
-import terser from '@rollup/plugin-terser'
 import esbuild from 'rollup-plugin-esbuild'
 import alias from '@rollup/plugin-alias'
 import { entries } from './scripts/aliases.js'
 import { inlineEnums } from './scripts/inline-enums.js'
+import { minify as minifySwc } from '@swc/core'
 
 /**
  * @template T
@@ -366,14 +366,25 @@ function createMinifiedConfig(/** @type {PackageFormat} */ format) {
       file: outputConfigs[format].file.replace(/\.js$/, '.prod.js'),
     },
     [
-      terser({
-        module: /^esm/.test(format),
-        compress: {
-          ecma: 2016,
-          pure_getters: true,
+      {
+        name: 'swc-minify',
+
+        async renderChunk(
+          contents,
+          _,
+          { format, sourcemap, sourcemapExcludeSources },
+        ) {
+          const { code, map } = await minifySwc(contents, {
+            module: format === 'es',
+            compress: true,
+            mangle: true,
+            sourceMap: !!sourcemap,
+            inlineSourcesContent: !sourcemapExcludeSources,
+          })
+
+          return { code, map: map || null }
         },
-        safari10: true,
-      }),
+      },
     ],
   )
 }

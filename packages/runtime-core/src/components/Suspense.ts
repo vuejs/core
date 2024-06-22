@@ -123,7 +123,6 @@ export const SuspenseImpl = {
     }
   },
   hydrate: hydrateSuspense,
-  create: createSuspenseBoundary,
   normalize: normalizeSuspenseChildren,
 }
 

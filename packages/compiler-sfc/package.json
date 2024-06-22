@@ -63,6 +63,6 @@
     "postcss-modules": "^6.0.0",
     "postcss-selector-parser": "^6.1.0",
     "pug": "^3.0.3",
-    "sass": "^1.77.4"
+    "sass": "^1.77.5"
   }
 }

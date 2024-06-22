@@ -853,6 +853,57 @@ describe('reactivity/computed', () => {
     expect(calls).toMatchObject(['b eval', 'mounted', 'b eval'])
   })
 
+  it('should chained computeds keep reactivity when computed effect happens', async () => {
+    const v = ref('Hello')
+    const c = computed(() => {
+      v.value += ' World'
+      return v.value
+    })
+    const d = computed(() => c.value)
+    const e = computed(() => d.value)
+    const Comp = {
+      setup: () => {
+        return () => d.value + ' | ' + e.value
+      },
+    }
+    const root = nodeOps.createElement('div')
+
+    render(h(Comp), root)
+    await nextTick()
+    expect(serializeInner(root)).toBe('Hello World | Hello World')
+
+    v.value += ' World'
+    await nextTick()
+    expect(serializeInner(root)).toBe(
+      'Hello World World World | Hello World World World',
+    )
+  })
+
+  it('should keep dirty level when side effect computed value changed', () => {
+    const v = ref(0)
+    const c = computed(() => {
+      v.value += 1
+      return v.value
+    })
+    const d = computed(() => {
+      return { d: c.value }
+    })
+
+    const Comp = {
+      setup: () => {
+        return () => {
+          return [d.value.d, d.value.d]
+        }
+      },
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(Comp), root)
+
+    expect(d.value.d).toBe(1)
+    expect(serializeInner(root)).toBe('11')
+  })
+
   it('debug: onTrigger (ref)', () => {
     let events: DebuggerEvent[] = []
     const onTrigger = vi.fn((e: DebuggerEvent) => {

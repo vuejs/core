@@ -17,6 +17,7 @@ import { warn } from './warning'
 import {
   PatchFlags,
   ShapeFlags,
+  def,
   includeBooleanAttr,
   isBooleanAttr,
   isKnownHtmlAttr,
@@ -141,18 +142,8 @@ export function createHydrationFunctions(
     vnode.el = node
 
     if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
-      if (!('__vnode' in node)) {
-        Object.defineProperty(node, '__vnode', {
-          value: vnode,
-          enumerable: false,
-        })
-      }
-      if (!('__vueParentComponent' in node)) {
-        Object.defineProperty(node, '__vueParentComponent', {
-          value: parentComponent,
-          enumerable: false,
-        })
-      }
+      def(node, '__vnode', vnode, true)
+      def(node, '__vueParentComponent', parentComponent, true)
     }
 
     if (patchFlag === PatchFlags.BAIL) {
@@ -459,6 +450,9 @@ export function createHydrationFunctions(
             // check hydration mismatch
             if (
               (__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
+              // #11189 skip if this node has directives that have created hooks
+              // as it could have mutated the DOM in any possible way
+              !(dirs && dirs.some(d => d.dir.created)) &&
               propHasMismatch(el, key, props[key], vnode, parentComponent)
             ) {
               logMismatchError()
@@ -766,18 +760,8 @@ function propHasMismatch(
       }
     }
 
-    // eslint-disable-next-line no-restricted-syntax
-    const root = instance?.subTree
-    if (
-      vnode === root ||
-      // eslint-disable-next-line no-restricted-syntax
-      (root?.type === Fragment && (root.children as VNode[]).includes(vnode))
-    ) {
-      // eslint-disable-next-line no-restricted-syntax
-      const cssVars = instance?.getCssVars?.()
-      for (const key in cssVars) {
-        expectedMap.set(`--${key}`, String(cssVars[key]))
-      }
+    if (instance) {
+      resolveCssVars(instance, vnode, expectedMap)
     }
 
     if (!isMapEqual(actualMap, expectedMap)) {
@@ -854,10 +838,8 @@ function toStyleMap(str: string): Map<string, string> {
   const styleMap: Map<string, string> = new Map()
   for (const item of str.split(';')) {
     let [key, value] = item.split(':')
-    // eslint-disable-next-line no-restricted-syntax
-    key = key?.trim()
-    // eslint-disable-next-line no-restricted-syntax
-    value = value?.trim()
+    key = key.trim()
+    value = value && value.trim()
     if (key && value) {
       styleMap.set(key, value)
     }
@@ -875,4 +857,27 @@ function isMapEqual(a: Map<string, string>, b: Map<string, string>): boolean {
     }
   }
   return true
+}
+
+function resolveCssVars(
+  instance: ComponentInternalInstance,
+  vnode: VNode,
+  expectedMap: Map<string, string>,
+) {
+  const root = instance.subTree
+  if (
+    instance.getCssVars &&
+    (vnode === root ||
+      (root &&
+        root.type === Fragment &&
+        (root.children as VNode[]).includes(vnode)))
+  ) {
+    const cssVars = instance.getCssVars()
+    for (const key in cssVars) {
+      expectedMap.set(`--${key}`, String(cssVars[key]))
+    }
+  }
+  if (vnode === root && instance.parent) {
+    resolveCssVars(instance.parent, instance.vnode, expectedMap)
+  }
 }
