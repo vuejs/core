@@ -535,21 +535,19 @@ function parseForExpression(
       result.key = createAliasExpression(keyContent, keyOffset, true)
     }
 
-    if (iteratorMatch[2]) {
-      const indexContent = iteratorMatch[2].trim()
+    const indexContent = iteratorMatch[2] && iteratorMatch[2].trim()
 
-      if (indexContent) {
-        result.index = createAliasExpression(
+    if (indexContent) {
+      result.index = createAliasExpression(
+        indexContent,
+        exp.indexOf(
           indexContent,
-          exp.indexOf(
-            indexContent,
-            result.key
-              ? keyOffset! + keyContent.length
-              : trimmedOffset + valueContent.length,
-          ),
-          true,
-        )
-      }
+          result.key
+            ? keyOffset! + keyContent.length
+            : trimmedOffset + valueContent.length,
+        ),
+        true,
+      )
     }
   }
 

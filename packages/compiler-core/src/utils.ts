@@ -397,18 +397,12 @@ export function injectProp(
       parentCall = callPath[callPath.length - 2]
     }
   }
-  if (node.type === NodeTypes.VNODE_CALL) {
-    if (parentCall) {
-      parentCall.arguments[0] = propsWithInjection
-    } else {
-      node.props = propsWithInjection
-    }
+  if (parentCall) {
+    parentCall.arguments[0] = propsWithInjection
+  } else if (node.type === NodeTypes.VNODE_CALL) {
+    node.props = propsWithInjection
   } else {
-    if (parentCall) {
-      parentCall.arguments[0] = propsWithInjection
-    } else {
-      node.arguments[2] = propsWithInjection
-    }
+    node.arguments[2] = propsWithInjection
   }
 }
 

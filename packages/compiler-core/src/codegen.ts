@@ -230,10 +230,9 @@ function createCodegenContext(
       newline(++context.indentLevel)
     },
     deindent(withoutNewLine = false) {
-      if (withoutNewLine) {
-        --context.indentLevel
-      } else {
-        newline(--context.indentLevel)
+      --context.indentLevel
+      if (!withoutNewLine) {
+        newline(context.indentLevel)
       }
     },
     newline() {
