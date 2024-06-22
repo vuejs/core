@@ -9,8 +9,8 @@
   },
   "include": [
     "packages/global.d.ts",
-    "packages/compiler-sfc/src"
-    // "packages/compiler-ssr/src",
-    // "packages/server-renderer/src"
+    "packages/compiler-sfc/src",
+    "packages/compiler-ssr/src",
+    "packages/server-renderer/src"
   ]
 }
