@@ -64,6 +64,11 @@ describe('toDisplayString', () => {
     )
   })
 
+  test('ref with String', () => {
+    const n = ref('foo')
+    expect(toDisplayString(n)).toBe(n.value)
+  })
+
   test('refs', () => {
     const n = ref(1)
     const np = computed(() => n.value + 1)

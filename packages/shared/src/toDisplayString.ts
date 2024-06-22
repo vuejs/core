@@ -17,18 +17,20 @@ import {
 export const toDisplayString = (val: unknown): string => {
   return isString(val)
     ? val
-    : val == null
-      ? ''
-      : isArray(val) ||
-          (isObject(val) &&
-            (val.toString === objectToString || !isFunction(val.toString)))
-        ? JSON.stringify(val, replacer, 2)
-        : String(val)
+    : isRef(val) && isString(val.value)
+      ? val.value
+      : val == null
+        ? ''
+        : isArray(val) ||
+            (isObject(val) &&
+              (val.toString === objectToString || !isFunction(val.toString)))
+          ? JSON.stringify(val, replacer, 2)
+          : String(val)
 }
 
 const replacer = (_key: string, val: any): any => {
   // can't use isRef here since @vue/shared has no deps
-  if (val && val.__v_isRef) {
+  if (isRef(val)) {
     return replacer(_key, val.value)
   } else if (isMap(val)) {
     return {
@@ -57,3 +59,5 @@ const stringifySymbol = (v: unknown, i: number | string = ''): any =>
   // Symbol.description in es2019+ so we need to cast here to pass
   // the lib: es2016 check
   isSymbol(v) ? `Symbol(${(v as any).description ?? i})` : v
+
+const isRef = (val: any): val is { value: any } => val && val.__v_isRef
