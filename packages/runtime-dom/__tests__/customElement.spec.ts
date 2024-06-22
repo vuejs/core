@@ -9,6 +9,7 @@ import {
   inject,
   nextTick,
   ref,
+  render,
   renderSlot,
 } from '../src'
 
@@ -137,7 +138,7 @@ describe('defineCustomElement', () => {
 
   describe('props', () => {
     const E = defineCustomElement({
-      props: ['foo', 'bar', 'bazQux'],
+      props: ['foo', 'bar', 'bazQux', 'value'],
       render() {
         return [
           h('div', null, this.foo),
@@ -146,6 +147,12 @@ describe('defineCustomElement', () => {
       },
     })
     customElements.define('my-el-props', E)
+
+    test('renders custom element w/ correct object prop value', () => {
+      render(h('my-el-props', { value: { x: 1 } }), container)
+      const el = container.children[0]
+      expect((el as any).value).toEqual({ x: 1 })
+    })
 
     test('props via attribute', async () => {
       // bazQux should map to `baz-qux` attribute
