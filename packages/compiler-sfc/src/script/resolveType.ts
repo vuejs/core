@@ -767,7 +767,7 @@ function innerResolveTypeReference(
         )
       }
     } else {
-      let importType = scope.imports[typeName]
+      const importType = scope.imports[typeName]
       if (importType?.imported === '*') {
         const importPath = scope.resolvedImportSources[importType.source]
         return innerResolveTypeReference(
