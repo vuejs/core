@@ -47,11 +47,11 @@ export class ComputedRefImpl<T = any> implements Subscriber {
   /**
    * @internal
    */
-  readonly dep = new Dep(this);
+  readonly dep = new Dep(this)
   /**
    * @internal
    */
-  readonly [ReactiveFlags.IS_REF] = true;
+  readonly [ReactiveFlags.IS_REF] = true
   /**
    * @internal
    */

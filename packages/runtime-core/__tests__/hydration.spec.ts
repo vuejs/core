@@ -3,6 +3,7 @@
  */
 
 import {
+  type ObjectDirective,
   Suspense,
   Teleport,
   Transition,
@@ -1669,6 +1670,46 @@ describe('SSR hydration', () => {
           }))
           return () =>
             h('div', null, [h('div', { style: { color: 'var(--foo)' } })])
+        },
+      })
+      app.mount(container)
+      expect(`Hydration style mismatch`).not.toHaveBeenWarned()
+    })
+
+    // #11188
+    test('css vars support fallthrough', () => {
+      const container = document.createElement('div')
+      container.innerHTML = `<div style="padding: 4px;--foo:red;"></div>`
+      const app = createSSRApp({
+        setup() {
+          useCssVars(() => ({
+            foo: 'red',
+          }))
+          return () => h(Child)
+        },
+      })
+      const Child = {
+        setup() {
+          return () => h('div', { style: 'padding: 4px' })
+        },
+      }
+      app.mount(container)
+      expect(`Hydration style mismatch`).not.toHaveBeenWarned()
+    })
+
+    // #11189
+    test('should not warn for directives that mutate DOM in created', () => {
+      const container = document.createElement('div')
+      container.innerHTML = `<div class="test red"></div>`
+      const vColor: ObjectDirective = {
+        created(el, binding) {
+          el.classList.add(binding.value)
+        },
+      }
+      const app = createSSRApp({
+        setup() {
+          return () =>
+            withDirectives(h('div', { class: 'test' }), [[vColor, 'red']])
         },
       })
       app.mount(container)

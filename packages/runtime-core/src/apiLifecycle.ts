@@ -31,9 +31,6 @@ export function injectHook(
     const wrappedHook =
       hook.__weh ||
       (hook.__weh = (...args: unknown[]) => {
-        if (target.isUnmounted) {
-          return
-        }
         // disable tracking inside all lifecycle hooks
         // since they can potentially be called inside effects.
         pauseTracking()

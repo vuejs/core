@@ -696,6 +696,7 @@ describe('compiler: transform component slots', () => {
     expect((root as any).children[0].codegenNode.patchFlag).toMatch(
       PatchFlags.DYNAMIC_SLOTS + '',
     )
+    expect((root as any).children[0].children.length).toBe(3)
     expect(generate(root).code).toMatchSnapshot()
   })
 
