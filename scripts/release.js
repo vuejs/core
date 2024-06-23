@@ -140,21 +140,21 @@ async function main() {
     const major = semver.major(currentVersion)
     let newVersion
 
-    if (isCanary) {
-      // The canary version string format is `3.yyyyMMdd.0` (or `3.yyyyMMdd.0-minor.0` for minor)
-      // Use UTC date so that it's consistent across CI and maintainers' machines
-      const date = new Date()
-      const yyyy = date.getUTCFullYear()
-      const MM = (date.getUTCMonth() + 1).toString().padStart(2, '0')
-      const dd = date.getUTCDate().toString().padStart(2, '0')
+    // The canary version string format is `3.yyyyMMdd.0` (or `3.yyyyMMdd.0-minor.0` for minor)
+    // Use UTC date so that it's consistent across CI and maintainers' machines
+    const date = new Date()
+    const yyyy = date.getUTCFullYear()
+    const MM = (date.getUTCMonth() + 1).toString().padStart(2, '0')
+    const dd = date.getUTCDate().toString().padStart(2, '0')
+    const datestamp = `${yyyy}${MM}${dd}`
 
-      const datestamp = `${yyyy}${MM}${dd}`
+    if (isCanary) {
       newVersion = `${major}.${datestamp}.0`
       if (args.tag && args.tag !== 'latest') {
         newVersion = `${major}.${datestamp}.0-${args.tag}.0`
       }
     } else {
-      newVersion = `${major}.2024.0-${await getSha(true)}`
+      newVersion = `${major}.${datestamp}.0-${await getSha(true)}`
     }
 
     // check the registry to avoid version collision
