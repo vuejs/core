@@ -17,8 +17,8 @@ import {
 export const toDisplayString = (val: unknown): string => {
   return isString(val)
     ? val
-    : isRef(val) && isString(val.value)
-      ? val.value
+    : isRef(val)
+      ? toDisplayString(val.value)
       : val == null
         ? ''
         : isArray(val) ||
@@ -29,7 +29,6 @@ export const toDisplayString = (val: unknown): string => {
 }
 
 const replacer = (_key: string, val: any): any => {
-  // can't use isRef here since @vue/shared has no deps
   if (isRef(val)) {
     return replacer(_key, val.value)
   } else if (isMap(val)) {
@@ -55,9 +54,10 @@ const replacer = (_key: string, val: any): any => {
   return val
 }
 
+// can't use isRef from @vue/reactivity here since @vue/shared has no deps
+const isRef = (val: any): val is { value: any } => val && val.__v_isRef
+
 const stringifySymbol = (v: unknown, i: number | string = ''): any =>
   // Symbol.description in es2019+ so we need to cast here to pass
   // the lib: es2016 check
   isSymbol(v) ? `Symbol(${(v as any).description ?? i})` : v
-
-const isRef = (val: any): val is { value: any } => val && val.__v_isRef
