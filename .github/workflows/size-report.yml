@@ -13,6 +13,7 @@ permissions:
 
 env:
   PUPPETEER_SKIP_DOWNLOAD: 'true'
+  COMMENT_MARKER: <!-- VUE_CORE_SIZE -->
 
 jobs:
   size-report:
@@ -52,20 +53,15 @@ jobs:
           path: temp/size-prev
           if_no_artifact_found: warn
 
-      - name: Compare size
-        run: pnpm tsx scripts/size-report.ts > size-report.md
-
-      - name: Read Size Report
-        id: size-report
-        uses: juliangruber/read-file-action@v1
-        with:
-          path: ./size-report.md
+      - name: Prepare report
+        run: |
+          pnpm tsx scripts/size-report.ts > size-report.md
+          echo '${{ env.COMMENT_MARKER }}' >> size-report.md
 
       - name: Create Comment
-        uses: actions-cool/maintain-one-comment@v3
+        uses: thollander/actions-comment-pull-request@v2.5.0
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          body: |
-            ${{ steps.size-report.outputs.content }}
-            <!-- VUE_CORE_SIZE -->
-          body-include: '<!-- VUE_CORE_SIZE -->'
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          filePath: size-report.md
+          comment_tag: ${{ env.COMMENT_MARKER }}
+          pr_number: ${{ github.event.workflow_run.pull_requests[0].number }}
