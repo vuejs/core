@@ -1,4 +1,5 @@
 import { makeMap } from './makeMap'
+import type { Ref } from './typeUtils'
 
 export const EMPTY_OBJ: { readonly [key: string]: any } = __DEV__
   ? Object.freeze({})
@@ -51,6 +52,20 @@ export const isString = (val: unknown): val is string => typeof val === 'string'
 export const isSymbol = (val: unknown): val is symbol => typeof val === 'symbol'
 export const isObject = (val: unknown): val is Record<any, any> =>
   val !== null && typeof val === 'object'
+
+// @vue/shared can't have dependencies,
+// but this is needed here for #7306
+
+/**
+ * Checks if a value is a ref object.
+ *
+ * @param r - The value to inspect.
+ * @see {@link https://vuejs.org/api/reactivity-utilities.html#isref}
+ */
+export function isRef<T>(r: Ref<T> | unknown): r is Ref<T>
+export function isRef(r: any): r is Ref {
+  return !!(r && r.__v_isRef === true)
+}
 
 export const isPromise = <T = any>(val: unknown): val is Promise<T> => {
   return (

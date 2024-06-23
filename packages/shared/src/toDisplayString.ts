@@ -4,16 +4,12 @@ import {
   isMap,
   isObject,
   isPlainObject,
+  isRef,
   isSet,
   isString,
   isSymbol,
   objectToString,
 } from './general'
-
-// can't use isRef here since @vue/shared has no deps
-const isRef = (val: any): val is { value: unknown } => {
-  return !!(val && val.__v_isRef === true)
-}
 
 /**
  * For converting {{ interpolation }} values to displayed strings.
