@@ -1,5 +1,31 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
+exports[`compiler: codeframe > invalid start and end 1`] = `
+"1  |  <div>
+   |  ^
+2  |    <template key="one"></template>
+3  |    <ul>"
+`;
+
+exports[`compiler: codeframe > invalid start and end 2`] = `
+"1  |  <div>
+   |  ^^^^^
+2  |    <template key="one"></template>
+   |  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+3  |    <ul>
+   |  ^^^^^^
+4  |      <li v-for="foobar">hi</li>
+   |  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+5  |    </ul>
+   |  ^^^^^^^
+6  |    <template key="two"></template>
+   |  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+7  |  </div>
+   |  ^^^^^^"
+`;
+
+exports[`compiler: codeframe > invalid start and end 3`] = `""`;
+
 exports[`compiler: codeframe > line in middle 1`] = `
 "2  |    <template key="one"></template>
 3  |    <ul>

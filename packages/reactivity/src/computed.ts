@@ -71,14 +71,21 @@ export class ComputedRefImpl<T> {
   get value() {
     // the computed ref may get wrapped by other proxies e.g. readonly() #3376
     const self = toRaw(this)
+    const lastDirtyLevel = self.effect._dirtyLevel
     if (
       (!self._cacheable || self.effect.dirty) &&
       hasChanged(self._value, (self._value = self.effect.run()!))
     ) {
-      triggerRefValue(self, DirtyLevels.Dirty)
+      // keep dirty level when side effect computed's value changed
+      if (lastDirtyLevel !== DirtyLevels.MaybeDirty_ComputedSideEffect) {
+        triggerRefValue(self, DirtyLevels.Dirty)
+      }
     }
     trackRefValue(self)
-    if (self.effect._dirtyLevel >= DirtyLevels.MaybeDirty_ComputedSideEffect) {
+    if (
+      self.effect._dirtyLevel >=
+      DirtyLevels.MaybeDirty_ComputedSideEffect_Origin
+    ) {
       if (__DEV__ && (__TEST__ || this._warnRecursive)) {
         warn(COMPUTED_SIDE_EFFECT_WARN, `\n\ngetter: `, this.getter)
       }

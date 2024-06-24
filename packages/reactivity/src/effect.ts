@@ -76,6 +76,9 @@ export class ReactiveEffect<T = any> {
   }
 
   public get dirty() {
+    // treat original side effect computed as not dirty to avoid infinite loop
+    if (this._dirtyLevel === DirtyLevels.MaybeDirty_ComputedSideEffect_Origin)
+      return false
     if (
       this._dirtyLevel === DirtyLevels.MaybeDirty_ComputedSideEffect ||
       this._dirtyLevel === DirtyLevels.MaybeDirty
@@ -85,6 +88,15 @@ export class ReactiveEffect<T = any> {
       for (let i = 0; i < this._depsLength; i++) {
         const dep = this.deps[i]
         if (dep.computed) {
+          // treat chained side effect computed as dirty to force it re-run
+          // since we know the original side effect computed is dirty
+          if (
+            dep.computed.effect._dirtyLevel ===
+            DirtyLevels.MaybeDirty_ComputedSideEffect_Origin
+          ) {
+            resetTracking()
+            return true
+          }
           triggerComputed(dep.computed)
           if (this._dirtyLevel >= DirtyLevels.Dirty) {
             break
@@ -281,6 +293,7 @@ export function trackEffect(
       effect._depsLength++
     }
     if (__DEV__) {
+      // eslint-disable-next-line no-restricted-syntax
       effect.onTrack?.(extend({ effect }, debuggerEventExtraInfo!))
     }
   }
@@ -297,11 +310,30 @@ export function triggerEffects(
   for (const effect of dep.keys()) {
     // dep.get(effect) is very expensive, we need to calculate it lazily and reuse the result
     let tracking: boolean | undefined
+
+    if (!dep.computed && effect.computed) {
+      if (
+        effect._runnings > 0 &&
+        (tracking ??= dep.get(effect) === effect._trackId)
+      ) {
+        effect._dirtyLevel = DirtyLevels.MaybeDirty_ComputedSideEffect_Origin
+        continue
+      }
+    }
+
     if (
       effect._dirtyLevel < dirtyLevel &&
       (tracking ??= dep.get(effect) === effect._trackId)
     ) {
       effect._shouldSchedule ||= effect._dirtyLevel === DirtyLevels.NotDirty
+      // always schedule if the computed is original side effect
+      // since we know it is actually dirty
+      if (
+        effect.computed &&
+        effect._dirtyLevel === DirtyLevels.MaybeDirty_ComputedSideEffect_Origin
+      ) {
+        effect._shouldSchedule = true
+      }
       effect._dirtyLevel = dirtyLevel
     }
     if (
@@ -309,6 +341,7 @@ export function triggerEffects(
       (tracking ??= dep.get(effect) === effect._trackId)
     ) {
       if (__DEV__) {
+        // eslint-disable-next-line no-restricted-syntax
         effect.onTrigger?.(extend({ effect }, debuggerEventExtraInfo))
       }
       effect.trigger()

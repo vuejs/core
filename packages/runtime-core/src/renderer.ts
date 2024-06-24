@@ -17,6 +17,7 @@ import {
   type ComponentInternalInstance,
   type ComponentOptions,
   type Data,
+  type LifecycleHook,
   createComponentInstance,
   setupComponent,
 } from './component'
@@ -32,6 +33,7 @@ import {
   NOOP,
   PatchFlags,
   ShapeFlags,
+  def,
   getGlobalThis,
   invokeArrayFns,
   isArray,
@@ -695,15 +697,10 @@ function baseCreateRenderer(
     }
 
     if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
-      Object.defineProperty(el, '__vnode', {
-        value: vnode,
-        enumerable: false,
-      })
-      Object.defineProperty(el, '__vueParentComponent', {
-        value: parentComponent,
-        enumerable: false,
-      })
+      def(el, '__vnode', vnode, true)
+      def(el, '__vueParentComponent', parentComponent, true)
     }
+
     if (dirs) {
       invokeDirectiveHook(vnode, null, parentComponent, 'beforeMount')
     }
@@ -804,6 +801,9 @@ function baseCreateRenderer(
     optimized: boolean,
   ) => {
     const el = (n2.el = n1.el!)
+    if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
+      el.__vnode = n2
+    }
     let { patchFlag, dynamicChildren, dirs } = n2
     // #1426 take the old vnode's patch flag into account since user may clone a
     // compiler-generated vnode, which de-opts to FULL_PROPS
@@ -1238,7 +1238,8 @@ function baseCreateRenderer(
     // setup() is async. This component relies on async logic to be resolved
     // before proceeding
     if (__FEATURE_SUSPENSE__ && instance.asyncDep) {
-      parentSuspense && parentSuspense.registerDep(instance, setupRenderEffect)
+      parentSuspense &&
+        parentSuspense.registerDep(instance, setupRenderEffect, optimized)
 
       // Give it a placeholder if this is not hydration
       // TODO handle self-defined fallback
@@ -1907,7 +1908,7 @@ function baseCreateRenderer(
       const s2 = i // next starting index
 
       // 5.1 build key:index map for newChildren
-      const keyToNewIndexMap: Map<string | number | symbol, number> = new Map()
+      const keyToNewIndexMap: Map<PropertyKey, number> = new Map()
       for (i = s2; i <= e2; i++) {
         const nextChild = (c2[i] = optimized
           ? cloneIfMounted(c2[i] as VNode)
@@ -2108,10 +2109,21 @@ function baseCreateRenderer(
       shapeFlag,
       patchFlag,
       dirs,
+      memoIndex,
     } = vnode
+
+    if (patchFlag === PatchFlags.BAIL) {
+      optimized = false
+    }
+
     // unset ref
     if (ref != null) {
       setRef(ref, null, parentSuspense, vnode, true)
+    }
+
+    // #6593 should clean memo cache when unmount
+    if (memoIndex != null) {
+      parentComponent!.renderCache[memoIndex] = undefined
     }
 
     if (shapeFlag & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE) {
@@ -2147,7 +2159,6 @@ function baseCreateRenderer(
           vnode,
           parentComponent,
           parentSuspense,
-          optimized,
           internals,
           doRemove,
         )
@@ -2265,7 +2276,9 @@ function baseCreateRenderer(
       unregisterHMR(instance)
     }
 
-    const { bum, scope, update, subTree, um } = instance
+    const { bum, scope, update, subTree, um, m, a } = instance
+    invalidateMount(m)
+    invalidateMount(a)
 
     // beforeUnmount hook
     if (bum) {
@@ -2463,7 +2476,8 @@ export function traverseStaticChildren(n1: VNode, n2: VNode, shallow = false) {
           c2 = ch2[i] = cloneIfMounted(ch2[i] as VNode)
           c2.el = c1.el
         }
-        if (!shallow) traverseStaticChildren(c1, c2)
+        if (!shallow && c2.patchFlag !== PatchFlags.BAIL)
+          traverseStaticChildren(c1, c2)
       }
       // #6852 also inherit for text nodes
       if (c2.type === Text) {
@@ -2530,5 +2544,11 @@ function locateNonHydratedAsyncRoot(
     } else {
       return locateNonHydratedAsyncRoot(subComponent)
     }
+  }
+}
+
+export function invalidateMount(hooks: LifecycleHook) {
+  if (hooks) {
+    for (let i = 0; i < hooks.length; i++) hooks[i].active = false
   }
 }

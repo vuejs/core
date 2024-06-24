@@ -35,6 +35,8 @@ export {
   type DeepReadonly,
   type ShallowReactive,
   type UnwrapNestedRefs,
+  type Reactive,
+  type ReactiveMarker,
 } from './reactive'
 export {
   computed,
