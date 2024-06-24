@@ -94,7 +94,7 @@ export type Data = Record<string, unknown>
  * the usage of `InstanceType<typeof Comp>` which only works for
  * constructor-based component definition types.
  *
- * Exmaple:
+ * @example
  * ```ts
  * const MyComp = { ... }
  * declare const instance: ComponentInstance<typeof MyComp>
