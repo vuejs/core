@@ -1,34 +1,34 @@
-import {
-  ComputedOptions,
-  MethodOptions,
-  ComponentOptionsWithoutProps,
+import type {
+  ComponentInjectOptions,
+  ComponentOptions,
+  ComponentOptionsBase,
+  ComponentOptionsMixin,
   ComponentOptionsWithArrayProps,
   ComponentOptionsWithObjectProps,
-  ComponentOptionsMixin,
+  ComponentOptionsWithoutProps,
+  ComputedOptions,
+  MethodOptions,
   RenderFunction,
-  ComponentOptionsBase,
-  ComponentInjectOptions,
-  ComponentOptions
 } from './componentOptions'
-import {
-  SetupContext,
+import type {
   AllowedComponentProps,
-  ComponentCustomProps
+  ComponentCustomProps,
+  SetupContext,
 } from './component'
-import {
-  ExtractPropTypes,
+import type {
+  ComponentObjectPropsOptions,
   ComponentPropsOptions,
   ExtractDefaultPropTypes,
-  ComponentObjectPropsOptions
+  ExtractPropTypes,
 } from './componentProps'
-import { EmitsOptions, EmitsToProps } from './componentEmits'
+import type { EmitsOptions, EmitsToProps } from './componentEmits'
 import { extend, isFunction } from '@vue/shared'
-import { VNodeProps } from './vnode'
-import {
+import type { VNodeProps } from './vnode'
+import type {
+  ComponentPublicInstanceConstructor,
   CreateComponentPublicInstance,
-  ComponentPublicInstanceConstructor
 } from './componentPublicInstance'
-import { SlotsType } from './componentSlots'
+import type { SlotsType } from './componentSlots'
 
 export type PublicProps = VNodeProps &
   AllowedComponentProps &
@@ -54,7 +54,7 @@ export type DefineComponent<
   PP = PublicProps,
   Props = ResolveProps<PropsOrPropOptions, E>,
   Defaults = ExtractDefaultPropTypes<PropsOrPropOptions>,
-  S extends SlotsType = {}
+  S extends SlotsType = {},
 > = ComponentPublicInstanceConstructor<
   CreateComponentPublicInstance<
     Props,
@@ -70,8 +70,7 @@ export type DefineComponent<
     true,
     {},
     S
-  > &
-    Props
+  >
 > &
   ComponentOptionsBase<
     Props,
@@ -90,6 +89,30 @@ export type DefineComponent<
   > &
   PP
 
+export type DefineSetupFnComponent<
+  P extends Record<string, any>,
+  E extends EmitsOptions = {},
+  S extends SlotsType = SlotsType,
+  Props = P & EmitsToProps<E>,
+  PP = PublicProps,
+> = new (
+  props: Props & PP,
+) => CreateComponentPublicInstance<
+  Props,
+  {},
+  {},
+  {},
+  {},
+  ComponentOptionsMixin,
+  ComponentOptionsMixin,
+  E,
+  PP,
+  {},
+  false,
+  {},
+  S
+>
+
 // defineComponent is a utility that is primarily used for type inference
 // when declaring components. Type inference is provided in the component
 // options (provided as the argument). The returned value has artificial types
@@ -101,34 +124,34 @@ export function defineComponent<
   Props extends Record<string, any>,
   E extends EmitsOptions = {},
   EE extends string = string,
-  S extends SlotsType = {}
+  S extends SlotsType = {},
 >(
   setup: (
     props: Props,
-    ctx: SetupContext<E, S>
+    ctx: SetupContext<E, S>,
   ) => RenderFunction | Promise<RenderFunction>,
   options?: Pick<ComponentOptions, 'name' | 'inheritAttrs'> & {
     props?: (keyof Props)[]
     emits?: E | EE[]
     slots?: S
-  }
-): (props: Props & EmitsToProps<E>) => any
+  },
+): DefineSetupFnComponent<Props, E, S>
 export function defineComponent<
   Props extends Record<string, any>,
   E extends EmitsOptions = {},
   EE extends string = string,
-  S extends SlotsType = {}
+  S extends SlotsType = {},
 >(
   setup: (
     props: Props,
-    ctx: SetupContext<E, S>
+    ctx: SetupContext<E, S>,
   ) => RenderFunction | Promise<RenderFunction>,
   options?: Pick<ComponentOptions, 'name' | 'inheritAttrs'> & {
     props?: ComponentObjectPropsOptions<Props>
     emits?: E | EE[]
     slots?: S
-  }
-): (props: Props & EmitsToProps<E>) => any
+  },
+): DefineSetupFnComponent<Props, E, S>
 
 // overload 2: object format with no props
 // (uses user defined props interface)
@@ -145,7 +168,7 @@ export function defineComponent<
   EE extends string = string,
   S extends SlotsType = {},
   I extends ComponentInjectOptions = {},
-  II extends string = string
+  II extends string = string,
 >(
   options: ComponentOptionsWithoutProps<
     Props,
@@ -160,7 +183,7 @@ export function defineComponent<
     I,
     II,
     S
-  >
+  >,
 ): DefineComponent<
   Props,
   RawBindings,
@@ -193,7 +216,7 @@ export function defineComponent<
   S extends SlotsType = {},
   I extends ComponentInjectOptions = {},
   II extends string = string,
-  Props = Readonly<{ [key in PropNames]?: any }>
+  Props = Readonly<{ [key in PropNames]?: any }>,
 >(
   options: ComponentOptionsWithArrayProps<
     PropNames,
@@ -208,7 +231,7 @@ export function defineComponent<
     I,
     II,
     S
-  >
+  >,
 ): DefineComponent<
   Props,
   RawBindings,
@@ -241,7 +264,7 @@ export function defineComponent<
   EE extends string = string,
   S extends SlotsType = {},
   I extends ComponentInjectOptions = {},
-  II extends string = string
+  II extends string = string,
 >(
   options: ComponentOptionsWithObjectProps<
     PropsOptions,
@@ -256,7 +279,7 @@ export function defineComponent<
     I,
     II,
     S
-  >
+  >,
 ): DefineComponent<
   PropsOptions,
   RawBindings,
@@ -277,7 +300,7 @@ export function defineComponent<
 /*! #__NO_SIDE_EFFECTS__ */
 export function defineComponent(
   options: unknown,
-  extraOptions?: ComponentOptions
+  extraOptions?: ComponentOptions,
 ) {
   return isFunction(options)
     ? // #8326: extend call and options.name access are considered side-effects

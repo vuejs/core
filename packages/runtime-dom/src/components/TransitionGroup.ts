@@ -1,29 +1,30 @@
 import {
-  TransitionProps,
-  addTransitionClass,
-  removeTransitionClass,
-  ElementWithTransition,
-  getTransitionInfo,
-  resolveTransitionProps,
+  type ElementWithTransition,
+  type TransitionProps,
   TransitionPropsValidators,
-  forceReflow
+  addTransitionClass,
+  forceReflow,
+  getTransitionInfo,
+  removeTransitionClass,
+  resolveTransitionProps,
+  vtcKey,
 } from './Transition'
 import {
-  Fragment,
-  VNode,
-  warn,
-  resolveTransitionHooks,
-  useTransitionState,
-  getTransitionRawChildren,
-  getCurrentInstance,
-  setTransitionHooks,
-  createVNode,
-  onUpdated,
-  SetupContext,
-  toRaw,
-  compatUtils,
+  type ComponentOptions,
   DeprecationTypes,
-  ComponentOptions
+  Fragment,
+  type SetupContext,
+  type VNode,
+  compatUtils,
+  createVNode,
+  getCurrentInstance,
+  getTransitionRawChildren,
+  onUpdated,
+  resolveTransitionHooks,
+  setTransitionHooks,
+  toRaw,
+  useTransitionState,
+  warn,
 } from '@vue/runtime-core'
 import { extend } from '@vue/shared'
 
@@ -34,7 +35,8 @@ interface Position {
 
 const positionMap = new WeakMap<VNode, Position>()
 const newPositionMap = new WeakMap<VNode, Position>()
-
+const moveCbKey = Symbol('_moveCb')
+const enterCbKey = Symbol('_enterCb')
 export type TransitionGroupProps = Omit<TransitionProps, 'mode'> & {
   tag?: string
   moveClass?: string
@@ -45,7 +47,7 @@ const TransitionGroupImpl: ComponentOptions = {
 
   props: /*#__PURE__*/ extend({}, TransitionPropsValidators, {
     tag: String,
-    moveClass: String
+    moveClass: String,
   }),
 
   setup(props: TransitionGroupProps, { slots }: SetupContext) {
@@ -65,7 +67,7 @@ const TransitionGroupImpl: ComponentOptions = {
         !hasCSSTransform(
           prevChildren[0].el as ElementWithTransition,
           instance.vnode.el as Node,
-          moveClass
+          moveClass,
         )
       ) {
         return
@@ -85,13 +87,13 @@ const TransitionGroupImpl: ComponentOptions = {
         const style = el.style
         addTransitionClass(el, moveClass)
         style.transform = style.webkitTransform = style.transitionDuration = ''
-        const cb = ((el as any)._moveCb = (e: TransitionEvent) => {
+        const cb = ((el as any)[moveCbKey] = (e: TransitionEvent) => {
           if (e && e.target !== el) {
             return
           }
           if (!e || /transform$/.test(e.propertyName)) {
             el.removeEventListener('transitionend', cb)
-            ;(el as any)._moveCb = null
+            ;(el as any)[moveCbKey] = null
             removeTransitionClass(el, moveClass)
           }
         })
@@ -109,13 +111,32 @@ const TransitionGroupImpl: ComponentOptions = {
         !rawProps.tag &&
         compatUtils.checkCompatEnabled(
           DeprecationTypes.TRANSITION_GROUP_ROOT,
-          instance.parent
+          instance.parent,
         )
       ) {
         tag = 'span'
       }
 
-      prevChildren = children
+      prevChildren = []
+      if (children) {
+        for (let i = 0; i < children.length; i++) {
+          const child = children[i]
+          if (child.el && child.el instanceof Element) {
+            prevChildren.push(child)
+            setTransitionHooks(
+              child,
+              resolveTransitionHooks(
+                child,
+                cssTransitionProps,
+                state,
+                instance,
+              ),
+            )
+            positionMap.set(child, getRelativePosition(child.el as Element))
+          }
+        }
+      }
+
       children = slots.default ? getTransitionRawChildren(slots.default()) : []
 
       for (let i = 0; i < children.length; i++) {
@@ -123,27 +144,16 @@ const TransitionGroupImpl: ComponentOptions = {
         if (child.key != null) {
           setTransitionHooks(
             child,
-            resolveTransitionHooks(child, cssTransitionProps, state, instance)
+            resolveTransitionHooks(child, cssTransitionProps, state, instance),
           )
         } else if (__DEV__) {
           warn(`<TransitionGroup> children must be keyed.`)
         }
       }
 
-      if (prevChildren) {
-        for (let i = 0; i < prevChildren.length; i++) {
-          const child = prevChildren[i]
-          setTransitionHooks(
-            child,
-            resolveTransitionHooks(child, cssTransitionProps, state, instance)
-          )
-          positionMap.set(child, getRelativePosition(child.el as Element))
-        }
-      }
-
       return createVNode(tag, null, children)
     }
-  }
+  },
 }
 
 if (__COMPAT__) {
@@ -167,21 +177,27 @@ export const TransitionGroup = TransitionGroupImpl as unknown as {
 
 function callPendingCbs(c: VNode) {
   const el = c.el as any
-  if (el._moveCb) {
-    el._moveCb()
+  if (el[moveCbKey]) {
+    el[moveCbKey]()
   }
-  if (el._enterCb) {
-    el._enterCb()
+  if (el[enterCbKey]) {
+    el[enterCbKey]()
   }
 }
 
 function getRelativePosition(el: Element): Position {
   const elRect = el.getBoundingClientRect()
-  const parentRect = el.parentElement?.getBoundingClientRect()
+  if (!el.parentElement) {
+    return {
+      left: elRect.left,
+      top: elRect.top,
+    }
+  }
 
+  const parentRect = el.parentElement.getBoundingClientRect()
   return {
-    left: elRect.left - (parentRect?.left || 0),
-    top: elRect.top - (parentRect?.top || 0)
+    left: elRect.left - parentRect.left,
+    top: elRect.top - parentRect.top,
   }
 }
 
@@ -205,7 +221,7 @@ function applyTranslation(c: VNode): VNode | undefined {
 function hasCSSTransform(
   el: ElementWithTransition,
   root: Node,
-  moveClass: string
+  moveClass: string,
 ): boolean {
   // Detect whether an element with the move class applied has
   // CSS transitions. Since the element may be inside an entering
@@ -213,8 +229,9 @@ function hasCSSTransform(
   // all other transition classes applied to ensure only the move class
   // is applied.
   const clone = el.cloneNode() as HTMLElement
-  if (el._vtc) {
-    el._vtc.forEach(cls => {
+  const _vtc = el[vtcKey]
+  if (_vtc) {
+    _vtc.forEach(cls => {
       cls.split(/\s+/).forEach(c => c && clone.classList.remove(c))
     })
   }

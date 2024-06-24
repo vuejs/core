@@ -1,0 +1,15 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "types": ["node"],
+    "declaration": true,
+    "emitDeclarationOnly": true,
+    "stripInternal": true
+  },
+  "include": [
+    "packages/global.d.ts",
+    "packages/compiler-sfc/src",
+    "packages/compiler-ssr/src",
+    "packages/server-renderer/src"
+  ]
+}
