@@ -1,5 +1,6 @@
 ## [3.4.30](https://github.com/vuejs/core/compare/v3.4.29...v3.4.30) (2024-06-22)
 
+**Note: this release contains a fix (#11150) that requires `vue-tsc` to also be updated in sync to ^2.0.22. See #11196**
 
 ### Bug Fixes
 
