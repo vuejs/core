@@ -94,7 +94,7 @@ export type Data = Record<string, unknown>
  * the usage of `InstanceType<typeof Comp>` which only works for
  * constructor-based component definition types.
  *
- * Exmaple:
+ * @example
  * ```ts
  * const MyComp = { ... }
  * declare const instance: ComponentInstance<typeof MyComp>
@@ -322,7 +322,7 @@ export interface ComponentInternalInstance {
    * after initialized (e.g. inline handlers)
    * @internal
    */
-  renderCache: (Function | VNode)[]
+  renderCache: (Function | VNode | undefined)[]
 
   /**
    * Resolved component registry, only for components with mixins or extends
@@ -566,6 +566,7 @@ export function createComponentInstance(
     exposed: null,
     exposeProxy: null,
     withProxy: null,
+
     provides: parent ? parent.provides : Object.create(appContext.provides),
     accessCache: null!,
     renderCache: [],
@@ -1107,7 +1108,9 @@ export function createSetupContext(
   }
 }
 
-export function getExposeProxy(instance: ComponentInternalInstance) {
+export function getComponentPublicInstance(
+  instance: ComponentInternalInstance,
+) {
   if (instance.exposed) {
     return (
       instance.exposeProxy ||
@@ -1124,6 +1127,8 @@ export function getExposeProxy(instance: ComponentInternalInstance) {
         },
       }))
     )
+  } else {
+    return instance.proxy
   }
 }
 
