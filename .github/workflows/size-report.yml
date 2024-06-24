@@ -36,14 +36,14 @@ jobs:
         run: pnpm install
 
       - name: Download Size Data
-        uses: dawidd6/action-download-artifact@v4
+        uses: dawidd6/action-download-artifact@v6
         with:
           name: size-data
           run_id: ${{ github.event.workflow_run.id }}
           path: temp/size
 
       - name: Download Previous Size Data
-        uses: dawidd6/action-download-artifact@v4
+        uses: dawidd6/action-download-artifact@v6
         with:
           branch: main
           workflow: size-data.yml
