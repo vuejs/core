@@ -29,6 +29,7 @@ import { installAppCompatProperties } from './compat/global'
 import type { NormalizedPropsOptions } from './componentProps'
 import type { ObjectEmitsOptions } from './componentEmits'
 import type { DefineComponent } from './apiDefineComponent'
+import type { EffectScope } from '@vue/reactivity'
 
 export interface App<HostElement = any> {
   version: string
@@ -71,6 +72,7 @@ export interface App<HostElement = any> {
   _container: HostElement | null
   _context: AppContext
   _instance: ComponentInternalInstance | null
+  _scope: EffectScope
 
   /**
    * v2 compat only
@@ -229,6 +231,7 @@ export function createAppAPI<HostElement>(
       _container: null,
       _context: context,
       _instance: null,
+      _scope: scope,
 
       version,
 
@@ -402,7 +405,7 @@ export function createAppAPI<HostElement>(
         const lastApp = currentApp
         currentApp = app
         try {
-          return scope.run(fn)!
+          return app._scope.run(fn)!
         } finally {
           currentApp = lastApp
         }
