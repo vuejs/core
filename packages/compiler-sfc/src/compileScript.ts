@@ -11,7 +11,7 @@ import {
   type SFCScriptBlock,
 } from './parse'
 import type { ParserPlugin } from '@babel/parser'
-import { generateCodeFrame } from '@vue/shared'
+import { generateCodeFrame, isString } from '@vue/shared'
 import type {
   ArrayPattern,
   CallExpression,
@@ -886,7 +886,7 @@ export function compileScript(
         tips.forEach(warnOnce)
       }
       const err = errors[0]
-      if (typeof err === 'string') {
+      if (isString(err)) {
         throw new Error(err)
       } else if (err) {
         if (err.loc) {

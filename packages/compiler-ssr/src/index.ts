@@ -27,6 +27,7 @@ import { ssrTransformModel } from './transforms/ssrVModel'
 import { ssrTransformShow } from './transforms/ssrVShow'
 import { ssrInjectFallthroughAttrs } from './transforms/ssrInjectFallthroughAttrs'
 import { ssrInjectCssVars } from './transforms/ssrInjectCssVars'
+import { isString } from '@vue/shared'
 
 export function compile(
   source: string | RootNode,
@@ -45,7 +46,7 @@ export function compile(
     hoistStatic: false,
   }
 
-  const ast = typeof source === 'string' ? baseParse(source, options) : source
+  const ast = isString(source) ? baseParse(source, options) : source
 
   // Save raw options for AST. This is needed when performing sub-transforms
   // on slot vnode branches.
