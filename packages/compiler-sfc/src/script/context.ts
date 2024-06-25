@@ -1,6 +1,6 @@
 import type { CallExpression, Node, ObjectPattern, Program } from '@babel/types'
 import type { SFCDescriptor } from '../parse'
-import { generateCodeFrame, isArray } from '@vue/shared'
+import { generateCodeFrame, isArray, isBoolean } from '@vue/shared'
 import { type ParserPlugin, parse as babelParse } from '@babel/parser'
 import type { ImportBinding, SFCScriptCompileOptions } from '../compileScript'
 import type { PropsDestructureBindings } from './defineProps'
@@ -99,10 +99,9 @@ export class ScriptCompileContext {
     const customElement = options.customElement
     const filename = this.descriptor.filename
     if (customElement) {
-      this.isCE =
-        typeof customElement === 'boolean'
-          ? customElement
-          : customElement(filename)
+      this.isCE = isBoolean(customElement)
+        ? customElement
+        : customElement(filename)
     }
     // resolve parser plugins
     const plugins: ParserPlugin[] = resolveParserPlugins(

@@ -10,7 +10,13 @@ import {
   normalizeVNode,
   openBlock,
 } from '../vnode'
-import { ShapeFlags, isArray, isFunction, toNumber } from '@vue/shared'
+import {
+  ShapeFlags,
+  isArray,
+  isFunction,
+  isNumber,
+  toNumber,
+} from '@vue/shared'
 import { type ComponentInternalInstance, handleSetupResult } from '../component'
 import type { Slots } from '../componentSlots'
 import {
@@ -500,7 +506,7 @@ function createSuspenseBoundary(
     hiddenContainer,
     deps: 0,
     pendingId: suspenseId++,
-    timeout: typeof timeout === 'number' ? timeout : -1,
+    timeout: isNumber(timeout) ? timeout : -1,
     activeBranch: null,
     pendingBranch: null,
     isInFallback: !isHydrating,

@@ -29,6 +29,7 @@ import {
   extend,
   hyphenate,
   isArray,
+  isNumber,
   isString,
   toNumber,
 } from '@vue/shared'
@@ -367,7 +368,7 @@ export class VueElement extends BaseClass {
       if (shouldReflect) {
         if (val === true) {
           this.setAttribute(hyphenate(key), '')
-        } else if (isString(val) || typeof val === 'number') {
+        } else if (isString(val) || isNumber(val)) {
           this.setAttribute(hyphenate(key), val + '')
         } else if (!val) {
           this.removeAttribute(hyphenate(key))
