@@ -73,5 +73,5 @@ jobs:
         with:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           filePath: size-report.md
-          pr_number: ${{ github.event.workflow_run.pull_requests[0].number }}
+          pr_number: ${{ steps.pr-number.outputs.content }}
           comment_tag: VUE_CORE_SIZE
