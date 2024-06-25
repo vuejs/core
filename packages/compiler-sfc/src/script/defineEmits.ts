@@ -1,14 +1,25 @@
-import { Identifier, LVal, Node, RestElement } from '@babel/types'
+import type {
+  ArrayPattern,
+  Identifier,
+  LVal,
+  Node,
+  ObjectPattern,
+  RestElement,
+} from '@babel/types'
 import { isCallOf } from './utils'
-import { ScriptCompileContext } from './context'
-import { resolveTypeElements, resolveUnionType } from './resolveType'
+import type { ScriptCompileContext } from './context'
+import {
+  type TypeResolveContext,
+  resolveTypeElements,
+  resolveUnionType,
+} from './resolveType'
 
 export const DEFINE_EMITS = 'defineEmits'
 
 export function processDefineEmits(
   ctx: ScriptCompileContext,
   node: Node,
-  declId?: LVal
+  declId?: LVal,
 ): boolean {
   if (!isCallOf(node, DEFINE_EMITS)) {
     return false
@@ -23,7 +34,7 @@ export function processDefineEmits(
       ctx.error(
         `${DEFINE_EMITS}() cannot accept both type and non-type arguments ` +
           `at the same time. Use one or the other.`,
-        node
+        node,
       )
     }
     ctx.emitsTypeDecl = node.typeParameters.params[0]
@@ -51,13 +62,15 @@ export function genRuntimeEmits(ctx: ScriptCompileContext): string | undefined {
       .map(n => JSON.stringify(`update:${n}`))
       .join(', ')}]`
     emitsDecl = emitsDecl
-      ? `${ctx.helper('mergeModels')}(${emitsDecl}, ${modelEmitsDecl})`
+      ? `/*#__PURE__*/${ctx.helper(
+          'mergeModels',
+        )}(${emitsDecl}, ${modelEmitsDecl})`
       : modelEmitsDecl
   }
   return emitsDecl
 }
 
-function extractRuntimeEmits(ctx: ScriptCompileContext): Set<string> {
+export function extractRuntimeEmits(ctx: TypeResolveContext): Set<string> {
   const emits = new Set<string>()
   const node = ctx.emitsTypeDecl!
 
@@ -78,7 +91,7 @@ function extractRuntimeEmits(ctx: ScriptCompileContext): Set<string> {
     if (hasProperty) {
       ctx.error(
         `defineEmits() type cannot mixed call signature and property syntax.`,
-        node
+        node,
       )
     }
     for (const call of calls) {
@@ -90,9 +103,9 @@ function extractRuntimeEmits(ctx: ScriptCompileContext): Set<string> {
 }
 
 function extractEventNames(
-  ctx: ScriptCompileContext,
-  eventName: Identifier | RestElement,
-  emits: Set<string>
+  ctx: TypeResolveContext,
+  eventName: ArrayPattern | Identifier | ObjectPattern | RestElement,
+  emits: Set<string>,
 ) {
   if (
     eventName.type === 'Identifier' &&
