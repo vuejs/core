@@ -271,8 +271,17 @@ export function pauseScheduling() {
 
 export function resetScheduling() {
   pauseScheduleStack--
-  while (!pauseScheduleStack && queueEffectSchedulers.length) {
-    queueEffectSchedulers.shift()!()
+  if (schedulerFlag) {
+    return
+  }
+
+  try {
+    schedulerFlag = true
+    while (!pauseScheduleStack && queueEffectSchedulers.length) {
+      queueEffectSchedulers.shift()!()
+    }
+  } finally {
+    schedulerFlag = false
   }
 }
 
@@ -300,6 +309,7 @@ export function trackEffect(
 }
 
 const queueEffectSchedulers: EffectScheduler[] = []
+let schedulerFlag = false
 
 export function triggerEffects(
   dep: Dep,
