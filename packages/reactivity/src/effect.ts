@@ -237,7 +237,7 @@ export function stop(runner: ReactiveEffectRunner) {
 }
 
 export let shouldTrack = true
-export let pauseScheduleStack = 0
+export let pauseScheduleStack = 1
 
 const trackStack: boolean[] = []
 
@@ -270,10 +270,10 @@ export function pauseScheduling() {
 }
 
 export function resetScheduling() {
-  pauseScheduleStack--
   while (!pauseScheduleStack && queueEffectSchedulers.length) {
     queueEffectSchedulers.shift()!()
   }
+  pauseScheduleStack--
 }
 
 export function trackEffect(
