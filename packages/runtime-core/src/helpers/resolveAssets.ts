@@ -6,7 +6,7 @@ import {
 } from '../component'
 import { currentRenderingInstance } from '../componentRenderContext'
 import type { Directive } from '../directives'
-import { camelize, capitalize, isString } from '@vue/shared'
+import { camelize, capitalize, isLateTag, isString } from '@vue/shared'
 import { warn } from '../warning'
 import type { VNodeTypes } from '../vnode'
 
@@ -106,18 +106,26 @@ function resolveAsset(
       resolve(instance[type] || (Component as ComponentOptions)[type], name) ||
       // global registration
       resolve(instance.appContext[type], name)
-
     if (!res && maybeSelfReference) {
       // fallback to implicit self-reference
       return Component
     }
 
-    if (__DEV__ && warnMissing && !res) {
-      const extra =
-        type === COMPONENTS
-          ? `\nIf this is a native custom element, make sure to exclude it from ` +
+    if (
+      __DEV__ &&
+      warnMissing &&
+      ((!res && !isLateTag(name)) || (res && isLateTag(name)))
+    ) {
+      let extra = ''
+      if (type === COMPONENTS) {
+        if (isLateTag(name)) {
+          extra = `\nplease do not use built-in tag names as component names.`
+        } else {
+          extra =
+            `\nIf this is a native custom element, make sure to exclude it from ` +
             `component resolution via compilerOptions.isCustomElement.`
-          : ``
+        }
+      }
       warn(`Failed to resolve ${type.slice(0, -1)}: ${name}${extra}`)
     }
 
@@ -137,4 +145,17 @@ function resolve(registry: Record<string, any> | undefined, name: string) {
       registry[camelize(name)] ||
       registry[capitalize(camelize(name))])
   )
+}
+
+/**
+ * @private
+ */
+export function resolveSetupReturned(name: string, setupReturn: any) {
+  if (!setupReturn) return name
+  const returnValue = setupReturn[name]
+  if (returnValue && returnValue.__file && isLateTag(name as string)) {
+    const extra = `\nplease do not use built-in tag names as component names.`
+    warn(`Failed to resolve component: ${name},${extra}`)
+  }
+  return returnValue
 }

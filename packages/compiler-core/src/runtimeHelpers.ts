@@ -12,6 +12,9 @@ export const CREATE_COMMENT = Symbol(__DEV__ ? `createCommentVNode` : ``)
 export const CREATE_TEXT = Symbol(__DEV__ ? `createTextVNode` : ``)
 export const CREATE_STATIC = Symbol(__DEV__ ? `createStaticVNode` : ``)
 export const RESOLVE_COMPONENT = Symbol(__DEV__ ? `resolveComponent` : ``)
+export const RESOLVE_SETUP_RETURNED = Symbol(
+  __DEV__ ? `resolveSetupReturned` : ``,
+)
 export const RESOLVE_DYNAMIC_COMPONENT = Symbol(
   __DEV__ ? `resolveDynamicComponent` : ``,
 )
@@ -64,6 +67,7 @@ export const helperNameMap: Record<symbol, string> = {
   [CREATE_TEXT]: `createTextVNode`,
   [CREATE_STATIC]: `createStaticVNode`,
   [RESOLVE_COMPONENT]: `resolveComponent`,
+  [RESOLVE_SETUP_RETURNED]: `resolveSetupReturned`,
   [RESOLVE_DYNAMIC_COMPONENT]: `resolveDynamicComponent`,
   [RESOLVE_DIRECTIVE]: `resolveDirective`,
   [RESOLVE_FILTER]: `resolveFilter`,
