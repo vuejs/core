@@ -198,7 +198,7 @@ export const arrayInstrumentations: Record<string | symbol, Function> = <any>{
 // instrument iterators to take ARRAY_ITERATE dependency
 function iterator(
   self: unknown[],
-  method: keyof Array<any>,
+  method: keyof Array<unknown>,
   wrapValue: (value: any) => unknown,
 ) {
   // note that taking ARRAY_ITERATE dependency here is not strictly equivalent
@@ -210,11 +210,13 @@ function iterator(
   // given that JS iterator can only be read once, this doesn't seem like
   // a plausible use-case, so this tracking simplification seems ok.
   const arr = shallowReadArray(self)
-  const iter = (arr[method] as any)()
+  const iter = (arr[method] as any)() as IterableIterator<unknown> & {
+    _next: IterableIterator<unknown>['next']
+  }
   if (arr !== self && !isShallow(self)) {
-    ;(iter as any)._next = iter.next
+    iter._next = iter.next
     iter.next = () => {
-      const result = (iter as any)._next()
+      const result = iter._next()
       if (result.value) {
         result.value = wrapValue(result.value)
       }
