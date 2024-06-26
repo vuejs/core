@@ -237,7 +237,7 @@ export function stop(runner: ReactiveEffectRunner) {
 }
 
 export let shouldTrack = true
-export let pauseScheduleStack = 1
+export let pauseScheduleStack = -1
 
 const trackStack: boolean[] = []
 
