@@ -406,6 +406,21 @@ function hydrateTeleport(
     }
     updateCssVars(vnode)
   }
+  if (!target && isTeleportDisabled(vnode.props)) {
+    const targetNode = nextSibling(node)
+    if (vnode.shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
+      vnode.anchor = hydrateChildren(
+        nextSibling(node),
+        vnode,
+        parentNode(node)!,
+        parentComponent,
+        parentSuspense,
+        slotScopeIds,
+        optimized,
+      )
+      vnode.targetAnchor = targetNode
+    }
+  }
   return vnode.anchor && nextSibling(vnode.anchor as Node)
 }
 
