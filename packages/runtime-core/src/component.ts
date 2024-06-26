@@ -317,6 +317,10 @@ export interface ComponentInternalInstance {
   root: ComponentInternalInstance
   appContext: AppContext
   /**
+   * ShadowRoot of custom element if it is
+   */
+  container: ShadowRoot | null
+  /**
    * Vnode representing this component in its parent's vdom tree
    */
   vnode: VNode
@@ -605,6 +609,7 @@ export function createComponentInstance(
     type,
     parent,
     appContext,
+    container: null, // will be set synchronously before setup
     root: null!, // to be immediately set
     next: null,
     subTree: null!, // will be set synchronously right after creation
