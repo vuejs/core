@@ -10,7 +10,9 @@ import { expectType } from './utils'
 
 // non-symbol keys
 provide('foo', 123)
-provide(123, 123)
+provide(123, 123) // FIXME: should be a type error
+provide([123], 123) // FIXME: should be a type error
+provide({ deep: 'dark' }, 123) // FIXME: should be a type error
 
 const key: InjectionKey<number> = Symbol()
 
@@ -19,6 +21,7 @@ provide(key, 1)
 provide(key, 'foo')
 // @ts-expect-error
 provide(key, null)
+provide<null | string>(key, null) // FIXME: should be a type error
 
 expectType<number | undefined>(inject(key))
 expectType<number>(inject(key, 1))
@@ -40,8 +43,9 @@ provide(injectionKeyRef, ref({}))
 
 // naive-ui: explicit provide type parameter
 provide<Cube>('cube', { size: 123 })
+// @ts-expect-error
 provide<Cube>(123, { size: 123 })
-provide<Cube>(injectionKeyRef, { size: 123 })
+provide<Cube>(injectionKeyRef, { size: 123 }) // FIXME: should be a type error
 
 // @ts-expect-error
 provide<Cube>('cube', { size: 'foo' })
