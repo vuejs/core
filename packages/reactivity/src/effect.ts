@@ -325,15 +325,7 @@ export function triggerEffects(
       effect._dirtyLevel < dirtyLevel &&
       (tracking ??= dep.get(effect) === effect._trackId)
     ) {
-      effect._shouldSchedule ||= effect._dirtyLevel === DirtyLevels.NotDirty
-      // always schedule if the computed is original side effect
-      // since we know it is actually dirty
-      if (
-        effect.computed &&
-        effect._dirtyLevel === DirtyLevels.MaybeDirty_ComputedSideEffect_Origin
-      ) {
-        effect._shouldSchedule = true
-      }
+      resolveSchedule(effect, dirtyLevel)
       effect._dirtyLevel = dirtyLevel
     }
     if (
@@ -357,4 +349,22 @@ export function triggerEffects(
     }
   }
   resetScheduling()
+}
+
+function resolveSchedule(effect: ReactiveEffect, dirtyLevel: DirtyLevels) {
+  effect._shouldSchedule ||= effect._dirtyLevel === DirtyLevels.NotDirty
+  // always schedule if the computed is original side effect
+  // since we know it is actually dirty
+  if (
+    effect.computed &&
+    effect._dirtyLevel === DirtyLevels.MaybeDirty_ComputedSideEffect_Origin
+  ) {
+    effect._shouldSchedule = true
+  }
+  if (
+    effect._dirtyLevel === DirtyLevels.MaybeDirty_ComputedSideEffect &&
+    dirtyLevel > DirtyLevels.MaybeDirty_ComputedSideEffect
+  ) {
+    effect._shouldSchedule = true
+  }
 }

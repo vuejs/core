@@ -765,6 +765,40 @@ describe('reactivity/computed', () => {
     expect(COMPUTED_SIDE_EFFECT_WARN).toHaveBeenWarned()
   })
 
+  // #11236
+  it('should schedule effect when trigger maybedirty', async () => {
+    const foo = ref<any>({})
+
+    const bar = computed(() => {
+      foo.value.bar ??= {}
+      return foo.value.bar
+    })
+
+    const baz = computed(() => {
+      bar.value.baz ??= []
+      return bar.value.baz
+    })
+
+    const qux = computed(() => baz.value.at(-1) === 2)
+
+    const Comp = {
+      render: () => h('div', [JSON.stringify(qux.value)]),
+    }
+    const root = nodeOps.createElement('div')
+    render(h(Comp), root)
+    await nextTick()
+    expect(serializeInner(root)).toBe('<div>false</div>')
+
+    baz.value.push(1)
+    await nextTick()
+    expect(serializeInner(root)).toBe('<div>false</div>')
+
+    baz.value.push(2)
+    await nextTick()
+    expect(serializeInner(root)).toBe('<div>true</div>')
+    expect(COMPUTED_SIDE_EFFECT_WARN).toHaveBeenWarned()
+  })
+
   it('debug: onTrigger (ref)', () => {
     let events: DebuggerEvent[] = []
     const onTrigger = vi.fn((e: DebuggerEvent) => {
