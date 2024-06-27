@@ -765,6 +765,21 @@ describe('reactivity/computed', () => {
     expect(COMPUTED_SIDE_EFFECT_WARN).toHaveBeenWarned()
   })
 
+  it('should be recompute without being affected by side effects', () => {
+    const v = ref(0)
+    const c1 = computed(() => {
+      v.value = 1
+      return 0
+    })
+    const c2 = computed(() => {
+      return v.value + ',' + c1.value
+    })
+
+    expect(c2.value).toBe('0,0')
+    v.value = 1
+    expect(c2.value).toBe('1,0')
+  })
+
   it('debug: onTrigger (ref)', () => {
     let events: DebuggerEvent[] = []
     const onTrigger = vi.fn((e: DebuggerEvent) => {
