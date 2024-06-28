@@ -110,7 +110,8 @@ function reload(id: string, newComp: HMRComponent) {
   // create a snapshot which avoids the set being mutated during updates
   const instances = [...record.instances]
 
-  for (const instance of instances) {
+  for (let i = 0; i < instances.length; i++) {
+    const instance = instances[i]
     const oldComp = normalizeClassComponent(instance.type as HMRComponent)
 
     if (!hmrDirtyComponents.has(oldComp)) {
@@ -139,10 +140,13 @@ function reload(id: string, newComp: HMRComponent) {
       // components to be unmounted and re-mounted. Queue the update so that we
       // don't end up forcing the same parent to re-render multiple times.
       instance.parent.effect.dirty = true
+      const isLast = i === instances.length - 1
       queueJob(() => {
         instance.parent!.update()
-        // #6930 avoid infinite recursion
-        hmrDirtyComponents.delete(oldComp)
+        if (isLast) {
+          // #6930 avoid infinite recursion
+          hmrDirtyComponents.delete(oldComp)
+        }
       })
     } else if (instance.appContext.reload) {
       // root instance mounted via createApp() has a reload method

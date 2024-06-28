@@ -29,6 +29,8 @@ function compileToFunction(template: string) {
   return render
 }
 
+const timeout = (n: number = 0) => new Promise(r => setTimeout(r, n))
+
 describe('hot module replacement', () => {
   test('inject global runtime', () => {
     expect(createRecord).toBeDefined()
@@ -804,5 +806,43 @@ describe('hot module replacement', () => {
     expect(serializeInner(root)).toBe(
       `<div><div>1<p>3</p></div></div><div><div>1<p>3</p></div></div><p>2</p>`,
     )
+  })
+
+  test('Async component without rerender only', async () => {
+    const root = nodeOps.createElement('div')
+    const childId = 'test-child-id'
+    const Child: ComponentOptions = {
+      __hmrId: childId,
+      data() {
+        return { count: 0 }
+      },
+      render: compileToFunction(`<div>{{ count }}</div>`),
+    }
+    const Comp = runtimeTest.defineAsyncComponent(() => Promise.resolve(Child))
+    const appId = 'test-app-id'
+    const App: ComponentOptions = {
+      __hmrId: appId,
+      render: () => [h(Comp), h(Comp)],
+    }
+    createRecord(appId, App)
+
+    render(h(App), root)
+
+    await timeout()
+
+    expect(serializeInner(root)).toBe(`<div>0</div><div>0</div>`)
+
+    // change count to 1
+    reload(childId, {
+      __hmrId: childId,
+      data() {
+        return { count: 1 }
+      },
+      render: compileToFunction(`<div>{{ count }}</div>`),
+    })
+
+    await timeout()
+
+    expect(serializeInner(root)).toBe(`<div>1</div><div>1</div>`)
   })
 })
