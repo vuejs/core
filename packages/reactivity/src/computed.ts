@@ -78,10 +78,7 @@ export class ComputedRefImpl<T> {
       triggerRefValue(self, DirtyLevels.Dirty)
     }
     trackRefValue(self)
-    if (
-      self.effect._dirtyLevel >=
-      DirtyLevels.MaybeDirty_ComputedSideEffect_Origin
-    ) {
+    if (self.effect._dirtyLevel >= DirtyLevels.MaybeDirty_ComputedSideEffect) {
       if (__DEV__ && (__TEST__ || this._warnRecursive)) {
         warn(COMPUTED_SIDE_EFFECT_WARN, `\n\ngetter: `, this.getter)
       }
