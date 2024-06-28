@@ -68,10 +68,18 @@ jobs:
       - name: Prepare report
         run: pnpm tsx scripts/size-report.ts > size-report.md
 
-      - name: Create Comment
-        uses: thollander/actions-comment-pull-request@v2.5.0
+      - name: Read Size Report
+        id: size-report
+        uses: juliangruber/read-file-action@v1
         with:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          filePath: size-report.md
-          pr_number: ${{ steps.pr-number.outputs.content }}
-          comment_tag: VUE_CORE_SIZE
+          path: ./size-report.md
+
+      - name: Create Comment
+        uses: actions-cool/maintain-one-comment@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          number: ${{ steps.pr-number.outputs.content }}
+          body: |
+            ${{ steps.size-report.outputs.content }}
+            <!-- VUE_CORE_SIZE -->
+          body-include: '<!-- VUE_CORE_SIZE -->'
