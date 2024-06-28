@@ -1,4 +1,10 @@
-import { toRaw, toReactive, toReadonly } from './reactive'
+import {
+  isReadonly,
+  isShallow,
+  toRaw,
+  toReactive,
+  toReadonly,
+} from './reactive'
 import {
   ITERATE_KEY,
   MAP_KEY_ITERATE_KEY,
@@ -72,8 +78,10 @@ function size(target: IterableCollections, isReadonly = false) {
   return Reflect.get(target, 'size', target)
 }
 
-function add(this: SetTypes, value: unknown, isShallow = false) {
-  value = isShallow ? value : toRaw(value)
+function add(this: SetTypes, value: unknown, _isShallow = false) {
+  if (!_isShallow && !isShallow(value) && !isReadonly(value)) {
+    value = toRaw(value)
+  }
   const target = toRaw(this)
   const proto = getProto(target)
   const hadKey = proto.has.call(target, value)
@@ -84,8 +92,10 @@ function add(this: SetTypes, value: unknown, isShallow = false) {
   return this
 }
 
-function set(this: MapTypes, key: unknown, value: unknown, isShallow = false) {
-  value = isShallow ? value : toRaw(value)
+function set(this: MapTypes, key: unknown, value: unknown, _isShallow = false) {
+  if (!_isShallow && !isShallow(value) && !isReadonly(value)) {
+    value = toRaw(value)
+  }
   const target = toRaw(this)
   const { has, get } = getProto(target)
 
