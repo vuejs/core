@@ -125,17 +125,22 @@ export function emit(
   const isModelListener = event.startsWith('update:')
 
   // for v-model update:xxx events, apply modifiers on args
-  const modelArg = isModelListener && event.slice(7)
-  if (modelArg && modelArg in props) {
-    const modifiersKey = `${
-      modelArg === 'modelValue' ? 'model' : modelArg
-    }Modifiers`
-    const { number, trim } = props[modifiersKey] || EMPTY_OBJ
-    if (trim) {
-      args = rawArgs.map(a => (isString(a) ? a.trim() : a))
-    }
-    if (number) {
-      args = rawArgs.map(looseToNumber)
+  if (isModelListener) {
+    const modelArg = event.slice(7)
+    const modifiers =
+      modelArg === 'modelValue' || modelArg === 'model-value'
+        ? props.modelModifiers
+        : props[toModifiersKey(modelArg)] ||
+          props[toModifiersKey(camelize(modelArg))] ||
+          props[toModifiersKey(hyphenate(modelArg))]
+
+    if (modifiers) {
+      if (modifiers.trim) {
+        args = rawArgs.map(a => (isString(a) ? a.trim() : a))
+      }
+      if (modifiers.number) {
+        args = rawArgs.map(looseToNumber)
+      }
     }
   }
 
@@ -201,6 +206,10 @@ export function emit(
     compatModelEmit(instance, event, args)
     return compatInstanceEmit(instance, event, args)
   }
+}
+
+function toModifiersKey(modelArg: string) {
+  return `${modelArg}Modifiers`
 }
 
 export function normalizeEmitsOptions(
