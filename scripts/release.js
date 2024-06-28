@@ -196,6 +196,12 @@ async function main() {
     }
   }
 
+  // @ts-expect-error
+  if (versionIncrements.includes(targetVersion)) {
+    // @ts-expect-error
+    targetVersion = inc(targetVersion)
+  }
+
   if (!semver.valid(targetVersion)) {
     throw new Error(`invalid target version: ${targetVersion}`)
   }
@@ -315,6 +321,11 @@ async function main() {
   const branch = await getBranch()
   if (branch !== 'main') {
     additionalPublishFlags.push('--publish-branch', branch)
+  }
+  // add provenance metadata when releasing from CI
+  // canary release commits are not pushed therefore we don't need to add provenance
+  if (process.env.CI && !isCanary) {
+    additionalPublishFlags.push('--provenance')
   }
 
   for (const pkg of packages) {
