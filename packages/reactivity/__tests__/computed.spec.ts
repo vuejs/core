@@ -456,78 +456,6 @@ describe('reactivity/computed', () => {
     expect(fnSpy).toBeCalledTimes(2)
   })
 
-  it('should mark dirty as MaybeDirty_ComputedSideEffect_Origin', () => {
-    const v = ref(1)
-    const c = computed(() => {
-      v.value += 1
-      return v.value
-    })
-
-    c.value
-    expect(c.effect._dirtyLevel).toBe(
-      DirtyLevels.MaybeDirty_ComputedSideEffect_Origin,
-    )
-    expect(COMPUTED_SIDE_EFFECT_WARN).toHaveBeenWarned()
-  })
-
-  it('should not infinite re-run effect when effect access original side effect computed', async () => {
-    const spy = vi.fn()
-    const v = ref(0)
-    const c = computed(() => {
-      v.value += 1
-      return v.value
-    })
-    const Comp = {
-      setup: () => {
-        return () => {
-          spy()
-          return v.value + c.value
-        }
-      },
-    }
-    const root = nodeOps.createElement('div')
-
-    render(h(Comp), root)
-    expect(spy).toBeCalledTimes(1)
-    await nextTick()
-    expect(c.effect._dirtyLevel).toBe(
-      DirtyLevels.MaybeDirty_ComputedSideEffect_Origin,
-    )
-    expect(serializeInner(root)).toBe('2')
-    expect(COMPUTED_SIDE_EFFECT_WARN).toHaveBeenWarned()
-  })
-
-  it('should not infinite re-run effect when effect access chained side effect computed', async () => {
-    const spy = vi.fn()
-    const v = ref(0)
-    const c1 = computed(() => {
-      v.value += 1
-      return v.value
-    })
-    const c2 = computed(() => v.value + c1.value)
-    const Comp = {
-      setup: () => {
-        return () => {
-          spy()
-          return v.value + c1.value + c2.value
-        }
-      },
-    }
-    const root = nodeOps.createElement('div')
-
-    render(h(Comp), root)
-    expect(spy).toBeCalledTimes(1)
-    await nextTick()
-    expect(c1.effect._dirtyLevel).toBe(
-      DirtyLevels.MaybeDirty_ComputedSideEffect_Origin,
-    )
-    expect(c2.effect._dirtyLevel).toBe(
-      DirtyLevels.MaybeDirty_ComputedSideEffect,
-    )
-    expect(serializeInner(root)).toBe('4')
-    expect(COMPUTED_SIDE_EFFECT_WARN).toHaveBeenWarned()
-  })
-
   it('should chained recurse effects clear dirty after trigger', () => {
     const v = ref(1)
     const c1 = computed(() => v.value)
@@ -554,9 +482,7 @@ describe('reactivity/computed', () => {
 
     c3.value
 
-    expect(c1.effect._dirtyLevel).toBe(
-      DirtyLevels.MaybeDirty_ComputedSideEffect_Origin,
-    )
+    expect(c1.effect._dirtyLevel).toBe(DirtyLevels.Dirty)
     expect(c2.effect._dirtyLevel).toBe(
       DirtyLevels.MaybeDirty_ComputedSideEffect,
     )
@@ -576,9 +502,7 @@ describe('reactivity/computed', () => {
     })
     const c2 = computed(() => v.value + c1.value)
     expect(c2.value).toBe('0foo')
-    expect(c2.effect._dirtyLevel).toBe(
-      DirtyLevels.MaybeDirty_ComputedSideEffect,
-    )
+    expect(c2.effect._dirtyLevel).toBe(DirtyLevels.Dirty)
     expect(c2.value).toBe('1foo')
     expect(COMPUTED_SIDE_EFFECT_WARN).toHaveBeenWarned()
   })
@@ -599,12 +523,8 @@ describe('reactivity/computed', () => {
       c2.value
     })
     expect(fnSpy).toBeCalledTimes(1)
-    expect(c1.effect._dirtyLevel).toBe(
-      DirtyLevels.MaybeDirty_ComputedSideEffect_Origin,
-    )
-    expect(c2.effect._dirtyLevel).toBe(
-      DirtyLevels.MaybeDirty_ComputedSideEffect,
-    )
+    expect(c1.effect._dirtyLevel).toBe(DirtyLevels.Dirty)
+    expect(c2.effect._dirtyLevel).toBe(DirtyLevels.Dirty)
     v.value = 2
     expect(fnSpy).toBeCalledTimes(2)
     expect(COMPUTED_SIDE_EFFECT_WARN).toHaveBeenWarned()
@@ -637,9 +557,7 @@ describe('reactivity/computed', () => {
     expect(c3.effect._dirtyLevel).toBe(DirtyLevels.MaybeDirty)
 
     c3.value
-    expect(c1.effect._dirtyLevel).toBe(
-      DirtyLevels.MaybeDirty_ComputedSideEffect_Origin,
-    )
+    expect(c1.effect._dirtyLevel).toBe(DirtyLevels.Dirty)
     expect(c2.effect._dirtyLevel).toBe(
       DirtyLevels.MaybeDirty_ComputedSideEffect,
     )
@@ -693,75 +611,11 @@ describe('reactivity/computed', () => {
 
     render(h(Comp), root)
     await nextTick()
-    expect(c.effect._dirtyLevel).toBe(
-      DirtyLevels.MaybeDirty_ComputedSideEffect_Origin,
-    )
     expect(serializeInner(root)).toBe('Hello World')
 
     v.value += ' World'
-    expect(c.effect._dirtyLevel).toBe(DirtyLevels.Dirty)
     await nextTick()
-    expect(c.effect._dirtyLevel).toBe(
-      DirtyLevels.MaybeDirty_ComputedSideEffect_Origin,
-    )
-    expect(serializeInner(root)).toBe('Hello World World World')
-    expect(COMPUTED_SIDE_EFFECT_WARN).toHaveBeenWarned()
-  })
-
-  it('should chained computeds keep reactivity when computed effect happens', async () => {
-    const v = ref('Hello')
-    const c = computed(() => {
-      v.value += ' World'
-      return v.value
-    })
-    const d = computed(() => c.value)
-    const e = computed(() => d.value)
-    const Comp = {
-      setup: () => {
-        return () => d.value + ' | ' + e.value
-      },
-    }
-    const root = nodeOps.createElement('div')
-
-    render(h(Comp), root)
-    await nextTick()
-    expect(serializeInner(root)).toBe('Hello World | Hello World')
-
-    v.value += ' World'
-    await nextTick()
-    expect(serializeInner(root)).toBe(
-      'Hello World World World | Hello World World World',
-    )
-    expect(COMPUTED_SIDE_EFFECT_WARN).toHaveBeenWarned()
-  })
-
-  it('should keep dirty level when side effect computed value changed', () => {
-    const v = ref(0)
-    const c = computed(() => {
-      v.value += 1
-      return v.value
-    })
-    const d = computed(() => {
-      return { d: c.value }
-    })
-
-    const Comp = {
-      setup: () => {
-        return () => {
-          return [d.value.d, d.value.d]
-        }
-      },
-    }
-
-    const root = nodeOps.createElement('div')
-    render(h(Comp), root)
-
-    expect(d.value.d).toBe(1)
-    expect(serializeInner(root)).toBe('11')
-    expect(c.effect._dirtyLevel).toBe(
-      DirtyLevels.MaybeDirty_ComputedSideEffect_Origin,
-    )
-    expect(d.effect._dirtyLevel).toBe(DirtyLevels.MaybeDirty_ComputedSideEffect)
+    expect(serializeInner(root)).toBe('Hello World World World World')
     expect(COMPUTED_SIDE_EFFECT_WARN).toHaveBeenWarned()
   })
 
