@@ -438,18 +438,23 @@ describe('hot module replacement', () => {
 
     const Parent: ComponentOptions = {
       setup() {
-        const com = ref()
-        const changeRef = (value: any) => {
-          com.value = value
-        }
+        const com1 = ref()
+        const changeRef1 = (value: any) => (com1.value = value)
 
-        return () => [h(Child, { ref: changeRef }), com.value?.count]
+        const com2 = ref()
+        const changeRef2 = (value: any) => (com2.value = value)
+
+        return () => [
+          h(Child, { ref: changeRef1 }),
+          h(Child, { ref: changeRef2 }),
+          com1.value?.count,
+        ]
       },
     }
 
     render(h(Parent), root)
     await nextTick()
-    expect(serializeInner(root)).toBe(`<div>0</div>0`)
+    expect(serializeInner(root)).toBe(`<div>0</div><div>0</div>0`)
 
     reload(childId, {
       __hmrId: childId,
@@ -460,9 +465,9 @@ describe('hot module replacement', () => {
       render: compileToFunction(`<div @click="count++">{{ count }}</div>`),
     })
     await nextTick()
-    expect(serializeInner(root)).toBe(`<div>1</div>1`)
-    expect(unmountSpy).toHaveBeenCalledTimes(1)
-    expect(mountSpy).toHaveBeenCalledTimes(1)
+    expect(serializeInner(root)).toBe(`<div>1</div><div>1</div>1`)
+    expect(unmountSpy).toHaveBeenCalledTimes(2)
+    expect(mountSpy).toHaveBeenCalledTimes(2)
   })
 
   // #1156 - static nodes should retain DOM element reference across updates
