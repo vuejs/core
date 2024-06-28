@@ -202,6 +202,27 @@ describe('reactivity/effect/scope', () => {
     expect(dummy).toBe(7)
   })
 
+  it('should execute all cleanup functions registered with onScopeDispose, even if one of them throws an error', () => {
+    let dummy = 0
+
+    const scope = effectScope()
+    scope.run(() => {
+      onScopeDispose(() => (dummy += 2))
+      onScopeDispose(() => {
+        throw new Error('test')
+      })
+    })
+
+    scope.run(() => {
+      onScopeDispose(() => (dummy += 4))
+    })
+
+    expect(dummy).toBe(0)
+
+    scope.stop()
+    expect(dummy).toBe(6)
+  })
+
   it('should warn onScopeDispose() is called when there is no active effect scope', () => {
     const spy = vi.fn()
     const scope = effectScope()
@@ -218,6 +239,34 @@ describe('reactivity/effect/scope', () => {
     ).toHaveBeenWarned()
 
     scope.stop()
+    expect(spy).toHaveBeenCalledTimes(1)
+  })
+
+  // #6538
+  it('should not track effect in onScopeDispose', () => {
+    const counter = ref(0)
+    const num = ref(0)
+    const spy = vi.fn()
+
+    const scope = new EffectScope()
+    scope.run(() => {
+      onScopeDispose(() => {
+        counter.value
+      })
+    })
+    effect(
+      () => {
+        scope.stop()
+        num.value
+      },
+      {
+        scheduler: spy,
+      },
+    )
+
+    counter.value = 1
+    expect(spy).toHaveBeenCalledTimes(0)
+    num.value = 1
     expect(spy).toHaveBeenCalledTimes(1)
   })
 

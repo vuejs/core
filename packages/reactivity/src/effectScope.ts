@@ -1,4 +1,4 @@
-import type { ReactiveEffect } from './effect'
+import { type ReactiveEffect, pauseTracking, resetTracking } from './effect'
 import { warn } from './warning'
 
 let activeEffectScope: EffectScope | undefined
@@ -80,6 +80,7 @@ export class EffectScope {
 
   stop(fromParent?: boolean) {
     if (this._active) {
+      pauseTracking()
       let i, l
       for (i = 0, l = this.effects.length; i < l; i++) {
         this.effects[i].stop()
@@ -103,6 +104,7 @@ export class EffectScope {
       }
       this.parent = undefined
       this._active = false
+      resetTracking()
     }
   }
 }
@@ -147,7 +149,16 @@ export function getCurrentScope() {
  */
 export function onScopeDispose(fn: () => void) {
   if (activeEffectScope) {
-    activeEffectScope.cleanups.push(fn)
+    activeEffectScope.cleanups.push(() => {
+      try {
+        fn()
+      } catch (e) {
+        console.error(
+          'An error occurred while executing a cleanup function:',
+          e,
+        )
+      }
+    })
   } else if (__DEV__) {
     warn(
       `onScopeDispose() is called when there is no active effect scope` +
