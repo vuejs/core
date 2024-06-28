@@ -1130,7 +1130,7 @@ function baseCreateRenderer(
           n2.key != null ||
           (parentComponent && n2 === parentComponent.subTree)
         ) {
-          traverseStaticChildren(n1, n2, true /* shallow */)
+          traverseStaticChildren(n1, n2)
         }
       } else {
         // keyed / unkeyed, or manual fragments.
