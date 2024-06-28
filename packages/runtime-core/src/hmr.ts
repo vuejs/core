@@ -145,9 +145,9 @@ function reload(id: string, newComp: HMRComponent) {
       // components to be unmounted and re-mounted. Queue the update so that we
       // don't end up forcing the same parent to re-render multiple times.
       instance.parent.effect.dirty = true
-      // #11248 make sure to update all async components properly
       queueJob(() => {
         instance.parent!.update()
+        // #6930, #11248 avoid infinite recursion
         dirtyInstances.delete(instance)
       })
     } else if (instance.appContext.reload) {
