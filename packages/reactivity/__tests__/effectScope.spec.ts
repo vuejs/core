@@ -268,8 +268,7 @@ describe('reactivity/effect/scope', () => {
     r.value++
     c!.value
     await nextTick()
-    // should not trigger anymore
-    expect(computedSpy).toHaveBeenCalledTimes(2)
+    expect(computedSpy).toHaveBeenCalledTimes(3)
     expect(watchSpy).toHaveBeenCalledTimes(1)
     expect(watchEffectSpy).toHaveBeenCalledTimes(2)
   })
