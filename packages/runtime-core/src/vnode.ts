@@ -240,6 +240,10 @@ export interface VNode<
    * @internal custom element interception hook
    */
   ce?: (instance: ComponentInternalInstance) => void
+  /**
+   * @internal is slot fallback node
+   */
+  isSlotFallback?: boolean
 }
 
 // Since v-if and v-for are the two possible ways node structure can dynamically

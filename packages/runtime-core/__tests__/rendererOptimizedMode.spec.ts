@@ -8,6 +8,8 @@ import {
   createApp,
   createBlock,
   createCommentVNode,
+  createElementBlock,
+  createElementVNode,
   createTextVNode,
   createVNode,
   defineComponent,
@@ -721,6 +723,79 @@ describe('renderer: optimized mode', () => {
     expect(block!.dynamicChildren![0].dynamicChildren![0]).toEqual(
       dynamicVNode!,
     )
+  })
+
+  test('diff slot and slot fallback node', async () => {
+    const Comp = {
+      props: ['show'],
+      setup(props: any, { slots }: SetupContext) {
+        return () => {
+          return (
+            openBlock(),
+            createElementBlock('div', null, [
+              renderSlot(slots, 'default', { hide: !props.show }, () => [
+                (openBlock(),
+                (block = createElementBlock(
+                  Fragment,
+                  { key: 0 },
+                  [createTextVNode('foo')],
+                  PatchFlags.STABLE_FRAGMENT,
+                ))),
+              ]),
+            ])
+          )
+        }
+      },
+    }
+
+    const show = ref(true)
+    const app = createApp({
+      render() {
+        return (
+          openBlock(),
+          createBlock(
+            Comp,
+            { show: show.value },
+            {
+              default: withCtx(({ hide }: { hide: boolean }) => [
+                !hide
+                  ? (openBlock(),
+                    createElementBlock(
+                      Fragment,
+                      { key: 0 },
+                      [
+                        createCommentVNode('comment'),
+                        createElementVNode(
+                          'div',
+                          null,
+                          'bar',
+                          PatchFlags.HOISTED,
+                        ),
+                      ],
+                      PatchFlags.STABLE_FRAGMENT,
+                    ))
+                  : createCommentVNode('v-if', true),
+              ]),
+              _: SlotFlags.STABLE,
+            },
+            PatchFlags.PROPS,
+            ['show'],
+          )
+        )
+      },
+    })
+
+    app.mount(root)
+    expect(inner(root)).toBe('<div><!--comment--><div>bar</div></div>')
+    expect(block).toBe(null)
+
+    show.value = false
+    await nextTick()
+    expect(inner(root)).toBe('<div>foo</div>')
+
+    show.value = true
+    await nextTick()
+    expect(inner(root)).toBe('<div><!--comment--><div>bar</div></div>')
   })
 
   // 3569

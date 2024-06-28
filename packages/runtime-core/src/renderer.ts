@@ -1059,7 +1059,25 @@ function baseCreateRenderer(
     const fragmentStartAnchor = (n2.el = n1 ? n1.el : hostCreateText(''))!
     const fragmentEndAnchor = (n2.anchor = n1 ? n1.anchor : hostCreateText(''))!
 
-    let { patchFlag, dynamicChildren, slotScopeIds: fragmentSlotScopeIds } = n2
+    let {
+      patchFlag,
+      dynamicChildren,
+      slotScopeIds: fragmentSlotScopeIds,
+      isSlotFallback,
+    } = n2
+
+    // #9200 when patching the slot vnode and the slot fallback vnode
+    // cannot take the fast path, nor can reuse the old vnode because they
+    // are from different templates
+    if (
+      n1 &&
+      n1.isSlotFallback !== undefined &&
+      isSlotFallback !== undefined &&
+      n1.isSlotFallback !== isSlotFallback
+    ) {
+      unmount(n1!, parentComponent, parentSuspense, true)
+      n1 = null
+    }
 
     if (
       __DEV__ &&
