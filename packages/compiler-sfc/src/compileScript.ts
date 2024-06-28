@@ -616,7 +616,7 @@ export function compileScript(
     ) {
       const scope: Statement[][] = [scriptSetupAst.body]
       walk(node, {
-        enter(child: Node, parent: Node | undefined) {
+        enter(child: Node, parent: Node | null) {
           if (isFunctionType(child)) {
             this.skip()
           }
