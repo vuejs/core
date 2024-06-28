@@ -89,6 +89,7 @@ export function withDirectives<T extends VNode>(
   directives: DirectiveArguments,
 ): T {
   if (currentRenderingInstance === null) {
+    // 只能在渲染函数内部使用 也就是只能挂在的节点上，
     __DEV__ && warn(`withDirectives can only be used inside render functions.`)
     return vnode
   }
@@ -139,8 +140,8 @@ export function invokeDirectiveHook(
       hook = mapCompatDirectiveHook(name, binding.dir, instance)
     }
     if (hook) {
-      // disable tracking inside all lifecycle hooks
-      // since they can potentially be called inside effects.
+      // 禁用所有生命周期挂钩内的跟踪
+      // 因为它们可能被称为内部效应。
       pauseTracking()
       callWithAsyncErrorHandling(hook, instance, ErrorCodes.DIRECTIVE_HOOK, [
         vnode.el,
