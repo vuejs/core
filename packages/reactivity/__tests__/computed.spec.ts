@@ -1,4 +1,4 @@
-import { h, nextTick, nodeOps, onUnmounted, render, serializeInner } from '@vue/runtime-test'
+import { h, nextTick, nodeOps, render, serializeInner } from '@vue/runtime-test'
 import {
   type DebuggerEvent,
   ITERATE_KEY,

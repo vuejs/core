@@ -1,9 +1,7 @@
 import {
   type ComponentInternalInstance,
-  type ComputedRef,
   type SetupContext,
   Suspense,
-  computed,
   createApp,
   defineComponent,
   getCurrentInstance,
