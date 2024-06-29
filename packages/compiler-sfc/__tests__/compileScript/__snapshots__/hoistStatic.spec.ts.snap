@@ -5,7 +5,8 @@ exports[`sfc hoist static > should enable when only script setup 1`] = `
     const foo = 'bar'
     
 export default {
-  setup(__props) {
+  setup(__props, { expose: __expose }) {
+  __expose();
 
     const foo = 'bar'
     
@@ -22,7 +23,8 @@ exports[`sfc hoist static > should hoist expressions 1`] = `
     const sequence = (1, true, 'foo', 1)
     
 export default {
-  setup(__props) {
+  setup(__props, { expose: __expose }) {
+  __expose();
 
     
 return () => {}
@@ -40,7 +42,8 @@ exports[`sfc hoist static > should hoist literal value 1`] = `
     const template = \`str\`
     
 export default {
-  setup(__props) {
+  setup(__props, { expose: __expose }) {
+  __expose();
 
     
 return () => {}
@@ -58,7 +61,8 @@ export default {
         default: defaultValue
       }
     },
-  setup(__props) {
+  setup(__props, { expose: __expose }) {
+  __expose();
 
     
     
@@ -72,7 +76,8 @@ exports[`sfc hoist static > should not hoist a constant initialized to a referen
 "import { defineComponent as _defineComponent } from 'vue'
 
 export default /*#__PURE__*/_defineComponent({
-  setup(__props) {
+  setup(__props, { expose: __expose }) {
+  __expose();
 
     const KEY1 = Boolean
     const KEY2 = [Boolean]
@@ -94,7 +99,8 @@ return () => {}
 exports[`sfc hoist static > should not hoist a function or class 1`] = `
 "
 export default {
-  setup(__props) {
+  setup(__props, { expose: __expose }) {
+  __expose();
 
     const fn = () => {}
     function fn2() {}
@@ -109,7 +115,8 @@ return () => {}
 exports[`sfc hoist static > should not hoist a object or array 1`] = `
 "
 export default {
-  setup(__props) {
+  setup(__props, { expose: __expose }) {
+  __expose();
 
     const obj = { foo: 'bar' }
     const arr = [1, 2, 3]
@@ -123,7 +130,8 @@ return () => {}
 exports[`sfc hoist static > should not hoist a variable 1`] = `
 "
 export default {
-  setup(__props) {
+  setup(__props, { expose: __expose }) {
+  __expose();
 
     let KEY1 = 'default value'
     var KEY2 = 123
@@ -139,7 +147,8 @@ return () => {}
 exports[`sfc hoist static > should not hoist when disabled 1`] = `
 "
 export default {
-  setup(__props) {
+  setup(__props, { expose: __expose }) {
+  __expose();
 
     const foo = 'bar'
     
