@@ -169,9 +169,7 @@ export function buildSlots(
       !(slotDir = findDir(slotElement, 'slot', true))
     ) {
       // not a <template v-slot>, skip.
-      if (slotElement.type !== NodeTypes.COMMENT) {
-        implicitDefaultChildren.push(slotElement)
-      }
+      implicitDefaultChildren.push(slotElement)
       continue
     }
 
