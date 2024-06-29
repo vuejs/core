@@ -45,6 +45,9 @@ export function useModel(
         return options.get ? options.get(localValue) : localValue
       },
       set(value) {
+        if (!hasChanged(value, localValue)) {
+          return
+        }
         const rawProps = i.vnode!.props
         if (
           !(
@@ -56,8 +59,7 @@ export function useModel(
             (`onUpdate:${name}` in rawProps ||
               `onUpdate:${camelizedName}` in rawProps ||
               `onUpdate:${hyphenatedName}` in rawProps)
-          ) &&
-          hasChanged(value, localValue)
+          )
         ) {
           localValue = value
           trigger()
