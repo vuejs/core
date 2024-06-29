@@ -8,6 +8,7 @@ import type {
   Node,
   StringLiteral,
 } from '@babel/types'
+import { isString } from '@vue/shared'
 import path from 'path'
 
 export const UNKNOWN_TYPE = 'Unknown'
@@ -40,9 +41,7 @@ export function isCallOf(
     test &&
     node.type === 'CallExpression' &&
     node.callee.type === 'Identifier' &&
-    (typeof test === 'string'
-      ? node.callee.name === test
-      : test(node.callee.name))
+    (isString(test) ? node.callee.name === test : test(node.callee.name))
   )
 }
 

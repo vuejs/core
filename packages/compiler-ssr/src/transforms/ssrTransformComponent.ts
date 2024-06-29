@@ -55,7 +55,14 @@ import {
   ssrProcessTransitionGroup,
   ssrTransformTransitionGroup,
 } from './ssrTransformTransitionGroup'
-import { extend, isArray, isObject, isPlainObject, isSymbol } from '@vue/shared'
+import {
+  extend,
+  isArray,
+  isObject,
+  isPlainObject,
+  isString,
+  isSymbol,
+} from '@vue/shared'
 import { buildSSRProps } from './ssrTransformElement'
 import {
   ssrProcessTransition,
@@ -255,7 +262,7 @@ export function ssrProcessComponent(
       node.ssrCodegenNode.arguments.push(`_scopeId`)
     }
 
-    if (typeof component === 'string') {
+    if (isString(component)) {
       // static component
       context.pushStatement(
         createCallExpression(`_push`, [node.ssrCodegenNode]),
