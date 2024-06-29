@@ -288,7 +288,7 @@ type MappedOmit<T, K extends keyof any> = {
   [P in keyof T as P extends K ? never : P]: T[P]
 }
 
-type InferDefaults<T> = {
+export type InferDefaults<T> = {
   [K in keyof T]?: InferDefault<T, T[K]>
 }
 
