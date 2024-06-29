@@ -1,9 +1,7 @@
 import {
   type ComponentInternalInstance,
-  type ComputedRef,
   type SetupContext,
   Suspense,
-  computed,
   createApp,
   defineComponent,
   getCurrentInstance,
@@ -418,39 +416,6 @@ describe('SFC <script setup> helpers', () => {
       expect(uids.one.before).not.toBe(uids.two.before)
       expect(uids.one.before).toBe(uids.one.after)
       expect(uids.two.before).toBe(uids.two.after)
-    })
-
-    test('should teardown in-scope effects', async () => {
-      let resolve: (val?: any) => void
-      const ready = new Promise(r => {
-        resolve = r
-      })
-
-      let c: ComputedRef
-
-      const Comp = defineComponent({
-        async setup() {
-          let __temp: any, __restore: any
-          ;[__temp, __restore] = withAsyncContext(() => Promise.resolve())
-          __temp = await __temp
-          __restore()
-
-          c = computed(() => {})
-          // register the lifecycle after an await statement
-          onMounted(resolve)
-          return () => ''
-        },
-      })
-
-      const app = createApp(() => h(Suspense, () => h(Comp)))
-      const root = nodeOps.createElement('div')
-      app.mount(root)
-
-      await ready
-      expect(c!.effect.active).toBe(true)
-
-      app.unmount()
-      expect(c!.effect.active).toBe(false)
     })
   })
 })

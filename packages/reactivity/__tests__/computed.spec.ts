@@ -123,21 +123,6 @@ describe('reactivity/computed', () => {
     expect(getter2).toHaveBeenCalledTimes(2)
   })
 
-  it('should no longer update when stopped', () => {
-    const value = reactive<{ foo?: number }>({})
-    const cValue = computed(() => value.foo)
-    let dummy
-    effect(() => {
-      dummy = cValue.value
-    })
-    expect(dummy).toBe(undefined)
-    value.foo = 1
-    expect(dummy).toBe(1)
-    cValue.effect.stop()
-    value.foo = 2
-    expect(dummy).toBe(1)
-  })
-
   it('should support setter', () => {
     const n = ref(1)
     const plusOne = computed({
