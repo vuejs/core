@@ -226,6 +226,35 @@ describe('v-memo', () => {
     expect(el.innerHTML).toBe(`<div>2</div><div>2</div><div>2</div>`)
   })
 
+  test('on v-for /w should memo keyd vnode', async () => {
+    const runner = vitest.fn()
+    const [el, vm] = mount({
+      template: `<div v-for="item in list" :key="item.id" v-memo="[item.id]">
+          {{item.id}}{{ runner() }}
+        </div>`,
+      data: () => ({
+        list: [{ id: 1 }, { id: 2 }, { id: 3 }],
+      }),
+      methods: {
+        runner,
+      },
+    })
+    expect(el.innerHTML).toBe(`<div>1</div><div>2</div><div>3</div>`)
+    expect(runner).toHaveBeenCalledTimes(3)
+
+    vm.list = [{ id: 1 }, { id: 3 }]
+    await nextTick()
+    // should not re evaluate runner
+    expect(el.innerHTML).toBe(`<div>1</div><div>3</div>`)
+    expect(runner).toHaveBeenCalledTimes(3)
+
+    vm.list = [{ id: 1 }, { id: 3 }, { id: 2 }]
+    await nextTick()
+    // should only evaluate the new item
+    expect(el.innerHTML).toBe(`<div>1</div><div>3</div><div>2</div>`)
+    expect(runner).toHaveBeenCalledTimes(4)
+  })
+
   test('v-memo dependency is NaN should be equal', async () => {
     const [el, vm] = mount({
       template: `<div v-memo="[x]">{{ y }}</div>`,
