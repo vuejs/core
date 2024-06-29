@@ -35,7 +35,7 @@ import { shallowReadonly } from '@vue/reactivity'
  */
 let accessedAttrs: boolean = false
 
-export function markAttrsAccessed() {
+export function markAttrsAccessed(): void {
   accessedAttrs = true
 }
 
@@ -452,7 +452,7 @@ function hasPropsChanged(
 export function updateHOCHostEl(
   { vnode, parent }: ComponentInternalInstance,
   el: typeof vnode.el, // HostNode
-) {
+): void {
   while (parent) {
     const root = parent.subTree
     if (root.suspense && root.suspense.activeBranch === vnode) {

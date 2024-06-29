@@ -1,4 +1,5 @@
 import {
+  type NodeTransform,
   type TransformContext,
   createStructuralDirectiveTransform,
   traverseNode,
@@ -33,7 +34,7 @@ import { CREATE_COMMENT, FRAGMENT } from '../runtimeHelpers'
 import { findDir, findProp, getMemoedVNodeCall, injectProp } from '../utils'
 import { PatchFlagNames, PatchFlags } from '@vue/shared'
 
-export const transformIf = createStructuralDirectiveTransform(
+export const transformIf: NodeTransform = createStructuralDirectiveTransform(
   /^(if|else|else-if)$/,
   (node, dir, context) => {
     return processIf(node, dir, context, (ifNode, branch, isRoot) => {
@@ -83,7 +84,7 @@ export function processIf(
     branch: IfBranchNode,
     isRoot: boolean,
   ) => (() => void) | undefined,
-) {
+): (() => void) | undefined {
   if (
     dir.name !== 'else' &&
     (!dir.exp || !(dir.exp as SimpleExpressionNode).content.trim())

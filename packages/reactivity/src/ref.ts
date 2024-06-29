@@ -45,7 +45,7 @@ type RefBase<T> = {
   value: T
 }
 
-export function trackRefValue(ref: RefBase<any>) {
+export function trackRefValue(ref: RefBase<any>): void {
   if (shouldTrack && activeEffect) {
     ref = toRaw(ref)
     trackEffect(
@@ -70,7 +70,7 @@ export function triggerRefValue(
   dirtyLevel: DirtyLevels = DirtyLevels.Dirty,
   newVal?: any,
   oldVal?: any,
-) {
+): void {
   ref = toRaw(ref)
   const dep = ref.dep
   if (dep) {
@@ -212,7 +212,7 @@ class RefImpl<T> {
  * @param ref - The ref whose tied effects shall be executed.
  * @see {@link https://vuejs.org/api/reactivity-advanced.html#triggerref}
  */
-export function triggerRef(ref: Ref) {
+export function triggerRef(ref: Ref): void {
   triggerRefValue(ref, DirtyLevels.Dirty, __DEV__ ? ref.value : void 0)
 }
 

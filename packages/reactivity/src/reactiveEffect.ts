@@ -17,8 +17,10 @@ import {
 type KeyToDepMap = Map<any, Dep>
 const targetMap = new WeakMap<object, KeyToDepMap>()
 
-export const ITERATE_KEY = Symbol(__DEV__ ? 'iterate' : '')
-export const MAP_KEY_ITERATE_KEY = Symbol(__DEV__ ? 'Map key iterate' : '')
+export const ITERATE_KEY: unique symbol = Symbol(__DEV__ ? 'iterate' : '')
+export const MAP_KEY_ITERATE_KEY: unique symbol = Symbol(
+  __DEV__ ? 'Map key iterate' : '',
+)
 
 /**
  * Tracks access to a reactive property.
@@ -30,7 +32,7 @@ export const MAP_KEY_ITERATE_KEY = Symbol(__DEV__ ? 'Map key iterate' : '')
  * @param type - Defines the type of access to the reactive property.
  * @param key - Identifier of the reactive property to track.
  */
-export function track(target: object, type: TrackOpTypes, key: unknown) {
+export function track(target: object, type: TrackOpTypes, key: unknown): void {
   if (shouldTrack && activeEffect) {
     let depsMap = targetMap.get(target)
     if (!depsMap) {
@@ -69,7 +71,7 @@ export function trigger(
   newValue?: unknown,
   oldValue?: unknown,
   oldTarget?: Map<unknown, unknown> | Set<unknown>,
-) {
+): void {
   const depsMap = targetMap.get(target)
   if (!depsMap) {
     // never been tracked
@@ -145,7 +147,10 @@ export function trigger(
   resetScheduling()
 }
 
-export function getDepFromReactive(object: any, key: PropertyKey) {
+export function getDepFromReactive(
+  object: any,
+  key: PropertyKey,
+): Dep | undefined {
   const depsMap = targetMap.get(object)
   return depsMap && depsMap.get(key)
 }

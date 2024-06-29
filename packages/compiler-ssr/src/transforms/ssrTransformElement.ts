@@ -417,7 +417,7 @@ function findVModel(node: PlainElementNode): DirectiveNode | undefined {
 export function ssrProcessElement(
   node: PlainElementNode,
   context: SSRTransformContext,
-) {
+): void {
   const isVoidTag = context.options.isVoidTag || NO
   const elementsToAdd = node.ssrCodegenNode!.elements
   for (let j = 0; j < elementsToAdd.length; j++) {

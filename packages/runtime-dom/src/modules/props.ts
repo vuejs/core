@@ -17,7 +17,7 @@ export function patchDOMProp(
   parentComponent: any,
   parentSuspense: any,
   unmountChildren: any,
-) {
+): void {
   if (key === 'innerHTML' || key === 'textContent') {
     if (prevChildren) {
       unmountChildren(prevChildren, parentComponent, parentSuspense)

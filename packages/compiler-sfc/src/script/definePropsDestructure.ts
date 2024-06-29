@@ -27,7 +27,7 @@ import { warnOnce } from '../warn'
 export function processPropsDestructure(
   ctx: ScriptCompileContext,
   declId: ObjectPattern,
-) {
+): void {
   if (!ctx.options.propsDestructure) {
     return
   }
@@ -103,7 +103,7 @@ type Scope = Record<string, boolean>
 export function transformDestructuredProps(
   ctx: ScriptCompileContext,
   vueImportAliases: Record<string, string>,
-) {
+): void {
   if (!ctx.options.propsDestructure) {
     return
   }

@@ -27,7 +27,7 @@ import {
   OPEN_BLOCK,
 } from '../runtimeHelpers'
 
-export function hoistStatic(root: RootNode, context: TransformContext) {
+export function hoistStatic(root: RootNode, context: TransformContext): void {
   walk(
     root,
     context,

@@ -7,6 +7,7 @@ import {
   compile,
 } from '@vue/compiler-dom'
 import {
+  type CompatVue,
   type RenderFunction,
   registerRuntimeCompiler,
   warn,
@@ -99,7 +100,7 @@ function compileToFunction(
 
 registerRuntimeCompiler(compileToFunction)
 
-const Vue = createCompatVue()
+const Vue: CompatVue = createCompatVue()
 Vue.compile = compileToFunction
 
 export default Vue

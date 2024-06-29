@@ -22,15 +22,15 @@ type TraceEntry = {
 
 type ComponentTraceStack = TraceEntry[]
 
-export function pushWarningContext(vnode: VNode) {
+export function pushWarningContext(vnode: VNode): void {
   stack.push(vnode)
 }
 
-export function popWarningContext() {
+export function popWarningContext(): void {
   stack.pop()
 }
 
-export function warn(msg: string, ...args: any[]) {
+export function warn(msg: string, ...args: any[]): void {
   // avoid props formatting or warn handler tracking deps that might be mutated
   // during patch, leading to infinite recursion.
   pauseTracking()
@@ -165,7 +165,7 @@ function formatProp(key: string, value: unknown, raw?: boolean): any {
 /**
  * @internal
  */
-export function assertNumber(val: unknown, type: string) {
+export function assertNumber(val: unknown, type: string): void {
   if (!__DEV__) return
   if (val === undefined) {
     return

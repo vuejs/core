@@ -9,11 +9,11 @@ export interface CoreCompilerError extends CompilerError {
   code: ErrorCodes
 }
 
-export function defaultOnError(error: CompilerError) {
+export function defaultOnError(error: CompilerError): never {
   throw error
 }
 
-export function defaultOnWarn(msg: CompilerError) {
+export function defaultOnWarn(msg: CompilerError): void {
   __DEV__ && console.warn(`[Vue warn] ${msg.message}`)
 }
 

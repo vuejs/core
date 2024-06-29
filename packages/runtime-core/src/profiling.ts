@@ -11,7 +11,7 @@ let perf: Performance
 export function startMeasure(
   instance: ComponentInternalInstance,
   type: string,
-) {
+): void {
   if (instance.appContext.config.performance && isSupported()) {
     perf.mark(`vue-${type}-${instance.uid}`)
   }
@@ -21,7 +21,10 @@ export function startMeasure(
   }
 }
 
-export function endMeasure(instance: ComponentInternalInstance, type: string) {
+export function endMeasure(
+  instance: ComponentInternalInstance,
+  type: string,
+): void {
   if (instance.appContext.config.performance && isSupported()) {
     const startTag = `vue-${type}-${instance.uid}`
     const endTag = startTag + `:end`

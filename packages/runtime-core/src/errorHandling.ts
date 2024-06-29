@@ -66,7 +66,7 @@ export function callWithErrorHandling(
   instance: ComponentInternalInstance | null,
   type: ErrorTypes,
   args?: unknown[],
-) {
+): any {
   try {
     return args ? fn(...args) : fn()
   } catch (err) {
@@ -108,7 +108,7 @@ export function handleError(
   instance: ComponentInternalInstance | null,
   type: ErrorTypes,
   throwInDev = true,
-) {
+): void {
   const contextVNode = instance ? instance.vnode : null
   if (instance) {
     let cur = instance.parent

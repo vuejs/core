@@ -1,4 +1,5 @@
 import {
+  type NodeTransform,
   type TransformContext,
   createStructuralDirectiveTransform,
 } from '../transform'
@@ -49,7 +50,7 @@ import { validateBrowserExpression } from '../validateExpression'
 import { PatchFlagNames, PatchFlags } from '@vue/shared'
 import { transformBindShorthand } from './vBind'
 
-export const transformFor = createStructuralDirectiveTransform(
+export const transformFor: NodeTransform = createStructuralDirectiveTransform(
   'for',
   (node, dir, context) => {
     const { helper, removeHelper } = context
@@ -301,7 +302,7 @@ export function processFor(
 
   const onExit = processCodegen && processCodegen(forNode)
 
-  return () => {
+  return (): void => {
     scopes.vFor--
     if (!__BROWSER__ && context.prefixIdentifiers) {
       value && removeIdentifiers(value)
@@ -315,7 +316,7 @@ export function processFor(
 export function finalizeForParseResult(
   result: ForParseResult,
   context: TransformContext,
-) {
+): void {
   if (result.finalized) return
 
   if (!__BROWSER__ && context.prefixIdentifiers) {

@@ -42,19 +42,23 @@ const VOID_TAGS =
  * Compiler only.
  * Do NOT use in runtime code paths unless behind `__DEV__` flag.
  */
-export const isHTMLTag = /*#__PURE__*/ makeMap(HTML_TAGS)
+export const isHTMLTag: (key: string) => boolean =
+  /*#__PURE__*/ makeMap(HTML_TAGS)
 /**
  * Compiler only.
  * Do NOT use in runtime code paths unless behind `__DEV__` flag.
  */
-export const isSVGTag = /*#__PURE__*/ makeMap(SVG_TAGS)
+export const isSVGTag: (key: string) => boolean =
+  /*#__PURE__*/ makeMap(SVG_TAGS)
 /**
  * Compiler only.
  * Do NOT use in runtime code paths unless behind `__DEV__` flag.
  */
-export const isMathMLTag = /*#__PURE__*/ makeMap(MATH_TAGS)
+export const isMathMLTag: (key: string) => boolean =
+  /*#__PURE__*/ makeMap(MATH_TAGS)
 /**
  * Compiler only.
  * Do NOT use in runtime code paths unless behind `__DEV__` flag.
  */
-export const isVoidTag = /*#__PURE__*/ makeMap(VOID_TAGS)
+export const isVoidTag: (key: string) => boolean =
+  /*#__PURE__*/ makeMap(VOID_TAGS)

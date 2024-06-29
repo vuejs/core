@@ -1,6 +1,6 @@
 // Core API ------------------------------------------------------------------
 
-export const version = __VERSION__
+export const version: string = __VERSION__
 export {
   // core
   reactive,
@@ -372,7 +372,15 @@ import { renderComponentRoot } from './componentRenderUtils'
 import { setCurrentRenderingInstance } from './componentRenderContext'
 import { isVNode, normalizeVNode } from './vnode'
 
-const _ssrUtils = {
+const _ssrUtils: {
+  createComponentInstance: typeof createComponentInstance
+  setupComponent: typeof setupComponent
+  renderComponentRoot: typeof renderComponentRoot
+  setCurrentRenderingInstance: typeof setCurrentRenderingInstance
+  isVNode: typeof isVNode
+  normalizeVNode: typeof normalizeVNode
+  getComponentPublicInstance: typeof getComponentPublicInstance
+} = {
   createComponentInstance,
   setupComponent,
   renderComponentRoot,
@@ -407,9 +415,17 @@ import { NOOP } from '@vue/shared'
 /**
  * @internal only exposed in compat builds
  */
-export const resolveFilter = __COMPAT__ ? _resolveFilter : null
+export const resolveFilter: typeof _resolveFilter | null = __COMPAT__
+  ? _resolveFilter
+  : null
 
-const _compatUtils = {
+const _compatUtils: {
+  warnDeprecation: typeof warnDeprecation
+  createCompatVue: typeof createCompatVue
+  isCompatEnabled: typeof isCompatEnabled
+  checkCompatEnabled: typeof checkCompatEnabled
+  softAssertCompatEnabled: typeof softAssertCompatEnabled
+} = {
   warnDeprecation,
   createCompatVue,
   isCompatEnabled,

@@ -48,7 +48,7 @@ export class ReactiveEffect<T = any> {
   /**
    * @internal
    */
-  _dirtyLevel = DirtyLevels.Dirty
+  _dirtyLevel: DirtyLevels = DirtyLevels.Dirty
   /**
    * @internal
    */
@@ -69,13 +69,13 @@ export class ReactiveEffect<T = any> {
   constructor(
     public fn: () => T,
     public trigger: () => void,
-    public scheduler?: EffectScheduler,
+    public scheduler?: EffectScheduler | undefined,
     scope?: EffectScope,
   ) {
     recordEffectScope(this, scope)
   }
 
-  public get dirty() {
+  public get dirty(): boolean {
     if (
       this._dirtyLevel === DirtyLevels.MaybeDirty_ComputedSideEffect ||
       this._dirtyLevel === DirtyLevels.MaybeDirty
@@ -103,7 +103,7 @@ export class ReactiveEffect<T = any> {
     this._dirtyLevel = v ? DirtyLevels.Dirty : DirtyLevels.NotDirty
   }
 
-  run() {
+  run(): T {
     this._dirtyLevel = DirtyLevels.NotDirty
     if (!this.active) {
       return this.fn()
@@ -124,7 +124,7 @@ export class ReactiveEffect<T = any> {
     }
   }
 
-  stop() {
+  stop(): void {
     if (this.active) {
       preCleanupEffect(this)
       postCleanupEffect(this)
@@ -220,7 +220,7 @@ export function effect<T = any>(
  *
  * @param runner - Association with the effect to stop tracking.
  */
-export function stop(runner: ReactiveEffectRunner) {
+export function stop(runner: ReactiveEffectRunner): void {
   runner.effect.stop()
 }
 
@@ -232,7 +232,7 @@ const trackStack: boolean[] = []
 /**
  * Temporarily pauses tracking.
  */
-export function pauseTracking() {
+export function pauseTracking(): void {
   trackStack.push(shouldTrack)
   shouldTrack = false
 }
@@ -240,7 +240,7 @@ export function pauseTracking() {
 /**
  * Re-enables effect tracking (if it was paused).
  */
-export function enableTracking() {
+export function enableTracking(): void {
   trackStack.push(shouldTrack)
   shouldTrack = true
 }
@@ -248,16 +248,16 @@ export function enableTracking() {
 /**
  * Resets the previous global effect tracking state.
  */
-export function resetTracking() {
+export function resetTracking(): void {
   const last = trackStack.pop()
   shouldTrack = last === undefined ? true : last
 }
 
-export function pauseScheduling() {
+export function pauseScheduling(): void {
   pauseScheduleStack++
 }
 
-export function resetScheduling() {
+export function resetScheduling(): void {
   pauseScheduleStack--
   while (!pauseScheduleStack && queueEffectSchedulers.length) {
     queueEffectSchedulers.shift()!()
@@ -268,7 +268,7 @@ export function trackEffect(
   effect: ReactiveEffect,
   dep: Dep,
   debuggerEventExtraInfo?: DebuggerEventExtraInfo,
-) {
+): void {
   if (dep.get(effect) !== effect._trackId) {
     dep.set(effect, effect._trackId)
     const oldDep = effect.deps[effect._depsLength]
@@ -293,7 +293,7 @@ export function triggerEffects(
   dep: Dep,
   dirtyLevel: DirtyLevels,
   debuggerEventExtraInfo?: DebuggerEventExtraInfo,
-) {
+): void {
   pauseScheduling()
   for (const effect of dep.keys()) {
     // dep.get(effect) is very expensive, we need to calculate it lazily and reuse the result

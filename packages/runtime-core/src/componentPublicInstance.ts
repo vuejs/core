@@ -302,7 +302,8 @@ export interface ComponentRenderContext {
   _: ComponentInternalInstance
 }
 
-export const isReservedPrefix = (key: string) => key === '_' || key === '$'
+export const isReservedPrefix = (key: string): key is '_' | '$' =>
+  key === '_' || key === '$'
 
 const hasSetupBinding = (state: Data, key: string) =>
   state !== EMPTY_OBJ && !state.__isScriptSetup && hasOwn(state, key)
@@ -513,10 +514,8 @@ if (__DEV__ && !__TEST__) {
   }
 }
 
-export const RuntimeCompiledPublicInstanceProxyHandlers = /*#__PURE__*/ extend(
-  {},
-  PublicInstanceProxyHandlers,
-  {
+export const RuntimeCompiledPublicInstanceProxyHandlers: ProxyHandler<any> =
+  /*#__PURE__*/ extend({}, PublicInstanceProxyHandlers, {
     get(target: ComponentRenderContext, key: string) {
       // fast path for unscopables when using `with` block
       if ((key as any) === Symbol.unscopables) {
@@ -535,8 +534,7 @@ export const RuntimeCompiledPublicInstanceProxyHandlers = /*#__PURE__*/ extend(
       }
       return has
     },
-  },
-)
+  })
 
 // dev only
 // In dev mode, the proxy target exposes the same properties as seen on `this`
@@ -570,7 +568,7 @@ export function createDevRenderContext(instance: ComponentInternalInstance) {
 // dev only
 export function exposePropsOnRenderContext(
   instance: ComponentInternalInstance,
-) {
+): void {
   const {
     ctx,
     propsOptions: [propsOptions],
@@ -590,7 +588,7 @@ export function exposePropsOnRenderContext(
 // dev only
 export function exposeSetupStateOnRenderContext(
   instance: ComponentInternalInstance,
-) {
+): void {
   const { ctx, setupState } = instance
   Object.keys(toRaw(setupState)).forEach(key => {
     if (!setupState.__isScriptSetup) {

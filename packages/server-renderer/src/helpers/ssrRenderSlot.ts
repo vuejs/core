@@ -23,7 +23,7 @@ export function ssrRenderSlot(
   push: PushFn,
   parentComponent: ComponentInternalInstance,
   slotScopeId?: string,
-) {
+): void {
   // template-compiled slots are always rendered as fragments
   push(`<!--[-->`)
   ssrRenderSlotInner(
@@ -47,7 +47,7 @@ export function ssrRenderSlotInner(
   parentComponent: ComponentInternalInstance,
   slotScopeId?: string,
   transition?: boolean,
-) {
+): void {
   const slotFn = slots[slotName]
   if (slotFn) {
     const slotBuffer: SSRBufferItem[] = []

@@ -616,7 +616,7 @@ export function createVNodeCall(
   isBlock: VNodeCall['isBlock'] = false,
   disableTracking: VNodeCall['disableTracking'] = false,
   isComponent: VNodeCall['isComponent'] = false,
-  loc = locStub,
+  loc: SourceLocation = locStub,
 ): VNodeCall {
   if (context) {
     if (isBlock) {
@@ -848,18 +848,24 @@ export function createReturnStatement(
   }
 }
 
-export function getVNodeHelper(ssr: boolean, isComponent: boolean) {
+export function getVNodeHelper(
+  ssr: boolean,
+  isComponent: boolean,
+): typeof CREATE_VNODE | typeof CREATE_ELEMENT_VNODE {
   return ssr || isComponent ? CREATE_VNODE : CREATE_ELEMENT_VNODE
 }
 
-export function getVNodeBlockHelper(ssr: boolean, isComponent: boolean) {
+export function getVNodeBlockHelper(
+  ssr: boolean,
+  isComponent: boolean,
+): typeof CREATE_BLOCK | typeof CREATE_ELEMENT_BLOCK {
   return ssr || isComponent ? CREATE_BLOCK : CREATE_ELEMENT_BLOCK
 }
 
 export function convertToBlock(
   node: VNodeCall,
   { helper, removeHelper, inSSR }: TransformContext,
-) {
+): void {
   if (!node.isBlock) {
     node.isBlock = true
     removeHelper(getVNodeHelper(inSSR, node.isComponent))

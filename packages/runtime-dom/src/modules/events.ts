@@ -18,7 +18,7 @@ export function addEventListener(
   event: string,
   handler: EventListener,
   options?: EventListenerOptions,
-) {
+): void {
   el.addEventListener(event, handler, options)
 }
 
@@ -27,11 +27,11 @@ export function removeEventListener(
   event: string,
   handler: EventListener,
   options?: EventListenerOptions,
-) {
+): void {
   el.removeEventListener(event, handler, options)
 }
 
-const veiKey = Symbol('_vei')
+const veiKey: unique symbol = Symbol('_vei')
 
 export function patchEvent(
   el: Element & { [veiKey]?: Record<string, Invoker | undefined> },
@@ -39,7 +39,7 @@ export function patchEvent(
   prevValue: EventValue | null,
   nextValue: EventValue | unknown,
   instance: ComponentInternalInstance | null = null,
-) {
+): void {
   // vei = vue event invokers
   const invokers = el[veiKey] || (el[veiKey] = {})
   const existingInvoker = invokers[rawName]

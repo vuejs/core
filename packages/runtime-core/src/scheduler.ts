@@ -80,7 +80,7 @@ function findInsertionIndex(id: number) {
   return start
 }
 
-export function queueJob(job: SchedulerJob) {
+export function queueJob(job: SchedulerJob): void {
   // the dedupe search uses the startIndex argument of Array.includes()
   // by default the search index includes the current job that is being run
   // so it cannot recursively trigger itself again.
@@ -110,14 +110,14 @@ function queueFlush() {
   }
 }
 
-export function invalidateJob(job: SchedulerJob) {
+export function invalidateJob(job: SchedulerJob): void {
   const i = queue.indexOf(job)
   if (i > flushIndex) {
     queue.splice(i, 1)
   }
 }
 
-export function queuePostFlushCb(cb: SchedulerJobs) {
+export function queuePostFlushCb(cb: SchedulerJobs): void {
   if (!isArray(cb)) {
     if (
       !activePostFlushCbs ||
@@ -141,8 +141,8 @@ export function flushPreFlushCbs(
   instance?: ComponentInternalInstance,
   seen?: CountMap,
   // if currently flushing, skip the current job itself
-  i = isFlushing ? flushIndex + 1 : 0,
-) {
+  i: number = isFlushing ? flushIndex + 1 : 0,
+): void {
   if (__DEV__) {
     seen = seen || new Map()
   }
@@ -162,7 +162,7 @@ export function flushPreFlushCbs(
   }
 }
 
-export function flushPostFlushCbs(seen?: CountMap) {
+export function flushPostFlushCbs(seen?: CountMap): void {
   if (pendingPostFlushCbs.length) {
     const deduped = [...new Set(pendingPostFlushCbs)].sort(
       (a, b) => getId(a) - getId(b),

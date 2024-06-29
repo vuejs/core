@@ -9,7 +9,7 @@ export interface InjectionKey<T> extends Symbol {}
 export function provide<T, K = InjectionKey<T> | string | number>(
   key: K,
   value: K extends InjectionKey<infer V> ? V : T,
-) {
+): void {
   if (!currentInstance) {
     if (__DEV__) {
       warn(`provide() can only be used inside setup().`)

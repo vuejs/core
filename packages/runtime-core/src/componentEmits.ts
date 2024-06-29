@@ -28,6 +28,7 @@ import {
   compatModelEmit,
   compatModelEventPrefix,
 } from './compat/componentVModel'
+import type { ComponentPublicInstance } from './componentPublicInstance'
 
 export type ObjectEmitsOptions = Record<
   string,
@@ -83,7 +84,7 @@ export function emit(
   instance: ComponentInternalInstance,
   event: string,
   ...rawArgs: any[]
-) {
+): ComponentPublicInstance | null | undefined {
   if (instance.isUnmounted) return
   const props = instance.vnode.props || EMPTY_OBJ
 

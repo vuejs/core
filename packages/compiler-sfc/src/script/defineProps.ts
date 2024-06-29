@@ -48,7 +48,7 @@ export function processDefineProps(
   ctx: ScriptCompileContext,
   node: Node,
   declId?: LVal,
-) {
+): boolean {
   if (!isCallOf(node, DEFINE_PROPS)) {
     return processWithDefaults(ctx, node, declId)
   }

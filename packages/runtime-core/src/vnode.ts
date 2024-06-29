@@ -66,9 +66,9 @@ export const Fragment = Symbol.for('v-fgt') as any as {
     $props: VNodeProps
   }
 }
-export const Text = Symbol.for('v-txt')
-export const Comment = Symbol.for('v-cmt')
-export const Static = Symbol.for('v-stc')
+export const Text: unique symbol = Symbol.for('v-txt')
+export const Comment: unique symbol = Symbol.for('v-cmt')
+export const Static: unique symbol = Symbol.for('v-stc')
 
 export type VNodeTypes =
   | string
@@ -266,11 +266,11 @@ export let currentBlock: VNode[] | null = null
  *
  * @private
  */
-export function openBlock(disableTracking = false) {
+export function openBlock(disableTracking = false): void {
   blockStack.push((currentBlock = disableTracking ? null : []))
 }
 
-export function closeBlock() {
+export function closeBlock(): void {
   blockStack.pop()
   currentBlock = blockStack[blockStack.length - 1] || null
 }
@@ -297,7 +297,7 @@ export let isBlockTreeEnabled = 1
  *
  * @private
  */
-export function setBlockTracking(value: number) {
+export function setBlockTracking(value: number): void {
   isBlockTreeEnabled += value
 }
 
@@ -325,7 +325,7 @@ export function createElementBlock(
   patchFlag?: number,
   dynamicProps?: string[],
   shapeFlag?: number,
-) {
+): VNode {
   return setupBlock(
     createBaseVNode(
       type,
@@ -398,7 +398,9 @@ let vnodeArgsTransformer:
  * It is *internal* but needs to be exposed for test-utils to pick up proper
  * typings
  */
-export function transformVNodeArgs(transformer?: typeof vnodeArgsTransformer) {
+export function transformVNodeArgs(
+  transformer?: typeof vnodeArgsTransformer,
+): void {
   vnodeArgsTransformer = transformer
 }
 
@@ -438,10 +440,10 @@ function createBaseVNode(
   children: unknown = null,
   patchFlag = 0,
   dynamicProps: string[] | null = null,
-  shapeFlag = type === Fragment ? 0 : ShapeFlags.ELEMENT,
+  shapeFlag: number = type === Fragment ? 0 : ShapeFlags.ELEMENT,
   isBlockNode = false,
   needFullChildrenNormalization = false,
-) {
+): VNode {
   const vnode = {
     __v_isVNode: true,
     __v_skip: true,
@@ -622,7 +624,9 @@ function _createVNode(
   )
 }
 
-export function guardReactiveProps(props: (Data & VNodeProps) | null) {
+export function guardReactiveProps(
+  props: (Data & VNodeProps) | null,
+): (Data & VNodeProps) | null {
   if (!props) return null
   return isProxy(props) || isInternalObject(props) ? extend({}, props) : props
 }
@@ -788,7 +792,7 @@ export function cloneIfMounted(child: VNode): VNode {
     : cloneVNode(child)
 }
 
-export function normalizeChildren(vnode: VNode, children: unknown) {
+export function normalizeChildren(vnode: VNode, children: unknown): void {
   let type = 0
   const { shapeFlag } = vnode
   if (children == null) {
@@ -843,7 +847,7 @@ export function normalizeChildren(vnode: VNode, children: unknown) {
   vnode.shapeFlag |= type
 }
 
-export function mergeProps(...args: (Data & VNodeProps)[]) {
+export function mergeProps(...args: (Data & VNodeProps)[]): Data {
   const ret: Data = {}
   for (let i = 0; i < args.length; i++) {
     const toMerge = args[i]
@@ -879,7 +883,7 @@ export function invokeVNodeHook(
   instance: ComponentInternalInstance | null,
   vnode: VNode,
   prevVNode: VNode | null = null,
-) {
+): void {
   callWithAsyncErrorHandling(hook, instance, ErrorCodes.VNODE_HOOK, [
     vnode,
     prevVNode,

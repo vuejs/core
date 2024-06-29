@@ -89,7 +89,7 @@ export function watchEffect(
 export function watchPostEffect(
   effect: WatchEffect,
   options?: DebuggerOptions,
-) {
+): WatchStopHandle {
   return doWatch(
     effect,
     null,
@@ -100,7 +100,7 @@ export function watchPostEffect(
 export function watchSyncEffect(
   effect: WatchEffect,
   options?: DebuggerOptions,
-) {
+): WatchStopHandle {
   return doWatch(
     effect,
     null,
@@ -454,7 +454,7 @@ export function instanceWatch(
 
 export function createPathGetter(ctx: any, path: string) {
   const segments = path.split('.')
-  return () => {
+  return (): any => {
     let cur = ctx
     for (let i = 0; i < segments.length && cur; i++) {
       cur = cur[segments[i]]
@@ -465,9 +465,9 @@ export function createPathGetter(ctx: any, path: string) {
 
 export function traverse(
   value: unknown,
-  depth = Infinity,
+  depth: number = Infinity,
   seen?: Set<unknown>,
-) {
+): unknown {
   if (depth <= 0 || !isObject(value) || (value as any)[ReactiveFlags.SKIP]) {
     return value
   }

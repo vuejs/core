@@ -53,7 +53,7 @@ let suspenseId = 0
 /**
  * For testing only
  */
-export const resetSuspenseId = () => (suspenseId = 0)
+export const resetSuspenseId = (): number => (suspenseId = 0)
 
 // Suspense exposes a component-like API, and is treated like a component
 // in the compiler, but internally it's a special built-in type that hooks
@@ -77,7 +77,7 @@ export const SuspenseImpl = {
     optimized: boolean,
     // platform-specific impl passed from renderer
     rendererInternals: RendererInternals,
-  ) {
+  ): void {
     if (n1 == null) {
       mountSuspense(
         n2,
@@ -122,8 +122,8 @@ export const SuspenseImpl = {
       )
     }
   },
-  hydrate: hydrateSuspense,
-  normalize: normalizeSuspenseChildren,
+  hydrate: hydrateSuspense as typeof hydrateSuspense,
+  normalize: normalizeSuspenseChildren as typeof normalizeSuspenseChildren,
 }
 
 // Force-casted public typing for h and TSX props inference
@@ -816,7 +816,7 @@ function hydrateSuspense(
   return result
 }
 
-function normalizeSuspenseChildren(vnode: VNode) {
+function normalizeSuspenseChildren(vnode: VNode): void {
   const { shapeFlag, children } = vnode
   const isSlotChildren = shapeFlag & ShapeFlags.SLOTS_CHILDREN
   vnode.ssContent = normalizeSuspenseSlot(

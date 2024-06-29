@@ -81,7 +81,9 @@ export function normalizeClass(value: unknown): string {
   return res.trim()
 }
 
-export function normalizeProps(props: Record<string, any> | null) {
+export function normalizeProps(
+  props: Record<string, any> | null,
+): Record<string, any> | null {
   if (!props) return null
   let { class: klass, style } = props
   if (klass && !isString(klass)) {

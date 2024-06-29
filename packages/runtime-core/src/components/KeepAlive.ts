@@ -384,14 +384,14 @@ function matches(pattern: MatchPattern, name: string): boolean {
 export function onActivated(
   hook: Function,
   target?: ComponentInternalInstance | null,
-) {
+): void {
   registerKeepAliveHook(hook, LifecycleHooks.ACTIVATED, target)
 }
 
 export function onDeactivated(
   hook: Function,
   target?: ComponentInternalInstance | null,
-) {
+): void {
   registerKeepAliveHook(hook, LifecycleHooks.DEACTIVATED, target)
 }
 

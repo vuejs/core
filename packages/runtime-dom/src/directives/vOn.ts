@@ -49,7 +49,7 @@ export const withModifiers = <
 >(
   fn: T & { _withMods?: { [key: string]: T } },
   modifiers: ModifierGuardsKeys[],
-) => {
+): T => {
   const cache = fn._withMods || (fn._withMods = {})
   const cacheKey = modifiers.join('.')
   return (
@@ -82,7 +82,7 @@ const keyNames: Record<string, string | string[]> = {
 export const withKeys = <T extends (event: KeyboardEvent) => any>(
   fn: T & { _withKeys?: { [k: string]: T } },
   modifiers: string[],
-) => {
+): T => {
   let globalKeyCodes: LegacyConfig['keyCodes']
   let instance: ComponentInternalInstance | null = null
   if (__COMPAT__) {

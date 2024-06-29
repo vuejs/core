@@ -191,7 +191,7 @@ export function initProps(
   rawProps: Data | null,
   isStateful: number, // result of bitwise flag comparison
   isSSR = false,
-) {
+): void {
   const props: Data = {}
   const attrs: Data = createInternalObject()
 
@@ -238,7 +238,7 @@ export function updateProps(
   rawProps: Data | null,
   rawPrevProps: Data | null,
   optimized: boolean,
-) {
+): void {
   const {
     props,
     attrs,

@@ -25,7 +25,7 @@ export interface WritableComputedOptions<T> {
   set: ComputedSetter<T>
 }
 
-export const COMPUTED_SIDE_EFFECT_WARN =
+export const COMPUTED_SIDE_EFFECT_WARN: string =
   `Computed is still dirty after getter evaluation,` +
   ` likely because a computed is mutating its own dependency in its getter.` +
   ` State mutations in computed getters should be avoided. ` +
@@ -38,7 +38,9 @@ export class ComputedRefImpl<T> {
   public readonly effect: ReactiveEffect<T>
 
   public readonly __v_isRef = true
-  public readonly [ReactiveFlags.IS_READONLY]: boolean = false
+  // TODO isolatedDeclarations
+  // public readonly [ReactiveFlags.IS_READONLY]: boolean = false
+  public readonly __v_isReadonly: boolean = false
 
   public _cacheable: boolean
 
@@ -92,7 +94,7 @@ export class ComputedRefImpl<T> {
   }
 
   // #region polyfill _dirty for backward compatibility third party code for Vue <= 3.3.x
-  get _dirty() {
+  get _dirty(): boolean {
     return this.effect.dirty
   }
 

@@ -10,12 +10,12 @@ import {
 } from '@vue/runtime-core'
 import { ShapeFlags } from '@vue/shared'
 
-export const CSS_VAR_TEXT = Symbol(__DEV__ ? 'CSS_VAR_TEXT' : '')
+export const CSS_VAR_TEXT: unique symbol = Symbol(__DEV__ ? 'CSS_VAR_TEXT' : '')
 /**
  * Runtime helper for SFC's CSS variable injection feature.
  * @private
  */
-export function useCssVars(getter: (ctx: any) => Record<string, string>) {
+export function useCssVars(getter: (ctx: any) => Record<string, string>): void {
   if (!__BROWSER__ && !__TEST__) return
 
   const instance = getCurrentInstance()

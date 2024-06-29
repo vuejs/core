@@ -170,7 +170,7 @@ type ShortEmits<T extends Record<string, any>> = UnionToIntersection<
  */
 export function defineExpose<
   Exposed extends Record<string, any> = Record<string, any>,
->(exposed?: Exposed) {
+>(exposed?: Exposed): void {
   if (__DEV__) {
     warnRuntimeUsage(`defineExpose`)
   }
@@ -371,7 +371,7 @@ function getContext(): SetupContext {
  */
 export function normalizePropsOrEmits(
   props: ComponentPropsOptions | EmitsOptions,
-) {
+): ComponentObjectPropsOptions | ObjectEmitsOptions {
   return isArray(props)
     ? props.reduce(
         (normalized, p) => ((normalized[p] = null), normalized),
@@ -419,7 +419,7 @@ export function mergeDefaults(
 export function mergeModels(
   a: ComponentPropsOptions | EmitsOptions,
   b: ComponentPropsOptions | EmitsOptions,
-) {
+): ComponentPropsOptions | EmitsOptions {
   if (!a || !b) return a || b
   if (isArray(a) && isArray(b)) return a.concat(b)
   return extend({}, normalizePropsOrEmits(a), normalizePropsOrEmits(b))
@@ -464,7 +464,7 @@ export function createPropsRestProxy(
  * ```
  * @internal
  */
-export function withAsyncContext(getAwaitable: () => any) {
+export function withAsyncContext(getAwaitable: () => any): [any, () => void] {
   const ctx = getCurrentInstance()!
   if (__DEV__ && !ctx) {
     warn(
