@@ -425,6 +425,7 @@ export interface SuspenseBoundary {
   isInFallback: boolean
   isHydrating: boolean
   isUnmounted: boolean
+  preEffects: Function[]
   effects: Function[]
   resolve(force?: boolean, sync?: boolean): void
   fallback(fallbackVNode: VNode): void
@@ -506,6 +507,7 @@ function createSuspenseBoundary(
     isInFallback: !isHydrating,
     isHydrating,
     isUnmounted: false,
+    preEffects: [],
     effects: [],
 
     resolve(resume = false, sync = false) {
@@ -526,6 +528,7 @@ function createSuspenseBoundary(
         activeBranch,
         pendingBranch,
         pendingId,
+        preEffects,
         effects,
         parentComponent,
         container,
@@ -536,6 +539,10 @@ function createSuspenseBoundary(
       if (suspense.isHydrating) {
         suspense.isHydrating = false
       } else if (!resume) {
+        if (preEffects.length > 0) {
+          preEffects.forEach(e => e())
+          suspense.preEffects = []
+        }
         delayEnter =
           activeBranch &&
           pendingBranch!.transition &&
@@ -900,4 +907,16 @@ function setActiveBranch(suspense: SuspenseBoundary, branch: VNode) {
 function isVNodeSuspensible(vnode: VNode) {
   const suspensible = vnode.props && vnode.props.suspensible
   return suspensible != null && suspensible !== false
+}
+
+export function hasSuspensibleChild(vnode: VNode): boolean {
+  if (vnode.shapeFlag & ShapeFlags.SUSPENSE && isVNodeSuspensible(vnode)) {
+    return true
+  }
+
+  if (isArray(vnode.children)) {
+    return vnode.children.some(child => hasSuspensibleChild(child as VNode))
+  }
+
+  return false
 }
