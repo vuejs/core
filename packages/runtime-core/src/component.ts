@@ -355,6 +355,25 @@ export interface ComponentInternalInstance {
    */
   inheritAttrs?: boolean
   /**
+   * custom element context,
+   * exists when the component is a child component of custom element
+   * @internal
+   */
+  ceContext: {
+    addCEChildStyle: (styles: string[], uid: number, hasAttr: boolean) => void
+    removeCEChildStyles: (uid: number) => void
+    setStyleAttrs: (
+      uid: number | 'root',
+      nAttrs: Array<Record<string, string | number>>,
+      oAttrs?: Array<Record<string, string | number>>,
+    ) => void
+  } | null
+  /**
+   * Whether the style tag has attribute tags
+   * @internal
+   */
+  hasStyleAttrs: boolean
+  /**
    * is custom element?
    * @internal
    */
@@ -363,7 +382,10 @@ export interface ComponentInternalInstance {
    * custom element specific HMR method
    * @internal
    */
-  ceReload?: (newStyles?: string[]) => void
+  ceReload?: (
+    newStyles?: string[],
+    attrs?: Array<Record<string, string | number>>,
+  ) => void
 
   // the rest are only for stateful components ---------------------------------
 
@@ -448,6 +470,7 @@ export interface ComponentInternalInstance {
   isMounted: boolean
   isUnmounted: boolean
   isDeactivated: boolean
+
   /**
    * @internal
    */
@@ -588,7 +611,6 @@ export function createComponentInstance(
 
     // inheritAttrs
     inheritAttrs: type.inheritAttrs,
-
     // state
     ctx: EMPTY_OBJ,
     data: EMPTY_OBJ,
@@ -613,6 +635,11 @@ export function createComponentInstance(
     isMounted: false,
     isUnmounted: false,
     isDeactivated: false,
+
+    ceContext:
+      parent && (parent.isCE || parent.ceContext) ? parent.ceContext : null,
+    hasStyleAttrs: false,
+
     bc: null,
     c: null,
     bm: null,

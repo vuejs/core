@@ -1,12 +1,15 @@
 import {
+  type AttributeNode,
   type BindingMetadata,
   type CodegenSourceMapGenerator,
   type CompilerError,
+  type DirectiveNode,
   type ElementNode,
   NodeTypes,
   type ParserOptions,
   type RawSourceMap,
   type RootNode,
+  type SimpleExpressionNode,
   type SourceLocation,
   createRoot,
 } from '@vue/compiler-core'
@@ -79,6 +82,7 @@ export interface SFCDescriptor {
   script: SFCScriptBlock | null
   scriptSetup: SFCScriptBlock | null
   styles: SFCStyleBlock[]
+  ceStyleAttrs: Array<AttributeNode | DirectiveNode>[]
   customBlocks: SFCBlock[]
   cssVars: string[]
   /**
@@ -146,6 +150,7 @@ export function parse(
     script: null,
     scriptSetup: null,
     styles: [],
+    ceStyleAttrs: [],
     customBlocks: [],
     cssVars: [],
     slotted: false,
@@ -229,6 +234,8 @@ export function parse(
           )
         }
         descriptor.styles.push(styleBlock)
+        // ce style attrs
+        setPropsNodeForStyleAttrs(descriptor, node.props)
         break
       default:
         descriptor.customBlocks.push(createBlock(node, source, pad))
@@ -466,6 +473,28 @@ export function hmrShouldReload(
   }
 
   return false
+}
+function setPropsNodeForStyleAttrs(
+  descriptor: SFCDescriptor,
+  props: Array<AttributeNode | DirectiveNode>,
+) {
+  const propsArr = props.filter(prop => {
+    // skip scoped and lang
+    if (prop.type === 6 && (prop.name === 'scoped' || prop.name === 'lang')) {
+      return false
+    }
+    return !(
+      prop.type === 7 &&
+      (((prop as DirectiveNode).arg! as SimpleExpressionNode).content ===
+        'scoped' ||
+        ((prop as DirectiveNode).arg! as SimpleExpressionNode).content ===
+          'lang')
+    )
+  })
+
+  if (propsArr.length > 0) {
+    descriptor.ceStyleAttrs.push(propsArr)
+  }
 }
 
 /**

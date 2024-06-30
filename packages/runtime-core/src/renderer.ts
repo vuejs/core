@@ -16,6 +16,7 @@ import {
 import {
   type ComponentInternalInstance,
   type ComponentOptions,
+  type ConcreteComponent,
   type Data,
   type LifecycleHook,
   createComponentInstance,
@@ -710,6 +711,7 @@ function baseCreateRenderer(
     if (needCallTransitionHooks) {
       transition!.beforeEnter(el)
     }
+
     hostInsert(el, container, anchor)
     if (
       (vnodeHook = props && props.onVnodeMounted) ||
@@ -1377,6 +1379,31 @@ function baseCreateRenderer(
             startMeasure(instance, `render`)
           }
           const subTree = (instance.subTree = renderComponentRoot(instance))
+
+          // add style tag when the component is a child
+          // component of a custom element
+          if (instance && instance.parent) {
+            if (
+              !(
+                (instance.parent.type as ComponentOptions).__asyncLoader &&
+                instance.parent.isCE
+              )
+            ) {
+              const styles =
+                (instance.ceContext &&
+                  (instance.type as ConcreteComponent & { styles?: string[] })
+                    .styles) ||
+                null
+              if (instance.ceContext && styles) {
+                instance.ceContext.addCEChildStyle(
+                  styles,
+                  instance.uid,
+                  instance.hasStyleAttrs,
+                )
+              }
+            }
+          }
+
           if (__DEV__) {
             endMeasure(instance, `render`)
           }
@@ -2143,6 +2170,11 @@ function baseCreateRenderer(
     }
 
     if (shapeFlag & ShapeFlags.COMPONENT) {
+      // remove style tags when the component is a child
+      // component of a custom element
+      if (vnode.component!.ceContext && isHmrUpdating) {
+        vnode.component!.ceContext.removeCEChildStyles(vnode.component!.uid)
+      }
       unmountComponent(vnode.component!, parentSuspense, doRemove)
     } else {
       if (__FEATURE_SUSPENSE__ && shapeFlag & ShapeFlags.SUSPENSE) {
@@ -2189,7 +2221,6 @@ function baseCreateRenderer(
         remove(vnode)
       }
     }
-
     if (
       (shouldInvokeVnodeHook &&
         (vnodeHook = props && props.onVnodeUnmounted)) ||
