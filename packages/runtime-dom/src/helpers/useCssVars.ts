@@ -30,6 +30,9 @@ export function useCssVars(getter: (ctx: any) => Record<string, string>) {
     Array.from(
       document.querySelectorAll(`[data-v-owner="${instance.uid}"]`),
     ).forEach(node => setVarsOnNode(node, vars))
+    Array.from(
+      document.querySelectorAll(`[data-v-parent-${instance.uid}-owner]`),
+    ).forEach(node => setVarsOnNode(node, vars))
   })
 
   if (__DEV__) {
