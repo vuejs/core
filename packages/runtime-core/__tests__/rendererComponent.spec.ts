@@ -1,4 +1,5 @@
 import {
+  Fragment,
   type Ref,
   type SetupContext,
   type VNode,
@@ -374,5 +375,72 @@ describe('renderer: component', () => {
     expect(
       `Property '$attrs' was accessed via 'this'. Avoid using 'this' in templates.`,
     ).toHaveBeenWarned()
+  })
+
+  // #10929
+  it('Render a radio button group with a checked prop and an onChange event', async () => {
+    const values = ['foo', 'bar'] as const
+    type RadioValue = (typeof values)[number]
+    const checked = ref<RadioValue>('foo')
+    const options = ref<RadioValue[]>(['foo', 'bar'])
+
+    const type = 'radio'
+    const name = 'test'
+
+    function onChange(val: RadioValue) {
+      checked.value = val
+    }
+
+    const Comp = {
+      setup() {
+        watch(checked, (n, o) => {
+          swapOptions(n, o)
+        })
+
+        function swapOptions(v1: RadioValue, v2: RadioValue) {
+          options.value = swap(
+            [...options.value],
+            options.value.findIndex(item => item === v1),
+            options.value.findIndex(item => item === v2),
+          )
+        }
+
+        function swap(arr: RadioValue[], i1: number, i2: number) {
+          ;[arr[i2], arr[i1]] = [arr[i1], arr[i2]]
+          return arr
+        }
+
+        return () => {
+          return h(Fragment, null, [
+            h('input', {
+              type,
+              name,
+              checked: options.value[0] === checked.value,
+              value: options.value[0],
+              onChange: () => onChange(options.value[0]),
+            }),
+            h('input', {
+              type,
+              name,
+              checked: options.value[1] === checked.value,
+              value: options.value[1],
+              onChange: () => onChange(options.value[0]),
+            }),
+          ])
+        }
+      },
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(Comp), root)
+    expect(serializeInner(root)).toBe(
+      `<input type="radio" name="test" value="foo" checked=true></input><input type="radio" name="test" value="bar" checked=false></input>`,
+    )
+
+    onChange('bar')
+    await nextTick()
+    expect(serializeInner(root)).toBe(
+      `<input type="radio" name="test" value="bar" checked=true></input><input type="radio" name="test" value="foo" checked=false></input>`,
+    )
   })
 })
