@@ -103,6 +103,20 @@ export function setRef(
                 if (rawRef.k) refs[rawRef.k] = ref.value
               }
             } else if (!existing.includes(refValue)) {
+              // #10655 warn if not ref() array used as a string ref
+              const wrongRefType =
+                __DEV__ &&
+                _isString &&
+                hasOwn(owner.devtoolsRawSetupState, ref) &&
+                !isRef(owner.devtoolsRawSetupState[ref]) &&
+                hasOwn(setupState, '__isScriptSetup')
+              if (wrongRefType) {
+                warn(
+                  'In production mode ref array will not be filled. ' +
+                    'Use ref() instead. Ref name: ' +
+                    ref,
+                )
+              }
               existing.push(refValue)
             }
           }
