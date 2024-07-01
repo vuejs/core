@@ -14,7 +14,7 @@
   - Contains hard-coded prod/dev branches, and the prod build is pre-minified. Use the `*.prod.js` files for production.
 
 - **`vue(.runtime).esm-browser(.prod).js`**:
-  - For usage via native ES modules imports (in browser via `<script type="module">`.
+  - For usage via native ES modules imports (in browser via `<script type="module">`).
   - Shares the same runtime compilation, dependency inlining and hard-coded prod/dev behavior with the global build.
 
 ### With a Bundler
