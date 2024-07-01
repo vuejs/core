@@ -5,6 +5,7 @@ import {
   getCurrentInstance,
   onMounted,
   onUnmounted,
+  teleportUTMap,
   warn,
   watchPostEffect,
 } from '@vue/runtime-core'
@@ -26,11 +27,14 @@ export function useCssVars(getter: (ctx: any) => Record<string, string>) {
     return
   }
 
-  const updateTeleports = (instance.ut = (vars = getter(instance.proxy)) => {
-    Array.from(
-      document.querySelectorAll(`[data-v-owner="${instance.uid}"]`),
-    ).forEach(node => setVarsOnNode(node, vars))
-  })
+  const updateTeleports =
+    (teleportUTMap[instance.uid] =
+    instance.ut =
+      (vars = getter(instance.proxy)) => {
+        Array.from(
+          document.querySelectorAll(`[data-v-owner="${instance.uid}"]`),
+        ).forEach(node => setVarsOnNode(node, vars))
+      })
 
   if (__DEV__) {
     instance.getCssVars = () => getter(instance.proxy)
@@ -46,7 +50,10 @@ export function useCssVars(getter: (ctx: any) => Record<string, string>) {
     watchPostEffect(setVars)
     const ob = new MutationObserver(setVars)
     ob.observe(instance.subTree.el!.parentNode, { childList: true })
-    onUnmounted(() => ob.disconnect())
+    onUnmounted(() => {
+      ob.disconnect()
+      teleportUTMap[instance.uid] = null
+    })
   })
 }
 

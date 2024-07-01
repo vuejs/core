@@ -8,12 +8,14 @@ import {
   KeepAlive,
   Suspense,
   type SuspenseProps,
+  Teleport,
   h,
   nextTick,
   nodeOps,
   onErrorCaptured,
   onMounted,
   onUnmounted,
+  reactive,
   ref,
   render,
   resolveDynamicComponent,
@@ -21,11 +23,19 @@ import {
   shallowRef,
   watch,
   watchEffect,
+  withCtx,
 } from '@vue/runtime-test'
-import { computed, createApp, defineComponent, inject, provide } from 'vue'
+import {
+  computed,
+  createApp,
+  defineComponent,
+  inject,
+  provide,
+  useCssVars,
+} from 'vue'
 import type { RawSlots } from 'packages/runtime-core/src/componentSlots'
 import { resetSuspenseId } from '../../src/components/Suspense'
-
+import { render as runtimeRender } from '@vue/runtime-dom'
 describe('Suspense', () => {
   const deps: Promise<any>[] = []
 
@@ -2123,6 +2133,47 @@ describe('Suspense', () => {
     // should not throw error due to Suspense vnode.el being null
     data.value = 'data2'
     await Promise.all(deps)
+  })
+
+  test('suspense can render CssVars correctly in teleport', async () => {
+    document.body.innerHTML = ''
+    const state = reactive({ color: 'red' })
+    const root = document.createElement('div')
+    const target = document.body
+    const Async = defineAsyncComponent({
+      render() {
+        return h('div', 'async')
+      },
+    })
+
+    const Comp = {
+      setup() {
+        useCssVars(() => state)
+        return () =>
+          h(Teleport, { to: target }, [
+            h(Suspense, null, {
+              default: withCtx(() => h(Async)),
+              fallback: withCtx(() => h('div', 'fallback')),
+            }),
+          ])
+      },
+    }
+
+    runtimeRender(h(Comp), root)
+    await nextTick()
+    expect(target.children.length).toBe(1)
+    for (const c of [].slice.call(target.children as any)) {
+      expect((c as HTMLElement).style.getPropertyValue(`--color`)).toBe('red')
+    }
+    expect(target.children[0].innerHTML).toBe('fallback')
+
+    await Promise.all(deps)
+    await nextTick()
+    expect(target.children.length).toBe(1)
+    for (const c of [].slice.call(target.children as any)) {
+      expect((c as HTMLElement).style.getPropertyValue(`--color`)).toBe('red')
+    }
+    expect(target.children[0].innerHTML).toBe('async')
   })
 
   describe('warnings', () => {
