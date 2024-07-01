@@ -10,6 +10,7 @@ import { isPromise, isString } from '@vue/shared'
 import { type SSRBuffer, type SSRContext, renderComponentVNode } from './render'
 import type { Readable, Writable } from 'node:stream'
 import { resolveTeleports } from './renderToString'
+import { MultipleErrors } from './index'
 
 const { isVNode } = ssrUtils
 
@@ -21,17 +22,35 @@ export interface SimpleReadable {
 async function unrollBuffer(
   buffer: SSRBuffer,
   stream: SimpleReadable,
+  errors: unknown[] = [],
+  depth: number = 0,
 ): Promise<void> {
   if (buffer.hasAsync) {
     for (let i = 0; i < buffer.length; i++) {
       let item = buffer[i]
       if (isPromise(item)) {
-        item = await item
+        try {
+          item = await item
+        } catch (e: unknown) {
+          errors.push(e)
+          continue
+        }
       }
       if (isString(item)) {
         stream.push(item)
       } else {
-        await unrollBuffer(item, stream)
+        await unrollBuffer(item, stream, errors, depth + 1)
+      }
+    }
+
+    if (depth === 0 && errors.length) {
+      if (errors.length === 1) {
+        throw errors[0]
+      } else {
+        throw new MultipleErrors(
+          'Multiple errors during buffer unrolling',
+          errors,
+        )
       }
     }
   } else {
