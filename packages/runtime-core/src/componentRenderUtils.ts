@@ -377,7 +377,9 @@ export function shouldUpdateComponent(
   }
 
   // force child update for runtime directive or transition on component vnode.
-  if (nextVNode.dirs || nextVNode.transition) {
+  // #11227
+  // component with patchFlag set to 0 should be forced to update
+  if (nextVNode.dirs || nextVNode.transition || patchFlag === 0) {
     return true
   }
 
