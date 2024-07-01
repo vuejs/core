@@ -164,6 +164,10 @@ function rewriteSelector(
       // global: replace with inner selector and do not inject [id].
       // ::v-global(.foo) -> .foo
       if (value === ':global' || value === '::v-global') {
+        // ::v-global(.foo) .bar -> .foo .bar
+        for (let i = selector.index(n) + 1; i < selector.length; i++) {
+          n.nodes[0].nodes.push(selector.at(i))
+        }
         selectorRoot.insertAfter(selector, n.nodes[0])
         selectorRoot.removeChild(selector)
         return false

@@ -142,6 +142,12 @@ describe('SFC scoped CSS', () => {
       ".foo .bar { color: red;
       }"
     `)
+    // #10403
+    expect(compileScoped(`::v-global(.foo) .bar { color: red; }`))
+      .toMatchInlineSnapshot(`
+      ".foo .bar { color: red;
+      }"
+    `)
   })
 
   test(':is() and :where() with multiple selectors', () => {
