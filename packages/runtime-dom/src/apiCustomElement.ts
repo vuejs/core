@@ -379,6 +379,9 @@ export class VueElement extends BaseClass {
       vnode.ce = instance => {
         this._instance = instance
         instance.isCE = true
+        instance.ceSetCssVars = (cssvars: Record<string, string>) => {
+          this._setCssVars(cssvars)
+        }
         // HMR
         if (__DEV__) {
           instance.ceReload = newStyles => {
@@ -426,6 +429,12 @@ export class VueElement extends BaseClass {
       }
     }
     return vnode
+  }
+
+  private _setCssVars(vars: Record<string, string>) {
+    for (const key in vars) {
+      this.style.setProperty(`--${key}`, vars[key])
+    }
   }
 
   private _applyStyles(styles: string[] | undefined) {
