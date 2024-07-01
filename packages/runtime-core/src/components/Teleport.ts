@@ -138,7 +138,7 @@ export const TeleportImpl = {
         }
       }
 
-      if (disabled) {
+      if (disabled || !target) {
         mount(container, mainAnchor)
       } else if (target) {
         mount(target, targetAnchor)
