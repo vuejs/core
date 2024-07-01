@@ -56,6 +56,7 @@ import { setRef } from './rendererTemplateRef'
 import {
   type SuspenseBoundary,
   type SuspenseImpl,
+  isSuspense,
   queueEffectWithSuspense,
 } from './components/Suspense'
 import type { TeleportImpl, TeleportVNode } from './components/Teleport'
@@ -749,7 +750,11 @@ function baseCreateRenderer(
         subTree =
           filterSingleRoot(subTree.children as VNodeArrayChildren) || subTree
       }
-      if (vnode === subTree) {
+      if (
+        vnode === subTree ||
+        (isSuspense(subTree.type) &&
+          (subTree.ssContent === vnode || subTree.ssFallback === vnode))
+      ) {
         const parentVNode = parentComponent.vnode
         setScopeId(
           el,
