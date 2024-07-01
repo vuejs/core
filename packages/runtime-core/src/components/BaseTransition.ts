@@ -18,6 +18,7 @@ import { toRaw } from '@vue/reactivity'
 import { ErrorCodes, callWithAsyncErrorHandling } from '../errorHandling'
 import { PatchFlags, ShapeFlags, isArray, isFunction } from '@vue/shared'
 import { onBeforeUnmount, onMounted } from '../apiLifecycle'
+import { queueJob } from '../scheduler'
 import type { RendererElement } from '../renderer'
 
 type Hook<T = () => void> = T | T[]
@@ -241,7 +242,7 @@ const BaseTransitionImpl: ComponentOptions = {
             // it also needs to be updated when active is undefined
             if (instance.update.active !== false) {
               instance.effect.dirty = true
-              instance.update()
+              queueJob(instance.update)
             }
           }
           return emptyPlaceholder(child)
