@@ -813,7 +813,8 @@ describe('hot module replacement', () => {
     )
   })
 
-  test('Async component without rerender only', async () => {
+  // #11248
+  test('reload async component with multiple instances', async () => {
     const root = nodeOps.createElement('div')
     const childId = 'test-child-id'
     const Child: ComponentOptions = {
