@@ -108,6 +108,7 @@ describe('defineCustomElement', () => {
       myInputEl.removeAttribute('value')
       await nextTick()
       expect(inputEl.value).toBe('')
+      app.unmount()
     })
 
     test('should not unmount on move', async () => {
@@ -742,6 +743,45 @@ describe('defineCustomElement', () => {
 
       const e = container.childNodes[0] as VueElement
       expect(e.shadowRoot!.innerHTML).toBe(`<div>20,number</div>`)
+    })
+
+    test('Props can be casted when mounting custom elements in component rendering functions', async () => {
+      const E = defineCustomElement(
+        defineAsyncComponent(() => {
+          return Promise.resolve({
+            props: ['fooValue'],
+            setup(props) {
+              expect(props.fooValue).toBe('fooValue')
+            },
+            render(this: any) {
+              return h('div', this.fooValue)
+            },
+          })
+        }),
+      )
+      customElements.define('my-el-async-4', E)
+      const R = defineComponent({
+        setup() {
+          const fooValue = ref('fooValue')
+          return {
+            fooValue,
+          }
+        },
+        render: (props: any, _: any, __: any, $setup: unknown) => {
+          return h('div', null, [
+            h('my-el-async-4', {
+              fooValue: ($setup as any).fooValue,
+            }),
+          ])
+        },
+      })
+
+      const app = createApp(R)
+      app.mount(container)
+      await new Promise(r => setTimeout(r))
+      const e = container.querySelector('my-el-async-4') as VueElement
+      expect(e.shadowRoot!.innerHTML).toBe(`<div>fooValue</div>`)
+      app.unmount()
     })
 
     test('with slots', async () => {

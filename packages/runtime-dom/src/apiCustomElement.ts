@@ -193,6 +193,8 @@ export class VueElement extends BaseClass {
   private _numberProps: Record<string, true> | null = null
   private _styles?: HTMLStyleElement[]
   private _ob?: MutationObserver | null = null
+  public _ce = true
+  public _asyncPatchProps: (() => void) | null = null
   constructor(
     private _def: InnerComponentDef,
     private _props: Record<string, any> = {},
@@ -285,6 +287,9 @@ export class VueElement extends BaseClass {
         // defining getter/setters on prototype
         // for sync defs, this already happened in the constructor
         this._resolveProps(def)
+        if (this._asyncPatchProps) {
+          this._asyncPatchProps()
+        }
       }
 
       // apply CSS
