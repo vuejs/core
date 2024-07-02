@@ -851,6 +851,11 @@ export function compileScript(
         returned +=
           `get ${key}() { return ${key} }, ` +
           `set ${key}(${setArg}) { ${key} = ${setArg} }, `
+      } else if (ctx.bindingMetadata[key] === BindingTypes.LITERAL_CONST) {
+        const setArg = key === 'v' ? `_v` : `v`
+        returned +=
+          `get ${key}() { return ${key} }, ` +
+          `set ${key}(${setArg}) {throw new Error('Cannot assign to a constant variable');}, `
       } else {
         returned += `${key}, `
       }
