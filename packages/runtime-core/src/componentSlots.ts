@@ -209,7 +209,11 @@ export const updateSlots = (
         // when rendering the optimized slots by manually written render function,
         // we need to delete the `slots._` flag if necessary to make subsequent updates reliable,
         // i.e. let the `renderSlot` create the bailed Fragment
-        if (!optimized && type === SlotFlags.STABLE) {
+        if (
+          !optimized &&
+          type === SlotFlags.STABLE &&
+          !(instance.parent && instance.parent.vnode.patchFlag > 0)
+        ) {
           delete slots._
         }
       }
