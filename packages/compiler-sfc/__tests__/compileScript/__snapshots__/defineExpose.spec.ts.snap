@@ -9,7 +9,7 @@ export default {
   __expose();
 
   
-return { n, get x() { return x } }
+return { get n() { return n }, set n(v) { throw new Error('Assignment to constant variable.') }, get x() { return x } }
 }
 
 }"
