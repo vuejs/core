@@ -423,6 +423,10 @@ export class VueElement extends BaseClass {
             break
           }
         }
+
+        instance.ceSetProp = (key: string, value: any) => {
+          this._setProp(key, value, true, false)
+        }
       }
     }
     return vnode

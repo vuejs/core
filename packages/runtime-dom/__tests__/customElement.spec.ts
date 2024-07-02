@@ -41,6 +41,7 @@ describe('defineCustomElement', () => {
       expect(e).toBeInstanceOf(E)
       expect(e._instance).toBeTruthy()
       expect(e.shadowRoot!.innerHTML).toBe(`<div>hello</div>`)
+      expect(e.getAttribute('msg')).toBe(`hello`)
     })
 
     test('should work w/ manual instantiation', () => {

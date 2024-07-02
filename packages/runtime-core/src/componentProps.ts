@@ -480,6 +480,10 @@ function resolvePropValue(
       } else {
         value = defaultValue
       }
+
+      if (instance.isCE) {
+        instance.ceSetProp!(key, value)
+      }
     }
     // boolean casting
     if (opt[BooleanFlags.shouldCast]) {
