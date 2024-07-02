@@ -196,6 +196,9 @@ export type CreateComponentPublicInstance<
   I,
   S
 >
+
+type Override<T, U> = Omit<T, keyof U> & U
+
 // public properties exposed on the proxy, which is used as the render context
 // in templates (as `this` in the render option)
 export type ComponentPublicInstance<
@@ -215,8 +218,9 @@ export type ComponentPublicInstance<
   $: ComponentInternalInstance
   $data: D
   $props: MakeDefaultsOptional extends true
-    ? Partial<Defaults> & Omit<Prettify<P> & PublicProps, keyof Defaults>
-    : Prettify<P> & PublicProps
+    ? Partial<Defaults> &
+        Omit<Override<PublicProps, Prettify<P>>, keyof Defaults>
+    : Override<PublicProps, Prettify<P>>
   $attrs: Data
   $refs: Data
   $slots: UnwrapSlotsType<S>
