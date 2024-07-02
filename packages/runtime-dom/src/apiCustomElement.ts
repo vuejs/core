@@ -353,6 +353,7 @@ export class VueElement extends BaseClass {
   ) {
     if (val !== this._props[key]) {
       this._props[key] = val
+      if (val === undefined) delete this._props[key]
       if (shouldUpdate && this._instance) {
         this._update()
       }
