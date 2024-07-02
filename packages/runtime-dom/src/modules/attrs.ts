@@ -2,6 +2,7 @@ import {
   NOOP,
   includeBooleanAttr,
   isSpecialBooleanAttr,
+  isSymbol,
   makeMap,
 } from '@vue/shared'
 import {
@@ -37,7 +38,10 @@ export function patchAttr(
       el.removeAttribute(key)
     } else {
       // attribute value is a string https://html.spec.whatwg.org/multipage/dom.html#attributes
-      el.setAttribute(key, isBoolean ? '' : String(value))
+      el.setAttribute(
+        key,
+        isBoolean ? '' : isSymbol(value) ? String(value) : value,
+      )
     }
   }
 }
@@ -76,12 +80,13 @@ export function compatCoerceAttr(
   } else if (
     value === false &&
     !isSpecialBooleanAttr(key) &&
-    compatUtils.softAssertCompatEnabled(
+    compatUtils.isCompatEnabled(DeprecationTypes.ATTR_FALSE_VALUE, instance)
+  ) {
+    compatUtils.warnDeprecation(
       DeprecationTypes.ATTR_FALSE_VALUE,
       instance,
       key,
     )
-  ) {
     el.removeAttribute(key)
     return true
   }

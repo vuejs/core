@@ -137,6 +137,18 @@ describe('resolveType', () => {
     })
   })
 
+  test('intersection type with ignore', () => {
+    expect(
+      resolve(`
+    type Foo = { foo: number }
+    type Bar = { bar: string }
+    defineProps<Foo & /* @vue-ignore */ Bar>()
+    `).props,
+    ).toStrictEqual({
+      foo: ['Number'],
+    })
+  })
+
   // #7553
   test('union type', () => {
     expect(
@@ -510,6 +522,31 @@ describe('resolveType', () => {
     expect(props).toStrictEqual({
       foo: ['Symbol', 'String', 'Number'],
       bar: [UNKNOWN_TYPE],
+    })
+  })
+
+  // #11129
+  test('keyof: intersection type', () => {
+    const { props } = resolve(`
+    type A = { name: string }
+    type B = A & { [key: number]: string }
+    defineProps<{
+      foo: keyof B
+    }>()`)
+    expect(props).toStrictEqual({
+      foo: ['String', 'Number'],
+    })
+  })
+
+  test('keyof: union type', () => {
+    const { props } = resolve(`
+    type A = { name: string }
+    type B = A | { [key: number]: string }
+    defineProps<{
+      foo: keyof B
+    }>()`)
+    expect(props).toStrictEqual({
+      foo: ['String', 'Number'],
     })
   })
 

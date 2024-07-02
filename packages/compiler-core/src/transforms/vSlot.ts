@@ -226,10 +226,7 @@ export function buildSlots(
           break
         }
       }
-      if (prev && isTemplateNode(prev) && findDir(prev, 'if')) {
-        // remove node
-        children.splice(i, 1)
-        i--
+      if (prev && isTemplateNode(prev) && findDir(prev, /^(else-)?if$/)) {
         __TEST__ && assert(dynamicSlots.length > 0)
         // attach this slot to previous conditional
         let conditional = dynamicSlots[

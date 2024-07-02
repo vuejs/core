@@ -9,6 +9,7 @@ import {
   inject,
   nextTick,
   ref,
+  render,
   renderSlot,
 } from '../src'
 
@@ -138,7 +139,7 @@ describe('defineCustomElement', () => {
 
   describe('props', () => {
     const E = defineCustomElement({
-      props: ['foo', 'bar', 'bazQux'],
+      props: ['foo', 'bar', 'bazQux', 'value'],
       render() {
         return [
           h('div', null, this.foo),
@@ -147,6 +148,12 @@ describe('defineCustomElement', () => {
       },
     })
     customElements.define('my-el-props', E)
+
+    test('renders custom element w/ correct object prop value', () => {
+      render(h('my-el-props', { value: { x: 1 } }), container)
+      const el = container.children[0]
+      expect((el as any).value).toEqual({ x: 1 })
+    })
 
     test('props via attribute', async () => {
       // bazQux should map to `baz-qux` attribute
@@ -338,6 +345,23 @@ describe('defineCustomElement', () => {
       el.maxAge = 50
       expect(el.maxAge).toBe(50)
       expect(el.shadowRoot.innerHTML).toBe('max age: 50/type: number')
+    })
+
+    test('support direct setup function syntax with extra options', () => {
+      const E = defineCustomElement(
+        props => {
+          return () => props.text
+        },
+        {
+          props: {
+            text: String,
+          },
+        },
+      )
+      customElements.define('my-el-setup-with-props', E)
+      container.innerHTML = `<my-el-setup-with-props text="hello"></my-el-setup-with-props>`
+      const e = container.childNodes[0] as VueElement
+      expect(e.shadowRoot!.innerHTML).toBe('hello')
     })
   })
 
