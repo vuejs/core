@@ -12,6 +12,7 @@ import {
   render,
   renderSlot,
 } from '../src'
+import { computed } from '@vue/reactivity'
 
 describe('defineCustomElement', () => {
   const container = document.createElement('div')
@@ -482,6 +483,321 @@ describe('defineCustomElement', () => {
       expect(spy.mock.calls[0][0]).toMatchObject({
         detail: [1],
       })
+    })
+  })
+
+  describe('v-model emits', () => {
+    const CompDef = defineComponent({
+      emits: ['update:modelValue', 'update:fooProp', 'update:barProp'],
+      props: {
+        modelValue: {
+          type: String,
+          default: '',
+        },
+        fooProp: {
+          type: String,
+          default: '',
+        },
+        barProp: {
+          type: String,
+          default: '',
+        },
+      },
+      setup(props, { emit }) {
+        const testValue = computed({
+          get() {
+            return props.modelValue
+          },
+          set(value) {
+            emit('update:modelValue', value)
+          },
+        })
+        const testValueFoo = computed({
+          get() {
+            return props.fooProp
+          },
+          set(value) {
+            emit('update:fooProp', value)
+          },
+        })
+        const testValueBar = computed({
+          get() {
+            return props.barProp
+          },
+          set(value) {
+            emit('update:barProp', value)
+          },
+        })
+        const handleClick = () => {
+          testValue.value = 'emit trigger'
+          testValueFoo.value = 'emit trigger foo'
+          testValueBar.value = 'emit trigger bar'
+        }
+        return () =>
+          h(
+            'div',
+            {
+              id: 'test_dom',
+              onClick: handleClick,
+            },
+            [
+              h('span', {}, [testValue.value]),
+              h('span', {}, [testValueFoo.value]),
+              h('span', {}, [testValueBar.value]),
+            ],
+          )
+      },
+    })
+    const E = defineCustomElement(CompDef)
+    customElements.define('my-el-v-model', E)
+
+    test('v-model should work on custom element', async () => {
+      const foo = ref('foo')
+      const app = createApp(
+        defineComponent({
+          components: {
+            'my-el-v-model': CompDef,
+          },
+          setup() {
+            return () =>
+              h('my-el-v-model', {
+                modelValue: foo.value,
+                'onUpdate:modelValue': ($event: string) => (foo.value = $event),
+              })
+          },
+        }),
+      )
+      app.mount(container)
+
+      const shadowRootChild = (container.childNodes[0] as VueElement)
+        .shadowRoot!.childNodes[0]
+      const shadowSpanContent = shadowRootChild.childNodes[0]
+      expect((shadowSpanContent as Element).innerHTML).toBe('foo')
+      foo.value = 'test'
+      await nextTick()
+      expect((shadowSpanContent as Element).innerHTML).toBe('test')
+      shadowRootChild.dispatchEvent(new CustomEvent('click'))
+      await nextTick()
+      expect((shadowSpanContent as Element).innerHTML).toBe('emit trigger')
+      expect(foo.value).toBe('emit trigger')
+
+      app.unmount()
+    })
+
+    test('trigger hyphenated events for update:xxx events', async () => {
+      const foo = ref('foo')
+      const bar = ref('bar')
+      const app = createApp(
+        defineComponent({
+          components: {
+            'my-el-v-model': CompDef,
+          },
+          setup() {
+            return () =>
+              h('my-el-v-model', {
+                fooProp: foo.value,
+                'onUpdate:fooProp': ($event: string) => (foo.value = $event),
+                barProp: bar.value,
+                'onUpdate:barProp': ($event: string) => (bar.value = $event),
+              })
+          },
+        }),
+      )
+      app.mount(container)
+
+      const shadowRootChild = (container.childNodes[0] as VueElement)
+        .shadowRoot!.childNodes[0]
+      const shadowSpanFoo = shadowRootChild.childNodes[1]
+      const shadowSpanBar = shadowRootChild.childNodes[2]
+
+      expect((shadowSpanFoo as Element).innerHTML).toBe('foo')
+      foo.value = 'test foo'
+      await nextTick()
+      expect((shadowSpanFoo as Element).innerHTML).toBe('test foo')
+
+      expect((shadowSpanBar as Element).innerHTML).toBe('bar')
+      bar.value = 'test bar'
+      await nextTick()
+      expect((shadowSpanBar as Element).innerHTML).toBe('test bar')
+
+      shadowRootChild.dispatchEvent(new CustomEvent('click'))
+      await nextTick()
+
+      expect((shadowSpanFoo as Element).innerHTML).toBe('emit trigger foo')
+      expect(foo.value).toBe('emit trigger foo')
+
+      expect((shadowSpanBar as Element).innerHTML).toBe('emit trigger bar')
+      expect(bar.value).toBe('emit trigger bar')
+
+      app.unmount()
+    })
+
+    test('.number modifier should work with v-model on custom element', () => {
+      const Comp = defineComponent({
+        emits: ['update:modelValue', 'update:barProp'],
+        props: ['modelValue', 'barProp'],
+        setup(props, { emit }) {
+          emit('update:modelValue', '1')
+          emit('update:barProp', '2')
+          return () => h('div')
+        },
+      })
+      const E = defineCustomElement(Comp)
+      customElements.define('my-el-v-model-number', E)
+
+      const fn1 = vi.fn()
+      const fn2 = vi.fn()
+      const app = createApp(
+        defineComponent({
+          components: {
+            'my-el-v-model-number': Comp,
+          },
+          setup() {
+            return () =>
+              h('my-el-v-model-number', {
+                modelValue: null,
+                'onUpdate:modelValue': fn1,
+                modelModifiers: { number: true },
+
+                barProp: null,
+                barPropModifiers: { number: true },
+                'onUpdate:barProp': fn2,
+              })
+          },
+        }),
+      )
+      app.mount(container)
+
+      expect(fn1).toHaveBeenCalledTimes(1)
+      expect(fn1).toHaveBeenCalledWith(1)
+      expect(fn2).toHaveBeenCalledTimes(1)
+      expect(fn2).toHaveBeenCalledWith(2)
+
+      app.unmount()
+    })
+
+    test('.trim modifier should work with v-model on custom element', () => {
+      const Comp = defineComponent({
+        emits: ['update:modelValue', 'update:barProp'],
+        props: ['modelValue', 'barProp'],
+        setup(props, { emit }) {
+          emit('update:modelValue', '   one  ')
+          emit('update:barProp', '   two  ')
+          return () => h('div')
+        },
+      })
+      const E = defineCustomElement(Comp)
+      customElements.define('my-el-v-model-trim', E)
+
+      const fn1 = vi.fn()
+      const fn2 = vi.fn()
+      const app = createApp(
+        defineComponent({
+          components: {
+            'my-el-v-model-trim': Comp,
+          },
+          setup() {
+            return () =>
+              h('my-el-v-model-trim', {
+                modelValue: null,
+                'onUpdate:modelValue': fn1,
+                modelModifiers: { trim: true },
+
+                barProp: null,
+                barPropModifiers: { trim: true },
+                'onUpdate:barProp': fn2,
+              })
+          },
+        }),
+      )
+      app.mount(container)
+
+      expect(fn1).toHaveBeenCalledTimes(1)
+      expect(fn1).toHaveBeenCalledWith('one')
+      expect(fn2).toHaveBeenCalledTimes(1)
+      expect(fn2).toHaveBeenCalledWith('two')
+
+      app.unmount()
+    })
+
+    test('.trim and .number modifiers should work with v-model on custom element', () => {
+      const Comp = defineComponent({
+        emits: ['update:modelValue', 'update:barProp'],
+        props: ['modelValue', 'barProp'],
+        setup(props, { emit }) {
+          emit('update:modelValue', '    +01.2    ')
+          emit('update:barProp', '    1    ')
+          return () => h('div')
+        },
+      })
+      const E = defineCustomElement(Comp)
+      customElements.define('my-el-v-model-trim-num', E)
+
+      const fn1 = vi.fn()
+      const fn2 = vi.fn()
+      const app = createApp(
+        defineComponent({
+          components: {
+            'my-el-v-model-trim-num': Comp,
+          },
+          setup() {
+            return () =>
+              h('my-el-v-model-trim-num', {
+                modelValue: null,
+                'onUpdate:modelValue': fn1,
+                modelModifiers: { trim: true, number: true },
+
+                barProp: null,
+                barPropModifiers: { trim: true, number: true },
+                'onUpdate:barProp': fn2,
+              })
+          },
+        }),
+      )
+      app.mount(container)
+
+      expect(fn1).toHaveBeenCalledTimes(1)
+      expect(fn1).toHaveBeenCalledWith(1.2)
+      expect(fn2).toHaveBeenCalledTimes(1)
+      expect(fn2).toHaveBeenCalledWith(1)
+
+      app.unmount()
+    })
+
+    test('only trim string parameter when work with v-model on custom element', () => {
+      const Comp = defineComponent({
+        emits: ['update:modelValue', 'update:barProp'],
+        props: ['modelValue', 'barProp'],
+        setup(props, { emit }) {
+          emit('update:modelValue', ' foo ', { bar: ' bar ' })
+          return () => h('div')
+        },
+      })
+      const E = defineCustomElement(Comp)
+      customElements.define('my-el-v-model-trim-only', E)
+
+      const fn = vi.fn()
+      const app = createApp(
+        defineComponent({
+          components: {
+            'my-el-v-model-trim-only': Comp,
+          },
+          setup() {
+            return () =>
+              h('my-el-v-model-trim-only', {
+                modelValue: null,
+                'onUpdate:modelValue': fn,
+                modelModifiers: { trim: true },
+              })
+          },
+        }),
+      )
+      app.mount(container)
+
+      expect(fn).toHaveBeenCalledTimes(1)
+      expect(fn).toHaveBeenCalledWith('foo', { bar: ' bar ' })
+
+      app.unmount()
     })
   })
 

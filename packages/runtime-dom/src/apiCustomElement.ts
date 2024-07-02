@@ -22,11 +22,19 @@ import {
   createVNode,
   defineComponent,
   nextTick,
+  toHandlerKey,
   warn,
 } from '@vue/runtime-core'
-import { camelize, extend, hyphenate, isArray, toNumber } from '@vue/shared'
+import {
+  camelize,
+  extend,
+  hyphenate,
+  isArray,
+  isModelListener,
+  toNumber,
+} from '@vue/shared'
 import { hydrate, render } from '.'
-
+import { emit } from '../../runtime-core/src/componentEmits'
 export type VueElementConstructor<P = {}> = {
   new (initialProps?: Record<string, any>): VueElement & P
 }
@@ -187,6 +195,8 @@ export class VueElement extends BaseClass {
    * @internal
    */
   _instance: ComponentInternalInstance | null = null
+  _isCE = true
+  _VModelEmits: Record<string, any> = {}
 
   private _connected = false
   private _resolved = false
@@ -374,7 +384,10 @@ export class VueElement extends BaseClass {
   }
 
   private _createVNode(): VNode<any, any> {
-    const vnode = createVNode(this._def, extend({}, this._props))
+    const vnode = createVNode(
+      this._def,
+      extend({}, this._props, this._VModelEmits),
+    )
     if (!this._instance) {
       vnode.ce = instance => {
         this._instance = instance
@@ -403,6 +416,12 @@ export class VueElement extends BaseClass {
 
         // intercept emit
         instance.emit = (event: string, ...args: any[]) => {
+          // emit v-model
+          const vModelEvent = toHandlerKey(event)
+          if (isModelListener(vModelEvent)) {
+            emit(instance, event, ...args)
+            return
+          }
           // dispatch both the raw and hyphenated versions of an event
           // to match Vue behavior
           dispatch(event, args)
