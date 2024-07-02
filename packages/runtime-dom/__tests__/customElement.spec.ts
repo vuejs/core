@@ -771,5 +771,43 @@ describe('defineCustomElement', () => {
         `<div><slot><div>fallback</div></slot></div><div><slot name="named"></slot></div>`,
       )
     })
+    test('with undefined prop', async () => {
+      const toggleBoo = () => {
+        const elem = document.getElementById('mve') as any
+        if (elem.boo) {
+          elem.removeAttribute('boo')
+        } else {
+          elem.setAttribute('boo', 'boo')
+        }
+      }
+      const Foo = defineCustomElement({
+        props: {
+          boo: {
+            type: Boolean,
+          },
+        },
+        render(ctx: any) {
+          return h(
+            'div',
+            null,
+            `BOO: ${JSON.stringify(ctx.boo)}; typeof: ${typeof ctx.boo}`,
+          )
+        },
+      })
+
+      customElements.define('my-vue-element', Foo)
+      container.innerHTML = `<my-vue-element id="mve"></my-vue-element>`
+      const e = container.childNodes[0] as VueElement
+      toggleBoo()
+      await nextTick()
+      expect(e.shadowRoot!.innerHTML).toBe(
+        `<div id="mve">BOO: true; typeof: boolean</div>`,
+      )
+      toggleBoo()
+      await nextTick()
+      expect(e.shadowRoot!.innerHTML).toBe(
+        `<div id="mve">BOO: false; typeof: boolean</div>`,
+      )
+    })
   })
 })
