@@ -635,6 +635,26 @@ describe('resolveType', () => {
     })
   })
 
+  // #11266
+  test('correctly parse type annotation for declared function', () => {
+    const { props } = resolve(`
+    import { ExtractPropTypes } from 'vue'
+    interface UploadFile<T = any> {
+      xhr?: T
+    }
+    declare function uploadProps<T = any>(): {
+      fileList: {
+        type: PropType<UploadFile<T>[]>
+        default: UploadFile<T>[]
+      }
+    }
+    type UploadProps = ExtractPropTypes<ReturnType<typeof uploadProps>>
+    defineProps<UploadProps>()`)
+    expect(props).toStrictEqual({
+      fileList: ['Array'],
+    })
+  })
+
   describe('generics', () => {
     test('generic with type literal', () => {
       expect(

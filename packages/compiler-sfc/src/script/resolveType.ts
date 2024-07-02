@@ -177,6 +177,7 @@ function innerResolveTypeElements(
     case 'TSInterfaceDeclaration':
       return resolveInterfaceMembers(ctx, node, scope, typeParameters)
     case 'TSTypeAliasDeclaration':
+    case 'TSTypeAnnotation':
     case 'TSParenthesizedType':
       return resolveTypeElements(
         ctx,
