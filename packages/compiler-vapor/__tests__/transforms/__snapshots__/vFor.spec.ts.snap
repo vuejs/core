@@ -30,6 +30,20 @@ export function render(_ctx) {
 }"
 `;
 
+exports[`compiler: v-for > function params w/ prefixIdentifiers: false 1`] = `
+"import { renderEffect as _renderEffect, setText as _setText, createFor as _createFor, template as _template } from 'vue/vapor';
+const t0 = _template("<div></div>")
+
+export function render(_ctx) {
+  const n0 = _createFor(() => (items), ([item, __, k]) => {
+    const n2 = t0()
+    _renderEffect(() => _setText(n2, item))
+    return n2
+  }, (item, __, k) => (k))
+  return n0
+}"
+`;
+
 exports[`compiler: v-for > multi effect 1`] = `
 "import { renderEffect as _renderEffect, setDynamicProp as _setDynamicProp, createFor as _createFor, template as _template } from 'vue/vapor';
 const t0 = _template("<div></div>")

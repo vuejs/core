@@ -223,4 +223,17 @@ describe('compiler: v-for', () => {
       index: undefined,
     })
   })
+
+  test('function params w/ prefixIdentifiers: false', () => {
+    const { code } = compileWithVFor(
+      `<div v-for="(item, , k) of items" :key="k">{{ item }}</div>`,
+      {
+        prefixIdentifiers: false,
+      },
+    )
+
+    expect(code).contains(`_createFor(() => (items), ([item, __, k]) => {`)
+    expect(code).contain(`_setText(n2, item)`)
+    expect(code).matchSnapshot()
+  })
 })
