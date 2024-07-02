@@ -443,7 +443,7 @@ describe('component: proxy', () => {
     ).not.toHaveBeenWarned()
   })
 
-  test('should allow symbol to access on render', () => {
+  test('should not warn Symbol.unscopables access on render', () => {
     const Comp = {
       render() {
         if ((this as any)[Symbol.unscopables]) {
@@ -460,7 +460,7 @@ describe('component: proxy', () => {
       `Property ${JSON.stringify(
         Symbol.unscopables,
       )} was accessed during render ` + `but is not defined on instance.`,
-    ).toHaveBeenWarned()
+    ).not.toHaveBeenWarned()
   })
 
   test('should prevent mutating script setup bindings', () => {
