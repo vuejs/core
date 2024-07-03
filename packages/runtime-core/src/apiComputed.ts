@@ -14,12 +14,11 @@ export const computed: typeof _computed = (
       return callWithErrorHandling(getter, i, ErrorCodes.COMPUTED_GETTER, args)
     }
   } else {
-    const getter = getterOrOptions.get
-    const setter = getterOrOptions.set
+    const { get: getter, set: setter } = getterOrOptions
     getterOrOptions.get = function safeGetter(...args: any) {
       return callWithErrorHandling(getter, i, ErrorCodes.COMPUTED_GETTER, args)
     }
-    getterOrOptions.set = function safeGetter(...args: any) {
+    getterOrOptions.set = function safeSetter(...args: any) {
       callWithErrorHandling(setter, i, ErrorCodes.COMPUTED_SETTER, args)
     }
   }
