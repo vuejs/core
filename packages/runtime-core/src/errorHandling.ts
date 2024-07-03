@@ -10,6 +10,8 @@ import { LifecycleHooks } from './enums'
 export enum ErrorCodes {
   SETUP_FUNCTION,
   RENDER_FUNCTION,
+  COMPUTED_GETTER,
+  COMPUTED_SETTER,
   WATCH_GETTER,
   WATCH_CALLBACK,
   WATCH_CLEANUP,
@@ -42,6 +44,8 @@ export const ErrorTypeStrings: Record<LifecycleHooks | ErrorCodes, string> = {
   [LifecycleHooks.RENDER_TRIGGERED]: 'renderTriggered hook',
   [ErrorCodes.SETUP_FUNCTION]: 'setup function',
   [ErrorCodes.RENDER_FUNCTION]: 'render function',
+  [ErrorCodes.COMPUTED_GETTER]: 'computed getter',
+  [ErrorCodes.COMPUTED_SETTER]: 'computed setter',
   [ErrorCodes.WATCH_GETTER]: 'watcher getter',
   [ErrorCodes.WATCH_CALLBACK]: 'watcher callback',
   [ErrorCodes.WATCH_CLEANUP]: 'watcher cleanup function',

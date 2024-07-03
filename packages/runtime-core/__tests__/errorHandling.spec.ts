@@ -1,3 +1,4 @@
+import { computed } from 'vue'
 import {
   createApp,
   defineComponent,
@@ -583,6 +584,45 @@ describe('error handling', () => {
     expect(handler).toHaveBeenCalledTimes(4)
   })
 
+  test('handle error in computed', async () => {
+    const error1 = new Error('error1')
+    const error2 = new Error('error2')
+    const error3 = new Error('error3')
+    const handler = vi.fn()
+
+    const app = createApp({
+      setup() {
+        const count = ref(1)
+        const x = computed(() => {
+          if (count.value !== 2) throw error1
+          return count.value + 1
+        })
+        const y = computed({
+          get: () => {
+            if (count.value !== 3) throw error2
+            return count.value + 1
+          },
+          set: (val: any) => {
+            if (val !== 4) throw error3
+            count.value = val - 1
+          },
+        })
+        y.value = 5
+        return () => {
+          return [h('div', x.value), h('div', null, y.value)]
+        }
+      },
+    })
+
+    app.config.errorHandler = handler
+    app.mount(nodeOps.createElement('div'))
+
+    await nextTick()
+    expect(handler).toHaveBeenCalledWith(error1, {}, 'computed getter')
+    expect(handler).toHaveBeenCalledWith(error2, {}, 'computed getter')
+    expect(handler).toHaveBeenCalledWith(error3, {}, 'computed setter')
+    expect(handler).toHaveBeenCalledTimes(3)
+  })
   // #9574
   test('should pause tracking in error handler', async () => {
     const error = new Error('error')
