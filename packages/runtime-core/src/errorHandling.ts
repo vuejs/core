@@ -22,6 +22,7 @@ export enum ErrorCodes {
   APP_WARN_HANDLER,
   FUNCTION_REF,
   ASYNC_COMPONENT_LOADER,
+  COMPONENT_UPDATE_FN,
   SCHEDULER,
 }
 
@@ -54,6 +55,7 @@ export const ErrorTypeStrings: Record<LifecycleHooks | ErrorCodes, string> = {
   [ErrorCodes.APP_WARN_HANDLER]: 'app warnHandler',
   [ErrorCodes.FUNCTION_REF]: 'ref function',
   [ErrorCodes.ASYNC_COMPONENT_LOADER]: 'async component loader',
+  [ErrorCodes.COMPONENT_UPDATE_FN]: 'component update fn',
   [ErrorCodes.SCHEDULER]:
     'scheduler flush. This is likely a Vue internals bug. ' +
     'Please open an issue at https://github.com/vuejs/core .',

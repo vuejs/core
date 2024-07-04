@@ -75,6 +75,7 @@ import { isAsyncWrapper } from './apiAsyncComponent'
 import { isCompatEnabled } from './compat/compatConfig'
 import { DeprecationTypes } from './compat/compatConfig'
 import type { TransitionHooks } from './components/BaseTransition'
+import { ErrorCodes, callWithErrorHandling } from './errorHandling'
 
 export interface Renderer<HostElement = RendererElement> {
   render: RootRenderFunction<HostElement>
@@ -1583,9 +1584,15 @@ function baseCreateRenderer(
     ))
 
     const update: SchedulerJob = (instance.update = () => {
-      if (effect.dirty) {
-        effect.run()
-      }
+      callWithErrorHandling(
+        () => {
+          if (effect.dirty) {
+            effect.run()
+          }
+        },
+        instance,
+        ErrorCodes.COMPONENT_UPDATE_FN,
+      )
     })
     update.id = instance.uid
     // allowRecurse

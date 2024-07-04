@@ -1,4 +1,5 @@
 import {
+  computed,
   createApp,
   defineComponent,
   h,
@@ -608,6 +609,28 @@ describe('error handling', () => {
     expect(handler).toHaveBeenCalledWith(error, {}, 'render function')
     expect(handler).toHaveBeenCalledTimes(1)
   })
+  test('handle error in componentUpdateFn', async () => {
+    const error1 = new Error('error1')
+    const handler = vi.fn()
+    const count = ref(1)
+    const app = createApp({
+      setup() {
+        const x = computed(() => {
+          if (count.value === 1) return count.value + 3
+          if (count.value !== 2) throw error1
+        })
+        return () => {
+          return [h('div', x.value)]
+        }
+      },
+    })
 
+    app.config.errorHandler = handler
+    app.mount(nodeOps.createElement('div'))
+    count.value = 100
+    await nextTick()
+    expect(handler).toHaveBeenCalledTimes(1)
+    expect(handler).toHaveBeenCalledWith(error1, {}, 'component update fn')
+  })
   // native event handler handling should be tested in respective renderers
 })
