@@ -533,7 +533,9 @@ describe('error handling', () => {
       `Unhandled error during execution of setup function`,
     ).toHaveBeenWarned()
     expect(caughtError).toBe(err)
-
+    expect(
+      `Unhandled error during execution of component update fn`,
+    ).toHaveBeenWarned()
     groupCollapsed.mockRestore()
     log.mockRestore()
   })
