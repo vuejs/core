@@ -4,15 +4,36 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+catalogs:
+  default:
+    '@babel/parser':
+      specifier: ^7.24.7
+      version: 7.24.7
+    '@babel/types':
+      specifier: ^7.2.47
+      version: 7.24.7
+    estree-walker:
+      specifier: ^2.0.2
+      version: 2.0.2
+    magic-string:
+      specifier: ^0.30.10
+      version: 0.30.10
+    source-map-js:
+      specifier: ^1.2.0
+      version: 1.2.0
+    vite:
+      specifier: ^5.3.3
+      version: 5.3.3
+
 importers:
 
   .:
     devDependencies:
       '@babel/parser':
-        specifier: ^7.24.7
+        specifier: 'catalog:'
         version: 7.24.7
       '@babel/types':
-        specifier: ^7.24.7
+        specifier: 'catalog:'
         version: 7.24.7
       '@codspeed/vitest-plugin':
         specifier: ^3.1.0
@@ -21,8 +42,8 @@ importers:
         specifier: ^5.1.0
         version: 5.1.0(rollup@4.18.0)
       '@rollup/plugin-commonjs':
-        specifier: ^25.0.8
-        version: 25.0.8(rollup@4.18.0)
+        specifier: ^26.0.1
+        version: 26.0.1(rollup@4.18.0)
       '@rollup/plugin-json':
         specifier: ^6.1.0
         version: 6.1.0(rollup@4.18.0)
@@ -153,7 +174,7 @@ importers:
         specifier: ^7.15.0
         version: 7.15.0(eslint@9.6.0)(typescript@5.4.5)
       vite:
-        specifier: ^5.3.3
+        specifier: 'catalog:'
         version: 5.3.3(@types/node@20.14.10)(sass@1.77.6)(terser@5.31.1)
       vitest:
         specifier: ^1.6.0
@@ -162,7 +183,7 @@ importers:
   packages/compiler-core:
     dependencies:
       '@babel/parser':
-        specifier: ^7.24.7
+        specifier: 'catalog:'
         version: 7.24.7
       '@vue/shared':
         specifier: workspace:*
@@ -171,14 +192,14 @@ importers:
         specifier: ^4.5.0
         version: 4.5.0
       estree-walker:
-        specifier: ^2.0.2
+        specifier: 'catalog:'
         version: 2.0.2
       source-map-js:
-        specifier: ^1.2.0
+        specifier: 'catalog:'
         version: 1.2.0
     devDependencies:
       '@babel/types':
-        specifier: ^7.24.7
+        specifier: 'catalog:'
         version: 7.24.7
 
   packages/compiler-dom:
@@ -193,7 +214,7 @@ importers:
   packages/compiler-sfc:
     dependencies:
       '@babel/parser':
-        specifier: ^7.24.7
+        specifier: 'catalog:'
         version: 7.24.7
       '@vue/compiler-core':
         specifier: workspace:*
@@ -208,20 +229,20 @@ importers:
         specifier: workspace:*
         version: link:../shared
       estree-walker:
-        specifier: ^2.0.2
+        specifier: 'catalog:'
         version: 2.0.2
       magic-string:
-        specifier: ^0.30.10
+        specifier: 'catalog:'
         version: 0.30.10
       postcss:
         specifier: ^8.4.39
         version: 8.4.39
       source-map-js:
-        specifier: ^1.2.0
+        specifier: 'catalog:'
         version: 1.2.0
     devDependencies:
       '@babel/types':
-        specifier: ^7.24.7
+        specifier: 'catalog:'
         version: 7.24.7
       '@vue/consolidate':
         specifier: ^1.0.0
@@ -351,7 +372,7 @@ importers:
         specifier: ^5.0.5
         version: 5.0.5(vite@5.3.3(@types/node@20.14.10)(sass@1.77.6)(terser@5.31.1))(vue@packages+vue)
       vite:
-        specifier: ^5.3.3
+        specifier: 'catalog:'
         version: 5.3.3(@types/node@20.14.10)(sass@1.77.6)(terser@5.31.1)
 
   packages/shared: {}
@@ -389,13 +410,13 @@ importers:
   packages/vue-compat:
     dependencies:
       '@babel/parser':
-        specifier: ^7.24.7
+        specifier: 'catalog:'
         version: 7.24.7
       estree-walker:
-        specifier: ^2.0.2
+        specifier: 'catalog:'
         version: 2.0.2
       source-map-js:
-        specifier: ^1.2.0
+        specifier: 'catalog:'
         version: 1.2.0
       vue:
         specifier: workspace:*
@@ -889,9 +910,9 @@ packages:
       rollup:
         optional: true
 
-  '@rollup/plugin-commonjs@25.0.8':
-    resolution: {integrity: sha512-ZEZWTK5n6Qde0to4vS9Mr5x/0UZoqCxPVR9KRUjU4kA2sO7GEUn1fop0DAwpO6z0Nw/kJON9bDmSxdWxO/TT1A==}
-    engines: {node: '>=14.0.0'}
+  '@rollup/plugin-commonjs@26.0.1':
+    resolution: {integrity: sha512-UnsKoZK6/aGIH6AdkptXhNvhaqftcjq3zZdT+LY5Ftms6JR06nADcDsYp5hTU9E2lbJUEOhdlY5J4DNTneM+jQ==}
+    engines: {node: '>=16.0.0 || 14 >= 14.17'}
     peerDependencies:
       rollup: ^2.68.0||^3.0.0||^4.0.0
     peerDependenciesMeta:
@@ -2047,11 +2068,6 @@ packages:
     resolution: {integrity: sha512-nFR0zLpU2YCaRxwoCJvL6UvCH2JFyFVIvwTLsIf21AuHlMskA1hhTdk+LlYJtOlYt9v6dvszD2BGRqBL+iQK9Q==}
     deprecated: Glob versions prior to v9 are no longer supported
 
-  glob@8.1.0:
-    resolution: {integrity: sha512-r8hpEjiQEYlF2QU0df3dS+nxxSIreXQS1qRhMJM0Q5NDdR386C7jb7Hwwod8Fgiuex+k0GFjgft18yvxm5XoCQ==}
-    engines: {node: '>=12'}
-    deprecated: Glob versions prior to v9 are no longer supported
-
   globals@11.12.0:
     resolution: {integrity: sha512-WOBp/EEGUiIsJSp7wcv/y6MO+lV9UoncWqxuFfm8eBwzWNgyfBd6Gz+IeKQ9jCmyhoH99g15M3T+QaVHFjizVA==}
     engines: {node: '>=4'}
@@ -2521,10 +2537,6 @@ packages:
 
   minimatch@3.1.2:
     resolution: {integrity: sha512-J7p63hRiAjw1NDEww1W7i37+ByIrOWO5XQQAzZ3VOcL0PNybwpfmV/N05zFAzwQ9USyEcX6t3UO+K5aqBQOIHw==}
-
-  minimatch@5.1.6:
-    resolution: {integrity: sha512-lKwV/1brpG6mBUFHtb7NUmtABCb2WZZmm2wNiOA5hAb8VdCS4B3dtMWyvcoViccwAW/COERjXLt0zP1zXUN26g==}
-    engines: {node: '>=10'}
 
   minimatch@9.0.5:
     resolution: {integrity: sha512-G6T0ZX48xgozx7587koeX9Ys2NYy6Gmv//P89sEte9V9whIapMNF4idKxnW2QtCcLiTWlb/wfCabAtAFWhhBow==}
@@ -3954,12 +3966,12 @@ snapshots:
     optionalDependencies:
       rollup: 4.18.0
 
-  '@rollup/plugin-commonjs@25.0.8(rollup@4.18.0)':
+  '@rollup/plugin-commonjs@26.0.1(rollup@4.18.0)':
     dependencies:
       '@rollup/pluginutils': 5.1.0(rollup@4.18.0)
       commondir: 1.0.1
       estree-walker: 2.0.2
-      glob: 8.1.0
+      glob: 10.4.3
       is-reference: 1.2.1
       magic-string: 0.30.10
     optionalDependencies:
@@ -4408,7 +4420,7 @@ snapshots:
     dependencies:
       ansi-align: 3.0.1
       camelcase: 7.0.1
-      chalk: 5.0.1
+      chalk: 5.3.0
       cli-boxes: 3.0.0
       string-width: 5.1.2
       type-fest: 2.19.0
@@ -5018,7 +5030,7 @@ snapshots:
 
   extract-zip@2.0.1:
     dependencies:
-      debug: 4.3.4
+      debug: 4.3.5
       get-stream: 5.2.0
       yauzl: 2.10.0
     optionalDependencies:
@@ -5143,7 +5155,7 @@ snapshots:
     dependencies:
       basic-ftp: 5.0.5
       data-uri-to-buffer: 6.0.2
-      debug: 4.3.4
+      debug: 4.3.5
       fs-extra: 11.2.0
     transitivePeerDependencies:
       - supports-color
@@ -5184,14 +5196,6 @@ snapshots:
       minimatch: 3.1.2
       once: 1.4.0
       path-is-absolute: 1.0.1
-
-  glob@8.1.0:
-    dependencies:
-      fs.realpath: 1.0.0
-      inflight: 1.0.6
-      inherits: 2.0.4
-      minimatch: 5.1.6
-      once: 1.4.0
 
   globals@11.12.0: {}
 
@@ -5646,10 +5650,6 @@ snapshots:
     dependencies:
       brace-expansion: 1.1.11
 
-  minimatch@5.1.6:
-    dependencies:
-      brace-expansion: 2.0.1
-
   minimatch@9.0.5:
     dependencies:
       brace-expansion: 2.0.1
@@ -5768,7 +5768,7 @@ snapshots:
     dependencies:
       '@tootallnate/quickjs-emscripten': 0.23.0
       agent-base: 7.1.1
-      debug: 4.3.4
+      debug: 4.3.5
       get-uri: 6.0.3
       http-proxy-agent: 7.0.2
       https-proxy-agent: 7.0.5
@@ -5919,7 +5919,7 @@ snapshots:
   proxy-agent@6.4.0:
     dependencies:
       agent-base: 7.1.1
-      debug: 4.3.4
+      debug: 4.3.5
       http-proxy-agent: 7.0.2
       https-proxy-agent: 7.0.5
       lru-cache: 7.18.3
@@ -6271,7 +6271,7 @@ snapshots:
   socks-proxy-agent@8.0.4:
     dependencies:
       agent-base: 7.1.1
-      debug: 4.3.4
+      debug: 4.3.5
       socks: 2.8.3
     transitivePeerDependencies:
       - supports-color
