@@ -75,7 +75,7 @@
     "@vue/consolidate": "1.0.0",
     "conventional-changelog-cli": "^4.1.0",
     "enquirer": "^2.4.1",
-    "esbuild": "^0.21.5",
+    "esbuild": "^0.23.0",
     "esbuild-plugin-polyfill-node": "^0.3.0",
     "eslint": "^9.5.0",
     "eslint-plugin-import-x": "^0.5.1",
@@ -107,7 +107,7 @@
     "tsx": "^4.16.2",
     "typescript": "~5.4.5",
     "typescript-eslint": "^7.13.1",
-    "vite": "^5.3.1",
+    "vite": "^5.3.3",
     "vitest": "^1.6.0"
   },
   "pnpm": {
