@@ -36,7 +36,7 @@ jobs:
         run: pnpm install
 
       - name: Download PR number
-        uses: dawidd6/action-download-artifact@v3
+        uses: dawidd6/action-download-artifact@v6
         with:
           name: pr-number
           run_id: ${{ github.event.workflow_run.id }}
