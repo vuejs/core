@@ -2,6 +2,7 @@
 import fs from 'node:fs'
 import pico from 'picocolors'
 import { createRequire } from 'node:module'
+import { spawn } from 'node:child_process'
 
 const require = createRequire(import.meta.url)
 
@@ -50,4 +51,51 @@ export function fuzzyMatchTarget(partialTargets, includeAllMatching) {
 
     process.exit(1)
   }
+}
+
+/**
+ * @param {string} command
+ * @param {ReadonlyArray<string>} args
+ * @param {object} [options]
+ */
+export async function exec(command, args, options) {
+  return new Promise((resolve, reject) => {
+    const process = spawn(command, args, {
+      stdio: [
+        'ignore', // stdin
+        'pipe', // stdout
+        'pipe', // stderr
+      ],
+      ...options,
+    })
+
+    /**
+     * @type {Buffer[]}
+     */
+    const stderrChunks = []
+    /**
+     * @type {Buffer[]}
+     */
+    const stdoutChunks = []
+
+    process.stderr?.on('data', chunk => {
+      stderrChunks.push(chunk)
+    })
+
+    process.stdout?.on('data', chunk => {
+      stdoutChunks.push(chunk)
+    })
+
+    process.on('error', error => {
+      reject(error)
+    })
+
+    process.on('exit', code => {
+      const ok = code === 0
+      const stderr = Buffer.concat(stderrChunks).toString().trim()
+      const stdout = Buffer.concat(stdoutChunks).toString().trim()
+      const result = { ok, code, stderr, stdout }
+      resolve(result)
+    })
+  })
 }
