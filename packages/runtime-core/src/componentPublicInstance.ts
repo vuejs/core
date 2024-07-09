@@ -1,7 +1,7 @@
 import {
   type ComponentInternalInstance,
   type Data,
-  getExposeProxy,
+  getComponentPublicInstance,
   isStatefulComponent,
 } from './component'
 import { nextTick, queueJob } from './scheduler'
@@ -256,7 +256,7 @@ const getPublicInstance = (
   i: ComponentInternalInstance | null,
 ): ComponentPublicInstance | ComponentInternalInstance['exposed'] | null => {
   if (!i) return null
-  if (isStatefulComponent(i)) return getExposeProxy(i) || i.proxy
+  if (isStatefulComponent(i)) return getComponentPublicInstance(i)
   return getPublicInstance(i.parent)
 }
 

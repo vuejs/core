@@ -36,7 +36,10 @@ import {
   isSuspense,
 } from './components/Suspense'
 import type { DirectiveBinding } from './directives'
-import type { TransitionHooks } from './components/BaseTransition'
+import {
+  type TransitionHooks,
+  setTransitionHooks,
+} from './components/BaseTransition'
 import { warn } from './warning'
 import {
   type Teleport,
@@ -109,7 +112,7 @@ export type VNodeHook =
 
 // https://github.com/microsoft/TypeScript/issues/33099
 export type VNodeProps = {
-  key?: string | number | symbol
+  key?: PropertyKey
   ref?: VNodeRef
   ref_for?: boolean
   ref_key?: string
@@ -159,7 +162,7 @@ export interface VNode<
 
   type: VNodeTypes
   props: (VNodeProps & ExtraProps) | null
-  key: string | number | symbol | null
+  key: PropertyKey | null
   ref: VNodeNormalizedRef | null
   /**
    * SFC only. This is assigned on vnode creation using currentScopeId
@@ -225,6 +228,10 @@ export interface VNode<
    * @internal attached by v-memo
    */
   memo?: any[]
+  /**
+   * @internal index for cleaning v-memo cache
+   */
+  memoIndex?: number
   /**
    * @internal __COMPAT__ only
    */
@@ -546,7 +553,7 @@ function _createVNode(
         currentBlock.push(cloned)
       }
     }
-    cloned.patchFlag |= PatchFlags.BAIL
+    cloned.patchFlag = PatchFlags.BAIL
     return cloned
   }
 
@@ -691,7 +698,10 @@ export function cloneVNode<T, U>(
   // to clone the transition to ensure that the vnode referenced within
   // the transition hooks is fresh.
   if (transition && cloneTransition) {
-    cloned.transition = transition.clone(cloned as VNode)
+    setTransitionHooks(
+      cloned as VNode,
+      transition.clone(cloned as VNode) as TransitionHooks,
+    )
   }
 
   if (__COMPAT__) {

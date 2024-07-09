@@ -38,6 +38,7 @@ import {
   type RendererElement,
   type RendererInternals,
   type RendererNode,
+  invalidateMount,
   queuePostRenderEffect,
 } from '../renderer'
 import { setTransitionHooks } from './BaseTransition'
@@ -55,7 +56,7 @@ export interface KeepAliveProps {
   max?: number | string
 }
 
-type CacheKey = string | number | symbol | ConcreteComponent
+type CacheKey = PropertyKey | ConcreteComponent
 type Cache = Map<CacheKey, VNode>
 type Keys = Set<CacheKey>
 
@@ -166,6 +167,9 @@ const KeepAliveImpl: ComponentOptions = {
 
     sharedContext.deactivate = (vnode: VNode) => {
       const instance = vnode.component!
+      invalidateMount(instance.m)
+      invalidateMount(instance.a)
+
       move(vnode, storageContainer, null, MoveType.LEAVE, parentSuspense)
       queuePostRenderEffect(() => {
         if (instance.da) {
