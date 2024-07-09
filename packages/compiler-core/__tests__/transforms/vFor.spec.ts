@@ -253,6 +253,20 @@ describe('compiler: v-for', () => {
       )
     })
 
+    test('key property missing expression', () => {
+      const onError = vi.fn()
+      parseWithForTransform('<template v-for="i in 1" :key=""></template>', {
+        onError,
+      })
+
+      expect(onError).toHaveBeenCalledTimes(1)
+      expect(onError).toHaveBeenCalledWith(
+        expect.objectContaining({
+          code: ErrorCodes.X_V_BIND_NO_EXPRESSION,
+        }),
+      )
+    })
+
     test('missing source', () => {
       const onError = vi.fn()
       parseWithForTransform('<span v-for="item in" />', { onError })
