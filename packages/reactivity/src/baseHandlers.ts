@@ -1,5 +1,6 @@
 import {
   type Target,
+  isProxy,
   isReadonly,
   isShallow,
   reactive,
@@ -57,7 +58,7 @@ function createArrayInstrumentations() {
       }
       // we run the method using the original args first (which may be reactive)
       const res = arr[key](...args)
-      if (res === -1 || res === false) {
+      if (isProxy(args[0]) && (res === -1 || res === false)) {
         // if that didn't work, run it again using raw values.
         return arr[key](...args.map(toRaw))
       } else {
