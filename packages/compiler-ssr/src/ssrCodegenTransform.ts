@@ -40,7 +40,11 @@ export function ssrCodegenTransform(ast: RootNode, options: CompilerOptions) {
   // we do this instead of inlining the expression to ensure the vars are
   // only resolved once per render
   if (options.ssrCssVars) {
-    const cssContext = createTransformContext(createRoot([]), options)
+    const cssContext = createTransformContext(createRoot([]), {
+      prefixIdentifiers: true,
+      inline: true,
+      bindingMetadata: options.bindingMetadata,
+    })
     const varsExp = processExpression(
       createSimpleExpression(options.ssrCssVars, false),
       cssContext,
