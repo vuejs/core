@@ -137,8 +137,14 @@ describe('ssr: inject <style vars>', () => {
   test('inject cssVars (non-inline)', () => {
     const result = compile(`<div/>`, {
       inline: false,
-      bindingMetadata: { Color: BindingTypes.SETUP_MAYBE_REF },
-      ssrCssVars: '{ "color": Color.red }',
+      // @ts-expect-error
+      bindingMetadata: {
+        color: BindingTypes.SETUP_MAYBE_REF,
+        size: BindingTypes.PROPS,
+        height: BindingTypes.PROPS_ALIASED,
+        __propsAliases: { height: 'size' },
+      },
+      ssrCssVars: '{ "color": color.red, "font-size": size, "height": height }',
     })
 
     expect(result.code).toMatchInlineSnapshot(`
@@ -146,7 +152,7 @@ describe('ssr: inject <style vars>', () => {
       const { ssrRenderAttrs: _ssrRenderAttrs } = require("vue/server-renderer")
 
       return function ssrRender(_ctx, _push, _parent, _attrs, $props, $setup, $data, $options) {
-        const _cssVars = { style: { "color": _unref(Color).red }}
+        const _cssVars = { style: { "color": _unref(color).red, "font-size": $props.size, "height": $props.size }}
         _push(\`<div\${_ssrRenderAttrs(_mergeProps(_attrs, _cssVars))}></div>\`)
       }"
     `)
