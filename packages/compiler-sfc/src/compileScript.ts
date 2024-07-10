@@ -730,7 +730,7 @@ export function compileScript(
       (imported === 'default' && source.endsWith('.vue')) ||
       source === 'vue'
         ? BindingTypes.SETUP_CONST
-        : BindingTypes.SETUP_MAYBE_REF
+        : BindingTypes.SETUP_IMPORTED_MAYBE_REF
   }
   for (const key in scriptBindings) {
     ctx.bindingMetadata[key] = scriptBindings[key]

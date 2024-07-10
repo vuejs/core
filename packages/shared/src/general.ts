@@ -193,9 +193,8 @@ export const getGlobalThis = (): any => {
 
 const identRE = /^[_$a-zA-Z\xA0-\uFFFF][_$a-zA-Z0-9\xA0-\uFFFF]*$/
 
-export function genPropsAccessExp(name: string, ssr: boolean = false) {
-  const prefix = ssr ? `$props` : `__props`
+export function genPropsAccessExp(name: string) {
   return identRE.test(name)
-    ? `${prefix}.${name}`
-    : `${prefix}[${JSON.stringify(name)}]`
+    ? `__props.${name}`
+    : `__props[${JSON.stringify(name)}]`
 }
