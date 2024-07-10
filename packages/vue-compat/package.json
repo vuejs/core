@@ -52,9 +52,9 @@
   },
   "homepage": "https://github.com/vuejs/core/tree/main/packages/vue-compat#readme",
   "dependencies": {
-    "@babel/parser": "^7.24.7",
-    "estree-walker": "^2.0.2",
-    "source-map-js": "^1.2.0"
+    "@babel/parser": "catalog:",
+    "estree-walker": "catalog:",
+    "source-map-js": "catalog:"
   },
   "peerDependencies": {
     "vue": "workspace:*"
