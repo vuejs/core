@@ -1587,6 +1587,7 @@ function baseCreateRenderer(
         effect.run()
       }
     })
+    update.i = instance
     update.id = instance.uid
     // allowRecurse
     // #1801, #2043 component render effects should allow recursive updates
@@ -1599,7 +1600,6 @@ function baseCreateRenderer(
       effect.onTrigger = instance.rtg
         ? e => invokeArrayFns(instance.rtg!, e)
         : void 0
-      update.ownerInstance = instance
     }
 
     update()
