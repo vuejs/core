@@ -47,14 +47,13 @@ const resolveTarget = <T = RendererElement>(
       return null
     } else {
       const target = select(targetSelector)
-      if (!target) {
-        __DEV__ &&
-          warn(
-            `Failed to locate Teleport target with selector "${targetSelector}". ` +
-              `Note the target element must exist before the component is mounted - ` +
-              `i.e. the target cannot be rendered by the component itself, and ` +
-              `ideally should be outside of the entire Vue component tree.`,
-          )
+      if (__DEV__ && !target && !isTeleportDisabled(props)) {
+        warn(
+          `Failed to locate Teleport target with selector "${targetSelector}". ` +
+            `Note the target element must exist before the component is mounted - ` +
+            `i.e. the target cannot be rendered by the component itself, and ` +
+            `ideally should be outside of the entire Vue component tree.`,
+        )
       }
       return target as T
     }
@@ -251,7 +250,6 @@ export const TeleportImpl = {
     vnode: VNode,
     parentComponent: ComponentInternalInstance | null,
     parentSuspense: SuspenseBoundary | null,
-    optimized: boolean,
     { um: unmount, o: { remove: hostRemove } }: RendererInternals,
     doRemove: boolean,
   ) {

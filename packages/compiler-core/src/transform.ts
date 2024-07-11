@@ -102,6 +102,9 @@ export interface TransformContext
     vOnce: number
   }
   parent: ParentNode | null
+  // we could use a stack but in practice we've only ever needed two layers up
+  // so this is more efficient
+  grandParent: ParentNode | null
   childIndex: number
   currentNode: RootNode | TemplateChildNode | null
   inVOnce: boolean
@@ -193,6 +196,7 @@ export function createTransformContext(
       vOnce: 0,
     },
     parent: null,
+    grandParent: null,
     currentNode: root,
     childIndex: 0,
     inVOnce: false,
@@ -401,6 +405,7 @@ export function traverseChildren(
   for (; i < parent.children.length; i++) {
     const child = parent.children[i]
     if (isString(child)) continue
+    context.grandParent = context.parent
     context.parent = parent
     context.childIndex = i
     context.onNodeRemoved = nodeRemoved

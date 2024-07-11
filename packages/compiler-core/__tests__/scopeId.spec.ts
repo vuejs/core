@@ -81,4 +81,29 @@ describe('scopeId compiler support', () => {
     ].forEach(c => expect(code).toMatch(c))
     expect(code).toMatchSnapshot()
   })
+
+  test('should push typescript-compatible scopeId for hoisted nodes', () => {
+    const { ast, code } = baseCompile(
+      `<div><div>hello</div>{{ foo }}<div>world</div></div>`,
+      {
+        mode: 'module',
+        scopeId: 'test',
+        hoistStatic: true,
+        isTS: true,
+      },
+    )
+    expect(ast.helpers).toContain(PUSH_SCOPE_ID)
+    expect(ast.helpers).toContain(POP_SCOPE_ID)
+    expect(ast.hoists.length).toBe(2)
+    ;[
+      `const _withScopeId = (n: any) => (_pushScopeId("test"),n=n(),_popScopeId(),n)`,
+      `const _hoisted_1 = /*#__PURE__*/ _withScopeId(() => /*#__PURE__*/_createElementVNode("div", null, "hello", ${genFlagText(
+        PatchFlags.HOISTED,
+      )}))`,
+      `const _hoisted_2 = /*#__PURE__*/ _withScopeId(() => /*#__PURE__*/_createElementVNode("div", null, "world", ${genFlagText(
+        PatchFlags.HOISTED,
+      )}))`,
+    ].forEach(c => expect(code).toMatch(c))
+    expect(code).toMatchSnapshot()
+  })
 })

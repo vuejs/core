@@ -406,7 +406,7 @@ export interface DataHTMLAttributes extends HTMLAttributes {
 
 export interface DetailsHTMLAttributes extends HTMLAttributes {
   open?: Booleanish
-  onToggle?: Event
+  onToggle?: (payload: ToggleEvent) => void
 }
 
 export interface DelHTMLAttributes extends HTMLAttributes {
@@ -1390,7 +1390,7 @@ type EventHandlers<E> = {
 import type { VNodeRef } from '@vue/runtime-core'
 
 export type ReservedProps = {
-  key?: string | number | symbol
+  key?: PropertyKey
   ref?: VNodeRef
   ref_for?: boolean
   ref_key?: string

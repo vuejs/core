@@ -11,6 +11,7 @@ import {
   getCurrentInstance,
   h,
   inject,
+  nextTick,
   nodeOps,
   provide,
   ref,
@@ -19,7 +20,7 @@ import {
   toRefs,
   watch,
 } from '@vue/runtime-test'
-import { render as domRender, nextTick } from 'vue'
+import { render as domRender } from 'vue'
 
 describe('component props', () => {
   test('stateful', () => {
@@ -747,5 +748,40 @@ describe('component props', () => {
     expect(`Invalid prop name: "key"`).toHaveBeenWarned()
     expect(`Invalid prop name: "ref"`).toHaveBeenWarned()
     expect(`Invalid prop name: "$foo"`).toHaveBeenWarned()
+  })
+
+  // #5517
+  test('events should not be props when component updating', async () => {
+    let props: any
+    function eventHandler() {}
+    const foo = ref(1)
+
+    const Child = defineComponent({
+      setup(_props) {
+        props = _props
+      },
+      emits: ['event'],
+      props: ['foo'],
+      template: `<div>{{ foo }}</div>`,
+    })
+
+    const Comp = defineComponent({
+      setup() {
+        return {
+          foo,
+          eventHandler,
+        }
+      },
+      components: { Child },
+      template: `<Child @event="eventHandler" :foo="foo" />`,
+    })
+
+    const root = document.createElement('div')
+    domRender(h(Comp), root)
+    expect(props).not.toHaveProperty('onEvent')
+
+    foo.value++
+    await nextTick()
+    expect(props).not.toHaveProperty('onEvent')
   })
 })

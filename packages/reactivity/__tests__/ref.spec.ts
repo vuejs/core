@@ -7,6 +7,7 @@ import {
   ref,
   toRef,
   toRefs,
+  toValue,
 } from '../src/index'
 import { computed } from '@vue/runtime-dom'
 import { customRef, shallowRef, triggerRef, unref } from '../src/ref'
@@ -251,6 +252,18 @@ describe('reactivity/ref', () => {
       x: 1,
     })
     const x = toRef(a, 'x')
+
+    const b = ref({ y: 1 })
+
+    const c = toRef(b)
+
+    const d = toRef({ z: 1 })
+
+    expect(isRef(d)).toBe(true)
+    expect(d.value.z).toBe(1)
+
+    expect(c).toBe(b)
+
     expect(isRef(x)).toBe(true)
     expect(x.value).toBe(1)
 
@@ -441,5 +454,17 @@ describe('reactivity/ref', () => {
     a.value = rr
     expect(a.value).toBe(rr)
     expect(a.value).not.toBe(r)
+  })
+
+  test('toValue', () => {
+    const a = ref(1)
+    const b = computed(() => a.value + 1)
+    const c = () => a.value + 2
+    const d = 4
+
+    expect(toValue(a)).toBe(1)
+    expect(toValue(b)).toBe(2)
+    expect(toValue(c)).toBe(3)
+    expect(toValue(d)).toBe(4)
   })
 })
