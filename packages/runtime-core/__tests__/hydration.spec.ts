@@ -3,6 +3,7 @@
  */
 
 import {
+  type ObjectDirective,
   Suspense,
   Teleport,
   Transition,
@@ -1160,6 +1161,21 @@ describe('SSR hydration', () => {
     expect((vnode as any).component?.subTree.children[0].el).toBe(text)
   })
 
+  // #7215
+  test('empty text node', () => {
+    const Comp = {
+      render(this: any) {
+        return h('p', [''])
+      },
+    }
+    const { container } = mountWithHydration('<p></p>', () => h(Comp))
+    expect(container.childNodes.length).toBe(1)
+    const p = container.childNodes[0]
+    expect(p.childNodes.length).toBe(1)
+    const text = p.childNodes[0]
+    expect(text.nodeType).toBe(3)
+  })
+
   test('app.unmount()', async () => {
     const container = document.createElement('DIV')
     container.innerHTML = '<button></button>'
@@ -1527,6 +1543,13 @@ describe('SSR hydration', () => {
       expect(`Hydration style mismatch`).toHaveBeenWarnedTimes(1)
     })
 
+    test('style mismatch when no style attribute is present', () => {
+      mountWithHydration(`<div></div>`, () =>
+        h('div', { style: { color: 'red' } }),
+      )
+      expect(`Hydration style mismatch`).toHaveBeenWarnedTimes(1)
+    })
+
     test('style mismatch w/ v-show', () => {
       mountWithHydration(`<div style="color:red;display:none"></div>`, () =>
         withDirectives(createVNode('div', { style: 'color: red' }, ''), [
@@ -1647,6 +1670,46 @@ describe('SSR hydration', () => {
           }))
           return () =>
             h('div', null, [h('div', { style: { color: 'var(--foo)' } })])
+        },
+      })
+      app.mount(container)
+      expect(`Hydration style mismatch`).not.toHaveBeenWarned()
+    })
+
+    // #11188
+    test('css vars support fallthrough', () => {
+      const container = document.createElement('div')
+      container.innerHTML = `<div style="padding: 4px;--foo:red;"></div>`
+      const app = createSSRApp({
+        setup() {
+          useCssVars(() => ({
+            foo: 'red',
+          }))
+          return () => h(Child)
+        },
+      })
+      const Child = {
+        setup() {
+          return () => h('div', { style: 'padding: 4px' })
+        },
+      }
+      app.mount(container)
+      expect(`Hydration style mismatch`).not.toHaveBeenWarned()
+    })
+
+    // #11189
+    test('should not warn for directives that mutate DOM in created', () => {
+      const container = document.createElement('div')
+      container.innerHTML = `<div class="test red"></div>`
+      const vColor: ObjectDirective = {
+        created(el, binding) {
+          el.classList.add(binding.value)
+        },
+      }
+      const app = createSSRApp({
+        setup() {
+          return () =>
+            withDirectives(h('div', { class: 'test' }), [[vColor, 'red']])
         },
       })
       app.mount(container)

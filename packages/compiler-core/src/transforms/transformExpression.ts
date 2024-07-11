@@ -116,7 +116,11 @@ export function processExpression(
   }
 
   const { inline, bindingMetadata } = context
-  const rewriteIdentifier = (raw: string, parent?: Node, id?: Identifier) => {
+  const rewriteIdentifier = (
+    raw: string,
+    parent?: Node | null,
+    id?: Identifier,
+  ) => {
     const type = hasOwn(bindingMetadata, raw) && bindingMetadata[raw]
     if (inline) {
       // x = y
@@ -311,7 +315,13 @@ export function processExpression(
       } else {
         // The identifier is considered constant unless it's pointing to a
         // local scope variable (a v-for alias, or a v-slot prop)
-        if (!(needPrefix && isLocal)) {
+        if (
+          !(needPrefix && isLocal) &&
+          (!parent ||
+            (parent.type !== 'CallExpression' &&
+              parent.type !== 'NewExpression' &&
+              parent.type !== 'MemberExpression'))
+        ) {
           ;(node as QualifiedId).isConstant = true
         }
         // also generate sub-expressions for other identifiers for better

@@ -38,7 +38,7 @@ export function patchDOMProp(
     // compare against its attribute value instead.
     const oldValue =
       tag === 'OPTION' ? el.getAttribute('value') || '' : el.value
-    const newValue = value == null ? '' : value
+    const newValue = value == null ? '' : String(value)
     if (oldValue !== newValue || !('_value' in el)) {
       el.value = newValue
     }

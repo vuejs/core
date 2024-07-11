@@ -17,7 +17,7 @@ export function walkIdentifiers(
   root: Node,
   onIdentifier: (
     node: Identifier,
-    parent: Node,
+    parent: Node | null,
     parentStack: Node[],
     isReference: boolean,
     isLocal: boolean,
@@ -36,7 +36,7 @@ export function walkIdentifiers(
       : root
 
   walk(root, {
-    enter(node: Node & { scopeIds?: Set<string> }, parent: Node | undefined) {
+    enter(node: Node & { scopeIds?: Set<string> }, parent: Node | null) {
       parent && parentStack.push(parent)
       if (
         parent &&
@@ -47,12 +47,13 @@ export function walkIdentifiers(
       }
       if (node.type === 'Identifier') {
         const isLocal = !!knownIds[node.name]
-        const isRefed = isReferencedIdentifier(node, parent!, parentStack)
+        const isRefed = isReferencedIdentifier(node, parent, parentStack)
         if (includeAll || (isRefed && !isLocal)) {
-          onIdentifier(node, parent!, parentStack, isRefed, isLocal)
+          onIdentifier(node, parent, parentStack, isRefed, isLocal)
         }
       } else if (
         node.type === 'ObjectProperty' &&
+        // eslint-disable-next-line no-restricted-syntax
         parent?.type === 'ObjectPattern'
       ) {
         // mark property in destructure pattern
@@ -78,7 +79,7 @@ export function walkIdentifiers(
         }
       }
     },
-    leave(node: Node & { scopeIds?: Set<string> }, parent: Node | undefined) {
+    leave(node: Node & { scopeIds?: Set<string> }, parent: Node | null) {
       parent && parentStack.pop()
       if (node !== rootExp && node.scopeIds) {
         for (const id of node.scopeIds) {
@@ -407,6 +408,7 @@ function isReferenced(node: Node, parent: Node, grandparent?: Node): boolean {
     // no: export { NODE as foo } from "foo";
     case 'ExportSpecifier':
       // @ts-expect-error
+      // eslint-disable-next-line no-restricted-syntax
       if (grandparent?.source) {
         return false
       }

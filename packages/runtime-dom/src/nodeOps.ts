@@ -25,7 +25,9 @@ export const nodeOps: Omit<RendererOptions<Node, Element>, 'patchProp'> = {
         ? doc.createElementNS(svgNS, tag)
         : namespace === 'mathml'
           ? doc.createElementNS(mathmlNS, tag)
-          : doc.createElement(tag, is ? { is } : undefined)
+          : is
+            ? doc.createElement(tag, { is })
+            : doc.createElement(tag)
 
     if (tag === 'select' && props && props.multiple != null) {
       ;(el as HTMLSelectElement).setAttribute('multiple', props.multiple)
