@@ -164,6 +164,7 @@ const normalizeVNodeSlots = (
 export const initSlots = (
   instance: ComponentInternalInstance,
   children: VNodeNormalizedChildren,
+  optimized: boolean,
 ) => {
   const slots = (instance.slots = createInternalObject())
   if (instance.vnode.shapeFlag & ShapeFlags.SLOTS_CHILDREN) {
@@ -171,7 +172,15 @@ export const initSlots = (
     if (type) {
       extend(slots, children as InternalSlots)
       // make compiler marker non-enumerable
-      def(slots, '_', type, true)
+      if (optimized) {
+        def(slots, '_', type, true)
+      } else {
+        // #2893
+        // when rendering the optimized slots by manually written render function,
+        // we need to delete the `slots._` flag if necessary to make subsequent
+        // updates reliable, i.e. let the `renderSlot` create the bailed Fragment
+        delete slots._
+      }
     } else {
       normalizeObjectSlots(children as RawSlots, slots, instance)
     }
@@ -205,13 +214,6 @@ export const updateSlots = (
         // compiled but dynamic (v-if/v-for on slots) - update slots, but skip
         // normalization.
         extend(slots, children as Slots)
-        // #2893
-        // when rendering the optimized slots by manually written render function,
-        // we need to delete the `slots._` flag if necessary to make subsequent updates reliable,
-        // i.e. let the `renderSlot` create the bailed Fragment
-        if (!optimized && type === SlotFlags.STABLE) {
-          delete slots._
-        }
       }
     } else {
       needDeletionCheck = !(children as RawSlots).$stable
