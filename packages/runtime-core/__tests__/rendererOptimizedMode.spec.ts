@@ -434,7 +434,7 @@ describe('renderer: optimized mode', () => {
     const App = {
       setup() {
         return () => {
-          return createVNode(Comp, null, {
+          return createBlock(Comp, null, {
             default: withCtx(() => [
               createVNode('p', null, foo.value, PatchFlags.TEXT),
             ]),
@@ -560,6 +560,7 @@ describe('renderer: optimized mode', () => {
     const state = ref(0)
 
     const CompA = {
+      name: 'A',
       setup(props: any, { slots }: SetupContext) {
         return () => {
           return (
@@ -571,6 +572,7 @@ describe('renderer: optimized mode', () => {
     }
 
     const Wrapper = {
+      name: 'Wrapper',
       setup(props: any, { slots }: SetupContext) {
         // use the manually written render function to rendering the optimized slots,
         // which should make subsequent updates exit the optimized mode correctly
@@ -581,6 +583,7 @@ describe('renderer: optimized mode', () => {
     }
 
     const app = createApp({
+      name: 'App',
       setup() {
         return () => {
           return (

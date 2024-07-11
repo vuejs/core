@@ -1229,7 +1229,7 @@ function baseCreateRenderer(
       if (__DEV__) {
         startMeasure(instance, `init`)
       }
-      setupComponent(instance)
+      setupComponent(instance, false, optimized)
       if (__DEV__) {
         endMeasure(instance, `init`)
       }
