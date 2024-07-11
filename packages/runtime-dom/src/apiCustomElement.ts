@@ -290,8 +290,10 @@ export class VueElement extends BaseClass {
       // apply CSS
       this._applyStyles(styles)
 
-      // initial render
-      this._update()
+      nextTick(() => {
+        // initial render
+        this._update()
+      })
     }
 
     const asyncDef = (this._def as ComponentOptions).__asyncLoader
