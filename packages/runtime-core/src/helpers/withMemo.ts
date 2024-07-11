@@ -1,11 +1,11 @@
 import { hasChanged } from '@vue/shared'
-import { currentBlock, isBlockTreeEnabled, VNode } from '../vnode'
+import { type VNode, currentBlock, isBlockTreeEnabled } from '../vnode'
 
 export function withMemo(
   memo: any[],
   render: () => VNode<any, any>,
   cache: any[],
-  index: number
+  index: number,
 ) {
   const cached = cache[index] as VNode | undefined
   if (cached && isMemoSame(cached, memo)) {
@@ -15,6 +15,8 @@ export function withMemo(
 
   // shallow clone
   ret.memo = memo.slice()
+  ret.memoIndex = index
+
   return (cache[index] = ret)
 }
 
