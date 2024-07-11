@@ -31,7 +31,7 @@ import {
   isCompatEnabled,
   warnDeprecation,
 } from './compat/compatConfig'
-import { NO, extend } from '@vue/shared'
+import { NO, extend, NOOP } from '@vue/shared'
 import {
   ErrorCodes,
   createCompilerError,
@@ -73,6 +73,7 @@ export const defaultParserOptions: MergedParserOptions = {
   isVoidTag: NO,
   isPreTag: NO,
   isCustomElement: NO,
+  customElementType: NOOP,
   onError: defaultOnError,
   onWarn: defaultOnWarn,
   comments: __DEV__,
