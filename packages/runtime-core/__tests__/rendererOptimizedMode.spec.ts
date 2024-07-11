@@ -8,6 +8,8 @@ import {
   createApp,
   createBlock,
   createCommentVNode,
+  createElementBlock,
+  createElementVNode,
   createTextVNode,
   createVNode,
   defineComponent,
@@ -961,5 +963,81 @@ describe('renderer: optimized mode', () => {
     await nextTick()
     // should successfully unmount without error
     expect(inner(root)).toBe(`<!---->`)
+  })
+
+  // #10870
+  test('should bail manually rendered compiler slots for both mount and update', async () => {
+    // only reproducible in prod
+    __DEV__ = false
+    function Outer(_: any, { slots }: any) {
+      return slots.default()
+    }
+    const Mid = {
+      render(ctx: any) {
+        return (
+          openBlock(),
+          createElementBlock('div', null, [renderSlot(ctx.$slots, 'default')])
+        )
+      },
+    }
+    const state1 = ref(true)
+    const state2 = ref(true)
+    const App = {
+      render() {
+        return (
+          openBlock(),
+          createBlock(Outer, null, {
+            default: withCtx(() => [
+              createVNode(
+                Mid,
+                { foo: state2.value },
+                {
+                  default: withCtx(() => [
+                    createElementVNode('div', null, [
+                      createElementVNode('div', null, [
+                        state2.value
+                          ? (openBlock(),
+                            createElementBlock(
+                              'div',
+                              {
+                                key: 0,
+                                id: 'if',
+                                foo: state1.value,
+                              },
+                              null,
+                              8 /* PROPS */,
+                              ['foo'],
+                            ))
+                          : createCommentVNode('v-if', true),
+                      ]),
+                    ]),
+                  ]),
+                  _: 1 /* STABLE */,
+                },
+                8 /* PROPS */,
+                ['foo'],
+              ),
+            ]),
+            _: 1 /* STABLE */,
+          })
+        )
+      },
+    }
+
+    const app = createApp(App)
+    app.config.errorHandler = vi.fn()
+
+    try {
+      app.mount(root)
+
+      state1.value = false
+      await nextTick()
+
+      state2.value = false
+      await nextTick()
+    } finally {
+      __DEV__ = true
+      expect(app.config.errorHandler).not.toHaveBeenCalled()
+    }
   })
 })
