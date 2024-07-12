@@ -214,6 +214,10 @@ export const updateSlots = (
         // compiled but dynamic (v-if/v-for on slots) - update slots, but skip
         // normalization.
         extend(slots, children as Slots)
+
+        if (!optimized) {
+          delete slots._
+        }
       }
     } else {
       needDeletionCheck = !(children as RawSlots).$stable
