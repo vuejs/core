@@ -179,7 +179,9 @@ export const initSlots = (
         // when rendering the optimized slots by manually written render function,
         // we need to delete the `slots._` flag if necessary to make subsequent
         // updates reliable, i.e. let the `renderSlot` create the bailed Fragment
-        delete slots._
+        if (!(instance.parent && instance.parent.vnode.patchFlag > 0)) {
+          delete slots._
+        }
       }
     } else {
       normalizeObjectSlots(children as RawSlots, slots, instance)
@@ -215,7 +217,10 @@ export const updateSlots = (
         // normalization.
         extend(slots, children as Slots)
 
-        if (!optimized) {
+        if (
+          !optimized &&
+          !(instance.parent && instance.parent.vnode.patchFlag > 0)
+        ) {
           delete slots._
         }
       }
