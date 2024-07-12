@@ -54,7 +54,7 @@ const sfcOptions = computed(
     template: {
       isProd: productionMode.value,
       compilerOptions: {
-        isCustomElement: (tag: string) => tag === 'mjx-container',
+        isCustomElement: (tag: string) => tag === 'mjx-container' || tag.startsWith('my-'),
       },
     },
   }),
