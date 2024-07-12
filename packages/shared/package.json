@@ -21,7 +21,7 @@
       "import": "./dist/shared.esm-bundler.js",
       "require": "./index.js"
     },
-    "./*": "./*"
+    "./index": "./index.js"
   },
   "sideEffects": false,
   "buildOptions": {
