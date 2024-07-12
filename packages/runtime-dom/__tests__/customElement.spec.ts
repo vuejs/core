@@ -35,20 +35,22 @@ describe('defineCustomElement', () => {
     })
     customElements.define('my-element', E)
 
-    test('should work', () => {
+    test('should work', async () => {
       container.innerHTML = `<my-element></my-element>`
       const e = container.childNodes[0] as VueElement
+      await nextTick()
       expect(e).toBeInstanceOf(E)
       expect(e._instance).toBeTruthy()
       expect(e.shadowRoot!.innerHTML).toBe(`<div>hello</div>`)
     })
 
-    test('should work w/ manual instantiation', () => {
+    test('should work w/ manual instantiation', async () => {
       const e = new E({ msg: 'inline' })
       // should lazy init
       expect(e._instance).toBe(null)
       // should initialize on connect
       container.appendChild(e)
+      await nextTick()
       expect(e._instance).toBeTruthy()
       expect(e.shadowRoot!.innerHTML).toBe(`<div>inline</div>`)
     })
@@ -98,6 +100,7 @@ describe('defineCustomElement', () => {
       })
       const app = createApp(containerComp)
       app.mount(container)
+      await nextTick()
       const myInputEl = container.querySelector('my-el-input')!
       const inputEl = myInputEl.shadowRoot!.querySelector('input')!
       await nextTick()
@@ -112,6 +115,7 @@ describe('defineCustomElement', () => {
 
     test('should not unmount on move', async () => {
       container.innerHTML = `<div><my-element></my-element></div>`
+      await nextTick()
       const e = container.childNodes[0].childNodes[0] as VueElement
       const i = e._instance
       // moving from one parent to another - this will trigger both disconnect
@@ -157,6 +161,7 @@ describe('defineCustomElement', () => {
     test('props via attribute', async () => {
       // bazQux should map to `baz-qux` attribute
       container.innerHTML = `<my-el-props foo="hello" baz-qux="bye"></my-el-props>`
+      await nextTick()
       const e = container.childNodes[0] as VueElement
       expect(e.shadowRoot!.innerHTML).toBe('<div>hello</div><div>bye</div>')
 
@@ -177,6 +182,7 @@ describe('defineCustomElement', () => {
       e.foo = 'one'
       e.bar = { x: 'two' }
       container.appendChild(e)
+      await nextTick()
       expect(e.shadowRoot!.innerHTML).toBe('<div>one</div><div>two</div>')
 
       // reflect
@@ -227,6 +233,7 @@ describe('defineCustomElement', () => {
       })
       customElements.define('my-el-props-cast', E)
       container.innerHTML = `<my-el-props-cast foo-bar="1" baz="12345"></my-el-props-cast>`
+      await nextTick()
       const e = container.childNodes[0] as VueElement
       expect(e.shadowRoot!.innerHTML).toBe(
         `1 number false boolean 12345 string`,
@@ -248,7 +255,7 @@ describe('defineCustomElement', () => {
     })
 
     // #4772
-    test('attr casting w/ programmatic creation', () => {
+    test('attr casting w/ programmatic creation', async () => {
       const E = defineCustomElement({
         props: {
           foo: Number,
@@ -261,10 +268,11 @@ describe('defineCustomElement', () => {
       const el = document.createElement('my-element-programmatic') as any
       el.setAttribute('foo', '123')
       container.appendChild(el)
+      await nextTick()
       expect(el.shadowRoot.innerHTML).toBe(`foo type: number`)
     })
 
-    test('handling properties set before upgrading', () => {
+    test('handling properties set before upgrading', async () => {
       const E = defineCustomElement({
         props: {
           foo: String,
@@ -284,12 +292,13 @@ describe('defineCustomElement', () => {
       el.notProp = 1
       container.appendChild(el)
       customElements.define('my-el-upgrade', E)
+      await nextTick()
       expect(el.shadowRoot.firstChild.innerHTML).toBe(`foo: hello`)
       // should not reflect if not declared as a prop
       expect(el.hasAttribute('not-prop')).toBe(false)
     })
 
-    test('handle properties set before connecting', () => {
+    test('handle properties set before connecting', async () => {
       const obj = { a: 1 }
       const E = defineCustomElement({
         props: {
@@ -310,6 +319,7 @@ describe('defineCustomElement', () => {
       el.post = obj
 
       container.appendChild(el)
+      await nextTick()
       expect(el.shadowRoot.innerHTML).toBe(JSON.stringify(obj))
     })
 
@@ -328,7 +338,7 @@ describe('defineCustomElement', () => {
     })
 
     // # 5793
-    test('set number value in dom property', () => {
+    test('set number value in dom property', async () => {
       const E = defineCustomElement({
         props: {
           'max-age': Number,
@@ -341,12 +351,13 @@ describe('defineCustomElement', () => {
       customElements.define('my-element-number-property', E)
       const el = document.createElement('my-element-number-property') as any
       container.appendChild(el)
+      await nextTick()
       el.maxAge = 50
       expect(el.maxAge).toBe(50)
       expect(el.shadowRoot.innerHTML).toBe('max age: 50/type: number')
     })
 
-    test('support direct setup function syntax with extra options', () => {
+    test('support direct setup function syntax with extra options', async () => {
       const E = defineCustomElement(
         props => {
           return () => props.text
@@ -359,6 +370,7 @@ describe('defineCustomElement', () => {
       )
       customElements.define('my-el-setup-with-props', E)
       container.innerHTML = `<my-el-setup-with-props text="hello"></my-el-setup-with-props>`
+      await nextTick()
       const e = container.childNodes[0] as VueElement
       expect(e.shadowRoot!.innerHTML).toBe('hello')
     })
@@ -374,6 +386,7 @@ describe('defineCustomElement', () => {
 
     test('attrs via attribute', async () => {
       container.innerHTML = `<my-el-attrs foo="hello"></my-el-attrs>`
+      await nextTick()
       const e = container.childNodes[0] as VueElement
       expect(e.shadowRoot!.innerHTML).toBe('<div>hello</div>')
 
@@ -382,11 +395,12 @@ describe('defineCustomElement', () => {
       expect(e.shadowRoot!.innerHTML).toBe('<div>changed</div>')
     })
 
-    test('non-declared properties should not show up in $attrs', () => {
+    test('non-declared properties should not show up in $attrs', async () => {
       const e = new E()
       // @ts-expect-error
       e.foo = '123'
       container.appendChild(e)
+      await nextTick()
       expect(e.shadowRoot!.innerHTML).toBe('<div></div>')
     })
   })
@@ -409,16 +423,18 @@ describe('defineCustomElement', () => {
     const E = defineCustomElement(CompDef)
     customElements.define('my-el-emits', E)
 
-    test('emit on connect', () => {
+    test('emit on connect', async () => {
       const e = new E()
       const spy = vi.fn()
       e.addEventListener('created', spy)
       container.appendChild(e)
+      await nextTick()
       expect(spy).toHaveBeenCalled()
     })
 
-    test('emit on interaction', () => {
+    test('emit on interaction', async () => {
       container.innerHTML = `<my-el-emits></my-el-emits>`
+      await nextTick()
       const e = container.childNodes[0] as VueElement
       const spy = vi.fn()
       e.addEventListener('my-click', spy)
@@ -430,8 +446,9 @@ describe('defineCustomElement', () => {
     })
 
     // #5373
-    test('case transform for camelCase event', () => {
+    test('case transform for camelCase event', async () => {
       container.innerHTML = `<my-el-emits></my-el-emits>`
+      await nextTick()
       const e = container.childNodes[0] as VueElement
       const spy1 = vi.fn()
       e.addEventListener('myEvent', spy1)
@@ -449,6 +466,7 @@ describe('defineCustomElement', () => {
       const E = defineCustomElement(defineAsyncComponent(() => p))
       customElements.define('my-async-el-emits', E)
       container.innerHTML = `<my-async-el-emits></my-async-el-emits>`
+      await nextTick()
       const e = container.childNodes[0] as VueElement
       const spy = vi.fn()
       e.addEventListener('my-click', spy)
@@ -471,6 +489,7 @@ describe('defineCustomElement', () => {
       )
       customElements.define('my-async-el-props-emits', E)
       container.innerHTML = `<my-async-el-props-emits id="my_async_el_props_emits"></my-async-el-props-emits>`
+      await nextTick()
       const e = container.childNodes[0] as VueElement
       const spy = vi.fn()
       e.addEventListener('my-click', spy)
@@ -500,8 +519,9 @@ describe('defineCustomElement', () => {
     })
     customElements.define('my-el-slots', E)
 
-    test('default slot', () => {
+    test('default slot', async () => {
       container.innerHTML = `<my-el-slots><span>hi</span></my-el-slots>`
+      await nextTick()
       const e = container.childNodes[0] as VueElement
       // native slots allocation does not affect innerHTML, so we just
       // verify that we've rendered the correct native slots here...
@@ -532,6 +552,8 @@ describe('defineCustomElement', () => {
       })
       customElements.define('my-provider', Provider)
       container.innerHTML = `<my-provider><my-provider>`
+      await nextTick()
+      await nextTick()
       const provider = container.childNodes[0] as VueElement
       const consumer = provider.shadowRoot!.childNodes[0] as VueElement
 
@@ -555,6 +577,7 @@ describe('defineCustomElement', () => {
       customElements.define('my-provider-2', Provider)
 
       container.innerHTML = `<my-provider-2><my-consumer></my-consumer><my-provider-2>`
+      await nextTick()
       const provider = container.childNodes[0]
       const consumer = provider.childNodes[0] as VueElement
       expect(consumer.shadowRoot!.innerHTML).toBe(`<div>injected!</div>`)
@@ -596,6 +619,10 @@ describe('defineCustomElement', () => {
       customElements.define('provider-b', ProviderB)
       customElements.define('my-multi-consumer', Consumer)
       container.innerHTML = `<provider-a><provider-a>`
+      // three components nested, so three ticks are needed
+      await nextTick()
+      await nextTick()
+      await nextTick()
       const providerA = container.childNodes[0] as VueElement
       const providerB = providerA.shadowRoot!.childNodes[0] as VueElement
       const consumer = providerB.shadowRoot!.childNodes[0] as VueElement
