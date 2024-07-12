@@ -290,10 +290,11 @@ export class VueElement extends BaseClass {
       // apply CSS
       this._applyStyles(styles)
 
-      // nextTick(() => {
-      // initial render
-      this._update()
-      // })
+      // #9885 - nextTick fixes duplication issue with v-model
+      nextTick(() => {
+        // initial render
+        this._update()
+      })
     }
 
     const asyncDef = (this._def as ComponentOptions).__asyncLoader
