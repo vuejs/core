@@ -11,7 +11,7 @@ import { type SSRBuffer, type SSRContext, renderComponentVNode } from './render'
 
 const { isVNode } = ssrUtils
 
-async function unrollBuffer(buffer: SSRBuffer): Promise<string> {
+export async function unrollBuffer(buffer: SSRBuffer): Promise<string> {
   if (buffer.hasAsync) {
     let ret = ''
     for (let i = 0; i < buffer.length; i++) {
