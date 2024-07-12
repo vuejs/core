@@ -21,30 +21,24 @@ function nestedUnrollBuffer(
   }
 
   let ret = parentRet
-
   for (let i = startIndex; i < buffer.length; i += 1) {
     const item = buffer[i]
-
     if (isString(item)) {
       ret += item
-
       continue
     }
 
     if (isPromise(item)) {
       return item.then(nestedItem => {
         buffer[i] = nestedItem
-
         return nestedUnrollBuffer(buffer, ret, i)
       })
     }
 
     const result = nestedUnrollBuffer(item, ret, 0)
-
     if (isPromise(result)) {
       return result.then(nestedItem => {
         buffer[i] = nestedItem
-
         return nestedUnrollBuffer(buffer, '', i)
       })
     }
