@@ -40,5 +40,11 @@ describe('decodeHtmlBrowser', () => {
         true,
       ),
     ).toBe('<strong><strong>&</strong></strong>')
+    expect(decodeHtmlBrowser('"', true)).toBe(
+      '"',
+    )
+    expect(decodeHtmlBrowser("'", true)).toBe(
+      "'",
+    )
   })
 })
