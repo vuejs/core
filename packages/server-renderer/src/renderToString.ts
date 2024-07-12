@@ -8,23 +8,45 @@ import {
 } from 'vue'
 import { isPromise, isString } from '@vue/shared'
 import { type SSRBuffer, type SSRContext, renderComponentVNode } from './render'
+import { MultipleErrors } from './index'
 
 const { isVNode } = ssrUtils
 
-async function unrollBuffer(buffer: SSRBuffer): Promise<string> {
+async function unrollBuffer(
+  buffer: SSRBuffer,
+  errors: unknown[] = [],
+  depth: number = 0,
+): Promise<string> {
   if (buffer.hasAsync) {
     let ret = ''
     for (let i = 0; i < buffer.length; i++) {
       let item = buffer[i]
       if (isPromise(item)) {
-        item = await item
+        try {
+          item = await item
+        } catch (e: unknown) {
+          errors.push(e)
+          continue
+        }
       }
       if (isString(item)) {
         ret += item
       } else {
-        ret += await unrollBuffer(item)
+        ret += await unrollBuffer(item, errors, depth + 1)
       }
     }
+
+    if (depth === 0 && errors.length) {
+      if (errors.length === 1) {
+        throw errors[0]
+      } else {
+        throw new MultipleErrors(
+          'Multiple errors during buffer unrolling',
+          errors,
+        )
+      }
+    }
+
     return ret
   } else {
     // sync buffer can be more efficiently unrolled without unnecessary await
