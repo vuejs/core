@@ -1040,4 +1040,69 @@ describe('renderer: optimized mode', () => {
       expect(app.config.errorHandler).not.toHaveBeenCalled()
     }
   })
+
+  // #11336
+  test('should bail manually rendered compiler slots for both mount and update (2)', async () => {
+    // only reproducible in prod
+    __DEV__ = false
+    const n = ref(0)
+    function Outer(_: any, { slots }: any) {
+      n.value // track
+      return slots.default()
+    }
+    const Mid = {
+      render(ctx: any) {
+        return (
+          openBlock(),
+          createElementBlock('div', null, [renderSlot(ctx.$slots, 'default')])
+        )
+      },
+    }
+    const show = ref(false)
+    const App = {
+      render() {
+        return (
+          openBlock(),
+          createBlock(Outer, null, {
+            default: withCtx(() => [
+              createVNode(Mid, null, {
+                default: withCtx(() => [
+                  createElementVNode('div', null, [
+                    show.value
+                      ? (openBlock(),
+                        createElementBlock('div', { key: 0 }, '1'))
+                      : createCommentVNode('v-if', true),
+                    createElementVNode('div', null, '2'),
+                    createElementVNode('div', null, '3'),
+                  ]),
+                  createElementVNode('div', null, '4'),
+                ]),
+                _: 1 /* STABLE */,
+              }),
+            ]),
+            _: 1 /* STABLE */,
+          })
+        )
+      },
+    }
+
+    const app = createApp(App)
+    app.config.errorHandler = vi.fn()
+
+    try {
+      app.mount(root)
+
+      // force Outer update, which will assign new slots to Mid
+      // we want to make sure the compiled slot flag doesn't accidentally
+      // get assigned again
+      n.value++
+      await nextTick()
+
+      show.value = true
+      await nextTick()
+    } finally {
+      __DEV__ = true
+      expect(app.config.errorHandler).not.toHaveBeenCalled()
+    }
+  })
 })
