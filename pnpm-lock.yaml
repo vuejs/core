@@ -10,7 +10,7 @@ catalogs:
       specifier: ^7.24.7
       version: 7.24.7
     '@babel/types':
-      specifier: ^7.2.47
+      specifier: ^7.24.7
       version: 7.24.7
     estree-walker:
       specifier: ^2.0.2
