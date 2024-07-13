@@ -109,7 +109,7 @@ export const getModelModifiers = (
   props: Record<string, any>,
   modelName: string,
 ): Record<string, boolean> | undefined => {
-  return modelName === 'modelValue'
+  return modelName === 'modelValue' || modelName === 'model-value'
     ? props.modelModifiers
     : props[`${modelName}Modifiers`] ||
         props[`${camelize(modelName)}Modifiers`] ||
