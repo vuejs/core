@@ -361,7 +361,7 @@ describe('component: emit', () => {
       render() {},
       created() {
         this.$emit('update:firstName', ' one ')
-      }
+      },
     })
 
     const fn1 = vi.fn()
@@ -370,7 +370,7 @@ describe('component: emit', () => {
       h(Foo, {
         'first-name': null,
         'first-nameModifiers': { trim: true },
-        'onUpdate:first-name': fn1
+        'onUpdate:first-name': fn1,
       })
 
     render(h(Comp), nodeOps.createElement('div'))
@@ -385,7 +385,7 @@ describe('component: emit', () => {
       created() {
         this.$emit('update:model-value', ' one ')
         this.$emit('update:first-name', ' two ')
-      }
+      },
     })
 
     const fn1 = vi.fn()
@@ -399,7 +399,7 @@ describe('component: emit', () => {
 
         firstName: null,
         firstNameModifiers: { trim: true },
-        'onUpdate:firstName': fn2
+        'onUpdate:firstName': fn2,
       })
 
     render(h(Comp), nodeOps.createElement('div'))
@@ -415,7 +415,7 @@ describe('component: emit', () => {
       render() {},
       created() {
         this.$emit('update:base-URL', ' one ')
-      }
+      },
     })
 
     const fn1 = vi.fn()
@@ -424,7 +424,7 @@ describe('component: emit', () => {
       h(Foo, {
         'base-URL': null,
         'base-URLModifiers': { trim: true },
-        'onUpdate:base-URL': fn1
+        'onUpdate:base-URL': fn1,
       })
 
     render(h(Comp), nodeOps.createElement('div'))
