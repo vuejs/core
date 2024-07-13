@@ -23,14 +23,23 @@ describe('e2e: Transition', () => {
   beforeEach(async () => {
     await page().goto(baseUrl)
     await page().waitForSelector('#app')
+
+    await page().evaluate(() => {
+      const script = document.createElement('script')
+      script.src = 'https://cdn.jsdelivr.net/npm/vue@3'
+      script.async = false
+      document.head.appendChild(script)
+    })
+
+    await page().waitForFunction(
+      () => typeof (window as any).Vue !== 'undefined',
+    )
   })
 
   describe('transition with v-if', () => {
     test(
       'basic transition',
       async () => {
-        await page().goto(baseUrl)
-        await page().waitForSelector('#app')
         await page().evaluate(() => {
           const { createApp, ref } = (window as any).Vue
           createApp({
@@ -1296,8 +1305,6 @@ describe('e2e: Transition', () => {
     test(
       'wrapping transition + fallthrough attrs',
       async () => {
-        await page().goto(baseUrl)
-        await page().waitForSelector('#app')
         await page().evaluate(() => {
           const { createApp, ref } = (window as any).Vue
           createApp({
@@ -1372,7 +1379,7 @@ describe('e2e: Transition', () => {
             },
             template: `
             <div id="container">
-              <transition foo="1" name="test" mode="in-out" 
+              <transition foo="1" name="test" mode="in-out"
                 @before-enter="beforeEnterSpy()"
                 @enter="onEnterSpy()"
                 @after-enter="afterEnterSpy()"
