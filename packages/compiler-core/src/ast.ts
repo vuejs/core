@@ -416,7 +416,7 @@ export interface CacheExpression extends Node {
   type: NodeTypes.JS_CACHE_EXPRESSION
   index: number
   value: JSChildNode
-  isVNode: boolean
+  isVOnce: boolean
 }
 
 export interface MemoExpression extends CallExpression {
@@ -771,13 +771,13 @@ export function createConditionalExpression(
 export function createCacheExpression(
   index: number,
   value: JSChildNode,
-  isVNode: boolean = false,
+  isVOnce: boolean = false,
 ): CacheExpression {
   return {
     type: NodeTypes.JS_CACHE_EXPRESSION,
     index,
     value,
-    isVNode,
+    isVOnce,
     loc: locStub,
   }
 }
