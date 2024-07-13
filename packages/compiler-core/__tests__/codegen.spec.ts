@@ -437,7 +437,7 @@ describe('compiler: codegen', () => {
     expect(code).toMatchSnapshot()
   })
 
-  test('CacheExpression w/ isVNode: true', () => {
+  test('CacheExpression w/ isVOnce: true', () => {
     const { code } = generate(
       createRoot({
         cached: 1,
@@ -456,7 +456,7 @@ describe('compiler: codegen', () => {
       `
   _cache[1] || (
     _setBlockTracking(-1),
-    _cache[1] = foo,
+    (_cache[1] = foo).cacheIndex = 1,
     _setBlockTracking(1),
     _cache[1]
   )

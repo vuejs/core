@@ -2164,6 +2164,12 @@ function baseCreateRenderer(
         )
       } else if (
         dynamicChildren &&
+        // #5154
+        // when v-once is used inside a block, setBlockTracking(-1) marks the
+        // parent block with hasOnce: true
+        // so that it doesn't take the fast path during unmount - otherwise
+        // components nested in v-once are never unmounted.
+        !dynamicChildren.hasOnce &&
         // #1153: fast path should not be taken for non-stable (v-for) fragments
         (type !== Fragment ||
           (patchFlag > 0 && patchFlag & PatchFlags.STABLE_FRAGMENT))

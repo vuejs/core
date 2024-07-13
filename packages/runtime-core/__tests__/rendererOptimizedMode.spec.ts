@@ -25,6 +25,7 @@ import {
   renderList,
   renderSlot,
   serialize,
+  setBlockTracking,
   withCtx,
 } from '@vue/runtime-test'
 import { PatchFlags, SlotFlags } from '@vue/shared'
@@ -1177,5 +1178,58 @@ describe('renderer: optimized mode', () => {
     show.value = true
     await nextTick()
     expect(inner(root)).toBe('<div><!--comment--><div>bar</div></div>')
+  })
+
+  test('should not take unmount children fast path if children contain cached nodes', async () => {
+    const show = ref(true)
+    const spyUnmounted = vi.fn()
+
+    const Child = {
+      setup() {
+        onUnmounted(spyUnmounted)
+        return () => createVNode('div', null, 'Child')
+      },
+    }
+
+    const app = createApp({
+      render(_: any, cache: any) {
+        return show.value
+          ? (openBlock(),
+            createBlock('div', null, [
+              createVNode('div', null, [
+                cache[0] ||
+                  (setBlockTracking(-1),
+                  ((cache[0] = createVNode('div', null, [
+                    createVNode(Child),
+                  ])).cacheIndex = 0),
+                  setBlockTracking(1),
+                  cache[0]),
+              ]),
+            ]))
+          : createCommentVNode('v-if', true)
+      },
+    })
+
+    app.mount(root)
+    expect(inner(root)).toBe(
+      '<div><div><div><div>Child</div></div></div></div>',
+    )
+
+    show.value = false
+    await nextTick()
+    expect(inner(root)).toBe('<!--v-if-->')
+    expect(spyUnmounted).toHaveBeenCalledTimes(1)
+
+    show.value = true
+    await nextTick()
+    expect(inner(root)).toBe(
+      '<div><div><div><div>Child</div></div></div></div>',
+    )
+
+    // should unmount again, this verifies previous cache was properly cleared
+    show.value = false
+    await nextTick()
+    expect(inner(root)).toBe('<!--v-if-->')
+    expect(spyUnmounted).toHaveBeenCalledTimes(2)
   })
 })

@@ -226,7 +226,7 @@ export interface VNode<
   /**
    * @internal
    */
-  dynamicChildren: VNode[] | null
+  dynamicChildren: (VNode[] & { hasOnce?: boolean }) | null
 
   // application root node only
   appContext: AppContext | null
@@ -259,8 +259,8 @@ export interface VNode<
 // can divide a template into nested blocks, and within each block the node
 // structure would be stable. This allows us to skip most children diffing
 // and only worry about the dynamic nodes (indicated by patch flags).
-export const blockStack: (VNode[] | null)[] = []
-export let currentBlock: VNode[] | null = null
+export const blockStack: VNode['dynamicChildren'][] = []
+export let currentBlock: VNode['dynamicChildren'] = null
 
 /**
  * Open a block.
@@ -311,6 +311,11 @@ export let isBlockTreeEnabled = 1
  */
 export function setBlockTracking(value: number) {
   isBlockTreeEnabled += value
+  if (value < 0 && currentBlock) {
+    // mark current block so it doesn't take fast path and skip possible
+    // nested components duriung unmount
+    currentBlock.hasOnce = true
+  }
 }
 
 function setupBlock(vnode: VNode) {

@@ -19,12 +19,12 @@ export function render(_ctx, _cache) {
 }"
 `;
 
-exports[`compiler: codegen > CacheExpression w/ isVNode: true 1`] = `
+exports[`compiler: codegen > CacheExpression w/ isVOnce: true 1`] = `
 "
 export function render(_ctx, _cache) {
   return _cache[1] || (
     _setBlockTracking(-1),
-    _cache[1] = foo,
+    (_cache[1] = foo).cacheIndex = 1,
     _setBlockTracking(1),
     _cache[1]
   )

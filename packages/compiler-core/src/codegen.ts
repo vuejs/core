@@ -1041,11 +1041,12 @@ function genCacheExpression(node: CacheExpression, context: CodegenContext) {
     indent()
     push(`${helper(SET_BLOCK_TRACKING)}(-1),`)
     newline()
+    push(`(`)
   }
   push(`_cache[${node.index}] = `)
   genNode(node.value, context)
   if (node.isVOnce) {
-    push(`,`)
+    push(`).cacheIndex = ${node.index},`)
     newline()
     push(`${helper(SET_BLOCK_TRACKING)}(1),`)
     newline()
