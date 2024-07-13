@@ -356,6 +356,83 @@ describe('component: emit', () => {
     expect(fn2).toHaveBeenCalledWith('two')
   })
 
+  test('.trim modifier should work with v-model on component for kebab-cased props and camelCased emit', () => {
+    const Foo = defineComponent({
+      render() {},
+      created() {
+        this.$emit('update:firstName', ' one ')
+      },
+    })
+
+    const fn1 = vi.fn()
+
+    const Comp = () =>
+      h(Foo, {
+        'first-name': null,
+        'first-nameModifiers': { trim: true },
+        'onUpdate:first-name': fn1,
+      })
+
+    render(h(Comp), nodeOps.createElement('div'))
+
+    expect(fn1).toHaveBeenCalledTimes(1)
+    expect(fn1).toHaveBeenCalledWith('one')
+  })
+
+  test('.trim modifier should work with v-model on component for camelCased props and kebab-cased emit', () => {
+    const Foo = defineComponent({
+      render() {},
+      created() {
+        this.$emit('update:model-value', ' one ')
+        this.$emit('update:first-name', ' two ')
+      },
+    })
+
+    const fn1 = vi.fn()
+    const fn2 = vi.fn()
+
+    const Comp = () =>
+      h(Foo, {
+        modelValue: null,
+        modelModifiers: { trim: true },
+        'onUpdate:modelValue': fn1,
+
+        firstName: null,
+        firstNameModifiers: { trim: true },
+        'onUpdate:firstName': fn2,
+      })
+
+    render(h(Comp), nodeOps.createElement('div'))
+
+    expect(fn1).toHaveBeenCalledTimes(1)
+    expect(fn1).toHaveBeenCalledWith('one')
+    expect(fn2).toHaveBeenCalledTimes(1)
+    expect(fn2).toHaveBeenCalledWith('two')
+  })
+
+  test('.trim modifier should work with v-model on component for mixed cased props and emit', () => {
+    const Foo = defineComponent({
+      render() {},
+      created() {
+        this.$emit('update:base-URL', ' one ')
+      },
+    })
+
+    const fn1 = vi.fn()
+
+    const Comp = () =>
+      h(Foo, {
+        'base-URL': null,
+        'base-URLModifiers': { trim: true },
+        'onUpdate:base-URL': fn1,
+      })
+
+    render(h(Comp), nodeOps.createElement('div'))
+
+    expect(fn1).toHaveBeenCalledTimes(1)
+    expect(fn1).toHaveBeenCalledWith('one')
+  })
+
   test('.trim and .number modifiers should work with v-model on component', () => {
     const Foo = defineComponent({
       render() {},
