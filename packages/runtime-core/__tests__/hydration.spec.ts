@@ -1317,76 +1317,83 @@ describe('SSR hydration', () => {
   // #10607
   test('update component stable slot (prod + optimized mode)', async () => {
     __DEV__ = false
-    const container = document.createElement('div')
-    container.innerHTML = `<template><div show="false"><!--[--><div><div><!----></div></div><div>0</div><!--]--></div></template>`
-    const Comp = {
-      render(this: any) {
-        return (
-          openBlock(),
-          createElementBlock('div', null, [renderSlot(this.$slots, 'default')])
-        )
-      },
-    }
-    const show = ref(false)
-    const clicked = ref(false)
-
-    const Wrapper = {
-      setup() {
-        const items = ref<number[]>([])
-        onMounted(() => {
-          items.value = [1]
-        })
-        return () => {
+    try {
+      const container = document.createElement('div')
+      container.innerHTML = `<template><div show="false"><!--[--><div><div><!----></div></div><div>0</div><!--]--></div></template>`
+      const Comp = {
+        render(this: any) {
           return (
             openBlock(),
-            createBlock(Comp, null, {
-              default: withCtx(() => [
-                createElementVNode('div', null, [
-                  createElementVNode('div', null, [
-                    clicked.value
-                      ? (openBlock(),
-                        createElementBlock('div', { key: 0 }, 'foo'))
-                      : createCommentVNode('v-if', true),
-                  ]),
-                ]),
-                createElementVNode(
-                  'div',
-                  null,
-                  items.value.length,
-                  1 /* TEXT */,
-                ),
-              ]),
-              _: 1 /* STABLE */,
-            })
+            createElementBlock('div', null, [
+              renderSlot(this.$slots, 'default'),
+            ])
           )
-        }
-      },
-    }
-    createSSRApp({
-      components: { Wrapper },
-      data() {
-        return { show }
-      },
-      template: `<Wrapper :show="show"/>`,
-    }).mount(container)
+        },
+      }
+      const show = ref(false)
+      const clicked = ref(false)
 
-    await nextTick()
-    expect(container.innerHTML).toBe(
-      `<div show="false"><!--[--><div><div><!----></div></div><div>1</div><!--]--></div>`,
-    )
+      const Wrapper = {
+        setup() {
+          const items = ref<number[]>([])
+          onMounted(() => {
+            items.value = [1]
+          })
+          return () => {
+            return (
+              openBlock(),
+              createBlock(Comp, null, {
+                default: withCtx(() => [
+                  createElementVNode('div', null, [
+                    createElementVNode('div', null, [
+                      clicked.value
+                        ? (openBlock(),
+                          createElementBlock('div', { key: 0 }, 'foo'))
+                        : createCommentVNode('v-if', true),
+                    ]),
+                  ]),
+                  createElementVNode(
+                    'div',
+                    null,
+                    items.value.length,
+                    1 /* TEXT */,
+                  ),
+                ]),
+                _: 1 /* STABLE */,
+              })
+            )
+          }
+        },
+      }
+      createSSRApp({
+        components: { Wrapper },
+        data() {
+          return { show }
+        },
+        template: `<Wrapper :show="show"/>`,
+      }).mount(container)
 
-    show.value = true
-    await nextTick()
-    expect(async () => {
-      clicked.value = true
       await nextTick()
-    }).not.toThrow("Cannot read properties of null (reading 'insertBefore')")
+      expect(container.innerHTML).toBe(
+        `<div show="false"><!--[--><div><div><!----></div></div><div>1</div><!--]--></div>`,
+      )
 
-    await nextTick()
-    expect(container.innerHTML).toBe(
-      `<div show="true"><!--[--><div><div><div>foo</div></div></div><div>1</div><!--]--></div>`,
-    )
-    __DEV__ = true
+      show.value = true
+      await nextTick()
+      expect(async () => {
+        clicked.value = true
+        await nextTick()
+      }).not.toThrow("Cannot read properties of null (reading 'insertBefore')")
+
+      await nextTick()
+      expect(container.innerHTML).toBe(
+        `<div show="true"><!--[--><div><div><div>foo</div></div></div><div>1</div><!--]--></div>`,
+      )
+    } catch (e) {
+      throw e
+    } finally {
+      __DEV__ = true
+    }
   })
 
   describe('mismatch handling', () => {
