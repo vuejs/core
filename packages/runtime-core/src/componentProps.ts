@@ -496,12 +496,15 @@ function resolvePropValue(
   return value
 }
 
+const mixinPropsCache = new WeakMap<ConcreteComponent, NormalizedPropsOptions>()
+
 export function normalizePropsOptions(
   comp: ConcreteComponent,
   appContext: AppContext,
   asMixin = false,
 ): NormalizedPropsOptions {
-  const cache = appContext.propsCache
+  const cache =
+    __FEATURE_OPTIONS_API__ && asMixin ? mixinPropsCache : appContext.propsCache
   const cached = cache.get(comp)
   if (cached) {
     return cached
@@ -534,7 +537,7 @@ export function normalizePropsOptions(
     }
   }
 
-  if (!raw && !hasExtends && !asMixin) {
+  if (!raw && !hasExtends) {
     if (isObject(comp)) {
       cache.set(comp, EMPTY_ARR as any)
     }
@@ -577,7 +580,7 @@ export function normalizePropsOptions(
   }
 
   const res: NormalizedPropsOptions = [normalized, needCastKeys]
-  if (isObject(comp) && !asMixin) {
+  if (isObject(comp)) {
     cache.set(comp, res)
   }
   return res
