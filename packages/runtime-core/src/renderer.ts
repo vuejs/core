@@ -1229,7 +1229,7 @@ function baseCreateRenderer(
       if (__DEV__) {
         startMeasure(instance, `init`)
       }
-      setupComponent(instance)
+      setupComponent(instance, false, optimized)
       if (__DEV__) {
         endMeasure(instance, `init`)
       }
@@ -1587,6 +1587,7 @@ function baseCreateRenderer(
         effect.run()
       }
     })
+    update.i = instance
     update.id = instance.uid
     // allowRecurse
     // #1801, #2043 component render effects should allow recursive updates
@@ -1599,7 +1600,6 @@ function baseCreateRenderer(
       effect.onTrigger = instance.rtg
         ? e => invokeArrayFns(instance.rtg!, e)
         : void 0
-      update.ownerInstance = instance
     }
 
     update()
@@ -2109,7 +2109,7 @@ function baseCreateRenderer(
       shapeFlag,
       patchFlag,
       dirs,
-      memoIndex,
+      cacheIndex,
     } = vnode
 
     if (patchFlag === PatchFlags.BAIL) {
@@ -2122,8 +2122,8 @@ function baseCreateRenderer(
     }
 
     // #6593 should clean memo cache when unmount
-    if (memoIndex != null) {
-      parentComponent!.renderCache[memoIndex] = undefined
+    if (cacheIndex != null) {
+      parentComponent!.renderCache[cacheIndex] = undefined
     }
 
     if (shapeFlag & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE) {
@@ -2164,6 +2164,12 @@ function baseCreateRenderer(
         )
       } else if (
         dynamicChildren &&
+        // #5154
+        // when v-once is used inside a block, setBlockTracking(-1) marks the
+        // parent block with hasOnce: true
+        // so that it doesn't take the fast path during unmount - otherwise
+        // components nested in v-once are never unmounted.
+        !dynamicChildren.hasOnce &&
         // #1153: fast path should not be taken for non-stable (v-for) fragments
         (type !== Fragment ||
           (patchFlag > 0 && patchFlag & PatchFlags.STABLE_FRAGMENT))

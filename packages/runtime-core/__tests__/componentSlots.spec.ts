@@ -7,7 +7,7 @@ import {
   ref,
   render,
 } from '@vue/runtime-test'
-import { normalizeVNode } from '../src/vnode'
+import { createBlock, normalizeVNode } from '../src/vnode'
 import { createSlots } from '../src/helpers/createSlots'
 
 describe('component: slots', () => {
@@ -25,8 +25,21 @@ describe('component: slots', () => {
   }
 
   test('initSlots: instance.slots should be set correctly', () => {
+    let instance: any
+    const Comp = {
+      render() {
+        instance = getCurrentInstance()
+        return h('div')
+      },
+    }
+    const slots = { foo: () => {}, _: 1 }
+    render(createBlock(Comp, null, slots), nodeOps.createElement('div'))
+    expect(instance.slots).toMatchObject(slots)
+  })
+
+  test('initSlots: instance.slots should remove compiler marker if parent is using manual render function', () => {
     const { slots } = renderWithSlots({ _: 1 })
-    expect(slots).toMatchObject({ _: 1 })
+    expect(slots).toMatchObject({})
   })
 
   test('initSlots: should normalize object slots (when value is null, string, array)', () => {
