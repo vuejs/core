@@ -243,7 +243,7 @@ export interface VNode<
   /**
    * @internal index for cleaning v-memo cache
    */
-  memoIndex?: number
+  cacheIndex?: number
   /**
    * @internal __COMPAT__ only
    */

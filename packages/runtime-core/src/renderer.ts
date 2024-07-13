@@ -2109,7 +2109,7 @@ function baseCreateRenderer(
       shapeFlag,
       patchFlag,
       dirs,
-      memoIndex,
+      cacheIndex,
     } = vnode
 
     if (patchFlag === PatchFlags.BAIL) {
@@ -2122,8 +2122,8 @@ function baseCreateRenderer(
     }
 
     // #6593 should clean memo cache when unmount
-    if (memoIndex != null) {
-      parentComponent!.renderCache[memoIndex] = undefined
+    if (cacheIndex != null) {
+      parentComponent!.renderCache[cacheIndex] = undefined
     }
 
     if (shapeFlag & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE) {
