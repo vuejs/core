@@ -506,31 +506,31 @@ describe('component props', () => {
     const props = {
       globalProp: {
         type: String,
-        default: defaultProp
-      }
+        default: defaultProp,
+      },
     }
     const globalMixin = {
-      props
+      props,
     }
     const Comp = {
       render(this: any) {
         renderProxy = this
         return h('div', ['Comp', this.globalProp])
-      }
+      },
     }
     const ExtendedComp = {
       extends: Comp,
       render(this: any) {
         extendedRenderProxy = this
         return h('div', ['ExtendedComp', this.globalProp])
-      }
+      },
     }
 
     const app = createApp(
       {
-        render: () => [h(ExtendedComp), h(Comp)]
+        render: () => [h(ExtendedComp), h(Comp)],
       },
-      {}
+      {},
     )
     app.mixin(globalMixin)
 
@@ -538,11 +538,11 @@ describe('component props', () => {
     app.mount(root)
 
     expect(serializeInner(root)).toMatch(
-      `<div>ExtendedComp from global </div><div>Comp from global </div>`
+      `<div>ExtendedComp from global </div><div>Comp from global </div>`,
     )
     expect(renderProxy.$props).toMatchObject({ globalProp: defaultProp })
     expect(extendedRenderProxy.$props).toMatchObject({
-      globalProp: defaultProp
+      globalProp: defaultProp,
     })
   })
 
