@@ -93,7 +93,7 @@ importers:
         specifier: ^0.5.4
         version: 0.5.4(eslint@9.6.0)(typescript@5.4.5)(vitest@1.6.0(@types/node@20.14.10)(jsdom@24.1.0)(sass@1.77.6)(terser@5.31.1))
       estree-walker:
-        specifier: ^2.0.2
+        specifier: 'catalog:'
         version: 2.0.2
       jsdom:
         specifier: ^24.1.0
