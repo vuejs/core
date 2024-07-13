@@ -1,4 +1,4 @@
-import {
+import type {
   Expression,
   Identifier,
   Node,
@@ -22,25 +22,33 @@ import {
   TSTypeLiteral,
   TSTypeQuery,
   TSTypeReference,
-  TemplateLiteral
+  TemplateLiteral,
 } from '@babel/types'
 import {
   UNKNOWN_TYPE,
   createGetCanonicalFileName,
   getId,
   getImportedName,
+  joinPaths,
   normalizePath,
-  joinPaths
 } from './utils'
-import { ScriptCompileContext, resolveParserPlugins } from './context'
-import { ImportBinding, SFCScriptCompileOptions } from '../compileScript'
+import { type ScriptCompileContext, resolveParserPlugins } from './context'
+import type { ImportBinding, SFCScriptCompileOptions } from '../compileScript'
 import { capitalize, hasOwn } from '@vue/shared'
 import { parse as babelParse } from '@babel/parser'
 import { parse } from '../parse'
 import { createCache } from '../cache'
 import type TS from 'typescript'
-import { extname, dirname } from 'path'
+import { dirname, extname, join } from 'path'
 import { minimatch as isMatch } from 'minimatch'
+import * as process from 'process'
+
+export type SimpleTypeResolveOptions = Partial<
+  Pick<
+    SFCScriptCompileOptions,
+    'globalTypeFiles' | 'fs' | 'babelParserPlugins' | 'isProd'
+  >
+>
 
 /**
  * TypeResolveContext is compatible with ScriptCompileContext
@@ -59,13 +67,31 @@ import { minimatch as isMatch } from 'minimatch'
  */
 export type SimpleTypeResolveContext = Pick<
   ScriptCompileContext,
-  // required
-  'source' | 'filename' | 'error' | 'options'
+  // file
+  | 'source'
+  | 'filename'
+
+  // utils
+  | 'error'
+  | 'helper'
+  | 'getString'
+
+  // props
+  | 'propsTypeDecl'
+  | 'propsRuntimeDefaults'
+  | 'propsDestructuredBindings'
+
+  // emits
+  | 'emitsTypeDecl'
+
+  // customElement
+  | 'isCE'
 > &
   Partial<
     Pick<ScriptCompileContext, 'scope' | 'globalScopes' | 'deps' | 'fs'>
   > & {
     ast: Statement[]
+    options: SimpleTypeResolveOptions
   }
 
 export type TypeResolveContext = ScriptCompileContext | SimpleTypeResolveContext
@@ -87,9 +113,9 @@ export class TypeScope {
     public offset: number = 0,
     public imports: Record<string, Import> = Object.create(null),
     public types: Record<string, ScopeTypeNode> = Object.create(null),
-    public declares: Record<string, ScopeTypeNode> = Object.create(null)
+    public declares: Record<string, ScopeTypeNode> = Object.create(null),
   ) {}
-
+  isGenericScope = false
   resolvedImportSources: Record<string, string> = Object.create(null)
   exportedTypes: Record<string, ScopeTypeNode> = Object.create(null)
   exportedDeclares: Record<string, ScopeTypeNode> = Object.create(null)
@@ -117,47 +143,63 @@ interface ResolvedElements {
 export function resolveTypeElements(
   ctx: TypeResolveContext,
   node: Node & MaybeWithScope & { _resolvedElements?: ResolvedElements },
-  scope?: TypeScope
+  scope?: TypeScope,
+  typeParameters?: Record<string, Node>,
 ): ResolvedElements {
-  if (node._resolvedElements) {
+  const canCache = !typeParameters
+  if (canCache && node._resolvedElements) {
     return node._resolvedElements
   }
-  return (node._resolvedElements = innerResolveTypeElements(
+  const resolved = innerResolveTypeElements(
     ctx,
     node,
-    node._ownerScope || scope || ctxToScope(ctx)
-  ))
+    node._ownerScope || scope || ctxToScope(ctx),
+    typeParameters,
+  )
+  return canCache ? (node._resolvedElements = resolved) : resolved
 }
 
 function innerResolveTypeElements(
   ctx: TypeResolveContext,
   node: Node,
-  scope: TypeScope
+  scope: TypeScope,
+  typeParameters?: Record<string, Node>,
 ): ResolvedElements {
+  if (
+    node.leadingComments &&
+    node.leadingComments.some(c => c.value.includes('@vue-ignore'))
+  ) {
+    return { props: {} }
+  }
   switch (node.type) {
     case 'TSTypeLiteral':
-      return typeElementsToMap(ctx, node.members, scope)
+      return typeElementsToMap(ctx, node.members, scope, typeParameters)
     case 'TSInterfaceDeclaration':
-      return resolveInterfaceMembers(ctx, node, scope)
+      return resolveInterfaceMembers(ctx, node, scope, typeParameters)
     case 'TSTypeAliasDeclaration':
     case 'TSParenthesizedType':
-      return resolveTypeElements(ctx, node.typeAnnotation, scope)
+      return resolveTypeElements(
+        ctx,
+        node.typeAnnotation,
+        scope,
+        typeParameters,
+      )
     case 'TSFunctionType': {
       return { props: {}, calls: [node] }
     }
     case 'TSUnionType':
     case 'TSIntersectionType':
       return mergeElements(
-        node.types.map(t => resolveTypeElements(ctx, t, scope)),
-        node.type
+        node.types.map(t => resolveTypeElements(ctx, t, scope, typeParameters)),
+        node.type,
       )
     case 'TSMappedType':
-      return resolveMappedType(ctx, node, scope)
+      return resolveMappedType(ctx, node, scope, typeParameters)
     case 'TSIndexedAccessType': {
       const types = resolveIndexType(ctx, node, scope)
       return mergeElements(
         types.map(t => resolveTypeElements(ctx, t, t._ownerScope)),
-        'TSUnionType'
+        'TSUnionType',
       )
     }
     case 'TSExpressionWithTypeArguments': // referenced by interface extends
@@ -170,26 +212,64 @@ function innerResolveTypeElements(
         scope.imports[typeName]?.source === 'vue'
       ) {
         return resolveExtractPropTypes(
-          resolveTypeElements(ctx, node.typeParameters.params[0], scope),
-          scope
+          resolveTypeElements(
+            ctx,
+            node.typeParameters.params[0],
+            scope,
+            typeParameters,
+          ),
+          scope,
         )
       }
       const resolved = resolveTypeReference(ctx, node, scope)
       if (resolved) {
-        return resolveTypeElements(ctx, resolved, resolved._ownerScope)
+        let typeParams: Record<string, Node> | undefined
+        if (
+          (resolved.type === 'TSTypeAliasDeclaration' ||
+            resolved.type === 'TSInterfaceDeclaration') &&
+          resolved.typeParameters &&
+          node.typeParameters
+        ) {
+          typeParams = Object.create(null)
+          resolved.typeParameters.params.forEach((p, i) => {
+            let param = typeParameters && typeParameters[p.name]
+            if (!param) param = node.typeParameters!.params[i]
+            typeParams![p.name] = param
+          })
+        }
+        return resolveTypeElements(
+          ctx,
+          resolved,
+          resolved._ownerScope,
+          typeParams,
+        )
       } else {
         if (typeof typeName === 'string') {
+          if (typeParameters && typeParameters[typeName]) {
+            return resolveTypeElements(
+              ctx,
+              typeParameters[typeName],
+              scope,
+              typeParameters,
+            )
+          }
           if (
-            // @ts-ignore
+            // @ts-expect-error
             SupportedBuiltinsSet.has(typeName)
           ) {
-            return resolveBuiltin(ctx, node, typeName as any, scope)
+            return resolveBuiltin(
+              ctx,
+              node,
+              typeName as any,
+              scope,
+              typeParameters,
+            )
           } else if (typeName === 'ReturnType' && node.typeParameters) {
             // limited support, only reference types
             const ret = resolveReturnType(
               ctx,
               node.typeParameters.params[0],
-              scope
+              scope,
             )
             if (ret) {
               return resolveTypeElements(ctx, ret, scope)
@@ -199,7 +279,7 @@ function innerResolveTypeElements(
         return ctx.error(
           `Unresolvable type reference or unsupported built-in utility type`,
           node,
-          scope
+          scope,
         )
       }
     }
@@ -212,14 +292,14 @@ function innerResolveTypeElements(
       ) {
         return resolveExtractPropTypes(
           resolveTypeElements(ctx, node.typeParameters.params[0], scope),
-          scope
+          scope,
         )
       }
       const sourceScope = importSourceToScope(
         ctx,
         node.argument,
         scope,
-        node.argument.value
+        node.argument.value,
       )
       const resolved = resolveTypeReference(ctx, node, sourceScope)
       if (resolved) {
@@ -242,11 +322,18 @@ function innerResolveTypeElements(
 function typeElementsToMap(
   ctx: TypeResolveContext,
   elements: TSTypeElement[],
-  scope = ctxToScope(ctx)
+  scope = ctxToScope(ctx),
+  typeParameters?: Record<string, Node>,
 ): ResolvedElements {
   const res: ResolvedElements = { props: {} }
   for (const e of elements) {
     if (e.type === 'TSPropertySignature' || e.type === 'TSMethodSignature') {
+      // capture generic parameters on node's scope
+      if (typeParameters) {
+        scope = createChildScope(scope)
+        scope.isGenericScope = true
+        Object.assign(scope.types, typeParameters)
+      }
       ;(e as MaybeWithScope)._ownerScope = scope
       const name = getId(e.key)
       if (name && !e.computed) {
@@ -259,7 +346,7 @@ function typeElementsToMap(
         ctx.error(
           `Unsupported computed key in type referenced by a macro`,
           e.key,
-          scope
+          scope,
         )
       }
     } else if (e.type === 'TSCallSignatureDeclaration') {
@@ -271,7 +358,7 @@ function typeElementsToMap(
 
 function mergeElements(
   maps: ResolvedElements[],
-  type: 'TSUnionType' | 'TSIntersectionType'
+  type: 'TSUnionType' | 'TSIntersectionType',
 ): ResolvedElements {
   if (maps.length === 1) return maps[0]
   const res: ResolvedElements = { props: {} }
@@ -285,11 +372,11 @@ function mergeElements(
           baseProps[key].key,
           {
             type,
-            // @ts-ignore
-            types: [baseProps[key], props[key]]
+            // @ts-expect-error
+            types: [baseProps[key], props[key]],
           },
           baseProps[key]._ownerScope,
-          baseProps[key].optional || props[key].optional
+          baseProps[key].optional || props[key].optional,
         )
       }
     }
@@ -304,7 +391,7 @@ function createProperty(
   key: Expression,
   typeAnnotation: TSType,
   scope: TypeScope,
-  optional: boolean
+  optional: boolean,
 ): TSPropertySignature & WithScope {
   return {
     type: 'TSPropertySignature',
@@ -313,32 +400,35 @@ function createProperty(
     optional,
     typeAnnotation: {
       type: 'TSTypeAnnotation',
-      typeAnnotation
+      typeAnnotation,
     },
-    _ownerScope: scope
+    _ownerScope: scope,
   }
 }
 
 function resolveInterfaceMembers(
   ctx: TypeResolveContext,
   node: TSInterfaceDeclaration & MaybeWithScope,
-  scope: TypeScope
+  scope: TypeScope,
+  typeParameters?: Record<string, Node>,
 ): ResolvedElements {
-  const base = typeElementsToMap(ctx, node.body.body, node._ownerScope)
+  const base = typeElementsToMap(
+    ctx,
+    node.body.body,
+    node._ownerScope,
+    typeParameters,
+  )
   if (node.extends) {
     for (const ext of node.extends) {
-      if (
-        ext.leadingComments &&
-        ext.leadingComments.some(c => c.value.includes('@vue-ignore'))
-      ) {
-        continue
-      }
       try {
-        const { props } = resolveTypeElements(ctx, ext, scope)
+        const { props, calls } = resolveTypeElements(ctx, ext, scope)
         for (const key in props) {
           if (!hasOwn(base.props, key)) {
             base.props[key] = props[key]
           }
+        }
+        if (calls) {
+          ;(base.calls || (base.calls = [])).push(...calls)
         }
       } catch (e) {
         ctx.error(
@@ -348,7 +438,8 @@ function resolveInterfaceMembers(
             `interface Props extends /* @vue-ignore */ Base {}\n\n` +
             `Note: both in 3.2 or with the ignore, the properties in the base ` +
             `type are treated as fallthrough attrs at runtime.`,
-          ext
+          ext,
+          scope,
         )
       }
     }
@@ -359,19 +450,28 @@ function resolveInterfaceMembers(
 function resolveMappedType(
   ctx: TypeResolveContext,
   node: TSMappedType,
-  scope: TypeScope
+  scope: TypeScope,
+  typeParameters?: Record<string, Node>,
 ): ResolvedElements {
   const res: ResolvedElements = { props: {} }
-  const keys = resolveStringType(ctx, node.typeParameter.constraint!, scope)
+  let keys: string[]
+  if (node.nameType) {
+    const { name, constraint } = node.typeParameter
+    scope = createChildScope(scope)
+    Object.assign(scope.types, { ...typeParameters, [name]: constraint })
+    keys = resolveStringType(ctx, node.nameType, scope)
+  } else {
+    keys = resolveStringType(ctx, node.typeParameter.constraint!, scope)
+  }
   for (const key of keys) {
     res.props[key] = createProperty(
       {
         type: 'Identifier',
-        name: key
+        name: key,
       },
       node.typeAnnotation!,
       scope,
-      !!node.optional
+      !!node.optional,
     )
   }
   return res
@@ -380,7 +480,7 @@ function resolveMappedType(
 function resolveIndexType(
   ctx: TypeResolveContext,
   node: TSIndexedAccessType,
-  scope: TypeScope
+  scope: TypeScope,
 ): (TSType & MaybeWithScope)[] {
   if (node.indexType.type === 'TSNumberKeyword') {
     return resolveArrayElementType(ctx, node.objectType, scope)
@@ -411,7 +511,7 @@ function resolveIndexType(
 function resolveArrayElementType(
   ctx: TypeResolveContext,
   node: Node,
-  scope: TypeScope
+  scope: TypeScope,
 ): TSType[] {
   // type[]
   if (node.type === 'TSArrayType') {
@@ -420,7 +520,7 @@ function resolveArrayElementType(
   // tuple
   if (node.type === 'TSTupleType') {
     return node.elementTypes.map(t =>
-      t.type === 'TSNamedTupleMember' ? t.elementType : t
+      t.type === 'TSNamedTupleMember' ? t.elementType : t,
     )
   }
   if (node.type === 'TSTypeReference') {
@@ -437,14 +537,14 @@ function resolveArrayElementType(
   return ctx.error(
     'Failed to resolve element type from target type',
     node,
-    scope
+    scope,
   )
 }
 
 function resolveStringType(
   ctx: TypeResolveContext,
   node: Node,
-  scope: TypeScope
+  scope: TypeScope,
 ): string[] {
   switch (node.type) {
     case 'StringLiteral':
@@ -483,7 +583,7 @@ function resolveStringType(
             ctx.error(
               'Unsupported type when resolving index type',
               node.typeName,
-              scope
+              scope,
             )
         }
       }
@@ -495,7 +595,7 @@ function resolveStringType(
 function resolveTemplateKeys(
   ctx: TypeResolveContext,
   node: TemplateLiteral,
-  scope: TypeScope
+  scope: TypeScope,
 ): string[] {
   if (!node.expressions.length) {
     return [node.quasis[0].value.raw]
@@ -511,9 +611,9 @@ function resolveTemplateKeys(
     {
       ...node,
       expressions: node.expressions.slice(1),
-      quasis: q ? node.quasis.slice(1) : node.quasis
+      quasis: q ? node.quasis.slice(1) : node.quasis,
     },
-    scope
+    scope,
   )
 
   for (const r of resolved) {
@@ -530,7 +630,7 @@ const SupportedBuiltinsSet = new Set([
   'Required',
   'Readonly',
   'Pick',
-  'Omit'
+  'Omit',
 ] as const)
 
 type GetSetType<T> = T extends Set<infer V> ? V : never
@@ -539,9 +639,15 @@ function resolveBuiltin(
   ctx: TypeResolveContext,
   node: TSTypeReference | TSExpressionWithTypeArguments,
   name: GetSetType<typeof SupportedBuiltinsSet>,
-  scope: TypeScope
+  scope: TypeScope,
+  typeParameters?: Record<string, Node>,
 ): ResolvedElements {
-  const t = resolveTypeElements(ctx, node.typeParameters!.params[0], scope)
+  const t = resolveTypeElements(
+    ctx,
+    node.typeParameters!.params[0],
+    scope,
+    typeParameters,
+  )
   switch (name) {
     case 'Partial': {
       const res: ResolvedElements = { props: {}, calls: t.calls }
@@ -563,7 +669,7 @@ function resolveBuiltin(
       const picked = resolveStringType(
         ctx,
         node.typeParameters!.params[1],
-        scope
+        scope,
       )
       const res: ResolvedElements = { props: {}, calls: t.calls }
       for (const key of picked) {
@@ -575,7 +681,7 @@ function resolveBuiltin(
       const omitted = resolveStringType(
         ctx,
         node.typeParameters!.params[1],
-        scope
+        scope,
       )
       const res: ResolvedElements = { props: {}, calls: t.calls }
       for (const key in t.props) {
@@ -600,18 +706,20 @@ function resolveTypeReference(
   },
   scope?: TypeScope,
   name?: string,
-  onlyExported = false
+  onlyExported = false,
 ): ScopeTypeNode | undefined {
-  if (node._resolvedReference) {
+  const canCache = !scope?.isGenericScope
+  if (canCache && node._resolvedReference) {
     return node._resolvedReference
   }
-  return (node._resolvedReference = innerResolveTypeReference(
+  const resolved = innerResolveTypeReference(
     ctx,
     scope || ctxToScope(ctx),
     name || getReferenceName(node),
     node,
-    onlyExported
-  ))
+    onlyExported,
+  )
+  return canCache ? (node._resolvedReference = resolved) : resolved
 }
 
 function innerResolveTypeReference(
@@ -619,7 +727,7 @@ function innerResolveTypeReference(
   scope: TypeScope,
   name: string | string[],
   node: ReferenceTypes,
-  onlyExported: boolean
+  onlyExported: boolean,
 ): ScopeTypeNode | undefined {
   if (typeof name === 'string') {
     if (scope.imports[name]) {
@@ -631,8 +739,8 @@ function innerResolveTypeReference(
             ? scope.exportedDeclares
             : scope.declares
           : onlyExported
-          ? scope.exportedTypes
-          : scope.types
+            ? scope.exportedTypes
+            : scope.types
       if (lookupSource[name]) {
         return lookupSource[name]
       } else {
@@ -663,7 +771,7 @@ function innerResolveTypeReference(
           childScope,
           name.length > 2 ? name.slice(1) : name[name.length - 1],
           node,
-          !ns.declare
+          !ns.declare,
         )
       }
     }
@@ -675,10 +783,10 @@ function getReferenceName(node: ReferenceTypes): string | string[] {
     node.type === 'TSTypeReference'
       ? node.typeName
       : node.type === 'TSExpressionWithTypeArguments'
-      ? node.expression
-      : node.type === 'TSImportType'
-      ? node.qualifier
-      : node.exprName
+        ? node.expression
+        : node.type === 'TSImportType'
+          ? node.qualifier
+          : node.exprName
   if (ref?.type === 'Identifier') {
     return ref.name
   } else if (ref?.type === 'TSQualifiedName') {
@@ -703,7 +811,7 @@ function resolveGlobalScope(ctx: TypeResolveContext): TypeScope[] | undefined {
       throw new Error('[vue/compiler-sfc] globalTypeFiles requires fs access.')
     }
     return ctx.options.globalTypeFiles.map(file =>
-      fileToScope(ctx, normalizePath(file), true)
+      fileToScope(ctx, normalizePath(file), true),
     )
   }
 }
@@ -715,7 +823,25 @@ let loadTS: (() => typeof TS) | undefined
  * @private
  */
 export function registerTS(_loadTS: () => typeof TS) {
-  loadTS = _loadTS
+  loadTS = () => {
+    try {
+      return _loadTS()
+    } catch (err: any) {
+      if (
+        typeof err.message === 'string' &&
+        err.message.includes('Cannot find module')
+      ) {
+        throw new Error(
+          'Failed to load TypeScript, which is required for resolving imported types. ' +
+            'Please make sure "typescript" is installed as a project dependency.',
+        )
+      } else {
+        throw new Error(
+          'Failed to load TypeScript for resolving imported types.',
+        )
+      }
+    }
+  }
 }
 
 type FS = NonNullable<SFCScriptCompileOptions['fs']>
@@ -743,7 +869,8 @@ function resolveFS(ctx: TypeResolveContext): FS | undefined {
         file = file.replace(/\.ts$/, '')
       }
       return fs.readFile(file)
-    }
+    },
+    realpath: fs.realpath,
   })
 }
 
@@ -751,7 +878,7 @@ function resolveTypeFromImport(
   ctx: TypeResolveContext,
   node: ReferenceTypes,
   name: string,
-  scope: TypeScope
+  scope: TypeScope,
 ): ScopeTypeNode | undefined {
   const { source, imported } = scope.imports[name]
   const sourceScope = importSourceToScope(ctx, node, scope, source)
@@ -762,31 +889,41 @@ function importSourceToScope(
   ctx: TypeResolveContext,
   node: Node,
   scope: TypeScope,
-  source: string
+  source: string,
 ): TypeScope {
-  const fs = resolveFS(ctx)
+  let fs: FS | undefined
+  try {
+    fs = resolveFS(ctx)
+  } catch (err: any) {
+    return ctx.error(err.message, node, scope)
+  }
   if (!fs) {
     return ctx.error(
       `No fs option provided to \`compileScript\` in non-Node environment. ` +
         `File system access is required for resolving imported types.`,
       node,
-      scope
+      scope,
     )
   }
 
   let resolved: string | undefined = scope.resolvedImportSources[source]
   if (!resolved) {
-    if (source.startsWith('.')) {
+    if (source.startsWith('..')) {
+      const osSpecificJoinFn = process.platform === 'win32' ? join : joinPaths
+
+      const filename = osSpecificJoinFn(dirname(scope.filename), source)
+      resolved = resolveExt(filename, fs)
+    } else if (source[0] === '.') {
       // relative import - fast path
       const filename = joinPaths(dirname(scope.filename), source)
       resolved = resolveExt(filename, fs)
     } else {
       // module or aliased import - use full TS resolution, only supported in Node
-      if (!__NODE_JS__) {
+      if (!__CJS__) {
         return ctx.error(
           `Type import from non-relative sources is not supported in the browser build.`,
           node,
-          scope
+          scope,
         )
       }
       if (!ts) {
@@ -797,7 +934,7 @@ function importSourceToScope(
               `typescript is required as a peer dep for vue in order ` +
               `to support resolving types from module imports.`,
             node,
-            scope
+            scope,
           )
         }
       }
@@ -815,7 +952,7 @@ function importSourceToScope(
     return ctx.error(
       `Failed to resolve import source ${JSON.stringify(source)}.`,
       node,
-      scope
+      scope,
     )
   }
 }
@@ -829,8 +966,10 @@ function resolveExt(filename: string, fs: FS) {
   return (
     tryResolve(filename) ||
     tryResolve(filename + `.ts`) ||
+    tryResolve(filename + `.tsx`) ||
     tryResolve(filename + `.d.ts`) ||
     tryResolve(joinPaths(filename, `index.ts`)) ||
+    tryResolve(joinPaths(filename, `index.tsx`)) ||
     tryResolve(joinPaths(filename, `index.d.ts`))
   )
 }
@@ -847,9 +986,9 @@ function resolveWithTS(
   containingFile: string,
   source: string,
   ts: typeof TS,
-  fs: FS
+  fs: FS,
 ): string | undefined {
-  if (!__NODE_JS__) return
+  if (!__CJS__) return
 
   // 1. resolve tsconfig.json
   const configPath = ts.findConfigFile(containingFile, fs.fileExists)
@@ -874,13 +1013,13 @@ function resolveWithTS(
       for (const c of configs) {
         const base = normalizePath(
           (c.config.options.pathsBasePath as string) ||
-            dirname(c.config.options.configFilePath as string)
+            dirname(c.config.options.configFilePath as string),
         )
-        const included: string[] = c.config.raw?.include
-        const excluded: string[] = c.config.raw?.exclude
+        const included: string[] | undefined = c.config.raw?.include
+        const excluded: string[] | undefined = c.config.raw?.exclude
         if (
           (!included && (!base || containingFile.startsWith(base))) ||
-          included.some(p => isMatch(containingFile, joinPaths(base, p)))
+          included?.some(p => isMatch(containingFile, joinPaths(base, p)))
         ) {
           if (
             excluded &&
@@ -902,7 +1041,7 @@ function resolveWithTS(
       (matchedConfig.cache = ts.createModuleResolutionCache(
         process.cwd(),
         createGetCanonicalFileName(ts.sys.useCaseSensitiveFileNames),
-        tsCompilerOptions
+        tsCompilerOptions,
       ))
   } else {
     tsCompilerOptions = {}
@@ -914,7 +1053,7 @@ function resolveWithTS(
     containingFile,
     tsCompilerOptions,
     fs,
-    tsResolveCache
+    tsResolveCache,
   )
 
   if (res.resolvedModule) {
@@ -922,14 +1061,14 @@ function resolveWithTS(
     if (filename.endsWith('.vue.ts')) {
       filename = filename.replace(/\.ts$/, '')
     }
-    return filename
+    return fs.realpath ? fs.realpath(filename) : filename
   }
 }
 
 function loadTSConfig(
   configPath: string,
   ts: typeof TS,
-  fs: FS
+  fs: FS,
 ): TS.ParsedCommandLine[] {
   // The only case where `fs` is NOT `ts.sys` is during tests.
   // parse config host requires an extra `readDirectory` method
@@ -938,7 +1077,7 @@ function loadTSConfig(
     ? {
         ...fs,
         useCaseSensitiveFileNames: true,
-        readDirectory: () => []
+        readDirectory: () => [],
       }
     : ts.sys
   const config = ts.parseJsonConfigFileContent(
@@ -946,13 +1085,17 @@ function loadTSConfig(
     parseConfigHost,
     dirname(configPath),
     undefined,
-    configPath
+    configPath,
   )
   const res = [config]
   if (config.projectReferences) {
     for (const ref of config.projectReferences) {
-      tsConfigRefMap.set(ref.path, configPath)
-      res.unshift(...loadTSConfig(ref.path, ts, fs))
+      const refPath = ts.resolveProjectReferencePath(ref)
+      if (!fs.fileExists(refPath)) {
+        continue
+      }
+      tsConfigRefMap.set(refPath, configPath)
+      res.unshift(...loadTSConfig(refPath, ts, fs))
     }
   }
   return res
@@ -974,7 +1117,7 @@ export function invalidateTypeCache(filename: string) {
 export function fileToScope(
   ctx: TypeResolveContext,
   filename: string,
-  asGlobal = false
+  asGlobal = false,
 ): TypeScope {
   const cached = fileToScopeCache.get(filename)
   if (cached) {
@@ -993,21 +1136,21 @@ export function fileToScope(
 function parseFile(
   filename: string,
   content: string,
-  parserPlugins?: SFCScriptCompileOptions['babelParserPlugins']
+  parserPlugins?: SFCScriptCompileOptions['babelParserPlugins'],
 ): Statement[] {
   const ext = extname(filename)
-  if (ext === '.ts' || ext === '.tsx') {
+  if (ext === '.ts' || ext === '.mts' || ext === '.tsx' || ext === '.mtsx') {
     return babelParse(content, {
       plugins: resolveParserPlugins(
         ext.slice(1),
         parserPlugins,
-        filename.endsWith('.d.ts')
+        /\.d\.m?ts$/.test(filename),
       ),
-      sourceType: 'module'
+      sourceType: 'module',
     }).program.body
   } else if (ext === '.vue') {
     const {
-      descriptor: { script, scriptSetup }
+      descriptor: { script, scriptSetup },
     } = parse(content)
     if (!script && !scriptSetup) {
       return []
@@ -1032,7 +1175,7 @@ function parseFile(
     const lang = script?.lang || scriptSetup?.lang
     return babelParse(scriptContent, {
       plugins: resolveParserPlugins(lang!, parserPlugins),
-      sourceType: 'module'
+      sourceType: 'module',
     }).program.body
   }
   return []
@@ -1047,14 +1190,14 @@ function ctxToScope(ctx: TypeResolveContext): TypeScope {
     'ast' in ctx
       ? ctx.ast
       : ctx.scriptAst
-      ? [...ctx.scriptAst.body, ...ctx.scriptSetupAst!.body]
-      : ctx.scriptSetupAst!.body
+        ? [...ctx.scriptAst.body, ...ctx.scriptSetupAst!.body]
+        : ctx.scriptSetupAst!.body
 
   const scope = new TypeScope(
     ctx.filename,
     ctx.source,
     'startOffset' in ctx ? ctx.startOffset! : 0,
-    'userImports' in ctx ? Object.create(ctx.userImports) : recordImports(body)
+    'userImports' in ctx ? Object.create(ctx.userImports) : recordImports(body),
   )
 
   recordTypes(ctx, body, scope)
@@ -1065,20 +1208,13 @@ function ctxToScope(ctx: TypeResolveContext): TypeScope {
 function moduleDeclToScope(
   ctx: TypeResolveContext,
   node: TSModuleDeclaration & { _resolvedChildScope?: TypeScope },
-  parentScope: TypeScope
+  parentScope: TypeScope,
 ): TypeScope {
   if (node._resolvedChildScope) {
     return node._resolvedChildScope
   }
 
-  const scope = new TypeScope(
-    parentScope.filename,
-    parentScope.source,
-    parentScope.offset,
-    Object.create(parentScope.imports),
-    Object.create(parentScope.types),
-    Object.create(parentScope.declares)
-  )
+  const scope = createChildScope(parentScope)
 
   if (node.body.type === 'TSModuleDeclaration') {
     const decl = node.body as TSModuleDeclaration & WithScope
@@ -1092,13 +1228,24 @@ function moduleDeclToScope(
   return (node._resolvedChildScope = scope)
 }
 
+function createChildScope(parentScope: TypeScope) {
+  return new TypeScope(
+    parentScope.filename,
+    parentScope.source,
+    parentScope.offset,
+    Object.create(parentScope.imports),
+    Object.create(parentScope.types),
+    Object.create(parentScope.declares),
+  )
+}
+
 const importExportRE = /^Import|^Export/
 
 function recordTypes(
   ctx: TypeResolveContext,
   body: Statement[],
   scope: TypeScope,
-  asGlobal = false
+  asGlobal = false,
 ) {
   const { types, declares, exportedTypes, exportedDeclares, imports } = scope
   const isAmbient = asGlobal
@@ -1134,15 +1281,15 @@ function recordTypes(
                 // re-export, register an import + export as a type reference
                 imports[exported] = {
                   source: stmt.source.value,
-                  imported: local
+                  imported: local,
                 }
                 exportedTypes[exported] = {
                   type: 'TSTypeReference',
                   typeName: {
                     type: 'Identifier',
-                    name: local
+                    name: local,
                   },
-                  _ownerScope: scope
+                  _ownerScope: scope,
                 }
               } else if (types[local]) {
                 // exporting local defined type
@@ -1156,7 +1303,7 @@ function recordTypes(
           ctx,
           stmt.source,
           scope,
-          stmt.source.value
+          stmt.source.value,
         )
         Object.assign(scope.exportedTypes, sourceScope.exportedTypes)
       } else if (stmt.type === 'ExportDefaultDeclaration' && stmt.declaration) {
@@ -1166,7 +1313,7 @@ function recordTypes(
             stmt.declaration,
             exportedTypes,
             exportedDeclares,
-            'default'
+            'default',
           )
         } else if (types[stmt.declaration.name]) {
           exportedTypes['default'] = types[stmt.declaration.name]
@@ -1188,7 +1335,7 @@ function recordType(
   node: Node,
   types: Record<string, Node>,
   declares: Record<string, Node>,
-  overwriteId?: string
+  overwriteId?: string,
 ) {
   switch (node.type) {
     case 'TSInterfaceDeclaration':
@@ -1230,7 +1377,7 @@ function recordType(
       if (overwriteId || node.id) types[overwriteId || getId(node.id!)] = node
       break
     case 'TSTypeAliasDeclaration':
-      types[node.id.name] = node.typeAnnotation
+      types[node.id.name] = node.typeParameters ? node : node.typeAnnotation
       break
     case 'TSDeclareFunction':
       if (node.id) declares[node.id.name] = node
@@ -1263,7 +1410,7 @@ function mergeNamespaces(to: TSModuleDeclaration, from: TSModuleDeclaration) {
         type: 'ExportNamedDeclaration',
         declaration: toBody,
         exportKind: 'type',
-        specifiers: []
+        specifiers: [],
       })
     }
   } else if (fromBody.type === 'TSModuleDeclaration') {
@@ -1272,7 +1419,7 @@ function mergeNamespaces(to: TSModuleDeclaration, from: TSModuleDeclaration) {
       type: 'ExportNamedDeclaration',
       declaration: fromBody,
       exportKind: 'type',
-      specifiers: []
+      specifiers: [],
     })
   } else {
     // both block
@@ -1282,7 +1429,7 @@ function mergeNamespaces(to: TSModuleDeclaration, from: TSModuleDeclaration) {
 
 function attachNamespace(
   to: Node & { _ns?: TSModuleDeclaration },
-  ns: TSModuleDeclaration
+  ns: TSModuleDeclaration,
 ) {
   if (!to._ns) {
     to._ns = ns
@@ -1306,7 +1453,7 @@ function recordImport(node: Node, imports: TypeScope['imports']) {
   for (const s of node.specifiers) {
     imports[s.local.name] = {
       imported: getImportedName(s),
-      source: node.source.value
+      source: node.source.value,
     }
   }
 }
@@ -1314,7 +1461,8 @@ function recordImport(node: Node, imports: TypeScope['imports']) {
 export function inferRuntimeType(
   ctx: TypeResolveContext,
   node: Node & MaybeWithScope,
-  scope = node._ownerScope || ctxToScope(ctx)
+  scope = node._ownerScope || ctxToScope(ctx),
+  isKeyOf = false,
 ): string[] {
   try {
     switch (node.type) {
@@ -1334,8 +1482,29 @@ export function inferRuntimeType(
         const types = new Set<string>()
         const members =
           node.type === 'TSTypeLiteral' ? node.members : node.body.body
+
         for (const m of members) {
-          if (
+          if (isKeyOf) {
+            if (
+              m.type === 'TSPropertySignature' &&
+              m.key.type === 'NumericLiteral'
+            ) {
+              types.add('Number')
+            } else if (m.type === 'TSIndexSignature') {
+              const annotation = m.parameters[0].typeAnnotation
+              if (annotation && annotation.type !== 'Noop') {
+                const type = inferRuntimeType(
+                  ctx,
+                  annotation.typeAnnotation,
+                  scope,
+                )[0]
+                if (type === UNKNOWN_TYPE) return [UNKNOWN_TYPE]
+                types.add(type)
+              }
+            } else {
+              types.add('String')
+            }
+          } else if (
             m.type === 'TSCallSignatureDeclaration' ||
             m.type === 'TSConstructSignatureDeclaration'
           ) {
@@ -1344,16 +1513,20 @@ export function inferRuntimeType(
             types.add('Object')
           }
         }
-        return types.size ? Array.from(types) : ['Object']
+
+        return types.size
+          ? Array.from(types)
+          : [isKeyOf ? UNKNOWN_TYPE : 'Object']
       }
       case 'TSPropertySignature':
         if (node.typeAnnotation) {
           return inferRuntimeType(
             ctx,
             node.typeAnnotation.typeAnnotation,
-            scope
+            scope,
           )
         }
+        break
       case 'TSMethodSignature':
       case 'TSFunctionType':
         return ['Function']
@@ -1378,70 +1551,132 @@ export function inferRuntimeType(
       case 'TSTypeReference': {
         const resolved = resolveTypeReference(ctx, node, scope)
         if (resolved) {
-          return inferRuntimeType(ctx, resolved, resolved._ownerScope)
+          return inferRuntimeType(ctx, resolved, resolved._ownerScope, isKeyOf)
         }
+
         if (node.typeName.type === 'Identifier') {
-          switch (node.typeName.name) {
-            case 'Array':
-            case 'Function':
-            case 'Object':
-            case 'Set':
-            case 'Map':
-            case 'WeakSet':
-            case 'WeakMap':
-            case 'Date':
-            case 'Promise':
-              return [node.typeName.name]
+          if (isKeyOf) {
+            switch (node.typeName.name) {
+              case 'String':
+              case 'Array':
+              case 'ArrayLike':
+              case 'Parameters':
+              case 'ConstructorParameters':
+              case 'ReadonlyArray':
+                return ['String', 'Number']
 
-            // TS built-in utility types
-            // https://www.typescriptlang.org/docs/handbook/utility-types.html
-            case 'Partial':
-            case 'Required':
-            case 'Readonly':
-            case 'Record':
-            case 'Pick':
-            case 'Omit':
-            case 'InstanceType':
-              return ['Object']
+              // TS built-in utility types
+              case 'Record':
+              case 'Partial':
+              case 'Required':
+              case 'Readonly':
+                if (node.typeParameters && node.typeParameters.params[0]) {
+                  return inferRuntimeType(
+                    ctx,
+                    node.typeParameters.params[0],
+                    scope,
+                    true,
+                  )
+                }
+                break
+              case 'Pick':
+              case 'Extract':
+                if (node.typeParameters && node.typeParameters.params[1]) {
+                  return inferRuntimeType(
+                    ctx,
+                    node.typeParameters.params[1],
+                    scope,
+                  )
+                }
+                break
 
-            case 'Uppercase':
-            case 'Lowercase':
-            case 'Capitalize':
-            case 'Uncapitalize':
-              return ['String']
+              case 'Function':
+              case 'Object':
+              case 'Set':
+              case 'Map':
+              case 'WeakSet':
+              case 'WeakMap':
+              case 'Date':
+              case 'Promise':
+              case 'Error':
+              case 'Uppercase':
+              case 'Lowercase':
+              case 'Capitalize':
+              case 'Uncapitalize':
+              case 'ReadonlyMap':
+              case 'ReadonlySet':
+                return ['String']
+            }
+          } else {
+            switch (node.typeName.name) {
+              case 'Array':
+              case 'Function':
+              case 'Object':
+              case 'Set':
+              case 'Map':
+              case 'WeakSet':
+              case 'WeakMap':
+              case 'Date':
+              case 'Promise':
+              case 'Error':
+                return [node.typeName.name]
 
-            case 'Parameters':
-            case 'ConstructorParameters':
-              return ['Array']
+              // TS built-in utility types
+              // https://www.typescriptlang.org/docs/handbook/utility-types.html
+              case 'Partial':
+              case 'Required':
+              case 'Readonly':
+              case 'Record':
+              case 'Pick':
+              case 'Omit':
+              case 'InstanceType':
+                return ['Object']
 
-            case 'NonNullable':
-              if (node.typeParameters && node.typeParameters.params[0]) {
-                return inferRuntimeType(
-                  ctx,
-                  node.typeParameters.params[0],
-                  scope
-                ).filter(t => t !== 'null')
-              }
-              break
-            case 'Extract':
-              if (node.typeParameters && node.typeParameters.params[1]) {
-                return inferRuntimeType(
-                  ctx,
-                  node.typeParameters.params[1],
-                  scope
-                )
-              }
-              break
-            case 'Exclude':
-            case 'OmitThisParameter':
-              if (node.typeParameters && node.typeParameters.params[0]) {
-                return inferRuntimeType(
-                  ctx,
-                  node.typeParameters.params[0],
-                  scope
-                )
-              }
-              break
+              case 'Uppercase':
+              case 'Lowercase':
+              case 'Capitalize':
+              case 'Uncapitalize':
+                return ['String']
+
+              case 'Parameters':
+              case 'ConstructorParameters':
+              case 'ReadonlyArray':
+                return ['Array']
+
+              case 'ReadonlyMap':
+                return ['Map']
+              case 'ReadonlySet':
+                return ['Set']
+
+              case 'NonNullable':
+                if (node.typeParameters && node.typeParameters.params[0]) {
+                  return inferRuntimeType(
+                    ctx,
+                    node.typeParameters.params[0],
+                    scope,
+                  ).filter(t => t !== 'null')
+                }
+                break
+              case 'Extract':
+                if (node.typeParameters && node.typeParameters.params[1]) {
+                  return inferRuntimeType(
+                    ctx,
+                    node.typeParameters.params[1],
+                    scope,
+                  )
+                }
+                break
+              case 'Exclude':
+              case 'OmitThisParameter':
+                if (node.typeParameters && node.typeParameters.params[0]) {
+                  return inferRuntimeType(
+                    ctx,
+                    node.typeParameters.params[0],
+                    scope,
+                  )
+                }
+                break
+            }
           }
         }
         // cannot infer, fallback to UNKNOWN: ThisParameterType
@@ -1452,10 +1687,10 @@ export function inferRuntimeType(
         return inferRuntimeType(ctx, node.typeAnnotation, scope)
 
       case 'TSUnionType':
-        return flattenTypes(ctx, node.types, scope)
+        return flattenTypes(ctx, node.types, scope, isKeyOf)
       case 'TSIntersectionType': {
-        return flattenTypes(ctx, node.types, scope).filter(
-          t => t !== UNKNOWN_TYPE
+        return flattenTypes(ctx, node.types, scope, isKeyOf).filter(
+          t => t !== UNKNOWN_TYPE,
         )
       }
 
@@ -1478,7 +1713,7 @@ export function inferRuntimeType(
           ctx,
           node.argument,
           scope,
-          node.argument.value
+          node.argument.value,
         )
         const resolved = resolveTypeReference(ctx, node, sourceScope)
         if (resolved) {
@@ -1493,8 +1728,25 @@ export function inferRuntimeType(
           // typeof only support identifier in local scope
           const matched = scope.declares[id.name]
           if (matched) {
-            return inferRuntimeType(ctx, matched, matched._ownerScope)
+            return inferRuntimeType(ctx, matched, matched._ownerScope, isKeyOf)
           }
+        }
+        break
+      }
+
+      // e.g. readonly
+      case 'TSTypeOperator': {
+        return inferRuntimeType(
+          ctx,
+          node.typeAnnotation,
+          scope,
+          node.operator === 'keyof',
+        )
+      }
+
+      case 'TSAnyKeyword': {
+        if (isKeyOf) {
+          return ['String', 'Number', 'Symbol']
         }
         break
       }
@@ -1508,17 +1760,18 @@ export function inferRuntimeType(
 function flattenTypes(
   ctx: TypeResolveContext,
   types: TSType[],
-  scope: TypeScope
+  scope: TypeScope,
+  isKeyOf: boolean = false,
 ): string[] {
   if (types.length === 1) {
-    return inferRuntimeType(ctx, types[0], scope)
+    return inferRuntimeType(ctx, types[0], scope, isKeyOf)
   }
   return [
     ...new Set(
       ([] as string[]).concat(
-        ...types.map(t => inferRuntimeType(ctx, t, scope))
-      )
-    )
+        ...types.map(t => inferRuntimeType(ctx, t, scope, isKeyOf)),
+      ),
+    ),
   ]
 }
 
@@ -1545,7 +1798,7 @@ function inferEnumType(node: TSEnumDeclaration): string[] {
  */
 function resolveExtractPropTypes(
   { props }: ResolvedElements,
-  scope: TypeScope
+  scope: TypeScope,
 ): ResolvedElements {
   const res: ResolvedElements = { props: {} }
   for (const key in props) {
@@ -1553,7 +1806,7 @@ function resolveExtractPropTypes(
     res.props[key] = reverseInferType(
       raw.key,
       raw.typeAnnotation!.typeAnnotation,
-      scope
+      scope,
     )
   }
   return res
@@ -1564,7 +1817,7 @@ function reverseInferType(
   node: TSType,
   scope: TypeScope,
   optional = true,
-  checkObjectSyntax = true
+  checkObjectSyntax = true,
 ): TSPropertySignature & WithScope {
   if (checkObjectSyntax && node.type === 'TSTypeLiteral') {
     // check { type: xxx }
@@ -1588,7 +1841,7 @@ function reverseInferType(
         key,
         ctorToType(node.typeName.name),
         scope,
-        optional
+        optional,
       )
     } else if (node.typeName.name === 'PropType' && node.typeParameters) {
       // PropType<{}>
@@ -1626,7 +1879,7 @@ function ctorToType(ctorType: string): TSType {
     case 'Promise':
       return {
         type: 'TSTypeReference',
-        typeName: { type: 'Identifier', name: ctor }
+        typeName: { type: 'Identifier', name: ctor },
       }
   }
   // fallback to null
@@ -1639,7 +1892,7 @@ function findStaticPropertyType(node: TSTypeLiteral, key: string) {
       m.type === 'TSPropertySignature' &&
       !m.computed &&
       getId(m.key) === key &&
-      m.typeAnnotation
+      m.typeAnnotation,
   )
   return prop && prop.typeAnnotation!.typeAnnotation
 }
@@ -1647,7 +1900,7 @@ function findStaticPropertyType(node: TSTypeLiteral, key: string) {
 function resolveReturnType(
   ctx: TypeResolveContext,
   arg: Node,
-  scope: TypeScope
+  scope: TypeScope,
 ) {
   let resolved: Node | undefined = arg
   if (
@@ -1669,7 +1922,7 @@ function resolveReturnType(
 export function resolveUnionType(
   ctx: TypeResolveContext,
   node: Node & MaybeWithScope & { _resolvedElements?: ResolvedElements },
-  scope?: TypeScope
+  scope?: TypeScope,
 ): Node[] {
   if (node.type === 'TSTypeReference') {
     const resolved = resolveTypeReference(ctx, node, scope)

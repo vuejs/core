@@ -1,4 +1,4 @@
-# vuejs/core [![npm](https://img.shields.io/npm/v/vue.svg)](https://www.npmjs.com/package/vue) [![build status](https://github.com/vuejs/core/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/vuejs/core/actions/workflows/ci.yml)
+# vuejs/core [![npm](https://img.shields.io/npm/v/vue.svg)](https://www.npmjs.com/package/vue) [![build status](https://github.com/vuejs/core/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/vuejs/core/actions/workflows/ci.yml) [![Download](https://img.shields.io/npm/dm/vue)](https://www.npmjs.com/package/vue)
 
 ## Getting Started
 
@@ -20,7 +20,7 @@ Vue.js is an MIT-licensed open source project with its ongoing development made 
 
 <p align="center">
   <a target="_blank" href="https://vuejs.org/sponsor/#current-sponsors">
-    <img alt="sponsors" src="https://sponsors.vuejs.org/sponsors.svg?v2">
+    <img alt="sponsors" src="https://sponsors.vuejs.org/sponsors.svg?v3">
   </a>
 </p>
 
