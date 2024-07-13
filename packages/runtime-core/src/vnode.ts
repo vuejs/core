@@ -92,10 +92,22 @@ export type VNodeRef =
     ) => void)
 
 export type VNodeNormalizedRefAtom = {
+  /**
+   * component instance
+   */
   i: ComponentInternalInstance
+  /**
+   * Actual ref
+   */
   r: VNodeRef
-  k?: string // setup ref key
-  f?: boolean // refInFor marker
+  /**
+   * setup ref key
+   */
+  k?: string
+  /**
+   * refInFor marker
+   */
+  f?: boolean
 }
 
 export type VNodeNormalizedRef =
