@@ -73,6 +73,7 @@ export function createBuffer() {
       const isStringItem = isString(item)
       if (appendable && isStringItem) {
         buffer[buffer.length - 1] += item as string
+        return
       } else {
         buffer.push(item)
       }
