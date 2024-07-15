@@ -93,7 +93,7 @@
     "pretty-bytes": "^6.1.1",
     "pug": "^3.0.3",
     "puppeteer": "~22.12.1",
-    "rimraf": "^5.0.8",
+    "rimraf": "^5.0.9",
     "rollup": "^4.18.0",
     "rollup-plugin-dts": "^6.1.1",
     "rollup-plugin-esbuild": "^6.1.1",
