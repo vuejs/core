@@ -216,7 +216,7 @@ export function triggerRef(ref: Ref) {
   triggerRefValue(ref, DirtyLevels.Dirty, __DEV__ ? ref.value : void 0)
 }
 
-export type MaybeRef<T = any> = T | Ref<T>
+export type MaybeRef<T = any> = T | Ref<T> | ShallowRef<T>
 export type MaybeRefOrGetter<T = any> = MaybeRef<T> | (() => T)
 
 /**
