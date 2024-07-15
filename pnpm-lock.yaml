@@ -35,9 +35,6 @@ importers:
       '@babel/types':
         specifier: 'catalog:'
         version: 7.24.7
-      '@codspeed/vitest-plugin':
-        specifier: ^3.1.0
-        version: 3.1.0(vite@5.3.3(@types/node@20.14.10)(sass@1.77.8)(terser@5.31.1))(vitest@1.6.0(@types/node@20.14.10)(jsdom@24.1.0)(sass@1.77.8)(terser@5.31.1))
       '@rollup/plugin-alias':
         specifier: ^5.1.0
         version: 5.1.0(rollup@4.18.0)
@@ -511,15 +508,6 @@ packages:
   '@babel/types@7.24.7':
     resolution: {integrity: sha512-XEFXSlxiG5td2EJRe8vOmRbaXVgfcBlszKujvVmWIK/UpywWljQCfzAv3RQCGujWQ1RD4YYWEAqDXfuJiy8f5Q==}
     engines: {node: '>=6.9.0'}
-
-  '@codspeed/core@3.1.0':
-    resolution: {integrity: sha512-oYd7X46QhnRkgRbZkqAoX9i3Fwm17FpunK4Ee5RdrvRYR0Xr93ewH8/O5g6uyTPDOOqDEv1v2KRYtWhVgN+2VQ==}
-
-  '@codspeed/vitest-plugin@3.1.0':
-    resolution: {integrity: sha512-ms11tUytiQTgB+idxZRUuCUQfgz4LaKTDJCLYm5VTSpOCUU7D5+QWvJnA8X8B9glPfR5siIK8RxrnZP4yuysKQ==}
-    peerDependencies:
-      vite: ^4.2.0 || ^5.0.0
-      vitest: '>=1.2.2'
 
   '@esbuild/aix-ppc64@0.21.5':
     resolution: {integrity: sha512-1SDgH6ZSPTlggy1yI6+Dbkiz8xzpHJEVAlF/AM1tHPLsf5STom9rwtjE4hKAF20FfXXNTFqEYXyJNWh1GiZedQ==}
@@ -1349,9 +1337,6 @@ packages:
   asynckit@0.4.0:
     resolution: {integrity: sha512-Oei9OH4tRh0YqU3GxhX79dM/mwVgvbZJaSNaRk+bshkj0S5cfHcgYakreBjrHwatXKbz+IoIdYLxrKim2MjW0Q==}
 
-  axios@1.7.2:
-    resolution: {integrity: sha512-2A8QhOMrbomlDuiLeK9XibIBzuHeRcqqNOHp0Cyp5EoJ1IFDh+XZH3A6BkXtv0K4gFGCI0Y4BM7B1wOEi0Rmgw==}
-
   b4a@1.6.6:
     resolution: {integrity: sha512-5Tk1HLk6b6ctmjIkAcU/Ujv/1WqiDl0F0JdRCR80VsOcUlHcu7pWeWRlOqQLHfDEsVx9YH/aif5AG4ehoCtTmg==}
 
@@ -1965,15 +1950,6 @@ packages:
   flatted@3.3.1:
     resolution: {integrity: sha512-X8cqMLLie7KsNUDSdzeN8FYK9rEt4Dt67OsG/DNGnYTSDBG4uFAJFBnUeiV+zCVAvwFy56IjM9sH51jVaEhNxw==}
 
-  follow-redirects@1.15.6:
-    resolution: {integrity: sha512-wWN62YITEaOpSK584EZXJafH1AGpO8RVgElfkuXbTOrPX4fIfOyEpW/CsiNd8JdYrAoOvafRTOEnvsO++qCqFA==}
-    engines: {node: '>=4.0'}
-    peerDependencies:
-      debug: '*'
-    peerDependenciesMeta:
-      debug:
-        optional: true
-
   foreground-child@3.2.1:
     resolution: {integrity: sha512-PXUUyLqrR2XCWICfv6ukppP96sdFwWbNEnfEMt7jNsISjMsvaLNinAHNDYyvkyU+SZG2BTSbT5NjG+vZslfGTA==}
     engines: {node: '>=14'}
@@ -2582,10 +2558,6 @@ packages:
   netmask@2.0.2:
     resolution: {integrity: sha512-dBpDMdxv9Irdq66304OLfEmQ9tbNRFnFTuZiLo+bD+r332bBmMJ8GBLXklIXXgxd3+v9+KUnZaUR5PJMa75Gsg==}
     engines: {node: '>= 0.4.0'}
-
-  node-gyp-build@4.8.1:
-    resolution: {integrity: sha512-OSs33Z9yWr148JZcbZd5WiAXhh/n9z8TxQcdMhIOlpN9AhWpLfvVFO73+m77bBABQMaY9XSvIa+qk0jlI7Gcaw==}
-    hasBin: true
 
   node-releases@2.0.14:
     resolution: {integrity: sha512-y10wOWt8yZpqXmOgRo77WaHEmhYQYGNA6y421PKsKYWEK8aW+cqAphborZDhqfyKrbZEN92CN1X2KbafY2s7Yw==}
@@ -3693,23 +3665,6 @@ snapshots:
       '@babel/helper-validator-identifier': 7.24.7
       to-fast-properties: 2.0.0
 
-  '@codspeed/core@3.1.0':
-    dependencies:
-      axios: 1.7.2
-      find-up: 6.3.0
-      form-data: 4.0.0
-      node-gyp-build: 4.8.1
-    transitivePeerDependencies:
-      - debug
-
-  '@codspeed/vitest-plugin@3.1.0(vite@5.3.3(@types/node@20.14.10)(sass@1.77.8)(terser@5.31.1))(vitest@1.6.0(@types/node@20.14.10)(jsdom@24.1.0)(sass@1.77.8)(terser@5.31.1))':
-    dependencies:
-      '@codspeed/core': 3.1.0
-      vite: 5.3.3(@types/node@20.14.10)(sass@1.77.8)(terser@5.31.1)
-      vitest: 1.6.0(@types/node@20.14.10)(jsdom@24.1.0)(sass@1.77.8)(terser@5.31.1)
-    transitivePeerDependencies:
-      - debug
-
   '@esbuild/aix-ppc64@0.21.5':
     optional: true
 
@@ -4368,14 +4323,6 @@ snapshots:
       tslib: 2.6.3
 
   asynckit@0.4.0: {}
-
-  axios@1.7.2:
-    dependencies:
-      follow-redirects: 1.15.6
-      form-data: 4.0.0
-      proxy-from-env: 1.1.0
-    transitivePeerDependencies:
-      - debug
 
   b4a@1.6.6: {}
 
@@ -5093,8 +5040,6 @@ snapshots:
 
   flatted@3.3.1: {}
 
-  follow-redirects@1.15.6: {}
-
   foreground-child@3.2.1:
     dependencies:
       cross-spawn: 7.0.3
@@ -5684,8 +5629,6 @@ snapshots:
   neo-async@2.6.2: {}
 
   netmask@2.0.2: {}
-
-  node-gyp-build@4.8.1: {}
 
   node-releases@2.0.14: {}
 
