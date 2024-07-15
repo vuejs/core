@@ -155,9 +155,6 @@ importers:
       simple-git-hooks:
         specifier: ^2.11.1
         version: 2.11.1
-      terser:
-        specifier: ^5.31.1
-        version: 5.31.1
       todomvc-app-css:
         specifier: ^2.4.3
         version: 2.4.3
@@ -3922,6 +3919,7 @@ snapshots:
     dependencies:
       '@jridgewell/gen-mapping': 0.3.5
       '@jridgewell/trace-mapping': 0.3.25
+    optional: true
 
   '@jridgewell/sourcemap-codec@1.4.15': {}
 
@@ -4449,7 +4447,8 @@ snapshots:
 
   buffer-crc32@0.2.13: {}
 
-  buffer-from@1.1.2: {}
+  buffer-from@1.1.2:
+    optional: true
 
   buffer@5.7.1:
     dependencies:
@@ -4575,7 +4574,8 @@ snapshots:
 
   commander@12.1.0: {}
 
-  commander@2.20.3: {}
+  commander@2.20.3:
+    optional: true
 
   commondir@1.0.1: {}
 
@@ -6287,6 +6287,7 @@ snapshots:
     dependencies:
       buffer-from: 1.1.2
       source-map: 0.6.1
+    optional: true
 
   source-map@0.6.1: {}
 
@@ -6406,6 +6407,7 @@ snapshots:
       acorn: 8.12.1
       commander: 2.20.3
       source-map-support: 0.5.21
+    optional: true
 
   test-exclude@6.0.0:
     dependencies:

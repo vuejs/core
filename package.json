@@ -101,7 +101,6 @@
     "semver": "^7.6.2",
     "serve": "^14.2.3",
     "simple-git-hooks": "^2.11.1",
-    "terser": "^5.31.1",
     "todomvc-app-css": "^2.4.3",
     "tslib": "^2.6.3",
     "tsx": "^4.16.2",
