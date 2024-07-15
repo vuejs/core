@@ -79,7 +79,7 @@
     "eslint": "^9.6.0",
     "eslint-plugin-import-x": "^0.5.3",
     "eslint-plugin-vitest": "^0.5.4",
-    "estree-walker": "^2.0.2",
+    "estree-walker": "catalog:",
     "jsdom": "^24.1.0",
     "lint-staged": "^15.2.7",
     "lodash": "^4.17.21",
