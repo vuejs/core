@@ -1,3 +1,19 @@
+## [3.4.31](https://github.com/vuejs/core/compare/v3.4.30...v3.4.31) (2024-06-28)
+
+
+### Bug Fixes
+
+* **compiler-core:** handle inline comments with undefined bindings ([#11217](https://github.com/vuejs/core/issues/11217)) ([746352a](https://github.com/vuejs/core/commit/746352a14d62e9d3d9a38c359d2c54d418c1e0ac)), closes [#11216](https://github.com/vuejs/core/issues/11216)
+* **shared:** unwrap refs in toDisplayString ([#7306](https://github.com/vuejs/core/issues/7306)) ([0126cff](https://github.com/vuejs/core/commit/0126cfff9d93bcec70e5745519f6378e3cd3f39c)), closes [#5578](https://github.com/vuejs/core/issues/5578) [#5593](https://github.com/vuejs/core/issues/5593) [#11199](https://github.com/vuejs/core/issues/11199) [#11201](https://github.com/vuejs/core/issues/11201)
+
+
+### Reverts
+
+* Revert "fix(reactivity): avoid infinite loop when render access a side effect computed ([#11135](https://github.com/vuejs/core/issues/11135))" ([e0df985](https://github.com/vuejs/core/commit/e0df985f0317fb65c5b461bf224375c7763f0269))
+* Revert "fix(reactivity): fix side effect computed dirty level (#11183)" ([6c303ea](https://github.com/vuejs/core/commit/6c303eacd14b7b0de0accc228f6abeb43d706f63)), closes [#11183](https://github.com/vuejs/core/issues/11183)
+
+
+
 ## [3.4.30](https://github.com/vuejs/core/compare/v3.4.29...v3.4.30) (2024-06-22)
 
 **Note: this release contains a fix (#11150) that requires `vue-tsc` to also be updated in sync to ^2.0.22. See #11196**

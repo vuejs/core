@@ -148,6 +148,15 @@ describe('SSR hydration', () => {
     expect(container.innerHTML).toBe(`<div class="bar">bar</div>`)
   })
 
+  // #7285
+  test('element with multiple continuous text vnodes', async () => {
+    // should no mismatch warning
+    const { container } = mountWithHydration('<div>fooo</div>', () =>
+      h('div', ['fo', createTextVNode('o'), 'o']),
+    )
+    expect(container.textContent).toBe('fooo')
+  })
+
   test('element with elements children', async () => {
     const msg = ref('foo')
     const fn = vi.fn()
@@ -237,6 +246,17 @@ describe('SSR hydration', () => {
     expect(vnode.el.innerHTML).toBe(
       `<!--[--><span>bar</span><!--[--><span class="bar"></span><!--]--><!--]-->`,
     )
+  })
+
+  // #7285
+  test('Fragment (multiple continuous text vnodes)', async () => {
+    // should no mismatch warning
+    const { container } = mountWithHydration('<!--[-->fooo<!--]-->', () => [
+      'fo',
+      createTextVNode('o'),
+      'o',
+    ])
+    expect(container.textContent).toBe('fooo')
   })
 
   test('Teleport', async () => {
@@ -1317,76 +1337,83 @@ describe('SSR hydration', () => {
   // #10607
   test('update component stable slot (prod + optimized mode)', async () => {
     __DEV__ = false
-    const container = document.createElement('div')
-    container.innerHTML = `<template><div show="false"><!--[--><div><div><!----></div></div><div>0</div><!--]--></div></template>`
-    const Comp = {
-      render(this: any) {
-        return (
-          openBlock(),
-          createElementBlock('div', null, [renderSlot(this.$slots, 'default')])
-        )
-      },
-    }
-    const show = ref(false)
-    const clicked = ref(false)
-
-    const Wrapper = {
-      setup() {
-        const items = ref<number[]>([])
-        onMounted(() => {
-          items.value = [1]
-        })
-        return () => {
+    try {
+      const container = document.createElement('div')
+      container.innerHTML = `<template><div show="false"><!--[--><div><div><!----></div></div><div>0</div><!--]--></div></template>`
+      const Comp = {
+        render(this: any) {
           return (
             openBlock(),
-            createBlock(Comp, null, {
-              default: withCtx(() => [
-                createElementVNode('div', null, [
-                  createElementVNode('div', null, [
-                    clicked.value
-                      ? (openBlock(),
-                        createElementBlock('div', { key: 0 }, 'foo'))
-                      : createCommentVNode('v-if', true),
-                  ]),
-                ]),
-                createElementVNode(
-                  'div',
-                  null,
-                  items.value.length,
-                  1 /* TEXT */,
-                ),
-              ]),
-              _: 1 /* STABLE */,
-            })
+            createElementBlock('div', null, [
+              renderSlot(this.$slots, 'default'),
+            ])
           )
-        }
-      },
-    }
-    createSSRApp({
-      components: { Wrapper },
-      data() {
-        return { show }
-      },
-      template: `<Wrapper :show="show"/>`,
-    }).mount(container)
+        },
+      }
+      const show = ref(false)
+      const clicked = ref(false)
 
-    await nextTick()
-    expect(container.innerHTML).toBe(
-      `<div show="false"><!--[--><div><div><!----></div></div><div>1</div><!--]--></div>`,
-    )
+      const Wrapper = {
+        setup() {
+          const items = ref<number[]>([])
+          onMounted(() => {
+            items.value = [1]
+          })
+          return () => {
+            return (
+              openBlock(),
+              createBlock(Comp, null, {
+                default: withCtx(() => [
+                  createElementVNode('div', null, [
+                    createElementVNode('div', null, [
+                      clicked.value
+                        ? (openBlock(),
+                          createElementBlock('div', { key: 0 }, 'foo'))
+                        : createCommentVNode('v-if', true),
+                    ]),
+                  ]),
+                  createElementVNode(
+                    'div',
+                    null,
+                    items.value.length,
+                    1 /* TEXT */,
+                  ),
+                ]),
+                _: 1 /* STABLE */,
+              })
+            )
+          }
+        },
+      }
+      createSSRApp({
+        components: { Wrapper },
+        data() {
+          return { show }
+        },
+        template: `<Wrapper :show="show"/>`,
+      }).mount(container)
 
-    show.value = true
-    await nextTick()
-    expect(async () => {
-      clicked.value = true
       await nextTick()
-    }).not.toThrow("Cannot read properties of null (reading 'insertBefore')")
+      expect(container.innerHTML).toBe(
+        `<div show="false"><!--[--><div><div><!----></div></div><div>1</div><!--]--></div>`,
+      )
 
-    await nextTick()
-    expect(container.innerHTML).toBe(
-      `<div show="true"><!--[--><div><div><div>foo</div></div></div><div>1</div><!--]--></div>`,
-    )
-    __DEV__ = true
+      show.value = true
+      await nextTick()
+      expect(async () => {
+        clicked.value = true
+        await nextTick()
+      }).not.toThrow("Cannot read properties of null (reading 'insertBefore')")
+
+      await nextTick()
+      expect(container.innerHTML).toBe(
+        `<div show="true"><!--[--><div><div><div>foo</div></div></div><div>1</div><!--]--></div>`,
+      )
+    } catch (e) {
+      throw e
+    } finally {
+      __DEV__ = true
+    }
   })
 
   describe('mismatch handling', () => {

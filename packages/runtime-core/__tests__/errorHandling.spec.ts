@@ -1,4 +1,5 @@
 import {
+  type VNode,
   createApp,
   defineComponent,
   h,
@@ -11,6 +12,7 @@ import {
   watch,
   watchEffect,
 } from '@vue/runtime-test'
+import { ErrorCodes, ErrorTypeStrings } from '../src/errorHandling'
 
 describe('error handling', () => {
   test('propagation', () => {
@@ -607,6 +609,34 @@ describe('error handling', () => {
     await nextTick()
     expect(handler).toHaveBeenCalledWith(error, {}, 'render function')
     expect(handler).toHaveBeenCalledTimes(1)
+  })
+
+  test('errors in scheduler job with owner instance should be caught', async () => {
+    let vnode: VNode
+    const x = ref(0)
+    const app = createApp({
+      render() {
+        return (vnode = vnode || h('div', x.value))
+      },
+    })
+
+    app.config.errorHandler = vi.fn()
+    app.mount(nodeOps.createElement('div'))
+
+    const error = new Error('error')
+    Object.defineProperty(vnode!, 'el', {
+      get() {
+        throw error
+      },
+    })
+
+    x.value++
+    await nextTick()
+    expect(app.config.errorHandler).toHaveBeenCalledWith(
+      error,
+      {},
+      ErrorTypeStrings[ErrorCodes.COMPONENT_UPDATE],
+    )
   })
 
   // native event handler handling should be tested in respective renderers
