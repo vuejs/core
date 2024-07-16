@@ -5,6 +5,7 @@ import {
   defineComponent,
   getCurrentInstance,
   nextTick,
+  onErrorCaptured,
   reactive,
   ref,
   watch,
@@ -1575,5 +1576,61 @@ describe('api: watch', () => {
     await nextTick()
     expect(spy).toHaveBeenCalledTimes(1)
     expect(foo.value.a).toBe(2)
+  })
+
+  test('watch immediate error in effect scope should be catched by onErrorCaptured', async () => {
+    const warn = vi.spyOn(console, 'warn')
+    warn.mockImplementation(() => {})
+    const ERROR_IN_SCOPE = 'ERROR_IN_SCOPE'
+    const ERROR_OUT_SCOPE = 'ERROR_OUT_SCOPE'
+
+    const errors = ref<string[]>([])
+    const Comp = {
+      setup() {
+        const trigger = ref(0)
+
+        effectScope(true).run(() => {
+          watch(
+            trigger,
+            () => {
+              throw new Error(ERROR_IN_SCOPE)
+            },
+            { immediate: true },
+          )
+        })
+
+        watchEffect(() => {
+          throw new Error(ERROR_OUT_SCOPE)
+        })
+
+        return () => ''
+      },
+    }
+
+    const root = nodeOps.createElement('div')
+    render(
+      h(
+        {
+          setup(_, { slots }) {
+            onErrorCaptured(e => {
+              errors.value.push(e.message)
+              return false
+            })
+
+            return () => h('div', slots.default && slots.default())
+          },
+        },
+        null,
+        () => [h(Comp)],
+      ),
+      root,
+    )
+    await nextTick()
+    // only watchEffect as ran so far
+    expect(errors.value).toHaveLength(2)
+    expect(errors.value[0]).toBe(ERROR_IN_SCOPE)
+    expect(errors.value[1]).toBe(ERROR_OUT_SCOPE)
+
+    warn.mockRestore()
   })
 })
