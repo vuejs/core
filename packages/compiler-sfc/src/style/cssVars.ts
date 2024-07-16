@@ -1,5 +1,6 @@
 import {
   type BindingMetadata,
+  BindingTypes,
   NodeTypes,
   type SimpleExpressionNode,
   createRoot,
@@ -163,12 +164,13 @@ export function genCssVarsCode(
   id: string,
   isProd: boolean,
 ) {
+  const isNonScriptSetup = bindings.__isScriptSetup === false
   const varsExp = genCssVarsFromList(vars, id, isProd)
   const exp = createSimpleExpression(varsExp, false)
   const context = createTransformContext(createRoot([]), {
     prefixIdentifiers: true,
     inline: true,
-    bindingMetadata: bindings.__isScriptSetup === false ? undefined : bindings,
+    bindingMetadata: isNonScriptSetup ? undefined : bindings,
   })
   const transformed = processExpression(exp, context)
   const transformedString =
@@ -182,6 +184,20 @@ export function genCssVarsCode(
           })
           .join('')
 
+  if (!isNonScriptSetup) {
+    for (const varName of vars) {
+      const type = bindings[varName]
+      if (
+        type &&
+        (type === BindingTypes.SETUP_LET ||
+          type === BindingTypes.SETUP_MAYBE_REF ||
+          type === BindingTypes.SETUP_IMPORTED_MAYBE_REF ||
+          type === BindingTypes.SETUP_REF)
+      ) {
+        bindings.__isRefBindingUsedInCssVar = true
+      }
+    }
+  }
   return `_${CSS_VARS_HELPER}(_ctx => (${transformedString}))`
 }
 

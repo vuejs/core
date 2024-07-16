@@ -752,7 +752,6 @@ export function compileScript(
     !options.templateOptions?.ssr
   ) {
     ctx.helperImports.add(CSS_VARS_HELPER)
-    ctx.helperImports.add('unref')
     ctx.s.prependLeft(
       startOffset,
       `\n${genCssVarsCode(
@@ -762,6 +761,10 @@ export function compileScript(
         !!options.isProd,
       )}\n`,
     )
+
+    if (ctx.bindingMetadata.__isRefBindingUsedInCssVar) {
+      ctx.helperImports.add('unref')
+    }
   }
 
   // 8. finalize setup() argument signature

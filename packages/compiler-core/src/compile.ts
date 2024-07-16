@@ -22,6 +22,7 @@ import { transformModel } from './transforms/vModel'
 import { transformFilter } from './compat/transformFilter'
 import { ErrorCodes, createCompilerError, defaultOnError } from './errors'
 import { transformMemo } from './transforms/vMemo'
+import { UNREF } from './runtimeHelpers'
 
 export type TransformPreset = [
   NodeTransform[],
@@ -114,6 +115,16 @@ export function baseCompile(
       ),
     }),
   )
+
+  // avoid generating duplicate unref import
+  const { bindingMetadata } = options
+  if (
+    bindingMetadata &&
+    bindingMetadata.__isRefBindingUsedInCssVar &&
+    ast.helpers.has(UNREF)
+  ) {
+    ast.helpers.delete(UNREF)
+  }
 
   return generate(ast, resolvedOptions)
 }

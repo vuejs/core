@@ -161,6 +161,7 @@ export type BindingMetadata = {
 } & {
   __isScriptSetup?: boolean
   __propsAliases?: Record<string, string>
+  __isRefBindingUsedInCssVar?: boolean
 }
 
 interface SharedTransformCodegenOptions {
