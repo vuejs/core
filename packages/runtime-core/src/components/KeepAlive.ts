@@ -220,7 +220,8 @@ const KeepAliveImpl: ComponentOptions = {
     watch(
       () => [props.include, props.exclude],
       ([include, exclude]) => {
-        include && pruneCache(name => matches(include, name))
+        ;(include || typeof include === 'string') &&
+          pruneCache(name => matches(include, name))
         exclude && pruneCache(name => !matches(exclude, name))
       },
       // prune post-render after `current` has been updated
@@ -300,7 +301,8 @@ const KeepAliveImpl: ComponentOptions = {
       const { include, exclude, max } = props
 
       if (
-        (include && (!name || !matches(include, name))) ||
+        ((include || typeof include === 'string') &&
+          (!name || !matches(include, name))) ||
         (exclude && name && matches(exclude, name))
       ) {
         current = vnode
