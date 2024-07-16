@@ -92,10 +92,22 @@ export type VNodeRef =
     ) => void)
 
 export type VNodeNormalizedRefAtom = {
+  /**
+   * component instance
+   */
   i: ComponentInternalInstance
+  /**
+   * Actual ref
+   */
   r: VNodeRef
-  k?: string // setup ref key
-  f?: boolean // refInFor marker
+  /**
+   * setup ref key
+   */
+  k?: string
+  /**
+   * refInFor marker
+   */
+  f?: boolean
 }
 
 export type VNodeNormalizedRef =
@@ -214,7 +226,7 @@ export interface VNode<
   /**
    * @internal
    */
-  dynamicChildren: VNode[] | null
+  dynamicChildren: (VNode[] & { hasOnce?: boolean }) | null
 
   // application root node only
   appContext: AppContext | null
@@ -231,7 +243,7 @@ export interface VNode<
   /**
    * @internal index for cleaning v-memo cache
    */
-  memoIndex?: number
+  cacheIndex?: number
   /**
    * @internal __COMPAT__ only
    */
@@ -247,8 +259,8 @@ export interface VNode<
 // can divide a template into nested blocks, and within each block the node
 // structure would be stable. This allows us to skip most children diffing
 // and only worry about the dynamic nodes (indicated by patch flags).
-export const blockStack: (VNode[] | null)[] = []
-export let currentBlock: VNode[] | null = null
+export const blockStack: VNode['dynamicChildren'][] = []
+export let currentBlock: VNode['dynamicChildren'] = null
 
 /**
  * Open a block.
@@ -299,6 +311,11 @@ export let isBlockTreeEnabled = 1
  */
 export function setBlockTracking(value: number) {
   isBlockTreeEnabled += value
+  if (value < 0 && currentBlock) {
+    // mark current block so it doesn't take fast path and skip possible
+    // nested components duriung unmount
+    currentBlock.hasOnce = true
+  }
 }
 
 function setupBlock(vnode: VNode) {
@@ -370,17 +387,16 @@ export function isVNode(value: any): value is VNode {
 }
 
 export function isSameVNodeType(n1: VNode, n2: VNode): boolean {
-  if (
-    __DEV__ &&
-    n2.shapeFlag & ShapeFlags.COMPONENT &&
-    hmrDirtyComponents.has(n2.type as ConcreteComponent)
-  ) {
-    // #7042, ensure the vnode being unmounted during HMR
-    // bitwise operations to remove keep alive flags
-    n1.shapeFlag &= ~ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE
-    n2.shapeFlag &= ~ShapeFlags.COMPONENT_KEPT_ALIVE
-    // HMR only: if the component has been hot-updated, force a reload.
-    return false
+  if (__DEV__ && n2.shapeFlag & ShapeFlags.COMPONENT && n1.component) {
+    const dirtyInstances = hmrDirtyComponents.get(n2.type as ConcreteComponent)
+    if (dirtyInstances && dirtyInstances.has(n1.component)) {
+      // #7042, ensure the vnode being unmounted during HMR
+      // bitwise operations to remove keep alive flags
+      n1.shapeFlag &= ~ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE
+      n2.shapeFlag &= ~ShapeFlags.COMPONENT_KEPT_ALIVE
+      // HMR only: if the component has been hot-updated, force a reload.
+      return false
+    }
   }
   return n1.type === n2.type && n1.key === n2.key
 }
