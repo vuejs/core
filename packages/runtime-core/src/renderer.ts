@@ -58,7 +58,11 @@ import {
   type SuspenseImpl,
   queueEffectWithSuspense,
 } from './components/Suspense'
-import type { TeleportImpl, TeleportVNode } from './components/Teleport'
+import {
+  TeleportEndKey,
+  type TeleportImpl,
+  type TeleportVNode,
+} from './components/Teleport'
 import { type KeepAliveContext, isKeepAlive } from './components/KeepAlive'
 import { isHmrUpdating, registerHMR, unregisterHMR } from './hmr'
 import { type RootHydrateFunction, createHydrationFunctions } from './hydration'
@@ -140,7 +144,7 @@ export interface RendererOptions<
 // functions provided via options, so the internal constraint is really just
 // a generic object.
 export interface RendererNode {
-  [key: string]: any
+  [key: string | symbol]: any
 }
 
 export interface RendererElement extends RendererNode {}
@@ -2368,7 +2372,12 @@ function baseCreateRenderer(
     if (__FEATURE_SUSPENSE__ && vnode.shapeFlag & ShapeFlags.SUSPENSE) {
       return vnode.suspense!.next()
     }
-    return hostNextSibling((vnode.anchor || vnode.el)!)
+    const el = hostNextSibling((vnode.anchor || vnode.el)!)
+    // #9071, #9313
+    // teleported content can mess up nextSibling searches during patch so
+    // we need to skip them during nextSibling search
+    const teleportEnd = el && el[TeleportEndKey]
+    return teleportEnd ? hostNextSibling(teleportEnd) : el
   }
 
   let isFlushing = false

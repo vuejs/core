@@ -198,6 +198,7 @@ export interface VNode<
   el: HostNode | null
   anchor: HostNode | null // fragment anchor
   target: HostElement | null // teleport target
+  targetStart: HostNode | null // teleport target start anchor
   targetAnchor: HostNode | null // teleport target anchor
   /**
    * number of elements contained in a static vnode
@@ -477,6 +478,7 @@ function createBaseVNode(
     el: null,
     anchor: null,
     target: null,
+    targetStart: null,
     targetAnchor: null,
     staticCount: 0,
     shapeFlag,
@@ -677,6 +679,7 @@ export function cloneVNode<T, U>(
         ? (children as VNode[]).map(deepCloneVNode)
         : children,
     target: vnode.target,
+    targetStart: vnode.targetStart,
     targetAnchor: vnode.targetAnchor,
     staticCount: vnode.staticCount,
     shapeFlag: vnode.shapeFlag,
