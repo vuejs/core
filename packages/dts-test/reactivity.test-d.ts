@@ -120,3 +120,13 @@ describe('should unwrap extended Set correctly', () => {
   expectType<string>(eset1.foo)
   expectType<number>(eset1.bar)
 })
+
+describe('should not error when assignment', () => {
+  const arr = reactive([''])
+  let record: Record<number, string>
+  record = arr
+  expectType<string>(record[0])
+  let record2: { [key: number]: string }
+  record2 = arr
+  expectType<string>(record2[0])
+})

@@ -25,7 +25,7 @@ describe('ssr: element', () => {
     test('v-html', () => {
       expect(getCompiledString(`<div v-html="foo"/>`)).toMatchInlineSnapshot(`
         "\`<div>\${
-            _ctx.foo
+            (_ctx.foo) ?? ''
           }</div>\`"
       `)
     })

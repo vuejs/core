@@ -16,7 +16,7 @@ import { warn } from '../warning'
 import { isKeepAlive } from './KeepAlive'
 import { toRaw } from '@vue/reactivity'
 import { ErrorCodes, callWithAsyncErrorHandling } from '../errorHandling'
-import { PatchFlags, ShapeFlags, isArray } from '@vue/shared'
+import { PatchFlags, ShapeFlags, isArray, isFunction } from '@vue/shared'
 import { onBeforeUnmount, onMounted } from '../apiLifecycle'
 import type { RendererElement } from '../renderer'
 
@@ -135,6 +135,11 @@ export const BaseTransitionPropsValidators = {
   onAppearCancelled: TransitionHookValidator,
 }
 
+const recursiveGetSubtree = (instance: ComponentInternalInstance): VNode => {
+  const subTree = instance.subTree
+  return subTree.component ? recursiveGetSubtree(subTree.component) : subTree
+}
+
 const BaseTransitionImpl: ComponentOptions = {
   name: `BaseTransition`,
 
@@ -143,8 +148,6 @@ const BaseTransitionImpl: ComponentOptions = {
   setup(props: BaseTransitionProps, { slots }: SetupContext) {
     const instance = getCurrentInstance()!
     const state = useTransitionState()
-
-    let prevTransitionKey: any
 
     return () => {
       const children =
@@ -200,34 +203,25 @@ const BaseTransitionImpl: ComponentOptions = {
         return emptyPlaceholder(child)
       }
 
-      const enterHooks = resolveTransitionHooks(
+      let enterHooks = resolveTransitionHooks(
         innerChild,
         rawProps,
         state,
         instance,
+        // #11061, ensure enterHooks is fresh after clone
+        hooks => (enterHooks = hooks),
       )
       setTransitionHooks(innerChild, enterHooks)
 
       const oldChild = instance.subTree
       const oldInnerChild = oldChild && getKeepAliveChild(oldChild)
 
-      let transitionKeyChanged = false
-      const { getTransitionKey } = innerChild.type as any
-      if (getTransitionKey) {
-        const key = getTransitionKey()
-        if (prevTransitionKey === undefined) {
-          prevTransitionKey = key
-        } else if (key !== prevTransitionKey) {
-          prevTransitionKey = key
-          transitionKeyChanged = true
-        }
-      }
-
       // handle mode
       if (
         oldInnerChild &&
         oldInnerChild.type !== Comment &&
-        (!isSameVNodeType(innerChild, oldInnerChild) || transitionKeyChanged)
+        !isSameVNodeType(innerChild, oldInnerChild) &&
+        recursiveGetSubtree(instance).type !== Comment
       ) {
         const leavingHooks = resolveTransitionHooks(
           oldInnerChild,
@@ -238,7 +232,7 @@ const BaseTransitionImpl: ComponentOptions = {
         // update old tree's hooks in case of dynamic transition
         setTransitionHooks(oldInnerChild, leavingHooks)
         // switching between different views
-        if (mode === 'out-in') {
+        if (mode === 'out-in' && innerChild.type !== Comment) {
           state.isLeaving = true
           // return placeholder node and queue update when leave finishes
           leavingHooks.afterLeave = () => {
@@ -313,6 +307,7 @@ export function resolveTransitionHooks(
   props: BaseTransitionProps<any>,
   state: TransitionState,
   instance: ComponentInternalInstance,
+  postClone?: (hooks: TransitionHooks) => void,
 ): TransitionHooks {
   const {
     appear,
@@ -453,7 +448,15 @@ export function resolveTransitionHooks(
     },
 
     clone(vnode) {
-      return resolveTransitionHooks(vnode, props, state, instance)
+      const hooks = resolveTransitionHooks(
+        vnode,
+        props,
+        state,
+        instance,
+        postClone,
+      )
+      if (postClone) postClone(hooks)
+      return hooks
     },
   }
 
@@ -473,15 +476,29 @@ function emptyPlaceholder(vnode: VNode): VNode | undefined {
 }
 
 function getKeepAliveChild(vnode: VNode): VNode | undefined {
-  return isKeepAlive(vnode)
-    ? // #7121 ensure get the child component subtree in case
-      // it's been replaced during HMR
-      __DEV__ && vnode.component
-      ? vnode.component.subTree
-      : vnode.children
-        ? ((vnode.children as VNodeArrayChildren)[0] as VNode)
-        : undefined
-    : vnode
+  if (!isKeepAlive(vnode)) {
+    return vnode
+  }
+  // #7121 ensure get the child component subtree in case
+  // it's been replaced during HMR
+  if (__DEV__ && vnode.component) {
+    return vnode.component.subTree
+  }
+
+  const { shapeFlag, children } = vnode
+
+  if (children) {
+    if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
+      return (children as VNodeArrayChildren)[0] as VNode
+    }
+
+    if (
+      shapeFlag & ShapeFlags.SLOTS_CHILDREN &&
+      isFunction((children as any).default)
+    ) {
+      return (children as any).default()
+    }
+  }
 }
 
 export function setTransitionHooks(vnode: VNode, hooks: TransitionHooks) {

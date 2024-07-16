@@ -485,4 +485,51 @@ describe('stringify static html', () => {
     expect(code).toMatch(`<code>text1</code>`)
     expect(code).toMatchSnapshot()
   })
+
+  test('should work for <option> elements with string values', () => {
+    const { ast, code } = compileWithStringify(
+      `<div><select>${repeat(
+        `<option value="1" />`,
+        StringifyThresholds.ELEMENT_WITH_BINDING_COUNT,
+      )}</select></div>`,
+    )
+    // should be optimized now
+    expect(ast.hoists).toMatchObject([
+      {
+        type: NodeTypes.JS_CALL_EXPRESSION,
+        callee: CREATE_STATIC,
+        arguments: [
+          JSON.stringify(
+            `<select>${repeat(
+              `<option value="1"></option>`,
+              StringifyThresholds.ELEMENT_WITH_BINDING_COUNT,
+            )}</select>`,
+          ),
+          '1',
+        ],
+      },
+      {
+        type: NodeTypes.JS_ARRAY_EXPRESSION,
+      },
+    ])
+    expect(code).toMatchSnapshot()
+  })
+
+  test('should bail for <option> elements with number values', () => {
+    const { ast, code } = compileWithStringify(
+      `<div><select>${repeat(
+        `<option :value="1" />`,
+        StringifyThresholds.ELEMENT_WITH_BINDING_COUNT,
+      )}</select></div>`,
+    )
+    expect(ast.hoists).toMatchObject([
+      {
+        type: NodeTypes.VNODE_CALL,
+      },
+      {
+        type: NodeTypes.JS_ARRAY_EXPRESSION,
+      },
+    ])
+    expect(code).toMatchSnapshot()
+  })
 })

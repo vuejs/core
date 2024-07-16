@@ -1193,4 +1193,9 @@ describe('BaseTransition', () => {
       await runTestWithKeepAlive(testInOutBeforeFinish)
     })
   })
+
+  // #10719
+  test('should not error on KeepAlive w/ function children', () => {
+    expect(() => mount({}, () => () => h('div'), true)).not.toThrow()
+  })
 })

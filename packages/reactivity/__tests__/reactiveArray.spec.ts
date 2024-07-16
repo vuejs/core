@@ -99,6 +99,21 @@ describe('reactivity/reactive/Array', () => {
     expect(fn).toHaveBeenCalledTimes(1)
   })
 
+  test('should track hasOwnProperty call with index', () => {
+    const original = [1, 2, 3]
+    const observed = reactive(original)
+
+    let dummy
+    effect(() => {
+      dummy = observed.hasOwnProperty(0)
+    })
+
+    expect(dummy).toBe(true)
+
+    delete observed[0]
+    expect(dummy).toBe(false)
+  })
+
   test('shift on Array should trigger dependency once', () => {
     const arr = reactive([1, 2, 3])
     const fn = vi.fn()
