@@ -819,16 +819,12 @@ function baseCreateRenderer(
       optimized = false
       dynamicChildren = null
     }
-    // due to potential innerHTML/textContent overriding existing VNodes,
-    // in which case the old tree must be properly unmounted.
+
     if (
-      oldProps.innerHTML !== undefined ||
-      oldProps.textContent !== undefined
+      (oldProps.innerHTML && newProps.innerHTML == null) ||
+      (oldProps.textContent && newProps.textContent == null)
     ) {
-      hostSetElementText(n1.el!, '')
-      if (n1.children) {
-        unmountChildren(n1.children as VNode[], parentComponent, parentSuspense)
-      }
+      hostSetElementText(el, '')
     }
 
     if (dynamicChildren) {
@@ -867,15 +863,7 @@ function baseCreateRenderer(
       // (i.e. at the exact same position in the source template)
       if (patchFlag & PatchFlags.FULL_PROPS) {
         // element props contain dynamic keys, full diff needed
-        patchProps(
-          el,
-          n2,
-          oldProps,
-          newProps,
-          parentComponent,
-          parentSuspense,
-          namespace,
-        )
+        patchProps(el, oldProps, newProps, parentComponent, namespace)
       } else {
         // class
         // this flag is matched when the element has dynamic class bindings.
@@ -921,15 +909,7 @@ function baseCreateRenderer(
       }
     } else if (!optimized && dynamicChildren == null) {
       // unoptimized, full diff
-      patchProps(
-        el,
-        n2,
-        oldProps,
-        newProps,
-        parentComponent,
-        parentSuspense,
-        namespace,
-      )
+      patchProps(el, oldProps, newProps, parentComponent, namespace)
     }
 
     if ((vnodeHook = newProps.onVnodeUpdated) || dirs) {
@@ -986,11 +966,9 @@ function baseCreateRenderer(
 
   const patchProps = (
     el: RendererElement,
-    vnode: VNode,
     oldProps: Data,
     newProps: Data,
     parentComponent: ComponentInternalInstance | null,
-    parentSuspense: SuspenseBoundary | null,
     namespace: ElementNamespace,
   ) => {
     if (oldProps !== newProps) {
