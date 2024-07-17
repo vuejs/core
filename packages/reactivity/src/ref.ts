@@ -16,7 +16,7 @@ import {
   toRaw,
   toReactive,
 } from './reactive'
-import type { ComputedRef } from './computed'
+import type { ComputedRef, WritableComputedRef } from './computed'
 import { ReactiveFlags, TrackOpTypes, TriggerOpTypes } from './constants'
 import { warn } from './warning'
 
@@ -191,8 +191,13 @@ export function triggerRef(ref: Ref) {
   }
 }
 
-export type MaybeRef<T = any> = T | Ref<T>
-export type MaybeRefOrGetter<T = any> = MaybeRef<T> | (() => T)
+export type MaybeRef<T = any> =
+  | T
+  | Ref<T>
+  | ShallowRef<T>
+  | WritableComputedRef<T>
+
+export type MaybeRefOrGetter<T = any> = MaybeRef<T> | ComputedRef<T> | (() => T)
 
 /**
  * Returns the inner value if the argument is a ref, otherwise return the
@@ -210,7 +215,7 @@ export type MaybeRefOrGetter<T = any> = MaybeRef<T> | (() => T)
  * @param ref - Ref or plain value to be converted into the plain value.
  * @see {@link https://vuejs.org/api/reactivity-utilities.html#unref}
  */
-export function unref<T>(ref: MaybeRef<T> | ComputedRef<T> | ShallowRef<T>): T {
+export function unref<T>(ref: MaybeRef<T> | ComputedRef<T>): T {
   return isRef(ref) ? ref.value : ref
 }
 
@@ -230,9 +235,7 @@ export function unref<T>(ref: MaybeRef<T> | ComputedRef<T> | ShallowRef<T>): T {
  * @param source - A getter, an existing ref, or a non-function value.
  * @see {@link https://vuejs.org/api/reactivity-utilities.html#tovalue}
  */
-export function toValue<T>(
-  source: MaybeRefOrGetter<T> | ComputedRef<T> | ShallowRef<T>,
-): T {
+export function toValue<T>(source: MaybeRefOrGetter<T>): T {
   return isFunction(source) ? source() : unref(source)
 }
 

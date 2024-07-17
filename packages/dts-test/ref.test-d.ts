@@ -5,6 +5,7 @@ import {
   type Ref,
   type ShallowRef,
   type ToRefs,
+  type WritableComputedRef,
   computed,
   isRef,
   proxyRefs,
@@ -455,8 +456,21 @@ describe('toRef <-> toValue', () => {
 })
 
 // unref
-declare const text: ShallowRef<string> | ComputedRef<string> | MaybeRef<string>
-expectType<string>(unref(text))
+// #8747
+declare const unref1: number | Ref<number> | ComputedRef<number>
+expectType<number>(unref(unref1))
+
+// #11356
+declare const unref2:
+  | MaybeRef<string>
+  | ShallowRef<string>
+  | ComputedRef<string>
+  | WritableComputedRef<string>
+expectType<string>(unref(unref2))
+
+// toValue
+expectType<number>(toValue(unref1))
+expectType<string>(toValue(unref2))
 
 // useTemplateRef
 const tRef = useTemplateRef('foo')
