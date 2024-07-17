@@ -51,6 +51,9 @@ export function useModel(
       },
 
       set(value) {
+        if (!hasChanged(value, localValue)) {
+          return
+        }
         const rawProps = i.vnode!.props
         if (
           !(
@@ -62,8 +65,7 @@ export function useModel(
             (`onUpdate:${name}` in rawProps ||
               `onUpdate:${camelizedName}` in rawProps ||
               `onUpdate:${hyphenatedName}` in rawProps)
-          ) &&
-          hasChanged(value, localValue)
+          )
         ) {
           // no v-model, local update
           localValue = value
