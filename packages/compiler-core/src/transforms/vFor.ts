@@ -46,7 +46,7 @@ import {
 } from '../runtimeHelpers'
 import { processExpression } from './transformExpression'
 import { validateBrowserExpression } from '../validateExpression'
-import { PatchFlagNames, PatchFlags } from '@vue/shared'
+import { PatchFlags } from '@vue/shared'
 import { transformBindShorthand } from './vBind'
 
 export const transformFor = createStructuralDirectiveTransform(
@@ -109,8 +109,7 @@ export const transformFor = createStructuralDirectiveTransform(
         helper(FRAGMENT),
         undefined,
         renderExp,
-        fragmentFlag +
-          (__DEV__ ? ` /* ${PatchFlagNames[fragmentFlag]} */` : ``),
+        fragmentFlag,
         undefined,
         undefined,
         true /* isBlock */,
@@ -169,10 +168,7 @@ export const transformFor = createStructuralDirectiveTransform(
             helper(FRAGMENT),
             keyProperty ? createObjectExpression([keyProperty]) : undefined,
             node.children,
-            PatchFlags.STABLE_FRAGMENT +
-              (__DEV__
-                ? ` /* ${PatchFlagNames[PatchFlags.STABLE_FRAGMENT]} */`
-                : ``),
+            PatchFlags.STABLE_FRAGMENT,
             undefined,
             undefined,
             true,
