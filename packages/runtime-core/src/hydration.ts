@@ -39,6 +39,7 @@ import {
 } from './components/Suspense'
 import type { TeleportImpl, TeleportVNode } from './components/Teleport'
 import { isAsyncWrapper } from './apiAsyncComponent'
+import { isReactive } from '@vue/reactivity'
 
 export type RootHydrateFunction = (
   vnode: VNode<Node, Element>,
@@ -487,6 +488,11 @@ export function createHydrationFunctions(
             undefined,
             parentComponent,
           )
+        } else if (patchFlag & PatchFlags.STYLE && isReactive(props.style)) {
+          // #11372: object style values are iterated during patch instead of
+          // render/normalization phase, but style patch is skipped during
+          // hydration, so we need to force iterate the object to track deps
+          for (const key in props.style) props.style[key]
         }
       }
 
