@@ -762,7 +762,8 @@ export function compileScript(
       )}\n`,
     )
 
-    if (ctx.bindingMetadata.__isRefBindingUsedInCssVar) {
+    // if any of the css vars reference a ref, we need to import `unref`
+    if (ctx.bindingMetadata.__hasRefBindingUsedInCssVar) {
       ctx.helperImports.add('unref')
     }
   }
@@ -910,8 +911,7 @@ export function compileScript(
         ctx.s.prepend(preamble)
       }
       // avoid duplicated unref import
-      // as this may get injected by the render function preamble OR the
-      // css vars codegen
+      // as this may get injected by the render function preamble
       if (ast && ast.helpers.has(UNREF)) {
         ctx.helperImports.delete('unref')
       }

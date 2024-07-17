@@ -139,7 +139,7 @@ export enum BindingTypes {
    */
   SETUP_MAYBE_REF = 'setup-maybe-ref',
   /**
-   * user import binding that may be a ref
+   * a user import binding that may be a ref
    */
   SETUP_IMPORTED_MAYBE_REF = 'setup-imported-maybe-ref',
   /**
@@ -161,7 +161,7 @@ export type BindingMetadata = {
 } & {
   __isScriptSetup?: boolean
   __propsAliases?: Record<string, string>
-  __isRefBindingUsedInCssVar?: boolean
+  __hasRefBindingUsedInCssVar?: boolean
 }
 
 interface SharedTransformCodegenOptions {

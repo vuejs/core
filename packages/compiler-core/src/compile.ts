@@ -116,11 +116,12 @@ export function baseCompile(
     }),
   )
 
-  // avoid generating duplicate unref import
+  // avoid duplicated unref import
+  // as this may get injected by the css vars codegen
   const { bindingMetadata } = options
   if (
     bindingMetadata &&
-    bindingMetadata.__isRefBindingUsedInCssVar &&
+    bindingMetadata.__hasRefBindingUsedInCssVar &&
     ast.helpers.has(UNREF)
   ) {
     ast.helpers.delete(UNREF)
