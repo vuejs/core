@@ -820,6 +820,8 @@ function baseCreateRenderer(
       dynamicChildren = null
     }
 
+    // #9135 innerHTML / textContent unset needs to happen before possible
+    // new children mount
     if (
       (oldProps.innerHTML && newProps.innerHTML == null) ||
       (oldProps.textContent && newProps.textContent == null)
