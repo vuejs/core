@@ -1,4 +1,4 @@
-import { isString } from '@vue/shared'
+import { type PatchFlags, isString } from '@vue/shared'
 import {
   CREATE_BLOCK,
   CREATE_ELEMENT_BLOCK,
@@ -332,7 +332,7 @@ export interface VNodeCall extends Node {
     | SimpleExpressionNode // hoisted
     | CacheExpression // cached
     | undefined
-  patchFlag: string | undefined
+  patchFlag: PatchFlags | undefined
   dynamicProps: string | SimpleExpressionNode | undefined
   directives: DirectiveArguments | undefined
   isBlock: boolean
@@ -563,7 +563,7 @@ export interface ForCodegenNode extends VNodeCall {
   tag: typeof FRAGMENT
   props: undefined
   children: ForRenderListExpression
-  patchFlag: string
+  patchFlag: PatchFlags
   disableTracking: boolean
 }
 

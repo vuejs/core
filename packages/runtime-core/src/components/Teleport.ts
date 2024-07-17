@@ -21,6 +21,8 @@ export interface TeleportProps {
   disabled?: boolean
 }
 
+export const TeleportEndKey = Symbol('_vte')
+
 export const isTeleport = (type: any): boolean => type.__isTeleport
 
 const isTeleportDisabled = (props: VNode['props']): boolean =>
@@ -105,11 +107,16 @@ export const TeleportImpl = {
       const mainAnchor = (n2.anchor = __DEV__
         ? createComment('teleport end')
         : createText(''))
+      const target = (n2.target = resolveTarget(n2.props, querySelector))
+      const targetStart = (n2.targetStart = createText(''))
+      const targetAnchor = (n2.targetAnchor = createText(''))
       insert(placeholder, container, anchor)
       insert(mainAnchor, container, anchor)
-      const target = (n2.target = resolveTarget(n2.props, querySelector))
-      const targetAnchor = (n2.targetAnchor = createText(''))
+      // attach a special property so we can skip teleported content in
+      // renderer's nextSibling search
+      targetStart[TeleportEndKey] = targetAnchor
       if (target) {
+        insert(targetStart, target)
         insert(targetAnchor, target)
         // #2652 we could be teleporting from a non-SVG tree into an SVG tree
         if (namespace === 'svg' || isTargetSVG(target)) {
@@ -146,6 +153,7 @@ export const TeleportImpl = {
     } else {
       // update content
       n2.el = n1.el
+      n2.targetStart = n1.targetStart
       const mainAnchor = (n2.anchor = n1.anchor)!
       const target = (n2.target = n1.target)!
       const targetAnchor = (n2.targetAnchor = n1.targetAnchor)!
@@ -253,9 +261,18 @@ export const TeleportImpl = {
     { um: unmount, o: { remove: hostRemove } }: RendererInternals,
     doRemove: boolean,
   ) {
-    const { shapeFlag, children, anchor, targetAnchor, target, props } = vnode
+    const {
+      shapeFlag,
+      children,
+      anchor,
+      targetStart,
+      targetAnchor,
+      target,
+      props,
+    } = vnode
 
     if (target) {
+      hostRemove(targetStart!)
       hostRemove(targetAnchor!)
     }
 
