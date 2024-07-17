@@ -465,15 +465,7 @@ export function createHydrationFunctions(
               // force hydrate v-bind with .prop modifiers
               key[0] === '.'
             ) {
-              patchProp(
-                el,
-                key,
-                null,
-                props[key],
-                undefined,
-                undefined,
-                parentComponent,
-              )
+              patchProp(el, key, null, props[key], undefined, parentComponent)
             }
           }
         } else if (props.onClick) {
@@ -484,7 +476,6 @@ export function createHydrationFunctions(
             'onClick',
             null,
             props.onClick,
-            undefined,
             undefined,
             parentComponent,
           )
