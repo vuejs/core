@@ -68,7 +68,7 @@ describe('inject', () => {
 })
 
 describe('defineCustomElement using defineComponent return type', () => {
-  test('with emits', () => {
+  test('with object emits', () => {
     const Comp1Vue = defineComponent({
       props: {
         a: String,
@@ -80,6 +80,23 @@ describe('defineCustomElement using defineComponent return type', () => {
     const Comp = defineCustomElement(Comp1Vue)
     expectType<VueElementConstructor>(Comp)
 
-    expectType<string | undefined>(new Comp().a)
+    const instance = new Comp()
+    expectType<string | undefined>(instance.a)
+    instance.a = ''
+  })
+
+  test('with array emits', () => {
+    const Comp1Vue = defineComponent({
+      props: {
+        a: Number,
+      },
+      emits: ['click'],
+    })
+    const Comp = defineCustomElement(Comp1Vue)
+    expectType<VueElementConstructor>(Comp)
+
+    const instance = new Comp()
+    expectType<number | undefined>(instance.a)
+    instance.a = 42
   })
 })
