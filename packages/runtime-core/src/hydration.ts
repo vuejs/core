@@ -17,6 +17,7 @@ import { warn } from './warning'
 import {
   PatchFlags,
   ShapeFlags,
+  def,
   includeBooleanAttr,
   isBooleanAttr,
   isKnownHtmlAttr,
@@ -38,6 +39,7 @@ import {
 } from './components/Suspense'
 import type { TeleportImpl, TeleportVNode } from './components/Teleport'
 import { isAsyncWrapper } from './apiAsyncComponent'
+import { isReactive } from '@vue/reactivity'
 
 export type RootHydrateFunction = (
   vnode: VNode<Node, Element>,
@@ -141,18 +143,8 @@ export function createHydrationFunctions(
     vnode.el = node
 
     if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
-      if (!('__vnode' in node)) {
-        Object.defineProperty(node, '__vnode', {
-          value: vnode,
-          enumerable: false,
-        })
-      }
-      if (!('__vueParentComponent' in node)) {
-        Object.defineProperty(node, '__vueParentComponent', {
-          value: parentComponent,
-          enumerable: false,
-        })
-      }
+      def(node, '__vnode', vnode, true)
+      def(node, '__vueParentComponent', parentComponent, true)
     }
 
     if (patchFlag === PatchFlags.BAIL) {
@@ -459,6 +451,9 @@ export function createHydrationFunctions(
             // check hydration mismatch
             if (
               (__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
+              // #11189 skip if this node has directives that have created hooks
+              // as it could have mutated the DOM in any possible way
+              !(dirs && dirs.some(d => d.dir.created)) &&
               propHasMismatch(el, key, props[key], vnode, parentComponent)
             ) {
               logMismatchError()
@@ -470,15 +465,7 @@ export function createHydrationFunctions(
               // force hydrate v-bind with .prop modifiers
               key[0] === '.'
             ) {
-              patchProp(
-                el,
-                key,
-                null,
-                props[key],
-                undefined,
-                undefined,
-                parentComponent,
-              )
+              patchProp(el, key, null, props[key], undefined, parentComponent)
             }
           }
         } else if (props.onClick) {
@@ -490,9 +477,13 @@ export function createHydrationFunctions(
             null,
             props.onClick,
             undefined,
-            undefined,
             parentComponent,
           )
+        } else if (patchFlag & PatchFlags.STYLE && isReactive(props.style)) {
+          // #11372: object style values are iterated during patch instead of
+          // render/normalization phase, but style patch is skipped during
+          // hydration, so we need to force iterate the object to track deps
+          for (const key in props.style) props.style[key]
         }
       }
 
@@ -537,7 +528,27 @@ export function createHydrationFunctions(
       const vnode = optimized
         ? children[i]
         : (children[i] = normalizeVNode(children[i]))
+      const isText = vnode.type === Text
       if (node) {
+        if (isText && !optimized) {
+          // #7285 possible consecutive text vnodes from manual render fns or
+          // JSX-compiled fns, but on the client the browser parses only 1 text
+          // node.
+          // look ahead for next possible text vnode
+          let next = children[i + 1]
+          if (next && (next = normalizeVNode(next)).type === Text) {
+            // create an extra TextNode on the client for the next vnode to
+            // adopt
+            insert(
+              createText(
+                (node as Text).data.slice((vnode.children as string).length),
+              ),
+              container,
+              nextSibling(node),
+            )
+            ;(node as Text).data = vnode.children as string
+          }
+        }
         node = hydrateNode(
           node,
           vnode,
@@ -546,7 +557,7 @@ export function createHydrationFunctions(
           slotScopeIds,
           optimized,
         )
-      } else if (vnode.type === Text && !vnode.children) {
+      } else if (isText && !vnode.children) {
         // #7215 create a TextNode for empty text node
         // because server rendered HTML won't contain a text node
         insert((vnode.el = createText('')), container)
@@ -766,18 +777,8 @@ function propHasMismatch(
       }
     }
 
-    // eslint-disable-next-line no-restricted-syntax
-    const root = instance?.subTree
-    if (
-      vnode === root ||
-      // eslint-disable-next-line no-restricted-syntax
-      (root?.type === Fragment && (root.children as VNode[]).includes(vnode))
-    ) {
-      // eslint-disable-next-line no-restricted-syntax
-      const cssVars = instance?.getCssVars?.()
-      for (const key in cssVars) {
-        expectedMap.set(`--${key}`, String(cssVars[key]))
-      }
+    if (instance) {
+      resolveCssVars(instance, vnode, expectedMap)
     }
 
     if (!isMapEqual(actualMap, expectedMap)) {
@@ -854,10 +855,8 @@ function toStyleMap(str: string): Map<string, string> {
   const styleMap: Map<string, string> = new Map()
   for (const item of str.split(';')) {
     let [key, value] = item.split(':')
-    // eslint-disable-next-line no-restricted-syntax
-    key = key?.trim()
-    // eslint-disable-next-line no-restricted-syntax
-    value = value?.trim()
+    key = key.trim()
+    value = value && value.trim()
     if (key && value) {
       styleMap.set(key, value)
     }
@@ -875,4 +874,27 @@ function isMapEqual(a: Map<string, string>, b: Map<string, string>): boolean {
     }
   }
   return true
+}
+
+function resolveCssVars(
+  instance: ComponentInternalInstance,
+  vnode: VNode,
+  expectedMap: Map<string, string>,
+) {
+  const root = instance.subTree
+  if (
+    instance.getCssVars &&
+    (vnode === root ||
+      (root &&
+        root.type === Fragment &&
+        (root.children as VNode[]).includes(vnode)))
+  ) {
+    const cssVars = instance.getCssVars()
+    for (const key in cssVars) {
+      expectedMap.set(`--${key}`, String(cssVars[key]))
+    }
+  }
+  if (vnode === root && instance.parent) {
+    resolveCssVars(instance.parent, instance.vnode, expectedMap)
+  }
 }

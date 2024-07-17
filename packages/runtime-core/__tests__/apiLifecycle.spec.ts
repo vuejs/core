@@ -24,8 +24,6 @@ import {
   TriggerOpTypes,
 } from '@vue/reactivity'
 
-// reference: https://vue-composition-api-rfc.netlify.com/api.html#lifecycle-hooks
-
 describe('api: lifecycle hooks', () => {
   it('onBeforeMount', () => {
     const root = nodeOps.createElement('div')

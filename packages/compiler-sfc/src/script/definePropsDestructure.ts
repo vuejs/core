@@ -239,7 +239,7 @@ export function transformDestructuredProps(
   const ast = ctx.scriptSetupAst!
   walkScope(ast, true)
   walk(ast, {
-    enter(node: Node, parent?: Node) {
+    enter(node: Node, parent: Node | null) {
       parent && parentStack.push(parent)
 
       // skip type nodes
@@ -294,7 +294,7 @@ export function transformDestructuredProps(
         }
       }
     },
-    leave(node: Node, parent?: Node) {
+    leave(node: Node, parent: Node | null) {
       parent && parentStack.pop()
       if (
         (node.type === 'BlockStatement' && !isFunctionType(parent!)) ||

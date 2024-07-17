@@ -33,6 +33,7 @@ import {
   NOOP,
   PatchFlags,
   ShapeFlags,
+  def,
   getGlobalThis,
   invokeArrayFns,
   isArray,
@@ -57,7 +58,11 @@ import {
   type SuspenseImpl,
   queueEffectWithSuspense,
 } from './components/Suspense'
-import type { TeleportImpl, TeleportVNode } from './components/Teleport'
+import {
+  TeleportEndKey,
+  type TeleportImpl,
+  type TeleportVNode,
+} from './components/Teleport'
 import { type KeepAliveContext, isKeepAlive } from './components/KeepAlive'
 import { isHmrUpdating, registerHMR, unregisterHMR } from './hmr'
 import { type RootHydrateFunction, createHydrationFunctions } from './hydration'
@@ -102,10 +107,7 @@ export interface RendererOptions<
     prevValue: any,
     nextValue: any,
     namespace?: ElementNamespace,
-    prevChildren?: VNode<HostNode, HostElement>[],
     parentComponent?: ComponentInternalInstance | null,
-    parentSuspense?: SuspenseBoundary | null,
-    unmountChildren?: UnmountChildrenFn,
   ): void
   insert(el: HostNode, parent: HostElement, anchor?: HostNode | null): void
   remove(el: HostNode): void
@@ -139,7 +141,7 @@ export interface RendererOptions<
 // functions provided via options, so the internal constraint is really just
 // a generic object.
 export interface RendererNode {
-  [key: string]: any
+  [key: string | symbol]: any
 }
 
 export interface RendererElement extends RendererNode {}
@@ -665,17 +667,7 @@ function baseCreateRenderer(
     if (props) {
       for (const key in props) {
         if (key !== 'value' && !isReservedProp(key)) {
-          hostPatchProp(
-            el,
-            key,
-            null,
-            props[key],
-            namespace,
-            vnode.children as VNode[],
-            parentComponent,
-            parentSuspense,
-            unmountChildren,
-          )
+          hostPatchProp(el, key, null, props[key], namespace, parentComponent)
         }
       }
       /**
@@ -696,15 +688,10 @@ function baseCreateRenderer(
     }
 
     if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
-      Object.defineProperty(el, '__vnode', {
-        value: vnode,
-        enumerable: false,
-      })
-      Object.defineProperty(el, '__vueParentComponent', {
-        value: parentComponent,
-        enumerable: false,
-      })
+      def(el, '__vnode', vnode, true)
+      def(el, '__vueParentComponent', parentComponent, true)
     }
+
     if (dirs) {
       invokeDirectiveHook(vnode, null, parentComponent, 'beforeMount')
     }
@@ -805,6 +792,9 @@ function baseCreateRenderer(
     optimized: boolean,
   ) => {
     const el = (n2.el = n1.el!)
+    if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
+      el.__vnode = n2
+    }
     let { patchFlag, dynamicChildren, dirs } = n2
     // #1426 take the old vnode's patch flag into account since user may clone a
     // compiler-generated vnode, which de-opts to FULL_PROPS
@@ -828,6 +818,15 @@ function baseCreateRenderer(
       patchFlag = 0
       optimized = false
       dynamicChildren = null
+    }
+
+    // #9135 innerHTML / textContent unset needs to happen before possible
+    // new children mount
+    if (
+      (oldProps.innerHTML && newProps.innerHTML == null) ||
+      (oldProps.textContent && newProps.textContent == null)
+    ) {
+      hostSetElementText(el, '')
     }
 
     if (dynamicChildren) {
@@ -866,15 +865,7 @@ function baseCreateRenderer(
       // (i.e. at the exact same position in the source template)
       if (patchFlag & PatchFlags.FULL_PROPS) {
         // element props contain dynamic keys, full diff needed
-        patchProps(
-          el,
-          n2,
-          oldProps,
-          newProps,
-          parentComponent,
-          parentSuspense,
-          namespace,
-        )
+        patchProps(el, oldProps, newProps, parentComponent, namespace)
       } else {
         // class
         // this flag is matched when the element has dynamic class bindings.
@@ -905,17 +896,7 @@ function baseCreateRenderer(
             const next = newProps[key]
             // #1471 force patch value
             if (next !== prev || key === 'value') {
-              hostPatchProp(
-                el,
-                key,
-                prev,
-                next,
-                namespace,
-                n1.children as VNode[],
-                parentComponent,
-                parentSuspense,
-                unmountChildren,
-              )
+              hostPatchProp(el, key, prev, next, namespace, parentComponent)
             }
           }
         }
@@ -930,15 +911,7 @@ function baseCreateRenderer(
       }
     } else if (!optimized && dynamicChildren == null) {
       // unoptimized, full diff
-      patchProps(
-        el,
-        n2,
-        oldProps,
-        newProps,
-        parentComponent,
-        parentSuspense,
-        namespace,
-      )
+      patchProps(el, oldProps, newProps, parentComponent, namespace)
     }
 
     if ((vnodeHook = newProps.onVnodeUpdated) || dirs) {
@@ -995,11 +968,9 @@ function baseCreateRenderer(
 
   const patchProps = (
     el: RendererElement,
-    vnode: VNode,
     oldProps: Data,
     newProps: Data,
     parentComponent: ComponentInternalInstance | null,
-    parentSuspense: SuspenseBoundary | null,
     namespace: ElementNamespace,
   ) => {
     if (oldProps !== newProps) {
@@ -1012,10 +983,7 @@ function baseCreateRenderer(
               oldProps[key],
               null,
               namespace,
-              vnode.children as VNode[],
               parentComponent,
-              parentSuspense,
-              unmountChildren,
             )
           }
         }
@@ -1027,17 +995,7 @@ function baseCreateRenderer(
         const prev = oldProps[key]
         // defer patching value
         if (next !== prev && key !== 'value') {
-          hostPatchProp(
-            el,
-            key,
-            prev,
-            next,
-            namespace,
-            vnode.children as VNode[],
-            parentComponent,
-            parentSuspense,
-            unmountChildren,
-          )
+          hostPatchProp(el, key, prev, next, namespace, parentComponent)
         }
       }
       if ('value' in newProps) {
@@ -1230,7 +1188,7 @@ function baseCreateRenderer(
       if (__DEV__) {
         startMeasure(instance, `init`)
       }
-      setupComponent(instance)
+      setupComponent(instance, false, optimized)
       if (__DEV__) {
         endMeasure(instance, `init`)
       }
@@ -1588,6 +1546,7 @@ function baseCreateRenderer(
         effect.run()
       }
     })
+    update.i = instance
     update.id = instance.uid
     // allowRecurse
     // #1801, #2043 component render effects should allow recursive updates
@@ -1600,7 +1559,6 @@ function baseCreateRenderer(
       effect.onTrigger = instance.rtg
         ? e => invokeArrayFns(instance.rtg!, e)
         : void 0
-      update.ownerInstance = instance
     }
 
     update()
@@ -2110,16 +2068,21 @@ function baseCreateRenderer(
       shapeFlag,
       patchFlag,
       dirs,
-      memoIndex,
+      cacheIndex,
     } = vnode
+
+    if (patchFlag === PatchFlags.BAIL) {
+      optimized = false
+    }
+
     // unset ref
     if (ref != null) {
       setRef(ref, null, parentSuspense, vnode, true)
     }
 
     // #6593 should clean memo cache when unmount
-    if (memoIndex != null) {
-      parentComponent!.renderCache[memoIndex] = undefined
+    if (cacheIndex != null) {
+      parentComponent!.renderCache[cacheIndex] = undefined
     }
 
     if (shapeFlag & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE) {
@@ -2155,12 +2118,17 @@ function baseCreateRenderer(
           vnode,
           parentComponent,
           parentSuspense,
-          optimized,
           internals,
           doRemove,
         )
       } else if (
         dynamicChildren &&
+        // #5154
+        // when v-once is used inside a block, setBlockTracking(-1) marks the
+        // parent block with hasOnce: true
+        // so that it doesn't take the fast path during unmount - otherwise
+        // components nested in v-once are never unmounted.
+        !dynamicChildren.hasOnce &&
         // #1153: fast path should not be taken for non-stable (v-for) fragments
         (type !== Fragment ||
           (patchFlag > 0 && patchFlag & PatchFlags.STABLE_FRAGMENT))
@@ -2359,7 +2327,12 @@ function baseCreateRenderer(
     if (__FEATURE_SUSPENSE__ && vnode.shapeFlag & ShapeFlags.SUSPENSE) {
       return vnode.suspense!.next()
     }
-    return hostNextSibling((vnode.anchor || vnode.el)!)
+    const el = hostNextSibling((vnode.anchor || vnode.el)!)
+    // #9071, #9313
+    // teleported content can mess up nextSibling searches during patch so
+    // we need to skip them during nextSibling search
+    const teleportEnd = el && el[TeleportEndKey]
+    return teleportEnd ? hostNextSibling(teleportEnd) : el
   }
 
   let isFlushing = false

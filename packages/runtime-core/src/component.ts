@@ -94,7 +94,7 @@ export type Data = Record<string, unknown>
  * the usage of `InstanceType<typeof Comp>` which only works for
  * constructor-based component definition types.
  *
- * Exmaple:
+ * @example
  * ```ts
  * const MyComp = { ... }
  * declare const instance: ComponentInstance<typeof MyComp>
@@ -736,13 +736,14 @@ export let isInSSRComponentSetup = false
 export function setupComponent(
   instance: ComponentInternalInstance,
   isSSR = false,
+  optimized = false,
 ) {
   isSSR && setInSSRSetupState(isSSR)
 
   const { props, children } = instance.vnode
   const isStateful = isStatefulComponent(instance)
   initProps(instance, props, isStateful, isSSR)
-  initSlots(instance, children)
+  initSlots(instance, children, optimized)
 
   const setupResult = isStateful
     ? setupStatefulComponent(instance, isSSR)
