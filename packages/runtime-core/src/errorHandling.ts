@@ -2,7 +2,7 @@ import { pauseTracking, resetTracking } from '@vue/reactivity'
 import type { VNode } from './vnode'
 import type { ComponentInternalInstance } from './component'
 import { popWarningContext, pushWarningContext, warn } from './warning'
-import { isArray, isFunction, isPromise } from '@vue/shared'
+import { EMPTY_OBJ, isArray, isFunction, isPromise } from '@vue/shared'
 import { LifecycleHooks } from './enums'
 
 // contexts where user provided function may be executed, in addition to
@@ -111,7 +111,9 @@ export function handleError(
   type: ErrorTypes,
   throwInDev = true,
 ) {
-  const contextVNode = instance ? instance.vnode : null
+  const contextVNode = instance && instance.vnode
+  const { errorHandler, throwUnhandledErrorInProduction } =
+    (instance && instance.appContext.config) || EMPTY_OBJ
   if (instance) {
     let cur = instance.parent
     // the exposed instance is the render proxy to keep it consistent with 2.x
@@ -134,20 +136,18 @@ export function handleError(
       cur = cur.parent
     }
     // app-level handling
-    const appErrorHandler = instance.appContext.config.errorHandler
-    if (appErrorHandler) {
+    if (errorHandler) {
       pauseTracking()
-      callWithErrorHandling(
-        appErrorHandler,
-        null,
-        ErrorCodes.APP_ERROR_HANDLER,
-        [err, exposedInstance, errorInfo],
-      )
+      callWithErrorHandling(errorHandler, null, ErrorCodes.APP_ERROR_HANDLER, [
+        err,
+        exposedInstance,
+        errorInfo,
+      ])
       resetTracking()
       return
     }
   }
-  logError(err, type, contextVNode, throwInDev)
+  logError(err, type, contextVNode, throwInDev, throwUnhandledErrorInProduction)
 }
 
 function logError(
@@ -155,6 +155,7 @@ function logError(
   type: ErrorTypes,
   contextVNode: VNode | null,
   throwInDev = true,
+  throwInProd = false,
 ) {
   if (__DEV__) {
     const info = ErrorTypeStrings[type]
@@ -171,6 +172,8 @@ function logError(
     } else if (!__TEST__) {
       console.error(err)
     }
+  } else if (throwInProd) {
+    throw err
   } else {
     // recover in prod to reduce the impact on end-user
     console.error(err)
