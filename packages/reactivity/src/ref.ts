@@ -250,11 +250,9 @@ const shallowUnwrapHandlers: ProxyHandler<any> = {
 }
 
 /**
- * Returns a reactive proxy for the given object.
- *
- * If the object already is reactive, it's returned as-is. If not, a new
- * reactive proxy is created. Direct child properties that are refs are properly
- * handled, as well.
+ * Returns a proxy for the given object that shallowly unwraps properties that
+ * are refs. If the object already is reactive, it's returned as-is. If not, a
+ * new reactive proxy is created.
  *
  * @param objectWithRefs - Either an already-reactive object or a simple object
  * that contains refs.
