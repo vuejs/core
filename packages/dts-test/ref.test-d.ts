@@ -17,6 +17,7 @@ import {
   toRefs,
   toValue,
   unref,
+  useTemplateRef,
 } from 'vue'
 import { type IsAny, type IsUnion, describe, expectType } from './utils'
 
@@ -456,3 +457,10 @@ describe('toRef <-> toValue', () => {
 // unref
 declare const text: ShallowRef<string> | ComputedRef<string> | MaybeRef<string>
 expectType<string>(unref(text))
+
+// useTemplateRef
+const tRef = useTemplateRef('foo')
+expectType<Readonly<ShallowRef<unknown>>>(tRef)
+
+const tRef2 = useTemplateRef<HTMLElement>('bar')
+expectType<Readonly<ShallowRef<HTMLElement | null>>>(tRef2)
