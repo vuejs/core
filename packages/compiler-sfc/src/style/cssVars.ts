@@ -185,15 +185,18 @@ export function genCssVarsCode(
           .join('')
 
   if (isScriptSetup) {
-    bindings.__hasRefBindingUsedInCssVar = vars.some(varName => {
-      const type = bindings[varName]
-      return (
-        type &&
-        (type === BindingTypes.SETUP_LET ||
-          type === BindingTypes.SETUP_MAYBE_REF ||
-          type === BindingTypes.SETUP_IMPORTED_MAYBE_REF ||
-          type === BindingTypes.SETUP_REF)
-      )
+    Object.defineProperty(bindings, '__hasRefBindingUsedInCssVar', {
+      enumerable: false,
+      value: vars.some(varName => {
+        const type = bindings[varName]
+        return (
+          type &&
+          (type === BindingTypes.SETUP_LET ||
+            type === BindingTypes.SETUP_MAYBE_REF ||
+            type === BindingTypes.SETUP_IMPORTED_MAYBE_REF ||
+            type === BindingTypes.SETUP_REF)
+        )
+      }),
     })
   }
   return `_${CSS_VARS_HELPER}(_ctx => (${transformedString}))`
