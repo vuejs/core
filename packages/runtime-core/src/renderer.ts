@@ -107,10 +107,7 @@ export interface RendererOptions<
     prevValue: any,
     nextValue: any,
     namespace?: ElementNamespace,
-    prevChildren?: VNode<HostNode, HostElement>[],
     parentComponent?: ComponentInternalInstance | null,
-    parentSuspense?: SuspenseBoundary | null,
-    unmountChildren?: UnmountChildrenFn,
   ): void
   insert(el: HostNode, parent: HostElement, anchor?: HostNode | null): void
   remove(el: HostNode): void
@@ -670,17 +667,7 @@ function baseCreateRenderer(
     if (props) {
       for (const key in props) {
         if (key !== 'value' && !isReservedProp(key)) {
-          hostPatchProp(
-            el,
-            key,
-            null,
-            props[key],
-            namespace,
-            vnode.children as VNode[],
-            parentComponent,
-            parentSuspense,
-            unmountChildren,
-          )
+          hostPatchProp(el, key, null, props[key], namespace, parentComponent)
         }
       }
       /**
@@ -833,6 +820,15 @@ function baseCreateRenderer(
       dynamicChildren = null
     }
 
+    // #9135 innerHTML / textContent unset needs to happen before possible
+    // new children mount
+    if (
+      (oldProps.innerHTML && newProps.innerHTML == null) ||
+      (oldProps.textContent && newProps.textContent == null)
+    ) {
+      hostSetElementText(el, '')
+    }
+
     if (dynamicChildren) {
       patchBlockChildren(
         n1.dynamicChildren!,
@@ -869,15 +865,7 @@ function baseCreateRenderer(
       // (i.e. at the exact same position in the source template)
       if (patchFlag & PatchFlags.FULL_PROPS) {
         // element props contain dynamic keys, full diff needed
-        patchProps(
-          el,
-          n2,
-          oldProps,
-          newProps,
-          parentComponent,
-          parentSuspense,
-          namespace,
-        )
+        patchProps(el, oldProps, newProps, parentComponent, namespace)
       } else {
         // class
         // this flag is matched when the element has dynamic class bindings.
@@ -908,17 +896,7 @@ function baseCreateRenderer(
             const next = newProps[key]
             // #1471 force patch value
             if (next !== prev || key === 'value') {
-              hostPatchProp(
-                el,
-                key,
-                prev,
-                next,
-                namespace,
-                n1.children as VNode[],
-                parentComponent,
-                parentSuspense,
-                unmountChildren,
-              )
+              hostPatchProp(el, key, prev, next, namespace, parentComponent)
             }
           }
         }
@@ -933,15 +911,7 @@ function baseCreateRenderer(
       }
     } else if (!optimized && dynamicChildren == null) {
       // unoptimized, full diff
-      patchProps(
-        el,
-        n2,
-        oldProps,
-        newProps,
-        parentComponent,
-        parentSuspense,
-        namespace,
-      )
+      patchProps(el, oldProps, newProps, parentComponent, namespace)
     }
 
     if ((vnodeHook = newProps.onVnodeUpdated) || dirs) {
@@ -998,11 +968,9 @@ function baseCreateRenderer(
 
   const patchProps = (
     el: RendererElement,
-    vnode: VNode,
     oldProps: Data,
     newProps: Data,
     parentComponent: ComponentInternalInstance | null,
-    parentSuspense: SuspenseBoundary | null,
     namespace: ElementNamespace,
   ) => {
     if (oldProps !== newProps) {
@@ -1015,10 +983,7 @@ function baseCreateRenderer(
               oldProps[key],
               null,
               namespace,
-              vnode.children as VNode[],
               parentComponent,
-              parentSuspense,
-              unmountChildren,
             )
           }
         }
@@ -1030,17 +995,7 @@ function baseCreateRenderer(
         const prev = oldProps[key]
         // defer patching value
         if (next !== prev && key !== 'value') {
-          hostPatchProp(
-            el,
-            key,
-            prev,
-            next,
-            namespace,
-            vnode.children as VNode[],
-            parentComponent,
-            parentSuspense,
-            unmountChildren,
-          )
+          hostPatchProp(el, key, prev, next, namespace, parentComponent)
         }
       }
       if ('value' in newProps) {

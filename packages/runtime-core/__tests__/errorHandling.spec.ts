@@ -1,5 +1,6 @@
 import {
   type VNode,
+  computed,
   createApp,
   defineComponent,
   h,
@@ -634,6 +635,36 @@ describe('error handling', () => {
     await nextTick()
     expect(app.config.errorHandler).toHaveBeenCalledWith(
       error,
+      {},
+      ErrorTypeStrings[ErrorCodes.COMPONENT_UPDATE],
+    )
+  })
+
+  // #11286
+  test('handle error in computed', async () => {
+    const err = new Error()
+    const handler = vi.fn()
+
+    const count = ref(1)
+    const x = computed(() => {
+      if (count.value === 2) throw err
+      return count.value + 1
+    })
+
+    const app = createApp({
+      setup() {
+        return () => x.value
+      },
+    })
+
+    app.config.errorHandler = handler
+    app.mount(nodeOps.createElement('div'))
+
+    count.value = 2
+
+    await nextTick()
+    expect(handler).toHaveBeenCalledWith(
+      err,
       {},
       ErrorTypeStrings[ErrorCodes.COMPONENT_UPDATE],
     )
