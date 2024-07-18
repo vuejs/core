@@ -127,7 +127,9 @@ export function invalidateJob(job: SchedulerJob) {
 
 export function queuePostFlushCb(cb: SchedulerJobs) {
   if (!isArray(cb)) {
-    if (!(cb.flags! & SchedulerJobFlags.QUEUED)) {
+    if (activePostFlushCbs && cb.id === -1) {
+      activePostFlushCbs.splice(postFlushIndex + 1, 0, cb)
+    } else if (!(cb.flags! & SchedulerJobFlags.QUEUED)) {
       pendingPostFlushCbs.push(cb)
       if (!(cb.flags! & SchedulerJobFlags.ALLOW_RECURSE)) {
         cb.flags! |= SchedulerJobFlags.QUEUED
