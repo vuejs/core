@@ -59,6 +59,7 @@ export function fuzzyMatchTarget(partialTargets, includeAllMatching) {
  * @param {object} [options]
  */
 export async function exec(command, args, options) {
+  const isWin32 = process.platform === 'win32'
   return new Promise((resolve, reject) => {
     const process = spawn(command, args, {
       stdio: [
@@ -66,6 +67,7 @@ export async function exec(command, args, options) {
         'pipe', // stdout
         'pipe', // stderr
       ],
+      shell: isWin32,
       ...options,
     })
 
