@@ -17,7 +17,7 @@ import {
   withDirectives,
 } from '@vue/runtime-test'
 import { Fragment, createCommentVNode, createVNode } from '../../src/vnode'
-import { compile, render as domRender } from 'vue'
+import { compile, createApp as createDOMApp, render as domRender } from 'vue'
 
 describe('renderer: teleport', () => {
   test('should work', () => {
@@ -490,6 +490,7 @@ describe('renderer: teleport', () => {
       `"<!--teleport start--><!--teleport end-->"`,
     )
     expect(serializeInner(target)).toMatchInlineSnapshot(`"<div>foo</div>"`)
+    await nextTick()
     expect(dir.mounted).toHaveBeenCalledTimes(1)
     expect(dir.unmounted).toHaveBeenCalledTimes(0)
 
@@ -619,5 +620,23 @@ describe('renderer: teleport', () => {
     parentShow.value = false
     await nextTick()
     expect(root.innerHTML).toMatchInlineSnapshot('"<!--v-if-->"')
+  })
+
+  test('should be able to target content appearing later than the teleport', () => {
+    const root = document.createElement('div')
+    document.body.appendChild(root)
+
+    createDOMApp({
+      render() {
+        return [
+          h(Teleport, { to: '#target' }, h('div', 'teleported')),
+          h('div', { id: 'target' }),
+        ]
+      },
+    }).mount(root)
+
+    expect(root.innerHTML).toMatchInlineSnapshot(
+      `"<!--teleport start--><!--teleport end--><div id="target"><div>teleported</div></div>"`,
+    )
   })
 })

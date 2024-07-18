@@ -7,6 +7,7 @@ import {
   type RendererInternals,
   type RendererNode,
   type RendererOptions,
+  queuePostRenderEffect,
   traverseStaticChildren,
 } from '../renderer'
 import type { VNode, VNodeArrayChildren, VNodeProps } from '../vnode'
@@ -107,7 +108,6 @@ export const TeleportImpl = {
       const mainAnchor = (n2.anchor = __DEV__
         ? createComment('teleport end')
         : createText(''))
-      const target = (n2.target = resolveTarget(n2.props, querySelector))
       const targetStart = (n2.targetStart = createText(''))
       const targetAnchor = (n2.targetAnchor = createText(''))
       insert(placeholder, container, anchor)
@@ -115,18 +115,6 @@ export const TeleportImpl = {
       // attach a special property so we can skip teleported content in
       // renderer's nextSibling search
       targetStart[TeleportEndKey] = targetAnchor
-      if (target) {
-        insert(targetStart, target)
-        insert(targetAnchor, target)
-        // #2652 we could be teleporting from a non-SVG tree into an SVG tree
-        if (namespace === 'svg' || isTargetSVG(target)) {
-          namespace = 'svg'
-        } else if (namespace === 'mathml' || isTargetMathML(target)) {
-          namespace = 'mathml'
-        }
-      } else if (__DEV__ && !disabled) {
-        warn('Invalid Teleport target on mount:', target, `(${typeof target})`)
-      }
 
       const mount = (container: RendererElement, anchor: RendererNode) => {
         // Teleport *always* has Array children. This is enforced in both the
@@ -147,9 +135,30 @@ export const TeleportImpl = {
 
       if (disabled) {
         mount(container, mainAnchor)
-      } else if (target) {
-        mount(target, targetAnchor)
       }
+
+      queuePostRenderEffect(() => {
+        const target = (n2.target = resolveTarget(n2.props, querySelector))
+        if (target) {
+          insert(targetStart, target)
+          insert(targetAnchor, target)
+          // #2652 we could be teleporting from a non-SVG tree into an SVG tree
+          if (namespace !== 'svg' && isTargetSVG(target)) {
+            namespace = 'svg'
+          } else if (namespace !== 'mathml' && isTargetMathML(target)) {
+            namespace = 'mathml'
+          }
+          if (!disabled) {
+            mount(target, targetAnchor)
+          }
+        } else if (__DEV__ && !disabled) {
+          warn(
+            'Invalid Teleport target on mount:',
+            target,
+            `(${typeof target})`,
+          )
+        }
+      }, parentSuspense)
     } else {
       // update content
       n2.el = n1.el
