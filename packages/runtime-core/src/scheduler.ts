@@ -127,7 +127,9 @@ export function invalidateJob(job: SchedulerJob) {
 
 export function queuePostFlushCb(cb: SchedulerJobs) {
   if (!isArray(cb)) {
-    if (!(cb.flags! & SchedulerJobFlags.QUEUED)) {
+    if (activePostFlushCbs && cb.id === -1) {
+      activePostFlushCbs.splice(postFlushIndex + 1, 0, cb)
+    } else if (!(cb.flags! & SchedulerJobFlags.QUEUED)) {
       pendingPostFlushCbs.push(cb)
       if (!(cb.flags! & SchedulerJobFlags.ALLOW_RECURSE)) {
         cb.flags! |= SchedulerJobFlags.QUEUED
@@ -168,18 +170,7 @@ export function flushPreFlushCbs(
   }
 }
 
-const prepost: SchedulerJob[] = []
-export function queuePrePostFlushCb(job: SchedulerJob) {
-  prepost.push(job)
-}
-
 export function flushPostFlushCbs(seen?: CountMap) {
-  if (prepost.length) {
-    for (let i = 0; i < prepost.length; i++) {
-      prepost[i]()
-    }
-    prepost.length = 0
-  }
   if (pendingPostFlushCbs.length) {
     const deduped = [...new Set(pendingPostFlushCbs)].sort(
       (a, b) => getId(a) - getId(b),

@@ -7,19 +7,20 @@ import {
   type RendererInternals,
   type RendererNode,
   type RendererOptions,
+  queuePostRenderEffect,
   traverseStaticChildren,
 } from '../renderer'
 import type { VNode, VNodeArrayChildren, VNodeProps } from '../vnode'
 import { ShapeFlags, isString } from '@vue/shared'
 import { warn } from '../warning'
 import { isHmrUpdating } from '../hmr'
-import { queuePrePostFlushCb } from '../scheduler'
 
 export type TeleportVNode = VNode<RendererNode, RendererElement, TeleportProps>
 
 export interface TeleportProps {
   to: string | RendererElement | null | undefined
   disabled?: boolean
+  defer?: boolean
 }
 
 export const TeleportEndKey = Symbol('_vte')
@@ -28,6 +29,9 @@ export const isTeleport = (type: any): boolean => type.__isTeleport
 
 const isTeleportDisabled = (props: VNode['props']): boolean =>
   props && (props.disabled || props.disabled === '')
+
+const isTeleportDeferred = (props: VNode['props']): boolean =>
+  props && (props.defer || props.defer === '')
 
 const isTargetSVG = (target: RendererElement): boolean =>
   typeof SVGElement !== 'undefined' && target instanceof SVGElement
@@ -133,12 +137,7 @@ export const TeleportImpl = {
         }
       }
 
-      if (disabled) {
-        mount(container, mainAnchor)
-        updateCssVars(n2)
-      }
-
-      queuePrePostFlushCb(() => {
+      const mountToTarget = () => {
         const target = (n2.target = resolveTarget(n2.props, querySelector))
         if (target) {
           insert(targetStart, target)
@@ -160,7 +159,18 @@ export const TeleportImpl = {
             `(${typeof target})`,
           )
         }
-      })
+      }
+
+      if (disabled) {
+        mount(container, mainAnchor)
+        updateCssVars(n2)
+      }
+
+      if (isTeleportDeferred(n2.props)) {
+        queuePostRenderEffect(mountToTarget, parentSuspense)
+      } else {
+        mountToTarget()
+      }
     } else {
       // update content
       n2.el = n1.el
