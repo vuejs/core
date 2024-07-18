@@ -7,13 +7,13 @@ import {
   type RendererInternals,
   type RendererNode,
   type RendererOptions,
-  queuePostRenderEffect,
   traverseStaticChildren,
 } from '../renderer'
 import type { VNode, VNodeArrayChildren, VNodeProps } from '../vnode'
 import { ShapeFlags, isString } from '@vue/shared'
 import { warn } from '../warning'
 import { isHmrUpdating } from '../hmr'
+import { queuePrePostFlushCb } from '../scheduler'
 
 export type TeleportVNode = VNode<RendererNode, RendererElement, TeleportProps>
 
@@ -138,7 +138,7 @@ export const TeleportImpl = {
         updateCssVars(n2)
       }
 
-      queuePostRenderEffect(() => {
+      queuePrePostFlushCb(() => {
         const target = (n2.target = resolveTarget(n2.props, querySelector))
         if (target) {
           insert(targetStart, target)
@@ -160,7 +160,7 @@ export const TeleportImpl = {
             `(${typeof target})`,
           )
         }
-      }, parentSuspense)
+      })
     } else {
       // update content
       n2.el = n1.el

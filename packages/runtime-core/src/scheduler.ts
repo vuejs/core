@@ -168,7 +168,18 @@ export function flushPreFlushCbs(
   }
 }
 
+const prepost: SchedulerJob[] = []
+export function queuePrePostFlushCb(job: SchedulerJob) {
+  prepost.push(job)
+}
+
 export function flushPostFlushCbs(seen?: CountMap) {
+  if (prepost.length) {
+    for (let i = 0; i < prepost.length; i++) {
+      prepost[i]()
+    }
+    prepost.length = 0
+  }
   if (pendingPostFlushCbs.length) {
     const deduped = [...new Set(pendingPostFlushCbs)].sort(
       (a, b) => getId(a) - getId(b),
