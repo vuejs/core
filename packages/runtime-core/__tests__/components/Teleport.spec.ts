@@ -59,7 +59,7 @@ describe('renderer: teleport', () => {
           <div>
             <async />
             <teleport defer to="#target-suspense">
-              <div ref="tel">teleported</div>
+              <div>teleported</div>
             </teleport>
             <div id="target-suspense" />
           </div>
@@ -704,6 +704,28 @@ describe('renderer: teleport', () => {
       parentShow.value = false
       await nextTick()
       expect(root.innerHTML).toMatchInlineSnapshot('"<!--v-if-->"')
+    })
+
+    test('accessing template refs inside teleport', async () => {
+      const target = nodeOps.createElement('div')
+      const tRef = ref()
+      let tRefInMounted
+
+      render(
+        h({
+          render: () => [
+            h(Teleport, { to: target }, h('div', { ref: tRef }, 'teleported')),
+            h('div', 'root'),
+          ],
+          mounted() {
+            tRefInMounted = tRef.value
+          },
+        }),
+        nodeOps.createElement('div'),
+      )
+
+      // children[0] is the start anchor
+      expect(tRefInMounted).toBe(target.children[1])
     })
   }
 })
