@@ -135,6 +135,7 @@ export const TeleportImpl = {
 
       if (disabled) {
         mount(container, mainAnchor)
+        updateCssVars(n2)
       }
 
       queuePostRenderEffect(() => {
@@ -150,6 +151,7 @@ export const TeleportImpl = {
           }
           if (!disabled) {
             mount(target, targetAnchor)
+            updateCssVars(n2)
           }
         } else if (__DEV__ && !disabled) {
           warn(
@@ -258,9 +260,8 @@ export const TeleportImpl = {
           )
         }
       }
+      updateCssVars(n2)
     }
-
-    updateCssVars(n2)
   },
 
   remove(
@@ -450,7 +451,7 @@ function updateCssVars(vnode: VNode) {
   // code path here can assume browser environment.
   const ctx = vnode.ctx
   if (ctx && ctx.ut) {
-    let node = (vnode.children as VNode[])[0].el!
+    let node = vnode.targetStart
     while (node && node !== vnode.targetAnchor) {
       if (node.nodeType === 1) node.setAttribute('data-v-owner', ctx.uid)
       node = node.nextSibling
