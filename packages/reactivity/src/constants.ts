@@ -12,6 +12,7 @@ export enum TriggerOpTypes {
   ADD = 'add',
   DELETE = 'delete',
   CLEAR = 'clear',
+  INTERSECTION = 'intersection',
 }
 
 export enum ReactiveFlags {

@@ -137,6 +137,22 @@ function deleteEntry(this: CollectionTypes, key: unknown) {
   return result
 }
 
+function intersection(this: SetTypes, value: unknown, _isShallow = false) {
+  if (!_isShallow && !isShallow(value) && !isReadonly(value)) {
+    value = toRaw(value)
+  }
+  const target = toRaw(this)
+  const proto = getProto(target)
+  const hadKey = proto.has.call(target, value)
+  let result
+  if (!hadKey) {
+    // @ts-expect-error
+    result = target.intersection(value)
+    trigger(target, TriggerOpTypes.INTERSECTION, value, value)
+  }
+  return result
+}
+
 function clear(this: IterableCollections) {
   const target = toRaw(this)
   const hadItems = target.size !== 0
@@ -263,6 +279,7 @@ function createInstrumentations() {
     delete: deleteEntry,
     clear,
     forEach: createForEach(false, false),
+    intersection,
   }
 
   const shallowInstrumentations: Instrumentations = {
@@ -282,6 +299,7 @@ function createInstrumentations() {
     delete: deleteEntry,
     clear,
     forEach: createForEach(false, true),
+    intersection,
   }
 
   const readonlyInstrumentations: Instrumentations = {
@@ -299,6 +317,7 @@ function createInstrumentations() {
     delete: createReadonlyMethod(TriggerOpTypes.DELETE),
     clear: createReadonlyMethod(TriggerOpTypes.CLEAR),
     forEach: createForEach(true, false),
+    intersection,
   }
 
   const shallowReadonlyInstrumentations: Instrumentations = {
@@ -316,6 +335,7 @@ function createInstrumentations() {
     delete: createReadonlyMethod(TriggerOpTypes.DELETE),
     clear: createReadonlyMethod(TriggerOpTypes.CLEAR),
     forEach: createForEach(true, true),
+    intersection,
   }
 
   const iteratorMethods = [
