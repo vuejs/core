@@ -63,6 +63,7 @@ export { defineAsyncComponent } from './apiAsyncComponent'
 export { useAttrs, useSlots } from './apiSetupHelpers'
 export { useModel } from './helpers/useModel'
 export { useTemplateRef } from './helpers/useTemplateRef'
+export { useId } from './helpers/useId'
 
 // <script setup> API ----------------------------------------------------------
 

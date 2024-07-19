@@ -92,6 +92,7 @@ import type { SuspenseProps } from './components/Suspense'
 import type { KeepAliveProps } from './components/KeepAlive'
 import type { BaseTransitionProps } from './components/BaseTransition'
 import type { DefineComponent } from './apiDefineComponent'
+import { markAsyncBoundary } from './helpers/useId'
 
 export type Data = Record<string, unknown>
 
@@ -357,6 +358,14 @@ export interface ComponentInternalInstance {
    */
   provides: Data
   /**
+   * for tracking useId()
+   * first number is the index of the current async boundrary
+   * second number is the index of the useId call within that boundary
+   * third number is the count of child async boundaries
+   * @internal
+   */
+  ids: [number, number, number]
+  /**
    * Tracking reactive effects (e.g. watchers) associated with this component
    * so that they can be automatically stopped on component unmount
    * @internal
@@ -619,6 +628,7 @@ export function createComponentInstance(
     withProxy: null,
 
     provides: parent ? parent.provides : Object.create(appContext.provides),
+    ids: parent ? parent.ids : [0, 0, 0],
     accessCache: null!,
     renderCache: [],
 
@@ -862,6 +872,8 @@ function setupStatefulComponent(
     reset()
 
     if (isPromise(setupResult)) {
+      // async setup, mark as async boundary for useId()
+      markAsyncBoundary(instance)
       setupResult.then(unsetCurrentInstance, unsetCurrentInstance)
       if (isSSR) {
         // return the promise so server-renderer can wait on it

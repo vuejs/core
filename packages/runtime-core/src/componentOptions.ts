@@ -84,6 +84,7 @@ import {
   type ComponentTypeEmits,
   normalizePropsOrEmits,
 } from './apiSetupHelpers'
+import { markAsyncBoundary } from './helpers/useId'
 
 /**
  * Interface for declaring custom options.
@@ -770,6 +771,10 @@ export function applyOptions(instance: ComponentInternalInstance) {
     isCompatEnabled(DeprecationTypes.FILTERS, instance)
   ) {
     instance.filters = filters
+  }
+
+  if (__SSR__ && serverPrefetch) {
+    markAsyncBoundary(instance)
   }
 }
 
