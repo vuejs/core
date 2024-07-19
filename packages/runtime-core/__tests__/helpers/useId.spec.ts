@@ -61,6 +61,16 @@ describe('useId', () => {
     ).toBe('v0:0 v0:1')
   })
 
+  test('with config.idPrefix', async () => {
+    expect(
+      await getOutput(() => {
+        const app = createApp(BasicComponentWithUseId)
+        app.config.idPrefix = 'foo-'
+        return [app, []]
+      }),
+    ).toBe('foo-0:0 foo-0:1')
+  })
+
   test('async component', async () => {
     const factory = (
       delay1: number,
