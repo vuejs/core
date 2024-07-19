@@ -58,17 +58,17 @@ describe('useId', () => {
         const app = createApp(BasicComponentWithUseId)
         return [app, []]
       }),
-    ).toBe('v0:0 v0:1')
+    ).toBe('v:0 v:1')
   })
 
   test('with config.idPrefix', async () => {
     expect(
       await getOutput(() => {
         const app = createApp(BasicComponentWithUseId)
-        app.config.idPrefix = 'foo-'
+        app.config.idPrefix = 'foo'
         return [app, []]
       }),
-    ).toBe('foo-0:0 foo-0:1')
+    ).toBe('foo:0 foo:1')
   })
 
   test('async component', async () => {
@@ -91,9 +91,9 @@ describe('useId', () => {
     }
 
     const expected =
-      'v0:0 v0:1 ' + // root
-      'v1:0 v1:1 ' + // inside first async subtree
-      'v2:0 v2:1' // inside second async subtree
+      'v:0 v:1 ' + // root
+      'v:0-0 v:0-1 ' + // inside first async subtree
+      'v:1-0 v:1-1' // inside second async subtree
     // assert different async resolution order does not affect id stable-ness
     expect(await getOutput(() => factory(10, 20))).toBe(expected)
     expect(await getOutput(() => factory(20, 10))).toBe(expected)
@@ -136,9 +136,9 @@ describe('useId', () => {
     }
 
     const expected =
-      'v0:0 v0:1 ' + // root
-      'v1:0 v1:1 ' + // inside first async subtree
-      'v2:0 v2:1' // inside second async subtree
+      'v:0 v:1 ' + // root
+      'v:0-0 v:0-1 ' + // inside first async subtree
+      'v:1-0 v:1-1' // inside second async subtree
     // assert different async resolution order does not affect id stable-ness
     expect(await getOutput(() => factory(10, 20))).toBe(expected)
     expect(await getOutput(() => factory(20, 10))).toBe(expected)
@@ -187,12 +187,56 @@ describe('useId', () => {
 
     const expected =
       '<div>' +
-      'v0:0 v0:1 ' + // root
-      'v1:0 v1:1 ' + // inside first async subtree
-      'v2:0 v2:1' + // inside second async subtree
+      'v:0 v:1 ' + // root
+      'v:0-0 v:0-1 ' + // inside first async subtree
+      'v:1-0 v:1-1' + // inside second async subtree
       '</div>'
     // assert different async resolution order does not affect id stable-ness
     expect(await getOutput(() => factory(10, 20))).toBe(expected)
     expect(await getOutput(() => factory(20, 10))).toBe(expected)
+  })
+
+  test('deep nested', async () => {
+    const factory = (): ReturnType<TestCaseFactory> => {
+      const p = Promise.resolve()
+      const One = {
+        async setup() {
+          const id = useId()
+          await p
+          return () => [id, ' ', h(Two), ' ', h(Three)]
+        },
+      }
+      const Two = {
+        async setup() {
+          const id = useId()
+          await p
+          return () => [id, ' ', h(Three), ' ', h(Three)]
+        },
+      }
+      const Three = {
+        async setup() {
+          const id = useId()
+          return () => id
+        },
+      }
+      const app = createApp({
+        setup() {
+          return () =>
+            h(Suspense, null, {
+              default: h(One),
+            })
+        },
+      })
+      return [app, [p]]
+    }
+
+    const expected =
+      'v:0 ' + // One
+      'v:0-0 ' + // Two
+      'v:0-0-0 v:0-0-1 ' + // Three + Three nested in Two
+      'v:0-1' // Three after Two
+    // assert different async resolution order does not affect id stable-ness
+    expect(await getOutput(() => factory())).toBe(expected)
+    expect(await getOutput(() => factory())).toBe(expected)
   })
 })

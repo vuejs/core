@@ -7,7 +7,7 @@ import { warn } from '../warning'
 export function useId() {
   const i = getCurrentInstance()
   if (i) {
-    return (i.appContext.config.idPrefix || 'v') + i.ids[0] + ':' + i.ids[1]++
+    return (i.appContext.config.idPrefix || 'v') + ':' + i.ids[0] + i.ids[1]++
   } else if (__DEV__) {
     warn(
       `useId() is called when there is no active component ` +
@@ -23,5 +23,5 @@ export function useId() {
  * - components with serverPrefetch
  */
 export function markAsyncBoundary(instance: ComponentInternalInstance) {
-  instance.ids = [++instance.ids[2], 0, 0]
+  instance.ids = [instance.ids[0] + instance.ids[2]++ + '-', 0, 0]
 }

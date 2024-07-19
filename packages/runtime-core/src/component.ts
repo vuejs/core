@@ -359,12 +359,11 @@ export interface ComponentInternalInstance {
   provides: Data
   /**
    * for tracking useId()
-   * first number is the index of the current async boundrary
+   * first element is the current boundary prefix
    * second number is the index of the useId call within that boundary
-   * third number is the count of child async boundaries
    * @internal
    */
-  ids: [number, number, number]
+  ids: [string, number, number]
   /**
    * Tracking reactive effects (e.g. watchers) associated with this component
    * so that they can be automatically stopped on component unmount
@@ -628,7 +627,7 @@ export function createComponentInstance(
     withProxy: null,
 
     provides: parent ? parent.provides : Object.create(appContext.provides),
-    ids: parent ? parent.ids : [0, 0, 0],
+    ids: parent ? parent.ids : ['', 0, 0],
     accessCache: null!,
     renderCache: [],
 
