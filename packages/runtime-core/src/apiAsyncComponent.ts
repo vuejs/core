@@ -15,6 +15,7 @@ import { ref } from '@vue/reactivity'
 import { ErrorCodes, handleError } from './errorHandling'
 import { isKeepAlive } from './components/KeepAlive'
 import { queueJob } from './scheduler'
+import { markAsyncBoundary } from './helpers/useId'
 
 export type AsyncComponentResolveResult<T = Component> = T | { default: T } // es modules
 
@@ -157,6 +158,8 @@ export function defineAsyncComponent<
                   })
                 : null
           })
+      } else {
+        markAsyncBoundary(instance)
       }
 
       const loaded = ref(false)
