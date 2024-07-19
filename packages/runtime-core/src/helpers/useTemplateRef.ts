@@ -1,6 +1,6 @@
 import { type ShallowRef, readonly, shallowRef } from '@vue/reactivity'
-import { getCurrentInstance } from './component'
-import { warn } from './warning'
+import { getCurrentInstance } from '../component'
+import { warn } from '../warning'
 import { EMPTY_OBJ } from '@vue/shared'
 
 export function useTemplateRef<T = unknown>(

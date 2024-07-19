@@ -62,7 +62,7 @@ export { defineComponent } from './apiDefineComponent'
 export { defineAsyncComponent } from './apiAsyncComponent'
 export { useAttrs, useSlots } from './apiSetupHelpers'
 export { useModel } from './helpers/useModel'
-export { useTemplateRef } from './apiTemplateRef'
+export { useTemplateRef } from './helpers/useTemplateRef'
 
 // <script setup> API ----------------------------------------------------------
 
