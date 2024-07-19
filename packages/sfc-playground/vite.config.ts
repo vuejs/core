@@ -2,9 +2,11 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { type Plugin, defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
-import { execaSync } from 'execa'
+import { spawnSync } from 'node:child_process'
 
-const commit = execaSync('git', ['rev-parse', '--short=7', 'HEAD']).stdout
+const commit = spawnSync('git', ['rev-parse', '--short=7', 'HEAD'])
+  .stdout.toString()
+  .trim()
 
 export default defineConfig({
   plugins: [

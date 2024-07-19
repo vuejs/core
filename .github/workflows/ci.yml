@@ -88,7 +88,7 @@ jobs:
 
       - run: pnpm install
 
-      - run: pnpm release --vapor --skip-tests --tag ${{ github.ref == 'refs/heads/main' && 'latest' || 'branch' }}
+      - run: pnpm release --vapor --skipTests --tag ${{ github.ref == 'refs/heads/main' && 'latest' || 'branch' }}
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           NPM_CONFIG_PROVENANCE: 'true'

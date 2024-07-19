@@ -538,6 +538,23 @@ describe('api: createApp', () => {
     expect(serializeInner(root)).toBe('hello')
   })
 
+  test('config.throwUnhandledErrorInProduction', () => {
+    __DEV__ = false
+    try {
+      const err = new Error()
+      const app = createApp({
+        setup() {
+          throw err
+        },
+      })
+      app.config.throwUnhandledErrorInProduction = true
+      const root = nodeOps.createElement('div')
+      expect(() => app.mount(root)).toThrow(err)
+    } finally {
+      __DEV__ = true
+    }
+  })
+
   test('return property "_" should not overwrite "ctx._", __isScriptSetup: false', () => {
     const Comp = defineComponent({
       setup() {

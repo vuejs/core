@@ -52,3 +52,13 @@ jobs:
         with:
           name: size-data
           path: temp/size
+
+      - name: Save PR number
+        if: ${{github.event_name == 'pull_request'}}
+        run: echo ${{ github.event.number }} > ./pr.txt
+
+      - uses: actions/upload-artifact@v4
+        if: ${{github.event_name == 'pull_request'}}
+        with:
+          name: pr-number
+          path: pr.txt

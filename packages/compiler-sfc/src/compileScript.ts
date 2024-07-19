@@ -607,6 +607,7 @@ export function compileScript(
         setupBindings,
         vueImportAliases,
         hoistStatic,
+        !!ctx.propsDestructureDecl,
       )
     }
 
@@ -623,7 +624,7 @@ export function compileScript(
     ) {
       const scope: Statement[][] = [scriptSetupAst.body]
       walk(node, {
-        enter(child: Node, parent: Node | undefined) {
+        enter(child: Node, parent: Node | null) {
           if (isFunctionType(child)) {
             this.skip()
           }
@@ -1071,6 +1072,7 @@ function walkDeclaration(
   bindings: Record<string, BindingTypes>,
   userImportAliases: Record<string, string>,
   hoistStatic: boolean,
+  isPropsDestructureEnabled = false,
 ): boolean {
   let isAllLiteral = false
 
@@ -1139,7 +1141,7 @@ function walkDeclaration(
         }
         registerBinding(bindings, id, bindingType)
       } else {
-        if (isCallOf(init, DEFINE_PROPS)) {
+        if (isCallOf(init, DEFINE_PROPS) && isPropsDestructureEnabled) {
           continue
         }
         if (id.type === 'ObjectPattern') {

@@ -118,7 +118,11 @@ export function processExpression(
   }
 
   const { inline, bindingMetadata } = context
-  const rewriteIdentifier = (raw: string, parent?: Node, id?: Identifier) => {
+  const rewriteIdentifier = (
+    raw: string,
+    parent?: Node | null,
+    id?: Identifier,
+  ) => {
     const type = hasOwn(bindingMetadata, raw) && bindingMetadata[raw]
     if (inline) {
       // x = y
@@ -315,9 +319,10 @@ export function processExpression(
         // local scope variable (a v-for alias, or a v-slot prop)
         if (
           !(needPrefix && isLocal) &&
-          parent.type !== 'CallExpression' &&
-          parent.type !== 'NewExpression' &&
-          parent.type !== 'MemberExpression'
+          (!parent ||
+            (parent.type !== 'CallExpression' &&
+              parent.type !== 'NewExpression' &&
+              parent.type !== 'MemberExpression'))
         ) {
           ;(node as QualifiedId).isConstant = true
         }

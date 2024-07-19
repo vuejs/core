@@ -1,3 +1,11 @@
 packages:
   - 'packages/*'
   - playground
+
+catalog:
+  '@babel/parser': ^7.24.7
+  '@babel/types': ^7.24.7
+  'estree-walker': ^2.0.2
+  'magic-string': ^0.30.10
+  'source-map-js': ^1.2.0
+  'vite': ^5.3.3

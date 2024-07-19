@@ -73,9 +73,9 @@ export function createBuffer() {
       const isStringItem = isString(item)
       if (appendable && isStringItem) {
         buffer[buffer.length - 1] += item as string
-      } else {
-        buffer.push(item)
+        return
       }
+      buffer.push(item)
       appendable = isStringItem
       if (isPromise(item) || (isArray(item) && item.hasAsync)) {
         // promise, or child buffer with async, mark as async.
