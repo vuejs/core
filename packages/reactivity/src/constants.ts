@@ -20,6 +20,7 @@ export enum TriggerOpTypes {
   IS_SUBSET_OF = 'isSubsetOf',
   IS_SUPERSET_OF = 'isSupersetOf',
   SYMMETRIC_DIFFERENCE = 'symmetricDifference',
+  UNION = 'union',
 }
 
 export enum ReactiveFlags {

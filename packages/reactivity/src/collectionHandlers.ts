@@ -291,6 +291,7 @@ function createInstrumentations() {
     symmetricDifference: createSetProtoMethod(
       TriggerOpTypes.SYMMETRIC_DIFFERENCE,
     ),
+    union: createSetProtoMethod(TriggerOpTypes.UNION),
   }
 
   const shallowInstrumentations: Instrumentations = {
@@ -320,6 +321,7 @@ function createInstrumentations() {
     symmetricDifference: createSetProtoMethod(
       TriggerOpTypes.SYMMETRIC_DIFFERENCE,
     ),
+    union: createSetProtoMethod(TriggerOpTypes.UNION),
   }
 
   const readonlyInstrumentations: Instrumentations = {
@@ -347,6 +349,7 @@ function createInstrumentations() {
     symmetricDifference: createSetProtoMethod(
       TriggerOpTypes.SYMMETRIC_DIFFERENCE,
     ),
+    union: createSetProtoMethod(TriggerOpTypes.UNION),
   }
 
   const shallowReadonlyInstrumentations: Instrumentations = {
@@ -374,6 +377,7 @@ function createInstrumentations() {
     symmetricDifference: createSetProtoMethod(
       TriggerOpTypes.SYMMETRIC_DIFFERENCE,
     ),
+    union: createSetProtoMethod(TriggerOpTypes.UNION),
   }
 
   const iteratorMethods = [

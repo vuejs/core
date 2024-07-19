@@ -467,8 +467,8 @@ describe('reactivity/collections', () => {
       const setSpy = vi.fn(() => result.value)
       effect(setSpy)
       // @ts-expect-error
-      set1.value.difference(set2.value)
-      expect(setSpy).toHaveBeenCalledTimes(1)
+      result.value = set1.value.difference(set2.value)
+      expect(setSpy).toHaveBeenCalledTimes(2)
     })
 
     it('set with intersection', () => {
@@ -478,8 +478,8 @@ describe('reactivity/collections', () => {
       const setSpy = vi.fn(() => result.value)
       effect(setSpy)
       // @ts-expect-error
-      set1.value.intersection(set2.value)
-      expect(setSpy).toHaveBeenCalledTimes(1)
+      result.value = set1.value.intersection(set2.value)
+      expect(setSpy).toHaveBeenCalledTimes(2)
     })
 
     it('set with isDisjointFrom', () => {
@@ -489,8 +489,8 @@ describe('reactivity/collections', () => {
       const setSpy = vi.fn(() => result.value)
       effect(setSpy)
       // @ts-expect-error
-      set1.value.isDisjointFrom(set2.value)
-      expect(setSpy).toHaveBeenCalledTimes(1)
+      result.value = set1.value.isDisjointFrom(set2.value)
+      expect(setSpy).toHaveBeenCalledTimes(2)
     })
 
     it('set with isSubsetOf', () => {
@@ -500,8 +500,8 @@ describe('reactivity/collections', () => {
       const setSpy = vi.fn(() => result.value)
       effect(setSpy)
       // @ts-expect-error
-      set1.value.isSubsetOf(set2.value)
-      expect(setSpy).toHaveBeenCalledTimes(1)
+      result.value = set1.value.isSubsetOf(set2.value)
+      expect(setSpy).toHaveBeenCalledTimes(2)
     })
 
     it('set with isSupersetOf', () => {
@@ -511,8 +511,8 @@ describe('reactivity/collections', () => {
       const setSpy = vi.fn(() => result.value)
       effect(setSpy)
       // @ts-expect-error
-      set1.value.isSupersetOf(set2.value)
-      expect(setSpy).toHaveBeenCalledTimes(1)
+      result.value = set1.value.isSupersetOf(set2.value)
+      expect(setSpy).toHaveBeenCalledTimes(2)
     })
 
     it('set with symmetricDifference', () => {
@@ -522,8 +522,19 @@ describe('reactivity/collections', () => {
       const setSpy = vi.fn(() => result.value)
       effect(setSpy)
       // @ts-expect-error
-      set1.value.symmetricDifference(set2.value)
-      expect(setSpy).toHaveBeenCalledTimes(1)
+      result.value = set1.value.symmetricDifference(set2.value)
+      expect(setSpy).toHaveBeenCalledTimes(2)
+    })
+
+    it('set with union', () => {
+      const result = ref('')
+      const set1 = ref(new Set([1, 2, 3]))
+      const set2 = ref(new Set([2, 3, 4]))
+      const setSpy = vi.fn(() => result.value)
+      effect(setSpy)
+      // @ts-expect-error
+      result.value = set1.value.union(set2.value)
+      expect(setSpy).toHaveBeenCalledTimes(2)
     })
   })
 })
