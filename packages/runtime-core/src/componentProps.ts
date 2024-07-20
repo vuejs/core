@@ -563,26 +563,30 @@ export function normalizePropsOptions(
         const prop: NormalizedProp = (normalized[normalizedKey] =
           isArray(opt) || isFunction(opt) ? { type: opt } : extend({}, opt))
         const propType = prop.type
+        let shouldCast = false
         let shouldCastTrue = true
 
-        const checkForBoolean = (
-          type: PropConstructor | true | null | undefined,
-        ) => {
-          const typeName = isFunction(type) && type.name
+        if (isArray(propType)) {
+          for (let index = 0; index < propType.length; ++index) {
+            const type = propType[index]
+            const typeName = isFunction(type) && type.name
 
-          // If we find `String` before `Boolean`, e.g. `[String, Boolean]`, we need to handle the casting slightly
-          // differently. Props passed as `<Comp checked="">` or `<Comp checked="checked">` will either be treated as
-          // strings or converted to a boolean `true`, depending on the order of the types.
-          if (typeName === 'String') {
-            shouldCastTrue = false
+            if (typeName === 'Boolean') {
+              shouldCast = true
+              break
+            } else if (typeName === 'String') {
+              // If we find `String` before `Boolean`, e.g. `[String, Boolean]`,
+              // we need to handle the casting slightly differently. Props
+              // passed as `<Comp checked="">` or `<Comp checked="checked">`
+              // will either be treated as strings or converted to a boolean
+              // `true`, depending on the order of the types.
+              shouldCastTrue = false
+            }
           }
-
-          return typeName === 'Boolean'
+        } else {
+          shouldCast = isFunction(propType) && propType.name === 'Boolean'
         }
 
-        const shouldCast = isArray(propType)
-          ? propType.some(checkForBoolean)
-          : checkForBoolean(propType)
         prop[BooleanFlags.shouldCast] = shouldCast
         prop[BooleanFlags.shouldCastTrue] = shouldCastTrue
         // if the prop needs boolean casting or default value
