@@ -210,7 +210,6 @@ const KeepAliveImpl: ComponentOptions = {
       move(vnode, storageContainer, null, MoveType.LEAVE, parentSuspense)
       function deactivateTeleport(vnode: VNode) {
         if (vnode.shapeFlag & ShapeFlags.TELEPORT && isArray(vnode.children)) {
-          //
           for (let i = 0; i < vnode.children.length; i++) {
             const subVnode = vnode.children[i] as VNode
             move(
