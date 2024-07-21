@@ -4,6 +4,7 @@ import {
   type ComponentPublicInstance,
   KeepAlive,
   type Ref,
+  Teleport,
   type TestElement,
   cloneVNode,
   createApp,
@@ -22,6 +23,7 @@ import {
   reactive,
   ref,
   render,
+  resolveDynamicComponent,
   serializeInner,
   shallowRef,
 } from '@vue/runtime-test'
@@ -976,5 +978,60 @@ describe('KeepAlive', () => {
     expect(deactivatedA).toHaveBeenCalledTimes(1)
     expect(mountedB).toHaveBeenCalledTimes(1)
     expect(unmountedB).toHaveBeenCalledTimes(0)
+  })
+
+  // #3648
+  test('teloport in keepalive should be cached', async () => {
+    const activeComponent = shallowRef()
+    const App = {
+      name: 'App',
+      setup() {
+        const headerRef = ref()
+        const provided = reactive({ headerRef })
+        provide('App', provided)
+        return () => {
+          const render = [h('div', { ref: headerRef })]
+          if (activeComponent.value) {
+            render.push(
+              // @ts-expect-error
+              h(KeepAlive, null, [
+                resolveDynamicComponent(h(activeComponent.value)),
+              ]),
+            )
+          }
+          return render
+        }
+      },
+    }
+    const Comp1 = {
+      name: 'Comp1',
+      setup() {
+        const App = inject('App') as any
+        return () => h(Teleport, { to: App.headerRef }, ['xxx'])
+      },
+    }
+    const Comp2 = {
+      name: 'Comp2',
+      setup() {
+        return () => h('div', null, 'Comp2')
+      },
+    }
+    const root = nodeOps.createElement('div')
+    render(h(App), root)
+    activeComponent.value = Comp1
+    await nextTick()
+    expect(serializeInner(root)).toMatchInlineSnapshot(
+      `"<div>xxx</div><!--teleport start--><!--teleport end-->"`,
+    )
+    activeComponent.value = Comp2
+    await nextTick()
+    expect(serializeInner(root)).toMatchInlineSnapshot(
+      `"<div></div><div>Comp2</div>"`,
+    )
+    activeComponent.value = Comp1
+    await nextTick()
+    expect(serializeInner(root)).toMatchInlineSnapshot(
+      `"<div>xxx</div><!--teleport start--><!--teleport end-->"`,
+    )
   })
 })
