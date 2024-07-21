@@ -136,6 +136,47 @@ const KeepAliveImpl: ComponentOptions = {
     ) => {
       const instance = vnode.component!
       move(vnode, container, anchor, MoveType.ENTER, parentSuspense)
+      function activateTeleport(vnode: VNode) {
+        if (vnode.shapeFlag & ShapeFlags.TELEPORT && isArray(vnode.children)) {
+          for (let i = 0; i < vnode.children.length; i++) {
+            const subVnode = vnode.children[i] as VNode
+            move(
+              subVnode,
+              vnode.target!,
+              vnode.targetAnchor,
+              MoveType.ENTER,
+              parentSuspense,
+            )
+          }
+        }
+        if (vnode.component) {
+          const subTree = vnode.component.subTree
+          if (
+            subTree.shapeFlag & ShapeFlags.TELEPORT &&
+            isArray(subTree.children)
+          ) {
+            for (let i = 0; i < subTree.children.length; i++) {
+              const subVnode = subTree.children[i] as VNode
+              move(
+                subVnode,
+                subTree.target!,
+                subTree.targetAnchor,
+                MoveType.ENTER,
+                parentSuspense,
+              )
+            }
+          }
+          if (isArray(subTree.children)) {
+            for (let i = 0; i < subTree.children.length; i++) {
+              const child = subTree.children[i]
+              if (child) {
+                activateTeleport(child as VNode)
+              }
+            }
+          }
+        }
+      }
+      activateTeleport(vnode)
       // in case props have changed
       patch(
         instance.vnode,
@@ -169,8 +210,49 @@ const KeepAliveImpl: ComponentOptions = {
       const instance = vnode.component!
       invalidateMount(instance.m)
       invalidateMount(instance.a)
-
       move(vnode, storageContainer, null, MoveType.LEAVE, parentSuspense)
+      function deactivateTeleport(vnode: VNode) {
+        if (vnode.shapeFlag & ShapeFlags.TELEPORT && isArray(vnode.children)) {
+          //
+          for (let i = 0; i < vnode.children.length; i++) {
+            const subVnode = vnode.children[i] as VNode
+            move(
+              subVnode,
+              storageContainer,
+              null,
+              MoveType.LEAVE,
+              parentSuspense,
+            )
+          }
+        }
+        if (vnode.component) {
+          const subTree = vnode.component.subTree
+          if (
+            subTree.shapeFlag & ShapeFlags.TELEPORT &&
+            isArray(subTree.children)
+          ) {
+            for (let i = 0; i < subTree.children.length; i++) {
+              const subVnode = subTree.children[i] as VNode
+              move(
+                subVnode,
+                storageContainer,
+                null,
+                MoveType.LEAVE,
+                parentSuspense,
+              )
+            }
+          }
+          if (isArray(subTree.children)) {
+            for (let i = 0; i < subTree.children.length; i++) {
+              const child = subTree.children[i]
+              if (child) {
+                deactivateTeleport(child as VNode)
+              }
+            }
+          }
+        }
+      }
+      deactivateTeleport(vnode)
       queuePostRenderEffect(() => {
         if (instance.da) {
           invokeArrayFns(instance.da)
