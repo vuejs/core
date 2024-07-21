@@ -174,22 +174,35 @@ function createForEach(isReadonly: boolean, isShallow: boolean) {
 }
 
 function createSetProtoMethod(method: TriggerOpTypes) {
-  return function (this: SetTypes, value: unknown, _isShallow = false) {
-    if (!_isShallow && !isShallow(value) && !isReadonly(value)) {
+  return function (this: SetTypes, value: unknown) {
+    if (!isShallow(value) && !isReadonly(value)) {
       value = toRaw(value)
     }
-    const target = toRaw(this)
-    const proto = getProto(target)
-    const hadKey = proto.has.call(target, value)
-    let result
-    if (!hadKey) {
-      // @ts-expect-error
-      result = target[method](value)
-      trigger(target, method, value, value)
-    }
+    const target = (this as any)[ReactiveFlags.RAW]
+    const rawTarget = toRaw(target)
+    const result = target[method](value)
+    track(rawTarget, TrackOpTypes.ITERATE, ITERATE_KEY)
+    track(value as any, TrackOpTypes.ITERATE, ITERATE_KEY)
     return result
   }
 }
+// function createSetProtoMethod(method: TriggerOpTypes) {
+//   return function (this: SetTypes, value: unknown, _isShallow = false) {
+//     if (!_isShallow && !isShallow(value) && !isReadonly(value)) {
+//       value = toRaw(value)
+//     }
+//     const target = toRaw(this)
+//     const proto = getProto(target)
+//     const hadKey = proto.has.call(target, value)
+//     let result
+//     if (!hadKey) {
+//       // @ts-expect-error
+//       result = target[method](value)
+//       trigger(target, method, value, value)
+//     }
+//     return result
+//   }
+// }
 
 interface Iterable {
   [Symbol.iterator](): Iterator
