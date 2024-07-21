@@ -151,24 +151,21 @@ const KeepAliveImpl: ComponentOptions = {
         }
         if (vnode.component) {
           const subTree = vnode.component.subTree
-          if (
-            subTree.shapeFlag & ShapeFlags.TELEPORT &&
-            isArray(subTree.children)
-          ) {
-            for (let i = 0; i < subTree.children.length; i++) {
-              const subVnode = subTree.children[i] as VNode
-              move(
-                subVnode,
-                subTree.target!,
-                subTree.targetAnchor,
-                MoveType.ENTER,
-                parentSuspense,
-              )
-            }
-          }
+          activateTeleport(subTree)
+
           if (isArray(subTree.children)) {
             for (let i = 0; i < subTree.children.length; i++) {
               const child = subTree.children[i]
+              if (child) {
+                activateTeleport(child as VNode)
+              }
+            }
+          }
+        }
+        if (isArray(vnode.children)) {
+          if (isArray(vnode.children)) {
+            for (let i = 0; i < vnode.children.length; i++) {
+              const child = vnode.children[i]
               if (child) {
                 activateTeleport(child as VNode)
               }
@@ -227,24 +224,20 @@ const KeepAliveImpl: ComponentOptions = {
         }
         if (vnode.component) {
           const subTree = vnode.component.subTree
-          if (
-            subTree.shapeFlag & ShapeFlags.TELEPORT &&
-            isArray(subTree.children)
-          ) {
-            for (let i = 0; i < subTree.children.length; i++) {
-              const subVnode = subTree.children[i] as VNode
-              move(
-                subVnode,
-                storageContainer,
-                null,
-                MoveType.LEAVE,
-                parentSuspense,
-              )
-            }
-          }
+          deactivateTeleport(subTree)
           if (isArray(subTree.children)) {
             for (let i = 0; i < subTree.children.length; i++) {
               const child = subTree.children[i]
+              if (child) {
+                deactivateTeleport(child as VNode)
+              }
+            }
+          }
+        }
+        if (isArray(vnode.children)) {
+          if (isArray(vnode.children)) {
+            for (let i = 0; i < vnode.children.length; i++) {
+              const child = vnode.children[i]
               if (child) {
                 deactivateTeleport(child as VNode)
               }
