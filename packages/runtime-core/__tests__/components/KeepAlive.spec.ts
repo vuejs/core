@@ -980,7 +980,7 @@ describe('KeepAlive', () => {
     expect(unmountedB).toHaveBeenCalledTimes(0)
   })
 
-  // #3648
+  // #11410
   test('teloport in keepalive should be cached', async () => {
     const activeComponent = shallowRef()
     const App = {
