@@ -137,10 +137,10 @@ const KeepAliveImpl: ComponentOptions = {
     ) => {
       const instance = vnode.component!
       move(vnode, container, anchor, MoveType.ENTER, parentSuspense)
-      processPotentialTeleport(vnode, potentialTeleportVnode => {
-        ;(potentialTeleportVnode.type as typeof TeleportImpl).activate(
-          potentialTeleportVnode,
-          potentialTeleportVnode.target!,
+      processPotentialTeleport(vnode, teleportVnode => {
+        ;(teleportVnode.type as typeof TeleportImpl).activate(
+          teleportVnode,
+          teleportVnode.target!,
           null,
           sharedContext.renderer,
         )
@@ -180,9 +180,9 @@ const KeepAliveImpl: ComponentOptions = {
       invalidateMount(instance.a)
       move(vnode, storageContainer, null, MoveType.LEAVE, parentSuspense)
 
-      processPotentialTeleport(vnode, potentialTeleportVnode => {
-        ;(potentialTeleportVnode.type as typeof TeleportImpl).deactivate(
-          potentialTeleportVnode,
+      processPotentialTeleport(vnode, teleportVnode => {
+        ;(teleportVnode.type as typeof TeleportImpl).deactivate(
+          teleportVnode,
           storageContainer,
           null,
           sharedContext.renderer,
