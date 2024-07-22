@@ -47,6 +47,7 @@ import { devtoolsComponentAdded } from '../devtools'
 import { isAsyncWrapper } from '../apiAsyncComponent'
 import { isSuspense } from './Suspense'
 import { LifecycleHooks } from '../enums'
+import type { TeleportImpl } from './Teleport'
 
 type MatchPattern = string | RegExp | (string | RegExp)[]
 
@@ -136,41 +137,14 @@ const KeepAliveImpl: ComponentOptions = {
     ) => {
       const instance = vnode.component!
       move(vnode, container, anchor, MoveType.ENTER, parentSuspense)
-      function activateTeleport(vnode: VNode) {
-        if (vnode.shapeFlag & ShapeFlags.TELEPORT && isArray(vnode.children)) {
-          for (let i = 0; i < vnode.children.length; i++) {
-            const subVnode = vnode.children[i] as VNode
-            move(
-              subVnode,
-              vnode.target!,
-              vnode.targetAnchor,
-              MoveType.ENTER,
-              parentSuspense,
-            )
-          }
-        }
-        if (vnode.component) {
-          const subTree = vnode.component.subTree
-          activateTeleport(subTree)
-          if (isArray(subTree.children)) {
-            for (let i = 0; i < subTree.children.length; i++) {
-              const child = subTree.children[i]
-              if (child) {
-                activateTeleport(child as VNode)
-              }
-            }
-          }
-        }
-        if (isArray(vnode.children)) {
-          for (let i = 0; i < vnode.children.length; i++) {
-            const child = vnode.children[i]
-            if (child) {
-              activateTeleport(child as VNode)
-            }
-          }
-        }
-      }
-      activateTeleport(vnode)
+      processPotentialTeleport(vnode, potentialTeleportVnode => {
+        ;(potentialTeleportVnode.type as typeof TeleportImpl).activate(
+          potentialTeleportVnode,
+          potentialTeleportVnode.target!,
+          null,
+          sharedContext.renderer,
+        )
+      })
       // in case props have changed
       patch(
         instance.vnode,
@@ -205,41 +179,15 @@ const KeepAliveImpl: ComponentOptions = {
       invalidateMount(instance.m)
       invalidateMount(instance.a)
       move(vnode, storageContainer, null, MoveType.LEAVE, parentSuspense)
-      function deactivateTeleport(vnode: VNode) {
-        if (vnode.shapeFlag & ShapeFlags.TELEPORT && isArray(vnode.children)) {
-          for (let i = 0; i < vnode.children.length; i++) {
-            const subVnode = vnode.children[i] as VNode
-            move(
-              subVnode,
-              storageContainer,
-              null,
-              MoveType.LEAVE,
-              parentSuspense,
-            )
-          }
-        }
-        if (vnode.component) {
-          const subTree = vnode.component.subTree
-          deactivateTeleport(subTree)
-          if (isArray(subTree.children)) {
-            for (let i = 0; i < subTree.children.length; i++) {
-              const child = subTree.children[i]
-              if (child) {
-                deactivateTeleport(child as VNode)
-              }
-            }
-          }
-        }
-        if (isArray(vnode.children)) {
-          for (let i = 0; i < vnode.children.length; i++) {
-            const child = vnode.children[i]
-            if (child) {
-              deactivateTeleport(child as VNode)
-            }
-          }
-        }
-      }
-      deactivateTeleport(vnode)
+
+      processPotentialTeleport(vnode, potentialTeleportVnode => {
+        ;(potentialTeleportVnode.type as typeof TeleportImpl).deactivate(
+          potentialTeleportVnode,
+          storageContainer,
+          null,
+          sharedContext.renderer,
+        )
+      })
       queuePostRenderEffect(() => {
         if (instance.da) {
           invokeArrayFns(instance.da)
@@ -524,4 +472,33 @@ function resetShapeFlag(vnode: VNode) {
 
 function getInnerChild(vnode: VNode) {
   return vnode.shapeFlag & ShapeFlags.SUSPENSE ? vnode.ssContent! : vnode
+}
+
+function processPotentialTeleport(
+  vnode: VNode,
+  handle: (teleportVnode: VNode) => void,
+) {
+  if (vnode.shapeFlag & ShapeFlags.TELEPORT) {
+    handle && handle(vnode)
+  }
+  if (vnode.component) {
+    const subTree = vnode.component.subTree
+    if (subTree.shapeFlag & ShapeFlags.TELEPORT)
+      processPotentialTeleport(subTree, handle)
+    else if (isArray(subTree.children)) {
+      for (let i = 0; i < subTree.children.length; i++) {
+        const child = subTree.children[i]
+        if (child) {
+          processPotentialTeleport(child as VNode, handle)
+        }
+      }
+    }
+  } else if (isArray(vnode.children)) {
+    for (let i = 0; i < vnode.children.length; i++) {
+      const child = vnode.children[i]
+      if (child) {
+        processPotentialTeleport(child as VNode, handle)
+      }
+    }
+  }
 }

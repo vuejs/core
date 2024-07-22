@@ -292,7 +292,34 @@ export const TeleportImpl = {
       }
     }
   },
-
+  activate: (
+    vnode: VNode,
+    container: RendererElement,
+    parentAnchor: RendererNode | null,
+    internals: RendererInternals,
+  ) => {
+    moveTeleport(
+      vnode,
+      container,
+      parentAnchor,
+      internals,
+      TeleportMoveTypes.TOGGLE,
+    )
+  },
+  deactivate: (
+    vnode: VNode,
+    container: RendererElement,
+    parentAnchor: RendererNode | null,
+    internals: RendererInternals,
+  ) => {
+    moveTeleport(
+      vnode,
+      container,
+      parentAnchor,
+      internals,
+      TeleportMoveTypes.TOGGLE,
+    )
+  },
   move: moveTeleport,
   hydrate: hydrateTeleport,
 }
