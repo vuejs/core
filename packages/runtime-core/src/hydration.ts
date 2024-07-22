@@ -39,6 +39,7 @@ import {
 } from './components/Suspense'
 import type { TeleportImpl, TeleportVNode } from './components/Teleport'
 import { isAsyncWrapper } from './apiAsyncComponent'
+import { isReactive } from '@vue/reactivity'
 
 export type RootHydrateFunction = (
   vnode: VNode<Node, Element>,
@@ -464,15 +465,7 @@ export function createHydrationFunctions(
               // force hydrate v-bind with .prop modifiers
               key[0] === '.'
             ) {
-              patchProp(
-                el,
-                key,
-                null,
-                props[key],
-                undefined,
-                undefined,
-                parentComponent,
-              )
+              patchProp(el, key, null, props[key], undefined, parentComponent)
             }
           }
         } else if (props.onClick) {
@@ -484,9 +477,13 @@ export function createHydrationFunctions(
             null,
             props.onClick,
             undefined,
-            undefined,
             parentComponent,
           )
+        } else if (patchFlag & PatchFlags.STYLE && isReactive(props.style)) {
+          // #11372: object style values are iterated during patch instead of
+          // render/normalization phase, but style patch is skipped during
+          // hydration, so we need to force iterate the object to track deps
+          for (const key in props.style) props.style[key]
         }
       }
 
@@ -531,7 +528,27 @@ export function createHydrationFunctions(
       const vnode = optimized
         ? children[i]
         : (children[i] = normalizeVNode(children[i]))
+      const isText = vnode.type === Text
       if (node) {
+        if (isText && !optimized) {
+          // #7285 possible consecutive text vnodes from manual render fns or
+          // JSX-compiled fns, but on the client the browser parses only 1 text
+          // node.
+          // look ahead for next possible text vnode
+          let next = children[i + 1]
+          if (next && (next = normalizeVNode(next)).type === Text) {
+            // create an extra TextNode on the client for the next vnode to
+            // adopt
+            insert(
+              createText(
+                (node as Text).data.slice((vnode.children as string).length),
+              ),
+              container,
+              nextSibling(node),
+            )
+            ;(node as Text).data = vnode.children as string
+          }
+        }
         node = hydrateNode(
           node,
           vnode,
@@ -540,7 +557,7 @@ export function createHydrationFunctions(
           slotScopeIds,
           optimized,
         )
-      } else if (vnode.type === Text && !vnode.children) {
+      } else if (isText && !vnode.children) {
         // #7215 create a TextNode for empty text node
         // because server rendered HTML won't contain a text node
         insert((vnode.el = createText('')), container)

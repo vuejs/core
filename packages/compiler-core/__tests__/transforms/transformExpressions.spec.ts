@@ -384,6 +384,17 @@ describe('compiler: expression transform', () => {
     )
   })
 
+  test('should not error', () => {
+    const onError = vi.fn()
+    parseWithExpressionTransform(
+      `<p :id="undefined /* force override the id */"/>`,
+      {
+        onError,
+      },
+    )
+    expect(onError).not.toHaveBeenCalled()
+  })
+
   test('should prefix in assignment', () => {
     const node = parseWithExpressionTransform(
       `{{ x = 1 }}`,

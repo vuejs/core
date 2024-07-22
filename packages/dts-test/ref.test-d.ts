@@ -452,3 +452,7 @@ describe('toRef <-> toValue', () => {
     ),
   )
 })
+
+// unref
+declare const text: ShallowRef<string> | ComputedRef<string> | MaybeRef<string>
+expectType<string>(unref(text))
