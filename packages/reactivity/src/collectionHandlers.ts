@@ -186,23 +186,6 @@ function createSetProtoMethod(method: TriggerOpTypes) {
     return result
   }
 }
-// function createSetProtoMethod(method: TriggerOpTypes) {
-//   return function (this: SetTypes, value: unknown, _isShallow = false) {
-//     if (!_isShallow && !isShallow(value) && !isReadonly(value)) {
-//       value = toRaw(value)
-//     }
-//     const target = toRaw(this)
-//     const proto = getProto(target)
-//     const hadKey = proto.has.call(target, value)
-//     let result
-//     if (!hadKey) {
-//       // @ts-expect-error
-//       result = target[method](value)
-//       trigger(target, method, value, value)
-//     }
-//     return result
-//   }
-// }
 
 interface Iterable {
   [Symbol.iterator](): Iterator
