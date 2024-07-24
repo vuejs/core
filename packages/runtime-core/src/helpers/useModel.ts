@@ -81,9 +81,9 @@ export function useModel(
         // updates and there will be no prop sync. However the local input state
         // may be out of sync, so we need to force an update here.
         if (
-          value !== emittedValue &&
-          value !== prevSetValue &&
-          emittedValue === prevEmittedValue
+          hasChanged(value, emittedValue) &&
+          hasChanged(value, prevSetValue) &&
+          !hasChanged(emittedValue, prevEmittedValue)
         ) {
           trigger()
         }
