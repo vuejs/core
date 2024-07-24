@@ -51,7 +51,10 @@ export function useModel(
       },
 
       set(value) {
-        if (!hasChanged(value, localValue)) {
+        if (
+          !hasChanged(value, localValue) &&
+          (!prevSetValue || !hasChanged(value, prevSetValue))
+        ) {
           return
         }
         const rawProps = i.vnode!.props
