@@ -1,3 +1,9 @@
+## [3.4.34](https://github.com/vuejs/core/compare/v3.4.33...v3.4.34) (2024-07-24)
+
+* **defineModel:** correct update with multiple changes in same tick ([#11430](https://github.com/vuejs/core/issues/11430)) ([a18f1ec](https://github.com/vuejs/core/commit/a18f1ecf05842337f1eb39a6871adb8cb4024093)), closes [#11429](https://github.com/vuejs/core/issues/11429)
+
+
+
 # [3.5.0-alpha.3](https://github.com/vuejs/core/compare/v3.4.33...v3.5.0-alpha.3) (2024-07-19)
 
 
