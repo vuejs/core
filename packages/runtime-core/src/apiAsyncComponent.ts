@@ -158,9 +158,9 @@ export function defineAsyncComponent<
                   })
                 : null
           })
-      } else {
-        markAsyncBoundary(instance)
       }
+
+      markAsyncBoundary(instance)
 
       const loaded = ref(false)
       const error = ref()
