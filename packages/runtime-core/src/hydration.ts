@@ -46,7 +46,7 @@ export type RootHydrateFunction = (
   container: (Element | ShadowRoot) & { _vnode?: VNode },
 ) => void
 
-enum DOMNodeTypes {
+export enum DOMNodeTypes {
   ELEMENT = 1,
   TEXT = 3,
   COMMENT = 8,
@@ -75,7 +75,7 @@ const getContainerType = (container: Element): 'svg' | 'mathml' | undefined => {
   return undefined
 }
 
-const isComment = (node: Node): node is Comment =>
+export const isComment = (node: Node): node is Comment =>
   node.nodeType === DOMNodeTypes.COMMENT
 
 // Note: hydration is DOM-specific

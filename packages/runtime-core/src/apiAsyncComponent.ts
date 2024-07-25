@@ -122,7 +122,8 @@ export function defineAsyncComponent<
     __asyncLoader: load,
 
     __asyncHydrate(el, instance, hydrate) {
-      const doHydrate = hydrateStrategy ? hydrateStrategy(el, hydrate) : hydrate
+      const doHydrate = () =>
+        hydrateStrategy ? hydrateStrategy(hydrate, el) : hydrate()
       if (resolvedComp) {
         doHydrate()
       } else {

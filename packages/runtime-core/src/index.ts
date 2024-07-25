@@ -64,7 +64,12 @@ export { useAttrs, useSlots } from './apiSetupHelpers'
 export { useModel } from './helpers/useModel'
 export { useTemplateRef } from './helpers/useTemplateRef'
 export { useId } from './helpers/useId'
-export { hydrateOnTimeout } from './hydrationStrategies'
+export {
+  hydrateOnIdle,
+  hydrateOnVisible,
+  hydrateOnMediaQuery,
+  hydrateOnInteraction,
+} from './hydrationStrategies'
 
 // <script setup> API ----------------------------------------------------------
 
