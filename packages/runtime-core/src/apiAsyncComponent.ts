@@ -23,6 +23,8 @@ export type AsyncComponentLoader<T = any> = () => Promise<
   AsyncComponentResolveResult<T>
 >
 
+type HydrationStrategy = (doHydrate: () => void) => void
+
 export interface AsyncComponentOptions<T = any> {
   loader: AsyncComponentLoader<T>
   loadingComponent?: Component
@@ -30,6 +32,7 @@ export interface AsyncComponentOptions<T = any> {
   delay?: number
   timeout?: number
   suspensible?: boolean
+  hydrate?: HydrationStrategy
   onError?: (
     error: Error,
     retry: () => void,
@@ -54,6 +57,7 @@ export function defineAsyncComponent<
     loadingComponent,
     errorComponent,
     delay = 200,
+    // hydrate,
     timeout, // undefined = never times out
     suspensible = true,
     onError: userOnError,
@@ -117,6 +121,14 @@ export function defineAsyncComponent<
     name: 'AsyncComponentWrapper',
 
     __asyncLoader: load,
+
+    __asyncHydrate(instance, hydrate) {
+      if (resolvedComp) {
+        hydrate()
+      } else {
+        load().then(() => !instance.isUnmounted && hydrate())
+      }
+    },
 
     get __asyncResolved() {
       return resolvedComp
