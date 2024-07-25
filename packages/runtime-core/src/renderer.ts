@@ -1327,6 +1327,7 @@ function baseCreateRenderer(
 
           if (isAsyncWrapperVNode) {
             ;(type as ComponentOptions).__asyncHydrate!(
+              el as Element,
               instance,
               hydrateSubTree,
             )

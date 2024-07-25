@@ -204,6 +204,7 @@ export interface ComponentOptionsBase<
    * @internal
    */
   __asyncHydrate?: (
+    el: Element,
     instance: ComponentInternalInstance,
     hydrate: () => void,
   ) => void

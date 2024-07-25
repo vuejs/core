@@ -64,6 +64,7 @@ export { useAttrs, useSlots } from './apiSetupHelpers'
 export { useModel } from './helpers/useModel'
 export { useTemplateRef } from './helpers/useTemplateRef'
 export { useId } from './helpers/useId'
+export { hydrateOnTimeout } from './hydrationStrategies'
 
 // <script setup> API ----------------------------------------------------------
 
@@ -327,6 +328,10 @@ export type {
   AsyncComponentOptions,
   AsyncComponentLoader,
 } from './apiAsyncComponent'
+export type {
+  HydrationStrategy,
+  HydrationStrategyFactory,
+} from './hydrationStrategies'
 export type { HMRRuntime } from './hmr'
 
 // Internal API ----------------------------------------------------------------

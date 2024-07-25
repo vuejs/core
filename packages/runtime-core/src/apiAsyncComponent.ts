@@ -16,14 +16,13 @@ import { ErrorCodes, handleError } from './errorHandling'
 import { isKeepAlive } from './components/KeepAlive'
 import { queueJob } from './scheduler'
 import { markAsyncBoundary } from './helpers/useId'
+import type { HydrationStrategy } from './hydrationStrategies'
 
 export type AsyncComponentResolveResult<T = Component> = T | { default: T } // es modules
 
 export type AsyncComponentLoader<T = any> = () => Promise<
   AsyncComponentResolveResult<T>
 >
-
-type HydrationStrategy = (doHydrate: () => void) => void
 
 export interface AsyncComponentOptions<T = any> {
   loader: AsyncComponentLoader<T>
@@ -57,7 +56,7 @@ export function defineAsyncComponent<
     loadingComponent,
     errorComponent,
     delay = 200,
-    // hydrate,
+    hydrate: hydrateStrategy,
     timeout, // undefined = never times out
     suspensible = true,
     onError: userOnError,
@@ -122,11 +121,12 @@ export function defineAsyncComponent<
 
     __asyncLoader: load,
 
-    __asyncHydrate(instance, hydrate) {
+    __asyncHydrate(el, instance, hydrate) {
+      const doHydrate = hydrateStrategy ? hydrateStrategy(el, hydrate) : hydrate
       if (resolvedComp) {
-        hydrate()
+        doHydrate()
       } else {
-        load().then(() => !instance.isUnmounted && hydrate())
+        load().then(() => !instance.isUnmounted && doHydrate())
       }
     },
 
