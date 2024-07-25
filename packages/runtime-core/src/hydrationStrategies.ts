@@ -51,20 +51,18 @@ export const hydrateOnInteraction: HydrationStrategyFactory<
     let hasHydrated = false
     const doHydrate = () => {
       if (!hasHydrated) {
-        hydrate()
         hasHydrated = true
-        for (const el of els) {
+        forEachNode(node, el => {
           for (const i of interactions) {
             el.removeEventListener(i, doHydrate)
           }
-        }
+        })
+        hydrate()
       }
     }
-    const els: Element[] = []
     forEachNode(node, el => {
       for (const i of interactions) {
         el.addEventListener(i, doHydrate, { once: true })
-        els.push(el)
       }
     })
   }
