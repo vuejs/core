@@ -54,16 +54,14 @@ export const arrayInstrumentations: Record<string | symbol, Function> = <any>{
     fn: (item: unknown, index: number, array: unknown[]) => unknown,
     thisArg?: unknown,
   ) {
-    const result = apply(this, 'filter', fn, thisArg)
-    return isProxy(this) && !isShallow(this) ? result.map(toReactive) : result
+    return apply(this, 'filter', fn, thisArg, v => v.map(toReactive))
   },
 
   find(
     fn: (item: unknown, index: number, array: unknown[]) => boolean,
     thisArg?: unknown,
   ) {
-    const result = apply(this, 'find', fn, thisArg)
-    return isProxy(this) && !isShallow(this) ? toReactive(result) : result
+    return apply(this, 'find', fn, thisArg, toReactive)
   },
 
   findIndex(
@@ -77,8 +75,7 @@ export const arrayInstrumentations: Record<string | symbol, Function> = <any>{
     fn: (item: unknown, index: number, array: unknown[]) => boolean,
     thisArg?: unknown,
   ) {
-    const result = apply(this, 'findLast', fn, thisArg)
-    return isProxy(this) && !isShallow(this) ? toReactive(result) : result
+    return apply(this, 'findLast', fn, thisArg, toReactive)
   },
 
   findLastIndex(
@@ -237,11 +234,14 @@ function apply(
   method: ArrayMethods,
   fn: (item: unknown, index: number, array: unknown[]) => unknown,
   thisArg?: unknown,
+  wrappedRetFn?: (result: any) => unknown,
 ) {
   const arr = shallowReadArray(self)
+  let needsWrap
   let wrappedFn = fn
   if (arr !== self) {
-    if (!isShallow(self)) {
+    needsWrap = !isShallow(self)
+    if (needsWrap) {
       wrappedFn = function (this: unknown, item, index) {
         return fn.call(this, toReactive(item), index, self)
       }
@@ -252,7 +252,8 @@ function apply(
     }
   }
   // @ts-expect-error our code is limited to es2016 but user code is not
-  return arr[method](wrappedFn, thisArg)
+  const result = arr[method](wrappedFn, thisArg)
+  return needsWrap && wrappedRetFn ? wrappedRetFn(result) : result
 }
 
 // instrument reduce and reduceRight to take ARRAY_ITERATE dependency
