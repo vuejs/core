@@ -1505,6 +1505,29 @@ describe('withKeys and withModifiers as pro', () => {
   ;<input onKeydown={onKeydown} onClick={onClick} />
 })
 
+// #9647 #9702
+describe('`defineComponent` props type should respect the generic type parameters', () => {
+  const Comp = defineComponent(
+    <T extends string | number>(props: { msg: T; list: T[] }) => {
+      // use Composition API here like in <script setup>
+      const count = ref(0)
+
+      return () => {
+        // render function or JSX
+        return <div>{count.value}</div>
+      }
+    },
+    // manual runtime props declaration is currently still needed.
+    {
+      props: ['msg', 'list'],
+    },
+  )
+
+  const CompI = {} as InstanceType<typeof Comp>
+  expectType<(string | number)[]>(CompI.$props.list)
+  expectType<string | number>(CompI.$props.msg)
+})
+
 import type {
   AllowedComponentProps,
   ComponentCustomProps,
