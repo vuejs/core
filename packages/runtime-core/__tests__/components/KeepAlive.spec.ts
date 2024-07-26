@@ -981,7 +981,7 @@ describe('KeepAlive', () => {
   })
 
   // #11410
-  test('teloport in keepalive should be cached', async () => {
+  test('teleport in keepalive should be cached', async () => {
     const activeComponent = shallowRef()
     const App = {
       name: 'App',
