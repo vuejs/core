@@ -1,7 +1,7 @@
 {
   "private": true,
   "version": "3.4.34",
-  "packageManager": "pnpm@9.5.0",
+  "packageManager": "pnpm@9.6.0",
   "type": "module",
   "scripts": {
     "dev": "node scripts/dev.js",
@@ -68,7 +68,7 @@
     "@rollup/plugin-replace": "5.0.4",
     "@swc/core": "^1.6.13",
     "@types/hash-sum": "^1.0.2",
-    "@types/node": "^20.14.10",
+    "@types/node": "^20.14.13",
     "@types/semver": "^7.5.8",
     "@vitest/coverage-istanbul": "^1.6.0",
     "@vue/consolidate": "1.0.0",
@@ -97,7 +97,7 @@
     "rollup-plugin-dts": "^6.1.1",
     "rollup-plugin-esbuild": "^6.1.1",
     "rollup-plugin-polyfill-node": "^0.13.0",
-    "semver": "^7.6.2",
+    "semver": "^7.6.3",
     "serve": "^14.2.3",
     "simple-git-hooks": "^2.11.1",
     "todomvc-app-css": "^2.4.3",
