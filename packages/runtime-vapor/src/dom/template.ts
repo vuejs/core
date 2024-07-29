@@ -13,9 +13,14 @@ export function template(html: string) {
 /*! #__NO_SIDE_EFFECTS__ */
 export function children(node: Node, ...paths: number[]): Node {
   for (const idx of paths) {
-    for (let i = 0; i <= idx; i++) {
-      node = node[i === 0 ? 'firstChild' : 'nextSibling']!
-    }
+    // In various situations, select the quickest approach.
+    // See https://github.com/vuejs/core-vapor/pull/263
+    node =
+      idx === 0
+        ? node.firstChild!
+        : idx === 1
+          ? node.firstChild!.nextSibling!
+          : node.childNodes[idx]
   }
   return node
 }
