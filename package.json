@@ -77,7 +77,7 @@
     "esbuild": "^0.23.0",
     "esbuild-plugin-polyfill-node": "^0.3.0",
     "eslint": "^9.8.0",
-    "eslint-plugin-import-x": "^0.5.3",
+    "eslint-plugin-import-x": "^3.1.0",
     "eslint-plugin-vitest": "^0.5.4",
     "estree-walker": "catalog:",
     "jsdom": "^24.1.1",
