@@ -237,7 +237,7 @@ function apply(
   wrappedRetFn?: (result: any) => unknown,
 ) {
   const arr = shallowReadArray(self)
-  let needsWrap
+  let needsWrap = false
   let wrappedFn = fn
   if (arr !== self) {
     needsWrap = !isShallow(self)
