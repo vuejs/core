@@ -80,7 +80,7 @@ function toggleDark() {
         pkg="vue"
         label="Vue Version"
       >
-        <li>
+        <li :class="{ active: vueVersion === `@${currentCommit}` }">
           <a @click="resetVueVersion">This Commit ({{ currentCommit }})</a>
         </li>
         <li>
