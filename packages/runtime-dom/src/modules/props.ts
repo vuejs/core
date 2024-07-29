@@ -15,7 +15,7 @@ export function patchDOMProp(
   if (key === 'innerHTML' || key === 'textContent') {
     // null value case is handled in renderer patchElement before patching
     // children
-    if (value === null) return
+    if (value == null) return
     el[key] = value
     return
   }

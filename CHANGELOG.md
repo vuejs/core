@@ -1,3 +1,21 @@
+## [3.4.34](https://github.com/vuejs/core/compare/v3.4.33...v3.4.34) (2024-07-24)
+
+
+### Bug Fixes
+
+* **defineModel:** correct update with multiple changes in same tick ([#11430](https://github.com/vuejs/core/issues/11430)) ([a18f1ec](https://github.com/vuejs/core/commit/a18f1ecf05842337f1eb39a6871adb8cb4024093)), closes [#11429](https://github.com/vuejs/core/issues/11429)
+
+
+
+## [3.4.33](https://github.com/vuejs/core/compare/v3.4.32...v3.4.33) (2024-07-19)
+
+
+### Bug Fixes
+
+* **runtime-dom:** handle undefined values in v-html ([#11403](https://github.com/vuejs/core/issues/11403)) ([5df67e3](https://github.com/vuejs/core/commit/5df67e36756639ea7b923d1b139d6cb14450123b))
+
+
+
 ## [3.4.32](https://github.com/vuejs/core/compare/v3.4.31...v3.4.32) (2024-07-17)
 
 
