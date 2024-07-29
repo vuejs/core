@@ -72,7 +72,7 @@
     "@types/semver": "^7.5.8",
     "@vitest/coverage-istanbul": "^1.6.0",
     "@vue/consolidate": "1.0.0",
-    "conventional-changelog-cli": "^4.1.0",
+    "conventional-changelog-cli": "^5.0.0",
     "enquirer": "^2.4.1",
     "esbuild": "^0.23.0",
     "esbuild-plugin-polyfill-node": "^0.3.0",
