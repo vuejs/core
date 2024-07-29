@@ -124,6 +124,7 @@ export function defineAsyncComponent<
 
     setup() {
       const instance = currentInstance!
+      markAsyncBoundary(instance)
 
       // already resolved
       if (resolvedComp) {
@@ -158,8 +159,6 @@ export function defineAsyncComponent<
                   })
                 : null
           })
-      } else {
-        markAsyncBoundary(instance)
       }
 
       const loaded = ref(false)

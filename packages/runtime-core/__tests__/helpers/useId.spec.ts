@@ -12,10 +12,11 @@ import {
 } from 'vue'
 import { renderToString } from '@vue/server-renderer'
 
-type TestCaseFactory = () => [App, Promise<any>[]]
+type FactoryRes = [App, Promise<any>[]]
+type TestCaseFactory = () => FactoryRes | Promise<FactoryRes>
 
 async function runOnClient(factory: TestCaseFactory) {
-  const [app, deps] = factory()
+  const [app, deps] = await factory()
   const root = document.createElement('div')
   app.mount(root)
   await Promise.all(deps)
@@ -24,7 +25,7 @@ async function runOnClient(factory: TestCaseFactory) {
 }
 
 async function runOnServer(factory: TestCaseFactory) {
-  const [app, _] = factory()
+  const [app, _] = await factory()
   return (await renderToString(app))
     .replace(/<!--[\[\]]-->/g, '') // remove fragment wrappers
     .trim()
@@ -95,8 +96,8 @@ describe('useId', () => {
       'v:0-0 v:0-1 ' + // inside first async subtree
       'v:1-0 v:1-1' // inside second async subtree
     // assert different async resolution order does not affect id stable-ness
-    expect(await getOutput(() => factory(10, 20))).toBe(expected)
-    expect(await getOutput(() => factory(20, 10))).toBe(expected)
+    expect(await getOutput(() => factory(0, 16))).toBe(expected)
+    expect(await getOutput(() => factory(16, 0))).toBe(expected)
   })
 
   test('serverPrefetch', async () => {
@@ -140,8 +141,8 @@ describe('useId', () => {
       'v:0-0 v:0-1 ' + // inside first async subtree
       'v:1-0 v:1-1' // inside second async subtree
     // assert different async resolution order does not affect id stable-ness
-    expect(await getOutput(() => factory(10, 20))).toBe(expected)
-    expect(await getOutput(() => factory(20, 10))).toBe(expected)
+    expect(await getOutput(() => factory(0, 16))).toBe(expected)
+    expect(await getOutput(() => factory(16, 0))).toBe(expected)
   })
 
   test('async setup()', async () => {
@@ -192,8 +193,8 @@ describe('useId', () => {
       'v:1-0 v:1-1' + // inside second async subtree
       '</div>'
     // assert different async resolution order does not affect id stable-ness
-    expect(await getOutput(() => factory(10, 20))).toBe(expected)
-    expect(await getOutput(() => factory(20, 10))).toBe(expected)
+    expect(await getOutput(() => factory(0, 16))).toBe(expected)
+    expect(await getOutput(() => factory(16, 0))).toBe(expected)
   })
 
   test('deep nested', async () => {
@@ -238,5 +239,50 @@ describe('useId', () => {
     // assert different async resolution order does not affect id stable-ness
     expect(await getOutput(() => factory())).toBe(expected)
     expect(await getOutput(() => factory())).toBe(expected)
+  })
+
+  test('async component inside async setup, already resolved', async () => {
+    const factory = async (
+      delay1: number,
+      delay2: number,
+    ): Promise<FactoryRes> => {
+      const p1 = promiseWithDelay(null, delay1)
+      const p2 = promiseWithDelay(BasicComponentWithUseId, delay2)
+      const AsyncInner = defineAsyncComponent(() => p2)
+
+      const AsyncSetup = defineComponent({
+        async setup() {
+          await p1
+          return {}
+        },
+        render() {
+          return h(AsyncInner)
+        },
+      })
+
+      const app = createApp({
+        setup() {
+          const id1 = useId()
+          const id2 = useId()
+          return () =>
+            h(Suspense, null, {
+              default: h('div', [id1, ' ', id2, ' ', h(AsyncSetup)]),
+            })
+        },
+      })
+
+      // the async component may have already been resolved
+      await AsyncInner.__asyncLoader()
+      return [app, [p1, p2]]
+    }
+
+    const expected =
+      '<div>' +
+      'v:0 v:1 ' + // root
+      'v:0-0-0 v:0-0-1' + // async component inside async setup
+      '</div>'
+    // assert different async resolution order does not affect id stable-ness
+    expect(await getOutput(async () => factory(0, 16))).toBe(expected)
+    expect(await getOutput(() => factory(16, 0))).toBe(expected)
   })
 })

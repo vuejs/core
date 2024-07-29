@@ -94,6 +94,7 @@ import type { KeepAliveProps } from './components/KeepAlive'
 import type { BaseTransitionProps } from './components/BaseTransition'
 import type { DefineComponent } from './apiDefineComponent'
 import { markAsyncBoundary } from './helpers/useId'
+import { isAsyncWrapper } from './apiAsyncComponent'
 
 /**
  * Public utility type for extracting the instance type of a component.
@@ -863,7 +864,7 @@ function setupStatefulComponent(
 
     if (isPromise(setupResult)) {
       // async setup, mark as async boundary for useId()
-      markAsyncBoundary(instance)
+      if (!isAsyncWrapper(instance)) markAsyncBoundary(instance)
       setupResult.then(unsetCurrentInstance, unsetCurrentInstance)
       if (isSSR) {
         // return the promise so server-renderer can wait on it

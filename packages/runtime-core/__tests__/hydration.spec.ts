@@ -688,6 +688,54 @@ describe('SSR hydration', () => {
     expect(container.innerHTML).toBe(`<span>1</span>`)
   })
 
+  // #6638
+  test('Suspense + async component', async () => {
+    let isSuspenseResolved = false
+    let isSuspenseResolvedInChild: any
+    const AsyncChild = defineAsyncComponent(() =>
+      Promise.resolve(
+        defineComponent({
+          setup() {
+            isSuspenseResolvedInChild = isSuspenseResolved
+            const count = ref(0)
+            return () =>
+              h(
+                'span',
+                {
+                  onClick: () => {
+                    count.value++
+                  },
+                },
+                count.value,
+              )
+          },
+        }),
+      ),
+    )
+    const { vnode, container } = mountWithHydration('<span>0</span>', () =>
+      h(
+        Suspense,
+        {
+          onResolve() {
+            isSuspenseResolved = true
+          },
+        },
+        () => h(AsyncChild),
+      ),
+    )
+    expect(vnode.el).toBe(container.firstChild)
+    // wait for hydration to finish
+    await new Promise(r => setTimeout(r))
+
+    expect(isSuspenseResolvedInChild).toBe(false)
+    expect(isSuspenseResolved).toBe(true)
+
+    // assert interaction
+    triggerEvent('click', container.querySelector('span')!)
+    await nextTick()
+    expect(container.innerHTML).toBe(`<span>1</span>`)
+  })
+
   test('Suspense (full integration)', async () => {
     const mountedCalls: number[] = []
     const asyncDeps: Promise<any>[] = []
