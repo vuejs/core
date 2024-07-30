@@ -110,7 +110,7 @@ export const TeleportImpl = {
       insert(placeholder, container, anchor)
       insert(mainAnchor, container, anchor)
       const target = (n2.target = resolveTarget(n2.props, querySelector))
-      const targetAnchor = prepareTarget(target, n2, createText, insert)
+      const targetAnchor = prepareAnchor(target, n2, createText, insert)
       if (target) {
         // #2652 we could be teleporting from a non-SVG tree into an SVG tree
         if (namespace === 'svg' || isTargetSVG(target)) {
@@ -388,23 +388,26 @@ function hydrateTeleport(
         // lookahead until we find the target anchor
         // we cannot rely on return value of hydrateChildren() because there
         // could be nested teleports
-        if (targetNode) {
-          let targetAnchor = targetNode as any
-          while (targetAnchor) {
-            targetAnchor = nextSibling(targetAnchor)
-            if (
-              targetAnchor &&
-              targetAnchor.nodeType === 8 &&
-              (targetAnchor as Comment).data === 'teleport anchor'
-            ) {
-              vnode.targetAnchor = targetAnchor
-              ;(target as TeleportTargetElement)._lpa =
-                vnode.targetAnchor && nextSibling(vnode.targetAnchor as Node)
-              break
-            }
+        let targetAnchor = targetNode as any
+        while (targetAnchor) {
+          targetAnchor = nextSibling(targetAnchor)
+          if (
+            targetAnchor &&
+            targetAnchor.nodeType === 8 &&
+            (targetAnchor as Comment).data === 'teleport anchor'
+          ) {
+            vnode.targetAnchor = targetAnchor
+            ;(target as TeleportTargetElement)._lpa =
+              vnode.targetAnchor && nextSibling(vnode.targetAnchor as Node)
+            break
           }
-        } else {
-          prepareTarget(target, vnode, createText, insert)
+        }
+
+        // #11400 if the HTML corresponding to Teleport is not embedded in the correct position
+        // on the final page during SSR. the targetAnchor will always be null, we need to
+        // manually add targetAnchor to ensure that it can properly unmount
+        if (!targetAnchor) {
+          prepareAnchor(target, vnode, createText, insert)
         }
 
         hydrateChildren(
@@ -448,7 +451,7 @@ function updateCssVars(vnode: VNode) {
   }
 }
 
-function prepareTarget(
+function prepareAnchor(
   target: RendererElement | null,
   vnode: TeleportVNode,
   createText: RendererOptions['createText'],
