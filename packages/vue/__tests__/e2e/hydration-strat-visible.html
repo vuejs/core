@@ -8,7 +8,8 @@
   const rootMargin = location.search.match(/rootMargin=(\d+)/)?.[1] ?? 0
   const isFragment = location.search.includes('?fragment')
   if (isFragment) {
-    document.getElementById('app').innerHTML = `<!--[--><span>one</span><button>0</button><span>two</span><!--]-->`
+    document.getElementById('app').innerHTML =
+      `<!--[--><!--[--><span>one</span><!--]--><button>0</button><span>two</span><!--]-->`
   }
 
   window.isHydrated = false
@@ -24,7 +25,7 @@
       return () => {
         const button = h('button', { onClick: () => count.value++ }, count.value)
         if (isFragment) {
-          return [h('span', 'one'), button, h('span', 'two')]
+          return [[h('span', 'one')], button, h('span', 'two')]
         } else {
           return button
         }
