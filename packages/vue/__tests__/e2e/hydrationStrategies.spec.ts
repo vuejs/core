@@ -90,4 +90,13 @@ describe('async component hydration strategies', () => {
     expect(await text('button')).toBe('1')
     await assertHydrationSuccess('2')
   })
+
+  test('custom', async () => {
+    await goToCase('custom')
+    await page().waitForFunction(() => window.isRootMounted)
+    expect(await page().evaluate(() => window.isHydrated)).toBe(false)
+    await click('#custom-trigger')
+    await page().waitForFunction(() => window.isHydrated)
+    await assertHydrationSuccess()
+  })
 })
