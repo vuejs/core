@@ -388,7 +388,7 @@ function hydrateTeleport(
         // lookahead until we find the target anchor
         // we cannot rely on return value of hydrateChildren() because there
         // could be nested teleports
-        let targetAnchor = targetNode as any
+        let targetAnchor = targetNode
         while (targetAnchor) {
           targetAnchor = nextSibling(targetAnchor)
           if (
