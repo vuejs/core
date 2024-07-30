@@ -1,7 +1,10 @@
 <script setup lang="ts">
 import Header from './Header.vue'
-import { Repl, ReplStore } from '@vue/repl'
-import { ref, watchEffect } from 'vue'
+import { Repl, useStore, SFCOptions, useVueImportMap } from '@vue/repl'
+import Monaco from '@vue/repl/monaco-editor'
+import { ref, watchEffect, onMounted, computed } from 'vue'
+
+const replRef = ref<InstanceType<typeof Repl>>()
 
 const setVH = () => {
   document.documentElement.style.setProperty('--vh', window.innerHeight + `px`)
@@ -9,53 +12,140 @@ const setVH = () => {
 window.addEventListener('resize', setVH)
 setVH()
 
-const hash = location.hash.slice(1)
-const useDevMode = ref(hash.startsWith('__DEV__'))
+const useSSRMode = ref(false)
 
-const store = new ReplStore({
-  serializedState: useDevMode.value ? hash.slice(7) : hash,
-  defaultVueRuntimeURL: import.meta.env.PROD
+const { productionMode, vueVersion, importMap } = useVueImportMap({
+  runtimeDev: import.meta.env.PROD
     ? `${location.origin}/vue.runtime.esm-browser.js`
-    : `${location.origin}/src/vue-dev-proxy`
+    : `${location.origin}/src/vue-dev-proxy`,
+  runtimeProd: import.meta.env.PROD
+    ? `${location.origin}/vue.runtime.esm-browser.prod.js`
+    : `${location.origin}/src/vue-dev-proxy-prod`,
+  serverRenderer: import.meta.env.PROD
+    ? `${location.origin}/server-renderer.esm-browser.js`
+    : `${location.origin}/src/vue-server-renderer-dev-proxy`,
 })
 
-// enable experimental features
-const sfcOptions = {
-  script: {
-    inlineTemplate: !useDevMode.value,
-    reactivityTransform: true
-  }
+let hash = location.hash.slice(1)
+if (hash.startsWith('__DEV__')) {
+  hash = hash.slice(7)
+  productionMode.value = false
 }
+if (hash.startsWith('__PROD__')) {
+  hash = hash.slice(8)
+  productionMode.value = true
+}
+if (hash.startsWith('__SSR__')) {
+  hash = hash.slice(7)
+  useSSRMode.value = true
+}
+
+// enable experimental features
+const sfcOptions = computed(
+  (): SFCOptions => ({
+    script: {
+      inlineTemplate: productionMode.value,
+      isProd: productionMode.value,
+      propsDestructure: true,
+    },
+    style: {
+      isProd: productionMode.value,
+    },
+    template: {
+      isProd: productionMode.value,
+      compilerOptions: {
+        isCustomElement: (tag: string) => tag === 'mjx-container',
+      },
+    },
+  }),
+)
+
+const store = useStore(
+  {
+    builtinImportMap: importMap,
+    vueVersion,
+    sfcOptions,
+  },
+  hash,
+)
+// @ts-expect-error
+globalThis.store = store
 
 // persist state
 watchEffect(() => {
   const newHash = store
     .serialize()
-    .replace(/^#/, useDevMode.value ? `#__DEV__` : `#`)
+    .replace(/^#/, useSSRMode.value ? `#__SSR__` : `#`)
+    .replace(/^#/, productionMode.value ? `#__PROD__` : `#`)
   history.replaceState({}, '', newHash)
 })
 
-function toggleDevMode() {
-  const dev = (useDevMode.value = !useDevMode.value)
-  sfcOptions.script.inlineTemplate = !dev
-  store.setFiles(store.getFiles())
+function toggleProdMode() {
+  productionMode.value = !productionMode.value
 }
+
+function toggleSSR() {
+  useSSRMode.value = !useSSRMode.value
+}
+
+function reloadPage() {
+  replRef.value?.reload()
+}
+
+const theme = ref<'dark' | 'light'>('dark')
+function toggleTheme(isDark: boolean) {
+  theme.value = isDark ? 'dark' : 'light'
+}
+onMounted(() => {
+  const cls = document.documentElement.classList
+  toggleTheme(cls.contains('dark'))
+
+  // @ts-expect-error process shim for old versions of @vue/compiler-sfc dependency
+  window.process = { env: {} }
+})
 </script>
 
 <template>
-  <Header :store="store" :dev="useDevMode" @toggle-dev="toggleDevMode" />
+  <Header
+    :store="store"
+    :prod="productionMode"
+    :ssr="useSSRMode"
+    @toggle-theme="toggleTheme"
+    @toggle-prod="toggleProdMode"
+    @toggle-ssr="toggleSSR"
+    @reload-page="reloadPage"
+  />
   <Repl
+    ref="replRef"
+    :theme="theme"
+    :editor="Monaco"
     @keydown.ctrl.s.prevent
     @keydown.meta.s.prevent
+    :ssr="useSSRMode"
     :store="store"
     :showCompileOutput="true"
     :autoResize="true"
-    :sfcOptions="sfcOptions"
     :clearConsole="false"
+    :preview-options="{
+      customCode: {
+        importCode: `import { initCustomFormatter } from 'vue'`,
+        useCode: `if (window.devtoolsFormatters) {
+    const index = window.devtoolsFormatters.findIndex((v) => v.__vue_custom_formatter)
+    window.devtoolsFormatters.splice(index, 1)
+    initCustomFormatter()
+  } else {
+    initCustomFormatter()
+  }`,
+      },
+    }"
   />
 </template>
 
 <style>
+.dark {
+  color-scheme: dark;
+}
+
 body {
   font-size: 13px;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen,
@@ -66,7 +156,7 @@ body {
 }
 
 .vue-repl {
-  height: calc(var(--vh) - var(--nav-height));
+  height: calc(var(--vh) - var(--nav-height)) !important;
 }
 
 button {

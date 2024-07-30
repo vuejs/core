@@ -1,22 +1,31 @@
 import {
-  ref,
-  reactive,
-  effect,
-  stop,
-  toRaw,
+  type DebuggerEvent,
+  type ReactiveEffectRunner,
   TrackOpTypes,
   TriggerOpTypes,
-  DebuggerEvent,
+  effect,
   markRaw,
-  shallowReactive,
+  reactive,
   readonly,
-  ReactiveEffectRunner
+  shallowReactive,
+  stop,
+  toRaw,
 } from '../src/index'
-import { ITERATE_KEY } from '../src/effect'
+import { pauseScheduling, resetScheduling } from '../src/effect'
+import { ITERATE_KEY, getDepFromReactive } from '../src/reactiveEffect'
+import {
+  computed,
+  h,
+  nextTick,
+  nodeOps,
+  ref,
+  render,
+  serializeInner,
+} from '@vue/runtime-test'
 
 describe('reactivity/effect', () => {
   it('should run the passed function once (wrapped by a effect)', () => {
-    const fnSpy = jest.fn(() => {})
+    const fnSpy = vi.fn(() => {})
     effect(fnSpy)
     expect(fnSpy).toHaveBeenCalledTimes(1)
   })
@@ -129,7 +138,7 @@ describe('reactivity/effect', () => {
       },
       get prop() {
         return hiddenValue
-      }
+      },
     })
     Object.setPrototypeOf(obj, parent)
     effect(() => (dummy = obj.prop))
@@ -243,6 +252,38 @@ describe('reactivity/effect', () => {
     expect(dummy).toBe(undefined)
   })
 
+  it('should not observe well-known symbol keyed properties in has operation', () => {
+    const key = Symbol.isConcatSpreadable
+    const obj = reactive({
+      [key]: true,
+    }) as any
+
+    const spy = vi.fn(() => {
+      key in obj
+    })
+    effect(spy)
+    expect(spy).toHaveBeenCalledTimes(1)
+
+    obj[key] = false
+    expect(spy).toHaveBeenCalledTimes(1)
+  })
+
+  it('should support manipulating an array while observing symbol keyed properties', () => {
+    const key = Symbol()
+    let dummy
+    const array: any = reactive([1, 2, 3])
+    effect(() => (dummy = array[key]))
+
+    expect(dummy).toBe(undefined)
+    array.pop()
+    array.shift()
+    array.splice(0, 1)
+    expect(dummy).toBe(undefined)
+    array[key] = 'value'
+    array.length = 0
+    expect(dummy).toBe('value')
+  })
+
   it('should observe function valued properties', () => {
     const oldFunc = () => {}
     const newFunc = () => {}
@@ -261,7 +302,7 @@ describe('reactivity/effect', () => {
       a: 1,
       get b() {
         return this.a
-      }
+      },
     })
 
     let dummy
@@ -276,7 +317,7 @@ describe('reactivity/effect', () => {
       a: 1,
       b() {
         return this.a
-      }
+      },
     })
 
     let dummy
@@ -290,8 +331,8 @@ describe('reactivity/effect', () => {
     let hasDummy, getDummy
     const obj = reactive({ prop: 'value' })
 
-    const getSpy = jest.fn(() => (getDummy = obj.prop))
-    const hasSpy = jest.fn(() => (hasDummy = 'prop' in obj))
+    const getSpy = vi.fn(() => (getDummy = obj.prop))
+    const hasSpy = vi.fn(() => (hasDummy = 'prop' in obj))
     effect(getSpy)
     effect(hasSpy)
 
@@ -333,7 +374,7 @@ describe('reactivity/effect', () => {
       },
       get prop() {
         return hiddenValue
-      }
+      },
     })
     Object.setPrototypeOf(obj, parent)
     effect(() => (dummy = obj.prop))
@@ -349,7 +390,7 @@ describe('reactivity/effect', () => {
   it('should avoid implicit infinite recursive loops with itself', () => {
     const counter = reactive({ num: 0 })
 
-    const counterSpy = jest.fn(() => counter.num++)
+    const counterSpy = vi.fn(() => counter.num++)
     effect(counterSpy)
     expect(counter.num).toBe(1)
     expect(counterSpy).toHaveBeenCalledTimes(1)
@@ -361,8 +402,8 @@ describe('reactivity/effect', () => {
   it('should avoid infinite recursive loops when use Array.prototype.push/unshift/pop/shift', () => {
     ;(['push', 'unshift'] as const).forEach(key => {
       const arr = reactive<number[]>([])
-      const counterSpy1 = jest.fn(() => (arr[key] as any)(1))
-      const counterSpy2 = jest.fn(() => (arr[key] as any)(2))
+      const counterSpy1 = vi.fn(() => (arr[key] as any)(1))
+      const counterSpy2 = vi.fn(() => (arr[key] as any)(2))
       effect(counterSpy1)
       effect(counterSpy2)
       expect(arr.length).toBe(2)
@@ -371,8 +412,8 @@ describe('reactivity/effect', () => {
     })
     ;(['pop', 'shift'] as const).forEach(key => {
       const arr = reactive<number[]>([1, 2, 3, 4])
-      const counterSpy1 = jest.fn(() => (arr[key] as any)())
-      const counterSpy2 = jest.fn(() => (arr[key] as any)())
+      const counterSpy1 = vi.fn(() => (arr[key] as any)())
+      const counterSpy2 = vi.fn(() => (arr[key] as any)())
       effect(counterSpy1)
       effect(counterSpy2)
       expect(arr.length).toBe(2)
@@ -383,7 +424,7 @@ describe('reactivity/effect', () => {
 
   it('should allow explicitly recursive raw function loops', () => {
     const counter = reactive({ num: 0 })
-    const numSpy = jest.fn(() => {
+    const numSpy = vi.fn(() => {
       counter.num++
       if (counter.num < 10) {
         numSpy()
@@ -397,8 +438,8 @@ describe('reactivity/effect', () => {
   it('should avoid infinite loops with other effects', () => {
     const nums = reactive({ num1: 0, num2: 1 })
 
-    const spy1 = jest.fn(() => (nums.num1 = nums.num2))
-    const spy2 = jest.fn(() => (nums.num2 = nums.num1))
+    const spy1 = vi.fn(() => (nums.num1 = nums.num2))
+    const spy2 = vi.fn(() => (nums.num2 = nums.num1))
     effect(spy1)
     effect(spy2)
     expect(nums.num1).toBe(1)
@@ -433,7 +474,7 @@ describe('reactivity/effect', () => {
     let dummy
     const obj = reactive({ prop: 'value', run: false })
 
-    const conditionalSpy = jest.fn(() => {
+    const conditionalSpy = vi.fn(() => {
       dummy = obj.run ? obj.prop : 'other'
     })
     effect(conditionalSpy)
@@ -473,7 +514,7 @@ describe('reactivity/effect', () => {
     let dummy
     const obj = reactive({ prop: 'value', run: true })
 
-    const conditionalSpy = jest.fn(() => {
+    const conditionalSpy = vi.fn(() => {
       dummy = obj.run ? obj.prop : 'other'
     })
     effect(conditionalSpy)
@@ -509,7 +550,7 @@ describe('reactivity/effect', () => {
     const input = reactive({ a: 1, b: 2, c: 0 })
     const output = reactive({ fx1: 0, fx2: 0 })
 
-    const fx1Spy = jest.fn(() => {
+    const fx1Spy = vi.fn(() => {
       let result = 0
       if (input.c < 2) result += input.a
       if (input.c > 1) result += input.b
@@ -518,7 +559,7 @@ describe('reactivity/effect', () => {
 
     const fx1 = effect(fx1Spy)
 
-    const fx2Spy = jest.fn(() => {
+    const fx2Spy = vi.fn(() => {
       let result = 0
       if (input.c > 1) result += input.a
       if (input.c < 3) result += input.b
@@ -558,8 +599,8 @@ describe('reactivity/effect', () => {
     expect(output.fx2).toBe(1 + 3 + 3)
     expect(fx1Spy).toHaveBeenCalledTimes(1)
 
-    // Invoked twice due to change of fx1.
-    expect(fx2Spy).toHaveBeenCalledTimes(2)
+    // Invoked due to change of fx1.
+    expect(fx2Spy).toHaveBeenCalledTimes(1)
 
     fx1Spy.mockClear()
     fx2Spy.mockClear()
@@ -585,10 +626,18 @@ describe('reactivity/effect', () => {
     expect(runner.effect.fn).toBe(otherRunner.effect.fn)
   })
 
+  it('should wrap if the passed function is a fake effect', () => {
+    const fakeRunner = () => {}
+    fakeRunner.effect = {}
+    const runner = effect(fakeRunner)
+    expect(fakeRunner).not.toBe(runner)
+    expect(runner.effect.fn).toBe(fakeRunner)
+  })
+
   it('should not run multiple times for a single mutation', () => {
     let dummy
     const obj = reactive<Record<string, number>>({})
-    const fnSpy = jest.fn(() => {
+    const fnSpy = vi.fn(() => {
       for (const key in obj) {
         dummy = obj[key]
       }
@@ -606,9 +655,9 @@ describe('reactivity/effect', () => {
     const nums = reactive({ num1: 0, num2: 1, num3: 2 })
     const dummy: any = {}
 
-    const childSpy = jest.fn(() => (dummy.num1 = nums.num1))
+    const childSpy = vi.fn(() => (dummy.num1 = nums.num1))
     const childeffect = effect(childSpy)
-    const parentSpy = jest.fn(() => {
+    const parentSpy = vi.fn(() => {
       dummy.num2 = nums.num2
       childeffect()
       dummy.num3 = nums.num3
@@ -680,7 +729,7 @@ describe('reactivity/effect', () => {
   it('scheduler', () => {
     let dummy
     let run: any
-    const scheduler = jest.fn(() => {
+    const scheduler = vi.fn(() => {
       run = runner
     })
     const obj = reactive({ foo: 1 })
@@ -688,7 +737,7 @@ describe('reactivity/effect', () => {
       () => {
         dummy = obj.foo
       },
-      { scheduler }
+      { scheduler },
     )
     expect(scheduler).not.toHaveBeenCalled()
     expect(dummy).toBe(1)
@@ -706,7 +755,7 @@ describe('reactivity/effect', () => {
   it('events: onTrack', () => {
     let events: DebuggerEvent[] = []
     let dummy
-    const onTrack = jest.fn((e: DebuggerEvent) => {
+    const onTrack = vi.fn((e: DebuggerEvent) => {
       events.push(e)
     })
     const obj = reactive({ foo: 1, bar: 2 })
@@ -716,7 +765,7 @@ describe('reactivity/effect', () => {
         dummy = 'bar' in obj
         dummy = Object.keys(obj)
       },
-      { onTrack }
+      { onTrack },
     )
     expect(dummy).toEqual(['foo', 'bar'])
     expect(onTrack).toHaveBeenCalledTimes(3)
@@ -725,27 +774,27 @@ describe('reactivity/effect', () => {
         effect: runner.effect,
         target: toRaw(obj),
         type: TrackOpTypes.GET,
-        key: 'foo'
+        key: 'foo',
       },
       {
         effect: runner.effect,
         target: toRaw(obj),
         type: TrackOpTypes.HAS,
-        key: 'bar'
+        key: 'bar',
       },
       {
         effect: runner.effect,
         target: toRaw(obj),
         type: TrackOpTypes.ITERATE,
-        key: ITERATE_KEY
-      }
+        key: ITERATE_KEY,
+      },
     ])
   })
 
   it('events: onTrigger', () => {
     let events: DebuggerEvent[] = []
     let dummy
-    const onTrigger = jest.fn((e: DebuggerEvent) => {
+    const onTrigger = vi.fn((e: DebuggerEvent) => {
       events.push(e)
     })
     const obj = reactive<{ foo?: number }>({ foo: 1 })
@@ -753,7 +802,7 @@ describe('reactivity/effect', () => {
       () => {
         dummy = obj.foo
       },
-      { onTrigger }
+      { onTrigger },
     )
 
     obj.foo!++
@@ -765,7 +814,7 @@ describe('reactivity/effect', () => {
       type: TriggerOpTypes.SET,
       key: 'foo',
       oldValue: 1,
-      newValue: 2
+      newValue: 2,
     })
 
     delete obj.foo
@@ -776,7 +825,7 @@ describe('reactivity/effect', () => {
       target: toRaw(obj),
       type: TriggerOpTypes.DELETE,
       key: 'foo',
-      oldValue: 2
+      oldValue: 2,
     })
   })
 
@@ -797,30 +846,35 @@ describe('reactivity/effect', () => {
     expect(dummy).toBe(3)
   })
 
-  // #5707
-  // when an effect completes its run, it should clear the tracking bits of
-  // its tracked deps. However, if the effect stops itself, the deps list is
-  // emptied so their bits are never cleared.
-  it('edge case: self-stopping effect tracking ref', () => {
-    const c = ref(true)
+  it('stop with multiple dependencies', () => {
+    let dummy1, dummy2
+    const obj1 = reactive({ prop: 1 })
+    const obj2 = reactive({ prop: 1 })
     const runner = effect(() => {
-      // reference ref
-      if (!c.value) {
-        // stop itself while running
-        stop(runner)
-      }
+      dummy1 = obj1.prop
+      dummy2 = obj2.prop
     })
-    // trigger run
-    c.value = !c.value
-    // should clear bits
-    expect((c as any).dep.w).toBe(0)
-    expect((c as any).dep.n).toBe(0)
+
+    obj1.prop = 2
+    expect(dummy1).toBe(2)
+
+    obj2.prop = 3
+    expect(dummy2).toBe(3)
+
+    stop(runner)
+
+    obj1.prop = 4
+    obj2.prop = 5
+
+    // Check that both dependencies have been cleared
+    expect(dummy1).toBe(2)
+    expect(dummy2).toBe(3)
   })
 
   it('events: onStop', () => {
-    const onStop = jest.fn()
+    const onStop = vi.fn()
     const runner = effect(() => {}, {
-      onStop
+      onStop,
     })
 
     stop(runner)
@@ -852,8 +906,8 @@ describe('reactivity/effect', () => {
   it('markRaw', () => {
     const obj = reactive({
       foo: markRaw({
-        prop: 0
-      })
+        prop: 0,
+      }),
     })
     let dummy
     effect(() => {
@@ -868,9 +922,9 @@ describe('reactivity/effect', () => {
 
   it('should not be triggered when the value and the old value both are NaN', () => {
     const obj = reactive({
-      foo: NaN
+      foo: NaN,
     })
-    const fnSpy = jest.fn(() => obj.foo)
+    const fnSpy = vi.fn(() => obj.foo)
     effect(fnSpy)
     obj.foo = NaN
     expect(fnSpy).toHaveBeenCalledTimes(1)
@@ -903,7 +957,7 @@ describe('reactivity/effect', () => {
   it('should not be triggered when set with the same proxy', () => {
     const obj = reactive({ foo: 1 })
     const observed: any = reactive({ obj })
-    const fnSpy = jest.fn(() => observed.obj)
+    const fnSpy = vi.fn(() => observed.obj)
 
     effect(fnSpy)
 
@@ -913,7 +967,7 @@ describe('reactivity/effect', () => {
 
     const obj2 = reactive({ foo: 1 })
     const observed2: any = shallowReactive({ obj2 })
-    const fnSpy2 = jest.fn(() => observed2.obj2)
+    const fnSpy2 = vi.fn(() => observed2.obj2)
 
     effect(fnSpy2)
 
@@ -922,11 +976,27 @@ describe('reactivity/effect', () => {
     expect(fnSpy2).toHaveBeenCalledTimes(1)
   })
 
+  it('should be triggered when set length with string', () => {
+    let ret1 = 'idle'
+    let ret2 = 'idle'
+    const arr1 = reactive(new Array(11).fill(0))
+    const arr2 = reactive(new Array(11).fill(0))
+    effect(() => {
+      ret1 = arr1[10] === undefined ? 'arr[10] is set to empty' : 'idle'
+    })
+    effect(() => {
+      ret2 = arr2[10] === undefined ? 'arr[10] is set to empty' : 'idle'
+    })
+    arr1.length = 2
+    arr2.length = '2' as any
+    expect(ret1).toBe(ret2)
+  })
+
   describe('readonly + reactive for Map', () => {
     test('should work with readonly(reactive(Map))', () => {
       const m = reactive(new Map())
       const roM = readonly(m)
-      const fnSpy = jest.fn(() => roM.get(1))
+      const fnSpy = vi.fn(() => roM.get(1))
 
       effect(fnSpy)
       expect(fnSpy).toHaveBeenCalledTimes(1)
@@ -939,7 +1009,7 @@ describe('reactivity/effect', () => {
       const m = reactive(new Map())
       m.set(key, 1)
       const roM = readonly(m)
-      const fnSpy = jest.fn(() => roM.get(key))
+      const fnSpy = vi.fn(() => roM.get(key))
 
       effect(fnSpy)
       expect(fnSpy).toHaveBeenCalledTimes(1)
@@ -947,6 +1017,140 @@ describe('reactivity/effect', () => {
       expect(fnSpy).toHaveBeenCalledTimes(1)
       m.set(key, 2)
       expect(fnSpy).toHaveBeenCalledTimes(2)
+    })
+
+    test('should track hasOwnProperty', () => {
+      const obj: any = reactive({})
+      let has = false
+      const fnSpy = vi.fn()
+
+      effect(() => {
+        fnSpy()
+        has = obj.hasOwnProperty('foo')
+      })
+      expect(fnSpy).toHaveBeenCalledTimes(1)
+      expect(has).toBe(false)
+
+      obj.foo = 1
+      expect(fnSpy).toHaveBeenCalledTimes(2)
+      expect(has).toBe(true)
+
+      delete obj.foo
+      expect(fnSpy).toHaveBeenCalledTimes(3)
+      expect(has).toBe(false)
+
+      // should not trigger on unrelated key
+      obj.bar = 2
+      expect(fnSpy).toHaveBeenCalledTimes(3)
+      expect(has).toBe(false)
+    })
+  })
+
+  it('should be triggered once with pauseScheduling', () => {
+    const counter = reactive({ num: 0 })
+
+    const counterSpy = vi.fn(() => counter.num)
+    effect(counterSpy)
+
+    counterSpy.mockClear()
+
+    pauseScheduling()
+    counter.num++
+    counter.num++
+    resetScheduling()
+    expect(counterSpy).toHaveBeenCalledTimes(1)
+  })
+
+  // #10082
+  it('should set dirtyLevel when effect is allowRecurse and is running', async () => {
+    const s = ref(0)
+    const n = computed(() => s.value + 1)
+
+    const Child = {
+      setup() {
+        s.value++
+        return () => n.value
+      },
+    }
+
+    const renderSpy = vi.fn()
+    const Parent = {
+      setup() {
+        return () => {
+          renderSpy()
+          return [n.value, h(Child)]
+        }
+      },
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(Parent), root)
+    await nextTick()
+    expect(serializeInner(root)).toBe('22')
+    expect(renderSpy).toHaveBeenCalledTimes(2)
+  })
+
+  describe('empty dep cleanup', () => {
+    it('should remove the dep when the effect is stopped', () => {
+      const obj = reactive({ prop: 1 })
+      expect(getDepFromReactive(toRaw(obj), 'prop')).toBeUndefined()
+      const runner = effect(() => obj.prop)
+      const dep = getDepFromReactive(toRaw(obj), 'prop')
+      expect(dep).toHaveLength(1)
+      obj.prop = 2
+      expect(getDepFromReactive(toRaw(obj), 'prop')).toBe(dep)
+      expect(dep).toHaveLength(1)
+      stop(runner)
+      expect(getDepFromReactive(toRaw(obj), 'prop')).toBeUndefined()
+      obj.prop = 3
+      runner()
+      expect(getDepFromReactive(toRaw(obj), 'prop')).toBeUndefined()
+    })
+
+    it('should only remove the dep when the last effect is stopped', () => {
+      const obj = reactive({ prop: 1 })
+      expect(getDepFromReactive(toRaw(obj), 'prop')).toBeUndefined()
+      const runner1 = effect(() => obj.prop)
+      const dep = getDepFromReactive(toRaw(obj), 'prop')
+      expect(dep).toHaveLength(1)
+      const runner2 = effect(() => obj.prop)
+      expect(getDepFromReactive(toRaw(obj), 'prop')).toBe(dep)
+      expect(dep).toHaveLength(2)
+      obj.prop = 2
+      expect(getDepFromReactive(toRaw(obj), 'prop')).toBe(dep)
+      expect(dep).toHaveLength(2)
+      stop(runner1)
+      expect(getDepFromReactive(toRaw(obj), 'prop')).toBe(dep)
+      expect(dep).toHaveLength(1)
+      obj.prop = 3
+      expect(getDepFromReactive(toRaw(obj), 'prop')).toBe(dep)
+      expect(dep).toHaveLength(1)
+      stop(runner2)
+      expect(getDepFromReactive(toRaw(obj), 'prop')).toBeUndefined()
+      obj.prop = 4
+      runner1()
+      runner2()
+      expect(getDepFromReactive(toRaw(obj), 'prop')).toBeUndefined()
+    })
+
+    it('should remove the dep when it is no longer used by the effect', () => {
+      const obj = reactive<{ a: number; b: number; c: 'a' | 'b' }>({
+        a: 1,
+        b: 2,
+        c: 'a',
+      })
+      expect(getDepFromReactive(toRaw(obj), 'prop')).toBeUndefined()
+      effect(() => obj[obj.c])
+      const depC = getDepFromReactive(toRaw(obj), 'c')
+      expect(getDepFromReactive(toRaw(obj), 'a')).toHaveLength(1)
+      expect(getDepFromReactive(toRaw(obj), 'b')).toBeUndefined()
+      expect(depC).toHaveLength(1)
+      obj.c = 'b'
+      obj.a = 4
+      expect(getDepFromReactive(toRaw(obj), 'a')).toBeUndefined()
+      expect(getDepFromReactive(toRaw(obj), 'b')).toHaveLength(1)
+      expect(getDepFromReactive(toRaw(obj), 'c')).toBe(depC)
+      expect(depC).toHaveLength(1)
     })
   })
 })

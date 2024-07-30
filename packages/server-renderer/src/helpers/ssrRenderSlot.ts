@@ -1,5 +1,10 @@
-import { ComponentInternalInstance, Slots } from 'vue'
-import { Props, PushFn, renderVNodeChildren, SSRBufferItem } from '../render'
+import type { ComponentInternalInstance, Slots } from 'vue'
+import {
+  type Props,
+  type PushFn,
+  type SSRBufferItem,
+  renderVNodeChildren,
+} from '../render'
 import { isArray } from '@vue/shared'
 
 export type SSRSlots = Record<string, SSRSlot>
@@ -7,7 +12,7 @@ export type SSRSlot = (
   props: Props,
   push: PushFn,
   parentComponent: ComponentInternalInstance | null,
-  scopeId: string | null
+  scopeId: string | null,
 ) => void
 
 export function ssrRenderSlot(
@@ -17,7 +22,7 @@ export function ssrRenderSlot(
   fallbackRenderFn: (() => void) | null,
   push: PushFn,
   parentComponent: ComponentInternalInstance,
-  slotScopeId?: string
+  slotScopeId?: string,
 ) {
   // template-compiled slots are always rendered as fragments
   push(`<!--[-->`)
@@ -28,7 +33,7 @@ export function ssrRenderSlot(
     fallbackRenderFn,
     push,
     parentComponent,
-    slotScopeId
+    slotScopeId,
   )
   push(`<!--]-->`)
 }
@@ -40,7 +45,8 @@ export function ssrRenderSlotInner(
   fallbackRenderFn: (() => void) | null,
   push: PushFn,
   parentComponent: ComponentInternalInstance,
-  slotScopeId?: string
+  slotScopeId?: string,
+  transition?: boolean,
 ) {
   const slotFn = slots[slotName]
   if (slotFn) {
@@ -52,7 +58,7 @@ export function ssrRenderSlotInner(
       slotProps,
       bufferedPush,
       parentComponent,
-      slotScopeId ? ' ' + slotScopeId : ''
+      slotScopeId ? ' ' + slotScopeId : '',
     )
     if (isArray(ret)) {
       // normal slot
@@ -61,10 +67,14 @@ export function ssrRenderSlotInner(
       // ssr slot.
       // check if the slot renders all comments, in which case use the fallback
       let isEmptySlot = true
-      for (let i = 0; i < slotBuffer.length; i++) {
-        if (!isComment(slotBuffer[i])) {
-          isEmptySlot = false
-          break
+      if (transition) {
+        isEmptySlot = false
+      } else {
+        for (let i = 0; i < slotBuffer.length; i++) {
+          if (!isComment(slotBuffer[i])) {
+            isEmptySlot = false
+            break
+          }
         }
       }
       if (isEmptySlot) {
@@ -72,7 +82,23 @@ export function ssrRenderSlotInner(
           fallbackRenderFn()
         }
       } else {
-        for (let i = 0; i < slotBuffer.length; i++) {
+        // #9933
+        // Although we handle Transition/TransitionGroup in the transform stage
+        // without rendering it as a fragment, the content passed into the slot
+        // may still be a fragment.
+        // Therefore, here we need to avoid rendering it as a fragment again.
+        let start = 0
+        let end = slotBuffer.length
+        if (
+          transition &&
+          slotBuffer[0] === '<!--[-->' &&
+          slotBuffer[end - 1] === '<!--]-->'
+        ) {
+          start++
+          end--
+        }
+
+        for (let i = start; i < end; i++) {
           push(slotBuffer[i])
         }
       }
@@ -82,11 +108,11 @@ export function ssrRenderSlotInner(
   }
 }
 
+const commentTestRE = /^<!--[\s\S]*-->$/
 const commentRE = /<!--[^]*?-->/gm
 function isComment(item: SSRBufferItem) {
-  return (
-    typeof item === 'string' &&
-    commentRE.test(item) &&
-    !item.replace(commentRE, '').trim()
-  )
+  if (typeof item !== 'string' || !commentTestRE.test(item)) return false
+  // if item is '<!---->' or '<!--[-->' or '<!--]-->', return true directly
+  if (item.length <= 8) return true
+  return !item.replace(commentRE, '').trim()
 }

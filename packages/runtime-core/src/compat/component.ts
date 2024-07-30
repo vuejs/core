@@ -1,16 +1,16 @@
 import { isFunction, isObject } from '@vue/shared'
-import { Component, ComponentInternalInstance } from '../component'
+import type { Component, ComponentInternalInstance } from '../component'
 import {
-  checkCompatEnabled,
   DeprecationTypes,
-  softAssertCompatEnabled
+  checkCompatEnabled,
+  softAssertCompatEnabled,
 } from './compatConfig'
 import { convertLegacyAsyncComponent } from './componentAsync'
 import { convertLegacyFunctionalComponent } from './componentFunctional'
 
 export function convertLegacyComponent(
   comp: any,
-  instance: ComponentInternalInstance | null
+  instance: ComponentInternalInstance | null,
 ): Component {
   if (comp.__isBuiltIn) {
     return comp
@@ -18,6 +18,15 @@ export function convertLegacyComponent(
 
   // 2.x constructor
   if (isFunction(comp) && comp.cid) {
+    // #7766
+    if (comp.render) {
+      // only necessary when compiled from SFC
+      comp.options.render = comp.render
+    }
+    // copy over internal properties set by the SFC compiler
+    comp.options.__file = comp.__file
+    comp.options.__hmrId = comp.__hmrId
+    comp.options.__scopeId = comp.__scopeId
     comp = comp.options
   }
 
@@ -38,7 +47,7 @@ export function convertLegacyComponent(
     softAssertCompatEnabled(
       DeprecationTypes.COMPONENT_FUNCTIONAL,
       instance,
-      comp
+      comp,
     )
   ) {
     return convertLegacyFunctionalComponent(comp)
