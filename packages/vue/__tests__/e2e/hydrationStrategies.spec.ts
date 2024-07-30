@@ -11,9 +11,9 @@ describe('async component hydration strategies', () => {
     await page().goto(file)
   }
 
-  async function assertHydrationSuccess() {
+  async function assertHydrationSuccess(n = '1') {
     await click('button')
-    expect(await text('button')).toBe('1')
+    expect(await text('button')).toBe(n)
   }
 
   test('idle', async () => {
@@ -40,6 +40,14 @@ describe('async component hydration strategies', () => {
     await assertHydrationSuccess()
   })
 
+  test('visible (with rootMargin)', async () => {
+    await goToCase('visible', '?rootMargin=1000')
+    await page().waitForFunction(() => window.isRootMounted)
+    // should hydrate without needing to scroll
+    await page().waitForFunction(() => window.isHydrated)
+    await assertHydrationSuccess()
+  })
+
   test('visible (fragment)', async () => {
     await goToCase('visible', '?fragment')
     await page().waitForFunction(() => window.isRootMounted)
@@ -51,9 +59,35 @@ describe('async component hydration strategies', () => {
     await assertHydrationSuccess()
   })
 
-  test('media query', async () => {})
+  test('media query', async () => {
+    await goToCase('media')
+    await page().waitForFunction(() => window.isRootMounted)
+    expect(await page().evaluate(() => window.isHydrated)).toBe(false)
+    // resize
+    await page().setViewport({ width: 400, height: 600 })
+    await page().waitForFunction(() => window.isHydrated)
+    await assertHydrationSuccess()
+  })
 
-  test('interaction', async () => {})
+  test('interaction', async () => {
+    await goToCase('interaction')
+    await page().waitForFunction(() => window.isRootMounted)
+    expect(await page().evaluate(() => window.isHydrated)).toBe(false)
+    await click('button')
+    await page().waitForFunction(() => window.isHydrated)
+    // should replay event
+    expect(await text('button')).toBe('1')
+    await assertHydrationSuccess('2')
+  })
 
-  test('interaction (fragment)', async () => {})
+  test('interaction (fragment)', async () => {
+    await goToCase('interaction', '?fragment')
+    await page().waitForFunction(() => window.isRootMounted)
+    expect(await page().evaluate(() => window.isHydrated)).toBe(false)
+    await click('button')
+    await page().waitForFunction(() => window.isHydrated)
+    // should replay event
+    expect(await text('button')).toBe('1')
+    await assertHydrationSuccess('2')
+  })
 })

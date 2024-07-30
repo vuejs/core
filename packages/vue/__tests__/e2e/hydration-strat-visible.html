@@ -2,8 +2,10 @@
 
 <div style="height: 1000px">scroll to the bottom to hydrate</div>
 <div id="app"><button>0</button></div>
+<style>body { margin: 0 }</style>
 
 <script>
+  const rootMargin = location.search.match(/rootMargin=(\d+)/)?.[1] ?? 0
   const isFragment = location.search.includes('?fragment')
   if (isFragment) {
     document.getElementById('app').innerHTML = `<!--[--><span>one</span><button>0</button><span>two</span><!--]-->`
@@ -32,7 +34,7 @@
 
   const AsyncComp = defineAsyncComponent({
     loader: () => Promise.resolve(Comp),
-    hydrate: hydrateOnVisible()
+    hydrate: hydrateOnVisible(rootMargin + 'px')
   })
 
   createSSRApp({

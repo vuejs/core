@@ -49,7 +49,7 @@ export const hydrateOnInteraction: HydrationStrategyFactory<
   (hydrate, node) => {
     if (isString(interactions)) interactions = [interactions]
     let hasHydrated = false
-    const doHydrate = () => {
+    const doHydrate = (e: Event) => {
       if (!hasHydrated) {
         hasHydrated = true
         forEachNode(node, el => {
@@ -58,6 +58,8 @@ export const hydrateOnInteraction: HydrationStrategyFactory<
           }
         })
         hydrate()
+        // replay event
+        e.target!.dispatchEvent(new (e.constructor as any)(e.type, e))
       }
     }
     forEachNode(node, el => {
