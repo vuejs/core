@@ -405,8 +405,8 @@ function hydrateTeleport(
 
         // #11400 if the HTML corresponding to Teleport is not embedded in the correct position
         // on the final page during SSR. the targetAnchor will always be null, we need to
-        // manually add targetAnchor to ensure that it can properly unmount
-        if (!targetAnchor) {
+        // manually add targetAnchor to ensure Teleport it can properly unmount or move
+        if (!vnode.targetAnchor) {
           prepareAnchor(target, vnode, createText, insert)
         }
 

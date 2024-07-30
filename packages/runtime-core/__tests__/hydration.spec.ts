@@ -512,6 +512,63 @@ describe('SSR hydration', () => {
     )
   })
 
+  test('Teleport unmount (full integration)', async () => {
+    const Comp1 = {
+      template: `
+        <Teleport to="#target"> 
+          <span>Teleported Comp1</span>
+        </Teleport>
+      `,
+    }
+    const Comp2 = {
+      template: `
+        <div>Comp2</div>
+      `,
+    }
+
+    const toggle = ref(true)
+    const App = {
+      template: `
+        <div>
+          <Comp1 v-if="toggle"/>
+          <Comp2 v-else/>
+        </div>
+      `,
+      components: {
+        Comp1,
+        Comp2,
+      },
+      setup() {
+        return { toggle }
+      },
+    }
+
+    const container = document.createElement('div')
+    const teleportContainer = document.createElement('div')
+    teleportContainer.id = 'target'
+    document.body.appendChild(teleportContainer)
+
+    // server render
+    container.innerHTML = await renderToString(h(App))
+    expect(container.innerHTML).toBe(
+      '<div><!--teleport start--><!--teleport end--></div>',
+    )
+    expect(teleportContainer.innerHTML).toBe('')
+
+    // hydrate
+    createSSRApp(App).mount(container)
+    expect(container.innerHTML).toBe(
+      '<div><!--teleport start--><!--teleport end--></div>',
+    )
+    expect(teleportContainer.innerHTML).toBe('<span>Teleported Comp1</span>')
+    expect(`Hydration children mismatch`).toHaveBeenWarned()
+
+    toggle.value = false
+    await nextTick()
+    expect(container.innerHTML).toBe('<div><div>Comp2</div></div>')
+    expect(teleportContainer.innerHTML).toBe('')
+  })
+
   // compile SSR + client render fn from the same template & hydrate
   test('full compiler integration', async () => {
     const mounted: string[] = []
