@@ -1,7 +1,10 @@
 import { isString } from '@vue/shared'
 import { DOMNodeTypes, isComment } from './hydration'
 
-export type HydrationStrategy = (hydrate: () => void, el: Node) => void
+export type HydrationStrategy = (
+  hydrate: () => void,
+  forEachElement: (cb: (el: Element) => any) => void,
+) => void
 
 export type HydrationStrategyFactory<Options = any> = (
   options?: Options,
@@ -13,7 +16,7 @@ export const hydrateOnIdle: HydrationStrategyFactory = () => hydrate => {
 
 export const hydrateOnVisible: HydrationStrategyFactory<string | number> =
   (margin = 0) =>
-  (hydrate, node) => {
+  (hydrate, forEach) => {
     const ob = new IntersectionObserver(
       entries => {
         for (const e of entries) {
@@ -27,7 +30,7 @@ export const hydrateOnVisible: HydrationStrategyFactory<string | number> =
         rootMargin: isString(margin) ? margin : margin + 'px',
       },
     )
-    forEachNode(node, el => ob.observe(el))
+    forEach(el => ob.observe(el))
   }
 
 export const hydrateOnMediaQuery: HydrationStrategyFactory<string> =
@@ -46,13 +49,13 @@ export const hydrateOnInteraction: HydrationStrategyFactory<
   string | string[]
 > =
   (interactions = []) =>
-  (hydrate, node) => {
+  (hydrate, forEach) => {
     if (isString(interactions)) interactions = [interactions]
     let hasHydrated = false
     const doHydrate = (e: Event) => {
       if (!hasHydrated) {
         hasHydrated = true
-        forEachNode(node, el => {
+        forEach(el => {
           for (const i of interactions) {
             el.removeEventListener(i, doHydrate)
           }
@@ -62,14 +65,14 @@ export const hydrateOnInteraction: HydrationStrategyFactory<
         e.target!.dispatchEvent(new (e.constructor as any)(e.type, e))
       }
     }
-    forEachNode(node, el => {
+    forEach(el => {
       for (const i of interactions) {
         el.addEventListener(i, doHydrate, { once: true })
       }
     })
   }
 
-function forEachNode(node: Node, cb: (el: Element) => void) {
+export function forEachElement(node: Node, cb: (el: Element) => void) {
   // fragment
   if (isComment(node) && node.data === '[') {
     let next = node.nextSibling

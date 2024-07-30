@@ -16,7 +16,7 @@ import { ErrorCodes, handleError } from './errorHandling'
 import { isKeepAlive } from './components/KeepAlive'
 import { queueJob } from './scheduler'
 import { markAsyncBoundary } from './helpers/useId'
-import type { HydrationStrategy } from './hydrationStrategies'
+import { type HydrationStrategy, forEachElement } from './hydrationStrategies'
 
 export type AsyncComponentResolveResult<T = Component> = T | { default: T } // es modules
 
@@ -122,8 +122,9 @@ export function defineAsyncComponent<
     __asyncLoader: load,
 
     __asyncHydrate(el, instance, hydrate) {
-      const doHydrate = () =>
-        hydrateStrategy ? hydrateStrategy(hydrate, el) : hydrate()
+      const doHydrate = hydrateStrategy
+        ? () => hydrateStrategy(hydrate, cb => forEachElement(el, cb))
+        : hydrate
       if (resolvedComp) {
         doHydrate()
       } else {
