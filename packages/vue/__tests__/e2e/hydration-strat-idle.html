@@ -3,6 +3,7 @@
 <div id="app"><button>0</button></div>
 
 <script>
+  window.isHydrated = false
   const { createSSRApp, defineAsyncComponent, h, ref, onMounted, hydrateOnIdle } = Vue
 
   const Comp = {
@@ -30,8 +31,6 @@
   })
 
   createSSRApp({
-    render() {
-      return h(AsyncComp)
-    },
+    render: () => h(AsyncComp)
   }).mount('#app')
 </script>

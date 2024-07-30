@@ -1,13 +1,13 @@
 import path from 'node:path'
 import { setupPuppeteer } from './e2eUtils'
 
-declare const window: { isHydrated: boolean }
+declare const window: Window & { isHydrated: boolean; isRootMounted: boolean }
 
 describe('async component hydration strategies', () => {
-  const { page, click, text } = setupPuppeteer()
+  const { page, click, text, count } = setupPuppeteer(['--window-size=800,600'])
 
-  async function goToCase(name: string) {
-    const file = `file://${path.resolve(__dirname, `./hydration-strat-${name}.html`)}`
+  async function goToCase(name: string, query = '') {
+    const file = `file://${path.resolve(__dirname, `./hydration-strat-${name}.html${query}`)}`
     await page().goto(file)
   }
 
@@ -22,7 +22,7 @@ describe('async component hydration strategies', () => {
 
     await goToCase('idle')
     // not hydrated yet
-    expect(await page().evaluate(() => window.isHydrated)).toBe(undefined)
+    expect(await page().evaluate(() => window.isHydrated)).toBe(false)
     // wait for hydration
     await page().waitForFunction(() => window.isHydrated)
     // assert message order: hyration should happen after already queued main thread work
@@ -30,9 +30,26 @@ describe('async component hydration strategies', () => {
     await assertHydrationSuccess()
   })
 
-  test('visible', async () => {})
+  test('visible', async () => {
+    await goToCase('visible')
+    await page().waitForFunction(() => window.isRootMounted)
+    expect(await page().evaluate(() => window.isHydrated)).toBe(false)
+    // scroll down
+    await page().evaluate(() => window.scrollTo({ top: 1000 }))
+    await page().waitForFunction(() => window.isHydrated)
+    await assertHydrationSuccess()
+  })
 
-  test('visible (fragment)', async () => {})
+  test('visible (fragment)', async () => {
+    await goToCase('visible', '?fragment')
+    await page().waitForFunction(() => window.isRootMounted)
+    expect(await page().evaluate(() => window.isHydrated)).toBe(false)
+    expect(await count('span')).toBe(2)
+    // scroll down
+    await page().evaluate(() => window.scrollTo({ top: 1000 }))
+    await page().waitForFunction(() => window.isHydrated)
+    await assertHydrationSuccess()
+  })
 
   test('media query', async () => {})
 

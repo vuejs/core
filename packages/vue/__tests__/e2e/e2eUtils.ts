@@ -30,12 +30,19 @@ export async function expectByPolling(
   }
 }
 
-export function setupPuppeteer() {
+export function setupPuppeteer(args?: string[]) {
   let browser: Browser
   let page: Page
 
+  const resolvedOptions = args
+    ? {
+        ...puppeteerOptions,
+        args: [...puppeteerOptions.args!, ...args],
+      }
+    : puppeteerOptions
+
   beforeAll(async () => {
-    browser = await puppeteer.launch(puppeteerOptions)
+    browser = await puppeteer.launch(resolvedOptions)
   }, 20000)
 
   beforeEach(async () => {
