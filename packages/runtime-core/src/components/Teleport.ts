@@ -381,7 +381,7 @@ function hydrateTeleport(
           slotScopeIds,
           optimized,
         )
-        vnode.targetAnchor = targetNode
+        vnode.targetStart = vnode.targetAnchor = targetNode
       } else {
         vnode.anchor = nextSibling(node)
 
