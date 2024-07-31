@@ -75,8 +75,7 @@ function walk(
         : getConstantType(child, context)
       if (constantType > ConstantTypes.NOT_CONSTANT) {
         if (constantType >= ConstantTypes.CAN_CACHE) {
-          ;(child.codegenNode as VNodeCall).patchFlag =
-            PatchFlags.CACHED + (__DEV__ ? ` /* CACHED */` : ``)
+          ;(child.codegenNode as VNodeCall).patchFlag = PatchFlags.CACHED
           toCache.push(child)
           continue
         }
@@ -85,9 +84,9 @@ function walk(
         // hoisting.
         const codegenNode = child.codegenNode!
         if (codegenNode.type === NodeTypes.VNODE_CALL) {
-          const flag = getPatchFlag(codegenNode)
+          const flag = codegenNode.patchFlag
           if (
-            (!flag ||
+            (flag === undefined ||
               flag === PatchFlags.NEED_PATCH ||
               flag === PatchFlags.TEXT) &&
             getGeneratedPropsConstantType(child, context) >=
@@ -259,8 +258,7 @@ export function getConstantType(
       ) {
         return ConstantTypes.NOT_CONSTANT
       }
-      const flag = getPatchFlag(codegenNode)
-      if (!flag) {
+      if (codegenNode.patchFlag === undefined) {
         let returnType = ConstantTypes.CAN_STRINGIFY
 
         // Element itself has no patch flag. However we still need to check:
@@ -446,9 +444,4 @@ function getNodeProps(node: PlainElementNode) {
   if (codegenNode.type === NodeTypes.VNODE_CALL) {
     return codegenNode.props
   }
-}
-
-function getPatchFlag(node: VNodeCall): number | undefined {
-  const flag = node.patchFlag
-  return flag ? parseInt(flag, 10) : undefined
 }

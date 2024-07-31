@@ -388,7 +388,7 @@ function createRootCodegen(root: RootNode, context: TransformContext) {
       helper(FRAGMENT),
       undefined,
       root.children,
-      patchFlag + (__DEV__ ? ` /* ${patchFlagText} */` : ``),
+      patchFlag,
       undefined,
       undefined,
       true,

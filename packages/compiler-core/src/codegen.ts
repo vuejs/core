@@ -35,7 +35,13 @@ import {
   isSimpleIdentifier,
   toValidAssetId,
 } from './utils'
-import { isArray, isString, isSymbol } from '@vue/shared'
+import {
+  PatchFlagNames,
+  type PatchFlags,
+  isArray,
+  isString,
+  isSymbol,
+} from '@vue/shared'
 import {
   CREATE_COMMENT,
   CREATE_ELEMENT_VNODE,
@@ -816,6 +822,28 @@ function genVNodeCall(node: VNodeCall, context: CodegenContext) {
     disableTracking,
     isComponent,
   } = node
+
+  // add dev annotations to patch flags
+  let patchFlagString
+  if (patchFlag) {
+    if (__DEV__) {
+      if (patchFlag < 0) {
+        // special flags (negative and mutually exclusive)
+        patchFlagString = patchFlag + ` /* ${PatchFlagNames[patchFlag]} */`
+      } else {
+        // bitwise flags
+        const flagNames = Object.keys(PatchFlagNames)
+          .map(Number)
+          .filter(n => n > 0 && patchFlag & n)
+          .map(n => PatchFlagNames[n as PatchFlags])
+          .join(`, `)
+        patchFlagString = patchFlag + ` /* ${flagNames} */`
+      }
+    } else {
+      patchFlagString = String(patchFlag)
+    }
+  }
+
   if (directives) {
     push(helper(WITH_DIRECTIVES) + `(`)
   }
@@ -830,7 +858,7 @@ function genVNodeCall(node: VNodeCall, context: CodegenContext) {
     : getVNodeHelper(context.inSSR, isComponent)
   push(helper(callHelper) + `(`, NewlineType.None, node)
   genNodeList(
-    genNullableArgs([tag, props, children, patchFlag, dynamicProps]),
+    genNullableArgs([tag, props, children, patchFlagString, dynamicProps]),
     context,
   )
   push(`)`)
@@ -990,11 +1018,12 @@ function genCacheExpression(node: CacheExpression, context: CodegenContext) {
     indent()
     push(`${helper(SET_BLOCK_TRACKING)}(-1),`)
     newline()
+    push(`(`)
   }
   push(`_cache[${node.index}] = `)
   genNode(node.value, context)
   if (needPauseTracking) {
-    push(`,`)
+    push(`).cacheIndex = ${node.index},`)
     newline()
     push(`${helper(SET_BLOCK_TRACKING)}(1),`)
     newline()
