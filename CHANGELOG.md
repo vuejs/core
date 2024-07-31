@@ -1,5 +1,20 @@
-# [3.5.0-alpha.4](https://github.com/vuejs/core/compare/v3.4.34...v3.5.0-alpha.4) (2024-07-24)
+## [3.4.35](https://github.com/vuejs/core/compare/v3.4.34...v3.4.35) (2024-07-31)
 
+
+### Bug Fixes
+
+* **teleport/ssr:** fix Teleport hydration regression due to targetStart anchor addition ([7b18cdb](https://github.com/vuejs/core/commit/7b18cdb0b53a94007ca6a3675bf41b5d3153fec6))
+* **teleport/ssr:** ensure targetAnchor and targetStart not null during hydration ([#11456](https://github.com/vuejs/core/issues/11456)) ([12667da](https://github.com/vuejs/core/commit/12667da4879f980dcf2c50e36f3642d085a87d71)), closes [#11400](https://github.com/vuejs/core/issues/11400)
+* **types/ref:** allow getter and setter types to be unrelated ([#11442](https://github.com/vuejs/core/issues/11442)) ([e0b2975](https://github.com/vuejs/core/commit/e0b2975ef65ae6a0be0aa0a0df43fb887c665251))
+
+
+### Performance Improvements
+
+* **runtime-core:** improve efficiency of normalizePropsOptions ([#11409](https://github.com/vuejs/core/issues/11409)) ([5680142](https://github.com/vuejs/core/commit/5680142e68096c42e66da9f4c6220d040d7c56ba)), closes [#9739](https://github.com/vuejs/core/issues/9739)
+
+
+
+# [3.5.0-alpha.4](https://github.com/vuejs/core/compare/v3.4.34...v3.5.0-alpha.4) (2024-07-24)
 
 ### Bug Fixes
 
