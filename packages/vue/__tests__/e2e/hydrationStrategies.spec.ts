@@ -1,7 +1,13 @@
 import path from 'node:path'
 import { setupPuppeteer } from './e2eUtils'
+import type { Ref } from '../../src/runtime'
 
-declare const window: Window & { isHydrated: boolean; isRootMounted: boolean }
+declare const window: Window & {
+  isHydrated: boolean
+  isRootMounted: boolean
+  teardownCalled?: boolean
+  show: Ref<boolean>
+}
 
 describe('async component hydration strategies', () => {
   const { page, click, text, count } = setupPuppeteer(['--window-size=800,600'])
@@ -98,5 +104,15 @@ describe('async component hydration strategies', () => {
     await click('#custom-trigger')
     await page().waitForFunction(() => window.isHydrated)
     await assertHydrationSuccess()
+  })
+
+  test('custom teardown', async () => {
+    await goToCase('custom')
+    await page().waitForFunction(() => window.isRootMounted)
+    expect(await page().evaluate(() => window.isHydrated)).toBe(false)
+    await page().evaluate(() => (window.show.value = false))
+    expect(await text('#app')).toBe('off')
+    expect(await page().evaluate(() => window.isHydrated)).toBe(false)
+    expect(await page().evaluate(() => window.teardownCalled)).toBe(true)
   })
 })

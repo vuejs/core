@@ -123,7 +123,14 @@ export function defineAsyncComponent<
 
     __asyncHydrate(el, instance, hydrate) {
       const doHydrate = hydrateStrategy
-        ? () => hydrateStrategy(hydrate, cb => forEachElement(el, cb))
+        ? () => {
+            const teardown = hydrateStrategy(hydrate, cb =>
+              forEachElement(el, cb),
+            )
+            if (teardown) {
+              ;(instance.bum || (instance.bum = [])).push(teardown)
+            }
+          }
         : hydrate
       if (resolvedComp) {
         doHydrate()

@@ -23,18 +23,22 @@
   const AsyncComp = defineAsyncComponent({
     loader: () => Promise.resolve(Comp),
     hydrate: (hydrate, el) => {
-      document.getElementById('custom-trigger').addEventListener('click', () => {
-        hydrate()
-      }, { once: true })
+      const triggerEl = document.getElementById('custom-trigger')
+      triggerEl.addEventListener('click', hydrate, { once: true })
+      return () => {
+        window.teardownCalled = true
+        triggerEl.removeEventListener('click', hydrate)
+      }
     }
   })
 
+  const show = window.show = ref(true)
   createSSRApp({
     setup() {
       onMounted(() => {
         window.isRootMounted = true
       })
-      return () => h(AsyncComp)
+      return () => show.value ? h(AsyncComp) : 'off'
     }
   }).mount('#app')
 </script>

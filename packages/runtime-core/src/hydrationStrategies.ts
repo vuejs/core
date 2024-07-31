@@ -1,17 +1,27 @@
 import { isString } from '@vue/shared'
 import { DOMNodeTypes, isComment } from './hydration'
 
+/**
+ * A lazy hydration strategy for async components.
+ * @param hydrate - call this to perform the actual hydration.
+ * @param forEachElement - iterate through the root elements of the component's
+ *                         non-hydrated DOM, accounting for possible fragments.
+ * @returns a teardown function to be called if the async component is unmounted
+ *          before it is hydrated. This can be used to e.g. remove DOM event
+ *          listeners.
+ */
 export type HydrationStrategy = (
   hydrate: () => void,
   forEachElement: (cb: (el: Element) => any) => void,
-) => void
+) => (() => void) | void
 
 export type HydrationStrategyFactory<Options = any> = (
   options?: Options,
 ) => HydrationStrategy
 
 export const hydrateOnIdle: HydrationStrategyFactory = () => hydrate => {
-  requestIdleCallback(hydrate)
+  const id = requestIdleCallback(hydrate)
+  return () => cancelIdleCallback(id)
 }
 
 export const hydrateOnVisible: HydrationStrategyFactory<string | number> =
@@ -31,6 +41,7 @@ export const hydrateOnVisible: HydrationStrategyFactory<string | number> =
       },
     )
     forEach(el => ob.observe(el))
+    return () => ob.disconnect()
   }
 
 export const hydrateOnMediaQuery: HydrationStrategyFactory<string> =
@@ -41,6 +52,7 @@ export const hydrateOnMediaQuery: HydrationStrategyFactory<string> =
         hydrate()
       } else {
         mql.addEventListener('change', hydrate, { once: true })
+        return () => mql.removeEventListener('change', hydrate)
       }
     }
   }
@@ -55,21 +67,25 @@ export const hydrateOnInteraction: HydrationStrategyFactory<
     const doHydrate = (e: Event) => {
       if (!hasHydrated) {
         hasHydrated = true
-        forEach(el => {
-          for (const i of interactions) {
-            el.removeEventListener(i, doHydrate)
-          }
-        })
+        teardown()
         hydrate()
         // replay event
         e.target!.dispatchEvent(new (e.constructor as any)(e.type, e))
       }
+    }
+    const teardown = () => {
+      forEach(el => {
+        for (const i of interactions) {
+          el.removeEventListener(i, doHydrate)
+        }
+      })
     }
     forEach(el => {
       for (const i of interactions) {
         el.addEventListener(i, doHydrate, { once: true })
       }
     })
+    return teardown
   }
 
 export function forEachElement(node: Node, cb: (el: Element) => void) {
