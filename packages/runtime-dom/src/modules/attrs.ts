@@ -2,6 +2,7 @@ import {
   NOOP,
   includeBooleanAttr,
   isSpecialBooleanAttr,
+  isSymbol,
   makeMap,
 } from '@vue/shared'
 import {
@@ -18,6 +19,7 @@ export function patchAttr(
   value: any,
   isSVG: boolean,
   instance?: ComponentInternalInstance | null,
+  isBoolean = isSpecialBooleanAttr(key),
 ) {
   if (isSVG && key.startsWith('xlink:')) {
     if (value == null) {
@@ -32,11 +34,14 @@ export function patchAttr(
 
     // note we are only checking boolean attributes that don't have a
     // corresponding dom prop of the same name here.
-    const isBoolean = isSpecialBooleanAttr(key)
     if (value == null || (isBoolean && !includeBooleanAttr(value))) {
       el.removeAttribute(key)
     } else {
-      el.setAttribute(key, isBoolean ? '' : value)
+      // attribute value is a string https://html.spec.whatwg.org/multipage/dom.html#attributes
+      el.setAttribute(
+        key,
+        isBoolean ? '' : isSymbol(value) ? String(value) : value,
+      )
     }
   }
 }
@@ -75,12 +80,13 @@ export function compatCoerceAttr(
   } else if (
     value === false &&
     !isSpecialBooleanAttr(key) &&
-    compatUtils.softAssertCompatEnabled(
+    compatUtils.isCompatEnabled(DeprecationTypes.ATTR_FALSE_VALUE, instance)
+  ) {
+    compatUtils.warnDeprecation(
       DeprecationTypes.ATTR_FALSE_VALUE,
       instance,
       key,
     )
-  ) {
     el.removeAttribute(key)
     return true
   }

@@ -5,12 +5,15 @@ import {
   getCurrentInstance,
   h,
   inject,
+  nextTick,
   nodeOps,
+  onMounted,
   provide,
   ref,
   resolveComponent,
   resolveDirective,
   serializeInner,
+  watch,
   withDirectives,
 } from '@vue/runtime-test'
 
@@ -120,6 +123,13 @@ describe('api: createApp', () => {
 
     expect(app.runWithContext(() => inject('foo'))).toBe(1)
 
+    expect(
+      app.runWithContext(() => {
+        app.runWithContext(() => {})
+        return inject('foo')
+      }),
+    ).toBe(1)
+
     // ensure the context is restored
     inject('foo')
     expect('inject() can only be used inside setup').toHaveBeenWarned()
@@ -133,10 +143,10 @@ describe('api: createApp', () => {
       },
       setup() {
         // resolve in setup
-        const FooBar = resolveComponent('foo-bar') as any
+        const FooBar = resolveComponent('foo-bar')
         return () => {
           // resolve in render
-          const BarBaz = resolveComponent('bar-baz') as any
+          const BarBaz = resolveComponent('bar-baz')
           return h('div', [h(FooBar), h(BarBaz)])
         }
       },
@@ -172,10 +182,10 @@ describe('api: createApp', () => {
       },
       setup() {
         // resolve in setup
-        const FooBar = resolveDirective('foo-bar')!
+        const FooBar = resolveDirective('foo-bar')
         return () => {
           // resolve in render
-          const BarBaz = resolveDirective('bar-baz')!
+          const BarBaz = resolveDirective('bar-baz')
           return withDirectives(h('div'), [[FooBar], [BarBaz]])
         }
       },
@@ -340,7 +350,7 @@ describe('api: createApp', () => {
 
     const handler = vi.fn((err, instance, info) => {
       expect(err).toBe(error)
-      expect((instance as any).count).toBe(count.value)
+      expect(instance.count).toBe(count.value)
       expect(info).toBe(`render function`)
     })
 
@@ -440,11 +450,6 @@ describe('api: createApp', () => {
       }
 
       const app = createApp(Root)
-      Object.defineProperty(app.config, 'isNativeTag', {
-        value: isNativeTag,
-        writable: false,
-      })
-
       app.mount(nodeOps.createElement('div'))
       expect(
         `Do not use built-in directive ids as custom directive id: bind`,
@@ -549,6 +554,35 @@ describe('api: createApp', () => {
     expect(
       `TypeError: Cannot read property '__isScriptSetup' of undefined`,
     ).not.toHaveBeenWarned()
+  })
+
+  // #10005
+  test('flush order edge case on nested createApp', async () => {
+    const order: string[] = []
+    const App = defineComponent({
+      setup(props) {
+        const message = ref('m1')
+        watch(
+          message,
+          () => {
+            order.push('post watcher')
+          },
+          { flush: 'post' },
+        )
+        onMounted(() => {
+          message.value = 'm2'
+          createApp(() => '').mount(nodeOps.createElement('div'))
+        })
+        return () => {
+          order.push('render')
+          return h('div', [message.value])
+        }
+      },
+    })
+
+    createApp(App).mount(nodeOps.createElement('div'))
+    await nextTick()
+    expect(order).toMatchObject(['render', 'render', 'post watcher'])
   })
 
   // config.compilerOptions is tested in packages/vue since it is only

@@ -1,15 +1,18 @@
 import type { ObjectDirective } from '@vue/runtime-core'
 
-export const vShowOldKey = Symbol('_vod')
+export const vShowOriginalDisplay = Symbol('_vod')
+export const vShowHidden = Symbol('_vsh')
 
-interface VShowElement extends HTMLElement {
+export interface VShowElement extends HTMLElement {
   // _vod = vue original display
-  [vShowOldKey]: string
+  [vShowOriginalDisplay]: string
+  [vShowHidden]: boolean
 }
 
-export const vShow: ObjectDirective<VShowElement> = {
+export const vShow: ObjectDirective<VShowElement> & { name?: 'show' } = {
   beforeMount(el, { value }, { transition }) {
-    el[vShowOldKey] = el.style.display === 'none' ? '' : el.style.display
+    el[vShowOriginalDisplay] =
+      el.style.display === 'none' ? '' : el.style.display
     if (transition && value) {
       transition.beforeEnter(el)
     } else {
@@ -42,8 +45,13 @@ export const vShow: ObjectDirective<VShowElement> = {
   },
 }
 
+if (__DEV__) {
+  vShow.name = 'show'
+}
+
 function setDisplay(el: VShowElement, value: unknown): void {
-  el.style.display = value ? el[vShowOldKey] : 'none'
+  el.style.display = value ? el[vShowOriginalDisplay] : 'none'
+  el[vShowHidden] = !value
 }
 
 // SSR vnode transforms, only used when user includes client-oriented render
