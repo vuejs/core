@@ -107,17 +107,11 @@ export const TeleportImpl = {
       const mainAnchor = (n2.anchor = __DEV__
         ? createComment('teleport end')
         : createText(''))
-      const target = (n2.target = resolveTarget(n2.props, querySelector))
-      const targetStart = (n2.targetStart = createText(''))
-      const targetAnchor = (n2.targetAnchor = createText(''))
       insert(placeholder, container, anchor)
       insert(mainAnchor, container, anchor)
-      // attach a special property so we can skip teleported content in
-      // renderer's nextSibling search
-      targetStart[TeleportEndKey] = targetAnchor
+      const target = (n2.target = resolveTarget(n2.props, querySelector))
+      const targetAnchor = prepareAnchor(target, n2, createText, insert)
       if (target) {
-        insert(targetStart, target)
-        insert(targetAnchor, target)
         // #2652 we could be teleporting from a non-SVG tree into an SVG tree
         if (namespace === 'svg' || isTargetSVG(target)) {
           namespace = 'svg'
@@ -355,7 +349,7 @@ function hydrateTeleport(
   slotScopeIds: string[] | null,
   optimized: boolean,
   {
-    o: { nextSibling, parentNode, querySelector },
+    o: { nextSibling, parentNode, querySelector, insert, createText },
   }: RendererInternals<Node, Element>,
   hydrateChildren: (
     node: Node | null,
@@ -387,7 +381,7 @@ function hydrateTeleport(
           slotScopeIds,
           optimized,
         )
-        vnode.targetAnchor = targetNode
+        vnode.targetStart = vnode.targetAnchor = targetNode
       } else {
         vnode.anchor = nextSibling(node)
 
@@ -407,6 +401,13 @@ function hydrateTeleport(
               vnode.targetAnchor && nextSibling(vnode.targetAnchor as Node)
             break
           }
+        }
+
+        // #11400 if the HTML corresponding to Teleport is not embedded in the correct position
+        // on the final page during SSR. the targetAnchor will always be null, we need to
+        // manually add targetAnchor to ensure Teleport it can properly unmount or move
+        if (!vnode.targetAnchor) {
+          prepareAnchor(target, vnode, createText, insert)
         }
 
         hydrateChildren(
@@ -448,4 +449,25 @@ function updateCssVars(vnode: VNode) {
     }
     ctx.ut()
   }
+}
+
+function prepareAnchor(
+  target: RendererElement | null,
+  vnode: TeleportVNode,
+  createText: RendererOptions['createText'],
+  insert: RendererOptions['insert'],
+) {
+  const targetStart = (vnode.targetStart = createText(''))
+  const targetAnchor = (vnode.targetAnchor = createText(''))
+
+  // attach a special property, so we can skip teleported content in
+  // renderer's nextSibling search
+  targetStart[TeleportEndKey] = targetAnchor
+
+  if (target) {
+    insert(targetStart, target)
+    insert(targetAnchor, target)
+  }
+
+  return targetAnchor
 }
