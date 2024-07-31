@@ -169,19 +169,6 @@ function createForEach(isReadonly: boolean, isShallow: boolean) {
   }
 }
 
-interface Iterable {
-  [Symbol.iterator](): Iterator
-}
-
-interface Iterator {
-  next(value?: any): IterationResult
-}
-
-interface IterationResult {
-  value: any
-  done: boolean
-}
-
 function createIterableMethod(
   method: string | symbol,
   isReadonly: boolean,
@@ -190,7 +177,7 @@ function createIterableMethod(
   return function (
     this: IterableCollections,
     ...args: unknown[]
-  ): Iterable & Iterator {
+  ): Iterable<unknown> & Iterator<unknown> {
     const target = this[ReactiveFlags.RAW]
     const rawTarget = toRaw(target)
     const targetIsMap = isMap(rawTarget)
