@@ -33,7 +33,7 @@ export function useModel(
 
   const res = customRef((track, trigger) => {
     let localValue: any
-    let prevSetValue: any
+    let prevSetValue: any = EMPTY_OBJ
     let prevEmittedValue: any
 
     watchSyncEffect(() => {
@@ -51,6 +51,12 @@ export function useModel(
       },
 
       set(value) {
+        if (
+          !hasChanged(value, localValue) &&
+          !(prevSetValue !== EMPTY_OBJ && hasChanged(value, prevSetValue))
+        ) {
+          return
+        }
         const rawProps = i.vnode!.props
         if (
           !(
@@ -62,8 +68,7 @@ export function useModel(
             (`onUpdate:${name}` in rawProps ||
               `onUpdate:${camelizedName}` in rawProps ||
               `onUpdate:${hyphenatedName}` in rawProps)
-          ) &&
-          hasChanged(value, localValue)
+          )
         ) {
           // no v-model, local update
           localValue = value
@@ -76,9 +81,9 @@ export function useModel(
         // updates and there will be no prop sync. However the local input state
         // may be out of sync, so we need to force an update here.
         if (
-          value !== emittedValue &&
-          value !== prevSetValue &&
-          emittedValue === prevEmittedValue
+          hasChanged(value, emittedValue) &&
+          hasChanged(value, prevSetValue) &&
+          !hasChanged(emittedValue, prevEmittedValue)
         ) {
           trigger()
         }
@@ -108,5 +113,10 @@ export function useModel(
 export const getModelModifiers = (
   props: Record<string, any>,
   modelName: string,
-): Record<string, boolean> | undefined =>
-  props[`${modelName === 'modelValue' ? 'model' : modelName}Modifiers`]
+): Record<string, boolean> | undefined => {
+  return modelName === 'modelValue' || modelName === 'model-value'
+    ? props.modelModifiers
+    : props[`${modelName}Modifiers`] ||
+        props[`${camelize(modelName)}Modifiers`] ||
+        props[`${hyphenate(modelName)}Modifiers`]
+}

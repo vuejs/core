@@ -612,4 +612,49 @@ describe('useModel', () => {
     // should not force local update if set to the same value
     expect(compRender).toHaveBeenCalledTimes(3)
   })
+
+  test('set no change value', async () => {
+    let changeChildMsg!: (val: string) => void
+
+    const setValue = vi.fn()
+    const Comp = defineComponent({
+      props: ['msg'],
+      emits: ['update:msg'],
+      setup(props) {
+        const childMsg = useModel(props, 'msg')
+        changeChildMsg = (val: string) => (childMsg.value = val)
+        return () => {
+          return childMsg.value
+        }
+      },
+    })
+
+    const defaultVal = 'defaultVal'
+    const msg = ref(defaultVal)
+    const Parent = defineComponent({
+      setup() {
+        return () =>
+          h(Comp, {
+            msg: msg.value,
+            'onUpdate:msg': val => {
+              msg.value = val
+              setValue()
+            },
+          })
+      },
+    })
+
+    const root = nodeOps.createElement('div')
+    render(h(Parent), root)
+
+    expect(setValue).toBeCalledTimes(0)
+
+    changeChildMsg(defaultVal)
+    expect(setValue).toBeCalledTimes(0)
+
+    changeChildMsg('changed')
+    changeChildMsg(defaultVal)
+    expect(setValue).toBeCalledTimes(2)
+    expect(msg.value).toBe(defaultVal)
+  })
 })

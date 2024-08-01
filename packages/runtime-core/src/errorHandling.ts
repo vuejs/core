@@ -23,6 +23,7 @@ export enum ErrorCodes {
   FUNCTION_REF,
   ASYNC_COMPONENT_LOADER,
   SCHEDULER,
+  COMPONENT_UPDATE,
 }
 
 export const ErrorTypeStrings: Record<LifecycleHooks | ErrorCodes, string> = {
@@ -54,16 +55,15 @@ export const ErrorTypeStrings: Record<LifecycleHooks | ErrorCodes, string> = {
   [ErrorCodes.APP_WARN_HANDLER]: 'app warnHandler',
   [ErrorCodes.FUNCTION_REF]: 'ref function',
   [ErrorCodes.ASYNC_COMPONENT_LOADER]: 'async component loader',
-  [ErrorCodes.SCHEDULER]:
-    'scheduler flush. This is likely a Vue internals bug. ' +
-    'Please open an issue at https://github.com/vuejs/core .',
+  [ErrorCodes.SCHEDULER]: 'scheduler flush',
+  [ErrorCodes.COMPONENT_UPDATE]: 'component update',
 }
 
 export type ErrorTypes = LifecycleHooks | ErrorCodes
 
 export function callWithErrorHandling(
   fn: Function,
-  instance: ComponentInternalInstance | null,
+  instance: ComponentInternalInstance | null | undefined,
   type: ErrorTypes,
   args?: unknown[],
 ) {
@@ -105,7 +105,7 @@ export function callWithAsyncErrorHandling(
 
 export function handleError(
   err: unknown,
-  instance: ComponentInternalInstance | null,
+  instance: ComponentInternalInstance | null | undefined,
   type: ErrorTypes,
   throwInDev = true,
 ) {
