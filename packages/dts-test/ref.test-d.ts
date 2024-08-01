@@ -183,6 +183,26 @@ describe('allow getter and setter types to be unrelated', <T>() => {
   e.value = d
 })
 
+// computed
+describe('allow computed getter and setter types to be unrelated', () => {
+  const obj = ref({
+    name: 'foo',
+  })
+
+  const c = computed({
+    get() {
+      return JSON.stringify(obj.value)
+    },
+    set(val: typeof obj.value) {
+      obj.value = val
+    },
+  })
+
+  c.value = { name: 'bar' } // object
+
+  expectType<string>(c.value)
+})
+
 // shallowRef
 type Status = 'initial' | 'ready' | 'invalidating'
 const shallowStatus = shallowRef<Status>('initial')
