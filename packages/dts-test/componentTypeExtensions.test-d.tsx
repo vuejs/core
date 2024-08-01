@@ -1,9 +1,17 @@
-import { defineComponent } from 'vue'
+import { type DefineComponent, type Directive, defineComponent } from 'vue'
 import { expectType } from './utils'
 
 declare module 'vue' {
   interface ComponentCustomOptions {
     test?(n: number): void
+  }
+
+  interface GlobalDirectives {
+    test: Directive
+  }
+
+  interface GlobalComponents {
+    RouterView: DefineComponent<{}>
   }
 
   interface ComponentCustomProperties {
@@ -20,8 +28,8 @@ export const Custom = defineComponent({
     bar: String,
     baz: {
       type: Number,
-      required: true
-    }
+      required: true,
+    },
   },
 
   data: () => ({ counter: 0 }),
@@ -42,10 +50,12 @@ export const Custom = defineComponent({
       this.state = 'not valid'
       // @ts-expect-error
       this.$.appContext.config.globalProperties.state = 'not valid'
-    }
-  }
+    },
+  },
 })
 
+expectType<Directive>(Custom.directives!.test)
+expectType<DefineComponent<{}>>(Custom.components!.RouterView)
 expectType<JSX.Element>(<Custom baz={1} />)
 expectType<JSX.Element>(<Custom custom={1} baz={1} />)
 expectType<JSX.Element>(<Custom bar="bar" baz={1} />)

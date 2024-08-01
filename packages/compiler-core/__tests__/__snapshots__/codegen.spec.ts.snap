@@ -19,12 +19,12 @@ export function render(_ctx, _cache) {
 }"
 `;
 
-exports[`compiler: codegen > CacheExpression w/ isVNode: true 1`] = `
+exports[`compiler: codegen > CacheExpression w/ isVOnce: true 1`] = `
 "
 export function render(_ctx, _cache) {
   return _cache[1] || (
     _setBlockTracking(-1),
-    _cache[1] = foo,
+    (_cache[1] = foo).cacheIndex = 1,
     _setBlockTracking(1),
     _cache[1]
   )
@@ -48,13 +48,13 @@ exports[`compiler: codegen > Element (callExpression + objectExpression + Templa
 "
 return function render(_ctx, _cache) {
   with (_ctx) {
-    return _createElementVNode(\\"div\\", {
-      id: \\"foo\\",
+    return _createElementVNode("div", {
+      id: "foo",
       [prop]: bar,
       [foo + bar]: bar
     }, [
-      _createElementVNode(\\"p\\", { \\"some-key\\": \\"foo\\" })
-    ], 16)
+      _createElementVNode("p", { "some-key": "foo" })
+    ], 16 /* FULL_PROPS */)
   }
 }"
 `;
@@ -63,12 +63,12 @@ exports[`compiler: codegen > assets + temps 1`] = `
 "
 return function render(_ctx, _cache) {
   with (_ctx) {
-    const _component_Foo = _resolveComponent(\\"Foo\\")
-    const _component_bar_baz = _resolveComponent(\\"bar-baz\\")
-    const _component_barbaz = _resolveComponent(\\"barbaz\\")
-    const _component_Qux = _resolveComponent(\\"Qux\\", true)
-    const _directive_my_dir_0 = _resolveDirective(\\"my_dir_0\\")
-    const _directive_my_dir_1 = _resolveDirective(\\"my_dir_1\\")
+    const _component_Foo = _resolveComponent("Foo")
+    const _component_bar_baz = _resolveComponent("bar-baz")
+    const _component_barbaz = _resolveComponent("barbaz")
+    const _component_Qux = _resolveComponent("Qux", true)
+    const _directive_my_dir_0 = _resolveDirective("my_dir_0")
+    const _directive_my_dir_1 = _resolveDirective("my_dir_1")
     let _temp0, _temp1, _temp2
 
     return null
@@ -80,7 +80,7 @@ exports[`compiler: codegen > comment 1`] = `
 "
 return function render(_ctx, _cache) {
   with (_ctx) {
-    return _createCommentVNode(\\"foo\\")
+    return _createCommentVNode("foo")
   }
 }"
 `;
@@ -98,7 +98,7 @@ exports[`compiler: codegen > forNode 1`] = `
 "
 return function render(_ctx, _cache) {
   with (_ctx) {
-    return (_openBlock(true), _createElementBlock(_Fragment, null, _renderList(), 1))
+    return (_openBlock(true), _createElementBlock(_Fragment, null, _renderList(), 1 /* TEXT */))
   }
 }"
 `;
@@ -135,7 +135,7 @@ return function render(_ctx, _cache) {
 exports[`compiler: codegen > hoists 1`] = `
 "
 const _hoisted_1 = hello
-const _hoisted_2 = { id: \\"foo\\" }
+const _hoisted_2 = { id: "foo" }
 
 return function render(_ctx, _cache) {
   with (_ctx) {
@@ -165,7 +165,7 @@ return function render(_ctx, _cache) {
 `;
 
 exports[`compiler: codegen > module mode preamble 1`] = `
-"import { createVNode as _createVNode, resolveDirective as _resolveDirective } from \\"vue\\"
+"import { createVNode as _createVNode, resolveDirective as _resolveDirective } from "vue"
 
 export function render(_ctx, _cache) {
   return null
@@ -173,7 +173,7 @@ export function render(_ctx, _cache) {
 `;
 
 exports[`compiler: codegen > module mode preamble w/ optimizeImports: true 1`] = `
-"import { createVNode, resolveDirective } from \\"vue\\"
+"import { createVNode, resolveDirective } from "vue"
 
 // Binding optimization for webpack code-split
 const _createVNode = createVNode, _resolveDirective = resolveDirective
@@ -187,7 +187,7 @@ exports[`compiler: codegen > static text 1`] = `
 "
 return function render(_ctx, _cache) {
   with (_ctx) {
-    return \\"hello\\"
+    return "hello"
   }
 }"
 `;

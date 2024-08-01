@@ -1,15 +1,15 @@
 import puppeteer, {
-  Browser,
-  Page,
-  ClickOptions,
-  PuppeteerLaunchOptions
+  type Browser,
+  type ClickOptions,
+  type Page,
+  type PuppeteerLaunchOptions,
 } from 'puppeteer'
 
 export const E2E_TIMEOUT = 30 * 1000
 
 const puppeteerOptions: PuppeteerLaunchOptions = {
   args: process.env.CI ? ['--no-sandbox', '--disable-setuid-sandbox'] : [],
-  headless: 'new'
+  headless: true,
 }
 
 const maxTries = 30
@@ -17,7 +17,7 @@ export const timeout = (n: number) => new Promise(r => setTimeout(r, n))
 
 export async function expectByPolling(
   poll: () => Promise<any>,
-  expected: string
+  expected: string,
 ) {
   for (let tries = 0; tries < maxTries; tries++) {
     const actual = (await poll()) || ''
@@ -30,12 +30,19 @@ export async function expectByPolling(
   }
 }
 
-export function setupPuppeteer() {
+export function setupPuppeteer(args?: string[]) {
   let browser: Browser
   let page: Page
 
+  const resolvedOptions = args
+    ? {
+        ...puppeteerOptions,
+        args: [...puppeteerOptions.args!, ...args],
+      }
+    : puppeteerOptions
+
   beforeAll(async () => {
-    browser = await puppeteer.launch(puppeteerOptions)
+    browser = await puppeteer.launch(resolvedOptions)
   }, 20000)
 
   beforeEach(async () => {
@@ -50,7 +57,7 @@ export function setupPuppeteer() {
         const err = e.args()[0]
         console.error(
           `Error from Puppeteer-loaded page:\n`,
-          err.remoteObject().description
+          err.remoteObject().description,
         )
       }
     })
@@ -102,7 +109,7 @@ export function setupPuppeteer() {
   async function isChecked(selector: string) {
     return await page.$eval(
       selector,
-      node => (node as HTMLInputElement).checked
+      node => (node as HTMLInputElement).checked,
     )
   }
 
@@ -117,7 +124,7 @@ export function setupPuppeteer() {
         ;(node as HTMLInputElement).value = value as string
         node.dispatchEvent(new Event('input'))
       },
-      value
+      value,
     )
   }
 
@@ -137,7 +144,7 @@ export function setupPuppeteer() {
   async function clearValue(selector: string) {
     return await page.$eval(
       selector,
-      node => ((node as HTMLInputElement).value = '')
+      node => ((node as HTMLInputElement).value = ''),
     )
   }
 
@@ -176,6 +183,6 @@ export function setupPuppeteer() {
     enterValue,
     clearValue,
     timeout,
-    nextFrame
+    nextFrame,
   }
 }

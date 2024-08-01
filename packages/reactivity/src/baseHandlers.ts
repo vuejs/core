@@ -1,32 +1,26 @@
 import {
+  type Target,
+  isReadonly,
+  isShallow,
   reactive,
-  readonly,
-  toRaw,
-  ReactiveFlags,
-  Target,
-  readonlyMap,
   reactiveMap,
+  readonly,
+  readonlyMap,
   shallowReactiveMap,
   shallowReadonlyMap,
-  isReadonly,
-  isShallow
+  toRaw,
 } from './reactive'
-import { TrackOpTypes, TriggerOpTypes } from './operations'
+import { arrayInstrumentations } from './arrayInstrumentations'
+import { ReactiveFlags, TrackOpTypes, TriggerOpTypes } from './constants'
+import { ITERATE_KEY, track, trigger } from './dep'
 import {
-  track,
-  trigger,
-  ITERATE_KEY,
-  pauseTracking,
-  resetTracking
-} from './effect'
-import {
-  isObject,
-  hasOwn,
-  isSymbol,
   hasChanged,
+  hasOwn,
   isArray,
   isIntegerKey,
-  makeMap
+  isObject,
+  isSymbol,
+  makeMap,
 } from '@vue/shared'
 import { isRef } from './ref'
 import { warn } from './warning'
@@ -40,93 +34,74 @@ const builtInSymbols = new Set(
     // but accessing them on Symbol leads to TypeError because Symbol is a strict mode
     // function
     .filter(key => key !== 'arguments' && key !== 'caller')
-    .map(key => (Symbol as any)[key])
-    .filter(isSymbol)
+    .map(key => Symbol[key as keyof SymbolConstructor])
+    .filter(isSymbol),
 )
 
-const arrayInstrumentations = /*#__PURE__*/ createArrayInstrumentations()
-
-function createArrayInstrumentations() {
-  const instrumentations: Record<string, Function> = {}
-  // instrument identity-sensitive Array methods to account for possible reactive
-  // values
-  ;(['includes', 'indexOf', 'lastIndexOf'] as const).forEach(key => {
-    instrumentations[key] = function (this: unknown[], ...args: unknown[]) {
-      const arr = toRaw(this) as any
-      for (let i = 0, l = this.length; i < l; i++) {
-        track(arr, TrackOpTypes.GET, i + '')
-      }
-      // we run the method using the original args first (which may be reactive)
-      const res = arr[key](...args)
-      if (res === -1 || res === false) {
-        // if that didn't work, run it again using raw values.
-        return arr[key](...args.map(toRaw))
-      } else {
-        return res
-      }
-    }
-  })
-  // instrument length-altering mutation methods to avoid length being tracked
-  // which leads to infinite loops in some cases (#2137)
-  ;(['push', 'pop', 'shift', 'unshift', 'splice'] as const).forEach(key => {
-    instrumentations[key] = function (this: unknown[], ...args: unknown[]) {
-      pauseTracking()
-      const res = (toRaw(this) as any)[key].apply(this, args)
-      resetTracking()
-      return res
-    }
-  })
-  return instrumentations
-}
-
-function hasOwnProperty(this: object, key: string) {
+function hasOwnProperty(this: object, key: unknown) {
+  // #10455 hasOwnProperty may be called with non-string values
+  if (!isSymbol(key)) key = String(key)
   const obj = toRaw(this)
   track(obj, TrackOpTypes.HAS, key)
-  return obj.hasOwnProperty(key)
+  return obj.hasOwnProperty(key as string)
 }
 
 class BaseReactiveHandler implements ProxyHandler<Target> {
   constructor(
     protected readonly _isReadonly = false,
-    protected readonly _shallow = false
+    protected readonly _isShallow = false,
   ) {}
 
   get(target: Target, key: string | symbol, receiver: object) {
     const isReadonly = this._isReadonly,
-      shallow = this._shallow
+      isShallow = this._isShallow
     if (key === ReactiveFlags.IS_REACTIVE) {
       return !isReadonly
     } else if (key === ReactiveFlags.IS_READONLY) {
       return isReadonly
     } else if (key === ReactiveFlags.IS_SHALLOW) {
-      return shallow
-    } else if (
-      key === ReactiveFlags.RAW &&
-      receiver ===
-        (isReadonly
-          ? shallow
-            ? shallowReadonlyMap
-            : readonlyMap
-          : shallow
-          ? shallowReactiveMap
-          : reactiveMap
-        ).get(target)
-    ) {
-      return target
+      return isShallow
+    } else if (key === ReactiveFlags.RAW) {
+      if (
+        receiver ===
+          (isReadonly
+            ? isShallow
+              ? shallowReadonlyMap
+              : readonlyMap
+            : isShallow
+              ? shallowReactiveMap
+              : reactiveMap
+          ).get(target) ||
+        // receiver is not the reactive proxy, but has the same prototype
+        // this means the reciever is a user proxy of the reactive proxy
+        Object.getPrototypeOf(target) === Object.getPrototypeOf(receiver)
+      ) {
+        return target
+      }
+      // early return undefined
+      return
     }
 
     const targetIsArray = isArray(target)
 
     if (!isReadonly) {
-      if (targetIsArray && hasOwn(arrayInstrumentations, key)) {
-        return Reflect.get(arrayInstrumentations, key, receiver)
+      let fn: Function | undefined
+      if (targetIsArray && (fn = arrayInstrumentations[key])) {
+        return fn
       }
       if (key === 'hasOwnProperty') {
         return hasOwnProperty
       }
     }
 
-    const res = Reflect.get(target, key, receiver)
+    const res = Reflect.get(
+      target,
+      key,
+      // if this is a proxy wrapping a ref, return methods using the raw ref
+      // as receiver so that we don't have to call `toRaw` on the ref in all
+      // its class methods
+      isRef(target) ? target : receiver,
+    )
 
     if (isSymbol(key) ? builtInSymbols.has(key) : isNonTrackableKeys(key)) {
       return res
@@ -136,7 +111,7 @@ class BaseReactiveHandler implements ProxyHandler<Target> {
       track(target, TrackOpTypes.GET, key)
     }
 
-    if (shallow) {
+    if (isShallow) {
       return res
     }
 
@@ -157,28 +132,30 @@ class BaseReactiveHandler implements ProxyHandler<Target> {
 }
 
 class MutableReactiveHandler extends BaseReactiveHandler {
-  constructor(shallow = false) {
-    super(false, shallow)
+  constructor(isShallow = false) {
+    super(false, isShallow)
   }
 
   set(
-    target: object,
+    target: Record<string | symbol, unknown>,
     key: string | symbol,
     value: unknown,
-    receiver: object
+    receiver: object,
   ): boolean {
-    let oldValue = (target as any)[key]
-    if (isReadonly(oldValue) && isRef(oldValue) && !isRef(value)) {
-      return false
-    }
-    if (!this._shallow) {
+    let oldValue = target[key]
+    if (!this._isShallow) {
+      const isOldValueReadonly = isReadonly(oldValue)
       if (!isShallow(value) && !isReadonly(value)) {
         oldValue = toRaw(oldValue)
         value = toRaw(value)
       }
       if (!isArray(target) && isRef(oldValue) && !isRef(value)) {
-        oldValue.value = value
-        return true
+        if (isOldValueReadonly) {
+          return false
+        } else {
+          oldValue.value = value
+          return true
+        }
       }
     } else {
       // in shallow mode, objects are set as-is regardless of reactive or not
@@ -200,9 +177,12 @@ class MutableReactiveHandler extends BaseReactiveHandler {
     return result
   }
 
-  deleteProperty(target: object, key: string | symbol): boolean {
+  deleteProperty(
+    target: Record<string | symbol, unknown>,
+    key: string | symbol,
+  ): boolean {
     const hadKey = hasOwn(target, key)
-    const oldValue = (target as any)[key]
+    const oldValue = target[key]
     const result = Reflect.deleteProperty(target, key)
     if (result && hadKey) {
       trigger(target, TriggerOpTypes.DELETE, key, undefined, oldValue)
@@ -210,33 +190,34 @@ class MutableReactiveHandler extends BaseReactiveHandler {
     return result
   }
 
-  has(target: object, key: string | symbol): boolean {
+  has(target: Record<string | symbol, unknown>, key: string | symbol): boolean {
     const result = Reflect.has(target, key)
     if (!isSymbol(key) || !builtInSymbols.has(key)) {
       track(target, TrackOpTypes.HAS, key)
     }
     return result
   }
-  ownKeys(target: object): (string | symbol)[] {
+
+  ownKeys(target: Record<string | symbol, unknown>): (string | symbol)[] {
     track(
       target,
       TrackOpTypes.ITERATE,
-      isArray(target) ? 'length' : ITERATE_KEY
+      isArray(target) ? 'length' : ITERATE_KEY,
     )
     return Reflect.ownKeys(target)
   }
 }
 
 class ReadonlyReactiveHandler extends BaseReactiveHandler {
-  constructor(shallow = false) {
-    super(true, shallow)
+  constructor(isShallow = false) {
+    super(true, isShallow)
   }
 
   set(target: object, key: string | symbol) {
     if (__DEV__) {
       warn(
         `Set operation on key "${String(key)}" failed: target is readonly.`,
-        target
+        target,
       )
     }
     return true
@@ -246,7 +227,7 @@ class ReadonlyReactiveHandler extends BaseReactiveHandler {
     if (__DEV__) {
       warn(
         `Delete operation on key "${String(key)}" failed: target is readonly.`,
-        target
+        target,
       )
     }
     return true
@@ -260,7 +241,7 @@ export const readonlyHandlers: ProxyHandler<object> =
   /*#__PURE__*/ new ReadonlyReactiveHandler()
 
 export const shallowReactiveHandlers = /*#__PURE__*/ new MutableReactiveHandler(
-  true
+  true,
 )
 
 // Props handlers are special in the sense that it should not unwrap top-level

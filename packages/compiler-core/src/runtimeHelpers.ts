@@ -13,7 +13,7 @@ export const CREATE_TEXT = Symbol(__DEV__ ? `createTextVNode` : ``)
 export const CREATE_STATIC = Symbol(__DEV__ ? `createStaticVNode` : ``)
 export const RESOLVE_COMPONENT = Symbol(__DEV__ ? `resolveComponent` : ``)
 export const RESOLVE_DYNAMIC_COMPONENT = Symbol(
-  __DEV__ ? `resolveDynamicComponent` : ``
+  __DEV__ ? `resolveDynamicComponent` : ``,
 )
 export const RESOLVE_DIRECTIVE = Symbol(__DEV__ ? `resolveDirective` : ``)
 export const RESOLVE_FILTER = Symbol(__DEV__ ? `resolveFilter` : ``)
@@ -32,7 +32,14 @@ export const CAMELIZE = Symbol(__DEV__ ? `camelize` : ``)
 export const CAPITALIZE = Symbol(__DEV__ ? `capitalize` : ``)
 export const TO_HANDLER_KEY = Symbol(__DEV__ ? `toHandlerKey` : ``)
 export const SET_BLOCK_TRACKING = Symbol(__DEV__ ? `setBlockTracking` : ``)
+/**
+ * @deprecated no longer needed in 3.5+ because we no longer hoist element nodes
+ * but kept for backwards compat
+ */
 export const PUSH_SCOPE_ID = Symbol(__DEV__ ? `pushScopeId` : ``)
+/**
+ * @deprecated kept for backwards compat
+ */
 export const POP_SCOPE_ID = Symbol(__DEV__ ? `popScopeId` : ``)
 export const WITH_CTX = Symbol(__DEV__ ? `withCtx` : ``)
 export const UNREF = Symbol(__DEV__ ? `unref` : ``)
@@ -81,7 +88,7 @@ export const helperNameMap: Record<symbol, string> = {
   [UNREF]: `unref`,
   [IS_REF]: `isRef`,
   [WITH_MEMO]: `withMemo`,
-  [IS_MEMO_SAME]: `isMemoSame`
+  [IS_MEMO_SAME]: `isMemoSame`,
 }
 
 export function registerRuntimeHelpers(helpers: Record<symbol, string>) {

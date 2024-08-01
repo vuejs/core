@@ -9,7 +9,7 @@ export type InjectionKey<T> = symbol & { [InjectionKeySymbol]: T }
 
 export function provide<T, K = InjectionKey<T> | string | number | symbol>(
   key: K,
-  value: K extends InjectionKey<infer V> ? V : T
+  value: K extends InjectionKey<infer V> ? V : T,
 ) {
   if (!currentInstance) {
     if (__DEV__) {
@@ -36,17 +36,17 @@ export function inject<T>(key: InjectionKey<T> | string | symbol): T | undefined
 export function inject<T>(
   key: InjectionKey<T> | string | symbol,
   defaultValue: T,
-  treatDefaultAsFactory?: false
+  treatDefaultAsFactory?: false,
 ): T
 export function inject<T>(
   key: InjectionKey<T> | string | symbol,
   defaultValue: T | (() => T),
-  treatDefaultAsFactory: true
+  treatDefaultAsFactory: true,
 ): T
 export function inject(
   key: InjectionKey<any> | string | symbol,
   defaultValue?: unknown,
-  treatDefaultAsFactory = false
+  treatDefaultAsFactory = false,
 ) {
   // fallback to `currentRenderingInstance` so that this can be called in
   // a functional component

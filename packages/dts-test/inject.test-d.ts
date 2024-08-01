@@ -1,4 +1,11 @@
-import { provide, inject, ref, Ref, InjectionKey } from 'vue'
+import {
+  type InjectionKey,
+  type Ref,
+  createApp,
+  inject,
+  provide,
+  ref,
+} from 'vue'
 import { expectType } from './utils'
 
 // non-symbol keys
@@ -40,3 +47,8 @@ provide<Cube>(injectionKeyRef, { size: 123 })
 provide<Cube>('cube', { size: 'foo' })
 // @ts-expect-error
 provide<Cube>(123, { size: 'foo' })
+
+// #10602
+const app = createApp({})
+// @ts-expect-error
+app.provide(injectionKeyRef, ref({}))

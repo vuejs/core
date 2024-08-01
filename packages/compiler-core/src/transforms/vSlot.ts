@@ -1,38 +1,37 @@
 import {
-  ElementNode,
-  ObjectExpression,
-  createObjectExpression,
+  type CallExpression,
+  type ConditionalExpression,
+  type DirectiveNode,
+  type ElementNode,
+  ElementTypes,
+  type ExpressionNode,
+  type FunctionExpression,
   NodeTypes,
+  type ObjectExpression,
+  type Property,
+  type SlotsExpression,
+  type SourceLocation,
+  type TemplateChildNode,
+  createArrayExpression,
+  createCallExpression,
+  createConditionalExpression,
+  createFunctionExpression,
+  createObjectExpression,
   createObjectProperty,
   createSimpleExpression,
-  createFunctionExpression,
-  DirectiveNode,
-  ElementTypes,
-  ExpressionNode,
-  Property,
-  TemplateChildNode,
-  SourceLocation,
-  createConditionalExpression,
-  ConditionalExpression,
-  SimpleExpressionNode,
-  FunctionExpression,
-  CallExpression,
-  createCallExpression,
-  createArrayExpression,
-  SlotsExpression
 } from '../ast'
-import { TransformContext, NodeTransform } from '../transform'
-import { createCompilerError, ErrorCodes } from '../errors'
+import type { NodeTransform, TransformContext } from '../transform'
+import { ErrorCodes, createCompilerError } from '../errors'
 import {
-  findDir,
-  isTemplateNode,
   assert,
-  isVSlot,
+  findDir,
   hasScopeRef,
-  isStaticExp
+  isStaticExp,
+  isTemplateNode,
+  isVSlot,
 } from '../utils'
 import { CREATE_SLOTS, RENDER_LIST, WITH_CTX } from '../runtimeHelpers'
-import { parseForExpression, createForLoopParams } from './vFor'
+import { createForLoopParams, finalizeForParseResult } from './vFor'
 import { SlotFlags, slotFlagsText } from '@vue/shared'
 
 const defaultFallback = createSimpleExpression(`undefined`, false)
@@ -78,11 +77,9 @@ export const trackVForSlotScopes: NodeTransform = (node, context) => {
     node.props.some(isVSlot) &&
     (vFor = findDir(node, 'for'))
   ) {
-    const result = (vFor.parseResult = parseForExpression(
-      vFor.exp as SimpleExpressionNode,
-      context
-    ))
+    const result = vFor.forParseResult
     if (result) {
+      finalizeForParseResult(result, context)
       const { value, key, index } = result
       const { addIdentifiers, removeIdentifiers } = context
       value && addIdentifiers(value)
@@ -100,17 +97,18 @@ export const trackVForSlotScopes: NodeTransform = (node, context) => {
 
 export type SlotFnBuilder = (
   slotProps: ExpressionNode | undefined,
+  vFor: DirectiveNode | undefined,
   slotChildren: TemplateChildNode[],
-  loc: SourceLocation
+  loc: SourceLocation,
 ) => FunctionExpression
 
-const buildClientSlotFn: SlotFnBuilder = (props, children, loc) =>
+const buildClientSlotFn: SlotFnBuilder = (props, _vForExp, children, loc) =>
   createFunctionExpression(
     props,
     children,
     false /* newline */,
     true /* isSlot */,
-    children.length ? children[0].loc : loc
+    children.length ? children[0].loc : loc,
   )
 
 // Instead of being a DirectiveTransform, v-slot processing is called during
@@ -118,7 +116,7 @@ const buildClientSlotFn: SlotFnBuilder = (props, children, loc) =>
 export function buildSlots(
   node: ElementNode,
   context: TransformContext,
-  buildSlotFn: SlotFnBuilder = buildClientSlotFn
+  buildSlotFn: SlotFnBuilder = buildClientSlotFn,
 ): {
   slots: SlotsExpression
   hasDynamicSlots: boolean
@@ -149,8 +147,8 @@ export function buildSlots(
     slotsProperties.push(
       createObjectProperty(
         arg || createSimpleExpression('default', true),
-        buildSlotFn(exp, children, loc)
-      )
+        buildSlotFn(exp, undefined, children, loc),
+      ),
     )
   }
 
@@ -180,7 +178,7 @@ export function buildSlots(
     if (onComponentSlot) {
       // already has on-component slot - this is incorrect usage.
       context.onError(
-        createCompilerError(ErrorCodes.X_V_SLOT_MIXED_SLOT_USAGE, slotDir.loc)
+        createCompilerError(ErrorCodes.X_V_SLOT_MIXED_SLOT_USAGE, slotDir.loc),
       )
       break
     }
@@ -190,7 +188,7 @@ export function buildSlots(
     const {
       arg: slotName = createSimpleExpression(`default`, true),
       exp: slotProps,
-      loc: dirLoc
+      loc: dirLoc,
     } = slotDir
 
     // check if name is dynamic.
@@ -201,19 +199,20 @@ export function buildSlots(
       hasDynamicSlots = true
     }
 
-    const slotFunction = buildSlotFn(slotProps, slotChildren, slotLoc)
+    const vFor = findDir(slotElement, 'for')
+    const slotFunction = buildSlotFn(slotProps, vFor, slotChildren, slotLoc)
+
     // check if this slot is conditional (v-if/v-for)
     let vIf: DirectiveNode | undefined
     let vElse: DirectiveNode | undefined
-    let vFor: DirectiveNode | undefined
     if ((vIf = findDir(slotElement, 'if'))) {
       hasDynamicSlots = true
       dynamicSlots.push(
         createConditionalExpression(
           vIf.exp!,
           buildDynamicSlot(slotName, slotFunction, conditionalBranchIndex++),
-          defaultFallback
-        )
+          defaultFallback,
+        ),
       )
     } else if (
       (vElse = findDir(slotElement, /^else(-if)?$/, true /* allowEmpty */))
@@ -227,10 +226,7 @@ export function buildSlots(
           break
         }
       }
-      if (prev && isTemplateNode(prev) && findDir(prev, 'if')) {
-        // remove node
-        children.splice(i, 1)
-        i--
+      if (prev && isTemplateNode(prev) && findDir(prev, /^(else-)?if$/)) {
         __TEST__ && assert(dynamicSlots.length > 0)
         // attach this slot to previous conditional
         let conditional = dynamicSlots[
@@ -247,22 +243,21 @@ export function buildSlots(
               buildDynamicSlot(
                 slotName,
                 slotFunction,
-                conditionalBranchIndex++
+                conditionalBranchIndex++,
               ),
-              defaultFallback
+              defaultFallback,
             )
           : buildDynamicSlot(slotName, slotFunction, conditionalBranchIndex++)
       } else {
         context.onError(
-          createCompilerError(ErrorCodes.X_V_ELSE_NO_ADJACENT_IF, vElse.loc)
+          createCompilerError(ErrorCodes.X_V_ELSE_NO_ADJACENT_IF, vElse.loc),
         )
       }
-    } else if ((vFor = findDir(slotElement, 'for'))) {
+    } else if (vFor) {
       hasDynamicSlots = true
-      const parseResult =
-        vFor.parseResult ||
-        parseForExpression(vFor.exp as SimpleExpressionNode, context)
+      const parseResult = vFor.forParseResult
       if (parseResult) {
+        finalizeForParseResult(parseResult, context)
         // Render the dynamic slots as an array and add it to the createSlot()
         // args. The runtime knows how to handle it appropriately.
         dynamicSlots.push(
@@ -271,13 +266,16 @@ export function buildSlots(
             createFunctionExpression(
               createForLoopParams(parseResult),
               buildDynamicSlot(slotName, slotFunction),
-              true /* force newline */
-            )
-          ])
+              true /* force newline */,
+            ),
+          ]),
         )
       } else {
         context.onError(
-          createCompilerError(ErrorCodes.X_V_FOR_MALFORMED_EXPRESSION, vFor.loc)
+          createCompilerError(
+            ErrorCodes.X_V_FOR_MALFORMED_EXPRESSION,
+            vFor.loc,
+          ),
         )
       }
     } else {
@@ -287,8 +285,8 @@ export function buildSlots(
           context.onError(
             createCompilerError(
               ErrorCodes.X_V_SLOT_DUPLICATE_SLOT_NAMES,
-              dirLoc
-            )
+              dirLoc,
+            ),
           )
           continue
         }
@@ -304,9 +302,9 @@ export function buildSlots(
   if (!onComponentSlot) {
     const buildDefaultSlotProperty = (
       props: ExpressionNode | undefined,
-      children: TemplateChildNode[]
+      children: TemplateChildNode[],
     ) => {
-      const fn = buildSlotFn(props, children, loc)
+      const fn = buildSlotFn(props, undefined, children, loc)
       if (__COMPAT__ && context.compatConfig) {
         fn.isNonScopedSlot = true
       }
@@ -328,12 +326,12 @@ export function buildSlots(
         context.onError(
           createCompilerError(
             ErrorCodes.X_V_SLOT_EXTRANEOUS_DEFAULT_SLOT_CHILDREN,
-            implicitDefaultChildren[0].loc
-          )
+            implicitDefaultChildren[0].loc,
+          ),
         )
       } else {
         slotsProperties.push(
-          buildDefaultSlotProperty(undefined, implicitDefaultChildren)
+          buildDefaultSlotProperty(undefined, implicitDefaultChildren),
         )
       }
     }
@@ -342,8 +340,8 @@ export function buildSlots(
   const slotFlag = hasDynamicSlots
     ? SlotFlags.DYNAMIC
     : hasForwardedSlots(node.children)
-    ? SlotFlags.FORWARDED
-    : SlotFlags.STABLE
+      ? SlotFlags.FORWARDED
+      : SlotFlags.STABLE
 
   let slots = createObjectExpression(
     slotsProperties.concat(
@@ -353,37 +351,37 @@ export function buildSlots(
         // 1 = compiled and static = can skip normalization AND diff as optimized
         createSimpleExpression(
           slotFlag + (__DEV__ ? ` /* ${slotFlagsText[slotFlag]} */` : ``),
-          false
-        )
-      )
+          false,
+        ),
+      ),
     ),
-    loc
+    loc,
   ) as SlotsExpression
   if (dynamicSlots.length) {
     slots = createCallExpression(context.helper(CREATE_SLOTS), [
       slots,
-      createArrayExpression(dynamicSlots)
+      createArrayExpression(dynamicSlots),
     ]) as SlotsExpression
   }
 
   return {
     slots,
-    hasDynamicSlots
+    hasDynamicSlots,
   }
 }
 
 function buildDynamicSlot(
   name: ExpressionNode,
   fn: FunctionExpression,
-  index?: number
+  index?: number,
 ): ObjectExpression {
   const props = [
     createObjectProperty(`name`, name),
-    createObjectProperty(`fn`, fn)
+    createObjectProperty(`fn`, fn),
   ]
   if (index != null) {
     props.push(
-      createObjectProperty(`key`, createSimpleExpression(String(index), true))
+      createObjectProperty(`key`, createSimpleExpression(String(index), true)),
     )
   }
   return createObjectExpression(props)
