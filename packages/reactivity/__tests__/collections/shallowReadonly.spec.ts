@@ -99,7 +99,7 @@ describe('reactivity/collections', () => {
     test('should not make nested values readonly', () => {
       const obj = { foo: 1 }
       const original = new Set([obj])
-      const sroSet = shallowReadonly(original)
+      const sroSet = shallowReadonly(original as any)
 
       const values = [...sroSet.values()]
 
