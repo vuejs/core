@@ -45,6 +45,7 @@ import { IS_REF, UNREF } from '../runtimeHelpers'
 import { BindingTypes } from '../options'
 
 const isLiteralWhitelisted = /*#__PURE__*/ makeMap('true,false,null,this')
+type QualifiedId = Identifier & PrefixMeta
 
 export const transformExpression: NodeTransform = (node, context) => {
   if (node.type === NodeTypes.INTERPOLATION) {
@@ -287,7 +288,6 @@ export function processExpression(
     }
   }
 
-  type QualifiedId = Identifier & PrefixMeta
   const ids: QualifiedId[] = []
   const parentStack: Node[] = []
   const knownIds: Record<string, number> = Object.create(context.identifiers)
@@ -303,7 +303,7 @@ export function processExpression(
         return
       }
 
-      const needPrefix = isReferenced && canPrefix(node)
+      const needPrefix = isReferenced && canPrefix(node) && !isInIds(ids, node)
       if (needPrefix && !isLocal) {
         if (isStaticProperty(parent!) && parent.shorthand) {
           // property shorthand like { foo }, we need to add the key since
@@ -409,4 +409,11 @@ function isConst(type: unknown) {
   return (
     type === BindingTypes.SETUP_CONST || type === BindingTypes.LITERAL_CONST
   )
+}
+
+function isInIds(ids: QualifiedId[], node: Identifier) {
+  for (let i = 0; i < ids.length; i++) {
+    if (ids[i].name === node.name) return true
+  }
+  return false
 }
