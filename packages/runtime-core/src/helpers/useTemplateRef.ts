@@ -3,8 +3,8 @@ import { getCurrentInstance } from '../component'
 import { warn } from '../warning'
 import { EMPTY_OBJ } from '@vue/shared'
 
-export function useTemplateRef<T = unknown>(
-  key: string,
+export function useTemplateRef<T = unknown, Keys extends string = string>(
+  key: Keys,
 ): Readonly<ShallowRef<T | null>> {
   const i = getCurrentInstance()
   const r = shallowRef(null)
