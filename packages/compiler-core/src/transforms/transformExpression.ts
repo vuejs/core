@@ -294,7 +294,7 @@ export function processExpression(
 
   walkIdentifiers(
     ast,
-    (node, parent, _, isReferenced, isLocal) => {
+    (node, parent, parentStack, isReferenced, isLocal) => {
       if (isStaticPropertyKey(node, parent!)) {
         return
       }
@@ -302,8 +302,8 @@ export function processExpression(
       if (__COMPAT__ && node.name.startsWith('_filter_')) {
         return
       }
-
-      const needPrefix = isReferenced && canPrefix(node) && !isInIds(ids, node)
+      const needPrefix =
+        isReferenced && canPrefix(node) && !isInParentStack(parentStack, node)
       if (needPrefix && !isLocal) {
         if (isStaticProperty(parent!) && parent.shorthand) {
           // property shorthand like { foo }, we need to add the key since
@@ -411,9 +411,17 @@ function isConst(type: unknown) {
   )
 }
 
-function isInIds(ids: QualifiedId[], node: Identifier) {
-  for (let i = 0; i < ids.length; i++) {
-    if (ids[i].name === node.name) return true
+function isInParentStack(parentStack: Node[], node: Identifier) {
+  let i = parentStack.length
+  while (i--) {
+    const p = parentStack[i]
+    if (p.type === 'CatchClause') {
+      // @ts-expect-error
+      if (p.param && p.param.name === node.name) {
+        return true
+      }
+    }
   }
+
   return false
 }
