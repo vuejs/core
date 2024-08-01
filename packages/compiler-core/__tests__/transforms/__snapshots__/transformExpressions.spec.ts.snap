@@ -56,7 +56,7 @@ return function render(_ctx, _cache, $props, $setup, $data, $options) {
 }"
 `;
 
-exports[`compiler: expression transform > bindingMetadata > should not prefix temp variable of for...of 2`] = `
+exports[`compiler: expression transform > bindingMetadata > with try catch 1`] = `
 "const { openBlock: _openBlock, createElementBlock: _createElementBlock } = Vue
 
 return function render(_ctx, _cache, $props, $setup, $data, $options) {
