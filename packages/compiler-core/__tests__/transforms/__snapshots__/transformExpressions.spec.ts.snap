@@ -55,3 +55,19 @@ return function render(_ctx, _cache, $props, $setup, $data, $options) {
   }, null, 8 /* PROPS */, ["onClick"]))
 }"
 `;
+
+exports[`compiler: expression transform > bindingMetadata > should not prefix temp variable of for...of 2`] = `
+"const { openBlock: _openBlock, createElementBlock: _createElementBlock } = Vue
+
+return function render(_ctx, _cache, $props, $setup, $data, $options) {
+  return (_openBlock(), _createElementBlock("div", {
+    onClick: () => {
+           try {
+            throw new Error('sup?')
+          } catch (error) {
+            _ctx.msg = error.message
+          }
+        }
+  }, null, 8 /* PROPS */, ["onClick"]))
+}"
+`;

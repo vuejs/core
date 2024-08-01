@@ -662,5 +662,18 @@ describe('compiler: expression transform', () => {
         ],
       })
     })
+
+    test('should not prefix temp variable of for...of', () => {
+      const { code } = compileWithBindingMetadata(
+        `<div @click="() => {
+           try {
+            throw new Error('sup?')
+          } catch (error) {
+            msg = error.message
+          }
+        }"/>`,
+      )
+      expect(code).toMatchSnapshot()
+    })
   })
 })
