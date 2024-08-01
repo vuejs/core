@@ -248,7 +248,11 @@ function patchSuspense(
         slotScopeIds,
         optimized,
       )
-      if (suspense.deps <= 0) {
+      // #7506 pendingBranch may be unmounted during patching. If so,
+      // resolve may be triggered and pendingBranch will be set to null.
+      // Therefore, we need to check that pendingBranch is not null here
+      // to avoid a double resolve.
+      if (suspense.deps <= 0 && suspense.pendingBranch) {
         suspense.resolve()
       } else if (isInFallback) {
         // It's possible that the app is in hydrating state when patching the
