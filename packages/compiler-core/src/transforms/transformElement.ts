@@ -23,7 +23,6 @@ import {
   createVNodeCall,
 } from '../ast'
 import {
-  PatchFlagNames,
   PatchFlags,
   camelize,
   capitalize,
@@ -101,8 +100,7 @@ export const transformElement: NodeTransform = (node, context) => {
 
     let vnodeProps: VNodeCall['props']
     let vnodeChildren: VNodeCall['children']
-    let vnodePatchFlag: VNodeCall['patchFlag']
-    let patchFlag: number = 0
+    let patchFlag: VNodeCall['patchFlag'] | 0 = 0
     let vnodeDynamicProps: VNodeCall['dynamicProps']
     let dynamicPropNames: string[] | undefined
     let vnodeDirectives: VNodeCall['directives']
@@ -117,7 +115,7 @@ export const transformElement: NodeTransform = (node, context) => {
         // updates inside get proper isSVG flag at runtime. (#639, #643)
         // This is technically web-specific, but splitting the logic out of core
         // leads to too much unnecessary complexity.
-        (tag === 'svg' || tag === 'foreignObject'))
+        (tag === 'svg' || tag === 'foreignObject' || tag === 'math'))
 
     // props
     if (props.length > 0) {
@@ -206,27 +204,8 @@ export const transformElement: NodeTransform = (node, context) => {
     }
 
     // patchFlag & dynamicPropNames
-    if (patchFlag !== 0) {
-      if (__DEV__) {
-        if (patchFlag < 0) {
-          // special flags (negative and mutually exclusive)
-          vnodePatchFlag =
-            patchFlag + ` /* ${PatchFlagNames[patchFlag as PatchFlags]} */`
-        } else {
-          // bitwise flags
-          const flagNames = Object.keys(PatchFlagNames)
-            .map(Number)
-            .filter(n => n > 0 && patchFlag & n)
-            .map(n => PatchFlagNames[n as PatchFlags])
-            .join(`, `)
-          vnodePatchFlag = patchFlag + ` /* ${flagNames} */`
-        }
-      } else {
-        vnodePatchFlag = String(patchFlag)
-      }
-      if (dynamicPropNames && dynamicPropNames.length) {
-        vnodeDynamicProps = stringifyDynamicPropNames(dynamicPropNames)
-      }
+    if (dynamicPropNames && dynamicPropNames.length) {
+      vnodeDynamicProps = stringifyDynamicPropNames(dynamicPropNames)
     }
 
     node.codegenNode = createVNodeCall(
@@ -234,7 +213,7 @@ export const transformElement: NodeTransform = (node, context) => {
       vnodeTag,
       vnodeProps,
       vnodeChildren,
-      vnodePatchFlag,
+      patchFlag === 0 ? undefined : patchFlag,
       vnodeDynamicProps,
       vnodeDirectives,
       !!shouldUseBlock,
@@ -433,6 +412,18 @@ export function buildProps(
     if (arg) mergeArgs.push(arg)
   }
 
+  // mark template ref on v-for
+  const pushRefVForMarker = () => {
+    if (context.scopes.vFor > 0) {
+      properties.push(
+        createObjectProperty(
+          createSimpleExpression('ref_for', true),
+          createSimpleExpression('true'),
+        ),
+      )
+    }
+  }
+
   const analyzePatchFlag = ({ key, value }: Property) => {
     if (isStaticExp(key)) {
       const name = key.content
@@ -502,14 +493,7 @@ export function buildProps(
       let isStatic = true
       if (name === 'ref') {
         hasRef = true
-        if (context.scopes.vFor > 0) {
-          properties.push(
-            createObjectProperty(
-              createSimpleExpression('ref_for', true),
-              createSimpleExpression('true'),
-            ),
-          )
-        }
+        pushRefVForMarker()
         // in inline mode there is no setupState object, so we can't use string
         // keys to set the ref. Instead, we need to transform it to pass the
         // actual ref instead.
@@ -601,13 +585,8 @@ export function buildProps(
         shouldUseBlock = true
       }
 
-      if (isVBind && isStaticArgOf(arg, 'ref') && context.scopes.vFor > 0) {
-        properties.push(
-          createObjectProperty(
-            createSimpleExpression('ref_for', true),
-            createSimpleExpression('true'),
-          ),
-        )
+      if (isVBind && isStaticArgOf(arg, 'ref')) {
+        pushRefVForMarker()
       }
 
       // special case for v-bind and v-on with no argument
@@ -615,6 +594,8 @@ export function buildProps(
         hasDynamicKeys = true
         if (exp) {
           if (isVBind) {
+            // #10696 in case a v-bind object contains ref
+            pushRefVForMarker()
             // have to merge early for compat build check
             pushMergeArg()
             if (__COMPAT__) {

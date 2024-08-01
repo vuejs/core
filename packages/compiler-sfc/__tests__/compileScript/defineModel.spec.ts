@@ -161,6 +161,34 @@ describe('defineModel()', () => {
     })
   })
 
+  test('w/ types, production mode, boolean + multiple types', () => {
+    const { content } = compile(
+      `
+      <script setup lang="ts">
+      const modelValue = defineModel<boolean | string | {}>()
+      </script>
+      `,
+      { isProd: true },
+    )
+    assertCode(content)
+    expect(content).toMatch('"modelValue": { type: [Boolean, String, Object] }')
+  })
+
+  test('w/ types, production mode, function + runtime opts + multiple types', () => {
+    const { content } = compile(
+      `
+      <script setup lang="ts">
+      const modelValue = defineModel<number | (() => number)>({ default: () => 1 })
+      </script>
+      `,
+      { isProd: true },
+    )
+    assertCode(content)
+    expect(content).toMatch(
+      '"modelValue": { type: [Number, Function], ...{ default: () => 1 } }',
+    )
+  })
+
   test('get / set transformers', () => {
     const { content } = compile(
       `

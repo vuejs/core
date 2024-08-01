@@ -175,14 +175,14 @@ export function resolveParserPlugins(
   ) {
     plugins.push('importAttributes')
   }
-  if (lang === 'jsx' || lang === 'tsx') {
+  if (lang === 'jsx' || lang === 'tsx' || lang === 'mtsx') {
     plugins.push('jsx')
   } else if (userPlugins) {
     // If don't match the case of adding jsx
     // should remove the jsx from user options
     userPlugins = userPlugins.filter(p => p !== 'jsx')
   }
-  if (lang === 'ts' || lang === 'tsx') {
+  if (lang === 'ts' || lang === 'mts' || lang === 'tsx' || lang === 'mtsx') {
     plugins.push(['typescript', { dts }], 'explicitResourceManagement')
     if (!userPlugins || !userPlugins.includes('decorators')) {
       plugins.push('decorators-legacy')

@@ -31,9 +31,6 @@ export function injectHook(
     const wrappedHook =
       hook.__weh ||
       (hook.__weh = (...args: unknown[]) => {
-        if (target.isUnmounted) {
-          return
-        }
         // disable tracking inside all lifecycle hooks
         // since they can potentially be called inside effects.
         pauseTracking()
@@ -68,10 +65,15 @@ export function injectHook(
 
 export const createHook =
   <T extends Function = () => any>(lifecycle: LifecycleHooks) =>
-  (hook: T, target: ComponentInternalInstance | null = currentInstance) =>
+  (hook: T, target: ComponentInternalInstance | null = currentInstance) => {
     // post-create lifecycle registrations are noops during SSR (except for serverPrefetch)
-    (!isInSSRComponentSetup || lifecycle === LifecycleHooks.SERVER_PREFETCH) &&
-    injectHook(lifecycle, (...args: unknown[]) => hook(...args), target)
+    if (
+      !isInSSRComponentSetup ||
+      lifecycle === LifecycleHooks.SERVER_PREFETCH
+    ) {
+      injectHook(lifecycle, (...args: unknown[]) => hook(...args), target)
+    }
+  }
 
 export const onBeforeMount = createHook(LifecycleHooks.BEFORE_MOUNT)
 export const onMounted = createHook(LifecycleHooks.MOUNTED)

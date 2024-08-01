@@ -226,3 +226,43 @@ return { modelValue, fn, fnWithDefault, str, optional }
 
 })"
 `;
+
+exports[`defineModel() > w/ types, production mode, boolean + multiple types 1`] = `
+"import { useModel as _useModel, defineComponent as _defineComponent } from 'vue'
+
+export default /*#__PURE__*/_defineComponent({
+  props: {
+    "modelValue": { type: [Boolean, String, Object] },
+    "modelModifiers": {},
+  },
+  emits: ["update:modelValue"],
+  setup(__props, { expose: __expose }) {
+  __expose();
+
+      const modelValue = _useModel<boolean | string | {}>(__props, "modelValue")
+      
+return { modelValue }
+}
+
+})"
+`;
+
+exports[`defineModel() > w/ types, production mode, function + runtime opts + multiple types 1`] = `
+"import { useModel as _useModel, defineComponent as _defineComponent } from 'vue'
+
+export default /*#__PURE__*/_defineComponent({
+  props: {
+    "modelValue": { type: [Number, Function], ...{ default: () => 1 } },
+    "modelModifiers": {},
+  },
+  emits: ["update:modelValue"],
+  setup(__props, { expose: __expose }) {
+  __expose();
+
+      const modelValue = _useModel<number | (() => number)>(__props, "modelValue")
+      
+return { modelValue }
+}
+
+})"
+`;

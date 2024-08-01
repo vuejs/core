@@ -1,6 +1,5 @@
 import { configDefaults, defineConfig } from 'vitest/config'
 import { entries } from './scripts/aliases.js'
-import codspeedPlugin from '@codspeed/vitest-plugin'
 
 export default defineConfig({
   define: {
@@ -22,7 +21,6 @@ export default defineConfig({
   resolve: {
     alias: entries,
   },
-  plugins: [codspeedPlugin()],
   test: {
     globals: true,
     setupFiles: 'scripts/setup-vitest.ts',
@@ -41,6 +39,8 @@ export default defineConfig({
         'packages/runtime-dom/src/components/Transition*',
         // mostly entries
         'packages/vue-compat/**',
+        'packages/sfc-playground/**',
+        'scripts/**',
       ],
     },
   },

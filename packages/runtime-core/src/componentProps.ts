@@ -38,6 +38,7 @@ import { createPropsDefaultThis } from './compat/props'
 import { isCompatEnabled, softAssertCompatEnabled } from './compat/compatConfig'
 import { DeprecationTypes } from './compat/compatConfig'
 import { shouldSkipAttr } from './compat/attrsFallthrough'
+import { createInternalObject } from './internalObject'
 
 export type ComponentPropsOptions<P = Data> =
   | ComponentObjectPropsOptions<P>
@@ -173,24 +174,15 @@ export type ExtractDefaultPropTypes<O> = O extends object
     { [K in keyof Pick<O, DefaultKeys<O>>]: InferPropType<O[K]> }
   : {}
 
-type NormalizedProp =
-  | null
-  | (PropOptions & {
-      [BooleanFlags.shouldCast]?: boolean
-      [BooleanFlags.shouldCastTrue]?: boolean
-    })
+type NormalizedProp = PropOptions & {
+  [BooleanFlags.shouldCast]?: boolean
+  [BooleanFlags.shouldCastTrue]?: boolean
+}
 
 // normalized value is a tuple of the actual normalized options
 // and an array of prop keys that need value casting (booleans and defaults)
 export type NormalizedProps = Record<string, NormalizedProp>
 export type NormalizedPropsOptions = [NormalizedProps, string[]] | []
-
-/**
- * Used during vnode props normalization to check if the vnode props is the
- * attrs object of a component via `Object.getPrototypeOf`. This is more
- * performant than defining a non-enumerable property.
- */
-export const attrsProto = {}
 
 export function initProps(
   instance: ComponentInternalInstance,
@@ -199,7 +191,7 @@ export function initProps(
   isSSR = false,
 ) {
   const props: Data = {}
-  const attrs: Data = Object.create(attrsProto)
+  const attrs: Data = createInternalObject()
 
   instance.propsDefaults = Object.create(null)
 
@@ -502,12 +494,15 @@ function resolvePropValue(
   return value
 }
 
+const mixinPropsCache = new WeakMap<ConcreteComponent, NormalizedPropsOptions>()
+
 export function normalizePropsOptions(
   comp: ConcreteComponent,
   appContext: AppContext,
   asMixin = false,
 ): NormalizedPropsOptions {
-  const cache = appContext.propsCache
+  const cache =
+    __FEATURE_OPTIONS_API__ && asMixin ? mixinPropsCache : appContext.propsCache
   const cached = cache.get(comp)
   if (cached) {
     return cached
@@ -567,16 +562,36 @@ export function normalizePropsOptions(
         const opt = raw[key]
         const prop: NormalizedProp = (normalized[normalizedKey] =
           isArray(opt) || isFunction(opt) ? { type: opt } : extend({}, opt))
-        if (prop) {
-          const booleanIndex = getTypeIndex(Boolean, prop.type)
-          const stringIndex = getTypeIndex(String, prop.type)
-          prop[BooleanFlags.shouldCast] = booleanIndex > -1
-          prop[BooleanFlags.shouldCastTrue] =
-            stringIndex < 0 || booleanIndex < stringIndex
-          // if the prop needs boolean casting or default value
-          if (booleanIndex > -1 || hasOwn(prop, 'default')) {
-            needCastKeys.push(normalizedKey)
+        const propType = prop.type
+        let shouldCast = false
+        let shouldCastTrue = true
+
+        if (isArray(propType)) {
+          for (let index = 0; index < propType.length; ++index) {
+            const type = propType[index]
+            const typeName = isFunction(type) && type.name
+
+            if (typeName === 'Boolean') {
+              shouldCast = true
+              break
+            } else if (typeName === 'String') {
+              // If we find `String` before `Boolean`, e.g. `[String, Boolean]`,
+              // we need to handle the casting slightly differently. Props
+              // passed as `<Comp checked="">` or `<Comp checked="checked">`
+              // will either be treated as strings or converted to a boolean
+              // `true`, depending on the order of the types.
+              shouldCastTrue = false
+            }
           }
+        } else {
+          shouldCast = isFunction(propType) && propType.name === 'Boolean'
+        }
+
+        prop[BooleanFlags.shouldCast] = shouldCast
+        prop[BooleanFlags.shouldCastTrue] = shouldCastTrue
+        // if the prop needs boolean casting or default value
+        if (shouldCast || hasOwn(prop, 'default')) {
+          needCastKeys.push(normalizedKey)
         }
       }
     }
@@ -598,6 +613,7 @@ function validatePropName(key: string) {
   return false
 }
 
+// dev only
 // use function string name to check type constructors
 // so that it works across vms / iframes.
 function getType(ctor: Prop<any>): string {
@@ -618,22 +634,6 @@ function getType(ctor: Prop<any>): string {
 
   // Fallback for other types (though they're less likely to have meaningful names here)
   return ''
-}
-
-function isSameType(a: Prop<any>, b: Prop<any>): boolean {
-  return getType(a) === getType(b)
-}
-
-function getTypeIndex(
-  type: Prop<any>,
-  expectedTypes: PropType<any> | void | null | true,
-): number {
-  if (isArray(expectedTypes)) {
-    return expectedTypes.findIndex(t => isSameType(t, type))
-  } else if (isFunction(expectedTypes)) {
-    return isSameType(expectedTypes, type) ? 0 : -1
-  }
-  return -1
 }
 
 /**

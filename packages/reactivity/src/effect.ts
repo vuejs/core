@@ -128,7 +128,7 @@ export class ReactiveEffect<T = any> {
     if (this.active) {
       preCleanupEffect(this)
       postCleanupEffect(this)
-      this.onStop?.()
+      this.onStop && this.onStop()
       this.active = false
     }
   }
@@ -281,6 +281,7 @@ export function trackEffect(
       effect._depsLength++
     }
     if (__DEV__) {
+      // eslint-disable-next-line no-restricted-syntax
       effect.onTrack?.(extend({ effect }, debuggerEventExtraInfo!))
     }
   }
@@ -309,6 +310,7 @@ export function triggerEffects(
       (tracking ??= dep.get(effect) === effect._trackId)
     ) {
       if (__DEV__) {
+        // eslint-disable-next-line no-restricted-syntax
         effect.onTrigger?.(extend({ effect }, debuggerEventExtraInfo))
       }
       effect.trigger()
