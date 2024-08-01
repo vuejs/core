@@ -30,7 +30,12 @@ export function popWarningContext() {
   stack.pop()
 }
 
+let isWarning = false
+
 export function warn(msg: string, ...args: any[]) {
+  if (isWarning) return
+  isWarning = true
+
   // avoid props formatting or warn handler tracking deps that might be mutated
   // during patch, leading to infinite recursion.
   pauseTracking()
@@ -70,6 +75,7 @@ export function warn(msg: string, ...args: any[]) {
   }
 
   resetTracking()
+  isWarning = false
 }
 
 export function getComponentTrace(): ComponentTraceStack {

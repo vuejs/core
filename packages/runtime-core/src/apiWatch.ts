@@ -46,7 +46,7 @@ import { useSSRContext } from './helpers/useSsrContext'
 
 export type WatchEffect = (onCleanup: OnCleanup) => void
 
-export type WatchSource<T = any> = Ref<T> | ComputedRef<T> | (() => T)
+export type WatchSource<T = any> = Ref<T, any> | ComputedRef<T> | (() => T)
 
 export type WatchCallback<V = any, OV = any> = (
   value: V,
