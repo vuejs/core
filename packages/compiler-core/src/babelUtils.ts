@@ -77,6 +77,12 @@ export function walkIdentifiers(
             markScopeIdentifier(node, id, knownIds),
           )
         }
+      } else if (node.type === 'CatchClause') {
+        // @ts-expect-error
+        if (node.param && node.param.name) {
+          // @ts-expect-error
+          markKnownIds(node.param.name, knownIds)
+        }
       }
     },
     leave(node: Node & { scopeIds?: Set<string> }, parent: Node | null) {
