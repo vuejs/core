@@ -663,7 +663,7 @@ describe('compiler: expression transform', () => {
       })
     })
 
-    test('should not prefix temp variable of for...of', () => {
+    test('with try catch', () => {
       const { code } = compileWithBindingMetadata(
         `<div @click="() => {
            try {
