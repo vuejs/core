@@ -3,6 +3,7 @@
  */
 import type { Mock } from 'vitest'
 import {
+  type PropType,
   type TestElement,
   computed,
   createApp,
@@ -17,6 +18,7 @@ import {
   triggerEvent,
 } from '@vue/runtime-test'
 import { render as domRender } from 'vue'
+import type { Ref } from '@vue/reactivity'
 
 describe('api: options', () => {
   test('data', async () => {
@@ -1703,6 +1705,105 @@ describe('api: options', () => {
       expect(
         `Computed property "foo" is already defined in Data.`,
       ).toHaveBeenWarned()
+    })
+
+    test('defineComponent with generic', async () => {
+      const Comp = defineComponent({
+        props: {
+          msg: String,
+          list: Array as PropType<{ name: string }[]>,
+        },
+        setup(props) {
+          const count = ref(0)
+          const increment = () => {
+            count.value++
+          }
+
+          return () =>
+            h('div', { onClick: increment }, [
+              h('h2', props.msg),
+              h('p', count.value),
+              ...(props.list || []).map((item: { name: string }) =>
+                h('p', item.name),
+              ),
+            ])
+        },
+      })
+
+      const list: Ref<{ name: string }[]> = ref([
+        { name: 'Tom' },
+        { name: 'Jerry' },
+      ])
+
+      const root = nodeOps.createElement('div')
+      render(h(Comp, { msg: 'Hello', list: list.value }), root)
+
+      expect(serializeInner(root)).toBe(
+        `<div><h2>Hello</h2><p>0</p><p>Tom</p><p>Jerry</p></div>`,
+      )
+
+      triggerEvent(root.children[0] as TestElement, 'click')
+      await nextTick()
+      expect(serializeInner(root)).toBe(
+        `<div><h2>Hello</h2><p>1</p><p>Tom</p><p>Jerry</p></div>`,
+      )
+
+      list.value.push({ name: 'Spike' })
+      await nextTick()
+      expect(serializeInner(root)).toBe(
+        `<div><h2>Hello</h2><p>1</p><p>Tom</p><p>Jerry</p><p>Spike</p></div>`,
+      )
+    })
+
+    test('defineComponent with generic in render function', async () => {
+      const Comp = defineComponent({
+        props: {
+          msg: String,
+          list: Array as PropType<{ name: string }[]>,
+        },
+        setup(props) {
+          const count = ref(0)
+          const increment = () => {
+            count.value++
+          }
+
+          return () =>
+            h('div', { onClick: increment }, [
+              h('h2', props.msg),
+              h('p', count.value),
+              ...(props.list || []).map((item: { name: string }) =>
+                h('p', item.name),
+              ),
+            ])
+        },
+      })
+
+      const list = ref([{ name: 'Tom' }, { name: 'Jerry' }])
+
+      const App = defineComponent({
+        setup() {
+          return () => h(Comp, { msg: 'Hello', list: list.value })
+        },
+      })
+
+      const root = nodeOps.createElement('div')
+      render(h(App), root)
+
+      expect(serializeInner(root)).toBe(
+        `<div><h2>Hello</h2><p>0</p><p>Tom</p><p>Jerry</p></div>`,
+      )
+
+      triggerEvent(root.children[0] as TestElement, 'click')
+      await nextTick()
+      expect(serializeInner(root)).toBe(
+        `<div><h2>Hello</h2><p>1</p><p>Tom</p><p>Jerry</p></div>`,
+      )
+
+      list.value.push({ name: 'Spike' })
+      await nextTick()
+      expect(serializeInner(root)).toBe(
+        `<div><h2>Hello</h2><p>1</p><p>Tom</p><p>Jerry</p><p>Spike</p></div>`,
+      )
     })
   })
 })
