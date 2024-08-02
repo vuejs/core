@@ -151,7 +151,7 @@ describe('defineProps w/ generic discriminate union + withDefaults', () => {
   }
   type Props = S<string> | M<string>
   const props = withDefaults(defineProps<Props>(), {
-    b: 'b'
+    b: 'b',
   })
 
   if (props.mode === 'single') {
