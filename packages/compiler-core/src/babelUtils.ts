@@ -1,13 +1,6 @@
 // should only use types from @babel/types
 // do not import runtime methods
-import type {
-  BlockStatement,
-  Function,
-  Identifier,
-  Node,
-  ObjectProperty,
-  Program,
-} from '@babel/types'
+import type { Function, Identifier, Node, ObjectProperty } from '@babel/types'
 import { walk } from 'estree-walker'
 
 /**
@@ -102,6 +95,13 @@ export function walkIdentifiers(
         if (node.param && node.param.name) {
           // @ts-expect-error
           markKnownIds(node.param.name, knownIds)
+          // @ts-expect-error
+        } else if (node.param.type === 'ObjectPattern') {
+          // @ts-expect-error
+          for (const property of node.param.properties) {
+            const id = property.value.name
+            markKnownIds(id, knownIds)
+          }
         }
       }
     },
@@ -196,44 +196,6 @@ export function walkFunctionParams(
   for (const p of node.params) {
     for (const id of extractIdentifiers(p)) {
       onIdent(id)
-    }
-  }
-}
-
-export function walkBlockDeclarations(
-  block: BlockStatement | Program,
-  onIdent: (
-    node: Identifier,
-    scopeNode?: Node & { scopeIds?: Set<string> },
-  ) => void,
-) {
-  for (const stmt of block.body.slice(0, 1)) {
-    if (stmt.type === 'VariableDeclaration') {
-      if (stmt.declare) continue
-      for (const decl of stmt.declarations) {
-        for (const id of extractIdentifiers(decl.id)) {
-          onIdent(id)
-        }
-      }
-    } else if (
-      stmt.type === 'FunctionDeclaration' ||
-      stmt.type === 'ClassDeclaration'
-    ) {
-      if (stmt.declare || !stmt.id) continue
-      onIdent(stmt.id)
-    } else if (
-      stmt.type === 'ForOfStatement' ||
-      stmt.type === 'ForInStatement' ||
-      stmt.type === 'ForStatement'
-    ) {
-      const variable = stmt.type === 'ForStatement' ? stmt.init : stmt.left
-      if (variable && variable.type === 'VariableDeclaration') {
-        for (const decl of variable.declarations) {
-          for (const id of extractIdentifiers(decl.id)) {
-            onIdent(id, stmt)
-          }
-        }
-      }
     }
   }
 }

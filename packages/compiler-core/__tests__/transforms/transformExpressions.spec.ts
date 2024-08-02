@@ -675,5 +675,17 @@ describe('compiler: expression transform', () => {
       )
       expect(code).toMatchSnapshot()
     })
+    test('try catch with destructure', () => {
+      const { code } = compileWithBindingMetadata(
+        `<div @click="() => {
+           try {
+            throw new Error('sup?')
+          } catch ({message: foo}) {
+            msg = foo
+          }
+        }"/>`,
+      )
+      expect(code).toMatchSnapshot()
+    })
   })
 })

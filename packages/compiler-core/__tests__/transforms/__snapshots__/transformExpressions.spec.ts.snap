@@ -56,6 +56,22 @@ return function render(_ctx, _cache, $props, $setup, $data, $options) {
 }"
 `;
 
+exports[`compiler: expression transform > bindingMetadata > try catch with destructure 1`] = `
+"const { openBlock: _openBlock, createElementBlock: _createElementBlock } = Vue
+
+return function render(_ctx, _cache, $props, $setup, $data, $options) {
+  return (_openBlock(), _createElementBlock("div", {
+    onClick: () => {
+           try {
+            throw new Error('sup?')
+          } catch ({message: foo}) {
+            _ctx.msg = foo
+          }
+        }
+  }, null, 8 /* PROPS */, ["onClick"]))
+}"
+`;
+
 exports[`compiler: expression transform > bindingMetadata > with try catch 1`] = `
 "const { openBlock: _openBlock, createElementBlock: _createElementBlock } = Vue
 
