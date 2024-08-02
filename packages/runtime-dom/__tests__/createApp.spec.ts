@@ -1,4 +1,4 @@
-import { createApp, h } from '../src'
+import { createApp, h, ref } from '../src'
 import { defineComponent, onMounted, shallowRef } from 'vue'
 
 describe('createApp for dom', () => {
@@ -42,6 +42,7 @@ describe('createApp for dom', () => {
   })
   test('When the app is unmounted, the onMounted of suspense in Transition should not be called', async () => {
     const onPage2Mounted = vi.fn()
+    let page1Comp: any
     const Page1 = defineComponent({
       name: 'Page1',
       setup() {
@@ -56,10 +57,12 @@ describe('createApp for dom', () => {
       },
     })
     const Component = shallowRef(Page1)
+    const page = ref<any>(null)
     const App = defineComponent({
       setup() {
         return {
           Component,
+          page,
         }
       },
       template: `
@@ -68,7 +71,7 @@ describe('createApp for dom', () => {
                 <transition :duration="300" mode="out-in" appear>
                   <keep-alive :include="['Page1', 'Page2']">
                     <suspense>
-                      <component :is="Component" :key="Component.name"></component>
+                      <component ref="page" :is="Component" :key="Component.name"></component>
                     </suspense>
                   </keep-alive>
                 </transition>
@@ -78,8 +81,20 @@ describe('createApp for dom', () => {
     })
     const app = createApp(App)
     app.mount(document.createElement('div'))
+    await new Promise(resolve => {
+      setTimeout(resolve, 500)
+    })
+    page1Comp = page.value
     Component.value = Page2
+    await new Promise(resolve => {
+      setTimeout(resolve, 500)
+    })
+    expect(onPage2Mounted).toHaveBeenCalledTimes(1)
     app.unmount()
-    expect(onPage2Mounted).toHaveBeenCalledTimes(0)
+    await new Promise(resolve => {
+      setTimeout(resolve, 500)
+    })
+    expect(onPage2Mounted).toHaveBeenCalledTimes(1)
+    expect(page1Comp._.vnode.transition.afterLeave).toBe(undefined)
   })
 })
