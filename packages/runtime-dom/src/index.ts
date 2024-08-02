@@ -1,7 +1,7 @@
 import {
   type App,
   type CreateAppFunction,
-  type DefineComponent,
+  type DefineComponentWithGeneric as DefineComponent,
   DeprecationTypes,
   type Directive,
   type ElementNamespace,
