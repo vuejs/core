@@ -192,9 +192,6 @@ function createConfig(format, output, plugins = []) {
       __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__: isBundlerESMBuild
         ? `__VUE_PROD_HYDRATION_MISMATCH_DETAILS__`
         : `false`,
-      __FEATURE_PROD_TRUSTED_TYPES__: isBundlerESMBuild
-        ? `__VUE_PROD_TRUSTED_TYPES__`
-        : `false`,
     }
 
     if (!isBundlerESMBuild) {

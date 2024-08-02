@@ -49,10 +49,6 @@
   - Default: `false`
   - Enable / disable detailed warnings for hydration mismatches in production
 
-- `__VUE_PROD_TRUSTED_TYPES__`
-  - Default: `false`
-  - Enable / disable built-in Trusted Types Policy for compatibility with the [`trusted-types` CSP directive](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy/trusted-types)
-
 The build will work without configuring these flags, however it is **strongly recommended** to properly configure them in order to get proper tree-shaking in the final bundle.
 
 ### For Server-Side Rendering

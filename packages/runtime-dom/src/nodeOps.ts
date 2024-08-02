@@ -6,30 +6,21 @@ import type {
   TrustedTypesWindow,
 } from 'trusted-types/lib'
 
-type VueTrustedTypePolicy =
-  | Pick<TrustedTypePolicy, 'name' | 'createHTML'>
-  | undefined
+let policy: Pick<TrustedTypePolicy, 'name' | 'createHTML'> | undefined =
+  undefined
 
-let policy: VueTrustedTypePolicy = undefined
-function getPolicy(): VueTrustedTypePolicy {
-  const ttWindow = window as unknown as TrustedTypesWindow
-  if (
-    (__DEV__ || __FEATURE_PROD_TRUSTED_TYPES__) &&
-    ttWindow.trustedTypes &&
-    !policy
-  ) {
-    try {
-      policy = ttWindow.trustedTypes.createPolicy('vue', {
-        createHTML: val => val,
-      })
-    } catch (e: unknown) {
-      // `createPolicy` throws a TypeError if the name is a duplicate
-      // and the CSP trusted-types directive is not using `allow-duplicates`.
-      // So we have to catch that error.
-      __DEV__ && warn(`Error creating trusted types policy: ${e}`)
-    }
+const tt = (window as unknown as TrustedTypesWindow).trustedTypes
+if (tt) {
+  try {
+    policy = /*#__PURE__*/ tt.createPolicy('vue', {
+      createHTML: val => val,
+    })
+  } catch (e: unknown) {
+    // `createPolicy` throws a TypeError if the name is a duplicate
+    // and the CSP trusted-types directive is not using `allow-duplicates`.
+    // So we have to catch that error.
+    __DEV__ && warn(`Error creating trusted types policy: ${e}`)
   }
-  return policy
 }
 
 // __UNSAFE__
@@ -37,12 +28,9 @@ function getPolicy(): VueTrustedTypePolicy {
 // This function merely perform a type-level trusted type conversion
 // for use in `innerHTML` assignment, etc.
 // Be careful of whatever value passed to this function.
-function unsafeToTrustedHTML(value: string): TrustedHTML | string {
-  /* eslint-disable-next-line no-restricted-syntax --
-   * the minified compilation result of a single `()?.` isn't very verbose,
-   * we use the syntax for readability here. */
-  return getPolicy()?.createHTML(value) || value
-}
+const unsafeToTrustedHTML: (value: string) => TrustedHTML | string = policy
+  ? val => policy.createHTML(val)
+  : val => val
 
 export const svgNS = 'http://www.w3.org/2000/svg'
 export const mathmlNS = 'http://www.w3.org/1998/Math/MathML'
