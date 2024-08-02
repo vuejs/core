@@ -191,7 +191,7 @@ function doWatch(
     const _cb = cb
     cb = (...args) => {
       _cb(...args)
-      unwatch()
+      watchHandle()
     }
   }
 
@@ -407,17 +407,16 @@ function doWatch(
   effect.scheduler = scheduler
 
   const scope = getCurrentScope()
-  const unwatch = () => {
+  const watchHandle: WatchHandle = () => {
     effect.stop()
     if (scope) {
       remove(scope.effects, effect)
     }
   }
 
-  const watchHandle: WatchHandle = () => unwatch()
   watchHandle.pause = effect.pause.bind(effect)
   watchHandle.resume = effect.resume.bind(effect)
-  watchHandle.stop = unwatch
+  watchHandle.stop = watchHandle
 
   if (__DEV__) {
     effect.onTrack = onTrack
@@ -440,7 +439,7 @@ function doWatch(
     effect.run()
   }
 
-  if (__SSR__ && ssrCleanup) ssrCleanup.push(unwatch)
+  if (__SSR__ && ssrCleanup) ssrCleanup.push(watchHandle)
   return watchHandle
 }
 
