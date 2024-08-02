@@ -26,7 +26,7 @@ function getPolicy(): VueTrustedTypePolicy {
       // `createPolicy` throws a TypeError if the name is a duplicate
       // and the CSP trusted-types directive is not using `allow-duplicates`.
       // So we have to catch that error.
-      warn(`Error creating trusted types policy: ${e}`)
+      __DEV__ && warn(`Error creating trusted types policy: ${e}`)
     }
   }
   return policy
