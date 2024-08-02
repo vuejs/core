@@ -224,6 +224,7 @@ export type {
   Reactive,
 } from '@vue/reactivity'
 export type {
+  MultiWatchSources,
   WatchEffect,
   WatchOptions,
   WatchOptionsBase,
