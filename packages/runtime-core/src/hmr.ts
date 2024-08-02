@@ -1,11 +1,11 @@
 /* eslint-disable no-restricted-globals */
 import {
-  ConcreteComponent,
-  ComponentInternalInstance,
-  ComponentOptions,
-  InternalRenderFunction,
-  ClassComponent,
-  isClassComponent
+  type ClassComponent,
+  type ComponentInternalInstance,
+  type ComponentOptions,
+  type ConcreteComponent,
+  type InternalRenderFunction,
+  isClassComponent,
 } from './component'
 import { queueJob, queuePostFlushCb } from './scheduler'
 import { extend, getGlobalThis } from '@vue/shared'
@@ -14,7 +14,10 @@ type HMRComponent = ComponentOptions | ClassComponent
 
 export let isHmrUpdating = false
 
-export const hmrDirtyComponents = new Set<ConcreteComponent>()
+export const hmrDirtyComponents = new Map<
+  ConcreteComponent,
+  Set<ComponentInternalInstance>
+>()
 
 export interface HMRRuntime {
   createRecord: typeof createRecord
@@ -31,7 +34,7 @@ if (__DEV__) {
   getGlobalThis().__VUE_HMR_RUNTIME__ = {
     createRecord: tryWrap(createRecord),
     rerender: tryWrap(rerender),
-    reload: tryWrap(reload)
+    reload: tryWrap(reload),
   } as HMRRuntime
 }
 
@@ -66,7 +69,7 @@ function createRecord(id: string, initialDef: HMRComponent): boolean {
   }
   map.set(id, {
     initialDef: normalizeClassComponent(initialDef),
-    instances: new Set()
+    instances: new Set(),
   })
   return true
 }
@@ -93,6 +96,7 @@ function rerender(id: string, newRender?: Function) {
     instance.renderCache = []
     // this flag forces child components with slot content to update
     isHmrUpdating = true
+    instance.effect.dirty = true
     instance.update()
     isHmrUpdating = false
   })
@@ -109,18 +113,21 @@ function reload(id: string, newComp: HMRComponent) {
   // create a snapshot which avoids the set being mutated during updates
   const instances = [...record.instances]
 
-  for (const instance of instances) {
+  for (let i = 0; i < instances.length; i++) {
+    const instance = instances[i]
     const oldComp = normalizeClassComponent(instance.type as HMRComponent)
 
-    if (!hmrDirtyComponents.has(oldComp)) {
+    let dirtyInstances = hmrDirtyComponents.get(oldComp)
+    if (!dirtyInstances) {
       // 1. Update existing comp definition to match new one
       if (oldComp !== record.initialDef) {
         updateComponentDef(oldComp, newComp)
       }
       // 2. mark definition dirty. This forces the renderer to replace the
       // component on patch.
-      hmrDirtyComponents.add(oldComp)
+      hmrDirtyComponents.set(oldComp, (dirtyInstances = new Set()))
     }
+    dirtyInstances.add(instance)
 
     // 3. invalidate options resolution cache
     instance.appContext.propsCache.delete(instance.type as any)
@@ -130,14 +137,19 @@ function reload(id: string, newComp: HMRComponent) {
     // 4. actually update
     if (instance.ceReload) {
       // custom element
-      hmrDirtyComponents.add(oldComp)
+      dirtyInstances.add(instance)
       instance.ceReload((newComp as any).styles)
-      hmrDirtyComponents.delete(oldComp)
+      dirtyInstances.delete(instance)
     } else if (instance.parent) {
       // 4. Force the parent instance to re-render. This will cause all updated
       // components to be unmounted and re-mounted. Queue the update so that we
       // don't end up forcing the same parent to re-render multiple times.
-      queueJob(instance.parent.update)
+      instance.parent.effect.dirty = true
+      queueJob(() => {
+        instance.parent!.update()
+        // #6930, #11248 avoid infinite recursion
+        dirtyInstances.delete(instance)
+      })
     } else if (instance.appContext.reload) {
       // root instance mounted via createApp() has a reload method
       instance.appContext.reload()
@@ -146,24 +158,20 @@ function reload(id: string, newComp: HMRComponent) {
       window.location.reload()
     } else {
       console.warn(
-        '[HMR] Root or manually mounted instance modified. Full reload required.'
+        '[HMR] Root or manually mounted instance modified. Full reload required.',
       )
     }
   }
 
   // 5. make sure to cleanup dirty hmr components after update
   queuePostFlushCb(() => {
-    for (const instance of instances) {
-      hmrDirtyComponents.delete(
-        normalizeClassComponent(instance.type as HMRComponent)
-      )
-    }
+    hmrDirtyComponents.clear()
   })
 }
 
 function updateComponentDef(
   oldComp: ComponentOptions,
-  newComp: ComponentOptions
+  newComp: ComponentOptions,
 ) {
   extend(oldComp, newComp)
   for (const key in oldComp) {
@@ -181,7 +189,7 @@ function tryWrap(fn: (id: string, arg: any) => any): Function {
       console.error(e)
       console.warn(
         `[HMR] Something went wrong during Vue component hot-reload. ` +
-          `Full reload required.`
+          `Full reload required.`,
       )
     }
   }
