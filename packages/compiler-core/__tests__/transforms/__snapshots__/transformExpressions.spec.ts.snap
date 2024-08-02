@@ -1,5 +1,20 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
+exports[`compiler: expression transform > bindingMetadata > for of with same variables 1`] = `
+"const { openBlock: _openBlock, createElementBlock: _createElementBlock } = Vue
+
+return function render(_ctx, _cache, $props, $setup, $data, $options) {
+  return (_openBlock(), _createElementBlock("div", {
+    onClick: () => {
+          for (const msg of _ctx.msgs) {
+            console.log(msg)
+          }
+          console.log(_ctx.msg)
+        }
+  }, null, 8 /* PROPS */, ["onClick"]))
+}"
+`;
+
 exports[`compiler: expression transform > bindingMetadata > inline mode 1`] = `
 "(_ctx, _cache) => {
   return (_openBlock(), _createElementBlock("div", null, _toDisplayString(__props.props) + " " + _toDisplayString(_unref(setup)) + " " + _toDisplayString(setupConst) + " " + _toDisplayString(_ctx.data) + " " + _toDisplayString(_ctx.options) + " " + _toDisplayString(isNaN.value), 1 /* TEXT */))
@@ -62,7 +77,7 @@ exports[`compiler: expression transform > bindingMetadata > try catch with destr
 return function render(_ctx, _cache, $props, $setup, $data, $options) {
   return (_openBlock(), _createElementBlock("div", {
     onClick: () => {
-           try {
+          try {
             throw new Error('sup?')
           } catch ({message: foo}) {
             _ctx.msg = foo
@@ -78,7 +93,7 @@ exports[`compiler: expression transform > bindingMetadata > with try catch 1`] =
 return function render(_ctx, _cache, $props, $setup, $data, $options) {
   return (_openBlock(), _createElementBlock("div", {
     onClick: () => {
-           try {
+          try {
             throw new Error('sup?')
           } catch (error) {
             _ctx.msg = error.message

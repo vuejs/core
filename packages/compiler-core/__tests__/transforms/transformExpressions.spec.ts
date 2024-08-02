@@ -666,7 +666,7 @@ describe('compiler: expression transform', () => {
     test('with try catch', () => {
       const { code } = compileWithBindingMetadata(
         `<div @click="() => {
-           try {
+          try {
             throw new Error('sup?')
           } catch (error) {
             msg = error.message
@@ -678,11 +678,22 @@ describe('compiler: expression transform', () => {
     test('try catch with destructure', () => {
       const { code } = compileWithBindingMetadata(
         `<div @click="() => {
-           try {
+          try {
             throw new Error('sup?')
           } catch ({message: foo}) {
             msg = foo
           }
+        }"/>`,
+      )
+      expect(code).toMatchSnapshot()
+    })
+    test('for of with same variables', () => {
+      const { code } = compileWithBindingMetadata(
+        `<div @click="() => {
+          for (const msg of msgs) {
+            console.log(msg)
+          }
+          console.log(msg)
         }"/>`,
       )
       expect(code).toMatchSnapshot()
