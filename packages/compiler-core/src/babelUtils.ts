@@ -68,14 +68,34 @@ export function walkIdentifiers(
             markScopeIdentifier(node, id, knownIds),
           )
         }
-      } else if (node.type === 'BlockStatement') {
-        if (node.scopeIds) {
-          node.scopeIds.forEach(id => markKnownIds(id, knownIds))
-        } else {
-          // #3445 record block-level local variables
-          walkBlockDeclarations(node, (id, scopeNode) =>
-            markScopeIdentifier(scopeNode ?? node, id, knownIds),
-          )
+      } else if (node.type === 'VariableDeclaration') {
+        if (!node.declare) {
+          for (const decl of node.declarations) {
+            for (const id of extractIdentifiers(decl.id)) {
+              markScopeIdentifier(parent || node, id, knownIds)
+            }
+          }
+        }
+      } else if (
+        // @ts-expect-error
+        node.type === 'FunctionDeclaration' ||
+        node.type === 'ClassDeclaration'
+      ) {
+        if (!(node.declare || !node.id)) {
+          markScopeIdentifier(parent || node, node.id, knownIds)
+        }
+      } else if (
+        node.type === 'ForOfStatement' ||
+        node.type === 'ForInStatement' ||
+        node.type === 'ForStatement'
+      ) {
+        const variable = node.type === 'ForStatement' ? node.init : node.left
+        if (variable && variable.type === 'VariableDeclaration') {
+          for (const decl of variable.declarations) {
+            for (const id of extractIdentifiers(decl.id)) {
+              markScopeIdentifier(node, id, knownIds)
+            }
+          }
         }
       } else if (node.type === 'CatchClause') {
         // @ts-expect-error
