@@ -46,6 +46,7 @@ export enum EffectFlags {
   DIRTY = 1 << 4,
   ALLOW_RECURSE = 1 << 5,
   NO_BATCH = 1 << 6,
+  PAUSED = 1 << 7,
 }
 
 /**
@@ -107,6 +108,8 @@ export interface Link {
   prevActiveLink?: Link
 }
 
+const pausedQueueEffects = new WeakSet<ReactiveEffect>()
+
 export class ReactiveEffect<T = any>
   implements Subscriber, ReactiveEffectOptions
 {
@@ -139,6 +142,20 @@ export class ReactiveEffect<T = any>
   constructor(public fn: () => T) {
     if (activeEffectScope && activeEffectScope.active) {
       activeEffectScope.effects.push(this)
+    }
+  }
+
+  pause() {
+    this.flags |= EffectFlags.PAUSED
+  }
+
+  resume() {
+    if (this.flags & EffectFlags.PAUSED) {
+      this.flags &= ~EffectFlags.PAUSED
+      if (pausedQueueEffects.has(this)) {
+        pausedQueueEffects.delete(this)
+        this.trigger()
+      }
     }
   }
 
@@ -207,7 +224,9 @@ export class ReactiveEffect<T = any>
   }
 
   trigger() {
-    if (this.scheduler) {
+    if (this.flags & EffectFlags.PAUSED) {
+      pausedQueueEffects.add(this)
+    } else if (this.scheduler) {
       this.scheduler()
     } else {
       this.runIfDirty()
