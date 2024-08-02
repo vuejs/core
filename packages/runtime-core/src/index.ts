@@ -224,11 +224,13 @@ export type {
   Reactive,
 } from '@vue/reactivity'
 export type {
+  MultiWatchSources,
   WatchEffect,
   WatchOptions,
   WatchOptionsBase,
   WatchCallback,
   WatchSource,
+  WatchHandle,
   WatchStopHandle,
 } from './apiWatch'
 export type { InjectionKey } from './apiInject'

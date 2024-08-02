@@ -73,17 +73,23 @@ export interface WatchOptionsBase extends DebuggerOptions {
 
 export interface WatchOptions<Immediate = boolean> extends WatchOptionsBase {
   immediate?: Immediate
-  deep?: boolean
+  deep?: boolean | number
   once?: boolean
 }
 
 export type WatchStopHandle = () => void
 
+export interface WatchHandle extends WatchStopHandle {
+  pause: () => void
+  resume: () => void
+  stop: () => void
+}
+
 // Simple effect.
 export function watchEffect(
   effect: WatchEffect,
   options?: WatchOptionsBase,
-): WatchStopHandle {
+): WatchHandle {
   return doWatch(effect, null, options)
 }
 
@@ -112,14 +118,14 @@ export function watchSyncEffect(
 // initial value for watchers to trigger on undefined initial values
 const INITIAL_WATCHER_VALUE = {}
 
-type MultiWatchSources = (WatchSource<unknown> | object)[]
+export type MultiWatchSources = (WatchSource<unknown> | object)[]
 
 // overload: single source + cb
 export function watch<T, Immediate extends Readonly<boolean> = false>(
   source: WatchSource<T>,
   cb: WatchCallback<T, MaybeUndefined<T, Immediate>>,
   options?: WatchOptions<Immediate>,
-): WatchStopHandle
+): WatchHandle
 
 // overload: reactive array or tuple of multiple sources + cb
 export function watch<
@@ -131,7 +137,7 @@ export function watch<
     ? WatchCallback<T, MaybeUndefined<T, Immediate>>
     : WatchCallback<MapSources<T, false>, MapSources<T, Immediate>>,
   options?: WatchOptions<Immediate>,
-): WatchStopHandle
+): WatchHandle
 
 // overload: array of multiple sources + cb
 export function watch<
@@ -141,7 +147,7 @@ export function watch<
   sources: [...T],
   cb: WatchCallback<MapSources<T, false>, MapSources<T, Immediate>>,
   options?: WatchOptions<Immediate>,
-): WatchStopHandle
+): WatchHandle
 
 // overload: watching reactive object w/ cb
 export function watch<
@@ -151,14 +157,14 @@ export function watch<
   source: T,
   cb: WatchCallback<T, MaybeUndefined<T, Immediate>>,
   options?: WatchOptions<Immediate>,
-): WatchStopHandle
+): WatchHandle
 
 // implementation
 export function watch<T = any, Immediate extends Readonly<boolean> = false>(
   source: T | WatchSource<T>,
   cb: any,
   options?: WatchOptions<Immediate>,
-): WatchStopHandle {
+): WatchHandle {
   if (__DEV__ && !isFunction(cb)) {
     warn(
       `\`watch(fn, options?)\` signature has been moved to a separate API. ` +
@@ -180,21 +186,13 @@ function doWatch(
     onTrack,
     onTrigger,
   }: WatchOptions = EMPTY_OBJ,
-): WatchStopHandle {
+): WatchHandle {
   if (cb && once) {
     const _cb = cb
     cb = (...args) => {
       _cb(...args)
-      unwatch()
+      watchHandle()
     }
-  }
-
-  // TODO remove in 3.5
-  if (__DEV__ && deep !== void 0 && typeof deep === 'number') {
-    warn(
-      `watch() "deep" option with number value will be used as watch depth in future versions. ` +
-        `Please use a boolean instead to avoid potential breakage.`,
-    )
   }
 
   if (__DEV__ && !cb) {
@@ -228,11 +226,15 @@ function doWatch(
   }
 
   const instance = currentInstance
-  const reactiveGetter = (source: object) =>
-    deep === true
-      ? source // traverse will happen in wrapped getter below
-      : // for deep: false, only traverse root-level properties
-        traverse(source, deep === false ? 1 : undefined)
+  const reactiveGetter = (source: object) => {
+    // traverse will happen in wrapped getter below
+    if (deep) return source
+    // for `deep: false | 0` or shallow reactive, only traverse root-level properties
+    if (isShallow(source) || deep === false || deep === 0)
+      return traverse(source, 1)
+    // for `deep: undefined` on a reactive object, deeply traverse all properties
+    return traverse(source)
+  }
 
   let getter: () => any
   let forceTrigger = false
@@ -300,7 +302,8 @@ function doWatch(
 
   if (cb && deep) {
     const baseGetter = getter
-    getter = () => traverse(baseGetter())
+    const depth = deep === true ? Infinity : deep
+    getter = () => traverse(baseGetter(), depth)
   }
 
   let cleanup: (() => void) | undefined
@@ -330,7 +333,11 @@ function doWatch(
       const ctx = useSSRContext()!
       ssrCleanup = ctx.__watcherHandles || (ctx.__watcherHandles = [])
     } else {
-      return NOOP
+      const watchHandle: WatchHandle = () => {}
+      watchHandle.stop = NOOP
+      watchHandle.resume = NOOP
+      watchHandle.pause = NOOP
+      return watchHandle
     }
   }
 
@@ -400,12 +407,16 @@ function doWatch(
   effect.scheduler = scheduler
 
   const scope = getCurrentScope()
-  const unwatch = () => {
+  const watchHandle: WatchHandle = () => {
     effect.stop()
     if (scope) {
       remove(scope.effects, effect)
     }
   }
+
+  watchHandle.pause = effect.pause.bind(effect)
+  watchHandle.resume = effect.resume.bind(effect)
+  watchHandle.stop = watchHandle
 
   if (__DEV__) {
     effect.onTrack = onTrack
@@ -428,8 +439,8 @@ function doWatch(
     effect.run()
   }
 
-  if (__SSR__ && ssrCleanup) ssrCleanup.push(unwatch)
-  return unwatch
+  if (__SSR__ && ssrCleanup) ssrCleanup.push(watchHandle)
+  return watchHandle
 }
 
 // this.$watch
@@ -438,7 +449,7 @@ export function instanceWatch(
   source: string | Function,
   value: WatchCallback | ObjectWatchOptionItem,
   options?: WatchOptions,
-): WatchStopHandle {
+): WatchHandle {
   const publicThis = this.proxy as any
   const getter = isString(source)
     ? source.includes('.')
