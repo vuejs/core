@@ -146,9 +146,7 @@ export class ReactiveEffect<T = any>
   }
 
   pause() {
-    if (!(this.flags & EffectFlags.PAUSED)) {
-      this.flags |= EffectFlags.PAUSED
-    }
+    this.flags |= EffectFlags.PAUSED
   }
 
   resume() {
@@ -228,9 +226,7 @@ export class ReactiveEffect<T = any>
   trigger() {
     if (this.flags & EffectFlags.PAUSED) {
       pausedQueueEffects.add(this)
-      return
-    }
-    if (this.scheduler) {
+    } else if (this.scheduler) {
       this.scheduler()
     } else {
       this.runIfDirty()
