@@ -2,7 +2,7 @@ import { extend, hasChanged } from '@vue/shared'
 import type { ComputedRefImpl } from './computed'
 import type { TrackOpTypes, TriggerOpTypes } from './constants'
 import { type Dep, globalVersion } from './dep'
-import { recordEffectScope } from './effectScope'
+import { activeEffectScope } from './effectScope'
 import { warn } from './warning'
 
 export type EffectScheduler = (...args: any[]) => any
@@ -129,6 +129,10 @@ export class ReactiveEffect<T = any>
    * @internal
    */
   nextEffect?: ReactiveEffect = undefined
+  /**
+   * @internal
+   */
+  cleanup?: () => void = undefined
 
   scheduler?: EffectScheduler = undefined
   onStop?: () => void
@@ -136,7 +140,9 @@ export class ReactiveEffect<T = any>
   onTrigger?: (event: DebuggerEvent) => void
 
   constructor(public fn: () => T) {
-    recordEffectScope(this)
+    if (activeEffectScope && activeEffectScope.active) {
+      activeEffectScope.effects.push(this)
+    }
   }
 
   pause() {
@@ -184,6 +190,7 @@ export class ReactiveEffect<T = any>
     }
 
     this.flags |= EffectFlags.RUNNING
+    cleanupEffect(this)
     prepareDeps(this)
     const prevEffect = activeSub
     const prevShouldTrack = shouldTrack
@@ -212,6 +219,7 @@ export class ReactiveEffect<T = any>
         removeSub(link)
       }
       this.deps = this.depsTail = undefined
+      cleanupEffect(this)
       this.onStop && this.onStop()
       this.flags &= ~EffectFlags.ACTIVE
     }
@@ -390,12 +398,13 @@ export function refreshComputed(computed: ComputedRefImpl) {
     }
   } catch (err) {
     dep.version++
+    throw err
+  } finally {
+    activeSub = prevSub
+    shouldTrack = prevShouldTrack
+    cleanupDeps(computed)
+    computed.flags &= ~EffectFlags.RUNNING
   }
-
-  activeSub = prevSub
-  shouldTrack = prevShouldTrack
-  cleanupDeps(computed)
-  computed.flags &= ~EffectFlags.RUNNING
 }
 
 function removeSub(link: Link) {
@@ -501,4 +510,42 @@ export function enableTracking() {
 export function resetTracking() {
   const last = trackStack.pop()
   shouldTrack = last === undefined ? true : last
+}
+
+/**
+ * Registers a cleanup function for the current active effect.
+ * The cleanup function is called right before the next effect run, or when the
+ * effect is stopped.
+ *
+ * Throws a warning iff there is no currenct active effect. The warning can be
+ * suppressed by passing `true` to the second argument.
+ *
+ * @param fn - the cleanup function to be registered
+ * @param failSilently - if `true`, will not throw warning when called without
+ * an active effect.
+ */
+export function onEffectCleanup(fn: () => void, failSilently = false) {
+  if (activeSub instanceof ReactiveEffect) {
+    activeSub.cleanup = fn
+  } else if (__DEV__ && !failSilently) {
+    warn(
+      `onEffectCleanup() was called when there was no active effect` +
+        ` to associate with.`,
+    )
+  }
+}
+
+function cleanupEffect(e: ReactiveEffect) {
+  const { cleanup } = e
+  e.cleanup = undefined
+  if (cleanup) {
+    // run cleanup without active effect
+    const prevSub = activeSub
+    activeSub = undefined
+    try {
+      cleanup()
+    } finally {
+      activeSub = prevSub
+    }
+  }
 }

@@ -87,6 +87,13 @@ export function ssrProcessTransitionGroup(
          * by disabling nested fragment wrappers from being generated.
          */
         true,
+        /**
+         * TransitionGroup filters out comment children at runtime and thus
+         * doesn't expect comments to be present during hydration. We need to
+         * account for that by disabling the empty comment that is otherwise
+         * rendered for a falsy v-if that has no v-else specified. (#6715)
+         */
+        true,
       )
       context.pushStringPart(`</`)
       context.pushStringPart(tag.exp!)
@@ -106,6 +113,6 @@ export function ssrProcessTransitionGroup(
     }
   } else {
     // fragment
-    processChildren(node, context, true, true)
+    processChildren(node, context, true, true, true)
   }
 }

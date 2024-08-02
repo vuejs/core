@@ -34,14 +34,16 @@ const builtInSymbols = new Set(
     // but accessing them on Symbol leads to TypeError because Symbol is a strict mode
     // function
     .filter(key => key !== 'arguments' && key !== 'caller')
-    .map(key => (Symbol as any)[key])
+    .map(key => Symbol[key as keyof SymbolConstructor])
     .filter(isSymbol),
 )
 
-function hasOwnProperty(this: object, key: string) {
+function hasOwnProperty(this: object, key: unknown) {
+  // #10455 hasOwnProperty may be called with non-string values
+  if (!isSymbol(key)) key = String(key)
   const obj = toRaw(this)
   track(obj, TrackOpTypes.HAS, key)
-  return obj.hasOwnProperty(key)
+  return obj.hasOwnProperty(key as string)
 }
 
 class BaseReactiveHandler implements ProxyHandler<Target> {
@@ -135,12 +137,12 @@ class MutableReactiveHandler extends BaseReactiveHandler {
   }
 
   set(
-    target: object,
+    target: Record<string | symbol, unknown>,
     key: string | symbol,
     value: unknown,
     receiver: object,
   ): boolean {
-    let oldValue = (target as any)[key]
+    let oldValue = target[key]
     if (!this._isShallow) {
       const isOldValueReadonly = isReadonly(oldValue)
       if (!isShallow(value) && !isReadonly(value)) {
@@ -175,9 +177,12 @@ class MutableReactiveHandler extends BaseReactiveHandler {
     return result
   }
 
-  deleteProperty(target: object, key: string | symbol): boolean {
+  deleteProperty(
+    target: Record<string | symbol, unknown>,
+    key: string | symbol,
+  ): boolean {
     const hadKey = hasOwn(target, key)
-    const oldValue = (target as any)[key]
+    const oldValue = target[key]
     const result = Reflect.deleteProperty(target, key)
     if (result && hadKey) {
       trigger(target, TriggerOpTypes.DELETE, key, undefined, oldValue)
@@ -185,14 +190,15 @@ class MutableReactiveHandler extends BaseReactiveHandler {
     return result
   }
 
-  has(target: object, key: string | symbol): boolean {
+  has(target: Record<string | symbol, unknown>, key: string | symbol): boolean {
     const result = Reflect.has(target, key)
     if (!isSymbol(key) || !builtInSymbols.has(key)) {
       track(target, TrackOpTypes.HAS, key)
     }
     return result
   }
-  ownKeys(target: object): (string | symbol)[] {
+
+  ownKeys(target: Record<string | symbol, unknown>): (string | symbol)[] {
     track(
       target,
       TrackOpTypes.ITERATE,

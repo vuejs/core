@@ -1,16 +1,20 @@
 import {
+  type CacheExpression,
   type CallExpression,
   type ComponentNode,
   ConstantTypes,
   ElementTypes,
+  type ExpressionNode,
   type JSChildNode,
   NodeTypes,
   type ParentNode,
   type PlainElementNode,
   type RootNode,
   type SimpleExpressionNode,
+  type SlotFunctionExpression,
   type TemplateChildNode,
   type TemplateNode,
+  type TextCallNode,
   type VNodeCall,
   createArrayExpression,
   getVNodeBlockHelper,
@@ -18,7 +22,7 @@ import {
 } from '../ast'
 import type { TransformContext } from '../transform'
 import { PatchFlags, isArray, isString, isSymbol } from '@vue/shared'
-import { isSlotOutlet } from '../utils'
+import { findDir, isSlotOutlet } from '../utils'
 import {
   GUARD_REACTIVE_PROPS,
   NORMALIZE_CLASS,
@@ -27,9 +31,10 @@ import {
   OPEN_BLOCK,
 } from '../runtimeHelpers'
 
-export function hoistStatic(root: RootNode, context: TransformContext) {
+export function cacheStatic(root: RootNode, context: TransformContext) {
   walk(
     root,
+    undefined,
     context,
     // Root node is unfortunately non-hoistable due to potential parent
     // fallthrough attributes.
@@ -51,16 +56,16 @@ export function isSingleElementRoot(
 
 function walk(
   node: ParentNode,
+  parent: ParentNode | undefined,
   context: TransformContext,
   doNotHoistNode: boolean = false,
+  inFor = false,
 ) {
   const { children } = node
-  const originalCount = children.length
-  let hoistedCount = 0
-
+  const toCache: (PlainElementNode | TextCallNode)[] = []
   for (let i = 0; i < children.length; i++) {
     const child = children[i]
-    // only plain elements & text calls are eligible for hoisting.
+    // only plain elements & text calls are eligible for caching.
     if (
       child.type === NodeTypes.ELEMENT &&
       child.tagType === ElementTypes.ELEMENT
@@ -69,11 +74,9 @@ function walk(
         ? ConstantTypes.NOT_CONSTANT
         : getConstantType(child, context)
       if (constantType > ConstantTypes.NOT_CONSTANT) {
-        if (constantType >= ConstantTypes.CAN_HOIST) {
-          ;(child.codegenNode as VNodeCall).patchFlag =
-            PatchFlags.HOISTED + (__DEV__ ? ` /* HOISTED */` : ``)
-          child.codegenNode = context.hoist(child.codegenNode!)
-          hoistedCount++
+        if (constantType >= ConstantTypes.CAN_CACHE) {
+          ;(child.codegenNode as VNodeCall).patchFlag = PatchFlags.CACHED
+          toCache.push(child)
           continue
         }
       } else {
@@ -81,13 +84,13 @@ function walk(
         // hoisting.
         const codegenNode = child.codegenNode!
         if (codegenNode.type === NodeTypes.VNODE_CALL) {
-          const flag = getPatchFlag(codegenNode)
+          const flag = codegenNode.patchFlag
           if (
-            (!flag ||
+            (flag === undefined ||
               flag === PatchFlags.NEED_PATCH ||
               flag === PatchFlags.TEXT) &&
             getGeneratedPropsConstantType(child, context) >=
-              ConstantTypes.CAN_HOIST
+              ConstantTypes.CAN_CACHE
           ) {
             const props = getNodeProps(child)
             if (props) {
@@ -99,6 +102,14 @@ function walk(
           }
         }
       }
+    } else if (child.type === NodeTypes.TEXT_CALL) {
+      const constantType = doNotHoistNode
+        ? ConstantTypes.NOT_CONSTANT
+        : getConstantType(child, context)
+      if (constantType >= ConstantTypes.CAN_CACHE) {
+        toCache.push(child)
+        continue
+      }
     }
 
     // walk further
@@ -107,54 +118,122 @@ function walk(
       if (isComponent) {
         context.scopes.vSlot++
       }
-      walk(child, context)
+      walk(child, node, context, false, inFor)
       if (isComponent) {
         context.scopes.vSlot--
       }
     } else if (child.type === NodeTypes.FOR) {
       // Do not hoist v-for single child because it has to be a block
-      walk(child, context, child.children.length === 1)
+      walk(child, node, context, child.children.length === 1, true)
     } else if (child.type === NodeTypes.IF) {
       for (let i = 0; i < child.branches.length; i++) {
         // Do not hoist v-if single child because it has to be a block
         walk(
           child.branches[i],
+          node,
           context,
           child.branches[i].children.length === 1,
+          inFor,
         )
       }
     }
   }
 
-  if (hoistedCount && context.transformHoist) {
-    context.transformHoist(children, context, node)
+  let cachedAsArray = false
+  if (toCache.length === children.length && node.type === NodeTypes.ELEMENT) {
+    if (
+      node.tagType === ElementTypes.ELEMENT &&
+      node.codegenNode &&
+      node.codegenNode.type === NodeTypes.VNODE_CALL &&
+      isArray(node.codegenNode.children)
+    ) {
+      // all children were hoisted - the entire children array is cacheable.
+      node.codegenNode.children = getCacheExpression(
+        createArrayExpression(node.codegenNode.children),
+      )
+      cachedAsArray = true
+    } else if (
+      node.tagType === ElementTypes.COMPONENT &&
+      node.codegenNode &&
+      node.codegenNode.type === NodeTypes.VNODE_CALL &&
+      node.codegenNode.children &&
+      !isArray(node.codegenNode.children) &&
+      node.codegenNode.children.type === NodeTypes.JS_OBJECT_EXPRESSION
+    ) {
+      // default slot
+      const slot = getSlotNode(node.codegenNode, 'default')
+      if (slot) {
+        slot.returns = getCacheExpression(
+          createArrayExpression(slot.returns as TemplateChildNode[]),
+        )
+        cachedAsArray = true
+      }
+    } else if (
+      node.tagType === ElementTypes.TEMPLATE &&
+      parent &&
+      parent.type === NodeTypes.ELEMENT &&
+      parent.tagType === ElementTypes.COMPONENT &&
+      parent.codegenNode &&
+      parent.codegenNode.type === NodeTypes.VNODE_CALL &&
+      parent.codegenNode.children &&
+      !isArray(parent.codegenNode.children) &&
+      parent.codegenNode.children.type === NodeTypes.JS_OBJECT_EXPRESSION
+    ) {
+      // named <template> slot
+      const slotName = findDir(node, 'slot', true)
+      const slot =
+        slotName &&
+        slotName.arg &&
+        getSlotNode(parent.codegenNode, slotName.arg)
+      if (slot) {
+        slot.returns = getCacheExpression(
+          createArrayExpression(slot.returns as TemplateChildNode[]),
+        )
+        cachedAsArray = true
+      }
+    }
   }
 
-  // all children were hoisted - the entire children array is hoistable.
-  if (
-    hoistedCount &&
-    hoistedCount === originalCount &&
-    node.type === NodeTypes.ELEMENT &&
-    node.tagType === ElementTypes.ELEMENT &&
-    node.codegenNode &&
-    node.codegenNode.type === NodeTypes.VNODE_CALL &&
-    isArray(node.codegenNode.children)
-  ) {
-    const hoisted = context.hoist(
-      createArrayExpression(node.codegenNode.children),
-    )
-    // #6978, #7138, #7114
-    // a hoisted children array inside v-for can caused HMR errors since
-    // it might be mutated when mounting the v-for list
-    if (context.hmr) {
-      hoisted.content = `[...${hoisted.content}]`
+  if (!cachedAsArray) {
+    for (const child of toCache) {
+      child.codegenNode = context.cache(child.codegenNode!)
     }
-    node.codegenNode.children = hoisted
+  }
+
+  function getCacheExpression(value: JSChildNode): CacheExpression {
+    const exp = context.cache(value)
+    // #6978, #7138, #7114
+    // a cached children array inside v-for can caused HMR errors since
+    // it might be mutated when mounting the first item
+    if (inFor && context.hmr) {
+      exp.needArraySpread = true
+    }
+    return exp
+  }
+
+  function getSlotNode(
+    node: VNodeCall,
+    name: string | ExpressionNode,
+  ): SlotFunctionExpression | undefined {
+    if (
+      node.children &&
+      !isArray(node.children) &&
+      node.children.type === NodeTypes.JS_OBJECT_EXPRESSION
+    ) {
+      const slot = node.children.properties.find(
+        p => p.key === name || (p.key as SimpleExpressionNode).content === name,
+      )
+      return slot && slot.value
+    }
+  }
+
+  if (toCache.length && context.transformHoist) {
+    context.transformHoist(children, context, node)
   }
 }
 
 export function getConstantType(
-  node: TemplateChildNode | SimpleExpressionNode,
+  node: TemplateChildNode | SimpleExpressionNode | CacheExpression,
   context: TransformContext,
 ): ConstantTypes {
   const { constantCache } = context
@@ -174,12 +253,12 @@ export function getConstantType(
       if (
         codegenNode.isBlock &&
         node.tag !== 'svg' &&
-        node.tag !== 'foreignObject'
+        node.tag !== 'foreignObject' &&
+        node.tag !== 'math'
       ) {
         return ConstantTypes.NOT_CONSTANT
       }
-      const flag = getPatchFlag(codegenNode)
-      if (!flag) {
+      if (codegenNode.patchFlag === undefined) {
         let returnType = ConstantTypes.CAN_STRINGIFY
 
         // Element itself has no patch flag. However we still need to check:
@@ -283,6 +362,8 @@ export function getConstantType(
         }
       }
       return returnType
+    case NodeTypes.JS_CACHE_EXPRESSION:
+      return ConstantTypes.CAN_CACHE
     default:
       if (__DEV__) {
         const exhaustiveCheck: never = node
@@ -363,9 +444,4 @@ function getNodeProps(node: PlainElementNode) {
   if (codegenNode.type === NodeTypes.VNODE_CALL) {
     return codegenNode.props
   }
-}
-
-function getPatchFlag(node: VNodeCall): number | undefined {
-  const flag = node.patchFlag
-  return flag ? parseInt(flag, 10) : undefined
 }

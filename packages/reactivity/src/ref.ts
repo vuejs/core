@@ -7,6 +7,7 @@ import {
 } from '@vue/shared'
 import { Dep, getDepFromReactive } from './dep'
 import {
+  type Builtin,
   type ShallowReactiveMarker,
   isProxy,
   isReactive,
@@ -16,14 +17,15 @@ import {
   toReactive,
 } from './reactive'
 import type { ComputedRef } from './computed'
-import { TrackOpTypes, TriggerOpTypes } from './constants'
+import { ReactiveFlags, TrackOpTypes, TriggerOpTypes } from './constants'
 import { warn } from './warning'
 
 declare const RefSymbol: unique symbol
 export declare const RawSymbol: unique symbol
 
-export interface Ref<T = any> {
-  value: T
+export interface Ref<T = any, S = T> {
+  get value(): T
+  set value(_: S)
   /**
    * Type differentiator only.
    * We need this to be in public d.ts but don't want it to show up in IDE
@@ -40,7 +42,7 @@ export interface Ref<T = any> {
  */
 export function isRef<T>(r: Ref<T> | unknown): r is Ref<T>
 export function isRef(r: any): r is Ref {
-  return r ? r.__v_isRef === true : false
+  return r ? r[ReactiveFlags.IS_REF] === true : false
 }
 
 /**
@@ -50,7 +52,7 @@ export function isRef(r: any): r is Ref {
  * @param value - The object to wrap in the ref.
  * @see {@link https://vuejs.org/api/reactivity-core.html#ref}
  */
-export function ref<T>(value: T): Ref<UnwrapRef<T>>
+export function ref<T>(value: T): Ref<UnwrapRef<T>, UnwrapRef<T> | T>
 export function ref<T = any>(): Ref<T | undefined>
 export function ref(value?: unknown) {
   return createRef(value, false)
@@ -105,14 +107,13 @@ class RefImpl<T = any> {
 
   dep: Dep = new Dep()
 
-  public readonly __v_isRef = true
+  public readonly [ReactiveFlags.IS_REF] = true
+  public readonly [ReactiveFlags.IS_SHALLOW]: boolean = false
 
-  constructor(
-    value: T,
-    public readonly __v_isShallow: boolean,
-  ) {
-    this._rawValue = __v_isShallow ? value : toRaw(value)
-    this._value = __v_isShallow ? value : toReactive(value)
+  constructor(value: T, isShallow: boolean) {
+    this._rawValue = isShallow ? value : toRaw(value)
+    this._value = isShallow ? value : toReactive(value)
+    this[ReactiveFlags.IS_SHALLOW] = isShallow
   }
 
   get value() {
@@ -131,7 +132,9 @@ class RefImpl<T = any> {
   set value(newValue) {
     const oldValue = this._rawValue
     const useDirectValue =
-      this.__v_isShallow || isShallow(newValue) || isReadonly(newValue)
+      this[ReactiveFlags.IS_SHALLOW] ||
+      isShallow(newValue) ||
+      isReadonly(newValue)
     newValue = useDirectValue ? newValue : toRaw(newValue)
     if (hasChanged(newValue, oldValue)) {
       this._rawValue = newValue
@@ -208,7 +211,7 @@ export type MaybeRefOrGetter<T = any> = MaybeRef<T> | (() => T)
  * @param ref - Ref or plain value to be converted into the plain value.
  * @see {@link https://vuejs.org/api/reactivity-utilities.html#unref}
  */
-export function unref<T>(ref: MaybeRef<T> | ComputedRef<T>): T {
+export function unref<T>(ref: MaybeRef<T> | ComputedRef<T> | ShallowRef<T>): T {
   return isRef(ref) ? ref.value : ref
 }
 
@@ -228,7 +231,9 @@ export function unref<T>(ref: MaybeRef<T> | ComputedRef<T>): T {
  * @param source - A getter, an existing ref, or a non-function value.
  * @see {@link https://vuejs.org/api/reactivity-utilities.html#tovalue}
  */
-export function toValue<T>(source: MaybeRefOrGetter<T> | ComputedRef<T>): T {
+export function toValue<T>(
+  source: MaybeRefOrGetter<T> | ComputedRef<T> | ShallowRef<T>,
+): T {
   return isFunction(source) ? source() : unref(source)
 }
 
@@ -246,11 +251,9 @@ const shallowUnwrapHandlers: ProxyHandler<any> = {
 }
 
 /**
- * Returns a reactive proxy for the given object.
- *
- * If the object already is reactive, it's returned as-is. If not, a new
- * reactive proxy is created. Direct child properties that are refs are properly
- * handled, as well.
+ * Returns a proxy for the given object that shallowly unwraps properties that
+ * are refs. If the object already is reactive, it's returned as-is. If not, a
+ * new reactive proxy is created.
  *
  * @param objectWithRefs - Either an already-reactive object or a simple object
  * that contains refs.
@@ -277,7 +280,7 @@ class CustomRefImpl<T> {
   private readonly _get: ReturnType<CustomRefFactory<T>>['get']
   private readonly _set: ReturnType<CustomRefFactory<T>>['set']
 
-  public readonly __v_isRef = true
+  public readonly [ReactiveFlags.IS_REF] = true
 
   constructor(factory: CustomRefFactory<T>) {
     const dep = (this.dep = new Dep())
@@ -330,7 +333,7 @@ export function toRefs<T extends object>(object: T): ToRefs<T> {
 }
 
 class ObjectRefImpl<T extends object, K extends keyof T> {
-  public readonly __v_isRef = true
+  public readonly [ReactiveFlags.IS_REF] = true
 
   constructor(
     private readonly _object: T,
@@ -353,8 +356,8 @@ class ObjectRefImpl<T extends object, K extends keyof T> {
 }
 
 class GetterRefImpl<T> {
-  public readonly __v_isRef = true
-  public readonly __v_isReadonly = true
+  public readonly [ReactiveFlags.IS_REF] = true
+  public readonly [ReactiveFlags.IS_READONLY] = true
   constructor(private readonly _getter: () => T) {}
   get value() {
     return this._getter()
@@ -449,11 +452,6 @@ function propertyToRef(
     : (new ObjectRefImpl(source, key, defaultValue) as any)
 }
 
-// corner case when use narrows type
-// Ex. type RelativePath = string & { __brand: unknown }
-// RelativePath extends object -> true
-type BaseTypes = string | number | boolean
-
 /**
  * This is a special exported interface for other packages to declare
  * additional types that should bail out for ref unwrapping. For example
@@ -470,10 +468,10 @@ type BaseTypes = string | number | boolean
 export interface RefUnwrapBailTypes {}
 
 export type ShallowUnwrapRef<T> = {
-  [K in keyof T]: DistrubuteRef<T[K]>
+  [K in keyof T]: DistributeRef<T[K]>
 }
 
-type DistrubuteRef<T> = T extends Ref<infer V> ? V : T
+type DistributeRef<T> = T extends Ref<infer V> ? V : T
 
 export type UnwrapRef<T> =
   T extends ShallowRef<infer V>
@@ -483,8 +481,7 @@ export type UnwrapRef<T> =
       : UnwrapRefSimple<T>
 
 export type UnwrapRefSimple<T> = T extends
-  | Function
-  | BaseTypes
+  | Builtin
   | Ref
   | RefUnwrapBailTypes[keyof RefUnwrapBailTypes]
   | { [RawSymbol]?: true }

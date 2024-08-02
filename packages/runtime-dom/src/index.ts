@@ -1,7 +1,9 @@
 import {
   type App,
   type CreateAppFunction,
+  type DefineComponent,
   DeprecationTypes,
+  type Directive,
   type ElementNamespace,
   type HydrationRenderer,
   type Renderer,
@@ -25,10 +27,31 @@ import {
   isSVGTag,
   isString,
 } from '@vue/shared'
+import type { TransitionProps } from './components/Transition'
+import type { TransitionGroupProps } from './components/TransitionGroup'
+import type { vShow } from './directives/vShow'
+import type { VOnDirective } from './directives/vOn'
+import type { VModelDirective } from './directives/vModel'
 
 declare module '@vue/reactivity' {
   export interface RefUnwrapBailTypes {
     runtimeDOMBailTypes: Node | Window
+  }
+}
+
+declare module '@vue/runtime-core' {
+  interface GlobalComponents {
+    Transition: DefineComponent<TransitionProps>
+    TransitionGroup: DefineComponent<TransitionGroupProps>
+  }
+
+  interface GlobalDirectives {
+    vShow: typeof vShow
+    vOn: VOnDirective
+    vBind: VModelDirective
+    vIf: Directive<any, boolean>
+    VOnce: Directive
+    VSlot: Directive
   }
 }
 
@@ -100,7 +123,7 @@ export const createApp = ((...args) => {
     }
 
     // clear content before mounting
-    container.innerHTML = ''
+    container.textContent = ''
     const proxy = mount(container, false, resolveRootNamespace(container))
     if (container instanceof Element) {
       container.removeAttribute('v-cloak')

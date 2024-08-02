@@ -1,13 +1,13 @@
 // @ts-check
-import minimist from 'minimist'
 import fs from 'node:fs'
 import path from 'node:path'
 import pico from 'picocolors'
 import semver from 'semver'
 import enquirer from 'enquirer'
-import { execa } from 'execa'
 import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
+import { exec } from './utils.js'
+import { parseArgs } from 'node:util'
 
 /**
  * @typedef {{
@@ -23,12 +23,34 @@ let versionUpdated = false
 const { prompt } = enquirer
 const currentVersion = createRequire(import.meta.url)('../package.json').version
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
-const args = minimist(process.argv.slice(2), {
-  alias: {
-    skipBuild: 'skip-build',
-    skipTests: 'skip-tests',
-    skipGit: 'skip-git',
-    skipPrompts: 'skip-prompts',
+
+const { values: args, positionals } = parseArgs({
+  allowPositionals: true,
+  options: {
+    preid: {
+      type: 'string',
+    },
+    dry: {
+      type: 'boolean',
+    },
+    tag: {
+      type: 'string',
+    },
+    canary: {
+      type: 'boolean',
+    },
+    skipBuild: {
+      type: 'boolean',
+    },
+    skipTests: {
+      type: 'boolean',
+    },
+    skipGit: {
+      type: 'boolean',
+    },
+    skipPrompts: {
+      type: 'boolean',
+    },
   },
 })
 
@@ -94,16 +116,16 @@ const versionIncrements = [
 ]
 
 const inc = (/** @type {import('semver').ReleaseType} */ i) =>
-  semver.inc(currentVersion, i, preId)
+  semver.inc(currentVersion, i, typeof preId === 'string' ? preId : undefined)
 const run = async (
   /** @type {string} */ bin,
   /** @type {ReadonlyArray<string>} */ args,
-  /** @type {import('execa').Options} */ opts = {},
-) => execa(bin, args, { stdio: 'inherit', ...opts })
+  /** @type {import('node:child_process').SpawnOptions} */ opts = {},
+) => exec(bin, args, { stdio: 'inherit', ...opts })
 const dryRun = async (
   /** @type {string} */ bin,
   /** @type {ReadonlyArray<string>} */ args,
-  /** @type {import('execa').Options} */ opts = {},
+  /** @type {import('node:child_process').SpawnOptions} */ opts = {},
 ) => console.log(pico.blue(`[dryrun] ${bin} ${args.join(' ')}`), opts)
 const runIfNotDry = isDryRun ? dryRun : run
 const getPkgRoot = (/** @type {string} */ pkg) =>
@@ -117,7 +139,7 @@ async function main() {
     console.log(`${pico.green(`✓`)} commit is up-to-date with remote.\n`)
   }
 
-  let targetVersion = args._[0]
+  let targetVersion = positionals[0]
 
   if (isCanary) {
     // The canary version string format is `3.yyyyMMdd.0` (or `3.yyyyMMdd.0-minor.0` for minor)
@@ -145,7 +167,7 @@ async function main() {
         ['view', `${pkgName}@~${canaryVersion}`, 'version', '--json'],
         { stdio: 'pipe' },
       )
-      let versions = JSON.parse(stdout)
+      let versions = JSON.parse(/** @type {string} */ (stdout))
       versions = Array.isArray(versions) ? versions : [versions]
       const latestSameDayPatch = /** @type {string} */ (
         semver.maxSatisfying(versions, `~${canaryVersion}`)
@@ -352,9 +374,12 @@ async function getCIResult() {
       `https://api.github.com/repos/vuejs/core/actions/runs?head_sha=${sha}` +
         `&status=success&exclude_pull_requests=true`,
     )
+    /** @type {{ workflow_runs: ({ name: string, conclusion: string })[] }} */
     const data = await res.json()
-    return data.workflow_runs.length > 0
-  } catch (e) {
+    return data.workflow_runs.some(({ name, conclusion }) => {
+      return name === 'ci' && conclusion === 'success'
+    })
+  } catch {
     console.error('Failed to get CI status for current commit.')
     return false
   }
@@ -380,7 +405,7 @@ async function isInSyncWithRemote() {
       })
       return yes
     }
-  } catch (e) {
+  } catch {
     console.error(
       pico.red('Failed to check whether local HEAD is up-to-date with remote.'),
     )
@@ -389,11 +414,11 @@ async function isInSyncWithRemote() {
 }
 
 async function getSha() {
-  return (await execa('git', ['rev-parse', 'HEAD'])).stdout
+  return (await exec('git', ['rev-parse', 'HEAD'])).stdout
 }
 
 async function getBranch() {
-  return (await execa('git', ['rev-parse', '--abbrev-ref', 'HEAD'])).stdout
+  return (await exec('git', ['rev-parse', '--abbrev-ref', 'HEAD'])).stdout
 }
 
 /**

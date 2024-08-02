@@ -43,7 +43,7 @@ export function renderList<T>(
   source: T,
   renderItem: <K extends keyof T>(
     value: T[K],
-    key: K,
+    key: string,
     index: number,
   ) => VNodeChild,
 ): VNodeChild[]
@@ -60,9 +60,9 @@ export function renderList(
   let ret: VNodeChild[]
   const cached = (cache && cache[index!]) as VNode[] | undefined
   const sourceIsArray = isArray(source)
-  const sourceIsReactiveArray = sourceIsArray && isReactive(source)
 
   if (sourceIsArray || isString(source)) {
+    const sourceIsReactiveArray = sourceIsArray && isReactive(source)
     if (sourceIsReactiveArray) {
       source = shallowReadArray(source)
     }
