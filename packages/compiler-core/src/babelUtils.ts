@@ -73,8 +73,8 @@ export function walkIdentifiers(
           node.scopeIds.forEach(id => markKnownIds(id, knownIds))
         } else {
           // #3445 record block-level local variables
-          walkBlockDeclarations(node, id =>
-            markScopeIdentifier(node, id, knownIds),
+          walkBlockDeclarations(node, (id, scopeNode) =>
+            markScopeIdentifier(scopeNode ?? node, id, knownIds),
           )
         }
       } else if (node.type === 'CatchClause') {
@@ -182,9 +182,12 @@ export function walkFunctionParams(
 
 export function walkBlockDeclarations(
   block: BlockStatement | Program,
-  onIdent: (node: Identifier) => void,
+  onIdent: (
+    node: Identifier,
+    scopeNode?: Node & { scopeIds?: Set<string> },
+  ) => void,
 ) {
-  for (const stmt of block.body) {
+  for (const stmt of block.body.slice(0, 1)) {
     if (stmt.type === 'VariableDeclaration') {
       if (stmt.declare) continue
       for (const decl of stmt.declarations) {
@@ -207,7 +210,7 @@ export function walkBlockDeclarations(
       if (variable && variable.type === 'VariableDeclaration') {
         for (const decl of variable.declarations) {
           for (const id of extractIdentifiers(decl.id)) {
-            onIdent(id)
+            onIdent(id, stmt)
           }
         }
       }
