@@ -73,9 +73,9 @@ export function createBuffer() {
       const isStringItem = isString(item)
       if (appendable && isStringItem) {
         buffer[buffer.length - 1] += item as string
-      } else {
-        buffer.push(item)
+        return
       }
+      buffer.push(item)
       appendable = isStringItem
       if (isPromise(item) || (isArray(item) && item.hasAsync)) {
         // promise, or child buffer with async, mark as async.
@@ -172,7 +172,10 @@ function renderComponentSubTree(
 
       if (slotScopeId) {
         if (!hasCloned) attrs = { ...attrs }
-        attrs![slotScopeId.trim()] = ''
+        const slotScopeIdList = slotScopeId.trim().split(' ')
+        for (let i = 0; i < slotScopeIdList.length; i++) {
+          attrs![slotScopeIdList[i]] = ''
+        }
       }
 
       // set current rendering instance for asset resolution

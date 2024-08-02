@@ -10,19 +10,13 @@ export function patchDOMProp(
   el: any,
   key: string,
   value: any,
-  // the following args are passed only due to potential innerHTML/textContent
-  // overriding existing VNodes, in which case the old tree must be properly
-  // unmounted.
-  prevChildren: any,
   parentComponent: any,
-  parentSuspense: any,
-  unmountChildren: any,
 ) {
   if (key === 'innerHTML' || key === 'textContent') {
-    if (prevChildren) {
-      unmountChildren(prevChildren, parentComponent, parentSuspense)
-    }
-    el[key] = value == null ? '' : value
+    // null value case is handled in renderer patchElement before patching
+    // children
+    if (value == null) return
+    el[key] = value
     return
   }
 
@@ -38,7 +32,7 @@ export function patchDOMProp(
     // compare against its attribute value instead.
     const oldValue =
       tag === 'OPTION' ? el.getAttribute('value') || '' : el.value
-    const newValue = value == null ? '' : value
+    const newValue = value == null ? '' : String(value)
     if (oldValue !== newValue || !('_value' in el)) {
       el.value = newValue
     }

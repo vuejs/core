@@ -38,7 +38,7 @@ import {
   helperNameMap,
 } from './runtimeHelpers'
 import { isVSlot } from './utils'
-import { hoistStatic, isSingleElementRoot } from './transforms/hoistStatic'
+import { cacheStatic, isSingleElementRoot } from './transforms/cacheStatic'
 import type { CompilerCompatOptions } from './compat/compatConfig'
 
 // There are two types of transforms:
@@ -93,7 +93,7 @@ export interface TransformContext
   hoists: (JSChildNode | null)[]
   imports: ImportItem[]
   temps: number
-  cached: number
+  cached: (CacheExpression | null)[]
   identifiers: { [name: string]: number | undefined }
   scopes: {
     vFor: number
@@ -117,7 +117,7 @@ export interface TransformContext
   addIdentifiers(exp: ExpressionNode | string): void
   removeIdentifiers(exp: ExpressionNode | string): void
   hoist(exp: string | JSChildNode | ArrayExpression): SimpleExpressionNode
-  cache<T extends JSChildNode>(exp: T, isVNode?: boolean): CacheExpression | T
+  cache(exp: JSChildNode, isVNode?: boolean): CacheExpression
   constantCache: WeakMap<TemplateChildNode, ConstantTypes>
 
   // 2.x Compat only
@@ -185,9 +185,9 @@ export function createTransformContext(
     directives: new Set(),
     hoists: [],
     imports: [],
+    cached: [],
     constantCache: new WeakMap(),
     temps: 0,
-    cached: 0,
     identifiers: Object.create(null),
     scopes: {
       vFor: 0,
@@ -291,13 +291,19 @@ export function createTransformContext(
         `_hoisted_${context.hoists.length}`,
         false,
         exp.loc,
-        ConstantTypes.CAN_HOIST,
+        ConstantTypes.CAN_CACHE,
       )
       identifier.hoisted = exp
       return identifier
     },
     cache(exp, isVNode = false) {
-      return createCacheExpression(context.cached++, exp, isVNode)
+      const cacheExp = createCacheExpression(
+        context.cached.length,
+        exp,
+        isVNode,
+      )
+      context.cached.push(cacheExp)
+      return cacheExp
     },
   }
 
@@ -324,7 +330,7 @@ export function transform(root: RootNode, options: TransformOptions) {
   const context = createTransformContext(root, options)
   traverseNode(root, context)
   if (options.hoistStatic) {
-    hoistStatic(root, context)
+    cacheStatic(root, context)
   }
   if (!options.ssr) {
     createRootCodegen(root, context)
@@ -382,7 +388,7 @@ function createRootCodegen(root: RootNode, context: TransformContext) {
       helper(FRAGMENT),
       undefined,
       root.children,
-      patchFlag + (__DEV__ ? ` /* ${patchFlagText} */` : ``),
+      patchFlag,
       undefined,
       undefined,
       true,

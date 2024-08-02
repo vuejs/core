@@ -248,7 +248,7 @@ function createChildrenCodegenNode(
       `${keyIndex}`,
       false,
       locStub,
-      ConstantTypes.CAN_HOIST,
+      ConstantTypes.CAN_CACHE,
     ),
   )
   const { children } = branch
@@ -280,7 +280,7 @@ function createChildrenCodegenNode(
         helper(FRAGMENT),
         createObjectExpression([keyProperty]),
         children,
-        patchFlag + (__DEV__ ? ` /* ${patchFlagText} */` : ``),
+        patchFlag,
         undefined,
         undefined,
         true,

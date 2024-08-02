@@ -8,7 +8,7 @@ describe('e2e: Transition', () => {
   const baseUrl = `file://${path.resolve(__dirname, './transition.html')}`
 
   const duration = process.env.CI ? 200 : 50
-  const buffer = process.env.CI ? 20 : 5
+  const buffer = 20
 
   const transitionFinish = (time = duration) => timeout(time + buffer)
 
@@ -29,8 +29,6 @@ describe('e2e: Transition', () => {
     test(
       'basic transition',
       async () => {
-        await page().goto(baseUrl)
-        await page().waitForSelector('#app')
         await page().evaluate(() => {
           const { createApp, ref } = (window as any).Vue
           createApp({
@@ -1215,12 +1213,87 @@ describe('e2e: Transition', () => {
       E2E_TIMEOUT,
     )
 
+    // issue https://github.com/vuejs/core/issues/7649
+    test(
+      'transition with v-if at component root-level',
+      async () => {
+        await page().evaluate(() => {
+          const { createApp, ref } = (window as any).Vue
+          createApp({
+            template: `
+              <div id="container">
+                <transition name="test" mode="out-in">
+                  <component class="test" :is="view"></component>
+                </transition>
+              </div>
+              <button id="toggleBtn" @click="click">button</button>
+              <button id="changeViewBtn" @click="change">button</button>
+            `,
+            components: {
+              one: {
+                template: '<div v-if="false">one</div>',
+              },
+              two: {
+                template: '<div>two</div>',
+              },
+            },
+            setup: () => {
+              const toggle = ref(true)
+              const view = ref('one')
+              const click = () => (toggle.value = !toggle.value)
+              const change = () =>
+                (view.value = view.value === 'one' ? 'two' : 'one')
+              return { toggle, click, change, view }
+            },
+          }).mount('#app')
+        })
+        expect(await html('#container')).toBe('<!--v-if-->')
+
+        // change view -> 'two'
+        await page().evaluate(() => {
+          ;(document.querySelector('#changeViewBtn') as any)!.click()
+        })
+        // enter
+        expect(await classWhenTransitionStart()).toStrictEqual([
+          'test',
+          'test-enter-from',
+          'test-enter-active',
+        ])
+        await nextFrame()
+        expect(await classList('.test')).toStrictEqual([
+          'test',
+          'test-enter-active',
+          'test-enter-to',
+        ])
+        await transitionFinish()
+        expect(await html('#container')).toBe('<div class="test">two</div>')
+
+        // change view -> 'one'
+        await page().evaluate(() => {
+          ;(document.querySelector('#changeViewBtn') as any)!.click()
+        })
+        // leave
+        expect(await classWhenTransitionStart()).toStrictEqual([
+          'test',
+          'test-leave-from',
+          'test-leave-active',
+        ])
+        await nextFrame()
+        expect(await classList('.test')).toStrictEqual([
+          'test',
+          'test-leave-active',
+          'test-leave-to',
+        ])
+        await transitionFinish()
+        expect(await html('#container')).toBe('<!--v-if-->')
+      },
+      E2E_TIMEOUT,
+    )
+
     // #3716
     test(
       'wrapping transition + fallthrough attrs',
       async () => {
-        await page().goto(baseUrl)
-        await page().waitForSelector('#app')
         await page().evaluate(() => {
           const { createApp, ref } = (window as any).Vue
           createApp({
@@ -1259,6 +1332,98 @@ describe('e2e: Transition', () => {
         expect(await html('#container')).toBe(
           '<div foo="1" class="">content</div>',
         )
+      },
+      E2E_TIMEOUT,
+    )
+
+    // #11061
+    test(
+      'transition + fallthrough attrs (in-out mode)',
+      async () => {
+        const beforeLeaveSpy = vi.fn()
+        const onLeaveSpy = vi.fn()
+        const afterLeaveSpy = vi.fn()
+        const beforeEnterSpy = vi.fn()
+        const onEnterSpy = vi.fn()
+        const afterEnterSpy = vi.fn()
+
+        await page().exposeFunction('onLeaveSpy', onLeaveSpy)
+        await page().exposeFunction('onEnterSpy', onEnterSpy)
+        await page().exposeFunction('beforeLeaveSpy', beforeLeaveSpy)
+        await page().exposeFunction('beforeEnterSpy', beforeEnterSpy)
+        await page().exposeFunction('afterLeaveSpy', afterLeaveSpy)
+        await page().exposeFunction('afterEnterSpy', afterEnterSpy)
+
+        await page().evaluate(() => {
+          const { onEnterSpy, onLeaveSpy } = window as any
+          const { createApp, ref } = (window as any).Vue
+          createApp({
+            components: {
+              one: {
+                template: '<div>one</div>',
+              },
+              two: {
+                template: '<div>two</div>',
+              },
+            },
+            template: `
+            <div id="container">
+              <transition foo="1" name="test" mode="in-out" 
+                @before-enter="beforeEnterSpy()"
+                @enter="onEnterSpy()"
+                @after-enter="afterEnterSpy()"
+                @before-leave="beforeLeaveSpy()"
+                @leave="onLeaveSpy()"
+                @after-leave="afterLeaveSpy()">
+                <component :is="view"></component>
+              </transition>
+            </div>
+            <button id="toggleBtn" @click="click">button</button>
+          `,
+            setup: () => {
+              const view = ref('one')
+              const click = () =>
+                (view.value = view.value === 'one' ? 'two' : 'one')
+              return {
+                view,
+                click,
+                beforeEnterSpy,
+                onEnterSpy,
+                afterEnterSpy,
+                beforeLeaveSpy,
+                onLeaveSpy,
+                afterLeaveSpy,
+              }
+            },
+          }).mount('#app')
+        })
+        expect(await html('#container')).toBe('<div foo="1">one</div>')
+
+        // toggle
+        await click('#toggleBtn')
+        await nextTick()
+        await transitionFinish()
+        expect(beforeEnterSpy).toBeCalledTimes(1)
+        expect(onEnterSpy).toBeCalledTimes(1)
+        expect(afterEnterSpy).toBeCalledTimes(1)
+        expect(beforeLeaveSpy).toBeCalledTimes(1)
+        expect(onLeaveSpy).toBeCalledTimes(1)
+        expect(afterLeaveSpy).toBeCalledTimes(1)
+
+        expect(await html('#container')).toBe('<div foo="1" class="">two</div>')
+
+        // toggle back
+        await click('#toggleBtn')
+        await nextTick()
+        await transitionFinish()
+        expect(beforeEnterSpy).toBeCalledTimes(2)
+        expect(onEnterSpy).toBeCalledTimes(2)
+        expect(afterEnterSpy).toBeCalledTimes(2)
+        expect(beforeLeaveSpy).toBeCalledTimes(2)
+        expect(onLeaveSpy).toBeCalledTimes(2)
+        expect(afterLeaveSpy).toBeCalledTimes(2)
+
+        expect(await html('#container')).toBe('<div foo="1" class="">one</div>')
       },
       E2E_TIMEOUT,
     )

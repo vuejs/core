@@ -54,16 +54,14 @@ export const arrayInstrumentations: Record<string | symbol, Function> = <any>{
     fn: (item: unknown, index: number, array: unknown[]) => unknown,
     thisArg?: unknown,
   ) {
-    const result = apply(this, 'filter', fn, thisArg)
-    return isProxy(this) && !isShallow(this) ? result.map(toReactive) : result
+    return apply(this, 'filter', fn, thisArg, v => v.map(toReactive))
   },
 
   find(
     fn: (item: unknown, index: number, array: unknown[]) => boolean,
     thisArg?: unknown,
   ) {
-    const result = apply(this, 'find', fn, thisArg)
-    return isProxy(this) && !isShallow(this) ? toReactive(result) : result
+    return apply(this, 'find', fn, thisArg, toReactive)
   },
 
   findIndex(
@@ -77,8 +75,7 @@ export const arrayInstrumentations: Record<string | symbol, Function> = <any>{
     fn: (item: unknown, index: number, array: unknown[]) => boolean,
     thisArg?: unknown,
   ) {
-    const result = apply(this, 'findLast', fn, thisArg)
-    return isProxy(this) && !isShallow(this) ? toReactive(result) : result
+    return apply(this, 'findLast', fn, thisArg, toReactive)
   },
 
   findLastIndex(
@@ -198,7 +195,7 @@ export const arrayInstrumentations: Record<string | symbol, Function> = <any>{
 // instrument iterators to take ARRAY_ITERATE dependency
 function iterator(
   self: unknown[],
-  method: keyof Array<any>,
+  method: keyof Array<unknown>,
   wrapValue: (value: any) => unknown,
 ) {
   // note that taking ARRAY_ITERATE dependency here is not strictly equivalent
@@ -210,11 +207,13 @@ function iterator(
   // given that JS iterator can only be read once, this doesn't seem like
   // a plausible use-case, so this tracking simplification seems ok.
   const arr = shallowReadArray(self)
-  const iter = (arr[method] as any)()
+  const iter = (arr[method] as any)() as IterableIterator<unknown> & {
+    _next: IterableIterator<unknown>['next']
+  }
   if (arr !== self && !isShallow(self)) {
-    ;(iter as any)._next = iter.next
+    iter._next = iter.next
     iter.next = () => {
-      const result = (iter as any)._next()
+      const result = iter._next()
       if (result.value) {
         result.value = wrapValue(result.value)
       }
@@ -235,11 +234,14 @@ function apply(
   method: ArrayMethods,
   fn: (item: unknown, index: number, array: unknown[]) => unknown,
   thisArg?: unknown,
+  wrappedRetFn?: (result: any) => unknown,
 ) {
   const arr = shallowReadArray(self)
+  let needsWrap = false
   let wrappedFn = fn
   if (arr !== self) {
-    if (!isShallow(self)) {
+    needsWrap = !isShallow(self)
+    if (needsWrap) {
       wrappedFn = function (this: unknown, item, index) {
         return fn.call(this, toReactive(item), index, self)
       }
@@ -250,7 +252,8 @@ function apply(
     }
   }
   // @ts-expect-error our code is limited to es2016 but user code is not
-  return arr[method](wrappedFn, thisArg)
+  const result = arr[method](wrappedFn, thisArg)
+  return needsWrap && wrappedRetFn ? wrappedRetFn(result) : result
 }
 
 // instrument reduce and reduceRight to take ARRAY_ITERATE dependency

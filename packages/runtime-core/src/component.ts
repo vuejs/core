@@ -92,6 +92,8 @@ import type { SuspenseProps } from './components/Suspense'
 import type { KeepAliveProps } from './components/KeepAlive'
 import type { BaseTransitionProps } from './components/BaseTransition'
 import type { DefineComponent } from './apiDefineComponent'
+import { markAsyncBoundary } from './helpers/useId'
+import { isAsyncWrapper } from './apiAsyncComponent'
 
 export type Data = Record<string, unknown>
 
@@ -101,7 +103,7 @@ export type Data = Record<string, unknown>
  * the usage of `InstanceType<typeof Comp>` which only works for
  * constructor-based component definition types.
  *
- * Exmaple:
+ * @example
  * ```ts
  * const MyComp = { ... }
  * declare const instance: ComponentInstance<typeof MyComp>
@@ -269,7 +271,7 @@ export type Component<
 
 export type { ComponentOptions }
 
-type LifecycleHook<TFn = Function> = TFn[] | null
+export type LifecycleHook<TFn = Function> = (TFn & SchedulerJob)[] | null
 
 // use `E extends any` to force evaluating type to fix #2362
 export type SetupContext<
@@ -280,7 +282,9 @@ export type SetupContext<
       attrs: Data
       slots: UnwrapSlotsType<S>
       emit: EmitFn<E>
-      expose: (exposed?: Record<string, any>) => void
+      expose: <Exposed extends Record<string, any> = Record<string, any>>(
+        exposed?: Exposed,
+      ) => void
     }
   : never
 
@@ -355,6 +359,13 @@ export interface ComponentInternalInstance {
    */
   provides: Data
   /**
+   * for tracking useId()
+   * first element is the current boundary prefix
+   * second number is the index of the useId call within that boundary
+   * @internal
+   */
+  ids: [string, number, number]
+  /**
    * Tracking reactive effects (e.g. watchers) associated with this component
    * so that they can be automatically stopped on component unmount
    * @internal
@@ -370,7 +381,7 @@ export interface ComponentInternalInstance {
    * after initialized (e.g. inline handlers)
    * @internal
    */
-  renderCache: (Function | VNode)[]
+  renderCache: (Function | VNode | undefined)[]
 
   /**
    * Resolved component registry, only for components with mixins or extends
@@ -443,9 +454,6 @@ export interface ComponentInternalInstance {
   slots: InternalSlots
   refs: Data
   emit: EmitFn
-
-  attrsProxy: Data | null
-  slotsProxy: Slots | null
 
   /**
    * used for keeping track of .once event handlers on components
@@ -615,7 +623,9 @@ export function createComponentInstance(
     exposed: null,
     exposeProxy: null,
     withProxy: null,
+
     provides: parent ? parent.provides : Object.create(appContext.provides),
+    ids: parent ? parent.ids : ['', 0, 0],
     accessCache: null!,
     renderCache: [],
 
@@ -646,9 +656,6 @@ export function createComponentInstance(
     refs: EMPTY_OBJ,
     setupState: EMPTY_OBJ,
     setupContext: null,
-
-    attrsProxy: null,
-    slotsProxy: null,
 
     // suspense related
     suspense,
@@ -784,13 +791,14 @@ export let isInSSRComponentSetup = false
 export function setupComponent(
   instance: ComponentInternalInstance,
   isSSR = false,
+  optimized = false,
 ) {
   isSSR && setInSSRSetupState(isSSR)
 
   const { props, children } = instance.vnode
   const isStateful = isStatefulComponent(instance)
   initProps(instance, props, isStateful, isSSR)
-  initSlots(instance, children)
+  initSlots(instance, children, optimized)
 
   const setupResult = isStateful
     ? setupStatefulComponent(instance, isSSR)
@@ -858,6 +866,8 @@ function setupStatefulComponent(
     reset()
 
     if (isPromise(setupResult)) {
+      // async setup, mark as async boundary for useId()
+      if (!isAsyncWrapper(instance)) markAsyncBoundary(instance)
       setupResult.then(unsetCurrentInstance, unsetCurrentInstance)
       if (isSSR) {
         // return the promise so server-renderer can wait on it
@@ -1089,15 +1099,12 @@ const attrsProxyHandlers = __DEV__
  * Dev-only
  */
 function getSlotsProxy(instance: ComponentInternalInstance): Slots {
-  return (
-    instance.slotsProxy ||
-    (instance.slotsProxy = new Proxy(instance.slots, {
-      get(target, key: string) {
-        track(instance, TrackOpTypes.GET, '$slots')
-        return target[key]
-      },
-    }))
-  )
+  return new Proxy(instance.slots, {
+    get(target, key: string) {
+      track(instance, TrackOpTypes.GET, '$slots')
+      return target[key]
+    },
+  })
 }
 
 export function createSetupContext(
@@ -1131,6 +1138,7 @@ export function createSetupContext(
     // We use getters in dev in case libs like test-utils overwrite instance
     // properties (overwrites should not be done in prod)
     let attrsProxy: Data
+    let slotsProxy: Slots
     return Object.freeze({
       get attrs() {
         return (
@@ -1139,7 +1147,7 @@ export function createSetupContext(
         )
       },
       get slots() {
-        return getSlotsProxy(instance)
+        return slotsProxy || (slotsProxy = getSlotsProxy(instance))
       },
       get emit() {
         return (event: string, ...args: any[]) => instance.emit(event, ...args)
@@ -1156,7 +1164,9 @@ export function createSetupContext(
   }
 }
 
-export function getExposeProxy(instance: ComponentInternalInstance) {
+export function getComponentPublicInstance(
+  instance: ComponentInternalInstance,
+) {
   if (instance.exposed) {
     return (
       instance.exposeProxy ||
@@ -1173,6 +1183,8 @@ export function getExposeProxy(instance: ComponentInternalInstance) {
         },
       }))
     )
+  } else {
+    return instance.proxy
   }
 }
 

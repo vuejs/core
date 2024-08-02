@@ -2,7 +2,7 @@ import {
   type Component,
   type ComponentInternalInstance,
   type Data,
-  getExposeProxy,
+  getComponentPublicInstance,
   isStatefulComponent,
 } from './component'
 import { nextTick, queueJob } from './scheduler'
@@ -292,7 +292,7 @@ export type ComponentPublicInstance<
   C extends ComputedOptions = {},
   M extends MethodOptions = {},
   E extends EmitsOptions = {},
-  PublicProps = P,
+  PublicProps = {},
   Defaults = {},
   MakeDefaultsOptional extends boolean = false,
   Options = ComponentOptionsBase<any, any, any, any, any, any, any, any, any>,
@@ -323,7 +323,11 @@ export type ComponentPublicInstance<
     options?: WatchOptions,
   ): WatchStopHandle
 } & ExposedKeys<
-  IfAny<P, P, Omit<P, keyof ShallowUnwrapRef<B>>> &
+  IfAny<
+    P,
+    P,
+    Readonly<Defaults> & Omit<P, keyof ShallowUnwrapRef<B> | keyof Defaults>
+  > &
     ShallowUnwrapRef<B> &
     UnwrapNestedRefs<D> &
     ExtractComputedReturns<C> &
@@ -347,7 +351,7 @@ const getPublicInstance = (
   i: ComponentInternalInstance | null,
 ): ComponentPublicInstance | ComponentInternalInstance['exposed'] | null => {
   if (!i) return null
-  if (isStatefulComponent(i)) return getExposeProxy(i) || i.proxy
+  if (isStatefulComponent(i)) return getComponentPublicInstance(i)
   return getPublicInstance(i.parent)
 }
 

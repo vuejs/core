@@ -32,7 +32,14 @@ export const CAMELIZE = Symbol(__DEV__ ? `camelize` : ``)
 export const CAPITALIZE = Symbol(__DEV__ ? `capitalize` : ``)
 export const TO_HANDLER_KEY = Symbol(__DEV__ ? `toHandlerKey` : ``)
 export const SET_BLOCK_TRACKING = Symbol(__DEV__ ? `setBlockTracking` : ``)
+/**
+ * @deprecated no longer needed in 3.5+ because we no longer hoist element nodes
+ * but kept for backwards compat
+ */
 export const PUSH_SCOPE_ID = Symbol(__DEV__ ? `pushScopeId` : ``)
+/**
+ * @deprecated kept for backwards compat
+ */
 export const POP_SCOPE_ID = Symbol(__DEV__ ? `popScopeId` : ``)
 export const WITH_CTX = Symbol(__DEV__ ? `withCtx` : ``)
 export const UNREF = Symbol(__DEV__ ? `unref` : ``)

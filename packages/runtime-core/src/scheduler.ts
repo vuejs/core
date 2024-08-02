@@ -34,9 +34,8 @@ export interface SchedulerJob extends Function {
   /**
    * Attached by renderer.ts when setting up a component's render effect
    * Used to obtain component information when reporting max recursive updates.
-   * dev only.
    */
-  ownerInstance?: ComponentInternalInstance
+  i?: ComponentInternalInstance
 }
 
 export type SchedulerJobs = SchedulerJob | SchedulerJob[]
@@ -128,7 +127,9 @@ export function invalidateJob(job: SchedulerJob) {
 
 export function queuePostFlushCb(cb: SchedulerJobs) {
   if (!isArray(cb)) {
-    if (!(cb.flags! & SchedulerJobFlags.QUEUED)) {
+    if (activePostFlushCbs && cb.id === -1) {
+      activePostFlushCbs.splice(postFlushIndex + 1, 0, cb)
+    } else if (!(cb.flags! & SchedulerJobFlags.QUEUED)) {
       pendingPostFlushCbs.push(cb)
       if (!(cb.flags! & SchedulerJobFlags.ALLOW_RECURSE)) {
         cb.flags! |= SchedulerJobFlags.QUEUED
@@ -192,14 +193,12 @@ export function flushPostFlushCbs(seen?: CountMap) {
       postFlushIndex < activePostFlushCbs.length;
       postFlushIndex++
     ) {
-      if (
-        __DEV__ &&
-        checkRecursiveUpdates(seen!, activePostFlushCbs[postFlushIndex])
-      ) {
+      const cb = activePostFlushCbs[postFlushIndex]
+      if (__DEV__ && checkRecursiveUpdates(seen!, cb)) {
         continue
       }
-      activePostFlushCbs[postFlushIndex]()
-      activePostFlushCbs[postFlushIndex].flags! &= ~SchedulerJobFlags.QUEUED
+      if (!(cb.flags! & SchedulerJobFlags.DISPOSED)) cb()
+      cb.flags! &= ~SchedulerJobFlags.QUEUED
     }
     activePostFlushCbs = null
     postFlushIndex = 0
@@ -252,7 +251,11 @@ function flushJobs(seen?: CountMap) {
         if (__DEV__ && check(job)) {
           continue
         }
-        callWithErrorHandling(job, null, ErrorCodes.SCHEDULER)
+        callWithErrorHandling(
+          job,
+          job.i,
+          job.i ? ErrorCodes.COMPONENT_UPDATE : ErrorCodes.SCHEDULER,
+        )
         job.flags! &= ~SchedulerJobFlags.QUEUED
       }
     }
@@ -278,7 +281,7 @@ function checkRecursiveUpdates(seen: CountMap, fn: SchedulerJob) {
   } else {
     const count = seen.get(fn)!
     if (count > RECURSION_LIMIT) {
-      const instance = fn.ownerInstance
+      const instance = fn.i
       const componentName = instance && getComponentName(instance.type)
       handleError(
         `Maximum recursive updates exceeded${

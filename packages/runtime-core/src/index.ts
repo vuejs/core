@@ -62,6 +62,14 @@ export { defineComponent } from './apiDefineComponent'
 export { defineAsyncComponent } from './apiAsyncComponent'
 export { useAttrs, useSlots } from './apiSetupHelpers'
 export { useModel } from './helpers/useModel'
+export { useTemplateRef } from './helpers/useTemplateRef'
+export { useId } from './helpers/useId'
+export {
+  hydrateOnIdle,
+  hydrateOnVisible,
+  hydrateOnMediaQuery,
+  hydrateOnInteraction,
+} from './hydrationStrategies'
 
 // <script setup> API ----------------------------------------------------------
 
@@ -213,6 +221,7 @@ export type {
   DebuggerEvent,
   DebuggerEventExtraInfo,
   Raw,
+  Reactive,
 } from '@vue/reactivity'
 export type {
   WatchEffect,
@@ -278,6 +287,8 @@ export type {
   EmitsOptions,
   ObjectEmitsOptions,
   EmitsToProps,
+  ShortEmitsToObject,
+  EmitFn,
 } from './componentEmits'
 export type {
   ComponentPublicInstance,
@@ -322,6 +333,10 @@ export type {
   AsyncComponentOptions,
   AsyncComponentLoader,
 } from './apiAsyncComponent'
+export type {
+  HydrationStrategy,
+  HydrationStrategyFactory,
+} from './hydrationStrategies'
 export type { HMRRuntime } from './hmr'
 
 // Internal API ----------------------------------------------------------------
@@ -371,7 +386,11 @@ export { transformVNodeArgs } from './vnode'
 // **IMPORTANT** These APIs are exposed solely for @vue/server-renderer and may
 // change without notice between versions. User code should never rely on them.
 
-import { createComponentInstance, setupComponent } from './component'
+import {
+  createComponentInstance,
+  getComponentPublicInstance,
+  setupComponent,
+} from './component'
 import { renderComponentRoot } from './componentRenderUtils'
 import { setCurrentRenderingInstance } from './componentRenderContext'
 import { isVNode, normalizeVNode } from './vnode'
@@ -383,6 +402,7 @@ const _ssrUtils = {
   setCurrentRenderingInstance,
   isVNode,
   normalizeVNode,
+  getComponentPublicInstance,
 }
 
 /**
