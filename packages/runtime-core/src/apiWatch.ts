@@ -189,9 +189,6 @@ function doWatch(
     }
   }
 
-  // Convert the `deep` option to a number type.
-  deep = deep === true ? Infinity : deep === false ? 0 : deep
-
   if (__DEV__ && !cb) {
     if (immediate !== undefined) {
       warn(
@@ -227,7 +224,8 @@ function doWatch(
     // traverse will happen in wrapped getter below
     if (deep) return source
     // for `deep: false | 0` or shallow reactive, only traverse root-level properties
-    if (isShallow(source) || deep === 0) return traverse(source, 1)
+    if (isShallow(source) || deep === false || deep === 0)
+      return traverse(source, 1)
     // for `deep: undefined` on a reactive object, deeply traverse all properties
     return traverse(source)
   }
@@ -290,7 +288,7 @@ function doWatch(
         isArray(val) &&
         checkCompatEnabled(DeprecationTypes.WATCH_ARRAY, instance)
       ) {
-        traverse(val, deep)
+        traverse(val)
       }
       return val
     }
@@ -298,7 +296,8 @@ function doWatch(
 
   if (cb && deep) {
     const baseGetter = getter
-    getter = () => traverse(baseGetter(), deep)
+    const depth = deep === true ? Infinity : deep
+    getter = () => traverse(baseGetter(), depth)
   }
 
   let cleanup: (() => void) | undefined
