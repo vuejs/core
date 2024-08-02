@@ -152,6 +152,12 @@ describe('runtime-dom: props patching', () => {
     expect(root.innerHTML).toBe(`<div><del>baz</del></div>`)
   })
 
+  test('patch innerHTML porp w/ undefined value', async () => {
+    const root = document.createElement('div')
+    render(h('div', { innerHTML: undefined }), root)
+    expect(root.innerHTML).toBe(`<div></div>`)
+  })
+
   test('textContent unmount prev children', () => {
     const fn = vi.fn()
     const comp = {

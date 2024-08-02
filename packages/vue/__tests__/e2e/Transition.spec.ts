@@ -8,7 +8,7 @@ describe('e2e: Transition', () => {
   const baseUrl = `file://${path.resolve(__dirname, './transition.html')}`
 
   const duration = process.env.CI ? 200 : 50
-  const buffer = process.env.CI ? 20 : 5
+  const buffer = 20
 
   const transitionFinish = (time = duration) => timeout(time + buffer)
 
@@ -29,8 +29,6 @@ describe('e2e: Transition', () => {
     test(
       'basic transition',
       async () => {
-        await page().goto(baseUrl)
-        await page().waitForSelector('#app')
         await page().evaluate(() => {
           const { createApp, ref } = (window as any).Vue
           createApp({
@@ -1296,8 +1294,6 @@ describe('e2e: Transition', () => {
     test(
       'wrapping transition + fallthrough attrs',
       async () => {
-        await page().goto(baseUrl)
-        await page().waitForSelector('#app')
         await page().evaluate(() => {
           const { createApp, ref } = (window as any).Vue
           createApp({

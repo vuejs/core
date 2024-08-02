@@ -1,3 +1,75 @@
+# [3.5.0-alpha.5](https://github.com/vuejs/core/compare/v3.4.35...v3.5.0-alpha.5) (2024-07-31)
+
+
+### Features
+
+* **hydration:** support suppressing hydration mismatch via data-allow-mismatch ([94fb2b8](https://github.com/vuejs/core/commit/94fb2b8106a66bcca1a3f922a246a29fdd1274b1))
+* lazy hydration strategies for async components ([#11458](https://github.com/vuejs/core/issues/11458)) ([d14a11c](https://github.com/vuejs/core/commit/d14a11c1cdcee88452f17ce97758743c863958f4))
+
+
+
+## [3.4.35](https://github.com/vuejs/core/compare/v3.4.34...v3.4.35) (2024-07-31)
+
+
+### Bug Fixes
+
+* **teleport/ssr:** fix Teleport hydration regression due to targetStart anchor addition ([7b18cdb](https://github.com/vuejs/core/commit/7b18cdb0b53a94007ca6a3675bf41b5d3153fec6))
+* **teleport/ssr:** ensure targetAnchor and targetStart not null during hydration ([#11456](https://github.com/vuejs/core/issues/11456)) ([12667da](https://github.com/vuejs/core/commit/12667da4879f980dcf2c50e36f3642d085a87d71)), closes [#11400](https://github.com/vuejs/core/issues/11400)
+* **types/ref:** allow getter and setter types to be unrelated ([#11442](https://github.com/vuejs/core/issues/11442)) ([e0b2975](https://github.com/vuejs/core/commit/e0b2975ef65ae6a0be0aa0a0df43fb887c665251))
+
+
+### Performance Improvements
+
+* **runtime-core:** improve efficiency of normalizePropsOptions ([#11409](https://github.com/vuejs/core/issues/11409)) ([5680142](https://github.com/vuejs/core/commit/5680142e68096c42e66da9f4c6220d040d7c56ba)), closes [#9739](https://github.com/vuejs/core/issues/9739)
+
+
+
+# [3.5.0-alpha.4](https://github.com/vuejs/core/compare/v3.4.34...v3.5.0-alpha.4) (2024-07-24)
+
+### Bug Fixes
+
+* **suspense/hydration:** fix hydration timing of async component inside suspense ([1b8e197](https://github.com/vuejs/core/commit/1b8e197a5b65d67a9703b8511786fb81df9aa7cc)), closes [#6638](https://github.com/vuejs/core/issues/6638)
+* **useId:** properly mark async boundary for already resolved async component ([cd28172](https://github.com/vuejs/core/commit/cd281725781ada2ab279e919031ae307e146a9d9))
+
+
+
+## [3.4.34](https://github.com/vuejs/core/compare/v3.4.33...v3.4.34) (2024-07-24)
+
+* **defineModel:** correct update with multiple changes in same tick ([#11430](https://github.com/vuejs/core/issues/11430)) ([a18f1ec](https://github.com/vuejs/core/commit/a18f1ecf05842337f1eb39a6871adb8cb4024093)), closes [#11429](https://github.com/vuejs/core/issues/11429)
+
+
+
+# [3.5.0-alpha.3](https://github.com/vuejs/core/compare/v3.4.33...v3.5.0-alpha.3) (2024-07-19)
+
+
+### Bug Fixes
+
+* **build:** enable SSR branches in esm-browser builds ([b14cd9a](https://github.com/vuejs/core/commit/b14cd9a68bab082332b0169be075be357be076ca))
+* **compiler-core:** change node hoisting to caching per instance ([#11067](https://github.com/vuejs/core/issues/11067)) ([cd0ea0d](https://github.com/vuejs/core/commit/cd0ea0d479a276583fa181d8ecbc97fb0e4a9dce)), closes [#5256](https://github.com/vuejs/core/issues/5256) [#9219](https://github.com/vuejs/core/issues/9219) [#10959](https://github.com/vuejs/core/issues/10959)
+* **compiler-sfc:** should properly walk desutructured props when reactive destructure is not enabled ([0fd6193](https://github.com/vuejs/core/commit/0fd6193def2380916eb51a118f37f2d9ec2ace23)), closes [#11325](https://github.com/vuejs/core/issues/11325)
+* **types:** respect props with default on instance type when using __typeProps ([96e4738](https://github.com/vuejs/core/commit/96e473833422342c5ca371ae1aeb186dec9a55e3))
+
+
+### Features
+
+* **runtime-core:** useTemplateRef() ([3ba70e4](https://github.com/vuejs/core/commit/3ba70e49b5856c53611c314d4855d679a546a7df))
+* **runtime-core:** useId() and app.config.idPrefix ([#11404](https://github.com/vuejs/core/issues/11404)) ([73ef156](https://github.com/vuejs/core/commit/73ef1561f6905d69f968c094d0180c61824f1247))
+* **runtime-core:** add app.config.throwUnhandledErrorInProduction ([f476b7f](https://github.com/vuejs/core/commit/f476b7f030f2dd427ca655fcea36f4933a4b4da0)), closes [#7876](https://github.com/vuejs/core/issues/7876)
+* **teleport:** support deferred Teleport ([#11387](https://github.com/vuejs/core/issues/11387)) ([59a3e88](https://github.com/vuejs/core/commit/59a3e88903b10ac2278170a44d5a03f24fef23ef)), closes [#2015](https://github.com/vuejs/core/issues/2015) [#11386](https://github.com/vuejs/core/issues/11386)
+* **compiler-core:** support `Symbol` global in template expressions ([#9069](https://github.com/vuejs/core/issues/9069)) ([a501a85](https://github.com/vuejs/core/commit/a501a85a7c910868e01a5c70a2abea4e9d9e87f3))
+* **types:** export more emit related types ([#11017](https://github.com/vuejs/core/issues/11017)) ([189573d](https://github.com/vuejs/core/commit/189573dcee2a16bd3ed36ff5589d43f535e5e733))
+
+
+
+## [3.4.33](https://github.com/vuejs/core/compare/v3.4.32...v3.4.33) (2024-07-19)
+
+
+### Bug Fixes
+
+* **runtime-dom:** handle undefined values in v-html ([#11403](https://github.com/vuejs/core/issues/11403)) ([5df67e3](https://github.com/vuejs/core/commit/5df67e36756639ea7b923d1b139d6cb14450123b))
+
+
+
 ## [3.4.32](https://github.com/vuejs/core/compare/v3.4.31...v3.4.32) (2024-07-17)
 
 

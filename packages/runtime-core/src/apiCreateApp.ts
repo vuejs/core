@@ -131,6 +131,11 @@ export interface AppConfig {
    * But in some cases, e.g. SSR, throwing might be more desirable.
    */
   throwUnhandledErrorInProduction?: boolean
+
+  /**
+   * Prefix for all useId() calls within this app
+   */
+  idPrefix?: string
 }
 
 export interface AppContext {

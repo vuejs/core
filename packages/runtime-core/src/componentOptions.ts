@@ -84,6 +84,7 @@ import {
   type ComponentTypeEmits,
   normalizePropsOrEmits,
 } from './apiSetupHelpers'
+import { markAsyncBoundary } from './helpers/useId'
 
 /**
  * Interface for declaring custom options.
@@ -198,6 +199,15 @@ export interface ComponentOptionsBase<
    * @internal
    */
   __asyncResolved?: ConcreteComponent
+  /**
+   * Exposed for lazy hydration
+   * @internal
+   */
+  __asyncHydrate?: (
+    el: Element,
+    instance: ComponentInternalInstance,
+    hydrate: () => void,
+  ) => void
 
   // Type differentiators ------------------------------------------------------
 
@@ -770,6 +780,10 @@ export function applyOptions(instance: ComponentInternalInstance) {
     isCompatEnabled(DeprecationTypes.FILTERS, instance)
   ) {
     instance.filters = filters
+  }
+
+  if (__SSR__ && serverPrefetch) {
+    markAsyncBoundary(instance)
   }
 }
 

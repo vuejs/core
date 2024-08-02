@@ -33,7 +33,7 @@ export function useModel(
 
   const res = customRef((track, trigger) => {
     let localValue: any
-    let prevSetValue: any
+    let prevSetValue: any = EMPTY_OBJ
     let prevEmittedValue: any
 
     watchSyncEffect(() => {
@@ -51,7 +51,10 @@ export function useModel(
       },
 
       set(value) {
-        if (!hasChanged(value, localValue)) {
+        if (
+          !hasChanged(value, localValue) &&
+          !(prevSetValue !== EMPTY_OBJ && hasChanged(value, prevSetValue))
+        ) {
           return
         }
         const rawProps = i.vnode!.props
@@ -78,9 +81,9 @@ export function useModel(
         // updates and there will be no prop sync. However the local input state
         // may be out of sync, so we need to force an update here.
         if (
-          value !== emittedValue &&
-          value !== prevSetValue &&
-          emittedValue === prevEmittedValue
+          hasChanged(value, emittedValue) &&
+          hasChanged(value, prevSetValue) &&
+          !hasChanged(emittedValue, prevEmittedValue)
         ) {
           trigger()
         }

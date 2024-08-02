@@ -1276,7 +1276,7 @@ function baseCreateRenderer(
     const componentUpdateFn = () => {
       if (!instance.isMounted) {
         let vnodeHook: VNodeHook | null | undefined
-        const { el, props } = initialVNode
+        const { el, props, type } = initialVNode
         const { bm, m, parent } = instance
         const isAsyncWrapperVNode = isAsyncWrapper(initialVNode)
 
@@ -1326,12 +1326,10 @@ function baseCreateRenderer(
           }
 
           if (isAsyncWrapperVNode) {
-            ;(initialVNode.type as ComponentOptions).__asyncLoader!().then(
-              // note: we are moving the render call into an async callback,
-              // which means it won't track dependencies - but it's ok because
-              // a server-rendered async wrapper is already in resolved state
-              // and it will never need to change.
-              () => !instance.isUnmounted && hydrateSubTree(),
+            ;(type as ComponentOptions).__asyncHydrate!(
+              el as Element,
+              instance,
+              hydrateSubTree,
             )
           } else {
             hydrateSubTree()
