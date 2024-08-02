@@ -68,4 +68,18 @@ describe('useTemplateRef', () => {
     expect(t2!.value).toBe(root.children[0])
     expect(t1!.value).toBe(null)
   })
+
+  test('should warn on duplicate useTemplateRef', () => {
+    const root = nodeOps.createElement('div')
+    render(
+      h(() => {
+        useTemplateRef('foo')
+        useTemplateRef('foo')
+        return ''
+      }),
+      root,
+    )
+
+    expect(`useTemplateRef('foo') already exists.`).toHaveBeenWarned()
+  })
 })
