@@ -1621,6 +1621,45 @@ describe('api: watch', () => {
     expect(cb).toHaveBeenCalledTimes(4)
   })
 
+  test('pause / resume', async () => {
+    const count = ref(0)
+    const cb = vi.fn()
+    const { pause, resume } = watch(count, cb)
+
+    count.value++
+    await nextTick()
+    expect(cb).toHaveBeenCalledTimes(1)
+    expect(cb).toHaveBeenLastCalledWith(1, 0, expect.any(Function))
+
+    pause()
+    count.value++
+    await nextTick()
+    expect(cb).toHaveBeenCalledTimes(1)
+    expect(cb).toHaveBeenLastCalledWith(1, 0, expect.any(Function))
+
+    resume()
+    count.value++
+    await nextTick()
+    expect(cb).toHaveBeenCalledTimes(2)
+    expect(cb).toHaveBeenLastCalledWith(3, 1, expect.any(Function))
+
+    count.value++
+    await nextTick()
+    expect(cb).toHaveBeenCalledTimes(3)
+    expect(cb).toHaveBeenLastCalledWith(4, 3, expect.any(Function))
+
+    pause()
+    count.value++
+    await nextTick()
+    expect(cb).toHaveBeenCalledTimes(3)
+    expect(cb).toHaveBeenLastCalledWith(4, 3, expect.any(Function))
+
+    resume()
+    await nextTick()
+    expect(cb).toHaveBeenCalledTimes(4)
+    expect(cb).toHaveBeenLastCalledWith(5, 4, expect.any(Function))
+  })
+
   it('shallowReactive', async () => {
     const state = shallowReactive({
       msg: ref('hello'),
