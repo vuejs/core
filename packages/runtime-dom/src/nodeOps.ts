@@ -9,7 +9,10 @@ import type {
 let policy: Pick<TrustedTypePolicy, 'name' | 'createHTML'> | undefined =
   undefined
 
-const tt = (window as unknown as TrustedTypesWindow).trustedTypes
+const tt =
+  typeof window !== 'undefined' &&
+  (window as unknown as TrustedTypesWindow).trustedTypes
+
 if (tt) {
   try {
     policy = /*#__PURE__*/ tt.createPolicy('vue', {
