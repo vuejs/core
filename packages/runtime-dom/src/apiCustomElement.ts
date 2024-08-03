@@ -21,6 +21,7 @@ import {
   type SetupContext,
   type SlotsType,
   type VNode,
+  type VNodeProps,
   createVNode,
   defineComponent,
   nextTick,
@@ -33,21 +34,28 @@ export type VueElementConstructor<P = {}> = {
   new (initialProps?: Record<string, any>): VueElement & P
 }
 
+export interface CustomElementOptions {
+  styles?: string[]
+  shadowRoot?: boolean
+}
+
 // defineCustomElement provides the same type inference as defineComponent
 // so most of the following overloads should be kept in sync w/ defineComponent.
 
 // overload 1: direct setup function
 export function defineCustomElement<Props, RawBindings = object>(
   setup: (props: Props, ctx: SetupContext) => RawBindings | RenderFunction,
-  options?: Pick<ComponentOptions, 'name' | 'inheritAttrs' | 'emits'> & {
-    props?: (keyof Props)[]
-  },
+  options?: Pick<ComponentOptions, 'name' | 'inheritAttrs' | 'emits'> &
+    CustomElementOptions & {
+      props?: (keyof Props)[]
+    },
 ): VueElementConstructor<Props>
 export function defineCustomElement<Props, RawBindings = object>(
   setup: (props: Props, ctx: SetupContext) => RawBindings | RenderFunction,
-  options?: Pick<ComponentOptions, 'name' | 'inheritAttrs' | 'emits'> & {
-    props?: ComponentObjectPropsOptions<Props>
-  },
+  options?: Pick<ComponentOptions, 'name' | 'inheritAttrs' | 'emits'> &
+    CustomElementOptions & {
+      props?: ComponentObjectPropsOptions<Props>
+    },
 ): VueElementConstructor<Props>
 
 // overload 2: defineCustomElement with options object, infer props from options
@@ -81,27 +89,27 @@ export function defineCustomElement<
     : { [key in PropsKeys]?: any },
   ResolvedProps = InferredProps & EmitsToProps<RuntimeEmitsOptions>,
 >(
-  options: {
+  options: CustomElementOptions & {
     props?: (RuntimePropsOptions & ThisType<void>) | PropsKeys[]
   } & ComponentOptionsBase<
-    ResolvedProps,
-    SetupBindings,
-    Data,
-    Computed,
-    Methods,
-    Mixin,
-    Extends,
-    RuntimeEmitsOptions,
-    EmitsKeys,
-    {}, // Defaults
-    InjectOptions,
-    InjectKeys,
-    Slots,
-    LocalComponents,
-    Directives,
-    Exposed,
-    Provide
-  > &
+      ResolvedProps,
+      SetupBindings,
+      Data,
+      Computed,
+      Methods,
+      Mixin,
+      Extends,
+      RuntimeEmitsOptions,
+      EmitsKeys,
+      {}, // Defaults
+      InjectOptions,
+      InjectKeys,
+      Slots,
+      LocalComponents,
+      Directives,
+      Exposed,
+      Provide
+    > &
     ThisType<
       CreateComponentPublicInstanceWithMixins<
         Readonly<ResolvedProps>,
@@ -163,7 +171,7 @@ const BaseClass = (
   typeof HTMLElement !== 'undefined' ? HTMLElement : class {}
 ) as typeof HTMLElement
 
-type InnerComponentDef = ConcreteComponent & { styles?: string[] }
+type InnerComponentDef = ConcreteComponent & CustomElementOptions
 
 export class VueElement extends BaseClass {
   /**
@@ -176,14 +184,19 @@ export class VueElement extends BaseClass {
   private _numberProps: Record<string, true> | null = null
   private _styles?: HTMLStyleElement[]
   private _ob?: MutationObserver | null = null
+  private _root: Element | ShadowRoot
+  private _slots?: Record<string, Node[]>
+
   constructor(
     private _def: InnerComponentDef,
     private _props: Record<string, any> = {},
     hydrate?: RootHydrateFunction,
   ) {
     super()
+    // TODO handle non-shadowRoot hydration
     if (this.shadowRoot && hydrate) {
       hydrate(this._createVNode(), this.shadowRoot)
+      this._root = this.shadowRoot
     } else {
       if (__DEV__ && this.shadowRoot) {
         warn(
@@ -191,7 +204,12 @@ export class VueElement extends BaseClass {
             `defined as hydratable. Use \`defineSSRCustomElement\`.`,
         )
       }
-      this.attachShadow({ mode: 'open' })
+      if (_def.shadowRoot !== false) {
+        this.attachShadow({ mode: 'open' })
+        this._root = this.shadowRoot!
+      } else {
+        this._root = this
+      }
       if (!(this._def as ComponentOptions).__asyncLoader) {
         // for sync component defs we can immediately resolve props
         this._resolveProps(this._def)
@@ -200,6 +218,9 @@ export class VueElement extends BaseClass {
   }
 
   connectedCallback() {
+    if (!this.shadowRoot) {
+      this._parseSlots()
+    }
     this._connected = true
     if (!this._instance) {
       if (this._resolved) {
@@ -218,7 +239,7 @@ export class VueElement extends BaseClass {
           this._ob.disconnect()
           this._ob = null
         }
-        render(null, this.shadowRoot!)
+        render(null, this._root)
         this._instance = null
       }
     })
@@ -353,11 +374,16 @@ export class VueElement extends BaseClass {
   }
 
   private _update() {
-    render(this._createVNode(), this.shadowRoot!)
+    render(this._createVNode(), this._root)
   }
 
   private _createVNode(): VNode<any, any> {
-    const vnode = createVNode(this._def, extend({}, this._props))
+    const baseProps: VNodeProps = {}
+    if (!this.shadowRoot) {
+      baseProps.onVnodeMounted = baseProps.onVnodeUpdated =
+        this._renderSlots.bind(this)
+    }
+    const vnode = createVNode(this._def, extend(baseProps, this._props))
     if (!this._instance) {
       vnode.ce = instance => {
         this._instance = instance
@@ -367,7 +393,7 @@ export class VueElement extends BaseClass {
           instance.ceReload = newStyles => {
             // always reset styles
             if (this._styles) {
-              this._styles.forEach(s => this.shadowRoot!.removeChild(s))
+              this._styles.forEach(s => this._root.removeChild(s))
               this._styles.length = 0
             }
             this._applyStyles(newStyles)
@@ -416,12 +442,58 @@ export class VueElement extends BaseClass {
       styles.forEach(css => {
         const s = document.createElement('style')
         s.textContent = css
-        this.shadowRoot!.appendChild(s)
+        this._root.appendChild(s)
         // record for HMR
         if (__DEV__) {
           ;(this._styles || (this._styles = [])).push(s)
         }
       })
+    }
+  }
+
+  /**
+   * Only called when shaddowRoot is false
+   */
+  private _parseSlots() {
+    const slots: VueElement['_slots'] = (this._slots = {})
+    let n
+    while ((n = this.firstChild)) {
+      const slotName =
+        (n.nodeType === 1 && (n as Element).getAttribute('slot')) || 'default'
+      ;(slots[slotName] || (slots[slotName] = [])).push(n)
+      this.removeChild(n)
+    }
+  }
+
+  /**
+   * Only called when shaddowRoot is false
+   */
+  private _renderSlots() {
+    const outlets = this.querySelectorAll('slot')
+    const scopeId = this._instance!.type.__scopeId
+    for (let i = 0; i < outlets.length; i++) {
+      const o = outlets[i] as HTMLSlotElement
+      const slotName = o.getAttribute('name') || 'default'
+      const content = this._slots![slotName]
+      const parent = o.parentNode!
+      if (content) {
+        for (const n of content) {
+          // for :slotted css
+          if (scopeId && n.nodeType === 1) {
+            const id = scopeId + '-s'
+            const walker = document.createTreeWalker(n, 1)
+            ;(n as Element).setAttribute(id, '')
+            let child
+            while ((child = walker.nextNode())) {
+              ;(child as Element).setAttribute(id, '')
+            }
+          }
+          parent.insertBefore(n, o)
+        }
+      } else {
+        while (o.firstChild) parent.insertBefore(o.firstChild, o)
+      }
+      parent.removeChild(o)
     }
   }
 }

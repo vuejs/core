@@ -505,7 +505,7 @@ describe('defineCustomElement', () => {
     })
     customElements.define('my-el-slots', E)
 
-    test('default slot', () => {
+    test('render slots correctly', () => {
       container.innerHTML = `<my-el-slots><span>hi</span></my-el-slots>`
       const e = container.childNodes[0] as VueElement
       // native slots allocation does not affect innerHTML, so we just
@@ -774,6 +774,73 @@ describe('defineCustomElement', () => {
       const e = container.childNodes[0] as VueElement
       expect(e.shadowRoot!.innerHTML).toBe(
         `<div><slot><div>fallback</div></slot></div><div><slot name="named"></slot></div>`,
+      )
+    })
+  })
+
+  describe('shadowRoot: false', () => {
+    const E = defineCustomElement({
+      shadowRoot: false,
+      props: {
+        msg: {
+          type: String,
+          default: 'hello',
+        },
+      },
+      render() {
+        return h('div', this.msg)
+      },
+    })
+    customElements.define('my-el-shadowroot-false', E)
+
+    test('should work', async () => {
+      function raf() {
+        return new Promise(resolve => {
+          requestAnimationFrame(resolve)
+        })
+      }
+
+      container.innerHTML = `<my-el-shadowroot-false></my-el-shadowroot-false>`
+      const e = container.childNodes[0] as VueElement
+      await raf()
+      expect(e).toBeInstanceOf(E)
+      expect(e._instance).toBeTruthy()
+      expect(e.innerHTML).toBe(`<div>hello</div>`)
+      expect(e.shadowRoot).toBe(null)
+    })
+
+    const toggle = ref(true)
+    const ES = defineCustomElement({
+      shadowRoot: false,
+      render() {
+        return [
+          renderSlot(this.$slots, 'default'),
+          toggle.value ? renderSlot(this.$slots, 'named') : null,
+          renderSlot(this.$slots, 'omitted', {}, () => [h('div', 'fallback')]),
+        ]
+      },
+    })
+    customElements.define('my-el-shadowroot-false-slots', ES)
+
+    test('should render slots', async () => {
+      container.innerHTML =
+        `<my-el-shadowroot-false-slots>` +
+        `<span>default</span>text` +
+        `<div slot="named">named</div>` +
+        `</my-el-shadowroot-false-slots>`
+      const e = container.childNodes[0] as VueElement
+      // native slots allocation does not affect innerHTML, so we just
+      // verify that we've rendered the correct native slots here...
+      expect(e.innerHTML).toBe(
+        `<span>default</span>text` +
+          `<div slot="named">named</div>` +
+          `<div>fallback</div>`,
+      )
+
+      toggle.value = false
+      await nextTick()
+      expect(e.innerHTML).toBe(
+        `<span>default</span>text` + `<!---->` + `<div>fallback</div>`,
       )
     })
   })
