@@ -155,12 +155,12 @@ describe('component: emit', () => {
       render() {},
       created() {
         // @ts-expect-error
-        this.$emit('bar')
+        this.$emit('bar-baz')
       },
     })
     render(h(Foo), nodeOps.createElement('div'))
     expect(
-      `Component emitted event "bar" but didn't declare a "onBar" prop or a "bar" emit option.`,
+      `Component emitted event "bar-baz" but it is neither declared in the emits option nor as an "onBarBaz" prop`,
     ).toHaveBeenWarned()
   })
 
@@ -172,12 +172,12 @@ describe('component: emit', () => {
       render() {},
       created() {
         // @ts-expect-error
-        this.$emit('bar')
+        this.$emit('bar-baz')
       },
     })
     render(h(Foo), nodeOps.createElement('div'))
     expect(
-      `Component emitted event "bar" but didn't declare a "onBar" prop or a "bar" emit option.`,
+      `Component emitted event "bar-baz" but it is neither declared in the emits option nor as an "onBarBaz" prop`,
     ).toHaveBeenWarned()
   })
 
@@ -193,23 +193,23 @@ describe('component: emit', () => {
     })
     render(h(Foo), nodeOps.createElement('div'))
     expect(
-      `Component emitted event "foo" but didn't declare a "onFoo" prop or a "foo" emit option.`,
+      `Component emitted event "foo" but it is neither declared`,
     ).not.toHaveBeenWarned()
   })
 
-  test('should not warn if has equivalent onXXX prop with kebap-cased event', () => {
+  test('should not warn if has equivalent onXXX prop with kebab-cased event', () => {
     const Foo = defineComponent({
       props: ['onFooBar'],
       emits: [],
       render() {},
       created() {
-        // @ts-expect-error `$emit` argument type is inferred from empty component `emits` and thus is `never` here
+        // @ts-expect-error
         this.$emit('foo-bar')
-      }
+      },
     })
     render(h(Foo), nodeOps.createElement('div'))
     expect(
-      `Component emitted event "foo-bar" but didn't declare a "onFooBar" prop or a "foo-bar" emit option.`,
+      `Component emitted event "foo-bar" but it is neither declared`,
     ).not.toHaveBeenWarned()
   })
 
