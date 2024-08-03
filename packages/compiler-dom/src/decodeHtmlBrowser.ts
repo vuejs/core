@@ -8,9 +8,9 @@ export function decodeHtmlBrowser(raw: string, asAttr = false): string {
   }
   if (asAttr) {
     decoder.innerHTML = `<div foo="${raw.replace(/"/g, '&quot;')}">`
-    return decoder.children[0].getAttribute('foo') as string
+    return decoder.children[0].getAttribute('foo')!
   } else {
     decoder.innerHTML = raw
-    return decoder.textContent as string
+    return decoder.textContent!
   }
 }

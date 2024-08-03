@@ -1,6 +1,5 @@
-import { vi } from 'vitest'
 import { patchProp } from '../src/patchProp'
-import { render, h } from '../src'
+import { h, nextTick, ref, render } from '../src'
 
 describe('runtime-dom: props patching', () => {
   test('basic', () => {
@@ -107,7 +106,7 @@ describe('runtime-dom: props patching', () => {
     const fn = vi.fn()
     const comp = {
       render: () => 'foo',
-      unmounted: fn
+      unmounted: fn,
     }
     const root = document.createElement('div')
     render(h('div', null, [h(comp)]), root)
@@ -123,7 +122,7 @@ describe('runtime-dom: props patching', () => {
     const fn = vi.fn()
     const comp = {
       render: () => 'foo',
-      unmounted: fn
+      unmounted: fn,
     }
     const root = document.createElement('div')
     render(h('div', null, [h(comp)]), root)
@@ -134,11 +133,36 @@ describe('runtime-dom: props patching', () => {
     expect(fn).toHaveBeenCalled()
   })
 
+  test('patch innerHTML porp', async () => {
+    const root = document.createElement('div')
+    const state = ref(false)
+    const Comp = {
+      render: () => {
+        if (state.value) {
+          return h('div', [h('del', null, 'baz')])
+        } else {
+          return h('div', { innerHTML: 'baz' })
+        }
+      },
+    }
+    render(h(Comp), root)
+    expect(root.innerHTML).toBe(`<div>baz</div>`)
+    state.value = true
+    await nextTick()
+    expect(root.innerHTML).toBe(`<div><del>baz</del></div>`)
+  })
+
+  test('patch innerHTML porp w/ undefined value', async () => {
+    const root = document.createElement('div')
+    render(h('div', { innerHTML: undefined }), root)
+    expect(root.innerHTML).toBe(`<div></div>`)
+  })
+
   test('textContent unmount prev children', () => {
     const fn = vi.fn()
     const comp = {
       render: () => 'foo',
-      unmounted: fn
+      unmounted: fn,
     }
     const root = document.createElement('div')
     render(h('div', null, [h(comp)]), root)
@@ -170,7 +194,7 @@ describe('runtime-dom: props patching', () => {
     Object.defineProperty(el, 'someProp', {
       set() {
         throw new TypeError('Invalid type')
-      }
+      },
     })
     patchProp(el, 'someProp', null, 'foo')
 
@@ -266,7 +290,7 @@ describe('runtime-dom: props patching', () => {
     patchProp(el, 'willValidate', true, null)
     expect(el.willValidate).toBe(true)
     expect(
-      'Failed setting prop "willValidate" on <select>'
+      'Failed setting prop "willValidate" on <select>',
     ).toHaveBeenWarnedLast()
   })
 
@@ -275,9 +299,9 @@ describe('runtime-dom: props patching', () => {
     render(
       h('select', { value: 'foo' }, [
         h('option', { value: 'foo' }, 'foo'),
-        h('option', { value: 'bar' }, 'bar')
+        h('option', { value: 'bar' }, 'bar'),
       ]),
-      root
+      root,
     )
     const el = root.children[0] as HTMLSelectElement
     expect(el.value).toBe('foo')
@@ -285,11 +309,39 @@ describe('runtime-dom: props patching', () => {
     render(
       h('select', { value: 'baz' }, [
         h('option', { value: 'foo' }, 'foo'),
-        h('option', { value: 'baz' }, 'baz')
+        h('option', { value: 'baz' }, 'baz'),
       ]),
-      root
+      root,
     )
     expect(el.value).toBe('baz')
+  })
+
+  test('init empty value for option', () => {
+    const root = document.createElement('div')
+    render(
+      h('select', { value: 'foo' }, [h('option', { value: '' }, 'foo')]),
+      root,
+    )
+    const select = root.children[0] as HTMLSelectElement
+    const option = select.children[0] as HTMLOptionElement
+    expect(select.value).toBe('')
+    expect(option.value).toBe('')
+  })
+
+  // #8780
+  test('embedded tag with width and height', () => {
+    // Width and height of some embedded element such as img、video、source、canvas
+    // must be set as attribute
+    const el = document.createElement('img')
+    patchProp(el, 'width', null, '24px')
+    expect(el.getAttribute('width')).toBe('24px')
+  })
+
+  // # 9762 should fallthrough to `key in el` logic for non embedded tags
+  test('width and height on custom elements', () => {
+    const el = document.createElement('foobar')
+    patchProp(el, 'width', null, '24px')
+    expect(el.getAttribute('width')).toBe('24px')
   })
 
   test('translate attribute', () => {

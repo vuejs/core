@@ -1,17 +1,19 @@
-import { vi } from 'vitest'
 import {
+  type DirectiveBinding,
+  type DirectiveHook,
+  type VNode,
+  defineComponent,
   h,
-  withDirectives,
+  nextTick,
+  nodeOps,
   ref,
   render,
-  nodeOps,
-  DirectiveHook,
-  VNode,
-  DirectiveBinding,
-  nextTick,
-  defineComponent
+  withDirectives,
 } from '@vue/runtime-test'
-import { currentInstance, ComponentInternalInstance } from '../src/component'
+import {
+  type ComponentInternalInstance,
+  currentInstance,
+} from '../src/component'
 
 describe('directives', () => {
   it('should work', async () => {
@@ -106,7 +108,7 @@ describe('directives', () => {
       beforeUpdate,
       updated,
       beforeUnmount,
-      unmounted
+      unmounted,
     }
 
     let _instance: ComponentInternalInstance | null = null
@@ -126,11 +128,11 @@ describe('directives', () => {
             // argument
             'foo',
             // modifiers
-            { ok: true }
-          ]
+            { ok: true },
+          ],
         ])
         return _vnode
-      }
+      },
     }
 
     const root = nodeOps.createElement('div')
@@ -186,11 +188,11 @@ describe('directives', () => {
             // argument
             'foo',
             // modifiers
-            { ok: true }
-          ]
+            { ok: true },
+          ],
         ])
         return _vnode
-      }
+      },
     }
 
     const root = nodeOps.createElement('div')
@@ -295,7 +297,7 @@ describe('directives', () => {
       beforeUpdate,
       updated,
       beforeUnmount,
-      unmounted
+      unmounted,
     }
 
     let _instance: ComponentInternalInstance | null = null
@@ -321,10 +323,10 @@ describe('directives', () => {
             // argument
             'foo',
             // modifiers
-            { ok: true }
-          ]
+            { ok: true },
+          ],
         ])
-      }
+      },
     }
 
     const root = nodeOps.createElement('div')
@@ -346,22 +348,22 @@ describe('directives', () => {
   // #2298
   it('directive merging on component root', () => {
     const d1 = {
-      mounted: vi.fn()
+      mounted: vi.fn(),
     }
     const d2 = {
-      mounted: vi.fn()
+      mounted: vi.fn(),
     }
     const Comp = {
       render() {
         return withDirectives(h('div'), [[d2]])
-      }
+      },
     }
 
     const App = {
       name: 'App',
       render() {
         return h('div', [withDirectives(h(Comp), [[d1]])])
-      }
+      },
     }
 
     const root = nodeOps.createElement('div')
@@ -380,11 +382,11 @@ describe('directives', () => {
         return withDirectives(h('p', text.value), [
           [
             {
-              beforeUpdate
-            }
-          ]
+              beforeUpdate,
+            },
+          ],
         ])
-      }
+      },
     }
 
     const root = nodeOps.createElement('div')
@@ -403,7 +405,7 @@ describe('directives', () => {
     const App = defineComponent({
       setup(_, { expose }) {
         expose({
-          msg: 'Test'
+          msg: 'Test',
         })
 
         return () =>
@@ -412,11 +414,11 @@ describe('directives', () => {
               {
                 mounted(el, { instance }) {
                   res = (instance as any).msg as string
-                }
-              }
-            ]
+                },
+              },
+            ],
           ])
-      }
+      },
     })
     const root = nodeOps.createElement('div')
     render(h(App), root)
@@ -425,14 +427,14 @@ describe('directives', () => {
 
   test('should not throw with unknown directive', async () => {
     const d1 = {
-      mounted: vi.fn()
+      mounted: vi.fn(),
     }
     const App = {
       name: 'App',
       render() {
         // simulates the code generated on an unknown directive
         return withDirectives(h('div'), [[undefined], [d1]])
-      }
+      },
     }
 
     const root = nodeOps.createElement('div')
