@@ -19,12 +19,12 @@ export function render(_ctx, _cache) {
 }"
 `;
 
-exports[`compiler: codegen > CacheExpression w/ isVNode: true 1`] = `
+exports[`compiler: codegen > CacheExpression w/ isVOnce: true 1`] = `
 "
 export function render(_ctx, _cache) {
   return _cache[1] || (
     _setBlockTracking(-1),
-    _cache[1] = foo,
+    (_cache[1] = foo).cacheIndex = 1,
     _setBlockTracking(1),
     _cache[1]
   )
@@ -54,7 +54,7 @@ return function render(_ctx, _cache) {
       [foo + bar]: bar
     }, [
       _createElementVNode("p", { "some-key": "foo" })
-    ], 16)
+    ], 16 /* FULL_PROPS */)
   }
 }"
 `;
@@ -98,7 +98,7 @@ exports[`compiler: codegen > forNode 1`] = `
 "
 return function render(_ctx, _cache) {
   with (_ctx) {
-    return (_openBlock(true), _createElementBlock(_Fragment, null, _renderList(), 1))
+    return (_openBlock(true), _createElementBlock(_Fragment, null, _renderList(), 1 /* TEXT */))
   }
 }"
 `;

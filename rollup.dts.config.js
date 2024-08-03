@@ -7,7 +7,7 @@ import dts from 'rollup-plugin-dts'
 
 if (!existsSync('temp/packages')) {
   console.warn(
-    'no temp dts files found. run `tsc -p tsconfig.build.json` first.',
+    'no temp dts files found. run `tsc -p tsconfig.build-browser.json && tsc -p tsconfig.build-node.json` first.',
   )
   process.exit(1)
 }

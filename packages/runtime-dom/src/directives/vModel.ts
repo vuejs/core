@@ -82,13 +82,18 @@ export const vModelText: ModelDirective<
   mounted(el, { value }) {
     el.value = value == null ? '' : value
   },
-  beforeUpdate(el, { value, modifiers: { lazy, trim, number } }, vnode) {
+  beforeUpdate(
+    el,
+    { value, oldValue, modifiers: { lazy, trim, number } },
+    vnode,
+  ) {
     el[assignKey] = getModelAssigner(vnode)
     // avoid clearing unresolved text. #2302
     if ((el as any).composing) return
-
     const elValue =
-      number || el.type === 'number' ? looseToNumber(el.value) : el.value
+      (number || el.type === 'number') && !/^0\d/.test(el.value)
+        ? looseToNumber(el.value)
+        : el.value
     const newValue = value == null ? '' : value
 
     if (elValue === newValue) {
@@ -96,7 +101,8 @@ export const vModelText: ModelDirective<
     }
 
     if (document.activeElement === el && el.type !== 'range') {
-      if (lazy) {
+      // #8546
+      if (lazy && value === oldValue) {
         return
       }
       if (trim && el.value.trim() === newValue) {
@@ -242,9 +248,7 @@ function setSelected(el: HTMLSelectElement, value: any, number: boolean) {
         const optionType = typeof optionValue
         // fast path for string / number values
         if (optionType === 'string' || optionType === 'number') {
-          option.selected = value.includes(
-            number ? looseToNumber(optionValue) : optionValue,
-          )
+          option.selected = value.some(v => String(v) === String(optionValue))
         } else {
           option.selected = looseIndexOf(value, optionValue) > -1
         }

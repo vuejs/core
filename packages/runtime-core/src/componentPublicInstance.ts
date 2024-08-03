@@ -1,11 +1,12 @@
 import {
   type ComponentInternalInstance,
   type Data,
-  getExposeProxy,
+  getComponentPublicInstance,
   isStatefulComponent,
 } from './component'
 import { nextTick, queueJob } from './scheduler'
 import {
+  type OnCleanup,
   type WatchOptions,
   type WatchStopHandle,
   instanceWatch,
@@ -23,6 +24,7 @@ import {
   isString,
 } from '@vue/shared'
 import {
+  ReactiveFlags,
   type ShallowUnwrapRef,
   TrackOpTypes,
   type UnwrapNestedRefs,
@@ -228,8 +230,8 @@ export type ComponentPublicInstance<
   $watch<T extends string | ((...args: any) => any)>(
     source: T,
     cb: T extends (...args: any) => infer R
-      ? (...args: [R, R]) => any
-      : (...args: any) => any,
+      ? (...args: [R, R, OnCleanup]) => any
+      : (...args: [any, any, OnCleanup]) => any,
     options?: WatchOptions,
   ): WatchStopHandle
 } & IfAny<P, P, Omit<P, keyof ShallowUnwrapRef<B>>> &
@@ -254,7 +256,7 @@ const getPublicInstance = (
   i: ComponentInternalInstance | null,
 ): ComponentPublicInstance | ComponentInternalInstance['exposed'] | null => {
   if (!i) return null
-  if (isStatefulComponent(i)) return getExposeProxy(i) || i.proxy
+  if (isStatefulComponent(i)) return getComponentPublicInstance(i)
   return getPublicInstance(i.parent)
 }
 
@@ -307,6 +309,10 @@ const hasSetupBinding = (state: Data, key: string) =>
 
 export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
   get({ _: instance }: ComponentRenderContext, key: string) {
+    if (key === ReactiveFlags.SKIP) {
+      return true
+    }
+
     const { ctx, setupState, data, props, accessCache, type, appContext } =
       instance
 
@@ -363,9 +369,10 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
     // public $xxx properties
     if (publicGetter) {
       if (key === '$attrs') {
-        track(instance, TrackOpTypes.GET, key)
+        track(instance.attrs, TrackOpTypes.GET, '')
         __DEV__ && markAttrsAccessed()
       } else if (__DEV__ && key === '$slots') {
+        // for HMR only
         track(instance, TrackOpTypes.GET, key)
       }
       return publicGetter(instance)
@@ -390,9 +397,7 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
           return desc.get.call(instance.proxy)
         } else {
           const val = globalProperties[key]
-          return isFunction(val)
-            ? Object.assign(val.bind(instance.proxy), val)
-            : val
+          return isFunction(val) ? extend(val.bind(instance.proxy), val) : val
         }
       } else {
         return globalProperties[key]

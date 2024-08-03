@@ -9,11 +9,11 @@ import pico from 'picocolors'
 import commonJS from '@rollup/plugin-commonjs'
 import polyfillNode from 'rollup-plugin-polyfill-node'
 import { nodeResolve } from '@rollup/plugin-node-resolve'
-import terser from '@rollup/plugin-terser'
 import esbuild from 'rollup-plugin-esbuild'
 import alias from '@rollup/plugin-alias'
 import { entries } from './scripts/aliases.js'
 import { inlineEnums } from './scripts/inline-enums.js'
+import { minify as minifySwc } from '@swc/core'
 
 /**
  * @template T
@@ -331,7 +331,7 @@ function createConfig(format, output, plugins = []) {
         tsconfig: path.resolve(__dirname, 'tsconfig.json'),
         sourceMap: output.sourcemap,
         minify: false,
-        target: isServerRenderer || isCJSBuild ? 'es2019' : 'es2015',
+        target: isServerRenderer || isCJSBuild ? 'es2019' : 'es2016',
         define: resolveDefine(),
       }),
       ...resolveNodePlugins(),
@@ -364,14 +364,29 @@ function createMinifiedConfig(/** @type {PackageFormat} */ format) {
       format: outputConfigs[format].format,
     },
     [
-      terser({
-        module: /^esm/.test(format),
-        compress: {
-          ecma: 2015,
-          pure_getters: true,
+      {
+        name: 'swc-minify',
+
+        async renderChunk(
+          contents,
+          _,
+          { format, sourcemap, sourcemapExcludeSources },
+        ) {
+          const { code, map } = await minifySwc(contents, {
+            module: format === 'es',
+            compress: {
+              ecma: 2016,
+              pure_getters: true,
+            },
+            safari10: true,
+            mangle: true,
+            sourceMap: !!sourcemap,
+            inlineSourcesContent: !sourcemapExcludeSources,
+          })
+
+          return { code, map: map || null }
         },
-        safari10: true,
-      }),
+      },
     ],
   )
 }

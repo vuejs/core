@@ -256,7 +256,13 @@ describe('vModel', () => {
   it('should support modifiers', async () => {
     const component = defineComponent({
       data() {
-        return { number: null, trim: null, lazy: null, trimNumber: null }
+        return {
+          number: null,
+          trim: null,
+          lazy: null,
+          trimNumber: null,
+          trimLazy: null,
+        }
       },
       render() {
         return [
@@ -282,6 +288,19 @@ describe('vModel', () => {
             this.trim,
             {
               trim: true,
+            },
+          ),
+          withVModel(
+            h('input', {
+              class: 'trim-lazy',
+              'onUpdate:modelValue': (val: any) => {
+                this.trimLazy = val
+              },
+            }),
+            this.trim,
+            {
+              trim: true,
+              lazy: true,
             },
           ),
           withVModel(
@@ -317,6 +336,7 @@ describe('vModel', () => {
     const number = root.querySelector('.number')
     const trim = root.querySelector('.trim')
     const trimNumber = root.querySelector('.trim-number')
+    const trimLazy = root.querySelector('.trim-lazy')
     const lazy = root.querySelector('.lazy')
     const data = root._vnode.component.data
 
@@ -339,6 +359,11 @@ describe('vModel', () => {
     triggerEvent('input', trimNumber)
     await nextTick()
     expect(data.trimNumber).toEqual(1.2)
+
+    trimLazy.value = '   ddd    '
+    triggerEvent('change', trimLazy)
+    await nextTick()
+    expect(data.trimLazy).toEqual('ddd')
 
     lazy.value = 'foo'
     triggerEvent('change', lazy)
@@ -1236,5 +1261,74 @@ describe('vModel', () => {
     triggerEvent('compositionend', input)
     await nextTick()
     expect(data.value).toEqual('使用拼音输入')
+  })
+
+  it('multiple select (model is number, option value is string)', async () => {
+    const component = defineComponent({
+      data() {
+        return {
+          value: [1, 2],
+        }
+      },
+      render() {
+        return [
+          withVModel(
+            h(
+              'select',
+              {
+                multiple: true,
+                'onUpdate:modelValue': setValue.bind(this),
+              },
+              [h('option', { value: '1' }), h('option', { value: '2' })],
+            ),
+            this.value,
+          ),
+        ]
+      },
+    })
+    render(h(component), root)
+
+    await nextTick()
+    const [foo, bar] = root.querySelectorAll('option')
+
+    expect(foo.selected).toEqual(true)
+    expect(bar.selected).toEqual(true)
+  })
+
+  // #10503
+  test('equal value with a leading 0 should trigger update.', async () => {
+    const setNum = function (this: any, value: any) {
+      this.num = value
+    }
+    const component = defineComponent({
+      data() {
+        return { num: 0 }
+      },
+      render() {
+        return [
+          withVModel(
+            h('input', {
+              id: 'input_num1',
+              type: 'number',
+              'onUpdate:modelValue': setNum.bind(this),
+            }),
+            this.num,
+          ),
+        ]
+      },
+    })
+
+    render(h(component), root)
+    const data = root._vnode.component.data
+
+    const inputNum1 = root.querySelector('#input_num1')!
+    expect(inputNum1.value).toBe('0')
+
+    inputNum1.value = '01'
+    triggerEvent('input', inputNum1)
+    await nextTick()
+    expect(data.num).toBe(1)
+
+    expect(inputNum1.value).toBe('1')
   })
 })

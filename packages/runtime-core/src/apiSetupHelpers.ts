@@ -116,7 +116,7 @@ type BooleanKey<T, K extends keyof T = keyof T> = K extends any
  * const emit = defineEmits<{
  *   // <eventName>: <expected arguments>
  *   change: []
- *   update: [value: string] // named tuple syntax
+ *   update: [value: number] // named tuple syntax
  * }>()
  *
  * emit('change')
@@ -215,7 +215,7 @@ export function defineSlots<
   return null as any
 }
 
-export type ModelRef<T, M extends string | number | symbol = string> = Ref<T> &
+export type ModelRef<T, M extends PropertyKey = string> = Ref<T> &
   [ModelRef<T, M>, Record<M, true | undefined>]
 
 export type DefineModelOptions<T = any> = {
@@ -233,7 +233,7 @@ export type DefineModelOptions<T = any> = {
  * Otherwise the prop name will default to "modelValue". In both cases, you
  * can also pass an additional object which will be used as the prop's options.
  *
- * The the returned ref behaves differently depending on whether the parent
+ * The returned ref behaves differently depending on whether the parent
  * provided the corresponding v-model props or not:
  * - If yes, the returned ref's value will always be in sync with the parent
  *   prop.
@@ -256,24 +256,24 @@ export type DefineModelOptions<T = any> = {
  * const count = defineModel<number>('count', { default: 0 })
  * ```
  */
-export function defineModel<T, M extends string | number | symbol = string>(
+export function defineModel<T, M extends PropertyKey = string>(
   options: { required: true } & PropOptions<T> & DefineModelOptions<T>,
 ): ModelRef<T, M>
-export function defineModel<T, M extends string | number | symbol = string>(
+export function defineModel<T, M extends PropertyKey = string>(
   options: { default: any } & PropOptions<T> & DefineModelOptions<T>,
 ): ModelRef<T, M>
-export function defineModel<T, M extends string | number | symbol = string>(
+export function defineModel<T, M extends PropertyKey = string>(
   options?: PropOptions<T> & DefineModelOptions<T>,
 ): ModelRef<T | undefined, M>
-export function defineModel<T, M extends string | number | symbol = string>(
+export function defineModel<T, M extends PropertyKey = string>(
   name: string,
   options: { required: true } & PropOptions<T> & DefineModelOptions<T>,
 ): ModelRef<T, M>
-export function defineModel<T, M extends string | number | symbol = string>(
+export function defineModel<T, M extends PropertyKey = string>(
   name: string,
   options: { default: any } & PropOptions<T> & DefineModelOptions<T>,
 ): ModelRef<T, M>
-export function defineModel<T, M extends string | number | symbol = string>(
+export function defineModel<T, M extends PropertyKey = string>(
   name: string,
   options?: PropOptions<T> & DefineModelOptions<T>,
 ): ModelRef<T | undefined, M>
@@ -284,6 +284,9 @@ export function defineModel(): any {
 }
 
 type NotUndefined<T> = T extends undefined ? never : T
+type MappedOmit<T, K extends keyof any> = {
+  [P in keyof T as P extends K ? never : P]: T[P]
+}
 
 type InferDefaults<T> = {
   [K in keyof T]?: InferDefault<T, T[K]>
@@ -299,7 +302,7 @@ type PropsWithDefaults<
   T,
   Defaults extends InferDefaults<T>,
   BKeys extends keyof T,
-> = Readonly<Omit<T, keyof Defaults>> & {
+> = Readonly<MappedOmit<T, keyof Defaults>> & {
   readonly [K in keyof Defaults]-?: K extends keyof T
     ? Defaults[K] extends undefined
       ? T[K]

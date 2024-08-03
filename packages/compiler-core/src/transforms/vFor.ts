@@ -46,7 +46,8 @@ import {
 } from '../runtimeHelpers'
 import { processExpression } from './transformExpression'
 import { validateBrowserExpression } from '../validateExpression'
-import { PatchFlagNames, PatchFlags } from '@vue/shared'
+import { PatchFlags } from '@vue/shared'
+import { transformBindShorthand } from './vBind'
 
 export const transformFor = createStructuralDirectiveTransform(
   'for',
@@ -60,13 +61,20 @@ export const transformFor = createStructuralDirectiveTransform(
       ]) as ForRenderListExpression
       const isTemplate = isTemplateNode(node)
       const memo = findDir(node, 'memo')
-      const keyProp = findProp(node, `key`)
+      const keyProp = findProp(node, `key`, false, true)
+      if (keyProp && keyProp.type === NodeTypes.DIRECTIVE && !keyProp.exp) {
+        // resolve :key shorthand #10882
+        transformBindShorthand(keyProp, context)
+      }
       const keyExp =
         keyProp &&
         (keyProp.type === NodeTypes.ATTRIBUTE
-          ? createSimpleExpression(keyProp.value!.content, true)
-          : keyProp.exp!)
-      const keyProperty = keyProp ? createObjectProperty(`key`, keyExp!) : null
+          ? keyProp.value
+            ? createSimpleExpression(keyProp.value.content, true)
+            : undefined
+          : keyProp.exp)
+      const keyProperty =
+        keyProp && keyExp ? createObjectProperty(`key`, keyExp) : null
 
       if (!__BROWSER__ && isTemplate) {
         // #2085 / #5288 process :key and v-memo expressions need to be
@@ -101,8 +109,7 @@ export const transformFor = createStructuralDirectiveTransform(
         helper(FRAGMENT),
         undefined,
         renderExp,
-        fragmentFlag +
-          (__DEV__ ? ` /* ${PatchFlagNames[fragmentFlag]} */` : ``),
+        fragmentFlag,
         undefined,
         undefined,
         true /* isBlock */,
@@ -161,10 +168,7 @@ export const transformFor = createStructuralDirectiveTransform(
             helper(FRAGMENT),
             keyProperty ? createObjectExpression([keyProperty]) : undefined,
             node.children,
-            PatchFlags.STABLE_FRAGMENT +
-              (__DEV__
-                ? ` /* ${PatchFlagNames[PatchFlags.STABLE_FRAGMENT]} */`
-                : ``),
+            PatchFlags.STABLE_FRAGMENT,
             undefined,
             undefined,
             true,

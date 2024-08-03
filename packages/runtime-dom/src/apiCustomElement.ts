@@ -1,6 +1,7 @@
 import {
   type ComponentInjectOptions,
   type ComponentInternalInstance,
+  type ComponentObjectPropsOptions,
   type ComponentOptions,
   type ComponentOptionsMixin,
   type ComponentOptionsWithArrayProps,
@@ -35,10 +36,16 @@ export type VueElementConstructor<P = {}> = {
 
 // overload 1: direct setup function
 export function defineCustomElement<Props, RawBindings = object>(
-  setup: (
-    props: Readonly<Props>,
-    ctx: SetupContext,
-  ) => RawBindings | RenderFunction,
+  setup: (props: Props, ctx: SetupContext) => RawBindings | RenderFunction,
+  options?: Pick<ComponentOptions, 'name' | 'inheritAttrs' | 'emits'> & {
+    props?: (keyof Props)[]
+  },
+): VueElementConstructor<Props>
+export function defineCustomElement<Props, RawBindings = object>(
+  setup: (props: Props, ctx: SetupContext) => RawBindings | RenderFunction,
+  options?: Pick<ComponentOptions, 'name' | 'inheritAttrs' | 'emits'> & {
+    props?: ComponentObjectPropsOptions<Props>
+  },
 ): VueElementConstructor<Props>
 
 // overload 2: object format with no props
@@ -143,9 +150,13 @@ export function defineCustomElement<P>(
 /*! #__NO_SIDE_EFFECTS__ */
 export function defineCustomElement(
   options: any,
+  extraOptions?: ComponentOptions,
+  /**
+   * @internal
+   */
   hydrate?: RootHydrateFunction,
 ): VueElementConstructor {
-  const Comp = defineComponent(options) as any
+  const Comp = defineComponent(options, extraOptions) as any
   class VueCustomElement extends VueElement {
     static def = Comp
     constructor(initialProps?: Record<string, any>) {
@@ -157,9 +168,12 @@ export function defineCustomElement(
 }
 
 /*! #__NO_SIDE_EFFECTS__ */
-export const defineSSRCustomElement = ((options: any) => {
+export const defineSSRCustomElement = ((
+  options: any,
+  extraOptions?: ComponentOptions,
+) => {
   // @ts-expect-error
-  return defineCustomElement(options, hydrate)
+  return defineCustomElement(options, extraOptions, hydrate)
 }) as typeof defineCustomElement
 
 const BaseClass = (
@@ -215,12 +229,12 @@ export class VueElement extends BaseClass {
 
   disconnectedCallback() {
     this._connected = false
-    if (this._ob) {
-      this._ob.disconnect()
-      this._ob = null
-    }
     nextTick(() => {
       if (!this._connected) {
+        if (this._ob) {
+          this._ob.disconnect()
+          this._ob = null
+        }
         render(null, this.shadowRoot!)
         this._instance = null
       }

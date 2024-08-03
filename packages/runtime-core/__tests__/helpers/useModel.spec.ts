@@ -1,6 +1,7 @@
 import {
   Fragment,
   type Ref,
+  type TestElement,
   createApp,
   createBlock,
   createElementBlock,
@@ -525,5 +526,135 @@ describe('useModel', () => {
     childMsg!.value = 'ughh'
     await nextTick()
     expect(msg.value).toBe('UGHH')
+  })
+
+  // #10279
+  test('force local update when setter formats value to the same value', async () => {
+    let childMsg: Ref<string>
+    let childModifiers: Record<string, true | undefined>
+
+    const compRender = vi.fn()
+    const parentRender = vi.fn()
+
+    const Comp = defineComponent({
+      props: ['msg', 'msgModifiers'],
+      emits: ['update:msg'],
+      setup(props) {
+        ;[childMsg, childModifiers] = useModel(props, 'msg', {
+          set(val) {
+            if (childModifiers.number) {
+              return val.replace(/\D+/g, '')
+            }
+          },
+        })
+        return () => {
+          compRender()
+          return h('input', {
+            // simulate how v-model works
+            onVnodeBeforeMount(vnode) {
+              ;(vnode.el as TestElement).props.value = childMsg.value
+            },
+            onVnodeBeforeUpdate(vnode) {
+              ;(vnode.el as TestElement).props.value = childMsg.value
+            },
+            onInput(value: any) {
+              childMsg.value = value
+            },
+          })
+        }
+      },
+    })
+
+    const msg = ref(1)
+    const Parent = defineComponent({
+      setup() {
+        return () => {
+          parentRender()
+          return h(Comp, {
+            msg: msg.value,
+            msgModifiers: { number: true },
+            'onUpdate:msg': val => {
+              msg.value = val
+            },
+          })
+        }
+      },
+    })
+
+    const root = nodeOps.createElement('div')
+    render(h(Parent), root)
+
+    expect(parentRender).toHaveBeenCalledTimes(1)
+    expect(compRender).toHaveBeenCalledTimes(1)
+    expect(serializeInner(root)).toBe('<input value=1></input>')
+
+    const input = root.children[0] as TestElement
+
+    // simulate v-model update
+    input.props.onInput((input.props.value = '2'))
+    await nextTick()
+    expect(msg.value).toBe(2)
+    expect(parentRender).toHaveBeenCalledTimes(2)
+    expect(compRender).toHaveBeenCalledTimes(2)
+    expect(serializeInner(root)).toBe('<input value=2></input>')
+
+    input.props.onInput((input.props.value = '2a'))
+    await nextTick()
+    expect(msg.value).toBe(2)
+    expect(parentRender).toHaveBeenCalledTimes(2)
+    // should force local update
+    expect(compRender).toHaveBeenCalledTimes(3)
+    expect(serializeInner(root)).toBe('<input value=2></input>')
+
+    input.props.onInput((input.props.value = '2a'))
+    await nextTick()
+    expect(parentRender).toHaveBeenCalledTimes(2)
+    // should not force local update if set to the same value
+    expect(compRender).toHaveBeenCalledTimes(3)
+  })
+
+  test('set no change value', async () => {
+    let changeChildMsg!: (val: string) => void
+
+    const setValue = vi.fn()
+    const Comp = defineComponent({
+      props: ['msg'],
+      emits: ['update:msg'],
+      setup(props) {
+        const childMsg = useModel(props, 'msg')
+        changeChildMsg = (val: string) => (childMsg.value = val)
+        return () => {
+          return childMsg.value
+        }
+      },
+    })
+
+    const defaultVal = 'defaultVal'
+    const msg = ref(defaultVal)
+    const Parent = defineComponent({
+      setup() {
+        return () =>
+          h(Comp, {
+            msg: msg.value,
+            'onUpdate:msg': val => {
+              msg.value = val
+              setValue()
+            },
+          })
+      },
+    })
+
+    const root = nodeOps.createElement('div')
+    render(h(Parent), root)
+
+    expect(setValue).toBeCalledTimes(0)
+
+    changeChildMsg(defaultVal)
+    expect(setValue).toBeCalledTimes(0)
+
+    changeChildMsg('changed')
+    changeChildMsg(defaultVal)
+    expect(setValue).toBeCalledTimes(2)
+    expect(msg.value).toBe(defaultVal)
   })
 })

@@ -42,7 +42,7 @@ export function renderList<T>(
   source: T,
   renderItem: <K extends keyof T>(
     value: T[K],
-    key: K,
+    key: string,
     index: number,
   ) => VNodeChild,
 ): VNodeChild[]
