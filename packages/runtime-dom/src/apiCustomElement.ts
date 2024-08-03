@@ -24,6 +24,7 @@ import {
   type VNodeProps,
   createVNode,
   defineComponent,
+  getCurrentInstance,
   nextTick,
   warn,
 } from '@vue/runtime-core'
@@ -191,7 +192,10 @@ export class VueElement extends BaseClass {
   private _numberProps: Record<string, true> | null = null
   private _styles?: HTMLStyleElement[]
   private _ob?: MutationObserver | null = null
-  private _root: Element | ShadowRoot
+  /**
+   * @internal
+   */
+  public _root: Element | ShadowRoot
   private _slots?: Record<string, Node[]>
 
   constructor(
@@ -247,6 +251,7 @@ export class VueElement extends BaseClass {
           this._ob = null
         }
         render(null, this._root)
+        this._instance!.isCE = undefined
         this._instance = null
       }
     })
@@ -395,7 +400,7 @@ export class VueElement extends BaseClass {
     if (!this._instance) {
       vnode.ce = instance => {
         this._instance = instance
-        instance.isCE = true
+        instance.isCE = this
         // HMR
         if (__DEV__) {
           instance.ceReload = newStyles => {
@@ -507,4 +512,26 @@ export class VueElement extends BaseClass {
       parent.removeChild(o)
     }
   }
+}
+
+/**
+ * Retrieve the shadowRoot of the current custom element. Only usable in setup()
+ * of a `defineCustomElement` component.
+ */
+export function useShadowRoot(): ShadowRoot | null {
+  const instance = getCurrentInstance()
+  const el = instance && instance.isCE
+  if (el) {
+    return el.shadowRoot
+  } else if (__DEV__) {
+    if (!instance) {
+      warn(`useCustomElementRoot called without an active component instance.`)
+    } else {
+      warn(
+        `useCustomElementRoot can only be used in components defined via ` +
+          `defineCustomElement.`,
+      )
+    }
+  }
+  return null
 }

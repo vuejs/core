@@ -11,6 +11,7 @@ import {
   ref,
   render,
   renderSlot,
+  useShadowRoot,
 } from '../src'
 
 describe('defineCustomElement', () => {
@@ -859,6 +860,25 @@ describe('defineCustomElement', () => {
       expect(e.innerHTML).toBe(
         `<span>default</span>text` + `<!---->` + `<div>fallback</div>`,
       )
+    })
+  })
+
+  describe('useCustomElementRoot', () => {
+    test('should work for style injection', () => {
+      const Foo = defineCustomElement({
+        setup() {
+          const root = useShadowRoot()!
+          const style = document.createElement('style')
+          style.innerHTML = `div { color: red; }`
+          root.appendChild(style)
+          return () => h('div', 'hello')
+        },
+      })
+      customElements.define('my-el', Foo)
+      container.innerHTML = `<my-el></my-el>`
+      const el = container.childNodes[0] as VueElement
+      const style = el.shadowRoot?.querySelector('style')!
+      expect(style.textContent).toBe(`div { color: red; }`)
     })
   })
 })

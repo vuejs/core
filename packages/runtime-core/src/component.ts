@@ -417,7 +417,7 @@ export interface ComponentInternalInstance {
    * is custom element?
    * @internal
    */
-  isCE?: boolean
+  isCE?: Element
   /**
    * custom element specific HMR method
    * @internal
