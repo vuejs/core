@@ -1,0 +1,14 @@
+{
+  "compilerOptions": {
+    "baseUrl": ".",
+    "outDir": "dist",
+    "jsx": "preserve",
+    "module": "esnext",
+    "strict": true,
+    "moduleResolution": "Bundler",
+    "lib": ["esnext", "dom"],
+    "declaration": true,
+    "emitDeclarationOnly": true
+  },
+  "include": ["./src"]
+}

@@ -28,6 +28,7 @@ import {
   compatModelEmit,
   compatModelEventPrefix,
 } from './compat/componentVModel'
+import { getModelModifiers } from './helpers/useModel'
 
 export type ObjectEmitsOptions = Record<
   string,
@@ -54,28 +55,30 @@ export type EmitsToProps<T extends EmitsOptions> = T extends string[]
       }
     : {}
 
-export type ShortEmitsToObject<E> = E extends Record<string, any[]>
-  ? {
-      [K in keyof E]: (...args: E[K]) => any
-    }
-  : E
+export type ShortEmitsToObject<E> =
+  E extends Record<string, any[]>
+    ? {
+        [K in keyof E]: (...args: E[K]) => any
+      }
+    : E
 
 export type EmitFn<
   Options = ObjectEmitsOptions,
   Event extends keyof Options = keyof Options,
-> = Options extends Array<infer V>
-  ? (event: V, ...args: any[]) => void
-  : {} extends Options // if the emit is empty object (usually the default value for emit) should be converted to function
-    ? (event: string, ...args: any[]) => void
-    : UnionToIntersection<
-        {
-          [key in Event]: Options[key] extends (...args: infer Args) => any
-            ? (event: key, ...args: Args) => void
-            : Options[key] extends any[]
-              ? (event: key, ...args: Options[key]) => void
-              : (event: key, ...args: any[]) => void
-        }[Event]
-      >
+> =
+  Options extends Array<infer V>
+    ? (event: V, ...args: any[]) => void
+    : {} extends Options // if the emit is empty object (usually the default value for emit) should be converted to function
+      ? (event: string, ...args: any[]) => void
+      : UnionToIntersection<
+          {
+            [key in Event]: Options[key] extends (...args: infer Args) => any
+              ? (event: key, ...args: Args) => void
+              : Options[key] extends any[]
+                ? (event: key, ...args: Options[key]) => void
+                : (event: key, ...args: any[]) => void
+          }[Event]
+        >
 
 export function emit(
   instance: ComponentInternalInstance,
@@ -123,16 +126,12 @@ export function emit(
   const isModelListener = event.startsWith('update:')
 
   // for v-model update:xxx events, apply modifiers on args
-  const modelArg = isModelListener && event.slice(7)
-  if (modelArg && modelArg in props) {
-    const modifiersKey = `${
-      modelArg === 'modelValue' ? 'model' : modelArg
-    }Modifiers`
-    const { number, trim } = props[modifiersKey] || EMPTY_OBJ
-    if (trim) {
+  const modifiers = isModelListener && getModelModifiers(props, event.slice(7))
+  if (modifiers) {
+    if (modifiers.trim) {
       args = rawArgs.map(a => (isString(a) ? a.trim() : a))
     }
-    if (number) {
+    if (modifiers.number) {
       args = rawArgs.map(looseToNumber)
     }
   }

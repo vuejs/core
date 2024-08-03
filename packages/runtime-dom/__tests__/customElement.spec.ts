@@ -2,6 +2,7 @@ import {
   type Ref,
   type Ref,
   type VueElement,
+  createApp,
   defineAsyncComponent,
   defineComponent,
   defineCustomElement,
@@ -10,6 +11,7 @@ import {
   nextTick,
   provide,
   ref,
+  render,
   renderSlot,
 } from '../src'
 
@@ -62,6 +64,54 @@ describe('defineCustomElement', () => {
       expect(e.shadowRoot!.innerHTML).toBe('')
     })
 
+    // #10610
+    test('When elements move, avoid prematurely disconnecting MutationObserver', async () => {
+      const CustomInput = defineCustomElement({
+        props: ['value'],
+        emits: ['update'],
+        setup(props, { emit }) {
+          return () =>
+            h('input', {
+              type: 'number',
+              value: props.value,
+              onInput: (e: InputEvent) => {
+                const num = (e.target! as HTMLInputElement).valueAsNumber
+                emit('update', Number.isNaN(num) ? null : num)
+              },
+            })
+        },
+      })
+      customElements.define('my-el-input', CustomInput)
+      const num = ref('12')
+      const containerComp = defineComponent({
+        setup() {
+          return () => {
+            return h('div', [
+              h('my-el-input', {
+                value: num.value,
+                onUpdate: ($event: CustomEvent) => {
+                  num.value = $event.detail[0]
+                },
+              }),
+              h('div', { id: 'move' }),
+            ])
+          }
+        },
+      })
+      const app = createApp(containerComp)
+      app.mount(container)
+      const myInputEl = container.querySelector('my-el-input')!
+      const inputEl = myInputEl.shadowRoot!.querySelector('input')!
+      await nextTick()
+      expect(inputEl.value).toBe('12')
+      const moveEl = container.querySelector('#move')!
+      moveEl.append(myInputEl)
+      await nextTick()
+      myInputEl.removeAttribute('value')
+      await nextTick()
+      expect(inputEl.value).toBe('')
+    })
+
     test('should not unmount on move', async () => {
       container.innerHTML = `<div><my-element></my-element></div>`
       const e = container.childNodes[0].childNodes[0] as VueElement
@@ -90,7 +140,7 @@ describe('defineCustomElement', () => {
 
   describe('props', () => {
     const E = defineCustomElement({
-      props: ['foo', 'bar', 'bazQux'],
+      props: ['foo', 'bar', 'bazQux', 'value'],
       render() {
         return [
           h('div', null, this.foo),
@@ -99,6 +149,12 @@ describe('defineCustomElement', () => {
       },
     })
     customElements.define('my-el-props', E)
+
+    test('renders custom element w/ correct object prop value', () => {
+      render(h('my-el-props', { value: { x: 1 } }), container)
+      const el = container.children[0]
+      expect((el as any).value).toEqual({ x: 1 })
+    })
 
     test('props via attribute', async () => {
       // bazQux should map to `baz-qux` attribute
@@ -140,6 +196,12 @@ describe('defineCustomElement', () => {
       await nextTick()
       expect(e.shadowRoot!.innerHTML).toBe('<div></div><div>two</div>')
       expect(e.hasAttribute('foo')).toBe(false)
+
+      e.foo = undefined
+      await nextTick()
+      expect(e.shadowRoot!.innerHTML).toBe('<div></div><div>two</div>')
+      expect(e.hasAttribute('foo')).toBe(false)
+      expect(e.foo).toBe(undefined)
 
       e.bazQux = 'four'
       await nextTick()
@@ -284,6 +346,23 @@ describe('defineCustomElement', () => {
       el.maxAge = 50
       expect(el.maxAge).toBe(50)
       expect(el.shadowRoot.innerHTML).toBe('max age: 50/type: number')
+    })
+
+    test('support direct setup function syntax with extra options', () => {
+      const E = defineCustomElement(
+        props => {
+          return () => props.text
+        },
+        {
+          props: {
+            text: String,
+          },
+        },
+      )
+      customElements.define('my-el-setup-with-props', E)
+      container.innerHTML = `<my-el-setup-with-props text="hello"></my-el-setup-with-props>`
+      const e = container.childNodes[0] as VueElement
+      expect(e.shadowRoot!.innerHTML).toBe('hello')
     })
   })
 

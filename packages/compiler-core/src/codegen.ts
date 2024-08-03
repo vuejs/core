@@ -28,14 +28,20 @@ import {
   getVNodeHelper,
   locStub,
 } from './ast'
-import { type RawSourceMap, SourceMapGenerator } from 'source-map-js'
+import { SourceMapGenerator } from 'source-map-js'
 import {
   advancePositionWithMutation,
   assert,
   isSimpleIdentifier,
   toValidAssetId,
 } from './utils'
-import { isArray, isString, isSymbol } from '@vue/shared'
+import {
+  PatchFlagNames,
+  type PatchFlags,
+  isArray,
+  isString,
+  isSymbol,
+} from '@vue/shared'
 import {
   CREATE_COMMENT,
   CREATE_ELEMENT_VNODE,
@@ -55,6 +61,45 @@ import {
   helperNameMap,
 } from './runtimeHelpers'
 import type { ImportItem } from './transform'
+
+/**
+ * The `SourceMapGenerator` type from `source-map-js` is a bit incomplete as it
+ * misses `toJSON()`. We also need to add types for internal properties which we
+ * need to access for better performance.
+ *
+ * Since TS 5.3, dts generation starts to strangely include broken triple slash
+ * references for source-map-js, so we are inlining all source map related types
+ * here to to workaround that.
+ */
+export interface CodegenSourceMapGenerator {
+  setSourceContent(sourceFile: string, sourceContent: string): void
+  // SourceMapGenerator has this method but the types do not include it
+  toJSON(): RawSourceMap
+  _sources: Set<string>
+  _names: Set<string>
+  _mappings: {
+    add(mapping: MappingItem): void
+  }
+}
+
+export interface RawSourceMap {
+  file?: string
+  sourceRoot?: string
+  version: string
+  sources: string[]
+  names: string[]
+  sourcesContent?: string[]
+  mappings: string
+}
+
+interface MappingItem {
+  source: string
+  generatedLine: number
+  generatedColumn: number
+  originalLine: number
+  originalColumn: number
+  name: string | null
+}
 
 const PURE_ANNOTATION = `/*#__PURE__*/`
 
@@ -85,7 +130,7 @@ export interface CodegenContext
   offset: number
   indentLevel: number
   pure: boolean
-  map?: SourceMapGenerator
+  map?: CodegenSourceMapGenerator
   helper(key: symbol): string
   push(code: string, newlineIndex?: number, node?: CodegenNode): void
   indent(): void
@@ -218,14 +263,14 @@ function createCodegenContext(
       generatedLine: context.line,
       generatedColumn: context.column - 1,
       source: filename,
-      // @ts-expect-error it is possible to be null
       name,
     })
   }
 
   if (!__BROWSER__ && sourceMap) {
     // lazy require source-map implementation, only in non-browser builds
-    context.map = new SourceMapGenerator()
+    context.map =
+      new SourceMapGenerator() as unknown as CodegenSourceMapGenerator
     context.map.setSourceContent(filename, context.source)
     context.map._sources.add(filename)
   }
@@ -533,8 +578,9 @@ function genHoists(hoists: (JSChildNode | null)[], context: CodegenContext) {
 
   // generate inlined withScopeId helper
   if (genScopeId) {
+    const param = context.isTS ? '(n: any)' : 'n'
     push(
-      `const _withScopeId = n => (${helper(
+      `const _withScopeId = ${param} => (${helper(
         PUSH_SCOPE_ID,
       )}("${scopeId}"),n=n(),${helper(POP_SCOPE_ID)}(),n)`,
     )
@@ -803,6 +849,28 @@ function genVNodeCall(node: VNodeCall, context: CodegenContext) {
     disableTracking,
     isComponent,
   } = node
+
+  // add dev annotations to patch flags
+  let patchFlagString
+  if (patchFlag) {
+    if (__DEV__) {
+      if (patchFlag < 0) {
+        // special flags (negative and mutually exclusive)
+        patchFlagString = patchFlag + ` /* ${PatchFlagNames[patchFlag]} */`
+      } else {
+        // bitwise flags
+        const flagNames = Object.keys(PatchFlagNames)
+          .map(Number)
+          .filter(n => n > 0 && patchFlag & n)
+          .map(n => PatchFlagNames[n as PatchFlags])
+          .join(`, `)
+        patchFlagString = patchFlag + ` /* ${flagNames} */`
+      }
+    } else {
+      patchFlagString = String(patchFlag)
+    }
+  }
+
   if (directives) {
     push(helper(WITH_DIRECTIVES) + `(`)
   }
@@ -817,7 +885,7 @@ function genVNodeCall(node: VNodeCall, context: CodegenContext) {
     : getVNodeHelper(context.inSSR, isComponent)
   push(helper(callHelper) + `(`, NewlineType.None, node)
   genNodeList(
-    genNullableArgs([tag, props, children, patchFlag, dynamicProps]),
+    genNullableArgs([tag, props, children, patchFlagString, dynamicProps]),
     context,
   )
   push(`)`)
@@ -969,15 +1037,16 @@ function genConditionalExpression(
 function genCacheExpression(node: CacheExpression, context: CodegenContext) {
   const { push, helper, indent, deindent, newline } = context
   push(`_cache[${node.index}] || (`)
-  if (node.isVNode) {
+  if (node.isVOnce) {
     indent()
     push(`${helper(SET_BLOCK_TRACKING)}(-1),`)
     newline()
+    push(`(`)
   }
   push(`_cache[${node.index}] = `)
   genNode(node.value, context)
-  if (node.isVNode) {
-    push(`,`)
+  if (node.isVOnce) {
+    push(`).cacheIndex = ${node.index},`)
     newline()
     push(`${helper(SET_BLOCK_TRACKING)}(1),`)
     newline()

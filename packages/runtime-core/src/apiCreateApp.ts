@@ -3,7 +3,7 @@ import {
   type ComponentInternalInstance,
   type ConcreteComponent,
   type Data,
-  getExposeProxy,
+  getComponentPublicInstance,
   validateComponentName,
 } from './component'
 import type {
@@ -50,7 +50,10 @@ export interface App<HostElement = any> {
     namespace?: boolean | ElementNamespace,
   ): ComponentPublicInstance
   unmount(): void
-  provide<T>(key: InjectionKey<T> | string, value: T): this
+  provide<T, K = InjectionKey<T> | string | number>(
+    key: K,
+    value: K extends InjectionKey<infer V> ? V : T,
+  ): this
 
   /**
    * Runs a function with the app as active instance. This allows using of `inject()` within the function to get access
@@ -84,7 +87,7 @@ export type OptionMergeFunction = (to: unknown, from: unknown) => any
 
 export interface AppConfig {
   // @private
-  readonly isNativeTag?: (tag: string) => boolean
+  readonly isNativeTag: (tag: string) => boolean
 
   performance: boolean
   optionMergeStrategies: Record<string, OptionMergeFunction>
@@ -110,6 +113,12 @@ export interface AppConfig {
    * @deprecated use config.compilerOptions.isCustomElement
    */
   isCustomElement?: (tag: string) => boolean
+
+  /**
+   * TODO document for 3.5
+   * Enable warnings for computed getters that recursively trigger itself.
+   */
+  warnRecursiveComputed?: boolean
 }
 
 export interface AppContext {
@@ -349,7 +358,7 @@ export function createAppAPI<HostElement>(
             devtoolsInitApp(app, version)
           }
 
-          return getExposeProxy(vnode.component!) || vnode.component!.proxy
+          return getComponentPublicInstance(vnode.component!)
         } else if (__DEV__) {
           warn(
             `App has already been mounted.\n` +
@@ -387,11 +396,12 @@ export function createAppAPI<HostElement>(
       },
 
       runWithContext(fn) {
+        const lastApp = currentApp
         currentApp = app
         try {
           return fn()
         } finally {
-          currentApp = null
+          currentApp = lastApp
         }
       },
     })
