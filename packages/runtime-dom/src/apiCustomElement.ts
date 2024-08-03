@@ -27,7 +27,14 @@ import {
   nextTick,
   warn,
 } from '@vue/runtime-core'
-import { camelize, extend, hyphenate, isArray, toNumber } from '@vue/shared'
+import {
+  camelize,
+  extend,
+  hyphenate,
+  isArray,
+  isPlainObject,
+  toNumber,
+} from '@vue/shared'
 import { hydrate, render } from '.'
 
 export type VueElementConstructor<P = {}> = {
@@ -405,9 +412,12 @@ export class VueElement extends BaseClass {
 
         const dispatch = (event: string, args: any[]) => {
           this.dispatchEvent(
-            new CustomEvent(event, {
-              detail: args,
-            }),
+            new CustomEvent(
+              event,
+              isPlainObject(args[0])
+                ? extend({ detail: args }, args[0])
+                : { detail: args },
+            ),
           )
         }
 

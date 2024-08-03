@@ -408,6 +408,9 @@ describe('defineCustomElement', () => {
             onMousedown: () => {
               emit('myEvent', 1) // validate hyphenation
             },
+            onWheel: () => {
+              emit('my-wheel', { bubbles: true }, 1)
+            },
           })
       },
     })
@@ -467,6 +470,7 @@ describe('defineCustomElement', () => {
         detail: [1],
       })
     })
+
     // #7293
     test('emit in an async component wrapper with properties bound', async () => {
       const E = defineCustomElement(
@@ -486,6 +490,19 @@ describe('defineCustomElement', () => {
       expect(spy).toHaveBeenCalled()
       expect(spy.mock.calls[0][0]).toMatchObject({
         detail: [1],
+      })
+    })
+
+    test('emit with options', async () => {
+      container.innerHTML = `<my-el-emits></my-el-emits>`
+      const e = container.childNodes[0] as VueElement
+      const spy = vi.fn()
+      e.addEventListener('my-wheel', spy)
+      e.shadowRoot!.childNodes[0].dispatchEvent(new CustomEvent('wheel'))
+      expect(spy).toHaveBeenCalledTimes(1)
+      expect(spy.mock.calls[0][0]).toMatchObject({
+        bubbles: true,
+        detail: [{ bubbles: true }, 1],
       })
     })
   })
