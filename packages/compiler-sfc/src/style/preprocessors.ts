@@ -1,5 +1,5 @@
 import merge from 'merge-source-map'
-import type { RawSourceMap } from 'source-map-js'
+import type { RawSourceMap } from '@vue/compiler-core'
 import type { SFCStyleCompileOptions } from '../compileStyle'
 import { isFunction } from '@vue/shared'
 
@@ -38,12 +38,7 @@ const scss: StylePreprocessor = (source, map, options, load = require) => {
     if (map) {
       return {
         code: result.css.toString(),
-        map: merge(
-          map,
-          result.map.toJSON
-            ? result.map.toJSON()
-            : JSON.parse(result.map.toString()),
-        ),
+        map: merge(map, JSON.parse(result.map.toString())),
         errors: [],
         dependencies,
       }

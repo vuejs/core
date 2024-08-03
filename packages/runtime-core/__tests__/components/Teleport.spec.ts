@@ -16,7 +16,7 @@ import {
   serializeInner,
   withDirectives,
 } from '@vue/runtime-test'
-import { Fragment, createVNode } from '../../src/vnode'
+import { Fragment, createCommentVNode, createVNode } from '../../src/vnode'
 import { compile, render as domRender } from 'vue'
 
 describe('renderer: teleport', () => {
@@ -552,5 +552,72 @@ describe('renderer: teleport', () => {
     expect(serializeInner(target3)).toMatchInlineSnapshot(
       `"<div>teleported</div>"`,
     )
+  })
+
+  //#9071
+  test('toggle sibling node inside target node', async () => {
+    const root = document.createElement('div')
+    const show = ref(false)
+    const App = defineComponent({
+      setup() {
+        return () => {
+          return show.value
+            ? h(Teleport, { to: root }, [h('div', 'teleported')])
+            : h('div', 'foo')
+        }
+      },
+    })
+
+    domRender(h(App), root)
+    expect(root.innerHTML).toMatchInlineSnapshot('"<div>foo</div>"')
+
+    show.value = true
+    await nextTick()
+
+    expect(root.innerHTML).toMatchInlineSnapshot(
+      '"<!--teleport start--><!--teleport end--><div>teleported</div>"',
+    )
+
+    show.value = false
+    await nextTick()
+
+    expect(root.innerHTML).toMatchInlineSnapshot('"<div>foo</div>"')
+  })
+
+  test('unmount previous sibling node inside target node', async () => {
+    const root = document.createElement('div')
+    const parentShow = ref(false)
+    const childShow = ref(true)
+
+    const Comp = {
+      setup() {
+        return () => h(Teleport, { to: root }, [h('div', 'foo')])
+      },
+    }
+
+    const App = defineComponent({
+      setup() {
+        return () => {
+          return parentShow.value
+            ? h(Fragment, { key: 0 }, [
+                childShow.value ? h(Comp) : createCommentVNode('v-if'),
+              ])
+            : createCommentVNode('v-if')
+        }
+      },
+    })
+
+    domRender(h(App), root)
+    expect(root.innerHTML).toMatchInlineSnapshot('"<!--v-if-->"')
+
+    parentShow.value = true
+    await nextTick()
+    expect(root.innerHTML).toMatchInlineSnapshot(
+      '"<!--teleport start--><!--teleport end--><div>foo</div>"',
+    )
+
+    parentShow.value = false
+    await nextTick()
+    expect(root.innerHTML).toMatchInlineSnapshot('"<!--v-if-->"')
   })
 })

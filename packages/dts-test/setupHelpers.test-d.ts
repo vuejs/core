@@ -2,18 +2,18 @@ import {
   type Ref,
   type Slots,
   type VNode,
+  defineComponent,
   defineEmits,
   defineModel,
   defineProps,
   defineSlots,
   toRefs,
   useAttrs,
+  useModel,
   useSlots,
   withDefaults,
 } from 'vue'
 import { describe, expectType } from './utils'
-import { defineComponent } from 'vue'
-import { useModel } from 'vue'
 
 describe('defineProps w/ type declaration', () => {
   // type declaration
@@ -100,6 +100,66 @@ describe('defineProps w/ union type declaration + withDefaults', () => {
       union4: () => 123,
     },
   )
+})
+
+describe('defineProps w/ object union + withDefaults', () => {
+  const props = withDefaults(
+    defineProps<
+      {
+        foo: string
+      } & (
+        | {
+            type: 'hello'
+            bar: string
+          }
+        | {
+            type: 'world'
+            bar: number
+          }
+      )
+    >(),
+    {
+      foo: 'default value!',
+    },
+  )
+
+  expectType<
+    | {
+        readonly type: 'hello'
+        readonly bar: string
+        readonly foo: string
+      }
+    | {
+        readonly type: 'world'
+        readonly bar: number
+        readonly foo: string
+      }
+  >(props)
+})
+
+describe('defineProps w/ generic discriminate union + withDefaults', () => {
+  interface B {
+    b?: string
+  }
+  interface S<T> extends B {
+    mode: 'single'
+    v: T
+  }
+  interface M<T> extends B {
+    mode: 'multiple'
+    v: T[]
+  }
+  type Props = S<string> | M<string>
+  const props = withDefaults(defineProps<Props>(), {
+    b: 'b',
+  })
+
+  if (props.mode === 'single') {
+    expectType<string>(props.v)
+  }
+  if (props.mode === 'multiple') {
+    expectType<string[]>(props.v)
+  }
 })
 
 describe('defineProps w/ generic type declaration + withDefaults', <T extends

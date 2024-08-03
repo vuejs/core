@@ -35,6 +35,8 @@ export {
   type DeepReadonly,
   type ShallowReactive,
   type UnwrapNestedRefs,
+  type Reactive,
+  type ReactiveMarker,
 } from './reactive'
 export {
   computed,
@@ -43,6 +45,7 @@ export {
   type WritableComputedOptions,
   type ComputedGetter,
   type ComputedSetter,
+  type ComputedRefImpl,
 } from './computed'
 export { deferredComputed } from './deferredComputed'
 export {
