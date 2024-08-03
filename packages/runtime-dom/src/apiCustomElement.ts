@@ -26,11 +26,13 @@ import {
   defineComponent,
   getCurrentInstance,
   nextTick,
+  unref,
   warn,
 } from '@vue/runtime-core'
 import {
   camelize,
   extend,
+  hasOwn,
   hyphenate,
   isArray,
   isPlainObject,
@@ -308,6 +310,9 @@ export class VueElement extends BaseClass {
 
       // initial render
       this._update()
+
+      // apply expose
+      this._applyExpose()
     }
 
     const asyncDef = (this._def as ComponentOptions).__asyncLoader
@@ -339,6 +344,22 @@ export class VueElement extends BaseClass {
           this._setProp(key, val)
         },
       })
+    }
+  }
+
+  private _applyExpose() {
+    const exposed = this._instance && this._instance.exposed
+    if (!exposed) return
+    for (const key in exposed) {
+      if (!hasOwn(this, key)) {
+        // exposed properties are readonly
+        Object.defineProperty(this, key, {
+          // unwrap ref to be consistent with public instance behavior
+          get: () => unref(exposed[key]),
+        })
+      } else if (__DEV__) {
+        warn(`Exposed property "${key}" already exists on custom element.`)
+      }
     }
   }
 
