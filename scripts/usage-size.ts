@@ -2,7 +2,7 @@ import { mkdir, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { rollup } from 'rollup'
 import nodeResolve from '@rollup/plugin-node-resolve'
-import { minify } from 'terser'
+import { minify } from '@swc/core'
 import replace from '@rollup/plugin-replace'
 import { brotliCompressSync, gzipSync } from 'node:zlib'
 
