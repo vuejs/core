@@ -1,3 +1,4 @@
+import type { MockedFunction } from 'vitest'
 import {
   type Ref,
   type VueElement,
@@ -879,6 +880,66 @@ describe('defineCustomElement', () => {
       const el = container.childNodes[0] as VueElement
       const style = el.shadowRoot?.querySelector('style')!
       expect(style.textContent).toBe(`div { color: red; }`)
+    })
+  })
+
+  describe('expose', () => {
+    test('expose attributes and callback', async () => {
+      type SetValue = (value: string) => void
+      let fn: MockedFunction<SetValue>
+
+      const E = defineCustomElement({
+        setup(_, { expose }) {
+          const value = ref('hello')
+
+          const setValue = (fn = vi.fn((_value: string) => {
+            value.value = _value
+          }))
+
+          expose({
+            setValue,
+            value,
+          })
+
+          return () => h('div', null, [value.value])
+        },
+      })
+      customElements.define('my-el-expose', E)
+
+      container.innerHTML = `<my-el-expose></my-el-expose>`
+      const e = container.childNodes[0] as VueElement & {
+        value: string
+        setValue: MockedFunction<SetValue>
+      }
+      expect(e.shadowRoot!.innerHTML).toBe(`<div>hello</div>`)
+      expect(e.value).toBe('hello')
+      expect(e.setValue).toBe(fn!)
+      e.setValue('world')
+      expect(e.value).toBe('world')
+      await nextTick()
+      expect(e.shadowRoot!.innerHTML).toBe(`<div>world</div>`)
+    })
+
+    test('warning when exposing an existing property', () => {
+      const E = defineCustomElement({
+        props: {
+          value: String,
+        },
+        setup(props, { expose }) {
+          expose({
+            value: 'hello',
+          })
+
+          return () => h('div', null, [props.value])
+        },
+      })
+      customElements.define('my-el-expose-two', E)
+
+      container.innerHTML = `<my-el-expose-two value="world"></my-el-expose-two>`
+
+      expect(
+        `[Vue warn]: Exposed property "value" already exists on custom element.`,
+      ).toHaveBeenWarned()
     })
   })
 })
