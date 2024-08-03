@@ -10,12 +10,12 @@ import {
   remove,
 } from '@vue/shared'
 import { isAsyncWrapper } from './apiAsyncComponent'
-import { getExposeProxy } from './component'
 import { warn } from './warning'
 import { isRef } from '@vue/reactivity'
 import { ErrorCodes, callWithErrorHandling } from './errorHandling'
 import type { SchedulerJob } from './scheduler'
 import { queuePostRenderEffect } from './renderer'
+import { getComponentPublicInstance } from './component'
 
 /**
  * Function for handling a template ref
@@ -48,7 +48,7 @@ export function setRef(
 
   const refValue =
     vnode.shapeFlag & ShapeFlags.STATEFUL_COMPONENT
-      ? getExposeProxy(vnode.component!) || vnode.component!.proxy
+      ? getComponentPublicInstance(vnode.component!)
       : vnode.el
   const value = isUnmount ? null : refValue
 

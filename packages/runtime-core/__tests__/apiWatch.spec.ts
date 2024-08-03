@@ -5,6 +5,7 @@ import {
   defineComponent,
   getCurrentInstance,
   nextTick,
+  onErrorCaptured,
   reactive,
   ref,
   watch,
@@ -34,8 +35,6 @@ import {
   toRef,
   triggerRef,
 } from '@vue/reactivity'
-
-// reference: https://vue-composition-api-rfc.netlify.com/api.html#watch
 
 describe('api: watch', () => {
   it('effect', async () => {
@@ -932,6 +931,52 @@ describe('api: watch', () => {
     expect(dummy).toEqual([1, 2])
   })
 
+  it('deep with symbols', async () => {
+    const symbol1 = Symbol()
+    const symbol2 = Symbol()
+    const symbol3 = Symbol()
+    const symbol4 = Symbol()
+
+    const raw: any = {
+      [symbol1]: {
+        [symbol2]: 1,
+      },
+    }
+
+    Object.defineProperty(raw, symbol3, {
+      writable: true,
+      enumerable: false,
+      value: 1,
+    })
+
+    const state = reactive(raw)
+    const spy = vi.fn()
+
+    watch(() => state, spy, { deep: true })
+
+    await nextTick()
+    expect(spy).toHaveBeenCalledTimes(0)
+
+    state[symbol1][symbol2] = 2
+    await nextTick()
+    expect(spy).toHaveBeenCalledTimes(1)
+
+    // Non-enumerable properties don't trigger deep watchers
+    state[symbol3] = 3
+    await nextTick()
+    expect(spy).toHaveBeenCalledTimes(1)
+
+    // Adding a new symbol property
+    state[symbol4] = 1
+    await nextTick()
+    expect(spy).toHaveBeenCalledTimes(2)
+
+    // Removing a symbol property
+    delete state[symbol4]
+    await nextTick()
+    expect(spy).toHaveBeenCalledTimes(3)
+  })
+
   it('immediate', async () => {
     const count = ref(0)
     const cb = vi.fn()
@@ -1515,5 +1560,77 @@ describe('api: watch', () => {
     expect(scope.effects.length).toBe(1)
     unwatch!()
     expect(scope.effects.length).toBe(0)
+  })
+
+  test('circular reference', async () => {
+    const obj = { a: 1 }
+    // @ts-expect-error
+    obj.b = obj
+    const foo = ref(obj)
+    const spy = vi.fn()
+
+    watch(foo, spy, { deep: true })
+
+    // @ts-expect-error
+    foo.value.b.a = 2
+    await nextTick()
+    expect(spy).toHaveBeenCalledTimes(1)
+    expect(foo.value.a).toBe(2)
+  })
+
+  test('watch immediate error in effect scope should be catched by onErrorCaptured', async () => {
+    const warn = vi.spyOn(console, 'warn')
+    warn.mockImplementation(() => {})
+    const ERROR_IN_SCOPE = 'ERROR_IN_SCOPE'
+    const ERROR_OUT_SCOPE = 'ERROR_OUT_SCOPE'
+
+    const errors = ref<string[]>([])
+    const Comp = {
+      setup() {
+        const trigger = ref(0)
+
+        effectScope(true).run(() => {
+          watch(
+            trigger,
+            () => {
+              throw new Error(ERROR_IN_SCOPE)
+            },
+            { immediate: true },
+          )
+        })
+
+        watchEffect(() => {
+          throw new Error(ERROR_OUT_SCOPE)
+        })
+
+        return () => ''
+      },
+    }
+
+    const root = nodeOps.createElement('div')
+    render(
+      h(
+        {
+          setup(_, { slots }) {
+            onErrorCaptured(e => {
+              errors.value.push(e.message)
+              return false
+            })
+
+            return () => h('div', slots.default && slots.default())
+          },
+        },
+        null,
+        () => [h(Comp)],
+      ),
+      root,
+    )
+    await nextTick()
+    // only watchEffect as ran so far
+    expect(errors.value).toHaveLength(2)
+    expect(errors.value[0]).toBe(ERROR_IN_SCOPE)
+    expect(errors.value[1]).toBe(ERROR_OUT_SCOPE)
+
+    warn.mockRestore()
   })
 })
