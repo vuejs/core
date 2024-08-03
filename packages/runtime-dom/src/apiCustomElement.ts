@@ -331,6 +331,7 @@ export class VueElement extends BaseClass {
   }
 
   protected _setAttr(key: string) {
+    if (key.startsWith('data-v-')) return
     let value = this.hasAttribute(key) ? this.getAttribute(key) : undefined
     const camelKey = camelize(key)
     if (this._numberProps && this._numberProps[camelKey]) {
