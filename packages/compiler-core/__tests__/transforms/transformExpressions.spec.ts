@@ -666,11 +666,12 @@ describe('compiler: expression transform', () => {
     test('with try catch', () => {
       const { code } = compileWithBindingMetadata(
         `<div @click="() => {
-          try {
+           try {
             throw new Error('sup?')
-          } catch (error) {
-            msg = error.message
+          } catch (err) {
+            console.log(err)
           }
+          console.log(err)
         }"/>`,
       )
       expect(code).toMatchSnapshot()
@@ -680,8 +681,8 @@ describe('compiler: expression transform', () => {
         `<div @click="() => {
           try {
             throw new Error('sup?')
-          } catch ({message: foo}) {
-            msg = foo
+          } catch ({ message: { length } }) {
+            console.log(length)
           }
         }"/>`,
       )

@@ -1,6 +1,12 @@
 // should only use types from @babel/types
 // do not import runtime methods
-import type { Function, Identifier, Node, ObjectProperty } from '@babel/types'
+import type {
+  CatchClause,
+  Function,
+  Identifier,
+  Node,
+  ObjectProperty,
+} from '@babel/types'
 import { walk } from 'estree-walker'
 
 /**
@@ -91,17 +97,10 @@ export function walkIdentifiers(
           }
         }
       } else if (node.type === 'CatchClause') {
-        // @ts-expect-error
-        if (node.param && node.param.name) {
-          // @ts-expect-error
-          markKnownIds(node.param.name, knownIds)
-          // @ts-expect-error
-        } else if (node.param.type === 'ObjectPattern') {
-          // @ts-expect-error
-          for (const property of node.param.properties) {
-            const id = property.value.name
-            markKnownIds(id, knownIds)
-          }
+        if (node.scopeIds) {
+          node.scopeIds.forEach(id => markKnownIds(id, knownIds))
+        } else {
+          walkCatchParam(node, id => markScopeIdentifier(node, id, knownIds))
         }
       }
     },
@@ -195,6 +194,17 @@ export function walkFunctionParams(
 ) {
   for (const p of node.params) {
     for (const id of extractIdentifiers(p)) {
+      onIdent(id)
+    }
+  }
+}
+
+export function walkCatchParam(
+  node: CatchClause,
+  onIdent: (id: Identifier) => void,
+) {
+  if (node.param) {
+    for (const id of extractIdentifiers(node.param)) {
       onIdent(id)
     }
   }
