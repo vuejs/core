@@ -104,9 +104,9 @@
     "simple-git-hooks": "^2.11.1",
     "todomvc-app-css": "^2.4.3",
     "tslib": "^2.6.3",
-    "tsx": "^4.16.2",
-    "typescript": "~5.4.5",
-    "typescript-eslint": "^7.17.0",
+    "tsx": "^4.16.5",
+    "typescript": "~5.5.4",
+    "typescript-eslint": "^8.0.0",
     "vite": "catalog:",
     "vitest": "^1.6.0"
   },
