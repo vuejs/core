@@ -1,5 +1,6 @@
 import {
   type Component,
+  type ComponentCustomElementInterface,
   type ComponentInjectOptions,
   type ComponentInternalInstance,
   type ComponentObjectPropsOptions,
@@ -189,7 +190,10 @@ const BaseClass = (
 
 type InnerComponentDef = ConcreteComponent & CustomElementOptions
 
-export class VueElement extends BaseClass {
+export class VueElement
+  extends BaseClass
+  implements ComponentCustomElementInterface
+{
   /**
    * @internal
    */
@@ -198,7 +202,15 @@ export class VueElement extends BaseClass {
   private _connected = false
   private _resolved = false
   private _numberProps: Record<string, true> | null = null
+  private _styleChildren = new WeakSet()
+  /**
+   * dev only
+   */
   private _styles?: HTMLStyleElement[]
+  /**
+   * dev only
+   */
+  private _childStyles?: Map<string, HTMLStyleElement[]>
   private _ob?: MutationObserver | null = null
   /**
    * @internal
@@ -312,13 +324,14 @@ export class VueElement extends BaseClass {
       }
 
       // apply CSS
-      if (__DEV__ && styles && def.shadowRoot === false) {
+      if (this.shadowRoot) {
+        this._applyStyles(styles)
+      } else if (__DEV__ && styles) {
         warn(
           'Custom element style injection is not supported when using ' +
             'shadowRoot: false',
         )
       }
-      this._applyStyles(styles)
 
       // initial render
       this._update()
@@ -329,7 +342,7 @@ export class VueElement extends BaseClass {
 
     const asyncDef = (this._def as ComponentOptions).__asyncLoader
     if (asyncDef) {
-      asyncDef().then(def => resolve(def, true))
+      asyncDef().then(def => resolve((this._def = def), true))
     } else {
       resolve(this._def)
     }
@@ -486,19 +499,36 @@ export class VueElement extends BaseClass {
     return vnode
   }
 
-  private _applyStyles(styles: string[] | undefined) {
-    const root = this.shadowRoot
-    if (!root) return
-    if (styles) {
-      styles.forEach(css => {
-        const s = document.createElement('style')
-        s.textContent = css
-        root.appendChild(s)
-        // record for HMR
-        if (__DEV__) {
+  private _applyStyles(
+    styles: string[] | undefined,
+    owner?: ConcreteComponent,
+  ) {
+    if (!styles) return
+    if (owner) {
+      if (owner === this._def || this._styleChildren.has(owner)) {
+        return
+      }
+      this._styleChildren.add(owner)
+    }
+    for (let i = styles.length - 1; i >= 0; i--) {
+      const s = document.createElement('style')
+      s.textContent = styles[i]
+      this.shadowRoot!.prepend(s)
+      // record for HMR
+      if (__DEV__) {
+        if (owner) {
+          if (owner.__hmrId) {
+            if (!this._childStyles) this._childStyles = new Map()
+            let entry = this._childStyles.get(owner.__hmrId)
+            if (!entry) {
+              this._childStyles.set(owner.__hmrId, (entry = []))
+            }
+            entry.push(s)
+          }
+        } else {
           ;(this._styles || (this._styles = [])).push(s)
         }
-      })
+      }
     }
   }
 
@@ -547,6 +577,24 @@ export class VueElement extends BaseClass {
       parent.removeChild(o)
     }
   }
+
+  injectChildStyle(comp: ConcreteComponent & CustomElementOptions) {
+    this._applyStyles(comp.styles, comp)
+  }
+
+  removeChildStlye(comp: ConcreteComponent): void {
+    if (__DEV__) {
+      this._styleChildren.delete(comp)
+      if (this._childStyles && comp.__hmrId) {
+        // clear old styles
+        const oldStyles = this._childStyles.get(comp.__hmrId)
+        if (oldStyles) {
+          oldStyles.forEach(s => this._root.removeChild(s))
+          oldStyles.length = 0
+        }
+      }
+    }
+  }
 }
 
 /**
@@ -557,7 +605,7 @@ export function useShadowRoot(): ShadowRoot | null {
   const instance = getCurrentInstance()
   const el = instance && instance.ce
   if (el) {
-    return el.shadowRoot
+    return (el as VueElement).shadowRoot
   } else if (__DEV__) {
     if (!instance) {
       warn(`useCustomElementRoot called without an active component instance.`)

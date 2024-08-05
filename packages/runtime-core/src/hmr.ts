@@ -159,6 +159,11 @@ function reload(id: string, newComp: HMRComponent) {
         '[HMR] Root or manually mounted instance modified. Full reload required.',
       )
     }
+
+    // update custom element child style
+    if (instance.root.ce && instance !== instance.root) {
+      instance.root.ce.removeChildStlye(oldComp)
+    }
   }
 
   // 5. make sure to cleanup dirty hmr components after update
