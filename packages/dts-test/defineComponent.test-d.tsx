@@ -1593,6 +1593,7 @@ describe('expose typing', () => {
 import type {
   AllowedComponentProps,
   ComponentCustomProps,
+  ComponentInstance,
   ComponentOptionsMixin,
   DefineComponent,
   Directive,
@@ -1754,6 +1755,24 @@ describe('__typeEmits backdoor, call signature syntax', () => {
   c.$emit('update', 'test')
   // @ts-expect-error
   c.$emit('update', 123)
+})
+
+describe('__typeRefs backdoor, object syntax', () => {
+  type Refs = {
+    foo: number
+  }
+
+  const Parent = defineComponent({
+    __typeRefs: {} as { child: ComponentInstance<typeof Child> },
+  })
+  const Child = defineComponent({
+    __typeRefs: {} as Refs,
+  })
+  const c = new Parent()
+  const refs = c.$refs
+
+  expectType<ComponentInstance<typeof Child>>(refs.child)
+  expectType<number>(refs.child.$refs.foo)
 })
 
 defineComponent({
