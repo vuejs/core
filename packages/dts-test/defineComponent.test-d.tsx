@@ -1757,22 +1757,22 @@ describe('__typeEmits backdoor, call signature syntax', () => {
   c.$emit('update', 123)
 })
 
-describe('__typeRefs backdoor', () => {
+describe('__typeRefs backdoor, object syntax', () => {
   type Refs = {
     foo: number
   }
 
+  const Parent = defineComponent({
+    __typeRefs: {} as { child: ComponentInstance<typeof Child> },
+  })
   const Child = defineComponent({
     __typeRefs: {} as Refs,
-  })
-  const Parent = defineComponent({
-    __typeRefs: {} as { comp1: ComponentInstance<typeof Child> },
   })
   const c = new Parent()
   const refs = c.$refs
 
-  expectType<number>(refs.comp1.$refs.foo)
-  expectType<ComponentInstance<typeof Child>>(refs.comp1)
+  expectType<ComponentInstance<typeof Child>>(refs.child)
+  expectType<number>(refs.child.$refs.foo)
 })
 
 defineComponent({
