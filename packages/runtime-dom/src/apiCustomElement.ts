@@ -49,11 +49,6 @@ export interface CustomElementOptions {
   shadowRoot?: boolean
 }
 
-type ExtractComponentPropTypes<T extends DefineComponent<any, any, any, any>> =
-  T extends DefineComponent<infer P, any, any, any>
-    ? ExtractPropTypes<P>
-    : unknown
-
 // defineCustomElement provides the same type inference as defineComponent
 // so most of the following overloads should be kept in sync w/ defineComponent.
 
@@ -147,11 +142,17 @@ export function defineCustomElement<
     >,
 ): VueElementConstructor<ResolvedProps>
 
-// overload 5: defining a custom element from the returned value of
+// overload 3: defining a custom element from the returned value of
 // `defineComponent`
 export function defineCustomElement<
   T extends DefineComponent<any, any, any, any>,
->(options: T): VueElementConstructor<ExtractComponentPropTypes<T>>
+>(
+  options: T,
+): VueElementConstructor<
+  T extends DefineComponent<infer P, any, any, any>
+    ? ExtractPropTypes<P>
+    : unknown
+>
 
 /*! #__NO_SIDE_EFFECTS__ */
 export function defineCustomElement(
