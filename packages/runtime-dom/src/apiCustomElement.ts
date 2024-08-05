@@ -312,6 +312,12 @@ export class VueElement extends BaseClass {
       }
 
       // apply CSS
+      if (__DEV__ && styles && def.shadowRoot === false) {
+        warn(
+          'Custom element style injection is not supported when using ' +
+            'shadowRoot: false',
+        )
+      }
       this._applyStyles(styles)
 
       // initial render
@@ -481,11 +487,13 @@ export class VueElement extends BaseClass {
   }
 
   private _applyStyles(styles: string[] | undefined) {
+    const root = this.shadowRoot
+    if (!root) return
     if (styles) {
       styles.forEach(css => {
         const s = document.createElement('style')
         s.textContent = css
-        this._root.appendChild(s)
+        root.appendChild(s)
         // record for HMR
         if (__DEV__) {
           ;(this._styles || (this._styles = [])).push(s)
