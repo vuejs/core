@@ -468,9 +468,11 @@ describe('compiler: expression transform', () => {
         for (const x in list) {
           log(x)
         }
+        error(x)
       }"/>`,
     )
-    expect(code).not.toMatch(`_ctx.x`)
+    expect(code).not.toMatch(`log(_ctx.x)`)
+    expect(code).toMatch(`error(_ctx.x)`)
     expect(code).toMatchSnapshot()
   })
 
@@ -480,9 +482,11 @@ describe('compiler: expression transform', () => {
         for (const x of list) {
           log(x)
         }
+        error(x)
       }"/>`,
     )
-    expect(code).not.toMatch(`_ctx.x`)
+    expect(code).not.toMatch(`log(_ctx.x)`)
+    expect(code).toMatch(`error(_ctx.x)`)
     expect(code).toMatchSnapshot()
   })
 
@@ -492,9 +496,25 @@ describe('compiler: expression transform', () => {
         for (let i = 0; i < list.length; i++) {
           log(i)
         }
+        error(i)
       }"/>`,
     )
-    expect(code).not.toMatch(`_ctx.i`)
+    expect(code).not.toMatch(`log(_ctx.i)`)
+    expect(code).toMatch(`error(_ctx.i)`)
+    expect(code).toMatchSnapshot()
+  })
+
+  test('should allow leak of var declarations in for loop', () => {
+    const { code } = compile(
+      `<div @click="() => {
+        for (var i = 0; i < list.length; i++) {
+          log(i)
+        }
+        error(i)
+      }"/>`,
+    )
+    expect(code).not.toMatch(`log(_ctx.i)`)
+    expect(code).not.toMatch(`error(_ctx.i)`)
     expect(code).toMatchSnapshot()
   })
 

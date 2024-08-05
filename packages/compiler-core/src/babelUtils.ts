@@ -2,6 +2,9 @@
 // do not import runtime methods
 import type {
   BlockStatement,
+  ForInStatement,
+  ForOfStatement,
+  ForStatement,
   Function,
   Identifier,
   Node,
@@ -81,6 +84,10 @@ export function walkIdentifiers(
         for (const id of extractIdentifiers(node.param)) {
           markScopeIdentifier(node, id, knownIds)
         }
+      } else if (isForStatement(node)) {
+        walkForStatement(node, false, id =>
+          markScopeIdentifier(node, id, knownIds),
+        )
       }
     },
     leave(node: Node & { scopeIds?: Set<string> }, parent: Node | null) {
@@ -196,18 +203,36 @@ export function walkBlockDeclarations(
     ) {
       if (stmt.declare || !stmt.id) continue
       onIdent(stmt.id)
-    } else if (
-      stmt.type === 'ForOfStatement' ||
-      stmt.type === 'ForInStatement' ||
-      stmt.type === 'ForStatement'
-    ) {
-      const variable = stmt.type === 'ForStatement' ? stmt.init : stmt.left
-      if (variable && variable.type === 'VariableDeclaration') {
-        for (const decl of variable.declarations) {
-          for (const id of extractIdentifiers(decl.id)) {
-            onIdent(id)
-          }
-        }
+    } else if (isForStatement(stmt)) {
+      walkForStatement(stmt, true, onIdent)
+    }
+  }
+}
+
+function isForStatement(
+  stmt: Node,
+): stmt is ForStatement | ForOfStatement | ForInStatement {
+  return (
+    stmt.type === 'ForOfStatement' ||
+    stmt.type === 'ForInStatement' ||
+    stmt.type === 'ForStatement'
+  )
+}
+
+function walkForStatement(
+  stmt: ForStatement | ForOfStatement | ForInStatement,
+  isVar: boolean,
+  onIdent: (id: Identifier) => void,
+) {
+  const variable = stmt.type === 'ForStatement' ? stmt.init : stmt.left
+  if (
+    variable &&
+    variable.type === 'VariableDeclaration' &&
+    (variable.kind === 'var' ? isVar : !isVar)
+  ) {
+    for (const decl of variable.declarations) {
+      for (const id of extractIdentifiers(decl.id)) {
+        onIdent(id)
       }
     }
   }

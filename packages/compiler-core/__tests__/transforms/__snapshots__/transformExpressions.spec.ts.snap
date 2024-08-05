@@ -14,6 +14,21 @@ return function render(_ctx, _cache, $props, $setup, $data, $options) {
 }"
 `;
 
+exports[`compiler: expression transform > should allow leak of var declarations in for loop 1`] = `
+"const { openBlock: _openBlock, createElementBlock: _createElementBlock } = Vue
+
+return function render(_ctx, _cache) {
+  return (_openBlock(), _createElementBlock("div", {
+    onClick: () => {
+        for (var i = 0; i < _ctx.list.length; i++) {
+          _ctx.log(i)
+        }
+        _ctx.error(i)
+      }
+  }, null, 8 /* PROPS */, ["onClick"]))
+}"
+`;
+
 exports[`compiler: expression transform > should not prefix catch block param 1`] = `
 "const { openBlock: _openBlock, createElementBlock: _createElementBlock } = Vue
 
@@ -53,6 +68,7 @@ return function render(_ctx, _cache) {
         for (let i = 0; i < _ctx.list.length; i++) {
           _ctx.log(i)
         }
+        _ctx.error(_ctx.i)
       }
   }, null, 8 /* PROPS */, ["onClick"]))
 }"
@@ -67,6 +83,7 @@ return function render(_ctx, _cache) {
         for (const x in _ctx.list) {
           _ctx.log(x)
         }
+        _ctx.error(_ctx.x)
       }
   }, null, 8 /* PROPS */, ["onClick"]))
 }"
@@ -81,6 +98,7 @@ return function render(_ctx, _cache) {
         for (const x of _ctx.list) {
           _ctx.log(x)
         }
+        _ctx.error(_ctx.x)
       }
   }, null, 8 /* PROPS */, ["onClick"]))
 }"
