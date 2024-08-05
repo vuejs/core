@@ -77,6 +77,10 @@ export function walkIdentifiers(
             markScopeIdentifier(node, id, knownIds),
           )
         }
+      } else if (node.type === 'CatchClause' && node.param) {
+        for (const id of extractIdentifiers(node.param)) {
+          markScopeIdentifier(node, id, knownIds)
+        }
       }
     },
     leave(node: Node & { scopeIds?: Set<string> }, parent: Node | null) {
