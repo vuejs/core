@@ -99,12 +99,13 @@ export async function exec(command, args, options) {
       if (ok) {
         const result = { ok, code, stderr, stdout }
         resolve(result)
+      } else {
+        reject(
+          new Error(
+            `Failed to execute command: ${command} ${args.join(' ')}: ${stderr}`,
+          )
+        )
       }
-      reject(
-        new Error(
-          `Failed to execute command: ${command} ${args.join(' ')}: ${stderr}`,
-        ),
-      )
     })
   })
 }
