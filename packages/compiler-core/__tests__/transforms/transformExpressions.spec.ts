@@ -695,5 +695,29 @@ describe('compiler: expression transform', () => {
         ],
       })
     })
+
+    test('for of with same variables', () => {
+      const { code } = compileWithBindingMetadata(
+        `<div @click="() => {
+          for (const msg of msgs) {
+            console.log(msg)
+          }
+          console.log(msg)
+        }"/>`,
+      )
+      expect(code).toMatchSnapshot()
+    })
+
+    test('for of with same variables', () => {
+      const { code } = compileWithBindingMetadata(
+        `<div @click="() => {
+          for (const key in value) {
+            console.log(key)
+          }
+          console.log(msg)
+        }"/>`,
+      )
+      expect(code).toMatchSnapshot()
+    })
   })
 })

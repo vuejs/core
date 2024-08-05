@@ -1,13 +1,6 @@
 // should only use types from @babel/types
 // do not import runtime methods
-import type {
-  BlockStatement,
-  Function,
-  Identifier,
-  Node,
-  ObjectProperty,
-  Program,
-} from '@babel/types'
+import type { Function, Identifier, Node, ObjectProperty } from '@babel/types'
 import { walk } from 'estree-walker'
 
 /**
@@ -68,14 +61,34 @@ export function walkIdentifiers(
             markScopeIdentifier(node, id, knownIds),
           )
         }
-      } else if (node.type === 'BlockStatement') {
-        if (node.scopeIds) {
-          node.scopeIds.forEach(id => markKnownIds(id, knownIds))
-        } else {
-          // #3445 record block-level local variables
-          walkBlockDeclarations(node, id =>
-            markScopeIdentifier(node, id, knownIds),
-          )
+      } else if (node.type === 'VariableDeclaration') {
+        if (parent) {
+          for (const decl of node.declarations) {
+            for (const id of extractIdentifiers(decl.id)) {
+              markScopeIdentifier(parent, id, knownIds)
+            }
+          }
+        }
+      } else if (
+        // @ts-expect-error
+        node.type === 'FunctionDeclaration' ||
+        node.type === 'ClassDeclaration'
+      ) {
+        if (parent && node.id) {
+          markScopeIdentifier(node, node.id, knownIds)
+        }
+      } else if (
+        node.type === 'ForOfStatement' ||
+        node.type === 'ForInStatement' ||
+        node.type === 'ForStatement'
+      ) {
+        const variable = node.type === 'ForStatement' ? node.init : node.left
+        if (variable && variable.type === 'VariableDeclaration') {
+          for (const decl of variable.declarations) {
+            for (const id of extractIdentifiers(decl.id)) {
+              markScopeIdentifier(node, id, knownIds)
+            }
+          }
         }
       } else if (node.type === 'CatchClause' && node.param) {
         for (const id of extractIdentifiers(node.param)) {
@@ -174,41 +187,6 @@ export function walkFunctionParams(
   for (const p of node.params) {
     for (const id of extractIdentifiers(p)) {
       onIdent(id)
-    }
-  }
-}
-
-export function walkBlockDeclarations(
-  block: BlockStatement | Program,
-  onIdent: (node: Identifier) => void,
-) {
-  for (const stmt of block.body) {
-    if (stmt.type === 'VariableDeclaration') {
-      if (stmt.declare) continue
-      for (const decl of stmt.declarations) {
-        for (const id of extractIdentifiers(decl.id)) {
-          onIdent(id)
-        }
-      }
-    } else if (
-      stmt.type === 'FunctionDeclaration' ||
-      stmt.type === 'ClassDeclaration'
-    ) {
-      if (stmt.declare || !stmt.id) continue
-      onIdent(stmt.id)
-    } else if (
-      stmt.type === 'ForOfStatement' ||
-      stmt.type === 'ForInStatement' ||
-      stmt.type === 'ForStatement'
-    ) {
-      const variable = stmt.type === 'ForStatement' ? stmt.init : stmt.left
-      if (variable && variable.type === 'VariableDeclaration') {
-        for (const decl of variable.declarations) {
-          for (const id of extractIdentifiers(decl.id)) {
-            onIdent(id)
-          }
-        }
-      }
     }
   }
 }
