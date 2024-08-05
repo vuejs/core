@@ -417,7 +417,7 @@ export interface ComponentInternalInstance {
    * is custom element?
    * @internal
    */
-  isCE?: boolean
+  ce?: ComponentCustomElementInterface
   /**
    * custom element specific HMR method
    * @internal
@@ -1236,4 +1236,9 @@ export function formatComponentName(
 
 export function isClassComponent(value: unknown): value is ClassComponent {
   return isFunction(value) && '__vccOpts' in value
+}
+
+export interface ComponentCustomElementInterface {
+  injectChildStyle(type: ConcreteComponent): void
+  removeChildStlye(type: ConcreteComponent): void
 }

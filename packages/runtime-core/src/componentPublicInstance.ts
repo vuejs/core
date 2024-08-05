@@ -232,6 +232,7 @@ export type CreateComponentPublicInstanceWithMixins<
   LC extends Record<string, Component> = {},
   Directives extends Record<string, Directive> = {},
   Exposed extends string = string,
+  TypeRefs extends Data = {},
   Provide extends ComponentProvideOptions = ComponentProvideOptions,
   // mixin inference
   PublicMixin = IntersectionMixin<Mixin> & IntersectionMixin<Extends>,
@@ -275,7 +276,8 @@ export type CreateComponentPublicInstanceWithMixins<
   >,
   I,
   S,
-  Exposed
+  Exposed,
+  TypeRefs
 >
 
 export type ExposedKeys<
@@ -299,6 +301,7 @@ export type ComponentPublicInstance<
   I extends ComponentInjectOptions = {},
   S extends SlotsType = {},
   Exposed extends string = '',
+  TypeRefs extends Data = {},
 > = {
   $: ComponentInternalInstance
   $data: D
@@ -306,7 +309,7 @@ export type ComponentPublicInstance<
     ? Partial<Defaults> & Omit<Prettify<P> & PublicProps, keyof Defaults>
     : Prettify<P> & PublicProps
   $attrs: Data
-  $refs: Data
+  $refs: Data & TypeRefs
   $slots: UnwrapSlotsType<S>
   $root: ComponentPublicInstance | null
   $parent: ComponentPublicInstance | null

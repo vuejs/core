@@ -20,7 +20,7 @@ export interface ComputedRef<T = any> extends WritableComputedRef<T> {
   [ComputedRefSymbol]: true
 }
 
-export interface WritableComputedRef<T> extends Ref<T> {
+export interface WritableComputedRef<T, S = T> extends Ref<T, S> {
   /**
    * @deprecated computed no longer uses effect
    */
@@ -30,9 +30,9 @@ export interface WritableComputedRef<T> extends Ref<T> {
 export type ComputedGetter<T> = (oldValue?: T) => T
 export type ComputedSetter<T> = (newValue: T) => void
 
-export interface WritableComputedOptions<T> {
+export interface WritableComputedOptions<T, S = T> {
   get: ComputedGetter<T>
-  set: ComputedSetter<T>
+  set: ComputedSetter<S>
 }
 
 /**
@@ -175,10 +175,10 @@ export function computed<T>(
   getter: ComputedGetter<T>,
   debugOptions?: DebuggerOptions,
 ): ComputedRef<T>
-export function computed<T>(
-  options: WritableComputedOptions<T>,
+export function computed<T, S = T>(
+  options: WritableComputedOptions<T, S>,
   debugOptions?: DebuggerOptions,
-): WritableComputedRef<T>
+): WritableComputedRef<T, S>
 export function computed<T>(
   getterOrOptions: ComputedGetter<T> | WritableComputedOptions<T>,
   debugOptions?: DebuggerOptions,
