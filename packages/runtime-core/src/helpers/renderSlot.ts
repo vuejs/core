@@ -32,10 +32,10 @@ export function renderSlot(
   noSlotted?: boolean,
 ): VNode {
   if (
-    currentRenderingInstance!.isCE ||
+    currentRenderingInstance!.ce ||
     (currentRenderingInstance!.parent &&
       isAsyncWrapper(currentRenderingInstance!.parent) &&
-      currentRenderingInstance!.parent.isCE)
+      currentRenderingInstance!.parent.ce)
   ) {
     // in custom element mode, render <slot/> as actual slot outlets
     // wrap it with a fragment because in shadowRoot: false mode the slot

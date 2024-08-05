@@ -259,7 +259,7 @@ export class VueElement extends BaseClass {
           this._ob = null
         }
         render(null, this._root)
-        this._instance!.isCE = undefined
+        this._instance!.ce = undefined
         this._instance = null
       }
     })
@@ -433,7 +433,7 @@ export class VueElement extends BaseClass {
     if (!this._instance) {
       vnode.ce = instance => {
         this._instance = instance
-        instance.isCE = this
+        instance.ce = this
         // HMR
         if (__DEV__) {
           instance.ceReload = newStyles => {
@@ -555,7 +555,7 @@ export class VueElement extends BaseClass {
  */
 export function useShadowRoot(): ShadowRoot | null {
   const instance = getCurrentInstance()
-  const el = instance && instance.isCE
+  const el = instance && instance.ce
   if (el) {
     return el.shadowRoot
   } else if (__DEV__) {
