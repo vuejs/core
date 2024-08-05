@@ -54,11 +54,15 @@ import type {
   ExtractDefaultPropTypes,
   ExtractPropTypes,
 } from './componentProps'
-import type { EmitsOptions, EmitsToProps } from './componentEmits'
+import type {
+  EmitsOptions,
+  EmitsToProps,
+  TypeEmitsToOptions,
+} from './componentEmits'
 import type { Directive } from './directives'
 import {
   type ComponentPublicInstance,
-  type CreateComponentPublicInstance,
+  type CreateComponentPublicInstanceWithMixins,
   type IntersectionMixin,
   type UnwrapMixinsType,
   isReservedPrefix,
@@ -76,7 +80,11 @@ import {
 import type { OptionMergeFunction } from './apiCreateApp'
 import { LifecycleHooks } from './enums'
 import type { SlotsType } from './componentSlots'
-import { normalizePropsOrEmits } from './apiSetupHelpers'
+import {
+  type ComponentTypeEmits,
+  normalizePropsOrEmits,
+} from './apiSetupHelpers'
+import { markAsyncBoundary } from './helpers/useId'
 
 /**
  * Interface for declaring custom options.
@@ -112,7 +120,11 @@ export interface ComponentOptionsBase<
   I extends ComponentInjectOptions = {},
   II extends string = string,
   S extends SlotsType = {},
-> extends LegacyOptions<Props, D, C, M, Mixin, Extends, I, II>,
+  LC extends Record<string, Component> = {},
+  Directives extends Record<string, Directive> = {},
+  Exposed extends string = string,
+  Provide extends ComponentProvideOptions = ComponentProvideOptions,
+> extends LegacyOptions<Props, D, C, M, Mixin, Extends, I, II, Provide>,
     ComponentInternalOptions,
     ComponentCustomOptions {
   setup?: (
@@ -136,13 +148,16 @@ export interface ComponentOptionsBase<
   // Luckily `render()` doesn't need any arguments nor does it care about return
   // type.
   render?: Function
-  components?: Record<string, Component>
-  directives?: Record<string, Directive>
+  // NOTE: extending both LC and Record<string, Component> allows objects to be forced
+  // to be of type Component, while still inferring LC generic
+  components?: LC & Record<string, Component>
+  // NOTE: extending both Directives and Record<string, Directive> allows objects to be forced
+  // to be of type Directive, while still inferring Directives generic
+  directives?: Directives & Record<string, Directive>
   inheritAttrs?: boolean
   emits?: (E | EE[]) & ThisType<void>
   slots?: S
-  // TODO infer public instance type based on exposed keys
-  expose?: string[]
+  expose?: Exposed[]
   serverPrefetch?(): void | Promise<any>
 
   // Runtime compiler only -----------------------------------------------------
@@ -184,6 +199,15 @@ export interface ComponentOptionsBase<
    * @internal
    */
   __asyncResolved?: ConcreteComponent
+  /**
+   * Exposed for lazy hydration
+   * @internal
+   */
+  __asyncHydrate?: (
+    el: Element,
+    instance: ComponentInternalInstance,
+    hydrate: () => void,
+  ) => void
 
   // Type differentiators ------------------------------------------------------
 
@@ -211,117 +235,24 @@ export interface RuntimeCompilerOptions {
   delimiters?: [string, string]
 }
 
-export type ComponentOptionsWithoutProps<
+export type ComponentOptions<
   Props = {},
-  RawBindings = {},
-  D = {},
-  C extends ComputedOptions = {},
-  M extends MethodOptions = {},
-  Mixin extends ComponentOptionsMixin = ComponentOptionsMixin,
-  Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
-  E extends EmitsOptions = EmitsOptions,
+  RawBindings = any,
+  D = any,
+  C extends ComputedOptions = any,
+  M extends MethodOptions = any,
+  Mixin extends ComponentOptionsMixin = any,
+  Extends extends ComponentOptionsMixin = any,
+  E extends EmitsOptions = any,
   EE extends string = string,
+  Defaults = {},
   I extends ComponentInjectOptions = {},
   II extends string = string,
   S extends SlotsType = {},
-  PE = Props & EmitsToProps<E>,
-> = ComponentOptionsBase<
-  PE,
-  RawBindings,
-  D,
-  C,
-  M,
-  Mixin,
-  Extends,
-  E,
-  EE,
-  {},
-  I,
-  II,
-  S
-> & {
-  props?: undefined
-} & ThisType<
-    CreateComponentPublicInstance<
-      PE,
-      RawBindings,
-      D,
-      C,
-      M,
-      Mixin,
-      Extends,
-      E,
-      PE,
-      {},
-      false,
-      I,
-      S
-    >
-  >
-
-export type ComponentOptionsWithArrayProps<
-  PropNames extends string = string,
-  RawBindings = {},
-  D = {},
-  C extends ComputedOptions = {},
-  M extends MethodOptions = {},
-  Mixin extends ComponentOptionsMixin = ComponentOptionsMixin,
-  Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
-  E extends EmitsOptions = EmitsOptions,
-  EE extends string = string,
-  I extends ComponentInjectOptions = {},
-  II extends string = string,
-  S extends SlotsType = {},
-  Props = Prettify<Readonly<{ [key in PropNames]?: any } & EmitsToProps<E>>>,
-> = ComponentOptionsBase<
-  Props,
-  RawBindings,
-  D,
-  C,
-  M,
-  Mixin,
-  Extends,
-  E,
-  EE,
-  {},
-  I,
-  II,
-  S
-> & {
-  props: PropNames[]
-} & ThisType<
-    CreateComponentPublicInstance<
-      Props,
-      RawBindings,
-      D,
-      C,
-      M,
-      Mixin,
-      Extends,
-      E,
-      Props,
-      {},
-      false,
-      I,
-      S
-    >
-  >
-
-export type ComponentOptionsWithObjectProps<
-  PropsOptions = ComponentObjectPropsOptions,
-  RawBindings = {},
-  D = {},
-  C extends ComputedOptions = {},
-  M extends MethodOptions = {},
-  Mixin extends ComponentOptionsMixin = ComponentOptionsMixin,
-  Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
-  E extends EmitsOptions = EmitsOptions,
-  EE extends string = string,
-  I extends ComponentInjectOptions = {},
-  II extends string = string,
-  S extends SlotsType = {},
-  Props = Prettify<Readonly<ExtractPropTypes<PropsOptions> & EmitsToProps<E>>>,
-  Defaults = ExtractDefaultPropTypes<PropsOptions>,
+  LC extends Record<string, Component> = {},
+  Directives extends Record<string, Directive> = {},
+  Exposed extends string = string,
+  Provide extends ComponentProvideOptions = ComponentProvideOptions,
 > = ComponentOptionsBase<
   Props,
   RawBindings,
@@ -335,51 +266,14 @@ export type ComponentOptionsWithObjectProps<
   Defaults,
   I,
   II,
-  S
-> & {
-  props: PropsOptions & ThisType<void>
-} & ThisType<
-    CreateComponentPublicInstance<
-      Props,
-      RawBindings,
-      D,
-      C,
-      M,
-      Mixin,
-      Extends,
-      E,
-      Props,
-      Defaults,
-      false,
-      I,
-      S
-    >
-  >
-
-export type ComponentOptions<
-  Props = {},
-  RawBindings = any,
-  D = any,
-  C extends ComputedOptions = any,
-  M extends MethodOptions = any,
-  Mixin extends ComponentOptionsMixin = any,
-  Extends extends ComponentOptionsMixin = any,
-  E extends EmitsOptions = any,
-  S extends SlotsType = any,
-> = ComponentOptionsBase<
-  Props,
-  RawBindings,
-  D,
-  C,
-  M,
-  Mixin,
-  Extends,
-  E,
-  string,
-  S
+  S,
+  LC,
+  Directives,
+  Exposed,
+  Provide
 > &
   ThisType<
-    CreateComponentPublicInstance<
+    CreateComponentPublicInstanceWithMixins<
       {},
       RawBindings,
       D,
@@ -388,11 +282,23 @@ export type ComponentOptions<
       Mixin,
       Extends,
       E,
-      Readonly<Props>
+      Readonly<Props>,
+      Defaults,
+      false,
+      I,
+      S,
+      LC,
+      Directives
     >
   >
 
 export type ComponentOptionsMixin = ComponentOptionsBase<
+  any,
+  any,
+  any,
+  any,
+  any,
+  any,
   any,
   any,
   any,
@@ -464,6 +370,7 @@ interface LegacyOptions<
   Extends extends ComponentOptionsMixin,
   I extends ComponentInjectOptions,
   II extends string,
+  Provide extends ComponentProvideOptions = ComponentProvideOptions,
 > {
   compatConfig?: CompatConfig
 
@@ -475,7 +382,7 @@ interface LegacyOptions<
   // since that leads to some sort of circular inference and breaks ThisType
   // for the entire component.
   data?: (
-    this: CreateComponentPublicInstance<
+    this: CreateComponentPublicInstanceWithMixins<
       Props,
       {},
       {},
@@ -484,7 +391,7 @@ interface LegacyOptions<
       Mixin,
       Extends
     >,
-    vm: CreateComponentPublicInstance<
+    vm: CreateComponentPublicInstanceWithMixins<
       Props,
       {},
       {},
@@ -497,7 +404,7 @@ interface LegacyOptions<
   computed?: C
   methods?: M
   watch?: ComponentWatchOptions
-  provide?: ComponentProvideOptions
+  provide?: Provide
   inject?: I | II[]
 
   // assets
@@ -874,6 +781,10 @@ export function applyOptions(instance: ComponentInternalInstance) {
   ) {
     instance.filters = filters
   }
+
+  if (__SSR__ && serverPrefetch) {
+    markAsyncBoundary(instance)
+  }
 }
 
 export function resolveInjections(
@@ -1171,3 +1082,203 @@ function mergeWatchOptions(
   }
   return merged
 }
+
+// Deprecated legacy types, kept because they were previously exported ---------
+
+/**
+ * @deprecated
+ */
+export type ComponentOptionsWithoutProps<
+  Props = {},
+  RawBindings = {},
+  D = {},
+  C extends ComputedOptions = {},
+  M extends MethodOptions = {},
+  Mixin extends ComponentOptionsMixin = ComponentOptionsMixin,
+  Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
+  E extends EmitsOptions = {},
+  EE extends string = string,
+  I extends ComponentInjectOptions = {},
+  II extends string = string,
+  S extends SlotsType = {},
+  LC extends Record<string, Component> = {},
+  Directives extends Record<string, Directive> = {},
+  Exposed extends string = string,
+  Provide extends ComponentProvideOptions = ComponentProvideOptions,
+  TE extends ComponentTypeEmits = {},
+  ResolvedEmits extends EmitsOptions = {} extends E
+    ? TypeEmitsToOptions<TE>
+    : E,
+  PE = Props & EmitsToProps<ResolvedEmits>,
+> = ComponentOptionsBase<
+  PE,
+  RawBindings,
+  D,
+  C,
+  M,
+  Mixin,
+  Extends,
+  E,
+  EE,
+  {},
+  I,
+  II,
+  S,
+  LC,
+  Directives,
+  Exposed,
+  Provide
+> & {
+  props?: never
+  /**
+   * @private for language-tools use only
+   */
+  __typeProps?: Props
+  /**
+   * @private for language-tools use only
+   */
+  __typeEmits?: TE
+} & ThisType<
+    CreateComponentPublicInstanceWithMixins<
+      PE,
+      RawBindings,
+      D,
+      C,
+      M,
+      Mixin,
+      Extends,
+      ResolvedEmits,
+      EE,
+      {},
+      false,
+      I,
+      S,
+      LC,
+      Directives,
+      Exposed
+    >
+  >
+
+/**
+ * @deprecated
+ */
+export type ComponentOptionsWithArrayProps<
+  PropNames extends string = string,
+  RawBindings = {},
+  D = {},
+  C extends ComputedOptions = {},
+  M extends MethodOptions = {},
+  Mixin extends ComponentOptionsMixin = ComponentOptionsMixin,
+  Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
+  E extends EmitsOptions = EmitsOptions,
+  EE extends string = string,
+  I extends ComponentInjectOptions = {},
+  II extends string = string,
+  S extends SlotsType = {},
+  LC extends Record<string, Component> = {},
+  Directives extends Record<string, Directive> = {},
+  Exposed extends string = string,
+  Provide extends ComponentProvideOptions = ComponentProvideOptions,
+  Props = Prettify<Readonly<{ [key in PropNames]?: any } & EmitsToProps<E>>>,
+> = ComponentOptionsBase<
+  Props,
+  RawBindings,
+  D,
+  C,
+  M,
+  Mixin,
+  Extends,
+  E,
+  EE,
+  {},
+  I,
+  II,
+  S,
+  LC,
+  Directives,
+  Exposed,
+  Provide
+> & {
+  props: PropNames[]
+} & ThisType<
+    CreateComponentPublicInstanceWithMixins<
+      Props,
+      RawBindings,
+      D,
+      C,
+      M,
+      Mixin,
+      Extends,
+      E,
+      Props,
+      {},
+      false,
+      I,
+      S,
+      LC,
+      Directives,
+      Exposed
+    >
+  >
+
+/**
+ * @deprecated
+ */
+export type ComponentOptionsWithObjectProps<
+  PropsOptions = ComponentObjectPropsOptions,
+  RawBindings = {},
+  D = {},
+  C extends ComputedOptions = {},
+  M extends MethodOptions = {},
+  Mixin extends ComponentOptionsMixin = ComponentOptionsMixin,
+  Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
+  E extends EmitsOptions = EmitsOptions,
+  EE extends string = string,
+  I extends ComponentInjectOptions = {},
+  II extends string = string,
+  S extends SlotsType = {},
+  LC extends Record<string, Component> = {},
+  Directives extends Record<string, Directive> = {},
+  Exposed extends string = string,
+  Provide extends ComponentProvideOptions = ComponentProvideOptions,
+  Props = Prettify<Readonly<ExtractPropTypes<PropsOptions> & EmitsToProps<E>>>,
+  Defaults = ExtractDefaultPropTypes<PropsOptions>,
+> = ComponentOptionsBase<
+  Props,
+  RawBindings,
+  D,
+  C,
+  M,
+  Mixin,
+  Extends,
+  E,
+  EE,
+  Defaults,
+  I,
+  II,
+  S,
+  LC,
+  Directives,
+  Exposed,
+  Provide
+> & {
+  props: PropsOptions & ThisType<void>
+} & ThisType<
+    CreateComponentPublicInstanceWithMixins<
+      Props,
+      RawBindings,
+      D,
+      C,
+      M,
+      Mixin,
+      Extends,
+      E,
+      Props,
+      Defaults,
+      false,
+      I,
+      S,
+      LC,
+      Directives
+    >
+  >

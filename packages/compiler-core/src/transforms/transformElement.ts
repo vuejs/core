@@ -56,7 +56,7 @@ import {
   toValidAssetId,
 } from '../utils'
 import { buildSlots } from './vSlot'
-import { getConstantType } from './hoistStatic'
+import { getConstantType } from './cacheStatic'
 import { BindingTypes } from '../options'
 import {
   CompilerDeprecationTypes,

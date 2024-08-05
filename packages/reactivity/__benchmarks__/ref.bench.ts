@@ -26,7 +26,6 @@ describe('ref', () => {
     const v = ref(100)
     bench('write/read ref', () => {
       v.value = i++
-
       v.value
     })
   }

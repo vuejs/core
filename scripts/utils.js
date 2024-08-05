@@ -60,13 +60,14 @@ export function fuzzyMatchTarget(partialTargets, includeAllMatching) {
  */
 export async function exec(command, args, options) {
   return new Promise((resolve, reject) => {
-    const process = spawn(command, args, {
+    const _process = spawn(command, args, {
       stdio: [
         'ignore', // stdin
         'pipe', // stdout
         'pipe', // stderr
       ],
       ...options,
+      shell: process.platform === 'win32',
     })
 
     /**
@@ -78,19 +79,19 @@ export async function exec(command, args, options) {
      */
     const stdoutChunks = []
 
-    process.stderr?.on('data', chunk => {
+    _process.stderr?.on('data', chunk => {
       stderrChunks.push(chunk)
     })
 
-    process.stdout?.on('data', chunk => {
+    _process.stdout?.on('data', chunk => {
       stdoutChunks.push(chunk)
     })
 
-    process.on('error', error => {
+    _process.on('error', error => {
       reject(error)
     })
 
-    process.on('exit', code => {
+    _process.on('exit', code => {
       const ok = code === 0
       const stderr = Buffer.concat(stderrChunks).toString().trim()
       const stdout = Buffer.concat(stdoutChunks).toString().trim()

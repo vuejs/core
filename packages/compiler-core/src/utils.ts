@@ -1,5 +1,6 @@
 import {
   type BlockCodegenNode,
+  type CacheExpression,
   type CallExpression,
   type DirectiveNode,
   type ElementNode,
@@ -438,7 +439,12 @@ export function toValidAssetId(
 
 // Check if a node contains expressions that reference current context scope ids
 export function hasScopeRef(
-  node: TemplateChildNode | IfBranchNode | ExpressionNode | undefined,
+  node:
+    | TemplateChildNode
+    | IfBranchNode
+    | ExpressionNode
+    | CacheExpression
+    | undefined,
   ids: TransformContext['identifiers'],
 ): boolean {
   if (!node || Object.keys(ids).length === 0) {
@@ -481,6 +487,7 @@ export function hasScopeRef(
       return hasScopeRef(node.content, ids)
     case NodeTypes.TEXT:
     case NodeTypes.COMMENT:
+    case NodeTypes.JS_CACHE_EXPRESSION:
       return false
     default:
       if (__DEV__) {

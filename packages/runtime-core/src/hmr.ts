@@ -96,7 +96,6 @@ function rerender(id: string, newRender?: Function) {
     instance.renderCache = []
     // this flag forces child components with slot content to update
     isHmrUpdating = true
-    instance.effect.dirty = true
     instance.update()
     isHmrUpdating = false
   })
@@ -144,7 +143,6 @@ function reload(id: string, newComp: HMRComponent) {
       // 4. Force the parent instance to re-render. This will cause all updated
       // components to be unmounted and re-mounted. Queue the update so that we
       // don't end up forcing the same parent to re-render multiple times.
-      instance.parent.effect.dirty = true
       queueJob(() => {
         instance.parent!.update()
         // #6930, #11248 avoid infinite recursion

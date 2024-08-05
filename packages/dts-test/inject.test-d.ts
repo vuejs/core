@@ -2,6 +2,7 @@ import {
   type InjectionKey,
   type Ref,
   createApp,
+  defineComponent,
   inject,
   provide,
   ref,
@@ -52,3 +53,9 @@ provide<Cube>(123, { size: 'foo' })
 const app = createApp({})
 // @ts-expect-error
 app.provide(injectionKeyRef, ref({}))
+
+defineComponent({
+  provide: {
+    [injectionKeyRef]: { size: 'foo' },
+  },
+})
