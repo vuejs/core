@@ -29,6 +29,22 @@ return function render(_ctx, _cache) {
 }"
 `;
 
+exports[`compiler: expression transform > should correctly handle the variable scoping 1`] = `
+"const { openBlock: _openBlock, createElementBlock: _createElementBlock } = Vue
+
+return function render(_ctx, _cache) {
+  return (_openBlock(), _createElementBlock("div", {
+    onClick: () => {
+        for (const msg of _ctx.msgs) {
+          _ctx.log(msg)
+        }
+        _ctx.error(_ctx.msgs)
+        const msgs  = 123
+      }
+  }, null, 8 /* PROPS */, ["onClick"]))
+}"
+`;
+
 exports[`compiler: expression transform > should not prefix catch block param 1`] = `
 "const { openBlock: _openBlock, createElementBlock: _createElementBlock } = Vue
 

@@ -80,6 +80,14 @@ export function walkIdentifiers(
             markScopeIdentifier(node, id, knownIds),
           )
         }
+      } else if (node.type === 'VariableDeclaration') {
+        if (parent && !node.declare) {
+          for (const decl of node.declarations) {
+            for (const id of extractIdentifiers(decl.id)) {
+              markScopeIdentifier(parent, id, knownIds)
+            }
+          }
+        }
       } else if (node.type === 'CatchClause' && node.param) {
         for (const id of extractIdentifiers(node.param)) {
           markScopeIdentifier(node, id, knownIds)
@@ -190,7 +198,7 @@ export function walkBlockDeclarations(
   onIdent: (node: Identifier) => void,
 ) {
   for (const stmt of block.body) {
-    if (stmt.type === 'VariableDeclaration') {
+    if (stmt.type === 'VariableDeclaration' && stmt.kind === 'var') {
       if (stmt.declare) continue
       for (const decl of stmt.declarations) {
         for (const id of extractIdentifiers(decl.id)) {

@@ -518,6 +518,21 @@ describe('compiler: expression transform', () => {
     expect(code).toMatchSnapshot()
   })
 
+  test('should correctly handle the variable scoping', () => {
+    const { code } = compile(
+      `<div @click="() => {
+        for (const msg of msgs) {
+          log(msg)
+        }
+        error(msgs)
+        const msgs  = 123
+      }"/>`,
+    )
+    expect(code).toMatch(`log(msg)`)
+    expect(code).toMatch(`error(_ctx.msgs)`)
+    expect(code).toMatchSnapshot()
+  })
+
   test('should not prefix catch block param', () => {
     const { code } = compile(
       `<div @click="() => {
