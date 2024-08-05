@@ -95,7 +95,6 @@ export async function exec(command, args, options) {
       const ok = code === 0
       const stderr = Buffer.concat(stderrChunks).toString().trim()
       const stdout = Buffer.concat(stdoutChunks).toString().trim()
-      const result = { ok, code, stderr, stdout }
 
       if (ok) {
         const result = { ok, code, stderr, stdout }
