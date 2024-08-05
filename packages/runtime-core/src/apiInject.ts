@@ -58,7 +58,7 @@ export function inject(
     // fallback to appContext's `provides` if the instance is at root
     // #11488, in a nested createApp, prioritize using the provides from currentApp
     const provides = currentApp
-      ? currentApp!._context.provides
+      ? currentApp._context.provides
       : instance
         ? instance.parent == null
           ? instance.vnode.appContext && instance.vnode.appContext.provides
