@@ -142,11 +142,17 @@ export function defineCustomElement<
     >,
 ): VueElementConstructor<ResolvedProps>
 
-// overload 5: defining a custom element from the returned value of
+// overload 3: defining a custom element from the returned value of
 // `defineComponent`
-export function defineCustomElement<P>(
-  options: DefineComponent<P, any, any, any>,
-): VueElementConstructor<ExtractPropTypes<P>>
+export function defineCustomElement<
+  T extends DefineComponent<any, any, any, any>,
+>(
+  options: T,
+): VueElementConstructor<
+  T extends DefineComponent<infer P, any, any, any>
+    ? ExtractPropTypes<P>
+    : unknown
+>
 
 /*! #__NO_SIDE_EFFECTS__ */
 export function defineCustomElement(
