@@ -263,6 +263,7 @@ export type {
   GlobalComponents,
   GlobalDirectives,
   ComponentInstance,
+  ComponentCustomElementInterface,
 } from './component'
 export type {
   DefineComponent,

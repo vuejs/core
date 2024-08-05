@@ -1,5 +1,6 @@
 import type { MockedFunction } from 'vitest'
 import {
+  type HMRRuntime,
   type Ref,
   type VueElement,
   createApp,
@@ -14,6 +15,8 @@ import {
   renderSlot,
   useShadowRoot,
 } from '../src'
+
+declare var __VUE_HMR_RUNTIME__: HMRRuntime
 
 describe('defineCustomElement', () => {
   const container = document.createElement('div')
@@ -636,18 +639,84 @@ describe('defineCustomElement', () => {
   })
 
   describe('styles', () => {
-    test('should attach styles to shadow dom', () => {
-      const Foo = defineCustomElement({
+    function assertStyles(el: VueElement, css: string[]) {
+      const styles = el.shadowRoot?.querySelectorAll('style')!
+      expect(styles.length).toBe(css.length) // should not duplicate multiple copies from Bar
+      for (let i = 0; i < css.length; i++) {
+        expect(styles[i].textContent).toBe(css[i])
+      }
+    }
+
+    test('should attach styles to shadow dom', async () => {
+      const def = defineComponent({
+        __hmrId: 'foo',
         styles: [`div { color: red; }`],
         render() {
           return h('div', 'hello')
         },
       })
+      const Foo = defineCustomElement(def)
       customElements.define('my-el-with-styles', Foo)
       container.innerHTML = `<my-el-with-styles></my-el-with-styles>`
       const el = container.childNodes[0] as VueElement
       const style = el.shadowRoot?.querySelector('style')!
       expect(style.textContent).toBe(`div { color: red; }`)
+
+      // hmr
+      __VUE_HMR_RUNTIME__.reload('foo', {
+        ...def,
+        styles: [`div { color: blue; }`, `div { color: yellow; }`],
+      } as any)
+
+      await nextTick()
+      assertStyles(el, [`div { color: blue; }`, `div { color: yellow; }`])
+    })
+
+    test("child components should inject styles to root element's shadow root", async () => {
+      const Baz = () => h(Bar)
+      const Bar = defineComponent({
+        __hmrId: 'bar',
+        styles: [`div { color: green; }`, `div { color: blue; }`],
+        render() {
+          return 'bar'
+        },
+      })
+      const Foo = defineCustomElement({
+        styles: [`div { color: red; }`],
+        render() {
+          return [h(Baz), h(Baz)]
+        },
+      })
+      customElements.define('my-el-with-child-styles', Foo)
+      container.innerHTML = `<my-el-with-child-styles></my-el-with-child-styles>`
+      const el = container.childNodes[0] as VueElement
+
+      // inject order should be child -> parent
+      assertStyles(el, [
+        `div { color: green; }`,
+        `div { color: blue; }`,
+        `div { color: red; }`,
+      ])
+
+      // hmr
+      __VUE_HMR_RUNTIME__.reload(Bar.__hmrId!, {
+        ...Bar,
+        styles: [`div { color: red; }`, `div { color: yellow; }`],
+      } as any)
+
+      await nextTick()
+      assertStyles(el, [
+        `div { color: red; }`,
+        `div { color: yellow; }`,
+        `div { color: red; }`,
+      ])
+
+      __VUE_HMR_RUNTIME__.reload(Bar.__hmrId!, {
+        ...Bar,
+        styles: [`div { color: blue; }`],
+      } as any)
+      await nextTick()
+      assertStyles(el, [`div { color: blue; }`, `div { color: red; }`])
     })
   })
 

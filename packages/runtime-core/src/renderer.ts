@@ -1276,8 +1276,8 @@ function baseCreateRenderer(
     const componentUpdateFn = () => {
       if (!instance.isMounted) {
         let vnodeHook: VNodeHook | null | undefined
-        const { el, props, type } = initialVNode
-        const { bm, m, parent } = instance
+        const { el, props } = initialVNode
+        const { bm, m, parent, root, type } = instance
         const isAsyncWrapperVNode = isAsyncWrapper(initialVNode)
 
         toggleRecurse(instance, false)
@@ -1335,6 +1335,11 @@ function baseCreateRenderer(
             hydrateSubTree()
           }
         } else {
+          // custom element style injection
+          if (root.ce) {
+            root.ce.injectChildStyle(type)
+          }
+
           if (__DEV__) {
             startMeasure(instance, `render`)
           }
