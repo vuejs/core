@@ -96,7 +96,16 @@ export async function exec(command, args, options) {
       const stderr = Buffer.concat(stderrChunks).toString().trim()
       const stdout = Buffer.concat(stdoutChunks).toString().trim()
       const result = { ok, code, stderr, stdout }
-      resolve(result)
+
+      if (ok) {
+        const result = { ok, code, stderr, stdout }
+        resolve(result)
+      }
+      reject(
+        new Error(
+          `Failed to execute command: ${command} ${args.join(' ')}: ${stderr}`,
+        ),
+      )
     })
   })
 }
