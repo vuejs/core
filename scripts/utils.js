@@ -103,7 +103,7 @@ export async function exec(command, args, options) {
         reject(
           new Error(
             `Failed to execute command: ${command} ${args.join(' ')}: ${stderr}`,
-          )
+          ),
         )
       }
     })
