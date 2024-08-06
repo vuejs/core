@@ -15,17 +15,17 @@ export type HydrationStrategy = (
   forEachElement: (cb: (el: Element) => any) => void,
 ) => (() => void) | void
 
-export type HydrationStrategyFactory<Options = any> = (
+export type HydrationStrategyFactory<Options> = (
   options?: Options,
 ) => HydrationStrategy
 
-export const hydrateOnIdle: HydrationStrategyFactory = () => hydrate => {
-  const id = requestIdleCallback(hydrate)
+export const hydrateOnIdle: HydrationStrategyFactory<number> = (timeout = 10000) => hydrate => {
+  const id = requestIdleCallback(hydrate, { timeout })
   return () => cancelIdleCallback(id)
 }
 
-export const hydrateOnVisible: HydrationStrategyFactory<string | number> =
-  (margin = 0) =>
+export const hydrateOnVisible: HydrationStrategyFactory<IntersectionObserverInit> =
+  (opts) =>
   (hydrate, forEach) => {
     const ob = new IntersectionObserver(
       entries => {
@@ -36,9 +36,7 @@ export const hydrateOnVisible: HydrationStrategyFactory<string | number> =
           break
         }
       },
-      {
-        rootMargin: isString(margin) ? margin : margin + 'px',
-      },
+      opts,
     )
     forEach(el => ob.observe(el))
     return () => ob.disconnect()
@@ -58,7 +56,7 @@ export const hydrateOnMediaQuery: HydrationStrategyFactory<string> =
   }
 
 export const hydrateOnInteraction: HydrationStrategyFactory<
-  string | string[]
+  keyof HTMLElementEventMap | Array<keyof HTMLElementEventMap>
 > =
   (interactions = []) =>
   (hydrate, forEach) => {
