@@ -1,7 +1,9 @@
-<script setup lang="ts">
-import { ref, shallowRef } from 'vue'
+<script setup lang="ts" vapor>
+import { ref, shallowRef } from '@vue/vapor'
 import { buildData } from './data'
 import { defer, wrap } from './profiling'
+
+const isVapor = !!import.meta.env.IS_VAPOR
 
 const selected = ref<number>()
 const rows = shallowRef<
@@ -75,14 +77,14 @@ async function bench() {
 </script>
 
 <template>
-  <h1>Vue.js Vapor Benchmark</h1>
+  <h1>Vue.js ({{ isVapor ? 'Vapor' : 'Virtual DOM' }}) Benchmark</h1>
   <div
     id="control"
     style="display: flex; flex-direction: column; width: fit-content; gap: 6px"
   >
     <button @click="bench">Benchmark mounting</button>
     <button id="run" @click="run">Create 1,000 rows</button>
-    <button id="runlots" @click="runLots">Create 10,000 rows</button>
+    <button id="runLots" @click="runLots">Create 10,000 rows</button>
     <button id="add" @click="add">Append 1,000 rows</button>
     <button id="update" @click="update">Update every 10th row</button>
     <button id="clear" @click="clear">Clear</button>

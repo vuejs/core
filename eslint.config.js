@@ -146,6 +146,7 @@ export default tseslint.config(
       'eslint.config.js',
       'rollup*.config.js',
       'scripts/**',
+      'benchmark/*',
       './*.{js,ts}',
       'packages/*/*.js',
       'packages/vue/*/*.js',
