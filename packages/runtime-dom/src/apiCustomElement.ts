@@ -48,6 +48,7 @@ export type VueElementConstructor<P = {}> = {
 export interface CustomElementOptions {
   styles?: string[]
   shadowRoot?: boolean
+  nonce?: string
 }
 
 // defineCustomElement provides the same type inference as defineComponent
@@ -513,8 +514,10 @@ export class VueElement
       }
       this._styleChildren.add(owner)
     }
+    const nonce = this._def.nonce
     for (let i = styles.length - 1; i >= 0; i--) {
       const s = document.createElement('style')
+      if (nonce) s.setAttribute('nonce', nonce)
       s.textContent = styles[i]
       this.shadowRoot!.prepend(s)
       // record for HMR

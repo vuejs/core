@@ -718,6 +718,23 @@ describe('defineCustomElement', () => {
       await nextTick()
       assertStyles(el, [`div { color: blue; }`, `div { color: red; }`])
     })
+
+    test('with nonce', () => {
+      const Foo = defineCustomElement(
+        {
+          styles: [`div { color: red; }`],
+          render() {
+            return h('div', 'hello')
+          },
+        },
+        { nonce: 'xxx' },
+      )
+      customElements.define('my-el-with-nonce', Foo)
+      container.innerHTML = `<my-el-with-nonce></my-el-with-nonce>`
+      const el = container.childNodes[0] as VueElement
+      const style = el.shadowRoot?.querySelector('style')!
+      expect(style.getAttribute('nonce')).toBe('xxx')
+    })
   })
 
   describe('async', () => {
