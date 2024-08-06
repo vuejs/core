@@ -62,9 +62,19 @@ export function ssrRenderSlotInner(
       parentComponent,
       slotScopeId ? ' ' + slotScopeId : '',
     )
-    if (isArray(ret) && ensureValidVNode(ret)) {
-      // normal slot
-      renderVNodeChildren(push, ret, parentComponent, slotScopeId)
+    if (isArray(ret)) {
+      const validSlotContent = ensureValidVNode(ret)
+      if (validSlotContent) {
+        // normal slot
+        renderVNodeChildren(
+          push,
+          validSlotContent,
+          parentComponent,
+          slotScopeId,
+        )
+      } else if (fallbackRenderFn) {
+        fallbackRenderFn()
+      }
     } else {
       // ssr slot.
       // check if the slot renders all comments, in which case use the fallback
