@@ -338,7 +338,7 @@ describe('defineCustomElement', () => {
       expect(el.shadowRoot!.innerHTML).toMatchInlineSnapshot('"<div>foo</div>"')
     })
 
-    // # 5793
+    // #5793
     test('set number value in dom property', () => {
       const E = defineCustomElement({
         props: {
@@ -355,6 +355,25 @@ describe('defineCustomElement', () => {
       el.maxAge = 50
       expect(el.maxAge).toBe(50)
       expect(el.shadowRoot.innerHTML).toBe('max age: 50/type: number')
+    })
+
+    // #9006
+    test('should reflect default value', () => {
+      const E = defineCustomElement({
+        props: {
+          value: {
+            type: String,
+            default: 'hi',
+          },
+        },
+        render() {
+          return this.value
+        },
+      })
+      customElements.define('my-el-default-val', E)
+      container.innerHTML = `<my-el-default-val></my-el-default-val>`
+      const e = container.childNodes[0] as any
+      expect(e.value).toBe('hi')
     })
 
     test('support direct setup function syntax with extra options', () => {

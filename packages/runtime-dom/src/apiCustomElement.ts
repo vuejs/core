@@ -395,7 +395,7 @@ export class VueElement
     // check if there are props set pre-upgrade or connect
     for (const key of Object.keys(this)) {
       if (key[0] !== '_' && declaredPropKeys.includes(key)) {
-        this._setProp(key, this[key as keyof this], true, false)
+        this._setProp(key, this[key as keyof this])
       }
     }
 
@@ -406,7 +406,7 @@ export class VueElement
           return this._getProp(key)
         },
         set(val) {
-          this._setProp(key, val)
+          this._setProp(key, val, true, true)
         },
       })
     }
@@ -435,7 +435,7 @@ export class VueElement
     if (this._numberProps && this._numberProps[camelKey]) {
       value = toNumber(value)
     }
-    this._setProp(camelKey, value, false)
+    this._setProp(camelKey, value, false, true)
   }
 
   /**
@@ -448,12 +448,7 @@ export class VueElement
   /**
    * @internal
    */
-  protected _setProp(
-    key: string,
-    val: any,
-    shouldReflect = true,
-    shouldUpdate = true,
-  ) {
+  _setProp(key: string, val: any, shouldReflect = true, shouldUpdate = false) {
     if (val !== this._props[key]) {
       this._props[key] = val
       if (shouldUpdate && this._instance) {

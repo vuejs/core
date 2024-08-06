@@ -1247,4 +1247,13 @@ export interface ComponentCustomElementInterface {
    * @internal
    */
   _removeChildStyle(type: ConcreteComponent): void
+  /**
+   * @internal
+   */
+  _setProp(
+    key: string,
+    val: any,
+    shouldReflect?: boolean,
+    shouldUpdate?: boolean,
+  ): void
 }
