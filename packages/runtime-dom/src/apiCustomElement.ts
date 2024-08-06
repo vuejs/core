@@ -588,7 +588,7 @@ export class VueElement
     this._applyStyles(comp.styles, comp)
   }
 
-  removeChildStlye(comp: ConcreteComponent): void {
+  removeChildStyle(comp: ConcreteComponent): void {
     if (__DEV__) {
       this._styleChildren.delete(comp)
       if (this._childStyles && comp.__hmrId) {

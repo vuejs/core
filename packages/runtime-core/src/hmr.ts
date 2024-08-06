@@ -162,7 +162,7 @@ function reload(id: string, newComp: HMRComponent) {
 
     // update custom element child style
     if (instance.root.ce && instance !== instance.root) {
-      instance.root.ce.removeChildStlye(oldComp)
+      instance.root.ce.removeChildStyle(oldComp)
     }
   }
 
