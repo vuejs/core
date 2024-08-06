@@ -495,7 +495,7 @@ describe('compiler: transform component slots', () => {
         flag = (innerComp.codegenNode as VNodeCall).patchFlag
       }
       if (expectedPatchFlag) {
-        expect(flag).toBe(PatchFlags.DYNAMIC_SLOTS)
+        expect(flag).toBe(expectedPatchFlag)
       } else {
         expect(flag).toBeUndefined()
       }
