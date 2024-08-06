@@ -1,4 +1,4 @@
-name: Publish Package
+name: Release
 
 on:
   workflow_dispatch:
@@ -62,7 +62,7 @@ jobs:
           git config user.email "<bot@vuejs.org>"
 
       - name: Release
-        run: pnpm release ${{ inputs.bump != 'custom' && inputs.bump || inputs.custom_version }} --skip-prompts
+        run: pnpm release ${{ inputs.bump != 'custom' && inputs.bump || inputs.custom_version }} --skipPrompts
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
