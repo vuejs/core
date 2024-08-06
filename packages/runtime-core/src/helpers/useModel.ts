@@ -51,8 +51,9 @@ export function useModel(
       },
 
       set(value) {
+        const _localValue = options.get ? options.get(localValue) : localValue
         if (
-          !hasChanged(value, localValue) &&
+          !hasChanged(value, _localValue) &&
           !(prevSetValue !== EMPTY_OBJ && hasChanged(value, prevSetValue))
         ) {
           return
