@@ -1340,6 +1340,26 @@ describe('SSR hydration', () => {
     expect((container.firstChild!.firstChild as any)._value).toBe(true)
   })
 
+  // #7203
+  test('force hydrate custom element with dynamic props', () => {
+    class MyElement extends HTMLElement {
+      foo = ''
+      constructor() {
+        super()
+      }
+    }
+    customElements.define('my-element-7203', MyElement)
+
+    const msg = ref('bar')
+    const container = document.createElement('div')
+    container.innerHTML = '<my-element-7203></my-element-7203>'
+    const app = createSSRApp({
+      render: () => h('my-element-7203', { foo: msg.value }),
+    })
+    app.mount(container)
+    expect((container.firstChild as any).foo).toBe(msg.value)
+  })
+
   // #5728
   test('empty text node in slot', () => {
     const Comp = {
