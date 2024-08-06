@@ -252,15 +252,23 @@ async function main() {
     let isCIPassed = await getCIResult()
     skipTests ||= isCIPassed
 
-    if (isCIPassed && !skipPrompts) {
-      /** @type {{ yes: boolean }} */
-      const { yes: promptSkipTests } = await prompt({
-        type: 'confirm',
-        name: 'yes',
-        message: `CI for this commit passed. Skip local tests?`,
-      })
-
-      skipTests = promptSkipTests
+    if (isCIPassed) {
+      if (!skipPrompts) {
+        /** @type {{ yes: boolean }} */
+        const { yes: promptSkipTests } = await prompt({
+          type: 'confirm',
+          name: 'yes',
+          message: `CI for this commit passed. Skip local tests?`,
+        })
+        skipTests = promptSkipTests
+      } else {
+        skipTests = true
+      }
+    } else if (skipPrompts) {
+      throw new Error(
+        'CI for the latest commit has not passed yet. ' +
+          'Only run the release workflow after the CI has passed.',
+      )
     }
   }
 
