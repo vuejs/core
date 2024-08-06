@@ -44,7 +44,7 @@ import {
   isSimpleIdentifier,
   isStaticArgOf,
 } from './utils'
-import { decodeHTML } from 'entities/lib/decode.js'
+import { decodeHTML } from 'entities/dist/decode.js'
 import {
   type ParserOptions as BabelOptions,
   parse,
@@ -179,7 +179,7 @@ const tokenizer = new Tokenizer(stack, {
     const name = currentOpenTag!.tag
     currentOpenTag!.isSelfClosing = true
     endOpenTag(end)
-    if (stack[0]?.tag === name) {
+    if (stack[0] && stack[0].tag === name) {
       onCloseTag(stack.shift()!, end)
     }
   },
@@ -587,14 +587,14 @@ function endOpenTag(end: number) {
 
 function onText(content: string, start: number, end: number) {
   if (__BROWSER__) {
-    const tag = stack[0]?.tag
+    const tag = stack[0] && stack[0].tag
     if (tag !== 'script' && tag !== 'style' && content.includes('&')) {
       content = currentOptions.decodeEntities!(content, false)
     }
   }
   const parent = stack[0] || currentRoot
   const lastNode = parent.children[parent.children.length - 1]
-  if (lastNode?.type === NodeTypes.TEXT) {
+  if (lastNode && lastNode.type === NodeTypes.TEXT) {
     // merge
     lastNode.content += content
     setLocEnd(lastNode.loc, end)
@@ -771,7 +771,8 @@ function isComponent({ tag, props }: ElementNode): boolean {
     tag === 'component' ||
     isUpperCase(tag.charCodeAt(0)) ||
     isCoreComponent(tag) ||
-    currentOptions.isBuiltInComponent?.(tag) ||
+    (currentOptions.isBuiltInComponent &&
+      currentOptions.isBuiltInComponent(tag)) ||
     (currentOptions.isNativeTag && !currentOptions.isNativeTag(tag))
   ) {
     return true
@@ -828,8 +829,8 @@ function condenseWhitespace(
     if (node.type === NodeTypes.TEXT) {
       if (!inPre) {
         if (isAllWhitespace(node.content)) {
-          const prev = nodes[i - 1]?.type
-          const next = nodes[i + 1]?.type
+          const prev = nodes[i - 1] && nodes[i - 1].type
+          const next = nodes[i + 1] && nodes[i + 1].type
           // Remove if:
           // - the whitespace is the first or last node, or:
           // - (condense mode) the whitespace is between two comments, or:
@@ -1063,7 +1064,7 @@ export function baseParse(input: string, options?: ParserOptions): RootNode {
     currentOptions.ns === Namespaces.SVG ||
     currentOptions.ns === Namespaces.MATH_ML
 
-  const delimiters = options?.delimiters
+  const delimiters = options && options.delimiters
   if (delimiters) {
     tokenizer.delimiterOpen = toCharCodes(delimiters[0])
     tokenizer.delimiterClose = toCharCodes(delimiters[1])

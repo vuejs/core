@@ -172,6 +172,16 @@ describe('ref with generic', <T extends { name: string }>() => {
   expectType<string>(ss.value.name)
 })
 
+describe('allow getter and setter types to be unrelated', <T>() => {
+  const a = { b: ref(0) }
+  const c = ref(a)
+  c.value = a
+
+  const d = {} as T
+  const e = ref(d)
+  e.value = d
+})
+
 // shallowRef
 type Status = 'initial' | 'ready' | 'invalidating'
 const shallowStatus = shallowRef<Status>('initial')
@@ -452,3 +462,7 @@ describe('toRef <-> toValue', () => {
     ),
   )
 })
+
+// unref
+declare const text: ShallowRef<string> | ComputedRef<string> | MaybeRef<string>
+expectType<string>(unref(text))

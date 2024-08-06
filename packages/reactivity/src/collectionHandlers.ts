@@ -1,4 +1,10 @@
-import { toRaw, toReactive, toReadonly } from './reactive'
+import {
+  isReadonly,
+  isShallow,
+  toRaw,
+  toReactive,
+  toReadonly,
+} from './reactive'
 import {
   ITERATE_KEY,
   MAP_KEY_ITERATE_KEY,
@@ -72,8 +78,10 @@ function size(target: IterableCollections, isReadonly = false) {
   return Reflect.get(target, 'size', target)
 }
 
-function add(this: SetTypes, value: unknown) {
-  value = toRaw(value)
+function add(this: SetTypes, value: unknown, _isShallow = false) {
+  if (!_isShallow && !isShallow(value) && !isReadonly(value)) {
+    value = toRaw(value)
+  }
   const target = toRaw(this)
   const proto = getProto(target)
   const hadKey = proto.has.call(target, value)
@@ -84,8 +92,10 @@ function add(this: SetTypes, value: unknown) {
   return this
 }
 
-function set(this: MapTypes, key: unknown, value: unknown) {
-  value = toRaw(value)
+function set(this: MapTypes, key: unknown, value: unknown, _isShallow = false) {
+  if (!_isShallow && !isShallow(value) && !isReadonly(value)) {
+    value = toRaw(value)
+  }
   const target = toRaw(this)
   const { has, get } = getProto(target)
 
@@ -163,19 +173,6 @@ function createForEach(isReadonly: boolean, isShallow: boolean) {
   }
 }
 
-interface Iterable {
-  [Symbol.iterator](): Iterator
-}
-
-interface Iterator {
-  next(value?: any): IterationResult
-}
-
-interface IterationResult {
-  value: any
-  done: boolean
-}
-
 function createIterableMethod(
   method: string | symbol,
   isReadonly: boolean,
@@ -184,7 +181,7 @@ function createIterableMethod(
   return function (
     this: IterableCollections,
     ...args: unknown[]
-  ): Iterable & Iterator {
+  ): Iterable<unknown> & Iterator<unknown> {
     const target = (this as any)[ReactiveFlags.RAW]
     const rawTarget = toRaw(target)
     const targetIsMap = isMap(rawTarget)
@@ -263,8 +260,12 @@ function createInstrumentations() {
       return size(this as unknown as IterableCollections)
     },
     has,
-    add,
-    set,
+    add(this: SetTypes, value: unknown) {
+      return add.call(this, value, true)
+    },
+    set(this: MapTypes, key: unknown, value: unknown) {
+      return set.call(this, key, value, true)
+    },
     delete: deleteEntry,
     clear,
     forEach: createForEach(false, true),

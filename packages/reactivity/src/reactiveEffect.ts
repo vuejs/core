@@ -145,6 +145,7 @@ export function trigger(
   resetScheduling()
 }
 
-export function getDepFromReactive(object: any, key: string | number | symbol) {
-  return targetMap.get(object)?.get(key)
+export function getDepFromReactive(object: any, key: PropertyKey) {
+  const depsMap = targetMap.get(object)
+  return depsMap && depsMap.get(key)
 }
