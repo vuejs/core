@@ -207,6 +207,8 @@ export class VueElement
   private _resolved = false
   private _numberProps: Record<string, true> | null = null
   private _styleChildren = new WeakSet()
+  private _pendingResolve: Promise<void> | undefined
+  private _parent: VueElement | undefined
   /**
    * dev only
    */
@@ -257,12 +259,39 @@ export class VueElement
       this._parseSlots()
     }
     this._connected = true
+
+    // locate nearest Vue custom element parent for provide/inject
+    let parent: Node | null = this
+    while (
+      (parent = parent && (parent.parentNode || (parent as ShadowRoot).host))
+    ) {
+      if (parent instanceof VueElement) {
+        this._parent = parent
+        break
+      }
+    }
+
     if (!this._instance) {
       if (this._resolved) {
+        this._setParent()
         this._update()
       } else {
-        this._resolveDef()
+        if (parent && parent._pendingResolve) {
+          this._pendingResolve = parent._pendingResolve.then(() => {
+            this._pendingResolve = undefined
+            this._resolveDef()
+          })
+        } else {
+          this._resolveDef()
+        }
       }
+    }
+  }
+
+  private _setParent(parent = this._parent) {
+    if (parent) {
+      this._instance!.parent = parent._instance
+      this._instance!.provides = parent._instance!.provides
     }
   }
 
@@ -285,7 +314,9 @@ export class VueElement
    * resolve inner component definition (handle possible async component)
    */
   private _resolveDef() {
-    this._resolved = true
+    if (this._pendingResolve) {
+      return
+    }
 
     // set initial attrs
     for (let i = 0; i < this.attributes.length; i++) {
@@ -302,6 +333,9 @@ export class VueElement
     this._ob.observe(this, { attributes: true })
 
     const resolve = (def: InnerComponentDef, isAsync = false) => {
+      this._resolved = true
+      this._pendingResolve = undefined
+
       const { props, styles } = def
 
       // cast Number-type props set before resolve
@@ -346,7 +380,9 @@ export class VueElement
 
     const asyncDef = (this._def as ComponentOptions).__asyncLoader
     if (asyncDef) {
-      asyncDef().then(def => resolve((this._def = def), true))
+      this._pendingResolve = asyncDef().then(def =>
+        resolve((this._def = def), true),
+      )
     } else {
       resolve(this._def)
     }
@@ -486,18 +522,7 @@ export class VueElement
           }
         }
 
-        // locate nearest Vue custom element parent for provide/inject
-        let parent: Node | null = this
-        while (
-          (parent =
-            parent && (parent.parentNode || (parent as ShadowRoot).host))
-        ) {
-          if (parent instanceof VueElement) {
-            instance.parent = parent._instance
-            instance.provides = parent._instance!.provides
-            break
-          }
-        }
+        this._setParent()
       }
     }
     return vnode
