@@ -62,6 +62,14 @@ jobs:
           git config user.name "vue-bot"
           git config user.email "<bot@vuejs.org>"
 
+      - name: Import GPG key
+        uses: crazy-max/ghaction-import-gpg@v6
+        with:
+          gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
+          passphrase: ${{ secrets.GPG_PASSPHRASE }}
+          git_user_signingkey: true
+          git_commit_gpgsign: true
+
       - name: Run release script
         id: release
         run: |
