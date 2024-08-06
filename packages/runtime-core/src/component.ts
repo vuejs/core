@@ -1239,6 +1239,12 @@ export function isClassComponent(value: unknown): value is ClassComponent {
 }
 
 export interface ComponentCustomElementInterface {
-  injectChildStyle(type: ConcreteComponent): void
-  removeChildStyle(type: ConcreteComponent): void
+  /**
+   * @internal
+   */
+  _injectChildStyle(type: ConcreteComponent): void
+  /**
+   * @internal
+   */
+  _removeChildStyle(type: ConcreteComponent): void
 }

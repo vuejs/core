@@ -609,11 +609,17 @@ export class VueElement
     }
   }
 
-  injectChildStyle(comp: ConcreteComponent & CustomElementOptions) {
+  /**
+   * @internal
+   */
+  _injectChildStyle(comp: ConcreteComponent & CustomElementOptions) {
     this._applyStyles(comp.styles, comp)
   }
 
-  removeChildStyle(comp: ConcreteComponent): void {
+  /**
+   * @internal
+   */
+  _removeChildStyle(comp: ConcreteComponent): void {
     if (__DEV__) {
       this._styleChildren.delete(comp)
       if (this._childStyles && comp.__hmrId) {
