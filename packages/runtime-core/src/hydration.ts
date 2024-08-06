@@ -447,6 +447,7 @@ export function createHydrationFunctions(
           !optimized ||
           patchFlag & (PatchFlags.FULL_PROPS | PatchFlags.NEED_HYDRATION)
         ) {
+          const isCustomElement = el.tagName.includes('-')
           for (const key in props) {
             // check hydration mismatch
             if (
@@ -463,7 +464,8 @@ export function createHydrationFunctions(
                 (key.endsWith('value') || key === 'indeterminate')) ||
               (isOn(key) && !isReservedProp(key)) ||
               // force hydrate v-bind with .prop modifiers
-              key[0] === '.'
+              key[0] === '.' ||
+              isCustomElement
             ) {
               patchProp(el, key, null, props[key], undefined, parentComponent)
             }

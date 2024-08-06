@@ -42,7 +42,8 @@ describe('defineProps w/ generics', () => {
   test()
 })
 
-describe('defineProps w/ type declaration + withDefaults', () => {
+describe('defineProps w/ type declaration + withDefaults', <T extends
+  string>() => {
   const res = withDefaults(
     defineProps<{
       number?: number
@@ -55,6 +56,7 @@ describe('defineProps w/ type declaration + withDefaults', () => {
       z?: string
       bool?: boolean
       boolAndUndefined: boolean | undefined
+      foo?: T
     }>(),
     {
       number: 123,
@@ -64,6 +66,7 @@ describe('defineProps w/ type declaration + withDefaults', () => {
       genStr: () => '',
       y: undefined,
       z: 'string',
+      foo: '' as any,
     },
   )
 
@@ -80,6 +83,7 @@ describe('defineProps w/ type declaration + withDefaults', () => {
   expectType<string | undefined>(res.x)
   expectType<string | undefined>(res.y)
   expectType<string>(res.z)
+  expectType<T>(res.foo)
 
   expectType<boolean>(res.bool)
   expectType<boolean>(res.boolAndUndefined)
