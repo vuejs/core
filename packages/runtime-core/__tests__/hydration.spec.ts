@@ -265,7 +265,7 @@ describe('SSR hydration', () => {
     const fn = vi.fn()
     const teleportContainer = document.createElement('div')
     teleportContainer.id = 'teleport'
-    teleportContainer.innerHTML = `<span>foo</span><span class="foo"></span><!--teleport anchor-->`
+    teleportContainer.innerHTML = `<!--teleport start anchor--><span>foo</span><span class="foo"></span><!--teleport anchor-->`
     document.body.appendChild(teleportContainer)
 
     const { vnode, container } = mountWithHydration(
@@ -281,13 +281,14 @@ describe('SSR hydration', () => {
     expect(vnode.anchor).toBe(container.lastChild)
 
     expect(vnode.target).toBe(teleportContainer)
+    expect(vnode.targetStart).toBe(teleportContainer.childNodes[0])
     expect((vnode.children as VNode[])[0].el).toBe(
-      teleportContainer.childNodes[0],
-    )
-    expect((vnode.children as VNode[])[1].el).toBe(
       teleportContainer.childNodes[1],
     )
-    expect(vnode.targetAnchor).toBe(teleportContainer.childNodes[2])
+    expect((vnode.children as VNode[])[1].el).toBe(
+      teleportContainer.childNodes[2],
+    )
+    expect(vnode.targetAnchor).toBe(teleportContainer.childNodes[3])
 
     // event handler
     triggerEvent('click', teleportContainer.querySelector('.foo')!)
@@ -296,7 +297,7 @@ describe('SSR hydration', () => {
     msg.value = 'bar'
     await nextTick()
     expect(teleportContainer.innerHTML).toBe(
-      `<span>bar</span><span class="bar"></span><!--teleport anchor-->`,
+      `<!--teleport start anchor--><span>bar</span><span class="bar"></span><!--teleport anchor-->`,
     )
   })
 
@@ -326,7 +327,7 @@ describe('SSR hydration', () => {
 
     const teleportHtml = ctx.teleports!['#teleport2']
     expect(teleportHtml).toMatchInlineSnapshot(
-      `"<span>foo</span><span class="foo"></span><!--teleport anchor--><span>foo2</span><span class="foo2"></span><!--teleport anchor-->"`,
+      `"<!--teleport start anchor--><span>foo</span><span class="foo"></span><!--teleport anchor--><!--teleport start anchor--><span>foo2</span><span class="foo2"></span><!--teleport anchor-->"`,
     )
 
     teleportContainer.innerHTML = teleportHtml
@@ -342,16 +343,18 @@ describe('SSR hydration', () => {
     expect(teleportVnode2.anchor).toBe(container.childNodes[4])
 
     expect(teleportVnode1.target).toBe(teleportContainer)
+    expect(teleportVnode1.targetStart).toBe(teleportContainer.childNodes[0])
     expect((teleportVnode1 as any).children[0].el).toBe(
-      teleportContainer.childNodes[0],
+      teleportContainer.childNodes[1],
     )
-    expect(teleportVnode1.targetAnchor).toBe(teleportContainer.childNodes[2])
+    expect(teleportVnode1.targetAnchor).toBe(teleportContainer.childNodes[3])
 
     expect(teleportVnode2.target).toBe(teleportContainer)
+    expect(teleportVnode2.targetStart).toBe(teleportContainer.childNodes[4])
     expect((teleportVnode2 as any).children[0].el).toBe(
-      teleportContainer.childNodes[3],
+      teleportContainer.childNodes[5],
     )
-    expect(teleportVnode2.targetAnchor).toBe(teleportContainer.childNodes[5])
+    expect(teleportVnode2.targetAnchor).toBe(teleportContainer.childNodes[7])
 
     // // event handler
     triggerEvent('click', teleportContainer.querySelector('.foo')!)
@@ -363,7 +366,7 @@ describe('SSR hydration', () => {
     msg.value = 'bar'
     await nextTick()
     expect(teleportContainer.innerHTML).toMatchInlineSnapshot(
-      `"<span>bar</span><span class="bar"></span><!--teleport anchor--><span>bar2</span><span class="bar2"></span><!--teleport anchor-->"`,
+      `"<!--teleport start anchor--><span>bar</span><span class="bar"></span><!--teleport anchor--><!--teleport start anchor--><span>bar2</span><span class="bar2"></span><!--teleport anchor-->"`,
     )
   })
 
@@ -390,7 +393,9 @@ describe('SSR hydration', () => {
     )
 
     const teleportHtml = ctx.teleports!['#teleport3']
-    expect(teleportHtml).toMatchInlineSnapshot(`"<!--teleport anchor-->"`)
+    expect(teleportHtml).toMatchInlineSnapshot(
+      `"<!--teleport start anchor--><!--teleport anchor-->"`,
+    )
 
     teleportContainer.innerHTML = teleportHtml
     document.body.appendChild(teleportContainer)
@@ -413,7 +418,8 @@ describe('SSR hydration', () => {
     expect(children[2].el).toBe(container.childNodes[6])
 
     expect(teleportVnode.target).toBe(teleportContainer)
-    expect(teleportVnode.targetAnchor).toBe(teleportContainer.childNodes[0])
+    expect(teleportVnode.targetStart).toBe(teleportContainer.childNodes[0])
+    expect(teleportVnode.targetAnchor).toBe(teleportContainer.childNodes[1])
 
     // // event handler
     triggerEvent('click', container.querySelector('.foo')!)
@@ -454,7 +460,7 @@ describe('SSR hydration', () => {
   test('Teleport (as component root)', () => {
     const teleportContainer = document.createElement('div')
     teleportContainer.id = 'teleport4'
-    teleportContainer.innerHTML = `hello<!--teleport anchor-->`
+    teleportContainer.innerHTML = `<!--teleport start anchor-->hello<!--teleport anchor-->`
     document.body.appendChild(teleportContainer)
 
     const wrapper = {
@@ -483,7 +489,7 @@ describe('SSR hydration', () => {
   test('Teleport (nested)', () => {
     const teleportContainer = document.createElement('div')
     teleportContainer.id = 'teleport5'
-    teleportContainer.innerHTML = `<div><!--teleport start--><!--teleport end--></div><!--teleport anchor--><div>child</div><!--teleport anchor-->`
+    teleportContainer.innerHTML = `<!--teleport start anchor--><div><!--teleport start--><!--teleport end--></div><!--teleport anchor--><!--teleport start anchor--><div>child</div><!--teleport anchor-->`
     document.body.appendChild(teleportContainer)
 
     const { vnode, container } = mountWithHydration(
@@ -498,7 +504,7 @@ describe('SSR hydration', () => {
     expect(vnode.anchor).toBe(container.lastChild)
 
     const childDivVNode = (vnode as any).children[0]
-    const div = teleportContainer.firstChild
+    const div = teleportContainer.childNodes[1]
     expect(childDivVNode.el).toBe(div)
     expect(vnode.targetAnchor).toBe(div?.nextSibling)
 
@@ -510,6 +516,178 @@ describe('SSR hydration', () => {
     expect(childTeleportVNode.children[0].el).toBe(
       teleportContainer.lastChild?.previousSibling,
     )
+  })
+
+  test('Teleport unmount (full integration)', async () => {
+    const Comp1 = {
+      template: `
+        <Teleport to="#target"> 
+          <span>Teleported Comp1</span>
+        </Teleport>
+      `,
+    }
+    const Comp2 = {
+      template: `
+        <div>Comp2</div>
+      `,
+    }
+
+    const toggle = ref(true)
+    const App = {
+      template: `
+        <div>
+          <Comp1 v-if="toggle"/>
+          <Comp2 v-else/>
+        </div>
+      `,
+      components: {
+        Comp1,
+        Comp2,
+      },
+      setup() {
+        return { toggle }
+      },
+    }
+
+    const container = document.createElement('div')
+    const teleportContainer = document.createElement('div')
+    teleportContainer.id = 'target'
+    document.body.appendChild(teleportContainer)
+
+    // server render
+    const ctx: SSRContext = {}
+    container.innerHTML = await renderToString(h(App), ctx)
+    expect(container.innerHTML).toBe(
+      '<div><!--teleport start--><!--teleport end--></div>',
+    )
+    teleportContainer.innerHTML = ctx.teleports!['#target']
+
+    // hydrate
+    createSSRApp(App).mount(container)
+    expect(container.innerHTML).toBe(
+      '<div><!--teleport start--><!--teleport end--></div>',
+    )
+    expect(teleportContainer.innerHTML).toBe(
+      '<!--teleport start anchor--><span>Teleported Comp1</span><!--teleport anchor-->',
+    )
+    expect(`Hydration children mismatch`).not.toHaveBeenWarned()
+
+    toggle.value = false
+    await nextTick()
+    expect(container.innerHTML).toBe('<div><div>Comp2</div></div>')
+    expect(teleportContainer.innerHTML).toBe('')
+  })
+
+  test('Teleport unmount (mismatch + full integration)', async () => {
+    const Comp1 = {
+      template: `
+        <Teleport to="#target"> 
+          <span>Teleported Comp1</span>
+        </Teleport>
+      `,
+    }
+    const Comp2 = {
+      template: `
+        <div>Comp2</div>
+      `,
+    }
+
+    const toggle = ref(true)
+    const App = {
+      template: `
+        <div>
+          <Comp1 v-if="toggle"/>
+          <Comp2 v-else/>
+        </div>
+      `,
+      components: {
+        Comp1,
+        Comp2,
+      },
+      setup() {
+        return { toggle }
+      },
+    }
+
+    const container = document.createElement('div')
+    const teleportContainer = document.createElement('div')
+    teleportContainer.id = 'target'
+    document.body.appendChild(teleportContainer)
+
+    // server render
+    container.innerHTML = await renderToString(h(App))
+    expect(container.innerHTML).toBe(
+      '<div><!--teleport start--><!--teleport end--></div>',
+    )
+    expect(teleportContainer.innerHTML).toBe('')
+
+    // hydrate
+    createSSRApp(App).mount(container)
+    expect(container.innerHTML).toBe(
+      '<div><!--teleport start--><!--teleport end--></div>',
+    )
+    expect(teleportContainer.innerHTML).toBe('<span>Teleported Comp1</span>')
+    expect(`Hydration children mismatch`).toHaveBeenWarned()
+
+    toggle.value = false
+    await nextTick()
+    expect(container.innerHTML).toBe('<div><div>Comp2</div></div>')
+    expect(teleportContainer.innerHTML).toBe('')
+  })
+
+  test('Teleport target change (mismatch + full integration)', async () => {
+    const target = ref('#target1')
+    const Comp = {
+      template: `
+        <Teleport :to="target"> 
+          <span>Teleported</span>
+        </Teleport>
+      `,
+      setup() {
+        return { target }
+      },
+    }
+
+    const App = {
+      template: `
+        <div>
+          <Comp />
+        </div>
+      `,
+      components: {
+        Comp,
+      },
+    }
+
+    const container = document.createElement('div')
+    const teleportContainer1 = document.createElement('div')
+    teleportContainer1.id = 'target1'
+    const teleportContainer2 = document.createElement('div')
+    teleportContainer2.id = 'target2'
+    document.body.appendChild(teleportContainer1)
+    document.body.appendChild(teleportContainer2)
+
+    // server render
+    container.innerHTML = await renderToString(h(App))
+    expect(container.innerHTML).toBe(
+      '<div><!--teleport start--><!--teleport end--></div>',
+    )
+    expect(teleportContainer1.innerHTML).toBe('')
+    expect(teleportContainer2.innerHTML).toBe('')
+
+    // hydrate
+    createSSRApp(App).mount(container)
+    expect(container.innerHTML).toBe(
+      '<div><!--teleport start--><!--teleport end--></div>',
+    )
+    expect(teleportContainer1.innerHTML).toBe('<span>Teleported</span>')
+    expect(teleportContainer2.innerHTML).toBe('')
+    expect(`Hydration children mismatch`).toHaveBeenWarned()
+
+    target.value = '#target2'
+    await nextTick()
+    expect(teleportContainer1.innerHTML).toBe('')
+    expect(teleportContainer2.innerHTML).toBe('<span>Teleported</span>')
   })
 
   // compile SSR + client render fn from the same template & hydrate
@@ -1822,6 +2000,138 @@ describe('SSR hydration', () => {
       })
       app.mount(container)
       expect(`Hydration style mismatch`).not.toHaveBeenWarned()
+    })
+  })
+
+  describe('data-allow-mismatch', () => {
+    test('element text content', () => {
+      const { container } = mountWithHydration(
+        `<div data-allow-mismatch="text">foo</div>`,
+        () => h('div', 'bar'),
+      )
+      expect(container.innerHTML).toBe(
+        '<div data-allow-mismatch="text">bar</div>',
+      )
+      expect(`Hydration text content mismatch`).not.toHaveBeenWarned()
+    })
+
+    test('not enough children', () => {
+      const { container } = mountWithHydration(
+        `<div data-allow-mismatch="children"></div>`,
+        () => h('div', [h('span', 'foo'), h('span', 'bar')]),
+      )
+      expect(container.innerHTML).toBe(
+        '<div data-allow-mismatch="children"><span>foo</span><span>bar</span></div>',
+      )
+      expect(`Hydration children mismatch`).not.toHaveBeenWarned()
+    })
+
+    test('too many children', () => {
+      const { container } = mountWithHydration(
+        `<div data-allow-mismatch="children"><span>foo</span><span>bar</span></div>`,
+        () => h('div', [h('span', 'foo')]),
+      )
+      expect(container.innerHTML).toBe(
+        '<div data-allow-mismatch="children"><span>foo</span></div>',
+      )
+      expect(`Hydration children mismatch`).not.toHaveBeenWarned()
+    })
+
+    test('complete mismatch', () => {
+      const { container } = mountWithHydration(
+        `<div data-allow-mismatch="children"><span>foo</span><span>bar</span></div>`,
+        () => h('div', [h('div', 'foo'), h('p', 'bar')]),
+      )
+      expect(container.innerHTML).toBe(
+        '<div data-allow-mismatch="children"><div>foo</div><p>bar</p></div>',
+      )
+      expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+    })
+
+    test('fragment mismatch removal', () => {
+      const { container } = mountWithHydration(
+        `<div data-allow-mismatch="children"><!--[--><div>foo</div><div>bar</div><!--]--></div>`,
+        () => h('div', [h('span', 'replaced')]),
+      )
+      expect(container.innerHTML).toBe(
+        '<div data-allow-mismatch="children"><span>replaced</span></div>',
+      )
+      expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+    })
+
+    test('fragment not enough children', () => {
+      const { container } = mountWithHydration(
+        `<div data-allow-mismatch="children"><!--[--><div>foo</div><!--]--><div>baz</div></div>`,
+        () => h('div', [[h('div', 'foo'), h('div', 'bar')], h('div', 'baz')]),
+      )
+      expect(container.innerHTML).toBe(
+        '<div data-allow-mismatch="children"><!--[--><div>foo</div><div>bar</div><!--]--><div>baz</div></div>',
+      )
+      expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+    })
+
+    test('fragment too many children', () => {
+      const { container } = mountWithHydration(
+        `<div data-allow-mismatch="children"><!--[--><div>foo</div><div>bar</div><!--]--><div>baz</div></div>`,
+        () => h('div', [[h('div', 'foo')], h('div', 'baz')]),
+      )
+      expect(container.innerHTML).toBe(
+        '<div data-allow-mismatch="children"><!--[--><div>foo</div><!--]--><div>baz</div></div>',
+      )
+      // fragment ends early and attempts to hydrate the extra <div>bar</div>
+      // as 2nd fragment child.
+      expect(`Hydration text content mismatch`).not.toHaveBeenWarned()
+      // excessive children removal
+      expect(`Hydration children mismatch`).not.toHaveBeenWarned()
+    })
+
+    test('comment mismatch (element)', () => {
+      const { container } = mountWithHydration(
+        `<div data-allow-mismatch="children"><span></span></div>`,
+        () => h('div', [createCommentVNode('hi')]),
+      )
+      expect(container.innerHTML).toBe(
+        '<div data-allow-mismatch="children"><!--hi--></div>',
+      )
+      expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+    })
+
+    test('comment mismatch (text)', () => {
+      const { container } = mountWithHydration(
+        `<div data-allow-mismatch="children">foobar</div>`,
+        () => h('div', [createCommentVNode('hi')]),
+      )
+      expect(container.innerHTML).toBe(
+        '<div data-allow-mismatch="children"><!--hi--></div>',
+      )
+      expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+    })
+
+    test('class mismatch', () => {
+      mountWithHydration(
+        `<div class="foo bar" data-allow-mismatch="class"></div>`,
+        () => h('div', { class: 'foo' }),
+      )
+      expect(`Hydration class mismatch`).not.toHaveBeenWarned()
+    })
+
+    test('style mismatch', () => {
+      mountWithHydration(
+        `<div style="color:red;" data-allow-mismatch="style"></div>`,
+        () => h('div', { style: { color: 'green' } }),
+      )
+      expect(`Hydration style mismatch`).not.toHaveBeenWarned()
+    })
+
+    test('attr mismatch', () => {
+      mountWithHydration(`<div data-allow-mismatch="attribute"></div>`, () =>
+        h('div', { id: 'foo' }),
+      )
+      mountWithHydration(
+        `<div id="bar" data-allow-mismatch="attribute"></div>`,
+        () => h('div', { id: 'foo' }),
+      )
+      expect(`Hydration attribute mismatch`).not.toHaveBeenWarned()
     })
   })
 })

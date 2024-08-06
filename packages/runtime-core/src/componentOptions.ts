@@ -200,6 +200,15 @@ export interface ComponentOptionsBase<
    * @internal
    */
   __asyncResolved?: ConcreteComponent
+  /**
+   * Exposed for lazy hydration
+   * @internal
+   */
+  __asyncHydrate?: (
+    el: Element,
+    instance: ComponentInternalInstance,
+    hydrate: () => void,
+  ) => void
 
   // Type differentiators ------------------------------------------------------
 

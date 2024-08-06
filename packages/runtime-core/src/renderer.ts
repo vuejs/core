@@ -1338,16 +1338,11 @@ function baseCreateRenderer(
             }
           }
 
-          if (
-            isAsyncWrapperVNode &&
-            !(type as ComponentOptions).__asyncResolved
-          ) {
-            ;(type as ComponentOptions).__asyncLoader!().then(
-              // note: we are moving the render call into an async callback,
-              // which means it won't track dependencies - but it's ok because
-              // a server-rendered async wrapper is already in resolved state
-              // and it will never need to change.
-              () => !instance.isUnmounted && hydrateSubTree(),
+          if (isAsyncWrapperVNode) {
+            ;(type as ComponentOptions).__asyncHydrate!(
+              el as Element,
+              instance,
+              hydrateSubTree,
             )
           } else {
             hydrateSubTree()
