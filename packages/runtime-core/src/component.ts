@@ -1240,5 +1240,5 @@ export function isClassComponent(value: unknown): value is ClassComponent {
 
 export interface ComponentCustomElementInterface {
   injectChildStyle(type: ConcreteComponent): void
-  removeChildStlye(type: ConcreteComponent): void
+  removeChildStyle(type: ConcreteComponent): void
 }
