@@ -138,31 +138,6 @@ describe('defineProps w/ object union + withDefaults', () => {
   >(props)
 })
 
-describe('defineProps w/ generic discriminate union + withDefaults', () => {
-  interface B {
-    b?: string
-  }
-  interface S<T> extends B {
-    mode: 'single'
-    v: T
-  }
-  interface M<T> extends B {
-    mode: 'multiple'
-    v: T[]
-  }
-  type Props = S<string> | M<string>
-  const props = withDefaults(defineProps<Props>(), {
-    b: 'b',
-  })
-
-  if (props.mode === 'single') {
-    expectType<string>(props.v)
-  }
-  if (props.mode === 'multiple') {
-    expectType<string[]>(props.v)
-  }
-})
-
 describe('defineProps w/ generic type declaration + withDefaults', <T extends
   number, TA extends {
   a: string

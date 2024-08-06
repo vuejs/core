@@ -423,12 +423,6 @@ export interface ComponentInternalInstance {
    * @internal
    */
   ceReload?: (newStyles?: string[]) => void
-  /**
-   * Set the css variables related to the :host selector
-   * to the style of the custom element
-   * @internal
-   */
-  ceSetCssVars?: (vars: Record<string, string>) => void
 
   // the rest are only for stateful components ---------------------------------
 
