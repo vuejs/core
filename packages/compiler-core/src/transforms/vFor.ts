@@ -228,8 +228,10 @@ export const transformFor = createStructuralDirectiveTransform(
           renderExp.arguments.push(
             loop as ForIteratorExpression,
             createSimpleExpression(`_cache`),
-            createSimpleExpression(String(context.cached++)),
+            createSimpleExpression(String(context.cached.length)),
           )
+          // increment cache count
+          context.cached.push(null)
         } else {
           renderExp.arguments.push(
             createFunctionExpression(

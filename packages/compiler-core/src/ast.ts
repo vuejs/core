@@ -110,7 +110,7 @@ export interface RootNode extends Node {
   directives: string[]
   hoists: (JSChildNode | null)[]
   imports: ImportItem[]
-  cached: number
+  cached: (CacheExpression | null)[]
   temps: number
   ssrHelpers?: symbol[]
   codegenNode?: TemplateChildNode | JSChildNode | BlockStatement
@@ -218,7 +218,7 @@ export interface DirectiveNode extends Node {
 export enum ConstantTypes {
   NOT_CONSTANT = 0,
   CAN_SKIP_PATCH,
-  CAN_HOIST,
+  CAN_CACHE,
   CAN_STRINGIFY,
 }
 
@@ -330,6 +330,7 @@ export interface VNodeCall extends Node {
     | SlotsExpression // component slots
     | ForRenderListExpression // v-for fragment call
     | SimpleExpressionNode // hoisted
+    | CacheExpression // cached
     | undefined
   patchFlag: PatchFlags | undefined
   dynamicProps: string | SimpleExpressionNode | undefined
@@ -416,7 +417,8 @@ export interface CacheExpression extends Node {
   type: NodeTypes.JS_CACHE_EXPRESSION
   index: number
   value: JSChildNode
-  isVOnce: boolean
+  needPauseTracking: boolean
+  needArraySpread: boolean
 }
 
 export interface MemoExpression extends CallExpression {
@@ -511,7 +513,7 @@ export interface SlotsObjectProperty extends Property {
 }
 
 export interface SlotFunctionExpression extends FunctionExpression {
-  returns: TemplateChildNode[]
+  returns: TemplateChildNode[] | CacheExpression
 }
 
 // createSlots({ ... }, [
@@ -598,7 +600,7 @@ export function createRoot(
     directives: [],
     hoists: [],
     imports: [],
-    cached: 0,
+    cached: [],
     temps: 0,
     codegenNode: undefined,
     loc: locStub,
@@ -771,13 +773,14 @@ export function createConditionalExpression(
 export function createCacheExpression(
   index: number,
   value: JSChildNode,
-  isVOnce: boolean = false,
+  needPauseTracking: boolean = false,
 ): CacheExpression {
   return {
     type: NodeTypes.JS_CACHE_EXPRESSION,
     index,
     value,
-    isVOnce,
+    needPauseTracking: needPauseTracking,
+    needArraySpread: false,
     loc: locStub,
   }
 }

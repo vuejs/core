@@ -86,6 +86,15 @@ import {
 import type { SchedulerJob } from './scheduler'
 import type { LifecycleHooks } from './enums'
 
+// Augment GlobalComponents
+import type { TeleportProps } from './components/Teleport'
+import type { SuspenseProps } from './components/Suspense'
+import type { KeepAliveProps } from './components/KeepAlive'
+import type { BaseTransitionProps } from './components/BaseTransition'
+import type { DefineComponent } from './apiDefineComponent'
+import { markAsyncBoundary } from './helpers/useId'
+import { isAsyncWrapper } from './apiAsyncComponent'
+
 export type Data = Record<string, unknown>
 
 /**
@@ -125,6 +134,45 @@ export type ComponentInstance<T> = T extends { new (): ComponentPublicInstance }
  * For extending allowed non-declared props on components in TSX
  */
 export interface ComponentCustomProps {}
+
+/**
+ * For globally defined Directives
+ * Here is an example of adding a directive `VTooltip` as global directive:
+ *
+ * @example
+ * ```ts
+ * import VTooltip from 'v-tooltip'
+ *
+ * declare module '@vue/runtime-core' {
+ *   interface GlobalDirectives {
+ *     VTooltip
+ *   }
+ * }
+ * ```
+ */
+export interface GlobalDirectives extends Record<string, Directive> {}
+
+/**
+ * For globally defined Components
+ * Here is an example of adding a component `RouterView` as global component:
+ *
+ * @example
+ * ```ts
+ * import { RouterView } from 'vue-router'
+ *
+ * declare module '@vue/runtime-core' {
+ *   interface GlobalComponents {
+ *     RouterView
+ *   }
+ * }
+ * ```
+ */
+export interface GlobalComponents extends Record<string, Component> {
+  Teleport: DefineComponent<TeleportProps>
+  Suspense: DefineComponent<SuspenseProps>
+  KeepAlive: DefineComponent<KeepAliveProps>
+  BaseTransition: DefineComponent<BaseTransitionProps>
+}
 
 /**
  * Default allowed non-declared props on component in TSX
@@ -288,9 +336,13 @@ export interface ComponentInternalInstance {
    */
   effect: ReactiveEffect
   /**
-   * Bound effect runner to be passed to schedulers
+   * Force update render effect
    */
-  update: SchedulerJob
+  update: () => void
+  /**
+   * Render effect job to be passed to scheduler (checks if dirty)
+   */
+  job: SchedulerJob
   /**
    * The render function that returns vdom tree.
    * @internal
@@ -306,6 +358,13 @@ export interface ComponentInternalInstance {
    * @internal
    */
   provides: Data
+  /**
+   * for tracking useId()
+   * first element is the current boundary prefix
+   * second number is the index of the useId call within that boundary
+   * @internal
+   */
+  ids: [string, number, number]
   /**
    * Tracking reactive effects (e.g. watchers) associated with this component
    * so that they can be automatically stopped on component unmount
@@ -358,7 +417,7 @@ export interface ComponentInternalInstance {
    * is custom element?
    * @internal
    */
-  isCE?: boolean
+  ce?: ComponentCustomElementInterface
   /**
    * custom element specific HMR method
    * @internal
@@ -563,6 +622,7 @@ export function createComponentInstance(
     subTree: null!, // will be set synchronously right after creation
     effect: null!,
     update: null!, // will be set synchronously right after creation
+    job: null!,
     scope: new EffectScope(true /* detached */),
     render: null,
     proxy: null,
@@ -571,6 +631,7 @@ export function createComponentInstance(
     withProxy: null,
 
     provides: parent ? parent.provides : Object.create(appContext.provides),
+    ids: parent ? parent.ids : ['', 0, 0],
     accessCache: null!,
     renderCache: [],
 
@@ -811,6 +872,8 @@ function setupStatefulComponent(
     reset()
 
     if (isPromise(setupResult)) {
+      // async setup, mark as async boundary for useId()
+      if (!isAsyncWrapper(instance)) markAsyncBoundary(instance)
       setupResult.then(unsetCurrentInstance, unsetCurrentInstance)
       if (isSSR) {
         // return the promise so server-renderer can wait on it
@@ -1179,4 +1242,9 @@ export function formatComponentName(
 
 export function isClassComponent(value: unknown): value is ClassComponent {
   return isFunction(value) && '__vccOpts' in value
+}
+
+export interface ComponentCustomElementInterface {
+  injectChildStyle(type: ConcreteComponent): void
+  removeChildStyle(type: ConcreteComponent): void
 }

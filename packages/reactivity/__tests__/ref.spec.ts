@@ -456,6 +456,17 @@ describe('reactivity/ref', () => {
     expect(a.value).not.toBe(r)
   })
 
+  test('should not trigger when setting the same raw object', () => {
+    const obj = {}
+    const r = ref(obj)
+    const spy = vi.fn()
+    effect(() => spy(r.value))
+    expect(spy).toHaveBeenCalledTimes(1)
+
+    r.value = obj
+    expect(spy).toHaveBeenCalledTimes(1)
+  })
+
   test('toValue', () => {
     const a = ref(1)
     const b = computed(() => a.value + 1)

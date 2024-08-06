@@ -18,7 +18,9 @@ import { toRaw } from '@vue/reactivity'
 import { ErrorCodes, callWithAsyncErrorHandling } from '../errorHandling'
 import { PatchFlags, ShapeFlags, isArray, isFunction } from '@vue/shared'
 import { onBeforeUnmount, onMounted } from '../apiLifecycle'
+import { isTeleport } from './Teleport'
 import type { RendererElement } from '../renderer'
+import { SchedulerJobFlags } from '../scheduler'
 
 type Hook<T = () => void> = T | T[]
 
@@ -156,27 +158,7 @@ const BaseTransitionImpl: ComponentOptions = {
         return
       }
 
-      let child: VNode = children[0]
-      if (children.length > 1) {
-        let hasFound = false
-        // locate first non-comment child
-        for (const c of children) {
-          if (c.type !== Comment) {
-            if (__DEV__ && hasFound) {
-              // warn more than one non-comment child
-              warn(
-                '<transition> can only be used on a single element or component. ' +
-                  'Use <transition-group> for lists.',
-              )
-              break
-            }
-            child = c
-            hasFound = true
-            if (!__DEV__) break
-          }
-        }
-      }
-
+      const child: VNode = findNonCommentChild(children)
       // there's no need to track reactivity for these props so use the raw
       // props for a bit better perf
       const rawProps = toRaw(props)
@@ -198,7 +180,7 @@ const BaseTransitionImpl: ComponentOptions = {
 
       // in the case of <transition><keep-alive/></transition>, we need to
       // compare the type of the kept-alive children.
-      const innerChild = getKeepAliveChild(child)
+      const innerChild = getInnerChild(child)
       if (!innerChild) {
         return emptyPlaceholder(child)
       }
@@ -214,7 +196,7 @@ const BaseTransitionImpl: ComponentOptions = {
       setTransitionHooks(innerChild, enterHooks)
 
       const oldChild = instance.subTree
-      const oldInnerChild = oldChild && getKeepAliveChild(oldChild)
+      const oldInnerChild = oldChild && getInnerChild(oldChild)
 
       // handle mode
       if (
@@ -239,8 +221,7 @@ const BaseTransitionImpl: ComponentOptions = {
             state.isLeaving = false
             // #6835
             // it also needs to be updated when active is undefined
-            if (instance.update.active !== false) {
-              instance.effect.dirty = true
+            if (!(instance.job.flags! & SchedulerJobFlags.DISPOSED)) {
               instance.update()
             }
           }
@@ -274,6 +255,30 @@ const BaseTransitionImpl: ComponentOptions = {
 
 if (__COMPAT__) {
   BaseTransitionImpl.__isBuiltIn = true
+}
+
+function findNonCommentChild(children: VNode[]): VNode {
+  let child: VNode = children[0]
+  if (children.length > 1) {
+    let hasFound = false
+    // locate first non-comment child
+    for (const c of children) {
+      if (c.type !== Comment) {
+        if (__DEV__ && hasFound) {
+          // warn more than one non-comment child
+          warn(
+            '<transition> can only be used on a single element or component. ' +
+              'Use <transition-group> for lists.',
+          )
+          break
+        }
+        child = c
+        hasFound = true
+        if (!__DEV__) break
+      }
+    }
+  }
+  return child
 }
 
 // export the public type for h/tsx inference
@@ -475,8 +480,12 @@ function emptyPlaceholder(vnode: VNode): VNode | undefined {
   }
 }
 
-function getKeepAliveChild(vnode: VNode): VNode | undefined {
+function getInnerChild(vnode: VNode): VNode | undefined {
   if (!isKeepAlive(vnode)) {
+    if (isTeleport(vnode.type) && vnode.children) {
+      return findNonCommentChild(vnode.children as VNode[])
+    }
+
     return vnode
   }
   // #7121 ensure get the child component subtree in case

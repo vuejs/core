@@ -91,7 +91,7 @@ function setVarsOnNode(
   instance: ComponentInternalInstance | null,
 ) {
   if (el.nodeType === 1) {
-    if (instance && instance.isCE) {
+    if (instance && instance.ce) {
       instance.ceSetCssVars && instance.ceSetCssVars(vars)
     } else {
       const style = (el as HTMLElement).style

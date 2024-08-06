@@ -1,26 +1,22 @@
 import {
+  type Target,
   isReadonly,
   isShallow,
   toRaw,
   toReactive,
   toReadonly,
 } from './reactive'
-import {
-  ITERATE_KEY,
-  MAP_KEY_ITERATE_KEY,
-  track,
-  trigger,
-} from './reactiveEffect'
+import { ITERATE_KEY, MAP_KEY_ITERATE_KEY, track, trigger } from './dep'
 import { ReactiveFlags, TrackOpTypes, TriggerOpTypes } from './constants'
 import { capitalize, hasChanged, hasOwn, isMap, toRawType } from '@vue/shared'
 import { warn } from './warning'
 
 type CollectionTypes = IterableCollections | WeakCollections
 
-type IterableCollections = Map<any, any> | Set<any>
-type WeakCollections = WeakMap<any, any> | WeakSet<any>
-type MapTypes = Map<any, any> | WeakMap<any, any>
-type SetTypes = Set<any> | WeakSet<any>
+type IterableCollections = (Map<any, any> | Set<any>) & Target
+type WeakCollections = (WeakMap<any, any> | WeakSet<any>) & Target
+type MapTypes = (Map<any, any> | WeakMap<any, any>) & Target
+type SetTypes = (Set<any> | WeakSet<any>) & Target
 
 const toShallow = <T extends unknown>(value: T): T => value
 
@@ -35,7 +31,7 @@ function get(
 ) {
   // #1772: readonly(reactive(Map)) should return readonly + reactive version
   // of the value
-  target = (target as any)[ReactiveFlags.RAW]
+  target = target[ReactiveFlags.RAW]
   const rawTarget = toRaw(target)
   const rawKey = toRaw(key)
   if (!isReadonly) {
@@ -58,7 +54,7 @@ function get(
 }
 
 function has(this: CollectionTypes, key: unknown, isReadonly = false): boolean {
-  const target = (this as any)[ReactiveFlags.RAW]
+  const target = this[ReactiveFlags.RAW]
   const rawTarget = toRaw(target)
   const rawKey = toRaw(key)
   if (!isReadonly) {
@@ -73,7 +69,7 @@ function has(this: CollectionTypes, key: unknown, isReadonly = false): boolean {
 }
 
 function size(target: IterableCollections, isReadonly = false) {
-  target = (target as any)[ReactiveFlags.RAW]
+  target = target[ReactiveFlags.RAW]
   !isReadonly && track(toRaw(target), TrackOpTypes.ITERATE, ITERATE_KEY)
   return Reflect.get(target, 'size', target)
 }
@@ -159,7 +155,7 @@ function createForEach(isReadonly: boolean, isShallow: boolean) {
     callback: Function,
     thisArg?: unknown,
   ) {
-    const observed = this as any
+    const observed = this
     const target = observed[ReactiveFlags.RAW]
     const rawTarget = toRaw(target)
     const wrap = isShallow ? toShallow : isReadonly ? toReadonly : toReactive
@@ -182,7 +178,7 @@ function createIterableMethod(
     this: IterableCollections,
     ...args: unknown[]
   ): Iterable<unknown> & Iterator<unknown> {
-    const target = (this as any)[ReactiveFlags.RAW]
+    const target = this[ReactiveFlags.RAW]
     const rawTarget = toRaw(target)
     const targetIsMap = isMap(rawTarget)
     const isPair =
