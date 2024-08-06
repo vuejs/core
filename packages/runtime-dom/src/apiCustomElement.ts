@@ -141,6 +141,7 @@ export function defineCustomElement<
         Exposed
       >
     >,
+  extraOptions?: CustomElementOptions,
 ): VueElementConstructor<ResolvedProps>
 
 // overload 3: defining a custom element from the returned value of
@@ -149,6 +150,7 @@ export function defineCustomElement<
   T extends DefineComponent<any, any, any, any>,
 >(
   options: T,
+  extraOptions?: CustomElementOptions,
 ): VueElementConstructor<
   T extends DefineComponent<infer P, any, any, any>
     ? ExtractPropTypes<P>
@@ -165,6 +167,7 @@ export function defineCustomElement(
   hydrate?: RootHydrateFunction,
 ): VueElementConstructor {
   const Comp = defineComponent(options, extraOptions) as any
+  if (isPlainObject(Comp)) extend(Comp, extraOptions)
   class VueCustomElement extends VueElement {
     static def = Comp
     constructor(initialProps?: Record<string, any>) {

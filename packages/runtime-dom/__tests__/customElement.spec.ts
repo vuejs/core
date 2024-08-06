@@ -898,16 +898,20 @@ describe('defineCustomElement', () => {
     })
 
     const toggle = ref(true)
-    const ES = defineCustomElement({
-      shadowRoot: false,
-      render() {
-        return [
-          renderSlot(this.$slots, 'default'),
-          toggle.value ? renderSlot(this.$slots, 'named') : null,
-          renderSlot(this.$slots, 'omitted', {}, () => [h('div', 'fallback')]),
-        ]
+    const ES = defineCustomElement(
+      {
+        render() {
+          return [
+            renderSlot(this.$slots, 'default'),
+            toggle.value ? renderSlot(this.$slots, 'named') : null,
+            renderSlot(this.$slots, 'omitted', {}, () => [
+              h('div', 'fallback'),
+            ]),
+          ]
+        },
       },
-    })
+      { shadowRoot: false },
+    )
     customElements.define('my-el-shadowroot-false-slots', ES)
 
     test('should render slots', async () => {
