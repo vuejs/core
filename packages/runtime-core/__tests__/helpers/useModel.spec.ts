@@ -658,7 +658,7 @@ describe('useModel', () => {
     expect(msg.value).toBe(defaultVal)
   })
 
-    test('custom setter',() => {
+   test('custom setter',() => {
     let changeChildMsg!: (val: boolean) => void
 
     const Comp = defineComponent({
@@ -703,4 +703,5 @@ describe('useModel', () => {
 
     changeChildMsg(true)
     expect(msg.value).toBe(null)
+  })
 })
