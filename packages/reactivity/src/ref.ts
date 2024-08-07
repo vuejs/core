@@ -30,9 +30,8 @@ import { warn } from './warning'
 declare const RefSymbol: unique symbol
 export declare const RawSymbol: unique symbol
 
-export interface Ref<T = any, S = T> {
-  get value(): T
-  set value(_: S)
+export interface Ref<T = any> {
+  value: T
   /**
    * Type differentiator only.
    * We need this to be in public d.ts but don't want it to show up in IDE
@@ -109,7 +108,7 @@ export function isRef(r: any): r is Ref {
  * @param value - The object to wrap in the ref.
  * @see {@link https://vuejs.org/api/reactivity-core.html#ref}
  */
-export function ref<T>(value: T): Ref<UnwrapRef<T>, UnwrapRef<T> | T>
+export function ref<T>(value: T): Ref<UnwrapRef<T>>
 export function ref<T = any>(): Ref<T | undefined>
 export function ref(value?: unknown) {
   return createRef(value, false)

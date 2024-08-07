@@ -1,6 +1,5 @@
 import {
   type ComputedRef,
-  type MaybeRef,
   type Ref,
   computed,
   defineComponent,
@@ -202,12 +201,5 @@ defineComponent({
   const obj = defineModel<{ foo: string }>({ required: true })
   watch(obj, value => {
     expectType<{ foo: string }>(value)
-  })
-}
-
-{
-  const css: MaybeRef<string> = ''
-  watch(ref(css), value => {
-    expectType<string>(value)
   })
 }
