@@ -43,6 +43,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: ${{ inputs.branch }}
+          fetch-depth: 0 # need this to get tags for changelog generation
 
       - name: Install pnpm
         uses: pnpm/action-setup@v4
