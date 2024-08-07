@@ -108,7 +108,7 @@ export function ssrProcessTransitionGroup(
         context.pushStringPart(` ${scopeId}`)
       }
       context.pushStringPart(`>`)
-      processChildren(node, context, false, true)
+      processChildren(node, context, false, true, true)
       context.pushStringPart(`</${tag.value!.content}>`)
     }
   } else {

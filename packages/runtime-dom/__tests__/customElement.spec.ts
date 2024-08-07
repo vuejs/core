@@ -114,6 +114,7 @@ describe('defineCustomElement', () => {
       myInputEl.removeAttribute('value')
       await nextTick()
       expect(inputEl.value).toBe('')
+      app.unmount()
     })
 
     test('should not unmount on move', async () => {
@@ -1157,5 +1158,34 @@ describe('defineCustomElement', () => {
 
       expect(e.shadowRoot?.innerHTML).toBe('<div>app-injected</div>')
     })
+  })
+
+  // #9885
+  test('avoid double mount when prop is set immediately after mount', () => {
+    customElements.define(
+      'my-input-dupe',
+      defineCustomElement({
+        props: {
+          value: String,
+        },
+        render() {
+          return 'hello'
+        },
+      }),
+    )
+    createApp({
+      render() {
+        return h('div', [
+          h('my-input-dupe', {
+            onVnodeMounted(vnode) {
+              vnode.el!.value = 'fesfes'
+            },
+          }),
+        ])
+      },
+    }).mount(container)
+    expect(container.children[0].children[0].shadowRoot?.innerHTML).toBe(
+      'hello',
+    )
   })
 })

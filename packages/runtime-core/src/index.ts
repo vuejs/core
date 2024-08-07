@@ -397,6 +397,7 @@ import {
 import { renderComponentRoot } from './componentRenderUtils'
 import { setCurrentRenderingInstance } from './componentRenderContext'
 import { isVNode, normalizeVNode } from './vnode'
+import { ensureValidVNode } from './helpers/renderSlot'
 
 const _ssrUtils = {
   createComponentInstance,
@@ -406,6 +407,7 @@ const _ssrUtils = {
   isVNode,
   normalizeVNode,
   getComponentPublicInstance,
+  ensureValidVNode,
 }
 
 /**

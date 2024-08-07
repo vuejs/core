@@ -218,6 +218,12 @@ async function main() {
     }
   }
 
+  // @ts-expect-error
+  if (versionIncrements.includes(targetVersion)) {
+    // @ts-expect-error
+    targetVersion = inc(targetVersion)
+  }
+
   if (!semver.valid(targetVersion)) {
     throw new Error(`invalid target version: ${targetVersion}`)
   }
@@ -246,15 +252,23 @@ async function main() {
     let isCIPassed = await getCIResult()
     skipTests ||= isCIPassed
 
-    if (isCIPassed && !skipPrompts) {
-      /** @type {{ yes: boolean }} */
-      const { yes: promptSkipTests } = await prompt({
-        type: 'confirm',
-        name: 'yes',
-        message: `CI for this commit passed. Skip local tests?`,
-      })
-
-      skipTests = promptSkipTests
+    if (isCIPassed) {
+      if (!skipPrompts) {
+        /** @type {{ yes: boolean }} */
+        const { yes: promptSkipTests } = await prompt({
+          type: 'confirm',
+          name: 'yes',
+          message: `CI for this commit passed. Skip local tests?`,
+        })
+        skipTests = promptSkipTests
+      } else {
+        skipTests = true
+      }
+    } else if (skipPrompts) {
+      throw new Error(
+        'CI for the latest commit has not passed yet. ' +
+          'Only run the release workflow after the CI has passed.',
+      )
     }
   }
 
@@ -337,6 +351,11 @@ async function main() {
   const branch = await getBranch()
   if (branch !== 'main') {
     additionalPublishFlags.push('--publish-branch', branch)
+  }
+  // add provenance metadata when releasing from CI
+  // canary release commits are not pushed therefore we don't need to add provenance
+  if (process.env.CI && !isCanary) {
+    additionalPublishFlags.push('--provenance')
   }
 
   for (const pkg of packages) {
@@ -514,7 +533,7 @@ async function publishPackage(pkgName, version, additionalFlags) {
     )
     console.log(pico.green(`Successfully published ${pkgName}@${version}`))
   } catch (/** @type {any} */ e) {
-    if (e.stderr.match(/previously published/)) {
+    if (e.message?.match(/previously published/)) {
       console.log(pico.red(`Skipping already published: ${pkgName}`))
     } else {
       throw e

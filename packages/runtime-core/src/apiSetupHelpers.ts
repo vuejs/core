@@ -1,4 +1,5 @@
 import {
+  type IfAny,
   type LooseRequired,
   type Prettify,
   type UnionToIntersection,
@@ -329,7 +330,7 @@ type PropsWithDefaults<
 > = Readonly<MappedOmit<T, keyof Defaults>> & {
   readonly [K in keyof Defaults]-?: K extends keyof T
     ? Defaults[K] extends undefined
-      ? T[K]
+      ? IfAny<Defaults[K], NotUndefined<T[K]>, T[K]>
       : NotUndefined<T[K]>
     : never
 } & {

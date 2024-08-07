@@ -2356,13 +2356,13 @@ function baseCreateRenderer(
         namespace,
       )
     }
+    container._vnode = vnode
     if (!isFlushing) {
       isFlushing = true
       flushPreFlushCbs()
       flushPostFlushCbs()
       isFlushing = false
     }
-    container._vnode = vnode
   }
 
   const internals: RendererInternals = {
