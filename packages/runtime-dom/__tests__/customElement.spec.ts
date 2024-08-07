@@ -975,7 +975,7 @@ describe('defineCustomElement', () => {
     })
   })
 
-  describe('useCustomElementRoot', () => {
+  describe('useShadowRoot', () => {
     test('should work for style injection', () => {
       const Foo = defineCustomElement({
         setup() {
