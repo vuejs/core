@@ -2036,7 +2036,7 @@ describe('Suspense', () => {
     expect(serializeInner(root)).toBe(`<div>sync</div>`)
   })
 
-  // #10899
+  // #10899 / #11427
   test('KeepAlive + Suspense switch before branch resolves', async () => {
     const Async1 = defineAsyncComponent({
       render() {
@@ -2053,14 +2053,20 @@ describe('Suspense', () => {
     const root = nodeOps.createElement('div')
     const App = {
       render() {
-        return h(KeepAlive, null, {
-          default: () => {
-            return h(Suspense, null, {
-              default: h(components[viewRef.value]),
-              fallback: h('div', 'loading'),
-            })
+        return h(
+          KeepAlive,
+          {
+            max: 1,
           },
-        })
+          {
+            default: () => {
+              return h(Suspense, null, {
+                default: h(components[viewRef.value]),
+                fallback: h('div', 'loading'),
+              })
+            },
+          },
+        )
       },
     }
     render(h(App), root)
