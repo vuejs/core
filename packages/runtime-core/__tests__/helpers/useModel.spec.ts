@@ -658,21 +658,21 @@ describe('useModel', () => {
     expect(msg.value).toBe(defaultVal)
   })
 
-   test('custom setter',() => {
+  test('custom setter', () => {
     let changeChildMsg!: (val: boolean) => void
 
     const Comp = defineComponent({
       props: ['msg'],
       emits: ['update:msg'],
       setup(props) {
-        const childMsg = useModel(props, 'msg',{
-          set: (value) => {
+        const childMsg = useModel(props, 'msg', {
+          set: value => {
             if (value === msg.value) {
-              return null;
+              return null
             } else {
-              return value;
+              return value
             }
-          }
+          },
         })
         changeChildMsg = (val: boolean) => (childMsg.value = val)
         return () => {
