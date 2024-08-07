@@ -17,8 +17,8 @@
     {
       groupName: 'playground',
       matchFileNames: [
-        'packages/sfc-playground/package.json',
-        'packages/template-explorer/package.json',
+        'packages-private/sfc-playground/package.json',
+        'packages-private/template-explorer/package.json',
       ],
     },
     {

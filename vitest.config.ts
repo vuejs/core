@@ -39,7 +39,7 @@ export default defineConfig({
         'packages/runtime-dom/src/components/Transition*',
         // mostly entries
         'packages/vue-compat/**',
-        'packages/sfc-playground/**',
+        'packages-private/**',
         'scripts/**',
       ],
     },
