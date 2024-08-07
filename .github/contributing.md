@@ -35,7 +35,6 @@ Hi! I'm really excited that you are interested in contributing to Vue.js. Before
 
   Another aspect of it is that large scale stylistic changes result in massive diffs that touch multiple files, adding noise to the git history and makes tracing behavior changes across commits more cumbersome.
 
-
 ### Pull Request Checklist
 
 - Vue core has two primary work branches: `main` and `minor`.

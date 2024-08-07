@@ -102,10 +102,10 @@ export function emit(
             event.startsWith(compatModelEventPrefix))
         )
       ) {
-        if (!propsOptions || !(toHandlerKey(event) in propsOptions)) {
+        if (!propsOptions || !(toHandlerKey(camelize(event)) in propsOptions)) {
           warn(
             `Component emitted event "${event}" but it is neither declared in ` +
-              `the emits option nor as an "${toHandlerKey(event)}" prop.`,
+              `the emits option nor as an "${toHandlerKey(camelize(event))}" prop.`,
           )
         }
       } else {
