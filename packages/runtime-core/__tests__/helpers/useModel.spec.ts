@@ -701,6 +701,7 @@ describe('useModel', () => {
     changeChildMsg(!getter(msg.value))
     expect(msg.value).toBe(false)
   })
+
   // #11541
   test('custom setter', () => {
     let changeChildMsg!: (val: boolean) => void
