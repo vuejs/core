@@ -51,8 +51,9 @@ export function useModel(
       },
 
       set(value) {
+        const emittedValue = options.set ? options.set(value) : value
         if (
-          !hasChanged(value, localValue) &&
+          !hasChanged(emittedValue, localValue) &&
           !(prevSetValue !== EMPTY_OBJ && hasChanged(value, prevSetValue))
         ) {
           return
@@ -74,7 +75,7 @@ export function useModel(
           localValue = value
           trigger()
         }
-        const emittedValue = options.set ? options.set(value) : value
+        
         i.emit(`update:${name}`, emittedValue)
         // #10279: if the local value is converted via a setter but the value
         // emitted to parent was the same, the parent will not trigger any
