@@ -287,6 +287,8 @@ class CustomRefImpl<T> {
 
   public readonly [ReactiveFlags.IS_REF] = true
 
+  public _value: T = undefined!
+
   constructor(factory: CustomRefFactory<T>) {
     const dep = (this.dep = new Dep())
     const { get, set } = factory(dep.track.bind(dep), dep.trigger.bind(dep))
@@ -295,7 +297,7 @@ class CustomRefImpl<T> {
   }
 
   get value() {
-    return this._get()
+    return (this._value = this._get())
   }
 
   set value(newVal) {
@@ -339,6 +341,7 @@ export function toRefs<T extends object>(object: T): ToRefs<T> {
 
 class ObjectRefImpl<T extends object, K extends keyof T> {
   public readonly [ReactiveFlags.IS_REF] = true
+  public _value: T[K] = undefined!
 
   constructor(
     private readonly _object: T,
@@ -348,7 +351,7 @@ class ObjectRefImpl<T extends object, K extends keyof T> {
 
   get value() {
     const val = this._object[this._key]
-    return val === undefined ? this._defaultValue! : val
+    return (this._value = val === undefined ? this._defaultValue! : val)
   }
 
   set value(newVal) {
@@ -363,9 +366,11 @@ class ObjectRefImpl<T extends object, K extends keyof T> {
 class GetterRefImpl<T> {
   public readonly [ReactiveFlags.IS_REF] = true
   public readonly [ReactiveFlags.IS_READONLY] = true
+  public _value: T = undefined!
+
   constructor(private readonly _getter: () => T) {}
   get value() {
-    return this._getter()
+    return (this._value = this._getter())
   }
 }
 
