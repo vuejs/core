@@ -1136,4 +1136,26 @@ describe('defineCustomElement', () => {
     expect(fooVal).toBe('foo')
     expect(barVal).toBe('bar')
   })
+
+  describe('configureApp', () => {
+    test('should work', () => {
+      const E = defineCustomElement(
+        () => {
+          const msg = inject('msg')
+          return () => h('div', msg!)
+        },
+        {
+          configureApp(app) {
+            app.provide('msg', 'app-injected')
+          },
+        },
+      )
+      customElements.define('my-element-with-app', E)
+
+      container.innerHTML = `<my-element-with-app></my-element-with-app>`
+      const e = container.childNodes[0] as VueElement
+
+      expect(e.shadowRoot?.innerHTML).toBe('<div>app-injected</div>')
+    })
+  })
 })

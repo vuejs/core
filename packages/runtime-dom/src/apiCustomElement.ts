@@ -1,4 +1,5 @@
 import {
+  type App,
   type Component,
   type ComponentCustomElementInterface,
   type ComponentInjectOptions,
@@ -10,6 +11,7 @@ import {
   type ComponentProvideOptions,
   type ComputedOptions,
   type ConcreteComponent,
+  type CreateAppFunction,
   type CreateComponentPublicInstanceWithMixins,
   type DefineComponent,
   type Directive,
@@ -18,7 +20,6 @@ import {
   type ExtractPropTypes,
   type MethodOptions,
   type RenderFunction,
-  type RootHydrateFunction,
   type SetupContext,
   type SlotsType,
   type VNode,
@@ -39,7 +40,7 @@ import {
   isPlainObject,
   toNumber,
 } from '@vue/shared'
-import { hydrate, render } from '.'
+import { createApp, createSSRApp, render } from '.'
 
 export type VueElementConstructor<P = {}> = {
   new (initialProps?: Record<string, any>): VueElement & P
@@ -49,6 +50,7 @@ export interface CustomElementOptions {
   styles?: string[]
   shadowRoot?: boolean
   nonce?: string
+  configureApp?: (app: App) => void
 }
 
 // defineCustomElement provides the same type inference as defineComponent
@@ -165,14 +167,14 @@ export function defineCustomElement(
   /**
    * @internal
    */
-  hydrate?: RootHydrateFunction,
+  _createApp?: CreateAppFunction<Element>,
 ): VueElementConstructor {
   const Comp = defineComponent(options, extraOptions) as any
   if (isPlainObject(Comp)) extend(Comp, extraOptions)
   class VueCustomElement extends VueElement {
     static def = Comp
     constructor(initialProps?: Record<string, any>) {
-      super(Comp, initialProps, hydrate)
+      super(Comp, initialProps, _createApp)
     }
   }
 
@@ -185,7 +187,7 @@ export const defineSSRCustomElement = ((
   extraOptions?: ComponentOptions,
 ) => {
   // @ts-expect-error
-  return defineCustomElement(options, extraOptions, hydrate)
+  return defineCustomElement(options, extraOptions, createSSRApp)
 }) as typeof defineCustomElement
 
 const BaseClass = (
@@ -202,6 +204,14 @@ export class VueElement
    * @internal
    */
   _instance: ComponentInternalInstance | null = null
+  /**
+   * @internal
+   */
+  _app: App | null = null
+  /**
+   * @internal
+   */
+  _nonce = this._def.nonce
 
   private _connected = false
   private _resolved = false
@@ -225,15 +235,19 @@ export class VueElement
   private _slots?: Record<string, Node[]>
 
   constructor(
+    /**
+     * Component def - note this may be an AsyncWrapper, and this._def will
+     * be overwritten by the inner component when resolved.
+     */
     private _def: InnerComponentDef,
     private _props: Record<string, any> = {},
-    hydrate?: RootHydrateFunction,
+    private _createApp: CreateAppFunction<Element> = createApp,
   ) {
     super()
-    // TODO handle non-shadowRoot hydration
-    if (this.shadowRoot && hydrate) {
-      hydrate(this._createVNode(), this.shadowRoot)
+    if (this.shadowRoot && _createApp !== createApp) {
       this._root = this.shadowRoot
+      // TODO hydration needs to be reworked
+      this._mount(_def)
     } else {
       if (__DEV__ && this.shadowRoot) {
         warn(
@@ -303,9 +317,10 @@ export class VueElement
           this._ob.disconnect()
           this._ob = null
         }
-        render(null, this._root)
+        // unmount
+        this._app && this._app.unmount()
         this._instance!.ce = undefined
-        this._instance = null
+        this._app = this._instance = null
       }
     })
   }
@@ -371,11 +386,8 @@ export class VueElement
         )
       }
 
-      // initial render
-      this._update()
-
-      // apply expose
-      this._applyExpose()
+      // initial mount
+      this._mount(def)
     }
 
     const asyncDef = (this._def as ComponentOptions).__asyncLoader
@@ -385,6 +397,34 @@ export class VueElement
       )
     } else {
       resolve(this._def)
+    }
+  }
+
+  private _mount(def: InnerComponentDef) {
+    if ((__DEV__ || __FEATURE_PROD_DEVTOOLS__) && !def.name) {
+      // @ts-expect-error
+      def.name = 'VueElement'
+    }
+    this._app = this._createApp(def)
+    if (def.configureApp) {
+      def.configureApp(this._app)
+    }
+    this._app._ceVNode = this._createVNode()
+    this._app.mount(this._root)
+
+    // apply expose after mount
+    const exposed = this._instance && this._instance.exposed
+    if (!exposed) return
+    for (const key in exposed) {
+      if (!hasOwn(this, key)) {
+        // exposed properties are readonly
+        Object.defineProperty(this, key, {
+          // unwrap ref to be consistent with public instance behavior
+          get: () => unref(exposed[key]),
+        })
+      } else if (__DEV__) {
+        warn(`Exposed property "${key}" already exists on custom element.`)
+      }
     }
   }
 
@@ -409,22 +449,6 @@ export class VueElement
           this._setProp(key, val, true, true)
         },
       })
-    }
-  }
-
-  private _applyExpose() {
-    const exposed = this._instance && this._instance.exposed
-    if (!exposed) return
-    for (const key in exposed) {
-      if (!hasOwn(this, key)) {
-        // exposed properties are readonly
-        Object.defineProperty(this, key, {
-          // unwrap ref to be consistent with public instance behavior
-          get: () => unref(exposed[key]),
-        })
-      } else if (__DEV__) {
-        warn(`Exposed property "${key}" already exists on custom element.`)
-      }
     }
   }
 
@@ -534,7 +558,7 @@ export class VueElement
       }
       this._styleChildren.add(owner)
     }
-    const nonce = this._def.nonce
+    const nonce = this._nonce
     for (let i = styles.length - 1; i >= 0; i--) {
       const s = document.createElement('style')
       if (nonce) s.setAttribute('nonce', nonce)

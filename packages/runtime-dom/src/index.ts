@@ -108,9 +108,9 @@ export const createApp = ((...args) => {
       // rendered by the server, the template should not contain any user data.
       component.template = container.innerHTML
       // 2.x compat check
-      if (__COMPAT__ && __DEV__) {
-        for (let i = 0; i < container.attributes.length; i++) {
-          const attr = container.attributes[i]
+      if (__COMPAT__ && __DEV__ && container.nodeType === 1) {
+        for (let i = 0; i < (container as Element).attributes.length; i++) {
+          const attr = (container as Element).attributes[i]
           if (attr.name !== 'v-cloak' && /^(v-|:|@)/.test(attr.name)) {
             compatUtils.warnDeprecation(
               DeprecationTypes.GLOBAL_MOUNT_CONTAINER,
@@ -123,7 +123,9 @@ export const createApp = ((...args) => {
     }
 
     // clear content before mounting
-    container.textContent = ''
+    if (container.nodeType === 1) {
+      container.textContent = ''
+    }
     const proxy = mount(container, false, resolveRootNamespace(container))
     if (container instanceof Element) {
       container.removeAttribute('v-cloak')
@@ -154,7 +156,9 @@ export const createSSRApp = ((...args) => {
   return app
 }) as CreateAppFunction<Element>
 
-function resolveRootNamespace(container: Element): ElementNamespace {
+function resolveRootNamespace(
+  container: Element | ShadowRoot,
+): ElementNamespace {
   if (container instanceof SVGElement) {
     return 'svg'
   }
@@ -215,7 +219,7 @@ function injectCompilerOptionsCheck(app: App) {
 
 function normalizeContainer(
   container: Element | ShadowRoot | string,
-): Element | null {
+): Element | ShadowRoot | null {
   if (isString(container)) {
     const res = document.querySelector(container)
     if (__DEV__ && !res) {
