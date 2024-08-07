@@ -658,6 +658,7 @@ describe('useModel', () => {
     expect(msg.value).toBe(defaultVal)
   })
 
+  // #11526
   test('custom getter', () => {
     let changeChildMsg!: (val: boolean) => void
     const getter = (value: boolean) => !value
@@ -700,7 +701,7 @@ describe('useModel', () => {
     changeChildMsg(!getter(msg.value))
     expect(msg.value).toBe(false)
   })
-
+  // #11541
   test('custom setter', () => {
     let changeChildMsg!: (val: boolean) => void
 
