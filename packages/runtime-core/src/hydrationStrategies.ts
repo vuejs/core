@@ -19,28 +19,27 @@ export type HydrationStrategyFactory<Options> = (
   options?: Options,
 ) => HydrationStrategy
 
-export const hydrateOnIdle: HydrationStrategyFactory<number> = (timeout = 10000) => hydrate => {
-  const id = requestIdleCallback(hydrate, { timeout })
-  return () => cancelIdleCallback(id)
-}
-
-export const hydrateOnVisible: HydrationStrategyFactory<IntersectionObserverInit> =
-  (opts) =>
-  (hydrate, forEach) => {
-    const ob = new IntersectionObserver(
-      entries => {
-        for (const e of entries) {
-          if (!e.isIntersecting) continue
-          ob.disconnect()
-          hydrate()
-          break
-        }
-      },
-      opts,
-    )
-    forEach(el => ob.observe(el))
-    return () => ob.disconnect()
+export const hydrateOnIdle: HydrationStrategyFactory<number> =
+  (timeout = 10000) =>
+  hydrate => {
+    const id = requestIdleCallback(hydrate, { timeout })
+    return () => cancelIdleCallback(id)
   }
+
+export const hydrateOnVisible: HydrationStrategyFactory<
+  IntersectionObserverInit
+> = opts => (hydrate, forEach) => {
+  const ob = new IntersectionObserver(entries => {
+    for (const e of entries) {
+      if (!e.isIntersecting) continue
+      ob.disconnect()
+      hydrate()
+      break
+    }
+  }, opts)
+  forEach(el => ob.observe(el))
+  return () => ob.disconnect()
+}
 
 export const hydrateOnMediaQuery: HydrationStrategyFactory<string> =
   query => hydrate => {
