@@ -38,13 +38,11 @@ import _imports_0 from '@svg/file.svg'
 
 
 const _hoisted_1 = _imports_0 + '#fragment'
-const _hoisted_2 = /*#__PURE__*/_createElementVNode("use", { href: _hoisted_1 }, null, -1 /* HOISTED */)
-const _hoisted_3 = /*#__PURE__*/_createElementVNode("use", { href: _hoisted_1 }, null, -1 /* HOISTED */)
 
 export function render(_ctx, _cache) {
   return (_openBlock(), _createElementBlock(_Fragment, null, [
-    _hoisted_2,
-    _hoisted_3
+    _cache[0] || (_cache[0] = _createElementVNode("use", { href: _hoisted_1 }, null, -1 /* HOISTED */)),
+    _cache[1] || (_cache[1] = _createElementVNode("use", { href: _hoisted_1 }, null, -1 /* HOISTED */))
   ], 64 /* STABLE_FRAGMENT */))
 }"
 `;
@@ -82,13 +80,10 @@ import _imports_0 from './bar.png'
 import _imports_1 from '/bar.png'
 
 
-const _hoisted_1 = /*#__PURE__*/_createStaticVNode("<img src=\\"" + _imports_0 + "\\"><img src=\\"" + _imports_1 + "\\"><img src=\\"https://foo.bar/baz.png\\"><img src=\\"//foo.bar/baz.png\\"><img src=\\"" + _imports_0 + "\\">", 5)
-const _hoisted_6 = [
-  _hoisted_1
-]
-
 export function render(_ctx, _cache) {
-  return (_openBlock(), _createElementBlock("div", null, _hoisted_6))
+  return (_openBlock(), _createElementBlock("div", null, _cache[0] || (_cache[0] = [
+    _createStaticVNode("<img src=\\"" + _imports_0 + "\\"><img src=\\"" + _imports_1 + "\\"><img src=\\"https://foo.bar/baz.png\\"><img src=\\"//foo.bar/baz.png\\"><img src=\\"" + _imports_0 + "\\">", 5)
+  ])))
 }"
 `;
 

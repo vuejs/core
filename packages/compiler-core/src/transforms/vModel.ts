@@ -148,7 +148,7 @@ export const transformModel: DirectiveTransform = (dir, node, context) => {
           `{ ${modifiers} }`,
           false,
           dir.loc,
-          ConstantTypes.CAN_HOIST,
+          ConstantTypes.CAN_CACHE,
         ),
       ),
     )

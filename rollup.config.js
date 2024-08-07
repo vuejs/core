@@ -176,7 +176,7 @@ function createConfig(format, output, plugins = []) {
       // is targeting Node (SSR)?
       __CJS__: String(isCJSBuild),
       // need SSR-specific branches?
-      __SSR__: String(isCJSBuild || isBundlerESMBuild || isServerRenderer),
+      __SSR__: String(!isGlobalBuild),
 
       // 2.x compat build
       __COMPAT__: String(isCompatBuild),

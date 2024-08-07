@@ -1,5 +1,6 @@
 import {
   EMPTY_OBJ,
+  type OverloadParameters,
   type UnionToIntersection,
   camelize,
   extend,
@@ -28,6 +29,7 @@ import {
   compatModelEmit,
   compatModelEventPrefix,
 } from './compat/componentVModel'
+import type { ComponentTypeEmits } from './apiSetupHelpers'
 import { getModelModifiers } from './helpers/useModel'
 
 export type ObjectEmitsOptions = Record<
@@ -37,23 +39,41 @@ export type ObjectEmitsOptions = Record<
 
 export type EmitsOptions = ObjectEmitsOptions | string[]
 
-export type EmitsToProps<T extends EmitsOptions> = T extends string[]
-  ? {
-      [K in `on${Capitalize<T[number]>}`]?: (...args: any[]) => any
-    }
-  : T extends ObjectEmitsOptions
+export type EmitsToProps<T extends EmitsOptions | ComponentTypeEmits> =
+  T extends string[]
     ? {
-        [K in `on${Capitalize<string & keyof T>}`]?: K extends `on${infer C}`
-          ? (
-              ...args: T[Uncapitalize<C>] extends (...args: infer P) => any
-                ? P
-                : T[Uncapitalize<C>] extends null
-                  ? any[]
-                  : never
-            ) => any
-          : never
+        [K in `on${Capitalize<T[number]>}`]?: (...args: any[]) => any
       }
-    : {}
+    : T extends ObjectEmitsOptions
+      ? {
+          [K in `on${Capitalize<string & keyof T>}`]?: K extends `on${infer C}`
+            ? (
+                ...args: T[Uncapitalize<C>] extends (...args: infer P) => any
+                  ? P
+                  : T[Uncapitalize<C>] extends null
+                    ? any[]
+                    : never
+              ) => any
+            : never
+        }
+      : {}
+
+export type TypeEmitsToOptions<T extends ComponentTypeEmits> =
+  T extends Record<string, any[]>
+    ? {
+        [K in keyof T]: T[K] extends [...args: infer Args]
+          ? (...args: Args) => any
+          : () => any
+      }
+    : T extends (...args: any[]) => any
+      ? ParametersToFns<OverloadParameters<T>>
+      : {}
+
+type ParametersToFns<T extends any[]> = {
+  [K in T[0]]: K extends `${infer C}`
+    ? (...args: T extends [C, ...infer Args] ? Args : never) => any
+    : never
+}
 
 export type ShortEmitsToObject<E> =
   E extends Record<string, any[]>
@@ -102,10 +122,10 @@ export function emit(
             event.startsWith(compatModelEventPrefix))
         )
       ) {
-        if (!propsOptions || !(toHandlerKey(event) in propsOptions)) {
+        if (!propsOptions || !(toHandlerKey(camelize(event)) in propsOptions)) {
           warn(
             `Component emitted event "${event}" but it is neither declared in ` +
-              `the emits option nor as an "${toHandlerKey(event)}" prop.`,
+              `the emits option nor as an "${toHandlerKey(camelize(event))}" prop.`,
           )
         }
       } else {

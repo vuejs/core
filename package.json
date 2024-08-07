@@ -1,6 +1,6 @@
 {
   "private": true,
-  "version": "3.4.36",
+  "version": "3.5.0-alpha.5",
   "packageManager": "pnpm@9.6.0",
   "type": "module",
   "scripts": {
@@ -70,6 +70,7 @@
     "@types/hash-sum": "^1.0.2",
     "@types/node": "^20.14.14",
     "@types/semver": "^7.5.8",
+    "@types/serve-handler": "^6.1.4",
     "@vitest/coverage-istanbul": "^1.6.0",
     "@vue/consolidate": "1.0.0",
     "conventional-changelog-cli": "^5.0.0",
@@ -99,11 +100,12 @@
     "rollup-plugin-polyfill-node": "^0.13.0",
     "semver": "^7.6.3",
     "serve": "^14.2.3",
+    "serve-handler": "^6.1.5",
     "simple-git-hooks": "^2.11.1",
     "todomvc-app-css": "^2.4.3",
     "tslib": "^2.6.3",
     "tsx": "^4.16.5",
-    "typescript": "~5.4.5",
+    "typescript": "~5.5.4",
     "typescript-eslint": "^8.0.0",
     "vite": "catalog:",
     "vitest": "^1.6.0"

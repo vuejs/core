@@ -5,6 +5,7 @@ import {
   type Ref,
   type ShallowRef,
   type ToRefs,
+  type WritableComputedRef,
   computed,
   isRef,
   proxyRefs,
@@ -17,6 +18,7 @@ import {
   toRefs,
   toValue,
   unref,
+  useTemplateRef,
 } from 'vue'
 import { type IsAny, type IsUnion, describe, expectType } from './utils'
 
@@ -180,6 +182,31 @@ describe('allow getter and setter types to be unrelated', <T>() => {
   const d = {} as T
   const e = ref(d)
   e.value = d
+
+  const f = ref(ref(0))
+  expectType<number>(f.value)
+  // @ts-expect-error
+  f.value = ref(1)
+})
+
+// computed
+describe('allow computed getter and setter types to be unrelated', () => {
+  const obj = ref({
+    name: 'foo',
+  })
+
+  const c = computed({
+    get() {
+      return JSON.stringify(obj.value)
+    },
+    set(val: typeof obj.value) {
+      obj.value = val
+    },
+  })
+
+  c.value = { name: 'bar' } // object
+
+  expectType<string>(c.value)
 })
 
 // shallowRef
@@ -464,5 +491,25 @@ describe('toRef <-> toValue', () => {
 })
 
 // unref
-declare const text: ShallowRef<string> | ComputedRef<string> | MaybeRef<string>
-expectType<string>(unref(text))
+// #8747
+declare const unref1: number | Ref<number> | ComputedRef<number>
+expectType<number>(unref(unref1))
+
+// #11356
+declare const unref2:
+  | MaybeRef<string>
+  | ShallowRef<string>
+  | ComputedRef<string>
+  | WritableComputedRef<string>
+expectType<string>(unref(unref2))
+
+// toValue
+expectType<number>(toValue(unref1))
+expectType<string>(toValue(unref2))
+
+// useTemplateRef
+const tRef = useTemplateRef('foo')
+expectType<Readonly<ShallowRef<unknown>>>(tRef)
+
+const tRef2 = useTemplateRef<HTMLElement>('bar')
+expectType<Readonly<ShallowRef<HTMLElement | null>>>(tRef2)

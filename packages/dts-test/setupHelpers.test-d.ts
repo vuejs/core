@@ -5,6 +5,7 @@ import {
   defineComponent,
   defineEmits,
   defineModel,
+  defineOptions,
   defineProps,
   defineSlots,
   toRefs,
@@ -529,4 +530,22 @@ describe('toRefs w/ type declaration', () => {
     file?: File | File[]
   }>()
   expectType<Ref<File | File[] | undefined>>(toRefs(props).file)
+})
+
+describe('defineOptions', () => {
+  defineOptions({
+    name: 'MyComponent',
+    inheritAttrs: true,
+  })
+
+  defineOptions({
+    // @ts-expect-error props should be defined via defineProps()
+    props: ['props'],
+    // @ts-expect-error emits should be defined via defineEmits()
+    emits: ['emits'],
+    // @ts-expect-error slots should be defined via defineSlots()
+    slots: { default: 'default' },
+    // @ts-expect-error expose should be defined via defineExpose()
+    expose: ['expose'],
+  })
 })

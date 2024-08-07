@@ -10,12 +10,12 @@ import {
   type VNode,
   type VNodeArrayChildren,
   createBlock,
+  createVNode,
   isVNode,
   openBlock,
 } from '../vnode'
 import { PatchFlags, SlotFlags } from '@vue/shared'
 import { warn } from '../warning'
-import { createVNode } from '@vue/runtime-core'
 import { isAsyncWrapper } from '../apiAsyncComponent'
 
 /**
@@ -32,13 +32,24 @@ export function renderSlot(
   noSlotted?: boolean,
 ): VNode {
   if (
-    currentRenderingInstance!.isCE ||
+    currentRenderingInstance!.ce ||
     (currentRenderingInstance!.parent &&
       isAsyncWrapper(currentRenderingInstance!.parent) &&
-      currentRenderingInstance!.parent.isCE)
+      currentRenderingInstance!.parent.ce)
   ) {
+    // in custom element mode, render <slot/> as actual slot outlets
+    // wrap it with a fragment because in shadowRoot: false mode the slot
+    // element gets replaced by injected content
     if (name !== 'default') props.name = name
-    return createVNode('slot', props, fallback && fallback())
+    return (
+      openBlock(),
+      createBlock(
+        Fragment,
+        null,
+        [createVNode('slot', props, fallback && fallback())],
+        PatchFlags.STABLE_FRAGMENT,
+      )
+    )
   }
 
   let slot = slots[name]
@@ -87,7 +98,7 @@ export function renderSlot(
   return rendered
 }
 
-function ensureValidVNode(vnodes: VNodeArrayChildren) {
+export function ensureValidVNode(vnodes: VNodeArrayChildren) {
   return vnodes.some(child => {
     if (!isVNode(child)) return true
     if (child.type === Comment) return false
