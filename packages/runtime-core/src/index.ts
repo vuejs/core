@@ -407,6 +407,7 @@ const _ssrUtils: {
   isVNode: typeof isVNode
   normalizeVNode: typeof normalizeVNode
   getComponentPublicInstance: typeof getComponentPublicInstance
+  ensureValidVNode: typeof ensureValidVNode
 } = {
   createComponentInstance,
   setupComponent,
