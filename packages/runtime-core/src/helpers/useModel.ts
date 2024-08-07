@@ -75,7 +75,7 @@ export function useModel(
           localValue = value
           trigger()
         }
-        
+
         i.emit(`update:${name}`, emittedValue)
         // #10279: if the local value is converted via a setter but the value
         // emitted to parent was the same, the parent will not trigger any
