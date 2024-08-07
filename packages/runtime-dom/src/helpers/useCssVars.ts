@@ -3,6 +3,7 @@ import {
   Static,
   type VNode,
   getCurrentInstance,
+  onBeforeMount,
   onMounted,
   onUnmounted,
   warn,
@@ -41,9 +42,10 @@ export function useCssVars(getter: (ctx: any) => Record<string, string>) {
     setVarsOnVNode(instance.subTree, vars)
     updateTeleports(vars)
   }
-
-  onMounted(() => {
+  onBeforeMount(() => {
     watchPostEffect(setVars)
+  })
+  onMounted(() => {
     const ob = new MutationObserver(setVars)
     ob.observe(instance.subTree.el!.parentNode, { childList: true })
     onUnmounted(() => ob.disconnect())
