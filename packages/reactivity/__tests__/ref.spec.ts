@@ -467,4 +467,12 @@ describe('reactivity/ref', () => {
     expect(toValue(c)).toBe(3)
     expect(toValue(d)).toBe(4)
   })
+
+  // #11532
+  test('ref should be unwrapped when getting the value', () => {
+    const b = ref(ref(1))
+    expect(b.value).toBe(1)
+    b.value = ref(2)
+    expect(b.value).toBe(2)
+  })
 })

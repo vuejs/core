@@ -172,7 +172,7 @@ class RefImpl<T> {
 
   get value() {
     trackRefValue(this)
-    return this._value
+    return unref(this._value)
   }
 
   set value(newVal) {
