@@ -15,34 +15,31 @@ export type HydrationStrategy = (
   forEachElement: (cb: (el: Element) => any) => void,
 ) => (() => void) | void
 
-export type HydrationStrategyFactory<Options = any> = (
+export type HydrationStrategyFactory<Options> = (
   options?: Options,
 ) => HydrationStrategy
 
-export const hydrateOnIdle: HydrationStrategyFactory = () => hydrate => {
-  const id = requestIdleCallback(hydrate)
-  return () => cancelIdleCallback(id)
-}
-
-export const hydrateOnVisible: HydrationStrategyFactory<string | number> =
-  (margin = 0) =>
-  (hydrate, forEach) => {
-    const ob = new IntersectionObserver(
-      entries => {
-        for (const e of entries) {
-          if (!e.isIntersecting) continue
-          ob.disconnect()
-          hydrate()
-          break
-        }
-      },
-      {
-        rootMargin: isString(margin) ? margin : margin + 'px',
-      },
-    )
-    forEach(el => ob.observe(el))
-    return () => ob.disconnect()
+export const hydrateOnIdle: HydrationStrategyFactory<number> =
+  (timeout = 10000) =>
+  hydrate => {
+    const id = requestIdleCallback(hydrate, { timeout })
+    return () => cancelIdleCallback(id)
   }
+
+export const hydrateOnVisible: HydrationStrategyFactory<
+  IntersectionObserverInit
+> = opts => (hydrate, forEach) => {
+  const ob = new IntersectionObserver(entries => {
+    for (const e of entries) {
+      if (!e.isIntersecting) continue
+      ob.disconnect()
+      hydrate()
+      break
+    }
+  }, opts)
+  forEach(el => ob.observe(el))
+  return () => ob.disconnect()
+}
 
 export const hydrateOnMediaQuery: HydrationStrategyFactory<string> =
   query => hydrate => {
@@ -58,7 +55,7 @@ export const hydrateOnMediaQuery: HydrationStrategyFactory<string> =
   }
 
 export const hydrateOnInteraction: HydrationStrategyFactory<
-  string | string[]
+  keyof HTMLElementEventMap | Array<keyof HTMLElementEventMap>
 > =
   (interactions = []) =>
   (hydrate, forEach) => {

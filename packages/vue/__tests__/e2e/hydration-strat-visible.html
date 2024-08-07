@@ -35,7 +35,7 @@
 
   const AsyncComp = defineAsyncComponent({
     loader: () => Promise.resolve(Comp),
-    hydrate: hydrateOnVisible(rootMargin + 'px')
+    hydrate: hydrateOnVisible({rootMargin: rootMargin + 'px'})
   })
 
   createSSRApp({

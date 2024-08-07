@@ -245,6 +245,7 @@ export {
   useShadowRoot,
   VueElement,
   type VueElementConstructor,
+  type CustomElementOptions,
 } from './apiCustomElement'
 
 // SFC CSS utilities

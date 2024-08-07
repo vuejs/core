@@ -48,6 +48,7 @@ export type VueElementConstructor<P = {}> = {
 export interface CustomElementOptions {
   styles?: string[]
   shadowRoot?: boolean
+  nonce?: string
 }
 
 // defineCustomElement provides the same type inference as defineComponent
@@ -141,6 +142,7 @@ export function defineCustomElement<
         Exposed
       >
     >,
+  extraOptions?: CustomElementOptions,
 ): VueElementConstructor<ResolvedProps>
 
 // overload 3: defining a custom element from the returned value of
@@ -149,6 +151,7 @@ export function defineCustomElement<
   T extends DefineComponent<any, any, any, any>,
 >(
   options: T,
+  extraOptions?: CustomElementOptions,
 ): VueElementConstructor<
   T extends DefineComponent<infer P, any, any, any>
     ? ExtractPropTypes<P>
@@ -165,6 +168,7 @@ export function defineCustomElement(
   hydrate?: RootHydrateFunction,
 ): VueElementConstructor {
   const Comp = defineComponent(options, extraOptions) as any
+  if (isPlainObject(Comp)) extend(Comp, extraOptions)
   class VueCustomElement extends VueElement {
     static def = Comp
     constructor(initialProps?: Record<string, any>) {
@@ -203,6 +207,8 @@ export class VueElement
   private _resolved = false
   private _numberProps: Record<string, true> | null = null
   private _styleChildren = new WeakSet()
+  private _pendingResolve: Promise<void> | undefined
+  private _parent: VueElement | undefined
   /**
    * dev only
    */
@@ -253,12 +259,39 @@ export class VueElement
       this._parseSlots()
     }
     this._connected = true
+
+    // locate nearest Vue custom element parent for provide/inject
+    let parent: Node | null = this
+    while (
+      (parent = parent && (parent.parentNode || (parent as ShadowRoot).host))
+    ) {
+      if (parent instanceof VueElement) {
+        this._parent = parent
+        break
+      }
+    }
+
     if (!this._instance) {
       if (this._resolved) {
+        this._setParent()
         this._update()
       } else {
-        this._resolveDef()
+        if (parent && parent._pendingResolve) {
+          this._pendingResolve = parent._pendingResolve.then(() => {
+            this._pendingResolve = undefined
+            this._resolveDef()
+          })
+        } else {
+          this._resolveDef()
+        }
       }
+    }
+  }
+
+  private _setParent(parent = this._parent) {
+    if (parent) {
+      this._instance!.parent = parent._instance
+      this._instance!.provides = parent._instance!.provides
     }
   }
 
@@ -281,7 +314,9 @@ export class VueElement
    * resolve inner component definition (handle possible async component)
    */
   private _resolveDef() {
-    this._resolved = true
+    if (this._pendingResolve) {
+      return
+    }
 
     // set initial attrs
     for (let i = 0; i < this.attributes.length; i++) {
@@ -298,6 +333,9 @@ export class VueElement
     this._ob.observe(this, { attributes: true })
 
     const resolve = (def: InnerComponentDef, isAsync = false) => {
+      this._resolved = true
+      this._pendingResolve = undefined
+
       const { props, styles } = def
 
       // cast Number-type props set before resolve
@@ -342,7 +380,9 @@ export class VueElement
 
     const asyncDef = (this._def as ComponentOptions).__asyncLoader
     if (asyncDef) {
-      asyncDef().then(def => resolve((this._def = def), true))
+      this._pendingResolve = asyncDef().then(def =>
+        resolve((this._def = def), true),
+      )
     } else {
       resolve(this._def)
     }
@@ -355,7 +395,7 @@ export class VueElement
     // check if there are props set pre-upgrade or connect
     for (const key of Object.keys(this)) {
       if (key[0] !== '_' && declaredPropKeys.includes(key)) {
-        this._setProp(key, this[key as keyof this], true, false)
+        this._setProp(key, this[key as keyof this])
       }
     }
 
@@ -366,7 +406,7 @@ export class VueElement
           return this._getProp(key)
         },
         set(val) {
-          this._setProp(key, val)
+          this._setProp(key, val, true, true)
         },
       })
     }
@@ -395,7 +435,7 @@ export class VueElement
     if (this._numberProps && this._numberProps[camelKey]) {
       value = toNumber(value)
     }
-    this._setProp(camelKey, value, false)
+    this._setProp(camelKey, value, false, true)
   }
 
   /**
@@ -408,12 +448,7 @@ export class VueElement
   /**
    * @internal
    */
-  protected _setProp(
-    key: string,
-    val: any,
-    shouldReflect = true,
-    shouldUpdate = true,
-  ) {
+  _setProp(key: string, val: any, shouldReflect = true, shouldUpdate = false) {
     if (val !== this._props[key]) {
       this._props[key] = val
       if (shouldUpdate && this._instance) {
@@ -482,18 +517,7 @@ export class VueElement
           }
         }
 
-        // locate nearest Vue custom element parent for provide/inject
-        let parent: Node | null = this
-        while (
-          (parent =
-            parent && (parent.parentNode || (parent as ShadowRoot).host))
-        ) {
-          if (parent instanceof VueElement) {
-            instance.parent = parent._instance
-            instance.provides = parent._instance!.provides
-            break
-          }
-        }
+        this._setParent()
       }
     }
     return vnode
@@ -510,8 +534,10 @@ export class VueElement
       }
       this._styleChildren.add(owner)
     }
+    const nonce = this._def.nonce
     for (let i = styles.length - 1; i >= 0; i--) {
       const s = document.createElement('style')
+      if (nonce) s.setAttribute('nonce', nonce)
       s.textContent = styles[i]
       this.shadowRoot!.prepend(s)
       // record for HMR
@@ -578,11 +604,17 @@ export class VueElement
     }
   }
 
-  injectChildStyle(comp: ConcreteComponent & CustomElementOptions) {
+  /**
+   * @internal
+   */
+  _injectChildStyle(comp: ConcreteComponent & CustomElementOptions) {
     this._applyStyles(comp.styles, comp)
   }
 
-  removeChildStlye(comp: ConcreteComponent): void {
+  /**
+   * @internal
+   */
+  _removeChildStyle(comp: ConcreteComponent): void {
     if (__DEV__) {
       this._styleChildren.delete(comp)
       if (this._childStyles && comp.__hmrId) {

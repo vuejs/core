@@ -1337,7 +1337,7 @@ function baseCreateRenderer(
         } else {
           // custom element style injection
           if (root.ce) {
-            root.ce.injectChildStyle(type)
+            root.ce._injectChildStyle(type)
           }
 
           if (__DEV__) {

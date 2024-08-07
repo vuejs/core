@@ -480,6 +480,10 @@ function resolvePropValue(
       } else {
         value = defaultValue
       }
+      // #9006 reflect default value on custom element
+      if (instance.ce) {
+        instance.ce._setProp(key, value)
+      }
     }
     // boolean casting
     if (opt[BooleanFlags.shouldCast]) {
