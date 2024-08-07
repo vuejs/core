@@ -664,10 +664,10 @@ export function useShadowRoot(): ShadowRoot | null {
     return (el as VueElement).shadowRoot
   } else if (__DEV__) {
     if (!instance) {
-      warn(`useCustomElementRoot called without an active component instance.`)
+      warn(`useShadowRoot called without an active component instance.`)
     } else {
       warn(
-        `useCustomElementRoot can only be used in components defined via ` +
+        `useShadowRoot can only be used in components defined via ` +
           `defineCustomElement.`,
       )
     }
