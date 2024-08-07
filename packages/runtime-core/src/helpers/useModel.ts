@@ -52,7 +52,10 @@ export function useModel(
 
       set(value) {
         if (
-          !hasChanged(value, options.get ? options.get(localValue) : localValue) &&
+          !hasChanged(
+            value,
+            options.get ? options.get(localValue) : localValue,
+          ) &&
           !(prevSetValue !== EMPTY_OBJ && hasChanged(value, prevSetValue))
         ) {
           return
