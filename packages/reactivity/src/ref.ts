@@ -158,7 +158,6 @@ function createRef(rawValue: unknown, shallow: boolean) {
 class RefImpl<T> {
   private _value: T
   private _rawValue: T
-
   public dep?: Dep = undefined
   public readonly __v_isRef = true
 
@@ -176,14 +175,18 @@ class RefImpl<T> {
   }
 
   set value(newVal) {
-    const useDirectValue =
-      this.__v_isShallow || isShallow(newVal) || isReadonly(newVal)
-    newVal = useDirectValue ? newVal : toRaw(newVal)
-    if (hasChanged(newVal, this._rawValue)) {
-      const oldVal = this._rawValue
-      this._rawValue = newVal
-      this._value = useDirectValue ? newVal : toReactive(newVal)
-      triggerRefValue(this, DirtyLevels.Dirty, newVal, oldVal)
+    if (!isRef(newVal) && isRef(this._rawValue)) {
+      this._rawValue.value = newVal
+    } else {
+      const useDirectValue =
+        this.__v_isShallow || isShallow(newVal) || isReadonly(newVal)
+      newVal = useDirectValue ? newVal : toRaw(newVal)
+      if (hasChanged(newVal, this._rawValue)) {
+        const oldVal = this._rawValue
+        this._rawValue = newVal
+        this._value = useDirectValue ? newVal : toReactive(newVal)
+        triggerRefValue(this, DirtyLevels.Dirty, newVal, oldVal)
+      }
     }
   }
 }
