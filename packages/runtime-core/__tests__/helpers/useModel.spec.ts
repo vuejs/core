@@ -658,7 +658,7 @@ describe('useModel', () => {
     expect(msg.value).toBe(defaultVal)
   })
 
-  test('comparison logic when user customizes getter', () => {
+  test('custom getter', () => {
     let changeChildMsg!: (val: boolean) => void
     const getter = (value: boolean) => !value
 
