@@ -42,9 +42,11 @@ export function useCssVars(getter: (ctx: any) => Record<string, string>) {
     setVarsOnVNode(instance.subTree, vars)
     updateTeleports(vars)
   }
+
   onBeforeMount(() => {
     watchPostEffect(setVars)
   })
+
   onMounted(() => {
     const ob = new MutationObserver(setVars)
     ob.observe(instance.subTree.el!.parentNode, { childList: true })
