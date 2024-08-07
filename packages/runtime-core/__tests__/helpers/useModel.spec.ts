@@ -658,17 +658,17 @@ describe('useModel', () => {
     expect(msg.value).toBe(defaultVal)
   })
 
-  test('comparison logic when user customizes getter',() => {
+  test('comparison logic when user customizes getter', () => {
     let changeChildMsg!: (val: boolean) => void
-    const getter = (value:boolean) => !value
+    const getter = (value: boolean) => !value
 
     const Comp = defineComponent({
       props: ['msg'],
       emits: ['update:msg'],
       setup(props) {
-        const childMsg = useModel(props, 'msg',{
+        const childMsg = useModel(props, 'msg', {
           get: getter,
-          set: (value) => !value
+          set: value => !value,
         })
         changeChildMsg = (val: boolean) => (childMsg.value = val)
         return () => {
@@ -696,7 +696,7 @@ describe('useModel', () => {
 
     changeChildMsg(!getter(msg.value))
     expect(msg.value).toBe(true)
-    
+
     changeChildMsg(!getter(msg.value))
     expect(msg.value).toBe(false)
   })
