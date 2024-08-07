@@ -8,6 +8,7 @@ import {
   getCurrentInstance,
 } from '../component'
 import {
+  Comment,
   type VNode,
   type VNodeProps,
   cloneVNode,
@@ -287,6 +288,12 @@ const KeepAliveImpl: ComponentOptions = {
       }
 
       let vnode = getInnerChild(rawVNode)
+      // #6028 Suspense ssContent maybe a comment VNode, should avoid caching it
+      if (vnode.type === Comment) {
+        current = null
+        return vnode
+      }
+
       const comp = vnode.type as ConcreteComponent
 
       // for async components, name check should be based in its loaded

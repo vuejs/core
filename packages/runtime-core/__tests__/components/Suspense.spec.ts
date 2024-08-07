@@ -8,6 +8,7 @@ import {
   KeepAlive,
   Suspense,
   type SuspenseProps,
+  createCommentVNode,
   h,
   nextTick,
   nodeOps,
@@ -2083,6 +2084,35 @@ describe('Suspense', () => {
     await nextTick()
     await Promise.all(deps)
     expect(serializeInner(root)).toBe(`<div>async2</div>`)
+  })
+
+  test('KeepAlive + Suspense + comment slot', async () => {
+    const toggle = ref(false)
+    const Async = defineAsyncComponent({
+      render() {
+        return h('div', 'async1')
+      },
+    })
+    const App = {
+      render() {
+        return h(KeepAlive, null, {
+          default: () => {
+            return h(Suspense, null, {
+              default: toggle.value ? h(Async) : createCommentVNode('v-if'),
+            })
+          },
+        })
+      },
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(App), root)
+    expect(serializeInner(root)).toBe(`<!--v-if-->`)
+
+    toggle.value = true
+    await nextTick()
+    await Promise.all(deps)
+    expect(serializeInner(root)).toBe(`<div>async1</div>`)
   })
 
   // #6416 follow up / #10017
