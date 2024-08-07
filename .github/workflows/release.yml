@@ -1,4 +1,4 @@
-name: Publish Package
+name: Release
 
 on:
   workflow_dispatch:
@@ -29,7 +29,7 @@ on:
         type: string
 
 jobs:
-  publish:
+  release:
     # prevents this action from running on forks
     if: github.repository == 'vuejs/core'
     runs-on: ubuntu-latest
@@ -45,12 +45,13 @@ jobs:
           ref: ${{ inputs.branch }}
 
       - name: Install pnpm
-        uses: pnpm/action-setup@v2
+        uses: pnpm/action-setup@v4
 
       - name: Install Node.js
         uses: actions/setup-node@v4
         with:
           node-version-file: '.node-version'
+          registry-url: 'https://registry.npmjs.org'
           cache: 'pnpm'
 
       - name: Install deps
@@ -61,10 +62,33 @@ jobs:
           git config user.name "vue-bot"
           git config user.email "<bot@vuejs.org>"
 
-      - name: Release
-        run: pnpm release ${{ inputs.bump != 'custom' && inputs.bump || inputs.custom_version }} --skip-prompts
+      - name: Import GPG key
+        uses: crazy-max/ghaction-import-gpg@v6
+        with:
+          gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
+          passphrase: ${{ secrets.GPG_PASSPHRASE }}
+          git_user_signingkey: true
+          git_commit_gpgsign: true
+
+      - name: Run release script
+        id: release
+        run: |
+          pnpm release ${{ inputs.bump != 'custom' && inputs.bump || inputs.custom_version }} --skipPrompts
+          RELEASE_TAG=$(git describe --tags --abbrev=0)
+          echo "tag=$RELEASE_TAG" >> $GITHUB_OUTPUT
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Push tags
         run: git push -u origin ${{ inputs.branch }} --follow-tags
+
+      - name: Create Release for Tag
+        id: release_tag
+        uses: yyx990803/release-tag@master
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ steps.release.outputs.tag }}
+          body: |
+            For stable releases, please refer to [CHANGELOG.md](https://github.com/vuejs/core/blob/main/CHANGELOG.md) for details.
+            For pre-releases, please refer to [CHANGELOG.md](https://github.com/vuejs/core/blob/minor/CHANGELOG.md) of the `minor` branch.

@@ -1,3 +1,16 @@
+## [3.4.36](https://github.com/vuejs/core/compare/v3.4.35...v3.4.36) (2024-08-06)
+
+### Bug Fixes
+
+* **compiler-core:** fix expression transform for try...catch block params ([077a1ae](https://github.com/vuejs/core/commit/077a1aeb3c222b729a7e190f46864656ecc65325)), closes [#11465](https://github.com/vuejs/core/issues/11465) [#11467](https://github.com/vuejs/core/issues/11467)
+* **compiler-core:** properly handle for loop variable declarations in expression transforms ([67bb820](https://github.com/vuejs/core/commit/67bb820904d53480fa37536fc3cb4109a4c6d3e2)), ref [#11467](https://github.com/vuejs/core/issues/11467)
+* **compiler-ssr:** don't render v-if comments in TransitionGroup + static tag ([#11515](https://github.com/vuejs/core/issues/11515)) ([275354c](https://github.com/vuejs/core/commit/275354caba295a6fb50695b70e97888a33c504e0)), closes [#11514](https://github.com/vuejs/core/issues/11514)
+* **hydration:** force hydrate custom element dynamic props ([7d473b7](https://github.com/vuejs/core/commit/7d473b7721b423050dba62823b16f3d39e640567)), closes [#7203](https://github.com/vuejs/core/issues/7203) [#8038](https://github.com/vuejs/core/issues/8038)
+* **ssr:** respect textContent/innerHTML from getSSRProps in optimized SSR output ([79602f9](https://github.com/vuejs/core/commit/79602f9ecd9559954f844774a90286305b13e056)), closes [#8112](https://github.com/vuejs/core/issues/8112)
+* **types/withDefaults:** ensure default values of type `any` do not include `undefined` ([#11490](https://github.com/vuejs/core/issues/11490)) ([4592b63](https://github.com/vuejs/core/commit/4592b63c6a8a3d69bfe4ac1f9458b4a86a9676a4))
+
+
+
 ## [3.4.35](https://github.com/vuejs/core/compare/v3.4.34...v3.4.35) (2024-07-31)
 
 
