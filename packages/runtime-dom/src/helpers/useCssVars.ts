@@ -4,6 +4,7 @@ import {
   type VNode,
   getCurrentInstance,
   onBeforeMount,
+  onBeforeUpdate,
   onMounted,
   onUnmounted,
   warn,
@@ -44,6 +45,10 @@ export function useCssVars(getter: (ctx: any) => Record<string, string>) {
   }
 
   onBeforeMount(() => {
+    watchPostEffect(setVars)
+  })
+
+  onBeforeUpdate(() => {
     watchPostEffect(setVars)
   })
 
