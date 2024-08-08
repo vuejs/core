@@ -4,7 +4,7 @@ import {
 } from '../component'
 import { warn } from '../warning'
 
-export function useId() {
+export function useId(): string | undefined {
   const i = getCurrentInstance()
   if (i) {
     return (i.appContext.config.idPrefix || 'v') + ':' + i.ids[0] + i.ids[1]++
@@ -22,6 +22,6 @@ export function useId() {
  * - components with async setup()
  * - components with serverPrefetch
  */
-export function markAsyncBoundary(instance: ComponentInternalInstance) {
+export function markAsyncBoundary(instance: ComponentInternalInstance): void {
   instance.ids = [instance.ids[0] + instance.ids[2]++ + '-', 0, 0]
 }

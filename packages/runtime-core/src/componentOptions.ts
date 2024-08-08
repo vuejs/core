@@ -514,7 +514,7 @@ function createDuplicateChecker() {
 
 export let shouldCacheAccess = true
 
-export function applyOptions(instance: ComponentInternalInstance) {
+export function applyOptions(instance: ComponentInternalInstance): void {
   const options = resolveMergedOptions(instance)
   const publicThis = instance.proxy! as any
   const ctx = instance.ctx
@@ -791,7 +791,7 @@ export function resolveInjections(
   injectOptions: ComponentInjectOptions,
   ctx: any,
   checkDuplicateProperties = NOOP as any,
-) {
+): void {
   if (isArray(injectOptions)) {
     injectOptions = normalizeInject(injectOptions)!
   }
@@ -847,7 +847,7 @@ export function createWatcher(
   ctx: Data,
   publicThis: ComponentPublicInstance,
   key: string,
-) {
+): void {
   const getter = key.includes('.')
     ? createPathGetter(publicThis, key)
     : () => (publicThis as any)[key]
@@ -930,7 +930,7 @@ export function mergeOptions(
   from: any,
   strats: Record<string, OptionMergeFunction>,
   asMixin = false,
-) {
+): any {
   if (__COMPAT__ && isFunction(from)) {
     from = from.options
   }

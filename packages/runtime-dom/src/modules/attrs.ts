@@ -19,8 +19,8 @@ export function patchAttr(
   value: any,
   isSVG: boolean,
   instance?: ComponentInternalInstance | null,
-  isBoolean = isSpecialBooleanAttr(key),
-) {
+  isBoolean: boolean = isSpecialBooleanAttr(key),
+): void {
   if (isSVG && key.startsWith('xlink:')) {
     if (value == null) {
       el.removeAttributeNS(xlinkNS, key.slice(6, key.length))

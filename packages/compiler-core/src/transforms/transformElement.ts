@@ -228,7 +228,7 @@ export function resolveComponentType(
   node: ComponentNode,
   context: TransformContext,
   ssr = false,
-) {
+): string | symbol | CallExpression {
   let { tag } = node
 
   // 1. dynamic component
@@ -374,7 +374,7 @@ export type PropsExpression = ObjectExpression | CallExpression | ExpressionNode
 export function buildProps(
   node: ElementNode,
   context: TransformContext,
-  props: ElementNode['props'] = node.props,
+  props: ElementNode['props'] | undefined = node.props,
   isComponent: boolean,
   isDynamicComponent: boolean,
   ssr = false,
