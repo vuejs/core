@@ -235,11 +235,9 @@ export function createAppAPI<HostElement>(
       },
 
       set config(v) {
-        if (__DEV__) {
-          warn(
-            `app.config cannot be replaced. Modify individual options instead.`,
-          )
-        }
+        warn(
+          `app.config cannot be replaced. Modify individual options instead.`,
+        )
       },
 
       use(plugin: Plugin, ...options: any[]) {
