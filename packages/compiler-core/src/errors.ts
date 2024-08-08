@@ -90,6 +90,7 @@ export enum ErrorCodes {
   X_V_MODEL_ON_PROPS,
   X_INVALID_EXPRESSION,
   X_KEEP_ALIVE_INVALID_CHILDREN,
+  X_TEMPLATE_NOT_ROOT,
 
   // generic errors
   X_PREFIX_ID_NOT_SUPPORTED,
@@ -151,6 +152,9 @@ export const errorMessages: Record<ErrorCodes, string> = {
     'End bracket for dynamic directive argument was not found. ' +
     'Note that dynamic directive argument cannot contain spaces.',
   [ErrorCodes.X_MISSING_DIRECTIVE_NAME]: 'Legal directive name was expected.',
+  [ErrorCodes.X_TEMPLATE_NOT_ROOT]:
+    `<template v-slot> can only appear at the root level inside ` +
+    `the receiving component`,
 
   // transform errors
   [ErrorCodes.X_V_IF_NO_EXPRESSION]: `v-if/v-else-if is missing expression.`,
