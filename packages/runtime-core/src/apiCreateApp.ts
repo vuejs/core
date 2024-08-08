@@ -243,7 +243,8 @@ export function createAppAPI<HostElement>(
     }
 
     if (rootProps != null && !isObject(rootProps)) {
-      warn(`root props passed to app.mount() must be an object.`)
+      // comment
+      __DEV__ && warn(`root props passed to app.mount() must be an object.`)
       rootProps = null
     }
 
