@@ -116,12 +116,25 @@ describe('api: createApp', () => {
     const app = createApp({
       setup() {
         provide('foo', 'should not be seen')
+
+        // nested createApp
+        const childApp = createApp({
+          setup() {
+            provide('foo', 'foo from child')
+          },
+        })
+
+        childApp.provide('foo', 2)
+        expect(childApp.runWithContext(() => inject('foo'))).toBe(2)
+
         return () => h('div')
       },
     })
     app.provide('foo', 1)
 
     expect(app.runWithContext(() => inject('foo'))).toBe(1)
+    const root = nodeOps.createElement('div')
+    app.mount(root)
 
     expect(
       app.runWithContext(() => {

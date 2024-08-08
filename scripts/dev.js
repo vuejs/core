@@ -8,16 +8,38 @@ import esbuild from 'esbuild'
 import { dirname, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { createRequire } from 'node:module'
-import minimist from 'minimist'
+import { parseArgs } from 'node:util'
 import { polyfillNode } from 'esbuild-plugin-polyfill-node'
 
 const require = createRequire(import.meta.url)
 const __dirname = dirname(fileURLToPath(import.meta.url))
-const args = minimist(process.argv.slice(2))
-const targets = args._.length ? args._ : ['vue']
-const format = args.f || 'global'
-const prod = args.p || false
-const inlineDeps = args.i || args.inline
+
+const {
+  values: { format: rawFormat, prod, inline: inlineDeps },
+  positionals,
+} = parseArgs({
+  allowPositionals: true,
+  options: {
+    format: {
+      type: 'string',
+      short: 'f',
+      default: 'global',
+    },
+    prod: {
+      type: 'boolean',
+      short: 'p',
+      default: false,
+    },
+    inline: {
+      type: 'boolean',
+      short: 'i',
+      default: false,
+    },
+  },
+})
+
+const format = rawFormat || 'global'
+const targets = positionals.length ? positionals : ['vue']
 
 // resolve output
 const outputFormat = format.startsWith('global')

@@ -21,7 +21,7 @@ import {
   toRaw,
   toReactive,
 } from './reactive'
-import type { ShallowReactiveMarker } from './reactive'
+import type { Builtin, ShallowReactiveMarker } from './reactive'
 import { type Dep, createDep } from './dep'
 import { ComputedRefImpl } from './computed'
 import { getDepFromReactive } from './reactiveEffect'
@@ -69,6 +69,7 @@ export function triggerRefValue(
   ref: RefBase<any>,
   dirtyLevel: DirtyLevels = DirtyLevels.Dirty,
   newVal?: any,
+  oldVal?: any,
 ) {
   ref = toRaw(ref)
   const dep = ref.dep
@@ -82,6 +83,7 @@ export function triggerRefValue(
             type: TriggerOpTypes.SET,
             key: 'value',
             newValue: newVal,
+            oldValue: oldVal,
           }
         : void 0,
     )
@@ -177,9 +179,10 @@ class RefImpl<T> {
       this.__v_isShallow || isShallow(newVal) || isReadonly(newVal)
     newVal = useDirectValue ? newVal : toRaw(newVal)
     if (hasChanged(newVal, this._rawValue)) {
+      const oldVal = this._rawValue
       this._rawValue = newVal
       this._value = useDirectValue ? newVal : toReactive(newVal)
-      triggerRefValue(this, DirtyLevels.Dirty, newVal)
+      triggerRefValue(this, DirtyLevels.Dirty, newVal, oldVal)
     }
   }
 }
@@ -232,7 +235,7 @@ export type MaybeRefOrGetter<T = any> = MaybeRef<T> | (() => T)
  * @param ref - Ref or plain value to be converted into the plain value.
  * @see {@link https://vuejs.org/api/reactivity-utilities.html#unref}
  */
-export function unref<T>(ref: MaybeRef<T> | ComputedRef<T>): T {
+export function unref<T>(ref: MaybeRef<T> | ComputedRef<T> | ShallowRef<T>): T {
   return isRef(ref) ? ref.value : ref
 }
 
@@ -252,7 +255,9 @@ export function unref<T>(ref: MaybeRef<T> | ComputedRef<T>): T {
  * @param source - A getter, an existing ref, or a non-function value.
  * @see {@link https://vuejs.org/api/reactivity-utilities.html#tovalue}
  */
-export function toValue<T>(source: MaybeRefOrGetter<T> | ComputedRef<T>): T {
+export function toValue<T>(
+  source: MaybeRefOrGetter<T> | ComputedRef<T> | ShallowRef<T>,
+): T {
   return isFunction(source) ? source() : unref(source)
 }
 
@@ -475,11 +480,6 @@ function propertyToRef(
     : (new ObjectRefImpl(source, key, defaultValue) as any)
 }
 
-// corner case when use narrows type
-// Ex. type RelativePath = string & { __brand: unknown }
-// RelativePath extends object -> true
-type BaseTypes = string | number | boolean
-
 /**
  * This is a special exported interface for other packages to declare
  * additional types that should bail out for ref unwrapping. For example
@@ -496,10 +496,10 @@ type BaseTypes = string | number | boolean
 export interface RefUnwrapBailTypes {}
 
 export type ShallowUnwrapRef<T> = {
-  [K in keyof T]: DistrubuteRef<T[K]>
+  [K in keyof T]: DistributeRef<T[K]>
 }
 
-type DistrubuteRef<T> = T extends Ref<infer V> ? V : T
+type DistributeRef<T> = T extends Ref<infer V> ? V : T
 
 export type UnwrapRef<T> =
   T extends ShallowRef<infer V>
@@ -509,8 +509,7 @@ export type UnwrapRef<T> =
       : UnwrapRefSimple<T>
 
 export type UnwrapRefSimple<T> = T extends
-  | Function
-  | BaseTypes
+  | Builtin
   | Ref
   | RefUnwrapBailTypes[keyof RefUnwrapBailTypes]
   | { [RawSymbol]?: true }

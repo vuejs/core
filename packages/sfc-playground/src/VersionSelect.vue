@@ -74,7 +74,12 @@ onMounted(() => {
 
     <ul class="versions" :class="{ expanded }">
       <li v-if="!versions"><a>loading versions...</a></li>
-      <li v-for="ver of versions" :class="{ active: ver === version }">
+      <li
+        v-for="(ver, index) of versions"
+        :class="{
+          active: ver === version || (version === 'latest' && index === 0),
+        }"
+      >
         <a @click="setVersion(ver)">v{{ ver }}</a>
       </li>
       <div @click="expanded = false">

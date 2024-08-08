@@ -258,7 +258,7 @@ describe('reactivity/computed', () => {
     ])
   })
 
-  it('debug: onTrigger', () => {
+  it('debug: onTrigger (reactive)', () => {
     let events: DebuggerEvent[] = []
     const onTrigger = vi.fn((e: DebuggerEvent) => {
       events.push(e)
@@ -617,5 +617,46 @@ describe('reactivity/computed', () => {
     await nextTick()
     expect(serializeInner(root)).toBe('Hello World World World World')
     expect(COMPUTED_SIDE_EFFECT_WARN).toHaveBeenWarned()
+  })
+
+  it('should be recomputed without being affected by side effects', () => {
+    const v = ref(0)
+    const c1 = computed(() => {
+      v.value = 1
+      return 0
+    })
+    const c2 = computed(() => {
+      return v.value + ',' + c1.value
+    })
+
+    expect(c2.value).toBe('0,0')
+    v.value = 1
+    expect(c2.value).toBe('1,0')
+    expect(COMPUTED_SIDE_EFFECT_WARN).toHaveBeenWarned()
+  })
+
+  it('debug: onTrigger (ref)', () => {
+    let events: DebuggerEvent[] = []
+    const onTrigger = vi.fn((e: DebuggerEvent) => {
+      events.push(e)
+    })
+    const obj = ref(1)
+    const c = computed(() => obj.value, { onTrigger })
+
+    // computed won't trigger compute until accessed
+    c.value
+
+    obj.value++
+
+    expect(c.value).toBe(2)
+    expect(onTrigger).toHaveBeenCalledTimes(1)
+    expect(events[0]).toEqual({
+      effect: c.effect,
+      target: toRaw(obj),
+      type: TriggerOpTypes.SET,
+      key: 'value',
+      oldValue: 1,
+      newValue: 2,
+    })
   })
 })

@@ -252,6 +252,22 @@ describe('reactivity/effect', () => {
     expect(dummy).toBe(undefined)
   })
 
+  it('should not observe well-known symbol keyed properties in has operation', () => {
+    const key = Symbol.isConcatSpreadable
+    const obj = reactive({
+      [key]: true,
+    }) as any
+
+    const spy = vi.fn(() => {
+      key in obj
+    })
+    effect(spy)
+    expect(spy).toHaveBeenCalledTimes(1)
+
+    obj[key] = false
+    expect(spy).toHaveBeenCalledTimes(1)
+  })
+
   it('should support manipulating an array while observing symbol keyed properties', () => {
     const key = Symbol()
     let dummy
@@ -828,6 +844,31 @@ describe('reactivity/effect', () => {
     // stopped effect should still be manually callable
     runner()
     expect(dummy).toBe(3)
+  })
+
+  it('stop with multiple dependencies', () => {
+    let dummy1, dummy2
+    const obj1 = reactive({ prop: 1 })
+    const obj2 = reactive({ prop: 1 })
+    const runner = effect(() => {
+      dummy1 = obj1.prop
+      dummy2 = obj2.prop
+    })
+
+    obj1.prop = 2
+    expect(dummy1).toBe(2)
+
+    obj2.prop = 3
+    expect(dummy2).toBe(3)
+
+    stop(runner)
+
+    obj1.prop = 4
+    obj2.prop = 5
+
+    // Check that both dependencies have been cleared
+    expect(dummy1).toBe(2)
+    expect(dummy2).toBe(3)
   })
 
   it('events: onStop', () => {
