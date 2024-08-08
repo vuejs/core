@@ -1,0 +1,33 @@
+name: canary minor release
+on:
+  # Runs every Monday at 1 AM UTC (9:00 AM in Singapore)
+  schedule:
+    - cron: 0 1 * * MON
+  workflow_dispatch:
+
+jobs:
+  canary:
+    # prevents this action from running on forks
+    if: github.repository == 'vuejs/core'
+    runs-on: ubuntu-latest
+    environment: Release
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: minor
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4.0.0
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.node-version'
+          registry-url: 'https://registry.npmjs.org'
+          cache: 'pnpm'
+
+      - run: pnpm install
+
+      - run: pnpm release --canary --tag minor
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

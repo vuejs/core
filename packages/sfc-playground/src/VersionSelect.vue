@@ -19,7 +19,7 @@ async function toggle() {
 
 async function fetchVersions(): Promise<string[]> {
   const res = await fetch(
-    `https://data.jsdelivr.com/v1/package/npm/${props.pkg}`
+    `https://data.jsdelivr.com/v1/package/npm/${props.pkg}`,
   )
   const { versions } = (await res.json()) as { versions: string[] }
 
@@ -74,8 +74,13 @@ onMounted(() => {
 
     <ul class="versions" :class="{ expanded }">
       <li v-if="!versions"><a>loading versions...</a></li>
-      <li v-for="version of versions">
-        <a @click="setVersion(version)">v{{ version }}</a>
+      <li
+        v-for="(ver, index) of versions"
+        :class="{
+          active: ver === version || (version === 'latest' && index === 0),
+        }"
+      >
+        <a @click="setVersion(ver)">v{{ ver }}</a>
       </li>
       <div @click="expanded = false">
         <slot />
@@ -110,5 +115,9 @@ onMounted(() => {
   border-right: 4px solid transparent;
   border-top: 6px solid #aaa;
   margin-left: 8px;
+}
+
+.versions .active a {
+  color: var(--green);
 }
 </style>

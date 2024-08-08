@@ -1,5 +1,5 @@
-import path from 'path'
-import { setupPuppeteer, E2E_TIMEOUT } from './e2eUtils'
+import path from 'node:path'
+import { E2E_TIMEOUT, setupPuppeteer } from './e2eUtils'
 
 interface TableData {
   name: string
@@ -15,7 +15,7 @@ describe('e2e: grid', () => {
     for (let i = 0; i < data.length; i++) {
       for (let j = 0; j < columns.length; j++) {
         expect(
-          await text(`tr:nth-child(${i + 1}) td:nth-child(${j + 1})`)
+          await text(`tr:nth-child(${i + 1}) td:nth-child(${j + 1})`),
         ).toContain(`${data[i][columns[j]]}`)
       }
     }
@@ -24,7 +24,7 @@ describe('e2e: grid', () => {
   async function testGrid(apiType: 'classic' | 'composition') {
     const baseUrl = `file://${path.resolve(
       __dirname,
-      `../../examples/${apiType}/grid.html`
+      `../../examples/${apiType}/grid.html`,
     )}`
 
     await page().goto(baseUrl)
@@ -37,7 +37,7 @@ describe('e2e: grid', () => {
       { name: 'Chuck Norris', power: Infinity },
       { name: 'Bruce Lee', power: 9000 },
       { name: 'Jackie Chan', power: 7000 },
-      { name: 'Jet Li', power: 8000 }
+      { name: 'Jet Li', power: 8000 },
     ])
 
     await click('th:nth-child(1)')
@@ -49,7 +49,7 @@ describe('e2e: grid', () => {
       { name: 'Jet Li', power: 8000 },
       { name: 'Jackie Chan', power: 7000 },
       { name: 'Chuck Norris', power: Infinity },
-      { name: 'Bruce Lee', power: 9000 }
+      { name: 'Bruce Lee', power: 9000 },
     ])
 
     await click('th:nth-child(2)')
@@ -61,7 +61,7 @@ describe('e2e: grid', () => {
       { name: 'Chuck Norris', power: Infinity },
       { name: 'Bruce Lee', power: 9000 },
       { name: 'Jet Li', power: 8000 },
-      { name: 'Jackie Chan', power: 7000 }
+      { name: 'Jackie Chan', power: 7000 },
     ])
 
     await click('th:nth-child(2)')
@@ -73,7 +73,7 @@ describe('e2e: grid', () => {
       { name: 'Jackie Chan', power: 7000 },
       { name: 'Jet Li', power: 8000 },
       { name: 'Bruce Lee', power: 9000 },
-      { name: 'Chuck Norris', power: Infinity }
+      { name: 'Chuck Norris', power: Infinity },
     ])
 
     await click('th:nth-child(1)')
@@ -85,13 +85,13 @@ describe('e2e: grid', () => {
       { name: 'Bruce Lee', power: 9000 },
       { name: 'Chuck Norris', power: Infinity },
       { name: 'Jackie Chan', power: 7000 },
-      { name: 'Jet Li', power: 8000 }
+      { name: 'Jet Li', power: 8000 },
     ])
 
     await typeValue('input[name="query"]', 'j')
     await assertTable([
       { name: 'Jackie Chan', power: 7000 },
-      { name: 'Jet Li', power: 8000 }
+      { name: 'Jet Li', power: 8000 },
     ])
 
     await typeValue('input[name="query"]', 'infinity')
@@ -108,7 +108,7 @@ describe('e2e: grid', () => {
     async () => {
       await testGrid('classic')
     },
-    E2E_TIMEOUT
+    E2E_TIMEOUT,
   )
 
   test(
@@ -116,6 +116,6 @@ describe('e2e: grid', () => {
     async () => {
       await testGrid('composition')
     },
-    E2E_TIMEOUT
+    E2E_TIMEOUT,
   )
 })

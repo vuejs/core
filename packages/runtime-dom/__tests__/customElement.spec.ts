@@ -1,14 +1,16 @@
 import {
+  type Ref,
+  type VueElement,
+  createApp,
   defineAsyncComponent,
   defineComponent,
   defineCustomElement,
   h,
   inject,
   nextTick,
-  Ref,
   ref,
+  render,
   renderSlot,
-  VueElement
 } from '../src'
 
 describe('defineCustomElement', () => {
@@ -24,12 +26,12 @@ describe('defineCustomElement', () => {
       props: {
         msg: {
           type: String,
-          default: 'hello'
-        }
+          default: 'hello',
+        },
       },
       render() {
         return h('div', this.msg)
-      }
+      },
     })
     customElements.define('my-element', E)
 
@@ -60,6 +62,55 @@ describe('defineCustomElement', () => {
       expect(e.shadowRoot!.innerHTML).toBe('')
     })
 
+    // #10610
+    test('When elements move, avoid prematurely disconnecting MutationObserver', async () => {
+      const CustomInput = defineCustomElement({
+        props: ['value'],
+        emits: ['update'],
+        setup(props, { emit }) {
+          return () =>
+            h('input', {
+              type: 'number',
+              value: props.value,
+              onInput: (e: InputEvent) => {
+                const num = (e.target! as HTMLInputElement).valueAsNumber
+                emit('update', Number.isNaN(num) ? null : num)
+              },
+            })
+        },
+      })
+      customElements.define('my-el-input', CustomInput)
+      const num = ref('12')
+      const containerComp = defineComponent({
+        setup() {
+          return () => {
+            return h('div', [
+              h('my-el-input', {
+                value: num.value,
+                onUpdate: ($event: CustomEvent) => {
+                  num.value = $event.detail[0]
+                },
+              }),
+              h('div', { id: 'move' }),
+            ])
+          }
+        },
+      })
+      const app = createApp(containerComp)
+      app.mount(container)
+      const myInputEl = container.querySelector('my-el-input')!
+      const inputEl = myInputEl.shadowRoot!.querySelector('input')!
+      await nextTick()
+      expect(inputEl.value).toBe('12')
+      const moveEl = container.querySelector('#move')!
+      moveEl.append(myInputEl)
+      await nextTick()
+      myInputEl.removeAttribute('value')
+      await nextTick()
+      expect(inputEl.value).toBe('')
+      app.unmount()
+    })
+
     test('should not unmount on move', async () => {
       container.innerHTML = `<div><my-element></my-element></div>`
       const e = container.childNodes[0].childNodes[0] as VueElement
@@ -88,15 +139,21 @@ describe('defineCustomElement', () => {
 
   describe('props', () => {
     const E = defineCustomElement({
-      props: ['foo', 'bar', 'bazQux'],
+      props: ['foo', 'bar', 'bazQux', 'value'],
       render() {
         return [
           h('div', null, this.foo),
-          h('div', null, this.bazQux || (this.bar && this.bar.x))
+          h('div', null, this.bazQux || (this.bar && this.bar.x)),
         ]
-      }
+      },
     })
     customElements.define('my-el-props', E)
+
+    test('renders custom element w/ correct object prop value', () => {
+      render(h('my-el-props', { value: { x: 1 } }), container)
+      const el = container.children[0]
+      expect((el as any).value).toEqual({ x: 1 })
+    })
 
     test('props via attribute', async () => {
       // bazQux should map to `baz-qux` attribute
@@ -112,7 +169,7 @@ describe('defineCustomElement', () => {
       e.setAttribute('baz-qux', 'changed')
       await nextTick()
       expect(e.shadowRoot!.innerHTML).toBe(
-        '<div>changed</div><div>changed</div>'
+        '<div>changed</div><div>changed</div>',
       )
     })
 
@@ -139,6 +196,12 @@ describe('defineCustomElement', () => {
       expect(e.shadowRoot!.innerHTML).toBe('<div></div><div>two</div>')
       expect(e.hasAttribute('foo')).toBe(false)
 
+      e.foo = undefined
+      await nextTick()
+      expect(e.shadowRoot!.innerHTML).toBe('<div></div><div>two</div>')
+      expect(e.hasAttribute('foo')).toBe(false)
+      expect(e.foo).toBe(undefined)
+
       e.bazQux = 'four'
       await nextTick()
       expect(e.shadowRoot!.innerHTML).toBe('<div></div><div>four</div>')
@@ -150,7 +213,7 @@ describe('defineCustomElement', () => {
         props: {
           fooBar: Number, // test casting of camelCase prop names
           bar: Boolean,
-          baz: String
+          baz: String,
         },
         render() {
           return [
@@ -159,15 +222,15 @@ describe('defineCustomElement', () => {
             this.bar,
             typeof this.bar,
             this.baz,
-            typeof this.baz
+            typeof this.baz,
           ].join(' ')
-        }
+        },
       })
       customElements.define('my-el-props-cast', E)
       container.innerHTML = `<my-el-props-cast foo-bar="1" baz="12345"></my-el-props-cast>`
       const e = container.childNodes[0] as VueElement
       expect(e.shadowRoot!.innerHTML).toBe(
-        `1 number false boolean 12345 string`
+        `1 number false boolean 12345 string`,
       )
 
       e.setAttribute('bar', '')
@@ -177,7 +240,7 @@ describe('defineCustomElement', () => {
       e.setAttribute('foo-bar', '2e1')
       await nextTick()
       expect(e.shadowRoot!.innerHTML).toBe(
-        `20 number true boolean 12345 string`
+        `20 number true boolean 12345 string`,
       )
 
       e.setAttribute('baz', '2e1')
@@ -189,11 +252,11 @@ describe('defineCustomElement', () => {
     test('attr casting w/ programmatic creation', () => {
       const E = defineCustomElement({
         props: {
-          foo: Number
+          foo: Number,
         },
         render() {
           return `foo type: ${typeof this.foo}`
-        }
+        },
       })
       customElements.define('my-element-programmatic', E)
       const el = document.createElement('my-element-programmatic') as any
@@ -206,7 +269,7 @@ describe('defineCustomElement', () => {
       const E = defineCustomElement({
         props: {
           foo: String,
-          dataAge: Number
+          dataAge: Number,
         },
         setup(props) {
           expect(props.foo).toBe('hello')
@@ -214,7 +277,7 @@ describe('defineCustomElement', () => {
         },
         render() {
           return h('div', `foo: ${this.foo}`)
-        }
+        },
       })
       const el = document.createElement('my-el-upgrade') as any
       el.foo = 'hello'
@@ -232,7 +295,7 @@ describe('defineCustomElement', () => {
       const E = defineCustomElement({
         props: {
           foo: String,
-          post: Object
+          post: Object,
         },
         setup(props) {
           expect(props.foo).toBe('hello')
@@ -240,7 +303,7 @@ describe('defineCustomElement', () => {
         },
         render() {
           return JSON.stringify(this.post)
-        }
+        },
       })
       customElements.define('my-el-preconnect', E)
       const el = document.createElement('my-el-preconnect') as any
@@ -256,7 +319,7 @@ describe('defineCustomElement', () => {
       const E = defineCustomElement({
         render() {
           return h('div', 'foo')
-        }
+        },
       })
       customElements.define('my-element-noprops', E)
       const el = document.createElement('my-element-noprops')
@@ -269,12 +332,12 @@ describe('defineCustomElement', () => {
     test('set number value in dom property', () => {
       const E = defineCustomElement({
         props: {
-          'max-age': Number
+          'max-age': Number,
         },
         render() {
-          // @ts-ignore
+          // @ts-expect-error
           return `max age: ${this.maxAge}/type: ${typeof this.maxAge}`
-        }
+        },
       })
       customElements.define('my-element-number-property', E)
       const el = document.createElement('my-element-number-property') as any
@@ -283,13 +346,30 @@ describe('defineCustomElement', () => {
       expect(el.maxAge).toBe(50)
       expect(el.shadowRoot.innerHTML).toBe('max age: 50/type: number')
     })
+
+    test('support direct setup function syntax with extra options', () => {
+      const E = defineCustomElement(
+        props => {
+          return () => props.text
+        },
+        {
+          props: {
+            text: String,
+          },
+        },
+      )
+      customElements.define('my-el-setup-with-props', E)
+      container.innerHTML = `<my-el-setup-with-props text="hello"></my-el-setup-with-props>`
+      const e = container.childNodes[0] as VueElement
+      expect(e.shadowRoot!.innerHTML).toBe('hello')
+    })
   })
 
   describe('attrs', () => {
     const E = defineCustomElement({
       render() {
         return [h('div', null, this.$attrs.foo as string)]
-      }
+      },
     })
     customElements.define('my-el-attrs', E)
 
@@ -305,7 +385,7 @@ describe('defineCustomElement', () => {
 
     test('non-declared properties should not show up in $attrs', () => {
       const e = new E()
-      // @ts-ignore
+      // @ts-expect-error
       e.foo = '123'
       container.appendChild(e)
       expect(e.shadowRoot!.innerHTML).toBe('<div></div>')
@@ -323,9 +403,9 @@ describe('defineCustomElement', () => {
             },
             onMousedown: () => {
               emit('myEvent', 1) // validate hyphenation
-            }
+            },
           })
-      }
+      },
     })
     const E = defineCustomElement(CompDef)
     customElements.define('my-el-emits', E)
@@ -346,7 +426,7 @@ describe('defineCustomElement', () => {
       e.shadowRoot!.childNodes[0].dispatchEvent(new CustomEvent('click'))
       expect(spy).toHaveBeenCalledTimes(1)
       expect(spy.mock.calls[0][0]).toMatchObject({
-        detail: [1]
+        detail: [1],
       })
     })
 
@@ -380,15 +460,15 @@ describe('defineCustomElement', () => {
       e.shadowRoot!.childNodes[0].dispatchEvent(new CustomEvent('click'))
       expect(spy).toHaveBeenCalled()
       expect(spy.mock.calls[0][0]).toMatchObject({
-        detail: [1]
+        detail: [1],
       })
     })
     // #7293
     test('emit in an async component wrapper with properties bound', async () => {
       const E = defineCustomElement(
         defineAsyncComponent(
-          () => new Promise<typeof CompDef>(res => res(CompDef as any))
-        )
+          () => new Promise<typeof CompDef>(res => res(CompDef as any)),
+        ),
       )
       customElements.define('my-async-el-props-emits', E)
       container.innerHTML = `<my-async-el-props-emits id="my_async_el_props_emits"></my-async-el-props-emits>`
@@ -401,7 +481,7 @@ describe('defineCustomElement', () => {
       e.shadowRoot!.childNodes[0].dispatchEvent(new CustomEvent('click'))
       expect(spy).toHaveBeenCalled()
       expect(spy.mock.calls[0][0]).toMatchObject({
-        detail: [1]
+        detail: [1],
       })
     })
   })
@@ -412,12 +492,12 @@ describe('defineCustomElement', () => {
         return [
           h('div', null, [
             renderSlot(this.$slots, 'default', undefined, () => [
-              h('div', 'fallback')
-            ])
+              h('div', 'fallback'),
+            ]),
           ]),
-          h('div', null, renderSlot(this.$slots, 'named'))
+          h('div', null, renderSlot(this.$slots, 'named')),
         ]
-      }
+      },
     })
     customElements.define('my-el-slots', E)
 
@@ -427,7 +507,7 @@ describe('defineCustomElement', () => {
       // native slots allocation does not affect innerHTML, so we just
       // verify that we've rendered the correct native slots here...
       expect(e.shadowRoot!.innerHTML).toBe(
-        `<div><slot><div>fallback</div></slot></div><div><slot name="named"></slot></div>`
+        `<div><slot><div>fallback</div></slot></div><div><slot name="named"></slot></div>`,
       )
     })
   })
@@ -437,7 +517,7 @@ describe('defineCustomElement', () => {
       setup() {
         const foo = inject<Ref>('foo')!
         return () => h('div', foo.value)
-      }
+      },
     })
     customElements.define('my-consumer', Consumer)
 
@@ -445,11 +525,11 @@ describe('defineCustomElement', () => {
       const foo = ref('injected!')
       const Provider = defineCustomElement({
         provide: {
-          foo
+          foo,
         },
         render() {
           return h('my-consumer')
-        }
+        },
       })
       customElements.define('my-provider', Provider)
       container.innerHTML = `<my-provider><my-provider>`
@@ -467,11 +547,11 @@ describe('defineCustomElement', () => {
       const foo = ref('injected!')
       const Provider = defineCustomElement({
         provide: {
-          foo
+          foo,
         },
         render() {
           return renderSlot(this.$slots, 'default')
-        }
+        },
       })
       customElements.define('my-provider-2', Provider)
 
@@ -490,19 +570,19 @@ describe('defineCustomElement', () => {
       const fooB = ref('FooB!')
       const ProviderA = defineCustomElement({
         provide: {
-          fooA
+          fooA,
         },
         render() {
           return h('provider-b')
-        }
+        },
       })
       const ProviderB = defineCustomElement({
         provide: {
-          fooB
+          fooB,
         },
         render() {
           return h('my-multi-consumer')
-        }
+        },
       })
 
       const Consumer = defineCustomElement({
@@ -510,7 +590,7 @@ describe('defineCustomElement', () => {
           const fooA = inject<Ref>('fooA')!
           const fooB = inject<Ref>('fooB')!
           return () => h('div', `${fooA.value} ${fooB.value}`)
-        }
+        },
       })
 
       customElements.define('provider-a', ProviderA)
@@ -527,7 +607,7 @@ describe('defineCustomElement', () => {
       fooB.value = 'changedB!'
       await nextTick()
       expect(consumer.shadowRoot!.innerHTML).toBe(
-        `<div>changedA! changedB!</div>`
+        `<div>changedA! changedB!</div>`,
       )
     })
   })
@@ -538,7 +618,7 @@ describe('defineCustomElement', () => {
         styles: [`div { color: red; }`],
         render() {
           return h('div', 'hello')
-        }
+        },
       })
       customElements.define('my-el-with-styles', Foo)
       container.innerHTML = `<my-el-with-styles></my-el-with-styles>`
@@ -559,9 +639,9 @@ describe('defineCustomElement', () => {
             styles: [`div { color: red }`],
             render(this: any) {
               return h('div', null, this.msg)
-            }
+            },
           })
-        })
+        }),
       )
       customElements.define('my-el-async', E)
       container.innerHTML =
@@ -578,10 +658,10 @@ describe('defineCustomElement', () => {
 
       // should inject styles
       expect(e1.shadowRoot!.innerHTML).toBe(
-        `<style>div { color: red }</style><div>hello</div>`
+        `<style>div { color: red }</style><div>hello</div>`,
       )
       expect(e2.shadowRoot!.innerHTML).toBe(
-        `<style>div { color: red }</style><div>world</div>`
+        `<style>div { color: red }</style><div>world</div>`,
       )
 
       // attr
@@ -589,7 +669,7 @@ describe('defineCustomElement', () => {
       await nextTick()
       expect((e1 as any).msg).toBe('attr')
       expect(e1.shadowRoot!.innerHTML).toBe(
-        `<style>div { color: red }</style><div>attr</div>`
+        `<style>div { color: red }</style><div>attr</div>`,
       )
 
       // props
@@ -597,7 +677,7 @@ describe('defineCustomElement', () => {
       ;(e1 as any).msg = 'prop'
       expect(e1.getAttribute('msg')).toBe('prop')
       expect(e1.shadowRoot!.innerHTML).toBe(
-        `<style>div { color: red }</style><div>prop</div>`
+        `<style>div { color: red }</style><div>prop</div>`,
       )
     })
 
@@ -611,9 +691,9 @@ describe('defineCustomElement', () => {
             },
             render(this: any) {
               return h('div', this.msg)
-            }
+            },
           })
-        })
+        }),
       )
       customElements.define('my-el-async-2', E)
 
@@ -652,9 +732,9 @@ describe('defineCustomElement', () => {
             },
             render(this: any) {
               return h('div', this.n + ',' + typeof this.n)
-            }
+            },
           })
-        })
+        }),
       )
       customElements.define('my-el-async-3', E)
       container.innerHTML = `<my-el-async-3 n="2e1"></my-el-async-3>`
@@ -673,14 +753,14 @@ describe('defineCustomElement', () => {
               return [
                 h('div', null, [
                   renderSlot(this.$slots, 'default', undefined, () => [
-                    h('div', 'fallback')
-                  ])
+                    h('div', 'fallback'),
+                  ]),
                 ]),
-                h('div', null, renderSlot(this.$slots, 'named'))
+                h('div', null, renderSlot(this.$slots, 'named')),
               ]
-            }
+            },
           })
-        })
+        }),
       )
       customElements.define('my-el-async-slots', E)
       container.innerHTML = `<my-el-async-slots><span>hi</span></my-el-async-slots>`
@@ -689,8 +769,37 @@ describe('defineCustomElement', () => {
 
       const e = container.childNodes[0] as VueElement
       expect(e.shadowRoot!.innerHTML).toBe(
-        `<div><slot><div>fallback</div></slot></div><div><slot name="named"></slot></div>`
+        `<div><slot><div>fallback</div></slot></div><div><slot name="named"></slot></div>`,
       )
     })
+  })
+
+  // #9885
+  test('avoid double mount when prop is set immediately after mount', () => {
+    customElements.define(
+      'my-input-dupe',
+      defineCustomElement({
+        props: {
+          value: String,
+        },
+        render() {
+          return 'hello'
+        },
+      }),
+    )
+    createApp({
+      render() {
+        return h('div', [
+          h('my-input-dupe', {
+            onVnodeMounted(vnode) {
+              vnode.el!.value = 'fesfes'
+            },
+          }),
+        ])
+      },
+    }).mount(container)
+    expect(container.children[0].children[0].shadowRoot?.innerHTML).toBe(
+      'hello',
+    )
   })
 })

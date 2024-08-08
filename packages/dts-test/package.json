@@ -1,8 +1,9 @@
 {
   "name": "dts-test",
   "private": true,
+  "version": "0.0.0",
   "dependencies": {
-    "vue": "workspace:*"
-  },
-  "version": "3.3.4"
+    "vue": "workspace:*",
+    "@vue/dts-built-test": "workspace:*"
+  }
 }
