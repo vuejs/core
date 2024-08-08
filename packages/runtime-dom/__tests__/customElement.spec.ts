@@ -104,6 +104,8 @@ describe('defineCustomElement', () => {
         },
       })
       const app = createApp(containerComp)
+      const container = document.createElement('div')
+      document.body.appendChild(container)
       app.mount(container)
       const myInputEl = container.querySelector('my-el-input')!
       const inputEl = myInputEl.shadowRoot!.querySelector('input')!
@@ -115,7 +117,6 @@ describe('defineCustomElement', () => {
       myInputEl.removeAttribute('value')
       await nextTick()
       expect(inputEl.value).toBe('')
-      app.unmount()
     })
 
     test('should not unmount on move', async () => {
@@ -1188,6 +1189,8 @@ describe('defineCustomElement', () => {
         },
       }),
     )
+    const container = document.createElement('div')
+    document.body.appendChild(container)
     createApp({
       render() {
         return h('div', [
