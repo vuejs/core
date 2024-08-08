@@ -93,7 +93,9 @@ export function defineProps() {
   return null as any
 }
 
-export type DefineProps<T, BKeys extends keyof T> = Readonly<T> & {
+export type DefineProps<T, BKeys extends keyof T> = Readonly<
+  LooseRequired<T>
+> & {
   readonly [K in BKeys]-?: boolean
 }
 
