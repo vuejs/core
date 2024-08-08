@@ -253,7 +253,7 @@ function createConfig(format, output, plugins = []) {
       'source-map-js',
       '@babel/parser',
       'estree-walker',
-      'entities/lib/decode.js',
+      'entities/dist/decode.js',
     ]
 
     if (isGlobalBuild || isBrowserESMBuild || isCompatPackage) {
@@ -374,7 +374,11 @@ function createMinifiedConfig(/** @type {PackageFormat} */ format) {
         ) {
           const { code, map } = await minifySwc(contents, {
             module: format === 'es',
-            compress: true,
+            compress: {
+              ecma: 2016,
+              pure_getters: true,
+            },
+            safari10: true,
             mangle: true,
             sourceMap: !!sourcemap,
             inlineSourcesContent: !sourcemapExcludeSources,

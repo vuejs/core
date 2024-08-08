@@ -9,6 +9,7 @@ import {
   inject,
   nextTick,
   ref,
+  render,
   renderSlot,
 } from '../src'
 
@@ -107,6 +108,7 @@ describe('defineCustomElement', () => {
       myInputEl.removeAttribute('value')
       await nextTick()
       expect(inputEl.value).toBe('')
+      app.unmount()
     })
 
     test('should not unmount on move', async () => {
@@ -137,7 +139,7 @@ describe('defineCustomElement', () => {
 
   describe('props', () => {
     const E = defineCustomElement({
-      props: ['foo', 'bar', 'bazQux'],
+      props: ['foo', 'bar', 'bazQux', 'value'],
       render() {
         return [
           h('div', null, this.foo),
@@ -146,6 +148,12 @@ describe('defineCustomElement', () => {
       },
     })
     customElements.define('my-el-props', E)
+
+    test('renders custom element w/ correct object prop value', () => {
+      render(h('my-el-props', { value: { x: 1 } }), container)
+      const el = container.children[0]
+      expect((el as any).value).toEqual({ x: 1 })
+    })
 
     test('props via attribute', async () => {
       // bazQux should map to `baz-qux` attribute
@@ -764,5 +772,34 @@ describe('defineCustomElement', () => {
         `<div><slot><div>fallback</div></slot></div><div><slot name="named"></slot></div>`,
       )
     })
+  })
+
+  // #9885
+  test('avoid double mount when prop is set immediately after mount', () => {
+    customElements.define(
+      'my-input-dupe',
+      defineCustomElement({
+        props: {
+          value: String,
+        },
+        render() {
+          return 'hello'
+        },
+      }),
+    )
+    createApp({
+      render() {
+        return h('div', [
+          h('my-input-dupe', {
+            onVnodeMounted(vnode) {
+              vnode.el!.value = 'fesfes'
+            },
+          }),
+        ])
+      },
+    }).mount(container)
+    expect(container.children[0].children[0].shadowRoot?.innerHTML).toBe(
+      'hello',
+    )
   })
 })

@@ -1,3 +1,121 @@
+## [3.4.36](https://github.com/vuejs/core/compare/v3.4.35...v3.4.36) (2024-08-06)
+
+### Bug Fixes
+
+* **compiler-core:** fix expression transform for try...catch block params ([077a1ae](https://github.com/vuejs/core/commit/077a1aeb3c222b729a7e190f46864656ecc65325)), closes [#11465](https://github.com/vuejs/core/issues/11465) [#11467](https://github.com/vuejs/core/issues/11467)
+* **compiler-core:** properly handle for loop variable declarations in expression transforms ([67bb820](https://github.com/vuejs/core/commit/67bb820904d53480fa37536fc3cb4109a4c6d3e2)), ref [#11467](https://github.com/vuejs/core/issues/11467)
+* **compiler-ssr:** don't render v-if comments in TransitionGroup + static tag ([#11515](https://github.com/vuejs/core/issues/11515)) ([275354c](https://github.com/vuejs/core/commit/275354caba295a6fb50695b70e97888a33c504e0)), closes [#11514](https://github.com/vuejs/core/issues/11514)
+* **hydration:** force hydrate custom element dynamic props ([7d473b7](https://github.com/vuejs/core/commit/7d473b7721b423050dba62823b16f3d39e640567)), closes [#7203](https://github.com/vuejs/core/issues/7203) [#8038](https://github.com/vuejs/core/issues/8038)
+* **ssr:** respect textContent/innerHTML from getSSRProps in optimized SSR output ([79602f9](https://github.com/vuejs/core/commit/79602f9ecd9559954f844774a90286305b13e056)), closes [#8112](https://github.com/vuejs/core/issues/8112)
+* **types/withDefaults:** ensure default values of type `any` do not include `undefined` ([#11490](https://github.com/vuejs/core/issues/11490)) ([4592b63](https://github.com/vuejs/core/commit/4592b63c6a8a3d69bfe4ac1f9458b4a86a9676a4))
+
+
+
+## [3.4.35](https://github.com/vuejs/core/compare/v3.4.34...v3.4.35) (2024-07-31)
+
+
+### Bug Fixes
+
+* **teleport/ssr:** fix Teleport hydration regression due to targetStart anchor addition ([7b18cdb](https://github.com/vuejs/core/commit/7b18cdb0b53a94007ca6a3675bf41b5d3153fec6))
+* **teleport/ssr:** ensure targetAnchor and targetStart not null during hydration ([#11456](https://github.com/vuejs/core/issues/11456)) ([12667da](https://github.com/vuejs/core/commit/12667da4879f980dcf2c50e36f3642d085a87d71)), closes [#11400](https://github.com/vuejs/core/issues/11400)
+* **types/ref:** allow getter and setter types to be unrelated ([#11442](https://github.com/vuejs/core/issues/11442)) ([e0b2975](https://github.com/vuejs/core/commit/e0b2975ef65ae6a0be0aa0a0df43fb887c665251))
+
+
+### Performance Improvements
+
+* **runtime-core:** improve efficiency of normalizePropsOptions ([#11409](https://github.com/vuejs/core/issues/11409)) ([5680142](https://github.com/vuejs/core/commit/5680142e68096c42e66da9f4c6220d040d7c56ba)), closes [#9739](https://github.com/vuejs/core/issues/9739)
+
+
+
+## [3.4.34](https://github.com/vuejs/core/compare/v3.4.33...v3.4.34) (2024-07-24)
+
+
+### Bug Fixes
+
+* **defineModel:** correct update with multiple changes in same tick ([#11430](https://github.com/vuejs/core/issues/11430)) ([a18f1ec](https://github.com/vuejs/core/commit/a18f1ecf05842337f1eb39a6871adb8cb4024093)), closes [#11429](https://github.com/vuejs/core/issues/11429)
+
+
+
+## [3.4.33](https://github.com/vuejs/core/compare/v3.4.32...v3.4.33) (2024-07-19)
+
+
+### Bug Fixes
+
+* **runtime-dom:** handle undefined values in v-html ([#11403](https://github.com/vuejs/core/issues/11403)) ([5df67e3](https://github.com/vuejs/core/commit/5df67e36756639ea7b923d1b139d6cb14450123b))
+
+
+
+## [3.4.32](https://github.com/vuejs/core/compare/v3.4.31...v3.4.32) (2024-07-17)
+
+
+### Bug Fixes
+
+* **build:** use consistent minify options from previous terser config ([789675f](https://github.com/vuejs/core/commit/789675f65d2b72cf979ba6a29bd323f716154a4b))
+* **compiler-sfc:** correctly resolve type annotation for declared function ([#11279](https://github.com/vuejs/core/issues/11279)) ([b287aee](https://github.com/vuejs/core/commit/b287aeec3ea85f20e4b1fc3d907c901bdc2a0176)), closes [#11266](https://github.com/vuejs/core/issues/11266)
+* **defineModel:** force local update when setter results in same emitted value ([de174e1](https://github.com/vuejs/core/commit/de174e1aa756508c7542605a448e55a373afb1ed)), closes [#10279](https://github.com/vuejs/core/issues/10279) [#10301](https://github.com/vuejs/core/issues/10301)
+* **hmr:** hmr reload should work with async component ([#11248](https://github.com/vuejs/core/issues/11248)) ([c8b9794](https://github.com/vuejs/core/commit/c8b97945759e869c997d60c3350d2451c5ff7887))
+* **hydration:** fix tracking of reactive style objects in production ([c10e40a](https://github.com/vuejs/core/commit/c10e40a217b89ab7e0f7f3515242d4246ecffbdd)), closes [#11372](https://github.com/vuejs/core/issues/11372)
+* **hydration:** handle consectuvie text nodes during hydration ([f44c3b3](https://github.com/vuejs/core/commit/f44c3b37d446d5f8e34539029dae0d806b25bb47)), closes [#7285](https://github.com/vuejs/core/issues/7285) [#7301](https://github.com/vuejs/core/issues/7301)
+* **reactivity:** ensure `unref` correctly resolves type for `ShallowRef` ([#11360](https://github.com/vuejs/core/issues/11360)) ([a509e30](https://github.com/vuejs/core/commit/a509e30f059fcdd158f39fdf34670b1019eaf2d1)), closes [#11356](https://github.com/vuejs/core/issues/11356)
+* **reactivity:** shallowReactive map "unwraps" the nested refs ([#8503](https://github.com/vuejs/core/issues/8503)) ([50ddafe](https://github.com/vuejs/core/commit/50ddafe91b9195cf94124466239f82c9794699fb)), closes [#8501](https://github.com/vuejs/core/issues/8501) [#11249](https://github.com/vuejs/core/issues/11249)
+* **runtime-core:** avoid recursive warning ([3ee7b4c](https://github.com/vuejs/core/commit/3ee7b4c7b1374c5bdc50a579b49f6bc15022b085)), closes [#8074](https://github.com/vuejs/core/issues/8074)
+* **runtime-core:** bail manually rendered compiler slot fragments in all cases ([3d34f40](https://github.com/vuejs/core/commit/3d34f406ac7497dafd2f4e62ab23579b78a0e08a)), closes [#10870](https://github.com/vuejs/core/issues/10870)
+* **runtime-core:** do not emit when defineModel ref is set with same value ([#11162](https://github.com/vuejs/core/issues/11162)) ([f1bb0ae](https://github.com/vuejs/core/commit/f1bb0aef084b5cdd4d49aecfed01ec106d9b6897)), closes [#11125](https://github.com/vuejs/core/issues/11125)
+* **runtime-core:** errors during component patch should be caught by error handlers ([ee0248a](https://github.com/vuejs/core/commit/ee0248accff589a94688e177e5e3af10c18288cb))
+* **runtime-core:** force diff slot fallback content and provided content ([d76dd9c](https://github.com/vuejs/core/commit/d76dd9c58de24b273bc55af3a8ed81ba693e9683)), closes [#7256](https://github.com/vuejs/core/issues/7256) [#9200](https://github.com/vuejs/core/issues/9200) [#9308](https://github.com/vuejs/core/issues/9308) [#7266](https://github.com/vuejs/core/issues/7266) [#9213](https://github.com/vuejs/core/issues/9213)
+* **runtime-core:** more edge case fix for manually rendered compiled slot ([685e3f3](https://github.com/vuejs/core/commit/685e3f381c024b9f4023e60fe0545dc60d90d984)), closes [#11336](https://github.com/vuejs/core/issues/11336)
+* **runtime-core:** use separate prop caches for components and mixins ([#11350](https://github.com/vuejs/core/issues/11350)) ([b0aa234](https://github.com/vuejs/core/commit/b0aa234e5e7a611c018de68bc31e0cf55518d5ce)), closes [#7998](https://github.com/vuejs/core/issues/7998)
+* **runtime-dom:** properly handle innerHTML unmount into new children ([#11159](https://github.com/vuejs/core/issues/11159)) ([3e9e32e](https://github.com/vuejs/core/commit/3e9e32ee0a6d0fbf67e9098a66ff0a1ea6647806)), closes [#9135](https://github.com/vuejs/core/issues/9135)
+* **teleport:** skip teleported nodes when locating patch anchor ([8655ced](https://github.com/vuejs/core/commit/8655ced480ea0fe453ff5fe445cecf97b91ec260)), closes [#9071](https://github.com/vuejs/core/issues/9071) [#9134](https://github.com/vuejs/core/issues/9134) [#9313](https://github.com/vuejs/core/issues/9313) [#9313](https://github.com/vuejs/core/issues/9313)
+* **v-model:** component v-model modifiers trim and number when cases don't match ([#9609](https://github.com/vuejs/core/issues/9609)) ([7fb6eb8](https://github.com/vuejs/core/commit/7fb6eb882b64bf99a99d00606e54b0e050674206)), closes [#4848](https://github.com/vuejs/core/issues/4848) [#4850](https://github.com/vuejs/core/issues/4850) [#4850](https://github.com/vuejs/core/issues/4850)
+* **v-once:** properly unmount v-once cached trees ([d343a0d](https://github.com/vuejs/core/commit/d343a0dc01663f91db42b4ddb693e6fffcb45873)), closes [#5154](https://github.com/vuejs/core/issues/5154) [#8809](https://github.com/vuejs/core/issues/8809)
+
+
+### Performance Improvements
+
+* **server-renderer:** avoid unnecessary checks in `createBuffer` ([#11364](https://github.com/vuejs/core/issues/11364)) ([fc205bf](https://github.com/vuejs/core/commit/fc205bf4decde5ce0f4a61394ffa3914b502c287))
+* **server-renderer:** optimize `unrollBuffer` by avoiding promises ([#11340](https://github.com/vuejs/core/issues/11340)) ([05779a7](https://github.com/vuejs/core/commit/05779a70bd0b567ae458a07636d229bd07c44c4e))
+
+
+
+## [3.4.31](https://github.com/vuejs/core/compare/v3.4.30...v3.4.31) (2024-06-28)
+
+
+### Bug Fixes
+
+* **compiler-core:** handle inline comments with undefined bindings ([#11217](https://github.com/vuejs/core/issues/11217)) ([746352a](https://github.com/vuejs/core/commit/746352a14d62e9d3d9a38c359d2c54d418c1e0ac)), closes [#11216](https://github.com/vuejs/core/issues/11216)
+* **shared:** unwrap refs in toDisplayString ([#7306](https://github.com/vuejs/core/issues/7306)) ([0126cff](https://github.com/vuejs/core/commit/0126cfff9d93bcec70e5745519f6378e3cd3f39c)), closes [#5578](https://github.com/vuejs/core/issues/5578) [#5593](https://github.com/vuejs/core/issues/5593) [#11199](https://github.com/vuejs/core/issues/11199) [#11201](https://github.com/vuejs/core/issues/11201)
+
+
+### Reverts
+
+* Revert "fix(reactivity): avoid infinite loop when render access a side effect computed ([#11135](https://github.com/vuejs/core/issues/11135))" ([e0df985](https://github.com/vuejs/core/commit/e0df985f0317fb65c5b461bf224375c7763f0269))
+* Revert "fix(reactivity): fix side effect computed dirty level (#11183)" ([6c303ea](https://github.com/vuejs/core/commit/6c303eacd14b7b0de0accc228f6abeb43d706f63)), closes [#11183](https://github.com/vuejs/core/issues/11183)
+
+
+
+## [3.4.30](https://github.com/vuejs/core/compare/v3.4.29...v3.4.30) (2024-06-22)
+
+**Note: this release contains a fix (#11150) that requires `vue-tsc` to also be updated in sync to ^2.0.22. See #11196**
+
+### Bug Fixes
+
+* **compiler-core:** should not remove slot node with `v-else` ([#11150](https://github.com/vuejs/core/issues/11150)) ([e102670](https://github.com/vuejs/core/commit/e102670bde00417c3a5b0262c855b297c0e4169e))
+* **hydration:** fix css vars hydration mismatch false positive on attr-fallthrough ([#11190](https://github.com/vuejs/core/issues/11190)) ([7ad67ce](https://github.com/vuejs/core/commit/7ad67ced26e5f53a47cb42f4834496e4958cb53b)), closes [#11188](https://github.com/vuejs/core/issues/11188)
+* **hydration:** skip prop mismatch check for directives that mutate DOM in created ([3169c91](https://github.com/vuejs/core/commit/3169c914939d02a013b2938aff30dac8525923f8)), closes [#11189](https://github.com/vuejs/core/issues/11189)
+* **reactivity:** fix side effect computed dirty level ([#11183](https://github.com/vuejs/core/issues/11183)) ([3bd79e3](https://github.com/vuejs/core/commit/3bd79e3e5ed960fc42cbf77bc61a97d2c03557c0)), closes [#11181](https://github.com/vuejs/core/issues/11181) [#11169](https://github.com/vuejs/core/issues/11169)
+* **runtime-core:** ensure unmount dynamic components in optimized mode ([#11171](https://github.com/vuejs/core/issues/11171)) ([220fe24](https://github.com/vuejs/core/commit/220fe247484209e62c7f4991902c5335e29c5007)), closes [#11168](https://github.com/vuejs/core/issues/11168)
+* **runtime-core:** update devtool __vnode on patch, avoid memory leak during dev ([a959781](https://github.com/vuejs/core/commit/a959781dd6f609dcb6f16dd7fa47d3b16895e5ca)), closes [#11192](https://github.com/vuejs/core/issues/11192)
+* **runtime-dom:** ensure only symbols are explicitly stringified during attribute patching ([#11182](https://github.com/vuejs/core/issues/11182)) ([a2e35d6](https://github.com/vuejs/core/commit/a2e35d682db15a592f4270bb0cde70a0e7bdc4a6)), closes [#11177](https://github.com/vuejs/core/issues/11177)
+* **runtime-dom:** prevent setting state as attribute for custom elements ([#11165](https://github.com/vuejs/core/issues/11165)) ([8ae4c29](https://github.com/vuejs/core/commit/8ae4c293adcec28f18114cb6016230a86787e6a9)), closes [#11163](https://github.com/vuejs/core/issues/11163)
+
+
+### Performance Improvements
+
+* **reactivity:** cache tracking value ([#11145](https://github.com/vuejs/core/issues/11145)) ([7936dae](https://github.com/vuejs/core/commit/7936daebceab2ae9461c3b8f256e51020fb7d3ed))
+
+
+
 ## [3.4.29](https://github.com/vuejs/core/compare/v3.4.28...v3.4.29) (2024-06-14)
 
 

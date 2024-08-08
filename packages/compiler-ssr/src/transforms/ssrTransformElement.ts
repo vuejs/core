@@ -163,6 +163,25 @@ export const ssrTransformElement: NodeTransform = (node, context) => {
               ]),
             ]
           }
+        } else if (directives.length && !node.children.length) {
+          const tempId = `_temp${context.temps++}`
+          propsExp.arguments = [
+            createAssignmentExpression(
+              createSimpleExpression(tempId, false),
+              mergedProps,
+            ),
+          ]
+          rawChildrenMap.set(
+            node,
+            createConditionalExpression(
+              createSimpleExpression(`"textContent" in ${tempId}`, false),
+              createCallExpression(context.helper(SSR_INTERPOLATE), [
+                createSimpleExpression(`${tempId}.textContent`, false),
+              ]),
+              createSimpleExpression(`${tempId}.innerHTML ?? ''`, false),
+              false,
+            ),
+          )
         }
 
         if (needTagForRuntime) {

@@ -65,11 +65,13 @@ export function renderSlot(
     Fragment,
     {
       key:
-        props.key ||
-        // slot content array of a dynamic conditional slot may have a branch
-        // key attached in the `createSlots` helper, respect that
-        (validSlotContent && (validSlotContent as any).key) ||
-        `_${name}`,
+        (props.key ||
+          // slot content array of a dynamic conditional slot may have a branch
+          // key attached in the `createSlots` helper, respect that
+          (validSlotContent && (validSlotContent as any).key) ||
+          `_${name}`) +
+        // #7256 force differentiate fallback content from actual content
+        (!validSlotContent && fallback ? '_fb' : ''),
     },
     validSlotContent || (fallback ? fallback() : []),
     validSlotContent && (slots as RawSlots)._ === SlotFlags.STABLE
@@ -85,7 +87,7 @@ export function renderSlot(
   return rendered
 }
 
-function ensureValidVNode(vnodes: VNodeArrayChildren) {
+export function ensureValidVNode(vnodes: VNodeArrayChildren) {
   return vnodes.some(child => {
     if (!isVNode(child)) return true
     if (child.type === Comment) return false

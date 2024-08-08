@@ -28,7 +28,7 @@
     },
     {
       groupName: 'build',
-      matchPackageNames: ['vite', 'terser'],
+      matchPackageNames: ['vite', '@swc/core'],
       matchPackagePrefixes: ['rollup', 'esbuild', '@rollup', '@vitejs'],
     },
     {

@@ -21,7 +21,7 @@ import { transformIf } from '../../src/transforms/vIf'
 import { transformFor } from '../../src/transforms/vFor'
 import { transformBind } from '../../src/transforms/vBind'
 import { transformOn } from '../../src/transforms/vOn'
-import { createObjectMatcher, genFlagText } from '../testUtils'
+import { createObjectMatcher } from '../testUtils'
 import { transformText } from '../../src/transforms/transformText'
 import { PatchFlags } from '@vue/shared'
 
@@ -180,7 +180,7 @@ describe('compiler: hoistStatic transform', () => {
             id: `[foo]`,
           }),
           children: undefined,
-          patchFlag: genFlagText(PatchFlags.PROPS),
+          patchFlag: PatchFlags.PROPS,
           dynamicProps: {
             type: NodeTypes.SIMPLE_EXPRESSION,
             content: `_hoisted_1`,
@@ -242,7 +242,7 @@ describe('compiler: hoistStatic transform', () => {
             ref: `[foo]`,
           }),
           children: undefined,
-          patchFlag: genFlagText(PatchFlags.NEED_PATCH),
+          patchFlag: PatchFlags.NEED_PATCH,
         },
       },
     ])
@@ -263,7 +263,7 @@ describe('compiler: hoistStatic transform', () => {
             content: `_hoisted_1`,
           },
           children: undefined,
-          patchFlag: genFlagText(PatchFlags.NEED_PATCH),
+          patchFlag: PatchFlags.NEED_PATCH,
           directives: {
             type: NodeTypes.JS_ARRAY_EXPRESSION,
           },
@@ -286,7 +286,7 @@ describe('compiler: hoistStatic transform', () => {
           tag: `"div"`,
           props: { content: `_hoisted_1` },
           children: { type: NodeTypes.INTERPOLATION },
-          patchFlag: genFlagText(PatchFlags.TEXT),
+          patchFlag: PatchFlags.TEXT,
         },
       },
     ])
@@ -365,7 +365,7 @@ describe('compiler: hoistStatic transform', () => {
         type: NodeTypes.JS_CALL_EXPRESSION,
         callee: RENDER_LIST,
       },
-      patchFlag: genFlagText(PatchFlags.UNKEYED_FRAGMENT),
+      patchFlag: PatchFlags.UNKEYED_FRAGMENT,
     })
     const innerBlockCodegen = forBlockCodegen!.children.arguments[1]
     expect(innerBlockCodegen.returns).toMatchObject({
@@ -496,7 +496,7 @@ describe('compiler: hoistStatic transform', () => {
                   constType: ConstantTypes.NOT_CONSTANT,
                 },
               },
-              patchFlag: `1 /* TEXT */`,
+              patchFlag: PatchFlags.TEXT,
             },
           },
         ],
