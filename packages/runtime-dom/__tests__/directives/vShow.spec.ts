@@ -309,4 +309,30 @@ describe('runtime-dom: v-show directive', () => {
     await nextTick()
     expect($div.style.display).toEqual('')
   })
+
+  test('should hide when vnode use the withDirectives', async () => {
+    const showVar = ref(2)
+    const useVShow = ref(false)
+    const Comp = defineComponent({
+      setup() {
+        return {
+          showVar: showVar,
+          useVShow: useVShow,
+        }
+      },
+      render() {
+        const vnode = h('div', null, 'foo')
+        const dirs = [] as any
+        if (this.useVShow) {
+          dirs.push([vShow, this.showVar === 1])
+        }
+        return withDirectives(vnode, dirs)
+      },
+    })
+    render(h(Comp), root)
+    useVShow.value = true
+    await nextTick()
+    const $div = root.children[0]
+    expect($div.style.display).toEqual('none')
+  })
 })
