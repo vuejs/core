@@ -73,6 +73,7 @@ export enum ErrorCodes {
   // transform errors
   X_V_IF_NO_EXPRESSION,
   X_V_IF_SAME_KEY,
+  X_V_IF_TEMPLATE_USER_DEFINED_KEY,
   X_V_ELSE_NO_ADJACENT_IF,
   X_V_FOR_NO_EXPRESSION,
   X_V_FOR_MALFORMED_EXPRESSION,
@@ -155,6 +156,7 @@ export const errorMessages: Record<ErrorCodes, string> = {
   // transform errors
   [ErrorCodes.X_V_IF_NO_EXPRESSION]: `v-if/v-else-if is missing expression.`,
   [ErrorCodes.X_V_IF_SAME_KEY]: `v-if/else branches must use unique keys.`,
+  [ErrorCodes.X_V_IF_TEMPLATE_USER_DEFINED_KEY]: `v-if/else the template key is internally set.`,
   [ErrorCodes.X_V_ELSE_NO_ADJACENT_IF]: `v-else/v-else-if has no adjacent v-if or v-else-if.`,
   [ErrorCodes.X_V_FOR_NO_EXPRESSION]: `v-for is missing expression.`,
   [ErrorCodes.X_V_FOR_MALFORMED_EXPRESSION]: `v-for has invalid expression.`,

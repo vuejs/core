@@ -93,6 +93,14 @@ export const transformFor = createStructuralDirectiveTransform(
             context,
           )
         }
+        if (
+          keyExp &&
+          keyExp.type === NodeTypes.SIMPLE_EXPRESSION &&
+          !keyExp.content.trim()
+        )
+          context.onError(
+            createCompilerError(ErrorCodes.X_V_BIND_NO_EXPRESSION, keyProp.loc),
+          )
       }
 
       const isStableFragment =

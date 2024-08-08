@@ -323,6 +323,32 @@ describe('compiler: v-if', () => {
         },
       ])
     })
+
+    test('error on template key', () => {
+      const onError = vi.fn()
+      // dynamic
+      parseWithIfTransform(
+        `<template v-if="ok" :key="a" /><template v-else :key="b" />`,
+        { onError },
+      )
+      expect(onError.mock.calls[0]).toMatchObject([
+        {
+          code: ErrorCodes.X_V_IF_TEMPLATE_USER_DEFINED_KEY,
+        },
+      ])
+      // static
+      parseWithIfTransform(
+        `<template v-if="ok" key="1" /><template v-else key="2" />`,
+        {
+          onError,
+        },
+      )
+      expect(onError.mock.calls[1]).toMatchObject([
+        {
+          code: ErrorCodes.X_V_IF_TEMPLATE_USER_DEFINED_KEY,
+        },
+      ])
+    })
   })
 
   describe('codegen', () => {
