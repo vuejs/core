@@ -90,7 +90,7 @@ const KeepAliveImpl: ComponentOptions = {
     max: [String, Number],
   },
 
-  setup(props: KeepAliveProps, { slots }: SetupContext) {
+  setup(props: KeepAliveProps, { slots, expose }: SetupContext) {
     const instance = getCurrentInstance()!
     // KeepAlive communicates with the instantiated renderer via the
     // ctx where the renderer passes in its internals,
@@ -198,7 +198,7 @@ const KeepAliveImpl: ComponentOptions = {
     function pruneCache(filter?: (name: string) => boolean) {
       cache.forEach((vnode, key) => {
         const name = getComponentName(vnode.type as ConcreteComponent)
-        if (name && (!filter || !filter(name))) {
+        if (!filter || (name && !filter(name)) || !filter(key.toString())) {
           pruneCacheEntry(key)
         }
       })
@@ -262,6 +262,8 @@ const KeepAliveImpl: ComponentOptions = {
         unmount(cached)
       })
     })
+
+    expose({pruneCacheEntry});
 
     return () => {
       pendingCacheKey = null
