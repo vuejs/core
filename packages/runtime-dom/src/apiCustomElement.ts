@@ -200,6 +200,7 @@ export class VueElement
   extends BaseClass
   implements ComponentCustomElementInterface
 {
+  _isVueCE = true
   /**
    * @internal
    */
@@ -208,6 +209,10 @@ export class VueElement
    * @internal
    */
   _app: App | null = null
+  /**
+   * @internal
+   */
+  _root: Element | ShadowRoot
   /**
    * @internal
    */
@@ -228,10 +233,6 @@ export class VueElement
    */
   private _childStyles?: Map<string, HTMLStyleElement[]>
   private _ob?: MutationObserver | null = null
-  /**
-   * @internal
-   */
-  public _root: Element | ShadowRoot
   private _slots?: Record<string, Node[]>
 
   constructor(

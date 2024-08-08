@@ -1206,4 +1206,39 @@ describe('defineCustomElement', () => {
       'hello',
     )
   })
+
+  // #11081
+  test('Props can be casted when mounting custom elements in component rendering functions', async () => {
+    const E = defineCustomElement(
+      defineAsyncComponent(() =>
+        Promise.resolve({
+          props: ['fooValue'],
+          setup(props) {
+            expect(props.fooValue).toBe('fooValue')
+            return () => h('div', props.fooValue)
+          },
+        }),
+      ),
+    )
+    customElements.define('my-el-async-4', E)
+    const R = defineComponent({
+      setup() {
+        const fooValue = ref('fooValue')
+        return () => {
+          return h('div', null, [
+            h('my-el-async-4', {
+              fooValue: fooValue.value,
+            }),
+          ])
+        }
+      },
+    })
+
+    const app = createApp(R)
+    app.mount(container)
+    await new Promise(r => setTimeout(r))
+    const e = container.querySelector('my-el-async-4') as VueElement
+    expect(e.shadowRoot!.innerHTML).toBe(`<div>fooValue</div>`)
+    app.unmount()
+  })
 })
