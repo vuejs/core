@@ -591,7 +591,7 @@ const props = defineProps({ foo: String })
 
   // #8289
   test('destructure without enabling reactive destructure', () => {
-    const { content } = compile(
+    const { content, bindings } = compile(
       `<script setup lang="ts">
       const { foo } = defineProps<{
         foo: Foo
@@ -602,6 +602,10 @@ const props = defineProps({ foo: String })
       },
     )
     expect(content).toMatch(`const { foo } = __props`)
+    expect(content).toMatch(`return { foo }`)
+    expect(bindings).toStrictEqual({
+      foo: BindingTypes.SETUP_CONST,
+    })
     assertCode(content)
   })
 

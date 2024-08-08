@@ -478,4 +478,38 @@ describe('reactivity/ref', () => {
     expect(toValue(c)).toBe(3)
     expect(toValue(d)).toBe(4)
   })
+
+  test('ref w/ customRef w/ getterRef w/ objectRef should store value cache', () => {
+    const refValue = ref(1)
+    // @ts-expect-error private field
+    expect(refValue._value).toBe(1)
+
+    let customRefValueCache = 0
+    const customRefValue = customRef((track, trigger) => {
+      return {
+        get() {
+          track()
+          return customRefValueCache
+        },
+        set(value: number) {
+          customRefValueCache = value
+          trigger()
+        },
+      }
+    })
+    customRefValue.value
+
+    // @ts-expect-error internal field
+    expect(customRefValue._value).toBe(0)
+
+    const getterRefValue = toRef(() => 1)
+    getterRefValue.value
+    // @ts-expect-error internal field
+    expect(getterRefValue._value).toBe(1)
+
+    const objectRefValue = toRef({ value: 1 }, 'value')
+    objectRefValue.value
+    // @ts-expect-error internal field
+    expect(objectRefValue._value).toBe(1)
+  })
 })

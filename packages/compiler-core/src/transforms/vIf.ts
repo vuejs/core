@@ -280,7 +280,7 @@ function createChildrenCodegenNode(
         helper(FRAGMENT),
         createObjectExpression([keyProperty]),
         children,
-        patchFlag + (__DEV__ ? ` /* ${patchFlagText} */` : ``),
+        patchFlag,
         undefined,
         undefined,
         true,

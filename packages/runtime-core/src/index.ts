@@ -62,6 +62,14 @@ export { defineComponent } from './apiDefineComponent'
 export { defineAsyncComponent } from './apiAsyncComponent'
 export { useAttrs, useSlots } from './apiSetupHelpers'
 export { useModel } from './helpers/useModel'
+export { useTemplateRef } from './helpers/useTemplateRef'
+export { useId } from './helpers/useId'
+export {
+  hydrateOnIdle,
+  hydrateOnVisible,
+  hydrateOnMediaQuery,
+  hydrateOnInteraction,
+} from './hydrationStrategies'
 
 // <script setup> API ----------------------------------------------------------
 
@@ -216,11 +224,13 @@ export type {
   Reactive,
 } from '@vue/reactivity'
 export type {
+  MultiWatchSources,
   WatchEffect,
   WatchOptions,
   WatchOptionsBase,
   WatchCallback,
   WatchSource,
+  WatchHandle,
   WatchStopHandle,
 } from './apiWatch'
 export type { InjectionKey } from './apiInject'
@@ -253,6 +263,7 @@ export type {
   GlobalComponents,
   GlobalDirectives,
   ComponentInstance,
+  ComponentCustomElementInterface,
 } from './component'
 export type {
   DefineComponent,
@@ -325,6 +336,10 @@ export type {
   AsyncComponentOptions,
   AsyncComponentLoader,
 } from './apiAsyncComponent'
+export type {
+  HydrationStrategy,
+  HydrationStrategyFactory,
+} from './hydrationStrategies'
 export type { HMRRuntime } from './hmr'
 
 // Internal API ----------------------------------------------------------------
@@ -382,6 +397,7 @@ import {
 import { renderComponentRoot } from './componentRenderUtils'
 import { setCurrentRenderingInstance } from './componentRenderContext'
 import { isVNode, normalizeVNode } from './vnode'
+import { ensureValidVNode } from './helpers/renderSlot'
 
 const _ssrUtils = {
   createComponentInstance,
@@ -391,6 +407,7 @@ const _ssrUtils = {
   isVNode,
   normalizeVNode,
   getComponentPublicInstance,
+  ensureValidVNode,
 }
 
 /**

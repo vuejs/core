@@ -16,15 +16,16 @@ import {
   toRaw,
   toReactive,
 } from './reactive'
-import type { ComputedRef } from './computed'
+import type { ComputedRef, WritableComputedRef } from './computed'
 import { ReactiveFlags, TrackOpTypes, TriggerOpTypes } from './constants'
 import { warn } from './warning'
 
 declare const RefSymbol: unique symbol
 export declare const RawSymbol: unique symbol
 
-export interface Ref<T = any> {
-  value: T
+export interface Ref<T = any, S = T> {
+  get value(): T
+  set value(_: S)
   /**
    * Type differentiator only.
    * We need this to be in public d.ts but don't want it to show up in IDE
@@ -51,7 +52,9 @@ export function isRef(r: any): r is Ref {
  * @param value - The object to wrap in the ref.
  * @see {@link https://vuejs.org/api/reactivity-core.html#ref}
  */
-export function ref<T>(value: T): Ref<UnwrapRef<T>>
+export function ref<T>(
+  value: T,
+): [T] extends [Ref] ? IfAny<T, Ref<T>, T> : Ref<UnwrapRef<T>, UnwrapRef<T> | T>
 export function ref<T = any>(): Ref<T | undefined>
 export function ref(value?: unknown) {
   return createRef(value, false)
@@ -191,8 +194,13 @@ export function triggerRef(ref: Ref) {
   }
 }
 
-export type MaybeRef<T = any> = T | Ref<T>
-export type MaybeRefOrGetter<T = any> = MaybeRef<T> | (() => T)
+export type MaybeRef<T = any> =
+  | T
+  | Ref<T>
+  | ShallowRef<T>
+  | WritableComputedRef<T>
+
+export type MaybeRefOrGetter<T = any> = MaybeRef<T> | ComputedRef<T> | (() => T)
 
 /**
  * Returns the inner value if the argument is a ref, otherwise return the
@@ -230,7 +238,7 @@ export function unref<T>(ref: MaybeRef<T> | ComputedRef<T>): T {
  * @param source - A getter, an existing ref, or a non-function value.
  * @see {@link https://vuejs.org/api/reactivity-utilities.html#tovalue}
  */
-export function toValue<T>(source: MaybeRefOrGetter<T> | ComputedRef<T>): T {
+export function toValue<T>(source: MaybeRefOrGetter<T>): T {
   return isFunction(source) ? source() : unref(source)
 }
 
@@ -248,11 +256,9 @@ const shallowUnwrapHandlers: ProxyHandler<any> = {
 }
 
 /**
- * Returns a reactive proxy for the given object.
- *
- * If the object already is reactive, it's returned as-is. If not, a new
- * reactive proxy is created. Direct child properties that are refs are properly
- * handled, as well.
+ * Returns a proxy for the given object that shallowly unwraps properties that
+ * are refs. If the object already is reactive, it's returned as-is. If not, a
+ * new reactive proxy is created.
  *
  * @param objectWithRefs - Either an already-reactive object or a simple object
  * that contains refs.
@@ -281,6 +287,8 @@ class CustomRefImpl<T> {
 
   public readonly [ReactiveFlags.IS_REF] = true
 
+  public _value: T = undefined!
+
   constructor(factory: CustomRefFactory<T>) {
     const dep = (this.dep = new Dep())
     const { get, set } = factory(dep.track.bind(dep), dep.trigger.bind(dep))
@@ -289,7 +297,7 @@ class CustomRefImpl<T> {
   }
 
   get value() {
-    return this._get()
+    return (this._value = this._get())
   }
 
   set value(newVal) {
@@ -333,6 +341,7 @@ export function toRefs<T extends object>(object: T): ToRefs<T> {
 
 class ObjectRefImpl<T extends object, K extends keyof T> {
   public readonly [ReactiveFlags.IS_REF] = true
+  public _value: T[K] = undefined!
 
   constructor(
     private readonly _object: T,
@@ -342,7 +351,7 @@ class ObjectRefImpl<T extends object, K extends keyof T> {
 
   get value() {
     const val = this._object[this._key]
-    return val === undefined ? this._defaultValue! : val
+    return (this._value = val === undefined ? this._defaultValue! : val)
   }
 
   set value(newVal) {
@@ -357,9 +366,11 @@ class ObjectRefImpl<T extends object, K extends keyof T> {
 class GetterRefImpl<T> {
   public readonly [ReactiveFlags.IS_REF] = true
   public readonly [ReactiveFlags.IS_READONLY] = true
+  public _value: T = undefined!
+
   constructor(private readonly _getter: () => T) {}
   get value() {
-    return this._getter()
+    return (this._value = this._getter())
   }
 }
 

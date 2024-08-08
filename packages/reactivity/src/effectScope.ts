@@ -17,6 +17,8 @@ export class EffectScope {
    */
   cleanups: (() => void)[] = []
 
+  private _isPaused = false
+
   /**
    * only assigned by undetached scope
    * @internal
@@ -46,6 +48,39 @@ export class EffectScope {
 
   get active() {
     return this._active
+  }
+
+  pause() {
+    if (this._active) {
+      this._isPaused = true
+      if (this.scopes) {
+        for (let i = 0, l = this.scopes.length; i < l; i++) {
+          this.scopes[i].pause()
+        }
+      }
+      for (let i = 0, l = this.effects.length; i < l; i++) {
+        this.effects[i].pause()
+      }
+    }
+  }
+
+  /**
+   * Resumes the effect scope, including all child scopes and effects.
+   */
+  resume() {
+    if (this._active) {
+      if (this._isPaused) {
+        this._isPaused = false
+        if (this.scopes) {
+          for (let i = 0, l = this.scopes.length; i < l; i++) {
+            this.scopes[i].resume()
+          }
+        }
+        for (let i = 0, l = this.effects.length; i < l; i++) {
+          this.effects[i].resume()
+        }
+      }
+    }
   }
 
   run<T>(fn: () => T): T | undefined {

@@ -30,6 +30,7 @@ import {
   compatModelEventPrefix,
 } from './compat/componentVModel'
 import type { ComponentTypeEmits } from './apiSetupHelpers'
+import { getModelModifiers } from './helpers/useModel'
 
 export type ObjectEmitsOptions = Record<
   string,
@@ -121,10 +122,10 @@ export function emit(
             event.startsWith(compatModelEventPrefix))
         )
       ) {
-        if (!propsOptions || !(toHandlerKey(event) in propsOptions)) {
+        if (!propsOptions || !(toHandlerKey(camelize(event)) in propsOptions)) {
           warn(
             `Component emitted event "${event}" but it is neither declared in ` +
-              `the emits option nor as an "${toHandlerKey(event)}" prop.`,
+              `the emits option nor as an "${toHandlerKey(camelize(event))}" prop.`,
           )
         }
       } else {
@@ -145,16 +146,12 @@ export function emit(
   const isModelListener = event.startsWith('update:')
 
   // for v-model update:xxx events, apply modifiers on args
-  const modelArg = isModelListener && event.slice(7)
-  if (modelArg && modelArg in props) {
-    const modifiersKey = `${
-      modelArg === 'modelValue' ? 'model' : modelArg
-    }Modifiers`
-    const { number, trim } = props[modifiersKey] || EMPTY_OBJ
-    if (trim) {
+  const modifiers = isModelListener && getModelModifiers(props, event.slice(7))
+  if (modifiers) {
+    if (modifiers.trim) {
       args = rawArgs.map(a => (isString(a) ? a.trim() : a))
     }
-    if (number) {
+    if (modifiers.number) {
       args = rawArgs.map(looseToNumber)
     }
   }

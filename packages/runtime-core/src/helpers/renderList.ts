@@ -60,9 +60,9 @@ export function renderList(
   let ret: VNodeChild[]
   const cached = (cache && cache[index!]) as VNode[] | undefined
   const sourceIsArray = isArray(source)
-  const sourceIsReactiveArray = sourceIsArray && isReactive(source)
 
   if (sourceIsArray || isString(source)) {
+    const sourceIsReactiveArray = sourceIsArray && isReactive(source)
     if (sourceIsReactiveArray) {
       source = shallowReadArray(source)
     }

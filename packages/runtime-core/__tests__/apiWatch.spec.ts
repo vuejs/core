@@ -5,6 +5,7 @@ import {
   defineComponent,
   getCurrentInstance,
   nextTick,
+  onErrorCaptured,
   reactive,
   ref,
   watch,
@@ -1531,6 +1532,186 @@ describe('api: watch', () => {
     expect(spy2).toHaveBeenCalledTimes(1)
   })
 
+  it('watching reactive depth', async () => {
+    const state = reactive({
+      a: {
+        b: {
+          c: {
+            d: {
+              e: 1,
+            },
+          },
+        },
+      },
+    })
+
+    const cb = vi.fn()
+
+    watch(state, cb, { deep: 2 })
+
+    state.a.b = { c: { d: { e: 2 } } }
+    await nextTick()
+    expect(cb).toHaveBeenCalledTimes(1)
+
+    state.a.b.c = { d: { e: 3 } }
+
+    await nextTick()
+    expect(cb).toHaveBeenCalledTimes(1)
+
+    state.a.b = { c: { d: { e: 4 } } }
+
+    await nextTick()
+    expect(cb).toHaveBeenCalledTimes(2)
+  })
+
+  it('watching ref depth', async () => {
+    const state = ref({
+      a: {
+        b: 2,
+      },
+    })
+
+    const cb = vi.fn()
+
+    watch(state, cb, { deep: 1 })
+
+    state.value.a.b = 3
+    await nextTick()
+    expect(cb).toHaveBeenCalledTimes(0)
+
+    state.value.a = { b: 3 }
+    await nextTick()
+    expect(cb).toHaveBeenCalledTimes(1)
+  })
+
+  it('watching array depth', async () => {
+    const arr = ref([
+      {
+        a: {
+          b: 2,
+        },
+      },
+      {
+        a: {
+          b: 3,
+        },
+      },
+    ])
+    const cb = vi.fn()
+    watch(arr, cb, { deep: 2 })
+
+    arr.value[0].a.b = 3
+    await nextTick()
+    expect(cb).toHaveBeenCalledTimes(0)
+
+    arr.value[0].a = { b: 3 }
+    await nextTick()
+    expect(cb).toHaveBeenCalledTimes(1)
+
+    arr.value[1].a = { b: 4 }
+    await nextTick()
+    expect(cb).toHaveBeenCalledTimes(2)
+
+    arr.value.push({ a: { b: 5 } })
+    await nextTick()
+    expect(cb).toHaveBeenCalledTimes(3)
+
+    arr.value.pop()
+    await nextTick()
+    expect(cb).toHaveBeenCalledTimes(4)
+  })
+
+  test('pause / resume', async () => {
+    const count = ref(0)
+    const cb = vi.fn()
+    const { pause, resume } = watch(count, cb)
+
+    count.value++
+    await nextTick()
+    expect(cb).toHaveBeenCalledTimes(1)
+    expect(cb).toHaveBeenLastCalledWith(1, 0, expect.any(Function))
+
+    pause()
+    count.value++
+    await nextTick()
+    expect(cb).toHaveBeenCalledTimes(1)
+    expect(cb).toHaveBeenLastCalledWith(1, 0, expect.any(Function))
+
+    resume()
+    count.value++
+    await nextTick()
+    expect(cb).toHaveBeenCalledTimes(2)
+    expect(cb).toHaveBeenLastCalledWith(3, 1, expect.any(Function))
+
+    count.value++
+    await nextTick()
+    expect(cb).toHaveBeenCalledTimes(3)
+    expect(cb).toHaveBeenLastCalledWith(4, 3, expect.any(Function))
+
+    pause()
+    count.value++
+    await nextTick()
+    expect(cb).toHaveBeenCalledTimes(3)
+    expect(cb).toHaveBeenLastCalledWith(4, 3, expect.any(Function))
+
+    resume()
+    await nextTick()
+    expect(cb).toHaveBeenCalledTimes(4)
+    expect(cb).toHaveBeenLastCalledWith(5, 4, expect.any(Function))
+  })
+
+  it('shallowReactive', async () => {
+    const state = shallowReactive({
+      msg: ref('hello'),
+      foo: {
+        a: ref(1),
+        b: 2,
+      },
+      bar: 'bar',
+    })
+
+    const spy = vi.fn()
+
+    watch(state, spy)
+
+    state.msg.value = 'hi'
+    await nextTick()
+    expect(spy).not.toHaveBeenCalled()
+
+    state.bar = 'bar2'
+    await nextTick()
+    expect(spy).toHaveBeenCalledTimes(1)
+
+    state.foo.a.value++
+    state.foo.b++
+    await nextTick()
+    expect(spy).toHaveBeenCalledTimes(1)
+
+    state.bar = 'bar3'
+    await nextTick()
+    expect(spy).toHaveBeenCalledTimes(2)
+  })
+  it('watching reactive with deep: false', async () => {
+    const state = reactive({
+      foo: {
+        a: 2,
+      },
+      bar: 'bar',
+    })
+
+    const spy = vi.fn()
+
+    watch(state, spy, { deep: false })
+
+    state.foo.a++
+    await nextTick()
+    expect(spy).toHaveBeenCalledTimes(0)
+
+    state.bar = 'bar2'
+    await nextTick()
+    expect(spy).toHaveBeenCalledTimes(1)
+  })
+
   test("effect should be removed from scope's effects after it is stopped", () => {
     const num = ref(0)
     let unwatch: () => void
@@ -1618,5 +1799,61 @@ describe('api: watch', () => {
     await nextTick()
     expect(spy).toHaveBeenCalledTimes(1)
     expect(foo.value.a).toBe(2)
+  })
+
+  test('watch immediate error in effect scope should be catched by onErrorCaptured', async () => {
+    const warn = vi.spyOn(console, 'warn')
+    warn.mockImplementation(() => {})
+    const ERROR_IN_SCOPE = 'ERROR_IN_SCOPE'
+    const ERROR_OUT_SCOPE = 'ERROR_OUT_SCOPE'
+
+    const errors = ref<string[]>([])
+    const Comp = {
+      setup() {
+        const trigger = ref(0)
+
+        effectScope(true).run(() => {
+          watch(
+            trigger,
+            () => {
+              throw new Error(ERROR_IN_SCOPE)
+            },
+            { immediate: true },
+          )
+        })
+
+        watchEffect(() => {
+          throw new Error(ERROR_OUT_SCOPE)
+        })
+
+        return () => ''
+      },
+    }
+
+    const root = nodeOps.createElement('div')
+    render(
+      h(
+        {
+          setup(_, { slots }) {
+            onErrorCaptured(e => {
+              errors.value.push(e.message)
+              return false
+            })
+
+            return () => h('div', slots.default && slots.default())
+          },
+        },
+        null,
+        () => [h(Comp)],
+      ),
+      root,
+    )
+    await nextTick()
+    // only watchEffect as ran so far
+    expect(errors.value).toHaveLength(2)
+    expect(errors.value[0]).toBe(ERROR_IN_SCOPE)
+    expect(errors.value[1]).toBe(ERROR_OUT_SCOPE)
+
+    warn.mockRestore()
   })
 })

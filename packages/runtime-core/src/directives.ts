@@ -125,7 +125,7 @@ export type DirectiveArguments = Array<
   | [Directive | undefined]
   | [Directive | undefined, any]
   | [Directive | undefined, any, string]
-  | [Directive | undefined, any, string, DirectiveModifiers]
+  | [Directive | undefined, any, string | undefined, DirectiveModifiers]
 >
 
 /**

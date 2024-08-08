@@ -54,7 +54,8 @@ const sfcOptions = computed(
     template: {
       isProd: productionMode.value,
       compilerOptions: {
-        isCustomElement: (tag: string) => tag === 'mjx-container',
+        isCustomElement: (tag: string) =>
+          tag === 'mjx-container' || tag.startsWith('custom-'),
       },
     },
   }),
@@ -129,7 +130,13 @@ onMounted(() => {
     :preview-options="{
       customCode: {
         importCode: `import { initCustomFormatter } from 'vue'`,
-        useCode: `initCustomFormatter()`,
+        useCode: `if (window.devtoolsFormatters) {
+    const index = window.devtoolsFormatters.findIndex((v) => v.__vue_custom_formatter)
+    window.devtoolsFormatters.splice(index, 1)
+    initCustomFormatter()
+  } else {
+    initCustomFormatter()
+  }`,
       },
     }"
   />

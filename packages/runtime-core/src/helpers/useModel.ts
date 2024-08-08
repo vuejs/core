@@ -29,9 +29,13 @@ export function useModel(
 
   const camelizedName = camelize(name)
   const hyphenatedName = hyphenate(name)
+  const modifiers = getModelModifiers(props, name)
 
   const res = customRef((track, trigger) => {
     let localValue: any
+    let prevSetValue: any = EMPTY_OBJ
+    let prevEmittedValue: any
+
     watchSyncEffect(() => {
       const propValue = props[name]
       if (hasChanged(localValue, propValue)) {
@@ -39,12 +43,20 @@ export function useModel(
         trigger()
       }
     })
+
     return {
       get() {
         track()
         return options.get ? options.get(localValue) : localValue
       },
+
       set(value) {
+        if (
+          !hasChanged(value, localValue) &&
+          !(prevSetValue !== EMPTY_OBJ && hasChanged(value, prevSetValue))
+        ) {
+          return
+        }
         const rawProps = i.vnode!.props
         if (
           !(
@@ -56,19 +68,30 @@ export function useModel(
             (`onUpdate:${name}` in rawProps ||
               `onUpdate:${camelizedName}` in rawProps ||
               `onUpdate:${hyphenatedName}` in rawProps)
-          ) &&
-          hasChanged(value, localValue)
+          )
         ) {
+          // no v-model, local update
           localValue = value
           trigger()
         }
-        i.emit(`update:${name}`, options.set ? options.set(value) : value)
+        const emittedValue = options.set ? options.set(value) : value
+        i.emit(`update:${name}`, emittedValue)
+        // #10279: if the local value is converted via a setter but the value
+        // emitted to parent was the same, the parent will not trigger any
+        // updates and there will be no prop sync. However the local input state
+        // may be out of sync, so we need to force an update here.
+        if (
+          hasChanged(value, emittedValue) &&
+          hasChanged(value, prevSetValue) &&
+          !hasChanged(emittedValue, prevEmittedValue)
+        ) {
+          trigger()
+        }
+        prevSetValue = value
+        prevEmittedValue = emittedValue
       },
     }
   })
-
-  const modifierKey =
-    name === 'modelValue' ? 'modelModifiers' : `${name}Modifiers`
 
   // @ts-expect-error
   res[Symbol.iterator] = () => {
@@ -76,7 +99,7 @@ export function useModel(
     return {
       next() {
         if (i < 2) {
-          return { value: i++ ? props[modifierKey] || {} : res, done: false }
+          return { value: i++ ? modifiers || EMPTY_OBJ : res, done: false }
         } else {
           return { done: true }
         }
@@ -85,4 +108,15 @@ export function useModel(
   }
 
   return res
+}
+
+export const getModelModifiers = (
+  props: Record<string, any>,
+  modelName: string,
+): Record<string, boolean> | undefined => {
+  return modelName === 'modelValue' || modelName === 'model-value'
+    ? props.modelModifiers
+    : props[`${modelName}Modifiers`] ||
+        props[`${camelize(modelName)}Modifiers`] ||
+        props[`${hyphenate(modelName)}Modifiers`]
 }
