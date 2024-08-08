@@ -19,7 +19,6 @@ import { transformFor } from '../src/transforms/vFor'
 import { transformElement } from '../src/transforms/transformElement'
 import { transformSlotOutlet } from '../src/transforms/transformSlotOutlet'
 import { transformText } from '../src/transforms/transformText'
-import { genFlagText } from './testUtils'
 import { PatchFlags } from '@vue/shared'
 
 describe('compiler: transform', () => {
@@ -358,7 +357,7 @@ describe('compiler: transform', () => {
             { type: NodeTypes.ELEMENT, tag: `div` },
             { type: NodeTypes.ELEMENT, tag: `div` },
           ] as any,
-          genFlagText(PatchFlags.STABLE_FRAGMENT),
+          PatchFlags.STABLE_FRAGMENT,
         ),
       )
     })
@@ -374,10 +373,7 @@ describe('compiler: transform', () => {
             { type: NodeTypes.ELEMENT, tag: `div` },
             { type: NodeTypes.COMMENT },
           ] as any,
-          genFlagText([
-            PatchFlags.STABLE_FRAGMENT,
-            PatchFlags.DEV_ROOT_FRAGMENT,
-          ]),
+          PatchFlags.STABLE_FRAGMENT | PatchFlags.DEV_ROOT_FRAGMENT,
         ),
       )
     })

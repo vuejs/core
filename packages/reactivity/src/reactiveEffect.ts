@@ -13,7 +13,7 @@ import {
 // The main WeakMap that stores {target -> key -> dep} connections.
 // Conceptually, it's easier to think of a dependency as a Dep class
 // which maintains a Set of subscribers, but we simply store them as
-// raw Sets to reduce memory overhead.
+// raw Maps to reduce memory overhead.
 type KeyToDepMap = Map<any, Dep>
 const targetMap = new WeakMap<object, KeyToDepMap>()
 
@@ -145,6 +145,7 @@ export function trigger(
   resetScheduling()
 }
 
-export function getDepFromReactive(object: any, key: string | number | symbol) {
-  return targetMap.get(object)?.get(key)
+export function getDepFromReactive(object: any, key: PropertyKey) {
+  const depsMap = targetMap.get(object)
+  return depsMap && depsMap.get(key)
 }

@@ -56,11 +56,14 @@ export function inject(
     // #2400
     // to support `app.use` plugins,
     // fallback to appContext's `provides` if the instance is at root
-    const provides = instance
-      ? instance.parent == null
-        ? instance.vnode.appContext && instance.vnode.appContext.provides
-        : instance.parent.provides
-      : currentApp!._context.provides
+    // #11488, in a nested createApp, prioritize using the provides from currentApp
+    const provides = currentApp
+      ? currentApp._context.provides
+      : instance
+        ? instance.parent == null
+          ? instance.vnode.appContext && instance.vnode.appContext.provides
+          : instance.parent.provides
+        : undefined
 
     if (provides && (key as string | symbol) in provides) {
       // TS doesn't allow symbol as index type

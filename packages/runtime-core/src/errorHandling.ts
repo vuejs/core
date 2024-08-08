@@ -1,7 +1,8 @@
+import { pauseTracking, resetTracking } from '@vue/reactivity'
 import type { VNode } from './vnode'
 import type { ComponentInternalInstance } from './component'
 import { popWarningContext, pushWarningContext, warn } from './warning'
-import { isFunction, isPromise } from '@vue/shared'
+import { isArray, isFunction, isPromise } from '@vue/shared'
 import { LifecycleHooks } from './enums'
 
 // contexts where user provided function may be executed, in addition to
@@ -22,6 +23,7 @@ export enum ErrorCodes {
   FUNCTION_REF,
   ASYNC_COMPONENT_LOADER,
   SCHEDULER,
+  COMPONENT_UPDATE,
 }
 
 export const ErrorTypeStrings: Record<LifecycleHooks | ErrorCodes, string> = {
@@ -53,26 +55,23 @@ export const ErrorTypeStrings: Record<LifecycleHooks | ErrorCodes, string> = {
   [ErrorCodes.APP_WARN_HANDLER]: 'app warnHandler',
   [ErrorCodes.FUNCTION_REF]: 'ref function',
   [ErrorCodes.ASYNC_COMPONENT_LOADER]: 'async component loader',
-  [ErrorCodes.SCHEDULER]:
-    'scheduler flush. This is likely a Vue internals bug. ' +
-    'Please open an issue at https://github.com/vuejs/core .',
+  [ErrorCodes.SCHEDULER]: 'scheduler flush',
+  [ErrorCodes.COMPONENT_UPDATE]: 'component update',
 }
 
 export type ErrorTypes = LifecycleHooks | ErrorCodes
 
 export function callWithErrorHandling(
   fn: Function,
-  instance: ComponentInternalInstance | null,
+  instance: ComponentInternalInstance | null | undefined,
   type: ErrorTypes,
   args?: unknown[],
 ) {
-  let res
   try {
-    res = args ? fn(...args) : fn()
+    return args ? fn(...args) : fn()
   } catch (err) {
     handleError(err, instance, type)
   }
-  return res
 }
 
 export function callWithAsyncErrorHandling(
@@ -80,7 +79,7 @@ export function callWithAsyncErrorHandling(
   instance: ComponentInternalInstance | null,
   type: ErrorTypes,
   args?: unknown[],
-): any[] {
+): any {
   if (isFunction(fn)) {
     const res = callWithErrorHandling(fn, instance, type, args)
     if (res && isPromise(res)) {
@@ -91,16 +90,22 @@ export function callWithAsyncErrorHandling(
     return res
   }
 
-  const values = []
-  for (let i = 0; i < fn.length; i++) {
-    values.push(callWithAsyncErrorHandling(fn[i], instance, type, args))
+  if (isArray(fn)) {
+    const values = []
+    for (let i = 0; i < fn.length; i++) {
+      values.push(callWithAsyncErrorHandling(fn[i], instance, type, args))
+    }
+    return values
+  } else if (__DEV__) {
+    warn(
+      `Invalid value type passed to callWithAsyncErrorHandling(): ${typeof fn}`,
+    )
   }
-  return values
 }
 
 export function handleError(
   err: unknown,
-  instance: ComponentInternalInstance | null,
+  instance: ComponentInternalInstance | null | undefined,
   type: ErrorTypes,
   throwInDev = true,
 ) {
@@ -112,7 +117,7 @@ export function handleError(
     // in production the hook receives only the error code
     const errorInfo = __DEV__
       ? ErrorTypeStrings[type]
-      : `https://vuejs.org/errors/#runtime-${type}`
+      : `https://vuejs.org/error-reference/#runtime-${type}`
     while (cur) {
       const errorCapturedHooks = cur.ec
       if (errorCapturedHooks) {
@@ -129,12 +134,14 @@ export function handleError(
     // app-level handling
     const appErrorHandler = instance.appContext.config.errorHandler
     if (appErrorHandler) {
+      pauseTracking()
       callWithErrorHandling(
         appErrorHandler,
         null,
         ErrorCodes.APP_ERROR_HANDLER,
         [err, exposedInstance, errorInfo],
       )
+      resetTracking()
       return
     }
   }

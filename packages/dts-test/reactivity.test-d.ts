@@ -122,6 +122,16 @@ describe('should unwrap extended Set correctly', () => {
   expectType<number>(eset1.bar)
 })
 
+describe('should not error when assignment', () => {
+  const arr = reactive([''])
+  let record: Record<number, string>
+  record = arr
+  expectType<string>(record[0])
+  let record2: { [key: number]: string }
+  record2 = arr
+  expectType<string>(record2[0])
+})
+
 // #7478
 describe('readonly raw type', () => {
   type Foo = { readonly a: number; b: string; c: { d: number } }

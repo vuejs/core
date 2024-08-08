@@ -13,6 +13,15 @@ import {
 } from '../src/index'
 import { pauseScheduling, resetScheduling } from '../src/effect'
 import { ITERATE_KEY, getDepFromReactive } from '../src/reactiveEffect'
+import {
+  computed,
+  h,
+  nextTick,
+  nodeOps,
+  ref,
+  render,
+  serializeInner,
+} from '@vue/runtime-test'
 
 describe('reactivity/effect', () => {
   it('should run the passed function once (wrapped by a effect)', () => {
@@ -241,6 +250,22 @@ describe('reactivity/effect', () => {
     array[key] = true
     expect(array[key]).toBe(true)
     expect(dummy).toBe(undefined)
+  })
+
+  it('should not observe well-known symbol keyed properties in has operation', () => {
+    const key = Symbol.isConcatSpreadable
+    const obj = reactive({
+      [key]: true,
+    }) as any
+
+    const spy = vi.fn(() => {
+      key in obj
+    })
+    effect(spy)
+    expect(spy).toHaveBeenCalledTimes(1)
+
+    obj[key] = false
+    expect(spy).toHaveBeenCalledTimes(1)
   })
 
   it('should support manipulating an array while observing symbol keyed properties', () => {
@@ -821,6 +846,31 @@ describe('reactivity/effect', () => {
     expect(dummy).toBe(3)
   })
 
+  it('stop with multiple dependencies', () => {
+    let dummy1, dummy2
+    const obj1 = reactive({ prop: 1 })
+    const obj2 = reactive({ prop: 1 })
+    const runner = effect(() => {
+      dummy1 = obj1.prop
+      dummy2 = obj2.prop
+    })
+
+    obj1.prop = 2
+    expect(dummy1).toBe(2)
+
+    obj2.prop = 3
+    expect(dummy2).toBe(3)
+
+    stop(runner)
+
+    obj1.prop = 4
+    obj2.prop = 5
+
+    // Check that both dependencies have been cleared
+    expect(dummy1).toBe(2)
+    expect(dummy2).toBe(3)
+  })
+
   it('events: onStop', () => {
     const onStop = vi.fn()
     const runner = effect(() => {}, {
@@ -1009,6 +1059,35 @@ describe('reactivity/effect', () => {
     counter.num++
     resetScheduling()
     expect(counterSpy).toHaveBeenCalledTimes(1)
+  })
+
+  // #10082
+  it('should set dirtyLevel when effect is allowRecurse and is running', async () => {
+    const s = ref(0)
+    const n = computed(() => s.value + 1)
+
+    const Child = {
+      setup() {
+        s.value++
+        return () => n.value
+      },
+    }
+
+    const renderSpy = vi.fn()
+    const Parent = {
+      setup() {
+        return () => {
+          renderSpy()
+          return [n.value, h(Child)]
+        }
+      },
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(Parent), root)
+    await nextTick()
+    expect(serializeInner(root)).toBe('22')
+    expect(renderSpy).toHaveBeenCalledTimes(2)
   })
 
   describe('empty dep cleanup', () => {

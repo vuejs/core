@@ -1,5 +1,5 @@
 import { patchProp } from '../src/patchProp'
-import { h, render } from '../src'
+import { h, nextTick, ref, render } from '../src'
 
 describe('runtime-dom: props patching', () => {
   test('basic', () => {
@@ -131,6 +131,31 @@ describe('runtime-dom: props patching', () => {
     render(h('svg', { innerHTML: '<g></g>' }), root)
     expect(root.innerHTML).toBe(`<svg><g></g></svg>`)
     expect(fn).toHaveBeenCalled()
+  })
+
+  test('patch innerHTML porp', async () => {
+    const root = document.createElement('div')
+    const state = ref(false)
+    const Comp = {
+      render: () => {
+        if (state.value) {
+          return h('div', [h('del', null, 'baz')])
+        } else {
+          return h('div', { innerHTML: 'baz' })
+        }
+      },
+    }
+    render(h(Comp), root)
+    expect(root.innerHTML).toBe(`<div>baz</div>`)
+    state.value = true
+    await nextTick()
+    expect(root.innerHTML).toBe(`<div><del>baz</del></div>`)
+  })
+
+  test('patch innerHTML porp w/ undefined value', async () => {
+    const root = document.createElement('div')
+    render(h('div', { innerHTML: undefined }), root)
+    expect(root.innerHTML).toBe(`<div></div>`)
   })
 
   test('textContent unmount prev children', () => {
@@ -289,6 +314,18 @@ describe('runtime-dom: props patching', () => {
       root,
     )
     expect(el.value).toBe('baz')
+  })
+
+  test('init empty value for option', () => {
+    const root = document.createElement('div')
+    render(
+      h('select', { value: 'foo' }, [h('option', { value: '' }, 'foo')]),
+      root,
+    )
+    const select = root.children[0] as HTMLSelectElement
+    const option = select.children[0] as HTMLOptionElement
+    expect(select.value).toBe('')
+    expect(option.value).toBe('')
   })
 
   // #8780

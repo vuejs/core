@@ -137,4 +137,70 @@ describe('ssr: slot', () => {
       ),
     ).toBe(`<div>foo</div>`)
   })
+
+  // #9933
+  test('transition-group slot', async () => {
+    expect(
+      await renderToString(
+        createApp({
+          components: {
+            one: {
+              template: `<TransitionGroup tag="div"><slot/></TransitionGroup>`,
+            },
+          },
+          template: `<one><p v-for="i in 2">{{i}}</p></one>`,
+        }),
+      ),
+    ).toBe(`<div><p>1</p><p>2</p></div>`)
+  })
+
+  // #11326
+  test('dynamic component slot', async () => {
+    expect(
+      await renderToString(
+        createApp({
+          components: {
+            ButtonComp: {
+              template: `<component is="button"><slot/></component>`,
+            },
+            Wrap: {
+              template: `<div><slot/></div>`,
+            },
+          },
+          template: `<ButtonComp><Wrap><div v-if="false">hello</div></Wrap></ButtonComp>`,
+        }),
+      ),
+    ).toBe(`<button><!--[--><div><!--[--><!--]--></div><!--]--></button>`)
+
+    expect(
+      await renderToString(
+        createApp({
+          components: {
+            ButtonComp: {
+              template: `<component is="button"><slot/></component>`,
+            },
+            Wrap: {
+              template: `<div><slot/></div>`,
+            },
+          },
+          template: `<ButtonComp><Wrap><div v-if="true">hello</div></Wrap></ButtonComp>`,
+        }),
+      ),
+    ).toBe(
+      `<button><!--[--><div><!--[--><div>hello</div><!--]--></div><!--]--></button>`,
+    )
+
+    expect(
+      await renderToString(
+        createApp({
+          components: {
+            ButtonComp: {
+              template: `<component is="button"><slot/></component>`,
+            },
+          },
+          template: `<ButtonComp><template v-if="false">hello</template></ButtonComp>`,
+        }),
+      ),
+    ).toBe(`<button><!--[--><!--]--></button>`)
+  })
 })

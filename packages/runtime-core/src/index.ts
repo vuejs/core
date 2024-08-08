@@ -61,6 +61,7 @@ export { nextTick } from './scheduler'
 export { defineComponent } from './apiDefineComponent'
 export { defineAsyncComponent } from './apiAsyncComponent'
 export { useAttrs, useSlots } from './apiSetupHelpers'
+export { useModel } from './helpers/useModel'
 
 // <script setup> API ----------------------------------------------------------
 
@@ -73,7 +74,6 @@ export {
   defineSlots,
   defineModel,
   withDefaults,
-  useModel,
   type DefineProps,
   type ModelRef,
 } from './apiSetupHelpers'
@@ -150,7 +150,7 @@ import { ErrorTypeStrings as _ErrorTypeStrings } from './errorHandling'
  * @internal
  */
 export const ErrorTypeStrings = (
-  __ESM_BUNDLER__ || __NODE_JS__ || __DEV__ ? _ErrorTypeStrings : null
+  __ESM_BUNDLER__ || __CJS__ || __DEV__ ? _ErrorTypeStrings : null
 ) as typeof _ErrorTypeStrings
 
 // For devtools
@@ -161,13 +161,13 @@ import {
 } from './devtools'
 
 export const devtools = (
-  __DEV__ || __FEATURE_PROD_DEVTOOLS__ ? _devtools : undefined
+  __DEV__ || __ESM_BUNDLER__ ? _devtools : undefined
 ) as DevtoolsHook
 export const setDevtoolsHook = (
-  __DEV__ || __FEATURE_PROD_DEVTOOLS__ ? _setDevtoolsHook : NOOP
+  __DEV__ || __ESM_BUNDLER__ ? _setDevtoolsHook : NOOP
 ) as typeof _setDevtoolsHook
 
-// Types -------------------------------------------------------------------------
+// Types -----------------------------------------------------------------------
 
 import type { VNode } from './vnode'
 import type { ComponentInternalInstance } from './component'
@@ -212,6 +212,7 @@ export type {
   DebuggerEvent,
   DebuggerEventExtraInfo,
   Raw,
+  Reactive,
 } from '@vue/reactivity'
 export type {
   WatchEffect,
@@ -250,7 +251,11 @@ export type {
   AllowedComponentProps,
   ComponentInstance,
 } from './component'
-export type { DefineComponent, PublicProps } from './apiDefineComponent'
+export type {
+  DefineComponent,
+  DefineSetupFnComponent,
+  PublicProps,
+} from './apiDefineComponent'
 export type {
   ComponentOptions,
   ComponentOptionsMixin,
@@ -358,10 +363,15 @@ export { transformVNodeArgs } from './vnode'
 // **IMPORTANT** These APIs are exposed solely for @vue/server-renderer and may
 // change without notice between versions. User code should never rely on them.
 
-import { createComponentInstance, setupComponent } from './component'
+import {
+  createComponentInstance,
+  getComponentPublicInstance,
+  setupComponent,
+} from './component'
 import { renderComponentRoot } from './componentRenderUtils'
 import { setCurrentRenderingInstance } from './componentRenderContext'
 import { isVNode, normalizeVNode } from './vnode'
+import { ensureValidVNode } from './helpers/renderSlot'
 
 const _ssrUtils = {
   createComponentInstance,
@@ -370,6 +380,8 @@ const _ssrUtils = {
   setCurrentRenderingInstance,
   isVNode,
   normalizeVNode,
+  getComponentPublicInstance,
+  ensureValidVNode,
 }
 
 /**

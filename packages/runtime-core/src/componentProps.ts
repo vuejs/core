@@ -12,7 +12,6 @@ import {
   PatchFlags,
   camelize,
   capitalize,
-  def,
   extend,
   hasOwn,
   hyphenate,
@@ -32,15 +31,14 @@ import {
   type ConcreteComponent,
   type Data,
   setCurrentInstance,
-  unsetCurrentInstance,
 } from './component'
 import { isEmitListener } from './componentEmits'
-import { InternalObjectKey } from './vnode'
 import type { AppContext } from './apiCreateApp'
 import { createPropsDefaultThis } from './compat/props'
 import { isCompatEnabled, softAssertCompatEnabled } from './compat/compatConfig'
 import { DeprecationTypes } from './compat/compatConfig'
 import { shouldSkipAttr } from './compat/attrsFallthrough'
+import { createInternalObject } from './internalObject'
 
 export type ComponentPropsOptions<P = Data> =
   | ComponentObjectPropsOptions<P>
@@ -176,12 +174,10 @@ export type ExtractDefaultPropTypes<O> = O extends object
     { [K in keyof Pick<O, DefaultKeys<O>>]: InferPropType<O[K]> }
   : {}
 
-type NormalizedProp =
-  | null
-  | (PropOptions & {
-      [BooleanFlags.shouldCast]?: boolean
-      [BooleanFlags.shouldCastTrue]?: boolean
-    })
+type NormalizedProp = PropOptions & {
+  [BooleanFlags.shouldCast]?: boolean
+  [BooleanFlags.shouldCastTrue]?: boolean
+}
 
 // normalized value is a tuple of the actual normalized options
 // and an array of prop keys that need value casting (booleans and defaults)
@@ -195,8 +191,7 @@ export function initProps(
   isSSR = false,
 ) {
   const props: Data = {}
-  const attrs: Data = {}
-  def(attrs, InternalObjectKey, 1)
+  const attrs: Data = createInternalObject()
 
   instance.propsDefaults = Object.create(null)
 
@@ -362,7 +357,7 @@ export function updateProps(
 
   // trigger updates for $attrs in case it's used in component slots
   if (hasAttrsChanged) {
-    trigger(instance, TriggerOpTypes.SET, '$attrs')
+    trigger(instance.attrs, TriggerOpTypes.SET, '')
   }
 
   if (__DEV__) {
@@ -470,7 +465,7 @@ function resolvePropValue(
         if (key in propsDefaults) {
           value = propsDefaults[key]
         } else {
-          setCurrentInstance(instance)
+          const reset = setCurrentInstance(instance)
           value = propsDefaults[key] = defaultValue.call(
             __COMPAT__ &&
               isCompatEnabled(DeprecationTypes.PROPS_DEFAULT_THIS, instance)
@@ -478,7 +473,7 @@ function resolvePropValue(
               : null,
             props,
           )
-          unsetCurrentInstance()
+          reset()
         }
       } else {
         value = defaultValue
@@ -499,12 +494,15 @@ function resolvePropValue(
   return value
 }
 
+const mixinPropsCache = new WeakMap<ConcreteComponent, NormalizedPropsOptions>()
+
 export function normalizePropsOptions(
   comp: ConcreteComponent,
   appContext: AppContext,
   asMixin = false,
 ): NormalizedPropsOptions {
-  const cache = appContext.propsCache
+  const cache =
+    __FEATURE_OPTIONS_API__ && asMixin ? mixinPropsCache : appContext.propsCache
   const cached = cache.get(comp)
   if (cached) {
     return cached
@@ -564,16 +562,36 @@ export function normalizePropsOptions(
         const opt = raw[key]
         const prop: NormalizedProp = (normalized[normalizedKey] =
           isArray(opt) || isFunction(opt) ? { type: opt } : extend({}, opt))
-        if (prop) {
-          const booleanIndex = getTypeIndex(Boolean, prop.type)
-          const stringIndex = getTypeIndex(String, prop.type)
-          prop[BooleanFlags.shouldCast] = booleanIndex > -1
-          prop[BooleanFlags.shouldCastTrue] =
-            stringIndex < 0 || booleanIndex < stringIndex
-          // if the prop needs boolean casting or default value
-          if (booleanIndex > -1 || hasOwn(prop, 'default')) {
-            needCastKeys.push(normalizedKey)
+        const propType = prop.type
+        let shouldCast = false
+        let shouldCastTrue = true
+
+        if (isArray(propType)) {
+          for (let index = 0; index < propType.length; ++index) {
+            const type = propType[index]
+            const typeName = isFunction(type) && type.name
+
+            if (typeName === 'Boolean') {
+              shouldCast = true
+              break
+            } else if (typeName === 'String') {
+              // If we find `String` before `Boolean`, e.g. `[String, Boolean]`,
+              // we need to handle the casting slightly differently. Props
+              // passed as `<Comp checked="">` or `<Comp checked="checked">`
+              // will either be treated as strings or converted to a boolean
+              // `true`, depending on the order of the types.
+              shouldCastTrue = false
+            }
           }
+        } else {
+          shouldCast = isFunction(propType) && propType.name === 'Boolean'
+        }
+
+        prop[BooleanFlags.shouldCast] = shouldCast
+        prop[BooleanFlags.shouldCastTrue] = shouldCastTrue
+        // if the prop needs boolean casting or default value
+        if (shouldCast || hasOwn(prop, 'default')) {
+          needCastKeys.push(normalizedKey)
         }
       }
     }
@@ -587,7 +605,7 @@ export function normalizePropsOptions(
 }
 
 function validatePropName(key: string) {
-  if (key[0] !== '$') {
+  if (key[0] !== '$' && !isReservedProp(key)) {
     return true
   } else if (__DEV__) {
     warn(`Invalid prop name: "${key}" is a reserved property.`)
@@ -595,27 +613,27 @@ function validatePropName(key: string) {
   return false
 }
 
+// dev only
 // use function string name to check type constructors
 // so that it works across vms / iframes.
 function getType(ctor: Prop<any>): string {
-  const match = ctor && ctor.toString().match(/^\s*(function|class) (\w+)/)
-  return match ? match[2] : ctor === null ? 'null' : ''
-}
-
-function isSameType(a: Prop<any>, b: Prop<any>): boolean {
-  return getType(a) === getType(b)
-}
-
-function getTypeIndex(
-  type: Prop<any>,
-  expectedTypes: PropType<any> | void | null | true,
-): number {
-  if (isArray(expectedTypes)) {
-    return expectedTypes.findIndex(t => isSameType(t, type))
-  } else if (isFunction(expectedTypes)) {
-    return isSameType(expectedTypes, type) ? 0 : -1
+  // Early return for null to avoid unnecessary computations
+  if (ctor === null) {
+    return 'null'
   }
-  return -1
+
+  // Avoid using regex for common cases by checking the type directly
+  if (typeof ctor === 'function') {
+    // Using name property to avoid converting function to string
+    return ctor.name || ''
+  } else if (typeof ctor === 'object') {
+    // Attempting to directly access constructor name if possible
+    const name = ctor.constructor && ctor.constructor.name
+    return name || ''
+  }
+
+  // Fallback for other types (though they're less likely to have meaningful names here)
+  return ''
 }
 
 /**
