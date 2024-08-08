@@ -55,10 +55,18 @@ jobs:
           run_id: ${{ github.event.workflow_run.id }}
           path: temp/size
 
+      - name: Get latest commit
+        id: latest_commit
+        run: |
+          git fetch --prune --unshallow
+          latest_commit=$(git rev-parse origin/${{ github.base_ref }})
+          echo "Latest commit on 'your-branch': $latest_commit"
+          echo "commit=$latest_commit" >> $GITHUB_OUTPUT
+
       - name: Download Previous Size Data
         uses: dawidd6/action-download-artifact@v6
         with:
-          branch: ${{ github.base_ref }}
+          commit: ${{ steps.latest_commit.outputs.commit }}
           workflow: size-data.yml
           event: push
           name: size-data
