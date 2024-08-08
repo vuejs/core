@@ -42,6 +42,9 @@ import {
 } from '@vue/shared'
 import { createApp, createSSRApp, render } from '.'
 
+// marker for attr removal
+const REMOVAL = {}
+
 export type VueElementConstructor<P = {}> = {
   new (initialProps?: Record<string, any>): VueElement & P
 }
@@ -455,9 +458,10 @@ export class VueElement
 
   protected _setAttr(key: string) {
     if (key.startsWith('data-v-')) return
-    let value = this.hasAttribute(key) ? this.getAttribute(key) : undefined
+    const has = this.hasAttribute(key)
+    let value = has ? this.getAttribute(key) : REMOVAL
     const camelKey = camelize(key)
-    if (this._numberProps && this._numberProps[camelKey]) {
+    if (has && this._numberProps && this._numberProps[camelKey]) {
       value = toNumber(value)
     }
     this._setProp(camelKey, value, false, true)
@@ -475,7 +479,11 @@ export class VueElement
    */
   _setProp(key: string, val: any, shouldReflect = true, shouldUpdate = false) {
     if (val !== this._props[key]) {
-      this._props[key] = val
+      if (val === REMOVAL) {
+        delete this._props[key]
+      } else {
+        this._props[key] = val
+      }
       if (shouldUpdate && this._instance) {
         this._update()
       }

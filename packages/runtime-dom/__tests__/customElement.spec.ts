@@ -1241,4 +1241,25 @@ describe('defineCustomElement', () => {
     expect(e.shadowRoot!.innerHTML).toBe(`<div>fooValue</div>`)
     app.unmount()
   })
+
+  // #11276
+  test('delete prop on attr removal', async () => {
+    const E = defineCustomElement({
+      props: {
+        boo: {
+          type: Boolean,
+        },
+      },
+      render() {
+        return this.boo + ',' + typeof this.boo
+      },
+    })
+    customElements.define('el-attr-removal', E)
+    container.innerHTML = '<el-attr-removal boo>'
+    const e = container.childNodes[0] as VueElement
+    expect(e.shadowRoot!.innerHTML).toBe(`true,boolean`)
+    e.removeAttribute('boo')
+    await nextTick()
+    expect(e.shadowRoot!.innerHTML).toBe(`false,boolean`)
+  })
 })
