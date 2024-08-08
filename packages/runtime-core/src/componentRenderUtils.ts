@@ -367,7 +367,6 @@ export function shouldUpdateComponent(
 ): boolean {
   const { props: prevProps, children: prevChildren, component } = prevVNode
   const { props: nextProps, children: nextChildren, patchFlag } = nextVNode
-  const emits = component!.emitsOptions
 
   // Parent component's render function was hot-updated. Since this may have
   // caused the child component's slots content to have changed, we need to
@@ -375,6 +374,8 @@ export function shouldUpdateComponent(
   if (__DEV__ && (prevChildren || nextChildren) && isHmrUpdating) {
     return true
   }
+  
+  const emits = component!.emitsOptions
 
   // force child update for runtime directive or transition on component vnode.
   if (nextVNode.dirs || nextVNode.transition) {
