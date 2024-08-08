@@ -6,9 +6,13 @@ on:
       - 'v*' # Push events to matching v*, i.e. v1.0, v20.15.10
 
 jobs:
+  test:
+    uses: ./.github/workflows/test.yml
+
   release:
     # prevents this action from running on forks
     if: github.repository == 'vuejs/core'
+    needs: [test]
     runs-on: ubuntu-latest
     permissions:
       contents: write
