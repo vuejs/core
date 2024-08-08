@@ -653,24 +653,31 @@ export class VueElement
   }
 }
 
-/**
- * Retrieve the shadowRoot of the current custom element. Only usable in setup()
- * of a `defineCustomElement` component.
- */
-export function useShadowRoot(): ShadowRoot | null {
+export function useHost(caller?: string): VueElement | null {
   const instance = getCurrentInstance()
-  const el = instance && instance.ce
+  const el = instance && (instance.ce as VueElement)
   if (el) {
-    return (el as VueElement).shadowRoot
+    return el
   } else if (__DEV__) {
     if (!instance) {
-      warn(`useShadowRoot called without an active component instance.`)
+      warn(
+        `${caller || 'useHost'} called without an active component instance.`,
+      )
     } else {
       warn(
-        `useShadowRoot can only be used in components defined via ` +
+        `${caller || 'useHost'} can only be used in components defined via ` +
           `defineCustomElement.`,
       )
     }
   }
   return null
+}
+
+/**
+ * Retrieve the shadowRoot of the current custom element. Only usable in setup()
+ * of a `defineCustomElement` component.
+ */
+export function useShadowRoot(): ShadowRoot | null {
+  const el = __DEV__ ? useHost('useShadowRoot') : useHost()
+  return el && el.shadowRoot
 }

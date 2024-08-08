@@ -14,6 +14,7 @@ import {
   ref,
   render,
   renderSlot,
+  useHost,
   useShadowRoot,
 } from '../src'
 
@@ -975,8 +976,22 @@ describe('defineCustomElement', () => {
     })
   })
 
-  describe('useShadowRoot', () => {
-    test('should work for style injection', () => {
+  describe('helpers', () => {
+    test('useHost', () => {
+      const Foo = defineCustomElement({
+        setup() {
+          const host = useHost()!
+          host.setAttribute('id', 'host')
+          return () => h('div', 'hello')
+        },
+      })
+      customElements.define('my-el-use-host', Foo)
+      container.innerHTML = `<my-el-use-host>`
+      const el = container.childNodes[0] as VueElement
+      expect(el.id).toBe('host')
+    })
+
+    test('useShadowRoot for style injection', () => {
       const Foo = defineCustomElement({
         setup() {
           const root = useShadowRoot()!
@@ -986,8 +1001,8 @@ describe('defineCustomElement', () => {
           return () => h('div', 'hello')
         },
       })
-      customElements.define('my-el', Foo)
-      container.innerHTML = `<my-el></my-el>`
+      customElements.define('my-el-use-shadow-root', Foo)
+      container.innerHTML = `<my-el-use-shadow-root>`
       const el = container.childNodes[0] as VueElement
       const style = el.shadowRoot?.querySelector('style')!
       expect(style.textContent).toBe(`div { color: red; }`)

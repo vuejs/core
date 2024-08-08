@@ -247,6 +247,7 @@ export {
   defineCustomElement,
   defineSSRCustomElement,
   useShadowRoot,
+  useHost,
   VueElement,
   type VueElementConstructor,
   type CustomElementOptions,
