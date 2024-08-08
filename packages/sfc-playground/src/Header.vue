@@ -13,7 +13,7 @@ import VersionSelect from './VersionSelect.vue'
 const props = defineProps<{
   store: ReplStore
   prod: boolean
-  ssr: boolean
+  ssr: boolean | null
 }>()
 const emit = defineEmits([
   'toggle-theme',
@@ -100,6 +100,7 @@ function toggleDark() {
         <span>{{ prod ? 'PROD' : 'DEV' }}</span>
       </button>
       <button
+        v-if="ssr != null"
         title="Toggle server rendering mode"
         class="toggle-ssr"
         :class="{ enabled: ssr }"
@@ -118,6 +119,7 @@ function toggleDark() {
         <Reload />
       </button>
       <button
+        v-if="!store.mainFile.endsWith('.html')"
         title="Download project files"
         class="download"
         @click="downloadProject(store)"

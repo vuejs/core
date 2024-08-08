@@ -12,7 +12,7 @@ const setVH = () => {
 window.addEventListener('resize', setVH)
 setVH()
 
-const useSSRMode = ref(false)
+const useSSRMode = ref<boolean | null>(false)
 
 const { productionMode, vueVersion, importMap } = useVueImportMap({
   runtimeDev: import.meta.env.PROD
@@ -71,6 +71,20 @@ const store = useStore(
 // @ts-expect-error
 globalThis.store = store
 
+let { mainFile } = store
+
+if (mainFile === 'src/App.vue') {
+  const firstFile = Object.keys(store.getFiles())[0]
+  if (['index.html', 'main.js', 'main.ts'].includes(firstFile)) {
+    mainFile = `src/${firstFile}`
+    store.setFiles(store.getFiles(), mainFile)
+  }
+}
+
+if (!mainFile.endsWith('.vue')) {
+  useSSRMode.value = null
+}
+
 // persist state
 watchEffect(() => {
   const newHash = store
@@ -121,7 +135,7 @@ onMounted(() => {
     :editor="Monaco"
     @keydown.ctrl.s.prevent
     @keydown.meta.s.prevent
-    :ssr="useSSRMode"
+    :ssr="useSSRMode === true"
     :store="store"
     :showCompileOutput="true"
     :autoResize="true"
