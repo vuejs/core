@@ -37,12 +37,12 @@ describe('SFC compile <script setup>', () => {
         `get xx() { return xx }, get x() { return x } }`,
     )
     expect(bindings).toStrictEqual({
-      x: BindingTypes.SETUP_MAYBE_REF,
+      x: BindingTypes.SETUP_IMPORTED_MAYBE_REF,
       a: BindingTypes.SETUP_LET,
       b: BindingTypes.SETUP_CONST,
       c: BindingTypes.SETUP_CONST,
       d: BindingTypes.SETUP_CONST,
-      xx: BindingTypes.SETUP_MAYBE_REF,
+      xx: BindingTypes.SETUP_IMPORTED_MAYBE_REF,
       aa: BindingTypes.SETUP_LET,
       bb: BindingTypes.LITERAL_CONST,
       cc: BindingTypes.SETUP_CONST,
@@ -285,8 +285,8 @@ describe('SFC compile <script setup>', () => {
         </script>
       `)
         expect(bindings).toStrictEqual({
-          ref: BindingTypes.SETUP_MAYBE_REF,
-          reactive: BindingTypes.SETUP_MAYBE_REF,
+          ref: BindingTypes.SETUP_IMPORTED_MAYBE_REF,
+          reactive: BindingTypes.SETUP_IMPORTED_MAYBE_REF,
           foo: BindingTypes.SETUP_MAYBE_REF,
           bar: BindingTypes.SETUP_MAYBE_REF,
         })
@@ -302,8 +302,8 @@ describe('SFC compile <script setup>', () => {
         </script>
       `)
         expect(bindings).toStrictEqual({
-          _reactive: BindingTypes.SETUP_MAYBE_REF,
-          _ref: BindingTypes.SETUP_MAYBE_REF,
+          _reactive: BindingTypes.SETUP_IMPORTED_MAYBE_REF,
+          _ref: BindingTypes.SETUP_IMPORTED_MAYBE_REF,
           foo: BindingTypes.SETUP_MAYBE_REF,
           bar: BindingTypes.SETUP_MAYBE_REF,
         })
@@ -334,7 +334,7 @@ describe('SFC compile <script setup>', () => {
     `)
       assertCode(content)
       expect(bindings).toStrictEqual({
-        foo: BindingTypes.SETUP_MAYBE_REF,
+        foo: BindingTypes.SETUP_IMPORTED_MAYBE_REF,
       })
     })
   })
