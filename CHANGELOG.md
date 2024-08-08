@@ -1,3 +1,24 @@
+## [3.4.37](https://github.com/vuejs/core/compare/v3.4.36...v3.4.37) (2024-08-08)
+
+
+### Bug Fixes
+
+* **compiler-core:** use `isProp.arg.loc` instead of `isProp.loc` ([#11547](https://github.com/vuejs/core/issues/11547)) ([236fb7a](https://github.com/vuejs/core/commit/236fb7abebe567b73826a3ddc2120f3273377ba0))
+* **custom-element:** fix custom-element double render on immediate prop change ([978ff3c](https://github.com/vuejs/core/commit/978ff3c1dbff9c93ec284c1804d3c77331ea33f8)), closes [#9885](https://github.com/vuejs/core/issues/9885) [#11335](https://github.com/vuejs/core/issues/11335)
+* **defineModel:** detect changes respect custom getter and setter ([#11543](https://github.com/vuejs/core/issues/11543)) ([e042888](https://github.com/vuejs/core/commit/e0428884b57ac834274045bd33841263aeae259e)), closes [#11541](https://github.com/vuejs/core/issues/11541) [#11526](https://github.com/vuejs/core/issues/11526) [#11527](https://github.com/vuejs/core/issues/11527)
+* **keep-alive:** avoid cache suspense comment root ([#11479](https://github.com/vuejs/core/issues/11479)) ([a917c05](https://github.com/vuejs/core/commit/a917c0539cdc55c0188ca91f70b6ff79fee13ed9))
+* **keep-alive:** fix render error in cached is undefined ([#11496](https://github.com/vuejs/core/issues/11496)) ([81351dc](https://github.com/vuejs/core/commit/81351dc7fbdabcfa0f545f7d924c31a3c367e496)), closes [#11427](https://github.com/vuejs/core/issues/11427) [#11431](https://github.com/vuejs/core/issues/11431)
+* Revert "fix(types/ref): allow getter and setter types to be unrelated ([#11442](https://github.com/vuejs/core/issues/11442))" ([b1abac0](https://github.com/vuejs/core/commit/b1abac06cdb198bd72f8e614b1f68b92e1c78339))
+* Revert "fix(types/ref): correct type inference for nested refs ([#11536](https://github.com/vuejs/core/issues/11536))" ([3a56315](https://github.com/vuejs/core/commit/3a56315f94bc0e11cfbb288b65482ea8fc3a39b4))
+* **runtime-core:** fix warning for missing event handler ([#11489](https://github.com/vuejs/core/issues/11489)) ([e359ff0](https://github.com/vuejs/core/commit/e359ff0046286aee03fe31656c023677be457e07)), closes [#4803](https://github.com/vuejs/core/issues/4803) [#8268](https://github.com/vuejs/core/issues/8268)
+* **runtime-core:** prioritize using the provides from currentApp in nested createApp ([#11502](https://github.com/vuejs/core/issues/11502)) ([7e75de0](https://github.com/vuejs/core/commit/7e75de002f08076a02c9361a58fa1d0af1772964)), closes [#11488](https://github.com/vuejs/core/issues/11488)
+* **runtime-dom:** apply css vars before mount ([#11538](https://github.com/vuejs/core/issues/11538)) ([fdc2a31](https://github.com/vuejs/core/commit/fdc2a31dbd4196d6432be16767a1bfdab1240d49)), closes [#11533](https://github.com/vuejs/core/issues/11533)
+* **ssr:** ensure content is valid when rendering normal slot ([#11491](https://github.com/vuejs/core/issues/11491)) ([6c90324](https://github.com/vuejs/core/commit/6c903248703e2413c6197b9ad4d535f31c8eac39)), closes [#11326](https://github.com/vuejs/core/issues/11326)
+* **types/ref:** correct type inference for nested refs ([#11536](https://github.com/vuejs/core/issues/11536)) ([536f623](https://github.com/vuejs/core/commit/536f62332c455ba82ef2979ba634b831f91928ba)), closes [#11532](https://github.com/vuejs/core/issues/11532) [#11537](https://github.com/vuejs/core/issues/11537)
+* **types:** allow `DirectiveArguments` third parameter to accept undefined ([#11540](https://github.com/vuejs/core/issues/11540)) ([1058ce8](https://github.com/vuejs/core/commit/1058ce8e747ce606e5e86fca5a2acce3c12a0846))
+
+
+
 ## [3.4.36](https://github.com/vuejs/core/compare/v3.4.35...v3.4.36) (2024-08-06)
 
 ### Bug Fixes

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
+import Copy from './icons/Copy.vue'
 
 const expanded = ref(false)
 const versions = ref<string[]>()
@@ -53,6 +54,12 @@ function setVersion(v: string) {
   expanded.value = false
 }
 
+function copyVersion(v: string) {
+  window.navigator.clipboard.writeText(v).then(() => {
+    alert('Vue version has been copied to clipboard.')
+  })
+}
+
 onMounted(() => {
   window.addEventListener('click', () => {
     expanded.value = false
@@ -76,11 +83,19 @@ onMounted(() => {
       <li v-if="!versions"><a>loading versions...</a></li>
       <li
         v-for="(ver, index) of versions"
+        class="versions-item"
         :class="{
           active: ver === version || (version === 'latest' && index === 0),
         }"
       >
         <a @click="setVersion(ver)">v{{ ver }}</a>
+        <button
+          title="Copy Version"
+          class="version-copy"
+          @click="copyVersion(`v${ver}`)"
+        >
+          <Copy />
+        </button>
       </li>
       <div @click="expanded = false">
         <slot />
@@ -119,5 +134,18 @@ onMounted(() => {
 
 .versions .active a {
   color: var(--green);
+}
+
+.versions .versions-item {
+  display: flex;
+  justify-content: space-between;
+}
+
+.versions .versions-item .version-copy {
+  display: none;
+}
+
+.versions .versions-item:hover .version-copy {
+  display: block;
 }
 </style>
