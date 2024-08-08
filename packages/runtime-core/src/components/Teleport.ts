@@ -451,6 +451,15 @@ function updateCssVars(vnode: VNode) {
     }
     ctx.ut()
   }
+  if (ctx && ctx.parentUt) {
+    let node = (vnode.children as VNode[])[0].el!
+    while (node && node !== vnode.targetAnchor) {
+      if (node.nodeType === 1)
+        node.setAttribute(`data-v-parent-${ctx.parentUt.uid}-owner`, '')
+      node = node.nextSibling
+    }
+    ctx.parentUt.ut()
+  }
 }
 
 function prepareAnchor(
