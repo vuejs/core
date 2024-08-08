@@ -224,17 +224,14 @@ function doWatch(
     handleErrorWithInstance(err, instance, type)
   extendOptions.scheduler = getScheduler(flush)(instance)
 
-  let effect = baseWatch(source, cb, extend({}, options, extendOptions))
-
+  const effect = baseWatch(source, cb, extend({}, options, extendOptions))
   const scope = getCurrentScope()
-  const unwatch = !effect
-    ? NOOP
-    : () => {
-        effect!.stop()
-        if (scope) {
-          remove(scope.effects, effect)
-        }
-      }
+  const unwatch = () => {
+    effect!.stop()
+    if (scope) {
+      remove(scope.effects, effect)
+    }
+  }
 
   if (__SSR__ && ssrCleanup) ssrCleanup.push(unwatch)
   return unwatch

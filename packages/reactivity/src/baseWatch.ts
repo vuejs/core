@@ -123,7 +123,7 @@ export function baseWatch(
     onTrack,
     onTrigger,
   }: BaseWatchOptions = EMPTY_OBJ,
-): ReactiveEffect | undefined {
+): ReactiveEffect {
   const warnInvalidSource = (s: unknown) => {
     onWarn(
       `Invalid watch source: `,
