@@ -499,14 +499,8 @@ async function publishPackages(version) {
   if (isDryRun) {
     additionalPublishFlags.push('--dry-run')
   }
-  if (isDryRun || skipGit) {
+  if (isDryRun || skipGit || process.env.CI) {
     additionalPublishFlags.push('--no-git-checks')
-  }
-  // bypass the pnpm --publish-branch restriction which isn't too useful to us
-  // otherwise it leads to a prompt and blocks the release script
-  const branch = await getBranch()
-  if (branch !== 'main') {
-    additionalPublishFlags.push('--publish-branch', branch)
   }
   // add provenance metadata when releasing from CI
   // canary release commits are not pushed therefore we don't need to add provenance
