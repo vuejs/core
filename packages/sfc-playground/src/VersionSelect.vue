@@ -55,7 +55,7 @@ function setVersion(v: string) {
 }
 
 function copyVersion(v: string) {
-  window.navigator.clipboard.writeText(v).then(()=>{
+  window.navigator.clipboard.writeText(v).then(() => {
     alert('Vue version has been copied to clipboard.')
   })
 }
@@ -89,8 +89,12 @@ onMounted(() => {
         }"
       >
         <a @click="setVersion(ver)">v{{ ver }}</a>
-        <button title="Copy Version" class="version-copy" @click="copyVersion(`v${ver}`)">
-          <Copy/>
+        <button
+          title="Copy Version"
+          class="version-copy"
+          @click="copyVersion(`v${ver}`)"
+        >
+          <Copy />
         </button>
       </li>
       <div @click="expanded = false">
@@ -144,5 +148,4 @@ onMounted(() => {
 .versions .versions-item:hover .version-copy {
   display: block;
 }
-
 </style>
