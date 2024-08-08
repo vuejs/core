@@ -313,6 +313,7 @@ export type ComponentPublicInstance<
   $slots: UnwrapSlotsType<S>
   $root: ComponentPublicInstance | null
   $parent: ComponentPublicInstance | null
+  $host: Element | null
   $emit: EmitFn<E>
   $el: any
   $options: Options & MergedComponentOptionsOverride
@@ -371,6 +372,7 @@ export const publicPropertiesMap: PublicPropertiesMap =
     $refs: i => (__DEV__ ? shallowReadonly(i.refs) : i.refs),
     $parent: i => getPublicInstance(i.parent),
     $root: i => getPublicInstance(i.root),
+    $host: i => i.ce,
     $emit: i => i.emit,
     $options: i => (__FEATURE_OPTIONS_API__ ? resolveMergedOptions(i) : i.type),
     $forceUpdate: i =>
