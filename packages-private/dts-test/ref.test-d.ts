@@ -218,7 +218,7 @@ describe('Type safety for `WritableComputedRef` and `ComputedRef`', () => {
 })
 
 declare class Foo {
-  private _: number
+  private _: unknown
 }
 
 describe('omit the initial value and specify a generic w/ `Ref` type', <T>() => {
@@ -242,6 +242,7 @@ describe('omit the initial value and specify a generic w/ `Ref` type', <T>() => 
   c.value = undefined
   c.value = {} as T
 
+  // case from vueuse
   const d = ref<Foo>()
   expectType<Ref<Foo | undefined>>(d)
   d.value = new Foo()
