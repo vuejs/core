@@ -8,7 +8,7 @@
     "useDefineForClassFields": false,
     "module": "esnext",
     "moduleResolution": "bundler",
-    "allowJs": true,
+    "allowJs": false,
     "strict": true,
     "noUnusedLocals": true,
     "experimentalDecorators": true,
@@ -26,7 +26,9 @@
       "@vue/vapor": ["packages/vue-vapor/src"],
       "@vue/*": ["packages/*/src"],
       "vue": ["packages/vue/src"]
-    }
+    },
+    "isolatedDeclarations": true,
+    "composite": true
   },
   "include": [
     "packages/global.d.ts",

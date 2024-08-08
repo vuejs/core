@@ -50,8 +50,18 @@ export interface App<HostElement = any> {
   directive<T = any, V = any>(name: string, directive: Directive<T, V>): this
   mount(
     rootContainer: HostElement | string,
+    /**
+     * @internal
+     */
     isHydrate?: boolean,
+    /**
+     * @internal
+     */
     namespace?: boolean | ElementNamespace,
+    /**
+     * @internal
+     */
+    vnode?: VNode,
   ): ComponentPublicInstance
   unmount(): void
   onUnmount(cb: () => void): void
@@ -75,6 +85,11 @@ export interface App<HostElement = any> {
   _container: HostElement | null
   _context: AppContext
   _instance: ComponentInternalInstance | null
+
+  /**
+   * @internal custom element vnode
+   */
+  _ceVNode?: VNode
 
   /**
    * v2 compat only
@@ -337,7 +352,7 @@ export function createAppAPI<HostElement>(
                 ` you need to unmount the previous app by calling \`app.unmount()\` first.`,
             )
           }
-          const vnode = createVNode(rootComponent, rootProps)
+          const vnode = app._ceVNode || createVNode(rootComponent, rootProps)
           // store app context on the root VNode.
           // this will be set on the root instance on initial mount.
           vnode.appContext = context

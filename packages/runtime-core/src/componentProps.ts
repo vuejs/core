@@ -191,7 +191,7 @@ export function initProps(
   rawProps: Data | null,
   isStateful: number, // result of bitwise flag comparison
   isSSR = false,
-) {
+): void {
   const props: Data = {}
   const attrs: Data = createInternalObject()
 
@@ -238,7 +238,7 @@ export function updateProps(
   rawProps: Data | null,
   rawPrevProps: Data | null,
   optimized: boolean,
-) {
+): void {
   const {
     props,
     attrs,
@@ -479,6 +479,10 @@ function resolvePropValue(
         }
       } else {
         value = defaultValue
+      }
+      // #9006 reflect default value on custom element
+      if (instance.ce) {
+        instance.ce._setProp(key, value)
       }
     }
     // boolean casting

@@ -20,7 +20,7 @@ export interface ComputedRef<T = any> extends WritableComputedRef<T> {
   [ComputedRefSymbol]: true
 }
 
-export interface WritableComputedRef<T> extends Ref<T> {
+export interface WritableComputedRef<T, S = T> extends Ref<T, S> {
   /**
    * @deprecated computed no longer uses effect
    */
@@ -30,9 +30,9 @@ export interface WritableComputedRef<T> extends Ref<T> {
 export type ComputedGetter<T> = (oldValue?: T) => T
 export type ComputedSetter<T> = (newValue: T) => void
 
-export interface WritableComputedOptions<T> {
+export interface WritableComputedOptions<T, S = T> {
   get: ComputedGetter<T>
-  set: ComputedSetter<T>
+  set: ComputedSetter<S>
 }
 
 /**
@@ -47,15 +47,17 @@ export class ComputedRefImpl<T = any> implements Subscriber {
   /**
    * @internal
    */
-  readonly dep = new Dep(this)
+  readonly dep: Dep = new Dep(this)
   /**
    * @internal
    */
-  readonly [ReactiveFlags.IS_REF] = true
+  readonly __v_isRef = true
+  // TODO isolatedDeclarations ReactiveFlags.IS_REF
   /**
    * @internal
    */
-  readonly [ReactiveFlags.IS_READONLY]: boolean
+  readonly __v_isReadonly: boolean
+  // TODO isolatedDeclarations ReactiveFlags.IS_READONLY
   // A computed is also a subscriber that tracks other deps
   /**
    * @internal
@@ -68,17 +70,17 @@ export class ComputedRefImpl<T = any> implements Subscriber {
   /**
    * @internal
    */
-  flags = EffectFlags.DIRTY
+  flags: EffectFlags = EffectFlags.DIRTY
   /**
    * @internal
    */
-  globalVersion = globalVersion - 1
+  globalVersion: number = globalVersion - 1
   /**
    * @internal
    */
   isSSR: boolean
   // for backwards compat
-  effect = this
+  effect: this = this
 
   // dev only
   onTrack?: (event: DebuggerEvent) => void
@@ -103,7 +105,7 @@ export class ComputedRefImpl<T = any> implements Subscriber {
   /**
    * @internal
    */
-  notify() {
+  notify(): void {
     // avoid infinite self recursion
     if (activeSub !== this) {
       this.flags |= EffectFlags.DIRTY
@@ -113,7 +115,7 @@ export class ComputedRefImpl<T = any> implements Subscriber {
     }
   }
 
-  get value() {
+  get value(): T {
     const link = __DEV__
       ? this.dep.track({
           target: this,
@@ -175,10 +177,10 @@ export function computed<T>(
   getter: ComputedGetter<T>,
   debugOptions?: DebuggerOptions,
 ): ComputedRef<T>
-export function computed<T>(
-  options: WritableComputedOptions<T>,
+export function computed<T, S = T>(
+  options: WritableComputedOptions<T, S>,
   debugOptions?: DebuggerOptions,
-): WritableComputedRef<T>
+): WritableComputedRef<T, S>
 export function computed<T>(
   getterOrOptions: ComputedGetter<T> | WritableComputedOptions<T>,
   debugOptions?: DebuggerOptions,

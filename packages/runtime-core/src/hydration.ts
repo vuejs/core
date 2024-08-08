@@ -85,7 +85,17 @@ export const isComment = (node: Node): node is Comment =>
 // passed in via arguments.
 export function createHydrationFunctions(
   rendererInternals: RendererInternals<Node, Element>,
-) {
+): [
+  RootHydrateFunction,
+  (
+    node: Node,
+    vnode: VNode,
+    parentComponent: ComponentInternalInstance | null,
+    parentSuspense: SuspenseBoundary | null,
+    slotScopeIds: string[] | null,
+    optimized?: boolean,
+  ) => Node | null,
+] {
   const {
     mt: mountComponent,
     p: patch,
@@ -451,6 +461,7 @@ export function createHydrationFunctions(
           !optimized ||
           patchFlag & (PatchFlags.FULL_PROPS | PatchFlags.NEED_HYDRATION)
         ) {
+          const isCustomElement = el.tagName.includes('-')
           for (const key in props) {
             // check hydration mismatch
             if (
@@ -467,7 +478,8 @@ export function createHydrationFunctions(
                 (key.endsWith('value') || key === 'indeterminate')) ||
               (isOn(key) && !isReservedProp(key)) ||
               // force hydrate v-bind with .prop modifiers
-              key[0] === '.'
+              key[0] === '.' ||
+              isCustomElement
             ) {
               patchProp(el, key, null, props[key], undefined, parentComponent)
             }
@@ -742,7 +754,7 @@ export function createHydrationFunctions(
     )
   }
 
-  return [hydrate, hydrateNode] as const
+  return [hydrate, hydrateNode]
 }
 
 /**

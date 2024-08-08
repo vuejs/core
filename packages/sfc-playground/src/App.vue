@@ -92,7 +92,8 @@ const sfcOptions = computed(
       vapor: useVaporMode.value,
       isProd: productionMode.value,
       compilerOptions: {
-        isCustomElement: (tag: string) => tag === 'mjx-container',
+        isCustomElement: (tag: string) =>
+          tag === 'mjx-container' || tag.startsWith('custom-'),
       },
     },
   }),

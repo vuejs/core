@@ -39,7 +39,7 @@ export class Dep {
    */
   subsHead?: Link
 
-  constructor(public computed?: ComputedRefImpl) {
+  constructor(public computed?: ComputedRefImpl | undefined) {
     if (__DEV__) {
       this.subsHead = undefined
     }
@@ -115,13 +115,13 @@ export class Dep {
     return link
   }
 
-  trigger(debugInfo?: DebuggerEventExtraInfo) {
+  trigger(debugInfo?: DebuggerEventExtraInfo): void {
     this.version++
     globalVersion++
     this.notify(debugInfo)
   }
 
-  notify(debugInfo?: DebuggerEventExtraInfo) {
+  notify(debugInfo?: DebuggerEventExtraInfo): void {
     startBatch()
     try {
       if (__DEV__) {
@@ -185,9 +185,15 @@ function addSub(link: Link) {
 type KeyToDepMap = Map<any, Dep>
 const targetMap = new WeakMap<object, KeyToDepMap>()
 
-export const ITERATE_KEY = Symbol(__DEV__ ? 'Object iterate' : '')
-export const MAP_KEY_ITERATE_KEY = Symbol(__DEV__ ? 'Map keys iterate' : '')
-export const ARRAY_ITERATE_KEY = Symbol(__DEV__ ? 'Array iterate' : '')
+export const ITERATE_KEY: unique symbol = Symbol(
+  __DEV__ ? 'Object iterate' : '',
+)
+export const MAP_KEY_ITERATE_KEY: unique symbol = Symbol(
+  __DEV__ ? 'Map keys iterate' : '',
+)
+export const ARRAY_ITERATE_KEY: unique symbol = Symbol(
+  __DEV__ ? 'Array iterate' : '',
+)
 
 /**
  * Tracks access to a reactive property.
@@ -199,7 +205,7 @@ export const ARRAY_ITERATE_KEY = Symbol(__DEV__ ? 'Array iterate' : '')
  * @param type - Defines the type of access to the reactive property.
  * @param key - Identifier of the reactive property to track.
  */
-export function track(target: object, type: TrackOpTypes, key: unknown) {
+export function track(target: object, type: TrackOpTypes, key: unknown): void {
   if (shouldTrack && activeSub) {
     let depsMap = targetMap.get(target)
     if (!depsMap) {
@@ -236,7 +242,7 @@ export function trigger(
   newValue?: unknown,
   oldValue?: unknown,
   oldTarget?: Map<unknown, unknown> | Set<unknown>,
-) {
+): void {
   const depsMap = targetMap.get(target)
   if (!depsMap) {
     // never been tracked
@@ -328,7 +334,10 @@ export function trigger(
 /**
  * Test only
  */
-export function getDepFromReactive(object: any, key: string | number | symbol) {
+export function getDepFromReactive(
+  object: any,
+  key: string | number | symbol,
+): Dep | undefined {
   // eslint-disable-next-line
   return targetMap.get(object)?.get(key)
 }

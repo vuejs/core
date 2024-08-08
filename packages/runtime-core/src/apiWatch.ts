@@ -61,24 +61,30 @@ export interface WatchOptionsBase extends DebuggerOptions {
 
 export interface WatchOptions<Immediate = boolean> extends WatchOptionsBase {
   immediate?: Immediate
-  deep?: boolean
+  deep?: boolean | number
   once?: boolean
 }
 
 export type WatchStopHandle = () => void
 
+export interface WatchHandle extends WatchStopHandle {
+  pause: () => void
+  resume: () => void
+  stop: () => void
+}
+
 // Simple effect.
 export function watchEffect(
   effect: WatchEffect,
   options?: WatchOptionsBase,
-): WatchStopHandle {
+): WatchHandle {
   return doWatch(effect, null, options)
 }
 
 export function watchPostEffect(
   effect: WatchEffect,
   options?: DebuggerOptions,
-) {
+): WatchStopHandle {
   return doWatch(
     effect,
     null,
@@ -89,7 +95,7 @@ export function watchPostEffect(
 export function watchSyncEffect(
   effect: WatchEffect,
   options?: DebuggerOptions,
-) {
+): WatchStopHandle {
   return doWatch(
     effect,
     null,
@@ -97,14 +103,14 @@ export function watchSyncEffect(
   )
 }
 
-type MultiWatchSources = (WatchSource<unknown> | object)[]
+export type MultiWatchSources = (WatchSource<unknown> | object)[]
 
 // overload: single source + cb
 export function watch<T, Immediate extends Readonly<boolean> = false>(
   source: WatchSource<T>,
   cb: WatchCallback<T, MaybeUndefined<T, Immediate>>,
   options?: WatchOptions<Immediate>,
-): WatchStopHandle
+): WatchHandle
 
 // overload: reactive array or tuple of multiple sources + cb
 export function watch<
@@ -116,7 +122,7 @@ export function watch<
     ? WatchCallback<T, MaybeUndefined<T, Immediate>>
     : WatchCallback<MapSources<T, false>, MapSources<T, Immediate>>,
   options?: WatchOptions<Immediate>,
-): WatchStopHandle
+): WatchHandle
 
 // overload: array of multiple sources + cb
 export function watch<
@@ -126,7 +132,7 @@ export function watch<
   sources: [...T],
   cb: WatchCallback<MapSources<T, false>, MapSources<T, Immediate>>,
   options?: WatchOptions<Immediate>,
-): WatchStopHandle
+): WatchHandle
 
 // overload: watching reactive object w/ cb
 export function watch<
@@ -136,14 +142,14 @@ export function watch<
   source: T,
   cb: WatchCallback<T, MaybeUndefined<T, Immediate>>,
   options?: WatchOptions<Immediate>,
-): WatchStopHandle
+): WatchHandle
 
 // implementation
 export function watch<T = any, Immediate extends Readonly<boolean> = false>(
   source: T | WatchSource<T>,
   cb: any,
   options?: WatchOptions<Immediate>,
-): WatchStopHandle {
+): WatchHandle {
   if (__DEV__ && !isFunction(cb)) {
     warn(
       `\`watch(fn, options?)\` signature has been moved to a separate API. ` +
@@ -169,16 +175,8 @@ function doWatch(
   source: WatchSource | WatchSource[] | WatchEffect | object,
   cb: WatchCallback | null,
   options: WatchOptions = EMPTY_OBJ,
-): WatchStopHandle {
+): WatchHandle {
   const { immediate, deep, flush, once } = options
-
-  // TODO remove in 3.5
-  if (__DEV__ && deep !== void 0 && typeof deep === 'number') {
-    warn(
-      `watch() "deep" option with number value will be used as watch depth in future versions. ` +
-        `Please use a boolean instead to avoid potential breakage.`,
-    )
-  }
 
   if (__DEV__ && !cb) {
     if (immediate !== undefined) {
@@ -214,8 +212,11 @@ function doWatch(
       // immediately watch or watchEffect
       extendOptions.once = true
     } else {
-      // watch(source, cb)
-      return NOOP
+      const watchHandle: WatchHandle = () => {}
+      watchHandle.stop = NOOP
+      watchHandle.resume = NOOP
+      watchHandle.pause = NOOP
+      return watchHandle
     }
   }
 
@@ -226,15 +227,19 @@ function doWatch(
 
   const effect = baseWatch(source, cb, extend({}, options, extendOptions))
   const scope = getCurrentScope()
-  const unwatch = () => {
-    effect!.stop()
+  const watchHandle: WatchHandle = () => {
+    effect.stop()
     if (scope) {
       remove(scope.effects, effect)
     }
   }
 
-  if (__SSR__ && ssrCleanup) ssrCleanup.push(unwatch)
-  return unwatch
+  watchHandle.pause = effect.pause.bind(effect)
+  watchHandle.resume = effect.resume.bind(effect)
+  watchHandle.stop = watchHandle
+
+  if (__SSR__ && ssrCleanup) ssrCleanup.push(watchHandle)
+  return watchHandle
 }
 
 // this.$watch
@@ -243,7 +248,7 @@ export function instanceWatch(
   source: string | Function,
   value: WatchCallback | ObjectWatchOptionItem,
   options?: WatchOptions,
-): WatchStopHandle {
+): WatchHandle {
   const publicThis = this.proxy as any
   const getter = isString(source)
     ? source.includes('.')
@@ -265,7 +270,7 @@ export function instanceWatch(
 
 export function createPathGetter(ctx: any, path: string) {
   const segments = path.split('.')
-  return () => {
+  return (): any => {
     let cur = ctx
     for (let i = 0; i < segments.length && cur; i++) {
       cur = cur[segments[i]]

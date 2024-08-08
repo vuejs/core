@@ -68,7 +68,7 @@ function findInsertionIndex(id: number) {
   return start
 }
 
-export function queueJob(job: SchedulerJob) {
+export function queueJob(job: SchedulerJob): void {
   if (!(job.flags! & SchedulerJobFlags.QUEUED)) {
     if (job.id == null) {
       queue.push(job)
@@ -96,14 +96,14 @@ function queueFlush() {
   }
 }
 
-export function invalidateJob(job: SchedulerJob) {
+export function invalidateJob(job: SchedulerJob): void {
   const i = queue.indexOf(job)
   if (i > flushIndex) {
     queue.splice(i, 1)
   }
 }
 
-export function queuePostFlushCb(cb: SchedulerJobs) {
+export function queuePostFlushCb(cb: SchedulerJobs): void {
   if (!isArray(cb)) {
     if (activePostFlushCbs && cb.id === -1) {
       activePostFlushCbs.splice(postFlushIndex + 1, 0, cb)
@@ -126,8 +126,8 @@ export function flushPreFlushCbs(
   instance?: ComponentInternalInstance,
   seen?: CountMap,
   // if currently flushing, skip the current job itself
-  i = isFlushing ? flushIndex + 1 : 0,
-) {
+  i: number = isFlushing ? flushIndex + 1 : 0,
+): void {
   if (__DEV__) {
     seen = seen || new Map()
   }
@@ -148,7 +148,7 @@ export function flushPreFlushCbs(
   }
 }
 
-export function flushPostFlushCbs(seen?: CountMap) {
+export function flushPostFlushCbs(seen?: CountMap): void {
   if (pendingPostFlushCbs.length) {
     const deduped = [...new Set(pendingPostFlushCbs)].sort(
       (a, b) => getId(a) - getId(b),

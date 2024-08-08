@@ -72,7 +72,7 @@ export function callWithErrorHandling(
   instance: ComponentInternalInstance | null | undefined,
   type: ErrorTypes,
   args?: unknown[],
-) {
+): any {
   try {
     return args ? fn(...args) : fn()
   } catch (err) {
@@ -114,7 +114,7 @@ export function handleError(
   instance: ComponentInternalInstance | null | undefined,
   type: ErrorTypes,
   throwInDev = true,
-) {
+): void {
   const contextVNode = instance ? instance.vnode : null
   const { errorHandler, throwUnhandledErrorInProduction } =
     (instance && instance.appContext.config) || EMPTY_OBJ

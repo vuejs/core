@@ -4,7 +4,14 @@
 
 <script>
   window.isHydrated = false
-  const { createSSRApp, defineAsyncComponent, h, ref, onMounted, hydrateOnIdle } = Vue
+  const {
+    createSSRApp,
+    defineAsyncComponent,
+    h,
+    ref,
+    onMounted,
+    hydrateOnIdle,
+  } = Vue
 
   const Comp = {
     setup() {
@@ -18,19 +25,20 @@
   }
 
   const AsyncComp = defineAsyncComponent({
-    loader: () => new Promise(resolve => {
-      setTimeout(() => {
-        console.log('resolve')
-        resolve(Comp)
-        requestIdleCallback(() => {
-          console.log('busy')
-        })
-      }, 10)
-    }),
-    hydrate: hydrateOnIdle()
+    loader: () =>
+      new Promise(resolve => {
+        setTimeout(() => {
+          console.log('resolve')
+          resolve(Comp)
+          requestIdleCallback(() => {
+            console.log('busy')
+          })
+        }, 10)
+      }),
+    hydrate: hydrateOnIdle(),
   })
 
   createSSRApp({
-    render: () => h(AsyncComp)
+    render: () => h(AsyncComp),
   }).mount('#app')
 </script>

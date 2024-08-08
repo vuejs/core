@@ -29,16 +29,16 @@
         window.teardownCalled = true
         triggerEl.removeEventListener('click', hydrate)
       }
-    }
+    },
   })
 
-  const show = window.show = ref(true)
+  const show = (window.show = ref(true))
   createSSRApp({
     setup() {
       onMounted(() => {
         window.isRootMounted = true
       })
-      return () => show.value ? h(AsyncComp) : 'off'
-    }
+      return () => (show.value ? h(AsyncComp) : 'off')
+    },
   }).mount('#app')
 </script>

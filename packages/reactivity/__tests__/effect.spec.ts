@@ -1282,4 +1282,48 @@ describe('reactivity/effect', () => {
       ).not.toHaveBeenWarned()
     })
   })
+
+  test('should pause/resume effect', () => {
+    const obj = reactive({ foo: 1 })
+    const fnSpy = vi.fn(() => obj.foo)
+    const runner = effect(fnSpy)
+
+    expect(fnSpy).toHaveBeenCalledTimes(1)
+    expect(obj.foo).toBe(1)
+
+    runner.effect.pause()
+    obj.foo++
+    expect(fnSpy).toHaveBeenCalledTimes(1)
+    expect(obj.foo).toBe(2)
+
+    runner.effect.resume()
+    expect(fnSpy).toHaveBeenCalledTimes(2)
+    expect(obj.foo).toBe(2)
+
+    obj.foo++
+    expect(fnSpy).toHaveBeenCalledTimes(3)
+    expect(obj.foo).toBe(3)
+  })
+
+  test('should be executed once immediately when resume is called', () => {
+    const obj = reactive({ foo: 1 })
+    const fnSpy = vi.fn(() => obj.foo)
+    const runner = effect(fnSpy)
+
+    expect(fnSpy).toHaveBeenCalledTimes(1)
+    expect(obj.foo).toBe(1)
+
+    runner.effect.pause()
+    obj.foo++
+    expect(fnSpy).toHaveBeenCalledTimes(1)
+    expect(obj.foo).toBe(2)
+
+    obj.foo++
+    expect(fnSpy).toHaveBeenCalledTimes(1)
+    expect(obj.foo).toBe(3)
+
+    runner.effect.resume()
+    expect(fnSpy).toHaveBeenCalledTimes(2)
+    expect(obj.foo).toBe(3)
+  })
 })

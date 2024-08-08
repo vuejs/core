@@ -8,6 +8,7 @@ import {
   KeepAlive,
   Suspense,
   type SuspenseProps,
+  createCommentVNode,
   h,
   nextTick,
   nodeOps,
@@ -2035,7 +2036,7 @@ describe('Suspense', () => {
     expect(serializeInner(root)).toBe(`<div>sync</div>`)
   })
 
-  // #10899
+  // #10899 / #11427
   test('KeepAlive + Suspense switch before branch resolves', async () => {
     const Async1 = defineAsyncComponent({
       render() {
@@ -2052,14 +2053,20 @@ describe('Suspense', () => {
     const root = nodeOps.createElement('div')
     const App = {
       render() {
-        return h(KeepAlive, null, {
-          default: () => {
-            return h(Suspense, null, {
-              default: h(components[viewRef.value]),
-              fallback: h('div', 'loading'),
-            })
+        return h(
+          KeepAlive,
+          {
+            max: 1,
           },
-        })
+          {
+            default: () => {
+              return h(Suspense, null, {
+                default: h(components[viewRef.value]),
+                fallback: h('div', 'loading'),
+              })
+            },
+          },
+        )
       },
     }
     render(h(App), root)
@@ -2083,6 +2090,35 @@ describe('Suspense', () => {
     await nextTick()
     await Promise.all(deps)
     expect(serializeInner(root)).toBe(`<div>async2</div>`)
+  })
+
+  test('KeepAlive + Suspense + comment slot', async () => {
+    const toggle = ref(false)
+    const Async = defineAsyncComponent({
+      render() {
+        return h('div', 'async1')
+      },
+    })
+    const App = {
+      render() {
+        return h(KeepAlive, null, {
+          default: () => {
+            return h(Suspense, null, {
+              default: toggle.value ? h(Async) : createCommentVNode('v-if'),
+            })
+          },
+        })
+      },
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(App), root)
+    expect(serializeInner(root)).toBe(`<!--v-if-->`)
+
+    toggle.value = true
+    await nextTick()
+    await Promise.all(deps)
+    expect(serializeInner(root)).toBe(`<div>async1</div>`)
   })
 
   // #6416 follow up / #10017

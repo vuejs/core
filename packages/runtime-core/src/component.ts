@@ -416,7 +416,7 @@ export interface ComponentInternalInstance {
    * is custom element?
    * @internal
    */
-  isCE?: boolean
+  ce?: ComponentCustomElementInterface
   /**
    * custom element specific HMR method
    * @internal
@@ -598,7 +598,7 @@ export function createComponentInstance(
   vnode: VNode,
   parent: ComponentInternalInstance | null,
   suspense: SuspenseBoundary | null,
-) {
+): ComponentInternalInstance {
   const type = vnode.type as ConcreteComponent
   // inherit parent app context - or - if root, adopt from root vnode
   const appContext =
@@ -757,13 +757,13 @@ export const setCurrentInstance = (instance: ComponentInternalInstance) => {
   const prev = currentInstance
   internalSetCurrentInstance(instance)
   instance.scope.on()
-  return () => {
+  return (): void => {
     instance.scope.off()
     internalSetCurrentInstance(prev)
   }
 }
 
-export const unsetCurrentInstance = () => {
+export const unsetCurrentInstance = (): void => {
   currentInstance && currentInstance.scope.off()
   internalSetCurrentInstance(null)
 }
@@ -771,7 +771,7 @@ export const unsetCurrentInstance = () => {
 export function validateComponentName(
   name: string,
   { isNativeTag }: AppConfig,
-) {
+): void {
   if (isBuiltInTag(name) || isNativeTag(name)) {
     warn(
       'Do not use built-in or reserved HTML elements as component id: ' + name,
@@ -779,7 +779,9 @@ export function validateComponentName(
   }
 }
 
-export function isStatefulComponent(instance: ComponentInternalInstance) {
+export function isStatefulComponent(
+  instance: ComponentInternalInstance,
+): number {
   return instance.vnode.shapeFlag & ShapeFlags.STATEFUL_COMPONENT
 }
 
@@ -789,7 +791,7 @@ export function setupComponent(
   instance: ComponentInternalInstance,
   isSSR = false,
   optimized = false,
-) {
+): Promise<void> | undefined {
   isSSR && setInSSRSetupState(isSSR)
 
   const { props, children } = instance.vnode
@@ -906,7 +908,7 @@ export function handleSetupResult(
   instance: ComponentInternalInstance,
   setupResult: unknown,
   isSSR: boolean,
-) {
+): void {
   if (isFunction(setupResult)) {
     // setup returned an inline render function
     if (__SSR__ && (instance.type as ComponentOptions).__ssrInlineRender) {
@@ -954,7 +956,7 @@ let installWithProxy: (i: ComponentInternalInstance) => void
  * For runtime-dom to register the compiler.
  * Note the exported method uses any to avoid d.ts relying on the compiler types.
  */
-export function registerRuntimeCompiler(_compile: any) {
+export function registerRuntimeCompiler(_compile: any): void {
   compile = _compile
   installWithProxy = i => {
     if (i.render!._rc) {
@@ -964,13 +966,13 @@ export function registerRuntimeCompiler(_compile: any) {
 }
 
 // dev only
-export const isRuntimeOnly = () => !compile
+export const isRuntimeOnly = (): boolean => !compile
 
 export function finishComponentSetup(
   instance: ComponentInternalInstance,
   isSSR: boolean,
   skipOptions?: boolean,
-) {
+): void {
   const Component = instance.type as ComponentOptions
 
   if (__COMPAT__) {
@@ -1163,7 +1165,7 @@ export function createSetupContext(
 
 export function getComponentPublicInstance(
   instance: ComponentInternalInstance,
-) {
+): ComponentPublicInstance | ComponentInternalInstance['exposed'] | null {
   if (instance.exposed) {
     return (
       instance.exposeProxy ||
@@ -1233,4 +1235,24 @@ export function formatComponentName(
 
 export function isClassComponent(value: unknown): value is ClassComponent {
   return isFunction(value) && '__vccOpts' in value
+}
+
+export interface ComponentCustomElementInterface {
+  /**
+   * @internal
+   */
+  _injectChildStyle(type: ConcreteComponent): void
+  /**
+   * @internal
+   */
+  _removeChildStyle(type: ConcreteComponent): void
+  /**
+   * @internal
+   */
+  _setProp(
+    key: string,
+    val: any,
+    shouldReflect?: boolean,
+    shouldUpdate?: boolean,
+  ): void
 }

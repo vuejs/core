@@ -52,7 +52,7 @@ class BaseReactiveHandler implements ProxyHandler<Target> {
     protected readonly _isShallow = false,
   ) {}
 
-  get(target: Target, key: string | symbol, receiver: object) {
+  get(target: Target, key: string | symbol, receiver: object): any {
     const isReadonly = this._isReadonly,
       isShallow = this._isShallow
     if (key === ReactiveFlags.IS_REACTIVE) {
@@ -73,7 +73,7 @@ class BaseReactiveHandler implements ProxyHandler<Target> {
               : reactiveMap
           ).get(target) ||
         // receiver is not the reactive proxy, but has the same prototype
-        // this means the reciever is a user proxy of the reactive proxy
+        // this means the receiver is a user proxy of the reactive proxy
         Object.getPrototypeOf(target) === Object.getPrototypeOf(receiver)
       ) {
         return target
@@ -240,12 +240,11 @@ export const mutableHandlers: ProxyHandler<object> =
 export const readonlyHandlers: ProxyHandler<object> =
   /*#__PURE__*/ new ReadonlyReactiveHandler()
 
-export const shallowReactiveHandlers = /*#__PURE__*/ new MutableReactiveHandler(
-  true,
-)
+export const shallowReactiveHandlers: MutableReactiveHandler =
+  /*#__PURE__*/ new MutableReactiveHandler(true)
 
 // Props handlers are special in the sense that it should not unwrap top-level
 // refs (in order to allow refs to be explicitly passed down), but should
 // retain the reactivity of the normal readonly object.
-export const shallowReadonlyHandlers =
+export const shallowReadonlyHandlers: ReadonlyReactiveHandler =
   /*#__PURE__*/ new ReadonlyReactiveHandler(true)

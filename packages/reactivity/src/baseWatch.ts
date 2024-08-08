@@ -85,7 +85,7 @@ let activeWatcher: ReactiveEffect | undefined = undefined
 /**
  * Returns the current active effect if there is one.
  */
-export function getCurrentWatcher() {
+export function getCurrentWatcher(): ReactiveEffect<any> | undefined {
   return activeWatcher
 }
 
@@ -96,7 +96,10 @@ export function getCurrentWatcher() {
  *
  * @param cleanupFn - The callback function to attach to the effect's cleanup.
  */
-export function onWatcherCleanup(cleanupFn: () => void, failSilently = false) {
+export function onWatcherCleanup(
+  cleanupFn: () => void,
+  failSilently = false,
+): void {
   if (activeWatcher) {
     const cleanups =
       cleanupMap.get(activeWatcher) ||
@@ -133,11 +136,15 @@ export function baseWatch(
     )
   }
 
-  const reactiveGetter = (source: object) =>
-    deep === true
-      ? source // traverse will happen in wrapped getter below
-      : // for deep: false, only traverse root-level properties
-        traverse(source, deep === false ? 1 : undefined)
+  const reactiveGetter = (source: object) => {
+    // traverse will happen in wrapped getter below
+    if (deep) return source
+    // for `deep: false | 0` or shallow reactive, only traverse root-level properties
+    if (isShallow(source) || deep === false || deep === 0)
+      return traverse(source, 1)
+    // for `deep: undefined` on a reactive object, deeply traverse all properties
+    return traverse(source)
+  }
 
   let effect: ReactiveEffect
   let getter: () => any
@@ -207,7 +214,8 @@ export function baseWatch(
 
   if (cb && deep) {
     const baseGetter = getter
-    getter = () => traverse(baseGetter())
+    const depth = deep === true ? Infinity : deep
+    getter = () => traverse(baseGetter(), depth)
   }
 
   if (once) {
@@ -322,9 +330,9 @@ export function baseWatch(
 
 export function traverse(
   value: unknown,
-  depth = Infinity,
+  depth: number = Infinity,
   seen?: Set<unknown>,
-) {
+): unknown {
   if (depth <= 0 || !isObject(value) || (value as any)[ReactiveFlags.SKIP]) {
     return value
   }
