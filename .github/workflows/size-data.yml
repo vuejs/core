@@ -5,10 +5,6 @@ on:
     branches:
       - main
       - minor
-  pull_request:
-    branches:
-      - main
-      - minor
 
 permissions:
   contents: read
@@ -42,17 +38,3 @@ jobs:
         with:
           name: size-data
           path: temp/size
-
-      - name: Save PR number & base branch
-        if: ${{github.event_name == 'pull_request'}}
-        run: |
-          echo ${{ github.event.number }} > ./number.txt
-          echo ${{ github.base_ref }} > ./base.txt
-
-      - uses: actions/upload-artifact@v4
-        if: ${{github.event_name == 'pull_request'}}
-        with:
-          name: pr-info
-          path: |
-            number.txt
-            base.txt
