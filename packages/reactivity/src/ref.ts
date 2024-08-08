@@ -235,7 +235,7 @@ export type MaybeRefOrGetter<T = any> = MaybeRef<T> | (() => T)
  * @param ref - Ref or plain value to be converted into the plain value.
  * @see {@link https://vuejs.org/api/reactivity-utilities.html#unref}
  */
-export function unref<T>(ref: MaybeRef<T> | ComputedRef<T>): T {
+export function unref<T>(ref: MaybeRef<T> | ComputedRef<T> | ShallowRef<T>): T {
   return isRef(ref) ? ref.value : ref
 }
 
@@ -255,7 +255,9 @@ export function unref<T>(ref: MaybeRef<T> | ComputedRef<T>): T {
  * @param source - A getter, an existing ref, or a non-function value.
  * @see {@link https://vuejs.org/api/reactivity-utilities.html#tovalue}
  */
-export function toValue<T>(source: MaybeRefOrGetter<T> | ComputedRef<T>): T {
+export function toValue<T>(
+  source: MaybeRefOrGetter<T> | ComputedRef<T> | ShallowRef<T>,
+): T {
   return isFunction(source) ? source() : unref(source)
 }
 

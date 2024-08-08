@@ -251,7 +251,7 @@ export function resolveComponentType(
         exp = isProp.exp
         if (!exp) {
           // #10469 handle :is shorthand
-          exp = createSimpleExpression(`is`, false, isProp.loc)
+          exp = createSimpleExpression(`is`, false, isProp.arg!.loc)
           if (!__BROWSER__) {
             exp = isProp.exp = processExpression(exp, context)
           }

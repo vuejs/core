@@ -58,7 +58,7 @@ jobs:
       - name: Download Previous Size Data
         uses: dawidd6/action-download-artifact@v6
         with:
-          branch: main
+          branch: ${{ github.base_ref }}
           workflow: size-data.yml
           event: push
           name: size-data

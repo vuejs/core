@@ -3,7 +3,7 @@ on:
     tags:
       - 'v*' # Push events to matching v*, i.e. v1.0, v20.15.10
 
-name: Create Release
+name: Create GH Release for Tag
 
 permissions: {}
 jobs:
