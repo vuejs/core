@@ -873,6 +873,26 @@ function testRender(type: string, render: typeof renderToString) {
       expect(html).toBe(`<div>hello</div>`)
     })
 
+    test('serverPrefetch w/ async setup', async () => {
+      const msg = Promise.resolve('hello')
+      const app = createApp({
+        data() {
+          return {
+            msg: '',
+          }
+        },
+        async serverPrefetch() {
+          this.msg = await msg
+        },
+        render() {
+          return h('div', this.msg)
+        },
+        async setup() {},
+      })
+      const html = await render(app)
+      expect(html).toBe(`<div>hello</div>`)
+    })
+
     // #2763
     test('error handling w/ async setup', async () => {
       const fn = vi.fn()
