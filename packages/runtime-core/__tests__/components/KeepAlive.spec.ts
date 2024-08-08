@@ -894,7 +894,7 @@ describe('KeepAlive', () => {
           childCount++
         })
         return () => 'child'
-      }
+      },
     })
     const Parent = defineComponent({
       setup() {
@@ -902,14 +902,14 @@ describe('KeepAlive', () => {
           parentCount++
         })
         return () => h(Child)
-      }
+      },
     })
     const AsyncComp = defineAsyncComponent(() => Promise.resolve(Parent))
 
     const App = {
       render: () => {
         return h(KeepAlive, null, () => (toggle.value ? h(AsyncComp) : null))
-      }
+      },
     }
 
     render(h(App), root)
