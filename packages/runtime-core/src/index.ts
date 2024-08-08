@@ -76,6 +76,7 @@ export {
   withDefaults,
   type DefineProps,
   type ModelRef,
+  type InferDefaults,
 } from './apiSetupHelpers'
 
 /**
