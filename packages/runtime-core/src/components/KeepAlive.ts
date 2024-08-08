@@ -198,7 +198,7 @@ const KeepAliveImpl: ComponentOptions = {
     function pruneCache(filter?: (name: string) => boolean) {
       cache.forEach((vnode, key) => {
         const name = getComponentName(vnode.type as ConcreteComponent)
-        if (name && (!filter || !filter(name))) {
+        if (name && (!filter || !filter(name) || !filter(key as string))) {
           pruneCacheEntry(key)
         }
       })
