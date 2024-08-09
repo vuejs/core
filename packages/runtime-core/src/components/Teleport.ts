@@ -424,6 +424,20 @@ function hydrateTeleport(
       }
     }
     updateCssVars(vnode)
+  } else if (isTeleportDisabled(vnode.props)) {
+    if (vnode.shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
+      vnode.anchor = hydrateChildren(
+        nextSibling(node),
+        vnode,
+        parentNode(node)!,
+        parentComponent,
+        parentSuspense,
+        slotScopeIds,
+        optimized,
+      )
+      vnode.targetStart = node
+      vnode.targetAnchor = nextSibling(node)
+    }
   }
   return vnode.anchor && nextSibling(vnode.anchor as Node)
 }
