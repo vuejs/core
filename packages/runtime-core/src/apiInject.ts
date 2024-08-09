@@ -8,7 +8,7 @@ interface InjectionConstraint<T> {}
 
 export type InjectionKey<T> = symbol & InjectionConstraint<T>
 
-export function provide<T, K = InjectionKey<T> | string | number>(
+export function provide<T, K = InjectionKey<T> | string>(
   key: K,
   value: K extends InjectionKey<infer V> ? V : T,
 ): void {
