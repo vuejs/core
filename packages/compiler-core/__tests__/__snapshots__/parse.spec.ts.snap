@@ -496,6 +496,220 @@ exports[`compiler: parse > Edge Cases > valid html 1`] = `
 }
 `;
 
+exports[`compiler: parse > Edge Cases > warn when v-slot used on non-root <template> 1`] = `
+{
+  "cached": 0,
+  "children": [
+    {
+      "children": [
+        {
+          "children": [
+            {
+              "children": [
+                {
+                  "content": " Header ",
+                  "loc": {
+                    "end": {
+                      "column": 41,
+                      "line": 4,
+                      "offset": 93,
+                    },
+                    "source": " Header ",
+                    "start": {
+                      "column": 33,
+                      "line": 4,
+                      "offset": 85,
+                    },
+                  },
+                  "type": 2,
+                },
+              ],
+              "codegenNode": undefined,
+              "loc": {
+                "end": {
+                  "column": 52,
+                  "line": 4,
+                  "offset": 104,
+                },
+                "source": "<template #header> Header </template>",
+                "start": {
+                  "column": 15,
+                  "line": 4,
+                  "offset": 67,
+                },
+              },
+              "ns": 0,
+              "props": [
+                {
+                  "arg": {
+                    "constType": 3,
+                    "content": "header",
+                    "isStatic": true,
+                    "loc": {
+                      "end": {
+                        "column": 32,
+                        "line": 4,
+                        "offset": 84,
+                      },
+                      "source": "header",
+                      "start": {
+                        "column": 26,
+                        "line": 4,
+                        "offset": 78,
+                      },
+                    },
+                    "type": 4,
+                  },
+                  "exp": undefined,
+                  "loc": {
+                    "end": {
+                      "column": 32,
+                      "line": 4,
+                      "offset": 84,
+                    },
+                    "source": "#header",
+                    "start": {
+                      "column": 25,
+                      "line": 4,
+                      "offset": 77,
+                    },
+                  },
+                  "modifiers": [],
+                  "name": "slot",
+                  "rawName": "#header",
+                  "type": 7,
+                },
+              ],
+              "tag": "template",
+              "tagType": 3,
+              "type": 1,
+            },
+          ],
+          "codegenNode": undefined,
+          "loc": {
+            "end": {
+              "column": 24,
+              "line": 5,
+              "offset": 128,
+            },
+            "source": "<template v-if="true">
+              <template #header> Header </template>
+            </template>",
+            "start": {
+              "column": 13,
+              "line": 3,
+              "offset": 30,
+            },
+          },
+          "ns": 0,
+          "props": [
+            {
+              "arg": undefined,
+              "exp": {
+                "constType": 0,
+                "content": "true",
+                "isStatic": false,
+                "loc": {
+                  "end": {
+                    "column": 33,
+                    "line": 3,
+                    "offset": 50,
+                  },
+                  "source": "true",
+                  "start": {
+                    "column": 29,
+                    "line": 3,
+                    "offset": 46,
+                  },
+                },
+                "type": 4,
+              },
+              "loc": {
+                "end": {
+                  "column": 34,
+                  "line": 3,
+                  "offset": 51,
+                },
+                "source": "v-if="true"",
+                "start": {
+                  "column": 23,
+                  "line": 3,
+                  "offset": 40,
+                },
+              },
+              "modifiers": [],
+              "name": "if",
+              "rawName": "v-if",
+              "type": 7,
+            },
+          ],
+          "tag": "template",
+          "tagType": 3,
+          "type": 1,
+        },
+      ],
+      "codegenNode": undefined,
+      "loc": {
+        "end": {
+          "column": 18,
+          "line": 6,
+          "offset": 146,
+        },
+        "source": "<Comp>
+            <template v-if="true">
+              <template #header> Header </template>
+            </template>
+          </Comp>",
+        "start": {
+          "column": 11,
+          "line": 2,
+          "offset": 11,
+        },
+      },
+      "ns": 0,
+      "props": [],
+      "tag": "Comp",
+      "tagType": 1,
+      "type": 1,
+    },
+  ],
+  "codegenNode": undefined,
+  "components": [],
+  "directives": [],
+  "helpers": Set {},
+  "hoists": [],
+  "imports": [],
+  "loc": {
+    "end": {
+      "column": 11,
+      "line": 7,
+      "offset": 157,
+    },
+    "source": "
+          <Comp>
+            <template v-if="true">
+              <template #header> Header </template>
+            </template>
+          </Comp>
+          ",
+    "start": {
+      "column": 1,
+      "line": 1,
+      "offset": 0,
+    },
+  },
+  "source": "
+          <Comp>
+            <template v-if="true">
+              <template #header> Header </template>
+            </template>
+          </Comp>
+          ",
+  "temps": 0,
+  "type": 0,
+}
+`;
+
 exports[`compiler: parse > Errors > CDATA_IN_HTML_CONTENT > <template><![CDATA[cdata]]></template> 1`] = `
 {
   "cached": 0,

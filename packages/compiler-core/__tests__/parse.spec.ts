@@ -1992,6 +1992,42 @@ describe('compiler: parse', () => {
       expect(ast).toMatchSnapshot()
     })
 
+    test('warn when v-slot used on non-root <template>', () => {
+      const source = `
+          <Comp>
+            <template v-if="true">
+              <template #header> Header </template>
+            </template>
+          </Comp>
+          `
+
+      expect(() => {
+        baseParse(source)
+      }).toThrow(
+        '<template v-slot> can only appear at the root level inside the receiving component',
+      )
+
+      const spy = vi.fn()
+      const ast = baseParse(source, {
+        onError: spy,
+      })
+
+      expect(spy.mock.calls).toMatchObject([
+        [
+          {
+            code: ErrorCodes.X_TEMPLATE_NOT_ROOT,
+            loc: {
+              start: { column: 15, line: 4, offset: 67 },
+              end: { column: 15, line: 4, offset: 67 },
+              source: '',
+            },
+          },
+        ],
+      ])
+
+      expect(ast).toMatchSnapshot()
+    })
+
     test('parse with correct location info', () => {
       const fooSrc = `foo\n is `
       const barSrc = `{{ bar }}`
