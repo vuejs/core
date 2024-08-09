@@ -9,7 +9,6 @@ import {
   onUnmounted,
   queuePostFlushCb,
   warn,
-  watchPostEffect,
 } from '@vue/runtime-core'
 import { ShapeFlags } from '@vue/shared'
 
@@ -46,7 +45,7 @@ export function useCssVars(getter: (ctx: any) => Record<string, string>) {
   }
 
   onBeforeMount(() => {
-    watchPostEffect(setVars)
+    queuePostFlushCb(setVars)
   })
 
   onBeforeUpdate(() => {
