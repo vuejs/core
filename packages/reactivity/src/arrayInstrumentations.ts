@@ -241,7 +241,7 @@ function apply(
   // @ts-expect-error
   if (arr[method] !== arrayProto[method]) {
     // @ts-expect-error
-    return arr[method](fn, thisArg)
+    return arr[method](...arrayProto.slice.call(arguments, 2))
   }
 
   let needsWrap = false
