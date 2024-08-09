@@ -47,42 +47,42 @@ export const arrayInstrumentations: Record<string | symbol, Function> = <any>{
     fn: (item: unknown, index: number, array: unknown[]) => unknown,
     thisArg?: unknown,
   ) {
-    return apply(this, 'every', fn, thisArg)
+    return apply(this, 'every', fn, thisArg, undefined, arguments)
   },
 
   filter(
     fn: (item: unknown, index: number, array: unknown[]) => unknown,
     thisArg?: unknown,
   ) {
-    return apply(this, 'filter', fn, thisArg, v => v.map(toReactive))
+    return apply(this, 'filter', fn, thisArg, v => v.map(toReactive), arguments)
   },
 
   find(
     fn: (item: unknown, index: number, array: unknown[]) => boolean,
     thisArg?: unknown,
   ) {
-    return apply(this, 'find', fn, thisArg, toReactive)
+    return apply(this, 'find', fn, thisArg, toReactive, arguments)
   },
 
   findIndex(
     fn: (item: unknown, index: number, array: unknown[]) => boolean,
     thisArg?: unknown,
   ) {
-    return apply(this, 'findIndex', fn, thisArg)
+    return apply(this, 'findIndex', fn, thisArg, undefined, arguments)
   },
 
   findLast(
     fn: (item: unknown, index: number, array: unknown[]) => boolean,
     thisArg?: unknown,
   ) {
-    return apply(this, 'findLast', fn, thisArg, toReactive)
+    return apply(this, 'findLast', fn, thisArg, toReactive, arguments)
   },
 
   findLastIndex(
     fn: (item: unknown, index: number, array: unknown[]) => boolean,
     thisArg?: unknown,
   ) {
-    return apply(this, 'findLastIndex', fn, thisArg)
+    return apply(this, 'findLastIndex', fn, thisArg, undefined, arguments)
   },
 
   // flat, flatMap could benefit from ARRAY_ITERATE but are not straight-forward to implement
@@ -91,7 +91,7 @@ export const arrayInstrumentations: Record<string | symbol, Function> = <any>{
     fn: (item: unknown, index: number, array: unknown[]) => unknown,
     thisArg?: unknown,
   ) {
-    return apply(this, 'forEach', fn, thisArg)
+    return apply(this, 'forEach', fn, thisArg, undefined, arguments)
   },
 
   includes(...args: unknown[]) {
@@ -116,7 +116,7 @@ export const arrayInstrumentations: Record<string | symbol, Function> = <any>{
     fn: (item: unknown, index: number, array: unknown[]) => unknown,
     thisArg?: unknown,
   ) {
-    return apply(this, 'map', fn, thisArg)
+    return apply(this, 'map', fn, thisArg, undefined, arguments)
   },
 
   pop() {
@@ -161,7 +161,7 @@ export const arrayInstrumentations: Record<string | symbol, Function> = <any>{
     fn: (item: unknown, index: number, array: unknown[]) => unknown,
     thisArg?: unknown,
   ) {
-    return apply(this, 'some', fn, thisArg)
+    return apply(this, 'some', fn, thisArg, undefined, arguments)
   },
 
   splice(...args: unknown[]) {
@@ -236,12 +236,13 @@ function apply(
   fn: (item: unknown, index: number, array: unknown[]) => unknown,
   thisArg?: unknown,
   wrappedRetFn?: (result: any) => unknown,
+  args?: IArguments,
 ) {
   const arr = shallowReadArray(self)
   let methodFn
   // @ts-expect-error our code is limited to es2016 but user code is not
   if ((methodFn = arr[method]) !== arrayProto[method]) {
-    return methodFn.apply(arr, arrayProto.slice.call(arguments, 2))
+    return methodFn.apply(arr, args)
   }
 
   let needsWrap = false
