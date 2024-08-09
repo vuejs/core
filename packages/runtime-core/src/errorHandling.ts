@@ -31,8 +31,6 @@ export enum ErrorCodes {
   APP_UNMOUNT_CLEANUP,
 }
 
-export type ErrorTypes = LifecycleHooks | ErrorCodes | BaseWatchErrorCodes
-
 export const ErrorTypeStrings: Record<ErrorTypes, string> = {
   [LifecycleHooks.SERVER_PREFETCH]: 'serverPrefetch hook',
   [LifecycleHooks.BEFORE_CREATE]: 'beforeCreate hook',
@@ -66,6 +64,8 @@ export const ErrorTypeStrings: Record<ErrorTypes, string> = {
   [ErrorCodes.COMPONENT_UPDATE]: 'component update',
   [ErrorCodes.APP_UNMOUNT_CLEANUP]: 'app unmount cleanup function',
 }
+
+export type ErrorTypes = LifecycleHooks | ErrorCodes | BaseWatchErrorCodes
 
 export function callWithErrorHandling(
   fn: Function,
