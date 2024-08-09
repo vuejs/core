@@ -13,6 +13,7 @@ export {
   toRef,
   toValue,
   toRefs,
+  toShallowRef,
   isProxy,
   isReactive,
   isReadonly,
