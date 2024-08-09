@@ -80,3 +80,13 @@ export {
 } from './effectScope'
 export { reactiveReadArray, shallowReadArray } from './arrayInstrumentations'
 export { TrackOpTypes, TriggerOpTypes, ReactiveFlags } from './constants'
+export {
+  baseWatch,
+  getCurrentWatcher,
+  traverse,
+  onWatcherCleanup,
+  BaseWatchErrorCodes,
+  type BaseWatchOptions,
+  type WatchScheduler,
+} from './baseWatch'
+export { type SchedulerJob, SchedulerJobFlags } from './scheduler'
