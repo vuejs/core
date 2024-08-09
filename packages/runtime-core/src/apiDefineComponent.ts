@@ -28,7 +28,7 @@ import type {
   TypeEmitsToOptions,
 } from './componentEmits'
 import { extend, isFunction } from '@vue/shared'
-import type { VNodeProps } from './vnode'
+import type { VNode, VNodeProps } from './vnode'
 import type {
   ComponentPublicInstanceConstructor,
   CreateComponentPublicInstanceWithMixins,
@@ -36,6 +36,7 @@ import type {
 import type { SlotsType } from './componentSlots'
 import type { Directive } from './directives'
 import type { ComponentTypeEmits } from './apiSetupHelpers'
+import type { Ref } from '@vue/reactivity'
 
 export type PublicProps = VNodeProps &
   AllowedComponentProps &
@@ -133,6 +134,60 @@ export type DefineSetupFnComponent<
   {},
   S
 >
+
+export type DefineComponentWithGeneric<
+  PropsOrPropOptions = {},
+  RawBindings = {},
+  D = {},
+  C extends ComputedOptions = ComputedOptions,
+  M extends MethodOptions = MethodOptions,
+  Mixin extends ComponentOptionsMixin = ComponentOptionsMixin,
+  Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
+  E extends EmitsOptions = {},
+  EE extends string = string,
+  PP = PublicProps,
+  Props = ResolveProps<PropsOrPropOptions, E>,
+  Defaults = ExtractDefaultPropTypes<PropsOrPropOptions>,
+  S extends SlotsType = {},
+  Generic extends Record<string, any> = {},
+> = ComponentPublicInstanceConstructor<
+  CreateComponentPublicInstanceWithMixins<
+    Props,
+    RawBindings,
+    D,
+    C,
+    M,
+    Mixin,
+    Extends,
+    E,
+    PP & Props,
+    Defaults,
+    true,
+    {},
+    S
+  > &
+    Generic
+> &
+  ComponentOptionsBase<
+    Props,
+    RawBindings,
+    D,
+    C,
+    M,
+    Mixin,
+    Extends,
+    E,
+    EE,
+    Defaults,
+    {},
+    string,
+    S
+  > &
+  PP & {
+    <T extends Record<string, any> = Generic>(
+      props: Props & { ref?: Ref<any> },
+    ): VNode
+  }
 
 // defineComponent is a utility that is primarily used for type inference
 // when declaring components. Type inference is provided in the component
@@ -290,16 +345,60 @@ export function defineComponent<
   TypeRefs
 >
 
+export function defineComponent<
+  T extends Record<string, any> = {},
+  PropsOptions extends Readonly<ComponentPropsOptions> = {},
+  RawBindings = {},
+  D = {},
+  C extends ComputedOptions = {},
+  M extends MethodOptions = {},
+  Mixin extends ComponentOptionsMixin = ComponentOptionsMixin,
+  Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
+  E extends EmitsOptions = {},
+  EE extends string = string,
+  S extends SlotsType = {},
+>(
+  options: ComponentOptionsBase<
+    PropsOptions,
+    RawBindings,
+    D,
+    C,
+    M,
+    Mixin,
+    Extends,
+    E,
+    EE,
+    ExtractDefaultPropTypes<PropsOptions>,
+    {},
+    string,
+    S
+  > & { __generic?: T },
+): DefineComponentWithGeneric<
+  PropsOptions,
+  RawBindings,
+  D,
+  C,
+  M,
+  Mixin,
+  Extends,
+  E,
+  EE,
+  PublicProps,
+  Readonly<PropsOptions>,
+  ExtractDefaultPropTypes<PropsOptions>,
+  S,
+  T
+>
+
 // implementation, close to no-op
 /*! #__NO_SIDE_EFFECTS__ */
-export function defineComponent(
-  options: unknown,
-  extraOptions?: ComponentOptions,
-) {
-  return isFunction(options)
-    ? // #8326: extend call and options.name access are considered side-effects
-      // by Rollup, so we have to wrap it in a pure-annotated IIFE.
-      /*#__PURE__*/ (() =>
-        extend({ name: options.name }, extraOptions, { setup: options }))()
+export function defineComponent(options: unknown): any {
+  const comp = isFunction(options)
+    ? { setup: options, name: options.name }
     : options
+  return new Proxy(comp as any, {
+    apply(target, thisArg, argumentsList) {
+      return extend({}, target, { props: argumentsList[0] })
+    },
+  })
 }
