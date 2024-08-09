@@ -72,7 +72,7 @@ export type Directive<T = any, V = any, M extends string = string> =
   | ObjectDirective<T, V, M>
   | FunctionDirective<T, V, M>
 
-export function validateDirectiveName(name: string) {
+export function validateDirectiveName(name: string): void {
   if (isBuiltInDirective(name)) {
     warn('Do not use built-in directive ids as custom directive id: ' + name)
   }
@@ -190,7 +190,7 @@ export function invokeDirectiveHook(
   instance: ComponentInternalInstance | null,
   name: DirectiveHookName,
   scope: BlockEffectScope,
-) {
+): void {
   const { dirs } = scope
   if (name === 'mounted') scope.im = true
   if (!dirs) return

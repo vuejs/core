@@ -38,7 +38,7 @@ export class EffectScope {
 
   constructor(
     public detached = false,
-    parent = activeEffectScope,
+    parent: EffectScope | undefined = activeEffectScope,
   ) {
     this.parent = parent
     if (!detached && parent) {

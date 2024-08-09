@@ -15,7 +15,7 @@ type TraceEntry = {
 
 type ComponentTraceStack = TraceEntry[]
 
-export function warn(msg: string, ...args: any[]) {
+export function warn(msg: string, ...args: any[]): void {
   // avoid props formatting or warn handler tracking deps that might be mutated
   // during patch, leading to infinite recursion.
   pauseTracking()

@@ -10,11 +10,11 @@ import {
 import { isArray, isString } from '@vue/shared'
 import type { CodegenContext } from '../generate'
 
-export const NEWLINE = Symbol(__DEV__ ? `newline` : ``)
+export const NEWLINE: unique symbol = Symbol(__DEV__ ? `newline` : ``)
 /** increase offset but don't push actual code */
-export const LF = Symbol(__DEV__ ? `line feed` : ``)
-export const INDENT_START = Symbol(__DEV__ ? `indent start` : ``)
-export const INDENT_END = Symbol(__DEV__ ? `indent end` : ``)
+export const LF: unique symbol = Symbol(__DEV__ ? `line feed` : ``)
+export const INDENT_START: unique symbol = Symbol(__DEV__ ? `indent start` : ``)
+export const INDENT_END: unique symbol = Symbol(__DEV__ ? `indent end` : ``)
 
 type FalsyValue = false | null | undefined
 export type CodeFragment =

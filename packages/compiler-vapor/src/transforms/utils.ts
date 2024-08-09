@@ -4,6 +4,7 @@ import {
   type ElementNode,
   ElementTypes,
   NodeTypes,
+  type SimpleExpressionNode,
   type TemplateChildNode,
   type TemplateNode,
   createSimpleExpression,
@@ -54,4 +55,7 @@ export function wrapTemplate(node: ElementNode, dirs: string[]): TemplateNode {
   } as Partial<TemplateNode>)
 }
 
-export const EMPTY_EXPRESSION = createSimpleExpression('', true)
+export const EMPTY_EXPRESSION: SimpleExpressionNode = createSimpleExpression(
+  '',
+  true,
+)

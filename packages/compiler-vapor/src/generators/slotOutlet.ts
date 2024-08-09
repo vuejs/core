@@ -5,7 +5,10 @@ import { genExpression } from './expression'
 import { type CodeFragment, NEWLINE, buildCodeFragment, genCall } from './utils'
 import { genRawProps } from './component'
 
-export function genSlotOutlet(oper: SlotOutletIRNode, context: CodegenContext) {
+export function genSlotOutlet(
+  oper: SlotOutletIRNode,
+  context: CodegenContext,
+): CodeFragment[] {
   const { vaporHelper } = context
   const { id, name, fallback } = oper
   const [frag, push] = buildCodeFragment()

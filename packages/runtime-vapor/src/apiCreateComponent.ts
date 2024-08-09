@@ -1,5 +1,6 @@
 import {
   type Component,
+  type ComponentInternalInstance,
   createComponentInstance,
   currentInstance,
 } from './component'
@@ -14,7 +15,7 @@ export function createComponent(
   slots: RawSlots | null = null,
   singleRoot: boolean = false,
   once: boolean = false,
-) {
+): ComponentInternalInstance {
   const current = currentInstance!
   const instance = createComponentInstance(
     comp,

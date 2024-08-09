@@ -10,7 +10,7 @@ if (__DEV__) {
 
 export * from '@vue/runtime-vapor'
 
-export const compile = () => {
+export const compile = (): void => {
   if (__DEV__) {
     console.warn(
       `Runtime compilation is not supported in this build of Vue.` +

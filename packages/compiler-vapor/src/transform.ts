@@ -113,14 +113,14 @@ export class TransformContext<T extends AllNode = AllNode> {
     }
   }
 
-  increaseId = () => this.globalId++
-  reference() {
+  increaseId = (): number => this.globalId++
+  reference(): number {
     if (this.dynamic.id !== undefined) return this.dynamic.id
     this.dynamic.flags |= DynamicFlag.REFERENCED
     return (this.dynamic.id = this.increaseId())
   }
 
-  pushTemplate(content: string) {
+  pushTemplate(content: string): number {
     const existing = this.ir.template.findIndex(
       template => template === content,
     )
@@ -128,7 +128,7 @@ export class TransformContext<T extends AllNode = AllNode> {
     this.ir.template.push(content)
     return this.ir.template.length - 1
   }
-  registerTemplate() {
+  registerTemplate(): number {
     if (!this.template) return -1
     const id = this.pushTemplate(this.template)
     return (this.dynamic.template = id)
@@ -137,7 +137,7 @@ export class TransformContext<T extends AllNode = AllNode> {
   registerEffect(
     expressions: SimpleExpressionNode[],
     ...operations: OperationNode[]
-  ) {
+  ): void {
     expressions = expressions.filter(exp => !isConstantExpression(exp))
     if (this.inVOnce || expressions.length === 0) {
       return this.registerOperation(...operations)
@@ -162,7 +162,7 @@ export class TransformContext<T extends AllNode = AllNode> {
       return a.every((exp, i) => exp.content === b[i].content)
     }
   }
-  registerOperation(...node: OperationNode[]) {
+  registerOperation(...node: OperationNode[]): void {
     this.block.operation.push(...node)
   }
 
@@ -230,7 +230,7 @@ export function transform(
 
 export function transformNode(
   context: TransformContext<RootNode | TemplateChildNode>,
-) {
+): void {
   let { node } = context
 
   // apply transform plugins

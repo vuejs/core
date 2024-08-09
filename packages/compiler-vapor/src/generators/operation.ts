@@ -19,7 +19,10 @@ import {
 import { genCreateComponent } from './component'
 import { genSlotOutlet } from './slotOutlet'
 
-export function genOperations(opers: OperationNode[], context: CodegenContext) {
+export function genOperations(
+  opers: OperationNode[],
+  context: CodegenContext,
+): CodeFragment[] {
   const [frag, push] = buildCodeFragment()
   for (const operation of opers) {
     push(...genOperation(operation, context))
@@ -69,7 +72,10 @@ export function genOperation(
   return []
 }
 
-export function genEffects(effects: IREffect[], context: CodegenContext) {
+export function genEffects(
+  effects: IREffect[],
+  context: CodegenContext,
+): CodeFragment[] {
   const [frag, push] = buildCodeFragment()
   for (const effect of effects) {
     push(...genEffect(effect, context))
@@ -77,7 +83,10 @@ export function genEffects(effects: IREffect[], context: CodegenContext) {
   return frag
 }
 
-export function genEffect({ operations }: IREffect, context: CodegenContext) {
+export function genEffect(
+  { operations }: IREffect,
+  context: CodegenContext,
+): CodeFragment[] {
   const { vaporHelper } = context
   const [frag, push] = buildCodeFragment(
     NEWLINE,

@@ -10,7 +10,7 @@ export function invokeLifecycle(
   directive: DirectiveHookName,
   cb?: (instance: ComponentInternalInstance) => void,
   post?: boolean,
-) {
+): void {
   invokeArrayFns(post ? [invokeSub, invokeCurrent] : [invokeCurrent, invokeSub])
 
   function invokeCurrent() {

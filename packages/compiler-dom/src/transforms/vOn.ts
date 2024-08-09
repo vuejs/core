@@ -37,7 +37,11 @@ export const resolveModifiers = (
   modifiers: string[],
   context: TransformContext | null,
   loc: SourceLocation,
-) => {
+): {
+  keyModifiers: string[]
+  nonKeyModifiers: string[]
+  eventOptionModifiers: string[]
+} => {
   const keyModifiers = []
   const nonKeyModifiers = []
   const eventOptionModifiers = []

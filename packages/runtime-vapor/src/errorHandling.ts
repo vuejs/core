@@ -78,7 +78,7 @@ export function callWithErrorHandling(
   instance: ComponentInternalInstance | null,
   type: ErrorTypes,
   args?: unknown[],
-) {
+): any {
   let res
   try {
     res = args ? fn(...args) : fn()
@@ -116,7 +116,7 @@ export function handleError(
   instance: ComponentInternalInstance | null,
   type: ErrorTypes,
   throwInDev = true,
-) {
+): void {
   if (instance) {
     let cur = instance.parent
     // in production the hook receives only the error code

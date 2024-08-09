@@ -32,7 +32,7 @@ let postFlushIndex = 0
 const resolvedPromise = /*#__PURE__*/ Promise.resolve() as Promise<any>
 let currentFlushPromise: Promise<void> | null = null
 
-export function queueJob(job: SchedulerJob) {
+export function queueJob(job: SchedulerJob): void {
   let lastOne: SchedulerJob | undefined
   if (!(job.flags! & SchedulerJobFlags.QUEUED)) {
     if (job.id == null) {
@@ -54,7 +54,7 @@ export function queueJob(job: SchedulerJob) {
   }
 }
 
-export function queuePostFlushCb(cb: SchedulerJobs) {
+export function queuePostFlushCb(cb: SchedulerJobs): void {
   if (!isArray(cb)) {
     if (!(cb.flags! & SchedulerJobFlags.QUEUED)) {
       pendingPostFlushCbs.push(cb)
@@ -78,7 +78,7 @@ function queueFlush() {
   }
 }
 
-export function flushPostFlushCbs() {
+export function flushPostFlushCbs(): void {
   if (!pendingPostFlushCbs.length) return
 
   const deduped = [...new Set(pendingPostFlushCbs)]

@@ -29,5 +29,5 @@ export function recordEventMetadata(el: Node, key: string, value: any) {
   const metadata = getMetadata(el)[MetadataKind.event]
   const handlers = (metadata[key] ||= [])
   handlers.push(value)
-  return () => remove(handlers, value)
+  return (): void => remove(handlers, value)
 }

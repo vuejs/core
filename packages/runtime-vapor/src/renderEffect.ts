@@ -15,7 +15,7 @@ import { queueJob, queuePostFlushCb } from './scheduler'
 import { VaporErrorCodes, callWithAsyncErrorHandling } from './errorHandling'
 import { invokeDirectiveHook } from './directives'
 
-export function renderEffect(cb: () => void) {
+export function renderEffect(cb: () => void): void {
   const instance = getCurrentInstance()
   const scope = getCurrentScope()
 
@@ -94,7 +94,7 @@ export function renderEffect(cb: () => void) {
 export function firstEffect(
   instance: ComponentInternalInstance,
   fn: () => void,
-) {
+): void {
   const effect = new ReactiveEffect(fn)
   const job: SchedulerJob = () => effect.run()
   job.flags! |= SchedulerJobFlags.PRE

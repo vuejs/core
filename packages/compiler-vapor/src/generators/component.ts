@@ -76,7 +76,10 @@ export function genCreateComponent(
   }
 }
 
-export function genRawProps(props: IRProps[], context: CodegenContext) {
+export function genRawProps(
+  props: IRProps[],
+  context: CodegenContext,
+): CodeFragment[] | undefined {
   const { vaporHelper } = context
   const frag = props
     .map(props => {

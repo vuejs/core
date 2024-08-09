@@ -59,19 +59,29 @@ const createHook =
   <T extends Function = () => any>(lifecycle: VaporLifecycleHooks) =>
   (hook: T, target: ComponentInternalInstance | null = currentInstance) =>
     injectHook(lifecycle, (...args: unknown[]) => hook(...args), target)
+type CreateHook<T = any> = (
+  hook: T,
+  target?: ComponentInternalInstance | null,
+) => void
 
-export const onBeforeMount = createHook(VaporLifecycleHooks.BEFORE_MOUNT)
-export const onMounted = createHook(VaporLifecycleHooks.MOUNTED)
-export const onBeforeUpdate = createHook(VaporLifecycleHooks.BEFORE_UPDATE)
-export const onUpdated = createHook(VaporLifecycleHooks.UPDATED)
-export const onBeforeUnmount = createHook(VaporLifecycleHooks.BEFORE_UNMOUNT)
-export const onUnmounted = createHook(VaporLifecycleHooks.UNMOUNTED)
+export const onBeforeMount: CreateHook = createHook(
+  VaporLifecycleHooks.BEFORE_MOUNT,
+)
+export const onMounted: CreateHook = createHook(VaporLifecycleHooks.MOUNTED)
+export const onBeforeUpdate: CreateHook = createHook(
+  VaporLifecycleHooks.BEFORE_UPDATE,
+)
+export const onUpdated: CreateHook = createHook(VaporLifecycleHooks.UPDATED)
+export const onBeforeUnmount: CreateHook = createHook(
+  VaporLifecycleHooks.BEFORE_UNMOUNT,
+)
+export const onUnmounted: CreateHook = createHook(VaporLifecycleHooks.UNMOUNTED)
 
 export type DebuggerHook = (e: DebuggerEvent) => void
-export const onRenderTriggered = createHook<DebuggerHook>(
+export const onRenderTriggered: CreateHook = createHook<DebuggerHook>(
   VaporLifecycleHooks.RENDER_TRIGGERED,
 )
-export const onRenderTracked = createHook<DebuggerHook>(
+export const onRenderTracked: CreateHook = createHook<DebuggerHook>(
   VaporLifecycleHooks.RENDER_TRACKED,
 )
 
@@ -84,6 +94,6 @@ export type ErrorCapturedHook<TError = unknown> = (
 export function onErrorCaptured<TError = Error>(
   hook: ErrorCapturedHook<TError>,
   target: ComponentInternalInstance | null = currentInstance,
-) {
+): void {
   injectHook(VaporLifecycleHooks.ERROR_CAPTURED, hook, target)
 }

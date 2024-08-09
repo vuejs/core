@@ -22,7 +22,7 @@ export function createChildFragmentDirectives(
   initCallback: (getValue: () => any) => void,
   effectCallback: (getValue: () => any) => void,
   once?: boolean,
-) {
+): void {
   let isTriggered = false
   const instance = currentInstance!
   const parentScope = getCurrentScope() as BlockEffectScope
@@ -92,7 +92,10 @@ export function createChildFragmentDirectives(
   }
 }
 
-export function invokeWithMount(scope: BlockEffectScope, handler?: () => any) {
+export function invokeWithMount(
+  scope: BlockEffectScope,
+  handler?: () => any,
+): any {
   if (isRenderEffectScope(scope.parent) && !scope.parent.im) {
     return handler && handler()
   }
@@ -102,7 +105,7 @@ export function invokeWithMount(scope: BlockEffectScope, handler?: () => any) {
 export function invokeWithUnmount(
   scope: BlockEffectScope,
   handler?: () => void,
-) {
+): any {
   try {
     return invokeWithDirsHooks(scope, 'unmount', handler)
   } finally {
@@ -113,7 +116,7 @@ export function invokeWithUnmount(
 export function invokeWithUpdate(
   scope: BlockEffectScope,
   handler?: () => void,
-) {
+): any {
   return invokeWithDirsHooks(scope, 'update', handler)
 }
 

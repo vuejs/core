@@ -7,7 +7,7 @@ export function template(html: string) {
     t.innerHTML = html
     return t.content.firstChild!
   }
-  return () => (node || (node = create())).cloneNode(true)
+  return (): Node => (node || (node = create())).cloneNode(true)
 }
 
 /*! #__NO_SIDE_EFFECTS__ */

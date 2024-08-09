@@ -24,15 +24,15 @@ export function insert(
   block: Block,
   parent: ParentNode,
   anchor: Node | null = null,
-) {
+): void {
   normalizeBlock(block).forEach(node => parent.insertBefore(node, anchor))
 }
 
-export function prepend(parent: ParentNode, ...blocks: Block[]) {
+export function prepend(parent: ParentNode, ...blocks: Block[]): void {
   parent.prepend(...normalizeBlock(blocks))
 }
 
-export function remove(block: Block, parent: ParentNode) {
+export function remove(block: Block, parent: ParentNode): void {
   normalizeBlock(block).forEach(node => parent.removeChild(node))
 }
 

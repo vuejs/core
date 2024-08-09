@@ -25,7 +25,7 @@ export function genSetModelValue(
 export function genModelHandler(
   value: SimpleExpressionNode,
   context: CodegenContext,
-) {
+): CodeFragment[] {
   const {
     options: { isTS },
   } = context

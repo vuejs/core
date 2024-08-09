@@ -5,7 +5,7 @@ import { setDynamicProps } from './dom/prop'
 import type { RawProps } from './componentProps'
 import { renderEffect } from './renderEffect'
 
-export function patchAttrs(instance: ComponentInternalInstance) {
+export function patchAttrs(instance: ComponentInternalInstance): void {
   const {
     attrs,
     rawProps,
@@ -64,7 +64,7 @@ export function withAttrs(props: RawProps): RawProps {
   return [attrsGetter, props]
 }
 
-export function fallThroughAttrs(instance: ComponentInternalInstance) {
+export function fallThroughAttrs(instance: ComponentInternalInstance): void {
   const {
     block,
     type: { inheritAttrs },

@@ -8,11 +8,14 @@ export const DIRECTIVES = 'directives'
 
 export type AssetTypes = typeof COMPONENTS | typeof DIRECTIVES
 
-export function resolveComponent(name: string, maybeSelfReference?: boolean) {
+export function resolveComponent(
+  name: string,
+  maybeSelfReference?: boolean,
+): string | Component {
   return resolveAsset(COMPONENTS, name, true, maybeSelfReference) || name
 }
 
-export function resolveDirective(name: string) {
+export function resolveDirective(name: string): Directive | undefined {
   return resolveAsset(DIRECTIVES, name)
 }
 

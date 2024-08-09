@@ -82,7 +82,7 @@ export function initProps(
   rawProps: RawProps,
   isStateful: boolean,
   once: boolean,
-) {
+): void {
   if (!rawProps) rawProps = []
   else if (!isArray(rawProps)) rawProps = [rawProps]
   instance.rawProps = rawProps

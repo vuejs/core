@@ -6,7 +6,7 @@ import { type CodeFragment, NEWLINE, buildCodeFragment, genCall } from './utils'
 export function genTemplates(
   templates: string[],
   { vaporHelper }: CodegenContext,
-) {
+): string {
   return templates
     .map(
       (template, i) =>

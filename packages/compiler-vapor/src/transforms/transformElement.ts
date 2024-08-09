@@ -34,7 +34,7 @@ import {
 } from '../ir'
 import { EMPTY_EXPRESSION } from './utils'
 
-export const isReservedProp = /*#__PURE__*/ makeMap(
+export const isReservedProp: (key: string) => boolean = /*#__PURE__*/ makeMap(
   // the leading comma is intentional so empty string "" is also included
   ',key,ref,ref_for,ref_key,',
 )

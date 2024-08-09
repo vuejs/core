@@ -90,7 +90,7 @@ function genArrayExpression(elements: string[]) {
 export function genEventHandler(
   context: CodegenContext,
   value: SimpleExpressionNode | undefined,
-) {
+): CodeFragment[] {
   if (value && value.content.trim()) {
     const isMemberExp = isMemberExpression(value.content, context.options)
     const isInlineStatement = !(isMemberExp || fnExpRE.test(value.content))

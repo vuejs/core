@@ -21,7 +21,7 @@ import { VaporErrorCodes, callWithErrorHandling } from './errorHandling'
 import { endMeasure, startMeasure } from './profiling'
 import { devtoolsComponentAdded } from './devtools'
 
-export const fragmentKey = Symbol(__DEV__ ? `fragmentKey` : ``)
+export const fragmentKey: unique symbol = Symbol(__DEV__ ? `fragmentKey` : ``)
 
 export type Block = Node | Fragment | ComponentInternalInstance | Block[]
 export type Fragment = {
@@ -152,7 +152,7 @@ function mountComponent(
   return instance
 }
 
-export function unmountComponent(instance: ComponentInternalInstance) {
+export function unmountComponent(instance: ComponentInternalInstance): void {
   const { container, block, scope } = instance
 
   // hook: beforeUnmount

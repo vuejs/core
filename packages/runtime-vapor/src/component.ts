@@ -146,7 +146,7 @@ export interface ComponentInternalOptions {
 
 type LifecycleHook<TFn = Function> = TFn[] | null
 
-export const componentKey = Symbol(__DEV__ ? `componentKey` : ``)
+export const componentKey: unique symbol = Symbol(__DEV__ ? `componentKey` : ``)
 
 export interface ComponentInternalInstance {
   [componentKey]: true
@@ -246,12 +246,12 @@ export const getCurrentInstance: () => ComponentInternalInstance | null = () =>
 export const setCurrentInstance = (instance: ComponentInternalInstance) => {
   const prev = currentInstance
   currentInstance = instance
-  return () => {
+  return (): void => {
     currentInstance = prev
   }
 }
 
-export const unsetCurrentInstance = () => {
+export const unsetCurrentInstance = (): void => {
   currentInstance && currentInstance.scope.off()
   currentInstance = null
 }
@@ -375,7 +375,7 @@ export function isVaporComponent(
 export function validateComponentName(
   name: string,
   { isNativeTag }: AppConfig,
-) {
+): void {
   if (isBuiltInTag(name) || isNativeTag(name)) {
     warn(
       'Do not use built-in or reserved HTML elements as component id: ' + name,

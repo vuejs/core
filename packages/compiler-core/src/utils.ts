@@ -158,7 +158,7 @@ export const isMemberExpressionNode: (
   context: Pick<TransformContext, 'expressionPlugins'>,
 ) => boolean = __BROWSER__
   ? (NOOP as any)
-  : (path, context): boolean => {
+  : (path, context) => {
       try {
         let ret: Expression = parseExpression(path, {
           plugins: context.expressionPlugins,
@@ -176,7 +176,7 @@ export const isMemberExpressionNode: (
 
 export const isMemberExpression: (
   path: string,
-  context: TransformContext,
+  context: Pick<TransformContext, 'expressionPlugins'>,
 ) => boolean = __BROWSER__ ? isMemberExpressionBrowser : isMemberExpressionNode
 
 export function advancePositionWithClone(

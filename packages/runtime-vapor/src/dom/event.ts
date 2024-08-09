@@ -18,7 +18,7 @@ export function addEventListener(
   options?: AddEventListenerOptions,
 ) {
   el.addEventListener(event, handler, options)
-  return () => el.removeEventListener(event, handler, options)
+  return (): void => el.removeEventListener(event, handler, options)
 }
 
 interface ModifierOptions {
@@ -32,7 +32,7 @@ export function on(
   handlerGetter: () => undefined | ((...args: any[]) => any),
   options: AddEventListenerOptions &
     ModifierOptions & { effect?: boolean } = {},
-) {
+): void {
   const handler: DelegatedHandler = eventHandler(handlerGetter, options)
   let cleanupEvent: (() => void) | undefined
   queuePostFlushCb(() => {
@@ -60,7 +60,7 @@ export function delegate(
   event: string,
   handlerGetter: () => undefined | ((...args: any[]) => any),
   options: ModifierOptions = {},
-) {
+): void {
   const handler: DelegatedHandler = eventHandler(handlerGetter, options)
   handler.delegate = true
   recordEventMetadata(el, event, handler)
@@ -85,7 +85,7 @@ function eventHandler(
  */
 const delegatedEvents = Object.create(null)
 
-export const delegateEvents = (...names: string[]) => {
+export const delegateEvents = (...names: string[]): void => {
   for (const name of names) {
     if (!delegatedEvents[name]) {
       delegatedEvents[name] = true
@@ -130,7 +130,7 @@ const delegatedEventHandler = (e: Event) => {
 export function setDynamicEvents(
   el: HTMLElement,
   events: Record<string, (...args: any[]) => any>,
-) {
+): void {
   for (const name in events) {
     on(el, name, () => events[name], { effect: true })
   }

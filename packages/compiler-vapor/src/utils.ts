@@ -27,7 +27,9 @@ export const findDir = _findDir as (
   allowEmpty?: boolean,
 ) => VaporDirectiveNode | undefined
 
-export function propToExpression(prop: AttributeNode | VaporDirectiveNode) {
+export function propToExpression(
+  prop: AttributeNode | VaporDirectiveNode,
+): SimpleExpressionNode | undefined {
   return prop.type === NodeTypes.ATTRIBUTE
     ? prop.value
       ? createSimpleExpression(prop.value.content, true, prop.value.loc)
@@ -35,7 +37,7 @@ export function propToExpression(prop: AttributeNode | VaporDirectiveNode) {
     : prop.exp
 }
 
-export function isConstantExpression(exp: SimpleExpressionNode) {
+export function isConstantExpression(exp: SimpleExpressionNode): boolean {
   return (
     isLiteralWhitelisted(exp.content) ||
     isGloballyAllowed(exp.content) ||
@@ -43,7 +45,9 @@ export function isConstantExpression(exp: SimpleExpressionNode) {
   )
 }
 
-export function resolveExpression(exp: SimpleExpressionNode) {
+export function resolveExpression(
+  exp: SimpleExpressionNode,
+): SimpleExpressionNode {
   if (!exp.isStatic) {
     const value = getLiteralExpressionValue(exp)
     if (value !== null) {

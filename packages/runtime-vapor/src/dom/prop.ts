@@ -19,14 +19,14 @@ import {
 import { on } from './event'
 import type { Data } from '@vue/runtime-shared'
 
-export function setClass(el: Element, value: any) {
+export function setClass(el: Element, value: any): void {
   const prev = recordPropMetadata(el, 'class', (value = normalizeClass(value)))
   if (value !== prev && (value || prev)) {
     el.className = value
   }
 }
 
-export function setAttr(el: Element, key: string, value: any) {
+export function setAttr(el: Element, key: string, value: any): void {
   const oldVal = recordPropMetadata(el, key, value)
   if (value !== oldVal) {
     if (value != null) {
@@ -37,7 +37,7 @@ export function setAttr(el: Element, key: string, value: any) {
   }
 }
 
-export function setDOMProp(el: any, key: string, value: any) {
+export function setDOMProp(el: any, key: string, value: any): void {
   const oldVal = recordPropMetadata(el, key, value)
   if (value === oldVal) return
 
@@ -109,7 +109,7 @@ export function setDOMProp(el: any, key: string, value: any) {
   needRemove && el.removeAttribute(key)
 }
 
-export function setDynamicProp(el: Element, key: string, value: any) {
+export function setDynamicProp(el: Element, key: string, value: any): void {
   // TODO
   const isSVG = false
   if (key === 'class') {
@@ -132,7 +132,7 @@ export function setDynamicProp(el: Element, key: string, value: any) {
   }
 }
 
-export function setDynamicProps(el: Element, ...args: any) {
+export function setDynamicProps(el: Element, ...args: any): void {
   const oldProps = getMetadata(el)[MetadataKind.prop]
   const props = args.length > 1 ? mergeProps(...args) : args[0]
 
@@ -154,7 +154,7 @@ export function setDynamicProps(el: Element, ...args: any) {
 }
 
 // TODO copied from runtime-core
-export function mergeProps(...args: Data[]) {
+export function mergeProps(...args: Data[]): Data {
   const ret: Data = {}
   for (let i = 0; i < args.length; i++) {
     const toMerge = args[i]
@@ -185,7 +185,7 @@ export function mergeProps(...args: Data[]) {
   return ret
 }
 
-export function setText(el: Node, ...values: any[]) {
+export function setText(el: Node, ...values: any[]): void {
   const text = values.map(v => toDisplayString(v)).join('')
   const oldVal = recordPropMetadata(el, 'textContent', text)
   if (text !== oldVal) {
@@ -193,7 +193,7 @@ export function setText(el: Node, ...values: any[]) {
   }
 }
 
-export function setHtml(el: Element, value: any) {
+export function setHtml(el: Element, value: any): void {
   const oldVal = recordPropMetadata(el, 'innerHTML', value)
   if (value !== oldVal) {
     el.innerHTML = value

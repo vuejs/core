@@ -36,7 +36,7 @@ export const isDynamicSlotFn = isFunction as (
 export function initSlots(
   instance: ComponentInternalInstance,
   rawSlots: RawSlots | null = null,
-) {
+): void {
   if (!rawSlots) return
   if (!isArray(rawSlots)) rawSlots = [rawSlots]
 

@@ -1,6 +1,6 @@
 // Core API ------------------------------------------------------------------
 
-export const version = __VERSION__
+export const version: string = __VERSION__
 export {
   // core
   type Ref,

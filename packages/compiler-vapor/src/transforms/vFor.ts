@@ -5,6 +5,7 @@ import {
   createCompilerError,
 } from '@vue/compiler-dom'
 import {
+  type NodeTransform,
   type TransformContext,
   createStructuralDirectiveTransform,
 } from '../transform'
@@ -17,7 +18,7 @@ import {
 import { findProp, propToExpression } from '../utils'
 import { newBlock, wrapTemplate } from './utils'
 
-export const transformVFor = createStructuralDirectiveTransform(
+export const transformVFor: NodeTransform = createStructuralDirectiveTransform(
   'for',
   processFor,
 )
@@ -52,7 +53,7 @@ export function processFor(
   const exitBlock = context.enterBlock(render, true)
   context.reference()
 
-  return () => {
+  return (): void => {
     exitBlock()
     context.registerOperation({
       type: IRNodeTypes.FOR,

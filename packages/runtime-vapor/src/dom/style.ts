@@ -9,7 +9,7 @@ import {
 import { warn } from '../warning'
 import { recordPropMetadata } from '../componentMetadata'
 
-export function setStyle(el: HTMLElement, value: any) {
+export function setStyle(el: HTMLElement, value: any): void {
   const prev = recordPropMetadata(el, 'style', (value = normalizeStyle(value)))
   patchStyle(el, prev, value)
 }

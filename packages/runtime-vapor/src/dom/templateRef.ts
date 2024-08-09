@@ -32,7 +32,7 @@ export function setRef(
   ref: NodeRef,
   oldRef?: NodeRef,
   refFor = false,
-) {
+): NodeRef | undefined {
   if (!currentInstance) return
   const { setupState, isUnmounted } = currentInstance
 

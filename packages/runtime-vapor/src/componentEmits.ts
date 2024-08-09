@@ -43,7 +43,7 @@ export function emit(
   instance: ComponentInternalInstance,
   event: string,
   ...rawArgs: any[]
-) {
+): void {
   if (instance.isUnmounted) return
 
   if (__DEV__) {

@@ -65,7 +65,7 @@ export function watchEffect(
 export function watchPostEffect(
   effect: WatchEffect,
   options?: DebuggerOptions,
-) {
+): WatchStopHandle {
   return doWatch(
     effect,
     null,
@@ -76,7 +76,7 @@ export function watchPostEffect(
 export function watchSyncEffect(
   effect: WatchEffect,
   options?: DebuggerOptions,
-) {
+): WatchStopHandle {
   return doWatch(
     effect,
     null,

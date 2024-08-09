@@ -5,6 +5,7 @@ import {
   createSimpleExpression,
 } from '@vue/compiler-dom'
 import {
+  type NodeTransform,
   type TransformContext,
   createStructuralDirectiveTransform,
 } from '../transform'
@@ -18,7 +19,7 @@ import { extend } from '@vue/shared'
 import { newBlock, wrapTemplate } from './utils'
 import { getSiblingIf } from './transformComment'
 
-export const transformVIf = createStructuralDirectiveTransform(
+export const transformVIf: NodeTransform = createStructuralDirectiveTransform(
   ['if', 'else', 'else-if'],
   processIf,
 )
@@ -27,7 +28,7 @@ export function processIf(
   node: ElementNode,
   dir: VaporDirectiveNode,
   context: TransformContext<ElementNode>,
-) {
+): (() => void) | undefined {
   if (dir.name !== 'else' && (!dir.exp || !dir.exp.content.trim())) {
     const loc = dir.exp ? dir.exp.loc : node.loc
     context.options.onError(

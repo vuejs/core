@@ -48,7 +48,7 @@ function emit(event: string, ...args: any[]) {
   }
 }
 
-export function setDevtoolsHook(hook: DevtoolsHook, target: any) {
+export function setDevtoolsHook(hook: DevtoolsHook, target: any): void {
   devtools = hook
   if (devtools) {
     devtools.enabled = true
@@ -86,19 +86,18 @@ export function setDevtoolsHook(hook: DevtoolsHook, target: any) {
   }
 }
 
-export function devtoolsInitApp(app: App, version: string) {
+export function devtoolsInitApp(app: App, version: string): void {
   emit(DevtoolsHooks.APP_INIT, app, version, {})
 }
 
-export function devtoolsUnmountApp(app: App) {
+export function devtoolsUnmountApp(app: App): void {
   emit(DevtoolsHooks.APP_UNMOUNT, app)
 }
 
-export const devtoolsComponentAdded = /*#__PURE__*/ createDevtoolsComponentHook(
-  DevtoolsHooks.COMPONENT_ADDED,
-)
+export const devtoolsComponentAdded: DevtoolsComponentHook =
+  /*#__PURE__*/ createDevtoolsComponentHook(DevtoolsHooks.COMPONENT_ADDED)
 
-export const devtoolsComponentUpdated =
+export const devtoolsComponentUpdated: DevtoolsComponentHook =
   /*#__PURE__*/ createDevtoolsComponentHook(DevtoolsHooks.COMPONENT_UPDATED)
 
 const _devtoolsComponentRemoved = /*#__PURE__*/ createDevtoolsComponentHook(
@@ -107,7 +106,7 @@ const _devtoolsComponentRemoved = /*#__PURE__*/ createDevtoolsComponentHook(
 
 export const devtoolsComponentRemoved = (
   component: ComponentInternalInstance,
-) => {
+): void => {
   if (
     devtools &&
     typeof devtools.cleanupBuffer === 'function' &&
@@ -118,8 +117,12 @@ export const devtoolsComponentRemoved = (
   }
 }
 
+type DevtoolsComponentHook = (component: ComponentInternalInstance) => void
+
 /*! #__NO_SIDE_EFFECTS__ */
-function createDevtoolsComponentHook(hook: DevtoolsHooks) {
+function createDevtoolsComponentHook(
+  hook: DevtoolsHooks,
+): DevtoolsComponentHook {
   return (component: ComponentInternalInstance) => {
     emit(
       hook,
@@ -131,15 +134,20 @@ function createDevtoolsComponentHook(hook: DevtoolsHooks) {
   }
 }
 
-export const devtoolsPerfStart = /*#__PURE__*/ createDevtoolsPerformanceHook(
-  DevtoolsHooks.PERFORMANCE_START,
-)
+export const devtoolsPerfStart: DevtoolsPerformanceHook =
+  /*#__PURE__*/ createDevtoolsPerformanceHook(DevtoolsHooks.PERFORMANCE_START)
 
-export const devtoolsPerfEnd = /*#__PURE__*/ createDevtoolsPerformanceHook(
-  DevtoolsHooks.PERFORMANCE_END,
-)
+export const devtoolsPerfEnd: DevtoolsPerformanceHook =
+  /*#__PURE__*/ createDevtoolsPerformanceHook(DevtoolsHooks.PERFORMANCE_END)
 
-function createDevtoolsPerformanceHook(hook: DevtoolsHooks) {
+type DevtoolsPerformanceHook = (
+  component: ComponentInternalInstance,
+  type: string,
+  time: number,
+) => void
+function createDevtoolsPerformanceHook(
+  hook: DevtoolsHooks,
+): DevtoolsPerformanceHook {
   return (component: ComponentInternalInstance, type: string, time: number) => {
     emit(hook, component.appContext.app, component.uid, component, type, time)
   }
@@ -149,7 +157,7 @@ export function devtoolsComponentEmit(
   component: ComponentInternalInstance,
   event: string,
   params: any[],
-) {
+): void {
   emit(
     DevtoolsHooks.COMPONENT_EMIT,
     component.appContext.app,

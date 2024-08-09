@@ -20,7 +20,10 @@ import {
   type WithDirectiveIRNode,
 } from '../ir'
 
-export function genDirectivesForElement(id: number, context: CodegenContext) {
+export function genDirectivesForElement(
+  id: number,
+  context: CodegenContext,
+): CodeFragment[] {
   const dirs = filterDirectives(id, context.block.operation)
   return dirs.length ? genWithDirective(dirs, context) : []
 }
@@ -78,7 +81,7 @@ export function genWithDirective(
   }
 }
 
-export function genDirectiveModifiers(modifiers: string[]) {
+export function genDirectiveModifiers(modifiers: string[]): string {
   return modifiers
     .map(
       value =>

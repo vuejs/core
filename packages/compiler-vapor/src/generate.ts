@@ -22,8 +22,8 @@ export type CodegenOptions = Omit<BaseCodegenOptions, 'optimizeImports'>
 export class CodegenContext {
   options: Required<CodegenOptions>
 
-  helpers = new Set<string>([])
-  vaporHelpers = new Set<string>([])
+  helpers: Set<string> = new Set<string>([])
+  vaporHelpers: Set<string> = new Set<string>([])
   helper = (name: string) => {
     this.helpers.add(name)
     return `_${name}`
@@ -33,7 +33,7 @@ export class CodegenContext {
     return `_${name}`
   }
 
-  delegates = new Set<string>()
+  delegates: Set<string> = new Set<string>()
 
   identifiers: Record<string, string[]> = Object.create(null)
 
@@ -56,11 +56,11 @@ export class CodegenContext {
   enterBlock(block: BlockIRNode) {
     const parent = this.block
     this.block = block
-    return () => (this.block = parent)
+    return (): BlockIRNode => (this.block = parent)
   }
 
   scopeLevel: number = 0
-  enterScope() {
+  enterScope(): [level: number, exit: () => number] {
     return [this.scopeLevel++, () => this.scopeLevel--] as const
   }
 

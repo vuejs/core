@@ -1,5 +1,6 @@
 import {
   type CommentNode,
+  type ElementNode,
   NodeTypes,
   type TemplateChildNode,
 } from '@vue/compiler-dom'
@@ -20,7 +21,7 @@ export const transformComment: NodeTransform = (node, context) => {
 export function getSiblingIf(
   context: TransformContext<TemplateChildNode>,
   reverse?: boolean,
-) {
+): ElementNode | undefined {
   const parent = context.parent
   if (!parent) return
 
