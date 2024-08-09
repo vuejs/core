@@ -425,7 +425,6 @@ function hydrateTeleport(
     }
     updateCssVars(vnode)
   } else if (isTeleportDisabled(vnode.props)) {
-    const targetNode = nextSibling(node)
     if (vnode.shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
       vnode.anchor = hydrateChildren(
         nextSibling(node),
@@ -436,7 +435,8 @@ function hydrateTeleport(
         slotScopeIds,
         optimized,
       )
-      vnode.targetAnchor = targetNode
+      vnode.targetStart = node
+      vnode.targetAnchor = nextSibling(node)
     }
   }
   return vnode.anchor && nextSibling(vnode.anchor as Node)
