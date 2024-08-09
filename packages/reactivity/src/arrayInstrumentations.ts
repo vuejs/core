@@ -238,10 +238,10 @@ function apply(
   wrappedRetFn?: (result: any) => unknown,
 ) {
   const arr = shallowReadArray(self)
-  // @ts-expect-error
-  if (arr[method] !== arrayProto[method]) {
-    // @ts-expect-error
-    return arr[method](...arrayProto.slice.call(arguments, 2))
+  let methodFn
+  // @ts-expect-error our code is limited to es2016 but user code is not
+  if ((methodFn = arr[method]) !== arrayProto[method]) {
+    return methodFn.apply(arr, arrayProto.slice.call(arguments, 2))
   }
 
   let needsWrap = false
@@ -258,8 +258,7 @@ function apply(
       }
     }
   }
-  // @ts-expect-error our code is limited to es2016 but user code is not
-  const result = arr[method](wrappedFn, thisArg)
+  const result = methodFn.call(arr, wrappedFn, thisArg)
   return needsWrap && wrappedRetFn ? wrappedRetFn(result) : result
 }
 
