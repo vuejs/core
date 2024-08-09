@@ -7,6 +7,7 @@ import {
   onBeforeUpdate,
   onMounted,
   onUnmounted,
+  queuePostFlushCb,
   warn,
   watchPostEffect,
 } from '@vue/runtime-core'
@@ -49,7 +50,7 @@ export function useCssVars(getter: (ctx: any) => Record<string, string>) {
   })
 
   onBeforeUpdate(() => {
-    watchPostEffect(setVars)
+    queuePostFlushCb(setVars)
   })
 
   onMounted(() => {
