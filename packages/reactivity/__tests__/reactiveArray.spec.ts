@@ -2,6 +2,7 @@ import { type ComputedRef, computed } from '../src/computed'
 import { isReactive, reactive, shallowReactive, toRaw } from '../src/reactive'
 import { isRef, ref } from '../src/ref'
 import { effect } from '../src/effect'
+import { expect } from 'vitest'
 
 describe('reactivity/reactive/Array', () => {
   test('should make Array reactive', () => {
@@ -621,6 +622,23 @@ describe('reactivity/reactive/Array', () => {
       const deep = reactive([{ val: 1 }, { val: 2 }])
       const firstItem = Array.from(deep.values())[0]
       expect(isReactive(firstItem)).toBe(true)
+    })
+
+    test('extend methods', () => {
+      class Collection extends Array {
+        find(id: any) {
+          return super.find(obj => obj.id === id)
+        }
+      }
+
+      const state = reactive({
+        things: new Collection(),
+      })
+
+      const val = { id: 'foo', value: 'bar' }
+      state.things.push(val)
+
+      expect(state.things.find('foo')).toBe(val)
     })
   })
 })
