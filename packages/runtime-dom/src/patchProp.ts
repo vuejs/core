@@ -21,10 +21,7 @@ export const patchProp: DOMRendererOptions['patchProp'] = (
   prevValue,
   nextValue,
   namespace,
-  prevChildren,
   parentComponent,
-  parentSuspense,
-  unmountChildren,
 ) => {
   const isSVG = namespace === 'svg'
   if (key === 'class') {
@@ -43,18 +40,14 @@ export const patchProp: DOMRendererOptions['patchProp'] = (
         ? ((key = key.slice(1)), false)
         : shouldSetAsProp(el, key, nextValue, isSVG)
   ) {
-    patchDOMProp(
-      el,
-      key,
-      nextValue,
-      prevChildren,
-      parentComponent,
-      parentSuspense,
-      unmountChildren,
-    )
+    patchDOMProp(el, key, nextValue, parentComponent)
     // #6007 also set form state as attributes so they work with
     // <input type="reset"> or libs / extensions that expect attributes
-    if (key === 'value' || key === 'checked' || key === 'selected') {
+    // #11163 custom elements may use value as an prop and set it as object
+    if (
+      !el.tagName.includes('-') &&
+      (key === 'value' || key === 'checked' || key === 'selected')
+    ) {
       patchAttr(el, key, nextValue, isSVG, parentComponent, key !== 'value')
     }
   } else {

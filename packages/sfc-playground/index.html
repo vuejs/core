@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -7,13 +7,16 @@
     <link rel="icon" type="image/svg" href="/logo.svg" />
     <title>Vue SFC Playground</title>
     <script>
-       const savedPreferDark = localStorage.getItem('vue-sfc-playground-prefer-dark')
-       if (
-         savedPreferDark === 'true' ||
-         (!savedPreferDark && window.matchMedia('(prefers-color-scheme: dark)').matches)
-       ) {
+      const savedPreferDark = localStorage.getItem(
+        'vue-sfc-playground-prefer-dark',
+      )
+      if (
+        savedPreferDark === 'true' ||
+        (!savedPreferDark &&
+          window.matchMedia('(prefers-color-scheme: dark)').matches)
+      ) {
         document.documentElement.classList.add('dark')
-       }
+      }
     </script>
     <script type="module" src="/src/main.ts"></script>
   </head>
