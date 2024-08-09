@@ -2,7 +2,6 @@ import { type ComputedRef, computed } from '../src/computed'
 import { isReactive, reactive, shallowReactive, toRaw } from '../src/reactive'
 import { isRef, ref } from '../src/ref'
 import { effect } from '../src/effect'
-import { expect } from 'vitest'
 
 describe('reactivity/reactive/Array', () => {
   test('should make Array reactive', () => {
