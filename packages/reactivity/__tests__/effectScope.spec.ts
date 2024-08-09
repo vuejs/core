@@ -322,4 +322,15 @@ describe('reactivity/effect/scope', () => {
     scope.resume()
     expect(fnSpy).toHaveBeenCalledTimes(3)
   })
+
+  it('should register a cleanup function to be called when the effect scope is stopped', () => {
+    const spy = vi.fn()
+
+    const scope = effectScope()
+    scope.onDispose(spy)
+
+    expect(spy).toHaveBeenCalledTimes(0)
+    scope.stop()
+    expect(spy).toHaveBeenCalledTimes(1)
+  })
 })
