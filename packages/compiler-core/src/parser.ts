@@ -634,7 +634,7 @@ function onCloseTag(el: ElementNode, end: number, isImplied = false) {
   if (!inVPre) {
     if (tag === 'slot') {
       el.tagType = ElementTypes.SLOT
-    } else if (isFragmentTemplate(el, stack[0])) {
+    } else if (isFragmentTemplate(el)) {
       el.tagType = ElementTypes.TEMPLATE
     } else if (isComponent(el)) {
       el.tagType = ElementTypes.COMPONENT
@@ -698,7 +698,7 @@ function onCloseTag(el: ElementNode, end: number, isImplied = false) {
         currentOptions,
       ) &&
       el.tag === 'template' &&
-      !isFragmentTemplate(el, stack[0])
+      !isFragmentTemplate(el)
     ) {
       __DEV__ &&
         warnDeprecation(
@@ -751,7 +751,6 @@ function backTrack(index: number, c: number) {
 const specialTemplateDir = new Set(['if', 'else', 'else-if', 'for', 'slot'])
 function isFragmentTemplate(
   { tag, props, loc }: ElementNode,
-  parent: ElementNode,
 ): boolean {
   if (tag === 'template') {
     for (let i = 0; i < props.length; i++) {
@@ -759,7 +758,7 @@ function isFragmentTemplate(
         props[i].type === NodeTypes.DIRECTIVE &&
         specialTemplateDir.has((props[i] as DirectiveNode).name)
       ) {
-        if (props[i].name === 'slot' && parent && !isComponent(parent)) {
+        if (props[i].name === 'slot' && stack[0] && !isComponent(stack[0])) {
           emitError(ErrorCodes.X_TEMPLATE_NOT_ROOT, loc.start.offset)
         }
         return true
