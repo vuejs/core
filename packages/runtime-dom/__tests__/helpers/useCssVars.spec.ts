@@ -6,6 +6,7 @@ import {
   createStaticVNode,
   h,
   nextTick,
+  onMounted,
   reactive,
   ref,
   render,
@@ -379,6 +380,44 @@ describe('useCssVars', () => {
 
     for (const c of [].slice.call(root.children as any)) {
       expect((c as HTMLElement).style.getPropertyValue(`--color`)).toBe('red')
+    }
+  })
+
+  test('with delay mount child', async () => {
+    const state = reactive({ color: 'red' })
+    const value = ref(false)
+    const root = document.createElement('div')
+
+    const Child = {
+      setup() {
+        onMounted(() => {
+          const childEl = root.children[0]
+          expect(getComputedStyle(childEl!).getPropertyValue(`--color`)).toBe(
+            `red`,
+          )
+        })
+        return () => h('div', { id: 'childId' })
+      },
+    }
+    const App = {
+      setup() {
+        useCssVars(() => state)
+        return () => (value.value ? h(Child) : [h('span')])
+      },
+    }
+
+    render(h(App), root)
+    await nextTick()
+    // css vars use with fallback tree
+    for (const c of [].slice.call(root.children as any)) {
+      expect((c as HTMLElement).style.getPropertyValue(`--color`)).toBe(`red`)
+    }
+
+    // mount child
+    value.value = true
+    await nextTick()
+    for (const c of [].slice.call(root.children as any)) {
+      expect((c as HTMLElement).style.getPropertyValue(`--color`)).toBe(`red`)
     }
   })
 })
