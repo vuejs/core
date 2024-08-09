@@ -625,8 +625,74 @@ describe('reactivity/reactive/Array', () => {
 
     test('extend methods', () => {
       class Collection extends Array {
-        find(id: any) {
-          return super.find(obj => obj.id === id)
+        // @ts-expect-error
+        every(foo: any, bar: any, baz: any) {
+          expect(foo).toBe('foo')
+          expect(bar).toBe('bar')
+          expect(baz).toBe('baz')
+          return super.every(obj => obj.id === foo)
+        }
+
+        // @ts-expect-error
+        filter(foo: any, bar: any, baz: any) {
+          expect(foo).toBe('foo')
+          expect(bar).toBe('bar')
+          expect(baz).toBe('baz')
+          return super.filter(obj => obj.id === foo)
+        }
+
+        // @ts-expect-error
+        find(foo: any, bar: any, baz: any) {
+          expect(foo).toBe('foo')
+          expect(bar).toBe('bar')
+          expect(baz).toBe('baz')
+          return super.find(obj => obj.id === foo)
+        }
+
+        // @ts-expect-error
+        findIndex(foo: any, bar: any, baz: any) {
+          expect(foo).toBe('foo')
+          expect(bar).toBe('bar')
+          expect(baz).toBe('baz')
+          return super.findIndex(obj => obj.id === bar)
+        }
+
+        findLast(foo: any, bar: any, baz: any) {
+          expect(foo).toBe('foo')
+          expect(bar).toBe('bar')
+          expect(baz).toBe('baz')
+          // @ts-expect-error our code is limited to es2016 but user code is not
+          return super.findLast(obj => obj.id === bar)
+        }
+
+        findLastIndex(foo: any, bar: any, baz: any) {
+          expect(foo).toBe('foo')
+          expect(bar).toBe('bar')
+          expect(baz).toBe('baz')
+          return super.findIndex(obj => obj.id === bar)
+        }
+
+        // @ts-expect-error
+        forEach(foo: any, bar: any, baz: any) {
+          expect(foo).toBe('foo')
+          expect(bar).toBe('bar')
+          expect(baz).toBe('baz')
+        }
+
+        // @ts-expect-error
+        map(foo: any, bar: any, baz: any) {
+          expect(foo).toBe('foo')
+          expect(bar).toBe('bar')
+          expect(baz).toBe('baz')
+          return super.map(obj => obj.value)
+        }
+
+        // @ts-expect-error
+        some(foo: any, bar: any, baz: any) {
+          expect(foo).toBe('foo')
+          expect(bar).toBe('bar')
+          expect(baz).toBe('baz')
+          return super.some(obj => obj.id === baz)
         }
       }
 
@@ -634,10 +700,22 @@ describe('reactivity/reactive/Array', () => {
         things: new Collection(),
       })
 
-      const val = { id: 'foo', value: 'bar' }
-      state.things.push(val)
+      const foo = { id: 'foo', value: '1' }
+      const bar = { id: 'bar', value: '2' }
+      const baz = { id: 'baz', value: '3' }
+      state.things.push(foo)
+      state.things.push(bar)
+      state.things.push(baz)
 
-      expect(state.things.find('foo')).toBe(val)
+      expect(state.things.every('foo', 'bar', 'baz')).toBe(false)
+      expect(state.things.filter('foo', 'bar', 'baz')).toEqual([foo])
+      expect(state.things.find('foo', 'bar', 'baz')).toBe(foo)
+      expect(state.things.findIndex('foo', 'bar', 'baz')).toBe(1)
+      expect(state.things.findLast('foo', 'bar', 'baz')).toBe(bar)
+      expect(state.things.findLastIndex('foo', 'bar', 'baz')).toBe(1)
+      expect(state.things.forEach('foo', 'bar', 'baz')).toBeUndefined()
+      expect(state.things.map('foo', 'bar', 'baz')).toEqual(['1', '2', '3'])
+      expect(state.things.some('foo', 'bar', 'baz')).toBe(true)
     })
   })
 })
