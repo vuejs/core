@@ -125,7 +125,7 @@ function toggleDark() {
         <Download />
       </button>
       <a
-        href="https://github.com/vuejs/core/tree/main/packages/sfc-playground"
+        href="https://github.com/vuejs/core/tree/main/packages-private/sfc-playground"
         target="_blank"
         title="View on GitHub"
         class="github"
