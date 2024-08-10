@@ -906,12 +906,15 @@ describe('emits', () => {
     emits: {
       click: (n: number) => typeof n === 'number',
       input: (b: string) => b.length > 1,
+      Focus: (f: boolean) => !!f,
     },
     setup(props, { emit }) {
       expectType<((n: number) => boolean) | undefined>(props.onClick)
       expectType<((b: string) => boolean) | undefined>(props.onInput)
+      expectType<((f: boolean) => boolean) | undefined>(props.onFocus)
       emit('click', 1)
       emit('input', 'foo')
+      emit('Focus', true)
       //  @ts-expect-error
       emit('nope')
       //  @ts-expect-error
@@ -922,6 +925,10 @@ describe('emits', () => {
       emit('input')
       //  @ts-expect-error
       emit('input', 1)
+      //  @ts-expect-error
+      emit('focus')
+      //  @ts-expect-error
+      emit('focus', true)
     },
     created() {
       this.$emit('click', 1)
@@ -936,6 +943,10 @@ describe('emits', () => {
       this.$emit('input')
       //  @ts-expect-error
       this.$emit('input', 1)
+      //  @ts-expect-error
+      this.$emit('focus')
+      //  @ts-expect-error
+      this.$emit('focus', true)
     },
     mounted() {
       // #3599
@@ -954,6 +965,10 @@ describe('emits', () => {
         this.$emit('input')
         //  @ts-expect-error
         this.$emit('input', 1)
+        //  @ts-expect-error
+        this.$emit('focus')
+        //  @ts-expect-error
+        this.$emit('focus', true)
       })
     },
   })
