@@ -43,15 +43,13 @@ export type EmitsToProps<T extends EmitsOptions> = T extends string[]
     }
   : T extends ObjectEmitsOptions
     ? {
-        [K in `on${Capitalize<string & keyof T>}`]?: K extends `on${infer C}`
-          ? (
-              ...args: T[Uncapitalize<C>] extends (...args: infer P) => any
-                ? P
-                : T[Uncapitalize<C>] extends null
-                  ? any[]
-                  : never
-            ) => any
-          : never
+        [K in keyof T as `on${Capitalize<string & K>}`]?: (
+          ...args: T[K] extends (...args: infer P) => any
+            ? P
+            : T[K] extends null
+              ? any[]
+              : never
+        ) => any
       }
     : {}
 
