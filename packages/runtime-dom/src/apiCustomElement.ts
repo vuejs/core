@@ -250,8 +250,6 @@ export class VueElement
     super()
     if (this.shadowRoot && _createApp !== createApp) {
       this._root = this.shadowRoot
-      // TODO hydration needs to be reworked
-      this._mount(_def)
     } else {
       if (__DEV__ && this.shadowRoot) {
         warn(
@@ -265,10 +263,11 @@ export class VueElement
       } else {
         this._root = this
       }
-      if (!(this._def as ComponentOptions).__asyncLoader) {
-        // for sync component defs we can immediately resolve props
-        this._resolveProps(this._def)
-      }
+    }
+
+    if (!(this._def as ComponentOptions).__asyncLoader) {
+      // for sync component defs we can immediately resolve props
+      this._resolveProps(this._def)
     }
   }
 
