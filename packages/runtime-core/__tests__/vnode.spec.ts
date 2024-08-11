@@ -132,8 +132,6 @@ describe('vnode', () => {
   })
 
   describe('children normalization', () => {
-    const nop = vi.fn
-
     test('null', () => {
       const vnode = createVNode('p', null, null)
       expect(vnode.children).toBe(null)
@@ -157,10 +155,10 @@ describe('vnode', () => {
     })
 
     test('function', () => {
-      const vnode = createVNode('p', null, nop)
-      expect(vnode.children).toMatchObject({ default: nop })
+      const vnode = createVNode('p', null, () => 'foo')
+      expect(vnode.children).toBe('foo')
       expect(vnode.shapeFlag).toBe(
-        ShapeFlags.ELEMENT | ShapeFlags.SLOTS_CHILDREN,
+        ShapeFlags.ELEMENT | ShapeFlags.TEXT_CHILDREN,
       )
     })
 

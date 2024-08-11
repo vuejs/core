@@ -850,8 +850,8 @@ export function normalizeChildren(vnode: VNode, children: unknown): void {
       }
     }
   } else if (isFunction(children)) {
-    children = { default: children, _ctx: currentRenderingInstance }
-    type = ShapeFlags.SLOTS_CHILDREN
+    normalizeChildren(vnode, { default: children })
+    return
   } else {
     children = String(children)
     // force teleport children to array so it can be moved around
