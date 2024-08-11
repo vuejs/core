@@ -563,6 +563,10 @@ async function publishPackage(pkgName, version, additionalFlags) {
 }
 
 async function publishOnly() {
+  const targetVersion = positionals[0]
+  if (targetVersion) {
+    updateVersions(targetVersion)
+  }
   await buildPackages()
   await publishPackages(currentVersion)
 }
