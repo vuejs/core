@@ -58,6 +58,9 @@ const { values: args, positionals } = parseArgs({
     publishOnly: {
       type: 'boolean',
     },
+    registry: {
+      type: 'string',
+    },
   },
 })
 
@@ -545,6 +548,7 @@ async function publishPackage(pkgName, version, additionalFlags) {
         ...(releaseTag ? ['--tag', releaseTag] : []),
         '--access',
         'public',
+        ...(args.registry ? ['--registry', args.registry] : []),
         ...additionalFlags,
       ],
       {

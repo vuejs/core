@@ -34,6 +34,6 @@ jobs:
       - name: Build and publish
         id: publish
         run: |
-          pnpm release 0.0.0-${{ github.event.workflow_run.head_commit }} --tag ${{ github.event.workflow_run.head_branch }} --publishOnly
+          pnpm release 0.0.0-${{ github.event.workflow_run.head_commit.id }} --tag ${{ github.event.workflow_run.head_branch }} --registry https://npm.pkg.github.com --publishOnly
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
