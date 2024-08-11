@@ -1,0 +1,39 @@
+name: publish-commit
+
+on:
+  workflow_run:
+    workflows: ['ci']
+    branches: [main, minor, test-publish]
+    types:
+      - completed
+
+jobs:
+  pubilsh:
+    if: >
+      github.repository == 'vuejs/core' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.node-version'
+          registry-url: 'https://npm.pkg.github.com'
+          cache: 'pnpm'
+
+      - name: Install deps
+        run: pnpm install
+
+      - name: Build and publish
+        id: publish
+        run: |
+          pnpm release 0.0.0-${{ github.event.workflow_run.head_commit }} --tag ${{ github.event.workflow_run.head_branch }} --publishOnly
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
