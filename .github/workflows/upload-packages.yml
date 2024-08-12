@@ -9,7 +9,7 @@ on:
       - completed
 
 jobs:
-  pubilsh:
+  build-and-upload:
     if: >
       github.repository == 'vuejs/core' &&
       github.event.workflow_run.event == 'push' &&
@@ -39,4 +39,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: packages
-          path: packages/**/dist/*
+          path: packages/*/dist/*
