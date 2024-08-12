@@ -69,7 +69,7 @@ importers:
         specifier: ^6.1.4
         version: 6.1.4
       '@vitest/coverage-istanbul':
-        specifier: ^2.0.0
+        specifier: ^2.0.5
         version: 2.0.5(vitest@2.0.5(@types/node@20.14.15)(jsdom@24.1.1)(sass@1.77.8))
       '@vue/consolidate':
         specifier: 1.0.0
@@ -180,7 +180,7 @@ importers:
         specifier: 'catalog:'
         version: 5.4.0(@types/node@20.14.15)(sass@1.77.8)
       vitest:
-        specifier: ^2.0.0
+        specifier: ^2.0.5
         version: 2.0.5(@types/node@20.14.15)(jsdom@24.1.1)(sass@1.77.8)
 
   packages-private/dts-built-test:
