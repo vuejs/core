@@ -175,8 +175,6 @@ export function watch<T = any, Immediate extends Readonly<boolean> = false>(
   return doWatch(source as any, cb, options)
 }
 
-const syncJobs: SchedulerJob[] = []
-
 function doWatch(
   source: WatchSource | WatchSource[] | WatchEffect | object,
   cb: WatchCallback | null,
@@ -397,14 +395,8 @@ function doWatch(
   let scheduler: EffectScheduler
   if (flush === 'sync') {
     effect.flags |= EffectFlags.NO_BATCH
-    syncJobs.push(job)
-    scheduler = () => {
-      const job = syncJobs.shift()
-      if (job) {
-        syncJobs.push(job)
-        job()
-      }
-    } // the scheduler function gets called directly in reverse-order
+
+    scheduler = job as any
   } else if (flush === 'post') {
     scheduler = () => queuePostRenderEffect(job, instance && instance.suspense)
   } else {

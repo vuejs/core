@@ -169,7 +169,7 @@ export class ReactiveEffect<T = any>
     ) {
       return
     }
-    if (this.flags & EffectFlags.NO_BATCH) {
+    if (this.flags & EffectFlags.NO_BATCH && !batchDepth) {
       return this.trigger()
     }
     if (!(this.flags & EffectFlags.NOTIFIED)) {
@@ -267,6 +267,7 @@ export function endBatch(): void {
     return
   }
 
+  batchDepth--
   let error: unknown
   while (batchedEffect) {
     let e: ReactiveEffect | undefined = batchedEffect
@@ -286,7 +287,6 @@ export function endBatch(): void {
     }
   }
 
-  batchDepth--
   if (error) throw error
 }
 
