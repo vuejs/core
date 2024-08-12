@@ -302,7 +302,7 @@ importers:
         specifier: 'catalog:'
         version: 0.30.11
       postcss:
-        specifier: ^8.4.40
+        specifier: ^8.4.41
         version: 8.4.41
       source-map-js:
         specifier: 'catalog:'
