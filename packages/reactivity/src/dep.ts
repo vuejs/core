@@ -145,7 +145,7 @@ export class Dep {
           }
         }
       }
-      for (let link = this.subs; link; link = link.prevSub) {
+      for (let link = this.subsHead; link; link = link.nextSub) {
         link.sub.notify()
       }
     } finally {
