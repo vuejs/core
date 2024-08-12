@@ -221,7 +221,7 @@ export function renderVNode(
   if (dirs) {
     vnode.props = applySSRDirectives(vnode, props, dirs)
   }
-  
+
   switch (type) {
     case Text:
       push(escapeHtml(children as string))
