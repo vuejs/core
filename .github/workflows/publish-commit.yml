@@ -1,9 +1,10 @@
-name: publish-commit
+# upload built packages as artifacts for faster ecosystem-ci
+name: upload-built-packages
 
 on:
   workflow_run:
     workflows: ['ci']
-    branches: [main, minor, test-publish]
+    branches: [main, minor]
     types:
       - completed
 
@@ -25,15 +26,17 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version-file: '.node-version'
-          registry-url: 'https://npm.pkg.github.com'
+          registry-url: 'https://registry.npmjs.org'
           cache: 'pnpm'
 
       - name: Install deps
         run: pnpm install
 
-      - name: Build and publish
-        id: publish
-        run: |
-          pnpm release 0.0.0-${{ github.event.workflow_run.head_commit.id }} --tag ${{ github.event.workflow_run.head_branch }} --registry https://npm.pkg.github.com --publishOnly
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build
+        run: pnpm build --withTypes
+
+      - name: Upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: packages
+          path: packages/**/dist/*
