@@ -1,7 +1,7 @@
 {
   "private": true,
   "version": "3.5.0-beta.1",
-  "packageManager": "pnpm@9.6.0",
+  "packageManager": "pnpm@9.7.0",
   "type": "module",
   "scripts": {
     "dev": "node scripts/dev.js",
@@ -68,7 +68,7 @@
     "@rollup/plugin-replace": "5.0.4",
     "@swc/core": "^1.7.6",
     "@types/hash-sum": "^1.0.2",
-    "@types/node": "^20.14.14",
+    "@types/node": "^20.14.15",
     "@types/semver": "^7.5.8",
     "@types/serve-handler": "^6.1.4",
     "@vitest/coverage-istanbul": "^2.0.0",
@@ -104,7 +104,7 @@
     "simple-git-hooks": "^2.11.1",
     "todomvc-app-css": "^2.4.3",
     "tslib": "^2.6.3",
-    "tsx": "^4.16.5",
+    "tsx": "^4.17.0",
     "typescript": "~5.5.4",
     "typescript-eslint": "^8.0.0",
     "vite": "catalog:",
