@@ -208,6 +208,31 @@ test('ATTR_FALSE_VALUE', () => {
   ).toHaveBeenWarned()
 })
 
+test("ATTR_FALSE_VALUE with false value shouldn't throw warning", () => {
+  const vm = new Vue({
+    template: `<div :id="false" :foo="false"/>`,
+    compatConfig: {
+      ATTR_FALSE_VALUE: false,
+    },
+  }).$mount()
+
+  expect(vm.$el).toBeInstanceOf(HTMLDivElement)
+  expect(vm.$el.hasAttribute('id')).toBe(true)
+  expect(vm.$el.getAttribute('id')).toBe('false')
+  expect(vm.$el.hasAttribute('foo')).toBe(true)
+  expect(vm.$el.getAttribute('foo')).toBe('false')
+  expect(
+    (deprecationData[DeprecationTypes.ATTR_FALSE_VALUE].message as Function)(
+      'id',
+    ),
+  ).not.toHaveBeenWarned()
+  expect(
+    (deprecationData[DeprecationTypes.ATTR_FALSE_VALUE].message as Function)(
+      'foo',
+    ),
+  ).not.toHaveBeenWarned()
+})
+
 test('ATTR_ENUMERATED_COERCION', () => {
   const vm = new Vue({
     template: `<div :draggable="null" :spellcheck="0" contenteditable="foo" />`,

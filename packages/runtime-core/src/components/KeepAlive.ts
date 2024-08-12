@@ -8,6 +8,7 @@ import {
   getCurrentInstance,
 } from '../component'
 import {
+  Comment,
   type VNode,
   type VNodeProps,
   cloneVNode,
@@ -38,6 +39,7 @@ import {
   type RendererElement,
   type RendererInternals,
   type RendererNode,
+  invalidateMount,
   queuePostRenderEffect,
 } from '../renderer'
 import { setTransitionHooks } from './BaseTransition'
@@ -55,7 +57,7 @@ export interface KeepAliveProps {
   max?: number | string
 }
 
-type CacheKey = string | number | symbol | ConcreteComponent
+type CacheKey = PropertyKey | ConcreteComponent
 type Cache = Map<CacheKey, VNode>
 type Keys = Set<CacheKey>
 
@@ -166,6 +168,9 @@ const KeepAliveImpl: ComponentOptions = {
 
     sharedContext.deactivate = (vnode: VNode) => {
       const instance = vnode.component!
+      invalidateMount(instance.m)
+      invalidateMount(instance.a)
+
       move(vnode, storageContainer, null, MoveType.LEAVE, parentSuspense)
       queuePostRenderEffect(() => {
         if (instance.da) {
@@ -201,7 +206,7 @@ const KeepAliveImpl: ComponentOptions = {
 
     function pruneCacheEntry(key: CacheKey) {
       const cached = cache.get(key) as VNode
-      if (!current || !isSameVNodeType(cached, current)) {
+      if (cached && (!current || !isSameVNodeType(cached, current))) {
         unmount(cached)
       } else if (current) {
         // current active instance should no longer be kept-alive.
@@ -283,6 +288,12 @@ const KeepAliveImpl: ComponentOptions = {
       }
 
       let vnode = getInnerChild(rawVNode)
+      // #6028 Suspense ssContent maybe a comment VNode, should avoid caching it
+      if (vnode.type === Comment) {
+        current = null
+        return vnode
+      }
+
       const comp = vnode.type as ConcreteComponent
 
       // for async components, name check should be based in its loaded
@@ -380,14 +391,14 @@ function matches(pattern: MatchPattern, name: string): boolean {
 export function onActivated(
   hook: Function,
   target?: ComponentInternalInstance | null,
-) {
+): void {
   registerKeepAliveHook(hook, LifecycleHooks.ACTIVATED, target)
 }
 
 export function onDeactivated(
   hook: Function,
   target?: ComponentInternalInstance | null,
-) {
+): void {
   registerKeepAliveHook(hook, LifecycleHooks.DEACTIVATED, target)
 }
 

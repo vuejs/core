@@ -1,6 +1,6 @@
 // Core API ------------------------------------------------------------------
 
-export const version = __VERSION__
+export const version: string = __VERSION__
 export {
   // core
   reactive,
@@ -62,6 +62,14 @@ export { defineComponent } from './apiDefineComponent'
 export { defineAsyncComponent } from './apiAsyncComponent'
 export { useAttrs, useSlots } from './apiSetupHelpers'
 export { useModel } from './helpers/useModel'
+export { useTemplateRef } from './helpers/useTemplateRef'
+export { useId } from './helpers/useId'
+export {
+  hydrateOnIdle,
+  hydrateOnVisible,
+  hydrateOnMediaQuery,
+  hydrateOnInteraction,
+} from './hydrationStrategies'
 
 // <script setup> API ----------------------------------------------------------
 
@@ -76,6 +84,7 @@ export {
   withDefaults,
   type DefineProps,
   type ModelRef,
+  type ComponentTypeEmits,
 } from './apiSetupHelpers'
 
 /**
@@ -212,13 +221,16 @@ export type {
   DebuggerEvent,
   DebuggerEventExtraInfo,
   Raw,
+  Reactive,
 } from '@vue/reactivity'
 export type {
+  MultiWatchSources,
   WatchEffect,
   WatchOptions,
   WatchOptionsBase,
   WatchCallback,
   WatchSource,
+  WatchHandle,
   WatchStopHandle,
 } from './apiWatch'
 export type { InjectionKey } from './apiInject'
@@ -248,7 +260,10 @@ export type {
   SetupContext,
   ComponentCustomProps,
   AllowedComponentProps,
+  GlobalComponents,
+  GlobalDirectives,
   ComponentInstance,
+  ComponentCustomElementInterface,
 } from './component'
 export type {
   DefineComponent,
@@ -258,9 +273,6 @@ export type {
 export type {
   ComponentOptions,
   ComponentOptionsMixin,
-  ComponentOptionsWithoutProps,
-  ComponentOptionsWithObjectProps,
-  ComponentOptionsWithArrayProps,
   ComponentCustomOptions,
   ComponentOptionsBase,
   ComponentProvideOptions,
@@ -269,12 +281,23 @@ export type {
   ComputedOptions,
   RuntimeCompilerOptions,
   ComponentInjectOptions,
+  // deprecated
+  ComponentOptionsWithoutProps,
+  ComponentOptionsWithArrayProps,
+  ComponentOptionsWithObjectProps,
 } from './componentOptions'
-export type { EmitsOptions, ObjectEmitsOptions } from './componentEmits'
+export type {
+  EmitsOptions,
+  ObjectEmitsOptions,
+  EmitsToProps,
+  ShortEmitsToObject,
+  EmitFn,
+} from './componentEmits'
 export type {
   ComponentPublicInstance,
   ComponentCustomProperties,
   CreateComponentPublicInstance,
+  CreateComponentPublicInstanceWithMixins,
 } from './componentPublicInstance'
 export type {
   Renderer,
@@ -313,6 +336,10 @@ export type {
   AsyncComponentOptions,
   AsyncComponentLoader,
 } from './apiAsyncComponent'
+export type {
+  HydrationStrategy,
+  HydrationStrategyFactory,
+} from './hydrationStrategies'
 export type { HMRRuntime } from './hmr'
 
 // Internal API ----------------------------------------------------------------
@@ -362,18 +389,34 @@ export { transformVNodeArgs } from './vnode'
 // **IMPORTANT** These APIs are exposed solely for @vue/server-renderer and may
 // change without notice between versions. User code should never rely on them.
 
-import { createComponentInstance, setupComponent } from './component'
+import {
+  createComponentInstance,
+  getComponentPublicInstance,
+  setupComponent,
+} from './component'
 import { renderComponentRoot } from './componentRenderUtils'
 import { setCurrentRenderingInstance } from './componentRenderContext'
 import { isVNode, normalizeVNode } from './vnode'
+import { ensureValidVNode } from './helpers/renderSlot'
 
-const _ssrUtils = {
+const _ssrUtils: {
+  createComponentInstance: typeof createComponentInstance
+  setupComponent: typeof setupComponent
+  renderComponentRoot: typeof renderComponentRoot
+  setCurrentRenderingInstance: typeof setCurrentRenderingInstance
+  isVNode: typeof isVNode
+  normalizeVNode: typeof normalizeVNode
+  getComponentPublicInstance: typeof getComponentPublicInstance
+  ensureValidVNode: typeof ensureValidVNode
+} = {
   createComponentInstance,
   setupComponent,
   renderComponentRoot,
   setCurrentRenderingInstance,
   isVNode,
   normalizeVNode,
+  getComponentPublicInstance,
+  ensureValidVNode,
 }
 
 /**
@@ -401,9 +444,17 @@ import { NOOP } from '@vue/shared'
 /**
  * @internal only exposed in compat builds
  */
-export const resolveFilter = __COMPAT__ ? _resolveFilter : null
+export const resolveFilter: typeof _resolveFilter | null = __COMPAT__
+  ? _resolveFilter
+  : null
 
-const _compatUtils = {
+const _compatUtils: {
+  warnDeprecation: typeof warnDeprecation
+  createCompatVue: typeof createCompatVue
+  isCompatEnabled: typeof isCompatEnabled
+  checkCompatEnabled: typeof checkCompatEnabled
+  softAssertCompatEnabled: typeof softAssertCompatEnabled
+} = {
   warnDeprecation,
   createCompatVue,
   isCompatEnabled,

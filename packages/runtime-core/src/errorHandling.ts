@@ -2,7 +2,7 @@ import { pauseTracking, resetTracking } from '@vue/reactivity'
 import type { VNode } from './vnode'
 import type { ComponentInternalInstance } from './component'
 import { popWarningContext, pushWarningContext, warn } from './warning'
-import { isArray, isFunction, isPromise } from '@vue/shared'
+import { EMPTY_OBJ, isArray, isFunction, isPromise } from '@vue/shared'
 import { LifecycleHooks } from './enums'
 
 // contexts where user provided function may be executed, in addition to
@@ -23,6 +23,8 @@ export enum ErrorCodes {
   FUNCTION_REF,
   ASYNC_COMPONENT_LOADER,
   SCHEDULER,
+  COMPONENT_UPDATE,
+  APP_UNMOUNT_CLEANUP,
 }
 
 export const ErrorTypeStrings: Record<LifecycleHooks | ErrorCodes, string> = {
@@ -54,19 +56,19 @@ export const ErrorTypeStrings: Record<LifecycleHooks | ErrorCodes, string> = {
   [ErrorCodes.APP_WARN_HANDLER]: 'app warnHandler',
   [ErrorCodes.FUNCTION_REF]: 'ref function',
   [ErrorCodes.ASYNC_COMPONENT_LOADER]: 'async component loader',
-  [ErrorCodes.SCHEDULER]:
-    'scheduler flush. This is likely a Vue internals bug. ' +
-    'Please open an issue at https://github.com/vuejs/core .',
+  [ErrorCodes.SCHEDULER]: 'scheduler flush',
+  [ErrorCodes.COMPONENT_UPDATE]: 'component update',
+  [ErrorCodes.APP_UNMOUNT_CLEANUP]: 'app unmount cleanup function',
 }
 
 export type ErrorTypes = LifecycleHooks | ErrorCodes
 
 export function callWithErrorHandling(
   fn: Function,
-  instance: ComponentInternalInstance | null,
+  instance: ComponentInternalInstance | null | undefined,
   type: ErrorTypes,
   args?: unknown[],
-) {
+): any {
   try {
     return args ? fn(...args) : fn()
   } catch (err) {
@@ -105,11 +107,13 @@ export function callWithAsyncErrorHandling(
 
 export function handleError(
   err: unknown,
-  instance: ComponentInternalInstance | null,
+  instance: ComponentInternalInstance | null | undefined,
   type: ErrorTypes,
   throwInDev = true,
-) {
+): void {
   const contextVNode = instance ? instance.vnode : null
+  const { errorHandler, throwUnhandledErrorInProduction } =
+    (instance && instance.appContext.config) || EMPTY_OBJ
   if (instance) {
     let cur = instance.parent
     // the exposed instance is the render proxy to keep it consistent with 2.x
@@ -132,20 +136,18 @@ export function handleError(
       cur = cur.parent
     }
     // app-level handling
-    const appErrorHandler = instance.appContext.config.errorHandler
-    if (appErrorHandler) {
+    if (errorHandler) {
       pauseTracking()
-      callWithErrorHandling(
-        appErrorHandler,
-        null,
-        ErrorCodes.APP_ERROR_HANDLER,
-        [err, exposedInstance, errorInfo],
-      )
+      callWithErrorHandling(errorHandler, null, ErrorCodes.APP_ERROR_HANDLER, [
+        err,
+        exposedInstance,
+        errorInfo,
+      ])
       resetTracking()
       return
     }
   }
-  logError(err, type, contextVNode, throwInDev)
+  logError(err, type, contextVNode, throwInDev, throwUnhandledErrorInProduction)
 }
 
 function logError(
@@ -153,6 +155,7 @@ function logError(
   type: ErrorTypes,
   contextVNode: VNode | null,
   throwInDev = true,
+  throwInProd = false,
 ) {
   if (__DEV__) {
     const info = ErrorTypeStrings[type]
@@ -169,6 +172,8 @@ function logError(
     } else if (!__TEST__) {
       console.error(err)
     }
+  } else if (throwInProd) {
+    throw err
   } else {
     // recover in prod to reduce the impact on end-user
     console.error(err)

@@ -1,16 +1,18 @@
 import {
   type ComputedRef,
   type DebuggerOptions,
+  EffectFlags,
   type EffectScheduler,
   ReactiveEffect,
   ReactiveFlags,
+  type ReactiveMarker,
   type Ref,
   getCurrentScope,
   isReactive,
   isRef,
   isShallow,
 } from '@vue/reactivity'
-import { type SchedulerJob, queueJob } from './scheduler'
+import { type SchedulerJob, SchedulerJobFlags, queueJob } from './scheduler'
 import {
   EMPTY_OBJ,
   NOOP,
@@ -45,7 +47,7 @@ import { useSSRContext } from './helpers/useSsrContext'
 
 export type WatchEffect = (onCleanup: OnCleanup) => void
 
-export type WatchSource<T = any> = Ref<T> | ComputedRef<T> | (() => T)
+export type WatchSource<T = any> = Ref<T, any> | ComputedRef<T> | (() => T)
 
 export type WatchCallback<V = any, OV = any> = (
   value: V,
@@ -53,15 +55,13 @@ export type WatchCallback<V = any, OV = any> = (
   onCleanup: OnCleanup,
 ) => any
 
+type MaybeUndefined<T, I> = I extends true ? T | undefined : T
+
 type MapSources<T, Immediate> = {
   [K in keyof T]: T[K] extends WatchSource<infer V>
-    ? Immediate extends true
-      ? V | undefined
-      : V
+    ? MaybeUndefined<V, Immediate>
     : T[K] extends object
-      ? Immediate extends true
-        ? T[K] | undefined
-        : T[K]
+      ? MaybeUndefined<T[K], Immediate>
       : never
 }
 
@@ -73,24 +73,30 @@ export interface WatchOptionsBase extends DebuggerOptions {
 
 export interface WatchOptions<Immediate = boolean> extends WatchOptionsBase {
   immediate?: Immediate
-  deep?: boolean
+  deep?: boolean | number
   once?: boolean
 }
 
 export type WatchStopHandle = () => void
 
+export interface WatchHandle extends WatchStopHandle {
+  pause: () => void
+  resume: () => void
+  stop: () => void
+}
+
 // Simple effect.
 export function watchEffect(
   effect: WatchEffect,
   options?: WatchOptionsBase,
-): WatchStopHandle {
+): WatchHandle {
   return doWatch(effect, null, options)
 }
 
 export function watchPostEffect(
   effect: WatchEffect,
   options?: DebuggerOptions,
-) {
+): WatchStopHandle {
   return doWatch(
     effect,
     null,
@@ -101,7 +107,7 @@ export function watchPostEffect(
 export function watchSyncEffect(
   effect: WatchEffect,
   options?: DebuggerOptions,
-) {
+): WatchStopHandle {
   return doWatch(
     effect,
     null,
@@ -112,14 +118,26 @@ export function watchSyncEffect(
 // initial value for watchers to trigger on undefined initial values
 const INITIAL_WATCHER_VALUE = {}
 
-type MultiWatchSources = (WatchSource<unknown> | object)[]
+export type MultiWatchSources = (WatchSource<unknown> | object)[]
 
 // overload: single source + cb
 export function watch<T, Immediate extends Readonly<boolean> = false>(
   source: WatchSource<T>,
-  cb: WatchCallback<T, Immediate extends true ? T | undefined : T>,
+  cb: WatchCallback<T, MaybeUndefined<T, Immediate>>,
   options?: WatchOptions<Immediate>,
-): WatchStopHandle
+): WatchHandle
+
+// overload: reactive array or tuple of multiple sources + cb
+export function watch<
+  T extends Readonly<MultiWatchSources>,
+  Immediate extends Readonly<boolean> = false,
+>(
+  sources: readonly [...T] | T,
+  cb: [T] extends [ReactiveMarker]
+    ? WatchCallback<T, MaybeUndefined<T, Immediate>>
+    : WatchCallback<MapSources<T, false>, MapSources<T, Immediate>>,
+  options?: WatchOptions<Immediate>,
+): WatchHandle
 
 // overload: array of multiple sources + cb
 export function watch<
@@ -129,19 +147,7 @@ export function watch<
   sources: [...T],
   cb: WatchCallback<MapSources<T, false>, MapSources<T, Immediate>>,
   options?: WatchOptions<Immediate>,
-): WatchStopHandle
-
-// overload: multiple sources w/ `as const`
-// watch([foo, bar] as const, () => {})
-// somehow [...T] breaks when the type is readonly
-export function watch<
-  T extends Readonly<MultiWatchSources>,
-  Immediate extends Readonly<boolean> = false,
->(
-  source: T,
-  cb: WatchCallback<MapSources<T, false>, MapSources<T, Immediate>>,
-  options?: WatchOptions<Immediate>,
-): WatchStopHandle
+): WatchHandle
 
 // overload: watching reactive object w/ cb
 export function watch<
@@ -149,16 +155,16 @@ export function watch<
   Immediate extends Readonly<boolean> = false,
 >(
   source: T,
-  cb: WatchCallback<T, Immediate extends true ? T | undefined : T>,
+  cb: WatchCallback<T, MaybeUndefined<T, Immediate>>,
   options?: WatchOptions<Immediate>,
-): WatchStopHandle
+): WatchHandle
 
 // implementation
 export function watch<T = any, Immediate extends Readonly<boolean> = false>(
   source: T | WatchSource<T>,
   cb: any,
   options?: WatchOptions<Immediate>,
-): WatchStopHandle {
+): WatchHandle {
   if (__DEV__ && !isFunction(cb)) {
     warn(
       `\`watch(fn, options?)\` signature has been moved to a separate API. ` +
@@ -180,21 +186,13 @@ function doWatch(
     onTrack,
     onTrigger,
   }: WatchOptions = EMPTY_OBJ,
-): WatchStopHandle {
+): WatchHandle {
   if (cb && once) {
     const _cb = cb
     cb = (...args) => {
       _cb(...args)
-      unwatch()
+      watchHandle()
     }
-  }
-
-  // TODO remove in 3.5
-  if (__DEV__ && deep !== void 0 && typeof deep === 'number') {
-    warn(
-      `watch() "deep" option with number value will be used as watch depth in future versions. ` +
-        `Please use a boolean instead to avoid potential breakage.`,
-    )
   }
 
   if (__DEV__ && !cb) {
@@ -228,11 +226,15 @@ function doWatch(
   }
 
   const instance = currentInstance
-  const reactiveGetter = (source: object) =>
-    deep === true
-      ? source // traverse will happen in wrapped getter below
-      : // for deep: false, only traverse root-level properties
-        traverse(source, deep === false ? 1 : undefined)
+  const reactiveGetter = (source: object) => {
+    // traverse will happen in wrapped getter below
+    if (deep) return source
+    // for `deep: false | 0` or shallow reactive, only traverse root-level properties
+    if (isShallow(source) || deep === false || deep === 0)
+      return traverse(source, 1)
+    // for `deep: undefined` on a reactive object, deeply traverse all properties
+    return traverse(source)
+  }
 
   let getter: () => any
   let forceTrigger = false
@@ -300,7 +302,8 @@ function doWatch(
 
   if (cb && deep) {
     const baseGetter = getter
-    getter = () => traverse(baseGetter())
+    const depth = deep === true ? Infinity : deep
+    getter = () => traverse(baseGetter(), depth)
   }
 
   let cleanup: (() => void) | undefined
@@ -330,15 +333,22 @@ function doWatch(
       const ctx = useSSRContext()!
       ssrCleanup = ctx.__watcherHandles || (ctx.__watcherHandles = [])
     } else {
-      return NOOP
+      const watchHandle: WatchHandle = () => {}
+      watchHandle.stop = NOOP
+      watchHandle.resume = NOOP
+      watchHandle.pause = NOOP
+      return watchHandle
     }
   }
 
   let oldValue: any = isMultiSource
     ? new Array((source as []).length).fill(INITIAL_WATCHER_VALUE)
     : INITIAL_WATCHER_VALUE
-  const job: SchedulerJob = () => {
-    if (!effect.active || !effect.dirty) {
+  const job: SchedulerJob = (immediateFirstRun?: boolean) => {
+    if (
+      !(effect.flags & EffectFlags.ACTIVE) ||
+      (!effect.dirty && !immediateFirstRun)
+    ) {
       return
     }
     if (cb) {
@@ -378,29 +388,35 @@ function doWatch(
 
   // important: mark the job as a watcher callback so that scheduler knows
   // it is allowed to self-trigger (#1727)
-  job.allowRecurse = !!cb
+  if (cb) job.flags! |= SchedulerJobFlags.ALLOW_RECURSE
+
+  const effect = new ReactiveEffect(getter)
 
   let scheduler: EffectScheduler
   if (flush === 'sync') {
+    effect.flags |= EffectFlags.NO_BATCH
     scheduler = job as any // the scheduler function gets called directly
   } else if (flush === 'post') {
     scheduler = () => queuePostRenderEffect(job, instance && instance.suspense)
   } else {
     // default: 'pre'
-    job.pre = true
+    job.flags! |= SchedulerJobFlags.PRE
     if (instance) job.id = instance.uid
     scheduler = () => queueJob(job)
   }
-
-  const effect = new ReactiveEffect(getter, NOOP, scheduler)
+  effect.scheduler = scheduler
 
   const scope = getCurrentScope()
-  const unwatch = () => {
+  const watchHandle: WatchHandle = () => {
     effect.stop()
     if (scope) {
       remove(scope.effects, effect)
     }
   }
+
+  watchHandle.pause = effect.pause.bind(effect)
+  watchHandle.resume = effect.resume.bind(effect)
+  watchHandle.stop = watchHandle
 
   if (__DEV__) {
     effect.onTrack = onTrack
@@ -410,7 +426,7 @@ function doWatch(
   // initial run
   if (cb) {
     if (immediate) {
-      job()
+      job(true)
     } else {
       oldValue = effect.run()
     }
@@ -423,8 +439,8 @@ function doWatch(
     effect.run()
   }
 
-  if (__SSR__ && ssrCleanup) ssrCleanup.push(unwatch)
-  return unwatch
+  if (__SSR__ && ssrCleanup) ssrCleanup.push(watchHandle)
+  return watchHandle
 }
 
 // this.$watch
@@ -433,7 +449,7 @@ export function instanceWatch(
   source: string | Function,
   value: WatchCallback | ObjectWatchOptionItem,
   options?: WatchOptions,
-): WatchStopHandle {
+): WatchHandle {
   const publicThis = this.proxy as any
   const getter = isString(source)
     ? source.includes('.')
@@ -455,7 +471,7 @@ export function instanceWatch(
 
 export function createPathGetter(ctx: any, path: string) {
   const segments = path.split('.')
-  return () => {
+  return (): any => {
     let cur = ctx
     for (let i = 0; i < segments.length && cur; i++) {
       cur = cur[segments[i]]
@@ -466,9 +482,9 @@ export function createPathGetter(ctx: any, path: string) {
 
 export function traverse(
   value: unknown,
-  depth = Infinity,
+  depth: number = Infinity,
   seen?: Set<unknown>,
-) {
+): unknown {
   if (depth <= 0 || !isObject(value) || (value as any)[ReactiveFlags.SKIP]) {
     return value
   }
