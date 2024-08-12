@@ -12,6 +12,9 @@ catalogs:
     '@babel/types':
       specifier: ^7.25.2
       version: 7.25.2
+    '@vitejs/plugin-vue':
+      specifier: ^5.1.2
+      version: 5.1.2
     estree-walker:
       specifier: ^2.0.2
       version: 2.0.2
@@ -180,6 +183,70 @@ importers:
         specifier: ^2.0.0
         version: 2.0.5(@types/node@20.14.14)(jsdom@24.1.1)(sass@1.77.8)
 
+  packages-private/dts-built-test:
+    dependencies:
+      '@vue/reactivity':
+        specifier: workspace:*
+        version: link:../../packages/reactivity
+      '@vue/shared':
+        specifier: workspace:*
+        version: link:../../packages/shared
+      vue:
+        specifier: workspace:*
+        version: link:../../packages/vue
+
+  packages-private/dts-test:
+    dependencies:
+      dts-built-test:
+        specifier: workspace:*
+        version: link:../dts-built-test
+      vue:
+        specifier: workspace:*
+        version: link:../../packages/vue
+
+  packages-private/sfc-playground:
+    dependencies:
+      '@vue/repl':
+        specifier: ^4.3.1
+        version: 4.3.1
+      file-saver:
+        specifier: ^2.0.5
+        version: 2.0.5
+      jszip:
+        specifier: ^3.10.1
+        version: 3.10.1
+      vue:
+        specifier: workspace:*
+        version: link:../../packages/vue
+    devDependencies:
+      '@vitejs/plugin-vue':
+        specifier: 'catalog:'
+        version: 5.1.2(vite@5.4.0(@types/node@20.14.14)(sass@1.77.8))(vue@packages+vue)
+      vite:
+        specifier: 'catalog:'
+        version: 5.4.0(@types/node@20.14.14)(sass@1.77.8)
+
+  packages-private/template-explorer:
+    dependencies:
+      monaco-editor:
+        specifier: ^0.50.0
+        version: 0.50.0
+      source-map-js:
+        specifier: ^1.2.0
+        version: 1.2.0
+
+  packages-private/vite-debug:
+    devDependencies:
+      '@vitejs/plugin-vue':
+        specifier: 'catalog:'
+        version: 5.1.2(vite@5.4.0(@types/node@20.14.14)(sass@1.77.8))(vue@packages+vue)
+      vite:
+        specifier: 'catalog:'
+        version: 5.4.0(@types/node@20.14.14)(sass@1.77.8)
+      vue:
+        specifier: workspace:*
+        version: link:../../packages/vue
+
   packages/compiler-core:
     dependencies:
       '@babel/parser':
@@ -281,27 +348,6 @@ importers:
         specifier: workspace:*
         version: link:../shared
 
-  packages/dts-built-test:
-    dependencies:
-      '@vue/reactivity':
-        specifier: workspace:*
-        version: link:../reactivity
-      '@vue/shared':
-        specifier: workspace:*
-        version: link:../shared
-      vue:
-        specifier: workspace:*
-        version: link:../vue
-
-  packages/dts-test:
-    dependencies:
-      '@vue/dts-built-test':
-        specifier: workspace:*
-        version: link:../dts-built-test
-      vue:
-        specifier: workspace:*
-        version: link:../vue
-
   packages/reactivity:
     dependencies:
       '@vue/shared':
@@ -357,38 +403,7 @@ importers:
         specifier: workspace:*
         version: link:../vue
 
-  packages/sfc-playground:
-    dependencies:
-      '@vue/repl':
-        specifier: ^4.3.1
-        version: 4.3.1
-      file-saver:
-        specifier: ^2.0.5
-        version: 2.0.5
-      jszip:
-        specifier: ^3.10.1
-        version: 3.10.1
-      vue:
-        specifier: workspace:*
-        version: link:../vue
-    devDependencies:
-      '@vitejs/plugin-vue':
-        specifier: ^5.1.2
-        version: 5.1.2(vite@5.4.0(@types/node@20.14.14)(sass@1.77.8))(vue@packages+vue)
-      vite:
-        specifier: 'catalog:'
-        version: 5.4.0(@types/node@20.14.14)(sass@1.77.8)
-
   packages/shared: {}
-
-  packages/template-explorer:
-    dependencies:
-      monaco-editor:
-        specifier: ^0.50.0
-        version: 0.50.0
-      source-map-js:
-        specifier: ^1.2.0
-        version: 1.2.0
 
   packages/vue:
     dependencies:

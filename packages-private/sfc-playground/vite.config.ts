@@ -34,7 +34,7 @@ function copyVuePlugin(): Plugin {
     name: 'copy-vue',
     generateBundle() {
       const copyFile = (file: string) => {
-        const filePath = path.resolve(__dirname, file)
+        const filePath = path.resolve(__dirname, '../../packages', file)
         const basename = path.basename(file)
         if (!fs.existsSync(filePath)) {
           throw new Error(
@@ -49,11 +49,11 @@ function copyVuePlugin(): Plugin {
         })
       }
 
-      copyFile(`../vue/dist/vue.esm-browser.js`)
-      copyFile(`../vue/dist/vue.esm-browser.prod.js`)
-      copyFile(`../vue/dist/vue.runtime.esm-browser.js`)
-      copyFile(`../vue/dist/vue.runtime.esm-browser.prod.js`)
-      copyFile(`../server-renderer/dist/server-renderer.esm-browser.js`)
+      copyFile(`vue/dist/vue.esm-browser.js`)
+      copyFile(`vue/dist/vue.esm-browser.prod.js`)
+      copyFile(`vue/dist/vue.runtime.esm-browser.js`)
+      copyFile(`vue/dist/vue.runtime.esm-browser.prod.js`)
+      copyFile(`server-renderer/dist/server-renderer.esm-browser.js`)
     },
   }
 }
