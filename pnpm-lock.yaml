@@ -114,7 +114,7 @@ importers:
         specifier: ^3.0.3
         version: 3.0.3
       marked:
-        specifier: ^13.0.3
+        specifier: 13.0.3
         version: 13.0.3
       npm-run-all2:
         specifier: ^6.2.2
