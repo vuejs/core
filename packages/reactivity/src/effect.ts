@@ -266,7 +266,7 @@ export function endBatch(): void {
     batchDepth--
     return
   }
-
+  batchDepth--
   let error: unknown
   while (batchedEffect) {
     let e: ReactiveEffect | undefined = batchedEffect
@@ -286,7 +286,6 @@ export function endBatch(): void {
     }
   }
 
-  batchDepth--
   if (error) throw error
 }
 
