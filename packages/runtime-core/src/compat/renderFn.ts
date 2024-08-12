@@ -279,12 +279,10 @@ function convertLegacySlots(vnode: VNode): VNode {
         slot.push(child)
       }
     }
-    if (slots) {
-      for (const key in slots) {
-        const slotChildren = slots[key]
-        slots[key] = () => slotChildren
-        slots[key]._ns = true /* non-scoped slot */
-      }
+    for (const key in slots) {
+      const slotChildren = slots[key]
+      slots[key] = () => slotChildren
+      slots[key]._ns = true /* non-scoped slot */
     }
   }
 

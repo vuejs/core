@@ -411,13 +411,13 @@ function hydrateTeleport(
         // could be nested teleports
         let targetAnchor = targetNode
         while (targetAnchor) {
-          if (targetAnchor && targetAnchor.nodeType === 8) {
+          if (targetAnchor.nodeType === 8) {
             if ((targetAnchor as Comment).data === 'teleport start anchor') {
               vnode.targetStart = targetAnchor
             } else if ((targetAnchor as Comment).data === 'teleport anchor') {
               vnode.targetAnchor = targetAnchor
               ;(target as TeleportTargetElement)._lpa =
-                vnode.targetAnchor && nextSibling(vnode.targetAnchor as Node)
+                nextSibling(vnode.targetAnchor as Node)
               break
             }
           }
