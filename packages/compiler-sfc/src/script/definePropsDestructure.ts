@@ -26,7 +26,7 @@ import { DEFINE_PROPS } from './defineProps'
 export function processPropsDestructure(
   ctx: ScriptCompileContext,
   declId: ObjectPattern,
-) {
+): void {
   if (ctx.options.propsDestructure === 'error') {
     ctx.error(`Props destructure is explicitly prohibited via config.`, declId)
   } else if (ctx.options.propsDestructure === false) {
@@ -97,7 +97,7 @@ type Scope = Record<string, boolean>
 export function transformDestructuredProps(
   ctx: ScriptCompileContext,
   vueImportAliases: Record<string, string>,
-) {
+): void {
   if (ctx.options.propsDestructure === false) {
     return
   }

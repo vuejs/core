@@ -17,6 +17,7 @@ import { parseCssVars } from './style/cssVars'
 import { createCache } from './cache'
 import type { ImportBinding } from './compileScript'
 import { isImportUsed } from './script/importUsageCheck'
+import type { LRUCache } from 'lru-cache'
 
 export const DEFAULT_FILENAME = 'anonymous.vue'
 
@@ -103,7 +104,9 @@ export interface SFCParseResult {
   errors: (CompilerError | SyntaxError)[]
 }
 
-export const parseCache = createCache<SFCParseResult>()
+export const parseCache:
+  | Map<string, SFCParseResult>
+  | LRUCache<string, SFCParseResult> = createCache<SFCParseResult>()
 
 function genCacheKey(source: string, options: SFCParseOptions): string {
   return (

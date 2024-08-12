@@ -326,7 +326,7 @@ export function createTransformContext(
   return context
 }
 
-export function transform(root: RootNode, options: TransformOptions) {
+export function transform(root: RootNode, options: TransformOptions): void {
   const context = createTransformContext(root, options)
   traverseNode(root, context)
   if (options.hoistStatic) {
@@ -403,7 +403,7 @@ function createRootCodegen(root: RootNode, context: TransformContext) {
 export function traverseChildren(
   parent: ParentNode,
   context: TransformContext,
-) {
+): void {
   let i = 0
   const nodeRemoved = () => {
     i--
@@ -422,7 +422,7 @@ export function traverseChildren(
 export function traverseNode(
   node: RootNode | TemplateChildNode,
   context: TransformContext,
-) {
+): void {
   context.currentNode = node
   // apply transform plugins
   const { nodeTransforms } = context

@@ -42,6 +42,9 @@ import {
 } from '@vue/shared'
 import { createApp, createSSRApp, render } from '.'
 
+// marker for attr removal
+const REMOVAL = {}
+
 export type VueElementConstructor<P = {}> = {
   new (initialProps?: Record<string, any>): VueElement & P
 }
@@ -216,7 +219,7 @@ export class VueElement
   /**
    * @internal
    */
-  _nonce = this._def.nonce
+  _nonce: string | undefined = this._def.nonce
 
   private _connected = false
   private _resolved = false
@@ -247,8 +250,6 @@ export class VueElement
     super()
     if (this.shadowRoot && _createApp !== createApp) {
       this._root = this.shadowRoot
-      // TODO hydration needs to be reworked
-      this._mount(_def)
     } else {
       if (__DEV__ && this.shadowRoot) {
         warn(
@@ -262,14 +263,15 @@ export class VueElement
       } else {
         this._root = this
       }
-      if (!(this._def as ComponentOptions).__asyncLoader) {
-        // for sync component defs we can immediately resolve props
-        this._resolveProps(this._def)
-      }
+    }
+
+    if (!(this._def as ComponentOptions).__asyncLoader) {
+      // for sync component defs we can immediately resolve props
+      this._resolveProps(this._def)
     }
   }
 
-  connectedCallback() {
+  connectedCallback(): void {
     if (!this.shadowRoot) {
       this._parseSlots()
     }
@@ -310,7 +312,7 @@ export class VueElement
     }
   }
 
-  disconnectedCallback() {
+  disconnectedCallback(): void {
     this._connected = false
     nextTick(() => {
       if (!this._connected) {
@@ -453,11 +455,12 @@ export class VueElement
     }
   }
 
-  protected _setAttr(key: string) {
+  protected _setAttr(key: string): void {
     if (key.startsWith('data-v-')) return
-    let value = this.hasAttribute(key) ? this.getAttribute(key) : undefined
+    const has = this.hasAttribute(key)
+    let value = has ? this.getAttribute(key) : REMOVAL
     const camelKey = camelize(key)
-    if (this._numberProps && this._numberProps[camelKey]) {
+    if (has && this._numberProps && this._numberProps[camelKey]) {
       value = toNumber(value)
     }
     this._setProp(camelKey, value, false, true)
@@ -466,16 +469,25 @@ export class VueElement
   /**
    * @internal
    */
-  protected _getProp(key: string) {
+  protected _getProp(key: string): any {
     return this._props[key]
   }
 
   /**
    * @internal
    */
-  _setProp(key: string, val: any, shouldReflect = true, shouldUpdate = false) {
+  _setProp(
+    key: string,
+    val: any,
+    shouldReflect = true,
+    shouldUpdate = false,
+  ): void {
     if (val !== this._props[key]) {
-      this._props[key] = val
+      if (val === REMOVAL) {
+        delete this._props[key]
+      } else {
+        this._props[key] = val
+      }
       if (shouldUpdate && this._instance) {
         this._update()
       }
@@ -632,7 +644,7 @@ export class VueElement
   /**
    * @internal
    */
-  _injectChildStyle(comp: ConcreteComponent & CustomElementOptions) {
+  _injectChildStyle(comp: ConcreteComponent & CustomElementOptions): void {
     this._applyStyles(comp.styles, comp)
   }
 

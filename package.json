@@ -1,6 +1,6 @@
 {
   "private": true,
-  "version": "3.5.0-alpha.5",
+  "version": "3.5.0-beta.1",
   "packageManager": "pnpm@9.6.0",
   "type": "module",
   "scripts": {
@@ -71,7 +71,7 @@
     "@types/node": "^20.14.14",
     "@types/semver": "^7.5.8",
     "@types/serve-handler": "^6.1.4",
-    "@vitest/coverage-istanbul": "^1.6.0",
+    "@vitest/coverage-istanbul": "^2.0.0",
     "@vue/consolidate": "1.0.0",
     "conventional-changelog-cli": "^5.0.0",
     "enquirer": "^2.4.1",
@@ -108,7 +108,7 @@
     "typescript": "~5.5.4",
     "typescript-eslint": "^8.0.0",
     "vite": "catalog:",
-    "vitest": "^1.6.0"
+    "vitest": "^2.0.0"
   },
   "pnpm": {
     "peerDependencyRules": {

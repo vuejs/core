@@ -26,7 +26,7 @@ export function setRef(
   parentSuspense: SuspenseBoundary | null,
   vnode: VNode,
   isUnmount = false,
-) {
+): void {
   if (isArray(rawRef)) {
     rawRef.forEach((r, i) =>
       setRef(

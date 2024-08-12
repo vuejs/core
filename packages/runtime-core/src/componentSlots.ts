@@ -180,7 +180,7 @@ export const initSlots = (
   instance: ComponentInternalInstance,
   children: VNodeNormalizedChildren,
   optimized: boolean,
-) => {
+): void => {
   const slots = (instance.slots = createInternalObject())
   if (instance.vnode.shapeFlag & ShapeFlags.SLOTS_CHILDREN) {
     const type = (children as RawSlots)._
@@ -202,7 +202,7 @@ export const updateSlots = (
   instance: ComponentInternalInstance,
   children: VNodeNormalizedChildren,
   optimized: boolean,
-) => {
+): void => {
   const { vnode, slots } = instance
   let needDeletionCheck = true
   let deletionComparisonTarget = EMPTY_OBJ

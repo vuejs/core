@@ -69,9 +69,12 @@ const isSVGContainer = (container: Element) =>
 const isMathMLContainer = (container: Element) =>
   container.namespaceURI!.includes('MathML')
 
-const getContainerType = (container: Element): 'svg' | 'mathml' | undefined => {
-  if (isSVGContainer(container)) return 'svg'
-  if (isMathMLContainer(container)) return 'mathml'
+const getContainerType = (
+  container: Element | ShadowRoot,
+): 'svg' | 'mathml' | undefined => {
+  if (container.nodeType !== DOMNodeTypes.ELEMENT) return undefined
+  if (isSVGContainer(container as Element)) return 'svg'
+  if (isMathMLContainer(container as Element)) return 'mathml'
   return undefined
 }
 
@@ -85,7 +88,17 @@ export const isComment = (node: Node): node is Comment =>
 // passed in via arguments.
 export function createHydrationFunctions(
   rendererInternals: RendererInternals<Node, Element>,
-) {
+): [
+  RootHydrateFunction,
+  (
+    node: Node,
+    vnode: VNode,
+    parentComponent: ComponentInternalInstance | null,
+    parentSuspense: SuspenseBoundary | null,
+    slotScopeIds: string[] | null,
+    optimized?: boolean,
+  ) => Node | null,
+] {
   const {
     mt: mountComponent,
     p: patch,
@@ -744,7 +757,7 @@ export function createHydrationFunctions(
     )
   }
 
-  return [hydrate, hydrateNode] as const
+  return [hydrate, hydrateNode]
 }
 
 /**

@@ -14,10 +14,10 @@ type HMRComponent = ComponentOptions | ClassComponent
 
 export let isHmrUpdating = false
 
-export const hmrDirtyComponents = new Map<
+export const hmrDirtyComponents: Map<
   ConcreteComponent,
   Set<ComponentInternalInstance>
->()
+> = new Map<ConcreteComponent, Set<ComponentInternalInstance>>()
 
 export interface HMRRuntime {
   createRecord: typeof createRecord
@@ -49,7 +49,7 @@ const map: Map<
   }
 > = new Map()
 
-export function registerHMR(instance: ComponentInternalInstance) {
+export function registerHMR(instance: ComponentInternalInstance): void {
   const id = instance.type.__hmrId!
   let record = map.get(id)
   if (!record) {
@@ -59,7 +59,7 @@ export function registerHMR(instance: ComponentInternalInstance) {
   record.instances.add(instance)
 }
 
-export function unregisterHMR(instance: ComponentInternalInstance) {
+export function unregisterHMR(instance: ComponentInternalInstance): void {
   map.get(instance.type.__hmrId!)!.instances.delete(instance)
 }
 
@@ -78,7 +78,7 @@ function normalizeClassComponent(component: HMRComponent): ComponentOptions {
   return isClassComponent(component) ? component.__vccOpts : component
 }
 
-function rerender(id: string, newRender?: Function) {
+function rerender(id: string, newRender?: Function): void {
   const record = map.get(id)
   if (!record) {
     return
@@ -101,7 +101,7 @@ function rerender(id: string, newRender?: Function) {
   })
 }
 
-function reload(id: string, newComp: HMRComponent) {
+function reload(id: string, newComp: HMRComponent): void {
   const record = map.get(id)
   if (!record) return
 

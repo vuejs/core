@@ -181,7 +181,7 @@ class RefImpl<T = any> {
  * @param ref - The ref whose tied effects shall be executed.
  * @see {@link https://vuejs.org/api/reactivity-advanced.html#triggerref}
  */
-export function triggerRef(ref: Ref) {
+export function triggerRef(ref: Ref): void {
   if (__DEV__) {
     ;(ref as unknown as RefImpl).dep.trigger({
       target: ref,

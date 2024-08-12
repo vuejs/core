@@ -31,7 +31,7 @@ import {
   OPEN_BLOCK,
 } from '../runtimeHelpers'
 
-export function cacheStatic(root: RootNode, context: TransformContext) {
+export function cacheStatic(root: RootNode, context: TransformContext): void {
   walk(
     root,
     undefined,
