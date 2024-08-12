@@ -416,8 +416,9 @@ function hydrateTeleport(
               vnode.targetStart = targetAnchor
             } else if ((targetAnchor as Comment).data === 'teleport anchor') {
               vnode.targetAnchor = targetAnchor
-              ;(target as TeleportTargetElement)._lpa =
-                nextSibling(vnode.targetAnchor as Node)
+              ;(target as TeleportTargetElement)._lpa = nextSibling(
+                vnode.targetAnchor as Node,
+              )
               break
             }
           }
