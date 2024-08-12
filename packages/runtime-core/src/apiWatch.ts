@@ -395,7 +395,6 @@ function doWatch(
   let scheduler: EffectScheduler
   if (flush === 'sync') {
     effect.flags |= EffectFlags.NO_BATCH
-
     scheduler = job as any
   } else if (flush === 'post') {
     scheduler = () => queuePostRenderEffect(job, instance && instance.suspense)
