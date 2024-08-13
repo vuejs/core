@@ -382,6 +382,7 @@ function matches(pattern: MatchPattern, name: string): boolean {
   } else if (isString(pattern)) {
     return pattern.split(',').includes(name)
   } else if (isRegExp(pattern)) {
+    pattern.lastIndex = 0
     return pattern.test(name)
   }
   /* istanbul ignore next */
