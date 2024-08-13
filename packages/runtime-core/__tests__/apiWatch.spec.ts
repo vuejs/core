@@ -1378,11 +1378,9 @@ describe('api: watch', () => {
     expect(spy).toHaveBeenCalledTimes(2)
   })
 
-  test('handle nested watcher stop properly', () => {
-    let instance: ComponentInternalInstance
+  test('nested watch stop', async () => {
     const Comp = {
       setup() {
-        instance = getCurrentInstance()!
         watch(
           () => 1,
           (val, oldVal, onCleanup) => {
@@ -1394,15 +1392,23 @@ describe('api: watch', () => {
           },
           { immediate: true },
         )
-        return () => ''
+        return () => 'comp'
       },
     }
-    const root = nodeOps.createElement('div')
-    createApp(Comp).mount(root)
-    expect(instance!.scope.effects.length).toBe(3)
+    const toggle = ref(true)
+    const App = {
+      setup() {
+        return () => (toggle.value ? h(Comp) : h('div', 'foo'))
+      },
+    }
 
-    instance!.scope.stop()
-    expect(instance!.scope.effects[0].active).toBe(false)
+    const root = nodeOps.createElement('div')
+    createApp(App).mount(root)
+    expect(serializeInner(root)).toBe('comp')
+
+    toggle.value = false
+    await nextTick()
+    expect(serializeInner(root)).toBe('<div>foo</div>')
   })
 
   it('watching sources: ref<any[]>', async () => {

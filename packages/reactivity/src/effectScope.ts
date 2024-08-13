@@ -117,7 +117,7 @@ export class EffectScope {
     if (this._active) {
       let i, l
       // #5783
-      // effects will be changed when a watcher stopped.
+      // effects will be changed when a watch stopped.
       // so we need to copy it for iteration.
       const effectsToStop = this.effects.slice()
       for (i = 0, l = effectsToStop.length; i < l; i++) {
