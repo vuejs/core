@@ -283,7 +283,7 @@ let ssrDirectiveInitialized = false
 /**
  * @internal
  */
-export const initDirectivesForSSR = __SSR__
+export const initDirectivesForSSR: () => void = __SSR__
   ? () => {
       if (!ssrDirectiveInitialized) {
         ssrDirectiveInitialized = true
