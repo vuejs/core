@@ -26,9 +26,17 @@ import {
   isString,
 } from '@vue/shared'
 
+/**
+ * This is a stub implementation to prevent the need to use dom types.
+ *
+ * To enable proper types, add `"dom"` to `"lib"` in your `tsconfig.json`.
+ */
+type DomStub = {}
+type DomType<T> = typeof globalThis extends { window: unknown } ? T : DomStub
+
 declare module '@vue/reactivity' {
   export interface RefUnwrapBailTypes {
-    runtimeDOMBailTypes: Node | Window
+    runtimeDOMBailTypes: DomType<Node | Window>
   }
 }
 
