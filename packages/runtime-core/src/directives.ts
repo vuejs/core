@@ -140,7 +140,7 @@ export function withDirectives<T extends VNode>(
     return vnode
   }
   const instance = getComponentPublicInstance(currentRenderingInstance)
-  const bindings: DirectiveBinding[] = vnode.dirs || (vnode.dirs = [])
+  let bindings: DirectiveBinding[] = vnode.dirs || (vnode.dirs = [])
   for (let i in directives) {
     let [dir, value, arg, modifiers = EMPTY_OBJ] = directives[i]
     if (dir) {
@@ -153,7 +153,7 @@ export function withDirectives<T extends VNode>(
       if (dir.deep) {
         traverse(value)
       }
-      bindings.push({
+      bindings = bindings.concat({
         dir,
         instance,
         value,
