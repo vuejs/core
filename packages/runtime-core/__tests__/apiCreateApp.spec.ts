@@ -126,11 +126,13 @@ describe('api: createApp', () => {
 
         childApp.provide('foo', 2)
         expect(childApp.runWithContext(() => inject('foo'))).toBe(2)
+        expect(childApp.runWithContext(() => inject('bar'))).toBe('bar')
 
         return () => h('div')
       },
     })
     app.provide('foo', 1)
+    app.provide('bar', 'bar')
 
     expect(app.runWithContext(() => inject('foo'))).toBe(1)
     const root = nodeOps.createElement('div')

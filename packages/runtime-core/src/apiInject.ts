@@ -68,10 +68,10 @@ export function inject(
     if (currentApp) {
       const currentProvides = currentApp._context.provides
       if ((key as string | symbol) in currentProvides) {
-        const target = currentProvides[key as string]
-        return target
+        return currentProvides[key as string]
       }
-    } else if (provides && (key as string | symbol) in provides) {
+    }
+    if (provides && (key as string | symbol) in provides) {
       // TS doesn't allow symbol as index type
       return provides[key as string]
     } else if (arguments.length > 1) {
