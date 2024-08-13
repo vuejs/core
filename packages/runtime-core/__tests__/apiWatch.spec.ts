@@ -1856,4 +1856,16 @@ describe('api: watch', () => {
 
     warn.mockRestore()
   })
+
+  it('sync watch callback order', () => {
+    const num = ref(1)
+    let result = ''
+
+    for (let i = 0; i < 5; i++) {
+      watch(num, () => (result += i), { flush: 'sync' })
+    }
+    expect(result).toBe('')
+    num.value++
+    expect(result).toBe('01234')
+  })
 })

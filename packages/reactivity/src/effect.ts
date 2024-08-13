@@ -169,9 +169,6 @@ export class ReactiveEffect<T = any>
     ) {
       return
     }
-    if (this.flags & EffectFlags.NO_BATCH) {
-      return this.trigger()
-    }
     if (!(this.flags & EffectFlags.NOTIFIED)) {
       this.flags |= EffectFlags.NOTIFIED
       this.nextEffect = batchedEffect
@@ -180,8 +177,6 @@ export class ReactiveEffect<T = any>
   }
 
   run(): T {
-    // TODO cleanupEffect
-
     if (!(this.flags & EffectFlags.ACTIVE)) {
       // stopped during cleanup
       return this.fn()
@@ -249,12 +244,13 @@ export class ReactiveEffect<T = any>
 
 let batchDepth = 0
 let batchedEffect: ReactiveEffect | undefined
+let needBatch = true
 
 /**
  * @internal
  */
 export function startBatch(): void {
-  batchDepth++
+  needBatch && batchDepth++
 }
 
 /**
@@ -262,7 +258,7 @@ export function startBatch(): void {
  * @internal
  */
 export function endBatch(): void {
-  if (batchDepth > 1) {
+  if (batchDepth > 1 && needBatch) {
     batchDepth--
     return
   }
@@ -277,16 +273,19 @@ export function endBatch(): void {
       e.flags &= ~EffectFlags.NOTIFIED
       if (e.flags & EffectFlags.ACTIVE) {
         try {
+          needBatch = !(e.flags & EffectFlags.NO_BATCH)
           e.trigger()
         } catch (err) {
           if (!error) error = err
+        } finally {
+          if (!needBatch) needBatch = true
         }
       }
       e = next
     }
   }
 
-  batchDepth--
+  needBatch && batchDepth--
   if (error) throw error
 }
 
