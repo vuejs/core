@@ -29,11 +29,6 @@ export interface SFCParseOptions {
   ignoreEmpty?: boolean
   compiler?: TemplateCompiler
   templateParseOptions?: ParserOptions
-  /**
-   * TODO remove in 3.5
-   * @deprecated use `templateParseOptions: { prefixIdentifiers: false }` instead
-   */
-  parseExpressions?: boolean
 }
 
 export interface SFCBlock {
@@ -138,8 +133,7 @@ export function parse(
     pad = false,
     ignoreEmpty = true,
     compiler = CompilerDOM,
-    templateParseOptions = {},
-    parseExpressions = true,
+    templateParseOptions = { prefixIdentifiers: true },
   } = options
 
   const descriptor: SFCDescriptor = {
@@ -158,7 +152,6 @@ export function parse(
   const errors: (CompilerError | SyntaxError)[] = []
   const ast = compiler.parse(source, {
     parseMode: 'sfc',
-    prefixIdentifiers: parseExpressions,
     ...templateParseOptions,
     onError: e => {
       errors.push(e)
