@@ -17,11 +17,12 @@ export class ScriptCompileContext {
   scriptAst: Program | null
   scriptSetupAst: Program | null
 
-  source = this.descriptor.source
-  filename = this.descriptor.filename
-  s = new MagicString(this.source)
-  startOffset = this.descriptor.scriptSetup?.loc.start.offset
-  endOffset = this.descriptor.scriptSetup?.loc.end.offset
+  source: string = this.descriptor.source
+  filename: string = this.descriptor.filename
+  s: MagicString = new MagicString(this.source)
+  startOffset: number | undefined =
+    this.descriptor.scriptSetup?.loc.start.offset
+  endOffset: number | undefined = this.descriptor.scriptSetup?.loc.end.offset
 
   // import / type analysis
   scope?: TypeScope
@@ -162,7 +163,7 @@ export function resolveParserPlugins(
   lang: string,
   userPlugins?: ParserPlugin[],
   dts = false,
-) {
+): ParserPlugin[] {
   const plugins: ParserPlugin[] = []
   if (
     !userPlugins ||

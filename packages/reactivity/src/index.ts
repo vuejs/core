@@ -31,6 +31,8 @@ export {
   shallowReadonly,
   markRaw,
   toRaw,
+  toReactive,
+  toReadonly,
   type Raw,
   type DeepReadonly,
   type ShallowReactive,
@@ -47,16 +49,15 @@ export {
   type ComputedSetter,
   type ComputedRefImpl,
 } from './computed'
-export { deferredComputed } from './deferredComputed'
 export {
   effect,
   stop,
   enableTracking,
   pauseTracking,
   resetTracking,
-  pauseScheduling,
-  resetScheduling,
+  onEffectCleanup,
   ReactiveEffect,
+  EffectFlags,
   type ReactiveEffectRunner,
   type ReactiveEffectOptions,
   type EffectScheduler,
@@ -64,11 +65,18 @@ export {
   type DebuggerEvent,
   type DebuggerEventExtraInfo,
 } from './effect'
-export { trigger, track, ITERATE_KEY } from './reactiveEffect'
+export {
+  trigger,
+  track,
+  ITERATE_KEY,
+  ARRAY_ITERATE_KEY,
+  MAP_KEY_ITERATE_KEY,
+} from './dep'
 export {
   effectScope,
   EffectScope,
   getCurrentScope,
   onScopeDispose,
 } from './effectScope'
+export { reactiveReadArray, shallowReadArray } from './arrayInstrumentations'
 export { TrackOpTypes, TriggerOpTypes, ReactiveFlags } from './constants'

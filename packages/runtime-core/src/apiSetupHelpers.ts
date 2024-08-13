@@ -1,4 +1,5 @@
 import {
+  type IfAny,
   type LooseRequired,
   type Prettify,
   type UnionToIntersection,
@@ -16,8 +17,8 @@ import {
 } from './component'
 import type { EmitFn, EmitsOptions, ObjectEmitsOptions } from './componentEmits'
 import type {
+  ComponentOptionsBase,
   ComponentOptionsMixin,
-  ComponentOptionsWithoutProps,
   ComputedOptions,
   MethodOptions,
 } from './componentOptions'
@@ -135,9 +136,11 @@ export function defineEmits<EE extends string = string>(
 export function defineEmits<E extends EmitsOptions = EmitsOptions>(
   emitOptions: E,
 ): EmitFn<E>
-export function defineEmits<
-  T extends ((...args: any[]) => any) | Record<string, any[]>,
->(): T extends (...args: any[]) => any ? T : ShortEmits<T>
+export function defineEmits<T extends ComponentTypeEmits>(): T extends (
+  ...args: any[]
+) => any
+  ? T
+  : ShortEmits<T>
 // implementation
 export function defineEmits() {
   if (__DEV__) {
@@ -145,6 +148,10 @@ export function defineEmits() {
   }
   return null as any
 }
+
+export type ComponentTypeEmits =
+  | ((...args: any[]) => any)
+  | Record<string, any[]>
 
 type RecordToUnion<T extends Record<string, any>> = T[keyof T]
 
@@ -170,7 +177,7 @@ type ShortEmits<T extends Record<string, any>> = UnionToIntersection<
  */
 export function defineExpose<
   Exposed extends Record<string, any> = Record<string, any>,
->(exposed?: Exposed) {
+>(exposed?: Exposed): void {
   if (__DEV__) {
     warnRuntimeUsage(`defineExpose`)
   }
@@ -191,15 +198,33 @@ export function defineOptions<
   Mixin extends ComponentOptionsMixin = ComponentOptionsMixin,
   Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
 >(
-  options?: ComponentOptionsWithoutProps<
+  options?: ComponentOptionsBase<
     {},
     RawBindings,
     D,
     C,
     M,
     Mixin,
-    Extends
-  > & { emits?: undefined; expose?: undefined; slots?: undefined },
+    Extends,
+    {}
+  > & {
+    /**
+     * props should be defined via defineProps().
+     */
+    props?: never
+    /**
+     * emits should be defined via defineEmits().
+     */
+    emits?: never
+    /**
+     * expose should be defined via defineExpose().
+     */
+    expose?: never
+    /**
+     * slots should be defined via defineSlots().
+     */
+    slots?: never
+  },
 ): void {
   if (__DEV__) {
     warnRuntimeUsage(`defineOptions`)
@@ -305,7 +330,7 @@ type PropsWithDefaults<
 > = Readonly<MappedOmit<T, keyof Defaults>> & {
   readonly [K in keyof Defaults]-?: K extends keyof T
     ? Defaults[K] extends undefined
-      ? T[K]
+      ? IfAny<Defaults[K], NotUndefined<T[K]>, T[K]>
       : NotUndefined<T[K]>
     : never
 } & {
@@ -371,7 +396,7 @@ function getContext(): SetupContext {
  */
 export function normalizePropsOrEmits(
   props: ComponentPropsOptions | EmitsOptions,
-) {
+): ComponentObjectPropsOptions | ObjectEmitsOptions {
   return isArray(props)
     ? props.reduce(
         (normalized, p) => ((normalized[p] = null), normalized),
@@ -419,7 +444,7 @@ export function mergeDefaults(
 export function mergeModels(
   a: ComponentPropsOptions | EmitsOptions,
   b: ComponentPropsOptions | EmitsOptions,
-) {
+): ComponentPropsOptions | EmitsOptions {
   if (!a || !b) return a || b
   if (isArray(a) && isArray(b)) return a.concat(b)
   return extend({}, normalizePropsOrEmits(a), normalizePropsOrEmits(b))
@@ -464,7 +489,7 @@ export function createPropsRestProxy(
  * ```
  * @internal
  */
-export function withAsyncContext(getAwaitable: () => any) {
+export function withAsyncContext(getAwaitable: () => any): [any, () => void] {
   const ctx = getCurrentInstance()!
   if (__DEV__ && !ctx) {
     warn(

@@ -109,10 +109,10 @@ export enum PatchFlags {
    */
 
   /**
-   * Indicates a hoisted static vnode. This is a hint for hydration to skip
+   * Indicates a cached static vnode. This is also a hint for hydration to skip
    * the entire sub tree since static content never needs to be updated.
    */
-  HOISTED = -1,
+  CACHED = -1,
   /**
    * A special flag that indicates that the diffing algorithm should bail out
    * of optimized mode. For example, on block fragments created by renderSlot()
@@ -139,6 +139,6 @@ export const PatchFlagNames: Record<PatchFlags, string> = {
   [PatchFlags.NEED_PATCH]: `NEED_PATCH`,
   [PatchFlags.DYNAMIC_SLOTS]: `DYNAMIC_SLOTS`,
   [PatchFlags.DEV_ROOT_FRAGMENT]: `DEV_ROOT_FRAGMENT`,
-  [PatchFlags.HOISTED]: `HOISTED`,
+  [PatchFlags.CACHED]: `HOISTED`,
   [PatchFlags.BAIL]: `BAIL`,
 }

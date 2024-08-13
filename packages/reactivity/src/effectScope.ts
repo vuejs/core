@@ -1,7 +1,7 @@
 import type { ReactiveEffect } from './effect'
 import { warn } from './warning'
 
-let activeEffectScope: EffectScope | undefined
+export let activeEffectScope: EffectScope | undefined
 
 export class EffectScope {
   /**
@@ -16,6 +16,8 @@ export class EffectScope {
    * @internal
    */
   cleanups: (() => void)[] = []
+
+  private _isPaused = false
 
   /**
    * only assigned by undetached scope
@@ -44,8 +46,41 @@ export class EffectScope {
     }
   }
 
-  get active() {
+  get active(): boolean {
     return this._active
+  }
+
+  pause(): void {
+    if (this._active) {
+      this._isPaused = true
+      if (this.scopes) {
+        for (let i = 0, l = this.scopes.length; i < l; i++) {
+          this.scopes[i].pause()
+        }
+      }
+      for (let i = 0, l = this.effects.length; i < l; i++) {
+        this.effects[i].pause()
+      }
+    }
+  }
+
+  /**
+   * Resumes the effect scope, including all child scopes and effects.
+   */
+  resume(): void {
+    if (this._active) {
+      if (this._isPaused) {
+        this._isPaused = false
+        if (this.scopes) {
+          for (let i = 0, l = this.scopes.length; i < l; i++) {
+            this.scopes[i].resume()
+          }
+        }
+        for (let i = 0, l = this.effects.length; i < l; i++) {
+          this.effects[i].resume()
+        }
+      }
+    }
   }
 
   run<T>(fn: () => T): T | undefined {
@@ -66,7 +101,7 @@ export class EffectScope {
    * This should only be called on non-detached scopes
    * @internal
    */
-  on() {
+  on(): void {
     activeEffectScope = this
   }
 
@@ -74,11 +109,11 @@ export class EffectScope {
    * This should only be called on non-detached scopes
    * @internal
    */
-  off() {
+  off(): void {
     activeEffectScope = this.parent
   }
 
-  stop(fromParent?: boolean) {
+  stop(fromParent?: boolean): void {
     if (this._active) {
       let i, l
       // #5783
@@ -120,17 +155,8 @@ export class EffectScope {
  * @param detached - Can be used to create a "detached" effect scope.
  * @see {@link https://vuejs.org/api/reactivity-advanced.html#effectscope}
  */
-export function effectScope(detached?: boolean) {
+export function effectScope(detached?: boolean): EffectScope {
   return new EffectScope(detached)
-}
-
-export function recordEffectScope(
-  effect: ReactiveEffect,
-  scope: EffectScope | undefined = activeEffectScope,
-) {
-  if (scope && scope.active) {
-    scope.effects.push(effect)
-  }
 }
 
 /**
@@ -138,7 +164,7 @@ export function recordEffectScope(
  *
  * @see {@link https://vuejs.org/api/reactivity-advanced.html#getcurrentscope}
  */
-export function getCurrentScope() {
+export function getCurrentScope(): EffectScope | undefined {
   return activeEffectScope
 }
 
@@ -149,10 +175,10 @@ export function getCurrentScope() {
  * @param fn - The callback function to attach to the scope's cleanup.
  * @see {@link https://vuejs.org/api/reactivity-advanced.html#onscopedispose}
  */
-export function onScopeDispose(fn: () => void) {
+export function onScopeDispose(fn: () => void, failSilently = false): void {
   if (activeEffectScope) {
     activeEffectScope.cleanups.push(fn)
-  } else if (__DEV__) {
+  } else if (__DEV__ && !failSilently) {
     warn(
       `onScopeDispose() is called when there is no active effect scope` +
         ` to be associated with.`,

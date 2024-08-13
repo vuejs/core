@@ -39,7 +39,9 @@ import {
 } from './compatConfig'
 import { compatModelEventPrefix } from './componentVModel'
 
-export function convertLegacyRenderFn(instance: ComponentInternalInstance) {
+export function convertLegacyRenderFn(
+  instance: ComponentInternalInstance,
+): void {
   const Component = instance.type as ComponentOptions
   const render = Component.render as InternalRenderFunction | undefined
 
@@ -303,7 +305,7 @@ function convertLegacySlots(vnode: VNode): VNode {
   return vnode
 }
 
-export function defineLegacyVNodeProperties(vnode: VNode) {
+export function defineLegacyVNodeProperties(vnode: VNode): void {
   /* istanbul ignore if */
   if (
     isCompatEnabled(
