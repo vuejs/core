@@ -141,7 +141,7 @@ export function withDirectives<T extends VNode>(
   }
   const instance = getComponentPublicInstance(currentRenderingInstance)
   const bindings: DirectiveBinding[] = vnode.dirs || (vnode.dirs = [])
-  for (let i = 0; i < directives.length; i++) {
+  for (let i in directives) {
     let [dir, value, arg, modifiers = EMPTY_OBJ] = directives[i]
     if (dir) {
       if (isFunction(dir)) {
@@ -174,7 +174,7 @@ export function invokeDirectiveHook(
 ): void {
   const bindings = vnode.dirs!
   const oldBindings = prevVNode && prevVNode.dirs!
-  for (let i = 0; i < bindings.length; i++) {
+  for (let i in bindings) {
     const binding = bindings[i]
     if (oldBindings) {
       binding.oldValue = oldBindings[i].value
