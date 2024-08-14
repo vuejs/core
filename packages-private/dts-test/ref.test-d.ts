@@ -209,6 +209,14 @@ describe('allow computed getter and setter types to be unrelated', () => {
   expectType<string>(c.value)
 })
 
+describe('Type safety for `WritableComputedRef` and `ComputedRef`', () => {
+  // @ts-expect-error
+  const writableComputed: WritableComputedRef<string> = computed(() => '')
+  // should allow
+  const immutableComputed: ComputedRef<string> = writableComputed
+  expectType<ComputedRef<string>>(immutableComputed)
+})
+
 // shallowRef
 type Status = 'initial' | 'ready' | 'invalidating'
 const shallowStatus = shallowRef<Status>('initial')
