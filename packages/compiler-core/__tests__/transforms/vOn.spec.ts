@@ -285,6 +285,21 @@ describe('compiler: transform v-on', () => {
         },
       ],
     })
+
+    const { node: node2 } = parseWithVOn(
+      `<div @click="(e: (number | stirng)[]) => foo(e)"/>`,
+    )
+    expect((node2.codegenNode as VNodeCall).props).toMatchObject({
+      properties: [
+        {
+          key: { content: `onClick` },
+          value: {
+            type: NodeTypes.SIMPLE_EXPRESSION,
+            content: `(e: (number | stirng)[]) => foo(e)`,
+          },
+        },
+      ],
+    })
   })
 
   test('should NOT wrap as function if expression is already function expression (async)', () => {
