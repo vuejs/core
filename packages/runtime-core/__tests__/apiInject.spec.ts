@@ -13,7 +13,6 @@ import {
 } from '../src/index'
 import { createApp, nodeOps, render, serialize } from '@vue/runtime-test'
 
-// reference: https://vue-composition-api-rfc.netlify.com/api.html#provide-inject
 describe('api: provide/inject', () => {
   it('string keys', () => {
     const Provider = {

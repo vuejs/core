@@ -1,20 +1,23 @@
 import {
   type BindingMetadata,
+  type CodegenSourceMapGenerator,
   type CompilerError,
   type ElementNode,
   NodeTypes,
   type ParserOptions,
+  type RawSourceMap,
   type RootNode,
   type SourceLocation,
   createRoot,
 } from '@vue/compiler-core'
 import * as CompilerDOM from '@vue/compiler-dom'
-import { type RawSourceMap, SourceMapGenerator } from 'source-map-js'
+import { SourceMapGenerator } from 'source-map-js'
 import type { TemplateCompiler } from './compileTemplate'
 import { parseCssVars } from './style/cssVars'
 import { createCache } from './cache'
 import type { ImportBinding } from './compileScript'
 import { isImportUsed } from './script/importUsageCheck'
+import type { LRUCache } from 'lru-cache'
 
 export const DEFAULT_FILENAME = 'anonymous.vue'
 
@@ -26,11 +29,6 @@ export interface SFCParseOptions {
   ignoreEmpty?: boolean
   compiler?: TemplateCompiler
   templateParseOptions?: ParserOptions
-  /**
-   * TODO remove in 3.5
-   * @deprecated use `templateParseOptions: { prefixIdentifiers: false }` instead
-   */
-  parseExpressions?: boolean
 }
 
 export interface SFCBlock {
@@ -101,7 +99,9 @@ export interface SFCParseResult {
   errors: (CompilerError | SyntaxError)[]
 }
 
-export const parseCache = createCache<SFCParseResult>()
+export const parseCache:
+  | Map<string, SFCParseResult>
+  | LRUCache<string, SFCParseResult> = createCache<SFCParseResult>()
 
 function genCacheKey(source: string, options: SFCParseOptions): string {
   return (
@@ -133,8 +133,7 @@ export function parse(
     pad = false,
     ignoreEmpty = true,
     compiler = CompilerDOM,
-    templateParseOptions = {},
-    parseExpressions = true,
+    templateParseOptions = { prefixIdentifiers: true },
   } = options
 
   const descriptor: SFCDescriptor = {
@@ -153,7 +152,6 @@ export function parse(
   const errors: (CompilerError | SyntaxError)[] = []
   const ast = compiler.parse(source, {
     parseMode: 'sfc',
-    prefixIdentifiers: parseExpressions,
     ...templateParseOptions,
     onError: e => {
       errors.push(e)
@@ -375,7 +373,7 @@ function generateSourceMap(
   const map = new SourceMapGenerator({
     file: filename.replace(/\\/g, '/'),
     sourceRoot: sourceRoot.replace(/\\/g, '/'),
-  })
+  }) as unknown as CodegenSourceMapGenerator
   map.setSourceContent(filename, source)
   map._sources.add(filename)
   generated.split(splitRE).forEach((line, index) => {
@@ -390,7 +388,6 @@ function generateSourceMap(
             generatedLine,
             generatedColumn: i,
             source: filename,
-            // @ts-expect-error
             name: null,
           })
         }

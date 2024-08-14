@@ -1,0 +1,17 @@
+{
+  "name": "@vue/template-explorer",
+  "private": true,
+  "version": "0.0.0",
+  "buildOptions": {
+    "formats": [
+      "global"
+    ],
+    "compat": true,
+    "env": "development",
+    "enableNonBrowserBranches": true
+  },
+  "dependencies": {
+    "monaco-editor": "^0.50.0",
+    "source-map-js": "^1.2.0"
+  }
+}

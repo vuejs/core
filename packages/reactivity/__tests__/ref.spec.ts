@@ -7,6 +7,7 @@ import {
   ref,
   toRef,
   toRefs,
+  toValue,
 } from '../src/index'
 import { computed } from '@vue/runtime-dom'
 import { customRef, shallowRef, triggerRef, unref } from '../src/ref'
@@ -251,6 +252,18 @@ describe('reactivity/ref', () => {
       x: 1,
     })
     const x = toRef(a, 'x')
+
+    const b = ref({ y: 1 })
+
+    const c = toRef(b)
+
+    const d = toRef({ z: 1 })
+
+    expect(isRef(d)).toBe(true)
+    expect(d.value.z).toBe(1)
+
+    expect(c).toBe(b)
+
     expect(isRef(x)).toBe(true)
     expect(x.value).toBe(1)
 
@@ -441,5 +454,62 @@ describe('reactivity/ref', () => {
     a.value = rr
     expect(a.value).toBe(rr)
     expect(a.value).not.toBe(r)
+  })
+
+  test('should not trigger when setting the same raw object', () => {
+    const obj = {}
+    const r = ref(obj)
+    const spy = vi.fn()
+    effect(() => spy(r.value))
+    expect(spy).toHaveBeenCalledTimes(1)
+
+    r.value = obj
+    expect(spy).toHaveBeenCalledTimes(1)
+  })
+
+  test('toValue', () => {
+    const a = ref(1)
+    const b = computed(() => a.value + 1)
+    const c = () => a.value + 2
+    const d = 4
+
+    expect(toValue(a)).toBe(1)
+    expect(toValue(b)).toBe(2)
+    expect(toValue(c)).toBe(3)
+    expect(toValue(d)).toBe(4)
+  })
+
+  test('ref w/ customRef w/ getterRef w/ objectRef should store value cache', () => {
+    const refValue = ref(1)
+    // @ts-expect-error private field
+    expect(refValue._value).toBe(1)
+
+    let customRefValueCache = 0
+    const customRefValue = customRef((track, trigger) => {
+      return {
+        get() {
+          track()
+          return customRefValueCache
+        },
+        set(value: number) {
+          customRefValueCache = value
+          trigger()
+        },
+      }
+    })
+    customRefValue.value
+
+    // @ts-expect-error internal field
+    expect(customRefValue._value).toBe(0)
+
+    const getterRefValue = toRef(() => 1)
+    getterRefValue.value
+    // @ts-expect-error internal field
+    expect(getterRefValue._value).toBe(1)
+
+    const objectRefValue = toRef({ value: 1 }, 'value')
+    objectRefValue.value
+    // @ts-expect-error internal field
+    expect(objectRefValue._value).toBe(1)
   })
 })
