@@ -287,7 +287,7 @@ describe('compiler: transform v-on', () => {
     })
 
     const { node: node2 } = parseWithVOn(
-      `<div @click="(e: (number | stirng)[]) => foo(e)"/>`,
+      `<div @click="(e: (number | string)[]) => foo(e)"/>`,
     )
     expect((node2.codegenNode as VNodeCall).props).toMatchObject({
       properties: [
@@ -295,7 +295,7 @@ describe('compiler: transform v-on', () => {
           key: { content: `onClick` },
           value: {
             type: NodeTypes.SIMPLE_EXPRESSION,
-            content: `(e: (number | stirng)[]) => foo(e)`,
+            content: `(e: (number | string)[]) => foo(e)`,
           },
         },
       ],
