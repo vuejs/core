@@ -573,7 +573,14 @@ describe('Suspense', () => {
     const Comp: ComponentOptions<{ data: string }> = {
       props: ['data'],
       setup(props) {
-        return () => h(Async, { 'data-test': props.data })
+        const val = ref('1')
+        onMounted(async () => {
+          val.value = '2'
+          await new Promise(r => setTimeout(r, 5))
+          val.value = '1'
+        })
+        return () =>
+          h(Async, { 'data-test': props.data, 'data-val': val.value })
       },
     }
 
@@ -595,7 +602,13 @@ describe('Suspense', () => {
     render(h(Root), root)
     expect(serializeInner(root)).toBe(`<div>fallback</div>`)
     await mounted
-    expect(serializeInner(root)).toBe(`<div data-test="2">async</div>`)
+    expect(serializeInner(root)).toBe(
+      `<div data-test="2" data-val="2">async</div>`,
+    )
+    await new Promise(r => setTimeout(r, 5))
+    expect(serializeInner(root)).toBe(
+      `<div data-test="2" data-val="1">async</div>`,
+    )
   })
 
   test('nested suspense (parent resolves first)', async () => {
