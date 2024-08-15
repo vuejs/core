@@ -1801,7 +1801,7 @@ describe('api: watch', () => {
     expect(foo.value.a).toBe(2)
   })
 
-  test('watch immediate error in effect scope should be catched by onErrorCaptured', async () => {
+  test('watch immediate error in effect scope should be caught by onErrorCaptured', async () => {
     const warn = vi.spyOn(console, 'warn')
     warn.mockImplementation(() => {})
     const ERROR_IN_SCOPE = 'ERROR_IN_SCOPE'
@@ -1853,6 +1853,48 @@ describe('api: watch', () => {
     expect(errors.value).toHaveLength(2)
     expect(errors.value[0]).toBe(ERROR_IN_SCOPE)
     expect(errors.value[1]).toBe(ERROR_OUT_SCOPE)
+
+    warn.mockRestore()
+  })
+
+  test('watch + computed error should be caught by onErrorCaptured', async () => {
+    const warn = vi.spyOn(console, 'warn')
+    warn.mockImplementation(() => {})
+    const ERROR_IN_COMPUTED = 'ERROR_IN_COMPUTED'
+
+    const trigger = ref(false)
+    const errors = ref<string[]>([])
+    const Comp = {
+      setup() {
+        const foo = computed(() => {
+          if (trigger.value) {
+            throw new Error(ERROR_IN_COMPUTED)
+          }
+        })
+        watch(foo, () => console.log('foo'))
+        return () => ''
+      },
+    }
+
+    const App = {
+      setup() {
+        onErrorCaptured(e => {
+          errors.value.push(e.message)
+          return false
+        })
+
+        return () => h(Comp)
+      },
+    }
+    const root = nodeOps.createElement('div')
+    render(h(App), root)
+    await nextTick()
+
+    trigger.value = true
+    await nextTick()
+
+    expect(errors.value).toHaveLength(1)
+    expect(errors.value[0]).toBe(ERROR_IN_COMPUTED)
 
     warn.mockRestore()
   })
