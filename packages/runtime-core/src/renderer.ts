@@ -1438,7 +1438,7 @@ function baseCreateRenderer(
             nonHydratedAsyncRoot.asyncDep!.then(() => {
               // the instance may be destroyed during the time period
               if (!instance.isUnmounted) {
-                componentUpdateFn()
+                instance.update()
               }
             })
             return
