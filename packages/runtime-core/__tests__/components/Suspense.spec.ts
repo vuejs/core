@@ -2162,7 +2162,8 @@ describe('Suspense', () => {
     await Promise.all(deps)
   })
 
-  test('Suspense & Component with `component is`', async () => {
+  //#11617
+  test('update async component before resolve then update again', async () => {
     const arr: boolean[] = []
     const Child = {
       props: ['loading'],
