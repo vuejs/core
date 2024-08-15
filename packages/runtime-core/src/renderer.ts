@@ -1435,7 +1435,7 @@ function baseCreateRenderer(
               updateComponentPreRender(instance, next, optimized)
             }
             // and continue the rest of operations once the deps are resolved
-            nonHydratedAsyncRoot.asyncDep!.catch().then(() => {
+            nonHydratedAsyncRoot.asyncDep!.then().then(() => {
               // the instance may be destroyed during the time period
               if (!instance.isUnmounted) {
                 update()
