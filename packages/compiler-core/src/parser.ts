@@ -44,7 +44,7 @@ import {
   isSimpleIdentifier,
   isStaticArgOf,
 } from './utils'
-import { decodeHTML } from 'entities/dist/decode.js'
+import { decodeHTML } from 'entities/lib/decode.js'
 import {
   type ParserOptions as BabelOptions,
   parse,
