@@ -1871,7 +1871,7 @@ describe('api: watch', () => {
             throw new Error(ERROR_IN_COMPUTED)
           }
         })
-        watch(foo, () => console.log('foo'))
+        watch(foo, () => {})
         return () => ''
       },
     }
