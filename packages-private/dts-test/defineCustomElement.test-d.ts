@@ -99,4 +99,37 @@ describe('defineCustomElement using defineComponent return type', () => {
     expectType<number | undefined>(instance.a)
     instance.a = 42
   })
+
+  test('with required props', () => {
+    const Comp1Vue = defineComponent({
+      props: {
+        a: { type: Number, required: true },
+      },
+    })
+    const Comp = defineCustomElement(Comp1Vue)
+    expectType<VueElementConstructor>(Comp)
+
+    const instance = new Comp()
+    expectType<number>(instance.a)
+    instance.a = 42
+  })
+
+  test('with default props', () => {
+    const Comp1Vue = defineComponent({
+      props: {
+        a: {
+          type: Number,
+          default: 1,
+          validator: () => true,
+        },
+      },
+      emits: ['click'],
+    })
+    const Comp = defineCustomElement(Comp1Vue)
+    expectType<VueElementConstructor>(Comp)
+
+    const instance = new Comp()
+    expectType<number>(instance.a)
+    instance.a = 42
+  })
 })
