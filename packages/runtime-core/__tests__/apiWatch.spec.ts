@@ -1378,37 +1378,41 @@ describe('api: watch', () => {
     expect(spy).toHaveBeenCalledTimes(2)
   })
 
-  test('nested watch stop', async () => {
-    const Comp = {
-      setup() {
-        watch(
-          () => 1,
-          (val, oldVal, onCleanup) => {
-            const stop = watch(
-              () => 2,
-              () => {},
-            )
-            onCleanup(stop)
-          },
-          { immediate: true },
-        )
-        return () => 'comp'
-      },
-    }
-    const toggle = ref(true)
-    const App = {
-      setup() {
-        return () => (toggle.value ? h(Comp) : h('div', 'foo'))
-      },
-    }
+  test('removing a watcher while stopping its effectScope', async () => {
+    const count = ref(0)
+    const scope = effectScope()
+    let watcherCalls = 0
+    let cleanupCalls = 0
 
-    const root = nodeOps.createElement('div')
-    createApp(App).mount(root)
-    expect(serializeInner(root)).toBe('comp')
+    scope.run(() => {
+      const stop1 = watch(count, () => {
+        watcherCalls++
+      })
+      watch(count, (val, old, onCleanup) => {
+        watcherCalls++
+        onCleanup(() => {
+          cleanupCalls++
+          stop1()
+        })
+      })
+      watch(count, () => {
+        watcherCalls++
+      })
+    })
 
-    toggle.value = false
+    expect(watcherCalls).toBe(0)
+    expect(cleanupCalls).toBe(0)
+
+    count.value++
     await nextTick()
-    expect(serializeInner(root)).toBe('<div>foo</div>')
+    expect(watcherCalls).toBe(3)
+    expect(cleanupCalls).toBe(0)
+
+    scope.stop()
+    count.value++
+    await nextTick()
+    expect(watcherCalls).toBe(3)
+    expect(cleanupCalls).toBe(1)
   })
 
   it('watching sources: ref<any[]>', async () => {
