@@ -333,7 +333,7 @@ export function installAppCompatProperties(
   app: App,
   context: AppContext,
   render: RootRenderFunction<any>,
-) {
+): void {
   installFilterMethod(app, context)
   installLegacyOptionMergeStrats(app.config)
 
@@ -548,7 +548,7 @@ function installCompatMount(
       }
 
       // clear content before mounting
-      container.innerHTML = ''
+      container.textContent = ''
 
       // TODO hydration
       render(vnode, container, namespace)

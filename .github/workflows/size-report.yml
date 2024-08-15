@@ -35,31 +35,24 @@ jobs:
       - name: Install dependencies
         run: pnpm install
 
-      - name: Download PR info
-        uses: dawidd6/action-download-artifact@v6
-        with:
-          name: pr-info
-          run_id: ${{ github.event.workflow_run.id }}
-          path: /tmp/pr-info
-
-      - name: Read PR Number
-        id: pr-number
-        uses: juliangruber/read-file-action@v1
-        with:
-          path: /tmp/pr-info/number.txt
-
-      - name: Read PR base branch
-        id: pr-base
-        uses: juliangruber/read-file-action@v1
-        with:
-          path: /tmp/pr-info/base.txt
-
       - name: Download Size Data
         uses: dawidd6/action-download-artifact@v6
         with:
           name: size-data
           run_id: ${{ github.event.workflow_run.id }}
           path: temp/size
+
+      - name: Read PR Number
+        id: pr-number
+        uses: juliangruber/read-file-action@v1
+        with:
+          path: temp/size/number.txt
+
+      - name: Read base branch
+        id: pr-base
+        uses: juliangruber/read-file-action@v1
+        with:
+          path: temp/size/base.txt
 
       - name: Download Previous Size Data
         uses: dawidd6/action-download-artifact@v6

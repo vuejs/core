@@ -5,6 +5,7 @@ import { patchDOMProp } from './modules/props'
 import { patchEvent } from './modules/events'
 import { isFunction, isModelListener, isOn, isString } from '@vue/shared'
 import type { RendererOptions } from '@vue/runtime-core'
+import type { VueElement } from './apiCustomElement'
 
 const isNativeOn = (key: string) =>
   key.charCodeAt(0) === 111 /* o */ &&
@@ -127,5 +128,14 @@ function shouldSetAsProp(
     return false
   }
 
-  return key in el
+  if (key in el) {
+    return true
+  }
+
+  // #11081 force set props for possible async custom element
+  if ((el as VueElement)._isVueCE && (/[A-Z]/.test(key) || !isString(value))) {
+    return true
+  }
+
+  return false
 }

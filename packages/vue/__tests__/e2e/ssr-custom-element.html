@@ -1,0 +1,44 @@
+<script src="../../dist/vue.global.js"></script>
+
+<my-element
+  ><template shadowrootmode="open"><button>1</button></template></my-element
+>
+<my-element-async
+  ><template shadowrootmode="open"
+    ><button>1</button></template
+  ></my-element-async
+>
+
+<script>
+  const {
+    h,
+    ref,
+    defineSSRCustomElement,
+    defineAsyncComponent,
+    onMounted,
+    useHost,
+  } = Vue
+
+  const def = {
+    setup() {
+      const count = ref(1)
+      const el = useHost()
+      onMounted(() => (el.style.border = '1px solid red'))
+
+      return () => h('button', { onClick: () => count.value++ }, count.value)
+    },
+  }
+
+  customElements.define('my-element', defineSSRCustomElement(def))
+  customElements.define(
+    'my-element-async',
+    defineSSRCustomElement(
+      defineAsyncComponent(
+        () =>
+          new Promise(r => {
+            window.resolve = () => r(def)
+          }),
+      ),
+    ),
+  )
+</script>

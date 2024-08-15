@@ -2,6 +2,7 @@
 import assert from 'node:assert/strict'
 import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
+import fs from 'node:fs'
 import path from 'node:path'
 import replace from '@rollup/plugin-replace'
 import json from '@rollup/plugin-json'
@@ -33,7 +34,11 @@ const __dirname = fileURLToPath(new URL('.', import.meta.url))
 const masterVersion = require('./package.json').version
 const consolidatePkg = require('@vue/consolidate/package.json')
 
-const packagesDir = path.resolve(__dirname, 'packages')
+const privatePackages = fs.readdirSync('packages-private')
+const pkgBase = privatePackages.includes(process.env.TARGET)
+  ? `packages-private`
+  : `packages`
+const packagesDir = path.resolve(__dirname, pkgBase)
 const packageDir = path.resolve(packagesDir, process.env.TARGET)
 
 const resolve = (/** @type {string} */ p) => path.resolve(packageDir, p)
@@ -176,7 +181,7 @@ function createConfig(format, output, plugins = []) {
       // is targeting Node (SSR)?
       __CJS__: String(isCJSBuild),
       // need SSR-specific branches?
-      __SSR__: String(isCJSBuild || isBundlerESMBuild || isServerRenderer),
+      __SSR__: String(!isGlobalBuild),
 
       // 2.x compat build
       __COMPAT__: String(isCompatBuild),
@@ -253,7 +258,7 @@ function createConfig(format, output, plugins = []) {
       'source-map-js',
       '@babel/parser',
       'estree-walker',
-      'entities/dist/decode.js',
+      'entities/lib/decode.js',
     ]
 
     if (isGlobalBuild || isBrowserESMBuild || isCompatPackage) {

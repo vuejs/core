@@ -1,0 +1,42 @@
+# upload built packages as artifacts for faster ecosystem-ci
+name: upload-built-packages
+
+on:
+  workflow_run:
+    workflows: ['ci']
+    branches: [main, minor]
+    types:
+      - completed
+
+jobs:
+  build-and-upload:
+    if: >
+      github.repository == 'vuejs/core' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.node-version'
+          registry-url: 'https://registry.npmjs.org'
+          cache: 'pnpm'
+
+      - name: Install deps
+        run: pnpm install
+
+      - name: Build
+        run: pnpm build --withTypes
+
+      - name: Upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: packages
+          path: packages/*/dist/*
