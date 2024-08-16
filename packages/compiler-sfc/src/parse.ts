@@ -133,7 +133,7 @@ export function parse(
     pad = false,
     ignoreEmpty = true,
     compiler = CompilerDOM,
-    templateParseOptions = { prefixIdentifiers: true },
+    templateParseOptions = {},
   } = options
 
   const descriptor: SFCDescriptor = {
@@ -152,6 +152,7 @@ export function parse(
   const errors: (CompilerError | SyntaxError)[] = []
   const ast = compiler.parse(source, {
     parseMode: 'sfc',
+    prefixIdentifiers: true,
     ...templateParseOptions,
     onError: e => {
       errors.push(e)
