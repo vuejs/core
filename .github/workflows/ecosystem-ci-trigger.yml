@@ -56,7 +56,8 @@ jobs:
             return {
               num: context.issue.number,
               branchName: pr.head.ref,
-              repo: pr.head.repo.full_name
+              repo: pr.head.repo.full_name,
+              commit: pr.head.sha
             }
       - uses: actions/github-script@v7
         id: trigger
@@ -81,5 +82,6 @@ jobs:
                 branchName: prData.branchName,
                 repo: prData.repo,
                 suite: suite === '' ? '-' : suite
+                commit: prData.commit
               }
             })
