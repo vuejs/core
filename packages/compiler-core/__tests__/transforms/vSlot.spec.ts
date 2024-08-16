@@ -28,6 +28,7 @@ import { createObjectMatcher } from '../testUtils'
 import { PatchFlags } from '@vue/shared'
 import { transformFor } from '../../src/transforms/vFor'
 import { transformIf } from '../../src/transforms/vIf'
+import type { CompilerError } from '../../src/errors'
 
 function parseWithSlots(template: string, options: CompilerOptions = {}) {
   const ast = parse(template, {
@@ -927,6 +928,46 @@ describe('compiler: transform component slots', () => {
           },
         },
       })
+    })
+
+    test('error when v-slot used on non-root level <template>', () => {
+      const onError = vi.fn()
+
+      const { root } = parseWithSlots(
+        `<Bar><template><template #header> Header </template></template></Bar>`,
+        { onError },
+      )
+
+      expect(onError.mock.calls[0]).toMatchObject([
+        {
+          code: ErrorCodes.X_V_SLOT_TEMPLATE_NOT_ROOT,
+          loc: (root.children[0] as any).children[0].children[0].loc,
+        },
+      ])
+    })
+
+    test('error when v-slot used on non-root level <template> with v-if', () => {
+      const onError = vi.fn().mockImplementation((error: CompilerError) => {
+        throw error
+      })
+
+      expect(() => {
+        parseWithSlots(
+          `<Bar><template v-if="true"><template #header> Header </template></template></Bar>`,
+          { onError },
+        )
+      }).toThrow()
+
+      expect(onError.mock.calls[0]).toMatchObject([
+        {
+          code: ErrorCodes.X_V_SLOT_TEMPLATE_NOT_ROOT,
+          loc: {
+            start: { column: 28, line: 1, offset: 27 },
+            end: { column: 65, line: 1, offset: 64 },
+            source: '<template #header> Header </template>',
+          },
+        },
+      ])
     })
   })
 

@@ -20,7 +20,6 @@ import { transformElement } from '../src/transforms/transformElement'
 import { transformSlotOutlet } from '../src/transforms/transformSlotOutlet'
 import { transformText } from '../src/transforms/transformText'
 import { PatchFlags } from '@vue/shared'
-import type { CompilerOptions } from '@vue/compiler-core'
 
 describe('compiler: transform', () => {
   test('context state', () => {
@@ -377,77 +376,6 @@ describe('compiler: transform', () => {
           PatchFlags.STABLE_FRAGMENT | PatchFlags.DEV_ROOT_FRAGMENT,
         ),
       )
-    })
-  })
-
-  describe('errors', () => {
-    function transformWithCodegen(
-      template: string,
-      options: CompilerOptions = {},
-    ) {
-      const ast = baseParse(template)
-      transform(ast, {
-        nodeTransforms: [
-          transformIf,
-          transformFor,
-          transformText,
-          transformSlotOutlet,
-          transformElement,
-        ],
-        ...options,
-      })
-      return ast
-    }
-
-    test('warn when v-slot used on non-root level <template>', () => {
-      const onError = vi.fn()
-
-      const ast = transformWithCodegen(
-        `
-        <template>
-          <Bar>
-            <template>
-              <template #header> Header </template>
-            </template>
-          </Bar>
-        </template>`,
-        { onError },
-      )
-
-      expect(onError.mock.calls[0]).toMatchObject([
-        {
-          code: ErrorCodes.X_TEMPLATE_NOT_ROOT,
-          loc: (ast.children[0] as any).children[0].children[0].children[0].loc,
-        },
-      ])
-    })
-
-    test('dont warn when v-slot used on root level <template>', () => {
-      const onError = vi.fn()
-
-      transformWithCodegen(
-        `<template>
-          <Comp>
-            <template #header> Header </template>
-          </Comp>
-        </template>`,
-        { onError },
-      )
-
-      expect(onError.mock.calls).toEqual([])
-    })
-
-    test('dont warn when v-slot used on root level <template> inside custom component', () => {
-      const onError = vi.fn()
-
-      transformWithCodegen(
-        `<template>
-          <div is="vue:customComp"><template v-slot="slotProps"></template></div>
-        </template>`,
-        { onError },
-      )
-
-      expect(onError.mock.calls).toEqual([])
     })
   })
 })

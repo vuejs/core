@@ -49,6 +49,19 @@ export const trackSlotScopes: NodeTransform = (node, context) => {
     (node.tagType === ElementTypes.COMPONENT ||
       node.tagType === ElementTypes.TEMPLATE)
   ) {
+    const { parent } = context
+    if (
+      node.tagType === ElementTypes.TEMPLATE &&
+      parent &&
+      (('tagType' in parent && parent.tagType !== ElementTypes.COMPONENT) ||
+        (parent.type && parent.type > NodeTypes.ELEMENT)) &&
+      node.props.some(isVSlot)
+    ) {
+      context.onError(
+        createCompilerError(ErrorCodes.X_V_SLOT_TEMPLATE_NOT_ROOT, node.loc),
+      )
+    }
+
     // We are only checking non-empty v-slot here
     // since we only care about slots that introduce scope variables.
     const vSlot = findDir(node, 'slot')

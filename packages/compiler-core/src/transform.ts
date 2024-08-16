@@ -30,12 +30,7 @@ import {
   isArray,
   isString,
 } from '@vue/shared'
-import {
-  ErrorCodes,
-  createCompilerError,
-  defaultOnError,
-  defaultOnWarn,
-} from './errors'
+import { defaultOnError, defaultOnWarn } from './errors'
 import {
   CREATE_COMMENT,
   FRAGMENT,
@@ -501,15 +496,6 @@ export function createStructuralDirectiveTransform(
       // structural directive transforms are not concerned with slots
       // as they are handled separately in vSlot.ts
       if (node.tagType === ElementTypes.TEMPLATE && props.some(isVSlot)) {
-        if (
-          context.parent &&
-          'tagType' in context.parent &&
-          context.parent.tagType !== ElementTypes.COMPONENT
-        ) {
-          context.onError(
-            createCompilerError(ErrorCodes.X_TEMPLATE_NOT_ROOT, node.loc),
-          )
-        }
         return
       }
       const exitFns = []
