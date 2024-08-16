@@ -51,6 +51,16 @@ const { values: args, positionals } = parseArgs({
     skipPrompts: {
       type: 'boolean',
     },
+    publish: {
+      type: 'boolean',
+      default: false,
+    },
+    publishOnly: {
+      type: 'boolean',
+    },
+    registry: {
+      type: 'string',
+    },
   },
 })
 
@@ -247,41 +257,7 @@ async function main() {
     }
   }
 
-  if (!skipTests) {
-    step('Checking CI status for HEAD...')
-    let isCIPassed = await getCIResult()
-    skipTests ||= isCIPassed
-
-    if (isCIPassed) {
-      if (!skipPrompts) {
-        /** @type {{ yes: boolean }} */
-        const { yes: promptSkipTests } = await prompt({
-          type: 'confirm',
-          name: 'yes',
-          message: `CI for this commit passed. Skip local tests?`,
-        })
-        skipTests = promptSkipTests
-      } else {
-        skipTests = true
-      }
-    } else if (skipPrompts) {
-      throw new Error(
-        'CI for the latest commit has not passed yet. ' +
-          'Only run the release workflow after the CI has passed.',
-      )
-    }
-  }
-
-  if (!skipTests) {
-    step('\nRunning tests...')
-    if (!isDryRun) {
-      await run('pnpm', ['run', 'test', '--run'])
-    } else {
-      console.log(`Skipped (dry run)`)
-    }
-  } else {
-    step('Tests skipped.')
-  }
+  await runTestsIfNeeded()
 
   // update all package versions and inter-dependencies
   step('\nUpdating cross dependencies...')
@@ -290,16 +266,6 @@ async function main() {
     isCanary ? renamePackageToCanary : keepThePackageName,
   )
   versionUpdated = true
-
-  // build all packages with types
-  step('\nBuilding all packages...')
-  if (!skipBuild && !isDryRun) {
-    await run('pnpm', ['run', 'build', '--withTypes'])
-    step('\nTesting built types...')
-    await run('pnpm', ['test-dts-only'])
-  } else {
-    console.log(`(skipped)`)
-  }
 
   // generate changelog
   step('\nGenerating changelog...')
@@ -337,29 +303,15 @@ async function main() {
   }
 
   // publish packages
-  step('\nPublishing packages...')
-
-  const additionalPublishFlags = []
-  if (isDryRun) {
-    additionalPublishFlags.push('--dry-run')
-  }
-  if (isDryRun || skipGit) {
-    additionalPublishFlags.push('--no-git-checks')
-  }
-  // bypass the pnpm --publish-branch restriction which isn't too useful to us
-  // otherwise it leads to a prompt and blocks the release script
-  const branch = await getBranch()
-  if (branch !== 'main') {
-    additionalPublishFlags.push('--publish-branch', branch)
-  }
-  // add provenance metadata when releasing from CI
-  // canary release commits are not pushed therefore we don't need to add provenance
-  if (process.env.CI && !isCanary) {
-    additionalPublishFlags.push('--provenance')
-  }
-
-  for (const pkg of packages) {
-    await publishPackage(pkg, targetVersion, additionalPublishFlags)
+  if (args.publish) {
+    await buildPackages()
+    await publishPackages(targetVersion)
+  } else {
+    console.log(
+      pico.yellow(
+        '\nPublish step skipped (will be done in GitHub actions on successful push)',
+      ),
+    )
   }
 
   // push to GitHub
@@ -384,6 +336,44 @@ async function main() {
     )
   }
   console.log()
+}
+
+async function runTestsIfNeeded() {
+  if (!skipTests) {
+    step('Checking CI status for HEAD...')
+    let isCIPassed = await getCIResult()
+    skipTests ||= isCIPassed
+
+    if (isCIPassed) {
+      if (!skipPrompts) {
+        /** @type {{ yes: boolean }} */
+        const { yes: promptSkipTests } = await prompt({
+          type: 'confirm',
+          name: 'yes',
+          message: `CI for this commit passed. Skip local tests?`,
+        })
+        skipTests = promptSkipTests
+      } else {
+        skipTests = true
+      }
+    } else if (skipPrompts) {
+      throw new Error(
+        'CI for the latest commit has not passed yet. ' +
+          'Only run the release workflow after the CI has passed.',
+      )
+    }
+  }
+
+  if (!skipTests) {
+    step('\nRunning tests...')
+    if (!isDryRun) {
+      await run('pnpm', ['run', 'test', '--run'])
+    } else {
+      console.log(`Skipped (dry run)`)
+    }
+  } else {
+    step('Tests skipped.')
+  }
 }
 
 async function getCIResult() {
@@ -492,6 +482,41 @@ function updateDeps(pkg, depType, version, getNewPackageName) {
   })
 }
 
+async function buildPackages() {
+  step('\nBuilding all packages...')
+  if (!skipBuild) {
+    await run('pnpm', ['run', 'build', '--withTypes'])
+  } else {
+    console.log(`(skipped)`)
+  }
+}
+
+/**
+ * @param {string} version
+ */
+async function publishPackages(version) {
+  // publish packages
+  step('\nPublishing packages...')
+
+  const additionalPublishFlags = []
+  if (isDryRun) {
+    additionalPublishFlags.push('--dry-run')
+  }
+  if (isDryRun || skipGit || process.env.CI) {
+    additionalPublishFlags.push('--no-git-checks')
+  }
+  // add provenance metadata when releasing from CI
+  // canary release commits are not pushed therefore we don't need to add provenance
+  // also skip provenance if not publishing to actual npm
+  if (process.env.CI && !isCanary && !args.registry) {
+    additionalPublishFlags.push('--provenance')
+  }
+
+  for (const pkg of packages) {
+    await publishPackage(pkg, version, additionalPublishFlags)
+  }
+}
+
 /**
  * @param {string} pkgName
  * @param {string} version
@@ -524,6 +549,7 @@ async function publishPackage(pkgName, version, additionalFlags) {
         ...(releaseTag ? ['--tag', releaseTag] : []),
         '--access',
         'public',
+        ...(args.registry ? ['--registry', args.registry] : []),
         ...additionalFlags,
       ],
       {
@@ -541,7 +567,18 @@ async function publishPackage(pkgName, version, additionalFlags) {
   }
 }
 
-main().catch(err => {
+async function publishOnly() {
+  const targetVersion = positionals[0]
+  if (targetVersion) {
+    updateVersions(targetVersion)
+  }
+  await buildPackages()
+  await publishPackages(currentVersion)
+}
+
+const fnToRun = args.publishOnly ? publishOnly : main
+
+fnToRun().catch(err => {
   if (versionUpdated) {
     // revert to current version on failed releases
     updateVersions(currentVersion)
