@@ -5,7 +5,14 @@
 
 <script>
   window.isHydrated = false
-  const { createSSRApp, defineAsyncComponent, h, ref, onMounted, hydrateOnMediaQuery } = Vue
+  const {
+    createSSRApp,
+    defineAsyncComponent,
+    h,
+    ref,
+    onMounted,
+    hydrateOnMediaQuery,
+  } = Vue
 
   const Comp = {
     setup() {
@@ -22,7 +29,7 @@
 
   const AsyncComp = defineAsyncComponent({
     loader: () => Promise.resolve(Comp),
-    hydrate: hydrateOnMediaQuery('(max-width:500px)')
+    hydrate: hydrateOnMediaQuery('(max-width:500px)'),
   })
 
   createSSRApp({
@@ -31,6 +38,6 @@
         window.isRootMounted = true
       })
       return () => h(AsyncComp)
-    }
+    },
   }).mount('#app')
 </script>

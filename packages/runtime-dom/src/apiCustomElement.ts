@@ -1,4 +1,5 @@
 import {
+  type App,
   type Component,
   type ComponentCustomElementInterface,
   type ComponentInjectOptions,
@@ -8,8 +9,10 @@ import {
   type ComponentOptionsBase,
   type ComponentOptionsMixin,
   type ComponentProvideOptions,
+  type ComponentPublicInstance,
   type ComputedOptions,
   type ConcreteComponent,
+  type CreateAppFunction,
   type CreateComponentPublicInstanceWithMixins,
   type DefineComponent,
   type Directive,
@@ -18,7 +21,6 @@ import {
   type ExtractPropTypes,
   type MethodOptions,
   type RenderFunction,
-  type RootHydrateFunction,
   type SetupContext,
   type SlotsType,
   type VNode,
@@ -39,7 +41,10 @@ import {
   isPlainObject,
   toNumber,
 } from '@vue/shared'
-import { hydrate, render } from '.'
+import { createApp, createSSRApp, render } from '.'
+
+// marker for attr removal
+const REMOVAL = {}
 
 export type VueElementConstructor<P = {}> = {
   new (initialProps?: Record<string, any>): VueElement & P
@@ -49,6 +54,7 @@ export interface CustomElementOptions {
   styles?: string[]
   shadowRoot?: boolean
   nonce?: string
+  configureApp?: (app: App) => void
 }
 
 // defineCustomElement provides the same type inference as defineComponent
@@ -148,14 +154,13 @@ export function defineCustomElement<
 // overload 3: defining a custom element from the returned value of
 // `defineComponent`
 export function defineCustomElement<
-  T extends DefineComponent<any, any, any, any>,
+  // this should be `ComponentPublicInstanceConstructor` but that type is not exported
+  T extends { new (...args: any[]): ComponentPublicInstance<any> },
 >(
   options: T,
   extraOptions?: CustomElementOptions,
 ): VueElementConstructor<
-  T extends DefineComponent<infer P, any, any, any>
-    ? ExtractPropTypes<P>
-    : unknown
+  T extends DefineComponent<infer P, any, any, any> ? P : unknown
 >
 
 /*! #__NO_SIDE_EFFECTS__ */
@@ -165,14 +170,14 @@ export function defineCustomElement(
   /**
    * @internal
    */
-  hydrate?: RootHydrateFunction,
+  _createApp?: CreateAppFunction<Element>,
 ): VueElementConstructor {
   const Comp = defineComponent(options, extraOptions) as any
   if (isPlainObject(Comp)) extend(Comp, extraOptions)
   class VueCustomElement extends VueElement {
     static def = Comp
     constructor(initialProps?: Record<string, any>) {
-      super(Comp, initialProps, hydrate)
+      super(Comp, initialProps, _createApp)
     }
   }
 
@@ -185,7 +190,7 @@ export const defineSSRCustomElement = ((
   extraOptions?: ComponentOptions,
 ) => {
   // @ts-expect-error
-  return defineCustomElement(options, extraOptions, hydrate)
+  return defineCustomElement(options, extraOptions, createSSRApp)
 }) as typeof defineCustomElement
 
 const BaseClass = (
@@ -198,10 +203,23 @@ export class VueElement
   extends BaseClass
   implements ComponentCustomElementInterface
 {
+  _isVueCE = true
   /**
    * @internal
    */
   _instance: ComponentInternalInstance | null = null
+  /**
+   * @internal
+   */
+  _app: App | null = null
+  /**
+   * @internal
+   */
+  _root: Element | ShadowRoot
+  /**
+   * @internal
+   */
+  _nonce: string | undefined = this._def.nonce
 
   private _connected = false
   private _resolved = false
@@ -218,21 +236,19 @@ export class VueElement
    */
   private _childStyles?: Map<string, HTMLStyleElement[]>
   private _ob?: MutationObserver | null = null
-  /**
-   * @internal
-   */
-  public _root: Element | ShadowRoot
   private _slots?: Record<string, Node[]>
 
   constructor(
+    /**
+     * Component def - note this may be an AsyncWrapper, and this._def will
+     * be overwritten by the inner component when resolved.
+     */
     private _def: InnerComponentDef,
     private _props: Record<string, any> = {},
-    hydrate?: RootHydrateFunction,
+    private _createApp: CreateAppFunction<Element> = createApp,
   ) {
     super()
-    // TODO handle non-shadowRoot hydration
-    if (this.shadowRoot && hydrate) {
-      hydrate(this._createVNode(), this.shadowRoot)
+    if (this.shadowRoot && _createApp !== createApp) {
       this._root = this.shadowRoot
     } else {
       if (__DEV__ && this.shadowRoot) {
@@ -247,14 +263,15 @@ export class VueElement
       } else {
         this._root = this
       }
-      if (!(this._def as ComponentOptions).__asyncLoader) {
-        // for sync component defs we can immediately resolve props
-        this._resolveProps(this._def)
-      }
+    }
+
+    if (!(this._def as ComponentOptions).__asyncLoader) {
+      // for sync component defs we can immediately resolve props
+      this._resolveProps(this._def)
     }
   }
 
-  connectedCallback() {
+  connectedCallback(): void {
     if (!this.shadowRoot) {
       this._parseSlots()
     }
@@ -295,7 +312,7 @@ export class VueElement
     }
   }
 
-  disconnectedCallback() {
+  disconnectedCallback(): void {
     this._connected = false
     nextTick(() => {
       if (!this._connected) {
@@ -303,9 +320,10 @@ export class VueElement
           this._ob.disconnect()
           this._ob = null
         }
-        render(null, this._root)
+        // unmount
+        this._app && this._app.unmount()
         this._instance!.ce = undefined
-        this._instance = null
+        this._app = this._instance = null
       }
     })
   }
@@ -371,11 +389,8 @@ export class VueElement
         )
       }
 
-      // initial render
-      this._update()
-
-      // apply expose
-      this._applyExpose()
+      // initial mount
+      this._mount(def)
     }
 
     const asyncDef = (this._def as ComponentOptions).__asyncLoader
@@ -385,6 +400,34 @@ export class VueElement
       )
     } else {
       resolve(this._def)
+    }
+  }
+
+  private _mount(def: InnerComponentDef) {
+    if ((__DEV__ || __FEATURE_PROD_DEVTOOLS__) && !def.name) {
+      // @ts-expect-error
+      def.name = 'VueElement'
+    }
+    this._app = this._createApp(def)
+    if (def.configureApp) {
+      def.configureApp(this._app)
+    }
+    this._app._ceVNode = this._createVNode()
+    this._app.mount(this._root)
+
+    // apply expose after mount
+    const exposed = this._instance && this._instance.exposed
+    if (!exposed) return
+    for (const key in exposed) {
+      if (!hasOwn(this, key)) {
+        // exposed properties are readonly
+        Object.defineProperty(this, key, {
+          // unwrap ref to be consistent with public instance behavior
+          get: () => unref(exposed[key]),
+        })
+      } else if (__DEV__) {
+        warn(`Exposed property "${key}" already exists on custom element.`)
+      }
     }
   }
 
@@ -412,27 +455,12 @@ export class VueElement
     }
   }
 
-  private _applyExpose() {
-    const exposed = this._instance && this._instance.exposed
-    if (!exposed) return
-    for (const key in exposed) {
-      if (!hasOwn(this, key)) {
-        // exposed properties are readonly
-        Object.defineProperty(this, key, {
-          // unwrap ref to be consistent with public instance behavior
-          get: () => unref(exposed[key]),
-        })
-      } else if (__DEV__) {
-        warn(`Exposed property "${key}" already exists on custom element.`)
-      }
-    }
-  }
-
-  protected _setAttr(key: string) {
+  protected _setAttr(key: string): void {
     if (key.startsWith('data-v-')) return
-    let value = this.hasAttribute(key) ? this.getAttribute(key) : undefined
+    const has = this.hasAttribute(key)
+    let value = has ? this.getAttribute(key) : REMOVAL
     const camelKey = camelize(key)
-    if (this._numberProps && this._numberProps[camelKey]) {
+    if (has && this._numberProps && this._numberProps[camelKey]) {
       value = toNumber(value)
     }
     this._setProp(camelKey, value, false, true)
@@ -441,16 +469,25 @@ export class VueElement
   /**
    * @internal
    */
-  protected _getProp(key: string) {
+  protected _getProp(key: string): any {
     return this._props[key]
   }
 
   /**
    * @internal
    */
-  _setProp(key: string, val: any, shouldReflect = true, shouldUpdate = false) {
+  _setProp(
+    key: string,
+    val: any,
+    shouldReflect = true,
+    shouldUpdate = false,
+  ): void {
     if (val !== this._props[key]) {
-      this._props[key] = val
+      if (val === REMOVAL) {
+        delete this._props[key]
+      } else {
+        this._props[key] = val
+      }
       if (shouldUpdate && this._instance) {
         this._update()
       }
@@ -534,7 +571,7 @@ export class VueElement
       }
       this._styleChildren.add(owner)
     }
-    const nonce = this._def.nonce
+    const nonce = this._nonce
     for (let i = styles.length - 1; i >= 0; i--) {
       const s = document.createElement('style')
       if (nonce) s.setAttribute('nonce', nonce)
@@ -607,7 +644,7 @@ export class VueElement
   /**
    * @internal
    */
-  _injectChildStyle(comp: ConcreteComponent & CustomElementOptions) {
+  _injectChildStyle(comp: ConcreteComponent & CustomElementOptions): void {
     this._applyStyles(comp.styles, comp)
   }
 
@@ -629,24 +666,31 @@ export class VueElement
   }
 }
 
-/**
- * Retrieve the shadowRoot of the current custom element. Only usable in setup()
- * of a `defineCustomElement` component.
- */
-export function useShadowRoot(): ShadowRoot | null {
+export function useHost(caller?: string): VueElement | null {
   const instance = getCurrentInstance()
-  const el = instance && instance.ce
+  const el = instance && (instance.ce as VueElement)
   if (el) {
-    return (el as VueElement).shadowRoot
+    return el
   } else if (__DEV__) {
     if (!instance) {
-      warn(`useCustomElementRoot called without an active component instance.`)
+      warn(
+        `${caller || 'useHost'} called without an active component instance.`,
+      )
     } else {
       warn(
-        `useCustomElementRoot can only be used in components defined via ` +
+        `${caller || 'useHost'} can only be used in components defined via ` +
           `defineCustomElement.`,
       )
     }
   }
   return null
+}
+
+/**
+ * Retrieve the shadowRoot of the current custom element. Only usable in setup()
+ * of a `defineCustomElement` component.
+ */
+export function useShadowRoot(): ShadowRoot | null {
+  const el = __DEV__ ? useHost('useShadowRoot') : useHost()
+  return el && el.shadowRoot
 }

@@ -145,11 +145,11 @@ export class ReactiveEffect<T = any>
     }
   }
 
-  pause() {
+  pause(): void {
     this.flags |= EffectFlags.PAUSED
   }
 
-  resume() {
+  resume(): void {
     if (this.flags & EffectFlags.PAUSED) {
       this.flags &= ~EffectFlags.PAUSED
       if (pausedQueueEffects.has(this)) {
@@ -162,7 +162,7 @@ export class ReactiveEffect<T = any>
   /**
    * @internal
    */
-  notify() {
+  notify(): void {
     if (
       this.flags & EffectFlags.RUNNING &&
       !(this.flags & EffectFlags.ALLOW_RECURSE)
@@ -179,7 +179,7 @@ export class ReactiveEffect<T = any>
     }
   }
 
-  run() {
+  run(): T {
     // TODO cleanupEffect
 
     if (!(this.flags & EffectFlags.ACTIVE)) {
@@ -211,7 +211,7 @@ export class ReactiveEffect<T = any>
     }
   }
 
-  stop() {
+  stop(): void {
     if (this.flags & EffectFlags.ACTIVE) {
       for (let link = this.deps; link; link = link.nextDep) {
         removeSub(link)
@@ -223,7 +223,7 @@ export class ReactiveEffect<T = any>
     }
   }
 
-  trigger() {
+  trigger(): void {
     if (this.flags & EffectFlags.PAUSED) {
       pausedQueueEffects.add(this)
     } else if (this.scheduler) {
@@ -236,13 +236,13 @@ export class ReactiveEffect<T = any>
   /**
    * @internal
    */
-  runIfDirty() {
+  runIfDirty(): void {
     if (isDirty(this)) {
       this.run()
     }
   }
 
-  get dirty() {
+  get dirty(): boolean {
     return isDirty(this)
   }
 }
@@ -253,7 +253,7 @@ let batchedEffect: ReactiveEffect | undefined
 /**
  * @internal
  */
-export function startBatch() {
+export function startBatch(): void {
   batchDepth++
 }
 
@@ -261,7 +261,7 @@ export function startBatch() {
  * Run batched effects when all batches have ended
  * @internal
  */
-export function endBatch() {
+export function endBatch(): void {
   if (batchDepth > 1) {
     batchDepth--
     return
@@ -350,7 +350,7 @@ function isDirty(sub: Subscriber): boolean {
  * Returning false indicates the refresh failed
  * @internal
  */
-export function refreshComputed(computed: ComputedRefImpl) {
+export function refreshComputed(computed: ComputedRefImpl): false | undefined {
   if (computed.flags & EffectFlags.RUNNING) {
     return false
   }
@@ -474,7 +474,7 @@ export function effect<T = any>(
  *
  * @param runner - Association with the effect to stop tracking.
  */
-export function stop(runner: ReactiveEffectRunner) {
+export function stop(runner: ReactiveEffectRunner): void {
   runner.effect.stop()
 }
 
@@ -487,7 +487,7 @@ const trackStack: boolean[] = []
 /**
  * Temporarily pauses tracking.
  */
-export function pauseTracking() {
+export function pauseTracking(): void {
   trackStack.push(shouldTrack)
   shouldTrack = false
 }
@@ -495,7 +495,7 @@ export function pauseTracking() {
 /**
  * Re-enables effect tracking (if it was paused).
  */
-export function enableTracking() {
+export function enableTracking(): void {
   trackStack.push(shouldTrack)
   shouldTrack = true
 }
@@ -503,7 +503,7 @@ export function enableTracking() {
 /**
  * Resets the previous global effect tracking state.
  */
-export function resetTracking() {
+export function resetTracking(): void {
   const last = trackStack.pop()
   shouldTrack = last === undefined ? true : last
 }
@@ -520,7 +520,7 @@ export function resetTracking() {
  * @param failSilently - if `true`, will not throw warning when called without
  * an active effect.
  */
-export function onEffectCleanup(fn: () => void, failSilently = false) {
+export function onEffectCleanup(fn: () => void, failSilently = false): void {
   if (activeSub instanceof ReactiveEffect) {
     activeSub.cleanup = fn
   } else if (__DEV__ && !failSilently) {

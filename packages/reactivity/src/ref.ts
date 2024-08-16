@@ -52,7 +52,9 @@ export function isRef(r: any): r is Ref {
  * @param value - The object to wrap in the ref.
  * @see {@link https://vuejs.org/api/reactivity-core.html#ref}
  */
-export function ref<T>(value: T): Ref<UnwrapRef<T>, UnwrapRef<T> | T>
+export function ref<T>(
+  value: T,
+): [T] extends [Ref] ? IfAny<T, Ref<T>, T> : Ref<UnwrapRef<T>, UnwrapRef<T> | T>
 export function ref<T = any>(): Ref<T | undefined>
 export function ref(value?: unknown) {
   return createRef(value, false)
@@ -179,7 +181,7 @@ class RefImpl<T = any> {
  * @param ref - The ref whose tied effects shall be executed.
  * @see {@link https://vuejs.org/api/reactivity-advanced.html#triggerref}
  */
-export function triggerRef(ref: Ref) {
+export function triggerRef(ref: Ref): void {
   if (__DEV__) {
     ;(ref as unknown as RefImpl).dep.trigger({
       target: ref,
@@ -285,6 +287,8 @@ class CustomRefImpl<T> {
 
   public readonly [ReactiveFlags.IS_REF] = true
 
+  public _value: T = undefined!
+
   constructor(factory: CustomRefFactory<T>) {
     const dep = (this.dep = new Dep())
     const { get, set } = factory(dep.track.bind(dep), dep.trigger.bind(dep))
@@ -293,7 +297,7 @@ class CustomRefImpl<T> {
   }
 
   get value() {
-    return this._get()
+    return (this._value = this._get())
   }
 
   set value(newVal) {
@@ -337,6 +341,7 @@ export function toRefs<T extends object>(object: T): ToRefs<T> {
 
 class ObjectRefImpl<T extends object, K extends keyof T> {
   public readonly [ReactiveFlags.IS_REF] = true
+  public _value: T[K] = undefined!
 
   constructor(
     private readonly _object: T,
@@ -346,7 +351,7 @@ class ObjectRefImpl<T extends object, K extends keyof T> {
 
   get value() {
     const val = this._object[this._key]
-    return val === undefined ? this._defaultValue! : val
+    return (this._value = val === undefined ? this._defaultValue! : val)
   }
 
   set value(newVal) {
@@ -361,9 +366,11 @@ class ObjectRefImpl<T extends object, K extends keyof T> {
 class GetterRefImpl<T> {
   public readonly [ReactiveFlags.IS_REF] = true
   public readonly [ReactiveFlags.IS_READONLY] = true
+  public _value: T = undefined!
+
   constructor(private readonly _getter: () => T) {}
   get value() {
-    return this._getter()
+    return (this._value = this._getter())
   }
 }
 

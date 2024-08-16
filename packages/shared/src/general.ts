@@ -3,26 +3,27 @@ import { makeMap } from './makeMap'
 export const EMPTY_OBJ: { readonly [key: string]: any } = __DEV__
   ? Object.freeze({})
   : {}
-export const EMPTY_ARR = __DEV__ ? Object.freeze([]) : []
+export const EMPTY_ARR: readonly never[] = __DEV__ ? Object.freeze([]) : []
 
-export const NOOP = () => {}
+export const NOOP = (): void => {}
 
 /**
  * Always return false.
  */
 export const NO = () => false
 
-export const isOn = (key: string) =>
+export const isOn = (key: string): boolean =>
   key.charCodeAt(0) === 111 /* o */ &&
   key.charCodeAt(1) === 110 /* n */ &&
   // uppercase letter
   (key.charCodeAt(2) > 122 || key.charCodeAt(2) < 97)
 
-export const isModelListener = (key: string) => key.startsWith('onUpdate:')
+export const isModelListener = (key: string): key is `onUpdate:${string}` =>
+  key.startsWith('onUpdate:')
 
-export const extend = Object.assign
+export const extend: typeof Object.assign = Object.assign
 
-export const remove = <T>(arr: T[], el: T) => {
+export const remove = <T>(arr: T[], el: T): void => {
   const i = arr.indexOf(el)
   if (i > -1) {
     arr.splice(i, 1)
@@ -35,7 +36,7 @@ export const hasOwn = (
   key: string | symbol,
 ): key is keyof typeof val => hasOwnProperty.call(val, key)
 
-export const isArray = Array.isArray
+export const isArray: typeof Array.isArray = Array.isArray
 export const isMap = (val: unknown): val is Map<any, any> =>
   toTypeString(val) === '[object Map]'
 export const isSet = (val: unknown): val is Set<any> =>
@@ -60,7 +61,8 @@ export const isPromise = <T = any>(val: unknown): val is Promise<T> => {
   )
 }
 
-export const objectToString = Object.prototype.toString
+export const objectToString: typeof Object.prototype.toString =
+  Object.prototype.toString
 export const toTypeString = (value: unknown): string =>
   objectToString.call(value)
 
@@ -72,13 +74,13 @@ export const toRawType = (value: unknown): string => {
 export const isPlainObject = (val: unknown): val is object =>
   toTypeString(val) === '[object Object]'
 
-export const isIntegerKey = (key: unknown) =>
+export const isIntegerKey = (key: unknown): boolean =>
   isString(key) &&
   key !== 'NaN' &&
   key[0] !== '-' &&
   '' + parseInt(key, 10) === key
 
-export const isReservedProp = /*#__PURE__*/ makeMap(
+export const isReservedProp: (key: string) => boolean = /*#__PURE__*/ makeMap(
   // the leading comma is intentional so empty string "" is also included
   ',key,ref,ref_for,ref_key,' +
     'onVnodeBeforeMount,onVnodeMounted,' +
@@ -86,9 +88,10 @@ export const isReservedProp = /*#__PURE__*/ makeMap(
     'onVnodeBeforeUnmount,onVnodeUnmounted',
 )
 
-export const isBuiltInDirective = /*#__PURE__*/ makeMap(
-  'bind,cloak,else-if,else,for,html,if,model,on,once,pre,show,slot,text,memo',
-)
+export const isBuiltInDirective: (key: string) => boolean =
+  /*#__PURE__*/ makeMap(
+    'bind,cloak,else-if,else,for,html,if,model,on,once,pre,show,slot,text,memo',
+  )
 
 const cacheStringFunction = <T extends (str: string) => string>(fn: T): T => {
   const cache: Record<string, string> = Object.create(null)
@@ -102,38 +105,45 @@ const camelizeRE = /-(\w)/g
 /**
  * @private
  */
-export const camelize = cacheStringFunction((str: string): string => {
-  return str.replace(camelizeRE, (_, c) => (c ? c.toUpperCase() : ''))
-})
+export const camelize: (str: string) => string = cacheStringFunction(
+  (str: string): string => {
+    return str.replace(camelizeRE, (_, c) => (c ? c.toUpperCase() : ''))
+  },
+)
 
 const hyphenateRE = /\B([A-Z])/g
 /**
  * @private
  */
-export const hyphenate = cacheStringFunction((str: string) =>
-  str.replace(hyphenateRE, '-$1').toLowerCase(),
+export const hyphenate: (str: string) => string = cacheStringFunction(
+  (str: string) => str.replace(hyphenateRE, '-$1').toLowerCase(),
 )
 
 /**
  * @private
  */
-export const capitalize = cacheStringFunction(<T extends string>(str: T) => {
-  return (str.charAt(0).toUpperCase() + str.slice(1)) as Capitalize<T>
-})
+export const capitalize: <T extends string>(str: T) => Capitalize<T> =
+  cacheStringFunction(<T extends string>(str: T) => {
+    return (str.charAt(0).toUpperCase() + str.slice(1)) as Capitalize<T>
+  })
 
 /**
  * @private
  */
-export const toHandlerKey = cacheStringFunction(<T extends string>(str: T) => {
-  const s = str ? `on${capitalize(str)}` : ``
-  return s as T extends '' ? '' : `on${Capitalize<T>}`
-})
+export const toHandlerKey: <T extends string>(
+  str: T,
+) => T extends '' ? '' : `on${Capitalize<T>}` = cacheStringFunction(
+  <T extends string>(str: T) => {
+    const s = str ? `on${capitalize(str)}` : ``
+    return s as T extends '' ? '' : `on${Capitalize<T>}`
+  },
+)
 
 // compare whether a value has changed, accounting for NaN.
 export const hasChanged = (value: any, oldValue: any): boolean =>
   !Object.is(value, oldValue)
 
-export const invokeArrayFns = (fns: Function[], ...arg: any[]) => {
+export const invokeArrayFns = (fns: Function[], ...arg: any[]): void => {
   for (let i = 0; i < fns.length; i++) {
     fns[i](...arg)
   }
@@ -144,7 +154,7 @@ export const def = (
   key: string | symbol,
   value: any,
   writable = false,
-) => {
+): void => {
   Object.defineProperty(obj, key, {
     configurable: true,
     enumerable: false,
@@ -193,7 +203,7 @@ export const getGlobalThis = (): any => {
 
 const identRE = /^[_$a-zA-Z\xA0-\uFFFF][_$a-zA-Z0-9\xA0-\uFFFF]*$/
 
-export function genPropsAccessExp(name: string) {
+export function genPropsAccessExp(name: string): string {
   return identRE.test(name)
     ? `__props.${name}`
     : `__props[${JSON.stringify(name)}]`

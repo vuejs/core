@@ -46,11 +46,11 @@ export class EffectScope {
     }
   }
 
-  get active() {
+  get active(): boolean {
     return this._active
   }
 
-  pause() {
+  pause(): void {
     if (this._active) {
       this._isPaused = true
       if (this.scopes) {
@@ -67,7 +67,7 @@ export class EffectScope {
   /**
    * Resumes the effect scope, including all child scopes and effects.
    */
-  resume() {
+  resume(): void {
     if (this._active) {
       if (this._isPaused) {
         this._isPaused = false
@@ -101,7 +101,7 @@ export class EffectScope {
    * This should only be called on non-detached scopes
    * @internal
    */
-  on() {
+  on(): void {
     activeEffectScope = this
   }
 
@@ -109,11 +109,11 @@ export class EffectScope {
    * This should only be called on non-detached scopes
    * @internal
    */
-  off() {
+  off(): void {
     activeEffectScope = this.parent
   }
 
-  stop(fromParent?: boolean) {
+  stop(fromParent?: boolean): void {
     if (this._active) {
       let i, l
       for (i = 0, l = this.effects.length; i < l; i++) {
@@ -151,7 +151,7 @@ export class EffectScope {
  * @param detached - Can be used to create a "detached" effect scope.
  * @see {@link https://vuejs.org/api/reactivity-advanced.html#effectscope}
  */
-export function effectScope(detached?: boolean) {
+export function effectScope(detached?: boolean): EffectScope {
   return new EffectScope(detached)
 }
 
@@ -160,7 +160,7 @@ export function effectScope(detached?: boolean) {
  *
  * @see {@link https://vuejs.org/api/reactivity-advanced.html#getcurrentscope}
  */
-export function getCurrentScope() {
+export function getCurrentScope(): EffectScope | undefined {
   return activeEffectScope
 }
 
@@ -171,7 +171,7 @@ export function getCurrentScope() {
  * @param fn - The callback function to attach to the scope's cleanup.
  * @see {@link https://vuejs.org/api/reactivity-advanced.html#onscopedispose}
  */
-export function onScopeDispose(fn: () => void, failSilently = false) {
+export function onScopeDispose(fn: () => void, failSilently = false): void {
   if (activeEffectScope) {
     activeEffectScope.cleanups.push(fn)
   } else if (__DEV__ && !failSilently) {

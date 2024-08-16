@@ -42,6 +42,7 @@ import {
 import {
   type SchedulerJob,
   SchedulerJobFlags,
+  type SchedulerJobs,
   flushPostFlushCbs,
   flushPreFlushCbs,
   invalidateJob,
@@ -282,7 +283,10 @@ export enum MoveType {
   REORDER,
 }
 
-export const queuePostRenderEffect = __FEATURE_SUSPENSE__
+export const queuePostRenderEffect: (
+  fn: SchedulerJobs,
+  suspense: SuspenseBoundary | null,
+) => void = __FEATURE_SUSPENSE__
   ? __TEST__
     ? // vitest can't seem to handle eager circular dependency
       (fn: Function | Function[], suspense: SuspenseBoundary | null) =>
@@ -308,7 +312,7 @@ export const queuePostRenderEffect = __FEATURE_SUSPENSE__
 export function createRenderer<
   HostNode = RendererNode,
   HostElement = RendererElement,
->(options: RendererOptions<HostNode, HostElement>) {
+>(options: RendererOptions<HostNode, HostElement>): Renderer<HostElement> {
   return baseCreateRenderer<HostNode, HostElement>(options)
 }
 
@@ -317,7 +321,7 @@ export function createRenderer<
 // tree-shakable.
 export function createHydrationRenderer(
   options: RendererOptions<Node, Element>,
-) {
+): HydrationRenderer {
   return baseCreateRenderer(options, createHydrationFunctions)
 }
 
@@ -2356,13 +2360,13 @@ function baseCreateRenderer(
         namespace,
       )
     }
+    container._vnode = vnode
     if (!isFlushing) {
       isFlushing = true
       flushPreFlushCbs()
       flushPostFlushCbs()
       isFlushing = false
     }
-    container._vnode = vnode
   }
 
   const internals: RendererInternals = {
@@ -2423,7 +2427,7 @@ function toggleRecurse(
 export function needTransition(
   parentSuspense: SuspenseBoundary | null,
   transition: TransitionHooks | null,
-) {
+): boolean | null {
   return (
     (!parentSuspense || (parentSuspense && !parentSuspense.pendingBranch)) &&
     transition &&
@@ -2442,7 +2446,11 @@ export function needTransition(
  * the children will always be moved. Therefore, in order to ensure correct move
  * position, el should be inherited from previous nodes.
  */
-export function traverseStaticChildren(n1: VNode, n2: VNode, shallow = false) {
+export function traverseStaticChildren(
+  n1: VNode,
+  n2: VNode,
+  shallow = false,
+): void {
   const ch1 = n1.children
   const ch2 = n2.children
   if (isArray(ch1) && isArray(ch2)) {
@@ -2527,7 +2535,7 @@ function locateNonHydratedAsyncRoot(
   }
 }
 
-export function invalidateMount(hooks: LifecycleHook) {
+export function invalidateMount(hooks: LifecycleHook): void {
   if (hooks) {
     for (let i = 0; i < hooks.length; i++)
       hooks[i].flags! |= SchedulerJobFlags.DISPOSED

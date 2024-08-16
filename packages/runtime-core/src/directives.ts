@@ -114,7 +114,7 @@ export type Directive<
 
 export type DirectiveModifiers<K extends string = string> = Record<K, boolean>
 
-export function validateDirectiveName(name: string) {
+export function validateDirectiveName(name: string): void {
   if (isBuiltInDirective(name)) {
     warn('Do not use built-in directive ids as custom directive id: ' + name)
   }
@@ -125,7 +125,7 @@ export type DirectiveArguments = Array<
   | [Directive | undefined]
   | [Directive | undefined, any]
   | [Directive | undefined, any, string]
-  | [Directive | undefined, any, string, DirectiveModifiers]
+  | [Directive | undefined, any, string | undefined, DirectiveModifiers]
 >
 
 /**
@@ -171,7 +171,7 @@ export function invokeDirectiveHook(
   prevVNode: VNode | null,
   instance: ComponentInternalInstance | null,
   name: keyof ObjectDirective,
-) {
+): void {
   const bindings = vnode.dirs!
   const oldBindings = prevVNode && prevVNode.dirs!
   for (let i = 0; i < bindings.length; i++) {

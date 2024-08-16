@@ -37,7 +37,7 @@ function onCompositionEnd(e: Event) {
   }
 }
 
-const assignKey = Symbol('_assign')
+const assignKey: unique symbol = Symbol('_assign')
 
 type ModelDirective<T, Modifiers extends string = string> = ObjectDirective<
   T & { [assignKey]: AssignerFn; _assigning?: boolean },
@@ -334,7 +334,7 @@ function callModelHook(
 
 // SSR vnode transforms, only used when user includes client-oriented render
 // function in SSR
-export function initVModelForSSR() {
+export function initVModelForSSR(): void {
   vModelText.getSSRProps = ({ value }) => ({ value })
 
   vModelRadio.getSSRProps = ({ value }, vnode) => {

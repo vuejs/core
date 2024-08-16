@@ -15,7 +15,23 @@ type CompatModifiers = keyof typeof keyNames
 export type VOnModifiers = SystemModifiers | ModifierGuards | CompatModifiers
 type KeyedEvent = KeyboardEvent | MouseEvent | TouchEvent
 
-const modifierGuards = {
+type ModifierGuards =
+  | 'shift'
+  | 'ctrl'
+  | 'alt'
+  | 'meta'
+  | 'left'
+  | 'right'
+  | 'stop'
+  | 'prevent'
+  | 'self'
+  | 'middle'
+  | 'exact'
+const modifierGuards: Record<
+  ModifierGuards,
+  | ((e: Event) => void | boolean)
+  | ((e: Event, modifiers: string[]) => void | boolean)
+> = {
   stop: (e: Event) => e.stopPropagation(),
   prevent: (e: Event) => e.preventDefault(),
   self: (e: Event) => e.target !== e.currentTarget,
@@ -28,13 +44,7 @@ const modifierGuards = {
   right: (e: Event) => 'button' in e && (e as MouseEvent).button !== 2,
   exact: (e, modifiers) =>
     systemModifiers.some(m => (e as any)[`${m}Key`] && !modifiers.includes(m)),
-} satisfies Record<
-  string,
-  | ((e: Event) => void | boolean)
-  | ((e: Event, modifiers: string[]) => void | boolean)
->
-
-type ModifierGuards = keyof typeof modifierGuards
+}
 
 /**
  * @private
@@ -44,7 +54,7 @@ export const withModifiers = <
 >(
   fn: T & { _withMods?: { [key: string]: T } },
   modifiers: VOnModifiers[],
-) => {
+): T => {
   const cache = fn._withMods || (fn._withMods = {})
   const cacheKey = modifiers.join('.')
   return (
@@ -61,7 +71,10 @@ export const withModifiers = <
 
 // Kept for 2.x compat.
 // Note: IE11 compat for `spacebar` and `del` is removed for now.
-const keyNames = {
+const keyNames: Record<
+  'esc' | 'space' | 'up' | 'left' | 'right' | 'down' | 'delete',
+  string
+> = {
   esc: 'escape',
   space: ' ',
   up: 'arrow-up',
@@ -69,7 +82,7 @@ const keyNames = {
   right: 'arrow-right',
   down: 'arrow-down',
   delete: 'backspace',
-} satisfies Record<string, string | string[]>
+}
 
 /**
  * @private
@@ -77,7 +90,7 @@ const keyNames = {
 export const withKeys = <T extends (event: KeyboardEvent) => any>(
   fn: T & { _withKeys?: { [k: string]: T } },
   modifiers: string[],
-) => {
+): T => {
   let globalKeyCodes: LegacyConfig['keyCodes']
   let instance: ComponentInternalInstance | null = null
   if (__COMPAT__) {

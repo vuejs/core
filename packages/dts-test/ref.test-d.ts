@@ -182,6 +182,11 @@ describe('allow getter and setter types to be unrelated', <T>() => {
   const d = {} as T
   const e = ref(d)
   e.value = d
+
+  const f = ref(ref(0))
+  expectType<number>(f.value)
+  // @ts-expect-error
+  f.value = ref(1)
 })
 
 // computed

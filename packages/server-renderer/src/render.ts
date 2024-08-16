@@ -69,7 +69,7 @@ export function createBuffer() {
       // Return static buffer and await on items during unroll stage
       return buffer
     },
-    push(item: SSRBufferItem) {
+    push(item: SSRBufferItem): void {
       const isStringItem = isString(item)
       if (appendable && isStringItem) {
         buffer[buffer.length - 1] += item as string
@@ -216,7 +216,7 @@ export function renderVNode(
   vnode: VNode,
   parentComponent: ComponentInternalInstance,
   slotScopeId?: string,
-) {
+): void {
   const { type, shapeFlag, children } = vnode
   switch (type) {
     case Text:
@@ -270,7 +270,7 @@ export function renderVNodeChildren(
   children: VNodeArrayChildren,
   parentComponent: ComponentInternalInstance,
   slotScopeId?: string,
-) {
+): void {
   for (let i = 0; i < children.length; i++) {
     renderVNode(push, normalizeVNode(children[i]), parentComponent, slotScopeId)
   }

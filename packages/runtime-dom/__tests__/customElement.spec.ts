@@ -14,6 +14,7 @@ import {
   ref,
   render,
   renderSlot,
+  useHost,
   useShadowRoot,
 } from '../src'
 
@@ -103,6 +104,8 @@ describe('defineCustomElement', () => {
         },
       })
       const app = createApp(containerComp)
+      const container = document.createElement('div')
+      document.body.appendChild(container)
       app.mount(container)
       const myInputEl = container.querySelector('my-el-input')!
       const inputEl = myInputEl.shadowRoot!.querySelector('input')!
@@ -974,8 +977,22 @@ describe('defineCustomElement', () => {
     })
   })
 
-  describe('useCustomElementRoot', () => {
-    test('should work for style injection', () => {
+  describe('helpers', () => {
+    test('useHost', () => {
+      const Foo = defineCustomElement({
+        setup() {
+          const host = useHost()!
+          host.setAttribute('id', 'host')
+          return () => h('div', 'hello')
+        },
+      })
+      customElements.define('my-el-use-host', Foo)
+      container.innerHTML = `<my-el-use-host>`
+      const el = container.childNodes[0] as VueElement
+      expect(el.id).toBe('host')
+    })
+
+    test('useShadowRoot for style injection', () => {
       const Foo = defineCustomElement({
         setup() {
           const root = useShadowRoot()!
@@ -985,8 +1002,8 @@ describe('defineCustomElement', () => {
           return () => h('div', 'hello')
         },
       })
-      customElements.define('my-el', Foo)
-      container.innerHTML = `<my-el></my-el>`
+      customElements.define('my-el-use-shadow-root', Foo)
+      container.innerHTML = `<my-el-use-shadow-root>`
       const el = container.childNodes[0] as VueElement
       const style = el.shadowRoot?.querySelector('style')!
       expect(style.textContent).toBe(`div { color: red; }`)
@@ -1135,5 +1152,114 @@ describe('defineCustomElement', () => {
     expect(e.shadowRoot!.innerHTML).toBe(`<div><slot></slot></div>`)
     expect(fooVal).toBe('foo')
     expect(barVal).toBe('bar')
+  })
+
+  describe('configureApp', () => {
+    test('should work', () => {
+      const E = defineCustomElement(
+        () => {
+          const msg = inject('msg')
+          return () => h('div', msg!)
+        },
+        {
+          configureApp(app) {
+            app.provide('msg', 'app-injected')
+          },
+        },
+      )
+      customElements.define('my-element-with-app', E)
+
+      container.innerHTML = `<my-element-with-app></my-element-with-app>`
+      const e = container.childNodes[0] as VueElement
+
+      expect(e.shadowRoot?.innerHTML).toBe('<div>app-injected</div>')
+    })
+  })
+
+  // #9885
+  test('avoid double mount when prop is set immediately after mount', () => {
+    customElements.define(
+      'my-input-dupe',
+      defineCustomElement({
+        props: {
+          value: String,
+        },
+        render() {
+          return 'hello'
+        },
+      }),
+    )
+    const container = document.createElement('div')
+    document.body.appendChild(container)
+    createApp({
+      render() {
+        return h('div', [
+          h('my-input-dupe', {
+            onVnodeMounted(vnode) {
+              vnode.el!.value = 'fesfes'
+            },
+          }),
+        ])
+      },
+    }).mount(container)
+    expect(container.children[0].children[0].shadowRoot?.innerHTML).toBe(
+      'hello',
+    )
+  })
+
+  // #11081
+  test('Props can be casted when mounting custom elements in component rendering functions', async () => {
+    const E = defineCustomElement(
+      defineAsyncComponent(() =>
+        Promise.resolve({
+          props: ['fooValue'],
+          setup(props) {
+            expect(props.fooValue).toBe('fooValue')
+            return () => h('div', props.fooValue)
+          },
+        }),
+      ),
+    )
+    customElements.define('my-el-async-4', E)
+    const R = defineComponent({
+      setup() {
+        const fooValue = ref('fooValue')
+        return () => {
+          return h('div', null, [
+            h('my-el-async-4', {
+              fooValue: fooValue.value,
+            }),
+          ])
+        }
+      },
+    })
+
+    const app = createApp(R)
+    app.mount(container)
+    await new Promise(r => setTimeout(r))
+    const e = container.querySelector('my-el-async-4') as VueElement
+    expect(e.shadowRoot!.innerHTML).toBe(`<div>fooValue</div>`)
+    app.unmount()
+  })
+
+  // #11276
+  test('delete prop on attr removal', async () => {
+    const E = defineCustomElement({
+      props: {
+        boo: {
+          type: Boolean,
+        },
+      },
+      render() {
+        return this.boo + ',' + typeof this.boo
+      },
+    })
+    customElements.define('el-attr-removal', E)
+    container.innerHTML = '<el-attr-removal boo>'
+    const e = container.childNodes[0] as VueElement
+    expect(e.shadowRoot!.innerHTML).toBe(`true,boolean`)
+    e.removeAttribute('boo')
+    await nextTick()
+    expect(e.shadowRoot!.innerHTML).toBe(`false,boolean`)
   })
 })

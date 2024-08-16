@@ -98,7 +98,9 @@ export function renderSlot(
   return rendered
 }
 
-function ensureValidVNode(vnodes: VNodeArrayChildren) {
+export function ensureValidVNode(
+  vnodes: VNodeArrayChildren,
+): VNodeArrayChildren | null {
   return vnodes.some(child => {
     if (!isVNode(child)) return true
     if (child.type === Comment) return false

@@ -35,19 +35,6 @@ jobs:
       - name: Install dependencies
         run: pnpm install
 
-      - name: Download PR number
-        uses: dawidd6/action-download-artifact@v6
-        with:
-          name: pr-number
-          run_id: ${{ github.event.workflow_run.id }}
-          path: /tmp/pr-number
-
-      - name: Read PR Number
-        id: pr-number
-        uses: juliangruber/read-file-action@v1
-        with:
-          path: /tmp/pr-number/pr.txt
-
       - name: Download Size Data
         uses: dawidd6/action-download-artifact@v6
         with:
@@ -55,10 +42,18 @@ jobs:
           run_id: ${{ github.event.workflow_run.id }}
           path: temp/size
 
+      - name: Read PR Number
+        id: pr-number
+        run: echo "number=(cat ./temp/size/number.txt)" >> $GITHUB_OUTPUT
+
+      - name: Read base branch
+        id: pr-base
+        run: echo "base=(cat ./temp/size/base.txt)" >> $GITHUB_OUTPUT
+
       - name: Download Previous Size Data
         uses: dawidd6/action-download-artifact@v6
         with:
-          branch: main
+          branch: ${{ steps.pr-base.outputs.base }}
           workflow: size-data.yml
           event: push
           name: size-data
@@ -78,7 +73,7 @@ jobs:
         uses: actions-cool/maintain-one-comment@v3
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          number: ${{ steps.pr-number.outputs.content }}
+          number: ${{ steps.pr-number.outputs.number }}
           body: |
             ${{ steps.size-report.outputs.content }}
             <!-- VUE_CORE_SIZE -->

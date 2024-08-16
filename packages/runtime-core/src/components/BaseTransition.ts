@@ -24,8 +24,8 @@ import { SchedulerJobFlags } from '../scheduler'
 
 type Hook<T = () => void> = T | T[]
 
-const leaveCbKey = Symbol('_leaveCb')
-const enterCbKey = Symbol('_enterCb')
+const leaveCbKey: unique symbol = Symbol('_leaveCb')
+const enterCbKey: unique symbol = Symbol('_enterCb')
 
 export interface BaseTransitionProps<HostElement = RendererElement> {
   mode?: 'in-out' | 'out-in' | 'default'
@@ -116,7 +116,7 @@ export function useTransitionState(): TransitionState {
 
 const TransitionHookValidator = [Function, Array]
 
-export const BaseTransitionPropsValidators = {
+export const BaseTransitionPropsValidators: Record<string, any> = {
   mode: String,
   appear: Boolean,
   persisted: Boolean,
@@ -510,7 +510,7 @@ function getInnerChild(vnode: VNode): VNode | undefined {
   }
 }
 
-export function setTransitionHooks(vnode: VNode, hooks: TransitionHooks) {
+export function setTransitionHooks(vnode: VNode, hooks: TransitionHooks): void {
   if (vnode.shapeFlag & ShapeFlags.COMPONENT && vnode.component) {
     setTransitionHooks(vnode.component.subTree, hooks)
   } else if (__FEATURE_SUSPENSE__ && vnode.shapeFlag & ShapeFlags.SUSPENSE) {
