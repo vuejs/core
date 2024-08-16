@@ -239,24 +239,23 @@ function apply(
   args?: IArguments,
 ) {
   const arr = shallowReadArray(self)
+  let needsWrap = arr !== self && !isShallow(self)
+
   let methodFn
   // @ts-expect-error our code is limited to es2016 but user code is not
   if ((methodFn = arr[method]) !== arrayProto[method]) {
-    return methodFn.apply(arr, args)
+    const result = methodFn.apply(arr, args)
+    return needsWrap ? toReactive(result) : result
   }
 
-  let needsWrap = false
   let wrappedFn = fn
-  if (arr !== self) {
-    needsWrap = !isShallow(self)
-    if (needsWrap) {
-      wrappedFn = function (this: unknown, item, index) {
-        return fn.call(this, toReactive(item), index, self)
-      }
-    } else if (fn.length > 2) {
-      wrappedFn = function (this: unknown, item, index) {
-        return fn.call(this, item, index, self)
-      }
+  if (needsWrap) {
+    wrappedFn = function (this: unknown, item, index) {
+      return fn.call(this, toReactive(item), index, self)
+    }
+  } else if (fn.length > 2) {
+    wrappedFn = function (this: unknown, item, index) {
+      return fn.call(this, item, index, self)
     }
   }
   const result = methodFn.call(arr, wrappedFn, thisArg)

@@ -2,6 +2,7 @@ import { type ComputedRef, computed } from '../src/computed'
 import { isReactive, reactive, shallowReactive, toRaw } from '../src/reactive'
 import { isRef, ref } from '../src/ref'
 import { effect } from '../src/effect'
+import { expect } from 'vitest'
 
 describe('reactivity/reactive/Array', () => {
   test('should make Array reactive', () => {
@@ -709,9 +710,17 @@ describe('reactivity/reactive/Array', () => {
 
       expect(state.things.every('foo', 'bar', 'baz')).toBe(false)
       expect(state.things.filter('foo', 'bar', 'baz')).toEqual([foo])
-      expect(state.things.find('foo', 'bar', 'baz')).toBe(foo)
+
+      const _foo = state.things.find('foo', 'bar', 'baz')
+      expect(isReactive(_foo)).toBe(true)
+      expect(foo).toStrictEqual(_foo)
+
       expect(state.things.findIndex('foo', 'bar', 'baz')).toBe(1)
-      expect(state.things.findLast('foo', 'bar', 'baz')).toBe(bar)
+
+      const _bar = state.things.findLast('foo', 'bar', 'baz')
+      expect(isReactive(_bar)).toBe(true)
+      expect(bar).toStrictEqual(_bar)
+
       expect(state.things.findLastIndex('foo', 'bar', 'baz')).toBe(1)
       expect(state.things.forEach('foo', 'bar', 'baz')).toBeUndefined()
       expect(state.things.map('foo', 'bar', 'baz')).toEqual(['1', '2', '3'])
