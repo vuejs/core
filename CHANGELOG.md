@@ -143,7 +143,7 @@
 
 ## Previous Changelogs
 
-### 3.4.x (2023-10-28 - 2024-08-08)
+### 3.4.x (2023-10-28 - 2024-08-15)
 
 See [3.4 changelog](./changelogs/CHANGELOG-3.4.md)
 

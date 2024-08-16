@@ -1,3 +1,15 @@
+## [3.4.38](https://github.com/vuejs/core/compare/v3.4.37...v3.4.38) (2024-08-15)
+
+
+### Bug Fixes
+
+* **build:** revert entities to 4.5 to avoid runtime resolution errors ([f349af7](https://github.com/vuejs/core/commit/f349af7b65b9f8605d8b7bafcc06c25ab1f2daf0)), closes [#11603](https://github.com/vuejs/core/issues/11603)
+* **compiler-core:** use ast-based check for function expressions when possible ([236cac3](https://github.com/vuejs/core/commit/236cac3ff285890b8468dc827c463d87a91e516f)), closes [#11615](https://github.com/vuejs/core/issues/11615)
+* **compiler-sfc:** handle keyof operator with index object ([#11581](https://github.com/vuejs/core/issues/11581)) ([74d26db](https://github.com/vuejs/core/commit/74d26dbbe3cf2f70d1b772284eec6743ea946f6d))
+* **types:** add fallback stub for DOM types when DOM lib is absent ([#11598](https://github.com/vuejs/core/issues/11598)) ([4db0085](https://github.com/vuejs/core/commit/4db0085de316e1b773f474597915f9071d6ae6c6))
+
+
+
 ## [3.4.37](https://github.com/vuejs/core/compare/v3.4.36...v3.4.37) (2024-08-08)
 
 
