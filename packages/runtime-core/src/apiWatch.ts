@@ -400,7 +400,10 @@ function doWatch(
   } else {
     // default: 'pre'
     job.flags! |= SchedulerJobFlags.PRE
-    if (instance) job.id = instance.uid
+    if (instance) {
+      job.id = instance.uid
+      job.i = instance
+    }
     scheduler = () => queueJob(job)
   }
   effect.scheduler = scheduler
