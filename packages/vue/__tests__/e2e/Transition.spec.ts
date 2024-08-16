@@ -8,7 +8,7 @@ describe('e2e: Transition', () => {
   const baseUrl = `file://${path.resolve(__dirname, './transition.html')}`
 
   const duration = process.env.CI ? 200 : 50
-  const buffer = 20
+  const buffer = process.env.CI ? 50 : 20
 
   const transitionFinish = (time = duration) => timeout(time + buffer)
 

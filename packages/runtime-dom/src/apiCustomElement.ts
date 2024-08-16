@@ -519,6 +519,7 @@ export class VueElement
       vnode.ce = instance => {
         this._instance = instance
         instance.ce = this
+        instance.isCE = true // for vue-i18n backwards compat
         // HMR
         if (__DEV__) {
           instance.ceReload = newStyles => {

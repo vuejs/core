@@ -414,10 +414,15 @@ export interface ComponentInternalInstance {
    */
   inheritAttrs?: boolean
   /**
-   * is custom element?
+   * Custom Element instance (if component is created by defineCustomElement)
    * @internal
    */
   ce?: ComponentCustomElementInterface
+  /**
+   * is custom element? (kept only for compatibility)
+   * @internal
+   */
+  isCE?: boolean
   /**
    * custom element specific HMR method
    * @internal

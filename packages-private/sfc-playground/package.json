@@ -9,7 +9,7 @@
     "serve": "vite preview"
   },
   "devDependencies": {
-    "@vitejs/plugin-vue": "^5.1.2",
+    "@vitejs/plugin-vue": "catalog:",
     "vite": "catalog:"
   },
   "dependencies": {

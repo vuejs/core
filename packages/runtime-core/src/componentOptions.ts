@@ -91,7 +91,7 @@ import { markAsyncBoundary } from './helpers/useId'
  *
  * @example
  * ```ts
- * declare module '@vue/runtime-core' {
+ * declare module 'vue' {
  *   interface ComponentCustomOptions {
  *     beforeRouteUpdate?(
  *       to: Route,

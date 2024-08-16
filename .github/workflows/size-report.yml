@@ -44,16 +44,20 @@ jobs:
 
       - name: Read PR Number
         id: pr-number
-        run: echo "number=(cat ./temp/size/number.txt)" >> $GITHUB_OUTPUT
+        uses: juliangruber/read-file-action@v1
+        with:
+          path: temp/size/number.txt
 
       - name: Read base branch
         id: pr-base
-        run: echo "base=(cat ./temp/size/base.txt)" >> $GITHUB_OUTPUT
+        uses: juliangruber/read-file-action@v1
+        with:
+          path: temp/size/base.txt
 
       - name: Download Previous Size Data
         uses: dawidd6/action-download-artifact@v6
         with:
-          branch: ${{ steps.pr-base.outputs.base }}
+          branch: ${{ steps.pr-base.outputs.content }}
           workflow: size-data.yml
           event: push
           name: size-data
@@ -73,7 +77,7 @@ jobs:
         uses: actions-cool/maintain-one-comment@v3
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          number: ${{ steps.pr-number.outputs.number }}
+          number: ${{ steps.pr-number.outputs.content }}
           body: |
             ${{ steps.size-report.outputs.content }}
             <!-- VUE_CORE_SIZE -->

@@ -596,6 +596,65 @@ describe('resolveType', () => {
     })
   })
 
+  test('keyof: nested object with number', () => {
+    const { props } = resolve(
+      `
+      interface Type {
+        deep: {
+          1: any
+        }
+      }
+
+      defineProps<{
+        route: keyof Type['deep']
+      }>()`,
+    )
+
+    expect(props).toStrictEqual({
+      route: ['Number'],
+    })
+  })
+
+  test('keyof: nested object with string', () => {
+    const { props } = resolve(
+      `
+      interface Type {
+        deep: {
+          foo: any
+        }
+      }
+
+      defineProps<{
+        route: keyof Type['deep']
+      }>()`,
+    )
+
+    expect(props).toStrictEqual({
+      route: ['String'],
+    })
+  })
+
+  test('keyof: nested object with intermediate', () => {
+    const { props } = resolve(
+      `
+      interface Type {
+        deep: {
+          foo: any
+        }
+      }
+
+      type Foo = Type['deep']
+
+      defineProps<{
+        route: keyof Foo
+      }>()`,
+    )
+
+    expect(props).toStrictEqual({
+      route: ['String'],
+    })
+  })
+
   test('ExtractPropTypes (element-plus)', () => {
     const { props, raw } = resolve(
       `
