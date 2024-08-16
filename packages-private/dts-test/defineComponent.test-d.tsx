@@ -3,6 +3,7 @@ import {
   type ComponentOptions,
   type ComponentPublicInstance,
   type PropType,
+  type Ref,
   type SetupContext,
   type Slots,
   type SlotsType,
@@ -10,12 +11,21 @@ import {
   createApp,
   defineComponent,
   h,
+  nextTick,
   reactive,
   ref,
+  render as vueRender,
   withKeys,
   withModifiers,
 } from 'vue'
 import { type IsAny, type IsUnion, describe, expectType } from './utils'
+import {
+  type TestElement,
+  type TestNode,
+  nodeOps,
+  serializeInner,
+  triggerEvent,
+} from '@vue/runtime-test'
 
 describe('with object props', () => {
   interface ExpectedProps {
@@ -2027,3 +2037,119 @@ expectString(instance.actionText)
 // public prop on $props should be optional
 // @ts-expect-error
 expectString(instance.$props.actionText)
+
+// Helper function to safely cast TestNode to TestElement
+function getFirstElementChild(node: TestNode): TestElement {
+  if ('children' in node) {
+    return node.children[0] as TestElement
+  }
+  throw new Error('Expected an element with children')
+}
+
+// Custom render function with correct typing for TestElement
+function render(vnode: any, root: TestElement) {
+  return vueRender(vnode, root as any)
+}
+
+describe('defineComponent with generics', () => {
+  test('defineComponent with generic', async () => {
+    const Comp = defineComponent({
+      props: {
+        msg: String,
+        list: Array as PropType<{ name: string }[]>,
+      },
+      setup(props) {
+        const count = ref(0)
+        const increment = () => {
+          count.value++
+        }
+
+        return () =>
+          h('div', { onClick: increment }, [
+            h('h2', props.msg),
+            h('p', count.value),
+            ...(props.list || []).map((item: { name: string }) =>
+              h('p', item.name),
+            ),
+          ])
+      },
+    })
+
+    const list: Ref<{ name: string }[]> = ref([
+      { name: 'Tom' },
+      { name: 'Jerry' },
+    ])
+
+    const root = nodeOps.createElement('div')
+    render(h(Comp, { msg: 'Hello', list: list.value }), root)
+
+    expect(serializeInner(root)).toBe(
+      `<div><h2>Hello</h2><p>0</p><p>Tom</p><p>Jerry</p></div>`,
+    )
+
+    const firstChild = getFirstElementChild(root)
+    triggerEvent(firstChild, 'click')
+    await nextTick()
+    expect(serializeInner(root)).toBe(
+      `<div><h2>Hello</h2><p>1</p><p>Tom</p><p>Jerry</p></div>`,
+    )
+
+    list.value.push({ name: 'Spike' })
+    await nextTick()
+    expect(serializeInner(root)).toBe(
+      `<div><h2>Hello</h2><p>1</p><p>Tom</p><p>Jerry</p><p>Spike</p></div>`,
+    )
+  })
+
+  test('defineComponent with generic in render function', async () => {
+    const Comp = defineComponent({
+      props: {
+        msg: String,
+        list: Array as PropType<{ name: string }[]>,
+      },
+      setup(props) {
+        const count = ref(0)
+        const increment = () => {
+          count.value++
+        }
+
+        return () =>
+          h('div', { onClick: increment }, [
+            h('h2', props.msg),
+            h('p', count.value),
+            ...(props.list || []).map((item: { name: string }) =>
+              h('p', item.name),
+            ),
+          ])
+      },
+    })
+
+    const list = ref([{ name: 'Tom' }, { name: 'Jerry' }])
+
+    const App = defineComponent({
+      setup() {
+        return () => h(Comp, { msg: 'Hello', list: list.value })
+      },
+    })
+
+    const root = nodeOps.createElement('div')
+    render(h(App), root)
+
+    expect(serializeInner(root)).toBe(
+      `<div><h2>Hello</h2><p>0</p><p>Tom</p><p>Jerry</p></div>`,
+    )
+
+    const firstChild = getFirstElementChild(root)
+    triggerEvent(firstChild, 'click')
+    await nextTick()
+    expect(serializeInner(root)).toBe(
+      `<div><h2>Hello</h2><p>1</p><p>Tom</p><p>Jerry</p></div>`,
+    )
+
+    list.value.push({ name: 'Spike' })
+    await nextTick()
+    expect(serializeInner(root)).toBe(
+      `<div><h2>Hello</h2><p>1</p><p>Tom</p><p>Jerry</p><p>Spike</p></div>`,
+    )
+  })
+})
