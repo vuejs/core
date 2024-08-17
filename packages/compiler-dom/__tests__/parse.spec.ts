@@ -20,7 +20,7 @@ describe('DOM parser', () => {
       )
       const element = ast.children[0] as ElementNode
       const text = element.children[0] as TextNode
-
+      expect(element.children.length).toBe(1)
       expect(text).toStrictEqual({
         type: NodeTypes.TEXT,
         content: 'some<div>text</div>and<!--comment-->',
@@ -30,6 +30,20 @@ describe('DOM parser', () => {
           source: 'some<div>text</div>and<!--comment-->',
         },
       })
+    })
+
+    test('should not treat Uppercase component as special tag', () => {
+      const ast = parse(
+        '<TextArea>some<div>text</div>and<!--comment--></TextArea>',
+        parserOptions,
+      )
+      const element = ast.children[0] as ElementNode
+      expect(element.children.map(n => n.type)).toMatchObject([
+        NodeTypes.TEXT,
+        NodeTypes.ELEMENT,
+        NodeTypes.TEXT,
+        NodeTypes.COMMENT,
+      ])
     })
 
     test('textarea handles entities', () => {

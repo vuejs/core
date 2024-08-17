@@ -1,15 +1,24 @@
+import type { MockedFunction } from 'vitest'
 import {
+  type HMRRuntime,
   type Ref,
   type VueElement,
+  createApp,
   defineAsyncComponent,
   defineComponent,
   defineCustomElement,
   h,
   inject,
   nextTick,
+  provide,
   ref,
+  render,
   renderSlot,
+  useHost,
+  useShadowRoot,
 } from '../src'
+
+declare var __VUE_HMR_RUNTIME__: HMRRuntime
 
 describe('defineCustomElement', () => {
   const container = document.createElement('div')
@@ -60,6 +69,56 @@ describe('defineCustomElement', () => {
       expect(e.shadowRoot!.innerHTML).toBe('')
     })
 
+    // #10610
+    test('When elements move, avoid prematurely disconnecting MutationObserver', async () => {
+      const CustomInput = defineCustomElement({
+        props: ['value'],
+        emits: ['update'],
+        setup(props, { emit }) {
+          return () =>
+            h('input', {
+              type: 'number',
+              value: props.value,
+              onInput: (e: InputEvent) => {
+                const num = (e.target! as HTMLInputElement).valueAsNumber
+                emit('update', Number.isNaN(num) ? null : num)
+              },
+            })
+        },
+      })
+      customElements.define('my-el-input', CustomInput)
+      const num = ref('12')
+      const containerComp = defineComponent({
+        setup() {
+          return () => {
+            return h('div', [
+              h('my-el-input', {
+                value: num.value,
+                onUpdate: ($event: CustomEvent) => {
+                  num.value = $event.detail[0]
+                },
+              }),
+              h('div', { id: 'move' }),
+            ])
+          }
+        },
+      })
+      const app = createApp(containerComp)
+      const container = document.createElement('div')
+      document.body.appendChild(container)
+      app.mount(container)
+      const myInputEl = container.querySelector('my-el-input')!
+      const inputEl = myInputEl.shadowRoot!.querySelector('input')!
+      await nextTick()
+      expect(inputEl.value).toBe('12')
+      const moveEl = container.querySelector('#move')!
+      moveEl.append(myInputEl)
+      await nextTick()
+      myInputEl.removeAttribute('value')
+      await nextTick()
+      expect(inputEl.value).toBe('')
+    })
+
     test('should not unmount on move', async () => {
       container.innerHTML = `<div><my-element></my-element></div>`
       const e = container.childNodes[0].childNodes[0] as VueElement
@@ -88,15 +147,26 @@ describe('defineCustomElement', () => {
 
   describe('props', () => {
     const E = defineCustomElement({
-      props: ['foo', 'bar', 'bazQux'],
+      props: {
+        foo: [String, null],
+        bar: Object,
+        bazQux: null,
+        value: null,
+      },
       render() {
         return [
-          h('div', null, this.foo),
+          h('div', null, this.foo || ''),
           h('div', null, this.bazQux || (this.bar && this.bar.x)),
         ]
       },
     })
     customElements.define('my-el-props', E)
+
+    test('renders custom element w/ correct object prop value', () => {
+      render(h('my-el-props', { value: { x: 1 } }), container)
+      const el = container.children[0]
+      expect((el as any).value).toEqual({ x: 1 })
+    })
 
     test('props via attribute', async () => {
       // bazQux should map to `baz-qux` attribute
@@ -138,6 +208,12 @@ describe('defineCustomElement', () => {
       await nextTick()
       expect(e.shadowRoot!.innerHTML).toBe('<div></div><div>two</div>')
       expect(e.hasAttribute('foo')).toBe(false)
+
+      e.foo = undefined
+      await nextTick()
+      expect(e.shadowRoot!.innerHTML).toBe('<div></div><div>two</div>')
+      expect(e.hasAttribute('foo')).toBe(false)
+      expect(e.foo).toBe(undefined)
 
       e.bazQux = 'four'
       await nextTick()
@@ -265,7 +341,7 @@ describe('defineCustomElement', () => {
       expect(el.shadowRoot!.innerHTML).toMatchInlineSnapshot('"<div>foo</div>"')
     })
 
-    // # 5793
+    // #5793
     test('set number value in dom property', () => {
       const E = defineCustomElement({
         props: {
@@ -282,6 +358,42 @@ describe('defineCustomElement', () => {
       el.maxAge = 50
       expect(el.maxAge).toBe(50)
       expect(el.shadowRoot.innerHTML).toBe('max age: 50/type: number')
+    })
+
+    // #9006
+    test('should reflect default value', () => {
+      const E = defineCustomElement({
+        props: {
+          value: {
+            type: String,
+            default: 'hi',
+          },
+        },
+        render() {
+          return this.value
+        },
+      })
+      customElements.define('my-el-default-val', E)
+      container.innerHTML = `<my-el-default-val></my-el-default-val>`
+      const e = container.childNodes[0] as any
+      expect(e.value).toBe('hi')
+    })
+
+    test('support direct setup function syntax with extra options', () => {
+      const E = defineCustomElement(
+        props => {
+          return () => props.text
+        },
+        {
+          props: {
+            text: String,
+          },
+        },
+      )
+      customElements.define('my-el-setup-with-props', E)
+      container.innerHTML = `<my-el-setup-with-props text="hello"></my-el-setup-with-props>`
+      const e = container.childNodes[0] as VueElement
+      expect(e.shadowRoot!.innerHTML).toBe('hello')
     })
   })
 
@@ -323,6 +435,9 @@ describe('defineCustomElement', () => {
             },
             onMousedown: () => {
               emit('myEvent', 1) // validate hyphenation
+            },
+            onWheel: () => {
+              emit('my-wheel', { bubbles: true }, 1)
             },
           })
       },
@@ -383,6 +498,7 @@ describe('defineCustomElement', () => {
         detail: [1],
       })
     })
+
     // #7293
     test('emit in an async component wrapper with properties bound', async () => {
       const E = defineCustomElement(
@@ -404,6 +520,19 @@ describe('defineCustomElement', () => {
         detail: [1],
       })
     })
+
+    test('emit with options', async () => {
+      container.innerHTML = `<my-el-emits></my-el-emits>`
+      const e = container.childNodes[0] as VueElement
+      const spy = vi.fn()
+      e.addEventListener('my-wheel', spy)
+      e.shadowRoot!.childNodes[0].dispatchEvent(new CustomEvent('wheel'))
+      expect(spy).toHaveBeenCalledTimes(1)
+      expect(spy.mock.calls[0][0]).toMatchObject({
+        bubbles: true,
+        detail: [{ bubbles: true }, 1],
+      })
+    })
   })
 
   describe('slots', () => {
@@ -421,7 +550,7 @@ describe('defineCustomElement', () => {
     })
     customElements.define('my-el-slots', E)
 
-    test('default slot', () => {
+    test('render slots correctly', () => {
       container.innerHTML = `<my-el-slots><span>hi</span></my-el-slots>`
       const e = container.childNodes[0] as VueElement
       // native slots allocation does not affect innerHTML, so we just
@@ -533,18 +662,101 @@ describe('defineCustomElement', () => {
   })
 
   describe('styles', () => {
-    test('should attach styles to shadow dom', () => {
-      const Foo = defineCustomElement({
+    function assertStyles(el: VueElement, css: string[]) {
+      const styles = el.shadowRoot?.querySelectorAll('style')!
+      expect(styles.length).toBe(css.length) // should not duplicate multiple copies from Bar
+      for (let i = 0; i < css.length; i++) {
+        expect(styles[i].textContent).toBe(css[i])
+      }
+    }
+
+    test('should attach styles to shadow dom', async () => {
+      const def = defineComponent({
+        __hmrId: 'foo',
         styles: [`div { color: red; }`],
         render() {
           return h('div', 'hello')
         },
       })
+      const Foo = defineCustomElement(def)
       customElements.define('my-el-with-styles', Foo)
       container.innerHTML = `<my-el-with-styles></my-el-with-styles>`
       const el = container.childNodes[0] as VueElement
       const style = el.shadowRoot?.querySelector('style')!
       expect(style.textContent).toBe(`div { color: red; }`)
+
+      // hmr
+      __VUE_HMR_RUNTIME__.reload('foo', {
+        ...def,
+        styles: [`div { color: blue; }`, `div { color: yellow; }`],
+      } as any)
+
+      await nextTick()
+      assertStyles(el, [`div { color: blue; }`, `div { color: yellow; }`])
+    })
+
+    test("child components should inject styles to root element's shadow root", async () => {
+      const Baz = () => h(Bar)
+      const Bar = defineComponent({
+        __hmrId: 'bar',
+        styles: [`div { color: green; }`, `div { color: blue; }`],
+        render() {
+          return 'bar'
+        },
+      })
+      const Foo = defineCustomElement({
+        styles: [`div { color: red; }`],
+        render() {
+          return [h(Baz), h(Baz)]
+        },
+      })
+      customElements.define('my-el-with-child-styles', Foo)
+      container.innerHTML = `<my-el-with-child-styles></my-el-with-child-styles>`
+      const el = container.childNodes[0] as VueElement
+
+      // inject order should be child -> parent
+      assertStyles(el, [
+        `div { color: green; }`,
+        `div { color: blue; }`,
+        `div { color: red; }`,
+      ])
+
+      // hmr
+      __VUE_HMR_RUNTIME__.reload(Bar.__hmrId!, {
+        ...Bar,
+        styles: [`div { color: red; }`, `div { color: yellow; }`],
+      } as any)
+
+      await nextTick()
+      assertStyles(el, [
+        `div { color: red; }`,
+        `div { color: yellow; }`,
+        `div { color: red; }`,
+      ])
+
+      __VUE_HMR_RUNTIME__.reload(Bar.__hmrId!, {
+        ...Bar,
+        styles: [`div { color: blue; }`],
+      } as any)
+      await nextTick()
+      assertStyles(el, [`div { color: blue; }`, `div { color: red; }`])
+    })
+
+    test('with nonce', () => {
+      const Foo = defineCustomElement(
+        {
+          styles: [`div { color: red; }`],
+          render() {
+            return h('div', 'hello')
+          },
+        },
+        { nonce: 'xxx' },
+      )
+      customElements.define('my-el-with-nonce', Foo)
+      container.innerHTML = `<my-el-with-nonce></my-el-with-nonce>`
+      const el = container.childNodes[0] as VueElement
+      const style = el.shadowRoot?.querySelector('style')!
+      expect(style.getAttribute('nonce')).toBe('xxx')
     })
   })
 
@@ -692,5 +904,362 @@ describe('defineCustomElement', () => {
         `<div><slot><div>fallback</div></slot></div><div><slot name="named"></slot></div>`,
       )
     })
+  })
+
+  describe('shadowRoot: false', () => {
+    const E = defineCustomElement({
+      shadowRoot: false,
+      props: {
+        msg: {
+          type: String,
+          default: 'hello',
+        },
+      },
+      render() {
+        return h('div', this.msg)
+      },
+    })
+    customElements.define('my-el-shadowroot-false', E)
+
+    test('should work', async () => {
+      function raf() {
+        return new Promise(resolve => {
+          requestAnimationFrame(resolve)
+        })
+      }
+
+      container.innerHTML = `<my-el-shadowroot-false></my-el-shadowroot-false>`
+      const e = container.childNodes[0] as VueElement
+      await raf()
+      expect(e).toBeInstanceOf(E)
+      expect(e._instance).toBeTruthy()
+      expect(e.innerHTML).toBe(`<div>hello</div>`)
+      expect(e.shadowRoot).toBe(null)
+    })
+
+    const toggle = ref(true)
+    const ES = defineCustomElement(
+      {
+        render() {
+          return [
+            renderSlot(this.$slots, 'default'),
+            toggle.value ? renderSlot(this.$slots, 'named') : null,
+            renderSlot(this.$slots, 'omitted', {}, () => [
+              h('div', 'fallback'),
+            ]),
+          ]
+        },
+      },
+      { shadowRoot: false },
+    )
+    customElements.define('my-el-shadowroot-false-slots', ES)
+
+    test('should render slots', async () => {
+      container.innerHTML =
+        `<my-el-shadowroot-false-slots>` +
+        `<span>default</span>text` +
+        `<div slot="named">named</div>` +
+        `</my-el-shadowroot-false-slots>`
+      const e = container.childNodes[0] as VueElement
+      // native slots allocation does not affect innerHTML, so we just
+      // verify that we've rendered the correct native slots here...
+      expect(e.innerHTML).toBe(
+        `<span>default</span>text` +
+          `<div slot="named">named</div>` +
+          `<div>fallback</div>`,
+      )
+
+      toggle.value = false
+      await nextTick()
+      expect(e.innerHTML).toBe(
+        `<span>default</span>text` + `<!---->` + `<div>fallback</div>`,
+      )
+    })
+  })
+
+  describe('helpers', () => {
+    test('useHost', () => {
+      const Foo = defineCustomElement({
+        setup() {
+          const host = useHost()!
+          host.setAttribute('id', 'host')
+          return () => h('div', 'hello')
+        },
+      })
+      customElements.define('my-el-use-host', Foo)
+      container.innerHTML = `<my-el-use-host>`
+      const el = container.childNodes[0] as VueElement
+      expect(el.id).toBe('host')
+    })
+
+    test('useShadowRoot for style injection', () => {
+      const Foo = defineCustomElement({
+        setup() {
+          const root = useShadowRoot()!
+          const style = document.createElement('style')
+          style.innerHTML = `div { color: red; }`
+          root.appendChild(style)
+          return () => h('div', 'hello')
+        },
+      })
+      customElements.define('my-el-use-shadow-root', Foo)
+      container.innerHTML = `<my-el-use-shadow-root>`
+      const el = container.childNodes[0] as VueElement
+      const style = el.shadowRoot?.querySelector('style')!
+      expect(style.textContent).toBe(`div { color: red; }`)
+    })
+  })
+
+  describe('expose', () => {
+    test('expose attributes and callback', async () => {
+      type SetValue = (value: string) => void
+      let fn: MockedFunction<SetValue>
+
+      const E = defineCustomElement({
+        setup(_, { expose }) {
+          const value = ref('hello')
+
+          const setValue = (fn = vi.fn((_value: string) => {
+            value.value = _value
+          }))
+
+          expose({
+            setValue,
+            value,
+          })
+
+          return () => h('div', null, [value.value])
+        },
+      })
+      customElements.define('my-el-expose', E)
+
+      container.innerHTML = `<my-el-expose></my-el-expose>`
+      const e = container.childNodes[0] as VueElement & {
+        value: string
+        setValue: MockedFunction<SetValue>
+      }
+      expect(e.shadowRoot!.innerHTML).toBe(`<div>hello</div>`)
+      expect(e.value).toBe('hello')
+      expect(e.setValue).toBe(fn!)
+      e.setValue('world')
+      expect(e.value).toBe('world')
+      await nextTick()
+      expect(e.shadowRoot!.innerHTML).toBe(`<div>world</div>`)
+    })
+
+    test('warning when exposing an existing property', () => {
+      const E = defineCustomElement({
+        props: {
+          value: String,
+        },
+        setup(props, { expose }) {
+          expose({
+            value: 'hello',
+          })
+
+          return () => h('div', null, [props.value])
+        },
+      })
+      customElements.define('my-el-expose-two', E)
+
+      container.innerHTML = `<my-el-expose-two value="world"></my-el-expose-two>`
+
+      expect(
+        `[Vue warn]: Exposed property "value" already exists on custom element.`,
+      ).toHaveBeenWarned()
+    })
+  })
+
+  test('async & nested custom elements', async () => {
+    let fooVal: string | undefined = ''
+    const E = defineCustomElement(
+      defineAsyncComponent(() => {
+        return Promise.resolve({
+          setup(props) {
+            provide('foo', 'foo')
+          },
+          render(this: any) {
+            return h('div', null, [renderSlot(this.$slots, 'default')])
+          },
+        })
+      }),
+    )
+
+    const EChild = defineCustomElement({
+      setup(props) {
+        fooVal = inject('foo')
+      },
+      render(this: any) {
+        return h('div', null, 'child')
+      },
+    })
+    customElements.define('my-el-async-nested-ce', E)
+    customElements.define('slotted-child', EChild)
+    container.innerHTML = `<my-el-async-nested-ce><div><slotted-child></slotted-child></div></my-el-async-nested-ce>`
+
+    await new Promise(r => setTimeout(r))
+    const e = container.childNodes[0] as VueElement
+    expect(e.shadowRoot!.innerHTML).toBe(`<div><slot></slot></div>`)
+    expect(fooVal).toBe('foo')
+  })
+
+  test('async & multiple levels of nested custom elements', async () => {
+    let fooVal: string | undefined = ''
+    let barVal: string | undefined = ''
+    const E = defineCustomElement(
+      defineAsyncComponent(() => {
+        return Promise.resolve({
+          setup(props) {
+            provide('foo', 'foo')
+          },
+          render(this: any) {
+            return h('div', null, [renderSlot(this.$slots, 'default')])
+          },
+        })
+      }),
+    )
+
+    const EChild = defineCustomElement({
+      setup(props) {
+        provide('bar', 'bar')
+      },
+      render(this: any) {
+        return h('div', null, [renderSlot(this.$slots, 'default')])
+      },
+    })
+
+    const EChild2 = defineCustomElement({
+      setup(props) {
+        fooVal = inject('foo')
+        barVal = inject('bar')
+      },
+      render(this: any) {
+        return h('div', null, 'child')
+      },
+    })
+    customElements.define('my-el-async-nested-m-ce', E)
+    customElements.define('slotted-child-m', EChild)
+    customElements.define('slotted-child2-m', EChild2)
+    container.innerHTML =
+      `<my-el-async-nested-m-ce>` +
+      `<div><slotted-child-m>` +
+      `<slotted-child2-m></slotted-child2-m>` +
+      `</slotted-child-m></div>` +
+      `</my-el-async-nested-m-ce>`
+
+    await new Promise(r => setTimeout(r))
+    const e = container.childNodes[0] as VueElement
+    expect(e.shadowRoot!.innerHTML).toBe(`<div><slot></slot></div>`)
+    expect(fooVal).toBe('foo')
+    expect(barVal).toBe('bar')
+  })
+
+  describe('configureApp', () => {
+    test('should work', () => {
+      const E = defineCustomElement(
+        () => {
+          const msg = inject('msg')
+          return () => h('div', msg!)
+        },
+        {
+          configureApp(app) {
+            app.provide('msg', 'app-injected')
+          },
+        },
+      )
+      customElements.define('my-element-with-app', E)
+
+      container.innerHTML = `<my-element-with-app></my-element-with-app>`
+      const e = container.childNodes[0] as VueElement
+
+      expect(e.shadowRoot?.innerHTML).toBe('<div>app-injected</div>')
+    })
+  })
+
+  // #9885
+  test('avoid double mount when prop is set immediately after mount', () => {
+    customElements.define(
+      'my-input-dupe',
+      defineCustomElement({
+        props: {
+          value: String,
+        },
+        render() {
+          return 'hello'
+        },
+      }),
+    )
+    const container = document.createElement('div')
+    document.body.appendChild(container)
+    createApp({
+      render() {
+        return h('div', [
+          h('my-input-dupe', {
+            onVnodeMounted(vnode) {
+              vnode.el!.value = 'fesfes'
+            },
+          }),
+        ])
+      },
+    }).mount(container)
+    expect(container.children[0].children[0].shadowRoot?.innerHTML).toBe(
+      'hello',
+    )
+  })
+
+  // #11081
+  test('Props can be casted when mounting custom elements in component rendering functions', async () => {
+    const E = defineCustomElement(
+      defineAsyncComponent(() =>
+        Promise.resolve({
+          props: ['fooValue'],
+          setup(props) {
+            expect(props.fooValue).toBe('fooValue')
+            return () => h('div', props.fooValue)
+          },
+        }),
+      ),
+    )
+    customElements.define('my-el-async-4', E)
+    const R = defineComponent({
+      setup() {
+        const fooValue = ref('fooValue')
+        return () => {
+          return h('div', null, [
+            h('my-el-async-4', {
+              fooValue: fooValue.value,
+            }),
+          ])
+        }
+      },
+    })
+
+    const app = createApp(R)
+    app.mount(container)
+    await new Promise(r => setTimeout(r))
+    const e = container.querySelector('my-el-async-4') as VueElement
+    expect(e.shadowRoot!.innerHTML).toBe(`<div>fooValue</div>`)
+    app.unmount()
+  })
+
+  // #11276
+  test('delete prop on attr removal', async () => {
+    const E = defineCustomElement({
+      props: {
+        boo: {
+          type: Boolean,
+        },
+      },
+      render() {
+        return this.boo + ',' + typeof this.boo
+      },
+    })
+    customElements.define('el-attr-removal', E)
+    container.innerHTML = '<el-attr-removal boo>'
+    const e = container.childNodes[0] as VueElement
+    expect(e.shadowRoot!.innerHTML).toBe(`true,boolean`)
+    e.removeAttribute('boo')
+    await nextTick()
+    expect(e.shadowRoot!.innerHTML).toBe(`false,boolean`)
   })
 })

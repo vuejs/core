@@ -304,3 +304,19 @@ return () => {}
 
 }"
 `;
+
+exports[`sfc reactive props destructure > rest spread non-inline 1`] = `
+"import { createPropsRestProxy as _createPropsRestProxy } from 'vue'
+
+export default {
+  props: ['foo', 'bar'],
+  setup(__props, { expose: __expose }) {
+  __expose();
+
+      const rest = _createPropsRestProxy(__props, ["foo"])
+      
+return { rest }
+}
+
+}"
+`;
