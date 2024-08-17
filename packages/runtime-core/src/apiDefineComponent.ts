@@ -203,7 +203,7 @@ export function defineComponent<
   ResolvedEmits extends EmitsOptions = {} extends RuntimeEmitsOptions
     ? TypeEmitsToOptions<TypeEmits>
     : RuntimeEmitsOptions,
-  InferredProps = unknown extends TypeProps
+  InferredProps = keyof TypeProps extends never
     ? string extends RuntimePropsKeys
       ? ComponentObjectPropsOptions extends RuntimePropsOptions
         ? {}
