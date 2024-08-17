@@ -26,6 +26,14 @@ export const hydrateOnIdle: HydrationStrategyFactory<number> =
     return () => cancelIdleCallback(id)
   }
 
+function elementIsVisibleInViewport (el: Element) {
+  const { top, left, bottom, right } = el.getBoundingClientRect()
+  const { innerHeight, innerWidth } = window
+  return ((top > 0 && top < innerHeight) ||
+    (bottom > 0 && bottom < innerHeight)) &&
+    ((left > 0 && left < innerWidth) || (right > 0 && right < innerWidth))
+}
+
 export const hydrateOnVisible: HydrationStrategyFactory<
   IntersectionObserverInit
 > = opts => (hydrate, forEach) => {
@@ -37,7 +45,13 @@ export const hydrateOnVisible: HydrationStrategyFactory<
       break
     }
   }, opts)
-  forEach(el => ob.observe(el))
+  forEach(el => {
+    if (elementIsVisibleInViewport(el)){
+      hydrate()
+      return () => ob.disconnect()
+    }
+    ob.observe(el)
+  })
   return () => ob.disconnect()
 }
 
