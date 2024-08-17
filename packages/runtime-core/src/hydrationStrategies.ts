@@ -26,13 +26,14 @@ export const hydrateOnIdle: HydrationStrategyFactory<number> =
     return () => cancelIdleCallback(id)
   }
 
-function elementIsVisibleInViewport (el: Element) {
+function elementIsVisibleInViewport(el: Element) {
   const { top, left, bottom, right } = el.getBoundingClientRect()
   // eslint-disable-next-line no-restricted-globals
   const { innerHeight, innerWidth } = window
-  return ((top > 0 && top < innerHeight) ||
-    (bottom > 0 && bottom < innerHeight)) &&
+  return (
+    ((top > 0 && top < innerHeight) || (bottom > 0 && bottom < innerHeight)) &&
     ((left > 0 && left < innerWidth) || (right > 0 && right < innerWidth))
+  )
 }
 
 export const hydrateOnVisible: HydrationStrategyFactory<
@@ -47,7 +48,7 @@ export const hydrateOnVisible: HydrationStrategyFactory<
     }
   }, opts)
   forEach(el => {
-    if (elementIsVisibleInViewport(el)){
+    if (elementIsVisibleInViewport(el)) {
       hydrate()
       return () => ob.disconnect()
     }
