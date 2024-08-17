@@ -5,6 +5,7 @@
   "license": "MIT",
   "type": "module",
   "scripts": {
+    "dev": "pnpm start --noHeadless --skipBench --vdom",
     "start": "node index.js"
   },
   "dependencies": {

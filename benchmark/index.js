@@ -177,7 +177,7 @@ async function buildApp(isVapor) {
 
 function startServer() {
   const server = connect().use(sirv('./client/dist')).listen(port)
-  console.info(`\n\nServer started at`, colors.blue(`http://localhost:${port}`))
+  printPort(port)
   process.on('SIGTERM', () => server.close())
   return server
 }
@@ -337,4 +337,15 @@ function compute(array) {
 /** @param {number} n */
 function round(n) {
   return +n.toFixed(2)
+}
+
+/** @param {number} port */
+function printPort(port) {
+  const vaporLink = !noVapor
+    ? `\nVapor: ${colors.blue(`http://localhost:${port}/vapor`)}`
+    : ''
+  const vdomLink = vdom
+    ? `\nvDom:  ${colors.blue(`http://localhost:${port}/vdom`)}`
+    : ''
+  console.info(`\n\nServer started at`, vaporLink, vdomLink)
 }
