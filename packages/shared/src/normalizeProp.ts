@@ -51,8 +51,8 @@ export function stringifyStyle(
   }
   for (const key in styles) {
     const value = styles[key]
-    const normalizedKey = key.startsWith(`--`) ? key : hyphenate(key)
     if (isString(value) || typeof value === 'number') {
+      const normalizedKey = key.startsWith(`--`) ? key : hyphenate(key)
       // only render valid values
       ret += `${normalizedKey}:${value};`
     }
@@ -81,7 +81,9 @@ export function normalizeClass(value: unknown): string {
   return res.trim()
 }
 
-export function normalizeProps(props: Record<string, any> | null) {
+export function normalizeProps(
+  props: Record<string, any> | null,
+): Record<string, any> | null {
   if (!props) return null
   let { class: klass, style } = props
   if (klass && !isString(klass)) {

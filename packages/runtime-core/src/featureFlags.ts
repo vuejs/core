@@ -7,7 +7,7 @@ import { getGlobalThis } from '@vue/shared'
  *
  * istanbul-ignore-next
  */
-export function initFeatureFlags() {
+export function initFeatureFlags(): void {
   const needWarn = []
 
   if (typeof __FEATURE_OPTIONS_API__ !== 'boolean') {
