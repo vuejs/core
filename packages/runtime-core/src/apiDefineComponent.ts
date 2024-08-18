@@ -203,12 +203,14 @@ export function defineComponent<
   ResolvedEmits extends EmitsOptions = {} extends RuntimeEmitsOptions
     ? TypeEmitsToOptions<TypeEmits>
     : RuntimeEmitsOptions,
-  InferredProps = keyof TypeProps extends never
-    ? string extends RuntimePropsKeys
-      ? ComponentObjectPropsOptions extends RuntimePropsOptions
-        ? {}
-        : ExtractPropTypes<RuntimePropsOptions>
-      : { [key in RuntimePropsKeys]?: any }
+  InferredProps = unknown extends TypeProps
+    ? keyof TypeProps extends never
+      ? string extends RuntimePropsKeys
+        ? ComponentObjectPropsOptions extends RuntimePropsOptions
+          ? {}
+          : ExtractPropTypes<RuntimePropsOptions>
+        : { [key in RuntimePropsKeys]?: any }
+      : TypeProps
     : TypeProps,
   ResolvedProps = Readonly<InferredProps & EmitsToProps<ResolvedEmits>>,
   TypeRefs extends Record<string, unknown> = {},
