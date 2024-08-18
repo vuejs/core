@@ -3,7 +3,6 @@ import {
   SchedulerJobFlags,
   flushPostFlushCbs,
   flushPreFlushCbs,
-  invalidateJob,
   nextTick,
   queueJob,
   queuePostFlushCb,
@@ -411,33 +410,6 @@ describe('scheduler', () => {
       await nextTick()
       expect(calls).toEqual(['job1', 'job2', 'cb1', 'cb2'])
     })
-  })
-
-  test('invalidateJob', async () => {
-    const calls: string[] = []
-    const job1 = () => {
-      calls.push('job1')
-      invalidateJob(job2)
-      job2()
-    }
-    const job2 = () => {
-      calls.push('job2')
-    }
-    const job3 = () => {
-      calls.push('job3')
-    }
-    const job4 = () => {
-      calls.push('job4')
-    }
-    // queue all jobs
-    queueJob(job1)
-    queueJob(job2)
-    queueJob(job3)
-    queuePostFlushCb(job4)
-    expect(calls).toEqual([])
-    await nextTick()
-    // job2 should be called only once
-    expect(calls).toEqual(['job1', 'job2', 'job3', 'job4'])
   })
 
   test('sort job based on id', async () => {
