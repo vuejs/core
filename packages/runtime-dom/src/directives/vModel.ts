@@ -138,13 +138,13 @@ export const vModelCheckbox: ModelDirective<HTMLInputElement> = {
           assign(filtered)
         }
       } else if (isSet(modelValue)) {
-        const updatedValue = new Set(modelValue)
+        const cloned = new Set(modelValue)
         if (checked) {
-          updatedValue.add(elementValue)
+          cloned.add(elementValue)
         } else {
-          updatedValue.delete(elementValue)
+          cloned.delete(elementValue)
         }
-        assign(new Set(updatedValue))
+        assign(cloned)
       } else {
         assign(getCheckboxValue(el, checked))
       }
