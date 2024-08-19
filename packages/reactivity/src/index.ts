@@ -89,4 +89,3 @@ export {
   type WatchOptions,
   type WatchScheduler,
 } from './watch'
-export { type SchedulerJob, SchedulerJobFlags } from './scheduler'

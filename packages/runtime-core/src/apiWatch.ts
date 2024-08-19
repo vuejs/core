@@ -4,12 +4,11 @@ import {
   type DebuggerOptions,
   type ReactiveMarker,
   type Ref,
-  SchedulerJobFlags,
   type WatchErrorCodes,
   watch as baseWatch,
   getCurrentScope,
 } from '@vue/reactivity'
-import { type SchedulerJob, queueJob } from './scheduler'
+import { type SchedulerJob, SchedulerJobFlags, queueJob } from './scheduler'
 import {
   EMPTY_OBJ,
   NOOP,
@@ -211,22 +210,34 @@ function doWatch(
     handleErrorWithInstance(err, instance, type)
 
   // scheduler
+  let isPre = false
   if (flush === 'post') {
     baseWatchOptions.scheduler = job => {
       queuePostRenderEffect(job, instance && instance.suspense)
     }
   } else if (flush !== 'sync') {
     // default: 'pre'
+    isPre = true
     baseWatchOptions.scheduler = (job, isFirstRun) => {
       if (isFirstRun) {
         job()
       } else {
-        job.flags! |= SchedulerJobFlags.PRE
-        if (instance) {
-          job.id = instance.uid
-          ;(job as SchedulerJob).i = instance
-        }
         queueJob(job)
+      }
+    }
+  }
+
+  baseWatchOptions.augmentJob = (job: SchedulerJob) => {
+    // important: mark the job as a watcher callback so that scheduler knows
+    // it is allowed to self-trigger (#1727)
+    if (cb) {
+      job.flags! |= SchedulerJobFlags.ALLOW_RECURSE
+    }
+    if (isPre) {
+      job.flags! |= SchedulerJobFlags.PRE
+      if (instance) {
+        job.id = instance.uid
+        ;(job as SchedulerJob).i = instance
       }
     }
   }

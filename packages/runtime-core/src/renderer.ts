@@ -41,6 +41,7 @@ import {
 } from '@vue/shared'
 import {
   type SchedulerJob,
+  SchedulerJobFlags,
   type SchedulerJobs,
   flushPostFlushCbs,
   flushPreFlushCbs,
@@ -50,7 +51,6 @@ import {
 import {
   EffectFlags,
   ReactiveEffect,
-  SchedulerJobFlags,
   pauseTracking,
   resetTracking,
 } from '@vue/reactivity'

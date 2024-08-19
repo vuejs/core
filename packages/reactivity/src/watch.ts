@@ -23,7 +23,6 @@ import {
 } from './effect'
 import { isReactive, isShallow } from './reactive'
 import { type Ref, isRef } from './ref'
-import { type SchedulerJob, SchedulerJobFlags } from './scheduler'
 
 // These errors were transferred from `packages/runtime-core/src/errorHandling.ts`
 // to @vue/reactivity to allow co-location with the moved base watch logic, hence
@@ -48,6 +47,7 @@ export interface WatchOptions<Immediate = boolean> extends DebuggerOptions {
   deep?: boolean | number
   once?: boolean
   scheduler?: WatchScheduler
+  augmentJob?: (job: (...args: any[]) => void) => void
   onError?: HandleError
   onWarn?: HandleWarn
 }
@@ -55,7 +55,7 @@ export interface WatchOptions<Immediate = boolean> extends DebuggerOptions {
 // initial value for watchers to trigger on undefined initial values
 const INITIAL_WATCHER_VALUE = {}
 
-export type WatchScheduler = (job: SchedulerJob, isFirstRun: boolean) => void
+export type WatchScheduler = (job: () => void, isFirstRun: boolean) => void
 export type HandleError = (err: unknown, type: WatchErrorCodes) => void
 export type HandleWarn = (msg: string, ...args: any[]) => void
 
@@ -105,6 +105,7 @@ export function watch(
     deep,
     once,
     scheduler,
+    augmentJob,
     onWarn = __DEV__ ? warn : NOOP,
     onError = DEFAULT_HANDLE_ERROR,
     onTrack,
@@ -217,7 +218,8 @@ export function watch(
   let oldValue: any = isMultiSource
     ? new Array((source as []).length).fill(INITIAL_WATCHER_VALUE)
     : INITIAL_WATCHER_VALUE
-  const job: SchedulerJob = (immediateFirstRun?: boolean) => {
+
+  const job = (immediateFirstRun?: boolean) => {
     if (
       !(effect.flags & EffectFlags.ACTIVE) ||
       (!effect.dirty && !immediateFirstRun)
@@ -267,9 +269,9 @@ export function watch(
     }
   }
 
-  // important: mark the job as a watcher callback so that scheduler knows
-  // it is allowed to self-trigger (#1727)
-  if (cb) job.flags! |= SchedulerJobFlags.ALLOW_RECURSE
+  if (augmentJob) {
+    augmentJob(job)
+  }
 
   effect = new ReactiveEffect(getter)
   if (scheduler) {

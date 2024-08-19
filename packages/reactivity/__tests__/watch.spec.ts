@@ -1,7 +1,6 @@
 import {
   EffectScope,
   type Ref,
-  type SchedulerJob,
   WatchErrorCodes,
   type WatchScheduler,
   onWatcherCleanup,
@@ -9,7 +8,7 @@ import {
   watch,
 } from '../src'
 
-const queue: SchedulerJob[] = []
+const queue: (() => void)[] = []
 
 // a simple scheduler for testing purposes
 let isFlushPending = false
@@ -19,7 +18,7 @@ const nextTick = (fn?: () => any) =>
 
 const scheduler: WatchScheduler = (job, isFirstRun) => {
   if (isFirstRun) {
-    job(true)
+    job()
   } else {
     queue.push(job)
     flushJobs()
