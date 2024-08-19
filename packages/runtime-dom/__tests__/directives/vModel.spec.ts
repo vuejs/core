@@ -812,7 +812,7 @@ describe('vModel', () => {
 
     const setCheckedSpyFoo = vi.spyOn(foo, 'checked', 'set')
     const setCheckedSpyBar = vi.spyOn(bar, 'checked', 'set')
-    
+
     expect(foo.checked).toEqual(true)
     expect(bar.checked).toEqual(false)
 
