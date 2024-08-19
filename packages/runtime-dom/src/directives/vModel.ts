@@ -138,13 +138,13 @@ export const vModelCheckbox: ModelDirective<HTMLInputElement> = {
           assign(filtered)
         }
       } else if (isSet(modelValue)) {
-        const cloned = new Set(modelValue)
+        const updatedValue = new Set(modelValue)
         if (checked) {
-          cloned.add(elementValue)
+          updatedValue.add(elementValue)
         } else {
-          cloned.delete(elementValue)
+          updatedValue.delete(elementValue)
         }
-        assign(cloned)
+        assign(new Set(updatedValue))
       } else {
         assign(getCheckboxValue(el, checked))
       }
@@ -154,10 +154,7 @@ export const vModelCheckbox: ModelDirective<HTMLInputElement> = {
   mounted: setChecked,
   beforeUpdate(el, binding, vnode) {
     el[assignKey] = getModelAssigner(vnode)
-    // Only call setChecked if the value has changed
-    if (!looseEqual(binding.value, binding.oldValue)) {
-      setChecked(el, binding, vnode)
-    }
+    setChecked(el, binding, vnode)
   },
 }
 
