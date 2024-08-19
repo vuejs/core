@@ -3,6 +3,7 @@
 
 import {
   type ComponentPublicInstance,
+  createApp,
   defineComponent,
   h,
   nextTick,
@@ -598,4 +599,77 @@ describe('component: emit', () => {
     render(h(ComponentC), el)
     expect(renderFn).toHaveBeenCalledTimes(1)
   })
+})
+
+test('merging emits for a component that is also used as a mixin', () => {
+  const render = () => h('div')
+  const CompA = {
+    render,
+  }
+
+  const mixin = {
+    emits: {
+      one: (arg: number) => arg === 1,
+    },
+  }
+
+  const CompB = {
+    mixins: [mixin, CompA],
+    created(this: ComponentPublicInstance) {
+      this.$emit('one', 1)
+    },
+    render,
+  }
+
+  const app = createApp({
+    render() {
+      return [h(CompA), ', ', h(CompB)]
+    },
+  })
+
+  app.mixin({
+    emits: {
+      one: (arg: number) => arg === 0,
+      two: null,
+    },
+  })
+
+  const root = nodeOps.createElement('div')
+  app.mount(root)
+  expect(`event validation failed for event "one"`).not.toHaveBeenWarned()
+})
+
+test('merging props from global mixins and extends', () => {
+  let renderProxy: any
+  let extendedRenderProxy: any
+  const render = () => h('div')
+  const Comp = {
+    mounted(this: ComponentPublicInstance) {
+      renderProxy = this
+    },
+    render,
+  }
+
+  const ExtendedComp = {
+    extends: Comp,
+    mounted(this: ComponentPublicInstance) {
+      extendedRenderProxy = this
+    },
+    render,
+  }
+
+  const app = createApp({
+    render: () => [h(ExtendedComp), h(Comp)],
+  })
+
+  const emits = {
+    one: (arg: number) => arg === 0,
+    two: (arg: number) => arg === 0,
+  }
+  app.mixin({ emits })
+
+  const root = nodeOps.createElement('div')
+  app.mount(root)
+  expect(renderProxy._.emitsOptions).toMatchObject(emits)
+  expect(extendedRenderProxy._.emitsOptions).toMatchObject(emits)
 })
