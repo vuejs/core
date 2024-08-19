@@ -96,11 +96,11 @@ export function getCurrentWatcher(): ReactiveEffect<any> | undefined {
 export function onWatcherCleanup(
   cleanupFn: () => void,
   failSilently = false,
+  owner: ReactiveEffect | undefined = activeWatcher,
 ): void {
-  if (activeWatcher) {
-    const cleanups =
-      cleanupMap.get(activeWatcher) ||
-      cleanupMap.set(activeWatcher, []).get(activeWatcher)!
+  if (owner) {
+    let cleanups = cleanupMap.get(owner)
+    if (!cleanups) cleanupMap.set(owner, (cleanups = []))
     cleanups.push(cleanupFn)
   } else if (__DEV__ && !failSilently) {
     warn(
@@ -137,6 +137,7 @@ export function watch(
   }
 
   let effect: ReactiveEffect
+  let boundCleanup: typeof onWatcherCleanup
   let getter: () => any
   let cleanup: (() => void) | undefined
   let forceTrigger = false
@@ -184,8 +185,8 @@ export function watch(
         activeWatcher = effect
         try {
           return call
-            ? call(source, WatchErrorCodes.WATCH_CALLBACK, [onWatcherCleanup])
-            : source(onWatcherCleanup)
+            ? call(source, WatchErrorCodes.WATCH_CALLBACK, [boundCleanup])
+            : source(boundCleanup)
         } finally {
           activeWatcher = currentEffect
         }
@@ -254,7 +255,7 @@ export function watch(
               : isMultiSource && oldValue[0] === INITIAL_WATCHER_VALUE
                 ? []
                 : oldValue,
-            onWatcherCleanup,
+            boundCleanup,
           ]
           call
             ? call(cb!, WatchErrorCodes.WATCH_CALLBACK, args)
@@ -276,6 +277,7 @@ export function watch(
   }
 
   effect = new ReactiveEffect(getter)
+  boundCleanup = fn => onWatcherCleanup(fn, false, effect)
   if (scheduler) {
     effect.scheduler = () => scheduler(job, false)
   } else {

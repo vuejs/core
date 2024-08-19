@@ -115,7 +115,7 @@ describe('watch', () => {
     ])
   })
 
-  test('watch with onEffectCleanup', async () => {
+  test('watch with onWatcherCleanup', async () => {
     let dummy = 0
     let source: Ref<number>
     const scope = new EffectScope()
@@ -146,7 +146,7 @@ describe('watch', () => {
     expect(dummy).toBe(30)
   })
 
-  test('nested calls to baseWatch and onEffectCleanup', async () => {
+  test('nested calls to baseWatch and onWatcherCleanup', async () => {
     let calls: string[] = []
     let source: Ref<number>
     let copyist: Ref<number>
