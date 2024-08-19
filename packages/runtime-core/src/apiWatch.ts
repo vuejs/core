@@ -4,18 +4,11 @@ import {
   type DebuggerOptions,
   type ReactiveMarker,
   type Ref,
+  type WatchHandle,
   watch as baseWatch,
-  getCurrentScope,
 } from '@vue/reactivity'
 import { type SchedulerJob, SchedulerJobFlags, queueJob } from './scheduler'
-import {
-  EMPTY_OBJ,
-  NOOP,
-  extend,
-  isFunction,
-  isString,
-  remove,
-} from '@vue/shared'
+import { EMPTY_OBJ, NOOP, extend, isFunction, isString } from '@vue/shared'
 import {
   type ComponentInternalInstance,
   currentInstance,
@@ -27,6 +20,8 @@ import { queuePostRenderEffect } from './renderer'
 import { warn } from './warning'
 import type { ObjectWatchOptionItem } from './componentOptions'
 import { useSSRContext } from './helpers/useSsrContext'
+
+export type { WatchHandle, WatchStopHandle } from '@vue/reactivity'
 
 export type WatchEffect = (onCleanup: OnCleanup) => void
 
@@ -60,14 +55,6 @@ export interface WatchOptions<Immediate = boolean> extends WatchOptionsBase {
   once?: boolean
 }
 
-export type WatchStopHandle = () => void
-
-export interface WatchHandle extends WatchStopHandle {
-  pause: () => void
-  resume: () => void
-  stop: () => void
-}
-
 // Simple effect.
 export function watchEffect(
   effect: WatchEffect,
@@ -79,7 +66,7 @@ export function watchEffect(
 export function watchPostEffect(
   effect: WatchEffect,
   options?: DebuggerOptions,
-): WatchStopHandle {
+): WatchHandle {
   return doWatch(
     effect,
     null,
@@ -90,7 +77,7 @@ export function watchPostEffect(
 export function watchSyncEffect(
   effect: WatchEffect,
   options?: DebuggerOptions,
-): WatchStopHandle {
+): WatchHandle {
   return doWatch(
     effect,
     null,
@@ -196,11 +183,11 @@ function doWatch(
       // immediately watch or watchEffect
       baseWatchOptions.once = true
     } else {
-      const watchHandle: WatchHandle = () => {}
-      watchHandle.stop = NOOP
-      watchHandle.resume = NOOP
-      watchHandle.pause = NOOP
-      return watchHandle
+      return {
+        stop: NOOP,
+        resume: NOOP,
+        pause: NOOP,
+      } as WatchHandle
     }
   }
 
@@ -241,18 +228,7 @@ function doWatch(
     }
   }
 
-  const effect = baseWatch(source, cb, baseWatchOptions)
-  const scope = getCurrentScope()
-  const watchHandle: WatchHandle = () => {
-    effect.stop()
-    if (scope) {
-      remove(scope.effects, effect)
-    }
-  }
-
-  watchHandle.pause = effect.pause.bind(effect)
-  watchHandle.resume = effect.resume.bind(effect)
-  watchHandle.stop = watchHandle
+  const watchHandle = baseWatch(source, cb, baseWatchOptions)
 
   if (__SSR__ && ssrCleanup) ssrCleanup.push(watchHandle)
   return watchHandle

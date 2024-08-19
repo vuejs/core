@@ -88,4 +88,6 @@ export {
   WatchErrorCodes,
   type WatchOptions,
   type WatchScheduler,
+  type WatchStopHandle,
+  type WatchHandle,
 } from './watch'

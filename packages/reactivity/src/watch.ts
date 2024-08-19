@@ -8,6 +8,7 @@ import {
   isObject,
   isPlainObject,
   isSet,
+  remove,
 } from '@vue/shared'
 import { warn } from './warning'
 import type { ComputedRef } from './computed'
@@ -22,6 +23,7 @@ import {
 } from './effect'
 import { isReactive, isShallow } from './reactive'
 import { type Ref, isRef } from './ref'
+import { getCurrentScope } from './effectScope'
 
 // These errors were transferred from `packages/runtime-core/src/errorHandling.ts`
 // to @vue/reactivity to allow co-location with the moved base watch logic, hence
@@ -59,6 +61,14 @@ export interface WatchOptions<Immediate = boolean> extends DebuggerOptions {
     type: WatchErrorCodes,
     args?: unknown[],
   ) => void
+}
+
+export type WatchStopHandle = () => void
+
+export interface WatchHandle extends WatchStopHandle {
+  pause: () => void
+  resume: () => void
+  stop: () => void
 }
 
 // initial value for watchers to trigger on undefined initial values
@@ -114,7 +124,7 @@ export function watch(
     augmentJob,
     call,
   }: WatchOptions = EMPTY_OBJ,
-): ReactiveEffect {
+): WatchHandle {
   const warnInvalidSource = (s: unknown) => {
     onWarn(
       `Invalid watch source: `,
@@ -310,7 +320,19 @@ export function watch(
     effect.run()
   }
 
-  return effect
+  const scope = getCurrentScope()
+  const watchHandle: WatchHandle = () => {
+    effect.stop()
+    if (scope) {
+      remove(scope.effects, effect)
+    }
+  }
+
+  watchHandle.pause = effect.pause.bind(effect)
+  watchHandle.resume = effect.resume.bind(effect)
+  watchHandle.stop = watchHandle
+
+  return watchHandle
 }
 
 export function traverse(
