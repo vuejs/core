@@ -113,20 +113,12 @@ export function onWatcherCleanup(
 export function watch(
   source: WatchSource | WatchSource[] | WatchEffect | object,
   cb?: WatchCallback | null,
-  {
-    immediate,
-    deep,
-    once,
-    scheduler,
-    onWarn = __DEV__ ? warn : NOOP,
-    onTrack,
-    onTrigger,
-    augmentJob,
-    call,
-  }: WatchOptions = EMPTY_OBJ,
+  options: WatchOptions = EMPTY_OBJ,
 ): WatchHandle {
+  const { immediate, deep, once, scheduler, augmentJob, call } = options
+
   const warnInvalidSource = (s: unknown) => {
-    onWarn(
+    ;(options.onWarn || warn)(
       `Invalid watch source: `,
       s,
       `A watch source can only be a getter/effect function, a ref, ` +
@@ -303,8 +295,8 @@ export function watch(
   }
 
   if (__DEV__) {
-    effect.onTrack = onTrack
-    effect.onTrigger = onTrigger
+    effect.onTrack = options.onTrack
+    effect.onTrigger = options.onTrigger
   }
 
   // initial run
