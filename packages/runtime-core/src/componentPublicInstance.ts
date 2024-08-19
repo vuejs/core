@@ -65,7 +65,7 @@ import type { Directive } from './directives'
  * import { createApp } from 'vue'
  * import { Router, createRouter } from 'vue-router'
  *
- * declare module '@vue/runtime-core' {
+ * declare module 'vue' {
  *   interface ComponentCustomProperties {
  *     $router: Router
  *   }

@@ -69,9 +69,12 @@ const isSVGContainer = (container: Element) =>
 const isMathMLContainer = (container: Element) =>
   container.namespaceURI!.includes('MathML')
 
-const getContainerType = (container: Element): 'svg' | 'mathml' | undefined => {
-  if (isSVGContainer(container)) return 'svg'
-  if (isMathMLContainer(container)) return 'mathml'
+const getContainerType = (
+  container: Element | ShadowRoot,
+): 'svg' | 'mathml' | undefined => {
+  if (container.nodeType !== DOMNodeTypes.ELEMENT) return undefined
+  if (isSVGContainer(container as Element)) return 'svg'
+  if (isMathMLContainer(container as Element)) return 'mathml'
   return undefined
 }
 

@@ -45,7 +45,6 @@ import {
   type SchedulerJobs,
   flushPostFlushCbs,
   flushPreFlushCbs,
-  invalidateJob,
   queueJob,
   queuePostFlushCb,
 } from './scheduler'
@@ -64,6 +63,7 @@ import { setRef } from './rendererTemplateRef'
 import {
   type SuspenseBoundary,
   type SuspenseImpl,
+  isSuspense,
   queueEffectWithSuspense,
 } from './components/Suspense'
 import {
@@ -763,7 +763,11 @@ function baseCreateRenderer(
         subTree =
           filterSingleRoot(subTree.children as VNodeArrayChildren) || subTree
       }
-      if (vnode === subTree) {
+      if (
+        vnode === subTree ||
+        (isSuspense(subTree.type) &&
+          (subTree.ssContent === vnode || subTree.ssFallback === vnode))
+      ) {
         const parentVNode = parentComponent.vnode
         setScopeId(
           el,
@@ -1268,9 +1272,6 @@ function baseCreateRenderer(
       } else {
         // normal update
         instance.next = n2
-        // in case the child component is also queued, remove it to avoid
-        // double updating the same child component in the same flush.
-        invalidateJob(instance.update)
         // instance.update is the reactive effect.
         instance.update()
       }

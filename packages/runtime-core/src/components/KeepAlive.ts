@@ -195,10 +195,10 @@ const KeepAliveImpl: ComponentOptions = {
       _unmount(vnode, instance, parentSuspense, true)
     }
 
-    function pruneCache(filter?: (name: string) => boolean) {
+    function pruneCache(filter: (name: string) => boolean) {
       cache.forEach((vnode, key) => {
         const name = getComponentName(vnode.type as ConcreteComponent)
-        if (name && (!filter || !filter(name))) {
+        if (name && !filter(name)) {
           pruneCacheEntry(key)
         }
       })
@@ -382,6 +382,7 @@ function matches(pattern: MatchPattern, name: string): boolean {
   } else if (isString(pattern)) {
     return pattern.split(',').includes(name)
   } else if (isRegExp(pattern)) {
+    pattern.lastIndex = 0
     return pattern.test(name)
   }
   /* istanbul ignore next */

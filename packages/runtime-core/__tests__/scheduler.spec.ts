@@ -3,7 +3,6 @@ import {
   type SchedulerJob,
   flushPostFlushCbs,
   flushPreFlushCbs,
-  invalidateJob,
   nextTick,
   queueJob,
   queuePostFlushCb,
@@ -239,6 +238,37 @@ describe('scheduler', () => {
       expect(calls).toEqual(['cb1', 'cb2', 'job1'])
     })
 
+    it('should insert pre jobs without ids first during flushing', async () => {
+      const calls: string[] = []
+      const job1: SchedulerJob = () => {
+        calls.push('job1')
+        queueJob(job3)
+        queueJob(job4)
+      }
+      // job1 has no id
+      job1.flags! |= SchedulerJobFlags.PRE
+      const job2: SchedulerJob = () => {
+        calls.push('job2')
+      }
+      job2.id = 1
+      job2.flags! |= SchedulerJobFlags.PRE
+      const job3: SchedulerJob = () => {
+        calls.push('job3')
+      }
+      // job3 has no id
+      job3.flags! |= SchedulerJobFlags.PRE
+      const job4: SchedulerJob = () => {
+        calls.push('job4')
+      }
+      // job4 has no id
+      job4.flags! |= SchedulerJobFlags.PRE
+
+      queueJob(job1)
+      queueJob(job2)
+      await nextTick()
+      expect(calls).toEqual(['job1', 'job3', 'job4', 'job2'])
+    })
+
     // #3806
     it('queue preFlushCb inside postFlushCb', async () => {
       const spy = vi.fn()
@@ -413,33 +443,6 @@ describe('scheduler', () => {
     })
   })
 
-  test('invalidateJob', async () => {
-    const calls: string[] = []
-    const job1 = () => {
-      calls.push('job1')
-      invalidateJob(job2)
-      job2()
-    }
-    const job2 = () => {
-      calls.push('job2')
-    }
-    const job3 = () => {
-      calls.push('job3')
-    }
-    const job4 = () => {
-      calls.push('job4')
-    }
-    // queue all jobs
-    queueJob(job1)
-    queueJob(job2)
-    queueJob(job3)
-    queuePostFlushCb(job4)
-    expect(calls).toEqual([])
-    await nextTick()
-    // job2 should be called only once
-    expect(calls).toEqual(['job1', 'job2', 'job3', 'job4'])
-  })
-
   test('sort job based on id', async () => {
     const calls: string[] = []
     const job1 = () => calls.push('job1')
@@ -448,12 +451,20 @@ describe('scheduler', () => {
     job2.id = 2
     const job3 = () => calls.push('job3')
     job3.id = 1
+    const job4: SchedulerJob = () => calls.push('job4')
+    job4.id = 2
+    job4.flags! |= SchedulerJobFlags.PRE
+    const job5: SchedulerJob = () => calls.push('job5')
+    // job5 has no id
+    job5.flags! |= SchedulerJobFlags.PRE
 
     queueJob(job1)
     queueJob(job2)
     queueJob(job3)
+    queueJob(job4)
+    queueJob(job5)
     await nextTick()
-    expect(calls).toEqual(['job3', 'job2', 'job1'])
+    expect(calls).toEqual(['job5', 'job3', 'job4', 'job2', 'job1'])
   })
 
   test('sort SchedulerCbs based on id', async () => {

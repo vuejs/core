@@ -14,17 +14,22 @@ import { Dep, globalVersion } from './dep'
 import { ReactiveFlags, TrackOpTypes } from './constants'
 
 declare const ComputedRefSymbol: unique symbol
+declare const WritableComputedRefSymbol: unique symbol
 
-export interface ComputedRef<T = any> extends WritableComputedRef<T> {
-  readonly value: T
+interface BaseComputedRef<T, S = T> extends Ref<T, S> {
   [ComputedRefSymbol]: true
-}
-
-export interface WritableComputedRef<T, S = T> extends Ref<T, S> {
   /**
    * @deprecated computed no longer uses effect
    */
   effect: ComputedRefImpl
+}
+
+export interface ComputedRef<T = any> extends BaseComputedRef<T> {
+  readonly value: T
+}
+
+export interface WritableComputedRef<T, S = T> extends BaseComputedRef<T, S> {
+  [WritableComputedRefSymbol]: true
 }
 
 export type ComputedGetter<T> = (oldValue?: T) => T
