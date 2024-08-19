@@ -228,12 +228,14 @@ export function emit(
   }
 }
 
+const mixinEmitsCache = new WeakMap<ConcreteComponent, ObjectEmitsOptions>()
 export function normalizeEmitsOptions(
   comp: ConcreteComponent,
   appContext: AppContext,
   asMixin = false,
 ): ObjectEmitsOptions | null {
-  const cache = appContext.emitsCache
+  const cache =
+    __FEATURE_OPTIONS_API__ && asMixin ? mixinEmitsCache : appContext.emitsCache
   const cached = cache.get(comp)
   if (cached !== undefined) {
     return cached
