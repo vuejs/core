@@ -171,9 +171,9 @@ function setChecked(
   ;(el as any)._modelValue = value
   let newChecked: boolean
 
-  if (Array.isArray(value)) {
+  if (isArray(value)) {
     newChecked = looseIndexOf(value, vnode.props!.value) > -1
-  } else if (value instanceof Set) {
+  } else if (isSet(value)) {
     newChecked = value.has(vnode.props!.value)
   } else {
     newChecked = looseEqual(value, getCheckboxValue(el, true))
