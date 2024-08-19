@@ -16,6 +16,7 @@ import { ReactiveFlags } from './constants'
 import {
   type DebuggerOptions,
   EffectFlags,
+  type EffectScheduler,
   ReactiveEffect,
   pauseTracking,
   resetTracking,
@@ -54,27 +55,10 @@ export interface BaseWatchOptions<Immediate = boolean> extends DebuggerOptions {
 // initial value for watchers to trigger on undefined initial values
 const INITIAL_WATCHER_VALUE = {}
 
-export type WatchScheduler = (
-  job: SchedulerJob,
-  effect: ReactiveEffect,
-  immediateFirstRun: boolean,
-  hasCb: boolean,
-) => void
+export type WatchScheduler = (job: SchedulerJob, isFirstRun: boolean) => void
 export type HandleError = (err: unknown, type: BaseWatchErrorCodes) => void
 export type HandleWarn = (msg: string, ...args: any[]) => void
 
-const DEFAULT_SCHEDULER: WatchScheduler = (
-  job,
-  effect,
-  immediateFirstRun,
-  hasCb,
-) => {
-  if (immediateFirstRun) {
-    !hasCb && effect.run()
-  } else {
-    job()
-  }
-}
 const DEFAULT_HANDLE_ERROR: HandleError = (err: unknown) => {
   throw err
 }
@@ -120,7 +104,7 @@ export function baseWatch(
     immediate,
     deep,
     once,
-    scheduler = DEFAULT_SCHEDULER,
+    scheduler,
     onWarn = __DEV__ ? warn : NOOP,
     onError = DEFAULT_HANDLE_ERROR,
     onTrack,
@@ -292,7 +276,11 @@ export function baseWatch(
   if (cb) job.flags! |= SchedulerJobFlags.ALLOW_RECURSE
 
   effect = new ReactiveEffect(getter)
-  effect.scheduler = () => scheduler(job, effect, false, !!cb)
+  if (scheduler) {
+    effect.scheduler = () => scheduler(job, false)
+  } else {
+    effect.scheduler = job as EffectScheduler
+  }
 
   cleanup = effect.onStop = () => {
     const cleanups = cleanupMap.get(effect)
@@ -315,14 +303,15 @@ export function baseWatch(
 
   // initial run
   if (cb) {
-    scheduler(job, effect, true, !!cb)
     if (immediate) {
       job(true)
     } else {
       oldValue = effect.run()
     }
+  } else if (scheduler) {
+    scheduler(job.bind(null, true), true)
   } else {
-    scheduler(job, effect, true, !!cb)
+    effect.run()
   }
 
   return effect

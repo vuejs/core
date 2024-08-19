@@ -4,7 +4,6 @@ import { type ComponentInternalInstance, getComponentName } from './component'
 import {
   type SchedulerJob as BaseSchedulerJob,
   SchedulerJobFlags,
-  type WatchScheduler,
 } from '@vue/reactivity'
 
 export interface SchedulerJob extends BaseSchedulerJob {
@@ -254,30 +253,3 @@ function checkRecursiveUpdates(seen: CountMap, fn: SchedulerJob) {
     }
   }
 }
-
-export type SchedulerFactory = (
-  instance: ComponentInternalInstance | null,
-) => WatchScheduler
-
-export const createSyncScheduler: SchedulerFactory =
-  () => (job, effect, immediateFirstRun, hasCb) => {
-    if (immediateFirstRun) {
-      if (!hasCb) effect.run()
-    } else {
-      job()
-    }
-  }
-
-export const createPreScheduler: SchedulerFactory =
-  instance => (job, effect, immediateFirstRun, hasCb) => {
-    if (!immediateFirstRun) {
-      job.flags! |= SchedulerJobFlags.PRE
-      if (instance) {
-        job.id = instance.uid
-        ;(job as SchedulerJob).i = instance
-      }
-      queueJob(job)
-    } else if (!hasCb) {
-      effect.run()
-    }
-  }

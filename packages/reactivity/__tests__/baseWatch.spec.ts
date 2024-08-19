@@ -11,19 +11,21 @@ import {
 
 const queue: SchedulerJob[] = []
 
-// these codes are a simple scheduler
+// a simple scheduler for testing purposes
 let isFlushPending = false
 const resolvedPromise = /*#__PURE__*/ Promise.resolve() as Promise<any>
 const nextTick = (fn?: () => any) =>
   fn ? resolvedPromise.then(fn) : resolvedPromise
-const scheduler: WatchScheduler = (job, effect, immediateFirstRun, hasCb) => {
-  if (immediateFirstRun) {
-    !hasCb && effect.run()
+
+const scheduler: WatchScheduler = (job, isFirstRun) => {
+  if (isFirstRun) {
+    job(true)
   } else {
-    queue.push(() => job(immediateFirstRun))
+    queue.push(job)
     flushJobs()
   }
 }
+
 const flushJobs = () => {
   if (isFlushPending) return
   isFlushPending = true

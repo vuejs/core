@@ -5,14 +5,11 @@ import {
   type DebuggerOptions,
   type ReactiveMarker,
   type Ref,
+  SchedulerJobFlags,
   baseWatch,
   getCurrentScope,
 } from '@vue/reactivity'
-import {
-  type SchedulerFactory,
-  createPreScheduler,
-  createSyncScheduler,
-} from './scheduler'
+import { type SchedulerJob, queueJob } from './scheduler'
 import {
   EMPTY_OBJ,
   NOOP,
@@ -28,7 +25,7 @@ import {
   setCurrentInstance,
 } from './component'
 import { handleError as handleErrorWithInstance } from './errorHandling'
-import { createPostRenderScheduler } from './renderer'
+import { queuePostRenderEffect } from './renderer'
 import { warn } from './warning'
 import type { ObjectWatchOptionItem } from './componentOptions'
 import { useSSRContext } from './helpers/useSsrContext'
@@ -160,17 +157,6 @@ export function watch<T = any, Immediate extends Readonly<boolean> = false>(
   return doWatch(source as any, cb, options)
 }
 
-function getScheduler(flush: WatchOptionsBase['flush']): SchedulerFactory {
-  if (flush === 'post') {
-    return createPostRenderScheduler
-  }
-  if (flush === 'sync') {
-    return createSyncScheduler
-  }
-  // default: 'pre'
-  return createPreScheduler
-}
-
 function doWatch(
   source: WatchSource | WatchSource[] | WatchEffect | object,
   cb: WatchCallback | null,
@@ -223,7 +209,27 @@ function doWatch(
   const instance = currentInstance
   extendOptions.onError = (err: unknown, type: BaseWatchErrorCodes) =>
     handleErrorWithInstance(err, instance, type)
-  extendOptions.scheduler = getScheduler(flush)(instance)
+
+  // scheduler
+  if (flush === 'post') {
+    extendOptions.scheduler = job => {
+      queuePostRenderEffect(job, instance && instance.suspense)
+    }
+  } else if (flush !== 'sync') {
+    // default: 'pre'
+    extendOptions.scheduler = (job, isFirstRun) => {
+      if (isFirstRun) {
+        job()
+      } else {
+        job.flags! |= SchedulerJobFlags.PRE
+        if (instance) {
+          job.id = instance.uid
+          ;(job as SchedulerJob).i = instance
+        }
+        queueJob(job)
+      }
+    }
+  }
 
   const effect = baseWatch(source, cb, extend({}, options, extendOptions))
   const scope = getCurrentScope()
