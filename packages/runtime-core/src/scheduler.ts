@@ -64,13 +64,17 @@ export function nextTick<T = void, R = void>(
   return fn ? p.then(this ? fn.bind(this) : fn) : p
 }
 
-// #2768
-// Use binary-search to find a suitable position in the queue,
-// so that the queue maintains the increasing order of job's id,
-// which can prevent the job from being skipped and also can avoid repeated patching.
+// Use binary-search to find a suitable position in the queue. The queue needs
+// to be sorted in increasing order of the job ids. This ensures that:
+// 1. Components are updated from parent to child. As the parent is always
+//    created before the child it will always have a smaller id.
+// 2. If a component is unmounted during a parent component's update, its update
+//    can be skipped.
+// A pre watcher will have the same id as its component's update job. The
+// watcher should be inserted immediately before the update job. This allows
+// watchers to be skipped if the component is unmounted by the parent update.
 function findInsertionIndex(id: number) {
-  // the start index should be `flushIndex + 1`
-  let start = flushIndex + 1
+  let start = isFlushing ? flushIndex + 1 : 0
   let end = queue.length
 
   while (start < end) {
@@ -208,32 +212,12 @@ export function flushPostFlushCbs(seen?: CountMap): void {
 const getId = (job: SchedulerJob): number =>
   job.id == null ? (job.flags! & SchedulerJobFlags.PRE ? -1 : Infinity) : job.id
 
-const comparator = (a: SchedulerJob, b: SchedulerJob): number => {
-  const diff = getId(a) - getId(b)
-  if (diff === 0) {
-    const isAPre = a.flags! & SchedulerJobFlags.PRE
-    const isBPre = b.flags! & SchedulerJobFlags.PRE
-    if (isAPre && !isBPre) return -1
-    if (isBPre && !isAPre) return 1
-  }
-  return diff
-}
-
 function flushJobs(seen?: CountMap) {
   isFlushPending = false
   isFlushing = true
   if (__DEV__) {
     seen = seen || new Map()
   }
-
-  // Sort queue before flush.
-  // This ensures that:
-  // 1. Components are updated from parent to child. (because parent is always
-  //    created before the child so its render effect will have smaller
-  //    priority number)
-  // 2. If a component is unmounted during a parent component's update,
-  //    its update can be skipped.
-  queue.sort(comparator)
 
   // conditional usage of checkRecursiveUpdate must be determined out of
   // try ... catch block since Rollup by default de-optimizes treeshaking
