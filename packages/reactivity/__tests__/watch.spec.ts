@@ -1,12 +1,12 @@
 import {
-  BaseWatchErrorCodes,
   EffectScope,
   type Ref,
   type SchedulerJob,
+  WatchErrorCodes,
   type WatchScheduler,
-  baseWatch,
   onWatcherCleanup,
   ref,
+  watch,
 } from '../src'
 
 const queue: SchedulerJob[] = []
@@ -36,11 +36,11 @@ const flushJobs = () => {
   })
 }
 
-describe('baseWatch', () => {
+describe('watch', () => {
   test('effect', () => {
     let dummy: any
     const source = ref(0)
-    baseWatch(() => {
+    watch(() => {
       dummy = source.value
     })
     expect(dummy).toBe(0)
@@ -48,10 +48,10 @@ describe('baseWatch', () => {
     expect(dummy).toBe(1)
   })
 
-  test('watch', () => {
+  test('with callback', () => {
     let dummy: any
     const source = ref(0)
-    baseWatch(source, () => {
+    watch(source, () => {
       dummy = source.value
     })
     expect(dummy).toBe(undefined)
@@ -62,7 +62,7 @@ describe('baseWatch', () => {
   test('custom error handler', () => {
     const onError = vi.fn()
 
-    baseWatch(
+    watch(
       () => {
         throw 'oops in effect'
       },
@@ -71,7 +71,7 @@ describe('baseWatch', () => {
     )
 
     const source = ref(0)
-    const effect = baseWatch(
+    const effect = watch(
       source,
       () => {
         onWatcherCleanup(() => {
@@ -85,14 +85,14 @@ describe('baseWatch', () => {
     expect(onError.mock.calls.length).toBe(1)
     expect(onError.mock.calls[0]).toMatchObject([
       'oops in effect',
-      BaseWatchErrorCodes.WATCH_CALLBACK,
+      WatchErrorCodes.WATCH_CALLBACK,
     ])
 
     source.value++
     expect(onError.mock.calls.length).toBe(2)
     expect(onError.mock.calls[1]).toMatchObject([
       'oops in watch',
-      BaseWatchErrorCodes.WATCH_CALLBACK,
+      WatchErrorCodes.WATCH_CALLBACK,
     ])
 
     effect!.stop()
@@ -100,18 +100,18 @@ describe('baseWatch', () => {
     expect(onError.mock.calls.length).toBe(3)
     expect(onError.mock.calls[2]).toMatchObject([
       'oops in cleanup',
-      BaseWatchErrorCodes.WATCH_CLEANUP,
+      WatchErrorCodes.WATCH_CLEANUP,
     ])
   })
 
-  test('baseWatch with onEffectCleanup', async () => {
+  test('watch with onEffectCleanup', async () => {
     let dummy = 0
     let source: Ref<number>
     const scope = new EffectScope()
 
     scope.run(() => {
       source = ref(0)
-      baseWatch(onCleanup => {
+      watch(onCleanup => {
         source.value
 
         onCleanup(() => (dummy += 2))
@@ -145,7 +145,7 @@ describe('baseWatch', () => {
       source = ref(0)
       copyist = ref(0)
       // sync by default
-      baseWatch(
+      watch(
         () => {
           const current = (copyist.value = source.value)
           onWatcherCleanup(() => calls.push(`sync ${current}`))
@@ -154,7 +154,7 @@ describe('baseWatch', () => {
         {},
       )
       // with scheduler
-      baseWatch(
+      watch(
         () => {
           const current = copyist.value
           onWatcherCleanup(() => calls.push(`post ${current}`))

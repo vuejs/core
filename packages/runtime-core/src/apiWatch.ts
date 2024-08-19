@@ -1,12 +1,12 @@
 import {
-  type BaseWatchErrorCodes,
-  type BaseWatchOptions,
+  type WatchOptions as BaseWatchOptions,
   type ComputedRef,
   type DebuggerOptions,
   type ReactiveMarker,
   type Ref,
   SchedulerJobFlags,
-  baseWatch,
+  type WatchErrorCodes,
+  watch as baseWatch,
   getCurrentScope,
 } from '@vue/reactivity'
 import { type SchedulerJob, queueJob } from './scheduler'
@@ -185,9 +185,9 @@ function doWatch(
     }
   }
 
-  const extendOptions: BaseWatchOptions = {}
+  const baseWatchOptions: BaseWatchOptions = extend({}, options)
 
-  if (__DEV__) extendOptions.onWarn = warn
+  if (__DEV__) baseWatchOptions.onWarn = warn
 
   let ssrCleanup: (() => void)[] | undefined
   if (__SSR__ && isInSSRComponentSetup) {
@@ -196,7 +196,7 @@ function doWatch(
       ssrCleanup = ctx.__watcherHandles || (ctx.__watcherHandles = [])
     } else if (!cb || immediate) {
       // immediately watch or watchEffect
-      extendOptions.once = true
+      baseWatchOptions.once = true
     } else {
       const watchHandle: WatchHandle = () => {}
       watchHandle.stop = NOOP
@@ -207,17 +207,17 @@ function doWatch(
   }
 
   const instance = currentInstance
-  extendOptions.onError = (err: unknown, type: BaseWatchErrorCodes) =>
+  baseWatchOptions.onError = (err: unknown, type: WatchErrorCodes) =>
     handleErrorWithInstance(err, instance, type)
 
   // scheduler
   if (flush === 'post') {
-    extendOptions.scheduler = job => {
+    baseWatchOptions.scheduler = job => {
       queuePostRenderEffect(job, instance && instance.suspense)
     }
   } else if (flush !== 'sync') {
     // default: 'pre'
-    extendOptions.scheduler = (job, isFirstRun) => {
+    baseWatchOptions.scheduler = (job, isFirstRun) => {
       if (isFirstRun) {
         job()
       } else {
@@ -231,7 +231,7 @@ function doWatch(
     }
   }
 
-  const effect = baseWatch(source, cb, extend({}, options, extendOptions))
+  const effect = baseWatch(source, cb, baseWatchOptions)
   const scope = getCurrentScope()
   const watchHandle: WatchHandle = () => {
     effect.stop()

@@ -26,9 +26,9 @@ import { type Ref, isRef } from './ref'
 import { type SchedulerJob, SchedulerJobFlags } from './scheduler'
 
 // These errors were transferred from `packages/runtime-core/src/errorHandling.ts`
-// along with baseWatch to maintain code compatibility. Hence,
+// to @vue/reactivity to allow co-location with the moved base watch logic, hence
 // it is essential to keep these values unchanged.
-export enum BaseWatchErrorCodes {
+export enum WatchErrorCodes {
   WATCH_GETTER = 2,
   WATCH_CALLBACK,
   WATCH_CLEANUP,
@@ -43,9 +43,9 @@ type WatchCallback<V = any, OV = any> = (
 ) => any
 type OnCleanup = (cleanupFn: () => void) => void
 
-export interface BaseWatchOptions<Immediate = boolean> extends DebuggerOptions {
+export interface WatchOptions<Immediate = boolean> extends DebuggerOptions {
   immediate?: Immediate
-  deep?: boolean
+  deep?: boolean | number
   once?: boolean
   scheduler?: WatchScheduler
   onError?: HandleError
@@ -56,7 +56,7 @@ export interface BaseWatchOptions<Immediate = boolean> extends DebuggerOptions {
 const INITIAL_WATCHER_VALUE = {}
 
 export type WatchScheduler = (job: SchedulerJob, isFirstRun: boolean) => void
-export type HandleError = (err: unknown, type: BaseWatchErrorCodes) => void
+export type HandleError = (err: unknown, type: WatchErrorCodes) => void
 export type HandleWarn = (msg: string, ...args: any[]) => void
 
 const DEFAULT_HANDLE_ERROR: HandleError = (err: unknown) => {
@@ -97,7 +97,7 @@ export function onWatcherCleanup(
   }
 }
 
-export function baseWatch(
+export function watch(
   source: WatchSource | WatchSource[] | WatchEffect | object,
   cb?: WatchCallback | null,
   {
@@ -109,7 +109,7 @@ export function baseWatch(
     onError = DEFAULT_HANDLE_ERROR,
     onTrack,
     onTrigger,
-  }: BaseWatchOptions = EMPTY_OBJ,
+  }: WatchOptions = EMPTY_OBJ,
 ): ReactiveEffect {
   const warnInvalidSource = (s: unknown) => {
     onWarn(
@@ -152,11 +152,7 @@ export function baseWatch(
         } else if (isReactive(s)) {
           return reactiveGetter(s)
         } else if (isFunction(s)) {
-          return callWithErrorHandling(
-            s,
-            onError,
-            BaseWatchErrorCodes.WATCH_GETTER,
-          )
+          return callWithErrorHandling(s, onError, WatchErrorCodes.WATCH_GETTER)
         } else {
           __DEV__ && warnInvalidSource(s)
         }
@@ -165,7 +161,7 @@ export function baseWatch(
     if (cb) {
       // getter with cb
       getter = () =>
-        callWithErrorHandling(source, onError, BaseWatchErrorCodes.WATCH_GETTER)
+        callWithErrorHandling(source, onError, WatchErrorCodes.WATCH_GETTER)
     } else {
       // no cb -> simple effect
       getter = () => {
@@ -183,7 +179,7 @@ export function baseWatch(
           return callWithAsyncErrorHandling(
             source,
             onError,
-            BaseWatchErrorCodes.WATCH_CALLBACK,
+            WatchErrorCodes.WATCH_CALLBACK,
             [onWatcherCleanup],
           )
         } finally {
@@ -248,7 +244,7 @@ export function baseWatch(
           callWithAsyncErrorHandling(
             cb!,
             onError,
-            BaseWatchErrorCodes.WATCH_CALLBACK,
+            WatchErrorCodes.WATCH_CALLBACK,
             [
               newValue,
               // pass undefined as the old value when it's changed for the first time
@@ -286,11 +282,7 @@ export function baseWatch(
     const cleanups = cleanupMap.get(effect)
     if (cleanups) {
       cleanups.forEach(cleanup =>
-        callWithErrorHandling(
-          cleanup,
-          onError,
-          BaseWatchErrorCodes.WATCH_CLEANUP,
-        ),
+        callWithErrorHandling(cleanup, onError, WatchErrorCodes.WATCH_CLEANUP),
       )
       cleanupMap.delete(effect)
     }
@@ -358,7 +350,7 @@ export function traverse(
 function callWithErrorHandling(
   fn: Function,
   handleError: HandleError,
-  type: BaseWatchErrorCodes,
+  type: WatchErrorCodes,
   args?: unknown[],
 ) {
   let res
@@ -373,7 +365,7 @@ function callWithErrorHandling(
 function callWithAsyncErrorHandling(
   fn: Function | Function[],
   handleError: HandleError,
-  type: BaseWatchErrorCodes,
+  type: WatchErrorCodes,
   args?: unknown[],
 ): any[] {
   if (isFunction(fn)) {

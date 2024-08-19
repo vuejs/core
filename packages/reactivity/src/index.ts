@@ -81,12 +81,12 @@ export {
 export { reactiveReadArray, shallowReadArray } from './arrayInstrumentations'
 export { TrackOpTypes, TriggerOpTypes, ReactiveFlags } from './constants'
 export {
-  baseWatch,
+  watch,
   getCurrentWatcher,
   traverse,
   onWatcherCleanup,
-  BaseWatchErrorCodes,
-  type BaseWatchOptions,
+  WatchErrorCodes,
+  type WatchOptions,
   type WatchScheduler,
-} from './baseWatch'
+} from './watch'
 export { type SchedulerJob, SchedulerJobFlags } from './scheduler'
