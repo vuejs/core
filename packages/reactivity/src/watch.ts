@@ -7,7 +7,6 @@ import {
   isMap,
   isObject,
   isPlainObject,
-  isPromise,
   isSet,
 } from '@vue/shared'
 import { warn } from './warning'
@@ -47,24 +46,25 @@ export interface WatchOptions<Immediate = boolean> extends DebuggerOptions {
   deep?: boolean | number
   once?: boolean
   scheduler?: WatchScheduler
-  onError?: HandleError
-  onWarn?: HandleWarn
+  onWarn?: (msg: string, ...args: any[]) => void
   /**
    * @internal
    */
   augmentJob?: (job: (...args: any[]) => void) => void
+  /**
+   * @internal
+   */
+  call?: (
+    fn: Function | Function[],
+    type: WatchErrorCodes,
+    args?: unknown[],
+  ) => void
 }
 
 // initial value for watchers to trigger on undefined initial values
 const INITIAL_WATCHER_VALUE = {}
 
 export type WatchScheduler = (job: () => void, isFirstRun: boolean) => void
-export type HandleError = (err: unknown, type: WatchErrorCodes) => void
-export type HandleWarn = (msg: string, ...args: any[]) => void
-
-const DEFAULT_HANDLE_ERROR: HandleError = (err: unknown) => {
-  throw err
-}
 
 const cleanupMap: WeakMap<ReactiveEffect, (() => void)[]> = new WeakMap()
 let activeWatcher: ReactiveEffect | undefined = undefined
@@ -109,10 +109,10 @@ export function watch(
     once,
     scheduler,
     onWarn = __DEV__ ? warn : NOOP,
-    onError = DEFAULT_HANDLE_ERROR,
     onTrack,
     onTrigger,
     augmentJob,
+    call,
   }: WatchOptions = EMPTY_OBJ,
 ): ReactiveEffect {
   const warnInvalidSource = (s: unknown) => {
@@ -156,7 +156,7 @@ export function watch(
         } else if (isReactive(s)) {
           return reactiveGetter(s)
         } else if (isFunction(s)) {
-          return callWithErrorHandling(s, onError, WatchErrorCodes.WATCH_GETTER)
+          return call ? call(s, WatchErrorCodes.WATCH_GETTER) : s()
         } else {
           __DEV__ && warnInvalidSource(s)
         }
@@ -164,8 +164,9 @@ export function watch(
   } else if (isFunction(source)) {
     if (cb) {
       // getter with cb
-      getter = () =>
-        callWithErrorHandling(source, onError, WatchErrorCodes.WATCH_GETTER)
+      getter = call
+        ? () => call(source, WatchErrorCodes.WATCH_GETTER)
+        : (source as () => any)
     } else {
       // no cb -> simple effect
       getter = () => {
@@ -180,12 +181,9 @@ export function watch(
         const currentEffect = activeWatcher
         activeWatcher = effect
         try {
-          return callWithAsyncErrorHandling(
-            source,
-            onError,
-            WatchErrorCodes.WATCH_CALLBACK,
-            [onWatcherCleanup],
-          )
+          return call
+            ? call(source, WatchErrorCodes.WATCH_CALLBACK, [onWatcherCleanup])
+            : source(onWatcherCleanup)
         } finally {
           activeWatcher = currentEffect
         }
@@ -246,21 +244,20 @@ export function watch(
         const currentWatcher = activeWatcher
         activeWatcher = effect
         try {
-          callWithAsyncErrorHandling(
-            cb!,
-            onError,
-            WatchErrorCodes.WATCH_CALLBACK,
-            [
-              newValue,
-              // pass undefined as the old value when it's changed for the first time
-              oldValue === INITIAL_WATCHER_VALUE
-                ? undefined
-                : isMultiSource && oldValue[0] === INITIAL_WATCHER_VALUE
-                  ? []
-                  : oldValue,
-              onWatcherCleanup,
-            ],
-          )
+          const args = [
+            newValue,
+            // pass undefined as the old value when it's changed for the first time
+            oldValue === INITIAL_WATCHER_VALUE
+              ? undefined
+              : isMultiSource && oldValue[0] === INITIAL_WATCHER_VALUE
+                ? []
+                : oldValue,
+            onWatcherCleanup,
+          ]
+          call
+            ? call(cb!, WatchErrorCodes.WATCH_CALLBACK, args)
+            : // @ts-expect-error
+              cb!(...args)
           oldValue = newValue
         } finally {
           activeWatcher = currentWatcher
@@ -286,9 +283,11 @@ export function watch(
   cleanup = effect.onStop = () => {
     const cleanups = cleanupMap.get(effect)
     if (cleanups) {
-      cleanups.forEach(cleanup =>
-        callWithErrorHandling(cleanup, onError, WatchErrorCodes.WATCH_CLEANUP),
-      )
+      if (call) {
+        call(cleanups, WatchErrorCodes.WATCH_CLEANUP)
+      } else {
+        for (const cleanup of cleanups) cleanup()
+      }
       cleanupMap.delete(effect)
     }
   }
@@ -350,42 +349,4 @@ export function traverse(
     }
   }
   return value
-}
-
-function callWithErrorHandling(
-  fn: Function,
-  handleError: HandleError,
-  type: WatchErrorCodes,
-  args?: unknown[],
-) {
-  let res
-  try {
-    res = args ? fn(...args) : fn()
-  } catch (err) {
-    handleError(err, type)
-  }
-  return res
-}
-
-function callWithAsyncErrorHandling(
-  fn: Function | Function[],
-  handleError: HandleError,
-  type: WatchErrorCodes,
-  args?: unknown[],
-): any[] {
-  if (isFunction(fn)) {
-    const res = callWithErrorHandling(fn, handleError, type, args)
-    if (res && isPromise(res)) {
-      res.catch(err => {
-        handleError(err, type)
-      })
-    }
-    return res
-  }
-
-  const values = []
-  for (let i = 0; i < fn.length; i++) {
-    values.push(callWithAsyncErrorHandling(fn[i], handleError, type, args))
-  }
-  return values
 }

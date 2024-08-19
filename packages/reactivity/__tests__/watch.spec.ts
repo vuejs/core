@@ -2,6 +2,7 @@ import {
   EffectScope,
   type Ref,
   WatchErrorCodes,
+  type WatchOptions,
   type WatchScheduler,
   onWatcherCleanup,
   ref,
@@ -58,15 +59,26 @@ describe('watch', () => {
     expect(dummy).toBe(1)
   })
 
-  test('custom error handler', () => {
+  test('call option with error handling', () => {
     const onError = vi.fn()
+    const call: WatchOptions['call'] = function call(fn, type, args) {
+      if (Array.isArray(fn)) {
+        fn.forEach(f => call(f, type, args))
+        return
+      }
+      try {
+        fn.apply(null, args)
+      } catch (e) {
+        onError(e, type)
+      }
+    }
 
     watch(
       () => {
         throw 'oops in effect'
       },
       null,
-      { onError },
+      { call },
     )
 
     const source = ref(0)
@@ -78,7 +90,7 @@ describe('watch', () => {
         })
         throw 'oops in watch'
       },
-      { onError },
+      { call },
     )
 
     expect(onError.mock.calls.length).toBe(1)

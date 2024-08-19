@@ -4,7 +4,6 @@ import {
   type DebuggerOptions,
   type ReactiveMarker,
   type Ref,
-  type WatchErrorCodes,
   watch as baseWatch,
   getCurrentScope,
 } from '@vue/reactivity'
@@ -23,7 +22,7 @@ import {
   isInSSRComponentSetup,
   setCurrentInstance,
 } from './component'
-import { handleError as handleErrorWithInstance } from './errorHandling'
+import { callWithAsyncErrorHandling } from './errorHandling'
 import { queuePostRenderEffect } from './renderer'
 import { warn } from './warning'
 import type { ObjectWatchOptionItem } from './componentOptions'
@@ -206,8 +205,8 @@ function doWatch(
   }
 
   const instance = currentInstance
-  baseWatchOptions.onError = (err: unknown, type: WatchErrorCodes) =>
-    handleErrorWithInstance(err, instance, type)
+  baseWatchOptions.call = (fn, type, args) =>
+    callWithAsyncErrorHandling(fn, instance, type, args)
 
   // scheduler
   let isPre = false
