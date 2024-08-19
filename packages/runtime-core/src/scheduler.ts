@@ -92,16 +92,16 @@ function findInsertionIndex(id: number) {
 
 export function queueJob(job: SchedulerJob): void {
   if (!(job.flags! & SchedulerJobFlags.QUEUED)) {
-    if (job.id == null) {
-      queue.push(job)
-    } else if (
+    const jobId = getId(job)
+    const lastJob = queue[queue.length - 1]
+    if (
+      !lastJob ||
       // fast path when the job id is larger than the tail
-      !(job.flags! & SchedulerJobFlags.PRE) &&
-      job.id >= ((queue[queue.length - 1] && queue[queue.length - 1].id) || 0)
+      (!(job.flags! & SchedulerJobFlags.PRE) && jobId >= getId(lastJob))
     ) {
       queue.push(job)
     } else {
-      queue.splice(findInsertionIndex(job.id), 0, job)
+      queue.splice(findInsertionIndex(jobId), 0, job)
     }
 
     if (!(job.flags! & SchedulerJobFlags.ALLOW_RECURSE)) {
@@ -206,7 +206,7 @@ export function flushPostFlushCbs(seen?: CountMap): void {
 }
 
 const getId = (job: SchedulerJob): number =>
-  job.id == null ? Infinity : job.id
+  job.id == null ? (job.flags! & SchedulerJobFlags.PRE ? -1 : Infinity) : job.id
 
 const comparator = (a: SchedulerJob, b: SchedulerJob): number => {
   const diff = getId(a) - getId(b)
