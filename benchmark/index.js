@@ -21,6 +21,7 @@ const {
     port: portStr,
     count: countStr,
     noHeadless,
+    devBuild,
   },
 } = parseArgs({
   allowNegative: true,
@@ -58,6 +59,10 @@ const {
     noHeadless: {
       type: 'boolean',
     },
+    devBuild: {
+      type: 'boolean',
+      short: 'd',
+    },
   },
 })
 
@@ -87,10 +92,11 @@ async function buildLib() {
     cwd: path.resolve(import.meta.dirname, '..'),
     stdio: 'inherit',
   }
+  const BuildOptions = devBuild ? '-df' : '-pf'
   const [{ ok }, { ok: ok2 }, { ok: ok3 }, { ok: ok4 }] = await Promise.all([
     exec(
       'pnpm',
-      'run --silent build shared compiler-core compiler-dom compiler-vapor -pf cjs'.split(
+      `run --silent build shared compiler-core compiler-dom compiler-vapor ${BuildOptions} cjs`.split(
         ' ',
       ),
       options,
@@ -102,12 +108,12 @@ async function buildLib() {
     ),
     exec(
       'pnpm',
-      'run --silent build vue-vapor -pf esm-browser'.split(' '),
+      `run --silent build vue-vapor ${BuildOptions} esm-browser`.split(' '),
       options,
     ),
     exec(
       'pnpm',
-      'run --silent build vue -pf esm-browser-runtime'.split(' '),
+      `run --silent build vue ${BuildOptions} esm-browser-runtime`.split(' '),
       options,
     ),
   ])
@@ -128,17 +134,19 @@ async function buildApp(isVapor) {
   const CompilerSFC = await import(
     '../packages/compiler-sfc/dist/compiler-sfc.cjs.js'
   )
+  const prodSuffix = devBuild ? '.js' : '.prod.js'
+
   /** @type {any} */
   const TemplateCompiler = await import(
-    isVapor
-      ? '../packages/compiler-vapor/dist/compiler-vapor.cjs.prod.js'
-      : '../packages/compiler-dom/dist/compiler-dom.cjs.prod.js'
+    (isVapor
+      ? '../packages/compiler-vapor/dist/compiler-vapor.cjs'
+      : '../packages/compiler-dom/dist/compiler-dom.cjs') + prodSuffix
   )
   const runtimePath = path.resolve(
     import.meta.dirname,
-    isVapor
-      ? '../packages/vue-vapor/dist/vue-vapor.esm-browser.prod.js'
-      : '../packages/vue/dist/vue.runtime.esm-browser.prod.js',
+    (isVapor
+      ? '../packages/vue-vapor/dist/vue-vapor.esm-browser'
+      : '../packages/vue/dist/vue.runtime.esm-browser') + prodSuffix,
   )
 
   const mode = isVapor ? 'vapor' : 'vdom'
@@ -149,7 +157,7 @@ async function buildApp(isVapor) {
       'import.meta.env.IS_VAPOR': String(isVapor),
     },
     build: {
-      minify: 'terser',
+      minify: !devBuild && 'terser',
       outDir: path.resolve('./client/dist', mode),
       rollupOptions: {
         onwarn(log, handler) {
