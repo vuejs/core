@@ -122,13 +122,6 @@ function queueFlush() {
   }
 }
 
-export function invalidateJob(job: SchedulerJob): void {
-  const i = queue.indexOf(job)
-  if (i > flushIndex) {
-    queue.splice(i, 1)
-  }
-}
-
 export function queuePostFlushCb(cb: SchedulerJobs): void {
   if (!isArray(cb)) {
     if (activePostFlushCbs && cb.id === -1) {
