@@ -35,7 +35,7 @@ export function patchDOMProp(
     const newValue =
       value == null
         ? // #11647: value should be set as empty string for null and undefined,
-          // but <input type="checkbox"> should be set as 'no'.
+          // but <input type="checkbox"> should be set as 'on'.
           el.type === 'checkbox'
           ? 'on'
           : ''
