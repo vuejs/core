@@ -82,7 +82,7 @@
     "eslint-plugin-vitest": "^0.5.4",
     "estree-walker": "catalog:",
     "jsdom": "^24.1.1",
-    "lint-staged": "^15.2.8",
+    "lint-staged": "^15.2.9",
     "lodash": "^4.17.21",
     "magic-string": "^0.30.11",
     "markdown-table": "^3.0.3",
@@ -106,7 +106,7 @@
     "tslib": "^2.6.3",
     "tsx": "^4.17.0",
     "typescript": "~5.5.4",
-    "typescript-eslint": "^8.0.1",
+    "typescript-eslint": "^8.1.0",
     "vite": "catalog:",
     "vitest": "^2.0.5"
   },
