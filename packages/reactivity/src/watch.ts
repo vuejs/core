@@ -47,9 +47,12 @@ export interface WatchOptions<Immediate = boolean> extends DebuggerOptions {
   deep?: boolean | number
   once?: boolean
   scheduler?: WatchScheduler
-  augmentJob?: (job: (...args: any[]) => void) => void
   onError?: HandleError
   onWarn?: HandleWarn
+  /**
+   * @internal
+   */
+  augmentJob?: (job: (...args: any[]) => void) => void
 }
 
 // initial value for watchers to trigger on undefined initial values
@@ -105,11 +108,11 @@ export function watch(
     deep,
     once,
     scheduler,
-    augmentJob,
     onWarn = __DEV__ ? warn : NOOP,
     onError = DEFAULT_HANDLE_ERROR,
     onTrack,
     onTrigger,
+    augmentJob,
   }: WatchOptions = EMPTY_OBJ,
 ): ReactiveEffect {
   const warnInvalidSource = (s: unknown) => {
