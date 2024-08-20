@@ -206,18 +206,26 @@ export function watch(
     getter = () => traverse(baseGetter(), depth)
   }
 
+  const scope = getCurrentScope()
+  const watchHandle: WatchHandle = () => {
+    effect.stop()
+    if (scope) {
+      remove(scope.effects, effect)
+    }
+  }
+
   if (once) {
     if (cb) {
       const _cb = cb
       cb = (...args) => {
         _cb(...args)
-        effect.stop()
+        watchHandle()
       }
     } else {
       const _getter = getter
       getter = () => {
         _getter()
-        effect.stop()
+        watchHandle()
       }
     }
   }
@@ -315,14 +323,6 @@ export function watch(
     scheduler(job.bind(null, true), true)
   } else {
     effect.run()
-  }
-
-  const scope = getCurrentScope()
-  const watchHandle: WatchHandle = () => {
-    effect.stop()
-    if (scope) {
-      remove(scope.effects, effect)
-    }
   }
 
   watchHandle.pause = effect.pause.bind(effect)
