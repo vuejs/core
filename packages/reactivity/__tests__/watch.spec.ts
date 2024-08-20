@@ -193,4 +193,21 @@ describe('watch', () => {
     scope.stop()
     expect(calls).toEqual(['sync 2', 'post 2'])
   })
+
+  test('watch callback return cleanup function', async () => {
+    const fn = vi.fn()
+
+    const scope = new EffectScope()
+
+    scope.run(() => {
+      const ource = ref(0)
+      watch(ource, () => fn)
+      ource.value++
+    })
+
+    scope.stop()
+    await nextTick()
+
+    expect(fn).toBeCalledTimes(1)
+  })
 })

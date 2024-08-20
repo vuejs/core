@@ -60,7 +60,7 @@ export interface WatchOptions<Immediate = boolean> extends DebuggerOptions {
     fn: Function | Function[],
     type: WatchErrorCodes,
     args?: unknown[],
-  ) => void
+  ) => any
 }
 
 export type WatchStopHandle = () => void
@@ -257,10 +257,13 @@ export function watch(
                 : oldValue,
             boundCleanup,
           ]
-          call
+          const cleanup = call
             ? call(cb!, WatchErrorCodes.WATCH_CALLBACK, args)
             : // @ts-expect-error
               cb!(...args)
+          if (isFunction(cleanup)) {
+            boundCleanup(cleanup)
+          }
           oldValue = newValue
         } finally {
           activeWatcher = currentWatcher
