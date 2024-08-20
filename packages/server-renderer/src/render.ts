@@ -99,7 +99,7 @@ export function renderComponentVNode(
     const p: Promise<unknown> = Promise.resolve(res as Promise<void>)
       .then(() => {
         // instance.sp may be null until an async setup resolves, so evaluate it here
-        prefetches = instance.sp
+        if (hasAsyncSetup) prefetches = instance.sp
         if (prefetches) {
           return Promise.all(
             prefetches.map(prefetch => prefetch.call(instance.proxy)),
