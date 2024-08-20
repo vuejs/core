@@ -75,7 +75,7 @@ function size(target: IterableCollections, isReadonly = false) {
     track(
       rawTarget,
       TrackOpTypes.ITERATE,
-      isMap(rawTarget) ? MAP_KEY_ITERATE_KEY : ITERATE_KEY
+      isMap(rawTarget) ? MAP_KEY_ITERATE_KEY : ITERATE_KEY,
     )
   }
   return Reflect.get(target, 'size', target)
