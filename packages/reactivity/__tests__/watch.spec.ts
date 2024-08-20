@@ -210,4 +210,26 @@ describe('watch', () => {
 
     expect(fn).toBeCalledTimes(1)
   })
+
+  test('watch effect return cleanup function', async () => {
+    const fn = vi.fn()
+
+    const scope = new EffectScope()
+
+    scope.run(() => {
+      const source = ref(0)
+      watch(() => {
+        void source.value
+        return () => fn()
+      })
+      source.value++
+    })
+
+    await nextTick()
+    expect(fn).toBeCalledTimes(1)
+
+    scope.stop()
+    await nextTick()
+    expect(fn).toBeCalledTimes(2)
+  })
 })

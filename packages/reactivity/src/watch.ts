@@ -184,9 +184,13 @@ export function watch(
         const currentEffect = activeWatcher
         activeWatcher = effect
         try {
-          return call
+          const cleanup = call
             ? call(source, WatchErrorCodes.WATCH_CALLBACK, [boundCleanup])
             : source(boundCleanup)
+
+          if (isFunction(cleanup)) {
+            boundCleanup(cleanup)
+          }
         } finally {
           activeWatcher = currentEffect
         }
