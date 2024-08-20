@@ -16,7 +16,7 @@ import {
   type SimpleExpressionNode,
 } from '../../src/ast'
 import { ErrorCodes } from '../../src/errors'
-import { type CompilerOptions, generate } from '../../src'
+import { type CompilerOptions, type RootNode, generate } from '../../src'
 import { FRAGMENT, RENDER_LIST, RENDER_SLOT } from '../../src/runtimeHelpers'
 import { PatchFlags } from '@vue/shared'
 import { createObjectMatcher } from '../testUtils'
@@ -24,7 +24,10 @@ import { createObjectMatcher } from '../testUtils'
 export function parseWithForTransform(
   template: string,
   options: CompilerOptions = {},
-) {
+): {
+  root: RootNode
+  node: ForNode & { codegenNode: ForCodegenNode }
+} {
   const ast = parse(template, options)
   transform(ast, {
     nodeTransforms: [

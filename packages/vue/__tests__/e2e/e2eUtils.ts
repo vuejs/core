@@ -31,7 +31,25 @@ export async function expectByPolling(
   }
 }
 
-export function setupPuppeteer(args?: string[]) {
+export function setupPuppeteer(args?: string[]): {
+  page: () => Page
+  click: (selector: string, options?: ClickOptions) => Promise<void>
+  count: (selector: string) => Promise<number>
+  text: (selector: string) => Promise<string | null>
+  value: (selector: string) => Promise<string>
+  html: (selector: string) => Promise<string>
+  classList: (selector: string) => Promise<any[]>
+  children: (selector: string) => Promise<any[]>
+  isVisible: (selector: string) => Promise<boolean>
+  isChecked: (selector: string) => Promise<boolean>
+  isFocused: (selector: string) => Promise<boolean>
+  setValue: (selector: string, value: string) => Promise<void>
+  typeValue: (selector: string, value: string) => Promise<void>
+  enterValue: (selector: string, value: string) => Promise<void>
+  clearValue: (selector: string) => Promise<string>
+  timeout: (time: number) => Promise<unknown>
+  nextFrame: () => Promise<unknown>
+} {
   let browser: Browser
   let page: Page
 
