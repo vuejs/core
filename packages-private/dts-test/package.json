@@ -4,6 +4,6 @@
   "version": "0.0.0",
   "dependencies": {
     "vue": "workspace:*",
-    "@vue/dts-built-test": "workspace:*"
+    "dts-built-test": "workspace:*"
   }
 }

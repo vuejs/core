@@ -36,7 +36,7 @@ import {
   EntityDecoder,
   fromCodePoint,
   htmlDecodeTree,
-} from 'entities/dist/decode.js'
+} from 'entities/lib/decode.js'
 
 export enum ParseMode {
   BASE,
