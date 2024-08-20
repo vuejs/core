@@ -7,7 +7,7 @@ import config from './template/vite.config.js?raw'
 import readme from './template/README.md?raw'
 import type { ReplStore } from '@vue/repl'
 
-export async function downloadProject(store: ReplStore) {
+export async function downloadProject(store: ReplStore): Promise<void> {
   if (!confirm('Download project files?')) {
     return
   }

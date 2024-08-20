@@ -1,8 +1,8 @@
-import { createApp, h, reactive, ref } from 'vue'
+import { type Ref, createApp, h, reactive, ref } from 'vue'
 import type { CompilerOptions } from '@vue/compiler-dom'
 import { BindingTypes } from '@vue/compiler-core'
 
-export const ssrMode = ref(false)
+export const ssrMode: Ref<boolean> = ref(false)
 
 export const defaultOptions: CompilerOptions = {
   mode: 'module',
@@ -229,6 +229,6 @@ const App = {
   },
 }
 
-export function initOptions() {
+export function initOptions(): void {
   createApp(App).mount(document.getElementById('header')!)
 }
