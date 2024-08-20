@@ -208,13 +208,13 @@ export function watch(
       const _cb = cb
       cb = (...args) => {
         _cb(...args)
-        effect.stop()
+        watchHandle()
       }
     } else {
       const _getter = getter
       getter = () => {
         _getter()
-        effect.stop()
+        watchHandle()
       }
     }
   }
