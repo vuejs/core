@@ -4,12 +4,14 @@ import { currentRenderingInstance } from './componentRenderContext'
 import { currentApp } from './apiCreateApp'
 import { warn } from './warning'
 
-export interface InjectionKey<T> extends Symbol {}
+interface InjectionConstraint<T> {}
+
+export type InjectionKey<T> = symbol & InjectionConstraint<T>
 
 export function provide<T, K = InjectionKey<T> | string | number>(
   key: K,
-  value: K extends InjectionKey<infer V> ? V : T
-) {
+  value: K extends InjectionKey<infer V> ? V : T,
+): void {
   if (!currentInstance) {
     if (__DEV__) {
       warn(`provide() can only be used inside setup().`)
@@ -35,17 +37,17 @@ export function inject<T>(key: InjectionKey<T> | string): T | undefined
 export function inject<T>(
   key: InjectionKey<T> | string,
   defaultValue: T,
-  treatDefaultAsFactory?: false
+  treatDefaultAsFactory?: false,
 ): T
 export function inject<T>(
   key: InjectionKey<T> | string,
   defaultValue: T | (() => T),
-  treatDefaultAsFactory: true
+  treatDefaultAsFactory: true,
 ): T
 export function inject(
   key: InjectionKey<any> | string,
   defaultValue?: unknown,
-  treatDefaultAsFactory = false
+  treatDefaultAsFactory = false,
 ) {
   // fallback to `currentRenderingInstance` so that this can be called in
   // a functional component
@@ -56,11 +58,14 @@ export function inject(
     // #2400
     // to support `app.use` plugins,
     // fallback to appContext's `provides` if the instance is at root
-    const provides = instance
-      ? instance.parent == null
-        ? instance.vnode.appContext && instance.vnode.appContext.provides
-        : instance.parent.provides
-      : currentApp!._context.provides
+    // #11488, in a nested createApp, prioritize using the provides from currentApp
+    const provides = currentApp
+      ? currentApp._context.provides
+      : instance
+        ? instance.parent == null
+          ? instance.vnode.appContext && instance.vnode.appContext.provides
+          : instance.parent.provides
+        : undefined
 
     if (provides && (key as string | symbol) in provides) {
       // TS doesn't allow symbol as index type

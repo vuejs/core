@@ -7,7 +7,7 @@ declare var __BROWSER__: boolean
 declare var __GLOBAL__: boolean
 declare var __ESM_BUNDLER__: boolean
 declare var __ESM_BROWSER__: boolean
-declare var __NODE_JS__: boolean
+declare var __CJS__: boolean
 declare var __SSR__: boolean
 declare var __COMMIT__: string
 declare var __VERSION__: string
@@ -17,15 +17,7 @@ declare var __COMPAT__: boolean
 declare var __FEATURE_OPTIONS_API__: boolean
 declare var __FEATURE_PROD_DEVTOOLS__: boolean
 declare var __FEATURE_SUSPENSE__: boolean
-
-// for tests
-declare namespace jest {
-  interface Matchers<R, T> {
-    toHaveBeenWarned(): R
-    toHaveBeenWarnedLast(): R
-    toHaveBeenWarnedTimes(n: number): R
-  }
-}
+declare var __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__: boolean
 
 declare module '*.vue' {}
 
@@ -37,10 +29,10 @@ declare module 'estree-walker' {
   export function walk<T>(
     root: T,
     options: {
-      enter?: (node: T, parent: T | undefined) => any
-      leave?: (node: T, parent: T | undefined) => any
+      enter?: (node: T, parent: T | null) => any
+      leave?: (node: T, parent: T | null) => any
       exit?: (node: T) => any
-    } & ThisType<{ skip: () => void }>
+    } & ThisType<{ skip: () => void }>,
   )
 }
 
