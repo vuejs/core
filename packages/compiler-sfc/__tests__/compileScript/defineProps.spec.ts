@@ -278,7 +278,7 @@ const props = defineProps({ foo: String })
     expect(bindings).toStrictEqual({
       x: BindingTypes.PROPS,
       y: BindingTypes.PROPS,
-      z: BindingTypes.PROPS
+      z: BindingTypes.PROPS,
     })
   })
 
@@ -299,7 +299,7 @@ const props = defineProps({ foo: String })
     expect(content).toMatch(`x: { type: Number, required: false }`)
     expect(bindings).toStrictEqual({
       x: BindingTypes.PROPS,
-      y: BindingTypes.PROPS
+      y: BindingTypes.PROPS,
     })
   })
 
