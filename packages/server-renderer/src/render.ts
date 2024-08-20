@@ -69,13 +69,13 @@ export function createBuffer() {
       // Return static buffer and await on items during unroll stage
       return buffer
     },
-    push(item: SSRBufferItem) {
+    push(item: SSRBufferItem): void {
       const isStringItem = isString(item)
       if (appendable && isStringItem) {
         buffer[buffer.length - 1] += item as string
-      } else {
-        buffer.push(item)
+        return
       }
+      buffer.push(item)
       appendable = isStringItem
       if (isPromise(item) || (isArray(item) && item.hasAsync)) {
         // promise, or child buffer with async, mark as async.
@@ -141,15 +141,6 @@ function renderComponentSubTree(
       isString(comp.template)
     ) {
       comp.ssrRender = ssrCompile(comp.template, instance)
-    }
-
-    // perf: enable caching of computed getters during render
-    // since there cannot be state mutations during render.
-    for (const e of instance.scope.effects) {
-      if (e.computed) {
-        e.computed._dirty = true
-        e.computed._cacheable = true
-      }
     }
 
     const ssrRender = instance.ssrRender || comp.ssrRender
@@ -225,8 +216,12 @@ export function renderVNode(
   vnode: VNode,
   parentComponent: ComponentInternalInstance,
   slotScopeId?: string,
-) {
-  const { type, shapeFlag, children } = vnode
+): void {
+  const { type, shapeFlag, children, dirs, props } = vnode
+  if (dirs) {
+    vnode.props = applySSRDirectives(vnode, props, dirs)
+  }
+
   switch (type) {
     case Text:
       push(escapeHtml(children as string))
@@ -279,7 +274,7 @@ export function renderVNodeChildren(
   children: VNodeArrayChildren,
   parentComponent: ComponentInternalInstance,
   slotScopeId?: string,
-) {
+): void {
   for (let i = 0; i < children.length; i++) {
     renderVNode(push, normalizeVNode(children[i]), parentComponent, slotScopeId)
   }
@@ -292,12 +287,8 @@ function renderElementVNode(
   slotScopeId?: string,
 ) {
   const tag = vnode.type as string
-  let { props, children, shapeFlag, scopeId, dirs } = vnode
+  let { props, children, shapeFlag, scopeId } = vnode
   let openTag = `<${tag}`
-
-  if (dirs) {
-    props = applySSRDirectives(vnode, props, dirs)
-  }
 
   if (props) {
     openTag += ssrRenderAttrs(props, tag)

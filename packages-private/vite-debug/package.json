@@ -1,0 +1,15 @@
+{
+  "name": "vite-debug",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "serve": "vite preview"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "catalog:",
+    "vite": "catalog:",
+    "vue": "workspace:*"
+  }
+}

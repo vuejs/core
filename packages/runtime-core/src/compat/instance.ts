@@ -62,7 +62,9 @@ export interface LegacyPublicProperties {
   $listeners: Record<string, Function | Function[]>
 }
 
-export function installCompatInstanceProperties(map: PublicPropertiesMap) {
+export function installCompatInstanceProperties(
+  map: PublicPropertiesMap,
+): void {
   const set = (target: any, key: any, val: any) => {
     target[key] = val
     return target[key]

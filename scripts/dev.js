@@ -143,12 +143,12 @@ for (const target of targets) {
         __ESM_BUNDLER__: String(format.includes('esm-bundler')),
         __ESM_BROWSER__: String(format.includes('esm-browser')),
         __CJS__: String(format === 'cjs'),
-        __SSR__: String(format === 'cjs' || format.includes('esm-bundler')),
+        __SSR__: String(format !== 'global'),
         __COMPAT__: String(target === 'vue-compat'),
         __FEATURE_SUSPENSE__: `true`,
         __FEATURE_OPTIONS_API__: `true`,
         __FEATURE_PROD_DEVTOOLS__: `false`,
-        __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__: `false`,
+        __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__: `true`,
       },
     })
     .then(ctx => ctx.watch())
