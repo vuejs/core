@@ -200,9 +200,9 @@ describe('watch', () => {
     const scope = new EffectScope()
 
     scope.run(() => {
-      const ource = ref(0)
-      watch(ource, () => fn)
-      ource.value++
+      const source = ref(0)
+      watch(source, () => fn)
+      source.value++
     })
 
     scope.stop()
