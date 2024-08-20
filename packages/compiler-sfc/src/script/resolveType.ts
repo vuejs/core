@@ -1703,7 +1703,7 @@ export function inferRuntimeType(
 
       case 'TSIndexedAccessType': {
         const types = resolveIndexType(ctx, node, scope)
-        return flattenTypes(ctx, types, scope)
+        return flattenTypes(ctx, types, scope, isKeyOf)
       }
 
       case 'ClassDeclaration':

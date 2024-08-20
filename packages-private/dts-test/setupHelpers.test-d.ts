@@ -227,6 +227,19 @@ describe('withDefaults w/ boolean type', () => {
   expectType<boolean | undefined>(res2.bool)
 })
 
+describe('withDefaults w/ defineProp type is different from the defaults type', () => {
+  const res1 = withDefaults(
+    defineProps<{
+      bool?: boolean
+    }>(),
+    { bool: false, value: false },
+  )
+  expectType<boolean>(res1.bool)
+
+  // @ts-expect-error
+  res1.value
+})
+
 describe('defineProps w/ runtime declaration', () => {
   // runtime declaration
   const props = defineProps({

@@ -45,8 +45,7 @@ export enum EffectFlags {
   NOTIFIED = 1 << 3,
   DIRTY = 1 << 4,
   ALLOW_RECURSE = 1 << 5,
-  NO_BATCH = 1 << 6,
-  PAUSED = 1 << 7,
+  PAUSED = 1 << 6,
 }
 
 /**
@@ -169,9 +168,6 @@ export class ReactiveEffect<T = any>
     ) {
       return
     }
-    if (this.flags & EffectFlags.NO_BATCH) {
-      return this.trigger()
-    }
     if (!(this.flags & EffectFlags.NOTIFIED)) {
       this.flags |= EffectFlags.NOTIFIED
       this.nextEffect = batchedEffect
@@ -267,6 +263,7 @@ export function endBatch(): void {
     return
   }
 
+  batchDepth--
   let error: unknown
   while (batchedEffect) {
     let e: ReactiveEffect | undefined = batchedEffect
@@ -286,7 +283,6 @@ export function endBatch(): void {
     }
   }
 
-  batchDepth--
   if (error) throw error
 }
 

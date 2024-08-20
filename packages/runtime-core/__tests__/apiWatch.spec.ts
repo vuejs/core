@@ -6,6 +6,7 @@ import {
   getCurrentInstance,
   nextTick,
   onErrorCaptured,
+  onWatcherCleanup,
   reactive,
   ref,
   watch,
@@ -433,6 +434,35 @@ describe('api: watch', () => {
 
     stop()
     expect(cleanup).toHaveBeenCalledTimes(2)
+  })
+
+  it('onWatcherCleanup', async () => {
+    const count = ref(0)
+    const cleanupEffect = vi.fn()
+    const cleanupWatch = vi.fn()
+
+    const stopEffect = watchEffect(() => {
+      onWatcherCleanup(cleanupEffect)
+      count.value
+    })
+    const stopWatch = watch(count, () => {
+      onWatcherCleanup(cleanupWatch)
+    })
+
+    count.value++
+    await nextTick()
+    expect(cleanupEffect).toHaveBeenCalledTimes(1)
+    expect(cleanupWatch).toHaveBeenCalledTimes(0)
+
+    count.value++
+    await nextTick()
+    expect(cleanupEffect).toHaveBeenCalledTimes(2)
+    expect(cleanupWatch).toHaveBeenCalledTimes(1)
+
+    stopEffect()
+    expect(cleanupEffect).toHaveBeenCalledTimes(3)
+    stopWatch()
+    expect(cleanupWatch).toHaveBeenCalledTimes(2)
   })
 
   it('flush timing: pre (default)', async () => {
@@ -1741,6 +1771,11 @@ describe('api: watch', () => {
     expect(scope.effects.length).toBe(1)
     unwatch!()
     expect(scope.effects.length).toBe(0)
+
+    scope.run(() => {
+      watch(num, () => {}, { once: true, immediate: true })
+    })
+    expect(scope.effects.length).toBe(0)
   })
 
   // simplified case of VueUse syncRef
@@ -1855,5 +1890,33 @@ describe('api: watch', () => {
     expect(errors.value[1]).toBe(ERROR_OUT_SCOPE)
 
     warn.mockRestore()
+  })
+
+  it('should be executed correctly', () => {
+    const v = ref(1)
+    let foo = ''
+
+    watch(
+      v,
+      () => {
+        foo += '1'
+      },
+      {
+        flush: 'sync',
+      },
+    )
+    watch(
+      v,
+      () => {
+        foo += '2'
+      },
+      {
+        flush: 'sync',
+      },
+    )
+
+    expect(foo).toBe('')
+    v.value++
+    expect(foo).toBe('12')
   })
 })

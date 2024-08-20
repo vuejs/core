@@ -1,3 +1,15 @@
+## [3.4.38](https://github.com/vuejs/core/compare/v3.4.37...v3.4.38) (2024-08-15)
+
+
+### Bug Fixes
+
+* **build:** revert entities to 4.5 to avoid runtime resolution errors ([f349af7](https://github.com/vuejs/core/commit/f349af7b65b9f8605d8b7bafcc06c25ab1f2daf0)), closes [#11603](https://github.com/vuejs/core/issues/11603)
+* **compiler-core:** use ast-based check for function expressions when possible ([236cac3](https://github.com/vuejs/core/commit/236cac3ff285890b8468dc827c463d87a91e516f)), closes [#11615](https://github.com/vuejs/core/issues/11615)
+* **compiler-sfc:** handle keyof operator with index object ([#11581](https://github.com/vuejs/core/issues/11581)) ([74d26db](https://github.com/vuejs/core/commit/74d26dbbe3cf2f70d1b772284eec6743ea946f6d))
+* **types:** add fallback stub for DOM types when DOM lib is absent ([#11598](https://github.com/vuejs/core/issues/11598)) ([4db0085](https://github.com/vuejs/core/commit/4db0085de316e1b773f474597915f9071d6ae6c6))
+
+
+
 ## [3.4.37](https://github.com/vuejs/core/compare/v3.4.36...v3.4.37) (2024-08-08)
 
 
@@ -12,6 +24,7 @@
 * Revert "fix(types/ref): correct type inference for nested refs ([#11536](https://github.com/vuejs/core/issues/11536))" ([3a56315](https://github.com/vuejs/core/commit/3a56315f94bc0e11cfbb288b65482ea8fc3a39b4))
 * **runtime-core:** fix warning for missing event handler ([#11489](https://github.com/vuejs/core/issues/11489)) ([e359ff0](https://github.com/vuejs/core/commit/e359ff0046286aee03fe31656c023677be457e07)), closes [#4803](https://github.com/vuejs/core/issues/4803) [#8268](https://github.com/vuejs/core/issues/8268)
 * **runtime-core:** prioritize using the provides from currentApp in nested createApp ([#11502](https://github.com/vuejs/core/issues/11502)) ([7e75de0](https://github.com/vuejs/core/commit/7e75de002f08076a02c9361a58fa1d0af1772964)), closes [#11488](https://github.com/vuejs/core/issues/11488)
+   * Note: this change will break `inject` calls inside Pinia stores that expects to be able to inject provided values from the component using the store. This is expected because the usage is relying on previously incorrect behavior.
 * **runtime-dom:** apply css vars before mount ([#11538](https://github.com/vuejs/core/issues/11538)) ([fdc2a31](https://github.com/vuejs/core/commit/fdc2a31dbd4196d6432be16767a1bfdab1240d49)), closes [#11533](https://github.com/vuejs/core/issues/11533)
 * **ssr:** ensure content is valid when rendering normal slot ([#11491](https://github.com/vuejs/core/issues/11491)) ([6c90324](https://github.com/vuejs/core/commit/6c903248703e2413c6197b9ad4d535f31c8eac39)), closes [#11326](https://github.com/vuejs/core/issues/11326)
 * **types/ref:** correct type inference for nested refs ([#11536](https://github.com/vuejs/core/issues/11536)) ([536f623](https://github.com/vuejs/core/commit/536f62332c455ba82ef2979ba634b831f91928ba)), closes [#11532](https://github.com/vuejs/core/issues/11532) [#11537](https://github.com/vuejs/core/issues/11537)
