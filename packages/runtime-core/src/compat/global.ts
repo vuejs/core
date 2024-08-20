@@ -77,7 +77,12 @@ export type CompatVue = Pick<App, 'version' | 'component' | 'directive'> & {
 
   nextTick: typeof nextTick
 
-  use(plugin: Plugin, ...options: any[]): CompatVue
+  use<Options extends unknown[]>(
+    plugin: Plugin<Options>,
+    ...options: Options
+  ): CompatVue
+  use<Options>(plugin: Plugin<Options>, options: Options): CompatVue
+
   mixin(mixin: ComponentOptions): CompatVue
 
   component(name: string): Component | undefined
@@ -97,11 +102,11 @@ export type CompatVue = Pick<App, 'version' | 'component' | 'directive'> & {
   /**
    * @deprecated Vue 3 no longer needs set() for adding new properties.
    */
-  set(target: any, key: string | number | symbol, value: any): void
+  set(target: any, key: PropertyKey, value: any): void
   /**
    * @deprecated Vue 3 no longer needs delete() for property deletions.
    */
-  delete(target: any, key: string | number | symbol): void
+  delete(target: any, key: PropertyKey): void
   /**
    * @deprecated use `reactive` instead.
    */
@@ -176,11 +181,11 @@ export function createCompatVue(
   Vue.version = `2.6.14-compat:${__VERSION__}`
   Vue.config = singletonApp.config
 
-  Vue.use = (p, ...options) => {
-    if (p && isFunction(p.install)) {
-      p.install(Vue as any, ...options)
-    } else if (isFunction(p)) {
-      p(Vue as any, ...options)
+  Vue.use = (plugin: Plugin, ...options: any[]) => {
+    if (plugin && isFunction(plugin.install)) {
+      plugin.install(Vue as any, ...options)
+    } else if (isFunction(plugin)) {
+      plugin(Vue as any, ...options)
     }
     return Vue
   }
@@ -328,7 +333,7 @@ export function installAppCompatProperties(
   app: App,
   context: AppContext,
   render: RootRenderFunction<any>,
-) {
+): void {
   installFilterMethod(app, context)
   installLegacyOptionMergeStrats(app.config)
 
@@ -427,15 +432,14 @@ function applySingletonPrototype(app: App, Ctor: Function) {
     app.config.globalProperties = Object.create(Ctor.prototype)
   }
   let hasPrototypeAugmentations = false
-  const descriptors = Object.getOwnPropertyDescriptors(Ctor.prototype)
-  for (const key in descriptors) {
+  for (const key of Object.getOwnPropertyNames(Ctor.prototype)) {
     if (key !== 'constructor') {
       hasPrototypeAugmentations = true
       if (enabled) {
         Object.defineProperty(
           app.config.globalProperties,
           key,
-          descriptors[key],
+          Object.getOwnPropertyDescriptor(Ctor.prototype, key)!,
         )
       }
     }
@@ -544,7 +548,7 @@ function installCompatMount(
       }
 
       // clear content before mounting
-      container.innerHTML = ''
+      container.textContent = ''
 
       // TODO hydration
       render(vnode, container, namespace)
@@ -618,11 +622,9 @@ function defineReactive(obj: any, key: string, val: any) {
   if (isObject(val) && !isReactive(val) && !patched.has(val)) {
     const reactiveVal = reactive(val)
     if (isArray(val)) {
-      methodsToPatch.forEach(m => {
-        // @ts-expect-error
+      methodsToPatch.forEach((m: any) => {
         val[m] = (...args: any[]) => {
-          // @ts-expect-error
-          Array.prototype[m].call(reactiveVal, ...args)
+          Array.prototype[m].apply(reactiveVal, args)
         }
       })
     } else {

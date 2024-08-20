@@ -22,15 +22,20 @@ type TraceEntry = {
 
 type ComponentTraceStack = TraceEntry[]
 
-export function pushWarningContext(vnode: VNode) {
+export function pushWarningContext(vnode: VNode): void {
   stack.push(vnode)
 }
 
-export function popWarningContext() {
+export function popWarningContext(): void {
   stack.pop()
 }
 
-export function warn(msg: string, ...args: any[]) {
+let isWarning = false
+
+export function warn(msg: string, ...args: any[]): void {
+  if (isWarning) return
+  isWarning = true
+
   // avoid props formatting or warn handler tracking deps that might be mutated
   // during patch, leading to infinite recursion.
   pauseTracking()
@@ -45,6 +50,7 @@ export function warn(msg: string, ...args: any[]) {
       instance,
       ErrorCodes.APP_WARN_HANDLER,
       [
+        // eslint-disable-next-line no-restricted-syntax
         msg + args.map(a => a.toString?.() ?? JSON.stringify(a)).join(''),
         instance && instance.proxy,
         trace
@@ -69,6 +75,7 @@ export function warn(msg: string, ...args: any[]) {
   }
 
   resetTracking()
+  isWarning = false
 }
 
 export function getComponentTrace(): ComponentTraceStack {
@@ -164,7 +171,7 @@ function formatProp(key: string, value: unknown, raw?: boolean): any {
 /**
  * @internal
  */
-export function assertNumber(val: unknown, type: string) {
+export function assertNumber(val: unknown, type: string): void {
   if (!__DEV__) return
   if (val === undefined) {
     return

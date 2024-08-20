@@ -10,14 +10,9 @@ import {
   shallowReadonlyMap,
   toRaw,
 } from './reactive'
+import { arrayInstrumentations } from './arrayInstrumentations'
 import { ReactiveFlags, TrackOpTypes, TriggerOpTypes } from './constants'
-import {
-  pauseScheduling,
-  pauseTracking,
-  resetScheduling,
-  resetTracking,
-} from './effect'
-import { ITERATE_KEY, track, trigger } from './reactiveEffect'
+import { ITERATE_KEY, track, trigger } from './dep'
 import {
   hasChanged,
   hasOwn,
@@ -39,51 +34,16 @@ const builtInSymbols = new Set(
     // but accessing them on Symbol leads to TypeError because Symbol is a strict mode
     // function
     .filter(key => key !== 'arguments' && key !== 'caller')
-    .map(key => (Symbol as any)[key])
+    .map(key => Symbol[key as keyof SymbolConstructor])
     .filter(isSymbol),
 )
 
-const arrayInstrumentations = /*#__PURE__*/ createArrayInstrumentations()
-
-function createArrayInstrumentations() {
-  const instrumentations: Record<string, Function> = {}
-  // instrument identity-sensitive Array methods to account for possible reactive
-  // values
-  ;(['includes', 'indexOf', 'lastIndexOf'] as const).forEach(key => {
-    instrumentations[key] = function (this: unknown[], ...args: unknown[]) {
-      const arr = toRaw(this) as any
-      for (let i = 0, l = this.length; i < l; i++) {
-        track(arr, TrackOpTypes.GET, i + '')
-      }
-      // we run the method using the original args first (which may be reactive)
-      const res = arr[key](...args)
-      if (res === -1 || res === false) {
-        // if that didn't work, run it again using raw values.
-        return arr[key](...args.map(toRaw))
-      } else {
-        return res
-      }
-    }
-  })
-  // instrument length-altering mutation methods to avoid length being tracked
-  // which leads to infinite loops in some cases (#2137)
-  ;(['push', 'pop', 'shift', 'unshift', 'splice'] as const).forEach(key => {
-    instrumentations[key] = function (this: unknown[], ...args: unknown[]) {
-      pauseTracking()
-      pauseScheduling()
-      const res = (toRaw(this) as any)[key].apply(this, args)
-      resetScheduling()
-      resetTracking()
-      return res
-    }
-  })
-  return instrumentations
-}
-
-function hasOwnProperty(this: object, key: string) {
+function hasOwnProperty(this: object, key: unknown) {
+  // #10455 hasOwnProperty may be called with non-string values
+  if (!isSymbol(key)) key = String(key)
   const obj = toRaw(this)
   track(obj, TrackOpTypes.HAS, key)
-  return obj.hasOwnProperty(key)
+  return obj.hasOwnProperty(key as string)
 }
 
 class BaseReactiveHandler implements ProxyHandler<Target> {
@@ -92,7 +52,7 @@ class BaseReactiveHandler implements ProxyHandler<Target> {
     protected readonly _isShallow = false,
   ) {}
 
-  get(target: Target, key: string | symbol, receiver: object) {
+  get(target: Target, key: string | symbol, receiver: object): any {
     const isReadonly = this._isReadonly,
       isShallow = this._isShallow
     if (key === ReactiveFlags.IS_REACTIVE) {
@@ -113,7 +73,7 @@ class BaseReactiveHandler implements ProxyHandler<Target> {
               : reactiveMap
           ).get(target) ||
         // receiver is not the reactive proxy, but has the same prototype
-        // this means the reciever is a user proxy of the reactive proxy
+        // this means the receiver is a user proxy of the reactive proxy
         Object.getPrototypeOf(target) === Object.getPrototypeOf(receiver)
       ) {
         return target
@@ -125,15 +85,23 @@ class BaseReactiveHandler implements ProxyHandler<Target> {
     const targetIsArray = isArray(target)
 
     if (!isReadonly) {
-      if (targetIsArray && hasOwn(arrayInstrumentations, key)) {
-        return Reflect.get(arrayInstrumentations, key, receiver)
+      let fn: Function | undefined
+      if (targetIsArray && (fn = arrayInstrumentations[key])) {
+        return fn
       }
       if (key === 'hasOwnProperty') {
         return hasOwnProperty
       }
     }
 
-    const res = Reflect.get(target, key, receiver)
+    const res = Reflect.get(
+      target,
+      key,
+      // if this is a proxy wrapping a ref, return methods using the raw ref
+      // as receiver so that we don't have to call `toRaw` on the ref in all
+      // its class methods
+      isRef(target) ? target : receiver,
+    )
 
     if (isSymbol(key) ? builtInSymbols.has(key) : isNonTrackableKeys(key)) {
       return res
@@ -169,12 +137,12 @@ class MutableReactiveHandler extends BaseReactiveHandler {
   }
 
   set(
-    target: object,
+    target: Record<string | symbol, unknown>,
     key: string | symbol,
     value: unknown,
     receiver: object,
   ): boolean {
-    let oldValue = (target as any)[key]
+    let oldValue = target[key]
     if (!this._isShallow) {
       const isOldValueReadonly = isReadonly(oldValue)
       if (!isShallow(value) && !isReadonly(value)) {
@@ -209,9 +177,12 @@ class MutableReactiveHandler extends BaseReactiveHandler {
     return result
   }
 
-  deleteProperty(target: object, key: string | symbol): boolean {
+  deleteProperty(
+    target: Record<string | symbol, unknown>,
+    key: string | symbol,
+  ): boolean {
     const hadKey = hasOwn(target, key)
-    const oldValue = (target as any)[key]
+    const oldValue = target[key]
     const result = Reflect.deleteProperty(target, key)
     if (result && hadKey) {
       trigger(target, TriggerOpTypes.DELETE, key, undefined, oldValue)
@@ -219,14 +190,15 @@ class MutableReactiveHandler extends BaseReactiveHandler {
     return result
   }
 
-  has(target: object, key: string | symbol): boolean {
+  has(target: Record<string | symbol, unknown>, key: string | symbol): boolean {
     const result = Reflect.has(target, key)
     if (!isSymbol(key) || !builtInSymbols.has(key)) {
       track(target, TrackOpTypes.HAS, key)
     }
     return result
   }
-  ownKeys(target: object): (string | symbol)[] {
+
+  ownKeys(target: Record<string | symbol, unknown>): (string | symbol)[] {
     track(
       target,
       TrackOpTypes.ITERATE,
@@ -268,12 +240,11 @@ export const mutableHandlers: ProxyHandler<object> =
 export const readonlyHandlers: ProxyHandler<object> =
   /*#__PURE__*/ new ReadonlyReactiveHandler()
 
-export const shallowReactiveHandlers = /*#__PURE__*/ new MutableReactiveHandler(
-  true,
-)
+export const shallowReactiveHandlers: MutableReactiveHandler =
+  /*#__PURE__*/ new MutableReactiveHandler(true)
 
 // Props handlers are special in the sense that it should not unwrap top-level
 // refs (in order to allow refs to be explicitly passed down), but should
 // retain the reactivity of the normal readonly object.
-export const shallowReadonlyHandlers =
+export const shallowReadonlyHandlers: ReadonlyReactiveHandler =
   /*#__PURE__*/ new ReadonlyReactiveHandler(true)

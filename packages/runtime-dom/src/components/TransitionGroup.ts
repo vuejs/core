@@ -112,7 +112,29 @@ const TransitionGroupImpl: ComponentOptions = {
         tag = 'span'
       }
 
-      prevChildren = children
+      prevChildren = []
+      if (children) {
+        for (let i = 0; i < children.length; i++) {
+          const child = children[i]
+          if (child.el && child.el instanceof Element) {
+            prevChildren.push(child)
+            setTransitionHooks(
+              child,
+              resolveTransitionHooks(
+                child,
+                cssTransitionProps,
+                state,
+                instance,
+              ),
+            )
+            positionMap.set(
+              child,
+              (child.el as Element).getBoundingClientRect(),
+            )
+          }
+        }
+      }
+
       children = slots.default ? getTransitionRawChildren(slots.default()) : []
 
       for (let i = 0; i < children.length; i++) {
@@ -124,17 +146,6 @@ const TransitionGroupImpl: ComponentOptions = {
           )
         } else if (__DEV__) {
           warn(`<TransitionGroup> children must be keyed.`)
-        }
-      }
-
-      if (prevChildren) {
-        for (let i = 0; i < prevChildren.length; i++) {
-          const child = prevChildren[i]
-          setTransitionHooks(
-            child,
-            resolveTransitionHooks(child, cssTransitionProps, state, instance),
-          )
-          positionMap.set(child, (child.el as Element).getBoundingClientRect())
         }
       }
 
