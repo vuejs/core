@@ -34,14 +34,17 @@ export enum WatchErrorCodes {
   WATCH_CLEANUP,
 }
 
-type WatchEffect = (onCleanup: OnCleanup) => void
-type WatchSource<T = any> = Ref<T> | ComputedRef<T> | (() => T)
-type WatchCallback<V = any, OV = any> = (
+export type WatchEffect = (onCleanup: OnCleanup) => void
+
+export type WatchSource<T = any> = Ref<T, any> | ComputedRef<T> | (() => T)
+
+export type WatchCallback<V = any, OV = any> = (
   value: V,
   oldValue: OV,
   onCleanup: OnCleanup,
 ) => any
-type OnCleanup = (cleanupFn: () => void) => void
+
+export type OnCleanup = (cleanupFn: () => void) => void
 
 export interface WatchOptions<Immediate = boolean> extends DebuggerOptions {
   immediate?: Immediate
