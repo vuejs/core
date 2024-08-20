@@ -96,13 +96,10 @@ export function renderComponentVNode(
   const hasAsyncSetup = isPromise(res)
   let prefetches = instance.sp /* LifecycleHooks.SERVER_PREFETCH */
   if (hasAsyncSetup || prefetches) {
-    let p: Promise<unknown> = (
-      hasAsyncSetup
-        ? // instance.sp may be null until an async setup resolves, so evaluate it here
-          (res as Promise<void>).then(() => (prefetches = instance.sp))
-        : Promise.resolve()
-    )
+    const p: Promise<unknown> = Promise.resolve(res as Promise<void>)
       .then(() => {
+        // instance.sp may be null until an async setup resolves, so evaluate it here
+        prefetches = instance.sp
         if (prefetches) {
           return Promise.all(
             prefetches.map(prefetch => prefetch.call(instance.proxy)),
