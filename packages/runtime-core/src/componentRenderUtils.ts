@@ -375,12 +375,12 @@ export function shouldUpdateComponent(
     return true
   }
 
-  const emits = component!.emitsOptions
-
   // force child update for runtime directive or transition on component vnode.
   if (nextVNode.dirs || nextVNode.transition) {
     return true
   }
+
+  const emits = component!.emitsOptions
 
   if (optimized && patchFlag >= 0) {
     if (patchFlag & PatchFlags.DYNAMIC_SLOTS) {
