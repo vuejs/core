@@ -149,13 +149,9 @@ const TransitionGroupImpl: ComponentOptions = {
         }
       }
 
-      return createVNode(
-        tag,
-        {
-          slotScopeIds: instance.vnode.slotScopeIds,
-        },
-        children,
-      )
+      const node = createVNode(tag, null, children)
+      node.slotScopeIds = instance.vnode.slotScopeIds
+      return node
     }
   },
 }
