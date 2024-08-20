@@ -374,7 +374,7 @@ export function shouldUpdateComponent(
   if (__DEV__ && (prevChildren || nextChildren) && isHmrUpdating) {
     return true
   }
-  
+
   const emits = component!.emitsOptions
 
   // force child update for runtime directive or transition on component vnode.
