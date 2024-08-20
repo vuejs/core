@@ -32,7 +32,7 @@
     "dev-sfc-serve": "vite packages-private/sfc-playground --host",
     "dev-sfc-run": "run-p \"dev compiler-sfc -f esm-browser\" \"dev vue -if esm-bundler-runtime\" \"dev vue -ipf esm-browser-runtime\" \"dev server-renderer -if esm-bundler\" dev-sfc-serve",
     "serve": "serve",
-    "open": "open http://localhost:3000/packages/template-explorer/local.html",
+    "open": "open http://localhost:3000/packages-private/template-explorer/local.html",
     "build-sfc-playground": "run-s build-all-cjs build-runtime-esm build-browser-esm build-ssr-esm build-sfc-playground-self",
     "build-all-cjs": "node scripts/build.js vue runtime compiler reactivity shared -af cjs",
     "build-runtime-esm": "node scripts/build.js runtime reactivity shared -af esm-bundler && node scripts/build.js vue -f esm-bundler-runtime && node scripts/build.js vue -f esm-browser-runtime",
