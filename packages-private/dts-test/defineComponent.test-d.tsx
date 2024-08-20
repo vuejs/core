@@ -3,7 +3,6 @@ import {
   type ComponentOptions,
   type ComponentPublicInstance,
   type PropType,
-  type Ref,
   type SetupContext,
   type Slots,
   type SlotsType,
@@ -11,21 +10,12 @@ import {
   createApp,
   defineComponent,
   h,
-  nextTick,
   reactive,
   ref,
-  render as vueRender,
   withKeys,
   withModifiers,
 } from 'vue'
 import { type IsAny, type IsUnion, describe, expectType } from './utils'
-import {
-  type TestElement,
-  type TestNode,
-  nodeOps,
-  serializeInner,
-  triggerEvent,
-} from '@vue/runtime-test'
 
 describe('with object props', () => {
   interface ExpectedProps {
@@ -2038,118 +2028,58 @@ expectString(instance.actionText)
 // @ts-expect-error
 expectString(instance.$props.actionText)
 
-// Helper function to safely cast TestNode to TestElement
-function getFirstElementChild(node: TestNode): TestElement {
-  if ('children' in node) {
-    return node.children[0] as TestElement
-  }
-  throw new Error('Expected an element with children')
-}
-
-// Custom render function with correct typing for TestElement
-function render(vnode: any, root: TestElement) {
-  return vueRender(vnode, root as any)
-}
-
-describe('defineComponent with generics', () => {
-  test('defineComponent with generic', async () => {
-    const Comp = defineComponent({
-      props: {
-        msg: String,
-        list: Array as PropType<{ name: string }[]>,
-      },
-      setup(props) {
-        const count = ref(0)
-        const increment = () => {
-          count.value++
-        }
-
-        return () =>
-          h('div', { onClick: increment }, [
-            h('h2', props.msg),
-            h('p', count.value),
-            ...(props.list || []).map((item: { name: string }) =>
-              h('p', item.name),
-            ),
-          ])
-      },
-    })
-
-    const list: Ref<{ name: string }[]> = ref([
-      { name: 'Tom' },
-      { name: 'Jerry' },
-    ])
-
-    const root = nodeOps.createElement('div')
-    render(h(Comp, { msg: 'Hello', list: list.value }), root)
-
-    expect(serializeInner(root)).toBe(
-      `<div><h2>Hello</h2><p>0</p><p>Tom</p><p>Jerry</p></div>`,
-    )
-
-    const firstChild = getFirstElementChild(root)
-    triggerEvent(firstChild, 'click')
-    await nextTick()
-    expect(serializeInner(root)).toBe(
-      `<div><h2>Hello</h2><p>1</p><p>Tom</p><p>Jerry</p></div>`,
-    )
-
-    list.value.push({ name: 'Spike' })
-    await nextTick()
-    expect(serializeInner(root)).toBe(
-      `<div><h2>Hello</h2><p>1</p><p>Tom</p><p>Jerry</p><p>Spike</p></div>`,
-    )
+describe('__typeRefs typing', () => {
+  const ChildComponent = defineComponent({
+    setup() {
+      return {
+        childMethod: () => 'child method',
+        childValue: ref(42),
+      }
+    },
   })
 
-  test('defineComponent with generic in render function', async () => {
-    const Comp = defineComponent({
-      props: {
-        msg: String,
-        list: Array as PropType<{ name: string }[]>,
-      },
-      setup(props) {
-        const count = ref(0)
-        const increment = () => {
-          count.value++
-        }
+  const ParentComponent = defineComponent({
+    __typeRefs: {} as {
+      childRef: InstanceType<typeof ChildComponent>
+    },
+    setup() {
+      const childRef = ref<InstanceType<typeof ChildComponent> | null>(null)
 
-        return () =>
-          h('div', { onClick: increment }, [
-            h('h2', props.msg),
-            h('p', count.value),
-            ...(props.list || []).map((item: { name: string }) =>
-              h('p', item.name),
-            ),
-          ])
-      },
-    })
+      expectType<string | undefined>(childRef.value?.childMethod())
+      expectType<number | undefined>(childRef.value?.childValue)
 
-    const list = ref([{ name: 'Tom' }, { name: 'Jerry' }])
-
-    const App = defineComponent({
-      setup() {
-        return () => h(Comp, { msg: 'Hello', list: list.value })
-      },
-    })
-
-    const root = nodeOps.createElement('div')
-    render(h(App), root)
-
-    expect(serializeInner(root)).toBe(
-      `<div><h2>Hello</h2><p>0</p><p>Tom</p><p>Jerry</p></div>`,
-    )
-
-    const firstChild = getFirstElementChild(root)
-    triggerEvent(firstChild, 'click')
-    await nextTick()
-    expect(serializeInner(root)).toBe(
-      `<div><h2>Hello</h2><p>1</p><p>Tom</p><p>Jerry</p></div>`,
-    )
-
-    list.value.push({ name: 'Spike' })
-    await nextTick()
-    expect(serializeInner(root)).toBe(
-      `<div><h2>Hello</h2><p>1</p><p>Tom</p><p>Jerry</p><p>Spike</p></div>`,
-    )
+      return { childRef }
+    },
   })
+
+  const parentInstance = new ParentComponent()
+
+  // Test typing of $refs
+  expectType<InstanceType<typeof ChildComponent> | undefined>(
+    parentInstance.$refs.childRef,
+  )
+
+  // Test access to child component methods and refs through $refs
+  expectType<string | undefined>(parentInstance.$refs.childRef?.childMethod())
+  expectType<number | undefined>(parentInstance.$refs.childRef?.childValue)
+
+  // Test with multiple refs
+  const MultiRefComponent = defineComponent({
+    __typeRefs: {} as {
+      stringRef: string
+      numberRef: number
+      componentRef: InstanceType<typeof ChildComponent>
+    },
+    setup() {
+      return {}
+    },
+  })
+
+  const multiRefInstance = new MultiRefComponent()
+
+  expectType<string | undefined>(multiRefInstance.$refs.stringRef)
+  expectType<number | undefined>(multiRefInstance.$refs.numberRef)
+  expectType<InstanceType<typeof ChildComponent> | undefined>(
+    multiRefInstance.$refs.componentRef,
+  )
 })
