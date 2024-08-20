@@ -1,6 +1,6 @@
-// Jest Snapshot v1, https://goo.gl/fbAQLP
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`compiler: transform text <template v-for> 1`] = `
+exports[`compiler: transform text > <template v-for> 1`] = `
 "const _Vue = Vue
 
 return function render(_ctx, _cache) {
@@ -16,7 +16,7 @@ return function render(_ctx, _cache) {
 }"
 `;
 
-exports[`compiler: transform text consecutive text 1`] = `
+exports[`compiler: transform text > consecutive text 1`] = `
 "const _Vue = Vue
 
 return function render(_ctx, _cache) {
@@ -28,7 +28,7 @@ return function render(_ctx, _cache) {
 }"
 `;
 
-exports[`compiler: transform text consecutive text between elements 1`] = `
+exports[`compiler: transform text > consecutive text between elements 1`] = `
 "const _Vue = Vue
 
 return function render(_ctx, _cache) {
@@ -44,7 +44,7 @@ return function render(_ctx, _cache) {
 }"
 `;
 
-exports[`compiler: transform text consecutive text mixed with elements 1`] = `
+exports[`compiler: transform text > consecutive text mixed with elements 1`] = `
 "const _Vue = Vue
 
 return function render(_ctx, _cache) {
@@ -62,7 +62,7 @@ return function render(_ctx, _cache) {
 }"
 `;
 
-exports[`compiler: transform text element with custom directives and only one text child node 1`] = `
+exports[`compiler: transform text > element with custom directives and only one text child node 1`] = `
 "const _Vue = Vue
 
 return function render(_ctx, _cache) {
@@ -80,7 +80,7 @@ return function render(_ctx, _cache) {
 }"
 `;
 
-exports[`compiler: transform text no consecutive text 1`] = `
+exports[`compiler: transform text > no consecutive text 1`] = `
 "const _Vue = Vue
 
 return function render(_ctx, _cache) {
@@ -92,7 +92,7 @@ return function render(_ctx, _cache) {
 }"
 `;
 
-exports[`compiler: transform text text between elements (static) 1`] = `
+exports[`compiler: transform text > text between elements (static) 1`] = `
 "const _Vue = Vue
 
 return function render(_ctx, _cache) {
@@ -108,7 +108,7 @@ return function render(_ctx, _cache) {
 }"
 `;
 
-exports[`compiler: transform text with prefixIdentifiers: true 1`] = `
+exports[`compiler: transform text > with prefixIdentifiers: true 1`] = `
 "const { toDisplayString: _toDisplayString } = Vue
 
 return function render(_ctx, _cache) {

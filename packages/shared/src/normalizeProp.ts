@@ -1,9 +1,9 @@
-import { isArray, isString, isObject, hyphenate } from './'
+import { hyphenate, isArray, isObject, isString } from './general'
 
 export type NormalizedStyle = Record<string, string | number>
 
 export function normalizeStyle(
-  value: unknown
+  value: unknown,
 ): NormalizedStyle | string | undefined {
   if (isArray(value)) {
     const res: NormalizedStyle = {}
@@ -19,16 +19,14 @@ export function normalizeStyle(
       }
     }
     return res
-  } else if (isString(value)) {
-    return value
-  } else if (isObject(value)) {
+  } else if (isString(value) || isObject(value)) {
     return value
   }
 }
 
 const listDelimiterRE = /;(?![^(]*\))/g
 const propertyDelimiterRE = /:([^]+)/
-const styleCommentRE = /\/\*.*?\*\//gs
+const styleCommentRE = /\/\*[^]*?\*\//g
 
 export function parseStringStyle(cssText: string): NormalizedStyle {
   const ret: NormalizedStyle = {}
@@ -45,7 +43,7 @@ export function parseStringStyle(cssText: string): NormalizedStyle {
 }
 
 export function stringifyStyle(
-  styles: NormalizedStyle | string | undefined
+  styles: NormalizedStyle | string | undefined,
 ): string {
   let ret = ''
   if (!styles || isString(styles)) {
@@ -53,8 +51,8 @@ export function stringifyStyle(
   }
   for (const key in styles) {
     const value = styles[key]
-    const normalizedKey = key.startsWith(`--`) ? key : hyphenate(key)
     if (isString(value) || typeof value === 'number') {
+      const normalizedKey = key.startsWith(`--`) ? key : hyphenate(key)
       // only render valid values
       ret += `${normalizedKey}:${value};`
     }
@@ -83,7 +81,9 @@ export function normalizeClass(value: unknown): string {
   return res.trim()
 }
 
-export function normalizeProps(props: Record<string, any> | null) {
+export function normalizeProps(
+  props: Record<string, any> | null,
+): Record<string, any> | null {
   if (!props) return null
   let { class: klass, style } = props
   if (klass && !isString(klass)) {

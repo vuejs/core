@@ -2,7 +2,7 @@
 // Reason: potentially setting innerHTML.
 // This can come from explicit usage of v-html or innerHTML as a prop in render
 
-import { warn, DeprecationTypes, compatUtils } from '@vue/runtime-core'
+import { DeprecationTypes, compatUtils, warn } from '@vue/runtime-core'
 import { includeBooleanAttr } from '@vue/shared'
 
 // functions. The user is responsible for using them with only trusted content.
@@ -10,44 +10,38 @@ export function patchDOMProp(
   el: any,
   key: string,
   value: any,
-  // the following args are passed only due to potential innerHTML/textContent
-  // overriding existing VNodes, in which case the old tree must be properly
-  // unmounted.
-  prevChildren: any,
   parentComponent: any,
-  parentSuspense: any,
-  unmountChildren: any
-) {
+): void {
   if (key === 'innerHTML' || key === 'textContent') {
-    if (prevChildren) {
-      unmountChildren(prevChildren, parentComponent, parentSuspense)
-    }
-    el[key] = value == null ? '' : value
+    // null value case is handled in renderer patchElement before patching
+    // children
+    if (value == null) return
+    el[key] = value
     return
   }
 
+  const tag = el.tagName
+
   if (
     key === 'value' &&
-    el.tagName !== 'PROGRESS' &&
+    tag !== 'PROGRESS' &&
     // custom elements may use _value internally
-    !el.tagName.includes('-')
+    !tag.includes('-')
   ) {
-    // store value as _value as well since
-    // non-string values will be stringified.
-    el._value = value
-    const newValue = value == null ? '' : value
-    if (
-      el.value !== newValue ||
-      // #4956: always set for OPTION elements because its value falls back to
-      // textContent if no value attribute is present. And setting .value for
-      // OPTION has no side effect
-      el.tagName === 'OPTION'
-    ) {
+    // #4956: <option> value will fallback to its text content so we need to
+    // compare against its attribute value instead.
+    const oldValue =
+      tag === 'OPTION' ? el.getAttribute('value') || '' : el.value
+    const newValue = value == null ? '' : String(value)
+    if (oldValue !== newValue || !('_value' in el)) {
       el.value = newValue
     }
     if (value == null) {
       el.removeAttribute(key)
     }
+    // store value as _value as well since
+    // non-string values will be stringified.
+    el._value = value
     return
   }
 
@@ -72,7 +66,7 @@ export function patchDOMProp(
       value === false &&
       compatUtils.isCompatEnabled(
         DeprecationTypes.ATTR_FALSE_VALUE,
-        parentComponent
+        parentComponent,
       )
     ) {
       const type = typeof el[key]
@@ -81,7 +75,7 @@ export function patchDOMProp(
           compatUtils.warnDeprecation(
             DeprecationTypes.ATTR_FALSE_VALUE,
             parentComponent,
-            key
+            key,
           )
         value = type === 'number' ? 0 : ''
         needRemove = true
@@ -98,9 +92,9 @@ export function patchDOMProp(
     // do not warn if value is auto-coerced from nullish values
     if (__DEV__ && !needRemove) {
       warn(
-        `Failed setting prop "${key}" on <${el.tagName.toLowerCase()}>: ` +
+        `Failed setting prop "${key}" on <${tag.toLowerCase()}>: ` +
           `value ${value} is invalid.`,
-        e
+        e,
       )
     }
   }
