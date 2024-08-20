@@ -137,9 +137,9 @@ export function watch(
   }
 
   let effect: ReactiveEffect
-  let boundCleanup: typeof onWatcherCleanup
   let getter: () => any
   let cleanup: (() => void) | undefined
+  let boundCleanup: typeof onWatcherCleanup
   let forceTrigger = false
   let isMultiSource = false
 
@@ -277,12 +277,12 @@ export function watch(
   }
 
   effect = new ReactiveEffect(getter)
+
+  effect.scheduler = scheduler
+    ? () => scheduler(job, false)
+    : (job as EffectScheduler)
+
   boundCleanup = fn => onWatcherCleanup(fn, false, effect)
-  if (scheduler) {
-    effect.scheduler = () => scheduler(job, false)
-  } else {
-    effect.scheduler = job as EffectScheduler
-  }
 
   cleanup = effect.onStop = () => {
     const cleanups = cleanupMap.get(effect)
