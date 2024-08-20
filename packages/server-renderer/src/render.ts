@@ -217,7 +217,11 @@ export function renderVNode(
   parentComponent: ComponentInternalInstance,
   slotScopeId?: string,
 ): void {
-  const { type, shapeFlag, children } = vnode
+  const { type, shapeFlag, children, dirs, props } = vnode
+  if (dirs) {
+    vnode.props = applySSRDirectives(vnode, props, dirs)
+  }
+
   switch (type) {
     case Text:
       push(escapeHtml(children as string))
@@ -283,12 +287,8 @@ function renderElementVNode(
   slotScopeId?: string,
 ) {
   const tag = vnode.type as string
-  let { props, children, shapeFlag, scopeId, dirs } = vnode
+  let { props, children, shapeFlag, scopeId } = vnode
   let openTag = `<${tag}`
-
-  if (dirs) {
-    props = applySSRDirectives(vnode, props, dirs)
-  }
 
   if (props) {
     openTag += ssrRenderAttrs(props, tag)
