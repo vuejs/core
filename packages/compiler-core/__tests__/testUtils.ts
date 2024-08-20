@@ -22,7 +22,18 @@ const bracketsRE = /^\[|\]$/g
 // e.g.
 // - createObjectMatcher({ 'foo': '[bar]' }) matches { foo: bar }
 // - createObjectMatcher({ '[foo]': 'bar' }) matches { [foo]: "bar" }
-export function createObjectMatcher(obj: Record<string, any>) {
+export function createObjectMatcher(obj: Record<string, any>): {
+  type: NodeTypes
+  properties: {
+    type: NodeTypes
+    key: {
+      type: NodeTypes
+      content: string
+      isStatic: boolean
+    }
+    value: any
+  }[]
+} {
   return {
     type: NodeTypes.JS_OBJECT_EXPRESSION,
     properties: Object.keys(obj).map(key => ({
@@ -78,7 +89,7 @@ type Flags = PatchFlags | ShapeFlags
 export function genFlagText(
   flag: Flags | Flags[],
   names: { [k: number]: string } = PatchFlagNames,
-) {
+): string {
   if (isArray(flag)) {
     let f = 0
     flag.forEach(ff => {
