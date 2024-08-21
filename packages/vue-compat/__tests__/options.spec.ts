@@ -1,10 +1,9 @@
-import { vi } from 'vitest'
 import Vue from '@vue/compat'
 import { nextTick } from '../../runtime-core/src/scheduler'
 import {
   DeprecationTypes,
   deprecationData,
-  toggleDeprecationWarning
+  toggleDeprecationWarning,
 } from '../../runtime-core/src/compat/compatConfig'
 
 beforeEach(() => {
@@ -12,7 +11,7 @@ beforeEach(() => {
   Vue.configureCompat({
     MODE: 2,
     GLOBAL_MOUNT: 'suppress-warning',
-    GLOBAL_EXTEND: 'suppress-warning'
+    GLOBAL_EXTEND: 'suppress-warning',
   })
 })
 
@@ -24,11 +23,11 @@ afterEach(() => {
 test('root data plain object', () => {
   const vm = new Vue({
     data: { foo: 1 } as any,
-    template: `{{ foo }}`
+    template: `{{ foo }}`,
   }).$mount()
   expect(vm.$el.textContent).toBe('1')
   expect(
-    deprecationData[DeprecationTypes.OPTIONS_DATA_FN].message
+    deprecationData[DeprecationTypes.OPTIONS_DATA_FN].message,
   ).toHaveBeenWarned()
 })
 
@@ -37,30 +36,30 @@ test('data deep merge', () => {
     data() {
       return {
         foo: {
-          baz: 2
-        }
+          baz: 2,
+        },
       }
-    }
+    },
   }
 
   const vm = new Vue({
     mixins: [mixin],
     data: () => ({
       foo: {
-        bar: 1
+        bar: 1,
       },
-      selfData: 3
+      selfData: 3,
     }),
-    template: `{{ { selfData, foo } }}`
+    template: `{{ { selfData, foo } }}`,
   }).$mount()
 
   expect(vm.$el.textContent).toBe(
-    JSON.stringify({ selfData: 3, foo: { baz: 2, bar: 1 } }, null, 2)
+    JSON.stringify({ selfData: 3, foo: { baz: 2, bar: 1 } }, null, 2),
   )
   expect(
     (deprecationData[DeprecationTypes.OPTIONS_DATA_MERGE].message as Function)(
-      'foo'
-    )
+      'foo',
+    ),
   ).toHaveBeenWarned()
 })
 
@@ -69,18 +68,18 @@ test('data deep merge w/ extended constructor', () => {
   const App = Vue.extend({
     template: `<pre>{{ { mixinData, selfData } }}</pre>`,
     mixins: [{ data: () => ({ mixinData: 'mixinData' }) }],
-    data: () => ({ selfData: 'selfData' })
+    data: () => ({ selfData: 'selfData' }),
   })
   const vm = new App().$mount()
   expect(vm.$el.textContent).toBe(
     JSON.stringify(
       {
         mixinData: 'mixinData',
-        selfData: 'selfData'
+        selfData: 'selfData',
       },
       null,
-      2
-    )
+      2,
+    ),
   )
 })
 
@@ -91,7 +90,7 @@ test('beforeDestroy/destroyed', async () => {
   const child = {
     template: `foo`,
     beforeDestroy,
-    destroyed
+    destroyed,
   }
 
   const vm = new Vue({
@@ -99,7 +98,7 @@ test('beforeDestroy/destroyed', async () => {
     data() {
       return { ok: true }
     },
-    components: { child }
+    components: { child },
   }).$mount() as any
 
   vm.ok = false
@@ -108,11 +107,11 @@ test('beforeDestroy/destroyed', async () => {
   expect(destroyed).toHaveBeenCalled()
 
   expect(
-    deprecationData[DeprecationTypes.OPTIONS_BEFORE_DESTROY].message
+    deprecationData[DeprecationTypes.OPTIONS_BEFORE_DESTROY].message,
   ).toHaveBeenWarned()
 
   expect(
-    deprecationData[DeprecationTypes.OPTIONS_DESTROYED].message
+    deprecationData[DeprecationTypes.OPTIONS_DESTROYED].message,
   ).toHaveBeenWarned()
 })
 
@@ -123,7 +122,7 @@ test('beforeDestroy/destroyed in Vue.extend components', async () => {
   const child = Vue.extend({
     template: `foo`,
     beforeDestroy,
-    destroyed
+    destroyed,
   })
 
   const vm = new Vue({
@@ -131,7 +130,7 @@ test('beforeDestroy/destroyed in Vue.extend components', async () => {
     data() {
       return { ok: true }
     },
-    components: { child }
+    components: { child },
   }).$mount() as any
 
   vm.ok = false
@@ -140,10 +139,10 @@ test('beforeDestroy/destroyed in Vue.extend components', async () => {
   expect(destroyed).toHaveBeenCalled()
 
   expect(
-    deprecationData[DeprecationTypes.OPTIONS_BEFORE_DESTROY].message
+    deprecationData[DeprecationTypes.OPTIONS_BEFORE_DESTROY].message,
   ).toHaveBeenWarned()
 
   expect(
-    deprecationData[DeprecationTypes.OPTIONS_DESTROYED].message
+    deprecationData[DeprecationTypes.OPTIONS_DESTROYED].message,
   ).toHaveBeenWarned()
 })

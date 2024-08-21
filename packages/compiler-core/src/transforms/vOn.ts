@@ -1,23 +1,20 @@
-import { DirectiveTransform, DirectiveTransformResult } from '../transform'
+import type { DirectiveTransform, DirectiveTransformResult } from '../transform'
 import {
+  type DirectiveNode,
+  ElementTypes,
+  type ExpressionNode,
+  NodeTypes,
+  type SimpleExpressionNode,
   createCompoundExpression,
   createObjectProperty,
   createSimpleExpression,
-  DirectiveNode,
-  ElementTypes,
-  ExpressionNode,
-  NodeTypes,
-  SimpleExpressionNode
 } from '../ast'
 import { camelize, toHandlerKey } from '@vue/shared'
-import { createCompilerError, ErrorCodes } from '../errors'
+import { ErrorCodes, createCompilerError } from '../errors'
 import { processExpression } from './transformExpression'
 import { validateBrowserExpression } from '../validateExpression'
-import { hasScopeRef, isMemberExpression } from '../utils'
+import { hasScopeRef, isFnExpression, isMemberExpression } from '../utils'
 import { TO_HANDLER_KEY } from '../runtimeHelpers'
-
-const fnExpRE =
-  /^\s*([\w$_]+|(async\s*)?\([^)]*?\))\s*(:[^=]+)?=>|^\s*(async\s+)?function(?:\s+[\w$]+)?\s*\(/
 
 export interface VOnDirectiveNode extends DirectiveNode {
   // v-on without arg is handled directly in ./transformElements.ts due to it affecting
@@ -33,7 +30,7 @@ export const transformOn: DirectiveTransform = (
   dir,
   node,
   context,
-  augmentor
+  augmentor,
 ) => {
   const { loc, modifiers, arg } = dir as VOnDirectiveNode
   if (!dir.exp && !modifiers.length) {
@@ -43,7 +40,9 @@ export const transformOn: DirectiveTransform = (
   if (arg.type === NodeTypes.SIMPLE_EXPRESSION) {
     if (arg.isStatic) {
       let rawName = arg.content
-      // TODO deprecate @vnodeXXX usage
+      if (__DEV__ && rawName.startsWith('vnode')) {
+        context.onError(createCompilerError(ErrorCodes.X_VNODE_HOOKS, arg.loc))
+      }
       if (rawName.startsWith('vue:')) {
         rawName = `vnode-${rawName.slice(4)}`
       }
@@ -63,7 +62,7 @@ export const transformOn: DirectiveTransform = (
       eventName = createCompoundExpression([
         `${context.helperString(TO_HANDLER_KEY)}(`,
         arg,
-        `)`
+        `)`,
       ])
     }
   } else {
@@ -82,8 +81,8 @@ export const transformOn: DirectiveTransform = (
   }
   let shouldCache: boolean = context.cacheHandlers && !exp && !context.inVOnce
   if (exp) {
-    const isMemberExp = isMemberExpression(exp.content, context)
-    const isInlineStatement = !(isMemberExp || fnExpRE.test(exp.content))
+    const isMemberExp = isMemberExpression(exp, context)
+    const isInlineStatement = !(isMemberExp || isFnExpression(exp, context))
     const hasMultipleStatements = exp.content.includes(`;`)
 
     // process the expression since it's been skipped
@@ -93,7 +92,7 @@ export const transformOn: DirectiveTransform = (
         exp,
         context,
         false,
-        hasMultipleStatements
+        hasMultipleStatements,
       )
       isInlineStatement && context.removeIdentifiers(`$event`)
       // with scope analysis, the function is hoistable if it has no reference
@@ -132,7 +131,7 @@ export const transformOn: DirectiveTransform = (
         exp as SimpleExpressionNode,
         context,
         false,
-        hasMultipleStatements
+        hasMultipleStatements,
       )
     }
 
@@ -149,7 +148,7 @@ export const transformOn: DirectiveTransform = (
               }(...args)`
         } => ${hasMultipleStatements ? `{` : `(`}`,
         exp,
-        hasMultipleStatements ? `}` : `)`
+        hasMultipleStatements ? `}` : `)`,
       ])
     }
   }
@@ -158,9 +157,9 @@ export const transformOn: DirectiveTransform = (
     props: [
       createObjectProperty(
         eventName,
-        exp || createSimpleExpression(`() => {}`, false, loc)
-      )
-    ]
+        exp || createSimpleExpression(`() => {}`, false, loc),
+      ),
+    ],
   }
 
   // apply extended compiler augmentor
