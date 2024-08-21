@@ -217,7 +217,7 @@ describe(`runtime-dom: events patching`, () => {
     await timeout()
     expect(onCapture).toHaveBeenCalledTimes(1)
   })
-  
+
   // #8334
   test('should support once passive capture in web-components', async () => {
     class TestCustomElement extends HTMLElement {
