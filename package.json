@@ -1,6 +1,6 @@
 {
   "private": true,
-  "version": "3.5.0-beta.2",
+  "version": "3.5.0-beta.3",
   "packageManager": "pnpm@9.7.1",
   "type": "module",
   "scripts": {
