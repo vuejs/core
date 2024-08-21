@@ -1771,6 +1771,11 @@ describe('api: watch', () => {
     expect(scope.effects.length).toBe(1)
     unwatch!()
     expect(scope.effects.length).toBe(0)
+
+    scope.run(() => {
+      watch(num, () => {}, { once: true, immediate: true })
+    })
+    expect(scope.effects.length).toBe(0)
   })
 
   // simplified case of VueUse syncRef
