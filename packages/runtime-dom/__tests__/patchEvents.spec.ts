@@ -193,7 +193,7 @@ describe(`runtime-dom: events patching`, () => {
     expect(fn2).toHaveBeenCalledTimes(1)
   })
 
-  // #8342
+  // #8334
   test('should support once passive capture', async () => {
     const el = document.createElement('div')
 
@@ -218,7 +218,6 @@ describe(`runtime-dom: events patching`, () => {
     expect(onCapture).toHaveBeenCalledTimes(1)
   })
 
-  // #8334
   test('should support once passive capture in web-components', async () => {
     class TestCustomElement extends HTMLElement {
       constructor() {
