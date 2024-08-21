@@ -11,7 +11,7 @@ import {
 } from '@vue/shared'
 import { isAsyncWrapper } from './apiAsyncComponent'
 import { warn } from './warning'
-import { isRef } from '@vue/reactivity'
+import { isRef, toRaw } from '@vue/reactivity'
 import { ErrorCodes, callWithErrorHandling } from './errorHandling'
 import type { SchedulerJob } from './scheduler'
 import { queuePostRenderEffect } from './renderer'
@@ -86,7 +86,7 @@ export function setRef(
         if (rawRef.f) {
           const existing = _isString
             ? hasOwn(setupState, ref)
-              ? setupState[ref]
+              ? toRaw(setupState[ref])
               : refs[ref]
             : ref.value
           if (isUnmount) {
