@@ -13,13 +13,17 @@ describe('normalizeClass', () => {
 
   test('handles string correctly', () => {
     expect(normalizeClass('foo')).toEqual('foo')
-    expect(normalizeClass('foo1 ')).toEqual('foo1')
   })
 
   test('handles array correctly', () => {
-    expect(normalizeClass(['foo ', undefined, true, false, 'bar'])).toEqual(
+    expect(normalizeClass(['foo', undefined, true, false, 'bar'])).toEqual(
       'foo bar',
     )
+  })
+
+  test('handles string containing spaces correctly', () => {
+    expect(normalizeClass('foo1 ')).toEqual('foo1')
+    expect(normalizeClass(['foo ', ' baz '])).toEqual('foo baz')
   })
 
   test('handles empty array correctly', () => {
@@ -104,6 +108,7 @@ describe('normalizeStyle', () => {
   test('handles string correctly', () => {
     expect(normalizeStyle('foo')).toEqual('foo')
   })
+
   test('handles array correctly', () => {
     const style: any = normalizeStyle([
       `border: 1px solid transparent;
@@ -116,7 +121,9 @@ describe('normalizeStyle', () => {
         white 0.75em
       );`,
     ])
+
     expect(style.border).toEqual('1px solid transparent')
+
     expect(style.background).toEqual(`linear-gradient(white, white) padding-box,
       repeating-linear-gradient(
         -45deg,
@@ -126,6 +133,7 @@ describe('normalizeStyle', () => {
         white 0.75em
       )`)
   })
+
   test('handles object correctly', () => {
     const styleObj = {
       border: '1px solid transparent',
@@ -145,27 +153,28 @@ describe('normalizeStyle', () => {
 })
 
 describe('stringifyStyle', () => {
-  it('should return empty string for undefined or string styles', () => {
+  test('should return empty string for undefined or string styles', () => {
     expect(stringifyStyle(undefined)).toBe('')
     expect(stringifyStyle('')).toBe('')
     expect(stringifyStyle('color: blue;')).toBe('')
   })
 
-  it('should return valid CSS string for normalized style object', () => {
+  test('should return valid CSS string for normalized style object', () => {
     const style = {
       color: 'blue',
       fontSize: '14px',
       backgroundColor: 'white',
       opacity: 0.8,
+      margin: 0,
       '--custom-color': 'red',
     }
 
     expect(stringifyStyle(style)).toBe(
-      'color:blue;font-size:14px;background-color:white;opacity:0.8;--custom-color:red;',
+      'color:blue;font-size:14px;background-color:white;opacity:0.8;margin:0;--custom-color:red;',
     )
   })
 
-  it('should ignore non-string or non-number values in style object', () => {
+  test('should ignore non-string or non-number values in style object', () => {
     const style: any = {
       color: 'blue',
       fontSize: '14px',
