@@ -87,10 +87,11 @@ function analyzeBindingsFromOptions(node: ObjectExpression): BindingMetadata {
           bodyItem.argument.type === 'ObjectExpression'
         ) {
           for (const key of getObjectExpressionKeys(bodyItem.argument)) {
-            bindings[key] =
-              property.key.name === 'setup'
+            bindings[key] = !bindings[key]
+              ? property.key.name === 'setup'
                 ? BindingTypes.SETUP_MAYBE_REF
                 : BindingTypes.DATA
+              : BindingTypes.SETUP_MAYBE_REF
           }
         }
       }
