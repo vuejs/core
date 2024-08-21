@@ -1,4 +1,5 @@
 import {
+  type NodeTransform,
   type TransformContext,
   createStructuralDirectiveTransform,
 } from '../transform'
@@ -46,9 +47,10 @@ import {
 } from '../runtimeHelpers'
 import { processExpression } from './transformExpression'
 import { validateBrowserExpression } from '../validateExpression'
-import { PatchFlagNames, PatchFlags } from '@vue/shared'
+import { PatchFlags } from '@vue/shared'
+import { transformBindShorthand } from './vBind'
 
-export const transformFor = createStructuralDirectiveTransform(
+export const transformFor: NodeTransform = createStructuralDirectiveTransform(
   'for',
   (node, dir, context) => {
     const { helper, removeHelper } = context
@@ -60,13 +62,20 @@ export const transformFor = createStructuralDirectiveTransform(
       ]) as ForRenderListExpression
       const isTemplate = isTemplateNode(node)
       const memo = findDir(node, 'memo')
-      const keyProp = findProp(node, `key`)
+      const keyProp = findProp(node, `key`, false, true)
+      if (keyProp && keyProp.type === NodeTypes.DIRECTIVE && !keyProp.exp) {
+        // resolve :key shorthand #10882
+        transformBindShorthand(keyProp, context)
+      }
       const keyExp =
         keyProp &&
         (keyProp.type === NodeTypes.ATTRIBUTE
-          ? createSimpleExpression(keyProp.value!.content, true)
-          : keyProp.exp!)
-      const keyProperty = keyProp ? createObjectProperty(`key`, keyExp!) : null
+          ? keyProp.value
+            ? createSimpleExpression(keyProp.value.content, true)
+            : undefined
+          : keyProp.exp)
+      const keyProperty =
+        keyProp && keyExp ? createObjectProperty(`key`, keyExp) : null
 
       if (!__BROWSER__ && isTemplate) {
         // #2085 / #5288 process :key and v-memo expressions need to be
@@ -101,8 +110,7 @@ export const transformFor = createStructuralDirectiveTransform(
         helper(FRAGMENT),
         undefined,
         renderExp,
-        fragmentFlag +
-          (__DEV__ ? ` /* ${PatchFlagNames[fragmentFlag]} */` : ``),
+        fragmentFlag,
         undefined,
         undefined,
         true /* isBlock */,
@@ -161,10 +169,7 @@ export const transformFor = createStructuralDirectiveTransform(
             helper(FRAGMENT),
             keyProperty ? createObjectExpression([keyProperty]) : undefined,
             node.children,
-            PatchFlags.STABLE_FRAGMENT +
-              (__DEV__
-                ? ` /* ${PatchFlagNames[PatchFlags.STABLE_FRAGMENT]} */`
-                : ``),
+            PatchFlags.STABLE_FRAGMENT,
             undefined,
             undefined,
             true,
@@ -224,8 +229,10 @@ export const transformFor = createStructuralDirectiveTransform(
           renderExp.arguments.push(
             loop as ForIteratorExpression,
             createSimpleExpression(`_cache`),
-            createSimpleExpression(String(context.cached++)),
+            createSimpleExpression(String(context.cached.length)),
           )
+          // increment cache count
+          context.cached.push(null)
         } else {
           renderExp.arguments.push(
             createFunctionExpression(
@@ -293,7 +300,7 @@ export function processFor(
 
   const onExit = processCodegen && processCodegen(forNode)
 
-  return () => {
+  return (): void => {
     scopes.vFor--
     if (!__BROWSER__ && context.prefixIdentifiers) {
       value && removeIdentifiers(value)
@@ -307,7 +314,7 @@ export function processFor(
 export function finalizeForParseResult(
   result: ForParseResult,
   context: TransformContext,
-) {
+): void {
   if (result.finalized) return
 
   if (!__BROWSER__ && context.prefixIdentifiers) {

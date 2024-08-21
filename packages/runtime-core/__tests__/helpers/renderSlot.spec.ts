@@ -26,13 +26,17 @@ describe('renderSlot', () => {
     const vnode = renderSlot(
       { default: () => [(child = h('child'))] },
       'default',
+      { key: 'foo' },
     )
     expect(vnode.children).toEqual([child])
+    expect(vnode.key).toBe('foo')
   })
 
   it('should render slot fallback', () => {
-    const vnode = renderSlot({}, 'default', {}, () => ['fallback'])
+    const vnode = renderSlot({}, 'default', { key: 'foo' }, () => ['fallback'])
     expect(vnode.children).toEqual(['fallback'])
+    // should attach fallback key postfix
+    expect(vnode.key).toBe('foo_fb')
   })
 
   it('should warn render ssr slot', () => {

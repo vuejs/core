@@ -123,6 +123,29 @@ describe('shallowReactive', () => {
       shallowSet.forEach(x => expect(isReactive(x)).toBe(false))
     })
 
+    test('Setting a reactive object on a shallowReactive map', () => {
+      const msg = ref('ads')
+      const bar = reactive({ msg })
+      const foo = shallowReactive(new Map([['foo1', bar]]))
+      foo.set('foo2', bar)
+
+      expect(isReactive(foo.get('foo2'))).toBe(true)
+      expect(isReactive(foo.get('foo1'))).toBe(true)
+    })
+
+    test('Setting a reactive object on a shallowReactive set', () => {
+      const msg = ref(1)
+      const bar = reactive({ msg })
+      const foo = reactive({ msg })
+
+      const deps = shallowReactive(new Set([bar]))
+      deps.add(foo)
+
+      deps.forEach(dep => {
+        expect(isReactive(dep)).toBe(true)
+      })
+    })
+
     // #1210
     test('onTrack on called on objectSpread', () => {
       const onTrackFn = vi.fn()
@@ -160,6 +183,7 @@ describe('shallowReactive', () => {
       shallowArray.pop()
       expect(size).toBe(0)
     })
+
     test('should not observe when iterating', () => {
       const shallowArray = shallowReactive<object[]>([])
       const a = {}

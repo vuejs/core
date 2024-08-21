@@ -2,7 +2,7 @@
 
 exports[`compiler: parse > Edge Cases > invalid html 1`] = `
 {
-  "cached": 0,
+  "cached": [],
   "children": [
     {
       "children": [
@@ -105,7 +105,7 @@ exports[`compiler: parse > Edge Cases > invalid html 1`] = `
 
 exports[`compiler: parse > Edge Cases > self closing multiple tag 1`] = `
 {
-  "cached": 0,
+  "cached": [],
   "children": [
     {
       "children": [],
@@ -299,7 +299,7 @@ exports[`compiler: parse > Edge Cases > self closing multiple tag 1`] = `
 
 exports[`compiler: parse > Edge Cases > valid html 1`] = `
 {
-  "cached": 0,
+  "cached": [],
   "children": [
     {
       "children": [
@@ -517,7 +517,7 @@ exports[`compiler: parse > Edge Cases > valid html 1`] = `
 
 exports[`compiler: parse > Errors > CDATA_IN_HTML_CONTENT > <template><![CDATA[cdata]]></template> 1`] = `
 {
-  "cached": 0,
+  "cached": [],
   "children": [
     {
       "children": [],
@@ -569,7 +569,7 @@ exports[`compiler: parse > Errors > CDATA_IN_HTML_CONTENT > <template><![CDATA[c
 
 exports[`compiler: parse > Errors > CDATA_IN_HTML_CONTENT > <template><svg><![CDATA[cdata]]></svg></template> 1`] = `
 {
-  "cached": 0,
+  "cached": [],
   "children": [
     {
       "children": [
@@ -662,7 +662,7 @@ exports[`compiler: parse > Errors > CDATA_IN_HTML_CONTENT > <template><svg><![CD
 
 exports[`compiler: parse > Errors > DUPLICATE_ATTRIBUTE > <template><div id="" id=""></div></template> 1`] = `
 {
-  "cached": 0,
+  "cached": [],
   "children": [
     {
       "children": [
@@ -832,7 +832,7 @@ exports[`compiler: parse > Errors > DUPLICATE_ATTRIBUTE > <template><div id="" i
 
 exports[`compiler: parse > Errors > EOF_BEFORE_TAG_NAME > <template>< 1`] = `
 {
-  "cached": 0,
+  "cached": [],
   "children": [
     {
       "children": [
@@ -902,7 +902,7 @@ exports[`compiler: parse > Errors > EOF_BEFORE_TAG_NAME > <template>< 1`] = `
 
 exports[`compiler: parse > Errors > EOF_BEFORE_TAG_NAME > <template></ 1`] = `
 {
-  "cached": 0,
+  "cached": [],
   "children": [
     {
       "children": [
@@ -972,7 +972,7 @@ exports[`compiler: parse > Errors > EOF_BEFORE_TAG_NAME > <template></ 1`] = `
 
 exports[`compiler: parse > Errors > EOF_IN_CDATA > <template><svg><![CDATA[ 1`] = `
 {
-  "cached": 0,
+  "cached": [],
   "children": [
     {
       "children": [
@@ -1047,7 +1047,7 @@ exports[`compiler: parse > Errors > EOF_IN_CDATA > <template><svg><![CDATA[ 1`] 
 
 exports[`compiler: parse > Errors > EOF_IN_CDATA > <template><svg><![CDATA[cdata 1`] = `
 {
-  "cached": 0,
+  "cached": [],
   "children": [
     {
       "children": [
@@ -1140,7 +1140,7 @@ exports[`compiler: parse > Errors > EOF_IN_CDATA > <template><svg><![CDATA[cdata
 
 exports[`compiler: parse > Errors > EOF_IN_COMMENT > <template><!-- 1`] = `
 {
-  "cached": 0,
+  "cached": [],
   "children": [
     {
       "children": [],
@@ -1192,7 +1192,7 @@ exports[`compiler: parse > Errors > EOF_IN_COMMENT > <template><!-- 1`] = `
 
 exports[`compiler: parse > Errors > EOF_IN_COMMENT > <template><!--comment 1`] = `
 {
-  "cached": 0,
+  "cached": [],
   "children": [
     {
       "children": [
@@ -1262,7 +1262,7 @@ exports[`compiler: parse > Errors > EOF_IN_COMMENT > <template><!--comment 1`] =
 
 exports[`compiler: parse > Errors > EOF_IN_TAG > <div></div 1`] = `
 {
-  "cached": 0,
+  "cached": [],
   "children": [
     {
       "children": [],
@@ -1314,7 +1314,7 @@ exports[`compiler: parse > Errors > EOF_IN_TAG > <div></div 1`] = `
 
 exports[`compiler: parse > Errors > EOF_IN_TAG > <template><div  1`] = `
 {
-  "cached": 0,
+  "cached": [],
   "children": [
     {
       "children": [],
@@ -1366,7 +1366,7 @@ exports[`compiler: parse > Errors > EOF_IN_TAG > <template><div  1`] = `
 
 exports[`compiler: parse > Errors > EOF_IN_TAG > <template><div 1`] = `
 {
-  "cached": 0,
+  "cached": [],
   "children": [
     {
       "children": [],
@@ -1418,7 +1418,7 @@ exports[`compiler: parse > Errors > EOF_IN_TAG > <template><div 1`] = `
 
 exports[`compiler: parse > Errors > EOF_IN_TAG > <template><div id  1`] = `
 {
-  "cached": 0,
+  "cached": [],
   "children": [
     {
       "children": [],
@@ -1470,7 +1470,7 @@ exports[`compiler: parse > Errors > EOF_IN_TAG > <template><div id  1`] = `
 
 exports[`compiler: parse > Errors > EOF_IN_TAG > <template><div id = 1`] = `
 {
-  "cached": 0,
+  "cached": [],
   "children": [
     {
       "children": [],
@@ -1522,7 +1522,7 @@ exports[`compiler: parse > Errors > EOF_IN_TAG > <template><div id = 1`] = `
 
 exports[`compiler: parse > Errors > EOF_IN_TAG > <template><div id 1`] = `
 {
-  "cached": 0,
+  "cached": [],
   "children": [
     {
       "children": [],
@@ -1574,7 +1574,7 @@ exports[`compiler: parse > Errors > EOF_IN_TAG > <template><div id 1`] = `
 
 exports[`compiler: parse > Errors > EOF_IN_TAG > <template><div id="abc 1`] = `
 {
-  "cached": 0,
+  "cached": [],
   "children": [
     {
       "children": [],
@@ -1626,7 +1626,7 @@ exports[`compiler: parse > Errors > EOF_IN_TAG > <template><div id="abc 1`] = `
 
 exports[`compiler: parse > Errors > EOF_IN_TAG > <template><div id="abc" 1`] = `
 {
-  "cached": 0,
+  "cached": [],
   "children": [
     {
       "children": [],
@@ -1678,7 +1678,7 @@ exports[`compiler: parse > Errors > EOF_IN_TAG > <template><div id="abc" 1`] = `
 
 exports[`compiler: parse > Errors > EOF_IN_TAG > <template><div id="abc"/ 1`] = `
 {
-  "cached": 0,
+  "cached": [],
   "children": [
     {
       "children": [
@@ -1748,7 +1748,7 @@ exports[`compiler: parse > Errors > EOF_IN_TAG > <template><div id="abc"/ 1`] = 
 
 exports[`compiler: parse > Errors > EOF_IN_TAG > <template><div id='abc 1`] = `
 {
-  "cached": 0,
+  "cached": [],
   "children": [
     {
       "children": [],
@@ -1800,7 +1800,7 @@ exports[`compiler: parse > Errors > EOF_IN_TAG > <template><div id='abc 1`] = `
 
 exports[`compiler: parse > Errors > EOF_IN_TAG > <template><div id='abc' 1`] = `
 {
-  "cached": 0,
+  "cached": [],
   "children": [
     {
       "children": [],
@@ -1852,7 +1852,7 @@ exports[`compiler: parse > Errors > EOF_IN_TAG > <template><div id='abc' 1`] = `
 
 exports[`compiler: parse > Errors > EOF_IN_TAG > <template><div id='abc'/ 1`] = `
 {
-  "cached": 0,
+  "cached": [],
   "children": [
     {
       "children": [
@@ -1922,7 +1922,7 @@ exports[`compiler: parse > Errors > EOF_IN_TAG > <template><div id='abc'/ 1`] = 
 
 exports[`compiler: parse > Errors > EOF_IN_TAG > <template><div id=abc / 1`] = `
 {
-  "cached": 0,
+  "cached": [],
   "children": [
     {
       "children": [
@@ -1992,7 +1992,7 @@ exports[`compiler: parse > Errors > EOF_IN_TAG > <template><div id=abc / 1`] = `
 
 exports[`compiler: parse > Errors > EOF_IN_TAG > <template><div id=abc 1`] = `
 {
-  "cached": 0,
+  "cached": [],
   "children": [
     {
       "children": [],
@@ -2044,7 +2044,7 @@ exports[`compiler: parse > Errors > EOF_IN_TAG > <template><div id=abc 1`] = `
 
 exports[`compiler: parse > Errors > MISSING_ATTRIBUTE_VALUE > <template><div id= /></div></template> 1`] = `
 {
-  "cached": 0,
+  "cached": [],
   "children": [
     {
       "children": [
@@ -2167,7 +2167,7 @@ exports[`compiler: parse > Errors > MISSING_ATTRIBUTE_VALUE > <template><div id=
 
 exports[`compiler: parse > Errors > MISSING_ATTRIBUTE_VALUE > <template><div id= ></div></template> 1`] = `
 {
-  "cached": 0,
+  "cached": [],
   "children": [
     {
       "children": [
@@ -2290,7 +2290,7 @@ exports[`compiler: parse > Errors > MISSING_ATTRIBUTE_VALUE > <template><div id=
 
 exports[`compiler: parse > Errors > MISSING_ATTRIBUTE_VALUE > <template><div id=></div></template> 1`] = `
 {
-  "cached": 0,
+  "cached": [],
   "children": [
     {
       "children": [
@@ -2413,7 +2413,7 @@ exports[`compiler: parse > Errors > MISSING_ATTRIBUTE_VALUE > <template><div id=
 
 exports[`compiler: parse > Errors > MISSING_END_TAG_NAME > <template></></template> 1`] = `
 {
-  "cached": 0,
+  "cached": [],
   "children": [
     {
       "children": [],
@@ -2465,7 +2465,7 @@ exports[`compiler: parse > Errors > MISSING_END_TAG_NAME > <template></></templa
 
 exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_ATTRIBUTE_NAME > <template><div a"bc=''></div></template> 1`] = `
 {
-  "cached": 0,
+  "cached": [],
   "children": [
     {
       "children": [
@@ -2588,7 +2588,7 @@ exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_ATTRIBUTE_NAME > <te
 
 exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_ATTRIBUTE_NAME > <template><div a'bc=''></div></template> 1`] = `
 {
-  "cached": 0,
+  "cached": [],
   "children": [
     {
       "children": [
@@ -2711,7 +2711,7 @@ exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_ATTRIBUTE_NAME > <te
 
 exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_ATTRIBUTE_NAME > <template><div a<bc=''></div></template> 1`] = `
 {
-  "cached": 0,
+  "cached": [],
   "children": [
     {
       "children": [
@@ -2834,7 +2834,7 @@ exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_ATTRIBUTE_NAME > <te
 
 exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_UNQUOTED_ATTRIBUTE_VALUE > <template><div foo=bar"></div></template> 1`] = `
 {
-  "cached": 0,
+  "cached": [],
   "children": [
     {
       "children": [
@@ -2957,7 +2957,7 @@ exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_UNQUOTED_ATTRIBUTE_V
 
 exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_UNQUOTED_ATTRIBUTE_VALUE > <template><div foo=bar'></div></template> 1`] = `
 {
-  "cached": 0,
+  "cached": [],
   "children": [
     {
       "children": [
@@ -3080,7 +3080,7 @@ exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_UNQUOTED_ATTRIBUTE_V
 
 exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_UNQUOTED_ATTRIBUTE_VALUE > <template><div foo=bar<div></div></template> 1`] = `
 {
-  "cached": 0,
+  "cached": [],
   "children": [
     {
       "children": [
@@ -3203,7 +3203,7 @@ exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_UNQUOTED_ATTRIBUTE_V
 
 exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_UNQUOTED_ATTRIBUTE_VALUE > <template><div foo=bar=baz></div></template> 1`] = `
 {
-  "cached": 0,
+  "cached": [],
   "children": [
     {
       "children": [
@@ -3326,7 +3326,7 @@ exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_UNQUOTED_ATTRIBUTE_V
 
 exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_UNQUOTED_ATTRIBUTE_VALUE > <template><div foo=bar\`></div></template> 1`] = `
 {
-  "cached": 0,
+  "cached": [],
   "children": [
     {
       "children": [
@@ -3449,7 +3449,7 @@ exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_UNQUOTED_ATTRIBUTE_V
 
 exports[`compiler: parse > Errors > UNEXPECTED_EQUALS_SIGN_BEFORE_ATTRIBUTE_NAME > <template><div =></div></template> 1`] = `
 {
-  "cached": 0,
+  "cached": [],
   "children": [
     {
       "children": [
@@ -3556,7 +3556,7 @@ exports[`compiler: parse > Errors > UNEXPECTED_EQUALS_SIGN_BEFORE_ATTRIBUTE_NAME
 
 exports[`compiler: parse > Errors > UNEXPECTED_EQUALS_SIGN_BEFORE_ATTRIBUTE_NAME > <template><div =foo=bar></div></template> 1`] = `
 {
-  "cached": 0,
+  "cached": [],
   "children": [
     {
       "children": [
@@ -3679,7 +3679,7 @@ exports[`compiler: parse > Errors > UNEXPECTED_EQUALS_SIGN_BEFORE_ATTRIBUTE_NAME
 
 exports[`compiler: parse > Errors > UNEXPECTED_QUESTION_MARK_INSTEAD_OF_TAG_NAME > <template><?xml?></template> 1`] = `
 {
-  "cached": 0,
+  "cached": [],
   "children": [
     {
       "children": [],
@@ -3731,7 +3731,7 @@ exports[`compiler: parse > Errors > UNEXPECTED_QUESTION_MARK_INSTEAD_OF_TAG_NAME
 
 exports[`compiler: parse > Errors > UNEXPECTED_SOLIDUS_IN_TAG > <template><div a/b></div></template> 1`] = `
 {
-  "cached": 0,
+  "cached": [],
   "children": [
     {
       "children": [
@@ -3869,7 +3869,7 @@ exports[`compiler: parse > Errors > UNEXPECTED_SOLIDUS_IN_TAG > <template><div a
 
 exports[`compiler: parse > Errors > X_INVALID_END_TAG > <svg><![CDATA[</div>]]></svg> 1`] = `
 {
-  "cached": 0,
+  "cached": [],
   "children": [
     {
       "children": [
@@ -3939,7 +3939,7 @@ exports[`compiler: parse > Errors > X_INVALID_END_TAG > <svg><![CDATA[</div>]]><
 
 exports[`compiler: parse > Errors > X_INVALID_END_TAG > <svg><!--</div>--></svg> 1`] = `
 {
-  "cached": 0,
+  "cached": [],
   "children": [
     {
       "children": [
@@ -4009,7 +4009,7 @@ exports[`compiler: parse > Errors > X_INVALID_END_TAG > <svg><!--</div>--></svg>
 
 exports[`compiler: parse > Errors > X_INVALID_END_TAG > <template></div></div></template> 1`] = `
 {
-  "cached": 0,
+  "cached": [],
   "children": [
     {
       "children": [],
@@ -4061,7 +4061,7 @@ exports[`compiler: parse > Errors > X_INVALID_END_TAG > <template></div></div></
 
 exports[`compiler: parse > Errors > X_INVALID_END_TAG > <template></div></template> 1`] = `
 {
-  "cached": 0,
+  "cached": [],
   "children": [
     {
       "children": [],
@@ -4113,7 +4113,7 @@ exports[`compiler: parse > Errors > X_INVALID_END_TAG > <template></div></templa
 
 exports[`compiler: parse > Errors > X_INVALID_END_TAG > <template>{{'</div>'}}</template> 1`] = `
 {
-  "cached": 0,
+  "cached": [],
   "children": [
     {
       "children": [
@@ -4201,7 +4201,7 @@ exports[`compiler: parse > Errors > X_INVALID_END_TAG > <template>{{'</div>'}}</
 
 exports[`compiler: parse > Errors > X_INVALID_END_TAG > <template>a </ b</template> 1`] = `
 {
-  "cached": 0,
+  "cached": [],
   "children": [
     {
       "children": [
@@ -4271,7 +4271,7 @@ exports[`compiler: parse > Errors > X_INVALID_END_TAG > <template>a </ b</templa
 
 exports[`compiler: parse > Errors > X_INVALID_END_TAG > <textarea></div></textarea> 1`] = `
 {
-  "cached": 0,
+  "cached": [],
   "children": [
     {
       "children": [
@@ -4341,7 +4341,7 @@ exports[`compiler: parse > Errors > X_INVALID_END_TAG > <textarea></div></textar
 
 exports[`compiler: parse > Errors > X_MISSING_DYNAMIC_DIRECTIVE_ARGUMENT_END > <div v-foo:[sef fsef] /> 1`] = `
 {
-  "cached": 0,
+  "cached": [],
   "children": [
     {
       "children": [],
@@ -4465,7 +4465,7 @@ exports[`compiler: parse > Errors > X_MISSING_DYNAMIC_DIRECTIVE_ARGUMENT_END > <
 
 exports[`compiler: parse > Errors > X_MISSING_END_TAG > <template><div> 1`] = `
 {
-  "cached": 0,
+  "cached": [],
   "children": [
     {
       "children": [
@@ -4540,7 +4540,7 @@ exports[`compiler: parse > Errors > X_MISSING_END_TAG > <template><div> 1`] = `
 
 exports[`compiler: parse > Errors > X_MISSING_END_TAG > <template><div></template> 1`] = `
 {
-  "cached": 0,
+  "cached": [],
   "children": [
     {
       "children": [
@@ -4615,7 +4615,7 @@ exports[`compiler: parse > Errors > X_MISSING_END_TAG > <template><div></templat
 
 exports[`compiler: parse > Errors > X_MISSING_INTERPOLATION_END > <div>{{ foo</div> 1`] = `
 {
-  "cached": 0,
+  "cached": [],
   "children": [
     {
       "children": [
@@ -4685,7 +4685,7 @@ exports[`compiler: parse > Errors > X_MISSING_INTERPOLATION_END > <div>{{ foo</d
 
 exports[`compiler: parse > Errors > X_MISSING_INTERPOLATION_END > {{ 1`] = `
 {
-  "cached": 0,
+  "cached": [],
   "children": [
     {
       "content": "{{",
@@ -4732,7 +4732,7 @@ exports[`compiler: parse > Errors > X_MISSING_INTERPOLATION_END > {{ 1`] = `
 
 exports[`compiler: parse > Errors > X_MISSING_INTERPOLATION_END > {{ foo 1`] = `
 {
-  "cached": 0,
+  "cached": [],
   "children": [
     {
       "content": "{{ foo",
@@ -4779,7 +4779,7 @@ exports[`compiler: parse > Errors > X_MISSING_INTERPOLATION_END > {{ foo 1`] = `
 
 exports[`compiler: parse > Errors > X_MISSING_INTERPOLATION_END > {{}} 1`] = `
 {
-  "cached": 0,
+  "cached": [],
   "children": [
     {
       "content": {
