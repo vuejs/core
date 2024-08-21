@@ -1066,6 +1066,28 @@ describe('SFC analyze <script> bindings', () => {
     expect(bindings!.__isScriptSetup).toBe(false)
   })
 
+  it('recognizes setup return + data return', () => {
+    const { bindings } = compile(`
+      <script>
+        export default {
+          setup() {
+            return {
+              foo: 1,
+            }
+          },
+          data(){
+            return {
+              foo: 1
+            }
+          }
+        }
+      </script>
+    `)
+    expect(bindings).toStrictEqual({
+      foo: BindingTypes.SETUP_MAYBE_REF,
+    })
+  })
+
   it('recognizes exported vars', () => {
     const { bindings } = compile(`
       <script>
