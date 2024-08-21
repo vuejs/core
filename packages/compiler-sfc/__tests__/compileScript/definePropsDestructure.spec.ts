@@ -6,7 +6,6 @@ describe('sfc reactive props destructure', () => {
   function compile(src: string, options?: Partial<SFCScriptCompileOptions>) {
     return compileSFCScript(src, {
       inlineTemplate: true,
-      propsDestructure: true,
       ...options,
     })
   }
@@ -261,6 +260,27 @@ describe('sfc reactive props destructure', () => {
       foo: BindingTypes.PROPS,
       bar: BindingTypes.PROPS,
       baz: BindingTypes.PROPS,
+      rest: BindingTypes.SETUP_REACTIVE_CONST,
+    })
+  })
+
+  test('rest spread non-inline', () => {
+    const { content, bindings } = compile(
+      `
+      <script setup>
+      const { foo, ...rest } = defineProps(['foo', 'bar'])
+      </script>
+      <template>{{ rest.bar }}</template>
+    `,
+      { inlineTemplate: false },
+    )
+    expect(content).toMatch(
+      `const rest = _createPropsRestProxy(__props, ["foo"])`,
+    )
+    assertCode(content)
+    expect(bindings).toStrictEqual({
+      foo: BindingTypes.PROPS,
+      bar: BindingTypes.PROPS,
       rest: BindingTypes.SETUP_REACTIVE_CONST,
     })
   })

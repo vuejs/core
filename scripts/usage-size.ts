@@ -2,9 +2,23 @@ import { mkdir, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { rollup } from 'rollup'
 import nodeResolve from '@rollup/plugin-node-resolve'
-import { minify } from 'terser'
+import { minify } from '@swc/core'
 import replace from '@rollup/plugin-replace'
 import { brotliCompressSync, gzipSync } from 'node:zlib'
+import { parseArgs } from 'node:util'
+import pico from 'picocolors'
+import prettyBytes from 'pretty-bytes'
+
+const {
+  values: { write },
+} = parseArgs({
+  options: {
+    write: {
+      type: 'boolean',
+      default: false,
+    },
+  },
+})
 
 const sizeDir = path.resolve('temp/size')
 const entry = path.resolve('./packages/vue/dist/vue.runtime.esm-bundler.js')
@@ -34,6 +48,7 @@ const presets: Preset[] = [
 main()
 
 async function main() {
+  console.log()
   const tasks: ReturnType<typeof generateBundle>[] = []
   for (const preset of presets) {
     tasks.push(generateBundle(preset))
@@ -46,7 +61,7 @@ async function main() {
   await mkdir(sizeDir, { recursive: true })
   await writeFile(
     path.resolve(sizeDir, '_usages.json'),
-    JSON.stringify(results),
+    JSON.stringify(results, null, 2),
     'utf-8',
   )
 }
@@ -90,6 +105,17 @@ async function generateBundle(preset: Preset) {
   const size = minified.length
   const gzip = gzipSync(minified).length
   const brotli = brotliCompressSync(minified).length
+
+  if (write) {
+    await writeFile(path.resolve(sizeDir, preset.name + '.js'), bundled)
+  }
+
+  console.log(
+    `${pico.green(pico.bold(preset.name))} - ` +
+      `min:${prettyBytes(size, { minimumFractionDigits: 3 })} / ` +
+      `gzip:${prettyBytes(gzip, { minimumFractionDigits: 3 })} / ` +
+      `brotli:${prettyBytes(brotli, { minimumFractionDigits: 3 })}`,
+  )
 
   return {
     name: preset.name,

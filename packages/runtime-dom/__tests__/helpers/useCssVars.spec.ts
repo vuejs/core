@@ -4,6 +4,7 @@ import {
   Suspense,
   Teleport,
   createStaticVNode,
+  defineCustomElement,
   h,
   nextTick,
   reactive,
@@ -115,6 +116,63 @@ describe('useCssVars', () => {
     await nextTick()
     for (const c of [].slice.call(root.children as any)) {
       expect((c as HTMLElement).style.getPropertyValue(`--color`)).toBe('green')
+    }
+  })
+
+  test('with v-if & async component & suspense', async () => {
+    const state = reactive({ color: 'red' })
+    const root = document.createElement('div')
+    const show = ref(false)
+    let resolveAsync: any
+    let asyncPromise: any
+
+    const AsyncComp = {
+      setup() {
+        useCssVars(() => state)
+        asyncPromise = new Promise(r => {
+          resolveAsync = () => {
+            r(() => h('p', 'default'))
+          }
+        })
+        return asyncPromise
+      },
+    }
+
+    const App = {
+      setup() {
+        return () =>
+          h(Suspense, null, {
+            default: h('div', {}, show.value ? h(AsyncComp) : h('p')),
+          })
+      },
+    }
+
+    render(h(App), root)
+    await nextTick()
+    // AsyncComp resolve
+    show.value = true
+    await nextTick()
+    resolveAsync()
+    await asyncPromise.then(() => {})
+    // Suspense effects flush
+    await nextTick()
+    // css vars use with default tree
+    for (const c of [].slice.call(root.children as any)) {
+      expect(
+        ((c as any).children[0] as HTMLElement).style.getPropertyValue(
+          `--color`,
+        ),
+      ).toBe(`red`)
+    }
+
+    state.color = 'green'
+    await nextTick()
+    for (const c of [].slice.call(root.children as any)) {
+      expect(
+        ((c as any).children[0] as HTMLElement).style.getPropertyValue(
+          `--color`,
+        ),
+      ).toBe('green')
     }
   })
 
@@ -323,5 +381,27 @@ describe('useCssVars', () => {
     for (const c of [].slice.call(root.children as any)) {
       expect((c as HTMLElement).style.getPropertyValue(`--color`)).toBe('red')
     }
+  })
+
+  // #8826
+  test('with custom element', async () => {
+    const state = reactive({ color: 'red' })
+    const container = document.createElement('div')
+    const App = defineCustomElement({
+      styles: [`div { color: red; }`],
+      setup() {
+        useCssVars(() => state)
+        return () => {
+          return h('div', 'hello')
+        }
+      },
+    })
+    customElements.define('css-vars-ce', App)
+    container.innerHTML = `<css-vars-ce></css-vars-ce>`
+    document.body.appendChild(container)
+    await nextTick()
+    expect(container.innerHTML).toBe(
+      `<css-vars-ce style="--color: red;"></css-vars-ce>`,
+    )
   })
 })

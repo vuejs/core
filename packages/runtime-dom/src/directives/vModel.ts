@@ -37,16 +37,19 @@ function onCompositionEnd(e: Event) {
   }
 }
 
-const assignKey = Symbol('_assign')
+const assignKey: unique symbol = Symbol('_assign')
 
-type ModelDirective<T> = ObjectDirective<
-  T & { [assignKey]: AssignerFn; _assigning?: boolean }
+type ModelDirective<T, Modifiers extends string = string> = ObjectDirective<
+  T & { [assignKey]: AssignerFn; _assigning?: boolean },
+  any,
+  Modifiers
 >
 
 // We are exporting the v-model runtime directly as vnode hooks so that it can
 // be tree-shaken in case v-model is never used.
 export const vModelText: ModelDirective<
-  HTMLInputElement | HTMLTextAreaElement
+  HTMLInputElement | HTMLTextAreaElement,
+  'trim' | 'number' | 'lazy'
 > = {
   created(el, { modifiers: { lazy, trim, number } }, vnode) {
     el[assignKey] = getModelAssigner(vnode)
@@ -82,13 +85,18 @@ export const vModelText: ModelDirective<
   mounted(el, { value }) {
     el.value = value == null ? '' : value
   },
-  beforeUpdate(el, { value, modifiers: { lazy, trim, number } }, vnode) {
+  beforeUpdate(
+    el,
+    { value, oldValue, modifiers: { lazy, trim, number } },
+    vnode,
+  ) {
     el[assignKey] = getModelAssigner(vnode)
     // avoid clearing unresolved text. #2302
     if ((el as any).composing) return
-
     const elValue =
-      number || el.type === 'number' ? looseToNumber(el.value) : el.value
+      (number || el.type === 'number') && !/^0\d/.test(el.value)
+        ? looseToNumber(el.value)
+        : el.value
     const newValue = value == null ? '' : value
 
     if (elValue === newValue) {
@@ -96,7 +104,8 @@ export const vModelText: ModelDirective<
     }
 
     if (document.activeElement === el && el.type !== 'range') {
-      if (lazy) {
+      // #8546
+      if (lazy && value === oldValue) {
         return
       }
       if (trim && el.value.trim() === newValue) {
@@ -182,7 +191,7 @@ export const vModelRadio: ModelDirective<HTMLInputElement> = {
   },
 }
 
-export const vModelSelect: ModelDirective<HTMLSelectElement> = {
+export const vModelSelect: ModelDirective<HTMLSelectElement, 'number'> = {
   // <select multiple> value need to be deep traversed
   deep: true,
   created(el, { value, modifiers: { number } }, vnode) {
@@ -325,7 +334,7 @@ function callModelHook(
 
 // SSR vnode transforms, only used when user includes client-oriented render
 // function in SSR
-export function initVModelForSSR() {
+export function initVModelForSSR(): void {
   vModelText.getSSRProps = ({ value }) => ({ value })
 
   vModelRadio.getSSRProps = ({ value }, vnode) => {
@@ -362,3 +371,10 @@ export function initVModelForSSR() {
     }
   }
 }
+
+export type VModelDirective =
+  | typeof vModelText
+  | typeof vModelCheckbox
+  | typeof vModelSelect
+  | typeof vModelRadio
+  | typeof vModelDynamic
