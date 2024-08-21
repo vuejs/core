@@ -24,7 +24,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Install pnpm
-        uses: pnpm/action-setup@v3.0.0
+        uses: pnpm/action-setup@v4.0.0
 
       - name: Install Node.js
         uses: actions/setup-node@v4
@@ -35,37 +35,36 @@ jobs:
       - name: Install dependencies
         run: pnpm install
 
-      - name: Download PR number
-        uses: dawidd6/action-download-artifact@v3
-        with:
-          name: pr-number
-          run_id: ${{ github.event.workflow_run.id }}
-          path: /tmp/pr-number
-
-      - name: Read PR Number
-        id: pr-number
-        uses: juliangruber/read-file-action@v1
-        with:
-          path: /tmp/pr-number/pr.txt
-
       - name: Download Size Data
-        uses: dawidd6/action-download-artifact@v3
+        uses: dawidd6/action-download-artifact@v6
         with:
           name: size-data
           run_id: ${{ github.event.workflow_run.id }}
           path: temp/size
 
-      - name: Download Previous Size Data
-        uses: dawidd6/action-download-artifact@v3
+      - name: Read PR Number
+        id: pr-number
+        uses: juliangruber/read-file-action@v1
         with:
-          branch: main
+          path: temp/size/number.txt
+
+      - name: Read base branch
+        id: pr-base
+        uses: juliangruber/read-file-action@v1
+        with:
+          path: temp/size/base.txt
+
+      - name: Download Previous Size Data
+        uses: dawidd6/action-download-artifact@v6
+        with:
+          branch: ${{ steps.pr-base.outputs.content }}
           workflow: size-data.yml
           event: push
           name: size-data
           path: temp/size-prev
           if_no_artifact_found: warn
 
-      - name: Compare size
+      - name: Prepare report
         run: pnpm tsx scripts/size-report.ts > size-report.md
 
       - name: Read Size Report

@@ -8,6 +8,8 @@ import {
   createApp,
   createBlock,
   createCommentVNode,
+  createElementBlock,
+  createElementVNode,
   createTextVNode,
   createVNode,
   defineComponent,
@@ -23,6 +25,7 @@ import {
   renderList,
   renderSlot,
   serialize,
+  setBlockTracking,
   withCtx,
 } from '@vue/runtime-test'
 import { PatchFlags, SlotFlags } from '@vue/shared'
@@ -434,7 +437,7 @@ describe('renderer: optimized mode', () => {
     const App = {
       setup() {
         return () => {
-          return createVNode(Comp, null, {
+          return createBlock(Comp, null, {
             default: withCtx(() => [
               createVNode('p', null, foo.value, PatchFlags.TEXT),
             ]),
@@ -487,6 +490,32 @@ describe('renderer: optimized mode', () => {
     expect(spy).toHaveBeenCalledTimes(1)
   })
 
+  test('should call onUnmounted hook for dynamic components receiving an existing vnode w/ component children', async () => {
+    const spy = vi.fn()
+    const show = ref(1)
+    const Child = {
+      setup() {
+        onUnmounted(spy)
+        return () => 'child'
+      },
+    }
+    const foo = h('div', null, h(Child))
+    const app = createApp({
+      render() {
+        return show.value
+          ? (openBlock(),
+            createBlock('div', null, [(openBlock(), createBlock(foo))]))
+          : createCommentVNode('v-if', true)
+      },
+    })
+
+    app.mount(root)
+    show.value = 0
+    await nextTick()
+
+    expect(spy).toHaveBeenCalledTimes(1)
+  })
+
   // #2444
   // `KEYED_FRAGMENT` and `UNKEYED_FRAGMENT` always need to diff its children
   test('non-stable Fragment always need to diff its children', () => {
@@ -534,6 +563,7 @@ describe('renderer: optimized mode', () => {
     const state = ref(0)
 
     const CompA = {
+      name: 'A',
       setup(props: any, { slots }: SetupContext) {
         return () => {
           return (
@@ -545,6 +575,7 @@ describe('renderer: optimized mode', () => {
     }
 
     const Wrapper = {
+      name: 'Wrapper',
       setup(props: any, { slots }: SetupContext) {
         // use the manually written render function to rendering the optimized slots,
         // which should make subsequent updates exit the optimized mode correctly
@@ -555,6 +586,7 @@ describe('renderer: optimized mode', () => {
     }
 
     const app = createApp({
+      name: 'App',
       setup() {
         return () => {
           return (
@@ -586,7 +618,7 @@ describe('renderer: optimized mode', () => {
   })
 
   //#3623
-  test('nested teleport unmount need exit the optimization mode', () => {
+  test('nested teleport unmount need exit the optimization mode', async () => {
     const target = nodeOps.createElement('div')
     const root = nodeOps.createElement('div')
 
@@ -615,6 +647,7 @@ describe('renderer: optimized mode', () => {
       ])),
       root,
     )
+    await nextTick()
     expect(inner(target)).toMatchInlineSnapshot(
       `"<div><!--teleport start--><!--teleport end--></div><div>foo</div>"`,
     )
@@ -932,5 +965,272 @@ describe('renderer: optimized mode', () => {
     await nextTick()
     // should successfully unmount without error
     expect(inner(root)).toBe(`<!---->`)
+  })
+
+  // #10870
+  test('should bail manually rendered compiler slots for both mount and update', async () => {
+    // only reproducible in prod
+    __DEV__ = false
+    function Outer(_: any, { slots }: any) {
+      return slots.default()
+    }
+    const Mid = {
+      render(ctx: any) {
+        return (
+          openBlock(),
+          createElementBlock('div', null, [renderSlot(ctx.$slots, 'default')])
+        )
+      },
+    }
+    const state1 = ref(true)
+    const state2 = ref(true)
+    const App = {
+      render() {
+        return (
+          openBlock(),
+          createBlock(Outer, null, {
+            default: withCtx(() => [
+              createVNode(
+                Mid,
+                { foo: state2.value },
+                {
+                  default: withCtx(() => [
+                    createElementVNode('div', null, [
+                      createElementVNode('div', null, [
+                        state2.value
+                          ? (openBlock(),
+                            createElementBlock(
+                              'div',
+                              {
+                                key: 0,
+                                id: 'if',
+                                foo: state1.value,
+                              },
+                              null,
+                              8 /* PROPS */,
+                              ['foo'],
+                            ))
+                          : createCommentVNode('v-if', true),
+                      ]),
+                    ]),
+                  ]),
+                  _: 1 /* STABLE */,
+                },
+                8 /* PROPS */,
+                ['foo'],
+              ),
+            ]),
+            _: 1 /* STABLE */,
+          })
+        )
+      },
+    }
+
+    const app = createApp(App)
+    app.config.errorHandler = vi.fn()
+
+    try {
+      app.mount(root)
+
+      state1.value = false
+      await nextTick()
+
+      state2.value = false
+      await nextTick()
+    } finally {
+      __DEV__ = true
+      expect(app.config.errorHandler).not.toHaveBeenCalled()
+    }
+  })
+
+  // #11336
+  test('should bail manually rendered compiler slots for both mount and update (2)', async () => {
+    // only reproducible in prod
+    __DEV__ = false
+    const n = ref(0)
+    function Outer(_: any, { slots }: any) {
+      n.value // track
+      return slots.default()
+    }
+    const Mid = {
+      render(ctx: any) {
+        return (
+          openBlock(),
+          createElementBlock('div', null, [renderSlot(ctx.$slots, 'default')])
+        )
+      },
+    }
+    const show = ref(false)
+    const App = {
+      render() {
+        return (
+          openBlock(),
+          createBlock(Outer, null, {
+            default: withCtx(() => [
+              createVNode(Mid, null, {
+                default: withCtx(() => [
+                  createElementVNode('div', null, [
+                    show.value
+                      ? (openBlock(),
+                        createElementBlock('div', { key: 0 }, '1'))
+                      : createCommentVNode('v-if', true),
+                    createElementVNode('div', null, '2'),
+                    createElementVNode('div', null, '3'),
+                  ]),
+                  createElementVNode('div', null, '4'),
+                ]),
+                _: 1 /* STABLE */,
+              }),
+            ]),
+            _: 1 /* STABLE */,
+          })
+        )
+      },
+    }
+
+    const app = createApp(App)
+    app.config.errorHandler = vi.fn()
+
+    try {
+      app.mount(root)
+
+      // force Outer update, which will assign new slots to Mid
+      // we want to make sure the compiled slot flag doesn't accidentally
+      // get assigned again
+      n.value++
+      await nextTick()
+
+      show.value = true
+      await nextTick()
+    } finally {
+      __DEV__ = true
+      expect(app.config.errorHandler).not.toHaveBeenCalled()
+    }
+  })
+
+  test('diff slot and slot fallback node', async () => {
+    const Comp = {
+      props: ['show'],
+      setup(props: any, { slots }: SetupContext) {
+        return () => {
+          return (
+            openBlock(),
+            createElementBlock('div', null, [
+              renderSlot(slots, 'default', { hide: !props.show }, () => [
+                (openBlock(),
+                (block = createElementBlock(
+                  Fragment,
+                  { key: 0 },
+                  [createTextVNode('foo')],
+                  PatchFlags.STABLE_FRAGMENT,
+                ))),
+              ]),
+            ])
+          )
+        }
+      },
+    }
+
+    const show = ref(true)
+    const app = createApp({
+      render() {
+        return (
+          openBlock(),
+          createBlock(
+            Comp,
+            { show: show.value },
+            {
+              default: withCtx(({ hide }: { hide: boolean }) => [
+                !hide
+                  ? (openBlock(),
+                    createElementBlock(
+                      Fragment,
+                      { key: 0 },
+                      [
+                        createCommentVNode('comment'),
+                        createElementVNode(
+                          'div',
+                          null,
+                          'bar',
+                          PatchFlags.CACHED,
+                        ),
+                      ],
+                      PatchFlags.STABLE_FRAGMENT,
+                    ))
+                  : createCommentVNode('v-if', true),
+              ]),
+              _: SlotFlags.STABLE,
+            },
+            PatchFlags.PROPS,
+            ['show'],
+          )
+        )
+      },
+    })
+
+    app.mount(root)
+    expect(inner(root)).toBe('<div><!--comment--><div>bar</div></div>')
+    expect(block).toBe(null)
+
+    show.value = false
+    await nextTick()
+    expect(inner(root)).toBe('<div>foo</div>')
+
+    show.value = true
+    await nextTick()
+    expect(inner(root)).toBe('<div><!--comment--><div>bar</div></div>')
+  })
+
+  test('should not take unmount children fast path if children contain cached nodes', async () => {
+    const show = ref(true)
+    const spyUnmounted = vi.fn()
+
+    const Child = {
+      setup() {
+        onUnmounted(spyUnmounted)
+        return () => createVNode('div', null, 'Child')
+      },
+    }
+
+    const app = createApp({
+      render(_: any, cache: any) {
+        return show.value
+          ? (openBlock(),
+            createBlock('div', null, [
+              createVNode('div', null, [
+                cache[0] ||
+                  (setBlockTracking(-1),
+                  ((cache[0] = createVNode('div', null, [
+                    createVNode(Child),
+                  ])).cacheIndex = 0),
+                  setBlockTracking(1),
+                  cache[0]),
+              ]),
+            ]))
+          : createCommentVNode('v-if', true)
+      },
+    })
+
+    app.mount(root)
+    expect(inner(root)).toBe(
+      '<div><div><div><div>Child</div></div></div></div>',
+    )
+
+    show.value = false
+    await nextTick()
+    expect(inner(root)).toBe('<!--v-if-->')
+    expect(spyUnmounted).toHaveBeenCalledTimes(1)
+
+    show.value = true
+    await nextTick()
+    expect(inner(root)).toBe(
+      '<div><div><div><div>Child</div></div></div></div>',
+    )
+
+    // should unmount again, this verifies previous cache was properly cleared
+    show.value = false
+    await nextTick()
+    expect(inner(root)).toBe('<!--v-if-->')
+    expect(spyUnmounted).toHaveBeenCalledTimes(2)
   })
 })

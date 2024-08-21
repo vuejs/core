@@ -17,11 +17,12 @@ export class ScriptCompileContext {
   scriptAst: Program | null
   scriptSetupAst: Program | null
 
-  source = this.descriptor.source
-  filename = this.descriptor.filename
-  s = new MagicString(this.source)
-  startOffset = this.descriptor.scriptSetup?.loc.start.offset
-  endOffset = this.descriptor.scriptSetup?.loc.end.offset
+  source: string = this.descriptor.source
+  filename: string = this.descriptor.filename
+  s: MagicString = new MagicString(this.source)
+  startOffset: number | undefined =
+    this.descriptor.scriptSetup?.loc.start.offset
+  endOffset: number | undefined = this.descriptor.scriptSetup?.loc.end.offset
 
   // import / type analysis
   scope?: TypeScope
@@ -162,7 +163,7 @@ export function resolveParserPlugins(
   lang: string,
   userPlugins?: ParserPlugin[],
   dts = false,
-) {
+): ParserPlugin[] {
   const plugins: ParserPlugin[] = []
   if (
     !userPlugins ||
@@ -175,14 +176,14 @@ export function resolveParserPlugins(
   ) {
     plugins.push('importAttributes')
   }
-  if (lang === 'jsx' || lang === 'tsx') {
+  if (lang === 'jsx' || lang === 'tsx' || lang === 'mtsx') {
     plugins.push('jsx')
   } else if (userPlugins) {
     // If don't match the case of adding jsx
     // should remove the jsx from user options
     userPlugins = userPlugins.filter(p => p !== 'jsx')
   }
-  if (lang === 'ts' || lang === 'tsx') {
+  if (lang === 'ts' || lang === 'mts' || lang === 'tsx' || lang === 'mtsx') {
     plugins.push(['typescript', { dts }], 'explicitResourceManagement')
     if (!userPlugins || !userPlugins.includes('decorators')) {
       plugins.push('decorators-legacy')
