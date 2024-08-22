@@ -44,4 +44,5 @@ test('pass key to custom element', async () => {
   )
 
   expect(messages.includes('child unmount')).toBe(false)
+  expect(await text('my-element >>> div')).toBe('1')
 })
