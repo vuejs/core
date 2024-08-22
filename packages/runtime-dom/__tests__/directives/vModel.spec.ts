@@ -262,6 +262,7 @@ describe('vModel', () => {
           lazy: null,
           trimNumber: null,
           trimLazy: null,
+          date: null,
         }
       },
       render() {
@@ -328,6 +329,19 @@ describe('vModel', () => {
               lazy: true,
             },
           ),
+          withVModel(
+            h('input', {
+              class: 'date',
+              type: 'date',
+              'onUpdate:modelValue': (val: any) => {
+                this.date = val
+              },
+            }),
+            this.date,
+            {
+              date: true,
+            },
+          ),
         ]
       },
     })
@@ -338,6 +352,8 @@ describe('vModel', () => {
     const trimNumber = root.querySelector('.trim-number')
     const trimLazy = root.querySelector('.trim-lazy')
     const lazy = root.querySelector('.lazy')
+    const date = root.querySelector('.date')
+
     const data = root._vnode.component.data
 
     number.value = '+01.2'
@@ -369,6 +385,13 @@ describe('vModel', () => {
     triggerEvent('change', lazy)
     await nextTick()
     expect(data.lazy).toEqual('foo')
+
+    date.value = '2023-02-24'
+    triggerEvent('input', date)
+    await nextTick()
+    expect((data.date as Date).valueOf()).toEqual(
+      new Date('2023-02-24').valueOf(),
+    )
   })
 
   it('should work with range', async () => {
