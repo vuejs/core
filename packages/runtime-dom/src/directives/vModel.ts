@@ -45,9 +45,9 @@ const pad = (num: number, cover: number) => {
 const toFormattedDateString = (value: Date) => {
   if (!isDate(value)) return value
 
-  const year = pad(value.getFullYear(), 4)
-  const month = pad(value.getMonth() + 1, 2)
-  const date = pad(value.getDate(), 2)
+  const year = pad(value.getUTCFullYear(), 4)
+  const month = pad(value.getUTCMonth() + 1, 2)
+  const date = pad(value.getUTCDate(), 2)
 
   return `${year}-${month}-${date}`
 }
