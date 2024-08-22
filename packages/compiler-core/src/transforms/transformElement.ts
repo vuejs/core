@@ -456,8 +456,8 @@ export function buildProps(
         value.type === NodeTypes.JS_CACHE_EXPRESSION ||
         ((value.type === NodeTypes.SIMPLE_EXPRESSION ||
           value.type === NodeTypes.COMPOUND_EXPRESSION) &&
-          name !== 'ref' &&
-          getConstantType(value, context) > 0)
+          getConstantType(value, context) > 0 &&
+          name !== 'ref')
       ) {
         // skip if:
         // 1. the prop is a cached handler
