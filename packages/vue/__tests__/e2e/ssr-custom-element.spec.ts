@@ -104,10 +104,7 @@ test('pass key to custom element', async () => {
         return () => h('div', props.str)
       },
     })
-
-    if (!customElements.get('my-element')) {
-      customElements.define('my-element', MyElement)
-    }
+    customElements.define('my-element', MyElement)
 
     createSSRApp({
       setup() {
