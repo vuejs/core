@@ -1,5 +1,5 @@
 import path from 'node:path'
-import { setupPuppeteer } from './e2eUtils'
+import { setupPuppeteer } from '../e2eUtils'
 
 const { page, click, text } = setupPuppeteer()
 
@@ -32,4 +32,16 @@ test('ssr custom element hydration', async () => {
 
   await assertInteraction('my-element')
   await assertInteraction('my-element-async')
+})
+
+// #11641
+test('pass key to custom element', async () => {
+  const messages: string[] = []
+  page().on('console', e => messages.push(e.text()))
+
+  await page().goto(
+    `file://${path.resolve(__dirname, './ssr-custom-element-with-key.html')}`,
+  )
+
+  expect(messages.includes('child unmount')).toBe(false)
 })

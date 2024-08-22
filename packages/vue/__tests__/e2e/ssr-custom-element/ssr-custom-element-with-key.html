@@ -1,0 +1,38 @@
+<script src='../../../dist/vue.global.js'></script>
+
+<div id="app"><!--[--><my-element str="1"><template shadowrootmode="open"><div>1</div></template></my-element><!--]--></div>
+
+<script>
+  const {
+    h,
+    ref,
+    defineSSRCustomElement,
+    onBeforeUnmount,
+    createSSRApp,
+    renderList
+  } = Vue
+
+  const MyElement = defineSSRCustomElement({
+    props: {
+      str: String,
+    },
+    setup(props) {
+      onBeforeUnmount(() => {
+        console.log('child unmount');
+      });
+      return () => h('div', props.str);
+    },
+  });
+
+  if(!customElements.get('my-element')){
+    customElements.define('my-element', MyElement);
+  }
+
+  createSSRApp({
+    setup() {
+      const arr = ref(['1'])
+      // pass key to custom element
+      return () => renderList(arr.value, i => h('my-element', { key: i, str: i }, null))
+    },
+  }).mount('#app')
+</script>
