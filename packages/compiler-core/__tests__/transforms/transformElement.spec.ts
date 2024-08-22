@@ -1030,19 +1030,21 @@ describe('compiler: element transform', () => {
 
     test('NEED_PATCH (vFor + static ref)', () => {
       const { node } = parseWithBind(
-        `<div v-for="item in 3" :key="3" ref="foo" />`,
+        `<div v-for="item in arr" :key="item" ref="foo" />`,
       )
       expect(node.patchFlag).toBe(PatchFlags.NEED_PATCH)
     })
 
     test('NEED_PATCH (vFor + custom directives)', () => {
-      const { node } = parseWithBind(`<div v-for="item in 3" :key="3" v-dir />`)
+      const { node } = parseWithBind(
+        `<div v-for="item in arr" :key="item" v-dir />`,
+      )
       expect(node.patchFlag).toBe(PatchFlags.NEED_PATCH)
     })
 
     test('NEED_PATCH (vFor + vnode hooks)', () => {
       const root = baseCompile(
-        `<div v-for="item in 3" :key="3" @vue:updated="foo" />`,
+        `<div v-for="item in arr" :key="item" @vue:updated="foo" />`,
         {
           prefixIdentifiers: true,
           cacheHandlers: true,
@@ -1054,7 +1056,7 @@ describe('compiler: element transform', () => {
 
     test('NEED_PATCH (vFor + setRef function)', () => {
       const root = baseCompile(
-        `<div v-for="item in 3" :key="3" :ref="setRefFn" />`,
+        `<div v-for="item in arr" :key="item" :ref="setRefFn" />`,
         {
           prefixIdentifiers: true,
           bindingMetadata: {
