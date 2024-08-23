@@ -212,8 +212,6 @@ export function track(target: object, type: TrackOpTypes, key: unknown): void {
       targetMap.set(target, (depsMap = new Map()))
     }
 
-    // if (depsMap.get(ITERATE_KEY) && key !== ITERATE_KEY) return
-
     let dep = depsMap.get(key)
     if (!dep) {
       depsMap.set(key, (dep = new Dep()))
@@ -254,20 +252,14 @@ export function trigger(
   }
 
   const run = (dep: Dep | undefined) => {
-    if (!dep) return
-
-    if (__DEV__) {
-      dep.trigger({
-        target,
-        type,
-        key,
-        newValue,
-        oldValue,
-        oldTarget,
-      })
-    } else {
-      dep.trigger()
-    }
+    dep && dep.trigger(__DEV__ && {
+      target,
+      type,
+      key,
+      newValue,
+      oldValue,
+      oldTarget,
+    })
   }
 
   startBatch()
