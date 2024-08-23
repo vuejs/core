@@ -3,17 +3,20 @@ import { setupPuppeteer } from './e2eUtils'
 
 const { page, click, text } = setupPuppeteer()
 
-async function initPage(html: string) {
+beforeEach(async () => {
   await page().addScriptTag({
     path: path.resolve(__dirname, '../../dist/vue.global.js'),
   })
+})
+
+async function setContent(html: string) {
   await page().setContent(`<div id="app">${html}</div>`)
 }
 
 // this must be tested in actual Chrome because jsdom does not support
 // declarative shadow DOM
 test('ssr custom element hydration', async () => {
-  await initPage(
+  await setContent(
     `<my-element><template shadowrootmode="open"><button>1</button></template></my-element><my-element-async><template shadowrootmode="open"><button>1</button></template></my-element-async>`,
   )
 
@@ -80,7 +83,7 @@ test('pass key to custom element', async () => {
   const messages: string[] = []
   page().on('console', e => messages.push(e.text()))
 
-  await initPage(
+  await setContent(
     `<!--[--><my-element str="1"><template shadowrootmode="open"><div>1</div></template></my-element><!--]-->`,
   )
   await page().evaluate(() => {
