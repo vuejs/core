@@ -1,6 +1,6 @@
 import { extend, isArray, isIntegerKey, isMap, isSymbol } from '@vue/shared'
 import type { ComputedRefImpl } from './computed'
-import { type TrackOpTypes, TriggerOpTypes } from './constants'
+import { ReactiveFlags, type TrackOpTypes, TriggerOpTypes } from './constants'
 import {
   type DebuggerEventExtraInfo,
   EffectFlags,
@@ -40,6 +40,9 @@ export class Dep {
   subsHead?: Link
 
   constructor(public computed?: ComputedRefImpl | undefined) {
+    // @ts-expect-error
+    this[ReactiveFlags.SKIP] = true
+
     if (__DEV__) {
       this.subsHead = undefined
     }
