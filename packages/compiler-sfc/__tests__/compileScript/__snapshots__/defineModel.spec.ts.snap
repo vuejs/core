@@ -1,0 +1,268 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`defineModel() > basic usage 1`] = `
+"import { useModel as _useModel } from 'vue'
+
+export default {
+  props: {
+    "modelValue": { required: true },
+    "modelModifiers": {},
+    "count": {},
+    "countModifiers": {},
+    "toString": { type: Function },
+    "toStringModifiers": {},
+  },
+  emits: ["update:modelValue", "update:count", "update:toString"],
+  setup(__props, { expose: __expose }) {
+  __expose();
+
+      const modelValue = _useModel(__props, "modelValue")
+      const c = _useModel(__props, 'count')
+      const toString = _useModel(__props, 'toString')
+      
+return { modelValue, c, toString }
+}
+
+}"
+`;
+
+exports[`defineModel() > get / set transformers 1`] = `
+"import { useModel as _useModel, defineComponent as _defineComponent } from 'vue'
+
+export default /*#__PURE__*/_defineComponent({
+  props: {
+    "modelValue": {
+        required: true
+      },
+    "modelModifiers": {},
+  },
+  emits: ["update:modelValue"],
+  setup(__props, { expose: __expose }) {
+  __expose();
+
+      const modelValue = _useModel(__props, "modelValue", {
+        get(v) { return v - 1 },
+        set: (v) => { return v + 1 },
+        })
+      
+return { modelValue }
+}
+
+})"
+`;
+
+exports[`defineModel() > get / set transformers 2`] = `
+"import { useModel as _useModel, defineComponent as _defineComponent } from 'vue'
+
+export default /*#__PURE__*/_defineComponent({
+  props: {
+    "modelValue": {
+        default: 0,
+        required: true,
+        },
+    "modelModifiers": {},
+  },
+  emits: ["update:modelValue"],
+  setup(__props, { expose: __expose }) {
+  __expose();
+
+      const modelValue = _useModel(__props, "modelValue", {
+        get(v) { return v - 1 },
+        set: (v) => { return v + 1 },
+      })
+      
+return { modelValue }
+}
+
+})"
+`;
+
+exports[`defineModel() > usage w/ props destructure 1`] = `
+"import { useModel as _useModel, mergeModels as _mergeModels, defineComponent as _defineComponent } from 'vue'
+
+export default /*#__PURE__*/_defineComponent({
+  props: /*#__PURE__*/_mergeModels({
+    x: { type: Number, required: true }
+  }, {
+    "modelValue": {
+        },
+    "modelModifiers": {},
+  }),
+  emits: ["update:modelValue"],
+  setup(__props: any, { expose: __expose }) {
+  __expose();
+
+      
+      const modelValue = _useModel(__props, "modelValue", {
+        set: (v) => { return v + __props.x }
+      })
+      
+return { modelValue }
+}
+
+})"
+`;
+
+exports[`defineModel() > w/ Boolean And Function types, production mode 1`] = `
+"import { useModel as _useModel, defineComponent as _defineComponent } from 'vue'
+
+export default /*#__PURE__*/_defineComponent({
+  props: {
+    "modelValue": { type: [Boolean, String] },
+    "modelModifiers": {},
+  },
+  emits: ["update:modelValue"],
+  setup(__props, { expose: __expose }) {
+  __expose();
+
+      const modelValue = _useModel<boolean | string>(__props, "modelValue")
+      
+return { modelValue }
+}
+
+})"
+`;
+
+exports[`defineModel() > w/ array props 1`] = `
+"import { useModel as _useModel, mergeModels as _mergeModels } from 'vue'
+
+export default {
+  props: /*#__PURE__*/_mergeModels(['foo', 'bar'], {
+    "count": {},
+    "countModifiers": {},
+  }),
+  emits: ["update:count"],
+  setup(__props, { expose: __expose }) {
+  __expose();
+
+      
+      const count = _useModel(__props, 'count')
+      
+return { count }
+}
+
+}"
+`;
+
+exports[`defineModel() > w/ defineProps and defineEmits 1`] = `
+"import { useModel as _useModel, mergeModels as _mergeModels } from 'vue'
+
+export default {
+  props: /*#__PURE__*/_mergeModels({ foo: String }, {
+    "modelValue": { default: 0 },
+    "modelModifiers": {},
+  }),
+  emits: /*#__PURE__*/_mergeModels(['change'], ["update:modelValue"]),
+  setup(__props, { expose: __expose }) {
+  __expose();
+
+      
+      
+      const count = _useModel(__props, "modelValue")
+      
+return { count }
+}
+
+}"
+`;
+
+exports[`defineModel() > w/ types, basic usage 1`] = `
+"import { useModel as _useModel, defineComponent as _defineComponent } from 'vue'
+
+export default /*#__PURE__*/_defineComponent({
+  props: {
+    "modelValue": { type: [Boolean, String] },
+    "modelModifiers": {},
+    "count": { type: Number },
+    "countModifiers": {},
+    "disabled": { type: Number, ...{ required: false } },
+    "disabledModifiers": {},
+    "any": { type: Boolean, skipCheck: true },
+    "anyModifiers": {},
+  },
+  emits: ["update:modelValue", "update:count", "update:disabled", "update:any"],
+  setup(__props, { expose: __expose }) {
+  __expose();
+
+      const modelValue = _useModel<boolean | string>(__props, "modelValue")
+      const count = _useModel<number>(__props, 'count')
+      const disabled = _useModel<number>(__props, 'disabled')
+      const any = _useModel<any | boolean>(__props, 'any')
+      
+return { modelValue, count, disabled, any }
+}
+
+})"
+`;
+
+exports[`defineModel() > w/ types, production mode 1`] = `
+"import { useModel as _useModel, defineComponent as _defineComponent } from 'vue'
+
+export default /*#__PURE__*/_defineComponent({
+  props: {
+    "modelValue": { type: Boolean },
+    "modelModifiers": {},
+    "fn": {},
+    "fnModifiers": {},
+    "fnWithDefault": { type: Function, ...{ default: () => null } },
+    "fnWithDefaultModifiers": {},
+    "str": {},
+    "strModifiers": {},
+    "optional": { required: false },
+    "optionalModifiers": {},
+  },
+  emits: ["update:modelValue", "update:fn", "update:fnWithDefault", "update:str", "update:optional"],
+  setup(__props, { expose: __expose }) {
+  __expose();
+
+      const modelValue = _useModel<boolean>(__props, "modelValue")
+      const fn = _useModel<() => void>(__props, 'fn')
+      const fnWithDefault = _useModel<() => void>(__props, 'fnWithDefault')
+      const str = _useModel<string>(__props, 'str')
+      const optional = _useModel<string>(__props, 'optional')
+      
+return { modelValue, fn, fnWithDefault, str, optional }
+}
+
+})"
+`;
+
+exports[`defineModel() > w/ types, production mode, boolean + multiple types 1`] = `
+"import { useModel as _useModel, defineComponent as _defineComponent } from 'vue'
+
+export default /*#__PURE__*/_defineComponent({
+  props: {
+    "modelValue": { type: [Boolean, String, Object] },
+    "modelModifiers": {},
+  },
+  emits: ["update:modelValue"],
+  setup(__props, { expose: __expose }) {
+  __expose();
+
+      const modelValue = _useModel<boolean | string | {}>(__props, "modelValue")
+      
+return { modelValue }
+}
+
+})"
+`;
+
+exports[`defineModel() > w/ types, production mode, function + runtime opts + multiple types 1`] = `
+"import { useModel as _useModel, defineComponent as _defineComponent } from 'vue'
+
+export default /*#__PURE__*/_defineComponent({
+  props: {
+    "modelValue": { type: [Number, Function], ...{ default: () => 1 } },
+    "modelModifiers": {},
+  },
+  emits: ["update:modelValue"],
+  setup(__props, { expose: __expose }) {
+  __expose();
+
+      const modelValue = _useModel<number | (() => number)>(__props, "modelValue")
+      
+return { modelValue }
+}
+
+})"
+`;

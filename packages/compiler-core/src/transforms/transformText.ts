@@ -1,16 +1,17 @@
-import { NodeTransform } from '../transform'
+import type { NodeTransform } from '../transform'
 import {
-  NodeTypes,
-  CompoundExpressionNode,
-  createCallExpression,
-  CallExpression,
+  type CallExpression,
+  type CompoundExpressionNode,
+  ConstantTypes,
   ElementTypes,
-  ConstantTypes
+  NodeTypes,
+  createCallExpression,
+  createCompoundExpression,
 } from '../ast'
 import { isText } from '../utils'
 import { CREATE_TEXT } from '../runtimeHelpers'
-import { PatchFlags, PatchFlagNames } from '@vue/shared'
-import { getConstantType } from './hoistStatic'
+import { PatchFlagNames, PatchFlags } from '@vue/shared'
+import { getConstantType } from './cacheStatic'
 
 // Merge adjacent text nodes and expressions into a single expression
 // e.g. <div>abc {{ d }} {{ e }}</div> should have a single expression node as child.
@@ -36,11 +37,10 @@ export const transformText: NodeTransform = (node, context) => {
             const next = children[j]
             if (isText(next)) {
               if (!currentContainer) {
-                currentContainer = children[i] = {
-                  type: NodeTypes.COMPOUND_EXPRESSION,
-                  loc: child.loc,
-                  children: [child]
-                }
+                currentContainer = children[i] = createCompoundExpression(
+                  [child],
+                  child.loc,
+                )
               }
               // merge adjacent text node into current
               currentContainer.children.push(` + `, next)
@@ -72,7 +72,7 @@ export const transformText: NodeTransform = (node, context) => {
               !node.props.find(
                 p =>
                   p.type === NodeTypes.DIRECTIVE &&
-                  !context.directiveTransforms[p.name]
+                  !context.directiveTransforms[p.name],
               ) &&
               // in compat mode, <template> tags with no special directives
               // will be rendered as a fragment so its children must be
@@ -100,7 +100,7 @@ export const transformText: NodeTransform = (node, context) => {
           ) {
             callArgs.push(
               PatchFlags.TEXT +
-                (__DEV__ ? ` /* ${PatchFlagNames[PatchFlags.TEXT]} */` : ``)
+                (__DEV__ ? ` /* ${PatchFlagNames[PatchFlags.TEXT]} */` : ``),
             )
           }
           children[i] = {
@@ -109,8 +109,8 @@ export const transformText: NodeTransform = (node, context) => {
             loc: child.loc,
             codegenNode: createCallExpression(
               context.helper(CREATE_TEXT),
-              callArgs
-            )
+              callArgs,
+            ),
           }
         }
       }
