@@ -324,7 +324,7 @@ describe('reactivity/reactive', () => {
     expect(spy1).toBeCalledTimes(2)
     expect(isReactive(obj)).toBe(true)
   })
-  
+
   test('hasOwnProperty edge case: Symbol values', () => {
     const key = Symbol()
     const obj = reactive({ [key]: 1 }) as { [key]?: 1 }
