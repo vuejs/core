@@ -244,7 +244,7 @@ export function trigger(
   oldTarget?: Map<unknown, unknown> | Set<unknown>,
 ): void {
   const depsMap = targetMap.get(target)
-  if (!depsMap) {
+  if (!depsMap?.size) {
     // never been tracked
     globalVersion++
     return
