@@ -61,6 +61,8 @@ class BaseReactiveHandler implements ProxyHandler<Target> {
       return isReadonly
     } else if (key === ReactiveFlags.IS_SHALLOW) {
       return isShallow
+    } else if (key === ReactiveFlags.SKIP) {
+      return target[ReactiveFlags.SKIP]
     } else if (key === ReactiveFlags.RAW) {
       if (
         receiver ===
@@ -107,7 +109,7 @@ class BaseReactiveHandler implements ProxyHandler<Target> {
       return res
     }
 
-    if (!isReadonly && key !== '__v_skip') {
+    if (!isReadonly) {
       track(target, TrackOpTypes.GET, key)
     }
 
