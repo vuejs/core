@@ -113,6 +113,26 @@ test('COMPILER_V_ON_NATIVE', () => {
   expect(CompilerDeprecationTypes.COMPILER_V_ON_NATIVE).toHaveBeenWarned()
 })
 
+test('COMPILER_V_ON_NATIVE with capture modifier', () => {
+  const spy = vi.fn()
+  const vm = new Vue({
+    template: `<child @click.capture="spy" />`,
+    components: {
+      child: {
+        template: `<button />`,
+      },
+    },
+    methods: {
+      spy,
+    },
+  }).$mount()
+
+  expect(vm.$el).toBeInstanceOf(HTMLButtonElement)
+  triggerEvent(vm.$el as HTMLButtonElement, 'click')
+  expect(spy).toHaveBeenCalledTimes(1)
+  expect(CompilerDeprecationTypes.COMPILER_V_ON_NATIVE).toHaveBeenWarned()
+})
+
 test('COMPILER_V_IF_V_FOR_PRECEDENCE', () => {
   new Vue({ template: `<div v-if="true" v-for="i in 1"/>` }).$mount()
   expect(
