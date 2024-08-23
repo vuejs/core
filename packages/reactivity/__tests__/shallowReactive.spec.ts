@@ -79,7 +79,7 @@ describe('shallowReactive', () => {
 
   test('ref is called as an argument to shallowReactive', () => {
     const obj = shallowReactive(ref(1))
-    const spy1 = jest.fn(() => obj.value)
+    const spy1 = vi.fn(() => obj.value)
 
     effect(spy1)
 
