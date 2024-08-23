@@ -22,7 +22,7 @@ A minimal reproduction means it demonstrates the bug, and the bug only. It shoul
 
 ### How to create a repro
 
-For Vue 3 core reproductions, try reproducing it in [The SFC Playground](https://sfc.vuejs.org/).
+For Vue 3 core reproductions, try reproducing it in [The SFC Playground](https://play.vuejs.org/).
 
 If it cannot be reproduced in the playground and requires a proper build setup, try [StackBlitz](https://vite.new/vue).
 
