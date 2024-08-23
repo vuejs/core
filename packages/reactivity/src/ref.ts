@@ -119,7 +119,6 @@ class RefImpl<T = any> {
   }
 
   get value() {
-    trackRefValue(this)
     if (__DEV__) {
       this.dep.track({
         target: this,
