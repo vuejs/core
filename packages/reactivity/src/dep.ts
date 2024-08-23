@@ -211,6 +211,9 @@ export function track(target: object, type: TrackOpTypes, key: unknown): void {
     if (!depsMap) {
       targetMap.set(target, (depsMap = new Map()))
     }
+
+    // if (depsMap.get(ITERATE_KEY) && key !== ITERATE_KEY) return
+
     let dep = depsMap.get(key)
     if (!dep) {
       depsMap.set(key, (dep = new Dep()))
@@ -250,71 +253,9 @@ export function trigger(
     return
   }
 
-  let deps: Dep[] = []
-  if (type === TriggerOpTypes.CLEAR) {
-    // collection being cleared
-    // trigger all effects for target
-    deps = [...depsMap.values()]
-  } else {
-    const targetIsArray = isArray(target)
-    const isArrayIndex = targetIsArray && isIntegerKey(key)
+  const run = (dep: Dep | undefined) => {
+    if (!dep) return
 
-    if (targetIsArray && key === 'length') {
-      const newLength = Number(newValue)
-      depsMap.forEach((dep, key) => {
-        if (
-          key === 'length' ||
-          key === ARRAY_ITERATE_KEY ||
-          (!isSymbol(key) && key >= newLength)
-        ) {
-          deps.push(dep)
-        }
-      })
-    } else {
-      const push = (dep: Dep | undefined) => dep && deps.push(dep)
-
-      // schedule runs for SET | ADD | DELETE
-      if (key !== void 0) {
-        push(depsMap.get(key))
-      }
-
-      // schedule ARRAY_ITERATE for any numeric key change (length is handled above)
-      if (isArrayIndex) {
-        push(depsMap.get(ARRAY_ITERATE_KEY))
-      }
-
-      // also run for iteration key on ADD | DELETE | Map.SET
-      switch (type) {
-        case TriggerOpTypes.ADD:
-          if (!targetIsArray) {
-            push(depsMap.get(ITERATE_KEY))
-            if (isMap(target)) {
-              push(depsMap.get(MAP_KEY_ITERATE_KEY))
-            }
-          } else if (isArrayIndex) {
-            // new index added to array -> length changes
-            push(depsMap.get('length'))
-          }
-          break
-        case TriggerOpTypes.DELETE:
-          if (!targetIsArray) {
-            push(depsMap.get(ITERATE_KEY))
-            if (isMap(target)) {
-              push(depsMap.get(MAP_KEY_ITERATE_KEY))
-            }
-          }
-          break
-        case TriggerOpTypes.SET:
-          if (isMap(target)) {
-            push(depsMap.get(ITERATE_KEY))
-          }
-          break
-      }
-    }
-  }
-
-  startBatch()
-  for (const dep of deps) {
     if (__DEV__) {
       dep.trigger({
         target,
@@ -328,6 +269,69 @@ export function trigger(
       dep.trigger()
     }
   }
+
+  startBatch()
+
+  if (type === TriggerOpTypes.CLEAR) {
+    // collection being cleared
+    // trigger all effects for target
+    depsMap.forEach(run)
+  } else {
+    const targetIsArray = isArray(target)
+    const isArrayIndex = targetIsArray && isIntegerKey(key)
+
+    if (targetIsArray && key === 'length') {
+      const newLength = Number(newValue)
+      depsMap.forEach((dep, key) => {
+        if (
+          key === 'length' ||
+          key === ARRAY_ITERATE_KEY ||
+          (!isSymbol(key) && key >= newLength)
+        ) {
+          run(dep)
+        }
+      })
+    } else {
+      // schedule runs for SET | ADD | DELETE
+      if (key !== void 0) {
+        run(depsMap.get(key))
+      }
+
+      // schedule ARRAY_ITERATE for any numeric key change (length is handled above)
+      if (isArrayIndex) {
+        run(depsMap.get(ARRAY_ITERATE_KEY))
+      }
+
+      // also run for iteration key on ADD | DELETE | Map.SET
+      switch (type) {
+        case TriggerOpTypes.ADD:
+          if (!targetIsArray) {
+            run(depsMap.get(ITERATE_KEY))
+            if (isMap(target)) {
+              run(depsMap.get(MAP_KEY_ITERATE_KEY))
+            }
+          } else if (isArrayIndex) {
+            // new index added to array -> length changes
+            run(depsMap.get('length'))
+          }
+          break
+        case TriggerOpTypes.DELETE:
+          if (!targetIsArray) {
+            run(depsMap.get(ITERATE_KEY))
+            if (isMap(target)) {
+              run(depsMap.get(MAP_KEY_ITERATE_KEY))
+            }
+          }
+          break
+        case TriggerOpTypes.SET:
+          if (isMap(target)) {
+            run(depsMap.get(ITERATE_KEY))
+          }
+          break
+      }
+    }
+  }
+
   endBatch()
 }
 
