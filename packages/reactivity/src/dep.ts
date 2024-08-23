@@ -252,14 +252,17 @@ export function trigger(
   }
 
   const run = (dep: Dep | undefined) => {
-    dep && dep.trigger(__DEV__ && {
-      target,
-      type,
-      key,
-      newValue,
-      oldValue,
-      oldTarget,
-    })
+    dep &&
+      dep.trigger(
+        __DEV__ && {
+          target,
+          type,
+          key,
+          newValue,
+          oldValue,
+          oldTarget,
+        },
+      )
   }
 
   startBatch()
