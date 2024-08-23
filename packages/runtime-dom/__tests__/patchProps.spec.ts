@@ -363,7 +363,7 @@ describe('runtime-dom: props patching', () => {
   })
 
   // #11691
-  test('should update the color style of the element from red to yellow after a timeout', async () => {
+  test('should update the color style of the element from red to yellow', async () => {
     const state = reactive({
       obj: {
         style: {
@@ -374,11 +374,6 @@ describe('runtime-dom: props patching', () => {
     const App = {
       setup() {
         const { obj } = toRefs(state)
-        setTimeout(async () => {
-          state.obj.style.color = 'yellow'
-          await nextTick()
-          expect(el.style.color).toBe('yellow')
-        })
         return () => {
           // <div v-bind="obj">msg</div>
           return createElementBlock(
@@ -394,5 +389,9 @@ describe('runtime-dom: props patching', () => {
     render(h(App), root)
     const el = root.children[0] as HTMLSelectElement
     expect(el.style.color).toBe('red')
+
+    state.obj.style.color = 'yellow'
+    await nextTick()
+    expect(el.style.color).toBe('yellow')
   })
 })
