@@ -659,7 +659,7 @@ export function guardReactiveProps(
 ): (Data & VNodeProps) | null {
   if (!props) return null
   return isProxy(props) || isInternalObject(props)
-    ? extend({}, generateProps(props))
+    ? generateProps(props)
     : props
 }
 
