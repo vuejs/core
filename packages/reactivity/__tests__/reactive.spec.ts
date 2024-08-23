@@ -314,14 +314,6 @@ describe('reactivity/reactive', () => {
     expect(isReactive(observed)).toBe(false)
   })
 
-  test('a ref nested in a reactive', () => {
-    const obj = reactive(ref(1))
-    const spy1 = vi.fn(() => obj.value)
-    effect(spy1)
-    obj.value = 2
-    expect(isReactive(obj)).toBe(true)
-  })
-
   test('hasOwnProperty edge case: Symbol values', () => {
     const key = Symbol()
     const obj = reactive({ [key]: 1 }) as { [key]?: 1 }

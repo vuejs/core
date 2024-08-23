@@ -82,9 +82,6 @@ class BaseReactiveHandler implements ProxyHandler<Target> {
       return
     }
 
-    // only track its value if target is a ref
-    if (isRef(target) && key !== 'value') return (target as any)[key]
-
     const targetIsArray = isArray(target)
 
     if (!isReadonly) {
