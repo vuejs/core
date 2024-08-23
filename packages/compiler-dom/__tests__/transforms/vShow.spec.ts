@@ -1,8 +1,8 @@
 import {
+  type CompilerOptions,
+  generate,
   baseParse as parse,
   transform,
-  generate,
-  CompilerOptions
 } from '@vue/compiler-core'
 import { transformElement } from '../../../compiler-core/src/transforms/transformElement'
 import { transformShow } from '../../src/transforms/vShow'
@@ -13,9 +13,9 @@ function transformWithShow(template: string, options: CompilerOptions = {}) {
   transform(ast, {
     nodeTransforms: [transformElement],
     directiveTransforms: {
-      show: transformShow
+      show: transformShow,
     },
-    ...options
+    ...options,
   })
   return ast
 }
@@ -28,14 +28,14 @@ describe('compiler: v-show transform', () => {
   })
 
   test('should raise error if has no expression', () => {
-    const onError = jest.fn()
+    const onError = vi.fn()
     transformWithShow(`<div v-show/>`, { onError })
 
     expect(onError).toHaveBeenCalledTimes(1)
     expect(onError).toHaveBeenCalledWith(
       expect.objectContaining({
-        code: DOMErrorCodes.X_V_SHOW_NO_EXPRESSION
-      })
+        code: DOMErrorCodes.X_V_SHOW_NO_EXPRESSION,
+      }),
     )
   })
 })

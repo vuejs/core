@@ -1,8 +1,8 @@
-import { AppConfig } from '../apiCreateApp'
+import type { AppConfig } from '../apiCreateApp'
 import {
   DeprecationTypes,
   softAssertCompatEnabled,
-  warnDeprecation
+  warnDeprecation,
 } from './compatConfig'
 import { isCopyingConfig } from './global'
 import { internalOptionMergeStrats } from '../componentOptions'
@@ -36,13 +36,13 @@ export type LegacyConfig = {
 }
 
 // dev only
-export function installLegacyConfigWarnings(config: AppConfig) {
+export function installLegacyConfigWarnings(config: AppConfig): void {
   const legacyConfigOptions: Record<string, DeprecationTypes> = {
     silent: DeprecationTypes.CONFIG_SILENT,
     devtools: DeprecationTypes.CONFIG_DEVTOOLS,
     ignoredElements: DeprecationTypes.CONFIG_IGNORED_ELEMENTS,
     keyCodes: DeprecationTypes.CONFIG_KEY_CODES,
-    productionTip: DeprecationTypes.CONFIG_PRODUCTION_TIP
+    productionTip: DeprecationTypes.CONFIG_PRODUCTION_TIP,
   }
 
   Object.keys(legacyConfigOptions).forEach(key => {
@@ -57,12 +57,12 @@ export function installLegacyConfigWarnings(config: AppConfig) {
           warnDeprecation(legacyConfigOptions[key], null)
         }
         val = newVal
-      }
+      },
     })
   })
 }
 
-export function installLegacyOptionMergeStrats(config: AppConfig) {
+export function installLegacyOptionMergeStrats(config: AppConfig): void {
   config.optionMergeStrategies = new Proxy({} as any, {
     get(target, key) {
       if (key in target) {
@@ -72,13 +72,13 @@ export function installLegacyOptionMergeStrats(config: AppConfig) {
         key in internalOptionMergeStrats &&
         softAssertCompatEnabled(
           DeprecationTypes.CONFIG_OPTION_MERGE_STRATS,
-          null
+          null,
         )
       ) {
         return internalOptionMergeStrats[
           key as keyof typeof internalOptionMergeStrats
         ]
       }
-    }
+    },
   })
 }
