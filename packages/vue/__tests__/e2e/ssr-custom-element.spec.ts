@@ -92,6 +92,7 @@ test('pass key to custom element', async () => {
       ref,
       defineSSRCustomElement,
       onBeforeUnmount,
+      onMounted,
       createSSRApp,
       renderList,
     } = (window as any).Vue
@@ -101,6 +102,9 @@ test('pass key to custom element', async () => {
         str: String,
       },
       setup(props: any) {
+        onMounted(() => {
+          console.log('child mounted')
+        })
         onBeforeUnmount(() => {
           console.log('child unmount')
         })
@@ -121,6 +125,7 @@ test('pass key to custom element', async () => {
     }).mount('#app')
   })
 
+  expect(messages.includes('child mounted')).toBe(true)
   expect(messages.includes('child unmount')).toBe(false)
   expect(await text('my-element >>> div')).toBe('1')
 })
