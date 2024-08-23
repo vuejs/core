@@ -645,8 +645,8 @@ function _createVNode(
 function generateProps(props: Data & VNodeProps) {
   const target: Data & VNodeProps = {}
   for (const key in props) {
-    if (isProxy(props[key])) {
-      target[key] = extend({}, props[key])
+    if (isObject(props[key])) {
+      target[key] = generateProps(props[key])
     } else {
       target[key] = props[key]
     }
