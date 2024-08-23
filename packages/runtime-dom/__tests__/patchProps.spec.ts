@@ -380,6 +380,7 @@ describe('runtime-dom: props patching', () => {
           expect(el.style.color).toBe('yellow')
         })
         return () => {
+          // <div v-bind="obj">msg</div>
           return createElementBlock(
             'div',
             normalizeProps(guardReactiveProps(obj.value)),
