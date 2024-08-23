@@ -642,11 +642,25 @@ function _createVNode(
   )
 }
 
+function generateProps(props: Data & VNodeProps) {
+  const target: Data & VNodeProps = {}
+  for (const key in props) {
+    if (isProxy(props[key])) {
+      target[key] = extend({}, props[key])
+    } else {
+      target[key] = props[key]
+    }
+  }
+  return target
+}
+
 export function guardReactiveProps(
   props: (Data & VNodeProps) | null,
 ): (Data & VNodeProps) | null {
   if (!props) return null
-  return isProxy(props) || isInternalObject(props) ? extend({}, props) : props
+  return isProxy(props) || isInternalObject(props)
+    ? extend({}, generateProps(props))
+    : props
 }
 
 export function cloneVNode<T, U>(
