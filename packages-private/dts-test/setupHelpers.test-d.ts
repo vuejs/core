@@ -428,28 +428,49 @@ describe('defineModel', () => {
   // @ts-expect-error unknown props option
   defineModel({ foo: 123 })
 
-  // unrelated getter and setter type
+  // unrelated getter and setter types
   {
     const modelVal = defineModel({
-      get(v: string[]): string {
-        return v.join('\n')
+      get(_: string[]): string {
+        return ''
       },
-      set(v: string) {
-        return v.split('\n')
+      set(_: number) {
+        return 1
       },
     })
-
-    expectType<string>(modelVal.value)
-    modelVal.value = 'foo'
+    expectType<string | undefined>(modelVal.value)
+    modelVal.value = 1
+    modelVal.value = undefined
     // @ts-expect-error
-    modelVal.value = ['foo']
+    modelVal.value = 'foo'
 
     const [modelVal2] = modelVal
-
-    expectType<string>(modelVal2.value)
-    modelVal2.value = 'foo'
+    expectType<string | undefined>(modelVal2.value)
+    modelVal2.value = 1
+    modelVal2.value = undefined
     // @ts-expect-error
-    modelVal2.value = ['foo']
+    modelVal.value = 'foo'
+
+    const count = defineModel('count', {
+      get(_: string[]): string {
+        return ''
+      },
+      set(_: number) {
+        return ''
+      },
+    })
+    expectType<string | undefined>(count.value)
+    count.value = 1
+    count.value = undefined
+    // @ts-expect-error
+    count.value = 'foo'
+
+    const [count2] = count
+    expectType<string | undefined>(count2.value)
+    count2.value = 1
+    count2.value = undefined
+    // @ts-expect-error
+    count2.value = 'foo'
   }
 })
 
