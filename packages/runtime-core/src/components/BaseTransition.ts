@@ -37,6 +37,7 @@ export interface BaseTransitionProps<HostElement = RendererElement> {
   // Instead, a custom directive can control the transition by calling the
   // injected hooks (e.g. v-show).
   persisted?: boolean
+  animateBeforeUnmounted?: boolean
 
   // Hooks. Using camel case for easier usage in render functions & JSX.
   // In templates these can be written as @before-enter="xxx" as prop names
@@ -120,6 +121,7 @@ export const BaseTransitionPropsValidators: Record<string, any> = {
   mode: String,
   appear: Boolean,
   persisted: Boolean,
+  animateBeforeUnmounted: Boolean,
   // enter
   onBeforeEnter: TransitionHookValidator,
   onEnter: TransitionHookValidator,
@@ -330,6 +332,7 @@ export function resolveTransitionHooks(
     onAppear,
     onAfterAppear,
     onAppearCancelled,
+    animateBeforeUnmounted
   } = props
   const key = String(vnode.key)
   const leavingVNodesCache = getLeavingNodesForType(state, vnode)
@@ -425,7 +428,7 @@ export function resolveTransitionHooks(
       if (el[enterCbKey]) {
         el[enterCbKey](true /* cancelled */)
       }
-      if (state.isUnmounting) {
+      if (!animateBeforeUnmounted && state.isUnmounting) {
         return remove()
       }
       callHook(onBeforeLeave, [el])
