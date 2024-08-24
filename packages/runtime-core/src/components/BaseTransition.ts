@@ -332,7 +332,7 @@ export function resolveTransitionHooks(
     onAppear,
     onAfterAppear,
     onAppearCancelled,
-    animateBeforeUnmounted
+    animateBeforeUnmounted,
   } = props
   const key = String(vnode.key)
   const leavingVNodesCache = getLeavingNodesForType(state, vnode)
