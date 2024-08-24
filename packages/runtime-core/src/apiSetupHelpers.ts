@@ -285,27 +285,27 @@ export type DefineModelOptions<T = any, G = T, S = T> = {
  * ```
  */
 export function defineModel<T, M extends PropertyKey = string, G = T, S = T>(
-  options: { required: true } & PropOptions<T> & DefineModelOptions<T, G, S>,
+  options: ({ default: any } | { required: true }) &
+    PropOptions<T> &
+    DefineModelOptions<T, G, S>,
 ): ModelRef<T, M, G, S>
-export function defineModel<T, M extends PropertyKey = string, G = T, S = T>(
-  options: { default: any } & PropOptions<T> & DefineModelOptions<T, G, S>,
-): ModelRef<T, M, G, S>
+
 export function defineModel<T, M extends PropertyKey = string, G = T, S = T>(
   options?: PropOptions<T> & DefineModelOptions<T, G, S>,
 ): ModelRef<T | undefined, M, G | undefined, S | undefined>
 
 export function defineModel<T, M extends PropertyKey = string, G = T, S = T>(
   name: string,
-  options: { required: true } & PropOptions<T> & DefineModelOptions<T, G, S>,
+  options: ({ default: any } | { required: true }) &
+    PropOptions<T> &
+    DefineModelOptions<T, G, S>,
 ): ModelRef<T, M, G, S>
-export function defineModel<T, M extends PropertyKey = string, G = T, S = T>(
-  name: string,
-  options: { default: any } & PropOptions<T> & DefineModelOptions<T, G, S>,
-): ModelRef<T, M, G, S>
+
 export function defineModel<T, M extends PropertyKey = string, G = T, S = T>(
   name: string,
   options?: PropOptions<T> & DefineModelOptions<T, G, S>,
 ): ModelRef<T | undefined, M, G | undefined, S | undefined>
+
 export function defineModel(): any {
   if (__DEV__) {
     warnRuntimeUsage('defineModel')
