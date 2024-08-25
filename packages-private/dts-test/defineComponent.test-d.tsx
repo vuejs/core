@@ -3,7 +3,6 @@ import {
   type ComponentOptions,
   type ComponentPublicInstance,
   type PropType,
-  type Ref,
   type SetupContext,
   type Slots,
   type SlotsType,
@@ -11,21 +10,12 @@ import {
   createApp,
   defineComponent,
   h,
-  nextTick,
   reactive,
   ref,
-  render as vueRender,
   withKeys,
   withModifiers,
 } from 'vue'
 import { type IsAny, type IsUnion, describe, expectType } from './utils'
-import {
-  type TestElement,
-  type TestNode,
-  nodeOps,
-  serializeInner,
-  triggerEvent,
-} from '@vue/runtime-test'
 
 describe('with object props', () => {
   interface ExpectedProps {
@@ -2038,118 +2028,69 @@ expectString(instance.actionText)
 // @ts-expect-error
 expectString(instance.$props.actionText)
 
-// Helper function to safely cast TestNode to TestElement
-function getFirstElementChild(node: TestNode): TestElement {
-  if ('children' in node) {
-    return node.children[0] as TestElement
+describe('generic components in defineComponent', () => {
+  const GenericComp = defineComponent(
+    <T extends { name: string }>(props: { msg: string; list: T[] }) => {
+      return () => (
+        <div>
+          {props.msg}
+          {props.list.map(item => item.name).join(', ')}
+        </div>
+      )
+    },
+  )
+
+  const GenericCompUser = defineComponent(() => {
+    const list = ref([{ name: 'Tom' }, { name: 'Jack' }])
+
+    return () => {
+      return (
+        <div>
+          <GenericComp<{ name: string }> msg="hello" list={list.value} />
+        </div>
+      )
+    }
+  })
+
+  // Test correct usage
+  expectType<JSX.Element>(<GenericCompUser />)
+
+  // Test GenericComp directly with correct props
+  expectType<JSX.Element>(
+    <GenericComp<{ name: string }> msg="hello" list={[{ name: 'Alice' }]} />,
+  )
+
+  // Test with missing required prop
+  expectType<JSX.Element>(
+    // @ts-expect-error
+    <GenericComp<{ name: string }> list={[{ name: 'Bob' }]} />,
+  )
+
+  // Test with extended type
+  interface Person {
+    name: string
+    age: number
   }
-  throw new Error('Expected an element with children')
-}
 
-// Custom render function with correct typing for TestElement
-function render(vnode: any, root: TestElement) {
-  return vueRender(vnode, root as any)
-}
-
-describe('defineComponent with generics', () => {
-  test('defineComponent with generic', async () => {
-    const Comp = defineComponent({
-      props: {
-        msg: String,
-        list: Array as PropType<{ name: string }[]>,
-      },
-      setup(props) {
-        const count = ref(0)
-        const increment = () => {
-          count.value++
-        }
-
-        return () =>
-          h('div', { onClick: increment }, [
-            h('h2', props.msg),
-            h('p', count.value),
-            ...(props.list || []).map((item: { name: string }) =>
-              h('p', item.name),
-            ),
-          ])
-      },
-    })
-
-    const list: Ref<{ name: string }[]> = ref([
-      { name: 'Tom' },
-      { name: 'Jerry' },
+  const ExtendedGenericCompUser = defineComponent(() => {
+    const people = ref<Person[]>([
+      { name: 'Tom', age: 25 },
+      { name: 'Jack', age: 30 },
     ])
 
-    const root = nodeOps.createElement('div')
-    render(h(Comp, { msg: 'Hello', list: list.value }), root)
-
-    expect(serializeInner(root)).toBe(
-      `<div><h2>Hello</h2><p>0</p><p>Tom</p><p>Jerry</p></div>`,
-    )
-
-    const firstChild = getFirstElementChild(root)
-    triggerEvent(firstChild, 'click')
-    await nextTick()
-    expect(serializeInner(root)).toBe(
-      `<div><h2>Hello</h2><p>1</p><p>Tom</p><p>Jerry</p></div>`,
-    )
-
-    list.value.push({ name: 'Spike' })
-    await nextTick()
-    expect(serializeInner(root)).toBe(
-      `<div><h2>Hello</h2><p>1</p><p>Tom</p><p>Jerry</p><p>Spike</p></div>`,
-    )
+    return () => {
+      return (
+        <div>
+          <GenericComp<Person> msg="people" list={people.value} />
+        </div>
+      )
+    }
   })
 
-  test('defineComponent with generic in render function', async () => {
-    const Comp = defineComponent({
-      props: {
-        msg: String,
-        list: Array as PropType<{ name: string }[]>,
-      },
-      setup(props) {
-        const count = ref(0)
-        const increment = () => {
-          count.value++
-        }
+  expectType<JSX.Element>(<ExtendedGenericCompUser />)
 
-        return () =>
-          h('div', { onClick: increment }, [
-            h('h2', props.msg),
-            h('p', count.value),
-            ...(props.list || []).map((item: { name: string }) =>
-              h('p', item.name),
-            ),
-          ])
-      },
-    })
-
-    const list = ref([{ name: 'Tom' }, { name: 'Jerry' }])
-
-    const App = defineComponent({
-      setup() {
-        return () => h(Comp, { msg: 'Hello', list: list.value })
-      },
-    })
-
-    const root = nodeOps.createElement('div')
-    render(h(App), root)
-
-    expect(serializeInner(root)).toBe(
-      `<div><h2>Hello</h2><p>0</p><p>Tom</p><p>Jerry</p></div>`,
-    )
-
-    const firstChild = getFirstElementChild(root)
-    triggerEvent(firstChild, 'click')
-    await nextTick()
-    expect(serializeInner(root)).toBe(
-      `<div><h2>Hello</h2><p>1</p><p>Tom</p><p>Jerry</p></div>`,
-    )
-
-    list.value.push({ name: 'Spike' })
-    await nextTick()
-    expect(serializeInner(root)).toBe(
-      `<div><h2>Hello</h2><p>1</p><p>Tom</p><p>Jerry</p><p>Spike</p></div>`,
-    )
-  })
+  // Test GenericComp directly with extended type
+  expectType<JSX.Element>(
+    <GenericComp<Person> msg="people" list={[{ name: 'Alice', age: 28 }]} />,
+  )
 })

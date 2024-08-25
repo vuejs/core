@@ -184,9 +184,7 @@ export type DefineComponentWithGeneric<
     S
   > &
   PP & {
-    <T extends Record<string, any> = Generic>(
-      props: Props & { ref?: Ref<any> },
-    ): VNode
+    <T extends Generic>(props: Props & { ref?: Ref<any> } & T): VNode
   }
 
 // defineComponent is a utility that is primarily used for type inference
