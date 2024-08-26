@@ -28,6 +28,8 @@ export {
   // effect
   effect,
   stop,
+  getCurrentWatcher,
+  onWatcherCleanup,
   ReactiveEffect,
   // effect scope
   effectScope,
@@ -227,7 +229,7 @@ export type {
   MultiWatchSources,
   WatchEffect,
   WatchOptions,
-  WatchOptionsBase,
+  WatchEffectOptions as WatchOptionsBase,
   WatchCallback,
   WatchSource,
   WatchHandle,

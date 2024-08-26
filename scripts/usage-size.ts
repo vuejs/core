@@ -111,9 +111,10 @@ async function generateBundle(preset: Preset) {
   }
 
   console.log(
-    `${pico.green(pico.bold(preset.name))} - min:${prettyBytes(
-      size,
-    )} / gzip:${prettyBytes(gzip)} / brotli:${prettyBytes(brotli)}`,
+    `${pico.green(pico.bold(preset.name))} - ` +
+      `min:${prettyBytes(size, { minimumFractionDigits: 3 })} / ` +
+      `gzip:${prettyBytes(gzip, { minimumFractionDigits: 3 })} / ` +
+      `brotli:${prettyBytes(brotli, { minimumFractionDigits: 3 })}`,
   )
 
   return {

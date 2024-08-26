@@ -23,8 +23,7 @@ import { currentRenderingInstance } from './componentRenderContext'
 import { ErrorCodes, callWithAsyncErrorHandling } from './errorHandling'
 import type { ComponentPublicInstance } from './componentPublicInstance'
 import { mapCompatDirectiveHook } from './compat/customDirective'
-import { pauseTracking, resetTracking } from '@vue/reactivity'
-import { traverse } from './apiWatch'
+import { pauseTracking, resetTracking, traverse } from '@vue/reactivity'
 
 export interface DirectiveBinding<
   Value = any,
