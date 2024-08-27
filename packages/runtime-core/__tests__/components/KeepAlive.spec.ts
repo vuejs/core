@@ -1164,7 +1164,6 @@ describe('KeepAlive', () => {
       },
     })
     App.mount(nodeOps.createElement('div'))
-    await nextTick()
     expect(mountedHome).toHaveBeenCalledTimes(1)
     expect(activatedHome).toHaveBeenCalledTimes(1)
     cacheList.splice(0, 1)
