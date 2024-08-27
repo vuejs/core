@@ -45,6 +45,12 @@ export default tseslint.config(
           message:
             'Our output target is ES2016, so async/await syntax should be avoided.',
         },
+        {
+          selector: 'ChainExpression',
+          message:
+            'Our output target is ES2016, and optional chaining results in ' +
+            'verbose helpers and should be avoided.',
+        },
       ],
       'sort-imports': ['error', { ignoreDeclarationSort: true }],
 
@@ -70,7 +76,11 @@ export default tseslint.config(
 
   // tests, no restrictions (runs in Node / Vitest with jsdom)
   {
-    files: ['**/__tests__/**', 'packages/dts-test/**'],
+    files: [
+      '**/__tests__/**',
+      'packages-private/dts-test/**',
+      'packages-private/dts-build-test/**',
+    ],
     plugins: { vitest },
     languageOptions: {
       globals: {
@@ -113,7 +123,10 @@ export default tseslint.config(
 
   // Private package, browser only + no syntax restrictions
   {
-    files: ['packages/template-explorer/**', 'packages/sfc-playground/**'],
+    files: [
+      'packages-private/template-explorer/**',
+      'packages-private/sfc-playground/**',
+    ],
     rules: {
       'no-restricted-globals': ['error', ...NodeGlobals],
       'no-restricted-syntax': ['error', banConstEnum],
@@ -134,7 +147,7 @@ export default tseslint.config(
   {
     files: [
       'eslint.config.js',
-      'rollup.config.js',
+      'rollup*.config.js',
       'scripts/**',
       './*.{js,ts}',
       'packages/*/*.js',

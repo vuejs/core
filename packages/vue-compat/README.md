@@ -84,12 +84,12 @@ The following workflow walks through the steps of migrating an actual Vue 2 app 
              ...options,
              compilerOptions: {
                compatConfig: {
-                 MODE: 2
-               }
-             }
+                 MODE: 2,
+               },
+             },
            }
          })
-     }
+     },
    }
    ```
 
@@ -103,8 +103,8 @@ The following workflow walks through the steps of migrating an actual Vue 2 app 
    module.exports = {
      resolve: {
        alias: {
-         vue: '@vue/compat'
-       }
+         vue: '@vue/compat',
+       },
      },
      module: {
        rules: [
@@ -114,13 +114,13 @@ The following workflow walks through the steps of migrating an actual Vue 2 app 
            options: {
              compilerOptions: {
                compatConfig: {
-                 MODE: 2
-               }
-             }
-           }
-         }
-       ]
-     }
+                 MODE: 2,
+               },
+             },
+           },
+         },
+       ],
+     },
    }
    ```
 
@@ -134,20 +134,20 @@ The following workflow walks through the steps of migrating an actual Vue 2 app 
    export default {
      resolve: {
        alias: {
-         vue: '@vue/compat'
-       }
+         vue: '@vue/compat',
+       },
      },
      plugins: [
        vue({
          template: {
            compilerOptions: {
              compatConfig: {
-               MODE: 2
-             }
-           }
-         }
-       })
-     ]
+               MODE: 2,
+             },
+           },
+         },
+       }),
+     ],
    }
    ```
 
@@ -207,7 +207,7 @@ import { configureCompat } from 'vue'
 // disable compat for certain features
 configureCompat({
   FEATURE_ID_A: false,
-  FEATURE_ID_B: false
+  FEATURE_ID_B: false,
 })
 ```
 
@@ -221,7 +221,7 @@ import { configureCompat } from 'vue'
 configureCompat({
   MODE: 3,
   FEATURE_ID_A: true,
-  FEATURE_ID_B: true
+  FEATURE_ID_B: true,
 })
 ```
 
@@ -233,8 +233,8 @@ A component can use the `compatConfig` option, which expects the same options as
 export default {
   compatConfig: {
     MODE: 3, // opt-in to Vue 3 behavior for this component only
-    FEATURE_ID_A: true // features can also be toggled at component level
-  }
+    FEATURE_ID_A: true, // features can also be toggled at component level
+  },
   // ...
 }
 ```
@@ -256,73 +256,73 @@ Features that start with `COMPILER_` are compiler-specific: if you are using the
 
 > Should be fixed upfront or will likely lead to errors
 
-| ID                                    | Type | Description                                                             | Docs                                                                                           |
-| ------------------------------------- | ---- | ----------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
-| GLOBAL_MOUNT_CONTAINER                | ⨂    | Mounted application does not replace the element it's mounted to        | [link](https://v3-migration.vuejs.org/breaking-changes/mount-changes.html)                                                    |
-| CONFIG_DEVTOOLS                       | ⨂    | production devtools is now a build-time flag                            | [link](https://github.com/vuejs/core/tree/main/packages/vue#bundler-build-feature-flags) |
-| COMPILER_V_IF_V_FOR_PRECEDENCE        | ⨂    | `v-if` and `v-for` precedence when used on the same element has changed | [link](https://v3-migration.vuejs.org/breaking-changes/v-if-v-for.html)                                                       |
-| COMPILER_V_IF_SAME_KEY                | ⨂    | `v-if` branches can no longer have the same key                         | [link](https://v3-migration.vuejs.org/breaking-changes/key-attribute.html#on-conditional-branches)                            |
-| COMPILER_V_FOR_TEMPLATE_KEY_PLACEMENT | ⨂    | `<template v-for>` key should now be placed on `<template>`             | [link](https://v3-migration.vuejs.org/breaking-changes/key-attribute.html#with-template-v-for)                                |
-| COMPILER_SFC_FUNCTIONAL               | ⨂    | `<template functional>` is no longer supported in SFCs                  | [link](https://v3-migration.vuejs.org/breaking-changes/functional-components.html#single-file-components-sfcs)                |  |  |
+| ID                                    | Type | Description                                                             | Docs                                                                                                           |
+| ------------------------------------- | ---- | ----------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| GLOBAL_MOUNT_CONTAINER                | ⨂    | Mounted application does not replace the element it's mounted to        | [link](https://v3-migration.vuejs.org/breaking-changes/mount-changes.html)                                     |
+| CONFIG_DEVTOOLS                       | ⨂    | production devtools is now a build-time flag                            | [link](https://github.com/vuejs/core/tree/main/packages/vue#bundler-build-feature-flags)                       |
+| COMPILER_V_IF_V_FOR_PRECEDENCE        | ⨂    | `v-if` and `v-for` precedence when used on the same element has changed | [link](https://v3-migration.vuejs.org/breaking-changes/v-if-v-for.html)                                        |
+| COMPILER_V_IF_SAME_KEY                | ⨂    | `v-if` branches can no longer have the same key                         | [link](https://v3-migration.vuejs.org/breaking-changes/key-attribute.html#on-conditional-branches)             |
+| COMPILER_V_FOR_TEMPLATE_KEY_PLACEMENT | ⨂    | `<template v-for>` key should now be placed on `<template>`             | [link](https://v3-migration.vuejs.org/breaking-changes/key-attribute.html#with-template-v-for)                 |
+| COMPILER_SFC_FUNCTIONAL               | ⨂    | `<template functional>` is no longer supported in SFCs                  | [link](https://v3-migration.vuejs.org/breaking-changes/functional-components.html#single-file-components-sfcs) |
 
 ### Partially Compatible with Caveats
 
-| ID                       | Type | Description                                                                                                                                                                                | Docs                                                                                          |
-| ------------------------ | ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------- |
+| ID                       | Type | Description                                                                                                                                                                                | Docs                                                                                                                         |
+| ------------------------ | ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------- |
 | CONFIG_IGNORED_ELEMENTS  | ◐    | `config.ignoredElements` is now `config.compilerOptions.isCustomElement` (only in browser compiler build). If using build setup, `isCustomElement` must be passed via build configuration. | [link](https://v3-migration.vuejs.org/breaking-changes/global-api.html#config-ignoredelements-is-now-config-iscustomelement) |
 | COMPILER_INLINE_TEMPLATE | ◐    | `inline-template` removed (compat only supported in browser compiler build)                                                                                                                | [link](https://v3-migration.vuejs.org/breaking-changes/inline-template-attribute.html)                                       |
 | PROPS_DEFAULT_THIS       | ◐    | props default factory no longer have access to `this` (in compat mode, `this` is not a real instance - it only exposes props, `$options` and injections)                                   | [link](https://v3-migration.vuejs.org/breaking-changes/props-default-this.html)                                              |
-| INSTANCE_DESTROY         | ◐    | `$destroy` instance method removed (in compat mode, only supported on root instance)                                                                                                       |                                                                                               |
-| GLOBAL_PRIVATE_UTIL      | ◐    | `Vue.util` is private and no longer available                                                                                                                                              |                                                                                               |
+| INSTANCE_DESTROY         | ◐    | `$destroy` instance method removed (in compat mode, only supported on root instance)                                                                                                       |                                                                                                                              |
+| GLOBAL_PRIVATE_UTIL      | ◐    | `Vue.util` is private and no longer available                                                                                                                                              |                                                                                                                              |
 | CONFIG_PRODUCTION_TIP    | ◐    | `config.productionTip` no longer necessary                                                                                                                                                 | [link](https://v3-migration.vuejs.org/breaking-changes/global-api.html#config-productiontip-removed)                         |
 | CONFIG_SILENT            | ◐    | `config.silent` removed                                                                                                                                                                    |
 
 ### Compat only (no warning)
 
-| ID                 | Type | Description                           | Docs                                     |
-| ------------------ | ---- | ------------------------------------- | ---------------------------------------- |
+| ID                 | Type | Description                            | Docs                                                                    |
+| ------------------ | ---- | -------------------------------------- | ----------------------------------------------------------------------- |
 | TRANSITION_CLASSES | ⭘    | Transition enter/leave classes changed | [link](https://v3-migration.vuejs.org/breaking-changes/transition.html) |
 
 ### Fully Compatible
 
-| ID                           | Type | Description                                                           | Docs                                                                                       |
-| ---------------------------- | ---- | --------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
-| GLOBAL_MOUNT                 | ✔    | new Vue() -> createApp                                                | [link](https://v3-migration.vuejs.org/breaking-changes/global-api.html#mounting-app-instance)                             |
-| GLOBAL_EXTEND                | ✔    | Vue.extend removed (use `defineComponent` or `extends` option)        | [link](https://v3-migration.vuejs.org/breaking-changes/global-api.html#vue-extend-replaced-by-definecomponent)            |
-| GLOBAL_PROTOTYPE             | ✔    | `Vue.prototype` -> `app.config.globalProperties`                      | [link](https://v3-migration.vuejs.org/breaking-changes/global-api.html#vue-prototype-replaced-by-config-globalproperties) |
-| GLOBAL_SET                   | ✔    | `Vue.set` removed (no longer needed)                                  |                                                                                            |
-| GLOBAL_DELETE                | ✔    | `Vue.delete` removed (no longer needed)                               |                                                                                            |
-| GLOBAL_OBSERVABLE            | ✔    | `Vue.observable` removed (use `reactive`)                             | [link](https://vuejs.org/api/reactivity-core.html#reactive)                                                         |
-| CONFIG_KEY_CODES             | ✔    | config.keyCodes removed                                               | [link](https://v3-migration.vuejs.org/breaking-changes/keycode-modifiers.html)                                            |
-| CONFIG_WHITESPACE            | ✔    | In Vue 3 whitespace defaults to `"condense"`                          |                                                                                            |
-| INSTANCE_SET                 | ✔    | `vm.$set` removed (no longer needed)                                  |                                                                                            |
-| INSTANCE_DELETE              | ✔    | `vm.$delete` removed (no longer needed)                               |                                                                                            |
-| INSTANCE_EVENT_EMITTER       | ✔    | `vm.$on`, `vm.$off`, `vm.$once` removed                               | [link](https://v3-migration.vuejs.org/breaking-changes/events-api.html)                                                   |
-| INSTANCE_EVENT_HOOKS         | ✔    | Instance no longer emits `hook:x` events                              | [link](https://v3-migration.vuejs.org/breaking-changes/vnode-lifecycle-events.html)                                       |
-| INSTANCE_CHILDREN            | ✔    | `vm.$children` removed                                                | [link](https://v3-migration.vuejs.org/breaking-changes/children.html)                                                     |
-| INSTANCE_LISTENERS           | ✔    | `vm.$listeners` removed                                               | [link](https://v3-migration.vuejs.org/breaking-changes/listeners-removed.html)                                            |
-| INSTANCE_SCOPED_SLOTS        | ✔    | `vm.$scopedSlots` removed; `vm.$slots` now exposes functions          | [link](https://v3-migration.vuejs.org/breaking-changes/slots-unification.html)                                            |
-| INSTANCE_ATTRS_CLASS_STYLE   | ✔    | `$attrs` now includes `class` and `style`                             | [link](https://v3-migration.vuejs.org/breaking-changes/attrs-includes-class-style.html)                                   |
-| OPTIONS_DATA_FN              | ✔    | `data` must be a function in all cases                                | [link](https://v3-migration.vuejs.org/breaking-changes/data-option.html)                                                  |
-| OPTIONS_DATA_MERGE           | ✔    | `data` from mixin or extension is now shallow merged                  | [link](https://v3-migration.vuejs.org/breaking-changes/data-option.html)                                                  |
-| OPTIONS_BEFORE_DESTROY       | ✔    | `beforeDestroy` -> `beforeUnmount`                                    |                                                                                            |
-| OPTIONS_DESTROYED            | ✔    | `destroyed` -> `unmounted`                                            |                                                                                            |
-| WATCH_ARRAY                  | ✔    | watching an array no longer triggers on mutation unless deep          | [link](https://v3-migration.vuejs.org/breaking-changes/watch.html)                                                        |
-| V_ON_KEYCODE_MODIFIER        | ✔    | `v-on` no longer supports keyCode modifiers                           | [link](https://v3-migration.vuejs.org/breaking-changes/keycode-modifiers.html)                                            |
-| CUSTOM_DIR                   | ✔    | Custom directive hook names changed                                   | [link](https://v3-migration.vuejs.org/breaking-changes/custom-directives.html)                                            |
-| ATTR_FALSE_VALUE             | ✔    | No longer removes attribute if binding value is boolean `false`       | [link](https://v3-migration.vuejs.org/breaking-changes/attribute-coercion.html)                                           |
-| ATTR_ENUMERATED_COERCION     | ✔    | No longer special case enumerated attributes                          | [link](https://v3-migration.vuejs.org/breaking-changes/attribute-coercion.html)                                           |
-| TRANSITION_GROUP_ROOT        | ✔    | `<transition-group>` no longer renders a root element by default      | [link](https://v3-migration.vuejs.org/breaking-changes/transition-group.html)                                             |
-| COMPONENT_ASYNC              | ✔    | Async component API changed (now requires `defineAsyncComponent`)     | [link](https://v3-migration.vuejs.org/breaking-changes/async-components.html)                                             |
-| COMPONENT_FUNCTIONAL         | ✔    | Functional component API changed (now must be plain functions)        | [link](https://v3-migration.vuejs.org/breaking-changes/functional-components.html)                                        |
-| COMPONENT_V_MODEL            | ✔    | Component v-model reworked                                            | [link](https://v3-migration.vuejs.org/breaking-changes/v-model.html)                                                      |
-| RENDER_FUNCTION              | ✔    | Render function API changed                                           | [link](https://v3-migration.vuejs.org/breaking-changes/render-function-api.html)                                          |
-| FILTERS                      | ✔    | Filters removed (this option affects only runtime filter APIs)        | [link](https://v3-migration.vuejs.org/breaking-changes/filters.html)                                                      |
-| COMPILER_IS_ON_ELEMENT       | ✔    | `is` usage is now restricted to `<component>` only                    | [link](https://v3-migration.vuejs.org/breaking-changes/custom-elements-interop.html)                                      |
-| COMPILER_V_BIND_SYNC         | ✔    | `v-bind.sync` replaced by `v-model` with arguments                    | [link](https://v3-migration.vuejs.org/breaking-changes/v-model.html)                                                      |
-| COMPILER_V_BIND_PROP         | ✔    | `v-bind.prop` modifier removed                                        |                                                                                            |
-| COMPILER_V_BIND_OBJECT_ORDER | ✔    | `v-bind="object"` is now order sensitive                              | [link](https://v3-migration.vuejs.org/breaking-changes/v-bind.html)                                                       |
-| COMPILER_V_ON_NATIVE         | ✔    | `v-on.native` modifier removed                                        | [link](https://v3-migration.vuejs.org/breaking-changes/v-on-native-modifier-removed.html)                                 |
-| COMPILER_V_FOR_REF           | ✔    | `ref` in `v-for` (compiler support)                                   |                                                                                            |
-| COMPILER_NATIVE_TEMPLATE     | ✔    | `<template>` with no special directives now renders as native element |                                                                                            |
-| COMPILER_FILTERS             | ✔    | filters (compiler support)                                            |                                                                                            |
+| ID                           | Type | Description                                                           | Docs                                                                                                                      |
+| ---------------------------- | ---- | --------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| GLOBAL_MOUNT                 | ✔   | new Vue() -> createApp                                                | [link](https://v3-migration.vuejs.org/breaking-changes/global-api.html#mounting-app-instance)                             |
+| GLOBAL_EXTEND                | ✔   | Vue.extend removed (use `defineComponent` or `extends` option)        | [link](https://v3-migration.vuejs.org/breaking-changes/global-api.html#vue-extend-replaced-by-definecomponent)            |
+| GLOBAL_PROTOTYPE             | ✔   | `Vue.prototype` -> `app.config.globalProperties`                      | [link](https://v3-migration.vuejs.org/breaking-changes/global-api.html#vue-prototype-replaced-by-config-globalproperties) |
+| GLOBAL_SET                   | ✔   | `Vue.set` removed (no longer needed)                                  |                                                                                                                           |
+| GLOBAL_DELETE                | ✔   | `Vue.delete` removed (no longer needed)                               |                                                                                                                           |
+| GLOBAL_OBSERVABLE            | ✔   | `Vue.observable` removed (use `reactive`)                             | [link](https://vuejs.org/api/reactivity-core.html#reactive)                                                               |
+| CONFIG_KEY_CODES             | ✔   | config.keyCodes removed                                               | [link](https://v3-migration.vuejs.org/breaking-changes/keycode-modifiers.html)                                            |
+| CONFIG_WHITESPACE            | ✔   | In Vue 3 whitespace defaults to `"condense"`                          |                                                                                                                           |
+| INSTANCE_SET                 | ✔   | `vm.$set` removed (no longer needed)                                  |                                                                                                                           |
+| INSTANCE_DELETE              | ✔   | `vm.$delete` removed (no longer needed)                               |                                                                                                                           |
+| INSTANCE_EVENT_EMITTER       | ✔   | `vm.$on`, `vm.$off`, `vm.$once` removed                               | [link](https://v3-migration.vuejs.org/breaking-changes/events-api.html)                                                   |
+| INSTANCE_EVENT_HOOKS         | ✔   | Instance no longer emits `hook:x` events                              | [link](https://v3-migration.vuejs.org/breaking-changes/vnode-lifecycle-events.html)                                       |
+| INSTANCE_CHILDREN            | ✔   | `vm.$children` removed                                                | [link](https://v3-migration.vuejs.org/breaking-changes/children.html)                                                     |
+| INSTANCE_LISTENERS           | ✔   | `vm.$listeners` removed                                               | [link](https://v3-migration.vuejs.org/breaking-changes/listeners-removed.html)                                            |
+| INSTANCE_SCOPED_SLOTS        | ✔   | `vm.$scopedSlots` removed; `vm.$slots` now exposes functions          | [link](https://v3-migration.vuejs.org/breaking-changes/slots-unification.html)                                            |
+| INSTANCE_ATTRS_CLASS_STYLE   | ✔   | `$attrs` now includes `class` and `style`                             | [link](https://v3-migration.vuejs.org/breaking-changes/attrs-includes-class-style.html)                                   |
+| OPTIONS_DATA_FN              | ✔   | `data` must be a function in all cases                                | [link](https://v3-migration.vuejs.org/breaking-changes/data-option.html)                                                  |
+| OPTIONS_DATA_MERGE           | ✔   | `data` from mixin or extension is now shallow merged                  | [link](https://v3-migration.vuejs.org/breaking-changes/data-option.html)                                                  |
+| OPTIONS_BEFORE_DESTROY       | ✔   | `beforeDestroy` -> `beforeUnmount`                                    |                                                                                                                           |
+| OPTIONS_DESTROYED            | ✔   | `destroyed` -> `unmounted`                                            |                                                                                                                           |
+| WATCH_ARRAY                  | ✔   | watching an array no longer triggers on mutation unless deep          | [link](https://v3-migration.vuejs.org/breaking-changes/watch.html)                                                        |
+| V_ON_KEYCODE_MODIFIER        | ✔   | `v-on` no longer supports keyCode modifiers                           | [link](https://v3-migration.vuejs.org/breaking-changes/keycode-modifiers.html)                                            |
+| CUSTOM_DIR                   | ✔   | Custom directive hook names changed                                   | [link](https://v3-migration.vuejs.org/breaking-changes/custom-directives.html)                                            |
+| ATTR_FALSE_VALUE             | ✔   | No longer removes attribute if binding value is boolean `false`       | [link](https://v3-migration.vuejs.org/breaking-changes/attribute-coercion.html)                                           |
+| ATTR_ENUMERATED_COERCION     | ✔   | No longer special case enumerated attributes                          | [link](https://v3-migration.vuejs.org/breaking-changes/attribute-coercion.html)                                           |
+| TRANSITION_GROUP_ROOT        | ✔   | `<transition-group>` no longer renders a root element by default      | [link](https://v3-migration.vuejs.org/breaking-changes/transition-group.html)                                             |
+| COMPONENT_ASYNC              | ✔   | Async component API changed (now requires `defineAsyncComponent`)     | [link](https://v3-migration.vuejs.org/breaking-changes/async-components.html)                                             |
+| COMPONENT_FUNCTIONAL         | ✔   | Functional component API changed (now must be plain functions)        | [link](https://v3-migration.vuejs.org/breaking-changes/functional-components.html)                                        |
+| COMPONENT_V_MODEL            | ✔   | Component v-model reworked                                            | [link](https://v3-migration.vuejs.org/breaking-changes/v-model.html)                                                      |
+| RENDER_FUNCTION              | ✔   | Render function API changed                                           | [link](https://v3-migration.vuejs.org/breaking-changes/render-function-api.html)                                          |
+| FILTERS                      | ✔   | Filters removed (this option affects only runtime filter APIs)        | [link](https://v3-migration.vuejs.org/breaking-changes/filters.html)                                                      |
+| COMPILER_IS_ON_ELEMENT       | ✔   | `is` usage is now restricted to `<component>` only                    | [link](https://v3-migration.vuejs.org/breaking-changes/custom-elements-interop.html)                                      |
+| COMPILER_V_BIND_SYNC         | ✔   | `v-bind.sync` replaced by `v-model` with arguments                    | [link](https://v3-migration.vuejs.org/breaking-changes/v-model.html)                                                      |
+| COMPILER_V_BIND_PROP         | ✔   | `v-bind.prop` modifier removed                                        |                                                                                                                           |
+| COMPILER_V_BIND_OBJECT_ORDER | ✔   | `v-bind="object"` is now order sensitive                              | [link](https://v3-migration.vuejs.org/breaking-changes/v-bind.html)                                                       |
+| COMPILER_V_ON_NATIVE         | ✔   | `v-on.native` modifier removed                                        | [link](https://v3-migration.vuejs.org/breaking-changes/v-on-native-modifier-removed.html)                                 |
+| COMPILER_V_FOR_REF           | ✔   | `ref` in `v-for` (compiler support)                                   |                                                                                                                           |
+| COMPILER_NATIVE_TEMPLATE     | ✔   | `<template>` with no special directives now renders as native element |                                                                                                                           |
+| COMPILER_FILTERS             | ✔   | filters (compiler support)                                            |                                                                                                                           |
