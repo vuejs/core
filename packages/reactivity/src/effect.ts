@@ -258,7 +258,8 @@ export function startBatch(): void {
  * @internal
  */
 export function endBatch(): void {
-  if (batchDepth-- > 0) {
+  batchDepth--
+  if (batchDepth > 0) {
     return
   }
 
