@@ -258,12 +258,11 @@ export function startBatch(): void {
  * @internal
  */
 export function endBatch(): void {
+  batchDepth--
   if (batchDepth > 1) {
-    batchDepth--
     return
   }
 
-  batchDepth--
   let error: unknown
   while (batchedEffect) {
     let e: ReactiveEffect | undefined = batchedEffect
