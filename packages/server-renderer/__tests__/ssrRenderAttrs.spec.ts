@@ -131,6 +131,11 @@ describe('ssr: renderClass', () => {
         class: ['foo', 'bar'],
       }),
     ).toBe(` class="foo bar"`)
+    expect(
+      ssrRenderAttrs({
+        className: ['foo', 'bar'],
+      }),
+    ).toBe(` class="foo bar"`)
   })
 
   test('standalone', () => {
