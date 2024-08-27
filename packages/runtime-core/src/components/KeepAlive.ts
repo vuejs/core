@@ -310,7 +310,10 @@ const KeepAliveImpl: ComponentOptions = {
         (include && (!name || !matches(include, name))) ||
         (exclude && name && matches(exclude, name))
       ) {
-        vnode.shapeFlag &= ~ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE
+        // #11717
+        if ((vnode.shapeFlag |= ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE)) {
+          vnode.shapeFlag &= ~ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE
+        }
         current = vnode
         return rawVNode
       }
