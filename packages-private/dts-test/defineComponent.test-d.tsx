@@ -2027,3 +2027,35 @@ expectString(instance.actionText)
 // public prop on $props should be optional
 // @ts-expect-error
 expectString(instance.$props.actionText)
+
+describe('with Slot', () => {
+  defineComponent({
+    slots: Object as SlotsType<{
+      default: { foo: string; bar: number }
+      optional?: { data: string }
+    }>,
+    setup(props, { slots }) {
+      expectType<
+        (scope: {
+          foo: string
+          bar: number
+        }) => VNode[] | VNode | null | undefined
+      >(slots.default)
+      expectType<
+        | ((scope: { data: string }) => VNode[] | VNode | null | undefined)
+        | undefined
+      >(slots.optional)
+
+      // Test slot invocation
+      const defaultResult = slots.default({ foo: 'foo', bar: 1 })
+      expectType<VNode[] | VNode | null | undefined>(defaultResult)
+
+      const optionalResult = slots.optional?.({ data: 'foo' })
+      expectType<VNode[] | VNode | null | undefined | undefined>(optionalResult)
+
+      // Test that single VNode, null, and undefined are allowed
+      slots.default({ foo: 'foo', bar: 1 })
+      slots.optional?.({ data: 'foo' })
+    },
+  })
+})
