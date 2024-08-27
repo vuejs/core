@@ -1123,7 +1123,7 @@ describe('KeepAlive', () => {
   })
 
   // #11717
-  test('expect that the mounted, activated, and unmounted lifecycle hooks will be called the expected number of times.', async () => {
+  test('remove component from include then switching child', async () => {
     const About = {
       name: 'About',
       render() {
