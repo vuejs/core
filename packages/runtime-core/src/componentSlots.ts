@@ -27,6 +27,10 @@ export type Slot<T extends any = any> = (
   ...args: IfAny<T, any[], [T] | (T extends undefined ? [] : never)>
 ) => VNode[]
 
+export type FlexibleSlot<T extends any = any> = (
+  ...args: IfAny<T, any[], [T] | (T extends undefined ? [] : never)>
+) => VNode[] | VNode | null | undefined
+
 export type InternalSlots = {
   [name: string]: Slot | undefined
 }
@@ -84,14 +88,14 @@ const normalizeSlotValue = (value: unknown): VNode[] =>
     ? value.map(normalizeVNode)
     : [normalizeVNode(value as VNodeChild)]
 
-const normalizeSlot = (
+const normalizeSlot = <T extends any>(
   key: string,
-  rawSlot: Function,
+  rawSlot: FlexibleSlot<T>,
   ctx: ComponentInternalInstance | null | undefined,
 ): Slot => {
   if ((rawSlot as any)._n) {
     // already normalized - #5353
-    return rawSlot as Slot
+    return rawSlot as Slot<T>
   }
   const normalized = withCtx((...args: any[]) => {
     if (
@@ -105,8 +109,12 @@ const normalizeSlot = (
           `Invoke the slot function inside the render function instead.`,
       )
     }
-    return normalizeSlotValue(rawSlot(...args))
-  }, ctx) as Slot
+    return normalizeSlotValue(
+      rawSlot(
+        ...(args as IfAny<T, any[], [T] | (T extends undefined ? [] : never)>),
+      ),
+    )
+  }, ctx) as Slot<T>
   // NOT a compiled slot
   ;(normalized as ContextualRenderFn)._c = false
   return normalized
@@ -122,7 +130,7 @@ const normalizeObjectSlots = (
     if (isInternalKey(key)) continue
     const value = rawSlots[key]
     if (isFunction(value)) {
-      slots[key] = normalizeSlot(key, value, ctx)
+      slots[key] = normalizeSlot(key, value as Slot, ctx)
     } else if (value != null) {
       if (
         __DEV__ &&
