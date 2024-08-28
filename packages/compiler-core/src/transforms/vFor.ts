@@ -209,22 +209,33 @@ export const transformFor: NodeTransform = createStructuralDirectiveTransform(
           }
         }
         if (__DEV__ || !__BROWSER__) {
+          let currentTag = ''
+          if (forNode.children[0]) {
+            currentTag = (forNode.children[0] as BaseElementNode).tag
+          }
           if (
+            currentTag &&
+            forNode.parseResult.value &&
             (forNode.parseResult.value as SimpleExpressionNode).content ===
-            (forNode.children[0] as BaseElementNode).tag
+              currentTag
           ) {
             context.onError(
               createCompilerError(ErrorCodes.X_V_FOR_PARAMS, childBlock.loc),
             )
           }
-          const identifiers: CompoundExpressionNode['identifiers'] = (
-            forNode.parseResult.value as CompoundExpressionNode
-          ).identifiers
+          let identifiers: CompoundExpressionNode['identifiers'] = []
           if (
+            forNode.parseResult.value &&
+            (forNode.parseResult.value as CompoundExpressionNode).identifiers
+          ) {
+            identifiers = (forNode.parseResult.value as CompoundExpressionNode)
+              .identifiers
+          }
+
+          if (
+            currentTag &&
             identifiers &&
-            identifiers.some(
-              i => i === (forNode.children[0] as BaseElementNode).tag,
-            )
+            identifiers.some(i => i === currentTag)
           ) {
             context.onError(
               createCompilerError(ErrorCodes.X_V_FOR_PARAMS, childBlock.loc),
