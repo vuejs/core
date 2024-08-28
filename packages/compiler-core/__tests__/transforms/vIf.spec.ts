@@ -792,6 +792,7 @@ describe('compiler: v-if', () => {
       },
     })
   })
+
   test('template is static key with v-if', () => {
     const {
       node: { codegenNode: codegenNode },
