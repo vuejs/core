@@ -4,7 +4,9 @@ import {
   createStructuralDirectiveTransform,
 } from '../transform'
 import {
+  type BaseElementNode,
   type BlockCodegenNode,
+  type CompoundExpressionNode,
   ConstantTypes,
   type DirectiveNode,
   type ElementNode,
@@ -206,7 +208,29 @@ export const transformFor: NodeTransform = createStructuralDirectiveTransform(
             helper(getVNodeHelper(context.inSSR, childBlock.isComponent))
           }
         }
-
+        if (__DEV__ || !__BROWSER__) {
+          if (
+            (forNode.parseResult.value as SimpleExpressionNode).content ===
+            (forNode.children[0] as BaseElementNode).tag
+          ) {
+            context.onError(
+              createCompilerError(ErrorCodes.X_V_FOR_PARAMS, childBlock.loc),
+            )
+          }
+          const identifiers: CompoundExpressionNode['identifiers'] = (
+            forNode.parseResult.value as CompoundExpressionNode
+          ).identifiers
+          if (
+            identifiers &&
+            identifiers.some(
+              i => i === (forNode.children[0] as BaseElementNode).tag,
+            )
+          ) {
+            context.onError(
+              createCompilerError(ErrorCodes.X_V_FOR_PARAMS, childBlock.loc),
+            )
+          }
+        }
         if (memo) {
           const loop = createFunctionExpression(
             createForLoopParams(forNode.parseResult, [
@@ -236,7 +260,7 @@ export const transformFor: NodeTransform = createStructuralDirectiveTransform(
         } else {
           renderExp.arguments.push(
             createFunctionExpression(
-              [],
+              createForLoopParams(forNode.parseResult),
               childBlock,
               true /* force newline */,
             ) as ForIteratorExpression,
