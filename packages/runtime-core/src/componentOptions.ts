@@ -645,6 +645,13 @@ export function applyOptions(instance: ComponentInternalInstance): void {
               get: () => data[key],
               set: NOOP,
             })
+          } else {
+            warn(
+              `data() return property ${JSON.stringify(
+                key,
+              )} should not start with "$" or "_" ` +
+                `which are reserved prefixes for Vue internals.`,
+            )
           }
         }
       }

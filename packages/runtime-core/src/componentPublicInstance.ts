@@ -428,7 +428,7 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
     // access on a plain object, so we use an accessCache object (with null
     // prototype) to memoize what access type a key corresponds to.
     let normalizedProps
-    if (key[0] !== '$' && key[0] !== '_') {
+    if (!isReservedPrefix(key[0])) {
       const n = accessCache![key]
       if (n !== undefined) {
         switch (n) {
