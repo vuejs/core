@@ -18,7 +18,7 @@ export {
   type ShallowRef,
   type ShallowUnwrapRef,
   type RefUnwrapBailTypes,
-  type CustomRefFactory
+  type CustomRefFactory,
 } from './ref'
 export {
   reactive,
@@ -31,11 +31,14 @@ export {
   shallowReadonly,
   markRaw,
   toRaw,
-  ReactiveFlags /* @remove */,
+  toReactive,
+  toReadonly,
   type Raw,
   type DeepReadonly,
   type ShallowReactive,
-  type UnwrapNestedRefs
+  type UnwrapNestedRefs,
+  type Reactive,
+  type ReactiveMarker,
 } from './reactive'
 export {
   computed,
@@ -43,33 +46,52 @@ export {
   type WritableComputedRef,
   type WritableComputedOptions,
   type ComputedGetter,
-  type ComputedSetter
+  type ComputedSetter,
+  type ComputedRefImpl,
 } from './computed'
-export { deferredComputed } from './deferredComputed'
 export {
   effect,
   stop,
-  trigger,
-  track,
   enableTracking,
   pauseTracking,
   resetTracking,
-  ITERATE_KEY,
+  onEffectCleanup,
   ReactiveEffect,
+  EffectFlags,
   type ReactiveEffectRunner,
   type ReactiveEffectOptions,
   type EffectScheduler,
   type DebuggerOptions,
   type DebuggerEvent,
-  type DebuggerEventExtraInfo
+  type DebuggerEventExtraInfo,
 } from './effect'
+export {
+  trigger,
+  track,
+  ITERATE_KEY,
+  ARRAY_ITERATE_KEY,
+  MAP_KEY_ITERATE_KEY,
+} from './dep'
 export {
   effectScope,
   EffectScope,
   getCurrentScope,
-  onScopeDispose
+  onScopeDispose,
 } from './effectScope'
+export { reactiveReadArray, shallowReadArray } from './arrayInstrumentations'
+export { TrackOpTypes, TriggerOpTypes, ReactiveFlags } from './constants'
 export {
-  TrackOpTypes /* @remove */,
-  TriggerOpTypes /* @remove */
-} from './operations'
+  watch,
+  getCurrentWatcher,
+  traverse,
+  onWatcherCleanup,
+  WatchErrorCodes,
+  type WatchOptions,
+  type WatchScheduler,
+  type WatchStopHandle,
+  type WatchHandle,
+  type WatchEffect,
+  type WatchSource,
+  type WatchCallback,
+  type OnCleanup,
+} from './watch'

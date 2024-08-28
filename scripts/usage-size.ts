@@ -1,10 +1,24 @@
-import { mkdir, writeFile } from 'fs/promises'
+import { mkdir, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { rollup } from 'rollup'
 import nodeResolve from '@rollup/plugin-node-resolve'
-import { minify } from 'terser'
+import { minify } from '@swc/core'
 import replace from '@rollup/plugin-replace'
 import { brotliCompressSync, gzipSync } from 'node:zlib'
+import { parseArgs } from 'node:util'
+import pico from 'picocolors'
+import prettyBytes from 'pretty-bytes'
+
+const {
+  values: { write },
+} = parseArgs({
+  options: {
+    write: {
+      type: 'boolean',
+      default: false,
+    },
+  },
+})
 
 const sizeDir = path.resolve('temp/size')
 const entry = path.resolve('./packages/vue/dist/vue.runtime.esm-bundler.js')
@@ -26,28 +40,29 @@ const presets: Preset[] = [
       'watch',
       'Transition',
       'KeepAlive',
-      'Suspense'
-    ]
-  }
+      'Suspense',
+    ],
+  },
 ]
 
 main()
 
 async function main() {
+  console.log()
   const tasks: ReturnType<typeof generateBundle>[] = []
   for (const preset of presets) {
     tasks.push(generateBundle(preset))
   }
 
   const results = Object.fromEntries(
-    (await Promise.all(tasks)).map(r => [r.name, r])
+    (await Promise.all(tasks)).map(r => [r.name, r]),
   )
 
   await mkdir(sizeDir, { recursive: true })
   await writeFile(
     path.resolve(sizeDir, '_usages.json'),
-    JSON.stringify(results),
-    'utf-8'
+    JSON.stringify(results, null, 2),
+    'utf-8',
   )
 }
 
@@ -65,16 +80,17 @@ async function generateBundle(preset: Preset) {
         },
         load(_id) {
           if (_id === id) return content
-        }
+        },
       },
       nodeResolve(),
       replace({
         'process.env.NODE_ENV': '"production"',
         __VUE_PROD_DEVTOOLS__: 'false',
+        __VUE_PROD_HYDRATION_MISMATCH_DETAILS__: 'false',
         __VUE_OPTIONS_API__: 'true',
-        preventAssignment: true
-      })
-    ]
+        preventAssignment: true,
+      }),
+    ],
   })
 
   const generated = await result.generate({})
@@ -82,7 +98,7 @@ async function generateBundle(preset: Preset) {
   const minified = (
     await minify(bundled, {
       module: true,
-      toplevel: true
+      toplevel: true,
     })
   ).code!
 
@@ -90,10 +106,21 @@ async function generateBundle(preset: Preset) {
   const gzip = gzipSync(minified).length
   const brotli = brotliCompressSync(minified).length
 
+  if (write) {
+    await writeFile(path.resolve(sizeDir, preset.name + '.js'), bundled)
+  }
+
+  console.log(
+    `${pico.green(pico.bold(preset.name))} - ` +
+      `min:${prettyBytes(size, { minimumFractionDigits: 3 })} / ` +
+      `gzip:${prettyBytes(gzip, { minimumFractionDigits: 3 })} / ` +
+      `brotli:${prettyBytes(brotli, { minimumFractionDigits: 3 })}`,
+  )
+
   return {
     name: preset.name,
     size,
     gzip,
-    brotli
+    brotli,
   }
 }
