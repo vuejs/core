@@ -16,7 +16,7 @@ import {
   type SimpleExpressionNode,
 } from '../../src/ast'
 import { ErrorCodes } from '../../src/errors'
-import { type CompilerOptions, generate } from '../../src'
+import { BindingTypes, type CompilerOptions, generate } from '../../src'
 import { FRAGMENT, RENDER_LIST, RENDER_SLOT } from '../../src/runtimeHelpers'
 import { PatchFlags } from '@vue/shared'
 import { createObjectMatcher } from '../testUtils'
@@ -317,10 +317,13 @@ describe('compiler: v-for', () => {
       expect(onError).toHaveBeenCalledTimes(1)
     })
 
-    test('the parameter name is the same as the current component name', () => {
+    test('the value in binding metadata cannot be used as a parameter.', () => {
       const onError = vi.fn()
       parseWithForTransform('<Comp v-for="Comp of list" />', {
         onError: onError,
+        bindingMetadata: {
+          Comp: BindingTypes.SETUP_CONST,
+        },
       })
       expect(onError).toHaveBeenCalledTimes(1)
       expect(onError).toHaveBeenCalledWith(
