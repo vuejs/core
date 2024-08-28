@@ -265,7 +265,7 @@ function createChildrenCodegenNode(
       `${userKey || keyIndex}`,
       isStatic,
       locStub,
-      ConstantTypes.CAN_CACHE,
+      userKey ? ConstantTypes.NOT_CONSTANT : ConstantTypes.CAN_CACHE,
     ),
   )
   const { children } = branch
