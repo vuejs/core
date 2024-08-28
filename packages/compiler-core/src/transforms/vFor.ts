@@ -4,7 +4,6 @@ import {
   createStructuralDirectiveTransform,
 } from '../transform'
 import {
-  type BaseElementNode,
   type BlockCodegenNode,
   type CompoundExpressionNode,
   ConstantTypes,
@@ -209,20 +208,18 @@ export const transformFor: NodeTransform = createStructuralDirectiveTransform(
           }
         }
         if (__DEV__ || !__BROWSER__) {
-          let currentTag = ''
-          if (forNode.children[0]) {
-            currentTag = (forNode.children[0] as BaseElementNode).tag
-          }
+          const bindingMetadata = context.bindingMetadata
           if (
-            currentTag &&
             forNode.parseResult.value &&
-            (forNode.parseResult.value as SimpleExpressionNode).content ===
-              currentTag
+            bindingMetadata[
+              (forNode.parseResult.value as SimpleExpressionNode).content
+            ]
           ) {
             context.onError(
               createCompilerError(ErrorCodes.X_V_FOR_PARAMS, childBlock.loc),
             )
           }
+
           let identifiers: CompoundExpressionNode['identifiers'] = []
           if (
             forNode.parseResult.value &&
@@ -232,11 +229,7 @@ export const transformFor: NodeTransform = createStructuralDirectiveTransform(
               .identifiers
           }
 
-          if (
-            currentTag &&
-            identifiers &&
-            identifiers.some(i => i === currentTag)
-          ) {
+          if (identifiers!.some(i => bindingMetadata[i])) {
             context.onError(
               createCompilerError(ErrorCodes.X_V_FOR_PARAMS, childBlock.loc),
             )
