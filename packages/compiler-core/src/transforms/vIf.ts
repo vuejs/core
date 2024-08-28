@@ -38,16 +38,38 @@ export const transformIf: NodeTransform = createStructuralDirectiveTransform(
   /^(if|else|else-if)$/,
   (node, dir, context) => {
     return processIf(node, dir, context, (ifNode, branch, isRoot) => {
+      let key: number | string = 0
+      let isUseUserKey = false
+      let isStatic: SimpleExpressionNode['isStatic'] = false
+
+      if (branch.userKey && branch.userKey.name === 'bind') {
+        isUseUserKey = true
+        key = ((branch.userKey as DirectiveNode).exp as SimpleExpressionNode)
+          .content
+      }
+
+      if (
+        branch.userKey &&
+        branch.userKey.name === 'key' &&
+        (branch.userKey as AttributeNode).value
+      ) {
+        isUseUserKey = true
+        isStatic = true
+        key = `${(branch.userKey as AttributeNode).value!.content}`
+      }
+
       // #1587: We need to dynamically increment the key based on the current
       // node's sibling nodes, since chained v-if/else branches are
       // rendered at the same depth
       const siblings = context.parent!.children
       let i = siblings.indexOf(ifNode)
-      let key = 0
-      while (i-- >= 0) {
-        const sibling = siblings[i]
-        if (sibling && sibling.type === NodeTypes.IF) {
-          key += sibling.branches.length
+
+      if (!isUseUserKey) {
+        while (i-- >= 0) {
+          const sibling = siblings[i]
+          if (sibling && sibling.type === NodeTypes.IF) {
+            ;(key as number) += sibling.branches.length
+          }
         }
       }
 
@@ -59,14 +81,16 @@ export const transformIf: NodeTransform = createStructuralDirectiveTransform(
             branch,
             key,
             context,
+            isStatic,
           ) as IfConditionalExpression
         } else {
           // attach this branch's codegen node to the v-if root.
           const parentCondition = getParentCondition(ifNode.codegenNode!)
           parentCondition.alternate = createCodegenNodeForBranch(
             branch,
-            key + ifNode.branches.length - 1,
+            isUseUserKey ? key : (key as number) + ifNode.branches.length - 1,
             context,
+            isStatic,
           )
         }
       }
@@ -218,13 +242,14 @@ function createIfBranch(node: ElementNode, dir: DirectiveNode): IfBranchNode {
 
 function createCodegenNodeForBranch(
   branch: IfBranchNode,
-  keyIndex: number,
+  keyIndex: number | string,
   context: TransformContext,
+  isStatic: SimpleExpressionNode['isStatic'] = false,
 ): IfConditionalExpression | BlockCodegenNode | MemoExpression {
   if (branch.condition) {
     return createConditionalExpression(
       branch.condition,
-      createChildrenCodegenNode(branch, keyIndex, context),
+      createChildrenCodegenNode(branch, keyIndex, context, isStatic),
       // make sure to pass in asBlock: true so that the comment node call
       // closes the current block.
       createCallExpression(context.helper(CREATE_COMMENT), [
@@ -233,21 +258,22 @@ function createCodegenNodeForBranch(
       ]),
     ) as IfConditionalExpression
   } else {
-    return createChildrenCodegenNode(branch, keyIndex, context)
+    return createChildrenCodegenNode(branch, keyIndex, context, isStatic)
   }
 }
 
 function createChildrenCodegenNode(
   branch: IfBranchNode,
-  keyIndex: number,
+  keyIndex: number | string,
   context: TransformContext,
+  isStatic: SimpleExpressionNode['isStatic'] = false,
 ): BlockCodegenNode | MemoExpression {
   const { helper } = context
   const keyProperty = createObjectProperty(
     `key`,
     createSimpleExpression(
       `${keyIndex}`,
-      false,
+      isStatic,
       locStub,
       ConstantTypes.CAN_CACHE,
     ),
