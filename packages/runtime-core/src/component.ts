@@ -150,7 +150,7 @@ export interface ComponentCustomProps {}
  * }
  * ```
  */
-export interface GlobalDirectives extends Record<string, Directive> {}
+export interface GlobalDirectives {}
 
 /**
  * For globally defined Components
@@ -167,7 +167,7 @@ export interface GlobalDirectives extends Record<string, Directive> {}
  * }
  * ```
  */
-export interface GlobalComponents extends Record<string, Component> {
+export interface GlobalComponents {
   Teleport: DefineComponent<TeleportProps>
   Suspense: DefineComponent<SuspenseProps>
   KeepAlive: DefineComponent<KeepAliveProps>
