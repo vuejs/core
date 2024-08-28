@@ -81,7 +81,7 @@ export const transformExpression: NodeTransform = (node, context) => {
       }
     }
   } else if (node.type === NodeTypes.IF_BRANCH) {
-    if (node.userKey && node.userKey.name === 'bind') {
+    if (node.isTemplateIf && node.userKey && node.userKey.name === 'bind') {
       const useKey = node.userKey as DirectiveNode
       const exp = useKey.exp
       const arg = useKey.arg
