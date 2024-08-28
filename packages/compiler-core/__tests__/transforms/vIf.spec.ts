@@ -758,14 +758,14 @@ describe('compiler: v-if', () => {
     )
   })
 
-  test('template key with v-if', () => {
+  test('template is not static key with v-if', () => {
     const {
-      node: { codegenNode: codegenNodeA },
+      node: { codegenNode: codegenNode },
     } = parseWithIfTransform(
       `<template v-if="flag" :key="100">aaaaaaaaaaaaa</template>
       <template v-else :key="2000">bbbbbbbbbbb</template>`,
     )
-    expect(codegenNodeA.alternate).toMatchObject({
+    expect(codegenNode.alternate).toMatchObject({
       props: {
         properties: [
           {
@@ -778,7 +778,7 @@ describe('compiler: v-if', () => {
         ],
       },
     })
-    expect(codegenNodeA.consequent).toMatchObject({
+    expect(codegenNode.consequent).toMatchObject({
       props: {
         properties: [
           {
@@ -791,13 +791,15 @@ describe('compiler: v-if', () => {
         ],
       },
     })
+  })
+  test('template is static key with v-if', () => {
     const {
-      node: { codegenNode: codegenNodeB },
+      node: { codegenNode: codegenNode },
     } = parseWithIfTransform(
       `<template v-if="flag" key="aa">aaaaaaaaaaaaa</template>
       <template v-else key="bb">bbbbbbbbbbb</template>`,
     )
-    expect(codegenNodeB.alternate).toMatchObject({
+    expect(codegenNode.alternate).toMatchObject({
       props: {
         properties: [
           {
@@ -810,7 +812,7 @@ describe('compiler: v-if', () => {
         ],
       },
     })
-    expect(codegenNodeB.consequent).toMatchObject({
+    expect(codegenNode.consequent).toMatchObject({
       props: {
         properties: [
           {
