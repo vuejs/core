@@ -316,6 +316,19 @@ describe('compiler: v-for', () => {
       )
       expect(onError).toHaveBeenCalledTimes(1)
     })
+
+    test('the parameter name is the same as the current component name', () => {
+      const onError = vi.fn()
+      parseWithForTransform('<Comp v-for="Comp of list" />', {
+        onError: onError,
+      })
+      expect(onError).toHaveBeenCalledTimes(1)
+      expect(onError).toHaveBeenCalledWith(
+        expect.objectContaining({
+          code: ErrorCodes.X_V_FOR_PARAMS,
+        }),
+      )
+    })
   })
 
   describe('source location', () => {
