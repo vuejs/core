@@ -318,15 +318,26 @@ describe('compiler: v-for', () => {
     })
 
     test('the value in binding metadata cannot be used as a parameter.', () => {
-      const onError = vi.fn()
+      const onError1 = vi.fn()
       parseWithForTransform('<Comp v-for="Comp of list" />', {
-        onError: onError,
+        onError: onError1,
         bindingMetadata: {
           Comp: BindingTypes.SETUP_CONST,
         },
       })
-      expect(onError).toHaveBeenCalledTimes(1)
-      expect(onError).toHaveBeenCalledWith(
+      expect(onError1).toHaveBeenCalledTimes(1)
+      expect(onError1).toHaveBeenCalledWith(
+        expect.objectContaining({
+          code: ErrorCodes.X_V_FOR_PARAMS,
+        }),
+      )
+
+      const onError2 = vi.fn()
+      parseWithForTransform('<Comp v-for="Comp of list" />', {
+        onError: onError2,
+      })
+      expect(onError2).toHaveBeenCalledTimes(1)
+      expect(onError2).toHaveBeenCalledWith(
         expect.objectContaining({
           code: ErrorCodes.X_V_FOR_PARAMS,
         }),

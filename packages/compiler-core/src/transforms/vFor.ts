@@ -280,7 +280,8 @@ function findTag(
   node: VNodeCall | ElementNode,
   name: string,
 ): VNodeCall | ElementNode | undefined {
-  if (node.tag === name) return node
+  if (node.tag === `$setup["${name}"]` || node.tag === `_component_${name}`)
+    return node
   if (node.children) {
     const children = node.children as TemplateChildNode[]
     for (let i = 0; i < children.length; i++) {
