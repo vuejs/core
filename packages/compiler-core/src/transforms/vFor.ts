@@ -37,6 +37,7 @@ import { ErrorCodes, createCompilerError } from '../errors'
 import {
   findDir,
   findProp,
+  findTag,
   injectProp,
   isSlotOutlet,
   isTemplateNode,
@@ -208,6 +209,7 @@ export const transformFor: NodeTransform = createStructuralDirectiveTransform(
             helper(getVNodeHelper(context.inSSR, childBlock.isComponent))
           }
         }
+
         if (__DEV__ || !__BROWSER__) {
           if (
             forNode.parseResult.value &&
@@ -218,7 +220,7 @@ export const transformFor: NodeTransform = createStructuralDirectiveTransform(
           ) {
             context.onError(
               createCompilerError(
-                ErrorCodes.X_V_FOR_PARAMS,
+                ErrorCodes.X_DIRECTIVE_PARAMS,
                 forNode.parseResult.value.loc,
               ),
             )
@@ -236,12 +238,13 @@ export const transformFor: NodeTransform = createStructuralDirectiveTransform(
           if (identifiers!.some(i => !!findTag(childBlock as VNodeCall, i))) {
             context.onError(
               createCompilerError(
-                ErrorCodes.X_V_FOR_PARAMS,
+                ErrorCodes.X_DIRECTIVE_PARAMS,
                 forNode.parseResult.value!.loc,
               ),
             )
           }
         }
+
         if (memo) {
           const loop = createFunctionExpression(
             createForLoopParams(forNode.parseResult, [
@@ -281,28 +284,6 @@ export const transformFor: NodeTransform = createStructuralDirectiveTransform(
     })
   },
 )
-
-function findTag(
-  node: VNodeCall | ElementNode,
-  name: string,
-): VNodeCall | ElementNode | undefined {
-  if (
-    node.tag === name ||
-    node.tag === `$setup["${name}"]` ||
-    node.tag === `_component_${name}`
-  )
-    return node
-  if (node.children) {
-    const children = node.children as TemplateChildNode[]
-    for (let i = 0; i < children.length; i++) {
-      const child = children[i]
-      if ((child as ElementNode).tag) {
-        const targetTag = findTag(child as ElementNode, name)
-        if (targetTag) return targetTag
-      }
-    }
-  }
-}
 
 // target-agnostic transform used for both Client and SSR
 export function processFor(

@@ -564,3 +564,25 @@ export function getMemoedVNodeCall(
 }
 
 export const forAliasRE: RegExp = /([\s\S]*?)\s+(?:in|of)\s+(\S[\s\S]*)/
+
+export function findTag(
+  node: VNodeCall | ElementNode,
+  name: string,
+): VNodeCall | ElementNode | undefined {
+  if (
+    node.tag === name ||
+    node.tag === `$setup["${name}"]` ||
+    node.tag === `_component_${name}`
+  )
+    return node
+  if (node.children) {
+    const children = node.children as TemplateChildNode[]
+    for (let i = 0; i < children.length; i++) {
+      const child = children[i]
+      if ((child as ElementNode).tag) {
+        const targetTag = findTag(child as ElementNode, name)
+        if (targetTag) return targetTag
+      }
+    }
+  }
+}
