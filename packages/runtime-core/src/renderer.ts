@@ -72,7 +72,11 @@ import {
 } from './components/Teleport'
 import { type KeepAliveContext, isKeepAlive } from './components/KeepAlive'
 import { isHmrUpdating, registerHMR, unregisterHMR } from './hmr'
-import { type RootHydrateFunction, createHydrationFunctions } from './hydration'
+import {
+  DOMNodeTypes,
+  type RootHydrateFunction,
+  createHydrationFunctions,
+} from './hydration'
 import { invokeDirectiveHook } from './directives'
 import { endMeasure, startMeasure } from './profiling'
 import {
@@ -2230,7 +2234,7 @@ function baseCreateRenderer(
   }
 
   const getFirstElement = (cur: RendererNode, end: RendererNode) => {
-    while (cur.nodeType !== Node.ELEMENT_NODE && cur !== end) {
+    while (cur.nodeType !== DOMNodeTypes.ELEMENT && cur !== end) {
       cur = hostNextSibling(cur)!
     }
 
