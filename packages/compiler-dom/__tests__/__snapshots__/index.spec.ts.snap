@@ -1,6 +1,6 @@
-// Jest Snapshot v1, https://goo.gl/fbAQLP
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`compile should contain standard transforms 1`] = `
+exports[`compile > should contain standard transforms 1`] = `
 "const _Vue = Vue
 
 return function render(_ctx, _cache) {

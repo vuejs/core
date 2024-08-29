@@ -1,6 +1,6 @@
-// Jest Snapshot v1, https://goo.gl/fbAQLP
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`compiler: transform v-model errors should allow usage on custom element 1`] = `
+exports[`compiler: transform v-model > errors > should allow usage on custom element 1`] = `
 "const _Vue = Vue
 
 return function render(_ctx, _cache) {
@@ -16,7 +16,7 @@ return function render(_ctx, _cache) {
 }"
 `;
 
-exports[`compiler: transform v-model input w/ dynamic v-bind 1`] = `
+exports[`compiler: transform v-model > input w/ dynamic v-bind 1`] = `
 "const _Vue = Vue
 
 return function render(_ctx, _cache) {
@@ -32,7 +32,7 @@ return function render(_ctx, _cache) {
 }"
 `;
 
-exports[`compiler: transform v-model input w/ dynamic v-bind 2`] = `
+exports[`compiler: transform v-model > input w/ dynamic v-bind 2`] = `
 "const _Vue = Vue
 
 return function render(_ctx, _cache) {
@@ -48,7 +48,7 @@ return function render(_ctx, _cache) {
 }"
 `;
 
-exports[`compiler: transform v-model modifiers .lazy 1`] = `
+exports[`compiler: transform v-model > modifiers > .lazy 1`] = `
 "const _Vue = Vue
 
 return function render(_ctx, _cache) {
@@ -69,7 +69,7 @@ return function render(_ctx, _cache) {
 }"
 `;
 
-exports[`compiler: transform v-model modifiers .number 1`] = `
+exports[`compiler: transform v-model > modifiers > .number 1`] = `
 "const _Vue = Vue
 
 return function render(_ctx, _cache) {
@@ -90,7 +90,7 @@ return function render(_ctx, _cache) {
 }"
 `;
 
-exports[`compiler: transform v-model modifiers .trim 1`] = `
+exports[`compiler: transform v-model > modifiers > .trim 1`] = `
 "const _Vue = Vue
 
 return function render(_ctx, _cache) {
@@ -111,7 +111,7 @@ return function render(_ctx, _cache) {
 }"
 `;
 
-exports[`compiler: transform v-model simple expression 1`] = `
+exports[`compiler: transform v-model > simple expression 1`] = `
 "const _Vue = Vue
 
 return function render(_ctx, _cache) {
@@ -127,7 +127,7 @@ return function render(_ctx, _cache) {
 }"
 `;
 
-exports[`compiler: transform v-model simple expression for input (checkbox) 1`] = `
+exports[`compiler: transform v-model > simple expression for input (checkbox) 1`] = `
 "const _Vue = Vue
 
 return function render(_ctx, _cache) {
@@ -144,7 +144,7 @@ return function render(_ctx, _cache) {
 }"
 `;
 
-exports[`compiler: transform v-model simple expression for input (dynamic type) 1`] = `
+exports[`compiler: transform v-model > simple expression for input (dynamic type) 1`] = `
 "const _Vue = Vue
 
 return function render(_ctx, _cache) {
@@ -160,7 +160,7 @@ return function render(_ctx, _cache) {
 }"
 `;
 
-exports[`compiler: transform v-model simple expression for input (radio) 1`] = `
+exports[`compiler: transform v-model > simple expression for input (radio) 1`] = `
 "const _Vue = Vue
 
 return function render(_ctx, _cache) {
@@ -177,7 +177,7 @@ return function render(_ctx, _cache) {
 }"
 `;
 
-exports[`compiler: transform v-model simple expression for input (text) 1`] = `
+exports[`compiler: transform v-model > simple expression for input (text) 1`] = `
 "const _Vue = Vue
 
 return function render(_ctx, _cache) {
@@ -194,7 +194,7 @@ return function render(_ctx, _cache) {
 }"
 `;
 
-exports[`compiler: transform v-model simple expression for select 1`] = `
+exports[`compiler: transform v-model > simple expression for select 1`] = `
 "const _Vue = Vue
 
 return function render(_ctx, _cache) {
@@ -210,7 +210,7 @@ return function render(_ctx, _cache) {
 }"
 `;
 
-exports[`compiler: transform v-model simple expression for textarea 1`] = `
+exports[`compiler: transform v-model > simple expression for textarea 1`] = `
 "const _Vue = Vue
 
 return function render(_ctx, _cache) {

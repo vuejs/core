@@ -1,3 +1,6 @@
+/**
+ * @vitest-environment jsdom
+ */
 import { decodeHtmlBrowser } from '../src/decodeHtmlBrowser'
 
 describe('decodeHtmlBrowser', () => {
@@ -26,16 +29,18 @@ describe('decodeHtmlBrowser', () => {
 
     // #3001 html tags inside attribute values
     expect(decodeHtmlBrowser('<strong>Text</strong>', true)).toBe(
-      '<strong>Text</strong>'
+      '<strong>Text</strong>',
     )
     expect(decodeHtmlBrowser('<strong>&amp;</strong>', true)).toBe(
-      '<strong>&</strong>'
+      '<strong>&</strong>',
     )
     expect(
       decodeHtmlBrowser(
         '<strong>&lt;strong&gt;&amp;&lt;/strong&gt;</strong>',
-        true
-      )
+        true,
+      ),
     ).toBe('<strong><strong>&</strong></strong>')
+    expect(decodeHtmlBrowser('"', true)).toBe('"')
+    expect(decodeHtmlBrowser("'", true)).toBe("'")
   })
 })
