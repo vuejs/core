@@ -387,7 +387,7 @@ function matches(pattern: MatchPattern, name: string): boolean {
     pattern.lastIndex = 0
     return pattern.test(name)
   }
-  /* istanbul ignore next */
+  /* v8 ignore next */
   return false
 }
 
