@@ -2905,13 +2905,13 @@ describe('e2e: Transition', () => {
               template: `
                   <!--xxx-->
                   <div class="test">Component A</div>
-                `
+                `,
             },
             CompB: {
               template: `
                   <div class="test">Component B</div>
-                `
-            }
+                `,
+            },
           },
           template: `
             <div id="container">
@@ -2926,51 +2926,51 @@ describe('e2e: Transition', () => {
             const toggle = ref(true)
             const click = () => (toggle.value = !toggle.value)
             return { toggle, click }
-          }
+          },
         }).mount('#app')
       })
       expect(await html('#container')).toBe(
-        '<!--xxx--><div class="test">Component A</div>'
+        '<!--xxx--><div class="test">Component A</div>',
       )
 
       // A -> B
       await click('#toggleBtn')
       expect(await html('#container')).toBe(
-        '<div class="test v-leave-from v-leave-active">Component A</div><!---->'
+        '<div class="test v-leave-from v-leave-active">Component A</div><!---->',
       )
       await nextFrame()
       expect(await html('#container')).toBe(
-        '<div class="test v-leave-active v-leave-to">Component A</div><!---->'
+        '<div class="test v-leave-active v-leave-to">Component A</div><!---->',
       )
       await nextFrame()
       await nextFrame()
       expect(await html('#container')).toBe(
-        '<div class="test v-enter-active v-enter-to">Component B</div>'
+        '<div class="test v-enter-active v-enter-to">Component B</div>',
       )
       await transitionFinish()
       expect(await html('#container')).toBe(
-        '<div class="test">Component B</div>'
+        '<div class="test">Component B</div>',
       )
 
       // B -> A
       await click('#toggleBtn')
       expect(await html('#container')).toBe(
-        '<div class="test v-leave-from v-leave-active">Component B</div><!---->'
+        '<div class="test v-leave-from v-leave-active">Component B</div><!---->',
       )
       await nextFrame()
       expect(await html('#container')).toBe(
-        '<div class="test v-leave-active v-leave-to">Component B</div><!---->'
+        '<div class="test v-leave-active v-leave-to">Component B</div><!---->',
       )
       await nextFrame()
       await nextFrame()
       expect(await html('#container')).toBe(
-        '<!--xxx--><div class="test v-enter-active v-enter-to">Component A</div>'
+        '<!--xxx--><div class="test v-enter-active v-enter-to">Component A</div>',
       )
       await transitionFinish()
       expect(await html('#container')).toBe(
-        '<!--xxx--><div class="test">Component A</div>'
+        '<!--xxx--><div class="test">Component A</div>',
       )
     },
-    E2E_TIMEOUT
+    E2E_TIMEOUT,
   )
 })
