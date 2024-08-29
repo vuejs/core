@@ -51,40 +51,32 @@ export class EffectScope {
   }
 
   pause(): void {
-    if (this._active) {
-      this._isPaused = true
-      let i, l
-      if (this.scopes) {
-        for (i = 0, l = this.scopes.length; i < l; i++) {
-          this.scopes[i].pause()
-        }
-      }
-      for (i = 0, l = this.effects.length; i < l; i++) {
-        this.effects[i].pause()
-      }
-    }
+    this.forItem('pause')
   }
 
   /**
    * Resumes the effect scope, including all child scopes and effects.
    */
   resume(): void {
-    if (this._active) {
       if (this._isPaused) {
-        this._isPaused = false
-        let i, l
-        if (this.scopes) {
-          for (i = 0, l = this.scopes.length; i < l; i++) {
-            this.scopes[i].resume()
-          }
-        }
-        for (i = 0, l = this.effects.length; i < l; i++) {
-          this.effects[i].resume()
-        }
+        this.forItem('resume')
       }
-    }
   }
 
+  forItem(type: 'pause' | 'resume'):void{
+    if(!this._active) return
+
+    this._isPaused = type === 'pause'
+    let i, l
+    if (this.scopes) {
+      for (i = 0, l = this.scopes.length; i < l; i++) {
+        this.scopes[i][type]()
+      }
+    }
+    for (i = 0, l = this.effects.length; i < l; i++) {
+      this.effects[i][type]()
+    }
+  }
   run<T>(fn: () => T): T | undefined {
     if (this._active) {
       const currentEffectScope = activeEffectScope
