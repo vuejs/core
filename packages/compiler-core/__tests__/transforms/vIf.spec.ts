@@ -758,7 +758,7 @@ describe('compiler: v-if', () => {
     )
   })
 
-  test('template is not static key with v-if', () => {
+  test('template v-if + dynamic key', () => {
     const {
       node: { codegenNode: codegenNode },
     } = parseWithIfTransform(
