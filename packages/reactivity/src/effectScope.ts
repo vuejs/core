@@ -58,22 +58,21 @@ export class EffectScope {
    * Resumes the effect scope, including all child scopes and effects.
    */
   resume(): void {
-    if (this._isPaused) {
-      this.forItem('resume')
-    }
+      if (this._isPaused) {
+        this.forItem('resume')
+      }
   }
 
-  forItem(type: 'pause' | 'resume'): void {
-    if (!this._active) return
+  forItem(type: 'pause' | 'resume'):void{
+    if(!this._active) return
 
     this._isPaused = type === 'pause'
-    let i, l
     if (this.scopes) {
-      for (i = 0, l = this.scopes.length; i < l; i++) {
+      for (let i = 0; i < this.scopes.length; i++) {
         this.scopes[i][type]()
       }
     }
-    for (i = 0, l = this.effects.length; i < l; i++) {
+    for (let i = 0; i < this.effects.length; i++) {
       this.effects[i][type]()
     }
   }
@@ -109,15 +108,14 @@ export class EffectScope {
 
   stop(fromParent?: boolean): void {
     if (this._active) {
-      let i, l
-      for (i = 0, l = this.effects.length; i < l; i++) {
+      for (let i = 0; i < this.effects.length; i++) {
         this.effects[i].stop()
       }
-      for (i = 0, l = this.cleanups.length; i < l; i++) {
+      for (let i = 0; i < this.cleanups.length; i++) {
         this.cleanups[i]()
       }
       if (this.scopes) {
-        for (i = 0, l = this.scopes.length; i < l; i++) {
+        for (let i = 0; i < this.scopes.length; i++) {
           this.scopes[i].stop(true)
         }
       }
