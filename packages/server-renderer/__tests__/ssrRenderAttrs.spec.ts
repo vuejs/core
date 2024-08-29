@@ -122,11 +122,6 @@ describe('ssr: renderAttr', () => {
       ` foo="${escapeHtml(`<script>`)}"`,
     )
   })
-
-  test('className', () => {
-    expect(ssrRenderAttr('className', 'foo')).toBe(` class="foo"`)
-    expect(ssrRenderAttr('className', ['foo', 'bar'])).toBe(` class="foo,bar"`)
-  })
 })
 
 describe('ssr: renderClass', () => {
@@ -147,6 +142,19 @@ describe('ssr: renderClass', () => {
 
   test('escape class values', () => {
     expect(ssrRenderClass(`"><script`)).toBe(`&quot;&gt;&lt;script`)
+  })
+
+  test('className', () => {
+    expect(
+      ssrRenderAttrs({
+        className: 'foo',
+      }),
+    ).toBe(` class="foo"`)
+    expect(
+      ssrRenderAttrs({
+        className: ['foo', 'bar'],
+      }),
+    ).toBe(` class="foo,bar"`)
   })
 })
 
