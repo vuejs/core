@@ -26,8 +26,8 @@ import type { NodeTransform, TransformContext } from '../transform'
 import { ErrorCodes, createCompilerError } from '../errors'
 import {
   assert,
+  findComponentTagNode,
   findDir,
-  findTag,
   hasScopeRef,
   isStaticExp,
   isTemplateNode,
@@ -182,7 +182,10 @@ export function buildSlots(
       if (
         slotDir.exp &&
         (slotDir.exp as SimpleExpressionNode).content &&
-        findTag(slotElement, (slotDir.exp as SimpleExpressionNode).content)
+        findComponentTagNode(
+          slotElement,
+          (slotDir.exp as SimpleExpressionNode).content,
+        )
       ) {
         context.onError(
           createCompilerError(ErrorCodes.X_DIRECTIVE_PARAMS, slotDir.exp.loc),
@@ -193,7 +196,10 @@ export function buildSlots(
       if (slotDir.exp && (slotDir.exp as CompoundExpressionNode).identifiers) {
         identifiers = (slotDir.exp as CompoundExpressionNode).identifiers
       }
-      if (slotDir.exp && identifiers!.some(i => !!findTag(slotElement, i))) {
+      if (
+        slotDir.exp &&
+        identifiers!.some(i => !!findComponentTagNode(slotElement, i))
+      ) {
         context.onError(
           createCompilerError(ErrorCodes.X_DIRECTIVE_PARAMS, slotDir.exp.loc),
         )

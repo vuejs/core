@@ -34,9 +34,9 @@ import {
 } from '../ast'
 import { ErrorCodes, createCompilerError } from '../errors'
 import {
+  findComponentTagNode,
   findDir,
   findProp,
-  findTag,
   injectProp,
   isSlotOutlet,
   isTemplateNode,
@@ -212,7 +212,7 @@ export const transformFor: NodeTransform = createStructuralDirectiveTransform(
         if (__DEV__ || !__BROWSER__) {
           if (
             forNode.parseResult.value &&
-            findTag(
+            findComponentTagNode(
               childBlock as VNodeCall,
               (forNode.parseResult.value as SimpleExpressionNode).content,
             )
@@ -234,7 +234,11 @@ export const transformFor: NodeTransform = createStructuralDirectiveTransform(
               .identifiers
           }
 
-          if (identifiers!.some(i => !!findTag(childBlock as VNodeCall, i))) {
+          if (
+            identifiers!.some(
+              i => !!findComponentTagNode(childBlock as VNodeCall, i),
+            )
+          ) {
             context.onError(
               createCompilerError(
                 ErrorCodes.X_DIRECTIVE_PARAMS,

@@ -565,7 +565,7 @@ export function getMemoedVNodeCall(
 
 export const forAliasRE: RegExp = /([\s\S]*?)\s+(?:in|of)\s+(\S[\s\S]*)/
 
-export function findTag(
+export function findComponentTagNode(
   node: VNodeCall | ElementNode,
   name: string,
 ): VNodeCall | ElementNode | undefined {
@@ -580,7 +580,7 @@ export function findTag(
     for (let i = 0; i < children.length; i++) {
       const child = children[i]
       if ((child as ElementNode).tag) {
-        const targetTag = findTag(child as ElementNode, name)
+        const targetTag = findComponentTagNode(child as ElementNode, name)
         if (targetTag) return targetTag
       }
     }
