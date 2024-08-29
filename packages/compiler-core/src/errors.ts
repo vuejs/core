@@ -152,7 +152,7 @@ export const errorMessages: Record<ErrorCodes, string> = {
     'End bracket for dynamic directive argument was not found. ' +
     'Note that dynamic directive argument cannot contain spaces.',
   [ErrorCodes.X_MISSING_DIRECTIVE_NAME]: 'Legal directive name was expected.',
-  [ErrorCodes.X_DIRECTIVE_PARAMS]: `the parameter name cannot be the same as the component name.`,
+  [ErrorCodes.X_DIRECTIVE_PARAMS]: `avoid using component name as parameter name.`,
 
   // transform errors
   [ErrorCodes.X_V_IF_NO_EXPRESSION]: `v-if/v-else-if is missing expression.`,
