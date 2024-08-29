@@ -58,13 +58,13 @@ export class EffectScope {
    * Resumes the effect scope, including all child scopes and effects.
    */
   resume(): void {
-      if (this._isPaused) {
-        this.forItem('resume')
-      }
+    if (this._isPaused) {
+      this.forItem('resume')
+    }
   }
 
-  forItem(type: 'pause' | 'resume'):void{
-    if(!this._active) return
+  forItem(type: 'pause' | 'resume'): void {
+    if (!this._active) return
 
     this._isPaused = type === 'pause'
     let i, l
