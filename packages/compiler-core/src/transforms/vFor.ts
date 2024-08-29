@@ -217,7 +217,10 @@ export const transformFor: NodeTransform = createStructuralDirectiveTransform(
             )
           ) {
             context.onError(
-              createCompilerError(ErrorCodes.X_V_FOR_PARAMS, childBlock.loc),
+              createCompilerError(
+                ErrorCodes.X_V_FOR_PARAMS,
+                forNode.parseResult.value.loc,
+              ),
             )
           }
 
@@ -232,7 +235,10 @@ export const transformFor: NodeTransform = createStructuralDirectiveTransform(
 
           if (identifiers!.some(i => !!findTag(childBlock as VNodeCall, i))) {
             context.onError(
-              createCompilerError(ErrorCodes.X_V_FOR_PARAMS, childBlock.loc),
+              createCompilerError(
+                ErrorCodes.X_V_FOR_PARAMS,
+                forNode.parseResult.value!.loc,
+              ),
             )
           }
         }
