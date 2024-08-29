@@ -128,8 +128,7 @@ class RefImpl<T = any> {
     } else {
       this.dep.track()
     }
-    // #6358 toRaw ensures that the internal _value access is not tracked by a wrapping reactive proxy, Ex: reactive(ref(0)).value
-    return toRaw(this)._value
+    return this._value
   }
 
   set value(newValue) {
