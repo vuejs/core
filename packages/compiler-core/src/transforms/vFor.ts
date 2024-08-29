@@ -20,7 +20,6 @@ import {
   type RenderSlotCall,
   type SimpleExpressionNode,
   type SlotOutletNode,
-  type TemplateChildNode,
   type VNodeCall,
   createBlockStatement,
   createCallExpression,
