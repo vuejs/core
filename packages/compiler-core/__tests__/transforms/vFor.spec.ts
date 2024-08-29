@@ -328,7 +328,7 @@ describe('compiler: v-for', () => {
       expect(onError1).toHaveBeenCalledTimes(1)
       expect(onError1).toHaveBeenCalledWith(
         expect.objectContaining({
-          code: ErrorCodes.X_DIRECTIVE_PARAMS,
+          code: ErrorCodes.X_DIRECTIVE_PARAMETER_NAME,
         }),
       )
 
@@ -339,7 +339,7 @@ describe('compiler: v-for', () => {
       expect(onError2).toHaveBeenCalledTimes(1)
       expect(onError2).toHaveBeenCalledWith(
         expect.objectContaining({
-          code: ErrorCodes.X_DIRECTIVE_PARAMS,
+          code: ErrorCodes.X_DIRECTIVE_PARAMETER_NAME,
         }),
       )
 
@@ -357,7 +357,7 @@ describe('compiler: v-for', () => {
       expect(onError3).toHaveBeenCalledTimes(1)
       expect(onError3).toHaveBeenCalledWith(
         expect.objectContaining({
-          code: ErrorCodes.X_DIRECTIVE_PARAMS,
+          code: ErrorCodes.X_DIRECTIVE_PARAMETER_NAME,
         }),
       )
     })

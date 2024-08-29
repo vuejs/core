@@ -5,7 +5,6 @@ import {
 } from '../transform'
 import {
   type BlockCodegenNode,
-  type CompoundExpressionNode,
   ConstantTypes,
   type DirectiveNode,
   type ElementNode,
@@ -34,7 +33,7 @@ import {
 } from '../ast'
 import { ErrorCodes, createCompilerError } from '../errors'
 import {
-  findComponentTagNode,
+  checkParameterName,
   findDir,
   findProp,
   injectProp,
@@ -210,42 +209,11 @@ export const transformFor: NodeTransform = createStructuralDirectiveTransform(
         }
 
         if (__DEV__ || !__BROWSER__) {
-          if (
-            forNode.parseResult.value &&
-            findComponentTagNode(
-              childBlock as VNodeCall,
-              (forNode.parseResult.value as SimpleExpressionNode).content,
-            )
-          ) {
-            context.onError(
-              createCompilerError(
-                ErrorCodes.X_DIRECTIVE_PARAMS,
-                forNode.parseResult.value.loc,
-              ),
-            )
-          }
-
-          let identifiers: CompoundExpressionNode['identifiers'] = []
-          if (
-            forNode.parseResult.value &&
-            (forNode.parseResult.value as CompoundExpressionNode).identifiers
-          ) {
-            identifiers = (forNode.parseResult.value as CompoundExpressionNode)
-              .identifiers
-          }
-
-          if (
-            identifiers!.some(
-              i => !!findComponentTagNode(childBlock as VNodeCall, i),
-            )
-          ) {
-            context.onError(
-              createCompilerError(
-                ErrorCodes.X_DIRECTIVE_PARAMS,
-                forNode.parseResult.value!.loc,
-              ),
-            )
-          }
+          checkParameterName(
+            forNode.parseResult.value,
+            childBlock as VNodeCall,
+            context,
+          )
         }
 
         if (memo) {

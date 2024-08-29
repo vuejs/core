@@ -1,6 +1,5 @@
 import {
   type CallExpression,
-  type CompoundExpressionNode,
   type ConditionalExpression,
   type DirectiveNode,
   type ElementNode,
@@ -10,7 +9,6 @@ import {
   NodeTypes,
   type ObjectExpression,
   type Property,
-  type SimpleExpressionNode,
   type SlotsExpression,
   type SourceLocation,
   type TemplateChildNode,
@@ -26,7 +24,7 @@ import type { NodeTransform, TransformContext } from '../transform'
 import { ErrorCodes, createCompilerError } from '../errors'
 import {
   assert,
-  findComponentTagNode,
+  checkParameterName,
   findDir,
   hasScopeRef,
   isStaticExp,
@@ -179,31 +177,7 @@ export function buildSlots(
     }
 
     if (__DEV__ || !__BROWSER__) {
-      if (
-        slotDir.exp &&
-        (slotDir.exp as SimpleExpressionNode).content &&
-        findComponentTagNode(
-          slotElement,
-          (slotDir.exp as SimpleExpressionNode).content,
-        )
-      ) {
-        context.onError(
-          createCompilerError(ErrorCodes.X_DIRECTIVE_PARAMS, slotDir.exp.loc),
-        )
-      }
-
-      let identifiers: CompoundExpressionNode['identifiers'] = []
-      if (slotDir.exp && (slotDir.exp as CompoundExpressionNode).identifiers) {
-        identifiers = (slotDir.exp as CompoundExpressionNode).identifiers
-      }
-      if (
-        slotDir.exp &&
-        identifiers!.some(i => !!findComponentTagNode(slotElement, i))
-      ) {
-        context.onError(
-          createCompilerError(ErrorCodes.X_DIRECTIVE_PARAMS, slotDir.exp.loc),
-        )
-      }
+      checkParameterName(slotDir.exp, slotElement, context)
     }
 
     if (onComponentSlot) {

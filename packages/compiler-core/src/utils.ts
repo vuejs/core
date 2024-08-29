@@ -2,6 +2,7 @@ import {
   type BlockCodegenNode,
   type CacheExpression,
   type CallExpression,
+  type CompoundExpressionNode,
   type DirectiveNode,
   type ElementNode,
   ElementTypes,
@@ -42,6 +43,7 @@ import type { PropsExpression } from './transforms/transformElement'
 import { parseExpression } from '@babel/parser'
 import type { Expression, Node } from '@babel/types'
 import { unwrapTSNode } from './babelUtils'
+import { ErrorCodes, createCompilerError } from './errors'
 
 export const isStaticExp = (p: JSChildNode): p is SimpleExpressionNode =>
   p.type === NodeTypes.SIMPLE_EXPRESSION && p.isStatic
@@ -584,5 +586,31 @@ export function findComponentTagNode(
         if (targetTag) return targetTag
       }
     }
+  }
+}
+
+export function checkParameterName(
+  exp: ExpressionNode | undefined,
+  blockNode: VNodeCall | ElementNode,
+  context: TransformContext,
+): void {
+  if (
+    exp &&
+    findComponentTagNode(blockNode, (exp as SimpleExpressionNode).content)
+  ) {
+    context.onError(
+      createCompilerError(ErrorCodes.X_DIRECTIVE_PARAMETER_NAME, exp.loc),
+    )
+  }
+
+  let identifiers: CompoundExpressionNode['identifiers'] = []
+  if (exp && (exp as CompoundExpressionNode).identifiers) {
+    identifiers = (exp as CompoundExpressionNode).identifiers
+  }
+
+  if (identifiers!.some(i => !!findComponentTagNode(blockNode, i))) {
+    context.onError(
+      createCompilerError(ErrorCodes.X_DIRECTIVE_PARAMETER_NAME, exp!.loc),
+    )
   }
 }
