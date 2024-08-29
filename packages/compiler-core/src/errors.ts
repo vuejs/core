@@ -160,7 +160,7 @@ export const errorMessages: Record<ErrorCodes, string> = {
   [ErrorCodes.X_V_FOR_NO_EXPRESSION]: `v-for is missing expression.`,
   [ErrorCodes.X_V_FOR_MALFORMED_EXPRESSION]: `v-for has invalid expression.`,
   [ErrorCodes.X_V_FOR_TEMPLATE_KEY_PLACEMENT]: `<template v-for> key should be placed on the <template> tag.`,
-  [ErrorCodes.X_V_FOR_PARAMS]: `<template v-for> the value in binding metadata cannot be used as a parameter.`,
+  [ErrorCodes.X_V_FOR_PARAMS]: `<template v-for> the parameter name cannot be the same as the component name.`,
   [ErrorCodes.X_V_BIND_NO_EXPRESSION]: `v-bind is missing expression.`,
   [ErrorCodes.X_V_BIND_INVALID_SAME_NAME_ARGUMENT]: `v-bind with same-name shorthand only allows static argument.`,
   [ErrorCodes.X_V_ON_NO_EXPRESSION]: `v-on is missing expression.`,

@@ -20,6 +20,7 @@ import {
   type RenderSlotCall,
   type SimpleExpressionNode,
   type SlotOutletNode,
+  type TemplateChildNode,
   type VNodeCall,
   createBlockStatement,
   createCallExpression,
@@ -208,12 +209,12 @@ export const transformFor: NodeTransform = createStructuralDirectiveTransform(
           }
         }
         if (__DEV__ || !__BROWSER__) {
-          const bindingMetadata = context.bindingMetadata
           if (
             forNode.parseResult.value &&
-            bindingMetadata[
-              (forNode.parseResult.value as SimpleExpressionNode).content
-            ]
+            findTag(
+              childBlock as VNodeCall,
+              (forNode.parseResult.value as SimpleExpressionNode).content,
+            )
           ) {
             context.onError(
               createCompilerError(ErrorCodes.X_V_FOR_PARAMS, childBlock.loc),
@@ -229,7 +230,7 @@ export const transformFor: NodeTransform = createStructuralDirectiveTransform(
               .identifiers
           }
 
-          if (identifiers!.some(i => bindingMetadata[i])) {
+          if (identifiers!.some(i => !!findTag(childBlock as VNodeCall, i))) {
             context.onError(
               createCompilerError(ErrorCodes.X_V_FOR_PARAMS, childBlock.loc),
             )
@@ -274,6 +275,23 @@ export const transformFor: NodeTransform = createStructuralDirectiveTransform(
     })
   },
 )
+
+function findTag(
+  node: VNodeCall | ElementNode,
+  name: string,
+): VNodeCall | ElementNode | undefined {
+  if (node.tag === name) return node
+  if (node.children) {
+    const children = node.children as TemplateChildNode[]
+    for (let i = 0; i < children.length; i++) {
+      const child = children[i]
+      if ((child as ElementNode).tag) {
+        const targetTag = findTag(child as ElementNode, name)
+        if (targetTag) return targetTag
+      }
+    }
+  }
+}
 
 // target-agnostic transform used for both Client and SSR
 export function processFor(
