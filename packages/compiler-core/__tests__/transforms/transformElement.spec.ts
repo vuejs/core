@@ -40,6 +40,7 @@ import { PatchFlags } from '@vue/shared'
 import { createObjectMatcher } from '../testUtils'
 import { transformText } from '../../src/transforms/transformText'
 import { parseWithForTransform } from './vFor.spec'
+import { parseWithSlots } from './vSlot.spec'
 
 function parseWithElementTransform(
   template: string,
@@ -1380,5 +1381,45 @@ describe('compiler: element transform', () => {
         },
       ],
     })
+  })
+
+  test('v-for scope var name conflict with component name', () => {
+    const onError = vi.fn()
+    parseWithForTransform(`<Comp v-for="Comp of list" />`, {
+      onError,
+      prefixIdentifiers: true,
+      bindingMetadata: {
+        Comp: BindingTypes.SETUP_CONST,
+      },
+    })
+    expect(onError.mock.calls[0]).toMatchObject([
+      {
+        code: ErrorCodes.X_VAR_NAME_CONFLICT_WITH_COMPONENT_NAME,
+      },
+    ])
+  })
+
+  test('slot scope var name conflict with component name', () => {
+    const onError = vi.fn()
+    parseWithSlots(
+      `<CompB>
+    <template #default="{ Comp }">
+      <Comp>{{Comp}}</Comp>
+    </template>
+  </CompB>`,
+      {
+        onError,
+        prefixIdentifiers: true,
+        bindingMetadata: {
+          Comp: BindingTypes.SETUP_CONST,
+          CompB: BindingTypes.SETUP_CONST,
+        },
+      },
+    )
+    expect(onError.mock.calls[0]).toMatchObject([
+      {
+        code: ErrorCodes.X_VAR_NAME_CONFLICT_WITH_COMPONENT_NAME,
+      },
+    ])
   })
 })

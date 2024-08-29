@@ -319,6 +319,20 @@ export function resolveComponentType(
   return toValidAssetId(tag, `component`)
 }
 
+/**
+ * dev only
+ */
+const checkName = (name: string, context: TransformContext) => {
+  if (context.identifiers[name]) {
+    context.onError(
+      createCompilerError(
+        ErrorCodes.X_VAR_NAME_CONFLICT_WITH_COMPONENT_NAME,
+        context.currentNode!.loc,
+      ),
+    )
+  }
+}
+
 function resolveSetupReference(name: string, context: TransformContext) {
   const bindings = context.bindingMetadata
   if (!bindings || bindings.__isScriptSetup === false) {
@@ -344,6 +358,7 @@ function resolveSetupReference(name: string, context: TransformContext) {
     checkType(BindingTypes.SETUP_REACTIVE_CONST) ||
     checkType(BindingTypes.LITERAL_CONST)
   if (fromConst) {
+    __DEV__ && checkName(fromConst, context)
     return context.inline
       ? // in inline mode, const setup bindings (e.g. imports) can be used as-is
         fromConst
@@ -355,6 +370,7 @@ function resolveSetupReference(name: string, context: TransformContext) {
     checkType(BindingTypes.SETUP_REF) ||
     checkType(BindingTypes.SETUP_MAYBE_REF)
   if (fromMaybeRef) {
+    __DEV__ && checkName(fromMaybeRef, context)
     return context.inline
       ? // setup scope bindings that may be refs need to be unrefed
         `${context.helperString(UNREF)}(${fromMaybeRef})`
@@ -363,6 +379,7 @@ function resolveSetupReference(name: string, context: TransformContext) {
 
   const fromProps = checkType(BindingTypes.PROPS)
   if (fromProps) {
+    __DEV__ && checkName(fromProps, context)
     return `${context.helperString(UNREF)}(${
       context.inline ? '__props' : '$props'
     }[${JSON.stringify(fromProps)}])`
