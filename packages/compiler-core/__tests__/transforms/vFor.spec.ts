@@ -317,7 +317,7 @@ describe('compiler: v-for', () => {
       expect(onError).toHaveBeenCalledTimes(1)
     })
 
-    test('the value in binding metadata cannot be used as a parameter.', () => {
+    test('the parameter name cannot be the same as the component name.', () => {
       const onError1 = vi.fn()
       parseWithForTransform('<Comp v-for="Comp of list" />', {
         onError: onError1,
@@ -338,6 +338,24 @@ describe('compiler: v-for', () => {
       })
       expect(onError2).toHaveBeenCalledTimes(1)
       expect(onError2).toHaveBeenCalledWith(
+        expect.objectContaining({
+          code: ErrorCodes.X_V_FOR_PARAMS,
+        }),
+      )
+
+      const onError3 = vi.fn()
+      parseWithForTransform(
+        `<div v-for="Comp of list">
+    <div>
+      <Comp>{{ Comp }}</Comp>
+    </div>
+  </div>`,
+        {
+          onError: onError3,
+        },
+      )
+      expect(onError3).toHaveBeenCalledTimes(1)
+      expect(onError3).toHaveBeenCalledWith(
         expect.objectContaining({
           code: ErrorCodes.X_V_FOR_PARAMS,
         }),
