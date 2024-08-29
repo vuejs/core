@@ -29,10 +29,7 @@ import { PatchFlags } from '@vue/shared'
 import { transformFor } from '../../src/transforms/vFor'
 import { transformIf } from '../../src/transforms/vIf'
 
-export function parseWithSlots(
-  template: string,
-  options: CompilerOptions = {},
-) {
+function parseWithSlots(template: string, options: CompilerOptions = {}) {
   const ast = parse(template, {
     whitespace: options.whitespace,
   })

@@ -5,6 +5,8 @@ import {
   type NodeTransform,
   baseCompile,
   baseParse as parse,
+  trackSlotScopes,
+  trackVForSlotScopes,
   transform,
   transformExpression,
 } from '../../src'
@@ -40,7 +42,6 @@ import { PatchFlags } from '@vue/shared'
 import { createObjectMatcher } from '../testUtils'
 import { transformText } from '../../src/transforms/transformText'
 import { parseWithForTransform } from './vFor.spec'
-import { parseWithSlots } from './vSlot.spec'
 
 function parseWithElementTransform(
   template: string,
@@ -72,6 +73,19 @@ function parseWithBind(template: string, options?: CompilerOptions) {
       ...options?.directiveTransforms,
       bind: transformBind,
     },
+  })
+}
+
+function parseWithSlot(template: string, options?: CompilerOptions) {
+  return parseWithElementTransform(template, {
+    nodeTransforms: [
+      ...(options?.prefixIdentifiers
+        ? [trackVForSlotScopes, transformExpression]
+        : []),
+      transformElement,
+      trackSlotScopes,
+    ],
+    ...options,
   })
 }
 
@@ -1401,7 +1415,7 @@ describe('compiler: element transform', () => {
 
   test('slot scope var name conflict with component name', () => {
     const onError = vi.fn()
-    parseWithSlots(
+    parseWithSlot(
       `<CompB>
     <template #default="{ Comp }">
       <Comp>{{Comp}}</Comp>
