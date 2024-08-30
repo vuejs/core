@@ -317,7 +317,7 @@ describe('compiler: v-for', () => {
       expect(onError).toHaveBeenCalledTimes(1)
     })
 
-    test('v-for + the parameter name cannot be the same as the component name.', () => {
+    test('v-for + the parameter name is the same as the component name.', () => {
       const onError1 = vi.fn()
       parseWithForTransform('<Comp v-for="Comp of list" />', {
         onError: onError1,

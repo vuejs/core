@@ -929,7 +929,7 @@ describe('compiler: transform component slots', () => {
       })
     })
 
-    test('v-slot + the parameter name cannot be the same as the component name.', () => {
+    test('v-slot + the parameter name is the same as the component name.', () => {
       const onError1 = vi.fn()
       parseWithSlots(
         `<CompB>
