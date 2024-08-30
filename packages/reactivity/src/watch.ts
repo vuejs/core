@@ -34,14 +34,17 @@ export enum WatchErrorCodes {
   WATCH_CLEANUP,
 }
 
-type WatchEffect = (onCleanup: OnCleanup) => void
-type WatchSource<T = any> = Ref<T> | ComputedRef<T> | (() => T)
-type WatchCallback<V = any, OV = any> = (
+export type WatchEffect = (onCleanup: OnCleanup) => void
+
+export type WatchSource<T = any> = Ref<T, any> | ComputedRef<T> | (() => T)
+
+export type WatchCallback<V = any, OV = any> = (
   value: V,
   oldValue: OV,
   onCleanup: OnCleanup,
 ) => any
-type OnCleanup = (cleanupFn: () => void) => void
+
+export type OnCleanup = (cleanupFn: () => void) => void
 
 export interface WatchOptions<Immediate = boolean> extends DebuggerOptions {
   immediate?: Immediate
@@ -203,18 +206,26 @@ export function watch(
     getter = () => traverse(baseGetter(), depth)
   }
 
+  const scope = getCurrentScope()
+  const watchHandle: WatchHandle = () => {
+    effect.stop()
+    if (scope) {
+      remove(scope.effects, effect)
+    }
+  }
+
   if (once) {
     if (cb) {
       const _cb = cb
       cb = (...args) => {
         _cb(...args)
-        effect.stop()
+        watchHandle()
       }
     } else {
       const _getter = getter
       getter = () => {
         _getter()
-        effect.stop()
+        watchHandle()
       }
     }
   }
@@ -312,14 +323,6 @@ export function watch(
     scheduler(job.bind(null, true), true)
   } else {
     effect.run()
-  }
-
-  const scope = getCurrentScope()
-  const watchHandle: WatchHandle = () => {
-    effect.stop()
-    if (scope) {
-      remove(scope.effects, effect)
-    }
   }
 
   watchHandle.pause = effect.pause.bind(effect)

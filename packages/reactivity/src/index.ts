@@ -90,4 +90,8 @@ export {
   type WatchScheduler,
   type WatchStopHandle,
   type WatchHandle,
+  type WatchEffect,
+  type WatchSource,
+  type WatchCallback,
+  type OnCleanup,
 } from './watch'
