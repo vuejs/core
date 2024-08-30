@@ -9,6 +9,7 @@ import {
   type ComponentOptionsBase,
   type ComponentOptionsMixin,
   type ComponentProvideOptions,
+  type ComponentPublicInstance,
   type ComputedOptions,
   type ConcreteComponent,
   type CreateAppFunction,
@@ -153,14 +154,13 @@ export function defineCustomElement<
 // overload 3: defining a custom element from the returned value of
 // `defineComponent`
 export function defineCustomElement<
-  T extends DefineComponent<any, any, any, any>,
+  // this should be `ComponentPublicInstanceConstructor` but that type is not exported
+  T extends { new (...args: any[]): ComponentPublicInstance<any> },
 >(
   options: T,
   extraOptions?: CustomElementOptions,
 ): VueElementConstructor<
-  T extends DefineComponent<infer P, any, any, any>
-    ? ExtractPropTypes<P>
-    : unknown
+  T extends DefineComponent<infer P, any, any, any> ? P : unknown
 >
 
 /*! #__NO_SIDE_EFFECTS__ */
@@ -487,6 +487,10 @@ export class VueElement
         delete this._props[key]
       } else {
         this._props[key] = val
+        // support set key on ceVNode
+        if (key === 'key' && this._app) {
+          this._app._ceVNode!.key = val
+        }
       }
       if (shouldUpdate && this._instance) {
         this._update()
