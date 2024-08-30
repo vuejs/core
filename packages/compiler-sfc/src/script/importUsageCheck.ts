@@ -8,7 +8,12 @@ import {
   walkIdentifiers,
 } from '@vue/compiler-dom'
 import { createCache } from '../cache'
-import { camelize, capitalize, isBuiltInDirective } from '@vue/shared'
+import {
+  camelize,
+  capitalize,
+  hyphenate,
+  isBuiltInDirective,
+} from '@vue/shared'
 
 /**
  * Check if an import is used in the SFC's template. This is used to determine
@@ -16,7 +21,8 @@ import { camelize, capitalize, isBuiltInDirective } from '@vue/shared'
  * when not using inline mode.
  */
 export function isImportUsed(local: string, sfc: SFCDescriptor): boolean {
-  return resolveTemplateUsedIdentifiers(sfc).has(local)
+  const set = resolveTemplateUsedIdentifiers(sfc)
+  return set.has(local) || set.has(hyphenate(local))
 }
 
 const templateUsageCheckCache = createCache<Set<string>>()
