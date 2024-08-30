@@ -725,7 +725,7 @@ function genNode(node: CodegenNode | symbol | string, context: CodegenContext) {
       !__BROWSER__ && genReturnStatement(node, context)
       break
 
-    /* istanbul ignore next */
+    /* v8 ignore start */
     case NodeTypes.IF_BRANCH:
       // noop
       break
@@ -736,6 +736,7 @@ function genNode(node: CodegenNode | symbol | string, context: CodegenContext) {
         const exhaustiveCheck: never = node
         return exhaustiveCheck
       }
+    /* v8 ignore stop */
   }
 }
 
