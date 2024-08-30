@@ -657,4 +657,96 @@ describe('useModel', () => {
     expect(setValue).toBeCalledTimes(2)
     expect(msg.value).toBe(defaultVal)
   })
+
+  // #11526
+  test('custom getter', () => {
+    let changeChildMsg!: (val: boolean) => void
+    const getter = (value: boolean) => !value
+
+    const Comp = defineComponent({
+      props: ['msg'],
+      emits: ['update:msg'],
+      setup(props) {
+        const childMsg = useModel(props, 'msg', {
+          get: getter,
+          set: value => !value,
+        })
+        changeChildMsg = (val: boolean) => (childMsg.value = val)
+        return () => {
+          return childMsg.value
+        }
+      },
+    })
+
+    const defaultVal = false
+    const msg = ref(defaultVal)
+    const Parent = defineComponent({
+      setup() {
+        return () =>
+          h(Comp, {
+            msg: msg.value,
+            'onUpdate:msg': val => {
+              msg.value = val
+            },
+          })
+      },
+    })
+
+    const root = nodeOps.createElement('div')
+    render(h(Parent), root)
+
+    changeChildMsg(!getter(msg.value))
+    expect(msg.value).toBe(true)
+
+    changeChildMsg(!getter(msg.value))
+    expect(msg.value).toBe(false)
+  })
+
+  // #11541
+  test('custom setter', () => {
+    let changeChildMsg!: (val: boolean) => void
+
+    const Comp = defineComponent({
+      props: ['msg'],
+      emits: ['update:msg'],
+      setup(props) {
+        const childMsg = useModel(props, 'msg', {
+          set: value => {
+            if (value === msg.value) {
+              return null
+            } else {
+              return value
+            }
+          },
+        })
+        changeChildMsg = (val: boolean) => (childMsg.value = val)
+        return () => {
+          return childMsg.value
+        }
+      },
+    })
+
+    const defaultVal = false
+    const msg = ref(defaultVal)
+    const Parent = defineComponent({
+      setup() {
+        return () =>
+          h(Comp, {
+            msg: msg.value,
+            'onUpdate:msg': val => {
+              msg.value = val
+            },
+          })
+      },
+    })
+
+    const root = nodeOps.createElement('div')
+    render(h(Parent), root)
+
+    changeChildMsg(true)
+    expect(msg.value).toBe(true)
+
+    changeChildMsg(true)
+    expect(msg.value).toBe(null)
+  })
 })

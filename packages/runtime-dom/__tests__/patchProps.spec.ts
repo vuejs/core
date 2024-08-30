@@ -181,10 +181,11 @@ describe('runtime-dom: props patching', () => {
     // anyway, here we just want to make sure Vue doesn't set non-string props
     // to an empty string on nullish values - it should reset to its default
     // value.
+    el.srcObject = null
     const initialValue = el.srcObject
     const fakeObject = {}
     patchProp(el, 'srcObject', null, fakeObject)
-    expect(el.srcObject).not.toBe(fakeObject)
+    expect(el.srcObject).toBe(fakeObject)
     patchProp(el, 'srcObject', null, null)
     expect(el.srcObject).toBe(initialValue)
   })

@@ -259,7 +259,7 @@ export function processExpression(
       if (isLiteral) {
         node.constType = ConstantTypes.CAN_STRINGIFY
       } else {
-        node.constType = ConstantTypes.CAN_HOIST
+        node.constType = ConstantTypes.CAN_CACHE
       }
     }
     return node
