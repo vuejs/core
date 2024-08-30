@@ -599,7 +599,7 @@ export function checkParameterName(
     findComponentTagNode(blockNode, (exp as SimpleExpressionNode).content)
   ) {
     context.onError(
-      createCompilerError(ErrorCodes.X_DIRECTIVE_PARAMETER_NAME, exp.loc),
+      createCompilerError(ErrorCodes.X_INVALID_PARAMETER_NAME, exp.loc),
     )
   }
 
@@ -610,7 +610,7 @@ export function checkParameterName(
 
   if (identifiers!.some(i => !!findComponentTagNode(blockNode, i))) {
     context.onError(
-      createCompilerError(ErrorCodes.X_DIRECTIVE_PARAMETER_NAME, exp!.loc),
+      createCompilerError(ErrorCodes.X_INVALID_PARAMETER_NAME, exp!.loc),
     )
   }
 }
