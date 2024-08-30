@@ -397,7 +397,6 @@ export function getTransitionInfo(
   let type: CSSTransitionInfo['type'] = null
   let timeout = 0
   let propCount = 0
-  /* istanbul ignore if */
   if (expectedType === TRANSITION) {
     if (transitionTimeout > 0) {
       type = TRANSITION

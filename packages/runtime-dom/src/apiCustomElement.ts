@@ -487,6 +487,10 @@ export class VueElement
         delete this._props[key]
       } else {
         this._props[key] = val
+        // support set key on ceVNode
+        if (key === 'key' && this._app) {
+          this._app._ceVNode!.key = val
+        }
       }
       if (shouldUpdate && this._instance) {
         this._update()
