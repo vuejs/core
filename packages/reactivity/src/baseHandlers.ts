@@ -86,7 +86,12 @@ class BaseReactiveHandler implements ProxyHandler<Target> {
 
     if (!isReadonly) {
       let fn: Function | undefined
-      if (targetIsArray && (fn = arrayInstrumentations[key])) {
+      if (
+        targetIsArray &&
+        // @ts-expect-error our code is limited to es2016 but user code is not
+        (target as any[])[key] === Array.prototype[key] &&
+        (fn = arrayInstrumentations[key])
+      ) {
         return fn
       }
       if (key === 'hasOwnProperty') {

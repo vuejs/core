@@ -47,42 +47,42 @@ export const arrayInstrumentations: Record<string | symbol, Function> = <any>{
     fn: (item: unknown, index: number, array: unknown[]) => unknown,
     thisArg?: unknown,
   ) {
-    return apply(this, 'every', fn, thisArg, undefined, arguments)
+    return apply(this, 'every', fn, thisArg)
   },
 
   filter(
     fn: (item: unknown, index: number, array: unknown[]) => unknown,
     thisArg?: unknown,
   ) {
-    return apply(this, 'filter', fn, thisArg, v => v.map(toReactive), arguments)
+    return apply(this, 'filter', fn, thisArg, v => v.map(toReactive))
   },
 
   find(
     fn: (item: unknown, index: number, array: unknown[]) => boolean,
     thisArg?: unknown,
   ) {
-    return apply(this, 'find', fn, thisArg, toReactive, arguments)
+    return apply(this, 'find', fn, thisArg, toReactive)
   },
 
   findIndex(
     fn: (item: unknown, index: number, array: unknown[]) => boolean,
     thisArg?: unknown,
   ) {
-    return apply(this, 'findIndex', fn, thisArg, undefined, arguments)
+    return apply(this, 'findIndex', fn, thisArg)
   },
 
   findLast(
     fn: (item: unknown, index: number, array: unknown[]) => boolean,
     thisArg?: unknown,
   ) {
-    return apply(this, 'findLast', fn, thisArg, toReactive, arguments)
+    return apply(this, 'findLast', fn, thisArg, toReactive)
   },
 
   findLastIndex(
     fn: (item: unknown, index: number, array: unknown[]) => boolean,
     thisArg?: unknown,
   ) {
-    return apply(this, 'findLastIndex', fn, thisArg, undefined, arguments)
+    return apply(this, 'findLastIndex', fn, thisArg)
   },
 
   // flat, flatMap could benefit from ARRAY_ITERATE but are not straight-forward to implement
@@ -91,7 +91,7 @@ export const arrayInstrumentations: Record<string | symbol, Function> = <any>{
     fn: (item: unknown, index: number, array: unknown[]) => unknown,
     thisArg?: unknown,
   ) {
-    return apply(this, 'forEach', fn, thisArg, undefined, arguments)
+    return apply(this, 'forEach', fn, thisArg)
   },
 
   includes(...args: unknown[]) {
@@ -116,7 +116,7 @@ export const arrayInstrumentations: Record<string | symbol, Function> = <any>{
     fn: (item: unknown, index: number, array: unknown[]) => unknown,
     thisArg?: unknown,
   ) {
-    return apply(this, 'map', fn, thisArg, undefined, arguments)
+    return apply(this, 'map', fn, thisArg)
   },
 
   pop() {
@@ -161,7 +161,7 @@ export const arrayInstrumentations: Record<string | symbol, Function> = <any>{
     fn: (item: unknown, index: number, array: unknown[]) => unknown,
     thisArg?: unknown,
   ) {
-    return apply(this, 'some', fn, thisArg, undefined, arguments)
+    return apply(this, 'some', fn, thisArg)
   },
 
   splice(...args: unknown[]) {
@@ -227,7 +227,6 @@ function iterator(
 // higher than that
 type ArrayMethods = keyof Array<any> | 'findLast' | 'findLastIndex'
 
-const arrayProto = Array.prototype
 // instrument functions that read (potentially) all items
 // to take ARRAY_ITERATE dependency
 function apply(
@@ -236,20 +235,12 @@ function apply(
   fn: (item: unknown, index: number, array: unknown[]) => unknown,
   thisArg?: unknown,
   wrappedRetFn?: (result: any) => unknown,
-  args?: IArguments,
 ) {
   const arr = shallowReadArray(self)
-  const needsWrap = arr !== self && !isShallow(self)
-  // @ts-expect-error our code is limited to es2016 but user code is not
-  const methodFn = arr[method]
-  // @ts-expect-error
-  if (methodFn !== arrayProto[method]) {
-    const result = methodFn.apply(arr, args)
-    return needsWrap ? toReactive(result) : result
-  }
-
+  let needsWrap = false
   let wrappedFn = fn
   if (arr !== self) {
+    needsWrap = !isShallow(self)
     if (needsWrap) {
       wrappedFn = function (this: unknown, item, index) {
         return fn.call(this, toReactive(item), index, self)
@@ -260,7 +251,8 @@ function apply(
       }
     }
   }
-  const result = methodFn.call(arr, wrappedFn, thisArg)
+  // @ts-expect-error our code is limited to es2016 but user code is not
+  const result = arr[method](wrappedFn, thisArg)
   return needsWrap && wrappedRetFn ? wrappedRetFn(result) : result
 }
 
