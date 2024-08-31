@@ -31,9 +31,8 @@ if (tt) {
 // This function merely perform a type-level trusted type conversion
 // for use in `innerHTML` assignment, etc.
 // Be careful of whatever value passed to this function.
-const unsafeToTrustedHTML: (value: string) => TrustedHTML | string = policy
-  ? val => policy.createHTML(val)
-  : val => val
+export const unsafeToTrustedHTML: (value: string) => TrustedHTML | string =
+  policy ? val => policy.createHTML(val) : val => val
 
 export const svgNS = 'http://www.w3.org/2000/svg'
 export const mathmlNS = 'http://www.w3.org/1998/Math/MathML'

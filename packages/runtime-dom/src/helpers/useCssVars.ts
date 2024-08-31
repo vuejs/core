@@ -20,12 +20,13 @@ export function useCssVars(getter: (ctx: any) => Record<string, string>): void {
   if (!__BROWSER__ && !__TEST__) return
 
   const instance = getCurrentInstance()
-  /* istanbul ignore next */
+  /* v8 ignore start */
   if (!instance) {
     __DEV__ &&
       warn(`useCssVars is called without current active component instance.`)
     return
   }
+  /* v8 ignore stop */
 
   const updateTeleports = (instance.ut = (vars = getter(instance.proxy)) => {
     Array.from(

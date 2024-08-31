@@ -29,7 +29,6 @@ export function looseEqual(a: any, b: any): boolean {
   aValidType = isObject(a)
   bValidType = isObject(b)
   if (aValidType || bValidType) {
-    /* istanbul ignore if: this if will probably never be called */
     if (!aValidType || !bValidType) {
       return false
     }

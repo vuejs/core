@@ -1070,6 +1070,7 @@ function loadTSConfig(
   configPath: string,
   ts: typeof TS,
   fs: FS,
+  visited = new Set<string>(),
 ): TS.ParsedCommandLine[] {
   // The only case where `fs` is NOT `ts.sys` is during tests.
   // parse config host requires an extra `readDirectory` method
@@ -1089,14 +1090,15 @@ function loadTSConfig(
     configPath,
   )
   const res = [config]
+  visited.add(configPath)
   if (config.projectReferences) {
     for (const ref of config.projectReferences) {
       const refPath = ts.resolveProjectReferencePath(ref)
-      if (!fs.fileExists(refPath)) {
+      if (visited.has(refPath) || !fs.fileExists(refPath)) {
         continue
       }
       tsConfigRefMap.set(refPath, configPath)
-      res.unshift(...loadTSConfig(refPath, ts, fs))
+      res.unshift(...loadTSConfig(refPath, ts, fs, visited))
     }
   }
   return res

@@ -382,4 +382,13 @@ describe('reactivity/reactive', () => {
       count++
     }
   })
+
+  // #11696
+  test('should use correct receiver on set handler for refs', () => {
+    const a = reactive(ref(1))
+    effect(() => a.value)
+    expect(() => {
+      a.value++
+    }).not.toThrow()
+  })
 })

@@ -235,7 +235,7 @@ export function parse(
   if (!descriptor.template && !descriptor.script && !descriptor.scriptSetup) {
     errors.push(
       new SyntaxError(
-        `At least one <template> or <script> is required in a single file component.`,
+        `At least one <template> or <script> is required in a single file component. ${descriptor.filename}`,
       ),
     )
   }

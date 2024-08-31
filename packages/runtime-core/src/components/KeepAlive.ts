@@ -310,6 +310,8 @@ const KeepAliveImpl: ComponentOptions = {
         (include && (!name || !matches(include, name))) ||
         (exclude && name && matches(exclude, name))
       ) {
+        // #11717
+        vnode.shapeFlag &= ~ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE
         current = vnode
         return rawVNode
       }
@@ -385,7 +387,7 @@ function matches(pattern: MatchPattern, name: string): boolean {
     pattern.lastIndex = 0
     return pattern.test(name)
   }
-  /* istanbul ignore next */
+  /* v8 ignore next */
   return false
 }
 

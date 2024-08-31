@@ -1185,6 +1185,49 @@ describe('resolveType', () => {
       expect(deps && [...deps]).toStrictEqual(['/user.ts'])
     })
 
+    // #11382
+    test('ts module resolve circular project reference', () => {
+      const files = {
+        '/tsconfig.json': JSON.stringify({
+          exclude: ['**/*.ts', '**/*.vue'],
+          references: [
+            {
+              path: './tsconfig.web.json',
+            },
+          ],
+        }),
+        '/tsconfig.web.json': JSON.stringify({
+          include: ['**/*.ts', '**/*.vue'],
+          compilerOptions: {
+            composite: true,
+            paths: {
+              user: ['./user.ts'],
+            },
+          },
+          references: [
+            {
+              // circular reference
+              path: './tsconfig.json',
+            },
+          ],
+        }),
+        '/user.ts': 'export type User = { bar: string }',
+      }
+
+      const { props, deps } = resolve(
+        `
+        import { User } from 'user'
+        defineProps<User>() 
+        `,
+        files,
+      )
+
+      expect(props).toStrictEqual({
+        bar: ['String'],
+      })
+      expect(deps && [...deps]).toStrictEqual(['/user.ts'])
+    })
+
     test('ts module resolve w/ path aliased vue file', () => {
       const files = {
         '/tsconfig.json': JSON.stringify({
