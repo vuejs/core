@@ -725,5 +725,26 @@ describe('reactivity/reactive/Array', () => {
       expect(state.things.map('foo', 'bar', 'baz')).toEqual(['1', '2', '3'])
       expect(state.things.some('foo', 'bar', 'baz')).toBe(true)
     })
+
+    test('computed + extend methods', () => {
+      class Collection extends Array {
+        find(matcher: any) {
+          return super.find(matcher)
+        }
+      }
+
+      const state = reactive({
+        // @ts-expect-error
+        things: new Collection({ foo: '' }),
+      })
+
+      const bar = computed(() => {
+        return state.things.find((obj: any) => obj.foo === 'bar')
+      })
+      bar.value
+      state.things[0].foo = 'bar'
+
+      expect(bar.value).toEqual({ foo: 'bar' })
+    })
   })
 })
