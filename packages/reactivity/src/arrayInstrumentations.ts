@@ -249,7 +249,7 @@ function apply(
   // handling and directly call apply with self.
   if (methodFn !== arrayProto[method as any]) {
     const result = methodFn.apply(self, args)
-    return needsWrap && wrappedRetFn ? wrappedRetFn(result) : result
+    return needsWrap ? toReactive(result) : result
   }
 
   let wrappedFn = fn
