@@ -302,8 +302,8 @@ importers:
         specifier: 'catalog:'
         version: 0.30.11
       postcss:
-        specifier: ^8.4.41
-        version: 8.4.41
+        specifier: ^8.4.44
+        version: 8.4.44
       source-map-js:
         specifier: 'catalog:'
         version: 1.2.0
@@ -328,7 +328,7 @@ importers:
         version: 9.0.5
       postcss-modules:
         specifier: ^6.0.0
-        version: 6.0.0(postcss@8.4.41)
+        version: 6.0.0(postcss@8.4.44)
       postcss-selector-parser:
         specifier: ^6.1.2
         version: 6.1.2
@@ -2745,6 +2745,10 @@ packages:
     resolution: {integrity: sha512-TesUflQ0WKZqAvg52PWL6kHgLKP6xB6heTOdoYM0Wt2UHyxNa4K25EZZMgKns3BH1RLVbZCREPpLY0rhnNoHVQ==}
     engines: {node: ^10 || ^12 || >=14}
 
+  postcss@8.4.44:
+    resolution: {integrity: sha512-Aweb9unOEpQ3ezu4Q00DPvvM2ZTUitJdNKeP/+uQgr1IBIqu574IaZoURId7BKtWMREwzKa9OgzPzezWGPWFQw==}
+    engines: {node: ^10 || ^12 || >=14}
+
   prelude-ls@1.2.1:
     resolution: {integrity: sha512-vkcDPrRZo1QZLbn5RLGPpg/WmIQ65qoWWhcGKf/b5eplkkarX0m9z8ppCat4mlOqUsWpyNuYgO3VRyrYHSzX5g==}
     engines: {node: '>= 0.8.0'}
@@ -5107,9 +5111,9 @@ snapshots:
     dependencies:
       safer-buffer: 2.1.2
 
-  icss-utils@5.1.0(postcss@8.4.41):
+  icss-utils@5.1.0(postcss@8.4.44):
     dependencies:
-      postcss: 8.4.41
+      postcss: 8.4.44
 
   ieee754@1.2.1: {}
 
@@ -5620,37 +5624,37 @@ snapshots:
 
   pidtree@0.6.0: {}
 
-  postcss-modules-extract-imports@3.1.0(postcss@8.4.41):
+  postcss-modules-extract-imports@3.1.0(postcss@8.4.44):
     dependencies:
-      postcss: 8.4.41
+      postcss: 8.4.44
 
-  postcss-modules-local-by-default@4.0.5(postcss@8.4.41):
+  postcss-modules-local-by-default@4.0.5(postcss@8.4.44):
     dependencies:
-      icss-utils: 5.1.0(postcss@8.4.41)
-      postcss: 8.4.41
+      icss-utils: 5.1.0(postcss@8.4.44)
+      postcss: 8.4.44
       postcss-selector-parser: 6.1.2
       postcss-value-parser: 4.2.0
 
-  postcss-modules-scope@3.2.0(postcss@8.4.41):
+  postcss-modules-scope@3.2.0(postcss@8.4.44):
     dependencies:
-      postcss: 8.4.41
+      postcss: 8.4.44
       postcss-selector-parser: 6.1.2
 
-  postcss-modules-values@4.0.0(postcss@8.4.41):
+  postcss-modules-values@4.0.0(postcss@8.4.44):
     dependencies:
-      icss-utils: 5.1.0(postcss@8.4.41)
-      postcss: 8.4.41
+      icss-utils: 5.1.0(postcss@8.4.44)
+      postcss: 8.4.44
 
-  postcss-modules@6.0.0(postcss@8.4.41):
+  postcss-modules@6.0.0(postcss@8.4.44):
     dependencies:
       generic-names: 4.0.0
-      icss-utils: 5.1.0(postcss@8.4.41)
+      icss-utils: 5.1.0(postcss@8.4.44)
       lodash.camelcase: 4.3.0
-      postcss: 8.4.41
-      postcss-modules-extract-imports: 3.1.0(postcss@8.4.41)
-      postcss-modules-local-by-default: 4.0.5(postcss@8.4.41)
-      postcss-modules-scope: 3.2.0(postcss@8.4.41)
-      postcss-modules-values: 4.0.0(postcss@8.4.41)
+      postcss: 8.4.44
+      postcss-modules-extract-imports: 3.1.0(postcss@8.4.44)
+      postcss-modules-local-by-default: 4.0.5(postcss@8.4.44)
+      postcss-modules-scope: 3.2.0(postcss@8.4.44)
+      postcss-modules-values: 4.0.0(postcss@8.4.44)
       string-hash: 1.1.3
 
   postcss-selector-parser@6.1.2:
@@ -5661,6 +5665,12 @@ snapshots:
   postcss-value-parser@4.2.0: {}
 
   postcss@8.4.41:
+    dependencies:
+      nanoid: 3.3.7
+      picocolors: 1.0.1
+      source-map-js: 1.2.0
+
+  postcss@8.4.44:
     dependencies:
       nanoid: 3.3.7
       picocolors: 1.0.1
