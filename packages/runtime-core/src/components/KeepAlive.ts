@@ -264,13 +264,10 @@ const KeepAliveImpl: ComponentOptions = {
     })
 
     return () => {
-      if (!slots.default && current && current.type === pendingCacheKey) {
-        current = null
-      }
-
       pendingCacheKey = null
 
       if (!slots.default) {
+        current = null
         return null
       }
 
