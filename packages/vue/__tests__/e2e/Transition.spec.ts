@@ -1491,12 +1491,20 @@ describe('e2e: Transition', () => {
     test(
       'replace child and update include at the same time (out-in mode)',
       async () => {
-        const updatedSpy = vi.fn()
-        await page().exposeFunction('updatedSpy', updatedSpy)
+        const onUpdatedSpyA = vi.fn()
+        const onUnmountedSpyB = vi.fn()
+        const onUnmountedSpyC = vi.fn()
+
+        await page().exposeFunction('onUpdatedSpyA', onUpdatedSpyA)
+        await page().exposeFunction('onUnmountedSpyB', onUnmountedSpyB)
+        await page().exposeFunction('onUnmountedSpyC', onUnmountedSpyC)
+
         await page().evaluate(() => {
-          const { updatedSpy } = window as any
-          const { createApp, ref, shallowRef, h, onUpdated } = (window as any)
-            .Vue
+          const { onUpdatedSpyA, onUnmountedSpyB, onUnmountedSpyC } =
+            window as any
+          const { createApp, ref, shallowRef, h, onUpdated, onUnmounted } = (
+            window as any
+          ).Vue
           createApp({
             template: `
             <div id="container">
@@ -1514,19 +1522,21 @@ describe('e2e: Transition', () => {
               CompA: {
                 name: 'CompA',
                 setup() {
-                  onUpdated(updatedSpy)
+                  onUpdated(onUpdatedSpyA)
                   return () => h('div', 'CompA')
                 },
               },
               CompB: {
                 name: 'CompB',
                 setup() {
+                  onUnmounted(onUnmountedSpyB)
                   return () => h('div', 'CompB')
                 },
               },
               CompC: {
                 name: 'CompC',
                 setup() {
+                  onUnmounted(onUnmountedSpyC)
                   return () => h('div', 'CompC')
                 },
               },
@@ -1557,8 +1567,11 @@ describe('e2e: Transition', () => {
         await click('#switchToA')
         await transitionFinish()
         expect(await html('#container')).toBe('<div class="">CompA</div>')
-        // expect updatedSpy to be called once
-        expect(updatedSpy).toBeCalledTimes(1)
+
+        // expect CompA only update once
+        expect(onUpdatedSpyA).toBeCalledTimes(1)
+        expect(onUnmountedSpyB).toBeCalledTimes(1)
+        expect(onUnmountedSpyC).toBeCalledTimes(1)
       },
       E2E_TIMEOUT,
     )
