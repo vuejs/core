@@ -453,6 +453,7 @@ export interface IframeHTMLAttributes extends HTMLAttributes {
   /** @deprecated */
   frameborder?: Numberish
   height?: Numberish
+  loading?: 'eager' | 'lazy'
   /** @deprecated */
   marginheight?: Numberish
   /** @deprecated */

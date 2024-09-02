@@ -152,10 +152,10 @@ describe('SSR hydration', () => {
   // #7285
   test('element with multiple continuous text vnodes', async () => {
     // should no mismatch warning
-    const { container } = mountWithHydration('<div>fooo</div>', () =>
-      h('div', ['fo', createTextVNode('o'), 'o']),
+    const { container } = mountWithHydration('<div>foo0o</div>', () =>
+      h('div', ['fo', createTextVNode('o'), 0, 'o']),
     )
-    expect(container.textContent).toBe('fooo')
+    expect(container.textContent).toBe('foo0o')
   })
 
   test('element with elements children', async () => {
