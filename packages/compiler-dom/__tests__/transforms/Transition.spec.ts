@@ -1,11 +1,10 @@
-import { vi } from 'vitest'
 import { compile } from '../../src'
 
 describe('Transition multi children warnings', () => {
   function checkWarning(
     template: string,
     shouldWarn: boolean,
-    message = `<Transition> expects exactly one child element or component.`
+    message = `<Transition> expects exactly one child element or component.`,
   ) {
     const spy = vi.fn()
     compile(template.trim(), {
@@ -13,7 +12,7 @@ describe('Transition multi children warnings', () => {
       transformHoist: null,
       onError: err => {
         spy(err.message)
-      }
+      },
     })
 
     if (shouldWarn) expect(spy).toHaveBeenCalledWith(message)
@@ -28,7 +27,7 @@ describe('Transition multi children warnings', () => {
         <div>hey</div>
       </transition>
       `,
-      true
+      true,
     )
   })
 
@@ -39,7 +38,7 @@ describe('Transition multi children warnings', () => {
         <div v-for="i in items">hey</div>
       </transition>
       `,
-      true
+      true,
     )
   })
 
@@ -51,7 +50,7 @@ describe('Transition multi children warnings', () => {
         <div v-else v-for="i in items">hey</div>
       </transition>
       `,
-      true
+      true,
     )
   })
 
@@ -62,7 +61,7 @@ describe('Transition multi children warnings', () => {
         <template v-if="ok"></template>
       </transition>
       `,
-      true
+      true,
     )
   })
 
@@ -74,7 +73,7 @@ describe('Transition multi children warnings', () => {
         <template v-else></template>
       </transition>
       `,
-      true
+      true,
     )
   })
 
@@ -86,7 +85,7 @@ describe('Transition multi children warnings', () => {
         <div v-if="other">hey</div>
       </transition>
       `,
-      true
+      true,
     )
   })
 
@@ -97,7 +96,7 @@ describe('Transition multi children warnings', () => {
         <div>hey</div>
       </transition>
       `,
-      false
+      false,
     )
   })
 
@@ -108,7 +107,7 @@ describe('Transition multi children warnings', () => {
         <div v-if="a">hey</div>
       </transition>
       `,
-      false
+      false,
     )
   })
 
@@ -121,7 +120,7 @@ describe('Transition multi children warnings', () => {
         <div v-else>hey</div>
       </transition>
       `,
-      false
+      false,
     )
   })
 
@@ -133,7 +132,7 @@ describe('Transition multi children warnings', () => {
         <div v-else>hey</div>
       </transition>
       `,
-      false
+      false,
     )
   })
 })
@@ -144,7 +143,7 @@ test('inject persisted when child has v-show', () => {
     <transition>
       <div v-show="ok" />
     </transition>
-    `).code
+    `).code,
   ).toMatchSnapshot()
 })
 
@@ -162,6 +161,6 @@ test('the v-if/else-if/else branches in Transition should ignore comments', () =
         <p v-else/>
       </div>
     </transition>
-    `).code
+    `).code,
   ).toMatchSnapshot()
 })
