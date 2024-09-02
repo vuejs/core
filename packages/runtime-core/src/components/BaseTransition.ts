@@ -531,10 +531,9 @@ export function getTransitionRawChildren(
   for (let i = 0; i < children.length; i++) {
     let child = children[i]
     // #5360 inherit parent key in case of <template v-for>
-    // #5761: when child.key is a number, it would be potentially
-    // duplicated with index i. In this case, ignore whatever existing
-    // number type child key (e.g. v-if node could have dedicated key based on branchs).
-    // Make it completely based on index i in children list to avoid duplication
+    // #5761 if child.key is a number, it would be potentially
+    // duplicated with index i. In this case, ignore whatever
+    // existing number type child key to avoid duplication
     const key =
       parentKey == null
         ? child.key
