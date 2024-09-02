@@ -1,29 +1,29 @@
 import {
   Comment,
-  Component,
-  ComponentInternalInstance,
-  DirectiveBinding,
+  type Component,
+  type ComponentInternalInstance,
+  type DirectiveBinding,
   Fragment,
-  FunctionalComponent,
-  mergeProps,
-  ssrUtils,
+  type FunctionalComponent,
   Static,
   Text,
-  VNode,
-  VNodeArrayChildren,
-  VNodeProps,
-  warn
+  type VNode,
+  type VNodeArrayChildren,
+  type VNodeProps,
+  mergeProps,
+  ssrUtils,
+  warn,
 } from 'vue'
 import {
+  NOOP,
+  ShapeFlags,
   escapeHtml,
   escapeHtmlComment,
+  isArray,
   isFunction,
   isPromise,
   isString,
   isVoidTag,
-  ShapeFlags,
-  isArray,
-  NOOP
 } from '@vue/shared'
 import { ssrRenderAttrs } from './helpers/ssrRenderAttrs'
 import { ssrCompile } from './helpers/ssrCompile'
@@ -34,7 +34,7 @@ const {
   setCurrentRenderingInstance,
   setupComponent,
   renderComponentRoot,
-  normalizeVNode
+  normalizeVNode,
 } = ssrUtils
 
 export type SSRBuffer = SSRBufferItem[] & { hasAsync?: boolean }
@@ -45,7 +45,14 @@ export type Props = Record<string, unknown>
 export type SSRContext = {
   [key: string]: any
   teleports?: Record<string, string>
+  /**
+   * @internal
+   */
   __teleportBuffers?: Record<string, SSRBuffer>
+  /**
+   * @internal
+   */
+  __watcherHandles?: (() => void)[]
 }
 
 // Each component has a buffer array.
@@ -62,27 +69,27 @@ export function createBuffer() {
       // Return static buffer and await on items during unroll stage
       return buffer
     },
-    push(item: SSRBufferItem) {
+    push(item: SSRBufferItem): void {
       const isStringItem = isString(item)
       if (appendable && isStringItem) {
         buffer[buffer.length - 1] += item as string
-      } else {
-        buffer.push(item)
+        return
       }
+      buffer.push(item)
       appendable = isStringItem
       if (isPromise(item) || (isArray(item) && item.hasAsync)) {
         // promise, or child buffer with async, mark as async.
         // this allows skipping unnecessary await ticks during unroll stage
         buffer.hasAsync = true
       }
-    }
+    },
   }
 }
 
 export function renderComponentVNode(
   vnode: VNode,
   parentComponent: ComponentInternalInstance | null = null,
-  slotScopeId?: string
+  slotScopeId?: string,
 ): SSRBuffer | Promise<SSRBuffer> {
   const instance = createComponentInstance(vnode, parentComponent, null)
   const res = setupComponent(instance, true /* isSSR */)
@@ -95,10 +102,12 @@ export function renderComponentVNode(
     if (prefetches) {
       p = p
         .then(() =>
-          Promise.all(prefetches.map(prefetch => prefetch.call(instance.proxy)))
+          Promise.all(
+            prefetches.map(prefetch => prefetch.call(instance.proxy)),
+          ),
         )
         // Note: error display is already done by the wrapped lifecycle hook function.
-        .catch(() => {})
+        .catch(NOOP)
     }
     return p.then(() => renderComponentSubTree(instance, slotScopeId))
   } else {
@@ -108,7 +117,7 @@ export function renderComponentVNode(
 
 function renderComponentSubTree(
   instance: ComponentInternalInstance,
-  slotScopeId?: string
+  slotScopeId?: string,
 ): SSRBuffer | Promise<SSRBuffer> {
   const comp = instance.type as Component
   const { getBuffer, push } = createBuffer()
@@ -132,12 +141,6 @@ function renderComponentSubTree(
       isString(comp.template)
     ) {
       comp.ssrRender = ssrCompile(comp.template, instance)
-    }
-
-    // perf: enable caching of computed getters during render
-    // since there cannot be state mutations during render.
-    for (const e of instance.scope.effects) {
-      if (e.computed) e.computed._cacheable = true
     }
 
     const ssrRender = instance.ssrRender || comp.ssrRender
@@ -169,29 +172,35 @@ function renderComponentSubTree(
 
       if (slotScopeId) {
         if (!hasCloned) attrs = { ...attrs }
-        attrs![slotScopeId.trim()] = ''
+        const slotScopeIdList = slotScopeId.trim().split(' ')
+        for (let i = 0; i < slotScopeIdList.length; i++) {
+          attrs![slotScopeIdList[i]] = ''
+        }
       }
 
       // set current rendering instance for asset resolution
       const prev = setCurrentRenderingInstance(instance)
-      ssrRender(
-        instance.proxy,
-        push,
-        instance,
-        attrs,
-        // compiler-optimized bindings
-        instance.props,
-        instance.setupState,
-        instance.data,
-        instance.ctx
-      )
-      setCurrentRenderingInstance(prev)
+      try {
+        ssrRender(
+          instance.proxy,
+          push,
+          instance,
+          attrs,
+          // compiler-optimized bindings
+          instance.props,
+          instance.setupState,
+          instance.data,
+          instance.ctx,
+        )
+      } finally {
+        setCurrentRenderingInstance(prev)
+      }
     } else if (instance.render && instance.render !== NOOP) {
       renderVNode(
         push,
         (instance.subTree = renderComponentRoot(instance)),
         instance,
-        slotScopeId
+        slotScopeId,
       )
     } else {
       const componentName = comp.name || comp.__file || `<Anonymous>`
@@ -206,16 +215,22 @@ export function renderVNode(
   push: PushFn,
   vnode: VNode,
   parentComponent: ComponentInternalInstance,
-  slotScopeId?: string
-) {
-  const { type, shapeFlag, children } = vnode
+  slotScopeId?: string,
+): void {
+  const { type, shapeFlag, children, dirs, props } = vnode
+  if (dirs) {
+    vnode.props = applySSRDirectives(vnode, props, dirs)
+  }
+
   switch (type) {
     case Text:
       push(escapeHtml(children as string))
       break
     case Comment:
       push(
-        children ? `<!--${escapeHtmlComment(children as string)}-->` : `<!---->`
+        children
+          ? `<!--${escapeHtmlComment(children as string)}-->`
+          : `<!---->`,
       )
       break
     case Static:
@@ -231,7 +246,7 @@ export function renderVNode(
         push,
         children as VNodeArrayChildren,
         parentComponent,
-        slotScopeId
+        slotScopeId,
       )
       push(`<!--]-->`) // close
       break
@@ -248,7 +263,7 @@ export function renderVNode(
         warn(
           '[@vue/server-renderer] Invalid VNode type:',
           type,
-          `(${typeof type})`
+          `(${typeof type})`,
         )
       }
   }
@@ -258,8 +273,8 @@ export function renderVNodeChildren(
   push: PushFn,
   children: VNodeArrayChildren,
   parentComponent: ComponentInternalInstance,
-  slotScopeId: string | undefined
-) {
+  slotScopeId?: string,
+): void {
   for (let i = 0; i < children.length; i++) {
     renderVNode(push, normalizeVNode(children[i]), parentComponent, slotScopeId)
   }
@@ -269,15 +284,11 @@ function renderElementVNode(
   push: PushFn,
   vnode: VNode,
   parentComponent: ComponentInternalInstance,
-  slotScopeId: string | undefined
+  slotScopeId?: string,
 ) {
   const tag = vnode.type as string
-  let { props, children, shapeFlag, scopeId, dirs } = vnode
+  let { props, children, shapeFlag, scopeId } = vnode
   let openTag = `<${tag}`
-
-  if (dirs) {
-    props = applySSRDirectives(vnode, props, dirs)
-  }
 
   if (props) {
     openTag += ssrRenderAttrs(props, tag)
@@ -323,7 +334,7 @@ function renderElementVNode(
           push,
           children as VNodeArrayChildren,
           parentComponent,
-          slotScopeId
+          slotScopeId,
         )
       }
     }
@@ -334,13 +345,13 @@ function renderElementVNode(
 function applySSRDirectives(
   vnode: VNode,
   rawProps: VNodeProps | null,
-  dirs: DirectiveBinding[]
+  dirs: DirectiveBinding[],
 ): VNodeProps {
   const toMerge: VNodeProps[] = []
   for (let i = 0; i < dirs.length; i++) {
     const binding = dirs[i]
     const {
-      dir: { getSSRProps }
+      dir: { getSSRProps },
     } = binding
     if (getSSRProps) {
       const props = getSSRProps(binding, vnode)
@@ -354,7 +365,7 @@ function renderTeleportVNode(
   push: PushFn,
   vnode: VNode,
   parentComponent: ComponentInternalInstance,
-  slotScopeId: string | undefined
+  slotScopeId?: string,
 ) {
   const target = vnode.props && vnode.props.to
   const disabled = vnode.props && vnode.props.disabled
@@ -366,7 +377,7 @@ function renderTeleportVNode(
   }
   if (!isString(target)) {
     warn(
-      `[@vue/server-renderer] Teleport target must be a query selector string.`
+      `[@vue/server-renderer] Teleport target must be a query selector string.`,
     )
     return []
   }
@@ -377,11 +388,11 @@ function renderTeleportVNode(
         push,
         vnode.children as VNodeArrayChildren,
         parentComponent,
-        slotScopeId
+        slotScopeId,
       )
     },
     target,
     disabled || disabled === '',
-    parentComponent
+    parentComponent,
   )
 }
