@@ -1,9 +1,6 @@
-// __UNSAFE__
-// Reason: potentially setting innerHTML.
-// This can come from explicit usage of v-html or innerHTML as a prop in render
-
 import { DeprecationTypes, compatUtils, warn } from '@vue/runtime-core'
 import { includeBooleanAttr } from '@vue/shared'
+import { unsafeToTrustedHTML } from '../nodeOps'
 
 // functions. The user is responsible for using them with only trusted content.
 export function patchDOMProp(
@@ -11,12 +8,16 @@ export function patchDOMProp(
   key: string,
   value: any,
   parentComponent: any,
-) {
+): void {
+  // __UNSAFE__
+  // Reason: potentially setting innerHTML.
+  // This can come from explicit usage of v-html or innerHTML as a prop in render
   if (key === 'innerHTML' || key === 'textContent') {
     // null value case is handled in renderer patchElement before patching
     // children
-    if (value == null) return
-    el[key] = value
+    if (value != null) {
+      el[key] = key === 'innerHTML' ? unsafeToTrustedHTML(value) : value
+    }
     return
   }
 

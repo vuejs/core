@@ -618,7 +618,7 @@ describe('renderer: optimized mode', () => {
   })
 
   //#3623
-  test('nested teleport unmount need exit the optimization mode', () => {
+  test('nested teleport unmount need exit the optimization mode', async () => {
     const target = nodeOps.createElement('div')
     const root = nodeOps.createElement('div')
 
@@ -647,6 +647,7 @@ describe('renderer: optimized mode', () => {
       ])),
       root,
     )
+    await nextTick()
     expect(inner(target)).toMatchInlineSnapshot(
       `"<div><!--teleport start--><!--teleport end--></div><div>foo</div>"`,
     )
@@ -1151,7 +1152,7 @@ describe('renderer: optimized mode', () => {
                           'div',
                           null,
                           'bar',
-                          PatchFlags.HOISTED,
+                          PatchFlags.CACHED,
                         ),
                       ],
                       PatchFlags.STABLE_FRAGMENT,
