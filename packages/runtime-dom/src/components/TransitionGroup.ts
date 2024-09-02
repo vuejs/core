@@ -190,7 +190,10 @@ function callPendingCbs(c: VNode) {
 }
 
 function recordPosition(c: VNode) {
-  newPositionMap.set(c, { left: (c.el as HTMLElement).offsetLeft, top: (c.el as HTMLElement).offsetTop })
+  newPositionMap.set(c, {
+    left: (c.el as HTMLElement).offsetLeft,
+    top: (c.el as HTMLElement).offsetTop,
+  })
 }
 
 function applyTranslation(c: VNode): VNode | undefined {
