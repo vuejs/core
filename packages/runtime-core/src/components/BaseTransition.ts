@@ -540,7 +540,7 @@ export function getTransitionRawChildren(
         ? child.key
         : String(parentKey) +
           String(
-            child.key != null && typeof child.key !== 'number' ? child.key : i
+            child.key != null && typeof child.key !== 'number' ? child.key : i,
           )
     // handle fragment children case, e.g. v-for
     if (child.type === Fragment) {
