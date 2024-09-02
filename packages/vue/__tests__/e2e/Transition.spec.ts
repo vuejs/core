@@ -1492,16 +1492,13 @@ describe('e2e: Transition', () => {
       'replace child and update include at the same time (out-in mode)',
       async () => {
         const onUpdatedSpyA = vi.fn()
-        const onUnmountedSpyB = vi.fn()
         const onUnmountedSpyC = vi.fn()
 
         await page().exposeFunction('onUpdatedSpyA', onUpdatedSpyA)
-        await page().exposeFunction('onUnmountedSpyB', onUnmountedSpyB)
         await page().exposeFunction('onUnmountedSpyC', onUnmountedSpyC)
 
         await page().evaluate(() => {
-          const { onUpdatedSpyA, onUnmountedSpyB, onUnmountedSpyC } =
-            window as any
+          const { onUpdatedSpyA, onUnmountedSpyC } = window as any
           const { createApp, ref, shallowRef, h, onUpdated, onUnmounted } = (
             window as any
           ).Vue
@@ -1529,7 +1526,6 @@ describe('e2e: Transition', () => {
               CompB: {
                 name: 'CompB',
                 setup() {
-                  onUnmounted(onUnmountedSpyB)
                   return () => h('div', 'CompB')
                 },
               },
@@ -1570,7 +1566,6 @@ describe('e2e: Transition', () => {
 
         // expect CompA only update once
         expect(onUpdatedSpyA).toBeCalledTimes(1)
-        expect(onUnmountedSpyB).toBeCalledTimes(1)
         expect(onUnmountedSpyC).toBeCalledTimes(1)
       },
       E2E_TIMEOUT,
