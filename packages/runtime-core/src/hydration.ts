@@ -549,12 +549,12 @@ export function createHydrationFunctions(
         : (children[i] = normalizeVNode(children[i]))
       const isText = vnode.type === Text
       if (node) {
-        if (isText && !optimized && i + 1 < l) {
+        if (isText && !optimized) {
           // #7285 possible consecutive text vnodes from manual render fns or
           // JSX-compiled fns, but on the client the browser parses only 1 text
           // node.
           // look ahead for next possible text vnode
-          if (normalizeVNode(children[i + 1]).type === Text) {
+          if (i + 1 < l && normalizeVNode(children[i + 1]).type === Text) {
             // create an extra TextNode on the client for the next vnode to
             // adopt
             insert(
