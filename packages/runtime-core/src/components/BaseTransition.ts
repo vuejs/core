@@ -224,7 +224,7 @@ const BaseTransitionImpl: ComponentOptions = {
             if (!(instance.job.flags! & SchedulerJobFlags.DISPOSED)) {
               instance.update()
             }
-            leavingHooks.afterLeave = undefined
+            delete leavingHooks.afterLeave
           }
           return emptyPlaceholder(child)
         } else if (mode === 'in-out' && innerChild.type !== Comment) {
@@ -245,7 +245,6 @@ const BaseTransitionImpl: ComponentOptions = {
               delete enterHooks.delayedLeave
             }
             enterHooks.delayedLeave = delayedLeave
-            leavingHooks.delayLeave = undefined
           }
         }
       }
