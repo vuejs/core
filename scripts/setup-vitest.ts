@@ -1,5 +1,16 @@
 import type { MockInstance } from 'vitest'
 
+declare module 'vitest' {
+  interface Assertion<T = any> extends CustomMatchers<T> {}
+  interface AsymmetricMatchersContaining extends CustomMatchers {}
+}
+
+interface CustomMatchers<R = unknown> {
+  toHaveBeenWarned(): R
+  toHaveBeenWarnedLast(): R
+  toHaveBeenWarnedTimes(n: number): R
+}
+
 vi.stubGlobal('MathMLElement', class MathMLElement {})
 
 expect.extend({

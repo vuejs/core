@@ -55,10 +55,7 @@ export const transformModel: DirectiveTransform = (dir, node, context) => {
       bindingType === BindingTypes.SETUP_REF ||
       bindingType === BindingTypes.SETUP_MAYBE_REF)
 
-  if (
-    !expString.trim() ||
-    (!isMemberExpression(expString, context) && !maybeRef)
-  ) {
+  if (!expString.trim() || (!isMemberExpression(exp, context) && !maybeRef)) {
     context.onError(
       createCompilerError(ErrorCodes.X_V_MODEL_MALFORMED_EXPRESSION, exp.loc),
     )
@@ -148,7 +145,7 @@ export const transformModel: DirectiveTransform = (dir, node, context) => {
           `{ ${modifiers} }`,
           false,
           dir.loc,
-          ConstantTypes.CAN_HOIST,
+          ConstantTypes.CAN_CACHE,
         ),
       ),
     )
