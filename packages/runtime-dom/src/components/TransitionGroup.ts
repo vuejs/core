@@ -133,10 +133,10 @@ const TransitionGroupImpl: ComponentOptions = {
                 instance,
               ),
             )
-            positionMap.set(
-              child,
-              (child.el as Element).getBoundingClientRect(),
-            )
+            positionMap.set(child, {
+              left: (child.el as HTMLElement).offsetLeft,
+              top: (child.el as HTMLElement).offsetTop,
+            })
           }
         }
       }
