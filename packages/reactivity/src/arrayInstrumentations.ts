@@ -32,11 +32,8 @@ export const arrayInstrumentations: Record<string | symbol, Function> = <any>{
   },
 
   concat(...args: unknown[]) {
-    const needsWrap = isShallow(this)
     return reactiveReadArray(this).concat(
-      ...args.map(x =>
-        isArray(x) ? reactiveReadArray(x) : needsWrap ? toReactive(x) : x,
-      ),
+      ...args.map(x => (isArray(x) ? reactiveReadArray(x) : x)),
     )
   },
 

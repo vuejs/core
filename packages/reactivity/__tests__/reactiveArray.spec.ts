@@ -315,7 +315,7 @@ describe('reactivity/reactive/Array', () => {
       ])
       expect(isReactive(result.value[1])).toBe(false)
       expect(isReactive(result.value[2])).toBe(true)
-      expect(isReactive(result.value[6])).toBe(true)
+      expect(isReactive(result.value[6])).toBe(false)
 
       a1.shift()
       expect(result.value).toStrictEqual([
