@@ -210,7 +210,8 @@ export function defineComponent<
         : ExtractPropTypes<RuntimePropsOptions>
       : { [key in RuntimePropsKeys]?: any }
     : TypeProps,
-  ResolvedProps = Readonly<InferredProps & EmitsToProps<ResolvedEmits>>,
+  ResolvedProps = Readonly<InferredProps> &
+    Readonly<EmitsToProps<ResolvedEmits>>,
   TypeRefs extends Record<string, unknown> = {},
 >(
   options: {
