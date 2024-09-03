@@ -94,21 +94,20 @@ export function renderComponentVNode(
   const instance = createComponentInstance(vnode, parentComponent, null)
   const res = setupComponent(instance, true /* isSSR */)
   const hasAsyncSetup = isPromise(res)
-  const prefetches = instance.sp /* LifecycleHooks.SERVER_PREFETCH */
+  let prefetches = instance.sp /* LifecycleHooks.SERVER_PREFETCH */
   if (hasAsyncSetup || prefetches) {
-    let p: Promise<unknown> = hasAsyncSetup
-      ? (res as Promise<void>)
-      : Promise.resolve()
-    if (prefetches) {
-      p = p
-        .then(() =>
-          Promise.all(
+    const p: Promise<unknown> = Promise.resolve(res as Promise<void>)
+      .then(() => {
+        // instance.sp may be null until an async setup resolves, so evaluate it here
+        if (hasAsyncSetup) prefetches = instance.sp
+        if (prefetches) {
+          return Promise.all(
             prefetches.map(prefetch => prefetch.call(instance.proxy)),
-          ),
-        )
-        // Note: error display is already done by the wrapped lifecycle hook function.
-        .catch(NOOP)
-    }
+          )
+        }
+      })
+      // Note: error display is already done by the wrapped lifecycle hook function.
+      .catch(NOOP)
     return p.then(() => renderComponentSubTree(instance, slotScopeId))
   } else {
     return renderComponentSubTree(instance, slotScopeId)
