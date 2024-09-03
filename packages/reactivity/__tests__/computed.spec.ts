@@ -1,4 +1,6 @@
 import {
+  type TestElement,
+  defineComponent,
   h,
   nextTick,
   nodeOps,
@@ -6,6 +8,7 @@ import {
   onUnmounted,
   render,
   serializeInner,
+  triggerEvent,
 } from '@vue/runtime-test'
 import {
   type DebuggerEvent,
@@ -943,5 +946,47 @@ describe('reactivity/computed', () => {
       oldValue: 1,
       newValue: 2,
     })
+  })
+
+  test('should prevent endless recursion in self-referencing computed getters', async () => {
+    const Comp = defineComponent({
+      data() {
+        return {
+          counter: 0,
+        }
+      },
+
+      computed: {
+        message(): string {
+          if (this.counter === 0) {
+            this.counter++
+            return this.message
+          } else {
+            return `Step ${this.counter}`
+          }
+        },
+      },
+
+      render() {
+        return [
+          h(
+            'button',
+            {
+              onClick: () => {
+                this.counter++
+              },
+            },
+            'Step',
+          ),
+          h('p', this.message),
+        ]
+      },
+    })
+    const root = nodeOps.createElement('div')
+    render(h(Comp), root)
+    expect(serializeInner(root)).toBe(`<button>Step</button><p></p>`)
+    triggerEvent(root.children[1] as TestElement, 'click')
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<button>Step</button><p>Step 2</p>`)
   })
 })
