@@ -267,6 +267,7 @@ const KeepAliveImpl: ComponentOptions = {
       pendingCacheKey = null
 
       if (!slots.default) {
+        current = null
         return null
       }
 
