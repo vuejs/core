@@ -166,12 +166,19 @@ function setChecked(
   // store the v-model value on the element so it can be accessed by the
   // change listener.
   ;(el as any)._modelValue = value
+  let checked: boolean
+
   if (isArray(value)) {
-    el.checked = looseIndexOf(value, vnode.props!.value) > -1
+    checked = looseIndexOf(value, vnode.props!.value) > -1
   } else if (isSet(value)) {
-    el.checked = value.has(vnode.props!.value)
-  } else if (value !== oldValue) {
-    el.checked = looseEqual(value, getCheckboxValue(el, true))
+    checked = value.has(vnode.props!.value)
+  } else {
+    checked = looseEqual(value, getCheckboxValue(el, true))
+  }
+
+  // Only update if the checked state has changed
+  if (el.checked !== checked) {
+    el.checked = checked
   }
 }
 
