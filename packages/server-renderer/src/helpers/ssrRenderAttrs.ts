@@ -40,7 +40,7 @@ export function ssrRenderAttrs(
     } else if (key === 'style') {
       ret += ` style="${ssrRenderStyle(value)}"`
     } else if (key === 'className') {
-      ret += ` class="${String(value)}"`
+      ret += ` class="${value}"`
     } else {
       ret += ssrRenderDynamicAttr(key, value, tag)
     }
