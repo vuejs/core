@@ -17,6 +17,7 @@ import { parseCssVars } from './style/cssVars'
 import { createCache } from './cache'
 import type { ImportBinding } from './compileScript'
 import { isImportUsed } from './script/importUsageCheck'
+import type { LRUCache } from 'lru-cache'
 
 export const DEFAULT_FILENAME = 'anonymous.vue'
 
@@ -28,11 +29,6 @@ export interface SFCParseOptions {
   ignoreEmpty?: boolean
   compiler?: TemplateCompiler
   templateParseOptions?: ParserOptions
-  /**
-   * TODO remove in 3.5
-   * @deprecated use `templateParseOptions: { prefixIdentifiers: false }` instead
-   */
-  parseExpressions?: boolean
 }
 
 export interface SFCBlock {
@@ -103,7 +99,9 @@ export interface SFCParseResult {
   errors: (CompilerError | SyntaxError)[]
 }
 
-export const parseCache = createCache<SFCParseResult>()
+export const parseCache:
+  | Map<string, SFCParseResult>
+  | LRUCache<string, SFCParseResult> = createCache<SFCParseResult>()
 
 function genCacheKey(source: string, options: SFCParseOptions): string {
   return (
@@ -136,7 +134,6 @@ export function parse(
     ignoreEmpty = true,
     compiler = CompilerDOM,
     templateParseOptions = {},
-    parseExpressions = true,
   } = options
 
   const descriptor: SFCDescriptor = {
@@ -155,7 +152,7 @@ export function parse(
   const errors: (CompilerError | SyntaxError)[] = []
   const ast = compiler.parse(source, {
     parseMode: 'sfc',
-    prefixIdentifiers: parseExpressions,
+    prefixIdentifiers: true,
     ...templateParseOptions,
     onError: e => {
       errors.push(e)
@@ -238,7 +235,7 @@ export function parse(
   if (!descriptor.template && !descriptor.script && !descriptor.scriptSetup) {
     errors.push(
       new SyntaxError(
-        `At least one <template> or <script> is required in a single file component.`,
+        `At least one <template> or <script> is required in a single file component. ${descriptor.filename}`,
       ),
     )
   }

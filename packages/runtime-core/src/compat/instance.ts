@@ -36,16 +36,22 @@ import {
   legacyresolveScopedSlots,
 } from './renderHelpers'
 import { resolveFilter } from '../helpers/resolveAssets'
-import type { InternalSlots, Slots } from '../componentSlots'
-import type { ContextualRenderFn } from '../componentRenderContext'
+import type { Slots } from '../componentSlots'
 import { resolveMergedOptions } from '../componentOptions'
 
 export type LegacyPublicInstance = ComponentPublicInstance &
   LegacyPublicProperties
 
 export interface LegacyPublicProperties {
-  $set(target: object, key: string, value: any): void
-  $delete(target: object, key: string): void
+  $set<T extends Record<keyof any, any>, K extends keyof T>(
+    target: T,
+    key: K,
+    value: T[K],
+  ): void
+  $delete<T extends Record<keyof any, any>, K extends keyof T>(
+    target: T,
+    key: K,
+  ): void
   $mount(el?: string | Element): this
   $destroy(): void
   $scopedSlots: Slots
@@ -56,7 +62,9 @@ export interface LegacyPublicProperties {
   $listeners: Record<string, Function | Function[]>
 }
 
-export function installCompatInstanceProperties(map: PublicPropertiesMap) {
+export function installCompatInstanceProperties(
+  map: PublicPropertiesMap,
+): void {
   const set = (target: any, key: any, val: any) => {
     target[key] = val
     return target[key]
@@ -106,14 +114,7 @@ export function installCompatInstanceProperties(map: PublicPropertiesMap) {
 
     $scopedSlots: i => {
       assertCompatEnabled(DeprecationTypes.INSTANCE_SCOPED_SLOTS, i)
-      const res: InternalSlots = {}
-      for (const key in i.slots) {
-        const fn = i.slots[key]!
-        if (!(fn as ContextualRenderFn)._ns /* non-scoped slot */) {
-          res[key] = fn
-        }
-      }
-      return res
+      return __DEV__ ? shallowReadonly(i.slots) : i.slots
     },
 
     $on: i => on.bind(null, i),

@@ -3,13 +3,14 @@ import type { ScriptCompileContext } from './context'
 import MagicString from 'magic-string'
 import { rewriteDefaultAST } from '../rewriteDefault'
 import { genNormalScriptCssVarsCode } from '../style/cssVars'
+import type { SFCScriptBlock } from '../parse'
 
 export const normalScriptDefaultVar = `__default__`
 
 export function processNormalScript(
   ctx: ScriptCompileContext,
   scopeId: string,
-) {
+): SFCScriptBlock {
   const script = ctx.descriptor.script!
   if (script.lang && !ctx.isJS && !ctx.isTS) {
     // do not process non js/ts script blocks

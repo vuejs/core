@@ -32,7 +32,7 @@ export interface TransitionProps extends BaseTransitionProps<Element> {
   leaveToClass?: string
 }
 
-export const vtcKey = Symbol('_vtc')
+export const vtcKey: unique symbol = Symbol('_vtc')
 
 export interface ElementWithTransition extends HTMLElement {
   // _vtc = Vue Transition Classes.
@@ -74,7 +74,7 @@ const DOMTransitionPropsValidators = {
   leaveToClass: String,
 }
 
-export const TransitionPropsValidators = (Transition.props =
+export const TransitionPropsValidators: any = (Transition.props =
   /*#__PURE__*/ extend(
     {},
     BaseTransitionPropsValidators as any,
@@ -252,9 +252,11 @@ export function resolveTransitionProps(
       if (__COMPAT__ && legacyClassEnabled && legacyLeaveFromClass) {
         addTransitionClass(el, legacyLeaveFromClass)
       }
+      // add *-leave-active class before reflow so in the case of a cancelled enter transition
+      // the css will not get the final state (#10677)
+      addTransitionClass(el, leaveActiveClass)
       // force reflow so *-leave-from classes immediately take effect (#2593)
       forceReflow()
-      addTransitionClass(el, leaveActiveClass)
       nextFrame(() => {
         if (!el._isLeaving) {
           // cancelled
@@ -307,7 +309,7 @@ function NumberOf(val: unknown): number {
   return res
 }
 
-export function addTransitionClass(el: Element, cls: string) {
+export function addTransitionClass(el: Element, cls: string): void {
   cls.split(/\s+/).forEach(c => c && el.classList.add(c))
   ;(
     (el as ElementWithTransition)[vtcKey] ||
@@ -315,7 +317,7 @@ export function addTransitionClass(el: Element, cls: string) {
   ).add(cls)
 }
 
-export function removeTransitionClass(el: Element, cls: string) {
+export function removeTransitionClass(el: Element, cls: string): void {
   cls.split(/\s+/).forEach(c => c && el.classList.remove(c))
   const _vtc = (el as ElementWithTransition)[vtcKey]
   if (_vtc) {
@@ -409,7 +411,6 @@ export function getTransitionInfo(
   let type: CSSTransitionInfo['type'] = null
   let timeout = 0
   let propCount = 0
-  /* istanbul ignore if */
   if (expectedType === TRANSITION) {
     if (transitionTimeout > 0) {
       type = TRANSITION
@@ -467,6 +468,6 @@ function toMs(s: string): number {
 }
 
 // synchronously force layout to put elements into a certain state
-export function forceReflow() {
+export function forceReflow(): number {
   return document.body.offsetHeight
 }

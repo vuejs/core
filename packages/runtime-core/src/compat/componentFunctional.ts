@@ -19,7 +19,9 @@ export const legacySlotProxyHandlers: ProxyHandler<InternalSlots> = {
   },
 }
 
-export function convertLegacyFunctionalComponent(comp: ComponentOptions) {
+export function convertLegacyFunctionalComponent(
+  comp: ComponentOptions,
+): FunctionalComponent {
   if (normalizedFunctionalComponentMap.has(comp)) {
     return normalizedFunctionalComponentMap.get(comp)!
   }
