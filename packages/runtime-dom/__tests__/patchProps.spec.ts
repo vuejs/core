@@ -1,5 +1,15 @@
 import { patchProp } from '../src/patchProp'
-import { h, nextTick, ref, render } from '../src'
+import {
+  createElementBlock,
+  guardReactiveProps,
+  h,
+  nextTick,
+  normalizeProps,
+  reactive,
+  ref,
+  render,
+  toRefs,
+} from '../src'
 
 describe('runtime-dom: props patching', () => {
   test('basic', () => {
@@ -350,5 +360,38 @@ describe('runtime-dom: props patching', () => {
     patchProp(el, 'translate', null, 'no')
     expect(el.translate).toBeFalsy()
     expect(el.getAttribute('translate')).toBe('no')
+  })
+
+  // #11691
+  test('should update the color style of the element from red to yellow', async () => {
+    const state = reactive({
+      obj: {
+        style: {
+          color: 'red',
+        },
+      },
+    })
+    const App = {
+      setup() {
+        const { obj } = toRefs(state)
+        return () => {
+          // <div v-bind="obj">msg</div>
+          return createElementBlock(
+            'div',
+            normalizeProps(guardReactiveProps(obj.value)),
+            'msg',
+            17,
+          )
+        }
+      },
+    }
+    const root = document.createElement('div')
+    render(h(App), root)
+    const el = root.children[0] as HTMLSelectElement
+    expect(el.style.color).toBe('red')
+
+    state.obj.style.color = 'yellow'
+    await nextTick()
+    expect(el.style.color).toBe('yellow')
   })
 })
