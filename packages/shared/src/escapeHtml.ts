@@ -59,6 +59,6 @@ export function getEscapedCssVarName(
   doubleEscape: boolean,
 ): string {
   return key.replace(cssVarNameEscapeSymbolsRE, s =>
-    doubleEscape ? `\\\\${s}` : `\\${s}`,
+    doubleEscape ? (s === '"' ? '\\\\\\"' : `\\\\${s}`) : `\\${s}`,
   )
 }
