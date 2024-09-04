@@ -381,7 +381,7 @@ export function refreshComputed(computed: ComputedRefImpl): false | undefined {
 
   try {
     prepareDeps(computed)
-    const value = computed.fn()
+    const value = computed.fn(computed._value)
     if (dep.version === 0 || hasChanged(value, computed._value)) {
       computed._value = value
       dep.version++
