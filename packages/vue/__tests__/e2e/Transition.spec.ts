@@ -1431,7 +1431,7 @@ describe('e2e: Transition', () => {
 
   describe('transition with KeepAlive', () => {
     test(
-      'unmount innerChild',
+      'unmount innerChild (out-in mode)',
       async () => {
         const unmountSpy = vi.fn()
         await page().exposeFunction('unmountSpy', unmountSpy)
@@ -1489,7 +1489,7 @@ describe('e2e: Transition', () => {
 
     // #11775
     test(
-      'replace child and update include at the same time (out-in mode)',
+      'switch child then update include (out-in mode)',
       async () => {
         const onUpdatedSpyA = vi.fn()
         const onUnmountedSpyC = vi.fn()
@@ -1567,6 +1567,89 @@ describe('e2e: Transition', () => {
         // expect CompA only update once
         expect(onUpdatedSpyA).toBeCalledTimes(1)
         expect(onUnmountedSpyC).toBeCalledTimes(1)
+      },
+      E2E_TIMEOUT,
+    )
+
+    // #10827
+    test(
+      'switch and update child then update include (out-in mode)',
+      async () => {
+        const onUnmountedSpyB = vi.fn()
+        await page().exposeFunction('onUnmountedSpyB', onUnmountedSpyB)
+
+        await page().evaluate(() => {
+          const { onUnmountedSpyB } = window as any
+          const {
+            createApp,
+            ref,
+            shallowRef,
+            h,
+            provide,
+            inject,
+            onUnmounted,
+          } = (window as any).Vue
+          createApp({
+            template: `
+            <div id="container">
+              <transition name="test-anim" mode="out-in">
+                <KeepAlive :include="includeRef">
+                  <component :is="current" />
+                </KeepAlive>
+              </transition>
+            </div>
+            <button id="switchToA" @click="switchToA">switchToA</button>
+            <button id="switchToB" @click="switchToB">switchToB</button>
+          `,
+            components: {
+              CompA: {
+                name: 'CompA',
+                setup() {
+                  const current = inject('current')
+                  return () => h('div', current.value)
+                },
+              },
+              CompB: {
+                name: 'CompB',
+                setup() {
+                  const current = inject('current')
+                  onUnmounted(onUnmountedSpyB)
+                  return () => h('div', current.value)
+                },
+              },
+            },
+            setup: () => {
+              const includeRef = ref(['CompA'])
+              const current = shallowRef('CompA')
+              provide('current', current)
+
+              const switchToB = () => {
+                current.value = 'CompB'
+                includeRef.value = ['CompA', 'CompB']
+              }
+              const switchToA = () => {
+                current.value = 'CompA'
+                includeRef.value = ['CompA']
+              }
+              return { current, switchToB, switchToA, includeRef }
+            },
+          }).mount('#app')
+        })
+
+        await transitionFinish()
+        expect(await html('#container')).toBe('<div>CompA</div>')
+
+        await click('#switchToB')
+        await transitionFinish()
+        await transitionFinish()
+        expect(await html('#container')).toBe('<div class="">CompB</div>')
+
+        await click('#switchToA')
+        await transitionFinish()
+        await transitionFinish()
+        expect(await html('#container')).toBe('<div class="">CompA</div>')
+
+        expect(onUnmountedSpyB).toBeCalledTimes(1)
       },
       E2E_TIMEOUT,
     )
