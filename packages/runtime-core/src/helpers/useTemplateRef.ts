@@ -8,8 +8,10 @@ export function useTemplateRef<T = unknown, Keys extends string = string>(
 ): Readonly<ShallowRef<T | null>> {
   const i = getCurrentInstance()
   const r = shallowRef(null)
-  // @ts-expect-error
-  r.__v__TemplateRef = true
+  if (__DEV__) {
+    // @ts-expect-error dev only
+    r.__v__TemplateRef = true
+  }
   if (i) {
     const refs = i.refs === EMPTY_OBJ ? (i.refs = {}) : i.refs
 
