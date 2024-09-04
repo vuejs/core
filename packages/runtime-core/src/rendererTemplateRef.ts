@@ -96,7 +96,12 @@ export function setRef(
               if (_isString) {
                 refs[ref] = [refValue]
                 if (hasOwn(setupState, ref)) {
-                  setupState[ref] = refs[ref]
+                  // @ts-expect-error
+                  if (setupState[ref] && setupState[ref].__v__TemplateRef) {
+                    // cannot update TemplateRef
+                  } else {
+                    setupState[ref] = value
+                  }
                 }
               } else {
                 ref.value = [refValue]
@@ -109,7 +114,12 @@ export function setRef(
         } else if (_isString) {
           refs[ref] = value
           if (hasOwn(setupState, ref)) {
-            setupState[ref] = value
+            // @ts-expect-error
+            if (setupState[ref] && setupState[ref].__v__TemplateRef) {
+              // cannot update TemplateRef
+            } else {
+              setupState[ref] = value
+            }
           }
         } else if (_isRef) {
           ref.value = value
