@@ -3,6 +3,8 @@ import { getCurrentInstance } from '../component'
 import { warn } from '../warning'
 import { EMPTY_OBJ } from '@vue/shared'
 
+export const TEMPLATE_REF_KEYS = '__v_ref_keys'
+
 export function useTemplateRef<T = unknown, Keys extends string = string>(
   key: Keys,
 ): Readonly<ShallowRef<T | null>> {
@@ -19,6 +21,15 @@ export function useTemplateRef<T = unknown, Keys extends string = string>(
     ) {
       warn(`useTemplateRef('${key}') already exists.`)
     } else {
+      if (refs[TEMPLATE_REF_KEYS]) {
+        ;(refs[TEMPLATE_REF_KEYS] as any).add(key)
+      } else {
+        const set = new Set([key])
+        Object.defineProperty(refs, TEMPLATE_REF_KEYS, {
+          get: () => set,
+        })
+      }
+
       Object.defineProperty(refs, key, {
         enumerable: true,
         get: () => r.value,

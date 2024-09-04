@@ -27,12 +27,16 @@ describe('useTemplateRef', () => {
   test('should be readonly', () => {
     let tRef
     const key = 'refKey'
+    const key2 = 'foo'
     const Comp = {
       setup() {
         tRef = useTemplateRef(key)
+        // naming a variable declared with the same as a template ref
+        const foo = useTemplateRef(key2)
+        return { [key2]: foo }
       },
       render() {
-        return h('div', { ref: key })
+        return h('div', { ref: key }, [h('div', { ref: key2 })])
       },
     }
     const root = nodeOps.createElement('div')
@@ -42,7 +46,7 @@ describe('useTemplateRef', () => {
     tRef.value = 123
 
     expect(tRef!.value).toBe(root.children[0])
-    expect('target is readonly').toHaveBeenWarned()
+    expect('target is readonly').toHaveBeenWarnedTimes(1)
   })
 
   test('should be updated for ref of dynamic strings', async () => {

@@ -16,6 +16,7 @@ import { ErrorCodes, callWithErrorHandling } from './errorHandling'
 import type { SchedulerJob } from './scheduler'
 import { queuePostRenderEffect } from './renderer'
 import { getComponentPublicInstance } from './component'
+import { TEMPLATE_REF_KEYS } from './helpers/useTemplateRef'
 
 /**
  * Function for handling a template ref
@@ -64,11 +65,17 @@ export function setRef(
   const refs = owner.refs === EMPTY_OBJ ? (owner.refs = {}) : owner.refs
   const setupState = owner.setupState
 
+  const canUpdateSetupState = (ref: string) => {
+    if (!hasOwn(setupState, ref)) return false
+    const set: Set<string> | undefined = refs[TEMPLATE_REF_KEYS] as any
+    return !set || !set.has(ref)
+  }
+
   // dynamic ref changed. unset old ref
   if (oldRef != null && oldRef !== ref) {
     if (isString(oldRef)) {
       refs[oldRef] = null
-      if (hasOwn(setupState, oldRef)) {
+      if (canUpdateSetupState(oldRef)) {
         setupState[oldRef] = null
       }
     } else if (isRef(oldRef)) {
@@ -95,7 +102,7 @@ export function setRef(
             if (!isArray(existing)) {
               if (_isString) {
                 refs[ref] = [refValue]
-                if (hasOwn(setupState, ref)) {
+                if (canUpdateSetupState(ref)) {
                   setupState[ref] = refs[ref]
                 }
               } else {
@@ -108,7 +115,7 @@ export function setRef(
           }
         } else if (_isString) {
           refs[ref] = value
-          if (hasOwn(setupState, ref)) {
+          if (canUpdateSetupState(ref)) {
             setupState[ref] = value
           }
         } else if (_isRef) {
