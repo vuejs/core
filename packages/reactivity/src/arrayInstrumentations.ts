@@ -2,6 +2,7 @@ import { TrackOpTypes } from './constants'
 import { endBatch, pauseTracking, resetTracking, startBatch } from './effect'
 import { isProxy, isShallow, toRaw, toReactive } from './reactive'
 import { ARRAY_ITERATE_KEY, track } from './dep'
+import { isArray } from '@vue/shared'
 
 /**
  * Track array iteration and return:
@@ -30,9 +31,9 @@ export const arrayInstrumentations: Record<string | symbol, Function> = <any>{
     return iterator(this, Symbol.iterator, toReactive)
   },
 
-  concat(...args: unknown[][]) {
+  concat(...args: unknown[]) {
     return reactiveReadArray(this).concat(
-      ...args.map(x => reactiveReadArray(x)),
+      ...args.map(x => (isArray(x) ? reactiveReadArray(x) : x)),
     )
   },
 
