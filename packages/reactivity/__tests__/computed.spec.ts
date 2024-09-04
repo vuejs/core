@@ -33,6 +33,20 @@ describe('reactivity/computed', () => {
     expect(cValue.value).toBe(1)
   })
 
+  it('support get previous value', () => {
+    const count = ref(0)
+    const preValue = ref()
+    const cValue = computed(pre => {
+      preValue.value = pre
+      return count.value
+    })
+    expect(cValue.value).toBe(0)
+    expect(preValue.value).toBe(undefined)
+    count.value++
+    expect(cValue.value).toBe(1)
+    expect(preValue.value).toBe(0)
+  })
+
   it('should compute lazily', () => {
     const value = reactive<{ foo?: number }>({})
     const getter = vi.fn(() => value.foo)
