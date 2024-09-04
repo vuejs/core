@@ -24,11 +24,7 @@ export function useTemplateRef<T = unknown, Keys extends string = string>(
       Object.defineProperty(refs, key, {
         enumerable: true,
         get: () => r.value,
-        set: val => {
-          r.value = val
-          // @ts-expect-error
-          if (val) r.value!.__v__TemplateRef = true
-        },
+        set: val => (r.value = val),
       })
     }
   } else if (__DEV__) {
