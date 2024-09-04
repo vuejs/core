@@ -774,7 +774,7 @@ export const unsetCurrentInstance = (): void => {
   internalSetCurrentInstance(null)
 }
 
-const isBuiltInTag = /*#__PURE__*/ makeMap('slot,component')
+const isBuiltInTag = /*@__PURE__*/ makeMap('slot,component')
 
 export function validateComponentName(
   name: string,
