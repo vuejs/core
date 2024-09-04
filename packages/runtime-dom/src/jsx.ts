@@ -416,6 +416,7 @@ export interface DelHTMLAttributes extends HTMLAttributes {
 
 export interface DialogHTMLAttributes extends HTMLAttributes {
   open?: Booleanish
+  onClose?: (payload: Event) => void
 }
 
 export interface EmbedHTMLAttributes extends HTMLAttributes {
