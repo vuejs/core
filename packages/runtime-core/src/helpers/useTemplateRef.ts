@@ -25,7 +25,7 @@ export function useTemplateRef<T = unknown, Keys extends string = string>(
         set: val => {
           r.value = val
           // @ts-expect-error
-          r.value!.__v__TemplateRef = true
+          if (val) r.value!.__v__TemplateRef = true
         },
       })
     }
