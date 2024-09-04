@@ -68,6 +68,7 @@ export type DefineComponent<
   Provide extends ComponentProvideOptions = ComponentProvideOptions,
   MakeDefaultsOptional extends boolean = true,
   TypeRefs extends Record<string, unknown> = {},
+  TypeEl extends Element = any,
 > = ComponentPublicInstanceConstructor<
   CreateComponentPublicInstanceWithMixins<
     Props,
@@ -86,7 +87,8 @@ export type DefineComponent<
     LC & GlobalComponents,
     Directives & GlobalDirectives,
     Exposed,
-    TypeRefs
+    TypeRefs,
+    TypeEl
   >
 > &
   ComponentOptionsBase<
@@ -213,6 +215,7 @@ export function defineComponent<
   ResolvedProps = Readonly<InferredProps> &
     Readonly<EmitsToProps<ResolvedEmits>>,
   TypeRefs extends Record<string, unknown> = {},
+  TypeEl extends Element = any,
 >(
   options: {
     props?: (RuntimePropsOptions & ThisType<void>) | RuntimePropsKeys[]
@@ -228,6 +231,10 @@ export function defineComponent<
      * @private for language-tools use only
      */
     __typeRefs?: TypeRefs
+    /**
+     * @private for language-tools use only
+     */
+    __typeEl?: TypeEl
   } & ComponentOptionsBase<
     ResolvedProps,
     SetupBindings,
@@ -288,7 +295,8 @@ export function defineComponent<
   // MakeDefaultsOptional - if TypeProps is provided, set to false to use
   // user props types verbatim
   unknown extends TypeProps ? true : false,
-  TypeRefs
+  TypeRefs,
+  TypeEl
 >
 
 // implementation, close to no-op
