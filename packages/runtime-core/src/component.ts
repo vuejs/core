@@ -939,7 +939,6 @@ export function handleSetupResult(
       instance.devtoolsRawSetupState = setupResult
     }
     instance.setupState = proxyRefs(setupResult)
-    instance.setupState.__v__setupResult = setupResult
     if (__DEV__) {
       exposeSetupStateOnRenderContext(instance)
     }

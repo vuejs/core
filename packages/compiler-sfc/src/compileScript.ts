@@ -927,6 +927,7 @@ export function compileScript(
       endOffset,
       `\nconst __returned__ = ${returned}\n` +
         `Object.defineProperty(__returned__, '__isScriptSetup', { enumerable: false, value: true })\n` +
+        `Object.defineProperty(__returned__, '__v__setupResult', { enumerable: false, value: __returned__ })\n` +
         `return __returned__` +
         `\n}\n\n`,
     )
