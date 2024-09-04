@@ -52,10 +52,10 @@ const decorate = (t: typeof TransitionGroupImpl) => {
   return t
 }
 
-const TransitionGroupImpl: ComponentOptions = /*#__PURE__*/ decorate({
+const TransitionGroupImpl: ComponentOptions = /*@__PURE__*/ decorate({
   name: 'TransitionGroup',
 
-  props: /*#__PURE__*/ extend({}, TransitionPropsValidators, {
+  props: /*@__PURE__*/ extend({}, TransitionPropsValidators, {
     tag: String,
     moveClass: String,
   }),

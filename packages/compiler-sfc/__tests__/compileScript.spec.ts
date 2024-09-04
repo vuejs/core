@@ -1357,7 +1357,7 @@ describe('SFC genDefaultAs', () => {
     )
     expect(content).not.toMatch('export default')
     expect(content).toMatch(
-      `const _sfc_ = /*#__PURE__*/Object.assign(__default__`,
+      `const _sfc_ = /*@__PURE__*/Object.assign(__default__`,
     )
     assertCode(content)
   })
@@ -1376,7 +1376,7 @@ describe('SFC genDefaultAs', () => {
     )
     expect(content).not.toMatch('export default')
     expect(content).toMatch(
-      `const _sfc_ = /*#__PURE__*/Object.assign(__default__`,
+      `const _sfc_ = /*@__PURE__*/Object.assign(__default__`,
     )
     assertCode(content)
   })
@@ -1405,7 +1405,7 @@ describe('SFC genDefaultAs', () => {
       },
     )
     expect(content).not.toMatch('export default')
-    expect(content).toMatch(`const _sfc_ = /*#__PURE__*/_defineComponent(`)
+    expect(content).toMatch(`const _sfc_ = /*@__PURE__*/_defineComponent(`)
     assertCode(content)
   })
 
@@ -1423,7 +1423,7 @@ describe('SFC genDefaultAs', () => {
     )
     expect(content).not.toMatch('export default')
     expect(content).toMatch(
-      `const _sfc_ = /*#__PURE__*/_defineComponent({\n  ...__default__`,
+      `const _sfc_ = /*@__PURE__*/_defineComponent({\n  ...__default__`,
     )
     assertCode(content)
   })

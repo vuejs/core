@@ -61,7 +61,7 @@ const DOMTransitionPropsValidators = {
   leaveToClass: String,
 }
 
-export const TransitionPropsValidators: any = /*#__PURE__*/ extend(
+export const TransitionPropsValidators: any = /*@__PURE__*/ extend(
   {},
   BaseTransitionPropsValidators as any,
   DOMTransitionPropsValidators,
@@ -85,7 +85,7 @@ const decorate = (t: typeof Transition) => {
  * base Transition component, with DOM-specific logic.
  */
 export const Transition: FunctionalComponent<TransitionProps> =
-  /*#__PURE__*/ decorate((props, { slots }) =>
+  /*@__PURE__*/ decorate((props, { slots }) =>
     h(BaseTransition, resolveTransitionProps(props), slots),
   )
 

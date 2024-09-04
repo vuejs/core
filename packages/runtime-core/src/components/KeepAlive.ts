@@ -370,7 +370,7 @@ const decorate = (t: typeof KeepAliveImpl) => {
 // export the public type for h/tsx inference
 // also to avoid inline import() in generated d.ts files
 export const KeepAlive = (__COMPAT__
-  ? /*#__PURE__*/ decorate(KeepAliveImpl)
+  ? /*@__PURE__*/ decorate(KeepAliveImpl)
   : KeepAliveImpl) as any as {
   __isKeepAlive: true
   new (): {
