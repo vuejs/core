@@ -50,3 +50,15 @@ const commentStripRE = /^-?>|<!--|-->|--!>|<!-$/g
 export function escapeHtmlComment(src: string): string {
   return src.replace(commentStripRE, '')
 }
+
+export const cssVarNameEscapeSymbolsRE: RegExp =
+  /[ !"#$%&'()*+,./:;<=>?@[\\\]^`{|}~]/g
+
+export function getEscapedCssVarName(
+  key: string,
+  doubleEscape: boolean,
+): string {
+  return key.replace(cssVarNameEscapeSymbolsRE, s =>
+    doubleEscape ? (s === '"' ? '\\\\\\"' : `\\\\${s}`) : `\\${s}`,
+  )
+}
