@@ -665,7 +665,7 @@ export function buildProps(
       }
 
       // force hydration for v-bind with .prop modifier
-      if (isVBind && modifiers.find(mod => mod.content === 'prop')) {
+      if (isVBind && modifiers.some(mod => mod.content === 'prop')) {
         patchFlag |= PatchFlags.NEED_HYDRATION
       }
 
