@@ -606,6 +606,7 @@ describe('SFC compile <script setup>', () => {
         import { ref } from 'vue'
         const count = ref(0)
         const style = { color: 'red' }
+        const height = ref(0)
         </script>
         <template>
           <div>{{ count }}</div>
@@ -614,6 +615,7 @@ describe('SFC compile <script setup>', () => {
         <style>
         div { color: v-bind(count) }
         span { color: v-bind(style.color) }
+        span { color: v-bind(height + "px") }
         </style>
         `,
         {
@@ -629,6 +631,9 @@ describe('SFC compile <script setup>', () => {
       expect(content).not.toMatch(`useCssVars`)
       expect(content).toMatch(`"--${mockId}-count": (count.value)`)
       expect(content).toMatch(`"--${mockId}-style\\\\.color": (style.color)`)
+      expect(content).toMatch(
+        `"--${mockId}-height\\\\ \\\\+\\\\ \\\\\\"px\\\\\\"": (height.value + "px")`,
+      )
       assertCode(content)
     })
 
@@ -649,6 +654,24 @@ describe('SFC compile <script setup>', () => {
           },
         ),
       ).not.toThrowError()
+    })
+
+    test('unref + new expression', () => {
+      const { content } = compile(
+        `
+        <script setup>
+        import Foo from './foo'
+        </script>
+        <template>
+          <div>{{ new Foo() }}</div>
+          <div>{{ new Foo.Bar() }}</div>
+        </template>
+        `,
+        { inlineTemplate: true },
+      )
+      expect(content).toMatch(`new (_unref(Foo))()`)
+      expect(content).toMatch(`new (_unref(Foo)).Bar()`)
+      assertCode(content)
     })
   })
 
@@ -934,6 +957,38 @@ describe('SFC compile <script setup>', () => {
         })
         </script>`).content,
       )
+    })
+
+    test('defineModel() referencing local var', () => {
+      expect(() =>
+        compile(`<script setup>
+        let bar = 1
+        defineModel({
+          default: () => bar
+        })
+        </script>`),
+      ).toThrow(`cannot reference locally declared variables`)
+
+      // allow const
+      expect(() =>
+        compile(`<script setup>
+        const bar = 1
+        defineModel({
+          default: () => bar
+        })
+        </script>`),
+      ).not.toThrow(`cannot reference locally declared variables`)
+
+      // allow in get/set
+      expect(() =>
+        compile(`<script setup>
+        let bar = 1
+        defineModel({
+          get: () => bar,
+          set: () => bar
+        })
+        </script>`),
+      ).not.toThrow(`cannot reference locally declared variables`)
     })
   })
 })
@@ -1302,7 +1357,7 @@ describe('SFC genDefaultAs', () => {
     )
     expect(content).not.toMatch('export default')
     expect(content).toMatch(
-      `const _sfc_ = /*#__PURE__*/Object.assign(__default__`,
+      `const _sfc_ = /*@__PURE__*/Object.assign(__default__`,
     )
     assertCode(content)
   })
@@ -1321,7 +1376,7 @@ describe('SFC genDefaultAs', () => {
     )
     expect(content).not.toMatch('export default')
     expect(content).toMatch(
-      `const _sfc_ = /*#__PURE__*/Object.assign(__default__`,
+      `const _sfc_ = /*@__PURE__*/Object.assign(__default__`,
     )
     assertCode(content)
   })
@@ -1350,7 +1405,7 @@ describe('SFC genDefaultAs', () => {
       },
     )
     expect(content).not.toMatch('export default')
-    expect(content).toMatch(`const _sfc_ = /*#__PURE__*/_defineComponent(`)
+    expect(content).toMatch(`const _sfc_ = /*@__PURE__*/_defineComponent(`)
     assertCode(content)
   })
 
@@ -1368,7 +1423,7 @@ describe('SFC genDefaultAs', () => {
     )
     expect(content).not.toMatch('export default')
     expect(content).toMatch(
-      `const _sfc_ = /*#__PURE__*/_defineComponent({\n  ...__default__`,
+      `const _sfc_ = /*@__PURE__*/_defineComponent({\n  ...__default__`,
     )
     assertCode(content)
   })
@@ -1420,5 +1475,28 @@ describe('SFC genDefaultAs', () => {
       )
       assertCode(content)
     })
+  })
+})
+
+describe('compileScript', () => {
+  test('should care about runtimeModuleName', () => {
+    const { content } = compile(
+      `
+      <script setup>
+        await Promise.resolve(1)
+      </script>
+      `,
+      {
+        templateOptions: {
+          compilerOptions: {
+            runtimeModuleName: 'npm:vue',
+          },
+        },
+      },
+    )
+    expect(content).toMatch(
+      `import { withAsyncContext as _withAsyncContext } from "npm:vue"\n`,
+    )
+    assertCode(content)
   })
 })

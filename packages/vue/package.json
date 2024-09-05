@@ -1,6 +1,6 @@
 {
   "name": "vue",
-  "version": "3.4.3",
+  "version": "3.5.1",
   "description": "The progressive JavaScript framework for building modern web UI.",
   "main": "index.js",
   "module": "dist/vue.runtime.esm-bundler.js",
@@ -25,6 +25,11 @@
       },
       "require": {
         "types": "./dist/vue.d.ts",
+        "node": {
+          "production": "./dist/vue.cjs.prod.js",
+          "development": "./dist/vue.cjs.js",
+          "default": "./index.js"
+        },
         "default": "./index.js"
       }
     },

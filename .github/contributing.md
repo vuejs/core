@@ -17,6 +17,26 @@ Hi! I'm really excited that you are interested in contributing to Vue.js. Before
 
 ## Pull Request Guidelines
 
+### What kinds of Pull Requests are accepted?
+
+- Bug fix that addresses a clearly identified bug. **"Clearly identified bug"** means the bug has a proper reproduction either from a related open issue, or is included in the PR itself. Avoid submitting PRs that claim to fix something but do not sufficiently explain what is being fixed.
+
+- New feature that addresses a clearly explained and widely applicable use case. **"Widely applicable"** means the new feature should provide non-trivial improvements to the majority of the user base. Vue already has a large API surface so we are quite cautious about adding new features - if the use case is niche and can be addressed via userland implementations, it likely isn't suitable to go into core.
+
+  The feature implementation should also consider the trade-off between the added complexity vs. the benefits gained. For example, if a small feature requires significant changes that spreads across the codebase, it is likely not worth it, or the approach should be reconsidered.
+
+  If the feature has a non-trivial API surface addition, or significantly affects the way a common use case is approached by the users, it should go through a discussion first in the [RFC repo](https://github.com/vuejs/rfcs/discussions). PRs of such features without prior discussion make it really difficult to steer / adjust the API design due to coupling with concrete implementations, and can lead to wasted work.
+
+- Chore: typos, comment improvements, build config, CI config, etc. For typos and comment changes, try to combine multiple of them into a single PR.
+
+- **It should be noted that we discourage contributors from submitting code refactors that are largely stylistic.** Code refactors are only accepted if it improves performance, or comes with sufficient explanations on why it objectively improves the code quality (e.g. makes a related feature implementation easier).
+
+  The reason is that code readability is subjective. The maintainers of this project have chosen to write the code in its current style based on our preferences, and we do not want to spend time explaining our stylistic preferences. Contributors should just respect the established conventions when contributing code.
+
+  Another aspect of it is that large scale stylistic changes result in massive diffs that touch multiple files, adding noise to the git history and makes tracing behavior changes across commits more cumbersome.
+
+### Pull Request Checklist
+
 - Vue core has two primary work branches: `main` and `minor`.
 
   - If your pull request is a feature that adds new API surface, it should be submitted against the `minor` branch.
@@ -61,7 +81,7 @@ Hi! I'm really excited that you are interested in contributing to Vue.js. Before
 
 ## Development Setup
 
-You will need [Node.js](https://nodejs.org) **version 18.12+**, and [PNPM](https://pnpm.io) **version 8+**.
+You will need [Node.js](https://nodejs.org) with minimum version as specified in the [`.node-version`](https://github.com/vuejs/core/blob/main/.node-version) file, and [PNPM](https://pnpm.io) with minimum version as specified in the [`"packageManager"` field in `package.json`](https://github.com/vuejs/core/blob/main/package.json#L4).
 
 We also recommend installing [@antfu/ni](https://github.com/antfu/ni) to help switching between repos using different package managers. `ni` also provides the handy `nr` command which running npm scripts easier.
 
@@ -216,7 +236,7 @@ Tests that test against source code are grouped under `nr test-unit`, while test
 
 ### `nr test-dts`
 
-Runs `nr build-dts` first, then verify the type tests in `packages/dts-test` are working correctly against the actual built type declarations.
+Runs `nr build-dts` first, then verify the type tests in `packages-private/dts-test` are working correctly against the actual built type declarations.
 
 ## Project Structure
 
@@ -315,7 +335,7 @@ Test coverage is continuously deployed at https://coverage.vuejs.org. PRs that i
 
 ### Testing Type Definition Correctness
 
-Type tests are located in the `packages/dts-test` directory. To run the dts tests, run `nr test-dts`. Note that the type test requires all relevant `*.d.ts` files to be built first (and the script does it for you). Once the `d.ts` files are built and up-to-date, the tests can be re-run by running `nr test-dts-only`.
+Type tests are located in the `packages-private/dts-test` directory. To run the dts tests, run `nr test-dts`. Note that the type test requires all relevant `*.d.ts` files to be built first (and the script does it for you). Once the `d.ts` files are built and up-to-date, the tests can be re-run by running `nr test-dts-only`.
 
 ## Financial Contribution
 

@@ -3,6 +3,7 @@ import {
   type DirectiveHook,
   type ObjectDirective,
   type VNode,
+  nextTick,
   warn,
 } from '@vue/runtime-core'
 import { addEventListener } from '../modules/events'
@@ -36,14 +37,19 @@ function onCompositionEnd(e: Event) {
   }
 }
 
-const assignKey = Symbol('_assign')
+const assignKey: unique symbol = Symbol('_assign')
 
-type ModelDirective<T> = ObjectDirective<T & { [assignKey]: AssignerFn }>
+type ModelDirective<T, Modifiers extends string = string> = ObjectDirective<
+  T & { [assignKey]: AssignerFn; _assigning?: boolean },
+  any,
+  Modifiers
+>
 
 // We are exporting the v-model runtime directly as vnode hooks so that it can
 // be tree-shaken in case v-model is never used.
 export const vModelText: ModelDirective<
-  HTMLInputElement | HTMLTextAreaElement
+  HTMLInputElement | HTMLTextAreaElement,
+  'trim' | 'number' | 'lazy'
 > = {
   created(el, { modifiers: { lazy, trim, number } }, vnode) {
     el[assignKey] = getModelAssigner(vnode)
@@ -79,13 +85,18 @@ export const vModelText: ModelDirective<
   mounted(el, { value }) {
     el.value = value == null ? '' : value
   },
-  beforeUpdate(el, { value, modifiers: { lazy, trim, number } }, vnode) {
+  beforeUpdate(
+    el,
+    { value, oldValue, modifiers: { lazy, trim, number } },
+    vnode,
+  ) {
     el[assignKey] = getModelAssigner(vnode)
     // avoid clearing unresolved text. #2302
     if ((el as any).composing) return
-
     const elValue =
-      number || el.type === 'number' ? looseToNumber(el.value) : el.value
+      (number || el.type === 'number') && !/^0\d/.test(el.value)
+        ? looseToNumber(el.value)
+        : el.value
     const newValue = value == null ? '' : value
 
     if (elValue === newValue) {
@@ -93,7 +104,8 @@ export const vModelText: ModelDirective<
     }
 
     if (document.activeElement === el && el.type !== 'range') {
-      if (lazy) {
+      // #8546
+      if (lazy && value === oldValue) {
         return
       }
       if (trim && el.value.trim() === newValue) {
@@ -154,12 +166,19 @@ function setChecked(
   // store the v-model value on the element so it can be accessed by the
   // change listener.
   ;(el as any)._modelValue = value
+  let checked: boolean
+
   if (isArray(value)) {
-    el.checked = looseIndexOf(value, vnode.props!.value) > -1
+    checked = looseIndexOf(value, vnode.props!.value) > -1
   } else if (isSet(value)) {
-    el.checked = value.has(vnode.props!.value)
-  } else if (value !== oldValue) {
-    el.checked = looseEqual(value, getCheckboxValue(el, true))
+    checked = value.has(vnode.props!.value)
+  } else {
+    checked = looseEqual(value, getCheckboxValue(el, true))
+  }
+
+  // Only update if the checked state has changed
+  if (el.checked !== checked) {
+    el.checked = checked
   }
 }
 
@@ -179,7 +198,7 @@ export const vModelRadio: ModelDirective<HTMLInputElement> = {
   },
 }
 
-export const vModelSelect: ModelDirective<HTMLSelectElement> = {
+export const vModelSelect: ModelDirective<HTMLSelectElement, 'number'> = {
   // <select multiple> value need to be deep traversed
   deep: true,
   created(el, { value, modifiers: { number } }, vnode) {
@@ -197,25 +216,32 @@ export const vModelSelect: ModelDirective<HTMLSelectElement> = {
             : selectedVal
           : selectedVal[0],
       )
+      el._assigning = true
+      nextTick(() => {
+        el._assigning = false
+      })
     })
     el[assignKey] = getModelAssigner(vnode)
   },
   // set value in mounted & updated because <select> relies on its children
   // <option>s.
-  mounted(el, { value }) {
-    setSelected(el, value)
+  mounted(el, { value, modifiers: { number } }) {
+    setSelected(el, value, number)
   },
   beforeUpdate(el, _binding, vnode) {
     el[assignKey] = getModelAssigner(vnode)
   },
-  updated(el, { value }) {
-    setSelected(el, value)
+  updated(el, { value, modifiers: { number } }) {
+    if (!el._assigning) {
+      setSelected(el, value, number)
+    }
   },
 }
 
-function setSelected(el: HTMLSelectElement, value: any) {
+function setSelected(el: HTMLSelectElement, value: any, number: boolean) {
   const isMultiple = el.multiple
-  if (isMultiple && !isArray(value) && !isSet(value)) {
+  const isArrayValue = isArray(value)
+  if (isMultiple && !isArrayValue && !isSet(value)) {
     __DEV__ &&
       warn(
         `<select multiple v-model> expects an Array or Set value for its binding, ` +
@@ -223,20 +249,25 @@ function setSelected(el: HTMLSelectElement, value: any) {
       )
     return
   }
+
   for (let i = 0, l = el.options.length; i < l; i++) {
     const option = el.options[i]
     const optionValue = getValue(option)
     if (isMultiple) {
-      if (isArray(value)) {
-        option.selected = looseIndexOf(value, optionValue) > -1
+      if (isArrayValue) {
+        const optionType = typeof optionValue
+        // fast path for string / number values
+        if (optionType === 'string' || optionType === 'number') {
+          option.selected = value.some(v => String(v) === String(optionValue))
+        } else {
+          option.selected = looseIndexOf(value, optionValue) > -1
+        }
       } else {
         option.selected = value.has(optionValue)
       }
-    } else {
-      if (looseEqual(getValue(option), value)) {
-        if (el.selectedIndex !== i) el.selectedIndex = i
-        return
-      }
+    } else if (looseEqual(getValue(option), value)) {
+      if (el.selectedIndex !== i) el.selectedIndex = i
+      return
     }
   }
   if (!isMultiple && el.selectedIndex !== -1) {
@@ -310,7 +341,7 @@ function callModelHook(
 
 // SSR vnode transforms, only used when user includes client-oriented render
 // function in SSR
-export function initVModelForSSR() {
+export function initVModelForSSR(): void {
   vModelText.getSSRProps = ({ value }) => ({ value })
 
   vModelRadio.getSSRProps = ({ value }, vnode) => {
@@ -347,3 +378,10 @@ export function initVModelForSSR() {
     }
   }
 }
+
+export type VModelDirective =
+  | typeof vModelText
+  | typeof vModelCheckbox
+  | typeof vModelSelect
+  | typeof vModelRadio
+  | typeof vModelDynamic

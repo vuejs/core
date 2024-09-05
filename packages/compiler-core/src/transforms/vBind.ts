@@ -1,7 +1,9 @@
-import type { DirectiveTransform } from '../transform'
+import type { DirectiveTransform, TransformContext } from '../transform'
 import {
+  type DirectiveNode,
   type ExpressionNode,
   NodeTypes,
+  type SimpleExpressionNode,
   createObjectProperty,
   createSimpleExpression,
 } from '../ast'
@@ -17,14 +19,46 @@ export const transformBind: DirectiveTransform = (dir, _node, context) => {
   const { modifiers, loc } = dir
   const arg = dir.arg!
 
-  // :arg is replaced by :arg="arg"
   let { exp } = dir
-  if (!exp && arg.type === NodeTypes.SIMPLE_EXPRESSION) {
-    const propName = camelize(arg.content)
-    exp = dir.exp = createSimpleExpression(propName, false, arg.loc)
+
+  // handle empty expression
+  if (exp && exp.type === NodeTypes.SIMPLE_EXPRESSION && !exp.content.trim()) {
     if (!__BROWSER__) {
-      exp = dir.exp = processExpression(exp, context)
+      // #10280 only error against empty expression in non-browser build
+      // because :foo in in-DOM templates will be parsed into :foo="" by the
+      // browser
+      context.onError(
+        createCompilerError(ErrorCodes.X_V_BIND_NO_EXPRESSION, loc),
+      )
+      return {
+        props: [
+          createObjectProperty(arg, createSimpleExpression('', true, loc)),
+        ],
+      }
+    } else {
+      exp = undefined
     }
+  }
+
+  // same-name shorthand - :arg is expanded to :arg="arg"
+  if (!exp) {
+    if (arg.type !== NodeTypes.SIMPLE_EXPRESSION || !arg.isStatic) {
+      // only simple expression is allowed for same-name shorthand
+      context.onError(
+        createCompilerError(
+          ErrorCodes.X_V_BIND_INVALID_SAME_NAME_ARGUMENT,
+          arg.loc,
+        ),
+      )
+      return {
+        props: [
+          createObjectProperty(arg, createSimpleExpression('', true, loc)),
+        ],
+      }
+    }
+
+    transformBindShorthand(dir, context)
+    exp = dir.exp!
   }
 
   if (arg.type !== NodeTypes.SIMPLE_EXPRESSION) {
@@ -57,18 +91,21 @@ export const transformBind: DirectiveTransform = (dir, _node, context) => {
     }
   }
 
-  if (
-    !exp ||
-    (exp.type === NodeTypes.SIMPLE_EXPRESSION && !exp.content.trim())
-  ) {
-    context.onError(createCompilerError(ErrorCodes.X_V_BIND_NO_EXPRESSION, loc))
-    return {
-      props: [createObjectProperty(arg, createSimpleExpression('', true, loc))],
-    }
-  }
-
   return {
     props: [createObjectProperty(arg, exp)],
+  }
+}
+
+export const transformBindShorthand = (
+  dir: DirectiveNode,
+  context: TransformContext,
+): void => {
+  const arg = dir.arg!
+
+  const propName = camelize((arg as SimpleExpressionNode).content)
+  dir.exp = createSimpleExpression(propName, false, arg.loc)
+  if (!__BROWSER__) {
+    dir.exp = processExpression(dir.exp, context)
   }
 }
 

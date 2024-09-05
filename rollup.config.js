@@ -2,6 +2,7 @@
 import assert from 'node:assert/strict'
 import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
+import fs from 'node:fs'
 import path from 'node:path'
 import replace from '@rollup/plugin-replace'
 import json from '@rollup/plugin-json'
@@ -9,11 +10,11 @@ import pico from 'picocolors'
 import commonJS from '@rollup/plugin-commonjs'
 import polyfillNode from 'rollup-plugin-polyfill-node'
 import { nodeResolve } from '@rollup/plugin-node-resolve'
-import terser from '@rollup/plugin-terser'
 import esbuild from 'rollup-plugin-esbuild'
 import alias from '@rollup/plugin-alias'
 import { entries } from './scripts/aliases.js'
 import { inlineEnums } from './scripts/inline-enums.js'
+import { minify as minifySwc } from '@swc/core'
 
 /**
  * @template T
@@ -33,7 +34,11 @@ const __dirname = fileURLToPath(new URL('.', import.meta.url))
 const masterVersion = require('./package.json').version
 const consolidatePkg = require('@vue/consolidate/package.json')
 
-const packagesDir = path.resolve(__dirname, 'packages')
+const privatePackages = fs.readdirSync('packages-private')
+const pkgBase = privatePackages.includes(process.env.TARGET)
+  ? `packages-private`
+  : `packages`
+const packagesDir = path.resolve(__dirname, pkgBase)
 const packageDir = path.resolve(packagesDir, process.env.TARGET)
 
 const resolve = (/** @type {string} */ p) => path.resolve(packageDir, p)
@@ -122,7 +127,7 @@ function createConfig(format, output, plugins = []) {
   const isBundlerESMBuild = /esm-bundler/.test(format)
   const isBrowserESMBuild = /esm-browser/.test(format)
   const isServerRenderer = name === 'server-renderer'
-  const isNodeBuild = format === 'cjs'
+  const isCJSBuild = format === 'cjs'
   const isGlobalBuild = /global/.test(format)
   const isCompatPackage =
     pkg.name === '@vue/compat' || pkg.name === '@vue/compat-canary'
@@ -131,12 +136,20 @@ function createConfig(format, output, plugins = []) {
     (isGlobalBuild || isBrowserESMBuild || isBundlerESMBuild) &&
     !packageOptions.enableNonBrowserBranches
 
+  output.banner = `/**
+* ${pkg.name} v${masterVersion}
+* (c) 2018-present Yuxi (Evan) You and Vue contributors
+* @license MIT
+**/`
+
   output.exports = isCompatPackage ? 'auto' : 'named'
-  if (isNodeBuild) {
+  if (isCJSBuild) {
     output.esModule = true
   }
   output.sourcemap = !!process.env.SOURCE_MAP
   output.externalLiveBindings = false
+  // https://github.com/rollup/rollup/pull/5380
+  output.reexportProtoFromExternal = false
 
   if (isGlobalBuild) {
     output.name = packageOptions.name
@@ -166,9 +179,9 @@ function createConfig(format, output, plugins = []) {
       __ESM_BUNDLER__: String(isBundlerESMBuild),
       __ESM_BROWSER__: String(isBrowserESMBuild),
       // is targeting Node (SSR)?
-      __NODE_JS__: String(isNodeBuild),
+      __CJS__: String(isCJSBuild),
       // need SSR-specific branches?
-      __SSR__: String(isNodeBuild || isBundlerESMBuild || isServerRenderer),
+      __SSR__: String(!isGlobalBuild),
 
       // 2.x compat build
       __COMPAT__: String(isCompatBuild),
@@ -210,10 +223,10 @@ function createConfig(format, output, plugins = []) {
 
     if (isProductionBuild && isBrowserBuild) {
       Object.assign(replacements, {
-        'context.onError(': `/*#__PURE__*/ context.onError(`,
-        'emitError(': `/*#__PURE__*/ emitError(`,
-        'createCompilerError(': `/*#__PURE__*/ createCompilerError(`,
-        'createDOMCompilerError(': `/*#__PURE__*/ createDOMCompilerError(`,
+        'context.onError(': `/*@__PURE__*/ context.onError(`,
+        'emitError(': `/*@__PURE__*/ emitError(`,
+        'createCompilerError(': `/*@__PURE__*/ createCompilerError(`,
+        'createDOMCompilerError(': `/*@__PURE__*/ createDOMCompilerError(`,
       })
     }
 
@@ -323,7 +336,7 @@ function createConfig(format, output, plugins = []) {
         tsconfig: path.resolve(__dirname, 'tsconfig.json'),
         sourceMap: output.sourcemap,
         minify: false,
-        target: isServerRenderer || isNodeBuild ? 'es2019' : 'es2015',
+        target: isServerRenderer || isCJSBuild ? 'es2019' : 'es2016',
         define: resolveDefine(),
       }),
       ...resolveNodePlugins(),
@@ -356,14 +369,29 @@ function createMinifiedConfig(/** @type {PackageFormat} */ format) {
       format: outputConfigs[format].format,
     },
     [
-      terser({
-        module: /^esm/.test(format),
-        compress: {
-          ecma: 2015,
-          pure_getters: true,
+      {
+        name: 'swc-minify',
+
+        async renderChunk(
+          contents,
+          _,
+          { format, sourcemap, sourcemapExcludeSources },
+        ) {
+          const { code, map } = await minifySwc(contents, {
+            module: format === 'es',
+            compress: {
+              ecma: 2016,
+              pure_getters: true,
+            },
+            safari10: true,
+            mangle: true,
+            sourceMap: !!sourcemap,
+            inlineSourcesContent: !sourcemapExcludeSources,
+          })
+
+          return { code, map: map || null }
         },
-        safari10: true,
-      }),
+      },
     ],
   )
 }

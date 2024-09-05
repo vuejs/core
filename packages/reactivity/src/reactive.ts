@@ -13,6 +13,7 @@ import {
 } from './collectionHandlers'
 import type { RawSymbol, Ref, UnwrapRefSimple } from './ref'
 import { ReactiveFlags } from './constants'
+import { warn } from './warning'
 
 export interface Target {
   [ReactiveFlags.SKIP]?: boolean
@@ -22,10 +23,16 @@ export interface Target {
   [ReactiveFlags.RAW]?: any
 }
 
-export const reactiveMap = new WeakMap<Target, any>()
-export const shallowReactiveMap = new WeakMap<Target, any>()
-export const readonlyMap = new WeakMap<Target, any>()
-export const shallowReadonlyMap = new WeakMap<Target, any>()
+export const reactiveMap: WeakMap<Target, any> = new WeakMap<Target, any>()
+export const shallowReactiveMap: WeakMap<Target, any> = new WeakMap<
+  Target,
+  any
+>()
+export const readonlyMap: WeakMap<Target, any> = new WeakMap<Target, any>()
+export const shallowReadonlyMap: WeakMap<Target, any> = new WeakMap<
+  Target,
+  any
+>()
 
 enum TargetType {
   INVALID = 0,
@@ -57,6 +64,15 @@ function getTargetType(value: Target) {
 // only unwrap nested ref
 export type UnwrapNestedRefs<T> = T extends Ref ? T : UnwrapRefSimple<T>
 
+declare const ReactiveMarkerSymbol: unique symbol
+
+export interface ReactiveMarker {
+  [ReactiveMarkerSymbol]?: void
+}
+
+export type Reactive<T> = UnwrapNestedRefs<T> &
+  (T extends readonly any[] ? ReactiveMarker : {})
+
 /**
  * Returns a reactive proxy of the object.
  *
@@ -72,7 +88,7 @@ export type UnwrapNestedRefs<T> = T extends Ref ? T : UnwrapRefSimple<T>
  * @param target - The source object.
  * @see {@link https://vuejs.org/api/reactivity-core.html#reactive}
  */
-export function reactive<T extends object>(target: T): UnwrapNestedRefs<T>
+export function reactive<T extends object>(target: T): Reactive<T>
 export function reactive(target: object) {
   // if trying to observe a readonly proxy, return the readonly version.
   if (isReadonly(target)) {
@@ -134,7 +150,7 @@ export function shallowReactive<T extends object>(
 }
 
 type Primitive = string | number | boolean | bigint | symbol | undefined | null
-type Builtin = Primitive | Function | Date | Error | RegExp
+export type Builtin = Primitive | Function | Date | Error | RegExp
 export type DeepReadonly<T> = T extends Builtin
   ? T
   : T extends Map<infer K, infer V>
@@ -247,7 +263,11 @@ function createReactiveObject(
 ) {
   if (!isObject(target)) {
     if (__DEV__) {
-      console.warn(`value cannot be made reactive: ${String(target)}`)
+      warn(
+        `value cannot be made ${isReadonly ? 'readonly' : 'reactive'}: ${String(
+          target,
+        )}`,
+      )
     }
     return target
   }
@@ -328,8 +348,8 @@ export function isShallow(value: unknown): boolean {
  * @param value - The value to check.
  * @see {@link https://vuejs.org/api/reactivity-utilities.html#isproxy}
  */
-export function isProxy(value: unknown): boolean {
-  return isReactive(value) || isReadonly(value)
+export function isProxy(value: any): boolean {
+  return value ? !!value[ReactiveFlags.RAW] : false
 }
 
 /**
@@ -385,7 +405,9 @@ export type Raw<T> = T & { [RawSymbol]?: true }
  * @see {@link https://vuejs.org/api/reactivity-advanced.html#markraw}
  */
 export function markRaw<T extends object>(value: T): Raw<T> {
-  def(value, ReactiveFlags.SKIP, true)
+  if (Object.isExtensible(value)) {
+    def(value, ReactiveFlags.SKIP, true)
+  }
   return value
 }
 
@@ -406,5 +428,5 @@ export const toReactive = <T extends unknown>(value: T): T =>
  *
  * @param value - The value for which a readonly proxy shall be created.
  */
-export const toReadonly = <T extends unknown>(value: T): T =>
-  isObject(value) ? readonly(value) : value
+export const toReadonly = <T extends unknown>(value: T): DeepReadonly<T> =>
+  isObject(value) ? readonly(value) : (value as DeepReadonly<T>)
