@@ -1,5 +1,5 @@
 import { ErrorCodes, callWithErrorHandling, handleError } from './errorHandling'
-import { type Awaited, NOOP, isArray } from '@vue/shared'
+import { NOOP, isArray } from '@vue/shared'
 import { type ComponentInternalInstance, getComponentName } from './component'
 
 export enum SchedulerJobFlags {
