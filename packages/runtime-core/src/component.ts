@@ -940,6 +940,11 @@ export function handleSetupResult(
     }
     instance.setupState = proxyRefs(setupResult)
     if (__DEV__) {
+      // dev only
+      Object.defineProperty(setupResult, '__v__setupResult', {
+        enumerable: false,
+        value: setupResult,
+      })
       exposeSetupStateOnRenderContext(instance)
     }
   } else if (__DEV__ && setupResult !== undefined) {
