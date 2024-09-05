@@ -15,7 +15,6 @@ import {
 } from './vnode'
 import {
   type ComponentInternalInstance,
-  type ComponentOptions,
   type Data,
   type LifecycleHook,
   createComponentInstance,
@@ -1330,12 +1329,12 @@ function baseCreateRenderer(
             }
           }
 
-          if (isAsyncWrapperVNode) {
-            ;(type as ComponentOptions).__asyncHydrate!(
-              el as Element,
-              instance,
-              hydrateSubTree,
-            )
+          if (
+            isAsyncWrapperVNode &&
+            '__asyncHydrate' in type &&
+            type.__asyncHydrate
+          ) {
+            type.__asyncHydrate(el as Element, instance, hydrateSubTree)
           } else {
             hydrateSubTree()
           }
