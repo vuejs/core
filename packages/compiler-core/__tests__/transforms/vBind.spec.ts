@@ -408,4 +408,22 @@ describe('compiler: transform v-bind', () => {
       },
     })
   })
+
+  test('error on invalid argument for same-name shorthand', () => {
+    const onError = vi.fn()
+    parseWithVBind(`<div v-bind:[arg] />`, { onError })
+    expect(onError.mock.calls[0][0]).toMatchObject({
+      code: ErrorCodes.X_V_BIND_INVALID_SAME_NAME_ARGUMENT,
+      loc: {
+        start: {
+          line: 1,
+          column: 13,
+        },
+        end: {
+          line: 1,
+          column: 18,
+        },
+      },
+    })
+  })
 })

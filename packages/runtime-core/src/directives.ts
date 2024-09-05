@@ -17,57 +17,103 @@ import { warn } from './warning'
 import {
   type ComponentInternalInstance,
   type Data,
-  getExposeProxy,
+  getComponentPublicInstance,
 } from './component'
 import { currentRenderingInstance } from './componentRenderContext'
 import { ErrorCodes, callWithAsyncErrorHandling } from './errorHandling'
 import type { ComponentPublicInstance } from './componentPublicInstance'
 import { mapCompatDirectiveHook } from './compat/customDirective'
-import { pauseTracking, resetTracking } from '@vue/reactivity'
-import { traverse } from './apiWatch'
+import { pauseTracking, resetTracking, traverse } from '@vue/reactivity'
 
-export interface DirectiveBinding<V = any> {
-  instance: ComponentPublicInstance | null
-  value: V
-  oldValue: V | null
-  arg?: string
-  modifiers: DirectiveModifiers
-  dir: ObjectDirective<any, V>
+export interface DirectiveBinding<
+  Value = any,
+  Modifiers extends string = string,
+  Arg extends string = string,
+> {
+  instance: ComponentPublicInstance | Record<string, any> | null
+  value: Value
+  oldValue: Value | null
+  arg?: Arg
+  modifiers: DirectiveModifiers<Modifiers>
+  dir: ObjectDirective<any, Value>
 }
 
-export type DirectiveHook<T = any, Prev = VNode<any, T> | null, V = any> = (
-  el: T,
-  binding: DirectiveBinding<V>,
-  vnode: VNode<any, T>,
+export type DirectiveHook<
+  HostElement = any,
+  Prev = VNode<any, HostElement> | null,
+  Value = any,
+  Modifiers extends string = string,
+  Arg extends string = string,
+> = (
+  el: HostElement,
+  binding: DirectiveBinding<Value, Modifiers, Arg>,
+  vnode: VNode<any, HostElement>,
   prevVNode: Prev,
 ) => void
 
-export type SSRDirectiveHook = (
-  binding: DirectiveBinding,
+export type SSRDirectiveHook<
+  Value = any,
+  Modifiers extends string = string,
+  Arg extends string = string,
+> = (
+  binding: DirectiveBinding<Value, Modifiers, Arg>,
   vnode: VNode,
 ) => Data | undefined
 
-export interface ObjectDirective<T = any, V = any> {
-  created?: DirectiveHook<T, null, V>
-  beforeMount?: DirectiveHook<T, null, V>
-  mounted?: DirectiveHook<T, null, V>
-  beforeUpdate?: DirectiveHook<T, VNode<any, T>, V>
-  updated?: DirectiveHook<T, VNode<any, T>, V>
-  beforeUnmount?: DirectiveHook<T, null, V>
-  unmounted?: DirectiveHook<T, null, V>
-  getSSRProps?: SSRDirectiveHook
+export interface ObjectDirective<
+  HostElement = any,
+  Value = any,
+  Modifiers extends string = string,
+  Arg extends string = string,
+> {
+  /**
+   * @internal without this, ts-expect-error in directives.test-d.ts somehow
+   * fails when running tsc, but passes in IDE and when testing against built
+   * dts. Could be a TS bug.
+   */
+  __mod?: Modifiers
+  created?: DirectiveHook<HostElement, null, Value, Modifiers, Arg>
+  beforeMount?: DirectiveHook<HostElement, null, Value, Modifiers, Arg>
+  mounted?: DirectiveHook<HostElement, null, Value, Modifiers, Arg>
+  beforeUpdate?: DirectiveHook<
+    HostElement,
+    VNode<any, HostElement>,
+    Value,
+    Modifiers,
+    Arg
+  >
+  updated?: DirectiveHook<
+    HostElement,
+    VNode<any, HostElement>,
+    Value,
+    Modifiers,
+    Arg
+  >
+  beforeUnmount?: DirectiveHook<HostElement, null, Value, Modifiers, Arg>
+  unmounted?: DirectiveHook<HostElement, null, Value, Modifiers, Arg>
+  getSSRProps?: SSRDirectiveHook<Value, Modifiers, Arg>
   deep?: boolean
 }
 
-export type FunctionDirective<T = any, V = any> = DirectiveHook<T, any, V>
+export type FunctionDirective<
+  HostElement = any,
+  V = any,
+  Modifiers extends string = string,
+  Arg extends string = string,
+> = DirectiveHook<HostElement, any, V, Modifiers, Arg>
 
-export type Directive<T = any, V = any> =
-  | ObjectDirective<T, V>
-  | FunctionDirective<T, V>
+export type Directive<
+  HostElement = any,
+  Value = any,
+  Modifiers extends string = string,
+  Arg extends string = string,
+> =
+  | ObjectDirective<HostElement, Value, Modifiers, Arg>
+  | FunctionDirective<HostElement, Value, Modifiers, Arg>
 
-export type DirectiveModifiers = Record<string, boolean>
+export type DirectiveModifiers<K extends string = string> = Record<K, boolean>
 
-export function validateDirectiveName(name: string) {
+export function validateDirectiveName(name: string): void {
   if (isBuiltInDirective(name)) {
     warn('Do not use built-in directive ids as custom directive id: ' + name)
   }
@@ -78,7 +124,7 @@ export type DirectiveArguments = Array<
   | [Directive | undefined]
   | [Directive | undefined, any]
   | [Directive | undefined, any, string]
-  | [Directive | undefined, any, string, DirectiveModifiers]
+  | [Directive | undefined, any, string | undefined, DirectiveModifiers]
 >
 
 /**
@@ -88,14 +134,11 @@ export function withDirectives<T extends VNode>(
   vnode: T,
   directives: DirectiveArguments,
 ): T {
-  const internalInstance = currentRenderingInstance
-  if (internalInstance === null) {
+  if (currentRenderingInstance === null) {
     __DEV__ && warn(`withDirectives can only be used inside render functions.`)
     return vnode
   }
-  const instance =
-    (getExposeProxy(internalInstance) as ComponentPublicInstance) ||
-    internalInstance.proxy
+  const instance = getComponentPublicInstance(currentRenderingInstance)
   const bindings: DirectiveBinding[] = vnode.dirs || (vnode.dirs = [])
   for (let i = 0; i < directives.length; i++) {
     let [dir, value, arg, modifiers = EMPTY_OBJ] = directives[i]
@@ -127,7 +170,7 @@ export function invokeDirectiveHook(
   prevVNode: VNode | null,
   instance: ComponentInternalInstance | null,
   name: keyof ObjectDirective,
-) {
+): void {
   const bindings = vnode.dirs!
   const oldBindings = prevVNode && prevVNode.dirs!
   for (let i = 0; i < bindings.length; i++) {

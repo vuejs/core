@@ -17,17 +17,17 @@ jobs:
           ref: minor
 
       - name: Install pnpm
-        uses: pnpm/action-setup@v2
+        uses: pnpm/action-setup@v4.0.0
 
-      - name: Set node version to 18
+      - name: Install Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version-file: '.node-version'
           registry-url: 'https://registry.npmjs.org'
           cache: 'pnpm'
 
       - run: pnpm install
 
-      - run: pnpm release --canary --tag minor
+      - run: pnpm release --canary --publish --tag minor
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

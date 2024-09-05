@@ -213,7 +213,15 @@ export interface Callbacks {
  * We don't have `Script`, `Style`, or `Title` here. Instead, we re-use the *End
  * sequences with an increased offset.
  */
-export const Sequences = {
+export const Sequences: {
+  Cdata: Uint8Array
+  CdataEnd: Uint8Array
+  CommentEnd: Uint8Array
+  ScriptEnd: Uint8Array
+  StyleEnd: Uint8Array
+  TitleEnd: Uint8Array
+  TextareaEnd: Uint8Array
+} = {
   Cdata: new Uint8Array([0x43, 0x44, 0x41, 0x54, 0x41, 0x5b]), // CDATA[
   CdataEnd: new Uint8Array([0x5d, 0x5d, 0x3e]), // ]]>
   CommentEnd: new Uint8Array([0x2d, 0x2d, 0x3e]), // `-->`
@@ -227,7 +235,7 @@ export const Sequences = {
 
 export default class Tokenizer {
   /** The current state the tokenizer is in. */
-  public state = State.Text
+  public state: State = State.Text
   /** The read buffer. */
   private buffer = ''
   /** The beginning of the section that is currently being read. */
@@ -249,8 +257,8 @@ export default class Tokenizer {
 
   private readonly entityDecoder?: EntityDecoder
 
-  public mode = ParseMode.BASE
-  public get inSFCRoot() {
+  public mode: ParseMode = ParseMode.BASE
+  public get inSFCRoot(): boolean {
     return this.mode === ParseMode.SFC && this.stack.length === 0
   }
 
@@ -526,7 +534,7 @@ export default class Tokenizer {
     this.state = State.SpecialStartSequence
   }
 
-  public enterRCDATA(sequence: Uint8Array, offset: number) {
+  public enterRCDATA(sequence: Uint8Array, offset: number): void {
     this.inRCDATA = true
     this.currentSequence = sequence
     this.sequenceIndex = offset
@@ -553,12 +561,11 @@ export default class Tokenizer {
         // HTML mode
         // - <script>, <style> RAWTEXT
         // - <title>, <textarea> RCDATA
-        const lower = c | 0x20
-        if (lower === 116 /* t */) {
+        if (c === 116 /* t */) {
           this.state = State.BeforeSpecialT
         } else {
           this.state =
-            lower === 115 /* s */ ? State.BeforeSpecialS : State.InTagName
+            c === 115 /* s */ ? State.BeforeSpecialS : State.InTagName
         }
       } else {
         this.state = State.InTagName
@@ -862,10 +869,9 @@ export default class Tokenizer {
     }
   }
   private stateBeforeSpecialS(c: number): void {
-    const lower = c | 0x20
-    if (lower === Sequences.ScriptEnd[3]) {
+    if (c === Sequences.ScriptEnd[3]) {
       this.startSpecial(Sequences.ScriptEnd, 4)
-    } else if (lower === Sequences.StyleEnd[3]) {
+    } else if (c === Sequences.StyleEnd[3]) {
       this.startSpecial(Sequences.StyleEnd, 4)
     } else {
       this.state = State.InTagName
@@ -873,10 +879,9 @@ export default class Tokenizer {
     }
   }
   private stateBeforeSpecialT(c: number): void {
-    const lower = c | 0x20
-    if (lower === Sequences.TitleEnd[3]) {
+    if (c === Sequences.TitleEnd[3]) {
       this.startSpecial(Sequences.TitleEnd, 4)
-    } else if (lower === Sequences.TextareaEnd[3]) {
+    } else if (c === Sequences.TextareaEnd[3]) {
       this.startSpecial(Sequences.TextareaEnd, 4)
     } else {
       this.state = State.InTagName
@@ -920,7 +925,7 @@ export default class Tokenizer {
    *
    * States that are more likely to be hit are higher up, as a performance improvement.
    */
-  public parse(input: string) {
+  public parse(input: string): void {
     this.buffer = input
     while (this.index < this.buffer.length) {
       const c = this.buffer.charCodeAt(this.index)
