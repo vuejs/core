@@ -90,12 +90,14 @@ describe('useTemplateRef', () => {
     const Comp = {
       setup() {
         tRef = useTemplateRef(key)
+        const foo = useTemplateRef('bar')
         return {
           [key]: tRef,
+          ['foo']: foo,
         }
       },
       render() {
-        return h('div', { ref: key })
+        return [h('div', { ref: key }), h('div', { ref: 'foo' })]
       },
     }
     const root = nodeOps.createElement('div')
