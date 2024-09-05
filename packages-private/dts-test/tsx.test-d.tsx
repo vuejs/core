@@ -122,4 +122,4 @@ expectType<JSX.Element>(
   />,
 )
 // details
-expectType<JSX.Element>(<details name='details' />)
+expectType<JSX.Element>(<details name="details" />)
