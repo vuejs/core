@@ -33,18 +33,18 @@ describe('reactivity/computed', () => {
     expect(cValue.value).toBe(1)
   })
 
-  it('support get previous value', () => {
+  it('pass oldValue to computed getter', () => {
     const count = ref(0)
-    const preValue = ref()
-    const cValue = computed(pre => {
-      preValue.value = pre
+    const oldValue = ref()
+    const curValue = computed(pre => {
+      oldValue.value = pre
       return count.value
     })
-    expect(cValue.value).toBe(0)
-    expect(preValue.value).toBe(undefined)
+    expect(curValue.value).toBe(0)
+    expect(oldValue.value).toBe(undefined)
     count.value++
-    expect(cValue.value).toBe(1)
-    expect(preValue.value).toBe(0)
+    expect(curValue.value).toBe(1)
+    expect(oldValue.value).toBe(0)
   })
 
   it('should compute lazily', () => {
