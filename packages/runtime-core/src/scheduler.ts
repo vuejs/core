@@ -53,7 +53,7 @@ let postFlushIndex = 0
 const resolvedPromise = /*@__PURE__*/ Promise.resolve() as Promise<any>
 let currentFlushPromise: Promise<void> | null = null
 
-const RECURSION_LIMIT = 100
+const RECURSION_LIMIT = 1000
 type CountMap = Map<SchedulerJob, number>
 
 export function nextTick<T = void, R = void>(
