@@ -345,9 +345,6 @@ function isDirty(sub: Subscriber): boolean {
  * @internal
  */
 export function refreshComputed(computed: ComputedRefImpl): false | undefined {
-  if (computed.flags & EffectFlags.RUNNING) {
-    return false
-  }
   if (
     computed.flags & EffectFlags.TRACKING &&
     !(computed.flags & EffectFlags.DIRTY)
