@@ -47,7 +47,7 @@ describe('defineModel()', () => {
     `,
     )
     assertCode(content)
-    expect(content).toMatch(`props: /*#__PURE__*/_mergeModels({ foo: String }`)
+    expect(content).toMatch(`props: /*@__PURE__*/_mergeModels({ foo: String }`)
     expect(content).toMatch(`"modelValue": { default: 0 }`)
     expect(content).toMatch(`const count = _useModel(__props, "modelValue")`)
     expect(content).not.toMatch('defineModel')
@@ -68,7 +68,7 @@ describe('defineModel()', () => {
     `,
     )
     assertCode(content)
-    expect(content).toMatch(`props: /*#__PURE__*/_mergeModels(['foo', 'bar'], {
+    expect(content).toMatch(`props: /*@__PURE__*/_mergeModels(['foo', 'bar'], {
     "count": {},
     "countModifiers": {},
   })`)
@@ -159,6 +159,34 @@ describe('defineModel()', () => {
       str: BindingTypes.SETUP_REF,
       optional: BindingTypes.SETUP_REF,
     })
+  })
+
+  test('w/ types, production mode, boolean + multiple types', () => {
+    const { content } = compile(
+      `
+      <script setup lang="ts">
+      const modelValue = defineModel<boolean | string | {}>()
+      </script>
+      `,
+      { isProd: true },
+    )
+    assertCode(content)
+    expect(content).toMatch('"modelValue": { type: [Boolean, String, Object] }')
+  })
+
+  test('w/ types, production mode, function + runtime opts + multiple types', () => {
+    const { content } = compile(
+      `
+      <script setup lang="ts">
+      const modelValue = defineModel<number | (() => number)>({ default: () => 1 })
+      </script>
+      `,
+      { isProd: true },
+    )
+    assertCode(content)
+    expect(content).toMatch(
+      '"modelValue": { type: [Number, Function], ...{ default: () => 1 } }',
+    )
   })
 
   test('get / set transformers', () => {
