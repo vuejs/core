@@ -5,8 +5,9 @@
 ### From CDN or without a Bundler
 
 - **`vue(.runtime).global(.prod).js`**:
+
   - For direct use via `<script src="...">` in the browser. Exposes the `Vue` global.
-  - Note that global builds are not [UMD](https://github.com/umdjs/umd) builds.  They are built as [IIFEs](https://developer.mozilla.org/en-US/docs/Glossary/IIFE) and is only meant for direct use via `<script src="...">`.
+  - Note that global builds are not [UMD](https://github.com/umdjs/umd) builds. They are built as [IIFEs](https://developer.mozilla.org/en-US/docs/Glossary/IIFE) and is only meant for direct use via `<script src="...">`.
   - In-browser template compilation:
     - **`vue.global.js`** is the "full" build that includes both the compiler and the runtime so it supports compiling templates on the fly.
     - **`vue.runtime.global.js`** contains only the runtime and requires templates to be pre-compiled during a build step.
@@ -14,7 +15,7 @@
   - Contains hard-coded prod/dev branches, and the prod build is pre-minified. Use the `*.prod.js` files for production.
 
 - **`vue(.runtime).esm-browser(.prod).js`**:
-  - For usage via native ES modules imports (in browser via `<script type="module">`.
+  - For usage via native ES modules imports (in browser via `<script type="module">`).
   - Shares the same runtime compilation, dependency inlining and hard-coded prod/dev behavior with the global build.
 
 ### With a Bundler
@@ -38,10 +39,12 @@
 `esm-bundler` builds of Vue expose global feature flags that can be overwritten at compile time:
 
 - `__VUE_OPTIONS_API__`
+
   - Default: `true`
   - Enable / disable Options API support
 
 - `__VUE_PROD_DEVTOOLS__`
+
   - Default: `false`
   - Enable / disable devtools support in production
 

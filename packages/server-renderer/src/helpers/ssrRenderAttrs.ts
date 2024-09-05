@@ -1,4 +1,9 @@
-import { escapeHtml, isSVGTag, stringifyStyle } from '@vue/shared'
+import {
+  escapeHtml,
+  isRenderableAttrValue,
+  isSVGTag,
+  stringifyStyle,
+} from '@vue/shared'
 import {
   includeBooleanAttr,
   isBooleanAttr,
@@ -12,7 +17,7 @@ import {
 } from '@vue/shared'
 
 // leading comma for empty string ""
-const shouldIgnoreProp = makeMap(
+const shouldIgnoreProp = /*@__PURE__*/ makeMap(
   `,key,ref,innerHTML,textContent,ref_key,ref_for`,
 )
 
@@ -34,6 +39,8 @@ export function ssrRenderAttrs(
       ret += ` class="${ssrRenderClass(value)}"`
     } else if (key === 'style') {
       ret += ` style="${ssrRenderStyle(value)}"`
+    } else if (key === 'className') {
+      ret += ` class="${String(value)}"`
     } else {
       ret += ssrRenderDynamicAttr(key, value, tag)
     }
@@ -47,7 +54,7 @@ export function ssrRenderDynamicAttr(
   value: unknown,
   tag?: string,
 ): string {
-  if (!isRenderableValue(value)) {
+  if (!isRenderableAttrValue(value)) {
     return ``
   }
   const attrKey =
@@ -69,18 +76,10 @@ export function ssrRenderDynamicAttr(
 // Render a v-bind attr with static key. The key is pre-processed at compile
 // time and we only need to check and escape value.
 export function ssrRenderAttr(key: string, value: unknown): string {
-  if (!isRenderableValue(value)) {
+  if (!isRenderableAttrValue(value)) {
     return ``
   }
   return ` ${key}="${escapeHtml(value)}"`
-}
-
-function isRenderableValue(value: unknown): boolean {
-  if (value == null) {
-    return false
-  }
-  const type = typeof value
-  return type === 'string' || type === 'number' || type === 'boolean'
 }
 
 export function ssrRenderClass(raw: unknown): string {

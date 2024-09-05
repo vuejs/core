@@ -17,8 +17,8 @@
     {
       groupName: 'playground',
       matchFileNames: [
-        'packages/sfc-playground/package.json',
-        'packages/template-explorer/package.json',
+        'packages-private/sfc-playground/package.json',
+        'packages-private/template-explorer/package.json',
       ],
     },
     {
@@ -28,13 +28,13 @@
     },
     {
       groupName: 'build',
-      matchPackageNames: ['vite', 'terser'],
+      matchPackageNames: ['vite', '@swc/core'],
       matchPackagePrefixes: ['rollup', 'esbuild', '@rollup', '@vitejs'],
     },
     {
       groupName: 'lint',
       matchPackageNames: ['simple-git-hooks', 'lint-staged'],
-      matchPackagePrefixes: ['@typescript-eslint', 'eslint', 'prettier'],
+      matchPackagePrefixes: ['typescript-eslint', 'eslint', 'prettier'],
     },
   ],
   ignoreDeps: [
@@ -46,5 +46,21 @@
 
     // ESM only
     'estree-walker',
+
+    // pinned
+    // https://github.com/vuejs/core/issues/10300#issuecomment-1940855364
+    'lru-cache',
+
+    // pinned
+    // https://github.com/vuejs/core/commit/a012e39b373f1b6918e5c89856e8f902e1bfa14d
+    '@rollup/plugin-replace',
+
+    // pinned
+    // only used in example for e2e tests
+    'marked',
+
+    // pinned, 5.0+ has exports issues
+    // https://github.com/vuejs/core/issues/11603
+    'entities',
   ],
 }

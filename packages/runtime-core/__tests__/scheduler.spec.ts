@@ -1,7 +1,8 @@
 import {
+  type SchedulerJob,
+  SchedulerJobFlags,
   flushPostFlushCbs,
   flushPreFlushCbs,
-  invalidateJob,
   nextTick,
   queueJob,
   queuePostFlushCb,
@@ -119,12 +120,12 @@ describe('scheduler', () => {
       const job1 = () => {
         calls.push('job1')
       }
-      const cb1 = () => {
+      const cb1: SchedulerJob = () => {
         // queueJob in postFlushCb
         calls.push('cb1')
         queueJob(job1)
       }
-      cb1.pre = true
+      cb1.flags! |= SchedulerJobFlags.PRE
 
       queueJob(cb1)
       await nextTick()
@@ -138,25 +139,25 @@ describe('scheduler', () => {
       }
       job1.id = 1
 
-      const cb1 = () => {
+      const cb1: SchedulerJob = () => {
         calls.push('cb1')
         queueJob(job1)
         // cb2 should execute before the job
         queueJob(cb2)
         queueJob(cb3)
       }
-      cb1.pre = true
+      cb1.flags! |= SchedulerJobFlags.PRE
 
-      const cb2 = () => {
+      const cb2: SchedulerJob = () => {
         calls.push('cb2')
       }
-      cb2.pre = true
+      cb2.flags! |= SchedulerJobFlags.PRE
       cb2.id = 1
 
-      const cb3 = () => {
+      const cb3: SchedulerJob = () => {
         calls.push('cb3')
       }
-      cb3.pre = true
+      cb3.flags! |= SchedulerJobFlags.PRE
       cb3.id = 1
 
       queueJob(cb1)
@@ -166,37 +167,37 @@ describe('scheduler', () => {
 
     it('should insert jobs after pre jobs with the same id', async () => {
       const calls: string[] = []
-      const job1 = () => {
+      const job1: SchedulerJob = () => {
         calls.push('job1')
       }
       job1.id = 1
-      job1.pre = true
-      const job2 = () => {
+      job1.flags! |= SchedulerJobFlags.PRE
+      const job2: SchedulerJob = () => {
         calls.push('job2')
         queueJob(job5)
         queueJob(job6)
       }
       job2.id = 2
-      job2.pre = true
-      const job3 = () => {
+      job2.flags! |= SchedulerJobFlags.PRE
+      const job3: SchedulerJob = () => {
         calls.push('job3')
       }
       job3.id = 2
-      job3.pre = true
-      const job4 = () => {
+      job3.flags! |= SchedulerJobFlags.PRE
+      const job4: SchedulerJob = () => {
         calls.push('job4')
       }
       job4.id = 3
-      job4.pre = true
-      const job5 = () => {
+      job4.flags! |= SchedulerJobFlags.PRE
+      const job5: SchedulerJob = () => {
         calls.push('job5')
       }
       job5.id = 2
-      const job6 = () => {
+      const job6: SchedulerJob = () => {
         calls.push('job6')
       }
       job6.id = 2
-      job6.pre = true
+      job6.flags! |= SchedulerJobFlags.PRE
 
       // We need several jobs to test this properly, otherwise
       // findInsertionIndex can yield the correct index by chance
@@ -221,27 +222,58 @@ describe('scheduler', () => {
         flushPreFlushCbs()
         calls.push('job1')
       }
-      const cb1 = () => {
+      const cb1: SchedulerJob = () => {
         calls.push('cb1')
         // a cb triggers its parent job, which should be skipped
         queueJob(job1)
       }
-      cb1.pre = true
-      const cb2 = () => {
+      cb1.flags! |= SchedulerJobFlags.PRE
+      const cb2: SchedulerJob = () => {
         calls.push('cb2')
       }
-      cb2.pre = true
+      cb2.flags! |= SchedulerJobFlags.PRE
 
       queueJob(job1)
       await nextTick()
       expect(calls).toEqual(['cb1', 'cb2', 'job1'])
     })
 
+    it('should insert pre jobs without ids first during flushing', async () => {
+      const calls: string[] = []
+      const job1: SchedulerJob = () => {
+        calls.push('job1')
+        queueJob(job3)
+        queueJob(job4)
+      }
+      // job1 has no id
+      job1.flags! |= SchedulerJobFlags.PRE
+      const job2: SchedulerJob = () => {
+        calls.push('job2')
+      }
+      job2.id = 1
+      job2.flags! |= SchedulerJobFlags.PRE
+      const job3: SchedulerJob = () => {
+        calls.push('job3')
+      }
+      // job3 has no id
+      job3.flags! |= SchedulerJobFlags.PRE
+      const job4: SchedulerJob = () => {
+        calls.push('job4')
+      }
+      // job4 has no id
+      job4.flags! |= SchedulerJobFlags.PRE
+
+      queueJob(job1)
+      queueJob(job2)
+      await nextTick()
+      expect(calls).toEqual(['job1', 'job3', 'job4', 'job2'])
+    })
+
     // #3806
     it('queue preFlushCb inside postFlushCb', async () => {
       const spy = vi.fn()
-      const cb = () => spy()
-      cb.pre = true
+      const cb: SchedulerJob = () => spy()
+      cb.flags! |= SchedulerJobFlags.PRE
       queuePostFlushCb(() => {
         queueJob(cb)
       })
@@ -411,33 +443,6 @@ describe('scheduler', () => {
     })
   })
 
-  test('invalidateJob', async () => {
-    const calls: string[] = []
-    const job1 = () => {
-      calls.push('job1')
-      invalidateJob(job2)
-      job2()
-    }
-    const job2 = () => {
-      calls.push('job2')
-    }
-    const job3 = () => {
-      calls.push('job3')
-    }
-    const job4 = () => {
-      calls.push('job4')
-    }
-    // queue all jobs
-    queueJob(job1)
-    queueJob(job2)
-    queueJob(job3)
-    queuePostFlushCb(job4)
-    expect(calls).toEqual([])
-    await nextTick()
-    // job2 should be called only once
-    expect(calls).toEqual(['job1', 'job2', 'job3', 'job4'])
-  })
-
   test('sort job based on id', async () => {
     const calls: string[] = []
     const job1 = () => calls.push('job1')
@@ -446,12 +451,20 @@ describe('scheduler', () => {
     job2.id = 2
     const job3 = () => calls.push('job3')
     job3.id = 1
+    const job4: SchedulerJob = () => calls.push('job4')
+    job4.id = 2
+    job4.flags! |= SchedulerJobFlags.PRE
+    const job5: SchedulerJob = () => calls.push('job5')
+    // job5 has no id
+    job5.flags! |= SchedulerJobFlags.PRE
 
     queueJob(job1)
     queueJob(job2)
     queueJob(job3)
+    queueJob(job4)
+    queueJob(job5)
     await nextTick()
-    expect(calls).toEqual(['job3', 'job2', 'job1'])
+    expect(calls).toEqual(['job5', 'job3', 'job4', 'job2', 'job1'])
   })
 
   test('sort SchedulerCbs based on id', async () => {
@@ -521,25 +534,25 @@ describe('scheduler', () => {
   test('should allow explicitly marked jobs to trigger itself', async () => {
     // normal job
     let count = 0
-    const job = () => {
+    const job: SchedulerJob = () => {
       if (count < 3) {
         count++
         queueJob(job)
       }
     }
-    job.allowRecurse = true
+    job.flags! |= SchedulerJobFlags.ALLOW_RECURSE
     queueJob(job)
     await nextTick()
     expect(count).toBe(3)
 
     // post cb
-    const cb = () => {
+    const cb: SchedulerJob = () => {
       if (count < 5) {
         count++
         queuePostFlushCb(cb)
       }
     }
-    cb.allowRecurse = true
+    cb.flags! |= SchedulerJobFlags.ALLOW_RECURSE
     queuePostFlushCb(cb)
     await nextTick()
     expect(count).toBe(5)
@@ -572,7 +585,7 @@ describe('scheduler', () => {
     // simulate parent component that toggles child
     const job1 = () => {
       // @ts-expect-error
-      job2.active = false
+      job2.flags! |= SchedulerJobFlags.DISPOSED
     }
     // simulate child that's triggered by the same reactive change that
     // triggers its toggle
@@ -589,11 +602,11 @@ describe('scheduler', () => {
 
   it('flushPreFlushCbs inside a pre job', async () => {
     const spy = vi.fn()
-    const job = () => {
+    const job: SchedulerJob = () => {
       spy()
       flushPreFlushCbs()
     }
-    job.pre = true
+    job.flags! |= SchedulerJobFlags.PRE
     queueJob(job)
     await nextTick()
     expect(spy).toHaveBeenCalledTimes(1)
@@ -609,5 +622,26 @@ describe('scheduler', () => {
     expect(p).toBeInstanceOf(Promise)
     expect(await p).toBe(1)
     expect(fn).toHaveBeenCalledTimes(1)
+  })
+
+  // #10003
+  test('nested flushPostFlushCbs', async () => {
+    const calls: string[] = []
+    const cb1 = () => calls.push('cb1')
+    // cb1 has no id
+    const cb2 = () => calls.push('cb2')
+    cb2.id = -1
+    const queueAndFlush = (hook: Function) => {
+      queuePostFlushCb(hook)
+      flushPostFlushCbs()
+    }
+
+    queueAndFlush(() => {
+      queuePostFlushCb([cb1, cb2])
+      flushPostFlushCbs()
+    })
+
+    await nextTick()
+    expect(calls).toEqual(['cb2', 'cb1'])
   })
 })

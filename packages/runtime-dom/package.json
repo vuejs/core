@@ -1,6 +1,6 @@
 {
   "name": "@vue/runtime-dom",
-  "version": "3.4.3",
+  "version": "3.5.1",
   "description": "@vue/runtime-dom",
   "main": "index.js",
   "module": "dist/runtime-dom.esm-bundler.js",
@@ -10,6 +10,20 @@
     "index.js",
     "dist"
   ],
+  "exports": {
+    ".": {
+      "types": "./dist/runtime-dom.d.ts",
+      "node": {
+        "production": "./dist/runtime-dom.cjs.prod.js",
+        "development": "./dist/runtime-dom.cjs.js",
+        "default": "./index.js"
+      },
+      "module": "./dist/runtime-dom.esm-bundler.js",
+      "import": "./dist/runtime-dom.esm-bundler.js",
+      "require": "./index.js"
+    },
+    "./*": "./*"
+  },
   "sideEffects": false,
   "buildOptions": {
     "name": "VueRuntimeDOM",
@@ -37,6 +51,10 @@
   "dependencies": {
     "@vue/shared": "workspace:*",
     "@vue/runtime-core": "workspace:*",
+    "@vue/reactivity": "workspace:*",
     "csstype": "^3.1.3"
+  },
+  "devDependencies": {
+    "@types/trusted-types": "^2.0.7"
   }
 }
