@@ -160,7 +160,10 @@ export const TeleportImpl = {
         updateCssVars(n2)
       }
 
-      if (isTeleportDeferred(n2.props) || parentSuspense && parentSuspense.pendingBranch) {
+      if (
+        isTeleportDeferred(n2.props) ||
+        (parentSuspense && parentSuspense.pendingBranch)
+      ) {
         queuePostRenderEffect(mountToTarget, parentSuspense)
       } else {
         mountToTarget()
