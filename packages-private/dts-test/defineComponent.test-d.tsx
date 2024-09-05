@@ -1041,6 +1041,18 @@ describe('emits', () => {
     },
   })
 
+  // #11803 manual props annotation in setup()
+  const Hello = defineComponent({
+    name: 'HelloWorld',
+    inheritAttrs: false,
+    props: { foo: String },
+    emits: {
+      customClick: (args: string) => typeof args === 'string',
+    },
+    setup(props: { foo?: string }) {},
+  })
+  ;<Hello onCustomClick={() => {}} />
+
   // without emits
   defineComponent({
     setup(props, { emit }) {

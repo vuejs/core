@@ -60,6 +60,7 @@ export function renderComponentRoot(
     setupState,
     ctx,
     inheritAttrs,
+    isMounted,
   } = instance
   const prev = setCurrentRenderingInstance(instance)
 
@@ -253,7 +254,9 @@ export function renderComponentRoot(
           `that cannot be animated.`,
       )
     }
-    root.transition = vnode.transition
+    root.transition = isMounted
+      ? vnode.component!.subTree.transition!
+      : vnode.transition
   }
 
   if (__DEV__ && setRoot) {
