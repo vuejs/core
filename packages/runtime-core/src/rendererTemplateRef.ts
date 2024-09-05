@@ -68,8 +68,6 @@ export function setRef(
       ? () => false
       : (key: string) => {
           if (!hasOwn(setupState, key)) return false
-          if ((Object.getOwnPropertyDescriptor(refs, key) || EMPTY_OBJ).get)
-            return false
           if (!__DEV__) return true
           if (
             setupState.__v__setupResult &&
