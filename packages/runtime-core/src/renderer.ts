@@ -679,7 +679,15 @@ function baseCreateRenderer(
       const isVPre = isVPreProps(props)
       for (const key in props) {
         if (key !== 'value' && !isReservedProp(key)) {
-          hostPatchProp(el, key, null, props[key], namespace, parentComponent, isVPre)
+          hostPatchProp(
+            el,
+            key,
+            null,
+            props[key],
+            namespace,
+            parentComponent,
+            isVPre,
+          )
         }
       }
       /**
@@ -1014,7 +1022,15 @@ function baseCreateRenderer(
         const prev = oldProps[key]
         // defer patching value
         if (next !== prev && key !== 'value') {
-          hostPatchProp(el, key, prev, next, namespace, parentComponent, isVPreInNewProps)
+          hostPatchProp(
+            el,
+            key,
+            prev,
+            next,
+            namespace,
+            parentComponent,
+            isVPreInNewProps,
+          )
         }
       }
       if ('value' in newProps) {
