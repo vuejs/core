@@ -1713,14 +1713,14 @@ describe('SSR hydration', () => {
     // #7775
     test('use unescapeHtml when vnode is of text type', () => {
       const { container: styleContainer } = mountWithHydration(
-        `<style>&quot;test&quot;\n\r\f\t</style>`,
+        `<style>&quot;test&quot;\n\r</style>`,
         () => h('style', '"test"'),
       )
       expect(styleContainer.innerHTML).toBe('<style>"test"</style>')
       expect(`Hydration text content mismatch`).not.toHaveBeenWarned()
 
       const { container: pContainer } = mountWithHydration(
-        `<p>&quot;test&quot;\n\r\f\t</p>`,
+        `<p>&quot;test&quot;\n\r</p>`,
         () => h('p', '"test"'),
       )
       expect(pContainer.innerHTML).toBe('<p>"test"</p>')

@@ -181,9 +181,9 @@ export function createHydrationFunctions(
           }
         } else {
           if ((node as Text).data !== vnode.children) {
-            let dataContent = (node as Text).data.replace(/[\r\n ]+/g, '')
+            let dataContent = (node as Text).data.replace(/[\r\n]+/g, '')
             let vnodeChildren = (vnode.children as string).replace(
-              /[\r\n ]+/g,
+              /[\r\n]+/g,
               '',
             )
             if (unescapeHtml(dataContent) !== unescapeHtml(vnodeChildren)) {
@@ -450,15 +450,15 @@ export function createHydrationFunctions(
       } else if (shapeFlag & ShapeFlags.TEXT_CHILDREN) {
         if (el.textContent !== vnode.children) {
           let textContent = (el.textContent as string).replace(
-            /[\r\n ]+/g,
+            /[\r\n]+/g,
             '',
           )
           let vnodeChildren = (vnode.children as string).replace(
-            /[\r\n ]+/g,
+            /[\r\n]+/g,
             '',
           )
           if (
-            !isMismatchAllowed(el, MismatchTypes.TEXT) ||
+            !isMismatchAllowed(el, MismatchTypes.TEXT) &&
             unescapeHtml(textContent) !== unescapeHtml(vnodeChildren)
           ) {
             ;(__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
