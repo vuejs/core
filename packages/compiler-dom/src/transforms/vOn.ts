@@ -35,7 +35,7 @@ const isKeyboardEvent = /*@__PURE__*/ makeMap(
 
 const resolveModifiers = (
   key: ExpressionNode,
-  modifiers: string[],
+  modifiers: SimpleExpressionNode[],
   context: TransformContext,
   loc: SourceLocation,
 ) => {
@@ -44,7 +44,7 @@ const resolveModifiers = (
   const eventOptionModifiers = []
 
   for (let i = 0; i < modifiers.length; i++) {
-    const modifier = modifiers[i]
+    const modifier = modifiers[i].content
 
     if (
       __COMPAT__ &&
