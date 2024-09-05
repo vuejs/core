@@ -1,5 +1,5 @@
 import { ErrorCodes, callWithErrorHandling, handleError } from './errorHandling'
-import { type Awaited, NOOP, isArray } from '@vue/shared'
+import { NOOP, isArray } from '@vue/shared'
 import { type ComponentInternalInstance, getComponentName } from './component'
 
 export enum SchedulerJobFlags {
@@ -50,7 +50,7 @@ const pendingPostFlushCbs: SchedulerJob[] = []
 let activePostFlushCbs: SchedulerJob[] | null = null
 let postFlushIndex = 0
 
-const resolvedPromise = /*#__PURE__*/ Promise.resolve() as Promise<any>
+const resolvedPromise = /*@__PURE__*/ Promise.resolve() as Promise<any>
 let currentFlushPromise: Promise<void> | null = null
 
 const RECURSION_LIMIT = 100

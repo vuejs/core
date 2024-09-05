@@ -152,10 +152,10 @@ describe('SSR hydration', () => {
   // #7285
   test('element with multiple continuous text vnodes', async () => {
     // should no mismatch warning
-    const { container } = mountWithHydration('<div>fooo</div>', () =>
-      h('div', ['fo', createTextVNode('o'), 'o']),
+    const { container } = mountWithHydration('<div>foo0o</div>', () =>
+      h('div', ['fo', createTextVNode('o'), 0, 'o']),
     )
-    expect(container.textContent).toBe('fooo')
+    expect(container.textContent).toBe('foo0o')
   })
 
   test('element with elements children', async () => {
@@ -2018,6 +2018,26 @@ describe('SSR hydration', () => {
             withDirectives(h('div', { class: 'test' }), [[vColor, 'red']])
         },
       })
+      app.mount(container)
+      expect(`Hydration style mismatch`).not.toHaveBeenWarned()
+    })
+
+    test('escape css var name', () => {
+      const container = document.createElement('div')
+      container.innerHTML = `<div style="padding: 4px;--foo\\.bar:red;"></div>`
+      const app = createSSRApp({
+        setup() {
+          useCssVars(() => ({
+            'foo.bar': 'red',
+          }))
+          return () => h(Child)
+        },
+      })
+      const Child = {
+        setup() {
+          return () => h('div', { style: 'padding: 4px' })
+        },
+      }
       app.mount(container)
       expect(`Hydration style mismatch`).not.toHaveBeenWarned()
     })

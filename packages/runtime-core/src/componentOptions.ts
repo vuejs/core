@@ -1279,7 +1279,9 @@ export type ComponentOptionsWithObjectProps<
   Directives extends Record<string, Directive> = {},
   Exposed extends string = string,
   Provide extends ComponentProvideOptions = ComponentProvideOptions,
-  Props = Prettify<Readonly<ExtractPropTypes<PropsOptions> & EmitsToProps<E>>>,
+  Props = Prettify<
+    Readonly<ExtractPropTypes<PropsOptions>> & Readonly<EmitsToProps<E>>
+  >,
   Defaults = ExtractDefaultPropTypes<PropsOptions>,
 > = ComponentOptionsBase<
   Props,

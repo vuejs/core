@@ -82,4 +82,25 @@ describe('useTemplateRef', () => {
 
     expect(`useTemplateRef('foo') already exists.`).toHaveBeenWarned()
   })
+
+  // #11795
+  test('should work when variable name is same as key', () => {
+    let tRef
+    const key = 'refKey'
+    const Comp = {
+      setup() {
+        tRef = useTemplateRef(key)
+        return {
+          [key]: tRef,
+        }
+      },
+      render() {
+        return h('div', { ref: key })
+      },
+    }
+    const root = nodeOps.createElement('div')
+    render(h(Comp), root)
+
+    expect('target is readonly').not.toHaveBeenWarned()
+  })
 })

@@ -193,7 +193,10 @@ const BaseTransitionImpl: ComponentOptions = {
         // #11061, ensure enterHooks is fresh after clone
         hooks => (enterHooks = hooks),
       )
-      setTransitionHooks(innerChild, enterHooks)
+
+      if (innerChild.type !== Comment) {
+        setTransitionHooks(innerChild, enterHooks)
+      }
 
       const oldChild = instance.subTree
       const oldInnerChild = oldChild && getInnerChild(oldChild)
