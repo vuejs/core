@@ -36,7 +36,12 @@ function parseWithIfTransform(
 ) {
   const ast = parse(template, options)
   transform(ast, {
-    nodeTransforms: [transformOnce, transformIf, transformSlotOutlet, transformElement],
+    nodeTransforms: [
+      transformOnce,
+      transformIf,
+      transformSlotOutlet,
+      transformElement,
+    ],
     ...options,
   })
   if (!options.onError) {
