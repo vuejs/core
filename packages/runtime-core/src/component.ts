@@ -942,7 +942,6 @@ export function handleSetupResult(
     if (__DEV__) {
       // dev only
       Object.defineProperty(setupResult, '__v__setupResult', {
-        enumerable: false,
         value: setupResult,
       })
       exposeSetupStateOnRenderContext(instance)

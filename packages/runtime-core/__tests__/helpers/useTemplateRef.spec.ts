@@ -93,7 +93,7 @@ describe('useTemplateRef', () => {
         const foo = useTemplateRef('bar')
         return {
           [key]: tRef,
-          ['foo']: foo,
+          foo,
         }
       },
       render() {
