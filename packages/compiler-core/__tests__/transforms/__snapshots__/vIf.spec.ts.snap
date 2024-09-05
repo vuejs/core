@@ -91,10 +91,15 @@ exports[`compiler: v-if > codegen > template v-if w/ v-once 1`] = `
 
 return function render(_ctx, _cache) {
   with (_ctx) {
-    const { openBlock: _openBlock, createElementBlock: _createElementBlock, createCommentVNode: _createCommentVNode } = _Vue
+    const { setBlockTracking: _setBlockTracking, openBlock: _openBlock, createElementBlock: _createElementBlock, createCommentVNode: _createCommentVNode } = _Vue
 
     return true
-      ? (_openBlock(), _createElementBlock("p", { key: 0 }, "foo"))
+      ? _cache[0] || (
+          _setBlockTracking(-1),
+          (_cache[0] = (_openBlock(), _createElementBlock("p", { key: 0 }, "foo"))).cacheIndex = 0,
+          _setBlockTracking(1),
+          _cache[0]
+        )
       : _createCommentVNode("v-if", true)
   }
 }"

@@ -19,9 +19,9 @@ import { ErrorCodes } from '../../src/errors'
 import { type CompilerOptions, generate } from '../../src'
 import { FRAGMENT, RENDER_LIST, RENDER_SLOT } from '../../src/runtimeHelpers'
 import { PatchFlags } from '@vue/shared'
-import { createObjectMatcher, genFlagText } from '../testUtils'
+import { createObjectMatcher } from '../testUtils'
 
-function parseWithForTransform(
+export function parseWithForTransform(
   template: string,
   options: CompilerOptions = {},
 ) {
@@ -202,6 +202,18 @@ describe('compiler: v-for', () => {
       expect(forNode.valueAlias).toBeUndefined()
       expect((forNode.source as SimpleExpressionNode).content).toBe('items')
     })
+
+    test('source containing string expression with spaces', () => {
+      const { node: forNode } = parseWithForTransform(
+        `<span v-for="item in state ['my items']" />`,
+      )
+      expect(forNode.keyAlias).toBeUndefined()
+      expect(forNode.objectIndexAlias).toBeUndefined()
+      expect((forNode.valueAlias as SimpleExpressionNode).content).toBe('item')
+      expect((forNode.source as SimpleExpressionNode).content).toBe(
+        "state ['my items']",
+      )
+    })
   })
 
   describe('errors', () => {
@@ -244,6 +256,18 @@ describe('compiler: v-for', () => {
     test('missing source', () => {
       const onError = vi.fn()
       parseWithForTransform('<span v-for="item in" />', { onError })
+
+      expect(onError).toHaveBeenCalledTimes(1)
+      expect(onError).toHaveBeenCalledWith(
+        expect.objectContaining({
+          code: ErrorCodes.X_V_FOR_MALFORMED_EXPRESSION,
+        }),
+      )
+    })
+
+    test('missing source and have multiple spaces with', () => {
+      const onError = vi.fn()
+      parseWithForTransform('<span v-for="item in  " />', { onError })
 
       expect(onError).toHaveBeenCalledTimes(1)
       expect(onError).toHaveBeenCalledWith(
@@ -672,10 +696,10 @@ describe('compiler: v-for', () => {
         tag: FRAGMENT,
         disableTracking,
         patchFlag: !disableTracking
-          ? genFlagText(PatchFlags.STABLE_FRAGMENT)
+          ? PatchFlags.STABLE_FRAGMENT
           : keyed
-            ? genFlagText(PatchFlags.KEYED_FRAGMENT)
-            : genFlagText(PatchFlags.UNKEYED_FRAGMENT),
+            ? PatchFlags.KEYED_FRAGMENT
+            : PatchFlags.UNKEYED_FRAGMENT,
         children: {
           type: NodeTypes.JS_CALL_EXPRESSION,
           callee: RENDER_LIST,
@@ -798,7 +822,7 @@ describe('compiler: v-for', () => {
               constType: ConstantTypes.NOT_CONSTANT,
             },
           },
-          patchFlag: genFlagText(PatchFlags.TEXT),
+          patchFlag: PatchFlags.TEXT,
         },
       })
       expect(generate(root).code).toMatchSnapshot()
@@ -822,7 +846,7 @@ describe('compiler: v-for', () => {
             { type: NodeTypes.TEXT, content: `hello` },
             { type: NodeTypes.ELEMENT, tag: `span` },
           ],
-          patchFlag: genFlagText(PatchFlags.STABLE_FRAGMENT),
+          patchFlag: PatchFlags.STABLE_FRAGMENT,
         },
       })
       expect(generate(root).code).toMatchSnapshot()
@@ -926,7 +950,7 @@ describe('compiler: v-for', () => {
             { type: NodeTypes.TEXT, content: `hello` },
             { type: NodeTypes.ELEMENT, tag: `span` },
           ],
-          patchFlag: genFlagText(PatchFlags.STABLE_FRAGMENT),
+          patchFlag: PatchFlags.STABLE_FRAGMENT,
         },
       })
       expect(generate(root).code).toMatchSnapshot()
@@ -947,7 +971,7 @@ describe('compiler: v-for', () => {
           }),
           isBlock: true,
           disableTracking: true,
-          patchFlag: genFlagText(PatchFlags.UNKEYED_FRAGMENT),
+          patchFlag: PatchFlags.UNKEYED_FRAGMENT,
           children: {
             type: NodeTypes.JS_CALL_EXPRESSION,
             callee: RENDER_LIST,
@@ -985,7 +1009,7 @@ describe('compiler: v-for', () => {
           }),
           isBlock: true,
           disableTracking: true,
-          patchFlag: genFlagText(PatchFlags.UNKEYED_FRAGMENT),
+          patchFlag: PatchFlags.UNKEYED_FRAGMENT,
           children: {
             type: NodeTypes.JS_CALL_EXPRESSION,
             callee: RENDER_LIST,
@@ -1018,6 +1042,32 @@ describe('compiler: v-for', () => {
         directives: { type: NodeTypes.JS_ARRAY_EXPRESSION },
       })
       expect(generate(root).code).toMatchSnapshot()
+    })
+
+    test('template v-for key w/ :key shorthand on div', () => {
+      const {
+        node: { codegenNode },
+      } = parseWithForTransform('<div v-for="key in keys" :key>test</div>')
+      expect(codegenNode.patchFlag).toBe(PatchFlags.KEYED_FRAGMENT)
+    })
+
+    test('template v-for key w/ :key shorthand on template injected to the child', () => {
+      const {
+        node: { codegenNode },
+      } = parseWithForTransform(
+        '<template v-for="key in keys" :key><div>test</div></template>',
+      )
+      expect(assertSharedCodegen(codegenNode, true)).toMatchObject({
+        source: { content: `keys` },
+        params: [{ content: `key` }],
+        innerVNodeCall: {
+          type: NodeTypes.VNODE_CALL,
+          tag: `"div"`,
+          props: createObjectMatcher({
+            key: '[key]',
+          }),
+        },
+      })
     })
   })
 })

@@ -3,140 +3,40 @@ on:
   push:
     branches:
       - '**'
+    tags:
+      - '!**'
   pull_request:
     branches:
       - main
-
-permissions:
-  contents: read # to fetch code (actions/checkout)
+      - minor
 
 jobs:
-  unit-test:
+  test:
+    if: ${{ ! startsWith(github.event.head_commit.message, 'release:') && (github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository) }}
+    uses: ./.github/workflows/test.yml
+
+  continuous-release:
+    if: github.repository == 'vuejs/core'
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository
-    env:
-      PUPPETEER_SKIP_DOWNLOAD: 'true'
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
       - name: Install pnpm
-        uses: pnpm/action-setup@v2
+        uses: pnpm/action-setup@v4
 
       - name: Install Node.js
         uses: actions/setup-node@v4
         with:
           node-version-file: '.node-version'
+          registry-url: 'https://registry.npmjs.org'
           cache: 'pnpm'
 
-      - run: pnpm install
+      - name: Install deps
+        run: pnpm install
 
-      - name: Run unit tests
-        run: pnpm run test-unit
+      - name: Build
+        run: pnpm build --withTypes
 
-  unit-test-windows:
-    runs-on: windows-latest
-    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository
-    env:
-      PUPPETEER_SKIP_DOWNLOAD: 'true'
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install pnpm
-        uses: pnpm/action-setup@v2
-
-      - name: Install Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version-file: '.node-version'
-          cache: 'pnpm'
-
-      - run: pnpm install
-
-      - name: Run compiler unit tests
-        run: pnpm run test-unit compiler
-
-      - name: Run ssr unit tests
-        run: pnpm run test-unit server-renderer
-
-  e2e-test:
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup cache for Chromium binary
-        uses: actions/cache@v3
-        with:
-          path: ~/.cache/puppeteer
-          key: chromium-${{ hashFiles('pnpm-lock.yaml') }}
-
-      - name: Install pnpm
-        uses: pnpm/action-setup@v2
-
-      - name: Install Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version-file: '.node-version'
-          cache: 'pnpm'
-
-      - run: pnpm install
-      - run: node node_modules/puppeteer/install.mjs
-
-      - name: Run e2e tests
-        run: pnpm run test-e2e
-
-      - name: verify treeshaking
-        run: node scripts/verify-treeshaking.js
-
-  lint-and-test-dts:
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository
-    env:
-      PUPPETEER_SKIP_DOWNLOAD: 'true'
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install pnpm
-        uses: pnpm/action-setup@v2
-
-      - name: Install Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version-file: '.node-version'
-          cache: 'pnpm'
-
-      - run: pnpm install
-
-      - name: Run eslint
-        run: pnpm run lint
-
-      - name: Run prettier
-        run: pnpm run format-check
-
-      - name: Run type declaration tests
-        run: pnpm run test-dts
-
-  # benchmarks:
-  #   runs-on: ubuntu-latest
-  #   if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository
-  #   env:
-  #     PUPPETEER_SKIP_DOWNLOAD: 'true'
-  #   steps:
-  #     - uses: actions/checkout@v4
-
-  #     - name: Install pnpm
-  #       uses: pnpm/action-setup@v2
-
-  #     - name: Install Node.js
-  #       uses: actions/setup-node@v4
-  #       with:
-  #         node-version-file: '.node-version'
-  #         cache: 'pnpm'
-
-  #     - run: pnpm install
-
-  #     - name: Run benchmarks
-  #       uses: CodSpeedHQ/action@v2
-  #       with:
-  #         run: pnpm vitest bench --run
-  #         token: ${{ secrets.CODSPEED_TOKEN }}
+      - name: Release
+        run: pnpx pkg-pr-new publish --compact --pnpm './packages/*'

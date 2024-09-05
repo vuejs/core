@@ -20,7 +20,7 @@ exports[`SFC analyze <script> bindings > auto name inference > do not overwrite 
           name: 'Baz'
         })
         
-export default /*#__PURE__*/Object.assign(__default__, {
+export default /*@__PURE__*/Object.assign(__default__, {
   setup(__props, { expose: __expose }) {
   __expose();
 const a = 1
@@ -36,7 +36,7 @@ exports[`SFC analyze <script> bindings > auto name inference > do not overwrite 
           name: 'Baz'
         }
         
-export default /*#__PURE__*/Object.assign(__default__, {
+export default /*@__PURE__*/Object.assign(__default__, {
   setup(__props, { expose: __expose }) {
   __expose();
 const a = 1
@@ -53,7 +53,7 @@ exports[`SFC compile <script setup> > <script> and <script setup> co-usage > exp
       }
       const __default__ = fn();
       
-export default /*#__PURE__*/Object.assign(__default__, {
+export default /*@__PURE__*/Object.assign(__default__, {
   setup(__props, { expose: __expose }) {
   __expose();
 
@@ -91,7 +91,7 @@ exports[`SFC compile <script setup> > <script> and <script setup> co-usage > scr
 
       const __default__ = {}
       
-export default /*#__PURE__*/Object.assign(__default__, {
+export default /*@__PURE__*/Object.assign(__default__, {
   setup(__props, { expose: __expose }) {
   __expose();
 
@@ -110,7 +110,7 @@ exports[`SFC compile <script setup> > <script> and <script setup> co-usage > scr
       const __default__ = {}
       
 
-export default /*#__PURE__*/Object.assign(__default__, {
+export default /*@__PURE__*/Object.assign(__default__, {
   setup(__props, { expose: __expose }) {
   __expose();
 
@@ -131,7 +131,7 @@ import { x } from './x'
       }
       
 
-export default /*#__PURE__*/_defineComponent({
+export default /*@__PURE__*/_defineComponent({
   ...__default__,
   setup(__props, { expose: __expose }) {
   __expose();
@@ -154,7 +154,7 @@ exports[`SFC compile <script setup> > <script> and <script setup> co-usage > scr
 const __default__ = def
 
 
-export default /*#__PURE__*/Object.assign(__default__, {
+export default /*@__PURE__*/Object.assign(__default__, {
   setup(__props, { expose: __expose }) {
   __expose();
 
@@ -174,7 +174,7 @@ exports[`SFC compile <script setup> > <script> and <script setup> co-usage > spa
           some:'option'
         }
         
-export default /*#__PURE__*/Object.assign(__default__, {
+export default /*@__PURE__*/Object.assign(__default__, {
   setup(__props, { expose: __expose }) {
   __expose();
 
@@ -194,7 +194,7 @@ exports[`SFC compile <script setup> > <script> and <script setup> co-usage > spa
           some:'option'
         }
         
-export default /*#__PURE__*/Object.assign(__default__, {
+export default /*@__PURE__*/Object.assign(__default__, {
   setup(__props, { expose: __expose }) {
   __expose();
 
@@ -851,8 +851,6 @@ return (_ctx, _cache) => {
 exports[`SFC compile <script setup> > inlineTemplate mode > should work 1`] = `
 "import { toDisplayString as _toDisplayString, createElementVNode as _createElementVNode, Fragment as _Fragment, openBlock as _openBlock, createElementBlock as _createElementBlock } from "vue"
 
-const _hoisted_1 = /*#__PURE__*/_createElementVNode("div", null, "static", -1 /* HOISTED */)
-
 import { ref } from 'vue'
         
 export default {
@@ -863,7 +861,7 @@ export default {
 return (_ctx, _cache) => {
   return (_openBlock(), _createElementBlock(_Fragment, null, [
     _createElementVNode("div", null, _toDisplayString(count.value), 1 /* TEXT */),
-    _hoisted_1
+    _cache[0] || (_cache[0] = _createElementVNode("div", null, "static", -1 /* HOISTED */))
   ], 64 /* STABLE_FRAGMENT */))
 }
 }
@@ -882,11 +880,13 @@ export default {
 
         const count = ref(0)
         const style = { color: 'red' }
+        const height = ref(0)
         
 return (_ctx, _push, _parent, _attrs) => {
   const _cssVars = { style: {
   "--xxxxxxxx-count": (count.value),
-  "--xxxxxxxx-style\\\\.color": (style.color)
+  "--xxxxxxxx-style\\\\.color": (style.color),
+  "--xxxxxxxx-height\\\\ \\\\+\\\\ \\\\\\"px\\\\\\"": (height.value + "px")
 }}
   _push(\`<!--[--><div\${
     _ssrRenderAttrs(_cssVars)
@@ -1028,6 +1028,26 @@ return (_ctx, _cache) => {
 }"
 `;
 
+exports[`SFC compile <script setup> > inlineTemplate mode > unref + new expression 1`] = `
+"import { unref as _unref, toDisplayString as _toDisplayString, createElementVNode as _createElementVNode, Fragment as _Fragment, openBlock as _openBlock, createElementBlock as _createElementBlock } from "vue"
+
+import Foo from './foo'
+        
+export default {
+  setup(__props) {
+
+        
+return (_ctx, _cache) => {
+  return (_openBlock(), _createElementBlock(_Fragment, null, [
+    _createElementVNode("div", null, _toDisplayString(new (_unref(Foo))()), 1 /* TEXT */),
+    _createElementVNode("div", null, _toDisplayString(new (_unref(Foo)).Bar()), 1 /* TEXT */)
+  ], 64 /* STABLE_FRAGMENT */))
+}
+}
+
+}"
+`;
+
 exports[`SFC compile <script setup> > inlineTemplate mode > v-model codegen 1`] = `
 "import { vModelText as _vModelText, createElementVNode as _createElementVNode, withDirectives as _withDirectives, unref as _unref, isRef as _isRef, Fragment as _Fragment, openBlock as _openBlock, createElementBlock as _createElementBlock } from "vue"
 
@@ -1122,7 +1142,7 @@ exports[`SFC compile <script setup> > with TypeScript > const Enum 1`] = `
 "import { defineComponent as _defineComponent } from 'vue'
 const enum Foo { A = 123 }
         
-export default /*#__PURE__*/_defineComponent({
+export default /*@__PURE__*/_defineComponent({
   setup(__props, { expose: __expose }) {
   __expose();
 
@@ -1138,7 +1158,7 @@ exports[`SFC compile <script setup> > with TypeScript > hoist type declarations 
 export interface Foo {}
         type Bar = {}
       
-export default /*#__PURE__*/_defineComponent({
+export default /*@__PURE__*/_defineComponent({
   setup(__props, { expose: __expose }) {
   __expose();
 
@@ -1154,7 +1174,7 @@ exports[`SFC compile <script setup> > with TypeScript > import type 1`] = `
 import type { Foo } from './main.ts'
         import { type Bar, Baz } from './main.ts'
         
-export default /*#__PURE__*/_defineComponent({
+export default /*@__PURE__*/_defineComponent({
   setup(__props, { expose: __expose }) {
   __expose();
 
@@ -1169,7 +1189,7 @@ exports[`SFC compile <script setup> > with TypeScript > runtime Enum 1`] = `
 "import { defineComponent as _defineComponent } from 'vue'
 enum Foo { A = 123 }
         
-export default /*#__PURE__*/_defineComponent({
+export default /*@__PURE__*/_defineComponent({
   setup(__props, { expose: __expose }) {
   __expose();
 
@@ -1187,7 +1207,7 @@ exports[`SFC compile <script setup> > with TypeScript > runtime Enum in normal s
           const enum C { C = "C" }
           enum B { B = "B" }
         
-export default /*#__PURE__*/_defineComponent({
+export default /*@__PURE__*/_defineComponent({
   setup(__props, { expose: __expose }) {
   __expose();
 
@@ -1203,7 +1223,7 @@ exports[`SFC compile <script setup> > with TypeScript > with generic attribute 1
 "import { defineComponent as _defineComponent } from 'vue'
 type Bar = {}
       
-export default /*#__PURE__*/_defineComponent({
+export default /*@__PURE__*/_defineComponent({
   setup(__props, { expose: __expose }) {
   __expose();
 
@@ -1232,7 +1252,7 @@ exports[`SFC genDefaultAs > <script setup> only w/ ts 1`] = `
 "import { defineComponent as _defineComponent } from 'vue'
 const a = 1
       
-const _sfc_ = /*#__PURE__*/_defineComponent({
+const _sfc_ = /*@__PURE__*/_defineComponent({
   setup(__props, { expose: __expose }) {
   __expose();
 
@@ -1247,7 +1267,7 @@ exports[`SFC genDefaultAs > <script> + <script setup> 1`] = `
 "
       const __default__ = {}
       
-const _sfc_ = /*#__PURE__*/Object.assign(__default__, {
+const _sfc_ = /*@__PURE__*/Object.assign(__default__, {
   setup(__props, { expose: __expose }) {
   __expose();
 
@@ -1263,7 +1283,7 @@ exports[`SFC genDefaultAs > <script> + <script setup> 2`] = `
 "
       const __default__ = {}
       
-const _sfc_ = /*#__PURE__*/Object.assign(__default__, {
+const _sfc_ = /*@__PURE__*/Object.assign(__default__, {
   setup(__props, { expose: __expose }) {
   __expose();
 
@@ -1280,7 +1300,7 @@ exports[`SFC genDefaultAs > <script> + <script setup> w/ ts 1`] = `
 
       const __default__ = {}
       
-const _sfc_ = /*#__PURE__*/_defineComponent({
+const _sfc_ = /*@__PURE__*/_defineComponent({
   ...__default__,
   setup(__props, { expose: __expose }) {
   __expose();
@@ -1338,6 +1358,27 @@ export default {
 
         
 return { get foo() { return foo } }
+}
+
+}"
+`;
+
+exports[`compileScript > should care about runtimeModuleName 1`] = `
+"import { withAsyncContext as _withAsyncContext } from "npm:vue"
+
+export default {
+  async setup(__props, { expose: __expose }) {
+  __expose();
+
+let __temp, __restore
+
+        ;(
+  ([__temp,__restore] = _withAsyncContext(() => Promise.resolve(1))),
+  await __temp,
+  __restore()
+)
+      
+return {  }
 }
 
 }"

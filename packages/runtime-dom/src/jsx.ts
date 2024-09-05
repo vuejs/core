@@ -406,7 +406,7 @@ export interface DataHTMLAttributes extends HTMLAttributes {
 
 export interface DetailsHTMLAttributes extends HTMLAttributes {
   open?: Booleanish
-  onToggle?: Event
+  onToggle?: (payload: ToggleEvent) => void
 }
 
 export interface DelHTMLAttributes extends HTMLAttributes {
@@ -453,6 +453,7 @@ export interface IframeHTMLAttributes extends HTMLAttributes {
   /** @deprecated */
   frameborder?: Numberish
   height?: Numberish
+  loading?: 'eager' | 'lazy'
   /** @deprecated */
   marginheight?: Numberish
   /** @deprecated */
@@ -739,7 +740,7 @@ export interface TextareaHTMLAttributes extends HTMLAttributes {
   readonly?: Booleanish
   required?: Booleanish
   rows?: Numberish
-  value?: string | ReadonlyArray<string> | number
+  value?: string | ReadonlyArray<string> | number | null
   wrap?: string
 }
 
@@ -1348,8 +1349,9 @@ export interface Events {
   // selection events
   onSelect: Event
 
-  // UI events
-  onScroll: UIEvent
+  // scroll events
+  onScroll: Event
+  onScrollend: Event
 
   // touch events
   onTouchcancel: TouchEvent
@@ -1389,7 +1391,7 @@ type EventHandlers<E> = {
 import type { VNodeRef } from '@vue/runtime-core'
 
 export type ReservedProps = {
-  key?: string | number | symbol
+  key?: PropertyKey
   ref?: VNodeRef
   ref_for?: boolean
   ref_key?: string
