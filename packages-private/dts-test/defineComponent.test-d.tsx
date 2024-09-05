@@ -1822,6 +1822,15 @@ describe('__typeRefs backdoor, object syntax', () => {
   expectType<number>(refs.child.$refs.foo)
 })
 
+describe('__typeEl backdoor', () => {
+  const Comp = defineComponent({
+    __typeEl: {} as HTMLAnchorElement,
+  })
+  const c = new Comp()
+
+  expectType<HTMLAnchorElement>(c.$el)
+})
+
 defineComponent({
   props: {
     foo: [String, null],
