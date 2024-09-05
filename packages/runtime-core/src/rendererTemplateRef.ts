@@ -131,7 +131,9 @@ export function setRef(
           if (canSetSetupRef(ref)) {
             setupState[ref] = value
           }
-        } else if (_isRef) {
+        }
+        // @ts-expect-error
+        else if (_isRef && !ref.__v__TemplateRef) {
           ref.value = value
           if (rawRef.k) refs[rawRef.k] = value
         } else if (__DEV__) {
