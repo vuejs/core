@@ -32,7 +32,7 @@ async function run() {
 
 async function renderFiles() {
   const filterFiles = (files: string[]) =>
-    files.filter(file => !file.startsWith('_'))
+    files.filter(file => file[0] !== '_' && !file.endsWith('.txt'))
 
   const curr = filterFiles(await readdir(currDir))
   const prev = existsSync(prevDir) ? filterFiles(await readdir(prevDir)) : []
