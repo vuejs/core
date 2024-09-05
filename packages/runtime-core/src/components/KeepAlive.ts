@@ -8,6 +8,7 @@ import {
   getCurrentInstance,
 } from '../component'
 import {
+  Comment,
   type VNode,
   type VNodeProps,
   cloneVNode,
@@ -38,6 +39,7 @@ import {
   type RendererElement,
   type RendererInternals,
   type RendererNode,
+  invalidateMount,
   queuePostRenderEffect,
 } from '../renderer'
 import { setTransitionHooks } from './BaseTransition'
@@ -55,7 +57,7 @@ export interface KeepAliveProps {
   max?: number | string
 }
 
-type CacheKey = string | number | symbol | ConcreteComponent
+type CacheKey = PropertyKey | ConcreteComponent
 type Cache = Map<CacheKey, VNode>
 type Keys = Set<CacheKey>
 
@@ -166,6 +168,9 @@ const KeepAliveImpl: ComponentOptions = {
 
     sharedContext.deactivate = (vnode: VNode) => {
       const instance = vnode.component!
+      invalidateMount(instance.m)
+      invalidateMount(instance.a)
+
       move(vnode, storageContainer, null, MoveType.LEAVE, parentSuspense)
       queuePostRenderEffect(() => {
         if (instance.da) {
@@ -190,10 +195,10 @@ const KeepAliveImpl: ComponentOptions = {
       _unmount(vnode, instance, parentSuspense, true)
     }
 
-    function pruneCache(filter?: (name: string) => boolean) {
+    function pruneCache(filter: (name: string) => boolean) {
       cache.forEach((vnode, key) => {
         const name = getComponentName(vnode.type as ConcreteComponent)
-        if (name && (!filter || !filter(name))) {
+        if (name && !filter(name)) {
           pruneCacheEntry(key)
         }
       })
@@ -201,7 +206,7 @@ const KeepAliveImpl: ComponentOptions = {
 
     function pruneCacheEntry(key: CacheKey) {
       const cached = cache.get(key) as VNode
-      if (!current || !isSameVNodeType(cached, current)) {
+      if (cached && (!current || !isSameVNodeType(cached, current))) {
         unmount(cached)
       } else if (current) {
         // current active instance should no longer be kept-alive.
@@ -228,7 +233,15 @@ const KeepAliveImpl: ComponentOptions = {
     const cacheSubtree = () => {
       // fix #1621, the pendingCacheKey could be 0
       if (pendingCacheKey != null) {
-        cache.set(pendingCacheKey, getInnerChild(instance.subTree))
+        // if KeepAlive child is a Suspense, it needs to be cached after Suspense resolves
+        // avoid caching vnode that not been mounted
+        if (isSuspense(instance.subTree.type)) {
+          queuePostRenderEffect(() => {
+            cache.set(pendingCacheKey!, getInnerChild(instance.subTree))
+          }, instance.subTree.suspense)
+        } else {
+          cache.set(pendingCacheKey, getInnerChild(instance.subTree))
+        }
       }
     }
     onMounted(cacheSubtree)
@@ -275,6 +288,12 @@ const KeepAliveImpl: ComponentOptions = {
       }
 
       let vnode = getInnerChild(rawVNode)
+      // #6028 Suspense ssContent maybe a comment VNode, should avoid caching it
+      if (vnode.type === Comment) {
+        current = null
+        return vnode
+      }
+
       const comp = vnode.type as ConcreteComponent
 
       // for async components, name check should be based in its loaded
@@ -291,6 +310,8 @@ const KeepAliveImpl: ComponentOptions = {
         (include && (!name || !matches(include, name))) ||
         (exclude && name && matches(exclude, name))
       ) {
+        // #11717
+        vnode.shapeFlag &= ~ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE
         current = vnode
         return rawVNode
       }
@@ -305,11 +326,11 @@ const KeepAliveImpl: ComponentOptions = {
           rawVNode.ssContent = vnode
         }
       }
-      // #1513 it's possible for the returned vnode to be cloned due to attr
+      // #1511 it's possible for the returned vnode to be cloned due to attr
       // fallthrough or scopeId, so the vnode here may not be the final vnode
       // that is mounted. Instead of caching it directly, we store the pending
       // key and cache `instance.subTree` (the normalized vnode) in
-      // beforeMount/beforeUpdate hooks.
+      // mounted/updated hooks.
       pendingCacheKey = key
 
       if (cachedVNode) {
@@ -341,13 +362,16 @@ const KeepAliveImpl: ComponentOptions = {
   },
 }
 
-if (__COMPAT__) {
-  KeepAliveImpl.__isBuildIn = true
+const decorate = (t: typeof KeepAliveImpl) => {
+  t.__isBuiltIn = true
+  return t
 }
 
 // export the public type for h/tsx inference
 // also to avoid inline import() in generated d.ts files
-export const KeepAlive = KeepAliveImpl as any as {
+export const KeepAlive = (__COMPAT__
+  ? /*@__PURE__*/ decorate(KeepAliveImpl)
+  : KeepAliveImpl) as any as {
   __isKeepAlive: true
   new (): {
     $props: VNodeProps & KeepAliveProps
@@ -363,23 +387,24 @@ function matches(pattern: MatchPattern, name: string): boolean {
   } else if (isString(pattern)) {
     return pattern.split(',').includes(name)
   } else if (isRegExp(pattern)) {
+    pattern.lastIndex = 0
     return pattern.test(name)
   }
-  /* istanbul ignore next */
+  /* v8 ignore next */
   return false
 }
 
 export function onActivated(
   hook: Function,
   target?: ComponentInternalInstance | null,
-) {
+): void {
   registerKeepAliveHook(hook, LifecycleHooks.ACTIVATED, target)
 }
 
 export function onDeactivated(
   hook: Function,
   target?: ComponentInternalInstance | null,
-) {
+): void {
   registerKeepAliveHook(hook, LifecycleHooks.DEACTIVATED, target)
 }
 

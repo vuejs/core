@@ -71,13 +71,13 @@ export function createBuffer() {
       // Return static buffer and await on items during unroll stage
       return buffer
     },
-    push(item: SSRBufferItem) {
+    push(item: SSRBufferItem): void {
       const isStringItem = isString(item)
       if (appendable && isStringItem) {
         buffer[buffer.length - 1] += item as string
-      } else {
-        buffer.push(item)
+        return
       }
+      buffer.push(item)
       appendable = isStringItem
       if (isPromise(item) || (isArray(item) && item.hasAsync)) {
         // promise, or child buffer with async, mark as async.
@@ -97,23 +97,21 @@ export function renderComponentVNode(
   const instance = createComponentInstance(vnode, parentComponent, null)
   const res = setupComponent(instance, true /* isSSR */)
   const hasAsyncSetup = isPromise(res)
-  const prefetches = instance.sp /* LifecycleHooks.SERVER_PREFETCH */
+  let prefetches = instance.sp /* LifecycleHooks.SERVER_PREFETCH */
   if (hasAsyncSetup || prefetches) {
     suspense && suspense.deps++
-    let p: Promise<unknown> = hasAsyncSetup
-      ? (res as Promise<void>)
-      : Promise.resolve()
-    if (prefetches) {
-      p = p
-        .then(() =>
-          Promise.all(
+    let p: Promise<unknown> = Promise.resolve(res as Promise<void>)
+      .then(() => {
+        // instance.sp may be null until an async setup resolves, so evaluate it here
+        if (hasAsyncSetup) prefetches = instance.sp
+        if (prefetches) {
+          return Promise.all(
             prefetches.map(prefetch => prefetch.call(instance.proxy)),
-          ),
-        )
-        // Note: error display is already done by the wrapped lifecycle hook function.
-        .catch(() => {})
-    }
-
+          )
+        }
+      })
+      // Note: error display is already done by the wrapped lifecycle hook function.
+      .catch(NOOP)
     return p.then(() => {
       const subtree = renderComponentSubTree(instance, suspense, slotScopeId)
       if (__FEATURE_SUSPENSE__ && suspense) {
@@ -173,15 +171,6 @@ function renderComponentSubTree(
       comp.ssrRender = ssrCompile(comp.template, instance)
     }
 
-    // perf: enable caching of computed getters during render
-    // since there cannot be state mutations during render.
-    for (const e of instance.scope.effects) {
-      if (e.computed) {
-        e.computed._dirty = true
-        e.computed._cacheable = true
-      }
-    }
-
     const ssrRender = instance.ssrRender || comp.ssrRender
     if (ssrRender) {
       // optimized
@@ -211,7 +200,10 @@ function renderComponentSubTree(
 
       if (slotScopeId) {
         if (!hasCloned) attrs = { ...attrs }
-        attrs![slotScopeId.trim()] = ''
+        const slotScopeIdList = slotScopeId.trim().split(' ')
+        for (let i = 0; i < slotScopeIdList.length; i++) {
+          attrs![slotScopeIdList[i]] = ''
+        }
       }
 
       // set current rendering instance for asset resolution
@@ -254,8 +246,12 @@ export function renderVNode(
   parentComponent: ComponentInternalInstance,
   parentSuspense: ssrSuspenseBoundary | null = null,
   slotScopeId?: string,
-) {
-  const { type, shapeFlag, children } = vnode
+): void {
+  const { type, shapeFlag, children, dirs, props } = vnode
+  if (dirs) {
+    vnode.props = applySSRDirectives(vnode, props, dirs)
+  }
+
   switch (type) {
     case Text:
       push(escapeHtml(children as string))
@@ -351,8 +347,8 @@ export function renderVNodeChildren(
   children: VNodeArrayChildren,
   parentComponent: ComponentInternalInstance,
   parentSuspense: ssrSuspenseBoundary | null,
-  slotScopeId: string | undefined,
-) {
+  slotScopeId?: string | undefined,
+): void {
   for (let i = 0; i < children.length; i++) {
     renderVNode(
       push,
@@ -369,15 +365,11 @@ function renderElementVNode(
   vnode: VNode,
   parentComponent: ComponentInternalInstance,
   parentSuspense: ssrSuspenseBoundary | null,
-  slotScopeId: string | undefined,
+  slotScopeId?: string,
 ) {
   const tag = vnode.type as string
-  let { props, children, shapeFlag, scopeId, dirs } = vnode
+  let { props, children, shapeFlag, scopeId } = vnode
   let openTag = `<${tag}`
-
-  if (dirs) {
-    props = applySSRDirectives(vnode, props, dirs)
-  }
 
   if (props) {
     openTag += ssrRenderAttrs(props, tag)
@@ -456,7 +448,7 @@ function renderTeleportVNode(
   vnode: VNode,
   parentComponent: ComponentInternalInstance,
   parentSuspense: ssrSuspenseBoundary | null,
-  slotScopeId: string | undefined,
+  slotScopeId?: string,
 ) {
   const target = vnode.props && vnode.props.to
   const disabled = vnode.props && vnode.props.disabled

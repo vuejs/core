@@ -3,6 +3,7 @@ import {
   NodeOpTypes,
   type TestElement,
   TestNodeTypes,
+  type VNode,
   createBlock,
   createCommentVNode,
   createTextVNode,
@@ -316,6 +317,64 @@ describe('renderer: fragment', () => {
     )
   })
 
+  // #10547
+  test('`template` fragment w/ render function', () => {
+    const renderFn = (vnode: VNode) => {
+      return (
+        openBlock(),
+        createBlock(
+          Fragment,
+          null,
+          [createTextVNode('text'), (openBlock(), createBlock(vnode))],
+          PatchFlags.STABLE_FRAGMENT,
+        )
+      )
+    }
+
+    const root = nodeOps.createElement('div')
+    const foo = h('div', ['foo'])
+    const bar = h('div', [h('div', 'bar')])
+
+    render(renderFn(foo), root)
+    expect(serializeInner(root)).toBe(`text<div>foo</div>`)
+
+    render(renderFn(bar), root)
+    expect(serializeInner(root)).toBe(`text<div><div>bar</div></div>`)
+
+    render(renderFn(foo), root)
+    expect(serializeInner(root)).toBe(`text<div>foo</div>`)
+  })
+
+  // #10547
+  test('`template` fragment w/ render function + keyed vnode', () => {
+    const renderFn = (vnode: VNode) => {
+      return (
+        openBlock(),
+        createBlock(
+          Fragment,
+          null,
+          [createTextVNode('text'), (openBlock(), createBlock(vnode))],
+          PatchFlags.STABLE_FRAGMENT,
+        )
+      )
+    }
+
+    const root = nodeOps.createElement('div')
+    const foo = h('div', { key: 1 }, [h('div', 'foo')])
+    const bar = h('div', { key: 2 }, [h('div', 'bar'), h('div', 'bar')])
+
+    render(renderFn(foo), root)
+    expect(serializeInner(root)).toBe(`text<div><div>foo</div></div>`)
+
+    render(renderFn(bar), root)
+    expect(serializeInner(root)).toBe(
+      `text<div><div>bar</div><div>bar</div></div>`,
+    )
+
+    render(renderFn(foo), root)
+    expect(serializeInner(root)).toBe(`text<div><div>foo</div></div>`)
+  })
+
   // #6852
   test('`template` keyed fragment w/ text', () => {
     const root = nodeOps.createElement('div')
@@ -350,5 +409,17 @@ describe('renderer: fragment', () => {
 
     render(renderFn(['two', 'one']), root)
     expect(serializeInner(root)).toBe(`text<div>two</div>text<div>one</div>`)
+  })
+
+  // #10007
+  test('empty fragment', () => {
+    const root = nodeOps.createElement('div')
+
+    const renderFn = () => {
+      return openBlock(true), createBlock(Fragment, null)
+    }
+
+    render(renderFn(), root)
+    expect(serializeInner(root)).toBe('')
   })
 })

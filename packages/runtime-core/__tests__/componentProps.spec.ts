@@ -11,6 +11,7 @@ import {
   getCurrentInstance,
   h,
   inject,
+  nextTick,
   nodeOps,
   provide,
   ref,
@@ -19,7 +20,7 @@ import {
   toRefs,
   watch,
 } from '@vue/runtime-test'
-import { render as domRender, nextTick } from 'vue'
+import { render as domRender } from 'vue'
 
 describe('component props', () => {
   test('stateful', () => {
@@ -537,6 +538,96 @@ describe('component props', () => {
     expect(renderProxy.$props).toMatchObject(props)
   })
 
+  test('merging props from global mixins and extends', () => {
+    let renderProxy: any
+    let extendedRenderProxy: any
+
+    const defaultProp = ' from global'
+    const props = {
+      globalProp: {
+        type: String,
+        default: defaultProp,
+      },
+    }
+    const globalMixin = {
+      props,
+    }
+    const Comp = {
+      render(this: any) {
+        renderProxy = this
+        return h('div', ['Comp', this.globalProp])
+      },
+    }
+    const ExtendedComp = {
+      extends: Comp,
+      render(this: any) {
+        extendedRenderProxy = this
+        return h('div', ['ExtendedComp', this.globalProp])
+      },
+    }
+
+    const app = createApp(
+      {
+        render: () => [h(ExtendedComp), h(Comp)],
+      },
+      {},
+    )
+    app.mixin(globalMixin)
+
+    const root = nodeOps.createElement('div')
+    app.mount(root)
+
+    expect(serializeInner(root)).toMatch(
+      `<div>ExtendedComp from global</div><div>Comp from global</div>`,
+    )
+    expect(renderProxy.$props).toMatchObject({ globalProp: defaultProp })
+    expect(extendedRenderProxy.$props).toMatchObject({
+      globalProp: defaultProp,
+    })
+  })
+
+  test('merging props for a component that is also used as a mixin', () => {
+    const CompA = {
+      render(this: any) {
+        return this.foo
+      },
+    }
+
+    const mixin = {
+      props: {
+        foo: {
+          default: 'from mixin',
+        },
+      },
+    }
+
+    const CompB = {
+      mixins: [mixin, CompA],
+      render(this: any) {
+        return this.foo
+      },
+    }
+
+    const app = createApp({
+      render() {
+        return [h(CompA), ', ', h(CompB)]
+      },
+    })
+
+    app.mixin({
+      props: {
+        foo: {
+          default: 'from global mixin',
+        },
+      },
+    })
+
+    const root = nodeOps.createElement('div')
+    app.mount(root)
+
+    expect(serializeInner(root)).toMatch(`from global mixin, from mixin`)
+  })
+
   test('props type support BigInt', () => {
     const Comp = {
       props: {
@@ -728,5 +819,59 @@ describe('component props', () => {
     render(h(Comp, { msg: 'test' }), root)
 
     expect(Object.keys(props.msg).length).toBe(1)
+  })
+
+  test('should warn against reserved prop names', () => {
+    const Comp = defineComponent({
+      props: {
+        key: String,
+        ref: String,
+        $foo: String,
+      },
+      render() {},
+    })
+
+    const root = nodeOps.createElement('div')
+
+    render(h(Comp, { msg: 'test' }), root)
+
+    expect(`Invalid prop name: "key"`).toHaveBeenWarned()
+    expect(`Invalid prop name: "ref"`).toHaveBeenWarned()
+    expect(`Invalid prop name: "$foo"`).toHaveBeenWarned()
+  })
+
+  // #5517
+  test('events should not be props when component updating', async () => {
+    let props: any
+    function eventHandler() {}
+    const foo = ref(1)
+
+    const Child = defineComponent({
+      setup(_props) {
+        props = _props
+      },
+      emits: ['event'],
+      props: ['foo'],
+      template: `<div>{{ foo }}</div>`,
+    })
+
+    const Comp = defineComponent({
+      setup() {
+        return {
+          foo,
+          eventHandler,
+        }
+      },
+      components: { Child },
+      template: `<Child @event="eventHandler" :foo="foo" />`,
+    })
+
+    const root = document.createElement('div')
+    domRender(h(Comp), root)
+    expect(props).not.toHaveProperty('onEvent')
+
+    foo.value++
+    await nextTick()
+    expect(props).not.toHaveProperty('onEvent')
   })
 })

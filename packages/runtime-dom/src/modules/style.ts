@@ -1,26 +1,44 @@
 import { capitalize, hyphenate, isArray, isString } from '@vue/shared'
 import { camelize, warn } from '@vue/runtime-core'
-import { vShowOldKey } from '../directives/vShow'
+import {
+  type VShowElement,
+  vShowHidden,
+  vShowOriginalDisplay,
+} from '../directives/vShow'
 import { CSS_VAR_TEXT } from '../helpers/useCssVars'
 
 type Style = string | Record<string, string | string[]> | null
 
-export function patchStyle(el: Element, prev: Style, next: Style) {
+const displayRE = /(^|;)\s*display\s*:/
+
+export function patchStyle(el: Element, prev: Style, next: Style): void {
   const style = (el as HTMLElement).style
   const isCssString = isString(next)
+  let hasControlledDisplay = false
   if (next && !isCssString) {
-    if (prev && !isString(prev)) {
-      for (const key in prev) {
-        if (next[key] == null) {
-          setStyle(style, key, '')
+    if (prev) {
+      if (!isString(prev)) {
+        for (const key in prev) {
+          if (next[key] == null) {
+            setStyle(style, key, '')
+          }
+        }
+      } else {
+        for (const prevStyle of prev.split(';')) {
+          const key = prevStyle.slice(0, prevStyle.indexOf(':')).trim()
+          if (next[key] == null) {
+            setStyle(style, key, '')
+          }
         }
       }
     }
     for (const key in next) {
+      if (key === 'display') {
+        hasControlledDisplay = true
+      }
       setStyle(style, key, next[key])
     }
   } else {
-    const currentDisplay = style.display
     if (isCssString) {
       if (prev !== next) {
         // #9821
@@ -29,15 +47,19 @@ export function patchStyle(el: Element, prev: Style, next: Style) {
           ;(next as string) += ';' + cssVarText
         }
         style.cssText = next as string
+        hasControlledDisplay = displayRE.test(next)
       }
     } else if (prev) {
       el.removeAttribute('style')
     }
-    // indicates that the `display` of the element is controlled by `v-show`,
-    // so we always keep the current `display` value regardless of the `style`
-    // value, thus handing over control to `v-show`.
-    if (vShowOldKey in el) {
-      style.display = currentDisplay
+  }
+  // indicates the element also has `v-show`.
+  if (vShowOriginalDisplay in el) {
+    // make v-show respect the current v-bind style display when shown
+    el[vShowOriginalDisplay] = hasControlledDisplay ? style.display : ''
+    // if v-show is in hidden state, v-show has higher priority
+    if ((el as VShowElement)[vShowHidden]) {
+      style.display = 'none'
     }
   }
 }

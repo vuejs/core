@@ -3,6 +3,7 @@ import {
   Static,
   type VNode,
   getCurrentInstance,
+  onBeforeMount,
   onMounted,
   onUnmounted,
   warn,
@@ -10,21 +11,22 @@ import {
 } from '@vue/runtime-core'
 import { ShapeFlags } from '@vue/shared'
 
-export const CSS_VAR_TEXT = Symbol(__DEV__ ? 'CSS_VAR_TEXT' : '')
+export const CSS_VAR_TEXT: unique symbol = Symbol(__DEV__ ? 'CSS_VAR_TEXT' : '')
 /**
  * Runtime helper for SFC's CSS variable injection feature.
  * @private
  */
-export function useCssVars(getter: (ctx: any) => Record<string, string>) {
+export function useCssVars(getter: (ctx: any) => Record<string, string>): void {
   if (!__BROWSER__ && !__TEST__) return
 
   const instance = getCurrentInstance()
-  /* istanbul ignore next */
+  /* v8 ignore start */
   if (!instance) {
     __DEV__ &&
       warn(`useCssVars is called without current active component instance.`)
     return
   }
+  /* v8 ignore stop */
 
   const updateTeleports = (instance.ut = (vars = getter(instance.proxy)) => {
     Array.from(
@@ -32,13 +34,23 @@ export function useCssVars(getter: (ctx: any) => Record<string, string>) {
     ).forEach(node => setVarsOnNode(node, vars))
   })
 
+  if (__DEV__) {
+    instance.getCssVars = () => getter(instance.proxy)
+  }
+
   const setVars = () => {
     const vars = getter(instance.proxy)
-    setVarsOnVNode(instance.subTree, vars)
+    if (instance.ce) {
+      setVarsOnNode(instance.ce as any, vars)
+    } else {
+      setVarsOnVNode(instance.subTree, vars)
+    }
     updateTeleports(vars)
   }
 
-  watchPostEffect(setVars)
+  onBeforeMount(() => {
+    watchPostEffect(setVars)
+  })
 
   onMounted(() => {
     const ob = new MutationObserver(setVars)

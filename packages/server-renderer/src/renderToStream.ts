@@ -108,7 +108,7 @@ export function renderToNodeStream(
   input: App | VNode,
   context: SSRContext = {},
 ): Readable {
-  const stream: Readable = __NODE_JS__
+  const stream: Readable = __CJS__
     ? new (require('node:stream').Readable)({ read() {} })
     : null
 
@@ -125,9 +125,9 @@ export function renderToNodeStream(
 
 export function pipeToNodeWritable(
   input: App | VNode,
-  context: SSRContext = {},
+  context: SSRContext | undefined = {},
   writable: Writable,
-) {
+): void {
   renderToSimpleStream(input, context, {
     push(content) {
       if (content != null) {
@@ -181,7 +181,7 @@ export function renderToWebStream(
 
 export function pipeToWebWritable(
   input: App | VNode,
-  context: SSRContext = {},
+  context: SSRContext | undefined = {},
   writable: WritableStream,
 ): void {
   const writer = writable.getWriter()
@@ -206,6 +206,7 @@ export function pipeToWebWritable(
     },
     destroy(err) {
       // TODO better error handling?
+      // eslint-disable-next-line no-console
       console.log(err)
       writer.close()
     },
