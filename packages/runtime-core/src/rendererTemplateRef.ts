@@ -68,15 +68,17 @@ export function setRef(
       ? () => false
       : (key: string) => {
           if (!hasOwn(setupState, key)) return false
-          if (!__DEV__) return true
-          if (
-            setupState.__v__setupResult &&
-            // @ts-expect-error
-            setupState.__v__setupResult[ref] &&
-            // @ts-expect-error
-            setupState.__v__setupResult[ref].__v__TemplateRef
-          ) {
-            return false
+          if (__DEV__) {
+            if (
+              setupState.__v__setupResult &&
+              // @ts-expect-error
+              setupState.__v__setupResult[ref] &&
+              // @ts-expect-error
+              setupState.__v__setupResult[ref].__v__TemplateRef
+            ) {
+              return false
+            }
+            return true
           }
           return true
         }
