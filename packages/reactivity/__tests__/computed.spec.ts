@@ -1,4 +1,6 @@
 import {
+  type TestElement,
+  defineComponent,
   h,
   nextTick,
   nodeOps,
@@ -6,6 +8,7 @@ import {
   onUnmounted,
   render,
   serializeInner,
+  triggerEvent,
 } from '@vue/runtime-test'
 import {
   type DebuggerEvent,
@@ -31,6 +34,20 @@ describe('reactivity/computed', () => {
     expect(cValue.value).toBe(undefined)
     value.foo = 1
     expect(cValue.value).toBe(1)
+  })
+
+  it('pass oldValue to computed getter', () => {
+    const count = ref(0)
+    const oldValue = ref()
+    const curValue = computed(pre => {
+      oldValue.value = pre
+      return count.value
+    })
+    expect(curValue.value).toBe(0)
+    expect(oldValue.value).toBe(undefined)
+    count.value++
+    expect(curValue.value).toBe(1)
+    expect(oldValue.value).toBe(0)
   })
 
   it('should compute lazily', () => {
@@ -577,7 +594,7 @@ describe('reactivity/computed', () => {
 
     v.value += ' World'
     await nextTick()
-    expect(serializeInner(root)).toBe('Hello World World World')
+    expect(serializeInner(root)).toBe('Hello World World World World')
     // expect(COMPUTED_SIDE_EFFECT_WARN).toHaveBeenWarned()
   })
 
@@ -875,7 +892,7 @@ describe('reactivity/computed', () => {
     v.value += ' World'
     await nextTick()
     expect(serializeInner(root)).toBe(
-      'Hello World World World | Hello World World World',
+      'Hello World World World World | Hello World World World World',
     )
   })
 
@@ -943,5 +960,48 @@ describe('reactivity/computed', () => {
       oldValue: 1,
       newValue: 2,
     })
+  })
+
+  // #11797
+  test('should prevent endless recursion in self-referencing computed getters', async () => {
+    const Comp = defineComponent({
+      data() {
+        return {
+          counter: 0,
+        }
+      },
+
+      computed: {
+        message(): string {
+          if (this.counter === 0) {
+            this.counter++
+            return this.message
+          } else {
+            return `Step ${this.counter}`
+          }
+        },
+      },
+
+      render() {
+        return [
+          h(
+            'button',
+            {
+              onClick: () => {
+                this.counter++
+              },
+            },
+            'Step',
+          ),
+          h('p', this.message),
+        ]
+      },
+    })
+    const root = nodeOps.createElement('div')
+    render(h(Comp), root)
+    expect(serializeInner(root)).toBe(`<button>Step</button><p>Step 1</p>`)
+    triggerEvent(root.children[1] as TestElement, 'click')
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<button>Step</button><p>Step 2</p>`)
   })
 })
