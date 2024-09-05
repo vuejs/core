@@ -63,12 +63,18 @@ export function setRef(
   const oldRef = oldRawRef && (oldRawRef as VNodeNormalizedRefAtom).r
   const refs = owner.refs === EMPTY_OBJ ? (owner.refs = {}) : owner.refs
   const setupState = owner.setupState
+  const canSetSetupRef =
+    setupState === EMPTY_OBJ
+      ? () => false
+      : (key: string) =>
+          hasOwn(setupState, key) &&
+          !(Object.getOwnPropertyDescriptor(refs, key) || EMPTY_OBJ).get
 
   // dynamic ref changed. unset old ref
   if (oldRef != null && oldRef !== ref) {
     if (isString(oldRef)) {
       refs[oldRef] = null
-      if (hasOwn(setupState, oldRef)) {
+      if (canSetSetupRef(oldRef)) {
         setupState[oldRef] = null
       }
     } else if (isRef(oldRef)) {
@@ -81,11 +87,12 @@ export function setRef(
   } else {
     const _isString = isString(ref)
     const _isRef = isRef(ref)
+
     if (_isString || _isRef) {
       const doSet = () => {
         if (rawRef.f) {
           const existing = _isString
-            ? hasOwn(setupState, ref)
+            ? canSetSetupRef(ref)
               ? setupState[ref]
               : refs[ref]
             : ref.value
@@ -95,7 +102,7 @@ export function setRef(
             if (!isArray(existing)) {
               if (_isString) {
                 refs[ref] = [refValue]
-                if (hasOwn(setupState, ref)) {
+                if (canSetSetupRef(ref)) {
                   setupState[ref] = refs[ref]
                 }
               } else {
@@ -108,7 +115,7 @@ export function setRef(
           }
         } else if (_isString) {
           refs[ref] = value
-          if (hasOwn(setupState, ref)) {
+          if (canSetSetupRef(ref)) {
             setupState[ref] = value
           }
         } else if (_isRef) {
