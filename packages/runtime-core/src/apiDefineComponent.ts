@@ -134,6 +134,9 @@ export type DefineSetupFnComponent<
   S
 >
 
+type ToResolvedProps<Props, Emits extends EmitsOptions> = Readonly<Props> &
+  Readonly<EmitsToProps<Emits>>
+
 // defineComponent is a utility that is primarily used for type inference
 // when declaring components. Type inference is provided in the component
 // options (provided as the argument). The returned value has artificial types
@@ -210,8 +213,6 @@ export function defineComponent<
         : ExtractPropTypes<RuntimePropsOptions>
       : { [key in RuntimePropsKeys]?: any }
     : TypeProps,
-  ResolvedProps = Readonly<InferredProps> &
-    Readonly<EmitsToProps<ResolvedEmits>>,
   TypeRefs extends Record<string, unknown> = {},
 >(
   options: {
@@ -229,7 +230,7 @@ export function defineComponent<
      */
     __typeRefs?: TypeRefs
   } & ComponentOptionsBase<
-    ResolvedProps,
+    ToResolvedProps<InferredProps, ResolvedEmits>,
     SetupBindings,
     Data,
     Computed,
@@ -249,7 +250,7 @@ export function defineComponent<
   > &
     ThisType<
       CreateComponentPublicInstanceWithMixins<
-        ResolvedProps,
+        ToResolvedProps<InferredProps, ResolvedEmits>,
         SetupBindings,
         Data,
         Computed,
@@ -278,7 +279,7 @@ export function defineComponent<
   ResolvedEmits,
   RuntimeEmitsKeys,
   PublicProps,
-  ResolvedProps,
+  ToResolvedProps<InferredProps, ResolvedEmits>,
   ExtractDefaultPropTypes<RuntimePropsOptions>,
   Slots,
   LocalComponents,
