@@ -14,13 +14,14 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Install pnpm
-        uses: pnpm/action-setup@v2
+        uses: pnpm/action-setup@v4.0.0
 
-      - name: Set node version to 18
+      - name: Install Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 18
-          cache: pnpm
+          node-version-file: '.node-version'
+          registry-url: 'https://registry.npmjs.org'
+          cache: 'pnpm'
 
       - run: pnpm install
 
@@ -30,4 +31,4 @@ jobs:
       - name: Run prettier
         run: pnpm run format
 
-      - uses: autofix-ci/action@ea32e3a12414e6d3183163c3424a7d7a8631ad84
+      - uses: autofix-ci/action@ff86a557419858bb967097bfc916833f5647fa8c

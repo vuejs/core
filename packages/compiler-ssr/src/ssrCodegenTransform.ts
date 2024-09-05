@@ -1,9 +1,11 @@
 import {
   type BlockStatement,
   type CallExpression,
+  type CompilerError,
   type CompilerOptions,
   ElementTypes,
   type IfStatement,
+  type JSChildNode,
   NodeTypes,
   type RootNode,
   type TemplateChildNode,
@@ -33,7 +35,10 @@ import { SSRErrorCodes, createSSRCompilerError } from './errors'
 // transform pass to convert the template AST into a fresh JS AST before
 // passing it to codegen.
 
-export function ssrCodegenTransform(ast: RootNode, options: CompilerOptions) {
+export function ssrCodegenTransform(
+  ast: RootNode,
+  options: CompilerOptions,
+): void {
   const context = createSSRTransformContext(ast, options)
 
   // inject SFC <style> CSS variables
@@ -70,14 +75,24 @@ export function ssrCodegenTransform(ast: RootNode, options: CompilerOptions) {
   ast.helpers = new Set(Array.from(ast.helpers).filter(h => !(h in ssrHelpers)))
 }
 
-export type SSRTransformContext = ReturnType<typeof createSSRTransformContext>
+export interface SSRTransformContext {
+  root: RootNode
+  options: CompilerOptions
+  body: (JSChildNode | IfStatement)[]
+  helpers: Set<symbol>
+  withSlotScopeId: boolean
+  onError: (error: CompilerError) => void
+  helper<T extends symbol>(name: T): T
+  pushStringPart(part: TemplateLiteral['elements'][0]): void
+  pushStatement(statement: IfStatement | CallExpression): void
+}
 
 function createSSRTransformContext(
   root: RootNode,
   options: CompilerOptions,
   helpers: Set<symbol> = new Set(),
   withSlotScopeId = false,
-) {
+): SSRTransformContext {
   const body: BlockStatement['body'] = []
   let currentString: TemplateLiteral | null = null
 
@@ -96,7 +111,7 @@ function createSSRTransformContext(
       helpers.add(name)
       return name
     },
-    pushStringPart(part: TemplateLiteral['elements'][0]) {
+    pushStringPart(part) {
       if (!currentString) {
         const currentCall = createCallExpression(`_push`)
         body.push(currentCall)
@@ -111,7 +126,7 @@ function createSSRTransformContext(
         bufferedElements.push(part)
       }
     },
-    pushStatement(statement: IfStatement | CallExpression) {
+    pushStatement(statement) {
       // close current string
       currentString = null
       body.push(statement)
@@ -141,7 +156,8 @@ export function processChildren(
   context: SSRTransformContext,
   asFragment = false,
   disableNestedFragments = false,
-) {
+  disableCommentAsIfAlternate = false,
+): void {
   if (asFragment) {
     context.pushStringPart(`<!--[-->`)
   }
@@ -191,7 +207,12 @@ export function processChildren(
         )
         break
       case NodeTypes.IF:
-        ssrProcessIf(child, context, disableNestedFragments)
+        ssrProcessIf(
+          child,
+          context,
+          disableNestedFragments,
+          disableCommentAsIfAlternate,
+        )
         break
       case NodeTypes.FOR:
         ssrProcessFor(child, context, disableNestedFragments)
@@ -225,7 +246,7 @@ export function processChildrenAsStatement(
   parent: Container,
   parentContext: SSRTransformContext,
   asFragment = false,
-  withSlotScopeId = parentContext.withSlotScopeId,
+  withSlotScopeId: boolean = parentContext.withSlotScopeId,
 ): BlockStatement {
   const childContext = createChildContext(parentContext, withSlotScopeId)
   processChildren(parent, childContext, asFragment)

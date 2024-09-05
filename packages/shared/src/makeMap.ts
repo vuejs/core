@@ -5,6 +5,8 @@
  * \/\*#\_\_PURE\_\_\*\/
  * So that rollup can tree-shake them if necessary.
  */
+
+/*! #__NO_SIDE_EFFECTS__ */
 export function makeMap(
   str: string,
   expectsLowerCase?: boolean,

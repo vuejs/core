@@ -26,6 +26,7 @@ import {
   isCompatEnabled,
   warnDeprecation,
 } from './compat/compatConfig'
+import { shallowReadonly } from '@vue/reactivity'
 
 /**
  * dev only flag to track whether $attrs was used during render.
@@ -34,7 +35,7 @@ import {
  */
 let accessedAttrs: boolean = false
 
-export function markAttrsAccessed() {
+export function markAttrsAccessed(): void {
   accessedAttrs = true
 }
 
@@ -48,22 +49,22 @@ export function renderComponentRoot(
     vnode,
     proxy,
     withProxy,
-    props,
     propsOptions: [propsOptions],
     slots,
     attrs,
     emit,
     render,
     renderCache,
+    props,
     data,
     setupState,
     ctx,
     inheritAttrs,
   } = instance
+  const prev = setCurrentRenderingInstance(instance)
 
   let result
   let fallthroughAttrs
-  const prev = setCurrentRenderingInstance(instance)
   if (__DEV__) {
     accessedAttrs = false
   }
@@ -93,7 +94,7 @@ export function renderComponentRoot(
           thisProxy,
           proxyToUse!,
           renderCache,
-          props,
+          __DEV__ ? shallowReadonly(props) : props,
           setupState,
           data,
           ctx,
@@ -110,19 +111,22 @@ export function renderComponentRoot(
       result = normalizeVNode(
         render.length > 1
           ? render(
-              props,
+              __DEV__ ? shallowReadonly(props) : props,
               __DEV__
                 ? {
                     get attrs() {
                       markAttrsAccessed()
-                      return attrs
+                      return shallowReadonly(attrs)
                     },
                     slots,
                     emit,
                   }
                 : { attrs, slots, emit },
             )
-          : render(props, null as any /* we know it doesn't need it */),
+          : render(
+              __DEV__ ? shallowReadonly(props) : props,
+              null as any /* we know it doesn't need it */,
+            ),
       )
       fallthroughAttrs = Component.props
         ? attrs
@@ -162,7 +166,7 @@ export function renderComponentRoot(
             propsOptions,
           )
         }
-        root = cloneVNode(root, fallthroughAttrs)
+        root = cloneVNode(root, fallthroughAttrs, false, true)
       } else if (__DEV__ && !accessedAttrs && root.type !== Comment) {
         const allAttrs = Object.keys(attrs)
         const eventAttrs: string[] = []
@@ -217,10 +221,15 @@ export function renderComponentRoot(
           getComponentName(instance.type),
         )
       }
-      root = cloneVNode(root, {
-        class: cls,
-        style: style,
-      })
+      root = cloneVNode(
+        root,
+        {
+          class: cls,
+          style: style,
+        },
+        false,
+        true,
+      )
     }
   }
 
@@ -233,7 +242,7 @@ export function renderComponentRoot(
       )
     }
     // clone before mutating since the root may be a hoisted vnode
-    root = cloneVNode(root)
+    root = cloneVNode(root, null, false, true)
     root.dirs = root.dirs ? root.dirs.concat(vnode.dirs) : vnode.dirs
   }
   // inherit transition data
@@ -266,10 +275,17 @@ export function renderComponentRoot(
 const getChildRoot = (vnode: VNode): [VNode, SetRootFn] => {
   const rawChildren = vnode.children as VNodeArrayChildren
   const dynamicChildren = vnode.dynamicChildren
-  const childRoot = filterSingleRoot(rawChildren)
+  const childRoot = filterSingleRoot(rawChildren, false)
   if (!childRoot) {
     return [vnode, undefined]
+  } else if (
+    __DEV__ &&
+    childRoot.patchFlag > 0 &&
+    childRoot.patchFlag & PatchFlags.DEV_ROOT_FRAGMENT
+  ) {
+    return getChildRoot(childRoot)
   }
+
   const index = rawChildren.indexOf(childRoot)
   const dynamicIndex = dynamicChildren ? dynamicChildren.indexOf(childRoot) : -1
   const setRoot: SetRootFn = (updatedRoot: VNode) => {
@@ -287,6 +303,7 @@ const getChildRoot = (vnode: VNode): [VNode, SetRootFn] => {
 
 export function filterSingleRoot(
   children: VNodeArrayChildren,
+  recurse = true,
 ): VNode | undefined {
   let singleRoot
   for (let i = 0; i < children.length; i++) {
@@ -299,6 +316,14 @@ export function filterSingleRoot(
           return
         } else {
           singleRoot = child
+          if (
+            __DEV__ &&
+            recurse &&
+            singleRoot.patchFlag > 0 &&
+            singleRoot.patchFlag & PatchFlags.DEV_ROOT_FRAGMENT
+          ) {
+            return filterSingleRoot(singleRoot.children as VNodeArrayChildren)
+          }
         }
       }
     } else {
@@ -427,8 +452,7 @@ function hasPropsChanged(
 export function updateHOCHostEl(
   { vnode, parent }: ComponentInternalInstance,
   el: typeof vnode.el, // HostNode
-) {
-  if (!el) return
+): void {
   while (parent) {
     const root = parent.subTree
     if (root.suspense && root.suspense.activeBranch === vnode) {

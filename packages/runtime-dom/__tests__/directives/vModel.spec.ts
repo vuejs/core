@@ -256,7 +256,13 @@ describe('vModel', () => {
   it('should support modifiers', async () => {
     const component = defineComponent({
       data() {
-        return { number: null, trim: null, lazy: null, trimNumber: null }
+        return {
+          number: null,
+          trim: null,
+          lazy: null,
+          trimNumber: null,
+          trimLazy: null,
+        }
       },
       render() {
         return [
@@ -282,6 +288,19 @@ describe('vModel', () => {
             this.trim,
             {
               trim: true,
+            },
+          ),
+          withVModel(
+            h('input', {
+              class: 'trim-lazy',
+              'onUpdate:modelValue': (val: any) => {
+                this.trimLazy = val
+              },
+            }),
+            this.trim,
+            {
+              trim: true,
+              lazy: true,
             },
           ),
           withVModel(
@@ -317,6 +336,7 @@ describe('vModel', () => {
     const number = root.querySelector('.number')
     const trim = root.querySelector('.trim')
     const trimNumber = root.querySelector('.trim-number')
+    const trimLazy = root.querySelector('.trim-lazy')
     const lazy = root.querySelector('.lazy')
     const data = root._vnode.component.data
 
@@ -339,6 +359,11 @@ describe('vModel', () => {
     triggerEvent('input', trimNumber)
     await nextTick()
     expect(data.trimNumber).toEqual(1.2)
+
+    trimLazy.value = '   ddd    '
+    triggerEvent('change', trimLazy)
+    await nextTick()
+    expect(data.trimLazy).toEqual('ddd')
 
     lazy.value = 'foo'
     triggerEvent('change', lazy)
@@ -704,6 +729,120 @@ describe('vModel', () => {
     expect(bar.checked).toEqual(false)
   })
 
+  it('should not update DOM unnecessarily', async () => {
+    const component = defineComponent({
+      data() {
+        return { value: true }
+      },
+      render() {
+        return [
+          withVModel(
+            h('input', {
+              type: 'checkbox',
+              'onUpdate:modelValue': setValue.bind(this),
+            }),
+            this.value,
+          ),
+        ]
+      },
+    })
+    render(h(component), root)
+
+    const input = root.querySelector('input')
+    const data = root._vnode.component.data
+
+    const setCheckedSpy = vi.spyOn(input, 'checked', 'set')
+
+    // Trigger a change event without actually changing the value
+    triggerEvent('change', input)
+    await nextTick()
+    expect(data.value).toEqual(true)
+    expect(setCheckedSpy).not.toHaveBeenCalled()
+
+    // Change the value and trigger a change event
+    input.checked = false
+    triggerEvent('change', input)
+    await nextTick()
+    expect(data.value).toEqual(false)
+    expect(setCheckedSpy).toHaveBeenCalledTimes(1)
+
+    setCheckedSpy.mockClear()
+
+    data.value = false
+    await nextTick()
+    expect(input.checked).toEqual(false)
+    expect(setCheckedSpy).not.toHaveBeenCalled()
+
+    data.value = true
+    await nextTick()
+    expect(input.checked).toEqual(true)
+    expect(setCheckedSpy).toHaveBeenCalledTimes(1)
+  })
+
+  it('should handle array values correctly without unnecessary updates', async () => {
+    const component = defineComponent({
+      data() {
+        return { value: ['foo'] }
+      },
+      render() {
+        return [
+          withVModel(
+            h('input', {
+              type: 'checkbox',
+              value: 'foo',
+              'onUpdate:modelValue': setValue.bind(this),
+            }),
+            this.value,
+          ),
+          withVModel(
+            h('input', {
+              type: 'checkbox',
+              value: 'bar',
+              'onUpdate:modelValue': setValue.bind(this),
+            }),
+            this.value,
+          ),
+        ]
+      },
+    })
+    render(h(component), root)
+
+    const [foo, bar] = root.querySelectorAll('input')
+    const data = root._vnode.component.data
+
+    const setCheckedSpyFoo = vi.spyOn(foo, 'checked', 'set')
+    const setCheckedSpyBar = vi.spyOn(bar, 'checked', 'set')
+
+    expect(foo.checked).toEqual(true)
+    expect(bar.checked).toEqual(false)
+
+    triggerEvent('change', foo)
+    await nextTick()
+    expect(data.value).toEqual(['foo'])
+    expect(setCheckedSpyFoo).not.toHaveBeenCalled()
+
+    bar.checked = true
+    triggerEvent('change', bar)
+    await nextTick()
+    expect(data.value).toEqual(['foo', 'bar'])
+    expect(setCheckedSpyBar).toHaveBeenCalledTimes(1)
+
+    setCheckedSpyFoo.mockClear()
+    setCheckedSpyBar.mockClear()
+
+    data.value = ['foo', 'bar']
+    await nextTick()
+    expect(setCheckedSpyFoo).not.toHaveBeenCalled()
+    expect(setCheckedSpyBar).not.toHaveBeenCalled()
+
+    data.value = ['bar']
+    await nextTick()
+    expect(setCheckedSpyFoo).toHaveBeenCalledTimes(1)
+    expect(setCheckedSpyBar).not.toHaveBeenCalled()
+    expect(foo.checked).toEqual(false)
+    expect(bar.checked).toEqual(true)
+  })
+
   it('should work with radio', async () => {
     const component = defineComponent({
       data() {
@@ -1037,15 +1176,25 @@ describe('vModel', () => {
     await nextTick()
     expect(data.value).toMatchObject([fooValue, barValue])
 
+    // reset
     foo.selected = false
     bar.selected = false
+    triggerEvent('change', input)
+    await nextTick()
+    expect(data.value).toMatchObject([])
+
     data.value = [fooValue, barValue]
     await nextTick()
     expect(foo.selected).toEqual(true)
     expect(bar.selected).toEqual(true)
 
+    // reset
     foo.selected = false
     bar.selected = false
+    triggerEvent('change', input)
+    await nextTick()
+    expect(data.value).toMatchObject([])
+
     data.value = [{ foo: 1 }, { bar: 1 }]
     await nextTick()
     // looseEqual
@@ -1226,5 +1375,74 @@ describe('vModel', () => {
     triggerEvent('compositionend', input)
     await nextTick()
     expect(data.value).toEqual('使用拼音输入')
+  })
+
+  it('multiple select (model is number, option value is string)', async () => {
+    const component = defineComponent({
+      data() {
+        return {
+          value: [1, 2],
+        }
+      },
+      render() {
+        return [
+          withVModel(
+            h(
+              'select',
+              {
+                multiple: true,
+                'onUpdate:modelValue': setValue.bind(this),
+              },
+              [h('option', { value: '1' }), h('option', { value: '2' })],
+            ),
+            this.value,
+          ),
+        ]
+      },
+    })
+    render(h(component), root)
+
+    await nextTick()
+    const [foo, bar] = root.querySelectorAll('option')
+
+    expect(foo.selected).toEqual(true)
+    expect(bar.selected).toEqual(true)
+  })
+
+  // #10503
+  test('equal value with a leading 0 should trigger update.', async () => {
+    const setNum = function (this: any, value: any) {
+      this.num = value
+    }
+    const component = defineComponent({
+      data() {
+        return { num: 0 }
+      },
+      render() {
+        return [
+          withVModel(
+            h('input', {
+              id: 'input_num1',
+              type: 'number',
+              'onUpdate:modelValue': setNum.bind(this),
+            }),
+            this.num,
+          ),
+        ]
+      },
+    })
+
+    render(h(component), root)
+    const data = root._vnode.component.data
+
+    const inputNum1 = root.querySelector('#input_num1')!
+    expect(inputNum1.value).toBe('0')
+
+    inputNum1.value = '01'
+    triggerEvent('input', inputNum1)
+    await nextTick()
+    expect(data.num).toBe(1)
+
+    expect(inputNum1.value).toBe('1')
   })
 })
