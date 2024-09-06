@@ -65,15 +65,12 @@ export function setRef(
   const refs = owner.refs === EMPTY_OBJ ? (owner.refs = {}) : owner.refs
   const setupState = owner.setupState
   const rawSetupState = toRaw(setupState)
-  const canSetSetupRef =
-    setupState === EMPTY_OBJ
-      ? () => false
-      : (key: string) => {
-          if (__DEV__ && knownTemplateRefs.has(rawSetupState[key] as any)) {
-            return false
-          }
-          return hasOwn(rawSetupState, key)
-        }
+ const canSetSetupRef = (key: string) => {
+    if (__DEV__ && knownTemplateRefs.has(rawSetupState[key] as any)) {
+      return false
+    }
+    return setupState !== EMPTY_OBJ && hasOwn(rawSetupState, key)
+  }
 
   // dynamic ref changed. unset old ref
   if (oldRef != null && oldRef !== ref) {
