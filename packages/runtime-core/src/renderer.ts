@@ -1330,7 +1330,10 @@ function baseCreateRenderer(
             }
           }
 
-          if (isAsyncWrapperVNode) {
+          if (
+            isAsyncWrapperVNode &&
+            (type as ComponentOptions).__asyncHydrate
+          ) {
             ;(type as ComponentOptions).__asyncHydrate!(
               el as Element,
               instance,
