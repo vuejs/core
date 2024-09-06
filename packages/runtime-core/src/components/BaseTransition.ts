@@ -227,7 +227,6 @@ const BaseTransitionImpl: ComponentOptions = {
             if (!(instance.job.flags! & SchedulerJobFlags.DISPOSED)) {
               instance.update()
             }
-            delete leavingHooks.afterLeave
           }
           return emptyPlaceholder(child)
         } else if (mode === 'in-out' && innerChild.type !== Comment) {
