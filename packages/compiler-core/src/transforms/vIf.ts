@@ -31,13 +31,31 @@ import { ErrorCodes, createCompilerError } from '../errors'
 import { processExpression } from './transformExpression'
 import { validateBrowserExpression } from '../validateExpression'
 import { CREATE_COMMENT, FRAGMENT } from '../runtimeHelpers'
-import { findDir, findProp, getMemoedVNodeCall, injectProp } from '../utils'
+import {
+  findDir,
+  findProp,
+  getMemoedVNodeCall,
+  injectProp,
+  isTemplateNode,
+} from '../utils'
 import { PatchFlagNames, PatchFlags } from '@vue/shared'
 
 export const transformIf: NodeTransform = createStructuralDirectiveTransform(
   /^(if|else|else-if)$/,
   (node, dir, context) => {
     return processIf(node, dir, context, (ifNode, branch, isRoot) => {
+      const isTemplate = isTemplateNode(node)
+      if ((__DEV__ || !__BROWSER__) && isTemplate) {
+        const keyProp = findProp(node, `key`, false, true)
+        if (keyProp) {
+          context.onError(
+            createCompilerError(
+              ErrorCodes.X_V_IF_TEMPLATE_USER_DEFINED_KEY,
+              keyProp.loc,
+            ),
+          )
+        }
+      }
       // #1587: We need to dynamically increment the key based on the current
       // node's sibling nodes, since chained v-if/else branches are
       // rendered at the same depth
