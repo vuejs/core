@@ -27,6 +27,7 @@ import {
   warnDeprecation,
 } from './compat/compatConfig'
 import { shallowReadonly } from '@vue/reactivity'
+import { setTransitionHooks } from './components/BaseTransition'
 
 /**
  * dev only flag to track whether $attrs was used during render.
@@ -60,7 +61,6 @@ export function renderComponentRoot(
     setupState,
     ctx,
     inheritAttrs,
-    isMounted,
   } = instance
   const prev = setCurrentRenderingInstance(instance)
 
@@ -254,9 +254,7 @@ export function renderComponentRoot(
           `that cannot be animated.`,
       )
     }
-    root.transition = isMounted
-      ? vnode.component!.subTree.transition!
-      : vnode.transition
+    setTransitionHooks(root, vnode.transition)
   }
 
   if (__DEV__ && setRoot) {
