@@ -111,9 +111,9 @@ export class ComputedRefImpl<T = any> implements Subscriber {
    * @internal
    */
   notify(): void {
-    this.flags |= EffectFlags.DIRTY
     // avoid infinite self recursion
     if (activeSub !== this) {
+      this.flags |= EffectFlags.DIRTY
       this.dep.notify()
     } else if (__DEV__) {
       // TODO warn
