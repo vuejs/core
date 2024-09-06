@@ -303,19 +303,35 @@ describe('reactivity/reactive/Array', () => {
       const a2 = reactive([{ val: 3 }])
       const a3 = [4, 5]
 
-      let result = computed(() => a1.concat(a2, a3))
-      expect(result.value).toStrictEqual([1, { val: 2 }, { val: 3 }, 4, 5])
+      let result = computed(() => a1.concat(a2, a3, 6, { val: 7 }))
+      expect(result.value).toStrictEqual([
+        1,
+        { val: 2 },
+        { val: 3 },
+        4,
+        5,
+        6,
+        { val: 7 },
+      ])
       expect(isReactive(result.value[1])).toBe(false)
       expect(isReactive(result.value[2])).toBe(true)
+      expect(isReactive(result.value[6])).toBe(false)
 
       a1.shift()
-      expect(result.value).toStrictEqual([{ val: 2 }, { val: 3 }, 4, 5])
+      expect(result.value).toStrictEqual([
+        { val: 2 },
+        { val: 3 },
+        4,
+        5,
+        6,
+        { val: 7 },
+      ])
 
       a2.pop()
-      expect(result.value).toStrictEqual([{ val: 2 }, 4, 5])
+      expect(result.value).toStrictEqual([{ val: 2 }, 4, 5, 6, { val: 7 }])
 
       a3.pop()
-      expect(result.value).toStrictEqual([{ val: 2 }, 4, 5])
+      expect(result.value).toStrictEqual([{ val: 2 }, 4, 5, 6, { val: 7 }])
     })
 
     test('entries', () => {
@@ -724,6 +740,27 @@ describe('reactivity/reactive/Array', () => {
       expect(state.things.forEach('foo', 'bar', 'baz')).toBeUndefined()
       expect(state.things.map('foo', 'bar', 'baz')).toEqual(['1', '2', '3'])
       expect(state.things.some('foo', 'bar', 'baz')).toBe(true)
+
+      {
+        class Collection extends Array {
+          find(matcher: any) {
+            return super.find(matcher)
+          }
+        }
+
+        const state = reactive({
+          // @ts-expect-error
+          things: new Collection({ foo: '' }),
+        })
+
+        const bar = computed(() => {
+          return state.things.find((obj: any) => obj.foo === 'bar')
+        })
+        bar.value
+        state.things[0].foo = 'bar'
+
+        expect(bar.value).toEqual({ foo: 'bar' })
+      }
     })
   })
 })

@@ -17,8 +17,8 @@ import {
 import { V_ON_WITH_KEYS, V_ON_WITH_MODIFIERS } from '../runtimeHelpers'
 import { capitalize, makeMap } from '@vue/shared'
 
-const isEventOptionModifier = /*#__PURE__*/ makeMap(`passive,once,capture`)
-const isNonKeyModifier = /*#__PURE__*/ makeMap(
+const isEventOptionModifier = /*@__PURE__*/ makeMap(`passive,once,capture`)
+const isNonKeyModifier = /*@__PURE__*/ makeMap(
   // event propagation management
   `stop,prevent,self,` +
     // system modifiers + exact
@@ -27,15 +27,15 @@ const isNonKeyModifier = /*#__PURE__*/ makeMap(
     `middle`,
 )
 // left & right could be mouse or key modifiers based on event type
-const maybeKeyModifier = /*#__PURE__*/ makeMap('left,right')
-const isKeyboardEvent = /*#__PURE__*/ makeMap(
+const maybeKeyModifier = /*@__PURE__*/ makeMap('left,right')
+const isKeyboardEvent = /*@__PURE__*/ makeMap(
   `onkeyup,onkeydown,onkeypress`,
   true,
 )
 
 const resolveModifiers = (
   key: ExpressionNode,
-  modifiers: string[],
+  modifiers: SimpleExpressionNode[],
   context: TransformContext,
   loc: SourceLocation,
 ) => {
@@ -44,7 +44,7 @@ const resolveModifiers = (
   const eventOptionModifiers = []
 
   for (let i = 0; i < modifiers.length; i++) {
-    const modifier = modifiers[i]
+    const modifier = modifiers[i].content
 
     if (
       __COMPAT__ &&

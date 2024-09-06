@@ -2021,6 +2021,26 @@ describe('SSR hydration', () => {
       app.mount(container)
       expect(`Hydration style mismatch`).not.toHaveBeenWarned()
     })
+
+    test('escape css var name', () => {
+      const container = document.createElement('div')
+      container.innerHTML = `<div style="padding: 4px;--foo\\.bar:red;"></div>`
+      const app = createSSRApp({
+        setup() {
+          useCssVars(() => ({
+            'foo.bar': 'red',
+          }))
+          return () => h(Child)
+        },
+      })
+      const Child = {
+        setup() {
+          return () => h('div', { style: 'padding: 4px' })
+        },
+      }
+      app.mount(container)
+      expect(`Hydration style mismatch`).not.toHaveBeenWarned()
+    })
   })
 
   describe('data-allow-mismatch', () => {

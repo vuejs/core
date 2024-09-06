@@ -2162,6 +2162,66 @@ describe('e2e: Transition', () => {
       },
       E2E_TIMEOUT,
     )
+
+    // #11806
+    test(
+      'switch between Async and Sync child when transition is not finished',
+      async () => {
+        await page().evaluate(() => {
+          const { createApp, shallowRef, h, nextTick } = (window as any).Vue
+          createApp({
+            template: `
+            <div id="container">
+              <Transition mode="out-in">
+                <Suspense>
+                  <component :is="view"/>
+                </Suspense>
+              </Transition>
+            </div>
+            <button id="toggleBtn" @click="click">button</button>
+          `,
+            setup: () => {
+              const view = shallowRef('SyncB')
+              const click = async () => {
+                view.value = 'SyncA'
+                await nextTick()
+                view.value = 'AsyncB'
+                await nextTick()
+                view.value = 'SyncB'
+              }
+              return { view, click }
+            },
+            components: {
+              SyncA: {
+                setup() {
+                  return () => h('div', 'SyncA')
+                },
+              },
+              AsyncB: {
+                async setup() {
+                  await nextTick()
+                  return () => h('div', 'AsyncB')
+                },
+              },
+              SyncB: {
+                setup() {
+                  return () => h('div', 'SyncB')
+                },
+              },
+            },
+          }).mount('#app')
+        })
+
+        expect(await html('#container')).toBe('<div>SyncB</div>')
+
+        await click('#toggleBtn')
+        await nextFrame()
+        await transitionFinish()
+        await transitionFinish()
+        expect(await html('#container')).toBe('<div class="">SyncB</div>')
+      },
+      E2E_TIMEOUT,
+    )
   })
 
   describe('transition with Teleport', () => {
