@@ -1331,10 +1331,13 @@ function baseCreateRenderer(
 
           if (
             isAsyncWrapperVNode &&
-            '__asyncHydrate' in type &&
-            type.__asyncHydrate
+            (type as ComponentOptions).__asyncHydrate
           ) {
-            type.__asyncHydrate(el as Element, instance, hydrateSubTree)
+            ;(type as ComponentOptions).__asyncHydrate!(
+              el as Element,
+              instance,
+              hydrateSubTree,
+            )
           } else {
             hydrateSubTree()
           }
