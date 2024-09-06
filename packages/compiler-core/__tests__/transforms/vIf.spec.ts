@@ -1,6 +1,7 @@
 import { baseParse as parse } from '../../src/parser'
 import { transform } from '../../src/transform'
 import { transformIf } from '../../src/transforms/vIf'
+import { transformOnce } from '../../src/transforms/vOnce'
 import { transformElement } from '../../src/transforms/transformElement'
 import { transformSlotOutlet } from '../../src/transforms/transformSlotOutlet'
 import {
@@ -35,7 +36,12 @@ function parseWithIfTransform(
 ) {
   const ast = parse(template, options)
   transform(ast, {
-    nodeTransforms: [transformIf, transformSlotOutlet, transformElement],
+    nodeTransforms: [
+      transformOnce,
+      transformIf,
+      transformSlotOutlet,
+      transformElement,
+    ],
     ...options,
   })
   if (!options.onError) {
@@ -421,6 +427,19 @@ describe('compiler: v-if', () => {
         type: NodeTypes.JS_CALL_EXPRESSION,
         callee: RENDER_SLOT,
         arguments: ['$slots', '"default"', createObjectMatcher({ key: `[0]` })],
+      })
+      expect(generate(root).code).toMatchSnapshot()
+    })
+
+    test('template v-if w/ v-once', () => {
+      const {
+        root,
+        node: { codegenNode },
+      } = parseWithIfTransform(
+        `<template v-if="true"><p v-once>foo</p></template>`,
+      )
+      expect(codegenNode.consequent).toMatchObject({
+        type: NodeTypes.JS_CACHE_EXPRESSION,
       })
       expect(generate(root).code).toMatchSnapshot()
     })
