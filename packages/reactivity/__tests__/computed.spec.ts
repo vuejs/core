@@ -996,11 +996,62 @@ describe('reactivity/computed', () => {
         ]
       },
     })
+
     const root = nodeOps.createElement('div')
     render(h(Comp), root)
     expect(serializeInner(root)).toBe(`<button>Step</button><p></p>`)
     triggerEvent(root.children[1] as TestElement, 'click')
     await nextTick()
     expect(serializeInner(root)).toBe(`<button>Step</button><p>Step 2</p>`)
+  })
+
+  test('accessing properties on reactive objects in computed getters should not refresh the entire getter', async () => {
+    let counter = 0
+
+    const Comp = defineComponent({
+      data() {
+        return {
+          counter: null as number | null,
+        }
+      },
+
+      computed: {
+        items() {
+          counter++
+          const item = reactive({ value: 1, foo: 'bar' })
+          // Simply accessing a property causes a recomputation of the entire
+          // `items` getter on vue 3.5.2 when `value` is changed in `onClick`
+          // later.
+          item.foo
+          return [item]
+        },
+      },
+
+      methods: {
+        onClick() {
+          this.items[0].value++ // Cause a refresh
+          this.counter = counter // force-update active counter
+        },
+      },
+
+      render() {
+        return [
+          h('button', { onClick: this.onClick }, 'Click'),
+          h('p', `items: ${JSON.stringify(this.items)}`),
+          h('p', `computed: ${(this.counter ??= counter)}`),
+        ]
+      },
+    })
+
+    const root = nodeOps.createElement('div')
+    render(h(Comp), root)
+    expect(serializeInner(root)).toBe(
+      `<button>Click</button><p>items: [{"value":1,"foo":"bar"}]</p><p>computed: 1</p>`,
+    )
+    triggerEvent(root.children[1] as TestElement, 'click')
+    await nextTick()
+    expect(serializeInner(root)).toBe(
+      `<button>Click</button><p>items: [{"value":2,"foo":"bar"}]</p><p>computed: 1</p>`,
+    )
   })
 })
