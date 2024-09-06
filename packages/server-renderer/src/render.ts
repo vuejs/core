@@ -35,6 +35,8 @@ const {
   setupComponent,
   renderComponentRoot,
   normalizeVNode,
+  pushWarningContext,
+  popWarningContext,
 } = ssrUtils
 
 export type SSRBuffer = SSRBufferItem[] & { hasAsync?: boolean }
@@ -91,8 +93,14 @@ export function renderComponentVNode(
   parentComponent: ComponentInternalInstance | null = null,
   slotScopeId?: string,
 ): SSRBuffer | Promise<SSRBuffer> {
-  const instance = createComponentInstance(vnode, parentComponent, null)
+  const instance = (vnode.component = createComponentInstance(
+    vnode,
+    parentComponent,
+    null,
+  ))
+  if (__DEV__) pushWarningContext(vnode)
   const res = setupComponent(instance, true /* isSSR */)
+  if (__DEV__) popWarningContext()
   const hasAsyncSetup = isPromise(res)
   let prefetches = instance.sp /* LifecycleHooks.SERVER_PREFETCH */
   if (hasAsyncSetup || prefetches) {
@@ -118,6 +126,7 @@ function renderComponentSubTree(
   instance: ComponentInternalInstance,
   slotScopeId?: string,
 ): SSRBuffer | Promise<SSRBuffer> {
+  if (__DEV__) pushWarningContext(instance.vnode)
   const comp = instance.type as Component
   const { getBuffer, push } = createBuffer()
   if (isFunction(comp)) {
@@ -207,6 +216,7 @@ function renderComponentSubTree(
       push(`<!---->`)
     }
   }
+  if (__DEV__) popWarningContext()
   return getBuffer()
 }
 
