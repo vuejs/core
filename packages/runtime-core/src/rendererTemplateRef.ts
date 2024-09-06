@@ -64,12 +64,12 @@ export function setRef(
   const oldRef = oldRawRef && (oldRawRef as VNodeNormalizedRefAtom).r
   const refs = owner.refs === EMPTY_OBJ ? (owner.refs = {}) : owner.refs
   const setupState = owner.setupState
-  const rawSetupState = toRaw(setupState)
   const canSetSetupRef = (key: string) => {
+    const rawSetupState = toRaw(setupState)
     if (__DEV__ && knownTemplateRefs.has(rawSetupState[key] as any)) {
       return false
     }
-    return setupState !== EMPTY_OBJ && hasOwn(rawSetupState, key)
+    return hasOwn(rawSetupState, key)
   }
 
   // dynamic ref changed. unset old ref
