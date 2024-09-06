@@ -709,7 +709,7 @@ function validateProp(
   }
 }
 
-const isSimpleType = /*#__PURE__*/ makeMap(
+const isSimpleType = /*@__PURE__*/ makeMap(
   'String,Number,Boolean,Function,Symbol,BigInt',
 )
 

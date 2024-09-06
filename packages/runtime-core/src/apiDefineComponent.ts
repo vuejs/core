@@ -68,6 +68,7 @@ export type DefineComponent<
   Provide extends ComponentProvideOptions = ComponentProvideOptions,
   MakeDefaultsOptional extends boolean = true,
   TypeRefs extends Record<string, unknown> = {},
+  TypeEl extends Element = any,
 > = ComponentPublicInstanceConstructor<
   CreateComponentPublicInstanceWithMixins<
     Props,
@@ -86,7 +87,8 @@ export type DefineComponent<
     LC & GlobalComponents,
     Directives & GlobalDirectives,
     Exposed,
-    TypeRefs
+    TypeRefs,
+    TypeEl
   >
 > &
   ComponentOptionsBase<
@@ -133,6 +135,9 @@ export type DefineSetupFnComponent<
   {},
   S
 >
+
+type ToResolvedProps<Props, Emits extends EmitsOptions> = Readonly<Props> &
+  Readonly<EmitsToProps<Emits>>
 
 // defineComponent is a utility that is primarily used for type inference
 // when declaring components. Type inference is provided in the component
@@ -212,8 +217,8 @@ export function defineComponent<
         : { [key in RuntimePropsKeys]?: any }
       : TypeProps
     : TypeProps,
-  ResolvedProps = Readonly<InferredProps & EmitsToProps<ResolvedEmits>>,
   TypeRefs extends Record<string, unknown> = {},
+  TypeEl extends Element = any,
 >(
   options: {
     props?: (RuntimePropsOptions & ThisType<void>) | RuntimePropsKeys[]
@@ -229,8 +234,12 @@ export function defineComponent<
      * @private for language-tools use only
      */
     __typeRefs?: TypeRefs
+    /**
+     * @private for language-tools use only
+     */
+    __typeEl?: TypeEl
   } & ComponentOptionsBase<
-    ResolvedProps,
+    ToResolvedProps<InferredProps, ResolvedEmits>,
     SetupBindings,
     Data,
     Computed,
@@ -250,7 +259,7 @@ export function defineComponent<
   > &
     ThisType<
       CreateComponentPublicInstanceWithMixins<
-        ResolvedProps,
+        ToResolvedProps<InferredProps, ResolvedEmits>,
         SetupBindings,
         Data,
         Computed,
@@ -279,7 +288,7 @@ export function defineComponent<
   ResolvedEmits,
   RuntimeEmitsKeys,
   PublicProps,
-  ResolvedProps,
+  ToResolvedProps<InferredProps, ResolvedEmits>,
   ExtractDefaultPropTypes<RuntimePropsOptions>,
   Slots,
   LocalComponents,
@@ -289,7 +298,8 @@ export function defineComponent<
   // MakeDefaultsOptional - if TypeProps is provided, set to false to use
   // user props types verbatim
   unknown extends TypeProps ? true : false,
-  TypeRefs
+  TypeRefs,
+  TypeEl
 >
 
 // implementation, close to no-op
@@ -299,9 +309,9 @@ export function defineComponent(
   extraOptions?: ComponentOptions,
 ) {
   return isFunction(options)
-    ? // #8326: extend call and options.name access are considered side-effects
+    ? // #8236: extend call and options.name access are considered side-effects
       // by Rollup, so we have to wrap it in a pure-annotated IIFE.
-      /*#__PURE__*/ (() =>
+      /*@__PURE__*/ (() =>
         extend({ name: options.name }, extraOptions, { setup: options }))()
     : options
 }

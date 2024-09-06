@@ -227,6 +227,19 @@ describe('withDefaults w/ boolean type', () => {
   expectType<boolean | undefined>(res2.bool)
 })
 
+describe('withDefaults w/ defineProp type is different from the defaults type', () => {
+  const res1 = withDefaults(
+    defineProps<{
+      bool?: boolean
+    }>(),
+    { bool: false, value: false },
+  )
+  expectType<boolean>(res1.bool)
+
+  // @ts-expect-error
+  res1.value
+})
+
 describe('defineProps w/ runtime declaration', () => {
   // runtime declaration
   const props = defineProps({
@@ -414,6 +427,51 @@ describe('defineModel', () => {
   defineModel<string>({ default: 123 })
   // @ts-expect-error unknown props option
   defineModel({ foo: 123 })
+
+  // unrelated getter and setter types
+  {
+    const modelVal = defineModel({
+      get(_: string[]): string {
+        return ''
+      },
+      set(_: number) {
+        return 1
+      },
+    })
+    expectType<string | undefined>(modelVal.value)
+    modelVal.value = 1
+    modelVal.value = undefined
+    // @ts-expect-error
+    modelVal.value = 'foo'
+
+    const [modelVal2] = modelVal
+    expectType<string | undefined>(modelVal2.value)
+    modelVal2.value = 1
+    modelVal2.value = undefined
+    // @ts-expect-error
+    modelVal.value = 'foo'
+
+    const count = defineModel('count', {
+      get(_: string[]): string {
+        return ''
+      },
+      set(_: number) {
+        return ''
+      },
+    })
+    expectType<string | undefined>(count.value)
+    count.value = 1
+    count.value = undefined
+    // @ts-expect-error
+    count.value = 'foo'
+
+    const [count2] = count
+    expectType<string | undefined>(count2.value)
+    count2.value = 1
+    count2.value = undefined
+    // @ts-expect-error
+    count2.value = 'foo'
+  }
 })
 
 describe('useModel', () => {

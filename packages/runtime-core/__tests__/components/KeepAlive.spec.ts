@@ -1121,4 +1121,56 @@ describe('KeepAlive', () => {
     expect(mountedB).toHaveBeenCalledTimes(1)
     expect(unmountedB).toHaveBeenCalledTimes(0)
   })
+
+  // #11717
+  test('remove component from include then switching child', async () => {
+    const About = {
+      name: 'About',
+      render() {
+        return h('h1', 'About')
+      },
+    }
+    const mountedHome = vi.fn()
+    const unmountedHome = vi.fn()
+    const activatedHome = vi.fn()
+    const deactivatedHome = vi.fn()
+    const Home = {
+      name: 'Home',
+      setup() {
+        onMounted(mountedHome)
+        onUnmounted(unmountedHome)
+        onDeactivated(deactivatedHome)
+        onActivated(activatedHome)
+        return () => {
+          h('h1', 'Home')
+        }
+      },
+    }
+    const activeViewName = ref('Home')
+    const cacheList = reactive(['Home'])
+    const App = createApp({
+      setup() {
+        return () => {
+          return [
+            h(
+              KeepAlive,
+              {
+                include: cacheList,
+              },
+              [activeViewName.value === 'Home' ? h(Home) : h(About)],
+            ),
+          ]
+        }
+      },
+    })
+    App.mount(nodeOps.createElement('div'))
+    expect(mountedHome).toHaveBeenCalledTimes(1)
+    expect(activatedHome).toHaveBeenCalledTimes(1)
+    cacheList.splice(0, 1)
+    await nextTick()
+    activeViewName.value = 'About'
+    await nextTick()
+    expect(deactivatedHome).toHaveBeenCalledTimes(0)
+    expect(unmountedHome).toHaveBeenCalledTimes(1)
+  })
 })

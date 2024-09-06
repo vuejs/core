@@ -258,12 +258,10 @@ export function startBatch(): void {
  * @internal
  */
 export function endBatch(): void {
-  if (batchDepth > 1) {
-    batchDepth--
+  if (--batchDepth > 0) {
     return
   }
 
-  batchDepth--
   let error: unknown
   while (batchedEffect) {
     let e: ReactiveEffect | undefined = batchedEffect
@@ -383,7 +381,7 @@ export function refreshComputed(computed: ComputedRefImpl): false | undefined {
 
   try {
     prepareDeps(computed)
-    const value = computed.fn()
+    const value = computed.fn(computed._value)
     if (dep.version === 0 || hasChanged(value, computed._value)) {
       computed._value = value
       dep.version++
@@ -509,7 +507,7 @@ export function resetTracking(): void {
  * The cleanup function is called right before the next effect run, or when the
  * effect is stopped.
  *
- * Throws a warning iff there is no currenct active effect. The warning can be
+ * Throws a warning if there is no current active effect. The warning can be
  * suppressed by passing `true` to the second argument.
  *
  * @param fn - the cleanup function to be registered

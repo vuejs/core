@@ -42,19 +42,6 @@ export interface ElementWithTransition extends HTMLElement {
   [vtcKey]?: Set<string>
 }
 
-// DOM Transition is a higher-order-component based on the platform-agnostic
-// base Transition component, with DOM-specific logic.
-export const Transition: FunctionalComponent<TransitionProps> = (
-  props,
-  { slots },
-) => h(BaseTransition, resolveTransitionProps(props), slots)
-
-Transition.displayName = 'Transition'
-
-if (__COMPAT__) {
-  Transition.__isBuiltIn = true
-}
-
 const DOMTransitionPropsValidators = {
   name: String,
   type: String,
@@ -74,12 +61,33 @@ const DOMTransitionPropsValidators = {
   leaveToClass: String,
 }
 
-export const TransitionPropsValidators: any = (Transition.props =
-  /*#__PURE__*/ extend(
-    {},
-    BaseTransitionPropsValidators as any,
-    DOMTransitionPropsValidators,
-  ))
+export const TransitionPropsValidators: any = /*@__PURE__*/ extend(
+  {},
+  BaseTransitionPropsValidators as any,
+  DOMTransitionPropsValidators,
+)
+
+/**
+ * Wrap logic that attaches extra properties to Transition in a function
+ * so that it can be annotated as pure
+ */
+const decorate = (t: typeof Transition) => {
+  t.displayName = 'Transition'
+  t.props = TransitionPropsValidators
+  if (__COMPAT__) {
+    t.__isBuiltIn = true
+  }
+  return t
+}
+
+/**
+ * DOM Transition is a higher-order-component based on the platform-agnostic
+ * base Transition component, with DOM-specific logic.
+ */
+export const Transition: FunctionalComponent<TransitionProps> =
+  /*@__PURE__*/ decorate((props, { slots }) =>
+    h(BaseTransition, resolveTransitionProps(props), slots),
+  )
 
 /**
  * #3227 Incoming hooks may be merged into arrays when wrapping Transition
@@ -397,7 +405,6 @@ export function getTransitionInfo(
   let type: CSSTransitionInfo['type'] = null
   let timeout = 0
   let propCount = 0
-  /* istanbul ignore if */
   if (expectedType === TRANSITION) {
     if (transitionTimeout > 0) {
       type = TRANSITION

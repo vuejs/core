@@ -53,12 +53,13 @@ export class EffectScope {
   pause(): void {
     if (this._active) {
       this._isPaused = true
+      let i, l
       if (this.scopes) {
-        for (let i = 0, l = this.scopes.length; i < l; i++) {
+        for (i = 0, l = this.scopes.length; i < l; i++) {
           this.scopes[i].pause()
         }
       }
-      for (let i = 0, l = this.effects.length; i < l; i++) {
+      for (i = 0, l = this.effects.length; i < l; i++) {
         this.effects[i].pause()
       }
     }
@@ -71,12 +72,13 @@ export class EffectScope {
     if (this._active) {
       if (this._isPaused) {
         this._isPaused = false
+        let i, l
         if (this.scopes) {
-          for (let i = 0, l = this.scopes.length; i < l; i++) {
+          for (i = 0, l = this.scopes.length; i < l; i++) {
             this.scopes[i].resume()
           }
         }
-        for (let i = 0, l = this.effects.length; i < l; i++) {
+        for (i = 0, l = this.effects.length; i < l; i++) {
           this.effects[i].resume()
         }
       }
