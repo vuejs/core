@@ -15,6 +15,7 @@ import {
 } from './vnode'
 import {
   type ComponentInternalInstance,
+  type ComponentOptions,
   type Data,
   type LifecycleHook,
   createComponentInstance,
