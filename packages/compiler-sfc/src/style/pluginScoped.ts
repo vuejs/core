@@ -1,4 +1,4 @@
-import type { AtRule, PluginCreator, Rule } from 'postcss'
+import { type AtRule, type PluginCreator, Rule } from 'postcss'
 import selectorParser from 'postcss-selector-parser'
 import { warn } from '../warn'
 
@@ -73,17 +73,33 @@ function processRule(id: string, rule: Rule) {
   processedRules.add(rule)
   rule.selector = selectorParser(selectorRoot => {
     selectorRoot.each(selector => {
-      rewriteSelector(id, selector, selectorRoot)
+      rewriteSelector(id, rule, selector, selectorRoot)
     })
   }).processSync(rule.selector)
 }
 
 function rewriteSelector(
   id: string,
+  rule: Rule,
   selector: selectorParser.Selector,
   selectorRoot: selectorParser.Root,
   slotted = false,
 ) {
+  if (rule.nodes.some(node => node.type === 'rule')) {
+    const decls = rule.nodes.filter(node => node.type === 'decl')
+    if (decls.length) {
+      for (const decl of decls) {
+        rule.removeChild(decl)
+      }
+      const hostRule = new Rule({
+        nodes: decls,
+        selector: '&',
+      })
+      rule.prepend(hostRule)
+    }
+    return
+  }
+
   let node: selectorParser.Node | null = null
   let shouldInject = true
   // find the last child node to insert attribute selector
@@ -147,7 +163,7 @@ function rewriteSelector(
       // instead.
       // ::v-slotted(.foo) -> .foo[xxxxxxx-s]
       if (value === ':slotted' || value === '::v-slotted') {
-        rewriteSelector(id, n.nodes[0], selectorRoot, true /* slotted */)
+        rewriteSelector(id, rule, n.nodes[0], selectorRoot, true /* slotted */)
         let last: selectorParser.Selector['nodes'][0] = n
         n.nodes[0].each(ss => {
           selector.insertAfter(last, ss)
@@ -210,7 +226,7 @@ function rewriteSelector(
     const { type, value } = node as selectorParser.Node
     if (type === 'pseudo' && (value === ':is' || value === ':where')) {
       ;(node as selectorParser.Pseudo).nodes.forEach(value =>
-        rewriteSelector(id, value, selectorRoot, slotted),
+        rewriteSelector(id, rule, value, selectorRoot, slotted),
       )
       shouldInject = false
     }
