@@ -614,24 +614,23 @@ describe('useModel', () => {
   })
 
   test('set no change value', async () => {
-    let changeChildMsg: (() => void) | null = null
+    let changeChildMsg!: (val: string) => void
 
-    const compRender = vi.fn()
+    const setValue = vi.fn()
     const Comp = defineComponent({
       props: ['msg'],
       emits: ['update:msg'],
       setup(props) {
         const childMsg = useModel(props, 'msg')
-        changeChildMsg = () => {
-          childMsg.value = childMsg.value
-        }
+        changeChildMsg = (val: string) => (childMsg.value = val)
         return () => {
           return childMsg.value
         }
       },
     })
 
-    const msg = ref('HI')
+    const defaultVal = 'defaultVal'
+    const msg = ref(defaultVal)
     const Parent = defineComponent({
       setup() {
         return () =>
@@ -639,7 +638,7 @@ describe('useModel', () => {
             msg: msg.value,
             'onUpdate:msg': val => {
               msg.value = val
-              compRender()
+              setValue()
             },
           })
       },
@@ -648,8 +647,106 @@ describe('useModel', () => {
     const root = nodeOps.createElement('div')
     render(h(Parent), root)
 
-    expect(compRender).toBeCalledTimes(0)
-    changeChildMsg!()
-    expect(compRender).toBeCalledTimes(0)
+    expect(setValue).toBeCalledTimes(0)
+
+    changeChildMsg(defaultVal)
+    expect(setValue).toBeCalledTimes(0)
+
+    changeChildMsg('changed')
+    changeChildMsg(defaultVal)
+    expect(setValue).toBeCalledTimes(2)
+    expect(msg.value).toBe(defaultVal)
+  })
+
+  // #11526
+  test('custom getter', () => {
+    let changeChildMsg!: (val: boolean) => void
+    const getter = (value: boolean) => !value
+
+    const Comp = defineComponent({
+      props: ['msg'],
+      emits: ['update:msg'],
+      setup(props) {
+        const childMsg = useModel(props, 'msg', {
+          get: getter,
+          set: value => !value,
+        })
+        changeChildMsg = (val: boolean) => (childMsg.value = val)
+        return () => {
+          return childMsg.value
+        }
+      },
+    })
+
+    const defaultVal = false
+    const msg = ref(defaultVal)
+    const Parent = defineComponent({
+      setup() {
+        return () =>
+          h(Comp, {
+            msg: msg.value,
+            'onUpdate:msg': val => {
+              msg.value = val
+            },
+          })
+      },
+    })
+
+    const root = nodeOps.createElement('div')
+    render(h(Parent), root)
+
+    changeChildMsg(!getter(msg.value))
+    expect(msg.value).toBe(true)
+
+    changeChildMsg(!getter(msg.value))
+    expect(msg.value).toBe(false)
+  })
+
+  // #11541
+  test('custom setter', () => {
+    let changeChildMsg!: (val: boolean) => void
+
+    const Comp = defineComponent({
+      props: ['msg'],
+      emits: ['update:msg'],
+      setup(props) {
+        const childMsg = useModel(props, 'msg', {
+          set: value => {
+            if (value === msg.value) {
+              return null
+            } else {
+              return value
+            }
+          },
+        })
+        changeChildMsg = (val: boolean) => (childMsg.value = val)
+        return () => {
+          return childMsg.value
+        }
+      },
+    })
+
+    const defaultVal = false
+    const msg = ref(defaultVal)
+    const Parent = defineComponent({
+      setup() {
+        return () =>
+          h(Comp, {
+            msg: msg.value,
+            'onUpdate:msg': val => {
+              msg.value = val
+            },
+          })
+      },
+    })
+
+    const root = nodeOps.createElement('div')
+    render(h(Parent), root)
+
+    changeChildMsg(true)
+    expect(msg.value).toBe(true)
+
+    changeChildMsg(true)
+    expect(msg.value).toBe(null)
   })
 })

@@ -6,19 +6,22 @@ import { spawn } from 'node:child_process'
 
 const require = createRequire(import.meta.url)
 
-export const targets = fs.readdirSync('packages').filter(f => {
-  if (
-    !fs.statSync(`packages/${f}`).isDirectory() ||
-    !fs.existsSync(`packages/${f}/package.json`)
-  ) {
-    return false
-  }
-  const pkg = require(`../packages/${f}/package.json`)
-  if (pkg.private && !pkg.buildOptions) {
-    return false
-  }
-  return true
-})
+export const targets = fs
+  .readdirSync('packages')
+  .filter(f => {
+    if (
+      !fs.statSync(`packages/${f}`).isDirectory() ||
+      !fs.existsSync(`packages/${f}/package.json`)
+    ) {
+      return false
+    }
+    const pkg = require(`../packages/${f}/package.json`)
+    if (pkg.private && !pkg.buildOptions) {
+      return false
+    }
+    return true
+  })
+  .concat('template-explorer')
 
 /**
  *
@@ -95,8 +98,17 @@ export async function exec(command, args, options) {
       const ok = code === 0
       const stderr = Buffer.concat(stderrChunks).toString().trim()
       const stdout = Buffer.concat(stdoutChunks).toString().trim()
-      const result = { ok, code, stderr, stdout }
-      resolve(result)
+
+      if (ok) {
+        const result = { ok, code, stderr, stdout }
+        resolve(result)
+      } else {
+        reject(
+          new Error(
+            `Failed to execute command: ${command} ${args.join(' ')}: ${stderr}`,
+          ),
+        )
+      }
     })
   })
 }

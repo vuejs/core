@@ -30,7 +30,7 @@ export function validateBrowserExpression(
   context: TransformContext,
   asParams = false,
   asRawStatements = false,
-) {
+): void {
   const exp = node.content
 
   // empty expressions are validated per-directive since some directives
