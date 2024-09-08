@@ -88,7 +88,7 @@ function processRule(id: string, rule: Rule) {
   }
   rule.selector = selectorParser(selectorRoot => {
     selectorRoot.each(selector => {
-      rewriteSelector(id, rule, selector, selectorRoot, false, deep)
+      rewriteSelector(id, rule, selector, selectorRoot, deep)
     })
   }).processSync(rule.selector)
 }
@@ -98,8 +98,8 @@ function rewriteSelector(
   rule: Rule,
   selector: selectorParser.Selector,
   selectorRoot: selectorParser.Root,
+  deep: boolean,
   slotted = false,
-  deep = false,
 ) {
   let node: selectorParser.Node | null = null
   let shouldInject = true
@@ -165,7 +165,14 @@ function rewriteSelector(
       // instead.
       // ::v-slotted(.foo) -> .foo[xxxxxxx-s]
       if (value === ':slotted' || value === '::v-slotted') {
-        rewriteSelector(id, rule, n.nodes[0], selectorRoot, true /* slotted */)
+        rewriteSelector(
+          id,
+          rule,
+          n.nodes[0],
+          selectorRoot,
+          deep,
+          true /* slotted */,
+        )
         let last: selectorParser.Selector['nodes'][0] = n
         n.nodes[0].each(ss => {
           selector.insertAfter(last, ss)
@@ -244,7 +251,7 @@ function rewriteSelector(
     const { type, value } = node as selectorParser.Node
     if (type === 'pseudo' && (value === ':is' || value === ':where')) {
       ;(node as selectorParser.Pseudo).nodes.forEach(value =>
-        rewriteSelector(id, rule, value, selectorRoot, slotted),
+        rewriteSelector(id, rule, value, selectorRoot, deep, slotted),
       )
       shouldInject = false
     }
