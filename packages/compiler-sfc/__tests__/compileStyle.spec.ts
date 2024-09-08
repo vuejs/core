@@ -101,6 +101,13 @@ describe('SFC scoped CSS', () => {
       ":where(.foo[data-v-test] .bar) { color: red;
       }"
     `)
+    expect(compileScoped(`:deep(.foo) { color: red; .bar { color: red; } }`))
+      .toMatchInlineSnapshot(`
+      "[data-v-test] .foo { color: red;
+      .bar { color: red;
+      }
+      }"
+    `)
   })
 
   test('::v-slotted', () => {
