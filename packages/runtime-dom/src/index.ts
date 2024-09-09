@@ -28,12 +28,15 @@ const rendererOptions = extend({ patchProp, forcePatchProp }, nodeOps)
 
 // lazy create the renderer - this makes core renderer logic tree-shakable
 // in case the user only imports reactivity utilities from Vue.
-let renderer: Renderer<Element> | HydrationRenderer
+let renderer: Renderer<Element | ShadowRoot> | HydrationRenderer
 
 let enabledHydration = false
 
 function ensureRenderer() {
-  return renderer || (renderer = createRenderer<Node, Element>(rendererOptions))
+  return (
+    renderer ||
+    (renderer = createRenderer<Node, Element | ShadowRoot>(rendererOptions))
+  )
 }
 
 function ensureHydrationRenderer() {
@@ -47,7 +50,7 @@ function ensureHydrationRenderer() {
 // use explicit type casts here to avoid import() calls in rolled-up d.ts
 export const render = ((...args) => {
   ensureRenderer().render(...args)
-}) as RootRenderFunction<Element>
+}) as RootRenderFunction<Element | ShadowRoot>
 
 export const hydrate = ((...args) => {
   ensureHydrationRenderer().hydrate(...args)
@@ -190,6 +193,13 @@ function normalizeContainer(
   }
   return container as any
 }
+
+// Custom element support
+export {
+  defineCustomElement,
+  defineSSRCustomElement,
+  VueElement
+} from './apiCustomElement'
 
 // SFC CSS utilities
 export { useCssModule } from './helpers/useCssModule'

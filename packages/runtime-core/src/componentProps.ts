@@ -29,7 +29,8 @@ import {
   ComponentInternalInstance,
   ComponentOptions,
   ConcreteComponent,
-  setCurrentInstance
+  setCurrentInstance,
+  unsetCurrentInstance
 } from './component'
 import { isEmitListener } from './componentEmits'
 import { InternalObjectKey } from './vnode'
@@ -411,7 +412,7 @@ function resolvePropValue(
               : null,
             props
           )
-          setCurrentInstance(null)
+          unsetCurrentInstance()
         }
       } else {
         value = defaultValue

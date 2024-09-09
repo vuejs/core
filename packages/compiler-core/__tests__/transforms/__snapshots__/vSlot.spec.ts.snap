@@ -15,14 +15,14 @@ return function render(_ctx, _cache) {
 `;
 
 exports[`compiler: transform component slots implicit default slot 1`] = `
-"const { createVNode: _createVNode, resolveComponent: _resolveComponent, withCtx: _withCtx, openBlock: _openBlock, createBlock: _createBlock } = Vue
+"const { createElementVNode: _createElementVNode, resolveComponent: _resolveComponent, withCtx: _withCtx, openBlock: _openBlock, createBlock: _createBlock } = Vue
 
 return function render(_ctx, _cache) {
   const _component_Comp = _resolveComponent(\\"Comp\\")
 
   return (_openBlock(), _createBlock(_component_Comp, null, {
     default: _withCtx(() => [
-      _createVNode(\\"div\\")
+      _createElementVNode(\\"div\\")
     ]),
     _: 1 /* STABLE */
   }))
@@ -118,7 +118,7 @@ exports[`compiler: transform component slots named slots w/ implicit default slo
 
 return function render(_ctx, _cache) {
   with (_ctx) {
-    const { createVNode: _createVNode, resolveComponent: _resolveComponent, withCtx: _withCtx, openBlock: _openBlock, createBlock: _createBlock } = _Vue
+    const { createElementVNode: _createElementVNode, resolveComponent: _resolveComponent, withCtx: _withCtx, openBlock: _openBlock, createBlock: _createBlock } = _Vue
 
     const _component_Comp = _resolveComponent(\\"Comp\\")
 
@@ -126,7 +126,7 @@ return function render(_ctx, _cache) {
       one: _withCtx(() => [\\"foo\\"]),
       default: _withCtx(() => [
         \\"bar\\",
-        _createVNode(\\"span\\")
+        _createElementVNode(\\"span\\")
       ]),
       _: 1 /* STABLE */
     }))
@@ -211,7 +211,7 @@ return function render(_ctx, _cache) {
 `;
 
 exports[`compiler: transform component slots with whitespace: 'preserve' implicit default slot 1`] = `
-"const { createVNode: _createVNode, resolveComponent: _resolveComponent, withCtx: _withCtx, openBlock: _openBlock, createBlock: _createBlock } = Vue
+"const { createElementVNode: _createElementVNode, resolveComponent: _resolveComponent, withCtx: _withCtx, openBlock: _openBlock, createBlock: _createBlock } = Vue
 
 return function render(_ctx, _cache) {
   const _component_Comp = _resolveComponent(\\"Comp\\")
@@ -220,7 +220,7 @@ return function render(_ctx, _cache) {
     header: _withCtx(() => [\\" Header \\"]),
     default: _withCtx(() => [
       \\" \\",
-      _createVNode(\\"p\\")
+      _createElementVNode(\\"p\\")
     ]),
     _: 1 /* STABLE */
   }))

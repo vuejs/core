@@ -382,7 +382,7 @@ describe('reactivity/readonly', () => {
     const eff = effect(() => {
       roArr.includes(2)
     })
-    expect(eff.deps.length).toBe(0)
+    expect(eff.effect.deps.length).toBe(0)
   })
 
   test('readonly should track and trigger if wrapping reactive original (collection)', () => {

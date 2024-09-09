@@ -31,7 +31,8 @@ import {
   RESOLVE_COMPONENT,
   CREATE_COMMENT,
   FRAGMENT,
-  RENDER_LIST
+  RENDER_LIST,
+  CREATE_ELEMENT_VNODE
 } from '../src/runtimeHelpers'
 import { createElementWithCodegen, genFlagText } from './testUtils'
 import { PatchFlags } from '@vue/shared'
@@ -395,12 +396,12 @@ describe('compiler: codegen', () => {
       })
     )
     expect(code).toMatch(`
-    return _${helperNameMap[CREATE_VNODE]}("div", {
+    return _${helperNameMap[CREATE_ELEMENT_VNODE]}("div", {
       id: "foo",
       [prop]: bar,
       [foo + bar]: bar
     }, [
-      _${helperNameMap[CREATE_VNODE]}("p", { "some-key": "foo" })
+      _${helperNameMap[CREATE_ELEMENT_VNODE]}("p", { "some-key": "foo" })
     ], ${PatchFlags.FULL_PROPS})`)
     expect(code).toMatchSnapshot()
   })
@@ -658,11 +659,11 @@ describe('compiler: codegen', () => {
 
     test('tag only', () => {
       expect(genCode(createVNodeCall(null, `"div"`))).toMatchInlineSnapshot(`
-              "return _createVNode(\\"div\\")
+              "return _createElementVNode(\\"div\\")
                "
           `)
       expect(genCode(createVNodeCall(null, FRAGMENT))).toMatchInlineSnapshot(`
-              "return _createVNode(_Fragment)
+              "return _createElementVNode(_Fragment)
                "
           `)
     })
@@ -670,7 +671,7 @@ describe('compiler: codegen', () => {
     test('with props', () => {
       expect(genCode(createVNodeCall(null, `"div"`, mockProps)))
         .toMatchInlineSnapshot(`
-              "return _createVNode(\\"div\\", { foo: \\"bar\\" })
+              "return _createElementVNode(\\"div\\", { foo: \\"bar\\" })
                "
           `)
     })
@@ -678,7 +679,7 @@ describe('compiler: codegen', () => {
     test('with children, no props', () => {
       expect(genCode(createVNodeCall(null, `"div"`, undefined, mockChildren)))
         .toMatchInlineSnapshot(`
-        "return _createVNode(\\"div\\", null, children)
+        "return _createElementVNode(\\"div\\", null, children)
          "
       `)
     })
@@ -686,7 +687,7 @@ describe('compiler: codegen', () => {
     test('with children + props', () => {
       expect(genCode(createVNodeCall(null, `"div"`, mockProps, mockChildren)))
         .toMatchInlineSnapshot(`
-        "return _createVNode(\\"div\\", { foo: \\"bar\\" }, children)
+        "return _createElementVNode(\\"div\\", { foo: \\"bar\\" }, children)
          "
       `)
     })
@@ -694,7 +695,7 @@ describe('compiler: codegen', () => {
     test('with patchFlag and no children/props', () => {
       expect(genCode(createVNodeCall(null, `"div"`, undefined, undefined, '1')))
         .toMatchInlineSnapshot(`
-        "return _createVNode(\\"div\\", null, null, 1)
+        "return _createElementVNode(\\"div\\", null, null, 1)
          "
       `)
     })
@@ -714,7 +715,7 @@ describe('compiler: codegen', () => {
           )
         )
       ).toMatchInlineSnapshot(`
-        "return (_openBlock(), _createBlock(\\"div\\", { foo: \\"bar\\" }, children))
+        "return (_openBlock(), _createElementBlock(\\"div\\", { foo: \\"bar\\" }, children))
          "
       `)
     })
@@ -735,7 +736,7 @@ describe('compiler: codegen', () => {
           )
         )
       ).toMatchInlineSnapshot(`
-        "return (_openBlock(true), _createBlock(\\"div\\", { foo: \\"bar\\" }, children))
+        "return (_openBlock(true), _createElementBlock(\\"div\\", { foo: \\"bar\\" }, children))
          "
       `)
     })
@@ -754,7 +755,7 @@ describe('compiler: codegen', () => {
           )
         )
       ).toMatchInlineSnapshot(`
-        "return _withDirectives(_createVNode(\\"div\\", { foo: \\"bar\\" }, children), [
+        "return _withDirectives(_createElementVNode(\\"div\\", { foo: \\"bar\\" }, children), [
               [foo, bar]
             ])
          "
@@ -776,7 +777,7 @@ describe('compiler: codegen', () => {
           )
         )
       ).toMatchInlineSnapshot(`
-        "return _withDirectives((_openBlock(), _createBlock(\\"div\\", { foo: \\"bar\\" }, children)), [
+        "return _withDirectives((_openBlock(), _createElementBlock(\\"div\\", { foo: \\"bar\\" }, children)), [
               [foo, bar]
             ])
          "

@@ -3,6 +3,7 @@
 export const version = __VERSION__
 export {
   // core
+  computed,
   reactive,
   ref,
   readonly,
@@ -22,10 +23,18 @@ export {
   shallowReactive,
   shallowReadonly,
   markRaw,
-  toRaw
+  toRaw,
+  // effect
+  effect,
+  stop,
+  ReactiveEffect,
+  // effect scope
+  effectScope,
+  EffectScope,
+  getCurrentScope,
+  onScopeDispose
 } from '@vue/reactivity'
-export { computed } from './apiComputed'
-export { watch, watchEffect } from './apiWatch'
+export { watch, watchEffect, watchPostEffect } from './apiWatch'
 export {
   onBeforeMount,
   onMounted,
@@ -137,7 +146,6 @@ declare module '@vue/reactivity' {
 }
 
 export {
-  ReactiveEffect,
   ReactiveEffectOptions,
   DebuggerEvent,
   TrackOpTypes,
@@ -256,19 +264,26 @@ export { renderList } from './helpers/renderList'
 export { toHandlers } from './helpers/toHandlers'
 export { renderSlot } from './helpers/renderSlot'
 export { createSlots } from './helpers/createSlots'
+export { withMemo, isMemoSame } from './helpers/withMemo'
 export {
   openBlock,
   createBlock,
   setBlockTracking,
   createTextVNode,
   createCommentVNode,
-  createStaticVNode
+  createStaticVNode,
+  createElementVNode,
+  createElementBlock,
+  guardReactiveProps
 } from './vnode'
 export {
   toDisplayString,
   camelize,
   capitalize,
-  toHandlerKey
+  toHandlerKey,
+  normalizeProps,
+  normalizeClass,
+  normalizeStyle
 } from '@vue/shared'
 
 // For test-utils

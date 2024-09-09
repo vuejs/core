@@ -22,6 +22,7 @@ import {
   CREATE_COMMENT,
   FRAGMENT,
   MERGE_PROPS,
+  NORMALIZE_PROPS,
   RENDER_SLOT
 } from '../../src/runtimeHelpers'
 import { createObjectMatcher } from '../testUtils'
@@ -556,8 +557,14 @@ describe('compiler: v-if', () => {
       const branch1 = codegenNode.consequent as VNodeCall
       expect(branch1.props).toMatchObject({
         type: NodeTypes.JS_CALL_EXPRESSION,
-        callee: MERGE_PROPS,
-        arguments: [createObjectMatcher({ key: `[0]` }), { content: `obj` }]
+        callee: NORMALIZE_PROPS,
+        arguments: [
+          {
+            type: NodeTypes.JS_CALL_EXPRESSION,
+            callee: MERGE_PROPS,
+            arguments: [createObjectMatcher({ key: `[0]` }), { content: `obj` }]
+          }
+        ]
       })
     })
 

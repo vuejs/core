@@ -1,3 +1,7 @@
+/**
+ * @jest-environment node
+ */
+
 import { createApp, h, Suspense } from 'vue'
 import { renderToString } from '../src/renderToString'
 

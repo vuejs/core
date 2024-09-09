@@ -21,7 +21,9 @@ import {
   TextNode,
   InterpolationNode,
   VNodeCall,
-  SimpleExpressionNode
+  SimpleExpressionNode,
+  BlockCodegenNode,
+  MemoExpression
 } from './ast'
 import { TransformContext } from './transform'
 import {
@@ -30,9 +32,18 @@ import {
   SUSPENSE,
   KEEP_ALIVE,
   BASE_TRANSITION,
-  TO_HANDLERS
+  TO_HANDLERS,
+  NORMALIZE_PROPS,
+  GUARD_REACTIVE_PROPS,
+  CREATE_BLOCK,
+  CREATE_ELEMENT_BLOCK,
+  CREATE_VNODE,
+  CREATE_ELEMENT_VNODE,
+  WITH_MEMO,
+  OPEN_BLOCK
 } from './runtimeHelpers'
 import { isString, isObject, hyphenate, extend } from '@vue/shared'
+import { PropsExpression } from './transforms/transformElement'
 
 export const isStaticExp = (p: JSChildNode): p is SimpleExpressionNode =>
   p.type === NodeTypes.SIMPLE_EXPRESSION && p.isStatic
@@ -291,14 +302,66 @@ export function isSlotOutlet(
   return node.type === NodeTypes.ELEMENT && node.tagType === ElementTypes.SLOT
 }
 
+export function getVNodeHelper(ssr: boolean, isComponent: boolean) {
+  return ssr || isComponent ? CREATE_VNODE : CREATE_ELEMENT_VNODE
+}
+
+export function getVNodeBlockHelper(ssr: boolean, isComponent: boolean) {
+  return ssr || isComponent ? CREATE_BLOCK : CREATE_ELEMENT_BLOCK
+}
+
+const propsHelperSet = new Set([NORMALIZE_PROPS, GUARD_REACTIVE_PROPS])
+
+function getUnnormalizedProps(
+  props: PropsExpression | '{}',
+  callPath: CallExpression[] = []
+): [PropsExpression | '{}', CallExpression[]] {
+  if (
+    props &&
+    !isString(props) &&
+    props.type === NodeTypes.JS_CALL_EXPRESSION
+  ) {
+    const callee = props.callee
+    if (!isString(callee) && propsHelperSet.has(callee)) {
+      return getUnnormalizedProps(
+        props.arguments[0] as PropsExpression,
+        callPath.concat(props)
+      )
+    }
+  }
+  return [props, callPath]
+}
 export function injectProp(
   node: VNodeCall | RenderSlotCall,
   prop: Property,
   context: TransformContext
 ) {
   let propsWithInjection: ObjectExpression | CallExpression | undefined
-  const props =
+  const originalProps =
     node.type === NodeTypes.VNODE_CALL ? node.props : node.arguments[2]
+
+  /**
+   * 1. mergeProps(...)
+   * 2. toHandlers(...)
+   * 3. normalizeProps(...)
+   * 4. normalizeProps(guardReactiveProps(...))
+   *
+   * we need to get the real props before normalization
+   */
+  let props = originalProps
+  let callPath: CallExpression[] = []
+  let parentCall: CallExpression | undefined
+  if (
+    props &&
+    !isString(props) &&
+    props.type === NodeTypes.JS_CALL_EXPRESSION
+  ) {
+    const ret = getUnnormalizedProps(props)
+    props = ret[0]
+    callPath = ret[1]
+    parentCall = callPath[callPath.length - 1]
+  }
+
   if (props == null || isString(props)) {
     propsWithInjection = createObjectExpression([prop])
   } else if (props.type === NodeTypes.JS_CALL_EXPRESSION) {
@@ -341,11 +404,25 @@ export function injectProp(
       createObjectExpression([prop]),
       props
     ])
+    // in the case of nested helper call, e.g. `normalizeProps(guardReactiveProps(props))`,
+    // it will be rewritten as `normalizeProps(mergeProps({ key: 0 }, props))`,
+    // the `guardReactiveProps` will no longer be needed
+    if (parentCall && parentCall.callee === GUARD_REACTIVE_PROPS) {
+      parentCall = callPath[callPath.length - 2]
+    }
   }
   if (node.type === NodeTypes.VNODE_CALL) {
-    node.props = propsWithInjection
+    if (parentCall) {
+      parentCall.arguments[0] = propsWithInjection
+    } else {
+      node.props = propsWithInjection
+    }
   } else {
-    node.arguments[2] = propsWithInjection
+    if (parentCall) {
+      parentCall.arguments[0] = propsWithInjection
+    } else {
+      node.arguments[2] = propsWithInjection
+    }
   }
 }
 
@@ -408,5 +485,25 @@ export function hasScopeRef(
         exhaustiveCheck
       }
       return false
+  }
+}
+
+export function getMemoedVNodeCall(node: BlockCodegenNode | MemoExpression) {
+  if (node.type === NodeTypes.JS_CALL_EXPRESSION && node.callee === WITH_MEMO) {
+    return node.arguments[1].returns as VNodeCall
+  } else {
+    return node
+  }
+}
+
+export function makeBlock(
+  node: VNodeCall,
+  { helper, removeHelper, inSSR }: TransformContext
+) {
+  if (!node.isBlock) {
+    node.isBlock = true
+    removeHelper(getVNodeHelper(inSSR, node.isComponent))
+    helper(OPEN_BLOCK)
+    helper(getVNodeBlockHelper(inSSR, node.isComponent))
   }
 }

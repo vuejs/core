@@ -2,7 +2,7 @@
 
 exports[`source map 1`] = `
 Object {
-  "mappings": ";;;wBACE,aAA8B;IAAzB,aAAmB,4BAAbA,WAAM",
+  "mappings": ";;;wBACE,oBAA8B;IAAzB,oBAAmB,4BAAbA,WAAM",
   "names": Array [
     "render",
   ],

@@ -1,3 +1,7 @@
+/**
+ * @jest-environment node
+ */
+
 import { ssrRenderList } from '../src/helpers/ssrRenderList'
 
 describe('ssr: renderList', () => {

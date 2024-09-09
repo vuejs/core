@@ -1,10 +1,10 @@
 import { VNode, VNodeChild, isVNode } from './vnode'
 import {
-  ReactiveEffect,
   pauseTracking,
   resetTracking,
   shallowReadonly,
   proxyRefs,
+  EffectScope,
   markRaw
 } from '@vue/reactivity'
 import {
@@ -60,6 +60,7 @@ import { currentRenderingInstance } from './componentRenderContext'
 import { startMeasure, endMeasure } from './profiling'
 import { convertLegacyRenderFn } from './compat/renderFn'
 import { globalCompatConfig, validateCompatConfig } from './compat/compatConfig'
+import { SchedulerJob } from './scheduler'
 
 export type Data = Record<string, unknown>
 
@@ -221,9 +222,9 @@ export interface ComponentInternalInstance {
    */
   subTree: VNode
   /**
-   * The reactive effect for rendering and patching the component. Callable.
+   * Bound effect runner to be passed to schedulers
    */
-  update: ReactiveEffect
+  update: SchedulerJob
   /**
    * The render function that returns vdom tree.
    * @internal
@@ -244,7 +245,7 @@ export interface ComponentInternalInstance {
    * so that they can be automatically stopped on component unmount
    * @internal
    */
-  effects: ReactiveEffect[] | null
+  scope: EffectScope
   /**
    * cache for proxy access type to avoid hasOwnProperty calls
    * @internal
@@ -282,12 +283,15 @@ export interface ComponentInternalInstance {
    * @internal
    */
   emitsOptions: ObjectEmitsOptions | null
-
   /**
    * resolved inheritAttrs options
    * @internal
    */
   inheritAttrs?: boolean
+  /**
+   * is custom element?
+   */
+  isCE?: boolean
 
   // the rest are only for stateful components ---------------------------------
 
@@ -450,12 +454,12 @@ export function createComponentInstance(
     next: null,
     subTree: null!, // will be set synchronously right after creation
     update: null!, // will be set synchronously right after creation
+    scope: new EffectScope(),
     render: null,
     proxy: null,
     exposed: null,
     exposeProxy: null,
     withProxy: null,
-    effects: null,
     provides: parent ? parent.provides : Object.create(appContext.provides),
     accessCache: null!,
     renderCache: [],
@@ -522,6 +526,11 @@ export function createComponentInstance(
   instance.root = parent ? parent.root : instance
   instance.emit = emit.bind(null, instance)
 
+  // apply custom element special handling
+  if (vnode.ce) {
+    vnode.ce(instance)
+  }
+
   return instance
 }
 
@@ -530,10 +539,14 @@ export let currentInstance: ComponentInternalInstance | null = null
 export const getCurrentInstance: () => ComponentInternalInstance | null = () =>
   currentInstance || currentRenderingInstance
 
-export const setCurrentInstance = (
-  instance: ComponentInternalInstance | null
-) => {
+export const setCurrentInstance = (instance: ComponentInternalInstance) => {
   currentInstance = instance
+  instance.scope.on()
+}
+
+export const unsetCurrentInstance = () => {
+  currentInstance && currentInstance.scope.off()
+  currentInstance = null
 }
 
 const isBuiltInTag = /*#__PURE__*/ makeMap('slot,component')
@@ -615,7 +628,7 @@ function setupStatefulComponent(
     const setupContext = (instance.setupContext =
       setup.length > 1 ? createSetupContext(instance) : null)
 
-    currentInstance = instance
+    setCurrentInstance(instance)
     pauseTracking()
     const setupResult = callWithErrorHandling(
       setup,
@@ -624,13 +637,10 @@ function setupStatefulComponent(
       [__DEV__ ? shallowReadonly(instance.props) : instance.props, setupContext]
     )
     resetTracking()
-    currentInstance = null
+    unsetCurrentInstance()
 
     if (isPromise(setupResult)) {
-      const unsetInstance = () => {
-        currentInstance = null
-      }
-      setupResult.then(unsetInstance, unsetInstance)
+      setupResult.then(unsetCurrentInstance, unsetCurrentInstance)
 
       if (isSSR) {
         // return the promise so server-renderer can wait on it
@@ -798,11 +808,11 @@ export function finishComponentSetup(
 
   // support for 2.x options
   if (__FEATURE_OPTIONS_API__ && !(__COMPAT__ && skipOptions)) {
-    currentInstance = instance
+    setCurrentInstance(instance)
     pauseTracking()
     applyOptions(instance)
     resetTracking()
-    currentInstance = null
+    unsetCurrentInstance()
   }
 
   // warn missing template/render
@@ -894,17 +904,6 @@ export function getExposeProxy(instance: ComponentInternalInstance) {
         }
       }))
     )
-  }
-}
-
-// record effects created during a component's setup() so that they can be
-// stopped when the component unmounts
-export function recordInstanceBoundEffect(
-  effect: ReactiveEffect,
-  instance = currentInstance
-) {
-  if (instance) {
-    ;(instance.effects || (instance.effects = [])).push(effect)
   }
 }
 

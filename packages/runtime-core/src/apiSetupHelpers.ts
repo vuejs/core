@@ -3,7 +3,8 @@ import {
   getCurrentInstance,
   setCurrentInstance,
   SetupContext,
-  createSetupContext
+  createSetupContext,
+  unsetCurrentInstance
 } from './component'
 import { EmitFn, EmitsOptions } from './componentEmits'
 import {
@@ -248,9 +249,15 @@ export function mergeDefaults(
  * @internal
  */
 export function withAsyncContext(getAwaitable: () => any) {
-  const ctx = getCurrentInstance()
+  const ctx = getCurrentInstance()!
+  if (__DEV__ && !ctx) {
+    warn(
+      `withAsyncContext called without active current instance. ` +
+        `This is likely a bug.`
+    )
+  }
   let awaitable = getAwaitable()
-  setCurrentInstance(null)
+  unsetCurrentInstance()
   if (isPromise(awaitable)) {
     awaitable = awaitable.catch(e => {
       setCurrentInstance(ctx)

@@ -59,25 +59,6 @@ const bar = 1
   props: propsModel,`)
   })
 
-  test('defineEmit() (deprecated)', () => {
-    const { content, bindings } = compile(`
-<script setup>
-const myEmit = defineEmit(['foo', 'bar'])
-</script>
-  `)
-    assertCode(content)
-    expect(bindings).toStrictEqual({
-      myEmit: BindingTypes.SETUP_CONST
-    })
-    // should remove defineOptions import and call
-    expect(content).not.toMatch(/defineEmits?/)
-    // should generate correct setup signature
-    expect(content).toMatch(`setup(__props, { expose, emit: myEmit }) {`)
-    // should include context options in default export
-    expect(content).toMatch(`export default {
-  emits: ['foo', 'bar'],`)
-  })
-
   test('defineEmits()', () => {
     const { content, bindings } = compile(`
 <script setup>
@@ -204,7 +185,7 @@ defineExpose({ foo: 123 })
         `
       <script setup>
       import { ref } from 'vue'
-      ref: foo = 1
+      let foo = $ref(1)
       </script>
       `,
         { refSugar: true }
@@ -474,32 +455,6 @@ defineExpose({ foo: 123 })
       expect(content).toMatch(`\n  __ssrInlineRender: true,\n`)
       expect(content).toMatch(`return (_ctx, _push`)
       expect(content).toMatch(`ssrInterpolate`)
-      assertCode(content)
-    })
-
-    // _withId is only generated for backwards compat and is a noop when called
-    // in module scope.
-    // when inside setup(), currentInstance will be non-null and _withId will
-    // no longer be noop and cause scopeId errors.
-    // TODO: this test should no longer be necessary if we remove _withId
-    // codegen in 3.1
-    test('should not wrap render fn with withId when having scoped styles', async () => {
-      const { content } = compile(
-        `
-        <script setup>
-        const msg = 1
-        </script>
-        <template><h1>{{ msg }}</h1></template>
-        <style scoped>
-        h1 { color: red; }
-        </style>
-        `,
-        {
-          inlineTemplate: true
-        }
-      )
-      expect(content).toMatch(`return (_ctx, _cache`)
-      expect(content).not.toMatch(`_withId(`)
       assertCode(content)
     })
   })
@@ -874,7 +829,7 @@ const emit = defineEmits(['a', 'b'])
 
     test('ref', () => {
       assertAwaitDetection(
-        `ref: a = 1 + (await foo)`,
+        `let a = $ref(1 + (await foo))`,
         `1 + ((([__temp,__restore]=_withAsyncContext(()=>(foo))),__temp=await __temp,__restore(),__temp))`
       )
     })

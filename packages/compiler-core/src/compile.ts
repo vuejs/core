@@ -17,6 +17,7 @@ import { transformOnce } from './transforms/vOnce'
 import { transformModel } from './transforms/vModel'
 import { transformFilter } from './compat/transformFilter'
 import { defaultOnError, createCompilerError, ErrorCodes } from './errors'
+import { transformMemo } from './transforms/vMemo'
 
 export type TransformPreset = [
   NodeTransform[],
@@ -30,6 +31,7 @@ export function getBaseTransformPreset(
     [
       transformOnce,
       transformIf,
+      transformMemo,
       transformFor,
       ...(__COMPAT__ ? [transformFilter] : []),
       ...(!__BROWSER__ && prefixIdentifiers

@@ -25,7 +25,7 @@ import { isAsyncWrapper } from './apiAsyncComponent'
 
 export type RootHydrateFunction = (
   vnode: VNode<Node, Element>,
-  container: Element
+  container: Element | ShadowRoot
 ) => void
 
 const enum DOMNodeTypes {

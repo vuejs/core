@@ -1,3 +1,7 @@
+/**
+ * @jest-environment node
+ */
+
 import { ssrInterpolate } from '../src/helpers/ssrInterpolate'
 import { escapeHtml } from '@vue/shared'
 
