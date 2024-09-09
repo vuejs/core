@@ -1019,7 +1019,7 @@ describe('defineCustomElement', () => {
 
     test('should work with Teleport', async () => {
       const target = document.createElement('div')
-      const Son = defineCustomElement(
+      const Y = defineCustomElement(
         {
           render() {
             return h(
@@ -1033,8 +1033,8 @@ describe('defineCustomElement', () => {
         },
         { shadowRoot: false },
       )
-      customElements.define('my-son', Son)
-      const Parent = defineCustomElement(
+      customElements.define('my-y', Y)
+      const P = defineCustomElement(
         {
           render() {
             return renderSlot(this.$slots, 'default')
@@ -1042,13 +1042,13 @@ describe('defineCustomElement', () => {
         },
         { shadowRoot: false },
       )
-      customElements.define('my-parent', Parent)
+      customElements.define('my-p', P)
 
       const App = {
         render() {
-          return h('my-parent', null, {
+          return h('my-p', null, {
             default: () => [
-              h('my-son', null, {
+              h('my-y', null, {
                 default: () => [h('span', null, 'default')],
               }),
             ],
