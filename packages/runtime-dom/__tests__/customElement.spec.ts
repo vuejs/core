@@ -1008,6 +1008,7 @@ describe('defineCustomElement', () => {
       }
       const app = createApp(App)
       app.mount(container)
+      await new Promise(r => setTimeout(r))
       const e = container.childNodes[0] as VueElement
       expect(e.innerHTML).toBe(
         `<my-son data-v-app=""><span>default</span></my-son>`,
