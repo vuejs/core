@@ -1,0 +1,11 @@
+{
+  "compilerOptions": {
+    "noEmit": true,
+    "jsx": "preserve",
+    "module": "esnext",
+    "strict": true,
+    "moduleResolution": "node",
+    "lib": ["esnext", "dom"]
+  },
+  "include": ["./*"]
+}

@@ -1,6 +1,7 @@
-import { createApp, h, Teleport } from 'vue'
+import { Teleport, createApp, h } from 'vue'
 import { renderToString } from '../src/renderToString'
-import { SSRContext } from '../src/render'
+import { renderToSimpleStream } from '../src/renderToStream'
+import type { SSRContext } from '../src/render'
 import { ssrRenderTeleport } from '../src/helpers/ssrRenderTeleport'
 
 describe('ssrRenderTeleport', () => {
@@ -19,14 +20,16 @@ describe('ssrRenderTeleport', () => {
             },
             '#target',
             false,
-            _parent
+            _parent,
           )
-        }
+        },
       }),
-      ctx
+      ctx,
     )
     expect(html).toBe('<!--teleport start--><!--teleport end-->')
-    expect(ctx.teleports!['#target']).toBe(`<div>content</div><!---->`)
+    expect(ctx.teleports!['#target']).toBe(
+      `<!--teleport start anchor--><div>content</div><!--teleport anchor-->`,
+    )
   })
 
   test('teleport rendering (compiled + disabled)', async () => {
@@ -44,16 +47,18 @@ describe('ssrRenderTeleport', () => {
             },
             '#target',
             true,
-            _parent
+            _parent,
           )
-        }
+        },
       }),
-      ctx
+      ctx,
     )
     expect(html).toBe(
-      '<!--teleport start--><div>content</div><!--teleport end-->'
+      '<!--teleport start--><div>content</div><!--teleport end-->',
     )
-    expect(ctx.teleports!['#target']).toBe(`<!---->`)
+    expect(ctx.teleports!['#target']).toBe(
+      `<!--teleport start anchor--><!--teleport anchor-->`,
+    )
   })
 
   test('teleport rendering (vnode)', async () => {
@@ -62,14 +67,16 @@ describe('ssrRenderTeleport', () => {
       h(
         Teleport,
         {
-          to: `#target`
+          to: `#target`,
         },
-        h('span', 'hello')
+        h('span', 'hello'),
       ),
-      ctx
+      ctx,
     )
     expect(html).toBe('<!--teleport start--><!--teleport end-->')
-    expect(ctx.teleports!['#target']).toBe('<span>hello</span><!---->')
+    expect(ctx.teleports!['#target']).toBe(
+      '<!--teleport start anchor--><span>hello</span><!--teleport anchor-->',
+    )
   })
 
   test('teleport rendering (vnode + disabled)', async () => {
@@ -79,16 +86,18 @@ describe('ssrRenderTeleport', () => {
         Teleport,
         {
           to: `#target`,
-          disabled: true
+          disabled: true,
         },
-        h('span', 'hello')
+        h('span', 'hello'),
       ),
-      ctx
+      ctx,
     )
     expect(html).toBe(
-      '<!--teleport start--><span>hello</span><!--teleport end-->'
+      '<!--teleport start--><span>hello</span><!--teleport end-->',
     )
-    expect(ctx.teleports!['#target']).toBe(`<!---->`)
+    expect(ctx.teleports!['#target']).toBe(
+      `<!--teleport start anchor--><!--teleport anchor-->`,
+    )
   })
 
   test('multiple teleports with same target', async () => {
@@ -98,19 +107,74 @@ describe('ssrRenderTeleport', () => {
         h(
           Teleport,
           {
-            to: `#target`
+            to: `#target`,
           },
-          h('span', 'hello')
+          h('span', 'hello'),
         ),
-        h(Teleport, { to: `#target` }, 'world')
+        h(Teleport, { to: `#target` }, 'world'),
       ]),
-      ctx
+      ctx,
     )
     expect(html).toBe(
-      '<div><!--teleport start--><!--teleport end--><!--teleport start--><!--teleport end--></div>'
+      '<div><!--teleport start--><!--teleport end--><!--teleport start--><!--teleport end--></div>',
     )
     expect(ctx.teleports!['#target']).toBe(
-      '<span>hello</span><!---->world<!---->'
+      '<!--teleport start anchor--><span>hello</span><!--teleport anchor-->' +
+        '<!--teleport start anchor-->world<!--teleport anchor-->',
+    )
+  })
+
+  test('teleport inside async component', async () => {
+    const ctx: SSRContext = {}
+    const asyncComponent = {
+      template: '<teleport to="#target"><div>content</div></teleport>',
+      async setup() {},
+    }
+    const html = await renderToString(
+      h({
+        template: '<async-component />',
+        components: { asyncComponent },
+      }),
+      ctx,
+    )
+    expect(html).toBe('<!--teleport start--><!--teleport end-->')
+    expect(ctx.teleports!['#target']).toBe(
+      `<!--teleport start anchor--><div>content</div><!--teleport anchor-->`,
+    )
+  })
+
+  test('teleport inside async component (stream)', async () => {
+    const ctx: SSRContext = {}
+    const asyncComponent = {
+      template: '<teleport to="#target"><div>content</div></teleport>',
+      async setup() {},
+    }
+    let html = ''
+    let resolve: any
+    const p = new Promise(r => (resolve = r))
+    renderToSimpleStream(
+      h({
+        template: '<async-component />',
+        components: { asyncComponent },
+      }),
+      ctx,
+      {
+        push(chunk) {
+          if (chunk === null) {
+            resolve()
+          } else {
+            html += chunk
+          }
+        },
+        destroy(err) {
+          throw err
+        },
+      },
+    )
+    await p
+    expect(html).toBe('<!--teleport start--><!--teleport end-->')
+    expect(ctx.teleports!['#target']).toBe(
+      `<!--teleport start anchor--><div>content</div><!--teleport anchor-->`,
     )
   })
 })

@@ -1,16 +1,16 @@
 import {
-  ComponentNode,
-  TransformContext,
+  type ComponentNode,
+  type FunctionExpression,
+  type SlotsExpression,
+  type TemplateChildNode,
+  type TransformContext,
   buildSlots,
-  createFunctionExpression,
-  FunctionExpression,
-  TemplateChildNode,
   createCallExpression,
-  SlotsExpression
+  createFunctionExpression,
 } from '@vue/compiler-dom'
 import {
-  SSRTransformContext,
-  processChildrenAsStatement
+  type SSRTransformContext,
+  processChildrenAsStatement,
 } from '../ssrCodegenTransform'
 import { SSR_RENDER_SUSPENSE } from '../runtimeHelpers'
 
@@ -27,29 +27,33 @@ interface WIPEntry {
 // phase 1
 export function ssrTransformSuspense(
   node: ComponentNode,
-  context: TransformContext
+  context: TransformContext,
 ) {
-  return () => {
+  return (): void => {
     if (node.children.length) {
       const wipEntry: WIPEntry = {
-        slotsExp: null as any,
-        wipSlots: []
+        slotsExp: null!, // to be immediately set
+        wipSlots: [],
       }
       wipMap.set(node, wipEntry)
-      wipEntry.slotsExp = buildSlots(node, context, (_props, children, loc) => {
-        const fn = createFunctionExpression(
-          [],
-          undefined, // no return, assign body later
-          true, // newline
-          false, // suspense slots are not treated as normal slots
-          loc
-        )
-        wipEntry.wipSlots.push({
-          fn,
-          children
-        })
-        return fn
-      }).slots
+      wipEntry.slotsExp = buildSlots(
+        node,
+        context,
+        (_props, _vForExp, children, loc) => {
+          const fn = createFunctionExpression(
+            [],
+            undefined, // no return, assign body later
+            true, // newline
+            false, // suspense slots are not treated as normal slots
+            loc,
+          )
+          wipEntry.wipSlots.push({
+            fn,
+            children,
+          })
+          return fn
+        },
+      ).slots
     }
   }
 }
@@ -57,8 +61,8 @@ export function ssrTransformSuspense(
 // phase 2
 export function ssrProcessSuspense(
   node: ComponentNode,
-  context: SSRTransformContext
-) {
+  context: SSRTransformContext,
+): void {
   // complete wip slots with ssr code
   const wipEntry = wipMap.get(node)
   if (!wipEntry) {
@@ -66,14 +70,14 @@ export function ssrProcessSuspense(
   }
   const { slotsExp, wipSlots } = wipEntry
   for (let i = 0; i < wipSlots.length; i++) {
-    const { fn, children } = wipSlots[i]
-    fn.body = processChildrenAsStatement(children, context)
+    const slot = wipSlots[i]
+    slot.fn.body = processChildrenAsStatement(slot, context)
   }
   // _push(ssrRenderSuspense(slots))
   context.pushStatement(
     createCallExpression(context.helper(SSR_RENDER_SUSPENSE), [
       `_push`,
-      slotsExp
-    ])
+      slotsExp,
+    ]),
   )
 }

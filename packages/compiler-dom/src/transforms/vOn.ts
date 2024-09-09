@@ -1,43 +1,59 @@
 import {
-  transformOn as baseTransform,
-  DirectiveTransform,
-  createObjectProperty,
-  createCallExpression,
-  createSimpleExpression,
+  CompilerDeprecationTypes,
+  type DirectiveTransform,
+  type ExpressionNode,
   NodeTypes,
+  type SimpleExpressionNode,
+  type SourceLocation,
+  type TransformContext,
+  transformOn as baseTransform,
+  checkCompatEnabled,
+  createCallExpression,
   createCompoundExpression,
-  ExpressionNode,
-  SimpleExpressionNode,
-  isStaticExp
+  createObjectProperty,
+  createSimpleExpression,
+  isStaticExp,
 } from '@vue/compiler-core'
-import { V_ON_WITH_MODIFIERS, V_ON_WITH_KEYS } from '../runtimeHelpers'
-import { makeMap, capitalize } from '@vue/shared'
+import { V_ON_WITH_KEYS, V_ON_WITH_MODIFIERS } from '../runtimeHelpers'
+import { capitalize, makeMap } from '@vue/shared'
 
-const isEventOptionModifier = /*#__PURE__*/ makeMap(`passive,once,capture`)
-const isNonKeyModifier = /*#__PURE__*/ makeMap(
+const isEventOptionModifier = /*@__PURE__*/ makeMap(`passive,once,capture`)
+const isNonKeyModifier = /*@__PURE__*/ makeMap(
   // event propagation management
   `stop,prevent,self,` +
     // system modifiers + exact
     `ctrl,shift,alt,meta,exact,` +
     // mouse
-    `middle`
+    `middle`,
 )
 // left & right could be mouse or key modifiers based on event type
-const maybeKeyModifier = /*#__PURE__*/ makeMap('left,right')
-const isKeyboardEvent = /*#__PURE__*/ makeMap(
-  `onkeyup,onkeydown,onkeypress`,
-  true
-)
+const maybeKeyModifier = /*@__PURE__*/ makeMap('left,right')
+const isKeyboardEvent = /*@__PURE__*/ makeMap(`onkeyup,onkeydown,onkeypress`)
 
-const resolveModifiers = (key: ExpressionNode, modifiers: string[]) => {
+const resolveModifiers = (
+  key: ExpressionNode,
+  modifiers: SimpleExpressionNode[],
+  context: TransformContext,
+  loc: SourceLocation,
+) => {
   const keyModifiers = []
   const nonKeyModifiers = []
   const eventOptionModifiers = []
 
   for (let i = 0; i < modifiers.length; i++) {
-    const modifier = modifiers[i]
+    const modifier = modifiers[i].content
 
-    if (isEventOptionModifier(modifier)) {
+    if (
+      __COMPAT__ &&
+      modifier === 'native' &&
+      checkCompatEnabled(
+        CompilerDeprecationTypes.COMPILER_V_ON_NATIVE,
+        context,
+        loc,
+      )
+    ) {
+      eventOptionModifiers.push(modifier)
+    } else if (isEventOptionModifier(modifier)) {
       // eventOptionModifiers: modifiers for addEventListener() options,
       // e.g. .passive & .capture
       eventOptionModifiers.push(modifier)
@@ -45,7 +61,9 @@ const resolveModifiers = (key: ExpressionNode, modifiers: string[]) => {
       // runtimeModifiers: modifiers that needs runtime guards
       if (maybeKeyModifier(modifier)) {
         if (isStaticExp(key)) {
-          if (isKeyboardEvent((key as SimpleExpressionNode).content)) {
+          if (
+            isKeyboardEvent((key as SimpleExpressionNode).content.toLowerCase())
+          ) {
             keyModifiers.push(modifier)
           } else {
             nonKeyModifiers.push(modifier)
@@ -67,7 +85,7 @@ const resolveModifiers = (key: ExpressionNode, modifiers: string[]) => {
   return {
     keyModifiers,
     nonKeyModifiers,
-    eventOptionModifiers
+    eventOptionModifiers,
   }
 }
 
@@ -82,7 +100,7 @@ const transformClick = (key: ExpressionNode, event: string) => {
           key,
           `) === "onClick" ? "${event}" : (`,
           key,
-          `)`
+          `)`,
         ])
       : key
 }
@@ -93,11 +111,8 @@ export const transformOn: DirectiveTransform = (dir, node, context) => {
     if (!modifiers.length) return baseResult
 
     let { key, value: handlerExp } = baseResult.props[0]
-    const {
-      keyModifiers,
-      nonKeyModifiers,
-      eventOptionModifiers
-    } = resolveModifiers(key, modifiers)
+    const { keyModifiers, nonKeyModifiers, eventOptionModifiers } =
+      resolveModifiers(key, modifiers, context, dir.loc)
 
     // normalize click.right and click.middle since they don't actually fire
     if (nonKeyModifiers.includes('right')) {
@@ -110,18 +125,18 @@ export const transformOn: DirectiveTransform = (dir, node, context) => {
     if (nonKeyModifiers.length) {
       handlerExp = createCallExpression(context.helper(V_ON_WITH_MODIFIERS), [
         handlerExp,
-        JSON.stringify(nonKeyModifiers)
+        JSON.stringify(nonKeyModifiers),
       ])
     }
 
     if (
       keyModifiers.length &&
       // if event name is dynamic, always wrap with keys guard
-      (!isStaticExp(key) || isKeyboardEvent(key.content))
+      (!isStaticExp(key) || isKeyboardEvent(key.content.toLowerCase()))
     ) {
       handlerExp = createCallExpression(context.helper(V_ON_WITH_KEYS), [
         handlerExp,
-        JSON.stringify(keyModifiers)
+        JSON.stringify(keyModifiers),
       ])
     }
 
@@ -133,7 +148,7 @@ export const transformOn: DirectiveTransform = (dir, node, context) => {
     }
 
     return {
-      props: [createObjectProperty(key, handlerExp)]
+      props: [createObjectProperty(key, handlerExp)],
     }
   })
 }

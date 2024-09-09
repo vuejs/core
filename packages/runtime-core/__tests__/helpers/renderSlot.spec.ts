@@ -1,28 +1,42 @@
 import { renderSlot } from '../../src/helpers/renderSlot'
 import {
-  h,
-  withCtx,
-  createVNode,
-  openBlock,
-  createBlock,
   Fragment,
-  createCommentVNode
+  type Slot,
+  createBlock,
+  createCommentVNode,
+  createVNode,
+  h,
+  openBlock,
+  withCtx,
 } from '../../src'
-import { PatchFlags } from '@vue/shared/src'
+import { PatchFlags } from '@vue/shared'
+import { setCurrentRenderingInstance } from '../../src/componentRenderContext'
 
 describe('renderSlot', () => {
+  beforeEach(() => {
+    setCurrentRenderingInstance({ type: {} } as any)
+  })
+
+  afterEach(() => {
+    setCurrentRenderingInstance(null)
+  })
+
   it('should render slot', () => {
     let child
     const vnode = renderSlot(
       { default: () => [(child = h('child'))] },
-      'default'
+      'default',
+      { key: 'foo' },
     )
     expect(vnode.children).toEqual([child])
+    expect(vnode.key).toBe('foo')
   })
 
   it('should render slot fallback', () => {
-    const vnode = renderSlot({}, 'default', {}, () => ['fallback'])
+    const vnode = renderSlot({}, 'default', { key: 'foo' }, () => ['fallback'])
     expect(vnode.children).toEqual(['fallback'])
+    // should attach fallback key postfix
+    expect(vnode.key).toBe('foo_fb')
   })
 
   it('should warn render ssr slot', () => {
@@ -37,8 +51,8 @@ describe('renderSlot', () => {
         return [createVNode('div', null, 'foo', PatchFlags.TEXT)]
       },
       // mock instance
-      {} as any
-    )
+      { type: {}, appContext: {} } as any,
+    ) as Slot
 
     // manual invocation should not track
     const manual = (openBlock(), createBlock(Fragment, null, slot()))
@@ -57,7 +71,7 @@ describe('renderSlot', () => {
         { default: () => [createCommentVNode('foo')] },
         'default',
         undefined,
-        () => [(fallback = h('fallback'))]
+        () => [(fallback = h('fallback'))],
       )
       expect(vnode.children).toEqual([fallback])
       expect(vnode.patchFlag).toBe(PatchFlags.BAIL)
@@ -69,7 +83,7 @@ describe('renderSlot', () => {
         { default: () => [renderSlot({}, 'foo')] },
         'default',
         undefined,
-        () => [(fallback = h('fallback'))]
+        () => [(fallback = h('fallback'))],
       )
       expect(vnode.children).toEqual([fallback])
       expect(vnode.patchFlag).toBe(PatchFlags.BAIL)

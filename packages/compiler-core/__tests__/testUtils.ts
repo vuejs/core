@@ -1,12 +1,18 @@
 import {
-  NodeTypes,
-  ElementNode,
-  locStub,
-  Namespaces,
+  type ElementNode,
   ElementTypes,
-  VNodeCall
+  Namespaces,
+  NodeTypes,
+  type VNodeCall,
+  locStub,
 } from '../src'
-import { isString, PatchFlags, PatchFlagNames, isArray } from '@vue/shared'
+import {
+  PatchFlagNames,
+  type PatchFlags,
+  type ShapeFlags,
+  isArray,
+  isString,
+} from '@vue/shared'
 
 const leadingBracketRE = /^\[/
 const bracketsRE = /^\[|\]$/g
@@ -24,16 +30,16 @@ export function createObjectMatcher(obj: Record<string, any>) {
       key: {
         type: NodeTypes.SIMPLE_EXPRESSION,
         content: key.replace(bracketsRE, ''),
-        isStatic: !leadingBracketRE.test(key)
+        isStatic: !leadingBracketRE.test(key),
       },
       value: isString(obj[key])
         ? {
             type: NodeTypes.SIMPLE_EXPRESSION,
             content: obj[key].replace(bracketsRE, ''),
-            isStatic: !leadingBracketRE.test(obj[key])
+            isStatic: !leadingBracketRE.test(obj[key]),
           }
-        : obj[key]
-    }))
+        : obj[key],
+    })),
   }
 }
 
@@ -42,7 +48,7 @@ export function createElementWithCodegen(
   props?: VNodeCall['props'],
   children?: VNodeCall['children'],
   patchFlag?: VNodeCall['patchFlag'],
-  dynamicProps?: VNodeCall['dynamicProps']
+  dynamicProps?: VNodeCall['dynamicProps'],
 ): ElementNode {
   return {
     type: NodeTypes.ELEMENT,
@@ -50,7 +56,6 @@ export function createElementWithCodegen(
     ns: Namespaces.HTML,
     tag: 'div',
     tagType: ElementTypes.ELEMENT,
-    isSelfClosing: false,
     props: [],
     children: [],
     codegenNode: {
@@ -63,19 +68,24 @@ export function createElementWithCodegen(
       directives: undefined,
       isBlock: false,
       disableTracking: false,
-      loc: locStub
-    }
+      isComponent: false,
+      loc: locStub,
+    },
   }
 }
 
-export function genFlagText(flag: PatchFlags | PatchFlags[]) {
+type Flags = PatchFlags | ShapeFlags
+export function genFlagText(
+  flag: Flags | Flags[],
+  names: { [k: number]: string } = PatchFlagNames,
+) {
   if (isArray(flag)) {
     let f = 0
     flag.forEach(ff => {
       f |= ff
     })
-    return `${f} /* ${flag.map(f => PatchFlagNames[f]).join(', ')} */`
+    return `${f} /* ${flag.map(f => names[f]).join(', ')} */`
   } else {
-    return `${flag} /* ${PatchFlagNames[flag]} */`
+    return `${flag} /* ${names[flag]} */`
   }
 }

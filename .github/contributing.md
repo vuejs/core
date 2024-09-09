@@ -2,7 +2,7 @@
 
 Hi! I'm really excited that you are interested in contributing to Vue.js. Before submitting your contribution, please make sure to take a moment and read through the following guidelines:
 
-- [Code of Conduct](https://github.com/vuejs/vue/blob/dev/.github/CODE_OF_CONDUCT.md)
+- [Code of Conduct](https://vuejs.org/about/coc.html)
 - [Issue Reporting Guidelines](#issue-reporting-guidelines)
 - [Pull Request Guidelines](#pull-request-guidelines)
 - [Development Setup](#development-setup)
@@ -17,7 +17,33 @@ Hi! I'm really excited that you are interested in contributing to Vue.js. Before
 
 ## Pull Request Guidelines
 
-- Checkout a topic branch from a base branch, e.g. `master`, and merge back against that branch.
+### What kinds of Pull Requests are accepted?
+
+- Bug fix that addresses a clearly identified bug. **"Clearly identified bug"** means the bug has a proper reproduction either from a related open issue, or is included in the PR itself. Avoid submitting PRs that claim to fix something but do not sufficiently explain what is being fixed.
+
+- New feature that addresses a clearly explained and widely applicable use case. **"Widely applicable"** means the new feature should provide non-trivial improvements to the majority of the user base. Vue already has a large API surface so we are quite cautious about adding new features - if the use case is niche and can be addressed via userland implementations, it likely isn't suitable to go into core.
+
+  The feature implementation should also consider the trade-off between the added complexity vs. the benefits gained. For example, if a small feature requires significant changes that spreads across the codebase, it is likely not worth it, or the approach should be reconsidered.
+
+  If the feature has a non-trivial API surface addition, or significantly affects the way a common use case is approached by the users, it should go through a discussion first in the [RFC repo](https://github.com/vuejs/rfcs/discussions). PRs of such features without prior discussion make it really difficult to steer / adjust the API design due to coupling with concrete implementations, and can lead to wasted work.
+
+- Chore: typos, comment improvements, build config, CI config, etc. For typos and comment changes, try to combine multiple of them into a single PR.
+
+- **It should be noted that we discourage contributors from submitting code refactors that are largely stylistic.** Code refactors are only accepted if it improves performance, or comes with sufficient explanations on why it objectively improves the code quality (e.g. makes a related feature implementation easier).
+
+  The reason is that code readability is subjective. The maintainers of this project have chosen to write the code in its current style based on our preferences, and we do not want to spend time explaining our stylistic preferences. Contributors should just respect the established conventions when contributing code.
+
+  Another aspect of it is that large scale stylistic changes result in massive diffs that touch multiple files, adding noise to the git history and makes tracing behavior changes across commits more cumbersome.
+
+### Pull Request Checklist
+
+- Vue core has two primary work branches: `main` and `minor`.
+
+  - If your pull request is a feature that adds new API surface, it should be submitted against the `minor` branch.
+
+  - Otherwise, it should be submitted against the `main` branch.
+
+- [Make sure to tick the "Allow edits from maintainers" box](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/working-with-forks/allowing-changes-to-a-pull-request-branch-created-from-a-fork). This allows us to directly make minor edits / refactors and saves a lot of time.
 
 - If adding a new feature:
 
@@ -28,36 +54,77 @@ Hi! I'm really excited that you are interested in contributing to Vue.js. Before
 
   - If you are resolving a special issue, add `(fix #xxxx[,#xxxx])` (#xxxx is the issue id) in your PR title for a better release log, e.g. `update entities encoding/decoding (fix #3899)`.
   - Provide a detailed description of the bug in the PR. Live demo preferred.
-  - Add appropriate test coverage if applicable. You can check the coverage of your code addition by running `yarn test --coverage`.
+  - Add appropriate test coverage if applicable. You can check the coverage of your code addition by running `nr test-coverage`.
 
 - It's OK to have multiple small commits as you work on the PR - GitHub can automatically squash them before merging.
 
 - Make sure tests pass!
 
-- Commit messages must follow the [commit message convention](./commit-convention.md) so that changelogs can be automatically generated. Commit messages are automatically validated before commit (by invoking [Git Hooks](https://git-scm.com/docs/githooks) via [yorkie](https://github.com/yyx990803/yorkie)).
+- Commit messages must follow the [commit message convention](./commit-convention.md) so that changelogs can be automatically generated. Commit messages are automatically validated before commit (by invoking [Git Hooks](https://git-scm.com/docs/githooks) via [simple-git-hooks](https://github.com/toplenboren/simple-git-hooks)).
 
-- No need to worry about code style as long as you have installed the dev dependencies - modified files are automatically formatted with Prettier on commit (by invoking [Git Hooks](https://git-scm.com/docs/githooks) via [yorkie](https://github.com/yyx990803/yorkie)).
+- No need to worry about code style as long as you have installed the dev dependencies - modified files are automatically formatted with Prettier on commit (by invoking [Git Hooks](https://git-scm.com/docs/githooks) via [simple-git-hooks](https://github.com/toplenboren/simple-git-hooks)).
+
+### Advanced Pull Request Tips
+
+- The PR should fix the intended bug **only** and not introduce unrelated changes. This includes unnecessary refactors - a PR should focus on the fix and not code style, this makes it easier to trace changes in the future.
+
+- Consider the performance / size impact of the changes, and whether the bug being fixes justifies the cost. If the bug being fixed is a very niche edge case, we should try to minimize the size / perf cost to make it worthwhile.
+
+  - Is the code perf-sensitive (e.g. in "hot paths" like component updates or the vdom patch function?)
+
+    - If the branch is dev-only, performance is less of a concern.
+
+  - Check how much extra bundle size the change introduces.
+    - Make sure to put dev-only code in `__DEV__` branches so they are tree-shakable.
+    - Runtime code is more sensitive to size increase than compiler code.
+    - Make sure it doesn't accidentally cause dev-only or compiler-only code branches to be included in the runtime build. Notable case is that some functions in `@vue/shared` are compiler-only and should not be used in runtime code, e.g. `isHTMLTag` and `isSVGTag`.
 
 ## Development Setup
 
-You will need [Node.js](http://nodejs.org) **version 10+**, and [Yarn 1.x](https://yarnpkg.com/en/docs/install).
+You will need [Node.js](https://nodejs.org) with minimum version as specified in the [`.node-version`](https://github.com/vuejs/core/blob/main/.node-version) file, and [PNPM](https://pnpm.io) with minimum version as specified in the [`"packageManager"` field in `package.json`](https://github.com/vuejs/core/blob/main/package.json#L4).
+
+We also recommend installing [@antfu/ni](https://github.com/antfu/ni) to help switching between repos using different package managers. `ni` also provides the handy `nr` command which running npm scripts easier.
 
 After cloning the repo, run:
 
 ```bash
-$ yarn # install the dependencies of the project
+$ pnpm i # install the dependencies of the project
 ```
 
 A high level overview of tools used:
 
 - [TypeScript](https://www.typescriptlang.org/) as the development language
-- [Rollup](https://rollupjs.org) for bundling
-- [Jest](https://jestjs.io/) for unit testing
+- [Vite](https://vitejs.dev/) and [ESBuild](https://esbuild.github.io/) for development bundling
+- [Rollup](https://rollupjs.org) for production bundling
+- [Vitest](https://vitest.dev/) for unit testing
 - [Prettier](https://prettier.io/) for code formatting
+- [ESLint](https://eslint.org/) for static error prevention (outside of types)
+
+## Git Hooks
+
+The project uses [simple-git-hooks](https://github.com/toplenboren/simple-git-hooks) to enforce the following on each commit:
+
+- Type check the entire project
+- Automatically format changed files using Prettier
+- Verify commit message format (logic in `scripts/verify-commit.js`)
 
 ## Scripts
 
-### `yarn build`
+**The examples below will be using the `nr` command from the [@antfu/ni](https://github.com/antfu/ni) package.** You can also use plain `npm run`, but you will need to pass all additional arguments after the command after an extra `--`. For example, `nr build runtime --all` is equivalent to `npm run build -- runtime --all`.
+
+The `run-s` and `run-p` commands found in some scripts are from [npm-run-all](https://github.com/mysticatea/npm-run-all) for orchestrating multiple scripts. `run-s` means "run in sequence" while `run-p` means "run in parallel".
+
+- [`nr build`](#nr-build)
+- [`nr build-dts`](#nr-build-dts)
+- [`nr check`](#nr-check)
+- [`nr dev`](#nr-dev)
+- [`nr dev-sfc`](#nr-dev-sfc)
+- [`nr dev-esm`](#nr-dev-esm)
+- [`nr dev-compiler`](#nr-dev-compiler)
+- [`nr test`](#nr-test)
+- [`nr test-dts`](#nr-test-dts)
+
+### `nr build`
 
 The `build` script builds all public packages (packages without `private: true` in their `package.json`).
 
@@ -65,11 +132,13 @@ Packages to build can be specified with fuzzy matching:
 
 ```bash
 # build runtime-core only
-yarn build runtime-core
+nr build runtime-core
 
 # build all packages matching "runtime"
-yarn build runtime --all
+nr build runtime --all
 ```
+
+Note that `nr build` uses `rollup-plugin-esbuild` for transpiling typescript and **does not perform type checking**. To run type check on the entire codebase, run `nr check`. Type checks are also automatically run on each commit.
 
 #### Build Formats
 
@@ -86,73 +155,88 @@ Additional formats that only apply to the main `vue` package:
 - **`esm-bundler-runtime`**
 - **`esm-browser-runtime`**
 
-More details about each of these formats can be found in the [`vue` package README](https://github.com/vuejs/vue-next/blob/master/packages/vue/README.md#which-dist-file-to-use) and the [Rollup config file](https://github.com/vuejs/vue-next/blob/master/rollup.config.js).
+More details about each of these formats can be found in the [`vue` package README](https://github.com/vuejs/core/blob/main/packages/vue/README.md#which-dist-file-to-use) and the [Rollup config file](https://github.com/vuejs/core/blob/main/rollup.config.js).
 
 For example, to build `runtime-core` with the global build only:
 
 ```bash
-yarn build runtime-core -f global
+nr build runtime-core -f global
 ```
 
 Multiple formats can be specified as a comma-separated list:
 
 ```bash
-yarn build runtime-core -f esm-browser,cjs
+nr build runtime-core -f esm-browser,cjs
 ```
 
 #### Build with Source Maps
 
 Use the `--sourcemap` or `-s` flag to build with source maps. Note this will make the build much slower.
 
-#### Build with Type Declarations
+### `nr build-dts`
 
-The `--types` or `-t` flag will generate type declarations during the build and in addition:
+This command builds the type declarations for all packages. It first generates the raw `.d.ts` files in the `temp` directory, then uses [rollup-plugin-dts](https://github.com/Swatinem/rollup-plugin-dts) to roll the types into a single `.d.ts` file for each package.
 
-- Roll the declarations into a single `.d.ts` file for each package;
-- Generate an API report in `<projectRoot>/temp/<packageName>.api.md`. This report contains potential warnings emitted by [api-extractor](https://api-extractor.com/).
-- Generate an API model json in `<projectRoot>/temp/<packageName>.api.json`. This file can be used to generate a Markdown version of the exported APIs.
+### `nr check`
 
-### `yarn dev`
+### `nr dev`
 
 The `dev` script bundles a target package (default: `vue`) in a specified format (default: `global`) in dev mode and watches for changes. This is useful when you want to load up a build in an HTML page for quick debugging:
 
 ```bash
-$ yarn dev
+$ nr dev
 
-> rollup v1.19.4
-> bundles packages/vue/src/index.ts → packages/vue/dist/vue.global.js...
+> built: packages/vue/dist/vue.global.js
 ```
 
-- The `dev` script also supports fuzzy match for the target package, but will only match the first package matched.
+- **Important:** output of the `dev` script is for development and debugging only. While it has the same runtime behavior, the generated code should never be published to npm.
+
+- The `dev` script does not support fuzzy match - you must specify the full package name, e.g. `nr dev runtime-core`.
 
 - The `dev` script supports specifying build format via the `-f` flag just like the `build` script.
 
 - The `dev` script also supports the `-s` flag for generating source maps, but it will make rebuilds slower.
 
-### `yarn dev-compiler`
+- The `dev` script supports the `-i` flag for inlining all deps. This is useful when debugging `esm-bundler` builds which externalizes deps by default.
 
-The `dev-compiler` script builds, watches and serves the [Template Explorer](https://github.com/vuejs/vue-next/tree/master/packages/template-explorer) at `http://localhost:5000`. This is extremely useful when working on the compiler.
+### `nr dev-sfc`
 
-### `yarn test`
+Shortcut for starting the SFC Playground in local dev mode. This provides the fastest feedback loop when debugging issues that can be reproduced in the SFC Playground.
 
-The `test` script simply calls the `jest` binary, so all [Jest CLI Options](https://jestjs.io/docs/en/cli) can be used. Some examples:
+### `nr dev-esm`
+
+Builds and watches `vue/dist/vue-runtime.esm-bundler.js` with all deps inlined using esbuild. This is useful when debugging the ESM build in a reproduction that requires real build setups: link `packages/vue` globally, then link it into the project being debugged.
+
+### `nr dev-compiler`
+
+The `dev-compiler` script builds, watches and serves the [Template Explorer](https://github.com/vuejs/core/tree/main/packages/template-explorer) at `http://localhost:3000`. This is useful when working on pure compiler issues.
+
+### `nr test`
+
+The `test` script simply calls the `vitest` binary, so all [Vitest CLI Options](https://vitest.dev/guide/cli.html#options) can be used. Some examples:
 
 ```bash
-# run all tests
-$ yarn test
+# run all tests in watch mode
+$ nr test
 
-# run tests in watch mode
-$ yarn test --watch
+# run once and exit (equivalent to `vitest run`)
+$ nr test run
 
 # run all tests under the runtime-core package
-$ yarn test runtime-core
+$ nr test runtime-core
 
-# run tests in a specific file
-$ yarn test fileName
+# run tests in files matching the pattern
+$ nr test <fileNamePattern>
 
-# run a specific test in a specific file
-$ yarn test fileName -t 'test name'
+# run a specific test in specific files
+$ nr test <fileNamePattern> -t 'test name'
 ```
+
+Tests that test against source code are grouped under `nr test-unit`, while tests that test against built files that run in real browsers are grouped under `nr test-e2e`.
+
+### `nr test-dts`
+
+Runs `nr build-dts` first, then verify the type tests in `packages-private/dts-test` are working correctly against the actual built type declarations.
 
 ## Project Structure
 
@@ -172,15 +256,21 @@ This repository employs a [monorepo](https://en.wikipedia.org/wiki/Monorepo) set
 
 - `compiler-dom`: Compiler with additional plugins specifically targeting the browser.
 
+- `compiler-sfc`: Lower level utilities for compiling Vue Single File Components.
+
 - `compiler-ssr`: Compiler that produces render functions optimized for server-side rendering.
-
-- `template-explorer`: A development tool for debugging compiler output. You can run `yarn dev template-explorer` and open its `index.html` to get a repl of template compilation based on current source code.
-
-  A [live version](https://vue-next-template-explorer.netlify.com) of the template explorer is also available, which can be used for providing reproductions for compiler bugs. You can also pick the deployment for a specific commit from the [deploy logs](https://app.netlify.com/sites/vue-next-template-explorer/deploys).
 
 - `shared`: Internal utilities shared across multiple packages (especially environment-agnostic utils used by both runtime and compiler packages).
 
 - `vue`: The public facing "full build" which includes both the runtime AND the compiler.
+
+- Private utility packages:
+
+  - `dts-test`: Contains type-only tests against generated dts files.
+
+  - `sfc-playground`: The playground continuously deployed at https://play.vuejs.org. To run the playground locally, use [`nr dev-sfc`](#nr-dev-sfc).
+
+  - `template-explorer`: A development tool for debugging compiler output, continuously deployed at https://template-explorer.vuejs.org/. To run it locally, run [`nr dev-compiler`](#nr-dev-compiler).
 
 ### Importing Packages
 
@@ -192,33 +282,35 @@ import { h } from '@vue/runtime-core'
 
 This is made possible via several configurations:
 
-- For TypeScript, `compilerOptions.path` in `tsconfig.json`
-- For Jest, `moduleNameMapper` in `jest.config.js`
-- For plain Node.js, they are linked using [Yarn Workspaces](https://yarnpkg.com/blog/2017/08/02/introducing-workspaces/).
+- For TypeScript, `compilerOptions.paths` in `tsconfig.json`
+- Vitest and Rollup share the same set of aliases from `scripts/aliases.js`
+- For plain Node.js, they are linked using [PNPM Workspaces](https://pnpm.io/workspaces).
 
 ### Package Dependencies
 
-```
-                                    +---------------------+
-                                    |                     |
-                                    |  @vue/compiler-sfc  |
-                                    |                     |
-                                    +-----+--------+------+
-                                          |        |
-                                          v        v
-                      +---------------------+    +----------------------+
-                      |                     |    |                      |
-        +------------>|  @vue/compiler-dom  +--->|  @vue/compiler-core  |
-        |             |                     |    |                      |
-   +----+----+        +---------------------+    +----------------------+
-   |         |
-   |   vue   |
-   |         |
-   +----+----+        +---------------------+    +----------------------+    +-------------------+
-        |             |                     |    |                      |    |                   |
-        +------------>|  @vue/runtime-dom   +--->|  @vue/runtime-core   +--->|  @vue/reactivity  |
-                      |                     |    |                      |    |                   |
-                      +---------------------+    +----------------------+    +-------------------+
+```mermaid
+  flowchart LR
+    compiler-sfc["@vue/compiler-sfc"]
+    compiler-dom["@vue/compiler-dom"]
+    compiler-core["@vue/compiler-core"]
+    vue["vue"]
+    runtime-dom["@vue/runtime-dom"]
+    runtime-core["@vue/runtime-core"]
+    reactivity["@vue/reactivity"]
+
+    subgraph "Runtime Packages"
+      runtime-dom --> runtime-core
+      runtime-core --> reactivity
+    end
+
+    subgraph "Compiler Packages"
+      compiler-sfc --> compiler-core
+      compiler-sfc --> compiler-dom
+      compiler-dom --> compiler-core
+    end
+
+    vue ---> compiler-dom
+    vue --> runtime-dom
 ```
 
 There are some rules to follow when importing across package boundaries:
@@ -231,7 +323,7 @@ There are some rules to follow when importing across package boundaries:
 
 ## Contributing Tests
 
-Unit tests are collocated with the code being tested in each package, inside directories named `__tests__`. Consult the [Jest docs](https://jestjs.io/docs/en/using-matchers) and existing test cases for how to write new test specs. Here are some additional guidelines:
+Unit tests are collocated with the code being tested in each package, inside directories named `__tests__`. Consult the [Vitest docs](https://vitest.dev/api/) and existing test cases for how to write new test specs. Here are some additional guidelines:
 
 - Use the minimal API needed for a test case. For example, if a test can be written without involving the reactivity system or a component, it should be written so. This limits the test's exposure to changes in unrelated parts and makes it more stable.
 
@@ -239,13 +331,11 @@ Unit tests are collocated with the code being tested in each package, inside dir
 
 - Only use platform-specific runtimes if the test is asserting platform-specific behavior.
 
-Test coverage is continuously deployed at https://vue-next-coverage.netlify.app/. PRs that improve test coverage are welcome, but in general the test coverage should be used as a guidance for finding API use cases that are not covered by tests. We don't recommend adding tests that only improve coverage but not actually test a meaning use case.
+Test coverage is continuously deployed at https://coverage.vuejs.org. PRs that improve test coverage are welcome, but in general the test coverage should be used as a guidance for finding API use cases that are not covered by tests. We don't recommend adding tests that only improve coverage but not actually test a meaning use case.
 
 ### Testing Type Definition Correctness
 
-This project uses [tsd](https://github.com/SamVerschueren/tsd) to test the built definition files (`*.d.ts`).
-
-Type tests are located in the `test-dts` directory. To run the dts tests, run `yarn test-dts`. Note that the type test requires all relevant `*.d.ts` files to be built first (and the script does it for you). Once the `d.ts` files are built and up-to-date, the tests can be re-run by simply running `yarn test-dts`.
+Type tests are located in the `packages-private/dts-test` directory. To run the dts tests, run `nr test-dts`. Note that the type test requires all relevant `*.d.ts` files to be built first (and the script does it for you). Once the `d.ts` files are built and up-to-date, the tests can be re-run by running `nr test-dts-only`.
 
 ## Financial Contribution
 
@@ -262,4 +352,4 @@ Funds donated via Patreon go directly to support Evan You's full-time work on Vu
 
 Thank you to all the people who have already contributed to Vue.js!
 
-<a href="https://github.com/vuejs/vue/graphs/contributors"><img src="https://opencollective.com/vuejs/contributors.svg?width=890" /></a>
+<a href="https://github.com/vuejs/core/graphs/contributors"><img src="https://opencollective.com/vuejs/contributors.svg?width=890" /></a>

@@ -1,0 +1,12 @@
+packages:
+  - 'packages/*'
+  - 'packages-private/*'
+
+catalog:
+  '@babel/parser': ^7.25.3
+  '@babel/types': ^7.25.2
+  'estree-walker': ^2.0.2
+  'magic-string': ^0.30.11
+  'source-map-js': ^1.2.0
+  'vite': ^5.4.0
+  '@vitejs/plugin-vue': ^5.1.2

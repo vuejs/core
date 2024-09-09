@@ -1,13 +1,18 @@
-import { ObjectDirective } from '@vue/runtime-core'
+import type { ObjectDirective } from '@vue/runtime-core'
 
-interface VShowElement extends HTMLElement {
+export const vShowOriginalDisplay: unique symbol = Symbol('_vod')
+export const vShowHidden: unique symbol = Symbol('_vsh')
+
+export interface VShowElement extends HTMLElement {
   // _vod = vue original display
-  _vod: string
+  [vShowOriginalDisplay]: string
+  [vShowHidden]: boolean
 }
 
-export const vShow: ObjectDirective<VShowElement> = {
+export const vShow: ObjectDirective<VShowElement> & { name?: 'show' } = {
   beforeMount(el, { value }, { transition }) {
-    el._vod = el.style.display === 'none' ? '' : el.style.display
+    el[vShowOriginalDisplay] =
+      el.style.display === 'none' ? '' : el.style.display
     if (transition && value) {
       transition.beforeEnter(el)
     } else {
@@ -37,17 +42,24 @@ export const vShow: ObjectDirective<VShowElement> = {
   },
   beforeUnmount(el, { value }) {
     setDisplay(el, value)
-  }
+  },
 }
 
-if (__NODE_JS__) {
+if (__DEV__) {
+  vShow.name = 'show'
+}
+
+function setDisplay(el: VShowElement, value: unknown): void {
+  el.style.display = value ? el[vShowOriginalDisplay] : 'none'
+  el[vShowHidden] = !value
+}
+
+// SSR vnode transforms, only used when user includes client-oriented render
+// function in SSR
+export function initVShowForSSR(): void {
   vShow.getSSRProps = ({ value }) => {
     if (!value) {
       return { style: { display: 'none' } }
     }
   }
-}
-
-function setDisplay(el: VShowElement, value: unknown): void {
-  el.style.display = value ? el._vod : 'none'
 }

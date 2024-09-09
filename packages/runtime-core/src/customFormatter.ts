@@ -1,22 +1,30 @@
-import { isReactive, isReadonly, isRef, Ref, toRaw } from '@vue/reactivity'
+import {
+  type Ref,
+  isReactive,
+  isReadonly,
+  isRef,
+  isShallow,
+  toRaw,
+} from '@vue/reactivity'
 import { EMPTY_OBJ, extend, isArray, isFunction, isObject } from '@vue/shared'
-import { ComponentInternalInstance, ComponentOptions } from './component'
-import { ComponentPublicInstance } from './componentPublicInstance'
+import type { ComponentInternalInstance, ComponentOptions } from './component'
+import type { ComponentPublicInstance } from './componentPublicInstance'
 
-export function initCustomFormatter() {
+export function initCustomFormatter(): void {
   /* eslint-disable no-restricted-globals */
   if (!__DEV__ || typeof window === 'undefined') {
     return
   }
 
   const vueStyle = { style: 'color:#3ba776' }
-  const numberStyle = { style: 'color:#0b1bc9' }
-  const stringStyle = { style: 'color:#b62e24' }
-  const keywordStyle = { style: 'color:#9d288c' }
+  const numberStyle = { style: 'color:#1677ff' }
+  const stringStyle = { style: 'color:#f5222d' }
+  const keywordStyle = { style: 'color:#eb2f96' }
 
   // custom formatter for Chrome
   // https://www.mattzeunert.com/2016/02/19/custom-chrome-devtools-object-formatters.html
   const formatter = {
+    __vue_custom_formatter: true,
     header(obj: unknown) {
       // TODO also format ComponentPublicInstance & ctx.slots/attrs in setup
       if (!isObject(obj)) {
@@ -31,26 +39,27 @@ export function initCustomFormatter() {
           {},
           ['span', vueStyle, genRefFlag(obj)],
           '<',
-          formatValue(obj.value),
-          `>`
+          // avoid debugger accessing value affecting behavior
+          formatValue('_value' in obj ? obj._value : obj),
+          `>`,
         ]
       } else if (isReactive(obj)) {
         return [
           'div',
           {},
-          ['span', vueStyle, 'Reactive'],
+          ['span', vueStyle, isShallow(obj) ? 'ShallowReactive' : 'Reactive'],
           '<',
           formatValue(obj),
-          `>${isReadonly(obj) ? ` (readonly)` : ``}`
+          `>${isReadonly(obj) ? ` (readonly)` : ``}`,
         ]
       } else if (isReadonly(obj)) {
         return [
           'div',
           {},
-          ['span', vueStyle, 'Readonly'],
+          ['span', vueStyle, isShallow(obj) ? 'ShallowReadonly' : 'Readonly'],
           '<',
           formatValue(obj),
-          '>'
+          '>',
         ]
       }
       return null
@@ -63,10 +72,10 @@ export function initCustomFormatter() {
         return [
           'div',
           {},
-          ...formatInstance((obj as ComponentPublicInstance).$)
+          ...formatInstance((obj as ComponentPublicInstance).$),
         ]
       }
-    }
+    },
   }
 
   function formatInstance(instance: ComponentInternalInstance) {
@@ -95,11 +104,11 @@ export function initCustomFormatter() {
       [
         'span',
         {
-          style: keywordStyle.style + ';opacity:0.66'
+          style: keywordStyle.style + ';opacity:0.66',
         },
-        '$ (internal): '
+        '$ (internal): ',
       ],
-      ['object', { object: instance }]
+      ['object', { object: instance }],
     ])
     return blocks
   }
@@ -115,24 +124,24 @@ export function initCustomFormatter() {
       [
         'div',
         {
-          style: 'color:#476582'
+          style: 'color:#476582',
         },
-        type
+        type,
       ],
       [
         'div',
         {
-          style: 'padding-left:1.25em'
+          style: 'padding-left:1.25em',
         },
         ...Object.keys(target).map(key => {
           return [
             'div',
             {},
             ['span', keywordStyle, key + ': '],
-            formatValue(target[key], false)
+            formatValue(target[key], false),
           ]
-        })
-      ]
+        }),
+      ],
     ]
   }
 
@@ -181,7 +190,7 @@ export function initCustomFormatter() {
   }
 
   function genRefFlag(v: Ref) {
-    if (v._shallow) {
+    if (isShallow(v)) {
       return `ShallowRef`
     }
     if ((v as any).effect) {

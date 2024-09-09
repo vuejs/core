@@ -1,20 +1,26 @@
 import {
-  App,
-  VNode,
-  createVNode,
-  ssrUtils,
+  type App,
+  type VNode,
   createApp,
-  ssrContextKey
+  createVNode,
+  ssrContextKey,
+  ssrUtils,
 } from 'vue'
-import { isString, isPromise } from '@vue/shared'
-import { renderComponentVNode, SSRBuffer, SSRContext } from './render'
-import { Readable } from 'stream'
+import { isPromise, isString } from '@vue/shared'
+import { type SSRBuffer, type SSRContext, renderComponentVNode } from './render'
+import type { Readable, Writable } from 'node:stream'
+import { resolveTeleports } from './renderToString'
 
 const { isVNode } = ssrUtils
 
+export interface SimpleReadable {
+  push(chunk: string | null): void
+  destroy(err: any): void
+}
+
 async function unrollBuffer(
   buffer: SSRBuffer,
-  stream: Readable
+  stream: SimpleReadable,
 ): Promise<void> {
   if (buffer.hasAsync) {
     for (let i = 0; i < buffer.length; i++) {
@@ -35,7 +41,7 @@ async function unrollBuffer(
   }
 }
 
-function unrollBufferSync(buffer: SSRBuffer, stream: Readable) {
+function unrollBufferSync(buffer: SSRBuffer, stream: SimpleReadable) {
   for (let i = 0; i < buffer.length; i++) {
     let item = buffer[i]
     if (isString(item)) {
@@ -47,13 +53,18 @@ function unrollBufferSync(buffer: SSRBuffer, stream: Readable) {
   }
 }
 
-export function renderToStream(
+export function renderToSimpleStream<T extends SimpleReadable>(
   input: App | VNode,
-  context: SSRContext = {}
-): Readable {
+  context: SSRContext,
+  stream: T,
+): T {
   if (isVNode(input)) {
     // raw vnode, wrap with app (for context)
-    return renderToStream(createApp({ render: () => input }), context)
+    return renderToSimpleStream(
+      createApp({ render: () => input }),
+      context,
+      stream,
+    )
   }
 
   // rendering an app
@@ -62,16 +73,142 @@ export function renderToStream(
   // provide the ssr context to the tree
   input.provide(ssrContextKey, context)
 
-  const stream = new Readable()
-
   Promise.resolve(renderComponentVNode(vnode))
     .then(buffer => unrollBuffer(buffer, stream))
+    .then(() => resolveTeleports(context))
     .then(() => {
-      stream.push(null)
+      if (context.__watcherHandles) {
+        for (const unwatch of context.__watcherHandles) {
+          unwatch()
+        }
+      }
     })
+    .then(() => stream.push(null))
     .catch(error => {
       stream.destroy(error)
     })
 
   return stream
+}
+
+/**
+ * @deprecated
+ */
+export function renderToStream(
+  input: App | VNode,
+  context: SSRContext = {},
+): Readable {
+  console.warn(
+    `[@vue/server-renderer] renderToStream is deprecated - use renderToNodeStream instead.`,
+  )
+  return renderToNodeStream(input, context)
+}
+
+export function renderToNodeStream(
+  input: App | VNode,
+  context: SSRContext = {},
+): Readable {
+  const stream: Readable = __CJS__
+    ? new (require('node:stream').Readable)({ read() {} })
+    : null
+
+  if (!stream) {
+    throw new Error(
+      `ESM build of renderToStream() does not support renderToNodeStream(). ` +
+        `Use pipeToNodeWritable() with an existing Node.js Writable stream ` +
+        `instance instead.`,
+    )
+  }
+
+  return renderToSimpleStream(input, context, stream)
+}
+
+export function pipeToNodeWritable(
+  input: App | VNode,
+  context: SSRContext | undefined = {},
+  writable: Writable,
+): void {
+  renderToSimpleStream(input, context, {
+    push(content) {
+      if (content != null) {
+        writable.write(content)
+      } else {
+        writable.end()
+      }
+    },
+    destroy(err) {
+      writable.destroy(err)
+    },
+  })
+}
+
+export function renderToWebStream(
+  input: App | VNode,
+  context: SSRContext = {},
+): ReadableStream {
+  if (typeof ReadableStream !== 'function') {
+    throw new Error(
+      `ReadableStream constructor is not available in the global scope. ` +
+        `If the target environment does support web streams, consider using ` +
+        `pipeToWebWritable() with an existing WritableStream instance instead.`,
+    )
+  }
+
+  const encoder = new TextEncoder()
+  let cancelled = false
+
+  return new ReadableStream({
+    start(controller) {
+      renderToSimpleStream(input, context, {
+        push(content) {
+          if (cancelled) return
+          if (content != null) {
+            controller.enqueue(encoder.encode(content))
+          } else {
+            controller.close()
+          }
+        },
+        destroy(err) {
+          controller.error(err)
+        },
+      })
+    },
+    cancel() {
+      cancelled = true
+    },
+  })
+}
+
+export function pipeToWebWritable(
+  input: App | VNode,
+  context: SSRContext | undefined = {},
+  writable: WritableStream,
+): void {
+  const writer = writable.getWriter()
+  const encoder = new TextEncoder()
+
+  // #4287 CloudFlare workers do not implement `ready` property
+  let hasReady = false
+  try {
+    hasReady = isPromise(writer.ready)
+  } catch (e: any) {}
+
+  renderToSimpleStream(input, context, {
+    async push(content) {
+      if (hasReady) {
+        await writer.ready
+      }
+      if (content != null) {
+        return writer.write(encoder.encode(content))
+      } else {
+        return writer.close()
+      }
+    },
+    destroy(err) {
+      // TODO better error handling?
+      // eslint-disable-next-line no-console
+      console.log(err)
+      writer.close()
+    },
+  })
 }
