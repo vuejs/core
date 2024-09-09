@@ -102,7 +102,7 @@ function rewriteSelector(
   slotted = false,
 ) {
   let node: selectorParser.Node | null = null
-  let shouldInject = true
+  let shouldInject = !deep
   // find the last child node to insert attribute selector
   selector.each(n => {
     // DEPRECATED ">>>" and "/deep/" combinator
@@ -266,7 +266,7 @@ function rewriteSelector(
     selector.first.spaces.before = ''
   }
 
-  if (shouldInject && !deep) {
+  if (shouldInject) {
     const idToAdd = slotted ? id + '-s' : id
     selector.insertAfter(
       // If node is null it means we need to inject [id] at the start
