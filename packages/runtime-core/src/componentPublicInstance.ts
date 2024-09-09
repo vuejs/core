@@ -285,7 +285,7 @@ export type CreateComponentPublicInstanceWithMixins<
 export type ExposedKeys<
   T,
   Exposed extends string & keyof T,
-  > = '' extends Exposed ? T : Pick<T, Exposed>
+> = '' extends Exposed ? T : Pick<T, Exposed>
 
 type Override<T, U> = Omit<T, keyof U> & U
 
