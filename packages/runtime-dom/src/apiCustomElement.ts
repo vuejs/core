@@ -238,6 +238,8 @@ export class VueElement
   private _ob?: MutationObserver | null = null
   private _slots?: Record<string, Node[]>
 
+  _teleportTarget?: HTMLElement
+
   constructor(
     /**
      * Component def - note this may be an AsyncWrapper, and this._def will
@@ -618,7 +620,7 @@ export class VueElement
    * Only called when shaddowRoot is false
    */
   private _renderSlots() {
-    const outlets = this.querySelectorAll('slot')
+    const outlets = (this._teleportTarget || this).querySelectorAll('slot')
     const scopeId = this._instance!.type.__scopeId
     for (let i = 0; i < outlets.length; i++) {
       const o = outlets[i] as HTMLSlotElement
