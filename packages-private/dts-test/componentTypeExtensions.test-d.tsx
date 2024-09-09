@@ -78,16 +78,16 @@ expectType<JSX.Element>(<Empty onClick={(e: MouseEvent) => { }} />)
 // @ts-expect-error
 expectType<JSX.Element>(<Custom />)
 // @ts-expect-error
-; <Custom bar="bar" />
+;<Custom bar="bar" />
 // @ts-expect-error
-; <Custom baz="baz" />
+;<Custom baz="baz" />
 // @ts-expect-error
-; <Custom baz={1} notExist={1} />
+;<Custom baz={1} notExist={1} />
 // @ts-expect-error
-; <Custom baz={1} custom="custom" />
+;<Custom baz={1} custom="custom" />
 // @ts-expect-error
-; <Custom baz={1} onClick={(e: MouseEvent) => { }} />
+;<Custom baz={1} onClick={(e: MouseEvent) => { }} />
 // @ts-expect-error
-; <Empty baz={1} />
+;<Empty baz={1} />
 // @ts-expect-error
-; <Empty onClick={(e: number) => { }} />
+;<Empty onClick={(e: number) => { }} />
