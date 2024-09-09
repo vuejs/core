@@ -32,15 +32,30 @@ const positionMap = new WeakMap<VNode, DOMRect>()
 const newPositionMap = new WeakMap<VNode, DOMRect>()
 const moveCbKey = Symbol('_moveCb')
 const enterCbKey = Symbol('_enterCb')
+
 export type TransitionGroupProps = Omit<TransitionProps, 'mode'> & {
   tag?: string
   moveClass?: string
 }
 
-const TransitionGroupImpl: ComponentOptions = {
+/**
+ * Wrap logic that modifies TransitionGroup properties in a function
+ * so that it can be annotated as pure
+ */
+const decorate = (t: typeof TransitionGroupImpl) => {
+  // TransitionGroup does not support "mode" so we need to remove it from the
+  // props declarations, but direct delete operation is considered a side effect
+  delete t.props.mode
+  if (__COMPAT__) {
+    t.__isBuiltIn = true
+  }
+  return t
+}
+
+const TransitionGroupImpl: ComponentOptions = /*@__PURE__*/ decorate({
   name: 'TransitionGroup',
 
-  props: /*#__PURE__*/ extend({}, TransitionPropsValidators, {
+  props: /*@__PURE__*/ extend({}, TransitionPropsValidators, {
     tag: String,
     moveClass: String,
   }),
@@ -112,7 +127,29 @@ const TransitionGroupImpl: ComponentOptions = {
         tag = 'span'
       }
 
-      prevChildren = children
+      prevChildren = []
+      if (children) {
+        for (let i = 0; i < children.length; i++) {
+          const child = children[i]
+          if (child.el && child.el instanceof Element) {
+            prevChildren.push(child)
+            setTransitionHooks(
+              child,
+              resolveTransitionHooks(
+                child,
+                cssTransitionProps,
+                state,
+                instance,
+              ),
+            )
+            positionMap.set(
+              child,
+              (child.el as Element).getBoundingClientRect(),
+            )
+          }
+        }
+      }
+
       children = slots.default ? getTransitionRawChildren(slots.default()) : []
 
       for (let i = 0; i < children.length; i++) {
@@ -127,34 +164,10 @@ const TransitionGroupImpl: ComponentOptions = {
         }
       }
 
-      if (prevChildren) {
-        for (let i = 0; i < prevChildren.length; i++) {
-          const child = prevChildren[i]
-          setTransitionHooks(
-            child,
-            resolveTransitionHooks(child, cssTransitionProps, state, instance),
-          )
-          positionMap.set(child, (child.el as Element).getBoundingClientRect())
-        }
-      }
-
       return createVNode(tag, null, children)
     }
   },
-}
-
-if (__COMPAT__) {
-  TransitionGroupImpl.__isBuiltIn = true
-}
-
-/**
- * TransitionGroup does not support "mode" so we need to remove it from the
- * props declarations, but direct delete operation is considered a side effect
- * and will make the entire transition feature non-tree-shakeable, so we do it
- * in a function and mark the function's invocation as pure.
- */
-const removeMode = (props: any) => delete props.mode
-/*#__PURE__*/ removeMode(TransitionGroupImpl.props)
+})
 
 export const TransitionGroup = TransitionGroupImpl as unknown as {
   new (): {

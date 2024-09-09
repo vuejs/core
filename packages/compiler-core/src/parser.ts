@@ -179,7 +179,7 @@ const tokenizer = new Tokenizer(stack, {
     const name = currentOpenTag!.tag
     currentOpenTag!.isSelfClosing = true
     endOpenTag(end)
-    if (stack[0]?.tag === name) {
+    if (stack[0] && stack[0].tag === name) {
       onCloseTag(stack.shift()!, end)
     }
   },
@@ -225,7 +225,7 @@ const tokenizer = new Tokenizer(stack, {
         rawName: raw,
         exp: undefined,
         arg: undefined,
-        modifiers: raw === '.' ? ['prop'] : [],
+        modifiers: raw === '.' ? [createSimpleExpression('prop')] : [],
         loc: getLoc(start),
       }
       if (name === 'pre') {
@@ -273,7 +273,8 @@ const tokenizer = new Tokenizer(stack, {
         setLocEnd(arg.loc, end)
       }
     } else {
-      ;(currentProp as DirectiveNode).modifiers.push(mod)
+      const exp = createSimpleExpression(mod, true, getLoc(start, end))
+      ;(currentProp as DirectiveNode).modifiers.push(exp)
     }
   },
 
@@ -379,7 +380,9 @@ const tokenizer = new Tokenizer(stack, {
           if (
             __COMPAT__ &&
             currentProp.name === 'bind' &&
-            (syncIndex = currentProp.modifiers.indexOf('sync')) > -1 &&
+            (syncIndex = currentProp.modifiers.findIndex(
+              mod => mod.content === 'sync',
+            )) > -1 &&
             checkCompatEnabled(
               CompilerDeprecationTypes.COMPILER_V_BIND_SYNC,
               currentOptions,
@@ -587,14 +590,14 @@ function endOpenTag(end: number) {
 
 function onText(content: string, start: number, end: number) {
   if (__BROWSER__) {
-    const tag = stack[0]?.tag
+    const tag = stack[0] && stack[0].tag
     if (tag !== 'script' && tag !== 'style' && content.includes('&')) {
       content = currentOptions.decodeEntities!(content, false)
     }
   }
   const parent = stack[0] || currentRoot
   const lastNode = parent.children[parent.children.length - 1]
-  if (lastNode?.type === NodeTypes.TEXT) {
+  if (lastNode && lastNode.type === NodeTypes.TEXT) {
     // merge
     lastNode.content += content
     setLocEnd(lastNode.loc, end)
@@ -613,7 +616,7 @@ function onCloseTag(el: ElementNode, end: number, isImplied = false) {
     // implied close, end should be backtracked to close
     setLocEnd(el.loc, backTrack(end, CharCodes.Lt))
   } else {
-    setLocEnd(el.loc, end + 1)
+    setLocEnd(el.loc, lookAhead(end, CharCodes.Gt) + 1)
   }
 
   if (tokenizer.inSFCRoot) {
@@ -736,6 +739,12 @@ function onCloseTag(el: ElementNode, end: number, isImplied = false) {
   }
 }
 
+function lookAhead(index: number, c: number) {
+  let i = index
+  while (currentInput.charCodeAt(i) !== c && i < currentInput.length - 1) i++
+  return i
+}
+
 function backTrack(index: number, c: number) {
   let i = index
   while (currentInput.charCodeAt(i) !== c && i >= 0) i--
@@ -765,7 +774,8 @@ function isComponent({ tag, props }: ElementNode): boolean {
     tag === 'component' ||
     isUpperCase(tag.charCodeAt(0)) ||
     isCoreComponent(tag) ||
-    currentOptions.isBuiltInComponent?.(tag) ||
+    (currentOptions.isBuiltInComponent &&
+      currentOptions.isBuiltInComponent(tag)) ||
     (currentOptions.isNativeTag && !currentOptions.isNativeTag(tag))
   ) {
     return true
@@ -822,8 +832,8 @@ function condenseWhitespace(
     if (node.type === NodeTypes.TEXT) {
       if (!inPre) {
         if (isAllWhitespace(node.content)) {
-          const prev = nodes[i - 1]?.type
-          const next = nodes[i + 1]?.type
+          const prev = nodes[i - 1] && nodes[i - 1].type
+          const next = nodes[i + 1] && nodes[i + 1].type
           // Remove if:
           // - the whitespace is the first or last node, or:
           // - (condense mode) the whitespace is between two comments, or:
@@ -1057,7 +1067,7 @@ export function baseParse(input: string, options?: ParserOptions): RootNode {
     currentOptions.ns === Namespaces.SVG ||
     currentOptions.ns === Namespaces.MATH_ML
 
-  const delimiters = options?.delimiters
+  const delimiters = options && options.delimiters
   if (delimiters) {
     tokenizer.delimiterOpen = toCharCodes(delimiters[0])
     tokenizer.delimiterClose = toCharCodes(delimiters[1])
