@@ -272,7 +272,7 @@ export class VueElement
   }
 
   connectedCallback(): void {
-    if (!this.shadowRoot) {
+    if (!this.shadowRoot && !this._slots) {
       this._parseSlots()
     }
     this._connected = true
