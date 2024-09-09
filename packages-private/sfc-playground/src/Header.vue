@@ -110,7 +110,7 @@ function toggleDark() {
         <span>{{ ssr ? 'SSR ON' : 'SSR OFF' }}</span>
       </button>
       <button
-        title="Toggle server rendering mode"
+        title="Toggle editor auto save mode"
         class="toggle-autosave"
         :class="{ enabled: autoSave }"
         @click="$emit('toggle-autosave')"
