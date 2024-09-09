@@ -2,6 +2,7 @@ import type { MockedFunction } from 'vitest'
 import {
   type HMRRuntime,
   type Ref,
+  Teleport,
   type VueElement,
   createApp,
   defineAsyncComponent,
@@ -1013,6 +1014,51 @@ describe('defineCustomElement', () => {
       expect(e.innerHTML).toBe(
         `<my-son data-v-app=""><span>default</span></my-son>`,
       )
+      app.unmount()
+    })
+
+    test('should work with Teleport', async () => {
+      const target = document.createElement('div')
+      const Son = defineCustomElement(
+        {
+          render() {
+            return h(
+              Teleport,
+              { to: target },
+              {
+                default: () => [renderSlot(this.$slots, 'default')],
+              },
+            )
+          },
+        },
+        { shadowRoot: false },
+      )
+      customElements.define('my-son', Son)
+      const Parent = defineCustomElement(
+        {
+          render() {
+            return renderSlot(this.$slots, 'default')
+          },
+        },
+        { shadowRoot: false },
+      )
+      customElements.define('my-parent', Parent)
+
+      const App = {
+        render() {
+          return h('my-parent', null, {
+            default: () => [
+              h('my-son', null, {
+                default: () => [h('span', null, 'default')],
+              }),
+            ],
+          })
+        },
+      }
+      const app = createApp(App)
+      app.mount(container)
+      await new Promise(r => setTimeout(r))
+      expect(target.innerHTML).toBe(`<span>default</span>`)
       app.unmount()
     })
   })
