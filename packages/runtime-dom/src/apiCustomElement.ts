@@ -238,6 +238,9 @@ export class VueElement
   private _ob?: MutationObserver | null = null
   private _slots?: Record<string, Node[]>
 
+  /**
+   * Only effective when shadowRoot is false.
+   */
   _teleportTarget?: HTMLElement
 
   constructor(

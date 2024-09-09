@@ -1264,6 +1264,8 @@ export interface ComponentCustomElementInterface {
     shouldReflect?: boolean,
     shouldUpdate?: boolean,
   ): void
-
+  /**
+   * Only effective when shadowRoot is false.
+   */
   _teleportTarget?: RendererElement
 }
