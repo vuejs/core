@@ -1006,11 +1006,13 @@ describe('defineCustomElement', () => {
           })
         },
       }
-      createApp(App).mount(container)
+      const app = createApp(App)
+      app.mount(container)
       const e = container.childNodes[0] as VueElement
       expect(e.innerHTML).toBe(
         `<my-son data-v-app=""><span>default</span></my-son>`,
       )
+      app.unmount()
     })
   })
 
