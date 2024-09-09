@@ -7,46 +7,50 @@
 // - This transform is only applied in non-browser builds because it relies on
 //   an additional JavaScript parser. In the browser, there is no source-map
 //   support and the code is wrapped in `with (this) { ... }`.
-import { NodeTransform, TransformContext } from '../transform'
+import type { NodeTransform, TransformContext } from '../transform'
 import {
+  type CompoundExpressionNode,
+  ConstantTypes,
+  type ExpressionNode,
   NodeTypes,
-  createSimpleExpression,
-  ExpressionNode,
-  SimpleExpressionNode,
-  CompoundExpressionNode,
+  type SimpleExpressionNode,
   createCompoundExpression,
-  ConstantTypes
+  createSimpleExpression,
 } from '../ast'
+import {
+  isInDestructureAssignment,
+  isInNewExpression,
+  isStaticProperty,
+  isStaticPropertyKey,
+  walkIdentifiers,
+} from '../babelUtils'
 import { advancePositionWithClone, isSimpleIdentifier } from '../utils'
 import {
-  isGloballyWhitelisted,
-  makeMap,
-  babelParserDefaultPlugins,
+  genPropsAccessExp,
   hasOwn,
-  isString
+  isGloballyAllowed,
+  isString,
+  makeMap,
 } from '@vue/shared'
-import { createCompilerError, ErrorCodes } from '../errors'
-import {
-  Node,
-  Function,
-  Identifier,
-  ObjectProperty,
+import { ErrorCodes, createCompilerError } from '../errors'
+import type {
   AssignmentExpression,
-  UpdateExpression
+  Identifier,
+  Node,
+  UpdateExpression,
 } from '@babel/types'
 import { validateBrowserExpression } from '../validateExpression'
-import { parse } from '@babel/parser'
-import { walk } from 'estree-walker'
+import { parseExpression } from '@babel/parser'
 import { IS_REF, UNREF } from '../runtimeHelpers'
 import { BindingTypes } from '../options'
 
-const isLiteralWhitelisted = /*#__PURE__*/ makeMap('true,false,null,this')
+const isLiteralWhitelisted = /*@__PURE__*/ makeMap('true,false,null,this')
 
 export const transformExpression: NodeTransform = (node, context) => {
   if (node.type === NodeTypes.INTERPOLATION) {
     node.content = processExpression(
       node.content as SimpleExpressionNode,
-      context
+      context,
     )
   } else if (node.type === NodeTypes.ELEMENT) {
     // handle directives on element
@@ -67,7 +71,7 @@ export const transformExpression: NodeTransform = (node, context) => {
             exp,
             context,
             // slot args must be processed as function params
-            dir.name === 'slot'
+            dir.name === 'slot',
           )
         }
         if (arg && arg.type === NodeTypes.SIMPLE_EXPRESSION && !arg.isStatic) {
@@ -96,7 +100,8 @@ export function processExpression(
   // function params
   asParams = false,
   // v-on handler values may contain multiple statements
-  asRawStatements = false
+  asRawStatements = false,
+  localVars: Record<string, number> = Object.create(context.identifiers),
 ): ExpressionNode {
   if (__BROWSER__) {
     if (__DEV__) {
@@ -111,7 +116,11 @@ export function processExpression(
   }
 
   const { inline, bindingMetadata } = context
-  const rewriteIdentifier = (raw: string, parent?: Node, id?: Identifier) => {
+  const rewriteIdentifier = (
+    raw: string,
+    parent?: Node | null,
+    id?: Identifier,
+  ) => {
     const type = hasOwn(bindingMetadata, raw) && bindingMetadata[raw]
     if (inline) {
       // x = y
@@ -123,8 +132,17 @@ export function processExpression(
       // ({ x } = y)
       const isDestructureAssignment =
         parent && isInDestructureAssignment(parent, parentStack)
+      const isNewExpression = parent && isInNewExpression(parentStack)
+      const wrapWithUnref = (raw: string) => {
+        const wrapped = `${context.helperString(UNREF)}(${raw})`
+        return isNewExpression ? `(${wrapped})` : wrapped
+      }
 
-      if (type === BindingTypes.SETUP_CONST) {
+      if (
+        isConst(type) ||
+        type === BindingTypes.SETUP_REACTIVE_CONST ||
+        localVars[raw]
+      ) {
         return raw
       } else if (type === BindingTypes.SETUP_REF) {
         return `${raw}.value`
@@ -135,7 +153,7 @@ export function processExpression(
         // that assumes the value to be a ref for more efficiency
         return isAssignmentLVal || isUpdateArg || isDestructureAssignment
           ? `${raw}.value`
-          : `${context.helperString(UNREF)}(${raw})`
+          : wrapWithUnref(raw)
       } else if (type === BindingTypes.SETUP_LET) {
         if (isAssignmentLVal) {
           // let binding.
@@ -146,7 +164,13 @@ export function processExpression(
           const { right: rVal, operator } = parent as AssignmentExpression
           const rExp = rawExp.slice(rVal.start! - 1, rVal.end! - 1)
           const rExpString = stringifyExpression(
-            processExpression(createSimpleExpression(rExp, false), context)
+            processExpression(
+              createSimpleExpression(rExp, false),
+              context,
+              false,
+              false,
+              knownIds,
+            ),
           )
           return `${context.helperString(IS_REF)}(${raw})${
             context.isTS ? ` //@ts-ignore\n` : ``
@@ -172,38 +196,57 @@ export function processExpression(
           // for now
           return raw
         } else {
-          return `${context.helperString(UNREF)}(${raw})`
+          return wrapWithUnref(raw)
         }
       } else if (type === BindingTypes.PROPS) {
         // use __props which is generated by compileScript so in ts mode
         // it gets correct type
-        return `__props.${raw}`
+        return genPropsAccessExp(raw)
+      } else if (type === BindingTypes.PROPS_ALIASED) {
+        // prop with a different local alias (from defineProps() destructure)
+        return genPropsAccessExp(bindingMetadata.__propsAliases![raw])
       }
     } else {
-      if (type && type.startsWith('setup')) {
+      if (
+        (type && type.startsWith('setup')) ||
+        type === BindingTypes.LITERAL_CONST
+      ) {
         // setup bindings in non-inline mode
         return `$setup.${raw}`
+      } else if (type === BindingTypes.PROPS_ALIASED) {
+        return `$props['${bindingMetadata.__propsAliases![raw]}']`
       } else if (type) {
         return `$${type}.${raw}`
       }
     }
+
     // fallback to ctx
     return `_ctx.${raw}`
   }
 
   // fast path if expression is a simple identifier.
   const rawExp = node.content
-  // bail constant on parens (function invocation) and dot (member access)
-  const bailConstant = rawExp.indexOf(`(`) > -1 || rawExp.indexOf('.') > 0
 
-  if (isSimpleIdentifier(rawExp)) {
+  let ast = node.ast
+
+  if (ast === false) {
+    // ast being false means it has caused an error already during parse phase
+    return node
+  }
+
+  if (ast === null || (!ast && isSimpleIdentifier(rawExp))) {
     const isScopeVarReference = context.identifiers[rawExp]
-    const isAllowedGlobal = isGloballyWhitelisted(rawExp)
+    const isAllowedGlobal = isGloballyAllowed(rawExp)
     const isLiteral = isLiteralWhitelisted(rawExp)
-    if (!asParams && !isScopeVarReference && !isAllowedGlobal && !isLiteral) {
+    if (
+      !asParams &&
+      !isScopeVarReference &&
+      !isLiteral &&
+      (!isAllowedGlobal || bindingMetadata[rawExp])
+    ) {
       // const bindings exposed from setup can be skipped for patching but
       // cannot be hoisted to module scope
-      if (bindingMetadata[node.content] === BindingTypes.SETUP_CONST) {
+      if (isConst(bindingMetadata[rawExp])) {
         node.constType = ConstantTypes.CAN_SKIP_PATCH
       }
       node.content = rewriteIdentifier(rawExp)
@@ -211,120 +254,85 @@ export function processExpression(
       if (isLiteral) {
         node.constType = ConstantTypes.CAN_STRINGIFY
       } else {
-        node.constType = ConstantTypes.CAN_HOIST
+        node.constType = ConstantTypes.CAN_CACHE
       }
     }
     return node
   }
 
-  let ast: any
-  // exp needs to be parsed differently:
-  // 1. Multiple inline statements (v-on, with presence of `;`): parse as raw
-  //    exp, but make sure to pad with spaces for consistent ranges
-  // 2. Expressions: wrap with parens (for e.g. object expressions)
-  // 3. Function arguments (v-for, v-slot): place in a function argument position
-  const source = asRawStatements
-    ? ` ${rawExp} `
-    : `(${rawExp})${asParams ? `=>{}` : ``}`
-  try {
-    ast = parse(source, {
-      plugins: [...context.expressionPlugins, ...babelParserDefaultPlugins]
-    }).program
-  } catch (e) {
-    context.onError(
-      createCompilerError(
-        ErrorCodes.X_INVALID_EXPRESSION,
-        node.loc,
-        undefined,
-        e.message
+  if (!ast) {
+    // exp needs to be parsed differently:
+    // 1. Multiple inline statements (v-on, with presence of `;`): parse as raw
+    //    exp, but make sure to pad with spaces for consistent ranges
+    // 2. Expressions: wrap with parens (for e.g. object expressions)
+    // 3. Function arguments (v-for, v-slot): place in a function argument position
+    const source = asRawStatements
+      ? ` ${rawExp} `
+      : `(${rawExp})${asParams ? `=>{}` : ``}`
+    try {
+      ast = parseExpression(source, {
+        sourceType: 'module',
+        plugins: context.expressionPlugins,
+      })
+    } catch (e: any) {
+      context.onError(
+        createCompilerError(
+          ErrorCodes.X_INVALID_EXPRESSION,
+          node.loc,
+          undefined,
+          e.message,
+        ),
       )
-    )
-    return node
+      return node
+    }
   }
 
-  const ids: (Identifier & PrefixMeta)[] = []
-  const knownIds = Object.create(context.identifiers)
-  const isDuplicate = (node: Node & PrefixMeta): boolean =>
-    ids.some(id => id.start === node.start)
+  type QualifiedId = Identifier & PrefixMeta
+  const ids: QualifiedId[] = []
   const parentStack: Node[] = []
+  const knownIds: Record<string, number> = Object.create(context.identifiers)
 
-  // walk the AST and look for identifiers that need to be prefixed.
-  ;(walk as any)(ast, {
-    enter(node: Node & PrefixMeta, parent: Node | undefined) {
-      parent && parentStack.push(parent)
-      if (node.type === 'Identifier') {
-        if (!isDuplicate(node)) {
-          // v2 wrapped filter call
-          if (__COMPAT__ && node.name.startsWith('_filter_')) {
-            return
-          }
+  walkIdentifiers(
+    ast,
+    (node, parent, _, isReferenced, isLocal) => {
+      if (isStaticPropertyKey(node, parent!)) {
+        return
+      }
+      // v2 wrapped filter call
+      if (__COMPAT__ && node.name.startsWith('_filter_')) {
+        return
+      }
 
-          const needPrefix = shouldPrefix(node, parent!, parentStack)
-          if (!knownIds[node.name] && needPrefix) {
-            if (isStaticProperty(parent!) && parent.shorthand) {
-              // property shorthand like { foo }, we need to add the key since
-              // we rewrite the value
-              node.prefix = `${node.name}: `
-            }
-            node.name = rewriteIdentifier(node.name, parent, node)
-            ids.push(node)
-          } else if (!isStaticPropertyKey(node, parent!)) {
-            // The identifier is considered constant unless it's pointing to a
-            // scope variable (a v-for alias, or a v-slot prop)
-            if (!(needPrefix && knownIds[node.name]) && !bailConstant) {
-              node.isConstant = true
-            }
-            // also generate sub-expressions for other identifiers for better
-            // source map support. (except for property keys which are static)
-            ids.push(node)
-          }
+      const needPrefix = isReferenced && canPrefix(node)
+      if (needPrefix && !isLocal) {
+        if (isStaticProperty(parent!) && parent.shorthand) {
+          // property shorthand like { foo }, we need to add the key since
+          // we rewrite the value
+          ;(node as QualifiedId).prefix = `${node.name}: `
         }
-      } else if (isFunction(node)) {
-        // walk function expressions and add its arguments to known identifiers
-        // so that we don't prefix them
-        node.params.forEach(p =>
-          (walk as any)(p, {
-            enter(child: Node, parent: Node) {
-              if (
-                child.type === 'Identifier' &&
-                // do not record as scope variable if is a destructured key
-                !isStaticPropertyKey(child, parent) &&
-                // do not record if this is a default value
-                // assignment of a destructured variable
-                !(
-                  parent &&
-                  parent.type === 'AssignmentPattern' &&
-                  parent.right === child
-                )
-              ) {
-                const { name } = child
-                if (node.scopeIds && node.scopeIds.has(name)) {
-                  return
-                }
-                if (name in knownIds) {
-                  knownIds[name]++
-                } else {
-                  knownIds[name] = 1
-                }
-                ;(node.scopeIds || (node.scopeIds = new Set())).add(name)
-              }
-            }
-          })
-        )
+        node.name = rewriteIdentifier(node.name, parent, node)
+        ids.push(node as QualifiedId)
+      } else {
+        // The identifier is considered constant unless it's pointing to a
+        // local scope variable (a v-for alias, or a v-slot prop)
+        if (
+          !(needPrefix && isLocal) &&
+          (!parent ||
+            (parent.type !== 'CallExpression' &&
+              parent.type !== 'NewExpression' &&
+              parent.type !== 'MemberExpression'))
+        ) {
+          ;(node as QualifiedId).isConstant = true
+        }
+        // also generate sub-expressions for other identifiers for better
+        // source map support. (except for property keys which are static)
+        ids.push(node as QualifiedId)
       }
     },
-    leave(node: Node & PrefixMeta, parent: Node | undefined) {
-      parent && parentStack.pop()
-      if (node !== ast.body[0].expression && node.scopeIds) {
-        node.scopeIds.forEach((id: string) => {
-          knownIds[id]--
-          if (knownIds[id] === 0) {
-            delete knownIds[id]
-          }
-        })
-      }
-    }
-  })
+    true, // invoke on ALL identifiers
+    parentStack,
+    knownIds,
+  )
 
   // We break up the compound expression into an array of strings and sub
   // expressions (for identifiers that have been prefixed). In codegen, if
@@ -347,12 +355,14 @@ export function processExpression(
         id.name,
         false,
         {
-          source,
           start: advancePositionWithClone(node.loc.start, source, start),
-          end: advancePositionWithClone(node.loc.start, source, end)
+          end: advancePositionWithClone(node.loc.start, source, end),
+          source,
         },
-        id.isConstant ? ConstantTypes.CAN_STRINGIFY : ConstantTypes.NOT_CONSTANT
-      )
+        id.isConstant
+          ? ConstantTypes.CAN_STRINGIFY
+          : ConstantTypes.NOT_CONSTANT,
+      ),
     )
     if (i === ids.length - 1 && end < rawExp.length) {
       children.push(rawExp.slice(end))
@@ -362,110 +372,28 @@ export function processExpression(
   let ret
   if (children.length) {
     ret = createCompoundExpression(children, node.loc)
+    ret.ast = ast
   } else {
     ret = node
-    ret.constType = bailConstant
-      ? ConstantTypes.NOT_CONSTANT
-      : ConstantTypes.CAN_STRINGIFY
+    ret.constType = ConstantTypes.CAN_STRINGIFY
   }
   ret.identifiers = Object.keys(knownIds)
   return ret
 }
 
-const isFunction = (node: Node): node is Function => {
-  return /Function(?:Expression|Declaration)$|Method$/.test(node.type)
-}
-
-const isStaticProperty = (node: Node): node is ObjectProperty =>
-  node &&
-  (node.type === 'ObjectProperty' || node.type === 'ObjectMethod') &&
-  !node.computed
-
-const isStaticPropertyKey = (node: Node, parent: Node) =>
-  isStaticProperty(parent) && parent.key === node
-
-function shouldPrefix(id: Identifier, parent: Node, parentStack: Node[]) {
-  // declaration id
-  if (
-    (parent.type === 'VariableDeclarator' ||
-      parent.type === 'ClassDeclaration') &&
-    parent.id === id
-  ) {
-    return false
-  }
-
-  if (isFunction(parent)) {
-    // function decalration/expression id
-    if ((parent as any).id === id) {
-      return false
-    }
-    // params list
-    if (parent.params.includes(id)) {
-      return false
-    }
-  }
-
-  // property key
-  // this also covers object destructure pattern
-  if (isStaticPropertyKey(id, parent)) {
-    return false
-  }
-
-  // non-assignment array destructure pattern
-  if (
-    parent.type === 'ArrayPattern' &&
-    !isInDestructureAssignment(parent, parentStack)
-  ) {
-    return false
-  }
-
-  // member expression property
-  if (
-    (parent.type === 'MemberExpression' ||
-      parent.type === 'OptionalMemberExpression') &&
-    parent.property === id &&
-    !parent.computed
-  ) {
-    return false
-  }
-
-  // is a special keyword but parsed as identifier
-  if (id.name === 'arguments') {
-    return false
-  }
-
+function canPrefix(id: Identifier) {
   // skip whitelisted globals
-  if (isGloballyWhitelisted(id.name)) {
+  if (isGloballyAllowed(id.name)) {
     return false
   }
-
   // special case for webpack compilation
   if (id.name === 'require') {
     return false
   }
-
   return true
 }
 
-function isInDestructureAssignment(parent: Node, parentStack: Node[]): boolean {
-  if (
-    parent &&
-    (parent.type === 'ObjectProperty' || parent.type === 'ArrayPattern')
-  ) {
-    let i = parentStack.length
-    while (i--) {
-      const p = parentStack[i]
-      if (p.type === 'AssignmentExpression') {
-        return true
-      } else if (p.type !== 'ObjectProperty' && !p.type.endsWith('Pattern')) {
-        break
-      }
-    }
-  }
-  return false
-}
-
-function stringifyExpression(exp: ExpressionNode | string): string {
+export function stringifyExpression(exp: ExpressionNode | string): string {
   if (isString(exp)) {
     return exp
   } else if (exp.type === NodeTypes.SIMPLE_EXPRESSION) {
@@ -475,4 +403,10 @@ function stringifyExpression(exp: ExpressionNode | string): string {
       .map(stringifyExpression)
       .join('')
   }
+}
+
+function isConst(type: unknown) {
+  return (
+    type === BindingTypes.SETUP_CONST || type === BindingTypes.LITERAL_CONST
+  )
 }

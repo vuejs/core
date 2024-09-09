@@ -1,94 +1,94 @@
-// Jest Snapshot v1, https://goo.gl/fbAQLP
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`compiler: v-once transform as root node 1`] = `
+exports[`compiler: v-once transform > as root node 1`] = `
 "const _Vue = Vue
 
 return function render(_ctx, _cache) {
   with (_ctx) {
-    const { setBlockTracking: _setBlockTracking, createVNode: _createVNode } = _Vue
+    const { setBlockTracking: _setBlockTracking, createElementVNode: _createElementVNode } = _Vue
 
-    return _cache[1] || (
+    return _cache[0] || (
       _setBlockTracking(-1),
-      _cache[1] = _createVNode(\\"div\\", { id: foo }, null, 8 /* PROPS */, [\\"id\\"]),
+      (_cache[0] = _createElementVNode("div", { id: foo }, null, 8 /* PROPS */, ["id"])).cacheIndex = 0,
       _setBlockTracking(1),
-      _cache[1]
+      _cache[0]
     )
   }
 }"
 `;
 
-exports[`compiler: v-once transform on component 1`] = `
+exports[`compiler: v-once transform > on component 1`] = `
 "const _Vue = Vue
 
 return function render(_ctx, _cache) {
   with (_ctx) {
-    const { setBlockTracking: _setBlockTracking, resolveComponent: _resolveComponent, createVNode: _createVNode, openBlock: _openBlock, createBlock: _createBlock } = _Vue
+    const { setBlockTracking: _setBlockTracking, resolveComponent: _resolveComponent, createVNode: _createVNode, openBlock: _openBlock, createElementBlock: _createElementBlock } = _Vue
 
-    const _component_Comp = _resolveComponent(\\"Comp\\")
+    const _component_Comp = _resolveComponent("Comp")
 
-    return (_openBlock(), _createBlock(\\"div\\", null, [
-      _cache[1] || (
+    return (_openBlock(), _createElementBlock("div", null, [
+      _cache[0] || (
         _setBlockTracking(-1),
-        _cache[1] = _createVNode(_component_Comp, { id: foo }, null, 8 /* PROPS */, [\\"id\\"]),
+        (_cache[0] = _createVNode(_component_Comp, { id: foo }, null, 8 /* PROPS */, ["id"])).cacheIndex = 0,
         _setBlockTracking(1),
-        _cache[1]
+        _cache[0]
       )
     ]))
   }
 }"
 `;
 
-exports[`compiler: v-once transform on nested plain element 1`] = `
+exports[`compiler: v-once transform > on nested plain element 1`] = `
 "const _Vue = Vue
 
 return function render(_ctx, _cache) {
   with (_ctx) {
-    const { setBlockTracking: _setBlockTracking, createVNode: _createVNode, openBlock: _openBlock, createBlock: _createBlock } = _Vue
+    const { setBlockTracking: _setBlockTracking, createElementVNode: _createElementVNode, openBlock: _openBlock, createElementBlock: _createElementBlock } = _Vue
 
-    return (_openBlock(), _createBlock(\\"div\\", null, [
-      _cache[1] || (
+    return (_openBlock(), _createElementBlock("div", null, [
+      _cache[0] || (
         _setBlockTracking(-1),
-        _cache[1] = _createVNode(\\"div\\", { id: foo }, null, 8 /* PROPS */, [\\"id\\"]),
+        (_cache[0] = _createElementVNode("div", { id: foo }, null, 8 /* PROPS */, ["id"])).cacheIndex = 0,
         _setBlockTracking(1),
-        _cache[1]
+        _cache[0]
       )
     ]))
   }
 }"
 `;
 
-exports[`compiler: v-once transform on slot outlet 1`] = `
+exports[`compiler: v-once transform > on slot outlet 1`] = `
 "const _Vue = Vue
 
 return function render(_ctx, _cache) {
   with (_ctx) {
-    const { setBlockTracking: _setBlockTracking, renderSlot: _renderSlot, openBlock: _openBlock, createBlock: _createBlock } = _Vue
+    const { setBlockTracking: _setBlockTracking, renderSlot: _renderSlot, openBlock: _openBlock, createElementBlock: _createElementBlock } = _Vue
 
-    return (_openBlock(), _createBlock(\\"div\\", null, [
-      _cache[1] || (
+    return (_openBlock(), _createElementBlock("div", null, [
+      _cache[0] || (
         _setBlockTracking(-1),
-        _cache[1] = _renderSlot($slots, \\"default\\"),
+        (_cache[0] = _renderSlot($slots, "default")).cacheIndex = 0,
         _setBlockTracking(1),
-        _cache[1]
+        _cache[0]
       )
     ]))
   }
 }"
 `;
 
-exports[`compiler: v-once transform with hoistStatic: true 1`] = `
+exports[`compiler: v-once transform > with hoistStatic: true 1`] = `
 "const _Vue = Vue
 
 return function render(_ctx, _cache) {
   with (_ctx) {
-    const { setBlockTracking: _setBlockTracking, createVNode: _createVNode, openBlock: _openBlock, createBlock: _createBlock } = _Vue
+    const { setBlockTracking: _setBlockTracking, createElementVNode: _createElementVNode, openBlock: _openBlock, createElementBlock: _createElementBlock } = _Vue
 
-    return (_openBlock(), _createBlock(\\"div\\", null, [
-      _cache[1] || (
+    return (_openBlock(), _createElementBlock("div", null, [
+      _cache[0] || (
         _setBlockTracking(-1),
-        _cache[1] = _createVNode(\\"div\\"),
+        (_cache[0] = _createElementVNode("div")).cacheIndex = 0,
         _setBlockTracking(1),
-        _cache[1]
+        _cache[0]
       )
     ]))
   }

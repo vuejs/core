@@ -1,62 +1,107 @@
-import { CodegenOptions } from './options'
+import type { CodegenOptions } from './options'
 import {
-  RootNode,
-  TemplateChildNode,
-  TextNode,
-  CommentNode,
-  ExpressionNode,
+  type ArrayExpression,
+  type AssignmentExpression,
+  type CacheExpression,
+  type CallExpression,
+  type CommentNode,
+  type CompoundExpressionNode,
+  type ConditionalExpression,
+  type ExpressionNode,
+  type FunctionExpression,
+  type IfStatement,
+  type InterpolationNode,
+  type JSChildNode,
   NodeTypes,
-  JSChildNode,
-  CallExpression,
-  ArrayExpression,
-  ObjectExpression,
-  Position,
-  InterpolationNode,
-  CompoundExpressionNode,
-  SimpleExpressionNode,
-  FunctionExpression,
-  ConditionalExpression,
-  CacheExpression,
+  type ObjectExpression,
+  type Position,
+  type ReturnStatement,
+  type RootNode,
+  type SSRCodegenNode,
+  type SequenceExpression,
+  type SimpleExpressionNode,
+  type TemplateChildNode,
+  type TemplateLiteral,
+  type TextNode,
+  type VNodeCall,
+  getVNodeBlockHelper,
+  getVNodeHelper,
   locStub,
-  SSRCodegenNode,
-  TemplateLiteral,
-  IfStatement,
-  AssignmentExpression,
-  ReturnStatement,
-  VNodeCall,
-  SequenceExpression
 } from './ast'
-import { SourceMapGenerator, RawSourceMap } from 'source-map'
+import { SourceMapGenerator } from 'source-map-js'
 import {
   advancePositionWithMutation,
   assert,
   isSimpleIdentifier,
-  toValidAssetId
+  toValidAssetId,
 } from './utils'
-import { isString, isArray, isSymbol } from '@vue/shared'
 import {
-  helperNameMap,
-  TO_DISPLAY_STRING,
+  PatchFlagNames,
+  type PatchFlags,
+  isArray,
+  isString,
+  isSymbol,
+} from '@vue/shared'
+import {
+  CREATE_COMMENT,
+  CREATE_ELEMENT_VNODE,
+  CREATE_STATIC,
+  CREATE_TEXT,
   CREATE_VNODE,
+  OPEN_BLOCK,
   RESOLVE_COMPONENT,
   RESOLVE_DIRECTIVE,
+  RESOLVE_FILTER,
   SET_BLOCK_TRACKING,
-  CREATE_COMMENT,
-  CREATE_TEXT,
-  PUSH_SCOPE_ID,
-  POP_SCOPE_ID,
-  WITH_SCOPE_ID,
-  WITH_DIRECTIVES,
-  CREATE_BLOCK,
-  OPEN_BLOCK,
-  CREATE_STATIC,
+  TO_DISPLAY_STRING,
   WITH_CTX,
-  RESOLVE_FILTER
+  WITH_DIRECTIVES,
+  helperNameMap,
 } from './runtimeHelpers'
-import { ImportItem } from './transform'
+import type { ImportItem } from './transform'
 
-const PURE_ANNOTATION = `/*#__PURE__*/`
-const WITH_ID = `_withId`
+/**
+ * The `SourceMapGenerator` type from `source-map-js` is a bit incomplete as it
+ * misses `toJSON()`. We also need to add types for internal properties which we
+ * need to access for better performance.
+ *
+ * Since TS 5.3, dts generation starts to strangely include broken triple slash
+ * references for source-map-js, so we are inlining all source map related types
+ * here to to workaround that.
+ */
+export interface CodegenSourceMapGenerator {
+  setSourceContent(sourceFile: string, sourceContent: string): void
+  // SourceMapGenerator has this method but the types do not include it
+  toJSON(): RawSourceMap
+  _sources: Set<string>
+  _names: Set<string>
+  _mappings: {
+    add(mapping: MappingItem): void
+  }
+}
+
+export interface RawSourceMap {
+  file?: string
+  sourceRoot?: string
+  version: string
+  sources: string[]
+  names: string[]
+  sourcesContent?: string[]
+  mappings: string
+}
+
+interface MappingItem {
+  source: string
+  generatedLine: number
+  generatedColumn: number
+  originalLine: number
+  originalColumn: number
+  name: string | null
+}
+
+const PURE_ANNOTATION = `/*@__PURE__*/`
+
+const aliasHelper = (s: symbol) => `${helperNameMap[s]}: _${helperNameMap[s]}`
 
 type CodegenNode = TemplateChildNode | JSChildNode | SSRCodegenNode
 
@@ -67,11 +112,15 @@ export interface CodegenResult {
   map?: RawSourceMap
 }
 
+enum NewlineType {
+  Start = 0,
+  End = -1,
+  None = -2,
+  Unknown = -3,
+}
+
 export interface CodegenContext
-  extends Omit<
-      Required<CodegenOptions>,
-      'bindingMetadata' | 'inline' | 'isTS'
-    > {
+  extends Omit<Required<CodegenOptions>, 'bindingMetadata' | 'inline'> {
   source: string
   code: string
   line: number
@@ -79,9 +128,9 @@ export interface CodegenContext
   offset: number
   indentLevel: number
   pure: boolean
-  map?: SourceMapGenerator
+  map?: CodegenSourceMapGenerator
   helper(key: symbol): string
-  push(code: string, node?: CodegenNode): void
+  push(code: string, newlineIndex?: number, node?: CodegenNode): void
   indent(): void
   deindent(withoutNewLine?: boolean): void
   newline(): void
@@ -98,8 +147,11 @@ function createCodegenContext(
     optimizeImports = false,
     runtimeGlobalName = `Vue`,
     runtimeModuleName = `vue`,
-    ssr = false
-  }: CodegenOptions
+    ssrRuntimeModuleName = 'vue/server-renderer',
+    ssr = false,
+    isTS = false,
+    inSSR = false,
+  }: CodegenOptions,
 ): CodegenContext {
   const context: CodegenContext = {
     mode,
@@ -110,8 +162,11 @@ function createCodegenContext(
     optimizeImports,
     runtimeGlobalName,
     runtimeModuleName,
+    ssrRuntimeModuleName,
     ssr,
-    source: ast.loc.source,
+    isTS,
+    inSSR,
+    source: ast.source,
     code: ``,
     column: 1,
     line: 1,
@@ -122,7 +177,7 @@ function createCodegenContext(
     helper(key) {
       return `_${helperNameMap[key]}`
     },
-    push(code, node) {
+    push(code, newlineIndex = NewlineType.None, node) {
       context.code += code
       if (!__BROWSER__ && context.map) {
         if (node) {
@@ -135,7 +190,41 @@ function createCodegenContext(
           }
           addMapping(node.loc.start, name)
         }
-        advancePositionWithMutation(context, code)
+        if (newlineIndex === NewlineType.Unknown) {
+          // multiple newlines, full iteration
+          advancePositionWithMutation(context, code)
+        } else {
+          // fast paths
+          context.offset += code.length
+          if (newlineIndex === NewlineType.None) {
+            // no newlines; fast path to avoid newline detection
+            if (__TEST__ && code.includes('\n')) {
+              throw new Error(
+                `CodegenContext.push() called newlineIndex: none, but contains` +
+                  `newlines: ${code.replace(/\n/g, '\\n')}`,
+              )
+            }
+            context.column += code.length
+          } else {
+            // single newline at known index
+            if (newlineIndex === NewlineType.End) {
+              newlineIndex = code.length - 1
+            }
+            if (
+              __TEST__ &&
+              (code.charAt(newlineIndex) !== '\n' ||
+                code.slice(0, newlineIndex).includes('\n') ||
+                code.slice(newlineIndex + 1).includes('\n'))
+            ) {
+              throw new Error(
+                `CodegenContext.push() called with newlineIndex: ${newlineIndex} ` +
+                  `but does not conform: ${code.replace(/\n/g, '\\n')}`,
+              )
+            }
+            context.line++
+            context.column = code.length - newlineIndex
+          }
+        }
         if (node && node.loc !== locStub) {
           addMapping(node.loc.end)
         }
@@ -153,32 +242,35 @@ function createCodegenContext(
     },
     newline() {
       newline(context.indentLevel)
-    }
+    },
   }
 
   function newline(n: number) {
-    context.push('\n' + `  `.repeat(n))
+    context.push('\n' + `  `.repeat(n), NewlineType.Start)
   }
 
-  function addMapping(loc: Position, name?: string) {
-    context.map!.addMapping({
+  function addMapping(loc: Position, name: string | null = null) {
+    // we use the private property to directly add the mapping
+    // because the addMapping() implementation in source-map-js has a bunch of
+    // unnecessary arg and validation checks that are pure overhead in our case.
+    const { _names, _mappings } = context.map!
+    if (name !== null && !_names.has(name)) _names.add(name)
+    _mappings.add({
+      originalLine: loc.line,
+      originalColumn: loc.column - 1, // source-map column is 0 based
+      generatedLine: context.line,
+      generatedColumn: context.column - 1,
+      source: filename,
       name,
-      source: context.filename,
-      original: {
-        line: loc.line,
-        column: loc.column - 1 // source-map column is 0 based
-      },
-      generated: {
-        line: context.line,
-        column: context.column - 1
-      }
     })
   }
 
   if (!__BROWSER__ && sourceMap) {
     // lazy require source-map implementation, only in non-browser builds
-    context.map = new SourceMapGenerator()
-    context.map!.setSourceContent(filename, context.source)
+    context.map =
+      new SourceMapGenerator() as unknown as CodegenSourceMapGenerator
+    context.map.setSourceContent(filename, context.source)
+    context.map._sources.add(filename)
   }
 
   return context
@@ -188,7 +280,7 @@ export function generate(
   ast: RootNode,
   options: CodegenOptions & {
     onContextCreated?: (context: CodegenContext) => void
-  } = {}
+  } = {},
 ): CodegenResult {
   const context = createCodegenContext(ast, options)
   if (options.onContextCreated) options.onContextCreated(context)
@@ -200,10 +292,11 @@ export function generate(
     deindent,
     newline,
     scopeId,
-    ssr
+    ssr,
   } = context
 
-  const hasHelpers = ast.helpers.length > 0
+  const helpers = Array.from(ast.helpers)
+  const hasHelpers = helpers.length > 0
   const useWithBlock = !prefixIdentifiers && mode !== 'module'
   const genScopeId = !__BROWSER__ && scopeId != null && mode === 'module'
   const isSetupInlined = !__BROWSER__ && !!options.inline
@@ -219,7 +312,6 @@ export function generate(
   } else {
     genFunctionPreamble(ast, preambleContext)
   }
-
   // enter render function
   const functionName = ssr ? `ssrRender` : `render`
   const args = ssr ? ['_ctx', '_push', '_parent', '_attrs'] : ['_ctx', '_cache']
@@ -232,14 +324,7 @@ export function generate(
       ? args.map(arg => `${arg}: any`).join(',')
       : args.join(', ')
 
-  if (genScopeId && !isSetupInlined) {
-    // root-level _withId wrapping is no longer necessary after 3.0.8 and is
-    // a noop, it's only kept so that code compiled with 3.0.8+ can run with
-    // runtime < 3.0.8.
-    // TODO: consider removing in 3.1
-    push(`const ${functionName} = ${PURE_ANNOTATION}${WITH_ID}(`)
-  }
-  if (isSetupInlined || genScopeId) {
+  if (isSetupInlined) {
     push(`(${signature}) => {`)
   } else {
     push(`function ${functionName}(${signature}) {`)
@@ -253,11 +338,9 @@ export function generate(
     // also they should be renamed to avoid collision with user properties
     if (hasHelpers) {
       push(
-        `const { ${ast.helpers
-          .map(s => `${helperNameMap[s]}: _${helperNameMap[s]}`)
-          .join(', ')} } = _Vue`
+        `const { ${helpers.map(aliasHelper).join(', ')} } = _Vue\n`,
+        NewlineType.End,
       )
-      push(`\n`)
       newline()
     }
   }
@@ -288,7 +371,7 @@ export function generate(
     }
   }
   if (ast.components.length || ast.directives.length || ast.temps) {
-    push(`\n`)
+    push(`\n`, NewlineType.Start)
     newline()
   }
 
@@ -310,16 +393,11 @@ export function generate(
   deindent()
   push(`}`)
 
-  if (genScopeId && !isSetupInlined) {
-    push(`)`)
-  }
-
   return {
     ast,
     code: context.code,
     preamble: isSetupInlined ? preambleContext.code : ``,
-    // SourceMapGenerator does have toJSON() method but it's not in the types
-    map: context.map ? (context.map as any).toJSON() : undefined
+    map: context.map ? context.map.toJSON() : undefined,
   }
 }
 
@@ -330,40 +408,43 @@ function genFunctionPreamble(ast: RootNode, context: CodegenContext) {
     push,
     newline,
     runtimeModuleName,
-    runtimeGlobalName
+    runtimeGlobalName,
+    ssrRuntimeModuleName,
   } = context
   const VueBinding =
     !__BROWSER__ && ssr
       ? `require(${JSON.stringify(runtimeModuleName)})`
       : runtimeGlobalName
-  const aliasHelper = (s: symbol) => `${helperNameMap[s]}: _${helperNameMap[s]}`
   // Generate const declaration for helpers
   // In prefix mode, we place the const declaration at top so it's done
   // only once; But if we not prefixing, we place the declaration inside the
   // with block so it doesn't incur the `in` check cost for every helper access.
-  if (ast.helpers.length > 0) {
+  const helpers = Array.from(ast.helpers)
+  if (helpers.length > 0) {
     if (!__BROWSER__ && prefixIdentifiers) {
       push(
-        `const { ${ast.helpers.map(aliasHelper).join(', ')} } = ${VueBinding}\n`
+        `const { ${helpers.map(aliasHelper).join(', ')} } = ${VueBinding}\n`,
+        NewlineType.End,
       )
     } else {
       // "with" mode.
       // save Vue in a separate variable to avoid collision
-      push(`const _Vue = ${VueBinding}\n`)
+      push(`const _Vue = ${VueBinding}\n`, NewlineType.End)
       // in "with" mode, helpers are declared inside the with block to avoid
       // has check cost, but hoists are lifted out of the function - we need
       // to provide the helper here.
       if (ast.hoists.length) {
         const staticHelpers = [
           CREATE_VNODE,
+          CREATE_ELEMENT_VNODE,
           CREATE_COMMENT,
           CREATE_TEXT,
-          CREATE_STATIC
+          CREATE_STATIC,
         ]
-          .filter(helper => ast.helpers.includes(helper))
+          .filter(helper => helpers.includes(helper))
           .map(aliasHelper)
           .join(', ')
-        push(`const { ${staticHelpers} } = _Vue\n`)
+        push(`const { ${staticHelpers} } = _Vue\n`, NewlineType.End)
       }
     }
   }
@@ -373,7 +454,8 @@ function genFunctionPreamble(ast: RootNode, context: CodegenContext) {
     push(
       `const { ${ast.ssrHelpers
         .map(aliasHelper)
-        .join(', ')} } = require("@vue/server-renderer")\n`
+        .join(', ')} } = require("${ssrRuntimeModuleName}")\n`,
+      NewlineType.End,
     )
   }
   genHoists(ast.hoists, context)
@@ -385,26 +467,19 @@ function genModulePreamble(
   ast: RootNode,
   context: CodegenContext,
   genScopeId: boolean,
-  inline?: boolean
+  inline?: boolean,
 ) {
   const {
     push,
     newline,
     optimizeImports,
     runtimeModuleName,
-    scopeId,
-    helper
+    ssrRuntimeModuleName,
   } = context
 
-  if (genScopeId) {
-    ast.helpers.push(WITH_SCOPE_ID)
-    if (ast.hoists.length) {
-      ast.helpers.push(PUSH_SCOPE_ID, POP_SCOPE_ID)
-    }
-  }
-
   // generate import statements for helpers
-  if (ast.helpers.length) {
+  if (ast.helpers.size) {
+    const helpers = Array.from(ast.helpers)
     if (optimizeImports) {
       // when bundled with webpack with code-split, calling an import binding
       // as a function leads to it being wrapped with `Object(a.b)` or `(0,a.b)`,
@@ -412,20 +487,23 @@ function genModulePreamble(
       // therefore we assign the imports to variables (which is a constant ~50b
       // cost per-component instead of scaling with template size)
       push(
-        `import { ${ast.helpers
+        `import { ${helpers
           .map(s => helperNameMap[s])
-          .join(', ')} } from ${JSON.stringify(runtimeModuleName)}\n`
+          .join(', ')} } from ${JSON.stringify(runtimeModuleName)}\n`,
+        NewlineType.End,
       )
       push(
-        `\n// Binding optimization for webpack code-split\nconst ${ast.helpers
+        `\n// Binding optimization for webpack code-split\nconst ${helpers
           .map(s => `_${helperNameMap[s]} = ${helperNameMap[s]}`)
-          .join(', ')}\n`
+          .join(', ')}\n`,
+        NewlineType.End,
       )
     } else {
       push(
-        `import { ${ast.helpers
+        `import { ${helpers
           .map(s => `${helperNameMap[s]} as _${helperNameMap[s]}`)
-          .join(', ')} } from ${JSON.stringify(runtimeModuleName)}\n`
+          .join(', ')} } from ${JSON.stringify(runtimeModuleName)}\n`,
+        NewlineType.End,
       )
     }
   }
@@ -434,24 +512,13 @@ function genModulePreamble(
     push(
       `import { ${ast.ssrHelpers
         .map(s => `${helperNameMap[s]} as _${helperNameMap[s]}`)
-        .join(', ')} } from "@vue/server-renderer"\n`
+        .join(', ')} } from "${ssrRuntimeModuleName}"\n`,
+      NewlineType.End,
     )
   }
 
   if (ast.imports.length) {
     genImports(ast.imports, context)
-    newline()
-  }
-
-  // we technically don't need this anymore since `withCtx` already sets the
-  // correct scopeId, but this is necessary for backwards compat
-  // TODO: consider removing in 3.1
-  if (genScopeId) {
-    push(
-      `const ${WITH_ID} = ${PURE_ANNOTATION}${helper(
-        WITH_SCOPE_ID
-      )}("${scopeId}")`
-    )
     newline()
   }
 
@@ -466,14 +533,14 @@ function genModulePreamble(
 function genAssets(
   assets: string[],
   type: 'component' | 'directive' | 'filter',
-  { helper, push, newline }: CodegenContext
+  { helper, push, newline, isTS }: CodegenContext,
 ) {
   const resolver = helper(
     __COMPAT__ && type === 'filter'
       ? RESOLVE_FILTER
       : type === 'component'
         ? RESOLVE_COMPONENT
-        : RESOLVE_DIRECTIVE
+        : RESOLVE_DIRECTIVE,
   )
   for (let i = 0; i < assets.length; i++) {
     let id = assets[i]
@@ -485,7 +552,7 @@ function genAssets(
     push(
       `const ${toValidAssetId(id, type)} = ${resolver}(${JSON.stringify(id)}${
         maybeSelfReference ? `, true` : ``
-      })`
+      })${isTS ? `!` : ``}`,
     )
     if (i < assets.length - 1) {
       newline()
@@ -498,29 +565,18 @@ function genHoists(hoists: (JSChildNode | null)[], context: CodegenContext) {
     return
   }
   context.pure = true
-  const { push, newline, helper, scopeId, mode } = context
-  const genScopeId = !__BROWSER__ && scopeId != null && mode !== 'function'
+  const { push, newline } = context
   newline()
 
-  // push scope Id before initializing hoisted vnodes so that these vnodes
-  // get the proper scopeId as well.
-  if (genScopeId) {
-    push(`${helper(PUSH_SCOPE_ID)}("${scopeId}")`)
-    newline()
-  }
-
-  hoists.forEach((exp, i) => {
+  for (let i = 0; i < hoists.length; i++) {
+    const exp = hoists[i]
     if (exp) {
       push(`const _hoisted_${i + 1} = `)
       genNode(exp, context)
       newline()
     }
-  })
-
-  if (genScopeId) {
-    push(`${helper(POP_SCOPE_ID)}()`)
-    newline()
   }
+
   context.pure = false
 }
 
@@ -548,7 +604,7 @@ function isText(n: string | CodegenNode) {
 
 function genNodeListAsArray(
   nodes: (string | CodegenNode | TemplateChildNode[])[],
-  context: CodegenContext
+  context: CodegenContext,
 ) {
   const multilines =
     nodes.length > 3 ||
@@ -564,13 +620,13 @@ function genNodeList(
   nodes: (string | symbol | CodegenNode | TemplateChildNode[])[],
   context: CodegenContext,
   multilines: boolean = false,
-  comma: boolean = true
+  comma: boolean = true,
 ) {
   const { push, newline } = context
   for (let i = 0; i < nodes.length; i++) {
     const node = nodes[i]
     if (isString(node)) {
-      push(node)
+      push(node, NewlineType.Unknown)
     } else if (isArray(node)) {
       genNodeListAsArray(node, context)
     } else {
@@ -589,7 +645,7 @@ function genNodeList(
 
 function genNode(node: CodegenNode | symbol | string, context: CodegenContext) {
   if (isString(node)) {
-    context.push(node)
+    context.push(node, NewlineType.Unknown)
     return
   }
   if (isSymbol(node)) {
@@ -604,7 +660,7 @@ function genNode(node: CodegenNode | symbol | string, context: CodegenContext) {
         assert(
           node.codegenNode != null,
           `Codegen node is missing for element/if/for node. ` +
-            `Apply appropriate transforms first.`
+            `Apply appropriate transforms first.`,
         )
       genNode(node.codegenNode!, context)
       break
@@ -648,11 +704,11 @@ function genNode(node: CodegenNode | symbol | string, context: CodegenContext) {
     case NodeTypes.JS_CACHE_EXPRESSION:
       genCacheExpression(node, context)
       break
+    case NodeTypes.JS_BLOCK_STATEMENT:
+      genNodeList(node.body, context, true, false)
+      break
 
     // SSR only types
-    case NodeTypes.JS_BLOCK_STATEMENT:
-      !__BROWSER__ && genNodeList(node.body, context, true, false)
-      break
     case NodeTypes.JS_TEMPLATE_LITERAL:
       !__BROWSER__ && genTemplateLiteral(node, context)
       break
@@ -669,7 +725,7 @@ function genNode(node: CodegenNode | symbol | string, context: CodegenContext) {
       !__BROWSER__ && genReturnStatement(node, context)
       break
 
-    /* istanbul ignore next */
+    /* v8 ignore start */
     case NodeTypes.IF_BRANCH:
       // noop
       break
@@ -680,19 +736,24 @@ function genNode(node: CodegenNode | symbol | string, context: CodegenContext) {
         const exhaustiveCheck: never = node
         return exhaustiveCheck
       }
+    /* v8 ignore stop */
   }
 }
 
 function genText(
   node: TextNode | SimpleExpressionNode,
-  context: CodegenContext
+  context: CodegenContext,
 ) {
-  context.push(JSON.stringify(node.content), node)
+  context.push(JSON.stringify(node.content), NewlineType.Unknown, node)
 }
 
 function genExpression(node: SimpleExpressionNode, context: CodegenContext) {
   const { content, isStatic } = node
-  context.push(isStatic ? JSON.stringify(content) : content, node)
+  context.push(
+    isStatic ? JSON.stringify(content) : content,
+    NewlineType.Unknown,
+    node,
+  )
 }
 
 function genInterpolation(node: InterpolationNode, context: CodegenContext) {
@@ -705,12 +766,12 @@ function genInterpolation(node: InterpolationNode, context: CodegenContext) {
 
 function genCompoundExpression(
   node: CompoundExpressionNode,
-  context: CodegenContext
+  context: CodegenContext,
 ) {
   for (let i = 0; i < node.children!.length; i++) {
     const child = node.children![i]
     if (isString(child)) {
-      context.push(child)
+      context.push(child, NewlineType.Unknown)
     } else {
       genNode(child, context)
     }
@@ -719,7 +780,7 @@ function genCompoundExpression(
 
 function genExpressionAsPropertyKey(
   node: ExpressionNode,
-  context: CodegenContext
+  context: CodegenContext,
 ) {
   const { push } = context
   if (node.type === NodeTypes.COMPOUND_EXPRESSION) {
@@ -731,9 +792,9 @@ function genExpressionAsPropertyKey(
     const text = isSimpleIdentifier(node.content)
       ? node.content
       : JSON.stringify(node.content)
-    push(text, node)
+    push(text, NewlineType.None, node)
   } else {
-    push(`[${node.content}]`, node)
+    push(`[${node.content}]`, NewlineType.Unknown, node)
   }
 }
 
@@ -742,7 +803,11 @@ function genComment(node: CommentNode, context: CodegenContext) {
   if (pure) {
     push(PURE_ANNOTATION)
   }
-  push(`${helper(CREATE_COMMENT)}(${JSON.stringify(node.content)})`, node)
+  push(
+    `${helper(CREATE_COMMENT)}(${JSON.stringify(node.content)})`,
+    NewlineType.Unknown,
+    node,
+  )
 }
 
 function genVNodeCall(node: VNodeCall, context: CodegenContext) {
@@ -755,8 +820,31 @@ function genVNodeCall(node: VNodeCall, context: CodegenContext) {
     dynamicProps,
     directives,
     isBlock,
-    disableTracking
+    disableTracking,
+    isComponent,
   } = node
+
+  // add dev annotations to patch flags
+  let patchFlagString
+  if (patchFlag) {
+    if (__DEV__) {
+      if (patchFlag < 0) {
+        // special flags (negative and mutually exclusive)
+        patchFlagString = patchFlag + ` /* ${PatchFlagNames[patchFlag]} */`
+      } else {
+        // bitwise flags
+        const flagNames = Object.keys(PatchFlagNames)
+          .map(Number)
+          .filter(n => n > 0 && patchFlag & n)
+          .map(n => PatchFlagNames[n as PatchFlags])
+          .join(`, `)
+        patchFlagString = patchFlag + ` /* ${flagNames} */`
+      }
+    } else {
+      patchFlagString = String(patchFlag)
+    }
+  }
+
   if (directives) {
     push(helper(WITH_DIRECTIVES) + `(`)
   }
@@ -766,10 +854,13 @@ function genVNodeCall(node: VNodeCall, context: CodegenContext) {
   if (pure) {
     push(PURE_ANNOTATION)
   }
-  push(helper(isBlock ? CREATE_BLOCK : CREATE_VNODE) + `(`, node)
+  const callHelper: symbol = isBlock
+    ? getVNodeBlockHelper(context.inSSR, isComponent)
+    : getVNodeHelper(context.inSSR, isComponent)
+  push(helper(callHelper) + `(`, NewlineType.None, node)
   genNodeList(
-    genNullableArgs([tag, props, children, patchFlag, dynamicProps]),
-    context
+    genNullableArgs([tag, props, children, patchFlagString, dynamicProps]),
+    context,
   )
   push(`)`)
   if (isBlock) {
@@ -797,7 +888,7 @@ function genCallExpression(node: CallExpression, context: CodegenContext) {
   if (pure) {
     push(PURE_ANNOTATION)
   }
-  push(callee + `(`, node)
+  push(callee + `(`, NewlineType.None, node)
   genNodeList(node.arguments, context)
   push(`)`)
 }
@@ -806,7 +897,7 @@ function genObjectExpression(node: ObjectExpression, context: CodegenContext) {
   const { push, indent, deindent, newline } = context
   const { properties } = node
   if (!properties.length) {
-    push(`{}`, node)
+    push(`{}`, NewlineType.None, node)
     return
   }
   const multilines =
@@ -833,24 +924,20 @@ function genObjectExpression(node: ObjectExpression, context: CodegenContext) {
 }
 
 function genArrayExpression(node: ArrayExpression, context: CodegenContext) {
-  genNodeListAsArray(node.elements, context)
+  genNodeListAsArray(node.elements as CodegenNode[], context)
 }
 
 function genFunctionExpression(
   node: FunctionExpression,
-  context: CodegenContext
+  context: CodegenContext,
 ) {
-  const { push, indent, deindent, scopeId, mode } = context
+  const { push, indent, deindent } = context
   const { params, returns, body, newline, isSlot } = node
-  // slot functions also need to push scopeId before rendering its content
-  const genScopeId =
-    !__BROWSER__ && isSlot && scopeId != null && mode !== 'function'
-
   if (isSlot) {
     // wrap slot functions with owner context
-    push(genScopeId ? `${WITH_ID}(` : `_${helperNameMap[WITH_CTX]}(`)
+    push(`_${helperNameMap[WITH_CTX]}(`)
   }
-  push(`(`, node)
+  push(`(`, NewlineType.None, node)
   if (isArray(params)) {
     genNodeList(params, context)
   } else if (params) {
@@ -887,7 +974,7 @@ function genFunctionExpression(
 
 function genConditionalExpression(
   node: ConditionalExpression,
-  context: CodegenContext
+  context: CodegenContext,
 ) {
   const { test, consequent, alternate, newline: needNewline } = node
   const { push, indent, deindent, newline } = context
@@ -923,16 +1010,21 @@ function genConditionalExpression(
 
 function genCacheExpression(node: CacheExpression, context: CodegenContext) {
   const { push, helper, indent, deindent, newline } = context
+  const { needPauseTracking, needArraySpread } = node
+  if (needArraySpread) {
+    push(`[...(`)
+  }
   push(`_cache[${node.index}] || (`)
-  if (node.isVNode) {
+  if (needPauseTracking) {
     indent()
     push(`${helper(SET_BLOCK_TRACKING)}(-1),`)
     newline()
+    push(`(`)
   }
   push(`_cache[${node.index}] = `)
   genNode(node.value, context)
-  if (node.isVNode) {
-    push(`,`)
+  if (needPauseTracking) {
+    push(`).cacheIndex = ${node.index},`)
     newline()
     push(`${helper(SET_BLOCK_TRACKING)}(1),`)
     newline()
@@ -940,6 +1032,9 @@ function genCacheExpression(node: CacheExpression, context: CodegenContext) {
     deindent()
   }
   push(`)`)
+  if (needArraySpread) {
+    push(`)]`)
+  }
 }
 
 function genTemplateLiteral(node: TemplateLiteral, context: CodegenContext) {
@@ -950,7 +1045,7 @@ function genTemplateLiteral(node: TemplateLiteral, context: CodegenContext) {
   for (let i = 0; i < l; i++) {
     const e = node.elements[i]
     if (isString(e)) {
-      push(e.replace(/(`|\$|\\)/g, '\\$1'))
+      push(e.replace(/(`|\$|\\)/g, '\\$1'), NewlineType.Unknown)
     } else {
       push('${')
       if (multilines) indent()
@@ -988,7 +1083,7 @@ function genIfStatement(node: IfStatement, context: CodegenContext) {
 
 function genAssignmentExpression(
   node: AssignmentExpression,
-  context: CodegenContext
+  context: CodegenContext,
 ) {
   genNode(node.left, context)
   context.push(` = `)
@@ -997,7 +1092,7 @@ function genAssignmentExpression(
 
 function genSequenceExpression(
   node: SequenceExpression,
-  context: CodegenContext
+  context: CodegenContext,
 ) {
   context.push(`(`)
   genNodeList(node.expressions, context)
@@ -1006,7 +1101,7 @@ function genSequenceExpression(
 
 function genReturnStatement(
   { returns }: ReturnStatement,
-  context: CodegenContext
+  context: CodegenContext,
 ) {
   context.push(`return `)
   if (isArray(returns)) {

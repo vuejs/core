@@ -9,7 +9,7 @@ if (__DEV__) {
 
 export * from '@vue/runtime-dom'
 
-export const compile = () => {
+export const compile = (): void => {
   if (__DEV__) {
     warn(
       `Runtime compilation is not supported in this build of Vue.` +
@@ -19,7 +19,7 @@ export const compile = () => {
             ? ` Use "vue.esm-browser.js" instead.`
             : __GLOBAL__
               ? ` Use "vue.global.js" instead.`
-              : ``) /* should not happen */
+              : ``) /* should not happen */,
     )
   }
 }

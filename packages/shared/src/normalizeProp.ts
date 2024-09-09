@@ -1,16 +1,17 @@
-import { isArray, isString, isObject, hyphenate } from './'
-import { isNoUnitNumericStyleProp } from './domAttrConfig'
+import { hyphenate, isArray, isObject, isString } from './general'
 
 export type NormalizedStyle = Record<string, string | number>
 
-export function normalizeStyle(value: unknown): NormalizedStyle | undefined {
+export function normalizeStyle(
+  value: unknown,
+): NormalizedStyle | string | undefined {
   if (isArray(value)) {
     const res: NormalizedStyle = {}
     for (let i = 0; i < value.length; i++) {
       const item = value[i]
-      const normalized = normalizeStyle(
-        isString(item) ? parseStringStyle(item) : item
-      )
+      const normalized = isString(item)
+        ? parseStringStyle(item)
+        : (normalizeStyle(item) as NormalizedStyle)
       if (normalized) {
         for (const key in normalized) {
           res[key] = normalized[key]
@@ -18,37 +19,40 @@ export function normalizeStyle(value: unknown): NormalizedStyle | undefined {
       }
     }
     return res
-  } else if (isObject(value)) {
+  } else if (isString(value) || isObject(value)) {
     return value
   }
 }
 
 const listDelimiterRE = /;(?![^(]*\))/g
-const propertyDelimiterRE = /:(.+)/
+const propertyDelimiterRE = /:([^]+)/
+const styleCommentRE = /\/\*[^]*?\*\//g
 
 export function parseStringStyle(cssText: string): NormalizedStyle {
   const ret: NormalizedStyle = {}
-  cssText.split(listDelimiterRE).forEach(item => {
-    if (item) {
-      const tmp = item.split(propertyDelimiterRE)
-      tmp.length > 1 && (ret[tmp[0].trim()] = tmp[1].trim())
-    }
-  })
+  cssText
+    .replace(styleCommentRE, '')
+    .split(listDelimiterRE)
+    .forEach(item => {
+      if (item) {
+        const tmp = item.split(propertyDelimiterRE)
+        tmp.length > 1 && (ret[tmp[0].trim()] = tmp[1].trim())
+      }
+    })
   return ret
 }
 
-export function stringifyStyle(styles: NormalizedStyle | undefined): string {
+export function stringifyStyle(
+  styles: NormalizedStyle | string | undefined,
+): string {
   let ret = ''
-  if (!styles) {
+  if (!styles || isString(styles)) {
     return ret
   }
   for (const key in styles) {
     const value = styles[key]
-    const normalizedKey = key.startsWith(`--`) ? key : hyphenate(key)
-    if (
-      isString(value) ||
-      (typeof value === 'number' && isNoUnitNumericStyleProp(normalizedKey))
-    ) {
+    if (isString(value) || typeof value === 'number') {
+      const normalizedKey = key.startsWith(`--`) ? key : hyphenate(key)
       // only render valid values
       ret += `${normalizedKey}:${value};`
     }
@@ -75,4 +79,18 @@ export function normalizeClass(value: unknown): string {
     }
   }
   return res.trim()
+}
+
+export function normalizeProps(
+  props: Record<string, any> | null,
+): Record<string, any> | null {
+  if (!props) return null
+  let { class: klass, style } = props
+  if (klass && !isString(klass)) {
+    props.class = normalizeClass(klass)
+  }
+  if (style) {
+    props.style = normalizeStyle(style)
+  }
+  return props
 }

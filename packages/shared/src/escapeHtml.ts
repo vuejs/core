@@ -1,6 +1,6 @@
 const escapeRE = /["'&<>]/
 
-export function escapeHtml(string: unknown) {
+export function escapeHtml(string: unknown): string {
   const str = '' + string
   const match = escapeRE.exec(str)
 
@@ -34,14 +34,14 @@ export function escapeHtml(string: unknown) {
     }
 
     if (lastIndex !== index) {
-      html += str.substring(lastIndex, index)
+      html += str.slice(lastIndex, index)
     }
 
     lastIndex = index + 1
     html += escaped
   }
 
-  return lastIndex !== index ? html + str.substring(lastIndex, index) : html
+  return lastIndex !== index ? html + str.slice(lastIndex, index) : html
 }
 
 // https://www.w3.org/TR/html52/syntax.html#comments
@@ -49,4 +49,16 @@ const commentStripRE = /^-?>|<!--|-->|--!>|<!-$/g
 
 export function escapeHtmlComment(src: string): string {
   return src.replace(commentStripRE, '')
+}
+
+export const cssVarNameEscapeSymbolsRE: RegExp =
+  /[ !"#$%&'()*+,./:;<=>?@[\\\]^`{|}~]/g
+
+export function getEscapedCssVarName(
+  key: string,
+  doubleEscape: boolean,
+): string {
+  return key.replace(cssVarNameEscapeSymbolsRE, s =>
+    doubleEscape ? (s === '"' ? '\\\\\\"' : `\\\\${s}`) : `\\${s}`,
+  )
 }

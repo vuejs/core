@@ -1,13 +1,18 @@
-import { ElementNode, Namespace, TemplateChildNode, ParentNode } from './ast'
-import { TextModes } from './parse'
-import { CompilerError } from './errors'
-import {
-  NodeTransform,
+import type {
+  ElementNode,
+  Namespace,
+  Namespaces,
+  ParentNode,
+  TemplateChildNode,
+} from './ast'
+import type { CompilerError } from './errors'
+import type {
   DirectiveTransform,
-  TransformContext
+  NodeTransform,
+  TransformContext,
 } from './transform'
-import { CompilerCompatOptions } from './compat/compatConfig'
-import { ParserPlugin } from '@babel/parser'
+import type { CompilerCompatOptions } from './compat/compatConfig'
+import type { ParserPlugin } from '@babel/parser'
 
 export interface ErrorHandlingOptions {
   onWarn?: (warning: CompilerError) => void
@@ -17,6 +22,24 @@ export interface ErrorHandlingOptions {
 export interface ParserOptions
   extends ErrorHandlingOptions,
     CompilerCompatOptions {
+  /**
+   * Base mode is platform agnostic and only parses HTML-like template syntax,
+   * treating all tags the same way. Specific tag parsing behavior can be
+   * configured by higher-level compilers.
+   *
+   * HTML mode adds additional logic for handling special parsing behavior in
+   * `<script>`, `<style>`,`<title>` and `<textarea>`.
+   * The logic is handled inside compiler-core for efficiency.
+   *
+   * SFC mode treats content of all root-level tags except `<template>` as plain
+   * text.
+   */
+  parseMode?: 'base' | 'html' | 'sfc'
+  /**
+   * Specify the root namespace to use when parsing a template.
+   * Defaults to `Namespaces.HTML` (0).
+   */
+  ns?: Namespaces
   /**
    * e.g. platform native elements, e.g. `<div>` for browsers
    */
@@ -40,47 +63,63 @@ export interface ParserOptions
   /**
    * Get tag namespace
    */
-  getNamespace?: (tag: string, parent: ElementNode | undefined) => Namespace
-  /**
-   * Get text parsing mode for this element
-   */
-  getTextMode?: (
-    node: ElementNode,
-    parent: ElementNode | undefined
-  ) => TextModes
+  getNamespace?: (
+    tag: string,
+    parent: ElementNode | undefined,
+    rootNamespace: Namespace,
+  ) => Namespace
   /**
    * @default ['{{', '}}']
    */
   delimiters?: [string, string]
   /**
    * Whitespace handling strategy
+   * @default 'condense'
    */
   whitespace?: 'preserve' | 'condense'
   /**
-   * Only needed for DOM compilers
+   * Only used for DOM compilers that runs in the browser.
+   * In non-browser builds, this option is ignored.
    */
   decodeEntities?: (rawText: string, asAttr: boolean) => string
   /**
-   * Keep comments in the templates AST, even in production
+   * Whether to keep comments in the templates AST.
+   * This defaults to `true` in development and `false` in production builds.
    */
   comments?: boolean
+  /**
+   * Parse JavaScript expressions with Babel.
+   * @default false
+   */
+  prefixIdentifiers?: boolean
+  /**
+   * A list of parser plugins to enable for `@babel/parser`, which is used to
+   * parse expressions in bindings and interpolations.
+   * https://babeljs.io/docs/en/next/babel-parser#plugins
+   */
+  expressionPlugins?: ParserPlugin[]
 }
 
 export type HoistTransform = (
   children: TemplateChildNode[],
   context: TransformContext,
-  parent: ParentNode
+  parent: ParentNode,
 ) => void
 
-export const enum BindingTypes {
+export enum BindingTypes {
   /**
    * returned from data()
    */
   DATA = 'data',
   /**
-   * decalred as a prop
+   * declared as a prop
    */
   PROPS = 'props',
+  /**
+   * a local alias of a `<script setup>` destructured prop.
+   * the original is stored in __propsAliases of the bindingMetadata object.
+   */
+  PROPS_ALIASED = 'props-aliased',
   /**
    * a let binding (may or may not be a ref)
    */
@@ -92,6 +131,10 @@ export const enum BindingTypes {
    */
   SETUP_CONST = 'setup-const',
   /**
+   * a const binding that does not need `unref()`, but may be mutated.
+   */
+  SETUP_REACTIVE_CONST = 'setup-reactive-const',
+  /**
    * a const binding that may be a ref.
    */
   SETUP_MAYBE_REF = 'setup-maybe-ref',
@@ -102,13 +145,18 @@ export const enum BindingTypes {
   /**
    * declared by other options, e.g. computed, inject
    */
-  OPTIONS = 'options'
+  OPTIONS = 'options',
+  /**
+   * a literal constant, e.g. 'foo', 1, true
+   */
+  LITERAL_CONST = 'literal-const',
 }
 
 export type BindingMetadata = {
   [key: string]: BindingTypes | undefined
 } & {
   __isScriptSetup?: boolean
+  __propsAliases?: Record<string, string>
 }
 
 interface SharedTransformCodegenOptions {
@@ -122,11 +170,25 @@ interface SharedTransformCodegenOptions {
    */
   prefixIdentifiers?: boolean
   /**
-   * Generate SSR-optimized render functions instead.
+   * Control whether generate SSR-optimized render functions instead.
    * The resulting function must be attached to the component via the
    * `ssrRender` option instead of `render`.
+   *
+   * When compiler generates code for SSR's fallback branch, we need to set it to false:
+   *  - context.ssr = false
+   *
+   * see `subTransform` in `ssrTransformComponent.ts`
    */
   ssr?: boolean
+  /**
+   * Indicates whether the compiler generates code for SSR,
+   * it is always true when generating code for SSR,
+   * regardless of whether we are generating code for SSR's fallback branch,
+   * this means that when the compiler generates code for SSR's fallback branch:
+   *  - context.ssr = false
+   *  - context.inSSR = true
+   */
+  inSSR?: boolean
   /**
    * Optional binding metadata analyzed from script - used to optimize
    * binding access when `prefixIdentifiers` is enabled.
@@ -188,7 +250,7 @@ export interface TransformOptions
    */
   prefixIdentifiers?: boolean
   /**
-   * Hoist static VNodes and props objects to `_hoisted_x` constants
+   * Cache static VNodes and props objects to `_hoisted_x` constants
    * @default false
    */
   hoistStatic?: boolean
@@ -227,6 +289,12 @@ export interface TransformOptions
    * needed to render inline CSS variables on component root
    */
   ssrCssVars?: string
+  /**
+   * Whether to compile the template assuming it needs to handle HMR.
+   * Some edge cases may need to generate different code for HMR to work
+   * correctly, e.g. #6938, #7138
+   */
+  hmr?: boolean
 }
 
 export interface CodegenOptions extends SharedTransformCodegenOptions {
@@ -260,6 +328,11 @@ export interface CodegenOptions extends SharedTransformCodegenOptions {
    * @default 'vue'
    */
   runtimeModuleName?: string
+  /**
+   * Customize where to import ssr runtime helpers from/**
+   * @default 'vue/server-renderer'
+   */
+  ssrRuntimeModuleName?: string
   /**
    * Customize the global variable name of `Vue` to get helpers from
    * in function mode

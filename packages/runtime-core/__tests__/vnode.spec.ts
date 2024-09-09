@@ -1,18 +1,20 @@
 import {
-  createBlock,
-  createVNode,
-  openBlock,
   Comment,
   Fragment,
   Text,
+  type VNode,
   cloneVNode,
+  createBlock,
+  createVNode,
+  isBlockTreeEnabled,
   mergeProps,
   normalizeVNode,
-  transformVNodeArgs
+  openBlock,
+  transformVNodeArgs,
 } from '../src/vnode'
-import { Data } from '../src/component'
-import { ShapeFlags, PatchFlags } from '@vue/shared'
-import { h, reactive, isReactive, setBlockTracking } from '../src'
+import type { Data } from '../src/component'
+import { PatchFlags, ShapeFlags } from '@vue/shared'
+import { h, isReactive, reactive, ref, setBlockTracking, withCtx } from '../src'
 import { createApp, nodeOps, serializeInner } from '@vue/runtime-test'
 import { setCurrentRenderingInstance } from '../src/componentRenderContext'
 
@@ -55,10 +57,21 @@ describe('vnode', () => {
       type: 'p',
       props: {
         id: 'foo',
-        class: 'bar'
+        class: 'bar',
       },
       children: 'baz',
-      shapeFlag: ShapeFlags.ELEMENT | ShapeFlags.TEXT_CHILDREN
+      shapeFlag: ShapeFlags.ELEMENT | ShapeFlags.TEXT_CHILDREN,
+    })
+  })
+
+  test('create from an existing text vnode', () => {
+    const vnode1 = createVNode('div', null, 'text', PatchFlags.TEXT)
+    const vnode2 = createVNode(vnode1)
+    expect(vnode2).toMatchObject({
+      type: 'div',
+      patchFlag: PatchFlags.BAIL,
+      children: 'text',
+      shapeFlag: ShapeFlags.ELEMENT | ShapeFlags.TEXT_CHILDREN,
     })
   })
 
@@ -93,7 +106,7 @@ describe('vnode', () => {
 
     test('array<object>', () => {
       const vnode = createVNode('p', {
-        class: [{ foo: 'foo' }, { baz: 'baz' }]
+        class: [{ foo: 'foo' }, { baz: 'baz' }],
       })
       expect(vnode.props).toMatchObject({ class: 'foo baz' })
     })
@@ -107,7 +120,7 @@ describe('vnode', () => {
   describe('style normalization', () => {
     test('array', () => {
       const vnode = createVNode('p', {
-        style: [{ foo: 'foo' }, { baz: 'baz' }]
+        style: [{ foo: 'foo' }, { baz: 'baz' }],
       })
       expect(vnode.props).toMatchObject({ style: { foo: 'foo', baz: 'baz' } })
     })
@@ -119,7 +132,7 @@ describe('vnode', () => {
   })
 
   describe('children normalization', () => {
-    const nop = jest.fn
+    const nop = vi.fn
 
     test('null', () => {
       const vnode = createVNode('p', null, null)
@@ -131,7 +144,7 @@ describe('vnode', () => {
       const vnode = createVNode('p', null, ['foo'])
       expect(vnode.children).toMatchObject(['foo'])
       expect(vnode.shapeFlag).toBe(
-        ShapeFlags.ELEMENT | ShapeFlags.ARRAY_CHILDREN
+        ShapeFlags.ELEMENT | ShapeFlags.ARRAY_CHILDREN,
       )
     })
 
@@ -139,7 +152,7 @@ describe('vnode', () => {
       const vnode = createVNode({}, null, { foo: 'foo' })
       expect(vnode.children).toMatchObject({ foo: 'foo' })
       expect(vnode.shapeFlag).toBe(
-        ShapeFlags.STATEFUL_COMPONENT | ShapeFlags.SLOTS_CHILDREN
+        ShapeFlags.STATEFUL_COMPONENT | ShapeFlags.SLOTS_CHILDREN,
       )
     })
 
@@ -147,7 +160,7 @@ describe('vnode', () => {
       const vnode = createVNode('p', null, nop)
       expect(vnode.children).toMatchObject({ default: nop })
       expect(vnode.shapeFlag).toBe(
-        ShapeFlags.ELEMENT | ShapeFlags.SLOTS_CHILDREN
+        ShapeFlags.ELEMENT | ShapeFlags.SLOTS_CHILDREN,
       )
     })
 
@@ -155,19 +168,19 @@ describe('vnode', () => {
       const vnode = createVNode('p', null, 'foo')
       expect(vnode.children).toBe('foo')
       expect(vnode.shapeFlag).toBe(
-        ShapeFlags.ELEMENT | ShapeFlags.TEXT_CHILDREN
+        ShapeFlags.ELEMENT | ShapeFlags.TEXT_CHILDREN,
       )
     })
 
     test('element with slots', () => {
       const children = [createVNode('span', null, 'hello')]
       const vnode = createVNode('div', null, {
-        default: () => children
+        default: () => children,
       })
 
       expect(vnode.children).toBe(children)
       expect(vnode.shapeFlag).toBe(
-        ShapeFlags.ELEMENT | ShapeFlags.ARRAY_CHILDREN
+        ShapeFlags.ELEMENT | ShapeFlags.ARRAY_CHILDREN,
       )
     })
   })
@@ -206,7 +219,7 @@ describe('vnode', () => {
     expect(createVNode('div').shapeFlag).toBe(ShapeFlags.ELEMENT)
     expect(createVNode({}).shapeFlag).toBe(ShapeFlags.STATEFUL_COMPONENT)
     expect(createVNode(() => {}).shapeFlag).toBe(
-      ShapeFlags.FUNCTIONAL_COMPONENT
+      ShapeFlags.FUNCTIONAL_COMPONENT,
     )
     expect(createVNode(Text).shapeFlag).toBe(0)
   })
@@ -218,7 +231,6 @@ describe('vnode', () => {
     const node2 = createVNode({}, null, [node1])
     const cloned2 = cloneVNode(node2)
     expect(cloned2).toEqual(node2)
-    expect(cloneVNode(node2)).toEqual(node2)
     expect(cloneVNode(node2)).toEqual(cloned2)
   })
 
@@ -236,20 +248,24 @@ describe('vnode', () => {
 
     setCurrentRenderingInstance(mockInstance1)
     const original = createVNode('div', { ref: 'foo' })
-    expect(original.ref).toStrictEqual({ i: mockInstance1, r: 'foo' })
+    expect(original.ref).toMatchObject({
+      i: mockInstance1,
+      r: 'foo',
+      f: false,
+    })
 
     // clone and preserve original ref
     const cloned1 = cloneVNode(original)
-    expect(cloned1.ref).toStrictEqual({ i: mockInstance1, r: 'foo' })
+    expect(cloned1.ref).toMatchObject({ i: mockInstance1, r: 'foo', f: false })
 
     // cloning with new ref, but with same context instance
     const cloned2 = cloneVNode(original, { ref: 'bar' })
-    expect(cloned2.ref).toStrictEqual({ i: mockInstance1, r: 'bar' })
+    expect(cloned2.ref).toMatchObject({ i: mockInstance1, r: 'bar', f: false })
 
     // cloning and adding ref to original that has no ref
     const original2 = createVNode('div')
     const cloned3 = cloneVNode(original2, { ref: 'bar' })
-    expect(cloned3.ref).toStrictEqual({ i: mockInstance1, r: 'bar' })
+    expect(cloned3.ref).toMatchObject({ i: mockInstance1, r: 'bar', f: false })
 
     // cloning with different context instance
     setCurrentRenderingInstance(mockInstance2)
@@ -257,16 +273,45 @@ describe('vnode', () => {
     // clone and preserve original ref
     const cloned4 = cloneVNode(original)
     // #1311 should preserve original context instance!
-    expect(cloned4.ref).toStrictEqual({ i: mockInstance1, r: 'foo' })
+    expect(cloned4.ref).toMatchObject({ i: mockInstance1, r: 'foo', f: false })
 
     // cloning with new ref, but with same context instance
     const cloned5 = cloneVNode(original, { ref: 'bar' })
     // new ref should use current context instance and overwrite original
-    expect(cloned5.ref).toStrictEqual({ i: mockInstance2, r: 'bar' })
+    expect(cloned5.ref).toMatchObject({ i: mockInstance2, r: 'bar', f: false })
 
     // cloning and adding ref to original that has no ref
     const cloned6 = cloneVNode(original2, { ref: 'bar' })
-    expect(cloned6.ref).toStrictEqual({ i: mockInstance2, r: 'bar' })
+    expect(cloned6.ref).toMatchObject({ i: mockInstance2, r: 'bar', f: false })
+
+    const original3 = createVNode('div', { ref: 'foo', ref_for: true })
+    expect(original3.ref).toMatchObject({
+      i: mockInstance2,
+      r: 'foo',
+      f: true,
+    })
+    const cloned7 = cloneVNode(original3, { ref: 'bar', ref_for: true })
+    expect(cloned7.ref).toMatchObject({ i: mockInstance2, r: 'bar', f: true })
+
+    const r = ref()
+    const original4 = createVNode('div', { ref: r, ref_key: 'foo' })
+    expect(original4.ref).toMatchObject({
+      i: mockInstance2,
+      r,
+      k: 'foo',
+    })
+    const cloned8 = cloneVNode(original4)
+    expect(cloned8.ref).toMatchObject({ i: mockInstance2, r, k: 'foo' })
+
+    // @ts-expect-error #8230
+    const original5 = createVNode('div', { ref: 111, ref_key: 'foo' })
+    expect(original5.ref).toMatchObject({
+      i: mockInstance2,
+      r: '111',
+      k: 'foo',
+    })
+    const cloned9 = cloneVNode(original5)
+    expect(cloned9.ref).toMatchObject({ i: mockInstance2, r: '111', k: 'foo' })
 
     setCurrentRenderingInstance(null)
   })
@@ -277,14 +322,14 @@ describe('vnode', () => {
 
     setCurrentRenderingInstance(mockInstance1)
     const original = createVNode('div', { ref: 'foo' })
-    expect(original.ref).toStrictEqual({ i: mockInstance1, r: 'foo' })
+    expect(original.ref).toMatchObject({ i: mockInstance1, r: 'foo', f: false })
 
     // clone and preserve original ref
     setCurrentRenderingInstance(mockInstance2)
     const cloned1 = cloneVNode(original, { ref: 'bar' }, true)
-    expect(cloned1.ref).toStrictEqual([
-      { i: mockInstance1, r: 'foo' },
-      { i: mockInstance2, r: 'bar' }
+    expect(cloned1.ref).toMatchObject([
+      { i: mockInstance1, r: 'foo', f: false },
+      { i: mockInstance2, r: 'bar', f: false },
     ])
 
     setCurrentRenderingInstance(null)
@@ -293,19 +338,19 @@ describe('vnode', () => {
   test('cloneVNode class normalization', () => {
     const vnode = createVNode('div')
     const expectedProps = {
-      class: 'a b'
+      class: 'a b',
     }
     expect(cloneVNode(vnode, { class: 'a b' }).props).toMatchObject(
-      expectedProps
+      expectedProps,
     )
     expect(cloneVNode(vnode, { class: ['a', 'b'] }).props).toMatchObject(
-      expectedProps
+      expectedProps,
     )
     expect(
-      cloneVNode(vnode, { class: { a: true, b: true } }).props
+      cloneVNode(vnode, { class: { a: true, b: true } }).props,
     ).toMatchObject(expectedProps)
     expect(
-      cloneVNode(vnode, { class: [{ a: true, b: true }] }).props
+      cloneVNode(vnode, { class: [{ a: true, b: true }] }).props,
     ).toMatchObject(expectedProps)
   })
 
@@ -314,89 +359,91 @@ describe('vnode', () => {
     const expectedProps = {
       style: {
         color: 'blue',
-        width: '300px'
-      }
+        width: '300px',
+      },
     }
     expect(
-      cloneVNode(vnode, { style: 'color: blue; width: 300px;' }).props
+      cloneVNode(vnode, { style: 'color: blue; width: 300px;' }).props,
     ).toMatchObject(expectedProps)
     expect(
       cloneVNode(vnode, {
         style: {
           color: 'blue',
-          width: '300px'
-        }
-      }).props
+          width: '300px',
+        },
+      }).props,
     ).toMatchObject(expectedProps)
     expect(
       cloneVNode(vnode, {
         style: [
           {
             color: 'blue',
-            width: '300px'
-          }
-        ]
-      }).props
+            width: '300px',
+          },
+        ],
+      }).props,
     ).toMatchObject(expectedProps)
   })
 
   describe('mergeProps', () => {
     test('class', () => {
-      let props1: Data = { class: 'c' }
+      let props1: Data = { class: { c: true } }
       let props2: Data = { class: ['cc'] }
       let props3: Data = { class: [{ ccc: true }] }
       let props4: Data = { class: { cccc: true } }
       expect(mergeProps(props1, props2, props3, props4)).toMatchObject({
-        class: 'c cc ccc cccc'
+        class: 'c cc ccc cccc',
       })
     })
 
     test('style', () => {
       let props1: Data = {
-        style: {
-          color: 'red',
-          fontSize: 10
-        }
+        style: [
+          {
+            color: 'red',
+            fontSize: 10,
+          },
+        ],
       }
       let props2: Data = {
         style: [
           {
             color: 'blue',
-            width: '200px'
+            width: '200px',
           },
           {
             width: '300px',
             height: '300px',
-            fontSize: 30
-          }
-        ]
+            fontSize: 30,
+          },
+        ],
       }
       expect(mergeProps(props1, props2)).toMatchObject({
         style: {
           color: 'blue',
           width: '300px',
           height: '300px',
-          fontSize: 30
-        }
+          fontSize: 30,
+        },
       })
     })
 
     test('style w/ strings', () => {
       let props1: Data = {
-        style: 'width:100px;right:10;top:10'
+        style: 'width:100px;right:10;top:10',
       }
       let props2: Data = {
         style: [
           {
             color: 'blue',
-            width: '200px'
+            width: '200px',
           },
           {
             width: '300px',
             height: '300px',
-            fontSize: 30
-          }
-        ]
+            fontSize: 30,
+          },
+        ],
       }
       expect(mergeProps(props1, props2)).toMatchObject({
         style: {
@@ -405,21 +452,25 @@ describe('vnode', () => {
           height: '300px',
           fontSize: 30,
           right: '10',
-          top: '10'
-        }
+          top: '10',
+        },
       })
     })
 
     test('handlers', () => {
-      let clickHandler1 = function() {}
-      let clickHandler2 = function() {}
-      let focusHandler2 = function() {}
+      let clickHandler1 = function () {}
+      let clickHandler2 = function () {}
+      let focusHandler2 = function () {}
 
       let props1: Data = { onClick: clickHandler1 }
       let props2: Data = { onClick: clickHandler2, onFocus: focusHandler2 }
       expect(mergeProps(props1, props2)).toMatchObject({
         onClick: [clickHandler1, clickHandler2],
-        onFocus: focusHandler2
+        onFocus: focusHandler2,
+      })
+      let props3: Data = { onClick: undefined }
+      expect(mergeProps(props1, props3)).toMatchObject({
+        onClick: clickHandler1,
       })
     })
 
@@ -430,7 +481,7 @@ describe('vnode', () => {
       expect(mergeProps(props1, props2, props3)).toMatchObject({
         foo: {},
         bar: ['cc'],
-        baz: { ccc: true }
+        baz: { ccc: true },
       })
     })
   })
@@ -439,37 +490,41 @@ describe('vnode', () => {
     test('with patchFlags', () => {
       const hoist = createVNode('div')
       let vnode1
-      const vnode = (openBlock(),
-      createBlock('div', null, [
-        hoist,
-        (vnode1 = createVNode('div', null, 'text', PatchFlags.TEXT))
-      ]))
+      const vnode =
+        (openBlock(),
+        createBlock('div', null, [
+          hoist,
+          (vnode1 = createVNode('div', null, 'text', PatchFlags.TEXT)),
+        ]))
       expect(vnode.dynamicChildren).toStrictEqual([vnode1])
     })
 
-    test('should not track vnodes with only HYDRATE_EVENTS flag', () => {
+    test('should not track vnodes with only NEED_HYDRATION flag', () => {
       const hoist = createVNode('div')
-      const vnode = (openBlock(),
-      createBlock('div', null, [
-        hoist,
-        createVNode('div', null, 'text', PatchFlags.HYDRATE_EVENTS)
-      ]))
+      const vnode =
+        (openBlock(),
+        createBlock('div', null, [
+          hoist,
+          createVNode('div', null, 'text', PatchFlags.NEED_HYDRATION),
+        ]))
       expect(vnode.dynamicChildren).toStrictEqual([])
     })
 
     test('many times call openBlock', () => {
       const hoist = createVNode('div')
       let vnode1, vnode2, vnode3
-      const vnode = (openBlock(),
-      createBlock('div', null, [
-        hoist,
-        (vnode1 = createVNode('div', null, 'text', PatchFlags.TEXT)),
-        (vnode2 = (openBlock(),
+      const vnode =
+        (openBlock(),
         createBlock('div', null, [
           hoist,
-          (vnode3 = createVNode('div', null, 'text', PatchFlags.TEXT))
-        ])))
-      ]))
+          (vnode1 = createVNode('div', null, 'text', PatchFlags.TEXT)),
+          (vnode2 =
+            (openBlock(),
+            createBlock('div', null, [
+              hoist,
+              (vnode3 = createVNode('div', null, 'text', PatchFlags.TEXT)),
+            ]))),
+        ]))
       expect(vnode.dynamicChildren).toStrictEqual([vnode1, vnode2])
       expect(vnode2.dynamicChildren).toStrictEqual([vnode3])
     })
@@ -477,33 +532,36 @@ describe('vnode', () => {
     test('with stateful component', () => {
       const hoist = createVNode('div')
       let vnode1
-      const vnode = (openBlock(),
-      createBlock('div', null, [
-        hoist,
-        (vnode1 = createVNode({}, null, 'text'))
-      ]))
+      const vnode =
+        (openBlock(),
+        createBlock('div', null, [
+          hoist,
+          (vnode1 = createVNode({}, null, 'text')),
+        ]))
       expect(vnode.dynamicChildren).toStrictEqual([vnode1])
     })
 
     test('with functional component', () => {
       const hoist = createVNode('div')
       let vnode1
-      const vnode = (openBlock(),
-      createBlock('div', null, [
-        hoist,
-        (vnode1 = createVNode(() => {}, null, 'text'))
-      ]))
+      const vnode =
+        (openBlock(),
+        createBlock('div', null, [
+          hoist,
+          (vnode1 = createVNode(() => {}, null, 'text')),
+        ]))
       expect(vnode.dynamicChildren).toStrictEqual([vnode1])
     })
 
     test('with suspense', () => {
       const hoist = createVNode('div')
       let vnode1
-      const vnode = (openBlock(),
-      createBlock('div', null, [
-        hoist,
-        (vnode1 = createVNode(() => {}, null, 'text'))
-      ]))
+      const vnode =
+        (openBlock(),
+        createBlock('div', null, [
+          hoist,
+          (vnode1 = createVNode(() => {}, null, 'text')),
+        ]))
       expect(vnode.dynamicChildren).toStrictEqual([vnode1])
     })
 
@@ -516,32 +574,35 @@ describe('vnode', () => {
     test('element block should track normalized slot children', () => {
       const hoist = createVNode('div')
       let vnode1: any
-      const vnode = (openBlock(),
-      createBlock('div', null, {
-        default: () => {
-          return [
-            hoist,
-            (vnode1 = createVNode('div', null, 'text', PatchFlags.TEXT))
-          ]
-        }
-      }))
+      const vnode =
+        (openBlock(),
+        createBlock('div', null, {
+          default: () => {
+            return [
+              hoist,
+              (vnode1 = createVNode('div', null, 'text', PatchFlags.TEXT)),
+            ]
+          },
+        }))
       expect(vnode.dynamicChildren).toStrictEqual([vnode1])
     })
 
     test('openBlock w/ disableTracking: true', () => {
       const hoist = createVNode('div')
       let vnode1
-      const vnode = (openBlock(),
-      createBlock('div', null, [
-        // a v-for fragment block generated by the compiler
-        // disables tracking because it always diffs its
-        // children.
-        (vnode1 = (openBlock(true),
-        createBlock(Fragment, null, [
-          hoist,
-          /*vnode2*/ createVNode(() => {}, null, 'text')
-        ])))
-      ]))
+      const vnode =
+        (openBlock(),
+        createBlock('div', null, [
+          // a v-for fragment block generated by the compiler
+          // disables tracking because it always diffs its
+          // children.
+          (vnode1 =
+            (openBlock(true),
+            createBlock(Fragment, null, [
+              hoist,
+              /*vnode2*/ createVNode(() => {}, null, 'text'),
+            ]))),
+        ]))
       expect(vnode.dynamicChildren).toStrictEqual([vnode1])
       expect(vnode1.dynamicChildren).toStrictEqual([])
     })
@@ -549,28 +610,56 @@ describe('vnode', () => {
     test('openBlock without disableTracking: true', () => {
       const hoist = createVNode('div')
       let vnode1, vnode2
-      const vnode = (openBlock(),
-      createBlock('div', null, [
-        (vnode1 = (openBlock(),
-        createBlock(Fragment, null, [
-          hoist,
-          (vnode2 = createVNode(() => {}, null, 'text'))
-        ])))
-      ]))
+      const vnode =
+        (openBlock(),
+        createBlock('div', null, [
+          (vnode1 =
+            (openBlock(),
+            createBlock(Fragment, null, [
+              hoist,
+              (vnode2 = createVNode(() => {}, null, 'text')),
+            ]))),
+        ]))
       expect(vnode.dynamicChildren).toStrictEqual([vnode1])
       expect(vnode1.dynamicChildren).toStrictEqual([vnode2])
     })
 
     test('should not track openBlock() when tracking is disabled', () => {
       let vnode1
-      const vnode = (openBlock(),
-      createBlock('div', null, [
-        setBlockTracking(-1),
-        (vnode1 = (openBlock(), createBlock('div'))),
-        setBlockTracking(1),
-        vnode1
-      ]))
-      expect(vnode.dynamicChildren).toStrictEqual([])
+      const vnode =
+        (openBlock(),
+        createBlock('div', null, [
+          setBlockTracking(-1),
+          (vnode1 = (openBlock(), createBlock('div'))),
+          setBlockTracking(1),
+          vnode1,
+        ]))
+      const expected: VNode['dynamicChildren'] = []
+      expected.hasOnce = true
+      expect(vnode.dynamicChildren).toStrictEqual(expected)
+    })
+    // #5657
+    test('error of slot function execution should not affect block tracking', () => {
+      expect(isBlockTreeEnabled).toStrictEqual(1)
+      const slotFn = withCtx(
+        () => {
+          throw new Error('slot execution error')
+        },
+        { type: {}, appContext: {} } as any,
+      )
+      const Parent = {
+        setup(_: any, { slots }: any) {
+          return () => {
+            try {
+              slots.default()
+            } catch (e) {}
+          }
+        },
+      }
+      const vnode =
+        (openBlock(), createBlock(Parent, null, { default: slotFn }))
+      createApp(vnode).mount(nodeOps.createElement('div'))
+      expect(isBlockTreeEnabled).toStrictEqual(1)
     })
   })
 
@@ -587,7 +676,7 @@ describe('vnode', () => {
         type: 'div',
         props: { id: 'foo' },
         children: 'hello',
-        shapeFlag: ShapeFlags.ELEMENT | ShapeFlags.TEXT_CHILDREN
+        shapeFlag: ShapeFlags.ELEMENT | ShapeFlags.TEXT_CHILDREN,
       })
     })
 
@@ -598,7 +687,7 @@ describe('vnode', () => {
         type: 'div',
         props: { id: 'foo' },
         children: 'hello',
-        shapeFlag: ShapeFlags.ELEMENT | ShapeFlags.TEXT_CHILDREN
+        shapeFlag: ShapeFlags.ELEMENT | ShapeFlags.TEXT_CHILDREN,
       })
     })
 
@@ -615,7 +704,7 @@ describe('vnode', () => {
         name: 'Root Component',
         render() {
           return h('p') // this will be overwritten by the transform
-        }
+        },
       }
       const root = nodeOps.createElement('div')
       createApp(App).mount(root)

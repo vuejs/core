@@ -1,43 +1,40 @@
 import {
+  type NodeTransform,
+  type TransformContext,
   createStructuralDirectiveTransform,
-  TransformContext,
-  traverseNode
+  traverseNode,
 } from '../transform'
 import {
-  NodeTypes,
+  type AttributeNode,
+  type BlockCodegenNode,
+  type CacheExpression,
+  ConstantTypes,
+  type DirectiveNode,
+  type ElementNode,
   ElementTypes,
-  ElementNode,
-  DirectiveNode,
-  IfBranchNode,
-  SimpleExpressionNode,
+  type IfBranchNode,
+  type IfConditionalExpression,
+  type IfNode,
+  type MemoExpression,
+  NodeTypes,
+  type SimpleExpressionNode,
+  convertToBlock,
   createCallExpression,
   createConditionalExpression,
-  createSimpleExpression,
-  createObjectProperty,
   createObjectExpression,
-  IfConditionalExpression,
-  BlockCodegenNode,
-  IfNode,
+  createObjectProperty,
+  createSimpleExpression,
   createVNodeCall,
-  AttributeNode,
   locStub,
-  CacheExpression,
-  ConstantTypes
 } from '../ast'
-import { createCompilerError, ErrorCodes } from '../errors'
+import { ErrorCodes, createCompilerError } from '../errors'
 import { processExpression } from './transformExpression'
 import { validateBrowserExpression } from '../validateExpression'
-import {
-  CREATE_BLOCK,
-  FRAGMENT,
-  CREATE_COMMENT,
-  OPEN_BLOCK,
-  CREATE_VNODE
-} from '../runtimeHelpers'
-import { injectProp, findDir, findProp, isBuiltInType } from '../utils'
-import { PatchFlags, PatchFlagNames } from '@vue/shared'
+import { CREATE_COMMENT, FRAGMENT } from '../runtimeHelpers'
+import { findDir, findProp, getMemoedVNodeCall, injectProp } from '../utils'
+import { PatchFlags } from '@vue/shared'
 
-export const transformIf = createStructuralDirectiveTransform(
+export const transformIf: NodeTransform = createStructuralDirectiveTransform(
   /^(if|else|else-if)$/,
   (node, dir, context) => {
     return processIf(node, dir, context, (ifNode, branch, isRoot) => {
@@ -61,7 +58,7 @@ export const transformIf = createStructuralDirectiveTransform(
           ifNode.codegenNode = createCodegenNodeForBranch(
             branch,
             key,
-            context
+            context,
           ) as IfConditionalExpression
         } else {
           // attach this branch's codegen node to the v-if root.
@@ -69,12 +66,12 @@ export const transformIf = createStructuralDirectiveTransform(
           parentCondition.alternate = createCodegenNodeForBranch(
             branch,
             key + ifNode.branches.length - 1,
-            context
+            context,
           )
         }
       }
     })
-  }
+  },
 )
 
 // target-agnostic transform used for both Client and SSR
@@ -85,16 +82,16 @@ export function processIf(
   processCodegen?: (
     node: IfNode,
     branch: IfBranchNode,
-    isRoot: boolean
-  ) => (() => void) | undefined
-) {
+    isRoot: boolean,
+  ) => (() => void) | undefined,
+): (() => void) | undefined {
   if (
     dir.name !== 'else' &&
     (!dir.exp || !(dir.exp as SimpleExpressionNode).content.trim())
   ) {
     const loc = dir.exp ? dir.exp.loc : node.loc
     context.onError(
-      createCompilerError(ErrorCodes.X_V_IF_NO_EXPRESSION, dir.loc)
+      createCompilerError(ErrorCodes.X_V_IF_NO_EXPRESSION, dir.loc),
     )
     dir.exp = createSimpleExpression(`true`, false, loc)
   }
@@ -114,7 +111,7 @@ export function processIf(
     const ifNode: IfNode = {
       type: NodeTypes.IF,
       loc: node.loc,
-      branches: [branch]
+      branches: [branch],
     }
     context.replaceNode(ifNode)
     if (processCodegen) {
@@ -127,9 +124,9 @@ export function processIf(
     let i = siblings.indexOf(node)
     while (i-- >= -1) {
       const sibling = siblings[i]
-      if (__DEV__ && sibling && sibling.type === NodeTypes.COMMENT) {
+      if (sibling && sibling.type === NodeTypes.COMMENT) {
         context.removeNode(sibling)
-        comments.unshift(sibling)
+        __DEV__ && comments.unshift(sibling)
         continue
       }
 
@@ -143,6 +140,16 @@ export function processIf(
       }
 
       if (sibling && sibling.type === NodeTypes.IF) {
+        // Check if v-else was followed by v-else-if
+        if (
+          dir.name === 'else-if' &&
+          sibling.branches[sibling.branches.length - 1].condition === undefined
+        ) {
+          context.onError(
+            createCompilerError(ErrorCodes.X_V_ELSE_NO_ADJACENT_IF, node.loc),
+          )
+        }
+
         // move the node to the if node's branches
         context.removeNode()
         const branch = createIfBranch(node, dir)
@@ -153,7 +160,8 @@ export function processIf(
           !(
             context.parent &&
             context.parent.type === NodeTypes.ELEMENT &&
-            isBuiltInType(context.parent.tag, 'transition')
+            (context.parent.tag === 'transition' ||
+              context.parent.tag === 'Transition')
           )
         ) {
           branch.children = [...comments, ...branch.children]
@@ -168,8 +176,8 @@ export function processIf(
                 context.onError(
                   createCompilerError(
                     ErrorCodes.X_V_IF_SAME_KEY,
-                    branch.userKey!.loc
-                  )
+                    branch.userKey!.loc,
+                  ),
                 )
               }
             })
@@ -188,7 +196,7 @@ export function processIf(
         context.currentNode = null
       } else {
         context.onError(
-          createCompilerError(ErrorCodes.X_V_ELSE_NO_ADJACENT_IF, node.loc)
+          createCompilerError(ErrorCodes.X_V_ELSE_NO_ADJACENT_IF, node.loc),
         )
       }
       break
@@ -197,23 +205,22 @@ export function processIf(
 }
 
 function createIfBranch(node: ElementNode, dir: DirectiveNode): IfBranchNode {
+  const isTemplateIf = node.tagType === ElementTypes.TEMPLATE
   return {
     type: NodeTypes.IF_BRANCH,
     loc: node.loc,
     condition: dir.name === 'else' ? undefined : dir.exp,
-    children:
-      node.tagType === ElementTypes.TEMPLATE && !findDir(node, 'for')
-        ? node.children
-        : [node],
-    userKey: findProp(node, `key`)
+    children: isTemplateIf && !findDir(node, 'for') ? node.children : [node],
+    userKey: findProp(node, `key`),
+    isTemplateIf,
   }
 }
 
 function createCodegenNodeForBranch(
   branch: IfBranchNode,
   keyIndex: number,
-  context: TransformContext
-): IfConditionalExpression | BlockCodegenNode {
+  context: TransformContext,
+): IfConditionalExpression | BlockCodegenNode | MemoExpression {
   if (branch.condition) {
     return createConditionalExpression(
       branch.condition,
@@ -222,8 +229,8 @@ function createCodegenNodeForBranch(
       // closes the current block.
       createCallExpression(context.helper(CREATE_COMMENT), [
         __DEV__ ? '"v-if"' : '""',
-        'true'
-      ])
+        'true',
+      ]),
     ) as IfConditionalExpression
   } else {
     return createChildrenCodegenNode(branch, keyIndex, context)
@@ -233,17 +240,17 @@ function createCodegenNodeForBranch(
 function createChildrenCodegenNode(
   branch: IfBranchNode,
   keyIndex: number,
-  context: TransformContext
-): BlockCodegenNode {
-  const { helper, removeHelper } = context
+  context: TransformContext,
+): BlockCodegenNode | MemoExpression {
+  const { helper } = context
   const keyProperty = createObjectProperty(
     `key`,
     createSimpleExpression(
       `${keyIndex}`,
       false,
       locStub,
-      ConstantTypes.CAN_HOIST
-    )
+      ConstantTypes.CAN_CACHE,
+    ),
   )
   const { children } = branch
   const firstChild = children[0]
@@ -257,15 +264,14 @@ function createChildrenCodegenNode(
       return vnodeCall
     } else {
       let patchFlag = PatchFlags.STABLE_FRAGMENT
-      let patchFlagText = PatchFlagNames[PatchFlags.STABLE_FRAGMENT]
       // check if the fragment actually contains a single valid child with
       // the rest being comments
       if (
         __DEV__ &&
+        !branch.isTemplateIf &&
         children.filter(c => c.type !== NodeTypes.COMMENT).length === 1
       ) {
         patchFlag |= PatchFlags.DEV_ROOT_FRAGMENT
-        patchFlagText += `, ${PatchFlagNames[PatchFlags.DEV_ROOT_FRAGMENT]}`
       }
 
       return createVNodeCall(
@@ -273,33 +279,33 @@ function createChildrenCodegenNode(
         helper(FRAGMENT),
         createObjectExpression([keyProperty]),
         children,
-        patchFlag + (__DEV__ ? ` /* ${patchFlagText} */` : ``),
+        patchFlag,
         undefined,
         undefined,
         true,
         false,
-        branch.loc
+        false /* isComponent */,
+        branch.loc,
       )
     }
   } else {
-    const vnodeCall = (firstChild as ElementNode)
-      .codegenNode as BlockCodegenNode
+    const ret = (firstChild as ElementNode).codegenNode as
+      | BlockCodegenNode
+      | MemoExpression
+    const vnodeCall = getMemoedVNodeCall(ret)
     // Change createVNode to createBlock.
-    if (vnodeCall.type === NodeTypes.VNODE_CALL && !vnodeCall.isBlock) {
-      removeHelper(CREATE_VNODE)
-      vnodeCall.isBlock = true
-      helper(OPEN_BLOCK)
-      helper(CREATE_BLOCK)
+    if (vnodeCall.type === NodeTypes.VNODE_CALL) {
+      convertToBlock(vnodeCall, context)
     }
     // inject branch key
     injectProp(vnodeCall, keyProperty, context)
-    return vnodeCall
+    return ret
   }
 }
 
 function isSameKey(
   a: AttributeNode | DirectiveNode | undefined,
-  b: AttributeNode | DirectiveNode
+  b: AttributeNode | DirectiveNode,
 ): boolean {
   if (!a || a.type !== b.type) {
     return false
@@ -317,8 +323,8 @@ function isSameKey(
     }
     if (
       exp.type !== NodeTypes.SIMPLE_EXPRESSION ||
-      (exp.isStatic !== (branchExp as SimpleExpressionNode).isStatic ||
-        exp.content !== (branchExp as SimpleExpressionNode).content)
+      exp.isStatic !== (branchExp as SimpleExpressionNode).isStatic ||
+      exp.content !== (branchExp as SimpleExpressionNode).content
     ) {
       return false
     }
@@ -327,7 +333,7 @@ function isSameKey(
 }
 
 function getParentCondition(
-  node: IfConditionalExpression | CacheExpression
+  node: IfConditionalExpression | CacheExpression,
 ): IfConditionalExpression {
   while (true) {
     if (node.type === NodeTypes.JS_CONDITIONAL_EXPRESSION) {

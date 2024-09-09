@@ -1,21 +1,39 @@
 {
   "name": "@vue/server-renderer",
-  "version": "3.1.1",
+  "version": "3.5.3",
   "description": "@vue/server-renderer",
   "main": "index.js",
+  "module": "dist/server-renderer.esm-bundler.js",
   "types": "dist/server-renderer.d.ts",
   "files": [
     "index.js",
     "dist"
   ],
+  "exports": {
+    ".": {
+      "types": "./dist/server-renderer.d.ts",
+      "node": {
+        "production": "./dist/server-renderer.cjs.prod.js",
+        "development": "./dist/server-renderer.cjs.js",
+        "default": "./index.js"
+      },
+      "module": "./dist/server-renderer.esm-bundler.js",
+      "import": "./dist/server-renderer.esm-bundler.js",
+      "require": "./index.js"
+    },
+    "./*": "./*"
+  },
   "buildOptions": {
+    "name": "VueServerRenderer",
     "formats": [
+      "esm-bundler",
+      "esm-browser",
       "cjs"
     ]
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/vuejs/vue-next.git",
+    "url": "git+https://github.com/vuejs/core.git",
     "directory": "packages/server-renderer"
   },
   "keywords": [
@@ -24,14 +42,14 @@
   "author": "Evan You",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/vuejs/vue-next/issues"
+    "url": "https://github.com/vuejs/core/issues"
   },
-  "homepage": "https://github.com/vuejs/vue-next/tree/master/packages/server-renderer#readme",
+  "homepage": "https://github.com/vuejs/core/tree/main/packages/server-renderer#readme",
   "peerDependencies": {
-    "vue": "3.1.1"
+    "vue": "workspace:*"
   },
   "dependencies": {
-    "@vue/shared": "3.1.1",
-    "@vue/compiler-ssr": "3.1.1"
+    "@vue/shared": "workspace:*",
+    "@vue/compiler-ssr": "workspace:*"
   }
 }

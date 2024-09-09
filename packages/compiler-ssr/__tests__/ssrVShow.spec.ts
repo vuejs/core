@@ -7,12 +7,12 @@ function compileWithWrapper(src: string) {
 describe('ssr: v-show', () => {
   test('basic as root', () => {
     expect(compile(`<div v-show="foo"/>`).code).toMatchInlineSnapshot(`
-      "const { mergeProps: _mergeProps } = require(\\"vue\\")
-      const { ssrRenderAttrs: _ssrRenderAttrs } = require(\\"@vue/server-renderer\\")
+      "const { mergeProps: _mergeProps } = require("vue")
+      const { ssrRenderAttrs: _ssrRenderAttrs } = require("vue/server-renderer")
 
       return function ssrRender(_ctx, _push, _parent, _attrs) {
         _push(\`<div\${_ssrRenderAttrs(_mergeProps({
-          style: (_ctx.foo) ? null : { display: \\"none\\" }
+          style: (_ctx.foo) ? null : { display: "none" }
         }, _attrs))}></div>\`)
       }"
     `)
@@ -21,51 +21,51 @@ describe('ssr: v-show', () => {
   test('basic', () => {
     expect(compileWithWrapper(`<div v-show="foo"/>`).code)
       .toMatchInlineSnapshot(`
-      "const { ssrRenderStyle: _ssrRenderStyle, ssrRenderAttrs: _ssrRenderAttrs } = require(\\"@vue/server-renderer\\")
+        "const { ssrRenderStyle: _ssrRenderStyle, ssrRenderAttrs: _ssrRenderAttrs } = require("vue/server-renderer")
 
-      return function ssrRender(_ctx, _push, _parent, _attrs) {
-        _push(\`<div\${
-          _ssrRenderAttrs(_attrs)
-        }><div style=\\"\${
-          _ssrRenderStyle((_ctx.foo) ? null : { display: \\"none\\" })
-        }\\"></div></div>\`)
-      }"
-    `)
+        return function ssrRender(_ctx, _push, _parent, _attrs) {
+          _push(\`<div\${
+            _ssrRenderAttrs(_attrs)
+          }><div style="\${
+            _ssrRenderStyle((_ctx.foo) ? null : { display: "none" })
+          }"></div></div>\`)
+        }"
+      `)
   })
 
   test('with static style', () => {
     expect(compileWithWrapper(`<div style="color:red" v-show="foo"/>`).code)
       .toMatchInlineSnapshot(`
-      "const { ssrRenderStyle: _ssrRenderStyle, ssrRenderAttrs: _ssrRenderAttrs } = require(\\"@vue/server-renderer\\")
+        "const { ssrRenderStyle: _ssrRenderStyle, ssrRenderAttrs: _ssrRenderAttrs } = require("vue/server-renderer")
 
-      return function ssrRender(_ctx, _push, _parent, _attrs) {
-        _push(\`<div\${
-          _ssrRenderAttrs(_attrs)
-        }><div style=\\"\${
-          _ssrRenderStyle([
-            {\\"color\\":\\"red\\"},
-            (_ctx.foo) ? null : { display: \\"none\\" }
-          ])
-        }\\"></div></div>\`)
-      }"
-    `)
+        return function ssrRender(_ctx, _push, _parent, _attrs) {
+          _push(\`<div\${
+            _ssrRenderAttrs(_attrs)
+          }><div style="\${
+            _ssrRenderStyle([
+              {"color":"red"},
+              (_ctx.foo) ? null : { display: "none" }
+            ])
+          }"></div></div>\`)
+        }"
+      `)
   })
 
   test('with dynamic style', () => {
     expect(
-      compileWithWrapper(`<div :style="{ color: 'red' }" v-show="foo"/>`).code
+      compileWithWrapper(`<div :style="{ color: 'red' }" v-show="foo"/>`).code,
     ).toMatchInlineSnapshot(`
-      "const { ssrRenderStyle: _ssrRenderStyle, ssrRenderAttrs: _ssrRenderAttrs } = require(\\"@vue/server-renderer\\")
+      "const { ssrRenderStyle: _ssrRenderStyle, ssrRenderAttrs: _ssrRenderAttrs } = require("vue/server-renderer")
 
       return function ssrRender(_ctx, _push, _parent, _attrs) {
         _push(\`<div\${
           _ssrRenderAttrs(_attrs)
-        }><div style=\\"\${
+        }><div style="\${
           _ssrRenderStyle([
             { color: 'red' },
-            (_ctx.foo) ? null : { display: \\"none\\" }
+            (_ctx.foo) ? null : { display: "none" }
           ])
-        }\\"></div></div>\`)
+        }"></div></div>\`)
       }"
     `)
   })
@@ -73,21 +73,21 @@ describe('ssr: v-show', () => {
   test('with static + dynamic style', () => {
     expect(
       compileWithWrapper(
-        `<div style="color:red" :style="{ fontSize: 14 }" v-show="foo"/>`
-      ).code
+        `<div style="color:red" :style="{ fontSize: 14 }" v-show="foo"/>`,
+      ).code,
     ).toMatchInlineSnapshot(`
-      "const { ssrRenderStyle: _ssrRenderStyle, ssrRenderAttrs: _ssrRenderAttrs } = require(\\"@vue/server-renderer\\")
+      "const { ssrRenderStyle: _ssrRenderStyle, ssrRenderAttrs: _ssrRenderAttrs } = require("vue/server-renderer")
 
       return function ssrRender(_ctx, _push, _parent, _attrs) {
         _push(\`<div\${
           _ssrRenderAttrs(_attrs)
-        }><div style=\\"\${
+        }><div style="\${
           _ssrRenderStyle([
-            {\\"color\\":\\"red\\"},
+            {"color":"red"},
             { fontSize: 14 },
-            (_ctx.foo) ? null : { display: \\"none\\" }
+            (_ctx.foo) ? null : { display: "none" }
           ])
-        }\\"></div></div>\`)
+        }"></div></div>\`)
       }"
     `)
   })
@@ -95,11 +95,11 @@ describe('ssr: v-show', () => {
   test('with v-bind', () => {
     expect(
       compileWithWrapper(
-        `<div v-bind="baz" style="color:red" :style="{ fontSize: 14 }" v-show="foo"/>`
-      ).code
+        `<div v-bind="baz" style="color:red" :style="{ fontSize: 14 }" v-show="foo"/>`,
+      ).code,
     ).toMatchInlineSnapshot(`
-      "const { mergeProps: _mergeProps } = require(\\"vue\\")
-      const { ssrRenderAttrs: _ssrRenderAttrs } = require(\\"@vue/server-renderer\\")
+      "const { mergeProps: _mergeProps } = require("vue")
+      const { ssrRenderAttrs: _ssrRenderAttrs } = require("vue/server-renderer")
 
       return function ssrRender(_ctx, _push, _parent, _attrs) {
         _push(\`<div\${
@@ -107,9 +107,9 @@ describe('ssr: v-show', () => {
         }><div\${
           _ssrRenderAttrs(_mergeProps(_ctx.baz, {
             style: [
-              {\\"color\\":\\"red\\"},
+              {"color":"red"},
               { fontSize: 14 },
-              (_ctx.foo) ? null : { display: \\"none\\" }
+              (_ctx.foo) ? null : { display: "none" }
             ]
           }))
         }></div></div>\`)

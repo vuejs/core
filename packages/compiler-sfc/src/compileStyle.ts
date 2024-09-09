@@ -1,20 +1,21 @@
 import postcss, {
-  ProcessOptions,
-  Result,
-  SourceMap,
-  Message,
-  LazyResult
+  type LazyResult,
+  type Message,
+  type ProcessOptions,
+  type Result,
+  type SourceMap,
 } from 'postcss'
-import trimPlugin from './stylePluginTrim'
-import scopedPlugin from './stylePluginScoped'
+import trimPlugin from './style/pluginTrim'
+import scopedPlugin from './style/pluginScoped'
 import {
+  type PreprocessLang,
+  type StylePreprocessor,
+  type StylePreprocessorResults,
   processors,
-  StylePreprocessor,
-  StylePreprocessorResults,
-  PreprocessLang
-} from './stylePreprocessors'
-import { RawSourceMap } from 'source-map'
-import { cssVarsPlugin } from './cssVars'
+} from './style/preprocessors'
+import type { RawSourceMap } from '@vue/compiler-core'
+import { cssVarsPlugin } from './style/cssVars'
+import postcssModules from 'postcss-modules'
 
 export interface SFCStyleCompileOptions {
   source: string
@@ -30,7 +31,7 @@ export interface SFCStyleCompileOptions {
   postcssOptions?: any
   postcssPlugins?: any[]
   /**
-   * @deprecated
+   * @deprecated use `inMap` instead.
    */
   map?: RawSourceMap
 }
@@ -47,7 +48,7 @@ export interface CSSModulesOptions {
   hashPrefix?: string
   localsConvention?: 'camelCase' | 'camelCaseOnly' | 'dashes' | 'dashesOnly'
   exportGlobals?: boolean
-  globalModulePaths?: string[]
+  globalModulePaths?: RegExp[]
 }
 
 export interface SFCAsyncStyleCompileOptions extends SFCStyleCompileOptions {
@@ -68,24 +69,25 @@ export interface SFCStyleCompileResults {
 }
 
 export function compileStyle(
-  options: SFCStyleCompileOptions
+  options: SFCStyleCompileOptions,
 ): SFCStyleCompileResults {
   return doCompileStyle({
     ...options,
-    isAsync: false
+    isAsync: false,
   }) as SFCStyleCompileResults
 }
 
 export function compileStyleAsync(
-  options: SFCAsyncStyleCompileOptions
+  options: SFCAsyncStyleCompileOptions,
 ): Promise<SFCStyleCompileResults> {
-  return doCompileStyle({ ...options, isAsync: true }) as Promise<
-    SFCStyleCompileResults
-  >
+  return doCompileStyle({
+    ...options,
+    isAsync: true,
+  }) as Promise<SFCStyleCompileResults>
 }
 
 export function doCompileStyle(
-  options: SFCAsyncStyleCompileOptions
+  options: SFCAsyncStyleCompileOptions,
 ): SFCStyleCompileResults | Promise<SFCStyleCompileResults> {
   const {
     filename,
@@ -97,7 +99,7 @@ export function doCompileStyle(
     modulesOptions = {},
     preprocessLang,
     postcssOptions,
-    postcssPlugins
+    postcssPlugins,
   } = options
   const preprocessor = preprocessLang && processors[preprocessLang]
   const preProcessedSource = preprocessor && preprocess(options, preprocessor)
@@ -121,34 +123,34 @@ export function doCompileStyle(
   if (modules) {
     if (__GLOBAL__ || __ESM_BROWSER__) {
       throw new Error(
-        '[@vue/compiler-sfc] `modules` option is not supported in the browser build.'
+        '[@vue/compiler-sfc] `modules` option is not supported in the browser build.',
       )
     }
     if (!options.isAsync) {
       throw new Error(
-        '[@vue/compiler-sfc] `modules` option can only be used with compileStyleAsync().'
+        '[@vue/compiler-sfc] `modules` option can only be used with compileStyleAsync().',
       )
     }
     plugins.push(
-      require('postcss-modules')({
+      postcssModules({
         ...modulesOptions,
         getJSON: (_cssFileName: string, json: Record<string, string>) => {
           cssModules = json
-        }
-      })
+        },
+      }),
     )
   }
 
   const postCSSOptions: ProcessOptions = {
     ...postcssOptions,
     to: filename,
-    from: filename
+    from: filename,
   }
   if (map) {
     postCSSOptions.map = {
       inline: false,
       annotation: false,
-      prev: map
+      prev: map,
     }
   }
 
@@ -157,7 +159,7 @@ export function doCompileStyle(
   let outMap: SourceMap | undefined
   // stylus output include plain css. so need remove the repeat item
   const dependencies = new Set(
-    preProcessedSource ? preProcessedSource.dependencies : []
+    preProcessedSource ? preProcessedSource.dependencies : [],
   )
   // sass has filename self when provided filename option
   dependencies.delete(filename)
@@ -185,18 +187,18 @@ export function doCompileStyle(
       return result
         .then(result => ({
           code: result.css || '',
-          map: result.map && (result.map.toJSON() as any),
+          map: result.map && result.map.toJSON(),
           errors,
           modules: cssModules,
           rawResult: result,
-          dependencies: recordPlainCssDependencies(result.messages)
+          dependencies: recordPlainCssDependencies(result.messages),
         }))
         .catch(error => ({
           code: '',
           map: undefined,
           errors: [...errors, error],
           rawResult: undefined,
-          dependencies
+          dependencies,
         }))
     }
 
@@ -204,28 +206,28 @@ export function doCompileStyle(
     // force synchronous transform (we know we only have sync plugins)
     code = result.css
     outMap = result.map
-  } catch (e) {
+  } catch (e: any) {
     errors.push(e)
   }
 
   return {
     code: code || ``,
-    map: outMap && (outMap.toJSON() as any),
+    map: outMap && outMap.toJSON(),
     errors,
     rawResult: result,
-    dependencies
+    dependencies,
   }
 }
 
 function preprocess(
   options: SFCStyleCompileOptions,
-  preprocessor: StylePreprocessor
+  preprocessor: StylePreprocessor,
 ): StylePreprocessorResults {
   if ((__ESM_BROWSER__ || __GLOBAL__) && !options.preprocessCustomRequire) {
     throw new Error(
       `[@vue/compiler-sfc] Style preprocessing in the browser build must ` +
         `provide the \`preprocessCustomRequire\` option to return the in-browser ` +
-        `version of the preprocessor.`
+        `version of the preprocessor.`,
     )
   }
 
@@ -234,8 +236,8 @@ function preprocess(
     options.inMap || options.map,
     {
       filename: options.filename,
-      ...options.preprocessOptions
+      ...options.preprocessOptions,
     },
-    options.preprocessCustomRequire
+    options.preprocessCustomRequire,
   )
 }

@@ -1,14 +1,14 @@
 import {
+  type ComponentOptions,
+  type ConcreteComponent,
   currentInstance,
-  ConcreteComponent,
-  ComponentOptions,
-  getComponentName
+  getComponentName,
 } from '../component'
 import { currentRenderingInstance } from '../componentRenderContext'
-import { Directive } from '../directives'
+import type { Directive } from '../directives'
 import { camelize, capitalize, isString } from '@vue/shared'
 import { warn } from '../warning'
-import { VNodeTypes } from '../vnode'
+import type { VNodeTypes } from '../vnode'
 
 export const COMPONENTS = 'components'
 export const DIRECTIVES = 'directives'
@@ -21,12 +21,12 @@ export type AssetTypes = typeof COMPONENTS | typeof DIRECTIVES | typeof FILTERS
  */
 export function resolveComponent(
   name: string,
-  maybeSelfReference?: boolean
+  maybeSelfReference?: boolean,
 ): ConcreteComponent | string {
   return resolveAsset(COMPONENTS, name, true, maybeSelfReference) || name
 }
 
-export const NULL_DYNAMIC_COMPONENT = Symbol()
+export const NULL_DYNAMIC_COMPONENT: unique symbol = Symbol.for('v-ndc')
 
 /**
  * @private
@@ -63,12 +63,12 @@ function resolveAsset(
   type: typeof COMPONENTS,
   name: string,
   warnMissing?: boolean,
-  maybeSelfReference?: boolean
+  maybeSelfReference?: boolean,
 ): ConcreteComponent | undefined
 // overload 2: directives
 function resolveAsset(
   type: typeof DIRECTIVES,
-  name: string
+  name: string,
 ): Directive | undefined
 // implementation
 // overload 3: filters (compat only)
@@ -78,7 +78,7 @@ function resolveAsset(
   type: AssetTypes,
   name: string,
   warnMissing = true,
-  maybeSelfReference = false
+  maybeSelfReference = false,
 ) {
   const instance = currentRenderingInstance || currentInstance
   if (instance) {
@@ -86,7 +86,10 @@ function resolveAsset(
 
     // explicit self name has highest priority
     if (type === COMPONENTS) {
-      const selfName = getComponentName(Component)
+      const selfName = getComponentName(
+        Component,
+        false /* do not include inferred name to avoid breaking existing code */,
+      )
       if (
         selfName &&
         (selfName === name ||
@@ -110,14 +113,19 @@ function resolveAsset(
     }
 
     if (__DEV__ && warnMissing && !res) {
-      warn(`Failed to resolve ${type.slice(0, -1)}: ${name}`)
+      const extra =
+        type === COMPONENTS
+          ? `\nIf this is a native custom element, make sure to exclude it from ` +
+            `component resolution via compilerOptions.isCustomElement.`
+          : ``
+      warn(`Failed to resolve ${type.slice(0, -1)}: ${name}${extra}`)
     }
 
     return res
   } else if (__DEV__) {
     warn(
       `resolve${capitalize(type.slice(0, -1))} ` +
-        `can only be used in render() or setup().`
+        `can only be used in render() or setup().`,
     )
   }
 }

@@ -1,18 +1,20 @@
+import type { Mock } from 'vitest'
 import Vue from '@vue/compat'
-import { Slots } from '../../runtime-core/src/componentSlots'
+import type { Slots } from '../../runtime-core/src/componentSlots'
 import { Text } from '../../runtime-core/src/vnode'
 import {
   DeprecationTypes,
   deprecationData,
-  toggleDeprecationWarning
+  toggleDeprecationWarning,
 } from '../../runtime-core/src/compat/compatConfig'
-import { LegacyPublicInstance } from '../../runtime-core/src/compat/instance'
+import type { LegacyPublicInstance } from '../../runtime-core/src/compat/instance'
 
 beforeEach(() => {
   toggleDeprecationWarning(true)
   Vue.configureCompat({
     MODE: 2,
-    GLOBAL_MOUNT: 'suppress-warning'
+    GLOBAL_MOUNT: 'suppress-warning',
+    PRIVATE_APIS: 'suppress-warning',
   })
 })
 
@@ -26,7 +28,7 @@ test('INSTANCE_SET', () => {
   new Vue().$set(obj, 'foo', 1)
   expect(obj.foo).toBe(1)
   expect(
-    deprecationData[DeprecationTypes.INSTANCE_SET].message
+    deprecationData[DeprecationTypes.INSTANCE_SET].message,
   ).toHaveBeenWarned()
 })
 
@@ -35,45 +37,45 @@ test('INSTANCE_DELETE', () => {
   new Vue().$delete(obj, 'foo')
   expect('foo' in obj).toBe(false)
   expect(
-    deprecationData[DeprecationTypes.INSTANCE_DELETE].message
+    deprecationData[DeprecationTypes.INSTANCE_DELETE].message,
   ).toHaveBeenWarned()
 })
 
 test('INSTANCE_DESTROY', () => {
   new Vue({ template: 'foo' }).$mount().$destroy()
   expect(
-    deprecationData[DeprecationTypes.INSTANCE_DESTROY].message
+    deprecationData[DeprecationTypes.INSTANCE_DESTROY].message,
   ).toHaveBeenWarned()
 })
 
 // https://github.com/vuejs/vue/blob/dev/test/unit/features/instance/methods-events.spec.js
 describe('INSTANCE_EVENT_EMITTER', () => {
   let vm: LegacyPublicInstance
-  let spy: jest.Mock
+  let spy: Mock
 
   beforeEach(() => {
     vm = new Vue()
-    spy = jest.fn()
+    spy = vi.fn()
   })
 
   it('$on', () => {
-    vm.$on('test', function(this: any) {
+    vm.$on('test', function (this: any) {
       // expect correct context
       expect(this).toBe(vm)
-      spy.apply(this, arguments)
+      spy.apply(this, arguments as unknown as any[])
     })
     vm.$emit('test', 1, 2, 3, 4)
     expect(spy).toHaveBeenCalledTimes(1)
     expect(spy).toHaveBeenCalledWith(1, 2, 3, 4)
     expect(
-      deprecationData[DeprecationTypes.INSTANCE_EVENT_EMITTER].message
+      deprecationData[DeprecationTypes.INSTANCE_EVENT_EMITTER].message,
     ).toHaveBeenWarned()
   })
 
   it('$on multi event', () => {
-    vm.$on(['test1', 'test2'], function(this: any) {
+    vm.$on(['test1', 'test2'], function (this: any) {
       expect(this).toBe(vm)
-      spy.apply(this, arguments)
+      spy.apply(this, arguments as unknown as any[])
     })
     vm.$emit('test1', 1, 2, 3, 4)
     expect(spy).toHaveBeenCalledTimes(1)
@@ -82,7 +84,7 @@ describe('INSTANCE_EVENT_EMITTER', () => {
     expect(spy).toHaveBeenCalledTimes(2)
     expect(spy).toHaveBeenCalledWith(5, 6, 7, 8)
     expect(
-      deprecationData[DeprecationTypes.INSTANCE_EVENT_EMITTER].message
+      deprecationData[DeprecationTypes.INSTANCE_EVENT_EMITTER].message,
     ).toHaveBeenWarned()
   })
 
@@ -95,7 +97,7 @@ describe('INSTANCE_EVENT_EMITTER', () => {
     vm.$emit('test3', 1, 2, 3, 4)
     expect(spy).toHaveBeenCalledTimes(1)
     expect(
-      deprecationData[DeprecationTypes.INSTANCE_EVENT_EMITTER].message
+      deprecationData[DeprecationTypes.INSTANCE_EVENT_EMITTER].message,
     ).toHaveBeenWarned()
   })
 
@@ -105,7 +107,7 @@ describe('INSTANCE_EVENT_EMITTER', () => {
     vm.$emit('test1')
     expect(spy).not.toHaveBeenCalled()
     expect(
-      deprecationData[DeprecationTypes.INSTANCE_EVENT_EMITTER].message
+      deprecationData[DeprecationTypes.INSTANCE_EVENT_EMITTER].message,
     ).toHaveBeenWarned()
   })
 
@@ -116,7 +118,7 @@ describe('INSTANCE_EVENT_EMITTER', () => {
     expect(spy).toHaveBeenCalledTimes(1)
     expect(spy).toHaveBeenCalledWith(1, 2, 3)
     expect(
-      deprecationData[DeprecationTypes.INSTANCE_EVENT_EMITTER].message
+      deprecationData[DeprecationTypes.INSTANCE_EVENT_EMITTER].message,
     ).toHaveBeenWarned()
   })
 
@@ -126,7 +128,7 @@ describe('INSTANCE_EVENT_EMITTER', () => {
     vm.$emit('test', 1, 2, 3)
     expect(spy).not.toHaveBeenCalled()
     expect(
-      deprecationData[DeprecationTypes.INSTANCE_EVENT_EMITTER].message
+      deprecationData[DeprecationTypes.INSTANCE_EVENT_EMITTER].message,
     ).toHaveBeenWarned()
   })
 
@@ -138,7 +140,7 @@ describe('INSTANCE_EVENT_EMITTER', () => {
     vm.$emit('test2')
     expect(spy).not.toHaveBeenCalled()
     expect(
-      deprecationData[DeprecationTypes.INSTANCE_EVENT_EMITTER].message
+      deprecationData[DeprecationTypes.INSTANCE_EVENT_EMITTER].message,
     ).toHaveBeenWarned()
   })
 
@@ -152,12 +154,12 @@ describe('INSTANCE_EVENT_EMITTER', () => {
     expect(spy).toHaveBeenCalledTimes(1)
     expect(spy).toHaveBeenCalledWith(2)
     expect(
-      deprecationData[DeprecationTypes.INSTANCE_EVENT_EMITTER].message
+      deprecationData[DeprecationTypes.INSTANCE_EVENT_EMITTER].message,
     ).toHaveBeenWarned()
   })
 
   it('$off event + fn', () => {
-    const spy2 = jasmine.createSpy('emitter')
+    const spy2 = vi.fn()
     vm.$on('test', spy)
     vm.$on('test', spy2)
     vm.$off('test', spy)
@@ -166,39 +168,43 @@ describe('INSTANCE_EVENT_EMITTER', () => {
     expect(spy2).toHaveBeenCalledTimes(1)
     expect(spy2).toHaveBeenCalledWith(1, 2, 3)
     expect(
-      deprecationData[DeprecationTypes.INSTANCE_EVENT_EMITTER].message
+      deprecationData[DeprecationTypes.INSTANCE_EVENT_EMITTER].message,
     ).toHaveBeenWarned()
   })
 })
 
 describe('INSTANCE_EVENT_HOOKS', () => {
   test('instance API', () => {
-    const spy = jest.fn()
+    const spy = vi.fn()
     const vm = new Vue({ template: 'foo' })
     vm.$on('hook:mounted', spy)
     vm.$mount()
     expect(spy).toHaveBeenCalled()
     expect(
-      (deprecationData[DeprecationTypes.INSTANCE_EVENT_HOOKS]
-        .message as Function)('hook:mounted')
+      (
+        deprecationData[DeprecationTypes.INSTANCE_EVENT_HOOKS]
+          .message as Function
+      )('hook:mounted'),
     ).toHaveBeenWarned()
   })
 
   test('via template', () => {
-    const spy = jest.fn()
+    const spy = vi.fn()
     new Vue({
       template: `<child @hook:mounted="spy"/>`,
       methods: { spy },
       components: {
         child: {
-          template: 'foo'
-        }
-      }
+          template: 'foo',
+        },
+      },
     }).$mount()
     expect(spy).toHaveBeenCalled()
     expect(
-      (deprecationData[DeprecationTypes.INSTANCE_EVENT_HOOKS]
-        .message as Function)('hook:mounted')
+      (
+        deprecationData[DeprecationTypes.INSTANCE_EVENT_HOOKS]
+          .message as Function
+      )('hook:mounted'),
     ).toHaveBeenWarned()
   })
 })
@@ -211,16 +217,16 @@ test('INSTANCE_EVENT_CHILDREN', () => {
         template: 'foo',
         data() {
           return { n: 1 }
-        }
-      }
-    }
+        },
+      },
+    },
   }).$mount()
   expect(vm.$children.length).toBe(4)
   vm.$children.forEach((c: any) => {
     expect(c.n).toBe(1)
   })
   expect(
-    deprecationData[DeprecationTypes.INSTANCE_CHILDREN].message
+    deprecationData[DeprecationTypes.INSTANCE_CHILDREN].message,
   ).toHaveBeenWarned()
 })
 
@@ -237,9 +243,9 @@ test('INSTANCE_LISTENERS', () => {
         template: `<div/>`,
         mounted() {
           listeners = this.$listeners
-        }
-      }
-    }
+        },
+      },
+    },
   }).$mount()
 
   expect(Object.keys(listeners!)).toMatchObject(['click', 'custom'])
@@ -247,7 +253,7 @@ test('INSTANCE_LISTENERS', () => {
   expect(listeners!.custom()).toBe('bar')
 
   expect(
-    deprecationData[DeprecationTypes.INSTANCE_LISTENERS].message
+    deprecationData[DeprecationTypes.INSTANCE_LISTENERS].message,
   ).toHaveBeenWarned()
 })
 
@@ -261,24 +267,24 @@ describe('INSTANCE_SCOPED_SLOTS', () => {
           compatConfig: { RENDER_FUNCTION: false },
           render() {
             slots = this.$scopedSlots
-          }
-        }
-      }
+          },
+        },
+      },
     }).$mount()
 
     expect(slots!.default!({ msg: 'hi' })).toMatchObject([
       {
         type: Text,
-        children: 'hi'
-      }
+        children: 'hi',
+      },
     ])
 
     expect(
-      deprecationData[DeprecationTypes.INSTANCE_SCOPED_SLOTS].message
+      deprecationData[DeprecationTypes.INSTANCE_SCOPED_SLOTS].message,
     ).toHaveBeenWarned()
   })
 
-  test('should not include legacy slot usage in $scopedSlots', () => {
+  test('should include legacy slot usage in $scopedSlots', () => {
     let normalSlots: Slots
     let scopedSlots: Slots
     new Vue({
@@ -286,19 +292,19 @@ describe('INSTANCE_SCOPED_SLOTS', () => {
       components: {
         child: {
           compatConfig: { RENDER_FUNCTION: false },
-          render() {
+          render(this: LegacyPublicInstance) {
             normalSlots = this.$slots
             scopedSlots = this.$scopedSlots
-          }
-        }
-      }
+          },
+        },
+      },
     }).$mount()
 
     expect('default' in normalSlots!).toBe(true)
-    expect('default' in scopedSlots!).toBe(false)
+    expect('default' in scopedSlots!).toBe(true)
 
     expect(
-      deprecationData[DeprecationTypes.INSTANCE_SCOPED_SLOTS].message
+      deprecationData[DeprecationTypes.INSTANCE_SCOPED_SLOTS].message,
     ).toHaveBeenWarned()
   })
 })
@@ -309,17 +315,60 @@ test('INSTANCE_ATTR_CLASS_STYLE', () => {
     components: {
       child: {
         inheritAttrs: false,
-        template: `<div><div v-bind="$attrs" /></div>`
-      }
-    }
+        template: `<div><div v-bind="$attrs" /></div>`,
+      },
+    },
   }).$mount()
 
+  expect(vm.$el).toBeInstanceOf(HTMLDivElement)
   expect(vm.$el.outerHTML).toBe(
-    `<div class="foo" style="color: red;"><div id="ok"></div></div>`
+    `<div class="foo" style="color: red;"><div id="ok"></div></div>`,
   )
 
   expect(
-    (deprecationData[DeprecationTypes.INSTANCE_ATTRS_CLASS_STYLE]
-      .message as Function)('Anonymous')
+    (
+      deprecationData[DeprecationTypes.INSTANCE_ATTRS_CLASS_STYLE]
+        .message as Function
+    )('Anonymous'),
   ).toHaveBeenWarned()
+})
+
+test('$options mutation', () => {
+  const Comp = {
+    props: ['id'],
+    template: '<div/>',
+    data() {
+      return {
+        foo: '',
+      }
+    },
+    created(this: any) {
+      expect(this.$options.parent).toBeDefined()
+      expect(this.$options.test).toBeUndefined()
+      this.$options.test = this.id
+      expect(this.$options.test).toBe(this.id)
+    },
+  }
+
+  new Vue({
+    template: `<div><Comp id="1"/><Comp id="2"/></div>`,
+    components: { Comp },
+  }).$mount()
+})
+
+test('other private APIs', () => {
+  new Vue({
+    created() {
+      expect(this.$createElement).toBeTruthy()
+    },
+  })
+
+  new Vue({
+    compatConfig: {
+      PRIVATE_APIS: false,
+    },
+    created() {
+      expect(this.$createElement).toBeUndefined()
+    },
+  })
 })
