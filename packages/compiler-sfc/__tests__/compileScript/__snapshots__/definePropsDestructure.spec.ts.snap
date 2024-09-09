@@ -62,7 +62,7 @@ exports[`sfc reactive props destructure > default values w/ array runtime declar
 "import { mergeDefaults as _mergeDefaults } from 'vue'
 
 export default {
-  props: /*#__PURE__*/_mergeDefaults(['foo', 'bar', 'baz'], {
+  props: /*@__PURE__*/_mergeDefaults(['foo', 'bar', 'baz'], {
   foo: 1,
   bar: () => ({}),
   func: () => {}, __skip_func: true
@@ -81,7 +81,7 @@ exports[`sfc reactive props destructure > default values w/ object runtime decla
 "import { mergeDefaults as _mergeDefaults } from 'vue'
 
 export default {
-  props: /*#__PURE__*/_mergeDefaults({ foo: Number, bar: Object, func: Function, ext: null }, {
+  props: /*@__PURE__*/_mergeDefaults({ foo: Number, bar: Object, func: Function, ext: null }, {
   foo: 1,
   bar: () => ({}),
   func: () => {}, __skip_func: true,
@@ -101,7 +101,7 @@ exports[`sfc reactive props destructure > default values w/ runtime declaration 
 "import { mergeDefaults as _mergeDefaults } from 'vue'
 
 export default {
-  props: /*#__PURE__*/_mergeDefaults(['foo', 'foo:bar'], {
+  props: /*@__PURE__*/_mergeDefaults(['foo', 'foo:bar'], {
   foo: 1,
   "foo:bar": 'foo-bar'
 }),
@@ -118,7 +118,7 @@ return () => {}
 exports[`sfc reactive props destructure > default values w/ type declaration & key is string 1`] = `
 "import { defineComponent as _defineComponent } from 'vue'
 
-export default /*#__PURE__*/_defineComponent({
+export default /*@__PURE__*/_defineComponent({
   props: {
     foo: { type: Number, required: true, default: 1 },
     bar: { type: Number, required: true, default: 2 },
@@ -138,7 +138,7 @@ return () => {}
 exports[`sfc reactive props destructure > default values w/ type declaration 1`] = `
 "import { defineComponent as _defineComponent } from 'vue'
 
-export default /*#__PURE__*/_defineComponent({
+export default /*@__PURE__*/_defineComponent({
   props: {
     foo: { type: Number, required: false, default: 1 },
     bar: { type: Object, required: false, default: () => ({}) },
@@ -157,7 +157,7 @@ return () => {}
 exports[`sfc reactive props destructure > default values w/ type declaration, prod mode 1`] = `
 "import { defineComponent as _defineComponent } from 'vue'
 
-export default /*#__PURE__*/_defineComponent({
+export default /*@__PURE__*/_defineComponent({
   props: {
     foo: { default: 1 },
     bar: { default: () => ({}) },
@@ -300,6 +300,22 @@ export default {
       const rest = _createPropsRestProxy(__props, ["foo","bar"])
       
 return () => {}
+}
+
+}"
+`;
+
+exports[`sfc reactive props destructure > rest spread non-inline 1`] = `
+"import { createPropsRestProxy as _createPropsRestProxy } from 'vue'
+
+export default {
+  props: ['foo', 'bar'],
+  setup(__props, { expose: __expose }) {
+  __expose();
+
+      const rest = _createPropsRestProxy(__props, ["foo"])
+      
+return { rest }
 }
 
 }"

@@ -6,7 +6,6 @@ describe('sfc reactive props destructure', () => {
   function compile(src: string, options?: Partial<SFCScriptCompileOptions>) {
     return compileSFCScript(src, {
       inlineTemplate: true,
-      propsDestructure: true,
       ...options,
     })
   }
@@ -79,7 +78,7 @@ describe('sfc reactive props destructure', () => {
     // function
     // functions need to be marked with a skip marker
     expect(content)
-      .toMatch(`props: /*#__PURE__*/_mergeDefaults(['foo', 'bar', 'baz'], {
+      .toMatch(`props: /*@__PURE__*/_mergeDefaults(['foo', 'bar', 'baz'], {
   foo: 1,
   bar: () => ({}),
   func: () => {}, __skip_func: true
@@ -99,7 +98,7 @@ describe('sfc reactive props destructure', () => {
     // safely infer whether runtime type is Function (e.g. if the runtime decl
     // is imported, or spreads another object)
     expect(content)
-      .toMatch(`props: /*#__PURE__*/_mergeDefaults({ foo: Number, bar: Object, func: Function, ext: null }, {
+      .toMatch(`props: /*@__PURE__*/_mergeDefaults({ foo: Number, bar: Object, func: Function, ext: null }, {
   foo: 1,
   bar: () => ({}),
   func: () => {}, __skip_func: true,
@@ -123,7 +122,7 @@ describe('sfc reactive props destructure', () => {
     })
 
     expect(content).toMatch(`
-  props: /*#__PURE__*/_mergeDefaults(['foo', 'foo:bar'], {
+  props: /*@__PURE__*/_mergeDefaults(['foo', 'foo:bar'], {
   foo: 1,
   "foo:bar": 'foo-bar'
 }),`)
@@ -261,6 +260,27 @@ describe('sfc reactive props destructure', () => {
       foo: BindingTypes.PROPS,
       bar: BindingTypes.PROPS,
       baz: BindingTypes.PROPS,
+      rest: BindingTypes.SETUP_REACTIVE_CONST,
+    })
+  })
+
+  test('rest spread non-inline', () => {
+    const { content, bindings } = compile(
+      `
+      <script setup>
+      const { foo, ...rest } = defineProps(['foo', 'bar'])
+      </script>
+      <template>{{ rest.bar }}</template>
+    `,
+      { inlineTemplate: false },
+    )
+    expect(content).toMatch(
+      `const rest = _createPropsRestProxy(__props, ["foo"])`,
+    )
+    assertCode(content)
+    expect(bindings).toStrictEqual({
+      foo: BindingTypes.PROPS,
+      bar: BindingTypes.PROPS,
       rest: BindingTypes.SETUP_REACTIVE_CONST,
     })
   })

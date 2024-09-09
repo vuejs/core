@@ -37,8 +37,9 @@ import { transformStyle } from '../../../compiler-dom/src/transforms/transformSt
 import { transformOn } from '../../src/transforms/vOn'
 import { transformBind } from '../../src/transforms/vBind'
 import { PatchFlags } from '@vue/shared'
-import { createObjectMatcher, genFlagText } from '../testUtils'
+import { createObjectMatcher } from '../testUtils'
 import { transformText } from '../../src/transforms/transformText'
+import { parseWithForTransform } from './vFor.spec'
 
 function parseWithElementTransform(
   template: string,
@@ -520,7 +521,7 @@ describe('compiler: element transform', () => {
         // keep-alive should not compile content to slots
         children: [{ type: NodeTypes.ELEMENT, tag: 'span' }],
         // should get a dynamic slots flag to force updates
-        patchFlag: genFlagText(PatchFlags.DYNAMIC_SLOTS),
+        patchFlag: PatchFlags.DYNAMIC_SLOTS,
       })
     }
 
@@ -587,7 +588,7 @@ describe('compiler: element transform', () => {
     })
     // should factor in props returned by custom directive transforms
     // in patchFlag analysis
-    expect(node.patchFlag).toMatch(PatchFlags.PROPS + '')
+    expect(node.patchFlag).toBe(PatchFlags.PROPS)
     expect(node.dynamicProps).toMatch(`"bar"`)
   })
 
@@ -611,7 +612,7 @@ describe('compiler: element transform', () => {
       tag: `"div"`,
       props: undefined,
       children: undefined,
-      patchFlag: genFlagText(PatchFlags.NEED_PATCH), // should generate appropriate flag
+      patchFlag: PatchFlags.NEED_PATCH, // should generate appropriate flag
       directives: {
         type: NodeTypes.JS_ARRAY_EXPRESSION,
         elements: [
@@ -944,26 +945,26 @@ describe('compiler: element transform', () => {
       expect(node.patchFlag).toBeUndefined()
 
       const { node: node2 } = parseWithBind(`<div>{{ foo }}</div>`)
-      expect(node2.patchFlag).toBe(genFlagText(PatchFlags.TEXT))
+      expect(node2.patchFlag).toBe(PatchFlags.TEXT)
 
       // multiple nodes, merged with optimize text
       const { node: node3 } = parseWithBind(`<div>foo {{ bar }} baz</div>`)
-      expect(node3.patchFlag).toBe(genFlagText(PatchFlags.TEXT))
+      expect(node3.patchFlag).toBe(PatchFlags.TEXT)
     })
 
     test('CLASS', () => {
       const { node } = parseWithBind(`<div :class="foo" />`)
-      expect(node.patchFlag).toBe(genFlagText(PatchFlags.CLASS))
+      expect(node.patchFlag).toBe(PatchFlags.CLASS)
     })
 
     test('STYLE', () => {
       const { node } = parseWithBind(`<div :style="foo" />`)
-      expect(node.patchFlag).toBe(genFlagText(PatchFlags.STYLE))
+      expect(node.patchFlag).toBe(PatchFlags.STYLE)
     })
 
     test('PROPS', () => {
       const { node } = parseWithBind(`<div id="foo" :foo="bar" :baz="qux" />`)
-      expect(node.patchFlag).toBe(genFlagText(PatchFlags.PROPS))
+      expect(node.patchFlag).toBe(PatchFlags.PROPS)
       expect(node.dynamicProps).toBe(`["foo", "baz"]`)
     })
 
@@ -972,7 +973,7 @@ describe('compiler: element transform', () => {
         `<div id="foo" :class="cls" :style="styl" :foo="bar" :baz="qux"/>`,
       )
       expect(node.patchFlag).toBe(
-        genFlagText([PatchFlags.CLASS, PatchFlags.STYLE, PatchFlags.PROPS]),
+        PatchFlags.CLASS | PatchFlags.STYLE | PatchFlags.PROPS,
       )
       expect(node.dynamicProps).toBe(`["foo", "baz"]`)
     })
@@ -982,40 +983,40 @@ describe('compiler: element transform', () => {
       const { node } = parseWithBind(
         `<Foo :id="foo" :class="cls" :style="styl" />`,
       )
-      expect(node.patchFlag).toBe(genFlagText(PatchFlags.PROPS))
+      expect(node.patchFlag).toBe(PatchFlags.PROPS)
       expect(node.dynamicProps).toBe(`["id", "class", "style"]`)
     })
 
     test('FULL_PROPS (v-bind)', () => {
       const { node } = parseWithBind(`<div v-bind="foo" />`)
-      expect(node.patchFlag).toBe(genFlagText(PatchFlags.FULL_PROPS))
+      expect(node.patchFlag).toBe(PatchFlags.FULL_PROPS)
     })
 
     test('FULL_PROPS (dynamic key)', () => {
       const { node } = parseWithBind(`<div :[foo]="bar" />`)
-      expect(node.patchFlag).toBe(genFlagText(PatchFlags.FULL_PROPS))
+      expect(node.patchFlag).toBe(PatchFlags.FULL_PROPS)
     })
 
     test('FULL_PROPS (w/ others)', () => {
       const { node } = parseWithBind(
         `<div id="foo" v-bind="bar" :class="cls" />`,
       )
-      expect(node.patchFlag).toBe(genFlagText(PatchFlags.FULL_PROPS))
+      expect(node.patchFlag).toBe(PatchFlags.FULL_PROPS)
     })
 
     test('NEED_PATCH (static ref)', () => {
       const { node } = parseWithBind(`<div ref="foo" />`)
-      expect(node.patchFlag).toBe(genFlagText(PatchFlags.NEED_PATCH))
+      expect(node.patchFlag).toBe(PatchFlags.NEED_PATCH)
     })
 
     test('NEED_PATCH (dynamic ref)', () => {
       const { node } = parseWithBind(`<div :ref="foo" />`)
-      expect(node.patchFlag).toBe(genFlagText(PatchFlags.NEED_PATCH))
+      expect(node.patchFlag).toBe(PatchFlags.NEED_PATCH)
     })
 
     test('NEED_PATCH (custom directives)', () => {
       const { node } = parseWithBind(`<div v-foo />`)
-      expect(node.patchFlag).toBe(genFlagText(PatchFlags.NEED_PATCH))
+      expect(node.patchFlag).toBe(PatchFlags.NEED_PATCH)
     })
 
     test('NEED_PATCH (vnode hooks)', () => {
@@ -1024,7 +1025,7 @@ describe('compiler: element transform', () => {
         cacheHandlers: true,
       }).ast
       const node = (root as any).children[0].codegenNode
-      expect(node.patchFlag).toBe(genFlagText(PatchFlags.NEED_PATCH))
+      expect(node.patchFlag).toBe(PatchFlags.NEED_PATCH)
     })
 
     test('script setup inline mode template ref (binding exists)', () => {
@@ -1119,7 +1120,7 @@ describe('compiler: element transform', () => {
         },
       })
       // should only have props flag
-      expect(node.patchFlag).toBe(genFlagText(PatchFlags.PROPS))
+      expect(node.patchFlag).toBe(PatchFlags.PROPS)
 
       const { node: node2 } = parseWithElementTransform(
         `<div @keyup="foo" />`,
@@ -1129,21 +1130,15 @@ describe('compiler: element transform', () => {
           },
         },
       )
-      expect(node2.patchFlag).toBe(
-        genFlagText([PatchFlags.PROPS, PatchFlags.NEED_HYDRATION]),
-      )
+      expect(node2.patchFlag).toBe(PatchFlags.PROPS | PatchFlags.NEED_HYDRATION)
     })
 
     test('NEED_HYDRATION for v-bind.prop', () => {
       const { node } = parseWithBind(`<div v-bind:id.prop="id" />`)
-      expect(node.patchFlag).toBe(
-        genFlagText([PatchFlags.PROPS, PatchFlags.NEED_HYDRATION]),
-      )
+      expect(node.patchFlag).toBe(PatchFlags.PROPS | PatchFlags.NEED_HYDRATION)
 
       const { node: node2 } = parseWithBind(`<div .id="id" />`)
-      expect(node2.patchFlag).toBe(
-        genFlagText([PatchFlags.PROPS, PatchFlags.NEED_HYDRATION]),
-      )
+      expect(node2.patchFlag).toBe(PatchFlags.PROPS | PatchFlags.NEED_HYDRATION)
     })
 
     // #5870
@@ -1156,9 +1151,7 @@ describe('compiler: element transform', () => {
           },
         },
       )
-      expect(node.patchFlag).toBe(
-        genFlagText([PatchFlags.PROPS, PatchFlags.NEED_HYDRATION]),
-      )
+      expect(node.patchFlag).toBe(PatchFlags.PROPS | PatchFlags.NEED_HYDRATION)
     })
 
     test('should not have PROPS patchflag for constant v-on handlers', () => {
@@ -1172,7 +1165,7 @@ describe('compiler: element transform', () => {
         },
       })
       // should only have hydration flag
-      expect(node.patchFlag).toBe(genFlagText(PatchFlags.NEED_HYDRATION))
+      expect(node.patchFlag).toBe(PatchFlags.NEED_HYDRATION)
     })
   })
 
@@ -1231,6 +1224,24 @@ describe('compiler: element transform', () => {
       })
     })
 
+    test('dynamic binding shorthand', () => {
+      const { node, root } = parseWithBind(`<component :is />`)
+      expect(root.helpers).toContain(RESOLVE_DYNAMIC_COMPONENT)
+      expect(node).toMatchObject({
+        isBlock: true,
+        tag: {
+          callee: RESOLVE_DYNAMIC_COMPONENT,
+          arguments: [
+            {
+              type: NodeTypes.SIMPLE_EXPRESSION,
+              content: 'is',
+              isStatic: false,
+            },
+          ],
+        },
+      })
+    })
+
     test('is casting', () => {
       const { node, root } = parseWithBind(`<div is="vue:foo" />`)
       expect(root.helpers).toContain(RESOLVE_COMPONENT)
@@ -1261,6 +1272,18 @@ describe('compiler: element transform', () => {
     expect((ast as any).children[0].children[0].codegenNode).toMatchObject({
       type: NodeTypes.VNODE_CALL,
       tag: `"svg"`,
+      isBlock: true,
+    })
+  })
+
+  test('<math> should be forced into blocks', () => {
+    const ast = parse(`<div><math/></div>`)
+    transform(ast, {
+      nodeTransforms: [transformElement],
+    })
+    expect((ast as any).children[0].children[0].codegenNode).toMatchObject({
+      type: NodeTypes.VNODE_CALL,
+      tag: `"math"`,
       isBlock: true,
     })
   })
@@ -1318,6 +1341,44 @@ describe('compiler: element transform', () => {
       type: NodeTypes.VNODE_CALL,
       tag: '"span"',
       isBlock: false,
+    })
+  })
+
+  test('ref_for marker on static ref', () => {
+    const { node } = parseWithForTransform(`<div v-for="i in l" ref="x"/>`)
+    expect((node.children[0] as any).codegenNode.props).toMatchObject(
+      createObjectMatcher({
+        ref_for: `[true]`,
+        ref: 'x',
+      }),
+    )
+  })
+
+  test('ref_for marker on dynamic ref', () => {
+    const { node } = parseWithForTransform(`<div v-for="i in l" :ref="x"/>`)
+    expect((node.children[0] as any).codegenNode.props).toMatchObject(
+      createObjectMatcher({
+        ref_for: `[true]`,
+        ref: '[x]',
+      }),
+    )
+  })
+
+  test('ref_for marker on v-bind', () => {
+    const { node } = parseWithForTransform(`<div v-for="i in l" v-bind="x" />`)
+    expect((node.children[0] as any).codegenNode.props).toMatchObject({
+      type: NodeTypes.JS_CALL_EXPRESSION,
+      callee: MERGE_PROPS,
+      arguments: [
+        createObjectMatcher({
+          ref_for: `[true]`,
+        }),
+        {
+          type: NodeTypes.SIMPLE_EXPRESSION,
+          content: 'x',
+          isStatic: false,
+        },
+      ],
     })
   })
 })

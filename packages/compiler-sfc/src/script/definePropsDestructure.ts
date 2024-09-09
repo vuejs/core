@@ -22,22 +22,16 @@ import { genPropsAccessExp } from '@vue/shared'
 import { isCallOf, resolveObjectKey } from './utils'
 import type { ScriptCompileContext } from './context'
 import { DEFINE_PROPS } from './defineProps'
-import { warnOnce } from '../warn'
 
 export function processPropsDestructure(
   ctx: ScriptCompileContext,
   declId: ObjectPattern,
-) {
-  if (!ctx.options.propsDestructure) {
+): void {
+  if (ctx.options.propsDestructure === 'error') {
+    ctx.error(`Props destructure is explicitly prohibited via config.`, declId)
+  } else if (ctx.options.propsDestructure === false) {
     return
   }
-
-  warnOnce(
-    `This project is using reactive props destructure, which is an experimental ` +
-      `feature. It may receive breaking changes or be removed in the future, so ` +
-      `use at your own risk.\n` +
-      `To stay updated, follow the RFC at https://github.com/vuejs/rfcs/discussions/502.`,
-  )
 
   ctx.propsDestructureDecl = declId
 
@@ -103,8 +97,8 @@ type Scope = Record<string, boolean>
 export function transformDestructuredProps(
   ctx: ScriptCompileContext,
   vueImportAliases: Record<string, string>,
-) {
-  if (!ctx.options.propsDestructure) {
+): void {
+  if (ctx.options.propsDestructure === false) {
     return
   }
 
@@ -239,7 +233,7 @@ export function transformDestructuredProps(
   const ast = ctx.scriptSetupAst!
   walkScope(ast, true)
   walk(ast, {
-    enter(node: Node, parent?: Node) {
+    enter(node: Node, parent: Node | null) {
       parent && parentStack.push(parent)
 
       // skip type nodes
@@ -294,7 +288,7 @@ export function transformDestructuredProps(
         }
       }
     },
-    leave(node: Node, parent?: Node) {
+    leave(node: Node, parent: Node | null) {
       parent && parentStack.pop()
       if (
         (node.type === 'BlockStatement' && !isFunctionType(parent!)) ||
