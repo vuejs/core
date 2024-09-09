@@ -94,7 +94,7 @@ import type { BaseTransitionProps } from './components/BaseTransition'
 import type { DefineComponent } from './apiDefineComponent'
 import { markAsyncBoundary } from './helpers/useId'
 import { isAsyncWrapper } from './apiAsyncComponent'
-import type { RendererElement } from 'vue'
+import type { RendererElement } from './renderer'
 
 export type Data = Record<string, unknown>
 
