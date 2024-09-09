@@ -975,6 +975,43 @@ describe('defineCustomElement', () => {
         `<span>default</span>text` + `<!---->` + `<div>fallback</div>`,
       )
     })
+    test('should render slots with nested customElement', async () => {
+      const Son = defineCustomElement(
+        {
+          render() {
+            return renderSlot(this.$slots, 'default')
+          },
+        },
+        { shadowRoot: false },
+      )
+      customElements.define('my-son', Son)
+      const Parent = defineCustomElement(
+        {
+          render() {
+            return renderSlot(this.$slots, 'default')
+          },
+        },
+        { shadowRoot: false },
+      )
+      customElements.define('my-parent', Parent)
+
+      const App = {
+        render() {
+          return h('my-parent', null, {
+            default: () => [
+              h('my-son', null, {
+                default: () => [h('span', null, 'default')],
+              }),
+            ],
+          })
+        },
+      }
+      createApp(App).mount(container)
+      const e = container.childNodes[0] as VueElement
+      expect(e.innerHTML).toBe(
+        `<my-son data-v-app=""><span>default</span></my-son>`,
+      )
+    })
   })
 
   describe('helpers', () => {
