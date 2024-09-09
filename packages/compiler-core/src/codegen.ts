@@ -99,7 +99,7 @@ interface MappingItem {
   name: string | null
 }
 
-const PURE_ANNOTATION = `/*#__PURE__*/`
+const PURE_ANNOTATION = `/*@__PURE__*/`
 
 const aliasHelper = (s: symbol) => `${helperNameMap[s]}: _${helperNameMap[s]}`
 

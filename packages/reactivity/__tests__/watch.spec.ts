@@ -13,7 +13,7 @@ const queue: (() => void)[] = []
 
 // a simple scheduler for testing purposes
 let isFlushPending = false
-const resolvedPromise = /*#__PURE__*/ Promise.resolve() as Promise<any>
+const resolvedPromise = /*@__PURE__*/ Promise.resolve() as Promise<any>
 const nextTick = (fn?: () => any) =>
   fn ? resolvedPromise.then(fn) : resolvedPromise
 

@@ -18,6 +18,7 @@ import {
   PatchFlags,
   ShapeFlags,
   def,
+  getEscapedCssVarName,
   includeBooleanAttr,
   isBooleanAttr,
   isKnownHtmlAttr,
@@ -554,8 +555,7 @@ export function createHydrationFunctions(
           // JSX-compiled fns, but on the client the browser parses only 1 text
           // node.
           // look ahead for next possible text vnode
-          let next = children[i + 1]
-          if (next && (next = normalizeVNode(next)).type === Text) {
+          if (i + 1 < l && normalizeVNode(children[i + 1]).type === Text) {
             // create an extra TextNode on the client for the next vnode to
             // adopt
             insert(
@@ -916,7 +916,10 @@ function resolveCssVars(
   ) {
     const cssVars = instance.getCssVars()
     for (const key in cssVars) {
-      expectedMap.set(`--${key}`, String(cssVars[key]))
+      expectedMap.set(
+        `--${getEscapedCssVarName(key, false)}`,
+        String(cssVars[key]),
+      )
     }
   }
   if (vnode === root && instance.parent) {

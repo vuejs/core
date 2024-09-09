@@ -25,10 +25,10 @@ import {
 import { isRef } from './ref'
 import { warn } from './warning'
 
-const isNonTrackableKeys = /*#__PURE__*/ makeMap(`__proto__,__v_isRef,__isVue`)
+const isNonTrackableKeys = /*@__PURE__*/ makeMap(`__proto__,__v_isRef,__isVue`)
 
 const builtInSymbols = new Set(
-  /*#__PURE__*/
+  /*@__PURE__*/
   Object.getOwnPropertyNames(Symbol)
     // ios10.x Object.getOwnPropertyNames(Symbol) can enumerate 'arguments' and 'caller'
     // but accessing them on Symbol leads to TypeError because Symbol is a strict mode
@@ -240,16 +240,16 @@ class ReadonlyReactiveHandler extends BaseReactiveHandler {
 }
 
 export const mutableHandlers: ProxyHandler<object> =
-  /*#__PURE__*/ new MutableReactiveHandler()
+  /*@__PURE__*/ new MutableReactiveHandler()
 
 export const readonlyHandlers: ProxyHandler<object> =
-  /*#__PURE__*/ new ReadonlyReactiveHandler()
+  /*@__PURE__*/ new ReadonlyReactiveHandler()
 
 export const shallowReactiveHandlers: MutableReactiveHandler =
-  /*#__PURE__*/ new MutableReactiveHandler(true)
+  /*@__PURE__*/ new MutableReactiveHandler(true)
 
 // Props handlers are special in the sense that it should not unwrap top-level
 // refs (in order to allow refs to be explicitly passed down), but should
 // retain the reactivity of the normal readonly object.
 export const shallowReadonlyHandlers: ReadonlyReactiveHandler =
-  /*#__PURE__*/ new ReadonlyReactiveHandler(true)
+  /*@__PURE__*/ new ReadonlyReactiveHandler(true)

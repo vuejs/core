@@ -114,7 +114,7 @@ function mapKeyToName(slots: LegacyScopedSlotsData) {
   return slots as any
 }
 
-const staticCacheMap = /*#__PURE__*/ new WeakMap<
+const staticCacheMap = /*@__PURE__*/ new WeakMap<
   ComponentInternalInstance,
   any[]
 >()

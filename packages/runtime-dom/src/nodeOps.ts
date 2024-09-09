@@ -15,7 +15,7 @@ const tt =
 
 if (tt) {
   try {
-    policy = /*#__PURE__*/ tt.createPolicy('vue', {
+    policy = /*@__PURE__*/ tt.createPolicy('vue', {
       createHTML: val => val,
     })
   } catch (e: unknown) {
@@ -39,7 +39,7 @@ export const mathmlNS = 'http://www.w3.org/1998/Math/MathML'
 
 const doc = (typeof document !== 'undefined' ? document : null) as Document
 
-const templateContainer = doc && /*#__PURE__*/ doc.createElement('template')
+const templateContainer = doc && /*@__PURE__*/ doc.createElement('template')
 
 export const nodeOps: Omit<RendererOptions<Node, Element>, 'patchProp'> = {
   insert: (child, parent, anchor) => {

@@ -46,7 +46,7 @@ export class Dep {
   }
 
   track(debugInfo?: DebuggerEventExtraInfo): Link | undefined {
-    if (!activeSub || !shouldTrack) {
+    if (!activeSub || !shouldTrack || activeSub === this.computed) {
       return
     }
 

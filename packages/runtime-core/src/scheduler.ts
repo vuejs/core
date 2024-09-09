@@ -1,5 +1,5 @@
 import { ErrorCodes, callWithErrorHandling, handleError } from './errorHandling'
-import { type Awaited, NOOP, isArray } from '@vue/shared'
+import { NOOP, isArray } from '@vue/shared'
 import { type ComponentInternalInstance, getComponentName } from './component'
 
 export enum SchedulerJobFlags {
@@ -50,7 +50,7 @@ const pendingPostFlushCbs: SchedulerJob[] = []
 let activePostFlushCbs: SchedulerJob[] | null = null
 let postFlushIndex = 0
 
-const resolvedPromise = /*#__PURE__*/ Promise.resolve() as Promise<any>
+const resolvedPromise = /*@__PURE__*/ Promise.resolve() as Promise<any>
 let currentFlushPromise: Promise<void> | null = null
 
 const RECURSION_LIMIT = 100
@@ -108,9 +108,8 @@ export function queueJob(job: SchedulerJob): void {
       queue.splice(findInsertionIndex(jobId), 0, job)
     }
 
-    if (!(job.flags! & SchedulerJobFlags.ALLOW_RECURSE)) {
-      job.flags! |= SchedulerJobFlags.QUEUED
-    }
+    job.flags! |= SchedulerJobFlags.QUEUED
+
     queueFlush()
   }
 }
@@ -128,9 +127,7 @@ export function queuePostFlushCb(cb: SchedulerJobs): void {
       activePostFlushCbs.splice(postFlushIndex + 1, 0, cb)
     } else if (!(cb.flags! & SchedulerJobFlags.QUEUED)) {
       pendingPostFlushCbs.push(cb)
-      if (!(cb.flags! & SchedulerJobFlags.ALLOW_RECURSE)) {
-        cb.flags! |= SchedulerJobFlags.QUEUED
-      }
+      cb.flags! |= SchedulerJobFlags.QUEUED
     }
   } else {
     // if cb is an array, it is a component lifecycle hook which can only be
@@ -161,6 +158,9 @@ export function flushPreFlushCbs(
       }
       queue.splice(i, 1)
       i--
+      if (cb.flags! & SchedulerJobFlags.ALLOW_RECURSE) {
+        cb.flags! &= ~SchedulerJobFlags.QUEUED
+      }
       cb()
       cb.flags! &= ~SchedulerJobFlags.QUEUED
     }
@@ -193,6 +193,9 @@ export function flushPostFlushCbs(seen?: CountMap): void {
       const cb = activePostFlushCbs[postFlushIndex]
       if (__DEV__ && checkRecursiveUpdates(seen!, cb)) {
         continue
+      }
+      if (cb.flags! & SchedulerJobFlags.ALLOW_RECURSE) {
+        cb.flags! &= ~SchedulerJobFlags.QUEUED
       }
       if (!(cb.flags! & SchedulerJobFlags.DISPOSED)) cb()
       cb.flags! &= ~SchedulerJobFlags.QUEUED
@@ -228,6 +231,9 @@ function flushJobs(seen?: CountMap) {
         if (__DEV__ && check(job)) {
           continue
         }
+        if (job.flags! & SchedulerJobFlags.ALLOW_RECURSE) {
+          job.flags! &= ~SchedulerJobFlags.QUEUED
+        }
         callWithErrorHandling(
           job,
           job.i,
@@ -237,6 +243,14 @@ function flushJobs(seen?: CountMap) {
       }
     }
   } finally {
+    // If there was an error we still need to clear the QUEUED flags
+    for (; flushIndex < queue.length; flushIndex++) {
+      const job = queue[flushIndex]
+      if (job) {
+        job.flags! &= ~SchedulerJobFlags.QUEUED
+      }
+    }
+
     flushIndex = 0
     queue.length = 0
 

@@ -509,7 +509,7 @@ export function configureCompat(config: CompatConfig): void {
   extend(globalCompatConfig, config)
 }
 
-const seenConfigObjects = /*#__PURE__*/ new WeakSet<CompatConfig>()
+const seenConfigObjects = /*@__PURE__*/ new WeakSet<CompatConfig>()
 const warnedInvalidKeys: Record<string, boolean> = {}
 
 // dev only

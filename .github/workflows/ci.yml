@@ -16,6 +16,7 @@ jobs:
     uses: ./.github/workflows/test.yml
 
   continuous-release:
+    if: github.repository == 'vuejs/core'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout

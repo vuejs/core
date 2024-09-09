@@ -3,6 +3,8 @@ import { getCurrentInstance } from '../component'
 import { warn } from '../warning'
 import { EMPTY_OBJ } from '@vue/shared'
 
+export const knownTemplateRefs: WeakSet<ShallowRef> = new WeakSet()
+
 export function useTemplateRef<T = unknown, Keys extends string = string>(
   key: Keys,
 ): Readonly<ShallowRef<T | null>> {
@@ -10,7 +12,6 @@ export function useTemplateRef<T = unknown, Keys extends string = string>(
   const r = shallowRef(null)
   if (i) {
     const refs = i.refs === EMPTY_OBJ ? (i.refs = {}) : i.refs
-
     let desc: PropertyDescriptor | undefined
     if (
       __DEV__ &&
@@ -31,5 +32,9 @@ export function useTemplateRef<T = unknown, Keys extends string = string>(
         `instance to be associated with.`,
     )
   }
-  return (__DEV__ ? readonly(r) : r) as any
+  const ret = __DEV__ ? readonly(r) : r
+  if (__DEV__) {
+    knownTemplateRefs.add(ret)
+  }
+  return ret
 }

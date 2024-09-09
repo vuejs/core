@@ -18,6 +18,7 @@ env:
 
 jobs:
   upload:
+    if: github.repository == 'vuejs/core'
     runs-on: ubuntu-latest
 
     steps:

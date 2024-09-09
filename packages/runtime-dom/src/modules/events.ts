@@ -86,7 +86,7 @@ function parseName(name: string): [string, EventListenerOptions | undefined] {
 // To avoid the overhead of repeatedly calling Date.now(), we cache
 // and use the same timestamp for all event listeners attached in the same tick.
 let cachedNow: number = 0
-const p = /*#__PURE__*/ Promise.resolve()
+const p = /*@__PURE__*/ Promise.resolve()
 const getNow = () =>
   cachedNow || (p.then(() => (cachedNow = 0)), (cachedNow = Date.now()))
 
