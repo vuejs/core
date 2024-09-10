@@ -891,7 +891,7 @@ export function mergeProps(...args: (Data & VNodeProps)[]): Data {
         }
       } else if (key !== '') {
         // #11880: order of the later updated keys should also be moved to the end.
-        delete ret[key]
+        if(key in ret) delete ret[key]
         ret[key] = toMerge[key]
       }
     }
