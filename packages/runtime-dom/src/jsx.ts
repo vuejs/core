@@ -405,6 +405,7 @@ export interface DataHTMLAttributes extends HTMLAttributes {
 }
 
 export interface DetailsHTMLAttributes extends HTMLAttributes {
+  name?: string
   open?: Booleanish
   onToggle?: (payload: ToggleEvent) => void
 }
@@ -416,6 +417,7 @@ export interface DelHTMLAttributes extends HTMLAttributes {
 
 export interface DialogHTMLAttributes extends HTMLAttributes {
   open?: Booleanish
+  onClose?: (payload: Event) => void
 }
 
 export interface EmbedHTMLAttributes extends HTMLAttributes {

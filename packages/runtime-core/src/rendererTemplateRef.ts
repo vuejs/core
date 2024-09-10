@@ -11,11 +11,12 @@ import {
 } from '@vue/shared'
 import { isAsyncWrapper } from './apiAsyncComponent'
 import { warn } from './warning'
-import { isRef } from '@vue/reactivity'
+import { isRef, toRaw } from '@vue/reactivity'
 import { ErrorCodes, callWithErrorHandling } from './errorHandling'
 import type { SchedulerJob } from './scheduler'
 import { queuePostRenderEffect } from './renderer'
 import { getComponentPublicInstance } from './component'
+import { knownTemplateRefs } from './helpers/useTemplateRef'
 
 /**
  * Function for handling a template ref
@@ -63,12 +64,16 @@ export function setRef(
   const oldRef = oldRawRef && (oldRawRef as VNodeNormalizedRefAtom).r
   const refs = owner.refs === EMPTY_OBJ ? (owner.refs = {}) : owner.refs
   const setupState = owner.setupState
+  const rawSetupState = toRaw(setupState)
   const canSetSetupRef =
     setupState === EMPTY_OBJ
       ? () => false
-      : (key: string) =>
-          hasOwn(setupState, key) &&
-          !(Object.getOwnPropertyDescriptor(refs, key) || EMPTY_OBJ).get
+      : (key: string) => {
+          if (__DEV__ && knownTemplateRefs.has(rawSetupState[key] as any)) {
+            return false
+          }
+          return hasOwn(rawSetupState, key)
+        }
 
   // dynamic ref changed. unset old ref
   if (oldRef != null && oldRef !== ref) {

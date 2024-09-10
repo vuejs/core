@@ -233,6 +233,7 @@ export type CreateComponentPublicInstanceWithMixins<
   Directives extends Record<string, Directive> = {},
   Exposed extends string = string,
   TypeRefs extends Data = {},
+  TypeEl extends Element = any,
   Provide extends ComponentProvideOptions = ComponentProvideOptions,
   // mixin inference
   PublicMixin = IntersectionMixin<Mixin> & IntersectionMixin<Extends>,
@@ -277,7 +278,8 @@ export type CreateComponentPublicInstanceWithMixins<
   I,
   S,
   Exposed,
-  TypeRefs
+  TypeRefs,
+  TypeEl
 >
 
 export type ExposedKeys<
@@ -302,6 +304,7 @@ export type ComponentPublicInstance<
   S extends SlotsType = {},
   Exposed extends string = '',
   TypeRefs extends Data = {},
+  TypeEl extends Element = any,
 > = {
   $: ComponentInternalInstance
   $data: D
@@ -315,7 +318,7 @@ export type ComponentPublicInstance<
   $parent: ComponentPublicInstance | null
   $host: Element | null
   $emit: EmitFn<E>
-  $el: any
+  $el: TypeEl
   $options: Options & MergedComponentOptionsOverride
   $forceUpdate: () => void
   $nextTick: typeof nextTick
