@@ -94,7 +94,7 @@ export type Data = Record<string, unknown>
  * the usage of `InstanceType<typeof Comp>` which only works for
  * constructor-based component definition types.
  *
- * Example:
+ * @example
  * ```ts
  * const MyComp = { ... }
  * declare const instance: ComponentInstance<typeof MyComp>
@@ -223,7 +223,7 @@ export type Component<
 
 export type { ComponentOptions }
 
-type LifecycleHook<TFn = Function> = TFn[] | null
+export type LifecycleHook<TFn = Function> = (TFn & SchedulerJob)[] | null
 
 // use `E extends any` to force evaluating type to fix #2362
 export type SetupContext<
@@ -234,7 +234,9 @@ export type SetupContext<
       attrs: Data
       slots: UnwrapSlotsType<S>
       emit: EmitFn<E>
-      expose: (exposed?: Record<string, any>) => void
+      expose: <Exposed extends Record<string, any> = Record<string, any>>(
+        exposed?: Exposed,
+      ) => void
     }
   : never
 
@@ -320,7 +322,7 @@ export interface ComponentInternalInstance {
    * after initialized (e.g. inline handlers)
    * @internal
    */
-  renderCache: (Function | VNode)[]
+  renderCache: (Function | VNode | undefined)[]
 
   /**
    * Resolved component registry, only for components with mixins or extends
@@ -564,6 +566,7 @@ export function createComponentInstance(
     exposed: null,
     exposeProxy: null,
     withProxy: null,
+
     provides: parent ? parent.provides : Object.create(appContext.provides),
     accessCache: null!,
     renderCache: [],
@@ -737,14 +740,10 @@ export function setupComponent(
   isSSR && setInSSRSetupState(isSSR)
 
   const { props, children } = instance.vnode
-  // 判断是否是一个有状态的组件
   const isStateful = isStatefulComponent(instance)
-  // 初始化 props
   initProps(instance, props, isStateful, isSSR)
-  // 初始化插槽
   initSlots(instance, children)
 
-  // 设置有状态的组件实例
   const setupResult = isStateful
     ? setupStatefulComponent(instance, isSSR)
     : undefined
@@ -783,23 +782,21 @@ function setupStatefulComponent(
       )
     }
   }
-  // 0. create render proxy property access cache 创建渲染代理缓存
+  // 0. create render proxy property access cache
   instance.accessCache = Object.create(null)
   // 1. create public instance / render proxy
   instance.proxy = new Proxy(instance.ctx, PublicInstanceProxyHandlers)
   if (__DEV__) {
     exposePropsOnRenderContext(instance)
   }
-  // 2. call setup() 运行step函数
+  // 2. call setup()
   const { setup } = Component
   if (setup) {
-    // 如果setup带多个参数，则创建一个setupContext上下文
     const setupContext = (instance.setupContext =
       setup.length > 1 ? createSetupContext(instance) : null)
 
     const reset = setCurrentInstance(instance)
     pauseTracking()
-    // 执行setup函数，并返回结果
     const setupResult = callWithErrorHandling(
       setup,
       instance,
@@ -812,7 +809,6 @@ function setupStatefulComponent(
     resetTracking()
     reset()
 
-    // 处理setup函数返回值
     if (isPromise(setupResult)) {
       setupResult.then(unsetCurrentInstance, unsetCurrentInstance)
       if (isSSR) {
@@ -856,7 +852,6 @@ export function handleSetupResult(
   setupResult: unknown,
   isSSR: boolean,
 ) {
-  // 如果setup函数返回的是一个函数，则将setupResult作为render函数
   if (isFunction(setupResult)) {
     // setup returned an inline render function
     if (__SSR__ && (instance.type as ComponentOptions).__ssrInlineRender) {
@@ -878,7 +873,6 @@ export function handleSetupResult(
     if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
       instance.devtoolsRawSetupState = setupResult
     }
-    // 将setupResult变成响应式对象，赋值给setupState
     instance.setupState = proxyRefs(setupResult)
     if (__DEV__) {
       exposeSetupStateOnRenderContext(instance)
@@ -890,7 +884,6 @@ export function handleSetupResult(
       }`,
     )
   }
-  // 完成组件实例的设置
   finishComponentSetup(instance, isSSR)
 }
 
@@ -1016,7 +1009,7 @@ export function finishComponentSetup(
                 : ``) /* should not happen */,
       )
     } else {
-      warn(`Component is missing template or render function.`)
+      warn(`Component is missing template or render function: `, Component)
     }
   }
 }
@@ -1115,7 +1108,9 @@ export function createSetupContext(
   }
 }
 
-export function getExposeProxy(instance: ComponentInternalInstance) {
+export function getComponentPublicInstance(
+  instance: ComponentInternalInstance,
+) {
   if (instance.exposed) {
     return (
       instance.exposeProxy ||
@@ -1132,6 +1127,8 @@ export function getExposeProxy(instance: ComponentInternalInstance) {
         },
       }))
     )
+  } else {
+    return instance.proxy
   }
 }
 

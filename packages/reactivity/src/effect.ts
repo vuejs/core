@@ -174,7 +174,7 @@ export class ReactiveEffect<T = any> {
     if (this.active) {
       preCleanupEffect(this)
       postCleanupEffect(this)
-      this.onStop?.()
+      this.onStop && this.onStop()
       this.active = false
     }
   }
@@ -380,6 +380,7 @@ export function trackEffect(
     }
     // 开发环境下，触发跟踪事件
     if (__DEV__) {
+      // eslint-disable-next-line no-restricted-syntax
       effect.onTrack?.(extend({ effect }, debuggerEventExtraInfo!))
     }
   }
@@ -420,6 +421,7 @@ export function triggerEffects(
     ) {
       // 在开发环境中，触发效果前调用onTrigger回调，提供调试信息
       if (__DEV__) {
+        // eslint-disable-next-line no-restricted-syntax
         effect.onTrigger?.(extend({ effect }, debuggerEventExtraInfo))
       }
       effect.trigger()

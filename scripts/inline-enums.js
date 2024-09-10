@@ -11,9 +11,6 @@
  * This file is expected to be executed with project root as cwd.
  */
 
-import { parse } from '@babel/parser'
-import { execaSync } from 'execa'
-import MagicString from 'magic-string'
 import * as assert from 'node:assert'
 import {
   existsSync,
@@ -23,6 +20,9 @@ import {
   writeFileSync,
 } from 'node:fs'
 import * as path from 'node:path'
+import { parse } from '@babel/parser'
+import { spawnSync } from 'node:child_process'
+import MagicString from 'magic-string'
 
 /**
  * @typedef {{ readonly name: string, readonly value: string | number }} EnumMember
@@ -49,8 +49,16 @@ export function scanEnums() {
   const defines = Object.create(null)
 
   // 1. grep for files with exported enum
-  const { stdout } = execaSync('git', ['grep', `export enum`])
-  const files = [...new Set(stdout.split('\n').map(line => line.split(':')[0]))]
+  const { stdout } = spawnSync('git', ['grep', `export enum`])
+  const files = [
+    ...new Set(
+      stdout
+        .toString()
+        .trim()
+        .split('\n')
+        .map(line => line.split(':')[0]),
+    ),
+  ]
 
   // 2. parse matched files to collect enum info
   for (const relativeFile of files) {

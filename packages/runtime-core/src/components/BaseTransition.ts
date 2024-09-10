@@ -135,6 +135,11 @@ export const BaseTransitionPropsValidators = {
   onAppearCancelled: TransitionHookValidator,
 }
 
+const recursiveGetSubtree = (instance: ComponentInternalInstance): VNode => {
+  const subTree = instance.subTree
+  return subTree.component ? recursiveGetSubtree(subTree.component) : subTree
+}
+
 const BaseTransitionImpl: ComponentOptions = {
   name: `BaseTransition`,
 
@@ -198,11 +203,13 @@ const BaseTransitionImpl: ComponentOptions = {
         return emptyPlaceholder(child)
       }
 
-      const enterHooks = resolveTransitionHooks(
+      let enterHooks = resolveTransitionHooks(
         innerChild,
         rawProps,
         state,
         instance,
+        // #11061, ensure enterHooks is fresh after clone
+        hooks => (enterHooks = hooks),
       )
       setTransitionHooks(innerChild, enterHooks)
 
@@ -213,7 +220,8 @@ const BaseTransitionImpl: ComponentOptions = {
       if (
         oldInnerChild &&
         oldInnerChild.type !== Comment &&
-        !isSameVNodeType(innerChild, oldInnerChild)
+        !isSameVNodeType(innerChild, oldInnerChild) &&
+        recursiveGetSubtree(instance).type !== Comment
       ) {
         const leavingHooks = resolveTransitionHooks(
           oldInnerChild,
@@ -224,7 +232,7 @@ const BaseTransitionImpl: ComponentOptions = {
         // update old tree's hooks in case of dynamic transition
         setTransitionHooks(oldInnerChild, leavingHooks)
         // switching between different views
-        if (mode === 'out-in') {
+        if (mode === 'out-in' && innerChild.type !== Comment) {
           state.isLeaving = true
           // return placeholder node and queue update when leave finishes
           leavingHooks.afterLeave = () => {
@@ -299,6 +307,7 @@ export function resolveTransitionHooks(
   props: BaseTransitionProps<any>,
   state: TransitionState,
   instance: ComponentInternalInstance,
+  postClone?: (hooks: TransitionHooks) => void,
 ): TransitionHooks {
   const {
     appear,
@@ -439,7 +448,15 @@ export function resolveTransitionHooks(
     },
 
     clone(vnode) {
-      return resolveTransitionHooks(vnode, props, state, instance)
+      const hooks = resolveTransitionHooks(
+        vnode,
+        props,
+        state,
+        instance,
+        postClone,
+      )
+      if (postClone) postClone(hooks)
+      return hooks
     },
   }
 
@@ -470,15 +487,17 @@ function getKeepAliveChild(vnode: VNode): VNode | undefined {
 
   const { shapeFlag, children } = vnode
 
-  if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
-    return (children as VNodeArrayChildren)[0] as VNode
-  }
+  if (children) {
+    if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
+      return (children as VNodeArrayChildren)[0] as VNode
+    }
 
-  if (
-    shapeFlag & ShapeFlags.SLOTS_CHILDREN &&
-    isFunction((children as any).default)
-  ) {
-    return (children as any).default()
+    if (
+      shapeFlag & ShapeFlags.SLOTS_CHILDREN &&
+      isFunction((children as any).default)
+    ) {
+      return (children as any).default()
+    }
   }
 }
 
