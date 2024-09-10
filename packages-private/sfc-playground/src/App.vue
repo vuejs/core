@@ -13,7 +13,12 @@ window.addEventListener('resize', setVH)
 setVH()
 
 const useSSRMode = ref(false)
-const autoSave = ref(true)
+
+const AUTO_SAVE_STORAGE_KEY = 'vue-sfc-playground-auto-save'
+const initAutoSave: boolean = JSON.parse(
+  localStorage.getItem(AUTO_SAVE_STORAGE_KEY) ?? 'true',
+)
+const autoSave = ref(initAutoSave)
 
 const { productionMode, vueVersion, importMap } = useVueImportMap({
   runtimeDev: import.meta.env.PROD
@@ -92,6 +97,7 @@ function toggleSSR() {
 
 function toggleAutoSave() {
   autoSave.value = !autoSave.value
+  localStorage.setItem(AUTO_SAVE_STORAGE_KEY, String(autoSave.value))
 }
 
 function reloadPage() {
