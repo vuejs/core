@@ -18,6 +18,7 @@ import {
   PatchFlags,
   ShapeFlags,
   def,
+  getEscapedCssVarName,
   includeBooleanAttr,
   isBooleanAttr,
   isKnownHtmlAttr,
@@ -39,13 +40,14 @@ import {
 } from './components/Suspense'
 import type { TeleportImpl, TeleportVNode } from './components/Teleport'
 import { isAsyncWrapper } from './apiAsyncComponent'
+import { isReactive } from '@vue/reactivity'
 
 export type RootHydrateFunction = (
   vnode: VNode<Node, Element>,
   container: (Element | ShadowRoot) & { _vnode?: VNode },
 ) => void
 
-enum DOMNodeTypes {
+export enum DOMNodeTypes {
   ELEMENT = 1,
   TEXT = 3,
   COMMENT = 8,
@@ -68,13 +70,16 @@ const isSVGContainer = (container: Element) =>
 const isMathMLContainer = (container: Element) =>
   container.namespaceURI!.includes('MathML')
 
-const getContainerType = (container: Element): 'svg' | 'mathml' | undefined => {
-  if (isSVGContainer(container)) return 'svg'
-  if (isMathMLContainer(container)) return 'mathml'
+const getContainerType = (
+  container: Element | ShadowRoot,
+): 'svg' | 'mathml' | undefined => {
+  if (container.nodeType !== DOMNodeTypes.ELEMENT) return undefined
+  if (isSVGContainer(container as Element)) return 'svg'
+  if (isMathMLContainer(container as Element)) return 'mathml'
   return undefined
 }
 
-const isComment = (node: Node): node is Comment =>
+export const isComment = (node: Node): node is Comment =>
   node.nodeType === DOMNodeTypes.COMMENT
 
 // Note: hydration is DOM-specific
@@ -84,7 +89,17 @@ const isComment = (node: Node): node is Comment =>
 // passed in via arguments.
 export function createHydrationFunctions(
   rendererInternals: RendererInternals<Node, Element>,
-) {
+): [
+  RootHydrateFunction,
+  (
+    node: Node,
+    vnode: VNode,
+    parentComponent: ComponentInternalInstance | null,
+    parentSuspense: SuspenseBoundary | null,
+    slotScopeIds: string[] | null,
+    optimized?: boolean,
+  ) => Node | null,
+] {
   const {
     mt: mountComponent,
     p: patch,
@@ -361,7 +376,7 @@ export function createHydrationFunctions(
     const forcePatch = type === 'input' || type === 'option'
     // skip props & children if this is hoisted static nodes
     // #5405 in dev, always hydrate children for HMR
-    if (__DEV__ || forcePatch || patchFlag !== PatchFlags.HOISTED) {
+    if (__DEV__ || forcePatch || patchFlag !== PatchFlags.CACHED) {
       if (dirs) {
         invokeDirectiveHook(vnode, null, parentComponent, 'created')
       }
@@ -404,18 +419,20 @@ export function createHydrationFunctions(
         )
         let hasWarned = false
         while (next) {
-          if (
-            (__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
-            !hasWarned
-          ) {
-            warn(
-              `Hydration children mismatch on`,
-              el,
-              `\nServer rendered element contains more child nodes than client vdom.`,
-            )
-            hasWarned = true
+          if (!isMismatchAllowed(el, MismatchTypes.CHILDREN)) {
+            if (
+              (__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
+              !hasWarned
+            ) {
+              warn(
+                `Hydration children mismatch on`,
+                el,
+                `\nServer rendered element contains more child nodes than client vdom.`,
+              )
+              hasWarned = true
+            }
+            logMismatchError()
           }
-          logMismatchError()
 
           // The SSRed DOM contains more nodes than it should. Remove them.
           const cur = next
@@ -424,14 +441,16 @@ export function createHydrationFunctions(
         }
       } else if (shapeFlag & ShapeFlags.TEXT_CHILDREN) {
         if (el.textContent !== vnode.children) {
-          ;(__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
-            warn(
-              `Hydration text content mismatch on`,
-              el,
-              `\n  - rendered on server: ${el.textContent}` +
-                `\n  - expected on client: ${vnode.children as string}`,
-            )
-          logMismatchError()
+          if (!isMismatchAllowed(el, MismatchTypes.TEXT)) {
+            ;(__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
+              warn(
+                `Hydration text content mismatch on`,
+                el,
+                `\n  - rendered on server: ${el.textContent}` +
+                  `\n  - expected on client: ${vnode.children as string}`,
+              )
+            logMismatchError()
+          }
 
           el.textContent = vnode.children as string
         }
@@ -446,6 +465,7 @@ export function createHydrationFunctions(
           !optimized ||
           patchFlag & (PatchFlags.FULL_PROPS | PatchFlags.NEED_HYDRATION)
         ) {
+          const isCustomElement = el.tagName.includes('-')
           for (const key in props) {
             // check hydration mismatch
             if (
@@ -462,17 +482,10 @@ export function createHydrationFunctions(
                 (key.endsWith('value') || key === 'indeterminate')) ||
               (isOn(key) && !isReservedProp(key)) ||
               // force hydrate v-bind with .prop modifiers
-              key[0] === '.'
+              key[0] === '.' ||
+              isCustomElement
             ) {
-              patchProp(
-                el,
-                key,
-                null,
-                props[key],
-                undefined,
-                undefined,
-                parentComponent,
-              )
+              patchProp(el, key, null, props[key], undefined, parentComponent)
             }
           }
         } else if (props.onClick) {
@@ -484,9 +497,13 @@ export function createHydrationFunctions(
             null,
             props.onClick,
             undefined,
-            undefined,
             parentComponent,
           )
+        } else if (patchFlag & PatchFlags.STYLE && isReactive(props.style)) {
+          // #11372: object style values are iterated during patch instead of
+          // render/normalization phase, but style patch is skipped during
+          // hydration, so we need to force iterate the object to track deps
+          for (const key in props.style) props.style[key]
         }
       }
 
@@ -531,7 +548,26 @@ export function createHydrationFunctions(
       const vnode = optimized
         ? children[i]
         : (children[i] = normalizeVNode(children[i]))
+      const isText = vnode.type === Text
       if (node) {
+        if (isText && !optimized) {
+          // #7285 possible consecutive text vnodes from manual render fns or
+          // JSX-compiled fns, but on the client the browser parses only 1 text
+          // node.
+          // look ahead for next possible text vnode
+          if (i + 1 < l && normalizeVNode(children[i + 1]).type === Text) {
+            // create an extra TextNode on the client for the next vnode to
+            // adopt
+            insert(
+              createText(
+                (node as Text).data.slice((vnode.children as string).length),
+              ),
+              container,
+              nextSibling(node),
+            )
+            ;(node as Text).data = vnode.children as string
+          }
+        }
         node = hydrateNode(
           node,
           vnode,
@@ -540,23 +576,25 @@ export function createHydrationFunctions(
           slotScopeIds,
           optimized,
         )
-      } else if (vnode.type === Text && !vnode.children) {
+      } else if (isText && !vnode.children) {
         // #7215 create a TextNode for empty text node
         // because server rendered HTML won't contain a text node
         insert((vnode.el = createText('')), container)
       } else {
-        if (
-          (__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
-          !hasWarned
-        ) {
-          warn(
-            `Hydration children mismatch on`,
-            container,
-            `\nServer rendered element contains fewer child nodes than client vdom.`,
-          )
-          hasWarned = true
+        if (!isMismatchAllowed(container, MismatchTypes.CHILDREN)) {
+          if (
+            (__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
+            !hasWarned
+          ) {
+            warn(
+              `Hydration children mismatch on`,
+              container,
+              `\nServer rendered element contains fewer child nodes than client vdom.`,
+            )
+            hasWarned = true
+          }
+          logMismatchError()
         }
-        logMismatchError()
 
         // the SSRed DOM didn't contain enough nodes. Mount the missing ones.
         patch(
@@ -620,19 +658,21 @@ export function createHydrationFunctions(
     slotScopeIds: string[] | null,
     isFragment: boolean,
   ): Node | null => {
-    ;(__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
-      warn(
-        `Hydration node mismatch:\n- rendered on server:`,
-        node,
-        node.nodeType === DOMNodeTypes.TEXT
-          ? `(text)`
-          : isComment(node) && node.data === '['
-            ? `(start of fragment)`
-            : ``,
-        `\n- expected on client:`,
-        vnode.type,
-      )
-    logMismatchError()
+    if (!isMismatchAllowed(node.parentElement!, MismatchTypes.CHILDREN)) {
+      ;(__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
+        warn(
+          `Hydration node mismatch:\n- rendered on server:`,
+          node,
+          node.nodeType === DOMNodeTypes.TEXT
+            ? `(text)`
+            : isComment(node) && node.data === '['
+              ? `(start of fragment)`
+              : ``,
+          `\n- expected on client:`,
+          vnode.type,
+        )
+      logMismatchError()
+    }
 
     vnode.el = null
 
@@ -717,7 +757,7 @@ export function createHydrationFunctions(
     )
   }
 
-  return [hydrate, hydrateNode] as const
+  return [hydrate, hydrateNode]
 }
 
 /**
@@ -730,7 +770,7 @@ function propHasMismatch(
   vnode: VNode,
   instance: ComponentInternalInstance | null,
 ): boolean {
-  let mismatchType: string | undefined
+  let mismatchType: MismatchTypes | undefined
   let mismatchKey: string | undefined
   let actual: string | boolean | null | undefined
   let expected: string | boolean | null | undefined
@@ -740,7 +780,8 @@ function propHasMismatch(
     actual = el.getAttribute('class')
     expected = normalizeClass(clientValue)
     if (!isSetEqual(toClassSet(actual || ''), toClassSet(expected))) {
-      mismatchType = mismatchKey = `class`
+      mismatchType = MismatchTypes.CLASS
+      mismatchKey = `class`
     }
   } else if (key === 'style') {
     // style might be in different order, but that doesn't affect cascade
@@ -765,7 +806,8 @@ function propHasMismatch(
     }
 
     if (!isMapEqual(actualMap, expectedMap)) {
-      mismatchType = mismatchKey = 'style'
+      mismatchType = MismatchTypes.STYLE
+      mismatchKey = 'style'
     }
   } else if (
     (el instanceof SVGElement && isKnownSvgAttr(key)) ||
@@ -791,15 +833,15 @@ function propHasMismatch(
         : false
     }
     if (actual !== expected) {
-      mismatchType = `attribute`
+      mismatchType = MismatchTypes.ATTRIBUTE
       mismatchKey = key
     }
   }
 
-  if (mismatchType) {
+  if (mismatchType != null && !isMismatchAllowed(el, mismatchType)) {
     const format = (v: any) =>
       v === false ? `(not rendered)` : `${mismatchKey}="${v}"`
-    const preSegment = `Hydration ${mismatchType} mismatch on`
+    const preSegment = `Hydration ${MismatchTypeString[mismatchType]} mismatch on`
     const postSegment =
       `\n  - rendered on server: ${format(actual)}` +
       `\n  - expected on client: ${format(expected)}` +
@@ -874,10 +916,58 @@ function resolveCssVars(
   ) {
     const cssVars = instance.getCssVars()
     for (const key in cssVars) {
-      expectedMap.set(`--${key}`, String(cssVars[key]))
+      expectedMap.set(
+        `--${getEscapedCssVarName(key, false)}`,
+        String(cssVars[key]),
+      )
     }
   }
   if (vnode === root && instance.parent) {
     resolveCssVars(instance.parent, instance.vnode, expectedMap)
+  }
+}
+
+const allowMismatchAttr = 'data-allow-mismatch'
+
+enum MismatchTypes {
+  TEXT = 0,
+  CHILDREN = 1,
+  CLASS = 2,
+  STYLE = 3,
+  ATTRIBUTE = 4,
+}
+
+const MismatchTypeString: Record<MismatchTypes, string> = {
+  [MismatchTypes.TEXT]: 'text',
+  [MismatchTypes.CHILDREN]: 'children',
+  [MismatchTypes.CLASS]: 'class',
+  [MismatchTypes.STYLE]: 'style',
+  [MismatchTypes.ATTRIBUTE]: 'attribute',
+} as const
+
+function isMismatchAllowed(
+  el: Element | null,
+  allowedType: MismatchTypes,
+): boolean {
+  if (
+    allowedType === MismatchTypes.TEXT ||
+    allowedType === MismatchTypes.CHILDREN
+  ) {
+    while (el && !el.hasAttribute(allowMismatchAttr)) {
+      el = el.parentElement
+    }
+  }
+  const allowedAttr = el && el.getAttribute(allowMismatchAttr)
+  if (allowedAttr == null) {
+    return false
+  } else if (allowedAttr === '') {
+    return true
+  } else {
+    const list = allowedAttr.split(',')
+    // text is a subset of children
+    if (allowedType === MismatchTypes.TEXT && list.includes('children')) {
+      return true
+    }
+    return allowedAttr.split(',').includes(MismatchTypeString[allowedType])
   }
 }

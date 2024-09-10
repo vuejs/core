@@ -10,14 +10,9 @@ import {
   shallowReadonlyMap,
   toRaw,
 } from './reactive'
+import { arrayInstrumentations } from './arrayInstrumentations'
 import { ReactiveFlags, TrackOpTypes, TriggerOpTypes } from './constants'
-import {
-  pauseScheduling,
-  pauseTracking,
-  resetScheduling,
-  resetTracking,
-} from './effect'
-import { ITERATE_KEY, track, trigger } from './reactiveEffect'
+import { ITERATE_KEY, track, trigger } from './dep'
 import {
   hasChanged,
   hasOwn,
@@ -30,68 +25,18 @@ import {
 import { isRef } from './ref'
 import { warn } from './warning'
 
-const isNonTrackableKeys = /*#__PURE__*/ makeMap(`__proto__,__v_isRef,__isVue`)
+const isNonTrackableKeys = /*@__PURE__*/ makeMap(`__proto__,__v_isRef,__isVue`)
 
 const builtInSymbols = new Set(
-  /*#__PURE__*/
+  /*@__PURE__*/
   Object.getOwnPropertyNames(Symbol)
     // ios10.x Object.getOwnPropertyNames(Symbol) can enumerate 'arguments' and 'caller'
     // but accessing them on Symbol leads to TypeError because Symbol is a strict mode
     // function
     .filter(key => key !== 'arguments' && key !== 'caller')
-    .map(key => (Symbol as any)[key])
+    .map(key => Symbol[key as keyof SymbolConstructor])
     .filter(isSymbol),
 )
-
-/**
- * 创建并返回一个包含数组操作Instrumentations的对象。
- * 这些Instrumentations用于对可能包含响应式值的数组方法进行拦截和处理，
- * 以实现对这些方法的追踪和优化。
- *
- * @returns {Record<string, Function>} 一个包含各种数组方法拦截器的对象。
- */
-const arrayInstrumentations = /*#__PURE__*/ createArrayInstrumentations()
-
-function createArrayInstrumentations() {
-  const instrumentations: Record<string, Function> = {}
-  // instrument identity-sensitive Array methods to account for possible reactive
-  // values
-  // 为身份敏感的数组方法（如includes、indexOf、lastIndexOf）添加拦截器，以处理可能的响应式值。
-  ;(['includes', 'indexOf', 'lastIndexOf'] as const).forEach(key => {
-    instrumentations[key] = function (this: unknown[], ...args: unknown[]) {
-      const arr = toRaw(this) as any
-      for (let i = 0, l = this.length; i < l; i++) {
-        track(arr, TrackOpTypes.GET, i + '')
-      }
-      // 首先使用原始参数运行方法（可能包含响应式值）。
-      // we run the method using the original args first (which may be reactive)
-      const res = arr[key](...args)
-      // 如果没有找到匹配项或方法返回false，使用原始值再次运行方法。
-      if (res === -1 || res === false) {
-        // if that didn't work, run it again using raw values.
-        return arr[key](...args.map(toRaw))
-      } else {
-        return res
-      }
-    }
-  })
-  // 为改变数组长度的突变方法（如push、pop、shift、unshift、splice）添加拦截器，以避免长度被追踪而导致的潜在无限循环问题。
-  // instrument length-altering mutation methods to avoid length being tracked
-  // which leads to infinite loops in some cases (#2137)
-  ;(['push', 'pop', 'shift', 'unshift', 'splice'] as const).forEach(key => {
-    instrumentations[key] = function (this: unknown[], ...args: unknown[]) {
-      pauseTracking()
-      pauseScheduling()
-      // 暂停追踪和调度，然后使用原始值应用突变方法。
-      const res = (toRaw(this) as any)[key].apply(this, args)
-      resetScheduling()
-      resetTracking()
-      // 恢复追踪和调度，然后返回结果。
-      return res
-    }
-  })
-  return instrumentations
-}
 
 function hasOwnProperty(this: object, key: unknown) {
   // #10455 hasOwnProperty may be called with non-string values
@@ -122,7 +67,7 @@ class BaseReactiveHandler implements ProxyHandler<Target> {
    * @param receiver 接收者对象，在处理属性访问时用到。
    * @returns 返回获取的属性值，具体返回值取决于处理逻辑。
    */
-  get(target: Target, key: string | symbol, receiver: object) {
+  get(target: Target, key: string | symbol, receiver: object): any {
     const isReadonly = this._isReadonly,
       isShallow = this._isShallow
     // 特殊标志位处理，判断是否为只读、浅响应式等。
@@ -159,9 +104,10 @@ class BaseReactiveHandler implements ProxyHandler<Target> {
 
     // 非只读模式下的特定处理。
     if (!isReadonly) {
+      let fn: Function | undefined
       // 数组且具有特殊Instrumentations的属性访问处理。
-      if (targetIsArray && hasOwn(arrayInstrumentations, key)) {
-        return Reflect.get(arrayInstrumentations, key, receiver)
+      if (targetIsArray && (fn = arrayInstrumentations[key])) {
+        return fn
       }
       // 'hasOwnProperty的特殊处理。
       if (key === 'hasOwnProperty') {
@@ -169,8 +115,14 @@ class BaseReactiveHandler implements ProxyHandler<Target> {
       }
     }
 
-    // 普通属性访问处理。
-    const res = Reflect.get(target, key, receiver)
+    const res = Reflect.get(
+      target,
+      key,
+      // if this is a proxy wrapping a ref, return methods using the raw ref
+      // as receiver so that we don't have to call `toRaw` on the ref in all
+      // its class methods
+      isRef(target) ? target : receiver,
+    )
 
     // 对于Symbol类型键或非追踪键的特殊处理，直接返回结果。
     if (isSymbol(key) ? builtInSymbols.has(key) : isNonTrackableKeys(key)) {
@@ -226,13 +178,13 @@ class MutableReactiveHandler extends BaseReactiveHandler {
    * @returns 操作是否成功的布尔值
    */
   set(
-    target: object,
+    target: Record<string | symbol, unknown>,
     key: string | symbol,
     value: unknown,
     receiver: object,
   ): boolean {
     // 判断是否为浅响应式，进行相应处理
-    let oldValue = (target as any)[key]
+    let oldValue = target[key]
     if (!this._isShallow) {
       // 对旧值和新值进行判断和转换，确保操作的正确性
       const isOldValueReadonly = isReadonly(oldValue)
@@ -258,7 +210,12 @@ class MutableReactiveHandler extends BaseReactiveHandler {
       isArray(target) && isIntegerKey(key)
         ? Number(key) < target.length
         : hasOwn(target, key)
-    const result = Reflect.set(target, key, value, receiver)
+    const result = Reflect.set(
+      target,
+      key,
+      value,
+      isRef(target) ? target : receiver,
+    )
     // don't trigger if target is something up in the prototype chain of original
     if (target === toRaw(receiver)) {
       if (!hadKey) {
@@ -276,10 +233,13 @@ class MutableReactiveHandler extends BaseReactiveHandler {
    * @param key 属性名或符号
    * @returns 操作是否成功的布尔值
    */
-  deleteProperty(target: object, key: string | symbol): boolean {
+  deleteProperty(
+    target: Record<string | symbol, unknown>,
+    key: string | symbol,
+  ): boolean {
     // 判断是否曾存在该属性，存在则触发相应响应式操作
     const hadKey = hasOwn(target, key)
-    const oldValue = (target as any)[key]
+    const oldValue = target[key]
     const result = Reflect.deleteProperty(target, key)
     if (result && hadKey) {
       trigger(target, TriggerOpTypes.DELETE, key, undefined, oldValue)
@@ -293,7 +253,7 @@ class MutableReactiveHandler extends BaseReactiveHandler {
    * @param key 属性名或符号
    * @returns 对象是否包含该属性的布尔值
    */
-  has(target: object, key: string | symbol): boolean {
+  has(target: Record<string | symbol, unknown>, key: string | symbol): boolean {
     // 进行存在性追踪
     const result = Reflect.has(target, key)
     if (!isSymbol(key) || !builtInSymbols.has(key)) {
@@ -301,12 +261,13 @@ class MutableReactiveHandler extends BaseReactiveHandler {
     }
     return result
   }
+
   /**
    * 获取对象自身的所有键。
    * @param target 目标对象
    * @returns 对象自身的所有键的数组
    */
-  ownKeys(target: object): (string | symbol)[] {
+  ownKeys(target: Record<string | symbol, unknown>): (string | symbol)[] {
     // 在迭代时进行追踪
     track(
       target,
@@ -362,18 +323,17 @@ class ReadonlyReactiveHandler extends BaseReactiveHandler {
 
 // 导出相应的处理器实例，用于创建响应式对象
 export const mutableHandlers: ProxyHandler<object> =
-  /*#__PURE__*/ new MutableReactiveHandler()
+  /*@__PURE__*/ new MutableReactiveHandler()
 
 export const readonlyHandlers: ProxyHandler<object> =
-  /*#__PURE__*/ new ReadonlyReactiveHandler()
+  /*@__PURE__*/ new ReadonlyReactiveHandler()
 
-export const shallowReactiveHandlers = /*#__PURE__*/ new MutableReactiveHandler(
-  true,
-)
+export const shallowReactiveHandlers: MutableReactiveHandler =
+  /*@__PURE__*/ new MutableReactiveHandler(true)
 
 // 浅只读处理器，特殊处理保持只读性和引用的不变性
 // Props handlers are special in the sense that it should not unwrap top-level
 // refs (in order to allow refs to be explicitly passed down), but should
 // retain the reactivity of the normal readonly object.
-export const shallowReadonlyHandlers =
-  /*#__PURE__*/ new ReadonlyReactiveHandler(true)
+export const shallowReadonlyHandlers: ReadonlyReactiveHandler =
+  /*@__PURE__*/ new ReadonlyReactiveHandler(true)

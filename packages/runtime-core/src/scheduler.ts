@@ -1,18 +1,10 @@
 import { ErrorCodes, callWithErrorHandling, handleError } from './errorHandling'
-import { type Awaited, NOOP, isArray } from '@vue/shared'
+import { NOOP, isArray } from '@vue/shared'
 import { type ComponentInternalInstance, getComponentName } from './component'
 
-// 定义一个用于异步任务队列管理的模块，支持任务的排队、立即执行、延后执行等功能。
-
-/**
- * 定义一个SchedulerJob接口，扩展自Function，用于表示调度器中的一个任务
- * 包含任务的各种属性，如id、是否前置任务、是否激活、是否计算中、是否允许递归调用等
- */
-export interface SchedulerJob extends Function {
-  id?: number // 任务的唯一标识符
-  pre?: boolean // 标记是否为前置任务
-  active?: boolean // 标记任务是否激活
-  computed?: boolean // 标记任务是否为计算任务
+export enum SchedulerJobFlags {
+  QUEUED = 1 << 0,
+  PRE = 1 << 1,
   /**
    * Indicates whether the effect is allowed to recursively trigger itself
    * when managed by the scheduler.
@@ -28,13 +20,22 @@ export interface SchedulerJob extends Function {
    * responsibility to perform recursive state mutation that eventually
    * stabilizes (#1727).
    */
-  allowRecurse?: boolean // 标记是否允许任务递归调用自身
+  ALLOW_RECURSE = 1 << 2,
+  DISPOSED = 1 << 3,
+}
+
+export interface SchedulerJob extends Function {
+  id?: number
+  /**
+   * flags can technically be undefined, but it can still be used in bitwise
+   * operations just like 0.
+   */
+  flags?: SchedulerJobFlags
   /**
    * Attached by renderer.ts when setting up a component's render effect
    * Used to obtain component information when reporting max recursive updates.
-   * dev only.
    */
-  ownerInstance?: ComponentInternalInstance // 任务所属的组件实例，仅开发环境使用
+  i?: ComponentInternalInstance
 }
 
 // 定义SchedulerJobs类型，可以是一个SchedulerJob实例或其数组
@@ -50,8 +51,8 @@ const pendingPostFlushCbs: SchedulerJob[] = [] // 存储待执行的后置回调
 let activePostFlushCbs: SchedulerJob[] | null = null // 当前正在执行的后置回调函数队列
 let postFlushIndex = 0 // 后置回调函数执行的索引
 
-const resolvedPromise = /*#__PURE__*/ Promise.resolve() as Promise<any> // 一个已经解析的Promise，用于快速返回结果
-let currentFlushPromise: Promise<void> | null = null // 当前执行队列中的Promise，用于链式执行
+const resolvedPromise = /*@__PURE__*/ Promise.resolve() as Promise<any>
+let currentFlushPromise: Promise<void> | null = null
 
 const RECURSION_LIMIT = 100 // 递归调用限制
 type CountMap = Map<SchedulerJob, number>
@@ -73,22 +74,27 @@ export function nextTick<T = void, R = void>(
   return fn ? p.then(this ? fn.bind(this) : fn) : p
 }
 
-// 使用二分查找在队列中找到适合插入任务的位置，以保持队列中任务id的递增顺序，
-// 这可以防止任务被跳过，也可以避免重复的修补操作。
-// #2768
-// Use binary-search to find a suitable position in the queue,
-// so that the queue maintains the increasing order of job's id,
-// which can prevent the job from being skipped and also can avoid repeated patching.
+// Use binary-search to find a suitable position in the queue. The queue needs
+// to be sorted in increasing order of the job ids. This ensures that:
+// 1. Components are updated from parent to child. As the parent is always
+//    created before the child it will always have a smaller id.
+// 2. If a component is unmounted during a parent component's update, its update
+//    can be skipped.
+// A pre watcher will have the same id as its component's update job. The
+// watcher should be inserted immediately before the update job. This allows
+// watchers to be skipped if the component is unmounted by the parent update.
 function findInsertionIndex(id: number) {
-  // the start index should be `flushIndex + 1`
-  let start = flushIndex + 1
+  let start = isFlushing ? flushIndex + 1 : 0
   let end = queue.length
 
   while (start < end) {
     const middle = (start + end) >>> 1
     const middleJob = queue[middle]
     const middleJobId = getId(middleJob)
-    if (middleJobId < id || (middleJobId === id && middleJob.pre)) {
+    if (
+      middleJobId < id ||
+      (middleJobId === id && middleJob.flags! & SchedulerJobFlags.PRE)
+    ) {
       start = middle + 1
     } else {
       end = middle
@@ -98,31 +104,22 @@ function findInsertionIndex(id: number) {
   return start
 }
 
-/**
- * 将给定的函数fn安排在当前事件循环的下一个tick中执行
- * @param job 要安排的任务
- */
-export function queueJob(job: SchedulerJob) {
-  // the dedupe search uses the startIndex argument of Array.includes()
-  // by default the search index includes the current job that is being run
-  // so it cannot recursively trigger itself again.
-  // if the job is a watch() callback, the search will start with a +1 index to
-  // allow it recursively trigger itself - it is the user's responsibility to
-  // ensure it doesn't end up in an infinite loop.
-  // 利用Array.includes()方法的startIndex参数进行去重搜索，
-  // 默认情况下，搜索从当前正在执行的任务之后开始，这样可以防止任务递归触发自身。
-  if (
-    !queue.length ||
-    !queue.includes(
-      job,
-      isFlushing && job.allowRecurse ? flushIndex + 1 : flushIndex,
-    )
-  ) {
-    if (job.id == null) {
+export function queueJob(job: SchedulerJob): void {
+  if (!(job.flags! & SchedulerJobFlags.QUEUED)) {
+    const jobId = getId(job)
+    const lastJob = queue[queue.length - 1]
+    if (
+      !lastJob ||
+      // fast path when the job id is larger than the tail
+      (!(job.flags! & SchedulerJobFlags.PRE) && jobId >= getId(lastJob))
+    ) {
       queue.push(job)
     } else {
-      queue.splice(findInsertionIndex(job.id), 0, job)
+      queue.splice(findInsertionIndex(jobId), 0, job)
     }
+
+    job.flags! |= SchedulerJobFlags.QUEUED
+
     queueFlush()
   }
 }
@@ -137,28 +134,13 @@ function queueFlush() {
   }
 }
 
-export function invalidateJob(job: SchedulerJob) {
-  const i = queue.indexOf(job)
-  if (i > flushIndex) {
-    queue.splice(i, 1)
-  }
-}
-
-/**
- * 将后置回调函数加入队列，等待执行
- * @param cb 后置回调函数，可以是一个函数或函数数组
- */
-export function queuePostFlushCb(cb: SchedulerJobs) {
+export function queuePostFlushCb(cb: SchedulerJobs): void {
   if (!isArray(cb)) {
-    // 如果cb不是数组，检查是否已包含在当前正在执行的回调队列中，未包含则加入待执行队列
-    if (
-      !activePostFlushCbs ||
-      !activePostFlushCbs.includes(
-        cb,
-        cb.allowRecurse ? postFlushIndex + 1 : postFlushIndex,
-      )
-    ) {
+    if (activePostFlushCbs && cb.id === -1) {
+      activePostFlushCbs.splice(postFlushIndex + 1, 0, cb)
+    } else if (!(cb.flags! & SchedulerJobFlags.QUEUED)) {
       pendingPostFlushCbs.push(cb)
+      cb.flags! |= SchedulerJobFlags.QUEUED
     }
   } else {
     // if cb is an array, it is a component lifecycle hook which can only be
@@ -180,15 +162,15 @@ export function flushPreFlushCbs(
   instance?: ComponentInternalInstance,
   seen?: CountMap,
   // if currently flushing, skip the current job itself
-  i = isFlushing ? flushIndex + 1 : 0,
-) {
+  i: number = isFlushing ? flushIndex + 1 : 0,
+): void {
   if (__DEV__) {
     seen = seen || new Map()
   }
   // 遍历队列中的任务，执行所有标记为前置的任务
   for (; i < queue.length; i++) {
     const cb = queue[i]
-    if (cb && cb.pre) {
+    if (cb && cb.flags! & SchedulerJobFlags.PRE) {
       if (instance && cb.id !== instance.uid) {
         continue
       }
@@ -198,17 +180,16 @@ export function flushPreFlushCbs(
       // 从队列中移除已执行的任务，避免重复执行
       queue.splice(i, 1)
       i--
+      if (cb.flags! & SchedulerJobFlags.ALLOW_RECURSE) {
+        cb.flags! &= ~SchedulerJobFlags.QUEUED
+      }
       cb()
+      cb.flags! &= ~SchedulerJobFlags.QUEUED
     }
   }
 }
 
-/**
- * 执行所有的后置回调函数
- * @param seen 记录已执行的任务，防止循环更新
- */
-export function flushPostFlushCbs(seen?: CountMap) {
-  // 先将待执行的后置回调函数去重并排序
+export function flushPostFlushCbs(seen?: CountMap): void {
   if (pendingPostFlushCbs.length) {
     const deduped = [...new Set(pendingPostFlushCbs)].sort(
       (a, b) => getId(a) - getId(b),
@@ -237,7 +218,11 @@ export function flushPostFlushCbs(seen?: CountMap) {
       if (__DEV__ && checkRecursiveUpdates(seen!, cb)) {
         continue
       }
-      if (cb.active !== false) cb()
+      if (cb.flags! & SchedulerJobFlags.ALLOW_RECURSE) {
+        cb.flags! &= ~SchedulerJobFlags.QUEUED
+      }
+      if (!(cb.flags! & SchedulerJobFlags.DISPOSED)) cb()
+      cb.flags! &= ~SchedulerJobFlags.QUEUED
     }
     activePostFlushCbs = null
     postFlushIndex = 0
@@ -245,16 +230,7 @@ export function flushPostFlushCbs(seen?: CountMap) {
 }
 
 const getId = (job: SchedulerJob): number =>
-  job.id == null ? Infinity : job.id
-
-const comparator = (a: SchedulerJob, b: SchedulerJob): number => {
-  const diff = getId(a) - getId(b)
-  if (diff === 0) {
-    if (a.pre && !b.pre) return -1
-    if (b.pre && !a.pre) return 1
-  }
-  return diff
-}
+  job.id == null ? (job.flags! & SchedulerJobFlags.PRE ? -1 : Infinity) : job.id
 
 /**
  * 执行队列中的所有任务
@@ -267,17 +243,6 @@ function flushJobs(seen?: CountMap) {
     seen = seen || new Map()
   }
 
-  // 在执行前对任务队列进行排序，确保更新顺序正确
-  // Sort queue before flush.
-  // This ensures that:
-  // 1. Components are updated from parent to child. (because parent is always
-  //    created before the child so its render effect will have smaller
-  //    priority number)
-  // 2. If a component is unmounted during a parent component's update,
-  //    its update can be skipped.
-  queue.sort(comparator)
-
-  // 条件判断外置以避免Rollup的优化导致的问题
   // conditional usage of checkRecursiveUpdate must be determined out of
   // try ... catch block since Rollup by default de-optimizes treeshaking
   // inside try-catch. This can leave all warning code unshaked. Although
@@ -288,19 +253,32 @@ function flushJobs(seen?: CountMap) {
     : NOOP
 
   try {
-    // 遍历队列，执行所有激活的任务
     for (flushIndex = 0; flushIndex < queue.length; flushIndex++) {
       const job = queue[flushIndex]
-      if (job && job.active !== false) {
+      if (job && !(job.flags! & SchedulerJobFlags.DISPOSED)) {
         if (__DEV__ && check(job)) {
           continue
         }
-        // 错误处理
-        callWithErrorHandling(job, null, ErrorCodes.SCHEDULER)
+        if (job.flags! & SchedulerJobFlags.ALLOW_RECURSE) {
+          job.flags! &= ~SchedulerJobFlags.QUEUED
+        }
+        callWithErrorHandling(
+          job,
+          job.i,
+          job.i ? ErrorCodes.COMPONENT_UPDATE : ErrorCodes.SCHEDULER,
+        )
+        job.flags! &= ~SchedulerJobFlags.QUEUED
       }
     }
   } finally {
-    // 清理状态，准备下一次执行
+    // If there was an error we still need to clear the QUEUED flags
+    for (; flushIndex < queue.length; flushIndex++) {
+      const job = queue[flushIndex]
+      if (job) {
+        job.flags! &= ~SchedulerJobFlags.QUEUED
+      }
+    }
+
     flushIndex = 0
     queue.length = 0
 
@@ -329,8 +307,7 @@ function checkRecursiveUpdates(seen: CountMap, fn: SchedulerJob) {
   } else {
     const count = seen.get(fn)!
     if (count > RECURSION_LIMIT) {
-      // 如果递归次数超过限制，报错提醒
-      const instance = fn.ownerInstance
+      const instance = fn.i
       const componentName = instance && getComponentName(instance.type)
       handleError(
         `Maximum recursive updates exceeded${

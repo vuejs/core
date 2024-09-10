@@ -48,7 +48,7 @@ export function processDefineProps(
   ctx: ScriptCompileContext,
   node: Node,
   declId?: LVal,
-) {
+): boolean {
   if (!isCallOf(node, DEFINE_PROPS)) {
     return processWithDefaults(ctx, node, declId)
   }
@@ -147,7 +147,7 @@ export function genRuntimeProps(ctx: ScriptCompileContext): string | undefined {
           )
       }
       if (defaults.length) {
-        propsDecls = `/*#__PURE__*/${ctx.helper(
+        propsDecls = `/*@__PURE__*/${ctx.helper(
           `mergeDefaults`,
         )}(${propsDecls}, {\n  ${defaults.join(',\n  ')}\n})`
       }
@@ -159,7 +159,7 @@ export function genRuntimeProps(ctx: ScriptCompileContext): string | undefined {
   const modelsDecls = genModelProps(ctx)
 
   if (propsDecls && modelsDecls) {
-    return `/*#__PURE__*/${ctx.helper(
+    return `/*@__PURE__*/${ctx.helper(
       'mergeModels',
     )}(${propsDecls}, ${modelsDecls})`
   } else {
@@ -191,7 +191,7 @@ export function extractRuntimeProps(
     ${propStrings.join(',\n    ')}\n  }`
 
   if (ctx.propsRuntimeDefaults && !hasStaticDefaults) {
-    propsDecls = `/*#__PURE__*/${ctx.helper(
+    propsDecls = `/*@__PURE__*/${ctx.helper(
       'mergeDefaults',
     )}(${propsDecls}, ${ctx.getString(ctx.propsRuntimeDefaults)})`
   }

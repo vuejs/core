@@ -18,18 +18,10 @@ export enum TriggerOpTypes {
 
 // 定义响应式标志枚举
 export enum ReactiveFlags {
-  SKIP = '__v_skip', // 跳过响应式处理
-  IS_REACTIVE = '__v_isReactive', // 标记是否为响应式对象
-  IS_READONLY = '__v_isReadonly', // 标记是否为只读对象
-  IS_SHALLOW = '__v_isShallow', // 标记是否为浅响应式对象
-  RAW = '__v_raw', // 原始数据
-}
-
-// 定义脏级别枚举
-export enum DirtyLevels {
-  NotDirty = 0, // 未脏
-  QueryingDirty = 1, // 正在查询脏状态
-  MaybeDirty_ComputedSideEffect = 2, // 可能脏，存在计算副作用
-  MaybeDirty = 3, // 可能脏
-  Dirty = 4, // 脏
+  SKIP = '__v_skip',
+  IS_REACTIVE = '__v_isReactive',
+  IS_READONLY = '__v_isReadonly',
+  IS_SHALLOW = '__v_isShallow',
+  RAW = '__v_raw',
+  IS_REF = '__v_isRef',
 }

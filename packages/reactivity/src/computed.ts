@@ -1,61 +1,100 @@
-import { type DebuggerOptions, ReactiveEffect } from './effect'
-import { type Ref, trackRefValue, triggerRefValue } from './ref'
-import { NOOP, hasChanged, isFunction } from '@vue/shared'
-import { toRaw } from './reactive'
-import type { Dep } from './dep'
-import { DirtyLevels, ReactiveFlags } from './constants'
+import { isFunction } from '@vue/shared'
+import {
+  type DebuggerEvent,
+  type DebuggerOptions,
+  EffectFlags,
+  type Link,
+  type Subscriber,
+  activeSub,
+  refreshComputed,
+} from './effect'
+import type { Ref } from './ref'
 import { warn } from './warning'
+import { Dep, globalVersion } from './dep'
+import { ReactiveFlags, TrackOpTypes } from './constants'
 
 declare const ComputedRefSymbol: unique symbol
+declare const WritableComputedRefSymbol: unique symbol
 
-export interface ComputedRef<T = any> extends WritableComputedRef<T> {
-  readonly value: T
+interface BaseComputedRef<T, S = T> extends Ref<T, S> {
   [ComputedRefSymbol]: true
+  /**
+   * @deprecated computed no longer uses effect
+   */
+  effect: ComputedRefImpl
 }
 
-export interface WritableComputedRef<T> extends Ref<T> {
-  readonly effect: ReactiveEffect<T>
+export interface ComputedRef<T = any> extends BaseComputedRef<T> {
+  readonly value: T
+}
+
+export interface WritableComputedRef<T, S = T> extends BaseComputedRef<T, S> {
+  [WritableComputedRefSymbol]: true
 }
 
 export type ComputedGetter<T> = (oldValue?: T) => T
 export type ComputedSetter<T> = (newValue: T) => void
 
-export interface WritableComputedOptions<T> {
+export interface WritableComputedOptions<T, S = T> {
   get: ComputedGetter<T>
-  set: ComputedSetter<T>
+  set: ComputedSetter<S>
 }
 
-export const COMPUTED_SIDE_EFFECT_WARN =
-  `Computed is still dirty after getter evaluation,` +
-  ` likely because a computed is mutating its own dependency in its getter.` +
-  ` State mutations in computed getters should be avoided. ` +
-  ` Check the docs for more details: https://vuejs.org/guide/essentials/computed.html#getters-should-be-side-effect-free`
-
 /**
- * 实现一个计算属性的引用类
- *
- * @template T 计算属性的值的类型
+ * @private exported by @vue/reactivity for Vue core use, but not exported from
+ * the main vue package
  */
-export class ComputedRefImpl<T> {
-  // 可能存在的依赖项管理对象
-  public dep?: Dep = undefined
+export class ComputedRefImpl<T = any> implements Subscriber {
+  /**
+   * @internal
+   */
+  _value: any = undefined
+  /**
+   * @internal
+   */
+  readonly dep: Dep = new Dep(this)
+  /**
+   * @internal
+   */
+  readonly __v_isRef = true
+  // TODO isolatedDeclarations ReactiveFlags.IS_REF
+  /**
+   * @internal
+   */
+  readonly __v_isReadonly: boolean
+  // TODO isolatedDeclarations ReactiveFlags.IS_READONLY
+  // A computed is also a subscriber that tracks other deps
+  /**
+   * @internal
+   */
+  deps?: Link = undefined
+  /**
+   * @internal
+   */
+  depsTail?: Link = undefined
+  /**
+   * @internal
+   */
+  flags: EffectFlags = EffectFlags.DIRTY
+  /**
+   * @internal
+   */
+  globalVersion: number = globalVersion - 1
+  /**
+   * @internal
+   */
+  isSSR: boolean
+  // for backwards compat
+  effect: this = this
 
-  // 计算属性的当前值，使用强制解包避免类型错误
-  private _value!: T
-  // 与计算属性关联的响应式效果
-  public readonly effect: ReactiveEffect<T>
-
-  // 标记这是一个引用类型
-  public readonly __v_isRef = true
-  // 标记是否为只读引用，这里默认为false
-  public readonly [ReactiveFlags.IS_READONLY]: boolean = false
-
-  // 控制是否缓存计算结果
-  public _cacheable: boolean
+  // dev only
+  onTrack?: (event: DebuggerEvent) => void
+  // dev only
+  onTrigger?: (event: DebuggerEvent) => void
 
   /**
    * Dev only
-   * 仅开发环境使用，用于警告递归调用的问题
+   * @internal
    */
   _warnRecursive?: boolean
 
@@ -68,70 +107,50 @@ export class ComputedRefImpl<T> {
    * @param isSSR 是否在服务器端渲染环境下
    */
   constructor(
-    private getter: ComputedGetter<T>,
-    private readonly _setter: ComputedSetter<T>,
-    isReadonly: boolean,
+    public fn: ComputedGetter<T>,
+    private readonly setter: ComputedSetter<T> | undefined,
     isSSR: boolean,
   ) {
-    // 初始化响应式效果
-    this.effect = new ReactiveEffect(
-      () => getter(this._value),
-      () =>
-        triggerRefValue(
-          this,
-          this.effect._dirtyLevel === DirtyLevels.MaybeDirty_ComputedSideEffect
-            ? DirtyLevels.MaybeDirty_ComputedSideEffect
-            : DirtyLevels.MaybeDirty,
-        ),
-    )
-    // 设置effect的相关属性
-    this.effect.computed = this
-    this.effect.active = this._cacheable = !isSSR
-    // 标记是否为只读
-    this[ReactiveFlags.IS_READONLY] = isReadonly
+    this[ReactiveFlags.IS_READONLY] = !setter
+    this.isSSR = isSSR
   }
 
   /**
-   * 获取计算属性的当前值
-   *
-   * 包含缓存逻辑和脏检查逻辑。
+   * @internal
    */
-  get value() {
-    // 确保在原始对象上操作以避免代理的影响
-    // the computed ref may get wrapped by other proxies e.g. readonly() #3376
-    const self = toRaw(this)
-    // 如果不允许缓存或属性已脏，则重新计算值
-    if (
-      (!self._cacheable || self.effect.dirty) &&
-      hasChanged(self._value, (self._value = self.effect.run()!))
-    ) {
-      triggerRefValue(self, DirtyLevels.Dirty)
+  notify(): void {
+    // avoid infinite self recursion
+    if (activeSub !== this) {
+      this.flags |= EffectFlags.DIRTY
+      this.dep.notify()
+    } else if (__DEV__) {
+      // TODO warn
     }
-    // 跟踪计算属性的访问
-    trackRefValue(self)
-    // 如果存在副作用，进行额外的处理
-    if (self.effect._dirtyLevel >= DirtyLevels.MaybeDirty_ComputedSideEffect) {
-      if (__DEV__ && (__TEST__ || this._warnRecursive)) {
-        warn(COMPUTED_SIDE_EFFECT_WARN, `\n\ngetter: `, this.getter)
-      }
-      triggerRefValue(self, DirtyLevels.MaybeDirty_ComputedSideEffect)
+  }
+
+  get value(): T {
+    const link = __DEV__
+      ? this.dep.track({
+          target: this,
+          type: TrackOpTypes.GET,
+          key: 'value',
+        })
+      : this.dep.track()
+    refreshComputed(this)
+    // sync version after evaluation
+    if (link) {
+      link.version = this.dep.version
     }
-    return self._value
+    return this._value
   }
 
-  set value(newValue: T) {
-    this._setter(newValue)
+  set value(newValue) {
+    if (this.setter) {
+      this.setter(newValue)
+    } else if (__DEV__) {
+      warn('Write operation failed: computed value is readonly')
+    }
   }
-
-  // #region polyfill _dirty for backward compatibility third party code for Vue <= 3.3.x
-  get _dirty() {
-    return this.effect.dirty
-  }
-
-  set _dirty(v) {
-    this.effect.dirty = v
-  }
-  // #endregion
 }
 
 /**
@@ -171,50 +190,32 @@ export function computed<T>(
   getter: ComputedGetter<T>,
   debugOptions?: DebuggerOptions,
 ): ComputedRef<T>
-export function computed<T>(
-  options: WritableComputedOptions<T>,
+export function computed<T, S = T>(
+  options: WritableComputedOptions<T, S>,
   debugOptions?: DebuggerOptions,
-): WritableComputedRef<T>
-
-/**
- * 创建一个计算属性，可以是只读的，也可以是可写的。
- *
- * @param getterOrOptions - 可以是一个计算属性的getter函数，或者是一个包含getter和setter的对象。
- * @param debugOptions - 可选的调试选项，仅在开发环境且不是SSR时使用，包括onTrack和onTrigger回调。
- * @param isSSR - 标记是否为服务器端渲染环境，默认为false。
- * @returns 返回一个ComputedRef实例，它封装了计算属性的getter和setter，以及相关的副作用管理。
- */
+): WritableComputedRef<T, S>
 export function computed<T>(
   getterOrOptions: ComputedGetter<T> | WritableComputedOptions<T>,
   debugOptions?: DebuggerOptions,
   isSSR = false,
 ) {
   let getter: ComputedGetter<T>
-  let setter: ComputedSetter<T>
+  let setter: ComputedSetter<T> | undefined
 
-  // 判断getterOrOptions是只包含getter的函数，还是包含getter和setter的对象
-  const onlyGetter = isFunction(getterOrOptions)
-  if (onlyGetter) {
-    // 如果是只读计算属性，设置getter为传入的函数，setter为一个警告函数（开发环境）或空操作（生产环境）
+  if (isFunction(getterOrOptions)) {
     getter = getterOrOptions
-    setter = __DEV__
-      ? () => {
-          warn('Write operation failed: computed value is readonly')
-        }
-      : NOOP
   } else {
     // 如果是可写计算属性，从对象中提取getter和setter
     getter = getterOrOptions.get
     setter = getterOrOptions.set
   }
 
-  // 创建ComputedRefImpl实例，根据是否只读或是否存在setter来配置
-  const cRef = new ComputedRefImpl(getter, setter, onlyGetter || !setter, isSSR)
+  const cRef = new ComputedRefImpl(getter, setter, isSSR)
 
   // 如果处于开发环境，且提供了debugOptions，并且不是在SSR环境中，则应用调试选项
   if (__DEV__ && debugOptions && !isSSR) {
-    cRef.effect.onTrack = debugOptions.onTrack
-    cRef.effect.onTrigger = debugOptions.onTrigger
+    cRef.onTrack = debugOptions.onTrack
+    cRef.onTrigger = debugOptions.onTrigger
   }
 
   return cRef as any

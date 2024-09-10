@@ -4,7 +4,9 @@ import { currentRenderingInstance } from './componentRenderContext'
 import { currentApp } from './apiCreateApp'
 import { warn } from './warning'
 
-export interface InjectionKey<T> extends Symbol {}
+interface InjectionConstraint<T> {}
+
+export type InjectionKey<T> = symbol & InjectionConstraint<T>
 
 /**
  * 提供一个依赖项供组件内部或子组件通过inject函数注入使用。
@@ -14,8 +16,7 @@ export interface InjectionKey<T> extends Symbol {}
 export function provide<T, K = InjectionKey<T> | string | number>(
   key: K,
   value: K extends InjectionKey<infer V> ? V : T,
-) {
-  // 当前没有实例时，若在开发模式下，则警告provide函数只能在setup函数内部使用。
+): void {
   if (!currentInstance) {
     if (__DEV__) {
       warn(`provide() can only be used inside setup().`)
@@ -77,11 +78,14 @@ export function inject(
     // #2400
     // to support `app.use` plugins,
     // fallback to appContext's `provides` if the instance is at root
-    const provides = instance
-      ? instance.parent == null
-        ? instance.vnode.appContext && instance.vnode.appContext.provides
-        : instance.parent.provides
-      : currentApp!._context.provides
+    // #11488, in a nested createApp, prioritize using the provides from currentApp
+    const provides = currentApp
+      ? currentApp._context.provides
+      : instance
+        ? instance.parent == null
+          ? instance.vnode.appContext && instance.vnode.appContext.provides
+          : instance.parent.provides
+        : undefined
 
     // 如果provides中存在key，则返回对应的值
     if (provides && (key as string | symbol) in provides) {

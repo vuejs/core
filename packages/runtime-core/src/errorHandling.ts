@@ -2,18 +2,22 @@ import { pauseTracking, resetTracking } from '@vue/reactivity'
 import type { VNode } from './vnode'
 import type { ComponentInternalInstance } from './component'
 import { popWarningContext, pushWarningContext, warn } from './warning'
-import { isArray, isFunction, isPromise } from '@vue/shared'
+import { EMPTY_OBJ, isArray, isFunction, isPromise } from '@vue/shared'
 import { LifecycleHooks } from './enums'
+import { WatchErrorCodes } from '@vue/reactivity'
 
 // contexts where user provided function may be executed, in addition to
 // lifecycle hooks.
 export enum ErrorCodes {
   SETUP_FUNCTION,
   RENDER_FUNCTION,
-  WATCH_GETTER,
-  WATCH_CALLBACK,
-  WATCH_CLEANUP,
-  NATIVE_EVENT_HANDLER,
+  // The error codes for the watch have been transferred to the reactivity
+  // package along with baseWatch to maintain code compatibility. Hence,
+  // it is essential to keep these values unchanged.
+  // WATCH_GETTER,
+  // WATCH_CALLBACK,
+  // WATCH_CLEANUP,
+  NATIVE_EVENT_HANDLER = 5,
   COMPONENT_EVENT_HANDLER,
   VNODE_HOOK,
   DIRECTIVE_HOOK,
@@ -23,9 +27,11 @@ export enum ErrorCodes {
   FUNCTION_REF,
   ASYNC_COMPONENT_LOADER,
   SCHEDULER,
+  COMPONENT_UPDATE,
+  APP_UNMOUNT_CLEANUP,
 }
 
-export const ErrorTypeStrings: Record<LifecycleHooks | ErrorCodes, string> = {
+export const ErrorTypeStrings: Record<ErrorTypes, string> = {
   [LifecycleHooks.SERVER_PREFETCH]: 'serverPrefetch hook',
   [LifecycleHooks.BEFORE_CREATE]: 'beforeCreate hook',
   [LifecycleHooks.CREATED]: 'created hook',
@@ -42,9 +48,9 @@ export const ErrorTypeStrings: Record<LifecycleHooks | ErrorCodes, string> = {
   [LifecycleHooks.RENDER_TRIGGERED]: 'renderTriggered hook',
   [ErrorCodes.SETUP_FUNCTION]: 'setup function',
   [ErrorCodes.RENDER_FUNCTION]: 'render function',
-  [ErrorCodes.WATCH_GETTER]: 'watcher getter',
-  [ErrorCodes.WATCH_CALLBACK]: 'watcher callback',
-  [ErrorCodes.WATCH_CLEANUP]: 'watcher cleanup function',
+  [WatchErrorCodes.WATCH_GETTER]: 'watcher getter',
+  [WatchErrorCodes.WATCH_CALLBACK]: 'watcher callback',
+  [WatchErrorCodes.WATCH_CLEANUP]: 'watcher cleanup function',
   [ErrorCodes.NATIVE_EVENT_HANDLER]: 'native event handler',
   [ErrorCodes.COMPONENT_EVENT_HANDLER]: 'component event handler',
   [ErrorCodes.VNODE_HOOK]: 'vnode hook',
@@ -54,19 +60,19 @@ export const ErrorTypeStrings: Record<LifecycleHooks | ErrorCodes, string> = {
   [ErrorCodes.APP_WARN_HANDLER]: 'app warnHandler',
   [ErrorCodes.FUNCTION_REF]: 'ref function',
   [ErrorCodes.ASYNC_COMPONENT_LOADER]: 'async component loader',
-  [ErrorCodes.SCHEDULER]:
-    'scheduler flush. This is likely a Vue internals bug. ' +
-    'Please open an issue at https://github.com/vuejs/core .',
+  [ErrorCodes.SCHEDULER]: 'scheduler flush',
+  [ErrorCodes.COMPONENT_UPDATE]: 'component update',
+  [ErrorCodes.APP_UNMOUNT_CLEANUP]: 'app unmount cleanup function',
 }
 
-export type ErrorTypes = LifecycleHooks | ErrorCodes
+export type ErrorTypes = LifecycleHooks | ErrorCodes | WatchErrorCodes
 
 export function callWithErrorHandling(
   fn: Function,
-  instance: ComponentInternalInstance | null,
+  instance: ComponentInternalInstance | null | undefined,
   type: ErrorTypes,
   args?: unknown[],
-) {
+): any {
   try {
     return args ? fn(...args) : fn()
   } catch (err) {
@@ -113,12 +119,13 @@ export function callWithAsyncErrorHandling(
  */
 export function handleError(
   err: unknown,
-  instance: ComponentInternalInstance | null,
+  instance: ComponentInternalInstance | null | undefined,
   type: ErrorTypes,
   throwInDev = true,
-) {
-  // 获取实例的上下文VNode
+): void {
   const contextVNode = instance ? instance.vnode : null
+  const { errorHandler, throwUnhandledErrorInProduction } =
+    (instance && instance.appContext.config) || EMPTY_OBJ
   if (instance) {
     let cur = instance.parent
     // 暴露的实例是渲染代理，以保持与2.x的一致性
@@ -146,22 +153,18 @@ export function handleError(
     }
     // 应用级别的错误处理
     // app-level handling
-    const appErrorHandler = instance.appContext.config.errorHandler
-    if (appErrorHandler) {
-      pauseTracking() // 暂停追踪
-      // 调用应用错误处理器
-      callWithErrorHandling(
-        appErrorHandler,
-        null,
-        ErrorCodes.APP_ERROR_HANDLER,
-        [err, exposedInstance, errorInfo],
-      )
-      resetTracking() // 重置追踪
+    if (errorHandler) {
+      pauseTracking()
+      callWithErrorHandling(errorHandler, null, ErrorCodes.APP_ERROR_HANDLER, [
+        err,
+        exposedInstance,
+        errorInfo,
+      ])
+      resetTracking()
       return
     }
   }
-  // 无实例时或所有错误处理钩子都未处理错误时，记录错误
-  logError(err, type, contextVNode, throwInDev)
+  logError(err, type, contextVNode, throwInDev, throwUnhandledErrorInProduction)
 }
 
 function logError(
@@ -169,6 +172,7 @@ function logError(
   type: ErrorTypes,
   contextVNode: VNode | null,
   throwInDev = true,
+  throwInProd = false,
 ) {
   if (__DEV__) {
     const info = ErrorTypeStrings[type]
@@ -185,6 +189,8 @@ function logError(
     } else if (!__TEST__) {
       console.error(err)
     }
+  } else if (throwInProd) {
+    throw err
   } else {
     // recover in prod to reduce the impact on end-user
     console.error(err)
