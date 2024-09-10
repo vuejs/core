@@ -594,7 +594,7 @@ describe('reactivity/computed', () => {
 
     v.value += ' World'
     await nextTick()
-    expect(serializeInner(root)).toBe('Hello World World World')
+    expect(serializeInner(root)).toBe('Hello World World World World')
     // expect(COMPUTED_SIDE_EFFECT_WARN).toHaveBeenWarned()
   })
 
@@ -892,7 +892,7 @@ describe('reactivity/computed', () => {
     v.value += ' World'
     await nextTick()
     expect(serializeInner(root)).toBe(
-      'Hello World World World | Hello World World World',
+      'Hello World World World World | Hello World World World World',
     )
   })
 
@@ -962,6 +962,7 @@ describe('reactivity/computed', () => {
     })
   })
 
+  // #11797
   test('should prevent endless recursion in self-referencing computed getters', async () => {
     const Comp = defineComponent({
       data() {
@@ -998,7 +999,7 @@ describe('reactivity/computed', () => {
     })
     const root = nodeOps.createElement('div')
     render(h(Comp), root)
-    expect(serializeInner(root)).toBe(`<button>Step</button><p></p>`)
+    expect(serializeInner(root)).toBe(`<button>Step</button><p>Step 1</p>`)
     triggerEvent(root.children[1] as TestElement, 'click')
     await nextTick()
     expect(serializeInner(root)).toBe(`<button>Step</button><p>Step 2</p>`)

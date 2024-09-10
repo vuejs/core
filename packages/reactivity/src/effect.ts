@@ -326,7 +326,7 @@ function isDirty(sub: Subscriber): boolean {
   for (let link = sub.deps; link; link = link.nextDep) {
     if (
       link.dep.version !== link.version ||
-      (link.dep.computed && refreshComputed(link.dep.computed) === false) ||
+      (link.dep.computed && refreshComputed(link.dep.computed)) ||
       link.dep.version !== link.version
     ) {
       return true
@@ -344,10 +344,7 @@ function isDirty(sub: Subscriber): boolean {
  * Returning false indicates the refresh failed
  * @internal
  */
-export function refreshComputed(computed: ComputedRefImpl): false | undefined {
-  if (computed.flags & EffectFlags.RUNNING) {
-    return false
-  }
+export function refreshComputed(computed: ComputedRefImpl): undefined {
   if (
     computed.flags & EffectFlags.TRACKING &&
     !(computed.flags & EffectFlags.DIRTY)

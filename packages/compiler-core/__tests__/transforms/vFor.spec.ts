@@ -13,6 +13,7 @@ import {
   type ForNode,
   type InterpolationNode,
   NodeTypes,
+  type RootNode,
   type SimpleExpressionNode,
 } from '../../src/ast'
 import { ErrorCodes } from '../../src/errors'
@@ -24,7 +25,10 @@ import { createObjectMatcher } from '../testUtils'
 export function parseWithForTransform(
   template: string,
   options: CompilerOptions = {},
-) {
+): {
+  root: RootNode
+  node: ForNode & { codegenNode: ForCodegenNode }
+} {
   const ast = parse(template, options)
   transform(ast, {
     nodeTransforms: [

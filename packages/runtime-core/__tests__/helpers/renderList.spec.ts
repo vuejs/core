@@ -1,3 +1,4 @@
+import { isReactive, reactive, shallowReactive } from '../../src/index'
 import { renderList } from '../../src/helpers/renderList'
 
 describe('renderList', () => {
@@ -55,5 +56,13 @@ describe('renderList', () => {
     expect(
       renderList(undefined, (item, index) => `node ${index}: ${item}`),
     ).toEqual([])
+  })
+
+  it('should render items in a reactive array correctly', () => {
+    const reactiveArray = reactive([{ foo: 1 }])
+    expect(renderList(reactiveArray, isReactive)).toEqual([true])
+
+    const shallowReactiveArray = shallowReactive([{ foo: 1 }])
+    expect(renderList(shallowReactiveArray, isReactive)).toEqual([false])
   })
 })

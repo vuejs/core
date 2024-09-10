@@ -1,4 +1,4 @@
-import { def, isObject, toRawType } from '@vue/shared'
+import { def, hasOwn, isObject, toRawType } from '@vue/shared'
 import {
   mutableHandlers,
   readonlyHandlers,
@@ -405,7 +405,7 @@ export type Raw<T> = T & { [RawSymbol]?: true }
  * @see {@link https://vuejs.org/api/reactivity-advanced.html#markraw}
  */
 export function markRaw<T extends object>(value: T): Raw<T> {
-  if (Object.isExtensible(value)) {
+  if (!hasOwn(value, ReactiveFlags.SKIP) && Object.isExtensible(value)) {
     def(value, ReactiveFlags.SKIP, true)
   }
   return value
