@@ -130,7 +130,9 @@ export const ssrTransformElement: NodeTransform = (node, context) => {
                   createSimpleExpression(`"value" in ${tempId}`, false),
                   createSimpleExpression(`${tempId}.value`, false),
                   createSimpleExpression(
-                    existingText ? existingText.content : ``,
+                    existingText
+                      ? `${existingText.content[0] === '\n' ? '\n' : ''}${existingText.content}`
+                      : ``,
                     true,
                   ),
                   false,
