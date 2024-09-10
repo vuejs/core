@@ -14,6 +14,12 @@ setVH()
 
 const useSSRMode = ref(false)
 
+const AUTO_SAVE_STORAGE_KEY = 'vue-sfc-playground-auto-save'
+const initAutoSave: boolean = JSON.parse(
+  localStorage.getItem(AUTO_SAVE_STORAGE_KEY) ?? 'true',
+)
+const autoSave = ref(initAutoSave)
+
 const { productionMode, vueVersion, importMap } = useVueImportMap({
   runtimeDev: import.meta.env.PROD
     ? `${location.origin}/vue.runtime.esm-browser.js`
@@ -89,6 +95,11 @@ function toggleSSR() {
   useSSRMode.value = !useSSRMode.value
 }
 
+function toggleAutoSave() {
+  autoSave.value = !autoSave.value
+  localStorage.setItem(AUTO_SAVE_STORAGE_KEY, String(autoSave.value))
+}
+
 function reloadPage() {
   replRef.value?.reload()
 }
@@ -111,9 +122,11 @@ onMounted(() => {
     :store="store"
     :prod="productionMode"
     :ssr="useSSRMode"
+    :autoSave="autoSave"
     @toggle-theme="toggleTheme"
     @toggle-prod="toggleProdMode"
     @toggle-ssr="toggleSSR"
+    @toggle-autosave="toggleAutoSave"
     @reload-page="reloadPage"
   />
   <Repl
@@ -123,6 +136,7 @@ onMounted(() => {
     @keydown.ctrl.s.prevent
     @keydown.meta.s.prevent
     :ssr="useSSRMode"
+    :autoSave="autoSave"
     :store="store"
     :showCompileOutput="true"
     :autoResize="true"

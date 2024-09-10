@@ -332,7 +332,7 @@ const [
   readonlyInstrumentations,
   shallowInstrumentations,
   shallowReadonlyInstrumentations,
-] = /* #__PURE__*/ createInstrumentations()
+] = /* @__PURE__*/ createInstrumentations()
 
 function createInstrumentationGetter(isReadonly: boolean, shallow: boolean) {
   const instrumentations = shallow
@@ -367,20 +367,20 @@ function createInstrumentationGetter(isReadonly: boolean, shallow: boolean) {
 }
 
 export const mutableCollectionHandlers: ProxyHandler<CollectionTypes> = {
-  get: /*#__PURE__*/ createInstrumentationGetter(false, false),
+  get: /*@__PURE__*/ createInstrumentationGetter(false, false),
 }
 
 export const shallowCollectionHandlers: ProxyHandler<CollectionTypes> = {
-  get: /*#__PURE__*/ createInstrumentationGetter(false, true),
+  get: /*@__PURE__*/ createInstrumentationGetter(false, true),
 }
 
 export const readonlyCollectionHandlers: ProxyHandler<CollectionTypes> = {
-  get: /*#__PURE__*/ createInstrumentationGetter(true, false),
+  get: /*@__PURE__*/ createInstrumentationGetter(true, false),
 }
 
 export const shallowReadonlyCollectionHandlers: ProxyHandler<CollectionTypes> =
   {
-    get: /*#__PURE__*/ createInstrumentationGetter(true, true),
+    get: /*@__PURE__*/ createInstrumentationGetter(true, true),
   }
 
 function checkIdentityKeys(

@@ -57,16 +57,13 @@ export type EmitsToProps<T extends EmitsOptions | ComponentTypeEmits> =
         }
       : {}
 
-export type TypeEmitsToOptions<T extends ComponentTypeEmits> =
-  T extends Record<string, any[]>
-    ? {
-        [K in keyof T]: T[K] extends [...args: infer Args]
-          ? (...args: Args) => any
-          : () => any
-      }
-    : T extends (...args: any[]) => any
-      ? ParametersToFns<OverloadParameters<T>>
-      : {}
+export type TypeEmitsToOptions<T extends ComponentTypeEmits> = {
+  [K in keyof T & string]: T[K] extends [...args: infer Args]
+    ? (...args: Args) => any
+    : () => any
+} & (T extends (...args: any[]) => any
+  ? ParametersToFns<OverloadParameters<T>>
+  : {})
 
 type ParametersToFns<T extends any[]> = {
   [K in T[0]]: K extends `${infer C}`

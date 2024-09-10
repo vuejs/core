@@ -225,7 +225,7 @@ const tokenizer = new Tokenizer(stack, {
         rawName: raw,
         exp: undefined,
         arg: undefined,
-        modifiers: raw === '.' ? ['prop'] : [],
+        modifiers: raw === '.' ? [createSimpleExpression('prop')] : [],
         loc: getLoc(start),
       }
       if (name === 'pre') {
@@ -273,7 +273,8 @@ const tokenizer = new Tokenizer(stack, {
         setLocEnd(arg.loc, end)
       }
     } else {
-      ;(currentProp as DirectiveNode).modifiers.push(mod)
+      const exp = createSimpleExpression(mod, true, getLoc(start, end))
+      ;(currentProp as DirectiveNode).modifiers.push(exp)
     }
   },
 
@@ -379,7 +380,9 @@ const tokenizer = new Tokenizer(stack, {
           if (
             __COMPAT__ &&
             currentProp.name === 'bind' &&
-            (syncIndex = currentProp.modifiers.indexOf('sync')) > -1 &&
+            (syncIndex = currentProp.modifiers.findIndex(
+              mod => mod.content === 'sync',
+            )) > -1 &&
             checkCompatEnabled(
               CompilerDeprecationTypes.COMPILER_V_BIND_SYNC,
               currentOptions,

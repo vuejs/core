@@ -243,7 +243,10 @@ export function toValue<T>(source: MaybeRefOrGetter<T>): T {
 }
 
 const shallowUnwrapHandlers: ProxyHandler<any> = {
-  get: (target, key, receiver) => unref(Reflect.get(target, key, receiver)),
+  get: (target, key, receiver) =>
+    key === ReactiveFlags.RAW
+      ? target
+      : unref(Reflect.get(target, key, receiver)),
   set: (target, key, value, receiver) => {
     const oldValue = target[key]
     if (isRef(oldValue) && !isRef(value)) {

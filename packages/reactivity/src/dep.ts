@@ -46,7 +46,7 @@ export class Dep {
   }
 
   track(debugInfo?: DebuggerEventExtraInfo): Link | undefined {
-    if (!activeSub || !shouldTrack) {
+    if (!activeSub || !shouldTrack || activeSub === this.computed) {
       return
     }
 
@@ -250,11 +250,29 @@ export function trigger(
     return
   }
 
-  let deps: Dep[] = []
+  const run = (dep: Dep | undefined) => {
+    if (dep) {
+      if (__DEV__) {
+        dep.trigger({
+          target,
+          type,
+          key,
+          newValue,
+          oldValue,
+          oldTarget,
+        })
+      } else {
+        dep.trigger()
+      }
+    }
+  }
+
+  startBatch()
+
   if (type === TriggerOpTypes.CLEAR) {
     // collection being cleared
     // trigger all effects for target
-    deps = [...depsMap.values()]
+    depsMap.forEach(run)
   } else {
     const targetIsArray = isArray(target)
     const isArrayIndex = targetIsArray && isIntegerKey(key)
@@ -267,67 +285,50 @@ export function trigger(
           key === ARRAY_ITERATE_KEY ||
           (!isSymbol(key) && key >= newLength)
         ) {
-          deps.push(dep)
+          run(dep)
         }
       })
     } else {
-      const push = (dep: Dep | undefined) => dep && deps.push(dep)
-
       // schedule runs for SET | ADD | DELETE
       if (key !== void 0) {
-        push(depsMap.get(key))
+        run(depsMap.get(key))
       }
 
       // schedule ARRAY_ITERATE for any numeric key change (length is handled above)
       if (isArrayIndex) {
-        push(depsMap.get(ARRAY_ITERATE_KEY))
+        run(depsMap.get(ARRAY_ITERATE_KEY))
       }
 
       // also run for iteration key on ADD | DELETE | Map.SET
       switch (type) {
         case TriggerOpTypes.ADD:
           if (!targetIsArray) {
-            push(depsMap.get(ITERATE_KEY))
+            run(depsMap.get(ITERATE_KEY))
             if (isMap(target)) {
-              push(depsMap.get(MAP_KEY_ITERATE_KEY))
+              run(depsMap.get(MAP_KEY_ITERATE_KEY))
             }
           } else if (isArrayIndex) {
             // new index added to array -> length changes
-            push(depsMap.get('length'))
+            run(depsMap.get('length'))
           }
           break
         case TriggerOpTypes.DELETE:
           if (!targetIsArray) {
-            push(depsMap.get(ITERATE_KEY))
+            run(depsMap.get(ITERATE_KEY))
             if (isMap(target)) {
-              push(depsMap.get(MAP_KEY_ITERATE_KEY))
+              run(depsMap.get(MAP_KEY_ITERATE_KEY))
             }
           }
           break
         case TriggerOpTypes.SET:
           if (isMap(target)) {
-            push(depsMap.get(ITERATE_KEY))
+            run(depsMap.get(ITERATE_KEY))
           }
           break
       }
     }
   }
 
-  startBatch()
-  for (const dep of deps) {
-    if (__DEV__) {
-      dep.trigger({
-        target,
-        type,
-        key,
-        newValue,
-        oldValue,
-        oldTarget,
-      })
-    } else {
-      dep.trigger()
-    }
-  }
   endBatch()
 }
 
