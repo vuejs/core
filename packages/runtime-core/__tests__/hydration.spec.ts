@@ -1913,7 +1913,7 @@ describe('SSR hydration', () => {
         createSSRApp({ template: '<textarea>\n</textarea>' }),
       )
       mountWithHydration(html, () => h('textarea', null, '\n'))
-      expect(`Hydration attribute mismatch`).not.toHaveBeenWarned()
+      expect(`Hydration text content mismatch`).not.toHaveBeenWarned()
     })
 
     test('boolean attr handling', () => {
