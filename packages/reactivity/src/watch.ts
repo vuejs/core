@@ -218,19 +218,11 @@ export function watch(
     }
   }
 
-  if (once) {
-    if (cb) {
-      const _cb = cb
-      cb = (...args) => {
-        _cb(...args)
-        watchHandle()
-      }
-    } else {
-      const _getter = getter
-      getter = () => {
-        _getter()
-        watchHandle()
-      }
+  if (once && cb) {
+    const _cb = cb
+    cb = (...args) => {
+      _cb(...args)
+      watchHandle()
     }
   }
 
