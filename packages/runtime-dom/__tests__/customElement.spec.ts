@@ -11,6 +11,7 @@ import {
   h,
   inject,
   nextTick,
+  onMounted,
   provide,
   ref,
   render,
@@ -978,8 +979,16 @@ describe('defineCustomElement', () => {
     })
 
     test('render nested customElement w/ shadowRoot false', async () => {
+      const calls: string[] = []
+
       const Child = defineCustomElement(
         {
+          setup() {
+            calls.push('child rending')
+            onMounted(() => {
+              calls.push('child mounted')
+            })
+          },
           render() {
             return renderSlot(this.$slots, 'default')
           },
@@ -990,6 +999,12 @@ describe('defineCustomElement', () => {
 
       const Parent = defineCustomElement(
         {
+          setup() {
+            calls.push('parent rending')
+            onMounted(() => {
+              calls.push('parent mounted')
+            })
+          },
           render() {
             return renderSlot(this.$slots, 'default')
           },
@@ -1016,6 +1031,12 @@ describe('defineCustomElement', () => {
       expect(e.innerHTML).toBe(
         `<my-child data-v-app=""><span>default</span></my-child>`,
       )
+      expect(calls).toEqual([
+        'parent rending',
+        'parent mounted',
+        'child rending',
+        'child mounted',
+      ])
       app.unmount()
     })
 
