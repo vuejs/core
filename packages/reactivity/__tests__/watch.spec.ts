@@ -211,6 +211,25 @@ describe('watch', () => {
     expect(fn).toBeCalledTimes(1)
   })
 
+  test('watch async callback return cleanup function', async () => {
+    const fn = vi.fn()
+
+    const scope = new EffectScope()
+
+    scope.run(() => {
+      const source = ref(0)
+      watch(source, async () => fn)
+      source.value++
+    })
+
+    await nextTick()
+
+    scope.stop()
+    await nextTick()
+
+    expect(fn).toBeCalledTimes(1)
+  })
+
   test('watch effect return cleanup function', async () => {
     const fn = vi.fn()
 
@@ -231,5 +250,26 @@ describe('watch', () => {
     scope.stop()
     await nextTick()
     expect(fn).toBeCalledTimes(2)
+  })
+
+  test('watch effect async callback return cleanup function', async () => {
+    const fn = vi.fn()
+
+    const scope = new EffectScope()
+
+    scope.run(() => {
+      const source = ref(0)
+      watch(async () => {
+        void source.value
+        return fn
+      })
+    })
+
+    await nextTick()
+
+    scope.stop()
+    await nextTick()
+
+    expect(fn).toBeCalledTimes(1)
   })
 })

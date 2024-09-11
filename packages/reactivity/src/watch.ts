@@ -7,6 +7,7 @@ import {
   isMap,
   isObject,
   isPlainObject,
+  isPromise,
   isSet,
   remove,
 } from '@vue/shared'
@@ -191,12 +192,18 @@ export function watch(
         const currentEffect = activeWatcher
         activeWatcher = effect
         try {
-          const cleanup = call
+          const maybeCleanup = call
             ? call(source, WatchErrorCodes.WATCH_CALLBACK, [boundCleanup])
             : source(boundCleanup)
 
-          if (isFunction(cleanup)) {
-            boundCleanup(cleanup)
+          if (isFunction(maybeCleanup)) {
+            boundCleanup(maybeCleanup)
+          } else if (isPromise(maybeCleanup)) {
+            maybeCleanup.then(cleanup => {
+              if (isFunction(cleanup)) {
+                boundCleanup(cleanup)
+              }
+            })
           }
         } finally {
           activeWatcher = currentEffect
@@ -276,12 +283,18 @@ export function watch(
                 : oldValue,
             boundCleanup,
           ]
-          const cleanup = call
+          const maybeCleanup = call
             ? call(cb!, WatchErrorCodes.WATCH_CALLBACK, args)
             : // @ts-expect-error
               cb!(...args)
-          if (isFunction(cleanup)) {
-            boundCleanup(cleanup)
+          if (isFunction(maybeCleanup)) {
+            boundCleanup(maybeCleanup)
+          } else if (isPromise(maybeCleanup)) {
+            maybeCleanup.then(cleanup => {
+              if (isFunction(cleanup)) {
+                boundCleanup(cleanup)
+              }
+            })
           }
           oldValue = newValue
         } finally {
