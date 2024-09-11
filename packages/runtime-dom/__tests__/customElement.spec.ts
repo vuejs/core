@@ -984,7 +984,7 @@ describe('defineCustomElement', () => {
       const Child = defineCustomElement(
         {
           setup() {
-            calls.push('child rending')
+            calls.push('child rendering')
             onMounted(() => {
               calls.push('child mounted')
             })
@@ -1000,7 +1000,7 @@ describe('defineCustomElement', () => {
       const Parent = defineCustomElement(
         {
           setup() {
-            calls.push('parent rending')
+            calls.push('parent rendering')
             onMounted(() => {
               calls.push('parent mounted')
             })
@@ -1032,9 +1032,9 @@ describe('defineCustomElement', () => {
         `<my-child data-v-app=""><span>default</span></my-child>`,
       )
       expect(calls).toEqual([
-        'parent rending',
+        'parent rendering',
         'parent mounted',
-        'child rending',
+        'child rendering',
         'child mounted',
       ])
       app.unmount()
