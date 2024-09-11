@@ -124,6 +124,18 @@ export const isKnownSvgAttr: (key: string) => boolean = /*@__PURE__*/ makeMap(
 )
 
 /**
+ * Generated from https://developer.mozilla.org/en-US/docs/Web/MathML/Attribute
+ */
+export const isKnownMathMLAttr: (key: string) => boolean =
+  /*@__PURE__*/ makeMap(
+    `accent,accentunder,align,columnalign,columnlines,columnspacing,columnspan,` +
+      `depth,dir,display,displaystyle,encoding,fence,framespacing,height,href,id,linethickness,` +
+      `lspace,mathbackground,mathcolor,mathsize,mathvariant,maxsize,minsize,notation,` +
+      `rowalign,rowlines,rowspacing,rowspan,rspace,scriptlevel,separator,stretchy,` +
+      `symmetric,voffset,width,xmlns`,
+  )
+
+/**
  * Shared between server-renderer and runtime-core hydration logic
  */
 export function isRenderableAttrValue(value: unknown): boolean {
