@@ -123,6 +123,9 @@ export const isKnownSvgAttr: (key: string) => boolean = /*@__PURE__*/ makeMap(
     `xml:space,y,y1,y2,yChannelSelector,z,zoomAndPan`,
 )
 
+/**
+ * Generated from https://developer.mozilla.org/en-US/docs/Web/MathML/Attribute
+ */
 export const isKnownMathMLAttr: (key: string) => boolean =
   /*@__PURE__*/ makeMap(
     `accent,accentunder,actiontype,align,alignmentscope,altimg,altimg-height,` +
