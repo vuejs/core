@@ -1265,7 +1265,7 @@ export interface ComponentCustomElementInterface {
     shouldUpdate?: boolean,
   ): void
   /**
-   * Only effective when shadowRoot is false.
+   * @internal attached by the nested Teleport when shadowRoot is false.
    */
   _teleportTarget?: RendererElement
 }

@@ -976,8 +976,9 @@ describe('defineCustomElement', () => {
         `<span>default</span>text` + `<!---->` + `<div>fallback</div>`,
       )
     })
-    test('should render slots with nested customElement', async () => {
-      const Son = defineCustomElement(
+
+    test('render nested customElement w/ shadowRoot false', async () => {
+      const Child = defineCustomElement(
         {
           render() {
             return renderSlot(this.$slots, 'default')
@@ -985,7 +986,8 @@ describe('defineCustomElement', () => {
         },
         { shadowRoot: false },
       )
-      customElements.define('my-son', Son)
+      customElements.define('my-child', Child)
+
       const Parent = defineCustomElement(
         {
           render() {
@@ -1000,7 +1002,7 @@ describe('defineCustomElement', () => {
         render() {
           return h('my-parent', null, {
             default: () => [
-              h('my-son', null, {
+              h('my-child', null, {
                 default: () => [h('span', null, 'default')],
               }),
             ],
@@ -1009,17 +1011,17 @@ describe('defineCustomElement', () => {
       }
       const app = createApp(App)
       app.mount(container)
-      await new Promise(r => setTimeout(r))
+      await nextTick()
       const e = container.childNodes[0] as VueElement
       expect(e.innerHTML).toBe(
-        `<my-son data-v-app=""><span>default</span></my-son>`,
+        `<my-child data-v-app=""><span>default</span></my-child>`,
       )
       app.unmount()
     })
 
-    test('should work with Teleport', async () => {
+    test('render nested Teleport w/ shadowRoot false', async () => {
       const target = document.createElement('div')
-      const Y = defineCustomElement(
+      const Child = defineCustomElement(
         {
           render() {
             return h(
@@ -1033,8 +1035,8 @@ describe('defineCustomElement', () => {
         },
         { shadowRoot: false },
       )
-      customElements.define('my-y', Y)
-      const P = defineCustomElement(
+      customElements.define('my-el-teleport-child', Child)
+      const Parent = defineCustomElement(
         {
           render() {
             return renderSlot(this.$slots, 'default')
@@ -1042,13 +1044,13 @@ describe('defineCustomElement', () => {
         },
         { shadowRoot: false },
       )
-      customElements.define('my-p', P)
+      customElements.define('my-el-teleport-parent', Parent)
 
       const App = {
         render() {
-          return h('my-p', null, {
+          return h('my-el-teleport-parent', null, {
             default: () => [
-              h('my-y', null, {
+              h('my-el-teleport-child', null, {
                 default: () => [h('span', null, 'default')],
               }),
             ],
@@ -1057,7 +1059,7 @@ describe('defineCustomElement', () => {
       }
       const app = createApp(App)
       app.mount(container)
-      await new Promise(r => setTimeout(r))
+      await nextTick()
       expect(target.innerHTML).toBe(`<span>default</span>`)
       app.unmount()
     })

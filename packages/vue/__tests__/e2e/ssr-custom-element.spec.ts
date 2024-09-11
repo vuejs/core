@@ -78,7 +78,7 @@ test('ssr custom element hydration', async () => {
   await assertInteraction('my-element-async')
 })
 
-test('ssr custom element hydration with Teleport', async () => {
+test('work with Teleport (shadowRoot: false)', async () => {
   await setContent(
     `<div id='test'></div><my-p><my-y><span>default</span></my-y></my-p>`,
   )

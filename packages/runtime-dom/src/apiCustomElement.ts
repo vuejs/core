@@ -221,6 +221,11 @@ export class VueElement
    */
   _nonce: string | undefined = this._def.nonce
 
+  /**
+   * @internal
+   */
+  _teleportTarget?: HTMLElement
+
   private _connected = false
   private _resolved = false
   private _numberProps: Record<string, true> | null = null
@@ -237,11 +242,6 @@ export class VueElement
   private _childStyles?: Map<string, HTMLStyleElement[]>
   private _ob?: MutationObserver | null = null
   private _slots?: Record<string, Node[]>
-
-  /**
-   * Only effective when shadowRoot is false.
-   */
-  _teleportTarget?: HTMLElement
 
   constructor(
     /**
