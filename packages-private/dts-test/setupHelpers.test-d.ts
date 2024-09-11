@@ -58,6 +58,7 @@ describe('defineProps w/ type declaration + withDefaults', <T extends
       bool?: boolean
       boolAndUndefined: boolean | undefined
       foo?: T
+      baz?: unknown
     }>(),
     {
       number: 123,
@@ -68,6 +69,7 @@ describe('defineProps w/ type declaration + withDefaults', <T extends
       y: undefined,
       z: 'string',
       foo: '' as any,
+      baz: '',
     },
   )
 
