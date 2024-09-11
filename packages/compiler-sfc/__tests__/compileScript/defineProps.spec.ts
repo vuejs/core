@@ -64,7 +64,7 @@ const props = defineProps({ foo: String })
 </script>
     `)
     assertCode(content)
-    expect(content).toMatch(`export default /*#__PURE__*/_defineComponent({
+    expect(content).toMatch(`export default /*@__PURE__*/_defineComponent({
   props: { foo: String },
   setup(__props, { expose: __expose }) {`)
   })

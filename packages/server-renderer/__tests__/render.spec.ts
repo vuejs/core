@@ -81,6 +81,18 @@ function testRender(type: string, render: typeof renderToString) {
       expect(html).toBe(`<div>foo</div>`)
     })
 
+    test('warnings should be suppressed by app.config.warnHandler', async () => {
+      const app = createApp({
+        render() {
+          return h('div', this.foo)
+        },
+      })
+      app.config.warnHandler = vi.fn()
+      await render(app)
+      expect('not defined on instance').not.toHaveBeenWarned()
+      expect(app.config.warnHandler).toHaveBeenCalledTimes(1)
+    })
+
     describe('components', () => {
       test('vnode components', async () => {
         expect(

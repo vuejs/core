@@ -188,7 +188,7 @@ const isStringifiableAttr = (name: string, ns: Namespaces) => {
   )
 }
 
-const isNonStringifiable = /*#__PURE__*/ makeMap(
+const isNonStringifiable = /*@__PURE__*/ makeMap(
   `caption,thead,tr,th,tbody,td,tfoot,colgroup,col`,
 )
 
