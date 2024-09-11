@@ -108,7 +108,7 @@ export const stringifyStatic: HoistTransform = (children, context, parent) => {
 
       if (isParentCached) {
         ;((parent.codegenNode as VNodeCall).children as CacheExpression).value =
-          createArrayExpression([staticCall])
+          createArrayExpression([staticCall, ...children.slice(currentIndex)])
       } else {
         // replace the first node's hoisted expression with the static vnode call
         ;(currentChunk[0].codegenNode as CacheExpression).value = staticCall

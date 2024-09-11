@@ -122,6 +122,17 @@ describe('stringify static html', () => {
     expect(code).toMatchSnapshot()
   })
 
+  test('eligible content (elements > 20) + non-eligible content', () => {
+    const { code } = compileWithStringify(
+      `<div>${repeat(
+        `<span/>`,
+        StringifyThresholds.NODE_COUNT,
+      )}<div key="1">1</div></div>`,
+    )
+
+    expect(code).toMatchSnapshot()
+  })
+
   test('should work for multiple adjacent nodes', () => {
     const { ast, code } = compileWithStringify(
       `<div>${repeat(
