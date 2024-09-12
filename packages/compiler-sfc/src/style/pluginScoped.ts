@@ -233,16 +233,13 @@ function rewriteSelector(
 
   if (rule.nodes.some(node => node.type === 'rule')) {
     const deep = (rule as any).__deep
-    const decls = rule.nodes.filter(
-      node => node.type === 'decl' || node.type === 'atrule',
-    )
-
-    if (!deep && decls.length) {
-      for (const decl of decls) {
+    const nodes = rule.nodes
+    if (!deep && nodes.length) {
+      for (const decl of nodes) {
         rule.removeChild(decl)
       }
       const hostRule = new Rule({
-        nodes: decls,
+        nodes: nodes,
         selector: '&',
       })
       rule.prepend(hostRule)
