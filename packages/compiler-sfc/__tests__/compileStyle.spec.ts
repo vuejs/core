@@ -51,7 +51,7 @@ describe('SFC scoped CSS', () => {
           '    background-color: green;\n' +
           '  }\n' +
           ' .foo { color: red; }\n' +
-          '} \n',
+          '}',
       ),
     ).toMatch(
       `h1 {
