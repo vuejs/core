@@ -233,7 +233,7 @@ function rewriteSelector(
 
   if (rule.nodes.some(node => node.type === 'rule')) {
     const deep = (rule as any).__deep
-    const nodes = rule.nodes
+    const nodes = rule.nodes.filter(node => node.type !== 'rule')
     if (!deep && nodes.length) {
       for (const decl of nodes) {
         rule.removeChild(decl)
