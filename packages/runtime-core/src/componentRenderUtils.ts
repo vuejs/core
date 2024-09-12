@@ -241,6 +241,14 @@ export function renderComponentRoot(
     }
   }
 
+  // #5407
+  if (root.type === Fragment) {
+    if (isArray(root.children)) {
+      const singleRoot = filterSingleRoot(root.children)
+      if (singleRoot) root = singleRoot
+    }
+  }
+
   // inherit directives
   if (vnode.dirs) {
     if (__DEV__ && !isElementRoot(root)) {
@@ -251,12 +259,7 @@ export function renderComponentRoot(
     }
     // clone before mutating since the root may be a hoisted vnode
     root = cloneVNode(root, null, false, true)
-    if (root.type === Fragment) {
-      if (isArray(root.children)) {
-        const singleRoot = filterSingleRoot(root.children)
-        if (singleRoot) root = singleRoot
-      }
-    }
+
     root.dirs = root.dirs ? root.dirs.concat(vnode.dirs) : vnode.dirs
   }
   // inherit transition data
