@@ -180,15 +180,19 @@ const getCachedNode = (
 
 const dataAriaRE = /^(data|aria)-/
 const isStringifiableAttr = (name: string, ns: Namespaces) => {
-  return (
-    (ns === Namespaces.HTML
-      ? isKnownHtmlAttr(name)
-      : ns === Namespaces.SVG
-        ? isKnownSvgAttr(name)
-        : ns === Namespaces.MATH_ML
-          ? isKnownMathMLAttr(name)
-          : false) || dataAriaRE.test(name)
-  )
+  if (dataAriaRE.test(name)) {
+    return true
+  }
+  if (ns === Namespaces.HTML) {
+    return isKnownHtmlAttr(name)
+  }
+  if (ns === Namespaces.SVG) {
+    return isKnownSvgAttr(name)
+  }
+  if (ns === Namespaces.MATH_ML) {
+    return isKnownMathMLAttr(name)
+  }
+  return false
 }
 
 const isNonStringifiable = /*@__PURE__*/ makeMap(
