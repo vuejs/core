@@ -267,7 +267,7 @@ const KeepAliveImpl: ComponentOptions = {
       pendingCacheKey = null
 
       if (!slots.default) {
-        return null
+        return (current = null)
       }
 
       const children = slots.default()
@@ -350,7 +350,7 @@ const KeepAliveImpl: ComponentOptions = {
         keys.add(key)
         // prune oldest entry
         if (max && keys.size > parseInt(max as string, 10)) {
-          pruneCacheEntry(keys.values().next().value)
+          pruneCacheEntry(keys.values().next().value!)
         }
       }
       // avoid vnode being unmounted

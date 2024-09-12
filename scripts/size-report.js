@@ -1,20 +1,24 @@
+// @ts-check
 import path from 'node:path'
 import { markdownTable } from 'markdown-table'
 import prettyBytes from 'pretty-bytes'
 import { readdir } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
 
-interface SizeResult {
-  size: number
-  gzip: number
-  brotli: number
-}
+/**
+ * @typedef {Object} SizeResult
+ * @property {number} size
+ * @property {number} gzip
+ * @property {number} brotli
+ */
 
-interface BundleResult extends SizeResult {
-  file: string
-}
+/**
+ * @typedef {SizeResult & { file: string }} BundleResult
+ */
 
-type UsageResult = Record<string, SizeResult & { name: string }>
+/**
+ * @typedef {Record<string, SizeResult & { name: string }>} UsageResult
+ */
 
 const currDir = path.resolve('temp/size')
 const prevDir = path.resolve('temp/size-prev')
@@ -23,6 +27,9 @@ const sizeHeaders = ['Size', 'Gzip', 'Brotli']
 
 run()
 
+/**
+ * Runs the main process of rendering file and usage data
+ */
 async function run() {
   await renderFiles()
   await renderUsages()
@@ -30,32 +37,36 @@ async function run() {
   process.stdout.write(output)
 }
 
+/**
+ * Renders file sizes and diffs between current and previous versions
+ */
 async function renderFiles() {
-  const filterFiles = (files: string[]) =>
+  const filterFiles = files =>
     files.filter(file => file[0] !== '_' && !file.endsWith('.txt'))
 
   const curr = filterFiles(await readdir(currDir))
   const prev = existsSync(prevDir) ? filterFiles(await readdir(prevDir)) : []
   const fileList = new Set([...curr, ...prev])
 
-  const rows: string[][] = []
+  const rows = []
   for (const file of fileList) {
     const currPath = path.resolve(currDir, file)
     const prevPath = path.resolve(prevDir, file)
 
-    const curr = await importJSON<BundleResult>(currPath)
-    const prev = await importJSON<BundleResult>(prevPath)
+    const curr = await importJSON(currPath)
+    const prev = await importJSON(prevPath)
     const fileName = curr?.file || prev?.file || ''
 
     if (!curr) {
       rows.push([`~~${fileName}~~`])
-    } else
+    } else {
       rows.push([
         fileName,
         `${prettyBytes(curr.size)}${getDiff(curr.size, prev?.size)}`,
         `${prettyBytes(curr.gzip)}${getDiff(curr.gzip, prev?.gzip)}`,
         `${prettyBytes(curr.brotli)}${getDiff(curr.brotli, prev?.brotli)}`,
       ])
+    }
   }
 
   output += '### Bundles\n\n'
@@ -63,13 +74,13 @@ async function renderFiles() {
   output += '\n\n'
 }
 
+/**
+ * Renders usage data comparing current and previous usage results
+ */
 async function renderUsages() {
-  const curr = (await importJSON<UsageResult>(
-    path.resolve(currDir, '_usages.json'),
-  ))!
-  const prev = await importJSON<UsageResult>(
-    path.resolve(prevDir, '_usages.json'),
-  )
+  const curr = await importJSON(path.resolve(currDir, '_usages.json'))
+  const prev = await importJSON(path.resolve(prevDir, '_usages.json'))
+
   output += '\n### Usages\n\n'
 
   const data = Object.values(curr)
@@ -86,17 +97,31 @@ async function renderUsages() {
         `${prettyBytes(usage.brotli)}${diffBrotli}`,
       ]
     })
-    .filter((usage): usage is string[] => !!usage)
+    .filter(usage => !!usage)
 
   output += `${markdownTable([['Name', ...sizeHeaders], ...data])}\n\n`
 }
 
-async function importJSON<T>(path: string): Promise<T | undefined> {
-  if (!existsSync(path)) return undefined
-  return (await import(path, { assert: { type: 'json' } })).default
+/**
+ * Imports JSON data from a specified path
+ *
+ * @template T
+ * @param {string} filePath - Path to the JSON file
+ * @returns {Promise<T | undefined>} The JSON content or undefined if the file does not exist
+ */
+async function importJSON(filePath) {
+  if (!existsSync(filePath)) return undefined
+  return (await import(filePath, { assert: { type: 'json' } })).default
 }
 
-function getDiff(curr: number, prev?: number) {
+/**
+ * Calculates the difference between the current and previous sizes
+ *
+ * @param {number} curr - The current size
+ * @param {number} [prev] - The previous size
+ * @returns {string} The difference in pretty format
+ */
+function getDiff(curr, prev) {
   if (prev === undefined) return ''
   const diff = curr - prev
   if (diff === 0) return ''
