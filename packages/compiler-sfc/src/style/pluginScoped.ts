@@ -233,16 +233,12 @@ function rewriteSelector(
 
   if (rule.nodes.some(node => node.type === 'rule')) {
     const deep = (rule as any).__deep
-    const nodes = rule.nodes.filter(node => node.type !== 'rule')
-    if (!deep && nodes.length) {
-      for (const decl of nodes) {
-        rule.removeChild(decl)
+    if (!deep) {
+      extractAndWrapNodes(rule)
+      const atruleNodes = rule.nodes.filter(node => node.type === 'atrule')
+      for (const atnode of atruleNodes) {
+        extractAndWrapNodes(atnode)
       }
-      const hostRule = new Rule({
-        nodes: nodes,
-        selector: '&',
-      })
-      rule.prepend(hostRule)
     }
     shouldInject = deep
   }
@@ -284,6 +280,21 @@ function rewriteSelector(
 
 function isSpaceCombinator(node: selectorParser.Node) {
   return node.type === 'combinator' && /^\s+$/.test(node.value)
+}
+function extractAndWrapNodes(parentNode: Rule | AtRule) {
+  const nodes = (parentNode.nodes || []).filter(
+    node => node.type === 'decl' || node.type === 'comment',
+  )
+  if (nodes.length) {
+    for (const node of nodes) {
+      parentNode.removeChild(node)
+    }
+    const wrappedRule = new Rule({
+      nodes: nodes,
+      selector: '&',
+    })
+    parentNode.prepend(wrappedRule)
+  }
 }
 
 scopedPlugin.postcss = true

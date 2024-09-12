@@ -58,7 +58,9 @@ describe('SFC scoped CSS', () => {
 &[data-v-test] {
   color: red;
   /**background-color: pink; */
+}
 @media only screen and (max-width: 800px) {
+&[data-v-test] {
     background-color: green;
 }
 }
