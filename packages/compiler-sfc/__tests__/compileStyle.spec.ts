@@ -42,8 +42,27 @@ describe('SFC scoped CSS', () => {
   })
 
   test('nesting selector', () => {
-    expect(compileScoped(`h1 { color: red; .foo { color: red; } }`)).toMatch(
-      `h1 {\n&[data-v-test] { color: red;\n}\n.foo[data-v-test] { color: red;`,
+    expect(
+      compileScoped(
+        'h1 { \n' +
+          '  color: red; \n' +
+          '  /**background-color: pink; */ \n' +
+          '  @media only screen and (max-width: 800px) { \n' +
+          '    background-color: green; \n' +
+          '  } \n' +
+          ' .foo { color: red; }' +
+          '} \n',
+      ),
+    ).toMatch(
+      `h1 {
+&[data-v-test] { 
+  color: red; 
+  /**background-color: pink; */
+@media only screen and (max-width: 800px) { 
+    background-color: green;
+}}
+.foo[data-v-test] { color: red;
+}} `,
     )
   })
 
