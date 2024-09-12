@@ -242,7 +242,7 @@ export function renderComponentRoot(
   }
 
   // #5407
-  if (root.type === Fragment) {
+  if (root.patchFlag > 0 && root.type === Fragment) {
     if (isArray(root.children)) {
       const singleRoot = filterSingleRoot(root.children)
       if (singleRoot) root = singleRoot
