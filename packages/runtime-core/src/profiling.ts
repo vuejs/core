@@ -15,6 +15,7 @@ export function startMeasure(
   if (instance.appContext.config.performance && perf) {
     perf.mark(`vue-${type}-${instance.uid}`)
   }
+
   if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
     devtoolsPerfStart(instance, type, timer())
   }
