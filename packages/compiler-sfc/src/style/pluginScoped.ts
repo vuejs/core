@@ -282,7 +282,7 @@ function isSpaceCombinator(node: selectorParser.Node) {
   return node.type === 'combinator' && /^\s+$/.test(node.value)
 }
 function extractAndWrapNodes(parentNode: Rule | AtRule) {
-  if(!parentNode.nodes) return
+  if (!parentNode.nodes) return
   const nodes = parentNode.nodes.filter(
     node => node.type === 'decl' || node.type === 'comment',
   )
