@@ -277,7 +277,7 @@ export class VueElement
   }
 
   connectedCallback(): void {
-    // aviod resolving component if it's not connected
+    // avoid resolving component if it's not connected
     if (!this.isConnected) return
 
     if (!this.shadowRoot) {
@@ -609,7 +609,7 @@ export class VueElement
   }
 
   /**
-   * Only called when shaddowRoot is false
+   * Only called when shadowRoot is false
    */
   private _parseSlots() {
     const slots: VueElement['_slots'] = (this._slots = {})
@@ -623,7 +623,7 @@ export class VueElement
   }
 
   /**
-   * Only called when shaddowRoot is false
+   * Only called when shadowRoot is false
    */
   private _renderSlots() {
     const outlets = (this._teleportTarget || this).querySelectorAll('slot')
