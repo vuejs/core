@@ -1216,7 +1216,7 @@ function baseCreateRenderer(
 
       // Give it a placeholder if this is not hydration
       // TODO handle self-defined fallback
-      if (!initialVNode.el) {
+      if (!initialVNode.el || (__DEV__ && isHmrUpdating)) {
         const placeholder = (instance.subTree = createVNode(Comment))
         processCommentNode(null, placeholder, container!, anchor)
       }

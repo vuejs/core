@@ -31,6 +31,7 @@ import {
 } from '../warning'
 import { ErrorCodes, handleError } from '../errorHandling'
 import { NULL_DYNAMIC_COMPONENT } from '../helpers/resolveAssets'
+import { isHmrUpdating } from '../hmr'
 
 export interface SuspenseProps {
   onResolve?: () => void
@@ -685,7 +686,7 @@ function createSuspenseBoundary(
       if (isInPendingSuspense) {
         suspense.deps++
       }
-      const hydratedEl = instance.vnode.el
+      const hydratedEl = __DEV__ && isHmrUpdating ? null : instance.vnode.el
       instance
         .asyncDep!.catch(err => {
           handleError(err, instance, ErrorCodes.SETUP_FUNCTION)
