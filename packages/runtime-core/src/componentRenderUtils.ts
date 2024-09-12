@@ -235,7 +235,7 @@ export function renderComponentRoot(
   }
 
   // #5407
-  if (root.patchFlag > 0 && root.patchFlag & PatchFlags.DEV_ROOT_FRAGMENT) {
+  if (!__DEV__ && root.patchFlag & PatchFlags.DEV_ROOT_FRAGMENT) {
     const singleRoot = filterSingleRoot(root.children as VNodeArrayChildren)
     if (singleRoot) root = singleRoot
   }
