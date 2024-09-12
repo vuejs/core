@@ -267,27 +267,23 @@ function flushJobs(seen?: CountMap) {
 }
 
 function checkRecursiveUpdates(seen: CountMap, fn: SchedulerJob) {
-  if (!seen.has(fn)) {
-    seen.set(fn, 1)
-  } else {
-    const count = seen.get(fn)!
-    if (count > RECURSION_LIMIT) {
-      const instance = fn.i
-      const componentName = instance && getComponentName(instance.type)
-      handleError(
-        `Maximum recursive updates exceeded${
-          componentName ? ` in component <${componentName}>` : ``
-        }. ` +
-          `This means you have a reactive effect that is mutating its own ` +
-          `dependencies and thus recursively triggering itself. Possible sources ` +
-          `include component template, render function, updated hook or ` +
-          `watcher source function.`,
-        null,
-        ErrorCodes.APP_ERROR_HANDLER,
-      )
-      return true
-    } else {
-      seen.set(fn, count + 1)
-    }
+  const count = seen.get(fn) || 0
+  if (count > RECURSION_LIMIT) {
+    const instance = fn.i
+    const componentName = instance && getComponentName(instance.type)
+    handleError(
+      `Maximum recursive updates exceeded${
+        componentName ? ` in component <${componentName}>` : ``
+      }. ` +
+        `This means you have a reactive effect that is mutating its own ` +
+        `dependencies and thus recursively triggering itself. Possible sources ` +
+        `include component template, render function, updated hook or ` +
+        `watcher source function.`,
+      null,
+      ErrorCodes.APP_ERROR_HANDLER,
+    )
+    return true
   }
+  seen.set(fn, count + 1)
+  return false
 }

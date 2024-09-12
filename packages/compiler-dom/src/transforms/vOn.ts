@@ -28,10 +28,7 @@ const isNonKeyModifier = /*@__PURE__*/ makeMap(
 )
 // left & right could be mouse or key modifiers based on event type
 const maybeKeyModifier = /*@__PURE__*/ makeMap('left,right')
-const isKeyboardEvent = /*@__PURE__*/ makeMap(
-  `onkeyup,onkeydown,onkeypress`,
-  true,
-)
+const isKeyboardEvent = /*@__PURE__*/ makeMap(`onkeyup,onkeydown,onkeypress`)
 
 const resolveModifiers = (
   key: ExpressionNode,
@@ -64,7 +61,9 @@ const resolveModifiers = (
       // runtimeModifiers: modifiers that needs runtime guards
       if (maybeKeyModifier(modifier)) {
         if (isStaticExp(key)) {
-          if (isKeyboardEvent((key as SimpleExpressionNode).content)) {
+          if (
+            isKeyboardEvent((key as SimpleExpressionNode).content.toLowerCase())
+          ) {
             keyModifiers.push(modifier)
           } else {
             nonKeyModifiers.push(modifier)
@@ -133,7 +132,7 @@ export const transformOn: DirectiveTransform = (dir, node, context) => {
     if (
       keyModifiers.length &&
       // if event name is dynamic, always wrap with keys guard
-      (!isStaticExp(key) || isKeyboardEvent(key.content))
+      (!isStaticExp(key) || isKeyboardEvent(key.content.toLowerCase()))
     ) {
       handlerExp = createCallExpression(context.helper(V_ON_WITH_KEYS), [
         handlerExp,
