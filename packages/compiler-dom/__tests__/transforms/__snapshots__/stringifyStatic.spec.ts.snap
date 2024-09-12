@@ -84,17 +84,6 @@ return function render(_ctx, _cache) {
 }"
 `;
 
-exports[`stringify static html > should work on eligible content (elements > 20) + non-eligible content 1`] = `
-"const { createElementVNode: _createElementVNode, createStaticVNode: _createStaticVNode, openBlock: _openBlock, createElementBlock: _createElementBlock } = Vue
-
-return function render(_ctx, _cache) {
-  return (_openBlock(), _createElementBlock("div", null, _cache[0] || (_cache[0] = [
-    _createStaticVNode("<span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span>", 20),
-    _createElementVNode("div", { key: "1" }, "1", -1 /* HOISTED */)
-  ])))
-}"
-`;
-
 exports[`stringify static html > should work on eligible content (elements > 20) 1`] = `
 "const { createElementVNode: _createElementVNode, createStaticVNode: _createStaticVNode, openBlock: _openBlock, createElementBlock: _createElementBlock } = Vue
 
