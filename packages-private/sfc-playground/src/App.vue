@@ -62,6 +62,7 @@ const sfcOptions = computed(
       compilerOptions: {
         isCustomElement: (tag: string) =>
           tag === 'mjx-container' || tag.startsWith('custom-'),
+        comments: !productionMode.value,
       },
     },
   }),
