@@ -6,6 +6,7 @@ import {
 } from './component'
 import {
   Comment,
+  Fragment,
   type VNode,
   type VNodeArrayChildren,
   blockStack,
@@ -15,7 +16,13 @@ import {
   normalizeVNode,
 } from './vnode'
 import { ErrorCodes, handleError } from './errorHandling'
-import { PatchFlags, ShapeFlags, isModelListener, isOn } from '@vue/shared'
+import {
+  PatchFlags,
+  ShapeFlags,
+  isArray,
+  isModelListener,
+  isOn,
+} from '@vue/shared'
 import { warn } from './warning'
 import { isHmrUpdating } from './hmr'
 import type { NormalizedProps } from './componentProps'
@@ -244,6 +251,12 @@ export function renderComponentRoot(
     }
     // clone before mutating since the root may be a hoisted vnode
     root = cloneVNode(root, null, false, true)
+    if (root.type === Fragment) {
+      if (isArray(root.children)) {
+        const singleRoot = filterSingleRoot(root.children)
+        if (singleRoot) root = singleRoot
+      }
+    }
     root.dirs = root.dirs ? root.dirs.concat(vnode.dirs) : vnode.dirs
   }
   // inherit transition data
