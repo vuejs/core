@@ -6,6 +6,7 @@ import {
 } from './component'
 import {
   Comment,
+  Fragment,
   type VNode,
   type VNodeArrayChildren,
   blockStack,
@@ -235,7 +236,7 @@ export function renderComponentRoot(
   }
 
   // #5407
-  if (!__DEV__ && root.patchFlag & PatchFlags.DEV_ROOT_FRAGMENT) {
+  if (!__DEV__ && root.type === Fragment) {
     const singleRoot = filterSingleRoot(root.children as VNodeArrayChildren)
     if (singleRoot) root = singleRoot
   }
