@@ -14,7 +14,6 @@ import { warn } from './warning'
 import { ref } from '@vue/reactivity'
 import { ErrorCodes, handleError } from './errorHandling'
 import { isKeepAlive } from './components/KeepAlive'
-import { queueJob } from './scheduler'
 import { markAsyncBoundary } from './helpers/useId'
 import { type HydrationStrategy, forEachElement } from './hydrationStrategies'
 
@@ -210,7 +209,7 @@ export function defineAsyncComponent<
           if (instance.parent && isKeepAlive(instance.parent.vnode)) {
             // parent is keep-alive, force update so the loaded component's
             // name is taken into account
-            queueJob(instance.parent.update)
+            instance.parent.update()
           }
         })
         .catch(err => {
