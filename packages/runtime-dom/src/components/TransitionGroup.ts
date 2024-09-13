@@ -14,6 +14,7 @@ import {
   DeprecationTypes,
   Fragment,
   type SetupContext,
+  Text,
   type VNode,
   compatUtils,
   createVNode,
@@ -159,7 +160,7 @@ const TransitionGroupImpl: ComponentOptions = /*@__PURE__*/ decorate({
             child,
             resolveTransitionHooks(child, cssTransitionProps, state, instance),
           )
-        } else if (__DEV__) {
+        } else if (__DEV__ && child.type !== Text) {
           warn(`<TransitionGroup> children must be keyed.`)
         }
       }
