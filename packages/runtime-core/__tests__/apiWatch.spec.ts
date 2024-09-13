@@ -373,6 +373,56 @@ describe('api: watch', () => {
     expect(dummy).toBe(0)
   })
 
+  it('stopping the watcher (SSR)', async () => {
+    type SetBoolean = (v: boolean) => void
+    const setSSR = (ssr: boolean) => {
+      __SSR__ = ssr
+      __VUE_SSR_SETTERS__.forEach((setInSSRSetupState: SetBoolean) => {
+        setInSSRSetupState(ssr)
+      })
+    }
+    setSSR(true)
+
+    let dummy = 0
+    const count = ref<number>(1)
+    const captureValue = (value: number) => {
+      dummy = value
+    }
+    const watchCallback = vi.fn(newValue => {
+      captureValue(newValue)
+    })
+    const scenario = () => {
+      const Comp = defineComponent({
+        created() {
+          const getter = () => this.count
+          captureValue(getter()) // sets dummy to 1
+          const stop = this.$watch(getter, watchCallback)
+          stop()
+          this.count = 2 // shouldn't trigger side effect
+        },
+        render() {
+          return h('div', this.count)
+        },
+        setup() {
+          return { count }
+        },
+      })
+      const root = nodeOps.createElement('div')
+      render(h(Comp), root)
+    }
+
+    expect(scenario).not.toThrowError(/stop is not a function/)
+    expect(watchCallback).not.toHaveBeenCalled()
+    expect(dummy).toBe(1)
+    await nextTick()
+    count.value = 3 // shouldn't trigger side effect
+    await nextTick()
+    expect(watchCallback).not.toHaveBeenCalled()
+    expect(dummy).toBe(1)
+
+    setSSR(false)
+  })
+
   it('stopping the watcher (with source)', async () => {
     const state = reactive({ count: 0 })
     let dummy
