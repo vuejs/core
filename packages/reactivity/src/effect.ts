@@ -1,7 +1,7 @@
 import { extend, hasChanged } from '@vue/shared'
 import type { ComputedRefImpl } from './computed'
 import type { TrackOpTypes, TriggerOpTypes } from './constants'
-import { type Dep, globalVersion } from './dep'
+import { type Link, globalVersion } from './dep'
 import { activeEffectScope } from './effectScope'
 import { warn } from './warning'
 
@@ -70,41 +70,6 @@ export interface Subscriber extends DebuggerOptions {
    * @internal
    */
   notify(): void
-}
-
-/**
- * Represents a link between a source (Dep) and a subscriber (Effect or Computed).
- * Deps and subs have a many-to-many relationship - each link between a
- * dep and a sub is represented by a Link instance.
- *
- * A Link is also a node in two doubly-linked lists - one for the associated
- * sub to track all its deps, and one for the associated dep to track all its
- * subs.
- *
- * @internal
- */
-export interface Link {
-  dep: Dep
-  sub: Subscriber
-
-  /**
-   * - Before each effect run, all previous dep links' version are reset to -1
-   * - During the run, a link's version is synced with the source dep on access
-   * - After the run, links with version -1 (that were never used) are cleaned
-   *   up
-   */
-  version: number
-
-  /**
-   * Pointers for doubly-linked lists
-   */
-  nextDep?: Link
-  prevDep?: Link
-
-  nextSub?: Link
-  prevSub?: Link
-
-  prevActiveLink?: Link
 }
 
 const pausedQueueEffects = new WeakSet<ReactiveEffect>()
