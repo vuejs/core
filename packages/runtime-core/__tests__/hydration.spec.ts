@@ -1710,6 +1710,23 @@ describe('SSR hydration', () => {
       expect(`Hydration text content mismatch`).toHaveBeenWarned()
     })
 
+    // #7775
+    test('use unescapeHtml when vnode is of text type', () => {
+      const { container: styleContainer } = mountWithHydration(
+        `<style>&quot;test&quot;\n\r</style>`,
+        () => h('style', '"test"'),
+      )
+      expect(styleContainer.innerHTML).toBe('<style>"test"</style>')
+      expect(`Hydration text content mismatch`).not.toHaveBeenWarned()
+
+      const { container: pContainer } = mountWithHydration(
+        `<p>&quot;test&quot;\n\r</p>`,
+        () => h('p', '"test"'),
+      )
+      expect(pContainer.innerHTML).toBe('<p>"test"</p>')
+      expect(`Hydration text content mismatch`).not.toHaveBeenWarned()
+    })
+
     test('not enough children', () => {
       const { container } = mountWithHydration(`<div></div>`, () =>
         h('div', [h('span', 'foo'), h('span', 'bar')]),

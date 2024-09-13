@@ -30,6 +30,7 @@ import {
   normalizeClass,
   normalizeStyle,
   stringifyStyle,
+  unescapeHtml,
 } from '@vue/shared'
 import { type RendererInternals, needTransition } from './renderer'
 import { setRef } from './rendererTemplateRef'
@@ -180,17 +181,24 @@ export function createHydrationFunctions(
           }
         } else {
           if ((node as Text).data !== vnode.children) {
-            ;(__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
-              warn(
-                `Hydration text mismatch in`,
-                node.parentNode,
-                `\n  - rendered on server: ${JSON.stringify(
-                  (node as Text).data,
-                )}` +
-                  `\n  - expected on client: ${JSON.stringify(vnode.children)}`,
-              )
-            logMismatchError()
-            ;(node as Text).data = vnode.children as string
+            let dataContent = (node as Text).data.replace(/[\r\n]+/g, '')
+            let vnodeChildren = (vnode.children as string).replace(
+              /[\r\n]+/g,
+              '',
+            )
+            if (unescapeHtml(dataContent) !== unescapeHtml(vnodeChildren)) {
+              ;(__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
+                warn(
+                  `Hydration text mismatch in`,
+                  node.parentNode,
+                  `\n  - rendered on server: ${JSON.stringify(
+                    (node as Text).data,
+                  )}` +
+                    `\n  - expected on client: ${JSON.stringify(vnode.children)}`,
+                )
+              logMismatchError()
+              ;(node as Text).data = vnode.children as string
+            }
           }
           nextNode = nextSibling(node)
         }
@@ -441,7 +449,12 @@ export function createHydrationFunctions(
         }
       } else if (shapeFlag & ShapeFlags.TEXT_CHILDREN) {
         if (el.textContent !== vnode.children) {
-          if (!isMismatchAllowed(el, MismatchTypes.TEXT)) {
+          let textContent = (el.textContent as string).replace(/[\r\n]+/g, '')
+          let vnodeChildren = (vnode.children as string).replace(/[\r\n]+/g, '')
+          if (
+            !isMismatchAllowed(el, MismatchTypes.TEXT) &&
+            unescapeHtml(textContent) !== unescapeHtml(vnodeChildren)
+          ) {
             ;(__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
               warn(
                 `Hydration text content mismatch on`,
