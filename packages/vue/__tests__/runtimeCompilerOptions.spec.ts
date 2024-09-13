@@ -1,4 +1,4 @@
-import { createApp } from 'vue'
+import { createApp, nextTick, ref } from 'vue'
 
 describe('config.compilerOptions', () => {
   test('isCustomElement', () => {
@@ -74,6 +74,40 @@ describe('per-component compilerOptions', () => {
     app.mount(root)
     expect(root.innerHTML).toBe('<div></div><!--test--><div></div>')
     __DEV__ = true
+  })
+
+  test('fragment with comments and directives', async () => {
+    const mounted = vi.fn()
+    const unmounted = vi.fn()
+    const foobar = {
+      mounted,
+      unmounted,
+    }
+    const show = ref(true)
+    const app = createApp({
+      directives: {
+        foobar,
+      },
+      components: {
+        WithCommentNode: {
+          template: `<!-- Comment Node --><h1>With comment node</h1>`,
+        },
+        WithoutCommentNode: {
+          template: `<h1>Without comment node</h1>`,
+        },
+      },
+      setup() {
+        return { show }
+      },
+      template: `<with-comment-node v-foobar v-if="show"></with-comment-node>
+      <without-comment-node v-foobar v-if="show"></without-comment-node>`,
+    })
+    const root = document.createElement('div')
+    app.mount(root)
+    expect(mounted).toHaveBeenCalledTimes(2)
+    show.value = false
+    await nextTick()
+    expect(unmounted).toHaveBeenCalledTimes(2)
   })
 
   test('whitespace', () => {
