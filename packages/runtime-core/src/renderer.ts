@@ -2105,7 +2105,11 @@ function baseCreateRenderer(
     let shouldInvokeDirs = shapeFlag & ShapeFlags.ELEMENT && dirs
     // #5407
     let root: VNode | undefined = undefined
-    if (__DEV__ && vnode.type === Fragment) {
+    if (
+      __DEV__ &&
+      vnode.patchFlag > 0 &&
+      vnode.patchFlag & PatchFlags.DEV_ROOT_FRAGMENT
+    ) {
       const singleRoot = filterSingleRoot(vnode.children as VNodeArrayChildren)
       if (singleRoot) {
         root = singleRoot
