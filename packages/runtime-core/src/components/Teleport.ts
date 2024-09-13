@@ -119,6 +119,9 @@ export const TeleportImpl = {
         // Teleport *always* has Array children. This is enforced in both the
         // compiler and vnode children normalization.
         if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
+          if (parentComponent && parentComponent.isCE) {
+            parentComponent.ce!._teleportTarget = container
+          }
           mountChildren(
             children as VNodeArrayChildren,
             container,
