@@ -330,7 +330,7 @@ export class VueElement
         }
         // unmount
         this._app && this._app.unmount()
-        this._instance!.ce = undefined
+        if (this._instance) this._instance.ce = undefined
         this._app = this._instance = null
       }
     })
