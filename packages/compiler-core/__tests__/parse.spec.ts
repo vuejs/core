@@ -2369,6 +2369,7 @@ describe('compiler: parse', () => {
     test('should remove leading newline character immediately following the pre element start tag', () => {
       const ast = parse(`<pre>\n  foo  bar  </pre>`, {
         isPreTag: tag => tag === 'pre',
+        isIgnoreNewlineTag: tag => tag === 'pre',
       })
       expect(ast.children).toHaveLength(1)
       const preElement = ast.children[0] as ElementNode

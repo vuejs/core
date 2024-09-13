@@ -72,6 +72,7 @@ export const defaultParserOptions: MergedParserOptions = {
   getNamespace: () => Namespaces.HTML,
   isVoidTag: NO,
   isPreTag: NO,
+  isIgnoreNewlineTag: NO,
   isCustomElement: NO,
   onError: defaultOnError,
   onWarn: defaultOnWarn,
@@ -633,7 +634,7 @@ function onCloseTag(el: ElementNode, end: number, isImplied = false) {
   }
 
   // refine element type
-  const { tag, ns } = el
+  const { tag, ns, children } = el
   if (!inVPre) {
     if (tag === 'slot') {
       el.tagType = ElementTypes.SLOT
@@ -646,8 +647,18 @@ function onCloseTag(el: ElementNode, end: number, isImplied = false) {
 
   // whitespace management
   if (!tokenizer.inRCDATA) {
-    el.children = condenseWhitespace(el.children, el.tag)
+    el.children = condenseWhitespace(children, tag)
   }
+
+  if (ns === Namespaces.HTML && currentOptions.isIgnoreNewlineTag(tag)) {
+    // remove leading newline for <textarea> and <pre> per html spec
+    // https://html.spec.whatwg.org/multipage/parsing.html#parsing-main-inbody
+    const first = children[0]
+    if (first && first.type === NodeTypes.TEXT) {
+      first.content = first.content.replace(/^\r?\n/, '')
+    }
+  }
+
   if (ns === Namespaces.HTML && currentOptions.isPreTag(tag)) {
     inPre--
   }
@@ -867,14 +878,6 @@ function condenseWhitespace(
         // in the DOM
         node.content = node.content.replace(windowsNewlineRE, '\n')
       }
-    }
-  }
-  if (inPre && tag && currentOptions.isPreTag(tag)) {
-    // remove leading newline per html spec
-    // https://html.spec.whatwg.org/multipage/grouping-content.html#the-pre-element
-    const first = nodes[0]
-    if (first && first.type === NodeTypes.TEXT) {
-      first.content = first.content.replace(/^\r?\n/, '')
     }
   }
   return removedWhitespace ? nodes.filter(Boolean) : nodes
