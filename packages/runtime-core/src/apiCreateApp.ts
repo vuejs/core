@@ -51,13 +51,18 @@ export interface App<HostElement = any> {
     Value = any,
     Modifiers extends string = string,
     Arg extends string = string,
-  >(name: string): Directive<HostElement, Value, Modifiers, Arg> | undefined
+  >(
+    name: string,
+  ): Directive<HostElement, Value, Modifiers, Arg> | undefined
   directive<
     HostElement = any,
     Value = any,
     Modifiers extends string = string,
     Arg extends string = string,
-  >(name: string, directive: Directive<HostElement, Value, Modifiers, Arg>): this
+  >(
+    name: string,
+    directive: Directive<HostElement, Value, Modifiers, Arg>,
+  ): this
   mount(
     rootContainer: HostElement | string,
     /**
