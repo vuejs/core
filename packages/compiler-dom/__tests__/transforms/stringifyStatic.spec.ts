@@ -451,4 +451,18 @@ describe('stringify static html', () => {
     expect(ast.cached).toMatchObject([cachedArrayBailedMatcher()])
     expect(code).toMatchSnapshot()
   })
+
+  test('eligible content (elements > 20) + non-eligible content', () => {
+    const { code } = compileWithStringify(
+      `<div>${repeat(
+        `<span/>`,
+        StringifyThresholds.NODE_COUNT,
+      )}<div key="1">1</div>${repeat(
+        `<span/>`,
+        StringifyThresholds.NODE_COUNT,
+      )}</div>`,
+    )
+
+    expect(code).toMatchSnapshot()
+  })
 })

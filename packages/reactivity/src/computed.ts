@@ -3,14 +3,13 @@ import {
   type DebuggerEvent,
   type DebuggerOptions,
   EffectFlags,
-  type Link,
   type Subscriber,
   activeSub,
   refreshComputed,
 } from './effect'
 import type { Ref } from './ref'
 import { warn } from './warning'
-import { Dep, globalVersion } from './dep'
+import { Dep, type Link, globalVersion } from './dep'
 import { ReactiveFlags, TrackOpTypes } from './constants'
 
 declare const ComputedRefSymbol: unique symbol
