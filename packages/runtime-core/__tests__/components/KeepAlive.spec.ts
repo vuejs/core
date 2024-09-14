@@ -954,7 +954,7 @@ describe('KeepAlive', () => {
     expect(spyUnmounted).toHaveBeenCalledTimes(4)
   })
 
-  // #1513
+  // #1511
   test('should work with cloned root due to scopeId / fallthrough attrs', async () => {
     const viewRef = ref('one')
     const instanceRef = ref<any>(null)
