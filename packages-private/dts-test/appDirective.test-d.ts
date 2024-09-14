@@ -9,8 +9,8 @@ app.directive<HTMLElement, string, 'prevent' | 'stop', 'arg1' | 'arg2'>(
     mounted(el, binding) {
       expectType<HTMLElement>(el)
       expectType<string>(binding.value)
-      expectType<{ prevent?: true; stop?: true }>(binding.modifiers)
-      expectType<'arg1' | 'arg2'>(binding.arg)
+      expectType<{ prevent: boolean; stop: boolean }>(binding.modifiers)
+      expectType<'arg1' | 'arg2'>(binding.arg!)
 
       // @ts-expect-error not any
       expectType<number>(binding.value)
