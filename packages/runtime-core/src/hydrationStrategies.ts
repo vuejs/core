@@ -102,7 +102,10 @@ export const hydrateOnInteraction: HydrationStrategyFactory<
     return teardown
   }
 
-export function forEachElement(node: Node, cb: (el: Element) => void | false): void {
+export function forEachElement(
+  node: Node,
+  cb: (el: Element) => void | false,
+): void {
   // fragment
   if (isComment(node) && node.data === '[') {
     let depth = 1
