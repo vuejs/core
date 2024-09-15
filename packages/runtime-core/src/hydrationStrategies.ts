@@ -4,16 +4,24 @@ import { DOMNodeTypes, isComment } from './hydration'
 // https://github.com/nuxt/nuxt/blob/main/packages/nuxt/src/app/compat/idle-callback.ts
 // Polyfills for Safari support
 // https://caniuse.com/requestidlecallback
-const requestIdleCallback: Window['requestIdleCallback'] = globalThis.requestIdleCallback || ((cb) => {
-  const start = Date.now()
-  const idleDeadline = {
-    didTimeout: false,
-    timeRemaining: () => Math.max(0, 50 - (Date.now() - start)),
-  }
-  return setTimeout(() => { cb(idleDeadline) }, 1)
-})
+const requestIdleCallback: Window['requestIdleCallback'] =
+  globalThis.requestIdleCallback ||
+  (cb => {
+    const start = Date.now()
+    const idleDeadline = {
+      didTimeout: false,
+      timeRemaining: () => Math.max(0, 50 - (Date.now() - start)),
+    }
+    return setTimeout(() => {
+      cb(idleDeadline)
+    }, 1)
+  })
 
-const cancelIdleCallback: Window['cancelIdleCallback'] = globalThis.cancelIdleCallback || ((id) => { clearTimeout(id) })
+const cancelIdleCallback: Window['cancelIdleCallback'] =
+  globalThis.cancelIdleCallback ||
+  (id => {
+    clearTimeout(id)
+  })
 
 /**
  * A lazy hydration strategy for async components.
