@@ -311,8 +311,9 @@ function isDirty(sub: Subscriber): boolean {
   for (let link = sub.deps; link; link = link.nextDep) {
     if (
       link.dep.version !== link.version ||
-      (link.dep.computed && refreshComputed(link.dep.computed)) ||
-      link.dep.version !== link.version
+      (link.dep.computed &&
+        (refreshComputed(link.dep.computed) ||
+          link.dep.version !== link.version))
     ) {
       return true
     }
