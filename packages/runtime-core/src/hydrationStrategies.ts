@@ -51,7 +51,7 @@ export const hydrateOnVisible: HydrationStrategyFactory<
     if (elementIsVisibleInViewport(el)) {
       hydrate()
       ob.disconnect()
-      return () => {}
+      return false
     }
     ob.observe(el)
   })
