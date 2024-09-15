@@ -1006,7 +1006,7 @@ describe('reactivity/computed', () => {
     expect(serializeInner(root)).toBe(`<button>Step</button><p>Step 2</p>`)
   })
 
-  it('should invoke computed', () => {
+  it('manual trigger computed', () => {
     const cValue = computed(() => 1)
     triggerRef(cValue)
     expect(cValue.value).toBe(1)
