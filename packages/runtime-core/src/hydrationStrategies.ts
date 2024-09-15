@@ -109,7 +109,10 @@ export function forEachElement(node: Node, cb: (el: Element) => void): void {
     let next = node.nextSibling
     while (next) {
       if (next.nodeType === DOMNodeTypes.ELEMENT) {
-        cb(next as Element)
+        const result = cb(next as Element)
+        if (result === false) {
+          break
+        }
       } else if (isComment(next)) {
         if (next.data === ']') {
           if (--depth === 0) break
