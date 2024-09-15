@@ -12,7 +12,7 @@ import { DOMNodeTypes, isComment } from './hydration'
  */
 export type HydrationStrategy = (
   hydrate: () => void,
-  forEachElement: (cb: (el: Element) => any) => void | false,
+  forEachElement: (cb: (el: Element) => any) => void,
 ) => (() => void) | void
 
 export type HydrationStrategyFactory<Options> = (
