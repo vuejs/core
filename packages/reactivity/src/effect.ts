@@ -74,9 +74,11 @@ export interface Subscriber extends DebuggerOptions {
    */
   next?: Subscriber
   /**
+   * returning `true` indicates it's a computed that needs to call notify
+   * on its dep too
    * @internal
    */
-  notify(): void
+  notify(): true | void
 }
 
 const pausedQueueEffects = new WeakSet<ReactiveEffect>()

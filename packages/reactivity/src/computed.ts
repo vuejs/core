@@ -110,7 +110,7 @@ export class ComputedRefImpl<T = any> implements Subscriber {
   /**
    * @internal
    */
-  notify(): void {
+  notify(): true | void {
     this.flags |= EffectFlags.DIRTY
     if (
       !(this.flags & EffectFlags.NOTIFIED) &&
@@ -118,7 +118,7 @@ export class ComputedRefImpl<T = any> implements Subscriber {
       activeSub !== this
     ) {
       batch(this)
-      this.dep.notify()
+      return true
     } else if (__DEV__) {
       // TODO warn
     }

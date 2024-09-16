@@ -176,7 +176,12 @@ export class Dep {
         }
       }
       for (let link = this.subs; link; link = link.prevSub) {
-        link.sub.notify()
+        if (link.sub.notify()) {
+          // if notify() returns `true`, this is a computed. Also call notify
+          // on its dep - it's called here instead of inside computed's notify
+          // in order to reduce call stack depth.
+          ;(link.sub as ComputedRefImpl).dep.notify()
+        }
       }
     } finally {
       endBatch()
