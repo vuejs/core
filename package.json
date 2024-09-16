@@ -17,11 +17,11 @@
     "format": "prettier --write --cache .",
     "format-check": "prettier --check --cache .",
     "test": "vitest",
-    "test-unit": "vitest -c vitest.unit.config.ts",
-    "test-e2e": "node scripts/build.js vue -f global -d && vitest -c vitest.e2e.config.ts",
+    "test-unit": "vitest --project unit",
+    "test-e2e": "node scripts/build.js vue -f global -d && vitest --project e2e",
     "test-dts": "run-s build-dts test-dts-only",
     "test-dts-only": "tsc -p packages-private/dts-built-test/tsconfig.json && tsc -p ./packages-private/dts-test/tsconfig.test.json",
-    "test-coverage": "vitest run -c vitest.unit.config.ts --coverage",
+    "test-coverage": "vitest run --project unit --coverage",
     "test-bench": "vitest bench",
     "release": "node scripts/release.js",
     "changelog": "conventional-changelog -p angular -i CHANGELOG.md -s",
@@ -71,7 +71,7 @@
     "@types/node": "^20.16.5",
     "@types/semver": "^7.5.8",
     "@types/serve-handler": "^6.1.4",
-    "@vitest/coverage-v8": "^2.0.5",
+    "@vitest/coverage-v8": "^2.1.1",
     "@vue/consolidate": "1.0.0",
     "conventional-changelog-cli": "^5.0.0",
     "enquirer": "^2.4.1",
@@ -107,7 +107,7 @@
     "typescript": "~5.6.2",
     "typescript-eslint": "^8.5.0",
     "vite": "catalog:",
-    "vitest": "^2.0.5"
+    "vitest": "^2.1.1"
   },
   "pnpm": {
     "peerDependencyRules": {
