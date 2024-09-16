@@ -1,10 +1,11 @@
 import {
   type WatchOptions as BaseWatchOptions,
-  type ComputedRef,
   type DebuggerOptions,
   type ReactiveMarker,
-  type Ref,
+  type WatchCallback,
+  type WatchEffect,
   type WatchHandle,
+  type WatchSource,
   watch as baseWatch,
 } from '@vue/reactivity'
 import { type SchedulerJob, SchedulerJobFlags, queueJob } from './scheduler'
@@ -21,17 +22,14 @@ import { warn } from './warning'
 import type { ObjectWatchOptionItem } from './componentOptions'
 import { useSSRContext } from './helpers/useSsrContext'
 
-export type { WatchHandle, WatchStopHandle } from '@vue/reactivity'
-
-export type WatchEffect = (onCleanup: OnCleanup) => void
-
-export type WatchSource<T = any> = Ref<T, any> | ComputedRef<T> | (() => T)
-
-export type WatchCallback<V = any, OV = any> = (
-  value: V,
-  oldValue: OV,
-  onCleanup: OnCleanup,
-) => any
+export type {
+  WatchHandle,
+  WatchStopHandle,
+  WatchEffect,
+  WatchSource,
+  WatchCallback,
+  OnCleanup,
+} from '@vue/reactivity'
 
 type MaybeUndefined<T, I> = I extends true ? T | undefined : T
 
@@ -43,13 +41,11 @@ type MapSources<T, Immediate> = {
       : never
 }
 
-export type OnCleanup = (cleanupFn: () => void) => void
-
-export interface WatchOptionsBase extends DebuggerOptions {
+export interface WatchEffectOptions extends DebuggerOptions {
   flush?: 'pre' | 'post' | 'sync'
 }
 
-export interface WatchOptions<Immediate = boolean> extends WatchOptionsBase {
+export interface WatchOptions<Immediate = boolean> extends WatchEffectOptions {
   immediate?: Immediate
   deep?: boolean | number
   once?: boolean
@@ -58,7 +54,7 @@ export interface WatchOptions<Immediate = boolean> extends WatchOptionsBase {
 // Simple effect.
 export function watchEffect(
   effect: WatchEffect,
-  options?: WatchOptionsBase,
+  options?: WatchEffectOptions,
 ): WatchHandle {
   return doWatch(effect, null, options)
 }
@@ -183,11 +179,11 @@ function doWatch(
       // immediately watch or watchEffect
       baseWatchOptions.once = true
     } else {
-      return {
-        stop: NOOP,
-        resume: NOOP,
-        pause: NOOP,
-      } as WatchHandle
+      const watchStopHandle = () => {}
+      watchStopHandle.stop = NOOP
+      watchStopHandle.resume = NOOP
+      watchStopHandle.pause = NOOP
+      return watchStopHandle
     }
   }
 

@@ -851,4 +851,47 @@ describe('hot module replacement', () => {
 
     expect(serializeInner(root)).toBe(`<div>1</div><div>1</div>`)
   })
+
+  test('reload async child wrapped in Suspense + KeepAlive', async () => {
+    const id = 'async-child-reload'
+    const AsyncChild: ComponentOptions = {
+      __hmrId: id,
+      async setup() {
+        await nextTick()
+        return () => 'foo'
+      },
+    }
+    createRecord(id, AsyncChild)
+
+    const appId = 'test-app-id'
+    const App: ComponentOptions = {
+      __hmrId: appId,
+      components: { AsyncChild },
+      render: compileToFunction(`
+        <div>
+        <Suspense>
+          <KeepAlive>
+            <AsyncChild />
+          </KeepAlive>
+        </Suspense>
+      </div>
+      `),
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(App), root)
+    expect(serializeInner(root)).toBe('<div><!----></div>')
+    await timeout()
+    expect(serializeInner(root)).toBe('<div>foo</div>')
+
+    reload(id, {
+      __hmrId: id,
+      async setup() {
+        await nextTick()
+        return () => 'bar'
+      },
+    })
+    await timeout()
+    expect(serializeInner(root)).toBe('<div>bar</div>')
+  })
 })

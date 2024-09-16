@@ -13,7 +13,7 @@ const queue: (() => void)[] = []
 
 // a simple scheduler for testing purposes
 let isFlushPending = false
-const resolvedPromise = /*#__PURE__*/ Promise.resolve() as Promise<any>
+const resolvedPromise = /*@__PURE__*/ Promise.resolve() as Promise<any>
 const nextTick = (fn?: () => any) =>
   fn ? resolvedPromise.then(fn) : resolvedPromise
 
@@ -192,5 +192,21 @@ describe('watch', () => {
 
     scope.stop()
     expect(calls).toEqual(['sync 2', 'post 2'])
+  })
+
+  test('once option should be ignored by simple watch', async () => {
+    let dummy: any
+    const source = ref(0)
+    watch(
+      () => {
+        dummy = source.value
+      },
+      null,
+      { once: true },
+    )
+    expect(dummy).toBe(0)
+
+    source.value++
+    expect(dummy).toBe(1)
   })
 })

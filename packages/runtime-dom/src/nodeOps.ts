@@ -15,7 +15,7 @@ const tt =
 
 if (tt) {
   try {
-    policy = /*#__PURE__*/ tt.createPolicy('vue', {
+    policy = /*@__PURE__*/ tt.createPolicy('vue', {
       createHTML: val => val,
     })
   } catch (e: unknown) {
@@ -31,16 +31,15 @@ if (tt) {
 // This function merely perform a type-level trusted type conversion
 // for use in `innerHTML` assignment, etc.
 // Be careful of whatever value passed to this function.
-const unsafeToTrustedHTML: (value: string) => TrustedHTML | string = policy
-  ? val => policy.createHTML(val)
-  : val => val
+export const unsafeToTrustedHTML: (value: string) => TrustedHTML | string =
+  policy ? val => policy.createHTML(val) : val => val
 
 export const svgNS = 'http://www.w3.org/2000/svg'
 export const mathmlNS = 'http://www.w3.org/1998/Math/MathML'
 
 const doc = (typeof document !== 'undefined' ? document : null) as Document
 
-const templateContainer = doc && /*#__PURE__*/ doc.createElement('template')
+const templateContainer = doc && /*@__PURE__*/ doc.createElement('template')
 
 export const nodeOps: Omit<RendererOptions<Node, Element>, 'patchProp'> = {
   insert: (child, parent, anchor) => {

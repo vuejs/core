@@ -229,7 +229,7 @@ export type {
   MultiWatchSources,
   WatchEffect,
   WatchOptions,
-  WatchOptionsBase,
+  WatchEffectOptions as WatchOptionsBase,
   WatchCallback,
   WatchSource,
   WatchHandle,
@@ -400,6 +400,7 @@ import { renderComponentRoot } from './componentRenderUtils'
 import { setCurrentRenderingInstance } from './componentRenderContext'
 import { isVNode, normalizeVNode } from './vnode'
 import { ensureValidVNode } from './helpers/renderSlot'
+import { popWarningContext, pushWarningContext } from './warning'
 
 const _ssrUtils: {
   createComponentInstance: typeof createComponentInstance
@@ -410,6 +411,8 @@ const _ssrUtils: {
   normalizeVNode: typeof normalizeVNode
   getComponentPublicInstance: typeof getComponentPublicInstance
   ensureValidVNode: typeof ensureValidVNode
+  pushWarningContext: typeof pushWarningContext
+  popWarningContext: typeof popWarningContext
 } = {
   createComponentInstance,
   setupComponent,
@@ -419,6 +422,8 @@ const _ssrUtils: {
   normalizeVNode,
   getComponentPublicInstance,
   ensureValidVNode,
+  pushWarningContext,
+  popWarningContext,
 }
 
 /**

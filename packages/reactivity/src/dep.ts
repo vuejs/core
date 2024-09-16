@@ -4,7 +4,7 @@ import { type TrackOpTypes, TriggerOpTypes } from './constants'
 import {
   type DebuggerEventExtraInfo,
   EffectFlags,
-  type Link,
+  type Subscriber,
   activeSub,
   endBatch,
   shouldTrack,
@@ -17,6 +17,49 @@ import {
  * has changed.
  */
 export let globalVersion = 0
+
+/**
+ * Represents a link between a source (Dep) and a subscriber (Effect or Computed).
+ * Deps and subs have a many-to-many relationship - each link between a
+ * dep and a sub is represented by a Link instance.
+ *
+ * A Link is also a node in two doubly-linked lists - one for the associated
+ * sub to track all its deps, and one for the associated dep to track all its
+ * subs.
+ *
+ * @internal
+ */
+export class Link {
+  /**
+   * - Before each effect run, all previous dep links' version are reset to -1
+   * - During the run, a link's version is synced with the source dep on access
+   * - After the run, links with version -1 (that were never used) are cleaned
+   *   up
+   */
+  version: number
+
+  /**
+   * Pointers for doubly-linked lists
+   */
+  nextDep?: Link
+  prevDep?: Link
+  nextSub?: Link
+  prevSub?: Link
+  prevActiveLink?: Link
+
+  constructor(
+    public sub: Subscriber,
+    public dep: Dep,
+  ) {
+    this.version = dep.version
+    this.nextDep =
+      this.prevDep =
+      this.nextSub =
+      this.prevSub =
+      this.prevActiveLink =
+        undefined
+  }
+}
 
 /**
  * @internal
@@ -46,22 +89,13 @@ export class Dep {
   }
 
   track(debugInfo?: DebuggerEventExtraInfo): Link | undefined {
-    if (!activeSub || !shouldTrack) {
+    if (!activeSub || !shouldTrack || activeSub === this.computed) {
       return
     }
 
     let link = this.activeLink
     if (link === undefined || link.sub !== activeSub) {
-      link = this.activeLink = {
-        dep: this,
-        sub: activeSub,
-        version: this.version,
-        nextDep: undefined,
-        prevDep: undefined,
-        nextSub: undefined,
-        prevSub: undefined,
-        prevActiveLink: undefined,
-      }
+      link = this.activeLink = new Link(activeSub, this)
 
       // add the link to the activeEffect as a dep (as tail)
       if (!activeSub.deps) {
@@ -129,11 +163,7 @@ export class Dep {
         // original order at the end of the batch, but onTrigger hooks should
         // be invoked in original order here.
         for (let head = this.subsHead; head; head = head.nextSub) {
-          if (
-            __DEV__ &&
-            head.sub.onTrigger &&
-            !(head.sub.flags & EffectFlags.NOTIFIED)
-          ) {
+          if (head.sub.onTrigger && !(head.sub.flags & EffectFlags.NOTIFIED)) {
             head.sub.onTrigger(
               extend(
                 {
@@ -146,7 +176,12 @@ export class Dep {
         }
       }
       for (let link = this.subs; link; link = link.prevSub) {
-        link.sub.notify()
+        if (link.sub.notify()) {
+          // if notify() returns `true`, this is a computed. Also call notify
+          // on its dep - it's called here instead of inside computed's notify
+          // in order to reduce call stack depth.
+          ;(link.sub as ComputedRefImpl).dep.notify()
+        }
       }
     } finally {
       endBatch()
@@ -250,11 +285,29 @@ export function trigger(
     return
   }
 
-  let deps: Dep[] = []
+  const run = (dep: Dep | undefined) => {
+    if (dep) {
+      if (__DEV__) {
+        dep.trigger({
+          target,
+          type,
+          key,
+          newValue,
+          oldValue,
+          oldTarget,
+        })
+      } else {
+        dep.trigger()
+      }
+    }
+  }
+
+  startBatch()
+
   if (type === TriggerOpTypes.CLEAR) {
     // collection being cleared
     // trigger all effects for target
-    deps = [...depsMap.values()]
+    depsMap.forEach(run)
   } else {
     const targetIsArray = isArray(target)
     const isArrayIndex = targetIsArray && isIntegerKey(key)
@@ -267,67 +320,50 @@ export function trigger(
           key === ARRAY_ITERATE_KEY ||
           (!isSymbol(key) && key >= newLength)
         ) {
-          deps.push(dep)
+          run(dep)
         }
       })
     } else {
-      const push = (dep: Dep | undefined) => dep && deps.push(dep)
-
       // schedule runs for SET | ADD | DELETE
       if (key !== void 0) {
-        push(depsMap.get(key))
+        run(depsMap.get(key))
       }
 
       // schedule ARRAY_ITERATE for any numeric key change (length is handled above)
       if (isArrayIndex) {
-        push(depsMap.get(ARRAY_ITERATE_KEY))
+        run(depsMap.get(ARRAY_ITERATE_KEY))
       }
 
       // also run for iteration key on ADD | DELETE | Map.SET
       switch (type) {
         case TriggerOpTypes.ADD:
           if (!targetIsArray) {
-            push(depsMap.get(ITERATE_KEY))
+            run(depsMap.get(ITERATE_KEY))
             if (isMap(target)) {
-              push(depsMap.get(MAP_KEY_ITERATE_KEY))
+              run(depsMap.get(MAP_KEY_ITERATE_KEY))
             }
           } else if (isArrayIndex) {
             // new index added to array -> length changes
-            push(depsMap.get('length'))
+            run(depsMap.get('length'))
           }
           break
         case TriggerOpTypes.DELETE:
           if (!targetIsArray) {
-            push(depsMap.get(ITERATE_KEY))
+            run(depsMap.get(ITERATE_KEY))
             if (isMap(target)) {
-              push(depsMap.get(MAP_KEY_ITERATE_KEY))
+              run(depsMap.get(MAP_KEY_ITERATE_KEY))
             }
           }
           break
         case TriggerOpTypes.SET:
           if (isMap(target)) {
-            push(depsMap.get(ITERATE_KEY))
+            run(depsMap.get(ITERATE_KEY))
           }
           break
       }
     }
   }
 
-  startBatch()
-  for (const dep of deps) {
-    if (__DEV__) {
-      dep.trigger({
-        target,
-        type,
-        key,
-        newValue,
-        oldValue,
-        oldTarget,
-      })
-    } else {
-      dep.trigger()
-    }
-  }
   endBatch()
 }
 
