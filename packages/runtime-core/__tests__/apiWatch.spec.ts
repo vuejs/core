@@ -37,6 +37,7 @@ import {
   toRef,
   triggerRef,
 } from '@vue/reactivity'
+import { renderToString } from '@vue/server-renderer'
 
 describe('api: watch', () => {
   it('effect', async () => {
@@ -374,15 +375,6 @@ describe('api: watch', () => {
   })
 
   it('stopping the watcher (SSR)', async () => {
-    type SetBoolean = (v: boolean) => void
-    const setSSR = (ssr: boolean) => {
-      __SSR__ = ssr
-      __VUE_SSR_SETTERS__.forEach((setInSSRSetupState: SetBoolean) => {
-        setInSSRSetupState(ssr)
-      })
-    }
-    setSSR(true)
-
     let dummy = 0
     const count = ref<number>(1)
     const captureValue = (value: number) => {
@@ -391,27 +383,25 @@ describe('api: watch', () => {
     const watchCallback = vi.fn(newValue => {
       captureValue(newValue)
     })
-    const scenario = () => {
-      const Comp = defineComponent({
-        created() {
-          const getter = () => this.count
-          captureValue(getter()) // sets dummy to 1
-          const stop = this.$watch(getter, watchCallback)
-          stop()
-          this.count = 2 // shouldn't trigger side effect
-        },
-        render() {
-          return h('div', this.count)
-        },
-        setup() {
-          return { count }
-        },
-      })
-      const root = nodeOps.createElement('div')
-      render(h(Comp), root)
-    }
-
-    expect(scenario).not.toThrowError(/stop is not a function/)
+    const Comp = defineComponent({
+      created() {
+        const getter = () => this.count
+        captureValue(getter()) // sets dummy to 1
+        const stop = this.$watch(getter, watchCallback)
+        stop()
+        this.count = 2 // shouldn't trigger side effect
+      },
+      render() {
+        return h('div', this.count)
+      },
+      setup() {
+        return { count }
+      },
+    })
+    let html
+    html = await renderToString(h(Comp))
+    // should not throw here
+    expect(html).toBe(`<div>2</div>`)
     expect(watchCallback).not.toHaveBeenCalled()
     expect(dummy).toBe(1)
     await nextTick()
@@ -419,8 +409,6 @@ describe('api: watch', () => {
     await nextTick()
     expect(watchCallback).not.toHaveBeenCalled()
     expect(dummy).toBe(1)
-
-    setSSR(false)
   })
 
   it('stopping the watcher (with source)', async () => {
