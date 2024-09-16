@@ -365,3 +365,25 @@ export function traverse(
   }
   return value
 }
+
+export const lazyWatch = (
+  source: any,
+  callback: (newVal: any, oldVal: any) => void,
+  options: { lazy?: boolean } = { lazy: true },
+) => {
+  if (options.lazy) {
+    // Variable to track whether the watcher has been initialized
+    let initialized = false
+
+    // Return a function that initializes the watcher when invoked
+    return () => {
+      if (!initialized) {
+        initialized = true // Set initialized to true after first call
+        watch(source, callback) // Set up the watcher
+      }
+    }
+  } else {
+    // If lazy is false, initialize the watcher immediately
+    watch(source, callback)
+  }
+}

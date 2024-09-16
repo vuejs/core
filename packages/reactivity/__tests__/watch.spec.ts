@@ -4,6 +4,7 @@ import {
   WatchErrorCodes,
   type WatchOptions,
   type WatchScheduler,
+  lazyWatch,
   onWatcherCleanup,
   ref,
   watch,
@@ -206,6 +207,115 @@ describe('watch', () => {
     )
     expect(dummy).toBe(0)
 
+    source.value++
+    expect(dummy).toBe(1)
+  })
+
+  test('lazyWatch should not trigger callback immediately if lazy option is true', () => {
+    const source = ref(0)
+    let triggered = false
+
+    // Create a lazyWatch instance
+    const lazy = lazyWatch(source, () => {
+      triggered = true
+    })
+
+    // At this point, the callback should not have been triggered
+    expect(triggered).toBe(false)
+
+    // Initialize the watcher
+    lazy()
+
+    // Change the source value
+    source.value++
+
+    // The callback should be triggered now
+    expect(triggered).toBe(true)
+  })
+
+  test('lazyWatch should trigger callback immediately if lazy option is false', () => {
+    const source = ref(0)
+    let triggered = false
+
+    // Create a lazyWatch instance with lazy option set to false
+    lazyWatch(
+      source,
+      () => {
+        triggered = true
+      },
+      { lazy: false },
+    )
+
+    // Change the source value
+    source.value++
+
+    // The callback should be triggered immediately
+    expect(triggered).toBe(true)
+  })
+
+  test('lazyWatch should handle multiple lazy initializations correctly', () => {
+    const source = ref(0)
+    let triggeredCount = 0
+
+    // Create a lazyWatch instance
+    const lazy = lazyWatch(source, () => {
+      triggeredCount++
+    })
+
+    // Initialize the watcher once
+    lazy()
+
+    // Change the source value
+    source.value++
+
+    // The callback should be triggered
+    expect(triggeredCount).toBe(1)
+
+    // Initialize the watcher again
+    lazy()
+
+    // Change the source value
+    source.value++
+
+    // The callback should still be triggered only once per initialization
+    expect(triggeredCount).toBe(2)
+  })
+
+  test('lazyWatch should handle multiple source refs with lazy option', () => {
+    const source1 = ref(0)
+    const source2 = ref(0)
+    let triggeredCount = 0
+
+    // Create lazyWatch instances for both sources
+    const lazy1 = lazyWatch(source1, () => {
+      triggeredCount++
+    })
+
+    const lazy2 = lazyWatch(source2, () => {
+      triggeredCount++
+    })
+
+    // Initialize the watchers
+    lazy1()
+    lazy2()
+
+    // Change both source values
+    source1.value++
+    source2.value++
+
+    // The callback should be triggered twice
+    expect(triggeredCount).toBe(2)
+  })
+
+  // Continue with existing tests...
+
+  test('with callback', () => {
+    let dummy: any
+    const source = ref(0)
+    watch(source, () => {
+      dummy = source.value
+    })
+    expect(dummy).toBe(undefined)
     source.value++
     expect(dummy).toBe(1)
   })
