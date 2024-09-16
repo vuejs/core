@@ -77,7 +77,7 @@
     "enquirer": "^2.4.1",
     "esbuild": "^0.23.1",
     "esbuild-plugin-polyfill-node": "^0.3.0",
-    "eslint": "^9.9.1",
+    "eslint": "^9.10.0",
     "eslint-plugin-import-x": "^3.1.0",
     "eslint-plugin-vitest": "^0.5.4",
     "estree-walker": "catalog:",
@@ -105,7 +105,7 @@
     "todomvc-app-css": "^2.4.3",
     "tslib": "^2.7.0",
     "typescript": "~5.6.2",
-    "typescript-eslint": "^8.4.0",
+    "typescript-eslint": "^8.5.0",
     "vite": "catalog:",
     "vitest": "^2.0.5"
   },
