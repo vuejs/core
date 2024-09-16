@@ -1,6 +1,5 @@
-import { isString } from '@vue/shared'
+import { isString, getGlobalThis } from '@vue/shared'
 import { DOMNodeTypes, isComment } from './hydration'
-import { getGlobalThis } from '@vue/shared'
 
 const globalThis = getGlobalThis()
 // https://github.com/nuxt/nuxt/blob/main/packages/nuxt/src/app/compat/idle-callback.ts
