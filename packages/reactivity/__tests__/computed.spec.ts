@@ -23,6 +23,7 @@ import {
   ref,
   shallowRef,
   toRaw,
+  triggerRef,
 } from '../src'
 import { EffectFlags, pauseTracking, resetTracking } from '../src/effect'
 import type { ComputedRef, ComputedRefImpl } from '../src/computed'
@@ -1003,5 +1004,11 @@ describe('reactivity/computed', () => {
     triggerEvent(root.children[1] as TestElement, 'click')
     await nextTick()
     expect(serializeInner(root)).toBe(`<button>Step</button><p>Step 2</p>`)
+  })
+
+  it('manual trigger computed', () => {
+    const cValue = computed(() => 1)
+    triggerRef(cValue)
+    expect(cValue.value).toBe(1)
   })
 })

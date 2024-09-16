@@ -352,7 +352,12 @@ export function refreshComputed(computed: ComputedRefImpl): undefined {
   // and therefore tracks no deps, thus we cannot rely on the dirty check.
   // Instead, computed always re-evaluate and relies on the globalVersion
   // fast path above for caching.
-  if (dep.version > 0 && !computed.isSSR && !isDirty(computed)) {
+  if (
+    dep.version > 0 &&
+    !computed.isSSR &&
+    computed.deps &&
+    !isDirty(computed)
+  ) {
     computed.flags &= ~EffectFlags.RUNNING
     return
   }
