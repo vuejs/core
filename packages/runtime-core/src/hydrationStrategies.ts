@@ -5,7 +5,7 @@ const globalThis = getGlobalThis()
 // https://github.com/nuxt/nuxt/blob/main/packages/nuxt/src/app/compat/idle-callback.ts
 // Polyfills for Safari support
 // https://caniuse.com/requestidlecallback
-const requestIdleCallback: Window['requestIdleCallback'] =
+const requestIdleCallback: typeof globalThis.requestIdleCallback =
   globalThis.requestIdleCallback ||
   (cb => {
     const start = Date.now()
@@ -13,12 +13,10 @@ const requestIdleCallback: Window['requestIdleCallback'] =
       didTimeout: false,
       timeRemaining: () => Math.max(0, 50 - (Date.now() - start)),
     }
-    return setTimeout(() => {
-      cb
-    }, 1)
+    return setTimeout(cb, 1)
   })
 
-const cancelIdleCallback: Window['cancelIdleCallback'] =
+const cancelIdleCallback: typeof globalThis.cancelIdleCallback =
   globalThis.cancelIdleCallback ||
   (id => {
     clearTimeout(id)
