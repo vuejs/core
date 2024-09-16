@@ -1,4 +1,4 @@
-import { isString, getGlobalThis } from '@vue/shared'
+import { getGlobalThis, isString } from '@vue/shared'
 import { DOMNodeTypes, isComment } from './hydration'
 
 const globalThis = getGlobalThis()
