@@ -5,6 +5,7 @@ import {
   EffectFlags,
   type Subscriber,
   activeSub,
+  batch,
   refreshComputed,
 } from './effect'
 import type { Ref } from './ref'
@@ -111,8 +112,12 @@ export class ComputedRefImpl<T = any> implements Subscriber {
    */
   notify(): void {
     this.flags |= EffectFlags.DIRTY
-    // avoid infinite self recursion
-    if (activeSub !== this) {
+    if (
+      !(this.flags & EffectFlags.NOTIFIED) &&
+      // avoid infinite self recursion
+      activeSub !== this
+    ) {
+      batch(this)
       this.dep.notify()
     } else if (__DEV__) {
       // TODO warn

@@ -39,6 +39,9 @@ export interface ReactiveEffectRunner<T = any> {
 export let activeSub: Subscriber | undefined
 
 export enum EffectFlags {
+  /**
+   * ReactiveEffect only
+   */
   ACTIVE = 1 << 0,
   RUNNING = 1 << 1,
   TRACKING = 1 << 2,
@@ -69,6 +72,10 @@ export interface Subscriber extends DebuggerOptions {
   /**
    * @internal
    */
+  next?: Subscriber
+  /**
+   * @internal
+   */
   notify(): void
 }
 
@@ -92,7 +99,7 @@ export class ReactiveEffect<T = any>
   /**
    * @internal
    */
-  nextEffect?: ReactiveEffect = undefined
+  next?: Subscriber = undefined
   /**
    * @internal
    */
@@ -134,9 +141,7 @@ export class ReactiveEffect<T = any>
       return
     }
     if (!(this.flags & EffectFlags.NOTIFIED)) {
-      this.flags |= EffectFlags.NOTIFIED
-      this.nextEffect = batchedEffect
-      batchedEffect = this
+      batch(this)
     }
   }
 
@@ -226,7 +231,13 @@ export class ReactiveEffect<T = any>
 // }
 
 let batchDepth = 0
-let batchedEffect: ReactiveEffect | undefined
+let batchedSub: Subscriber | undefined
+
+export function batch(sub: Subscriber): void {
+  sub.flags |= EffectFlags.NOTIFIED
+  sub.next = batchedSub
+  batchedSub = sub
+}
 
 /**
  * @internal
@@ -245,16 +256,17 @@ export function endBatch(): void {
   }
 
   let error: unknown
-  while (batchedEffect) {
-    let e: ReactiveEffect | undefined = batchedEffect
-    batchedEffect = undefined
+  while (batchedSub) {
+    let e: Subscriber | undefined = batchedSub
+    batchedSub = undefined
     while (e) {
-      const next: ReactiveEffect | undefined = e.nextEffect
-      e.nextEffect = undefined
+      const next: Subscriber | undefined = e.next
+      e.next = undefined
       e.flags &= ~EffectFlags.NOTIFIED
       if (e.flags & EffectFlags.ACTIVE) {
         try {
-          e.trigger()
+          // ACTIVE flag is effect-only
+          ;(e as ReactiveEffect).trigger()
         } catch (err) {
           if (!error) error = err
         }
@@ -331,6 +343,7 @@ function isDirty(sub: Subscriber): boolean {
  * @internal
  */
 export function refreshComputed(computed: ComputedRefImpl): undefined {
+  computed.flags &= ~EffectFlags.NOTIFIED
   if (
     computed.flags & EffectFlags.TRACKING &&
     !(computed.flags & EffectFlags.DIRTY)
