@@ -1,6 +1,8 @@
 import { isString } from '@vue/shared'
 import { DOMNodeTypes, isComment } from './hydration'
+import { getGlobalThis } from '@vue/shared'
 
+const globalThis = getGlobalThis()
 // https://github.com/nuxt/nuxt/blob/main/packages/nuxt/src/app/compat/idle-callback.ts
 // Polyfills for Safari support
 // https://caniuse.com/requestidlecallback
@@ -13,7 +15,7 @@ const requestIdleCallback: Window['requestIdleCallback'] =
       timeRemaining: () => Math.max(0, 50 - (Date.now() - start)),
     }
     return setTimeout(() => {
-      cb(idleDeadline)
+      cb
     }, 1)
   })
 
