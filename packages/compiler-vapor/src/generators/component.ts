@@ -163,7 +163,9 @@ function genRawSlots(slots: IRSlots[], context: CodegenContext) {
     ...slots.map(slot =>
       slot.slotType === IRSlotType.STATIC
         ? genStaticSlots(slot, context)
-        : genDynamicSlot(slot, context, true),
+        : slot.slotType === IRSlotType.EXPRESSION
+          ? slot.slots.content
+          : genDynamicSlot(slot, context, true),
     ),
   )
 }
