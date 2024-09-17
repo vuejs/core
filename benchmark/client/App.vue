@@ -1,5 +1,12 @@
 <script setup lang="ts" vapor>
-import { ref, shallowRef } from '@vue/vapor'
+import {
+  ref,
+  shallowRef,
+  triggerRef,
+  watch,
+  type ShallowRef,
+  type WatchSource,
+} from '@vue/vapor'
 import { buildData } from './data'
 import { defer, wrap } from './profiling'
 
@@ -9,16 +16,14 @@ const selected = ref<number>()
 const rows = shallowRef<
   {
     id: number
-    label: string
+    label: ShallowRef<string>
   }[]
 >([])
 
-function setRows(update = rows.value.slice()) {
-  rows.value = update
-}
-
+// Bench Add: https://jsbench.me/45lzxprzmu/1
 const add = wrap('add', () => {
-  rows.value = rows.value.concat(buildData(1000))
+  rows.value.push(...buildData(1000))
+  triggerRef(rows)
 })
 
 const remove = wrap('remove', (id: number) => {
@@ -26,7 +31,7 @@ const remove = wrap('remove', (id: number) => {
     rows.value.findIndex(d => d.id === id),
     1,
   )
-  setRows()
+  triggerRef(rows)
 })
 
 const select = wrap('select', (id: number) => {
@@ -34,25 +39,24 @@ const select = wrap('select', (id: number) => {
 })
 
 const run = wrap('run', () => {
-  setRows(buildData())
+  rows.value = buildData()
   selected.value = undefined
 })
 
 const update = wrap('update', () => {
   const _rows = rows.value
-  for (let i = 0; i < _rows.length; i += 10) {
-    _rows[i].label += ' !!!'
+  for (let i = 0, len = _rows.length; i < len; i += 10) {
+    _rows[i].label.value += ' !!!'
   }
-  setRows()
 })
 
 const runLots = wrap('runLots', () => {
-  setRows(buildData(10000))
+  rows.value = buildData(10000)
   selected.value = undefined
 })
 
 const clear = wrap('clear', () => {
-  setRows([])
+  rows.value = []
   selected.value = undefined
 })
 
@@ -63,7 +67,7 @@ const swapRows = wrap('swap', () => {
     const d998 = _rows[998]
     _rows[1] = d998
     _rows[998] = d1
-    setRows()
+    triggerRef(rows)
   }
 })
 
@@ -74,6 +78,18 @@ async function bench() {
     await runLots()
   }
 }
+
+// Reduce the complexity of `selected` from O(n) to O(1).
+function createSelector(source: WatchSource) {
+  const cache: Record<keyof any, ShallowRef<boolean>> = {}
+  watch(source, (val, old) => {
+    if (old != undefined) cache[old]!.value = false
+    if (val != undefined) cache[val]!.value = true
+  })
+  return (id: keyof any) => (cache[id] ??= shallowRef(false)).value
+}
+
+const isSelected = createSelector(selected)
 </script>
 
 <template>
@@ -96,11 +112,11 @@ async function bench() {
       <tr
         v-for="row of rows"
         :key="row.id"
-        :class="{ danger: row.id === selected }"
+        :class="{ danger: isSelected(row.id) }"
       >
         <td>{{ row.id }}</td>
         <td>
-          <a @click="select(row.id)">{{ row.label }}</a>
+          <a @click="select(row.id)">{{ row.label.value }}</a>
         </td>
         <td>
           <button @click="remove(row.id)">x</button>

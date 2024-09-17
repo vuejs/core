@@ -1,3 +1,5 @@
+import { shallowRef } from '@vue/vapor'
+
 let ID = 1
 
 function _random(max: number) {
@@ -64,12 +66,13 @@ export function buildData(count = 1000) {
   for (let i = 0; i < count; i++)
     data.push({
       id: ID++,
-      label:
+      label: shallowRef(
         adjectives[_random(adjectives.length)] +
-        ' ' +
-        colours[_random(colours.length)] +
-        ' ' +
-        nouns[_random(nouns.length)],
+          ' ' +
+          colours[_random(colours.length)] +
+          ' ' +
+          nouns[_random(nouns.length)],
+      ),
     })
   return data
 }

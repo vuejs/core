@@ -4,6 +4,7 @@ export const version: string = __VERSION__
 export {
   // core
   type Ref,
+  type ShallowRef,
   type DebuggerEvent,
   TrackOpTypes,
   TriggerOpTypes,
