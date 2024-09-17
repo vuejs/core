@@ -86,6 +86,7 @@ export const hydrateOnInteraction: HydrationStrategyFactory<
   }
 
 export function forEachElement(node: Node, cb: (el: Element) => void): void {
+  // #11952
   if (isComment(node)) {
     // fragment
     if (node.data === '[') {
