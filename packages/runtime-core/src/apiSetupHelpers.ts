@@ -313,9 +313,6 @@ export function defineModel(): any {
 }
 
 type NotUndefined<T> = T extends undefined ? never : T
-type MappedOmit<T, K extends keyof any> = {
-  [P in keyof T as P extends K ? never : P]: T[P]
-}
 
 type InferDefaults<T> = {
   [K in keyof T]?: InferDefault<T, T[K]>
@@ -331,7 +328,7 @@ type PropsWithDefaults<
   T,
   Defaults extends InferDefaults<T>,
   BKeys extends keyof T,
-> = Readonly<MappedOmit<T, keyof Defaults>> & {
+> = Readonly<T> & {
   readonly [K in keyof Defaults as K extends keyof T
     ? K
     : never]-?: K extends keyof T
