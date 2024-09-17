@@ -54,7 +54,7 @@ const {
     count: {
       type: 'string',
       short: 'c',
-      default: '50',
+      default: '30',
     },
     noHeadless: {
       type: 'boolean',
@@ -216,6 +216,7 @@ async function doBench(browser, isVapor) {
   console.info('\n\nmode:', mode)
 
   const page = await browser.newPage()
+  page.emulateCPUThrottling(4)
   await page.goto(`http://localhost:${port}/${mode}`, {
     waitUntil: 'networkidle0',
   })
