@@ -186,8 +186,8 @@ importers:
   benchmark:
     dependencies:
       '@vitejs/plugin-vue':
-        specifier: npm:@vue-vapor/vite-plugin-vue@0.0.0-alpha.6
-        version: '@vue-vapor/vite-plugin-vue@0.0.0-alpha.6(vite@5.3.3(@types/node@20.16.5)(sass@1.78.0)(terser@5.31.6))(vue@3.5.6(typescript@5.6.2))'
+        specifier: https://pkg.pr.new/@vitejs/plugin-vue@vapor
+        version: https://pkg.pr.new/@vitejs/plugin-vue@vapor(vite@5.3.3(@types/node@20.16.5)(sass@1.78.0)(terser@5.31.6))(vue@3.5.6(typescript@5.6.2))
       connect:
         specifier: ^3.7.0
         version: 3.7.0
@@ -1524,6 +1524,14 @@ packages:
       vite: ^5.0.0
       vue: ^3.2.25
 
+  '@vitejs/plugin-vue@https://pkg.pr.new/@vitejs/plugin-vue@vapor':
+    resolution: {tarball: https://pkg.pr.new/@vitejs/plugin-vue@vapor}
+    version: 5.1.3
+    engines: {node: ^18.0.0 || >=20.0.0}
+    peerDependencies:
+      vite: ^5.0.0
+      vue: ^3.2.25
+
   '@vitest/coverage-v8@2.1.1':
     resolution: {integrity: sha512-md/A7A3c42oTT8JUHSqjP5uKTWJejzUW4jalpvs+rZ27gsURsMU8DEb+8Jf8C6Kj2gwfSHJqobDNBuoqlm0cFw==}
     peerDependencies:
@@ -1570,13 +1578,6 @@ packages:
 
   '@vue-vapor/vite-plugin-vue@0.0.0-alpha.4':
     resolution: {integrity: sha512-18LGTnk07uKIWZtYjpyH71PZWIMrwBwiVqjG8bCS5Q7ebISdTUP2N3Lx1vfQNSoGeBV8rxfekfu7XGXRTjJ9gQ==}
-    engines: {node: ^18.0.0 || >=20.0.0}
-    peerDependencies:
-      vite: ^5.0.0
-      vue: '*'
-
-  '@vue-vapor/vite-plugin-vue@0.0.0-alpha.6':
-    resolution: {integrity: sha512-V2aTQ7bkDXsoPvYIkTA54m3ypUXDIVpTFspn+ycuYcMfIY37cZ0ny6jm/afNY6k1DiaQ9JfAMBXAKzTBpu2B9A==}
     engines: {node: ^18.0.0 || >=20.0.0}
     peerDependencies:
       vite: ^5.0.0
@@ -4768,6 +4769,11 @@ snapshots:
       vite: 5.4.0(@types/node@20.16.5)(sass@1.78.0)(terser@5.31.6)
       vue: link:packages/vue
 
+  '@vitejs/plugin-vue@https://pkg.pr.new/@vitejs/plugin-vue@vapor(vite@5.3.3(@types/node@20.16.5)(sass@1.78.0)(terser@5.31.6))(vue@3.5.6(typescript@5.6.2))':
+    dependencies:
+      vite: 5.3.3(@types/node@20.16.5)(sass@1.78.0)(terser@5.31.6)
+      vue: 3.5.6(typescript@5.6.2)
+
   '@vitest/coverage-v8@2.1.1(vitest@2.1.1(@types/node@20.16.5)(@vitest/ui@2.1.1)(jsdom@25.0.0)(sass@1.78.0)(terser@5.31.6))':
     dependencies:
       '@ampproject/remapping': 2.3.0
@@ -4841,11 +4847,6 @@ snapshots:
     dependencies:
       vite: 5.2.9(@types/node@20.16.5)(sass@1.78.0)(terser@5.31.6)
       vue: link:packages/vue
-
-  '@vue-vapor/vite-plugin-vue@0.0.0-alpha.6(vite@5.3.3(@types/node@20.16.5)(sass@1.78.0)(terser@5.31.6))(vue@3.5.6(typescript@5.6.2))':
-    dependencies:
-      vite: 5.3.3(@types/node@20.16.5)(sass@1.78.0)(terser@5.31.6)
-      vue: 3.5.6(typescript@5.6.2)
 
   '@vue/compiler-core@3.5.6':
     dependencies:

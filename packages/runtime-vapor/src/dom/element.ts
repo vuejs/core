@@ -25,7 +25,10 @@ export function insert(
   parent: ParentNode,
   anchor: Node | null = null,
 ): void {
-  normalizeBlock(block).forEach(node => parent.insertBefore(node, anchor))
+  const nodes = normalizeBlock(block)
+  for (let i = 0; i < nodes.length; i++) {
+    parent.insertBefore(nodes[i], anchor)
+  }
 }
 
 export function prepend(parent: ParentNode, ...blocks: Block[]): void {
@@ -33,7 +36,10 @@ export function prepend(parent: ParentNode, ...blocks: Block[]): void {
 }
 
 export function remove(block: Block, parent: ParentNode): void {
-  normalizeBlock(block).forEach(node => parent.removeChild(node))
+  const nodes = normalizeBlock(block)
+  for (let i = 0; i < nodes.length; i++) {
+    parent.removeChild(nodes[i])
+  }
 }
 
 export function createTextNode(values?: any[] | (() => any[])): Text {

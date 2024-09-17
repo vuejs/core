@@ -92,11 +92,11 @@ async function buildLib() {
     cwd: path.resolve(import.meta.dirname, '..'),
     stdio: 'inherit',
   }
-  const BuildOptions = devBuild ? '-df' : '-pf'
+  const buildOptions = devBuild ? '-df' : '-pf'
   const [{ ok }, { ok: ok2 }, { ok: ok3 }, { ok: ok4 }] = await Promise.all([
     exec(
       'pnpm',
-      `run --silent build shared compiler-core compiler-dom compiler-vapor ${BuildOptions} cjs`.split(
+      `run --silent build shared compiler-core compiler-dom compiler-vapor ${buildOptions} cjs`.split(
         ' ',
       ),
       options,
@@ -108,12 +108,12 @@ async function buildLib() {
     ),
     exec(
       'pnpm',
-      `run --silent build vue-vapor ${BuildOptions} esm-browser`.split(' '),
+      `run --silent build vue-vapor ${buildOptions} esm-browser`.split(' '),
       options,
     ),
     exec(
       'pnpm',
-      `run --silent build vue ${BuildOptions} esm-browser-runtime`.split(' '),
+      `run --silent build vue ${buildOptions} esm-browser-runtime`.split(' '),
       options,
     ),
   ])
