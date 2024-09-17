@@ -8,7 +8,6 @@ import {
 import {
   EffectFlags,
   ReactiveEffect,
-  type SchedulerJob,
   getCurrentScope,
   pauseTracking,
   resetTracking,
@@ -19,7 +18,7 @@ import {
   callWithAsyncErrorHandling,
   callWithErrorHandling,
 } from './errorHandling'
-import { queueJob, queuePostFlushCb } from './scheduler'
+import { type SchedulerJob, queueJob, queuePostFlushCb } from './scheduler'
 import { warn } from './warning'
 import { type BlockEffectScope, isRenderEffectScope } from './blockEffectScope'
 import { normalizeBlock } from './dom/element'

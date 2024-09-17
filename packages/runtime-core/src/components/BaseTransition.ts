@@ -14,12 +14,13 @@ import {
 } from '../vnode'
 import { warn } from '../warning'
 import { isKeepAlive } from './KeepAlive'
-import { SchedulerJobFlags, toRaw } from '@vue/reactivity'
+import { toRaw } from '@vue/reactivity'
 import { ErrorCodes, callWithAsyncErrorHandling } from '../errorHandling'
 import { PatchFlags, ShapeFlags, isArray, isFunction } from '@vue/shared'
 import { onBeforeUnmount, onMounted } from '../apiLifecycle'
 import { isTeleport } from './Teleport'
 import type { RendererElement } from '../renderer'
+import { SchedulerJobFlags } from '../scheduler'
 
 type Hook<T = () => void> = T | T[]
 
@@ -192,7 +193,10 @@ const BaseTransitionImpl: ComponentOptions = {
         // #11061, ensure enterHooks is fresh after clone
         hooks => (enterHooks = hooks),
       )
-      setTransitionHooks(innerChild, enterHooks)
+
+      if (innerChild.type !== Comment) {
+        setTransitionHooks(innerChild, enterHooks)
+      }
 
       const oldChild = instance.subTree
       const oldInnerChild = oldChild && getInnerChild(oldChild)
@@ -223,6 +227,7 @@ const BaseTransitionImpl: ComponentOptions = {
             if (!(instance.job.flags! & SchedulerJobFlags.DISPOSED)) {
               instance.update()
             }
+            delete leavingHooks.afterLeave
           }
           return emptyPlaceholder(child)
         } else if (mode === 'in-out' && innerChild.type !== Comment) {
@@ -511,6 +516,7 @@ function getInnerChild(vnode: VNode): VNode | undefined {
 
 export function setTransitionHooks(vnode: VNode, hooks: TransitionHooks): void {
   if (vnode.shapeFlag & ShapeFlags.COMPONENT && vnode.component) {
+    vnode.transition = hooks
     setTransitionHooks(vnode.component.subTree, hooks)
   } else if (__FEATURE_SUSPENSE__ && vnode.shapeFlag & ShapeFlags.SUSPENSE) {
     vnode.ssContent!.transition = hooks.clone(vnode.ssContent!)

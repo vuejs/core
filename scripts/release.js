@@ -58,6 +58,9 @@ const { values: args, positionals } = parseArgs({
     publishOnly: {
       type: 'boolean',
     },
+    registry: {
+      type: 'string',
+    },
   },
 })
 
@@ -500,7 +503,8 @@ async function publishPackages(version) {
   }
   // add provenance metadata when releasing from CI
   // canary release commits are not pushed therefore we don't need to add provenance
-  if (process.env.CI && !isCanary) {
+  // also skip provenance if not publishing to actual npm
+  if (process.env.CI && !isCanary && !args.registry) {
     additionalPublishFlags.push('--provenance')
   }
 
@@ -541,6 +545,7 @@ async function publishPackage(pkgName, version, additionalFlags) {
         ...(releaseTag ? ['--tag', releaseTag] : []),
         '--access',
         'public',
+        ...(args.registry ? ['--registry', args.registry] : []),
         ...additionalFlags,
       ],
       {
@@ -559,6 +564,10 @@ async function publishPackage(pkgName, version, additionalFlags) {
 }
 
 async function publishOnly() {
+  const targetVersion = positionals[0]
+  if (targetVersion) {
+    updateVersions(targetVersion)
+  }
   await buildPackages()
   await publishPackages(currentVersion)
 }

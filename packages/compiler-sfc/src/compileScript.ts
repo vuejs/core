@@ -988,7 +988,7 @@ export function compileScript(
       (definedOptions ? `\n  ...${definedOptions},` : '')
     ctx.s.prependLeft(
       startOffset,
-      `\n${genDefaultAs} /*#__PURE__*/${ctx.helper(
+      `\n${genDefaultAs} /*@__PURE__*/${ctx.helper(
         `defineComponent`,
         vapor,
       )}({${def}${runtimeOptions}\n  ${
@@ -1002,7 +1002,7 @@ export function compileScript(
       // export default Object.assign(__default__, { ... })
       ctx.s.prependLeft(
         startOffset,
-        `\n${genDefaultAs} /*#__PURE__*/Object.assign(${
+        `\n${genDefaultAs} /*@__PURE__*/Object.assign(${
           defaultExport ? `${normalScriptDefaultVar}, ` : ''
         }${definedOptions ? `${definedOptions}, ` : ''}{${runtimeOptions}\n  ` +
           `${hasAwait ? `async ` : ``}setup(${args}) {\n${exposeCall}`,

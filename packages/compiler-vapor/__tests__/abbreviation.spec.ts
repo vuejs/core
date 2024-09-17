@@ -2,13 +2,17 @@
  * @vitest-environment jsdom
  */
 
-const parser = new DOMParser()
+const parser: DOMParser = new DOMParser()
 
-function parseHTML(html: string) {
+function parseHTML(html: string): string {
   return parser.parseFromString(html, 'text/html').body.innerHTML
 }
 
-function checkAbbr(template: string, abbrevation: string, expected: string) {
+function checkAbbr(
+  template: string,
+  abbrevation: string,
+  expected: string,
+): void {
   // TODO do some optimzations to make sure template === abbrevation
   expect(parseHTML(abbrevation)).toBe(expected)
 }

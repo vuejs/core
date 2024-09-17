@@ -53,7 +53,7 @@ export const transformVModel: DirectiveTransform = (dir, node, context) => {
       bindingType === BindingTypes.SETUP_MAYBE_REF)
   if (
     !expString.trim() ||
-    (!isMemberExpression(expString, context.options) && !maybeRef)
+    (!isMemberExpression(exp, context.options) && !maybeRef)
   ) {
     context.options.onError(
       createCompilerError(ErrorCodes.X_V_MODEL_MALFORMED_EXPRESSION, exp.loc),
@@ -67,7 +67,7 @@ export const transformVModel: DirectiveTransform = (dir, node, context) => {
       key: arg ? arg : createSimpleExpression('modelValue', true),
       value: exp,
       model: true,
-      modelModifiers: dir.modifiers,
+      modelModifiers: dir.modifiers.map(m => m.content),
     }
   }
 

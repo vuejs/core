@@ -54,7 +54,7 @@ export function genWithDirective(
     const argument = dir.arg && genExpression(dir.arg, context)
     const modifiers = !!dir.modifiers.length && [
       '{ ',
-      genDirectiveModifiers(dir.modifiers),
+      genDirectiveModifiers(dir.modifiers.map(m => m.content)),
       ' }',
     ]
 

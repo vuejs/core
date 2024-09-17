@@ -76,7 +76,11 @@ export default tseslint.config(
 
   // tests, no restrictions (runs in Node / Vitest with jsdom)
   {
-    files: ['**/__tests__/**', 'packages/dts-test/**'],
+    files: [
+      '**/__tests__/**',
+      'packages-private/dts-test/**',
+      'packages-private/dts-build-test/**',
+    ],
     plugins: { vitest },
     languageOptions: {
       globals: {
@@ -120,8 +124,8 @@ export default tseslint.config(
   // Private package, browser only + no syntax restrictions
   {
     files: [
-      'packages/template-explorer/**',
-      'packages/sfc-playground/**',
+      'packages-private/template-explorer/**',
+      'packages-private/sfc-playground/**',
       'playground/**',
     ],
     rules: {

@@ -18,6 +18,7 @@ import {
   PatchFlags,
   ShapeFlags,
   def,
+  getEscapedCssVarName,
   includeBooleanAttr,
   isBooleanAttr,
   isKnownHtmlAttr,
@@ -69,9 +70,12 @@ const isSVGContainer = (container: Element) =>
 const isMathMLContainer = (container: Element) =>
   container.namespaceURI!.includes('MathML')
 
-const getContainerType = (container: Element): 'svg' | 'mathml' | undefined => {
-  if (isSVGContainer(container)) return 'svg'
-  if (isMathMLContainer(container)) return 'mathml'
+const getContainerType = (
+  container: Element | ShadowRoot,
+): 'svg' | 'mathml' | undefined => {
+  if (container.nodeType !== DOMNodeTypes.ELEMENT) return undefined
+  if (isSVGContainer(container as Element)) return 'svg'
+  if (isMathMLContainer(container as Element)) return 'mathml'
   return undefined
 }
 
@@ -436,7 +440,17 @@ export function createHydrationFunctions(
           remove(cur)
         }
       } else if (shapeFlag & ShapeFlags.TEXT_CHILDREN) {
-        if (el.textContent !== vnode.children) {
+        // #11873 the HTML parser will "eat" the first newline when parsing
+        // <pre> and <textarea>, so if the client value starts with a newline,
+        // we need to remove it before comparing
+        let clientText = vnode.children as string
+        if (
+          clientText[0] === '\n' &&
+          (el.tagName === 'PRE' || el.tagName === 'TEXTAREA')
+        ) {
+          clientText = clientText.slice(1)
+        }
+        if (el.textContent !== clientText) {
           if (!isMismatchAllowed(el, MismatchTypes.TEXT)) {
             ;(__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
               warn(
@@ -551,8 +565,7 @@ export function createHydrationFunctions(
           // JSX-compiled fns, but on the client the browser parses only 1 text
           // node.
           // look ahead for next possible text vnode
-          let next = children[i + 1]
-          if (next && (next = normalizeVNode(next)).type === Text) {
+          if (i + 1 < l && normalizeVNode(children[i + 1]).type === Text) {
             // create an extra TextNode on the client for the next vnode to
             // adopt
             insert(
@@ -750,7 +763,7 @@ export function createHydrationFunctions(
   const isTemplateNode = (node: Node): node is HTMLTemplateElement => {
     return (
       node.nodeType === DOMNodeTypes.ELEMENT &&
-      (node as Element).tagName.toLowerCase() === 'template'
+      (node as Element).tagName === 'TEMPLATE'
     )
   }
 
@@ -913,7 +926,10 @@ function resolveCssVars(
   ) {
     const cssVars = instance.getCssVars()
     for (const key in cssVars) {
-      expectedMap.set(`--${key}`, String(cssVars[key]))
+      expectedMap.set(
+        `--${getEscapedCssVarName(key, false)}`,
+        String(cssVars[key]),
+      )
     }
   }
   if (vnode === root && instance.parent) {

@@ -7,11 +7,7 @@ import type { ComponentInternalInstance } from './component'
 import { isFunction, isPromise } from '@vue/shared'
 import { warn } from './warning'
 import { VaporLifecycleHooks } from './enums'
-import {
-  BaseWatchErrorCodes,
-  pauseTracking,
-  resetTracking,
-} from '@vue/reactivity'
+import { WatchErrorCodes, pauseTracking, resetTracking } from '@vue/reactivity'
 
 // contexts where user provided function may be executed, in addition to
 // lifecycle hooks.
@@ -36,10 +32,7 @@ export enum VaporErrorCodes {
   SCHEDULER,
 }
 
-export type ErrorTypes =
-  | VaporLifecycleHooks
-  | VaporErrorCodes
-  | BaseWatchErrorCodes
+export type ErrorTypes = VaporLifecycleHooks | VaporErrorCodes | WatchErrorCodes
 
 export const ErrorTypeStrings: Record<ErrorTypes, string> = {
   // [VaporLifecycleHooks.SERVER_PREFETCH]: 'serverPrefetch hook',
@@ -56,9 +49,9 @@ export const ErrorTypeStrings: Record<ErrorTypes, string> = {
   [VaporLifecycleHooks.RENDER_TRIGGERED]: 'renderTriggered hook',
   [VaporErrorCodes.SETUP_FUNCTION]: 'setup function',
   [VaporErrorCodes.RENDER_FUNCTION]: 'render function',
-  [BaseWatchErrorCodes.WATCH_GETTER]: 'watcher getter',
-  [BaseWatchErrorCodes.WATCH_CALLBACK]: 'watcher callback',
-  [BaseWatchErrorCodes.WATCH_CLEANUP]: 'watcher cleanup function',
+  [WatchErrorCodes.WATCH_GETTER]: 'watcher getter',
+  [WatchErrorCodes.WATCH_CALLBACK]: 'watcher callback',
+  [WatchErrorCodes.WATCH_CLEANUP]: 'watcher cleanup function',
   [VaporErrorCodes.NATIVE_EVENT_HANDLER]: 'native event handler',
   [VaporErrorCodes.COMPONENT_EVENT_HANDLER]: 'component event handler',
   [VaporErrorCodes.VNODE_HOOK]: 'vnode hook',

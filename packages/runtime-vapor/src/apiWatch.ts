@@ -1,21 +1,19 @@
 import {
-  type BaseWatchErrorCodes,
-  type BaseWatchOptions,
+  type WatchOptions as BaseWatchOptions,
   type ComputedRef,
   type DebuggerOptions,
   type Ref,
-  baseWatch,
-  getCurrentScope,
+  watch as baseWatch,
 } from '@vue/reactivity'
-import { EMPTY_OBJ, extend, isFunction, remove } from '@vue/shared'
+import { EMPTY_OBJ, extend, isFunction } from '@vue/shared'
 import { currentInstance } from './component'
 import {
-  type SchedulerFactory,
-  createVaporPostScheduler,
-  createVaporPreScheduler,
-  createVaporSyncScheduler,
+  type SchedulerJob,
+  VaporSchedulerJobFlags,
+  queueJob,
+  queuePostFlushCb,
 } from './scheduler'
-import { handleError as handleErrorWithInstance } from './errorHandling'
+import { callWithAsyncErrorHandling } from './errorHandling'
 import { warn } from './warning'
 
 export type WatchEffect = (onCleanup: OnCleanup) => void
@@ -141,17 +139,6 @@ export function watch<T = any, Immediate extends Readonly<boolean> = false>(
   return doWatch(source as any, cb, options)
 }
 
-function getScheduler(flush: WatchOptionsBase['flush']): SchedulerFactory {
-  if (flush === 'post') {
-    return createVaporPostScheduler
-  }
-  if (flush === 'sync') {
-    return createVaporSyncScheduler
-  }
-  // default: 'pre'
-  return createVaporPreScheduler
-}
-
 function doWatch(
   source: WatchSource | WatchSource[] | WatchEffect | object,
   cb: WatchCallback | null,
@@ -180,9 +167,9 @@ function doWatch(
     }
   }
 
-  const extendOptions: BaseWatchOptions = {}
+  const baseWatchOptions: BaseWatchOptions = extend({}, options)
 
-  if (__DEV__) extendOptions.onWarn = warn
+  if (__DEV__) baseWatchOptions.onWarn = warn
 
   let ssrCleanup: (() => void)[] | undefined
   // TODO: SSR
@@ -200,20 +187,44 @@ function doWatch(
   // }
 
   const instance = currentInstance
+  baseWatchOptions.call = (fn, type, args) =>
+    callWithAsyncErrorHandling(fn, instance, type, args)
 
-  extendOptions.onError = (err: unknown, type: BaseWatchErrorCodes) =>
-    handleErrorWithInstance(err, instance, type)
-  extendOptions.scheduler = getScheduler(flush)(instance)
-
-  const effect = baseWatch(source, cb, extend({}, options, extendOptions))
-  const scope = getCurrentScope()
-  const unwatch = () => {
-    effect!.stop()
-    if (scope) {
-      remove(scope.effects, effect)
+  // scheduler
+  let isPre = false
+  if (flush === 'post') {
+    baseWatchOptions.scheduler = job => {
+      queuePostFlushCb(job)
+    }
+  } else if (flush !== 'sync') {
+    // default: 'pre'
+    isPre = true
+    baseWatchOptions.scheduler = (job, isFirstRun) => {
+      if (isFirstRun) {
+        job()
+      } else {
+        queueJob(job)
+      }
     }
   }
 
-  if (__SSR__ && ssrCleanup) ssrCleanup.push(unwatch)
-  return unwatch
+  baseWatchOptions.augmentJob = (job: SchedulerJob) => {
+    // important: mark the job as a watcher callback so that scheduler knows
+    // it is allowed to self-trigger (#1727)
+    if (cb) {
+      job.flags! |= VaporSchedulerJobFlags.ALLOW_RECURSE
+    }
+    if (isPre) {
+      job.flags! |= VaporSchedulerJobFlags.PRE
+      if (instance) {
+        job.id = instance.uid
+        ;(job as SchedulerJob).i = instance
+      }
+    }
+  }
+
+  const watchHandle = baseWatch(source, cb, baseWatchOptions)
+
+  if (__SSR__ && ssrCleanup) ssrCleanup.push(watchHandle)
+  return watchHandle
 }

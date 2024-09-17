@@ -1,47 +1,35 @@
 import {
-  type BaseWatchErrorCodes,
-  type BaseWatchOptions,
-  type ComputedRef,
+  type WatchOptions as BaseWatchOptions,
   type DebuggerOptions,
   type ReactiveMarker,
-  type Ref,
-  baseWatch,
-  getCurrentScope,
+  type WatchCallback,
+  type WatchEffect,
+  type WatchHandle,
+  type WatchSource,
+  watch as baseWatch,
 } from '@vue/reactivity'
-import {
-  type SchedulerFactory,
-  createPreScheduler,
-  createSyncScheduler,
-} from './scheduler'
-import {
-  EMPTY_OBJ,
-  NOOP,
-  extend,
-  isFunction,
-  isString,
-  remove,
-} from '@vue/shared'
+import { type SchedulerJob, SchedulerJobFlags, queueJob } from './scheduler'
+import { EMPTY_OBJ, NOOP, extend, isFunction, isString } from '@vue/shared'
 import {
   type ComponentInternalInstance,
   currentInstance,
   isInSSRComponentSetup,
   setCurrentInstance,
 } from './component'
-import { handleError as handleErrorWithInstance } from './errorHandling'
-import { createPostRenderScheduler } from './renderer'
+import { callWithAsyncErrorHandling } from './errorHandling'
+import { queuePostRenderEffect } from './renderer'
 import { warn } from './warning'
 import type { ObjectWatchOptionItem } from './componentOptions'
 import { useSSRContext } from './helpers/useSsrContext'
 
-export type WatchEffect = (onCleanup: OnCleanup) => void
-
-export type WatchSource<T = any> = Ref<T, any> | ComputedRef<T> | (() => T)
-
-export type WatchCallback<V = any, OV = any> = (
-  value: V,
-  oldValue: OV,
-  onCleanup: OnCleanup,
-) => any
+export type {
+  WatchHandle,
+  WatchStopHandle,
+  WatchEffect,
+  WatchSource,
+  WatchCallback,
+  OnCleanup,
+} from '@vue/reactivity'
 
 type MaybeUndefined<T, I> = I extends true ? T | undefined : T
 
@@ -53,30 +41,20 @@ type MapSources<T, Immediate> = {
       : never
 }
 
-export type OnCleanup = (cleanupFn: () => void) => void
-
-export interface WatchOptionsBase extends DebuggerOptions {
+export interface WatchEffectOptions extends DebuggerOptions {
   flush?: 'pre' | 'post' | 'sync'
 }
 
-export interface WatchOptions<Immediate = boolean> extends WatchOptionsBase {
+export interface WatchOptions<Immediate = boolean> extends WatchEffectOptions {
   immediate?: Immediate
   deep?: boolean | number
   once?: boolean
 }
 
-export type WatchStopHandle = () => void
-
-export interface WatchHandle extends WatchStopHandle {
-  pause: () => void
-  resume: () => void
-  stop: () => void
-}
-
 // Simple effect.
 export function watchEffect(
   effect: WatchEffect,
-  options?: WatchOptionsBase,
+  options?: WatchEffectOptions,
 ): WatchHandle {
   return doWatch(effect, null, options)
 }
@@ -84,7 +62,7 @@ export function watchEffect(
 export function watchPostEffect(
   effect: WatchEffect,
   options?: DebuggerOptions,
-): WatchStopHandle {
+): WatchHandle {
   return doWatch(
     effect,
     null,
@@ -95,7 +73,7 @@ export function watchPostEffect(
 export function watchSyncEffect(
   effect: WatchEffect,
   options?: DebuggerOptions,
-): WatchStopHandle {
+): WatchHandle {
   return doWatch(
     effect,
     null,
@@ -160,17 +138,6 @@ export function watch<T = any, Immediate extends Readonly<boolean> = false>(
   return doWatch(source as any, cb, options)
 }
 
-function getScheduler(flush: WatchOptionsBase['flush']): SchedulerFactory {
-  if (flush === 'post') {
-    return createPostRenderScheduler
-  }
-  if (flush === 'sync') {
-    return createSyncScheduler
-  }
-  // default: 'pre'
-  return createPreScheduler
-}
-
 function doWatch(
   source: WatchSource | WatchSource[] | WatchEffect | object,
   cb: WatchCallback | null,
@@ -199,9 +166,9 @@ function doWatch(
     }
   }
 
-  const extendOptions: BaseWatchOptions = {}
+  const baseWatchOptions: BaseWatchOptions = extend({}, options)
 
-  if (__DEV__) extendOptions.onWarn = warn
+  if (__DEV__) baseWatchOptions.onWarn = warn
 
   let ssrCleanup: (() => void)[] | undefined
   if (__SSR__ && isInSSRComponentSetup) {
@@ -210,33 +177,54 @@ function doWatch(
       ssrCleanup = ctx.__watcherHandles || (ctx.__watcherHandles = [])
     } else if (!cb || immediate) {
       // immediately watch or watchEffect
-      extendOptions.once = true
+      baseWatchOptions.once = true
     } else {
-      const watchHandle: WatchHandle = () => {}
-      watchHandle.stop = NOOP
-      watchHandle.resume = NOOP
-      watchHandle.pause = NOOP
-      return watchHandle
+      const watchStopHandle = () => {}
+      watchStopHandle.stop = NOOP
+      watchStopHandle.resume = NOOP
+      watchStopHandle.pause = NOOP
+      return watchStopHandle
     }
   }
 
   const instance = currentInstance
-  extendOptions.onError = (err: unknown, type: BaseWatchErrorCodes) =>
-    handleErrorWithInstance(err, instance, type)
-  extendOptions.scheduler = getScheduler(flush)(instance)
+  baseWatchOptions.call = (fn, type, args) =>
+    callWithAsyncErrorHandling(fn, instance, type, args)
 
-  const effect = baseWatch(source, cb, extend({}, options, extendOptions))
-  const scope = getCurrentScope()
-  const watchHandle: WatchHandle = () => {
-    effect.stop()
-    if (scope) {
-      remove(scope.effects, effect)
+  // scheduler
+  let isPre = false
+  if (flush === 'post') {
+    baseWatchOptions.scheduler = job => {
+      queuePostRenderEffect(job, instance && instance.suspense)
+    }
+  } else if (flush !== 'sync') {
+    // default: 'pre'
+    isPre = true
+    baseWatchOptions.scheduler = (job, isFirstRun) => {
+      if (isFirstRun) {
+        job()
+      } else {
+        queueJob(job)
+      }
     }
   }
 
-  watchHandle.pause = effect.pause.bind(effect)
-  watchHandle.resume = effect.resume.bind(effect)
-  watchHandle.stop = watchHandle
+  baseWatchOptions.augmentJob = (job: SchedulerJob) => {
+    // important: mark the job as a watcher callback so that scheduler knows
+    // it is allowed to self-trigger (#1727)
+    if (cb) {
+      job.flags! |= SchedulerJobFlags.ALLOW_RECURSE
+    }
+    if (isPre) {
+      job.flags! |= SchedulerJobFlags.PRE
+      if (instance) {
+        job.id = instance.uid
+        ;(job as SchedulerJob).i = instance
+      }
+    }
+  }
+
+  const watchHandle = baseWatch(source, cb, baseWatchOptions)
 
   if (__SSR__ && ssrCleanup) ssrCleanup.push(watchHandle)
   return watchHandle

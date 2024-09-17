@@ -40,19 +40,17 @@ import {
 } from '@vue/shared'
 import type { Data } from '@vue/runtime-shared'
 import {
-  type SchedulerFactory,
   type SchedulerJob,
+  SchedulerJobFlags,
   type SchedulerJobs,
   flushPostFlushCbs,
   flushPreFlushCbs,
-  invalidateJob,
   queueJob,
   queuePostFlushCb,
 } from './scheduler'
 import {
   EffectFlags,
   ReactiveEffect,
-  SchedulerJobFlags,
   pauseTracking,
   resetTracking,
 } from '@vue/reactivity'
@@ -64,6 +62,7 @@ import { setRef } from './rendererTemplateRef'
 import {
   type SuspenseBoundary,
   type SuspenseImpl,
+  isSuspense,
   queueEffectWithSuspense,
 } from './components/Suspense'
 import {
@@ -294,18 +293,6 @@ export const queuePostRenderEffect: (
         queueEffectWithSuspense(fn, suspense)
     : queueEffectWithSuspense
   : queuePostFlushCb
-
-export const createPostRenderScheduler: SchedulerFactory =
-  instance => (job, effect, immediateFirstRun, hasCb) => {
-    if (!immediateFirstRun) {
-      queuePostRenderEffect(job, instance && instance.suspense)
-    } else if (!hasCb) {
-      queuePostRenderEffect(
-        effect.run.bind(effect),
-        instance && instance.suspense,
-      )
-    }
-  }
 
 /**
  * The createRenderer function accepts two generic arguments:
@@ -763,7 +750,11 @@ function baseCreateRenderer(
         subTree =
           filterSingleRoot(subTree.children as VNodeArrayChildren) || subTree
       }
-      if (vnode === subTree) {
+      if (
+        vnode === subTree ||
+        (isSuspense(subTree.type) &&
+          (subTree.ssContent === vnode || subTree.ssFallback === vnode))
+      ) {
         const parentVNode = parentComponent.vnode
         setScopeId(
           el,
@@ -1220,6 +1211,9 @@ function baseCreateRenderer(
     // setup() is async. This component relies on async logic to be resolved
     // before proceeding
     if (__FEATURE_SUSPENSE__ && instance.asyncDep) {
+      // avoid hydration for hmr updating
+      if (__DEV__ && isHmrUpdating) initialVNode.el = null
+
       parentSuspense &&
         parentSuspense.registerDep(instance, setupRenderEffect, optimized)
 
@@ -1268,9 +1262,6 @@ function baseCreateRenderer(
       } else {
         // normal update
         instance.next = n2
-        // in case the child component is also queued, remove it to avoid
-        // double updating the same child component in the same flush.
-        invalidateJob(instance.update)
         // instance.update is the reactive effect.
         instance.update()
       }
@@ -1342,7 +1333,10 @@ function baseCreateRenderer(
             }
           }
 
-          if (isAsyncWrapperVNode) {
+          if (
+            isAsyncWrapperVNode &&
+            (type as ComponentOptions).__asyncHydrate
+          ) {
             ;(type as ComponentOptions).__asyncHydrate!(
               el as Element,
               instance,

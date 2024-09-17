@@ -119,7 +119,8 @@ export function render(_ctx) {
     modifiers: ["middle"]
   })
   _delegate(n10, "contextmenu", () => _ctx.handleEvent, {
-    modifiers: ["right"]
+    modifiers: ["right"], 
+    keys: ["enter"]
   })
   _delegate(n11, "keyup", () => _ctx.handleEvent, {
     keys: ["enter"]

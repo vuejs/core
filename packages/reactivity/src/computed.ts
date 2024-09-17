@@ -3,28 +3,33 @@ import {
   type DebuggerEvent,
   type DebuggerOptions,
   EffectFlags,
-  type Link,
   type Subscriber,
   activeSub,
+  batch,
   refreshComputed,
 } from './effect'
 import type { Ref } from './ref'
 import { warn } from './warning'
-import { Dep, globalVersion } from './dep'
+import { Dep, type Link, globalVersion } from './dep'
 import { ReactiveFlags, TrackOpTypes } from './constants'
 
 declare const ComputedRefSymbol: unique symbol
+declare const WritableComputedRefSymbol: unique symbol
 
-export interface ComputedRef<T = any> extends WritableComputedRef<T> {
-  readonly value: T
+interface BaseComputedRef<T, S = T> extends Ref<T, S> {
   [ComputedRefSymbol]: true
-}
-
-export interface WritableComputedRef<T, S = T> extends Ref<T, S> {
   /**
    * @deprecated computed no longer uses effect
    */
   effect: ComputedRefImpl
+}
+
+export interface ComputedRef<T = any> extends BaseComputedRef<T> {
+  readonly value: T
+}
+
+export interface WritableComputedRef<T, S = T> extends BaseComputedRef<T, S> {
+  [WritableComputedRefSymbol]: true
 }
 
 export type ComputedGetter<T> = (oldValue?: T) => T
@@ -105,11 +110,15 @@ export class ComputedRefImpl<T = any> implements Subscriber {
   /**
    * @internal
    */
-  notify(): void {
-    // avoid infinite self recursion
-    if (activeSub !== this) {
-      this.flags |= EffectFlags.DIRTY
-      this.dep.notify()
+  notify(): true | void {
+    this.flags |= EffectFlags.DIRTY
+    if (
+      !(this.flags & EffectFlags.NOTIFIED) &&
+      // avoid infinite self recursion
+      activeSub !== this
+    ) {
+      batch(this)
+      return true
     } else if (__DEV__) {
       // TODO warn
     }

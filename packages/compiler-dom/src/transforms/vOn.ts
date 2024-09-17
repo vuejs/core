@@ -3,6 +3,7 @@ import {
   type DirectiveTransform,
   type ExpressionNode,
   NodeTypes,
+  type SimpleExpressionNode,
   type SourceLocation,
   type TransformContext,
   transformOn as baseTransform,
@@ -16,8 +17,8 @@ import {
 import { V_ON_WITH_KEYS, V_ON_WITH_MODIFIERS } from '../runtimeHelpers'
 import { capitalize, isString, makeMap } from '@vue/shared'
 
-const isEventOptionModifier = /*#__PURE__*/ makeMap(`passive,once,capture`)
-const isNonKeyModifier = /*#__PURE__*/ makeMap(
+const isEventOptionModifier = /*@__PURE__*/ makeMap(`passive,once,capture`)
+const isNonKeyModifier = /*@__PURE__*/ makeMap(
   // event propagation management
   `stop,prevent,self,` +
     // system modifiers + exact
@@ -26,15 +27,12 @@ const isNonKeyModifier = /*#__PURE__*/ makeMap(
     `middle`,
 )
 // left & right could be mouse or key modifiers based on event type
-const maybeKeyModifier = /*#__PURE__*/ makeMap('left,right')
-const isKeyboardEvent = /*#__PURE__*/ makeMap(
-  `onkeyup,onkeydown,onkeypress`,
-  true,
-)
+const maybeKeyModifier = /*@__PURE__*/ makeMap('left,right')
+const isKeyboardEvent = /*@__PURE__*/ makeMap(`onkeyup,onkeydown,onkeypress`)
 
 export const resolveModifiers = (
   key: ExpressionNode | string,
-  modifiers: string[],
+  modifiers: SimpleExpressionNode[],
   context: TransformContext | null,
   loc: SourceLocation,
 ): {
@@ -47,7 +45,7 @@ export const resolveModifiers = (
   const eventOptionModifiers = []
 
   for (let i = 0; i < modifiers.length; i++) {
-    const modifier = modifiers[i]
+    const modifier = modifiers[i].content
 
     if (
       __COMPAT__ &&
@@ -74,7 +72,7 @@ export const resolveModifiers = (
       // runtimeModifiers: modifiers that needs runtime guards
       if (maybeKeyModifier(modifier)) {
         if (keyString) {
-          if (isKeyboardEvent(keyString)) {
+          if (isKeyboardEvent(keyString.toLowerCase())) {
             keyModifiers.push(modifier)
           } else {
             nonKeyModifiers.push(modifier)
@@ -86,7 +84,7 @@ export const resolveModifiers = (
       } else {
         if (isNonKeyModifier(modifier)) {
           nonKeyModifiers.push(modifier)
-        } else if (!keyString || isKeyboardEvent(keyString)) {
+        } else {
           keyModifiers.push(modifier)
         }
       }
@@ -143,7 +141,7 @@ export const transformOn: DirectiveTransform = (dir, node, context) => {
     if (
       keyModifiers.length &&
       // if event name is dynamic, always wrap with keys guard
-      (!isStaticExp(key) || isKeyboardEvent(key.content))
+      (!isStaticExp(key) || isKeyboardEvent(key.content.toLowerCase()))
     ) {
       handlerExp = createCallExpression(context.helper(V_ON_WITH_KEYS), [
         handlerExp,

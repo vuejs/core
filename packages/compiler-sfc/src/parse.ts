@@ -29,11 +29,6 @@ export interface SFCParseOptions {
   ignoreEmpty?: boolean
   compiler?: TemplateCompiler
   templateParseOptions?: ParserOptions
-  /**
-   * TODO remove in 3.5
-   * @deprecated use `templateParseOptions: { prefixIdentifiers: false }` instead
-   */
-  parseExpressions?: boolean
 }
 
 export interface SFCBlock {
@@ -141,7 +136,6 @@ export function parse(
     ignoreEmpty = true,
     compiler = CompilerDOM,
     templateParseOptions = {},
-    parseExpressions = true,
   } = options
 
   const descriptor: SFCDescriptor = {
@@ -161,7 +155,7 @@ export function parse(
   const errors: (CompilerError | SyntaxError)[] = []
   const ast = compiler.parse(source, {
     parseMode: 'sfc',
-    prefixIdentifiers: parseExpressions,
+    prefixIdentifiers: true,
     ...templateParseOptions,
     onError: e => {
       errors.push(e)
@@ -246,7 +240,7 @@ export function parse(
   if (!descriptor.template && !descriptor.script && !descriptor.scriptSetup) {
     errors.push(
       new SyntaxError(
-        `At least one <template> or <script> is required in a single file component.`,
+        `At least one <template> or <script> is required in a single file component. ${descriptor.filename}`,
       ),
     )
   }

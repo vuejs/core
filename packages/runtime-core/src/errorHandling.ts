@@ -4,7 +4,7 @@ import type { ComponentInternalInstance } from './component'
 import { popWarningContext, pushWarningContext, warn } from './warning'
 import { EMPTY_OBJ, isArray, isFunction, isPromise } from '@vue/shared'
 import { LifecycleHooks } from './enums'
-import { BaseWatchErrorCodes } from '@vue/reactivity'
+import { WatchErrorCodes } from '@vue/reactivity'
 
 // contexts where user provided function may be executed, in addition to
 // lifecycle hooks.
@@ -31,8 +31,6 @@ export enum ErrorCodes {
   APP_UNMOUNT_CLEANUP,
 }
 
-export type ErrorTypes = LifecycleHooks | ErrorCodes | BaseWatchErrorCodes
-
 export const ErrorTypeStrings: Record<ErrorTypes, string> = {
   [LifecycleHooks.SERVER_PREFETCH]: 'serverPrefetch hook',
   [LifecycleHooks.BEFORE_CREATE]: 'beforeCreate hook',
@@ -50,9 +48,9 @@ export const ErrorTypeStrings: Record<ErrorTypes, string> = {
   [LifecycleHooks.RENDER_TRIGGERED]: 'renderTriggered hook',
   [ErrorCodes.SETUP_FUNCTION]: 'setup function',
   [ErrorCodes.RENDER_FUNCTION]: 'render function',
-  [BaseWatchErrorCodes.WATCH_GETTER]: 'watcher getter',
-  [BaseWatchErrorCodes.WATCH_CALLBACK]: 'watcher callback',
-  [BaseWatchErrorCodes.WATCH_CLEANUP]: 'watcher cleanup function',
+  [WatchErrorCodes.WATCH_GETTER]: 'watcher getter',
+  [WatchErrorCodes.WATCH_CALLBACK]: 'watcher callback',
+  [WatchErrorCodes.WATCH_CLEANUP]: 'watcher cleanup function',
   [ErrorCodes.NATIVE_EVENT_HANDLER]: 'native event handler',
   [ErrorCodes.COMPONENT_EVENT_HANDLER]: 'component event handler',
   [ErrorCodes.VNODE_HOOK]: 'vnode hook',
@@ -66,6 +64,8 @@ export const ErrorTypeStrings: Record<ErrorTypes, string> = {
   [ErrorCodes.COMPONENT_UPDATE]: 'component update',
   [ErrorCodes.APP_UNMOUNT_CLEANUP]: 'app unmount cleanup function',
 }
+
+export type ErrorTypes = LifecycleHooks | ErrorCodes | WatchErrorCodes
 
 export function callWithErrorHandling(
   fn: Function,

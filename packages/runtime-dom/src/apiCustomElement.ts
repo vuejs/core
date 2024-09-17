@@ -9,6 +9,7 @@ import {
   type ComponentOptionsBase,
   type ComponentOptionsMixin,
   type ComponentProvideOptions,
+  type ComponentPublicInstance,
   type ComputedOptions,
   type ConcreteComponent,
   type CreateAppFunction,
@@ -153,14 +154,13 @@ export function defineCustomElement<
 // overload 3: defining a custom element from the returned value of
 // `defineComponent`
 export function defineCustomElement<
-  T extends DefineComponent<any, any, any, any>,
+  // this should be `ComponentPublicInstanceConstructor` but that type is not exported
+  T extends { new (...args: any[]): ComponentPublicInstance<any> },
 >(
   options: T,
   extraOptions?: CustomElementOptions,
 ): VueElementConstructor<
-  T extends DefineComponent<infer P, any, any, any>
-    ? ExtractPropTypes<P>
-    : unknown
+  T extends DefineComponent<infer P, any, any, any> ? P : unknown
 >
 
 /*! #__NO_SIDE_EFFECTS__ */
@@ -221,6 +221,11 @@ export class VueElement
    */
   _nonce: string | undefined = this._def.nonce
 
+  /**
+   * @internal
+   */
+  _teleportTarget?: HTMLElement
+
   private _connected = false
   private _resolved = false
   private _numberProps: Record<string, true> | null = null
@@ -250,8 +255,6 @@ export class VueElement
     super()
     if (this.shadowRoot && _createApp !== createApp) {
       this._root = this.shadowRoot
-      // TODO hydration needs to be reworked
-      this._mount(_def)
     } else {
       if (__DEV__ && this.shadowRoot) {
         warn(
@@ -265,14 +268,18 @@ export class VueElement
       } else {
         this._root = this
       }
-      if (!(this._def as ComponentOptions).__asyncLoader) {
-        // for sync component defs we can immediately resolve props
-        this._resolveProps(this._def)
-      }
+    }
+
+    if (!(this._def as ComponentOptions).__asyncLoader) {
+      // for sync component defs we can immediately resolve props
+      this._resolveProps(this._def)
     }
   }
 
   connectedCallback(): void {
+    // avoid resolving component if it's not connected
+    if (!this.isConnected) return
+
     if (!this.shadowRoot) {
       this._parseSlots()
     }
@@ -323,7 +330,7 @@ export class VueElement
         }
         // unmount
         this._app && this._app.unmount()
-        this._instance!.ce = undefined
+        if (this._instance) this._instance.ce = undefined
         this._app = this._instance = null
       }
     })
@@ -488,6 +495,10 @@ export class VueElement
         delete this._props[key]
       } else {
         this._props[key] = val
+        // support set key on ceVNode
+        if (key === 'key' && this._app) {
+          this._app._ceVNode!.key = val
+        }
       }
       if (shouldUpdate && this._instance) {
         this._update()
@@ -520,6 +531,7 @@ export class VueElement
       vnode.ce = instance => {
         this._instance = instance
         instance.ce = this
+        instance.isCE = true // for vue-i18n backwards compat
         // HMR
         if (__DEV__) {
           instance.ceReload = newStyles => {
@@ -597,7 +609,7 @@ export class VueElement
   }
 
   /**
-   * Only called when shaddowRoot is false
+   * Only called when shadowRoot is false
    */
   private _parseSlots() {
     const slots: VueElement['_slots'] = (this._slots = {})
@@ -611,10 +623,10 @@ export class VueElement
   }
 
   /**
-   * Only called when shaddowRoot is false
+   * Only called when shadowRoot is false
    */
   private _renderSlots() {
-    const outlets = this.querySelectorAll('slot')
+    const outlets = (this._teleportTarget || this).querySelectorAll('slot')
     const scopeId = this._instance!.type.__scopeId
     for (let i = 0; i < outlets.length; i++) {
       const o = outlets[i] as HTMLSlotElement

@@ -92,7 +92,7 @@ import { markAsyncBoundary } from './helpers/useId'
  *
  * @example
  * ```ts
- * declare module '@vue/runtime-core' {
+ * declare module 'vue' {
  *   interface ComponentCustomOptions {
  *     beforeRouteUpdate?(
  *       to: Route,
@@ -884,12 +884,20 @@ export function createWatcher(
   if (isString(raw)) {
     const handler = ctx[raw]
     if (isFunction(handler)) {
-      watch(getter, handler as WatchCallback, options)
+      if (__COMPAT__) {
+        watch(getter, handler as WatchCallback, options)
+      } else {
+        watch(getter, handler as WatchCallback)
+      }
     } else if (__DEV__) {
       warn(`Invalid watch handler specified by key "${raw}"`, handler)
     }
   } else if (isFunction(raw)) {
-    watch(getter, raw.bind(publicThis), options)
+    if (__COMPAT__) {
+      watch(getter, raw.bind(publicThis), options)
+    } else {
+      watch(getter, raw.bind(publicThis))
+    }
   } else if (isObject(raw)) {
     if (isArray(raw)) {
       raw.forEach(r => createWatcher(r, ctx, publicThis, key))
@@ -898,7 +906,7 @@ export function createWatcher(
         ? raw.handler.bind(publicThis)
         : (ctx[raw.handler] as WatchCallback)
       if (isFunction(handler)) {
-        watch(getter, handler, extend(raw, options))
+        watch(getter, handler, __COMPAT__ ? extend(raw, options) : raw)
       } else if (__DEV__) {
         warn(`Invalid watch handler specified by key "${raw.handler}"`, handler)
       }
@@ -1271,7 +1279,9 @@ export type ComponentOptionsWithObjectProps<
   Directives extends Record<string, Directive> = {},
   Exposed extends string = string,
   Provide extends ComponentProvideOptions = ComponentProvideOptions,
-  Props = Prettify<Readonly<ExtractPropTypes<PropsOptions> & EmitsToProps<E>>>,
+  Props = Prettify<
+    Readonly<ExtractPropTypes<PropsOptions>> & Readonly<EmitsToProps<E>>
+  >,
   Defaults = ExtractDefaultPropTypes<PropsOptions>,
 > = ComponentOptionsBase<
   Props,

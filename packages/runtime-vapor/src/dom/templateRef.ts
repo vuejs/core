@@ -1,9 +1,4 @@
-import {
-  type Ref,
-  type SchedulerJob,
-  isRef,
-  onScopeDispose,
-} from '@vue/reactivity'
+import { type Ref, isRef, onScopeDispose } from '@vue/reactivity'
 import {
   type ComponentInternalInstance,
   currentInstance,
@@ -19,7 +14,7 @@ import {
   remove,
 } from '@vue/shared'
 import { warn } from '../warning'
-import { queuePostFlushCb } from '../scheduler'
+import { type SchedulerJob, queuePostFlushCb } from '../scheduler'
 
 export type NodeRef = string | Ref | ((ref: Element) => void)
 export type RefEl = Element | ComponentInternalInstance

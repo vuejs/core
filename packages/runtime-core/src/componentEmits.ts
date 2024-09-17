@@ -47,28 +47,23 @@ export type EmitsToProps<T extends EmitsOptions | ComponentTypeEmits> =
       }
     : T extends ObjectEmitsOptions
       ? {
-          [K in `on${Capitalize<string & keyof T>}`]?: K extends `on${infer C}`
-            ? (
-                ...args: T[Uncapitalize<C>] extends (...args: infer P) => any
-                  ? P
-                  : T[Uncapitalize<C>] extends null
-                    ? any[]
-                    : never
-              ) => any
-            : never
+          [K in string & keyof T as `on${Capitalize<K>}`]?: (
+            ...args: T[K] extends (...args: infer P) => any
+              ? P
+              : T[K] extends null
+                ? any[]
+                : never
+          ) => any
         }
       : {}
 
-export type TypeEmitsToOptions<T extends ComponentTypeEmits> =
-  T extends Record<string, any[]>
-    ? {
-        [K in keyof T]: T[K] extends [...args: infer Args]
-          ? (...args: Args) => any
-          : () => any
-      }
-    : T extends (...args: any[]) => any
-      ? ParametersToFns<OverloadParameters<T>>
-      : {}
+export type TypeEmitsToOptions<T extends ComponentTypeEmits> = {
+  [K in keyof T & string]: T[K] extends [...args: infer Args]
+    ? (...args: Args) => any
+    : () => any
+} & (T extends (...args: any[]) => any
+  ? ParametersToFns<OverloadParameters<T>>
+  : {})
 
 type ParametersToFns<T extends any[]> = {
   [K in T[0]]: K extends `${infer C}`

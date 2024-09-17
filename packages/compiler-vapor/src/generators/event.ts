@@ -1,6 +1,6 @@
 import {
   type SimpleExpressionNode,
-  fnExpRE,
+  isFnExpression,
   isMemberExpression,
 } from '@vue/compiler-dom'
 import type { CodegenContext } from '../generate'
@@ -92,8 +92,10 @@ export function genEventHandler(
   value: SimpleExpressionNode | undefined,
 ): CodeFragment[] {
   if (value && value.content.trim()) {
-    const isMemberExp = isMemberExpression(value.content, context.options)
-    const isInlineStatement = !(isMemberExp || fnExpRE.test(value.content))
+    const isMemberExp = isMemberExpression(value, context.options)
+    const isInlineStatement = !(
+      isMemberExp || isFnExpression(value, context.options)
+    )
 
     if (isInlineStatement) {
       const expr = context.withId(() => genExpression(value, context), {

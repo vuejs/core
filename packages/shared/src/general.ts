@@ -87,7 +87,7 @@ export const isIntegerKey = (key: unknown): boolean =>
   key[0] !== '-' &&
   '' + parseInt(key, 10) === key
 
-export const isReservedProp: (key: string) => boolean = /*#__PURE__*/ makeMap(
+export const isReservedProp: (key: string) => boolean = /*@__PURE__*/ makeMap(
   // the leading comma is intentional so empty string "" is also included
   ',key,ref,ref_for,ref_key,' +
     'onVnodeBeforeMount,onVnodeMounted,' +
@@ -99,7 +99,7 @@ export const isBuiltInTag: (key: string) => boolean =
   /*#__PURE__*/ makeMap('slot,component')
 
 export const isBuiltInDirective: (key: string) => boolean =
-  /*#__PURE__*/ makeMap(
+  /*@__PURE__*/ makeMap(
     'bind,cloak,else-if,else,for,html,if,model,on,once,pre,show,slot,text,memo',
   )
 

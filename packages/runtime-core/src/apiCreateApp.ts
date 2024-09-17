@@ -46,8 +46,23 @@ export interface App<HostElement = any> {
     name: string,
     component: T,
   ): this
-  directive<T = any, V = any>(name: string): Directive<T, V> | undefined
-  directive<T = any, V = any>(name: string, directive: Directive<T, V>): this
+  directive<
+    HostElement = any,
+    Value = any,
+    Modifiers extends string = string,
+    Arg extends string = string,
+  >(
+    name: string,
+  ): Directive<HostElement, Value, Modifiers, Arg> | undefined
+  directive<
+    HostElement = any,
+    Value = any,
+    Modifiers extends string = string,
+    Arg extends string = string,
+  >(
+    name: string,
+    directive: Directive<HostElement, Value, Modifiers, Arg>,
+  ): this
   mount(
     rootContainer: HostElement | string,
     /**

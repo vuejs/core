@@ -1,3 +1,5 @@
+/// <reference types="vite/client" />
+
 import { createVaporApp } from 'vue/vapor'
 import { createApp } from 'vue'
 import './style.css'

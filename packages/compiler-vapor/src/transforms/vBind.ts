@@ -36,6 +36,7 @@ export const transformVBind: DirectiveTransform = (dir, node, context) => {
   const { loc, modifiers } = dir
   let { exp } = dir
   let arg = dir.arg!
+  const modifiersString = modifiers.map(s => s.content)
 
   if (!exp) exp = normalizeBindShorthand(arg, context)
   if (!exp.content.trim()) {
@@ -56,7 +57,7 @@ export const transformVBind: DirectiveTransform = (dir, node, context) => {
   if (arg.isStatic && isReservedProp(arg.content)) return
 
   let camel = false
-  if (modifiers.includes('camel')) {
+  if (modifiersString.includes('camel')) {
     if (arg.isStatic) {
       arg = extend({}, arg, { content: camelize(arg.content) })
     } else {
@@ -69,9 +70,9 @@ export const transformVBind: DirectiveTransform = (dir, node, context) => {
     value: exp,
     loc,
     runtimeCamelize: camel,
-    modifier: modifiers.includes('prop')
+    modifier: modifiersString.includes('prop')
       ? '.'
-      : modifiers.includes('attr')
+      : modifiersString.includes('attr')
         ? '^'
         : undefined,
   }

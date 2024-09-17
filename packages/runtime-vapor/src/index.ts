@@ -52,7 +52,7 @@ export { nextTick } from './scheduler'
 export {
   getCurrentInstance,
   type ComponentInternalInstance,
-  type Component,
+  type Component as Component,
   type ObjectComponent,
   type FunctionalComponent,
   type SetupFn,

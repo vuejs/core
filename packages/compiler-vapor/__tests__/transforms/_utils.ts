@@ -1,7 +1,23 @@
-import { type CompilerOptions, generate, parse, transform } from '../../src'
+import type { RootNode } from '@vue/compiler-dom'
+import {
+  type CompilerOptions,
+  type RootIRNode,
+  generate,
+  parse,
+  transform,
+} from '../../src'
 
 export function makeCompile(options: CompilerOptions = {}) {
-  return (template: string, overrideOptions: CompilerOptions = {}) => {
+  return (
+    template: string,
+    overrideOptions: CompilerOptions = {},
+  ): {
+    ast: RootNode
+    ir: RootIRNode
+    code: string
+    helpers: Set<string>
+    vaporHelpers: Set<string>
+  } => {
     const ast = parse(template, {
       prefixIdentifiers: true,
       ...options,
