@@ -7,15 +7,25 @@ This repository is a fork of [vuejs/core](https://github.com/vuejs/core) and is 
 
 ## Vue Vapor Team
 
-- [Evan You](https://github.com/yyx990803) - Creator and designer of Vue.js and Vue Vapor.
-- [Kevin Deng 三咲智子](https://github.com/sxzz) - Lead contributor and developer for Vue Vapor.
+- [Evan You](https://github.com/yyx990803) - Creator of Vue.js and Vue Vapor.
+- [Kevin Deng 三咲智子](https://github.com/sxzz) - Creator Vue Vapor.
 - [Rizumu Ayaka](https://github.com/LittleSound) - Active contributor.
 - [Ubugeeei](https://github.com/Ubugeeei) - Active contributor.
 - [Doctor Wu](https://github.com/doctor-wu) - Active contributor.
 
 ## Sponsors
 
-Vue.js is an MIT-licensed open source project with its ongoing development made possible entirely by the support of these awesome [backers](https://github.com/vuejs/core/blob/main/BACKERS.md). If you'd like to join them, please consider [ sponsoring Vue's development](https://vuejs.org/sponsor/).
+Vue Vapor is an MIT-licensed open source project with its ongoing development made possible entirely by the support of these amazing sponsors and [Vue's backers](https://github.com/vuejs/core/blob/main/BACKERS.md). If you'd like to join them, please consider [sponsoring Kevin Deng](https://github.com/sponsors/sxzz) or [supporting Vue's development](https://vuejs.org/sponsor).
+
+<p align="center">
+  <h3 align="center">Kevin Deng's Sponsors</h3>
+</p>
+
+<p align="center">
+  <a href="https://cdn.jsdelivr.net/gh/sxzz/sponsors/sponsors.svg">
+    <img src='https://cdn.jsdelivr.net/gh/sxzz/sponsors/sponsors.svg'/>
+  </a>
+</p>
 
 <p align="center">
   <h3 align="center">Special Sponsor</h3>
@@ -36,5 +46,7 @@ Vue.js is an MIT-licensed open source project with its ongoing development made 
 ## License
 
 [MIT](https://opensource.org/licenses/MIT)
+
+Copyright (c) 2024-present, Kevin Deng 三咲智子
 
 Copyright (c) 2013-present, Yuxi (Evan) You
