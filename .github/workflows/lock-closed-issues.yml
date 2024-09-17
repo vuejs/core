@@ -9,7 +9,7 @@ permissions:
 
 jobs:
   action:
-    if: github.repository == 'vuejs/core'
+    if: github.repository == 'vuejs/core-vapor'
     runs-on: ubuntu-latest
     steps:
       - uses: dessant/lock-threads@v5

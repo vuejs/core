@@ -9,7 +9,7 @@ permissions:
 
 jobs:
   close-issues:
-    if: github.repository == 'vuejs/core'
+    if: github.repository == 'vuejs/core-vapor'
     runs-on: ubuntu-latest
     steps:
       - name: can't reproduce
