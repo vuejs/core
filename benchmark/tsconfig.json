@@ -19,6 +19,7 @@
     "paths": {
       "vue": ["../packages/vue/src"],
       "@vue/vapor": ["../packages/vue-vapor/src"],
+      "vue/vapor": ["../packages/vue-vapor/src"],
       "@vue/*": ["../packages/*/src"]
     }
   },

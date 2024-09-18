@@ -12,7 +12,6 @@ import {
   queuePostFlushCb,
 } from './scheduler'
 import { VaporErrorCodes, callWithAsyncErrorHandling } from './errorHandling'
-import { invokeDirectiveHook } from './directives'
 
 export function renderEffect(cb: () => void): void {
   const instance = getCurrentInstance()
@@ -58,14 +57,10 @@ export function renderEffect(cb: () => void): void {
     if (instance && instance.isMounted && !instance.isUpdating) {
       instance.isUpdating = true
 
-      const { bu, u, scope } = instance
-      const { dirs } = scope
+      const { bu, u } = instance
       // beforeUpdate hook
       if (bu) {
         invokeArrayFns(bu)
-      }
-      if (dirs) {
-        invokeDirectiveHook(instance, 'beforeUpdate', scope)
       }
 
       effect.run()
@@ -73,9 +68,6 @@ export function renderEffect(cb: () => void): void {
       queuePostFlushCb(() => {
         instance.isUpdating = false
         const reset = setCurrentInstance(instance)
-        if (dirs) {
-          invokeDirectiveHook(instance, 'updated', scope)
-        }
         // updated hook
         if (u) {
           queuePostFlushCb(u)

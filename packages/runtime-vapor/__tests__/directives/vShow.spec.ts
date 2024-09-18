@@ -28,7 +28,7 @@ const createDemo = (defaultValue: boolean) =>
     on(n1 as HTMLElement, 'click', () => handleClick)
     return n0
   })
-describe('directive: v-show', () => {
+describe.todo('directive: v-show', () => {
   test('basic', async () => {
     const { host } = createDemo(true).render()
     const btn = host.querySelector('button')

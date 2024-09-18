@@ -1,10 +1,10 @@
 import {
+  type EffectScope,
   type ShallowRef,
-  getCurrentScope,
+  effectScope,
   isReactive,
   proxyRefs,
   shallowRef,
-  traverse,
   triggerRef,
 } from '@vue/reactivity'
 import { isArray, isObject, isString } from '@vue/shared'
@@ -18,17 +18,11 @@ import { type Block, type Fragment, fragmentKey } from './apiRender'
 import { warn } from './warning'
 import { currentInstance } from './component'
 import { componentKey } from './component'
-import { BlockEffectScope, isRenderEffectScope } from './blockEffectScope'
-import {
-  createChildFragmentDirectives,
-  invokeWithMount,
-  invokeWithUnmount,
-  invokeWithUpdate,
-} from './directivesChildFragment'
 import type { DynamicSlot } from './componentSlots'
+import { renderEffect } from './renderEffect'
 
 interface ForBlock extends Fragment {
-  scope: BlockEffectScope
+  scope: EffectScope
   state: [
     item: ShallowRef<any>,
     key: ShallowRef<any>,
@@ -53,8 +47,6 @@ export const createFor = (
   let oldBlocks: ForBlock[] = []
   let newBlocks: ForBlock[]
   let parent: ParentNode | undefined | null
-  const update = getMemo ? updateWithMemo : updateWithoutMemo
-  const parentScope = getCurrentScope()!
   const parentAnchor = __DEV__ ? createComment('for') : createTextNode()
   const ref: Fragment = {
     nodes: oldBlocks,
@@ -62,25 +54,17 @@ export const createFor = (
   }
 
   const instance = currentInstance!
-  if (__DEV__ && (!instance || !isRenderEffectScope(parentScope))) {
+  if (__DEV__ && !instance) {
     warn('createFor() can only be used inside setup()')
   }
 
-  createChildFragmentDirectives(
-    parentAnchor,
-    () => oldBlocks.map(b => b.scope),
-    // source getter
-    () => traverse(src(), 1),
-    // init cb
-    getValue => doFor(getValue()),
-    // effect cb
-    getValue => doFor(getValue()),
-    once,
-  )
+  const update = getMemo ? updateWithMemo : updateWithoutMemo
+  once ? renderList() : renderEffect(renderList)
 
   return ref
 
-  function doFor(source: any) {
+  function renderList() {
+    const source = src()
     const newLength = getLength(source)
     const oldLength = oldBlocks.length
     newBlocks = new Array(newLength)
@@ -265,7 +249,7 @@ export const createFor = (
     idx: number,
     anchor: Node = parentAnchor,
   ): ForBlock {
-    const scope = new BlockEffectScope(instance, parentScope)
+    const scope = effectScope()
 
     const [item, key, index] = getItem(source, idx)
     const state = [
@@ -283,11 +267,9 @@ export const createFor = (
     })
     block.nodes = scope.run(() => renderItem(proxyRefs(state)))!
 
-    invokeWithMount(scope, () => {
-      // TODO v-memo
-      // if (getMemo) block.update()
-      if (parent) insert(block.nodes, parent, anchor)
-    })
+    // TODO v-memo
+    // if (getMemo) block.update()
+    if (parent) insert(block.nodes, parent, anchor)
 
     return block
   }
@@ -326,7 +308,6 @@ export const createFor = (
     }
 
     if (needsUpdate) setState(block, newItem, newKey, newIndex)
-    invokeWithUpdate(block.scope)
   }
 
   function updateWithoutMemo(
@@ -344,13 +325,11 @@ export const createFor = (
       (!isReactive(newItem) && isObject(newItem))
 
     if (needsUpdate) setState(block, newItem, newKey, newIndex)
-    invokeWithUpdate(block.scope)
   }
 
   function unmount({ nodes, scope }: ForBlock) {
-    invokeWithUnmount(scope, () => {
-      removeBlock(nodes, parent!)
-    })
+    removeBlock(nodes, parent!)
+    scope.stop()
   }
 }
 

@@ -27,7 +27,7 @@ const setDOMProps = (el: any, props: Array<[key: string, value: any]>) => {
   })
 }
 
-describe('directive: v-model', () => {
+describe.todo('directive: v-model', () => {
   test('should work with text input', async () => {
     const spy = vi.fn()
 

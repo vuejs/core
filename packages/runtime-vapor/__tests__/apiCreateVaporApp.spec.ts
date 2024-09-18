@@ -153,7 +153,7 @@ describe('api: createVaporApp', () => {
     expect(host.innerHTML).toBe(`foobar!barbaz!`)
   })
 
-  test('directive', () => {
+  test.todo('directive', () => {
     const spy1 = vi.fn()
     const spy2 = vi.fn()
 

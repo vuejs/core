@@ -1,4 +1,4 @@
-import { isRef } from '@vue/reactivity'
+import { EffectScope, isRef } from '@vue/reactivity'
 import {
   EMPTY_OBJ,
   hasOwn,
@@ -31,7 +31,6 @@ import {
   createAppContext,
 } from './apiCreateVaporApp'
 import type { Data } from '@vue/runtime-shared'
-import { BlockEffectScope } from './blockEffectScope'
 
 export type Component = FunctionalComponent | ObjectComponent
 
@@ -161,7 +160,7 @@ export interface ComponentInternalInstance {
   root: ComponentInternalInstance
 
   provides: Data
-  scope: BlockEffectScope
+  scope: EffectScope
   comps: Set<ComponentInternalInstance>
 
   rawProps: NormalizedRawProps
@@ -283,7 +282,7 @@ export function createComponentInstance(
     parent,
     root: null!, // set later
 
-    scope: null!,
+    scope: new EffectScope(true /* detached */)!,
     provides: parent ? parent.provides : Object.create(_appContext.provides),
     type: component,
     comps: new Set(),
@@ -358,7 +357,6 @@ export function createComponentInstance(
     // [VaporLifecycleHooks.SERVER_PREFETCH]: null,
   }
   instance.root = parent ? parent.root : instance
-  instance.scope = new BlockEffectScope(instance, parent && parent.scope)
   initProps(instance, rawProps, !isFunction(component), once)
   initSlots(instance, slots)
   instance.emit = emit.bind(null, instance)

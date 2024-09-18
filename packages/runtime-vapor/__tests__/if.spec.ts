@@ -134,7 +134,7 @@ describe('createIf', () => {
     expect(host.innerHTML).toBe('<!--if-->')
   })
 
-  test('should work with directive hooks', async () => {
+  test.todo('should work with directive hooks', async () => {
     const calls: string[] = []
     const show1 = ref(true)
     const show2 = ref(true)

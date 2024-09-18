@@ -19,7 +19,7 @@ import { makeRender } from './_utils'
 
 const define = makeRender()
 
-describe('directives', () => {
+describe.todo('directives', () => {
   it('should work', async () => {
     const count = ref(0)
 

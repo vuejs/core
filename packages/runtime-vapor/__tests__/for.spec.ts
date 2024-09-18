@@ -194,7 +194,7 @@ describe('createFor', () => {
     expect(host.innerHTML).toBe('<!--for-->')
   })
 
-  test('should work with directive hooks', async () => {
+  test.fails('should work with directive hooks', async () => {
     const calls: string[] = []
     const list = ref([0])
     const update = ref(0)
