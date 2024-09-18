@@ -21,7 +21,6 @@
   }
 
   window.isHydrated = false
-
   const {
     createSSRApp,
     defineAsyncComponent,
@@ -31,7 +30,6 @@
     hydrateOnVisible,
     createCommentVNode,
   } = Vue
-  window.propsShow = ref(false)
 
   const Comp = {
     setup() {
@@ -55,7 +53,7 @@
     },
   }
   const CompWithRootVIf = {
-    setup(props) {
+    setup() {
       // <div v-if="false"></div>
       return () => createCommentVNode('v-if', true)
     },
