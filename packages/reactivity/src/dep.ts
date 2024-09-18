@@ -163,11 +163,7 @@ export class Dep {
         // original order at the end of the batch, but onTrigger hooks should
         // be invoked in original order here.
         for (let head = this.subsHead; head; head = head.nextSub) {
-          if (
-            __DEV__ &&
-            head.sub.onTrigger &&
-            !(head.sub.flags & EffectFlags.NOTIFIED)
-          ) {
+          if (head.sub.onTrigger && !(head.sub.flags & EffectFlags.NOTIFIED)) {
             head.sub.onTrigger(
               extend(
                 {
@@ -180,7 +176,12 @@ export class Dep {
         }
       }
       for (let link = this.subs; link; link = link.prevSub) {
-        link.sub.notify()
+        if (link.sub.notify()) {
+          // if notify() returns `true`, this is a computed. Also call notify
+          // on its dep - it's called here instead of inside computed's notify
+          // in order to reduce call stack depth.
+          ;(link.sub as ComputedRefImpl).dep.notify()
+        }
       }
     } finally {
       endBatch()
