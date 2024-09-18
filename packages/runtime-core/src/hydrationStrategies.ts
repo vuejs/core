@@ -42,8 +42,8 @@ export const hydrateOnVisible: HydrationStrategyFactory<
   const ob = new IntersectionObserver(entries => {
     for (const e of entries) {
       if (e.isIntersecting) {
-        ob.disconnect()
         hydrate()
+        ob.disconnect()
         return
       }
     }
