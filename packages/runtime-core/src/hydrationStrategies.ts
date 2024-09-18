@@ -37,7 +37,7 @@ export const hydrateOnVisible: HydrationStrategyFactory<
       break
     }
   }, opts)
-  forEach(el => ob.observe(el))
+  forEach(el => el instanceof Element && ob.observe(el))
   return () => ob.disconnect()
 }
 
@@ -86,24 +86,21 @@ export const hydrateOnInteraction: HydrationStrategyFactory<
   }
 
 export function forEachElement(node: Node, cb: (el: Element) => void): void {
-  // #11952
-  if (isComment(node)) {
-    // fragment
-    if (node.data === '[') {
-      let depth = 1
-      let next = node.nextSibling
-      while (next) {
-        if (next.nodeType === DOMNodeTypes.ELEMENT) {
-          cb(next as Element)
-        } else if (isComment(next)) {
-          if (next.data === ']') {
-            if (--depth === 0) break
-          } else if (next.data === '[') {
-            depth++
-          }
+  // fragment
+  if (isComment(node) && node.data === '[') {
+    let depth = 1
+    let next = node.nextSibling
+    while (next) {
+      if (next.nodeType === DOMNodeTypes.ELEMENT) {
+        cb(next as Element)
+      } else if (isComment(next)) {
+        if (next.data === ']') {
+          if (--depth === 0) break
+        } else if (next.data === '[') {
+          depth++
         }
-        next = next.nextSibling
       }
+      next = next.nextSibling
     }
   } else {
     cb(node as Element)
