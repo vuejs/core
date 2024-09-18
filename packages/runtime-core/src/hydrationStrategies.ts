@@ -1,7 +1,6 @@
 import { getGlobalThis, isString } from '@vue/shared'
 import { DOMNodeTypes, isComment } from './hydration'
 
-const globalThis = 
 // https://github.com/nuxt/nuxt/blob/main/packages/nuxt/src/app/compat/idle-callback.ts
 // Polyfills for Safari support
 // https://caniuse.com/requestidlecallback
