@@ -197,7 +197,9 @@ export function processChildren(
       case NodeTypes.COMMENT:
         // no need to escape comment here because the AST can only
         // contain valid comments.
-        context.pushStringPart(`<!--${child.content}-->`)
+        if (!disableCommentAsIfAlternate) {
+          context.pushStringPart(`<!--${child.content}-->`)
+        }
         break
       case NodeTypes.INTERPOLATION:
         context.pushStringPart(
