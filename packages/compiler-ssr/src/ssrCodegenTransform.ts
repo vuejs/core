@@ -156,7 +156,7 @@ export function processChildren(
   context: SSRTransformContext,
   asFragment = false,
   disableNestedFragments = false,
-  disableCommentAsIfAlternate = false,
+  disableComment = false,
 ): void {
   if (asFragment) {
     context.pushStringPart(`<!--[-->`)
@@ -197,7 +197,7 @@ export function processChildren(
       case NodeTypes.COMMENT:
         // no need to escape comment here because the AST can only
         // contain valid comments.
-        if (!disableCommentAsIfAlternate) {
+        if (!disableComment) {
           context.pushStringPart(`<!--${child.content}-->`)
         }
         break
@@ -209,12 +209,7 @@ export function processChildren(
         )
         break
       case NodeTypes.IF:
-        ssrProcessIf(
-          child,
-          context,
-          disableNestedFragments,
-          disableCommentAsIfAlternate,
-        )
+        ssrProcessIf(child, context, disableNestedFragments, disableComment)
         break
       case NodeTypes.FOR:
         ssrProcessFor(child, context, disableNestedFragments)
