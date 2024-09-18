@@ -7,6 +7,7 @@ declare const window: Window & {
   isRootMounted: boolean
   teardownCalled?: boolean
   show: Ref<boolean>
+  propsShow: Ref<boolean>
 }
 
 describe('async component hydration strategies', () => {
@@ -65,6 +66,15 @@ describe('async component hydration strategies', () => {
     await assertHydrationSuccess()
   })
 
+  test('visible (root v-if)', async () => {
+    await goToCase('visible', '?v-if')
+    await page().waitForFunction(() => window.isRootMounted)
+    expect(await page().evaluate(() => window.isHydrated)).toBe(false)
+    await page().evaluate(() => {
+      window.propsShow.value = true
+    })
+    await assertHydrationSuccess()
+  })
   test('media query', async () => {
     await goToCase('media')
     await page().waitForFunction(() => window.isRootMounted)

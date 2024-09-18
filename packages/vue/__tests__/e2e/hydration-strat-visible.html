@@ -11,12 +11,17 @@
 <script>
   const rootMargin = location.search.match(/rootMargin=(\d+)/)?.[1] ?? 0
   const isFragment = location.search.includes('?fragment')
+  const isVIf = location.search.includes('?v-if')
   if (isFragment) {
     document.getElementById('app').innerHTML =
       `<!--[--><!--[--><span>one</span><!--]--><button>0</button><span>two</span><!--]-->`
   }
+  if (isVIf) {
+    document.getElementById('app').innerHTML = `<!---->`
+  }
 
   window.isHydrated = false
+
   const {
     createSSRApp,
     defineAsyncComponent,
@@ -24,7 +29,9 @@
     ref,
     onMounted,
     hydrateOnVisible,
+    createCommentVNode,
   } = Vue
+  window.propsShow = ref(false)
 
   const Comp = {
     setup() {
@@ -47,10 +54,30 @@
       }
     },
   }
+  const CompWithRootVIf = {
+    props: ['show'],
+    setup(props) {
+      const count = ref(0)
+      onMounted(() => {
+        console.log('hydrated')
+        window.isHydrated = true
+      })
+      return () => {
+        const button = h(
+          'button',
+          { onClick: () => count.value++ },
+          count.value,
+        )
+        return props.show ? button : createCommentVNode('v-if', true)
+      }
+    },
+  }
 
   const AsyncComp = defineAsyncComponent({
-    loader: () => Promise.resolve(Comp),
-    hydrate: hydrateOnVisible({ rootMargin: rootMargin + 'px' }),
+    loader: () => Promise.resolve(isVIf ? CompWithRootVIf : Comp),
+    hydrate: isVIf
+      ? hydrateOnVisible()
+      : hydrateOnVisible({ rootMargin: rootMargin + 'px' }),
   })
 
   createSSRApp({
@@ -58,7 +85,9 @@
       onMounted(() => {
         window.isRootMounted = true
       })
-      return () => h(AsyncComp)
+      return isVIf
+        ? () => h(AsyncComp, { show: window.propsShow.value })
+        : () => h(AsyncComp)
     },
   }).mount('#app')
 </script>
