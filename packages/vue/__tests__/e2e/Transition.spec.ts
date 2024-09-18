@@ -1,6 +1,6 @@
 import { E2E_TIMEOUT, setupPuppeteer } from './e2eUtils'
 import path from 'node:path'
-import { Transition, createApp, h, nextTick, ref } from 'vue'
+import { Teleport, Transition, createApp, h, nextTick, ref } from 'vue'
 
 describe('e2e: Transition', () => {
   const { page, html, classList, isVisible, timeout, nextFrame, click } =
@@ -2307,6 +2307,89 @@ describe('e2e: Transition', () => {
         expect(await html('#target')).toBe('<!-- comment --><!--v-if-->')
         expect(await html('#container')).toBe(
           '<!--teleport start--><!--teleport end-->',
+        )
+      },
+      E2E_TIMEOUT,
+    ),
+    test(
+      'apply transition to teleport component child',
+      async () => {
+        await page().evaluate(() => {
+          const { createApp, ref, h } = (window as any).Vue
+          createApp({
+            template: `
+            <div id="target"></div>
+            <div id="container">
+              <transition>
+                  <Comp v-if="toggle" >content</Comp>
+              </transition>
+            </div>
+            <button id="toggleBtn" @click="click">button</button>
+          `,
+            components: {
+              Comp: {
+                setup() {
+                  return () => h(Teleport, { to: '#target' }, [h('div', { class: 'test' }, 'content')])
+                },
+              },
+            },
+            setup: () => {
+              const toggle = ref(false)
+              const click = () => (toggle.value = !toggle.value)
+              return { toggle, click }
+            },
+          }).mount('#app')
+        })
+
+        expect(await html('#target')).toBe('')
+        expect(await html('#container')).toBe(
+          '<!--v-if-->',
+        )
+
+        const classWhenTransitionStart = () =>
+          page().evaluate(() => {
+            ;(document.querySelector('#toggleBtn') as any)!.click()
+            return Promise.resolve().then(() => {
+              // find the class of teleported node
+              return document
+                .querySelector('#target div')!
+                .className.split(/\s+/g)
+            })
+          })
+
+        // enter
+        expect(await classWhenTransitionStart()).toStrictEqual([
+          'test',
+          'v-enter-from',
+          'v-enter-active',
+        ])
+        await nextFrame()
+        expect(await classList('.test')).toStrictEqual([
+          'test',
+          'v-enter-active',
+          'v-enter-to',
+        ])
+        await transitionFinish()
+        expect(await html('#target')).toBe(
+          '<div class="test">content</div>',
+        )
+
+        // leave
+        expect(await classWhenTransitionStart()).toStrictEqual([
+          'test',
+          'v-leave-from',
+          'v-leave-active',
+        ])
+        await nextFrame()
+        expect(await classList('.test')).toStrictEqual([
+          'test',
+          'v-leave-active',
+          'v-leave-to',
+        ])
+        await transitionFinish()
+        expect(await html('#target')).toBe('')
+        expect(await html('#container')).toBe(
+          '<!--v-if-->',
         )
       },
       E2E_TIMEOUT,
