@@ -2354,6 +2354,7 @@ describe('e2e: Transition', () => {
               ;(document.querySelector('#toggleBtn') as any)!.click()
               return Promise.resolve().then(() => {
                 // find the class of teleported node
+                console.log(document.querySelector('#target')?.innerHTML)
                 return document
                   .querySelector('#target div')!
                   .className.split(/\s+/g)
