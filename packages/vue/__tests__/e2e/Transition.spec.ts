@@ -1,6 +1,6 @@
 import { E2E_TIMEOUT, setupPuppeteer } from './e2eUtils'
 import path from 'node:path'
-import { Teleport, Transition, createApp, h, nextTick, ref } from 'vue'
+import { Transition, createApp, h, nextTick, ref } from 'vue'
 
 describe('e2e: Transition', () => {
   const { page, html, classList, isVisible, timeout, nextFrame, click } =
@@ -2315,7 +2315,7 @@ describe('e2e: Transition', () => {
         'apply transition to teleport component child',
         async () => {
           await page().evaluate(() => {
-            const { createApp, ref, h } = (window as any).Vue
+            const { createApp, ref } = (window as any).Vue
             createApp({
               template: `
             <div id="target"></div>
@@ -2328,14 +2328,11 @@ describe('e2e: Transition', () => {
           `,
               components: {
                 Comp: {
-                  setup() {
-                    return () =>
-                      h(
-                        Teleport,
-                        { to: '#target' },
-                        h('div', { class: 'test' }, 'content'),
-                      )
-                  },
+                  template: `
+                    <Teleport to="#target">
+                      <div class="test">content</div>
+                    </Teleport>
+                  `,
                 },
               },
               setup: () => {
@@ -2354,7 +2351,6 @@ describe('e2e: Transition', () => {
               ;(document.querySelector('#toggleBtn') as any)!.click()
               return Promise.resolve().then(() => {
                 // find the class of teleported node
-                console.log(document.querySelector('#target')?.innerHTML)
                 return document
                   .querySelector('#target div')!
                   .className.split(/\s+/g)
