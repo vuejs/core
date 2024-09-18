@@ -26,6 +26,16 @@ export const hydrateOnIdle: HydrationStrategyFactory<number> =
     return () => cancelIdleCallback(id)
   }
 
+function elementIsVisibleInViewport(el: Element) {
+  const { top, left, bottom, right } = el.getBoundingClientRect()
+  // eslint-disable-next-line no-restricted-globals
+  const { innerHeight, innerWidth } = window
+  return (
+    ((top > 0 && top < innerHeight) || (bottom > 0 && bottom < innerHeight)) &&
+    ((left > 0 && left < innerWidth) || (right > 0 && right < innerWidth))
+  )
+}
+
 export const hydrateOnVisible: HydrationStrategyFactory<
   IntersectionObserverInit
 > = opts => (hydrate, forEach) => {
@@ -37,7 +47,14 @@ export const hydrateOnVisible: HydrationStrategyFactory<
       break
     }
   }, opts)
-  forEach(el => ob.observe(el))
+  forEach(el => {
+    if (elementIsVisibleInViewport(el)) {
+      hydrate()
+      ob.disconnect()
+      return false
+    }
+    ob.observe(el)
+  })
   return () => ob.disconnect()
 }
 
@@ -85,14 +102,20 @@ export const hydrateOnInteraction: HydrationStrategyFactory<
     return teardown
   }
 
-export function forEachElement(node: Node, cb: (el: Element) => void): void {
+export function forEachElement(
+  node: Node,
+  cb: (el: Element) => void | false,
+): void {
   // fragment
   if (isComment(node) && node.data === '[') {
     let depth = 1
     let next = node.nextSibling
     while (next) {
       if (next.nodeType === DOMNodeTypes.ELEMENT) {
-        cb(next as Element)
+        const result = cb(next as Element)
+        if (result === false) {
+          break
+        }
       } else if (isComment(next)) {
         if (next.data === ']') {
           if (--depth === 0) break
