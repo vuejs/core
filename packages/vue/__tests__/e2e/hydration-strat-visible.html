@@ -57,7 +57,7 @@
   const CompWithRootVIf = {
     setup(props) {
       // <div v-if="false"></div>
-      return createCommentVNode('v-if', true)
+      return () => createCommentVNode('v-if', true)
     },
   }
 
