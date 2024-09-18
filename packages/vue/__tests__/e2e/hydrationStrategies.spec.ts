@@ -7,7 +7,6 @@ declare const window: Window & {
   isRootMounted: boolean
   teardownCalled?: boolean
   show: Ref<boolean>
-  propsShow: Ref<boolean>
 }
 
 describe('async component hydration strategies', () => {
