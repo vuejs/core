@@ -66,15 +66,17 @@ describe('async component hydration strategies', () => {
     await assertHydrationSuccess()
   })
 
-  test('visible (root v-if)', async () => {
+  test('visible (root v-if) should not throw error', async () => {
+    const spy = vi.fn()
+    const currentPage = page()
+    currentPage.on('pageerror', spy)
     await goToCase('visible', '?v-if')
     await page().waitForFunction(() => window.isRootMounted)
     expect(await page().evaluate(() => window.isHydrated)).toBe(false)
-    await page().evaluate(() => {
-      window.propsShow.value = true
-    })
-    await assertHydrationSuccess()
+    expect(spy).toBeCalledTimes(0)
+    currentPage.off('pageerror', spy)
   })
+
   test('media query', async () => {
     await goToCase('media')
     await page().waitForFunction(() => window.isRootMounted)

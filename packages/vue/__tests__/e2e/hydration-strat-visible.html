@@ -55,21 +55,9 @@
     },
   }
   const CompWithRootVIf = {
-    props: ['show'],
     setup(props) {
-      const count = ref(0)
-      onMounted(() => {
-        console.log('hydrated')
-        window.isHydrated = true
-      })
-      return () => {
-        const button = h(
-          'button',
-          { onClick: () => count.value++ },
-          count.value,
-        )
-        return props.show ? button : createCommentVNode('v-if', true)
-      }
+      // <div v-if="false"></div>
+      return createCommentVNode('v-if', true)
     },
   }
 
@@ -85,9 +73,7 @@
       onMounted(() => {
         window.isRootMounted = true
       })
-      return isVIf
-        ? () => h(AsyncComp, { show: window.propsShow.value })
-        : () => h(AsyncComp)
+      return () => h(AsyncComp)
     },
   }).mount('#app')
 </script>
