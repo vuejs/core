@@ -47,10 +47,10 @@ export function genFor(
   if (context.options.prefixIdentifiers) {
     propsName = `_ctx${depth}`
     Array.from(idsOfValue).forEach(
-      (id, idIndex) => (idMap[id] = `${propsName}[${idIndex}]`),
+      (id, idIndex) => (idMap[id] = `${propsName}[${idIndex}].value`),
     )
-    if (rawKey) idMap[rawKey] = `${propsName}[${idsOfValue.size}]`
-    if (rawIndex) idMap[rawIndex] = `${propsName}[${idsOfValue.size + 1}]`
+    if (rawKey) idMap[rawKey] = `${propsName}[${idsOfValue.size}].value`
+    if (rawIndex) idMap[rawIndex] = `${propsName}[${idsOfValue.size + 1}].value`
   } else {
     propsName = `[${[rawValue || ((rawKey || rawIndex) && '_'), rawKey || (rawIndex && '__'), rawIndex].filter(Boolean).join(', ')}]`
   }

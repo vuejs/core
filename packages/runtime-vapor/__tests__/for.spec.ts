@@ -28,7 +28,7 @@ describe('createFor', () => {
         state => {
           const span = document.createElement('li')
           renderEffect(() => {
-            const [item, key, index] = state
+            const [{ value: item }, { value: key }, { value: index }] = state
             span.innerHTML = `${key}. ${item.name}`
 
             // index should be undefined if source is not an object
@@ -94,11 +94,11 @@ describe('createFor', () => {
         state => {
           const span = document.createElement('li')
           renderEffect(() => {
-            const [item, key, index] = state
+            const [{ value: item }, { value: key }, index] = state
             span.innerHTML = `${key}. ${item}`
 
             // index should be undefined if source is not an object
-            expect(index).toBe(undefined)
+            expect(index.value).toBe(undefined)
           })
           return span
         },
@@ -139,7 +139,7 @@ describe('createFor', () => {
         state => {
           const span = document.createElement('li')
           renderEffect(() => {
-            const [item, key, index] = state
+            const [{ value: item }, { value: key }, { value: index }] = state
             span.innerHTML = `${key}${index}. ${item}`
             expect(index).not.toBe(undefined)
           })
@@ -319,23 +319,22 @@ describe('createFor', () => {
     const { host } = define(() => {
       const n1 = createFor(
         () => list.value,
-        withDestructure(
-          state => {
-            const [{ name }, key, index] = state
-            return [name, key, index]
-          },
-          state => {
-            const span = document.createElement('li')
-            renderEffect(() => {
-              const [name, key, index] = state
-              span.innerHTML = `${key}. ${name}`
-
-              // index should be undefined if source is not an object
-              expect(index).toBe(undefined)
-            })
-            return span
-          },
-        ),
+        state => {
+          const span = document.createElement('li')
+          renderEffect(() => {
+            const [
+              {
+                value: { name },
+              },
+              { value: key },
+              index,
+            ] = state
+            span.innerHTML = `${key}. ${name}`
+            // index should be undefined if source is not an object
+            expect(index.value).toBe(undefined)
+          })
+          return span
+        },
         item => item.name,
       )
       return n1
@@ -398,7 +397,7 @@ describe('createFor', () => {
         state => {
           const span = document.createElement('li')
           renderEffect(() => {
-            const [item, key, index] = state
+            const [{ value: item }, { value: key }, { value: index }] = state
             span.innerHTML = `${key}. ${item.name}`
 
             // index should be undefined if source is not an object

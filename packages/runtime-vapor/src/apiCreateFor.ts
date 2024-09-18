@@ -3,7 +3,6 @@ import {
   type ShallowRef,
   effectScope,
   isReactive,
-  proxyRefs,
   shallowRef,
   triggerRef,
 } from '@vue/reactivity'
@@ -37,7 +36,7 @@ type Source = any[] | Record<any, any> | number | Set<any> | Map<any, any>
 /*! #__NO_SIDE_EFFECTS__ */
 export const createFor = (
   src: () => Source,
-  renderItem: (block: any) => Block,
+  renderItem: (block: ForBlock['state']) => Block,
   getKey?: (item: any, key: any, index?: number) => any,
   getMemo?: (item: any, key: any, index?: number) => any[],
   hydrationNode?: Node,
@@ -265,7 +264,7 @@ export const createFor = (
       memo: getMemo && getMemo(item, key, index),
       [fragmentKey]: true,
     })
-    block.nodes = scope.run(() => renderItem(proxyRefs(state)))!
+    block.nodes = scope.run(() => renderItem(state))!
 
     // TODO v-memo
     // if (getMemo) block.update()
