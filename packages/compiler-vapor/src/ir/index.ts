@@ -77,6 +77,7 @@ export interface IRFor {
   value?: SimpleExpressionNode
   key?: SimpleExpressionNode
   index?: SimpleExpressionNode
+  memo?: SimpleExpressionNode
 }
 
 export interface ForIRNode extends BaseIRNode, IRFor {

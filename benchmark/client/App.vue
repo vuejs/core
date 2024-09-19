@@ -113,6 +113,7 @@ const isSelected = createSelector(selected)
         v-for="row of rows"
         :key="row.id"
         :class="{ danger: isSelected(row.id) }"
+        v-memo="[row.label, row.id === selected]"
       >
         <td>{{ row.id }}</td>
         <td>

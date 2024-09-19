@@ -21,7 +21,7 @@ export function getMetadata(
 export function recordPropMetadata(el: Node, key: string, value: any): any {
   const metadata = getMetadata(el)[MetadataKind.prop]
   const prev = metadata[key]
-  metadata[key] = value
+  if (prev !== value) metadata[key] = value
   return prev
 }
 

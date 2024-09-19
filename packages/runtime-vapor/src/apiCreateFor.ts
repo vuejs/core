@@ -19,6 +19,7 @@ import { currentInstance } from './component'
 import { componentKey } from './component'
 import type { DynamicSlot } from './componentSlots'
 import { renderEffect } from './renderEffect'
+import { withMemo } from './memo'
 
 interface ForBlock extends Fragment {
   scope: EffectScope
@@ -264,7 +265,15 @@ export const createFor = (
       memo: getMemo && getMemo(item, key, index),
       [fragmentKey]: true,
     })
-    block.nodes = scope.run(() => renderItem(state))!
+    block.nodes = scope.run(() => {
+      if (getMemo) {
+        return withMemo(
+          () => block.memo!,
+          () => renderItem(state),
+        )
+      }
+      return renderItem(state)
+    })!
 
     // TODO v-memo
     // if (getMemo) block.update()
@@ -306,7 +315,7 @@ export const createFor = (
       }
     }
 
-    if (needsUpdate) setState(block, newItem, newKey, newIndex)
+    if (needsUpdate) updateState(block, newItem, newKey, newIndex)
   }
 
   function updateWithoutMemo(
@@ -321,9 +330,8 @@ export const createFor = (
       newKey !== key.value ||
       newIndex !== index.value ||
       // shallowRef list
-      (!isReactive(newItem) && isObject(newItem))
-
-    if (needsUpdate) setState(block, newItem, newKey, newIndex)
+      (isObject(newItem) && !isReactive(newItem))
+    if (needsUpdate) updateState(block, newItem, newKey, newIndex)
   }
 
   function unmount({ nodes, scope }: ForBlock) {
@@ -332,7 +340,7 @@ export const createFor = (
   }
 }
 
-function setState(
+function updateState(
   block: ForBlock,
   newItem: any,
   newKey: any,

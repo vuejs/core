@@ -12,6 +12,7 @@ import {
   queuePostFlushCb,
 } from './scheduler'
 import { VaporErrorCodes, callWithAsyncErrorHandling } from './errorHandling'
+import { memoStack } from './memo'
 
 export function renderEffect(cb: () => void): void {
   const instance = getCurrentInstance()
@@ -32,6 +33,13 @@ export function renderEffect(cb: () => void): void {
     job.id = instance.uid
   }
 
+  let memos: (() => any[])[] | undefined
+  let memoCaches: any[][]
+  if (memoStack.length) {
+    memos = Array.from(memoStack)
+    memoCaches = memos.map(memo => memo())
+  }
+
   const effect = new ReactiveEffect(() =>
     callWithAsyncErrorHandling(cb, instance, VaporErrorCodes.RENDER_FUNCTION),
   )
@@ -50,6 +58,28 @@ export function renderEffect(cb: () => void): void {
   function job() {
     if (!(effect.flags & EffectFlags.ACTIVE) || !effect.dirty) {
       return
+    }
+
+    if (memos) {
+      let dirty: boolean | undefined
+      for (let i = 0; i < memos.length; i++) {
+        const memo = memos[i]
+        const cache = memoCaches[i]
+        const value = memo()
+
+        for (let j = 0; j < Math.max(value.length, cache.length); j++) {
+          if (value[j] !== cache[j]) {
+            dirty = true
+            break
+          }
+        }
+
+        memoCaches[i] = value
+      }
+
+      if (!dirty) {
+        return
+      }
     }
 
     const reset = instance && setCurrentInstance(instance)
