@@ -2019,6 +2019,21 @@ describe('compiler: parse', () => {
           children: [{ type: NodeTypes.TEXT, content: `{{ number ` }],
         },
       ])
+
+      const ast3 = baseParse(`<div v-pre><textarea>{{ foo </textarea></div>`, {
+        parseMode: 'html',
+      })
+      expect((ast3.children[0] as ElementNode).children).toMatchObject([
+        {
+          type: NodeTypes.ELEMENT,
+          children: [
+            {
+              type: NodeTypes.TEXT,
+              content: `{{ foo `,
+            },
+          ],
+        },
+      ])
     })
 
     test('self-closing v-pre', () => {
@@ -2354,6 +2369,7 @@ describe('compiler: parse', () => {
     test('should remove leading newline character immediately following the pre element start tag', () => {
       const ast = parse(`<pre>\n  foo  bar  </pre>`, {
         isPreTag: tag => tag === 'pre',
+        isIgnoreNewlineTag: tag => tag === 'pre',
       })
       expect(ast.children).toHaveLength(1)
       const preElement = ast.children[0] as ElementNode

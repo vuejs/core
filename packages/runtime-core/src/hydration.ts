@@ -440,7 +440,17 @@ export function createHydrationFunctions(
           remove(cur)
         }
       } else if (shapeFlag & ShapeFlags.TEXT_CHILDREN) {
-        if (el.textContent !== vnode.children) {
+        // #11873 the HTML parser will "eat" the first newline when parsing
+        // <pre> and <textarea>, so if the client value starts with a newline,
+        // we need to remove it before comparing
+        let clientText = vnode.children as string
+        if (
+          clientText[0] === '\n' &&
+          (el.tagName === 'PRE' || el.tagName === 'TEXTAREA')
+        ) {
+          clientText = clientText.slice(1)
+        }
+        if (el.textContent !== clientText) {
           if (!isMismatchAllowed(el, MismatchTypes.TEXT)) {
             ;(__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
               warn(
@@ -753,7 +763,7 @@ export function createHydrationFunctions(
   const isTemplateNode = (node: Node): node is HTMLTemplateElement => {
     return (
       node.nodeType === DOMNodeTypes.ELEMENT &&
-      (node as Element).tagName.toLowerCase() === 'template'
+      (node as Element).tagName === 'TEMPLATE'
     )
   }
 

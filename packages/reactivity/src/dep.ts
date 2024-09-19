@@ -4,7 +4,7 @@ import { type TrackOpTypes, TriggerOpTypes } from './constants'
 import {
   type DebuggerEventExtraInfo,
   EffectFlags,
-  type Link,
+  type Subscriber,
   activeSub,
   endBatch,
   shouldTrack,
@@ -17,6 +17,49 @@ import {
  * has changed.
  */
 export let globalVersion = 0
+
+/**
+ * Represents a link between a source (Dep) and a subscriber (Effect or Computed).
+ * Deps and subs have a many-to-many relationship - each link between a
+ * dep and a sub is represented by a Link instance.
+ *
+ * A Link is also a node in two doubly-linked lists - one for the associated
+ * sub to track all its deps, and one for the associated dep to track all its
+ * subs.
+ *
+ * @internal
+ */
+export class Link {
+  /**
+   * - Before each effect run, all previous dep links' version are reset to -1
+   * - During the run, a link's version is synced with the source dep on access
+   * - After the run, links with version -1 (that were never used) are cleaned
+   *   up
+   */
+  version: number
+
+  /**
+   * Pointers for doubly-linked lists
+   */
+  nextDep?: Link
+  prevDep?: Link
+  nextSub?: Link
+  prevSub?: Link
+  prevActiveLink?: Link
+
+  constructor(
+    public sub: Subscriber,
+    public dep: Dep,
+  ) {
+    this.version = dep.version
+    this.nextDep =
+      this.prevDep =
+      this.nextSub =
+      this.prevSub =
+      this.prevActiveLink =
+        undefined
+  }
+}
 
 /**
  * @internal
@@ -52,16 +95,7 @@ export class Dep {
 
     let link = this.activeLink
     if (link === undefined || link.sub !== activeSub) {
-      link = this.activeLink = {
-        dep: this,
-        sub: activeSub,
-        version: this.version,
-        nextDep: undefined,
-        prevDep: undefined,
-        nextSub: undefined,
-        prevSub: undefined,
-        prevActiveLink: undefined,
-      }
+      link = this.activeLink = new Link(activeSub, this)
 
       // add the link to the activeEffect as a dep (as tail)
       if (!activeSub.deps) {
@@ -129,11 +163,7 @@ export class Dep {
         // original order at the end of the batch, but onTrigger hooks should
         // be invoked in original order here.
         for (let head = this.subsHead; head; head = head.nextSub) {
-          if (
-            __DEV__ &&
-            head.sub.onTrigger &&
-            !(head.sub.flags & EffectFlags.NOTIFIED)
-          ) {
+          if (head.sub.onTrigger && !(head.sub.flags & EffectFlags.NOTIFIED)) {
             head.sub.onTrigger(
               extend(
                 {
@@ -146,7 +176,12 @@ export class Dep {
         }
       }
       for (let link = this.subs; link; link = link.prevSub) {
-        link.sub.notify()
+        if (link.sub.notify()) {
+          // if notify() returns `true`, this is a computed. Also call notify
+          // on its dep - it's called here instead of inside computed's notify
+          // in order to reduce call stack depth.
+          ;(link.sub as ComputedRefImpl).dep.notify()
+        }
       }
     } finally {
       endBatch()

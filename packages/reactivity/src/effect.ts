@@ -1,7 +1,7 @@
 import { extend, hasChanged } from '@vue/shared'
 import type { ComputedRefImpl } from './computed'
 import type { TrackOpTypes, TriggerOpTypes } from './constants'
-import { type Dep, globalVersion } from './dep'
+import { type Link, globalVersion } from './dep'
 import { activeEffectScope } from './effectScope'
 import { warn } from './warning'
 
@@ -39,6 +39,9 @@ export interface ReactiveEffectRunner<T = any> {
 export let activeSub: Subscriber | undefined
 
 export enum EffectFlags {
+  /**
+   * ReactiveEffect only
+   */
   ACTIVE = 1 << 0,
   RUNNING = 1 << 1,
   TRACKING = 1 << 2,
@@ -69,42 +72,13 @@ export interface Subscriber extends DebuggerOptions {
   /**
    * @internal
    */
-  notify(): void
-}
-
-/**
- * Represents a link between a source (Dep) and a subscriber (Effect or Computed).
- * Deps and subs have a many-to-many relationship - each link between a
- * dep and a sub is represented by a Link instance.
- *
- * A Link is also a node in two doubly-linked lists - one for the associated
- * sub to track all its deps, and one for the associated dep to track all its
- * subs.
- *
- * @internal
- */
-export interface Link {
-  dep: Dep
-  sub: Subscriber
-
+  next?: Subscriber
   /**
-   * - Before each effect run, all previous dep links' version are reset to -1
-   * - During the run, a link's version is synced with the source dep on access
-   * - After the run, links with version -1 (that were never used) are cleaned
-   *   up
+   * returning `true` indicates it's a computed that needs to call notify
+   * on its dep too
+   * @internal
    */
-  version: number
-
-  /**
-   * Pointers for doubly-linked lists
-   */
-  nextDep?: Link
-  prevDep?: Link
-
-  nextSub?: Link
-  prevSub?: Link
-
-  prevActiveLink?: Link
+  notify(): true | void
 }
 
 const pausedQueueEffects = new WeakSet<ReactiveEffect>()
@@ -127,7 +101,7 @@ export class ReactiveEffect<T = any>
   /**
    * @internal
    */
-  nextEffect?: ReactiveEffect = undefined
+  next?: Subscriber = undefined
   /**
    * @internal
    */
@@ -169,9 +143,7 @@ export class ReactiveEffect<T = any>
       return
     }
     if (!(this.flags & EffectFlags.NOTIFIED)) {
-      this.flags |= EffectFlags.NOTIFIED
-      this.nextEffect = batchedEffect
-      batchedEffect = this
+      batch(this)
     }
   }
 
@@ -243,8 +215,31 @@ export class ReactiveEffect<T = any>
   }
 }
 
+/**
+ * For debugging
+ */
+// function printDeps(sub: Subscriber) {
+//   let d = sub.deps
+//   let ds = []
+//   while (d) {
+//     ds.push(d)
+//     d = d.nextDep
+//   }
+//   return ds.map(d => ({
+//     id: d.id,
+//     prev: d.prevDep?.id,
+//     next: d.nextDep?.id,
+//   }))
+// }
+
 let batchDepth = 0
-let batchedEffect: ReactiveEffect | undefined
+let batchedSub: Subscriber | undefined
+
+export function batch(sub: Subscriber): void {
+  sub.flags |= EffectFlags.NOTIFIED
+  sub.next = batchedSub
+  batchedSub = sub
+}
 
 /**
  * @internal
@@ -263,16 +258,17 @@ export function endBatch(): void {
   }
 
   let error: unknown
-  while (batchedEffect) {
-    let e: ReactiveEffect | undefined = batchedEffect
-    batchedEffect = undefined
+  while (batchedSub) {
+    let e: Subscriber | undefined = batchedSub
+    batchedSub = undefined
     while (e) {
-      const next: ReactiveEffect | undefined = e.nextEffect
-      e.nextEffect = undefined
+      const next: Subscriber | undefined = e.next
+      e.next = undefined
       e.flags &= ~EffectFlags.NOTIFIED
       if (e.flags & EffectFlags.ACTIVE) {
         try {
-          e.trigger()
+          // ACTIVE flag is effect-only
+          ;(e as ReactiveEffect).trigger()
         } catch (err) {
           if (!error) error = err
         }
@@ -300,9 +296,11 @@ function cleanupDeps(sub: Subscriber) {
   // Cleanup unsued deps
   let head
   let tail = sub.depsTail
-  for (let link = tail; link; link = link.prevDep) {
+  let link = tail
+  while (link) {
+    const prev = link.prevDep
     if (link.version === -1) {
-      if (link === tail) tail = link.prevDep
+      if (link === tail) tail = prev
       // unused - remove it from the dep's subscribing effect list
       removeSub(link)
       // also remove it from this effect's dep list
@@ -316,6 +314,7 @@ function cleanupDeps(sub: Subscriber) {
     // restore previous active link if any
     link.dep.activeLink = link.prevActiveLink
     link.prevActiveLink = undefined
+    link = prev
   }
   // set the new head & tail
   sub.deps = head
@@ -326,8 +325,9 @@ function isDirty(sub: Subscriber): boolean {
   for (let link = sub.deps; link; link = link.nextDep) {
     if (
       link.dep.version !== link.version ||
-      (link.dep.computed && refreshComputed(link.dep.computed)) ||
-      link.dep.version !== link.version
+      (link.dep.computed &&
+        (refreshComputed(link.dep.computed) ||
+          link.dep.version !== link.version))
     ) {
       return true
     }
@@ -366,7 +366,12 @@ export function refreshComputed(computed: ComputedRefImpl): undefined {
   // and therefore tracks no deps, thus we cannot rely on the dirty check.
   // Instead, computed always re-evaluate and relies on the globalVersion
   // fast path above for caching.
-  if (dep.version > 0 && !computed.isSSR && !isDirty(computed)) {
+  if (
+    dep.version > 0 &&
+    !computed.isSSR &&
+    computed.deps &&
+    !isDirty(computed)
+  ) {
     computed.flags &= ~EffectFlags.RUNNING
     return
   }
