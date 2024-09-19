@@ -414,14 +414,22 @@ function removeSub(link: Link) {
     dep.subs = prevSub
   }
 
-  if (!dep.subs && dep.computed) {
+  if (!dep.subs) {
     // last subscriber removed
     // if computed, unsubscribe it from all its deps so this computed and its
     // value can be GCed
-    dep.computed.flags &= ~EffectFlags.TRACKING
-    for (let l = dep.computed.deps; l; l = l.nextDep) {
-      removeSub(l)
+    if (dep.computed) {
+      dep.computed.flags &= ~EffectFlags.TRACKING
+      for (let l = dep.computed.deps; l; l = l.nextDep) {
+        removeSub(l)
+      }
     }
+
+    // cleanup subsHead
+    if (__DEV__ && prevSub === undefined) dep.subsHead = undefined
+
+    // remove the dep from depsMap
+    if (dep.cleanup) dep.cleanup()
   }
 }
 

@@ -82,6 +82,11 @@ export class Dep {
    */
   subsHead?: Link
 
+  /**
+   * Delete itself from depsMap
+   */
+  cleanup?: () => void
+
   constructor(public computed?: ComputedRefImpl | undefined) {
     if (__DEV__) {
       this.subsHead = undefined
@@ -249,6 +254,7 @@ export function track(target: object, type: TrackOpTypes, key: unknown): void {
     let dep = depsMap.get(key)
     if (!dep) {
       depsMap.set(key, (dep = new Dep()))
+      dep.cleanup = () => depsMap.delete(key)
     }
     if (__DEV__) {
       dep.track({
