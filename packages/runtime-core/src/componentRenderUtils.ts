@@ -248,7 +248,7 @@ export function renderComponentRoot(
   }
   // inherit transition data
   if (vnode.transition) {
-    const child = getInnerChild(root) ?? root
+    const child = getInnerChild(root) || root
     if (__DEV__ && !isElementRoot(child)) {
       warn(
         `Component inside <Transition> renders non-element root node ` +
