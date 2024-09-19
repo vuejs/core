@@ -94,5 +94,4 @@ export {
   type WatchSource,
   type WatchCallback,
   type OnCleanup,
-  lazyWatch,
 } from './watch'

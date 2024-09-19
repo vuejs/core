@@ -4,7 +4,6 @@ import {
   WatchErrorCodes,
   type WatchOptions,
   type WatchScheduler,
-  lazyWatch,
   onWatcherCleanup,
   ref,
   watch,
@@ -79,7 +78,7 @@ describe('watch', () => {
         throw 'oops in effect'
       },
       null,
-      { call },
+      { call, lazy: true }, // Ensure lazy behavior doesn't trigger extra errors
     )
 
     const source = ref(0)
@@ -91,7 +90,7 @@ describe('watch', () => {
         })
         throw 'oops in watch'
       },
-      { call },
+      { call, lazy: true }, // Here as well
     )
 
     expect(onError.mock.calls.length).toBe(1)
@@ -123,13 +122,17 @@ describe('watch', () => {
 
     scope.run(() => {
       source = ref(0)
-      watch(onCleanup => {
-        source.value
+      watch(
+        onCleanup => {
+          source.value
 
-        onCleanup(() => (dummy += 2))
-        onWatcherCleanup(() => (dummy += 3))
-        onWatcherCleanup(() => (dummy += 5))
-      })
+          onCleanup(() => (dummy += 2))
+          onWatcherCleanup(() => (dummy += 3))
+          onWatcherCleanup(() => (dummy += 5))
+        },
+        null,
+        { lazy: true },
+      )
     })
     expect(dummy).toBe(0)
 
@@ -163,7 +166,7 @@ describe('watch', () => {
           onWatcherCleanup(() => calls.push(`sync ${current}`))
         },
         null,
-        {},
+        { lazy: true },
       )
       // with scheduler
       watch(
@@ -172,7 +175,7 @@ describe('watch', () => {
           onWatcherCleanup(() => calls.push(`post ${current}`))
         },
         null,
-        { scheduler },
+        { scheduler, lazy: true }, // Make this lazy as well
       )
     })
 
@@ -211,104 +214,6 @@ describe('watch', () => {
     expect(dummy).toBe(1)
   })
 
-  test('lazyWatch should not trigger callback immediately if lazy option is true', () => {
-    const source = ref(0)
-    let triggered = false
-
-    // Create a lazyWatch instance
-    const lazy = lazyWatch(source, () => {
-      triggered = true
-    })
-
-    // At this point, the callback should not have been triggered
-    expect(triggered).toBe(false)
-
-    // Initialize the watcher
-    lazy()
-
-    // Change the source value
-    source.value++
-
-    // The callback should be triggered now
-    expect(triggered).toBe(true)
-  })
-
-  test('lazyWatch should trigger callback immediately if lazy option is false', () => {
-    const source = ref(0)
-    let triggered = false
-
-    // Create a lazyWatch instance with lazy option set to false
-    lazyWatch(
-      source,
-      () => {
-        triggered = true
-      },
-      { lazy: false },
-    )
-
-    // Change the source value
-    source.value++
-
-    // The callback should be triggered immediately
-    expect(triggered).toBe(true)
-  })
-
-  test('lazyWatch should handle multiple lazy initializations correctly', () => {
-    const source = ref(0)
-    let triggeredCount = 0
-
-    // Create a lazyWatch instance
-    const lazy = lazyWatch(source, () => {
-      triggeredCount++
-    })
-
-    // Initialize the watcher once
-    lazy()
-
-    // Change the source value
-    source.value++
-
-    // The callback should be triggered
-    expect(triggeredCount).toBe(1)
-
-    // Initialize the watcher again
-    lazy()
-
-    // Change the source value
-    source.value++
-
-    // The callback should still be triggered only once per initialization
-    expect(triggeredCount).toBe(2)
-  })
-
-  test('lazyWatch should handle multiple source refs with lazy option', () => {
-    const source1 = ref(0)
-    const source2 = ref(0)
-    let triggeredCount = 0
-
-    // Create lazyWatch instances for both sources
-    const lazy1 = lazyWatch(source1, () => {
-      triggeredCount++
-    })
-
-    const lazy2 = lazyWatch(source2, () => {
-      triggeredCount++
-    })
-
-    // Initialize the watchers
-    lazy1()
-    lazy2()
-
-    // Change both source values
-    source1.value++
-    source2.value++
-
-    // The callback should be triggered twice
-    expect(triggeredCount).toBe(2)
-  })
-
-  // Continue with existing tests...
-
   test('with callback', () => {
     let dummy: any
     const source = ref(0)
@@ -318,5 +223,90 @@ describe('watch', () => {
     expect(dummy).toBe(undefined)
     source.value++
     expect(dummy).toBe(1)
+  })
+  test('lazy watcher should not run immediately', () => {
+    const source = ref(0)
+    let callCount = 0
+
+    const stop = watch(
+      source,
+      (newValue, oldValue) => {
+        callCount++
+      },
+      { lazy: true },
+    )
+
+    expect(callCount).toBe(0)
+    source.value++
+    expect(callCount).toBe(1)
+
+    source.value++
+    expect(callCount).toBe(2)
+
+    stop()
+  })
+  test('multiple watchers on the same source with { lazy: true }', async () => {
+    let dummy1: any
+    let dummy2: any
+    const source = ref(0)
+
+    const stop1 = watch(
+      () => source.value,
+      newVal => {
+        dummy1 = newVal
+      },
+      { lazy: true },
+    )
+
+    const stop2 = watch(
+      () => source.value,
+      newVal => {
+        dummy2 = newVal
+      },
+      { lazy: true },
+    )
+
+    expect(dummy1).toBeUndefined()
+    expect(dummy2).toBeUndefined()
+
+    source.value++
+
+    await nextTick()
+
+    expect(dummy1).toBe(1)
+    expect(dummy2).toBe(1)
+
+    stop1()
+    stop2()
+  })
+  test('lazy watcher with manual start', async () => {
+    let dummy: any
+    const source = ref(0)
+
+    const { start, stop } = watch(
+      () => source.value,
+      newVal => {
+        dummy = newVal
+      },
+      { lazy: true },
+    )
+
+    expect(dummy).toBeUndefined()
+
+    start()
+
+    source.value = 1
+
+    await nextTick()
+
+    expect(dummy).toBe(1)
+
+    source.value = 2
+
+    await nextTick()
+
+    expect(dummy).toBe(2)
+
+    stop()
   })
 })
