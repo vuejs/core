@@ -268,6 +268,7 @@ export type {
 export type {
   DefineComponent,
   DefineSetupFnComponent,
+  DefineComponentWithGeneric,
   PublicProps,
 } from './apiDefineComponent'
 export type {

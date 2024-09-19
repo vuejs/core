@@ -2027,3 +2027,70 @@ expectString(instance.actionText)
 // public prop on $props should be optional
 // @ts-expect-error
 expectString(instance.$props.actionText)
+
+describe('generic components in defineComponent', () => {
+  const GenericComp = defineComponent(
+    <T extends { name: string }>(props: { msg: string; list: T[] }) => {
+      return () => (
+        <div>
+          {props.msg}
+          {props.list.map(item => item.name).join(', ')}
+        </div>
+      )
+    },
+  )
+
+  const GenericCompUser = defineComponent(() => {
+    const list = ref([{ name: 'Tom' }, { name: 'Jack' }])
+
+    return () => {
+      return (
+        <div>
+          <GenericComp<{ name: string }> msg="hello" list={list.value} />
+        </div>
+      )
+    }
+  })
+
+  // Test correct usage
+  expectType<JSX.Element>(<GenericCompUser />)
+
+  // Test GenericComp directly with correct props
+  expectType<JSX.Element>(
+    <GenericComp<{ name: string }> msg="hello" list={[{ name: 'Alice' }]} />,
+  )
+
+  // Test with missing required prop
+  expectType<JSX.Element>(
+    // @ts-expect-error
+    <GenericComp<{ name: string }> list={[{ name: 'Bob' }]} />,
+  )
+
+  // Test with extended type
+  interface Person {
+    name: string
+    age: number
+  }
+
+  const ExtendedGenericCompUser = defineComponent(() => {
+    const people = ref<Person[]>([
+      { name: 'Tom', age: 25 },
+      { name: 'Jack', age: 30 },
+    ])
+
+    return () => {
+      return (
+        <div>
+          <GenericComp<Person> msg="people" list={people.value} />
+        </div>
+      )
+    }
+  })
+
+  expectType<JSX.Element>(<ExtendedGenericCompUser />)
+
+  // Test GenericComp directly with extended type
+  expectType<JSX.Element>(
+    <GenericComp<Person> msg="people" list={[{ name: 'Alice', age: 28 }]} />,
+  )
+})
