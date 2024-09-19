@@ -43,7 +43,7 @@
           { onClick: () => count.value++ },
           count.value,
         )
-        if(isVIf){
+        if (isVIf) {
           return createCommentVNode('v-if', true)
         } else if (isFragment) {
           return [[h('span', 'one')], button, h('span', 'two')]
