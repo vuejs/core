@@ -199,11 +199,13 @@ export function watch(
           if (isFunction(maybeCleanup)) {
             boundCleanup(maybeCleanup)
           } else if (isPromise(maybeCleanup)) {
-            maybeCleanup.then(cleanup => {
-              if (isFunction(cleanup)) {
-                boundCleanup(cleanup)
-              }
-            })
+            maybeCleanup
+              .then(cleanup => {
+                if (isFunction(cleanup)) {
+                  boundCleanup(cleanup)
+                }
+              })
+              .catch(NOOP)
           }
         } finally {
           activeWatcher = currentEffect
@@ -282,11 +284,13 @@ export function watch(
           if (isFunction(maybeCleanup)) {
             boundCleanup(maybeCleanup)
           } else if (isPromise(maybeCleanup)) {
-            maybeCleanup.then(cleanup => {
-              if (isFunction(cleanup)) {
-                boundCleanup(cleanup)
-              }
-            })
+            maybeCleanup
+              .then(cleanup => {
+                if (isFunction(cleanup)) {
+                  boundCleanup(cleanup)
+                }
+              })
+              .catch(NOOP)
           }
           oldValue = newValue
         } finally {
