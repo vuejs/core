@@ -399,7 +399,7 @@ export function refreshComputed(computed: ComputedRefImpl): undefined {
   }
 }
 
-function removeSub(link: Link) {
+function removeSub(link: Link, fromComputed = false) {
   const { dep, prevSub, nextSub } = link
   if (prevSub) {
     prevSub.nextSub = nextSub
@@ -425,9 +425,9 @@ function removeSub(link: Link) {
       // value can be GCed
       dep.computed.flags &= ~EffectFlags.TRACKING
       for (let l = dep.computed.deps; l; l = l.nextDep) {
-        removeSub(l)
+        removeSub(l, true)
       }
-    } else if (dep.map) {
+    } else if (dep.map && !fromComputed) {
       // property dep, remove it from the owner depsMap
       dep.map.delete(dep.key)
       if (!dep.map.size) targetMap.delete(dep.target!)
