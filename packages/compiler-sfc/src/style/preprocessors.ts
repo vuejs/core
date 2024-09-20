@@ -30,6 +30,7 @@ const scss: StylePreprocessor = (source, map, options, load = require) => {
     file: options.filename,
     outFile: options.filename,
     sourceMap: !!map,
+    silenceDeprecations: ['legacy-js-api'],
   }
 
   try {
