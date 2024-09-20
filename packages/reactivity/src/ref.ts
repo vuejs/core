@@ -183,17 +183,16 @@ class RefImpl<T = any> {
  */
 export function triggerRef(ref: Ref): void {
   // ref may be an instance of ObjectRefImpl
-  const dep = (ref as unknown as RefImpl).dep
-  if (dep) {
+  if ((ref as unknown as RefImpl).dep) {
     if (__DEV__) {
-      dep.trigger({
+      ;(ref as unknown as RefImpl).dep.trigger({
         target: ref,
         type: TriggerOpTypes.SET,
         key: 'value',
         newValue: (ref as unknown as RefImpl)._value,
       })
     } else {
-      dep.trigger()
+      ;(ref as unknown as RefImpl).dep.trigger()
     }
   }
 }
