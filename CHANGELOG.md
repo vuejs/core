@@ -1,3 +1,27 @@
+## [3.5.7](https://github.com/vuejs/core/compare/v3.5.6...v3.5.7) (2024-09-20)
+
+
+### Bug Fixes
+
+* **compile-core:** fix v-model with newlines edge case ([#11960](https://github.com/vuejs/core/issues/11960)) ([6224288](https://github.com/vuejs/core/commit/62242886d705ece88dbcad45bb78072ecccad0ca)), closes [#8306](https://github.com/vuejs/core/issues/8306)
+* **compiler-sfc:** initialize scope with null prototype object ([#11963](https://github.com/vuejs/core/issues/11963)) ([215e154](https://github.com/vuejs/core/commit/215e15407294bf667261360218f975b88c99c2e5))
+* **hydration:** avoid observing non-Element node ([#11954](https://github.com/vuejs/core/issues/11954)) ([7257e6a](https://github.com/vuejs/core/commit/7257e6a34200409b3fc347d3bb807e11e2785974)), closes [#11952](https://github.com/vuejs/core/issues/11952)
+* **reactivity:** do not remove dep from depsMap when unsubbed by computed ([960706e](https://github.com/vuejs/core/commit/960706eebf73f08ebc9d5dd853a05def05e2c153))
+* **reactivity:** fix dev-only memory leak by updating dep.subsHead on sub removal ([5c8b76e](https://github.com/vuejs/core/commit/5c8b76ed6cfbbcee4cbaac0b72beab7291044e4f)), closes [#11956](https://github.com/vuejs/core/issues/11956)
+* **reactivity:** fix memory leak from dep instances of garbage collected objects ([235ea47](https://github.com/vuejs/core/commit/235ea4772ed2972914cf142da8b7ac1fb04f7585)), closes [#11979](https://github.com/vuejs/core/issues/11979) [#11971](https://github.com/vuejs/core/issues/11971)
+* **reactivity:** fix triggerRef call on ObjectRefImpl returned by toRef ([#11986](https://github.com/vuejs/core/issues/11986)) ([b030c8b](https://github.com/vuejs/core/commit/b030c8bc7327877efb98aa3d9a58eb287a6ff07a)), closes [#11982](https://github.com/vuejs/core/issues/11982)
+* **scheduler:** ensure recursive jobs can't be queued twice ([#11955](https://github.com/vuejs/core/issues/11955)) ([d18d6aa](https://github.com/vuejs/core/commit/d18d6aa1b20dc57a8103c51ec4d61e8e53ed936d))
+* **ssr:** don't render comments in TransitionGroup ([#11961](https://github.com/vuejs/core/issues/11961)) ([a2f6ede](https://github.com/vuejs/core/commit/a2f6edeb02faedbb673c4bc5c6a59d9a79a37d07)), closes [#11958](https://github.com/vuejs/core/issues/11958)
+* **transition:** respect `duration` setting even when it is `0` ([#11967](https://github.com/vuejs/core/issues/11967)) ([f927a4a](https://github.com/vuejs/core/commit/f927a4ae6f7c453f70ba89498ee0c737dc9866fd))
+* **types:** correct type inference of all-optional props ([#11644](https://github.com/vuejs/core/issues/11644)) ([9eca65e](https://github.com/vuejs/core/commit/9eca65ee9871d1ac878755afa9a3eb1b02030350)), closes [#11733](https://github.com/vuejs/core/issues/11733) [vuejs/language-tools#4704](https://github.com/vuejs/language-tools/issues/4704)
+
+
+### Performance Improvements
+
+* **hydration:** avoid observer if element is in viewport ([#11639](https://github.com/vuejs/core/issues/11639)) ([e075dfa](https://github.com/vuejs/core/commit/e075dfad5c7649c6045e3711687ec888e7aa1a39))
+
+
+
 ## [3.5.6](https://github.com/vuejs/core/compare/v3.5.5...v3.5.6) (2024-09-16)
 
 
