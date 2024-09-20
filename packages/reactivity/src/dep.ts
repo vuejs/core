@@ -82,6 +82,13 @@ export class Dep {
    */
   subsHead?: Link
 
+  /**
+   * For object property deps cleanup
+   */
+  target?: unknown = undefined
+  map?: KeyToDepMap = undefined
+  key?: unknown = undefined
+
   constructor(public computed?: ComputedRefImpl | undefined) {
     if (__DEV__) {
       this.subsHead = undefined
@@ -218,7 +225,8 @@ function addSub(link: Link) {
 // which maintains a Set of subscribers, but we simply store them as
 // raw Maps to reduce memory overhead.
 type KeyToDepMap = Map<any, Dep>
-const targetMap = new WeakMap<object, KeyToDepMap>()
+
+export const targetMap: WeakMap<object, KeyToDepMap> = new WeakMap()
 
 export const ITERATE_KEY: unique symbol = Symbol(
   __DEV__ ? 'Object iterate' : '',
@@ -249,6 +257,9 @@ export function track(target: object, type: TrackOpTypes, key: unknown): void {
     let dep = depsMap.get(key)
     if (!dep) {
       depsMap.set(key, (dep = new Dep()))
+      dep.target = target
+      dep.map = depsMap
+      dep.key = key
     }
     if (__DEV__) {
       dep.track({

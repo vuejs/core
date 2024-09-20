@@ -1,7 +1,7 @@
 import { extend, hasChanged } from '@vue/shared'
 import type { ComputedRefImpl } from './computed'
 import type { TrackOpTypes, TriggerOpTypes } from './constants'
-import { type Link, globalVersion } from './dep'
+import { type Link, globalVersion, targetMap } from './dep'
 import { activeEffectScope } from './effectScope'
 import { warn } from './warning'
 
@@ -418,13 +418,19 @@ function removeSub(link: Link) {
     dep.subsHead = nextSub
   }
 
-  if (!dep.subs && dep.computed) {
+  if (!dep.subs) {
     // last subscriber removed
-    // if computed, unsubscribe it from all its deps so this computed and its
-    // value can be GCed
-    dep.computed.flags &= ~EffectFlags.TRACKING
-    for (let l = dep.computed.deps; l; l = l.nextDep) {
-      removeSub(l)
+    if (dep.computed) {
+      // if computed, unsubscribe it from all its deps so this computed and its
+      // value can be GCed
+      dep.computed.flags &= ~EffectFlags.TRACKING
+      for (let l = dep.computed.deps; l; l = l.nextDep) {
+        removeSub(l)
+      }
+    } else if (dep.map) {
+      // property dep, remove it from the owner depsMap
+      dep.map.delete(dep.key)
+      if (!dep.map.size) targetMap.delete(dep.target!)
     }
   }
 }
