@@ -293,6 +293,13 @@ describe('reactivity/reactive', () => {
     expect(() => markRaw(obj)).not.toThrowError()
   })
 
+  test('markRaw should not redefine on an marked object', () => {
+    const obj = markRaw({ foo: 1 })
+    const raw = markRaw(obj)
+    expect(raw).toBe(obj)
+    expect(() => markRaw(obj)).not.toThrowError()
+  })
+
   test('should not observe non-extensible objects', () => {
     const obj = reactive({
       foo: Object.preventExtensions({ a: 1 }),
@@ -381,5 +388,14 @@ describe('reactivity/reactive', () => {
       else expect(isReadonly(i)).toBe(true)
       count++
     }
+  })
+
+  // #11696
+  test('should use correct receiver on set handler for refs', () => {
+    const a = reactive(ref(1))
+    effect(() => a.value)
+    expect(() => {
+      a.value++
+    }).not.toThrow()
   })
 })

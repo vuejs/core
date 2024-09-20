@@ -1,4 +1,4 @@
-import { def, isObject, toRawType } from '@vue/shared'
+import { def, hasOwn, isObject, toRawType } from '@vue/shared'
 import {
   mutableHandlers,
   readonlyHandlers,
@@ -23,10 +23,16 @@ export interface Target {
   [ReactiveFlags.RAW]?: any
 }
 
-export const reactiveMap = new WeakMap<Target, any>()
-export const shallowReactiveMap = new WeakMap<Target, any>()
-export const readonlyMap = new WeakMap<Target, any>()
-export const shallowReadonlyMap = new WeakMap<Target, any>()
+export const reactiveMap: WeakMap<Target, any> = new WeakMap<Target, any>()
+export const shallowReactiveMap: WeakMap<Target, any> = new WeakMap<
+  Target,
+  any
+>()
+export const readonlyMap: WeakMap<Target, any> = new WeakMap<Target, any>()
+export const shallowReadonlyMap: WeakMap<Target, any> = new WeakMap<
+  Target,
+  any
+>()
 
 enum TargetType {
   INVALID = 0,
@@ -60,8 +66,8 @@ export type UnwrapNestedRefs<T> = T extends Ref ? T : UnwrapRefSimple<T>
 
 declare const ReactiveMarkerSymbol: unique symbol
 
-export declare class ReactiveMarker {
-  private [ReactiveMarkerSymbol]?: void
+export interface ReactiveMarker {
+  [ReactiveMarkerSymbol]?: void
 }
 
 export type Reactive<T> = UnwrapNestedRefs<T> &
@@ -399,7 +405,7 @@ export type Raw<T> = T & { [RawSymbol]?: true }
  * @see {@link https://vuejs.org/api/reactivity-advanced.html#markraw}
  */
 export function markRaw<T extends object>(value: T): Raw<T> {
-  if (Object.isExtensible(value)) {
+  if (!hasOwn(value, ReactiveFlags.SKIP) && Object.isExtensible(value)) {
     def(value, ReactiveFlags.SKIP, true)
   }
   return value

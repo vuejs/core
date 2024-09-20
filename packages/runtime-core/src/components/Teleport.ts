@@ -7,6 +7,7 @@ import {
   type RendererInternals,
   type RendererNode,
   type RendererOptions,
+  queuePostRenderEffect,
   traverseStaticChildren,
 } from '../renderer'
 import type { VNode, VNodeArrayChildren, VNodeProps } from '../vnode'
@@ -19,14 +20,18 @@ export type TeleportVNode = VNode<RendererNode, RendererElement, TeleportProps>
 export interface TeleportProps {
   to: string | RendererElement | null | undefined
   disabled?: boolean
+  defer?: boolean
 }
 
-export const TeleportEndKey = Symbol('_vte')
+export const TeleportEndKey: unique symbol = Symbol('_vte')
 
 export const isTeleport = (type: any): boolean => type.__isTeleport
 
 const isTeleportDisabled = (props: VNode['props']): boolean =>
   props && (props.disabled || props.disabled === '')
+
+const isTeleportDeferred = (props: VNode['props']): boolean =>
+  props && (props.defer || props.defer === '')
 
 const isTargetSVG = (target: RendererElement): boolean =>
   typeof SVGElement !== 'undefined' && target instanceof SVGElement
@@ -81,7 +86,7 @@ export const TeleportImpl = {
     slotScopeIds: string[] | null,
     optimized: boolean,
     internals: RendererInternals,
-  ) {
+  ): void {
     const {
       mc: mountChildren,
       pc: patchChildren,
@@ -109,23 +114,14 @@ export const TeleportImpl = {
         : createText(''))
       insert(placeholder, container, anchor)
       insert(mainAnchor, container, anchor)
-      const target = (n2.target = resolveTarget(n2.props, querySelector))
-      const targetAnchor = prepareAnchor(target, n2, createText, insert)
-      if (target) {
-        // #2652 we could be teleporting from a non-SVG tree into an SVG tree
-        if (namespace === 'svg' || isTargetSVG(target)) {
-          namespace = 'svg'
-        } else if (namespace === 'mathml' || isTargetMathML(target)) {
-          namespace = 'mathml'
-        }
-      } else if (__DEV__ && !disabled) {
-        warn('Invalid Teleport target on mount:', target, `(${typeof target})`)
-      }
 
       const mount = (container: RendererElement, anchor: RendererNode) => {
         // Teleport *always* has Array children. This is enforced in both the
         // compiler and vnode children normalization.
         if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
+          if (parentComponent && parentComponent.isCE) {
+            parentComponent.ce!._teleportTarget = container
+          }
           mountChildren(
             children as VNodeArrayChildren,
             container,
@@ -139,10 +135,38 @@ export const TeleportImpl = {
         }
       }
 
+      const mountToTarget = () => {
+        const target = (n2.target = resolveTarget(n2.props, querySelector))
+        const targetAnchor = prepareAnchor(target, n2, createText, insert)
+        if (target) {
+          // #2652 we could be teleporting from a non-SVG tree into an SVG tree
+          if (namespace !== 'svg' && isTargetSVG(target)) {
+            namespace = 'svg'
+          } else if (namespace !== 'mathml' && isTargetMathML(target)) {
+            namespace = 'mathml'
+          }
+          if (!disabled) {
+            mount(target, targetAnchor)
+            updateCssVars(n2)
+          }
+        } else if (__DEV__ && !disabled) {
+          warn(
+            'Invalid Teleport target on mount:',
+            target,
+            `(${typeof target})`,
+          )
+        }
+      }
+
       if (disabled) {
         mount(container, mainAnchor)
-      } else if (target) {
-        mount(target, targetAnchor)
+        updateCssVars(n2)
+      }
+
+      if (isTeleportDeferred(n2.props)) {
+        queuePostRenderEffect(mountToTarget, parentSuspense)
+      } else {
+        mountToTarget()
       }
     } else {
       // update content
@@ -243,9 +267,8 @@ export const TeleportImpl = {
           )
         }
       }
+      updateCssVars(n2)
     }
-
-    updateCssVars(n2)
   },
 
   remove(
@@ -254,7 +277,7 @@ export const TeleportImpl = {
     parentSuspense: SuspenseBoundary | null,
     { um: unmount, o: { remove: hostRemove } }: RendererInternals,
     doRemove: boolean,
-  ) {
+  ): void {
     const {
       shapeFlag,
       children,
@@ -287,8 +310,8 @@ export const TeleportImpl = {
     }
   },
 
-  move: moveTeleport,
-  hydrate: hydrateTeleport,
+  move: moveTeleport as typeof moveTeleport,
+  hydrate: hydrateTeleport as typeof hydrateTeleport,
 }
 
 export enum TeleportMoveTypes {
@@ -303,7 +326,7 @@ function moveTeleport(
   parentAnchor: RendererNode | null,
   { o: { insert }, m: move }: RendererInternals,
   moveType: TeleportMoveTypes = TeleportMoveTypes.REORDER,
-) {
+): void {
   // move target anchor if this is a target change.
   if (moveType === TeleportMoveTypes.TARGET_CHANGE) {
     insert(vnode.targetAnchor!, container, parentAnchor)
@@ -462,7 +485,7 @@ function updateCssVars(vnode: VNode) {
   // code path here can assume browser environment.
   const ctx = vnode.ctx
   if (ctx && ctx.ut) {
-    let node = (vnode.children as VNode[])[0].el!
+    let node = vnode.targetStart
     while (node && node !== vnode.targetAnchor) {
       if (node.nodeType === 1) node.setAttribute('data-v-owner', ctx.uid)
       node = node.nextSibling

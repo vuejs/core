@@ -18,6 +18,7 @@ jobs:
   size-report:
     runs-on: ubuntu-latest
     if: >
+      github.repository == 'vuejs/core' &&
       github.event.workflow_run.event == 'pull_request' &&
       github.event.workflow_run.conclusion == 'success'
     steps:
@@ -35,31 +36,24 @@ jobs:
       - name: Install dependencies
         run: pnpm install
 
-      - name: Download PR info
-        uses: dawidd6/action-download-artifact@v6
-        with:
-          name: pr-info
-          run_id: ${{ github.event.workflow_run.id }}
-          path: /tmp/pr-info
-
-      - name: Read PR Number
-        id: pr-number
-        uses: juliangruber/read-file-action@v1
-        with:
-          path: /tmp/pr-info/number.txt
-
-      - name: Read PR base branch
-        id: pr-base
-        uses: juliangruber/read-file-action@v1
-        with:
-          path: /tmp/pr-info/base.txt
-
       - name: Download Size Data
         uses: dawidd6/action-download-artifact@v6
         with:
           name: size-data
           run_id: ${{ github.event.workflow_run.id }}
           path: temp/size
+
+      - name: Read PR Number
+        id: pr-number
+        uses: juliangruber/read-file-action@v1
+        with:
+          path: temp/size/number.txt
+
+      - name: Read base branch
+        id: pr-base
+        uses: juliangruber/read-file-action@v1
+        with:
+          path: temp/size/base.txt
 
       - name: Download Previous Size Data
         uses: dawidd6/action-download-artifact@v6
@@ -72,7 +66,7 @@ jobs:
           if_no_artifact_found: warn
 
       - name: Prepare report
-        run: pnpm tsx scripts/size-report.ts > size-report.md
+        run: node scripts/size-report.js > size-report.md
 
       - name: Read Size Report
         id: size-report
