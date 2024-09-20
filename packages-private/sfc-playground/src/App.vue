@@ -136,7 +136,8 @@ onMounted(() => {
     @keydown.ctrl.s.prevent
     @keydown.meta.s.prevent
     :ssr="useSSRMode"
-    :autoSave="autoSave"
+    :model-value="autoSave"
+    :editorOptions="{ autoSaveText: false }"
     :store="store"
     :showCompileOutput="true"
     :autoResize="true"
