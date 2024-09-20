@@ -413,6 +413,10 @@ function removeSub(link: Link) {
     // was previous tail, point new tail to prev
     dep.subs = prevSub
   }
+  if (__DEV__ && dep.subsHead === link) {
+    // was previous head, point new head to next
+    dep.subsHead = nextSub
+  }
 
   if (!dep.subs && dep.computed) {
     // last subscriber removed
