@@ -132,6 +132,7 @@ export {
 export { createIf } from './apiCreateIf'
 export { createFor, createForSlots } from './apiCreateFor'
 export { createComponent } from './apiCreateComponent'
+export { createSelector } from './apiCreateSelector'
 
 export { resolveComponent, resolveDirective } from './helpers/resolveAssets'
 export { toHandlers } from './helpers/toHandlers'

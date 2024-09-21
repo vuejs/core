@@ -7,7 +7,6 @@ import {
   renderEffect,
   shallowRef,
   template,
-  withDestructure,
   withDirectives,
 } from '../src'
 import { makeRender } from './_utils'

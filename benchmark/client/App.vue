@@ -3,9 +3,8 @@ import {
   ref,
   shallowRef,
   triggerRef,
-  watch,
   type ShallowRef,
-  type WatchSource,
+  createSelector,
 } from '@vue/vapor'
 import { buildData } from './data'
 import { defer, wrap } from './profiling'
@@ -79,16 +78,6 @@ async function bench() {
   }
 }
 
-// Reduce the complexity of `selected` from O(n) to O(1).
-function createSelector(source: WatchSource) {
-  const cache: Record<keyof any, ShallowRef<boolean>> = {}
-  watch(source, (val, old) => {
-    if (old != undefined) cache[old]!.value = false
-    if (val != undefined) cache[val]!.value = true
-  })
-  return (id: keyof any) => (cache[id] ??= shallowRef(false)).value
-}
-
 const isSelected = createSelector(selected)
 </script>
 
@@ -113,7 +102,6 @@ const isSelected = createSelector(selected)
         v-for="row of rows"
         :key="row.id"
         :class="{ danger: isSelected(row.id) }"
-        v-memo="[row.label, row.id === selected]"
       >
         <td>{{ row.id }}</td>
         <td>
