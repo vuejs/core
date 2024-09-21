@@ -1006,9 +1006,27 @@ describe('reactivity/computed', () => {
     expect(serializeInner(root)).toBe(`<button>Step</button><p>Step 2</p>`)
   })
 
-  it('manual trigger computed', () => {
+  test('manual trigger computed', () => {
     const cValue = computed(() => 1)
     triggerRef(cValue)
     expect(cValue.value).toBe(1)
+  })
+
+  test('computed should remain live after losing all subscribers', () => {
+    const toggle = ref(true)
+    const state = reactive({
+      a: 1,
+    })
+    const p = computed(() => state.a + 1)
+    const pp = computed(() => {
+      return toggle.value ? p.value : 111
+    })
+
+    const { effect: e } = effect(() => pp.value)
+    e.stop()
+
+    expect(p.value).toBe(2)
+    state.a++
+    expect(p.value).toBe(3)
   })
 })

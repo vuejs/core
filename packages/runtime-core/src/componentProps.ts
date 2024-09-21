@@ -125,7 +125,9 @@ type InferPropType<T, NullAsAny = true> = [T] extends [null]
               : InferPropType<U, false>
             : [T] extends [Prop<infer V, infer D>]
               ? unknown extends V
-                ? IfAny<V, V, D>
+                ? keyof V extends never
+                  ? IfAny<V, V, D>
+                  : V
                 : V
               : T
 
