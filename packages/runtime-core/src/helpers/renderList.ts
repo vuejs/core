@@ -74,13 +74,19 @@ export function renderList(
       source = shallowReadArray(source)
     }
     ret = new Array(source.length)
-    for (let i = 0, l = source.length; i < l; i++) {
-      ret[i] = renderItem(
-        needsWrap ? toReactive(source[i]) : source[i],
-        i,
-        undefined,
-        cached && cached[i],
-      )
+    if (needsWrap) {
+      for (let i = 0, l = source.length; i < l; i++) {
+        ret[i] = renderItem(
+          toReactive(source[i]),
+          i,
+          undefined,
+          cached && cached[i],
+        )
+      }
+    } else {
+      for (let i = 0, l = source.length; i < l; i++) {
+        ret[i] = renderItem(source[i], i, undefined, cached && cached[i])
+      }
     }
   } else if (typeof source === 'number') {
     if (__DEV__ && !Number.isInteger(source)) {
