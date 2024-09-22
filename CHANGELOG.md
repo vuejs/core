@@ -1,3 +1,12 @@
+## [3.5.8](https://github.com/vuejs/core/compare/v3.5.7...v3.5.8) (2024-09-22)
+
+
+### Bug Fixes
+
+* **reactivity:** do not remove dep from depsMap when cleaning up deps of computed ([#11995](https://github.com/vuejs/core/issues/11995)) ([0267a58](https://github.com/vuejs/core/commit/0267a588017eee4951ac2a877fe1ccae84cad905))
+
+
+
 ## [3.5.7](https://github.com/vuejs/core/compare/v3.5.6...v3.5.7) (2024-09-20)
 
 
