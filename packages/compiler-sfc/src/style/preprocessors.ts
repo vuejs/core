@@ -24,7 +24,7 @@ export interface StylePreprocessorResults {
 // .scss/.sass processor
 const scss: StylePreprocessor = (source, map, options, load = require) => {
   const { pathToFileURL, fileURLToPath }: typeof import('url') = load('url')
-  const nodeSass = load('sass') as typeof import('sass')
+  const nodeSass: typeof import('sass') = load('sass')
   const data = getSource(source, options.filename, options.additionalData)
   const finalOptions: import('sass').StringOptions<'sync'> = {
     ...options,
