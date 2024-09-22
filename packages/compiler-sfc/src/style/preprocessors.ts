@@ -1,4 +1,5 @@
 import merge from 'merge-source-map'
+import { fileURLToPath, pathToFileURL } from 'url'
 import type { RawSourceMap } from '@vue/compiler-core'
 import type { SFCStyleCompileOptions } from '../compileStyle'
 import { isFunction } from '@vue/shared'
@@ -23,23 +24,21 @@ export interface StylePreprocessorResults {
 
 // .scss/.sass processor
 const scss: StylePreprocessor = (source, map, options, load = require) => {
-  const nodeSass = load('sass')
-  const finalOptions = {
+  const nodeSass = load('sass') as typeof import('sass')
+  const data = getSource(source, options.filename, options.additionalData)
+  const finalOptions: import('sass').StringOptions<'sync'> = {
     ...options,
-    data: getSource(source, options.filename, options.additionalData),
-    file: options.filename,
-    outFile: options.filename,
+    url: pathToFileURL(options.filename),
     sourceMap: !!map,
-    silenceDeprecations: ['legacy-js-api'],
   }
 
   try {
-    const result = nodeSass.renderSync(finalOptions)
-    const dependencies = result.stats.includedFiles
+    const result = nodeSass.compileString(data, finalOptions)
+    const dependencies = result.loadedUrls.map(url => fileURLToPath(url))
     if (map) {
       return {
         code: result.css.toString(),
-        map: merge(map, JSON.parse(result.map.toString())),
+        map: merge(map, JSON.parse(result.sourceMap?.toString() ?? '')),
         errors: [],
         dependencies,
       }
