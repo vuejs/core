@@ -38,7 +38,7 @@ const scss: StylePreprocessor = (source, map, options, load = require) => {
     if (map) {
       return {
         code: result.css,
-        map: merge(map, result.sourceMap!),
+        map: merge(map, JSON.parse(result.sourceMap!.toString())),
         errors: [],
         dependencies,
       }
