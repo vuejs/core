@@ -17,7 +17,6 @@ export default defineConfig({
   clearScreen: false,
   plugins: [
     Vue({
-      vapor: true,
       compiler: CompilerSFC,
     }),
     DevPlugin(),
