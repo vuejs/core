@@ -5,6 +5,7 @@ import {
   type WatchOptions,
   type WatchScheduler,
   onWatcherCleanup,
+  reactive,
   ref,
   watch,
 } from '../src'
@@ -208,5 +209,17 @@ describe('watch', () => {
 
     source.value++
     expect(dummy).toBe(1)
+  })
+
+  test('watch callback should not be called when functional source and deep(true)', async () => {
+    const spy = vi.fn()
+    const obj = reactive({ data: { number: 1 } })
+    watch(
+      () => obj.data.number,
+      val => spy(),
+      { deep: true },
+    )
+    obj.data = { number: 1 }
+    expect(spy).toHaveBeenCalledTimes(0)
   })
 })

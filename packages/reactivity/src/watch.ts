@@ -230,6 +230,13 @@ export function watch(
     ? new Array((source as []).length).fill(INITIAL_WATCHER_VALUE)
     : INITIAL_WATCHER_VALUE
 
+  const validateDeep = () => {
+    if (isFunction(source) && !isObject(oldValue)) {
+      return false
+    }
+    return deep
+  }
+
   const job = (immediateFirstRun?: boolean) => {
     if (
       !(effect.flags & EffectFlags.ACTIVE) ||
@@ -241,7 +248,7 @@ export function watch(
       // watch(source, cb)
       const newValue = effect.run()
       if (
-        deep ||
+        validateDeep() ||
         forceTrigger ||
         (isMultiSource
           ? (newValue as any[]).some((v, i) => hasChanged(v, oldValue[i]))
