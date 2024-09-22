@@ -1022,4 +1022,19 @@ describe('reactivity/computed', () => {
     state.a++
     expect(p.value).toBe(3)
   })
+
+  test('computed dep cleanup should not cause property dep to be deleted', () => {
+    const toggle = ref(true)
+    const state = reactive({ a: 1 })
+    const p = computed(() => {
+      return toggle.value ? state.a : 111
+    })
+    const pp = computed(() => state.a)
+    effect(() => p.value)
+
+    expect(pp.value).toBe(1)
+    toggle.value = false
+    state.a++
+    expect(pp.value).toBe(2)
+  })
 })

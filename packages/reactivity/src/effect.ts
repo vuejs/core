@@ -292,7 +292,7 @@ function prepareDeps(sub: Subscriber) {
   }
 }
 
-function cleanupDeps(sub: Subscriber) {
+function cleanupDeps(sub: Subscriber, fromComputed = false) {
   // Cleanup unsued deps
   let head
   let tail = sub.depsTail
@@ -302,7 +302,7 @@ function cleanupDeps(sub: Subscriber) {
     if (link.version === -1) {
       if (link === tail) tail = prev
       // unused - remove it from the dep's subscribing effect list
-      removeSub(link)
+      removeSub(link, fromComputed)
       // also remove it from this effect's dep list
       removeDep(link)
     } else {
@@ -394,7 +394,7 @@ export function refreshComputed(computed: ComputedRefImpl): undefined {
   } finally {
     activeSub = prevSub
     shouldTrack = prevShouldTrack
-    cleanupDeps(computed)
+    cleanupDeps(computed, true)
     computed.flags &= ~EffectFlags.RUNNING
   }
 }
