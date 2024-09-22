@@ -1013,16 +1013,9 @@ describe('reactivity/computed', () => {
   })
 
   test('computed should remain live after losing all subscribers', () => {
-    const toggle = ref(true)
-    const state = reactive({
-      a: 1,
-    })
+    const state = reactive({ a: 1 })
     const p = computed(() => state.a + 1)
-    const pp = computed(() => {
-      return toggle.value ? p.value : 111
-    })
-
-    const { effect: e } = effect(() => pp.value)
+    const { effect: e } = effect(() => p.value)
     e.stop()
 
     expect(p.value).toBe(2)
