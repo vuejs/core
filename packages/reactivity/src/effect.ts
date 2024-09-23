@@ -1,7 +1,7 @@
 import { extend, hasChanged } from '@vue/shared'
 import type { ComputedRefImpl } from './computed'
 import type { TrackOpTypes, TriggerOpTypes } from './constants'
-import { type Link, globalVersion } from './dep'
+import { type Link, globalVersion, targetMap } from './dep'
 import { activeEffectScope } from './effectScope'
 import { warn } from './warning'
 
@@ -292,7 +292,7 @@ function prepareDeps(sub: Subscriber) {
   }
 }
 
-function cleanupDeps(sub: Subscriber) {
+function cleanupDeps(sub: Subscriber, fromComputed = false) {
   // Cleanup unsued deps
   let head
   let tail = sub.depsTail
@@ -302,7 +302,7 @@ function cleanupDeps(sub: Subscriber) {
     if (link.version === -1) {
       if (link === tail) tail = prev
       // unused - remove it from the dep's subscribing effect list
-      removeSub(link)
+      removeSub(link, fromComputed)
       // also remove it from this effect's dep list
       removeDep(link)
     } else {
@@ -394,12 +394,12 @@ export function refreshComputed(computed: ComputedRefImpl): undefined {
   } finally {
     activeSub = prevSub
     shouldTrack = prevShouldTrack
-    cleanupDeps(computed)
+    cleanupDeps(computed, true)
     computed.flags &= ~EffectFlags.RUNNING
   }
 }
 
-function removeSub(link: Link) {
+function removeSub(link: Link, fromComputed = false) {
   const { dep, prevSub, nextSub } = link
   if (prevSub) {
     prevSub.nextSub = nextSub
@@ -413,14 +413,24 @@ function removeSub(link: Link) {
     // was previous tail, point new tail to prev
     dep.subs = prevSub
   }
+  if (__DEV__ && dep.subsHead === link) {
+    // was previous head, point new head to next
+    dep.subsHead = nextSub
+  }
 
-  if (!dep.subs && dep.computed) {
+  if (!dep.subs) {
     // last subscriber removed
-    // if computed, unsubscribe it from all its deps so this computed and its
-    // value can be GCed
-    dep.computed.flags &= ~EffectFlags.TRACKING
-    for (let l = dep.computed.deps; l; l = l.nextDep) {
-      removeSub(l)
+    if (dep.computed) {
+      // if computed, unsubscribe it from all its deps so this computed and its
+      // value can be GCed
+      dep.computed.flags &= ~EffectFlags.TRACKING
+      for (let l = dep.computed.deps; l; l = l.nextDep) {
+        removeSub(l, true)
+      }
+    } else if (dep.map && !fromComputed) {
+      // property dep, remove it from the owner depsMap
+      dep.map.delete(dep.key)
+      if (!dep.map.size) targetMap.delete(dep.target!)
     }
   }
 }

@@ -1006,9 +1006,35 @@ describe('reactivity/computed', () => {
     expect(serializeInner(root)).toBe(`<button>Step</button><p>Step 2</p>`)
   })
 
-  it('manual trigger computed', () => {
+  test('manual trigger computed', () => {
     const cValue = computed(() => 1)
     triggerRef(cValue)
     expect(cValue.value).toBe(1)
+  })
+
+  test('computed should remain live after losing all subscribers', () => {
+    const state = reactive({ a: 1 })
+    const p = computed(() => state.a + 1)
+    const { effect: e } = effect(() => p.value)
+    e.stop()
+
+    expect(p.value).toBe(2)
+    state.a++
+    expect(p.value).toBe(3)
+  })
+
+  test('computed dep cleanup should not cause property dep to be deleted', () => {
+    const toggle = ref(true)
+    const state = reactive({ a: 1 })
+    const p = computed(() => {
+      return toggle.value ? state.a : 111
+    })
+    const pp = computed(() => state.a)
+    effect(() => p.value)
+
+    expect(pp.value).toBe(1)
+    toggle.value = false
+    state.a++
+    expect(pp.value).toBe(2)
   })
 })
