@@ -61,7 +61,17 @@ export function nextTick<T = void, R = void>(
   fn?: (this: T) => R,
 ): Promise<Awaited<R>> {
   const p = currentFlushPromise || resolvedPromise
-  return fn ? p.then(this ? fn.bind(this) : fn) : p
+  let wrapperFn: ((this: T) => R | Promise<R> | undefined) | undefined = fn
+  if (!currentFlushPromise) {
+    wrapperFn = function () {
+      if (!fn) return
+      if (currentFlushPromise) {
+        return currentFlushPromise.then(fn.bind(this))
+      }
+      return fn.call(this)
+    }
+  }
+  return wrapperFn ? p.then(this ? wrapperFn.bind(this) : wrapperFn) : p
 }
 
 // Use binary-search to find a suitable position in the queue. The queue needs
