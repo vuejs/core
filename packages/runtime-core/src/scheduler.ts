@@ -173,7 +173,9 @@ export function flushPreFlushCbs(
         cb.flags! &= ~SchedulerJobFlags.QUEUED
       }
       cb()
-      cb.flags! &= ~SchedulerJobFlags.QUEUED
+      if (!(cb.flags! & SchedulerJobFlags.ALLOW_RECURSE)) {
+        cb.flags! &= ~SchedulerJobFlags.QUEUED
+      }
     }
   }
 }
@@ -250,7 +252,9 @@ function flushJobs(seen?: CountMap) {
           job.i,
           job.i ? ErrorCodes.COMPONENT_UPDATE : ErrorCodes.SCHEDULER,
         )
-        job.flags! &= ~SchedulerJobFlags.QUEUED
+        if (!(job.flags! & SchedulerJobFlags.ALLOW_RECURSE)) {
+          job.flags! &= ~SchedulerJobFlags.QUEUED
+        }
       }
     }
   } finally {

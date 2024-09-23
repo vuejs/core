@@ -344,7 +344,7 @@ function whenTransitionEnds(
     }
   }
 
-  if (explicitTimeout) {
+  if (explicitTimeout != null) {
     return setTimeout(resolveIfNotStale, explicitTimeout)
   }
 
