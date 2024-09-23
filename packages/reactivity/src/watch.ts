@@ -7,6 +7,7 @@ import {
   isMap,
   isObject,
   isPlainObject,
+  isPromise,
   isSet,
   remove,
 } from '@vue/shared'
@@ -63,7 +64,7 @@ export interface WatchOptions<Immediate = boolean> extends DebuggerOptions {
     fn: Function | Function[],
     type: WatchErrorCodes,
     args?: unknown[],
-  ) => void
+  ) => any
 }
 
 export type WatchStopHandle = () => void
@@ -191,9 +192,21 @@ export function watch(
         const currentEffect = activeWatcher
         activeWatcher = effect
         try {
-          return call
+          const maybeCleanup = call
             ? call(source, WatchErrorCodes.WATCH_CALLBACK, [boundCleanup])
             : source(boundCleanup)
+
+          if (isFunction(maybeCleanup)) {
+            boundCleanup(maybeCleanup)
+          } else if (isPromise(maybeCleanup)) {
+            maybeCleanup
+              .then(cleanup => {
+                if (isFunction(cleanup)) {
+                  boundCleanup(cleanup)
+                }
+              })
+              .catch(NOOP)
+          }
         } finally {
           activeWatcher = currentEffect
         }
@@ -264,10 +277,21 @@ export function watch(
                 : oldValue,
             boundCleanup,
           ]
-          call
+          const maybeCleanup = call
             ? call(cb!, WatchErrorCodes.WATCH_CALLBACK, args)
             : // @ts-expect-error
               cb!(...args)
+          if (isFunction(maybeCleanup)) {
+            boundCleanup(maybeCleanup)
+          } else if (isPromise(maybeCleanup)) {
+            maybeCleanup
+              .then(cleanup => {
+                if (isFunction(cleanup)) {
+                  boundCleanup(cleanup)
+                }
+              })
+              .catch(NOOP)
+          }
           oldValue = newValue
         } finally {
           activeWatcher = currentWatcher
