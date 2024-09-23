@@ -245,9 +245,11 @@ export function watch(
         (isMultiSource
           ? (newValue as any[]).some(
               (v, i) =>
-                (deep && isObject(v)) || hasChanged(v, (oldValue as any[])[i]),
+                (deep && typeof v === 'object') ||
+                hasChanged(v, (oldValue as any[])[i]),
             )
-          : (deep && isObject(newValue)) || hasChanged(newValue, oldValue))
+          : (deep && typeof newValue === 'object') ||
+            hasChanged(newValue, oldValue))
       ) {
         // cleanup before running cb again
         if (cleanup) {
