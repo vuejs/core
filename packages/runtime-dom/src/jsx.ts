@@ -1296,10 +1296,10 @@ export interface Events {
 
   // form events
   onChange: Event
-  onBeforeinput: Event
-  onInput: Event
+  onBeforeinput: InputEvent
+  onInput: InputEvent
   onReset: Event
-  onSubmit: Event
+  onSubmit: SubmitEvent
   onInvalid: Event
 
   // image events
@@ -1308,6 +1308,7 @@ export interface Events {
 
   // keyboard events
   onKeydown: KeyboardEvent
+  /** @deprecated use `onBeforeinput` or `onKeydown` instead */
   onKeypress: KeyboardEvent
   onKeyup: KeyboardEvent
 
@@ -1330,7 +1331,7 @@ export interface Events {
   onCanplaythrough: Event
   onDurationchange: Event
   onEmptied: Event
-  onEncrypted: Event
+  onEncrypted: MediaEncryptedEvent
   onEnded: Event
   onLoadeddata: Event
   onLoadedmetadata: Event
@@ -1370,6 +1371,8 @@ export interface Events {
   onPointerleave: PointerEvent
   onPointerover: PointerEvent
   onPointerout: PointerEvent
+  onGotpointercapture: PointerEvent
+  onLostpointercapture: PointerEvent
 
   // wheel events
   onWheel: WheelEvent
@@ -1377,11 +1380,24 @@ export interface Events {
   // animation events
   onAnimationstart: AnimationEvent
   onAnimationend: AnimationEvent
+  onAnimationcancel: AnimationEvent
   onAnimationiteration: AnimationEvent
 
   // transition events
-  onTransitionend: TransitionEvent
   onTransitionstart: TransitionEvent
+  onTransitionend: TransitionEvent
+  onTransitioncancel: TransitionEvent
+  onTransitionrun: TransitionEvent
+
+  // fullscreen events
+  onFullscreenchange: Event
+  onFullscreenerror: Event
+
+  // content visiblity events
+  onContentvisibilityautostatechange: ContentVisibilityAutoStateChangeEvent
+
+  // security policy events
+  onSecuritypolicyviolation: SecurityPolicyViolationEvent
 }
 
 type EventHandlers<E> = {
