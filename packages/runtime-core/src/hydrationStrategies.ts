@@ -48,6 +48,7 @@ export const hydrateOnVisible: HydrationStrategyFactory<
     }
   }, opts)
   forEach(el => {
+    if (!(el instanceof Element)) return
     if (elementIsVisibleInViewport(el)) {
       hydrate()
       ob.disconnect()
