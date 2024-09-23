@@ -61,7 +61,7 @@ const scss: StylePreprocessor = (source, map, options, load = require) => {
         code: css,
         errors: [],
         dependencies,
-        map: sourceMap,
+        map: merge(map,sourceMap!),
       }
     }
     return { code: css, errors: [], dependencies }
