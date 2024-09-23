@@ -367,13 +367,12 @@ export function trigger(
   endBatch()
 }
 
-/**
- * Test only
- */
 export function getDepFromReactive(
   object: any,
   key: string | number | symbol,
 ): Dep | undefined {
-  // eslint-disable-next-line
-  return targetMap.get(object)?.get(key)
+  const depMap = targetMap.get(object)
+  if (depMap) {
+    return depMap.get(key)
+  }
 }
