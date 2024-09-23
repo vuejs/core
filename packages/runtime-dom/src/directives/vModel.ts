@@ -160,7 +160,7 @@ export const vModelCheckbox: ModelDirective<HTMLInputElement> = {
 
 function setChecked(
   el: HTMLInputElement,
-  { value, oldValue }: DirectiveBinding,
+  { value }: DirectiveBinding,
   vnode: VNode,
 ) {
   // store the v-model value on the element so it can be accessed by the
@@ -225,20 +225,20 @@ export const vModelSelect: ModelDirective<HTMLSelectElement, 'number'> = {
   },
   // set value in mounted & updated because <select> relies on its children
   // <option>s.
-  mounted(el, { value, modifiers: { number } }) {
-    setSelected(el, value, number)
+  mounted(el, { value }) {
+    setSelected(el, value)
   },
   beforeUpdate(el, _binding, vnode) {
     el[assignKey] = getModelAssigner(vnode)
   },
-  updated(el, { value, modifiers: { number } }) {
+  updated(el, { value }) {
     if (!el._assigning) {
-      setSelected(el, value, number)
+      setSelected(el, value)
     }
   },
 }
 
-function setSelected(el: HTMLSelectElement, value: any, number: boolean) {
+function setSelected(el: HTMLSelectElement, value: any) {
   const isMultiple = el.multiple
   const isArrayValue = isArray(value)
   if (isMultiple && !isArrayValue && !isSet(value)) {
