@@ -23,28 +23,48 @@ export interface StylePreprocessorResults {
 
 // .scss/.sass processor
 const scss: StylePreprocessor = (source, map, options, load = require) => {
-  const { pathToFileURL, fileURLToPath }: typeof import('url') = load('url')
   const nodeSass: typeof import('sass') = load('sass')
+  const { compileString, renderSync } = nodeSass
+
   const data = getSource(source, options.filename, options.additionalData)
-  const finalOptions: import('sass').StringOptions<'sync'> = {
-    ...options,
-    url: pathToFileURL(options.filename),
-    sourceMap: !!map,
-  }
+  let css: string
+  let dependencies: string[]
+  let sourceMap: any
 
   try {
-    const result = nodeSass.compileString(data, finalOptions)
-    const dependencies = result.loadedUrls.map(url => fileURLToPath(url))
-    if (map) {
-      return {
-        code: result.css,
-        map: merge(map, result.sourceMap!),
-        errors: [],
-        dependencies,
-      }
+    if (compileString) {
+      const { pathToFileURL, fileURLToPath }: typeof import('url') = load('url')
+
+      const result = compileString(data, {
+        ...options,
+        url: pathToFileURL(options.filename),
+        sourceMap: !!map,
+      })
+      css = result.css
+      dependencies = result.loadedUrls.map(url => fileURLToPath(url))
+      sourceMap = map ? result.sourceMap! : undefined
+    } else {
+      const result = renderSync({
+        ...options,
+        data,
+        file: options.filename,
+        outFile: options.filename,
+        sourceMap: !!map,
+      })
+      css = result.css.toString()
+      dependencies = result.stats.includedFiles
+      sourceMap = map ? JSON.parse(result.map!.toString()) : undefined
     }
 
-    return { code: result.css, errors: [], dependencies }
+    if (map) {
+      return {
+        code: css,
+        errors: [],
+        dependencies,
+        map: sourceMap,
+      }
+    }
+    return { code: css, errors: [], dependencies }
   } catch (e: any) {
     return { code: '', errors: [e], dependencies: [] }
   }
