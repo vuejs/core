@@ -66,12 +66,12 @@ export type TypeEmitsToOptions<T extends ComponentTypeEmits> = {
   : {})
 
 type ParametersToFns<T extends any[]> = {
-  [K in T[0]]: isStringLiteral<K> extends true
+  [K in T[0]]: IsStringLiteral<K> extends true
     ? (...args: T extends [string, ...infer Args] ? Args : never) => any
     : never
 }
 
-type isStringLiteral<T> = T extends string
+type IsStringLiteral<T> = T extends string
   ? string extends T
     ? false
     : true
