@@ -1,4 +1,5 @@
-import { baseCompile } from '../../src'
+import { NodeTypes, baseCompile } from '../../src'
+import { parseWithForTransform } from './vFor.spec'
 
 describe('compiler: v-memo transform', () => {
   function compile(content: string) {
@@ -52,5 +53,28 @@ describe('compiler: v-memo transform', () => {
         </template>`,
       ),
     ).toMatchSnapshot()
+  })
+
+  test('element v-for key expression prefixing + v-memo', () => {
+    const {
+      node: { codegenNode },
+    } = parseWithForTransform(
+      '<span v-for="data of tableData" :key="getId(data)" v-memo="getLetter(data)"></span>',
+      { prefixIdentifiers: true },
+    )
+    const keyExp =
+      // @ts-expect-error
+      codegenNode.children.arguments[1].body.body[1].children[2]
+    expect(keyExp).toMatchObject({
+      type: NodeTypes.COMPOUND_EXPRESSION,
+      children: [
+        // should prefix outer scope references
+        { content: `_ctx.getId` },
+        `(`,
+        // should NOT prefix in scope variables
+        { content: `data` },
+        `)`,
+      ],
+    })
   })
 })
