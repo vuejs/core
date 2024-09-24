@@ -67,6 +67,13 @@ export const transformFor: NodeTransform = createStructuralDirectiveTransform(
         // resolve :key shorthand #10882
         transformBindShorthand(keyProp, context)
       }
+      // #12013
+      if (keyProp && keyProp.type !== NodeTypes.ATTRIBUTE && keyProp.exp) {
+        keyProp.exp = processExpression(
+          keyProp.exp as SimpleExpressionNode,
+          context,
+        )
+      }
       const keyExp =
         keyProp &&
         (keyProp.type === NodeTypes.ATTRIBUTE
