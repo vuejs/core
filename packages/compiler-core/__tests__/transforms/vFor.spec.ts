@@ -676,9 +676,18 @@ describe('compiler: v-for', () => {
       )
       const keyExp =
         // @ts-expect-error
-        codegenNode.children.arguments[1].body.body[1].children[2].children[0]
-          .content
-      expect(keyExp).toBe('_ctx.getId')
+        codegenNode.children.arguments[1].body.body[1].children[2]
+      expect(keyExp).toMatchObject({
+        type: NodeTypes.COMPOUND_EXPRESSION,
+        children: [
+          // should prefix outer scope references
+          { content: `_ctx.getId` },
+          `(`,
+          // should NOT prefix in scope variables
+          { content: `data` },
+          `)`,
+        ],
+      })
     })
 
     test('template v-for key no prefixing on attribute key', () => {
