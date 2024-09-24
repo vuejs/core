@@ -372,7 +372,5 @@ export function getDepFromReactive(
   key: string | number | symbol,
 ): Dep | undefined {
   const depMap = targetMap.get(object)
-  if (depMap) {
-    return depMap.get(key)
-  }
+  return depMap && depMap.get(key)
 }
