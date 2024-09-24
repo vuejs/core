@@ -65,7 +65,7 @@ export function nextTick<T = void, R = void>(
   if (!currentFlushPromise && fn) {
     wrapperFn = function () {
       if (currentFlushPromise) {
-        return currentFlushPromise.then(fn.bind(this))
+        return resolvedPromise.then(fn.bind(this))
       }
       return fn.call(this)
     }
