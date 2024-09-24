@@ -1037,4 +1037,27 @@ describe('reactivity/computed', () => {
     state.a++
     expect(pp.value).toBe(2)
   })
+
+  test('computed value updates correctly after dep cleanup', async () => {
+    const obj = reactive({ foo: 1, flag: 1 })
+    const c1 = computed(() => obj.foo)
+    const Comp = {
+      setup: () => {
+        return () => (obj.flag ? (obj.foo, c1.value) : 0)
+      },
+    }
+    const root = nodeOps.createElement('div')
+    render(h(Comp), root)
+    await nextTick()
+    expect(serializeInner(root)).toBe('1')
+
+    obj.flag = 0
+    await nextTick()
+    expect(serializeInner(root)).toBe('0')
+
+    obj.foo = 2
+    obj.flag = 1
+    await nextTick()
+    expect(serializeInner(root)).toBe('2')
+  })
 })
