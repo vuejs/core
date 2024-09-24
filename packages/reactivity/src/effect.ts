@@ -427,6 +427,7 @@ function removeSub(link: Link, fromComputed = false) {
       for (let l = dep.computed.deps; l; l = l.nextDep) {
         removeSub(l, true)
       }
+      dep.computed.dep.version = 0
     } else if (dep.map && !fromComputed) {
       // property dep, remove it from the owner depsMap
       dep.map.delete(dep.key)
