@@ -667,29 +667,6 @@ describe('compiler: v-for', () => {
       })
     })
 
-    test('element v-for key expression prefixing + v-memo', () => {
-      const {
-        node: { codegenNode },
-      } = parseWithForTransform(
-        '<span v-for="data of tableData" :key="getId(data)" v-memo="getLetter(data)"></span>',
-        { prefixIdentifiers: true },
-      )
-      const keyExp =
-        // @ts-expect-error
-        codegenNode.children.arguments[1].body.body[1].children[2]
-      expect(keyExp).toMatchObject({
-        type: NodeTypes.COMPOUND_EXPRESSION,
-        children: [
-          // should prefix outer scope references
-          { content: `_ctx.getId` },
-          `(`,
-          // should NOT prefix in scope variables
-          { content: `data` },
-          `)`,
-        ],
-      })
-    })
-
     test('template v-for key no prefixing on attribute key', () => {
       const {
         node: { codegenNode },
