@@ -151,4 +151,38 @@ for (let amount = 1e1; amount < 1e4; amount *= 10) {
       arr.push(1)
     })
   }
+
+  {
+    const rawArray: number[] = []
+    for (let i = 0, n = amount; i < n; i++) {
+      rawArray.push(i)
+    }
+    const arr = reactive(rawArray)
+
+    bench(`normal for loop, ${amount} elements`, () => {
+      let sum = 0
+      effect(() => {
+        for (let i = 0; i < arr.length; i++) {
+          sum += arr[i]
+        }
+      })
+    })
+  }
+
+  {
+    const rawArray: number[] = []
+    for (let i = 0, n = amount; i < n; i++) {
+      rawArray.push(i)
+    }
+    const arr = reactive(rawArray)
+
+    bench(`for...of loop, ${amount} elements`, () => {
+      let sum = 0
+      effect(() => {
+        for (const item of arr) {
+          sum += item
+        }
+      })
+    })
+  }
 }

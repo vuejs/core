@@ -1,10 +1,4 @@
 import type { VNode, VNodeChild } from '../vnode'
-import {
-  isReactive,
-  isShallow,
-  shallowReadArray,
-  toReactive,
-} from '@vue/reactivity'
 import { isArray, isObject, isString } from '@vue/shared'
 import { warn } from '../warning'
 
@@ -67,20 +61,12 @@ export function renderList(
   const sourceIsArray = isArray(source)
 
   if (sourceIsArray || isString(source)) {
-    const sourceIsReactiveArray = sourceIsArray && isReactive(source)
-    let needsWrap = false
-    if (sourceIsReactiveArray) {
-      needsWrap = !isShallow(source)
-      source = shallowReadArray(source)
-    }
     ret = new Array(source.length)
-    for (let i = 0, l = source.length; i < l; i++) {
-      ret[i] = renderItem(
-        needsWrap ? toReactive(source[i]) : source[i],
-        i,
-        undefined,
-        cached && cached[i],
-      )
+    let i = 0
+
+    for (const sourceItem of source) {
+      ret[i] = renderItem(sourceItem, i, undefined, cached && cached[i])
+      i++
     }
   } else if (typeof source === 'number') {
     if (__DEV__ && !Number.isInteger(source)) {
