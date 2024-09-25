@@ -321,13 +321,21 @@ function cleanupDeps(sub: Subscriber, fromComputed = false) {
   sub.depsTail = tail
 }
 
-function isDirty(sub: Subscriber): boolean {
+function isDirty(sub: Subscriber, isComputed = false): boolean {
   for (let link = sub.deps; link; link = link.nextDep) {
     if (
       link.dep.version !== link.version ||
       (link.dep.computed &&
         (refreshComputed(link.dep.computed) ||
           link.dep.version !== link.version))
+    ) {
+      return true
+    }
+
+    if (
+      isComputed &&
+      link.dep.map &&
+      link.dep.map.get(link.dep.key) !== link.dep
     ) {
       return true
     }
@@ -370,7 +378,7 @@ export function refreshComputed(computed: ComputedRefImpl): undefined {
     dep.version > 0 &&
     !computed.isSSR &&
     computed.deps &&
-    !isDirty(computed)
+    !isDirty(computed, true)
   ) {
     computed.flags &= ~EffectFlags.RUNNING
     return
@@ -427,7 +435,6 @@ function removeSub(link: Link, fromComputed = false) {
       for (let l = dep.computed.deps; l; l = l.nextDep) {
         removeSub(l, true)
       }
-      dep.computed.dep.version = 0
     } else if (dep.map && !fromComputed) {
       // property dep, remove it from the owner depsMap
       dep.map.delete(dep.key)
