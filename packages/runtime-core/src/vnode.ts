@@ -443,10 +443,8 @@ const normalizeRef = ({
     ref = '' + ref
   }
   return (
-    ref != null
-      ? isString(ref) || isRef(ref) || isFunction(ref)
-        ? { i: currentRenderingInstance, r: ref, k: ref_key, f: !!ref_for }
-        : ref
+    ref != null && (isString(ref) || isRef(ref) || isFunction(ref))
+      ? { i: currentRenderingInstance, r: ref, k: ref_key, f: !!ref_for }
       : null
   ) as any
 }
