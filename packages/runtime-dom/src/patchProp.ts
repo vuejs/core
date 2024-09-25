@@ -3,7 +3,13 @@ import { patchStyle } from './modules/style'
 import { patchAttr } from './modules/attrs'
 import { patchDOMProp } from './modules/props'
 import { patchEvent } from './modules/events'
-import { isFunction, isModelListener, isOn, isString } from '@vue/shared'
+import {
+  camelize,
+  isFunction,
+  isModelListener,
+  isOn,
+  isString,
+} from '@vue/shared'
 import type { RendererOptions } from '@vue/runtime-core'
 import type { VueElement } from './apiCustomElement'
 
@@ -41,6 +47,7 @@ export const patchProp: DOMRendererOptions['patchProp'] = (
         ? ((key = key.slice(1)), false)
         : shouldSetAsProp(el, key, nextValue, isSVG)
   ) {
+    key = camelize(key)
     patchDOMProp(el, key, nextValue, parentComponent)
     // #6007 also set form state as attributes so they work with
     // <input type="reset"> or libs / extensions that expect attributes
@@ -128,7 +135,7 @@ function shouldSetAsProp(
     return false
   }
 
-  if (key in el) {
+  if (camelize(key) in el) {
     return true
   }
 
