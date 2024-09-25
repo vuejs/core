@@ -2,6 +2,7 @@ import {
   Fragment,
   Static,
   Text,
+  // #12009 oxc cannot replicate tsc's ID behavior because tsc accidently type referenced the Comment to the global in dom.d.ts
   Comment as VComment,
   type VNode,
   type VNodeHook,
