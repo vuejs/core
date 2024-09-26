@@ -113,12 +113,13 @@ export class ComputedRefImpl<T = any> implements Subscriber {
   notify(): true | void {
     this.flags |= EffectFlags.DIRTY
     if (
-      !(this.flags & EffectFlags.NOTIFIED) &&
       // avoid infinite self recursion
       activeSub !== this
     ) {
+      if (!(this.flags & EffectFlags.NOTIFIED)) {
+        return true
+      }
       batch(this)
-      return true
     } else if (__DEV__) {
       // TODO warn
     }
