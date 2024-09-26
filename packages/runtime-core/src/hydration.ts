@@ -1,8 +1,8 @@
 import {
-  Comment,
   Fragment,
   Static,
   Text,
+  Comment as VComment,
   type VNode,
   type VNodeHook,
   createTextVNode,
@@ -195,7 +195,7 @@ export function createHydrationFunctions(
           nextNode = nextSibling(node)
         }
         break
-      case Comment:
+      case VComment:
         if (isTemplateNode(node)) {
           nextNode = nextSibling(node)
           // wrapped <transition appear>
