@@ -127,6 +127,7 @@ function shouldSetAsProp(
   if (isNativeOn(key) && isString(value)) {
     return false
   }
+
   if (key in el) {
     return true
   }
