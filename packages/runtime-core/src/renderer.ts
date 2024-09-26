@@ -2551,13 +2551,10 @@ function checkInstanceDeactive(instance: ComponentInternalInstance | null) {
     if (instance.isDeactive) {
       return true
     }
-    instance = instance.parent
-    if (
-      instance &&
-      instance.vnode.shapeFlag & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE
-    ) {
+    if (isKeepAlive(instance.vnode)) {
       break
     }
+    instance = instance.parent
   }
   return false
 }
