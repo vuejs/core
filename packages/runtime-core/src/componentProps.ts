@@ -663,7 +663,7 @@ function validateProps(
       resolvedValues[key],
       opt,
       __DEV__ ? shallowReadonly(resolvedValues) : resolvedValues,
-      !hasOwn(rawProps, key) && !camelizePropsKey.includes(key),
+      !camelizePropsKey.includes(key),
     )
   }
 }
