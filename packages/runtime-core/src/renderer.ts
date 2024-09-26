@@ -1431,7 +1431,7 @@ function baseCreateRenderer(
       } else {
         let { next, bu, u, parent, vnode } = instance
 
-        if (checkInstanceActivate(instance)) {
+        if (checkInstanceDeactive(instance)) {
           return
         }
 
@@ -2546,7 +2546,7 @@ function locateNonHydratedAsyncRoot(
   }
 }
 
-function checkInstanceActivate(instance: ComponentInternalInstance | null) {
+function checkInstanceDeactive(instance: ComponentInternalInstance | null) {
   while (instance) {
     const { isDeactive } = instance
     if (isDeactive) {
