@@ -63,14 +63,13 @@ export function nextTick<T = void, R = void>(
   const p = currentFlushPromise || resolvedPromise
   let wrapperFn: ((this: T) => R | Promise<R> | undefined) | undefined = fn
   if (!currentFlushPromise) {
-    wrapperFn = fn
-      ? function () {
-          if (currentFlushPromise) {
-            return currentFlushPromise.then(fn.bind(this))
-          }
-          return fn.call(this)
-        }
-      : void 0
+    wrapperFn = function () {
+      if (!fn) return
+      if (currentFlushPromise) {
+        return currentFlushPromise.then(fn.bind(this))
+      }
+      return fn.call(this)
+    }
   }
   return wrapperFn ? p.then(this ? wrapperFn.bind(this) : wrapperFn) : p
 }
