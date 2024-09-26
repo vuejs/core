@@ -260,11 +260,14 @@ export function endBatch(): void {
   let error: unknown
   while (batchedSub) {
     let e: Subscriber | undefined = batchedSub
+    let next: Subscriber | undefined
+    while (e) {
+      e.flags &= ~EffectFlags.NOTIFIED
+      e = e.next
+    }
+    e = batchedSub
     batchedSub = undefined
     while (e) {
-      const next: Subscriber | undefined = e.next
-      e.next = undefined
-      e.flags &= ~EffectFlags.NOTIFIED
       if (e.flags & EffectFlags.ACTIVE) {
         try {
           // ACTIVE flag is effect-only
@@ -273,6 +276,8 @@ export function endBatch(): void {
           if (!error) error = err
         }
       }
+      next = e.next
+      e.next = undefined
       e = next
     }
   }
