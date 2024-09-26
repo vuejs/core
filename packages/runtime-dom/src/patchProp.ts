@@ -3,13 +3,7 @@ import { patchStyle } from './modules/style'
 import { patchAttr } from './modules/attrs'
 import { patchDOMProp } from './modules/props'
 import { patchEvent } from './modules/events'
-import {
-  camelize,
-  isFunction,
-  isModelListener,
-  isOn,
-  isString,
-} from '@vue/shared'
+import { isFunction, isModelListener, isOn, isString } from '@vue/shared'
 import type { RendererOptions } from '@vue/runtime-core'
 import type { VueElement } from './apiCustomElement'
 
@@ -133,8 +127,7 @@ function shouldSetAsProp(
   if (isNativeOn(key) && isString(value)) {
     return false
   }
-  // if el is a Vue custom element, it should be passed as a prop.
-  if (camelize(key) in el) {
+  if (key in el) {
     return true
   }
 
