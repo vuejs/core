@@ -133,7 +133,7 @@ function shouldSetAsProp(
   if (isNativeOn(key) && isString(value)) {
     return false
   }
-
+  // if el is a Vue custom element, it should be passed as a prop.
   if (camelize(key) in el) {
     return true
   }
