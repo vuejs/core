@@ -30,6 +30,29 @@ import {
 } from '../src/effect'
 
 describe('reactivity/effect', () => {
+  it('study ~~~~~~', () => {
+    let dummy1, dummy2
+    //dep1
+    const counter1 = reactive({ num: 1 })
+    //dep2
+    const counter2 = reactive({ num: 2 })
+    //sub1
+    effect(() => {
+      dummy1 = counter1.num + counter2.num
+    })
+    //sub2
+    effect(() => {
+      dummy2 = counter1.num + counter2.num + 1
+    })
+
+    expect(dummy1).toBe(3)
+    expect(dummy2).toBe(4)
+    counter1.num++
+    counter2.num++
+    expect(dummy1).toBe(5)
+    expect(dummy2).toBe(6)
+  })
+
   it('should run the passed function once (wrapped by a effect)', () => {
     const fnSpy = vi.fn(() => {})
     effect(fnSpy)
