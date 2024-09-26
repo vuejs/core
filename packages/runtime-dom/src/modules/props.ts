@@ -1,5 +1,5 @@
 import { DeprecationTypes, compatUtils, warn } from '@vue/runtime-core'
-import { includeBooleanAttr } from '@vue/shared'
+import { camelize, includeBooleanAttr } from '@vue/shared'
 import { unsafeToTrustedHTML } from '../nodeOps'
 
 // functions. The user is responsible for using them with only trusted content.
@@ -95,7 +95,7 @@ export function patchDOMProp(
   // some properties has getter, no setter, will error in 'use strict'
   // eg. <select :type="null"></select> <select :willValidate="null"></select>
   try {
-    el[key] = value
+    el[camelize(key)] = value
   } catch (e: any) {
     // do not warn if value is auto-coerced from nullish values
     if (__DEV__ && !needRemove) {
