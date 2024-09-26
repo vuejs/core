@@ -241,11 +241,15 @@ export function watch(
       // watch(source, cb)
       const newValue = effect.run()
       if (
-        deep ||
         forceTrigger ||
         (isMultiSource
-          ? (newValue as any[]).some((v, i) => hasChanged(v, oldValue[i]))
-          : hasChanged(newValue, oldValue))
+          ? (newValue as any[]).some(
+              (v, i) =>
+                (deep && typeof v === 'object') ||
+                hasChanged(v, (oldValue as any[])[i]),
+            )
+          : (deep && typeof newValue === 'object') ||
+            hasChanged(newValue, oldValue))
       ) {
         // cleanup before running cb again
         if (cleanup) {
