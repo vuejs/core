@@ -4,6 +4,7 @@ import {
   WatchErrorCodes,
   type WatchOptions,
   type WatchScheduler,
+  computed,
   onWatcherCleanup,
   ref,
   watch,
@@ -208,5 +209,24 @@ describe('watch', () => {
 
     source.value++
     expect(dummy).toBe(1)
+  })
+
+  // #12033
+  test('recursive sync watcher on computed', () => {
+    const r = ref(0)
+    const c = computed(() => r.value)
+
+    watch(c, v => {
+      if (v > 1) {
+        r.value--
+      }
+    })
+
+    expect(r.value).toBe(0)
+    expect(c.value).toBe(0)
+
+    r.value = 10
+    expect(r.value).toBe(1)
+    expect(c.value).toBe(1)
   })
 })

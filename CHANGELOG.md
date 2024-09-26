@@ -1,3 +1,17 @@
+## [3.5.9](https://github.com/vuejs/core/compare/v3.5.8...v3.5.9) (2024-09-26)
+
+
+### Bug Fixes
+
+* **reactivity:** fix property dep removal regression ([6001e5c](https://github.com/vuejs/core/commit/6001e5c81a05c894586f9287fbd991677bdd0455)), closes [#12020](https://github.com/vuejs/core/issues/12020) [#12021](https://github.com/vuejs/core/issues/12021)
+* **reactivity:** fix recursive sync watcher on computed edge case ([10ff159](https://github.com/vuejs/core/commit/10ff15924053d9bd95ad706f78ce09e288213fcf)), closes [#12033](https://github.com/vuejs/core/issues/12033) [#12037](https://github.com/vuejs/core/issues/12037)
+* **runtime-core:** avoid rendering plain object as VNode ([#12038](https://github.com/vuejs/core/issues/12038)) ([cb34b28](https://github.com/vuejs/core/commit/cb34b28a4a9bf868be4785b001c526163eda342e)), closes [#12035](https://github.com/vuejs/core/issues/12035) [vitejs/vite-plugin-vue#353](https://github.com/vitejs/vite-plugin-vue/issues/353)
+* **runtime-core:** make useId() always return a string ([a177092](https://github.com/vuejs/core/commit/a177092754642af2f98c33a4feffe8f198c3c950))
+* **types:** correct type inference of union event names ([#12022](https://github.com/vuejs/core/issues/12022)) ([4da6881](https://github.com/vuejs/core/commit/4da688141d9e7c15b622c289deaa81b11845b2c7))
+* **vue:** properly cache runtime compilation ([#12019](https://github.com/vuejs/core/issues/12019)) ([fa0ba24](https://github.com/vuejs/core/commit/fa0ba24b3ace02d7ecab65e57c2bea89a2550dcb))
+
+
+
 ## [3.5.8](https://github.com/vuejs/core/compare/v3.5.7...v3.5.8) (2024-09-22)
 
 
