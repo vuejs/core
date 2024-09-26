@@ -23,6 +23,7 @@ import {
   ref,
   shallowRef,
   toRaw,
+  triggerRef,
 } from '../src'
 import { EffectFlags, pauseTracking, resetTracking } from '../src/effect'
 import type { ComputedRef, ComputedRefImpl } from '../src/computed'
@@ -1003,5 +1004,57 @@ describe('reactivity/computed', () => {
     triggerEvent(root.children[1] as TestElement, 'click')
     await nextTick()
     expect(serializeInner(root)).toBe(`<button>Step</button><p>Step 2</p>`)
+  })
+
+  test('manual trigger computed', () => {
+    const cValue = computed(() => 1)
+    triggerRef(cValue)
+    expect(cValue.value).toBe(1)
+  })
+
+  test('computed should remain live after losing all subscribers', () => {
+    const state = reactive({ a: 1 })
+    const p = computed(() => state.a + 1)
+    const { effect: e } = effect(() => p.value)
+    e.stop()
+
+    expect(p.value).toBe(2)
+    state.a++
+    expect(p.value).toBe(3)
+  })
+
+  // #11995
+  test('computed dep cleanup should not cause property dep to be deleted', () => {
+    const toggle = ref(true)
+    const state = reactive({ a: 1 })
+    const p = computed(() => {
+      return toggle.value ? state.a : 111
+    })
+    const pp = computed(() => state.a)
+    effect(() => p.value)
+
+    expect(pp.value).toBe(1)
+    toggle.value = false
+    state.a++
+    expect(pp.value).toBe(2)
+  })
+
+  // #12020
+  test('computed value updates correctly after dep cleanup', () => {
+    const obj = reactive({ foo: 1, flag: 1 })
+    const c1 = computed(() => obj.foo)
+
+    let foo
+    effect(() => {
+      foo = obj.flag ? (obj.foo, c1.value) : 0
+    })
+    expect(foo).toBe(1)
+
+    obj.flag = 0
+    expect(foo).toBe(0)
+
+    obj.foo = 2
+    obj.flag = 1
+    expect(foo).toBe(2)
   })
 })

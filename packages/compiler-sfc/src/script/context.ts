@@ -8,6 +8,7 @@ import type { ModelDecl } from './defineModel'
 import type { BindingMetadata } from '../../../compiler-core/src'
 import MagicString from 'magic-string'
 import type { TypeScope } from './resolveType'
+import { warn } from '../warn'
 
 export class ScriptCompileContext {
   isJS: boolean
@@ -145,18 +146,29 @@ export class ScriptCompileContext {
     return block.content.slice(node.start!, node.end!)
   }
 
+  warn(msg: string, node: Node, scope?: TypeScope): void {
+    warn(generateError(msg, node, this, scope))
+  }
+
   error(msg: string, node: Node, scope?: TypeScope): never {
-    const offset = scope ? scope.offset : this.startOffset!
     throw new Error(
-      `[@vue/compiler-sfc] ${msg}\n\n${
-        (scope || this.descriptor).filename
-      }\n${generateCodeFrame(
-        (scope || this.descriptor).source,
-        node.start! + offset,
-        node.end! + offset,
-      )}`,
+      `[@vue/compiler-sfc] ${generateError(msg, node, this, scope)}`,
     )
   }
+}
+
+function generateError(
+  msg: string,
+  node: Node,
+  ctx: ScriptCompileContext,
+  scope?: TypeScope,
+) {
+  const offset = scope ? scope.offset : ctx.startOffset!
+  return `${msg}\n\n${(scope || ctx.descriptor).filename}\n${generateCodeFrame(
+    (scope || ctx.descriptor).source,
+    node.start! + offset,
+    node.end! + offset,
+  )}`
 }
 
 export function resolveParserPlugins(

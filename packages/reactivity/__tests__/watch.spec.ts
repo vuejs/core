@@ -4,6 +4,7 @@ import {
   WatchErrorCodes,
   type WatchOptions,
   type WatchScheduler,
+  computed,
   onWatcherCleanup,
   ref,
   watch,
@@ -192,5 +193,40 @@ describe('watch', () => {
 
     scope.stop()
     expect(calls).toEqual(['sync 2', 'post 2'])
+  })
+
+  test('once option should be ignored by simple watch', async () => {
+    let dummy: any
+    const source = ref(0)
+    watch(
+      () => {
+        dummy = source.value
+      },
+      null,
+      { once: true },
+    )
+    expect(dummy).toBe(0)
+
+    source.value++
+    expect(dummy).toBe(1)
+  })
+
+  // #12033
+  test('recursive sync watcher on computed', () => {
+    const r = ref(0)
+    const c = computed(() => r.value)
+
+    watch(c, v => {
+      if (v > 1) {
+        r.value--
+      }
+    })
+
+    expect(r.value).toBe(0)
+    expect(c.value).toBe(0)
+
+    r.value = 10
+    expect(r.value).toBe(1)
+    expect(c.value).toBe(1)
   })
 })

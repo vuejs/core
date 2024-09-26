@@ -306,12 +306,6 @@ async function main() {
   if (args.publish) {
     await buildPackages()
     await publishPackages(targetVersion)
-  } else {
-    console.log(
-      pico.yellow(
-        '\nPublish step skipped (will be done in GitHub actions on successful push)',
-      ),
-    )
   }
 
   // push to GitHub
@@ -320,6 +314,15 @@ async function main() {
     await runIfNotDry('git', ['tag', `v${targetVersion}`])
     await runIfNotDry('git', ['push', 'origin', `refs/tags/v${targetVersion}`])
     await runIfNotDry('git', ['push'])
+  }
+
+  if (!args.publish) {
+    console.log(
+      pico.yellow(
+        '\nRelease will be done via GitHub Actions.\n' +
+          'Check status at https://github.com/vuejs/core/actions/workflows/release.yml',
+      ),
+    )
   }
 
   if (isDryRun) {

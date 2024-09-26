@@ -27,7 +27,7 @@ export function ssrProcessIf(
   node: IfNode,
   context: SSRTransformContext,
   disableNestedFragments = false,
-  disableCommentAsIfAlternate = false,
+  disableComment = false,
 ): void {
   const [rootBranch] = node.branches
   const ifStatement = createIfStatement(
@@ -56,7 +56,7 @@ export function ssrProcessIf(
     }
   }
 
-  if (!currentIf.alternate && !disableCommentAsIfAlternate) {
+  if (!currentIf.alternate && !disableComment) {
     currentIf.alternate = createBlockStatement([
       createCallExpression(`_push`, ['`<!---->`']),
     ])

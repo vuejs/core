@@ -102,7 +102,7 @@ export function transformDestructuredProps(
     return
   }
 
-  const rootScope: Scope = {}
+  const rootScope: Scope = Object.create(null)
   const scopeStack: Scope[] = [rootScope]
   let currentScope: Scope = rootScope
   const excludedIds = new WeakSet<Identifier>()

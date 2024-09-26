@@ -37,6 +37,7 @@ import {
   toRef,
   triggerRef,
 } from '@vue/reactivity'
+import { renderToString } from '@vue/server-renderer'
 
 describe('api: watch', () => {
   it('effect', async () => {
@@ -371,6 +372,43 @@ describe('api: watch', () => {
     await nextTick()
     // should not update
     expect(dummy).toBe(0)
+  })
+
+  it('stopping the watcher (SSR)', async () => {
+    let dummy = 0
+    const count = ref<number>(1)
+    const captureValue = (value: number) => {
+      dummy = value
+    }
+    const watchCallback = vi.fn(newValue => {
+      captureValue(newValue)
+    })
+    const Comp = defineComponent({
+      created() {
+        const getter = () => this.count
+        captureValue(getter()) // sets dummy to 1
+        const stop = this.$watch(getter, watchCallback)
+        stop()
+        this.count = 2 // shouldn't trigger side effect
+      },
+      render() {
+        return h('div', this.count)
+      },
+      setup() {
+        return { count }
+      },
+    })
+    let html
+    html = await renderToString(h(Comp))
+    // should not throw here
+    expect(html).toBe(`<div>2</div>`)
+    expect(watchCallback).not.toHaveBeenCalled()
+    expect(dummy).toBe(1)
+    await nextTick()
+    count.value = 3 // shouldn't trigger side effect
+    await nextTick()
+    expect(watchCallback).not.toHaveBeenCalled()
+    expect(dummy).toBe(1)
   })
 
   it('stopping the watcher (with source)', async () => {

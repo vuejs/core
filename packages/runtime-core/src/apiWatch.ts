@@ -179,11 +179,11 @@ function doWatch(
       // immediately watch or watchEffect
       baseWatchOptions.once = true
     } else {
-      return {
-        stop: NOOP,
-        resume: NOOP,
-        pause: NOOP,
-      } as WatchHandle
+      const watchStopHandle = () => {}
+      watchStopHandle.stop = NOOP
+      watchStopHandle.resume = NOOP
+      watchStopHandle.pause = NOOP
+      return watchStopHandle
     }
   }
 
