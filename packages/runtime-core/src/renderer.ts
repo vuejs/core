@@ -2548,11 +2548,16 @@ function locateNonHydratedAsyncRoot(
 
 function checkInstanceDeactive(instance: ComponentInternalInstance | null) {
   while (instance) {
-    const { isDeactive } = instance
-    if (isDeactive) {
+    if (instance.isDeactive) {
       return true
     }
     instance = instance.parent
+    if (
+      instance &&
+      instance.vnode.shapeFlag & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE
+    ) {
+      break
+    }
   }
   return false
 }
