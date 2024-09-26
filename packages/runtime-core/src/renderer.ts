@@ -1429,9 +1429,9 @@ function baseCreateRenderer(
         // #2458: deference mount-only object parameters to prevent memleaks
         initialVNode = container = anchor = null as any
       } else {
-        let { next, bu, u, parent, vnode, isDeactive } = instance
+        let { next, bu, u, parent, vnode } = instance
 
-        if (isDeactive) {
+        if (checkInstanceActivate(instance)) {
           return
         }
 
@@ -2544,6 +2544,17 @@ function locateNonHydratedAsyncRoot(
       return locateNonHydratedAsyncRoot(subComponent)
     }
   }
+}
+
+function checkInstanceActivate(instance: ComponentInternalInstance | null) {
+  while (instance) {
+    const { isDeactive } = instance
+    if (isDeactive) {
+      return true
+    }
+    instance = instance.parent
+  }
+  return false
 }
 
 export function invalidateMount(hooks: LifecycleHook): void {
