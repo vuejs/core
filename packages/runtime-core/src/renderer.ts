@@ -1429,7 +1429,11 @@ function baseCreateRenderer(
         // #2458: deference mount-only object parameters to prevent memleaks
         initialVNode = container = anchor = null as any
       } else {
-        let { next, bu, u, parent, vnode } = instance
+        let { next, bu, u, parent, vnode, isDeactive } = instance
+
+        if (isDeactive) {
+          return
+        }
 
         if (__FEATURE_SUSPENSE__) {
           const nonHydratedAsyncRoot = locateNonHydratedAsyncRoot(instance)

@@ -7,6 +7,7 @@ import {
   type TestElement,
   cloneVNode,
   createApp,
+  createVNode,
   defineAsyncComponent,
   defineComponent,
   h,
@@ -22,6 +23,7 @@ import {
   reactive,
   ref,
   render,
+  resolveDynamicComponent,
   serializeInner,
   shallowRef,
 } from '@vue/runtime-test'
@@ -1172,5 +1174,49 @@ describe('KeepAlive', () => {
     await nextTick()
     expect(deactivatedHome).toHaveBeenCalledTimes(0)
     expect(unmountedHome).toHaveBeenCalledTimes(1)
+  })
+
+  // #12017
+  test('avoid duplicate mounts of deactivate components', async () => {
+    const About = {
+      name: 'About',
+      setup() {
+        return () => h('h1', 'About')
+      },
+    }
+    const mountedHome = vi.fn()
+    const Home = {
+      name: 'Home',
+      setup() {
+        onMounted(mountedHome)
+        return () => h('h1', 'Home')
+      },
+    }
+    const activeView = shallowRef(About)
+    const HomeView = {
+      name: 'HomeView',
+      setup() {
+        return () => h(createVNode(resolveDynamicComponent(activeView.value)))
+      },
+    }
+
+    const App = createApp({
+      setup() {
+        return () => {
+          return [
+            h(KeepAlive, null, [
+              createVNode(resolveDynamicComponent(HomeView), {
+                key: activeView.value.name,
+              }),
+            ]),
+          ]
+        }
+      },
+    })
+    App.mount(nodeOps.createElement('div'))
+    expect(mountedHome).toHaveBeenCalledTimes(0)
+    activeView.value = Home
+    await nextTick()
+    expect(mountedHome).toHaveBeenCalledTimes(1)
   })
 })

@@ -509,6 +509,7 @@ export interface ComponentInternalInstance {
   // lifecycle
   isMounted: boolean
   isUnmounted: boolean
+  isDeactive: boolean
   isDeactivated: boolean
   /**
    * @internal
@@ -673,6 +674,7 @@ export function createComponentInstance(
     // not using enums here because it results in computed properties
     isMounted: false,
     isUnmounted: false,
+    isDeactive: false,
     isDeactivated: false,
     bc: null,
     c: null,
