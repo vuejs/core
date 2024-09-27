@@ -347,14 +347,9 @@ function updateState(
   newIndex: number | undefined,
 ) {
   const [item, key, index] = block.state
-  const oldItem = item.value
   item.value = newItem
   key.value = newKey
   index.value = newIndex
-
-  if (oldItem === newItem && !isReactive(oldItem)) {
-    triggerRef(item)
-  }
 }
 
 export function createForSlots(
