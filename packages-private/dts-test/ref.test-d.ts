@@ -189,7 +189,7 @@ describe('allow getter and setter types to be unrelated', <T>() => {
   f.value = ref(1)
 })
 
-describe('correctly unwraps nested ref', () => {
+describe('correctly unwraps nested refs', () => {
   const obj = {
     n: 24,
     ref: ref(24),
@@ -204,6 +204,7 @@ describe('correctly unwraps nested ref', () => {
   const b = reactive({ a })
   expectType<number>(b.a.n)
   expectType<number>(b.a.ref)
+  expectType<number>(b.a.nestedRef.n)
 })
 
 // computed
