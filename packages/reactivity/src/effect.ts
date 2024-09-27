@@ -260,10 +260,20 @@ export function endBatch(): void {
   let error: unknown
   while (batchedSub) {
     let e: Subscriber | undefined = batchedSub
-    batchedSub = undefined
+    let next: Subscriber | undefined
+    // 1st pass: clear notified flags for computed upfront
+    // we use the ACTIVE flag as a discriminator between computed and effect,
+    // since NOTIFIED is useless for an inactive effect anyway.
     while (e) {
-      const next: Subscriber | undefined = e.next
-      e.next = undefined
+      if (!(e.flags & EffectFlags.ACTIVE)) {
+        e.flags &= ~EffectFlags.NOTIFIED
+      }
+      e = e.next
+    }
+    e = batchedSub
+    batchedSub = undefined
+    // 2nd pass: run effects
+    while (e) {
       e.flags &= ~EffectFlags.NOTIFIED
       if (e.flags & EffectFlags.ACTIVE) {
         try {
@@ -273,6 +283,8 @@ export function endBatch(): void {
           if (!error) error = err
         }
       }
+      next = e.next
+      e.next = undefined
       e = next
     }
   }
@@ -399,7 +411,7 @@ export function refreshComputed(computed: ComputedRefImpl): undefined {
   }
 }
 
-function removeSub(link: Link) {
+function removeSub(link: Link, soft = false) {
   const { dep, prevSub, nextSub } = link
   if (prevSub) {
     prevSub.nextSub = nextSub
@@ -413,15 +425,28 @@ function removeSub(link: Link) {
     // was previous tail, point new tail to prev
     dep.subs = prevSub
   }
+  if (__DEV__ && dep.subsHead === link) {
+    // was previous head, point new head to next
+    dep.subsHead = nextSub
+  }
 
   if (!dep.subs && dep.computed) {
-    // last subscriber removed
     // if computed, unsubscribe it from all its deps so this computed and its
     // value can be GCed
     dep.computed.flags &= ~EffectFlags.TRACKING
     for (let l = dep.computed.deps; l; l = l.nextDep) {
-      removeSub(l)
+      // here we are only "soft" unsubscribing because the computed still keeps
+      // referencing the deps and the dep should not decrease its sub count
+      removeSub(l, true)
     }
+  }
+
+  if (!soft && !--dep.sc && dep.map) {
+    // #11979
+    // property dep no longer has effect subscribers, delete it
+    // this mostly is for the case where an object is kept in memory but only a
+    // subset of its properties is tracked at one time
+    dep.map.delete(dep.key)
   }
 }
 
