@@ -506,6 +506,8 @@ export interface ComponentInternalInstance {
    */
   asyncResolved: boolean
 
+  keepAliveEffct: Function[]
+
   // lifecycle
   isMounted: boolean
   isUnmounted: boolean
@@ -669,6 +671,8 @@ export function createComponentInstance(
     suspenseId: suspense ? suspense.pendingId : 0,
     asyncDep: null,
     asyncResolved: false,
+
+    keepAliveEffct: [],
 
     // lifecycle hooks
     // not using enums here because it results in computed properties

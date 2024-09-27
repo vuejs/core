@@ -1431,7 +1431,13 @@ function baseCreateRenderer(
       } else {
         let { next, bu, u, parent, vnode } = instance
 
-        if (checkInstanceDeactive(instance)) {
+        const keepAliveParent = checkInstanceDeactive(instance)
+        if (keepAliveParent) {
+          keepAliveParent.keepAliveEffct.push(() => {
+            if (!instance.isUnmounted) {
+              componentUpdateFn()
+            }
+          })
           return
         }
 
@@ -2549,14 +2555,14 @@ function locateNonHydratedAsyncRoot(
 function checkInstanceDeactive(instance: ComponentInternalInstance | null) {
   while (instance) {
     if (instance.isDeactive) {
-      return true
+      return instance
     }
     if (isKeepAlive(instance.vnode)) {
       break
     }
     instance = instance.parent
   }
-  return false
+  return null
 }
 
 export function invalidateMount(hooks: LifecycleHook): void {

@@ -48,6 +48,7 @@ import { devtoolsComponentAdded } from '../devtools'
 import { isAsyncWrapper } from '../apiAsyncComponent'
 import { isSuspense } from './Suspense'
 import { LifecycleHooks } from '../enums'
+import { queuePostFlushCb } from '../scheduler'
 
 type MatchPattern = string | RegExp | (string | RegExp)[]
 
@@ -150,6 +151,11 @@ const KeepAliveImpl: ComponentOptions = {
         vnode.slotScopeIds,
         optimized,
       )
+
+      const effects = instance.keepAliveEffct
+      queuePostFlushCb(effects)
+      instance.keepAliveEffct.length = 0
+
       queuePostRenderEffect(() => {
         instance.isDeactivated = false
         if (instance.a) {
