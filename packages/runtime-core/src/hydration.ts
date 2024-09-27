@@ -31,7 +31,7 @@ import {
   normalizeStyle,
   stringifyStyle,
 } from '@vue/shared'
-import type { RendererInternals } from './renderer'
+import { type RendererInternals, needTransition } from './renderer'
 import { setRef } from './rendererTemplateRef'
 import {
   type SuspenseBoundary,
@@ -385,8 +385,10 @@ export function createHydrationFunctions(
       let needCallTransitionHooks = false
       if (isTemplateNode(el)) {
         needCallTransitionHooks =
-          transition &&
-          !transition.persisted &&
+          needTransition(
+            null, // no need check parentSuspense in hydration
+            transition,
+          ) &&
           parentComponent &&
           parentComponent.vnode.props &&
           parentComponent.vnode.props.appear
