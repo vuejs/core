@@ -261,13 +261,20 @@ export function endBatch(): void {
   while (batchedSub) {
     let e: Subscriber | undefined = batchedSub
     let next: Subscriber | undefined
+    // 1st pass: clear notified flags for computed upfront
+    // we use the ACTIVE flag as a discriminator between computed and effect,
+    // since NOTIFIED is useless for an inactive effect anyway.
     while (e) {
-      e.flags &= ~EffectFlags.NOTIFIED
+      if (!(e.flags & EffectFlags.ACTIVE)) {
+        e.flags &= ~EffectFlags.NOTIFIED
+      }
       e = e.next
     }
     e = batchedSub
     batchedSub = undefined
+    // 2nd pass: run effects
     while (e) {
+      e.flags &= ~EffectFlags.NOTIFIED
       if (e.flags & EffectFlags.ACTIVE) {
         try {
           // ACTIVE flag is effect-only
