@@ -506,7 +506,7 @@ export interface ComponentInternalInstance {
    */
   asyncResolved: boolean
 
-  keepAliveEffct: Function[]
+  keepAliveEffect: Function[]
 
   // lifecycle
   isMounted: boolean
@@ -672,7 +672,7 @@ export function createComponentInstance(
     asyncDep: null,
     asyncResolved: false,
 
-    keepAliveEffct: [],
+    keepAliveEffect: [],
 
     // lifecycle hooks
     // not using enums here because it results in computed properties

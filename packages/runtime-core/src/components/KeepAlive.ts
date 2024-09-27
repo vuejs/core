@@ -152,9 +152,9 @@ const KeepAliveImpl: ComponentOptions = {
         optimized,
       )
 
-      const effects = instance.keepAliveEffct
+      const effects = instance.keepAliveEffect
       queuePostFlushCb(effects)
-      instance.keepAliveEffct.length = 0
+      instance.keepAliveEffect.length = 0
 
       queuePostRenderEffect(() => {
         instance.isDeactivated = false
