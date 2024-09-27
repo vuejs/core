@@ -4,7 +4,6 @@ import {
   effectScope,
   isReactive,
   shallowRef,
-  triggerRef,
 } from '@vue/reactivity'
 import { isArray, isObject, isString } from '@vue/shared'
 import {

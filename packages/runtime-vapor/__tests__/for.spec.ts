@@ -7,6 +7,7 @@ import {
   renderEffect,
   shallowRef,
   template,
+  triggerRef,
   withDirectives,
 } from '../src'
 import { makeRender } from './_utils'
@@ -383,7 +384,7 @@ describe('createFor', () => {
     expect(host.innerHTML).toBe('<!--for-->')
   })
 
-  test.fails('shallowRef source', async () => {
+  test('shallowRef source', async () => {
     const list = shallowRef([{ name: '1' }, { name: '2' }, { name: '3' }])
     const setList = (update = list.value.slice()) => (list.value = update)
     function reverse() {
@@ -435,12 +436,12 @@ describe('createFor', () => {
       '<li>0. 1</li><li>1. 2</li><li>2. 3</li><li>3. 4</li><!--for-->',
     )
 
-    // change
+    // change deep value should not update
     list.value[0].name = 'a'
     setList()
     await nextTick()
     expect(host.innerHTML).toBe(
-      '<li>0. a</li><li>1. 2</li><li>2. 3</li><li>3. 4</li><!--for-->',
+      '<li>0. 1</li><li>1. 2</li><li>2. 3</li><li>3. 4</li><!--for-->',
     )
 
     // remove
@@ -448,12 +449,255 @@ describe('createFor', () => {
     setList()
     await nextTick()
     expect(host.innerHTML).toBe(
-      '<li>0. a</li><li>1. 3</li><li>2. 4</li><!--for-->',
+      '<li>0. 1</li><li>1. 3</li><li>2. 4</li><!--for-->',
     )
 
     // clear
     setList([])
     await nextTick()
     expect(host.innerHTML).toBe('<!--for-->')
+  })
+
+  test('should optimize call frequency during list operations', async () => {
+    let sourceCalledTimes = 0
+    let renderCalledTimes = 0
+    let effectLabelCalledTimes = 0
+    let effectIndexCalledTimes = 0
+
+    const resetCounter = () => {
+      sourceCalledTimes = 0
+      renderCalledTimes = 0
+      effectLabelCalledTimes = 0
+      effectIndexCalledTimes = 0
+    }
+    const expectCalledTimesToBe = (
+      message: string,
+      source: number,
+      render: number,
+      label: number,
+      index: number,
+    ) => {
+      expect(
+        {
+          source: sourceCalledTimes,
+          render: renderCalledTimes,
+          label: effectLabelCalledTimes,
+          index: effectIndexCalledTimes,
+        },
+        message,
+      ).toEqual({ source, render, label, index })
+      resetCounter()
+    }
+
+    const createItem = (
+      (id = 0) =>
+      (label = id) => ({ id: id++, label })
+    )()
+    const createItems = (length: number) =>
+      Array.from({ length }, (_, i) => createItem(i))
+    const list = ref(createItems(100))
+    const length = () => list.value.length
+
+    define(() => {
+      const n1 = createFor(
+        () => (++sourceCalledTimes, list.value),
+        ([item, index]) => {
+          ++renderCalledTimes
+          const span = document.createElement('li')
+          renderEffect(() => {
+            ++effectLabelCalledTimes
+            item.value.label
+          })
+          renderEffect(() => {
+            ++effectIndexCalledTimes
+            index.value
+          })
+          return span
+        },
+        item => item.id,
+      )
+      return n1
+    }).render()
+
+    // Create rows
+    expectCalledTimesToBe('Create rows', 1, length(), length(), length())
+
+    // Update every 10th row
+    for (let i = 0; i < length(); i += 10) {
+      list.value[i].label += 10000
+    }
+    await nextTick()
+    expectCalledTimesToBe('Update every 10th row', 0, 0, length() / 10, 0)
+
+    // Append rows
+    list.value.push(...createItems(100))
+    await nextTick()
+    expectCalledTimesToBe('Append rows', 1, 100, 100, 100)
+
+    // Inserts rows at the beginning
+    const tempLen = length()
+    list.value.unshift(...createItems(100))
+    await nextTick()
+    expectCalledTimesToBe(
+      'Inserts rows at the beginning',
+      1,
+      100,
+      100,
+      100 + tempLen,
+    )
+
+    // Inserts rows in the middle
+    const middleIdx = length() / 2
+    list.value.splice(middleIdx, 0, ...createItems(100))
+    await nextTick()
+    expectCalledTimesToBe(
+      'Inserts rows in the middle',
+      1,
+      100,
+      100,
+      100 + middleIdx,
+    )
+
+    // Swap rows
+    const temp = list.value[1]
+    list.value[1] = list.value[length() - 2]
+    list.value[length() - 2] = temp
+    await nextTick()
+    expectCalledTimesToBe('Swap rows', 1, 0, 0, 2)
+
+    // Remove rows
+    list.value.splice(1, 1)
+    list.value.splice(length() - 2, 1)
+    await nextTick()
+    expectCalledTimesToBe('Remove rows', 1, 0, 0, length() - 1)
+
+    // Clear rows
+    list.value = []
+    await nextTick()
+    expectCalledTimesToBe('Clear rows', 1, 0, 0, 0)
+  })
+
+  test('should optimize call frequency during list operations with shallowRef', async () => {
+    let sourceCalledTimes = 0
+    let renderCalledTimes = 0
+    let effectLabelCalledTimes = 0
+    let effectIndexCalledTimes = 0
+
+    const resetCounter = () => {
+      sourceCalledTimes = 0
+      renderCalledTimes = 0
+      effectLabelCalledTimes = 0
+      effectIndexCalledTimes = 0
+    }
+    const expectCalledTimesToBe = (
+      message: string,
+      source: number,
+      render: number,
+      label: number,
+      index: number,
+    ) => {
+      expect(
+        {
+          source: sourceCalledTimes,
+          render: renderCalledTimes,
+          label: effectLabelCalledTimes,
+          index: effectIndexCalledTimes,
+        },
+        message,
+      ).toEqual({ source, render, label, index })
+      resetCounter()
+    }
+
+    const createItem = (
+      (id = 0) =>
+      (label = id) => ({ id: id++, label: shallowRef(label) })
+    )()
+    const createItems = (length: number) =>
+      Array.from({ length }, (_, i) => createItem(i))
+    const list = shallowRef(createItems(100))
+    const length = () => list.value.length
+
+    define(() => {
+      const n1 = createFor(
+        () => (++sourceCalledTimes, list.value),
+        ([item, index]) => {
+          ++renderCalledTimes
+          const span = document.createElement('li')
+          renderEffect(() => {
+            ++effectLabelCalledTimes
+            item.value.label.value
+          })
+          renderEffect(() => {
+            ++effectIndexCalledTimes
+            index.value
+          })
+          return span
+        },
+        item => item.id,
+      )
+      return n1
+    }).render()
+
+    // Create rows
+    expectCalledTimesToBe('Create rows', 1, length(), length(), length())
+
+    // Update every 10th row
+    for (let i = 0; i < length(); i += 10) {
+      list.value[i].label.value += 10000
+    }
+    await nextTick()
+    expectCalledTimesToBe('Update every 10th row', 0, 0, length() / 10, 0)
+
+    // Append rows
+    list.value.push(...createItems(100))
+    triggerRef(list)
+    await nextTick()
+    expectCalledTimesToBe('Append rows', 1, 100, 100, 100)
+
+    // Inserts rows at the beginning
+    const tempLen = length()
+    list.value.unshift(...createItems(100))
+    triggerRef(list)
+    await nextTick()
+    expectCalledTimesToBe(
+      'Inserts rows at the beginning',
+      1,
+      100,
+      100,
+      100 + tempLen,
+    )
+
+    // Inserts rows in the middle
+    const middleIdx = length() / 2
+    list.value.splice(middleIdx, 0, ...createItems(100))
+    triggerRef(list)
+    await nextTick()
+    expectCalledTimesToBe(
+      'Inserts rows in the middle',
+      1,
+      100,
+      100,
+      100 + middleIdx,
+    )
+
+    // Swap rows
+    const temp = list.value[1]
+    list.value[1] = list.value[length() - 2]
+    list.value[length() - 2] = temp
+    triggerRef(list)
+    await nextTick()
+    expectCalledTimesToBe('Swap rows', 1, 0, 0, 2)
+
+    // Remove rows
+    list.value.splice(1, 1)
+    list.value.splice(length() - 2, 1)
+    triggerRef(list)
+    await nextTick()
+    expectCalledTimesToBe('Remove rows', 1, 0, 0, length() - 1)
+
+    // Clear rows
+    list.value = []
+    await nextTick()
+    expectCalledTimesToBe('Clear rows', 1, 0, 0, 0)
   })
 })
