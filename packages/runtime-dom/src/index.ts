@@ -170,10 +170,7 @@ function resolveRootNamespace(
   if (container instanceof SVGElement) {
     return 'svg'
   }
-  if (
-    typeof MathMLElement === 'function' &&
-    container instanceof MathMLElement
-  ) {
+  if (isFunction(MathMLElement) && container instanceof MathMLElement) {
     return 'mathml'
   }
 }

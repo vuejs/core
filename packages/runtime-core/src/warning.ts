@@ -5,7 +5,7 @@ import {
   type Data,
   formatComponentName,
 } from './component'
-import { isFunction, isString } from '@vue/shared'
+import { isBoolean, isFunction, isNumber, isString } from '@vue/shared'
 import { isRef, pauseTracking, resetTracking, toRaw } from '@vue/reactivity'
 import { ErrorCodes, callWithErrorHandling } from './errorHandling'
 
@@ -149,11 +149,7 @@ function formatProp(key: string, value: unknown, raw?: boolean): any {
   if (isString(value)) {
     value = JSON.stringify(value)
     return raw ? value : [`${key}=${value}`]
-  } else if (
-    typeof value === 'number' ||
-    typeof value === 'boolean' ||
-    value == null
-  ) {
+  } else if (isNumber(value) || isBoolean(value) || value == null) {
     return raw ? value : [`${key}=${value}`]
   } else if (isRef(value)) {
     value = formatProp(key, toRaw(value.value), true)
@@ -173,7 +169,7 @@ export function assertNumber(val: unknown, type: string): void {
   if (!__DEV__) return
   if (val === undefined) {
     return
-  } else if (typeof val !== 'number') {
+  } else if (!isNumber(val)) {
     warn(`${type} is not a valid number - ` + `got ${JSON.stringify(val)}.`)
   } else if (isNaN(val)) {
     warn(`${type} is NaN - ` + 'the duration expression might be incorrect.')

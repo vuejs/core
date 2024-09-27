@@ -494,7 +494,7 @@ function installCompatMount(
       }
 
       let container: Element
-      if (typeof selectorOrEl === 'string') {
+      if (isString(selectorOrEl)) {
         // eslint-disable-next-line
         const result = document.querySelector(selectorOrEl)
         if (!result) {
@@ -512,10 +512,7 @@ function installCompatMount(
 
       let namespace: ElementNamespace
       if (container instanceof SVGElement) namespace = 'svg'
-      else if (
-        typeof MathMLElement === 'function' &&
-        container instanceof MathMLElement
-      )
+      else if (isFunction(MathMLElement) && container instanceof MathMLElement)
         namespace = 'mathml'
 
       // HMR root reload

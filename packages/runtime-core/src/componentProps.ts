@@ -631,10 +631,10 @@ function getType(ctor: Prop<any> | null): string {
   }
 
   // Avoid using regex for common cases by checking the type directly
-  if (typeof ctor === 'function') {
+  if (isFunction(ctor)) {
     // Using name property to avoid converting function to string
     return ctor.name || ''
-  } else if (typeof ctor === 'object') {
+  } else if (isObject(ctor)) {
     // Attempting to directly access constructor name if possible
     const name = ctor.constructor && ctor.constructor.name
     return name || ''
