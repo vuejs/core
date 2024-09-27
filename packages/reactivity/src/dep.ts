@@ -89,6 +89,11 @@ export class Dep {
   map?: KeyToDepMap = undefined
   key?: unknown = undefined
 
+  /**
+   * Subscriber counter
+   */
+  sc: number = 0
+
   constructor(public computed?: ComputedRefImpl | undefined) {
     if (__DEV__) {
       this.subsHead = undefined
@@ -113,9 +118,7 @@ export class Dep {
         activeSub.depsTail = link
       }
 
-      if (activeSub.flags & EffectFlags.TRACKING) {
-        addSub(link)
-      }
+      addSub(link)
     } else if (link.version === -1) {
       // reused from last run - already a sub, just sync version
       link.version = this.version
@@ -197,27 +200,30 @@ export class Dep {
 }
 
 function addSub(link: Link) {
-  const computed = link.dep.computed
-  // computed getting its first subscriber
-  // enable tracking + lazily subscribe to all its deps
-  if (computed && !link.dep.subs) {
-    computed.flags |= EffectFlags.TRACKING | EffectFlags.DIRTY
-    for (let l = computed.deps; l; l = l.nextDep) {
-      addSub(l)
+  link.dep.sc++
+  if (link.sub.flags & EffectFlags.TRACKING) {
+    const computed = link.dep.computed
+    // computed getting its first subscriber
+    // enable tracking + lazily subscribe to all its deps
+    if (computed && !link.dep.subs) {
+      computed.flags |= EffectFlags.TRACKING | EffectFlags.DIRTY
+      for (let l = computed.deps; l; l = l.nextDep) {
+        addSub(l)
+      }
     }
-  }
 
-  const currentTail = link.dep.subs
-  if (currentTail !== link) {
-    link.prevSub = currentTail
-    if (currentTail) currentTail.nextSub = link
-  }
+    const currentTail = link.dep.subs
+    if (currentTail !== link) {
+      link.prevSub = currentTail
+      if (currentTail) currentTail.nextSub = link
+    }
 
-  if (__DEV__ && link.dep.subsHead === undefined) {
-    link.dep.subsHead = link
-  }
+    if (__DEV__ && link.dep.subsHead === undefined) {
+      link.dep.subsHead = link
+    }
 
-  link.dep.subs = link
+    link.dep.subs = link
+  }
 }
 
 // The main WeakMap that stores {target -> key -> dep} connections.

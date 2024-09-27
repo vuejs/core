@@ -1930,7 +1930,7 @@ describe('api: watch', () => {
     warn.mockRestore()
   })
 
-  it('should be executed correctly', () => {
+  test('should be executed correctly', () => {
     const v = ref(1)
     let foo = ''
 
@@ -1956,5 +1956,31 @@ describe('api: watch', () => {
     expect(foo).toBe('')
     v.value++
     expect(foo).toBe('12')
+  })
+
+  // 12045
+  test('sync watcher should not break pre watchers', async () => {
+    const count1 = ref(0)
+    const count2 = ref(0)
+
+    watch(
+      count1,
+      () => {
+        count2.value++
+      },
+      { flush: 'sync' },
+    )
+
+    const spy1 = vi.fn()
+    watch([count1, count2], spy1)
+
+    const spy2 = vi.fn()
+    watch(count1, spy2)
+
+    count1.value++
+
+    await nextTick()
+    expect(spy1).toHaveBeenCalled()
+    expect(spy2).toHaveBeenCalled()
   })
 })
