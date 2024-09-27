@@ -72,7 +72,8 @@ export function setRef(
           if (__DEV__) {
             if (hasOwn(rawSetupState, key) && !isRef(rawSetupState[key])) {
               warn(
-                `${key} is not a ref. use a ref to hold the element reference is recommended.`,
+                `Template ref "${key}" used on a non-ref value. ` +
+                  `It will not work in the production build.`,
               )
             }
 

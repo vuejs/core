@@ -217,7 +217,7 @@ describe('api: template refs', () => {
     }
     render(h(Comp), root)
     expect(state.refKey).toBe(root.children[0])
-    expect('refKey is not a ref').toHaveBeenWarned()
+    expect('Template ref "refKey" used on a non-ref value').toHaveBeenWarned()
   })
 
   test('multiple root refs', () => {
