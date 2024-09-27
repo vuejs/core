@@ -399,6 +399,54 @@ const props = defineProps({ foo: String })
     assertCode(content)
   })
 
+  test('distributive union w/ conditional keys', () => {
+    const { content } = compile(`
+    <script setup lang="ts">
+      const props = withDefaults(defineProps<{
+        a?: string;
+        b: number;
+      } | {
+       c: number;
+       d?: string;
+       }>(), {
+      });
+    </script>
+    `)
+    assertCode(content)
+  })
+
+  test('discriminated union', () => {
+    const { content } = compile(`
+    <script setup lang="ts">
+      const props = withDefaults(defineProps<{
+        tag: string;
+        d1: number;
+      } | {
+        tag: number;
+        d2: string;
+       }>(), {
+      });
+    </script>
+    `)
+    assertCode(content)
+  })
+
+  test('distributive union with boolean keys', () => {
+    const { content } = compile(`
+    <script setup lang="ts">
+      const props = withDefaults(defineProps<{
+        a: string;
+        b: number;
+      } | {
+        c: boolean;
+        d: string;
+      }>(), {
+      });
+    </script>
+    `)
+    assertCode(content)
+  })
+
   // #7111
   test('withDefaults (static) w/ production mode', () => {
     const { content } = compile(

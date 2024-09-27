@@ -207,6 +207,99 @@ describe('defineProps w/ generic type declaration + withDefaults', <T extends
   expectType<boolean>(res.bool)
 })
 
+describe('defineProps w/union type', () => {
+  type PP =
+    | {
+        type: 'text'
+        mm: string
+      }
+    | {
+        type: 'number'
+        mm: number | null
+      }
+
+  const res = defineProps<PP>()
+  expectType<string | number | null>(res.mm)
+
+  if (res.type === 'text') {
+    expectType<string>(res.mm)
+  }
+
+  if (res.type === 'number') {
+    expectType<number | null>(res.mm)
+  }
+})
+
+describe('defineProps w/distributive union type', () => {
+  type PP =
+    | {
+        type1: 'text'
+        mm1: string
+      }
+    | {
+        type2: 'number'
+        mm2: number | null
+      }
+
+  const res = defineProps<PP>()
+
+  if ('type1' in res) {
+    expectType<string>(res.mm1)
+  }
+
+  if ('type2' in res) {
+    expectType<number | null>(res.mm2)
+  }
+})
+
+describe('withDefaults w/ union type', () => {
+  type PP =
+    | {
+        type?: 'text'
+        mm: string
+      }
+    | {
+        type?: 'number'
+        mm: number | null
+      }
+
+  const res = withDefaults(defineProps<PP>(), {
+    type: 'text',
+  })
+
+  if (res.type && res.type === 'text') {
+    expectType<string>(res.mm)
+  }
+
+  if (res.type === 'number') {
+    expectType<number | null>(res.mm)
+  }
+})
+
+describe('withDefaults w/ generic union type', <T extends
+  | string
+  | number>() => {
+  type PP =
+    | {
+        tt?: 'a'
+        mm: T
+      }
+    | {
+        tt?: 'b'
+        mm: T[]
+      }
+
+  const res = withDefaults(defineProps<PP>(), {
+    tt: 'a',
+  })
+
+  if (res.tt === 'a') {
+    expectType<T>(res.mm)
+  } else {
+    expectType<T[]>(res.mm)
+  }
+})
+
 describe('withDefaults w/ boolean type', () => {
   const res1 = withDefaults(
     defineProps<{

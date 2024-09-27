@@ -52,11 +52,17 @@ export type Prop<T, D = T> = PropOptions<T, D> | PropType<T>
 
 type DefaultFactory<T> = (props: Data) => T | null | undefined
 
+type UnionDefinition = string[] | string[][]
+
 export interface PropOptions<T = any, D = T> {
   type?: PropType<T> | true | null
   required?: boolean
   default?: D | DefaultFactory<D> | null | undefined | object
   validator?(value: unknown, props: Data): boolean
+  /**
+   * @internal
+   */
+  union?: UnionDefinition
   /**
    * @internal
    */
@@ -488,7 +494,10 @@ function resolvePropValue(
       }
     }
     // boolean casting
-    if (opt[BooleanFlags.shouldCast]) {
+    if (
+      opt[BooleanFlags.shouldCast] &&
+      (!opt.union || isInActiveUnion(key, opt, props))
+    ) {
       if (isAbsent && !hasDefault) {
         value = false
       } else if (
@@ -500,6 +509,28 @@ function resolvePropValue(
     }
   }
   return value
+}
+
+function isInActiveUnion(
+  key: string,
+  prop: NormalizedProp,
+  props: Data,
+): boolean {
+  const union = prop.union
+  if (!union) {
+    return false
+  }
+  return union.some(u => {
+    return (
+      Object.entries(props)
+        .filter(([k]) => k !== key) // skip current key
+        // check if any key in union is in props
+        .some(
+          ([k, v]) =>
+            (u === k || (Array.isArray(u) && u.includes(k))) && v !== undefined,
+        )
+    )
+  })
 }
 
 const mixinPropsCache = new WeakMap<ConcreteComponent, NormalizedPropsOptions>()
@@ -678,6 +709,11 @@ function validateProp(
   isAbsent: boolean,
 ) {
   const { type, required, validator, skipCheck } = prop
+
+  if (prop.union && !isInActiveUnion(name, prop, props)) {
+    return
+  }
+
   // required!
   if (required && isAbsent) {
     warn('Missing required prop: "' + name + '"')

@@ -42,6 +42,7 @@ import type TS from 'typescript'
 import { dirname, extname, join } from 'path'
 import { minimatch as isMatch } from 'minimatch'
 import * as process from 'process'
+import type { UnionDefinition } from './defineProps'
 
 export type SimpleTypeResolveOptions = Partial<
   Pick<
@@ -125,14 +126,16 @@ export interface MaybeWithScope {
   _ownerScope?: TypeScope
 }
 
-interface ResolvedElements {
-  props: Record<
-    string,
-    (TSPropertySignature | TSMethodSignature) & {
-      // resolved props always has ownerScope attached
-      _ownerScope: TypeScope
-    }
-  >
+export interface MaybeWithUnion {
+  union?: UnionDefinition
+}
+
+export type ResolvedElementProp = (TSPropertySignature | TSMethodSignature) &
+  WithScope &
+  MaybeWithUnion
+
+export interface ResolvedElements {
+  props: Record<string, ResolvedElementProp>
   calls?: (TSCallSignatureDeclaration | TSFunctionType)[]
 }
 
@@ -368,6 +371,9 @@ function mergeElements(
     for (const key in props) {
       if (!hasOwn(baseProps, key)) {
         baseProps[key] = props[key]
+
+        const keys = Object.keys(props).filter(k => k !== key)
+        baseProps[key].union = keys
       } else {
         baseProps[key] = createProperty(
           baseProps[key].key,
@@ -378,6 +384,10 @@ function mergeElements(
           },
           baseProps[key]._ownerScope,
           baseProps[key].optional || props[key].optional,
+          [
+            baseProps[key].union || [],
+            Object.keys(props).filter(k => k !== key),
+          ],
         )
       }
     }
@@ -393,7 +403,8 @@ function createProperty(
   typeAnnotation: TSType,
   scope: TypeScope,
   optional: boolean,
-): TSPropertySignature & WithScope {
+  union?: UnionDefinition,
+): TSPropertySignature & WithScope & MaybeWithUnion {
   return {
     type: 'TSPropertySignature',
     key,
@@ -404,6 +415,7 @@ function createProperty(
       typeAnnotation,
     },
     _ownerScope: scope,
+    union,
   }
 }
 
