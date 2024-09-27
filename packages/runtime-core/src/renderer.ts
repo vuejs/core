@@ -1431,7 +1431,7 @@ function baseCreateRenderer(
       } else {
         let { next, bu, u, parent, vnode } = instance
 
-        const keepAliveParent = checkInstanceDeactive(instance)
+        const keepAliveParent = locateDeactiveKeeyAlive(instance)
         if (keepAliveParent) {
           keepAliveParent.keepAliveEffct.push(() => {
             if (!instance.isUnmounted) {
@@ -2552,7 +2552,7 @@ function locateNonHydratedAsyncRoot(
   }
 }
 
-function checkInstanceDeactive(instance: ComponentInternalInstance | null) {
+function locateDeactiveKeeyAlive(instance: ComponentInternalInstance | null) {
   while (instance) {
     if (instance.isDeactive) {
       return instance
