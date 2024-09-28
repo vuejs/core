@@ -76,11 +76,11 @@ export function renderSlot(
     Fragment,
     {
       key:
-        (String(props.key) ||
-          // slot content array of a dynamic conditional slot may have a branch
-          // key attached in the `createSlots` helper, respect that
-          (validSlotContent && (validSlotContent as any).key) ||
-          `_${name}`) +
+        (props.key == null || props.key === ''
+          ? // slot content array of a dynamic conditional slot may have a branch
+            // key attached in the `createSlots` helper, respect that
+            (validSlotContent && (validSlotContent as any).key) || `_${name}`
+          : String(props.key)) +
         // #7256 force differentiate fallback content from actual content
         (!validSlotContent && fallback ? '_fb' : ''),
     },
