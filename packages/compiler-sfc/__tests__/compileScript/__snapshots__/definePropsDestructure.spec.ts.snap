@@ -1,5 +1,24 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
+exports[`sfc reactive props destructure > TSInstantiationExpression 1`] = `
+"import { defineComponent as _defineComponent } from 'vue'
+type Foo = <T extends string | number>(data: T) => void
+      
+export default /*@__PURE__*/_defineComponent({
+  props: {
+    value: { type: Function }
+  },
+  setup(__props: any) {
+
+      
+      const foo = __props.value<123>
+      
+return () => {}
+}
+
+})"
+`;
+
 exports[`sfc reactive props destructure > aliasing 1`] = `
 "import { toDisplayString as _toDisplayString } from "vue"
 
@@ -319,4 +338,23 @@ return { rest }
 }
 
 }"
+`;
+
+exports[`sfc reactive props destructure > with TSInstantiationExpression 1`] = `
+"import { defineComponent as _defineComponent } from 'vue'
+type Foo = <T extends string | number>(data: T) => void
+      
+export default /*@__PURE__*/_defineComponent({
+  props: {
+    value: { type: Function }
+  },
+  setup(__props: any) {
+
+      
+      const foo = __props.value<123>
+      
+return () => {}
+}
+
+})"
 `;
