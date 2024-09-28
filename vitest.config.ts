@@ -12,6 +12,7 @@ export default defineConfig({
     __ESM_BROWSER__: false,
     __CJS__: true,
     __SSR__: true,
+    __BENCHMARK__: false,
     __FEATURE_OPTIONS_API__: true,
     __FEATURE_SUSPENSE__: true,
     __FEATURE_PROD_DEVTOOLS__: false,

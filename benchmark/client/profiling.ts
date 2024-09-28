@@ -2,14 +2,16 @@
 /* eslint-disable no-restricted-syntax */
 /* eslint-disable no-restricted-globals */
 
-declare module globalThis {
+declare namespace globalThis {
   let doProfile: boolean
+  let reactivity: boolean
   let recordTime: boolean
   let times: Record<string, number[]>
 }
 
 globalThis.recordTime = true
 globalThis.doProfile = false
+globalThis.reactivity = false
 
 export const defer = () => new Promise(r => requestIdleCallback(r))
 
@@ -34,7 +36,18 @@ export function wrap(
     fn(...args)
 
     await defer()
-    const time = performance.now() - start
+    let time: number
+    if (globalThis.reactivity) {
+      time = performance.measure(
+        'flushJobs-measure',
+        'flushJobs-start',
+        'flushJobs-end',
+      ).duration
+      performance.clearMarks()
+      performance.clearMeasures()
+    } else {
+      time = performance.now() - start
+    }
     const prevTimes = times[id] || (times[id] = [])
     prevTimes.push(time)
 

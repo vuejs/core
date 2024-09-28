@@ -51,6 +51,7 @@ export function DevPlugin({ browser = false } = {}) {
           __NODE_JS__: String(false),
           // need SSR-specific branches?
           __SSR__: String(false),
+          __BENCHMARK__: 'false',
 
           // 2.x compat build
           __COMPAT__: String(false),

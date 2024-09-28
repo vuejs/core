@@ -139,6 +139,7 @@ export function flushPostFlushCbs(): void {
 
 // TODO: dev mode and checkRecursiveUpdates
 function flushJobs() {
+  if (__BENCHMARK__) performance.mark('flushJobs-start')
   isFlushPending = false
   isFlushing = true
 
@@ -169,6 +170,7 @@ function flushJobs() {
     if (queue.length || pendingPostFlushCbs.length) {
       flushJobs()
     }
+    if (__BENCHMARK__) performance.mark('flushJobs-end')
   }
 }
 

@@ -218,6 +218,7 @@ function createConfig(format, output, plugins = []) {
       __CJS__: String(isCJSBuild),
       // need SSR-specific branches?
       __SSR__: String(!isGlobalBuild),
+      __BENCHMARK__: process.env.BENCHMARK || 'false',
 
       // 2.x compat build
       __COMPAT__: String(isCompatBuild),

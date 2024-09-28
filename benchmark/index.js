@@ -88,9 +88,11 @@ if (!skipBench) {
 async function buildLib() {
   console.info(colors.blue('Building lib...'))
 
+  /** @type {import('node:child_process').SpawnOptions} */
   const options = {
     cwd: path.resolve(import.meta.dirname, '..'),
     stdio: 'inherit',
+    env: { ...process.env, BENCHMARK: 'true' },
   }
   const buildOptions = devBuild ? '-df' : '-pf'
   const [{ ok }, { ok: ok2 }, { ok: ok3 }, { ok: ok4 }] = await Promise.all([
@@ -130,7 +132,7 @@ async function buildApp(isVapor) {
     colors.blue(`\nBuilding ${isVapor ? 'Vapor' : 'Virtual DOM'} app...\n`),
   )
 
-  process.env.NODE_ENV = 'production'
+  if (!devBuild) process.env.NODE_ENV = 'production'
   const CompilerSFC = await import(
     '../packages/compiler-sfc/dist/compiler-sfc.cjs.js'
   )

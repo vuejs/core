@@ -1,6 +1,5 @@
 <script setup lang="ts" vapor>
 import {
-  ref,
   shallowRef,
   triggerRef,
   type ShallowRef,
@@ -11,7 +10,7 @@ import { defer, wrap } from './profiling'
 
 const isVapor = !!import.meta.env.IS_VAPOR
 
-const selected = ref<number>()
+const selected = shallowRef<number>()
 const rows = shallowRef<
   {
     id: number
@@ -79,10 +78,32 @@ async function bench() {
 }
 
 const isSelected = createSelector(selected)
+
+const globalThis = window
 </script>
 
 <template>
   <h1>Vue.js ({{ isVapor ? 'Vapor' : 'Virtual DOM' }}) Benchmark</h1>
+
+  <div style="display: flex; gap: 4px; margin-bottom: 4px">
+    <label>
+      <input
+        type="checkbox"
+        :value="globalThis.doProfile"
+        @change="globalThis.doProfile = $event.target.checked"
+      />
+      Profiling
+    </label>
+    <label>
+      <input
+        type="checkbox"
+        :value="globalThis.reactivity"
+        @change="globalThis.reactivity = $event.target.checked"
+      />
+      Reactivity Cost
+    </label>
+  </div>
+
   <div
     id="control"
     style="display: flex; flex-direction: column; width: fit-content; gap: 6px"
