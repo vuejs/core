@@ -2,7 +2,6 @@ import {
   type EffectScope,
   type ShallowRef,
   effectScope,
-  isReactive,
   shallowRef,
 } from '@vue/reactivity'
 import { isArray, isObject, isString } from '@vue/shared'
@@ -325,11 +324,7 @@ export const createFor = (
   ) {
     const [item, key, index] = block.state
     let needsUpdate =
-      newItem !== item.value ||
-      newKey !== key.value ||
-      newIndex !== index.value ||
-      // shallowRef list
-      (isObject(newItem) && !isReactive(newItem))
+      newItem !== item.value || newKey !== key.value || newIndex !== index.value
     if (needsUpdate) updateState(block, newItem, newKey, newIndex)
   }
 
