@@ -76,7 +76,7 @@ export function renderSlot(
     Fragment,
     {
       key:
-        (props.key ||
+        (String(props.key) ||
           // slot content array of a dynamic conditional slot may have a branch
           // key attached in the `createSlots` helper, respect that
           (validSlotContent && (validSlotContent as any).key) ||
