@@ -79,7 +79,7 @@ export type DefineComponent<
     Mixin,
     Extends,
     E,
-    PP & Props,
+    PP,
     Defaults,
     MakeDefaultsOptional,
     {},
