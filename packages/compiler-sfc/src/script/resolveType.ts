@@ -122,19 +122,19 @@ export class TypeScope {
   exportedDeclares: Record<string, ScopeTypeNode> = Object.create(null)
 }
 
-export interface MaybeWithScope {
+interface MaybeWithScope {
   _ownerScope?: TypeScope
 }
 
-export interface MaybeWithUnion {
+interface MaybeWithUnion {
   union?: UnionDefinition
 }
 
-export type ResolvedElementProp = (TSPropertySignature | TSMethodSignature) &
+type ResolvedElementProp = (TSPropertySignature | TSMethodSignature) &
   WithScope &
   MaybeWithUnion
 
-export interface ResolvedElements {
+interface ResolvedElements {
   props: Record<string, ResolvedElementProp>
   calls?: (TSCallSignatureDeclaration | TSFunctionType)[]
 }
