@@ -234,12 +234,20 @@ export class ReactiveEffect<T = any>
 
 let batchDepth = 0
 let batchedSub: Subscriber | undefined
+const batchedCleanup: (() => void)[] = []
 
 export function batch(sub: Subscriber): void {
   sub.flags |= EffectFlags.NOTIFIED
   // If sub.next is set, the subscriber is already in a batch,
   // return to avoid overwriting it and losing previous subscriptions.
-  if (sub.next) return
+  if (sub.next) {
+    batchedCleanup.push(() => {
+      if (!(sub.flags & EffectFlags.ACTIVE)) {
+        sub.flags &= ~EffectFlags.NOTIFIED
+      }
+    })
+    return
+  }
   sub.next = batchedSub
   batchedSub = sub
 }
@@ -272,6 +280,12 @@ export function endBatch(): void {
         e.flags &= ~EffectFlags.NOTIFIED
       }
       e = e.next
+    }
+    if (batchedCleanup.length) {
+      for (let i = 0; i < batchedCleanup.length; i++) {
+        batchedCleanup[i]()
+      }
+      batchedCleanup.length = 0
     }
     e = batchedSub
     batchedSub = undefined
