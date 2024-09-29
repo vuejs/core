@@ -9,6 +9,7 @@ import {
   NodeTypes,
   type ObjectExpression,
   type Property,
+  type RenderSlotCall,
   type SlotsExpression,
   type SourceLocation,
   type TemplateChildNode,
@@ -25,7 +26,9 @@ import { ErrorCodes, createCompilerError } from '../errors'
 import {
   assert,
   findDir,
+  findProp,
   hasScopeRef,
+  injectProp,
   isStaticExp,
   isTemplateNode,
   isVSlot,
@@ -258,6 +261,8 @@ export function buildSlots(
       const parseResult = vFor.forParseResult
       if (parseResult) {
         finalizeForParseResult(parseResult, context)
+        // #8395
+        injectRefFor(slotElement.children, context)
         // Render the dynamic slots as an array and add it to the createSlot()
         // args. The runtime knows how to handle it appropriately.
         dynamicSlots.push(
@@ -419,4 +424,20 @@ function isNonWhitespaceContent(node: TemplateChildNode): boolean {
   return node.type === NodeTypes.TEXT
     ? !!node.content.trim()
     : isNonWhitespaceContent(node.content)
+}
+
+function injectRefFor(
+  children: TemplateChildNode[],
+  context: TransformContext,
+) {
+  for (let i = 0; i < children.length; i++) {
+    const child = children[i]
+    if (child.type === NodeTypes.ELEMENT && findProp(child, 'ref')) {
+      const Property = createObjectProperty(
+        createSimpleExpression('ref_for', true),
+        createSimpleExpression('true'),
+      )
+      injectProp(child.codegenNode as RenderSlotCall, Property, context)
+    }
+  }
 }
