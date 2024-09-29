@@ -137,7 +137,7 @@ const KeepAliveImpl: ComponentOptions = {
       optimized,
     ) => {
       const instance = vnode.component!
-      instance.isDeactive = false
+      instance.isActivated = false
       move(vnode, container, anchor, MoveType.ENTER, parentSuspense)
       // in case props have changed
       patch(
@@ -175,7 +175,7 @@ const KeepAliveImpl: ComponentOptions = {
 
     sharedContext.deactivate = (vnode: VNode) => {
       const instance = vnode.component!
-      instance.isDeactive = true
+      instance.isActivated = true
       invalidateMount(instance.m)
       invalidateMount(instance.a)
 

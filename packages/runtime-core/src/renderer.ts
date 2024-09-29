@@ -2554,7 +2554,7 @@ function locateNonHydratedAsyncRoot(
 
 function locateDeactiveKeepAlive(instance: ComponentInternalInstance | null) {
   while (instance) {
-    if (instance.isDeactive) {
+    if (instance.isActivated) {
       return instance
     }
     if (isKeepAlive(instance.vnode)) {

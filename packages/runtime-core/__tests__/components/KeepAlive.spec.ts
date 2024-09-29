@@ -7,7 +7,6 @@ import {
   type TestElement,
   cloneVNode,
   createApp,
-  createVNode,
   defineAsyncComponent,
   defineComponent,
   h,
@@ -23,7 +22,6 @@ import {
   reactive,
   ref,
   render,
-  resolveDynamicComponent,
   serializeInner,
   shallowRef,
 } from '@vue/runtime-test'
@@ -1196,7 +1194,7 @@ describe('KeepAlive', () => {
     const HomeView = {
       name: 'HomeView',
       setup() {
-        return () => h(createVNode(resolveDynamicComponent(activeView.value)))
+        return () => h(activeView.value)
       },
     }
 
@@ -1205,7 +1203,7 @@ describe('KeepAlive', () => {
         return () => {
           return [
             h(KeepAlive, null, [
-              createVNode(resolveDynamicComponent(HomeView), {
+              h(HomeView, {
                 key: activeView.value.name,
               }),
             ]),
