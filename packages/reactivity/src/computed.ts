@@ -84,9 +84,13 @@ export class ComputedRefImpl<T = any> implements Subscriber {
    * @internal
    */
   isSSR: boolean
+  /**
+   * @internal
+   */
+  next?: Subscriber = undefined
+
   // for backwards compat
   effect: this = this
-
   // dev only
   onTrack?: (event: DebuggerEvent) => void
   // dev only

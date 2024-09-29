@@ -1,3 +1,29 @@
+## [3.5.10](https://github.com/vuejs/core/compare/v3.5.9...v3.5.10) (2024-09-27)
+
+
+### Bug Fixes
+
+* **custom-element:** properly set kebab-case props on Vue custom elements ([ea3efa0](https://github.com/vuejs/core/commit/ea3efa09e008918c1d9ba7226833a8b1a7a57244)), closes [#12030](https://github.com/vuejs/core/issues/12030) [#12032](https://github.com/vuejs/core/issues/12032)
+* **reactivity:** fix nested batch edge case ([93c95dd](https://github.com/vuejs/core/commit/93c95dd4cd416503f43a98a1455f62658d22b0b2))
+* **reactivity:** only clear notified flags for computed in first batch iteration ([aa9ef23](https://github.com/vuejs/core/commit/aa9ef2386a0cd39a174e5a887ec2b1a3525034fc)), closes [#12045](https://github.com/vuejs/core/issues/12045)
+* **types/ref:** handle nested refs in UnwrapRef ([#12049](https://github.com/vuejs/core/issues/12049)) ([e2c19c2](https://github.com/vuejs/core/commit/e2c19c20cfee9788519a80c0e53e216b78505994)), closes [#12044](https://github.com/vuejs/core/issues/12044)
+
+
+
+## [3.5.9](https://github.com/vuejs/core/compare/v3.5.8...v3.5.9) (2024-09-26)
+
+
+### Bug Fixes
+
+* **reactivity:** fix property dep removal regression ([6001e5c](https://github.com/vuejs/core/commit/6001e5c81a05c894586f9287fbd991677bdd0455)), closes [#12020](https://github.com/vuejs/core/issues/12020) [#12021](https://github.com/vuejs/core/issues/12021)
+* **reactivity:** fix recursive sync watcher on computed edge case ([10ff159](https://github.com/vuejs/core/commit/10ff15924053d9bd95ad706f78ce09e288213fcf)), closes [#12033](https://github.com/vuejs/core/issues/12033) [#12037](https://github.com/vuejs/core/issues/12037)
+* **runtime-core:** avoid rendering plain object as VNode ([#12038](https://github.com/vuejs/core/issues/12038)) ([cb34b28](https://github.com/vuejs/core/commit/cb34b28a4a9bf868be4785b001c526163eda342e)), closes [#12035](https://github.com/vuejs/core/issues/12035) [vitejs/vite-plugin-vue#353](https://github.com/vitejs/vite-plugin-vue/issues/353)
+* **runtime-core:** make useId() always return a string ([a177092](https://github.com/vuejs/core/commit/a177092754642af2f98c33a4feffe8f198c3c950))
+* **types:** correct type inference of union event names ([#12022](https://github.com/vuejs/core/issues/12022)) ([4da6881](https://github.com/vuejs/core/commit/4da688141d9e7c15b622c289deaa81b11845b2c7))
+* **vue:** properly cache runtime compilation ([#12019](https://github.com/vuejs/core/issues/12019)) ([fa0ba24](https://github.com/vuejs/core/commit/fa0ba24b3ace02d7ecab65e57c2bea89a2550dcb))
+
+
+
 ## [3.5.8](https://github.com/vuejs/core/compare/v3.5.7...v3.5.8) (2024-09-22)
 
 
