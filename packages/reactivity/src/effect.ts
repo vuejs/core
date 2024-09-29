@@ -237,6 +237,9 @@ let batchedSub: Subscriber | undefined
 
 export function batch(sub: Subscriber): void {
   sub.flags |= EffectFlags.NOTIFIED
+  // If sub.next is set, the subscriber is already in a batch,
+  // return to avoid overwriting it and losing previous subscriptions.
+  if (sub.next) return
   sub.next = batchedSub
   batchedSub = sub
 }
