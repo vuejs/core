@@ -240,12 +240,8 @@ export function batch(sub: Subscriber, isComputed = false): void {
   sub.flags |= EffectFlags.NOTIFIED
   if (isComputed) {
     batchedCleanup.push(() => {
-      // clear notified flags for computed upfront
-      // we use the ACTIVE flag as a discriminator between computed and effect,
-      // since NOTIFIED is useless for an inactive effect anyway.
-      if (!(sub.flags & EffectFlags.ACTIVE)) {
-        sub.flags &= ~EffectFlags.NOTIFIED
-      }
+      // clear notified flags for computed
+      sub.flags &= ~EffectFlags.NOTIFIED
     })
     return
   }
