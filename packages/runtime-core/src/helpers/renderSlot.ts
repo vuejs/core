@@ -14,7 +14,7 @@ import {
   isVNode,
   openBlock,
 } from '../vnode'
-import { PatchFlags, SlotFlags } from '@vue/shared'
+import { PatchFlags, SlotFlags, isSymbol } from '@vue/shared'
 import { warn } from '../warning'
 import { isAsyncWrapper } from '../apiAsyncComponent'
 
@@ -81,7 +81,7 @@ export function renderSlot(
     Fragment,
     {
       key:
-        (slotKey ? String(slotKey) : `_${name}`) +
+        (slotKey && !isSymbol(slotKey) ? slotKey : `_${name}`) +
         // #7256 force differentiate fallback content from actual content
         (!validSlotContent && fallback ? '_fb' : ''),
     },

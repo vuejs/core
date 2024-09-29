@@ -35,7 +35,7 @@ describe('renderSlot', () => {
   it('should allow symbol values for slot prop key', () => {
     const key = Symbol()
     const vnode = renderSlot({ default: () => [h('div')] }, 'default', { key })
-    expect(vnode.key).toBe(String(key))
+    expect(vnode.key).toBe('_default')
   })
 
   it('should render slot fallback', () => {
