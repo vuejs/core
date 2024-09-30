@@ -28,6 +28,13 @@ export function setRef(
   vnode: VNode,
   isUnmount = false,
 ): void {
+  if (parentSuspense) {
+    queuePostRenderEffect(() => {
+      setRef(rawRef, oldRawRef, null, vnode, isUnmount)
+    }, parentSuspense)
+    return
+  }
+
   if (isArray(rawRef)) {
     rawRef.forEach((r, i) =>
       setRef(
