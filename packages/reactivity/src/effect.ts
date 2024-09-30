@@ -234,15 +234,13 @@ export class ReactiveEffect<T = any>
 
 let batchDepth = 0
 let batchedSub: Subscriber | undefined
-const batchedCleanup: (() => void)[] = []
+let batchedComputed: Subscriber | undefined
 
 export function batch(sub: Subscriber, isComputed = false): void {
   sub.flags |= EffectFlags.NOTIFIED
   if (isComputed) {
-    batchedCleanup.push(() => {
-      // clear notified flags for computed
-      sub.flags &= ~EffectFlags.NOTIFIED
-    })
+    sub.next = batchedComputed
+    batchedComputed = sub
     return
   }
   sub.next = batchedSub
@@ -265,11 +263,15 @@ export function endBatch(): void {
     return
   }
 
-  if (batchedCleanup.length) {
-    for (let i = 0; i < batchedCleanup.length; i++) {
-      batchedCleanup[i]()
+  if (batchedComputed) {
+    let e: Subscriber | undefined = batchedComputed
+    batchedComputed = undefined
+    while (e) {
+      const next: Subscriber | undefined = e.next
+      e.next = undefined
+      e.flags &= ~EffectFlags.NOTIFIED
+      e = next
     }
-    batchedCleanup.length = 0
   }
 
   let error: unknown
