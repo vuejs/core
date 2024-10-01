@@ -441,6 +441,29 @@ describe('scheduler', () => {
       await nextTick()
       expect(calls).toEqual(['job1', 'job2', 'cb1', 'cb2'])
     })
+
+    test('jobs added during post flush are ordered correctly', async () => {
+      const calls: string[] = []
+
+      const job1: SchedulerJob = () => {
+        calls.push('job1')
+      }
+      job1.id = 1
+
+      const job2: SchedulerJob = () => {
+        calls.push('job2')
+      }
+      job2.id = 2
+
+      queuePostFlushCb(() => {
+        queueJob(job2)
+        queueJob(job1)
+      })
+
+      await nextTick()
+
+      expect(calls).toEqual(['job1', 'job2'])
+    })
   })
 
   test('sort job based on id', async () => {
@@ -758,6 +781,37 @@ describe('scheduler', () => {
     expect(spy).toHaveBeenCalledTimes(1)
   })
 
+  test('flushPreFlushCbs inside a post job', async () => {
+    const calls: string[] = []
+    const callsAfterFlush: string[] = []
+
+    const job1: SchedulerJob = () => {
+      calls.push('job1')
+    }
+    job1.id = 1
+    job1.flags! |= SchedulerJobFlags.PRE
+
+    const job2: SchedulerJob = () => {
+      calls.push('job2')
+    }
+    job2.id = 2
+    job2.flags! |= SchedulerJobFlags.PRE
+
+    queuePostFlushCb(() => {
+      queueJob(job2)
+      queueJob(job1)
+
+      // e.g. nested app.mount() call
+      flushPreFlushCbs()
+      callsAfterFlush.push(...calls)
+    })
+
+    await nextTick()
+
+    expect(callsAfterFlush).toEqual(['job1', 'job2'])
+    expect(calls).toEqual(['job1', 'job2'])
+  })
+
   it('nextTick should return promise', async () => {
     const fn = vi.fn(() => {
       return 1
@@ -789,5 +843,62 @@ describe('scheduler', () => {
 
     await nextTick()
     expect(calls).toEqual(['cb2', 'cb1'])
+  })
+
+  test(`nextTick runs callbacks in the order they're added`, async () => {
+    const calls: string[] = []
+    let counter = 0
+
+    const addNextTick = (count: number) => {
+      expect(count).toBe(++counter)
+
+      nextTick(() => {
+        calls.push(`tick ${count}`)
+      })
+    }
+
+    const job1 = () => {
+      addNextTick(3)
+      calls.push('job 1')
+      queuePostFlushCb(job2)
+      addNextTick(4)
+    }
+
+    const job2 = () => {
+      addNextTick(5)
+      calls.push('job 2')
+      queueJob(job3)
+      addNextTick(6)
+    }
+
+    const job3 = () => {
+      addNextTick(7)
+      calls.push('job 3')
+    }
+
+    addNextTick(1)
+
+    queueJob(job1)
+
+    addNextTick(2)
+
+    await nextTick()
+
+    expect(calls).toEqual(['tick 1', 'job 1', 'job 2', 'job 3', 'tick 2'])
+
+    await nextTick()
+
+    expect(calls).toEqual([
+      'tick 1',
+      'job 1',
+      'job 2',
+      'job 3',
+      'tick 2',
+      'tick 3',
+      'tick 4',
+      'tick 5',
+      'tick 6',
+      'tick 7',
+    ])
   })
 })
