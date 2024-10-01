@@ -242,6 +242,7 @@ export function transformDestructuredProps(
         parent.type.startsWith('TS') &&
         parent.type !== 'TSAsExpression' &&
         parent.type !== 'TSNonNullExpression' &&
+        parent.type !== 'TSSatisfiesExpression' &&
         parent.type !== 'TSTypeAssertion'
       ) {
         return this.skip()

@@ -274,6 +274,8 @@ export function endBatch(): void {
     batchedSub = undefined
     // 2nd pass: run effects
     while (e) {
+      next = e.next
+      e.next = undefined
       e.flags &= ~EffectFlags.NOTIFIED
       if (e.flags & EffectFlags.ACTIVE) {
         try {
@@ -283,8 +285,6 @@ export function endBatch(): void {
           if (!error) error = err
         }
       }
-      next = e.next
-      e.next = undefined
       e = next
     }
   }
