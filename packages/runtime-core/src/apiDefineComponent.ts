@@ -27,7 +27,7 @@ import type {
   EmitsToProps,
   TypeEmitsToOptions,
 } from './componentEmits'
-import { extend, isFunction } from '@vue/shared'
+import { type IsKeyValues, extend, isFunction } from '@vue/shared'
 import type { VNodeProps } from './vnode'
 import type {
   ComponentPublicInstanceConstructor,
@@ -208,15 +208,13 @@ export function defineComponent<
   ResolvedEmits extends EmitsOptions = {} extends RuntimeEmitsOptions
     ? TypeEmitsToOptions<TypeEmits>
     : RuntimeEmitsOptions,
-  InferredProps = unknown extends TypeProps
-    ? keyof TypeProps extends never
-      ? string extends RuntimePropsKeys
-        ? ComponentObjectPropsOptions extends RuntimePropsOptions
-          ? {}
-          : ExtractPropTypes<RuntimePropsOptions>
-        : { [key in RuntimePropsKeys]?: any }
-      : TypeProps
-    : TypeProps,
+  InferredProps = IsKeyValues<TypeProps> extends true
+    ? TypeProps
+    : string extends RuntimePropsKeys
+      ? ComponentObjectPropsOptions extends RuntimePropsOptions
+        ? {}
+        : ExtractPropTypes<RuntimePropsOptions>
+      : { [key in RuntimePropsKeys]?: any },
   TypeRefs extends Record<string, unknown> = {},
   TypeEl extends Element = any,
 >(
