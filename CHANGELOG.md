@@ -1,3 +1,17 @@
+## [3.5.11](https://github.com/vuejs/core/compare/v3.5.10...v3.5.11) (2024-10-03)
+
+
+### Bug Fixes
+
+* **compiler-sfc:** do not skip `TSSatisfiesExpression` when transforming props destructure ([#12062](https://github.com/vuejs/core/issues/12062)) ([2328b05](https://github.com/vuejs/core/commit/2328b051f4efa1f1394b7d4e73b7c3f76e430e7c)), closes [#12061](https://github.com/vuejs/core/issues/12061)
+* **reactivity:** prevent overwriting `next` property during batch processing ([#12075](https://github.com/vuejs/core/issues/12075)) ([d3f5e6e](https://github.com/vuejs/core/commit/d3f5e6e5319b4ffaa55ca9a2ea3d95d78e76fa58)), closes [#12072](https://github.com/vuejs/core/issues/12072)
+* **scheduler:** job ordering when the post queue is flushing ([#12090](https://github.com/vuejs/core/issues/12090)) ([577edca](https://github.com/vuejs/core/commit/577edca8e7795436efd710d1c289ea8ea2642b0e))
+* **types:** correctly infer `TypeProps` when it is `any` ([#12073](https://github.com/vuejs/core/issues/12073)) ([57315ab](https://github.com/vuejs/core/commit/57315ab9688c9741a271d1075bbd28cbe5f71e2f)), closes [#12058](https://github.com/vuejs/core/issues/12058)
+* **types:** should not intersect `PublicProps` with `Props` ([#12077](https://github.com/vuejs/core/issues/12077)) ([6f85894](https://github.com/vuejs/core/commit/6f8589437635706f825ccec51800effba1d2bf5f))
+* **types:** infer the first generic type of `Ref` correctly ([#12094](https://github.com/vuejs/core/issues/12094)) ([c97bb84](https://github.com/vuejs/core/commit/c97bb84d0b0a16b012f886b6498e924415ed63e5))
+
+
+
 ## [3.5.10](https://github.com/vuejs/core/compare/v3.5.9...v3.5.10) (2024-09-27)
 
 

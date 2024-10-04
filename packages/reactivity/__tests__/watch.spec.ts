@@ -260,4 +260,21 @@ describe('watch', () => {
     src.value = 10
     expect(spy).toHaveBeenCalledTimes(2)
   })
+
+  test('should ensure correct execution order in batch processing', () => {
+    const dummy: number[] = []
+    const n1 = ref(0)
+    const n2 = ref(0)
+    const sum = computed(() => n1.value + n2.value)
+    watch(n1, () => {
+      dummy.push(1)
+      n2.value++
+    })
+    watch(sum, () => dummy.push(2))
+    watch(n1, () => dummy.push(3))
+
+    n1.value++
+
+    expect(dummy).toEqual([1, 2, 3])
+  })
 })
