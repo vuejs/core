@@ -398,9 +398,7 @@ function patchSuspense(
         const { timeout, pendingId } = suspense
         if (timeout > 0) {
           setTimeout(() => {
-            if (suspense.pendingId === pendingId) {
-              suspense.fallback(newFallback)
-            }
+            suspense.fallback(newFallback)
           }, timeout)
         } else if (timeout === 0) {
           suspense.fallback(newFallback)
