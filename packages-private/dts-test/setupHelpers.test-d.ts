@@ -58,6 +58,9 @@ describe('defineProps w/ type declaration + withDefaults', <T extends
       bool?: boolean
       boolAndUndefined: boolean | undefined
       foo?: T
+      u:
+        | { type: 'button'; buttonType?: 'submit' }
+        | { type: 'link'; href: string }
     }>(),
     {
       number: 123,
@@ -88,6 +91,13 @@ describe('defineProps w/ type declaration + withDefaults', <T extends
 
   expectType<boolean>(res.bool)
   expectType<boolean>(res.boolAndUndefined)
+
+  if (res.u.type === 'button') {
+    expectType<'submit' | undefined>(res.u.buttonType)
+  }
+  if (res.u.type === 'link') {
+    expectType<string>(res.u.href)
+  }
 })
 
 describe('defineProps w/ union type declaration + withDefaults', () => {
