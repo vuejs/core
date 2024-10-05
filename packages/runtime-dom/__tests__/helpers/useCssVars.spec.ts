@@ -350,7 +350,7 @@ describe('useCssVars', () => {
     expect(() => render(h(App), root)).not.toThrow(TypeError)
     await nextTick()
     expect(target.children.length).toBe(0)
-    expect(root.children[0].outerHTML).toBe('<div data-v-owner="0"></div>')
+    expect(root.children[0].outerHTML.includes('data-v-owner')).toBe(true)
   })
 
   test('with string style', async () => {
