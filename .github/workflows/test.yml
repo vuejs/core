@@ -57,7 +57,6 @@ jobs:
   continuous-release:
     if: github.repository == 'vuejs/core-vapor'
     runs-on: ubuntu-latest
-    needs: [unit-test, lint-and-test-dts]
     permissions:
       contents: read
       id-token: write
