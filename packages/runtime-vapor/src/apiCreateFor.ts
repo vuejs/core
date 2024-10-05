@@ -38,6 +38,7 @@ export const createFor = (
   renderItem: (block: ForBlock['state']) => Block,
   getKey?: (item: any, key: any, index?: number) => any,
   getMemo?: (item: any, key: any, index?: number) => any[],
+  container?: ParentNode,
   hydrationNode?: Node,
   once?: boolean,
 ): Fragment => {
@@ -45,7 +46,11 @@ export const createFor = (
   let oldBlocks: ForBlock[] = []
   let newBlocks: ForBlock[]
   let parent: ParentNode | undefined | null
-  const parentAnchor = __DEV__ ? createComment('for') : createTextNode()
+  const parentAnchor = container
+    ? undefined
+    : __DEV__
+      ? createComment('for')
+      : createTextNode()
   const ref: Fragment = {
     nodes: oldBlocks,
     [fragmentKey]: true,
@@ -71,14 +76,22 @@ export const createFor = (
       isMounted = true
       mountList(source)
     } else {
-      parent = parent || parentAnchor.parentNode
+      parent = parent || container || parentAnchor!.parentNode
       if (!oldLength) {
         // fast path for all new
         mountList(source)
       } else if (!newLength) {
-        // fast path for clearing
-        for (let i = 0; i < oldLength; i++) {
-          unmount(oldBlocks[i])
+        // fast path for all removed
+        if (container) {
+          container.textContent = ''
+          for (let i = 0; i < oldLength; i++) {
+            oldBlocks[i].scope.stop()
+          }
+        } else {
+          // fast path for clearing
+          for (let i = 0; i < oldLength; i++) {
+            unmount(oldBlocks[i])
+          }
         }
       } else if (!getKey) {
         // unkeyed fast path
@@ -239,13 +252,16 @@ export const createFor = (
       }
     }
 
-    ref.nodes = [(oldBlocks = newBlocks), parentAnchor]
+    ref.nodes = [(oldBlocks = newBlocks)]
+    if (parentAnchor) {
+      ref.nodes.push(parentAnchor)
+    }
   }
 
   function mount(
     source: any,
     idx: number,
-    anchor: Node = parentAnchor,
+    anchor: Node | undefined = parentAnchor,
   ): ForBlock {
     const scope = effectScope()
 
