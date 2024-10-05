@@ -12,7 +12,7 @@
     "@vitejs/plugin-vue": "https://pkg.pr.new/@vitejs/plugin-vue@e3c5ce5",
     "connect": "^3.7.0",
     "sirv": "^2.0.4",
-    "vite": "^5.0.12"
+    "vite": "catalog:"
   },
   "devDependencies": {
     "@types/connect": "^3.4.38",
