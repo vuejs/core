@@ -18,7 +18,7 @@ env:
 
 jobs:
   upload:
-    if: github.repository == 'vuejs/core-vapor'
+    if: github.repository == 'vuejs/vue-vapor'
     runs-on: ubuntu-latest
 
     steps:

@@ -18,7 +18,7 @@ jobs:
   size-report:
     runs-on: ubuntu-latest
     if: >
-      github.repository == 'vuejs/core-vapor' &&
+      github.repository == 'vuejs/vue-vapor' &&
       github.event.workflow_run.event == 'pull_request' &&
       github.event.workflow_run.conclusion == 'success'
     steps:

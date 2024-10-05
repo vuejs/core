@@ -32,7 +32,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/vuejs/core-vapor.git",
+    "url": "git+https://github.com/vuejs/vue-vapor.git",
     "directory": "packages/runtime-shared"
   },
   "keywords": [
@@ -41,7 +41,7 @@
   "author": "Evan You",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/vuejs/core-vapor/issues"
+    "url": "https://github.com/vuejs/vue-vapor/issues"
   },
-  "homepage": "https://github.com/vuejs/core-vapor/tree/main/packages/runtime-shared#readme"
+  "homepage": "https://github.com/vuejs/vue-vapor/tree/main/packages/runtime-shared#readme"
 }

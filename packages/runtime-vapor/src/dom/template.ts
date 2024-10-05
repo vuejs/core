@@ -14,7 +14,7 @@ export function template(html: string) {
 export function children(node: Node, ...paths: number[]): Node {
   for (const idx of paths) {
     // In various situations, select the quickest approach.
-    // See https://github.com/vuejs/core-vapor/pull/263
+    // See https://github.com/vuejs/vue-vapor/pull/263
     node =
       idx === 0
         ? node.firstChild!
