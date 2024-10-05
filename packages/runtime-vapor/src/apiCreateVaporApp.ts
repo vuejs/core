@@ -109,17 +109,23 @@ export function createVaporApp(
       return app
     },
 
-    mount(rootContainer): any {
+    mount(container): any {
       if (!instance) {
-        rootContainer = normalizeContainer(rootContainer)
+        container = normalizeContainer(container)
         // #5571
-        if (__DEV__ && (rootContainer as any).__vue_app__) {
+        if (__DEV__ && (container as any).__vue_app__) {
           warn(
             `There is already an app instance mounted on the host container.\n` +
               ` If you want to mount another app on the same host container,` +
               ` you need to unmount the previous app by calling \`app.unmount()\` first.`,
           )
         }
+
+        // clear content before mounting
+        if (container.nodeType === 1 /* Node.ELEMENT_NODE */) {
+          container.textContent = ''
+        }
+
         instance = createComponentInstance(
           rootComponent,
           rootProps,
@@ -128,15 +134,20 @@ export function createVaporApp(
           context,
         )
         setupComponent(instance)
-        render(instance, rootContainer)
+        render(instance, container)
 
-        app._container = rootContainer
+        app._container = container
         // for devtools and telemetry
-        ;(rootContainer as any).__vue_app__ = app
+        ;(container as any).__vue_app__ = app
 
         if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
           app._instance = instance
           devtoolsInitApp(app, version)
+        }
+
+        if (container instanceof Element) {
+          container.removeAttribute('v-cloak')
+          container.setAttribute('data-v-app', '')
         }
 
         return instance

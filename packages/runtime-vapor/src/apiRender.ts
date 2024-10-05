@@ -5,7 +5,7 @@ import {
   setCurrentInstance,
   validateComponentName,
 } from './component'
-import { insert, querySelector, remove } from './dom/element'
+import { insert, querySelector } from './dom/element'
 import { flushPostFlushCbs, queuePostFlushCb } from './scheduler'
 import { invokeLifecycle } from './componentLifecycle'
 import { VaporLifecycleHooks } from './enums'
@@ -153,13 +153,13 @@ function mountComponent(
 }
 
 export function unmountComponent(instance: ComponentInternalInstance): void {
-  const { container, block, scope } = instance
+  const { container, scope } = instance
 
   // hook: beforeUnmount
   invokeLifecycle(instance, VaporLifecycleHooks.BEFORE_UNMOUNT, 'beforeUnmount')
 
   scope.stop()
-  block && remove(block, container)
+  container.textContent = ''
 
   // hook: unmounted
   invokeLifecycle(
