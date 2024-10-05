@@ -266,15 +266,18 @@ export const createFor = (
     block.nodes = scope.run(() => {
       if (getMemo) {
         return withMemo(
-          () => block.memo!,
+          () =>
+            getMemo(
+              block.state[0].value,
+              block.state[1].value,
+              block.state[2].value,
+            ),
           () => renderItem(state),
         )
       }
       return renderItem(state)
     })!
 
-    // TODO v-memo
-    // if (getMemo) block.update()
     if (parent) insert(block.nodes, parent, anchor)
 
     return block
