@@ -223,6 +223,21 @@ describe('defineCustomElement', () => {
       expect(e.getAttribute('baz-qux')).toBe('four')
     })
 
+    test('props via hyphen property', async () => {
+      const Comp = defineCustomElement({
+        props: {
+          fooBar: Boolean,
+        },
+        render() {
+          return 'Comp'
+        },
+      })
+      customElements.define('my-el-comp', Comp)
+      render(h('my-el-comp', { 'foo-bar': true }), container)
+      const el = container.children[0]
+      expect((el as any).outerHTML).toBe('<my-el-comp foo-bar=""></my-el-comp>')
+    })
+
     test('attribute -> prop type casting', async () => {
       const E = defineCustomElement({
         props: {
