@@ -467,7 +467,7 @@ function updateCssVars(vnode: VNode) {
   // code path here can assume browser environment.
   const ctx = vnode.ctx
   if (ctx && ctx.ut) {
-    let node = vnode.targetStart
+    let node = vnode.targetStart || (vnode.children as VNode[])[0].el!
     while (node && node !== vnode.targetAnchor) {
       if (node.nodeType === 1) node.setAttribute('data-v-owner', ctx.uid)
       node = node.nextSibling
