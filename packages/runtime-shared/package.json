@@ -43,5 +43,8 @@
   "bugs": {
     "url": "https://github.com/vuejs/vue-vapor/issues"
   },
-  "homepage": "https://github.com/vuejs/vue-vapor/tree/main/packages/runtime-shared#readme"
+  "homepage": "https://github.com/vuejs/vue-vapor/tree/main/packages/runtime-shared#readme",
+  "dependencies": {
+    "@vue/shared": "workspace:*"
+  }
 }

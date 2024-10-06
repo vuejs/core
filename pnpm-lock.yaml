@@ -425,7 +425,11 @@ importers:
         specifier: ^2.0.7
         version: 2.0.7
 
-  packages/runtime-shared: {}
+  packages/runtime-shared:
+    dependencies:
+      '@vue/shared':
+        specifier: workspace:*
+        version: link:../shared
 
   packages/runtime-test:
     dependencies:
