@@ -208,13 +208,20 @@ export function compileScript(
   const scriptEndOffset = script && script.loc.end.offset
 
   function hoistNode(node: Statement) {
+    // locate leading comments
+    // @ts-expect-error
+    if (node.leadingComments && node.leadingComments.every(i => !i.locate)) {
+      hoistLeadingCommentsNode(node)
+    }
     const start = node.start! + startOffset
     let end = node.end! + startOffset
-    // locate comment
+    // locate trailing comments
     if (node.trailingComments && node.trailingComments.length > 0) {
       const lastCommentNode =
         node.trailingComments[node.trailingComments.length - 1]
       end = lastCommentNode.end! + startOffset
+      // @ts-expect-error
+      node.trailingComments.forEach(i => (i.locate = true))
     }
     // locate the end of whitespace between this statement and the next
     while (end <= source.length) {
@@ -224,6 +231,17 @@ export function compileScript(
       end++
     }
     ctx.s.move(start, end, 0)
+  }
+
+  function hoistLeadingCommentsNode(node: Statement) {
+    if (node.leadingComments && node.leadingComments.length > 0) {
+      const firstCommentNode = node.leadingComments[0]
+      ctx.s.move(
+        firstCommentNode.start! + startOffset,
+        node.start! + startOffset,
+        0,
+      )
+    }
   }
 
   function registerUserImport(

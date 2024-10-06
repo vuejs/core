@@ -1122,8 +1122,11 @@ return () => {}
 `;
 
 exports[`SFC compile <script setup> > should compile JS syntax 1`] = `
-"const a = 1
+"// x = 111
+      const a = 1
+      // x = 222
       const b = 2
+      // x = 333
       
 export default {
   setup(__props, { expose: __expose }) {
