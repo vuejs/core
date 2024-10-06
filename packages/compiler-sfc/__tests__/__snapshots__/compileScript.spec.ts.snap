@@ -1122,11 +1122,8 @@ return () => {}
 `;
 
 exports[`SFC compile <script setup> > should compile JS syntax 1`] = `
-"// x = 111
-      const a = 1
-      // x = 222
+"const a = 1
       const b = 2
-      // x = 333
       
 export default {
   setup(__props, { expose: __expose }) {
@@ -1258,6 +1255,24 @@ return {  }
 }
 
 })"
+`;
+
+exports[`SFC compile <script setup> > with comments 1`] = `
+"// x = 111
+      const a = 1
+      // x = 222
+      const b = 2
+      // x = 333
+      
+export default {
+  setup(__props, { expose: __expose }) {
+  __expose();
+
+      
+return { a, b }
+}
+
+}"
 `;
 
 exports[`SFC genDefaultAs > <script setup> only 1`] = `

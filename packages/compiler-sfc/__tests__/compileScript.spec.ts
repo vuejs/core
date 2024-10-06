@@ -4,6 +4,17 @@ import { assertCode, compileSFCScript as compile, mockId } from './utils'
 describe('SFC compile <script setup>', () => {
   test('should compile JS syntax', () => {
     const { content } = compile(`
+      <script setup lang='js'>
+      const a = 1
+      const b = 2
+      </script>
+    `)
+    expect(content).toMatch(`return { a, b }`)
+    assertCode(content)
+  })
+
+  test('with comments', () => {
+    const { content } = compile(`
       <script setup>
       // x = 111
       const a = 1
