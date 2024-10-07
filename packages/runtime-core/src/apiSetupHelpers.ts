@@ -331,21 +331,23 @@ type PropsWithDefaults<
   T,
   Defaults extends InferDefaults<T>,
   BKeys extends keyof T,
-> = Readonly<MappedOmit<T, keyof Defaults>> & {
-  readonly [K in keyof Defaults as K extends keyof T
-    ? K
-    : never]-?: K extends keyof T
-    ? Defaults[K] extends undefined
-      ? IfAny<Defaults[K], NotUndefined<T[K]>, T[K]>
-      : NotUndefined<T[K]>
-    : never
-} & {
-  readonly [K in BKeys]-?: K extends keyof Defaults
-    ? Defaults[K] extends undefined
-      ? boolean | undefined
-      : boolean
-    : boolean
-}
+> = T extends unknown
+  ? Readonly<MappedOmit<T, keyof Defaults>> & {
+      readonly [K in keyof Defaults as K extends keyof T
+        ? K
+        : never]-?: K extends keyof T
+        ? Defaults[K] extends undefined
+          ? IfAny<Defaults[K], NotUndefined<T[K]>, T[K]>
+          : NotUndefined<T[K]>
+        : never
+    } & {
+      readonly [K in BKeys]-?: K extends keyof Defaults
+        ? Defaults[K] extends undefined
+          ? boolean | undefined
+          : boolean
+        : boolean
+    }
+  : never
 
 /**
  * Vue `<script setup>` compiler macro for providing props default values when

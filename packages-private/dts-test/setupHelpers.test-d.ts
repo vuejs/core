@@ -240,6 +240,23 @@ describe('withDefaults w/ defineProp type is different from the defaults type', 
   res1.value
 })
 
+describe('withDefaults w/ defineProp discriminate union type', () => {
+  const props = withDefaults(
+    defineProps<
+      { type: 'button'; buttonType?: 'submit' } | { type: 'link'; href: string }
+    >(),
+    {
+      type: 'button',
+    },
+  )
+  if (props.type === 'button') {
+    expectType<'submit' | undefined>(props.buttonType)
+  }
+  if (props.type === 'link') {
+    expectType<string>(props.href)
+  }
+})
+
 describe('defineProps w/ runtime declaration', () => {
   // runtime declaration
   const props = defineProps({
