@@ -11,7 +11,7 @@
     "enableNonBrowserBranches": true
   },
   "dependencies": {
-    "monaco-editor": "^0.51.0",
+    "monaco-editor": "^0.52.0",
     "source-map-js": "^1.2.1"
   }
 }
