@@ -409,4 +409,14 @@ describe('reactivity/reactive', () => {
     e.effect.stop()
     expect(targetMap.get(obj)?.get('x')).toBeFalsy()
   })
+
+  test('should trigger reactivity when Map key is undefined', () => {
+    const map = reactive(new Map())
+    const c = computed(() => map.get(void 0))
+
+    expect(c.value).toBe(void 0)
+
+    map.set(void 0, 1)
+    expect(c.value).toBe(1)
+  })
 })
