@@ -153,10 +153,10 @@ describe('useModel', () => {
 
     const compRender = vi.fn()
     const Comp = defineComponent({
-      props: ['fooBar'],
-      emits: ['update:fooBar'],
+      props: ['foo-bar'],
+      emits: ['update:foo-bar'],
       setup(props) {
-        foo = useModel(props, 'fooBar')
+        foo = useModel(props, 'foo-bar')
         return () => {
           compRender()
           return foo.value
@@ -192,10 +192,10 @@ describe('useModel', () => {
 
     const compRender = vi.fn()
     const Comp = defineComponent({
-      props: ['fooBar'],
-      emits: ['update:fooBar'],
+      props: ['foo-bar'],
+      emits: ['update:foo-bar'],
       setup(props) {
-        foo = useModel(props, 'fooBar')
+        foo = useModel(props, 'foo-bar')
         return () => {
           compRender()
           return foo.value
