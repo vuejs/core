@@ -2646,6 +2646,72 @@ describe('e2e: Transition', () => {
       E2E_TIMEOUT,
     )
 
+    test(
+      'transition on appear with v-show(invoke enterHook during appear)',
+      async () => {
+        const appearClass = await page().evaluate(async () => {
+          const { createApp, ref, h, vShow, withDirectives, onMounted } = (
+            window as any
+          ).Vue
+
+          const Comp = {
+            props: {
+              show: Boolean,
+            },
+            render(this: any) {
+              return withDirectives(h('div', 'content'), [[vShow, this.show]])
+            },
+          }
+
+          createApp({
+            template: `
+              <div id="container">
+                <transition name="test" appear
+                  appear-to-class="test-appear-to"
+                  appear-active-class="test-appear-active">
+                  <Comp class="test" :show="show"/>
+                </transition>
+              </div>
+            `,
+            components: { Comp },
+            setup: () => {
+              const show = ref(false)
+              onMounted(() => {
+                show.value = true
+              })
+              return {
+                show,
+              }
+            },
+          }).mount('#app')
+          return document.querySelector('.test')!.className.split(/\s+/g)
+        })
+
+        // appear
+        expect(appearClass).toStrictEqual([
+          'test',
+          'test-enter-from',
+          'test-appear-active',
+        ])
+
+        // enter
+        await nextFrame()
+        expect(await classList('.test')).toStrictEqual([
+          'test',
+          'test-appear-active',
+          'test-enter-active',
+          'test-appear-to',
+          'test-enter-to',
+        ])
+
+        await transitionFinish()
+        expect(await html('#container')).toBe(
+          '<div class="test" style="">content</div>',
+        )
+      },
+      E2E_TIMEOUT,
+    )
+
     // #4845
     test(
       'transition events should not call onEnter with v-show false',
