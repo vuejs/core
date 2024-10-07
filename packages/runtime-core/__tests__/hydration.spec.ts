@@ -1613,6 +1613,36 @@ describe('SSR hydration', () => {
     `)
   })
 
+  test('Suspense + transition appear', async () => {
+    const { vnode, container } = mountWithHydration(
+      `<template><div>foo</div></template>`,
+      () =>
+        h(Suspense, {}, () =>
+          h(
+            Transition,
+            { appear: true },
+            {
+              default: () => h('div', 'foo'),
+            },
+          ),
+        ),
+    )
+
+    expect(vnode.el).toBe(container.firstChild)
+    // wait for hydration to finish
+    await new Promise(r => setTimeout(r))
+
+    expect(container.firstChild).toMatchInlineSnapshot(`
+      <div
+        class="v-enter-from v-enter-active"
+      >
+        foo
+      </div>
+    `)
+    await nextTick()
+    expect(vnode.el).toBe(container.firstChild)
+  })
+
   // #10607
   test('update component stable slot (prod + optimized mode)', async () => {
     __DEV__ = false
