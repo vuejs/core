@@ -265,7 +265,7 @@ export function defineComponent<
         Mixin,
         Extends,
         ResolvedEmits,
-        RuntimeEmitsKeys,
+        {},
         {},
         false,
         InjectOptions,

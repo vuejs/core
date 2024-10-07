@@ -2068,3 +2068,13 @@ expectString(instance.actionText)
 // public prop on $props should be optional
 // @ts-expect-error
 expectString(instance.$props.actionText)
+
+// #12122
+defineComponent({
+  props: { foo: String },
+  render() {
+    expectType<{ readonly foo?: string }>(this.$props)
+    // @ts-expect-error
+    expectType<string>(this.$props)
+  },
+})
