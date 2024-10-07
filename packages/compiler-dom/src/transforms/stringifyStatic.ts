@@ -261,8 +261,7 @@ function analyzeNode(node: StringifiableNode): [number, number] | false {
           isOptionTag &&
           isStaticArgOf(p.arg, 'value') &&
           p.exp &&
-          p.exp.ast &&
-          p.exp.ast.type !== 'StringLiteral'
+          !p.exp.isStatic
         ) {
           return bail()
         }
