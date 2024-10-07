@@ -13,6 +13,22 @@ describe('SFC compile <script setup>', () => {
     assertCode(content)
   })
 
+  test('with comments', () => {
+    const { content } = compile(`
+      <script setup>
+      // import sometings
+      import { ref} from 'vue'
+      // x = 111
+      const a = ref(1) // aaa
+      // x = 222
+      const b = 2 // bbb
+      // x = 333
+      function sx(){} // sx
+      </script>
+    `)
+    assertCode(content)
+  })
+
   test('should expose top level declarations', () => {
     const { content, bindings } = compile(`
       <script setup>

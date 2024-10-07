@@ -207,14 +207,26 @@ export function compileScript(
   const scriptStartOffset = script && script.loc.start.offset
   const scriptEndOffset = script && script.loc.end.offset
 
-  function hoistNode(node: Statement) {
-    const start = node.start! + startOffset
+  function hoistNode(node: Statement, prevNode: Statement | null) {
+    let start = node.start! + startOffset
     let end = node.end! + startOffset
-    // locate comment
+    // locate comments
+    if (node.leadingComments) {
+      let filterLeadingComments = node.leadingComments
+      if (prevNode) {
+        filterLeadingComments = node.leadingComments.filter(
+          i => i.loc!.start.line !== prevNode.loc!.start.line,
+        )
+      }
+      if (filterLeadingComments.length) {
+        start = filterLeadingComments[0].start! + startOffset
+      }
+    }
     if (node.trailingComments && node.trailingComments.length > 0) {
-      const lastCommentNode =
-        node.trailingComments[node.trailingComments.length - 1]
-      end = lastCommentNode.end! + startOffset
+      const firstCommentNode = node.trailingComments[0]
+      if (firstCommentNode.loc!.start.line === node.loc!.start.line) {
+        end = firstCommentNode.end! + startOffset
+      }
     }
     // locate the end of whitespace between this statement and the next
     while (end <= source.length) {
@@ -300,10 +312,12 @@ export function compileScript(
   }
 
   // 1.2 walk import declarations of <script setup>
-  for (const node of scriptSetupAst.body) {
+  for (let i = 0; i < scriptSetupAst.body.length; i++) {
+    const node = scriptSetupAst.body[i]
+    const prevNode = i > 0 ? scriptSetupAst.body[i - 1] : null
     if (node.type === 'ImportDeclaration') {
       // import declarations are moved to top
-      hoistNode(node)
+      hoistNode(node, prevNode)
 
       // dedupe imports
       let removed = 0
@@ -497,7 +511,9 @@ export function compileScript(
   }
 
   // 2.2 process <script setup> body
-  for (const node of scriptSetupAst.body) {
+  for (let i = 0; i < scriptSetupAst.body.length; i++) {
+    const node = scriptSetupAst.body[i]
+    const prevNode = i > 0 ? scriptSetupAst.body[i - 1] : null
     if (node.type === 'ExpressionStatement') {
       const expr = unwrapTSNode(node.expression)
       // process `defineProps` and `defineEmit(s)` calls
@@ -607,7 +623,7 @@ export function compileScript(
 
     // hoist literal constants
     if (hoistStatic && isAllLiteral) {
-      hoistNode(node)
+      hoistNode(node, prevNode)
     }
 
     // walk statements & named exports / variable declarations for top level
@@ -675,7 +691,7 @@ export function compileScript(
         (node.type === 'VariableDeclaration' && node.declare)
       ) {
         if (node.type !== 'TSEnumDeclaration') {
-          hoistNode(node)
+          hoistNode(node, prevNode)
         }
       }
     }
