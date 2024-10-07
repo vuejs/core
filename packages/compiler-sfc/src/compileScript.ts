@@ -207,7 +207,7 @@ export function compileScript(
   const scriptStartOffset = script && script.loc.start.offset
   const scriptEndOffset = script && script.loc.end.offset
 
-  function hoistNode(node: Statement, prevNode?: Statement | null) {
+  function hoistNode(node: Statement, prevNode: Statement | null) {
     let start = node.start! + startOffset
     let end = node.end! + startOffset
     // locate comments
@@ -312,10 +312,12 @@ export function compileScript(
   }
 
   // 1.2 walk import declarations of <script setup>
-  for (const node of scriptSetupAst.body) {
+  for (let i = 0; i < scriptSetupAst.body.length; i++) {
+    const node = scriptSetupAst.body[i]
+    const prevNode = i > 0 ? scriptSetupAst.body[i - 1] : null
     if (node.type === 'ImportDeclaration') {
       // import declarations are moved to top
-      hoistNode(node)
+      hoistNode(node, prevNode)
 
       // dedupe imports
       let removed = 0
@@ -511,6 +513,7 @@ export function compileScript(
   // 2.2 process <script setup> body
   for (let i = 0; i < scriptSetupAst.body.length; i++) {
     const node = scriptSetupAst.body[i]
+    const prevNode = i > 0 ? scriptSetupAst.body[i - 1] : null
     if (node.type === 'ExpressionStatement') {
       const expr = unwrapTSNode(node.expression)
       // process `defineProps` and `defineEmit(s)` calls
@@ -620,7 +623,6 @@ export function compileScript(
 
     // hoist literal constants
     if (hoistStatic && isAllLiteral) {
-      const prevNode = i > 0 ? scriptSetupAst.body[i - 1] : null
       hoistNode(node, prevNode)
     }
 
@@ -689,7 +691,7 @@ export function compileScript(
         (node.type === 'VariableDeclaration' && node.declare)
       ) {
         if (node.type !== 'TSEnumDeclaration') {
-          hoistNode(node)
+          hoistNode(node, prevNode)
         }
       }
     }
