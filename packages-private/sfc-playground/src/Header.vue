@@ -118,9 +118,9 @@ function toggleDark() {
       >
         <span>{{ autoSave ? 'AutoSave ON' : 'AutoSave OFF' }}</span>
       </button>
-      <button 
-        :title="`Switch to ${ theme === 'dark' ? 'light' : 'dark' } theme`"
-        class="toggle-dark" 
+      <button
+        :title="`Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`"
+        class="toggle-dark"
         @click="toggleDark"
       >
         <Sun class="light" />
