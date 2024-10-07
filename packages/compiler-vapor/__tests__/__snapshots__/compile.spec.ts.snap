@@ -35,7 +35,7 @@ export function render(_ctx) {
   const _directive_test = _resolveDirective("test")
   const n4 = _createComponent(_component_Comp, null, [
     {
-      default: () => {
+      "default": () => {
         const n0 = _createIf(() => (true), () => {
           const n3 = t0()
           const n2 = _createComponent(_component_Bar)

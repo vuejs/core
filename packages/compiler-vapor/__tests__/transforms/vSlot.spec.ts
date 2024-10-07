@@ -398,6 +398,14 @@ describe('compiler: transform slot', () => {
     ])
   })
 
+  test('quote slot name', () => {
+    const { code } = compileWithSlots(
+      `<Comp><template #nav-bar-title-before></template></Comp>`,
+    )
+    expect(code).toMatchSnapshot()
+    expect(code).contains(`"nav-bar-title-before"`)
+  })
+
   describe('errors', () => {
     test('error on extraneous children w/ named default slot', () => {
       const onError = vi.fn()

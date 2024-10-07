@@ -175,7 +175,7 @@ function genStaticSlots({ slots }: IRSlotsStatic, context: CodegenContext) {
   return genMulti(
     DELIMITERS_OBJECT_NEWLINE,
     ...names.map(name => [
-      `${name}: `,
+      `${JSON.stringify(name)}: `,
       ...genSlotBlockWithProps(slots[name], context),
     ]),
   )

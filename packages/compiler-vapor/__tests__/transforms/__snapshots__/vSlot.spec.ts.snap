@@ -102,7 +102,7 @@ export function render(_ctx) {
   const _component_Comp = _resolveComponent("Comp")
   const n1 = _createComponent(_component_Comp, null, [
     {
-      default: () => {
+      "default": () => {
         const n0 = t0()
         return n0
       }
@@ -122,11 +122,11 @@ export function render(_ctx) {
   const _component_Comp = _resolveComponent("Comp")
   const n4 = _createComponent(_component_Comp, null, [
     {
-      one: () => {
+      "one": () => {
         const n0 = t0()
         return n0
       }, 
-      default: () => {
+      "default": () => {
         const n2 = t1()
         const n3 = t2()
         return [n2, n3]
@@ -146,11 +146,11 @@ export function render(_ctx) {
   const _component_Comp = _resolveComponent("Comp")
   const n5 = _createComponent(_component_Comp, null, [
     {
-      default: _withDestructure(({ foo }) => [foo], (_ctx0) => {
+      "default": _withDestructure(({ foo }) => [foo], (_ctx0) => {
         const n2 = t0()
         const n1 = _createComponent(_component_Inner, null, [
           {
-            default: _withDestructure(({ bar }) => [bar], (_ctx1) => {
+            "default": _withDestructure(({ bar }) => [bar], (_ctx1) => {
               const n0 = _createTextNode(() => [_ctx0[0] + _ctx1[0] + _ctx.baz])
               return n0
             })
@@ -190,7 +190,7 @@ export function render(_ctx) {
   const _component_Comp = _resolveComponent("Comp")
   const n1 = _createComponent(_component_Comp, null, [
     {
-      named: _withDestructure(({ foo }) => [foo], (_ctx0) => {
+      "named": _withDestructure(({ foo }) => [foo], (_ctx0) => {
         const n0 = _createTextNode(() => [_ctx0[0] + _ctx.bar])
         return n0
       })
@@ -207,10 +207,26 @@ export function render(_ctx) {
   const _component_Comp = _resolveComponent("Comp")
   const n1 = _createComponent(_component_Comp, null, [
     {
-      default: _withDestructure(({ foo }) => [foo], (_ctx0) => {
+      "default": _withDestructure(({ foo }) => [foo], (_ctx0) => {
         const n0 = _createTextNode(() => [_ctx0[0] + _ctx.bar])
         return n0
       })
+    }
+  ], true)
+  return n1
+}"
+`;
+
+exports[`compiler: transform slot > quote slot name 1`] = `
+"import { resolveComponent as _resolveComponent, createComponent as _createComponent } from 'vue/vapor';
+
+export function render(_ctx) {
+  const _component_Comp = _resolveComponent("Comp")
+  const n1 = _createComponent(_component_Comp, null, [
+    {
+      "nav-bar-title-before": () => {
+        return null
+      }
     }
   ], true)
   return n1
