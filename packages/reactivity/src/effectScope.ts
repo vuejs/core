@@ -118,8 +118,12 @@ export class EffectScope {
   stop(fromParent?: boolean): void {
     if (this._active) {
       let i, l
-      for (i = 0, l = this.effects.length; i < l; i++) {
-        this.effects[i].stop()
+      // #5783
+      // effects will be changed when a watch stopped.
+      // so we need to copy it for iteration.
+      const effectsToStop = this.effects.slice()
+      for (i = 0, l = effectsToStop.length; i < l; i++) {
+        effectsToStop[i].stop()
       }
       for (i = 0, l = this.cleanups.length; i < l; i++) {
         this.cleanups[i]()
