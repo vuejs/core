@@ -15,6 +15,7 @@ const props = defineProps<{
   prod: boolean
   ssr: boolean
   autoSave: boolean
+  theme: 'dark' | 'light'
 }>()
 const emit = defineEmits([
   'toggle-theme',
@@ -117,7 +118,11 @@ function toggleDark() {
       >
         <span>{{ autoSave ? 'AutoSave ON' : 'AutoSave OFF' }}</span>
       </button>
-      <button title="Toggle dark mode" class="toggle-dark" @click="toggleDark">
+      <button
+        :title="`Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`"
+        class="toggle-dark"
+        @click="toggleDark"
+      >
         <Sun class="light" />
         <Moon class="dark" />
       </button>
