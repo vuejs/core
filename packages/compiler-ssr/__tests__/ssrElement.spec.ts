@@ -312,6 +312,20 @@ describe('ssr: element', () => {
       `)
     })
 
+    test('custom dir when exp is ""', () => {
+      expect(getCompiledString(`<div v-xxx:x="" />`)).toMatchInlineSnapshot(`
+        "\`<div\${
+            _ssrRenderAttrs(_ssrGetDirectiveProps(_ctx, _directive_xxx, undefined, "x"))
+          }></div>\`"
+      `)
+
+      expect(getCompiledString(`<div v-xxx="" />`)).toMatchInlineSnapshot(`
+        "\`<div\${
+            _ssrRenderAttrs(_ssrGetDirectiveProps(_ctx, _directive_xxx, undefined))
+          }></div>\`"
+      `)
+    })
+
     test('custom dir with normal attrs', () => {
       expect(getCompiledString(`<div class="foo" v-xxx />`))
         .toMatchInlineSnapshot(`
