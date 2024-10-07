@@ -85,7 +85,6 @@ export class Dep {
   /**
    * For object property deps cleanup
    */
-  target?: unknown = undefined
   map?: KeyToDepMap = undefined
   key?: unknown = undefined
 
@@ -263,7 +262,6 @@ export function track(target: object, type: TrackOpTypes, key: unknown): void {
     let dep = depsMap.get(key)
     if (!dep) {
       depsMap.set(key, (dep = new Dep()))
-      dep.target = target
       dep.map = depsMap
       dep.key = key
     }

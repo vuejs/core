@@ -121,7 +121,7 @@ export class ComputedRefImpl<T = any> implements Subscriber {
       // avoid infinite self recursion
       activeSub !== this
     ) {
-      batch(this)
+      batch(this, true)
       return true
     } else if (__DEV__) {
       // TODO warn
