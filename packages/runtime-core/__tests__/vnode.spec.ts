@@ -13,7 +13,7 @@ import {
   transformVNodeArgs,
 } from '../src/vnode'
 import type { Data } from '../src/component'
-import { PatchFlags, ShapeFlags } from '@vue/shared'
+import { PatchFlags, ShapeFlags, isArray } from '@vue/shared'
 import { h, isReactive, reactive, ref, setBlockTracking, withCtx } from '../src'
 import { createApp, nodeOps, serializeInner } from '@vue/runtime-test'
 import { setCurrentRenderingInstance } from '../src/componentRenderContext'
@@ -478,11 +478,33 @@ describe('vnode', () => {
       let props1: Data = { foo: 'c' }
       let props2: Data = { foo: {}, bar: ['cc'] }
       let props3: Data = { baz: { ccc: true } }
-      expect(mergeProps(props1, props2, props3)).toMatchObject({
+      let props4: Data = { 'on-foo': false }
+      let props5: Data = { 'on-bar': 0 }
+      let props6: Data = { 'on-baz': () => {} }
+      let props7: Data = { 'on-x': '' }
+      let props8: Data = { 'on-baz': () => {} }
+      const props = mergeProps(
+        props1,
+        props2,
+        props3,
+        props4,
+        props5,
+        props6,
+        props7,
+        props8,
+      )
+      expect(props).toMatchObject({
         foo: {},
         bar: ['cc'],
         baz: { ccc: true },
+        'on-foo': false,
+        'on-bar': 0,
+        'on-x': '',
       })
+
+      // should merge props6 and prop8 into an array
+      expect(isArray(props['on-baz'])).equal(true)
+      expect((props['on-baz'] as any).length).toBe(2)
     })
   })
 
