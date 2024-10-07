@@ -208,12 +208,12 @@ export function compileScript(
   const scriptEndOffset = script && script.loc.end.offset
 
   function hoistNode(node: Statement) {
+    let start = node.start! + startOffset
     // locate leading comments
     // @ts-expect-error
     if (node.leadingComments && node.leadingComments.every(i => !i.locate)) {
-      hoistLeadingCommentsNode(node)
+      start = node.leadingComments[0].start! + startOffset
     }
-    const start = node.start! + startOffset
     let end = node.end! + startOffset
     // locate trailing comments
     if (node.trailingComments && node.trailingComments.length > 0) {
@@ -231,17 +231,6 @@ export function compileScript(
       end++
     }
     ctx.s.move(start, end, 0)
-  }
-
-  function hoistLeadingCommentsNode(node: Statement) {
-    if (node.leadingComments && node.leadingComments.length > 0) {
-      const firstCommentNode = node.leadingComments[0]
-      ctx.s.move(
-        firstCommentNode.start! + startOffset,
-        node.start! + startOffset,
-        0,
-      )
-    }
   }
 
   function registerUserImport(
