@@ -198,6 +198,21 @@ describe('sfc reactive props destructure', () => {
   }`)
   })
 
+  test('with TSInstantiationExpression', () => {
+    const { content } = compile(
+      `
+      <script setup lang="ts">
+      type Foo = <T extends string | number>(data: T) => void
+      const { value } = defineProps<{ value: Foo }>()
+      const foo = value<123>
+      </script>
+    `,
+      { isProd: true },
+    )
+    assertCode(content)
+    expect(content).toMatch(`const foo = __props.value<123>`)
+  })
+
   test('aliasing', () => {
     const { content, bindings } = compile(`
       <script setup>
