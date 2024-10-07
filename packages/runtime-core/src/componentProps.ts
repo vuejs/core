@@ -654,6 +654,7 @@ function validateProps(
 ) {
   const resolvedValues = toRaw(props)
   const options = instance.propsOptions[0]
+  const camelizePropsKey = Object.keys(rawProps).map(key => camelize(key))
   for (const key in options) {
     let opt = options[key]
     if (opt == null) continue
@@ -662,7 +663,7 @@ function validateProps(
       resolvedValues[key],
       opt,
       __DEV__ ? shallowReadonly(resolvedValues) : resolvedValues,
-      !hasOwn(rawProps, key) && !hasOwn(rawProps, hyphenate(key)),
+      !camelizePropsKey.includes(key),
     )
   }
 }
