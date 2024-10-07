@@ -2311,6 +2311,87 @@ describe('e2e: Transition', () => {
       },
       E2E_TIMEOUT,
     )
+
+    // #11910
+    test(
+      'apply transition to teleport component child',
+      async () => {
+        await page().evaluate(() => {
+          const { createApp, ref } = (window as any).Vue
+          createApp({
+            template: `
+            <div id="target"></div>
+            <div id="container">
+              <transition>
+                  <Comp v-if="toggle"></Comp>
+              </transition>
+            </div>
+            <button id="toggleBtn" @click="click">button</button>
+          `,
+            components: {
+              Comp: {
+                template: `
+                    <Teleport to="#target">
+                      <div class="test">content</div>
+                    </Teleport>
+                  `,
+              },
+            },
+            setup: () => {
+              const toggle = ref(false)
+              const click = () => (toggle.value = !toggle.value)
+              return { toggle, click }
+            },
+          }).mount('#app')
+        })
+
+        expect(await html('#target')).toBe('')
+        expect(await html('#container')).toBe('<!--v-if-->')
+
+        const classWhenTransitionStart = () =>
+          page().evaluate(() => {
+            ;(document.querySelector('#toggleBtn') as any)!.click()
+            return Promise.resolve().then(() => {
+              // find the class of teleported node
+              return document
+                .querySelector('#target div')!
+                .className.split(/\s+/g)
+            })
+          })
+
+        // enter
+        expect(await classWhenTransitionStart()).toStrictEqual([
+          'test',
+          'v-enter-from',
+          'v-enter-active',
+        ])
+        await nextFrame()
+        expect(await classList('.test')).toStrictEqual([
+          'test',
+          'v-enter-active',
+          'v-enter-to',
+        ])
+        await transitionFinish()
+        expect(await html('#target')).toBe('<div class="test">content</div>')
+
+        // leave
+        expect(await classWhenTransitionStart()).toStrictEqual([
+          'test',
+          'v-leave-from',
+          'v-leave-active',
+        ])
+        await nextFrame()
+        expect(await classList('.test')).toStrictEqual([
+          'test',
+          'v-leave-active',
+          'v-leave-to',
+        ])
+        await transitionFinish()
+        expect(await html('#target')).toBe('')
+        expect(await html('#container')).toBe('<!--v-if-->')
+      },
+      E2E_TIMEOUT,
+    )
   })
 
   describe('transition with v-show', () => {
