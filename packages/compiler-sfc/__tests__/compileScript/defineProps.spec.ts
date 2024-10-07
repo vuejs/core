@@ -473,6 +473,26 @@ const props = defineProps({ foo: String })
     )
   })
 
+  test('withDefaults (locally variable)', () => {
+    const { content } = compile(`
+    <script setup lang="ts">
+    const defaults = { baz: false }
+    const props = withDefaults(defineProps<{
+      baz: boolean
+    }>(), defaults)
+    </script>
+    `)
+
+    assertCode(content)
+    expect(content).toMatch(`import { mergeDefaults as _mergeDefaults`)
+    expect(content).toMatch(
+      `
+  _mergeDefaults({
+    baz: { type: Boolean, required: true }
+  }, defaults)`.trim()
+    )
+  })
+
   // #7111
   test('withDefaults (dynamic) w/ production mode', () => {
     const { content } = compile(
@@ -631,6 +651,20 @@ const props = defineProps({ foo: String })
         defineProps<{}>({})
         </script>`)
       }).toThrow(`cannot accept both type and non-type arguments`)
+    })
+
+    test('withDefaults (locally variable)', () => {
+      expect(() => {
+        compile(`
+        <script setup lang="ts">
+        const defaults = { bar: 1 }
+        withDefaults(defineProps<{
+          bar?: number
+        }>(), defaults)
+        defaults.bar++
+        </script>
+      `)
+      }).toThrow(`cannot reference locally declared variables`)
     })
   })
 
