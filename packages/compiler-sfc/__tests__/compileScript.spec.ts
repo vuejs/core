@@ -16,14 +16,16 @@ describe('SFC compile <script setup>', () => {
   test('with comments', () => {
     const { content } = compile(`
       <script setup>
+      // import sometings
+      import { ref} from 'vue'
       // x = 111
-      const a = 1
+      const a = ref(1) // aaa
       // x = 222
-      const b = 2
+      const b = 2 // bbb
       // x = 333
+      function sx(){} // sx
       </script>
     `)
-    expect(content).toMatch(`return { a, b }`)
     assertCode(content)
   })
 

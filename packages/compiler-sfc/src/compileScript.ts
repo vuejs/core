@@ -207,21 +207,26 @@ export function compileScript(
   const scriptStartOffset = script && script.loc.start.offset
   const scriptEndOffset = script && script.loc.end.offset
 
-  function hoistNode(node: Statement) {
+  function hoistNode(node: Statement, prevNode?: Statement | null) {
     let start = node.start! + startOffset
-    // locate leading comments
-    // @ts-expect-error
-    if (node.leadingComments && node.leadingComments.every(i => !i.locate)) {
-      start = node.leadingComments[0].start! + startOffset
-    }
     let end = node.end! + startOffset
-    // locate trailing comments
+    // locate comments
+    if (node.leadingComments) {
+      let filterLeadingComments = node.leadingComments
+      if (prevNode) {
+        filterLeadingComments = node.leadingComments.filter(
+          i => i.loc!.start.line !== prevNode.loc!.start.line,
+        )
+      }
+      if (filterLeadingComments.length) {
+        start = filterLeadingComments[0].start! + startOffset
+      }
+    }
     if (node.trailingComments && node.trailingComments.length > 0) {
-      const lastCommentNode =
-        node.trailingComments[node.trailingComments.length - 1]
-      end = lastCommentNode.end! + startOffset
-      // @ts-expect-error
-      node.trailingComments.forEach(i => (i.locate = true))
+      const firstCommentNode = node.trailingComments[0]
+      if (firstCommentNode.loc!.start.line === node.loc!.start.line) {
+        end = firstCommentNode.end! + startOffset
+      }
     }
     // locate the end of whitespace between this statement and the next
     while (end <= source.length) {
@@ -504,7 +509,8 @@ export function compileScript(
   }
 
   // 2.2 process <script setup> body
-  for (const node of scriptSetupAst.body) {
+  for (let i = 0; i < scriptSetupAst.body.length; i++) {
+    const node = scriptSetupAst.body[i]
     if (node.type === 'ExpressionStatement') {
       const expr = unwrapTSNode(node.expression)
       // process `defineProps` and `defineEmit(s)` calls
@@ -614,7 +620,8 @@ export function compileScript(
 
     // hoist literal constants
     if (hoistStatic && isAllLiteral) {
-      hoistNode(node)
+      const prevNode = i > 0 ? scriptSetupAst.body[i - 1] : null
+      hoistNode(node, prevNode)
     }
 
     // walk statements & named exports / variable declarations for top level

@@ -1258,18 +1258,21 @@ return {  }
 `;
 
 exports[`SFC compile <script setup> > with comments 1`] = `
-"// x = 111
-      const a = 1
+"// import sometings
+      import { ref} from 'vue'
       // x = 222
-      const b = 2
-      // x = 333
+      const b = 2 // bbb
       
 export default {
   setup(__props, { expose: __expose }) {
   __expose();
 
+      // x = 111
+      const a = ref(1) // aaa
+      // x = 333
+      function sx(){} // sx
       
-return { a, b }
+return { a, b, sx, ref }
 }
 
 }"
