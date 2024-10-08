@@ -190,7 +190,7 @@ export function renderComponentRoot(
             `Extraneous non-props attributes (` +
               `${extraAttrs.join(', ')}) ` +
               `were passed to component but could not be automatically inherited ` +
-              `because component renders fragment or text root nodes.`,
+              `because component renders fragment or text or teleport root nodes.`,
           )
         }
         if (eventAttrs.length) {
