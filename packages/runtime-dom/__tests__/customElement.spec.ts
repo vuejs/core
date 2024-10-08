@@ -1386,4 +1386,22 @@ describe('defineCustomElement', () => {
     await nextTick()
     expect(e.shadowRoot!.innerHTML).toBe(`false,boolean`)
   })
+
+  test('avoid overriding tagName', async () => {
+    const E = defineCustomElement({
+      props: {
+        tagName: {
+          type: String,
+        },
+      },
+      render() {
+        return this.tagName
+      },
+    })
+    customElements.define('el-attr-tag-name', E)
+    container.innerHTML = '<el-attr-tag-name tag-name="foo">'
+    const e = container.childNodes[0] as VueElement
+    expect(e.tagName).toBe(`EL-ATTR-TAG-NAME`)
+    expect(`[Vue warn]: Failed setting prop "tagName" `).toHaveBeenWarned()
+  })
 })
