@@ -25,6 +25,7 @@ import {
 import { genModelProps } from './defineModel'
 import { getObjectOrArrayExpressionKeys } from './analyzeScriptBindings'
 import { processPropsDestructure } from './definePropsDestructure'
+import { isArray } from '@vue/shared'
 
 export const DEFINE_PROPS = 'defineProps'
 export const WITH_DEFAULTS = 'withDefaults'
@@ -34,7 +35,10 @@ export interface PropTypeData {
   type: string[]
   required: boolean
   skipCheck: boolean
+  union?: UnionDefinition
 }
+
+export type UnionDefinition = string[] | string[][]
 
 export type PropsDestructureBindings = Record<
   string, // public prop key
@@ -231,6 +235,7 @@ function resolveRuntimePropsFromType(
       key,
       required: !e.optional,
       type: type || [`null`],
+      union: e.union,
       skipCheck,
     })
   }
@@ -239,7 +244,7 @@ function resolveRuntimePropsFromType(
 
 function genRuntimePropFromType(
   ctx: TypeResolveContext,
-  { key, required, type, skipCheck }: PropTypeData,
+  { key, required, type, skipCheck, union }: PropTypeData,
   hasStaticDefaults: boolean,
 ): string {
   let defaultString: string | undefined
@@ -272,6 +277,7 @@ function genRuntimePropFromType(
     return `${finalKey}: { ${concatStrings([
       `type: ${toRuntimeTypeString(type)}`,
       `required: ${required}`,
+      union && `union: ${genUnionArrayString(union)}`,
       skipCheck && 'skipCheck: true',
       defaultString,
     ])} }`
@@ -304,6 +310,18 @@ function genRuntimePropFromType(
     // production: checks are useless
     return `${finalKey}: ${defaultString ? `{ ${defaultString} }` : `{}`}`
   }
+}
+
+function genUnionArrayString(union: UnionDefinition): string {
+  const entries = union.map(key => {
+    if (isArray(key)) {
+      return genUnionArrayString(key)
+    } else {
+      return `'${key}'`
+    }
+  })
+
+  return `[${entries.join(', ')}]`
 }
 
 /**

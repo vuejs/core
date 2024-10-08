@@ -166,6 +166,123 @@ describe('component props', () => {
     expect('type check failed for prop "qux"').toHaveBeenWarned()
   })
 
+  test('distributive union props', () => {
+    /**
+     * type Props = {
+     *  a?: string
+     *  b: number
+     *  bb?: number
+     * } | {
+     *  c: boolean
+     *  d?: string
+     * }
+     */
+    const props = {
+      a: {
+        type: String,
+        required: false,
+        union: ['b', 'bb'],
+      },
+      b: {
+        type: Number,
+        required: true,
+        union: ['a', 'bb'],
+      },
+      bb: {
+        type: Number,
+        required: false,
+        union: ['a', 'b'],
+      },
+      c: {
+        type: Boolean,
+        required: true,
+        union: ['d'],
+      },
+      d: {
+        type: String,
+        required: false,
+        union: ['c'],
+      },
+    }
+
+    let proxy: any
+    const Comp = {
+      props,
+      render() {
+        proxy = this
+      },
+    }
+
+    render(
+      h(Comp, {
+        a: 'foo',
+        // b: absent required - should warn
+        // bb: absent not required - should not warn
+        // c: not in active union path - undefined boolean should not default to false - should not warn
+        // d: not in active union path - should not warn
+      }),
+      nodeOps.createElement('div'),
+    )
+
+    expect(proxy.a).toBe('foo')
+    expect('Missing required prop: "b"').toHaveBeenWarned()
+
+    expect('Missing required prop: "c"').not.toHaveBeenWarned()
+    expect('Missing required prop: "d"').not.toHaveBeenWarned()
+  })
+
+  test('discriminated union props', () => {
+    /**
+     * type Props = {
+     *  a: string
+     *  b: number
+     * } | {
+     *  a: string
+     *  c: string
+     * }
+     */
+    const props = {
+      a: {
+        type: [String, Number],
+        required: true,
+        union: [['b'], ['c']],
+      },
+      b: {
+        type: Number,
+        required: true,
+        union: ['a'],
+      },
+      c: {
+        type: Boolean,
+        required: true,
+        union: ['a'],
+      },
+    }
+
+    let proxy: any
+    const Comp = {
+      props,
+      render() {
+        proxy = this
+      },
+    }
+
+    render(
+      h(Comp, {
+        b: 2,
+        // a: absent required - should warn
+        // c: not in active union path - should not warn
+      }),
+      nodeOps.createElement('div'),
+    )
+
+    expect(proxy.b).toBe(2)
+    expect('Missing required prop: "a"').toHaveBeenWarned()
+
+    expect('Missing required prop: "b"').not.toHaveBeenWarned()
+    expect('Missing required prop: "c"').not.toHaveBeenWarned()
+  })
+
   test('default value', () => {
     let proxy: any
     const defaultFn = vi.fn(() => ({ a: 1 }))

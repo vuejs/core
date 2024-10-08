@@ -93,6 +93,68 @@ return { foo }
 })"
 `;
 
+exports[`defineProps > discriminated union 1`] = `
+"import { defineComponent as _defineComponent } from 'vue'
+
+export default /*@__PURE__*/_defineComponent({
+  props: {
+    tag: { type: [String, Number], required: true, union: [['d1'], ['d2']] },
+    d1: { type: Number, required: true, union: ['tag'] },
+    d2: { type: String, required: true, union: ['tag'] }
+  },
+  setup(__props: any, { expose: __expose }) {
+  __expose();
+
+      const props = __props;
+    
+return { props }
+}
+
+})"
+`;
+
+exports[`defineProps > distributive union w/ conditional keys 1`] = `
+"import { defineComponent as _defineComponent } from 'vue'
+
+export default /*@__PURE__*/_defineComponent({
+  props: {
+    a: { type: String, required: false, union: ['b'] },
+    b: { type: Number, required: true, union: ['a'] },
+    c: { type: Number, required: true, union: ['d'] },
+    d: { type: String, required: false, union: ['c'] }
+  },
+  setup(__props: any, { expose: __expose }) {
+  __expose();
+
+      const props = __props;
+    
+return { props }
+}
+
+})"
+`;
+
+exports[`defineProps > distributive union with boolean keys 1`] = `
+"import { defineComponent as _defineComponent } from 'vue'
+
+export default /*@__PURE__*/_defineComponent({
+  props: {
+    a: { type: String, required: true, union: ['b'] },
+    b: { type: Number, required: true, union: ['a'] },
+    c: { type: Boolean, required: true, union: ['d'] },
+    d: { type: String, required: true, union: ['c'] }
+  },
+  setup(__props: any, { expose: __expose }) {
+  __expose();
+
+      const props = __props;
+    
+return { props }
+}
+
+})"
+`;
+
 exports[`defineProps > should escape names w/ special symbols 1`] = `
 "import { defineComponent as _defineComponent } from 'vue'
 
