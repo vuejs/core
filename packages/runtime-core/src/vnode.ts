@@ -490,7 +490,16 @@ function createBaseVNode(
     appContext: null,
     ctx: currentRenderingInstance,
   } as VNode
-
+  // eslint-disable-next-line no-restricted-syntax
+  if (vnode.ctx && currentRenderingInstance?.parent?.ut) {
+    vnode.ctx.parentUt = {
+      ut: currentRenderingInstance.parent.ut,
+      uid: currentRenderingInstance.parent.uid,
+    }
+  }
+  if (vnode.ctx && vnode.ctx.parent && vnode.ctx.parent.parentUt) {
+    vnode.ctx.parentUt = vnode.ctx.parent.parentUt
+  }
   if (needFullChildrenNormalization) {
     normalizeChildren(vnode, children)
     // normalize suspense children
