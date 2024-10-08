@@ -873,9 +873,12 @@ function setupStatefulComponent(
     resetTracking()
     reset()
 
+    if ((isPromise(setupResult) || instance.sp) && !isAsyncWrapper(instance)) {
+      // async setup / serverPrefetch, mark as async boundary for useId()
+      markAsyncBoundary(instance)
+    }
+
     if (isPromise(setupResult)) {
-      // async setup, mark as async boundary for useId()
-      if (!isAsyncWrapper(instance)) markAsyncBoundary(instance)
       setupResult.then(unsetCurrentInstance, unsetCurrentInstance)
       if (isSSR) {
         // return the promise so server-renderer can wait on it
