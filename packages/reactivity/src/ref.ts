@@ -489,12 +489,12 @@ export type ShallowUnwrapRef<T> = {
   [K in keyof T]: DistributeRef<T[K]>
 }
 
-type DistributeRef<T> = T extends Ref<infer V> ? V : T
+type DistributeRef<T> = T extends Ref<infer V, unknown> ? V : T
 
 export type UnwrapRef<T> =
-  T extends ShallowRef<infer V, infer _>
+  T extends ShallowRef<infer V, unknown>
     ? V
-    : T extends Ref<infer V, infer _>
+    : T extends Ref<infer V, unknown>
       ? UnwrapRefSimple<V>
       : UnwrapRefSimple<T>
 
