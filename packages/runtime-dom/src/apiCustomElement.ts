@@ -451,13 +451,15 @@ export class VueElement
     }
 
     // defining getter/setters on prototype
+    const propValue: Record<string, any> = {}
     for (const key of declaredPropKeys.map(camelize)) {
-      if (key === 'tagName') continue
+      if (key in this) propValue[key] = this[key as keyof this]
       Object.defineProperty(this, key, {
         get() {
-          return this._getProp(key)
+          return key in propValue ? propValue[key] : this._getProp(key)
         },
         set(val) {
+          if (key in this) propValue[key] = val
           this._setProp(key, val, true, true)
         },
       })
@@ -491,15 +493,6 @@ export class VueElement
     shouldReflect = true,
     shouldUpdate = false,
   ): void {
-    if (key === 'tagName') {
-      if (__DEV__) {
-        warn(
-          `Failed setting prop "${key}" on <${this.tagName.toLowerCase()}>: ` +
-            `TypeError: Cannot set property tagName of #<Element> which has only a getter`,
-        )
-      }
-      return
-    }
     if (val !== this._props[key]) {
       if (val === REMOVAL) {
         delete this._props[key]
