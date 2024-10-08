@@ -10,7 +10,13 @@ export function useModel<
   M extends PropertyKey,
   T extends Record<string, any>,
   K extends keyof T,
->(props: T, name: K, options?: DefineModelOptions<T[K]>): ModelRef<T[K], M>
+  G = T[K],
+  S = T[K],
+>(
+  props: T,
+  name: K,
+  options?: DefineModelOptions<T[K], G, S>,
+): ModelRef<T[K], M, G, S>
 export function useModel(
   props: Record<string, any>,
   name: string,
@@ -33,7 +39,7 @@ export function useModel(
 
   const res = customRef((track, trigger) => {
     let localValue: any
-    let prevSetValue: any
+    let prevSetValue: any = EMPTY_OBJ
     let prevEmittedValue: any
 
     watchSyncEffect(() => {
@@ -51,6 +57,13 @@ export function useModel(
       },
 
       set(value) {
+        const emittedValue = options.set ? options.set(value) : value
+        if (
+          !hasChanged(emittedValue, localValue) &&
+          !(prevSetValue !== EMPTY_OBJ && hasChanged(value, prevSetValue))
+        ) {
+          return
+        }
         const rawProps = i.vnode!.props
         if (
           !(
@@ -62,23 +75,22 @@ export function useModel(
             (`onUpdate:${name}` in rawProps ||
               `onUpdate:${camelizedName}` in rawProps ||
               `onUpdate:${hyphenatedName}` in rawProps)
-          ) &&
-          hasChanged(value, localValue)
+          )
         ) {
           // no v-model, local update
           localValue = value
           trigger()
         }
-        const emittedValue = options.set ? options.set(value) : value
+
         i.emit(`update:${name}`, emittedValue)
         // #10279: if the local value is converted via a setter but the value
         // emitted to parent was the same, the parent will not trigger any
         // updates and there will be no prop sync. However the local input state
         // may be out of sync, so we need to force an update here.
         if (
-          value !== emittedValue &&
-          value !== prevSetValue &&
-          emittedValue === prevEmittedValue
+          hasChanged(value, emittedValue) &&
+          hasChanged(value, prevSetValue) &&
+          !hasChanged(emittedValue, prevEmittedValue)
         ) {
           trigger()
         }

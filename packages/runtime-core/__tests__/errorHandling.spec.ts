@@ -1,5 +1,6 @@
 import {
   type VNode,
+  computed,
   createApp,
   defineComponent,
   h,
@@ -635,6 +636,73 @@ describe('error handling', () => {
     expect(app.config.errorHandler).toHaveBeenCalledWith(
       error,
       {},
+      ErrorTypeStrings[ErrorCodes.COMPONENT_UPDATE],
+    )
+  })
+
+  // #11286
+  test('handle error in computed', async () => {
+    const err = new Error()
+    const handler = vi.fn()
+
+    const count = ref(1)
+    const x = computed(() => {
+      if (count.value === 2) throw err
+      return count.value + 1
+    })
+
+    const app = createApp({
+      setup() {
+        return () => x.value
+      },
+    })
+
+    app.config.errorHandler = handler
+    app.mount(nodeOps.createElement('div'))
+
+    count.value = 2
+
+    await nextTick()
+    expect(handler).toHaveBeenCalledWith(
+      err,
+      {},
+      ErrorTypeStrings[ErrorCodes.COMPONENT_UPDATE],
+    )
+  })
+
+  // #11624
+  test('in computed that is used as key for watch', async () => {
+    const err = new Error('foo')
+    const fn = vi.fn()
+    const trigger = ref(false)
+
+    const Comp = {
+      setup() {
+        onErrorCaptured((err, instance, info) => {
+          fn(err, info)
+          return false
+        })
+        return () => h(Child)
+      },
+    }
+
+    const Child = {
+      setup() {
+        const foo = computed(() => {
+          if (trigger.value) throw err
+          return 1
+        })
+        watch(foo, () => {})
+        return () => null
+      },
+    }
+
+    render(h(Comp), nodeOps.createElement('div'))
+
+    trigger.value = true
+    await nextTick()
+    expect(fn).toHaveBeenCalledWith(
+      err,
       ErrorTypeStrings[ErrorCodes.COMPONENT_UPDATE],
     )
   })
