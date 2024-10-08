@@ -68,7 +68,7 @@ export function baseCompile(
 ): CodegenResult {
   const onError = options.onError || defaultOnError
   const isModuleMode = options.mode === 'module'
-  /* istanbul ignore if */
+  /* v8 ignore start */
   if (__BROWSER__) {
     if (options.prefixIdentifiers === true) {
       onError(createCompilerError(ErrorCodes.X_PREFIX_ID_NOT_SUPPORTED))
@@ -76,6 +76,7 @@ export function baseCompile(
       onError(createCompilerError(ErrorCodes.X_MODULE_MODE_NOT_SUPPORTED))
     }
   }
+  /* v8 ignore stop */
 
   const prefixIdentifiers =
     !__BROWSER__ && (options.prefixIdentifiers === true || isModuleMode)

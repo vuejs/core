@@ -27,6 +27,7 @@ import { version } from '.'
 import { installAppCompatProperties } from './compat/global'
 import type { NormalizedPropsOptions } from './componentProps'
 import type { ObjectEmitsOptions } from './componentEmits'
+import { ErrorCodes, callWithAsyncErrorHandling } from './errorHandling'
 import type { DefineComponent } from './apiDefineComponent'
 
 export interface App<HostElement = any> {
@@ -41,15 +42,44 @@ export interface App<HostElement = any> {
 
   mixin(mixin: ComponentOptions): this
   component(name: string): Component | undefined
-  component(name: string, component: Component | DefineComponent): this
-  directive<T = any, V = any>(name: string): Directive<T, V> | undefined
-  directive<T = any, V = any>(name: string, directive: Directive<T, V>): this
+  component<T extends Component | DefineComponent>(
+    name: string,
+    component: T,
+  ): this
+  directive<
+    HostElement = any,
+    Value = any,
+    Modifiers extends string = string,
+    Arg extends string = string,
+  >(
+    name: string,
+  ): Directive<HostElement, Value, Modifiers, Arg> | undefined
+  directive<
+    HostElement = any,
+    Value = any,
+    Modifiers extends string = string,
+    Arg extends string = string,
+  >(
+    name: string,
+    directive: Directive<HostElement, Value, Modifiers, Arg>,
+  ): this
   mount(
     rootContainer: HostElement | string,
+    /**
+     * @internal
+     */
     isHydrate?: boolean,
+    /**
+     * @internal
+     */
     namespace?: boolean | ElementNamespace,
+    /**
+     * @internal
+     */
+    vnode?: VNode,
   ): ComponentPublicInstance
   unmount(): void
+  onUnmount(cb: () => void): void
   provide<T, K = InjectionKey<T> | string | number>(
     key: K,
     value: K extends InjectionKey<infer V> ? V : T,
@@ -70,6 +100,11 @@ export interface App<HostElement = any> {
   _container: HostElement | null
   _context: AppContext
   _instance: ComponentInternalInstance | null
+
+  /**
+   * @internal custom element vnode
+   */
+  _ceVNode?: VNode
 
   /**
    * v2 compat only
@@ -119,6 +154,18 @@ export interface AppConfig {
    * Enable warnings for computed getters that recursively trigger itself.
    */
   warnRecursiveComputed?: boolean
+
+  /**
+   * Whether to throw unhandled errors in production.
+   * Default is `false` to avoid crashing on any error (and only logs it)
+   * But in some cases, e.g. SSR, throwing might be more desirable.
+   */
+  throwUnhandledErrorInProduction?: boolean
+
+  /**
+   * Prefix for all useId() calls within this app
+   */
+  idPrefix?: string
 }
 
 export interface AppContext {
@@ -217,6 +264,7 @@ export function createAppAPI<HostElement>(
 
     const context = createAppContext()
     const installedPlugins = new WeakSet()
+    const pluginCleanupFns: Array<() => any> = []
 
     let isMounted = false
 
@@ -319,7 +367,7 @@ export function createAppAPI<HostElement>(
                 ` you need to unmount the previous app by calling \`app.unmount()\` first.`,
             )
           }
-          const vnode = createVNode(rootComponent, rootProps)
+          const vnode = app._ceVNode || createVNode(rootComponent, rootProps)
           // store app context on the root VNode.
           // this will be set on the root instance on initial mount.
           vnode.appContext = context
@@ -369,8 +417,23 @@ export function createAppAPI<HostElement>(
         }
       },
 
+      onUnmount(cleanupFn: () => void) {
+        if (__DEV__ && typeof cleanupFn !== 'function') {
+          warn(
+            `Expected function as first argument to app.onUnmount(), ` +
+              `but got ${typeof cleanupFn}`,
+          )
+        }
+        pluginCleanupFns.push(cleanupFn)
+      },
+
       unmount() {
         if (isMounted) {
+          callWithAsyncErrorHandling(
+            pluginCleanupFns,
+            app._instance,
+            ErrorCodes.APP_UNMOUNT_CLEANUP,
+          )
           render(null, app._container)
           if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
             app._instance = null
