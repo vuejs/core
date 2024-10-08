@@ -2,6 +2,7 @@ import { TrackOpTypes } from './constants'
 import { endBatch, pauseTracking, resetTracking, startBatch } from './effect'
 import { isProxy, isShallow, toRaw, toReactive } from './reactive'
 import { ARRAY_ITERATE_KEY, track } from './dep'
+import { isArray } from '@vue/shared'
 
 /**
  * Track array iteration and return:
@@ -30,9 +31,9 @@ export const arrayInstrumentations: Record<string | symbol, Function> = <any>{
     return iterator(this, Symbol.iterator, toReactive)
   },
 
-  concat(...args: unknown[][]) {
+  concat(...args: unknown[]) {
     return reactiveReadArray(this).concat(
-      ...args.map(x => reactiveReadArray(x)),
+      ...args.map(x => (isArray(x) ? reactiveReadArray(x) : x)),
     )
   },
 
@@ -239,16 +240,21 @@ function apply(
   args?: IArguments,
 ) {
   const arr = shallowReadArray(self)
-  let methodFn
+  const needsWrap = arr !== self && !isShallow(self)
   // @ts-expect-error our code is limited to es2016 but user code is not
-  if ((methodFn = arr[method]) !== arrayProto[method]) {
-    return methodFn.apply(arr, args)
+  const methodFn = arr[method]
+
+  // #11759
+  // If the method being called is from a user-extended Array, the arguments will be unknown
+  // (unknown order and unknown parameter types). In this case, we skip the shallowReadArray
+  // handling and directly call apply with self.
+  if (methodFn !== arrayProto[method as any]) {
+    const result = methodFn.apply(self, args)
+    return needsWrap ? toReactive(result) : result
   }
 
-  let needsWrap = false
   let wrappedFn = fn
   if (arr !== self) {
-    needsWrap = !isShallow(self)
     if (needsWrap) {
       wrappedFn = function (this: unknown, item, index) {
         return fn.call(this, toReactive(item), index, self)

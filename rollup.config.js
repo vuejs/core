@@ -223,10 +223,10 @@ function createConfig(format, output, plugins = []) {
 
     if (isProductionBuild && isBrowserBuild) {
       Object.assign(replacements, {
-        'context.onError(': `/*#__PURE__*/ context.onError(`,
-        'emitError(': `/*#__PURE__*/ emitError(`,
-        'createCompilerError(': `/*#__PURE__*/ createCompilerError(`,
-        'createDOMCompilerError(': `/*#__PURE__*/ createDOMCompilerError(`,
+        'context.onError(': `/*@__PURE__*/ context.onError(`,
+        'emitError(': `/*@__PURE__*/ emitError(`,
+        'createCompilerError(': `/*@__PURE__*/ createCompilerError(`,
+        'createDOMCompilerError(': `/*@__PURE__*/ createDOMCompilerError(`,
       })
     }
 
@@ -258,7 +258,7 @@ function createConfig(format, output, plugins = []) {
       'source-map-js',
       '@babel/parser',
       'estree-walker',
-      'entities/dist/decode.js',
+      'entities/lib/decode.js',
     ]
 
     if (isGlobalBuild || isBrowserESMBuild || isCompatPackage) {

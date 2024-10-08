@@ -480,6 +480,26 @@ describe('type inference w/ options API', () => {
   })
 })
 
+// #4051
+describe('type inference w/ empty prop object', () => {
+  const MyComponent = defineComponent({
+    props: {},
+    setup(props) {
+      return {}
+    },
+    render() {},
+  })
+  expectType<JSX.Element>(<MyComponent />)
+  // AllowedComponentProps
+  expectType<JSX.Element>(<MyComponent class={'foo'} />)
+  // ComponentCustomProps
+  expectType<JSX.Element>(<MyComponent custom={1} />)
+  // VNodeProps
+  expectType<JSX.Element>(<MyComponent key="1" />)
+  // @ts-expect-error
+  expectError(<MyComponent other="other" />)
+})
+
 describe('with mixins', () => {
   const MixinA = defineComponent({
     emits: ['bar'],
@@ -906,12 +926,15 @@ describe('emits', () => {
     emits: {
       click: (n: number) => typeof n === 'number',
       input: (b: string) => b.length > 1,
+      Focus: (f: boolean) => !!f,
     },
     setup(props, { emit }) {
       expectType<((n: number) => boolean) | undefined>(props.onClick)
       expectType<((b: string) => boolean) | undefined>(props.onInput)
+      expectType<((f: boolean) => boolean) | undefined>(props.onFocus)
       emit('click', 1)
       emit('input', 'foo')
+      emit('Focus', true)
       //  @ts-expect-error
       emit('nope')
       //  @ts-expect-error
@@ -922,6 +945,10 @@ describe('emits', () => {
       emit('input')
       //  @ts-expect-error
       emit('input', 1)
+      //  @ts-expect-error
+      emit('focus')
+      //  @ts-expect-error
+      emit('focus', true)
     },
     created() {
       this.$emit('click', 1)
@@ -936,6 +963,10 @@ describe('emits', () => {
       this.$emit('input')
       //  @ts-expect-error
       this.$emit('input', 1)
+      //  @ts-expect-error
+      this.$emit('focus')
+      //  @ts-expect-error
+      this.$emit('focus', true)
     },
     mounted() {
       // #3599
@@ -954,6 +985,10 @@ describe('emits', () => {
         this.$emit('input')
         //  @ts-expect-error
         this.$emit('input', 1)
+        //  @ts-expect-error
+        this.$emit('focus')
+        //  @ts-expect-error
+        this.$emit('focus', true)
       })
     },
   })
@@ -1005,6 +1040,18 @@ describe('emits', () => {
       )
     },
   })
+
+  // #11803 manual props annotation in setup()
+  const Hello = defineComponent({
+    name: 'HelloWorld',
+    inheritAttrs: false,
+    props: { foo: String },
+    emits: {
+      customClick: (args: string) => typeof args === 'string',
+    },
+    setup(props: { foo?: string }) {},
+  })
+  ;<Hello onCustomClick={() => {}} />
 
   // without emits
   defineComponent({
@@ -1773,6 +1820,15 @@ describe('__typeRefs backdoor, object syntax', () => {
 
   expectType<ComponentInstance<typeof Child>>(refs.child)
   expectType<number>(refs.child.$refs.foo)
+})
+
+describe('__typeEl backdoor', () => {
+  const Comp = defineComponent({
+    __typeEl: {} as HTMLAnchorElement,
+  })
+  const c = new Comp()
+
+  expectType<HTMLAnchorElement>(c.$el)
 })
 
 defineComponent({

@@ -23,7 +23,6 @@ import {
 import {
   EMPTY_OBJ,
   NOOP,
-  PatchFlagNames,
   PatchFlags,
   camelize,
   capitalize,
@@ -222,7 +221,7 @@ export function createTransformContext(
       return `_${helperNameMap[context.helper(name)]}`
     },
     replaceNode(node) {
-      /* istanbul ignore if */
+      /* v8 ignore start */
       if (__DEV__) {
         if (!context.currentNode) {
           throw new Error(`Node being replaced is already removed.`)
@@ -231,9 +230,11 @@ export function createTransformContext(
           throw new Error(`Cannot replace root node.`)
         }
       }
+      /* v8 ignore stop */
       context.parent!.children[context.childIndex] = context.currentNode = node
     },
     removeNode(node) {
+      /* v8 ignore next 3 */
       if (__DEV__ && !context.parent) {
         throw new Error(`Cannot remove root node.`)
       }
@@ -243,7 +244,7 @@ export function createTransformContext(
         : context.currentNode
           ? context.childIndex
           : -1
-      /* istanbul ignore if */
+      /* v8 ignore next 3 */
       if (__DEV__ && removalIndex < 0) {
         throw new Error(`node being removed is not a child of current parent`)
       }
@@ -373,7 +374,6 @@ function createRootCodegen(root: RootNode, context: TransformContext) {
   } else if (children.length > 1) {
     // root has multiple nodes - return a fragment block.
     let patchFlag = PatchFlags.STABLE_FRAGMENT
-    let patchFlagText = PatchFlagNames[PatchFlags.STABLE_FRAGMENT]
     // check if the fragment actually contains a single valid child with
     // the rest being comments
     if (
@@ -381,7 +381,6 @@ function createRootCodegen(root: RootNode, context: TransformContext) {
       children.filter(c => c.type !== NodeTypes.COMMENT).length === 1
     ) {
       patchFlag |= PatchFlags.DEV_ROOT_FRAGMENT
-      patchFlagText += `, ${PatchFlagNames[PatchFlags.DEV_ROOT_FRAGMENT]}`
     }
     root.codegenNode = createVNodeCall(
       context,
