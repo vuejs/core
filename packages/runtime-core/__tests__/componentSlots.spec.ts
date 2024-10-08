@@ -213,7 +213,7 @@ describe('component: slots', () => {
     expect(instance.slots.default()).toMatchObject([normalizeVNode('footer')])
   })
 
-  test('should respect $stable flag', async () => {
+  test('should respect $stable flag with a value of true', async () => {
     const flag1 = ref(1)
     const flag2 = ref(2)
     const spy = vi.fn()
@@ -253,6 +253,48 @@ describe('component: slots', () => {
     flag2.value++
     await nextTick()
     expect(spy).toHaveBeenCalledTimes(2)
+  })
+
+  test('should respect $stable flag with a value of false', async () => {
+    const flag1 = ref(1)
+    const flag2 = ref(2)
+    const spy = vi.fn()
+
+    const Child = () => {
+      spy()
+      return 'child'
+    }
+
+    const App = {
+      setup() {
+        return () => [
+          flag1.value,
+          h(
+            Child,
+            { n: flag2.value },
+            {
+              foo: () => 'foo',
+              $stable: false,
+            },
+          ),
+        ]
+      },
+    }
+
+    render(h(App), nodeOps.createElement('div'))
+    expect(spy).toHaveBeenCalledTimes(1)
+
+    // parent re-render, props didn't change, slots are not stable
+    // -> child should update
+    flag1.value++
+    await nextTick()
+    expect(spy).toHaveBeenCalledTimes(2)
+
+    // parent re-render, props changed
+    // -> child should update
+    flag2.value++
+    await nextTick()
+    expect(spy).toHaveBeenCalledTimes(3)
   })
 
   test('should not warn when mounting another app in setup', () => {

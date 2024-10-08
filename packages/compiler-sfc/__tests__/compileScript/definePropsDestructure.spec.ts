@@ -6,7 +6,6 @@ describe('sfc reactive props destructure', () => {
   function compile(src: string, options?: Partial<SFCScriptCompileOptions>) {
     return compileSFCScript(src, {
       inlineTemplate: true,
-      propsDestructure: true,
       ...options,
     })
   }
@@ -79,7 +78,7 @@ describe('sfc reactive props destructure', () => {
     // function
     // functions need to be marked with a skip marker
     expect(content)
-      .toMatch(`props: /*#__PURE__*/_mergeDefaults(['foo', 'bar', 'baz'], {
+      .toMatch(`props: /*@__PURE__*/_mergeDefaults(['foo', 'bar', 'baz'], {
   foo: 1,
   bar: () => ({}),
   func: () => {}, __skip_func: true
@@ -99,7 +98,7 @@ describe('sfc reactive props destructure', () => {
     // safely infer whether runtime type is Function (e.g. if the runtime decl
     // is imported, or spreads another object)
     expect(content)
-      .toMatch(`props: /*#__PURE__*/_mergeDefaults({ foo: Number, bar: Object, func: Function, ext: null }, {
+      .toMatch(`props: /*@__PURE__*/_mergeDefaults({ foo: Number, bar: Object, func: Function, ext: null }, {
   foo: 1,
   bar: () => ({}),
   func: () => {}, __skip_func: true,
@@ -123,7 +122,7 @@ describe('sfc reactive props destructure', () => {
     })
 
     expect(content).toMatch(`
-  props: /*#__PURE__*/_mergeDefaults(['foo', 'foo:bar'], {
+  props: /*@__PURE__*/_mergeDefaults(['foo', 'foo:bar'], {
   foo: 1,
   "foo:bar": 'foo-bar'
 }),`)
@@ -379,14 +378,15 @@ describe('sfc reactive props destructure', () => {
       ).toThrow(`destructure cannot use computed key`)
     })
 
-    test('should error when used with withDefaults', () => {
-      expect(() =>
-        compile(
-          `<script setup lang="ts">
-          const { foo } = withDefaults(defineProps<{ foo: string }>(), { foo: 'foo' })
-          </script>`,
-        ),
-      ).toThrow(`withDefaults() is unnecessary when using destructure`)
+    test('should warn when used with withDefaults', () => {
+      compile(
+        `<script setup lang="ts">
+        const { foo } = withDefaults(defineProps<{ foo: string }>(), { foo: 'foo' })
+        </script>`,
+      )
+      expect(
+        `withDefaults() is unnecessary when using destructure`,
+      ).toHaveBeenWarned()
     })
 
     test('should error if destructure reference local vars', () => {

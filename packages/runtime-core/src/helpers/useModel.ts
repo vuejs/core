@@ -10,7 +10,13 @@ export function useModel<
   M extends PropertyKey,
   T extends Record<string, any>,
   K extends keyof T,
->(props: T, name: K, options?: DefineModelOptions<T[K]>): ModelRef<T[K], M>
+  G = T[K],
+  S = T[K],
+>(
+  props: T,
+  name: K,
+  options?: DefineModelOptions<T[K], G, S>,
+): ModelRef<T[K], M, G, S>
 export function useModel(
   props: Record<string, any>,
   name: string,
@@ -51,8 +57,9 @@ export function useModel(
       },
 
       set(value) {
+        const emittedValue = options.set ? options.set(value) : value
         if (
-          !hasChanged(value, localValue) &&
+          !hasChanged(emittedValue, localValue) &&
           !(prevSetValue !== EMPTY_OBJ && hasChanged(value, prevSetValue))
         ) {
           return
@@ -74,7 +81,7 @@ export function useModel(
           localValue = value
           trigger()
         }
-        const emittedValue = options.set ? options.set(value) : value
+
         i.emit(`update:${name}`, emittedValue)
         // #10279: if the local value is converted via a setter but the value
         // emitted to parent was the same, the parent will not trigger any
