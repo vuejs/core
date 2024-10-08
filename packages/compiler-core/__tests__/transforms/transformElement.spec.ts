@@ -1381,4 +1381,14 @@ describe('compiler: element transform', () => {
       ],
     })
   })
+
+  test('resolveSetupReference handle `kebab-case` component', () => {
+    const { node } = parseWithElementTransform(`<view-component/>`, {
+      isNativeTag: () => false,
+      bindingMetadata: {
+        ViewComponent: BindingTypes.SETUP_CONST,
+      },
+    })
+    expect(node.tag).toBe(`$setup["ViewComponent"]`)
+  })
 })
