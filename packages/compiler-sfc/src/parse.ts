@@ -18,6 +18,7 @@ import { createCache } from './cache'
 import type { ImportBinding } from './compileScript'
 import { isImportUsed } from './script/importUsageCheck'
 import type { LRUCache } from 'lru-cache'
+import { genCacheKey } from '@vue/shared'
 
 export const DEFAULT_FILENAME = 'anonymous.vue'
 
@@ -103,24 +104,14 @@ export const parseCache:
   | Map<string, SFCParseResult>
   | LRUCache<string, SFCParseResult> = createCache<SFCParseResult>()
 
-function genCacheKey(source: string, options: SFCParseOptions): string {
-  return (
-    source +
-    JSON.stringify(
-      {
-        ...options,
-        compiler: { parse: options.compiler?.parse },
-      },
-      (_, val) => (typeof val === 'function' ? val.toString() : val),
-    )
-  )
-}
-
 export function parse(
   source: string,
   options: SFCParseOptions = {},
 ): SFCParseResult {
-  const sourceKey = genCacheKey(source, options)
+  const sourceKey = genCacheKey(source, {
+    ...options,
+    compiler: { parse: options.compiler?.parse },
+  })
   const cache = parseCache.get(sourceKey)
   if (cache) {
     return cache

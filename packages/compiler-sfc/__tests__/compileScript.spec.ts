@@ -472,6 +472,23 @@ describe('SFC compile <script setup>', () => {
       assertCode(content)
     })
 
+    test('v-model w/ newlines codegen', () => {
+      const { content } = compile(
+        `<script setup>
+        const count = ref(0)
+        </script>
+        <template>
+          <input v-model="
+          count
+          ">
+        </template>
+        `,
+        { inlineTemplate: true },
+      )
+      expect(content).toMatch(`_isRef(count) ? (count).value = $event : null`)
+      assertCode(content)
+    })
+
     test('v-model should not generate ref assignment code for non-setup bindings', () => {
       const { content } = compile(
         `<script setup>

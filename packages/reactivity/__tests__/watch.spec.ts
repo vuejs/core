@@ -4,6 +4,7 @@ import {
   WatchErrorCodes,
   type WatchOptions,
   type WatchScheduler,
+  computed,
   onWatcherCleanup,
   ref,
   watch,
@@ -208,5 +209,72 @@ describe('watch', () => {
 
     source.value++
     expect(dummy).toBe(1)
+  })
+
+  // #12033
+  test('recursive sync watcher on computed', () => {
+    const r = ref(0)
+    const c = computed(() => r.value)
+
+    watch(c, v => {
+      if (v > 1) {
+        r.value--
+      }
+    })
+
+    expect(r.value).toBe(0)
+    expect(c.value).toBe(0)
+
+    r.value = 10
+    expect(r.value).toBe(1)
+    expect(c.value).toBe(1)
+  })
+
+  // edge case where a nested endBatch() causes an effect to be batched in a
+  // nested batch loop with its .next mutated, causing the outer loop to end
+  // early
+  test('nested batch edge case', () => {
+    // useClamp from VueUse
+    const clamp = (n: number, min: number, max: number) =>
+      Math.min(max, Math.max(min, n))
+    function useClamp(src: Ref<number>, min: number, max: number) {
+      return computed({
+        get() {
+          return (src.value = clamp(src.value, min, max))
+        },
+        set(val) {
+          src.value = clamp(val, min, max)
+        },
+      })
+    }
+
+    const src = ref(1)
+    const clamped = useClamp(src, 1, 5)
+    watch(src, val => (clamped.value = val))
+
+    const spy = vi.fn()
+    watch(clamped, spy)
+
+    src.value = 2
+    expect(spy).toHaveBeenCalledTimes(1)
+    src.value = 10
+    expect(spy).toHaveBeenCalledTimes(2)
+  })
+
+  test('should ensure correct execution order in batch processing', () => {
+    const dummy: number[] = []
+    const n1 = ref(0)
+    const n2 = ref(0)
+    const sum = computed(() => n1.value + n2.value)
+    watch(n1, () => {
+      dummy.push(1)
+      n2.value++
+    })
+    watch(sum, () => dummy.push(2))
+    watch(n1, () => dummy.push(3))
+
+    n1.value++
+
+    expect(dummy).toEqual([1, 2, 3])
   })
 })
