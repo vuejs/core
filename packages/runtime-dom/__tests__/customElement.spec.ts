@@ -1386,4 +1386,18 @@ describe('defineCustomElement', () => {
     await nextTick()
     expect(e.shadowRoot!.innerHTML).toBe(`false,boolean`)
   })
+
+  test('support attachInternals method', () => {
+    const E = defineCustomElement({
+      formAssociated: true,
+      render() {
+        return h('div', 'hello')
+      },
+    })
+    customElements.define('my-el-attach-internals', E)
+    container.innerHTML = `<my-el-attach-internals></my-el-attach-internals>`
+    const e = container.childNodes[0] as VueElement
+    expect(e.shadowRoot!.innerHTML).toBe(`<div>hello</div>`)
+    expect(e._internals).toBeTruthy()
+  })
 })
