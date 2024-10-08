@@ -1,20 +1,12 @@
 import { getGlobalThis, isString } from '@vue/shared'
 import { DOMNodeTypes, isComment } from './hydration'
 
-// https://github.com/nuxt/nuxt/blob/main/packages/nuxt/src/app/compat/idle-callback.ts
 // Polyfills for Safari support
-// https://caniuse.com/requestidlecallback
-const requestIdleCallback: typeof getGlobalThis().requestIdleCallback =
-  getGlobalThis().requestIdleCallback ||
-  (cb => {
-    return setTimeout(cb, 1)
-  })
-
-const cancelIdleCallback: typeof getGlobalThis().cancelIdleCallback =
-  getGlobalThis().cancelIdleCallback ||
-  (id => {
-    clearTimeout(id)
-  })
+// see https://caniuse.com/requestidlecallback
+const requestIdleCallback: Window['requestIdleCallback'] =
+  getGlobalThis().requestIdleCallback || (cb => setTimeout(cb, 1))
+const cancelIdleCallback: Window['cancelIdleCallback'] =
+  getGlobalThis().cancelIdleCallback || (id => clearTimeout(id))
 
 /**
  * A lazy hydration strategy for async components.
