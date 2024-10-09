@@ -563,4 +563,5 @@ export function getMemoedVNodeCall(
   }
 }
 
-export const forAliasRE: RegExp = /([\s\S]*?)\s+(?:in|of)\s+(\S[\s\S]*)/
+export const forAliasRE: RegExp =
+  /([\s\S]*?[\s\)\}\]]+)(?:in|of)([\s\[]+[\s\S]*)/
