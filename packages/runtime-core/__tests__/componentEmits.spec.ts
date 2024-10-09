@@ -79,13 +79,13 @@ describe('component: emit', () => {
       created() {
         this.$emit('test-event')
         this.$emit('testEvent')
-      }
+      },
     })
 
     const fooSpy = vi.fn()
     const Comp = () =>
       h(Foo, {
-        'on-test-event': fooSpy
+        'on-test-event': fooSpy,
       })
     render(h(Comp), nodeOps.createElement('div'))
 
