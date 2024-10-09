@@ -1,18 +1,20 @@
-import { ParserOptions } from '../src/options'
-import { baseParse, TextModes } from '../src/parse'
+import type { ParserOptions } from '../src/options'
 import { ErrorCodes } from '../src/errors'
 import {
-  CommentNode,
-  ElementNode,
+  type CommentNode,
+  ConstantTypes,
+  type DirectiveNode,
+  type ElementNode,
   ElementTypes,
+  type InterpolationNode,
   Namespaces,
   NodeTypes,
-  Position,
-  TextNode,
-  InterpolationNode,
-  ConstantTypes,
-  DirectiveNode
+  type Position,
+  type TextNode,
 } from '../src/ast'
+
+import { baseParse } from '../src/parser'
+import type { Program } from '@babel/types'
 
 describe('compiler: parse', () => {
   describe('Text', () => {
@@ -26,27 +28,36 @@ describe('compiler: parse', () => {
         loc: {
           start: { offset: 0, line: 1, column: 1 },
           end: { offset: 9, line: 1, column: 10 },
-          source: 'some text'
-        }
+          source: 'some text',
+        },
       })
     })
 
     test('simple text with invalid end tag', () => {
       const onError = vi.fn()
-      const ast = baseParse('some text</div>', {
-        onError
-      })
+      const ast = baseParse('some text</div>', { onError })
       const text = ast.children[0] as TextNode
 
-      expect(onError).toBeCalled()
+      expect(onError.mock.calls).toMatchObject([
+        [
+          {
+            code: ErrorCodes.X_INVALID_END_TAG,
+            loc: {
+              start: { column: 10, line: 1, offset: 9 },
+              end: { column: 10, line: 1, offset: 9 },
+            },
+          },
+        ],
+      ])
+
       expect(text).toStrictEqual({
         type: NodeTypes.TEXT,
         content: 'some text',
         loc: {
           start: { offset: 0, line: 1, column: 1 },
           end: { offset: 9, line: 1, column: 10 },
-          source: 'some text'
-        }
+          source: 'some text',
+        },
       })
     })
 
@@ -61,8 +72,8 @@ describe('compiler: parse', () => {
         loc: {
           start: { offset: 0, line: 1, column: 1 },
           end: { offset: 5, line: 1, column: 6 },
-          source: 'some '
-        }
+          source: 'some ',
+        },
       })
       expect(text2).toStrictEqual({
         type: NodeTypes.TEXT,
@@ -70,8 +81,8 @@ describe('compiler: parse', () => {
         loc: {
           start: { offset: 20, line: 1, column: 21 },
           end: { offset: 25, line: 1, column: 26 },
-          source: ' text'
-        }
+          source: ' text',
+        },
       })
     })
 
@@ -86,8 +97,8 @@ describe('compiler: parse', () => {
         loc: {
           start: { offset: 0, line: 1, column: 1 },
           end: { offset: 5, line: 1, column: 6 },
-          source: 'some '
-        }
+          source: 'some ',
+        },
       })
       expect(text2).toStrictEqual({
         type: NodeTypes.TEXT,
@@ -95,8 +106,8 @@ describe('compiler: parse', () => {
         loc: {
           start: { offset: 21, line: 1, column: 22 },
           end: { offset: 26, line: 1, column: 27 },
-          source: ' text'
-        }
+          source: ' text',
+        },
       })
     })
 
@@ -111,8 +122,8 @@ describe('compiler: parse', () => {
         loc: {
           start: { offset: 0, line: 1, column: 1 },
           end: { offset: 5, line: 1, column: 6 },
-          source: 'some '
-        }
+          source: 'some ',
+        },
       })
       expect(text2).toStrictEqual({
         type: NodeTypes.TEXT,
@@ -120,8 +131,8 @@ describe('compiler: parse', () => {
         loc: {
           start: { offset: 32, line: 1, column: 33 },
           end: { offset: 37, line: 1, column: 38 },
-          source: ' text'
-        }
+          source: ' text',
+        },
       })
     })
 
@@ -131,7 +142,7 @@ describe('compiler: parse', () => {
           if (err.code !== ErrorCodes.INVALID_FIRST_CHARACTER_OF_TAG_NAME) {
             throw err
           }
-        }
+        },
       })
       const text = ast.children[0] as TextNode
 
@@ -141,8 +152,8 @@ describe('compiler: parse', () => {
         loc: {
           start: { offset: 0, line: 1, column: 1 },
           end: { offset: 5, line: 1, column: 6 },
-          source: 'a < b'
-        }
+          source: 'a < b',
+        },
       })
     })
 
@@ -152,7 +163,7 @@ describe('compiler: parse', () => {
           if (error.code !== ErrorCodes.X_MISSING_INTERPOLATION_END) {
             throw error
           }
-        }
+        },
       })
       const text = ast.children[0] as TextNode
 
@@ -162,8 +173,8 @@ describe('compiler: parse', () => {
         loc: {
           start: { offset: 0, line: 1, column: 1 },
           end: { offset: 6, line: 1, column: 7 },
-          source: 'a {{ b'
-        }
+          source: 'a {{ b',
+        },
       })
     })
   })
@@ -183,14 +194,14 @@ describe('compiler: parse', () => {
           loc: {
             start: { offset: 2, line: 1, column: 3 },
             end: { offset: 9, line: 1, column: 10 },
-            source: `message`
-          }
+            source: 'message',
+          },
         },
         loc: {
           start: { offset: 0, line: 1, column: 1 },
           end: { offset: 11, line: 1, column: 12 },
-          source: '{{message}}'
-        }
+          source: '{{message}}',
+        },
       })
     })
 
@@ -208,14 +219,14 @@ describe('compiler: parse', () => {
           loc: {
             start: { offset: 3, line: 1, column: 4 },
             end: { offset: 6, line: 1, column: 7 },
-            source: 'a<b'
-          }
+            source: 'a<b',
+          },
         },
         loc: {
           start: { offset: 0, line: 1, column: 1 },
           end: { offset: 9, line: 1, column: 10 },
-          source: '{{ a<b }}'
-        }
+          source: '{{ a<b }}',
+        },
       })
     })
 
@@ -234,14 +245,14 @@ describe('compiler: parse', () => {
           loc: {
             start: { offset: 3, line: 1, column: 4 },
             end: { offset: 6, line: 1, column: 7 },
-            source: 'a<b'
-          }
+            source: 'a<b',
+          },
         },
         loc: {
           start: { offset: 0, line: 1, column: 1 },
           end: { offset: 9, line: 1, column: 10 },
-          source: '{{ a<b }}'
-        }
+          source: '{{ a<b }}',
+        },
       })
 
       expect(interpolation2).toStrictEqual({
@@ -254,14 +265,14 @@ describe('compiler: parse', () => {
           loc: {
             start: { offset: 12, line: 1, column: 13 },
             end: { offset: 15, line: 1, column: 16 },
-            source: 'c>d'
-          }
+            source: 'c>d',
+          },
         },
         loc: {
           start: { offset: 9, line: 1, column: 10 },
           end: { offset: 18, line: 1, column: 19 },
-          source: '{{ c>d }}'
-        }
+          source: '{{ c>d }}',
+        },
       })
     })
 
@@ -281,20 +292,20 @@ describe('compiler: parse', () => {
           loc: {
             start: { offset: 8, line: 1, column: 9 },
             end: { offset: 16, line: 1, column: 17 },
-            source: '"</div>"'
-          }
+            source: '"</div>"',
+          },
         },
         loc: {
           start: { offset: 5, line: 1, column: 6 },
           end: { offset: 19, line: 1, column: 20 },
-          source: '{{ "</div>" }}'
-        }
+          source: '{{ "</div>" }}',
+        },
       })
     })
 
     test('custom delimiters', () => {
       const ast = baseParse('<p>{msg}</p>', {
-        delimiters: ['{', '}']
+        delimiters: ['{', '}'],
       })
       const element = ast.children[0] as ElementNode
       const interpolation = element.children[0] as InterpolationNode
@@ -309,14 +320,14 @@ describe('compiler: parse', () => {
           loc: {
             start: { offset: 4, line: 1, column: 5 },
             end: { offset: 7, line: 1, column: 8 },
-            source: 'msg'
-          }
+            source: 'msg',
+          },
         },
         loc: {
           start: { offset: 3, line: 1, column: 4 },
           end: { offset: 8, line: 1, column: 9 },
-          source: '{msg}'
-        }
+          source: '{msg}',
+        },
       })
     })
   })
@@ -332,8 +343,8 @@ describe('compiler: parse', () => {
         loc: {
           start: { offset: 0, line: 1, column: 1 },
           end: { offset: 7, line: 1, column: 8 },
-          source: '<!---->'
-        }
+          source: '<!---->',
+        },
       })
     })
 
@@ -347,8 +358,8 @@ describe('compiler: parse', () => {
         loc: {
           start: { offset: 0, line: 1, column: 1 },
           end: { offset: 10, line: 1, column: 11 },
-          source: '<!--abc-->'
-        }
+          source: '<!--abc-->',
+        },
       })
     })
 
@@ -363,8 +374,8 @@ describe('compiler: parse', () => {
         loc: {
           start: { offset: 0, line: 1, column: 1 },
           end: { offset: 10, line: 1, column: 11 },
-          source: '<!--abc-->'
-        }
+          source: '<!--abc-->',
+        },
       })
       expect(comment2).toStrictEqual({
         type: NodeTypes.COMMENT,
@@ -372,8 +383,8 @@ describe('compiler: parse', () => {
         loc: {
           start: { offset: 10, line: 1, column: 11 },
           end: { offset: 20, line: 1, column: 21 },
-          source: '<!--def-->'
-        }
+          source: '<!--def-->',
+        },
       })
     })
 
@@ -390,38 +401,38 @@ describe('compiler: parse', () => {
       const rawText = `<p/><!-- foo --><p/>`
 
       const astWithComments = baseParse(`<pre>${rawText}</pre>`, {
-        comments: true
+        comments: true,
       })
       expect(
-        (astWithComments.children[0] as ElementNode).children
+        (astWithComments.children[0] as ElementNode).children,
       ).toMatchObject([
         {
           type: NodeTypes.ELEMENT,
-          tag: 'p'
+          tag: 'p',
         },
         {
-          type: NodeTypes.COMMENT
+          type: NodeTypes.COMMENT,
         },
         {
           type: NodeTypes.ELEMENT,
-          tag: 'p'
-        }
+          tag: 'p',
+        },
       ])
 
       const astWithoutComments = baseParse(`<pre>${rawText}</pre>`, {
-        comments: false
+        comments: false,
       })
       expect(
-        (astWithoutComments.children[0] as ElementNode).children
+        (astWithoutComments.children[0] as ElementNode).children,
       ).toMatchObject([
         {
           type: NodeTypes.ELEMENT,
-          tag: 'p'
+          tag: 'p',
         },
         {
           type: NodeTypes.ELEMENT,
-          tag: 'p'
-        }
+          tag: 'p',
+        },
       ])
     })
   })
@@ -438,7 +449,6 @@ describe('compiler: parse', () => {
         tagType: ElementTypes.ELEMENT,
         codegenNode: undefined,
         props: [],
-        isSelfClosing: false,
         children: [
           {
             type: NodeTypes.TEXT,
@@ -446,15 +456,15 @@ describe('compiler: parse', () => {
             loc: {
               start: { offset: 5, line: 1, column: 6 },
               end: { offset: 10, line: 1, column: 11 },
-              source: 'hello'
-            }
-          }
+              source: 'hello',
+            },
+          },
         ],
         loc: {
           start: { offset: 0, line: 1, column: 1 },
           end: { offset: 16, line: 1, column: 17 },
-          source: '<div>hello</div>'
-        }
+          source: '<div>hello</div>',
+        },
       })
     })
 
@@ -469,13 +479,12 @@ describe('compiler: parse', () => {
         tagType: ElementTypes.ELEMENT,
         codegenNode: undefined,
         props: [],
-        isSelfClosing: false,
         children: [],
         loc: {
           start: { offset: 0, line: 1, column: 1 },
           end: { offset: 11, line: 1, column: 12 },
-          source: '<div></div>'
-        }
+          source: '<div></div>',
+        },
       })
     })
 
@@ -490,20 +499,19 @@ describe('compiler: parse', () => {
         tagType: ElementTypes.ELEMENT,
         codegenNode: undefined,
         props: [],
-
-        isSelfClosing: true,
         children: [],
+        isSelfClosing: true,
         loc: {
           start: { offset: 0, line: 1, column: 1 },
           end: { offset: 6, line: 1, column: 7 },
-          source: '<div/>'
-        }
+          source: '<div/>',
+        },
       })
     })
 
     test('void element', () => {
       const ast = baseParse('<img>after', {
-        isVoidTag: tag => tag === 'img'
+        isVoidTag: tag => tag === 'img',
       })
       const element = ast.children[0] as ElementNode
 
@@ -514,14 +522,35 @@ describe('compiler: parse', () => {
         tagType: ElementTypes.ELEMENT,
         codegenNode: undefined,
         props: [],
-
-        isSelfClosing: false,
         children: [],
         loc: {
           start: { offset: 0, line: 1, column: 1 },
           end: { offset: 5, line: 1, column: 6 },
-          source: '<img>'
-        }
+          source: '<img>',
+        },
+      })
+    })
+
+    test('self-closing void element', () => {
+      const ast = baseParse('<img/>after', {
+        isVoidTag: tag => tag === 'img',
+      })
+      const element = ast.children[0] as ElementNode
+
+      expect(element).toStrictEqual({
+        type: NodeTypes.ELEMENT,
+        ns: Namespaces.HTML,
+        tag: 'img',
+        tagType: ElementTypes.ELEMENT,
+        codegenNode: undefined,
+        props: [],
+        children: [],
+        isSelfClosing: true,
+        loc: {
+          start: { offset: 0, line: 1, column: 1 },
+          end: { offset: 6, line: 1, column: 7 },
+          source: '<img/>',
+        },
       })
     })
 
@@ -530,7 +559,7 @@ describe('compiler: parse', () => {
       const element = ast.children[0]
       expect(element).toMatchObject({
         type: NodeTypes.ELEMENT,
-        tagType: ElementTypes.TEMPLATE
+        tagType: ElementTypes.TEMPLATE,
       })
     })
 
@@ -539,31 +568,31 @@ describe('compiler: parse', () => {
       const element = ast.children[0]
       expect(element).toMatchObject({
         type: NodeTypes.ELEMENT,
-        tagType: ElementTypes.ELEMENT
+        tagType: ElementTypes.ELEMENT,
       })
     })
 
     test('native element with `isNativeTag`', () => {
       const ast = baseParse('<div></div><comp></comp><Comp></Comp>', {
-        isNativeTag: tag => tag === 'div'
+        isNativeTag: tag => tag === 'div',
       })
 
       expect(ast.children[0]).toMatchObject({
         type: NodeTypes.ELEMENT,
         tag: 'div',
-        tagType: ElementTypes.ELEMENT
+        tagType: ElementTypes.ELEMENT,
       })
 
       expect(ast.children[1]).toMatchObject({
         type: NodeTypes.ELEMENT,
         tag: 'comp',
-        tagType: ElementTypes.COMPONENT
+        tagType: ElementTypes.COMPONENT,
       })
 
       expect(ast.children[2]).toMatchObject({
         type: NodeTypes.ELEMENT,
         tag: 'Comp',
-        tagType: ElementTypes.COMPONENT
+        tagType: ElementTypes.COMPONENT,
       })
     })
 
@@ -573,105 +602,105 @@ describe('compiler: parse', () => {
       expect(ast.children[0]).toMatchObject({
         type: NodeTypes.ELEMENT,
         tag: 'div',
-        tagType: ElementTypes.ELEMENT
+        tagType: ElementTypes.ELEMENT,
       })
 
       expect(ast.children[1]).toMatchObject({
         type: NodeTypes.ELEMENT,
         tag: 'comp',
-        tagType: ElementTypes.ELEMENT
+        tagType: ElementTypes.ELEMENT,
       })
 
       expect(ast.children[2]).toMatchObject({
         type: NodeTypes.ELEMENT,
         tag: 'Comp',
-        tagType: ElementTypes.COMPONENT
+        tagType: ElementTypes.COMPONENT,
       })
     })
 
-    test('v-is with `isNativeTag`', () => {
+    test('is casting with `isNativeTag`', () => {
       const ast = baseParse(
-        `<div></div><div v-is="'foo'"></div><Comp></Comp>`,
+        `<div></div><div is="vue:foo"></div><Comp></Comp>`,
         {
-          isNativeTag: tag => tag === 'div'
-        }
+          isNativeTag: tag => tag === 'div',
+        },
       )
 
       expect(ast.children[0]).toMatchObject({
         type: NodeTypes.ELEMENT,
         tag: 'div',
-        tagType: ElementTypes.ELEMENT
+        tagType: ElementTypes.ELEMENT,
       })
 
       expect(ast.children[1]).toMatchObject({
         type: NodeTypes.ELEMENT,
         tag: 'div',
-        tagType: ElementTypes.COMPONENT
+        tagType: ElementTypes.COMPONENT,
       })
 
       expect(ast.children[2]).toMatchObject({
         type: NodeTypes.ELEMENT,
         tag: 'Comp',
-        tagType: ElementTypes.COMPONENT
+        tagType: ElementTypes.COMPONENT,
       })
     })
 
-    test('v-is without `isNativeTag`', () => {
-      const ast = baseParse(`<div></div><div v-is="'foo'"></div><Comp></Comp>`)
+    test('is casting without `isNativeTag`', () => {
+      const ast = baseParse(`<div></div><div is="vue:foo"></div><Comp></Comp>`)
 
       expect(ast.children[0]).toMatchObject({
         type: NodeTypes.ELEMENT,
         tag: 'div',
-        tagType: ElementTypes.ELEMENT
+        tagType: ElementTypes.ELEMENT,
       })
 
       expect(ast.children[1]).toMatchObject({
         type: NodeTypes.ELEMENT,
         tag: 'div',
-        tagType: ElementTypes.COMPONENT
+        tagType: ElementTypes.COMPONENT,
       })
 
       expect(ast.children[2]).toMatchObject({
         type: NodeTypes.ELEMENT,
         tag: 'Comp',
-        tagType: ElementTypes.COMPONENT
+        tagType: ElementTypes.COMPONENT,
       })
     })
 
     test('custom element', () => {
       const ast = baseParse('<div></div><comp></comp>', {
         isNativeTag: tag => tag === 'div',
-        isCustomElement: tag => tag === 'comp'
+        isCustomElement: tag => tag === 'comp',
       })
 
       expect(ast.children[0]).toMatchObject({
         type: NodeTypes.ELEMENT,
         tag: 'div',
-        tagType: ElementTypes.ELEMENT
+        tagType: ElementTypes.ELEMENT,
       })
 
       expect(ast.children[1]).toMatchObject({
         type: NodeTypes.ELEMENT,
         tag: 'comp',
-        tagType: ElementTypes.ELEMENT
+        tagType: ElementTypes.ELEMENT,
       })
     })
 
     test('built-in component', () => {
       const ast = baseParse('<div></div><comp></comp>', {
-        isBuiltInComponent: tag => (tag === 'comp' ? Symbol() : void 0)
+        isBuiltInComponent: tag => (tag === 'comp' ? Symbol() : void 0),
       })
 
       expect(ast.children[0]).toMatchObject({
         type: NodeTypes.ELEMENT,
         tag: 'div',
-        tagType: ElementTypes.ELEMENT
+        tagType: ElementTypes.ELEMENT,
       })
 
       expect(ast.children[1]).toMatchObject({
         type: NodeTypes.ELEMENT,
         tag: 'comp',
-        tagType: ElementTypes.COMPONENT
+        tagType: ElementTypes.COMPONENT,
       })
     })
 
@@ -681,13 +710,13 @@ describe('compiler: parse', () => {
       expect(ast.children[0]).toMatchObject({
         type: NodeTypes.ELEMENT,
         tag: 'slot',
-        tagType: ElementTypes.SLOT
+        tagType: ElementTypes.SLOT,
       })
 
       expect(ast.children[1]).toMatchObject({
         type: NodeTypes.ELEMENT,
         tag: 'Comp',
-        tagType: ElementTypes.COMPONENT
+        tagType: ElementTypes.COMPONENT,
       })
     })
 
@@ -705,22 +734,26 @@ describe('compiler: parse', () => {
           {
             type: NodeTypes.ATTRIBUTE,
             name: 'id',
+            nameLoc: {
+              start: { offset: 5, line: 1, column: 6 },
+              end: { offset: 7, line: 1, column: 8 },
+              source: 'id',
+            },
             value: undefined,
             loc: {
               start: { offset: 5, line: 1, column: 6 },
               end: { offset: 7, line: 1, column: 8 },
-              source: 'id'
-            }
-          }
+              source: 'id',
+            },
+          },
         ],
 
-        isSelfClosing: false,
         children: [],
         loc: {
           start: { offset: 0, line: 1, column: 1 },
           end: { offset: 14, line: 1, column: 15 },
-          source: '<div id></div>'
-        }
+          source: '<div id></div>',
+        },
       })
     })
 
@@ -738,30 +771,34 @@ describe('compiler: parse', () => {
           {
             type: NodeTypes.ATTRIBUTE,
             name: 'id',
+            nameLoc: {
+              start: { offset: 5, line: 1, column: 6 },
+              end: { offset: 7, line: 1, column: 8 },
+              source: 'id',
+            },
             value: {
               type: NodeTypes.TEXT,
               content: '',
               loc: {
                 start: { offset: 8, line: 1, column: 9 },
                 end: { offset: 10, line: 1, column: 11 },
-                source: '""'
-              }
+                source: '""',
+              },
             },
             loc: {
               start: { offset: 5, line: 1, column: 6 },
               end: { offset: 10, line: 1, column: 11 },
-              source: 'id=""'
-            }
-          }
+              source: 'id=""',
+            },
+          },
         ],
 
-        isSelfClosing: false,
         children: [],
         loc: {
           start: { offset: 0, line: 1, column: 1 },
           end: { offset: 17, line: 1, column: 18 },
-          source: '<div id=""></div>'
-        }
+          source: '<div id=""></div>',
+        },
       })
     })
 
@@ -779,30 +816,34 @@ describe('compiler: parse', () => {
           {
             type: NodeTypes.ATTRIBUTE,
             name: 'id',
+            nameLoc: {
+              start: { offset: 5, line: 1, column: 6 },
+              end: { offset: 7, line: 1, column: 8 },
+              source: 'id',
+            },
             value: {
               type: NodeTypes.TEXT,
               content: '',
               loc: {
                 start: { offset: 8, line: 1, column: 9 },
                 end: { offset: 10, line: 1, column: 11 },
-                source: "''"
-              }
+                source: "''",
+              },
             },
             loc: {
               start: { offset: 5, line: 1, column: 6 },
               end: { offset: 10, line: 1, column: 11 },
-              source: "id=''"
-            }
-          }
+              source: "id=''",
+            },
+          },
         ],
 
-        isSelfClosing: false,
         children: [],
         loc: {
           start: { offset: 0, line: 1, column: 1 },
           end: { offset: 17, line: 1, column: 18 },
-          source: "<div id=''></div>"
-        }
+          source: "<div id=''></div>",
+        },
       })
     })
 
@@ -820,30 +861,34 @@ describe('compiler: parse', () => {
           {
             type: NodeTypes.ATTRIBUTE,
             name: 'id',
+            nameLoc: {
+              start: { offset: 5, line: 1, column: 6 },
+              end: { offset: 7, line: 1, column: 8 },
+              source: 'id',
+            },
             value: {
               type: NodeTypes.TEXT,
               content: ">'",
               loc: {
                 start: { offset: 8, line: 1, column: 9 },
                 end: { offset: 12, line: 1, column: 13 },
-                source: '">\'"'
-              }
+                source: '">\'"',
+              },
             },
             loc: {
               start: { offset: 5, line: 1, column: 6 },
               end: { offset: 12, line: 1, column: 13 },
-              source: 'id=">\'"'
-            }
-          }
+              source: 'id=">\'"',
+            },
+          },
         ],
 
-        isSelfClosing: false,
         children: [],
         loc: {
           start: { offset: 0, line: 1, column: 1 },
           end: { offset: 19, line: 1, column: 20 },
-          source: '<div id=">\'"></div>'
-        }
+          source: '<div id=">\'"></div>',
+        },
       })
     })
 
@@ -861,30 +906,34 @@ describe('compiler: parse', () => {
           {
             type: NodeTypes.ATTRIBUTE,
             name: 'id',
+            nameLoc: {
+              start: { offset: 5, line: 1, column: 6 },
+              end: { offset: 7, line: 1, column: 8 },
+              source: 'id',
+            },
             value: {
               type: NodeTypes.TEXT,
               content: '>"',
               loc: {
                 start: { offset: 8, line: 1, column: 9 },
                 end: { offset: 12, line: 1, column: 13 },
-                source: "'>\"'"
-              }
+                source: "'>\"'",
+              },
             },
             loc: {
               start: { offset: 5, line: 1, column: 6 },
               end: { offset: 12, line: 1, column: 13 },
-              source: "id='>\"'"
-            }
-          }
+              source: "id='>\"'",
+            },
+          },
         ],
 
-        isSelfClosing: false,
         children: [],
         loc: {
           start: { offset: 0, line: 1, column: 1 },
           end: { offset: 19, line: 1, column: 20 },
-          source: "<div id='>\"'></div>"
-        }
+          source: "<div id='>\"'></div>",
+        },
       })
     })
 
@@ -902,30 +951,117 @@ describe('compiler: parse', () => {
           {
             type: NodeTypes.ATTRIBUTE,
             name: 'id',
+            nameLoc: {
+              start: { offset: 5, line: 1, column: 6 },
+              end: { offset: 7, line: 1, column: 8 },
+              source: 'id',
+            },
             value: {
               type: NodeTypes.TEXT,
               content: 'a/',
               loc: {
                 start: { offset: 8, line: 1, column: 9 },
                 end: { offset: 10, line: 1, column: 11 },
-                source: 'a/'
-              }
+                source: 'a/',
+              },
             },
             loc: {
               start: { offset: 5, line: 1, column: 6 },
               end: { offset: 10, line: 1, column: 11 },
-              source: 'id=a/'
-            }
-          }
+              source: 'id=a/',
+            },
+          },
         ],
 
-        isSelfClosing: false,
         children: [],
         loc: {
           start: { offset: 0, line: 1, column: 1 },
           end: { offset: 17, line: 1, column: 18 },
-          source: '<div id=a/></div>'
-        }
+          source: '<div id=a/></div>',
+        },
+      })
+    })
+
+    test('attribute value with >', () => {
+      const ast = baseParse(
+        '<script setup lang="ts" generic="T extends Record<string,string>"></script>',
+        { parseMode: 'sfc' },
+      )
+      const element = ast.children[0] as ElementNode
+      expect(element).toMatchObject({
+        type: NodeTypes.ELEMENT,
+        ns: Namespaces.HTML,
+        tag: 'script',
+        tagType: ElementTypes.ELEMENT,
+        codegenNode: undefined,
+        children: [],
+        innerLoc: {
+          start: { column: 67, line: 1, offset: 66 },
+          end: { column: 67, line: 1, offset: 66 },
+        },
+        props: [
+          {
+            loc: {
+              source: 'setup',
+              end: { column: 14, line: 1, offset: 13 },
+              start: { column: 9, line: 1, offset: 8 },
+            },
+            name: 'setup',
+            nameLoc: {
+              source: 'setup',
+              end: { column: 14, line: 1, offset: 13 },
+              start: { column: 9, line: 1, offset: 8 },
+            },
+            type: NodeTypes.ATTRIBUTE,
+            value: undefined,
+          },
+          {
+            loc: {
+              source: 'lang="ts"',
+              end: { column: 24, line: 1, offset: 23 },
+              start: { column: 15, line: 1, offset: 14 },
+            },
+            name: 'lang',
+            nameLoc: {
+              source: 'lang',
+              end: { column: 19, line: 1, offset: 18 },
+              start: { column: 15, line: 1, offset: 14 },
+            },
+            type: NodeTypes.ATTRIBUTE,
+            value: {
+              content: 'ts',
+              loc: {
+                source: '"ts"',
+                end: { column: 24, line: 1, offset: 23 },
+                start: { column: 20, line: 1, offset: 19 },
+              },
+              type: NodeTypes.TEXT,
+            },
+          },
+          {
+            loc: {
+              source: 'generic="T extends Record<string,string>"',
+              end: { column: 66, line: 1, offset: 65 },
+              start: { column: 25, line: 1, offset: 24 },
+            },
+            name: 'generic',
+            nameLoc: {
+              source: 'generic',
+              end: { column: 32, line: 1, offset: 31 },
+              start: { column: 25, line: 1, offset: 24 },
+            },
+            type: NodeTypes.ATTRIBUTE,
+            value: {
+              content: 'T extends Record<string,string>',
+              loc: {
+                source: '"T extends Record<string,string>"',
+                end: { column: 66, line: 1, offset: 65 },
+                start: { column: 33, line: 1, offset: 32 },
+              },
+              type: NodeTypes.TEXT,
+            },
+          },
+        ],
       })
     })
 
@@ -943,76 +1079,95 @@ describe('compiler: parse', () => {
           {
             type: NodeTypes.ATTRIBUTE,
             name: 'id',
+            nameLoc: {
+              start: { offset: 5, line: 1, column: 6 },
+              end: { offset: 7, line: 1, column: 8 },
+              source: 'id',
+            },
             value: {
               type: NodeTypes.TEXT,
               content: 'a',
               loc: {
                 start: { offset: 8, line: 1, column: 9 },
                 end: { offset: 9, line: 1, column: 10 },
-                source: 'a'
-              }
+                source: 'a',
+              },
             },
             loc: {
               start: { offset: 5, line: 1, column: 6 },
               end: { offset: 9, line: 1, column: 10 },
-              source: 'id=a'
-            }
+              source: 'id=a',
+            },
           },
           {
             type: NodeTypes.ATTRIBUTE,
             name: 'class',
+            nameLoc: {
+              start: { offset: 10, line: 1, column: 11 },
+              end: { offset: 15, line: 1, column: 16 },
+              source: 'class',
+            },
             value: {
               type: NodeTypes.TEXT,
               content: 'c',
               loc: {
                 start: { offset: 16, line: 1, column: 17 },
                 end: { offset: 19, line: 1, column: 20 },
-                source: '"c"'
-              }
+                source: '"c"',
+              },
             },
             loc: {
               start: { offset: 10, line: 1, column: 11 },
               end: { offset: 19, line: 1, column: 20 },
-              source: 'class="c"'
-            }
+              source: 'class="c"',
+            },
           },
           {
             type: NodeTypes.ATTRIBUTE,
             name: 'inert',
+            nameLoc: {
+              start: { offset: 20, line: 1, column: 21 },
+              end: { offset: 25, line: 1, column: 26 },
+              source: 'inert',
+            },
             value: undefined,
             loc: {
               start: { offset: 20, line: 1, column: 21 },
               end: { offset: 25, line: 1, column: 26 },
-              source: 'inert'
-            }
+              source: 'inert',
+            },
           },
           {
             type: NodeTypes.ATTRIBUTE,
             name: 'style',
+            nameLoc: {
+              start: { offset: 26, line: 1, column: 27 },
+              end: { offset: 31, line: 1, column: 32 },
+              source: 'style',
+            },
             value: {
               type: NodeTypes.TEXT,
               content: '',
               loc: {
                 start: { offset: 32, line: 1, column: 33 },
                 end: { offset: 34, line: 1, column: 35 },
-                source: "''"
-              }
+                source: "''",
+              },
             },
             loc: {
               start: { offset: 26, line: 1, column: 27 },
               end: { offset: 34, line: 1, column: 35 },
-              source: "style=''"
-            }
-          }
+              source: "style=''",
+            },
+          },
         ],
 
-        isSelfClosing: false,
         children: [],
         loc: {
           start: { offset: 0, line: 1, column: 1 },
           end: { offset: 41, line: 1, column: 42 },
-          source: '<div id=a class="c" inert style=\'\'></div>'
-        }
+          source: '<div id=a class="c" inert style=\'\'></div>',
+        },
       })
     })
 
@@ -1024,60 +1179,40 @@ describe('compiler: parse', () => {
       expect(element).toStrictEqual({
         children: [],
         codegenNode: undefined,
-        isSelfClosing: false,
         loc: {
-          end: {
-            column: 10,
-            line: 3,
-            offset: 29
-          },
+          start: { column: 1, line: 1, offset: 0 },
+          end: { column: 10, line: 3, offset: 29 },
           source: '<div class=" \n\t c \t\n "></div>',
-          start: {
-            column: 1,
-            line: 1,
-            offset: 0
-          }
         },
         ns: Namespaces.HTML,
         props: [
           {
-            loc: {
-              end: {
-                column: 3,
-                line: 3,
-                offset: 22
-              },
-              source: 'class=" \n\t c \t\n "',
-              start: {
-                column: 6,
-                line: 1,
-                offset: 5
-              }
-            },
             name: 'class',
+            nameLoc: {
+              start: { column: 6, line: 1, offset: 5 },
+              end: { column: 11, line: 1, offset: 10 },
+              source: 'class',
+            },
             type: NodeTypes.ATTRIBUTE,
             value: {
               content: 'c',
               loc: {
-                end: {
-                  column: 3,
-                  line: 3,
-                  offset: 22
-                },
+                start: { column: 12, line: 1, offset: 11 },
+                end: { column: 3, line: 3, offset: 22 },
                 source: '" \n\t c \t\n "',
-                start: {
-                  column: 12,
-                  line: 1,
-                  offset: 11
-                }
               },
-              type: NodeTypes.TEXT
-            }
-          }
+              type: NodeTypes.TEXT,
+            },
+            loc: {
+              start: { column: 6, line: 1, offset: 5 },
+              end: { column: 3, line: 3, offset: 22 },
+              source: 'class=" \n\t c \t\n "',
+            },
+          },
         ],
         tag: 'div',
         tagType: ElementTypes.ELEMENT,
-        type: NodeTypes.ELEMENT
+        type: NodeTypes.ELEMENT,
       })
     })
 
@@ -1088,14 +1223,15 @@ describe('compiler: parse', () => {
       expect(directive).toStrictEqual({
         type: NodeTypes.DIRECTIVE,
         name: 'if',
+        rawName: 'v-if',
         arg: undefined,
         modifiers: [],
         exp: undefined,
         loc: {
           start: { offset: 5, line: 1, column: 6 },
           end: { offset: 9, line: 1, column: 10 },
-          source: 'v-if'
-        }
+          source: 'v-if',
+        },
       })
     })
 
@@ -1106,6 +1242,7 @@ describe('compiler: parse', () => {
       expect(directive).toStrictEqual({
         type: NodeTypes.DIRECTIVE,
         name: 'if',
+        rawName: 'v-if',
         arg: undefined,
         modifiers: [],
         exp: {
@@ -1116,14 +1253,14 @@ describe('compiler: parse', () => {
           loc: {
             start: { offset: 11, line: 1, column: 12 },
             end: { offset: 12, line: 1, column: 13 },
-            source: 'a'
-          }
+            source: 'a',
+          },
         },
         loc: {
           start: { offset: 5, line: 1, column: 6 },
           end: { offset: 13, line: 1, column: 14 },
-          source: 'v-if="a"'
-        }
+          source: 'v-if="a"',
+        },
       })
     })
 
@@ -1134,33 +1271,25 @@ describe('compiler: parse', () => {
       expect(directive).toStrictEqual({
         type: NodeTypes.DIRECTIVE,
         name: 'on',
+        rawName: 'v-on:click',
         arg: {
           type: NodeTypes.SIMPLE_EXPRESSION,
           content: 'click',
           isStatic: true,
           constType: ConstantTypes.CAN_STRINGIFY,
-
           loc: {
+            start: { column: 11, line: 1, offset: 10 },
+            end: { column: 16, line: 1, offset: 15 },
             source: 'click',
-            start: {
-              column: 11,
-              line: 1,
-              offset: 10
-            },
-            end: {
-              column: 16,
-              line: 1,
-              offset: 15
-            }
-          }
+          },
         },
         modifiers: [],
         exp: undefined,
         loc: {
           start: { offset: 5, line: 1, column: 6 },
           end: { offset: 15, line: 1, column: 16 },
-          source: 'v-on:click'
-        }
+          source: 'v-on:click',
+        },
       })
     })
 
@@ -1173,8 +1302,7 @@ describe('compiler: parse', () => {
         loc: {
           start: { offset: 12, line: 1, column: 13 },
           end: { offset: 16, line: 1, column: 17 },
-          source: 'slot'
-        }
+        },
       })
     })
 
@@ -1184,11 +1312,11 @@ describe('compiler: parse', () => {
       const directive = (ast.children[0] as ElementNode)
         .props[0] as DirectiveNode
       expect(directive.arg).toMatchObject({
+        content: 'item.item',
         loc: {
           start: { offset: 6, line: 1, column: 7 },
           end: { offset: 15, line: 1, column: 16 },
-          source: 'item.item'
-        }
+        },
       })
     })
 
@@ -1199,33 +1327,25 @@ describe('compiler: parse', () => {
       expect(directive).toStrictEqual({
         type: NodeTypes.DIRECTIVE,
         name: 'on',
+        rawName: 'v-on:[event]',
         arg: {
           type: NodeTypes.SIMPLE_EXPRESSION,
           content: 'event',
           isStatic: false,
           constType: ConstantTypes.NOT_CONSTANT,
-
           loc: {
+            start: { column: 11, line: 1, offset: 10 },
+            end: { column: 18, line: 1, offset: 17 },
             source: '[event]',
-            start: {
-              column: 11,
-              line: 1,
-              offset: 10
-            },
-            end: {
-              column: 18,
-              line: 1,
-              offset: 17
-            }
-          }
+          },
         },
         modifiers: [],
         exp: undefined,
         loc: {
           start: { offset: 5, line: 1, column: 6 },
           end: { offset: 17, line: 1, column: 18 },
-          source: 'v-on:[event]'
-        }
+          source: 'v-on:[event]',
+        },
       })
     })
 
@@ -1236,14 +1356,35 @@ describe('compiler: parse', () => {
       expect(directive).toStrictEqual({
         type: NodeTypes.DIRECTIVE,
         name: 'on',
+        rawName: 'v-on.enter',
         arg: undefined,
-        modifiers: ['enter'],
+        modifiers: [
+          {
+            constType: 3,
+            content: 'enter',
+            isStatic: true,
+            loc: {
+              end: {
+                column: 16,
+                line: 1,
+                offset: 15,
+              },
+              source: 'enter',
+              start: {
+                column: 11,
+                line: 1,
+                offset: 10,
+              },
+            },
+            type: 4,
+          },
+        ],
         exp: undefined,
         loc: {
           start: { offset: 5, line: 1, column: 6 },
           end: { offset: 15, line: 1, column: 16 },
-          source: 'v-on.enter'
-        }
+          source: 'v-on.enter',
+        },
       })
     })
 
@@ -1254,14 +1395,54 @@ describe('compiler: parse', () => {
       expect(directive).toStrictEqual({
         type: NodeTypes.DIRECTIVE,
         name: 'on',
+        rawName: 'v-on.enter.exact',
         arg: undefined,
-        modifiers: ['enter', 'exact'],
+        modifiers: [
+          {
+            constType: 3,
+            content: 'enter',
+            isStatic: true,
+            loc: {
+              end: {
+                column: 16,
+                line: 1,
+                offset: 15,
+              },
+              source: 'enter',
+              start: {
+                column: 11,
+                line: 1,
+                offset: 10,
+              },
+            },
+            type: 4,
+          },
+          {
+            constType: 3,
+            content: 'exact',
+            isStatic: true,
+            loc: {
+              end: {
+                column: 22,
+                line: 1,
+                offset: 21,
+              },
+              source: 'exact',
+              start: {
+                column: 17,
+                line: 1,
+                offset: 16,
+              },
+            },
+            type: 4,
+          },
+        ],
         exp: undefined,
         loc: {
           start: { offset: 5, line: 1, column: 6 },
           end: { offset: 21, line: 1, column: 22 },
-          source: 'v-on.enter.exact'
-        }
+          source: 'v-on.enter.exact',
+        },
       })
     })
 
@@ -1272,33 +1453,64 @@ describe('compiler: parse', () => {
       expect(directive).toStrictEqual({
         type: NodeTypes.DIRECTIVE,
         name: 'on',
+        rawName: 'v-on:click.enter.exact',
         arg: {
           type: NodeTypes.SIMPLE_EXPRESSION,
           content: 'click',
           isStatic: true,
           constType: ConstantTypes.CAN_STRINGIFY,
-
           loc: {
+            start: { column: 11, line: 1, offset: 10 },
+            end: { column: 16, line: 1, offset: 15 },
             source: 'click',
-            start: {
-              column: 11,
-              line: 1,
-              offset: 10
-            },
-            end: {
-              column: 16,
-              line: 1,
-              offset: 15
-            }
-          }
+          },
         },
-        modifiers: ['enter', 'exact'],
+        modifiers: [
+          {
+            constType: 3,
+            content: 'enter',
+            isStatic: true,
+            loc: {
+              end: {
+                column: 22,
+                line: 1,
+                offset: 21,
+              },
+              source: 'enter',
+              start: {
+                column: 17,
+                line: 1,
+                offset: 16,
+              },
+            },
+            type: 4,
+          },
+          {
+            constType: 3,
+            content: 'exact',
+            isStatic: true,
+            loc: {
+              end: {
+                column: 28,
+                line: 1,
+                offset: 27,
+              },
+              source: 'exact',
+              start: {
+                column: 23,
+                line: 1,
+                offset: 22,
+              },
+            },
+            type: 4,
+          },
+        ],
         exp: undefined,
         loc: {
           start: { offset: 5, line: 1, column: 6 },
           end: { offset: 27, line: 1, column: 28 },
-          source: 'v-on:click.enter.exact'
-        }
+          source: 'v-on:click.enter.exact',
+        },
       })
     })
 
@@ -1309,41 +1521,54 @@ describe('compiler: parse', () => {
       expect(directive).toStrictEqual({
         type: NodeTypes.DIRECTIVE,
         name: 'on',
+        rawName: 'v-on:[a.b].camel',
         arg: {
           type: NodeTypes.SIMPLE_EXPRESSION,
           content: 'a.b',
           isStatic: false,
           constType: ConstantTypes.NOT_CONSTANT,
-
           loc: {
+            start: { column: 11, line: 1, offset: 10 },
+            end: { column: 16, line: 1, offset: 15 },
             source: '[a.b]',
-            start: {
-              column: 11,
-              line: 1,
-              offset: 10
-            },
-            end: {
-              column: 16,
-              line: 1,
-              offset: 15
-            }
-          }
+          },
         },
-        modifiers: ['camel'],
+        modifiers: [
+          {
+            constType: 3,
+            content: 'camel',
+            isStatic: true,
+            loc: {
+              end: {
+                column: 22,
+                line: 1,
+                offset: 21,
+              },
+              source: 'camel',
+              start: {
+                column: 17,
+                line: 1,
+                offset: 16,
+              },
+            },
+            type: 4,
+          },
+        ],
         exp: undefined,
         loc: {
           start: { offset: 5, line: 1, column: 6 },
           end: { offset: 21, line: 1, column: 22 },
-          source: 'v-on:[a.b].camel'
-        }
+          source: 'v-on:[a.b].camel',
+        },
       })
     })
+
     test('directive with no name', () => {
       let errorCode = -1
       const ast = baseParse('<div v-/>', {
         onError: err => {
           errorCode = err.code as number
-        }
+        },
       })
       const directive = (ast.children[0] as ElementNode).props[0]
 
@@ -1355,8 +1580,13 @@ describe('compiler: parse', () => {
         loc: {
           start: { offset: 5, line: 1, column: 6 },
           end: { offset: 7, line: 1, column: 8 },
-          source: 'v-'
-        }
+          source: 'v-',
+        },
+        nameLoc: {
+          start: { offset: 5, line: 1, column: 6 },
+          end: { offset: 7, line: 1, column: 8 },
+          source: 'v-',
+        },
       })
     })
 
@@ -1367,25 +1597,17 @@ describe('compiler: parse', () => {
       expect(directive).toStrictEqual({
         type: NodeTypes.DIRECTIVE,
         name: 'bind',
+        rawName: ':a',
         arg: {
           type: NodeTypes.SIMPLE_EXPRESSION,
           content: 'a',
           isStatic: true,
           constType: ConstantTypes.CAN_STRINGIFY,
-
           loc: {
+            start: { column: 7, line: 1, offset: 6 },
+            end: { column: 8, line: 1, offset: 7 },
             source: 'a',
-            start: {
-              column: 7,
-              line: 1,
-              offset: 6
-            },
-            end: {
-              column: 8,
-              line: 1,
-              offset: 7
-            }
-          }
+          },
         },
         modifiers: [],
         exp: {
@@ -1393,18 +1615,17 @@ describe('compiler: parse', () => {
           content: 'b',
           isStatic: false,
           constType: ConstantTypes.NOT_CONSTANT,
-
           loc: {
             start: { offset: 8, line: 1, column: 9 },
             end: { offset: 9, line: 1, column: 10 },
-            source: 'b'
-          }
+            source: 'b',
+          },
         },
         loc: {
           start: { offset: 5, line: 1, column: 6 },
           end: { offset: 9, line: 1, column: 10 },
-          source: ':a=b'
-        }
+          source: ':a=b',
+        },
       })
     })
 
@@ -1415,44 +1636,55 @@ describe('compiler: parse', () => {
       expect(directive).toStrictEqual({
         type: NodeTypes.DIRECTIVE,
         name: 'bind',
+        rawName: '.a',
         arg: {
           type: NodeTypes.SIMPLE_EXPRESSION,
           content: 'a',
           isStatic: true,
           constType: ConstantTypes.CAN_STRINGIFY,
-
           loc: {
+            start: { column: 7, line: 1, offset: 6 },
+            end: { column: 8, line: 1, offset: 7 },
             source: 'a',
-            start: {
-              column: 7,
-              line: 1,
-              offset: 6
-            },
-            end: {
-              column: 8,
-              line: 1,
-              offset: 7
-            }
-          }
+          },
         },
-        modifiers: ['prop'],
+        modifiers: [
+          {
+            constType: 0,
+            content: 'prop',
+            isStatic: false,
+            loc: {
+              end: {
+                column: 1,
+                line: 1,
+                offset: 0,
+              },
+              source: '',
+              start: {
+                column: 1,
+                line: 1,
+                offset: 0,
+              },
+            },
+            type: 4,
+          },
+        ],
         exp: {
           type: NodeTypes.SIMPLE_EXPRESSION,
           content: 'b',
           isStatic: false,
           constType: ConstantTypes.NOT_CONSTANT,
-
           loc: {
             start: { offset: 8, line: 1, column: 9 },
             end: { offset: 9, line: 1, column: 10 },
-            source: 'b'
-          }
+            source: 'b',
+          },
         },
         loc: {
           start: { offset: 5, line: 1, column: 6 },
           end: { offset: 9, line: 1, column: 10 },
-          source: '.a=b'
-        }
+          source: '.a=b',
+        },
       })
     })
 
@@ -1463,27 +1695,39 @@ describe('compiler: parse', () => {
       expect(directive).toStrictEqual({
         type: NodeTypes.DIRECTIVE,
         name: 'bind',
+        rawName: ':a.sync',
         arg: {
           type: NodeTypes.SIMPLE_EXPRESSION,
           content: 'a',
           isStatic: true,
           constType: ConstantTypes.CAN_STRINGIFY,
-
           loc: {
+            start: { column: 7, line: 1, offset: 6 },
+            end: { column: 8, line: 1, offset: 7 },
             source: 'a',
-            start: {
-              column: 7,
-              line: 1,
-              offset: 6
-            },
-            end: {
-              column: 8,
-              line: 1,
-              offset: 7
-            }
-          }
+          },
         },
-        modifiers: ['sync'],
+        modifiers: [
+          {
+            constType: 3,
+            content: 'sync',
+            isStatic: true,
+            loc: {
+              end: {
+                column: 13,
+                line: 1,
+                offset: 12,
+              },
+              source: 'sync',
+              start: {
+                column: 9,
+                line: 1,
+                offset: 8,
+              },
+            },
+            type: 4,
+          },
+        ],
         exp: {
           type: NodeTypes.SIMPLE_EXPRESSION,
           content: 'b',
@@ -1493,14 +1737,14 @@ describe('compiler: parse', () => {
           loc: {
             start: { offset: 13, line: 1, column: 14 },
             end: { offset: 14, line: 1, column: 15 },
-            source: 'b'
-          }
+            source: 'b',
+          },
         },
         loc: {
           start: { offset: 5, line: 1, column: 6 },
           end: { offset: 14, line: 1, column: 15 },
-          source: ':a.sync=b'
-        }
+          source: ':a.sync=b',
+        },
       })
     })
 
@@ -1511,25 +1755,17 @@ describe('compiler: parse', () => {
       expect(directive).toStrictEqual({
         type: NodeTypes.DIRECTIVE,
         name: 'on',
+        rawName: '@a',
         arg: {
           type: NodeTypes.SIMPLE_EXPRESSION,
           content: 'a',
           isStatic: true,
           constType: ConstantTypes.CAN_STRINGIFY,
-
           loc: {
+            start: { column: 7, line: 1, offset: 6 },
+            end: { column: 8, line: 1, offset: 7 },
             source: 'a',
-            start: {
-              column: 7,
-              line: 1,
-              offset: 6
-            },
-            end: {
-              column: 8,
-              line: 1,
-              offset: 7
-            }
-          }
+          },
         },
         modifiers: [],
         exp: {
@@ -1541,14 +1777,14 @@ describe('compiler: parse', () => {
           loc: {
             start: { offset: 8, line: 1, column: 9 },
             end: { offset: 9, line: 1, column: 10 },
-            source: 'b'
-          }
+            source: 'b',
+          },
         },
         loc: {
           start: { offset: 5, line: 1, column: 6 },
           end: { offset: 9, line: 1, column: 10 },
-          source: '@a=b'
-        }
+          source: '@a=b',
+        },
       })
     })
 
@@ -1559,27 +1795,39 @@ describe('compiler: parse', () => {
       expect(directive).toStrictEqual({
         type: NodeTypes.DIRECTIVE,
         name: 'on',
+        rawName: '@a.enter',
         arg: {
           type: NodeTypes.SIMPLE_EXPRESSION,
           content: 'a',
           isStatic: true,
           constType: ConstantTypes.CAN_STRINGIFY,
-
           loc: {
+            start: { column: 7, line: 1, offset: 6 },
+            end: { column: 8, line: 1, offset: 7 },
             source: 'a',
-            start: {
-              column: 7,
-              line: 1,
-              offset: 6
-            },
-            end: {
-              column: 8,
-              line: 1,
-              offset: 7
-            }
-          }
+          },
         },
-        modifiers: ['enter'],
+        modifiers: [
+          {
+            constType: 3,
+            content: 'enter',
+            isStatic: true,
+            loc: {
+              end: {
+                column: 14,
+                line: 1,
+                offset: 13,
+              },
+              source: 'enter',
+              start: {
+                column: 9,
+                line: 1,
+                offset: 8,
+              },
+            },
+            type: 4,
+          },
+        ],
         exp: {
           type: NodeTypes.SIMPLE_EXPRESSION,
           content: 'b',
@@ -1589,14 +1837,14 @@ describe('compiler: parse', () => {
           loc: {
             start: { offset: 14, line: 1, column: 15 },
             end: { offset: 15, line: 1, column: 16 },
-            source: 'b'
-          }
+            source: 'b',
+          },
         },
         loc: {
           start: { offset: 5, line: 1, column: 6 },
           end: { offset: 15, line: 1, column: 16 },
-          source: '@a.enter=b'
-        }
+          source: '@a.enter=b',
+        },
       })
     })
 
@@ -1607,24 +1855,17 @@ describe('compiler: parse', () => {
       expect(directive).toStrictEqual({
         type: NodeTypes.DIRECTIVE,
         name: 'slot',
+        rawName: '#a',
         arg: {
           type: NodeTypes.SIMPLE_EXPRESSION,
           content: 'a',
           isStatic: true,
           constType: ConstantTypes.CAN_STRINGIFY,
           loc: {
+            start: { column: 8, line: 1, offset: 7 },
+            end: { column: 9, line: 1, offset: 8 },
             source: 'a',
-            start: {
-              column: 8,
-              line: 1,
-              offset: 7
-            },
-            end: {
-              column: 9,
-              line: 1,
-              offset: 8
-            }
-          }
+          },
         },
         modifiers: [],
         exp: {
@@ -1636,14 +1877,14 @@ describe('compiler: parse', () => {
           loc: {
             start: { offset: 10, line: 1, column: 11 },
             end: { offset: 15, line: 1, column: 16 },
-            source: '{ b }'
-          }
+            source: '{ b }',
+          },
         },
         loc: {
           start: { offset: 6, line: 1, column: 7 },
           end: { offset: 16, line: 1, column: 17 },
-          source: '#a="{ b }"'
-        }
+          source: '#a="{ b }"',
+        },
       })
     })
 
@@ -1655,32 +1896,32 @@ describe('compiler: parse', () => {
       expect(directive).toMatchObject({
         type: NodeTypes.DIRECTIVE,
         name: 'slot',
+        rawName: 'v-slot:foo.bar',
         arg: {
           type: NodeTypes.SIMPLE_EXPRESSION,
           content: 'foo.bar',
           isStatic: true,
           constType: ConstantTypes.CAN_STRINGIFY,
           loc: {
-            source: 'foo.bar',
             start: {
               column: 14,
               line: 1,
-              offset: 13
+              offset: 13,
             },
             end: {
               column: 21,
               line: 1,
-              offset: 20
-            }
-          }
-        }
+              offset: 20,
+            },
+          },
+        },
       })
     })
 
     test('v-pre', () => {
       const ast = baseParse(
         `<div v-pre :id="foo"><Comp/>{{ bar }}</div>\n` +
-          `<div :id="foo"><Comp/>{{ bar }}</div>`
+          `<div :id="foo"><Comp/>{{ bar }}</div>`,
       )
 
       const divWithPre = ast.children[0] as ElementNode
@@ -1690,29 +1931,22 @@ describe('compiler: parse', () => {
           name: `:id`,
           value: {
             type: NodeTypes.TEXT,
-            content: `foo`
+            content: `foo`,
           },
           loc: {
-            source: `:id="foo"`,
-            start: {
-              line: 1,
-              column: 12
-            },
-            end: {
-              line: 1,
-              column: 21
-            }
-          }
-        }
+            start: { line: 1, column: 12 },
+            end: { line: 1, column: 21 },
+          },
+        },
       ])
       expect(divWithPre.children[0]).toMatchObject({
         type: NodeTypes.ELEMENT,
         tagType: ElementTypes.ELEMENT,
-        tag: `Comp`
+        tag: `Comp`,
       })
       expect(divWithPre.children[1]).toMatchObject({
         type: NodeTypes.TEXT,
-        content: `{{ bar }}`
+        content: `{{ bar }}`,
       })
 
       // should not affect siblings after it
@@ -1724,44 +1958,87 @@ describe('compiler: parse', () => {
           arg: {
             type: NodeTypes.SIMPLE_EXPRESSION,
             isStatic: true,
-            content: `id`
+            content: `id`,
           },
           exp: {
             type: NodeTypes.SIMPLE_EXPRESSION,
             isStatic: false,
-            content: `foo`
+            content: `foo`,
           },
           loc: {
-            source: `:id="foo"`,
             start: {
               line: 2,
-              column: 6
+              column: 6,
             },
             end: {
               line: 2,
-              column: 15
-            }
-          }
-        }
+              column: 15,
+            },
+          },
+        },
       ])
       expect(divWithoutPre.children[0]).toMatchObject({
         type: NodeTypes.ELEMENT,
         tagType: ElementTypes.COMPONENT,
-        tag: `Comp`
+        tag: `Comp`,
       })
       expect(divWithoutPre.children[1]).toMatchObject({
         type: NodeTypes.INTERPOLATION,
         content: {
           type: NodeTypes.SIMPLE_EXPRESSION,
           content: `bar`,
-          isStatic: false
-        }
+          isStatic: false,
+        },
       })
+    })
+
+    // https://github.com/vuejs/docs/issues/2586
+    test('v-pre with half-open interpolation', () => {
+      const ast = baseParse(
+        `<div v-pre>
+          <span>{{ number </span>
+          <span>}}</span>
+        </div>
+        `,
+      )
+      expect((ast.children[0] as ElementNode).children).toMatchObject([
+        {
+          type: NodeTypes.ELEMENT,
+          children: [{ type: NodeTypes.TEXT, content: `{{ number ` }],
+        },
+        {
+          type: NodeTypes.ELEMENT,
+          children: [{ type: NodeTypes.TEXT, content: `}}` }],
+        },
+      ])
+
+      const ast2 = baseParse(`<div v-pre><span>{{ number </span></div>`)
+      expect((ast2.children[0] as ElementNode).children).toMatchObject([
+        {
+          type: NodeTypes.ELEMENT,
+          children: [{ type: NodeTypes.TEXT, content: `{{ number ` }],
+        },
+      ])
+
+      const ast3 = baseParse(`<div v-pre><textarea>{{ foo </textarea></div>`, {
+        parseMode: 'html',
+      })
+      expect((ast3.children[0] as ElementNode).children).toMatchObject([
+        {
+          type: NodeTypes.ELEMENT,
+          children: [
+            {
+              type: NodeTypes.TEXT,
+              content: `{{ foo `,
+            },
+          ],
+        },
+      ])
     })
 
     test('self-closing v-pre', () => {
       const ast = baseParse(
-        `<div v-pre/>\n<div :id="foo"><Comp/>{{ bar }}</div>`
+        `<div v-pre/>\n<div :id="foo"><Comp/>{{ bar }}</div>`,
       )
       // should not affect siblings after it
       const divWithoutPre = ast.children[1] as ElementNode
@@ -1772,38 +2049,37 @@ describe('compiler: parse', () => {
           arg: {
             type: NodeTypes.SIMPLE_EXPRESSION,
             isStatic: true,
-            content: `id`
+            content: `id`,
           },
           exp: {
             type: NodeTypes.SIMPLE_EXPRESSION,
             isStatic: false,
-            content: `foo`
+            content: `foo`,
           },
           loc: {
-            source: `:id="foo"`,
             start: {
               line: 2,
-              column: 6
+              column: 6,
             },
             end: {
               line: 2,
-              column: 15
-            }
-          }
-        }
+              column: 15,
+            },
+          },
+        },
       ])
       expect(divWithoutPre.children[0]).toMatchObject({
         type: NodeTypes.ELEMENT,
         tagType: ElementTypes.COMPONENT,
-        tag: `Comp`
+        tag: `Comp`,
       })
       expect(divWithoutPre.children[1]).toMatchObject({
         type: NodeTypes.INTERPOLATION,
         content: {
           type: NodeTypes.SIMPLE_EXPRESSION,
           content: `bar`,
-          isStatic: false
-        }
+          isStatic: false,
+        },
       })
     })
 
@@ -1818,133 +2094,187 @@ describe('compiler: parse', () => {
         loc: {
           start: { offset: 5, line: 1, column: 6 },
           end: { offset: 10, line: 1, column: 11 },
-          source: 'hello'
-        }
+          source: 'hello',
+        },
       })
     })
   })
 
-  test('self closing single tag', () => {
-    const ast = baseParse('<div :class="{ some: condition }" />')
+  describe('Edge Cases', () => {
+    test('self closing single tag', () => {
+      const ast = baseParse('<div :class="{ some: condition }" />')
 
-    expect(ast.children).toHaveLength(1)
-    expect(ast.children[0]).toMatchObject({ tag: 'div' })
-  })
-
-  test('self closing multiple tag', () => {
-    const ast = baseParse(
-      `<div :class="{ some: condition }" />\n` +
-        `<p v-bind:style="{ color: 'red' }"/>`
-    )
-
-    expect(ast).toMatchSnapshot()
-
-    expect(ast.children).toHaveLength(2)
-    expect(ast.children[0]).toMatchObject({ tag: 'div' })
-    expect(ast.children[1]).toMatchObject({ tag: 'p' })
-  })
-
-  test('valid html', () => {
-    const ast = baseParse(
-      `<div :class="{ some: condition }">\n` +
-        `  <p v-bind:style="{ color: 'red' }"/>\n` +
-        `  <!-- a comment with <html> inside it -->\n` +
-        `</div>`
-    )
-
-    expect(ast).toMatchSnapshot()
-
-    expect(ast.children).toHaveLength(1)
-    const el = ast.children[0] as any
-    expect(el).toMatchObject({
-      tag: 'div'
-    })
-    expect(el.children).toHaveLength(2)
-    expect(el.children[0]).toMatchObject({
-      tag: 'p'
-    })
-    expect(el.children[1]).toMatchObject({
-      type: NodeTypes.COMMENT
-    })
-  })
-
-  test('invalid html', () => {
-    expect(() => {
-      baseParse(`<div>\n<span>\n</div>\n</span>`)
-    }).toThrow('Element is missing end tag.')
-
-    const spy = vi.fn()
-    const ast = baseParse(`<div>\n<span>\n</div>\n</span>`, {
-      onError: spy
+      expect(ast.children).toHaveLength(1)
+      expect(ast.children[0]).toMatchObject({ tag: 'div' })
     })
 
-    expect(spy.mock.calls).toMatchObject([
-      [
+    test('self closing multiple tag', () => {
+      const ast = baseParse(
+        `<div :class="{ some: condition }" />\n` +
+          `<p v-bind:style="{ color: 'red' }"/>`,
+      )
+
+      expect(ast).toMatchSnapshot()
+
+      expect(ast.children).toHaveLength(2)
+      expect(ast.children[0]).toMatchObject({ tag: 'div' })
+      expect(ast.children[1]).toMatchObject({ tag: 'p' })
+    })
+
+    test('valid html', () => {
+      const ast = baseParse(
+        `<div :class="{ some: condition }">\n` +
+          `  <p v-bind:style="{ color: 'red' }"/>\n` +
+          `  <!-- a comment with <html> inside it -->\n` +
+          `</div>`,
+      )
+
+      expect(ast).toMatchSnapshot()
+
+      expect(ast.children).toHaveLength(1)
+      const el = ast.children[0] as any
+      expect(el).toMatchObject({
+        tag: 'div',
+      })
+      expect(el.children).toHaveLength(2)
+      expect(el.children[0]).toMatchObject({
+        tag: 'p',
+      })
+      expect(el.children[1]).toMatchObject({
+        type: NodeTypes.COMMENT,
+      })
+    })
+
+    test('invalid html', () => {
+      expect(() => {
+        baseParse(`<div>\n<span>\n</div>\n</span>`)
+      }).toThrow('Element is missing end tag.')
+
+      const spy = vi.fn()
+      const ast = baseParse(`<div>\n<span>\n</div>\n</span>`, {
+        onError: spy,
+      })
+
+      expect(spy.mock.calls).toMatchObject([
+        [
+          {
+            code: ErrorCodes.X_MISSING_END_TAG,
+            loc: {
+              start: {
+                offset: 6,
+                line: 2,
+                column: 1,
+              },
+            },
+          },
+        ],
+        [
+          {
+            code: ErrorCodes.X_INVALID_END_TAG,
+            loc: {
+              start: {
+                offset: 20,
+                line: 4,
+                column: 1,
+              },
+            },
+          },
+        ],
+      ])
+
+      expect(ast).toMatchSnapshot()
+    })
+
+    test('parse with correct location info', () => {
+      const fooSrc = `foo\n is `
+      const barSrc = `{{ bar }}`
+      const butSrc = ` but `
+      const bazSrc = `{{ baz }}`
+      const [foo, bar, but, baz] = baseParse(
+        fooSrc + barSrc + butSrc + bazSrc,
+      ).children
+
+      let offset = 0
+      expect(foo.loc.start).toEqual({ line: 1, column: 1, offset })
+      offset += fooSrc.length
+      expect(foo.loc.end).toEqual({ line: 2, column: 5, offset })
+
+      expect(bar.loc.start).toEqual({ line: 2, column: 5, offset })
+      const barInner = (bar as InterpolationNode).content
+      offset += 3
+      expect(barInner.loc.start).toEqual({ line: 2, column: 8, offset })
+      offset += 3
+      expect(barInner.loc.end).toEqual({ line: 2, column: 11, offset })
+      offset += 3
+      expect(bar.loc.end).toEqual({ line: 2, column: 14, offset })
+
+      expect(but.loc.start).toEqual({ line: 2, column: 14, offset })
+      offset += butSrc.length
+      expect(but.loc.end).toEqual({ line: 2, column: 19, offset })
+
+      expect(baz.loc.start).toEqual({ line: 2, column: 19, offset })
+      const bazInner = (baz as InterpolationNode).content
+      offset += 3
+      expect(bazInner.loc.start).toEqual({ line: 2, column: 22, offset })
+      offset += 3
+      expect(bazInner.loc.end).toEqual({ line: 2, column: 25, offset })
+      offset += 3
+      expect(baz.loc.end).toEqual({ line: 2, column: 28, offset })
+    })
+
+    // With standard HTML parsing, the following input would ignore the slash
+    // and treat "<" and "template" as attributes on the open tag of "Hello",
+    // causing `<template>` to fail to close, and `<script>` being parsed as its
+    // child. This is would never be intended in actual templates, but is a common
+    // intermediate state from user input when parsing for IDE support. We want
+    // the `<script>` to be at root-level to keep the SFC structure stable for
+    // Volar to do incremental computations.
+    test('tag termination handling for IDE', () => {
+      const spy = vi.fn()
+      const ast = baseParse(
+        `<template><Hello\n</template><script>console.log(1)</script>`,
         {
-          code: ErrorCodes.X_MISSING_END_TAG,
-          loc: {
-            start: {
-              offset: 6,
-              line: 2,
-              column: 1
-            }
-          }
-        }
-      ],
-      [
-        {
-          code: ErrorCodes.X_INVALID_END_TAG,
-          loc: {
-            start: {
-              offset: 20,
-              line: 4,
-              column: 1
-            }
-          }
-        }
-      ]
-    ])
+          onError: spy,
+        },
+      )
+      //
+      expect(ast.children.length).toBe(2)
+      expect(ast.children[1]).toMatchObject({
+        type: NodeTypes.ELEMENT,
+        tag: 'script',
+      })
+    })
 
-    expect(ast).toMatchSnapshot()
-  })
+    test('arg should be undefined on shorthand dirs with no arg', () => {
+      const ast = baseParse(`<template #></template>`)
+      const el = ast.children[0] as ElementNode
+      expect(el.props[0]).toMatchObject({
+        type: NodeTypes.DIRECTIVE,
+        name: 'slot',
+        exp: undefined,
+        arg: undefined,
+      })
+    })
 
-  test('parse with correct location info', () => {
-    const [foo, bar, but, baz] = baseParse(
-      `
-foo
- is {{ bar }} but {{ baz }}`.trim()
-    ).children
+    // edge case found in vue-macros where the input is TS or JSX
+    test('should reset inRCDATA state', () => {
+      baseParse(`<Foo>`, { parseMode: 'sfc', onError() {} })
+      expect(() => baseParse(`{ foo }`)).not.toThrow()
+    })
 
-    let offset = 0
-    expect(foo.loc.start).toEqual({ line: 1, column: 1, offset })
-    offset += foo.loc.source.length
-    expect(foo.loc.end).toEqual({ line: 2, column: 5, offset })
+    test('correct loc when the closing > is foarmatted', () => {
+      const [span] = baseParse(`<span></span
+      
+      >`).children
 
-    expect(bar.loc.start).toEqual({ line: 2, column: 5, offset })
-    const barInner = (bar as InterpolationNode).content
-    offset += 3
-    expect(barInner.loc.start).toEqual({ line: 2, column: 8, offset })
-    offset += barInner.loc.source.length
-    expect(barInner.loc.end).toEqual({ line: 2, column: 11, offset })
-    offset += 3
-    expect(bar.loc.end).toEqual({ line: 2, column: 14, offset })
-
-    expect(but.loc.start).toEqual({ line: 2, column: 14, offset })
-    offset += but.loc.source.length
-    expect(but.loc.end).toEqual({ line: 2, column: 19, offset })
-
-    expect(baz.loc.start).toEqual({ line: 2, column: 19, offset })
-    const bazInner = (baz as InterpolationNode).content
-    offset += 3
-    expect(bazInner.loc.start).toEqual({ line: 2, column: 22, offset })
-    offset += bazInner.loc.source.length
-    expect(bazInner.loc.end).toEqual({ line: 2, column: 25, offset })
-    offset += 3
-    expect(baz.loc.end).toEqual({ line: 2, column: 28, offset })
+      expect(span.loc.source).toBe('<span></span\n      \n      >')
+      expect(span.loc.start.offset).toBe(0)
+      expect(span.loc.end.offset).toBe(27)
+    })
   })
 
   describe('decodeEntities option', () => {
-    test('use default map', () => {
+    test('use decode by default', () => {
       const ast: any = baseParse('&gt;&lt;&amp;&apos;&quot;&foo;')
 
       expect(ast.children.length).toBe(1)
@@ -1952,15 +2282,14 @@ foo
       expect(ast.children[0].content).toBe('><&\'"&foo;')
     })
 
-    test('use the given map', () => {
-      const ast: any = baseParse('&amp;&cups;', {
+    test('should warn in non-browser build', () => {
+      baseParse('&amp;&cups;', {
         decodeEntities: text => text.replace('&cups;', '\u222A\uFE00'),
-        onError: () => {} // Ignore errors
+        onError: () => {}, // Ignore errors
       })
-
-      expect(ast.children.length).toBe(1)
-      expect(ast.children[0].type).toBe(NodeTypes.TEXT)
-      expect(ast.children[0].content).toBe('&amp;\u222A\uFE00')
+      expect(
+        `decodeEntities option is passed but will be ignored`,
+      ).toHaveBeenWarned()
     })
   })
 
@@ -1968,21 +2297,21 @@ foo
     const parse = (content: string, options?: ParserOptions) =>
       baseParse(content, {
         whitespace: 'condense',
-        ...options
+        ...options,
       })
 
-    it('should remove whitespaces at start/end inside an element', () => {
+    test('should remove whitespaces at start/end inside an element', () => {
       const ast = parse(`<div>   <span/>    </div>`)
       expect((ast.children[0] as ElementNode).children.length).toBe(1)
     })
 
-    it('should remove whitespaces w/ newline between elements', () => {
+    test('should remove whitespaces w/ newline between elements', () => {
       const ast = parse(`<div/> \n <div/> \n <div/>`)
       expect(ast.children.length).toBe(3)
       expect(ast.children.every(c => c.type === NodeTypes.ELEMENT)).toBe(true)
     })
 
-    it('should remove whitespaces adjacent to comments', () => {
+    test('should remove whitespaces adjacent to comments', () => {
       const ast = parse(`<div/> \n <!--foo--> <div/>`)
       expect(ast.children.length).toBe(3)
       expect(ast.children[0].type).toBe(NodeTypes.ELEMENT)
@@ -1990,7 +2319,7 @@ foo
       expect(ast.children[2].type).toBe(NodeTypes.ELEMENT)
     })
 
-    it('should remove whitespaces w/ newline between comments and elements', () => {
+    test('should remove whitespaces w/ newline between comments and elements', () => {
       const ast = parse(`<div/> \n <!--foo--> \n <div/>`)
       expect(ast.children.length).toBe(3)
       expect(ast.children[0].type).toBe(NodeTypes.ELEMENT)
@@ -1998,29 +2327,29 @@ foo
       expect(ast.children[2].type).toBe(NodeTypes.ELEMENT)
     })
 
-    it('should NOT remove whitespaces w/ newline between interpolations', () => {
+    test('should NOT remove whitespaces w/ newline between interpolations', () => {
       const ast = parse(`{{ foo }} \n {{ bar }}`)
       expect(ast.children.length).toBe(3)
       expect(ast.children[0].type).toBe(NodeTypes.INTERPOLATION)
       expect(ast.children[1]).toMatchObject({
         type: NodeTypes.TEXT,
-        content: ' '
+        content: ' ',
       })
       expect(ast.children[2].type).toBe(NodeTypes.INTERPOLATION)
     })
 
-    it('should NOT remove whitespaces w/ newline between interpolation and comment', () => {
+    test('should NOT remove whitespaces w/ newline between interpolation and comment', () => {
       const ast = parse(`<!-- foo --> \n {{msg}}`)
       expect(ast.children.length).toBe(3)
       expect(ast.children[0].type).toBe(NodeTypes.COMMENT)
       expect(ast.children[1]).toMatchObject({
         type: NodeTypes.TEXT,
-        content: ' '
+        content: ' ',
       })
       expect(ast.children[2].type).toBe(NodeTypes.INTERPOLATION)
     })
 
-    it('should NOT remove whitespaces w/o newline between elements', () => {
+    test('should NOT remove whitespaces w/o newline between elements', () => {
       const ast = parse(`<div/> <div/> <div/>`)
       expect(ast.children.length).toBe(5)
       expect(ast.children.map(c => c.type)).toMatchObject([
@@ -2028,18 +2357,19 @@ foo
         NodeTypes.TEXT,
         NodeTypes.ELEMENT,
         NodeTypes.TEXT,
-        NodeTypes.ELEMENT
+        NodeTypes.ELEMENT,
       ])
     })
 
-    it('should condense consecutive whitespaces in text', () => {
+    test('should condense consecutive whitespaces in text', () => {
       const ast = parse(`   foo  \n    bar     baz     `)
       expect((ast.children[0] as TextNode).content).toBe(` foo bar baz `)
     })
 
-    it('should remove leading newline character immediately following the pre element start tag', () => {
-      const ast = baseParse(`<pre>\n  foo  bar  </pre>`, {
-        isPreTag: tag => tag === 'pre'
+    test('should remove leading newline character immediately following the pre element start tag', () => {
+      const ast = parse(`<pre>\n  foo  bar  </pre>`, {
+        isPreTag: tag => tag === 'pre',
+        isIgnoreNewlineTag: tag => tag === 'pre',
       })
       expect(ast.children).toHaveLength(1)
       const preElement = ast.children[0] as ElementNode
@@ -2047,30 +2377,29 @@ foo
       expect((preElement.children[0] as TextNode).content).toBe(`  foo  bar  `)
     })
 
-    it('should NOT remove leading newline character immediately following child-tag of pre element', () => {
-      const ast = baseParse(`<pre><span></span>\n  foo  bar  </pre>`, {
-        isPreTag: tag => tag === 'pre'
+    test('should NOT remove leading newline character immediately following child-tag of pre element', () => {
+      const ast = parse(`<pre><span></span>\n  foo  bar  </pre>`, {
+        isPreTag: tag => tag === 'pre',
       })
       const preElement = ast.children[0] as ElementNode
       expect(preElement.children).toHaveLength(2)
       expect((preElement.children[1] as TextNode).content).toBe(
-        `\n  foo  bar  `
+        `\n  foo  bar  `,
       )
     })
 
-    it('self-closing pre tag', () => {
-      const ast = baseParse(`<pre/><span>\n  foo   bar</span>`, {
-        isPreTag: tag => tag === 'pre'
+    test('self-closing pre tag', () => {
+      const ast = parse(`<pre/><span>\n  foo   bar</span>`, {
+        isPreTag: tag => tag === 'pre',
       })
       const elementAfterPre = ast.children[1] as ElementNode
       // should not affect the <span> and condense its whitespace inside
       expect((elementAfterPre.children[0] as TextNode).content).toBe(` foo bar`)
     })
 
-    it('should NOT condense whitespaces in RCDATA text mode', () => {
-      const ast = baseParse(`<textarea>Text:\n   foo</textarea>`, {
-        getTextMode: ({ tag }) =>
-          tag === 'textarea' ? TextModes.RCDATA : TextModes.DATA
+    test('should NOT condense whitespaces in RCDATA text mode', () => {
+      const ast = parse(`<textarea>Text:\n   foo</textarea>`, {
+        parseMode: 'html',
       })
       const preElement = ast.children[0] as ElementNode
       expect(preElement.children).toHaveLength(1)
@@ -2082,15 +2411,15 @@ foo
     const parse = (content: string, options?: ParserOptions) =>
       baseParse(content, {
         whitespace: 'preserve',
-        ...options
+        ...options,
       })
 
-    it('should still remove whitespaces at start/end inside an element', () => {
+    test('should still remove whitespaces at start/end inside an element', () => {
       const ast = parse(`<div>   <span/>    </div>`)
       expect((ast.children[0] as ElementNode).children.length).toBe(1)
     })
 
-    it('should preserve whitespaces w/ newline between elements', () => {
+    test('should preserve whitespaces w/ newline between elements', () => {
       const ast = parse(`<div/> \n <div/> \n <div/>`)
       expect(ast.children.length).toBe(5)
       expect(ast.children.map(c => c.type)).toMatchObject([
@@ -2098,11 +2427,11 @@ foo
         NodeTypes.TEXT,
         NodeTypes.ELEMENT,
         NodeTypes.TEXT,
-        NodeTypes.ELEMENT
+        NodeTypes.ELEMENT,
       ])
     })
 
-    it('should preserve whitespaces adjacent to comments', () => {
+    test('should preserve whitespaces adjacent to comments', () => {
       const ast = parse(`<div/> \n <!--foo--> <div/>`)
       expect(ast.children.length).toBe(5)
       expect(ast.children.map(c => c.type)).toMatchObject([
@@ -2110,11 +2439,11 @@ foo
         NodeTypes.TEXT,
         NodeTypes.COMMENT,
         NodeTypes.TEXT,
-        NodeTypes.ELEMENT
+        NodeTypes.ELEMENT,
       ])
     })
 
-    it('should preserve whitespaces w/ newline between comments and elements', () => {
+    test('should preserve whitespaces w/ newline between comments and elements', () => {
       const ast = parse(`<div/> \n <!--foo--> \n <div/>`)
       expect(ast.children.length).toBe(5)
       expect(ast.children.map(c => c.type)).toMatchObject([
@@ -2122,22 +2451,22 @@ foo
         NodeTypes.TEXT,
         NodeTypes.COMMENT,
         NodeTypes.TEXT,
-        NodeTypes.ELEMENT
+        NodeTypes.ELEMENT,
       ])
     })
 
-    it('should preserve whitespaces w/ newline between interpolations', () => {
+    test('should preserve whitespaces w/ newline between interpolations', () => {
       const ast = parse(`{{ foo }} \n {{ bar }}`)
       expect(ast.children.length).toBe(3)
       expect(ast.children[0].type).toBe(NodeTypes.INTERPOLATION)
       expect(ast.children[1]).toMatchObject({
         type: NodeTypes.TEXT,
-        content: ' '
+        content: ' ',
       })
       expect(ast.children[2].type).toBe(NodeTypes.INTERPOLATION)
     })
 
-    it('should preserve whitespaces w/o newline between elements', () => {
+    test('should preserve whitespaces w/o newline between elements', () => {
       const ast = parse(`<div/> <div/> <div/>`)
       expect(ast.children.length).toBe(5)
       expect(ast.children.map(c => c.type)).toMatchObject([
@@ -2145,18 +2474,79 @@ foo
         NodeTypes.TEXT,
         NodeTypes.ELEMENT,
         NodeTypes.TEXT,
-        NodeTypes.ELEMENT
+        NodeTypes.ELEMENT,
       ])
     })
 
-    it('should preserve consecutive whitespaces in text', () => {
+    test('should preserve consecutive whitespaces in text', () => {
       const content = `   foo  \n    bar     baz     `
       const ast = parse(content)
       expect((ast.children[0] as TextNode).content).toBe(content)
     })
   })
 
+  describe('expression parsing', () => {
+    test('interpolation', () => {
+      const ast = baseParse(`{{ a + b }}`, { prefixIdentifiers: true })
+      // @ts-expect-error
+      expect((ast.children[0] as InterpolationNode).content.ast?.type).toBe(
+        'BinaryExpression',
+      )
+    })
+
+    test('v-bind', () => {
+      const ast = baseParse(`<div :[key+1]="foo()" />`, {
+        prefixIdentifiers: true,
+      })
+      const dir = (ast.children[0] as ElementNode).props[0] as DirectiveNode
+      // @ts-expect-error
+      expect(dir.arg?.ast?.type).toBe('BinaryExpression')
+      // @ts-expect-error
+      expect(dir.exp?.ast?.type).toBe('CallExpression')
+    })
+
+    test('v-on multi statements', () => {
+      const ast = baseParse(`<div @click="a++;b++" />`, {
+        prefixIdentifiers: true,
+      })
+      const dir = (ast.children[0] as ElementNode).props[0] as DirectiveNode
+      // @ts-expect-error
+      expect(dir.exp?.ast?.type).toBe('Program')
+      expect((dir.exp?.ast as Program).body).toMatchObject([
+        { type: 'ExpressionStatement' },
+        { type: 'ExpressionStatement' },
+      ])
+    })
+
+    test('v-slot', () => {
+      const ast = baseParse(`<Comp #foo="{ a, b }" />`, {
+        prefixIdentifiers: true,
+      })
+      const dir = (ast.children[0] as ElementNode).props[0] as DirectiveNode
+      // @ts-expect-error
+      expect(dir.exp?.ast?.type).toBe('ArrowFunctionExpression')
+    })
+
+    test('v-for', () => {
+      const ast = baseParse(`<div v-for="({ a, b }, key, index) of a.b" />`, {
+        prefixIdentifiers: true,
+      })
+      const dir = (ast.children[0] as ElementNode).props[0] as DirectiveNode
+      const { source, value, key, index } = dir.forParseResult!
+      // @ts-expect-error
+      expect(source.ast?.type).toBe('MemberExpression')
+      // @ts-expect-error
+      expect(value?.ast?.type).toBe('ArrowFunctionExpression')
+      expect(key?.ast).toBeNull() // simple ident
+      expect(index?.ast).toBeNull() // simple ident
+    })
+  })
+
   describe('Errors', () => {
+    // HTML parsing errors as specified at
+    // https://html.spec.whatwg.org/multipage/parsing.html#parse-errors
+    // We ignore some errors that do NOT affect parse result in meaningful ways
+    // but have non-trivial implementation cost.
     const patterns: {
       [key: string]: Array<{
         code: string
@@ -2164,44 +2554,44 @@ foo
         options?: Partial<ParserOptions>
       }>
     } = {
-      ABRUPT_CLOSING_OF_EMPTY_COMMENT: [
-        {
-          code: '<template><!--></template>',
-          errors: [
-            {
-              type: ErrorCodes.ABRUPT_CLOSING_OF_EMPTY_COMMENT,
-              loc: { offset: 10, line: 1, column: 11 }
-            }
-          ]
-        },
-        {
-          code: '<template><!---></template>',
-          errors: [
-            {
-              type: ErrorCodes.ABRUPT_CLOSING_OF_EMPTY_COMMENT,
-              loc: { offset: 10, line: 1, column: 11 }
-            }
-          ]
-        },
-        {
-          code: '<template><!----></template>',
-          errors: []
-        }
-      ],
+      // ABRUPT_CLOSING_OF_EMPTY_COMMENT: [
+      //   {
+      //     code: '<template><!--></template>',
+      //     errors: [
+      //       {
+      //         type: ErrorCodes.ABRUPT_CLOSING_OF_EMPTY_COMMENT,
+      //         loc: { offset: 10, line: 1, column: 11 }
+      //       }
+      //     ]
+      //   },
+      //   {
+      //     code: '<template><!---></template>',
+      //     errors: [
+      //       {
+      //         type: ErrorCodes.ABRUPT_CLOSING_OF_EMPTY_COMMENT,
+      //         loc: { offset: 10, line: 1, column: 11 }
+      //       }
+      //     ]
+      //   },
+      //   {
+      //     code: '<template><!----></template>',
+      //     errors: []
+      //   }
+      // ],
       CDATA_IN_HTML_CONTENT: [
         {
           code: '<template><![CDATA[cdata]]></template>',
           errors: [
             {
               type: ErrorCodes.CDATA_IN_HTML_CONTENT,
-              loc: { offset: 10, line: 1, column: 11 }
-            }
-          ]
+              loc: { offset: 10, line: 1, column: 11 },
+            },
+          ],
         },
         {
           code: '<template><svg><![CDATA[cdata]]></svg></template>',
-          errors: []
-        }
+          errors: [],
+        },
       ],
       DUPLICATE_ATTRIBUTE: [
         {
@@ -2209,60 +2599,60 @@ foo
           errors: [
             {
               type: ErrorCodes.DUPLICATE_ATTRIBUTE,
-              loc: { offset: 21, line: 1, column: 22 }
-            }
-          ]
-        }
+              loc: { offset: 21, line: 1, column: 22 },
+            },
+          ],
+        },
       ],
-      END_TAG_WITH_ATTRIBUTES: [
-        {
-          code: '<template><div></div id=""></template>',
-          errors: [
-            {
-              type: ErrorCodes.END_TAG_WITH_ATTRIBUTES,
-              loc: { offset: 21, line: 1, column: 22 }
-            }
-          ]
-        }
-      ],
-      END_TAG_WITH_TRAILING_SOLIDUS: [
-        {
-          code: '<template><div></div/></template>',
-          errors: [
-            {
-              type: ErrorCodes.END_TAG_WITH_TRAILING_SOLIDUS,
-              loc: { offset: 20, line: 1, column: 21 }
-            }
-          ]
-        }
-      ],
+      // END_TAG_WITH_ATTRIBUTES: [
+      //   {
+      //     code: '<template><div></div id=""></template>',
+      //     errors: [
+      //       {
+      //         type: ErrorCodes.END_TAG_WITH_ATTRIBUTES,
+      //         loc: { offset: 21, line: 1, column: 22 }
+      //       }
+      //     ]
+      //   }
+      // ],
+      // END_TAG_WITH_TRAILING_SOLIDUS: [
+      //   {
+      //     code: '<template><div></div/></template>',
+      //     errors: [
+      //       {
+      //         type: ErrorCodes.END_TAG_WITH_TRAILING_SOLIDUS,
+      //         loc: { offset: 20, line: 1, column: 21 }
+      //       }
+      //     ]
+      //   }
+      // ],
       EOF_BEFORE_TAG_NAME: [
         {
           code: '<template><',
           errors: [
             {
               type: ErrorCodes.EOF_BEFORE_TAG_NAME,
-              loc: { offset: 11, line: 1, column: 12 }
+              loc: { offset: 11, line: 1, column: 12 },
             },
             {
               type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 0, line: 1, column: 1 }
-            }
-          ]
+              loc: { offset: 0, line: 1, column: 1 },
+            },
+          ],
         },
         {
           code: '<template></',
           errors: [
             {
               type: ErrorCodes.EOF_BEFORE_TAG_NAME,
-              loc: { offset: 12, line: 1, column: 13 }
+              loc: { offset: 12, line: 1, column: 13 },
             },
             {
               type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 0, line: 1, column: 1 }
-            }
-          ]
-        }
+              loc: { offset: 0, line: 1, column: 1 },
+            },
+          ],
+        },
       ],
       EOF_IN_CDATA: [
         {
@@ -2270,35 +2660,35 @@ foo
           errors: [
             {
               type: ErrorCodes.EOF_IN_CDATA,
-              loc: { offset: 29, line: 1, column: 30 }
+              loc: { offset: 29, line: 1, column: 30 },
             },
             {
               type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 10, line: 1, column: 11 }
+              loc: { offset: 10, line: 1, column: 11 },
             },
             {
               type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 0, line: 1, column: 1 }
-            }
-          ]
+              loc: { offset: 0, line: 1, column: 1 },
+            },
+          ],
         },
         {
           code: '<template><svg><![CDATA[',
           errors: [
             {
               type: ErrorCodes.EOF_IN_CDATA,
-              loc: { offset: 24, line: 1, column: 25 }
+              loc: { offset: 24, line: 1, column: 25 },
             },
             {
               type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 10, line: 1, column: 11 }
+              loc: { offset: 10, line: 1, column: 11 },
             },
             {
               type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 0, line: 1, column: 1 }
-            }
-          ]
-        }
+              loc: { offset: 0, line: 1, column: 1 },
+            },
+          ],
+        },
       ],
       EOF_IN_COMMENT: [
         {
@@ -2306,456 +2696,408 @@ foo
           errors: [
             {
               type: ErrorCodes.EOF_IN_COMMENT,
-              loc: { offset: 21, line: 1, column: 22 }
+              loc: { offset: 21, line: 1, column: 22 },
             },
             {
               type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 0, line: 1, column: 1 }
-            }
-          ]
+              loc: { offset: 0, line: 1, column: 1 },
+            },
+          ],
         },
         {
           code: '<template><!--',
           errors: [
             {
               type: ErrorCodes.EOF_IN_COMMENT,
-              loc: { offset: 14, line: 1, column: 15 }
+              loc: { offset: 14, line: 1, column: 15 },
             },
             {
               type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 0, line: 1, column: 1 }
-            }
-          ]
+              loc: { offset: 0, line: 1, column: 1 },
+            },
+          ],
         },
-        // Bogus comments don't throw eof-in-comment error.
-        // https://html.spec.whatwg.org/multipage/parsing.html#bogus-comment-state
-        {
-          code: '<template><!',
-          errors: [
-            {
-              type: ErrorCodes.INCORRECTLY_OPENED_COMMENT,
-              loc: { offset: 10, line: 1, column: 11 }
-            },
-            {
-              type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 0, line: 1, column: 1 }
-            }
-          ]
-        },
-        {
-          code: '<template><!-',
-          errors: [
-            {
-              type: ErrorCodes.INCORRECTLY_OPENED_COMMENT,
-              loc: { offset: 10, line: 1, column: 11 }
-            },
-            {
-              type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 0, line: 1, column: 1 }
-            }
-          ]
-        },
-        {
-          code: '<template><!abc',
-          errors: [
-            {
-              type: ErrorCodes.INCORRECTLY_OPENED_COMMENT,
-              loc: { offset: 10, line: 1, column: 11 }
-            },
-            {
-              type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 0, line: 1, column: 1 }
-            }
-          ]
-        }
+        // // Bogus comments don't throw eof-in-comment error.
+        // // https://html.spec.whatwg.org/multipage/parsing.html#bogus-comment-state
+        // {
+        //   code: '<template><!',
+        //   errors: [
+        //     {
+        //       type: ErrorCodes.INCORRECTLY_OPENED_COMMENT,
+        //       loc: { offset: 10, line: 1, column: 11 }
+        //     },
+        //     {
+        //       type: ErrorCodes.X_MISSING_END_TAG,
+        //       loc: { offset: 0, line: 1, column: 1 }
+        //     }
+        //   ]
+        // },
+        // {
+        //   code: '<template><!-',
+        //   errors: [
+        //     {
+        //       type: ErrorCodes.INCORRECTLY_OPENED_COMMENT,
+        //       loc: { offset: 10, line: 1, column: 11 }
+        //     },
+        //     {
+        //       type: ErrorCodes.X_MISSING_END_TAG,
+        //       loc: { offset: 0, line: 1, column: 1 }
+        //     }
+        //   ]
+        // },
+        // {
+        //   code: '<template><!abc',
+        //   errors: [
+        //     {
+        //       type: ErrorCodes.INCORRECTLY_OPENED_COMMENT,
+        //       loc: { offset: 10, line: 1, column: 11 }
+        //     },
+        //     {
+        //       type: ErrorCodes.X_MISSING_END_TAG,
+        //       loc: { offset: 0, line: 1, column: 1 }
+        //     }
+        //   ]
+        // }
       ],
-      EOF_IN_SCRIPT_HTML_COMMENT_LIKE_TEXT: [
-        {
-          code: "<script><!--console.log('hello')",
-          errors: [
-            {
-              type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 0, line: 1, column: 1 }
-            },
-            {
-              type: ErrorCodes.EOF_IN_SCRIPT_HTML_COMMENT_LIKE_TEXT,
-              loc: { offset: 32, line: 1, column: 33 }
-            }
-          ]
-        },
-        {
-          code: "<script>console.log('hello')",
-          errors: [
-            {
-              type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 0, line: 1, column: 1 }
-            }
-          ]
-        }
-      ],
+      // EOF_IN_SCRIPT_HTML_COMMENT_LIKE_TEXT: [
+      //   {
+      //     code: "<script><!--console.log('hello')",
+      //     errors: [
+      //       {
+      //         type: ErrorCodes.X_MISSING_END_TAG,
+      //         loc: { offset: 0, line: 1, column: 1 }
+      //       },
+      //       {
+      //         type: ErrorCodes.EOF_IN_SCRIPT_HTML_COMMENT_LIKE_TEXT,
+      //         loc: { offset: 32, line: 1, column: 33 }
+      //       }
+      //     ]
+      //   },
+      //   {
+      //     code: "<script>console.log('hello')",
+      //     errors: [
+      //       {
+      //         type: ErrorCodes.X_MISSING_END_TAG,
+      //         loc: { offset: 0, line: 1, column: 1 }
+      //       }
+      //     ]
+      //   }
+      // ],
       EOF_IN_TAG: [
         {
           code: '<template><div',
           errors: [
             {
               type: ErrorCodes.EOF_IN_TAG,
-              loc: { offset: 14, line: 1, column: 15 }
+              loc: { offset: 14, line: 1, column: 15 },
             },
             {
               type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 10, line: 1, column: 11 }
+              loc: { offset: 0, line: 1, column: 1 },
             },
-            {
-              type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 0, line: 1, column: 1 }
-            }
-          ]
+          ],
         },
         {
           code: '<template><div ',
           errors: [
             {
               type: ErrorCodes.EOF_IN_TAG,
-              loc: { offset: 15, line: 1, column: 16 }
+              loc: { offset: 15, line: 1, column: 16 },
             },
             {
               type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 10, line: 1, column: 11 }
+              loc: { offset: 0, line: 1, column: 1 },
             },
-            {
-              type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 0, line: 1, column: 1 }
-            }
-          ]
+          ],
         },
         {
           code: '<template><div id',
           errors: [
             {
               type: ErrorCodes.EOF_IN_TAG,
-              loc: { offset: 17, line: 1, column: 18 }
+              loc: { offset: 17, line: 1, column: 18 },
             },
             {
               type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 10, line: 1, column: 11 }
+              loc: { offset: 0, line: 1, column: 1 },
             },
-            {
-              type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 0, line: 1, column: 1 }
-            }
-          ]
+          ],
         },
         {
           code: '<template><div id ',
           errors: [
             {
               type: ErrorCodes.EOF_IN_TAG,
-              loc: { offset: 18, line: 1, column: 19 }
+              loc: { offset: 18, line: 1, column: 19 },
             },
             {
               type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 10, line: 1, column: 11 }
+              loc: { offset: 0, line: 1, column: 1 },
             },
-            {
-              type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 0, line: 1, column: 1 }
-            }
-          ]
+          ],
         },
         {
           code: '<template><div id =',
           errors: [
-            {
-              type: ErrorCodes.MISSING_ATTRIBUTE_VALUE,
-              loc: { offset: 19, line: 1, column: 20 }
-            },
+            // {
+            //   type: ErrorCodes.MISSING_ATTRIBUTE_VALUE,
+            //   loc: { offset: 19, line: 1, column: 20 }
+            // },
             {
               type: ErrorCodes.EOF_IN_TAG,
-              loc: { offset: 19, line: 1, column: 20 }
+              loc: { offset: 19, line: 1, column: 20 },
             },
             {
               type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 10, line: 1, column: 11 }
+              loc: { offset: 0, line: 1, column: 1 },
             },
-            {
-              type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 0, line: 1, column: 1 }
-            }
-          ]
+          ],
         },
         {
           code: "<template><div id='abc",
           errors: [
             {
               type: ErrorCodes.EOF_IN_TAG,
-              loc: { offset: 22, line: 1, column: 23 }
+              loc: { offset: 22, line: 1, column: 23 },
             },
             {
               type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 10, line: 1, column: 11 }
+              loc: { offset: 0, line: 1, column: 1 },
             },
-            {
-              type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 0, line: 1, column: 1 }
-            }
-          ]
+          ],
         },
         {
           code: '<template><div id="abc',
           errors: [
             {
               type: ErrorCodes.EOF_IN_TAG,
-              loc: { offset: 22, line: 1, column: 23 }
+              loc: { offset: 22, line: 1, column: 23 },
             },
             {
               type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 10, line: 1, column: 11 }
+              loc: { offset: 0, line: 1, column: 1 },
             },
-            {
-              type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 0, line: 1, column: 1 }
-            }
-          ]
+          ],
         },
         {
           code: "<template><div id='abc'",
           errors: [
             {
               type: ErrorCodes.EOF_IN_TAG,
-              loc: { offset: 23, line: 1, column: 24 }
+              loc: { offset: 23, line: 1, column: 24 },
             },
             {
               type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 10, line: 1, column: 11 }
+              loc: { offset: 0, line: 1, column: 1 },
             },
-            {
-              type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 0, line: 1, column: 1 }
-            }
-          ]
+          ],
         },
         {
           code: '<template><div id="abc"',
           errors: [
             {
               type: ErrorCodes.EOF_IN_TAG,
-              loc: { offset: 23, line: 1, column: 24 }
+              loc: { offset: 23, line: 1, column: 24 },
             },
             {
               type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 10, line: 1, column: 11 }
+              loc: { offset: 0, line: 1, column: 1 },
             },
-            {
-              type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 0, line: 1, column: 1 }
-            }
-          ]
+          ],
         },
         {
           code: '<template><div id=abc',
           errors: [
             {
               type: ErrorCodes.EOF_IN_TAG,
-              loc: { offset: 21, line: 1, column: 22 }
+              loc: { offset: 21, line: 1, column: 22 },
             },
             {
               type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 10, line: 1, column: 11 }
+              loc: { offset: 0, line: 1, column: 1 },
             },
-            {
-              type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 0, line: 1, column: 1 }
-            }
-          ]
+          ],
         },
         {
           code: "<template><div id='abc'/",
           errors: [
             {
               type: ErrorCodes.UNEXPECTED_SOLIDUS_IN_TAG,
-              loc: { offset: 23, line: 1, column: 24 }
+              loc: { offset: 23, line: 1, column: 24 },
             },
             {
               type: ErrorCodes.EOF_IN_TAG,
-              loc: { offset: 24, line: 1, column: 25 }
+              loc: { offset: 24, line: 1, column: 25 },
             },
             {
               type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 10, line: 1, column: 11 }
+              loc: { offset: 0, line: 1, column: 1 },
             },
-            {
-              type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 0, line: 1, column: 1 }
-            }
-          ]
+          ],
         },
         {
           code: '<template><div id="abc"/',
           errors: [
             {
               type: ErrorCodes.UNEXPECTED_SOLIDUS_IN_TAG,
-              loc: { offset: 23, line: 1, column: 24 }
+              loc: { offset: 23, line: 1, column: 24 },
             },
             {
               type: ErrorCodes.EOF_IN_TAG,
-              loc: { offset: 24, line: 1, column: 25 }
+              loc: { offset: 24, line: 1, column: 25 },
             },
             {
               type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 10, line: 1, column: 11 }
+              loc: { offset: 0, line: 1, column: 1 },
             },
-            {
-              type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 0, line: 1, column: 1 }
-            }
-          ]
+          ],
         },
         {
           code: '<template><div id=abc /',
           errors: [
             {
               type: ErrorCodes.UNEXPECTED_SOLIDUS_IN_TAG,
-              loc: { offset: 22, line: 1, column: 23 }
+              loc: { offset: 22, line: 1, column: 23 },
             },
             {
               type: ErrorCodes.EOF_IN_TAG,
-              loc: { offset: 23, line: 1, column: 24 }
+              loc: { offset: 23, line: 1, column: 24 },
             },
             {
               type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 10, line: 1, column: 11 }
+              loc: { offset: 0, line: 1, column: 1 },
             },
-            {
-              type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 0, line: 1, column: 1 }
-            }
-          ]
+          ],
         },
         {
           code: '<div></div',
           errors: [
             {
               type: ErrorCodes.EOF_IN_TAG,
-              loc: { offset: 10, line: 1, column: 11 }
-            }
-          ]
-        }
-      ],
-      INCORRECTLY_CLOSED_COMMENT: [
-        {
-          code: '<template><!--comment--!></template>',
-          errors: [
-            {
-              type: ErrorCodes.INCORRECTLY_CLOSED_COMMENT,
-              loc: { offset: 10, line: 1, column: 11 }
-            }
-          ]
-        }
-      ],
-      INCORRECTLY_OPENED_COMMENT: [
-        {
-          code: '<template><!></template>',
-          errors: [
-            {
-              type: ErrorCodes.INCORRECTLY_OPENED_COMMENT,
-              loc: { offset: 10, line: 1, column: 11 }
-            }
-          ]
-        },
-        {
-          code: '<template><!-></template>',
-          errors: [
-            {
-              type: ErrorCodes.INCORRECTLY_OPENED_COMMENT,
-              loc: { offset: 10, line: 1, column: 11 }
-            }
-          ]
-        },
-        {
-          code: '<template><!ELEMENT br EMPTY></template>',
-          errors: [
-            {
-              type: ErrorCodes.INCORRECTLY_OPENED_COMMENT,
-              loc: { offset: 10, line: 1, column: 11 }
-            }
-          ]
-        },
-        // Just ignore doctype.
-        {
-          code: '<!DOCTYPE html>',
-          errors: []
-        }
-      ],
-      INVALID_FIRST_CHARACTER_OF_TAG_NAME: [
-        {
-          code: '<template>a < b</template>',
-          errors: [
-            {
-              type: ErrorCodes.INVALID_FIRST_CHARACTER_OF_TAG_NAME,
-              loc: { offset: 13, line: 1, column: 14 }
-            }
-          ]
-        },
-        {
-          code: '<template><�></template>',
-          errors: [
-            {
-              type: ErrorCodes.INVALID_FIRST_CHARACTER_OF_TAG_NAME,
-              loc: { offset: 11, line: 1, column: 12 }
-            }
-          ]
-        },
-        {
-          code: '<template>a </ b</template>',
-          errors: [
-            {
-              type: ErrorCodes.INVALID_FIRST_CHARACTER_OF_TAG_NAME,
-              loc: { offset: 14, line: 1, column: 15 }
+              loc: { offset: 10, line: 1, column: 11 },
             },
             {
               type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 0, line: 1, column: 1 }
-            }
-          ]
+              loc: { offset: 0, line: 1, column: 1 },
+            },
+          ],
         },
-        {
-          code: '<template></�></template>',
-          errors: [
-            {
-              type: ErrorCodes.INVALID_FIRST_CHARACTER_OF_TAG_NAME,
-              loc: { offset: 12, line: 1, column: 13 }
-            }
-          ]
-        },
-        // Don't throw invalid-first-character-of-tag-name in interpolation
-        {
-          code: '<template>{{a < b}}</template>',
-          errors: []
-        }
       ],
+      // INCORRECTLY_CLOSED_COMMENT: [
+      //   {
+      //     code: '<template><!--comment--!></template>',
+      //     errors: [
+      //       {
+      //         type: ErrorCodes.INCORRECTLY_CLOSED_COMMENT,
+      //         loc: { offset: 10, line: 1, column: 11 }
+      //       }
+      //     ]
+      //   }
+      // ],
+      // INCORRECTLY_OPENED_COMMENT: [
+      //   {
+      //     code: '<template><!></template>',
+      //     errors: [
+      //       {
+      //         type: ErrorCodes.INCORRECTLY_OPENED_COMMENT,
+      //         loc: { offset: 10, line: 1, column: 11 }
+      //       }
+      //     ]
+      //   },
+      //   {
+      //     code: '<template><!-></template>',
+      //     errors: [
+      //       {
+      //         type: ErrorCodes.INCORRECTLY_OPENED_COMMENT,
+      //         loc: { offset: 10, line: 1, column: 11 }
+      //       }
+      //     ]
+      //   },
+      //   {
+      //     code: '<template><!ELEMENT br EMPTY></template>',
+      //     errors: [
+      //       {
+      //         type: ErrorCodes.INCORRECTLY_OPENED_COMMENT,
+      //         loc: { offset: 10, line: 1, column: 11 }
+      //       }
+      //     ]
+      //   },
+      //   // Just ignore doctype.
+      //   {
+      //     code: '<!DOCTYPE html>',
+      //     errors: []
+      //   }
+      // ],
+      // INVALID_FIRST_CHARACTER_OF_TAG_NAME: [
+      //   {
+      //     code: '<template>a < b</template>',
+      //     errors: [
+      //       {
+      //         type: ErrorCodes.INVALID_FIRST_CHARACTER_OF_TAG_NAME,
+      //         loc: { offset: 13, line: 1, column: 14 }
+      //       }
+      //     ]
+      //   },
+      //   {
+      //     code: '<template><�></template>',
+      //     errors: [
+      //       {
+      //         type: ErrorCodes.INVALID_FIRST_CHARACTER_OF_TAG_NAME,
+      //         loc: { offset: 11, line: 1, column: 12 }
+      //       }
+      //     ]
+      //   },
+      //   {
+      //     code: '<template>a </ b</template>',
+      //     errors: [
+      //       {
+      //         type: ErrorCodes.INVALID_FIRST_CHARACTER_OF_TAG_NAME,
+      //         loc: { offset: 14, line: 1, column: 15 }
+      //       },
+      //       {
+      //         type: ErrorCodes.X_MISSING_END_TAG,
+      //         loc: { offset: 0, line: 1, column: 1 }
+      //       }
+      //     ]
+      //   },
+      //   {
+      //     code: '<template></�></template>',
+      //     errors: [
+      //       {
+      //         type: ErrorCodes.INVALID_FIRST_CHARACTER_OF_TAG_NAME,
+      //         loc: { offset: 12, line: 1, column: 13 }
+      //       }
+      //     ]
+      //   },
+      //   // Don't throw invalid-first-character-of-tag-name in interpolation
+      //   {
+      //     code: '<template>{{a < b}}</template>',
+      //     errors: []
+      //   }
+      // ],
       MISSING_ATTRIBUTE_VALUE: [
         {
           code: '<template><div id=></div></template>',
           errors: [
             {
               type: ErrorCodes.MISSING_ATTRIBUTE_VALUE,
-              loc: { offset: 18, line: 1, column: 19 }
-            }
-          ]
+              loc: { offset: 18, line: 1, column: 19 },
+            },
+          ],
         },
         {
           code: '<template><div id= ></div></template>',
           errors: [
             {
               type: ErrorCodes.MISSING_ATTRIBUTE_VALUE,
-              loc: { offset: 19, line: 1, column: 20 }
-            }
-          ]
+              loc: { offset: 19, line: 1, column: 20 },
+            },
+          ],
         },
         {
           code: '<template><div id= /></div></template>',
-          errors: []
-        }
+          errors: [],
+        },
       ],
       MISSING_END_TAG_NAME: [
         {
@@ -2763,106 +3105,106 @@ foo
           errors: [
             {
               type: ErrorCodes.MISSING_END_TAG_NAME,
-              loc: { offset: 12, line: 1, column: 13 }
-            }
-          ]
-        }
-      ],
-      MISSING_WHITESPACE_BETWEEN_ATTRIBUTES: [
-        {
-          code: '<template><div id="foo"class="bar"></div></template>',
-          errors: [
-            {
-              type: ErrorCodes.MISSING_WHITESPACE_BETWEEN_ATTRIBUTES,
-              loc: { offset: 23, line: 1, column: 24 }
-            }
-          ]
-        },
-        // CR doesn't appear in tokenization phase, but all CR are removed in preprocessing.
-        // https://html.spec.whatwg.org/multipage/parsing.html#preprocessing-the-input-stream
-        {
-          code: '<template><div id="foo"\r\nclass="bar"></div></template>',
-          errors: []
-        }
-      ],
-      NESTED_COMMENT: [
-        {
-          code: '<template><!--a<!--b--></template>',
-          errors: [
-            {
-              type: ErrorCodes.NESTED_COMMENT,
-              loc: { offset: 15, line: 1, column: 16 }
-            }
-          ]
-        },
-        {
-          code: '<template><!--a<!--b<!--c--></template>',
-          errors: [
-            {
-              type: ErrorCodes.NESTED_COMMENT,
-              loc: { offset: 15, line: 1, column: 16 }
+              loc: { offset: 12, line: 1, column: 13 },
             },
-            {
-              type: ErrorCodes.NESTED_COMMENT,
-              loc: { offset: 20, line: 1, column: 21 }
-            }
-          ]
+          ],
         },
-        {
-          code: '<template><!--a<!--b<!----></template>',
-          errors: [
-            {
-              type: ErrorCodes.NESTED_COMMENT,
-              loc: { offset: 15, line: 1, column: 16 }
-            }
-          ]
-        },
-        {
-          code: '<template><!--a<!--></template>',
-          errors: []
-        },
-        {
-          code: '<template><!--a<!--',
-          errors: [
-            {
-              type: ErrorCodes.EOF_IN_COMMENT,
-              loc: { offset: 19, line: 1, column: 20 }
-            },
-            {
-              type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 0, line: 1, column: 1 }
-            }
-          ]
-        }
       ],
+      // MISSING_WHITESPACE_BETWEEN_ATTRIBUTES: [
+      //   {
+      //     code: '<template><div id="foo"class="bar"></div></template>',
+      //     errors: [
+      //       {
+      //         type: ErrorCodes.MISSING_WHITESPACE_BETWEEN_ATTRIBUTES,
+      //         loc: { offset: 23, line: 1, column: 24 }
+      //       }
+      //     ]
+      //   },
+      //   // CR doesn't appear in tokenization phase, but all CR are removed in preprocessing.
+      //   // https://html.spec.whatwg.org/multipage/parsing.html#preprocessing-the-input-stream
+      //   {
+      //     code: '<template><div id="foo"\r\nclass="bar"></div></template>',
+      //     errors: []
+      //   }
+      // ],
+      // NESTED_COMMENT: [
+      //   {
+      //     code: '<template><!--a<!--b--></template>',
+      //     errors: [
+      //       {
+      //         type: ErrorCodes.NESTED_COMMENT,
+      //         loc: { offset: 15, line: 1, column: 16 }
+      //       }
+      //     ]
+      //   },
+      //   {
+      //     code: '<template><!--a<!--b<!--c--></template>',
+      //     errors: [
+      //       {
+      //         type: ErrorCodes.NESTED_COMMENT,
+      //         loc: { offset: 15, line: 1, column: 16 }
+      //       },
+      //       {
+      //         type: ErrorCodes.NESTED_COMMENT,
+      //         loc: { offset: 20, line: 1, column: 21 }
+      //       }
+      //     ]
+      //   },
+      //   {
+      //     code: '<template><!--a<!--b<!----></template>',
+      //     errors: [
+      //       {
+      //         type: ErrorCodes.NESTED_COMMENT,
+      //         loc: { offset: 15, line: 1, column: 16 }
+      //       }
+      //     ]
+      //   },
+      //   {
+      //     code: '<template><!--a<!--></template>',
+      //     errors: []
+      //   },
+      //   {
+      //     code: '<template><!--a<!--',
+      //     errors: [
+      //       {
+      //         type: ErrorCodes.EOF_IN_COMMENT,
+      //         loc: { offset: 19, line: 1, column: 20 }
+      //       },
+      //       {
+      //         type: ErrorCodes.X_MISSING_END_TAG,
+      //         loc: { offset: 0, line: 1, column: 1 }
+      //       }
+      //     ]
+      //   }
+      // ],
       UNEXPECTED_CHARACTER_IN_ATTRIBUTE_NAME: [
         {
           code: "<template><div a\"bc=''></div></template>",
           errors: [
             {
               type: ErrorCodes.UNEXPECTED_CHARACTER_IN_ATTRIBUTE_NAME,
-              loc: { offset: 16, line: 1, column: 17 }
-            }
-          ]
+              loc: { offset: 16, line: 1, column: 17 },
+            },
+          ],
         },
         {
           code: "<template><div a'bc=''></div></template>",
           errors: [
             {
               type: ErrorCodes.UNEXPECTED_CHARACTER_IN_ATTRIBUTE_NAME,
-              loc: { offset: 16, line: 1, column: 17 }
-            }
-          ]
+              loc: { offset: 16, line: 1, column: 17 },
+            },
+          ],
         },
         {
           code: "<template><div a<bc=''></div></template>",
           errors: [
             {
               type: ErrorCodes.UNEXPECTED_CHARACTER_IN_ATTRIBUTE_NAME,
-              loc: { offset: 16, line: 1, column: 17 }
-            }
-          ]
-        }
+              loc: { offset: 16, line: 1, column: 17 },
+            },
+          ],
+        },
       ],
       UNEXPECTED_CHARACTER_IN_UNQUOTED_ATTRIBUTE_VALUE: [
         {
@@ -2870,46 +3212,46 @@ foo
           errors: [
             {
               type: ErrorCodes.UNEXPECTED_CHARACTER_IN_UNQUOTED_ATTRIBUTE_VALUE,
-              loc: { offset: 22, line: 1, column: 23 }
-            }
-          ]
+              loc: { offset: 22, line: 1, column: 23 },
+            },
+          ],
         },
         {
           code: "<template><div foo=bar'></div></template>",
           errors: [
             {
               type: ErrorCodes.UNEXPECTED_CHARACTER_IN_UNQUOTED_ATTRIBUTE_VALUE,
-              loc: { offset: 22, line: 1, column: 23 }
-            }
-          ]
+              loc: { offset: 22, line: 1, column: 23 },
+            },
+          ],
         },
         {
           code: '<template><div foo=bar<div></div></template>',
           errors: [
             {
               type: ErrorCodes.UNEXPECTED_CHARACTER_IN_UNQUOTED_ATTRIBUTE_VALUE,
-              loc: { offset: 22, line: 1, column: 23 }
-            }
-          ]
+              loc: { offset: 22, line: 1, column: 23 },
+            },
+          ],
         },
         {
           code: '<template><div foo=bar=baz></div></template>',
           errors: [
             {
               type: ErrorCodes.UNEXPECTED_CHARACTER_IN_UNQUOTED_ATTRIBUTE_VALUE,
-              loc: { offset: 22, line: 1, column: 23 }
-            }
-          ]
+              loc: { offset: 22, line: 1, column: 23 },
+            },
+          ],
         },
         {
           code: '<template><div foo=bar`></div></template>',
           errors: [
             {
               type: ErrorCodes.UNEXPECTED_CHARACTER_IN_UNQUOTED_ATTRIBUTE_VALUE,
-              loc: { offset: 22, line: 1, column: 23 }
-            }
-          ]
-        }
+              loc: { offset: 22, line: 1, column: 23 },
+            },
+          ],
+        },
       ],
       UNEXPECTED_EQUALS_SIGN_BEFORE_ATTRIBUTE_NAME: [
         {
@@ -2917,19 +3259,19 @@ foo
           errors: [
             {
               type: ErrorCodes.UNEXPECTED_EQUALS_SIGN_BEFORE_ATTRIBUTE_NAME,
-              loc: { offset: 15, line: 1, column: 16 }
-            }
-          ]
+              loc: { offset: 15, line: 1, column: 16 },
+            },
+          ],
         },
         {
           code: '<template><div =></div></template>',
           errors: [
             {
               type: ErrorCodes.UNEXPECTED_EQUALS_SIGN_BEFORE_ATTRIBUTE_NAME,
-              loc: { offset: 15, line: 1, column: 16 }
-            }
-          ]
-        }
+              loc: { offset: 15, line: 1, column: 16 },
+            },
+          ],
+        },
       ],
       UNEXPECTED_QUESTION_MARK_INSTEAD_OF_TAG_NAME: [
         {
@@ -2937,10 +3279,10 @@ foo
           errors: [
             {
               type: ErrorCodes.UNEXPECTED_QUESTION_MARK_INSTEAD_OF_TAG_NAME,
-              loc: { offset: 11, line: 1, column: 12 }
-            }
-          ]
-        }
+              loc: { offset: 11, line: 1, column: 12 },
+            },
+          ],
+        },
       ],
       UNEXPECTED_SOLIDUS_IN_TAG: [
         {
@@ -2948,10 +3290,10 @@ foo
           errors: [
             {
               type: ErrorCodes.UNEXPECTED_SOLIDUS_IN_TAG,
-              loc: { offset: 16, line: 1, column: 17 }
-            }
-          ]
-        }
+              loc: { offset: 16, line: 1, column: 17 },
+            },
+          ],
+        },
       ],
       X_INVALID_END_TAG: [
         {
@@ -2959,39 +3301,52 @@ foo
           errors: [
             {
               type: ErrorCodes.X_INVALID_END_TAG,
-              loc: { offset: 10, line: 1, column: 11 }
-            }
-          ]
+              loc: { offset: 10, line: 1, column: 11 },
+            },
+          ],
         },
         {
           code: '<template></div></div></template>',
           errors: [
             {
               type: ErrorCodes.X_INVALID_END_TAG,
-              loc: { offset: 10, line: 1, column: 11 }
+              loc: { offset: 10, line: 1, column: 11 },
             },
             {
               type: ErrorCodes.X_INVALID_END_TAG,
-              loc: { offset: 16, line: 1, column: 17 }
-            }
-          ]
+              loc: { offset: 16, line: 1, column: 17 },
+            },
+          ],
+        },
+        {
+          code: '<template>a </ b</template>',
+          errors: [
+            {
+              type: ErrorCodes.X_INVALID_END_TAG,
+              loc: { offset: 12, line: 1, column: 13 },
+            },
+            {
+              type: ErrorCodes.X_MISSING_END_TAG,
+              loc: { offset: 0, line: 1, column: 1 },
+            },
+          ],
         },
         {
           code: "<template>{{'</div>'}}</template>",
-          errors: []
+          errors: [],
         },
         {
           code: '<textarea></div></textarea>',
-          errors: []
+          errors: [],
         },
         {
           code: '<svg><![CDATA[</div>]]></svg>',
-          errors: []
+          errors: [],
         },
         {
           code: '<svg><!--</div>--></svg>',
-          errors: []
-        }
+          errors: [],
+        },
       ],
       X_MISSING_END_TAG: [
         {
@@ -2999,23 +3354,23 @@ foo
           errors: [
             {
               type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 10, line: 1, column: 11 }
-            }
-          ]
+              loc: { offset: 10, line: 1, column: 11 },
+            },
+          ],
         },
         {
           code: '<template><div>',
           errors: [
             {
               type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 10, line: 1, column: 11 }
+              loc: { offset: 10, line: 1, column: 11 },
             },
             {
               type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 0, line: 1, column: 1 }
-            }
-          ]
-        }
+              loc: { offset: 0, line: 1, column: 1 },
+            },
+          ],
+        },
       ],
       X_MISSING_INTERPOLATION_END: [
         {
@@ -3023,23 +3378,36 @@ foo
           errors: [
             {
               type: ErrorCodes.X_MISSING_INTERPOLATION_END,
-              loc: { offset: 0, line: 1, column: 1 }
-            }
-          ]
+              loc: { offset: 0, line: 1, column: 1 },
+            },
+          ],
         },
         {
           code: '{{',
           errors: [
             {
               type: ErrorCodes.X_MISSING_INTERPOLATION_END,
-              loc: { offset: 0, line: 1, column: 1 }
-            }
-          ]
+              loc: { offset: 0, line: 1, column: 1 },
+            },
+          ],
+        },
+        {
+          code: '<div>{{ foo</div>',
+          errors: [
+            {
+              type: ErrorCodes.X_MISSING_INTERPOLATION_END,
+              loc: { offset: 5, line: 1, column: 6 },
+            },
+            {
+              type: ErrorCodes.X_MISSING_END_TAG,
+              loc: { offset: 0, line: 1, column: 1 },
+            },
+          ],
         },
         {
           code: '{{}}',
-          errors: []
-        }
+          errors: [],
+        },
       ],
       X_MISSING_DYNAMIC_DIRECTIVE_ARGUMENT_END: [
         {
@@ -3047,11 +3415,11 @@ foo
           errors: [
             {
               type: ErrorCodes.X_MISSING_DYNAMIC_DIRECTIVE_ARGUMENT_END,
-              loc: { offset: 15, line: 1, column: 16 }
-            }
-          ]
-        }
-      ]
+              loc: { offset: 15, line: 1, column: 16 },
+            },
+          ],
+        },
+      ],
     }
 
     for (const key of Object.keys(patterns)) {
@@ -3060,41 +3428,26 @@ foo
           test(
             code.replace(
               /[\r\n]/g,
-              c => `\\x0${c.codePointAt(0)!.toString(16)};`
+              c => `\\x0${c.codePointAt(0)!.toString(16)};`,
             ),
             () => {
               const spy = vi.fn()
               const ast = baseParse(code, {
-                getNamespace: (tag, parent) => {
-                  const ns = parent ? parent.ns : Namespaces.HTML
-                  if (ns === Namespaces.HTML) {
-                    if (tag === 'svg') {
-                      return (Namespaces.HTML + 1) as any
-                    }
-                  }
-                  return ns
-                },
-                getTextMode: ({ tag }) => {
-                  if (tag === 'textarea') {
-                    return TextModes.RCDATA
-                  }
-                  if (tag === 'script') {
-                    return TextModes.RAWTEXT
-                  }
-                  return TextModes.DATA
-                },
+                parseMode: 'html',
+                getNamespace: tag =>
+                  tag === 'svg' ? Namespaces.SVG : Namespaces.HTML,
                 ...options,
-                onError: spy
+                onError: spy,
               })
 
               expect(
                 spy.mock.calls.map(([err]) => ({
                   type: err.code,
-                  loc: err.loc.start
-                }))
+                  loc: err.loc.start,
+                })),
               ).toMatchObject(errors)
               expect(ast).toMatchSnapshot()
-            }
+            },
           )
         }
       })

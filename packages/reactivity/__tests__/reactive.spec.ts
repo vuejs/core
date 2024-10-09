@@ -1,7 +1,19 @@
-import { ref, isRef } from '../src/ref'
-import { reactive, isReactive, toRaw, markRaw } from '../src/reactive'
+import { isRef, ref } from '../src/ref'
+import {
+  isProxy,
+  isReactive,
+  isReadonly,
+  isShallow,
+  markRaw,
+  reactive,
+  readonly,
+  shallowReactive,
+  shallowReadonly,
+  toRaw,
+} from '../src/reactive'
 import { computed } from '../src/computed'
 import { effect } from '../src/effect'
+import { targetMap } from '../src/dep'
 
 describe('reactivity/reactive', () => {
   test('Object', () => {
@@ -35,9 +47,9 @@ describe('reactivity/reactive', () => {
   test('nested reactives', () => {
     const original = {
       nested: {
-        foo: 1
+        foo: 1,
       },
-      array: [{ bar: 2 }]
+      array: [{ bar: 2 }],
     }
     const observed = reactive(original)
     expect(isReactive(observed.nested)).toBe(true)
@@ -209,7 +221,7 @@ describe('reactivity/reactive', () => {
     // writable
     const b = computed({
       get: () => 1,
-      set: () => {}
+      set: () => {},
     })
     const obj = reactive({ a, b })
     // check type
@@ -238,7 +250,7 @@ describe('reactivity/reactive', () => {
     const assertValue = (value: any) => {
       reactive(value)
       expect(
-        `value cannot be made reactive: ${String(value)}`
+        `value cannot be made reactive: ${String(value)}`,
       ).toHaveBeenWarnedLast()
     }
 
@@ -271,10 +283,22 @@ describe('reactivity/reactive', () => {
   test('markRaw', () => {
     const obj = reactive({
       foo: { a: 1 },
-      bar: markRaw({ b: 2 })
+      bar: markRaw({ b: 2 }),
     })
     expect(isReactive(obj.foo)).toBe(true)
     expect(isReactive(obj.bar)).toBe(false)
+  })
+
+  test('markRaw should skip non-extensible objects', () => {
+    const obj = Object.seal({ foo: 1 })
+    expect(() => markRaw(obj)).not.toThrowError()
+  })
+
+  test('markRaw should not redefine on an marked object', () => {
+    const obj = markRaw({ foo: 1 })
+    const raw = markRaw(obj)
+    expect(raw).toBe(obj)
+    expect(() => markRaw(obj)).not.toThrowError()
   })
 
   test('should not observe non-extensible objects', () => {
@@ -282,7 +306,7 @@ describe('reactivity/reactive', () => {
       foo: Object.preventExtensions({ a: 1 }),
       // sealed or frozen objects are considered non-extensible as well
       bar: Object.freeze({ a: 1 }),
-      baz: Object.seal({ a: 1 })
+      baz: Object.seal({ a: 1 }),
     })
     expect(isReactive(obj.foo)).toBe(false)
     expect(isReactive(obj.bar)).toBe(false)
@@ -292,9 +316,97 @@ describe('reactivity/reactive', () => {
   test('should not observe objects with __v_skip', () => {
     const original = {
       foo: 1,
-      __v_skip: true
+      __v_skip: true,
     }
     const observed = reactive(original)
     expect(isReactive(observed)).toBe(false)
+  })
+
+  test('hasOwnProperty edge case: Symbol values', () => {
+    const key = Symbol()
+    const obj = reactive({ [key]: 1 }) as { [key]?: 1 }
+    let dummy
+    effect(() => {
+      dummy = obj.hasOwnProperty(key)
+    })
+    expect(dummy).toBe(true)
+
+    delete obj[key]
+    expect(dummy).toBe(false)
+  })
+
+  test('hasOwnProperty edge case: non-string values', () => {
+    const key = {}
+    const obj = reactive({ '[object Object]': 1 }) as { '[object Object]'?: 1 }
+    let dummy
+    effect(() => {
+      // @ts-expect-error
+      dummy = obj.hasOwnProperty(key)
+    })
+    expect(dummy).toBe(true)
+
+    // @ts-expect-error
+    delete obj[key]
+    expect(dummy).toBe(false)
+  })
+
+  test('isProxy', () => {
+    const foo = {}
+    expect(isProxy(foo)).toBe(false)
+
+    const fooRe = reactive(foo)
+    expect(isProxy(fooRe)).toBe(true)
+
+    const fooSRe = shallowReactive(foo)
+    expect(isProxy(fooSRe)).toBe(true)
+
+    const barRl = readonly(foo)
+    expect(isProxy(barRl)).toBe(true)
+
+    const barSRl = shallowReadonly(foo)
+    expect(isProxy(barSRl)).toBe(true)
+
+    const c = computed(() => {})
+    expect(isProxy(c)).toBe(false)
+  })
+
+  test('The results of the shallow and readonly assignments are the same (Map)', () => {
+    const map = reactive(new Map())
+    map.set('foo', shallowReactive({ a: 2 }))
+    expect(isShallow(map.get('foo'))).toBe(true)
+
+    map.set('bar', readonly({ b: 2 }))
+    expect(isReadonly(map.get('bar'))).toBe(true)
+  })
+
+  test('The results of the shallow and readonly assignments are the same (Set)', () => {
+    const set = reactive(new Set())
+    set.add(shallowReactive({ a: 2 }))
+    set.add(readonly({ b: 2 }))
+    let count = 0
+    for (const i of set) {
+      if (count === 0) expect(isShallow(i)).toBe(true)
+      else expect(isReadonly(i)).toBe(true)
+      count++
+    }
+  })
+
+  // #11696
+  test('should use correct receiver on set handler for refs', () => {
+    const a = reactive(ref(1))
+    effect(() => a.value)
+    expect(() => {
+      a.value++
+    }).not.toThrow()
+  })
+
+  // #11979
+  test('should release property Dep instance if it no longer has subscribers', () => {
+    let obj = { x: 1 }
+    let a = reactive(obj)
+    const e = effect(() => a.x)
+    expect(targetMap.get(obj)?.get('x')).toBeTruthy()
+    e.effect.stop()
+    expect(targetMap.get(obj)?.get('x')).toBeFalsy()
   })
 })

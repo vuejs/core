@@ -1,13 +1,12 @@
 import { BindingTypes } from '@vue/compiler-core'
-import { SFCScriptCompileOptions } from '../../src'
-import { compileSFCScript, assertCode } from '../utils'
+import type { SFCScriptCompileOptions } from '../../src'
+import { assertCode, compileSFCScript } from '../utils'
 
 describe('sfc reactive props destructure', () => {
   function compile(src: string, options?: Partial<SFCScriptCompileOptions>) {
     return compileSFCScript(src, {
       inlineTemplate: true,
-      propsDestructure: true,
-      ...options
+      ...options,
     })
   }
 
@@ -24,7 +23,7 @@ describe('sfc reactive props destructure', () => {
     expect(content).toMatch(`_toDisplayString(__props.foo)`)
     assertCode(content)
     expect(bindings).toStrictEqual({
-      foo: BindingTypes.PROPS
+      foo: BindingTypes.PROPS,
     })
   })
 
@@ -44,7 +43,7 @@ describe('sfc reactive props destructure', () => {
     expect(bindings).toStrictEqual({
       foo: BindingTypes.PROPS,
       bar: BindingTypes.LITERAL_CONST,
-      hello: BindingTypes.LITERAL_CONST
+      hello: BindingTypes.LITERAL_CONST,
     })
   })
 
@@ -65,7 +64,7 @@ describe('sfc reactive props destructure', () => {
     expect(bindings).toStrictEqual({
       foo: BindingTypes.PROPS,
       bar: BindingTypes.PROPS,
-      test: BindingTypes.SETUP_CONST
+      test: BindingTypes.SETUP_CONST,
     })
   })
 
@@ -79,7 +78,7 @@ describe('sfc reactive props destructure', () => {
     // function
     // functions need to be marked with a skip marker
     expect(content)
-      .toMatch(`props: /*#__PURE__*/_mergeDefaults(['foo', 'bar', 'baz'], {
+      .toMatch(`props: /*@__PURE__*/_mergeDefaults(['foo', 'bar', 'baz'], {
   foo: 1,
   bar: () => ({}),
   func: () => {}, __skip_func: true
@@ -99,7 +98,7 @@ describe('sfc reactive props destructure', () => {
     // safely infer whether runtime type is Function (e.g. if the runtime decl
     // is imported, or spreads another object)
     expect(content)
-      .toMatch(`props: /*#__PURE__*/_mergeDefaults({ foo: Number, bar: Object, func: Function, ext: null }, {
+      .toMatch(`props: /*@__PURE__*/_mergeDefaults({ foo: Number, bar: Object, func: Function, ext: null }, {
   foo: 1,
   bar: () => ({}),
   func: () => {}, __skip_func: true,
@@ -115,15 +114,15 @@ describe('sfc reactive props destructure', () => {
     `)
     expect(bindings).toStrictEqual({
       __propsAliases: {
-        fooBar: 'foo:bar'
+        fooBar: 'foo:bar',
       },
       foo: BindingTypes.PROPS,
       'foo:bar': BindingTypes.PROPS,
-      fooBar: BindingTypes.PROPS_ALIASED
+      fooBar: BindingTypes.PROPS_ALIASED,
     })
 
     expect(content).toMatch(`
-  props: /*#__PURE__*/_mergeDefaults(['foo', 'foo:bar'], {
+  props: /*@__PURE__*/_mergeDefaults(['foo', 'foo:bar'], {
   foo: 1,
   "foo:bar": 'foo-bar'
 }),`)
@@ -159,13 +158,13 @@ describe('sfc reactive props destructure', () => {
     `)
     expect(bindings).toStrictEqual({
       __propsAliases: {
-        fooBar: 'foo:bar'
+        fooBar: 'foo:bar',
       },
       foo: BindingTypes.PROPS,
       bar: BindingTypes.PROPS,
       'foo:bar': BindingTypes.PROPS,
       fooBar: BindingTypes.PROPS_ALIASED,
-      'onUpdate:modelValue': BindingTypes.PROPS
+      'onUpdate:modelValue': BindingTypes.PROPS,
     })
     expect(content).toMatch(`
   props: {
@@ -184,7 +183,7 @@ describe('sfc reactive props destructure', () => {
       const { foo = 1, bar = {}, func = () => {} } = defineProps<{ foo?: number, bar?: object, baz?: any, boola?: boolean, boolb?: boolean | number, func?: Function }>()
       </script>
     `,
-      { isProd: true }
+      { isProd: true },
     )
     assertCode(content)
     // literals can be used as-is, non-literals are always returned from a
@@ -220,8 +219,8 @@ describe('sfc reactive props destructure', () => {
       foo: BindingTypes.PROPS,
       bar: BindingTypes.PROPS_ALIASED,
       __propsAliases: {
-        bar: 'foo'
-      }
+        bar: 'foo',
+      },
     })
   })
 
@@ -242,8 +241,8 @@ describe('sfc reactive props destructure', () => {
       'foo.bar': BindingTypes.PROPS,
       fooBar: BindingTypes.PROPS_ALIASED,
       __propsAliases: {
-        fooBar: 'foo.bar'
-      }
+        fooBar: 'foo.bar',
+      },
     })
   })
 
@@ -254,14 +253,35 @@ describe('sfc reactive props destructure', () => {
       </script>
     `)
     expect(content).toMatch(
-      `const rest = _createPropsRestProxy(__props, ["foo","bar"])`
+      `const rest = _createPropsRestProxy(__props, ["foo","bar"])`,
     )
     assertCode(content)
     expect(bindings).toStrictEqual({
       foo: BindingTypes.PROPS,
       bar: BindingTypes.PROPS,
       baz: BindingTypes.PROPS,
-      rest: BindingTypes.SETUP_REACTIVE_CONST
+      rest: BindingTypes.SETUP_REACTIVE_CONST,
+    })
+  })
+
+  test('rest spread non-inline', () => {
+    const { content, bindings } = compile(
+      `
+      <script setup>
+      const { foo, ...rest } = defineProps(['foo', 'bar'])
+      </script>
+      <template>{{ rest.bar }}</template>
+    `,
+      { inlineTemplate: false },
+    )
+    expect(content).toMatch(
+      `const rest = _createPropsRestProxy(__props, ["foo"])`,
+    )
+    assertCode(content)
+    expect(bindings).toStrictEqual({
+      foo: BindingTypes.PROPS,
+      bar: BindingTypes.PROPS,
+      rest: BindingTypes.SETUP_REACTIVE_CONST,
     })
   })
 
@@ -279,7 +299,7 @@ describe('sfc reactive props destructure', () => {
     expect(content).toMatch(`_toDisplayString(__props.foo)`)
     assertCode(content)
     expect(bindings).toStrictEqual({
-      foo: BindingTypes.PROPS
+      foo: BindingTypes.PROPS,
     })
   })
 
@@ -339,33 +359,34 @@ describe('sfc reactive props destructure', () => {
     test('should error on deep destructure', () => {
       expect(() =>
         compile(
-          `<script setup>const { foo: [bar] } = defineProps(['foo'])</script>`
-        )
+          `<script setup>const { foo: [bar] } = defineProps(['foo'])</script>`,
+        ),
       ).toThrow(`destructure does not support nested patterns`)
 
       expect(() =>
         compile(
-          `<script setup>const { foo: { bar } } = defineProps(['foo'])</script>`
-        )
+          `<script setup>const { foo: { bar } } = defineProps(['foo'])</script>`,
+        ),
       ).toThrow(`destructure does not support nested patterns`)
     })
 
     test('should error on computed key', () => {
       expect(() =>
         compile(
-          `<script setup>const { [foo]: bar } = defineProps(['foo'])</script>`
-        )
+          `<script setup>const { [foo]: bar } = defineProps(['foo'])</script>`,
+        ),
       ).toThrow(`destructure cannot use computed key`)
     })
 
-    test('should error when used with withDefaults', () => {
-      expect(() =>
-        compile(
-          `<script setup lang="ts">
-          const { foo } = withDefaults(defineProps<{ foo: string }>(), { foo: 'foo' })
-          </script>`
-        )
-      ).toThrow(`withDefaults() is unnecessary when using destructure`)
+    test('should warn when used with withDefaults', () => {
+      compile(
+        `<script setup lang="ts">
+        const { foo } = withDefaults(defineProps<{ foo: string }>(), { foo: 'foo' })
+        </script>`,
+      )
+      expect(
+        `withDefaults() is unnecessary when using destructure`,
+      ).toHaveBeenWarned()
     })
 
     test('should error if destructure reference local vars', () => {
@@ -376,8 +397,8 @@ describe('sfc reactive props destructure', () => {
           const {
             foo = () => x
           } = defineProps(['foo'])
-          </script>`
-        )
+          </script>`,
+        ),
       ).toThrow(`cannot reference locally declared variables`)
     })
 
@@ -387,8 +408,8 @@ describe('sfc reactive props destructure', () => {
           `<script setup>
           const { foo } = defineProps(['foo'])
           foo = 'bar'
-          </script>`
-        )
+          </script>`,
+        ),
       ).toThrow(`Cannot assign to destructured props`)
 
       expect(() =>
@@ -396,8 +417,8 @@ describe('sfc reactive props destructure', () => {
           `<script setup>
           let { foo } = defineProps(['foo'])
           foo = 'bar'
-          </script>`
-        )
+          </script>`,
+        ),
       ).toThrow(`Cannot assign to destructured props`)
     })
 
@@ -408,10 +429,10 @@ describe('sfc reactive props destructure', () => {
         import { watch } from 'vue'
         const { foo } = defineProps(['foo'])
         watch(foo, () => {})
-        </script>`
-        )
+        </script>`,
+        ),
       ).toThrow(
-        `"foo" is a destructured prop and should not be passed directly to watch().`
+        `"foo" is a destructured prop and should not be passed directly to watch().`,
       )
 
       expect(() =>
@@ -420,10 +441,10 @@ describe('sfc reactive props destructure', () => {
         import { watch as w } from 'vue'
         const { foo } = defineProps(['foo'])
         w(foo, () => {})
-        </script>`
-        )
+        </script>`,
+        ),
       ).toThrow(
-        `"foo" is a destructured prop and should not be passed directly to watch().`
+        `"foo" is a destructured prop and should not be passed directly to watch().`,
       )
 
       expect(() =>
@@ -432,10 +453,10 @@ describe('sfc reactive props destructure', () => {
         import { toRef } from 'vue'
         const { foo } = defineProps(['foo'])
         toRef(foo)
-        </script>`
-        )
+        </script>`,
+        ),
       ).toThrow(
-        `"foo" is a destructured prop and should not be passed directly to toRef().`
+        `"foo" is a destructured prop and should not be passed directly to toRef().`,
       )
 
       expect(() =>
@@ -444,10 +465,10 @@ describe('sfc reactive props destructure', () => {
         import { toRef as r } from 'vue'
         const { foo } = defineProps(['foo'])
         r(foo)
-        </script>`
-        )
+        </script>`,
+        ),
       ).toThrow(
-        `"foo" is a destructured prop and should not be passed directly to toRef().`
+        `"foo" is a destructured prop and should not be passed directly to toRef().`,
       )
     })
 
@@ -457,8 +478,8 @@ describe('sfc reactive props destructure', () => {
         compile(
           `<script setup lang="ts">
         const { foo = 'hello' } = defineProps<{ foo?: number }>()
-        </script>`
-        )
+        </script>`,
+        ),
       ).toThrow(`Default value of prop "foo" does not match declared type.`)
     })
 
@@ -472,8 +493,8 @@ describe('sfc reactive props destructure', () => {
         const { error: e, info } = useRequest();
         watch(e, () => {});
         watch(info, () => {});
-        </script>`
-        )
+        </script>`,
+        ),
       ).not.toThrowError()
     })
   })

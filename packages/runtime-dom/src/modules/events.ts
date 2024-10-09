@@ -1,8 +1,9 @@
-import { hyphenate, isArray } from '@vue/shared'
+import { NOOP, hyphenate, isArray, isFunction } from '@vue/shared'
 import {
+  type ComponentInternalInstance,
   ErrorCodes,
-  ComponentInternalInstance,
-  callWithAsyncErrorHandling
+  callWithAsyncErrorHandling,
+  warn,
 } from '@vue/runtime-core'
 
 interface Invoker extends EventListener {
@@ -16,8 +17,8 @@ export function addEventListener(
   el: Element,
   event: string,
   handler: EventListener,
-  options?: EventListenerOptions
-) {
+  options?: EventListenerOptions,
+): void {
   el.addEventListener(event, handler, options)
 }
 
@@ -25,31 +26,38 @@ export function removeEventListener(
   el: Element,
   event: string,
   handler: EventListener,
-  options?: EventListenerOptions
-) {
+  options?: EventListenerOptions,
+): void {
   el.removeEventListener(event, handler, options)
 }
 
-const veiKey = Symbol('_vei')
+const veiKey: unique symbol = Symbol('_vei')
 
 export function patchEvent(
   el: Element & { [veiKey]?: Record<string, Invoker | undefined> },
   rawName: string,
   prevValue: EventValue | null,
-  nextValue: EventValue | null,
-  instance: ComponentInternalInstance | null = null
-) {
+  nextValue: EventValue | unknown,
+  instance: ComponentInternalInstance | null = null,
+): void {
   // vei = vue event invokers
   const invokers = el[veiKey] || (el[veiKey] = {})
   const existingInvoker = invokers[rawName]
   if (nextValue && existingInvoker) {
     // patch
-    existingInvoker.value = nextValue
+    existingInvoker.value = __DEV__
+      ? sanitizeEventValue(nextValue, rawName)
+      : (nextValue as EventValue)
   } else {
     const [name, options] = parseName(rawName)
     if (nextValue) {
       // add
-      const invoker = (invokers[rawName] = createInvoker(nextValue, instance))
+      const invoker = (invokers[rawName] = createInvoker(
+        __DEV__
+          ? sanitizeEventValue(nextValue, rawName)
+          : (nextValue as EventValue),
+        instance,
+      ))
       addEventListener(el, name, invoker, options)
     } else if (existingInvoker) {
       // remove
@@ -78,13 +86,13 @@ function parseName(name: string): [string, EventListenerOptions | undefined] {
 // To avoid the overhead of repeatedly calling Date.now(), we cache
 // and use the same timestamp for all event listeners attached in the same tick.
 let cachedNow: number = 0
-const p = /*#__PURE__*/ Promise.resolve()
+const p = /*@__PURE__*/ Promise.resolve()
 const getNow = () =>
   cachedNow || (p.then(() => (cachedNow = 0)), (cachedNow = Date.now()))
 
 function createInvoker(
   initialValue: EventValue,
-  instance: ComponentInternalInstance | null
+  instance: ComponentInternalInstance | null,
 ) {
   const invoker: Invoker = (e: Event & { _vts?: number }) => {
     // async edge case vuejs/vue#6566
@@ -108,7 +116,7 @@ function createInvoker(
       patchStopImmediatePropagation(e, invoker.value),
       instance,
       ErrorCodes.NATIVE_EVENT_HANDLER,
-      [e]
+      [e],
     )
   }
   invoker.value = initialValue
@@ -116,9 +124,20 @@ function createInvoker(
   return invoker
 }
 
+function sanitizeEventValue(value: unknown, propName: string): EventValue {
+  if (isFunction(value) || isArray(value)) {
+    return value as EventValue
+  }
+  warn(
+    `Wrong type passed as event handler to ${propName} - did you forget @ or : ` +
+      `in front of your prop?\nExpected function or array of functions, received type ${typeof value}.`,
+  )
+  return NOOP
+}
+
 function patchStopImmediatePropagation(
   e: Event,
-  value: EventValue
+  value: EventValue,
 ): EventValue {
   if (isArray(value)) {
     const originalStop = e.stopImmediatePropagation
@@ -126,7 +145,9 @@ function patchStopImmediatePropagation(
       originalStop.call(e)
       ;(e as any)._stopped = true
     }
-    return value.map(fn => (e: Event) => !(e as any)._stopped && fn && fn(e))
+    return (value as Function[]).map(
+      fn => (e: Event) => !(e as any)._stopped && fn && fn(e),
+    )
   } else {
     return value
   }

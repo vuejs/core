@@ -16,7 +16,7 @@
  * Check the `patchElement` function in '../../runtime-core/src/renderer.ts' to see how the
  * flags are handled during diff.
  */
-export const enum PatchFlags {
+export enum PatchFlags {
   /**
    * Indicates an element with dynamic textContent (children fast path)
    */
@@ -109,10 +109,10 @@ export const enum PatchFlags {
    */
 
   /**
-   * Indicates a hoisted static vnode. This is a hint for hydration to skip
+   * Indicates a cached static vnode. This is also a hint for hydration to skip
    * the entire sub tree since static content never needs to be updated.
    */
-  HOISTED = -1,
+  CACHED = -1,
   /**
    * A special flag that indicates that the diffing algorithm should bail out
    * of optimized mode. For example, on block fragments created by renderSlot()
@@ -120,7 +120,7 @@ export const enum PatchFlags {
    * render functions, which should always be fully diffed)
    * OR manually cloneVNodes
    */
-  BAIL = -2
+  BAIL = -2,
 }
 
 /**
@@ -139,6 +139,6 @@ export const PatchFlagNames: Record<PatchFlags, string> = {
   [PatchFlags.NEED_PATCH]: `NEED_PATCH`,
   [PatchFlags.DYNAMIC_SLOTS]: `DYNAMIC_SLOTS`,
   [PatchFlags.DEV_ROOT_FRAGMENT]: `DEV_ROOT_FRAGMENT`,
-  [PatchFlags.HOISTED]: `HOISTED`,
-  [PatchFlags.BAIL]: `BAIL`
+  [PatchFlags.CACHED]: `HOISTED`,
+  [PatchFlags.BAIL]: `BAIL`,
 }

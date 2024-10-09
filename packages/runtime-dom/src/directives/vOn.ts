@@ -1,48 +1,67 @@
 import {
-  getCurrentInstance,
+  type ComponentInternalInstance,
   DeprecationTypes,
-  LegacyConfig,
+  type Directive,
+  type LegacyConfig,
   compatUtils,
-  ComponentInternalInstance
+  getCurrentInstance,
 } from '@vue/runtime-core'
 import { hyphenate, isArray } from '@vue/shared'
 
-const systemModifiers = ['ctrl', 'shift', 'alt', 'meta']
+const systemModifiers = ['ctrl', 'shift', 'alt', 'meta'] as const
+type SystemModifiers = (typeof systemModifiers)[number]
+type CompatModifiers = keyof typeof keyNames
 
+export type VOnModifiers = SystemModifiers | ModifierGuards | CompatModifiers
 type KeyedEvent = KeyboardEvent | MouseEvent | TouchEvent
 
+type ModifierGuards =
+  | 'shift'
+  | 'ctrl'
+  | 'alt'
+  | 'meta'
+  | 'left'
+  | 'right'
+  | 'stop'
+  | 'prevent'
+  | 'self'
+  | 'middle'
+  | 'exact'
 const modifierGuards: Record<
-  string,
-  (e: Event, modifiers: string[]) => void | boolean
+  ModifierGuards,
+  | ((e: Event) => void | boolean)
+  | ((e: Event, modifiers: string[]) => void | boolean)
 > = {
-  stop: e => e.stopPropagation(),
-  prevent: e => e.preventDefault(),
-  self: e => e.target !== e.currentTarget,
-  ctrl: e => !(e as KeyedEvent).ctrlKey,
-  shift: e => !(e as KeyedEvent).shiftKey,
-  alt: e => !(e as KeyedEvent).altKey,
-  meta: e => !(e as KeyedEvent).metaKey,
-  left: e => 'button' in e && (e as MouseEvent).button !== 0,
-  middle: e => 'button' in e && (e as MouseEvent).button !== 1,
-  right: e => 'button' in e && (e as MouseEvent).button !== 2,
+  stop: (e: Event) => e.stopPropagation(),
+  prevent: (e: Event) => e.preventDefault(),
+  self: (e: Event) => e.target !== e.currentTarget,
+  ctrl: (e: Event) => !(e as KeyedEvent).ctrlKey,
+  shift: (e: Event) => !(e as KeyedEvent).shiftKey,
+  alt: (e: Event) => !(e as KeyedEvent).altKey,
+  meta: (e: Event) => !(e as KeyedEvent).metaKey,
+  left: (e: Event) => 'button' in e && (e as MouseEvent).button !== 0,
+  middle: (e: Event) => 'button' in e && (e as MouseEvent).button !== 1,
+  right: (e: Event) => 'button' in e && (e as MouseEvent).button !== 2,
   exact: (e, modifiers) =>
-    systemModifiers.some(m => (e as any)[`${m}Key`] && !modifiers.includes(m))
+    systemModifiers.some(m => (e as any)[`${m}Key`] && !modifiers.includes(m)),
 }
 
 /**
  * @private
  */
 export const withModifiers = <
-  T extends (event: Event, ...args: unknown[]) => any
+  T extends (event: Event, ...args: unknown[]) => any,
 >(
-  fn: T & { _withMods?: T },
-  modifiers: string[]
-) => {
+  fn: T & { _withMods?: { [key: string]: T } },
+  modifiers: VOnModifiers[],
+): T => {
+  const cache = fn._withMods || (fn._withMods = {})
+  const cacheKey = modifiers.join('.')
   return (
-    fn._withMods ||
-    (fn._withMods = ((event, ...args) => {
+    cache[cacheKey] ||
+    (cache[cacheKey] = ((event, ...args) => {
       for (let i = 0; i < modifiers.length; i++) {
-        const guard = modifierGuards[modifiers[i]]
+        const guard = modifierGuards[modifiers[i] as ModifierGuards]
         if (guard && guard(event, modifiers)) return
       }
       return fn(event, ...args)
@@ -52,23 +71,26 @@ export const withModifiers = <
 
 // Kept for 2.x compat.
 // Note: IE11 compat for `spacebar` and `del` is removed for now.
-const keyNames: Record<string, string | string[]> = {
+const keyNames: Record<
+  'esc' | 'space' | 'up' | 'left' | 'right' | 'down' | 'delete',
+  string
+> = {
   esc: 'escape',
   space: ' ',
   up: 'arrow-up',
   left: 'arrow-left',
   right: 'arrow-right',
   down: 'arrow-down',
-  delete: 'backspace'
+  delete: 'backspace',
 }
 
 /**
  * @private
  */
 export const withKeys = <T extends (event: KeyboardEvent) => any>(
-  fn: T & { _withKeys?: T },
-  modifiers: string[]
-) => {
+  fn: T & { _withKeys?: { [k: string]: T } },
+  modifiers: string[],
+): T => {
   let globalKeyCodes: LegacyConfig['keyCodes']
   let instance: ComponentInternalInstance | null = null
   if (__COMPAT__) {
@@ -83,20 +105,29 @@ export const withKeys = <T extends (event: KeyboardEvent) => any>(
     if (__DEV__ && modifiers.some(m => /^\d+$/.test(m))) {
       compatUtils.warnDeprecation(
         DeprecationTypes.V_ON_KEYCODE_MODIFIER,
-        instance
+        instance,
       )
     }
   }
 
+  const cache: { [k: string]: T } = fn._withKeys || (fn._withKeys = {})
+  const cacheKey = modifiers.join('.')
+
   return (
-    fn._withKeys ||
-    (fn._withKeys = (event => {
+    cache[cacheKey] ||
+    (cache[cacheKey] = (event => {
       if (!('key' in event)) {
         return
       }
 
       const eventKey = hyphenate(event.key)
-      if (modifiers.some(k => k === eventKey || keyNames[k] === eventKey)) {
+      if (
+        modifiers.some(
+          k =>
+            k === eventKey ||
+            keyNames[k as unknown as CompatModifiers] === eventKey,
+        )
+      ) {
         return fn(event)
       }
 
@@ -105,7 +136,7 @@ export const withKeys = <T extends (event: KeyboardEvent) => any>(
         if (
           compatUtils.isCompatEnabled(
             DeprecationTypes.V_ON_KEYCODE_MODIFIER,
-            instance
+            instance,
           ) &&
           modifiers.some(mod => mod == keyCode)
         ) {
@@ -128,3 +159,5 @@ export const withKeys = <T extends (event: KeyboardEvent) => any>(
     }) as T)
   )
 }
+
+export type VOnDirective = Directive<any, any, VOnModifiers>

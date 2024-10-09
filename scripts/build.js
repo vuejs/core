@@ -16,38 +16,75 @@ nr build core --formats cjs
 ```
 */
 
-import fs from 'node:fs/promises'
-import { existsSync } from 'node:fs'
+import fs from 'node:fs'
+import { parseArgs } from 'node:util'
+import { existsSync, readFileSync } from 'node:fs'
 import path from 'node:path'
-import minimist from 'minimist'
-import { gzipSync, brotliCompressSync } from 'node:zlib'
+import { brotliCompressSync, gzipSync } from 'node:zlib'
 import pico from 'picocolors'
-import { execa, execaSync } from 'execa'
 import { cpus } from 'node:os'
-import { createRequire } from 'node:module'
-import { targets as allTargets, fuzzyMatchTarget } from './utils.js'
-import { scanEnums } from './const-enum.js'
+import { targets as allTargets, exec, fuzzyMatchTarget } from './utils.js'
+import { scanEnums } from './inline-enums.js'
 import prettyBytes from 'pretty-bytes'
+import { spawnSync } from 'node:child_process'
 
-const require = createRequire(import.meta.url)
-const args = minimist(process.argv.slice(2))
-const targets = args._
-const formats = args.formats || args.f
-const devOnly = args.devOnly || args.d
-const prodOnly = !devOnly && (args.prodOnly || args.p)
-const buildTypes = args.withTypes || args.t
-const sourceMap = args.sourcemap || args.s
-const isRelease = args.release
-const buildAllMatching = args.all || args.a
-const writeSize = args.size
-const commit = execaSync('git', ['rev-parse', '--short=7', 'HEAD']).stdout
+const commit = spawnSync('git', ['rev-parse', '--short=7', 'HEAD'])
+  .stdout.toString()
+  .trim()
+
+const { values, positionals: targets } = parseArgs({
+  allowPositionals: true,
+  options: {
+    formats: {
+      type: 'string',
+      short: 'f',
+    },
+    devOnly: {
+      type: 'boolean',
+      short: 'd',
+    },
+    prodOnly: {
+      type: 'boolean',
+      short: 'p',
+    },
+    withTypes: {
+      type: 'boolean',
+      short: 't',
+    },
+    sourceMap: {
+      type: 'boolean',
+      short: 's',
+    },
+    release: {
+      type: 'boolean',
+    },
+    all: {
+      type: 'boolean',
+      short: 'a',
+    },
+    size: {
+      type: 'boolean',
+    },
+  },
+})
+
+const {
+  formats,
+  all: buildAllMatching,
+  devOnly,
+  prodOnly,
+  withTypes: buildTypes,
+  sourceMap,
+  release: isRelease,
+  size: writeSize,
+} = values
 
 const sizeDir = path.resolve('temp/size')
 
 run()
 
 async function run() {
-  if (writeSize) await fs.mkdir(sizeDir, { recursive: true })
+  if (writeSize) fs.mkdirSync(sizeDir, { recursive: true })
   const removeCache = scanEnums()
   try {
     const resolvedTargets = targets.length
@@ -56,18 +93,18 @@ async function run() {
     await buildAll(resolvedTargets)
     await checkAllSizes(resolvedTargets)
     if (buildTypes) {
-      await execa(
+      await exec(
         'pnpm',
         [
           'run',
           'build-dts',
           ...(targets.length
             ? ['--environment', `TARGETS:${resolvedTargets.join(',')}`]
-            : [])
+            : []),
         ],
         {
-          stdio: 'inherit'
-        }
+          stdio: 'inherit',
+        },
       )
     }
   } finally {
@@ -102,7 +139,9 @@ async function runParallel(maxConcurrency, source, iteratorFn) {
     ret.push(p)
 
     if (maxConcurrency <= source.length) {
-      const e = p.then(() => executing.splice(executing.indexOf(e), 1))
+      const e = p.then(() => {
+        executing.splice(executing.indexOf(e), 1)
+      })
       executing.push(e)
       if (executing.length >= maxConcurrency) {
         await Promise.race(executing)
@@ -111,14 +150,20 @@ async function runParallel(maxConcurrency, source, iteratorFn) {
   }
   return Promise.all(ret)
 }
+
+const privatePackages = fs.readdirSync('packages-private')
+
 /**
  * Builds the target.
  * @param {string} target - The target to build.
  * @returns {Promise<void>} - A promise representing the build process.
  */
 async function build(target) {
-  const pkgDir = path.resolve(`packages/${target}`)
-  const pkg = require(`${pkgDir}/package.json`)
+  const pkgBase = privatePackages.includes(target)
+    ? `packages-private`
+    : `packages`
+  const pkgDir = path.resolve(`${pkgBase}/${target}`)
+  const pkg = JSON.parse(readFileSync(`${pkgDir}/package.json`, 'utf-8'))
 
   // if this is a full build (no specific targets), ignore private packages
   if ((isRelease || !targets.length) && pkg.private) {
@@ -127,13 +172,14 @@ async function build(target) {
 
   // if building a specific format, do not remove dist.
   if (!formats && existsSync(`${pkgDir}/dist`)) {
-    await fs.rm(`${pkgDir}/dist`, { recursive: true })
+    fs.rmSync(`${pkgDir}/dist`, { recursive: true })
   }
 
   const env =
     (pkg.buildOptions && pkg.buildOptions.env) ||
     (devOnly ? 'development' : 'production')
-  await execa(
+
+  await exec(
     'rollup',
     [
       '-c',
@@ -144,12 +190,12 @@ async function build(target) {
         `TARGET:${target}`,
         formats ? `FORMATS:${formats}` : ``,
         prodOnly ? `PROD_ONLY:true` : ``,
-        sourceMap ? `SOURCE_MAP:true` : ``
+        sourceMap ? `SOURCE_MAP:true` : ``,
       ]
         .filter(Boolean)
-        .join(',')
+        .join(','),
     ],
-    { stdio: 'inherit' }
+    { stdio: 'inherit' },
   )
 }
 
@@ -191,7 +237,7 @@ async function checkFileSize(filePath) {
   if (!existsSync(filePath)) {
     return
   }
-  const file = await fs.readFile(filePath)
+  const file = fs.readFileSync(filePath)
   const fileName = path.basename(filePath)
 
   const gzipped = gzipSync(file)
@@ -199,21 +245,21 @@ async function checkFileSize(filePath) {
 
   console.log(
     `${pico.gray(pico.bold(fileName))} min:${prettyBytes(
-      file.length
+      file.length,
     )} / gzip:${prettyBytes(gzipped.length)} / brotli:${prettyBytes(
-      brotli.length
-    )}`
+      brotli.length,
+    )}`,
   )
 
   if (writeSize)
-    await fs.writeFile(
+    fs.writeFileSync(
       path.resolve(sizeDir, `${fileName}.json`),
       JSON.stringify({
         file: fileName,
         size: file.length,
         gzip: gzipped.length,
-        brotli: brotli.length
+        brotli: brotli.length,
       }),
-      'utf-8'
+      'utf-8',
     )
 }

@@ -1,10 +1,10 @@
 import {
-  ComponentOptions,
-  FunctionalComponent,
-  getCurrentInstance
+  type ComponentOptions,
+  type FunctionalComponent,
+  getCurrentInstance,
 } from '../component'
 import { resolveInjections } from '../componentOptions'
-import { InternalSlots } from '../componentSlots'
+import type { InternalSlots } from '../componentSlots'
 import { getCompatListeners } from './instanceListeners'
 import { compatH } from './renderFn'
 
@@ -16,10 +16,12 @@ export const legacySlotProxyHandlers: ProxyHandler<InternalSlots> = {
   get(target, key: string) {
     const slot = target[key]
     return slot && slot()
-  }
+  },
 }
 
-export function convertLegacyFunctionalComponent(comp: ComponentOptions) {
+export function convertLegacyFunctionalComponent(
+  comp: ComponentOptions,
+): FunctionalComponent {
   if (normalizedFunctionalComponentMap.has(comp)) {
     return normalizedFunctionalComponentMap.get(comp)!
   }
@@ -48,7 +50,7 @@ export function convertLegacyFunctionalComponent(comp: ComponentOptions) {
           return injections
         }
         return {}
-      }
+      },
     }
     return legacyFn(compatH, legacyCtx)
   }

@@ -1,9 +1,9 @@
 // This entry exports the runtime only, and is built as
 // `dist/vue.esm-bundler.js` which is used by default for bundlers.
 import { createCompatVue } from './createCompatVue'
-import { warn } from '@vue/runtime-core'
+import { type CompatVue, warn } from '@vue/runtime-core'
 
-const Vue = createCompatVue()
+const Vue: CompatVue = createCompatVue()
 
 Vue.compile = (() => {
   if (__DEV__) {
@@ -15,7 +15,7 @@ Vue.compile = (() => {
             ? ` Use "vue.esm-browser.js" instead.`
             : __GLOBAL__
               ? ` Use "vue.global.js" instead.`
-              : ``) /* should not happen */
+              : ``) /* should not happen */,
     )
   }
 }) as any

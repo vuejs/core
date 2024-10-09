@@ -6,7 +6,7 @@ describe('transition-group', () => {
   test('basic', () => {
     expect(
       compile(`<transition-group><div v-for="i in list"/></transition-group>`)
-        .code
+        .code,
     ).toMatchInlineSnapshot(`
       "const { ssrRenderList: _ssrRenderList } = require("vue/server-renderer")
 
@@ -23,8 +23,49 @@ describe('transition-group', () => {
   test('with static tag', () => {
     expect(
       compile(
-        `<transition-group tag="ul"><div v-for="i in list"/></transition-group>`
-      ).code
+        `<transition-group tag="ul"><div v-for="i in list"/></transition-group>`,
+      ).code,
+    ).toMatchInlineSnapshot(`
+      "const { ssrRenderAttrs: _ssrRenderAttrs, ssrRenderList: _ssrRenderList } = require("vue/server-renderer")
+
+      return function ssrRender(_ctx, _push, _parent, _attrs) {
+        _push(\`<ul\${_ssrRenderAttrs(_attrs)}>\`)
+        _ssrRenderList(_ctx.list, (i) => {
+          _push(\`<div></div>\`)
+        })
+        _push(\`</ul>\`)
+      }"
+    `)
+  })
+
+  // #11514
+  test('with static tag + v-if comment', () => {
+    expect(
+      compile(
+        `<transition-group tag="ul"><div v-for="i in list"/><div v-if="false"></div></transition-group>`,
+      ).code,
+    ).toMatchInlineSnapshot(`
+      "const { ssrRenderAttrs: _ssrRenderAttrs, ssrRenderList: _ssrRenderList } = require("vue/server-renderer")
+
+      return function ssrRender(_ctx, _push, _parent, _attrs) {
+        _push(\`<ul\${_ssrRenderAttrs(_attrs)}>\`)
+        _ssrRenderList(_ctx.list, (i) => {
+          _push(\`<div></div>\`)
+        })
+        if (false) {
+          _push(\`<div></div>\`)
+        }
+        _push(\`</ul>\`)
+      }"
+    `)
+  })
+
+  // #11958
+  test('with static tag + comment', () => {
+    expect(
+      compile(
+        `<transition-group tag="ul"><div v-for="i in list"/><!--test--></transition-group>`,
+      ).code,
     ).toMatchInlineSnapshot(`
       "const { ssrRenderAttrs: _ssrRenderAttrs, ssrRenderList: _ssrRenderList } = require("vue/server-renderer")
 
@@ -41,8 +82,8 @@ describe('transition-group', () => {
   test('with dynamic tag', () => {
     expect(
       compile(
-        `<transition-group :tag="someTag"><div v-for="i in list"/></transition-group>`
-      ).code
+        `<transition-group :tag="someTag"><div v-for="i in list"/></transition-group>`,
+      ).code,
     ).toMatchInlineSnapshot(`
       "const { ssrRenderAttrs: _ssrRenderAttrs, ssrRenderList: _ssrRenderList } = require("vue/server-renderer")
 
@@ -67,8 +108,8 @@ describe('transition-group', () => {
               <div v-for="i in 10"/>
               <div v-for="i in 10"/>
               <template v-if="ok"><div>ok</div></template>
-            </transition-group>`
-      ).code
+            </transition-group>`,
+      ).code,
     ).toMatchInlineSnapshot(`
       "const { ssrRenderList: _ssrRenderList } = require("vue/server-renderer")
 
@@ -82,8 +123,6 @@ describe('transition-group', () => {
         })
         if (_ctx.ok) {
           _push(\`<div>ok</div>\`)
-        } else {
-          _push(\`<!---->\`)
         }
         _push(\`<!--]-->\`)
       }"
@@ -94,8 +133,8 @@ describe('transition-group', () => {
     expect(
       compile(
         `<transition-group tag="ul" class="red" id="ok">
-        </transition-group>`
-      ).code
+        </transition-group>`,
+      ).code,
     ).toMatchInlineSnapshot(`
       "const { mergeProps: _mergeProps } = require("vue")
       const { ssrRenderAttrs: _ssrRenderAttrs } = require("vue/server-renderer")

@@ -3,7 +3,7 @@
 exports[`defineSlots() > basic usage 1`] = `
 "import { useSlots as _useSlots, defineComponent as _defineComponent } from 'vue'
 
-export default /*#__PURE__*/_defineComponent({
+export default /*@__PURE__*/_defineComponent({
   setup(__props, { expose: __expose }) {
   __expose();
 
@@ -33,7 +33,7 @@ return { slots }
 exports[`defineSlots() > w/o return value 1`] = `
 "import { defineComponent as _defineComponent } from 'vue'
 
-export default /*#__PURE__*/_defineComponent({
+export default /*@__PURE__*/_defineComponent({
   setup(__props, { expose: __expose }) {
   __expose();
 

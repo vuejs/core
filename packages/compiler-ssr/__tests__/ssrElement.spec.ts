@@ -4,16 +4,16 @@ import { compile } from '../src'
 describe('ssr: element', () => {
   test('basic elements', () => {
     expect(getCompiledString(`<div></div>`)).toMatchInlineSnapshot(
-      `"\`<div></div>\`"`
+      `"\`<div></div>\`"`,
     )
     expect(getCompiledString(`<div/>`)).toMatchInlineSnapshot(
-      `"\`<div></div>\`"`
+      `"\`<div></div>\`"`,
     )
   })
 
   test('nested elements', () => {
     expect(
-      getCompiledString(`<div><span></span><span></span></div>`)
+      getCompiledString(`<div><span></span><span></span></div>`),
     ).toMatchInlineSnapshot(`"\`<div><span></span><span></span></div>\`"`)
   })
 
@@ -25,7 +25,7 @@ describe('ssr: element', () => {
     test('v-html', () => {
       expect(getCompiledString(`<div v-html="foo"/>`)).toMatchInlineSnapshot(`
         "\`<div>\${
-            _ctx.foo
+            (_ctx.foo) ?? ''
           }</div>\`"
       `)
     })
@@ -49,7 +49,7 @@ describe('ssr: element', () => {
 
     test('<textarea> with static value', () => {
       expect(
-        getCompiledString(`<textarea value="fo&gt;o"/>`)
+        getCompiledString(`<textarea value="fo&gt;o"/>`),
       ).toMatchInlineSnapshot(`"\`<textarea>fo&gt;o</textarea>\`"`)
     })
 
@@ -73,7 +73,7 @@ describe('ssr: element', () => {
 
     test('multiple _ssrInterpolate at parent and child import dependency once', () => {
       expect(
-        compile(`<div>{{ hello }}<textarea v-bind="a"></textarea></div>`).code
+        compile(`<div>{{ hello }}<textarea v-bind="a"></textarea></div>`).code,
       ).toMatchInlineSnapshot(`
         "const { ssrRenderAttrs: _ssrRenderAttrs, ssrInterpolate: _ssrInterpolate } = require("vue/server-renderer")
 
@@ -96,8 +96,8 @@ describe('ssr: element', () => {
     test('should pass tag to custom elements w/ dynamic v-bind', () => {
       expect(
         compile(`<my-foo v-bind="obj"></my-foo>`, {
-          isCustomElement: () => true
-        }).code
+          isCustomElement: () => true,
+        }).code,
       ).toMatchInlineSnapshot(`
         "const { mergeProps: _mergeProps } = require("vue")
         const { ssrRenderAttrs: _ssrRenderAttrs } = require("vue/server-renderer")
@@ -112,19 +112,19 @@ describe('ssr: element', () => {
   describe('attrs', () => {
     test('static attrs', () => {
       expect(
-        getCompiledString(`<div id="foo" class="bar"></div>`)
+        getCompiledString(`<div id="foo" class="bar"></div>`),
       ).toMatchInlineSnapshot(`"\`<div id="foo" class="bar"></div>\`"`)
     })
 
     test('ignore static key/ref', () => {
       expect(
-        getCompiledString(`<div key="1" ref="el"></div>`)
+        getCompiledString(`<div key="1" ref="el"></div>`),
       ).toMatchInlineSnapshot(`"\`<div></div>\`"`)
     })
 
     test('ignore v-bind key/ref', () => {
       expect(
-        getCompiledString(`<div :key="1" :ref="el"></div>`)
+        getCompiledString(`<div :key="1" :ref="el"></div>`),
       ).toMatchInlineSnapshot(`"\`<div></div>\`"`)
     })
 
@@ -263,8 +263,8 @@ describe('ssr: element', () => {
       // should merge style and :style
       expect(
         getCompiledString(
-          `<div style="color:red;" :style="b" v-bind="obj"></div>`
-        )
+          `<div style="color:red;" :style="b" v-bind="obj"></div>`,
+        ),
       ).toMatchInlineSnapshot(`
         "\`<div\${
             _ssrRenderAttrs(_mergeProps({
@@ -276,10 +276,10 @@ describe('ssr: element', () => {
 
     test('should ignore v-on', () => {
       expect(
-        getCompiledString(`<div id="foo" @click="bar"/>`)
+        getCompiledString(`<div id="foo" @click="bar"/>`),
       ).toMatchInlineSnapshot(`"\`<div id="foo"></div>\`"`)
       expect(
-        getCompiledString(`<div id="foo" v-on="bar"/>`)
+        getCompiledString(`<div id="foo" v-on="bar"/>`),
       ).toMatchInlineSnapshot(`"\`<div id="foo"></div>\`"`)
       expect(getCompiledString(`<div v-bind="foo" v-on="bar"/>`))
         .toMatchInlineSnapshot(`
@@ -288,12 +288,27 @@ describe('ssr: element', () => {
           }></div>\`"
       `)
     })
+  })
 
-    test('custom dir', () => {
+  describe('custom directives', () => {
+    // #8112 should respect textContent / innerHTML from directive getSSRProps
+    // if the element has no children
+    test('custom dir without children', () => {
       expect(getCompiledString(`<div v-xxx:x.y="z" />`)).toMatchInlineSnapshot(`
         "\`<div\${
+            _ssrRenderAttrs(_temp0 = _ssrGetDirectiveProps(_ctx, _directive_xxx, _ctx.z, "x", { y: true }))
+          }>\${
+            ("textContent" in _temp0) ? _ssrInterpolate(_temp0.textContent) : _temp0.innerHTML ?? ''
+          }</div>\`"
+      `)
+    })
+
+    test('custom dir with children', () => {
+      expect(getCompiledString(`<div v-xxx:x.y="z">hello</div>`))
+        .toMatchInlineSnapshot(`
+        "\`<div\${
             _ssrRenderAttrs(_ssrGetDirectiveProps(_ctx, _directive_xxx, _ctx.z, "x", { y: true }))
-          }></div>\`"
+          }>hello</div>\`"
       `)
     })
 
@@ -301,42 +316,50 @@ describe('ssr: element', () => {
       expect(getCompiledString(`<div class="foo" v-xxx />`))
         .toMatchInlineSnapshot(`
           "\`<div\${
-              _ssrRenderAttrs(_mergeProps({ class: "foo" }, _ssrGetDirectiveProps(_ctx, _directive_xxx)))
-            }></div>\`"
+              _ssrRenderAttrs(_temp0 = _mergeProps({ class: "foo" }, _ssrGetDirectiveProps(_ctx, _directive_xxx)))
+            }>\${
+              ("textContent" in _temp0) ? _ssrInterpolate(_temp0.textContent) : _temp0.innerHTML ?? ''
+            }</div>\`"
         `)
     })
 
     test('custom dir with v-bind', () => {
       expect(getCompiledString(`<div :title="foo" :class="bar" v-xxx />`))
         .toMatchInlineSnapshot(`
-        "\`<div\${
-            _ssrRenderAttrs(_mergeProps({
-              title: _ctx.foo,
-              class: _ctx.bar
-            }, _ssrGetDirectiveProps(_ctx, _directive_xxx)))
-          }></div>\`"
-      `)
+          "\`<div\${
+              _ssrRenderAttrs(_temp0 = _mergeProps({
+                title: _ctx.foo,
+                class: _ctx.bar
+              }, _ssrGetDirectiveProps(_ctx, _directive_xxx)))
+            }>\${
+              ("textContent" in _temp0) ? _ssrInterpolate(_temp0.textContent) : _temp0.innerHTML ?? ''
+            }</div>\`"
+        `)
     })
 
     test('custom dir with object v-bind', () => {
       expect(getCompiledString(`<div v-bind="x" v-xxx />`))
         .toMatchInlineSnapshot(`
-        "\`<div\${
-            _ssrRenderAttrs(_mergeProps(_ctx.x, _ssrGetDirectiveProps(_ctx, _directive_xxx)))
-          }></div>\`"
-      `)
+          "\`<div\${
+              _ssrRenderAttrs(_temp0 = _mergeProps(_ctx.x, _ssrGetDirectiveProps(_ctx, _directive_xxx)))
+            }>\${
+              ("textContent" in _temp0) ? _ssrInterpolate(_temp0.textContent) : _temp0.innerHTML ?? ''
+            }</div>\`"
+        `)
     })
 
     test('custom dir with object v-bind + normal bindings', () => {
       expect(
-        getCompiledString(`<div v-bind="x" class="foo" v-xxx title="bar" />`)
+        getCompiledString(`<div v-bind="x" class="foo" v-xxx title="bar" />`),
       ).toMatchInlineSnapshot(`
         "\`<div\${
-            _ssrRenderAttrs(_mergeProps(_ctx.x, {
+            _ssrRenderAttrs(_temp0 = _mergeProps(_ctx.x, {
               class: "foo",
               title: "bar"
             }, _ssrGetDirectiveProps(_ctx, _directive_xxx)))
-          }></div>\`"
+          }>\${
+            ("textContent" in _temp0) ? _ssrInterpolate(_temp0.textContent) : _temp0.innerHTML ?? ''
+          }</div>\`"
       `)
     })
   })

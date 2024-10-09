@@ -1,4 +1,4 @@
-import {
+import type {
   CallExpression,
   Expression,
   Identifier,
@@ -6,14 +6,16 @@ import {
   ImportNamespaceSpecifier,
   ImportSpecifier,
   Node,
-  StringLiteral
+  StringLiteral,
 } from '@babel/types'
 import path from 'path'
-import { TS_NODE_TYPES } from '@vue/compiler-dom'
 
 export const UNKNOWN_TYPE = 'Unknown'
 
-export function resolveObjectKey(node: Node, computed: boolean) {
+export function resolveObjectKey(
+  node: Node,
+  computed: boolean,
+): string | undefined {
   switch (node.type) {
     case 'StringLiteral':
     case 'NumericLiteral':
@@ -24,25 +26,19 @@ export function resolveObjectKey(node: Node, computed: boolean) {
   return undefined
 }
 
-export function concatStrings(strs: Array<string | null | undefined | false>) {
+export function concatStrings(
+  strs: Array<string | null | undefined | false>,
+): string {
   return strs.filter((s): s is string => !!s).join(', ')
 }
 
-export function isLiteralNode(node: Node) {
+export function isLiteralNode(node: Node): boolean {
   return node.type.endsWith('Literal')
-}
-
-export function unwrapTSNode(node: Node): Node {
-  if (TS_NODE_TYPES.includes(node.type)) {
-    return unwrapTSNode((node as any).expression)
-  } else {
-    return node
-  }
 }
 
 export function isCallOf(
   node: Node | null | undefined,
-  test: string | ((id: string) => boolean) | null | undefined
+  test: string | ((id: string) => boolean) | null | undefined,
 ): node is CallExpression {
   return !!(
     node &&
@@ -55,13 +51,16 @@ export function isCallOf(
   )
 }
 
-export function toRuntimeTypeString(types: string[]) {
+export function toRuntimeTypeString(types: string[]): string {
   return types.length > 1 ? `[${types.join(', ')}]` : types[0]
 }
 
 export function getImportedName(
-  specifier: ImportSpecifier | ImportDefaultSpecifier | ImportNamespaceSpecifier
-) {
+  specifier:
+    | ImportSpecifier
+    | ImportDefaultSpecifier
+    | ImportNamespaceSpecifier,
+): string {
   if (specifier.type === 'ImportSpecifier')
     return specifier.imported.type === 'Identifier'
       ? specifier.imported.name
@@ -95,7 +94,9 @@ function toFileNameLowerCase(x: string) {
  * but TS does not expose it directly. This implementation is repllicated from
  * the TS source code.
  */
-export function createGetCanonicalFileName(useCaseSensitiveFileNames: boolean) {
+export function createGetCanonicalFileName(
+  useCaseSensitiveFileNames: boolean,
+): (str: string) => string {
   return useCaseSensitiveFileNames ? identity : toFileNameLowerCase
 }
 
@@ -103,26 +104,20 @@ export function createGetCanonicalFileName(useCaseSensitiveFileNames: boolean) {
 // posix behavior.
 const normalize = (path.posix || path).normalize
 const windowsSlashRE = /\\/g
-export function normalizePath(p: string) {
+export function normalizePath(p: string): string {
   return normalize(p.replace(windowsSlashRE, '/'))
 }
 
-export const joinPaths = (path.posix || path).join
+export const joinPaths: (...paths: string[]) => string = (path.posix || path)
+  .join
 
 /**
  * key may contain symbols
  * e.g. onUpdate:modelValue -> "onUpdate:modelValue"
  */
-export const propNameEscapeSymbolsRE = /[ !"#$%&'()*+,./:;<=>?@[\\\]^`{|}~\-]/
+export const propNameEscapeSymbolsRE: RegExp =
+  /[ !"#$%&'()*+,./:;<=>?@[\\\]^`{|}~\-]/
 
-export function getEscapedPropName(key: string) {
+export function getEscapedPropName(key: string): string {
   return propNameEscapeSymbolsRE.test(key) ? JSON.stringify(key) : key
-}
-
-export const cssVarNameEscapeSymbolsRE = /[ !"#$%&'()*+,./:;<=>?@[\\\]^`{|}~]/g
-
-export function getEscapedCssVarName(key: string, doubleEscape: boolean) {
-  return key.replace(cssVarNameEscapeSymbolsRE, s =>
-    doubleEscape ? `\\\\${s}` : `\\${s}`
-  )
 }
