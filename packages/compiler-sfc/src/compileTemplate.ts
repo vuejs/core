@@ -191,11 +191,11 @@ function doCompileTemplate({
   if (ssr && !ssrCssVars) {
     warnOnce(
       `compileTemplate is called with \`ssr: true\` but no ` +
-        `corresponding \`cssVars\` option.\`.`,
+        `corresponding \`cssVars\` option.`,
     )
   }
   if (!id) {
-    warnOnce(`compileTemplate now requires the \`id\` option.\`.`)
+    warnOnce(`compileTemplate now requires the \`id\` option.`)
     id = ''
   }
 
