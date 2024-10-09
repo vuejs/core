@@ -426,23 +426,24 @@ function removeSub(link: Link, soft = false) {
     nextSub.prevSub = prevSub
     link.nextSub = undefined
   }
-  if (dep.subs === link) {
-    // was previous tail, point new tail to prev
-    dep.subs = prevSub
-  }
   if (__DEV__ && dep.subsHead === link) {
     // was previous head, point new head to next
     dep.subsHead = nextSub
   }
 
-  if (!dep.subs && dep.computed) {
-    // if computed, unsubscribe it from all its deps so this computed and its
-    // value can be GCed
-    dep.computed.flags &= ~EffectFlags.TRACKING
-    for (let l = dep.computed.deps; l; l = l.nextDep) {
-      // here we are only "soft" unsubscribing because the computed still keeps
-      // referencing the deps and the dep should not decrease its sub count
-      removeSub(l, true)
+  if (dep.subs === link) {
+    // was previous tail, point new tail to prev
+    dep.subs = prevSub
+
+    if (!prevSub && dep.computed) {
+      // if computed, unsubscribe it from all its deps so this computed and its
+      // value can be GCed
+      dep.computed.flags &= ~EffectFlags.TRACKING
+      for (let l = dep.computed.deps; l; l = l.nextDep) {
+        // here we are only "soft" unsubscribing because the computed still keeps
+        // referencing the deps and the dep should not decrease its sub count
+        removeSub(l, true)
+      }
     }
   }
 
