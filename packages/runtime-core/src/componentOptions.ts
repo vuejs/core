@@ -37,6 +37,7 @@ import {
   onBeforeUpdate,
   onDeactivated,
   onErrorCaptured,
+  onMismatched,
   onMounted,
   onRenderTracked,
   onRenderTriggered,
@@ -430,6 +431,7 @@ interface LegacyOptions<
   /** @deprecated use `unmounted` instead */
   destroyed?(): void
   unmounted?(): void
+  mismatched?(): void
   renderTracked?: DebuggerHook
   renderTriggered?: DebuggerHook
   errorCaptured?: ErrorCapturedHook
@@ -474,6 +476,7 @@ export type MergedComponentOptionsOverride = {
   renderTracked?: MergedHook<DebuggerHook>
   renderTriggered?: MergedHook<DebuggerHook>
   errorCaptured?: MergedHook<ErrorCapturedHook>
+  mismatched?: MergedHook
 }
 
 export type OptionTypesKeys = 'P' | 'B' | 'D' | 'C' | 'M' | 'Defaults'
@@ -550,6 +553,7 @@ export function applyOptions(instance: ComponentInternalInstance): void {
     destroyed,
     unmounted,
     render,
+    mismatched,
     renderTracked,
     renderTriggered,
     errorCaptured,
@@ -733,7 +737,7 @@ export function applyOptions(instance: ComponentInternalInstance): void {
   registerLifecycleHook(onBeforeUnmount, beforeUnmount)
   registerLifecycleHook(onUnmounted, unmounted)
   registerLifecycleHook(onServerPrefetch, serverPrefetch)
-
+  registerLifecycleHook(onMismatched, mismatched)
   if (__COMPAT__) {
     if (
       beforeDestroy &&
@@ -1017,6 +1021,7 @@ export const internalOptionMergeStrats: Record<string, Function> = {
   beforeUnmount: mergeAsArray,
   destroyed: mergeAsArray,
   unmounted: mergeAsArray,
+  mismatched: mergeAsArray,
   activated: mergeAsArray,
   deactivated: mergeAsArray,
   errorCaptured: mergeAsArray,

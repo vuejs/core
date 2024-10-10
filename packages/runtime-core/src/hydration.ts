@@ -20,6 +20,7 @@ import {
   def,
   getEscapedCssVarName,
   includeBooleanAttr,
+  invokeArrayFns,
   isBooleanAttr,
   isKnownHtmlAttr,
   isKnownSvgAttr,
@@ -41,6 +42,7 @@ import {
 import type { TeleportImpl, TeleportVNode } from './components/Teleport'
 import { isAsyncWrapper } from './apiAsyncComponent'
 import { isReactive } from '@vue/reactivity'
+import { DeprecationTypes, isCompatEnabled } from './compat/compatConfig'
 
 export type RootHydrateFunction = (
   vnode: VNode<Node, Element>,
@@ -190,6 +192,7 @@ export function createHydrationFunctions(
                   `\n  - expected on client: ${JSON.stringify(vnode.children)}`,
               )
             logMismatchError()
+            handleMismatchHook(vnode, parentComponent, node)
             ;(node as Text).data = vnode.children as string
           }
           nextNode = nextSibling(node)
@@ -431,6 +434,7 @@ export function createHydrationFunctions(
               )
               hasWarned = true
             }
+            handleMismatchHook(vnode, parentComponent, null)
             logMismatchError()
           }
 
@@ -460,6 +464,7 @@ export function createHydrationFunctions(
                   `\n  - expected on client: ${vnode.children as string}`,
               )
             logMismatchError()
+            handleMismatchHook(vnode, parentComponent, el)
           }
 
           el.textContent = vnode.children as string
@@ -603,6 +608,7 @@ export function createHydrationFunctions(
             )
             hasWarned = true
           }
+          handleMismatchHook(vnode, parentComponent, null)
           logMismatchError()
         }
 
@@ -682,6 +688,7 @@ export function createHydrationFunctions(
           vnode.type,
         )
       logMismatchError()
+      handleMismatchHook(vnode, parentComponent, node)
     }
 
     vnode.el = null
@@ -765,6 +772,29 @@ export function createHydrationFunctions(
       node.nodeType === DOMNodeTypes.ELEMENT &&
       (node as Element).tagName === 'TEMPLATE'
     )
+  }
+
+  const handleMismatchHook = (
+    vnode: VNode,
+    parentComponent: ComponentInternalInstance | null,
+    node: Node | null,
+  ) => {
+    const mm = parentComponent ? parentComponent.mm : null
+    if (__DEV__ && mm) {
+      invokeArrayFns(mm, {
+        parentComponent,
+        vnode,
+        node,
+      })
+    }
+    if (
+      parentComponent &&
+      __DEV__ &&
+      __COMPAT__ &&
+      isCompatEnabled(DeprecationTypes.INSTANCE_EVENT_HOOKS, parentComponent)
+    ) {
+      parentComponent.emit('hook:mismatched')
+    }
   }
 
   return [hydrate, hydrateNode]

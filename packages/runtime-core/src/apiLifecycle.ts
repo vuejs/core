@@ -14,6 +14,7 @@ import {
   resetTracking,
 } from '@vue/reactivity'
 import { LifecycleHooks } from './enums'
+import type { VNode } from './vnode'
 
 export { onActivated, onDeactivated } from './components/KeepAlive'
 
@@ -94,6 +95,16 @@ export const onBeforeUnmount: CreateHook = createHook(
 export const onUnmounted: CreateHook = createHook(LifecycleHooks.UNMOUNTED)
 export const onServerPrefetch: CreateHook = createHook(
   LifecycleHooks.SERVER_PREFETCH,
+)
+
+export type MismatchedHookParams = {
+  node: Node | null
+  vnode: VNode | null
+  parentComponent: ComponentInternalInstance | null
+}
+export type MismatchedHook = (e: MismatchedHookParams) => void
+export const onMismatched = createHook<MismatchedHook>(
+  LifecycleHooks.MIS_MATCHED,
 )
 
 export type DebuggerHook = (e: DebuggerEvent) => void
