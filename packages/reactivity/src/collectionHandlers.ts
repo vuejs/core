@@ -30,36 +30,6 @@ const toShallow = <T extends unknown>(value: T): T => value
 const getProto = <T extends CollectionTypes>(v: T): any =>
   Reflect.getPrototypeOf(v)
 
-function get(
-  target: MapTypes,
-  key: unknown,
-  isReadonly = false,
-  isShallow = false,
-) {
-  // #1772: readonly(reactive(Map)) should return readonly + reactive version
-  // of the value
-  target = target[ReactiveFlags.RAW]
-  const rawTarget = toRaw(target)
-  const rawKey = toRaw(key)
-  if (!isReadonly) {
-    if (hasChanged(key, rawKey)) {
-      track(rawTarget, TrackOpTypes.GET, key)
-    }
-    track(rawTarget, TrackOpTypes.GET, rawKey)
-  }
-  const { has } = getProto(rawTarget)
-  const wrap = isShallow ? toShallow : isReadonly ? toReadonly : toReactive
-  if (has.call(rawTarget, key)) {
-    return wrap(target.get(key))
-  } else if (has.call(rawTarget, rawKey)) {
-    return wrap(target.get(rawKey))
-  } else if (target !== rawTarget) {
-    // #3602 readonly(reactive(Map))
-    // ensure that the nested reactive `Map` can do tracking for itself
-    target.get(key)
-  }
-}
-
 function deleteEntry(this: CollectionTypes, key: unknown) {
   const target = toRaw(this)
   const { has, get } = getProto(target)
@@ -165,7 +135,28 @@ function createInstrumentations(
 ): Instrumentations {
   const instrumentations: Instrumentations = {
     get(this: MapTypes, key: unknown) {
-      return get(this, key, readonly, shallow)
+      // #1772: readonly(reactive(Map)) should return readonly + reactive version
+      // of the value
+      const target = this[ReactiveFlags.RAW]
+      const rawTarget = toRaw(target)
+      const rawKey = toRaw(key)
+      if (!readonly) {
+        if (hasChanged(key, rawKey)) {
+          track(rawTarget, TrackOpTypes.GET, key)
+        }
+        track(rawTarget, TrackOpTypes.GET, rawKey)
+      }
+      const { has } = getProto(rawTarget)
+      const wrap = shallow ? toShallow : readonly ? toReadonly : toReactive
+      if (has.call(rawTarget, key)) {
+        return wrap(target.get(key))
+      } else if (has.call(rawTarget, rawKey)) {
+        return wrap(target.get(rawKey))
+      } else if (target !== rawTarget) {
+        // #3602 readonly(reactive(Map))
+        // ensure that the nested reactive `Map` can do tracking for itself
+        target.get(key)
+      }
     },
     get size() {
       const target = (this as unknown as IterableCollections)[ReactiveFlags.RAW]
