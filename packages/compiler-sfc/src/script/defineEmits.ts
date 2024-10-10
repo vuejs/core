@@ -10,10 +10,10 @@ import { isCallOf } from './utils'
 import type { ScriptCompileContext } from './context'
 import {
   type TypeResolveContext,
-  resolveTypeElements,
-  resolveUnionType,
-  resolveTypeReference,
   resolveEnumMemberValue,
+  resolveTypeElements,
+  resolveTypeReference,
+  resolveUnionType,
 } from './resolveType'
 
 export const DEFINE_EMITS = 'defineEmits'
@@ -133,7 +133,7 @@ function extractEventNames(
           const memberValue = resolveEnumMemberValue(
             ctx,
             type,
-            typeNode.typeName.right.name
+            typeNode.typeName.right.name,
           )
           if (memberValue) emits.add(memberValue)
         }
@@ -146,13 +146,13 @@ function extractEventNames(
             ctx,
             type,
             undefined,
-            type.typeName.left.name
+            type.typeName.left.name,
           )
           if (resolved && resolved.type === 'TSEnumDeclaration') {
             const memberValue = resolveEnumMemberValue(
               ctx,
               resolved,
-              type.typeName.right.name
+              type.typeName.right.name,
             )
             if (memberValue) emits.add(memberValue)
           }

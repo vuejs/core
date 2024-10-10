@@ -765,7 +765,7 @@ function innerResolveTypeReference(
       scope,
       name[0],
       node,
-      onlyExported
+      onlyExported,
     )
     if (resolved) {
       if (resolved.type === 'TSEnumDeclaration') {
@@ -779,14 +779,14 @@ function innerResolveTypeReference(
           const childScope = moduleDeclToScope(
             ctx,
             resolved,
-            resolved._ownerScope || scope
+            resolved._ownerScope || scope,
           )
           return innerResolveTypeReference(
             ctx,
             childScope,
             name.length > 2 ? name.slice(1) : name[name.length - 1],
             node,
-            !resolved.declare
+            !resolved.declare,
           )
         }
       }
@@ -1963,7 +1963,7 @@ export function resolveEnumMemberValue(
   ctx: TypeResolveContext,
   node: Node & MaybeWithScope & { _resolvedElements?: ResolvedElements },
   typeName: string,
-  scope?: TypeScope
+  scope?: TypeScope,
 ): string | undefined {
   if (node.type === 'TSTypeReference') {
     const resolved = resolveTypeReference(ctx, node, scope, typeName)
@@ -1990,7 +1990,7 @@ export function resolveEnumMemberValue(
                 ctx,
                 m.initializer.object,
                 m.initializer.property.name,
-                scope
+                scope,
               )
             }
           }
