@@ -30,26 +30,6 @@ const toShallow = <T extends unknown>(value: T): T => value
 const getProto = <T extends CollectionTypes>(v: T): any =>
   Reflect.getPrototypeOf(v)
 
-function deleteEntry(this: CollectionTypes, key: unknown) {
-  const target = toRaw(this)
-  const { has, get } = getProto(target)
-  let hadKey = has.call(target, key)
-  if (!hadKey) {
-    key = toRaw(key)
-    hadKey = has.call(target, key)
-  } else if (__DEV__) {
-    checkIdentityKeys(target, has, key)
-  }
-
-  const oldValue = get ? get.call(target, key) : undefined
-  // forward the operation before queueing reactions
-  const result = target.delete(key)
-  if (hadKey) {
-    trigger(target, TriggerOpTypes.DELETE, key, undefined, oldValue)
-  }
-  return result
-}
-
 function clear(this: IterableCollections) {
   const target = toRaw(this)
   const hadItems = target.size !== 0
@@ -239,7 +219,25 @@ function createInstrumentations(
             }
             return this
           },
-          delete: deleteEntry,
+          delete(this: CollectionTypes, key: unknown) {
+            const target = toRaw(this)
+            const { has, get } = getProto(target)
+            let hadKey = has.call(target, key)
+            if (!hadKey) {
+              key = toRaw(key)
+              hadKey = has.call(target, key)
+            } else if (__DEV__) {
+              checkIdentityKeys(target, has, key)
+            }
+
+            const oldValue = get ? get.call(target, key) : undefined
+            // forward the operation before queueing reactions
+            const result = target.delete(key)
+            if (hadKey) {
+              trigger(target, TriggerOpTypes.DELETE, key, undefined, oldValue)
+            }
+            return result
+          },
           clear,
         },
   )
