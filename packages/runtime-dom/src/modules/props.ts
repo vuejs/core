@@ -1,7 +1,6 @@
 import { DeprecationTypes, compatUtils, warn } from '@vue/runtime-core'
-import { hyphenate, includeBooleanAttr } from '@vue/shared'
+import { includeBooleanAttr } from '@vue/shared'
 import { unsafeToTrustedHTML } from '../nodeOps'
-import type { VueElement } from '@vue/runtime-dom'
 
 // functions. The user is responsible for using them with only trusted content.
 export function patchDOMProp(
@@ -9,6 +8,7 @@ export function patchDOMProp(
   key: string,
   value: any,
   parentComponent: any,
+  attrName: string = '',
 ): void {
   // __UNSAFE__
   // Reason: potentially setting innerHTML.
@@ -107,6 +107,5 @@ export function patchDOMProp(
       )
     }
   }
-  needRemove &&
-    el.removeAttribute((el as VueElement)._isVueCE ? hyphenate(key) : key)
+  needRemove && el.removeAttribute(attrName || key)
 }
