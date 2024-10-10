@@ -162,7 +162,7 @@ describe('compiler: transform v-on', () => {
 
   test('should wrap as typescript function if expression is inline statement & isTS: true', () => {
     const { node } = parseWithVOn(`<div @click="i++"/>`, {
-      isTS: true
+      isTS: true,
     })
     expect((node.codegenNode as VNodeCall).props).toMatchObject({
       properties: [
@@ -170,10 +170,10 @@ describe('compiler: transform v-on', () => {
           key: { content: `onClick` },
           value: {
             type: NodeTypes.COMPOUND_EXPRESSION,
-            children: [`($event: any): any => (`, { content: `i++` }, `)`]
-          }
-        }
-      ]
+            children: [`($event: any): any => (`, { content: `i++` }, `)`],
+          },
+        },
+      ],
     })
   })
 
@@ -453,8 +453,8 @@ describe('compiler: transform v-on', () => {
       {
         isTS: true,
         prefixIdentifiers: true,
-        expressionPlugins: ['typescript']
-      }
+        expressionPlugins: ['typescript'],
+      },
     )
     expect((node.codegenNode as VNodeCall).props).toMatchObject({
       properties: [
@@ -469,11 +469,11 @@ describe('compiler: transform v-on', () => {
               { content: `_ctx.foo` },
               `(true, `,
               { content: `val` },
-              `)`
-            ]
-          }
-        }
-      ]
+              `)`,
+            ],
+          },
+        },
+      ],
     })
   })
 

@@ -37,8 +37,8 @@ import type {
   AssignmentExpression,
   Identifier,
   Node,
+  TSTypeAnnotation,
   UpdateExpression,
-  TSTypeAnnotation
 } from '@babel/types'
 import { validateBrowserExpression } from '../validateExpression'
 import { parseExpression } from '@babel/parser'
@@ -361,7 +361,7 @@ export function processExpression(
       if (_typeAnnotation.start && _typeAnnotation.end) {
         typeAnnotation = rawExp.slice(
           _typeAnnotation.start - 1,
-          _typeAnnotation.end - 1
+          _typeAnnotation.end - 1,
         )
       }
     }
