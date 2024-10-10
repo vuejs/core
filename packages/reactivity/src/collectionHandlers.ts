@@ -81,20 +81,6 @@ function size(target: IterableCollections, isReadonly = false) {
   return Reflect.get(target, 'size', target)
 }
 
-function add(this: SetTypes, value: unknown, _isShallow = false) {
-  if (!_isShallow && !isShallow(value) && !isReadonly(value)) {
-    value = toRaw(value)
-  }
-  const target = toRaw(this)
-  const proto = getProto(target)
-  const hadKey = proto.has.call(target, value)
-  if (!hadKey) {
-    target.add(value)
-    trigger(target, TriggerOpTypes.ADD, value, value)
-  }
-  return this
-}
-
 function deleteEntry(this: CollectionTypes, key: unknown) {
   const target = toRaw(this)
   const { has, get } = getProto(target)
@@ -242,7 +228,17 @@ function createInstrumentations(
         }
       : {
           add(this: SetTypes, value: unknown) {
-            return add.call(this, value, shallow)
+            if (!shallow && !isShallow(value) && !isReadonly(value)) {
+              value = toRaw(value)
+            }
+            const target = toRaw(this)
+            const proto = getProto(target)
+            const hadKey = proto.has.call(target, value)
+            if (!hadKey) {
+              target.add(value)
+              trigger(target, TriggerOpTypes.ADD, value, value)
+            }
+            return this
           },
           set(this: MapTypes, key: unknown, value: unknown) {
             if (!shallow && !isShallow(value) && !isReadonly(value)) {
