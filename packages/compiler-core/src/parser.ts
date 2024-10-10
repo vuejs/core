@@ -763,13 +763,26 @@ function backTrack(index: number, c: number) {
 }
 
 const specialTemplateDir = new Set(['if', 'else', 'else-if', 'for', 'slot'])
-function isFragmentTemplate({ tag, props }: ElementNode): boolean {
+function isFragmentTemplate({ tag, props, loc }: ElementNode): boolean {
   if (tag === 'template') {
     for (let i = 0; i < props.length; i++) {
       if (
         props[i].type === NodeTypes.DIRECTIVE &&
         specialTemplateDir.has((props[i] as DirectiveNode).name)
       ) {
+        if (
+          stack[0] &&
+          'tagType' in stack[0] &&
+          !isComponent(stack[0]) &&
+          props.find(p => p.name === 'slot')
+        ) {
+          currentOptions.onError(
+            createCompilerError(
+              ErrorCodes.X_SLOT_TEMPLATE_NOT_ROOT,
+              getLoc(loc.start.offset, loc.end.offset),
+            ),
+          )
+        }
         return true
       }
     }
