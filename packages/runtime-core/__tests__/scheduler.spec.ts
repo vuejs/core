@@ -441,6 +441,29 @@ describe('scheduler', () => {
       await nextTick()
       expect(calls).toEqual(['job1', 'job2', 'cb1', 'cb2'])
     })
+
+    test('jobs added during post flush are ordered correctly', async () => {
+      const calls: string[] = []
+
+      const job1: SchedulerJob = () => {
+        calls.push('job1')
+      }
+      job1.id = 1
+
+      const job2: SchedulerJob = () => {
+        calls.push('job2')
+      }
+      job2.id = 2
+
+      queuePostFlushCb(() => {
+        queueJob(job2)
+        queueJob(job1)
+      })
+
+      await nextTick()
+
+      expect(calls).toEqual(['job1', 'job2'])
+    })
   })
 
   test('sort job based on id', async () => {
@@ -756,6 +779,37 @@ describe('scheduler', () => {
     queueJob(job)
     await nextTick()
     expect(spy).toHaveBeenCalledTimes(1)
+  })
+
+  test('flushPreFlushCbs inside a post job', async () => {
+    const calls: string[] = []
+    const callsAfterFlush: string[] = []
+
+    const job1: SchedulerJob = () => {
+      calls.push('job1')
+    }
+    job1.id = 1
+    job1.flags! |= SchedulerJobFlags.PRE
+
+    const job2: SchedulerJob = () => {
+      calls.push('job2')
+    }
+    job2.id = 2
+    job2.flags! |= SchedulerJobFlags.PRE
+
+    queuePostFlushCb(() => {
+      queueJob(job2)
+      queueJob(job1)
+
+      // e.g. nested app.mount() call
+      flushPreFlushCbs()
+      callsAfterFlush.push(...calls)
+    })
+
+    await nextTick()
+
+    expect(callsAfterFlush).toEqual(['job1', 'job2'])
+    expect(calls).toEqual(['job1', 'job2'])
   })
 
   it('nextTick should return promise', async () => {
