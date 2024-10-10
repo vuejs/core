@@ -780,17 +780,20 @@ describe('vModel', () => {
   })
 
   it('should handle array values correctly without unnecessary updates', async () => {
+    const toggle = ref(true)
     const component = defineComponent({
       data() {
-        return { value: ['foo'] }
+        return { value: ['foo'], toggle }
       },
       render() {
         return [
+          h('div', toggle.value),
           withVModel(
             h('input', {
               type: 'checkbox',
               value: 'foo',
               'onUpdate:modelValue': setValue.bind(this),
+              onClick: () => (toggle.value = !toggle.value),
             }),
             this.value,
           ),
@@ -816,7 +819,9 @@ describe('vModel', () => {
     expect(foo.checked).toEqual(true)
     expect(bar.checked).toEqual(false)
 
-    triggerEvent('change', foo)
+    // #12144 - Clicking the input checkbox triggers the click event before the
+    // change event, which may result in checked being updated twice.
+    foo.click()
     await nextTick()
     expect(data.value).toEqual(['foo'])
     expect(setCheckedSpyFoo).not.toHaveBeenCalled()
