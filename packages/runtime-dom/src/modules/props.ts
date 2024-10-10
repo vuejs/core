@@ -8,6 +8,7 @@ export function patchDOMProp(
   key: string,
   value: any,
   parentComponent: any,
+  attrName?: string,
 ): void {
   // __UNSAFE__
   // Reason: potentially setting innerHTML.
@@ -106,5 +107,5 @@ export function patchDOMProp(
       )
     }
   }
-  needRemove && el.removeAttribute(key)
+  needRemove && el.removeAttribute(attrName || key)
 }
