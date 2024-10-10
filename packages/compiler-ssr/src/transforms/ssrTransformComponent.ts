@@ -205,7 +205,7 @@ export function ssrProcessComponent(
   node: ComponentNode,
   context: SSRTransformContext,
   parent: { children: TemplateChildNode[] },
-) {
+): void {
   const component = componentTypeMap.get(node)!
   if (!node.ssrCodegenNode) {
     // this is a built-in component that fell-through.
@@ -268,7 +268,10 @@ export function ssrProcessComponent(
   }
 }
 
-export const rawOptionsMap = new WeakMap<RootNode, CompilerOptions>()
+export const rawOptionsMap: WeakMap<RootNode, CompilerOptions> = new WeakMap<
+  RootNode,
+  CompilerOptions
+>()
 
 const [baseNodeTransforms, baseDirectiveTransforms] =
   getBaseTransformPreset(true)

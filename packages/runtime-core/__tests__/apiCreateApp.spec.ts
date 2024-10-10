@@ -116,12 +116,32 @@ describe('api: createApp', () => {
     const app = createApp({
       setup() {
         provide('foo', 'should not be seen')
+
+        // nested createApp
+        const childApp = createApp({
+          setup() {
+            provide('foo', 'foo from child')
+          },
+        })
+
+        childApp.provide('foo', 2)
+        expect(childApp.runWithContext(() => inject('foo'))).toBe(2)
+
         return () => h('div')
       },
     })
     app.provide('foo', 1)
 
     expect(app.runWithContext(() => inject('foo'))).toBe(1)
+    const root = nodeOps.createElement('div')
+    app.mount(root)
+
+    expect(
+      app.runWithContext(() => {
+        app.runWithContext(() => {})
+        return inject('foo')
+      }),
+    ).toBe(1)
 
     // ensure the context is restored
     inject('foo')
@@ -136,10 +156,10 @@ describe('api: createApp', () => {
       },
       setup() {
         // resolve in setup
-        const FooBar = resolveComponent('foo-bar') as any
+        const FooBar = resolveComponent('foo-bar')
         return () => {
           // resolve in render
-          const BarBaz = resolveComponent('bar-baz') as any
+          const BarBaz = resolveComponent('bar-baz')
           return h('div', [h(FooBar), h(BarBaz)])
         }
       },
@@ -175,10 +195,10 @@ describe('api: createApp', () => {
       },
       setup() {
         // resolve in setup
-        const FooBar = resolveDirective('foo-bar')!
+        const FooBar = resolveDirective('foo-bar')
         return () => {
           // resolve in render
-          const BarBaz = resolveDirective('bar-baz')!
+          const BarBaz = resolveDirective('bar-baz')
           return withDirectives(h('div'), [[FooBar], [BarBaz]])
         }
       },
@@ -337,13 +357,43 @@ describe('api: createApp', () => {
     ).toHaveBeenWarnedTimes(1)
   })
 
+  test('onUnmount', () => {
+    const cleanup = vi.fn().mockName('plugin cleanup')
+    const PluginA: Plugin = app => {
+      app.provide('foo', 1)
+      app.onUnmount(cleanup)
+    }
+    const PluginB: Plugin = {
+      install: (app, arg1, arg2) => {
+        app.provide('bar', arg1 + arg2)
+        app.onUnmount(cleanup)
+      },
+    }
+
+    const app = createApp({
+      render: () => `Test`,
+    })
+    app.use(PluginA)
+    app.use(PluginB)
+
+    const root = nodeOps.createElement('div')
+    app.mount(root)
+
+    //also can be added after mount
+    app.onUnmount(cleanup)
+
+    app.unmount()
+
+    expect(cleanup).toHaveBeenCalledTimes(3)
+  })
+
   test('config.errorHandler', () => {
     const error = new Error()
     const count = ref(0)
 
     const handler = vi.fn((err, instance, info) => {
       expect(err).toBe(error)
-      expect((instance as any).count).toBe(count.value)
+      expect(instance.count).toBe(count.value)
       expect(info).toBe(`render function`)
     })
 
@@ -443,11 +493,6 @@ describe('api: createApp', () => {
       }
 
       const app = createApp(Root)
-      Object.defineProperty(app.config, 'isNativeTag', {
-        value: isNativeTag,
-        writable: false,
-      })
-
       app.mount(nodeOps.createElement('div'))
       expect(
         `Do not use built-in directive ids as custom directive id: bind`,
@@ -504,6 +549,23 @@ describe('api: createApp', () => {
     const root = nodeOps.createElement('div')
     app.mount(root)
     expect(serializeInner(root)).toBe('hello')
+  })
+
+  test('config.throwUnhandledErrorInProduction', () => {
+    __DEV__ = false
+    try {
+      const err = new Error()
+      const app = createApp({
+        setup() {
+          throw err
+        },
+      })
+      app.config.throwUnhandledErrorInProduction = true
+      const root = nodeOps.createElement('div')
+      expect(() => app.mount(root)).toThrow(err)
+    } finally {
+      __DEV__ = true
+    }
   })
 
   test('return property "_" should not overwrite "ctx._", __isScriptSetup: false', () => {
