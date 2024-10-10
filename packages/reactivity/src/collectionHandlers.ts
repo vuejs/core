@@ -30,22 +30,6 @@ const toShallow = <T extends unknown>(value: T): T => value
 const getProto = <T extends CollectionTypes>(v: T): any =>
   Reflect.getPrototypeOf(v)
 
-function clear(this: IterableCollections) {
-  const target = toRaw(this)
-  const hadItems = target.size !== 0
-  const oldTarget = __DEV__
-    ? isMap(target)
-      ? new Map(target)
-      : new Set(target)
-    : undefined
-  // forward the operation before queueing reactions
-  const result = target.clear()
-  if (hadItems) {
-    trigger(target, TriggerOpTypes.CLEAR, undefined, undefined, oldTarget)
-  }
-  return result
-}
-
 function createIterableMethod(
   method: string | symbol,
   isReadonly: boolean,
@@ -238,7 +222,27 @@ function createInstrumentations(
             }
             return result
           },
-          clear,
+          clear(this: IterableCollections) {
+            const target = toRaw(this)
+            const hadItems = target.size !== 0
+            const oldTarget = __DEV__
+              ? isMap(target)
+                ? new Map(target)
+                : new Set(target)
+              : undefined
+            // forward the operation before queueing reactions
+            const result = target.clear()
+            if (hadItems) {
+              trigger(
+                target,
+                TriggerOpTypes.CLEAR,
+                undefined,
+                undefined,
+                oldTarget,
+              )
+            }
+            return result
+          },
         },
   )
 
