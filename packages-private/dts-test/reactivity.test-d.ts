@@ -134,7 +134,7 @@ describe('should not error when assignment', () => {
 
 // #7478
 describe('readonly raw type', () => {
-  type Foo = { readonly a: number; b: string; c: { d: number } }
+  type Foo = { a: number; b: string; c: { d: number } }
   const foo: Foo = {
     a: 1,
     b: 'b',
