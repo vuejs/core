@@ -8,7 +8,14 @@ import {
 } from './reactive'
 import { ITERATE_KEY, MAP_KEY_ITERATE_KEY, track, trigger } from './dep'
 import { ReactiveFlags, TrackOpTypes, TriggerOpTypes } from './constants'
-import { capitalize, hasChanged, hasOwn, isMap, toRawType } from '@vue/shared'
+import {
+  capitalize,
+  extend,
+  hasChanged,
+  hasOwn,
+  isMap,
+  toRawType,
+} from '@vue/shared'
 import { warn } from './warning'
 
 type CollectionTypes = IterableCollections | WeakCollections
@@ -232,74 +239,43 @@ function createReadonlyMethod(type: TriggerOpTypes): Function {
 
 type Instrumentations = Record<string | symbol, Function | number>
 
-function createInstrumentations() {
-  const mutableInstrumentations: Instrumentations = {
+function createInstrumentations(
+  readonly: boolean,
+  shallow: boolean,
+): Instrumentations {
+  const instrumentations: Instrumentations = {
     get(this: MapTypes, key: unknown) {
-      return get(this, key)
+      return get(this, key, readonly, shallow)
     },
     get size() {
-      return size(this as unknown as IterableCollections)
-    },
-    has,
-    add,
-    set,
-    delete: deleteEntry,
-    clear,
-    forEach: createForEach(false, false),
-  }
-
-  const shallowInstrumentations: Instrumentations = {
-    get(this: MapTypes, key: unknown) {
-      return get(this, key, false, true)
-    },
-    get size() {
-      return size(this as unknown as IterableCollections)
-    },
-    has,
-    add(this: SetTypes, value: unknown) {
-      return add.call(this, value, true)
-    },
-    set(this: MapTypes, key: unknown, value: unknown) {
-      return set.call(this, key, value, true)
-    },
-    delete: deleteEntry,
-    clear,
-    forEach: createForEach(false, true),
-  }
-
-  const readonlyInstrumentations: Instrumentations = {
-    get(this: MapTypes, key: unknown) {
-      return get(this, key, true)
-    },
-    get size() {
-      return size(this as unknown as IterableCollections, true)
+      return size(this as unknown as IterableCollections, readonly)
     },
     has(this: MapTypes, key: unknown) {
-      return has.call(this, key, true)
+      return has.call(this, key, readonly)
     },
-    add: createReadonlyMethod(TriggerOpTypes.ADD),
-    set: createReadonlyMethod(TriggerOpTypes.SET),
-    delete: createReadonlyMethod(TriggerOpTypes.DELETE),
-    clear: createReadonlyMethod(TriggerOpTypes.CLEAR),
-    forEach: createForEach(true, false),
+    forEach: createForEach(readonly, shallow),
   }
 
-  const shallowReadonlyInstrumentations: Instrumentations = {
-    get(this: MapTypes, key: unknown) {
-      return get(this, key, true, true)
-    },
-    get size() {
-      return size(this as unknown as IterableCollections, true)
-    },
-    has(this: MapTypes, key: unknown) {
-      return has.call(this, key, true)
-    },
-    add: createReadonlyMethod(TriggerOpTypes.ADD),
-    set: createReadonlyMethod(TriggerOpTypes.SET),
-    delete: createReadonlyMethod(TriggerOpTypes.DELETE),
-    clear: createReadonlyMethod(TriggerOpTypes.CLEAR),
-    forEach: createForEach(true, true),
-  }
+  extend(
+    instrumentations,
+    readonly
+      ? {
+          add: createReadonlyMethod(TriggerOpTypes.ADD),
+          set: createReadonlyMethod(TriggerOpTypes.SET),
+          delete: createReadonlyMethod(TriggerOpTypes.DELETE),
+          clear: createReadonlyMethod(TriggerOpTypes.CLEAR),
+        }
+      : {
+          add(this: SetTypes, value: unknown) {
+            return add.call(this, value, shallow)
+          },
+          set(this: MapTypes, key: unknown, value: unknown) {
+            return set.call(this, key, value, shallow)
+          },
+          delete: deleteEntry,
+          clear,
+        },
+  )
 
   const iteratorMethods = [
     'keys',
@@ -309,39 +285,14 @@ function createInstrumentations() {
   ] as const
 
   iteratorMethods.forEach(method => {
-    mutableInstrumentations[method] = createIterableMethod(method, false, false)
-    readonlyInstrumentations[method] = createIterableMethod(method, true, false)
-    shallowInstrumentations[method] = createIterableMethod(method, false, true)
-    shallowReadonlyInstrumentations[method] = createIterableMethod(
-      method,
-      true,
-      true,
-    )
+    instrumentations[method] = createIterableMethod(method, readonly, shallow)
   })
 
-  return [
-    mutableInstrumentations,
-    readonlyInstrumentations,
-    shallowInstrumentations,
-    shallowReadonlyInstrumentations,
-  ]
+  return instrumentations
 }
 
-const [
-  mutableInstrumentations,
-  readonlyInstrumentations,
-  shallowInstrumentations,
-  shallowReadonlyInstrumentations,
-] = /* @__PURE__*/ createInstrumentations()
-
 function createInstrumentationGetter(isReadonly: boolean, shallow: boolean) {
-  const instrumentations = shallow
-    ? isReadonly
-      ? shallowReadonlyInstrumentations
-      : shallowInstrumentations
-    : isReadonly
-      ? readonlyInstrumentations
-      : mutableInstrumentations
+  const instrumentations = createInstrumentations(isReadonly, shallow)
 
   return (
     target: CollectionTypes,
