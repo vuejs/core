@@ -60,12 +60,6 @@ function get(
   }
 }
 
-function size(target: IterableCollections, isReadonly = false) {
-  target = target[ReactiveFlags.RAW]
-  !isReadonly && track(toRaw(target), TrackOpTypes.ITERATE, ITERATE_KEY)
-  return Reflect.get(target, 'size', target)
-}
-
 function deleteEntry(this: CollectionTypes, key: unknown) {
   const target = toRaw(this)
   const { has, get } = getProto(target)
@@ -174,7 +168,9 @@ function createInstrumentations(
       return get(this, key, readonly, shallow)
     },
     get size() {
-      return size(this as unknown as IterableCollections, readonly)
+      const target = (this as unknown as IterableCollections)[ReactiveFlags.RAW]
+      !readonly && track(toRaw(target), TrackOpTypes.ITERATE, ITERATE_KEY)
+      return Reflect.get(target, 'size', target)
     },
     has(this: CollectionTypes, key: unknown): boolean {
       const target = this[ReactiveFlags.RAW]
