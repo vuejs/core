@@ -95,31 +95,6 @@ function add(this: SetTypes, value: unknown, _isShallow = false) {
   return this
 }
 
-function set(this: MapTypes, key: unknown, value: unknown, _isShallow = false) {
-  if (!_isShallow && !isShallow(value) && !isReadonly(value)) {
-    value = toRaw(value)
-  }
-  const target = toRaw(this)
-  const { has, get } = getProto(target)
-
-  let hadKey = has.call(target, key)
-  if (!hadKey) {
-    key = toRaw(key)
-    hadKey = has.call(target, key)
-  } else if (__DEV__) {
-    checkIdentityKeys(target, has, key)
-  }
-
-  const oldValue = get.call(target, key)
-  target.set(key, value)
-  if (!hadKey) {
-    trigger(target, TriggerOpTypes.ADD, key, value)
-  } else if (hasChanged(value, oldValue)) {
-    trigger(target, TriggerOpTypes.SET, key, value, oldValue)
-  }
-  return this
-}
-
 function deleteEntry(this: CollectionTypes, key: unknown) {
   const target = toRaw(this)
   const { has, get } = getProto(target)
@@ -270,7 +245,28 @@ function createInstrumentations(
             return add.call(this, value, shallow)
           },
           set(this: MapTypes, key: unknown, value: unknown) {
-            return set.call(this, key, value, shallow)
+            if (!shallow && !isShallow(value) && !isReadonly(value)) {
+              value = toRaw(value)
+            }
+            const target = toRaw(this)
+            const { has, get } = getProto(target)
+
+            let hadKey = has.call(target, key)
+            if (!hadKey) {
+              key = toRaw(key)
+              hadKey = has.call(target, key)
+            } else if (__DEV__) {
+              checkIdentityKeys(target, has, key)
+            }
+
+            const oldValue = get.call(target, key)
+            target.set(key, value)
+            if (!hadKey) {
+              trigger(target, TriggerOpTypes.ADD, key, value)
+            } else if (hasChanged(value, oldValue)) {
+              trigger(target, TriggerOpTypes.SET, key, value, oldValue)
+            }
+            return this
           },
           delete: deleteEntry,
           clear,
