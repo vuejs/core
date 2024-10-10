@@ -8,7 +8,7 @@ export function patchDOMProp(
   key: string,
   value: any,
   parentComponent: any,
-  attrName: string = '',
+  attrName?: string,
 ): void {
   // __UNSAFE__
   // Reason: potentially setting innerHTML.
