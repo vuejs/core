@@ -18,22 +18,25 @@
     "esModuleInterop": true,
     "removeComments": false,
     "jsx": "preserve",
-    "lib": ["esnext", "dom"],
+    "lib": ["es2016", "dom"],
     "types": ["vitest/globals", "puppeteer", "node"],
     "rootDir": ".",
     "paths": {
       "@vue/compat": ["packages/vue-compat/src"],
       "@vue/*": ["packages/*/src"],
       "vue": ["packages/vue/src"]
-    }
+    },
+    "isolatedDeclarations": true,
+    "composite": true
   },
   "include": [
     "packages/global.d.ts",
     "packages/*/src",
-    "packages/runtime-dom/types/jsx.d.ts",
     "packages/*/__tests__",
-    "packages/dts-test",
     "packages/vue/jsx-runtime",
-    "scripts/setupVitest.ts"
-  ]
+    "packages/runtime-dom/types/jsx.d.ts",
+    "scripts/*",
+    "rollup.*.js"
+  ],
+  "exclude": ["packages-private/sfc-playground/src/vue-dev-proxy*"]
 }

@@ -1,5 +1,5 @@
 import { BindingTypes } from '@vue/compiler-core'
-import { compileSFCScript as compile, assertCode } from '../utils'
+import { assertCode, compileSFCScript as compile } from '../utils'
 
 describe('defineEmits', () => {
   test('basic usage', () => {
@@ -10,13 +10,13 @@ const myEmit = defineEmits(['foo', 'bar'])
   `)
     assertCode(content)
     expect(bindings).toStrictEqual({
-      myEmit: BindingTypes.SETUP_CONST
+      myEmit: BindingTypes.SETUP_CONST,
     })
     // should remove defineEmits import and call
     expect(content).not.toMatch('defineEmits')
     // should generate correct setup signature
     expect(content).toMatch(
-      `setup(__props, { expose: __expose, emit: __emit }) {`
+      `setup(__props, { expose: __expose, emit: __emit }) {`,
     )
     expect(content).toMatch('const myEmit = __emit')
     // should include context options in default export
@@ -31,7 +31,7 @@ const emit = defineEmits(['a', 'b'])
 </script>
     `)
     assertCode(content)
-    expect(content).toMatch(`export default /*#__PURE__*/_defineComponent({
+    expect(content).toMatch(`export default /*@__PURE__*/_defineComponent({
   emits: ['a', 'b'],
   setup(__props, { expose: __expose, emit: __emit }) {`)
     expect(content).toMatch('const emit = __emit')
@@ -244,9 +244,9 @@ const emit = defineEmits(['a', 'b'])
           foo: []
           (e: 'hi'): void
         }>()
-        </script>`)
+        </script>`),
       ).toThrow(
-        `defineEmits() type cannot mixed call signature and property syntax.`
+        `defineEmits() type cannot mixed call signature and property syntax.`,
       )
     })
   })

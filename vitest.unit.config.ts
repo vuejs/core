@@ -3,6 +3,7 @@ import config from './vitest.config'
 
 export default mergeConfig(config, {
   test: {
-    exclude: [...configDefaults.exclude, '**/e2e/**']
-  }
+    name: 'unit',
+    exclude: [...configDefaults.exclude, '**/e2e/**'],
+  },
 })

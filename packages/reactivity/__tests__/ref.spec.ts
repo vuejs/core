@@ -1,20 +1,21 @@
 import {
-  ref,
+  type Ref,
   effect,
-  reactive,
+  isReactive,
   isRef,
+  reactive,
+  ref,
   toRef,
   toRefs,
-  Ref,
-  isReactive
+  toValue,
 } from '../src/index'
 import { computed } from '@vue/runtime-dom'
-import { shallowRef, unref, customRef, triggerRef } from '../src/ref'
+import { customRef, shallowRef, triggerRef, unref } from '../src/ref'
 import {
   isReadonly,
   isShallow,
   readonly,
-  shallowReactive
+  shallowReactive,
 } from '../src/reactive'
 
 describe('reactivity/ref', () => {
@@ -42,9 +43,31 @@ describe('reactivity/ref', () => {
     expect(fn).toHaveBeenCalledTimes(2)
   })
 
+  it('ref wrapped in reactive should not track internal _value access', () => {
+    const a = ref(1)
+    const b = reactive(a)
+    let dummy
+    const fn = vi.fn(() => {
+      dummy = b.value // this will observe both b.value and a.value access
+    })
+    effect(fn)
+    expect(fn).toHaveBeenCalledTimes(1)
+    expect(dummy).toBe(1)
+
+    // mutating a.value should only trigger effect once
+    a.value = 3
+    expect(fn).toHaveBeenCalledTimes(2)
+    expect(dummy).toBe(3)
+
+    // mutating b.value should trigger the effect twice. (once for a.value change and once for b.value change)
+    b.value = 5
+    expect(fn).toHaveBeenCalledTimes(4)
+    expect(dummy).toBe(5)
+  })
+
   it('should make nested properties reactive', () => {
     const a = ref({
-      count: 1
+      count: 1,
     })
     let dummy
     effect(() => {
@@ -71,8 +94,8 @@ describe('reactivity/ref', () => {
     const obj = reactive({
       a,
       b: {
-        c: a
-      }
+        c: a,
+      },
     })
 
     let dummy1: number
@@ -104,7 +127,7 @@ describe('reactivity/ref', () => {
 
   it('should unwrap nested values in types', () => {
     const a = {
-      b: ref(0)
+      b: ref(0),
     }
 
     const c = ref(a)
@@ -138,7 +161,7 @@ describe('reactivity/ref', () => {
       '1',
       { a: 1 },
       () => 0,
-      ref(0)
+      ref(0),
     ]
     const tupleRef = ref(tuple)
 
@@ -169,7 +192,7 @@ describe('reactivity/ref', () => {
       [Symbol.toPrimitive]: new WeakMap<Ref<boolean>, string>(),
       [Symbol.toStringTag]: { weakSet: new WeakSet<Ref<boolean>>() },
       [Symbol.unscopables]: { weakMap: new WeakMap<Ref<boolean>, string>() },
-      [customSymbol]: { arr: [ref(1)] }
+      [customSymbol]: { arr: [ref(1)] },
     }
 
     const objRef = ref(obj)
@@ -188,7 +211,7 @@ describe('reactivity/ref', () => {
       Symbol.toPrimitive,
       Symbol.toStringTag,
       Symbol.unscopables,
-      customSymbol
+      customSymbol,
     ]
 
     keys.forEach(key => {
@@ -248,9 +271,21 @@ describe('reactivity/ref', () => {
 
   test('toRef', () => {
     const a = reactive({
-      x: 1
+      x: 1,
     })
     const x = toRef(a, 'x')
+
+    const b = ref({ y: 1 })
+
+    const c = toRef(b)
+
+    const d = toRef({ z: 1 })
+
+    expect(isRef(d)).toBe(true)
+    expect(d.value.z).toBe(1)
+
+    expect(c).toBe(b)
+
     expect(isRef(x)).toBe(true)
     expect(x.value).toBe(1)
 
@@ -313,7 +348,7 @@ describe('reactivity/ref', () => {
   test('toRefs', () => {
     const a = reactive({
       x: 1,
-      y: 2
+      y: 2,
     })
 
     const { x, y } = toRefs(a)
@@ -386,7 +421,7 @@ describe('reactivity/ref', () => {
       set(newValue: number) {
         value = newValue
         _trigger = trigger
-      }
+      },
     }))
 
     expect(isRef(custom)).toBe(true)
@@ -441,5 +476,62 @@ describe('reactivity/ref', () => {
     a.value = rr
     expect(a.value).toBe(rr)
     expect(a.value).not.toBe(r)
+  })
+
+  test('should not trigger when setting the same raw object', () => {
+    const obj = {}
+    const r = ref(obj)
+    const spy = vi.fn()
+    effect(() => spy(r.value))
+    expect(spy).toHaveBeenCalledTimes(1)
+
+    r.value = obj
+    expect(spy).toHaveBeenCalledTimes(1)
+  })
+
+  test('toValue', () => {
+    const a = ref(1)
+    const b = computed(() => a.value + 1)
+    const c = () => a.value + 2
+    const d = 4
+
+    expect(toValue(a)).toBe(1)
+    expect(toValue(b)).toBe(2)
+    expect(toValue(c)).toBe(3)
+    expect(toValue(d)).toBe(4)
+  })
+
+  test('ref w/ customRef w/ getterRef w/ objectRef should store value cache', () => {
+    const refValue = ref(1)
+    // @ts-expect-error private field
+    expect(refValue._value).toBe(1)
+
+    let customRefValueCache = 0
+    const customRefValue = customRef((track, trigger) => {
+      return {
+        get() {
+          track()
+          return customRefValueCache
+        },
+        set(value: number) {
+          customRefValueCache = value
+          trigger()
+        },
+      }
+    })
+    customRefValue.value
+
+    // @ts-expect-error internal field
+    expect(customRefValue._value).toBe(0)
+
+    const getterRefValue = toRef(() => 1)
+    getterRefValue.value
+    // @ts-expect-error internal field
+    expect(getterRefValue._value).toBe(1)
+
+    const objectRefValue = toRef({ value: 1 }, 'value')
+    objectRefValue.value
+    // @ts-expect-error internal field
+    expect(objectRefValue._value).toBe(1)
   })
 })

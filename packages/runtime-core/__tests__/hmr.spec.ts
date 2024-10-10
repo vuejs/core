@@ -1,17 +1,18 @@
-import { HMRRuntime } from '../src/hmr'
+import type { HMRRuntime } from '../src/hmr'
 import '../src/hmr'
-import { ComponentOptions, InternalRenderFunction } from '../src/component'
+import type { ComponentOptions, InternalRenderFunction } from '../src/component'
 import {
-  render,
-  nodeOps,
+  type TestElement,
   h,
+  nextTick,
+  nodeOps,
+  ref,
+  render,
   serializeInner,
   triggerEvent,
-  TestElement,
-  nextTick
 } from '@vue/runtime-test'
 import * as runtimeTest from '@vue/runtime-test'
-import { registerRuntimeCompiler, createApp } from '@vue/runtime-test'
+import { createApp, registerRuntimeCompiler } from '@vue/runtime-test'
 import { baseCompile } from '@vue/compiler-core'
 
 declare var __VUE_HMR_RUNTIME__: HMRRuntime
@@ -22,11 +23,13 @@ registerRuntimeCompiler(compileToFunction)
 function compileToFunction(template: string) {
   const { code } = baseCompile(template, { hoistStatic: true, hmr: true })
   const render = new Function('Vue', code)(
-    runtimeTest
+    runtimeTest,
   ) as InternalRenderFunction
   render._rc = true // isRuntimeCompiled
   return render
 }
+
+const timeout = (n: number = 0) => new Promise(r => setTimeout(r, n))
 
 describe('hot module replacement', () => {
   test('inject global runtime', () => {
@@ -48,7 +51,7 @@ describe('hot module replacement', () => {
 
     const Child: ComponentOptions = {
       __hmrId: childId,
-      render: compileToFunction(`<div><slot/></div>`)
+      render: compileToFunction(`<div><slot/></div>`),
     }
     createRecord(childId, Child)
 
@@ -59,8 +62,8 @@ describe('hot module replacement', () => {
       },
       components: { Child },
       render: compileToFunction(
-        `<div @click="count++">{{ count }}<Child>{{ count }}</Child></div>`
-      )
+        `<div @click="count++">{{ count }}<Child>{{ count }}</Child></div>`,
+      ),
     }
     createRecord(parentId, Parent)
 
@@ -77,8 +80,8 @@ describe('hot module replacement', () => {
     rerender(
       parentId,
       compileToFunction(
-        `<div @click="count++">{{ count }}!<Child>{{ count }}</Child></div>`
-      )
+        `<div @click="count++">{{ count }}!<Child>{{ count }}</Child></div>`,
+      ),
     )
     expect(serializeInner(root)).toBe(`<div>1!<div>1</div></div>`)
 
@@ -86,8 +89,8 @@ describe('hot module replacement', () => {
     rerender(
       parentId,
       compileToFunction(
-        `<div @click="count++">{{ count }}!<Child>{{ count }}!</Child></div>`
-      )
+        `<div @click="count++">{{ count }}!<Child>{{ count }}!</Child></div>`,
+      ),
     )
     expect(serializeInner(root)).toBe(`<div>1!<div>1!</div></div>`)
 
@@ -97,8 +100,8 @@ describe('hot module replacement', () => {
       compileToFunction(
         `<div @click="count++">{{ count }}<span>{{ count }}</span>
         <Child>{{ count }}!</Child>
-      </div>`
-      )
+      </div>`,
+      ),
     )
     expect(serializeInner(root)).toBe(`<div>1<span>1</span><div>1!</div></div>`)
 
@@ -108,8 +111,8 @@ describe('hot module replacement', () => {
       compileToFunction(
         `<div @click="count++">
         <Child><span>{{ count }}</span></Child>
-      </div>`
-      )
+      </div>`,
+      ),
     )
     expect(serializeInner(root)).toBe(`<div><div><span>1</span></div></div>`)
   })
@@ -126,12 +129,12 @@ describe('hot module replacement', () => {
         return { count: 0 }
       },
       unmounted: unmountSpy,
-      render: compileToFunction(`<div @click="count++">{{ count }}</div>`)
+      render: compileToFunction(`<div @click="count++">{{ count }}</div>`),
     }
     createRecord(childId, Child)
 
     const Parent: ComponentOptions = {
-      render: () => h(Child)
+      render: () => h(Child),
     }
 
     render(h(Parent), root)
@@ -143,7 +146,7 @@ describe('hot module replacement', () => {
         return { count: 1 }
       },
       mounted: mountSpy,
-      render: compileToFunction(`<div @click="count++">{{ count }}</div>`)
+      render: compileToFunction(`<div @click="count++">{{ count }}</div>`),
     })
     await nextTick()
     expect(serializeInner(root)).toBe(`<div>1</div>`)
@@ -166,7 +169,7 @@ describe('hot module replacement', () => {
         return { count: 0 }
       },
       unmounted: unmountSpy,
-      render: compileToFunction(`<div>{{ count }}</div>`)
+      render: compileToFunction(`<div>{{ count }}</div>`),
     }
     createRecord(childId, Child)
 
@@ -176,8 +179,9 @@ describe('hot module replacement', () => {
         return { toggle: true }
       },
       render: compileToFunction(
-        `<button @click="toggle = !toggle"></button><KeepAlive><Child v-if="toggle" /></KeepAlive>`
-      )
+        `<button @click="toggle = !toggle" />
+        <KeepAlive><Child v-if="toggle" /></KeepAlive>`,
+      ),
     }
 
     render(h(Parent), root)
@@ -192,7 +196,7 @@ describe('hot module replacement', () => {
       unmounted: unmountSpy,
       activated: activeSpy,
       deactivated: deactiveSpy,
-      render: compileToFunction(`<div>{{ count }}</div>`)
+      render: compileToFunction(`<div>{{ count }}</div>`),
     })
     await nextTick()
     expect(serializeInner(root)).toBe(`<button></button><div>1</div>`)
@@ -233,7 +237,7 @@ describe('hot module replacement', () => {
         return { count: 0 }
       },
       unmounted: unmountSpy,
-      render: compileToFunction(`<div>{{ count }}</div>`)
+      render: compileToFunction(`<div>{{ count }}</div>`),
     }
     createRecord(childId, Child)
 
@@ -243,8 +247,11 @@ describe('hot module replacement', () => {
         return { toggle: true }
       },
       render: compileToFunction(
-        `<button @click="toggle = !toggle"></button><BaseTransition mode="out-in"><KeepAlive><Child v-if="toggle" /></KeepAlive></BaseTransition>`
-      )
+        `<button @click="toggle = !toggle" />
+        <BaseTransition>
+          <KeepAlive><Child v-if="toggle" /></KeepAlive>
+        </BaseTransition>`,
+      ),
     }
 
     render(h(Parent), root)
@@ -259,7 +266,7 @@ describe('hot module replacement', () => {
       unmounted: unmountSpy,
       activated: activeSpy,
       deactivated: deactiveSpy,
-      render: compileToFunction(`<div>{{ count }}</div>`)
+      render: compileToFunction(`<div>{{ count }}</div>`),
     })
     await nextTick()
     expect(serializeInner(root)).toBe(`<button></button><div>1</div>`)
@@ -271,7 +278,88 @@ describe('hot module replacement', () => {
     // should not unmount when toggling
     triggerEvent(root.children[1] as TestElement, 'click')
     await nextTick()
-    expect(serializeInner(root)).toBe(`<button></button><!---->`)
+    expect(serializeInner(root)).toBe(`<button></button><!--v-if-->`)
+    expect(unmountSpy).toHaveBeenCalledTimes(1)
+    expect(mountSpy).toHaveBeenCalledTimes(1)
+    expect(activeSpy).toHaveBeenCalledTimes(1)
+    expect(deactiveSpy).toHaveBeenCalledTimes(1)
+
+    // should not mount when toggling
+    triggerEvent(root.children[1] as TestElement, 'click')
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<button></button><div>1</div>`)
+    expect(unmountSpy).toHaveBeenCalledTimes(1)
+    expect(mountSpy).toHaveBeenCalledTimes(1)
+    expect(activeSpy).toHaveBeenCalledTimes(2)
+    expect(deactiveSpy).toHaveBeenCalledTimes(1)
+  })
+
+  test('reload KeepAlive slot in Transition with out-in', async () => {
+    const root = nodeOps.createElement('div')
+    const childId = 'test-transition-keep-alive-reload-with-out-in'
+    const unmountSpy = vi.fn()
+    const mountSpy = vi.fn()
+    const activeSpy = vi.fn()
+    const deactiveSpy = vi.fn()
+
+    const Child: ComponentOptions = {
+      __hmrId: childId,
+      name: 'original',
+      data() {
+        return { count: 0 }
+      },
+      unmounted: unmountSpy,
+      render: compileToFunction(`<div>{{ count }}</div>`),
+    }
+    createRecord(childId, Child)
+
+    const Parent: ComponentOptions = {
+      components: { Child },
+      data() {
+        return { toggle: true }
+      },
+      methods: {
+        // @ts-expect-error
+        onLeave(_, done) {
+          setTimeout(done, 0)
+        },
+      },
+      render: compileToFunction(
+        `<button @click="toggle = !toggle" />
+        <BaseTransition mode="out-in" @leave="onLeave">
+          <KeepAlive><Child v-if="toggle" /></KeepAlive>
+        </BaseTransition>`,
+      ),
+    }
+
+    render(h(Parent), root)
+    expect(serializeInner(root)).toBe(`<button></button><div>0</div>`)
+
+    reload(childId, {
+      __hmrId: childId,
+      name: 'updated',
+      data() {
+        return { count: 1 }
+      },
+      mounted: mountSpy,
+      unmounted: unmountSpy,
+      activated: activeSpy,
+      deactivated: deactiveSpy,
+      render: compileToFunction(`<div>{{ count }}</div>`),
+    })
+    await nextTick()
+    await new Promise(r => setTimeout(r, 0))
+    expect(serializeInner(root)).toBe(`<button></button><div>1</div>`)
+    expect(unmountSpy).toHaveBeenCalledTimes(1)
+    expect(mountSpy).toHaveBeenCalledTimes(1)
+    expect(activeSpy).toHaveBeenCalledTimes(1)
+    expect(deactiveSpy).toHaveBeenCalledTimes(0)
+
+    // should not unmount when toggling
+    triggerEvent(root.children[1] as TestElement, 'click')
+    await nextTick()
+    await new Promise(r => setTimeout(r, 0))
+    expect(serializeInner(root)).toBe(`<button></button><!--v-if-->`)
     expect(unmountSpy).toHaveBeenCalledTimes(1)
     expect(mountSpy).toHaveBeenCalledTimes(1)
     expect(activeSpy).toHaveBeenCalledTimes(1)
@@ -300,13 +388,13 @@ describe('hot module replacement', () => {
           return { count: 0 }
         },
         unmounted: unmountSpy,
-        render: compileToFunction(`<div @click="count++">{{ count }}</div>`)
+        render: compileToFunction(`<div @click="count++">{{ count }}</div>`),
       }
     }
     createRecord(childId, Child)
 
     const Parent: ComponentOptions = {
-      render: () => h(Child)
+      render: () => h(Child),
     }
 
     render(h(Parent), root)
@@ -319,7 +407,7 @@ describe('hot module replacement', () => {
           return { count: 1 }
         },
         mounted: mountSpy,
-        render: compileToFunction(`<div @click="count++">{{ count }}</div>`)
+        render: compileToFunction(`<div @click="count++">{{ count }}</div>`),
       }
     }
 
@@ -328,6 +416,58 @@ describe('hot module replacement', () => {
     expect(serializeInner(root)).toBe(`<div>1</div>`)
     expect(unmountSpy).toHaveBeenCalledTimes(1)
     expect(mountSpy).toHaveBeenCalledTimes(1)
+  })
+
+  // #6930
+  test('reload: avoid infinite recursion', async () => {
+    const root = nodeOps.createElement('div')
+    const childId = 'test-child-6930'
+    const unmountSpy = vi.fn()
+    const mountSpy = vi.fn()
+
+    const Child: ComponentOptions = {
+      __hmrId: childId,
+      data() {
+        return { count: 0 }
+      },
+      expose: ['count'],
+      unmounted: unmountSpy,
+      render: compileToFunction(`<div @click="count++">{{ count }}</div>`),
+    }
+    createRecord(childId, Child)
+
+    const Parent: ComponentOptions = {
+      setup() {
+        const com1 = ref()
+        const changeRef1 = (value: any) => (com1.value = value)
+
+        const com2 = ref()
+        const changeRef2 = (value: any) => (com2.value = value)
+
+        return () => [
+          h(Child, { ref: changeRef1 }),
+          h(Child, { ref: changeRef2 }),
+          com1.value?.count,
+        ]
+      },
+    }
+
+    render(h(Parent), root)
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<div>0</div><div>0</div>0`)
+
+    reload(childId, {
+      __hmrId: childId,
+      data() {
+        return { count: 1 }
+      },
+      mounted: mountSpy,
+      render: compileToFunction(`<div @click="count++">{{ count }}</div>`),
+    })
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<div>1</div><div>1</div>1`)
+    expect(unmountSpy).toHaveBeenCalledTimes(2)
+    expect(mountSpy).toHaveBeenCalledTimes(2)
   })
 
   // #1156 - static nodes should retain DOM element reference across updates
@@ -346,29 +486,29 @@ describe('hot module replacement', () => {
       data() {
         return { count: 0 }
       },
-      render: compileToFunction(template)
+      render: compileToFunction(template),
     }
     createRecord(id, Comp)
 
     render(h(Comp), root)
     expect(serializeInner(root)).toBe(
-      `<div><div>0</div><button>++</button></div>`
+      `<div><div>0</div><button>++</button></div>`,
     )
 
     // 1. click to trigger update
     triggerEvent((root as any).children[0].children[1], 'click')
     await nextTick()
     expect(serializeInner(root)).toBe(
-      `<div><div>1</div><button>++</button></div>`
+      `<div><div>1</div><button>++</button></div>`,
     )
 
     // 2. trigger HMR
     rerender(
       id,
-      compileToFunction(template.replace(`<button`, `<button class="foo"`))
+      compileToFunction(template.replace(`<button`, `<button class="foo"`)),
     )
     expect(serializeInner(root)).toBe(
-      `<div><div>1</div><button class="foo">++</button></div>`
+      `<div><div>1</div><button class="foo">++</button></div>`,
     )
   })
 
@@ -381,16 +521,16 @@ describe('hot module replacement', () => {
     const Child: ComponentOptions = {
       __hmrId: childId,
       props: {
-        msg: String
+        msg: String,
       },
-      render: compileToFunction(`<div>{{ msg }}</div>`)
+      render: compileToFunction(`<div>{{ msg }}</div>`),
     }
     createRecord(childId, Child)
 
     const Parent: ComponentOptions = {
       __hmrId: parentId,
       components: { Child },
-      render: compileToFunction(`<Child msg="foo" />`)
+      render: compileToFunction(`<Child msg="foo" />`),
     }
     createRecord(parentId, Parent)
 
@@ -409,14 +549,14 @@ describe('hot module replacement', () => {
 
     const Child: ComponentOptions = {
       __hmrId: childId,
-      render: compileToFunction(`<div>child</div>`)
+      render: compileToFunction(`<div>child</div>`),
     }
     createRecord(childId, Child)
 
     const Parent: ComponentOptions = {
       __hmrId: parentId,
       components: { Child },
-      render: compileToFunction(`<Child class="test" />`)
+      render: compileToFunction(`<Child class="test" />`),
     }
     createRecord(parentId, Parent)
 
@@ -436,7 +576,7 @@ describe('hot module replacement', () => {
 
     const Child: ComponentOptions = {
       __hmrId: childId,
-      render: compileToFunction(`<div>child</div>`)
+      render: compileToFunction(`<div>child</div>`),
     }
     createRecord(childId, Child)
 
@@ -445,18 +585,18 @@ describe('hot module replacement', () => {
     for (let i = 0; i < numberOfParents; i++) {
       const parentId = `${parent}${i}`
       const parentComp: ComponentOptions = {
-        __hmrId: parentId
+        __hmrId: parentId,
       }
       components.push(parentComp)
       if (i === 0) {
         parentComp.render = compileToFunction(`<Child />`)
         parentComp.components = {
-          Child
+          Child,
         }
       } else {
         parentComp.render = compileToFunction(`<Parent />`)
         parentComp.components = {
-          Parent: components[i - 1]
+          Parent: components[i - 1],
         }
       }
 
@@ -483,7 +623,7 @@ describe('hot module replacement', () => {
         return {
           // style is used to ensure that the div tag will be tracked by Teleport
           style: {},
-          target
+          target,
         }
       },
       render: compileToFunction(`
@@ -492,7 +632,7 @@ describe('hot module replacement', () => {
             <slot/>
           </div>
         </teleport>
-      `)
+      `),
     }
 
     const Parent: ComponentOptions = {
@@ -504,13 +644,13 @@ describe('hot module replacement', () => {
             <div>1</div>
           </template>
         </Child>
-      `)
+      `),
     }
     createRecord(parentId, Parent)
 
     render(h(Parent), root)
     expect(serializeInner(root)).toBe(
-      `<!--teleport start--><!--teleport end-->`
+      `<!--teleport start--><!--teleport end-->`,
     )
     expect(serializeInner(target)).toBe(`<div style={}><div>1</div></div>`)
 
@@ -523,13 +663,13 @@ describe('hot module replacement', () => {
           <div>2</div>
         </template>
       </Child>
-    `)
+    `),
     )
     expect(serializeInner(root)).toBe(
-      `<!--teleport start--><!--teleport end-->`
+      `<!--teleport start--><!--teleport end-->`,
     )
     expect(serializeInner(target)).toBe(
-      `<div style={}><div>1</div><div>2</div></div>`
+      `<div style={}><div>1</div><div>2</div></div>`,
     )
   })
 
@@ -544,12 +684,12 @@ describe('hot module replacement', () => {
       created: createSpy1,
       render() {
         return h('div')
-      }
+      },
     }
     createRecord(childId, Child)
 
     const Parent: ComponentOptions = {
-      render: () => h(Child)
+      render: () => h(Child),
     }
 
     const app = createApp(Parent)
@@ -565,7 +705,7 @@ describe('hot module replacement', () => {
       created: createSpy2,
       render() {
         return h('div')
-      }
+      },
     })
     await nextTick()
     expect(createSpy1).toHaveBeenCalledTimes(1)
@@ -577,7 +717,7 @@ describe('hot module replacement', () => {
     const id = 'no-active-instance-rerender'
     const Foo: ComponentOptions = {
       __hmrId: id,
-      render: () => 'foo'
+      render: () => 'foo',
     }
 
     createRecord(id, Foo)
@@ -592,13 +732,13 @@ describe('hot module replacement', () => {
     const id = 'no-active-instance-reload'
     const Foo: ComponentOptions = {
       __hmrId: id,
-      render: () => 'foo'
+      render: () => 'foo',
     }
 
     createRecord(id, Foo)
     reload(id, {
       __hmrId: id,
-      render: () => 'bar'
+      render: () => 'bar',
     })
 
     const root = nodeOps.createElement('div')
@@ -617,16 +757,16 @@ describe('hot module replacement', () => {
       computed: {
         slotContent() {
           return this.$slots.default?.()
-        }
+        },
       },
-      render: compileToFunction(`<component :is="() => slotContent" />`)
+      render: compileToFunction(`<component :is="() => slotContent" />`),
     }
     createRecord(childId, Child)
 
     const Parent: ComponentOptions = {
       __hmrId: parentId,
       components: { Child },
-      render: compileToFunction(`<Child>1</Child>`)
+      render: compileToFunction(`<Child>1</Child>`),
     }
     createRecord(parentId, Parent)
 
@@ -648,14 +788,14 @@ describe('hot module replacement', () => {
           <div>1</div>
         </div>
         <p>2</p>
-        <p>3</p>`
-      )
+        <p>3</p>`,
+      ),
     }
     createRecord(appId, App)
 
     render(h(App), root)
     expect(serializeInner(root)).toBe(
-      `<div><div>1</div></div><div><div>1</div></div><p>2</p><p>3</p>`
+      `<div><div>1</div></div><div><div>1</div></div><p>2</p><p>3</p>`,
     )
 
     // move the <p>3</p> into the <div>1</div>
@@ -665,11 +805,93 @@ describe('hot module replacement', () => {
         `<div v-for="item of 2">
           <div>1<p>3</p></div>
         </div>
-        <p>2</p>`
-      )
+        <p>2</p>`,
+      ),
     )
     expect(serializeInner(root)).toBe(
-      `<div><div>1<p>3</p></div></div><div><div>1<p>3</p></div></div><p>2</p>`
+      `<div><div>1<p>3</p></div></div><div><div>1<p>3</p></div></div><p>2</p>`,
     )
+  })
+
+  // #11248
+  test('reload async component with multiple instances', async () => {
+    const root = nodeOps.createElement('div')
+    const childId = 'test-child-id'
+    const Child: ComponentOptions = {
+      __hmrId: childId,
+      data() {
+        return { count: 0 }
+      },
+      render: compileToFunction(`<div>{{ count }}</div>`),
+    }
+    const Comp = runtimeTest.defineAsyncComponent(() => Promise.resolve(Child))
+    const appId = 'test-app-id'
+    const App: ComponentOptions = {
+      __hmrId: appId,
+      render: () => [h(Comp), h(Comp)],
+    }
+    createRecord(appId, App)
+
+    render(h(App), root)
+
+    await timeout()
+
+    expect(serializeInner(root)).toBe(`<div>0</div><div>0</div>`)
+
+    // change count to 1
+    reload(childId, {
+      __hmrId: childId,
+      data() {
+        return { count: 1 }
+      },
+      render: compileToFunction(`<div>{{ count }}</div>`),
+    })
+
+    await timeout()
+
+    expect(serializeInner(root)).toBe(`<div>1</div><div>1</div>`)
+  })
+
+  test('reload async child wrapped in Suspense + KeepAlive', async () => {
+    const id = 'async-child-reload'
+    const AsyncChild: ComponentOptions = {
+      __hmrId: id,
+      async setup() {
+        await nextTick()
+        return () => 'foo'
+      },
+    }
+    createRecord(id, AsyncChild)
+
+    const appId = 'test-app-id'
+    const App: ComponentOptions = {
+      __hmrId: appId,
+      components: { AsyncChild },
+      render: compileToFunction(`
+        <div>
+        <Suspense>
+          <KeepAlive>
+            <AsyncChild />
+          </KeepAlive>
+        </Suspense>
+      </div>
+      `),
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(App), root)
+    expect(serializeInner(root)).toBe('<div><!----></div>')
+    await timeout()
+    expect(serializeInner(root)).toBe('<div>foo</div>')
+
+    reload(id, {
+      __hmrId: id,
+      async setup() {
+        await nextTick()
+        return () => 'bar'
+      },
+    })
+    await timeout()
+    expect(serializeInner(root)).toBe('<div>bar</div>')
   })
 })
