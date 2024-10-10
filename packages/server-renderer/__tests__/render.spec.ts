@@ -81,6 +81,18 @@ function testRender(type: string, render: typeof renderToString) {
       expect(html).toBe(`<div>foo</div>`)
     })
 
+    test('warnings should be suppressed by app.config.warnHandler', async () => {
+      const app = createApp({
+        render() {
+          return h('div', this.foo)
+        },
+      })
+      app.config.warnHandler = vi.fn()
+      await render(app)
+      expect('not defined on instance').not.toHaveBeenWarned()
+      expect(app.config.warnHandler).toHaveBeenCalledTimes(1)
+    })
+
     describe('components', () => {
       test('vnode components', async () => {
         expect(
@@ -868,6 +880,26 @@ function testRender(type: string, render: typeof renderToString) {
         render() {
           return h('div', this.msg)
         },
+      })
+      const html = await render(app)
+      expect(html).toBe(`<div>hello</div>`)
+    })
+
+    test('serverPrefetch w/ async setup', async () => {
+      const msg = Promise.resolve('hello')
+      const app = createApp({
+        data() {
+          return {
+            msg: '',
+          }
+        },
+        async serverPrefetch() {
+          this.msg = await msg
+        },
+        render() {
+          return h('div', this.msg)
+        },
+        async setup() {},
       })
       const html = await render(app)
       expect(html).toBe(`<div>hello</div>`)

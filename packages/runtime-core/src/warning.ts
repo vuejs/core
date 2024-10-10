@@ -22,17 +22,17 @@ type TraceEntry = {
 
 type ComponentTraceStack = TraceEntry[]
 
-export function pushWarningContext(vnode: VNode) {
+export function pushWarningContext(vnode: VNode): void {
   stack.push(vnode)
 }
 
-export function popWarningContext() {
+export function popWarningContext(): void {
   stack.pop()
 }
 
 let isWarning = false
 
-export function warn(msg: string, ...args: any[]) {
+export function warn(msg: string, ...args: any[]): void {
   if (isWarning) return
   isWarning = true
 
@@ -63,12 +63,12 @@ export function warn(msg: string, ...args: any[]) {
     )
   } else {
     const warnArgs = [`[Vue warn]: ${msg}`, ...args]
-    /* istanbul ignore if */
     if (
       trace.length &&
       // avoid spamming console during tests
       !__TEST__
     ) {
+      /* v8 ignore next 2 */
       warnArgs.push(`\n`, ...formatTrace(trace))
     }
     console.warn(...warnArgs)
@@ -107,7 +107,7 @@ export function getComponentTrace(): ComponentTraceStack {
   return normalizedStack
 }
 
-/* istanbul ignore next */
+/* v8 ignore start */
 function formatTrace(trace: ComponentTraceStack): any[] {
   const logs: any[] = []
   trace.forEach((entry, i) => {
@@ -131,7 +131,6 @@ function formatTraceEntry({ vnode, recurseCount }: TraceEntry): any[] {
     : [open + close]
 }
 
-/* istanbul ignore next */
 function formatProps(props: Data): any[] {
   const res: any[] = []
   const keys = Object.keys(props)
@@ -146,7 +145,6 @@ function formatProps(props: Data): any[] {
 
 function formatProp(key: string, value: unknown): any[]
 function formatProp(key: string, value: unknown, raw: true): any
-/* istanbul ignore next */
 function formatProp(key: string, value: unknown, raw?: boolean): any {
   if (isString(value)) {
     value = JSON.stringify(value)
@@ -171,7 +169,7 @@ function formatProp(key: string, value: unknown, raw?: boolean): any {
 /**
  * @internal
  */
-export function assertNumber(val: unknown, type: string) {
+export function assertNumber(val: unknown, type: string): void {
   if (!__DEV__) return
   if (val === undefined) {
     return
@@ -181,3 +179,4 @@ export function assertNumber(val: unknown, type: string) {
     warn(`${type} is NaN - ` + 'the duration expression might be incorrect.')
   }
 }
+/* v8 ignore stop */
