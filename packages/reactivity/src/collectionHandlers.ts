@@ -60,21 +60,6 @@ function get(
   }
 }
 
-function has(this: CollectionTypes, key: unknown, isReadonly = false): boolean {
-  const target = this[ReactiveFlags.RAW]
-  const rawTarget = toRaw(target)
-  const rawKey = toRaw(key)
-  if (!isReadonly) {
-    if (hasChanged(key, rawKey)) {
-      track(rawTarget, TrackOpTypes.HAS, key)
-    }
-    track(rawTarget, TrackOpTypes.HAS, rawKey)
-  }
-  return key === rawKey
-    ? target.has(key)
-    : target.has(key) || target.has(rawKey)
-}
-
 function size(target: IterableCollections, isReadonly = false) {
   target = target[ReactiveFlags.RAW]
   !isReadonly && track(toRaw(target), TrackOpTypes.ITERATE, ITERATE_KEY)
@@ -191,8 +176,19 @@ function createInstrumentations(
     get size() {
       return size(this as unknown as IterableCollections, readonly)
     },
-    has(this: MapTypes, key: unknown) {
-      return has.call(this, key, readonly)
+    has(this: CollectionTypes, key: unknown): boolean {
+      const target = this[ReactiveFlags.RAW]
+      const rawTarget = toRaw(target)
+      const rawKey = toRaw(key)
+      if (!readonly) {
+        if (hasChanged(key, rawKey)) {
+          track(rawTarget, TrackOpTypes.HAS, key)
+        }
+        track(rawTarget, TrackOpTypes.HAS, rawKey)
+      }
+      return key === rawKey
+        ? target.has(key)
+        : target.has(key) || target.has(rawKey)
     },
     forEach(this: IterableCollections, callback: Function, thisArg?: unknown) {
       const observed = this
