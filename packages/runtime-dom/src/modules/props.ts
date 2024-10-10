@@ -1,6 +1,7 @@
 import { DeprecationTypes, compatUtils, warn } from '@vue/runtime-core'
-import { includeBooleanAttr } from '@vue/shared'
+import { hyphenate, includeBooleanAttr } from '@vue/shared'
 import { unsafeToTrustedHTML } from '../nodeOps'
+import type { VueElement } from '@vue/runtime-dom'
 
 // functions. The user is responsible for using them with only trusted content.
 export function patchDOMProp(
@@ -106,5 +107,6 @@ export function patchDOMProp(
       )
     }
   }
-  needRemove && el.removeAttribute(key)
+  needRemove &&
+    el.removeAttribute((el as VueElement)._isVueCE ? hyphenate(key) : key)
 }
