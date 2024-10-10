@@ -117,26 +117,6 @@ function clear(this: IterableCollections) {
   return result
 }
 
-function createForEach(isReadonly: boolean, isShallow: boolean) {
-  return function forEach(
-    this: IterableCollections,
-    callback: Function,
-    thisArg?: unknown,
-  ) {
-    const observed = this
-    const target = observed[ReactiveFlags.RAW]
-    const rawTarget = toRaw(target)
-    const wrap = isShallow ? toShallow : isReadonly ? toReadonly : toReactive
-    !isReadonly && track(rawTarget, TrackOpTypes.ITERATE, ITERATE_KEY)
-    return target.forEach((value: unknown, key: unknown) => {
-      // important: make sure the callback is
-      // 1. invoked with the reactive map as `this` and 3rd arg
-      // 2. the value received should be a corresponding reactive/readonly.
-      return callback.call(thisArg, wrap(value), wrap(key), observed)
-    })
-  }
-}
-
 function createIterableMethod(
   method: string | symbol,
   isReadonly: boolean,
@@ -214,7 +194,19 @@ function createInstrumentations(
     has(this: MapTypes, key: unknown) {
       return has.call(this, key, readonly)
     },
-    forEach: createForEach(readonly, shallow),
+    forEach(this: IterableCollections, callback: Function, thisArg?: unknown) {
+      const observed = this
+      const target = observed[ReactiveFlags.RAW]
+      const rawTarget = toRaw(target)
+      const wrap = shallow ? toShallow : readonly ? toReadonly : toReactive
+      !readonly && track(rawTarget, TrackOpTypes.ITERATE, ITERATE_KEY)
+      return target.forEach((value: unknown, key: unknown) => {
+        // important: make sure the callback is
+        // 1. invoked with the reactive map as `this` and 3rd arg
+        // 2. the value received should be a corresponding reactive/readonly.
+        return callback.call(thisArg, wrap(value), wrap(key), observed)
+      })
+    },
   }
 
   extend(
