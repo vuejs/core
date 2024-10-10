@@ -160,24 +160,26 @@ export const vModelCheckbox: ModelDirective<HTMLInputElement> = {
 
 function setChecked(
   el: HTMLInputElement,
-  { value }: DirectiveBinding,
+  { value, oldValue }: DirectiveBinding,
   vnode: VNode,
 ) {
   // store the v-model value on the element so it can be accessed by the
   // change listener.
   ;(el as any)._modelValue = value
   let checked: boolean
+  let isSimpleValue = false
 
   if (isArray(value)) {
     checked = looseIndexOf(value, vnode.props!.value) > -1
   } else if (isSet(value)) {
     checked = value.has(vnode.props!.value)
   } else {
+    isSimpleValue = true
     checked = looseEqual(value, getCheckboxValue(el, true))
   }
 
   // Only update if the checked state has changed
-  if (el.checked !== checked) {
+  if (el.checked !== checked && (!isSimpleValue || value !== oldValue)) {
     el.checked = checked
   }
 }
