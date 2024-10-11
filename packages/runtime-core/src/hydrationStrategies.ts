@@ -1,5 +1,12 @@
-import { isString } from '@vue/shared'
+import { getGlobalThis, isString } from '@vue/shared'
 import { DOMNodeTypes, isComment } from './hydration'
+
+// Polyfills for Safari support
+// see https://caniuse.com/requestidlecallback
+const requestIdleCallback: Window['requestIdleCallback'] =
+  getGlobalThis().requestIdleCallback || (cb => setTimeout(cb, 1))
+const cancelIdleCallback: Window['cancelIdleCallback'] =
+  getGlobalThis().cancelIdleCallback || (id => clearTimeout(id))
 
 /**
  * A lazy hydration strategy for async components.
