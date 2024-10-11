@@ -20,7 +20,8 @@ describe('defineProps w/ type declaration', () => {
   // type declaration
   const props = defineProps<{
     foo: string
-    bool?: boolean
+    bool: boolean
+    boolOptional?: boolean
     boolAndUndefined: boolean | undefined
     file?: File | File[]
   }>()
@@ -30,15 +31,22 @@ describe('defineProps w/ type declaration', () => {
   props.bar
 
   expectType<boolean>(props.bool)
-  expectType<boolean>(props.boolAndUndefined)
+  expectType<boolean | undefined>(props.boolOptional)
+  expectType<boolean | undefined>(props.boolAndUndefined)
 })
 
 describe('defineProps w/ generics', () => {
   function test<T extends boolean>() {
-    const props = defineProps<{ foo: T; bar: string; x?: boolean }>()
+    const props = defineProps<{
+      foo: T
+      bar: string
+      x: boolean
+      xOptional?: boolean
+    }>()
     expectType<T>(props.foo)
     expectType<string>(props.bar)
     expectType<boolean>(props.x)
+    expectType<boolean | undefined>(props.xOptional)
   }
   test()
 })
