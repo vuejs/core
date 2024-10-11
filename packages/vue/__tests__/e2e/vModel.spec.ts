@@ -12,7 +12,7 @@ beforeEach(async () => {
 })
 
 // #12144
-test('checkbox click with v-model', async () => {
+test('checkbox click with v-model boolean value', async () => {
   await page().evaluate(() => {
     const { createApp } = (window as any).Vue
     createApp({
@@ -57,7 +57,7 @@ test('checkbox click with v-model', async () => {
 })
 
 // #8638
-test('checkbox click with v-model array', async () => {
+test('checkbox click with v-model array value', async () => {
   await page().evaluate(() => {
     const { createApp, ref } = (window as any).Vue
     createApp({
