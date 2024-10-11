@@ -17,22 +17,22 @@ test('checkbox click with v-model', async () => {
     const { createApp } = (window as any).Vue
     createApp({
       template: `
-            <label>
-    <input 
-      id="first"
-      type="checkbox"
-      v-model="first"/>
-    First
-  </label>
-  <br>  
-  <label>
-    <input
-      id="second"
-      type="checkbox"
-      v-model="second"      
-      @click="secondClick"/>    
-      Second
-    </label> 
+      <label>
+        <input 
+          id="first"
+          type="checkbox"
+          v-model="first"/>
+        First
+      </label>
+      <br>  
+      <label>
+        <input
+          id="second"
+          type="checkbox"
+          v-model="second"      
+          @click="secondClick"/>    
+          Second
+      </label> 
         `,
       data() {
         return {
