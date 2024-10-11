@@ -51,6 +51,7 @@ describe('reactivity/reactive/Array', () => {
     const raw = {}
     const arr = reactive([{}, {}])
     arr.push(raw)
+
     expect(arr.indexOf(raw)).toBe(2)
     expect(arr.indexOf(raw, 3)).toBe(-1)
     expect(arr.includes(raw)).toBe(true)
@@ -87,6 +88,84 @@ describe('reactivity/reactive/Array', () => {
     expect(index).toBe(0)
     arr.reverse()
     expect(index).toBe(1)
+  })
+
+  // only non-existent reactive will try to search by using its raw value
+  describe('Array identity methods should not be called more than necessary', () => {
+    const identityMethods = ['includes', 'indexOf', 'lastIndexOf'] as const
+
+    function instrumentArr(rawTarget: any[]) {
+      identityMethods.forEach(key => {
+        const spy = vi.fn(rawTarget[key] as any)
+        rawTarget[key] = spy
+      })
+    }
+
+    function searchValue(target: any[], ...args: unknown[]) {
+      return identityMethods.map(key => (target[key] as any)(...args))
+    }
+
+    function unInstrumentArr(rawTarget: any[]) {
+      identityMethods.forEach(key => {
+        ;(rawTarget[key] as any).mockClear()
+        // relink to prototype method
+        rawTarget[key] = Array.prototype[key] as any
+      })
+    }
+
+    function expectHaveBeenCalledTimes(rawTarget: any[], times: number) {
+      identityMethods.forEach(key => {
+        expect(rawTarget[key]).toHaveBeenCalledTimes(times)
+      })
+    }
+
+    test('should be called once with a non-existent raw value', () => {
+      const reactiveArr = reactive([])
+      instrumentArr(toRaw(reactiveArr))
+      const searchResult = searchValue(reactiveArr, {})
+
+      expectHaveBeenCalledTimes(toRaw(reactiveArr), 1)
+      expect(searchResult).toStrictEqual([false, -1, -1])
+
+      unInstrumentArr(toRaw(reactiveArr))
+    })
+
+    test('should be called once with an existent reactive value', () => {
+      const existReactiveValue = reactive({})
+      const reactiveArr = reactive([existReactiveValue, existReactiveValue])
+
+      instrumentArr(toRaw(reactiveArr))
+      const searchResult = searchValue(reactiveArr, existReactiveValue)
+
+      expectHaveBeenCalledTimes(toRaw(reactiveArr), 1)
+      expect(searchResult).toStrictEqual([true, 0, 1])
+
+      unInstrumentArr(toRaw(reactiveArr))
+    })
+
+    test('should be called twice with a non-existent reactive value', () => {
+      const reactiveArr = reactive([])
+      instrumentArr(toRaw(reactiveArr))
+      const searchResult = searchValue(reactiveArr, reactive({}))
+
+      expectHaveBeenCalledTimes(toRaw(reactiveArr), 2)
+      expect(searchResult).toStrictEqual([false, -1, -1])
+
+      unInstrumentArr(toRaw(reactiveArr))
+    })
+
+    test('should be called twice with a non-existent reactive value, but the raw value exists', () => {
+      const existRaw = {}
+      const reactiveArr = reactive([existRaw, existRaw])
+
+      instrumentArr(toRaw(reactiveArr))
+      const searchResult = searchValue(reactiveArr, reactive(existRaw))
+
+      expectHaveBeenCalledTimes(toRaw(reactiveArr), 2)
+      expect(searchResult).toStrictEqual([true, 0, 1])
+
+      unInstrumentArr(toRaw(reactiveArr))
+    })
   })
 
   test('delete on Array should not trigger length dependency', () => {

@@ -69,8 +69,17 @@ export function setRef(
     setupState === EMPTY_OBJ
       ? () => false
       : (key: string) => {
-          if (__DEV__ && knownTemplateRefs.has(rawSetupState[key] as any)) {
-            return false
+          if (__DEV__) {
+            if (hasOwn(rawSetupState, key) && !isRef(rawSetupState[key])) {
+              warn(
+                `Template ref "${key}" used on a non-ref value. ` +
+                  `It will not work in the production build.`,
+              )
+            }
+
+            if (knownTemplateRefs.has(rawSetupState[key] as any)) {
+              return false
+            }
           }
           return hasOwn(rawSetupState, key)
         }
