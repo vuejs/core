@@ -470,6 +470,17 @@ describe('stringify static html', () => {
     expect(code).toMatchSnapshot()
   })
 
+  test('should bail for <option> elements with null values', () => {
+    const { ast, code } = compileWithStringify(
+      `<div><select><option :value="null" />${repeat(
+        `<option value="1" />`,
+        StringifyThresholds.ELEMENT_WITH_BINDING_COUNT,
+      )}</select></div>`,
+    )
+    expect(ast.cached).toMatchObject([cachedArrayBailedMatcher()])
+    expect(code).toMatchSnapshot()
+  })
+
   test('eligible content (elements > 20) + non-eligible content', () => {
     const { code } = compileWithStringify(
       `<div>${repeat(
