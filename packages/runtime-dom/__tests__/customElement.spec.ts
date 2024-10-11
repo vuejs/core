@@ -1386,4 +1386,39 @@ describe('defineCustomElement', () => {
     await nextTick()
     expect(e.shadowRoot!.innerHTML).toBe(`false,boolean`)
   })
+
+  test('hyphenated attr removal', async () => {
+    const E = defineCustomElement({
+      props: {
+        fooBar: {
+          type: Boolean,
+        },
+      },
+      render() {
+        return this.fooBar
+      },
+    })
+    customElements.define('el-hyphenated-attr-removal', E)
+    const toggle = ref(true)
+    const Comp = {
+      render() {
+        return h('el-hyphenated-attr-removal', {
+          'foo-bar': toggle.value ? '' : null,
+        })
+      },
+    }
+    render(h(Comp), container)
+    const el = container.children[0]
+    expect(el.hasAttribute('foo-bar')).toBe(true)
+    expect((el as any).outerHTML).toBe(
+      `<el-hyphenated-attr-removal foo-bar=""></el-hyphenated-attr-removal>`,
+    )
+
+    toggle.value = false
+    await nextTick()
+    expect(el.hasAttribute('foo-bar')).toBe(false)
+    expect((el as any).outerHTML).toBe(
+      `<el-hyphenated-attr-removal></el-hyphenated-attr-removal>`,
+    )
+  })
 })
