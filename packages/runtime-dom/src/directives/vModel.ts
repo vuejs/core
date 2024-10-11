@@ -163,8 +163,10 @@ function setChecked(
   { value }: DirectiveBinding,
   vnode: VNode,
 ) {
-  // store the v-model value on the element so it can be accessed by the
-  // change listener.
+  // avoid updating with clicking on checkbox
+  if ((el as any)._currentEventType === 'click')
+    return // store the v-model value on the element so it can be accessed by the
+    // change listener.
   ;(el as any)._modelValue = value
   let checked: boolean
 
