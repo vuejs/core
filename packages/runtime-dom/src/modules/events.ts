@@ -90,12 +90,14 @@ const p = /*@__PURE__*/ Promise.resolve()
 const getNow = () =>
   cachedNow || (p.then(() => (cachedNow = 0)), (cachedNow = Date.now()))
 
+export let globelEvent: Event | undefined
+
 function createInvoker(
   initialValue: EventValue,
   instance: ComponentInternalInstance | null,
 ) {
   const invoker: Invoker = (e: Event & { _vts?: number }) => {
-    ;(e.currentTarget as any)._currentEventType = e.type
+    globelEvent = e
     // async edge case vuejs/vue#6566
     // inner click event triggers patch, event handler
     // attached to outer element during patch, and triggered again. This

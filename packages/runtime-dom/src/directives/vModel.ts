@@ -6,7 +6,7 @@ import {
   nextTick,
   warn,
 } from '@vue/runtime-core'
-import { addEventListener } from '../modules/events'
+import { addEventListener, globelEvent } from '../modules/events'
 import {
   invokeArrayFns,
   isArray,
@@ -163,8 +163,11 @@ function setChecked(
   { value }: DirectiveBinding,
   vnode: VNode,
 ) {
-  // avoid updating when click event has side effect
-  if ((el as any)._currentEventType === 'click') {
+  if (
+    globelEvent &&
+    globelEvent.target === el &&
+    globelEvent.type !== 'change'
+  ) {
     return
   }
   // store the v-model value on the element so it can be accessed by the
@@ -243,6 +246,13 @@ export const vModelSelect: ModelDirective<HTMLSelectElement, 'number'> = {
 }
 
 function setSelected(el: HTMLSelectElement, value: any) {
+  if (
+    globelEvent &&
+    globelEvent.target === el &&
+    globelEvent.type !== 'change'
+  ) {
+    return
+  }
   const isMultiple = el.multiple
   const isArrayValue = isArray(value)
   if (isMultiple && !isArrayValue && !isSet(value)) {
