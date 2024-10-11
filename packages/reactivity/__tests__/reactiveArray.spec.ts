@@ -51,6 +51,7 @@ describe('reactivity/reactive/Array', () => {
     const raw = {}
     const arr = reactive([{}, {}])
     arr.push(raw)
+
     expect(arr.indexOf(raw)).toBe(2)
     expect(arr.indexOf(raw, 3)).toBe(-1)
     expect(arr.includes(raw)).toBe(true)
@@ -90,17 +91,20 @@ describe('reactivity/reactive/Array', () => {
   })
 
   // only non-existent reactive will try to search by using its raw value
-  describe('Array identity methods have been called times', () => {
+  describe('Array identity methods should not be called more than necessary', () => {
     const identityMethods = ['includes', 'indexOf', 'lastIndexOf'] as const
+
     function instrumentArr(rawTarget: any[]) {
       identityMethods.forEach(key => {
         const spy = vi.fn(rawTarget[key] as any)
         rawTarget[key] = spy
       })
     }
+
     function searchValue(target: any[], ...args: unknown[]) {
       return identityMethods.map(key => (target[key] as any)(...args))
     }
+
     function unInstrumentArr(rawTarget: any[]) {
       identityMethods.forEach(key => {
         ;(rawTarget[key] as any).mockClear()
@@ -108,6 +112,7 @@ describe('reactivity/reactive/Array', () => {
         rawTarget[key] = Array.prototype[key] as any
       })
     }
+
     function expectHaveBeenCalledTimes(rawTarget: any[], times: number) {
       identityMethods.forEach(key => {
         expect(rawTarget[key]).toHaveBeenCalledTimes(times)
