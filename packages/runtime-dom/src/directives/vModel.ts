@@ -163,7 +163,7 @@ function setChecked(
   { value }: DirectiveBinding,
   vnode: VNode,
 ) {
-  // avoid updating with clicking on checkbox
+  // avoid updating when click event has side effect
   if ((el as any)._currentEventType === 'click') {
     return
   }
