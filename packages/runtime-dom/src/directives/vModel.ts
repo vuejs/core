@@ -248,7 +248,7 @@ export const vModelSelect: ModelDirective<HTMLSelectElement, 'number'> = {
 }
 
 function setSelected(el: HTMLSelectElement, value: any) {
-  if (looseEqual(value, (el as any)._cachedValue)) {
+  if ((el as any)._assigning && looseEqual(value, (el as any)._cachedValue)) {
     return
   }
   ;(el as any)._cachedValue = isArray(value)
