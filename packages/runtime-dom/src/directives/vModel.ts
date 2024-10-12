@@ -122,9 +122,6 @@ export const vModelCheckbox: ModelDirective<HTMLInputElement> = {
   deep: true,
   created(el, _, vnode) {
     el[assignKey] = getModelAssigner(vnode)
-    addEventListener(el, 'click', () => {
-      ;(el as any)._willChange = true
-    })
     addEventListener(el, 'change', () => {
       const modelValue = (el as any)._modelValue
       const elementValue = getValue(el)
@@ -156,10 +153,6 @@ export const vModelCheckbox: ModelDirective<HTMLInputElement> = {
   // set initial checked on mount to wait for true-value/false-value
   mounted: setChecked,
   beforeUpdate(el, binding, vnode) {
-    if ((el as any)._willChange) {
-      ;(el as any)._willChange = false
-      return
-    }
     el[assignKey] = getModelAssigner(vnode)
     setChecked(el, binding, vnode)
   },
@@ -170,9 +163,17 @@ function setChecked(
   { value }: DirectiveBinding,
   vnode: VNode,
 ) {
+  if (looseEqual(value, (el as any)._cachedValue)) {
+    return
+  }
   // store the v-model value on the element so it can be accessed by the
   // change listener.
   ;(el as any)._modelValue = value
+  ;(el as any)._cachedValue = isArray(value)
+    ? [...value]
+    : isSet(value)
+      ? new Set(value)
+      : value
   let checked: boolean
 
   if (isArray(value)) {
@@ -210,22 +211,20 @@ export const vModelSelect: ModelDirective<HTMLSelectElement, 'number'> = {
   deep: true,
   created(el, { value, modifiers: { number } }, vnode) {
     const isSetModel = isSet(value)
-    addEventListener(el, 'click', () => {
-      ;(el as any)._willChange = true
-    })
     addEventListener(el, 'change', () => {
       const selectedVal = Array.prototype.filter
         .call(el.options, (o: HTMLOptionElement) => o.selected)
         .map((o: HTMLOptionElement) =>
           number ? looseToNumber(getValue(o)) : getValue(o),
         )
-      el[assignKey](
-        el.multiple
-          ? isSetModel
-            ? new Set(selectedVal)
-            : selectedVal
-          : selectedVal[0],
-      )
+      const modelValue = el.multiple
+        ? isSetModel
+          ? new Set(selectedVal)
+          : selectedVal
+        : selectedVal[0]
+      el[assignKey](modelValue)
+      ;(el as any)._cachedValue = isArray(value) ? [...value] : value
+
       el._assigning = true
       nextTick(() => {
         el._assigning = false
@@ -243,16 +242,21 @@ export const vModelSelect: ModelDirective<HTMLSelectElement, 'number'> = {
   },
   updated(el, { value }) {
     if (!el._assigning) {
-      if ((el as any)._willChange) {
-        ;(el as any)._willChange = false
-        return
-      }
       setSelected(el, value)
     }
   },
 }
 
 function setSelected(el: HTMLSelectElement, value: any) {
+  if (looseEqual(value, (el as any)._cachedValue)) {
+    return
+  }
+  ;(el as any)._cachedValue = isArray(value)
+    ? [...value]
+    : isSet(value)
+      ? new Set(value)
+      : value
+
   const isMultiple = el.multiple
   const isArrayValue = isArray(value)
   if (isMultiple && !isArrayValue && !isSet(value)) {
