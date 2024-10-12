@@ -17,7 +17,7 @@ import {
 } from '@vue/shared'
 
 // leading comma for empty string ""
-const shouldIgnoreProp = /*#__PURE__*/ makeMap(
+const shouldIgnoreProp = /*@__PURE__*/ makeMap(
   `,key,ref,innerHTML,textContent,ref_key,ref_for`,
 )
 
@@ -39,6 +39,8 @@ export function ssrRenderAttrs(
       ret += ` class="${ssrRenderClass(value)}"`
     } else if (key === 'style') {
       ret += ` style="${ssrRenderStyle(value)}"`
+    } else if (key === 'className') {
+      ret += ` class="${String(value)}"`
     } else {
       ret += ssrRenderDynamicAttr(key, value, tag)
     }
