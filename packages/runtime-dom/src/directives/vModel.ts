@@ -122,7 +122,7 @@ export const vModelCheckbox: ModelDirective<HTMLInputElement> = {
   deep: true,
   created(el, _, vnode) {
     el[assignKey] = getModelAssigner(vnode)
-    addEventListener(el, 'mousedown', () => {
+    addEventListener(el, 'click', () => {
       ;(el as any)._willChange = true
     })
     addEventListener(el, 'change', () => {
@@ -210,7 +210,7 @@ export const vModelSelect: ModelDirective<HTMLSelectElement, 'number'> = {
   deep: true,
   created(el, { value, modifiers: { number } }, vnode) {
     const isSetModel = isSet(value)
-    addEventListener(el, 'mousedown', () => {
+    addEventListener(el, 'click', () => {
       ;(el as any)._willChange = true
     })
     addEventListener(el, 'change', () => {
