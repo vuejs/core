@@ -93,9 +93,7 @@ function createReadonlyMethod(type: TriggerOpTypes): Function {
 
 function createSetProtoMethod(method: string) {
   return function (this: SetTypes, value: unknown) {
-    if (!isShallow(value) && !isReadonly(value)) {
-      value = toRaw(value)
-    }
+    value = toRaw(value)
     const target = (this as any)[ReactiveFlags.RAW]
     const rawTarget = toRaw(target)
     const result = target[method](value)
