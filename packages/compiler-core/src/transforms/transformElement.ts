@@ -56,7 +56,7 @@ import {
   toValidAssetId,
 } from '../utils'
 import { buildSlots } from './vSlot'
-import { getConstantType } from './hoistStatic'
+import { getConstantType } from './cacheStatic'
 import { BindingTypes } from '../options'
 import {
   CompilerDeprecationTypes,
@@ -228,7 +228,7 @@ export function resolveComponentType(
   node: ComponentNode,
   context: TransformContext,
   ssr = false,
-) {
+): string | symbol | CallExpression {
   let { tag } = node
 
   // 1. dynamic component
@@ -250,7 +250,7 @@ export function resolveComponentType(
         exp = isProp.exp
         if (!exp) {
           // #10469 handle :is shorthand
-          exp = createSimpleExpression(`is`, false, isProp.loc)
+          exp = createSimpleExpression(`is`, false, isProp.arg!.loc)
           if (!__BROWSER__) {
             exp = isProp.exp = processExpression(exp, context)
           }
@@ -374,7 +374,7 @@ export type PropsExpression = ObjectExpression | CallExpression | ExpressionNode
 export function buildProps(
   node: ElementNode,
   context: TransformContext,
-  props: ElementNode['props'] = node.props,
+  props: ElementNode['props'] | undefined = node.props,
   isComponent: boolean,
   isDynamicComponent: boolean,
   ssr = false,
@@ -665,7 +665,7 @@ export function buildProps(
       }
 
       // force hydration for v-bind with .prop modifier
-      if (isVBind && modifiers.includes('prop')) {
+      if (isVBind && modifiers.some(mod => mod.content === 'prop')) {
         patchFlag |= PatchFlags.NEED_HYDRATION
       }
 
