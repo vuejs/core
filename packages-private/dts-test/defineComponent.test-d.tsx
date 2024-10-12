@@ -118,7 +118,7 @@ describe('with object props', () => {
     // default + function
     ffff: {
       type: Function as PropType<(a: number, b: string) => { a: boolean }>,
-      default: (a: number, b: string) => ({ a: a > +b }),
+      default: () => (a: number, b: string) => ({ a: a > +b }),
     },
     // union + function with different return types
     iii: Function as PropType<(() => string) | (() => number)>,
