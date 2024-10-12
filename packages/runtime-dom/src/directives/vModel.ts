@@ -122,6 +122,9 @@ export const vModelCheckbox: ModelDirective<HTMLInputElement> = {
   deep: true,
   created(el, _, vnode) {
     el[assignKey] = getModelAssigner(vnode)
+    addEventListener(el, 'mousedown', () => {
+      ;(el as any)._willChange = true
+    })
     addEventListener(el, 'change', () => {
       const modelValue = (el as any)._modelValue
       const elementValue = getValue(el)
@@ -153,6 +156,10 @@ export const vModelCheckbox: ModelDirective<HTMLInputElement> = {
   // set initial checked on mount to wait for true-value/false-value
   mounted: setChecked,
   beforeUpdate(el, binding, vnode) {
+    if ((el as any)._willChange) {
+      ;(el as any)._willChange = false
+      return
+    }
     el[assignKey] = getModelAssigner(vnode)
     setChecked(el, binding, vnode)
   },
@@ -160,7 +167,7 @@ export const vModelCheckbox: ModelDirective<HTMLInputElement> = {
 
 function setChecked(
   el: HTMLInputElement,
-  { value, oldValue }: DirectiveBinding,
+  { value }: DirectiveBinding,
   vnode: VNode,
 ) {
   // store the v-model value on the element so it can be accessed by the
@@ -173,7 +180,6 @@ function setChecked(
   } else if (isSet(value)) {
     checked = value.has(vnode.props!.value)
   } else {
-    if (value === oldValue) return
     checked = looseEqual(value, getCheckboxValue(el, true))
   }
 
@@ -204,6 +210,9 @@ export const vModelSelect: ModelDirective<HTMLSelectElement, 'number'> = {
   deep: true,
   created(el, { value, modifiers: { number } }, vnode) {
     const isSetModel = isSet(value)
+    addEventListener(el, 'mousedown', () => {
+      ;(el as any)._willChange = true
+    })
     addEventListener(el, 'change', () => {
       const selectedVal = Array.prototype.filter
         .call(el.options, (o: HTMLOptionElement) => o.selected)
@@ -234,6 +243,10 @@ export const vModelSelect: ModelDirective<HTMLSelectElement, 'number'> = {
   },
   updated(el, { value }) {
     if (!el._assigning) {
+      if ((el as any)._willChange) {
+        ;(el as any)._willChange = false
+        return
+      }
       setSelected(el, value)
     }
   },
