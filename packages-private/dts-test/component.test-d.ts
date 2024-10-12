@@ -131,7 +131,7 @@ describe('object props', () => {
         // default + function
         ffff: {
           type: Function as PropType<(a: number, b: string) => { a: boolean }>,
-          default: (_a: number, _b: string) => ({ a: true }),
+          default: () => (_a: number, _b: string) => ({ a: true }),
         },
         validated: {
           type: String,
