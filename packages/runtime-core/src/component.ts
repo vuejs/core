@@ -1006,7 +1006,7 @@ export function finishComponentSetup(
           instance.vnode.props &&
           instance.vnode.props['inline-template']) ||
         Component.template ||
-        resolveMergedOptions(instance).template
+        (__FEATURE_OPTIONS_API__ && resolveMergedOptions(instance).template)
       if (template) {
         if (__DEV__) {
           startMeasure(instance, `compile`)
