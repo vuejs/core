@@ -108,8 +108,8 @@ importers:
         specifier: ^4.17.21
         version: 4.17.21
       magic-string:
-        specifier: ^0.30.11
-        version: 0.30.11
+        specifier: ^0.30.12
+        version: 0.30.12
       markdown-table:
         specifier: ^3.0.3
         version: 3.0.3
@@ -2523,6 +2523,9 @@ packages:
   magic-string@0.30.11:
     resolution: {integrity: sha512-+Wri9p0QHMy+545hKww7YAu5NyzF8iomPL/RQazugQ9+Ez4Ic3mERMd8ZTX5rfK944j+560ZJi8iAwgak1Ac7A==}
 
+  magic-string@0.30.12:
+    resolution: {integrity: sha512-Ea8I3sQMVXr8JhN4z+H/d8zwo+tYDgHE9+5G4Wnrwhs0gaK9fXTKx0Tw5Xwsd/bCPTTZNRAdpyzvoeORe9LYpw==}
+
   magicast@0.3.4:
     resolution: {integrity: sha512-TyDF/Pn36bBji9rWKHlZe+PZb6Mx5V8IHCSxk7X4aljM4e/vyDvZZYwHewdVaqiA0nb3ghfHU/6AUpDxWoER2Q==}
 
@@ -3942,7 +3945,7 @@ snapshots:
       estree-walker: 2.0.2
       fdir: 6.4.0(picomatch@2.3.1)
       is-reference: 1.2.1
-      magic-string: 0.30.11
+      magic-string: 0.30.12
       picomatch: 2.3.1
     optionalDependencies:
       rollup: 4.24.0
@@ -3951,7 +3954,7 @@ snapshots:
     dependencies:
       '@rollup/pluginutils': 5.1.0(rollup@4.24.0)
       estree-walker: 2.0.2
-      magic-string: 0.30.11
+      magic-string: 0.30.12
     optionalDependencies:
       rollup: 4.24.0
 
@@ -3974,7 +3977,7 @@ snapshots:
   '@rollup/plugin-replace@5.0.4(rollup@4.24.0)':
     dependencies:
       '@rollup/pluginutils': 5.1.0(rollup@4.24.0)
-      magic-string: 0.30.11
+      magic-string: 0.30.12
     optionalDependencies:
       rollup: 4.24.0
 
@@ -4298,7 +4301,7 @@ snapshots:
       istanbul-lib-report: 3.0.1
       istanbul-lib-source-maps: 5.0.6
       istanbul-reports: 3.1.7
-      magic-string: 0.30.11
+      magic-string: 0.30.12
       magicast: 0.3.4
       std-env: 3.7.0
       test-exclude: 7.0.1
@@ -4326,7 +4329,7 @@ snapshots:
     dependencies:
       '@vitest/spy': 2.1.1
       estree-walker: 3.0.3
-      magic-string: 0.30.11
+      magic-string: 0.30.12
     optionalDependencies:
       vite: 5.4.8(@types/node@20.16.11)(sass@1.79.5)
 
@@ -4342,7 +4345,7 @@ snapshots:
   '@vitest/snapshot@2.1.1':
     dependencies:
       '@vitest/pretty-format': 2.1.1
-      magic-string: 0.30.11
+      magic-string: 0.30.12
       pathe: 1.1.2
 
   '@vitest/spy@2.1.1':
@@ -5549,6 +5552,10 @@ snapshots:
     dependencies:
       '@jridgewell/sourcemap-codec': 1.5.0
 
+  magic-string@0.30.12:
+    dependencies:
+      '@jridgewell/sourcemap-codec': 1.5.0
+
   magicast@0.3.4:
     dependencies:
       '@babel/parser': 7.25.3
@@ -6055,7 +6062,7 @@ snapshots:
 
   rollup-plugin-dts@6.1.1(rollup@4.24.0)(typescript@5.6.2):
     dependencies:
-      magic-string: 0.30.11
+      magic-string: 0.30.12
       rollup: 4.24.0
       typescript: 5.6.2
     optionalDependencies:
@@ -6502,7 +6509,7 @@ snapshots:
       '@vitest/utils': 2.1.1
       chai: 5.1.1
       debug: 4.3.6
-      magic-string: 0.30.11
+      magic-string: 0.30.12
       pathe: 1.1.2
       std-env: 3.7.0
       tinybench: 2.9.0
