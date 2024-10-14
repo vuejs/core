@@ -105,7 +105,7 @@
     "todomvc-app-css": "^2.4.3",
     "tslib": "^2.7.0",
     "typescript": "~5.6.2",
-    "typescript-eslint": "^8.8.0",
+    "typescript-eslint": "^8.8.1",
     "vite": "catalog:",
     "vitest": "^2.1.1"
   },
