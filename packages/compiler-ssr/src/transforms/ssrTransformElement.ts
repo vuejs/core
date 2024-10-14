@@ -90,7 +90,7 @@ export const ssrTransformElement: NodeTransform = (node, context) => {
 
     // v-show has a higher priority in ssr
     const vShowPropIndex = node.props.findIndex(
-      i => i.type === NodeTypes.DIRECTIVE && i.rawName === 'v-show',
+      i => i.type === NodeTypes.DIRECTIVE && i.name === 'show',
     )
     if (vShowPropIndex !== -1) {
       const vShowProp = node.props[vShowPropIndex]
