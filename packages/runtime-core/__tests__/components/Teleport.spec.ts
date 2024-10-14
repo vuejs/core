@@ -97,7 +97,6 @@ describe('renderer: teleport', () => {
       const Header = {
         props: { foo: String },
         setup(props: any) {
-          foo.value = 'bar'
           return () => h('div', props.foo)
         },
       }
