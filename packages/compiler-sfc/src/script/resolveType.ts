@@ -34,7 +34,7 @@ import {
 } from './utils'
 import { type ScriptCompileContext, resolveParserPlugins } from './context'
 import type { ImportBinding, SFCScriptCompileOptions } from '../compileScript'
-import { capitalize, hasOwn } from '@vue/shared'
+import { Empty, capitalize, hasOwn } from '@vue/shared'
 import { parse as babelParse } from '@babel/parser'
 import { parse } from '../parse'
 import { createCache } from '../cache'
@@ -111,14 +111,14 @@ export class TypeScope {
     public filename: string,
     public source: string,
     public offset: number = 0,
-    public imports: Record<string, Import> = Object.create(null),
-    public types: Record<string, ScopeTypeNode> = Object.create(null),
-    public declares: Record<string, ScopeTypeNode> = Object.create(null),
+    public imports: Record<string, Import> = new Empty(),
+    public types: Record<string, ScopeTypeNode> = new Empty(),
+    public declares: Record<string, ScopeTypeNode> = new Empty(),
   ) {}
   isGenericScope = false
-  resolvedImportSources: Record<string, string> = Object.create(null)
-  exportedTypes: Record<string, ScopeTypeNode> = Object.create(null)
-  exportedDeclares: Record<string, ScopeTypeNode> = Object.create(null)
+  resolvedImportSources: Record<string, string> = new Empty()
+  exportedTypes: Record<string, ScopeTypeNode> = new Empty()
+  exportedDeclares: Record<string, ScopeTypeNode> = new Empty()
 }
 
 export interface MaybeWithScope {
@@ -231,7 +231,7 @@ function innerResolveTypeElements(
           resolved.typeParameters &&
           node.typeParameters
         ) {
-          typeParams = Object.create(null)
+          typeParams = new Empty()
           resolved.typeParameters.params.forEach((p, i) => {
             let param = typeParameters && typeParameters[p.name]
             if (!param) param = node.typeParameters!.params[i]
@@ -1442,7 +1442,7 @@ function attachNamespace(
 }
 
 export function recordImports(body: Statement[]): Record<string, Import> {
-  const imports: TypeScope['imports'] = Object.create(null)
+  const imports: TypeScope['imports'] = new Empty()
   for (const s of body) {
     recordImport(s, imports)
   }

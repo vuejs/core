@@ -1,4 +1,4 @@
-import { extend, hasOwn, isArray, isFunction } from '@vue/shared'
+import { Empty, extend, hasOwn, isArray, isFunction } from '@vue/shared'
 import {
   type Component,
   type ComponentInternalInstance,
@@ -425,8 +425,8 @@ export const deprecationData: Record<DeprecationTypes, DeprecationData> = {
   },
 }
 
-const instanceWarned: Record<string, true> = Object.create(null)
-const warnCount: Record<string, number> = Object.create(null)
+const instanceWarned: Record<string, true> = new Empty()
+const warnCount: Record<string, number> = new Empty()
 
 // test only
 let warningEnabled = true

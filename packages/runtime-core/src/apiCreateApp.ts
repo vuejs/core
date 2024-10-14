@@ -22,7 +22,7 @@ import { warn } from './warning'
 import { type VNode, cloneVNode, createVNode } from './vnode'
 import type { RootHydrateFunction } from './hydration'
 import { devtoolsInitApp, devtoolsUnmountApp } from './devtools'
-import { NO, extend, isFunction, isObject } from '@vue/shared'
+import { Empty, NO, extend, isFunction, isObject } from '@vue/shared'
 import { version } from '.'
 import { installAppCompatProperties } from './compat/global'
 import type { NormalizedPropsOptions } from './componentProps'
@@ -234,7 +234,7 @@ export function createAppContext(): AppContext {
     mixins: [],
     components: {},
     directives: {},
-    provides: Object.create(null),
+    provides: new Empty(),
     optionsCache: new WeakMap(),
     propsCache: new WeakMap(),
     emitsCache: new WeakMap(),
