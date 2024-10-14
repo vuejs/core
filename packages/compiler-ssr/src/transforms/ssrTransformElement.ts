@@ -89,10 +89,15 @@ export const ssrTransformElement: NodeTransform = (node, context) => {
     )
     const needMergeProps = hasDynamicVBind || hasCustomDir
     if (needMergeProps) {
+      const vShowPropIndex = node.props.findIndex(
+        i => i.type === NodeTypes.DIRECTIVE && i.rawName === 'v-show',
+      )
       const { props, directives } = buildProps(
         node,
         context,
-        node.props,
+        vShowPropIndex === -1
+          ? node.props
+          : node.props.splice(vShowPropIndex, 1),
         false /* isComponent */,
         false /* isDynamicComponent */,
         true /* ssr */,
