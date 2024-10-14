@@ -249,7 +249,7 @@ type Foo = {
         y: string
       }
       
-export default /*#__PURE__*/_defineComponent({
+export default /*@__PURE__*/_defineComponent({
   props: {
     z: { type: Number, required: true },
     y: { type: String, required: true },
@@ -310,7 +310,7 @@ type Foo = {
         y: string;
       };
       
-export default /*#__PURE__*/_defineComponent({
+export default /*@__PURE__*/_defineComponent({
   props: {
     x: { type: Number, required: false },
     y: { type: String, required: true }
