@@ -71,7 +71,7 @@ const resolveTarget = <T = RendererElement>(
     return targetSelector as T
   }
 }
-
+let isMounted = false
 export const TeleportImpl = {
   name: 'Teleport',
   __isTeleport: true,
@@ -133,6 +133,7 @@ export const TeleportImpl = {
             optimized,
           )
         }
+        isMounted = true
       }
 
       const mountToTarget = () => {
@@ -169,6 +170,25 @@ export const TeleportImpl = {
         mountToTarget()
       }
     } else {
+      if (isTeleportDeferred(n2.props) && !isMounted) {
+        queuePostRenderEffect(
+          () =>
+            TeleportImpl.process(
+              n1,
+              n2,
+              container,
+              anchor,
+              parentComponent,
+              parentSuspense,
+              namespace,
+              slotScopeIds,
+              optimized,
+              internals,
+            ),
+          parentSuspense,
+        )
+        return
+      }
       // update content
       n2.el = n1.el
       n2.targetStart = n1.targetStart
