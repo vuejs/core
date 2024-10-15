@@ -10,6 +10,7 @@ import type {
 import { walk } from 'estree-walker'
 import {
   BindingTypes,
+  TS_NODE_TYPES,
   extractIdentifiers,
   isFunctionType,
   isInDestructureAssignment,
@@ -240,9 +241,7 @@ export function transformDestructuredProps(
       if (
         parent &&
         parent.type.startsWith('TS') &&
-        parent.type !== 'TSAsExpression' &&
-        parent.type !== 'TSNonNullExpression' &&
-        parent.type !== 'TSTypeAssertion'
+        !TS_NODE_TYPES.includes(parent.type)
       ) {
         return this.skip()
       }

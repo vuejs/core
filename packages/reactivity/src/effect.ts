@@ -234,9 +234,15 @@ export class ReactiveEffect<T = any>
 
 let batchDepth = 0
 let batchedSub: Subscriber | undefined
+let batchedComputed: Subscriber | undefined
 
-export function batch(sub: Subscriber): void {
+export function batch(sub: Subscriber, isComputed = false): void {
   sub.flags |= EffectFlags.NOTIFIED
+  if (isComputed) {
+    sub.next = batchedComputed
+    batchedComputed = sub
+    return
+  }
   sub.next = batchedSub
   batchedSub = sub
 }
@@ -257,23 +263,24 @@ export function endBatch(): void {
     return
   }
 
+  if (batchedComputed) {
+    let e: Subscriber | undefined = batchedComputed
+    batchedComputed = undefined
+    while (e) {
+      const next: Subscriber | undefined = e.next
+      e.next = undefined
+      e.flags &= ~EffectFlags.NOTIFIED
+      e = next
+    }
+  }
+
   let error: unknown
   while (batchedSub) {
     let e: Subscriber | undefined = batchedSub
-    let next: Subscriber | undefined
-    // 1st pass: clear notified flags for computed upfront
-    // we use the ACTIVE flag as a discriminator between computed and effect,
-    // since NOTIFIED is useless for an inactive effect anyway.
-    while (e) {
-      if (!(e.flags & EffectFlags.ACTIVE)) {
-        e.flags &= ~EffectFlags.NOTIFIED
-      }
-      e = e.next
-    }
-    e = batchedSub
     batchedSub = undefined
-    // 2nd pass: run effects
     while (e) {
+      const next: Subscriber | undefined = e.next
+      e.next = undefined
       e.flags &= ~EffectFlags.NOTIFIED
       if (e.flags & EffectFlags.ACTIVE) {
         try {
@@ -283,8 +290,6 @@ export function endBatch(): void {
           if (!error) error = err
         }
       }
-      next = e.next
-      e.next = undefined
       e = next
     }
   }
@@ -421,23 +426,24 @@ function removeSub(link: Link, soft = false) {
     nextSub.prevSub = prevSub
     link.nextSub = undefined
   }
-  if (dep.subs === link) {
-    // was previous tail, point new tail to prev
-    dep.subs = prevSub
-  }
   if (__DEV__ && dep.subsHead === link) {
     // was previous head, point new head to next
     dep.subsHead = nextSub
   }
 
-  if (!dep.subs && dep.computed) {
-    // if computed, unsubscribe it from all its deps so this computed and its
-    // value can be GCed
-    dep.computed.flags &= ~EffectFlags.TRACKING
-    for (let l = dep.computed.deps; l; l = l.nextDep) {
-      // here we are only "soft" unsubscribing because the computed still keeps
-      // referencing the deps and the dep should not decrease its sub count
-      removeSub(l, true)
+  if (dep.subs === link) {
+    // was previous tail, point new tail to prev
+    dep.subs = prevSub
+
+    if (!prevSub && dep.computed) {
+      // if computed, unsubscribe it from all its deps so this computed and its
+      // value can be GCed
+      dep.computed.flags &= ~EffectFlags.TRACKING
+      for (let l = dep.computed.deps; l; l = l.nextDep) {
+        // here we are only "soft" unsubscribing because the computed still keeps
+        // referencing the deps and the dep should not decrease its sub count
+        removeSub(l, true)
+      }
     }
   }
 
