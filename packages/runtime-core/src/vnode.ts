@@ -490,8 +490,12 @@ function createBaseVNode(
     appContext: null,
     ctx: currentRenderingInstance,
   } as VNode
-  // eslint-disable-next-line no-restricted-syntax
-  if (vnode.ctx && currentRenderingInstance?.parent?.ut) {
+  if (
+    vnode.ctx &&
+    currentRenderingInstance &&
+    currentRenderingInstance.parent &&
+    currentRenderingInstance.parent.ut
+  ) {
     vnode.ctx.parentUt = {
       ut: currentRenderingInstance.parent.ut,
       uid: currentRenderingInstance.parent.uid,
