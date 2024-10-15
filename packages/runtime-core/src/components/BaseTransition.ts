@@ -199,7 +199,7 @@ const BaseTransitionImpl: ComponentOptions = {
       }
 
       const oldChild = instance.subTree
-      const oldInnerChild = oldChild && getInnerChild(oldChild)
+      let oldInnerChild = oldChild && getInnerChild(oldChild)
 
       // handle mode
       if (
@@ -238,9 +238,9 @@ const BaseTransitionImpl: ComponentOptions = {
           ) => {
             const leavingVNodesCache = getLeavingNodesForType(
               state,
-              oldInnerChild,
+              oldInnerChild!,
             )
-            leavingVNodesCache[String(oldInnerChild.key)] = oldInnerChild
+            leavingVNodesCache[String(oldInnerChild!.key)] = oldInnerChild!
             // early removal callback
             el[leaveCbKey] = () => {
               earlyRemove()
@@ -250,6 +250,8 @@ const BaseTransitionImpl: ComponentOptions = {
             enterHooks.delayedLeave = delayedLeave
           }
         }
+      } else if (oldInnerChild) {
+        oldInnerChild = undefined
       }
 
       return child
