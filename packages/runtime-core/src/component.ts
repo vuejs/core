@@ -86,6 +86,16 @@ import {
 import type { SchedulerJob } from './scheduler'
 import type { LifecycleHooks } from './enums'
 
+// Augment GlobalComponents
+import type { TeleportProps } from './components/Teleport'
+import type { SuspenseProps } from './components/Suspense'
+import type { KeepAliveProps } from './components/KeepAlive'
+import type { BaseTransitionProps } from './components/BaseTransition'
+import type { DefineComponent } from './apiDefineComponent'
+import { markAsyncBoundary } from './helpers/useId'
+import { isAsyncWrapper } from './apiAsyncComponent'
+import type { RendererElement } from './renderer'
+
 export type Data = Record<string, unknown>
 
 /**
@@ -94,7 +104,7 @@ export type Data = Record<string, unknown>
  * the usage of `InstanceType<typeof Comp>` which only works for
  * constructor-based component definition types.
  *
- * Exmaple:
+ * @example
  * ```ts
  * const MyComp = { ... }
  * declare const instance: ComponentInstance<typeof MyComp>
@@ -125,6 +135,45 @@ export type ComponentInstance<T> = T extends { new (): ComponentPublicInstance }
  * For extending allowed non-declared props on components in TSX
  */
 export interface ComponentCustomProps {}
+
+/**
+ * For globally defined Directives
+ * Here is an example of adding a directive `VTooltip` as global directive:
+ *
+ * @example
+ * ```ts
+ * import VTooltip from 'v-tooltip'
+ *
+ * declare module '@vue/runtime-core' {
+ *   interface GlobalDirectives {
+ *     VTooltip
+ *   }
+ * }
+ * ```
+ */
+export interface GlobalDirectives {}
+
+/**
+ * For globally defined Components
+ * Here is an example of adding a component `RouterView` as global component:
+ *
+ * @example
+ * ```ts
+ * import { RouterView } from 'vue-router'
+ *
+ * declare module '@vue/runtime-core' {
+ *   interface GlobalComponents {
+ *     RouterView
+ *   }
+ * }
+ * ```
+ */
+export interface GlobalComponents {
+  Teleport: DefineComponent<TeleportProps>
+  Suspense: DefineComponent<SuspenseProps>
+  KeepAlive: DefineComponent<KeepAliveProps>
+  BaseTransition: DefineComponent<BaseTransitionProps>
+}
 
 /**
  * Default allowed non-declared props on component in TSX
@@ -223,7 +272,7 @@ export type Component<
 
 export type { ComponentOptions }
 
-type LifecycleHook<TFn = Function> = TFn[] | null
+export type LifecycleHook<TFn = Function> = (TFn & SchedulerJob)[] | null
 
 // use `E extends any` to force evaluating type to fix #2362
 export type SetupContext<
@@ -234,7 +283,9 @@ export type SetupContext<
       attrs: Data
       slots: UnwrapSlotsType<S>
       emit: EmitFn<E>
-      expose: (exposed?: Record<string, any>) => void
+      expose: <Exposed extends Record<string, any> = Record<string, any>>(
+        exposed?: Exposed,
+      ) => void
     }
   : never
 
@@ -286,9 +337,13 @@ export interface ComponentInternalInstance {
    */
   effect: ReactiveEffect
   /**
-   * Bound effect runner to be passed to schedulers
+   * Force update render effect
    */
-  update: SchedulerJob
+  update: () => void
+  /**
+   * Render effect job to be passed to scheduler (checks if dirty)
+   */
+  job: SchedulerJob
   /**
    * The render function that returns vdom tree.
    * @internal
@@ -305,6 +360,13 @@ export interface ComponentInternalInstance {
    */
   provides: Data
   /**
+   * for tracking useId()
+   * first element is the current boundary prefix
+   * second number is the index of the useId call within that boundary
+   * @internal
+   */
+  ids: [string, number, number]
+  /**
    * Tracking reactive effects (e.g. watchers) associated with this component
    * so that they can be automatically stopped on component unmount
    * @internal
@@ -320,7 +382,7 @@ export interface ComponentInternalInstance {
    * after initialized (e.g. inline handlers)
    * @internal
    */
-  renderCache: (Function | VNode)[]
+  renderCache: (Function | VNode | undefined)[]
 
   /**
    * Resolved component registry, only for components with mixins or extends
@@ -353,7 +415,12 @@ export interface ComponentInternalInstance {
    */
   inheritAttrs?: boolean
   /**
-   * is custom element?
+   * Custom Element instance (if component is created by defineCustomElement)
+   * @internal
+   */
+  ce?: ComponentCustomElementInterface
+  /**
+   * is custom element? (kept only for compatibility)
    * @internal
    */
   isCE?: boolean
@@ -393,9 +460,6 @@ export interface ComponentInternalInstance {
   slots: InternalSlots
   refs: Data
   emit: EmitFn
-
-  attrsProxy: Data | null
-  slotsProxy: Slots | null
 
   /**
    * used for keeping track of .once event handlers on components
@@ -548,7 +612,7 @@ export function createComponentInstance(
   vnode: VNode,
   parent: ComponentInternalInstance | null,
   suspense: SuspenseBoundary | null,
-) {
+): ComponentInternalInstance {
   const type = vnode.type as ConcreteComponent
   // inherit parent app context - or - if root, adopt from root vnode
   const appContext =
@@ -565,13 +629,16 @@ export function createComponentInstance(
     subTree: null!, // will be set synchronously right after creation
     effect: null!,
     update: null!, // will be set synchronously right after creation
+    job: null!,
     scope: new EffectScope(true /* detached */),
     render: null,
     proxy: null,
     exposed: null,
     exposeProxy: null,
     withProxy: null,
+
     provides: parent ? parent.provides : Object.create(appContext.provides),
+    ids: parent ? parent.ids : ['', 0, 0],
     accessCache: null!,
     renderCache: [],
 
@@ -602,9 +669,6 @@ export function createComponentInstance(
     refs: EMPTY_OBJ,
     setupState: EMPTY_OBJ,
     setupContext: null,
-
-    attrsProxy: null,
-    slotsProxy: null,
 
     // suspense related
     suspense,
@@ -707,23 +771,23 @@ export const setCurrentInstance = (instance: ComponentInternalInstance) => {
   const prev = currentInstance
   internalSetCurrentInstance(instance)
   instance.scope.on()
-  return () => {
+  return (): void => {
     instance.scope.off()
     internalSetCurrentInstance(prev)
   }
 }
 
-export const unsetCurrentInstance = () => {
+export const unsetCurrentInstance = (): void => {
   currentInstance && currentInstance.scope.off()
   internalSetCurrentInstance(null)
 }
 
-const isBuiltInTag = /*#__PURE__*/ makeMap('slot,component')
+const isBuiltInTag = /*@__PURE__*/ makeMap('slot,component')
 
 export function validateComponentName(
   name: string,
   { isNativeTag }: AppConfig,
-) {
+): void {
   if (isBuiltInTag(name) || isNativeTag(name)) {
     warn(
       'Do not use built-in or reserved HTML elements as component id: ' + name,
@@ -731,7 +795,9 @@ export function validateComponentName(
   }
 }
 
-export function isStatefulComponent(instance: ComponentInternalInstance) {
+export function isStatefulComponent(
+  instance: ComponentInternalInstance,
+): number {
   return instance.vnode.shapeFlag & ShapeFlags.STATEFUL_COMPONENT
 }
 
@@ -740,13 +806,14 @@ export let isInSSRComponentSetup = false
 export function setupComponent(
   instance: ComponentInternalInstance,
   isSSR = false,
-) {
+  optimized = false,
+): Promise<void> | undefined {
   isSSR && setInSSRSetupState(isSSR)
 
   const { props, children } = instance.vnode
   const isStateful = isStatefulComponent(instance)
   initProps(instance, props, isStateful, isSSR)
-  initSlots(instance, children)
+  initSlots(instance, children, optimized)
 
   const setupResult = isStateful
     ? setupStatefulComponent(instance, isSSR)
@@ -796,11 +863,10 @@ function setupStatefulComponent(
   // 2. call setup()
   const { setup } = Component
   if (setup) {
+    pauseTracking()
     const setupContext = (instance.setupContext =
       setup.length > 1 ? createSetupContext(instance) : null)
-
     const reset = setCurrentInstance(instance)
-    pauseTracking()
     const setupResult = callWithErrorHandling(
       setup,
       instance,
@@ -810,10 +876,16 @@ function setupStatefulComponent(
         setupContext,
       ],
     )
+    const isAsyncSetup = isPromise(setupResult)
     resetTracking()
     reset()
 
-    if (isPromise(setupResult)) {
+    if ((isAsyncSetup || instance.sp) && !isAsyncWrapper(instance)) {
+      // async setup / serverPrefetch, mark as async boundary for useId()
+      markAsyncBoundary(instance)
+    }
+
+    if (isAsyncSetup) {
       setupResult.then(unsetCurrentInstance, unsetCurrentInstance)
       if (isSSR) {
         // return the promise so server-renderer can wait on it
@@ -855,7 +927,7 @@ export function handleSetupResult(
   instance: ComponentInternalInstance,
   setupResult: unknown,
   isSSR: boolean,
-) {
+): void {
   if (isFunction(setupResult)) {
     // setup returned an inline render function
     if (__SSR__ && (instance.type as ComponentOptions).__ssrInlineRender) {
@@ -903,7 +975,7 @@ let installWithProxy: (i: ComponentInternalInstance) => void
  * For runtime-dom to register the compiler.
  * Note the exported method uses any to avoid d.ts relying on the compiler types.
  */
-export function registerRuntimeCompiler(_compile: any) {
+export function registerRuntimeCompiler(_compile: any): void {
   compile = _compile
   installWithProxy = i => {
     if (i.render!._rc) {
@@ -913,13 +985,13 @@ export function registerRuntimeCompiler(_compile: any) {
 }
 
 // dev only
-export const isRuntimeOnly = () => !compile
+export const isRuntimeOnly = (): boolean => !compile
 
 export function finishComponentSetup(
   instance: ComponentInternalInstance,
   isSSR: boolean,
   skipOptions?: boolean,
-) {
+): void {
   const Component = instance.type as ComponentOptions
 
   if (__COMPAT__) {
@@ -941,7 +1013,7 @@ export function finishComponentSetup(
           instance.vnode.props &&
           instance.vnode.props['inline-template']) ||
         Component.template ||
-        resolveMergedOptions(instance).template
+        (__FEATURE_OPTIONS_API__ && resolveMergedOptions(instance).template)
       if (template) {
         if (__DEV__) {
           startMeasure(instance, `compile`)
@@ -999,8 +1071,8 @@ export function finishComponentSetup(
   // warn missing template/render
   // the runtime compilation of template in SSR is done by server-render
   if (__DEV__ && !Component.render && instance.render === NOOP && !isSSR) {
-    /* istanbul ignore if */
     if (!compile && Component.template) {
+      /* v8 ignore start */
       warn(
         `Component provided template option but ` +
           `runtime compilation is not supported in this build of Vue.` +
@@ -1012,6 +1084,7 @@ export function finishComponentSetup(
                 ? ` Use "vue.global.js" instead.`
                 : ``) /* should not happen */,
       )
+      /* v8 ignore stop */
     } else {
       warn(`Component is missing template or render function: `, Component)
     }
@@ -1045,15 +1118,12 @@ const attrsProxyHandlers = __DEV__
  * Dev-only
  */
 function getSlotsProxy(instance: ComponentInternalInstance): Slots {
-  return (
-    instance.slotsProxy ||
-    (instance.slotsProxy = new Proxy(instance.slots, {
-      get(target, key: string) {
-        track(instance, TrackOpTypes.GET, '$slots')
-        return target[key]
-      },
-    }))
-  )
+  return new Proxy(instance.slots, {
+    get(target, key: string) {
+      track(instance, TrackOpTypes.GET, '$slots')
+      return target[key]
+    },
+  })
 }
 
 export function createSetupContext(
@@ -1087,6 +1157,7 @@ export function createSetupContext(
     // We use getters in dev in case libs like test-utils overwrite instance
     // properties (overwrites should not be done in prod)
     let attrsProxy: Data
+    let slotsProxy: Slots
     return Object.freeze({
       get attrs() {
         return (
@@ -1095,7 +1166,7 @@ export function createSetupContext(
         )
       },
       get slots() {
-        return getSlotsProxy(instance)
+        return slotsProxy || (slotsProxy = getSlotsProxy(instance))
       },
       get emit() {
         return (event: string, ...args: any[]) => instance.emit(event, ...args)
@@ -1112,7 +1183,9 @@ export function createSetupContext(
   }
 }
 
-export function getExposeProxy(instance: ComponentInternalInstance) {
+export function getComponentPublicInstance(
+  instance: ComponentInternalInstance,
+): ComponentPublicInstance | ComponentInternalInstance['exposed'] | null {
   if (instance.exposed) {
     return (
       instance.exposeProxy ||
@@ -1129,6 +1202,8 @@ export function getExposeProxy(instance: ComponentInternalInstance) {
         },
       }))
     )
+  } else {
+    return instance.proxy
   }
 }
 
@@ -1145,7 +1220,6 @@ export function getComponentName(
     : Component.name || (includeInferred && Component.__name)
 }
 
-/* istanbul ignore next */
 export function formatComponentName(
   instance: ComponentInternalInstance | null,
   Component: ConcreteComponent,
@@ -1180,4 +1254,28 @@ export function formatComponentName(
 
 export function isClassComponent(value: unknown): value is ClassComponent {
   return isFunction(value) && '__vccOpts' in value
+}
+
+export interface ComponentCustomElementInterface {
+  /**
+   * @internal
+   */
+  _injectChildStyle(type: ConcreteComponent): void
+  /**
+   * @internal
+   */
+  _removeChildStyle(type: ConcreteComponent): void
+  /**
+   * @internal
+   */
+  _setProp(
+    key: string,
+    val: any,
+    shouldReflect?: boolean,
+    shouldUpdate?: boolean,
+  ): void
+  /**
+   * @internal attached by the nested Teleport when shadowRoot is false.
+   */
+  _teleportTarget?: RendererElement
 }
