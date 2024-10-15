@@ -96,12 +96,6 @@ export class ComputedRefImpl<T = any> implements Subscriber {
   // dev only
   onTrigger?: (event: DebuggerEvent) => void
 
-  /**
-   * Dev only
-   * @internal
-   */
-  _warnRecursive?: boolean
-
   constructor(
     public fn: ComputedGetter<T>,
     private readonly setter: ComputedSetter<T> | undefined,
