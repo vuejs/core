@@ -933,6 +933,10 @@ function getLoc(start: number, end?: number): SourceLocation {
   }
 }
 
+export function cloneLoc(loc: SourceLocation): SourceLocation {
+  return getLoc(loc.start.offset, loc.end.offset)
+}
+
 function setLocEnd(loc: SourceLocation, end: number) {
   loc.end = tokenizer.getPos(end)
   loc.source = getSlice(loc.start.offset, end)
