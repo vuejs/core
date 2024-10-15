@@ -590,7 +590,7 @@ export interface ComponentInternalInstance {
   parentUt?: {
     uid: number
     ut: (vars?: Record<string, string>) => void
-  }
+  }[]
   /**
    * dev only. For style v-bind hydration mismatch checks
    * @internal

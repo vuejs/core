@@ -496,9 +496,18 @@ function createBaseVNode(
     currentRenderingInstance.parent &&
     currentRenderingInstance.parent.ut
   ) {
-    vnode.ctx.parentUt = {
-      ut: currentRenderingInstance.parent.ut,
-      uid: currentRenderingInstance.parent.uid,
+    if (!vnode.ctx.parentUt) {
+      vnode.ctx.parentUt = [
+        {
+          ut: currentRenderingInstance.parent.ut,
+          uid: currentRenderingInstance.parent.uid,
+        },
+      ]
+    } else {
+      vnode.ctx.parentUt.push({
+        ut: currentRenderingInstance.parent.ut,
+        uid: currentRenderingInstance.parent.uid,
+      })
     }
   }
   if (vnode.ctx && vnode.ctx.parent && vnode.ctx.parent.parentUt) {

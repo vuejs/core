@@ -467,29 +467,33 @@ function updateCssVars(vnode: VNode, isDisabled: boolean) {
   // presence of .ut method indicates owner component uses css vars.
   // code path here can assume browser environment.
   const ctx = vnode.ctx
+  let node, anchor
+  if (isDisabled) {
+    node = vnode.el
+    anchor = vnode.anchor
+  } else {
+    node = vnode.targetStart
+    anchor = vnode.targetAnchor
+  }
   if (ctx && ctx.ut) {
-    let node, anchor
-    if (isDisabled) {
-      node = vnode.el
-      anchor = vnode.anchor
-    } else {
-      node = vnode.targetStart
-      anchor = vnode.targetAnchor
-    }
-    while (node && node !== anchor) {
-      if (node.nodeType === 1) node.setAttribute('data-v-owner', ctx.uid)
-      node = node.nextSibling
+    let currentNode = node
+    while (currentNode && currentNode !== anchor) {
+      if (currentNode.nodeType === 1)
+        currentNode.setAttribute('data-v-owner', ctx.uid)
+      currentNode = currentNode.nextSibling
     }
     ctx.ut()
   }
   if (ctx && ctx.parentUt) {
-    let node = (vnode.children as VNode[])[0].el!
-    while (node && node !== vnode.targetAnchor) {
-      if (node.nodeType === 1)
-        node.setAttribute(`data-v-parent-${ctx.parentUt.uid}-owner`, '')
-      node = node.nextSibling
-    }
-    ctx.parentUt.ut()
+    ctx.parentUt.forEach(i => {
+      let currentNode = node
+      while (currentNode && currentNode !== anchor) {
+        if (currentNode.nodeType === 1)
+          currentNode.setAttribute(`data-v-parent-${i.uid}-owner`, '')
+        currentNode = currentNode.nextSibling
+      }
+      i.ut()
+    })
   }
 }
 
