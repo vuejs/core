@@ -599,6 +599,7 @@ describe('component: emit', () => {
     render(h(ComponentC), el)
     expect(renderFn).toHaveBeenCalledTimes(1)
   })
+  
   test('merging emits for a component that is also used as a mixin', () => {
     const render = () => h('div')
     const CompA = {
