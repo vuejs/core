@@ -248,16 +248,15 @@ describe('reactivity/effect/scope', () => {
       watchEffect(() => {
         watchEffectSpy()
         r.value
+        c.value
       })
     })
 
-    c!.value // computed is lazy so trigger collection
     expect(computedSpy).toHaveBeenCalledTimes(1)
     expect(watchSpy).toHaveBeenCalledTimes(0)
     expect(watchEffectSpy).toHaveBeenCalledTimes(1)
 
     r.value++
-    c!.value
     await nextTick()
     expect(computedSpy).toHaveBeenCalledTimes(2)
     expect(watchSpy).toHaveBeenCalledTimes(1)
@@ -266,7 +265,6 @@ describe('reactivity/effect/scope', () => {
     scope.stop()
 
     r.value++
-    c!.value
     await nextTick()
     // should not trigger anymore
     expect(computedSpy).toHaveBeenCalledTimes(2)
@@ -296,5 +294,32 @@ describe('reactivity/effect/scope', () => {
       childScope.off()
       expect(getCurrentScope()).toBe(parentScope)
     })
+  })
+
+  it('should pause/resume EffectScope', async () => {
+    const counter = reactive({ num: 0 })
+    const fnSpy = vi.fn(() => counter.num)
+    const scope = new EffectScope()
+    scope.run(() => {
+      effect(fnSpy)
+    })
+
+    expect(fnSpy).toHaveBeenCalledTimes(1)
+
+    counter.num++
+    await nextTick()
+    expect(fnSpy).toHaveBeenCalledTimes(2)
+
+    scope.pause()
+    counter.num++
+    await nextTick()
+    expect(fnSpy).toHaveBeenCalledTimes(2)
+
+    counter.num++
+    await nextTick()
+    expect(fnSpy).toHaveBeenCalledTimes(2)
+
+    scope.resume()
+    expect(fnSpy).toHaveBeenCalledTimes(3)
   })
 })
