@@ -198,8 +198,7 @@ const BaseTransitionImpl: ComponentOptions = {
         setTransitionHooks(innerChild, enterHooks)
       }
 
-      const oldChild = instance.subTree
-      let oldInnerChild = oldChild && getInnerChild(oldChild)
+      let oldInnerChild = instance.subTree && getInnerChild(instance.subTree)
 
       // handle mode
       if (
