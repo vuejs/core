@@ -53,7 +53,7 @@ let suspenseId = 0
 /**
  * For testing only
  */
-export const resetSuspenseId = () => (suspenseId = 0)
+export const resetSuspenseId = (): number => (suspenseId = 0)
 
 // Suspense exposes a component-like API, and is treated like a component
 // in the compiler, but internally it's a special built-in type that hooks
@@ -77,7 +77,7 @@ export const SuspenseImpl = {
     optimized: boolean,
     // platform-specific impl passed from renderer
     rendererInternals: RendererInternals,
-  ) {
+  ): void {
     if (n1 == null) {
       mountSuspense(
         n2,
@@ -122,9 +122,8 @@ export const SuspenseImpl = {
       )
     }
   },
-  hydrate: hydrateSuspense,
-  create: createSuspenseBoundary,
-  normalize: normalizeSuspenseChildren,
+  hydrate: hydrateSuspense as typeof hydrateSuspense,
+  normalize: normalizeSuspenseChildren as typeof normalizeSuspenseChildren,
 }
 
 // Force-casted public typing for h and TSX props inference
@@ -438,6 +437,7 @@ export interface SuspenseBoundary {
   registerDep(
     instance: ComponentInternalInstance,
     setupRenderEffect: SetupRenderEffectFn,
+    optimized: boolean,
   ): void
   unmount(parentSuspense: SuspenseBoundary | null, doRemove?: boolean): void
 }
@@ -457,7 +457,7 @@ function createSuspenseBoundary(
   rendererInternals: RendererInternals,
   isHydrating = false,
 ): SuspenseBoundary {
-  /* istanbul ignore if */
+  /* v8 ignore start */
   if (__DEV__ && !__TEST__ && !hasWarned) {
     hasWarned = true
     // @ts-expect-error `console.info` cannot be null error
@@ -466,6 +466,7 @@ function createSuspenseBoundary(
       `<Suspense> is an experimental feature and its API will likely change.`,
     )
   }
+  /* v8 ignore stop */
 
   const {
     p: patch,
@@ -479,7 +480,7 @@ function createSuspenseBoundary(
   let parentSuspenseId: number | undefined
   const isSuspensible = isVNodeSuspensible(vnode)
   if (isSuspensible) {
-    if (parentSuspense?.pendingBranch) {
+    if (parentSuspense && parentSuspense.pendingBranch) {
       parentSuspenseId = parentSuspense.pendingId
       parentSuspense.deps++
     }
@@ -565,7 +566,7 @@ function createSuspenseBoundary(
           // (got `pendingBranch.el`).
           // Therefore, after the mounting of activeBranch is completed,
           // it is necessary to get the latest anchor.
-          if (parentNode(activeBranch.el!) !== suspense.hiddenContainer) {
+          if (parentNode(activeBranch.el!) === container) {
             anchor = next(activeBranch)
           }
           unmount(activeBranch, parentComponent, suspense, true)
@@ -679,7 +680,7 @@ function createSuspenseBoundary(
       return suspense.activeBranch && next(suspense.activeBranch)
     },
 
-    registerDep(instance, setupRenderEffect) {
+    registerDep(instance, setupRenderEffect, optimized) {
       const isInPendingSuspense = !!suspense.pendingBranch
       if (isInPendingSuspense) {
         suspense.deps++
@@ -814,10 +815,9 @@ function hydrateSuspense(
     suspense.resolve(false, true)
   }
   return result
-  /* eslint-enable no-restricted-globals */
 }
 
-function normalizeSuspenseChildren(vnode: VNode) {
+function normalizeSuspenseChildren(vnode: VNode): void {
   const { shapeFlag, children } = vnode
   const isSlotChildren = shapeFlag & ShapeFlags.SLOTS_CHILDREN
   vnode.ssContent = normalizeSuspenseSlot(
@@ -899,5 +899,6 @@ function setActiveBranch(suspense: SuspenseBoundary, branch: VNode) {
 }
 
 function isVNodeSuspensible(vnode: VNode) {
-  return vnode.props?.suspensible != null && vnode.props.suspensible !== false
+  const suspensible = vnode.props && vnode.props.suspensible
+  return suspensible != null && suspensible !== false
 }
