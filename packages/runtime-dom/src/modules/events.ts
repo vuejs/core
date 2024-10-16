@@ -95,6 +95,7 @@ function createInvoker(
   instance: ComponentInternalInstance | null,
 ) {
   const invoker: Invoker = (e: Event & { _vts?: number }) => {
+    if (instance && instance.isUnmounted) return
     // async edge case vuejs/vue#6566
     // inner click event triggers patch, event handler
     // attached to outer element during patch, and triggered again. This
