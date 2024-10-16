@@ -476,23 +476,14 @@ function updateCssVars(vnode: VNode, isDisabled: boolean) {
     anchor = vnode.targetAnchor
   }
   if (ctx && ctx.ut) {
-    let currentNode = node
-    while (currentNode && currentNode !== anchor) {
-      if (currentNode.nodeType === 1)
-        currentNode.setAttribute('data-v-owner', ctx.uid)
-      currentNode = currentNode.nextSibling
-    }
-    ctx.ut()
-  }
-  if (ctx && ctx.parentUt) {
-    ctx.parentUt.forEach(i => {
+    ctx.ut.forEach(i => {
       let currentNode = node
       while (currentNode && currentNode !== anchor) {
         if (currentNode.nodeType === 1)
-          currentNode.setAttribute(`data-v-parent-${i.uid}-owner`, '')
+          currentNode.setAttribute(`data-v-owner-${i.uid}`, '')
         currentNode = currentNode.nextSibling
       }
-      i.ut()
+      i.update()
     })
   }
 }
