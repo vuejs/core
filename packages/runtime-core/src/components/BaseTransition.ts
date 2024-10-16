@@ -208,7 +208,7 @@ const BaseTransitionImpl: ComponentOptions = {
         !isSameVNodeType(innerChild, oldInnerChild) &&
         recursiveGetSubtree(instance).type !== Comment
       ) {
-        const leavingHooks = resolveTransitionHooks(
+        let leavingHooks = resolveTransitionHooks(
           oldInnerChild,
           rawProps,
           state,
@@ -228,6 +228,7 @@ const BaseTransitionImpl: ComponentOptions = {
               instance.update()
             }
             delete leavingHooks.afterLeave
+            oldInnerChild = undefined
           }
           return emptyPlaceholder(child)
         } else if (mode === 'in-out' && innerChild.type !== Comment) {
@@ -246,9 +247,16 @@ const BaseTransitionImpl: ComponentOptions = {
               earlyRemove()
               el[leaveCbKey] = undefined
               delete enterHooks.delayedLeave
+              oldInnerChild = undefined
             }
-            enterHooks.delayedLeave = delayedLeave
+            enterHooks.delayedLeave = () => {
+              delayedLeave()
+              delete enterHooks.delayedLeave
+              oldInnerChild = undefined
+            }
           }
+        } else {
+          oldInnerChild = undefined
         }
       } else if (oldInnerChild) {
         oldInnerChild = undefined
