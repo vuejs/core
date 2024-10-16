@@ -1,8 +1,0 @@
-{
-  "name": "dts-test",
-  "private": true,
-  "dependencies": {
-    "vue": "workspace:*"
-  },
-  "version": "3.3.0-beta.2"
-}

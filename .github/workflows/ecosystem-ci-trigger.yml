@@ -9,7 +9,8 @@ jobs:
     runs-on: ubuntu-latest
     if: github.repository == 'vuejs/core' && github.event.issue.pull_request && startsWith(github.event.comment.body, '/ecosystem-ci run')
     steps:
-      - uses: actions/github-script@v6
+      - name: Check user permission
+        uses: actions/github-script@v7
         with:
           script: |
             const user = context.payload.sender.login
@@ -43,7 +44,8 @@ jobs:
               })
               throw new Error('not allowed')
             }
-      - uses: actions/github-script@v6
+      - name: Get PR info
+        uses: actions/github-script@v7
         id: get-pr-data
         with:
           script: |
@@ -56,9 +58,11 @@ jobs:
             return {
               num: context.issue.number,
               branchName: pr.head.ref,
-              repo: pr.head.repo.full_name
+              repo: pr.head.repo.full_name,
+              commit: pr.head.sha
             }
-      - uses: actions/github-script@v6
+      - name: Trigger run
+        uses: actions/github-script@v7
         id: trigger
         env:
           COMMENT: ${{ github.event.comment.body }}
@@ -80,6 +84,7 @@ jobs:
                 prNumber: '' + prData.num,
                 branchName: prData.branchName,
                 repo: prData.repo,
-                suite: suite === '' ? '-' : suite
+                suite: suite === '' ? '-' : suite,
+                commit: prData.commit
               }
             })

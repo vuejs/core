@@ -1,10 +1,14 @@
-import { UserConfig } from 'vitest/config'
+import { mergeConfig } from 'vitest/config'
 import config from './vitest.config'
 
-export default {
-  ...config,
+export default mergeConfig(config, {
   test: {
-    ...config.test,
-    include: ['packages/vue/__tests__/e2e/*.spec.ts']
-  }
-} as UserConfig
+    name: 'e2e',
+    poolOptions: {
+      threads: {
+        singleThread: !!process.env.CI,
+      },
+    },
+    include: ['packages/vue/__tests__/e2e/*.spec.ts'],
+  },
+})

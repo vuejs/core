@@ -26,7 +26,7 @@
 //                 Kanitkorn Sujautra <https://github.com/lukyth>
 //                 Sebastian Silbermann <https://github.com/eps1lon>
 
-import * as CSS from 'csstype'
+import type * as CSS from 'csstype'
 
 export interface CSSProperties
   extends CSS.Properties<string | number>,
@@ -46,7 +46,7 @@ type Booleanish = boolean | 'true' | 'false'
 type Numberish = number | string
 
 // All the WAI-ARIA 1.1 attributes from https://www.w3.org/TR/wai-aria-1.1/
-interface AriaAttributes {
+export interface AriaAttributes {
   /** Identifies the currently active element when DOM focus is on a composite widget, textbox, group, or application. */
   'aria-activedescendant'?: string
   /** Indicates whether assistive technologies will present all, or only parts of, the changed region based on the change notifications defined by the aria-relevant attribute. */
@@ -188,7 +188,17 @@ interface AriaAttributes {
    * Indicates what notifications the user agent will trigger when the accessibility tree within a live region is modified.
    * @see aria-atomic.
    */
-  'aria-relevant'?: 'additions' | 'additions text' | 'all' | 'removals' | 'text'
+  'aria-relevant'?:
+    | 'additions'
+    | 'additions removals'
+    | 'additions text'
+    | 'all'
+    | 'removals'
+    | 'removals additions'
+    | 'removals text'
+    | 'text'
+    | 'text additions'
+    | 'text removals'
   /** Indicates that user input is required on the element before a form may be submitted. */
   'aria-required'?: Booleanish
   /** Defines a human-readable, author-localized description for the role of an element. */
@@ -234,7 +244,13 @@ interface AriaAttributes {
 }
 
 // Vue's style normalization supports nested arrays
-export type StyleValue = string | CSSProperties | Array<StyleValue>
+export type StyleValue =
+  | false
+  | null
+  | undefined
+  | string
+  | CSSProperties
+  | Array<StyleValue>
 
 export interface HTMLAttributes extends AriaAttributes, EventHandlers<Events> {
   innerHTML?: string
@@ -244,12 +260,13 @@ export interface HTMLAttributes extends AriaAttributes, EventHandlers<Events> {
 
   // Standard HTML Attributes
   accesskey?: string
-  contenteditable?: Booleanish | 'inherit'
+  contenteditable?: Booleanish | 'inherit' | 'plaintext-only'
   contextmenu?: string
   dir?: string
   draggable?: Booleanish
-  hidden?: Booleanish
+  hidden?: Booleanish | '' | 'hidden' | 'until-found'
   id?: string
+  inert?: Booleanish
   lang?: string
   placeholder?: string
   spellcheck?: Booleanish
@@ -366,7 +383,7 @@ export interface ButtonHTMLAttributes extends HTMLAttributes {
   formtarget?: string
   name?: string
   type?: 'submit' | 'reset' | 'button'
-  value?: string | string[] | number
+  value?: string | ReadonlyArray<string> | number
 }
 
 export interface CanvasHTMLAttributes extends HTMLAttributes {
@@ -384,11 +401,13 @@ export interface ColgroupHTMLAttributes extends HTMLAttributes {
 }
 
 export interface DataHTMLAttributes extends HTMLAttributes {
-  value?: string | string[] | number
+  value?: string | ReadonlyArray<string> | number
 }
 
 export interface DetailsHTMLAttributes extends HTMLAttributes {
+  name?: string
   open?: Booleanish
+  onToggle?: (payload: ToggleEvent) => void
 }
 
 export interface DelHTMLAttributes extends HTMLAttributes {
@@ -398,6 +417,7 @@ export interface DelHTMLAttributes extends HTMLAttributes {
 
 export interface DialogHTMLAttributes extends HTMLAttributes {
   open?: Booleanish
+  onClose?: (payload: Event) => void
 }
 
 export interface EmbedHTMLAttributes extends HTMLAttributes {
@@ -432,13 +452,18 @@ export interface IframeHTMLAttributes extends HTMLAttributes {
   allow?: string
   allowfullscreen?: Booleanish
   allowtransparency?: Booleanish
+  /** @deprecated */
   frameborder?: Numberish
   height?: Numberish
+  loading?: 'eager' | 'lazy'
+  /** @deprecated */
   marginheight?: Numberish
+  /** @deprecated */
   marginwidth?: Numberish
   name?: string
   referrerpolicy?: HTMLAttributeReferrerPolicy
   sandbox?: string
+  /** @deprecated */
   scrolling?: string
   seamless?: Booleanish
   src?: string
@@ -451,6 +476,7 @@ export interface ImgHTMLAttributes extends HTMLAttributes {
   crossorigin?: 'anonymous' | 'use-credentials' | ''
   decoding?: 'async' | 'auto' | 'sync'
   height?: Numberish
+  loading?: 'eager' | 'lazy'
   referrerpolicy?: HTMLAttributeReferrerPolicy
   sizes?: string
   src?: string
@@ -464,6 +490,31 @@ export interface InsHTMLAttributes extends HTMLAttributes {
   datetime?: string
 }
 
+export type InputTypeHTMLAttribute =
+  | 'button'
+  | 'checkbox'
+  | 'color'
+  | 'date'
+  | 'datetime-local'
+  | 'email'
+  | 'file'
+  | 'hidden'
+  | 'image'
+  | 'month'
+  | 'number'
+  | 'password'
+  | 'radio'
+  | 'range'
+  | 'reset'
+  | 'search'
+  | 'submit'
+  | 'tel'
+  | 'text'
+  | 'time'
+  | 'url'
+  | 'week'
+  | (string & {})
+
 export interface InputHTMLAttributes extends HTMLAttributes {
   accept?: string
   alt?: string
@@ -473,6 +524,14 @@ export interface InputHTMLAttributes extends HTMLAttributes {
   checked?: Booleanish | any[] | Set<any> // for IDE v-model multi-checkbox support
   crossorigin?: string
   disabled?: Booleanish
+  enterKeyHint?:
+    | 'enter'
+    | 'done'
+    | 'go'
+    | 'next'
+    | 'previous'
+    | 'search'
+    | 'send'
   form?: string
   formaction?: string
   formenctype?: string
@@ -495,7 +554,7 @@ export interface InputHTMLAttributes extends HTMLAttributes {
   size?: Numberish
   src?: string
   step?: Numberish
-  type?: string
+  type?: InputTypeHTMLAttribute
   value?: any // we support :value to be bound to anything w/ v-model
   width?: Numberish
 }
@@ -516,7 +575,7 @@ export interface LabelHTMLAttributes extends HTMLAttributes {
 }
 
 export interface LiHTMLAttributes extends HTMLAttributes {
-  value?: string | string[] | number
+  value?: string | ReadonlyArray<string> | number
 }
 
 export interface LinkHTMLAttributes extends HTMLAttributes {
@@ -530,6 +589,7 @@ export interface LinkHTMLAttributes extends HTMLAttributes {
   rel?: string
   sizes?: string
   type?: string
+  charset?: string
 }
 
 export interface MapHTMLAttributes extends HTMLAttributes {
@@ -567,7 +627,7 @@ export interface MeterHTMLAttributes extends HTMLAttributes {
   max?: Numberish
   min?: Numberish
   optimum?: Numberish
-  value?: string | string[] | number
+  value?: string | ReadonlyArray<string> | number
 }
 
 export interface QuoteHTMLAttributes extends HTMLAttributes {
@@ -612,16 +672,17 @@ export interface OutputHTMLAttributes extends HTMLAttributes {
 
 export interface ParamHTMLAttributes extends HTMLAttributes {
   name?: string
-  value?: string | string[] | number
+  value?: string | ReadonlyArray<string> | number
 }
 
 export interface ProgressHTMLAttributes extends HTMLAttributes {
   max?: Numberish
-  value?: string | string[] | number
+  value?: string | ReadonlyArray<string> | number
 }
 
 export interface ScriptHTMLAttributes extends HTMLAttributes {
   async?: Booleanish
+  /** @deprecated */
   charset?: string
   crossorigin?: string
   defer?: Booleanish
@@ -664,6 +725,7 @@ export interface TableHTMLAttributes extends HTMLAttributes {
   cellpadding?: Numberish
   cellspacing?: Numberish
   summary?: string
+  width?: Numberish
 }
 
 export interface TextareaHTMLAttributes extends HTMLAttributes {
@@ -677,10 +739,10 @@ export interface TextareaHTMLAttributes extends HTMLAttributes {
   minlength?: Numberish
   name?: string
   placeholder?: string
-  readonly?: boolean
+  readonly?: Booleanish
   required?: Booleanish
   rows?: Numberish
-  value?: string | string[] | number
+  value?: string | ReadonlyArray<string> | number | null
   wrap?: string
 }
 
@@ -690,6 +752,9 @@ export interface TdHTMLAttributes extends HTMLAttributes {
   headers?: string
   rowspan?: Numberish
   scope?: string
+  abbr?: string
+  height?: Numberish
+  width?: Numberish
   valign?: 'top' | 'middle' | 'bottom' | 'baseline'
 }
 
@@ -699,6 +764,7 @@ export interface ThHTMLAttributes extends HTMLAttributes {
   headers?: string
   rowspan?: Numberish
   scope?: string
+  abbr?: string
 }
 
 export interface TimeHTMLAttributes extends HTMLAttributes {
@@ -719,6 +785,7 @@ export interface VideoHTMLAttributes extends MediaHTMLAttributes {
   poster?: string
   width?: Numberish
   disablePictureInPicture?: Booleanish
+  disableRemotePlayback?: Booleanish
 }
 
 export interface WebViewHTMLAttributes extends HTMLAttributes {
@@ -749,7 +816,7 @@ export interface SVGAttributes extends AriaAttributes, EventHandlers<Events> {
    * @see https://www.w3.org/TR/SVG/styling.html#ElementSpecificStyling
    */
   class?: any
-  style?: string | CSSProperties
+  style?: StyleValue
 
   color?: string
   height?: Numberish
@@ -767,6 +834,7 @@ export interface SVGAttributes extends AriaAttributes, EventHandlers<Events> {
   // Other HTML properties supported by SVG elements in browsers
   role?: string
   tabindex?: Numberish
+  crossOrigin?: 'anonymous' | 'use-credentials' | ''
 
   // SVG Specific attributes
   'accent-height'?: Numberish
@@ -1012,6 +1080,7 @@ export interface SVGAttributes extends AriaAttributes, EventHandlers<Events> {
   xlinkTitle?: string
   xlinkType?: string
   xmlns?: string
+  xmlnsXlink?: string
   y1?: Numberish
   y2?: Numberish
   y?: Numberish
@@ -1282,8 +1351,9 @@ export interface Events {
   // selection events
   onSelect: Event
 
-  // UI events
-  onScroll: UIEvent
+  // scroll events
+  onScroll: Event
+  onScrollend: Event
 
   // touch events
   onTouchcancel: TouchEvent
@@ -1320,10 +1390,10 @@ type EventHandlers<E> = {
     : (payload: E[K]) => void
 }
 
-import { VNodeRef } from '@vue/runtime-core'
+import type { VNodeRef } from '@vue/runtime-core'
 
 export type ReservedProps = {
-  key?: string | number | symbol
+  key?: PropertyKey
   ref?: VNodeRef
   ref_for?: boolean
   ref_key?: string

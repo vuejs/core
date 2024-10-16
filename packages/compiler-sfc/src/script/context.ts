@@ -1,26 +1,29 @@
-import { Node, ObjectPattern, Program } from '@babel/types'
-import { SFCDescriptor } from '../parse'
-import { generateCodeFrame } from '@vue/shared'
-import { parse as babelParse, ParserPlugin } from '@babel/parser'
-import { ImportBinding, SFCScriptCompileOptions } from '../compileScript'
-import { PropsDestructureBindings } from './defineProps'
-import { ModelDecl } from './defineModel'
-import { BindingMetadata } from '../../../compiler-core/src'
+import type { CallExpression, Node, ObjectPattern, Program } from '@babel/types'
+import type { SFCDescriptor } from '../parse'
+import { generateCodeFrame, isArray } from '@vue/shared'
+import { type ParserPlugin, parse as babelParse } from '@babel/parser'
+import type { ImportBinding, SFCScriptCompileOptions } from '../compileScript'
+import type { PropsDestructureBindings } from './defineProps'
+import type { ModelDecl } from './defineModel'
+import type { BindingMetadata } from '../../../compiler-core/src'
 import MagicString from 'magic-string'
-import { TypeScope } from './resolveType'
+import type { TypeScope } from './resolveType'
+import { warn } from '../warn'
 
 export class ScriptCompileContext {
   isJS: boolean
   isTS: boolean
+  isCE = false
 
   scriptAst: Program | null
   scriptSetupAst: Program | null
 
-  source = this.descriptor.source
-  filename = this.descriptor.filename
-  s = new MagicString(this.source)
-  startOffset = this.descriptor.scriptSetup?.loc.start.offset
-  endOffset = this.descriptor.scriptSetup?.loc.end.offset
+  source: string = this.descriptor.source
+  filename: string = this.descriptor.filename
+  s: MagicString = new MagicString(this.source)
+  startOffset: number | undefined =
+    this.descriptor.scriptSetup?.loc.start.offset
+  endOffset: number | undefined = this.descriptor.scriptSetup?.loc.end.offset
 
   // import / type analysis
   scope?: TypeScope
@@ -38,7 +41,8 @@ export class ScriptCompileContext {
   hasDefineModelCall = false
 
   // defineProps
-  propsIdentifier: string | undefined
+  propsCall: CallExpression | undefined
+  propsDecl: Node | undefined
   propsRuntimeDecl: Node | undefined
   propsTypeDecl: Node | undefined
   propsDestructureDecl: ObjectPattern | undefined
@@ -49,10 +53,10 @@ export class ScriptCompileContext {
   // defineEmits
   emitsRuntimeDecl: Node | undefined
   emitsTypeDecl: Node | undefined
-  emitIdentifier: string | undefined
+  emitDecl: Node | undefined
 
   // defineModel
-  modelDecls: Record<string, ModelDecl> = {}
+  modelDecls: Record<string, ModelDecl> = Object.create(null)
 
   // defineOptions
   optionsRuntimeDecl: Node | undefined
@@ -70,9 +74,14 @@ export class ScriptCompileContext {
    */
   deps?: Set<string>
 
+  /**
+   * cache for resolved fs
+   */
+  fs?: NonNullable<SFCScriptCompileOptions['fs']>
+
   constructor(
     public descriptor: SFCDescriptor,
-    public options: Partial<SFCScriptCompileOptions>
+    public options: Partial<SFCScriptCompileOptions>,
   ) {
     const { script, scriptSetup } = descriptor
     const scriptLang = script && script.lang
@@ -89,17 +98,25 @@ export class ScriptCompileContext {
       scriptSetupLang === 'ts' ||
       scriptSetupLang === 'tsx'
 
+    const customElement = options.customElement
+    const filename = this.descriptor.filename
+    if (customElement) {
+      this.isCE =
+        typeof customElement === 'boolean'
+          ? customElement
+          : customElement(filename)
+    }
     // resolve parser plugins
     const plugins: ParserPlugin[] = resolveParserPlugins(
       (scriptLang || scriptSetupLang)!,
-      options.babelParserPlugins
+      options.babelParserPlugins,
     )
 
     function parse(input: string, offset: number): Program {
       try {
         return babelParse(input, {
           plugins,
-          sourceType: 'module'
+          sourceType: 'module',
         }).program
       } catch (e: any) {
         e.message = `[vue/compiler-sfc] ${e.message}\n\n${
@@ -107,7 +124,7 @@ export class ScriptCompileContext {
         }\n${generateCodeFrame(
           descriptor.source,
           e.pos + offset,
-          e.pos + offset + 1
+          e.pos + offset + 1,
         )}`
         throw e
       }
@@ -129,35 +146,58 @@ export class ScriptCompileContext {
     return block.content.slice(node.start!, node.end!)
   }
 
+  warn(msg: string, node: Node, scope?: TypeScope): void {
+    warn(generateError(msg, node, this, scope))
+  }
+
   error(msg: string, node: Node, scope?: TypeScope): never {
-    const offset = scope ? scope.offset : this.startOffset!
     throw new Error(
-      `[@vue/compiler-sfc] ${msg}\n\n${
-        (scope || this.descriptor).filename
-      }\n${generateCodeFrame(
-        (scope || this.descriptor).source,
-        node.start! + offset,
-        node.end! + offset
-      )}`
+      `[@vue/compiler-sfc] ${generateError(msg, node, this, scope)}`,
     )
   }
 }
 
+function generateError(
+  msg: string,
+  node: Node,
+  ctx: ScriptCompileContext,
+  scope?: TypeScope,
+) {
+  const offset = scope ? scope.offset : ctx.startOffset!
+  return `${msg}\n\n${(scope || ctx.descriptor).filename}\n${generateCodeFrame(
+    (scope || ctx.descriptor).source,
+    node.start! + offset,
+    node.end! + offset,
+  )}`
+}
+
 export function resolveParserPlugins(
   lang: string,
-  userPlugins?: ParserPlugin[]
-) {
+  userPlugins?: ParserPlugin[],
+  dts = false,
+): ParserPlugin[] {
   const plugins: ParserPlugin[] = []
-  if (lang === 'jsx' || lang === 'tsx') {
+  if (
+    !userPlugins ||
+    !userPlugins.some(
+      p =>
+        p === 'importAssertions' ||
+        p === 'importAttributes' ||
+        (isArray(p) && p[0] === 'importAttributes'),
+    )
+  ) {
+    plugins.push('importAttributes')
+  }
+  if (lang === 'jsx' || lang === 'tsx' || lang === 'mtsx') {
     plugins.push('jsx')
   } else if (userPlugins) {
     // If don't match the case of adding jsx
     // should remove the jsx from user options
     userPlugins = userPlugins.filter(p => p !== 'jsx')
   }
-  if (lang === 'ts' || lang === 'tsx') {
-    plugins.push('typescript')
-    if (!plugins.includes('decorators')) {
+  if (lang === 'ts' || lang === 'mts' || lang === 'tsx' || lang === 'mtsx') {
+    plugins.push(['typescript', { dts }], 'explicitResourceManagement')
+    if (!userPlugins || !userPlugins.includes('decorators')) {
       plugins.push('decorators-legacy')
     }
   }

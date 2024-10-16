@@ -1,20 +1,20 @@
 import {
+  type SFCStyleCompileOptions,
   compileStyle,
   compileStyleAsync,
-  SFCStyleCompileOptions
 } from '../src/compileStyle'
-import path from 'path'
+import path from 'node:path'
 
 export function compileScoped(
   source: string,
-  options?: Partial<SFCStyleCompileOptions>
+  options?: Partial<SFCStyleCompileOptions>,
 ): string {
   const res = compileStyle({
     source,
     filename: 'test.css',
     id: 'data-v-test',
     scoped: true,
-    ...options
+    ...options,
   })
   if (res.errors.length) {
     res.errors.forEach(err => {
@@ -28,34 +28,72 @@ export function compileScoped(
 describe('SFC scoped CSS', () => {
   test('simple selectors', () => {
     expect(compileScoped(`h1 { color: red; }`)).toMatch(
-      `h1[data-v-test] { color: red;`
+      `h1[data-v-test] { color: red;`,
     )
     expect(compileScoped(`.foo { color: red; }`)).toMatch(
-      `.foo[data-v-test] { color: red;`
+      `.foo[data-v-test] { color: red;`,
     )
   })
 
   test('descendent selector', () => {
     expect(compileScoped(`h1 .foo { color: red; }`)).toMatch(
-      `h1 .foo[data-v-test] { color: red;`
+      `h1 .foo[data-v-test] { color: red;`,
+    )
+  })
+
+  test('nesting selector', () => {
+    expect(compileScoped(`h1 { color: red; .foo { color: red; } }`)).toMatch(
+      `h1 {\n&[data-v-test] { color: red;\n}\n.foo[data-v-test] { color: red;`,
+    )
+  })
+
+  test('nesting selector with atrule and comment', () => {
+    expect(
+      compileScoped(
+        `h1 {
+color: red;
+/*background-color: pink;*/
+@media only screen and (max-width: 800px) {
+  background-color: green;
+  .bar { color: white }
+}
+.foo { color: red; }
+}`,
+      ),
+    ).toMatch(
+      `h1 {
+&[data-v-test] {
+color: red
+/*background-color: pink;*/
+}
+@media only screen and (max-width: 800px) {
+&[data-v-test] {
+  background-color: green
+}
+.bar[data-v-test] { color: white
+}
+}
+.foo[data-v-test] { color: red;
+}
+}`,
     )
   })
 
   test('multiple selectors', () => {
     expect(compileScoped(`h1 .foo, .bar, .baz { color: red; }`)).toMatch(
-      `h1 .foo[data-v-test], .bar[data-v-test], .baz[data-v-test] { color: red;`
+      `h1 .foo[data-v-test], .bar[data-v-test], .baz[data-v-test] { color: red;`,
     )
   })
 
   test('pseudo class', () => {
     expect(compileScoped(`.foo:after { color: red; }`)).toMatch(
-      `.foo[data-v-test]:after { color: red;`
+      `.foo[data-v-test]:after { color: red;`,
     )
   })
 
   test('pseudo element', () => {
     expect(compileScoped(`::selection { display: none; }`)).toMatch(
-      '[data-v-test]::selection {'
+      '[data-v-test]::selection {',
     )
   })
 
@@ -83,6 +121,23 @@ describe('SFC scoped CSS', () => {
     expect(compileScoped(`.baz .qux ::v-deep(.foo .bar) { color: red; }`))
       .toMatchInlineSnapshot(`
       ".baz .qux[data-v-test] .foo .bar { color: red;
+      }"
+    `)
+    expect(compileScoped(`:is(.foo :deep(.bar)) { color: red; }`))
+      .toMatchInlineSnapshot(`
+      ":is(.foo[data-v-test] .bar) { color: red;
+      }"
+    `)
+    expect(compileScoped(`:where(.foo :deep(.bar)) { color: red; }`))
+      .toMatchInlineSnapshot(`
+      ":where(.foo[data-v-test] .bar) { color: red;
+      }"
+    `)
+    expect(compileScoped(`:deep(.foo) { color: red; .bar { color: red; } }`))
+      .toMatchInlineSnapshot(`
+      "[data-v-test] .foo { color: red;
+      .bar { color: red;
+      }
       }"
     `)
   })
@@ -132,6 +187,62 @@ describe('SFC scoped CSS', () => {
       ".foo .bar { color: red;
       }"
     `)
+  })
+
+  test(':is() and :where() with multiple selectors', () => {
+    expect(compileScoped(`:is(.foo) { color: red; }`)).toMatchInlineSnapshot(`
+      ":is(.foo[data-v-test]) { color: red;
+      }"
+    `)
+    expect(compileScoped(`:where(.foo, .bar) { color: red; }`))
+      .toMatchInlineSnapshot(`
+      ":where(.foo[data-v-test], .bar[data-v-test]) { color: red;
+      }"
+    `)
+    expect(compileScoped(`:is(.foo, .bar) div { color: red; }`))
+      .toMatchInlineSnapshot(`
+      ":is(.foo, .bar) div[data-v-test] { color: red;
+      }"
+    `)
+  })
+
+  // #10511
+  test(':is() and :where() in compound selectors', () => {
+    expect(
+      compileScoped(`.div { color: red; } .div:where(:hover) { color: blue; }`),
+    ).toMatchInlineSnapshot(`
+    ".div[data-v-test] { color: red;
+    }
+    .div[data-v-test]:where(:hover) { color: blue;
+    }"`)
+
+    expect(
+      compileScoped(`.div { color: red; } .div:is(:hover) { color: blue; }`),
+    ).toMatchInlineSnapshot(`
+    ".div[data-v-test] { color: red;
+    }
+    .div[data-v-test]:is(:hover) { color: blue;
+    }"`)
+
+    expect(
+      compileScoped(
+        `.div { color: red; } .div:where(.foo:hover) { color: blue; }`,
+      ),
+    ).toMatchInlineSnapshot(`
+    ".div[data-v-test] { color: red;
+    }
+    .div[data-v-test]:where(.foo:hover) { color: blue;
+    }"`)
+
+    expect(
+      compileScoped(
+        `.div { color: red; } .div:is(.foo:hover) { color: blue; }`,
+      ),
+    ).toMatchInlineSnapshot(`
+    ".div[data-v-test] { color: red;
+    }
+    .div[data-v-test]:is(.foo:hover) { color: blue;
+    }"`)
   })
 
   test('media query', () => {
@@ -190,30 +301,30 @@ describe('SFC scoped CSS', () => {
   to { opacity: 1; }
 }
     `,
-      { id: 'data-v-test' }
+      { id: 'data-v-test' },
     )
 
     expect(style).toContain(
-      `.anim[data-v-test] {\n  animation: color-test 5s infinite, other 5s;`
+      `.anim[data-v-test] {\n  animation: color-test 5s infinite, other 5s;`,
     )
     expect(style).toContain(
-      `.anim-2[data-v-test] {\n  animation-name: color-test`
+      `.anim-2[data-v-test] {\n  animation-name: color-test`,
     )
     expect(style).toContain(
-      `.anim-3[data-v-test] {\n  animation: 5s color-test infinite, 5s other;`
+      `.anim-3[data-v-test] {\n  animation: 5s color-test infinite, 5s other;`,
     )
     expect(style).toContain(`@keyframes color-test {`)
     expect(style).toContain(`@-webkit-keyframes color-test {`)
 
     expect(style).toContain(
-      `.anim-multiple[data-v-test] {\n  animation: color-test 5s infinite,opacity-test 2s;`
+      `.anim-multiple[data-v-test] {\n  animation: color-test 5s infinite,opacity-test 2s;`,
     )
     expect(style).toContain(
-      `.anim-multiple-2[data-v-test] {\n  animation-name: color-test,opacity-test;`
+      `.anim-multiple-2[data-v-test] {\n  animation-name: color-test,opacity-test;`,
     )
     expect(style).toContain(`@keyframes opacity-test {\nfrom { opacity: 0;`)
     expect(style).toContain(
-      `@-webkit-keyframes opacity-test {\nfrom { opacity: 0;`
+      `@-webkit-keyframes opacity-test {\nfrom { opacity: 0;`,
     )
   })
 
@@ -238,7 +349,7 @@ describe('SFC scoped CSS', () => {
         }"
       `)
       expect(
-        `::v-deep usage as a combinator has been deprecated.`
+        `::v-deep usage as a combinator has been deprecated.`,
       ).toHaveBeenWarned()
     })
 
@@ -249,7 +360,7 @@ describe('SFC scoped CSS', () => {
         }"
       `)
       expect(
-        `the >>> and /deep/ combinators have been deprecated.`
+        `the >>> and /deep/ combinators have been deprecated.`,
       ).toHaveBeenWarned()
     })
 
@@ -260,7 +371,7 @@ describe('SFC scoped CSS', () => {
         }"
       `)
       expect(
-        `the >>> and /deep/ combinators have been deprecated.`
+        `the >>> and /deep/ combinators have been deprecated.`,
       ).toHaveBeenWarned()
     })
   })
@@ -272,7 +383,7 @@ describe('SFC CSS modules', () => {
       source: `.red { color: red }\n.green { color: green }\n:global(.blue) { color: blue }`,
       filename: `test.css`,
       id: 'test',
-      modules: true
+      modules: true,
     })
     expect(result.modules).toBeDefined()
     expect(result.modules!.red).toMatch('_red_')
@@ -289,8 +400,8 @@ describe('SFC CSS modules', () => {
       modulesOptions: {
         scopeBehaviour: 'global',
         generateScopedName: `[name]__[local]__[hash:base64:5]`,
-        localsConvention: 'camelCaseOnly'
-      }
+        localsConvention: 'camelCaseOnly',
+      },
     })
     expect(result.modules).toBeDefined()
     expect(result.modules!.fooBar).toMatch('__foo-bar__')
@@ -306,11 +417,11 @@ describe('SFC style preprocessors', () => {
       `,
       filename: path.resolve(__dirname, './fixture/test.scss'),
       id: '',
-      preprocessLang: 'scss'
+      preprocessLang: 'scss',
     })
 
     expect([...res.dependencies]).toStrictEqual([
-      path.join(__dirname, './fixture/import.scss')
+      path.join(__dirname, './fixture/import.scss'),
     ])
   })
 
@@ -321,7 +432,7 @@ describe('SFC style preprocessors', () => {
           @mixin square($size) {
             width: $size;
             height: $size;
-          }`
+          }`,
       },
       source: `
         .square {
@@ -330,7 +441,7 @@ describe('SFC style preprocessors', () => {
       `,
       filename: path.resolve(__dirname, './fixture/test.scss'),
       id: '',
-      preprocessLang: 'scss'
+      preprocessLang: 'scss',
     })
 
     expect(res.errors.length).toBe(0)
@@ -353,14 +464,33 @@ describe('SFC style preprocessors', () => {
             width: $size;
             height: $size;
           }`
-        }
+        },
       },
       source,
       filename,
       id: '',
-      preprocessLang: 'scss'
+      preprocessLang: 'scss',
     })
 
     expect(res.errors.length).toBe(0)
+  })
+
+  test('should mount scope on correct selector when have universal selector', () => {
+    expect(compileScoped(`* { color: red; }`)).toMatchInlineSnapshot(`
+      "[data-v-test] { color: red;
+      }"
+    `)
+    expect(compileScoped('* .foo { color: red; }')).toMatchInlineSnapshot(`
+      ".foo[data-v-test] { color: red;
+      }"
+    `)
+    expect(compileScoped(`*.foo { color: red; }`)).toMatchInlineSnapshot(`
+      ".foo[data-v-test] { color: red;
+      }"
+    `)
+    expect(compileScoped(`.foo * { color: red; }`)).toMatchInlineSnapshot(`
+      ".foo[data-v-test] * { color: red;
+      }"
+    `)
   })
 })

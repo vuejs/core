@@ -1,12 +1,12 @@
 // reference: https://github.com/vuejs/vue/blob/dev/test/unit/modules/vdom/patch/children.spec.js
 import {
-  h,
-  render,
-  nodeOps,
+  type TestElement,
   TestNodeTypes,
-  TestElement,
+  h,
+  nodeOps,
+  render,
   serialize,
-  serializeInner
+  serializeInner,
 } from '@vue/runtime-test'
 function toSpan(content: any) {
   if (typeof content === 'string') {
@@ -65,6 +65,15 @@ test('array children -> text children', () => {
   expect(inner(root)).toBe('<div>hello</div>')
 })
 
+test('plain object child', () => {
+  const root = nodeOps.createElement('div')
+  const foo = { foo: '1' }
+  // @ts-expect-error
+  render(h('div', null, [foo]), root)
+  expect('Invalid VNode type').not.toHaveBeenWarned()
+  expect(inner(root)).toBe('<div>[object Object]</div>')
+})
+
 describe('renderer: keyed children', () => {
   let root: TestElement
   let elm: TestElement
@@ -99,7 +108,7 @@ describe('renderer: keyed children', () => {
       '2',
       '3',
       '4',
-      '5'
+      '5',
     ])
   })
 
@@ -114,7 +123,7 @@ describe('renderer: keyed children', () => {
       '2',
       '3',
       '4',
-      '5'
+      '5',
     ])
   })
 
@@ -129,7 +138,7 @@ describe('renderer: keyed children', () => {
       '2',
       '3',
       '4',
-      '5'
+      '5',
     ])
   })
 
@@ -144,7 +153,7 @@ describe('renderer: keyed children', () => {
       '2',
       '3',
       '4',
-      '5'
+      '5',
     ])
   })
 
@@ -156,7 +165,7 @@ describe('renderer: keyed children', () => {
       '2',
       '3',
       '4',
-      '5'
+      '5',
     ])
 
     render(h('div'), root)
@@ -191,7 +200,7 @@ describe('renderer: keyed children', () => {
       '1',
       '2',
       '4',
-      '5'
+      '5',
     ])
   })
 
@@ -205,7 +214,7 @@ describe('renderer: keyed children', () => {
       '2',
       '3',
       '1',
-      '4'
+      '4',
     ])
   })
 
@@ -219,7 +228,7 @@ describe('renderer: keyed children', () => {
       '1',
       '4',
       '2',
-      '3'
+      '3',
     ])
   })
 
@@ -242,7 +251,7 @@ describe('renderer: keyed children', () => {
       '4',
       '2',
       '3',
-      '1'
+      '1',
     ])
   })
 
@@ -257,7 +266,7 @@ describe('renderer: keyed children', () => {
       '1',
       '2',
       '3',
-      '6'
+      '6',
     ])
   })
 
@@ -291,7 +300,7 @@ describe('renderer: keyed children', () => {
       '4',
       '3',
       '2',
-      '1'
+      '1',
     ])
   })
 
@@ -306,7 +315,7 @@ describe('renderer: keyed children', () => {
       '2',
       '1',
       '5',
-      '0'
+      '0',
     ])
   })
 
@@ -324,15 +333,15 @@ describe('renderer: keyed children', () => {
       render(
         h(
           'span',
-          arr.map(n => spanNumWithOpacity(n, '1'))
+          arr.map(n => spanNumWithOpacity(n, '1')),
         ),
-        root
+        root,
       )
       elm = root.children[0] as TestElement
 
       for (let i = 0; i < elms; ++i) {
         expect(serializeInner(elm.children[i] as TestElement)).toBe(
-          i.toString()
+          i.toString(),
         )
         opacities[i] = Math.random().toFixed(5).toString()
       }
@@ -341,21 +350,21 @@ describe('renderer: keyed children', () => {
       render(
         h(
           'span',
-          arr.map(n => spanNumWithOpacity(shufArr[n], opacities[n]))
+          arr.map(n => spanNumWithOpacity(shufArr[n], opacities[n])),
         ),
-        root
+        root,
       )
       elm = root.children[0] as TestElement
       for (let i = 0; i < elms; ++i) {
         expect(serializeInner(elm.children[i] as TestElement)).toBe(
-          shufArr[i].toString()
+          shufArr[i].toString(),
         )
         expect(elm.children[i]).toMatchObject({
           props: {
             style: {
-              opacity: opacities[i]
-            }
-          }
+              opacity: opacities[i],
+            },
+          },
         })
       }
     }
@@ -367,22 +376,22 @@ describe('renderer: keyed children', () => {
         h('div', { key: 1 }, 'one'),
         h('div', { key: 2 }, 'two'),
         h('div', { key: 3 }, 'three'),
-        h('div', { key: 4 }, 'four')
+        h('div', { key: 4 }, 'four'),
       ]),
-      root
+      root,
     )
     elm = root.children[0] as TestElement
     expect((elm.children as TestElement[]).map(c => c.tag)).toEqual([
       'div',
       'div',
       'div',
-      'div'
+      'div',
     ])
     expect((elm.children as TestElement[]).map(inner)).toEqual([
       'one',
       'two',
       'three',
-      'four'
+      'four',
     ])
 
     render(
@@ -390,21 +399,21 @@ describe('renderer: keyed children', () => {
         h('div', { key: 4 }, 'four'),
         h('span', { key: 3 }, 'three'),
         h('span', { key: 2 }, 'two'),
-        h('div', { key: 1 }, 'one')
+        h('div', { key: 1 }, 'one'),
       ]),
-      root
+      root,
     )
     expect((elm.children as TestElement[]).map(c => c.tag)).toEqual([
       'div',
       'span',
       'span',
-      'div'
+      'div',
     ])
     expect((elm.children as TestElement[]).map(inner)).toEqual([
       'four',
       'three',
       'two',
-      'one'
+      'one',
     ])
   })
 
@@ -413,8 +422,8 @@ describe('renderer: keyed children', () => {
     elm = root.children[0] as TestElement
     expect(elm.children[0]).toMatchObject({
       props: {
-        class: 'hi'
-      }
+        class: 'hi',
+      },
     })
 
     render(h('div', [h('div', 'four')]), root)
@@ -423,8 +432,8 @@ describe('renderer: keyed children', () => {
       props: {
         // in the DOM renderer this will be ''
         // but the test renderer simply sets whatever value it receives.
-        class: null
-      }
+        class: null,
+      },
     })
     expect(serialize(elm.children[0])).toBe(`<div>four</div>`)
   })
@@ -456,7 +465,7 @@ describe('renderer: unkeyed children', () => {
       '1',
       'a',
       'b',
-      'c'
+      'c',
     ])
 
     elm = renderChildren(['d', 'a', 'b', 'c', 1, 'e'])
@@ -467,7 +476,7 @@ describe('renderer: unkeyed children', () => {
       'b',
       'c',
       '1',
-      'e'
+      'e',
     ])
   })
 
@@ -478,7 +487,7 @@ describe('renderer: unkeyed children', () => {
     elm = renderChildren(['hello', 'world'])
     expect((elm.children as TestElement[]).map(inner)).toEqual([
       'hello',
-      'world'
+      'world',
     ])
   })
 
@@ -488,7 +497,7 @@ describe('renderer: unkeyed children', () => {
     elm = root.children[0] as TestElement
     expect(elm.children[0]).toMatchObject({
       type: TestNodeTypes.TEXT,
-      text: 'text'
+      text: 'text',
     })
 
     render(h('div', ['text', h('span', ['hello'])]), root)
@@ -496,7 +505,7 @@ describe('renderer: unkeyed children', () => {
     elm = root.children[0] as TestElement
     expect(elm.children[0]).toMatchObject({
       type: TestNodeTypes.TEXT,
-      text: 'text'
+      text: 'text',
     })
   })
 
@@ -506,7 +515,7 @@ describe('renderer: unkeyed children', () => {
     elm = root.children[0] as TestElement
     expect(elm.children[0]).toMatchObject({
       type: TestNodeTypes.TEXT,
-      text: 'text'
+      text: 'text',
     })
 
     render(h('div', ['text2', h('span', ['hello'])]), root)
@@ -514,7 +523,7 @@ describe('renderer: unkeyed children', () => {
     elm = root.children[0] as TestElement
     expect(elm.children[0]).toMatchObject({
       type: TestNodeTypes.TEXT,
-      text: 'text2'
+      text: 'text2',
     })
   })
 
@@ -526,7 +535,7 @@ describe('renderer: unkeyed children', () => {
     render(h('div', [h('span', ['hello']), h('span', ['world'])]), root)
     expect((elm.children as TestElement[]).map(inner)).toEqual([
       'hello',
-      'world'
+      'world',
     ])
   })
 
@@ -538,24 +547,24 @@ describe('renderer: unkeyed children', () => {
     render(h('div', [h('div', ['hello']), h('span', ['world'])]), root)
     expect((elm.children as TestElement[]).map(c => c.tag)).toEqual([
       'div',
-      'span'
+      'span',
     ])
     expect((elm.children as TestElement[]).map(inner)).toEqual([
       'hello',
-      'world'
+      'world',
     ])
   })
 
   test('remove elements with updating children without keys', () => {
     render(
       h('div', [h('span', ['one']), h('span', ['two']), h('span', ['three'])]),
-      root
+      root,
     )
     elm = root.children[0] as TestElement
     expect((elm.children as TestElement[]).map(inner)).toEqual([
       'one',
       'two',
-      'three'
+      'three',
     ])
 
     render(h('div', [h('span', ['one']), h('span', ['three'])]), root)
@@ -587,7 +596,7 @@ describe('renderer: unkeyed children', () => {
     elm = root.children[0] as TestElement
     expect((elm.children as TestElement[]).map(c => serialize(c))).toEqual([
       'one',
-      '<span>two</span>'
+      '<span>two</span>',
     ])
 
     render(h('div', [h('div', ['three'])]), root)
@@ -599,24 +608,24 @@ describe('renderer: unkeyed children', () => {
   test('reorder elements', () => {
     render(
       h('div', [h('span', ['one']), h('div', ['two']), h('b', ['three'])]),
-      root
+      root,
     )
     elm = root.children[0] as TestElement
     expect((elm.children as TestElement[]).map(inner)).toEqual([
       'one',
       'two',
-      'three'
+      'three',
     ])
 
     render(
       h('div', [h('b', ['three']), h('div', ['two']), h('span', ['one'])]),
-      root
+      root,
     )
     elm = root.children[0] as TestElement
     expect((elm.children as TestElement[]).map(inner)).toEqual([
       'three',
       'two',
-      'one'
+      'one',
     ])
   })
 
