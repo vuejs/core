@@ -165,12 +165,19 @@ function innerResolveTypeElements(
   scope: TypeScope,
   typeParameters?: Record<string, Node>,
 ): ResolvedElements {
+  if (
+    node.leadingComments &&
+    node.leadingComments.some(c => c.value.includes('@vue-ignore'))
+  ) {
+    return { props: {} }
+  }
   switch (node.type) {
     case 'TSTypeLiteral':
       return typeElementsToMap(ctx, node.members, scope, typeParameters)
     case 'TSInterfaceDeclaration':
       return resolveInterfaceMembers(ctx, node, scope, typeParameters)
     case 'TSTypeAliasDeclaration':
+    case 'TSTypeAnnotation':
     case 'TSParenthesizedType':
       return resolveTypeElements(
         ctx,
@@ -188,7 +195,7 @@ function innerResolveTypeElements(
         node.type,
       )
     case 'TSMappedType':
-      return resolveMappedType(ctx, node, scope)
+      return resolveMappedType(ctx, node, scope, typeParameters)
     case 'TSIndexedAccessType': {
       const types = resolveIndexType(ctx, node, scope)
       return mergeElements(
@@ -414,12 +421,6 @@ function resolveInterfaceMembers(
   )
   if (node.extends) {
     for (const ext of node.extends) {
-      if (
-        ext.leadingComments &&
-        ext.leadingComments.some(c => c.value.includes('@vue-ignore'))
-      ) {
-        continue
-      }
       try {
         const { props, calls } = resolveTypeElements(ctx, ext, scope)
         for (const key in props) {
@@ -439,6 +440,7 @@ function resolveInterfaceMembers(
             `Note: both in 3.2 or with the ignore, the properties in the base ` +
             `type are treated as fallthrough attrs at runtime.`,
           ext,
+          scope,
         )
       }
     }
@@ -450,9 +452,18 @@ function resolveMappedType(
   ctx: TypeResolveContext,
   node: TSMappedType,
   scope: TypeScope,
+  typeParameters?: Record<string, Node>,
 ): ResolvedElements {
   const res: ResolvedElements = { props: {} }
-  const keys = resolveStringType(ctx, node.typeParameter.constraint!, scope)
+  let keys: string[]
+  if (node.nameType) {
+    const { name, constraint } = node.typeParameter
+    scope = createChildScope(scope)
+    Object.assign(scope.types, { ...typeParameters, [name]: constraint })
+    keys = resolveStringType(ctx, node.nameType, scope)
+  } else {
+    keys = resolveStringType(ctx, node.typeParameter.constraint!, scope)
+  }
   for (const key of keys) {
     res.props[key] = createProperty(
       {
@@ -812,7 +823,7 @@ let loadTS: (() => typeof TS) | undefined
 /**
  * @private
  */
-export function registerTS(_loadTS: () => typeof TS) {
+export function registerTS(_loadTS: () => typeof TS): void {
   loadTS = () => {
     try {
       return _loadTS()
@@ -903,7 +914,7 @@ function importSourceToScope(
 
       const filename = osSpecificJoinFn(dirname(scope.filename), source)
       resolved = resolveExt(filename, fs)
-    } else if (source.startsWith('.')) {
+    } else if (source[0] === '.') {
       // relative import - fast path
       const filename = joinPaths(dirname(scope.filename), source)
       resolved = resolveExt(filename, fs)
@@ -956,8 +967,10 @@ function resolveExt(filename: string, fs: FS) {
   return (
     tryResolve(filename) ||
     tryResolve(filename + `.ts`) ||
+    tryResolve(filename + `.tsx`) ||
     tryResolve(filename + `.d.ts`) ||
     tryResolve(joinPaths(filename, `index.ts`)) ||
+    tryResolve(joinPaths(filename, `index.tsx`)) ||
     tryResolve(joinPaths(filename, `index.d.ts`))
   )
 }
@@ -1003,11 +1016,11 @@ function resolveWithTS(
           (c.config.options.pathsBasePath as string) ||
             dirname(c.config.options.configFilePath as string),
         )
-        const included: string[] = c.config.raw?.include
-        const excluded: string[] = c.config.raw?.exclude
+        const included: string[] | undefined = c.config.raw?.include
+        const excluded: string[] | undefined = c.config.raw?.exclude
         if (
           (!included && (!base || containingFile.startsWith(base))) ||
-          included.some(p => isMatch(containingFile, joinPaths(base, p)))
+          included?.some(p => isMatch(containingFile, joinPaths(base, p)))
         ) {
           if (
             excluded &&
@@ -1057,6 +1070,7 @@ function loadTSConfig(
   configPath: string,
   ts: typeof TS,
   fs: FS,
+  visited = new Set<string>(),
 ): TS.ParsedCommandLine[] {
   // The only case where `fs` is NOT `ts.sys` is during tests.
   // parse config host requires an extra `readDirectory` method
@@ -1076,10 +1090,15 @@ function loadTSConfig(
     configPath,
   )
   const res = [config]
+  visited.add(configPath)
   if (config.projectReferences) {
     for (const ref of config.projectReferences) {
-      tsConfigRefMap.set(ref.path, configPath)
-      res.unshift(...loadTSConfig(ref.path, ts, fs))
+      const refPath = ts.resolveProjectReferencePath(ref)
+      if (visited.has(refPath) || !fs.fileExists(refPath)) {
+        continue
+      }
+      tsConfigRefMap.set(refPath, configPath)
+      res.unshift(...loadTSConfig(refPath, ts, fs, visited))
     }
   }
   return res
@@ -1090,7 +1109,7 @@ const fileToScopeCache = createCache<TypeScope>()
 /**
  * @private
  */
-export function invalidateTypeCache(filename: string) {
+export function invalidateTypeCache(filename: string): void {
   filename = normalizePath(filename)
   fileToScopeCache.delete(filename)
   tsConfigCache.delete(filename)
@@ -1123,12 +1142,12 @@ function parseFile(
   parserPlugins?: SFCScriptCompileOptions['babelParserPlugins'],
 ): Statement[] {
   const ext = extname(filename)
-  if (ext === '.ts' || ext === '.tsx') {
+  if (ext === '.ts' || ext === '.mts' || ext === '.tsx' || ext === '.mtsx') {
     return babelParse(content, {
       plugins: resolveParserPlugins(
         ext.slice(1),
         parserPlugins,
-        filename.endsWith('.d.ts'),
+        /\.d\.m?ts$/.test(filename),
       ),
       sourceType: 'module',
     }).program.body
@@ -1422,7 +1441,7 @@ function attachNamespace(
   }
 }
 
-export function recordImports(body: Statement[]) {
+export function recordImports(body: Statement[]): Record<string, Import> {
   const imports: TypeScope['imports'] = Object.create(null)
   for (const s of body) {
     recordImport(s, imports)
@@ -1445,7 +1464,8 @@ function recordImport(node: Node, imports: TypeScope['imports']) {
 export function inferRuntimeType(
   ctx: TypeResolveContext,
   node: Node & MaybeWithScope,
-  scope = node._ownerScope || ctxToScope(ctx),
+  scope: TypeScope = node._ownerScope || ctxToScope(ctx),
+  isKeyOf = false,
 ): string[] {
   try {
     switch (node.type) {
@@ -1465,8 +1485,29 @@ export function inferRuntimeType(
         const types = new Set<string>()
         const members =
           node.type === 'TSTypeLiteral' ? node.members : node.body.body
+
         for (const m of members) {
-          if (
+          if (isKeyOf) {
+            if (
+              m.type === 'TSPropertySignature' &&
+              m.key.type === 'NumericLiteral'
+            ) {
+              types.add('Number')
+            } else if (m.type === 'TSIndexSignature') {
+              const annotation = m.parameters[0].typeAnnotation
+              if (annotation && annotation.type !== 'Noop') {
+                const type = inferRuntimeType(
+                  ctx,
+                  annotation.typeAnnotation,
+                  scope,
+                )[0]
+                if (type === UNKNOWN_TYPE) return [UNKNOWN_TYPE]
+                types.add(type)
+              }
+            } else {
+              types.add('String')
+            }
+          } else if (
             m.type === 'TSCallSignatureDeclaration' ||
             m.type === 'TSConstructSignatureDeclaration'
           ) {
@@ -1475,7 +1516,10 @@ export function inferRuntimeType(
             types.add('Object')
           }
         }
-        return types.size ? Array.from(types) : ['Object']
+
+        return types.size
+          ? Array.from(types)
+          : [isKeyOf ? UNKNOWN_TYPE : 'Object']
       }
       case 'TSPropertySignature':
         if (node.typeAnnotation) {
@@ -1510,71 +1554,132 @@ export function inferRuntimeType(
       case 'TSTypeReference': {
         const resolved = resolveTypeReference(ctx, node, scope)
         if (resolved) {
-          return inferRuntimeType(ctx, resolved, resolved._ownerScope)
+          return inferRuntimeType(ctx, resolved, resolved._ownerScope, isKeyOf)
         }
+
         if (node.typeName.type === 'Identifier') {
-          switch (node.typeName.name) {
-            case 'Array':
-            case 'Function':
-            case 'Object':
-            case 'Set':
-            case 'Map':
-            case 'WeakSet':
-            case 'WeakMap':
-            case 'Date':
-            case 'Promise':
-            case 'Error':
-              return [node.typeName.name]
+          if (isKeyOf) {
+            switch (node.typeName.name) {
+              case 'String':
+              case 'Array':
+              case 'ArrayLike':
+              case 'Parameters':
+              case 'ConstructorParameters':
+              case 'ReadonlyArray':
+                return ['String', 'Number']
 
-            // TS built-in utility types
-            // https://www.typescriptlang.org/docs/handbook/utility-types.html
-            case 'Partial':
-            case 'Required':
-            case 'Readonly':
-            case 'Record':
-            case 'Pick':
-            case 'Omit':
-            case 'InstanceType':
-              return ['Object']
+              // TS built-in utility types
+              case 'Record':
+              case 'Partial':
+              case 'Required':
+              case 'Readonly':
+                if (node.typeParameters && node.typeParameters.params[0]) {
+                  return inferRuntimeType(
+                    ctx,
+                    node.typeParameters.params[0],
+                    scope,
+                    true,
+                  )
+                }
+                break
+              case 'Pick':
+              case 'Extract':
+                if (node.typeParameters && node.typeParameters.params[1]) {
+                  return inferRuntimeType(
+                    ctx,
+                    node.typeParameters.params[1],
+                    scope,
+                  )
+                }
+                break
 
-            case 'Uppercase':
-            case 'Lowercase':
-            case 'Capitalize':
-            case 'Uncapitalize':
-              return ['String']
+              case 'Function':
+              case 'Object':
+              case 'Set':
+              case 'Map':
+              case 'WeakSet':
+              case 'WeakMap':
+              case 'Date':
+              case 'Promise':
+              case 'Error':
+              case 'Uppercase':
+              case 'Lowercase':
+              case 'Capitalize':
+              case 'Uncapitalize':
+              case 'ReadonlyMap':
+              case 'ReadonlySet':
+                return ['String']
+            }
+          } else {
+            switch (node.typeName.name) {
+              case 'Array':
+              case 'Function':
+              case 'Object':
+              case 'Set':
+              case 'Map':
+              case 'WeakSet':
+              case 'WeakMap':
+              case 'Date':
+              case 'Promise':
+              case 'Error':
+                return [node.typeName.name]
 
-            case 'Parameters':
-            case 'ConstructorParameters':
-              return ['Array']
+              // TS built-in utility types
+              // https://www.typescriptlang.org/docs/handbook/utility-types.html
+              case 'Partial':
+              case 'Required':
+              case 'Readonly':
+              case 'Record':
+              case 'Pick':
+              case 'Omit':
+              case 'InstanceType':
+                return ['Object']
 
-            case 'NonNullable':
-              if (node.typeParameters && node.typeParameters.params[0]) {
-                return inferRuntimeType(
-                  ctx,
-                  node.typeParameters.params[0],
-                  scope,
-                ).filter(t => t !== 'null')
-              }
-              break
-            case 'Extract':
-              if (node.typeParameters && node.typeParameters.params[1]) {
-                return inferRuntimeType(
-                  ctx,
-                  node.typeParameters.params[1],
-                  scope,
-                )
-              }
-              break
-            case 'Exclude':
-            case 'OmitThisParameter':
-              if (node.typeParameters && node.typeParameters.params[0]) {
-                return inferRuntimeType(
-                  ctx,
-                  node.typeParameters.params[0],
-                  scope,
-                )
-              }
-              break
+              case 'Uppercase':
+              case 'Lowercase':
+              case 'Capitalize':
+              case 'Uncapitalize':
+                return ['String']
+
+              case 'Parameters':
+              case 'ConstructorParameters':
+              case 'ReadonlyArray':
+                return ['Array']
+
+              case 'ReadonlyMap':
+                return ['Map']
+              case 'ReadonlySet':
+                return ['Set']
+
+              case 'NonNullable':
+                if (node.typeParameters && node.typeParameters.params[0]) {
+                  return inferRuntimeType(
+                    ctx,
+                    node.typeParameters.params[0],
+                    scope,
+                  ).filter(t => t !== 'null')
+                }
+                break
+              case 'Extract':
+                if (node.typeParameters && node.typeParameters.params[1]) {
+                  return inferRuntimeType(
+                    ctx,
+                    node.typeParameters.params[1],
+                    scope,
+                  )
+                }
+                break
+              case 'Exclude':
+              case 'OmitThisParameter':
+                if (node.typeParameters && node.typeParameters.params[0]) {
+                  return inferRuntimeType(
+                    ctx,
+                    node.typeParameters.params[0],
+                    scope,
+                  )
+                }
+                break
+            }
           }
         }
         // cannot infer, fallback to UNKNOWN: ThisParameterType
@@ -1585,9 +1690,9 @@ export function inferRuntimeType(
         return inferRuntimeType(ctx, node.typeAnnotation, scope)
 
       case 'TSUnionType':
-        return flattenTypes(ctx, node.types, scope)
+        return flattenTypes(ctx, node.types, scope, isKeyOf)
       case 'TSIntersectionType': {
-        return flattenTypes(ctx, node.types, scope).filter(
+        return flattenTypes(ctx, node.types, scope, isKeyOf).filter(
           t => t !== UNKNOWN_TYPE,
         )
       }
@@ -1600,7 +1705,7 @@ export function inferRuntimeType(
 
       case 'TSIndexedAccessType': {
         const types = resolveIndexType(ctx, node, scope)
-        return flattenTypes(ctx, types, scope)
+        return flattenTypes(ctx, types, scope, isKeyOf)
       }
 
       case 'ClassDeclaration':
@@ -1626,8 +1731,25 @@ export function inferRuntimeType(
           // typeof only support identifier in local scope
           const matched = scope.declares[id.name]
           if (matched) {
-            return inferRuntimeType(ctx, matched, matched._ownerScope)
+            return inferRuntimeType(ctx, matched, matched._ownerScope, isKeyOf)
           }
+        }
+        break
+      }
+
+      // e.g. readonly
+      case 'TSTypeOperator': {
+        return inferRuntimeType(
+          ctx,
+          node.typeAnnotation,
+          scope,
+          node.operator === 'keyof',
+        )
+      }
+
+      case 'TSAnyKeyword': {
+        if (isKeyOf) {
+          return ['String', 'Number', 'Symbol']
         }
         break
       }
@@ -1642,14 +1764,15 @@ function flattenTypes(
   ctx: TypeResolveContext,
   types: TSType[],
   scope: TypeScope,
+  isKeyOf: boolean = false,
 ): string[] {
   if (types.length === 1) {
-    return inferRuntimeType(ctx, types[0], scope)
+    return inferRuntimeType(ctx, types[0], scope, isKeyOf)
   }
   return [
     ...new Set(
       ([] as string[]).concat(
-        ...types.map(t => inferRuntimeType(ctx, t, scope)),
+        ...types.map(t => inferRuntimeType(ctx, t, scope, isKeyOf)),
       ),
     ),
   ]
