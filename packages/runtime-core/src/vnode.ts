@@ -890,7 +890,7 @@ export function mergeProps(...args: (Data & VNodeProps)[]): Data {
           )
         ) {
           warn(
-            `Prop with prefix 'on' is considered an event handler, avoid such naming if it is not. prop: ${key}.`
+            `Prop with prefix 'on' is considered an event handler, avoid such naming if it is not. prop: ${key}.`,
           )
         }
 
