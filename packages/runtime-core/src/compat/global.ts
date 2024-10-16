@@ -333,7 +333,7 @@ export function installAppCompatProperties(
   app: App,
   context: AppContext,
   render: RootRenderFunction<any>,
-) {
+): void {
   installFilterMethod(app, context)
   installLegacyOptionMergeStrats(app.config)
 
@@ -548,7 +548,7 @@ function installCompatMount(
       }
 
       // clear content before mounting
-      container.innerHTML = ''
+      container.textContent = ''
 
       // TODO hydration
       render(vnode, container, namespace)
@@ -622,11 +622,9 @@ function defineReactive(obj: any, key: string, val: any) {
   if (isObject(val) && !isReactive(val) && !patched.has(val)) {
     const reactiveVal = reactive(val)
     if (isArray(val)) {
-      methodsToPatch.forEach(m => {
-        // @ts-expect-error
+      methodsToPatch.forEach((m: any) => {
         val[m] = (...args: any[]) => {
-          // @ts-expect-error
-          Array.prototype[m].call(reactiveVal, ...args)
+          Array.prototype[m].apply(reactiveVal, args)
         }
       })
     } else {

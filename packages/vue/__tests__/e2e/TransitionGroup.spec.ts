@@ -509,6 +509,21 @@ describe('e2e: TransitionGroup', () => {
     expect(`<TransitionGroup> children must be keyed`).toHaveBeenWarned()
   })
 
+  test('not warn unkeyed text children w/ whitespace preserve', () => {
+    const app = createApp({
+      template: `
+        <transition-group name="test">
+          <p key="1">1</p>
+          <p key="2" v-if="false">2</p>
+        </transition-group>
+        `,
+    })
+
+    app.config.compilerOptions.whitespace = 'preserve'
+    app.mount(document.createElement('div'))
+    expect(`<TransitionGroup> children must be keyed`).not.toHaveBeenWarned()
+  })
+
   // #5168, #7898, #9067
   test(
     'avoid set transition hooks for comment node',

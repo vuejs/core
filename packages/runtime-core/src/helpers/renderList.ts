@@ -1,5 +1,10 @@
-import type { VNode, VNodeChild } from '../vnode'
-import { isVNode } from '../vnode'
+import { type VNode, type VNodeChild, isVNode } from '../vnode'
+import {
+  isReactive,
+  isShallow,
+  shallowReadArray,
+  toReactive,
+} from '@vue/reactivity'
 import { isArray, isObject, isString } from '@vue/shared'
 import { warn } from '../warning'
 
@@ -62,23 +67,32 @@ export function renderList(
 ): VNodeChild[] {
   let ret: VNodeChild[]
   const retMap: Record<string | number | symbol, VNode> = {}
-  const cachedList = (cache && cache[index!]?.list) as VNode[] | undefined
-  const cachedMap = (cache && cache[index!]?.map) as
+  const cachedList = (cache && cache[index!] && cache[index!].list) as
+    | VNode[]
+    | undefined
+  const cachedMap = (cache && cache[index!] && cache[index!].map) as
     | Record<string | number | symbol, VNode>
     | undefined
+  const sourceIsArray = isArray(source)
 
-  if (isArray(source) || isString(source)) {
+  if (sourceIsArray || isString(source)) {
+    const sourceIsReactiveArray = sourceIsArray && isReactive(source)
+    let needsWrap = false
+    if (sourceIsReactiveArray) {
+      needsWrap = !isShallow(source)
+      source = shallowReadArray(source)
+    }
     ret = new Array(source.length)
     for (let i = 0, l = source.length; i < l; i++) {
       const item = renderItem(
-        source[i],
+        needsWrap ? toReactive(source[i]) : source[i],
         i,
         undefined,
-        cachedList?.[i],
+        cachedList && cachedList[i],
         cachedMap,
       )
-      if (isVNode(item) && item.key != null) {
-        retMap[item.key] = item
+      if (isVNode(item) && item!.key != null) {
+        retMap[item!.key] = item!
       }
       ret[i] = item
     }
@@ -88,7 +102,13 @@ export function renderList(
     }
     ret = new Array(source)
     for (let i = 0; i < source; i++) {
-      const item = renderItem(i + 1, i, undefined, cachedList?.[i], cachedMap)
+      const item = renderItem(
+        i + 1,
+        i,
+        undefined,
+        cachedList && cachedList[i],
+        cachedMap,
+      )
       if (isVNode(item) && item.key != null) {
         retMap[item.key] = item
       }
@@ -101,7 +121,7 @@ export function renderList(
           sourceItem,
           i,
           undefined,
-          cachedList?.[i],
+          cachedList && cachedList[i],
           cachedMap,
         )
         if (isVNode(item) && item.key != null) {
@@ -114,7 +134,13 @@ export function renderList(
       ret = new Array(keys.length)
       for (let i = 0, l = keys.length; i < l; i++) {
         const key = keys[i]
-        const item = renderItem(source[key], key, i, cachedList?.[i], cachedMap)
+        const item = renderItem(
+          source[key],
+          key,
+          i,
+          cachedList && cachedList[i],
+          cachedMap,
+        )
         if (isVNode(item) && item.key != null) {
           retMap[item.key] = item
         }

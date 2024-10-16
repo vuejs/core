@@ -1,4 +1,4 @@
-import type { ComponentInternalInstance, Slots } from 'vue'
+import { type ComponentInternalInstance, type Slots, ssrUtils } from 'vue'
 import {
   type Props,
   type PushFn,
@@ -6,6 +6,8 @@ import {
   renderVNodeChildren,
 } from '../render'
 import { isArray } from '@vue/shared'
+
+const { ensureValidVNode } = ssrUtils
 
 export type SSRSlots = Record<string, SSRSlot>
 export type SSRSlot = (
@@ -23,7 +25,7 @@ export function ssrRenderSlot(
   push: PushFn,
   parentComponent: ComponentInternalInstance,
   slotScopeId?: string,
-) {
+): void {
   // template-compiled slots are always rendered as fragments
   push(`<!--[-->`)
   ssrRenderSlotInner(
@@ -47,7 +49,7 @@ export function ssrRenderSlotInner(
   parentComponent: ComponentInternalInstance,
   slotScopeId?: string,
   transition?: boolean,
-) {
+): void {
   const slotFn = slots[slotName]
   if (slotFn) {
     const slotBuffer: SSRBufferItem[] = []
@@ -61,8 +63,18 @@ export function ssrRenderSlotInner(
       slotScopeId ? ' ' + slotScopeId : '',
     )
     if (isArray(ret)) {
-      // normal slot
-      renderVNodeChildren(push, ret, parentComponent, slotScopeId)
+      const validSlotContent = ensureValidVNode(ret)
+      if (validSlotContent) {
+        // normal slot
+        renderVNodeChildren(
+          push,
+          validSlotContent,
+          parentComponent,
+          slotScopeId,
+        )
+      } else if (fallbackRenderFn) {
+        fallbackRenderFn()
+      }
     } else {
       // ssr slot.
       // check if the slot renders all comments, in which case use the fallback
