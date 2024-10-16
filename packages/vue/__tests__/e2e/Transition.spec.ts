@@ -2986,6 +2986,126 @@ describe('e2e: Transition', () => {
     )
   })
 
+  // https://github.com/vuejs/core/issues/12181#issuecomment-2414380955
+  describe('not leaking', async () => {
+    test('switching VNodes', async () => {
+      const client = await page().createCDPSession()
+      await page().evaluate(async () => {
+        const { createApp, ref, nextTick } = (window as any).Vue
+        const empty = ref(true)
+
+        createApp({
+          components: {
+            Child: {
+              setup: () => {
+                // Big arrays kick GC earlier
+                const test = ref([...Array(30_000_000)].map((_, i) => ({ i })))
+                // TODO: Use a diferent TypeScript env for testing
+                // @ts-expect-error - Custom property and same lib as runtime is used
+                window.__REF__ = new WeakRef(test)
+
+                return { test }
+              },
+              template: `
+                <p>{{ test.length }}</p>
+              `,
+            },
+            Empty: {
+              template: '<div></div>',
+            },
+          },
+          template: `
+            <transition>
+              <component :is="empty ? 'Empty' : 'Child'" />
+            </transition>
+          `,
+          setup() {
+            return { empty }
+          },
+        }).mount('#app')
+
+        await nextTick()
+        empty.value = false
+        await nextTick()
+        empty.value = true
+        await nextTick()
+      })
+
+      const isCollected = async () =>
+        // @ts-expect-error - Custom property
+        await page().evaluate(() => window.__REF__.deref() === undefined)
+
+      while ((await isCollected()) === false) {
+        await client.send('HeapProfiler.collectGarbage')
+      }
+
+      expect(await isCollected()).toBe(true)
+    })
+
+    // https://github.com/vuejs/core/issues/12181#issue-2588232334
+    test('switching deep vnodes edge case', async () => {
+      const client = await page().createCDPSession()
+      await page().evaluate(async () => {
+        const { createApp, ref, nextTick } = (window as any).Vue
+        const shown = ref(false)
+
+        createApp({
+          components: {
+            Child: {
+              setup: () => {
+                // Big arrays kick GC earlier
+                const test = ref([...Array(30_000_000)].map((_, i) => ({ i })))
+                // TODO: Use a diferent TypeScript env for testing
+                // @ts-expect-error - Custom property and same lib as runtime is used
+                window.__REF__ = new WeakRef(test)
+
+                return { test }
+              },
+              template: `
+                <p>{{ test.length }}</p>
+              `,
+            },
+            Wrapper: {
+              template: `
+                <transition>
+                  <div v-if="true">
+                    <slot />
+                  </div>
+                </transition>
+              `,
+            },
+          },
+          template: `
+            <button id="toggleBtn" @click="shown = !shown">{{ shown ? 'Hide' : 'Show' }}</button>
+            <Wrapper>
+              <Child v-if="shown" />
+              <div v-else></div>
+            </Wrapper>
+          `,
+          setup() {
+            return { shown }
+          },
+        }).mount('#app')
+
+        await nextTick()
+        shown.value = true
+        await nextTick()
+        shown.value = false
+        await nextTick()
+      })
+
+      const isCollected = async () =>
+        // @ts-expect-error - Custom property
+        await page().evaluate(() => window.__REF__.deref() === undefined)
+
+      while ((await isCollected()) === false) {
+        await client.send('HeapProfiler.collectGarbage')
+      }
+
+      expect(await isCollected()).toBe(true)
+    })
+  })
+
   test('warn when used on multiple elements', async () => {
     createApp({
       render() {
