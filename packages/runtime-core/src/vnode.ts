@@ -490,29 +490,9 @@ function createBaseVNode(
     appContext: null,
     ctx: currentRenderingInstance,
   } as VNode
-  if (
-    vnode.ctx &&
-    currentRenderingInstance &&
-    currentRenderingInstance.parent &&
-    currentRenderingInstance.parent.ut
-  ) {
-    if (!vnode.ctx.parentUt) {
-      vnode.ctx.parentUt = [
-        {
-          ut: currentRenderingInstance.parent.ut,
-          uid: currentRenderingInstance.parent.uid,
-        },
-      ]
-    } else {
-      vnode.ctx.parentUt.push({
-        ut: currentRenderingInstance.parent.ut,
-        uid: currentRenderingInstance.parent.uid,
-      })
-    }
-  }
-  if (vnode.ctx && vnode.ctx.parent && vnode.ctx.parent.parentUt) {
-    vnode.ctx.parentUt = vnode.ctx.parent.parentUt
-  }
+
+  updateParentUt(vnode)
+
   if (needFullChildrenNormalization) {
     normalizeChildren(vnode, children)
     // normalize suspense children
@@ -557,6 +537,26 @@ function createBaseVNode(
   }
 
   return vnode
+}
+
+function updateParentUt(vnode: VNode) {
+  if (vnode.ctx && vnode.ctx.parent && vnode.ctx.parent.parentUt) {
+    vnode.ctx.parentUt = vnode.ctx.parent.parentUt.slice(0)
+  }
+  if (
+    vnode.ctx &&
+    currentRenderingInstance &&
+    currentRenderingInstance.parent &&
+    currentRenderingInstance.parent.ut
+  ) {
+    const parentUid = currentRenderingInstance.parent.uid
+    const parentUt = currentRenderingInstance.parent.ut
+    if (!vnode.ctx.parentUt) {
+      vnode.ctx.parentUt = [{ ut: parentUt, uid: parentUid }]
+    } else if (!vnode.ctx.parentUt.find(i => parentUid === i.uid)) {
+      vnode.ctx.parentUt.push({ ut: parentUt, uid: parentUid })
+    }
+  }
 }
 
 export { createBaseVNode as createElementVNode }
