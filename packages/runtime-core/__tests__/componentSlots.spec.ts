@@ -325,6 +325,26 @@ describe('component: slots', () => {
     ).not.toHaveBeenWarned()
   })
 
+  test('basic warn', () => {
+    const Comp = {
+      setup(_: any, { slots }: any) {
+        slots.default && slots.default()
+        return () => null
+      },
+    }
+
+    const App = {
+      setup() {
+        return () => h(Comp, () => h('div'))
+      },
+    }
+
+    createApp(App).mount(nodeOps.createElement('div'))
+    expect(
+      'Slot "default" invoked outside of the render function',
+    ).toHaveBeenWarned()
+  })
+
   test('should not warn when render in setup', () => {
     const container = {
       setup(_: any, { slots }: any) {
