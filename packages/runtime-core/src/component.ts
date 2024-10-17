@@ -856,11 +856,10 @@ function setupStatefulComponent(
   // 2. call setup()
   const { setup } = Component
   if (setup) {
+    pauseTracking()
     const setupContext = (instance.setupContext =
       setup.length > 1 ? createSetupContext(instance) : null)
-
     const reset = setCurrentInstance(instance)
-    pauseTracking()
     const setupResult = callWithErrorHandling(
       setup,
       instance,
@@ -870,12 +869,16 @@ function setupStatefulComponent(
         setupContext,
       ],
     )
+    const isAsyncSetup = isPromise(setupResult)
     resetTracking()
     reset()
 
-    if (isPromise(setupResult)) {
-      // async setup, mark as async boundary for useId()
-      if (!isAsyncWrapper(instance)) markAsyncBoundary(instance)
+    if ((isAsyncSetup || instance.sp) && !isAsyncWrapper(instance)) {
+      // async setup / serverPrefetch, mark as async boundary for useId()
+      markAsyncBoundary(instance)
+    }
+
+    if (isAsyncSetup) {
       setupResult.then(unsetCurrentInstance, unsetCurrentInstance)
       if (isSSR) {
         // return the promise so server-renderer can wait on it
@@ -1003,7 +1006,7 @@ export function finishComponentSetup(
           instance.vnode.props &&
           instance.vnode.props['inline-template']) ||
         Component.template ||
-        resolveMergedOptions(instance).template
+        (__FEATURE_OPTIONS_API__ && resolveMergedOptions(instance).template)
       if (template) {
         if (__DEV__) {
           startMeasure(instance, `compile`)
