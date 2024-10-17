@@ -713,3 +713,12 @@ export function useShadowRoot(): ShadowRoot | null {
   const el = __DEV__ ? useHost('useShadowRoot') : useHost()
   return el && el.shadowRoot
 }
+
+/**
+ * Retrieve the ElementInternals of the current custom element. Only usable in setup()
+ * of a `defineCustomElement` component.
+ */
+export function useHostInternals(): ElementInternals | null {
+  const el = __DEV__ ? useHost('useHostInternals') : useHost()
+  return el && el._internals
+}
