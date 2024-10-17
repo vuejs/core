@@ -386,7 +386,7 @@ function getConstantTypeOfHelperCall(
 ): ConstantTypes {
   if (
     value.type === NodeTypes.JS_CALL_EXPRESSION &&
-    !isString(value.callee) &&
+    isSymbol(value.callee) &&
     allowHoistedHelperSet.has(value.callee)
   ) {
     const arg = value.arguments[0] as JSChildNode

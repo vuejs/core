@@ -8,6 +8,7 @@ import {
   parserOptions,
   trackSlotScopes,
   trackVForSlotScopes,
+  trackVScopeScopes,
   transform,
   transformBind,
   transformExpression,
@@ -65,6 +66,7 @@ export function compile(
       ssrTransformElement,
       ssrTransformComponent,
       trackSlotScopes,
+      trackVScopeScopes,
       transformStyle,
       ...(options.nodeTransforms || []), // user transforms
     ],
