@@ -4,6 +4,7 @@ import {
   Suspense,
   Teleport,
   createStaticVNode,
+  defineCustomElement,
   h,
   nextTick,
   reactive,
@@ -349,6 +350,7 @@ describe('useCssVars', () => {
     expect(() => render(h(App), root)).not.toThrow(TypeError)
     await nextTick()
     expect(target.children.length).toBe(0)
+    expect(root.children[0].outerHTML.includes('data-v-owner')).toBe(true)
   })
 
   test('with string style', async () => {
@@ -380,5 +382,27 @@ describe('useCssVars', () => {
     for (const c of [].slice.call(root.children as any)) {
       expect((c as HTMLElement).style.getPropertyValue(`--color`)).toBe('red')
     }
+  })
+
+  // #8826
+  test('with custom element', async () => {
+    const state = reactive({ color: 'red' })
+    const container = document.createElement('div')
+    const App = defineCustomElement({
+      styles: [`div { color: red; }`],
+      setup() {
+        useCssVars(() => state)
+        return () => {
+          return h('div', 'hello')
+        }
+      },
+    })
+    customElements.define('css-vars-ce', App)
+    container.innerHTML = `<css-vars-ce></css-vars-ce>`
+    document.body.appendChild(container)
+    await nextTick()
+    expect(container.innerHTML).toBe(
+      `<css-vars-ce style="--color: red;"></css-vars-ce>`,
+    )
   })
 })

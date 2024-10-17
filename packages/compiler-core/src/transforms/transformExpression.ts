@@ -44,7 +44,7 @@ import { parseExpression } from '@babel/parser'
 import { IS_REF, UNREF } from '../runtimeHelpers'
 import { BindingTypes } from '../options'
 
-const isLiteralWhitelisted = /*#__PURE__*/ makeMap('true,false,null,this')
+const isLiteralWhitelisted = /*@__PURE__*/ makeMap('true,false,null,this')
 
 export const transformExpression: NodeTransform = (node, context) => {
   if (node.type === NodeTypes.INTERPOLATION) {
@@ -116,7 +116,11 @@ export function processExpression(
   }
 
   const { inline, bindingMetadata } = context
-  const rewriteIdentifier = (raw: string, parent?: Node, id?: Identifier) => {
+  const rewriteIdentifier = (
+    raw: string,
+    parent?: Node | null,
+    id?: Identifier,
+  ) => {
     const type = hasOwn(bindingMetadata, raw) && bindingMetadata[raw]
     if (inline) {
       // x = y
@@ -250,7 +254,7 @@ export function processExpression(
       if (isLiteral) {
         node.constType = ConstantTypes.CAN_STRINGIFY
       } else {
-        node.constType = ConstantTypes.CAN_HOIST
+        node.constType = ConstantTypes.CAN_CACHE
       }
     }
     return node
@@ -313,9 +317,10 @@ export function processExpression(
         // local scope variable (a v-for alias, or a v-slot prop)
         if (
           !(needPrefix && isLocal) &&
-          parent.type !== 'CallExpression' &&
-          parent.type !== 'NewExpression' &&
-          parent.type !== 'MemberExpression'
+          (!parent ||
+            (parent.type !== 'CallExpression' &&
+              parent.type !== 'NewExpression' &&
+              parent.type !== 'MemberExpression'))
         ) {
           ;(node as QualifiedId).isConstant = true
         }
