@@ -235,7 +235,9 @@ function rewriteSelector(
     const deep = (rule as any).__deep
     if (!deep) {
       extractAndWrapNodes(rule)
-      const atruleNodes = rule.nodes.filter(node => node.type === 'atrule')
+      const atruleNodes = rule.nodes.filter(
+        node => node.type === 'atrule',
+      ) as AtRule[]
       for (const atnode of atruleNodes) {
         extractAndWrapNodes(atnode)
       }
