@@ -213,18 +213,10 @@ function rewriteSelector(
       // instead.
       // ::v-slotted(.foo) -> .foo[xxxxxxx-s]
       if (value === ':slotted' || value === '::v-slotted') {
-        rewriteSelector(
-          id,
-          rule,
-          n.nodes[0],
-          selectorRoot,
-          deep,
-          true /* slotted */,
-        )
         let last: selectorParser.Selector['nodes'][0] = n
         const nextNodes = [] as typeof selector.nodes
         n.nodes.forEach((ss, i) => {
-          rewriteSelector(id, ss, selectorRoot, true /* slotted */)
+          rewriteSelector(id, rule, ss, selectorRoot, deep, true /* slotted */)
           const index = selector.index(n)
           if (i > 0) {
             const prevList = selector.nodes.slice(0, index).concat(ss.nodes)
