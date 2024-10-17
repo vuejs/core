@@ -1416,7 +1416,7 @@ describe('defineCustomElement', () => {
     expect(e.shadowRoot!.innerHTML).toBe(`<div>hello</div>`)
     expect(e._internals).toBeTruthy()
   })
-  
+
   test('hyphenated attr removal', async () => {
     const E = defineCustomElement({
       props: {
