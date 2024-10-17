@@ -1,37 +1,18 @@
 name: Release
 
 on:
-  workflow_dispatch:
-    inputs:
-      branch:
-        description: 'Branch to publish'
-        required: true
-        default: 'main'
-        type: choice
-        options:
-          - main
-          - minor
-      bump:
-        description: 'Bump version'
-        required: true
-        default: 'patch'
-        type: choice
-        options:
-          - patch
-          - minor
-          - prepatch
-          - preminor
-          - custom
-      custom_version:
-        description: 'Custom version'
-        required: false
-        default: ''
-        type: string
+  push:
+    tags:
+      - 'v*' # Push events to matching v*, i.e. v1.0, v20.15.10
 
 jobs:
+  test:
+    uses: ./.github/workflows/test.yml
+
   release:
     # prevents this action from running on forks
     if: github.repository == 'vuejs/core'
+    needs: [test]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -41,9 +22,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          ref: ${{ inputs.branch }}
-          fetch-depth: 0 # need this to get tags for changelog generation
 
       - name: Install pnpm
         uses: pnpm/action-setup@v4
@@ -58,38 +36,20 @@ jobs:
       - name: Install deps
         run: pnpm install
 
-      - name: Configure git user as vue bot
+      - name: Build and publish
+        id: publish
         run: |
-          git config user.name "vue-bot"
-          git config user.email "<bot@vuejs.org>"
-
-      - name: Import GPG key
-        uses: crazy-max/ghaction-import-gpg@v6
-        with:
-          gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
-          passphrase: ${{ secrets.GPG_PASSPHRASE }}
-          git_user_signingkey: true
-          git_commit_gpgsign: true
-
-      - name: Run release script
-        id: release
-        run: |
-          pnpm release ${{ inputs.bump != 'custom' && inputs.bump || inputs.custom_version }} --skipPrompts
-          RELEASE_TAG=$(git describe --tags --abbrev=0)
-          echo "tag=$RELEASE_TAG" >> $GITHUB_OUTPUT
+          pnpm release --publishOnly
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-      - name: Push tags
-        run: git push -u origin ${{ inputs.branch }} --follow-tags
-
-      - name: Create Release for Tag
+      - name: Create GitHub release
         id: release_tag
         uses: yyx990803/release-tag@master
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: ${{ steps.release.outputs.tag }}
+          tag_name: ${{ github.ref }}
           body: |
             For stable releases, please refer to [CHANGELOG.md](https://github.com/vuejs/core/blob/main/CHANGELOG.md) for details.
             For pre-releases, please refer to [CHANGELOG.md](https://github.com/vuejs/core/blob/minor/CHANGELOG.md) of the `minor` branch.

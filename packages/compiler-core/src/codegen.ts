@@ -49,8 +49,6 @@ import {
   CREATE_TEXT,
   CREATE_VNODE,
   OPEN_BLOCK,
-  POP_SCOPE_ID,
-  PUSH_SCOPE_ID,
   RESOLVE_COMPONENT,
   RESOLVE_DIRECTIVE,
   RESOLVE_FILTER,
@@ -101,7 +99,7 @@ interface MappingItem {
   name: string | null
 }
 
-const PURE_ANNOTATION = `/*#__PURE__*/`
+const PURE_ANNOTATION = `/*@__PURE__*/`
 
 const aliasHelper = (s: symbol) => `${helperNameMap[s]}: _${helperNameMap[s]}`
 
@@ -479,11 +477,6 @@ function genModulePreamble(
     ssrRuntimeModuleName,
   } = context
 
-  if (genScopeId && ast.hoists.length) {
-    ast.helpers.add(PUSH_SCOPE_ID)
-    ast.helpers.add(POP_SCOPE_ID)
-  }
-
   // generate import statements for helpers
   if (ast.helpers.size) {
     const helpers = Array.from(ast.helpers)
@@ -572,34 +565,14 @@ function genHoists(hoists: (JSChildNode | null)[], context: CodegenContext) {
     return
   }
   context.pure = true
-  const { push, newline, helper, scopeId, mode } = context
-  const genScopeId = !__BROWSER__ && scopeId != null && mode !== 'function'
+  const { push, newline } = context
   newline()
-
-  // generate inlined withScopeId helper
-  if (genScopeId) {
-    const param = context.isTS ? '(n: any)' : 'n'
-    push(
-      `const _withScopeId = ${param} => (${helper(
-        PUSH_SCOPE_ID,
-      )}("${scopeId}"),n=n(),${helper(POP_SCOPE_ID)}(),n)`,
-    )
-    newline()
-  }
 
   for (let i = 0; i < hoists.length; i++) {
     const exp = hoists[i]
     if (exp) {
-      const needScopeIdWrapper = genScopeId && exp.type === NodeTypes.VNODE_CALL
-      push(
-        `const _hoisted_${i + 1} = ${
-          needScopeIdWrapper ? `${PURE_ANNOTATION} _withScopeId(() => ` : ``
-        }`,
-      )
+      push(`const _hoisted_${i + 1} = `)
       genNode(exp, context)
-      if (needScopeIdWrapper) {
-        push(`)`)
-      }
       newline()
     }
   }
@@ -752,7 +725,7 @@ function genNode(node: CodegenNode | symbol | string, context: CodegenContext) {
       !__BROWSER__ && genReturnStatement(node, context)
       break
 
-    /* istanbul ignore next */
+    /* v8 ignore start */
     case NodeTypes.IF_BRANCH:
       // noop
       break
@@ -763,6 +736,7 @@ function genNode(node: CodegenNode | symbol | string, context: CodegenContext) {
         const exhaustiveCheck: never = node
         return exhaustiveCheck
       }
+    /* v8 ignore stop */
   }
 }
 
@@ -1036,8 +1010,12 @@ function genConditionalExpression(
 
 function genCacheExpression(node: CacheExpression, context: CodegenContext) {
   const { push, helper, indent, deindent, newline } = context
+  const { needPauseTracking, needArraySpread } = node
+  if (needArraySpread) {
+    push(`[...(`)
+  }
   push(`_cache[${node.index}] || (`)
-  if (node.isVOnce) {
+  if (needPauseTracking) {
     indent()
     push(`${helper(SET_BLOCK_TRACKING)}(-1),`)
     newline()
@@ -1045,7 +1023,7 @@ function genCacheExpression(node: CacheExpression, context: CodegenContext) {
   }
   push(`_cache[${node.index}] = `)
   genNode(node.value, context)
-  if (node.isVOnce) {
+  if (needPauseTracking) {
     push(`).cacheIndex = ${node.index},`)
     newline()
     push(`${helper(SET_BLOCK_TRACKING)}(1),`)
@@ -1054,6 +1032,9 @@ function genCacheExpression(node: CacheExpression, context: CodegenContext) {
     deindent()
   }
   push(`)`)
+  if (needArraySpread) {
+    push(`)]`)
+  }
 }
 
 function genTemplateLiteral(node: TemplateLiteral, context: CodegenContext) {

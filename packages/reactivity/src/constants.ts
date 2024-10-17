@@ -20,12 +20,5 @@ export enum ReactiveFlags {
   IS_READONLY = '__v_isReadonly',
   IS_SHALLOW = '__v_isShallow',
   RAW = '__v_raw',
-}
-
-export enum DirtyLevels {
-  NotDirty = 0,
-  QueryingDirty = 1,
-  MaybeDirty_ComputedSideEffect = 2,
-  MaybeDirty = 3,
-  Dirty = 4,
+  IS_REF = '__v_isRef',
 }

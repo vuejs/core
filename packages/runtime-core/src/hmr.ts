@@ -14,10 +14,10 @@ type HMRComponent = ComponentOptions | ClassComponent
 
 export let isHmrUpdating = false
 
-export const hmrDirtyComponents = new Map<
+export const hmrDirtyComponents: Map<
   ConcreteComponent,
   Set<ComponentInternalInstance>
->()
+> = new Map<ConcreteComponent, Set<ComponentInternalInstance>>()
 
 export interface HMRRuntime {
   createRecord: typeof createRecord
@@ -49,7 +49,7 @@ const map: Map<
   }
 > = new Map()
 
-export function registerHMR(instance: ComponentInternalInstance) {
+export function registerHMR(instance: ComponentInternalInstance): void {
   const id = instance.type.__hmrId!
   let record = map.get(id)
   if (!record) {
@@ -59,7 +59,7 @@ export function registerHMR(instance: ComponentInternalInstance) {
   record.instances.add(instance)
 }
 
-export function unregisterHMR(instance: ComponentInternalInstance) {
+export function unregisterHMR(instance: ComponentInternalInstance): void {
   map.get(instance.type.__hmrId!)!.instances.delete(instance)
 }
 
@@ -78,7 +78,7 @@ function normalizeClassComponent(component: HMRComponent): ComponentOptions {
   return isClassComponent(component) ? component.__vccOpts : component
 }
 
-function rerender(id: string, newRender?: Function) {
+function rerender(id: string, newRender?: Function): void {
   const record = map.get(id)
   if (!record) {
     return
@@ -96,13 +96,12 @@ function rerender(id: string, newRender?: Function) {
     instance.renderCache = []
     // this flag forces child components with slot content to update
     isHmrUpdating = true
-    instance.effect.dirty = true
     instance.update()
     isHmrUpdating = false
   })
 }
 
-function reload(id: string, newComp: HMRComponent) {
+function reload(id: string, newComp: HMRComponent): void {
   const record = map.get(id)
   if (!record) return
 
@@ -144,9 +143,10 @@ function reload(id: string, newComp: HMRComponent) {
       // 4. Force the parent instance to re-render. This will cause all updated
       // components to be unmounted and re-mounted. Queue the update so that we
       // don't end up forcing the same parent to re-render multiple times.
-      instance.parent.effect.dirty = true
       queueJob(() => {
+        isHmrUpdating = true
         instance.parent!.update()
+        isHmrUpdating = false
         // #6930, #11248 avoid infinite recursion
         dirtyInstances.delete(instance)
       })
@@ -160,6 +160,11 @@ function reload(id: string, newComp: HMRComponent) {
       console.warn(
         '[HMR] Root or manually mounted instance modified. Full reload required.',
       )
+    }
+
+    // update custom element child style
+    if (instance.root.ce && instance !== instance.root) {
+      instance.root.ce._removeChildStyle(oldComp)
     }
   }
 
