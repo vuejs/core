@@ -12,6 +12,7 @@ import {
   ShapeFlags,
   SlotFlags,
   def,
+  hasOwn,
   isArray,
   isFunction,
 } from '@vue/shared'
@@ -87,17 +88,18 @@ const normalizeSlotValue = (value: unknown): VNode[] =>
 const normalizeSlot = (
   key: string,
   rawSlot: Function,
-  ctx: ComponentInternalInstance | null | undefined,
+  rawSlots: RawSlots,
 ): Slot => {
   if ((rawSlot as any)._n) {
     // already normalized - #5353
     return rawSlot as Slot
   }
+  const ctx = rawSlots._ctx
   const normalized = withCtx((...args: any[]) => {
     if (
       __DEV__ &&
       currentInstance &&
-      (!ctx || ctx.root === currentInstance.root)
+      (!hasOwn(rawSlots, '_ctx') || (ctx && ctx.root === currentInstance.root))
     ) {
       warn(
         `Slot "${key}" invoked outside of the render function: ` +
@@ -117,12 +119,11 @@ const normalizeObjectSlots = (
   slots: InternalSlots,
   instance: ComponentInternalInstance,
 ) => {
-  const ctx = rawSlots._ctx
   for (const key in rawSlots) {
     if (isInternalKey(key)) continue
     const value = rawSlots[key]
     if (isFunction(value)) {
-      slots[key] = normalizeSlot(key, value, ctx)
+      slots[key] = normalizeSlot(key, value, rawSlots)
     } else if (value != null) {
       if (
         __DEV__ &&

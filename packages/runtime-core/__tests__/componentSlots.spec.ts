@@ -324,4 +324,52 @@ describe('component: slots', () => {
       'Slot "default" invoked outside of the render function',
     ).not.toHaveBeenWarned()
   })
+
+  test('basic warn', () => {
+    const Comp = {
+      setup(_: any, { slots }: any) {
+        slots.default && slots.default()
+        return () => null
+      },
+    }
+
+    const App = {
+      setup() {
+        return () => h(Comp, () => h('div'))
+      },
+    }
+
+    createApp(App).mount(nodeOps.createElement('div'))
+    expect(
+      'Slot "default" invoked outside of the render function',
+    ).toHaveBeenWarned()
+  })
+
+  test('should not warn when render in setup', () => {
+    const container = {
+      setup(_: any, { slots }: any) {
+        return function () {
+          return slots.default && slots.default()
+        }
+      },
+    }
+
+    const comp = h(container, null, {
+      default() {
+        return () => h('div')
+      },
+    })
+
+    const App = {
+      setup() {
+        render(h(comp), nodeOps.createElement('div'))
+        return () => null
+      },
+    }
+
+    createApp(App).mount(nodeOps.createElement('div'))
+    expect(
+      'Slot "default" invoked outside of the render function',
+    ).not.toHaveBeenWarned()
+  })
 })
