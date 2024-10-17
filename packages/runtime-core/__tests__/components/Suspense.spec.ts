@@ -8,6 +8,7 @@ import {
   KeepAlive,
   Suspense,
   type SuspenseProps,
+  createCommentVNode,
   h,
   nextTick,
   nodeOps,
@@ -22,7 +23,7 @@ import {
   watch,
   watchEffect,
 } from '@vue/runtime-test'
-import { createApp, defineComponent } from 'vue'
+import { computed, createApp, defineComponent, inject, provide } from 'vue'
 import type { RawSlots } from 'packages/runtime-core/src/componentSlots'
 import { resetSuspenseId } from '../../src/components/Suspense'
 
@@ -52,6 +53,18 @@ describe('Suspense', () => {
         return p
       },
     }
+  }
+
+  const RouterView = {
+    setup(_: any, { slots }: any) {
+      const route = inject('route') as any
+      const depth = inject('depth', 0)
+      provide('depth', depth + 1)
+      return () => {
+        const current = route.value[depth]
+        return slots.default({ Component: current })[0]
+      }
+    },
   }
 
   test('fallback content', async () => {
@@ -1039,6 +1052,202 @@ describe('Suspense', () => {
     expect(serializeInner(root)).toBe(`<div>foo<div>foo nested</div></div>`)
   })
 
+  // #10098
+  test('switching branches w/ nested suspense', async () => {
+    const OuterB = defineAsyncComponent({
+      setup: () => {
+        return () =>
+          h(RouterView, null, {
+            default: ({ Component }: any) => [
+              h(Suspense, null, {
+                default: () => h(Component),
+              }),
+            ],
+          })
+      },
+    })
+
+    const InnerB = defineAsyncComponent({
+      setup: () => {
+        return () => h('div', 'innerB')
+      },
+    })
+
+    const OuterA = defineAsyncComponent({
+      setup: () => {
+        return () =>
+          h(RouterView, null, {
+            default: ({ Component }: any) => [
+              h(Suspense, null, {
+                default: () => h(Component),
+              }),
+            ],
+          })
+      },
+    })
+
+    const InnerA = defineAsyncComponent({
+      setup: () => {
+        return () => h('div', 'innerA')
+      },
+    })
+
+    const toggle = ref(true)
+    const route = computed(() => {
+      return toggle.value ? [OuterA, InnerA] : [OuterB, InnerB]
+    })
+
+    const Comp = {
+      setup() {
+        provide('route', route)
+        return () =>
+          h(RouterView, null, {
+            default: ({ Component }: any) => [
+              h(Suspense, null, {
+                default: () => h(Component),
+              }),
+            ],
+          })
+      },
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(Comp), root)
+    await Promise.all(deps)
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<!---->`)
+
+    await Promise.all(deps)
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<div>innerA</div>`)
+
+    deps.length = 0
+
+    toggle.value = false
+    await nextTick()
+    // toggle again
+    toggle.value = true
+
+    await Promise.all(deps)
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<div>innerA</div>`)
+  })
+
+  // #10415
+  test('nested suspense (w/ suspensible) switch several times before parent suspense resolve', async () => {
+    const OuterA = defineAsyncComponent({
+      setup: () => {
+        return () =>
+          h(RouterView, null, {
+            default: ({ Component }: any) => [
+              h(Suspense, null, {
+                default: () => h(Component),
+              }),
+            ],
+          })
+      },
+    })
+
+    const InnerA = defineAsyncComponent({
+      setup: () => {
+        return () => h('div', 'innerA')
+      },
+    })
+
+    const route = shallowRef([OuterA, InnerA])
+    const InnerB = defineAsyncComponent(
+      {
+        setup: () => {
+          return () => h('div', 'innerB')
+        },
+      },
+      5,
+    )
+
+    const InnerB1 = defineAsyncComponent(
+      {
+        setup: () => {
+          return () => h('div', 'innerB1')
+        },
+      },
+      5,
+    )
+
+    const InnerB2 = defineAsyncComponent(
+      {
+        setup: () => {
+          return () => h('div', 'innerB2')
+        },
+      },
+      5,
+    )
+
+    const OuterB = defineAsyncComponent(
+      {
+        setup() {
+          nextTick(async () => {
+            await new Promise(resolve => setTimeout(resolve, 1))
+            route.value = [OuterB, InnerB1]
+          })
+
+          nextTick(async () => {
+            await new Promise(resolve => setTimeout(resolve, 1))
+            route.value = [OuterB, InnerB2]
+          })
+
+          return () =>
+            h(RouterView, null, {
+              default: ({ Component }: any) => [
+                h(
+                  Suspense,
+                  { suspensible: true },
+                  {
+                    default: () => h(Component),
+                  },
+                ),
+              ],
+            })
+        },
+      },
+      5,
+    )
+
+    const Comp = {
+      setup() {
+        provide('route', route)
+        return () =>
+          h(RouterView, null, {
+            default: ({ Component }: any) => [
+              h(Suspense, null, {
+                default: () => h(Component),
+              }),
+            ],
+          })
+      },
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(Comp), root)
+    await Promise.all(deps)
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<!---->`)
+
+    await Promise.all(deps)
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<div>innerA</div>`)
+
+    deps.length = 0
+
+    route.value = [OuterB, InnerB]
+    await nextTick()
+
+    await Promise.all(deps)
+    await Promise.all(deps)
+    await Promise.all(deps)
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<div>innerB2</div>`)
+  })
+
   test('branch switch to 3rd branch before resolve', async () => {
     const calls: string[] = []
 
@@ -1813,7 +2022,7 @@ describe('Suspense', () => {
     viewRef.value = 0
     await nextTick()
 
-    expect(serializeInner(root)).toBe('<!---->')
+    expect(serializeInner(root)).toBe('<div>sync</div>')
 
     await Promise.all(deps)
     await nextTick()
@@ -1825,6 +2034,91 @@ describe('Suspense', () => {
     // TypeError: Cannot read properties of null (reading 'parentNode')
     // This has been fixed
     expect(serializeInner(root)).toBe(`<div>sync</div>`)
+  })
+
+  // #10899 / #11427
+  test('KeepAlive + Suspense switch before branch resolves', async () => {
+    const Async1 = defineAsyncComponent({
+      render() {
+        return h('div', 'async1')
+      },
+    })
+    const Async2 = defineAsyncComponent({
+      render() {
+        return h('div', 'async2')
+      },
+    })
+    const components = [Async1, Async2]
+    const viewRef = ref(0)
+    const root = nodeOps.createElement('div')
+    const App = {
+      render() {
+        return h(
+          KeepAlive,
+          {
+            max: 1,
+          },
+          {
+            default: () => {
+              return h(Suspense, null, {
+                default: h(components[viewRef.value]),
+                fallback: h('div', 'loading'),
+              })
+            },
+          },
+        )
+      },
+    }
+    render(h(App), root)
+    expect(serializeInner(root)).toBe(`<div>loading</div>`)
+
+    // switch to Async2 before Async1 resolves
+    viewRef.value = 1
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<div>loading</div>`)
+
+    await Promise.all(deps)
+    await nextTick()
+    expect(serializeInner(root)).toBe('<div>async2</div>')
+
+    viewRef.value = 0
+    await nextTick()
+    await Promise.all(deps)
+    expect(serializeInner(root)).toBe(`<div>async1</div>`)
+
+    viewRef.value = 1
+    await nextTick()
+    await Promise.all(deps)
+    expect(serializeInner(root)).toBe(`<div>async2</div>`)
+  })
+
+  test('KeepAlive + Suspense + comment slot', async () => {
+    const toggle = ref(false)
+    const Async = defineAsyncComponent({
+      render() {
+        return h('div', 'async1')
+      },
+    })
+    const App = {
+      render() {
+        return h(KeepAlive, null, {
+          default: () => {
+            return h(Suspense, null, {
+              default: toggle.value ? h(Async) : createCommentVNode('v-if'),
+            })
+          },
+        })
+      },
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(App), root)
+    expect(serializeInner(root)).toBe(`<!--v-if-->`)
+
+    toggle.value = true
+    await nextTick()
+    await Promise.all(deps)
+    expect(serializeInner(root)).toBe(`<div>async1</div>`)
   })
 
   // #6416 follow up / #10017

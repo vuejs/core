@@ -10,12 +10,13 @@ import {
   remove,
 } from '@vue/shared'
 import { isAsyncWrapper } from './apiAsyncComponent'
-import { getExposeProxy } from './component'
 import { warn } from './warning'
-import { isRef } from '@vue/reactivity'
+import { isRef, toRaw } from '@vue/reactivity'
 import { ErrorCodes, callWithErrorHandling } from './errorHandling'
 import type { SchedulerJob } from './scheduler'
 import { queuePostRenderEffect } from './renderer'
+import { getComponentPublicInstance } from './component'
+import { knownTemplateRefs } from './helpers/useTemplateRef'
 
 /**
  * Function for handling a template ref
@@ -26,7 +27,7 @@ export function setRef(
   parentSuspense: SuspenseBoundary | null,
   vnode: VNode,
   isUnmount = false,
-) {
+): void {
   if (isArray(rawRef)) {
     rawRef.forEach((r, i) =>
       setRef(
@@ -48,7 +49,7 @@ export function setRef(
 
   const refValue =
     vnode.shapeFlag & ShapeFlags.STATEFUL_COMPONENT
-      ? getExposeProxy(vnode.component!) || vnode.component!.proxy
+      ? getComponentPublicInstance(vnode.component!)
       : vnode.el
   const value = isUnmount ? null : refValue
 
@@ -63,12 +64,31 @@ export function setRef(
   const oldRef = oldRawRef && (oldRawRef as VNodeNormalizedRefAtom).r
   const refs = owner.refs === EMPTY_OBJ ? (owner.refs = {}) : owner.refs
   const setupState = owner.setupState
+  const rawSetupState = toRaw(setupState)
+  const canSetSetupRef =
+    setupState === EMPTY_OBJ
+      ? () => false
+      : (key: string) => {
+          if (__DEV__) {
+            if (hasOwn(rawSetupState, key) && !isRef(rawSetupState[key])) {
+              warn(
+                `Template ref "${key}" used on a non-ref value. ` +
+                  `It will not work in the production build.`,
+              )
+            }
+
+            if (knownTemplateRefs.has(rawSetupState[key] as any)) {
+              return false
+            }
+          }
+          return hasOwn(rawSetupState, key)
+        }
 
   // dynamic ref changed. unset old ref
   if (oldRef != null && oldRef !== ref) {
     if (isString(oldRef)) {
       refs[oldRef] = null
-      if (hasOwn(setupState, oldRef)) {
+      if (canSetSetupRef(oldRef)) {
         setupState[oldRef] = null
       }
     } else if (isRef(oldRef)) {
@@ -81,12 +101,12 @@ export function setRef(
   } else {
     const _isString = isString(ref)
     const _isRef = isRef(ref)
-    const isVFor = rawRef.f
+
     if (_isString || _isRef) {
       const doSet = () => {
-        if (isVFor) {
+        if (rawRef.f) {
           const existing = _isString
-            ? hasOwn(setupState, ref)
+            ? canSetSetupRef(ref)
               ? setupState[ref]
               : refs[ref]
             : ref.value
@@ -96,7 +116,7 @@ export function setRef(
             if (!isArray(existing)) {
               if (_isString) {
                 refs[ref] = [refValue]
-                if (hasOwn(setupState, ref)) {
+                if (canSetSetupRef(ref)) {
                   setupState[ref] = refs[ref]
                 }
               } else {
@@ -109,7 +129,7 @@ export function setRef(
           }
         } else if (_isString) {
           refs[ref] = value
-          if (hasOwn(setupState, ref)) {
+          if (canSetSetupRef(ref)) {
             setupState[ref] = value
           }
         } else if (_isRef) {
@@ -119,15 +139,14 @@ export function setRef(
           warn('Invalid template ref type:', ref, `(${typeof ref})`)
         }
       }
-      // #9908 ref on v-for mutates the same array for both mount and unmount
-      // and should be done together
-      if (isUnmount || isVFor) {
-        doSet()
-      } else {
-        // #1789: set new refs in a post job so that they don't get overwritten
-        // by unmounting ones.
+      if (value) {
+        // #1789: for non-null values, set them after render
+        // null values means this is unmount and it should not overwrite another
+        // ref with the same key
         ;(doSet as SchedulerJob).id = -1
         queuePostRenderEffect(doSet, parentSuspense)
+      } else {
+        doSet()
       }
     } else if (__DEV__) {
       warn('Invalid template ref type:', ref, `(${typeof ref})`)
