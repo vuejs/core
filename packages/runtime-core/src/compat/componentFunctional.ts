@@ -1,9 +1,9 @@
 import {
-  ComponentInternalInstance,
-  isStatefulComponent,
+  type ComponentInternalInstance,
   type ComponentOptions,
   type FunctionalComponent,
   getCurrentInstance,
+  isStatefulComponent,
 } from '../component'
 import { resolveInjections } from '../componentOptions'
 import type { InternalSlots } from '../componentSlots'
