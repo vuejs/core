@@ -1,70 +1,69 @@
-import { NodeTransform, TransformContext } from '../transform'
+import type { NodeTransform, TransformContext } from '../transform'
 import {
-  NodeTypes,
+  type ArrayExpression,
+  type CallExpression,
+  type ComponentNode,
+  ConstantTypes,
+  type DirectiveArguments,
+  type DirectiveNode,
+  type ElementNode,
   ElementTypes,
-  CallExpression,
-  ObjectExpression,
-  ElementNode,
-  DirectiveNode,
-  ExpressionNode,
-  ArrayExpression,
-  createCallExpression,
+  type ExpressionNode,
+  type JSChildNode,
+  NodeTypes,
+  type ObjectExpression,
+  type Property,
+  type TemplateTextChildNode,
+  type VNodeCall,
   createArrayExpression,
+  createCallExpression,
+  createObjectExpression,
   createObjectProperty,
   createSimpleExpression,
-  createObjectExpression,
-  Property,
-  ComponentNode,
-  VNodeCall,
-  TemplateTextChildNode,
-  DirectiveArguments,
   createVNodeCall,
-  ConstantTypes
 } from '../ast'
 import {
   PatchFlags,
-  PatchFlagNames,
-  isSymbol,
-  isOn,
-  isObject,
-  isReservedProp,
-  capitalize,
   camelize,
-  isBuiltInDirective
+  capitalize,
+  isBuiltInDirective,
+  isObject,
+  isOn,
+  isReservedProp,
+  isSymbol,
 } from '@vue/shared'
-import { createCompilerError, ErrorCodes } from '../errors'
+import { ErrorCodes, createCompilerError } from '../errors'
 import {
-  RESOLVE_DIRECTIVE,
-  RESOLVE_COMPONENT,
-  RESOLVE_DYNAMIC_COMPONENT,
+  GUARD_REACTIVE_PROPS,
+  KEEP_ALIVE,
   MERGE_PROPS,
   NORMALIZE_CLASS,
-  NORMALIZE_STYLE,
   NORMALIZE_PROPS,
-  TO_HANDLERS,
-  TELEPORT,
-  KEEP_ALIVE,
+  NORMALIZE_STYLE,
+  RESOLVE_COMPONENT,
+  RESOLVE_DIRECTIVE,
+  RESOLVE_DYNAMIC_COMPONENT,
   SUSPENSE,
+  TELEPORT,
+  TO_HANDLERS,
   UNREF,
-  GUARD_REACTIVE_PROPS
 } from '../runtimeHelpers'
 import {
-  getInnerRange,
-  toValidAssetId,
   findProp,
   isCoreComponent,
   isStaticArgOf,
-  findDir,
-  isStaticExp
+  isStaticExp,
+  toValidAssetId,
 } from '../utils'
 import { buildSlots } from './vSlot'
-import { getConstantType } from './hoistStatic'
+import { getConstantType } from './cacheStatic'
 import { BindingTypes } from '../options'
 import {
-  checkCompatEnabled,
   CompilerDeprecationTypes,
-  isCompatEnabled
+  checkCompatEnabled,
+  isCompatEnabled,
 } from '../compat/compatConfig'
+import { processExpression } from './transformExpression'
 
 // some directive transforms (e.g. v-model) may return a symbol for runtime
 // import, which should be used instead of a resolveDirective call.
@@ -101,8 +100,7 @@ export const transformElement: NodeTransform = (node, context) => {
 
     let vnodeProps: VNodeCall['props']
     let vnodeChildren: VNodeCall['children']
-    let vnodePatchFlag: VNodeCall['patchFlag']
-    let patchFlag: number = 0
+    let patchFlag: VNodeCall['patchFlag'] | 0 = 0
     let vnodeDynamicProps: VNodeCall['dynamicProps']
     let dynamicPropNames: string[] | undefined
     let vnodeDirectives: VNodeCall['directives']
@@ -117,7 +115,7 @@ export const transformElement: NodeTransform = (node, context) => {
         // updates inside get proper isSVG flag at runtime. (#639, #643)
         // This is technically web-specific, but splitting the logic out of core
         // leads to too much unnecessary complexity.
-        (tag === 'svg' || tag === 'foreignObject'))
+        (tag === 'svg' || tag === 'foreignObject' || tag === 'math'))
 
     // props
     if (props.length > 0) {
@@ -126,7 +124,7 @@ export const transformElement: NodeTransform = (node, context) => {
         context,
         undefined,
         isComponent,
-        isDynamicComponent
+        isDynamicComponent,
       )
       vnodeProps = propsBuildResult.props
       patchFlag = propsBuildResult.patchFlag
@@ -135,7 +133,7 @@ export const transformElement: NodeTransform = (node, context) => {
       vnodeDirectives =
         directives && directives.length
           ? (createArrayExpression(
-              directives.map(dir => buildDirectiveArgs(dir, context))
+              directives.map(dir => buildDirectiveArgs(dir, context)),
             ) as DirectiveArguments)
           : undefined
 
@@ -161,8 +159,8 @@ export const transformElement: NodeTransform = (node, context) => {
             createCompilerError(ErrorCodes.X_KEEP_ALIVE_INVALID_CHILDREN, {
               start: node.children[0].loc.start,
               end: node.children[node.children.length - 1].loc.end,
-              source: ''
-            })
+              source: '',
+            }),
           )
         }
       }
@@ -206,27 +204,8 @@ export const transformElement: NodeTransform = (node, context) => {
     }
 
     // patchFlag & dynamicPropNames
-    if (patchFlag !== 0) {
-      if (__DEV__) {
-        if (patchFlag < 0) {
-          // special flags (negative and mutually exclusive)
-          vnodePatchFlag =
-            patchFlag + ` /* ${PatchFlagNames[patchFlag as PatchFlags]} */`
-        } else {
-          // bitwise flags
-          const flagNames = Object.keys(PatchFlagNames)
-            .map(Number)
-            .filter(n => n > 0 && patchFlag & n)
-            .map(n => PatchFlagNames[n as PatchFlags])
-            .join(`, `)
-          vnodePatchFlag = patchFlag + ` /* ${flagNames} */`
-        }
-      } else {
-        vnodePatchFlag = String(patchFlag)
-      }
-      if (dynamicPropNames && dynamicPropNames.length) {
-        vnodeDynamicProps = stringifyDynamicPropNames(dynamicPropNames)
-      }
+    if (dynamicPropNames && dynamicPropNames.length) {
+      vnodeDynamicProps = stringifyDynamicPropNames(dynamicPropNames)
     }
 
     node.codegenNode = createVNodeCall(
@@ -234,13 +213,13 @@ export const transformElement: NodeTransform = (node, context) => {
       vnodeTag,
       vnodeProps,
       vnodeChildren,
-      vnodePatchFlag,
+      patchFlag === 0 ? undefined : patchFlag,
       vnodeDynamicProps,
       vnodeDirectives,
       !!shouldUseBlock,
       false /* disableTracking */,
       isComponent,
-      node.loc
+      node.loc,
     )
   }
 }
@@ -248,29 +227,38 @@ export const transformElement: NodeTransform = (node, context) => {
 export function resolveComponentType(
   node: ComponentNode,
   context: TransformContext,
-  ssr = false
-) {
+  ssr = false,
+): string | symbol | CallExpression {
   let { tag } = node
 
   // 1. dynamic component
   const isExplicitDynamic = isComponentTag(tag)
-  const isProp = findProp(node, 'is')
+  const isProp = findProp(node, 'is', false, true /* allow empty */)
   if (isProp) {
     if (
       isExplicitDynamic ||
       (__COMPAT__ &&
         isCompatEnabled(
           CompilerDeprecationTypes.COMPILER_IS_ON_ELEMENT,
-          context
+          context,
         ))
     ) {
-      const exp =
-        isProp.type === NodeTypes.ATTRIBUTE
-          ? isProp.value && createSimpleExpression(isProp.value.content, true)
-          : isProp.exp
+      let exp: ExpressionNode | undefined
+      if (isProp.type === NodeTypes.ATTRIBUTE) {
+        exp = isProp.value && createSimpleExpression(isProp.value.content, true)
+      } else {
+        exp = isProp.exp
+        if (!exp) {
+          // #10469 handle :is shorthand
+          exp = createSimpleExpression(`is`, false, isProp.arg!.loc)
+          if (!__BROWSER__) {
+            exp = isProp.exp = processExpression(exp, context)
+          }
+        }
+      }
       if (exp) {
         return createCallExpression(context.helper(RESOLVE_DYNAMIC_COMPONENT), [
-          exp
+          exp,
         ])
       }
     } else if (
@@ -283,19 +271,6 @@ export function resolveComponentType(
       // compat mode where all is values are considered components
       tag = isProp.value!.content.slice(4)
     }
-  }
-
-  // 1.5 v-is (TODO: remove in 3.4)
-  const isDir = !isExplicitDynamic && findDir(node, 'is')
-  if (isDir && isDir.exp) {
-    if (__DEV__) {
-      context.onWarn(
-        createCompilerError(ErrorCodes.DEPRECATION_V_IS, isDir.loc)
-      )
-    }
-    return createCallExpression(context.helper(RESOLVE_DYNAMIC_COMPONENT), [
-      isDir.exp
-    ])
   }
 
   // 2. built-in components (Teleport, Transition, KeepAlive, Suspense...)
@@ -385,6 +360,13 @@ function resolveSetupReference(name: string, context: TransformContext) {
         `${context.helperString(UNREF)}(${fromMaybeRef})`
       : `$setup[${JSON.stringify(fromMaybeRef)}]`
   }
+
+  const fromProps = checkType(BindingTypes.PROPS)
+  if (fromProps) {
+    return `${context.helperString(UNREF)}(${
+      context.inline ? '__props' : '$props'
+    }[${JSON.stringify(fromProps)}])`
+  }
 }
 
 export type PropsExpression = ObjectExpression | CallExpression | ExpressionNode
@@ -392,10 +374,10 @@ export type PropsExpression = ObjectExpression | CallExpression | ExpressionNode
 export function buildProps(
   node: ElementNode,
   context: TransformContext,
-  props: ElementNode['props'] = node.props,
+  props: ElementNode['props'] | undefined = node.props,
   isComponent: boolean,
   isDynamicComponent: boolean,
-  ssr = false
+  ssr = false,
 ): {
   props: PropsExpression | undefined
   directives: DirectiveNode[]
@@ -423,11 +405,23 @@ export function buildProps(
   const pushMergeArg = (arg?: PropsExpression) => {
     if (properties.length) {
       mergeArgs.push(
-        createObjectExpression(dedupeProperties(properties), elementLoc)
+        createObjectExpression(dedupeProperties(properties), elementLoc),
       )
       properties = []
     }
     if (arg) mergeArgs.push(arg)
+  }
+
+  // mark template ref on v-for
+  const pushRefVForMarker = () => {
+    if (context.scopes.vFor > 0) {
+      properties.push(
+        createObjectProperty(
+          createSimpleExpression('ref_for', true),
+          createSimpleExpression('true'),
+        ),
+      )
+    }
   }
 
   const analyzePatchFlag = ({ key, value }: Property) => {
@@ -450,6 +444,12 @@ export function buildProps(
 
       if (isEventHandler && isReservedProp(name)) {
         hasVnodeHook = true
+      }
+
+      if (isEventHandler && value.type === NodeTypes.JS_CALL_EXPRESSION) {
+        // handler wrapped with internal helper e.g. withModifiers(fn)
+        // extract the actual expression
+        value = value.arguments[0] as JSChildNode
       }
 
       if (
@@ -489,18 +489,11 @@ export function buildProps(
     // static attribute
     const prop = props[i]
     if (prop.type === NodeTypes.ATTRIBUTE) {
-      const { loc, name, value } = prop
+      const { loc, name, nameLoc, value } = prop
       let isStatic = true
       if (name === 'ref') {
         hasRef = true
-        if (context.scopes.vFor > 0) {
-          properties.push(
-            createObjectProperty(
-              createSimpleExpression('ref_for', true),
-              createSimpleExpression('true')
-            )
-          )
-        }
+        pushRefVForMarker()
         // in inline mode there is no setupState object, so we can't use string
         // keys to set the ref. Instead, we need to transform it to pass the
         // actual ref instead.
@@ -515,8 +508,8 @@ export function buildProps(
             properties.push(
               createObjectProperty(
                 createSimpleExpression('ref_key', true),
-                createSimpleExpression(value.content, true, value.loc)
-              )
+                createSimpleExpression(value.content, true, value.loc),
+              ),
             )
           }
         }
@@ -529,28 +522,24 @@ export function buildProps(
           (__COMPAT__ &&
             isCompatEnabled(
               CompilerDeprecationTypes.COMPILER_IS_ON_ELEMENT,
-              context
+              context,
             )))
       ) {
         continue
       }
       properties.push(
         createObjectProperty(
-          createSimpleExpression(
-            name,
-            true,
-            getInnerRange(loc, 0, name.length)
-          ),
+          createSimpleExpression(name, true, nameLoc),
           createSimpleExpression(
             value ? value.content : '',
             isStatic,
-            value ? value.loc : loc
-          )
-        )
+            value ? value.loc : loc,
+          ),
+        ),
       )
     } else {
       // directives
-      const { name, arg, exp, loc } = prop
+      const { name, arg, exp, loc, modifiers } = prop
       const isVBind = name === 'bind'
       const isVOn = name === 'on'
 
@@ -558,7 +547,7 @@ export function buildProps(
       if (name === 'slot') {
         if (!isComponent) {
           context.onError(
-            createCompilerError(ErrorCodes.X_V_SLOT_MISPLACED, loc)
+            createCompilerError(ErrorCodes.X_V_SLOT_MISPLACED, loc),
           )
         }
         continue
@@ -576,7 +565,7 @@ export function buildProps(
             (__COMPAT__ &&
               isCompatEnabled(
                 CompilerDeprecationTypes.COMPILER_IS_ON_ELEMENT,
-                context
+                context,
               ))))
       ) {
         continue
@@ -596,13 +585,8 @@ export function buildProps(
         shouldUseBlock = true
       }
 
-      if (isVBind && isStaticArgOf(arg, 'ref') && context.scopes.vFor > 0) {
-        properties.push(
-          createObjectProperty(
-            createSimpleExpression('ref_for', true),
-            createSimpleExpression('true')
-          )
-        )
+      if (isVBind && isStaticArgOf(arg, 'ref')) {
+        pushRefVForMarker()
       }
 
       // special case for v-bind and v-on with no argument
@@ -610,6 +594,8 @@ export function buildProps(
         hasDynamicKeys = true
         if (exp) {
           if (isVBind) {
+            // #10696 in case a v-bind object contains ref
+            pushRefVForMarker()
             // have to merge early for compat build check
             pushMergeArg()
             if (__COMPAT__) {
@@ -639,7 +625,7 @@ export function buildProps(
                   checkCompatEnabled(
                     CompilerDeprecationTypes.COMPILER_V_BIND_OBJECT_ORDER,
                     context,
-                    loc
+                    loc,
                   )
                 }
               }
@@ -647,7 +633,7 @@ export function buildProps(
               if (
                 isCompatEnabled(
                   CompilerDeprecationTypes.COMPILER_V_BIND_OBJECT_ORDER,
-                  context
+                  context,
                 )
               ) {
                 mergeArgs.unshift(exp)
@@ -662,7 +648,7 @@ export function buildProps(
               type: NodeTypes.JS_CALL_EXPRESSION,
               loc,
               callee: context.helper(TO_HANDLERS),
-              arguments: isComponent ? [exp] : [exp, `true`]
+              arguments: isComponent ? [exp] : [exp, `true`],
             })
           }
         } else {
@@ -671,11 +657,16 @@ export function buildProps(
               isVBind
                 ? ErrorCodes.X_V_BIND_NO_EXPRESSION
                 : ErrorCodes.X_V_ON_NO_EXPRESSION,
-              loc
-            )
+              loc,
+            ),
           )
         }
         continue
+      }
+
+      // force hydration for v-bind with .prop modifier
+      if (isVBind && modifiers.some(mod => mod.content === 'prop')) {
+        patchFlag |= PatchFlags.NEED_HYDRATION
       }
 
       const directiveTransform = context.directiveTransforms[name]
@@ -716,7 +707,7 @@ export function buildProps(
       propsExpression = createCallExpression(
         context.helper(MERGE_PROPS),
         mergeArgs,
-        elementLoc
+        elementLoc,
       )
     } else {
       // single v-bind with nothing else - no need for a mergeProps call
@@ -725,7 +716,7 @@ export function buildProps(
   } else if (properties.length) {
     propsExpression = createObjectExpression(
       dedupeProperties(properties),
-      elementLoc
+      elementLoc,
     )
   }
 
@@ -743,12 +734,12 @@ export function buildProps(
       patchFlag |= PatchFlags.PROPS
     }
     if (hasHydrationEventBinding) {
-      patchFlag |= PatchFlags.HYDRATE_EVENTS
+      patchFlag |= PatchFlags.NEED_HYDRATION
     }
   }
   if (
     !shouldUseBlock &&
-    (patchFlag === 0 || patchFlag === PatchFlags.HYDRATE_EVENTS) &&
+    (patchFlag === 0 || patchFlag === PatchFlags.NEED_HYDRATION) &&
     (hasRef || hasVnodeHook || runtimeDirectives.length > 0)
   ) {
     patchFlag |= PatchFlags.NEED_PATCH
@@ -785,7 +776,7 @@ export function buildProps(
           if (classProp && !isStaticExp(classProp.value)) {
             classProp.value = createCallExpression(
               context.helper(NORMALIZE_CLASS),
-              [classProp.value]
+              [classProp.value],
             )
           }
           if (
@@ -801,14 +792,14 @@ export function buildProps(
           ) {
             styleProp.value = createCallExpression(
               context.helper(NORMALIZE_STYLE),
-              [styleProp.value]
+              [styleProp.value],
             )
           }
         } else {
           // dynamic key binding, wrap with `normalizeProps`
           propsExpression = createCallExpression(
             context.helper(NORMALIZE_PROPS),
-            [propsExpression]
+            [propsExpression],
           )
         }
         break
@@ -821,9 +812,9 @@ export function buildProps(
           context.helper(NORMALIZE_PROPS),
           [
             createCallExpression(context.helper(GUARD_REACTIVE_PROPS), [
-              propsExpression
-            ])
-          ]
+              propsExpression,
+            ]),
+          ],
         )
         break
     }
@@ -834,7 +825,7 @@ export function buildProps(
     directives: runtimeDirectives,
     patchFlag,
     dynamicPropNames,
-    shouldUseBlock
+    shouldUseBlock,
   }
 }
 
@@ -875,14 +866,14 @@ function mergeAsArray(existing: Property, incoming: Property) {
   } else {
     existing.value = createArrayExpression(
       [existing.value, incoming.value],
-      existing.loc
+      existing.loc,
     )
   }
 }
 
 export function buildDirectiveArgs(
   dir: DirectiveNode,
-  context: TransformContext
+  context: TransformContext,
 ): ArrayExpression {
   const dirArgs: ArrayExpression['elements'] = []
   const runtime = directiveImportMap.get(dir)
@@ -922,10 +913,10 @@ export function buildDirectiveArgs(
     dirArgs.push(
       createObjectExpression(
         dir.modifiers.map(modifier =>
-          createObjectProperty(modifier, trueExpression)
+          createObjectProperty(modifier, trueExpression),
         ),
-        loc
-      )
+        loc,
+      ),
     )
   }
   return createArrayExpression(dirArgs, dir.loc)

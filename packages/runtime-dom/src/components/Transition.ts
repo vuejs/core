@@ -1,14 +1,14 @@
 import {
   BaseTransition,
-  BaseTransitionProps,
+  type BaseTransitionProps,
   BaseTransitionPropsValidators,
-  h,
+  DeprecationTypes,
+  type FunctionalComponent,
   assertNumber,
-  FunctionalComponent,
   compatUtils,
-  DeprecationTypes
+  h,
 } from '@vue/runtime-core'
-import { isObject, toNumber, extend, isArray } from '@vue/shared'
+import { extend, isArray, isObject, toNumber } from '@vue/shared'
 
 const TRANSITION = 'transition'
 const ANIMATION = 'animation'
@@ -32,25 +32,14 @@ export interface TransitionProps extends BaseTransitionProps<Element> {
   leaveToClass?: string
 }
 
+export const vtcKey: unique symbol = Symbol('_vtc')
+
 export interface ElementWithTransition extends HTMLElement {
   // _vtc = Vue Transition Classes.
   // Store the temporarily-added transition classes on the element
   // so that we can avoid overwriting them if the element's class is patched
   // during the transition.
-  _vtc?: Set<string>
-}
-
-// DOM Transition is a higher-order-component based on the platform-agnostic
-// base Transition component, with DOM-specific logic.
-export const Transition: FunctionalComponent<TransitionProps> = (
-  props,
-  { slots }
-) => h(BaseTransition, resolveTransitionProps(props), slots)
-
-Transition.displayName = 'Transition'
-
-if (__COMPAT__) {
-  Transition.__isBuiltIn = true
+  [vtcKey]?: Set<string>
 }
 
 const DOMTransitionPropsValidators = {
@@ -58,7 +47,7 @@ const DOMTransitionPropsValidators = {
   type: String,
   css: {
     type: Boolean,
-    default: true
+    default: true,
   },
   duration: [String, Number, Object],
   enterFromClass: String,
@@ -69,15 +58,36 @@ const DOMTransitionPropsValidators = {
   appearToClass: String,
   leaveFromClass: String,
   leaveActiveClass: String,
-  leaveToClass: String
+  leaveToClass: String,
 }
 
-export const TransitionPropsValidators = (Transition.props =
-  /*#__PURE__*/ extend(
-    {},
-    BaseTransitionPropsValidators as any,
-    DOMTransitionPropsValidators
-  ))
+export const TransitionPropsValidators: any = /*@__PURE__*/ extend(
+  {},
+  BaseTransitionPropsValidators as any,
+  DOMTransitionPropsValidators,
+)
+
+/**
+ * Wrap logic that attaches extra properties to Transition in a function
+ * so that it can be annotated as pure
+ */
+const decorate = (t: typeof Transition) => {
+  t.displayName = 'Transition'
+  t.props = TransitionPropsValidators
+  if (__COMPAT__) {
+    t.__isBuiltIn = true
+  }
+  return t
+}
+
+/**
+ * DOM Transition is a higher-order-component based on the platform-agnostic
+ * base Transition component, with DOM-specific logic.
+ */
+export const Transition: FunctionalComponent<TransitionProps> =
+  /*@__PURE__*/ decorate((props, { slots }) =>
+    h(BaseTransition, resolveTransitionProps(props), slots),
+  )
 
 /**
  * #3227 Incoming hooks may be merged into arrays when wrapping Transition
@@ -85,7 +95,7 @@ export const TransitionPropsValidators = (Transition.props =
  */
 const callHook = (
   hook: Function | Function[] | undefined,
-  args: any[] = []
+  args: any[] = [],
 ) => {
   if (isArray(hook)) {
     hook.forEach(h => h(...args))
@@ -99,7 +109,7 @@ const callHook = (
  * intends to explicitly control the end of the transition.
  */
 const hasExplicitCallback = (
-  hook: Function | Function[] | undefined
+  hook: Function | Function[] | undefined,
 ): boolean => {
   return hook
     ? isArray(hook)
@@ -109,7 +119,7 @@ const hasExplicitCallback = (
 }
 
 export function resolveTransitionProps(
-  rawProps: TransitionProps
+  rawProps: TransitionProps,
 ): BaseTransitionProps<Element> {
   const baseProps: BaseTransitionProps<Element> = {}
   for (const key in rawProps) {
@@ -134,7 +144,7 @@ export function resolveTransitionProps(
     appearToClass = enterToClass,
     leaveFromClass = `${name}-leave-from`,
     leaveActiveClass = `${name}-leave-active`,
-    leaveToClass = `${name}-leave-to`
+    leaveToClass = `${name}-leave-to`,
   } = rawProps
 
   // legacy transition class compat
@@ -168,7 +178,7 @@ export function resolveTransitionProps(
     onLeaveCancelled,
     onBeforeAppear = onBeforeEnter,
     onAppear = onEnter,
-    onAppearCancelled = onEnterCancelled
+    onAppearCancelled = onEnterCancelled,
   } = baseProps
 
   const finishEnter = (el: Element, isAppear: boolean, done?: () => void) => {
@@ -179,7 +189,7 @@ export function resolveTransitionProps(
 
   const finishLeave = (
     el: Element & { _isLeaving?: boolean },
-    done?: () => void
+    done?: () => void,
   ) => {
     el._isLeaving = false
     removeTransitionClass(el, leaveFromClass)
@@ -237,9 +247,11 @@ export function resolveTransitionProps(
       if (__COMPAT__ && legacyClassEnabled && legacyLeaveFromClass) {
         addTransitionClass(el, legacyLeaveFromClass)
       }
+      // add *-leave-active class before reflow so in the case of a cancelled enter transition
+      // the css will not get the final state (#10677)
+      addTransitionClass(el, leaveActiveClass)
       // force reflow so *-leave-from classes immediately take effect (#2593)
       forceReflow()
-      addTransitionClass(el, leaveActiveClass)
       nextFrame(() => {
         if (!el._isLeaving) {
           // cancelled
@@ -267,12 +279,12 @@ export function resolveTransitionProps(
     onLeaveCancelled(el) {
       finishLeave(el)
       callHook(onLeaveCancelled, [el])
-    }
+    },
   } as BaseTransitionProps<Element>)
 }
 
 function normalizeDuration(
-  duration: TransitionProps['duration']
+  duration: TransitionProps['duration'],
 ): [number, number] | null {
   if (duration == null) {
     return null
@@ -292,21 +304,21 @@ function NumberOf(val: unknown): number {
   return res
 }
 
-export function addTransitionClass(el: Element, cls: string) {
+export function addTransitionClass(el: Element, cls: string): void {
   cls.split(/\s+/).forEach(c => c && el.classList.add(c))
   ;(
-    (el as ElementWithTransition)._vtc ||
-    ((el as ElementWithTransition)._vtc = new Set())
+    (el as ElementWithTransition)[vtcKey] ||
+    ((el as ElementWithTransition)[vtcKey] = new Set())
   ).add(cls)
 }
 
-export function removeTransitionClass(el: Element, cls: string) {
+export function removeTransitionClass(el: Element, cls: string): void {
   cls.split(/\s+/).forEach(c => c && el.classList.remove(c))
-  const { _vtc } = el as ElementWithTransition
+  const _vtc = (el as ElementWithTransition)[vtcKey]
   if (_vtc) {
     _vtc.delete(cls)
     if (!_vtc!.size) {
-      ;(el as ElementWithTransition)._vtc = undefined
+      ;(el as ElementWithTransition)[vtcKey] = undefined
     }
   }
 }
@@ -323,7 +335,7 @@ function whenTransitionEnds(
   el: Element & { _endId?: number },
   expectedType: TransitionProps['type'] | undefined,
   explicitTimeout: number | null,
-  resolve: () => void
+  resolve: () => void,
 ) {
   const id = (el._endId = ++endId)
   const resolveIfNotStale = () => {
@@ -332,7 +344,7 @@ function whenTransitionEnds(
     }
   }
 
-  if (explicitTimeout) {
+  if (explicitTimeout != null) {
     return setTimeout(resolveIfNotStale, explicitTimeout)
   }
 
@@ -374,7 +386,7 @@ type StylePropertiesKey =
 
 export function getTransitionInfo(
   el: Element,
-  expectedType?: TransitionProps['type']
+  expectedType?: TransitionProps['type'],
 ): CSSTransitionInfo {
   const styles = window.getComputedStyle(el) as Pick<
     CSSStyleDeclaration,
@@ -393,7 +405,6 @@ export function getTransitionInfo(
   let type: CSSTransitionInfo['type'] = null
   let timeout = 0
   let propCount = 0
-  /* istanbul ignore if */
   if (expectedType === TRANSITION) {
     if (transitionTimeout > 0) {
       type = TRANSITION
@@ -423,13 +434,13 @@ export function getTransitionInfo(
   const hasTransform =
     type === TRANSITION &&
     /\b(transform|all)(,|$)/.test(
-      getStyleProperties(`${TRANSITION}Property`).toString()
+      getStyleProperties(`${TRANSITION}Property`).toString(),
     )
   return {
     type,
     timeout,
     propCount,
-    hasTransform
+    hasTransform,
   }
 }
 
@@ -445,10 +456,12 @@ function getTimeout(delays: string[], durations: string[]): number {
 // If comma is not replaced with a dot, the input will be rounded down
 // (i.e. acting as a floor function) causing unexpected behaviors
 function toMs(s: string): number {
+  // #8409 default value for CSS durations can be 'auto'
+  if (s === 'auto') return 0
   return Number(s.slice(0, -1).replace(',', '.')) * 1000
 }
 
 // synchronously force layout to put elements into a certain state
-export function forceReflow() {
+export function forceReflow(): number {
   return document.body.offsetHeight
 }

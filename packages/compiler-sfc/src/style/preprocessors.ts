@@ -1,6 +1,6 @@
 import merge from 'merge-source-map'
-import { RawSourceMap } from 'source-map-js'
-import { SFCStyleCompileOptions } from '../compileStyle'
+import type { RawSourceMap } from '@vue/compiler-core'
+import type { SFCStyleCompileOptions } from '../compileStyle'
 import { isFunction } from '@vue/shared'
 
 export type StylePreprocessor = (
@@ -11,7 +11,7 @@ export type StylePreprocessor = (
     additionalData?: string | ((source: string, filename: string) => string)
     filename: string
   },
-  customRequire: SFCStyleCompileOptions['preprocessCustomRequire']
+  customRequire: SFCStyleCompileOptions['preprocessCustomRequire'],
 ) => StylePreprocessorResults
 
 export interface StylePreprocessorResults {
@@ -23,28 +23,48 @@ export interface StylePreprocessorResults {
 
 // .scss/.sass processor
 const scss: StylePreprocessor = (source, map, options, load = require) => {
-  const nodeSass = load('sass')
-  const finalOptions = {
-    ...options,
-    data: getSource(source, options.filename, options.additionalData),
-    file: options.filename,
-    outFile: options.filename,
-    sourceMap: !!map
-  }
+  const nodeSass: typeof import('sass') = load('sass')
+  const { compileString, renderSync } = nodeSass
+
+  const data = getSource(source, options.filename, options.additionalData)
+  let css: string
+  let dependencies: string[]
+  let sourceMap: any
 
   try {
-    const result = nodeSass.renderSync(finalOptions)
-    const dependencies = result.stats.includedFiles
-    if (map) {
-      return {
-        code: result.css.toString(),
-        map: merge(map, JSON.parse(result.map.toString())),
-        errors: [],
-        dependencies
-      }
+    if (compileString) {
+      const { pathToFileURL, fileURLToPath }: typeof import('url') = load('url')
+
+      const result = compileString(data, {
+        ...options,
+        url: pathToFileURL(options.filename),
+        sourceMap: !!map,
+      })
+      css = result.css
+      dependencies = result.loadedUrls.map(url => fileURLToPath(url))
+      sourceMap = map ? result.sourceMap! : undefined
+    } else {
+      const result = renderSync({
+        ...options,
+        data,
+        file: options.filename,
+        outFile: options.filename,
+        sourceMap: !!map,
+      })
+      css = result.css.toString()
+      dependencies = result.stats.includedFiles
+      sourceMap = map ? JSON.parse(result.map!.toString()) : undefined
     }
 
-    return { code: result.css.toString(), errors: [], dependencies }
+    if (map) {
+      return {
+        code: css,
+        errors: [],
+        dependencies,
+        map: merge(map, sourceMap!),
+      }
+    }
+    return { code: css, errors: [], dependencies }
   } catch (e: any) {
     return { code: '', errors: [e], dependencies: [] }
   }
@@ -56,9 +76,9 @@ const sass: StylePreprocessor = (source, map, options, load) =>
     map,
     {
       ...options,
-      indentedSyntax: true
+      indentedSyntax: true,
     },
-    load
+    load,
   )
 
 // .less
@@ -73,7 +93,7 @@ const less: StylePreprocessor = (source, map, options, load = require) => {
     (err: Error | null, output: any) => {
       error = err
       result = output
-    }
+    },
   )
 
   if (error) return { code: '', errors: [error], dependencies: [] }
@@ -83,14 +103,14 @@ const less: StylePreprocessor = (source, map, options, load = require) => {
       code: result.css.toString(),
       map: merge(map, result.map),
       errors: [],
-      dependencies: dependencies
+      dependencies: dependencies,
     }
   }
 
   return {
     code: result.css.toString(),
     errors: [],
-    dependencies: dependencies
+    dependencies: dependencies,
   }
 }
 
@@ -98,8 +118,7 @@ const less: StylePreprocessor = (source, map, options, load = require) => {
 const styl: StylePreprocessor = (source, map, options, load = require) => {
   const nodeStylus = load('stylus')
   try {
-    const ref = nodeStylus(source)
-    Object.keys(options).forEach(key => ref.set(key, options[key]))
+    const ref = nodeStylus(source, options)
     if (map) ref.set('sourcemap', { inline: false, comment: false })
 
     const result = ref.render()
@@ -109,7 +128,7 @@ const styl: StylePreprocessor = (source, map, options, load = require) => {
         code: result,
         map: merge(map, ref.sourcemap),
         errors: [],
-        dependencies
+        dependencies,
       }
     }
 
@@ -122,7 +141,7 @@ const styl: StylePreprocessor = (source, map, options, load = require) => {
 function getSource(
   source: string,
   filename: string,
-  additionalData?: string | ((source: string, filename: string) => string)
+  additionalData?: string | ((source: string, filename: string) => string),
 ) {
   if (!additionalData) return source
   if (isFunction(additionalData)) {
@@ -138,5 +157,5 @@ export const processors: Record<PreprocessLang, StylePreprocessor> = {
   sass,
   scss,
   styl,
-  stylus: styl
+  stylus: styl,
 }

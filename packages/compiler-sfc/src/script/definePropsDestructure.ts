@@ -1,32 +1,36 @@
-import {
-  Node,
-  Identifier,
+import type {
   BlockStatement,
+  Expression,
+  Identifier,
+  Node,
+  ObjectPattern,
   Program,
   VariableDeclaration,
-  ObjectPattern,
-  Expression
 } from '@babel/types'
 import { walk } from 'estree-walker'
 import {
   BindingTypes,
+  TS_NODE_TYPES,
   extractIdentifiers,
   isFunctionType,
   isInDestructureAssignment,
   isReferencedIdentifier,
   isStaticProperty,
-  walkFunctionParams
+  unwrapTSNode,
+  walkFunctionParams,
 } from '@vue/compiler-dom'
 import { genPropsAccessExp } from '@vue/shared'
-import { isCallOf, resolveObjectKey, unwrapTSNode } from './utils'
-import { ScriptCompileContext } from './context'
+import { isCallOf, resolveObjectKey } from './utils'
+import type { ScriptCompileContext } from './context'
 import { DEFINE_PROPS } from './defineProps'
 
 export function processPropsDestructure(
   ctx: ScriptCompileContext,
-  declId: ObjectPattern
-) {
-  if (!ctx.options.propsDestructure) {
+  declId: ObjectPattern,
+): void {
+  if (ctx.options.propsDestructure === 'error') {
+    ctx.error(`Props destructure is explicitly prohibited via config.`, declId)
+  } else if (ctx.options.propsDestructure === false) {
     return
   }
 
@@ -35,7 +39,7 @@ export function processPropsDestructure(
   const registerBinding = (
     key: string,
     local: string,
-    defaultValue?: Expression
+    defaultValue?: Expression,
   ) => {
     ctx.propsDestructuredBindings[key] = { local, default: defaultValue }
     if (local !== key) {
@@ -52,7 +56,7 @@ export function processPropsDestructure(
       if (!propKey) {
         ctx.error(
           `${DEFINE_PROPS}() destructure cannot use computed key.`,
-          prop.key
+          prop.key,
         )
       }
 
@@ -62,7 +66,7 @@ export function processPropsDestructure(
         if (left.type !== 'Identifier') {
           ctx.error(
             `${DEFINE_PROPS}() destructure does not support nested patterns.`,
-            left
+            left,
           )
         }
         registerBinding(propKey, left.name, right)
@@ -72,7 +76,7 @@ export function processPropsDestructure(
       } else {
         ctx.error(
           `${DEFINE_PROPS}() destructure does not support nested patterns.`,
-          prop.value
+          prop.value,
         )
       }
     } else {
@@ -93,13 +97,13 @@ type Scope = Record<string, boolean>
 
 export function transformDestructuredProps(
   ctx: ScriptCompileContext,
-  vueImportAliases: Record<string, string>
-) {
-  if (!ctx.options.propsDestructure) {
+  vueImportAliases: Record<string, string>,
+): void {
+  if (ctx.options.propsDestructure === false) {
     return
   }
 
-  const rootScope: Scope = {}
+  const rootScope: Scope = Object.create(null)
   const scopeStack: Scope[] = [rootScope]
   let currentScope: Scope = rootScope
   const excludedIds = new WeakSet<Identifier>()
@@ -128,7 +132,7 @@ export function transformDestructuredProps(
     } else {
       ctx.error(
         'registerBinding called without active scope, something is wrong.',
-        id
+        id,
       )
     }
   }
@@ -200,7 +204,7 @@ export function transformDestructuredProps(
         // { prop } -> { prop: __props.prop }
         ctx.s.appendLeft(
           id.end! + ctx.startOffset!,
-          `: ${genPropsAccessExp(propsLocalToPublicMap[id.name])}`
+          `: ${genPropsAccessExp(propsLocalToPublicMap[id.name])}`,
         )
       }
     } else {
@@ -208,7 +212,7 @@ export function transformDestructuredProps(
       ctx.s.overwrite(
         id.start! + ctx.startOffset!,
         id.end! + ctx.startOffset!,
-        genPropsAccessExp(propsLocalToPublicMap[id.name])
+        genPropsAccessExp(propsLocalToPublicMap[id.name]),
       )
     }
   }
@@ -220,7 +224,7 @@ export function transformDestructuredProps(
         ctx.error(
           `"${arg.name}" is a destructured prop and should not be passed directly to ${method}(). ` +
             `Pass a getter () => ${arg.name} instead.`,
-          arg
+          arg,
         )
       }
     }
@@ -229,17 +233,15 @@ export function transformDestructuredProps(
   // check root scope first
   const ast = ctx.scriptSetupAst!
   walkScope(ast, true)
-  ;(walk as any)(ast, {
-    enter(node: Node, parent?: Node) {
+  walk(ast, {
+    enter(node: Node, parent: Node | null) {
       parent && parentStack.push(parent)
 
       // skip type nodes
       if (
         parent &&
         parent.type.startsWith('TS') &&
-        parent.type !== 'TSAsExpression' &&
-        parent.type !== 'TSNonNullExpression' &&
-        parent.type !== 'TSTypeAssertion'
+        !TS_NODE_TYPES.includes(parent.type)
       ) {
         return this.skip()
       }
@@ -285,7 +287,7 @@ export function transformDestructuredProps(
         }
       }
     },
-    leave(node: Node, parent?: Node) {
+    leave(node: Node, parent: Node | null) {
       parent && parentStack.pop()
       if (
         (node.type === 'BlockStatement' && !isFunctionType(parent!)) ||
@@ -293,6 +295,6 @@ export function transformDestructuredProps(
       ) {
         popScope()
       }
-    }
+    },
   })
 }
