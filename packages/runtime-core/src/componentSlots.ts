@@ -12,13 +12,16 @@ import {
   ShapeFlags,
   SlotFlags,
   def,
-  hasOwn,
   isArray,
   isFunction,
 } from '@vue/shared'
 import { warn } from './warning'
 import { isKeepAlive } from './components/KeepAlive'
-import { type ContextualRenderFn, withCtx } from './componentRenderContext'
+import {
+  type ContextualRenderFn,
+  currentRenderingInstance,
+  withCtx,
+} from './componentRenderContext'
 import { isHmrUpdating } from './hmr'
 import { DeprecationTypes, isCompatEnabled } from './compat/compatConfig'
 import { TriggerOpTypes, trigger } from '@vue/reactivity'
@@ -88,18 +91,18 @@ const normalizeSlotValue = (value: unknown): VNode[] =>
 const normalizeSlot = (
   key: string,
   rawSlot: Function,
-  rawSlots: RawSlots,
+  ctx: ComponentInternalInstance | null | undefined,
 ): Slot => {
   if ((rawSlot as any)._n) {
     // already normalized - #5353
     return rawSlot as Slot
   }
-  const ctx = rawSlots._ctx
   const normalized = withCtx((...args: any[]) => {
     if (
       __DEV__ &&
       currentInstance &&
-      (!hasOwn(rawSlots, '_ctx') || (ctx && ctx.root === currentInstance.root))
+      !(ctx === null && currentRenderingInstance) &&
+      !(ctx && ctx.root !== currentInstance.root)
     ) {
       warn(
         `Slot "${key}" invoked outside of the render function: ` +
@@ -119,11 +122,12 @@ const normalizeObjectSlots = (
   slots: InternalSlots,
   instance: ComponentInternalInstance,
 ) => {
+  const ctx = rawSlots._ctx
   for (const key in rawSlots) {
     if (isInternalKey(key)) continue
     const value = rawSlots[key]
     if (isFunction(value)) {
-      slots[key] = normalizeSlot(key, value, rawSlots)
+      slots[key] = normalizeSlot(key, value, ctx)
     } else if (value != null) {
       if (
         __DEV__ &&
