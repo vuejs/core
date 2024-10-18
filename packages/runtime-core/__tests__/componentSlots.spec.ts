@@ -345,20 +345,43 @@ describe('component: slots', () => {
     ).toHaveBeenWarned()
   })
 
-  test('should not warn when render in setup', () => {
-    const container = {
+  test('basic warn when mounting another app in setup', () => {
+    const Comp = {
       setup(_: any, { slots }: any) {
-        return function () {
-          return slots.default && slots.default()
-        }
+        slots.default?.()
+        return () => null
       },
     }
 
-    const comp = h(container, null, {
-      default() {
-        return () => h('div')
+    const mountComp = () => {
+      createApp({
+        setup() {
+          return () => h(Comp, () => 'msg')
+        },
+      }).mount(nodeOps.createElement('div'))
+    }
+
+    const App = {
+      setup() {
+        mountComp()
+        return () => null
       },
-    })
+    }
+
+    createApp(App).mount(nodeOps.createElement('div'))
+    expect(
+      'Slot "default" invoked outside of the render function',
+    ).toHaveBeenWarned()
+  })
+
+  test('should not warn when render in setup', () => {
+    const container = {
+      setup(_: any, { slots }: any) {
+        return () => slots.default && slots.default()
+      },
+    }
+
+    const comp = h(container, null, () => h('div'))
 
     const App = {
       setup() {
@@ -371,5 +394,28 @@ describe('component: slots', () => {
     expect(
       'Slot "default" invoked outside of the render function',
     ).not.toHaveBeenWarned()
+  })
+
+  test('basic warn when render in setup', () => {
+    const container = {
+      setup(_: any, { slots }: any) {
+        slots.default && slots.default()
+        return () => null
+      },
+    }
+
+    const comp = h(container, null, () => h('div'))
+
+    const App = {
+      setup() {
+        render(h(comp), nodeOps.createElement('div'))
+        return () => null
+      },
+    }
+
+    createApp(App).mount(nodeOps.createElement('div'))
+    expect(
+      'Slot "default" invoked outside of the render function',
+    ).toHaveBeenWarned()
   })
 })
