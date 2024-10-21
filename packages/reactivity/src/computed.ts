@@ -40,11 +40,11 @@ export interface WritableComputedOptions<T, S = T> {
   set: ComputedSetter<S>
 }
 
-export const COMPUTED_SIDE_EFFECT_WARN: string =
-  `Computed has side effects,` +
+export const COMPUTED_SELF_RECURSIVE_WARN: string =
+  `Computed has a self-recursive issue,` +
   ` likely because a computed is mutating its own dependency in its getter.` +
   ` State mutations in computed getters should be avoided. ` +
-  ` Check the docs for more details: https://vuejs.org/guide/essentials/computed.html#getters-should-be-side-effect-free`
+  ` Check the documentation for more details: https://vuejs.org/guide/essentials/computed.html#getters-should-be-side-effect-free`
 
 /**
  * @private exported by @vue/reactivity for Vue core use, but not exported from
@@ -134,7 +134,7 @@ export class ComputedRefImpl<T = any> implements Subscriber {
       activeSub === this &&
       (this._warnRecursive || __TEST__)
     ) {
-      warn(COMPUTED_SIDE_EFFECT_WARN, `\n\ngetter: `, this.fn)
+      warn(COMPUTED_SELF_RECURSIVE_WARN, `\n\ngetter: `, this.fn)
     }
   }
 
