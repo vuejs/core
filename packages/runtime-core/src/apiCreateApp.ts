@@ -150,7 +150,6 @@ export interface AppConfig {
   isCustomElement?: (tag: string) => boolean
 
   /**
-   * TODO document for 3.5
    * Enable warnings for computed getters that recursively trigger itself.
    */
   warnRecursiveComputed?: boolean
