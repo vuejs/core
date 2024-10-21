@@ -626,7 +626,7 @@ function _createVNode(
     children != null
   ) {
     warn(
-      `don't render child nodes in a self-closing tag <${type as string} />, it may cause unexpected behavior`,
+      `don't render child nodes in a void element <${type as string} />, it may cause unexpected behavior`,
     )
   }
 

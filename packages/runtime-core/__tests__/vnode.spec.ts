@@ -50,9 +50,9 @@ describe('vnode', () => {
     expect(vnode.type).toBe(Comment)
   })
 
-  test('show warn when create with self-close tag', () => {
+  test('show warn when create with void element', () => {
     const vnode = createVNode('img', null, createVNode('p'))
-    expect("don't render child nodes in a self-closing tag").toHaveBeenWarned()
+    expect("don't render child nodes in a void element").toHaveBeenWarned()
     expect(vnode.type).toBe('img')
   })
 
