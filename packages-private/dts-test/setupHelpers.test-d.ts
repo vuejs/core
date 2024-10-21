@@ -440,8 +440,24 @@ describe('defineModel', () => {
     },
   })
 
-  // @ts-expect-error type / default mismatch
-  defineModel<string>({ default: 123 })
+  // default mismatch
+  {
+    // @ts-expect-error
+    defineModel<string>({ default: 123 })
+    // @ts-expect-error
+    defineModel<string>({ default: () => 123 })
+    // @ts-expect-error
+    defineModel<{ foo: number }>({ default: { foo: '' } })
+    // @ts-expect-error
+    defineModel<{ foo: number }>({
+      default: () => ({ foo: '' }),
+    })
+    // @ts-expect-error
+    defineModel<() => number>({
+      default: () => '',
+    })
+  }
+
   // @ts-expect-error unknown props option
   defineModel({ foo: 123 })
 
