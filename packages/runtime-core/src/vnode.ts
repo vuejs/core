@@ -880,6 +880,20 @@ export function mergeProps(...args: (Data & VNodeProps)[]): Data {
       } else if (isOn(key)) {
         const existing = ret[key]
         const incoming = toMerge[key]
+
+        if (
+          __DEV__ &&
+          incoming !== void 0 &&
+          !(
+            isFunction(incoming) ||
+            (isArray(incoming) && incoming.every(isFunction))
+          )
+        ) {
+          warn(
+            `Prop with prefix 'on' is considered an event handler, avoid such naming if it is not. prop: ${key}.`,
+          )
+        }
+
         if (
           incoming &&
           existing !== incoming &&
