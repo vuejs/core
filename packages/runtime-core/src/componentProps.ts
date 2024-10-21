@@ -57,7 +57,6 @@ export interface PropOptions<T = any, D = T> {
   required?: boolean
   default?:
     | null
-    | undefined
     | (T extends Function
         ? T extends infer F
           ? F
