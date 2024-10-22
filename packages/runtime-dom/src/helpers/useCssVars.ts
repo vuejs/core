@@ -4,8 +4,10 @@ import {
   type VNode,
   getCurrentInstance,
   onBeforeMount,
+  onBeforeUpdate,
   onMounted,
   onUnmounted,
+  queuePostFlushCb,
   warn,
   watchPostEffect,
 } from '@vue/runtime-core'
@@ -50,6 +52,10 @@ export function useCssVars(getter: (ctx: any) => Record<string, string>): void {
 
   onBeforeMount(() => {
     watchPostEffect(setVars)
+  })
+
+  onBeforeUpdate(() => {
+    queuePostFlushCb(setVars)
   })
 
   onMounted(() => {
