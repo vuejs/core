@@ -232,6 +232,8 @@ export class VueElement
   private _styleChildren = new WeakSet()
   private _pendingResolve: Promise<void> | undefined
   private _parent: VueElement | undefined
+  private _removedAttributes = new Set<string>()
+
   /**
    * dev only
    */
@@ -466,8 +468,12 @@ export class VueElement
   protected _setAttr(key: string): void {
     if (key.startsWith('data-v-')) return
     const has = this.hasAttribute(key)
-    let value = has ? this.getAttribute(key) : REMOVAL
     const camelKey = camelize(key)
+    if (this._removedAttributes.has(camelKey)) {
+      if (!has) return
+      else this._removedAttributes.delete(camelKey)
+    }
+    let value = has ? this.getAttribute(key) : REMOVAL
     if (has && this._numberProps && this._numberProps[camelKey]) {
       value = toNumber(value)
     }
@@ -511,6 +517,7 @@ export class VueElement
           this.setAttribute(hyphenate(key), val + '')
         } else if (!val) {
           this.removeAttribute(hyphenate(key))
+          this._removedAttributes.add(key)
         }
       }
     }

@@ -396,6 +396,38 @@ describe('defineCustomElement', () => {
       expect(e.value).toBe('hi')
     })
 
+    // #12214
+    test('Boolean prop with default true', async () => {
+      const E = defineCustomElement({
+        props: {
+          foo: {
+            type: Boolean,
+            default: true,
+          },
+        },
+        render() {
+          return String(this.foo)
+        },
+      })
+      customElements.define('my-el-default-true', E)
+      container.innerHTML = `<my-el-default-true></my-el-default-true>`
+      const e = container.childNodes[0] as HTMLElement & { foo: any },
+        shadowRoot = e.shadowRoot as ShadowRoot
+      expect(shadowRoot.innerHTML).toBe('true')
+      e.foo = undefined
+      await nextTick()
+      expect(shadowRoot.innerHTML).toBe('true')
+      e.foo = false
+      await nextTick()
+      expect(shadowRoot.innerHTML).toBe('false')
+      e.foo = null
+      await nextTick()
+      expect(shadowRoot.innerHTML).toBe('null')
+      e.foo = ''
+      await nextTick()
+      expect(shadowRoot.innerHTML).toBe('true')
+    })
+
     test('support direct setup function syntax with extra options', () => {
       const E = defineCustomElement(
         props => {
