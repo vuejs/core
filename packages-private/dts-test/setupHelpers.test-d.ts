@@ -403,6 +403,9 @@ describe('defineModel', () => {
   const countDefault = defineModel<number>('count', { default: 1 })
   expectType<Ref<number>>(countDefault)
 
+  const modelNull = defineModel<null>({ default: null })
+  expectType<Ref<null>>(modelNull)
+
   // infer type from default
   const inferred = defineModel({ default: 123 })
   expectType<Ref<number | undefined>>(inferred)
@@ -455,6 +458,11 @@ describe('defineModel', () => {
     // @ts-expect-error
     defineModel<() => number>({
       default: () => '',
+    })
+    // @ts-expect-error
+    // optional prop with default
+    defineModel<{ id?: number }>({
+      default: () => ({ foo: 'bar' }),
     })
   }
 
