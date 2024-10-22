@@ -349,18 +349,25 @@ function createInstrumentationGetter(isReadonly: boolean, shallow: boolean) {
       return !isReadonly
     } else if (key === ReactiveFlags.IS_READONLY) {
       return isReadonly
-    } else if (
-      key === ReactiveFlags.RAW &&
-      receiver ===
-        (isReadonly
-          ? shallow
-            ? shallowReadonlyMap
-            : readonlyMap
-          : shallow
-            ? shallowReactiveMap
-            : reactiveMap).get(target as Target)
+    } else if (key === ReactiveFlags.RAW) {
+      if (
+        receiver ===
+          (isReadonly
+            ? shallow
+              ? shallowReadonlyMap
+              : readonlyMap
+            : shallow
+              ? shallowReactiveMap
+              : reactiveMap
+          ).get(target as Target) ||
+        // receiver is not the reactive proxy, but has the same prototype
+        // this means the reciever is a user proxy of the reactive proxy
+        Object.getPrototypeOf(target) === Object.getPrototypeOf(receiver)
       ) {
-      return target
+        return target
+      }
+      // early return undefined
+      return
     }
 
     return Reflect.get(
