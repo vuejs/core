@@ -1689,8 +1689,10 @@ export function inferRuntimeType(
       case 'TSParenthesizedType':
         return inferRuntimeType(ctx, node.typeAnnotation, scope)
 
-      case 'TSUnionType':
-        return flattenTypes(ctx, node.types, scope, isKeyOf)
+      case 'TSUnionType': {
+        const types = flattenTypes(ctx, node.types, scope, isKeyOf)
+        return types.some(t => t === UNKNOWN_TYPE) ? [UNKNOWN_TYPE] : types
+      }
       case 'TSIntersectionType': {
         return flattenTypes(ctx, node.types, scope, isKeyOf).filter(
           t => t !== UNKNOWN_TYPE,

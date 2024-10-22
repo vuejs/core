@@ -460,6 +460,29 @@ describe('resolveType', () => {
     })
   })
 
+  test('should fallback to UNKNOWN when union contains uninferrable types', () => {
+    const files = {
+      '/foo.ts': `
+        const MySymbol = Symbol();
+        export type SymbolType = typeof MySymbol
+      `,
+    }
+
+    const { props } = resolve(
+      `
+      import { SymbolType } from './foo'
+      defineProps<{
+        foo: SymbolType | boolean;
+      }>()
+      `,
+      files,
+    )
+
+    expect(props).toStrictEqual({
+      foo: [UNKNOWN_TYPE],
+    })
+  })
+
   test('keyof', () => {
     const files = {
       '/foo.ts': `export type IMP = { ${1}: 1 };`,
