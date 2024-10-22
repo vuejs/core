@@ -1,9 +1,13 @@
-import { CompilerOptions } from './options'
-import { baseParse } from './parse'
-import { transform, NodeTransform, DirectiveTransform } from './transform'
-import { generate, CodegenResult } from './codegen'
-import { RootNode } from './ast'
-import { isString, extend } from '@vue/shared'
+import type { CompilerOptions } from './options'
+import { baseParse } from './parser'
+import {
+  type DirectiveTransform,
+  type NodeTransform,
+  transform,
+} from './transform'
+import { type CodegenResult, generate } from './codegen'
+import type { RootNode } from './ast'
+import { extend, isString } from '@vue/shared'
 import { transformIf } from './transforms/vIf'
 import { transformFor } from './transforms/vFor'
 import { transformExpression } from './transforms/transformExpression'
@@ -16,16 +20,16 @@ import { transformText } from './transforms/transformText'
 import { transformOnce } from './transforms/vOnce'
 import { transformModel } from './transforms/vModel'
 import { transformFilter } from './compat/transformFilter'
-import { defaultOnError, createCompilerError, ErrorCodes } from './errors'
+import { ErrorCodes, createCompilerError, defaultOnError } from './errors'
 import { transformMemo } from './transforms/vMemo'
 
 export type TransformPreset = [
   NodeTransform[],
-  Record<string, DirectiveTransform>
+  Record<string, DirectiveTransform>,
 ]
 
 export function getBaseTransformPreset(
-  prefixIdentifiers?: boolean
+  prefixIdentifiers?: boolean,
 ): TransformPreset {
   return [
     [
@@ -38,33 +42,33 @@ export function getBaseTransformPreset(
         ? [
             // order is important
             trackVForSlotScopes,
-            transformExpression
+            transformExpression,
           ]
         : __BROWSER__ && __DEV__
-        ? [transformExpression]
-        : []),
+          ? [transformExpression]
+          : []),
       transformSlotOutlet,
       transformElement,
       trackSlotScopes,
-      transformText
+      transformText,
     ],
     {
       on: transformOn,
       bind: transformBind,
-      model: transformModel
-    }
+      model: transformModel,
+    },
   ]
 }
 
 // we name it `baseCompile` so that higher order compilers like
 // @vue/compiler-dom can export `compile` while re-exporting everything else.
 export function baseCompile(
-  template: string | RootNode,
-  options: CompilerOptions = {}
+  source: string | RootNode,
+  options: CompilerOptions = {},
 ): CodegenResult {
   const onError = options.onError || defaultOnError
   const isModuleMode = options.mode === 'module'
-  /* istanbul ignore if */
+  /* v8 ignore start */
   if (__BROWSER__) {
     if (options.prefixIdentifiers === true) {
       onError(createCompilerError(ErrorCodes.X_PREFIX_ID_NOT_SUPPORTED))
@@ -72,6 +76,7 @@ export function baseCompile(
       onError(createCompilerError(ErrorCodes.X_MODULE_MODE_NOT_SUPPORTED))
     }
   }
+  /* v8 ignore stop */
 
   const prefixIdentifiers =
     !__BROWSER__ && (options.prefixIdentifiers === true || isModuleMode)
@@ -82,7 +87,10 @@ export function baseCompile(
     onError(createCompilerError(ErrorCodes.X_SCOPE_ID_NOT_SUPPORTED))
   }
 
-  const ast = isString(template) ? baseParse(template, options) : template
+  const resolvedOptions = extend({}, options, {
+    prefixIdentifiers,
+  })
+  const ast = isString(source) ? baseParse(source, resolvedOptions) : source
   const [nodeTransforms, directiveTransforms] =
     getBaseTransformPreset(prefixIdentifiers)
 
@@ -95,24 +103,18 @@ export function baseCompile(
 
   transform(
     ast,
-    extend({}, options, {
-      prefixIdentifiers,
+    extend({}, resolvedOptions, {
       nodeTransforms: [
         ...nodeTransforms,
-        ...(options.nodeTransforms || []) // user transforms
+        ...(options.nodeTransforms || []), // user transforms
       ],
       directiveTransforms: extend(
         {},
         directiveTransforms,
-        options.directiveTransforms || {} // user transforms
-      )
-    })
+        options.directiveTransforms || {}, // user transforms
+      ),
+    }),
   )
 
-  return generate(
-    ast,
-    extend({}, options, {
-      prefixIdentifiers
-    })
-  )
+  return generate(ast, resolvedOptions)
 }
