@@ -9,6 +9,7 @@ import {
   currentInstance,
 } from './component'
 import {
+  Empty,
   type LooseRequired,
   NOOP,
   type Prettify,
@@ -503,7 +504,7 @@ enum OptionTypes {
 }
 
 function createDuplicateChecker() {
-  const cache = Object.create(null)
+  const cache = new Empty()
   return (type: OptionTypes, key: string) => {
     if (cache[key]) {
       warn(`${type} property "${key}" is already defined in ${cache[key]}.`)
@@ -1079,7 +1080,7 @@ function mergeAsArray<T = Function>(to: T[] | T | undefined, from: T | T[]) {
 }
 
 function mergeObjectOptions(to: Object | undefined, from: Object | undefined) {
-  return to ? extend(Object.create(null), to, from) : from
+  return to ? extend(new Empty(), to, from) : from
 }
 
 function mergeEmitsOrPropsOptions(
@@ -1099,7 +1100,7 @@ function mergeEmitsOrPropsOptions(
       return [...new Set([...to, ...from])]
     }
     return extend(
-      Object.create(null),
+      new Empty(),
       normalizePropsOrEmits(to),
       normalizePropsOrEmits(from ?? {}),
     )
@@ -1114,7 +1115,7 @@ function mergeWatchOptions(
 ) {
   if (!to) return from
   if (!from) return to
-  const merged = extend(Object.create(null), to)
+  const merged = extend(new Empty(), to)
   for (const key in from) {
     merged[key] = mergeAsArray(to[key], from[key])
   }
