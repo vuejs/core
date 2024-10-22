@@ -732,7 +732,7 @@ export function compileScript(
       (imported === 'default' && source.endsWith('.vue')) ||
       source === 'vue'
         ? BindingTypes.SETUP_CONST
-        : BindingTypes.SETUP_MAYBE_REF
+        : BindingTypes.SETUP_IMPORTED_MAYBE_REF
   }
   for (const key in scriptBindings) {
     ctx.bindingMetadata[key] = scriptBindings[key]
@@ -754,7 +754,6 @@ export function compileScript(
     !options.templateOptions?.ssr
   ) {
     ctx.helperImports.add(CSS_VARS_HELPER)
-    ctx.helperImports.add('unref')
     ctx.s.prependLeft(
       startOffset,
       `\n${genCssVarsCode(
@@ -764,6 +763,11 @@ export function compileScript(
         !!options.isProd,
       )}\n`,
     )
+
+    // if any of the css vars reference a ref, we need to import `unref`
+    if (ctx.bindingMetadata.__hasRefBindingUsedInCssVar) {
+      ctx.helperImports.add('unref')
+    }
   }
 
   // 8. finalize setup() argument signature
@@ -909,8 +913,7 @@ export function compileScript(
         ctx.s.prepend(preamble)
       }
       // avoid duplicated unref import
-      // as this may get injected by the render function preamble OR the
-      // css vars codegen
+      // as this may get injected by the render function preamble
       if (ast && ast.helpers.has(UNREF)) {
         ctx.helperImports.delete('unref')
       }
