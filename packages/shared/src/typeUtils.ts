@@ -27,6 +27,13 @@ export type OverloadParameters<T extends (...args: any[]) => any> = Parameters<
   OverloadUnion<T>
 >
 
+/**
+ * Utility for strip out `private` / `protected` fields
+ */
+export type PublicOf<T> = {
+  [P in keyof T]: T[P]
+}
+
 type OverloadProps<TOverload> = Pick<TOverload, keyof TOverload>
 
 type OverloadUnionRecursive<
