@@ -662,13 +662,13 @@ describe('compiler: expression transform', () => {
     // #6822
     test('no access this through function declaration', () => {
       const { code } = compileWithBindingMetadata(
-        `<div @click="setupConst()" @keyup="setupLet()" @keydown="setup()"></div>`
+        `<div @click="setupConst()" @keyup="setupLet()" @keydown="setup()"></div>`,
       )
       expect(code).toMatch(`$setup.setupConst.bind()`)
       expect(code).toMatch(`$setup.setupLet.bind()`)
       expect(code).toMatch(`$setup.setup.bind()`)
     })
-    
+
     test('literal const handling', () => {
       const { code } = compileWithBindingMetadata(`<div>{{ literal }}</div>`, {
         inline: true,

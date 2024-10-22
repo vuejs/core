@@ -1,4 +1,5 @@
 import {
+  BindingTypes,
   type CompilerOptions,
   type ElementNode,
   ErrorCodes,
@@ -9,7 +10,6 @@ import {
   helperNameMap,
   baseParse as parse,
   transform,
-  BindingTypes,
 } from '../../src'
 import { transformFor } from '../../src/transforms/vFor'
 import { transformOn } from '../../src/transforms/vOn'
@@ -767,12 +767,12 @@ describe('compiler: transform v-on', () => {
         prefixIdentifiers: true,
         cacheHandlers: true,
         bindingMetadata: {
-          foo: BindingTypes.SETUP_LET
-        }
+          foo: BindingTypes.SETUP_LET,
+        },
       })
       const vnodeCall = node.codegenNode as VNodeCall
       expect(
-        (vnodeCall.props as ObjectExpression).properties[0].value
+        (vnodeCall.props as ObjectExpression).properties[0].value,
       ).toMatchObject({
         type: NodeTypes.JS_CACHE_EXPRESSION,
         index: 0,
@@ -781,9 +781,9 @@ describe('compiler: transform v-on', () => {
           children: [
             `(...args) => (`,
             { content: `$setup.foo && $setup.foo.call(undefined, ...args)` },
-            `)`
-          ]
-        }
+            `)`,
+          ],
+        },
       })
     })
   })
