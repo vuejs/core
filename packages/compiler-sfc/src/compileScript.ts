@@ -196,6 +196,13 @@ export function compileScript(
   // const ctx.bindingMetadata: BindingMetadata = {}
   const scriptBindings: Record<string, BindingTypes> = Object.create(null)
   const setupBindings: Record<string, BindingTypes> = Object.create(null)
+  const withDefaultsVariables: Record<
+    string,
+    {
+      node: Statement
+      needHoist?: boolean
+    }
+  > = {}
 
   let defaultExport: Node | undefined
   let hasAwait = false
@@ -261,7 +268,11 @@ export function compileScript(
     if (!node) return
     walkIdentifiers(node, id => {
       const binding = setupBindings[id.name]
-      if (binding && binding !== BindingTypes.LITERAL_CONST) {
+      if (
+        binding &&
+        binding !== BindingTypes.LITERAL_CONST &&
+        !withDefaultsVariables[id.name].needHoist
+      ) {
         ctx.error(
           `\`${method}()\` in <script setup> cannot reference locally ` +
             `declared variables because it will be hoisted outside of the ` +
@@ -646,6 +657,30 @@ export function compileScript(
               parent!.type === 'ExpressionStatement',
             )
           }
+
+          if (child.type === 'Identifier') {
+            if (parent!.type === 'VariableDeclarator') {
+              withDefaultsVariables[child.name] = {
+                node
+              }
+            } else if (
+              parent!.type === 'CallExpression' &&
+              parent.callee.type === 'Identifier' &&
+              parent.callee.name === WITH_DEFAULTS &&
+              withDefaultsVariables[child.name]
+            ) {
+              const variable = withDefaultsVariables[child.name]
+              if (variable.needHoist !== false) {
+                variable.needHoist = true
+              }
+            } else if (
+              parent!.type !== 'VariableDeclaration' &&
+              withDefaultsVariables[child.name]
+            ) {
+              const variable = withDefaultsVariables[child.name]
+              variable.needHoist = false
+            }
+          }
         },
         exit(node: Node) {
           if (node.type === 'BlockStatement') scope.pop()
@@ -678,6 +713,13 @@ export function compileScript(
           hoistNode(node)
         }
       }
+    }
+  }
+
+  for (const key in withDefaultsVariables) {
+    const variable = withDefaultsVariables[key]
+    if (variable.needHoist) {
+      hoistNode(variable.node)
     }
   }
 
