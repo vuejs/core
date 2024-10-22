@@ -1,4 +1,5 @@
 import {
+  ShapeFlags,
   extend,
   hyphenate,
   isArray,
@@ -7,40 +8,41 @@ import {
   makeMap,
   normalizeClass,
   normalizeStyle,
-  ShapeFlags,
-  toHandlerKey
+  toHandlerKey,
 } from '@vue/shared'
-import {
+import type {
   Component,
   ComponentInternalInstance,
   ComponentOptions,
   Data,
-  InternalRenderFunction
+  InternalRenderFunction,
 } from '../component'
 import { currentRenderingInstance } from '../componentRenderContext'
-import { DirectiveArguments, withDirectives } from '../directives'
+import { type DirectiveArguments, withDirectives } from '../directives'
 import {
   resolveDirective,
-  resolveDynamicComponent
+  resolveDynamicComponent,
 } from '../helpers/resolveAssets'
 import {
   Comment,
+  type VNode,
+  type VNodeArrayChildren,
+  type VNodeProps,
   createVNode,
   isVNode,
   normalizeChildren,
-  VNode,
-  VNodeArrayChildren,
-  VNodeProps
 } from '../vnode'
 import {
-  checkCompatEnabled,
   DeprecationTypes,
-  isCompatEnabled
+  checkCompatEnabled,
+  isCompatEnabled,
 } from './compatConfig'
 import { compatModelEventPrefix } from './componentVModel'
 import { resolveMergedOptions } from '../componentOptions'
 
-export function convertLegacyRenderFn(instance: ComponentInternalInstance) {
+export function convertLegacyRenderFn(
+  instance: ComponentInternalInstance,
+): void {
   const Component = instance.type as ComponentOptions
   const render = (Component.render || resolveMergedOptions(instance).render) as
     | InternalRenderFunction
@@ -62,10 +64,10 @@ export function convertLegacyRenderFn(instance: ComponentInternalInstance) {
   // v2 render function, try to provide compat
   if (checkCompatEnabled(DeprecationTypes.RENDER_FUNCTION, instance)) {
     const wrapped = (Component.render = function compatRender() {
-      // @ts-ignore
+      // @ts-expect-error
       return render.call(this, compatH)
     })
-    // @ts-ignore
+    // @ts-expect-error
     wrapped._compatWrapped = true
   }
 }
@@ -112,18 +114,18 @@ type LegacyVNodeChildren =
 
 export function compatH(
   type: string | Component,
-  children?: LegacyVNodeChildren
+  children?: LegacyVNodeChildren,
 ): VNode
 export function compatH(
   type: string | Component,
   props?: Data & LegacyVNodeProps,
-  children?: LegacyVNodeChildren
+  children?: LegacyVNodeChildren,
 ): VNode
 
 export function compatH(
   type: any,
   propsOrChildren?: any,
-  children?: any
+  children?: any,
 ): VNode {
   if (!type) {
     type = Comment
@@ -153,8 +155,8 @@ export function compatH(
       return convertLegacySlots(
         convertLegacyDirectives(
           createVNode(type, convertLegacyProps(propsOrChildren, type)),
-          propsOrChildren
-        )
+          propsOrChildren,
+        ),
       )
     } else {
       // omit props
@@ -167,19 +169,19 @@ export function compatH(
     return convertLegacySlots(
       convertLegacyDirectives(
         createVNode(type, convertLegacyProps(propsOrChildren, type), children),
-        propsOrChildren
-      )
+        propsOrChildren,
+      ),
     )
   }
 }
 
-const skipLegacyRootLevelProps = /*#__PURE__*/ makeMap(
-  'staticStyle,staticClass,directives,model,hook'
+const skipLegacyRootLevelProps = /*@__PURE__*/ makeMap(
+  'staticStyle,staticClass,directives,model,hook',
 )
 
 function convertLegacyProps(
   legacyProps: LegacyVNodeProps | undefined,
-  type: any
+  type: any,
 ): (Data & VNodeProps) | null {
   if (!legacyProps) {
     return null
@@ -243,7 +245,7 @@ function convertLegacyEventKey(event: string): string {
 
 function convertLegacyDirectives(
   vnode: VNode,
-  props?: LegacyVNodeProps
+  props?: LegacyVNodeProps,
 ): VNode {
   if (props && props.directives) {
     return withDirectives(
@@ -253,9 +255,9 @@ function convertLegacyDirectives(
           resolveDirective(name)!,
           value,
           arg,
-          modifiers
+          modifiers,
         ] as DirectiveArguments[number]
-      })
+      }),
     )
   }
   return vnode
@@ -306,18 +308,18 @@ function convertLegacySlots(vnode: VNode): VNode {
   return vnode
 }
 
-export function defineLegacyVNodeProperties(vnode: VNode) {
-  /* istanbul ignore if */
+export function defineLegacyVNodeProperties(vnode: VNode): void {
+  /* v8 ignore start */
   if (
     isCompatEnabled(
       DeprecationTypes.RENDER_FUNCTION,
       currentRenderingInstance,
-      true /* enable for built-ins */
+      true /* enable for built-ins */,
     ) &&
     isCompatEnabled(
       DeprecationTypes.PRIVATE_APIS,
       currentRenderingInstance,
-      true /* enable for built-ins */
+      true /* enable for built-ins */,
     )
   ) {
     const context = currentRenderingInstance
@@ -340,11 +342,12 @@ export function defineLegacyVNodeProperties(vnode: VNode) {
             return (componentOptions = {
               Ctor: vnode.type,
               propsData: vnode.props,
-              children: vnode.children
+              children: vnode.children,
             })
           }
-        }
-      }
+        },
+      },
     })
   }
+  /* v8 ignore stop */
 }
