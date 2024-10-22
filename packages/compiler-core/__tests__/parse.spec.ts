@@ -3453,4 +3453,96 @@ describe('compiler: parse', () => {
       })
     }
   })
+
+  describe('vue specific errors', () => {
+    test('error when v-slot used on non-root level <template>', () => {
+      const onError = vi.fn()
+
+      baseParse(
+        `<Bar><template><template #header> Header </template></template></Bar>`,
+        { onError },
+      )
+
+      expect(onError.mock.calls[0]).toMatchObject([
+        {
+          code: ErrorCodes.X_SLOT_TEMPLATE_NOT_ROOT,
+          loc: {
+            start: { column: 16, line: 1, offset: 15 },
+            end: { column: 53, line: 1, offset: 52 },
+            source: '<template #header> Header </template>',
+          },
+        },
+      ])
+    })
+
+    test('error when v-slot used on non-root level <template> with v-if', () => {
+      const onError = vi.fn()
+
+      baseParse(
+        `<Bar><template v-if="true"><template #header> Header </template></template></Bar>`,
+        { onError },
+      )
+
+      expect(onError.mock.calls[0]).toMatchObject([
+        {
+          code: ErrorCodes.X_SLOT_TEMPLATE_NOT_ROOT,
+          loc: {
+            start: { column: 28, line: 1, offset: 27 },
+            end: { column: 65, line: 1, offset: 64 },
+            source: '<template #header> Header </template>',
+          },
+        },
+      ])
+    })
+
+    test('error when v-slot used on non-root level <template> together with v-if', () => {
+      const onError = vi.fn()
+
+      baseParse(
+        `  <div><template v-if="true"><template v-if="true" #item> Header </template></template></div>`,
+        { onError },
+      )
+
+      expect(onError.mock.calls[0]).toMatchObject([
+        {
+          code: ErrorCodes.X_SLOT_TEMPLATE_NOT_ROOT,
+          loc: {
+            start: { column: 30, line: 1, offset: 29 },
+            end: { column: 77, line: 1, offset: 76 },
+            source: '<template v-if="true" #item> Header </template>',
+          },
+        },
+      ])
+    })
+
+    test('error when v-slot used on non-root level <template> inside dynamic component', () => {
+      const onError = vi.fn()
+
+      baseParse(
+        `<component is="MyComp"><template><template #item>bar</template></template></component>`,
+        { onError },
+      )
+
+      expect(onError.mock.calls[0]).toMatchObject([
+        {
+          code: ErrorCodes.X_SLOT_TEMPLATE_NOT_ROOT,
+          loc: {
+            start: { column: 34, line: 1, offset: 33 },
+            end: { column: 64, line: 1, offset: 63 },
+            source: '<template #item>bar</template>',
+          },
+        },
+      ])
+    })
+
+    test('shouldnt error when v-slot used on non-root level <template> inside dynamic component with casting', () => {
+      const onError = vi.fn()
+
+      baseParse(`<div is="vue:MyComp"><template #item>bar</template></div>`, {
+        onError,
+      })
+
+      expect(onError.mock.calls[0]).toEqual(undefined)
+    })
+  })
 })
