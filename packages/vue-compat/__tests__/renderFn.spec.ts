@@ -252,7 +252,7 @@ describe('compat: render function', () => {
     expect(vm.$el).toBeInstanceOf(HTMLDivElement)
     expect(vm.$el.outerHTML).toBe(`<div>hello</div>`)
   })
-  
+
   test('extends render fn', () => {
     const BaseComponent = {
       render: (h: any) => h('div', null, ['hello']),
