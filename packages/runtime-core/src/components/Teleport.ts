@@ -10,8 +10,13 @@ import {
   queuePostRenderEffect,
   traverseStaticChildren,
 } from '../renderer'
-import type { VNode, VNodeArrayChildren, VNodeProps } from '../vnode'
-import { ShapeFlags, isString } from '@vue/shared'
+import type {
+  VNode,
+  VNodeArrayChildren,
+  VNodeNormalizedChildren,
+  VNodeProps,
+} from '../vnode'
+import { ShapeFlags, isArray, isString } from '@vue/shared'
 import { warn } from '../warning'
 import { isHmrUpdating } from '../hmr'
 
@@ -24,9 +29,69 @@ export interface TeleportProps {
 }
 
 export const TeleportEndKey: unique symbol = Symbol('_vte')
+export const teleportUTMap: Record<
+  number,
+  ((vars?: Record<string, string>) => void) | null
+> = {}
 
 export const isTeleport = (type: any): boolean => type.__isTeleport
-
+/**
+ * @private
+ */
+export const setTeleportOwnerAttrToEl = (
+  props: (VNodeProps & { [key: string]: any }) | null,
+  vnode: VNode,
+) => {
+  const teleportIds = vnode.teleportIds
+  if (teleportIds !== null && teleportIds !== undefined) {
+    if (!props) {
+      props = {}
+    }
+    props['data-v-owner'] = teleportIds[teleportIds.length - 1]
+  }
+  return props
+}
+/**
+ * In the fast path, sometimes element updates will not re-update `teleport`
+ * E.g
+ * <teleport to="body">
+ *     <Comp>
+ *        <div class="text" v-if="showThing">
+ *         test
+ *       </div>
+ *     </Comp>
+ *   </teleport>
+ * TODO: comment
+ * @private
+ */
+export const updateTeleportsCssVarsFast = (
+  vnode: VNode,
+  parentSuspense: SuspenseBoundary | null,
+) => {
+  queuePostRenderEffect(() => {
+    const teleportIds = vnode.teleportIds
+    if (teleportIds !== null && teleportIds !== undefined) {
+      teleportIds.forEach((id: number) => {
+        if (teleportUTMap[id]) {
+          teleportUTMap[id]!()
+        }
+      })
+    }
+  }, parentSuspense)
+}
+export const setTeleportIdTOVNode = (
+  vnode: VNode,
+  parentComponent: ComponentInternalInstance | null,
+) => {
+  if (parentComponent) {
+    if (
+      parentComponent.vnode.teleportIds !== null &&
+      parentComponent.vnode.teleportIds !== undefined
+    ) {
+      vnode.teleportIds = parentComponent.vnode.teleportIds
+    }
+  }
+}
 const isTeleportDisabled = (props: VNode['props']): boolean =>
   props && (props.disabled || props.disabled === '')
 
@@ -138,6 +203,7 @@ export const TeleportImpl = {
       const mountToTarget = () => {
         const target = (n2.target = resolveTarget(n2.props, querySelector))
         const targetAnchor = prepareAnchor(target, n2, createText, insert)
+        initTeleportIds(children, n2)
         if (target) {
           // #2652 we could be teleporting from a non-SVG tree into an SVG tree
           if (namespace !== 'svg' && isTargetSVG(target)) {
@@ -503,4 +569,24 @@ function prepareAnchor(
   }
 
   return targetAnchor
+}
+
+function initTeleportIds(children: VNodeNormalizedChildren, vnode: VNode) {
+  if (!children) return
+  const ctx = vnode.ctx
+  if (children && isArray(children)) {
+    ;(children as VNode[]).forEach((c: VNode | null) => {
+      if (c && c.__v_isVNode && ctx && ctx.ut && (ctx.uid || ctx.uid === 0)) {
+        if (!c.teleportIds) c.teleportIds = []
+        c.teleportIds.push(ctx.uid)
+
+        if (c.ssContent && !c.ssContent.teleportIds) {
+          if (!c.ssContent.teleportIds) {
+            c.ssContent.teleportIds = []
+          }
+          c.ssContent.teleportIds.push(ctx.uid)
+        }
+      }
+    })
+  }
 }

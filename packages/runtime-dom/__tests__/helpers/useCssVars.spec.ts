@@ -3,14 +3,22 @@ import {
   type FunctionalComponent,
   Suspense,
   Teleport,
+  Transition,
+  createBlock,
+  createCommentVNode,
+  createElementBlock,
   createStaticVNode,
+  createVNode,
   defineCustomElement,
   h,
   nextTick,
+  openBlock,
   reactive,
   ref,
   render,
+  renderSlot,
   useCssVars,
+  withCtx,
 } from '@vue/runtime-dom'
 
 describe('useCssVars', () => {
@@ -404,5 +412,117 @@ describe('useCssVars', () => {
     expect(container.innerHTML).toBe(
       `<css-vars-ce style="--color: red;"></css-vars-ce>`,
     )
+  })
+
+  test('with teleport(component & v-if)', async () => {
+    document.body.innerHTML = ''
+    const state = reactive({ color: 'red' })
+    const root = document.createElement('div')
+    const target = document.body
+    const toggle = ref(false)
+    const comp = {
+      render(ctx: any) {
+        return renderSlot(ctx.$slots, 'default')
+      },
+    }
+    const App = {
+      setup() {
+        useCssVars(() => state)
+        return () => [
+          h(Teleport, { to: target }, [
+            h(
+              comp,
+              {},
+              {
+                default: withCtx(() => [
+                  toggle.value
+                    ? (openBlock(),
+                      createElementBlock(
+                        'div',
+                        {
+                          key: 0,
+                        },
+                        ' test ',
+                      ))
+                    : createCommentVNode('v-if', true),
+                ]),
+                _: 1,
+              },
+            ),
+          ]),
+        ]
+      },
+    }
+
+    render(h(App), root)
+    await nextTick()
+    expect(target.children.length).toBe(0)
+    toggle.value = true
+    await nextTick()
+    expect(target.children.length).toBe(1)
+    for (const c of [].slice.call(target.children as any)) {
+      expect((c as HTMLElement).style.getPropertyValue(`--color`)).toBe('red')
+    }
+    toggle.value = false
+    await nextTick()
+    expect(target.children.length).toBe(0)
+    toggle.value = true
+    await nextTick()
+    expect(target.children.length).toBe(1)
+    for (const c of [].slice.call(target.children as any)) {
+      expect((c as HTMLElement).style.getPropertyValue(`--color`)).toBe('red')
+    }
+  })
+
+  test('with teleport(transition & v-if)', async () => {
+    document.body.innerHTML = ''
+    const state = reactive({ color: 'red' })
+    const root = document.createElement('div')
+    const target = document.body
+    const toggle = ref(false)
+
+    const App = {
+      setup() {
+        useCssVars(() => state)
+        return () => [
+          (openBlock(),
+          createBlock(Teleport, { to: target }, [
+            createVNode(Transition, null, {
+              default: withCtx(() => [
+                toggle.value
+                  ? (openBlock(),
+                    createElementBlock(
+                      'div',
+                      {
+                        key: 0,
+                      },
+                      'test',
+                    ))
+                  : createCommentVNode('v-if', true),
+              ]),
+              _: 1 /* STABLE */,
+            }),
+          ])),
+        ]
+      },
+    }
+
+    render(h(App), root)
+    await nextTick()
+    expect(target.children.length).toBe(0)
+    toggle.value = true
+    await nextTick()
+    expect(target.children.length).toBe(1)
+    for (const c of [].slice.call(target.children as any)) {
+      expect((c as HTMLElement).style.getPropertyValue(`--color`)).toBe('red')
+    }
+    toggle.value = false
+    await nextTick()
+    toggle.value = true
+    await nextTick()
+    expect(target.children.length).toBe(1)
+    for (const c of [].slice.call(target.children as any)) {
+      expect((c as HTMLElement).style.getPropertyValue(`--color`)).toBe('red')
+    }
   })
 })
