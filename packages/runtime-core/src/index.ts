@@ -108,7 +108,7 @@ export {
   currentInstance,
   getCurrentInstance,
   setCurrentInstance,
-  unsetCurrentInstance
+  unsetCurrentInstance,
 } from './component'
 
 // For raw render function users
