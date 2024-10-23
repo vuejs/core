@@ -453,6 +453,29 @@ test('for loop prefixing edge case for reused AST', () => {
   expect(code).not.toMatch(`_ctx.item`)
 })
 
+test('catch block param prefixing edge case for reused AST', () => {
+  const src = `
+  <script setup lang="ts">
+    import { Foo } from './foo'
+  </script>
+  <template>
+    <div @click="() => {
+         try {} catch (err) { console.error(err) }
+      }"/>
+  </template>
+  `
+  const { descriptor } = parse(src)
+  // compileScript triggers importUsageCheck
+  compileScript(descriptor, { id: 'xxx' })
+  const { code } = compileTemplate({
+    id: 'xxx',
+    filename: 'test.vue',
+    ast: descriptor.template!.ast,
+    source: descriptor.template!.content,
+  })
+  expect(code).not.toMatch(`_ctx.err`)
+})
+
 test('prefixing edge case for reused AST ssr mode', () => {
   const src = `
   <script setup lang="ts">
