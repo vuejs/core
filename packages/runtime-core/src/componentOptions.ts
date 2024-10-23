@@ -860,14 +860,6 @@ export function createWatcher(
         ? currentInstance
         : null
 
-    const newValue = getter()
-    if (
-      isArray(newValue) &&
-      isCompatEnabled(DeprecationTypes.WATCH_ARRAY, instance)
-    ) {
-      options.deep = true
-    }
-
     const baseGetter = getter
     getter = () => {
       const val = baseGetter()
@@ -875,7 +867,8 @@ export function createWatcher(
         isArray(val) &&
         checkCompatEnabled(DeprecationTypes.WATCH_ARRAY, instance)
       ) {
-        traverse(val)
+        traverse(val, 1)
+        return { WATCH_ARRAY_UNWRAP: val }
       }
       return val
     }
