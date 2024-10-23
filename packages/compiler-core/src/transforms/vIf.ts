@@ -30,6 +30,7 @@ import {
 import { ErrorCodes, createCompilerError } from '../errors'
 import { processExpression } from './transformExpression'
 import { validateBrowserExpression } from '../validateExpression'
+import { cloneLoc } from '../parser'
 import { CREATE_COMMENT, FRAGMENT } from '../runtimeHelpers'
 import { findDir, findProp, getMemoedVNodeCall, injectProp } from '../utils'
 import { PatchFlags } from '@vue/shared'
@@ -110,7 +111,7 @@ export function processIf(
     const branch = createIfBranch(node, dir)
     const ifNode: IfNode = {
       type: NodeTypes.IF,
-      loc: node.loc,
+      loc: cloneLoc(node.loc),
       branches: [branch],
     }
     context.replaceNode(ifNode)

@@ -1,8 +1,8 @@
 import {
-  Comment,
   Fragment,
   Static,
   Text,
+  Comment as VComment,
   type VNode,
   type VNodeHook,
   createTextVNode,
@@ -195,7 +195,7 @@ export function createHydrationFunctions(
           nextNode = nextSibling(node)
         }
         break
-      case Comment:
+      case VComment:
         if (isTemplateNode(node)) {
           nextNode = nextSibling(node)
           // wrapped <transition appear>
@@ -385,7 +385,10 @@ export function createHydrationFunctions(
       let needCallTransitionHooks = false
       if (isTemplateNode(el)) {
         needCallTransitionHooks =
-          needTransition(parentSuspense, transition) &&
+          needTransition(
+            null, // no need check parentSuspense in hydration
+            transition,
+          ) &&
           parentComponent &&
           parentComponent.vnode.props &&
           parentComponent.vnode.props.appear
