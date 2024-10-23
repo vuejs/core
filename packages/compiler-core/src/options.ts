@@ -53,6 +53,11 @@ export interface ParserOptions
    */
   isPreTag?: (tag: string) => boolean
   /**
+   * Elements that should ignore the first newline token per parinsg spec
+   * e.g. `<textarea>` and `<pre>`
+   */
+  isIgnoreNewlineTag?: (tag: string) => boolean
+  /**
    * Platform-specific built-in components e.g. `<Transition>`
    */
   isBuiltInComponent?: (tag: string) => symbol | void

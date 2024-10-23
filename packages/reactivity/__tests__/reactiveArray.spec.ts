@@ -51,6 +51,7 @@ describe('reactivity/reactive/Array', () => {
     const raw = {}
     const arr = reactive([{}, {}])
     arr.push(raw)
+
     expect(arr.indexOf(raw)).toBe(2)
     expect(arr.indexOf(raw, 3)).toBe(-1)
     expect(arr.includes(raw)).toBe(true)
@@ -87,6 +88,84 @@ describe('reactivity/reactive/Array', () => {
     expect(index).toBe(0)
     arr.reverse()
     expect(index).toBe(1)
+  })
+
+  // only non-existent reactive will try to search by using its raw value
+  describe('Array identity methods should not be called more than necessary', () => {
+    const identityMethods = ['includes', 'indexOf', 'lastIndexOf'] as const
+
+    function instrumentArr(rawTarget: any[]) {
+      identityMethods.forEach(key => {
+        const spy = vi.fn(rawTarget[key] as any)
+        rawTarget[key] = spy
+      })
+    }
+
+    function searchValue(target: any[], ...args: unknown[]) {
+      return identityMethods.map(key => (target[key] as any)(...args))
+    }
+
+    function unInstrumentArr(rawTarget: any[]) {
+      identityMethods.forEach(key => {
+        ;(rawTarget[key] as any).mockClear()
+        // relink to prototype method
+        rawTarget[key] = Array.prototype[key] as any
+      })
+    }
+
+    function expectHaveBeenCalledTimes(rawTarget: any[], times: number) {
+      identityMethods.forEach(key => {
+        expect(rawTarget[key]).toHaveBeenCalledTimes(times)
+      })
+    }
+
+    test('should be called once with a non-existent raw value', () => {
+      const reactiveArr = reactive([])
+      instrumentArr(toRaw(reactiveArr))
+      const searchResult = searchValue(reactiveArr, {})
+
+      expectHaveBeenCalledTimes(toRaw(reactiveArr), 1)
+      expect(searchResult).toStrictEqual([false, -1, -1])
+
+      unInstrumentArr(toRaw(reactiveArr))
+    })
+
+    test('should be called once with an existent reactive value', () => {
+      const existReactiveValue = reactive({})
+      const reactiveArr = reactive([existReactiveValue, existReactiveValue])
+
+      instrumentArr(toRaw(reactiveArr))
+      const searchResult = searchValue(reactiveArr, existReactiveValue)
+
+      expectHaveBeenCalledTimes(toRaw(reactiveArr), 1)
+      expect(searchResult).toStrictEqual([true, 0, 1])
+
+      unInstrumentArr(toRaw(reactiveArr))
+    })
+
+    test('should be called twice with a non-existent reactive value', () => {
+      const reactiveArr = reactive([])
+      instrumentArr(toRaw(reactiveArr))
+      const searchResult = searchValue(reactiveArr, reactive({}))
+
+      expectHaveBeenCalledTimes(toRaw(reactiveArr), 2)
+      expect(searchResult).toStrictEqual([false, -1, -1])
+
+      unInstrumentArr(toRaw(reactiveArr))
+    })
+
+    test('should be called twice with a non-existent reactive value, but the raw value exists', () => {
+      const existRaw = {}
+      const reactiveArr = reactive([existRaw, existRaw])
+
+      instrumentArr(toRaw(reactiveArr))
+      const searchResult = searchValue(reactiveArr, reactive(existRaw))
+
+      expectHaveBeenCalledTimes(toRaw(reactiveArr), 2)
+      expect(searchResult).toStrictEqual([true, 0, 1])
+
+      unInstrumentArr(toRaw(reactiveArr))
+    })
   })
 
   test('delete on Array should not trigger length dependency', () => {
@@ -303,19 +382,35 @@ describe('reactivity/reactive/Array', () => {
       const a2 = reactive([{ val: 3 }])
       const a3 = [4, 5]
 
-      let result = computed(() => a1.concat(a2, a3))
-      expect(result.value).toStrictEqual([1, { val: 2 }, { val: 3 }, 4, 5])
+      let result = computed(() => a1.concat(a2, a3, 6, { val: 7 }))
+      expect(result.value).toStrictEqual([
+        1,
+        { val: 2 },
+        { val: 3 },
+        4,
+        5,
+        6,
+        { val: 7 },
+      ])
       expect(isReactive(result.value[1])).toBe(false)
       expect(isReactive(result.value[2])).toBe(true)
+      expect(isReactive(result.value[6])).toBe(false)
 
       a1.shift()
-      expect(result.value).toStrictEqual([{ val: 2 }, { val: 3 }, 4, 5])
+      expect(result.value).toStrictEqual([
+        { val: 2 },
+        { val: 3 },
+        4,
+        5,
+        6,
+        { val: 7 },
+      ])
 
       a2.pop()
-      expect(result.value).toStrictEqual([{ val: 2 }, 4, 5])
+      expect(result.value).toStrictEqual([{ val: 2 }, 4, 5, 6, { val: 7 }])
 
       a3.pop()
-      expect(result.value).toStrictEqual([{ val: 2 }, 4, 5])
+      expect(result.value).toStrictEqual([{ val: 2 }, 4, 5, 6, { val: 7 }])
     })
 
     test('entries', () => {
@@ -724,6 +819,27 @@ describe('reactivity/reactive/Array', () => {
       expect(state.things.forEach('foo', 'bar', 'baz')).toBeUndefined()
       expect(state.things.map('foo', 'bar', 'baz')).toEqual(['1', '2', '3'])
       expect(state.things.some('foo', 'bar', 'baz')).toBe(true)
+
+      {
+        class Collection extends Array {
+          find(matcher: any) {
+            return super.find(matcher)
+          }
+        }
+
+        const state = reactive({
+          // @ts-expect-error
+          things: new Collection({ foo: '' }),
+        })
+
+        const bar = computed(() => {
+          return state.things.find((obj: any) => obj.foo === 'bar')
+        })
+        bar.value
+        state.things[0].foo = 'bar'
+
+        expect(bar.value).toEqual({ foo: 'bar' })
+      }
     })
   })
 })

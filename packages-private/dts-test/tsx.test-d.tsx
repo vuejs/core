@@ -121,3 +121,5 @@ expectType<JSX.Element>(
     xmlns="http://www.w3.org/2000/svg"
   />,
 )
+// details
+expectType<JSX.Element>(<details name="details" />)

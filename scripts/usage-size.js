@@ -1,3 +1,4 @@
+// @ts-check
 import { mkdir, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { rollup } from 'rollup'
@@ -23,12 +24,20 @@ const {
 const sizeDir = path.resolve('temp/size')
 const entry = path.resolve('./packages/vue/dist/vue.runtime.esm-bundler.js')
 
-interface Preset {
-  name: string
-  imports: string[]
-}
+/**
+ * @typedef {Object} Preset
+ * @property {string} name - The name of the preset
+ * @property {string[]} imports - The imports that are part of this preset
+ * @property {Record<string, string>} [replace]
+ */
 
-const presets: Preset[] = [
+/** @type {Preset[]} */
+const presets = [
+  {
+    name: 'createApp (CAPI only)',
+    imports: ['createApp'],
+    replace: { __VUE_OPTIONS_API__: 'false' },
+  },
   { name: 'createApp', imports: ['createApp'] },
   { name: 'createSSRApp', imports: ['createSSRApp'] },
   { name: 'defineCustomElement', imports: ['defineCustomElement'] },
@@ -47,28 +56,45 @@ const presets: Preset[] = [
 
 main()
 
+/**
+ * Main function that initiates the bundling process for the presets
+ */
 async function main() {
   console.log()
-  const tasks: ReturnType<typeof generateBundle>[] = []
+  /** @type {Promise<{name: string, size: number, gzip: number, brotli: number}>[]} */
+  const tasks = []
   for (const preset of presets) {
     tasks.push(generateBundle(preset))
   }
+  const results = await Promise.all(tasks)
 
-  const results = Object.fromEntries(
-    (await Promise.all(tasks)).map(r => [r.name, r]),
-  )
+  for (const r of results) {
+    console.log(
+      `${pico.green(pico.bold(r.name))} - ` +
+        `min:${prettyBytes(r.size, { minimumFractionDigits: 3 })} / ` +
+        `gzip:${prettyBytes(r.gzip, { minimumFractionDigits: 3 })} / ` +
+        `brotli:${prettyBytes(r.brotli, { minimumFractionDigits: 3 })}`,
+    )
+  }
 
   await mkdir(sizeDir, { recursive: true })
   await writeFile(
     path.resolve(sizeDir, '_usages.json'),
-    JSON.stringify(results, null, 2),
+    JSON.stringify(Object.fromEntries(results.map(r => [r.name, r])), null, 2),
     'utf-8',
   )
 }
 
-async function generateBundle(preset: Preset) {
+/**
+ * Generates a bundle for a given preset
+ *
+ * @param {Preset} preset - The preset to generate the bundle for
+ * @returns {Promise<{name: string, size: number, gzip: number, brotli: number}>} - The result of the bundling process
+ */
+async function generateBundle(preset) {
   const id = 'virtual:entry'
   const content = `export { ${preset.imports.join(', ')} } from '${entry}'`
+
   const result = await rollup({
     input: id,
     plugins: [
@@ -89,6 +115,7 @@ async function generateBundle(preset: Preset) {
         __VUE_PROD_HYDRATION_MISMATCH_DETAILS__: 'false',
         __VUE_OPTIONS_API__: 'true',
         preventAssignment: true,
+        ...preset.replace,
       }),
     ],
   })
@@ -100,7 +127,7 @@ async function generateBundle(preset: Preset) {
       module: true,
       toplevel: true,
     })
-  ).code!
+  ).code
 
   const size = minified.length
   const gzip = gzipSync(minified).length
@@ -109,13 +136,6 @@ async function generateBundle(preset: Preset) {
   if (write) {
     await writeFile(path.resolve(sizeDir, preset.name + '.js'), bundled)
   }
-
-  console.log(
-    `${pico.green(pico.bold(preset.name))} - ` +
-      `min:${prettyBytes(size, { minimumFractionDigits: 3 })} / ` +
-      `gzip:${prettyBytes(gzip, { minimumFractionDigits: 3 })} / ` +
-      `brotli:${prettyBytes(brotli, { minimumFractionDigits: 3 })}`,
-  )
 
   return {
     name: preset.name,

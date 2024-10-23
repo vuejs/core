@@ -1041,6 +1041,18 @@ describe('emits', () => {
     },
   })
 
+  // #11803 manual props annotation in setup()
+  const Hello = defineComponent({
+    name: 'HelloWorld',
+    inheritAttrs: false,
+    props: { foo: String },
+    emits: {
+      customClick: (args: string) => typeof args === 'string',
+    },
+    setup(props: { foo?: string }) {},
+  })
+  ;<Hello onCustomClick={() => {}} />
+
   // without emits
   defineComponent({
     setup(props, { emit }) {
@@ -1810,6 +1822,15 @@ describe('__typeRefs backdoor, object syntax', () => {
   expectType<number>(refs.child.$refs.foo)
 })
 
+describe('__typeEl backdoor', () => {
+  const Comp = defineComponent({
+    __typeEl: {} as HTMLAnchorElement,
+  })
+  const c = new Comp()
+
+  expectType<HTMLAnchorElement>(c.$el)
+})
+
 defineComponent({
   props: {
     foo: [String, null],
@@ -2047,3 +2068,13 @@ expectString(instance.actionText)
 // public prop on $props should be optional
 // @ts-expect-error
 expectString(instance.$props.actionText)
+
+// #12122
+defineComponent({
+  props: { foo: String },
+  render() {
+    expectType<{ readonly foo?: string }>(this.$props)
+    // @ts-expect-error
+    expectType<string>(this.$props)
+  },
+})
