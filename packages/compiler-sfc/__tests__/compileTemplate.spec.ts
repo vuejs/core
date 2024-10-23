@@ -428,6 +428,31 @@ test('prefixing edge case for reused AST', () => {
   expect(code).not.toMatch(`_ctx.t`)
 })
 
+test('for loop prefixing edge case for reused AST', () => {
+  const src = `
+  <script setup lang="ts">
+    import { Foo } from './foo'
+  </script>
+  <template>
+    <div @click="(event) => {
+        for (const item of event) {
+          console.log(item)
+        }
+      }"></div>
+  </template>
+  `
+  const { descriptor } = parse(src)
+  // compileScript triggers importUsageCheck
+  compileScript(descriptor, { id: 'xxx' })
+  const { code } = compileTemplate({
+    id: 'xxx',
+    filename: 'test.vue',
+    ast: descriptor.template!.ast,
+    source: descriptor.template!.content,
+  })
+  expect(code).not.toMatch(`_ctx.item`)
+})
+
 test('prefixing edge case for reused AST ssr mode', () => {
   const src = `
   <script setup lang="ts">
