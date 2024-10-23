@@ -517,7 +517,9 @@ export default /*@__PURE__*/_defineComponent({
     qux: { type: Function, required: false, default() { return 1 } },
     quux: { type: Function, required: false, default() { } },
     quuxx: { type: Promise, required: false, async default() { return await Promise.resolve('hi') } },
-    fred: { type: String, required: false, get default() { return 'fred' } }
+    fred: { type: String, required: false, get default() { return 'fred' } },
+    toLowerCase: { type: Function, required: true, default: (str: string) => str.toLowerCase() },
+    toUpperCase: { type: Function, required: true, default(str: string) { return str.toUpperCase() } }
   },
   setup(__props: any, { expose: __expose }) {
   __expose();

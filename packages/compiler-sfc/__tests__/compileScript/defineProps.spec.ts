@@ -388,12 +388,16 @@ const props = defineProps({ foo: String })
       quux?(): void
       quuxx?: Promise<string>;
       fred?: string
+      toLowerCase: (str: string) => string
+      toUpperCase: (str: string) => string
     }>(), {
       foo: 'hi',
       qux() { return 1 },
       ['quux']() { },
       async quuxx() { return await Promise.resolve('hi') },
-      get fred() { return 'fred' }
+      get fred() { return 'fred' },
+      toLowerCase: (str: string) => str.toLowerCase(),
+      toUpperCase(str: string){ return str.toUpperCase() } 
     })
     </script>
     `)
@@ -415,6 +419,12 @@ const props = defineProps({ foo: String })
     expect(content).toMatch(
       `fred: { type: String, required: false, get default() { return 'fred' } }`,
     )
+    expect(content).toMatch(
+      `toLowerCase: { type: Function, required: true, default: (str: string) => str.toLowerCase() }`,
+    )
+    expect(content).toMatch(
+      `toUpperCase: { type: Function, required: true, default(str: string) { return str.toUpperCase() } }`,
+    )
     expect(content).toMatch(`const props = __props`)
     expect(bindings).toStrictEqual({
       foo: BindingTypes.PROPS,
@@ -424,6 +434,8 @@ const props = defineProps({ foo: String })
       quux: BindingTypes.PROPS,
       quuxx: BindingTypes.PROPS,
       fred: BindingTypes.PROPS,
+      toLowerCase: BindingTypes.PROPS,
+      toUpperCase: BindingTypes.PROPS,
       props: BindingTypes.SETUP_CONST,
     })
   })
