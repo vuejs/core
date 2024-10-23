@@ -69,6 +69,34 @@ test('WATCH_ARRAY', async () => {
   expect(spy).toHaveBeenCalledTimes(1)
 })
 
+test('WATCH_ARRAY with non-array initial value', async () => {
+  const spy = vi.fn()
+  const vm = new Vue({
+    data() {
+      return {
+        foo: null,
+      }
+    },
+    watch: {
+      foo: spy,
+    },
+  }) as any
+  expect(
+    deprecationData[DeprecationTypes.WATCH_ARRAY].message,
+  ).not.toHaveBeenWarned()
+
+  expect(spy).not.toHaveBeenCalled()
+  vm.foo = []
+  await nextTick()
+  expect(
+    deprecationData[DeprecationTypes.WATCH_ARRAY].message,
+  ).toHaveBeenWarned()
+  expect(spy).toHaveBeenCalledTimes(1)
+  vm.foo.push(1)
+  await nextTick()
+  expect(spy).toHaveBeenCalledTimes(2)
+})
+
 test('PROPS_DEFAULT_THIS', () => {
   let thisCtx: any
   const Child = {

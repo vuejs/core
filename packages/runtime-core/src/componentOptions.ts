@@ -868,6 +868,7 @@ export function createWatcher(
         checkCompatEnabled(DeprecationTypes.WATCH_ARRAY, instance)
       ) {
         traverse(val, 1)
+        return { WATCH_ARRAY_UNWRAP: val }
       }
       return val
     }
