@@ -1,24 +1,29 @@
+/**
+ * @vitest-environment jsdom
+ */
+import type { Mock } from 'vitest'
 import {
+  type TestElement,
+  computed,
+  createApp,
+  defineComponent,
   h,
+  nextTick,
   nodeOps,
+  ref,
   render,
+  renderToString,
   serializeInner,
   triggerEvent,
-  TestElement,
-  nextTick,
-  renderToString,
-  ref,
-  defineComponent,
-  createApp,
-  computed
 } from '@vue/runtime-test'
+import { render as domRender } from 'vue'
 
 describe('api: options', () => {
   test('data', async () => {
     const Comp = defineComponent({
       data() {
         return {
-          foo: 1
+          foo: 1,
         }
       },
       render() {
@@ -27,11 +32,11 @@ describe('api: options', () => {
           {
             onClick: () => {
               this.foo++
-            }
+            },
           },
-          this.foo
+          this.foo,
         )
-      }
+      },
     })
     const root = nodeOps.createElement('div')
     render(h(Comp), root)
@@ -46,14 +51,14 @@ describe('api: options', () => {
     const Comp = defineComponent({
       data() {
         return {
-          foo: 1
+          foo: 1,
         }
       },
       computed: {
         bar(): number {
           return this.foo + 1
         },
-        baz: (vm): number => vm.bar + 1
+        baz: (vm: any): number => vm.bar + 1,
       },
       render() {
         return h(
@@ -61,11 +66,11 @@ describe('api: options', () => {
           {
             onClick: () => {
               this.foo++
-            }
+            },
           },
-          this.bar + this.baz
+          this.bar + this.baz,
         )
-      }
+      },
     })
     const root = nodeOps.createElement('div')
     render(h(Comp), root)
@@ -82,7 +87,7 @@ describe('api: options', () => {
         // #3300 method on ctx should be overwritable
         this.incBy = this.incBy.bind(this, 2)
         return {
-          foo: 1
+          foo: 1,
         }
       },
       methods: {
@@ -91,18 +96,18 @@ describe('api: options', () => {
         },
         incBy(n = 0) {
           this.foo += n
-        }
+        },
       },
       render() {
         return h(
           'div',
           {
             onClick: this.inc,
-            onFoo: this.incBy
+            onFoo: this.incBy,
           },
-          this.foo
+          this.foo,
         )
-      }
+      },
     })
     const root = nodeOps.createElement('div')
     render(h(Comp), root)
@@ -117,16 +122,16 @@ describe('api: options', () => {
     expect(serializeInner(root)).toBe(`<div>4</div>`)
   })
 
-  test('component’s own methods have higher priority than global properties', async () => {
+  test("component's own methods have higher priority than global properties", async () => {
     const app = createApp({
       methods: {
         foo() {
           return 'foo'
-        }
+        },
       },
       render() {
         return this.foo()
-      }
+      },
     })
     app.config.globalProperties.foo = () => 'bar'
 
@@ -139,11 +144,11 @@ describe('api: options', () => {
     function returnThis(this: any) {
       return this
     }
-    const spyA = jest.fn(returnThis)
-    const spyB = jest.fn(returnThis)
-    const spyC = jest.fn(returnThis)
-    const spyD = jest.fn(returnThis)
-    const spyE = jest.fn(returnThis)
+    const spyA = vi.fn(returnThis)
+    const spyB = vi.fn(returnThis)
+    const spyC = vi.fn(returnThis)
+    const spyD = vi.fn(returnThis)
+    const spyE = vi.fn(returnThis)
 
     let ctx: any
     const Comp = {
@@ -152,12 +157,12 @@ describe('api: options', () => {
           foo: 1,
           bar: 2,
           baz: {
-            qux: 3
+            qux: 3,
           },
           qux: 4,
           dot: {
-            path: 5
-          }
+            path: 5,
+          },
         }
       },
       watch: {
@@ -167,27 +172,27 @@ describe('api: options', () => {
         bar: spyB,
         baz: {
           handler: spyC,
-          deep: true
+          deep: true,
         },
         qux: {
-          handler: 'onQuxChange'
+          handler: 'onQuxChange',
         },
-        'dot.path': spyE
+        'dot.path': spyE,
       },
       methods: {
         onFooChange: spyA,
-        onQuxChange: spyD
+        onQuxChange: spyD,
       },
       render() {
         ctx = this
-      }
+      },
     }
     const root = nodeOps.createElement('div')
     render(h(Comp), root)
 
-    function assertCall(spy: jest.Mock, callIndex: number, args: any[]) {
+    function assertCall(spy: Mock, callIndex: number, args: any[]) {
       expect(spy.mock.calls[callIndex].slice(0, 2)).toMatchObject(args)
-      expect(spy).toHaveReturnedWith(ctx)
+      expect(spy.mock.results[callIndex].value).toBe(ctx)
     }
 
     ctx.foo++
@@ -221,9 +226,9 @@ describe('api: options', () => {
     function returnThis(this: any) {
       return this
     }
-    const spyA = jest.fn(returnThis)
-    const spyB = jest.fn(returnThis)
-    const spyC = jest.fn(returnThis)
+    const spyA = vi.fn(returnThis)
+    const spyB = vi.fn(returnThis)
+    const spyC = vi.fn(returnThis)
 
     let ctx: any
     const Comp = {
@@ -232,8 +237,8 @@ describe('api: options', () => {
           foo: 1,
           bar: 2,
           baz: {
-            qux: 3
-          }
+            qux: 3,
+          },
         }
       },
       watch: {
@@ -244,23 +249,23 @@ describe('api: options', () => {
         baz: [
           {
             handler: spyC,
-            deep: true
-          }
-        ]
+            deep: true,
+          },
+        ],
       },
       methods: {
-        onFooChange: spyA
+        onFooChange: spyA,
       },
       render() {
         ctx = this
-      }
+      },
     }
     const root = nodeOps.createElement('div')
     render(h(Comp), root)
 
-    function assertCall(spy: jest.Mock, callIndex: number, args: any[]) {
+    function assertCall(spy: Mock, callIndex: number, args: any[]) {
       expect(spy.mock.calls[callIndex].slice(0, 2)).toMatchObject(args)
-      expect(spy).toHaveReturnedWith(ctx)
+      expect(spy.mock.results[callIndex].value).toBe(ctx)
     }
 
     ctx.foo++
@@ -285,32 +290,32 @@ describe('api: options', () => {
     const mixinA = {
       data() {
         return {
-          fromMixinA: ''
+          fromMixinA: '',
         }
       },
       watch: {
         obj: {
           handler(this: any, to: any) {
             this.fromMixinA = to
-          }
-        }
-      }
+          },
+        },
+      },
     }
 
     const mixinB = {
       data() {
         return {
-          fromMixinB: ''
+          fromMixinB: '',
         }
       },
       watch: {
-        obj: 'setMixinB'
+        obj: 'setMixinB',
       },
       methods: {
         setMixinB(this: any, to: any) {
           this.fromMixinB = to
-        }
-      }
+        },
+      },
     }
 
     let vm: any
@@ -319,16 +324,16 @@ describe('api: options', () => {
       mixins: [mixinA, mixinB],
       data: () => ({
         obj: 'foo',
-        fromComp: ''
+        fromComp: '',
       }),
       watch: {
         obj(this: any, to: any) {
           this.fromComp = to
-        }
+        },
       },
       mounted() {
         vm = this
-      }
+      },
     }
 
     const root = nodeOps.createElement('div')
@@ -346,13 +351,13 @@ describe('api: options', () => {
     const Root = defineComponent({
       data() {
         return {
-          a: 1
+          a: 1,
         }
       },
       provide() {
         return {
           a: this.a,
-          [symbolKey]: 2
+          [symbolKey]: 2,
         }
       },
       render() {
@@ -366,9 +371,9 @@ describe('api: options', () => {
           h(ChildG),
           h(ChildH),
           h(ChildI),
-          h(ChildJ)
+          h(ChildJ),
         ]
-      }
+      },
     })
 
     const defineChild = (injectOptions: any, injectedKey = 'b') =>
@@ -376,53 +381,53 @@ describe('api: options', () => {
         inject: injectOptions,
         render() {
           return this[injectedKey]
-        }
-      } as any)
+        },
+      }) as any
 
     const ChildA = defineChild(['a'], 'a')
     const ChildB = defineChild({ b: 'a' })
     const ChildC = defineChild({
       b: {
-        from: 'a'
-      }
+        from: 'a',
+      },
     })
     const ChildD = defineChild(
       {
         a: {
-          default: () => 0
-        }
+          default: () => 0,
+        },
       },
-      'a'
+      'a',
     )
     const ChildE = defineChild({
       b: {
         from: 'c',
-        default: 2
-      }
+        default: 2,
+      },
     })
     const ChildF = defineChild({
       b: {
         from: 'c',
-        default: () => 3
-      }
+        default: () => 3,
+      },
     })
     const ChildG = defineChild({
       b: {
-        default: 4
-      }
+        default: 4,
+      },
     })
     const ChildH = defineChild({
       b: {
-        default: () => 5
-      }
+        default: () => 5,
+      },
     })
     const ChildI = defineChild({
-      b: symbolKey
+      b: symbolKey,
     })
     const ChildJ = defineChild({
       b: {
-        from: symbolKey
-      }
+        from: symbolKey,
+      },
     })
     expect(renderToString(h(Root))).toBe(`1111234522`)
   })
@@ -434,50 +439,18 @@ describe('api: options', () => {
       provide() {
         return {
           n,
-          np
+          np,
         }
       },
-      render: () => h(Child)
+      render: () => h(Child),
     })
     const Child = defineComponent({
       inject: ['n', 'np'],
       render(this: any) {
         return this.n + this.np
-      }
-    })
-    const app = createApp(Parent)
-    // TODO remove in 3.3
-    app.config.unwrapInjectedRef = true
-    const root = nodeOps.createElement('div')
-    app.mount(root)
-    expect(serializeInner(root)).toBe(`1`)
-
-    n.value++
-    await nextTick()
-    expect(serializeInner(root)).toBe(`3`)
-  })
-
-  // TODO remove in 3.3
-  test('provide/inject refs (compat)', async () => {
-    const n = ref(0)
-    const np = computed(() => n.value + 1)
-    const Parent = defineComponent({
-      provide() {
-        return {
-          n,
-          np
-        }
       },
-      render: () => h(Child)
-    })
-    const Child = defineComponent({
-      inject: ['n', 'np'],
-      render(this: any) {
-        return this.n.value + this.np.value
-      }
     })
     const app = createApp(Parent)
-
     const root = nodeOps.createElement('div')
     app.mount(root)
     expect(serializeInner(root)).toBe(`1`)
@@ -485,37 +458,34 @@ describe('api: options', () => {
     n.value++
     await nextTick()
     expect(serializeInner(root)).toBe(`3`)
-
-    expect(`injected property "n" is a ref`).toHaveBeenWarned()
-    expect(`injected property "np" is a ref`).toHaveBeenWarned()
   })
 
   test('provide accessing data in extends', () => {
     const Base = defineComponent({
       data() {
         return {
-          a: 1
+          a: 1,
         }
       },
       provide() {
         return {
-          a: this.a
+          a: this.a,
         }
-      }
+      },
     })
 
     const Child = {
       inject: ['a'],
       render() {
         return (this as any).a
-      }
+      },
     }
 
     const Root = defineComponent({
       extends: Base,
       render() {
         return h(Child)
-      }
+      },
     })
     expect(renderToString(h(Root))).toBe(`1`)
   })
@@ -552,7 +522,7 @@ describe('api: options', () => {
       },
       render() {
         return h(Mid, { count: count.value })
-      }
+      },
     }
 
     const Mid = {
@@ -582,7 +552,7 @@ describe('api: options', () => {
       },
       render(this: any) {
         return h(Child, { count: this.$props.count })
-      }
+      },
     }
 
     const Child = {
@@ -612,7 +582,7 @@ describe('api: options', () => {
       },
       render(this: any) {
         return h('div', this.$props.count)
-      }
+      },
     }
 
     // mount
@@ -629,7 +599,7 @@ describe('api: options', () => {
       'child onBeforeMount',
       'child onMounted',
       'mid onMounted',
-      'root onMounted'
+      'root onMounted',
     ])
 
     calls.length = 0
@@ -643,7 +613,7 @@ describe('api: options', () => {
       'child onBeforeUpdate',
       'child onUpdated',
       'mid onUpdated',
-      'root onUpdated'
+      'root onUpdated',
     ])
 
     calls.length = 0
@@ -656,16 +626,16 @@ describe('api: options', () => {
       'child onBeforeUnmount',
       'child onUnmounted',
       'mid onUnmounted',
-      'root onUnmounted'
+      'root onUnmounted',
     ])
   })
 
   test('mixins', () => {
     const calls: string[] = []
-    const mixinA = {
+    const mixinA = defineComponent({
       data() {
         return {
-          a: 1
+          a: 1,
         }
       },
       created(this: any) {
@@ -676,17 +646,17 @@ describe('api: options', () => {
       },
       mounted() {
         calls.push('mixinA mounted')
-      }
-    }
-    const mixinB = {
+      },
+    })
+    const mixinB = defineComponent({
       props: {
         bP: {
-          type: String
-        }
+          type: String,
+        },
       },
       data() {
         return {
-          b: 2
+          b: 2,
         }
       },
       created(this: any) {
@@ -699,13 +669,13 @@ describe('api: options', () => {
       },
       mounted() {
         calls.push('mixinB mounted')
-      }
-    }
+      },
+    })
     const mixinC = defineComponent({
       props: ['cP1', 'cP2'],
       data() {
         return {
-          c: 3
+          c: 3,
         }
       },
       created() {
@@ -716,17 +686,17 @@ describe('api: options', () => {
       },
       mounted() {
         calls.push('mixinC mounted')
-      }
+      },
     })
     const Comp = defineComponent({
       props: {
-        aaa: String
+        aaa: String,
       },
-      mixins: [defineComponent(mixinA), defineComponent(mixinB), mixinC],
+      mixins: [mixinA, mixinB, mixinC],
       data() {
         return {
           c: 4,
-          z: 4
+          z: 4,
         }
       },
       created() {
@@ -743,7 +713,7 @@ describe('api: options', () => {
       },
       render() {
         return `${this.a}${this.b}${this.c}`
-      }
+      },
     })
     expect(renderToString(h(Comp))).toBe(`124`)
     expect(calls).toEqual([
@@ -754,7 +724,7 @@ describe('api: options', () => {
       'mixinA mounted',
       'mixinB mounted',
       'mixinC mounted',
-      'comp mounted'
+      'comp mounted',
     ])
   })
 
@@ -762,9 +732,9 @@ describe('api: options', () => {
     const Comp = {
       mixins: [
         {
-          render: () => 'from mixin'
-        }
-      ]
+          render: () => 'from mixin',
+        },
+      ],
     }
     expect(renderToString(h(Comp))).toBe('from mixin')
   })
@@ -777,7 +747,7 @@ describe('api: options', () => {
       },
       created() {
         calls.push('mixinA created')
-      }
+      },
     }
 
     const extendA = {
@@ -787,7 +757,7 @@ describe('api: options', () => {
       },
       created() {
         calls.push('extendA created')
-      }
+      },
     }
 
     const Comp = {
@@ -798,7 +768,7 @@ describe('api: options', () => {
       },
       created() {
         calls.push('self created')
-      }
+      },
     }
 
     expect(renderToString(h(Comp))).toBe(`123`)
@@ -808,8 +778,22 @@ describe('api: options', () => {
       'self beforeCreate',
       'mixinA created',
       'extendA created',
-      'self created'
+      'self created',
     ])
+  })
+
+  test('unlikely mixin usage', () => {
+    const MixinA = {
+      data() {},
+    }
+    const MixinB = {
+      data() {},
+    }
+    defineComponent({
+      // since the user will want to type the mixins themselves.
+      mixins: [defineComponent(MixinA), defineComponent(MixinB)],
+      data() {},
+    })
   })
 
   test('chained extends in mixins', () => {
@@ -821,7 +805,7 @@ describe('api: options', () => {
       },
       created() {
         calls.push('extendA created')
-      }
+      },
     }
 
     const mixinA = {
@@ -831,7 +815,7 @@ describe('api: options', () => {
       },
       created() {
         calls.push('mixinA created')
-      }
+      },
     }
 
     const Comp = {
@@ -842,7 +826,7 @@ describe('api: options', () => {
       },
       created() {
         calls.push('self created')
-      }
+      },
     }
 
     expect(renderToString(h(Comp))).toBe(`123`)
@@ -852,33 +836,33 @@ describe('api: options', () => {
       'self beforeCreate',
       'extendA created',
       'mixinA created',
-      'self created'
+      'self created',
     ])
   })
 
   test('extends', () => {
     const calls: string[] = []
-    const Base = {
+    const Base = defineComponent({
       data() {
         return {
           a: 1,
-          b: 1
+          b: 1,
         }
       },
       methods: {
-        sayA() {}
+        sayA() {},
       },
       mounted(this: any) {
         expect(this.a).toBe(1)
         expect(this.b).toBe(2)
         calls.push('base')
-      }
-    }
+      },
+    })
     const Comp = defineComponent({
-      extends: defineComponent(Base),
+      extends: Base,
       data() {
         return {
-          b: 2
+          b: 2,
         }
       },
       mounted() {
@@ -886,7 +870,7 @@ describe('api: options', () => {
       },
       render() {
         return `${this.a}${this.b}`
-      }
+      },
     })
 
     expect(renderToString(h(Comp))).toBe(`12`)
@@ -895,28 +879,28 @@ describe('api: options', () => {
 
   test('extends with mixins', () => {
     const calls: string[] = []
-    const Base = {
+    const Base = defineComponent({
       data() {
         return {
           a: 1,
-          x: 'base'
+          x: 'base',
         }
       },
       methods: {
-        sayA() {}
+        sayA() {},
       },
       mounted(this: any) {
         expect(this.a).toBe(1)
         expect(this.b).toBeTruthy()
         expect(this.c).toBe(2)
         calls.push('base')
-      }
-    }
-    const Mixin = {
+      },
+    })
+    const Mixin = defineComponent({
       data() {
         return {
           b: true,
-          x: 'mixin'
+          x: 'mixin',
         }
       },
       mounted(this: any) {
@@ -924,14 +908,14 @@ describe('api: options', () => {
         expect(this.b).toBeTruthy()
         expect(this.c).toBe(2)
         calls.push('mixin')
-      }
-    }
+      },
+    })
     const Comp = defineComponent({
-      extends: defineComponent(Base),
-      mixins: [defineComponent(Mixin)],
+      extends: Base,
+      mixins: [Mixin],
       data() {
         return {
-          c: 2
+          c: 2,
         }
       },
       mounted() {
@@ -939,7 +923,7 @@ describe('api: options', () => {
       },
       render() {
         return `${this.a}${this.b}${this.c}${this.x}`
-      }
+      },
     })
 
     expect(renderToString(h(Comp))).toBe(`1true2mixin`)
@@ -954,7 +938,7 @@ describe('api: options', () => {
       },
       created() {
         calls.push('createdA')
-      }
+      },
     }
     const BaseB = {
       extends: BaseA,
@@ -963,7 +947,7 @@ describe('api: options', () => {
       },
       created() {
         calls.push('createdB')
-      }
+      },
     }
 
     const MixinA = {
@@ -972,7 +956,7 @@ describe('api: options', () => {
       },
       created() {
         calls.push('createdC')
-      }
+      },
     }
     const MixinB = {
       mixins: [MixinA],
@@ -981,7 +965,7 @@ describe('api: options', () => {
       },
       created() {
         calls.push('createdD')
-      }
+      },
     }
 
     const Comp = {
@@ -993,7 +977,7 @@ describe('api: options', () => {
       created() {
         calls.push('selfCreated')
       },
-      render() {}
+      render() {},
     }
 
     renderToString(h(Comp))
@@ -1007,40 +991,52 @@ describe('api: options', () => {
       'createdB',
       'createdC',
       'createdD',
-      'selfCreated'
+      'selfCreated',
     ])
   })
 
   test('flatten merged options', async () => {
     const MixinBase = {
-      msg1: 'base'
+      msg1: 'base',
     }
     const ExtendsBase = {
-      msg2: 'base'
+      msg2: 'base',
     }
     const Mixin = {
-      mixins: [MixinBase]
+      mixins: [MixinBase],
     }
     const Extends = {
-      extends: ExtendsBase
+      extends: ExtendsBase,
     }
     const Comp = defineComponent({
       extends: defineComponent(Extends),
       mixins: [defineComponent(Mixin)],
       render() {
         return `${this.$options.msg1},${this.$options.msg2}`
-      }
+      },
     })
 
     expect(renderToString(h(Comp))).toBe('base,base')
   })
 
+  test('extends template', () => {
+    const Comp = {
+      extends: {
+        template: `<h1>Foo</h1>`,
+      },
+    }
+
+    const root = document.createElement('div') as any
+    domRender(h(Comp), root)
+    expect(root.innerHTML).toBe(`<h1>Foo</h1>`)
+  })
+
   test('options defined in component have higher priority', async () => {
     const Mixin = {
-      msg1: 'base'
+      msg1: 'base',
     }
     const Extends = {
-      msg2: 'base'
+      msg2: 'base',
     }
     const Comp = defineComponent({
       msg1: 'local',
@@ -1049,7 +1045,7 @@ describe('api: options', () => {
       mixins: [defineComponent(Mixin)],
       render() {
         return `${this.$options.msg1},${this.$options.msg2}`
-      }
+      },
     })
 
     expect(renderToString(h(Comp))).toBe('local,local')
@@ -1059,33 +1055,33 @@ describe('api: options', () => {
     const Comp = defineComponent({
       setup() {
         return {
-          count: ref(0)
+          count: ref(0),
         }
       },
       data() {
         return {
-          plusOne: (this as any).count + 1
+          plusOne: (this as any).count + 1,
         }
       },
       computed: {
         plusTwo(): number {
           return this.count + 2
-        }
+        },
       },
       methods: {
         inc() {
           this.count++
-        }
+        },
       },
       render() {
         return h(
           'div',
           {
-            onClick: this.inc
+            onClick: this.inc,
           },
-          `${this.count},${this.plusOne},${this.plusTwo}`
+          `${this.count},${this.plusOne},${this.plusTwo}`,
         )
-      }
+      },
     })
     const root = nodeOps.createElement('div')
     render(h(Comp), root)
@@ -1101,26 +1097,26 @@ describe('api: options', () => {
     const mixin1 = {
       data() {
         return {
-          mixin1Data: 'mixin1'
+          mixin1Data: 'mixin1',
         }
       },
-      methods: {}
+      methods: {},
     }
 
-    const watchSpy = jest.fn()
+    const watchSpy = vi.fn()
     const mixin2 = {
       watch: {
-        mixin3Data: watchSpy
-      }
+        mixin3Data: watchSpy,
+      },
     }
 
     const mixin3 = {
       data() {
         return {
-          mixin3Data: 'mixin3'
+          mixin3Data: 'mixin3',
         }
       },
-      methods: {}
+      methods: {},
     }
 
     let vm: any
@@ -1129,7 +1125,7 @@ describe('api: options', () => {
       render() {},
       created() {
         vm = this
-      }
+      },
     }
 
     const root = nodeOps.createElement('div')
@@ -1144,50 +1140,50 @@ describe('api: options', () => {
   test('injection from closest ancestor', () => {
     const Root = defineComponent({
       provide: {
-        a: 'root'
+        a: 'root',
       },
       render() {
         return [h(Mid), ' ', h(MidWithProvide), ' ', h(MidWithMixinProvide)]
-      }
+      },
     })
 
     const Mid = {
       render() {
         return h(Child)
-      }
+      },
     } as any
 
     const MidWithProvide = {
       provide: {
-        a: 'midWithProvide'
+        a: 'midWithProvide',
       },
       render() {
         return h(Child)
-      }
+      },
     } as any
 
     const mixin = {
       provide: {
-        a: 'midWithMixinProvide'
-      }
+        a: 'midWithMixinProvide',
+      },
     }
 
     const MidWithMixinProvide = {
       mixins: [mixin],
       render() {
         return h(Child)
-      }
+      },
     } as any
 
     const Child = {
       inject: ['a'],
       render() {
         return this.a
-      }
+      },
     } as any
 
     expect(renderToString(h(Root))).toBe(
-      'root midWithProvide midWithMixinProvide'
+      'root midWithProvide midWithMixinProvide',
     )
   })
 
@@ -1196,14 +1192,14 @@ describe('api: options', () => {
       const mixin = {
         data() {
           return { foo: 1, bar: 2 }
-        }
+        },
       }
       createApp({
         mixins: [mixin],
         data() {
           return {
             foo: 3,
-            baz: 4
+            baz: 4,
           }
         },
         created() {
@@ -1211,16 +1207,16 @@ describe('api: options', () => {
           expect(this.$options.data()).toEqual({
             foo: 3,
             bar: 2,
-            baz: 4
+            baz: 4,
           })
         },
-        render: () => null
+        render: () => null,
       }).mount(nodeOps.createElement('div'))
     })
 
     test('this.$options.inject', () => {
       const mixin = {
-        inject: ['a']
+        inject: ['a'],
       }
       const app = createApp({
         mixins: [mixin],
@@ -1233,7 +1229,7 @@ describe('api: options', () => {
           expect(this.b).toBe(2)
           expect(this.c).toBe(3)
         },
-        render: () => null
+        render: () => null,
       })
 
       app.provide('a', 1)
@@ -1245,21 +1241,21 @@ describe('api: options', () => {
     test('this.$options.provide', () => {
       const mixin = {
         provide: {
-          a: 1
-        }
+          a: 1,
+        },
       }
       createApp({
         mixins: [mixin],
         provide() {
           return {
-            b: 2
+            b: 2,
           }
         },
         created() {
           expect(this.$options.provide).toBeInstanceOf(Function)
           expect(this.$options.provide()).toEqual({ a: 1, b: 2 })
         },
-        render: () => null
+        render: () => null,
       }).mount(nodeOps.createElement('div'))
     })
 
@@ -1267,7 +1263,7 @@ describe('api: options', () => {
       const mixin = {
         mounted() {},
         beforeUnmount() {},
-        unmounted() {}
+        unmounted() {},
       }
       createApp({
         mixins: [mixin],
@@ -1282,26 +1278,26 @@ describe('api: options', () => {
           expect(this.$options.unmounted).toBeInstanceOf(Array)
           expect(this.$options.unmounted.length).toBe(2)
         },
-        render: () => null
+        render: () => null,
       }).mount(nodeOps.createElement('div'))
     })
 
     test('this.$options[asset-name]', () => {
       const mixin = {
         components: {
-          a: {}
+          a: {},
         },
         directives: {
-          d1: {}
-        }
+          d1: {},
+        },
       }
       createApp({
         mixins: [mixin],
         components: {
-          b: {}
+          b: {},
         },
         directives: {
-          d2: {}
+          d2: {},
         },
         created() {
           expect('a' in this.$options.components).toBe(true)
@@ -1309,45 +1305,45 @@ describe('api: options', () => {
           expect('d1' in this.$options.directives).toBe(true)
           expect('d2' in this.$options.directives).toBe(true)
         },
-        render: () => null
+        render: () => null,
       }).mount(nodeOps.createElement('div'))
     })
 
     test('this.$options.methods', () => {
       const mixin = {
         methods: {
-          fn1() {}
-        }
+          fn1() {},
+        },
       }
       createApp({
         mixins: [mixin],
         methods: {
-          fn2() {}
+          fn2() {},
         },
         created() {
           expect(this.$options.methods.fn1).toBeInstanceOf(Function)
           expect(this.$options.methods.fn2).toBeInstanceOf(Function)
         },
-        render: () => null
+        render: () => null,
       }).mount(nodeOps.createElement('div'))
     })
 
     test('this.$options.computed', () => {
       const mixin = {
         computed: {
-          c1() {}
-        }
+          c1() {},
+        },
       }
       createApp({
         mixins: [mixin],
         computed: {
-          c2() {}
+          c2() {},
         },
         created() {
           expect(this.$options.computed.c1).toBeInstanceOf(Function)
           expect(this.$options.computed.c2).toBeInstanceOf(Function)
         },
-        render: () => null
+        render: () => null,
       }).mount(nodeOps.createElement('div'))
     })
 
@@ -1363,14 +1359,14 @@ describe('api: options', () => {
             this.$options.computed = {}
           }
           this.$options.computed.value = () => count.value
-        }
+        },
       }
       const root = nodeOps.createElement('div')
       createApp({
         mixins: [mixin],
         render(this: any) {
           return this.value
-        }
+        },
       }).mount(root)
 
       expect(serializeInner(root)).toBe('0')
@@ -1387,31 +1383,31 @@ describe('api: options', () => {
         watch: {
           foo: 'notExistingMethod',
           foo2: {
-            handler: 'notExistingMethod2'
-          }
+            handler: 'notExistingMethod2',
+          },
         },
-        render() {}
+        render() {},
       }
 
       const root = nodeOps.createElement('div')
       render(h(Comp), root)
 
       expect(
-        'Invalid watch handler specified by key "notExistingMethod"'
+        'Invalid watch handler specified by key "notExistingMethod"',
       ).toHaveBeenWarned()
       expect(
-        'Invalid watch handler specified by key "notExistingMethod2"'
+        'Invalid watch handler specified by key "notExistingMethod2"',
       ).toHaveBeenWarned()
     })
 
     test('Invalid watch option', () => {
       const Comp = {
         watch: { foo: true },
-        render() {}
+        render() {},
       }
 
       const root = nodeOps.createElement('div')
-      // @ts-ignore
+      // @ts-expect-error
       render(h(Comp), root)
 
       expect('Invalid watch option: "foo"').toHaveBeenWarned()
@@ -1421,10 +1417,10 @@ describe('api: options', () => {
       const Comp = {
         computed: {
           foo: {
-            set() {}
-          }
+            set() {},
+          },
         },
-        render() {}
+        render() {},
       }
 
       const root = nodeOps.createElement('div')
@@ -1437,20 +1433,20 @@ describe('api: options', () => {
       const Comp = {
         computed: {
           foo: {
-            get() {}
-          }
+            get() {},
+          },
         },
         mounted() {
           instance = this
         },
-        render() {}
+        render() {},
       }
 
       const root = nodeOps.createElement('div')
       render(h(Comp), root)
       instance.foo = 1
       expect(
-        'Write operation failed: computed property "foo" is readonly'
+        'Write operation failed: computed property "foo" is readonly',
       ).toHaveBeenWarned()
     })
 
@@ -1458,64 +1454,64 @@ describe('api: options', () => {
       const Comp = {
         data() {
           return {
-            a: 1
+            a: 1,
           }
         },
         provide() {
           return {
-            a: this.a
+            a: this.a,
           }
         },
         render() {
           return [h(ChildA)]
-        }
+        },
       } as any
       const ChildA = {
         props: { a: Number },
         inject: ['a'],
         render() {
           return this.a
-        }
+        },
       } as any
 
       const root = nodeOps.createElement('div')
       render(h(Comp), root)
       expect(
-        `Inject property "a" is already defined in Props.`
+        `Inject property "a" is already defined in Props.`,
       ).toHaveBeenWarned()
     })
 
     test('methods property is not a function', () => {
       const Comp = {
         methods: {
-          foo: 1
+          foo: 1,
         },
-        render() {}
+        render() {},
       }
 
       const root = nodeOps.createElement('div')
       render(h(Comp), root)
       expect(
         `Method "foo" has type "number" in the component definition. ` +
-          `Did you reference the function correctly?`
+          `Did you reference the function correctly?`,
       ).toHaveBeenWarned()
     })
 
     test('methods property is already declared in props', () => {
       const Comp = {
         props: {
-          foo: Number
+          foo: Number,
         },
         methods: {
-          foo() {}
+          foo() {},
         },
-        render() {}
+        render() {},
       }
 
       const root = nodeOps.createElement('div')
       render(h(Comp), root)
       expect(
-        `Methods property "foo" is already defined in Props.`
+        `Methods property "foo" is already defined in Props.`,
       ).toHaveBeenWarned()
     })
 
@@ -1523,32 +1519,32 @@ describe('api: options', () => {
       const Comp = {
         data() {
           return {
-            a: 1
+            a: 1,
           }
         },
         provide() {
           return {
-            a: this.a
+            a: this.a,
           }
         },
         render() {
           return [h(ChildA)]
-        }
+        },
       } as any
       const ChildA = {
         methods: {
-          a: () => null
+          a: () => null,
         },
         inject: ['a'],
         render() {
           return this.a
-        }
+        },
       } as any
 
       const root = nodeOps.createElement('div')
       render(h(Comp), root)
       expect(
-        `Methods property "a" is already defined in Inject.`
+        `Methods property "a" is already defined in Inject.`,
       ).toHaveBeenWarned()
     })
 
@@ -1556,15 +1552,15 @@ describe('api: options', () => {
       const Comp = {
         props: { foo: Number },
         data: () => ({
-          foo: 1
+          foo: 1,
         }),
-        render() {}
+        render() {},
       }
 
       const root = nodeOps.createElement('div')
       render(h(Comp), root)
       expect(
-        `Data property "foo" is already defined in Props.`
+        `Data property "foo" is already defined in Props.`,
       ).toHaveBeenWarned()
     })
 
@@ -1572,52 +1568,52 @@ describe('api: options', () => {
       const Comp = {
         data() {
           return {
-            a: 1
+            a: 1,
           }
         },
         provide() {
           return {
-            a: this.a
+            a: this.a,
           }
         },
         render() {
           return [h(ChildA)]
-        }
+        },
       } as any
       const ChildA = {
         data() {
           return {
-            a: 1
+            a: 1,
           }
         },
         inject: ['a'],
         render() {
           return this.a
-        }
+        },
       } as any
 
       const root = nodeOps.createElement('div')
       render(h(Comp), root)
       expect(
-        `Data property "a" is already defined in Inject.`
+        `Data property "a" is already defined in Inject.`,
       ).toHaveBeenWarned()
     })
 
     test('data property is already declared in methods', () => {
       const Comp = {
         data: () => ({
-          foo: 1
+          foo: 1,
         }),
         methods: {
-          foo() {}
+          foo() {},
         },
-        render() {}
+        render() {},
       }
 
       const root = nodeOps.createElement('div')
       render(h(Comp), root)
       expect(
-        `Data property "foo" is already defined in Methods.`
+        `Data property "foo" is already defined in Methods.`,
       ).toHaveBeenWarned()
     })
 
@@ -1625,15 +1621,15 @@ describe('api: options', () => {
       const Comp = {
         props: { foo: Number },
         computed: {
-          foo() {}
+          foo() {},
         },
-        render() {}
+        render() {},
       }
 
       const root = nodeOps.createElement('div')
       render(h(Comp), root)
       expect(
-        `Computed property "foo" is already defined in Props.`
+        `Computed property "foo" is already defined in Props.`,
       ).toHaveBeenWarned()
     })
 
@@ -1641,71 +1637,71 @@ describe('api: options', () => {
       const Comp = {
         data() {
           return {
-            a: 1
+            a: 1,
           }
         },
         provide() {
           return {
-            a: this.a
+            a: this.a,
           }
         },
         render() {
           return [h(ChildA)]
-        }
+        },
       } as any
       const ChildA = {
         computed: {
           a: {
             get() {},
-            set() {}
-          }
+            set() {},
+          },
         },
         inject: ['a'],
         render() {
           return this.a
-        }
+        },
       } as any
 
       const root = nodeOps.createElement('div')
       render(h(Comp), root)
       expect(
-        `Computed property "a" is already defined in Inject.`
+        `Computed property "a" is already defined in Inject.`,
       ).toHaveBeenWarned()
     })
 
     test('computed property is already declared in methods', () => {
       const Comp = {
         computed: {
-          foo() {}
+          foo() {},
         },
         methods: {
-          foo() {}
+          foo() {},
         },
-        render() {}
+        render() {},
       }
 
       const root = nodeOps.createElement('div')
       render(h(Comp), root)
       expect(
-        `Computed property "foo" is already defined in Methods.`
+        `Computed property "foo" is already defined in Methods.`,
       ).toHaveBeenWarned()
     })
 
     test('computed property is already declared in data', () => {
       const Comp = {
         data: () => ({
-          foo: 1
+          foo: 1,
         }),
         computed: {
-          foo() {}
+          foo() {},
         },
-        render() {}
+        render() {},
       }
 
       const root = nodeOps.createElement('div')
       render(h(Comp), root)
       expect(
-        `Computed property "foo" is already defined in Data.`
+        `Computed property "foo" is already defined in Data.`,
       ).toHaveBeenWarned()
     })
   })

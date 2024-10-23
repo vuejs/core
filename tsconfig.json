@@ -1,34 +1,42 @@
 {
   "compilerOptions": {
     "baseUrl": ".",
-    "outDir": "dist",
+    "outDir": "temp",
     "sourceMap": false,
     "target": "es2016",
+    "newLine": "LF",
     "useDefineForClassFields": false,
     "module": "esnext",
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "allowJs": false,
     "strict": true,
     "noUnusedLocals": true,
     "experimentalDecorators": true,
     "resolveJsonModule": true,
+    "isolatedModules": true,
+    "skipLibCheck": true,
     "esModuleInterop": true,
     "removeComments": false,
     "jsx": "preserve",
-    "lib": ["esnext", "dom"],
-    "types": ["jest", "puppeteer", "node"],
+    "lib": ["es2016", "dom"],
+    "types": ["vitest/globals", "puppeteer", "node"],
     "rootDir": ".",
     "paths": {
       "@vue/compat": ["packages/vue-compat/src"],
       "@vue/*": ["packages/*/src"],
       "vue": ["packages/vue/src"]
-    }
+    },
+    "isolatedDeclarations": true,
+    "composite": true
   },
   "include": [
     "packages/global.d.ts",
     "packages/*/src",
-    "packages/runtime-dom/types/jsx.d.ts",
     "packages/*/__tests__",
-    "test-dts"
-  ]
+    "packages/vue/jsx-runtime",
+    "packages/runtime-dom/types/jsx.d.ts",
+    "scripts/*",
+    "rollup.*.js"
+  ],
+  "exclude": ["packages-private/sfc-playground/src/vue-dev-proxy*"]
 }
