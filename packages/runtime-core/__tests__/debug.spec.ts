@@ -1,10 +1,13 @@
-import {debug} from '../src/debug'
+import { debug } from '../src/debug'
 import {
-  h,
-  render,
+  type ComponentInternalInstance,
   defineComponent,
-  ref, getCurrentInstance, ComponentInternalInstance, nodeOps,
-  serializeInner as inner
+  getCurrentInstance,
+  h,
+  serializeInner as inner,
+  nodeOps,
+  ref,
+  render,
 } from '@vue/runtime-test'
 
 describe('debug', () => {
@@ -17,9 +20,7 @@ describe('debug', () => {
         debug({
           name,
         })
-        return () => (
-          h('div', name.value)
-        )
+        return () => h('div', name.value)
       },
       mounted() {
         instance = getCurrentInstance()!
@@ -48,9 +49,7 @@ describe('debug', () => {
         debug({
           name,
         })
-        return () => (
-          h('div', name.value)
-        )
+        return () => h('div', name.value)
       },
       mounted() {
         instance = getCurrentInstance()!
