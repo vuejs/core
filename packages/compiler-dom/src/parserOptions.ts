@@ -1,49 +1,31 @@
-import {
-  TextModes,
-  ParserOptions,
-  ElementNode,
-  Namespaces,
-  NodeTypes,
-  isBuiltInType
-} from '@vue/compiler-core'
-import { makeMap, isVoidTag, isHTMLTag, isSVGTag } from '@vue/shared'
+import { Namespaces, NodeTypes, type ParserOptions } from '@vue/compiler-core'
+import { isHTMLTag, isMathMLTag, isSVGTag, isVoidTag } from '@vue/shared'
 import { TRANSITION, TRANSITION_GROUP } from './runtimeHelpers'
-import { decodeHtml } from './decodeHtml'
 import { decodeHtmlBrowser } from './decodeHtmlBrowser'
 
-const isRawTextContainer = /*#__PURE__*/ makeMap(
-  'style,iframe,script,noscript',
-  true
-)
-
-export const enum DOMNamespaces {
-  HTML = Namespaces.HTML,
-  SVG,
-  MATH_ML
-}
-
 export const parserOptions: ParserOptions = {
+  parseMode: 'html',
   isVoidTag,
-  isNativeTag: tag => isHTMLTag(tag) || isSVGTag(tag),
+  isNativeTag: tag => isHTMLTag(tag) || isSVGTag(tag) || isMathMLTag(tag),
   isPreTag: tag => tag === 'pre',
-  decodeEntities: __BROWSER__ ? decodeHtmlBrowser : decodeHtml,
+  isIgnoreNewlineTag: tag => tag === 'pre' || tag === 'textarea',
+  decodeEntities: __BROWSER__ ? decodeHtmlBrowser : undefined,
 
-  isBuiltInComponent: (tag: string): symbol | undefined => {
-    if (isBuiltInType(tag, `Transition`)) {
+  isBuiltInComponent: tag => {
+    if (tag === 'Transition' || tag === 'transition') {
       return TRANSITION
-    } else if (isBuiltInType(tag, `TransitionGroup`)) {
+    } else if (tag === 'TransitionGroup' || tag === 'transition-group') {
       return TRANSITION_GROUP
     }
   },
 
   // https://html.spec.whatwg.org/multipage/parsing.html#tree-construction-dispatcher
-  getNamespace(tag: string, parent: ElementNode | undefined): DOMNamespaces {
-    let ns = parent ? parent.ns : DOMNamespaces.HTML
-
-    if (parent && ns === DOMNamespaces.MATH_ML) {
+  getNamespace(tag, parent, rootNamespace) {
+    let ns = parent ? parent.ns : rootNamespace
+    if (parent && ns === Namespaces.MATH_ML) {
       if (parent.tag === 'annotation-xml') {
         if (tag === 'svg') {
-          return DOMNamespaces.SVG
+          return Namespaces.SVG
         }
         if (
           parent.props.some(
@@ -52,49 +34,36 @@ export const parserOptions: ParserOptions = {
               a.name === 'encoding' &&
               a.value != null &&
               (a.value.content === 'text/html' ||
-                a.value.content === 'application/xhtml+xml')
+                a.value.content === 'application/xhtml+xml'),
           )
         ) {
-          ns = DOMNamespaces.HTML
+          ns = Namespaces.HTML
         }
       } else if (
         /^m(?:[ions]|text)$/.test(parent.tag) &&
         tag !== 'mglyph' &&
         tag !== 'malignmark'
       ) {
-        ns = DOMNamespaces.HTML
+        ns = Namespaces.HTML
       }
-    } else if (parent && ns === DOMNamespaces.SVG) {
+    } else if (parent && ns === Namespaces.SVG) {
       if (
         parent.tag === 'foreignObject' ||
         parent.tag === 'desc' ||
         parent.tag === 'title'
       ) {
-        ns = DOMNamespaces.HTML
+        ns = Namespaces.HTML
       }
     }
 
-    if (ns === DOMNamespaces.HTML) {
+    if (ns === Namespaces.HTML) {
       if (tag === 'svg') {
-        return DOMNamespaces.SVG
+        return Namespaces.SVG
       }
       if (tag === 'math') {
-        return DOMNamespaces.MATH_ML
+        return Namespaces.MATH_ML
       }
     }
     return ns
   },
-
-  // https://html.spec.whatwg.org/multipage/parsing.html#parsing-html-fragments
-  getTextMode({ tag, ns }: ElementNode): TextModes {
-    if (ns === DOMNamespaces.HTML) {
-      if (tag === 'textarea' || tag === 'title') {
-        return TextModes.RCDATA
-      }
-      if (isRawTextContainer(tag)) {
-        return TextModes.RAWTEXT
-      }
-    }
-    return TextModes.DATA
-  }
 }
