@@ -1,12 +1,13 @@
-import { NodeTransform } from '../transform'
-import { findDir, makeBlock } from '../utils'
+import type { NodeTransform } from '../transform'
+import { findDir } from '../utils'
 import {
+  ElementTypes,
+  type MemoExpression,
+  NodeTypes,
+  type PlainElementNode,
+  convertToBlock,
   createCallExpression,
   createFunctionExpression,
-  ElementTypes,
-  MemoExpression,
-  NodeTypes,
-  PlainElementNode
 } from '../ast'
 import { WITH_MEMO } from '../runtimeHelpers'
 
@@ -26,14 +27,16 @@ export const transformMemo: NodeTransform = (node, context) => {
       if (codegenNode && codegenNode.type === NodeTypes.VNODE_CALL) {
         // non-component sub tree should be turned into a block
         if (node.tagType !== ElementTypes.COMPONENT) {
-          makeBlock(codegenNode, context)
+          convertToBlock(codegenNode, context)
         }
         node.codegenNode = createCallExpression(context.helper(WITH_MEMO), [
           dir.exp!,
           createFunctionExpression(undefined, codegenNode),
           `_cache`,
-          String(context.cached++)
+          String(context.cached.length),
         ]) as MemoExpression
+        // increment cache count
+        context.cached.push(null)
       }
     }
   }

@@ -1,0 +1,21 @@
+name: Auto close issues with "can't reproduce" label
+
+on:
+  schedule:
+    - cron: '0 0 * * *'
+
+permissions:
+  issues: write
+
+jobs:
+  close-issues:
+    if: github.repository == 'vuejs/core'
+    runs-on: ubuntu-latest
+    steps:
+      - name: can't reproduce
+        uses: actions-cool/issues-helper@v3
+        with:
+          actions: 'close-issues'
+          token: ${{ secrets.GITHUB_TOKEN }}
+          labels: "can't reproduce"
+          inactive-day: 3

@@ -1,11 +1,10 @@
-import { TransformContext } from '../src'
-import { Position } from '../src/ast'
+import type { ExpressionNode, TransformContext } from '../src'
+import { type Position, createSimpleExpression } from '../src/ast'
 import {
-  getInnerRange,
   advancePositionWithClone,
-  isMemberExpressionNode,
   isMemberExpressionBrowser,
-  toValidAssetId
+  isMemberExpressionNode,
+  toValidAssetId,
 } from '../src/utils'
 
 function p(line: number, column: number, offset: number): Position {
@@ -41,34 +40,9 @@ describe('advancePositionWithClone', () => {
   })
 })
 
-describe('getInnerRange', () => {
-  const loc1 = {
-    source: 'foo\nbar\nbaz',
-    start: p(1, 1, 0),
-    end: p(3, 3, 11)
-  }
-
-  test('at start', () => {
-    const loc2 = getInnerRange(loc1, 0, 4)
-    expect(loc2.start).toEqual(loc1.start)
-    expect(loc2.end.column).toBe(1)
-    expect(loc2.end.line).toBe(2)
-    expect(loc2.end.offset).toBe(4)
-  })
-
-  test('in between', () => {
-    const loc2 = getInnerRange(loc1, 4, 3)
-    expect(loc2.start.column).toBe(1)
-    expect(loc2.start.line).toBe(2)
-    expect(loc2.start.offset).toBe(4)
-    expect(loc2.end.column).toBe(4)
-    expect(loc2.end.line).toBe(2)
-    expect(loc2.end.offset).toBe(7)
-  })
-})
-
 describe('isMemberExpression', () => {
-  function commonAssertions(fn: (str: string) => boolean) {
+  function commonAssertions(raw: (exp: ExpressionNode) => boolean) {
+    const fn = (str: string) => raw(createSimpleExpression(str))
     // should work
     expect(fn('obj.foo')).toBe(true)
     expect(fn('obj[foo]')).toBe(true)
@@ -105,13 +79,16 @@ describe('isMemberExpression', () => {
 
   test('browser', () => {
     commonAssertions(isMemberExpressionBrowser)
-    expect(isMemberExpressionBrowser('123[a]')).toBe(false)
+    expect(isMemberExpressionBrowser(createSimpleExpression('123[a]'))).toBe(
+      false,
+    )
   })
 
   test('node', () => {
     const ctx = { expressionPlugins: ['typescript'] } as any as TransformContext
-    const fn = (str: string) => isMemberExpressionNode(str, ctx)
-    commonAssertions(fn)
+    const fn = (str: string) =>
+      isMemberExpressionNode(createSimpleExpression(str), ctx)
+    commonAssertions(exp => isMemberExpressionNode(exp, ctx))
 
     // TS-specific checks
     expect(fn('foo as string')).toBe(true)
@@ -122,6 +99,10 @@ describe('isMemberExpression', () => {
     expect(fn(`123[a]`)).toBe(true)
     expect(fn(`foo() as string`)).toBe(false)
     expect(fn(`a + b as string`)).toBe(false)
+    // #9865
+    expect(fn('""')).toBe(false)
+    expect(fn('undefined')).toBe(false)
+    expect(fn('null')).toBe(false)
   })
 })
 
@@ -131,6 +112,6 @@ test('toValidAssetId', () => {
   expect(toValidAssetId('div', 'filter')).toBe('_filter_div')
   expect(toValidAssetId('foo-bar', 'component')).toBe('_component_foo_bar')
   expect(toValidAssetId('test-测试-1', 'component')).toBe(
-    '_component_test_2797935797_1'
+    '_component_test_2797935797_1',
   )
 })
