@@ -1,25 +1,38 @@
-import { parse, SFCScriptCompileOptions, compileScript } from '../src'
+import {
+  type SFCParseOptions,
+  type SFCScriptBlock,
+  type SFCScriptCompileOptions,
+  compileScript,
+  parse,
+} from '../src'
 import { parse as babelParse } from '@babel/parser'
 
 export const mockId = 'xxxxxxxx'
 
 export function compileSFCScript(
   src: string,
-  options?: Partial<SFCScriptCompileOptions>
-) {
-  const { descriptor } = parse(src)
+  options?: Partial<SFCScriptCompileOptions>,
+  parseOptions?: SFCParseOptions,
+): SFCScriptBlock {
+  const { descriptor, errors } = parse(src, parseOptions)
+  if (errors.length) {
+    console.warn(errors[0])
+  }
   return compileScript(descriptor, {
     ...options,
-    id: mockId
+    id: mockId,
   })
 }
 
-export function assertCode(code: string) {
+export function assertCode(code: string): void {
   // parse the generated code to make sure it is valid
   try {
     babelParse(code, {
       sourceType: 'module',
-      plugins: ['typescript']
+      plugins: [
+        'typescript',
+        ['importAttributes', { deprecatedAssertSyntax: true }],
+      ],
     })
   } catch (e: any) {
     console.log(code)

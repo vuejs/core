@@ -1,6 +1,6 @@
-// Jest Snapshot v1, https://goo.gl/fbAQLP
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`compiler: transform text <template v-for> 1`] = `
+exports[`compiler: transform text > <template v-for> 1`] = `
 "const _Vue = Vue
 
 return function render(_ctx, _cache) {
@@ -9,26 +9,26 @@ return function render(_ctx, _cache) {
 
     return (_openBlock(true), _createElementBlock(_Fragment, null, _renderList(list, (i) => {
       return (_openBlock(), _createElementBlock(_Fragment, null, [
-        _createTextVNode(\\"foo\\")
+        _createTextVNode("foo")
       ], 64 /* STABLE_FRAGMENT */))
     }), 256 /* UNKEYED_FRAGMENT */))
   }
 }"
 `;
 
-exports[`compiler: transform text consecutive text 1`] = `
+exports[`compiler: transform text > consecutive text 1`] = `
 "const _Vue = Vue
 
 return function render(_ctx, _cache) {
   with (_ctx) {
     const { toDisplayString: _toDisplayString } = _Vue
 
-    return _toDisplayString(foo) + \\" bar \\" + _toDisplayString(baz)
+    return _toDisplayString(foo) + " bar " + _toDisplayString(baz)
   }
 }"
 `;
 
-exports[`compiler: transform text consecutive text between elements 1`] = `
+exports[`compiler: transform text > consecutive text between elements 1`] = `
 "const _Vue = Vue
 
 return function render(_ctx, _cache) {
@@ -36,15 +36,15 @@ return function render(_ctx, _cache) {
     const { createElementVNode: _createElementVNode, toDisplayString: _toDisplayString, createTextVNode: _createTextVNode, Fragment: _Fragment, openBlock: _openBlock, createElementBlock: _createElementBlock } = _Vue
 
     return (_openBlock(), _createElementBlock(_Fragment, null, [
-      _createElementVNode(\\"div\\"),
-      _createTextVNode(_toDisplayString(foo) + \\" bar \\" + _toDisplayString(baz), 1 /* TEXT */),
-      _createElementVNode(\\"div\\")
+      _createElementVNode("div"),
+      _createTextVNode(_toDisplayString(foo) + " bar " + _toDisplayString(baz), 1 /* TEXT */),
+      _createElementVNode("div")
     ], 64 /* STABLE_FRAGMENT */))
   }
 }"
 `;
 
-exports[`compiler: transform text consecutive text mixed with elements 1`] = `
+exports[`compiler: transform text > consecutive text mixed with elements 1`] = `
 "const _Vue = Vue
 
 return function render(_ctx, _cache) {
@@ -52,35 +52,35 @@ return function render(_ctx, _cache) {
     const { createElementVNode: _createElementVNode, toDisplayString: _toDisplayString, createTextVNode: _createTextVNode, Fragment: _Fragment, openBlock: _openBlock, createElementBlock: _createElementBlock } = _Vue
 
     return (_openBlock(), _createElementBlock(_Fragment, null, [
-      _createElementVNode(\\"div\\"),
-      _createTextVNode(_toDisplayString(foo) + \\" bar \\" + _toDisplayString(baz), 1 /* TEXT */),
-      _createElementVNode(\\"div\\"),
-      _createTextVNode(\\"hello\\"),
-      _createElementVNode(\\"div\\")
+      _createElementVNode("div"),
+      _createTextVNode(_toDisplayString(foo) + " bar " + _toDisplayString(baz), 1 /* TEXT */),
+      _createElementVNode("div"),
+      _createTextVNode("hello"),
+      _createElementVNode("div")
     ], 64 /* STABLE_FRAGMENT */))
   }
 }"
 `;
 
-exports[`compiler: transform text element with custom directives and only one text child node 1`] = `
+exports[`compiler: transform text > element with custom directives and only one text child node 1`] = `
 "const _Vue = Vue
 
 return function render(_ctx, _cache) {
   with (_ctx) {
-    const { toDisplayString: _toDisplayString, createTextVNode: _createTextVNode, resolveDirective: _resolveDirective, withDirectives: _withDirectives, openBlock: _openBlock, createElementBlock: _createElementBlock } = _Vue
+    const { toDisplayString: _toDisplayString, createTextVNode: _createTextVNode, resolveDirective: _resolveDirective, openBlock: _openBlock, createElementBlock: _createElementBlock, withDirectives: _withDirectives } = _Vue
 
-    const _directive_foo = _resolveDirective(\\"foo\\")
+    const _directive_foo = _resolveDirective("foo")
 
-    return _withDirectives((_openBlock(), _createElementBlock(\\"p\\", null, [
+    return _withDirectives((_openBlock(), _createElementBlock("p", null, [
       _createTextVNode(_toDisplayString(foo), 1 /* TEXT */)
-    ], 512 /* NEED_PATCH */)), [
+    ])), [
       [_directive_foo]
     ])
   }
 }"
 `;
 
-exports[`compiler: transform text no consecutive text 1`] = `
+exports[`compiler: transform text > no consecutive text 1`] = `
 "const _Vue = Vue
 
 return function render(_ctx, _cache) {
@@ -92,7 +92,7 @@ return function render(_ctx, _cache) {
 }"
 `;
 
-exports[`compiler: transform text text between elements (static) 1`] = `
+exports[`compiler: transform text > text between elements (static) 1`] = `
 "const _Vue = Vue
 
 return function render(_ctx, _cache) {
@@ -100,18 +100,18 @@ return function render(_ctx, _cache) {
     const { createElementVNode: _createElementVNode, createTextVNode: _createTextVNode, Fragment: _Fragment, openBlock: _openBlock, createElementBlock: _createElementBlock } = _Vue
 
     return (_openBlock(), _createElementBlock(_Fragment, null, [
-      _createElementVNode(\\"div\\"),
-      _createTextVNode(\\"hello\\"),
-      _createElementVNode(\\"div\\")
+      _createElementVNode("div"),
+      _createTextVNode("hello"),
+      _createElementVNode("div")
     ], 64 /* STABLE_FRAGMENT */))
   }
 }"
 `;
 
-exports[`compiler: transform text with prefixIdentifiers: true 1`] = `
+exports[`compiler: transform text > with prefixIdentifiers: true 1`] = `
 "const { toDisplayString: _toDisplayString } = Vue
 
 return function render(_ctx, _cache) {
-  return _toDisplayString(_ctx.foo) + \\" bar \\" + _toDisplayString(_ctx.baz + _ctx.qux)
+  return _toDisplayString(_ctx.foo) + " bar " + _toDisplayString(_ctx.baz + _ctx.qux)
 }"
 `;

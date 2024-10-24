@@ -1,0 +1,51 @@
+name: size data
+
+on:
+  push:
+    branches:
+      - main
+      - minor
+  pull_request:
+    branches:
+      - main
+      - minor
+
+permissions:
+  contents: read
+
+env:
+  PUPPETEER_SKIP_DOWNLOAD: 'true'
+
+jobs:
+  upload:
+    if: github.repository == 'vuejs/core'
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4.0.0
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.node-version'
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - run: pnpm run size
+
+      - name: Save PR number & base branch
+        if: ${{github.event_name == 'pull_request'}}
+        run: |
+          echo ${{ github.event.number }} > ./temp/size/number.txt
+          echo ${{ github.base_ref }} > ./temp/size/base.txt
+
+      - name: Upload Size Data
+        uses: actions/upload-artifact@v4
+        with:
+          name: size-data
+          path: temp/size

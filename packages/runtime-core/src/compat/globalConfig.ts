@@ -1,8 +1,8 @@
-import { AppConfig } from '../apiCreateApp'
+import type { AppConfig } from '../apiCreateApp'
 import {
   DeprecationTypes,
   softAssertCompatEnabled,
-  warnDeprecation
+  warnDeprecation,
 } from './compatConfig'
 import { isCopyingConfig } from './global'
 import { internalOptionMergeStrats } from '../componentOptions'
@@ -15,34 +15,34 @@ export type LegacyConfig = {
   silent?: boolean
   /**
    * @deprecated use __VUE_PROD_DEVTOOLS__ compile-time feature flag instead
-   * https://github.com/vuejs/vue-next/tree/master/packages/vue#bundler-build-feature-flags
+   * https://github.com/vuejs/core/tree/main/packages/vue#bundler-build-feature-flags
    */
   devtools?: boolean
   /**
    * @deprecated use `config.isCustomElement` instead
-   * https://v3.vuejs.org/guide/migration/global-api.html#config-ignoredelements-is-now-config-iscustomelement
+   * https://v3-migration.vuejs.org/breaking-changes/global-api.html#config-ignoredelements-is-now-config-iscustomelement
    */
   ignoredElements?: (string | RegExp)[]
   /**
    * @deprecated
-   * https://v3.vuejs.org/guide/migration/keycode-modifiers.html
+   * https://v3-migration.vuejs.org/breaking-changes/keycode-modifiers.html
    */
   keyCodes?: Record<string, number | number[]>
   /**
    * @deprecated
-   * https://v3.vuejs.org/guide/migration/global-api.html#config-productiontip-removed
+   * https://v3-migration.vuejs.org/breaking-changes/global-api.html#config-productiontip-removed
    */
   productionTip?: boolean
 }
 
 // dev only
-export function installLegacyConfigWarnings(config: AppConfig) {
+export function installLegacyConfigWarnings(config: AppConfig): void {
   const legacyConfigOptions: Record<string, DeprecationTypes> = {
     silent: DeprecationTypes.CONFIG_SILENT,
     devtools: DeprecationTypes.CONFIG_DEVTOOLS,
     ignoredElements: DeprecationTypes.CONFIG_IGNORED_ELEMENTS,
     keyCodes: DeprecationTypes.CONFIG_KEY_CODES,
-    productionTip: DeprecationTypes.CONFIG_PRODUCTION_TIP
+    productionTip: DeprecationTypes.CONFIG_PRODUCTION_TIP,
   }
 
   Object.keys(legacyConfigOptions).forEach(key => {
@@ -57,12 +57,12 @@ export function installLegacyConfigWarnings(config: AppConfig) {
           warnDeprecation(legacyConfigOptions[key], null)
         }
         val = newVal
-      }
+      },
     })
   })
 }
 
-export function installLegacyOptionMergeStrats(config: AppConfig) {
+export function installLegacyOptionMergeStrats(config: AppConfig): void {
   config.optionMergeStrategies = new Proxy({} as any, {
     get(target, key) {
       if (key in target) {
@@ -72,13 +72,13 @@ export function installLegacyOptionMergeStrats(config: AppConfig) {
         key in internalOptionMergeStrats &&
         softAssertCompatEnabled(
           DeprecationTypes.CONFIG_OPTION_MERGE_STRATS,
-          null
+          null,
         )
       ) {
         return internalOptionMergeStrats[
           key as keyof typeof internalOptionMergeStrats
         ]
       }
-    }
+    },
   })
 }
