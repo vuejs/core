@@ -7,6 +7,8 @@ import {
   type Subscriber,
   activeSub,
   endBatch,
+  pauseTracking,
+  resetTracking,
   shouldTrack,
   startBatch,
 } from './effect'
@@ -143,6 +145,7 @@ export class Dep {
     }
 
     if (__DEV__ && activeSub.onTrack) {
+      pauseTracking()
       activeSub.onTrack(
         extend(
           {
@@ -151,6 +154,7 @@ export class Dep {
           debugInfo,
         ),
       )
+      resetTracking()
     }
 
     return link
