@@ -716,6 +716,10 @@ export function createHydrationFunctions(
       getContainerType(container),
       slotScopeIds,
     )
+    // the component vnode's el should be updated when a mismatch occurs.
+    if (parentComponent && parentComponent.subTree === vnode) {
+      parentComponent.vnode.el = vnode.el
+    }
     return next
   }
 
