@@ -1328,7 +1328,6 @@ function baseCreateRenderer(
               parentSuspense,
               null,
             )
-
             if (__DEV__) {
               endMeasure(instance, `hydrate`)
             }
