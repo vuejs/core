@@ -723,9 +723,8 @@ export function compileScript(
   if (scriptAst) {
     Object.assign(ctx.bindingMetadata, analyzeScriptBindings(scriptAst.body))
   }
-  for (const [key, { isType, imported, source }] of Object.entries(
-    ctx.userImports,
-  )) {
+  for (const key in ctx.userImports) {
+    const { isType, imported, source } = ctx.userImports[key]
     if (isType) continue
     ctx.bindingMetadata[key] =
       imported === '*' ||
