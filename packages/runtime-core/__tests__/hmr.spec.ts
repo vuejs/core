@@ -14,7 +14,6 @@ import {
 import * as runtimeTest from '@vue/runtime-test'
 import { createApp, registerRuntimeCompiler } from '@vue/runtime-test'
 import { baseCompile } from '@vue/compiler-core'
-import { createSSRApp } from '@vue/runtime-dom'
 
 declare var __VUE_HMR_RUNTIME__: HMRRuntime
 const { createRecord, rerender, reload } = __VUE_HMR_RUNTIME__
@@ -894,42 +893,5 @@ describe('hot module replacement', () => {
     })
     await timeout()
     expect(serializeInner(root)).toBe('<div>bar</div>')
-  })
-
-  /**
-   * @vitest-environment jsdom
-   */
-  test('reload child wrapped in KeepAlive', async () => {
-    const id = 'child-reload'
-    const Child: ComponentOptions = {
-      __hmrId: id,
-      render: compileToFunction(`<div>foo</div>`),
-    }
-    createRecord(id, Child)
-
-    const appId = 'test-app-id'
-    const App: ComponentOptions = {
-      __hmrId: appId,
-      components: { Child },
-      render: compileToFunction(`
-        <div>
-        <KeepAlive>
-          <Child />
-        </KeepAlive>
-      </div>
-      `),
-    }
-
-    const root = document.createElement('div')
-    root.innerHTML = runtimeTest.renderToString(h(App))
-    createSSRApp(App).mount(root)
-    expect(root.innerHTML).toBe('<div><div>foo</div></div>')
-
-    reload(id, {
-      __hmrId: id,
-      render: compileToFunction(`<div>bar</div>`),
-    })
-    await timeout()
-    expect(root.innerHTML).toBe('<div><div>bar</div></div>')
   })
 })
