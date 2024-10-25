@@ -302,7 +302,9 @@ export function createHydrationFunctions(
             getContainerType(container),
             optimized,
           )
-
+          if (vnode.component!.subTree) {
+            vnode.el = vnode.component!.subTree.el
+          }
           // #3787
           // if component is async, it may get moved / unmounted before its
           // inner component is loaded, so we need to give it a placeholder
