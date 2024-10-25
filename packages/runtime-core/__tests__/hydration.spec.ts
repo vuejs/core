@@ -21,6 +21,7 @@ import {
   h,
   nextTick,
   onMounted,
+  onServerPrefetch,
   openBlock,
   reactive,
   ref,
@@ -515,6 +516,45 @@ describe('SSR hydration', () => {
     expect(childTeleportVNode.targetAnchor).toBe(teleportContainer.lastChild)
     expect(childTeleportVNode.children[0].el).toBe(
       teleportContainer.lastChild?.previousSibling,
+    )
+  })
+
+  test('with data-allow-mismatch component when using onServerPrefetch', async () => {
+    const Comp = {
+      template: `
+        <div>Comp2</div>
+      `,
+    }
+    let foo: any
+    const App = {
+      setup() {
+        const flag = ref(true)
+        foo = () => {
+          flag.value = false
+        }
+        onServerPrefetch(() => (flag.value = false))
+        return { flag }
+      },
+      components: {
+        Comp,
+      },
+      template: `
+        <span data-allow-mismatch>
+          <Comp v-if="flag"></Comp>
+        </span>
+      `,
+    }
+    // hydrate
+    const container = document.createElement('div')
+    container.innerHTML = await renderToString(h(App))
+    createSSRApp(App).mount(container)
+    expect(container.innerHTML).toBe(
+      '<span data-allow-mismatch=""><div>Comp2</div></span>',
+    )
+    foo()
+    await nextTick()
+    expect(container.innerHTML).toBe(
+      '<span data-allow-mismatch=""><!--v-if--></span>',
     )
   })
 
