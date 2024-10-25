@@ -1328,7 +1328,10 @@ function baseCreateRenderer(
               parentSuspense,
               null,
             )
-            initialVNode.el = instance.subTree.el
+            // when data-allow-mismatch is set, the component vnode's el may be incorrect, so it should be updated
+            if (initialVNode) {
+              initialVNode.el = instance.subTree.el
+            }
             if (__DEV__) {
               endMeasure(instance, `hydrate`)
             }
