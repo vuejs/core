@@ -115,9 +115,11 @@ export function setRef(
           } else {
             if (!isArray(existing)) {
               if (_isString) {
-                refs[ref] = [refValue]
-                if (canSetSetupRef(ref)) {
-                  setupState[ref] = refs[ref]
+                if (oldRef !== ref) {
+                  refs[ref] = [refValue]
+                  if (canSetSetupRef(ref)) {
+                    setupState[ref] = refs[ref]
+                  }
                 }
               } else {
                 ref.value = [refValue]
@@ -128,9 +130,11 @@ export function setRef(
             }
           }
         } else if (_isString) {
-          refs[ref] = value
-          if (canSetSetupRef(ref)) {
-            setupState[ref] = value
+          if (oldRef !== ref) {
+            refs[ref] = value
+            if (canSetSetupRef(ref)) {
+              setupState[ref] = value
+            }
           }
         } else if (_isRef) {
           ref.value = value
