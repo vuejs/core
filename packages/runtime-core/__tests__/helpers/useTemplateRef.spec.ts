@@ -125,4 +125,28 @@ describe('useTemplateRef', () => {
       __DEV__ = true
     }
   })
+
+  // 12246
+  test('should set last element if multiple with same key are defined', () => {
+    let tRef: ShallowRef
+    let key = 'refKey'
+
+    const Comp = {
+      setup() {
+        tRef = useTemplateRef(key)
+      },
+      render() {
+        return h('div', [
+          h('div', { ref: key }),
+          h('div', { ref: key }),
+          h('span', { ref: key }),
+        ])
+      },
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(Comp), root)
+
+    expect(tRef!.value.tag).toBe('span')
+  })
 })
