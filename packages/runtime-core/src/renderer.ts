@@ -1328,6 +1328,7 @@ function baseCreateRenderer(
               parentSuspense,
               null,
             )
+            initialVNode.el = instance.subTree.el
             if (__DEV__) {
               endMeasure(instance, `hydrate`)
             }
