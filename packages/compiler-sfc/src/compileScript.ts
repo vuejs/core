@@ -693,8 +693,8 @@ export function compileScript(
   checkInvalidScopeReference(ctx.propsDestructureDecl, DEFINE_PROPS)
   checkInvalidScopeReference(ctx.emitsRuntimeDecl, DEFINE_EMITS)
   checkInvalidScopeReference(ctx.optionsRuntimeDecl, DEFINE_OPTIONS)
-  for (const { runtimeOptionNodes } of Object.values(ctx.modelDecls)) {
-    for (const node of runtimeOptionNodes) {
+  for (const decl in ctx.modelDecls) {
+    for (const node of ctx.modelDecls[decl].runtimeOptionNodes) {
       checkInvalidScopeReference(node, DEFINE_MODEL)
     }
   }
