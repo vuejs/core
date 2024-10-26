@@ -1,7 +1,7 @@
 import type { ReactiveEffect } from './effect'
 import { warn } from './warning'
 
-export let activeEffectScope: EffectScope | undefined
+export let currentEffectScope: EffectScope | undefined
 
 export class EffectScope {
   /**
@@ -37,10 +37,10 @@ export class EffectScope {
   private index: number | undefined
 
   constructor(public detached = false) {
-    this.parent = activeEffectScope
-    if (!detached && activeEffectScope) {
+    this.parent = currentEffectScope
+    if (!detached && currentEffectScope) {
       this.index =
-        (activeEffectScope.scopes || (activeEffectScope.scopes = [])).push(
+        (currentEffectScope.scopes || (currentEffectScope.scopes = [])).push(
           this,
         ) - 1
     }
@@ -87,12 +87,12 @@ export class EffectScope {
 
   run<T>(fn: () => T): T | undefined {
     if (this._active) {
-      const currentEffectScope = activeEffectScope
+      const previousEffectScope = currentEffectScope
       try {
-        activeEffectScope = this
+        currentEffectScope = this
         return fn()
       } finally {
-        activeEffectScope = currentEffectScope
+        currentEffectScope = previousEffectScope
       }
     } else if (__DEV__) {
       warn(`cannot run an inactive effect scope.`)
@@ -104,7 +104,7 @@ export class EffectScope {
    * @internal
    */
   on(): void {
-    activeEffectScope = this
+    currentEffectScope = this
   }
 
   /**
@@ -112,7 +112,7 @@ export class EffectScope {
    * @internal
    */
   off(): void {
-    activeEffectScope = this.parent
+    currentEffectScope = this.parent
   }
 
   stop(fromParent?: boolean): void {
@@ -163,7 +163,7 @@ export function effectScope(detached?: boolean): EffectScope {
  * @see {@link https://vuejs.org/api/reactivity-advanced.html#getcurrentscope}
  */
 export function getCurrentScope(): EffectScope | undefined {
-  return activeEffectScope
+  return currentEffectScope
 }
 
 /**
@@ -174,8 +174,8 @@ export function getCurrentScope(): EffectScope | undefined {
  * @see {@link https://vuejs.org/api/reactivity-advanced.html#onscopedispose}
  */
 export function onScopeDispose(fn: () => void, failSilently = false): void {
-  if (activeEffectScope) {
-    activeEffectScope.cleanups.push(fn)
+  if (currentEffectScope) {
+    currentEffectScope.cleanups.push(fn)
   } else if (__DEV__ && !failSilently) {
     warn(
       `onScopeDispose() is called when there is no active effect scope` +
