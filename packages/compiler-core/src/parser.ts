@@ -424,9 +424,10 @@ const tokenizer = new Tokenizer(stack, {
       const el = currentRoot.children[currentRoot.children.length - 1]
       if (
         el.type === 1 &&
+        el.innerLoc &&
         !new RegExp(`<\/${el.tag}\s*>$`).test(el.loc.source)
       ) {
-        el.innerLoc = getLoc(el.innerLoc!.start.offset, end)
+        el.innerLoc = getLoc(el.innerLoc.start.offset, end)
       }
     }
     // EOF ERRORS
