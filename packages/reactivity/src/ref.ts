@@ -493,14 +493,13 @@ export type ShallowUnwrapRef<T> = {
 type DistributeRef<T> =
   T extends Ref<infer V, unknown> ? UnwrapNestedRefs<V> : T
 
-export type UnwrapRef<T> =
-  T extends undefined
-    ? T
-    : T extends ShallowRef<infer V, unknown>
-      ? V
-      : T extends Ref<infer V, unknown>
-        ? UnwrapRefSimple<V>
-        : UnwrapRefSimple<T>
+export type UnwrapRef<T> = T extends undefined
+  ? T
+  : T extends ShallowRef<infer V, unknown>
+    ? V
+    : T extends Ref<infer V, unknown>
+      ? UnwrapRefSimple<V>
+      : UnwrapRefSimple<T>
 
 export type UnwrapRefSimple<T> = T extends
   | Builtin
