@@ -1,11 +1,11 @@
 import {
+  type Component,
+  KeepAlive,
+  Suspense,
   defineAsyncComponent,
   h,
-  Component,
-  ref,
   nextTick,
-  Suspense,
-  KeepAlive
+  ref,
 } from '../src'
 import { createApp, nodeOps, serializeInner } from '@vue/runtime-test'
 import { onActivated } from '../src/components/KeepAlive'
@@ -19,13 +19,13 @@ describe('api: defineAsyncComponent', () => {
       () =>
         new Promise(r => {
           resolve = r as any
-        })
+        }),
     )
 
     const toggle = ref(true)
     const root = nodeOps.createElement('div')
     createApp({
-      render: () => (toggle.value ? h(Foo) : null)
+      render: () => (toggle.value ? h(Foo) : null),
     }).mount(root)
 
     expect(serializeInner(root)).toBe('<!---->')
@@ -54,13 +54,13 @@ describe('api: defineAsyncComponent', () => {
           resolve = r as any
         }),
       loadingComponent: () => 'loading',
-      delay: 1 // defaults to 200
+      delay: 1, // defaults to 200
     })
 
     const toggle = ref(true)
     const root = nodeOps.createElement('div')
     createApp({
-      render: () => (toggle.value ? h(Foo) : null)
+      render: () => (toggle.value ? h(Foo) : null),
     }).mount(root)
 
     // due to the delay, initial mount should be empty
@@ -93,13 +93,13 @@ describe('api: defineAsyncComponent', () => {
           resolve = r as any
         }),
       loadingComponent: () => 'loading',
-      delay: 0
+      delay: 0,
     })
 
     const toggle = ref(true)
     const root = nodeOps.createElement('div')
     createApp({
-      render: () => (toggle.value ? h(Foo) : null)
+      render: () => (toggle.value ? h(Foo) : null),
     }).mount(root)
 
     // with delay: 0, should show loading immediately
@@ -128,16 +128,16 @@ describe('api: defineAsyncComponent', () => {
         new Promise((_resolve, _reject) => {
           resolve = _resolve as any
           reject = _reject
-        })
+        }),
     )
 
     const toggle = ref(true)
     const root = nodeOps.createElement('div')
     const app = createApp({
-      render: () => (toggle.value ? h(Foo) : null)
+      render: () => (toggle.value ? h(Foo) : null),
     })
 
-    const handler = (app.config.errorHandler = jest.fn())
+    const handler = (app.config.errorHandler = vi.fn())
 
     app.mount(root)
     expect(serializeInner(root)).toBe('<!---->')
@@ -173,16 +173,16 @@ describe('api: defineAsyncComponent', () => {
           resolve = _resolve as any
           reject = _reject
         }),
-      errorComponent: (props: { error: Error }) => props.error.message
+      errorComponent: (props: { error: Error }) => props.error.message,
     })
 
     const toggle = ref(true)
     const root = nodeOps.createElement('div')
     const app = createApp({
-      render: () => (toggle.value ? h(Foo) : null)
+      render: () => (toggle.value ? h(Foo) : null),
     })
 
-    const handler = (app.config.errorHandler = jest.fn())
+    const handler = (app.config.errorHandler = vi.fn())
 
     app.mount(root)
     expect(serializeInner(root)).toBe('<!---->')
@@ -218,13 +218,13 @@ describe('api: defineAsyncComponent', () => {
           resolve = _resolve as any
           reject = _reject
         }),
-      errorComponent: (props: { error: Error }) => props.error.message
+      errorComponent: (props: { error: Error }) => props.error.message,
     })
 
     const toggle = ref(true)
     const root = nodeOps.createElement('div')
     const app = createApp({
-      render: () => (toggle.value ? h(Foo) : null)
+      render: () => (toggle.value ? h(Foo) : null),
     })
 
     app.mount(root)
@@ -235,7 +235,7 @@ describe('api: defineAsyncComponent', () => {
     await timeout()
     expect(serializeInner(root)).toBe('errored out')
     expect(
-      'Unhandled error during execution of async component loader'
+      'Unhandled error during execution of async component loader',
     ).toHaveBeenWarned()
 
     toggle.value = false
@@ -264,16 +264,16 @@ describe('api: defineAsyncComponent', () => {
         }),
       errorComponent: (props: { error: Error }) => props.error.message,
       loadingComponent: () => 'loading',
-      delay: 1
+      delay: 1,
     })
 
     const toggle = ref(true)
     const root = nodeOps.createElement('div')
     const app = createApp({
-      render: () => (toggle.value ? h(Foo) : null)
+      render: () => (toggle.value ? h(Foo) : null),
     })
 
-    const handler = (app.config.errorHandler = jest.fn())
+    const handler = (app.config.errorHandler = vi.fn())
 
     app.mount(root)
 
@@ -316,15 +316,16 @@ describe('api: defineAsyncComponent', () => {
         new Promise(_resolve => {
           resolve = _resolve as any
         }),
-      timeout: 1
+      timeout: 1,
     })
 
     const root = nodeOps.createElement('div')
     const app = createApp({
-      render: () => h(Foo)
+      render: () => h(Foo),
     })
 
-    const handler = (app.config.errorHandler = jest.fn())
+    const handler = vi.fn()
+    app.config.errorHandler = handler
 
     app.mount(root)
     expect(serializeInner(root)).toBe('<!---->')
@@ -332,7 +333,7 @@ describe('api: defineAsyncComponent', () => {
     await timeout(1)
     expect(handler).toHaveBeenCalled()
     expect(handler.mock.calls[0][0].message).toMatch(
-      `Async component timed out after 1ms.`
+      `Async component timed out after 1ms.`,
     )
     expect(serializeInner(root)).toBe('<!---->')
 
@@ -350,15 +351,15 @@ describe('api: defineAsyncComponent', () => {
           resolve = _resolve as any
         }),
       timeout: 1,
-      errorComponent: () => 'timed out'
+      errorComponent: () => 'timed out',
     })
 
     const root = nodeOps.createElement('div')
     const app = createApp({
-      render: () => h(Foo)
+      render: () => h(Foo),
     })
 
-    const handler = (app.config.errorHandler = jest.fn())
+    const handler = (app.config.errorHandler = vi.fn())
 
     app.mount(root)
     expect(serializeInner(root)).toBe('<!---->')
@@ -383,14 +384,14 @@ describe('api: defineAsyncComponent', () => {
       delay: 1,
       timeout: 16,
       errorComponent: () => 'timed out',
-      loadingComponent: () => 'loading'
+      loadingComponent: () => 'loading',
     })
 
     const root = nodeOps.createElement('div')
     const app = createApp({
-      render: () => h(Foo)
+      render: () => h(Foo),
     })
-    const handler = (app.config.errorHandler = jest.fn())
+    const handler = (app.config.errorHandler = vi.fn())
     app.mount(root)
     expect(serializeInner(root)).toBe('<!---->')
     await timeout(1)
@@ -414,14 +415,15 @@ describe('api: defineAsyncComponent', () => {
         }),
       delay: 1,
       timeout: 16,
-      loadingComponent: () => 'loading'
+      loadingComponent: () => 'loading',
     })
 
     const root = nodeOps.createElement('div')
     const app = createApp({
-      render: () => h(Foo)
+      render: () => h(Foo),
     })
-    const handler = (app.config.errorHandler = jest.fn())
+    const handler = vi.fn()
+    app.config.errorHandler = handler
     app.mount(root)
     expect(serializeInner(root)).toBe('<!---->')
     await timeout(1)
@@ -430,7 +432,7 @@ describe('api: defineAsyncComponent', () => {
     await timeout(16)
     expect(handler).toHaveBeenCalled()
     expect(handler.mock.calls[0][0].message).toMatch(
-      `Async component timed out after 16ms.`
+      `Async component timed out after 16ms.`,
     )
     // should still display loading
     expect(serializeInner(root)).toBe('loading')
@@ -446,7 +448,7 @@ describe('api: defineAsyncComponent', () => {
       () =>
         new Promise(_resolve => {
           resolve = _resolve as any
-        })
+        }),
     )
 
     const root = nodeOps.createElement('div')
@@ -454,8 +456,8 @@ describe('api: defineAsyncComponent', () => {
       render: () =>
         h(Suspense, null, {
           default: () => h('div', [h(Foo), ' & ', h(Foo)]),
-          fallback: () => 'loading'
-        })
+          fallback: () => 'loading',
+        }),
     })
 
     app.mount(root)
@@ -473,7 +475,7 @@ describe('api: defineAsyncComponent', () => {
         new Promise(_resolve => {
           resolve = _resolve as any
         }),
-      suspensible: false
+      suspensible: false,
     })
 
     const root = nodeOps.createElement('div')
@@ -481,8 +483,8 @@ describe('api: defineAsyncComponent', () => {
       render: () =>
         h(Suspense, null, {
           default: () => h('div', [h(Foo), ' & ', h(Foo)]),
-          fallback: () => 'loading'
-        })
+          fallback: () => 'loading',
+        }),
     })
 
     app.mount(root)
@@ -500,7 +502,7 @@ describe('api: defineAsyncComponent', () => {
       () =>
         new Promise((_resolve, _reject) => {
           reject = _reject
-        })
+        }),
     )
 
     const root = nodeOps.createElement('div')
@@ -508,11 +510,11 @@ describe('api: defineAsyncComponent', () => {
       render: () =>
         h(Suspense, null, {
           default: () => h('div', [h(Foo), ' & ', h(Foo)]),
-          fallback: () => 'loading'
-        })
+          fallback: () => 'loading',
+        }),
     })
 
-    const handler = (app.config.errorHandler = jest.fn())
+    const handler = (app.config.errorHandler = vi.fn())
     app.mount(root)
     expect(serializeInner(root)).toBe('loading')
 
@@ -541,15 +543,15 @@ describe('api: defineAsyncComponent', () => {
         } else {
           fail()
         }
-      }
+      },
     })
 
     const root = nodeOps.createElement('div')
     const app = createApp({
-      render: () => h(Foo)
+      render: () => h(Foo),
     })
 
-    const handler = (app.config.errorHandler = jest.fn())
+    const handler = (app.config.errorHandler = vi.fn())
     app.mount(root)
     expect(serializeInner(root)).toBe('<!---->')
     expect(loaderCallCount).toBe(1)
@@ -585,15 +587,15 @@ describe('api: defineAsyncComponent', () => {
         } else {
           fail()
         }
-      }
+      },
     })
 
     const root = nodeOps.createElement('div')
     const app = createApp({
-      render: () => h(Foo)
+      render: () => h(Foo),
     })
 
-    const handler = (app.config.errorHandler = jest.fn())
+    const handler = (app.config.errorHandler = vi.fn())
     app.mount(root)
     expect(serializeInner(root)).toBe('<!---->')
     expect(loaderCallCount).toBe(1)
@@ -625,15 +627,15 @@ describe('api: defineAsyncComponent', () => {
         } else {
           fail()
         }
-      }
+      },
     })
 
     const root = nodeOps.createElement('div')
     const app = createApp({
-      render: () => h(Foo)
+      render: () => h(Foo),
     })
 
-    const handler = (app.config.errorHandler = jest.fn())
+    const handler = (app.config.errorHandler = vi.fn())
     app.mount(root)
     expect(serializeInner(root)).toBe('<!---->')
     expect(loaderCallCount).toBe(1)
@@ -661,14 +663,14 @@ describe('api: defineAsyncComponent', () => {
       () =>
         new Promise(r => {
           resolve = r as any
-        })
+        }),
     )
 
     const fooRef = ref<any>(null)
     const toggle = ref(true)
     const root = nodeOps.createElement('div')
     createApp({
-      render: () => (toggle.value ? h(Foo, { ref: fooRef }) : null)
+      render: () => (toggle.value ? h(Foo, { ref: fooRef }) : null),
     }).mount(root)
 
     expect(serializeInner(root)).toBe('<!---->')
@@ -677,10 +679,10 @@ describe('api: defineAsyncComponent', () => {
     resolve!({
       data() {
         return {
-          id: 'foo'
+          id: 'foo',
         }
       },
-      render: () => 'resolved'
+      render: () => 'resolved',
     })
     // first time resolve, wait for macro task since there are multiple
     // microtasks / .then() calls
@@ -707,7 +709,7 @@ describe('api: defineAsyncComponent', () => {
       () =>
         new Promise(r => {
           resolve = r as any
-        })
+        }),
     )
 
     const fooRef = ref<any>(null)
@@ -717,7 +719,7 @@ describe('api: defineAsyncComponent', () => {
     const root = nodeOps.createElement('div')
     createApp({
       render: () =>
-        toggle.value ? [h(Foo, { ref: fooRef }), updater.value] : null
+        toggle.value ? [h(Foo, { ref: fooRef }), updater.value] : null,
     }).mount(root)
 
     expect(serializeInner(root)).toBe('<!---->0')
@@ -726,10 +728,10 @@ describe('api: defineAsyncComponent', () => {
     resolve!({
       data() {
         return {
-          id: 'foo'
+          id: 'foo',
         }
       },
-      render: () => 'resolved'
+      render: () => 'resolved',
     })
 
     await timeout()
@@ -753,24 +755,24 @@ describe('api: defineAsyncComponent', () => {
       () =>
         new Promise(r => {
           resolve = r as any
-        })
+        }),
     )
     const updater = ref(0)
 
     const vnodeHooks = {
-      onVnodeBeforeMount: jest.fn(),
-      onVnodeMounted: jest.fn(),
-      onVnodeBeforeUpdate: jest.fn(),
-      onVnodeUpdated: jest.fn(),
-      onVnodeBeforeUnmount: jest.fn(),
-      onVnodeUnmounted: jest.fn()
+      onVnodeBeforeMount: vi.fn(),
+      onVnodeMounted: vi.fn(),
+      onVnodeBeforeUpdate: vi.fn(),
+      onVnodeUpdated: vi.fn(),
+      onVnodeBeforeUnmount: vi.fn(),
+      onVnodeUnmounted: vi.fn(),
     }
 
     const toggle = ref(true)
 
     const root = nodeOps.createElement('div')
     createApp({
-      render: () => (toggle.value ? [h(Foo, vnodeHooks), updater.value] : null)
+      render: () => (toggle.value ? [h(Foo, vnodeHooks), updater.value] : null),
     }).mount(root)
 
     expect(serializeInner(root)).toBe('<!---->0')
@@ -778,10 +780,10 @@ describe('api: defineAsyncComponent', () => {
     resolve!({
       data() {
         return {
-          id: 'foo'
+          id: 'foo',
         }
       },
-      render: () => 'resolved'
+      render: () => 'resolved',
     })
 
     await timeout()
@@ -803,14 +805,14 @@ describe('api: defineAsyncComponent', () => {
   })
 
   test('with KeepAlive', async () => {
-    const spy = jest.fn()
+    const spy = vi.fn()
     let resolve: (comp: Component) => void
 
     const Foo = defineAsyncComponent(
       () =>
         new Promise(r => {
           resolve = r as any
-        })
+        }),
     )
 
     const Bar = defineAsyncComponent(() => Promise.resolve(() => 'Bar'))
@@ -818,7 +820,7 @@ describe('api: defineAsyncComponent', () => {
     const toggle = ref(true)
     const root = nodeOps.createElement('div')
     const app = createApp({
-      render: () => h(KeepAlive, [toggle.value ? h(Foo) : h(Bar)])
+      render: () => h(KeepAlive, [toggle.value ? h(Foo) : h(Bar)]),
     })
 
     app.mount(root)
@@ -830,7 +832,7 @@ describe('api: defineAsyncComponent', () => {
           spy()
         })
         return () => 'Foo'
-      }
+      },
     })
 
     await timeout()
@@ -840,5 +842,38 @@ describe('api: defineAsyncComponent', () => {
     toggle.value = false
     await timeout()
     expect(serializeInner(root)).toBe('Bar')
+  })
+
+  // 11916
+  test('with KeepAlive + include', async () => {
+    const spy = vi.fn()
+    let resolve: (comp: Component) => void
+
+    const Foo = defineAsyncComponent(
+      () =>
+        new Promise(r => {
+          resolve = r as any
+        }),
+    )
+
+    const root = nodeOps.createElement('div')
+    const app = createApp({
+      render: () => h(KeepAlive, { include: 'Foo' }, [h(Foo)]),
+    })
+
+    app.mount(root)
+    await nextTick()
+
+    resolve!({
+      name: 'Foo',
+      setup() {
+        onActivated(spy)
+        return () => 'Foo'
+      },
+    })
+
+    await timeout()
+    expect(serializeInner(root)).toBe('Foo')
+    expect(spy).toBeCalledTimes(1)
   })
 })

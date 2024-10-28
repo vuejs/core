@@ -1,5 +1,12 @@
 import { patchProp } from '../src/patchProp'
-import { render, h } from '../src'
+import {
+  h,
+  nextTick,
+  ref,
+  render,
+  vModelCheckbox,
+  withDirectives,
+} from '../src'
 
 describe('runtime-dom: props patching', () => {
   test('basic', () => {
@@ -23,6 +30,14 @@ describe('runtime-dom: props patching', () => {
     patchProp(el, 'value', null, obj)
     expect(el.value).toBe(obj.toString())
     expect((el as any)._value).toBe(obj)
+
+    const option = document.createElement('option')
+    patchProp(option, 'textContent', null, 'foo')
+    expect(option.value).toBe('foo')
+    expect(option.getAttribute('value')).toBe(null)
+    patchProp(option, 'value', null, 'foo')
+    expect(option.value).toBe('foo')
+    expect(option.getAttribute('value')).toBe('foo')
   })
 
   test('value for custom elements', () => {
@@ -44,8 +59,8 @@ describe('runtime-dom: props patching', () => {
 
       public setterCalled: number = 0
     }
-    window.customElements.define('test-element', TestElement)
-    const el = document.createElement('test-element') as TestElement
+    window.customElements.define('patch-props-test-element', TestElement)
+    const el = document.createElement('patch-props-test-element') as TestElement
     patchProp(el, 'value', null, 'foo')
     expect(el.value).toBe('foo')
     expect(el.setterCalled).toBe(1)
@@ -95,10 +110,10 @@ describe('runtime-dom: props patching', () => {
   })
 
   test('innerHTML unmount prev children', () => {
-    const fn = jest.fn()
+    const fn = vi.fn()
     const comp = {
       render: () => 'foo',
-      unmounted: fn
+      unmounted: fn,
     }
     const root = document.createElement('div')
     render(h('div', null, [h(comp)]), root)
@@ -111,10 +126,10 @@ describe('runtime-dom: props patching', () => {
 
   // #954
   test('(svg) innerHTML unmount prev children', () => {
-    const fn = jest.fn()
+    const fn = vi.fn()
     const comp = {
       render: () => 'foo',
-      unmounted: fn
+      unmounted: fn,
     }
     const root = document.createElement('div')
     render(h('div', null, [h(comp)]), root)
@@ -125,11 +140,36 @@ describe('runtime-dom: props patching', () => {
     expect(fn).toHaveBeenCalled()
   })
 
+  test('patch innerHTML porp', async () => {
+    const root = document.createElement('div')
+    const state = ref(false)
+    const Comp = {
+      render: () => {
+        if (state.value) {
+          return h('div', [h('del', null, 'baz')])
+        } else {
+          return h('div', { innerHTML: 'baz' })
+        }
+      },
+    }
+    render(h(Comp), root)
+    expect(root.innerHTML).toBe(`<div>baz</div>`)
+    state.value = true
+    await nextTick()
+    expect(root.innerHTML).toBe(`<div><del>baz</del></div>`)
+  })
+
+  test('patch innerHTML porp w/ undefined value', async () => {
+    const root = document.createElement('div')
+    render(h('div', { innerHTML: undefined }), root)
+    expect(root.innerHTML).toBe(`<div></div>`)
+  })
+
   test('textContent unmount prev children', () => {
-    const fn = jest.fn()
+    const fn = vi.fn()
     const comp = {
       render: () => 'foo',
-      unmounted: fn
+      unmounted: fn,
     }
     const root = document.createElement('div')
     render(h('div', null, [h(comp)]), root)
@@ -148,10 +188,11 @@ describe('runtime-dom: props patching', () => {
     // anyway, here we just want to make sure Vue doesn't set non-string props
     // to an empty string on nullish values - it should reset to its default
     // value.
+    el.srcObject = null
     const initialValue = el.srcObject
     const fakeObject = {}
     patchProp(el, 'srcObject', null, fakeObject)
-    expect(el.srcObject).not.toBe(fakeObject)
+    expect(el.srcObject).toBe(fakeObject)
     patchProp(el, 'srcObject', null, null)
     expect(el.srcObject).toBe(initialValue)
   })
@@ -161,7 +202,7 @@ describe('runtime-dom: props patching', () => {
     Object.defineProperty(el, 'someProp', {
       set() {
         throw new TypeError('Invalid type')
-      }
+      },
     })
     patchProp(el, 'someProp', null, 'foo')
 
@@ -240,6 +281,8 @@ describe('runtime-dom: props patching', () => {
     expect(el.size).toBe(100)
     patchProp(el, 'size', 100, null)
     expect(el.getAttribute('size')).toBe(null)
+    expect('Failed setting prop "size" on <input>').not.toHaveBeenWarned()
+    patchProp(el, 'size', null, 'foobar')
     expect('Failed setting prop "size" on <input>').toHaveBeenWarnedLast()
   })
 
@@ -255,7 +298,7 @@ describe('runtime-dom: props patching', () => {
     patchProp(el, 'willValidate', true, null)
     expect(el.willValidate).toBe(true)
     expect(
-      'Failed setting prop "willValidate" on <select>'
+      'Failed setting prop "willValidate" on <select>',
     ).toHaveBeenWarnedLast()
   })
 
@@ -264,9 +307,9 @@ describe('runtime-dom: props patching', () => {
     render(
       h('select', { value: 'foo' }, [
         h('option', { value: 'foo' }, 'foo'),
-        h('option', { value: 'bar' }, 'bar')
+        h('option', { value: 'bar' }, 'bar'),
       ]),
-      root
+      root,
     )
     const el = root.children[0] as HTMLSelectElement
     expect(el.value).toBe('foo')
@@ -274,11 +317,39 @@ describe('runtime-dom: props patching', () => {
     render(
       h('select', { value: 'baz' }, [
         h('option', { value: 'foo' }, 'foo'),
-        h('option', { value: 'baz' }, 'baz')
+        h('option', { value: 'baz' }, 'baz'),
       ]),
-      root
+      root,
     )
     expect(el.value).toBe('baz')
+  })
+
+  test('init empty value for option', () => {
+    const root = document.createElement('div')
+    render(
+      h('select', { value: 'foo' }, [h('option', { value: '' }, 'foo')]),
+      root,
+    )
+    const select = root.children[0] as HTMLSelectElement
+    const option = select.children[0] as HTMLOptionElement
+    expect(select.value).toBe('')
+    expect(option.value).toBe('')
+  })
+
+  // #8780
+  test('embedded tag with width and height', () => {
+    // Width and height of some embedded element such as img、video、source、canvas
+    // must be set as attribute
+    const el = document.createElement('img')
+    patchProp(el, 'width', null, '24px')
+    expect(el.getAttribute('width')).toBe('24px')
+  })
+
+  // # 9762 should fallthrough to `key in el` logic for non embedded tags
+  test('width and height on custom elements', () => {
+    const el = document.createElement('foobar')
+    patchProp(el, 'width', null, '24px')
+    expect(el.getAttribute('width')).toBe('24px')
   })
 
   test('translate attribute', () => {
@@ -286,5 +357,41 @@ describe('runtime-dom: props patching', () => {
     patchProp(el, 'translate', null, 'no')
     expect(el.translate).toBeFalsy()
     expect(el.getAttribute('translate')).toBe('no')
+  })
+
+  // #11647
+  test('should not trigger input mutation when `value` is `undefined`', async () => {
+    const fn = vi.fn()
+    const comp = {
+      setup() {
+        const checked = ref()
+        return () =>
+          withDirectives(
+            h('input', {
+              type: 'checkbox',
+              value: undefined,
+              'onUpdate:modelValue': (value: any) => {
+                checked.value = value
+              },
+            }),
+            [[vModelCheckbox, checked.value]],
+          )
+      },
+    }
+
+    const root = document.createElement('div')
+    render(h(comp), root)
+    document.body.append(root)
+
+    const el = root.children[0] as HTMLInputElement
+    const observer = new MutationObserver(fn)
+    observer.observe(el, {
+      attributes: true,
+    })
+
+    el.click()
+    await nextTick()
+
+    expect(fn).toBeCalledTimes(0)
   })
 })

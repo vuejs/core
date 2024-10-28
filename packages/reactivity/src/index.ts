@@ -3,19 +3,22 @@ export {
   shallowRef,
   isRef,
   toRef,
+  toValue,
   toRefs,
   unref,
   proxyRefs,
   customRef,
   triggerRef,
-  Ref,
-  ToRef,
-  ToRefs,
-  UnwrapRef,
-  ShallowRef,
-  ShallowUnwrapRef,
-  RefUnwrapBailTypes,
-  CustomRefFactory
+  type Ref,
+  type MaybeRef,
+  type MaybeRefOrGetter,
+  type ToRef,
+  type ToRefs,
+  type UnwrapRef,
+  type ShallowRef,
+  type ShallowUnwrapRef,
+  type RefUnwrapBailTypes,
+  type CustomRefFactory,
 } from './ref'
 export {
   reactive,
@@ -28,41 +31,67 @@ export {
   shallowReadonly,
   markRaw,
   toRaw,
-  ReactiveFlags,
-  DeepReadonly,
-  ShallowReactive,
-  UnwrapNestedRefs
+  toReactive,
+  toReadonly,
+  type Raw,
+  type DeepReadonly,
+  type ShallowReactive,
+  type UnwrapNestedRefs,
+  type Reactive,
+  type ReactiveMarker,
 } from './reactive'
 export {
   computed,
-  ComputedRef,
-  WritableComputedRef,
-  WritableComputedOptions,
-  ComputedGetter,
-  ComputedSetter
+  type ComputedRef,
+  type WritableComputedRef,
+  type WritableComputedOptions,
+  type ComputedGetter,
+  type ComputedSetter,
+  type ComputedRefImpl,
 } from './computed'
-export { deferredComputed } from './deferredComputed'
 export {
   effect,
   stop,
-  trigger,
-  track,
   enableTracking,
   pauseTracking,
   resetTracking,
-  ITERATE_KEY,
+  onEffectCleanup,
   ReactiveEffect,
-  ReactiveEffectRunner,
-  ReactiveEffectOptions,
-  EffectScheduler,
-  DebuggerOptions,
-  DebuggerEvent,
-  DebuggerEventExtraInfo
+  EffectFlags,
+  type ReactiveEffectRunner,
+  type ReactiveEffectOptions,
+  type EffectScheduler,
+  type DebuggerOptions,
+  type DebuggerEvent,
+  type DebuggerEventExtraInfo,
 } from './effect'
+export {
+  trigger,
+  track,
+  ITERATE_KEY,
+  ARRAY_ITERATE_KEY,
+  MAP_KEY_ITERATE_KEY,
+} from './dep'
 export {
   effectScope,
   EffectScope,
   getCurrentScope,
-  onScopeDispose
+  onScopeDispose,
 } from './effectScope'
-export { TrackOpTypes, TriggerOpTypes } from './operations'
+export { reactiveReadArray, shallowReadArray } from './arrayInstrumentations'
+export { TrackOpTypes, TriggerOpTypes, ReactiveFlags } from './constants'
+export {
+  watch,
+  getCurrentWatcher,
+  traverse,
+  onWatcherCleanup,
+  WatchErrorCodes,
+  type WatchOptions,
+  type WatchScheduler,
+  type WatchStopHandle,
+  type WatchHandle,
+  type WatchEffect,
+  type WatchSource,
+  type WatchCallback,
+  type OnCleanup,
+} from './watch'
