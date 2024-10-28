@@ -115,11 +115,19 @@ export function setRef(
           } else {
             if (!isArray(existing)) {
               if (_isString) {
-                if (oldRef !== ref) {
-                  refs[ref] = [refValue]
-                  if (canSetSetupRef(ref)) {
-                    setupState[ref] = refs[ref]
+                if (oldRef === ref) {
+                  if (__DEV__ && !__TEST__) {
+                    warn(
+                      'Duplicate template ref detected:',
+                      ref,
+                      `(${typeof ref}). Ref names must be unique within the same scope.`,
+                    )
                   }
+                  return
+                }
+                refs[ref] = [refValue]
+                if (canSetSetupRef(ref)) {
+                  setupState[ref] = refs[ref]
                 }
               } else {
                 ref.value = [refValue]
@@ -130,11 +138,19 @@ export function setRef(
             }
           }
         } else if (_isString) {
-          if (oldRef !== ref) {
-            refs[ref] = value
-            if (canSetSetupRef(ref)) {
-              setupState[ref] = value
+          if (oldRef === ref) {
+            if (__DEV__ && !__TEST__) {
+              warn(
+                'Duplicate template ref detected:',
+                ref,
+                `(${typeof ref}). Ref names must be unique within the same scope.`,
+              )
             }
+            return
+          }
+          refs[ref] = value
+          if (canSetSetupRef(ref)) {
+            setupState[ref] = value
           }
         } else if (_isRef) {
           ref.value = value
