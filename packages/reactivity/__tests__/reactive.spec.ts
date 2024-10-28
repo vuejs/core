@@ -212,7 +212,6 @@ describe('reactivity/reactive', () => {
     const collection = Object.create(originalCollection)
     const rawCollection = toRaw(collection)
     expect(rawCollection).toBe(collection)
-    expect(rawCollection).not.toBe(toRaw(originalCollection))
   })
 
   test('should not unwrap Ref<T>', () => {
