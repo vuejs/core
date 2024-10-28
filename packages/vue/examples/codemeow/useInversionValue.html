@@ -1,0 +1,43 @@
+<script src="../../dist/vue.global.js"></script>
+<script>
+    const { reactive, computed } = Vue
+
+    const AxisLabel = {
+        template: '<text>{{stat}}</text>',
+        props: {
+            stat: {
+                default: true,
+                type: Boolean
+            },
+        },
+        setup(props) {
+            return {
+
+            }
+        },
+    }
+</script>
+
+
+<div id="demo">
+    <div class="zzz">vvv
+        ---
+        <axis-label !stat></axis-label>
+    </div>
+</div>
+
+<script>
+    const { createApp, ref, watchEffect } = Vue
+    createApp({
+        components: {
+            AxisLabel,
+        },
+        setup() {
+            return {  }
+        },
+    }).mount('#demo')
+</script>
+
+<style>
+
+</style>
