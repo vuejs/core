@@ -170,6 +170,7 @@ export class Dep {
     startBatch()
     try {
       if (__DEV__) {
+        pauseTracking()
         // subs are notified and batched in reverse-order and then invoked in
         // original order at the end of the batch, but onTrigger hooks should
         // be invoked in original order here.
@@ -185,6 +186,7 @@ export class Dep {
             )
           }
         }
+        resetTracking()
       }
       for (let link = this.subs; link; link = link.prevSub) {
         if (link.sub.notify()) {
