@@ -2,10 +2,6 @@ import {
   type Target,
   isReadonly,
   isShallow,
-  reactiveMap,
-  readonlyMap,
-  shallowReactiveMap,
-  shallowReadonlyMap,
   toRaw,
   toReactive,
   toReadonly,
@@ -21,6 +17,7 @@ import {
   toRawType,
 } from '@vue/shared'
 import { warn } from './warning'
+import { getRawValue } from './baseHandlers'
 
 type CollectionTypes = IterableCollections | WeakCollections
 
@@ -277,24 +274,7 @@ function createInstrumentationGetter(isReadonly: boolean, shallow: boolean) {
     } else if (key === ReactiveFlags.IS_READONLY) {
       return isReadonly
     } else if (key === ReactiveFlags.RAW) {
-      if (
-        receiver ===
-          (isReadonly
-            ? shallow
-              ? shallowReadonlyMap
-              : readonlyMap
-            : shallow
-              ? shallowReactiveMap
-              : reactiveMap
-          ).get(target as Target) ||
-        // receiver is not the reactive proxy, but has the same prototype
-        // this means the reciever is a user proxy of the reactive proxy
-        Object.getPrototypeOf(target) === Object.getPrototypeOf(receiver)
-      ) {
-        return target
-      }
-      // early return undefined
-      return
+      return getRawValue(receiver, isReadonly, shallow, target)
     }
 
     return Reflect.get(
