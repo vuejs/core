@@ -50,6 +50,7 @@ export function setRef(
       vnode.component!.subTree.component
     ) {
       setRef(rawRef, oldRawRef, parentSuspense, vnode.component!.subTree)
+      return
     }
 
     // when mounting async components, nothing needs to be done,
