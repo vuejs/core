@@ -642,25 +642,11 @@ function _createVNode(
   )
 }
 
-// eg. <select :disabled="false"></select> It can be abbreviated as <select !disabled></select>
-function formatInversionValue(props: (Data & VNodeProps) | null) {
-  if (props !== null)
-    Object.keys(props)
-      .filter(key => key[0] === '!')
-      .map(key => {
-        props[key.slice(1)] = false
-        delete props[key]
-      })
-  return props
-}
-
 export function guardReactiveProps(
   props: (Data & VNodeProps) | null,
 ): (Data & VNodeProps) | null {
   if (!props) return null
-  return isProxy(props) || isInternalObject(props)
-    ? extend({}, props)
-    : formatInversionValue(props)
+  return isProxy(props) || isInternalObject(props) ? extend({}, props) : props
 }
 
 export function cloneVNode<T, U>(

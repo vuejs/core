@@ -3,12 +3,16 @@
     const { reactive, computed } = Vue
 
     const AxisLabel = {
-        template: '<text>{{stat}}</text>',
+        template: '<text>{{stat}} {{stat===false}} {{wode}}</text>',
         props: {
             stat: {
                 default: true,
                 type: Boolean
             },
+            wode: {
+                default: false,
+                type: Boolean
+            }
         },
         setup(props) {
             return {
@@ -20,20 +24,20 @@
 
 
 <div id="demo">
-    <div class="zzz">vvv
-        ---
-        <axis-label !stat></axis-label>
+    <div class="zzz">
+        <input type="text" !value>
+        <axis-label !stat :nihao="false" wode></axis-label>
     </div>
 </div>
 
 <script>
-    const { createApp, ref, watchEffect } = Vue
+    const { createApp } = Vue
     createApp({
         components: {
             AxisLabel,
         },
         setup() {
-            return {  }
+            return {}
         },
     }).mount('#demo')
 </script>

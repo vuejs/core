@@ -199,7 +199,7 @@ const tokenizer = new Tokenizer(stack, {
   ondirname(start, end) {
     const raw = getSlice(start, end)
     const name =
-      raw === '.' || raw === ':'
+      raw === '.' || raw === ':' || raw === '!'
         ? 'bind'
         : raw === '@'
           ? 'on'
@@ -353,6 +353,11 @@ const tokenizer = new Tokenizer(stack, {
           }
         } else {
           // directive
+          const { rawName } = currentProp
+          if (rawName && rawName[0] === '!' && currentAttrValue === '') {
+            currentProp.rawName = `:${rawName.slice(1)}`
+            currentAttrValue = 'false'
+          }
           let expParseMode = ExpParseMode.Normal
           if (!__BROWSER__) {
             if (currentProp.name === 'for') {
