@@ -1,4 +1,7 @@
 import {
+  type Component,
+  KeepAlive,
+  defineAsyncComponent,
   defineComponent,
   h,
   nextTick,
@@ -537,5 +540,66 @@ describe('api: template refs', () => {
     expect(serializeInner(root)).toBe(
       '<div><div>[object Object],[object Object]</div><ul><li>2</li><li>3</li></ul></div>',
     )
+  })
+
+  test('with async component which nested in KeepAlive', async () => {
+    let resolve: (comp: Component) => void
+    const AsyncComp = defineAsyncComponent(
+      () =>
+        new Promise(r => {
+          resolve = r as any
+        }),
+    )
+
+    const Comp = defineComponent({
+      setup(_, { expose }) {
+        expose({
+          name: 'Comp',
+        })
+        return () => h('div')
+      },
+    })
+
+    const toggle = ref(false)
+    const instanceRef = ref<any>(null)
+
+    const App = {
+      render: () => {
+        return h(KeepAlive, () =>
+          toggle.value
+            ? h(AsyncComp, { ref: instanceRef })
+            : h(Comp, { ref: instanceRef }),
+        )
+      },
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(App), root)
+    expect(instanceRef.value.name).toBe('Comp')
+
+    // switch to async component
+    toggle.value = true
+    await nextTick()
+    resolve!({
+      setup(_, { expose }) {
+        expose({
+          name: 'AsyncComp',
+        })
+        return () => h('div')
+      },
+    })
+
+    await new Promise(r => setTimeout(r, 0))
+    expect(instanceRef.value.name).toBe('AsyncComp')
+
+    // switch back to normal component
+    toggle.value = false
+    await nextTick()
+    expect(instanceRef.value.name).toBe('Comp')
+
+    // switch to async component again
+    toggle.value = true
+    await nextTick()
+    expect(instanceRef.value.name).toBe('AsyncComp')
   })
 })

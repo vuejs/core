@@ -15,7 +15,7 @@ import { isRef, toRaw } from '@vue/reactivity'
 import { ErrorCodes, callWithErrorHandling } from './errorHandling'
 import type { SchedulerJob } from './scheduler'
 import { queuePostRenderEffect } from './renderer'
-import { getComponentPublicInstance } from './component'
+import { type ComponentOptions, getComponentPublicInstance } from './component'
 import { knownTemplateRefs } from './helpers/useTemplateRef'
 
 /**
@@ -42,6 +42,16 @@ export function setRef(
   }
 
   if (isAsyncWrapper(vnode) && !isUnmount) {
+    // #4999 if an async component already resolved and cached by KeepAlive,
+    // we need to set the ref to inner component
+    if (
+      vnode.shapeFlag & ShapeFlags.COMPONENT_KEPT_ALIVE &&
+      (vnode.type as ComponentOptions).__asyncResolved &&
+      vnode.component!.subTree.component
+    ) {
+      setRef(rawRef, oldRawRef, parentSuspense, vnode.component!.subTree)
+    }
+
     // when mounting async components, nothing needs to be done,
     // because the template ref is forwarded to inner component
     return
