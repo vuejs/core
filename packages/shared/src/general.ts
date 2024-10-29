@@ -50,6 +50,7 @@ export const isFunction = (val: unknown): val is Function =>
   typeof val === 'function'
 export const isString = (val: unknown): val is string => typeof val === 'string'
 export const isSymbol = (val: unknown): val is symbol => typeof val === 'symbol'
+export const isUndefined = (val: any): val is undefined => val === undefined
 export const isObject = (val: unknown): val is Record<any, any> =>
   val !== null && typeof val === 'object'
 
@@ -188,16 +189,15 @@ let _globalThis: any
 export const getGlobalThis = (): any => {
   return (
     _globalThis ||
-    (_globalThis =
-      typeof globalThis !== 'undefined'
-        ? globalThis
-        : typeof self !== 'undefined'
-          ? self
-          : typeof window !== 'undefined'
-            ? window
-            : typeof global !== 'undefined'
-              ? global
-              : {})
+    (_globalThis = !isUndefined(globalThis)
+      ? globalThis
+      : !isUndefined(self)
+        ? self
+        : !isUndefined(window)
+          ? window
+          : !isUndefined(global)
+            ? global
+            : {})
   )
 }
 
@@ -213,7 +213,7 @@ export function genCacheKey(source: string, options: any): string {
   return (
     source +
     JSON.stringify(options, (_, val) =>
-      typeof val === 'function' ? val.toString() : val,
+      isFunction(val) ? val.toString() : val,
     )
   )
 }
