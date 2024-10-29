@@ -189,8 +189,7 @@ function rewriteSelector(
       // global: replace with inner selector and do not inject [id].
       // ::v-global(.foo) -> .foo
       if (value === ':global' || value === '::v-global') {
-        selectorRoot.insertAfter(selector, n.nodes[0])
-        selectorRoot.removeChild(selector)
+        selector.replaceWith(n.nodes[0])
         return false
       }
     }
