@@ -421,6 +421,7 @@ describe('useCssVars', () => {
       expect((c as HTMLElement).style.getPropertyValue(`--color`)).toBe(`red`)
     }
   })
+  
   // #8826
   test('with custom element', async () => {
     const state = reactive({ color: 'red' })
