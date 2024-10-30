@@ -264,11 +264,11 @@ export function watch(
                 : oldValue,
             boundCleanup,
           ]
+          oldValue = newValue
           call
             ? call(cb!, WatchErrorCodes.WATCH_CALLBACK, args)
             : // @ts-expect-error
               cb!(...args)
-          oldValue = newValue
         } finally {
           activeWatcher = currentWatcher
         }
