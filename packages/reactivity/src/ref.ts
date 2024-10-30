@@ -8,8 +8,8 @@ import {
 import { Dep, getDepFromReactive } from './dep'
 import {
   type Builtin,
+  type ShallowReactive,
   type ShallowReactiveMarker,
-  type UnwrapNestedRefs,
   isProxy,
   isReactive,
   isReadonly,
@@ -491,7 +491,11 @@ export type ShallowUnwrapRef<T> = {
 }
 
 type DistributeRef<T> =
-  T extends Ref<infer V, unknown> ? UnwrapNestedRefs<V> : T
+  T extends Ref<infer V, unknown>
+    ? V extends object
+      ? ShallowReactive<V>
+      : V
+    : T
 
 export type UnwrapRef<T> = T extends undefined
   ? T
