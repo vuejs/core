@@ -1,5 +1,4 @@
 import {
-  type Component,
   KeepAlive,
   defineAsyncComponent,
   defineComponent,
@@ -543,12 +542,22 @@ describe('api: template refs', () => {
   })
 
   test('with async component which nested in KeepAlive', async () => {
-    let resolve: (comp: Component) => void
     const AsyncComp = defineAsyncComponent(
       () =>
-        new Promise(r => {
-          resolve = r as any
-        }),
+        new Promise(resolve =>
+          setTimeout(() =>
+            resolve(
+              defineComponent({
+                setup(_, { expose }) {
+                  expose({
+                    name: 'AsyncComp',
+                  })
+                  return () => h('div')
+                },
+              }) as any,
+            ),
+          ),
+        ),
     )
 
     const Comp = defineComponent({
@@ -580,16 +589,9 @@ describe('api: template refs', () => {
     // switch to async component
     toggle.value = true
     await nextTick()
-    resolve!({
-      setup(_, { expose }) {
-        expose({
-          name: 'AsyncComp',
-        })
-        return () => h('div')
-      },
-    })
+    expect(instanceRef.value).toBe(null)
 
-    await new Promise(r => setTimeout(r, 0))
+    await new Promise(r => setTimeout(r))
     expect(instanceRef.value.name).toBe('AsyncComp')
 
     // switch back to normal component
