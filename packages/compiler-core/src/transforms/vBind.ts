@@ -1,5 +1,6 @@
-import type { DirectiveTransform } from '../transform'
+import type { DirectiveTransform, TransformContext } from '../transform'
 import {
+  type DirectiveNode,
   type ExpressionNode,
   NodeTypes,
   type SimpleExpressionNode,
@@ -56,11 +57,8 @@ export const transformBind: DirectiveTransform = (dir, _node, context) => {
       }
     }
 
-    const propName = camelize((arg as SimpleExpressionNode).content)
-    exp = dir.exp = createSimpleExpression(propName, false, arg.loc)
-    if (!__BROWSER__) {
-      exp = dir.exp = processExpression(exp, context)
-    }
+    transformBindShorthand(dir, context)
+    exp = dir.exp!
   }
 
   if (arg.type !== NodeTypes.SIMPLE_EXPRESSION) {
@@ -71,7 +69,7 @@ export const transformBind: DirectiveTransform = (dir, _node, context) => {
   }
 
   // .sync is replaced by v-model:arg
-  if (modifiers.includes('camel')) {
+  if (modifiers.some(mod => mod.content === 'camel')) {
     if (arg.type === NodeTypes.SIMPLE_EXPRESSION) {
       if (arg.isStatic) {
         arg.content = camelize(arg.content)
@@ -85,16 +83,29 @@ export const transformBind: DirectiveTransform = (dir, _node, context) => {
   }
 
   if (!context.inSSR) {
-    if (modifiers.includes('prop')) {
+    if (modifiers.some(mod => mod.content === 'prop')) {
       injectPrefix(arg, '.')
     }
-    if (modifiers.includes('attr')) {
+    if (modifiers.some(mod => mod.content === 'attr')) {
       injectPrefix(arg, '^')
     }
   }
 
   return {
     props: [createObjectProperty(arg, exp)],
+  }
+}
+
+export const transformBindShorthand = (
+  dir: DirectiveNode,
+  context: TransformContext,
+): void => {
+  const arg = dir.arg!
+
+  const propName = camelize((arg as SimpleExpressionNode).content)
+  dir.exp = createSimpleExpression(propName, false, arg.loc)
+  if (!__BROWSER__) {
+    dir.exp = processExpression(dir.exp, context)
   }
 }
 
