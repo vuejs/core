@@ -40,7 +40,7 @@ describe('createApp for dom', () => {
     // ensure no mutation happened to Root object
     expect(originalObj).toMatchObject(Root)
   })
-  
+
   test('When the app is unmounted, the onMounted of suspense in Transition should not be called', async () => {
     const onPage2Mounted = vi.fn()
     let page1Comp: any
