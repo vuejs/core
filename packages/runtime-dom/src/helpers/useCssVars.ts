@@ -28,9 +28,14 @@ export function useCssVars(getter: (ctx: any) => Record<string, string>): void {
   }
   /* v8 ignore stop */
 
-  const updateTeleports = (instance.ut = (vars = getter(instance.proxy)) => {
+  const updateTeleports = (instance.ut = (
+    target,
+    vars = getter(instance.proxy),
+  ) => {
     Array.from(
-      document.querySelectorAll(`[data-v-owner="${instance.uid}"]`),
+      ((target as Element) || document).querySelectorAll(
+        `[data-v-owner="${instance.uid}"]`,
+      ),
     ).forEach(node => setVarsOnNode(node, vars))
   })
 
@@ -45,7 +50,7 @@ export function useCssVars(getter: (ctx: any) => Record<string, string>): void {
     } else {
       setVarsOnVNode(instance.subTree, vars)
     }
-    updateTeleports(vars)
+    updateTeleports(document, vars)
   }
 
   onBeforeMount(() => {
