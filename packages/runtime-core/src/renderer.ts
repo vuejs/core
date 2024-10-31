@@ -70,6 +70,11 @@ import {
   type TeleportImpl,
   type TeleportVNode,
 } from './components/Teleport'
+import {
+  setTeleportIdTOVNode,
+  setTeleportOwnerAttrToEl,
+  updateTeleportsCssVarsFast,
+} from './components/Teleport'
 import { type KeepAliveContext, isKeepAlive } from './components/KeepAlive'
 import { isHmrUpdating, registerHMR, unregisterHMR } from './hmr'
 import { type RootHydrateFunction, createHydrationFunctions } from './hydration'
@@ -605,7 +610,7 @@ function baseCreateRenderer(
     } else if (n2.type === 'math') {
       namespace = 'mathml'
     }
-
+    setTeleportIdTOVNode(n2, parentComponent)
     if (n1 == null) {
       mountElement(
         n2,
@@ -642,8 +647,8 @@ function baseCreateRenderer(
   ) => {
     let el: RendererElement
     let vnodeHook: VNodeHook | undefined | null
-    const { props, shapeFlag, transition, dirs } = vnode
-
+    const { shapeFlag, transition, dirs } = vnode
+    let props = setTeleportOwnerAttrToEl(vnode.props, vnode)
     el = vnode.el = hostCreateElement(
       vnode.type as string,
       namespace,
@@ -712,6 +717,9 @@ function baseCreateRenderer(
       transition!.beforeEnter(el)
     }
     hostInsert(el, container, anchor)
+
+    updateTeleportsCssVarsFast(vnode, parentSuspense)
+
     if (
       (vnodeHook = props && props.onVnodeMounted) ||
       needCallTransitionHooks ||
@@ -1052,6 +1060,8 @@ function baseCreateRenderer(
         : fragmentSlotScopeIds
     }
 
+    setTeleportIdTOVNode(n2, parentComponent)
+
     if (n1 == null) {
       hostInsert(fragmentStartAnchor, container, anchor)
       hostInsert(fragmentEndAnchor, container, anchor)
@@ -1137,6 +1147,9 @@ function baseCreateRenderer(
     optimized: boolean,
   ) => {
     n2.slotScopeIds = slotScopeIds
+
+    setTeleportIdTOVNode(n2, parentComponent)
+
     if (n1 == null) {
       if (n2.shapeFlag & ShapeFlags.COMPONENT_KEPT_ALIVE) {
         ;(parentComponent!.ctx as KeepAliveContext).activate(
