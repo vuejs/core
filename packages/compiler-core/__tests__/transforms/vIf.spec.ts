@@ -209,6 +209,15 @@ describe('compiler: v-if', () => {
         content: `_ctx.ok`,
       })
     })
+
+    test('v-if + :key shorthand', () => {
+      const { node } = parseWithIfTransform(`<div v-if="ok" :key></div>`)
+      expect(node.type).toBe(NodeTypes.IF)
+      expect(node.branches[0].userKey).toMatchObject({
+        arg: { content: 'key' },
+        exp: { content: 'key' },
+      })
+    })
   })
 
   describe('errors', () => {
