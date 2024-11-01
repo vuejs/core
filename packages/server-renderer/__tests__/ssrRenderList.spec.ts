@@ -27,8 +27,22 @@ describe('ssr: renderList', () => {
   it('should warn when given a non-integer N', () => {
     ssrRenderList(3.1, () => {})
     expect(
-      `The v-for range expect an integer value but got 3.1.`,
+      `The v-for range expects a positive integer value but got 3.1.`,
     ).toHaveBeenWarned()
+  })
+
+  it('should warn when given a negative N', () => {
+    ssrRenderList(-1, () => {})
+    expect(
+      `The v-for range expects a positive integer value but got -1.`,
+    ).toHaveBeenWarned()
+  })
+
+  it('should NOT warn when given 0', () => {
+    ssrRenderList(0, () => {})
+    expect(
+      `The v-for range expects a positive integer value but got 0.`,
+    ).not.toHaveBeenWarned()
   })
 
   it('should render properties in an object', () => {
@@ -49,6 +63,13 @@ describe('ssr: renderList', () => {
       stack.push(`node ${index}: ${item}`),
     )
     expect(stack).toEqual(['node 0: 1', 'node 1: 2', 'node 2: 3'])
+  })
+
+  it('should not render items when source is 0', () => {
+    ssrRenderList(0, (item, index) =>
+      stack.push(`node ${index}: ${item}`),
+    )
+    expect(stack).toEqual([])
   })
 
   it('should not render items when source is undefined', () => {
