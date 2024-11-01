@@ -11,7 +11,9 @@ import {
 } from '@vue/compiler-dom'
 
 const filterChild = (node: ParentNode) =>
-  node.children.filter(n => n.type !== NodeTypes.COMMENT)
+  node.children.filter(
+    n => n.type !== NodeTypes.COMMENT && n.type !== NodeTypes.TEXT,
+  )
 
 const hasSingleChild = (node: ParentNode): boolean =>
   filterChild(node).length === 1
