@@ -123,6 +123,7 @@ onMounted(() => {
     :prod="productionMode"
     :ssr="useSSRMode"
     :autoSave="autoSave"
+    :theme="theme"
     @toggle-theme="toggleTheme"
     @toggle-prod="toggleProdMode"
     @toggle-ssr="toggleSSR"
@@ -136,7 +137,8 @@ onMounted(() => {
     @keydown.ctrl.s.prevent
     @keydown.meta.s.prevent
     :ssr="useSSRMode"
-    :autoSave="autoSave"
+    :model-value="autoSave"
+    :editorOptions="{ autoSaveText: false }"
     :store="store"
     :showCompileOutput="true"
     :autoResize="true"

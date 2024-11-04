@@ -13,6 +13,7 @@ import {
 } from '../src/reactive'
 import { computed } from '../src/computed'
 import { effect } from '../src/effect'
+import { targetMap } from '../src/dep'
 
 describe('reactivity/reactive', () => {
   test('Object', () => {
@@ -397,5 +398,25 @@ describe('reactivity/reactive', () => {
     expect(() => {
       a.value++
     }).not.toThrow()
+  })
+
+  // #11979
+  test('should release property Dep instance if it no longer has subscribers', () => {
+    let obj = { x: 1 }
+    let a = reactive(obj)
+    const e = effect(() => a.x)
+    expect(targetMap.get(obj)?.get('x')).toBeTruthy()
+    e.effect.stop()
+    expect(targetMap.get(obj)?.get('x')).toBeFalsy()
+  })
+
+  test('should trigger reactivity when Map key is undefined', () => {
+    const map = reactive(new Map())
+    const c = computed(() => map.get(void 0))
+
+    expect(c.value).toBe(void 0)
+
+    map.set(void 0, 1)
+    expect(c.value).toBe(1)
   })
 })

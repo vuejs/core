@@ -32,6 +32,23 @@ return function render(_ctx, _cache) {
 }"
 `;
 
+exports[`stringify static html > should bail for <option> elements with null values 1`] = `
+"const { createElementVNode: _createElementVNode, openBlock: _openBlock, createElementBlock: _createElementBlock } = Vue
+
+return function render(_ctx, _cache) {
+  return (_openBlock(), _createElementBlock("div", null, _cache[0] || (_cache[0] = [
+    _createElementVNode("select", null, [
+      _createElementVNode("option", { value: null }),
+      _createElementVNode("option", { value: "1" }),
+      _createElementVNode("option", { value: "1" }),
+      _createElementVNode("option", { value: "1" }),
+      _createElementVNode("option", { value: "1" }),
+      _createElementVNode("option", { value: "1" })
+    ], -1 /* HOISTED */)
+  ])))
+}"
+`;
+
 exports[`stringify static html > should bail for <option> elements with number values 1`] = `
 "const { createElementVNode: _createElementVNode, openBlock: _openBlock, createElementBlock: _createElementBlock } = Vue
 

@@ -4,7 +4,7 @@ import {
 } from '../component'
 import { warn } from '../warning'
 
-export function useId(): string | undefined {
+export function useId(): string {
   const i = getCurrentInstance()
   if (i) {
     return (i.appContext.config.idPrefix || 'v') + '-' + i.ids[0] + i.ids[1]++
@@ -14,6 +14,7 @@ export function useId(): string | undefined {
         `instance to be associated with.`,
     )
   }
+  return ''
 }
 
 /**

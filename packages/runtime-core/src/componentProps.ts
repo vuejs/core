@@ -125,7 +125,9 @@ type InferPropType<T, NullAsAny = true> = [T] extends [null]
               : InferPropType<U, false>
             : [T] extends [Prop<infer V, infer D>]
               ? unknown extends V
-                ? IfAny<V, V, D>
+                ? keyof V extends never
+                  ? IfAny<V, V, D>
+                  : V
                 : V
               : T
 
@@ -652,6 +654,7 @@ function validateProps(
 ) {
   const resolvedValues = toRaw(props)
   const options = instance.propsOptions[0]
+  const camelizePropsKey = Object.keys(rawProps).map(key => camelize(key))
   for (const key in options) {
     let opt = options[key]
     if (opt == null) continue
@@ -660,7 +663,7 @@ function validateProps(
       resolvedValues[key],
       opt,
       __DEV__ ? shallowReadonly(resolvedValues) : resolvedValues,
-      !hasOwn(rawProps, key) && !hasOwn(rawProps, hyphenate(key)),
+      !camelizePropsKey.includes(key),
     )
   }
 }

@@ -40,11 +40,8 @@ export interface SchedulerJob extends Function {
 
 export type SchedulerJobs = SchedulerJob | SchedulerJob[]
 
-let isFlushing = false
-let isFlushPending = false
-
 const queue: SchedulerJob[] = []
-let flushIndex = 0
+let flushIndex = -1
 
 const pendingPostFlushCbs: SchedulerJob[] = []
 let activePostFlushCbs: SchedulerJob[] | null = null
@@ -74,7 +71,7 @@ export function nextTick<T = void, R = void>(
 // watcher should be inserted immediately before the update job. This allows
 // watchers to be skipped if the component is unmounted by the parent update.
 function findInsertionIndex(id: number) {
-  let start = isFlushing ? flushIndex + 1 : 0
+  let start = flushIndex + 1
   let end = queue.length
 
   while (start < end) {
@@ -115,8 +112,7 @@ export function queueJob(job: SchedulerJob): void {
 }
 
 function queueFlush() {
-  if (!isFlushing && !isFlushPending) {
-    isFlushPending = true
+  if (!currentFlushPromise) {
     currentFlushPromise = resolvedPromise.then(flushJobs)
   }
 }
@@ -141,8 +137,8 @@ export function queuePostFlushCb(cb: SchedulerJobs): void {
 export function flushPreFlushCbs(
   instance?: ComponentInternalInstance,
   seen?: CountMap,
-  // if currently flushing, skip the current job itself
-  i: number = isFlushing ? flushIndex + 1 : 0,
+  // skip the current job
+  i: number = flushIndex + 1,
 ): void {
   if (__DEV__) {
     seen = seen || new Map()
@@ -162,7 +158,9 @@ export function flushPreFlushCbs(
         cb.flags! &= ~SchedulerJobFlags.QUEUED
       }
       cb()
-      cb.flags! &= ~SchedulerJobFlags.QUEUED
+      if (!(cb.flags! & SchedulerJobFlags.ALLOW_RECURSE)) {
+        cb.flags! &= ~SchedulerJobFlags.QUEUED
+      }
     }
   }
 }
@@ -209,8 +207,6 @@ const getId = (job: SchedulerJob): number =>
   job.id == null ? (job.flags! & SchedulerJobFlags.PRE ? -1 : Infinity) : job.id
 
 function flushJobs(seen?: CountMap) {
-  isFlushPending = false
-  isFlushing = true
   if (__DEV__) {
     seen = seen || new Map()
   }
@@ -239,7 +235,9 @@ function flushJobs(seen?: CountMap) {
           job.i,
           job.i ? ErrorCodes.COMPONENT_UPDATE : ErrorCodes.SCHEDULER,
         )
-        job.flags! &= ~SchedulerJobFlags.QUEUED
+        if (!(job.flags! & SchedulerJobFlags.ALLOW_RECURSE)) {
+          job.flags! &= ~SchedulerJobFlags.QUEUED
+        }
       }
     }
   } finally {
@@ -251,15 +249,13 @@ function flushJobs(seen?: CountMap) {
       }
     }
 
-    flushIndex = 0
+    flushIndex = -1
     queue.length = 0
 
     flushPostFlushCbs(seen)
 
-    isFlushing = false
     currentFlushPromise = null
-    // some postFlushCb queued jobs!
-    // keep flushing until it drains.
+    // If new jobs have been added to either queue, keep flushing
     if (queue.length || pendingPostFlushCbs.length) {
       flushJobs(seen)
     }
