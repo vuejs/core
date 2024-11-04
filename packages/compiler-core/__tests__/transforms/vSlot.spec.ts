@@ -988,5 +988,19 @@ describe('compiler: transform component slots', () => {
 
       expect(generate(root, { prefixIdentifiers: true }).code).toMatchSnapshot()
     })
+
+    test('named slot with v-if + v-else', () => {
+      const source = `
+        <Comp>
+          <template #one v-if="ok">foo</template>
+          <template #two v-else>baz</template>
+        </Comp>
+      `
+      const { root } = parseWithSlots(source, {
+        whitespace: 'preserve',
+      })
+
+      expect(generate(root, { prefixIdentifiers: true }).code).toMatchSnapshot()
+    })
   })
 })
