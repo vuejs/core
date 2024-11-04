@@ -68,7 +68,7 @@
     "@rollup/plugin-replace": "5.0.4",
     "@swc/core": "^1.7.42",
     "@types/hash-sum": "^1.0.2",
-    "@types/node": "^20.17.6",
+    "@types/node": "^22.8.7",
     "@types/semver": "^7.5.8",
     "@types/serve-handler": "^6.1.4",
     "@vitest/coverage-v8": "^2.1.1",
