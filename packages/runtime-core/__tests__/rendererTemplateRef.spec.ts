@@ -1,4 +1,5 @@
 import {
+  Suspense,
   defineComponent,
   h,
   nextTick,
@@ -537,5 +538,40 @@ describe('api: template refs', () => {
     expect(serializeInner(root)).toBe(
       '<div><div>[object Object],[object Object]</div><ul><li>2</li><li>3</li></ul></div>',
     )
+  })
+
+  it('with async component', async () => {
+    const deps: Promise<any>[] = []
+    const spy = vi.fn()
+
+    const AsyncChild = defineComponent({
+      async setup(_, { expose }) {
+        const p = new Promise(r => setTimeout(r, 1))
+        deps.push(p.then(() => Promise.resolve()))
+        await p
+        expose({ foo: spy })
+        return () => h('div', 'child')
+      },
+    })
+
+    const childRef = ref(null)
+    const App = {
+      setup() {
+        return { refKey: childRef }
+      },
+      render() {
+        return h(Suspense, null, { default: h(AsyncChild, { ref: 'refKey' }) })
+      },
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(App), root)
+
+    await Promise.all(deps)
+    await nextTick()
+
+    expect((childRef.value as any).foo).toBe(spy)
+    ;(childRef.value as any).foo()
+    expect(spy).toBeCalledTimes(1)
   })
 })
