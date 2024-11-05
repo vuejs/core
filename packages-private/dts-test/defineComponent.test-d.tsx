@@ -1841,6 +1841,25 @@ defineComponent({
   },
 })
 
+describe('object props w/ PropType<boolean>', () => {
+  const MyComponent = defineComponent({
+    props: {
+      b1: { type: [Boolean] as PropType<boolean> },
+      b2: {
+        type: [Boolean, String] as PropType<boolean | string>,
+        required: true,
+      },
+    },
+    setup(props) {
+      expectType<boolean>(props.b1)
+      expectType<boolean | string>(props.b2)
+    },
+  })
+  expectType<JSX.Element>(<MyComponent b1 b2 />)
+  // @ts-expect-error
+  ;<MyComponent />
+})
+
 import type * as vue from 'vue'
 
 interface ErrorMessageSlotProps {
