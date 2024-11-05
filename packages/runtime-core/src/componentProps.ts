@@ -86,12 +86,13 @@ type RequiredKeys<T> = {
     | { default: any }
     // don't mark Boolean props as undefined
     | BooleanConstructor
-    | PropType<boolean>
     | { type: BooleanConstructor }
     ? T[K] extends { default: undefined | (() => undefined) }
       ? never
       : K
-    : never
+    : T[K] extends PropType<infer B>
+      ? IfAny<B, never, B extends boolean ? K : never>
+      : never
 }[keyof T]
 
 type OptionalKeys<T> = Exclude<keyof T, RequiredKeys<T>>

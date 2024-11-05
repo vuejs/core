@@ -271,12 +271,16 @@ describe('defineProps w/ runtime declaration', () => {
       required: true,
     },
     b1: Boolean as PropType<boolean>,
+    b2: Boolean as PropType<any>,
+    b3: Number as PropType<number>,
   })
   expectType<{
     foo?: string
     bar: number
     baz: unknown[]
     b1: boolean
+    b2?: any
+    b3?: number
   }>(props)
 
   props.foo && props.foo + 'bar'
