@@ -86,6 +86,7 @@ type RequiredKeys<T> = {
     | { default: any }
     // don't mark Boolean props as undefined
     | BooleanConstructor
+    | PropType<boolean>
     | { type: BooleanConstructor }
     ? T[K] extends { default: undefined | (() => undefined) }
       ? never

@@ -1,4 +1,5 @@
 import {
+  type PropType,
   type Ref,
   type Slots,
   type VNode,
@@ -269,11 +270,13 @@ describe('defineProps w/ runtime declaration', () => {
       type: Array,
       required: true,
     },
+    b1: Boolean as PropType<boolean>,
   })
   expectType<{
     foo?: string
     bar: number
     baz: unknown[]
+    b1: boolean
   }>(props)
 
   props.foo && props.foo + 'bar'
