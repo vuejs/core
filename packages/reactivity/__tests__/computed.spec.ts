@@ -1012,6 +1012,42 @@ describe('reactivity/computed', () => {
     expect(cValue.value).toBe(1)
   })
 
+  test('should not recompute when condition changes if computed does not track reactive data', async () => {
+    const spy = vi.fn()
+    const lookup = computed(() => {
+      spy()
+      return {
+        g: 'foo',
+      }
+    })
+
+    const unit = ref('')
+    const display = computed(() => {
+      if (!unit.value) return 'empty'
+      // @ts-expect-error
+      return lookup.value[unit.value]
+    })
+
+    function toggle() {
+      unit.value = unit.value === 'g' ? '' : 'g'
+    }
+
+    expect(display.value).toBe('empty')
+    expect(spy).toHaveBeenCalledTimes(0)
+
+    toggle()
+    expect(display.value).toBe('foo')
+    expect(spy).toHaveBeenCalledTimes(1)
+
+    toggle()
+    expect(display.value).toBe('empty')
+    expect(spy).toHaveBeenCalledTimes(1)
+
+    toggle()
+    expect(display.value).toBe('foo')
+    expect(spy).toHaveBeenCalledTimes(1)
+  })
+
   test('computed should remain live after losing all subscribers', () => {
     const state = reactive({ a: 1 })
     const p = computed(() => state.a + 1)
