@@ -49,6 +49,7 @@ export enum EffectFlags {
   DIRTY = 1 << 4,
   ALLOW_RECURSE = 1 << 5,
   PAUSED = 1 << 6,
+  FORCE_TRIGGER = 1 << 7,
 }
 
 /**
@@ -364,7 +365,8 @@ function isDirty(sub: Subscriber): boolean {
 export function refreshComputed(computed: ComputedRefImpl): undefined {
   if (
     computed.flags & EffectFlags.TRACKING &&
-    !(computed.flags & EffectFlags.DIRTY)
+    !(computed.flags & EffectFlags.DIRTY) &&
+    !(computed.flags & EffectFlags.FORCE_TRIGGER)
   ) {
     return
   }
@@ -386,13 +388,12 @@ export function refreshComputed(computed: ComputedRefImpl): undefined {
   if (
     dep.version > 0 &&
     !computed.isSSR &&
-    computed.deps &&
+    !(computed.flags & EffectFlags.FORCE_TRIGGER) &&
     !isDirty(computed)
   ) {
     computed.flags &= ~EffectFlags.RUNNING
     return
   }
-
   const prevSub = activeSub
   const prevShouldTrack = shouldTrack
   activeSub = computed
@@ -413,6 +414,7 @@ export function refreshComputed(computed: ComputedRefImpl): undefined {
     shouldTrack = prevShouldTrack
     cleanupDeps(computed)
     computed.flags &= ~EffectFlags.RUNNING
+    computed.flags &= ~EffectFlags.FORCE_TRIGGER
   }
 }
 
