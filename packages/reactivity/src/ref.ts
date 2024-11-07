@@ -19,7 +19,6 @@ import {
 import type { ComputedRef, WritableComputedRef } from './computed'
 import { ReactiveFlags, TrackOpTypes, TriggerOpTypes } from './constants'
 import { warn } from './warning'
-import { EffectFlags } from './effect'
 
 declare const RefSymbol: unique symbol
 export declare const RawSymbol: unique symbol
@@ -187,9 +186,6 @@ class RefImpl<T = any> {
 export function triggerRef(ref: Ref): void {
   // ref may be an instance of ObjectRefImpl
   if ((ref as unknown as RefImpl).dep) {
-    if ((ref as unknown as RefImpl).dep.computed) {
-      ;(ref as any).flags |= EffectFlags.FORCE_TRIGGER
-    }
     if (__DEV__) {
       ;(ref as unknown as RefImpl).dep.trigger({
         target: ref,

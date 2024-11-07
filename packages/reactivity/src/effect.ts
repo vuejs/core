@@ -49,7 +49,7 @@ export enum EffectFlags {
   DIRTY = 1 << 4,
   ALLOW_RECURSE = 1 << 5,
   PAUSED = 1 << 6,
-  FORCE_TRIGGER = 1 << 7,
+  EVALUATED = 1 << 7,
 }
 
 /**
@@ -365,8 +365,7 @@ function isDirty(sub: Subscriber): boolean {
 export function refreshComputed(computed: ComputedRefImpl): undefined {
   if (
     computed.flags & EffectFlags.TRACKING &&
-    !(computed.flags & EffectFlags.DIRTY) &&
-    !(computed.flags & EffectFlags.FORCE_TRIGGER)
+    !(computed.flags & EffectFlags.DIRTY)
   ) {
     return
   }
@@ -379,21 +378,21 @@ export function refreshComputed(computed: ComputedRefImpl): undefined {
   }
   computed.globalVersion = globalVersion
 
-  const dep = computed.dep
-  computed.flags |= EffectFlags.RUNNING
   // In SSR there will be no render effect, so the computed has no subscriber
   // and therefore tracks no deps, thus we cannot rely on the dirty check.
   // Instead, computed always re-evaluate and relies on the globalVersion
   // fast path above for caching.
   if (
-    dep.version > 0 &&
     !computed.isSSR &&
-    !(computed.flags & EffectFlags.FORCE_TRIGGER) &&
-    !isDirty(computed)
+    computed.flags & EffectFlags.EVALUATED &&
+    (!computed.deps || (computed.deps && !isDirty(computed)))
   ) {
     computed.flags &= ~EffectFlags.RUNNING
     return
   }
+  computed.flags |= EffectFlags.RUNNING
+
+  const dep = computed.dep
   const prevSub = activeSub
   const prevShouldTrack = shouldTrack
   activeSub = computed
@@ -403,6 +402,7 @@ export function refreshComputed(computed: ComputedRefImpl): undefined {
     prepareDeps(computed)
     const value = computed.fn(computed._value)
     if (dep.version === 0 || hasChanged(value, computed._value)) {
+      computed.flags |= EffectFlags.EVALUATED
       computed._value = value
       dep.version++
     }
@@ -414,7 +414,6 @@ export function refreshComputed(computed: ComputedRefImpl): undefined {
     shouldTrack = prevShouldTrack
     cleanupDeps(computed)
     computed.flags &= ~EffectFlags.RUNNING
-    computed.flags &= ~EffectFlags.FORCE_TRIGGER
   }
 }
 
