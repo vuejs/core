@@ -382,12 +382,13 @@ export function refreshComputed(computed: ComputedRefImpl): undefined {
   // and therefore tracks no deps, thus we cannot rely on the dirty check.
   // Instead, computed always re-evaluate and relies on the globalVersion
   // fast path above for caching.
+  // #12337 if computed no deps (does not rely on any reactive data) and evaluated,
+  // there is no need to re-evaluate.
   if (
     !computed.isSSR &&
     computed.flags & EffectFlags.EVALUATED &&
     (!computed.deps || (computed.deps && !isDirty(computed)))
   ) {
-    computed.flags &= ~EffectFlags.RUNNING
     return
   }
   computed.flags |= EffectFlags.RUNNING
