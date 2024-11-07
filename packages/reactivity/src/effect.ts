@@ -387,7 +387,7 @@ export function refreshComputed(computed: ComputedRefImpl): undefined {
   if (
     !computed.isSSR &&
     computed.flags & EffectFlags.EVALUATED &&
-    (!computed.deps || !isDirty(computed))
+    ((!computed.deps && !(computed as any)._dirty) || !isDirty(computed))
   ) {
     return
   }
