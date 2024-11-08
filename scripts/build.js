@@ -123,7 +123,7 @@ async function buildAll(targets) {
             rolldown(c).then(bundle => {
               return bundle.write(c.output).then(() => {
                 // @ts-expect-error
-                return path.join('packages', t, 'dist', c.output.entryFileNames)
+                return path.join('packages', t, 'dist', c.output.file)
               })
             }),
           ),
