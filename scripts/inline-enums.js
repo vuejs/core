@@ -233,7 +233,7 @@ export function inlineEnums() {
 
   // 3. during transform:
   //    3.1 files w/ enum declaration: rewrite declaration as object literal
-  //    3.2 files using enum: inject into esbuild define
+  //    3.2 files using enum: inject into rolldown define
   /**
    * @type {import('rollup').Plugin}
    */

@@ -16,6 +16,7 @@ nr build core --formats cjs
 ```
 */
 
+import { rolldown } from 'rolldown'
 import fs from 'node:fs'
 import { parseArgs } from 'node:util'
 import { existsSync, readFileSync } from 'node:fs'
@@ -26,7 +27,6 @@ import { targets as allTargets, fuzzyMatchTarget } from './utils.js'
 import prettyBytes from 'pretty-bytes'
 import { spawnSync } from 'node:child_process'
 import { createConfigsForPackage } from './create-rolldown-config.js'
-import { rolldown } from 'rolldown'
 import { scanEnums } from './inline-enums.js'
 import { fileURLToPath } from 'node:url'
 

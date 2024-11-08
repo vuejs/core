@@ -28,6 +28,8 @@ const packagesDir = path.resolve(__dirname, '../packages')
  *   devOnly?: boolean
  *   prodOnly?: boolean
  *   sourceMap?: boolean
+ *   localDev?: boolean
+ *   inlineDeps?: boolean
  * }} options
  */
 export function createConfigsForPackage({
@@ -37,8 +39,10 @@ export function createConfigsForPackage({
   devOnly = false,
   prodOnly = false,
   sourceMap = false,
+  localDev = false,
+  inlineDeps = false,
 }) {
-  const [enumPlugin, enumDefines] = inlineEnums()
+  const [enumPlugin, enumDefines] = localDev ? [] : inlineEnums()
 
   const packageDir = path.resolve(packagesDir, target)
   const resolve = (/** @type {string} */ p) => path.resolve(packageDir, p)
@@ -49,32 +53,32 @@ export function createConfigsForPackage({
   /** @type {Record<PackageFormat, import('rolldown').OutputOptions>} */
   const outputConfigs = {
     'esm-bundler': {
-      entryFileNames: `${name}.esm-bundler.js`,
+      file: `${name}.esm-bundler.js`,
       format: 'es',
     },
     'esm-browser': {
-      entryFileNames: `${name}.esm-browser.js`,
+      file: `${name}.esm-browser.js`,
       format: 'es',
     },
     cjs: {
-      entryFileNames: `${name}.cjs.js`,
+      file: `${name}.cjs.js`,
       format: 'cjs',
     },
     global: {
-      entryFileNames: `${name}.global.js`,
+      file: `${name}.global.js`,
       format: 'iife',
     },
     // runtime-only builds, for main "vue" package only
     'esm-bundler-runtime': {
-      entryFileNames: `${name}.runtime.esm-bundler.js`,
+      file: `${name}.runtime.esm-bundler.js`,
       format: 'es',
     },
     'esm-browser-runtime': {
-      entryFileNames: `${name}.runtime.esm-browser.js`,
+      file: `${name}.runtime.esm-browser.js`,
       format: 'es',
     },
     'global-runtime': {
-      entryFileNames: `${name}.runtime.global.js`,
+      file: `${name}.runtime.global.js`,
       format: 'iife',
     },
   }
@@ -117,9 +121,7 @@ export function createConfigsForPackage({
 
     output.dir = resolve('dist')
 
-    const isProductionBuild = /\.prod\.js$/.test(
-      String(output.entryFileNames) || '',
-    )
+    const isProductionBuild = /\.prod\.js$/.test(String(output.file) || '')
     const isBundlerESMBuild = /esm-bundler/.test(format)
     const isBrowserESMBuild = /esm-browser/.test(format)
     const isServerRenderer = name === 'server-renderer'
@@ -216,7 +218,7 @@ export function createConfigsForPackage({
       return defines
     }
 
-    // esbuild define is a bit strict and only allows literal json or identifiers
+    // define is a bit strict and only allows literal json or identifiers
     // so we still need replace plugin in some cases
     function resolveReplace() {
       /** @type {Record<string, string>} */
@@ -272,7 +274,7 @@ export function createConfigsForPackage({
         ]
       }
 
-      if (isGlobalBuild || isBrowserESMBuild || isCompatPackage) {
+      if (isGlobalBuild || isBrowserESMBuild || isCompatPackage || inlineDeps) {
         if (!packageOptions.enableNonBrowserBranches) {
           // normal browser builds - non-browser only imports are tree-shaken,
           // they are only listed here to suppress warnings.
@@ -314,9 +316,9 @@ export function createConfigsForPackage({
       resolve: {
         alias: entries,
       },
+      // @ts-expect-error rollup's Plugin type incompatible w/ rolldown's vendored Plugin type
       plugins: [
-        // @ts-expect-error rollup's Plugin type incompatible w/ rolldown's vendored Plugin type
-        enumPlugin,
+        ...(localDev ? [] : [enumPlugin]),
         ...resolveReplace(),
         ...resolveNodePlugins(),
         ...plugins,
@@ -336,7 +338,7 @@ export function createConfigsForPackage({
 
   function createProductionConfig(/** @type {PackageFormat} */ format) {
     return createConfig(format, {
-      entryFileNames: `${name}.${format}.prod.js`,
+      file: `${name}.${format}.prod.js`,
       format: outputConfigs[format].format,
     })
   }
@@ -345,10 +347,7 @@ export function createConfigsForPackage({
     return createConfig(
       format,
       {
-        entryFileNames: String(outputConfigs[format].entryFileNames).replace(
-          /\.js$/,
-          '.prod.js',
-        ),
+        file: String(outputConfigs[format].file).replace(/\.js$/, '.prod.js'),
         format: outputConfigs[format].format,
         // minify: true,
       },
