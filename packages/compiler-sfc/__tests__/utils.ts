@@ -1,5 +1,6 @@
 import {
   type SFCParseOptions,
+  type SFCScriptBlock,
   type SFCScriptCompileOptions,
   compileScript,
   parse,
@@ -12,7 +13,7 @@ export function compileSFCScript(
   src: string,
   options?: Partial<SFCScriptCompileOptions>,
   parseOptions?: SFCParseOptions,
-) {
+): SFCScriptBlock {
   const { descriptor, errors } = parse(src, parseOptions)
   if (errors.length) {
     console.warn(errors[0])
@@ -23,7 +24,7 @@ export function compileSFCScript(
   })
 }
 
-export function assertCode(code: string) {
+export function assertCode(code: string): void {
   // parse the generated code to make sure it is valid
   try {
     babelParse(code, {

@@ -166,12 +166,20 @@ function setChecked(
   // store the v-model value on the element so it can be accessed by the
   // change listener.
   ;(el as any)._modelValue = value
+  let checked: boolean
+
   if (isArray(value)) {
-    el.checked = looseIndexOf(value, vnode.props!.value) > -1
+    checked = looseIndexOf(value, vnode.props!.value) > -1
   } else if (isSet(value)) {
-    el.checked = value.has(vnode.props!.value)
-  } else if (value !== oldValue) {
-    el.checked = looseEqual(value, getCheckboxValue(el, true))
+    checked = value.has(vnode.props!.value)
+  } else {
+    if (value === oldValue) return
+    checked = looseEqual(value, getCheckboxValue(el, true))
+  }
+
+  // Only update if the checked state has changed
+  if (el.checked !== checked) {
+    el.checked = checked
   }
 }
 
@@ -218,20 +226,20 @@ export const vModelSelect: ModelDirective<HTMLSelectElement, 'number'> = {
   },
   // set value in mounted & updated because <select> relies on its children
   // <option>s.
-  mounted(el, { value, modifiers: { number } }) {
-    setSelected(el, value, number)
+  mounted(el, { value }) {
+    setSelected(el, value)
   },
   beforeUpdate(el, _binding, vnode) {
     el[assignKey] = getModelAssigner(vnode)
   },
-  updated(el, { value, modifiers: { number } }) {
+  updated(el, { value }) {
     if (!el._assigning) {
-      setSelected(el, value, number)
+      setSelected(el, value)
     }
   },
 }
 
-function setSelected(el: HTMLSelectElement, value: any, number: boolean) {
+function setSelected(el: HTMLSelectElement, value: any) {
   const isMultiple = el.multiple
   const isArrayValue = isArray(value)
   if (isMultiple && !isArrayValue && !isSet(value)) {

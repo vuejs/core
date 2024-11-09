@@ -95,6 +95,10 @@ export function getCurrentWatcher(): ReactiveEffect<any> | undefined {
  * associated effect re-runs.
  *
  * @param cleanupFn - The callback function to attach to the effect's cleanup.
+ * @param failSilently - if `true`, will not throw warning when called without
+ * an active effect.
+ * @param owner - The effect that this cleanup function should be attached to.
+ * By default, the current active effect.
  */
 export function onWatcherCleanup(
   cleanupFn: () => void,
@@ -214,19 +218,11 @@ export function watch(
     }
   }
 
-  if (once) {
-    if (cb) {
-      const _cb = cb
-      cb = (...args) => {
-        _cb(...args)
-        watchHandle()
-      }
-    } else {
-      const _getter = getter
-      getter = () => {
-        _getter()
-        watchHandle()
-      }
+  if (once && cb) {
+    const _cb = cb
+    cb = (...args) => {
+      _cb(...args)
+      watchHandle()
     }
   }
 

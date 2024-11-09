@@ -389,6 +389,24 @@ describe('stringify static html', () => {
     ])
   })
 
+  test('should stringify mathML', () => {
+    const math = `<math xmlns="http://www.w3.org/1998/Math/MathML">`
+    const repeated = `<ms>1</ms>`
+    const { ast } = compileWithStringify(
+      `<div>${math}${repeat(
+        repeated,
+        StringifyThresholds.NODE_COUNT,
+      )}</math></div>`,
+    )
+
+    expect(ast.cached).toMatchObject([
+      cachedArrayStaticNodeMatcher(
+        `${math}${repeat(repeated, StringifyThresholds.NODE_COUNT)}</math>`,
+        1,
+      ),
+    ])
+  })
+
   // #5439
   test('stringify v-html', () => {
     const { code } = compileWithStringify(`
@@ -449,6 +467,31 @@ describe('stringify static html', () => {
       )}</select></div>`,
     )
     expect(ast.cached).toMatchObject([cachedArrayBailedMatcher()])
+    expect(code).toMatchSnapshot()
+  })
+
+  test('should bail for <option> elements with null values', () => {
+    const { ast, code } = compileWithStringify(
+      `<div><select><option :value="null" />${repeat(
+        `<option value="1" />`,
+        StringifyThresholds.ELEMENT_WITH_BINDING_COUNT,
+      )}</select></div>`,
+    )
+    expect(ast.cached).toMatchObject([cachedArrayBailedMatcher()])
+    expect(code).toMatchSnapshot()
+  })
+
+  test('eligible content (elements > 20) + non-eligible content', () => {
+    const { code } = compileWithStringify(
+      `<div>${repeat(
+        `<span/>`,
+        StringifyThresholds.NODE_COUNT,
+      )}<div key="1">1</div>${repeat(
+        `<span/>`,
+        StringifyThresholds.NODE_COUNT,
+      )}</div>`,
+    )
+
     expect(code).toMatchSnapshot()
   })
 })
