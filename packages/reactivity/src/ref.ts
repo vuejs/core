@@ -126,18 +126,7 @@ class RefImpl<T = any> implements Dependency {
   }
 
   get value() {
-    const activeTrackId = System.activeTrackId
-    if (activeTrackId !== 0 && this.linkedTrackId !== activeTrackId) {
-      this.linkedTrackId = activeTrackId
-      if (__DEV__) {
-        onTrack(System.activeSub!, {
-          target: this,
-          type: TrackOpTypes.GET,
-          key: 'value',
-        })
-      }
-      Dependency.linkSubscriber(this, System.activeSub!)
-    }
+    track(this)
     return this._value
   }
 
@@ -151,22 +140,18 @@ class RefImpl<T = any> implements Dependency {
     if (hasChanged(newValue, oldValue)) {
       this._rawValue = newValue
       this._value = useDirectValue ? newValue : toReactive(newValue)
-      if (this.subs !== undefined) {
-        if (__DEV__) {
-          triggerEventInfos.push({
-            target: this,
-            type: TriggerOpTypes.SET,
-            key: 'value',
-            newValue,
-            oldValue,
-          })
-        }
-        startBatch()
-        Dependency.propagate(this.subs)
-        endBatch()
-        if (__DEV__) {
-          triggerEventInfos.pop()
-        }
+      if (__DEV__) {
+        triggerEventInfos.push({
+          target: this,
+          type: TriggerOpTypes.SET,
+          key: 'value',
+          newValue,
+          oldValue,
+        })
+      }
+      triggerRef(this as unknown as Ref)
+      if (__DEV__) {
+        triggerEventInfos.pop()
       }
     }
   }
@@ -199,10 +184,25 @@ class RefImpl<T = any> implements Dependency {
  */
 export function triggerRef(ref: Ref): void {
   // ref may be an instance of ObjectRefImpl
-  if ((ref as unknown as RefImpl).subs !== undefined) {
+  if ((ref as unknown as Dependency).subs !== undefined) {
     startBatch()
-    Dependency.propagate((ref as unknown as RefImpl).subs!)
+    Dependency.propagate((ref as unknown as Dependency).subs!)
     endBatch()
+  }
+}
+
+function track(dep: Dependency) {
+  const activeTrackId = System.activeTrackId
+  if (activeTrackId !== 0 && dep.linkedTrackId !== activeTrackId) {
+    dep.linkedTrackId = activeTrackId
+    if (__DEV__) {
+      onTrack(System.activeSub!, {
+        target: dep,
+        type: TrackOpTypes.GET,
+        key: 'value',
+      })
+    }
+    Dependency.linkSubscriber(dep, System.activeSub!)
   }
 }
 
@@ -308,7 +308,10 @@ class CustomRefImpl<T> implements Dependency {
   public _value: T = undefined!
 
   constructor(factory: CustomRefFactory<T>) {
-    const { get, set } = factory(this.track.bind(this), this.trigger.bind(this))
+    const { get, set } = factory(
+      () => track(this),
+      () => triggerRef(this as unknown as Ref),
+    )
     this._get = get
     this._set = set
   }
@@ -319,29 +322,6 @@ class CustomRefImpl<T> implements Dependency {
 
   set value(newVal) {
     this._set(newVal)
-  }
-
-  track() {
-    const activeTrackId = System.activeTrackId
-    if (activeTrackId !== 0 && this.linkedTrackId !== activeTrackId) {
-      this.linkedTrackId = activeTrackId
-      if (__DEV__) {
-        onTrack(System.activeSub!, {
-          target: this,
-          type: TrackOpTypes.GET,
-          key: 'value',
-        })
-      }
-      Dependency.linkSubscriber(this, System.activeSub!)
-    }
-  }
-
-  trigger() {
-    if (this.subs !== undefined) {
-      startBatch()
-      Dependency.propagate(this.subs)
-      endBatch()
-    }
   }
 }
 
