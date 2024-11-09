@@ -24,10 +24,14 @@ export class EffectScope implements IEffect {
   dirtyLevel: DirtyLevels = 0 satisfies DirtyLevels.None
   canPropagate = false
 
-  parent: EffectScope | undefined = undefined
   pauseLevel: PauseLevels = PauseLevels.None
-  allowRecurse = false
   cleanups: (() => void)[] = []
+
+  /**
+   * only assigned by undetached scope
+   * @internal
+   */
+  parent: EffectScope | undefined
 
   constructor(public detached = false) {
     const activeTrackId = System.activeEffectScopeTrackId
@@ -55,7 +59,7 @@ export class EffectScope implements IEffect {
       this.pauseLevel = PauseLevels.Paused
       let dep = this.deps
       while (dep !== undefined) {
-        ;(dep.dep as ReactiveEffect).pause()
+        ;(dep.dep as ReactiveEffect | EffectScope).pause()
         dep = dep.nextDep
       }
     }
@@ -104,7 +108,8 @@ export class EffectScope implements IEffect {
    * @internal
    */
   on(): void {
-    // activeEffectScope = this
+    System.activeEffectScope = this
+    System.activeEffectScopeTrackId = this.trackId
   }
 
   /**
@@ -112,7 +117,13 @@ export class EffectScope implements IEffect {
    * @internal
    */
   off(): void {
-    // activeEffectScope = this.parent
+    if (this.parent !== undefined) {
+      System.activeEffectScope = this.parent
+      System.activeEffectScopeTrackId = this.parent.trackId
+    } else {
+      System.activeEffectScope = undefined
+      System.activeEffectScopeTrackId = 0
+    }
   }
 
   stop(): void {
