@@ -1,13 +1,35 @@
 import { isArray, isIntegerKey, isMap, isSymbol } from '@vue/shared'
+import { Dependency, endBatch, Link, startBatch, System } from 'alien-signals'
 import { type TrackOpTypes, TriggerOpTypes } from './constants'
-import { Dependency, endBatch, startBatch, System } from 'alien-signals'
 import { onTrack, triggerEventInfos } from './debug'
+
+class Dep implements Dependency {
+  _subs: Link | undefined = undefined
+  subsTail: Link | undefined = undefined
+  linkedTrackId = 0
+
+  constructor(
+    private map: KeyToDepMap,
+    private key: unknown,
+  ) {}
+
+  get subs(): Link | undefined {
+    return this._subs
+  }
+
+  set subs(value: Link | undefined) {
+    this._subs = value
+    if (value === undefined) {
+      this.map.delete(this.key)
+    }
+  }
+}
 
 // The main WeakMap that stores {target -> key -> dep} connections.
 // Conceptually, it's easier to think of a dependency as a Dep class
 // which maintains a Set of subscribers, but we simply store them as
 // raw Maps to reduce memory overhead.
-type KeyToDepMap = Map<any, Dependency & { linkedTrackId: number }>
+type KeyToDepMap = Map<any, Dep>
 
 export const targetMap: WeakMap<object, KeyToDepMap> = new WeakMap()
 
@@ -40,14 +62,7 @@ export function track(target: object, type: TrackOpTypes, key: unknown): void {
     }
     let dep = depsMap.get(key)
     if (!dep) {
-      depsMap.set(
-        key,
-        (dep = {
-          subs: undefined,
-          subsTail: undefined,
-          linkedTrackId: 0,
-        }),
-      )
+      depsMap.set(key, (dep = new Dep(depsMap, key)))
     }
     if (dep.linkedTrackId !== activeTrackId) {
       dep.linkedTrackId = activeTrackId
