@@ -7,7 +7,7 @@ import {
 } from '@vue/shared'
 import { Dependency, endBatch, startBatch, System } from 'alien-signals'
 import type { ComputedRef, WritableComputedRef } from './computed'
-import { ReactiveFlags } from './constants'
+import { ReactiveFlags, TrackOpTypes } from './constants'
 import { getDepFromReactive } from './dep'
 import {
   type Builtin,
@@ -20,6 +20,7 @@ import {
   toReactive,
 } from './reactive'
 import { warn } from './warning'
+import { onTrack } from './debug'
 
 declare const RefSymbol: unique symbol
 export declare const RawSymbol: unique symbol
@@ -128,6 +129,13 @@ class RefImpl<T = any> implements Dependency {
     const activeTrackId = System.activeTrackId
     if (activeTrackId !== 0 && this.linkedTrackId !== activeTrackId) {
       this.linkedTrackId = activeTrackId
+      if (__DEV__) {
+        onTrack(System.activeSub!, {
+          target: this,
+          type: TrackOpTypes.GET,
+          key: 'value',
+        })
+      }
       Dependency.linkSubscriber(this, System.activeSub!)
     }
     return this._value
@@ -305,6 +313,13 @@ class CustomRefImpl<T> implements Dependency {
     const activeTrackId = System.activeTrackId
     if (activeTrackId !== 0 && this.linkedTrackId !== activeTrackId) {
       this.linkedTrackId = activeTrackId
+      if (__DEV__) {
+        onTrack(System.activeSub!, {
+          target: this,
+          type: TrackOpTypes.GET,
+          key: 'value',
+        })
+      }
       Dependency.linkSubscriber(this, System.activeSub!)
     }
   }

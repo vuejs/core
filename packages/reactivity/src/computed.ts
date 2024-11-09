@@ -1,6 +1,14 @@
 import { isFunction } from '@vue/shared'
-import { Computed } from 'alien-signals'
-import { ReactiveFlags } from './constants'
+import {
+  Dependency,
+  DirtyLevels,
+  IComputed,
+  Link,
+  Subscriber,
+  System,
+} from 'alien-signals'
+import { ReactiveFlags, TrackOpTypes } from './constants'
+import { onTrack } from './debug'
 import type { DebuggerEvent, DebuggerOptions } from './effect'
 import type { Ref } from './ref'
 import { warn } from './warning'
@@ -36,7 +44,21 @@ export interface WritableComputedOptions<T, S = T> {
  * @private exported by @vue/reactivity for Vue core use, but not exported from
  * the main vue package
  */
-export class ComputedRefImpl<T = any> extends Computed {
+export class ComputedRefImpl<T = any> implements IComputed {
+  _value: T | undefined = undefined
+
+  // Dependency
+  subs: Link | undefined = undefined
+  subsTail: Link | undefined = undefined
+  linkedTrackId = -1
+
+  // Subscriber
+  deps: Link | undefined = undefined
+  depsTail: Link | undefined = undefined
+  trackId = 0
+  dirtyLevel: DirtyLevels = 3 satisfies DirtyLevels.Dirty
+  canPropagate = false
+
   /**
    * @internal
    */
@@ -63,12 +85,35 @@ export class ComputedRefImpl<T = any> extends Computed {
     private readonly setter: ComputedSetter<T> | undefined,
     public isSSR: boolean,
   ) {
-    super(fn)
     this[ReactiveFlags.IS_READONLY] = !setter
   }
 
   get value(): T {
-    return this.get()
+    const dirtyLevel = this.dirtyLevel
+    if (dirtyLevel === (2 satisfies DirtyLevels.MaybeDirty)) {
+      Subscriber.resolveMaybeDirty(this)
+      if (this.dirtyLevel === (3 satisfies DirtyLevels.Dirty)) {
+        this.update()
+      }
+    } else if (
+      dirtyLevel === (3 satisfies DirtyLevels.Dirty) ||
+      dirtyLevel === (4 satisfies DirtyLevels.Released)
+    ) {
+      this.update()
+    }
+    const activeTrackId = System.activeTrackId
+    if (activeTrackId !== 0 && this.linkedTrackId !== activeTrackId) {
+      this.linkedTrackId = activeTrackId
+      if (__DEV__) {
+        onTrack(System.activeSub!, {
+          target: this,
+          type: TrackOpTypes.GET,
+          key: 'value',
+        })
+      }
+      Dependency.linkSubscriber(this, System.activeSub!)
+    }
+    return this._value!
   }
 
   set value(newValue) {
@@ -76,6 +121,24 @@ export class ComputedRefImpl<T = any> extends Computed {
       this.setter(newValue)
     } else if (__DEV__) {
       warn('Write operation failed: computed value is readonly')
+    }
+  }
+
+  update(): void {
+    const prevSub = Subscriber.startTrackDependencies(this)
+    const oldValue = this._value
+    let newValue: T
+    try {
+      newValue = this.fn(oldValue)
+    } finally {
+      Subscriber.endTrackDependencies(this, prevSub)
+    }
+    if (oldValue !== newValue) {
+      this._value = newValue
+      const subs = this.subs
+      if (subs !== undefined) {
+        Dependency.propagate(subs)
+      }
     }
   }
 }

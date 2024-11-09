@@ -1,6 +1,7 @@
 import { isArray, isIntegerKey, isMap, isSymbol } from '@vue/shared'
 import { type TrackOpTypes, TriggerOpTypes } from './constants'
 import { Dependency, endBatch, startBatch, System } from 'alien-signals'
+import { onTrack } from './debug'
 
 // The main WeakMap that stores {target -> key -> dep} connections.
 // Conceptually, it's easier to think of a dependency as a Dep class
@@ -50,6 +51,13 @@ export function track(target: object, type: TrackOpTypes, key: unknown): void {
     }
     if (dep.linkedTrackId !== activeTrackId) {
       dep.linkedTrackId = activeTrackId
+      if (__DEV__) {
+        onTrack(System.activeSub!, {
+          target,
+          type,
+          key,
+        })
+      }
       Dependency.linkSubscriber(dep, System.activeSub!)
     }
   }

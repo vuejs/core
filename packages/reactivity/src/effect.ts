@@ -164,23 +164,6 @@ export class ReactiveEffect<T = any>
   }
 }
 
-/**
- * For debugging
- */
-// function printDeps(sub: Subscriber) {
-//   let d = sub.deps
-//   let ds = []
-//   while (d) {
-//     ds.push(d)
-//     d = d.nextDep
-//   }
-//   return ds.map(d => ({
-//     id: d.id,
-//     prev: d.prevDep?.id,
-//     next: d.nextDep?.id,
-//   }))
-// }
-
 export interface ReactiveEffectRunner<T = any> {
   (): T
   effect: ReactiveEffect
