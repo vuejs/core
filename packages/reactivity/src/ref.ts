@@ -193,8 +193,7 @@ export function triggerRef(ref: Ref): void {
 
 function track(dep: Dependency) {
   const activeTrackId = System.activeTrackId
-  if (activeTrackId !== 0 && dep.linkedTrackId !== activeTrackId) {
-    dep.linkedTrackId = activeTrackId
+  if (activeTrackId !== 0 && dep.subsTail?.trackId !== activeTrackId) {
     if (__DEV__) {
       onTrack(System.activeSub!, {
         target: dep,

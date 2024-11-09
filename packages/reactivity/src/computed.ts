@@ -117,8 +117,7 @@ export class ComputedRefImpl<T = any> implements IComputed {
       this.update()
     }
     const activeTrackId = System.activeTrackId
-    if (activeTrackId !== 0 && this.linkedTrackId !== activeTrackId) {
-      this.linkedTrackId = activeTrackId
+    if (activeTrackId !== 0 && this.subsTail?.trackId !== activeTrackId) {
       if (__DEV__) {
         onTrack(System.activeSub!, {
           target: this,

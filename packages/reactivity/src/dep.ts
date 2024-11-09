@@ -64,8 +64,7 @@ export function track(target: object, type: TrackOpTypes, key: unknown): void {
     if (!dep) {
       depsMap.set(key, (dep = new Dep(depsMap, key)))
     }
-    if (dep.linkedTrackId !== activeTrackId) {
-      dep.linkedTrackId = activeTrackId
+    if (dep.subsTail?.trackId !== activeTrackId) {
       if (__DEV__) {
         onTrack(System.activeSub!, {
           target,
