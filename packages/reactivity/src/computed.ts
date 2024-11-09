@@ -1,17 +1,9 @@
 import { isFunction } from '@vue/shared'
-import {
-  type DebuggerEvent,
-  type DebuggerOptions,
-  EffectFlags,
-  type Subscriber,
-  activeSub,
-  batch,
-  refreshComputed,
-} from './effect'
+import { Computed } from 'alien-signals'
+import { ReactiveFlags } from './constants'
+import type { DebuggerEvent, DebuggerOptions } from './effect'
 import type { Ref } from './ref'
 import { warn } from './warning'
-import { Dep, type Link, globalVersion } from './dep'
-import { ReactiveFlags, TrackOpTypes } from './constants'
 
 declare const ComputedRefSymbol: unique symbol
 declare const WritableComputedRefSymbol: unique symbol
@@ -44,15 +36,7 @@ export interface WritableComputedOptions<T, S = T> {
  * @private exported by @vue/reactivity for Vue core use, but not exported from
  * the main vue package
  */
-export class ComputedRefImpl<T = any> implements Subscriber {
-  /**
-   * @internal
-   */
-  _value: any = undefined
-  /**
-   * @internal
-   */
-  readonly dep: Dep = new Dep(this)
+export class ComputedRefImpl<T = any> extends Computed {
   /**
    * @internal
    */
@@ -62,35 +46,7 @@ export class ComputedRefImpl<T = any> implements Subscriber {
    * @internal
    */
   readonly __v_isReadonly: boolean
-  // TODO isolatedDeclarations ReactiveFlags.IS_READONLY
-  // A computed is also a subscriber that tracks other deps
-  /**
-   * @internal
-   */
-  deps?: Link = undefined
-  /**
-   * @internal
-   */
-  depsTail?: Link = undefined
-  /**
-   * @internal
-   */
-  flags: EffectFlags = EffectFlags.DIRTY
-  /**
-   * @internal
-   */
-  globalVersion: number = globalVersion - 1
-  /**
-   * @internal
-   */
-  isSSR: boolean
-  /**
-   * @internal
-   */
-  next?: Subscriber = undefined
 
-  // for backwards compat
-  effect: this = this
   // dev only
   onTrack?: (event: DebuggerEvent) => void
   // dev only
@@ -105,43 +61,14 @@ export class ComputedRefImpl<T = any> implements Subscriber {
   constructor(
     public fn: ComputedGetter<T>,
     private readonly setter: ComputedSetter<T> | undefined,
-    isSSR: boolean,
+    public isSSR: boolean,
   ) {
+    super(fn)
     this[ReactiveFlags.IS_READONLY] = !setter
-    this.isSSR = isSSR
-  }
-
-  /**
-   * @internal
-   */
-  notify(): true | void {
-    this.flags |= EffectFlags.DIRTY
-    if (
-      !(this.flags & EffectFlags.NOTIFIED) &&
-      // avoid infinite self recursion
-      activeSub !== this
-    ) {
-      batch(this, true)
-      return true
-    } else if (__DEV__) {
-      // TODO warn
-    }
   }
 
   get value(): T {
-    const link = __DEV__
-      ? this.dep.track({
-          target: this,
-          type: TrackOpTypes.GET,
-          key: 'value',
-        })
-      : this.dep.track()
-    refreshComputed(this)
-    // sync version after evaluation
-    if (link) {
-      link.version = this.dep.version
-    }
-    return this._value
+    return this.get()
   }
 
   set value(newValue) {

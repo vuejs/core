@@ -8,22 +8,20 @@ import {
   isObject,
   isPlainObject,
   isSet,
-  remove,
 } from '@vue/shared'
 import { warn } from './warning'
 import type { ComputedRef } from './computed'
 import { ReactiveFlags } from './constants'
 import {
   type DebuggerOptions,
-  EffectFlags,
   type EffectScheduler,
+  PauseLevels,
   ReactiveEffect,
   pauseTracking,
   resetTracking,
 } from './effect'
 import { isReactive, isShallow } from './reactive'
 import { type Ref, isRef } from './ref'
-import { getCurrentScope } from './effectScope'
 
 // These errors were transferred from `packages/runtime-core/src/errorHandling.ts`
 // to @vue/reactivity to allow co-location with the moved base watch logic, hence
@@ -210,12 +208,8 @@ export function watch(
     getter = () => traverse(baseGetter(), depth)
   }
 
-  const scope = getCurrentScope()
   const watchHandle: WatchHandle = () => {
     effect.stop()
-    if (scope) {
-      remove(scope.effects, effect)
-    }
   }
 
   if (once && cb) {
@@ -232,8 +226,8 @@ export function watch(
 
   const job = (immediateFirstRun?: boolean) => {
     if (
-      !(effect.flags & EffectFlags.ACTIVE) ||
-      (!effect.dirty && !immediateFirstRun)
+      effect.pauseLevel === PauseLevels.Stop ||
+      (!immediateFirstRun && !effect.dirty)
     ) {
       return
     }

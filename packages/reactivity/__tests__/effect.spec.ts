@@ -11,7 +11,7 @@ import {
   stop,
   toRaw,
 } from '../src/index'
-import { type Dep, ITERATE_KEY, getDepFromReactive } from '../src/dep'
+import { ITERATE_KEY, getDepFromReactive } from '../src/dep'
 import {
   computed,
   h,
@@ -21,13 +21,8 @@ import {
   render,
   serializeInner,
 } from '@vue/runtime-test'
-import {
-  endBatch,
-  onEffectCleanup,
-  pauseTracking,
-  resetTracking,
-  startBatch,
-} from '../src/effect'
+import { onEffectCleanup, pauseTracking, resetTracking } from '../src/effect'
+import { Dependency, endBatch, startBatch } from 'alien-signals'
 
 describe('reactivity/effect', () => {
   it('should run the passed function once (wrapped by a effect)', () => {
@@ -1183,12 +1178,12 @@ describe('reactivity/effect', () => {
   })
 
   describe('dep unsubscribe', () => {
-    function getSubCount(dep: Dep | undefined) {
+    function getSubCount(dep: Dependency | undefined) {
       let count = 0
       let sub = dep!.subs
       while (sub) {
         count++
-        sub = sub.prevSub
+        sub = sub.nextSub
       }
       return count
     }

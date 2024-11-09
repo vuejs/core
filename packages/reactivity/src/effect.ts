@@ -1,8 +1,6 @@
-import { extend, hasChanged } from '@vue/shared'
-import type { ComputedRefImpl } from './computed'
+import { extend } from '@vue/shared'
+import { DirtyLevels, Effect, Subscriber, System } from 'alien-signals'
 import type { TrackOpTypes, TriggerOpTypes } from './constants'
-import { type Link, globalVersion } from './dep'
-import { activeEffectScope } from './effectScope'
 import { warn } from './warning'
 
 export type EffectScheduler = (...args: any[]) => any
@@ -36,8 +34,6 @@ export interface ReactiveEffectRunner<T = any> {
   effect: ReactiveEffect
 }
 
-export let activeSub: Subscriber | undefined
-
 export enum EffectFlags {
   /**
    * ReactiveEffect only
@@ -51,167 +47,120 @@ export enum EffectFlags {
   PAUSED = 1 << 6,
 }
 
-/**
- * Subscriber is a type that tracks (or subscribes to) a list of deps.
- */
-export interface Subscriber extends DebuggerOptions {
-  /**
-   * Head of the doubly linked list representing the deps
-   * @internal
-   */
-  deps?: Link
-  /**
-   * Tail of the same list
-   * @internal
-   */
-  depsTail?: Link
-  /**
-   * @internal
-   */
-  flags: EffectFlags
-  /**
-   * @internal
-   */
-  next?: Subscriber
-  /**
-   * returning `true` indicates it's a computed that needs to call notify
-   * on its dep too
-   * @internal
-   */
-  notify(): true | void
+export const enum PauseLevels {
+  None = 0,
+  Paused = 1,
+  Notify = 2,
+  Stop = 3,
 }
 
-const pausedQueueEffects = new WeakSet<ReactiveEffect>()
-
 export class ReactiveEffect<T = any>
-  implements Subscriber, ReactiveEffectOptions
+  extends Effect
+  implements ReactiveEffectOptions
 {
-  /**
-   * @internal
-   */
-  deps?: Link = undefined
-  /**
-   * @internal
-   */
-  depsTail?: Link = undefined
-  /**
-   * @internal
-   */
-  flags: EffectFlags = EffectFlags.ACTIVE | EffectFlags.TRACKING
-  /**
-   * @internal
-   */
-  next?: Subscriber = undefined
+  pauseLevel: PauseLevels = PauseLevels.None
+  allowRecurse = false
+
   /**
    * @internal
    */
   cleanup?: () => void = undefined
 
-  scheduler?: EffectScheduler = undefined
   onStop?: () => void
   onTrack?: (event: DebuggerEvent) => void
   onTrigger?: (event: DebuggerEvent) => void
 
   constructor(public fn: () => T) {
-    if (activeEffectScope && activeEffectScope.active) {
-      activeEffectScope.effects.push(this)
+    super(fn)
+  }
+
+  get dirty(): boolean {
+    if (this.dirtyLevel === (2 satisfies DirtyLevels.MaybeDirty)) {
+      Subscriber.resolveMaybeDirty(this)
     }
+    return this.dirtyLevel === (3 satisfies DirtyLevels.Dirty)
   }
 
   pause(): void {
-    this.flags |= EffectFlags.PAUSED
+    if (this.pauseLevel === PauseLevels.None) {
+      this.pauseLevel = PauseLevels.Paused
+    }
   }
 
   resume(): void {
-    if (this.flags & EffectFlags.PAUSED) {
-      this.flags &= ~EffectFlags.PAUSED
-      if (pausedQueueEffects.has(this)) {
-        pausedQueueEffects.delete(this)
-        this.trigger()
-      }
+    if (this.pauseLevel === PauseLevels.Stop) {
+      return
+    }
+    const shouldRun = this.pauseLevel === PauseLevels.Notify
+    this.pauseLevel = PauseLevels.None
+    if (shouldRun) {
+      this.notify()
     }
   }
 
-  /**
-   * @internal
-   */
   notify(): void {
-    if (
-      this.flags & EffectFlags.RUNNING &&
-      !(this.flags & EffectFlags.ALLOW_RECURSE)
-    ) {
+    // if (__DEV__ && this.onTrigger !== undefined) {
+    //   this.onTrigger?.()
+    // }
+    if (this.pauseLevel !== PauseLevels.None) {
+      if (this.pauseLevel === PauseLevels.Paused) {
+        this.pauseLevel = PauseLevels.Notify
+      }
       return
     }
-    if (!(this.flags & EffectFlags.NOTIFIED)) {
-      batch(this)
+    this.scheduler()
+  }
+
+  scheduler(): void {
+    this.runIfDirty()
+  }
+
+  runIfDirty(): void {
+    const dirtyLevel = this.dirtyLevel
+    if (dirtyLevel === (1 satisfies DirtyLevels.SideEffectsOnly)) {
+      this.dirtyLevel = 0 satisfies DirtyLevels.None
+      Subscriber.runInnerEffects(this.deps)
+    } else {
+      if (dirtyLevel === (2 satisfies DirtyLevels.MaybeDirty)) {
+        Subscriber.resolveMaybeDirty(this)
+      }
+      if (this.dirtyLevel === (3 satisfies DirtyLevels.Dirty)) {
+        this.run()
+      } else {
+        Subscriber.runInnerEffects(this.deps)
+      }
     }
   }
 
   run(): T {
     // TODO cleanupEffect
 
-    if (!(this.flags & EffectFlags.ACTIVE)) {
-      // stopped during cleanup
+    if (this.pauseLevel === PauseLevels.Stop) {
       return this.fn()
     }
-
-    this.flags |= EffectFlags.RUNNING
     cleanupEffect(this)
-    prepareDeps(this)
-    const prevEffect = activeSub
-    const prevShouldTrack = shouldTrack
-    activeSub = this
-    shouldTrack = true
-
+    const prevSub = Subscriber.startTrackDependencies(this)
     try {
       return this.fn()
     } finally {
-      if (__DEV__ && activeSub !== this) {
-        warn(
-          'Active effect was not restored correctly - ' +
-            'this is likely a Vue internal bug.',
-        )
+      Subscriber.endTrackDependencies(this, prevSub)
+      if (this.canPropagate && this.allowRecurse) {
+        this.canPropagate = false
+        this.notify()
       }
-      cleanupDeps(this)
-      activeSub = prevEffect
-      shouldTrack = prevShouldTrack
-      this.flags &= ~EffectFlags.RUNNING
     }
   }
 
   stop(): void {
-    if (this.flags & EffectFlags.ACTIVE) {
-      for (let link = this.deps; link; link = link.nextDep) {
-        removeSub(link)
-      }
-      this.deps = this.depsTail = undefined
-      cleanupEffect(this)
-      this.onStop && this.onStop()
-      this.flags &= ~EffectFlags.ACTIVE
+    if (this.deps !== undefined) {
+      Subscriber.clearTrack(this.deps)
+      this.deps = undefined
+      this.depsTail = undefined
     }
-  }
-
-  trigger(): void {
-    if (this.flags & EffectFlags.PAUSED) {
-      pausedQueueEffects.add(this)
-    } else if (this.scheduler) {
-      this.scheduler()
-    } else {
-      this.runIfDirty()
-    }
-  }
-
-  /**
-   * @internal
-   */
-  runIfDirty(): void {
-    if (isDirty(this)) {
-      this.run()
-    }
-  }
-
-  get dirty(): boolean {
-    return isDirty(this)
+    this.pauseLevel = PauseLevels.Stop
+    this.dirtyLevel = 3 satisfies DirtyLevels.Dirty
+    cleanupEffect(this)
+    this.onStop?.()
   }
 }
 
@@ -231,242 +180,6 @@ export class ReactiveEffect<T = any>
 //     next: d.nextDep?.id,
 //   }))
 // }
-
-let batchDepth = 0
-let batchedSub: Subscriber | undefined
-let batchedComputed: Subscriber | undefined
-
-export function batch(sub: Subscriber, isComputed = false): void {
-  sub.flags |= EffectFlags.NOTIFIED
-  if (isComputed) {
-    sub.next = batchedComputed
-    batchedComputed = sub
-    return
-  }
-  sub.next = batchedSub
-  batchedSub = sub
-}
-
-/**
- * @internal
- */
-export function startBatch(): void {
-  batchDepth++
-}
-
-/**
- * Run batched effects when all batches have ended
- * @internal
- */
-export function endBatch(): void {
-  if (--batchDepth > 0) {
-    return
-  }
-
-  if (batchedComputed) {
-    let e: Subscriber | undefined = batchedComputed
-    batchedComputed = undefined
-    while (e) {
-      const next: Subscriber | undefined = e.next
-      e.next = undefined
-      e.flags &= ~EffectFlags.NOTIFIED
-      e = next
-    }
-  }
-
-  let error: unknown
-  while (batchedSub) {
-    let e: Subscriber | undefined = batchedSub
-    batchedSub = undefined
-    while (e) {
-      const next: Subscriber | undefined = e.next
-      e.next = undefined
-      e.flags &= ~EffectFlags.NOTIFIED
-      if (e.flags & EffectFlags.ACTIVE) {
-        try {
-          // ACTIVE flag is effect-only
-          ;(e as ReactiveEffect).trigger()
-        } catch (err) {
-          if (!error) error = err
-        }
-      }
-      e = next
-    }
-  }
-
-  if (error) throw error
-}
-
-function prepareDeps(sub: Subscriber) {
-  // Prepare deps for tracking, starting from the head
-  for (let link = sub.deps; link; link = link.nextDep) {
-    // set all previous deps' (if any) version to -1 so that we can track
-    // which ones are unused after the run
-    link.version = -1
-    // store previous active sub if link was being used in another context
-    link.prevActiveLink = link.dep.activeLink
-    link.dep.activeLink = link
-  }
-}
-
-function cleanupDeps(sub: Subscriber) {
-  // Cleanup unsued deps
-  let head
-  let tail = sub.depsTail
-  let link = tail
-  while (link) {
-    const prev = link.prevDep
-    if (link.version === -1) {
-      if (link === tail) tail = prev
-      // unused - remove it from the dep's subscribing effect list
-      removeSub(link)
-      // also remove it from this effect's dep list
-      removeDep(link)
-    } else {
-      // The new head is the last node seen which wasn't removed
-      // from the doubly-linked list
-      head = link
-    }
-
-    // restore previous active link if any
-    link.dep.activeLink = link.prevActiveLink
-    link.prevActiveLink = undefined
-    link = prev
-  }
-  // set the new head & tail
-  sub.deps = head
-  sub.depsTail = tail
-}
-
-function isDirty(sub: Subscriber): boolean {
-  for (let link = sub.deps; link; link = link.nextDep) {
-    if (
-      link.dep.version !== link.version ||
-      (link.dep.computed &&
-        (refreshComputed(link.dep.computed) ||
-          link.dep.version !== link.version))
-    ) {
-      return true
-    }
-  }
-  // @ts-expect-error only for backwards compatibility where libs manually set
-  // this flag - e.g. Pinia's testing module
-  if (sub._dirty) {
-    return true
-  }
-  return false
-}
-
-/**
- * Returning false indicates the refresh failed
- * @internal
- */
-export function refreshComputed(computed: ComputedRefImpl): undefined {
-  if (
-    computed.flags & EffectFlags.TRACKING &&
-    !(computed.flags & EffectFlags.DIRTY)
-  ) {
-    return
-  }
-  computed.flags &= ~EffectFlags.DIRTY
-
-  // Global version fast path when no reactive changes has happened since
-  // last refresh.
-  if (computed.globalVersion === globalVersion) {
-    return
-  }
-  computed.globalVersion = globalVersion
-
-  const dep = computed.dep
-  computed.flags |= EffectFlags.RUNNING
-  // In SSR there will be no render effect, so the computed has no subscriber
-  // and therefore tracks no deps, thus we cannot rely on the dirty check.
-  // Instead, computed always re-evaluate and relies on the globalVersion
-  // fast path above for caching.
-  if (
-    dep.version > 0 &&
-    !computed.isSSR &&
-    computed.deps &&
-    !isDirty(computed)
-  ) {
-    computed.flags &= ~EffectFlags.RUNNING
-    return
-  }
-
-  const prevSub = activeSub
-  const prevShouldTrack = shouldTrack
-  activeSub = computed
-  shouldTrack = true
-
-  try {
-    prepareDeps(computed)
-    const value = computed.fn(computed._value)
-    if (dep.version === 0 || hasChanged(value, computed._value)) {
-      computed._value = value
-      dep.version++
-    }
-  } catch (err) {
-    dep.version++
-    throw err
-  } finally {
-    activeSub = prevSub
-    shouldTrack = prevShouldTrack
-    cleanupDeps(computed)
-    computed.flags &= ~EffectFlags.RUNNING
-  }
-}
-
-function removeSub(link: Link, soft = false) {
-  const { dep, prevSub, nextSub } = link
-  if (prevSub) {
-    prevSub.nextSub = nextSub
-    link.prevSub = undefined
-  }
-  if (nextSub) {
-    nextSub.prevSub = prevSub
-    link.nextSub = undefined
-  }
-  if (__DEV__ && dep.subsHead === link) {
-    // was previous head, point new head to next
-    dep.subsHead = nextSub
-  }
-
-  if (dep.subs === link) {
-    // was previous tail, point new tail to prev
-    dep.subs = prevSub
-
-    if (!prevSub && dep.computed) {
-      // if computed, unsubscribe it from all its deps so this computed and its
-      // value can be GCed
-      dep.computed.flags &= ~EffectFlags.TRACKING
-      for (let l = dep.computed.deps; l; l = l.nextDep) {
-        // here we are only "soft" unsubscribing because the computed still keeps
-        // referencing the deps and the dep should not decrease its sub count
-        removeSub(l, true)
-      }
-    }
-  }
-
-  if (!soft && !--dep.sc && dep.map) {
-    // #11979
-    // property dep no longer has effect subscribers, delete it
-    // this mostly is for the case where an object is kept in memory but only a
-    // subset of its properties is tracked at one time
-    dep.map.delete(dep.key)
-  }
-}
-
-function removeDep(link: Link) {
-  const { prevDep, nextDep } = link
-  if (prevDep) {
-    prevDep.nextDep = nextDep
-    link.prevDep = undefined
-  }
-  if (nextDep) {
-    nextDep.prevDep = prevDep
-    link.nextDep = undefined
-  }
-}
 
 export interface ReactiveEffectRunner<T = any> {
   (): T
@@ -505,34 +218,36 @@ export function stop(runner: ReactiveEffectRunner): void {
   runner.effect.stop()
 }
 
-/**
- * @internal
- */
-export let shouldTrack = true
-const trackStack: boolean[] = []
+const pausedSubs: (typeof System.activeSub)[] = []
 
 /**
  * Temporarily pauses tracking.
  */
 export function pauseTracking(): void {
-  trackStack.push(shouldTrack)
-  shouldTrack = false
+  pausedSubs.push(System.activeSub)
+  System.activeSub = undefined
+  System.activeTrackId = 0
 }
 
 /**
  * Re-enables effect tracking (if it was paused).
  */
 export function enableTracking(): void {
-  trackStack.push(shouldTrack)
-  shouldTrack = true
+  throw new Error('Not implemented')
 }
 
 /**
  * Resets the previous global effect tracking state.
  */
 export function resetTracking(): void {
-  const last = trackStack.pop()
-  shouldTrack = last === undefined ? true : last
+  const prevSub = pausedSubs.pop()
+  if (prevSub !== undefined) {
+    System.activeSub = prevSub
+    System.activeTrackId = prevSub.trackId
+  } else {
+    System.activeSub = undefined
+    System.activeTrackId = 0
+  }
 }
 
 /**
@@ -548,8 +263,8 @@ export function resetTracking(): void {
  * an active effect.
  */
 export function onEffectCleanup(fn: () => void, failSilently = false): void {
-  if (activeSub instanceof ReactiveEffect) {
-    activeSub.cleanup = fn
+  if (System.activeSub instanceof ReactiveEffect) {
+    System.activeSub.cleanup = fn
   } else if (__DEV__ && !failSilently) {
     warn(
       `onEffectCleanup() was called when there was no active effect` +
@@ -561,14 +276,14 @@ export function onEffectCleanup(fn: () => void, failSilently = false): void {
 function cleanupEffect(e: ReactiveEffect) {
   const { cleanup } = e
   e.cleanup = undefined
-  if (cleanup) {
+  if (cleanup !== undefined) {
     // run cleanup without active effect
-    const prevSub = activeSub
-    activeSub = undefined
+    const prevSub = System.activeSub
+    System.activeSub = undefined
     try {
       cleanup()
     } finally {
-      activeSub = prevSub
+      System.activeSub = prevSub
     }
   }
 }

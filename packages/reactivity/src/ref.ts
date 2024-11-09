@@ -5,7 +5,10 @@ import {
   isFunction,
   isObject,
 } from '@vue/shared'
-import { Dep, getDepFromReactive } from './dep'
+import { Dependency, endBatch, startBatch, System } from 'alien-signals'
+import type { ComputedRef, WritableComputedRef } from './computed'
+import { ReactiveFlags } from './constants'
+import { getDepFromReactive } from './dep'
 import {
   type Builtin,
   type ShallowReactiveMarker,
@@ -16,8 +19,6 @@ import {
   toRaw,
   toReactive,
 } from './reactive'
-import type { ComputedRef, WritableComputedRef } from './computed'
-import { ReactiveFlags, TrackOpTypes, TriggerOpTypes } from './constants'
 import { warn } from './warning'
 
 declare const RefSymbol: unique symbol
@@ -105,11 +106,14 @@ function createRef(rawValue: unknown, shallow: boolean) {
 /**
  * @internal
  */
-class RefImpl<T = any> {
+class RefImpl<T = any> implements Dependency {
+  // Dependency
+  subs = undefined
+  subsTail = undefined
+  linkedTrackId = 0
+
   _value: T
   private _rawValue: T
-
-  dep: Dep = new Dep()
 
   public readonly [ReactiveFlags.IS_REF] = true
   public readonly [ReactiveFlags.IS_SHALLOW]: boolean = false
@@ -121,14 +125,10 @@ class RefImpl<T = any> {
   }
 
   get value() {
-    if (__DEV__) {
-      this.dep.track({
-        target: this,
-        type: TrackOpTypes.GET,
-        key: 'value',
-      })
-    } else {
-      this.dep.track()
+    const activeTrackId = System.activeTrackId
+    if (activeTrackId !== 0 && this.linkedTrackId !== activeTrackId) {
+      this.linkedTrackId = activeTrackId
+      Dependency.linkSubscriber(this, System.activeSub!)
     }
     return this._value
   }
@@ -143,16 +143,10 @@ class RefImpl<T = any> {
     if (hasChanged(newValue, oldValue)) {
       this._rawValue = newValue
       this._value = useDirectValue ? newValue : toReactive(newValue)
-      if (__DEV__) {
-        this.dep.trigger({
-          target: this,
-          type: TriggerOpTypes.SET,
-          key: 'value',
-          newValue,
-          oldValue,
-        })
-      } else {
-        this.dep.trigger()
+      if (this.subs !== undefined) {
+        startBatch()
+        Dependency.propagate(this.subs)
+        endBatch()
       }
     }
   }
@@ -185,17 +179,10 @@ class RefImpl<T = any> {
  */
 export function triggerRef(ref: Ref): void {
   // ref may be an instance of ObjectRefImpl
-  if ((ref as unknown as RefImpl).dep) {
-    if (__DEV__) {
-      ;(ref as unknown as RefImpl).dep.trigger({
-        target: ref,
-        type: TriggerOpTypes.SET,
-        key: 'value',
-        newValue: (ref as unknown as RefImpl)._value,
-      })
-    } else {
-      ;(ref as unknown as RefImpl).dep.trigger()
-    }
+  if ((ref as unknown as RefImpl).subs !== undefined) {
+    startBatch()
+    Dependency.propagate((ref as unknown as RefImpl).subs!)
+    endBatch()
   }
 }
 
@@ -287,8 +274,11 @@ export type CustomRefFactory<T> = (
   set: (value: T) => void
 }
 
-class CustomRefImpl<T> {
-  public dep: Dep
+class CustomRefImpl<T> implements Dependency {
+  // Dependency
+  subs = undefined
+  subsTail = undefined
+  linkedTrackId = 0
 
   private readonly _get: ReturnType<CustomRefFactory<T>>['get']
   private readonly _set: ReturnType<CustomRefFactory<T>>['set']
@@ -298,8 +288,7 @@ class CustomRefImpl<T> {
   public _value: T = undefined!
 
   constructor(factory: CustomRefFactory<T>) {
-    const dep = (this.dep = new Dep())
-    const { get, set } = factory(dep.track.bind(dep), dep.trigger.bind(dep))
+    const { get, set } = factory(this.track.bind(this), this.trigger.bind(this))
     this._get = get
     this._set = set
   }
@@ -310,6 +299,22 @@ class CustomRefImpl<T> {
 
   set value(newVal) {
     this._set(newVal)
+  }
+
+  track() {
+    const activeTrackId = System.activeTrackId
+    if (activeTrackId !== 0 && this.linkedTrackId !== activeTrackId) {
+      this.linkedTrackId = activeTrackId
+      Dependency.linkSubscriber(this, System.activeSub!)
+    }
+  }
+
+  trigger() {
+    if (this.subs !== undefined) {
+      startBatch()
+      Dependency.propagate(this.subs)
+      endBatch()
+    }
   }
 }
 
@@ -347,7 +352,12 @@ export function toRefs<T extends object>(object: T): ToRefs<T> {
   return ret
 }
 
-class ObjectRefImpl<T extends object, K extends keyof T> {
+class ObjectRefImpl<T extends object, K extends keyof T> implements Dependency {
+  // Dependency
+  subs = undefined
+  subsTail = undefined
+  linkedTrackId = 0
+
   public readonly [ReactiveFlags.IS_REF] = true
   public _value: T[K] = undefined!
 
@@ -366,7 +376,7 @@ class ObjectRefImpl<T extends object, K extends keyof T> {
     this._object[this._key] = newVal
   }
 
-  get dep(): Dep | undefined {
+  get dep(): Dependency | undefined {
     return getDepFromReactive(toRaw(this._object), this._key)
   }
 }

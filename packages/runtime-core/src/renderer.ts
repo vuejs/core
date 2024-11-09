@@ -49,7 +49,6 @@ import {
   queuePostFlushCb,
 } from './scheduler'
 import {
-  EffectFlags,
   ReactiveEffect,
   pauseTracking,
   resetTracking,
@@ -2423,10 +2422,10 @@ function toggleRecurse(
   allowed: boolean,
 ) {
   if (allowed) {
-    effect.flags |= EffectFlags.ALLOW_RECURSE
+    effect.allowRecurse = true
     job.flags! |= SchedulerJobFlags.ALLOW_RECURSE
   } else {
-    effect.flags &= ~EffectFlags.ALLOW_RECURSE
+    effect.allowRecurse = false
     job.flags! &= ~SchedulerJobFlags.ALLOW_RECURSE
   }
 }

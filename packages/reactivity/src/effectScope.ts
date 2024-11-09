@@ -1,66 +1,61 @@
-import type { ReactiveEffect } from './effect'
+import {
+  Dependency,
+  DirtyLevels,
+  IEffect,
+  Link,
+  Subscriber,
+  System,
+} from 'alien-signals'
 import { warn } from './warning'
+import { PauseLevels, ReactiveEffect } from './effect'
 
-export let activeEffectScope: EffectScope | undefined
+export class EffectScope implements IEffect {
+  nextNotify: IEffect | undefined = undefined
 
-export class EffectScope {
-  /**
-   * @internal
-   */
-  private _active = true
-  /**
-   * @internal
-   */
-  effects: ReactiveEffect[] = []
-  /**
-   * @internal
-   */
+  // Dependency
+  subs: Link | undefined = undefined
+  subsTail: Link | undefined = undefined
+
+  // Subscriber
+  deps: Link | undefined = undefined
+  depsTail: Link | undefined = undefined
+  trackId: number = -++System.lastTrackId
+  dirtyLevel: DirtyLevels = 0 satisfies DirtyLevels.None
+  canPropagate = false
+
+  parent: EffectScope | undefined = undefined
+  pauseLevel: PauseLevels = PauseLevels.None
+  allowRecurse = false
   cleanups: (() => void)[] = []
 
-  private _isPaused = false
-
-  /**
-   * only assigned by undetached scope
-   * @internal
-   */
-  parent: EffectScope | undefined
-  /**
-   * record undetached scopes
-   * @internal
-   */
-  scopes: EffectScope[] | undefined
-  /**
-   * track a child scope's index in its parent's scopes array for optimized
-   * removal
-   * @internal
-   */
-  private index: number | undefined
-
   constructor(public detached = false) {
-    this.parent = activeEffectScope
-    if (!detached && activeEffectScope) {
-      this.index =
-        (activeEffectScope.scopes || (activeEffectScope.scopes = [])).push(
-          this,
-        ) - 1
+    const activeTrackId = System.activeEffectScopeTrackId
+    if (activeTrackId !== 0) {
+      this.parent = System.activeEffectScope as EffectScope
+      if (!detached) {
+        Dependency.linkSubscriber(this, System.activeEffectScope!)
+      }
     }
   }
 
   get active(): boolean {
-    return this._active
+    return this.pauseLevel !== PauseLevels.Stop
+  }
+
+  notify(): void {
+    if (this.dirtyLevel !== (0 satisfies DirtyLevels.None)) {
+      this.dirtyLevel = 0 satisfies DirtyLevels.None
+      Subscriber.runInnerEffects(this.deps)
+    }
   }
 
   pause(): void {
-    if (this._active) {
-      this._isPaused = true
-      let i, l
-      if (this.scopes) {
-        for (i = 0, l = this.scopes.length; i < l; i++) {
-          this.scopes[i].pause()
-        }
-      }
-      for (i = 0, l = this.effects.length; i < l; i++) {
-        this.effects[i].pause()
+    if (this.pauseLevel === PauseLevels.None) {
+      this.pauseLevel = PauseLevels.Paused
+      let dep = this.deps
+      while (dep !== undefined) {
+        ;(dep.dep as ReactiveEffect).pause()
+        dep = dep.nextDep
       }
     }
   }
@@ -69,30 +64,34 @@ export class EffectScope {
    * Resumes the effect scope, including all child scopes and effects.
    */
   resume(): void {
-    if (this._active) {
-      if (this._isPaused) {
-        this._isPaused = false
-        let i, l
-        if (this.scopes) {
-          for (i = 0, l = this.scopes.length; i < l; i++) {
-            this.scopes[i].resume()
-          }
-        }
-        for (i = 0, l = this.effects.length; i < l; i++) {
-          this.effects[i].resume()
-        }
-      }
+    if (this.pauseLevel === PauseLevels.Stop) {
+      return
+    }
+    let dep = this.deps
+    while (dep !== undefined) {
+      ;(dep.dep as ReactiveEffect).resume()
+      dep = dep.nextDep
     }
   }
 
   run<T>(fn: () => T): T | undefined {
-    if (this._active) {
-      const currentEffectScope = activeEffectScope
+    if (this.active) {
+      const prevSub = System.activeEffectScope
+      const trackId = Math.abs(this.trackId)
+      this.trackId = trackId
+      System.activeEffectScope = this
+      System.activeEffectScopeTrackId = trackId
       try {
-        activeEffectScope = this
         return fn()
       } finally {
-        activeEffectScope = currentEffectScope
+        if (prevSub !== undefined) {
+          System.activeEffectScope = prevSub
+          System.activeEffectScopeTrackId = prevSub.trackId
+        } else {
+          System.activeEffectScope = undefined
+          System.activeEffectScopeTrackId = 0
+        }
+        this.trackId = -trackId
       }
     } else if (__DEV__) {
       warn(`cannot run an inactive effect scope.`)
@@ -104,7 +103,7 @@ export class EffectScope {
    * @internal
    */
   on(): void {
-    activeEffectScope = this
+    // activeEffectScope = this
   }
 
   /**
@@ -112,34 +111,25 @@ export class EffectScope {
    * @internal
    */
   off(): void {
-    activeEffectScope = this.parent
+    // activeEffectScope = this.parent
   }
 
-  stop(fromParent?: boolean): void {
-    if (this._active) {
-      let i, l
-      for (i = 0, l = this.effects.length; i < l; i++) {
-        this.effects[i].stop()
+  stop(): void {
+    if (this.active) {
+      this.pauseLevel = PauseLevels.Stop
+      let dep = this.deps
+      while (dep) {
+        ;(dep.dep as EffectScope | ReactiveEffect).stop()
+        dep = dep.nextDep
       }
-      for (i = 0, l = this.cleanups.length; i < l; i++) {
-        this.cleanups[i]()
+      if (this.deps !== undefined) {
+        Subscriber.clearTrack(this.deps)
+        this.deps = undefined
+        this.depsTail = undefined
       }
-      if (this.scopes) {
-        for (i = 0, l = this.scopes.length; i < l; i++) {
-          this.scopes[i].stop(true)
-        }
+      for (const cleanup of this.cleanups) {
+        cleanup()
       }
-      // nested scope, dereference from parent to avoid memory leaks
-      if (!this.detached && this.parent && !fromParent) {
-        // optimized O(1) removal
-        const last = this.parent.scopes!.pop()
-        if (last && last !== this) {
-          this.parent.scopes![this.index!] = last
-          last.index = this.index!
-        }
-      }
-      this.parent = undefined
-      this._active = false
     }
   }
 }
@@ -163,7 +153,7 @@ export function effectScope(detached?: boolean): EffectScope {
  * @see {@link https://vuejs.org/api/reactivity-advanced.html#getcurrentscope}
  */
 export function getCurrentScope(): EffectScope | undefined {
-  return activeEffectScope
+  return System.activeEffectScope as EffectScope
 }
 
 /**
@@ -174,8 +164,8 @@ export function getCurrentScope(): EffectScope | undefined {
  * @see {@link https://vuejs.org/api/reactivity-advanced.html#onscopedispose}
  */
 export function onScopeDispose(fn: () => void, failSilently = false): void {
-  if (activeEffectScope) {
-    activeEffectScope.cleanups.push(fn)
+  if (System.activeEffectScope) {
+    ;(System.activeEffectScope as EffectScope).cleanups.push(fn)
   } else if (__DEV__ && !failSilently) {
     warn(
       `onScopeDispose() is called when there is no active effect scope` +
