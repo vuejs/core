@@ -10,6 +10,7 @@ import {
   serializeInner,
   triggerEvent,
 } from '@vue/runtime-test'
+import type { DirtyLevels } from 'alien-signals'
 import {
   type DebuggerEvent,
   ITERATE_KEY,
@@ -25,9 +26,8 @@ import {
   toRaw,
   triggerRef,
 } from '../src'
-import { pauseTracking, resetTracking } from '../src/effect'
 import type { ComputedRef, ComputedRefImpl } from '../src/computed'
-import { DirtyLevels } from 'alien-signals'
+import { pauseTracking, resetTracking } from '../src/effect'
 
 describe('reactivity/computed', () => {
   it('should return updated value', () => {

@@ -1,5 +1,12 @@
 import { extend } from '@vue/shared'
-import { DirtyLevels, IEffect, Link, Subscriber, System } from 'alien-signals'
+import {
+  Dependency,
+  DirtyLevels,
+  IEffect,
+  Link,
+  Subscriber,
+  System,
+} from 'alien-signals'
 import type { TrackOpTypes, TriggerOpTypes } from './constants'
 import { onTrigger } from './debug'
 import { warn } from './warning'
@@ -33,19 +40,6 @@ export interface ReactiveEffectOptions extends DebuggerOptions {
 export interface ReactiveEffectRunner<T = any> {
   (): T
   effect: ReactiveEffect
-}
-
-export enum EffectFlags {
-  /**
-   * ReactiveEffect only
-   */
-  ACTIVE = 1 << 0,
-  RUNNING = 1 << 1,
-  TRACKING = 1 << 2,
-  NOTIFIED = 1 << 3,
-  DIRTY = 1 << 4,
-  ALLOW_RECURSE = 1 << 5,
-  PAUSED = 1 << 6,
 }
 
 export const enum PauseLevels {
@@ -82,7 +76,17 @@ export class ReactiveEffect<T = any> implements IEffect, ReactiveEffectOptions {
   onTrack?: (event: DebuggerEvent) => void
   onTrigger?: (event: DebuggerEvent) => void
 
-  constructor(public fn: () => T) {}
+  constructor(public fn: () => T) {
+    const activeTrackId = System.activeTrackId
+    if (activeTrackId !== 0) {
+      Dependency.linkSubscriber(this, System.activeSub!)
+      return
+    }
+    const activeEffectScopeTrackId = System.activeEffectScopeTrackId
+    if (activeEffectScopeTrackId !== 0) {
+      Dependency.linkSubscriber(this, System.activeEffectScope!)
+    }
+  }
 
   get dirtyLevel(): DirtyLevels {
     return this._dirtyLevel

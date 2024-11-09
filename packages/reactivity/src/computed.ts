@@ -50,7 +50,7 @@ export class ComputedRefImpl<T = any> implements IComputed {
   // Dependency
   subs: Link | undefined = undefined
   subsTail: Link | undefined = undefined
-  linkedTrackId = -1
+  linkedTrackId = 0
 
   // Subscriber
   deps: Link | undefined = undefined

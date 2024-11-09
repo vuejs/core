@@ -1,4 +1,32 @@
 import {
+  type DebuggerEvent,
+  EffectScope,
+  ITERATE_KEY,
+  type PauseLevels,
+  ReactiveEffect,
+  type Ref,
+  type ShallowRef,
+  TrackOpTypes,
+  TriggerOpTypes,
+  effectScope,
+  shallowReactive,
+  shallowRef,
+  toRef,
+  triggerRef,
+} from '@vue/reactivity'
+import {
+  type TestElement,
+  createApp,
+  h,
+  nodeOps,
+  onMounted,
+  render,
+  serializeInner,
+  watchPostEffect,
+  watchSyncEffect,
+} from '@vue/runtime-test'
+import { renderToString } from '@vue/server-renderer'
+import {
   type ComponentInternalInstance,
   type ComponentPublicInstance,
   computed,
@@ -12,34 +40,18 @@ import {
   watch,
   watchEffect,
 } from '../src/index'
-import {
-  type TestElement,
-  createApp,
-  h,
-  nodeOps,
-  onMounted,
-  render,
-  serializeInner,
-  watchPostEffect,
-  watchSyncEffect,
-} from '@vue/runtime-test'
-import {
-  type DebuggerEvent,
-  EffectFlags,
-  ITERATE_KEY,
-  type Ref,
-  type ShallowRef,
-  TrackOpTypes,
-  TriggerOpTypes,
-  effectScope,
-  shallowReactive,
-  shallowRef,
-  toRef,
-  triggerRef,
-} from '@vue/reactivity'
-import { renderToString } from '@vue/server-renderer'
 
 describe('api: watch', () => {
+  function getDepCount(sub: EffectScope) {
+    let count = 0
+    let dep = sub!.deps
+    while (dep) {
+      count++
+      dep = dep.nextDep
+    }
+    return count
+  }
+
   it('effect', async () => {
     const state = reactive({ count: 0 })
     let dummy
@@ -1332,16 +1344,18 @@ describe('api: watch', () => {
     render(h(Comp), nodeOps.createElement('div'))
 
     expect(instance!).toBeDefined()
-    expect(instance!.scope.effects).toBeInstanceOf(Array)
     // includes the component's own render effect AND the watcher effect
-    expect(instance!.scope.effects.length).toBe(2)
+    expect(getDepCount(instance!.scope)).toBe(2)
 
     _show!.value = false
 
     await nextTick()
     await nextTick()
 
-    expect(instance!.scope.effects[0].flags & EffectFlags.ACTIVE).toBeFalsy()
+    expect(
+      (instance!.scope.deps!.dep as ReactiveEffect).pauseLevel !==
+        (3 satisfies PauseLevels.Stop),
+    ).toBeFalsy()
   })
 
   test('this.$watch should pass `this.proxy` to watch source as the first argument ', () => {
@@ -1489,7 +1503,7 @@ describe('api: watch', () => {
     createApp(Comp).mount(root)
     // should not record watcher in detached scope and only the instance's
     // own update effect
-    expect(instance!.scope.effects.length).toBe(1)
+    expect(getDepCount(instance!.scope)).toBe(1)
   })
 
   test('watchEffect should keep running if created in a detached scope', async () => {
@@ -1796,9 +1810,9 @@ describe('api: watch', () => {
     }
     const root = nodeOps.createElement('div')
     createApp(Comp).mount(root)
-    expect(instance!.scope.effects.length).toBe(2)
+    expect(getDepCount(instance!.scope)).toBe(2)
     unwatch!()
-    expect(instance!.scope.effects.length).toBe(1)
+    expect(getDepCount(instance!.scope)).toBe(1)
 
     const scope = effectScope()
     scope.run(() => {
@@ -1806,14 +1820,14 @@ describe('api: watch', () => {
         console.log(num.value)
       })
     })
-    expect(scope.effects.length).toBe(1)
+    expect(getDepCount(scope)).toBe(1)
     unwatch!()
-    expect(scope.effects.length).toBe(0)
+    expect(getDepCount(scope)).toBe(0)
 
     scope.run(() => {
       watch(num, () => {}, { once: true, immediate: true })
     })
-    expect(scope.effects.length).toBe(0)
+    expect(getDepCount(scope)).toBe(0)
   })
 
   // simplified case of VueUse syncRef

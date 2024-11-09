@@ -96,6 +96,7 @@ export function trigger(
 ): void {
   const depsMap = targetMap.get(target)
   if (!depsMap) {
+    // never been tracked
     return
   }
 
