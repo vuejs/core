@@ -117,6 +117,14 @@ export class ReactiveEffect<T = any> implements IEffect, ReactiveEffectOptions {
   pause(): void {
     if (this.pauseLevel === PauseLevels.None) {
       this.pauseLevel = PauseLevels.Paused
+
+      let dep = this.deps
+      while (dep !== undefined) {
+        if (dep.dep instanceof ReactiveEffect) {
+          dep.dep.pause()
+        }
+        dep = dep.nextDep
+      }
     }
   }
 
@@ -127,6 +135,15 @@ export class ReactiveEffect<T = any> implements IEffect, ReactiveEffectOptions {
     if (this.pauseLevel >= PauseLevels.Paused) {
       const shouldRun = this.pauseLevel === PauseLevels.Notify
       this.pauseLevel = PauseLevels.None
+
+      let dep = this.deps
+      while (dep !== undefined) {
+        if (dep.dep instanceof ReactiveEffect) {
+          dep.dep.resume()
+        }
+        dep = dep.nextDep
+      }
+
       if (shouldRun) {
         this.notify()
       }
@@ -187,11 +204,24 @@ export class ReactiveEffect<T = any> implements IEffect, ReactiveEffectOptions {
   }
 
   stop(): void {
+    if (!this.active) {
+      return
+    }
+
+    let dep = this.deps
+    while (dep !== undefined) {
+      if (dep.dep instanceof ReactiveEffect) {
+        dep.dep.stop()
+      }
+      dep = dep.nextDep
+    }
+
     if (this.deps !== undefined) {
       Subscriber.clearTrack(this.deps)
       this.deps = undefined
       this.depsTail = undefined
     }
+
     this.pauseLevel = PauseLevels.Stop
     this.dirtyLevel = 3 satisfies DirtyLevels.Dirty
     cleanupEffect(this)

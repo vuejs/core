@@ -136,21 +136,24 @@ export class EffectScope implements IEffect {
   }
 
   stop(): void {
-    if (this.active) {
-      this.pauseLevel = PauseLevels.Stop
-      let dep = this.deps
-      while (dep) {
-        ;(dep.dep as EffectScope | ReactiveEffect).stop()
-        dep = dep.nextDep
-      }
-      if (this.deps !== undefined) {
-        Subscriber.clearTrack(this.deps)
-        this.deps = undefined
-        this.depsTail = undefined
-      }
-      for (const cleanup of this.cleanups) {
-        cleanup()
-      }
+    if (!this.active) {
+      return
+    }
+
+    this.pauseLevel = PauseLevels.Stop
+    let dep = this.deps
+    while (dep) {
+      ;(dep.dep as EffectScope | ReactiveEffect).stop()
+      dep = dep.nextDep
+    }
+
+    if (this.deps !== undefined) {
+      Subscriber.clearTrack(this.deps)
+      this.deps = undefined
+      this.depsTail = undefined
+    }
+    for (const cleanup of this.cleanups) {
+      cleanup()
     }
   }
 }
