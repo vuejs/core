@@ -88,6 +88,10 @@ export class ReactiveEffect<T = any> implements IEffect, ReactiveEffectOptions {
     }
   }
 
+  get active(): boolean {
+    return this.pauseLevel !== PauseLevels.Stop
+  }
+
   get dirtyLevel(): DirtyLevels {
     return this._dirtyLevel
   }
@@ -117,13 +121,15 @@ export class ReactiveEffect<T = any> implements IEffect, ReactiveEffectOptions {
   }
 
   resume(): void {
-    if (this.pauseLevel === PauseLevels.Stop) {
+    if (!this.active) {
       return
     }
-    const shouldRun = this.pauseLevel === PauseLevels.Notify
-    this.pauseLevel = PauseLevels.None
-    if (shouldRun) {
-      this.notify()
+    if (this.pauseLevel >= PauseLevels.Paused) {
+      const shouldRun = this.pauseLevel === PauseLevels.Notify
+      this.pauseLevel = PauseLevels.None
+      if (shouldRun) {
+        this.notify()
+      }
     }
   }
 
@@ -164,7 +170,7 @@ export class ReactiveEffect<T = any> implements IEffect, ReactiveEffectOptions {
   run(): T {
     // TODO cleanupEffect
 
-    if (this.pauseLevel === PauseLevels.Stop) {
+    if (!this.active) {
       return this.fn()
     }
     cleanupEffect(this)

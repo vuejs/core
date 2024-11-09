@@ -1,8 +1,7 @@
 import {
   type ComputedRefImpl,
-  type PauseLevels,
   type ReactiveEffectRunner,
-  effect,
+  effect
 } from '@vue/reactivity'
 import {
   type ComponentInternalInstance,
@@ -454,15 +453,11 @@ describe('SFC <script setup> helpers', () => {
       app.mount(root)
 
       await ready
-      expect(
-        e!.effect.pauseLevel !== (3 satisfies PauseLevels.Stop),
-      ).toBeTruthy()
+      expect(e!.effect.active).toBeTruthy()
       expect(c!.trackId > 0).toBeTruthy()
 
       app.unmount()
-      expect(
-        e!.effect.pauseLevel !== (3 satisfies PauseLevels.Stop),
-      ).toBeFalsy()
+      expect(e!.effect.active).toBeFalsy()
       expect(c!.trackId > 0).toBeFalsy()
     })
   })

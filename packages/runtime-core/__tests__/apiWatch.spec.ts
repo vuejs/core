@@ -2,7 +2,6 @@ import {
   type DebuggerEvent,
   EffectScope,
   ITERATE_KEY,
-  type PauseLevels,
   ReactiveEffect,
   type Ref,
   type ShallowRef,
@@ -12,7 +11,7 @@ import {
   shallowReactive,
   shallowRef,
   toRef,
-  triggerRef,
+  triggerRef
 } from '@vue/reactivity'
 import {
   type TestElement,
@@ -1352,10 +1351,7 @@ describe('api: watch', () => {
     await nextTick()
     await nextTick()
 
-    expect(
-      (instance!.scope.deps!.dep as ReactiveEffect).pauseLevel !==
-        (3 satisfies PauseLevels.Stop),
-    ).toBeFalsy()
+    expect((instance!.scope.deps!.dep as ReactiveEffect).active).toBeFalsy()
   })
 
   test('this.$watch should pass `this.proxy` to watch source as the first argument ', () => {

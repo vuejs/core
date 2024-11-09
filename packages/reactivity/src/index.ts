@@ -57,7 +57,6 @@ export {
   resetTracking,
   onEffectCleanup,
   ReactiveEffect,
-  type PauseLevels,
   type ReactiveEffectRunner,
   type ReactiveEffectOptions,
   type EffectScheduler,

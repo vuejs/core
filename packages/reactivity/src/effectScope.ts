@@ -6,8 +6,8 @@ import {
   Subscriber,
   System,
 } from 'alien-signals'
-import { warn } from './warning'
 import { PauseLevels, ReactiveEffect } from './effect'
+import { warn } from './warning'
 
 export class EffectScope implements IEffect {
   nextNotify: IEffect | undefined = undefined
@@ -69,13 +69,22 @@ export class EffectScope implements IEffect {
    * Resumes the effect scope, including all child scopes and effects.
    */
   resume(): void {
-    if (this.pauseLevel === PauseLevels.Stop) {
+    if (!this.active) {
       return
     }
-    let dep = this.deps
-    while (dep !== undefined) {
-      ;(dep.dep as ReactiveEffect).resume()
-      dep = dep.nextDep
+    if (this.pauseLevel >= PauseLevels.Paused) {
+      const shouldRun = this.pauseLevel === PauseLevels.Notify
+      this.pauseLevel = PauseLevels.None
+
+      let dep = this.deps
+      while (dep !== undefined) {
+        ;(dep.dep as ReactiveEffect | EffectScope).resume()
+        dep = dep.nextDep
+      }
+
+      if (shouldRun) {
+        this.notify()
+      }
     }
   }
 
