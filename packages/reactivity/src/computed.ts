@@ -8,7 +8,7 @@ import {
   System,
 } from 'alien-signals'
 import { ReactiveFlags, TrackOpTypes } from './constants'
-import { onTrack } from './debug'
+import { onTrack, onTrigger } from './debug'
 import type { DebuggerEvent, DebuggerOptions } from './effect'
 import type { Ref } from './ref'
 import { warn } from './warning'
@@ -56,7 +56,7 @@ export class ComputedRefImpl<T = any> implements IComputed {
   deps: Link | undefined = undefined
   depsTail: Link | undefined = undefined
   trackId = 0
-  dirtyLevel: DirtyLevels = 3 satisfies DirtyLevels.Dirty
+  _dirtyLevel: DirtyLevels = 3 satisfies DirtyLevels.Dirty
   canPropagate = false
 
   /**
@@ -86,6 +86,21 @@ export class ComputedRefImpl<T = any> implements IComputed {
     public isSSR: boolean,
   ) {
     this[ReactiveFlags.IS_READONLY] = !setter
+  }
+
+  get dirtyLevel(): DirtyLevels {
+    return this._dirtyLevel
+  }
+
+  set dirtyLevel(value: DirtyLevels) {
+    if (
+      __DEV__ &&
+      value > (0 satisfies DirtyLevels.None) &&
+      value < (4 satisfies DirtyLevels.Released)
+    ) {
+      onTrigger(this)
+    }
+    this._dirtyLevel = value
   }
 
   get value(): T {

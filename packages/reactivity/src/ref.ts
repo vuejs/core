@@ -7,7 +7,8 @@ import {
 } from '@vue/shared'
 import { Dependency, endBatch, startBatch, System } from 'alien-signals'
 import type { ComputedRef, WritableComputedRef } from './computed'
-import { ReactiveFlags, TrackOpTypes } from './constants'
+import { ReactiveFlags, TrackOpTypes, TriggerOpTypes } from './constants'
+import { onTrack, triggerEventInfos } from './debug'
 import { getDepFromReactive } from './dep'
 import {
   type Builtin,
@@ -20,7 +21,6 @@ import {
   toReactive,
 } from './reactive'
 import { warn } from './warning'
-import { onTrack } from './debug'
 
 declare const RefSymbol: unique symbol
 export declare const RawSymbol: unique symbol
@@ -152,9 +152,21 @@ class RefImpl<T = any> implements Dependency {
       this._rawValue = newValue
       this._value = useDirectValue ? newValue : toReactive(newValue)
       if (this.subs !== undefined) {
+        if (__DEV__) {
+          triggerEventInfos.push({
+            target: this,
+            type: TriggerOpTypes.SET,
+            key: 'value',
+            newValue,
+            oldValue,
+          })
+        }
         startBatch()
         Dependency.propagate(this.subs)
         endBatch()
+        if (__DEV__) {
+          triggerEventInfos.pop()
+        }
       }
     }
   }

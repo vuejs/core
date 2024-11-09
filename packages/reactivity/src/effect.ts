@@ -1,6 +1,7 @@
 import { extend } from '@vue/shared'
-import { DirtyLevels, Effect, Subscriber, System } from 'alien-signals'
+import { DirtyLevels, IEffect, Link, Subscriber, System } from 'alien-signals'
 import type { TrackOpTypes, TriggerOpTypes } from './constants'
+import { onTrigger } from './debug'
 import { warn } from './warning'
 
 export type EffectScheduler = (...args: any[]) => any
@@ -54,10 +55,21 @@ export const enum PauseLevels {
   Stop = 3,
 }
 
-export class ReactiveEffect<T = any>
-  extends Effect
-  implements ReactiveEffectOptions
-{
+export class ReactiveEffect<T = any> implements IEffect, ReactiveEffectOptions {
+  nextNotify: IEffect | undefined = undefined
+
+  // Dependency
+  subs: Link | undefined = undefined
+  subsTail: Link | undefined = undefined
+  linkedTrackId = 0
+
+  // Subscriber
+  deps: Link | undefined = undefined
+  depsTail: Link | undefined = undefined
+  trackId = 0
+  _dirtyLevel: DirtyLevels = 3 satisfies DirtyLevels.Dirty
+  canPropagate = false
+
   pauseLevel: PauseLevels = PauseLevels.None
   allowRecurse = false
 
@@ -70,8 +82,21 @@ export class ReactiveEffect<T = any>
   onTrack?: (event: DebuggerEvent) => void
   onTrigger?: (event: DebuggerEvent) => void
 
-  constructor(public fn: () => T) {
-    super(fn)
+  constructor(public fn: () => T) {}
+
+  get dirtyLevel(): DirtyLevels {
+    return this._dirtyLevel
+  }
+
+  set dirtyLevel(value: DirtyLevels) {
+    if (
+      __DEV__ &&
+      value > (0 satisfies DirtyLevels.None) &&
+      value < (4 satisfies DirtyLevels.Released)
+    ) {
+      onTrigger(this)
+    }
+    this._dirtyLevel = value
   }
 
   get dirty(): boolean {
