@@ -3,7 +3,7 @@ import { entries } from './scripts/aliases.js'
 
 export default defineConfig({
   define: {
-    __DEV__: true,
+    __DEV__: process.env.MODE !== 'benchmark',
     __TEST__: true,
     __VERSION__: '"test"',
     __BROWSER__: false,
