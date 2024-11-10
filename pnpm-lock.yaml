@@ -28,6 +28,11 @@ catalogs:
       specifier: ^5.4.0
       version: 5.4.0
 
+patchedDependencies:
+  alien-signals:
+    hash: oqw4hnwgwrfjzh4dxrhvyy5lbq
+    path: patches/alien-signals.patch
+
 importers:
 
   .:
@@ -352,7 +357,7 @@ importers:
         version: link:../shared
       alien-signals:
         specifier: 0.2.1
-        version: 0.2.1
+        version: 0.2.1(patch_hash=oqw4hnwgwrfjzh4dxrhvyy5lbq)
 
   packages/runtime-core:
     dependencies:
@@ -4441,7 +4446,7 @@ snapshots:
       require-from-string: 2.0.2
       uri-js: 4.4.1
 
-  alien-signals@0.2.1: {}
+  alien-signals@0.2.1(patch_hash=oqw4hnwgwrfjzh4dxrhvyy5lbq): {}
 
   ansi-align@3.0.1:
     dependencies:

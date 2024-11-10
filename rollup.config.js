@@ -324,6 +324,17 @@ function createConfig(format, output, plugins = []) {
     // used alone.
     external: resolveExternal(),
     plugins: [
+      {
+        name: 'resolve-alien-signals',
+        resolveId(id) {
+          if (id === 'alien-signals') {
+            return path.resolve(
+              __dirname,
+              './packages/reactivity/node_modules/alien-signals/esm/index.mjs',
+            )
+          }
+        },
+      },
       json({
         namedExports: false,
       }),
