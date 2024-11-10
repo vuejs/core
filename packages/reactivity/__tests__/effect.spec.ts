@@ -22,7 +22,7 @@ import {
   serializeInner,
 } from '@vue/runtime-test'
 import { onEffectCleanup, pauseTracking, resetTracking } from '../src/effect'
-import { Dependency, endBatch, startBatch } from 'alien-signals'
+import { type Dependency, endBatch, startBatch } from 'alien-signals'
 
 describe('reactivity/effect', () => {
   it('should run the passed function once (wrapped by a effect)', () => {

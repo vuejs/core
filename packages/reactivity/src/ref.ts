@@ -5,7 +5,7 @@ import {
   isFunction,
   isObject,
 } from '@vue/shared'
-import { Dependency, endBatch, startBatch, System } from 'alien-signals'
+import { Dependency, System, endBatch, startBatch } from 'alien-signals'
 import type { ComputedRef, WritableComputedRef } from './computed'
 import { ReactiveFlags, TrackOpTypes, TriggerOpTypes } from './constants'
 import { onTrack, triggerEventInfos } from './debug'
@@ -187,24 +187,28 @@ class RefImpl<T = any> implements Dependency {
  */
 export function triggerRef(ref: Ref): void {
   // ref may be an instance of ObjectRefImpl
-  if ((ref as unknown as RefImpl).dep?.subs !== undefined) {
+  const dep = (ref as unknown as RefImpl).dep
+  if (dep !== undefined && dep.subs !== undefined) {
     startBatch()
-    Dependency.propagate((ref as unknown as RefImpl).dep!.subs!)
+    Dependency.propagate(dep.subs)
     endBatch()
   }
 }
 
 function trackRef(dep: Dependency) {
   const activeTrackId = System.activeTrackId
-  if (activeTrackId !== 0 && dep.subsTail?.trackId !== activeTrackId) {
-    if (__DEV__) {
-      onTrack(System.activeSub!, {
-        target: dep,
-        type: TrackOpTypes.GET,
-        key: 'value',
-      })
+  if (activeTrackId !== 0) {
+    const subsTail = dep.subsTail
+    if (subsTail !== undefined && subsTail.trackId !== activeTrackId) {
+      if (__DEV__) {
+        onTrack(System.activeSub!, {
+          target: dep,
+          type: TrackOpTypes.GET,
+          key: 'value',
+        })
+      }
+      Dependency.link(dep, System.activeSub!)
     }
-    Dependency.link(dep, System.activeSub!)
   }
 }
 

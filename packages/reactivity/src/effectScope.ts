@@ -1,5 +1,10 @@
-import { DirtyLevels, Link, Subscriber, System } from 'alien-signals'
-import { PauseLevels, ReactiveEffect } from './effect'
+import {
+  type DirtyLevels,
+  type Link,
+  type Subscriber,
+  System,
+} from 'alien-signals'
+import { PauseLevels, type ReactiveEffect } from './effect'
 import { warn } from './warning'
 
 export let activeEffectScope: EffectScope | undefined = undefined

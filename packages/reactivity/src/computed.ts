@@ -1,14 +1,14 @@
 import { isFunction } from '@vue/shared'
 import {
   Dependency,
-  DirtyLevels,
-  IComputed,
-  Link,
+  type DirtyLevels,
+  type IComputed,
+  type Link,
   Subscriber,
   System,
 } from 'alien-signals'
 import { ReactiveFlags, TrackOpTypes } from './constants'
-import { setupDirtyLevelHandler, onTrack } from './debug'
+import { onTrack, setupDirtyLevelHandler } from './debug'
 import type { DebuggerEvent, DebuggerOptions } from './effect'
 import type { Ref } from './ref'
 import { warn } from './warning'
@@ -135,15 +135,18 @@ export class ComputedRefImpl<T = any> implements IComputed {
       }
     }
     const activeTrackId = System.activeTrackId
-    if (activeTrackId !== 0 && this.subsTail?.trackId !== activeTrackId) {
-      if (__DEV__) {
-        onTrack(System.activeSub!, {
-          target: this,
-          type: TrackOpTypes.GET,
-          key: 'value',
-        })
+    if (activeTrackId !== 0) {
+      const subsTail = this.subsTail
+      if (subsTail !== undefined && subsTail.trackId !== activeTrackId) {
+        if (__DEV__) {
+          onTrack(System.activeSub!, {
+            target: this,
+            type: TrackOpTypes.GET,
+            key: 'value',
+          })
+        }
+        Dependency.link(this, System.activeSub!)
       }
-      Dependency.link(this, System.activeSub!)
     }
     return this._value!
   }

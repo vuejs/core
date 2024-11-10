@@ -1,5 +1,5 @@
 import { nextTick, watch, watchEffect } from '@vue/runtime-core'
-import { Subscriber } from 'alien-signals'
+import type { Subscriber } from 'alien-signals'
 import {
   type ComputedRef,
   EffectScope,

@@ -1,9 +1,9 @@
 import { extend } from '@vue/shared'
 import {
   Dependency,
-  DirtyLevels,
-  IEffect,
-  Link,
+  type DirtyLevels,
+  type IEffect,
+  type Link,
   Subscriber,
   System,
 } from 'alien-signals'
@@ -43,7 +43,7 @@ export interface ReactiveEffectRunner<T = any> {
   effect: ReactiveEffect
 }
 
-export const enum PauseLevels {
+export enum PauseLevels {
   None = 0,
   Paused = 1,
   Notify = 2,
@@ -181,7 +181,9 @@ export class ReactiveEffect<T = any> implements IEffect, ReactiveEffectOptions {
         this.depsTail = undefined
       }
       cleanupEffect(this)
-      this.onStop?.()
+      if (this.onStop !== undefined) {
+        this.onStop()
+      }
       this.pauseLevel = PauseLevels.Stop
     }
   }

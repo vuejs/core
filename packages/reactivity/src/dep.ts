@@ -1,5 +1,11 @@
 import { isArray, isIntegerKey, isMap, isSymbol } from '@vue/shared'
-import { Dependency, endBatch, Link, startBatch, System } from 'alien-signals'
+import {
+  Dependency,
+  type Link,
+  System,
+  endBatch,
+  startBatch,
+} from 'alien-signals'
 import { type TrackOpTypes, TriggerOpTypes } from './constants'
 import { onTrack, triggerEventInfos } from './debug'
 
@@ -63,7 +69,8 @@ export function track(target: object, type: TrackOpTypes, key: unknown): void {
     if (!dep) {
       depsMap.set(key, (dep = new Dep(depsMap, key)))
     }
-    if (dep.subsTail?.trackId !== activeTrackId) {
+    const subsTail = dep.subsTail
+    if (subsTail !== undefined && subsTail.trackId !== activeTrackId) {
       if (__DEV__) {
         onTrack(System.activeSub!, {
           target,
@@ -99,7 +106,7 @@ export function trigger(
   }
 
   const run = (dep: Dependency | undefined) => {
-    if (dep?.subs !== undefined) {
+    if (dep !== undefined && dep.subs !== undefined) {
       if (__DEV__) {
         triggerEventInfos.push({
           target,

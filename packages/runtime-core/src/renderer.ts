@@ -48,11 +48,7 @@ import {
   queueJob,
   queuePostFlushCb,
 } from './scheduler'
-import {
-  ReactiveEffect,
-  pauseTracking,
-  resetTracking,
-} from '@vue/reactivity'
+import { ReactiveEffect, pauseTracking, resetTracking } from '@vue/reactivity'
 import { updateProps } from './componentProps'
 import { updateSlots } from './componentSlots'
 import { popWarningContext, pushWarningContext, warn } from './warning'

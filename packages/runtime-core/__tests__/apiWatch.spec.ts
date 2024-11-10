@@ -1,8 +1,8 @@
 import {
   type DebuggerEvent,
-  EffectScope,
+  type EffectScope,
   ITERATE_KEY,
-  ReactiveEffect,
+  type ReactiveEffect,
   type Ref,
   type ShallowRef,
   TrackOpTypes,
@@ -11,7 +11,7 @@ import {
   shallowReactive,
   shallowRef,
   toRef,
-  triggerRef
+  triggerRef,
 } from '@vue/reactivity'
 import {
   type TestElement,
