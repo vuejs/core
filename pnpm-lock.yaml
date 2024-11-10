@@ -351,7 +351,7 @@ importers:
         specifier: workspace:*
         version: link:../shared
       alien-signals:
-        specifier: ^0.2.1
+        specifier: 0.2.1
         version: 0.2.1
 
   packages/runtime-core:
