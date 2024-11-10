@@ -40,12 +40,16 @@ export interface WritableComputedOptions<T, S = T> {
   set: ComputedSetter<S>
 }
 
+let globalVersion = 0
+let initSSR = false
+
 /**
  * @private exported by @vue/reactivity for Vue core use, but not exported from
  * the main vue package
  */
 export class ComputedRefImpl<T = any> implements IComputed {
   _value: T | undefined = undefined
+  version = -1
 
   // Dependency
   subs: Link | undefined = undefined
@@ -72,6 +76,10 @@ export class ComputedRefImpl<T = any> implements IComputed {
   get effect(): this {
     return this
   }
+  // for backwards compat
+  get dep(): Dependency {
+    return this
+  }
   // dev only
   onTrack?: (event: DebuggerEvent) => void
   // dev only
@@ -95,17 +103,36 @@ export class ComputedRefImpl<T = any> implements IComputed {
   }
 
   get value(): T {
-    const dirtyLevel = this.dirtyLevel
-    if (dirtyLevel === (2 satisfies DirtyLevels.MaybeDirty)) {
-      Subscriber.resolveMaybeDirty(this)
-      if (this.dirtyLevel === (3 satisfies DirtyLevels.Dirty)) {
+    // In SSR there will be no render effect, so the computed has no subscriber
+    // and therefore tracks no deps, thus we cannot rely on the dirty check.
+    // Instead, computed always re-evaluate and relies on the globalVersion
+    // fast path above for caching.
+    if (this.isSSR) {
+      if (!initSSR) {
+        initSSR = true
+        const propagate = Dependency.propagate
+        Dependency.propagate = (link: Link) => {
+          globalVersion++
+          propagate(link)
+        }
+      }
+      if (globalVersion !== this.version) {
+        this.version = globalVersion
         this.update()
       }
-    } else if (
-      dirtyLevel === (3 satisfies DirtyLevels.Dirty) ||
-      dirtyLevel === (4 satisfies DirtyLevels.Released)
-    ) {
-      this.update()
+    } else {
+      const dirtyLevel = this.dirtyLevel
+      if (dirtyLevel === (2 satisfies DirtyLevels.MaybeDirty)) {
+        Subscriber.resolveMaybeDirty(this)
+        if (this.dirtyLevel === (3 satisfies DirtyLevels.Dirty)) {
+          this.update()
+        }
+      } else if (
+        dirtyLevel === (3 satisfies DirtyLevels.Dirty) ||
+        dirtyLevel === (4 satisfies DirtyLevels.Released)
+      ) {
+        this.update()
+      }
     }
     const activeTrackId = System.activeTrackId
     if (activeTrackId !== 0 && this.subsTail?.trackId !== activeTrackId) {
