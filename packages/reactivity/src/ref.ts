@@ -369,10 +369,6 @@ export function toRefs<T extends object>(object: T): ToRefs<T> {
 }
 
 class ObjectRefImpl<T extends object, K extends keyof T> {
-  // Dependency
-  subs = undefined
-  subsTail = undefined
-
   public readonly [ReactiveFlags.IS_REF] = true
   public _value: T[K] = undefined!
 
