@@ -69,6 +69,10 @@ export class ComputedRefImpl<T = any> implements IComputed {
    */
   readonly __v_isReadonly: boolean
 
+  // for backwards compat
+  get effect(): this {
+    return this
+  }
   // dev only
   onTrack?: (event: DebuggerEvent) => void
   // dev only
