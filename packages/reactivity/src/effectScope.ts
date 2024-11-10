@@ -97,7 +97,7 @@ export class EffectScope implements Subscriber {
         return fn()
       } finally {
         activeEffectScope = prevSub
-        this.trackId = Math.abs(this.trackId)
+        this.trackId = -Math.abs(this.trackId)
       }
     } else if (__DEV__) {
       warn(`cannot run an inactive effect scope.`)
