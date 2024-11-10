@@ -70,7 +70,7 @@ export function track(target: object, type: TrackOpTypes, key: unknown): void {
       depsMap.set(key, (dep = new Dep(depsMap, key)))
     }
     const subsTail = dep.subsTail
-    if (subsTail !== undefined && subsTail.trackId !== activeTrackId) {
+    if (subsTail === undefined || subsTail.trackId !== activeTrackId) {
       if (__DEV__) {
         onTrack(System.activeSub!, {
           target,

@@ -199,7 +199,7 @@ function trackRef(dep: Dependency) {
   const activeTrackId = System.activeTrackId
   if (activeTrackId !== 0) {
     const subsTail = dep.subsTail
-    if (subsTail !== undefined && subsTail.trackId !== activeTrackId) {
+    if (subsTail === undefined || subsTail.trackId !== activeTrackId) {
       if (__DEV__) {
         onTrack(System.activeSub!, {
           target: dep,
