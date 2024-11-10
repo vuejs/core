@@ -10,6 +10,7 @@ import {
 import type { TrackOpTypes, TriggerOpTypes } from './constants'
 import { setupDirtyLevelHandler } from './debug'
 import { warn } from './warning'
+import { activeEffectScope } from './effectScope'
 
 export type EffectScheduler = (...args: any[]) => any
 
@@ -76,9 +77,14 @@ export class ReactiveEffect<T = any> implements IEffect, ReactiveEffectOptions {
   onTrigger?: (event: DebuggerEvent) => void
 
   constructor(public fn: () => T) {
-    const activeEffectScopeTrackId = System.activeEffectScopeTrackId
-    if (activeEffectScopeTrackId !== 0) {
-      Dependency.linkSubscriber(this, System.activeEffectScope!)
+    if (activeEffectScope !== undefined) {
+      const subsTail = this.subsTail
+      if (
+        subsTail === undefined ||
+        subsTail.trackId !== activeEffectScope.trackId
+      ) {
+        Dependency.link(this, activeEffectScope)
+      }
     }
     if (__DEV__) {
       setupDirtyLevelHandler(this)
@@ -156,11 +162,11 @@ export class ReactiveEffect<T = any> implements IEffect, ReactiveEffectOptions {
       return this.fn()
     }
     cleanupEffect(this)
-    const prevSub = Subscriber.startTrackDependencies(this)
+    const prevSub = Subscriber.startTrack(this)
     try {
       return this.fn()
     } finally {
-      Subscriber.endTrackDependencies(this, prevSub)
+      Subscriber.endTrack(this, prevSub)
       if (this.canPropagate && this.allowRecurse) {
         this.canPropagate = false
         this.notify()

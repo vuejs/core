@@ -98,8 +98,9 @@ describe('reactivity/effect/scope', () => {
       })
     })
 
-    expect(getDepCount(scope)).toBe(2)
-    expect(scope.deps?.nextDep?.dep).toBeInstanceOf(EffectScope)
+    expect(getDepCount(scope)).toBe(1)
+    expect(scope.scopes!.length).toBe(1)
+    expect(scope.scopes![0]).toBeInstanceOf(EffectScope)
 
     expect(dummy).toBe(0)
     counter.num = 7

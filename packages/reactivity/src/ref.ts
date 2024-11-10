@@ -200,7 +200,7 @@ function track(dep: Dependency) {
         key: 'value',
       })
     }
-    Dependency.linkSubscriber(dep, System.activeSub!)
+    Dependency.link(dep, System.activeSub!)
   }
 }
 

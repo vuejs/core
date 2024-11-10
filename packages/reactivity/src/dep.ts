@@ -71,7 +71,7 @@ export function track(target: object, type: TrackOpTypes, key: unknown): void {
           key,
         })
       }
-      Dependency.linkSubscriber(dep, System.activeSub!)
+      Dependency.link(dep, System.activeSub!)
     }
   }
 }

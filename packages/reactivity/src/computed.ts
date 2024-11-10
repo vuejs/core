@@ -116,7 +116,7 @@ export class ComputedRefImpl<T = any> implements IComputed {
           key: 'value',
         })
       }
-      Dependency.linkSubscriber(this, System.activeSub!)
+      Dependency.link(this, System.activeSub!)
     }
     return this._value!
   }
@@ -130,13 +130,13 @@ export class ComputedRefImpl<T = any> implements IComputed {
   }
 
   update(): void {
-    const prevSub = Subscriber.startTrackDependencies(this)
+    const prevSub = Subscriber.startTrack(this)
     const oldValue = this._value
     let newValue: T
     try {
       newValue = this.fn(oldValue)
     } finally {
-      Subscriber.endTrackDependencies(this, prevSub)
+      Subscriber.endTrack(this, prevSub)
     }
     if (oldValue !== newValue) {
       this._value = newValue
