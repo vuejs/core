@@ -51,6 +51,6 @@
   "homepage": "https://github.com/vuejs/core/tree/main/packages/reactivity#readme",
   "dependencies": {
     "@vue/shared": "workspace:*",
-    "alien-signals": "^0.2.0"
+    "alien-signals": "^0.2.1"
   }
 }
