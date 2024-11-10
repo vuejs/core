@@ -121,9 +121,6 @@ export class ReactiveEffect<T = any> implements IEffect, ReactiveEffectOptions {
   }
 
   notify(): void {
-    // if (__DEV__ && this.onTrigger !== undefined) {
-    //   this.onTrigger?.()
-    // }
     if (this.pauseLevel !== PauseLevels.None) {
       if (this.pauseLevel === PauseLevels.Paused) {
         this.pauseLevel = PauseLevels.Notify
