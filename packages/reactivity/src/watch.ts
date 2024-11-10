@@ -9,6 +9,7 @@ import {
   isPlainObject,
   isSet,
 } from '@vue/shared'
+import { Link } from 'alien-signals'
 import type { ComputedRef } from './computed'
 import { ReactiveFlags } from './constants'
 import {
@@ -16,8 +17,9 @@ import {
   type EffectScheduler,
   ReactiveEffect,
   pauseTracking,
-  resetTracking
+  resetTracking,
 } from './effect'
+import { getCurrentScope } from './effectScope'
 import { isReactive, isShallow } from './reactive'
 import { type Ref, isRef } from './ref'
 import { warn } from './warning'
@@ -207,8 +209,30 @@ export function watch(
     getter = () => traverse(baseGetter(), depth)
   }
 
+  const scope = getCurrentScope()
   const watchHandle: WatchHandle = () => {
     effect.stop()
+    if (scope) {
+      let prevDep: Link | undefined
+      let link = scope.deps
+      while (link !== undefined) {
+        if (link.dep === effect) {
+          const nextDep = link.nextDep
+          if (prevDep !== undefined) {
+            prevDep.nextDep = nextDep
+          }
+          if (nextDep === undefined) {
+            scope.depsTail = prevDep
+          }
+          if (prevDep === undefined) {
+            scope.deps = nextDep
+          }
+          Link.release(link)
+          break
+        }
+        link = link.nextDep
+      }
+    }
   }
 
   if (once && cb) {
