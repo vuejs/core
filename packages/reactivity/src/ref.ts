@@ -111,7 +111,6 @@ class RefImpl<T = any> implements Dependency {
   // Dependency
   subs = undefined
   subsTail = undefined
-  linkedTrackId = 0
 
   _value: T
   private _rawValue: T
@@ -297,7 +296,6 @@ class CustomRefImpl<T> implements Dependency {
   // Dependency
   subs = undefined
   subsTail = undefined
-  linkedTrackId = 0
 
   private readonly _get: ReturnType<CustomRefFactory<T>>['get']
   private readonly _set: ReturnType<CustomRefFactory<T>>['set']
@@ -362,7 +360,6 @@ class ObjectRefImpl<T extends object, K extends keyof T> implements Dependency {
   // Dependency
   subs = undefined
   subsTail = undefined
-  linkedTrackId = 0
 
   public readonly [ReactiveFlags.IS_REF] = true
   public _value: T[K] = undefined!

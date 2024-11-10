@@ -15,7 +15,6 @@ export class EffectScope implements IEffect {
   // Dependency
   subs: Link | undefined = undefined
   subsTail: Link | undefined = undefined
-  linkedTrackId = 0
 
   // Subscriber
   deps: Link | undefined = undefined

@@ -6,7 +6,6 @@ import { onTrack, triggerEventInfos } from './debug'
 class Dep implements Dependency {
   _subs: Link | undefined = undefined
   subsTail: Link | undefined = undefined
-  linkedTrackId = 0
 
   constructor(
     private map: KeyToDepMap,

@@ -55,7 +55,6 @@ export class ReactiveEffect<T = any> implements IEffect, ReactiveEffectOptions {
   // Dependency
   subs: Link | undefined = undefined
   subsTail: Link | undefined = undefined
-  linkedTrackId = 0
 
   // Subscriber
   deps: Link | undefined = undefined
