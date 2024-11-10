@@ -235,9 +235,9 @@ describe('reactivity/effect/scope', () => {
   it('should dereference child scope from parent scope after stopping child scope (no memleaks)', () => {
     const parent = effectScope()
     const child = parent.run(() => effectScope())!
-    expect(parent.deps?.dep).toBe(child)
+    expect(parent.scopes!.includes(child)).toBe(true)
     child.stop()
-    expect(parent.deps).toBeUndefined()
+    expect(parent.scopes!.includes(child)).toBe(false)
   })
 
   it('test with higher level APIs', async () => {
