@@ -8,7 +8,7 @@ import {
   System,
 } from 'alien-signals'
 import type { TrackOpTypes, TriggerOpTypes } from './constants'
-import { onTrigger } from './debug'
+import { setupDirtyLevelHandler } from './debug'
 import { warn } from './warning'
 
 export type EffectScheduler = (...args: any[]) => any
@@ -60,7 +60,7 @@ export class ReactiveEffect<T = any> implements IEffect, ReactiveEffectOptions {
   deps: Link | undefined = undefined
   depsTail: Link | undefined = undefined
   trackId = 0
-  _dirtyLevel: DirtyLevels = 3 satisfies DirtyLevels.Dirty
+  dirtyLevel: DirtyLevels = 3 satisfies DirtyLevels.Dirty
   canPropagate = false
 
   pauseLevel: PauseLevels = PauseLevels.None
@@ -80,25 +80,13 @@ export class ReactiveEffect<T = any> implements IEffect, ReactiveEffectOptions {
     if (activeEffectScopeTrackId !== 0) {
       Dependency.linkSubscriber(this, System.activeEffectScope!)
     }
+    if (__DEV__) {
+      setupDirtyLevelHandler(this)
+    }
   }
 
   get active(): boolean {
     return this.pauseLevel !== PauseLevels.Stop
-  }
-
-  get dirtyLevel(): DirtyLevels {
-    return this._dirtyLevel
-  }
-
-  set dirtyLevel(value: DirtyLevels) {
-    if (
-      __DEV__ &&
-      value > (0 satisfies DirtyLevels.None) &&
-      value < (4 satisfies DirtyLevels.Released)
-    ) {
-      onTrigger(this)
-    }
-    this._dirtyLevel = value
   }
 
   get dirty(): boolean {
