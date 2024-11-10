@@ -77,7 +77,7 @@ export class ReactiveEffect<T = any> implements IEffect, ReactiveEffectOptions {
   onTrigger?: (event: DebuggerEvent) => void
 
   constructor(public fn: () => T) {
-    if (activeEffectScope !== undefined) {
+    if (activeEffectScope !== undefined && activeEffectScope.active) {
       const subsTail = this.subsTail
       if (
         subsTail === undefined ||
@@ -109,14 +109,13 @@ export class ReactiveEffect<T = any> implements IEffect, ReactiveEffectOptions {
   }
 
   resume(): void {
-    if (!this.active) {
-      return
-    }
-    if (this.pauseLevel >= PauseLevels.Paused) {
-      const shouldRun = this.pauseLevel === PauseLevels.Notify
-      this.pauseLevel = PauseLevels.None
-      if (shouldRun) {
-        this.notify()
+    if (this.active) {
+      if (this.pauseLevel >= PauseLevels.Paused) {
+        const shouldRun = this.pauseLevel === PauseLevels.Notify
+        this.pauseLevel = PauseLevels.None
+        if (shouldRun) {
+          this.notify()
+        }
       }
     }
   }
@@ -175,18 +174,16 @@ export class ReactiveEffect<T = any> implements IEffect, ReactiveEffectOptions {
   }
 
   stop(): void {
-    if (!this.active) {
-      return
+    if (this.active) {
+      if (this.deps !== undefined) {
+        Subscriber.clearTrack(this.deps)
+        this.deps = undefined
+        this.depsTail = undefined
+      }
+      cleanupEffect(this)
+      this.onStop?.()
+      this.pauseLevel = PauseLevels.Stop
     }
-    if (this.deps !== undefined) {
-      Subscriber.clearTrack(this.deps)
-      this.deps = undefined
-      this.depsTail = undefined
-    }
-    this.pauseLevel = PauseLevels.Stop
-    this.dirtyLevel = 3 satisfies DirtyLevels.Dirty
-    cleanupEffect(this)
-    this.onStop?.()
   }
 }
 
