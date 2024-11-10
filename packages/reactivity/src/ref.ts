@@ -124,8 +124,12 @@ class RefImpl<T = any> implements Dependency {
     this[ReactiveFlags.IS_SHALLOW] = isShallow
   }
 
+  get dep() {
+    return this
+  }
+
   get value() {
-    track(this)
+    trackRef(this)
     return this._value
   }
 
@@ -183,14 +187,14 @@ class RefImpl<T = any> implements Dependency {
  */
 export function triggerRef(ref: Ref): void {
   // ref may be an instance of ObjectRefImpl
-  if ((ref as unknown as Dependency).subs !== undefined) {
+  if ((ref as unknown as RefImpl).dep?.subs !== undefined) {
     startBatch()
-    Dependency.propagate((ref as unknown as Dependency).subs!)
+    Dependency.propagate((ref as unknown as RefImpl).dep!.subs!)
     endBatch()
   }
 }
 
-function track(dep: Dependency) {
+function trackRef(dep: Dependency) {
   const activeTrackId = System.activeTrackId
   if (activeTrackId !== 0 && dep.subsTail?.trackId !== activeTrackId) {
     if (__DEV__) {
@@ -306,11 +310,15 @@ class CustomRefImpl<T> implements Dependency {
 
   constructor(factory: CustomRefFactory<T>) {
     const { get, set } = factory(
-      () => track(this),
+      () => trackRef(this),
       () => triggerRef(this as unknown as Ref),
     )
     this._get = get
     this._set = set
+  }
+
+  get dep() {
+    return this
   }
 
   get value() {
@@ -356,7 +364,7 @@ export function toRefs<T extends object>(object: T): ToRefs<T> {
   return ret
 }
 
-class ObjectRefImpl<T extends object, K extends keyof T> implements Dependency {
+class ObjectRefImpl<T extends object, K extends keyof T> {
   // Dependency
   subs = undefined
   subsTail = undefined

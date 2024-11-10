@@ -70,8 +70,8 @@ export class EffectScope implements Subscriber {
       if (this.pauseLevel >= PauseLevels.Paused) {
         this.pauseLevel = PauseLevels.None
         if (this.scopes) {
-          for (const scope of this.scopes) {
-            scope.resume()
+          for (let i = 0, l = this.scopes.length; i < l; i++) {
+            this.scopes[i].resume()
           }
         }
         let dep = this.deps
@@ -122,17 +122,13 @@ export class EffectScope implements Subscriber {
         ;(dep.dep as ReactiveEffect).stop()
         dep = dep.nextDep
       }
-      if (this.deps !== undefined) {
-        Subscriber.clearTrack(this.deps)
-        this.deps = undefined
-        this.depsTail = undefined
-      }
-      for (const cleanup of this.cleanups) {
-        cleanup()
+      let i, l
+      for (i = 0, l = this.cleanups.length; i < l; i++) {
+        this.cleanups[i]()
       }
       if (this.scopes) {
-        for (const scope of this.scopes) {
-          scope.stop(true)
+        for (i = 0, l = this.scopes.length; i < l; i++) {
+          this.scopes[i].stop(true)
         }
       }
       // nested scope, dereference from parent to avoid memory leaks

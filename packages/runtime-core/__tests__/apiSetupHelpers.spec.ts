@@ -1,7 +1,7 @@
 import {
   type ComputedRefImpl,
   type ReactiveEffectRunner,
-  effect
+  effect,
 } from '@vue/reactivity'
 import {
   type ComponentInternalInstance,
@@ -454,7 +454,7 @@ describe('SFC <script setup> helpers', () => {
 
       await ready
       expect(e!.effect.active).toBeTruthy()
-      expect(c!.trackId > 0).toBeTruthy()
+      expect(c!.trackId > 0).toBeFalsy()
 
       app.unmount()
       expect(e!.effect.active).toBeFalsy()
