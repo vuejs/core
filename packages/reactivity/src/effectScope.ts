@@ -66,20 +66,19 @@ export class EffectScope implements Subscriber {
    * Resumes the effect scope, including all child scopes and effects.
    */
   resume(): void {
-    if (!this.active) {
-      return
-    }
-    if (this.pauseLevel >= PauseLevels.Paused) {
-      this.pauseLevel = PauseLevels.None
-      if (this.scopes) {
-        for (const scope of this.scopes) {
-          scope.resume()
+    if (this.active) {
+      if (this.pauseLevel >= PauseLevels.Paused) {
+        this.pauseLevel = PauseLevels.None
+        if (this.scopes) {
+          for (const scope of this.scopes) {
+            scope.resume()
+          }
         }
-      }
-      let dep = this.deps
-      while (dep !== undefined) {
-        ;(dep.dep as ReactiveEffect).resume()
-        dep = dep.nextDep
+        let dep = this.deps
+        while (dep !== undefined) {
+          ;(dep.dep as ReactiveEffect).resume()
+          dep = dep.nextDep
+        }
       }
     }
   }
@@ -117,38 +116,37 @@ export class EffectScope implements Subscriber {
   }
 
   stop(fromParent?: boolean): void {
-    if (!this.active) {
-      return
-    }
-    let dep = this.deps
-    while (dep) {
-      ;(dep.dep as ReactiveEffect).stop()
-      dep = dep.nextDep
-    }
-    if (this.deps !== undefined) {
-      Subscriber.clearTrack(this.deps)
-      this.deps = undefined
-      this.depsTail = undefined
-    }
-    for (const cleanup of this.cleanups) {
-      cleanup()
-    }
-    if (this.scopes) {
-      for (const scope of this.scopes) {
-        scope.stop(true)
+    if (this.active) {
+      let dep = this.deps
+      while (dep) {
+        ;(dep.dep as ReactiveEffect).stop()
+        dep = dep.nextDep
       }
-    }
-    // nested scope, dereference from parent to avoid memory leaks
-    if (!this.detached && this.parent && !fromParent) {
-      // optimized O(1) removal
-      const last = this.parent.scopes!.pop()
-      if (last && last !== this) {
-        this.parent.scopes![this.index!] = last
-        last.index = this.index!
+      if (this.deps !== undefined) {
+        Subscriber.clearTrack(this.deps)
+        this.deps = undefined
+        this.depsTail = undefined
       }
+      for (const cleanup of this.cleanups) {
+        cleanup()
+      }
+      if (this.scopes) {
+        for (const scope of this.scopes) {
+          scope.stop(true)
+        }
+      }
+      // nested scope, dereference from parent to avoid memory leaks
+      if (!this.detached && this.parent && !fromParent) {
+        // optimized O(1) removal
+        const last = this.parent.scopes!.pop()
+        if (last && last !== this) {
+          this.parent.scopes![this.index!] = last
+          last.index = this.index!
+        }
+      }
+      this.parent = undefined
+      this.pauseLevel = PauseLevels.Stop
     }
-    this.parent = undefined
-    this.pauseLevel = PauseLevels.Stop
   }
 }
 
