@@ -49,7 +49,7 @@ let initSSR = false
  */
 export class ComputedRefImpl<T = any> implements IComputed {
   _value: T | undefined = undefined
-  version = -1
+  globalVersion = -1
 
   // Dependency
   subs: Link | undefined = undefined
@@ -116,8 +116,8 @@ export class ComputedRefImpl<T = any> implements IComputed {
           propagate(link)
         }
       }
-      if (globalVersion !== this.version) {
-        this.version = globalVersion
+      if (globalVersion !== this.globalVersion) {
+        this.globalVersion = globalVersion
         this.update()
       }
     } else {
