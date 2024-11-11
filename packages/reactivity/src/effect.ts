@@ -104,9 +104,6 @@ export class ReactiveEffect<T = any> implements IEffect, ReactiveEffectOptions {
     }
   }
 
-  /**
-   * @internal
-   */
   notify(): void {
     const pauseLevel = this.pauseLevel
     if (pauseLevel === PauseLevels.None) {
