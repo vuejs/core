@@ -104,6 +104,9 @@ export class ReactiveEffect<T = any> implements IEffect, ReactiveEffectOptions {
     }
   }
 
+  /**
+   * @internal
+   */
   notify(): void {
     const pauseLevel = this.pauseLevel
     if (pauseLevel === PauseLevels.None) {
@@ -222,13 +225,13 @@ export function stop(runner: ReactiveEffectRunner): void {
   runner.effect.stop()
 }
 
-const pausedSubs: (typeof System.activeSub)[] = []
+const resetTrackingStack: (typeof System.activeSub)[] = []
 
 /**
  * Temporarily pauses tracking.
  */
 export function pauseTracking(): void {
-  pausedSubs.push(System.activeSub)
+  resetTrackingStack.push(System.activeSub)
   System.activeSub = undefined
   System.activeTrackId = 0
 }
@@ -237,21 +240,47 @@ export function pauseTracking(): void {
  * Re-enables effect tracking (if it was paused).
  */
 export function enableTracking(): void {
-  throw new Error('Not implemented')
+  const activeSub = System.activeSub
+  const isPaused = activeSub === undefined
+  if (!isPaused) {
+    // Add the current active effect to the trackResetStack so it can be
+    // restored by calling resetTracking.
+    resetTrackingStack.push(activeSub)
+  } else {
+    // Add a placeholder to the trackResetStack so we can it can be popped
+    // to restore the previous active effect.
+    resetTrackingStack.push(undefined)
+    let prevSub: Subscriber | undefined
+    for (let i = resetTrackingStack.length - 1; i >= 0; i--) {
+      if (resetTrackingStack[i] !== undefined) {
+        prevSub = resetTrackingStack[i]
+        break
+      }
+    }
+    if (prevSub !== undefined) {
+      System.activeSub = prevSub
+      System.activeTrackId = prevSub.trackId
+    }
+  }
 }
 
 /**
  * Resets the previous global effect tracking state.
  */
 export function resetTracking(): void {
-  const prevSub = pausedSubs.pop()
+  if (__DEV__ && resetTrackingStack.length === 0) {
+    warn(
+      `resetTracking() was called when there was no active tracking ` +
+        `to reset.`,
+    )
+  }
+  const prevSub = resetTrackingStack.pop()
   if (prevSub !== undefined) {
-    System.activeSub = prevSub
     System.activeTrackId = prevSub.trackId
   } else {
-    System.activeSub = undefined
     System.activeTrackId = 0
   }
+  System.activeSub = prevSub
 }
 
 /**
