@@ -121,19 +121,13 @@ export class ReactiveEffect<T = any> implements IEffect, ReactiveEffectOptions {
    * @internal
    */
   runIfDirty(): void {
-    const dirtyLevel = this.dirtyLevel
-    if (dirtyLevel === (1 satisfies DirtyLevels.SideEffectsOnly)) {
-      this.dirtyLevel = 0 satisfies DirtyLevels.None
-      Subscriber.runInnerEffects(this.deps)
-    } else {
-      if (dirtyLevel === (2 satisfies DirtyLevels.MaybeDirty)) {
-        Subscriber.resolveMaybeDirty(this)
-      }
-      if (this.dirtyLevel === (3 satisfies DirtyLevels.Dirty)) {
-        this.run()
-      } else {
-        Subscriber.runInnerEffects(this.deps)
-      }
+    let dirtyLevel = this.dirtyLevel
+    if (dirtyLevel === (2 satisfies DirtyLevels.MaybeDirty)) {
+      Subscriber.resolveMaybeDirty(this)
+      dirtyLevel = this.dirtyLevel
+    }
+    if (dirtyLevel >= (3 satisfies DirtyLevels.Dirty)) {
+      this.run()
     }
   }
 

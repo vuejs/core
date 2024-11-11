@@ -131,16 +131,12 @@ export class ComputedRefImpl<T = any> implements IComputed {
         this.update()
       }
     } else {
-      const dirtyLevel = this.dirtyLevel
+      let dirtyLevel = this.dirtyLevel
       if (dirtyLevel === (2 satisfies DirtyLevels.MaybeDirty)) {
         Subscriber.resolveMaybeDirty(this)
-        if (this.dirtyLevel === (3 satisfies DirtyLevels.Dirty)) {
-          this.update()
-        }
-      } else if (
-        dirtyLevel === (3 satisfies DirtyLevels.Dirty) ||
-        dirtyLevel === (4 satisfies DirtyLevels.Released)
-      ) {
+        dirtyLevel = this.dirtyLevel
+      }
+      if (dirtyLevel >= (3 satisfies DirtyLevels.Dirty)) {
         this.update()
       }
     }
@@ -177,6 +173,9 @@ export class ComputedRefImpl<T = any> implements IComputed {
       newValue = this.fn(oldValue)
     } finally {
       Subscriber.endTrack(this, prevSub)
+      if (this.deps === undefined) {
+        this.dirtyLevel = 3 satisfies DirtyLevels.Dirty
+      }
     }
     if (hasChanged(oldValue, newValue)) {
       this._value = newValue
