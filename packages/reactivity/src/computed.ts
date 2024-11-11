@@ -94,9 +94,17 @@ export class ComputedRefImpl<T = any> implements IComputed {
   constructor(
     public fn: ComputedGetter<T>,
     private readonly setter: ComputedSetter<T> | undefined,
-    public isSSR: boolean,
+    private isSSR: boolean,
   ) {
     this[ReactiveFlags.IS_READONLY] = !setter
+    if (!initSSR) {
+      initSSR = true
+      const propagate = Dependency.propagate
+      Dependency.propagate = (link: Link) => {
+        globalVersion++
+        propagate(link)
+      }
+    }
     if (__DEV__) {
       setupDirtyLevelHandler(this)
     }
@@ -108,14 +116,6 @@ export class ComputedRefImpl<T = any> implements IComputed {
     // Instead, computed always re-evaluate and relies on the globalVersion
     // fast path above for caching.
     if (this.isSSR) {
-      if (!initSSR) {
-        initSSR = true
-        const propagate = Dependency.propagate
-        Dependency.propagate = (link: Link) => {
-          globalVersion++
-          propagate(link)
-        }
-      }
       if (globalVersion !== this.globalVersion) {
         this.globalVersion = globalVersion
         this.update()
