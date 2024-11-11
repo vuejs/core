@@ -97,7 +97,7 @@ export class ComputedRefImpl<T = any> implements IComputed {
     private isSSR: boolean,
   ) {
     this[ReactiveFlags.IS_READONLY] = !setter
-    if (!initSSR) {
+    if (isSSR && !initSSR) {
       initSSR = true
       const propagate = Dependency.propagate
       Dependency.propagate = (link: Link) => {
