@@ -5,7 +5,6 @@
   "cSpell.enabledLanguageIds": ["markdown", "plaintext", "text", "yml"],
 
   // Use prettier to format typescript, javascript and JSON files
-  "editor.formatOnSave": true,
   "[typescript]": {
     "editor.defaultFormatter": "esbenp.prettier-vscode"
   },

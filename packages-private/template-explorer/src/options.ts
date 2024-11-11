@@ -40,11 +40,11 @@ const App = {
         compilerOptions.prefixIdentifiers || compilerOptions.mode === 'module'
 
       return [
-        h('h1', `Vue Vapor Template Explorer`),
+        h('h1', `Vue Template Explorer`),
         h(
           'a',
           {
-            href: `https://github.com/vuejs/vue-vapor/tree/${__COMMIT__}`,
+            href: `https://github.com/vuejs/vue/tree/${__COMMIT__}`,
             target: `_blank`,
           },
           `@${__COMMIT__}`,

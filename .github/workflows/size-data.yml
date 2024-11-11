@@ -18,7 +18,7 @@ env:
 
 jobs:
   upload:
-    if: github.repository == 'vuejs/vue-vapor'
+    if: github.repository == 'vuejs/core'
     runs-on: ubuntu-latest
 
     steps:
@@ -37,17 +37,6 @@ jobs:
         run: pnpm install
 
       - run: pnpm run size
-
-      - name: Download Previous Size Data
-        uses: dawidd6/action-download-artifact@v2
-        if: ${{ github.event_name == 'push' }}
-        with:
-          branch: main
-          workflow: size-data.yml
-          event: push
-          name: size-data
-          path: temp/size-prev
-          if_no_artifact_found: warn
 
       - name: Save PR number & base branch
         if: ${{github.event_name == 'pull_request'}}

@@ -10,7 +10,6 @@ import {
 } from '@vue/repl'
 import Monaco from '@vue/repl/monaco-editor'
 import { ref, watchEffect, onMounted, computed, watch } from 'vue'
-import welcomeSFC from './welcome.vue?raw'
 
 const replRef = ref<InstanceType<typeof Repl>>()
 
@@ -98,9 +97,6 @@ const store = useStore(
     vueVersion,
     builtinImportMap: importMap,
     sfcOptions,
-    template: ref({
-      welcomeSFC: welcomeSFC,
-    }),
   },
   hash,
 )
