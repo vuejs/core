@@ -28,11 +28,6 @@ catalogs:
       specifier: ^5.4.0
       version: 5.4.0
 
-patchedDependencies:
-  alien-signals:
-    hash: oqw4hnwgwrfjzh4dxrhvyy5lbq
-    path: patches/alien-signals.patch
-
 importers:
 
   .:
@@ -356,8 +351,8 @@ importers:
         specifier: workspace:*
         version: link:../shared
       alien-signals:
-        specifier: 0.2.1
-        version: 0.2.1(patch_hash=oqw4hnwgwrfjzh4dxrhvyy5lbq)
+        specifier: 0.2.2-alpha.0
+        version: 0.2.2-alpha.0
 
   packages/runtime-core:
     dependencies:
@@ -1489,8 +1484,8 @@ packages:
   ajv@8.12.0:
     resolution: {integrity: sha512-sRu1kpcO9yLtYxBKvqfTeh9KzZEwO3STyX1HT+4CaDzC6HpTGYhIhPIzj9XuKU7KYDwnaeh5hcOwjy1QuJzBPA==}
 
-  alien-signals@0.2.1:
-    resolution: {integrity: sha512-FlEQrDJe9r2RI4cDlnK2zYqJezvx1uJaWEuwxsnlFqnPwvJbgitNBRumWrLDv8lA+7cCikpMxfJD2TTHiaTklA==}
+  alien-signals@0.2.2-alpha.0:
+    resolution: {integrity: sha512-0YQL8ceF95qg3VhTgEDJFz6YptInQcCOHjpQkS2sGs5WZGj1rLsUs2QXy1VjBCKvTCeAo9VVJAOsWQTlQ83dlQ==}
 
   ansi-align@3.0.1:
     resolution: {integrity: sha512-IOfwwBF5iczOjp/WeY4YxyjqAFMQoZufdQWDd19SEExbVLNXqvpzSJ/M7Za4/sCPmQ0+GRquoA7bGcINcxew6w==}
@@ -4446,7 +4441,7 @@ snapshots:
       require-from-string: 2.0.2
       uri-js: 4.4.1
 
-  alien-signals@0.2.1(patch_hash=oqw4hnwgwrfjzh4dxrhvyy5lbq): {}
+  alien-signals@0.2.2-alpha.0: {}
 
   ansi-align@3.0.1:
     dependencies:
