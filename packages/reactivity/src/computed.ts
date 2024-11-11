@@ -1,4 +1,4 @@
-import { isFunction } from '@vue/shared'
+import { hasChanged, isFunction } from '@vue/shared'
 import {
   Dependency,
   type DirtyLevels,
@@ -178,7 +178,7 @@ export class ComputedRefImpl<T = any> implements IComputed {
     } finally {
       Subscriber.endTrack(this, prevSub)
     }
-    if (oldValue !== newValue) {
+    if (hasChanged(oldValue, newValue)) {
       this._value = newValue
       const subs = this.subs
       if (subs !== undefined) {
