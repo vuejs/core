@@ -72,8 +72,8 @@ const swapRows = wrap('swap', () => {
 async function bench() {
   for (let i = 0; i < 30; i++) {
     rows.value = []
-    await defer()
     await runLots()
+    await defer()
   }
 }
 

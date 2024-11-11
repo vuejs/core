@@ -2,6 +2,8 @@
 /* eslint-disable no-restricted-syntax */
 /* eslint-disable no-restricted-globals */
 
+import { nextTick } from '@vue/vapor'
+
 declare namespace globalThis {
   let doProfile: boolean
   let reactivity: boolean
@@ -29,13 +31,13 @@ export function wrap(
     document.body.classList.remove('done')
 
     const { doProfile } = globalThis
-    await defer()
+    await nextTick()
 
     doProfile && console.profile(id)
     const start = performance.now()
     fn(...args)
 
-    await defer()
+    await nextTick()
     let time: number
     if (globalThis.reactivity) {
       time = performance.measure(
