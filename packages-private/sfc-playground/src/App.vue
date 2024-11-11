@@ -198,6 +198,7 @@ onMounted(() => {
     :ssr="useSSRMode"
     :vapor="useVaporMode"
     :autoSave="autoSave"
+    :theme="theme"
     @toggle-theme="toggleTheme"
     @toggle-prod="toggleProdMode"
     @toggle-ssr="toggleSSR"
