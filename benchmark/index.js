@@ -9,6 +9,8 @@ import sirv from 'sirv'
 import { launch } from 'puppeteer'
 import colors from 'picocolors'
 import { exec, getSha } from '../scripts/utils.js'
+import process from 'node:process'
+import readline from 'node:readline'
 
 // Thanks to https://github.com/krausest/js-framework-benchmark (Apache-2.0 license)
 const {
@@ -20,6 +22,7 @@ const {
     noVapor,
     port: portStr,
     count: countStr,
+    warmupCount: warmupCountStr,
     noHeadless,
     devBuild,
   },
@@ -56,6 +59,11 @@ const {
       short: 'c',
       default: '30',
     },
+    warmupCount: {
+      type: 'string',
+      short: 'w',
+      default: '5',
+    },
     noHeadless: {
       type: 'boolean',
     },
@@ -68,6 +76,7 @@ const {
 
 const port = +(/** @type {string}*/ (portStr))
 const count = +(/** @type {string}*/ (countStr))
+const warmupCount = +(/** @type {string}*/ (warmupCountStr))
 const sha = await getSha(true)
 
 if (!skipLib) {
@@ -226,22 +235,11 @@ async function doBench(browser, isVapor) {
   await forceGC()
   const t = performance.now()
 
-  for (let i = 0; i < count; i++) {
-    await clickButton('run') // test: create rows
-    await clickButton('update') // partial update
-    await clickButton('swaprows') // swap rows
-    await select() // test: select row, remove row
-    await clickButton('clear') // clear rows
+  console.log('warmup run')
+  await eachRun(() => withoutRecord(benchOnce), warmupCount)
 
-    await withoutRecord(() => clickButton('run'))
-    await clickButton('add') // append rows to large table
-
-    await withoutRecord(() => clickButton('clear'))
-    await clickButton('runLots') // create many rows
-    await withoutRecord(() => clickButton('clear'))
-
-    // TODO replace all rows
-  }
+  console.log('benchmark run')
+  await eachRun(benchOnce, count)
 
   console.info(
     'Total time:',
@@ -261,6 +259,23 @@ async function doBench(browser, isVapor) {
   await page.close()
   return result
 
+  async function benchOnce() {
+    await clickButton('run') // test: create rows
+    await clickButton('update') // partial update
+    await clickButton('swaprows') // swap rows
+    await select() // test: select row, remove row
+    await clickButton('clear') // clear rows
+
+    await withoutRecord(() => clickButton('run'))
+    await clickButton('add') // append rows to large table
+
+    await withoutRecord(() => clickButton('clear'))
+    await clickButton('runLots') // create many rows
+    await withoutRecord(() => clickButton('clear'))
+
+    // TODO replace all rows
+  }
+
   function getTimes() {
     return page.evaluate(() => /** @type {any} */ (globalThis).times)
   }
@@ -273,9 +288,13 @@ async function doBench(browser, isVapor) {
 
   /** @param {() => any} fn */
   async function withoutRecord(fn) {
+    const currentRecordTime = await page.evaluate(() => globalThis.recordTime)
     await page.evaluate(() => (globalThis.recordTime = false))
     await fn()
-    await page.evaluate(() => (globalThis.recordTime = true))
+    await page.evaluate(
+      currentRecordTime => (globalThis.recordTime = currentRecordTime),
+      currentRecordTime,
+    )
   }
 
   /** @param {string} id */
@@ -296,6 +315,23 @@ async function doBench(browser, isVapor) {
   async function wait() {
     await page.waitForSelector('.done')
   }
+}
+
+/**
+ * @param {Function} bench
+ * @param {number} count
+ */
+async function eachRun(bench, count) {
+  for (let i = 0; i < count; i++) {
+    readline.cursorTo(process.stdout, 0)
+    readline.clearLine(process.stdout, 0)
+    process.stdout.write(`${i + 1}/${count}`)
+    await bench()
+  }
+  if (count === 0) {
+    process.stdout.write('0/0 (skip)')
+  }
+  process.stdout.write('\n')
 }
 
 async function initBrowser() {
