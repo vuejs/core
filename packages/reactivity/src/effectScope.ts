@@ -1,24 +1,19 @@
-import {
-  type DirtyLevels,
-  type Link,
-  type Subscriber,
-  System,
-} from 'alien-signals'
 import { PauseLevels, type ReactiveEffect } from './effect'
 import { warn } from './warning'
 
-export let activeEffectScope: EffectScope | undefined = undefined
+export let activeEffectScope: EffectScope | undefined
 
-export class EffectScope implements Subscriber {
-  // Subscriber
-  deps: Link | undefined = undefined
-  depsTail: Link | undefined = undefined
-  trackId: number = -++System.lastTrackId
-  dirtyLevel: DirtyLevels = 0 satisfies DirtyLevels.None
-  canPropagate = false
-
-  pauseLevel: PauseLevels = PauseLevels.None
+export class EffectScope {
+  /**
+   * @internal
+   */
+  effects: ReactiveEffect[] = []
+  /**
+   * @internal
+   */
   cleanups: (() => void)[] = []
+
+  private pauseLevel: PauseLevels = PauseLevels.None
 
   /**
    * only assigned by undetached scope
@@ -54,15 +49,14 @@ export class EffectScope implements Subscriber {
   pause(): void {
     if (this.pauseLevel === PauseLevels.None) {
       this.pauseLevel = PauseLevels.Paused
+      let i, l
       if (this.scopes) {
-        for (const scope of this.scopes) {
-          scope.pause()
+        for (i = 0, l = this.scopes.length; i < l; i++) {
+          this.scopes[i].pause()
         }
       }
-      let dep = this.deps
-      while (dep !== undefined) {
-        ;(dep.dep as ReactiveEffect | EffectScope).pause()
-        dep = dep.nextDep
+      for (i = 0, l = this.effects.length; i < l; i++) {
+        this.effects[i].pause()
       }
     }
   }
@@ -71,33 +65,28 @@ export class EffectScope implements Subscriber {
    * Resumes the effect scope, including all child scopes and effects.
    */
   resume(): void {
-    if (this.active) {
-      if (this.pauseLevel >= PauseLevels.Paused) {
-        this.pauseLevel = PauseLevels.None
-        if (this.scopes) {
-          for (let i = 0, l = this.scopes.length; i < l; i++) {
-            this.scopes[i].resume()
-          }
+    if (this.pauseLevel === PauseLevels.Paused) {
+      this.pauseLevel = PauseLevels.None
+      let i, l
+      if (this.scopes) {
+        for (i = 0, l = this.scopes.length; i < l; i++) {
+          this.scopes[i].resume()
         }
-        let dep = this.deps
-        while (dep !== undefined) {
-          ;(dep.dep as ReactiveEffect).resume()
-          dep = dep.nextDep
-        }
+      }
+      for (i = 0, l = this.effects.length; i < l; i++) {
+        this.effects[i].resume()
       }
     }
   }
 
   run<T>(fn: () => T): T | undefined {
     if (this.active) {
-      const prevSub = activeEffectScope
-      activeEffectScope = this
-      this.trackId = Math.abs(this.trackId)
+      const currentEffectScope = activeEffectScope
       try {
+        activeEffectScope = this
         return fn()
       } finally {
-        activeEffectScope = prevSub
-        this.trackId = -Math.abs(this.trackId)
+        activeEffectScope = currentEffectScope
       }
     } else if (__DEV__) {
       warn(`cannot run an inactive effect scope.`)
@@ -122,12 +111,10 @@ export class EffectScope implements Subscriber {
 
   stop(fromParent?: boolean): void {
     if (this.active) {
-      let dep = this.deps
-      while (dep) {
-        ;(dep.dep as ReactiveEffect).stop()
-        dep = dep.nextDep
-      }
       let i, l
+      for (i = 0, l = this.effects.length; i < l; i++) {
+        this.effects[i].stop()
+      }
       for (i = 0, l = this.cleanups.length; i < l; i++) {
         this.cleanups[i]()
       }

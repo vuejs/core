@@ -49,7 +49,6 @@ let initSSR = false
  */
 export class ComputedRefImpl<T = any> implements IComputed {
   _value: T | undefined = undefined
-  globalVersion = -1
 
   // Dependency
   subs: Link | undefined = undefined
@@ -71,6 +70,15 @@ export class ComputedRefImpl<T = any> implements IComputed {
    * @internal
    */
   readonly __v_isReadonly: boolean
+  // TODO isolatedDeclarations ReactiveFlags.IS_READONLY
+  /**
+   * @internal
+   */
+  globalVersion: number = globalVersion - 1
+  /**
+   * @internal
+   */
+  isSSR: boolean
 
   // for backwards compat
   get effect(): this {
@@ -94,9 +102,11 @@ export class ComputedRefImpl<T = any> implements IComputed {
   constructor(
     public fn: ComputedGetter<T>,
     private readonly setter: ComputedSetter<T> | undefined,
-    private isSSR: boolean,
+    isSSR: boolean,
   ) {
     this[ReactiveFlags.IS_READONLY] = !setter
+    this.isSSR = isSSR
+
     if (isSSR && !initSSR) {
       initSSR = true
       const propagate = Dependency.propagate

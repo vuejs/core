@@ -1,5 +1,4 @@
 import { nextTick, watch, watchEffect } from '@vue/runtime-core'
-import type { Subscriber } from 'alien-signals'
 import {
   type ComputedRef,
   EffectScope,
@@ -13,16 +12,6 @@ import {
 } from '../src'
 
 describe('reactivity/effect/scope', () => {
-  function getDepCount(sub: Subscriber | undefined) {
-    let count = 0
-    let dep = sub!.deps
-    while (dep) {
-      count++
-      dep = dep.nextDep
-    }
-    return count
-  }
-
   it('should run', () => {
     const fnSpy = vi.fn(() => {})
     effectScope().run(fnSpy)
@@ -31,7 +20,7 @@ describe('reactivity/effect/scope', () => {
 
   it('should accept zero argument', () => {
     const scope = effectScope()
-    expect(getDepCount(scope)).toBe(0)
+    expect(scope.effects.length).toBe(0)
   })
 
   it('should return run value', () => {
@@ -58,7 +47,7 @@ describe('reactivity/effect/scope', () => {
       expect(dummy).toBe(7)
     })
 
-    expect(getDepCount(scope)).toBe(1)
+    expect(scope.effects.length).toBe(1)
   })
 
   it('stop', () => {
@@ -71,7 +60,7 @@ describe('reactivity/effect/scope', () => {
       effect(() => (doubled = counter.num * 2))
     })
 
-    expect(getDepCount(scope)).toBe(2)
+    expect(scope.effects.length).toBe(2)
 
     expect(dummy).toBe(0)
     counter.num = 7
@@ -98,7 +87,7 @@ describe('reactivity/effect/scope', () => {
       })
     })
 
-    expect(getDepCount(scope)).toBe(1)
+    expect(scope.effects.length).toBe(1)
     expect(scope.scopes!.length).toBe(1)
     expect(scope.scopes![0]).toBeInstanceOf(EffectScope)
 
@@ -128,7 +117,7 @@ describe('reactivity/effect/scope', () => {
       })
     })
 
-    expect(getDepCount(scope)).toBe(1)
+    expect(scope.effects.length).toBe(1)
 
     expect(dummy).toBe(0)
     counter.num = 7
@@ -153,13 +142,13 @@ describe('reactivity/effect/scope', () => {
       effect(() => (dummy = counter.num))
     })
 
-    expect(getDepCount(scope)).toBe(1)
+    expect(scope.effects.length).toBe(1)
 
     scope.run(() => {
       effect(() => (doubled = counter.num * 2))
     })
 
-    expect(getDepCount(scope)).toBe(2)
+    expect(scope.effects.length).toBe(2)
 
     counter.num = 7
     expect(dummy).toBe(7)
@@ -177,7 +166,7 @@ describe('reactivity/effect/scope', () => {
       effect(() => (dummy = counter.num))
     })
 
-    expect(getDepCount(scope)).toBe(1)
+    expect(scope.effects.length).toBe(1)
 
     scope.stop()
 
@@ -187,7 +176,7 @@ describe('reactivity/effect/scope', () => {
 
     expect('[Vue warn] cannot run an inactive effect scope.').toHaveBeenWarned()
 
-    expect(getDepCount(scope)).toBe(1)
+    expect(scope.effects.length).toBe(1)
 
     counter.num = 7
     expect(dummy).toBe(0)

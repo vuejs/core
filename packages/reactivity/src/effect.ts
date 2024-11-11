@@ -1,6 +1,5 @@
 import { extend } from '@vue/shared'
 import {
-  Dependency,
   type DirtyLevels,
   type IEffect,
   type Link,
@@ -77,14 +76,8 @@ export class ReactiveEffect<T = any> implements IEffect, ReactiveEffectOptions {
   onTrigger?: (event: DebuggerEvent) => void
 
   constructor(public fn: () => T) {
-    if (activeEffectScope !== undefined && activeEffectScope.active) {
-      const subsTail = this.subsTail
-      if (
-        subsTail === undefined ||
-        subsTail.trackId !== activeEffectScope.trackId
-      ) {
-        Dependency.link(this, activeEffectScope)
-      }
+    if (activeEffectScope && activeEffectScope.active) {
+      activeEffectScope.effects.push(this)
     }
     if (__DEV__) {
       setupDirtyLevelHandler(this)
@@ -95,13 +88,6 @@ export class ReactiveEffect<T = any> implements IEffect, ReactiveEffectOptions {
     return this.pauseLevel !== PauseLevels.Stop
   }
 
-  get dirty(): boolean {
-    if (this.dirtyLevel === (2 satisfies DirtyLevels.MaybeDirty)) {
-      Subscriber.resolveMaybeDirty(this)
-    }
-    return this.dirtyLevel === (3 satisfies DirtyLevels.Dirty)
-  }
-
   pause(): void {
     if (this.pauseLevel === PauseLevels.None) {
       this.pauseLevel = PauseLevels.Paused
@@ -109,31 +95,31 @@ export class ReactiveEffect<T = any> implements IEffect, ReactiveEffectOptions {
   }
 
   resume(): void {
-    if (this.active) {
-      if (this.pauseLevel >= PauseLevels.Paused) {
-        const shouldRun = this.pauseLevel === PauseLevels.Notify
-        this.pauseLevel = PauseLevels.None
-        if (shouldRun) {
-          this.notify()
-        }
-      }
+    const pauseLevel = this.pauseLevel
+    if (pauseLevel === PauseLevels.Notify) {
+      this.pauseLevel = PauseLevels.None
+      this.notify()
+    } else if (pauseLevel === PauseLevels.Paused) {
+      this.pauseLevel = PauseLevels.None
     }
   }
 
   notify(): void {
-    if (this.pauseLevel !== PauseLevels.None) {
-      if (this.pauseLevel === PauseLevels.Paused) {
-        this.pauseLevel = PauseLevels.Notify
-      }
-      return
+    const pauseLevel = this.pauseLevel
+    if (pauseLevel === PauseLevels.None) {
+      this.scheduler()
+    } else if (pauseLevel === PauseLevels.Paused) {
+      this.pauseLevel = PauseLevels.Notify
     }
-    this.scheduler()
   }
 
   scheduler(): void {
     this.runIfDirty()
   }
 
+  /**
+   * @internal
+   */
   runIfDirty(): void {
     const dirtyLevel = this.dirtyLevel
     if (dirtyLevel === (1 satisfies DirtyLevels.SideEffectsOnly)) {
@@ -155,13 +141,21 @@ export class ReactiveEffect<T = any> implements IEffect, ReactiveEffectOptions {
     // TODO cleanupEffect
 
     if (!this.active) {
+      // stopped during cleanup
       return this.fn()
     }
     cleanupEffect(this)
     const prevSub = Subscriber.startTrack(this)
+
     try {
       return this.fn()
     } finally {
+      if (__DEV__ && System.activeSub !== this) {
+        warn(
+          'Active effect was not restored correctly - ' +
+            'this is likely a Vue internal bug.',
+        )
+      }
       Subscriber.endTrack(this, prevSub)
       if (this.canPropagate && this.allowRecurse) {
         this.canPropagate = false
@@ -178,11 +172,16 @@ export class ReactiveEffect<T = any> implements IEffect, ReactiveEffectOptions {
         this.depsTail = undefined
       }
       cleanupEffect(this)
-      if (this.onStop !== undefined) {
-        this.onStop()
-      }
+      this.onStop && this.onStop()
       this.pauseLevel = PauseLevels.Stop
     }
+  }
+
+  get dirty(): boolean {
+    if (this.dirtyLevel === (2 satisfies DirtyLevels.MaybeDirty)) {
+      Subscriber.resolveMaybeDirty(this)
+    }
+    return this.dirtyLevel === (3 satisfies DirtyLevels.Dirty)
   }
 }
 

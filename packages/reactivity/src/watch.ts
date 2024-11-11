@@ -8,8 +8,8 @@ import {
   isObject,
   isPlainObject,
   isSet,
+  remove,
 } from '@vue/shared'
-import { Link } from 'alien-signals'
 import type { ComputedRef } from './computed'
 import { ReactiveFlags } from './constants'
 import {
@@ -213,25 +213,7 @@ export function watch(
   const watchHandle: WatchHandle = () => {
     effect.stop()
     if (scope) {
-      let prevDep: Link | undefined
-      let link = scope.deps
-      while (link !== undefined) {
-        if (link.dep === effect) {
-          const nextDep = link.nextDep
-          if (prevDep !== undefined) {
-            prevDep.nextDep = nextDep
-          }
-          if (nextDep === undefined) {
-            scope.depsTail = prevDep
-          }
-          if (prevDep === undefined) {
-            scope.deps = nextDep
-          }
-          Link.release(link)
-          break
-        }
-        link = link.nextDep
-      }
+      remove(scope.effects, effect)
     }
   }
 
