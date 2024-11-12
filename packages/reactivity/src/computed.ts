@@ -70,14 +70,6 @@ export class ComputedRefImpl<T = any> implements IComputed {
    */
   readonly __v_isReadonly: boolean
   // TODO isolatedDeclarations ReactiveFlags.IS_READONLY
-  /**
-   * @internal
-   */
-  globalVersion: number = ComputedRefImpl.globalVersion - 1
-  /**
-   * @internal
-   */
-  isSSR: boolean
 
   // for backwards compat
   get effect(): this {
@@ -101,10 +93,8 @@ export class ComputedRefImpl<T = any> implements IComputed {
   constructor(
     public fn: ComputedGetter<T>,
     private readonly setter: ComputedSetter<T> | undefined,
-    isSSR: boolean,
   ) {
     this[ReactiveFlags.IS_READONLY] = !setter
-    this.isSSR = isSSR
     if (__DEV__) {
       setupDirtyLevelHandler(this)
     }
@@ -116,19 +106,10 @@ export class ComputedRefImpl<T = any> implements IComputed {
       Subscriber.resolveMaybeDirty(this)
       dirtyLevel = this.dirtyLevel
     }
-    const activeTrackId = System.activeTrackId
-    if (
-      dirtyLevel >= (3 satisfies DirtyLevels.Dirty) ||
-      (this.globalVersion !== ComputedRefImpl.globalVersion &&
-        // In SSR there will be no render effect, so the computed has no subscriber
-        // and therefore tracks no deps, thus we cannot rely on the dirty check.
-        // Instead, computed always re-evaluate and relies on the globalVersion
-        // fast path above for caching.
-        (this.isSSR || (activeTrackId === 0 && this.deps === undefined)))
-    ) {
-      this.globalVersion = ComputedRefImpl.globalVersion
+    if (dirtyLevel >= (3 satisfies DirtyLevels.Dirty)) {
       this.update()
     }
+    const activeTrackId = System.activeTrackId
     if (activeTrackId !== 0) {
       const subsTail = this.subsTail
       if (subsTail === undefined || subsTail.trackId !== activeTrackId) {
@@ -228,7 +209,7 @@ export function computed<T>(
     setter = getterOrOptions.set
   }
 
-  const cRef = new ComputedRefImpl(getter, setter, isSSR)
+  const cRef = new ComputedRefImpl(getter, setter)
 
   if (__DEV__ && debugOptions && !isSSR) {
     cRef.onTrack = debugOptions.onTrack

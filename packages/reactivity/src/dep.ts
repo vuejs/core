@@ -107,7 +107,6 @@ export function trigger(
   }
 
   const run = (dep: Dependency | undefined) => {
-    ComputedRefImpl.globalVersion++
     if (dep !== undefined && dep.subs !== undefined) {
       if (__DEV__) {
         triggerEventInfos.push({
