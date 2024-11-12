@@ -116,6 +116,7 @@ export class ComputedRefImpl<T = any> implements IComputed {
       Subscriber.resolveMaybeDirty(this)
       dirtyLevel = this.dirtyLevel
     }
+    const activeTrackId = System.activeTrackId
     if (
       dirtyLevel >= (3 satisfies DirtyLevels.Dirty) ||
       (this.globalVersion !== ComputedRefImpl.globalVersion &&
@@ -123,12 +124,11 @@ export class ComputedRefImpl<T = any> implements IComputed {
         // and therefore tracks no deps, thus we cannot rely on the dirty check.
         // Instead, computed always re-evaluate and relies on the globalVersion
         // fast path above for caching.
-        (this.isSSR || this.deps === undefined))
+        (this.isSSR || (activeTrackId === 0 && this.deps === undefined)))
     ) {
       this.globalVersion = ComputedRefImpl.globalVersion
       this.update()
     }
-    const activeTrackId = System.activeTrackId
     if (activeTrackId !== 0) {
       const subsTail = this.subsTail
       if (subsTail === undefined || subsTail.trackId !== activeTrackId) {
