@@ -121,6 +121,7 @@ export class ComputedRefImpl<T = any> implements IComputed {
   }
 
   get value(): T {
+    const activeTrackId = System.activeTrackId
     // In SSR there will be no render effect, so the computed has no subscriber
     // and therefore tracks no deps, thus we cannot rely on the dirty check.
     // Instead, computed always re-evaluate and relies on the globalVersion
@@ -136,11 +137,13 @@ export class ComputedRefImpl<T = any> implements IComputed {
         Subscriber.resolveMaybeDirty(this)
         dirtyLevel = this.dirtyLevel
       }
-      if (dirtyLevel >= (3 satisfies DirtyLevels.Dirty)) {
+      if (
+        dirtyLevel >= (3 satisfies DirtyLevels.Dirty) ||
+        (activeTrackId === 0 && this.deps === undefined)
+      ) {
         this.update()
       }
     }
-    const activeTrackId = System.activeTrackId
     if (activeTrackId !== 0) {
       const subsTail = this.subsTail
       if (subsTail === undefined || subsTail.trackId !== activeTrackId) {
