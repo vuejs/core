@@ -19,14 +19,14 @@ export function patchStyle(el: Element, prev: Style, next: Style): void {
     if (prev) {
       if (!isString(prev)) {
         for (const key in prev) {
-          if (next[key] == null) {
+          if (!next[key]) {
             setStyle(style, key, '')
           }
         }
       } else {
         for (const prevStyle of prev.split(';')) {
           const key = prevStyle.slice(0, prevStyle.indexOf(':')).trim()
-          if (next[key] == null) {
+          if (!next[key]) {
             setStyle(style, key, '')
           }
         }
