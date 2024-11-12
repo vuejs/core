@@ -27,7 +27,7 @@ import {
 } from '../src'
 import type { ComputedRef, ComputedRefImpl } from '../src/computed'
 import { pauseTracking, resetTracking } from '../src/effect'
-import type { DirtyLevels } from '../src/system'
+import { DirtyLevels } from '../src/system'
 
 describe('reactivity/computed', () => {
   it('should return updated value', () => {
@@ -467,8 +467,8 @@ describe('reactivity/computed', () => {
     const c2 = computed(() => c1.value) as unknown as ComputedRefImpl
 
     c2.value
-    expect(c1.dirtyLevel).toBe(0 satisfies DirtyLevels.None)
-    expect(c2.dirtyLevel).toBe(0 satisfies DirtyLevels.None)
+    expect(c1.dirtyLevel).toBe(DirtyLevels.None)
+    expect(c2.dirtyLevel).toBe(DirtyLevels.None)
   })
 
   it('should chained computeds dirtyLevel update with first computed effect', () => {

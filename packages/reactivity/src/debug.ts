@@ -1,6 +1,6 @@
 import { extend } from '@vue/shared'
 import type { DebuggerEventExtraInfo, ReactiveEffectOptions } from './effect'
-import type { DirtyLevels, Link, Subscriber } from './system'
+import { DirtyLevels, Link, Subscriber } from './system'
 
 export const triggerEventInfos: DebuggerEventExtraInfo[] = []
 
@@ -58,11 +58,8 @@ export function setupDirtyLevelHandler(target: Subscriber): void {
       return target._dirtyLevel
     },
     set(value) {
-      if (
-        __DEV__ &&
-        value > (0 satisfies DirtyLevels.None) &&
-        value < (4 satisfies DirtyLevels.Released)
-      ) {
+      // @ts-expect-error
+      if (__DEV__ && target._dirtyLevel === DirtyLevels.None) {
         onTrigger(this)
       }
       // @ts-expect-error

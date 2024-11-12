@@ -5,7 +5,7 @@ import type { DebuggerEvent, DebuggerOptions } from './effect'
 import type { Ref } from './ref'
 import {
   Dependency,
-  type DirtyLevels,
+  DirtyLevels,
   type IComputed,
   type Link,
   Subscriber,
@@ -55,7 +55,7 @@ export class ComputedRefImpl<T = any> implements IComputed {
   deps: Link | undefined = undefined
   depsTail: Link | undefined = undefined
   trackId = 0
-  dirtyLevel: DirtyLevels = 3 satisfies DirtyLevels.Dirty
+  dirtyLevel: DirtyLevels = DirtyLevels.Dirty
   canPropagate = false
 
   /**
@@ -80,18 +80,17 @@ export class ComputedRefImpl<T = any> implements IComputed {
   // for backwards compat
   get _dirty(): boolean {
     let dirtyLevel = this.dirtyLevel
-    if (dirtyLevel === (2 satisfies DirtyLevels.MaybeDirty)) {
+    if (dirtyLevel === DirtyLevels.MaybeDirty) {
       Subscriber.resolveMaybeDirty(this)
       dirtyLevel = this.dirtyLevel
     }
-    return dirtyLevel >= (3 satisfies DirtyLevels.Dirty)
+    return dirtyLevel >= DirtyLevels.Dirty
   }
-  // for backwards compat
   set _dirty(v: boolean) {
     if (v) {
-      this.dirtyLevel = 3 satisfies DirtyLevels.Dirty
+      this.dirtyLevel = DirtyLevels.Dirty
     } else {
-      this.dirtyLevel = 0 satisfies DirtyLevels.None
+      this.dirtyLevel = DirtyLevels.None
     }
   }
 

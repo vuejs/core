@@ -3,7 +3,7 @@ import type { TrackOpTypes, TriggerOpTypes } from './constants'
 import { setupDirtyLevelHandler } from './debug'
 import { activeEffectScope } from './effectScope'
 import {
-  type DirtyLevels,
+  DirtyLevels,
   type IEffect,
   type Link,
   Subscriber,
@@ -60,7 +60,7 @@ export class ReactiveEffect<T = any> implements IEffect, ReactiveEffectOptions {
   deps: Link | undefined = undefined
   depsTail: Link | undefined = undefined
   trackId = 0
-  dirtyLevel: DirtyLevels = 3 satisfies DirtyLevels.Dirty
+  dirtyLevel: DirtyLevels = DirtyLevels.Dirty
   canPropagate = false
 
   pauseLevel: PauseLevels = PauseLevels.None
@@ -122,11 +122,11 @@ export class ReactiveEffect<T = any> implements IEffect, ReactiveEffectOptions {
    */
   runIfDirty(): void {
     let dirtyLevel = this.dirtyLevel
-    if (dirtyLevel === (2 satisfies DirtyLevels.MaybeDirty)) {
+    if (dirtyLevel === DirtyLevels.MaybeDirty) {
       Subscriber.resolveMaybeDirty(this)
       dirtyLevel = this.dirtyLevel
     }
-    if (dirtyLevel >= (3 satisfies DirtyLevels.Dirty)) {
+    if (dirtyLevel >= DirtyLevels.Dirty) {
       this.run()
     }
   }
@@ -172,10 +172,10 @@ export class ReactiveEffect<T = any> implements IEffect, ReactiveEffectOptions {
   }
 
   get dirty(): boolean {
-    if (this.dirtyLevel === (2 satisfies DirtyLevels.MaybeDirty)) {
+    if (this.dirtyLevel === DirtyLevels.MaybeDirty) {
       Subscriber.resolveMaybeDirty(this)
     }
-    return this.dirtyLevel === (3 satisfies DirtyLevels.Dirty)
+    return this.dirtyLevel === DirtyLevels.Dirty
   }
 }
 
