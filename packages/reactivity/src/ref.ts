@@ -6,11 +6,7 @@ import {
   isObject,
 } from '@vue/shared'
 import { Dependency, System, endBatch, startBatch } from 'alien-signals'
-import {
-  type ComputedRef,
-  ComputedRefImpl,
-  type WritableComputedRef,
-} from './computed'
+import type { ComputedRef, WritableComputedRef } from './computed'
 import { ReactiveFlags, TrackOpTypes, TriggerOpTypes } from './constants'
 import { onTrack, triggerEventInfos } from './debug'
 import { getDepFromReactive } from './dep'
