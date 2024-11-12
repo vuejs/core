@@ -307,7 +307,7 @@ export function createHydrationFunctions(
           // if component is async, it may get moved / unmounted before its
           // inner component is loaded, so we need to give it a placeholder
           // vnode that matches its adopted DOM.
-          if (isAsyncWrapper(vnode)) {
+          if (isAsyncWrapper(vnode) && !vnode.component!.subTree) {
             let subTree
             if (isFragmentStart) {
               subTree = createVNode(Fragment)
