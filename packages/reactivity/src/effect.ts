@@ -1,15 +1,15 @@
 import { extend } from '@vue/shared'
+import type { TrackOpTypes, TriggerOpTypes } from './constants'
+import { setupDirtyLevelHandler } from './debug'
+import { activeEffectScope } from './effectScope'
 import {
   type DirtyLevels,
   type IEffect,
   type Link,
   Subscriber,
   System,
-} from 'alien-signals'
-import type { TrackOpTypes, TriggerOpTypes } from './constants'
-import { setupDirtyLevelHandler } from './debug'
+} from './system'
 import { warn } from './warning'
-import { activeEffectScope } from './effectScope'
 
 export type EffectScheduler = (...args: any[]) => any
 

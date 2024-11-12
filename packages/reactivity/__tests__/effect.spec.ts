@@ -1,4 +1,15 @@
 import {
+  computed,
+  h,
+  nextTick,
+  nodeOps,
+  ref,
+  render,
+  serializeInner,
+} from '@vue/runtime-test'
+import { ITERATE_KEY, getDepFromReactive } from '../src/dep'
+import { onEffectCleanup, pauseTracking, resetTracking } from '../src/effect'
+import {
   type DebuggerEvent,
   type ReactiveEffectRunner,
   TrackOpTypes,
@@ -11,18 +22,7 @@ import {
   stop,
   toRaw,
 } from '../src/index'
-import { ITERATE_KEY, getDepFromReactive } from '../src/dep'
-import {
-  computed,
-  h,
-  nextTick,
-  nodeOps,
-  ref,
-  render,
-  serializeInner,
-} from '@vue/runtime-test'
-import { onEffectCleanup, pauseTracking, resetTracking } from '../src/effect'
-import { type Dependency, endBatch, startBatch } from 'alien-signals'
+import { type Dependency, endBatch, startBatch } from '../src/system'
 
 describe('reactivity/effect', () => {
   it('should run the passed function once (wrapped by a effect)', () => {

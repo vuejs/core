@@ -1,4 +1,8 @@
 import { hasChanged, isFunction } from '@vue/shared'
+import { ReactiveFlags, TrackOpTypes } from './constants'
+import { onTrack, setupDirtyLevelHandler } from './debug'
+import type { DebuggerEvent, DebuggerOptions } from './effect'
+import type { Ref } from './ref'
 import {
   Dependency,
   type DirtyLevels,
@@ -6,11 +10,7 @@ import {
   type Link,
   Subscriber,
   System,
-} from 'alien-signals'
-import { ReactiveFlags, TrackOpTypes } from './constants'
-import { onTrack, setupDirtyLevelHandler } from './debug'
-import type { DebuggerEvent, DebuggerOptions } from './effect'
-import type { Ref } from './ref'
+} from './system'
 import { warn } from './warning'
 
 declare const ComputedRefSymbol: unique symbol
@@ -45,8 +45,6 @@ export interface WritableComputedOptions<T, S = T> {
  * the main vue package
  */
 export class ComputedRefImpl<T = any> implements IComputed {
-  static globalVersion = 0
-
   _value: T | undefined = undefined
 
   // Dependency

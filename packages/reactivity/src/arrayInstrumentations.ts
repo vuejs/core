@@ -3,7 +3,7 @@ import { TrackOpTypes } from './constants'
 import { ARRAY_ITERATE_KEY, track } from './dep'
 import { pauseTracking, resetTracking } from './effect'
 import { isProxy, isShallow, toRaw, toReactive } from './reactive'
-import { endBatch, startBatch } from 'alien-signals'
+import { endBatch, startBatch } from './system'
 
 /**
  * Track array iteration and return:

@@ -1,14 +1,13 @@
 import { isArray, isIntegerKey, isMap, isSymbol } from '@vue/shared'
+import { type TrackOpTypes, TriggerOpTypes } from './constants'
+import { onTrack, triggerEventInfos } from './debug'
 import {
   Dependency,
   type Link,
   System,
   endBatch,
   startBatch,
-} from 'alien-signals'
-import { ComputedRefImpl } from './computed'
-import { type TrackOpTypes, TriggerOpTypes } from './constants'
-import { onTrack, triggerEventInfos } from './debug'
+} from './system'
 
 class Dep implements Dependency {
   _subs: Link | undefined = undefined

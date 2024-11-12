@@ -5,7 +5,6 @@ import {
   isFunction,
   isObject,
 } from '@vue/shared'
-import { Dependency, System, endBatch, startBatch } from 'alien-signals'
 import type { ComputedRef, WritableComputedRef } from './computed'
 import { ReactiveFlags, TrackOpTypes, TriggerOpTypes } from './constants'
 import { onTrack, triggerEventInfos } from './debug'
@@ -20,6 +19,7 @@ import {
   toRaw,
   toReactive,
 } from './reactive'
+import { Dependency, System, endBatch, startBatch } from './system'
 import { warn } from './warning'
 
 declare const RefSymbol: unique symbol

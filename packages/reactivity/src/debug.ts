@@ -1,6 +1,6 @@
 import { extend } from '@vue/shared'
-import type { DirtyLevels, Link, Subscriber } from 'alien-signals'
 import type { DebuggerEventExtraInfo, ReactiveEffectOptions } from './effect'
+import type { DirtyLevels, Link, Subscriber } from './system'
 
 export const triggerEventInfos: DebuggerEventExtraInfo[] = []
 
