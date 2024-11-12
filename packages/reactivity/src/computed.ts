@@ -79,6 +79,24 @@ export class ComputedRefImpl<T = any> implements IComputed {
   get dep(): Dependency {
     return this
   }
+  // for backwards compat
+  get _dirty(): boolean {
+    let dirtyLevel = this.dirtyLevel
+    if (dirtyLevel === (2 satisfies DirtyLevels.MaybeDirty)) {
+      Subscriber.resolveMaybeDirty(this)
+      dirtyLevel = this.dirtyLevel
+    }
+    return dirtyLevel >= (3 satisfies DirtyLevels.Dirty)
+  }
+  // for backwards compat
+  set _dirty(v: boolean) {
+    if (v) {
+      this.dirtyLevel = 3 satisfies DirtyLevels.Dirty
+    } else {
+      this.dirtyLevel = 0 satisfies DirtyLevels.None
+    }
+  }
+
   // dev only
   onTrack?: (event: DebuggerEvent) => void
   // dev only
@@ -101,12 +119,7 @@ export class ComputedRefImpl<T = any> implements IComputed {
   }
 
   get value(): T {
-    let dirtyLevel = this.dirtyLevel
-    if (dirtyLevel === (2 satisfies DirtyLevels.MaybeDirty)) {
-      Subscriber.resolveMaybeDirty(this)
-      dirtyLevel = this.dirtyLevel
-    }
-    if (dirtyLevel >= (3 satisfies DirtyLevels.Dirty)) {
+    if (this._dirty) {
       this.update()
     }
     const activeTrackId = System.activeTrackId
