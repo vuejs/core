@@ -173,9 +173,6 @@ export class ComputedRefImpl<T = any> implements IComputed {
       newValue = this.fn(oldValue)
     } finally {
       Subscriber.endTrack(this, prevSub)
-      if (this.deps === undefined) {
-        this.dirtyLevel = 3 satisfies DirtyLevels.Dirty
-      }
     }
     if (hasChanged(oldValue, newValue)) {
       this._value = newValue
