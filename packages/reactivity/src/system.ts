@@ -133,13 +133,6 @@ export namespace Link {
 export namespace Dependency {
   const system = System
 
-  /**
-   * @deprecated Use `startTrack` instead.
-   */
-  export function linkSubscriber(dep: Dependency, sub: Subscriber): void {
-    return link(dep, sub)
-  }
-
   export function link(dep: Dependency, sub: Subscriber): void {
     const depsTail = sub.depsTail
     const old = depsTail !== undefined ? depsTail.nextDep : sub.deps
@@ -400,25 +393,6 @@ export namespace Subscriber {
 
       break
     } while (true)
-  }
-
-  /**
-   * @deprecated Use `startTrack` instead.
-   */
-  export function startTrackDependencies(
-    sub: Subscriber,
-  ): Subscriber | undefined {
-    return startTrack(sub)
-  }
-
-  /**
-   * @deprecated Use `endTrack` instead.
-   */
-  export function endTrackDependencies(
-    sub: Subscriber,
-    prevSub: Subscriber | undefined,
-  ): void {
-    return endTrack(sub, prevSub)
   }
 
   export function startTrack(sub: Subscriber): Subscriber | undefined {
