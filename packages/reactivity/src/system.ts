@@ -35,10 +35,8 @@ export interface Link {
 
 export enum DirtyLevels {
   None,
-  SideEffectsOnly,
   MaybeDirty,
   Dirty,
-  Released,
 }
 
 export namespace System {
@@ -184,11 +182,7 @@ export namespace Dependency {
                   sub.depsTail!.nextDep = link
                   dep = sub
                   link = sub.subs
-                  if ('notify' in sub) {
-                    dirtyLevel = DirtyLevels.SideEffectsOnly
-                  } else {
-                    dirtyLevel = DirtyLevels.MaybeDirty
-                  }
+                  dirtyLevel = DirtyLevels.MaybeDirty
                   remainingQuantity++
 
                   continue
@@ -213,11 +207,7 @@ export namespace Dependency {
               sub.depsTail!.nextDep = link
               dep = sub
               link = sub.subs
-              if ('notify' in sub) {
-                dirtyLevel = DirtyLevels.SideEffectsOnly
-              } else {
-                dirtyLevel = DirtyLevels.MaybeDirty
-              }
+              dirtyLevel = DirtyLevels.MaybeDirty
               remainingQuantity++
 
               continue
@@ -249,10 +239,6 @@ export namespace Dependency {
 
         if (remainingQuantity === 0) {
           dirtyLevel = DirtyLevels.Dirty
-        } else if ('notify' in dep) {
-          dirtyLevel = DirtyLevels.SideEffectsOnly
-        } else {
-          dirtyLevel = DirtyLevels.MaybeDirty
         }
 
         if ('notify' in prevSub) {
@@ -276,54 +262,7 @@ export namespace Dependency {
 export namespace Subscriber {
   const system = System
 
-  export function runInnerEffects(link: Link | undefined): void {
-    while (link !== undefined) {
-      const dep = link.dep
-      if ('notify' in dep) {
-        dep.notify()
-      }
-      link = link.nextDep
-    }
-  }
-
-  export function resolveMaybeDirty(sub: IComputed | IEffect, depth = 0): void {
-    let link = sub.deps
-
-    while (link !== undefined) {
-      const dep = link.dep
-      if ('update' in dep) {
-        const dirtyLevel = dep.dirtyLevel
-
-        if (dirtyLevel === DirtyLevels.MaybeDirty) {
-          if (depth >= 4) {
-            resolveMaybeDirtyNonRecursive(dep)
-          } else {
-            resolveMaybeDirty(dep, depth + 1)
-          }
-          if (dep.dirtyLevel === DirtyLevels.Dirty) {
-            dep.update()
-            if (sub.dirtyLevel === DirtyLevels.Dirty) {
-              break
-            }
-          }
-        } else if (dirtyLevel === DirtyLevels.Dirty) {
-          dep.update()
-          if (sub.dirtyLevel === DirtyLevels.Dirty) {
-            break
-          }
-        }
-      }
-      link = link.nextDep
-    }
-
-    if (sub.dirtyLevel === DirtyLevels.MaybeDirty) {
-      sub.dirtyLevel = DirtyLevels.None
-    }
-  }
-
-  export function resolveMaybeDirtyNonRecursive(
-    sub: IComputed | IEffect,
-  ): void {
+  export function resolveMaybeDirty(sub: IComputed | IEffect): void {
     let link = sub.deps
     let remaining = 0
 
@@ -441,7 +380,7 @@ export namespace Subscriber {
       const nextDep = link.nextDep
       Link.release(link)
       if (dep.subs === undefined && 'deps' in dep) {
-        dep.dirtyLevel = DirtyLevels.Released
+        dep.dirtyLevel = DirtyLevels.Dirty
         if (dep.deps !== undefined) {
           link = dep.deps
           dep.depsTail!.nextDep = nextDep
