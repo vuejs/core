@@ -40,14 +40,13 @@ export interface WritableComputedOptions<T, S = T> {
   set: ComputedSetter<S>
 }
 
-let globalVersion = 0
-let initSSR = false
-
 /**
  * @private exported by @vue/reactivity for Vue core use, but not exported from
  * the main vue package
  */
 export class ComputedRefImpl<T = any> implements IComputed {
+  static globalVersion = 0
+
   _value: T | undefined = undefined
 
   // Dependency
@@ -74,7 +73,7 @@ export class ComputedRefImpl<T = any> implements IComputed {
   /**
    * @internal
    */
-  globalVersion: number = globalVersion - 1
+  globalVersion: number = ComputedRefImpl.globalVersion - 1
   /**
    * @internal
    */
@@ -106,44 +105,30 @@ export class ComputedRefImpl<T = any> implements IComputed {
   ) {
     this[ReactiveFlags.IS_READONLY] = !setter
     this.isSSR = isSSR
-
-    if (isSSR && !initSSR) {
-      initSSR = true
-      const propagate = Dependency.propagate
-      Dependency.propagate = (link: Link) => {
-        globalVersion++
-        propagate(link)
-      }
-    }
     if (__DEV__) {
       setupDirtyLevelHandler(this)
     }
   }
 
   get value(): T {
-    const activeTrackId = System.activeTrackId
-    // In SSR there will be no render effect, so the computed has no subscriber
-    // and therefore tracks no deps, thus we cannot rely on the dirty check.
-    // Instead, computed always re-evaluate and relies on the globalVersion
-    // fast path above for caching.
-    if (this.isSSR) {
-      if (globalVersion !== this.globalVersion) {
-        this.globalVersion = globalVersion
-        this.update()
-      }
-    } else {
-      let dirtyLevel = this.dirtyLevel
-      if (dirtyLevel === (2 satisfies DirtyLevels.MaybeDirty)) {
-        Subscriber.resolveMaybeDirty(this)
-        dirtyLevel = this.dirtyLevel
-      }
-      if (
-        dirtyLevel >= (3 satisfies DirtyLevels.Dirty) ||
-        (activeTrackId === 0 && this.deps === undefined)
-      ) {
-        this.update()
-      }
+    let dirtyLevel = this.dirtyLevel
+    if (dirtyLevel === (2 satisfies DirtyLevels.MaybeDirty)) {
+      Subscriber.resolveMaybeDirty(this)
+      dirtyLevel = this.dirtyLevel
     }
+    if (
+      dirtyLevel >= (3 satisfies DirtyLevels.Dirty) ||
+      (this.globalVersion !== ComputedRefImpl.globalVersion &&
+        // In SSR there will be no render effect, so the computed has no subscriber
+        // and therefore tracks no deps, thus we cannot rely on the dirty check.
+        // Instead, computed always re-evaluate and relies on the globalVersion
+        // fast path above for caching.
+        (this.isSSR || this.deps === undefined))
+    ) {
+      this.globalVersion = ComputedRefImpl.globalVersion
+      this.update()
+    }
+    const activeTrackId = System.activeTrackId
     if (activeTrackId !== 0) {
       const subsTail = this.subsTail
       if (subsTail === undefined || subsTail.trackId !== activeTrackId) {

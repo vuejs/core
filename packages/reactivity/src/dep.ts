@@ -6,6 +6,7 @@ import {
   endBatch,
   startBatch,
 } from 'alien-signals'
+import { ComputedRefImpl } from './computed'
 import { type TrackOpTypes, TriggerOpTypes } from './constants'
 import { onTrack, triggerEventInfos } from './debug'
 
@@ -106,6 +107,7 @@ export function trigger(
   }
 
   const run = (dep: Dependency | undefined) => {
+    ComputedRefImpl.globalVersion++
     if (dep !== undefined && dep.subs !== undefined) {
       if (__DEV__) {
         triggerEventInfos.push({

@@ -6,7 +6,11 @@ import {
   isObject,
 } from '@vue/shared'
 import { Dependency, System, endBatch, startBatch } from 'alien-signals'
-import type { ComputedRef, WritableComputedRef } from './computed'
+import {
+  type ComputedRef,
+  ComputedRefImpl,
+  type WritableComputedRef,
+} from './computed'
 import { ReactiveFlags, TrackOpTypes, TriggerOpTypes } from './constants'
 import { onTrack, triggerEventInfos } from './debug'
 import { getDepFromReactive } from './dep'
@@ -186,6 +190,7 @@ class RefImpl<T = any> implements Dependency {
  * @see {@link https://vuejs.org/api/reactivity-advanced.html#triggerref}
  */
 export function triggerRef(ref: Ref): void {
+  ComputedRefImpl.globalVersion++
   // ref may be an instance of ObjectRefImpl
   const dep = (ref as unknown as RefImpl).dep
   if (dep !== undefined && dep.subs !== undefined) {
