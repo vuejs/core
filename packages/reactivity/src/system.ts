@@ -1,4 +1,4 @@
-// Source: https://github.com/stackblitz/alien-signals/blob/6500808505660ef2abae95d56eca9d9138c26b66/src/system.ts
+// Source: https://github.com/stackblitz/alien-signals/blob/10712e7de4691ff3933c7c7af2689d994c635ad7/src/system.ts
 
 export interface IEffect extends Dependency, Subscriber {
   nextNotify: IEffect | undefined
@@ -169,9 +169,10 @@ export namespace Dependency {
     do {
       if (link !== undefined) {
         const sub: Link['sub'] = link.sub
+        const subTrackId = sub.trackId
 
-        if (sub.trackId > 0) {
-          if (sub.trackId === link.trackId) {
+        if (subTrackId > 0) {
+          if (subTrackId === link.trackId) {
             const subDirtyLevel = sub.dirtyLevel
             if (subDirtyLevel < dirtyLevel) {
               sub.dirtyLevel = dirtyLevel
@@ -190,7 +191,7 @@ export namespace Dependency {
               }
             }
           }
-        } else if (sub.trackId === -link.trackId) {
+        } else if (subTrackId === -link.trackId) {
           const subDirtyLevel = sub.dirtyLevel
           const notDirty = subDirtyLevel === DirtyLevels.None
 
@@ -380,7 +381,11 @@ export namespace Subscriber {
       const nextDep = link.nextDep
       Link.release(link)
       if (dep.subs === undefined && 'deps' in dep) {
-        dep.dirtyLevel = DirtyLevels.Dirty
+        if ('notify' in dep) {
+          dep.dirtyLevel = DirtyLevels.None
+        } else {
+          dep.dirtyLevel = DirtyLevels.Dirty
+        }
         if (dep.deps !== undefined) {
           link = dep.deps
           dep.depsTail!.nextDep = nextDep
