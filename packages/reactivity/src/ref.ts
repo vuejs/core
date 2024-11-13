@@ -19,7 +19,7 @@ import {
   toRaw,
   toReactive,
 } from './reactive'
-import { Dependency, Link, System, endBatch, startBatch } from './system'
+import { Dependency, type Link, System, endBatch, startBatch } from './system'
 import { warn } from './warning'
 
 declare const RefSymbol: unique symbol
