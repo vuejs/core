@@ -279,7 +279,7 @@ describe('watch', () => {
     expect(dummy).toEqual([1, 2, 3])
   })
 
-  test('removing a watcher while stopping its effectScope', async () => {
+  test('clean up watchers during effect scope stop', async () => {
     const count = ref(0)
     const scope = effectScope()
     let watcherCalls = 0
