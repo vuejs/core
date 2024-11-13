@@ -12,6 +12,7 @@ import {
 } from './effect'
 import type { Ref } from './ref'
 import { warn } from './warning'
+import { activeEffectScope } from './effectScope'
 
 declare const ComputedRefSymbol: unique symbol
 declare const WritableComputedRefSymbol: unique symbol
@@ -135,6 +136,8 @@ export class ComputedRefImpl<T = any> implements IComputed {
         }
         Dependency.link(this, System.activeSub!)
       }
+    } else if (activeEffectScope !== undefined) {
+      Dependency.link(this, activeEffectScope)
     }
     return this._value!
   }

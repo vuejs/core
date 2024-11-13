@@ -1,9 +1,23 @@
-import { PauseLevels, type ReactiveEffect } from './effect'
+import {
+  DirtyLevels,
+  type Link,
+  PauseLevels,
+  type ReactiveEffect,
+  Subscriber,
+  System,
+} from './effect'
 import { warn } from './warning'
 
 export let activeEffectScope: EffectScope | undefined
 
-export class EffectScope {
+export class EffectScope implements Subscriber {
+  // Subscriber: In order to collect orphans computeds
+  deps: Link | undefined = undefined
+  depsTail: Link | undefined = undefined
+  trackId: number = ++System.lastTrackId
+  dirtyLevel: DirtyLevels = DirtyLevels.Dirty
+  canPropagate = false
+
   /**
    * @internal
    */
@@ -111,6 +125,11 @@ export class EffectScope {
 
   stop(fromParent?: boolean): void {
     if (this.active) {
+      if (this.deps !== undefined) {
+        Subscriber.clearTrack(this.deps)
+        this.deps = undefined
+        this.depsTail = undefined
+      }
       let i, l
       for (i = 0, l = this.effects.length; i < l; i++) {
         this.effects[i].stop()
