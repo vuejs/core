@@ -1,6 +1,6 @@
 import { extend } from '@vue/shared'
 import type { DebuggerEventExtraInfo, ReactiveEffectOptions } from './effect'
-import { DirtyLevels, type Link, type Subscriber } from './system'
+import { DirtyLevels, type Link, type Subscriber } from './effect'
 
 export const triggerEventInfos: DebuggerEventExtraInfo[] = []
 

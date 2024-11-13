@@ -26,8 +26,7 @@ import {
   triggerRef,
 } from '../src'
 import type { ComputedRef, ComputedRefImpl } from '../src/computed'
-import { pauseTracking, resetTracking } from '../src/effect'
-import { DirtyLevels } from '../src/system'
+import { DirtyLevels, pauseTracking, resetTracking } from '../src/effect'
 
 describe('reactivity/computed', () => {
   it('should return updated value', () => {

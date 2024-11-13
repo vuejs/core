@@ -8,7 +8,14 @@ import {
   serializeInner,
 } from '@vue/runtime-test'
 import { ITERATE_KEY, getDepFromReactive } from '../src/dep'
-import { onEffectCleanup, pauseTracking, resetTracking } from '../src/effect'
+import {
+  type Dependency,
+  endBatch,
+  onEffectCleanup,
+  pauseTracking,
+  resetTracking,
+  startBatch,
+} from '../src/effect'
 import {
   type DebuggerEvent,
   type ReactiveEffectRunner,
@@ -22,7 +29,6 @@ import {
   stop,
   toRaw,
 } from '../src/index'
-import { type Dependency, endBatch, startBatch } from '../src/system'
 
 describe('reactivity/effect', () => {
   it('should run the passed function once (wrapped by a effect)', () => {

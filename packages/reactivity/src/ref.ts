@@ -9,6 +9,7 @@ import type { ComputedRef, WritableComputedRef } from './computed'
 import { ReactiveFlags, TrackOpTypes, TriggerOpTypes } from './constants'
 import { onTrack, triggerEventInfos } from './debug'
 import { getDepFromReactive } from './dep'
+import { Dependency, type Link, System, endBatch, startBatch } from './effect'
 import {
   type Builtin,
   type ShallowReactiveMarker,
@@ -19,7 +20,6 @@ import {
   toRaw,
   toReactive,
 } from './reactive'
-import { Dependency, type Link, System, endBatch, startBatch } from './system'
 import { warn } from './warning'
 
 declare const RefSymbol: unique symbol

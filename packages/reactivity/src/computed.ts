@@ -2,7 +2,6 @@ import { hasChanged, isFunction } from '@vue/shared'
 import { ReactiveFlags, TrackOpTypes } from './constants'
 import { onTrack, setupDirtyLevelHandler } from './debug'
 import type { DebuggerEvent, DebuggerOptions } from './effect'
-import type { Ref } from './ref'
 import {
   Dependency,
   DirtyLevels,
@@ -10,7 +9,8 @@ import {
   type Link,
   Subscriber,
   System,
-} from './system'
+} from './effect'
+import type { Ref } from './ref'
 import { warn } from './warning'
 
 declare const ComputedRefSymbol: unique symbol
