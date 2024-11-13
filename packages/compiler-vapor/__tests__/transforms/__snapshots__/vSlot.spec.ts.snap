@@ -137,6 +137,24 @@ export function render(_ctx) {
 }"
 `;
 
+exports[`compiler: transform slot > nested component slot 1`] = `
+"import { resolveComponent as _resolveComponent, createComponent as _createComponent } from 'vue/vapor';
+
+export function render(_ctx) {
+  const _component_B = _resolveComponent("B")
+  const _component_A = _resolveComponent("A")
+  const n1 = _createComponent(_component_A, null, [
+    {
+      "default": () => {
+        const n0 = _createComponent(_component_B)
+        return n0
+      }
+    }
+  ], true)
+  return n1
+}"
+`;
+
 exports[`compiler: transform slot > nested slots scoping 1`] = `
 "import { resolveComponent as _resolveComponent, createTextNode as _createTextNode, withDestructure as _withDestructure, createComponent as _createComponent, template as _template } from 'vue/vapor';
 const t0 = _template(" ")

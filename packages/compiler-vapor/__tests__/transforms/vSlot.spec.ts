@@ -406,6 +406,34 @@ describe('compiler: transform slot', () => {
     expect(code).contains(`"nav-bar-title-before"`)
   })
 
+  test('nested component slot', () => {
+    const { ir, code } = compileWithSlots(`<A><B/></A>`)
+    expect(code).toMatchSnapshot()
+    expect(ir.block.operation).toMatchObject([
+      {
+        type: IRNodeTypes.CREATE_COMPONENT_NODE,
+        tag: 'A',
+        slots: [
+          {
+            slotType: IRSlotType.STATIC,
+            slots: {
+              default: {
+                type: IRNodeTypes.BLOCK,
+                operation: [
+                  {
+                    type: IRNodeTypes.CREATE_COMPONENT_NODE,
+                    tag: 'B',
+                    slots: [],
+                  },
+                ],
+              },
+            },
+          },
+        ],
+      },
+    ])
+  })
+
   describe('errors', () => {
     test('error on extraneous children w/ named default slot', () => {
       const onError = vi.fn()
