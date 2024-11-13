@@ -45,6 +45,9 @@ export interface WritableComputedOptions<T, S = T> {
  * the main vue package
  */
 export class ComputedRefImpl<T = any> implements IComputed {
+  /**
+   * @internal
+   */
   _value: T | undefined = undefined
 
   // Dependency
