@@ -23,7 +23,7 @@ export function createComponent(
     slots,
     once,
   )
-  setupComponent(instance, singleRoot)
+  setupComponent(instance)
 
   // register sub-component with current component for lifecycle management
   current.comps.add(instance)

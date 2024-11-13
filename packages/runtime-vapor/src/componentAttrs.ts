@@ -72,6 +72,12 @@ export function fallThroughAttrs(instance: ComponentInternalInstance): void {
   if (inheritAttrs === false) return
 
   if (block instanceof Element) {
-    renderEffect(() => setDynamicProps(block, instance.attrs))
+    // attrs in static template
+    const initial: Record<string, string> = {}
+    for (let i = 0; i < block.attributes.length; i++) {
+      const attr = block.attributes[i]
+      initial[attr.name] = attr.value
+    }
+    renderEffect(() => setDynamicProps(block, instance.attrs, initial))
   }
 }

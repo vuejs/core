@@ -30,10 +30,7 @@ export type Fragment = {
   [fragmentKey]: true
 }
 
-export function setupComponent(
-  instance: ComponentInternalInstance,
-  singleRoot: boolean = false,
-): void {
+export function setupComponent(instance: ComponentInternalInstance): void {
   if (__DEV__) {
     startMeasure(instance, `init`)
   }
@@ -97,7 +94,7 @@ export function setupComponent(
       block = []
     }
     instance.block = block
-    if (singleRoot) fallThroughAttrs(instance)
+    fallThroughAttrs(instance)
     return block
   })
   reset()
