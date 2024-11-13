@@ -83,10 +83,7 @@ export function initProps(
   isStateful: boolean,
   once: boolean,
 ): void {
-  if (!rawProps) rawProps = []
-  else if (!isArray(rawProps)) rawProps = [rawProps]
-  instance.rawProps = rawProps
-
+  instance.rawProps = rawProps = normalizeRawProps(rawProps)
   const props: Data = {}
   const attrs = (instance.attrs = shallowReactive<Data>({}))
   const [options] = instance.propsOptions
@@ -163,6 +160,30 @@ function registerProp(
     const descriptor: PropertyDescriptor = once ? { value: get() } : { get }
     descriptor.enumerable = true
     Object.defineProperty(props, key, descriptor)
+  }
+}
+
+export function normalizeRawProps(rawProps: RawProps): NormalizedRawProps {
+  if (!rawProps) return []
+  if (!isArray(rawProps)) return [rawProps]
+  return rawProps
+}
+
+export function walkRawProps(
+  rawProps: NormalizedRawProps,
+  cb: (key: string, value: any, getter?: boolean) => void,
+): void {
+  for (const props of Array.from(rawProps).reverse()) {
+    if (isFunction(props)) {
+      const resolved = props()
+      for (const rawKey in resolved) {
+        cb(rawKey, resolved[rawKey])
+      }
+    } else {
+      for (const rawKey in props) {
+        cb(rawKey, props[rawKey], true)
+      }
+    }
   }
 }
 

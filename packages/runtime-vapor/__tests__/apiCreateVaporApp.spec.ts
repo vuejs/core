@@ -134,7 +134,6 @@ describe('api: createVaporApp', () => {
       setup() {
         const FooBar = resolveComponent('foo-bar')
         const BarBaz = resolveComponent('bar-baz')
-        // @ts-expect-error TODO support string
         return [createComponent(FooBar), createComponent(BarBaz)]
       },
     }).create()

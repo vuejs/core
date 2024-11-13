@@ -1,8 +1,8 @@
-import { camelize, isArray, isFunction } from '@vue/shared'
+import { camelize, isArray } from '@vue/shared'
 import { type ComponentInternalInstance, currentInstance } from './component'
 import { isEmitListener } from './componentEmits'
 import { setDynamicProps } from './dom/prop'
-import type { RawProps } from './componentProps'
+import { type RawProps, walkRawProps } from './componentProps'
 import { renderEffect } from './renderEffect'
 
 export function patchAttrs(instance: ComponentInternalInstance): void {
@@ -14,19 +14,8 @@ export function patchAttrs(instance: ComponentInternalInstance): void {
 
   if (!rawProps.length) return
   const keys = new Set<string>()
-  for (const props of Array.from(rawProps).reverse()) {
-    if (isFunction(props)) {
-      const resolved = props()
-      for (const rawKey in resolved) {
-        registerAttr(rawKey, resolved[rawKey])
-      }
-    } else {
-      for (const rawKey in props) {
-        registerAttr(rawKey, props[rawKey], true)
-      }
-    }
-  }
 
+  walkRawProps(rawProps, registerAttr)
   for (const key in attrs) {
     if (!keys.has(key)) {
       delete attrs[key]
