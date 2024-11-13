@@ -1199,7 +1199,7 @@ describe('renderer: optimized mode', () => {
             createBlock('div', null, [
               createVNode('div', null, [
                 cache[0] ||
-                  (setBlockTracking(-1),
+                  (setBlockTracking(-1, true),
                   ((cache[0] = createVNode('div', null, [
                     createVNode(Child),
                   ])).cacheIndex = 0),
