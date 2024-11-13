@@ -20,7 +20,7 @@ export const transformOnce: NodeTransform = (node, context) => {
         cur.codegenNode = context.cache(
           cur.codegenNode,
           true /* isVNode */,
-          true /* isOnce */,
+          true /* inVOnce */,
         )
       }
     }

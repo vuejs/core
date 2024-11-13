@@ -310,9 +310,9 @@ export let isBlockTreeEnabled = 1
  *
  * @private
  */
-export function setBlockTracking(value: number, isOnce = false): void {
+export function setBlockTracking(value: number, inVOnce = false): void {
   isBlockTreeEnabled += value
-  if (value < 0 && currentBlock && isOnce) {
+  if (value < 0 && currentBlock && inVOnce) {
     // mark current block so it doesn't take fast path and skip possible
     // nested components during unmount
     currentBlock.hasOnce = true
