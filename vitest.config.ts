@@ -23,8 +23,7 @@ export default defineConfig({
   },
   test: {
     globals: true,
-    // pool: 'threads',
-    include: ['./packages/reactivity/__tests__/gc.spec.ts'],
+    pool: 'threads',
     poolOptions: {
       forks: {
         execArgv: ['--expose-gc'],
