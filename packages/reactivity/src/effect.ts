@@ -301,7 +301,7 @@ function cleanupEffect(e: ReactiveEffect) {
   }
 }
 
-//#endregion Ported from https://github.com/stackblitz/alien-signals/blob/2f3656041a183956a91f805582fcd33026ed46a3/src/system.ts
+//#region Ported from https://github.com/stackblitz/alien-signals/blob/2f3656041a183956a91f805582fcd33026ed46a3/src/system.ts
 export interface IEffect extends Subscriber {
   nextNotify: IEffect | undefined
   notify(): void
