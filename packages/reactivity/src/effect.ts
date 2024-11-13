@@ -45,10 +45,6 @@ export enum PauseLevels {
 export class ReactiveEffect<T = any> implements IEffect, ReactiveEffectOptions {
   nextNotify: IEffect | undefined = undefined
 
-  // Dependency
-  subs: Link | undefined = undefined
-  subsTail: Link | undefined = undefined
-
   // Subscriber
   deps: Link | undefined = undefined
   depsTail: Link | undefined = undefined
@@ -306,7 +302,7 @@ function cleanupEffect(e: ReactiveEffect) {
 }
 
 //#endregion Ported from https://github.com/stackblitz/alien-signals/blob/10712e7de4691ff3933c7c7af2689d994c635ad7/src/system.ts
-export interface IEffect extends Dependency, Subscriber {
+export interface IEffect extends Subscriber {
   nextNotify: IEffect | undefined
   notify(): void
 }
@@ -329,7 +325,7 @@ export interface Subscriber {
 }
 
 export interface Link {
-  dep: Dependency | IComputed | IEffect
+  dep: Dependency | IComputed
   sub: Subscriber | IComputed | IEffect
   trackId: number
   // Also used as prev update
@@ -592,7 +588,7 @@ export namespace Subscriber {
 
             if (sub.dirtyLevel === DirtyLevels.Dirty) {
               if (remaining !== 0) {
-                const subSubs = sub.subs!
+                const subSubs = (sub as IComputed).subs!
                 const prevLink = subSubs.prevSub!
                 ;(sub as IComputed).update()
                 subSubs.prevSub = undefined
@@ -616,7 +612,7 @@ export namespace Subscriber {
       if (dirtyLevel === DirtyLevels.MaybeDirty) {
         sub.dirtyLevel = DirtyLevels.None
         if (remaining !== 0) {
-          const subSubs = sub.subs!
+          const subSubs = (sub as IComputed).subs!
           const prevLink = subSubs.prevSub!
           subSubs.prevSub = undefined
           sub = prevLink.sub as IComputed | IEffect
@@ -628,7 +624,7 @@ export namespace Subscriber {
         if (dirtyLevel === DirtyLevels.Dirty) {
           ;(sub as IComputed).update()
         }
-        const subSubs = sub.subs!
+        const subSubs = (sub as IComputed).subs!
         const prevLink = subSubs.prevSub!
         subSubs.prevSub = undefined
         sub = prevLink.sub as IComputed | IEffect
