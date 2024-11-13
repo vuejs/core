@@ -23,7 +23,13 @@ export default defineConfig({
   },
   test: {
     globals: true,
-    pool: 'threads',
+    // pool: 'threads',
+    include: ['./packages/reactivity/__tests__/gc.spec.ts'],
+    poolOptions: {
+      forks: {
+        execArgv: ['--expose-gc'],
+      },
+    },
     setupFiles: 'scripts/setup-vitest.ts',
     environmentMatchGlobs: [
       ['packages/{vue,vue-compat,runtime-dom}/**', 'jsdom'],
