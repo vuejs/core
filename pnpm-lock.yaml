@@ -507,9 +507,6 @@ importers:
 
   packages/vue-vapor:
     dependencies:
-      '@vue/compiler-vapor':
-        specifier: workspace:*
-        version: link:../compiler-vapor
       '@vue/runtime-vapor':
         specifier: workspace:*
         version: link:../runtime-vapor

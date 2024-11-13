@@ -1,12 +1,15 @@
-// This entry is the "full-build" that includes both the runtime
-// and the compiler, and supports on-the-fly compilation of the template option.
-import { initDev } from './dev'
+import { initCustomFormatter } from '@vue/runtime-dom'
 
-if (__DEV__) {
-  initDev()
+if (__DEV__ && __BROWSER__) {
+  /* istanbul ignore if */
+  if (!__ESM_BUNDLER__) {
+    console.info(
+      `You are running a development build of Vue.\n` +
+        `Make sure to use the production build (*.prod.js) when deploying for production.`,
+    )
+  }
+
+  initCustomFormatter()
 }
 
-// TODO register compiler
-
-export { compile } from '@vue/compiler-vapor'
 export * from '@vue/runtime-vapor'

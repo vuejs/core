@@ -23,9 +23,7 @@ const {
 
 const sizeDir = path.resolve('temp/size')
 const vue = path.resolve('./packages/vue/dist/vue.runtime.esm-bundler.js')
-const vapor = path.resolve(
-  './packages/vue-vapor/dist/vue-vapor.runtime.esm-bundler.js',
-)
+const vapor = path.resolve('./packages/vue-vapor/dist/vue-vapor.esm-bundler.js')
 
 /**
  * @typedef {Object} Preset
@@ -44,9 +42,9 @@ const presets = [
     from: vue,
   },
   { name: 'createApp', imports: ['createApp'], from: vue },
+  { name: 'createVaporApp', imports: ['createVaporApp'], from: vapor },
   { name: 'createSSRApp', imports: ['createSSRApp'], from: vue },
   { name: 'defineCustomElement', imports: ['defineCustomElement'], from: vue },
-  { name: 'vapor', imports: '*', from: vapor },
   {
     name: 'overall',
     imports: [
