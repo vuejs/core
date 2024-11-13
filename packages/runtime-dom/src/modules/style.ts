@@ -19,14 +19,14 @@ export function patchStyle(el: Element, prev: Style, next: Style): void {
     if (prev) {
       if (!isString(prev)) {
         for (const key in prev) {
-          if (!next[key]) {
+          if (next[key] == null) {
             setStyle(style, key, '')
           }
         }
       } else {
         for (const prevStyle of prev.split(';')) {
           const key = prevStyle.slice(0, prevStyle.indexOf(':')).trim()
-          if (!next[key]) {
+          if (next[key] == null) {
             setStyle(style, key, '')
           }
         }
@@ -75,7 +75,7 @@ function setStyle(
   if (isArray(val)) {
     val.forEach(v => setStyle(style, name, v))
   } else {
-    if (val == null) val = ''
+    if (typeof val === 'boolean' || val == null) val = ''
     if (__DEV__) {
       if (semicolonRE.test(val)) {
         warn(

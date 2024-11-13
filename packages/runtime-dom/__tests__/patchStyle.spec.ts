@@ -79,13 +79,13 @@ describe(`runtime-dom: style patching`, () => {
     expect(el.style.width).toBe('0px')
   })
 
-  it('multiple patch with falsy style value', () => {
+  it('multiple patch with boolean style value', () => {
     const el = document.createElement('div')
     const styleA = {
       left: 0,
-      right: false,
+      right: true,
       top: 0,
-      bottom: false,
+      bottom: true,
     }
     patchProp(el as any, 'style', null, styleA)
     expect(el.style.left).toBe('0px')
@@ -93,9 +93,9 @@ describe(`runtime-dom: style patching`, () => {
     expect(el.style.top).toBe('0px')
     expect(el.style.bottom).toBe('')
     const styleB = {
-      left: false,
+      left: true,
       right: 0,
-      top: false,
+      top: true,
       bottom: 0,
     }
     patchProp(el as any, 'style', styleA, styleB)
