@@ -54,28 +54,7 @@ describe('resolveAssets', () => {
     expect(directive3!).toBe(BarBaz)
     expect(directive4!).toBe(BarBaz)
   })
-  test('maybeSelfReference', async () => {
-    let component1: Component | string
-    let component2: Component | string
-    let component3: Component | string
-    const Foo = () => []
-    const Root = define({
-      name: 'Root',
-      render() {
-        component1 = resolveComponent('Root', true)
-        component2 = resolveComponent('Foo', true)
-        component3 = resolveComponent('Bar', true)
-        return []
-      },
-    })
-    const app = createVaporApp(Root.component)
-    app.component('Foo', Foo)
-    const root = document.createElement('div')
-    app.mount(root)
-    expect(component1!).toMatchObject(Root.component) // explicit self name reference
-    expect(component2!).toBe(Foo) // successful resolve take higher priority
-    expect(component3!).toMatchObject(Root.component) // fallback when resolve fails
-  })
+
   describe('warning', () => {
     test('used outside render() or setup()', () => {
       resolveComponent('foo')

@@ -425,11 +425,10 @@ function getSlotsProxy(instance: ComponentInternalInstance): StaticSlots {
 
 export function getComponentName(
   Component: Component,
-  includeInferred = true,
 ): string | false | undefined {
   return isFunction(Component)
     ? Component.displayName || Component.name
-    : Component.name || (includeInferred && Component.__name)
+    : Component.name || Component.__name
 }
 
 export function formatComponentName(

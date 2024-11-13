@@ -8,11 +8,8 @@ export const DIRECTIVES = 'directives'
 
 export type AssetTypes = typeof COMPONENTS | typeof DIRECTIVES
 
-export function resolveComponent(
-  name: string,
-  maybeSelfReference?: boolean,
-): string | Component {
-  return resolveAsset(COMPONENTS, name, true, maybeSelfReference) || name
+export function resolveComponent(name: string): string | Component {
+  return resolveAsset(COMPONENTS, name, true) || name
 }
 
 export function resolveDirective(name: string): Directive | undefined {
@@ -27,7 +24,6 @@ function resolveAsset(
   type: typeof COMPONENTS,
   name: string,
   warnMissing?: boolean,
-  maybeSelfReference?: boolean,
 ): Component | undefined
 // overload 2: directives
 function resolveAsset(
@@ -35,22 +31,14 @@ function resolveAsset(
   name: string,
 ): Directive | undefined
 // implementation
-function resolveAsset(
-  type: AssetTypes,
-  name: string,
-  warnMissing = true,
-  maybeSelfReference = false,
-) {
+function resolveAsset(type: AssetTypes, name: string, warnMissing = true) {
   const instance = currentInstance
   if (instance) {
     const Component = instance.type
 
     // explicit self name has highest priority
     if (type === COMPONENTS) {
-      const selfName = getComponentName(
-        Component,
-        false /* do not include inferred name to avoid breaking existing code */,
-      )
+      const selfName = getComponentName(Component)
       if (
         selfName &&
         (selfName === name ||
@@ -64,11 +52,6 @@ function resolveAsset(
     const res =
       // global registration
       resolve(instance.appContext[type], name)
-
-    if (!res && maybeSelfReference) {
-      // fallback to implicit self-reference
-      return Component
-    }
 
     if (__DEV__ && warnMissing && !res) {
       const extra =
