@@ -5,10 +5,12 @@ import {
   type WatchOptions,
   type WatchScheduler,
   computed,
+  effectScope,
   onWatcherCleanup,
   ref,
   watch,
 } from '../src'
+import { expect } from 'vitest'
 
 const queue: (() => void)[] = []
 
@@ -276,5 +278,45 @@ describe('watch', () => {
     n1.value++
 
     expect(dummy).toEqual([1, 2, 3])
+  })
+
+  test('removing a watcher while stopping its effectScope', async () => {
+    const count = ref(0)
+    const scope = effectScope()
+    let watcherCalls = 0
+    let cleanupCalls = 0
+
+    scope.run(() => {
+      const stop1 = watch(count, () => {
+        watcherCalls++
+      })
+      watch(count, (val, old, onCleanup) => {
+        watcherCalls++
+        onCleanup(() => {
+          cleanupCalls++
+          stop1()
+        })
+      })
+      watch(count, () => {
+        watcherCalls++
+      })
+    })
+
+    expect(watcherCalls).toBe(0)
+    expect(cleanupCalls).toBe(0)
+
+    count.value++
+    await nextTick()
+    expect(watcherCalls).toBe(3)
+    expect(cleanupCalls).toBe(0)
+
+    scope.stop()
+    count.value++
+    await nextTick()
+    expect(watcherCalls).toBe(3)
+    expect(cleanupCalls).toBe(1)
+
+    expect(scope.effects.length).toBe(0)
+    expect(scope.cleanups.length).toBe(0)
   })
 })

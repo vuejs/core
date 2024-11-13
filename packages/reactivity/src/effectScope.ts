@@ -119,8 +119,9 @@ export class EffectScope {
     if (this._active) {
       this._active = false
       let i, l
-      for (i = 0, l = this.effects.length; i < l; i++) {
-        this.effects[i].stop()
+      const effects = this.effects.slice()
+      for (i = 0, l = effects.length; i < l; i++) {
+        effects[i].stop()
       }
       const cleanups = this.cleanups.slice()
       for (i = 0, l = cleanups.length; i < l; i++) {
