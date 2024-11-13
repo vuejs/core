@@ -40,17 +40,7 @@ export function compile(
 ): VaporCodegenResult {
   const onError = options.onError || defaultOnError
   const isModuleMode = options.mode === 'module'
-  /* istanbul ignore if */
-  if (__BROWSER__) {
-    if (options.prefixIdentifiers === true) {
-      onError(createCompilerError(ErrorCodes.X_PREFIX_ID_NOT_SUPPORTED))
-    } else if (isModuleMode) {
-      onError(createCompilerError(ErrorCodes.X_MODULE_MODE_NOT_SUPPORTED))
-    }
-  }
-
-  const prefixIdentifiers =
-    !__BROWSER__ && (options.prefixIdentifiers === true || isModuleMode)
+  const prefixIdentifiers = options.prefixIdentifiers === true || isModuleMode
 
   if (options.scopeId && !isModuleMode) {
     onError(createCompilerError(ErrorCodes.X_SCOPE_ID_NOT_SUPPORTED))
@@ -63,7 +53,7 @@ export function compile(
   const [nodeTransforms, directiveTransforms] =
     getBaseTransformPreset(prefixIdentifiers)
 
-  if (!__BROWSER__ && options.isTS) {
+  if (options.isTS) {
     const { expressionPlugins } = options
     if (!expressionPlugins || !expressionPlugins.includes('typescript')) {
       resolvedOptions.expressionPlugins = [

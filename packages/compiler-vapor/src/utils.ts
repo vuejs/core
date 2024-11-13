@@ -60,7 +60,7 @@ export function resolveExpression(
 export function getLiteralExpressionValue(
   exp: SimpleExpressionNode,
 ): number | string | boolean | null {
-  if (!__BROWSER__ && exp.ast) {
+  if (exp.ast) {
     if (
       ['StringLiteral', 'NumericLiteral', 'BigIntLiteral'].includes(
         exp.ast.type,

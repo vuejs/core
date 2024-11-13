@@ -15,7 +15,7 @@ export function createVaporCompilerError(
   return createCompilerError(
     code,
     loc,
-    __DEV__ || !__BROWSER__ ? VaporErrorMessages : undefined,
+    VaporErrorMessages,
   ) as VaporCompilerError
 }
 

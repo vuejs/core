@@ -5,22 +5,28 @@
   "main": "index.js",
   "module": "dist/compiler-vapor.esm-bundler.js",
   "types": "dist/compiler-vapor.d.ts",
-  "unpkg": "dist/compiler-vapor.global.js",
-  "jsdelivr": "dist/compiler-vapor.global.js",
   "files": [
-    "index.js",
     "dist"
   ],
   "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/compiler-vapor.d.ts",
+      "node": "./dist/compiler-vapor.cjs.js",
+      "module": "./dist/compiler-vapor.esm-browser.js",
+      "import": "./dist/compiler-vapor.esm-browser.js",
+      "require": "./dist/compiler-vapor.cjs.js"
+    },
+    "./*": "./*"
+  },
   "buildOptions": {
     "name": "VueCompilerVapor",
-    "compat": true,
     "formats": [
-      "esm-bundler",
-      "esm-browser",
       "cjs",
-      "global"
-    ]
+      "esm-browser"
+    ],
+    "prod": false,
+    "enableNonBrowserBranches": true
   },
   "repository": {
     "type": "git",

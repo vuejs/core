@@ -74,21 +74,21 @@ function transformComponentElement(
 ) {
   let asset = true
 
-  if (!__BROWSER__) {
-    const fromSetup = resolveSetupReference(tag, context)
-    if (fromSetup) {
-      tag = fromSetup
+  const fromSetup = resolveSetupReference(tag, context)
+  if (fromSetup) {
+    tag = fromSetup
+    asset = false
+  }
+
+  const dotIndex = tag.indexOf('.')
+  if (dotIndex > 0) {
+    const ns = resolveSetupReference(tag.slice(0, dotIndex), context)
+    if (ns) {
+      tag = ns + tag.slice(dotIndex)
       asset = false
     }
-    const dotIndex = tag.indexOf('.')
-    if (dotIndex > 0) {
-      const ns = resolveSetupReference(tag.slice(0, dotIndex), context)
-      if (ns) {
-        tag = ns + tag.slice(dotIndex)
-        asset = false
-      }
-    }
   }
+
   if (asset) {
     context.component.add(tag)
   }
@@ -304,8 +304,7 @@ function transformProp(
   }
 
   if (!isBuiltInDirective(name)) {
-    const fromSetup =
-      !__BROWSER__ && resolveSetupReference(`v-${name}`, context)
+    const fromSetup = resolveSetupReference(`v-${name}`, context)
     if (fromSetup) {
       name = fromSetup
     } else {

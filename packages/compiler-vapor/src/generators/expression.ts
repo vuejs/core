@@ -28,7 +28,6 @@ export function genExpression(
   }
 
   if (
-    __BROWSER__ ||
     !prefixIdentifiers ||
     !node.content.trim() ||
     // there was a parsing error

@@ -102,7 +102,7 @@ export function codeFragmentToString(
   } = context
 
   let map: CodegenSourceMapGenerator | undefined
-  if (!__BROWSER__ && sourceMap) {
+  if (sourceMap) {
     // lazy require source-map implementation, only in non-browser builds
     map = new SourceMapGenerator() as unknown as CodegenSourceMapGenerator
     map.setSourceContent(filename, context.ir.source)
@@ -136,7 +136,7 @@ export function codeFragmentToString(
     let [code, newlineIndex = NewlineType.None, loc, name] = frag
     codegen += code
 
-    if (!__BROWSER__ && map) {
+    if (map) {
       if (loc) addMapping(loc.start, name)
       if (newlineIndex === NewlineType.Unknown) {
         // multiple newlines, full iteration

@@ -46,7 +46,6 @@ export const transformVModel: DirectiveTransform = (dir, node, context) => {
 
   const expString = exp.content
   const maybeRef =
-    !__BROWSER__ &&
     context.options.inline &&
     (bindingType === BindingTypes.SETUP_LET ||
       bindingType === BindingTypes.SETUP_REF ||
