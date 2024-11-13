@@ -423,6 +423,117 @@ describe('compiler: element transform', () => {
     })
   })
 
+  describe('dynamic component', () => {
+    test('static binding', () => {
+      const { code, ir, vaporHelpers } = compileWithElementTransform(
+        `<component is="foo" />`,
+      )
+      expect(code).toMatchSnapshot()
+      expect(vaporHelpers).toContain('resolveDynamicComponent')
+      expect(ir.block.operation).toMatchObject([
+        {
+          type: IRNodeTypes.CREATE_COMPONENT_NODE,
+          tag: 'component',
+          asset: true,
+          root: true,
+          props: [[]],
+          dynamic: {
+            type: NodeTypes.SIMPLE_EXPRESSION,
+            content: 'foo',
+            isStatic: true,
+          },
+        },
+      ])
+    })
+
+    test('capitalized version w/ static binding', () => {
+      const { code, ir, vaporHelpers } = compileWithElementTransform(
+        `<Component is="foo" />`,
+      )
+      expect(code).toMatchSnapshot()
+      expect(vaporHelpers).toContain('resolveDynamicComponent')
+      expect(ir.block.operation).toMatchObject([
+        {
+          type: IRNodeTypes.CREATE_COMPONENT_NODE,
+          tag: 'Component',
+          asset: true,
+          root: true,
+          props: [[]],
+          dynamic: {
+            type: NodeTypes.SIMPLE_EXPRESSION,
+            content: 'foo',
+            isStatic: true,
+          },
+        },
+      ])
+    })
+
+    test('dynamic binding', () => {
+      const { code, ir, vaporHelpers } = compileWithElementTransform(
+        `<component :is="foo" />`,
+      )
+      expect(code).toMatchSnapshot()
+      expect(vaporHelpers).toContain('resolveDynamicComponent')
+      expect(ir.block.operation).toMatchObject([
+        {
+          type: IRNodeTypes.CREATE_COMPONENT_NODE,
+          tag: 'component',
+          asset: true,
+          root: true,
+          props: [[]],
+          dynamic: {
+            type: NodeTypes.SIMPLE_EXPRESSION,
+            content: 'foo',
+            isStatic: false,
+          },
+        },
+      ])
+    })
+
+    test('dynamic binding shorthand', () => {
+      const { code, ir, vaporHelpers } =
+        compileWithElementTransform(`<component :is />`)
+      expect(code).toMatchSnapshot()
+      expect(vaporHelpers).toContain('resolveDynamicComponent')
+      expect(ir.block.operation).toMatchObject([
+        {
+          type: IRNodeTypes.CREATE_COMPONENT_NODE,
+          tag: 'component',
+          asset: true,
+          root: true,
+          props: [[]],
+          dynamic: {
+            type: NodeTypes.SIMPLE_EXPRESSION,
+            content: 'is',
+            isStatic: false,
+          },
+        },
+      ])
+    })
+
+    // #3934
+    test('normal component with is prop', () => {
+      const { code, ir, vaporHelpers } = compileWithElementTransform(
+        `<custom-input is="foo" />`,
+        {
+          isNativeTag: () => false,
+        },
+      )
+      expect(code).toMatchSnapshot()
+      expect(vaporHelpers).toContain('resolveComponent')
+      expect(vaporHelpers).not.toContain('resolveDynamicComponent')
+      expect(ir.block.operation).toMatchObject([
+        {
+          type: IRNodeTypes.CREATE_COMPONENT_NODE,
+          tag: 'custom-input',
+          asset: true,
+          root: true,
+          props: [[{ key: { content: 'is' }, values: [{ content: 'foo' }] }]],
+        },
+      ])
+    })
+  })
+
   test('static props', () => {
     const { code, ir } = compileWithElementTransform(
       `<div id="foo" class="bar" />`,

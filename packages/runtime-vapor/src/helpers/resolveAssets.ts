@@ -1,4 +1,4 @@
-import { camelize, capitalize } from '@vue/shared'
+import { camelize, capitalize, isString } from '@vue/shared'
 import { type Directive, warn } from '..'
 import { type Component, currentInstance } from '../component'
 import { getComponentName } from '../component'
@@ -78,4 +78,17 @@ function resolve(registry: Record<string, any> | undefined, name: string) {
       registry[camelize(name)] ||
       registry[capitalize(camelize(name))])
   )
+}
+
+/**
+ * @private
+ */
+export function resolveDynamicComponent(
+  component: string | Component,
+): string | Component {
+  if (isString(component)) {
+    return resolveAsset(COMPONENTS, component, false) || component
+  } else {
+    return component
+  }
 }

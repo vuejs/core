@@ -65,7 +65,12 @@ export function genCreateComponent(
   ]
 
   function genTag() {
-    if (oper.asset) {
+    if (oper.dynamic) {
+      return genCall(
+        vaporHelper('resolveDynamicComponent'),
+        genExpression(oper.dynamic, context),
+      )
+    } else if (oper.asset) {
       return toValidAssetId(oper.tag, 'component')
     } else {
       return genExpression(

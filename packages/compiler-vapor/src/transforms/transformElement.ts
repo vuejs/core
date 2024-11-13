@@ -1,13 +1,16 @@
 import { isValidHTMLNesting } from '../html-nesting'
 import {
   type AttributeNode,
+  type ComponentNode,
   type ElementNode,
   ElementTypes,
   ErrorCodes,
   NodeTypes,
+  type PlainElementNode,
   type SimpleExpressionNode,
   createCompilerError,
   createSimpleExpression,
+  isStaticArgOf,
 } from '@vue/compiler-dom'
 import {
   camelize,
@@ -33,6 +36,7 @@ import {
   type VaporDirectiveNode,
 } from '../ir'
 import { EMPTY_EXPRESSION } from './utils'
+import { findProp } from '../utils'
 
 export const isReservedProp: (key: string) => boolean = /*#__PURE__*/ makeMap(
   // the leading comma is intentional so empty string "" is also included
@@ -51,46 +55,56 @@ export const transformElement: NodeTransform = (node, context) => {
     )
       return
 
-    const { tag, tagType } = node
-    const isComponent = tagType === ElementTypes.COMPONENT
+    const isComponent = node.tagType === ElementTypes.COMPONENT
+    const isDynamicComponent = isComponentTag(node.tag)
     const propsResult = buildProps(
       node,
       context as TransformContext<ElementNode>,
       isComponent,
+      isDynamicComponent,
     )
 
     ;(isComponent ? transformComponentElement : transformNativeElement)(
-      tag,
+      node as any,
       propsResult,
       context as TransformContext<ElementNode>,
+      isDynamicComponent,
     )
   }
 }
 
 function transformComponentElement(
-  tag: string,
+  node: ComponentNode,
   propsResult: PropsResult,
   context: TransformContext,
+  isDynamicComponent: boolean,
 ) {
+  const dynamicComponent = isDynamicComponent
+    ? resolveDynamicComponent(node)
+    : undefined
+
+  let { tag } = node
   let asset = true
 
-  const fromSetup = resolveSetupReference(tag, context)
-  if (fromSetup) {
-    tag = fromSetup
-    asset = false
-  }
-
-  const dotIndex = tag.indexOf('.')
-  if (dotIndex > 0) {
-    const ns = resolveSetupReference(tag.slice(0, dotIndex), context)
-    if (ns) {
-      tag = ns + tag.slice(dotIndex)
+  if (!dynamicComponent) {
+    const fromSetup = resolveSetupReference(tag, context)
+    if (fromSetup) {
+      tag = fromSetup
       asset = false
     }
-  }
 
-  if (asset) {
-    context.component.add(tag)
+    const dotIndex = tag.indexOf('.')
+    if (dotIndex > 0) {
+      const ns = resolveSetupReference(tag.slice(0, dotIndex), context)
+      if (ns) {
+        tag = ns + tag.slice(dotIndex)
+        asset = false
+      }
+    }
+
+    if (asset) {
+      context.component.add(tag)
+    }
   }
 
   context.dynamic.flags |= DynamicFlag.NON_TEMPLATE | DynamicFlag.INSERT
@@ -106,8 +120,26 @@ function transformComponentElement(
     root,
     slots: [...context.slots],
     once: context.inVOnce,
+    dynamic: dynamicComponent,
   })
   context.slots = []
+}
+
+function resolveDynamicComponent(node: ComponentNode) {
+  const isProp = findProp(node, 'is', false, true /* allow empty */)
+  if (!isProp) return
+
+  if (isProp.type === NodeTypes.ATTRIBUTE) {
+    return isProp.value && createSimpleExpression(isProp.value.content, true)
+  } else {
+    return (
+      isProp.exp ||
+      // #10469 handle :is shorthand
+      extend(createSimpleExpression(`is`, false, isProp.arg!.loc), {
+        ast: null,
+      })
+    )
+  }
 }
 
 function resolveSetupReference(name: string, context: TransformContext) {
@@ -128,10 +160,11 @@ function resolveSetupReference(name: string, context: TransformContext) {
 }
 
 function transformNativeElement(
-  tag: string,
+  node: PlainElementNode,
   propsResult: PropsResult,
   context: TransformContext<ElementNode>,
 ) {
+  const { tag } = node
   const { scopeId } = context.options
 
   let template = ''
@@ -189,6 +222,7 @@ export function buildProps(
   node: ElementNode,
   context: TransformContext<ElementNode>,
   isComponent: boolean,
+  isDynamicComponent: boolean,
 ): PropsResult {
   const props = node.props as (VaporDirectiveNode | AttributeNode)[]
   if (props.length === 0) return [false, []]
@@ -250,6 +284,18 @@ export function buildProps(
         }
         continue
       }
+    }
+
+    // exclude `is` prop for <component>
+    if (
+      (isDynamicComponent &&
+        prop.type === NodeTypes.ATTRIBUTE &&
+        prop.name === 'is') ||
+      (prop.type === NodeTypes.DIRECTIVE &&
+        prop.name === 'bind' &&
+        isStaticArgOf(prop.arg, 'is'))
+    ) {
+      continue
     }
 
     const result = transformProp(prop, node, context)
@@ -361,4 +407,8 @@ function resolveDirectiveResult(prop: DirectiveTransformResult): IRProp {
 function mergePropValues(existing: IRProp, incoming: IRProp) {
   const newValues = incoming.values
   existing.values.push(...newValues)
+}
+
+function isComponentTag(tag: string) {
+  return tag === 'component' || tag === 'Component'
 }
