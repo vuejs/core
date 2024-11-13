@@ -222,7 +222,7 @@ export function buildProps(
   node: ElementNode,
   context: TransformContext<ElementNode>,
   isComponent: boolean,
-  isDynamicComponent: boolean,
+  isDynamicComponent?: boolean,
 ): PropsResult {
   const props = node.props as (VaporDirectiveNode | AttributeNode)[]
   if (props.length === 0) return [false, []]
