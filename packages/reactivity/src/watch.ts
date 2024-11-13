@@ -215,7 +215,11 @@ export function watch(
     effect.stop()
     if (scope && scope.active) {
       remove(scope.effects, effect)
+      remove(scope.cleanups, watchHandle)
     }
+  }
+  if (scope) {
+    scope.cleanups.push(watchHandle)
   }
 
   if (once && cb) {

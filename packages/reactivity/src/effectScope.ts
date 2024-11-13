@@ -122,8 +122,9 @@ export class EffectScope {
       for (i = 0, l = this.effects.length; i < l; i++) {
         this.effects[i].stop()
       }
-      for (i = 0, l = this.cleanups.length; i < l; i++) {
-        this.cleanups[i]()
+      const cleanups = this.cleanups.slice()
+      for (i = 0, l = cleanups.length; i < l; i++) {
+        cleanups[i]()
       }
       if (this.scopes) {
         for (i = 0, l = this.scopes.length; i < l; i++) {
