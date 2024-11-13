@@ -9,7 +9,16 @@ import type { ComputedRef, WritableComputedRef } from './computed'
 import { ReactiveFlags, TrackOpTypes, TriggerOpTypes } from './constants'
 import { onTrack, triggerEventInfos } from './debug'
 import { getDepFromReactive } from './dep'
-import { Dependency, type Link, System, endBatch, startBatch } from './effect'
+import {
+  type Dependency,
+  type Link,
+  activeSub,
+  activeTrackId,
+  endBatch,
+  link,
+  propagate,
+  startBatch,
+} from './effect'
 import {
   type Builtin,
   type ShallowReactiveMarker,
@@ -190,24 +199,23 @@ export function triggerRef(ref: Ref): void {
   const dep = (ref as unknown as RefImpl).dep
   if (dep !== undefined && dep.subs !== undefined) {
     startBatch()
-    Dependency.propagate(dep.subs)
+    propagate(dep.subs)
     endBatch()
   }
 }
 
 function trackRef(dep: Dependency) {
-  const activeTrackId = System.activeTrackId
   if (activeTrackId !== 0) {
     const subsTail = dep.subsTail
     if (subsTail === undefined || subsTail.trackId !== activeTrackId) {
       if (__DEV__) {
-        onTrack(System.activeSub!, {
+        onTrack(activeSub!, {
           target: dep,
           type: TrackOpTypes.GET,
           key: 'value',
         })
       }
-      Dependency.link(dep, System.activeSub!)
+      link(dep, activeSub!)
     }
   }
 }

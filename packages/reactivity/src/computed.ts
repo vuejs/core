@@ -3,12 +3,17 @@ import { ReactiveFlags, TrackOpTypes } from './constants'
 import { onTrack, setupDirtyLevelHandler } from './debug'
 import type { DebuggerEvent, DebuggerOptions } from './effect'
 import {
-  Dependency,
+  type Dependency,
   DirtyLevels,
   type IComputed,
   type Link,
-  Subscriber,
-  System,
+  activeSub,
+  activeTrackId,
+  endTrack,
+  link,
+  propagate,
+  resolveMaybeDirty,
+  startTrack,
 } from './effect'
 import type { Ref } from './ref'
 import { warn } from './warning'
@@ -85,7 +90,7 @@ export class ComputedRefImpl<T = any> implements IComputed {
   get _dirty(): boolean {
     let dirtyLevel = this.dirtyLevel
     if (dirtyLevel === DirtyLevels.MaybeDirty) {
-      Subscriber.resolveMaybeDirty(this)
+      resolveMaybeDirty(this)
       dirtyLevel = this.dirtyLevel
     }
     return dirtyLevel >= DirtyLevels.Dirty
@@ -123,21 +128,20 @@ export class ComputedRefImpl<T = any> implements IComputed {
     if (this._dirty) {
       this.update()
     }
-    const activeTrackId = System.activeTrackId
     if (activeTrackId !== 0) {
       const subsTail = this.subsTail
       if (subsTail === undefined || subsTail.trackId !== activeTrackId) {
         if (__DEV__) {
-          onTrack(System.activeSub!, {
+          onTrack(activeSub!, {
             target: this,
             type: TrackOpTypes.GET,
             key: 'value',
           })
         }
-        Dependency.link(this, System.activeSub!)
+        link(this, activeSub!)
       }
     } else if (activeEffectScope !== undefined) {
-      Dependency.link(this, activeEffectScope)
+      link(this, activeEffectScope)
     }
     return this._value!
   }
@@ -151,19 +155,19 @@ export class ComputedRefImpl<T = any> implements IComputed {
   }
 
   update(): void {
-    const prevSub = Subscriber.startTrack(this)
+    const prevSub = startTrack(this)
     const oldValue = this._value
     let newValue: T
     try {
       newValue = this.fn(oldValue)
     } finally {
-      Subscriber.endTrack(this, prevSub)
+      endTrack(this, prevSub)
     }
     if (hasChanged(oldValue, newValue)) {
       this._value = newValue
       const subs = this.subs
       if (subs !== undefined) {
-        Dependency.propagate(subs)
+        propagate(subs)
       }
     }
   }

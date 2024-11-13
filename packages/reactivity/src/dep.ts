@@ -1,7 +1,16 @@
 import { isArray, isIntegerKey, isMap, isSymbol } from '@vue/shared'
 import { type TrackOpTypes, TriggerOpTypes } from './constants'
 import { onTrack, triggerEventInfos } from './debug'
-import { Dependency, type Link, System, endBatch, startBatch } from './effect'
+import {
+  type Dependency,
+  type Link,
+  activeSub,
+  activeTrackId,
+  endBatch,
+  link,
+  propagate,
+  startBatch,
+} from './effect'
 
 class Dep implements Dependency {
   _subs: Link | undefined = undefined
@@ -53,7 +62,6 @@ export const ARRAY_ITERATE_KEY: unique symbol = Symbol(
  * @param key - Identifier of the reactive property to track.
  */
 export function track(target: object, type: TrackOpTypes, key: unknown): void {
-  const activeTrackId = System.activeTrackId
   if (activeTrackId > 0) {
     let depsMap = targetMap.get(target)
     if (!depsMap) {
@@ -66,13 +74,13 @@ export function track(target: object, type: TrackOpTypes, key: unknown): void {
     const subsTail = dep.subsTail
     if (subsTail === undefined || subsTail.trackId !== activeTrackId) {
       if (__DEV__) {
-        onTrack(System.activeSub!, {
+        onTrack(activeSub!, {
           target,
           type,
           key,
         })
       }
-      Dependency.link(dep, System.activeSub!)
+      link(dep, activeSub!)
     }
   }
 }
@@ -111,7 +119,7 @@ export function trigger(
           oldTarget,
         })
       }
-      Dependency.propagate(dep.subs)
+      propagate(dep.subs)
       if (__DEV__) {
         triggerEventInfos.pop()
       }
