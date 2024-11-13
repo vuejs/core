@@ -128,7 +128,7 @@ function mountComponent(
   }
 
   // hook: beforeMount
-  invokeLifecycle(instance, VaporLifecycleHooks.BEFORE_MOUNT, 'beforeMount')
+  invokeLifecycle(instance, VaporLifecycleHooks.BEFORE_MOUNT)
 
   insert(instance.block!, instance.container)
 
@@ -136,7 +136,6 @@ function mountComponent(
   invokeLifecycle(
     instance,
     VaporLifecycleHooks.MOUNTED,
-    'mounted',
     instance => (instance.isMounted = true),
     true,
   )
@@ -156,7 +155,7 @@ export function unmountComponent(instance: ComponentInternalInstance): void {
   const { container, scope } = instance
 
   // hook: beforeUnmount
-  invokeLifecycle(instance, VaporLifecycleHooks.BEFORE_UNMOUNT, 'beforeUnmount')
+  invokeLifecycle(instance, VaporLifecycleHooks.BEFORE_UNMOUNT)
 
   scope.stop()
   container.textContent = ''
@@ -165,7 +164,6 @@ export function unmountComponent(instance: ComponentInternalInstance): void {
   invokeLifecycle(
     instance,
     VaporLifecycleHooks.UNMOUNTED,
-    'unmounted',
     instance => queuePostFlushCb(() => (instance.isUnmounted = true)),
     true,
   )

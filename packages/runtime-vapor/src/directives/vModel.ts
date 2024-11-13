@@ -6,16 +6,18 @@ import {
   looseIndexOf,
   looseToNumber,
 } from '@vue/shared'
-import type {
-  DirectiveBinding,
-  DirectiveHook,
-  DirectiveHookName,
-  ObjectDirective,
-} from '../directives'
+import type { Directive } from '../directives'
 import { addEventListener } from '../dom/event'
 import { nextTick } from '../scheduler'
 import { warn } from '../warning'
 import { MetadataKind, getMetadata } from '../componentMetadata'
+import {
+  onBeforeMount,
+  onBeforeUnmount,
+  onBeforeUpdate,
+  onMounted,
+} from '../apiLifecycle'
+import { renderEffect } from '../renderEffect'
 
 type AssignerFn = (value: any) => void
 function getModelAssigner(el: Element): AssignerFn {
@@ -41,12 +43,12 @@ const assigningMap = new WeakMap<HTMLElement, boolean>()
 
 // We are exporting the v-model runtime directly as vnode hooks so that it can
 // be tree-shaken in case v-model is never used.
-export const vModelText: ObjectDirective<
+export const vModelText: Directive<
   HTMLInputElement | HTMLTextAreaElement,
   any,
   'lazy' | 'trim' | 'number'
-> = {
-  beforeMount(el, { modifiers: { lazy, trim, number } = {} }) {
+> = (el, { source, modifiers: { lazy, trim, number } = {} }) => {
+  onBeforeMount(() => {
     const assigner = getModelAssigner(el)
     assignFnMap.set(el, assigner)
 
@@ -78,12 +80,15 @@ export const vModelText: ObjectDirective<
       // fires "change" instead of "input" on autocomplete.
       addEventListener(el, 'change', onCompositionEnd)
     }
-  },
-  // set value on mounted so it's after min/max for type="range"
-  mounted(el, { value }) {
+  })
+
+  onMounted(() => {
+    const value = source()
     el.value = value == null ? '' : value
-  },
-  beforeUpdate(el, { value, modifiers: { lazy, trim, number } = {} }) {
+  })
+
+  renderEffect(() => {
+    const value = source()
     assignFnMap.set(el, getModelAssigner(el))
 
     // avoid clearing unresolved text. #2302
@@ -108,29 +113,31 @@ export const vModelText: ObjectDirective<
     }
 
     el.value = newValue
-  },
+  })
 }
 
-export const vModelRadio: ObjectDirective<HTMLInputElement> = {
-  beforeMount(el, { value }) {
-    el.checked = looseEqual(value, getValue(el))
+export const vModelRadio: Directive<HTMLInputElement> = (el, { source }) => {
+  onBeforeMount(() => {
+    el.checked = looseEqual(source(), getValue(el))
     assignFnMap.set(el, getModelAssigner(el))
     addEventListener(el, 'change', () => {
       assignFnMap.get(el)!(getValue(el))
     })
-  },
-  beforeUpdate(el, { value, oldValue }) {
+  })
+
+  renderEffect(() => {
+    const value = source()
     assignFnMap.set(el, getModelAssigner(el))
-    if (value !== oldValue) {
-      el.checked = looseEqual(value, getValue(el))
-    }
-  },
+    el.checked = looseEqual(value, getValue(el))
+  })
 }
 
-export const vModelSelect: ObjectDirective<HTMLSelectElement, any, 'number'> = {
-  // <select multiple> value need to be deep traversed
-  deep: true,
-  beforeMount(el, { value, modifiers: { number = false } = {} }) {
+export const vModelSelect: Directive<HTMLSelectElement, any, 'number'> = (
+  el,
+  { source, modifiers: { number = false } = {} },
+) => {
+  onBeforeMount(() => {
+    const value = source()
     const isSetModel = isSet(value)
     addEventListener(el, 'change', () => {
       const selectedVal = Array.prototype.filter
@@ -153,15 +160,17 @@ export const vModelSelect: ObjectDirective<HTMLSelectElement, any, 'number'> = {
     })
     assignFnMap.set(el, getModelAssigner(el))
     setSelected(el, value, number)
-  },
-  beforeUpdate(el) {
+  })
+
+  onBeforeUnmount(() => {
     assignFnMap.set(el, getModelAssigner(el))
-  },
-  updated(el, { value, modifiers: { number = false } = {} }) {
+  })
+
+  renderEffect(() => {
     if (!assigningMap.get(el)) {
-      setSelected(el, value, number)
+      setSelected(el, source(), number)
     }
-  },
+  })
 }
 
 function setSelected(el: HTMLSelectElement, value: any, number: boolean) {
@@ -223,27 +232,12 @@ function getCheckboxValue(el: HTMLInputElement, checked: boolean) {
   return checked
 }
 
-const setChecked: DirectiveHook<HTMLInputElement> = (
-  el,
-  { value, oldValue },
-) => {
-  if (isArray(value)) {
-    el.checked = looseIndexOf(value, getValue(el)) > -1
-  } else if (isSet(value)) {
-    el.checked = value.has(getValue(el))
-  } else if (value !== oldValue) {
-    el.checked = looseEqual(value, getCheckboxValue(el, true))
-  }
-}
-
-export const vModelCheckbox: ObjectDirective<HTMLInputElement> = {
-  // #4096 array checkboxes need to be deep traversed
-  deep: true,
-  beforeMount(el, binding) {
+export const vModelCheckbox: Directive<HTMLInputElement> = (el, { source }) => {
+  onBeforeMount(() => {
     assignFnMap.set(el, getModelAssigner(el))
 
     addEventListener(el, 'change', () => {
-      const modelValue = binding.value
+      const modelValue = source()
       const elementValue = getValue(el)
       const checked = el.checked
       const assigner = assignFnMap.get(el)!
@@ -269,36 +263,38 @@ export const vModelCheckbox: ObjectDirective<HTMLInputElement> = {
         assigner(getCheckboxValue(el, checked))
       }
     })
-  },
-  // set initial checked on mount to wait for true-value/false-value
-  mounted: setChecked,
-  beforeUpdate(el, binding) {
+  })
+
+  onMounted(() => {
+    setChecked()
+  })
+
+  onBeforeUpdate(() => {
     assignFnMap.set(el, getModelAssigner(el))
-    setChecked(el, binding)
-  },
+    setChecked()
+  })
+
+  function setChecked() {
+    const value = source()
+    if (isArray(value)) {
+      el.checked = looseIndexOf(value, getValue(el)) > -1
+    } else if (isSet(value)) {
+      el.checked = value.has(getValue(el))
+    } else {
+      el.checked = looseEqual(value, getCheckboxValue(el, true))
+    }
+  }
 }
 
-export const vModelDynamic: ObjectDirective<
+export const vModelDynamic: Directive<
   HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
-> = {
-  beforeMount(el, binding) {
-    callModelHook(el, binding, 'beforeMount')
-  },
-  mounted(el, binding) {
-    callModelHook(el, binding, 'mounted')
-  },
-  beforeUpdate(el, binding) {
-    callModelHook(el, binding, 'beforeUpdate')
-  },
-  updated(el, binding) {
-    callModelHook(el, binding, 'updated')
-  },
+> = (el, binding) => {
+  const type = el.getAttribute('type')
+  const modelToUse = resolveDynamicModel(el.tagName, type)
+  modelToUse(el, binding)
 }
 
-function resolveDynamicModel(
-  tagName: string,
-  type: string | null,
-): ObjectDirective {
+function resolveDynamicModel(tagName: string, type: string | null): Directive {
   switch (tagName) {
     case 'SELECT':
       return vModelSelect
@@ -314,15 +310,4 @@ function resolveDynamicModel(
           return vModelText
       }
   }
-}
-
-function callModelHook(
-  el: HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement,
-  binding: DirectiveBinding,
-  hook: DirectiveHookName,
-) {
-  const type = el.getAttribute('type')
-  const modelToUse = resolveDynamicModel(el.tagName, type)
-  const fn = modelToUse[hook]
-  fn && fn(el, binding)
 }

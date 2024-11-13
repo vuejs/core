@@ -2,12 +2,10 @@ import { invokeArrayFns } from '@vue/shared'
 import type { VaporLifecycleHooks } from './enums'
 import { type ComponentInternalInstance, setCurrentInstance } from './component'
 import { queuePostFlushCb } from './scheduler'
-import type { DirectiveHookName } from './directives'
 
 export function invokeLifecycle(
   instance: ComponentInternalInstance,
   lifecycle: VaporLifecycleHooks,
-  directive: DirectiveHookName,
   cb?: (instance: ComponentInternalInstance) => void,
   post?: boolean,
 ): void {
@@ -27,8 +25,6 @@ export function invokeLifecycle(
   }
 
   function invokeSub() {
-    instance.comps.forEach(comp =>
-      invokeLifecycle(comp, lifecycle, directive, cb, post),
-    )
+    instance.comps.forEach(comp => invokeLifecycle(comp, lifecycle, cb, post))
   }
 }

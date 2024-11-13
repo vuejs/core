@@ -1,23 +1,21 @@
-import type { ObjectDirective } from '../directives'
+import type { Directive } from '../directives'
+import { renderEffect } from '../renderEffect'
 
-const vShowMap = new WeakMap<HTMLElement, string>()
+export const vShowOriginalDisplay: unique symbol = Symbol('_vod')
+export const vShowHidden: unique symbol = Symbol('_vsh')
 
-export const vShow: ObjectDirective<HTMLElement> = {
-  beforeMount(node, { value }) {
-    vShowMap.set(node, node.style.display === 'none' ? '' : node.style.display)
-    setDisplay(node, value)
-  },
-
-  updated(node, { value, oldValue }) {
-    if (!value === !oldValue) return
-    setDisplay(node, value)
-  },
-
-  beforeUnmount(node, { value }) {
-    setDisplay(node, value)
-  },
+export interface VShowElement extends HTMLElement {
+  // _vod = vue original display
+  [vShowOriginalDisplay]: string
+  [vShowHidden]: boolean
 }
 
-function setDisplay(el: HTMLElement, value: unknown): void {
-  el.style.display = value ? vShowMap.get(el)! : 'none'
+export const vShow: Directive<VShowElement> = (el, { source }) => {
+  el[vShowOriginalDisplay] = el.style.display === 'none' ? '' : el.style.display
+  renderEffect(() => setDisplay(el, source()))
+}
+
+function setDisplay(el: VShowElement, value: unknown): void {
+  el.style.display = value ? el[vShowOriginalDisplay] : 'none'
+  el[vShowHidden] = !value
 }

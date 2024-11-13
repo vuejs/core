@@ -1,54 +1,30 @@
 import { isBuiltInDirective } from '@vue/shared'
-import { type ComponentInternalInstance, currentInstance } from './component'
+import {
+  type ComponentInternalInstance,
+  currentInstance,
+  isVaporComponent,
+} from './component'
 import { warn } from './warning'
+import { normalizeBlock } from './dom/element'
+import { getCurrentScope } from '@vue/reactivity'
+import { VaporErrorCodes, callWithAsyncErrorHandling } from './errorHandling'
 
 export type DirectiveModifiers<M extends string = string> = Record<M, boolean>
 
 export interface DirectiveBinding<T = any, V = any, M extends string = string> {
   instance: ComponentInternalInstance
-  source?: () => V
-  value: V
-  oldValue: V | null
+  source: () => V
   arg?: string
   modifiers?: DirectiveModifiers<M>
-  dir: ObjectDirective<T, V, M>
+  dir: Directive<T, V, M>
 }
 
 export type DirectiveBindingsMap = Map<Node, DirectiveBinding[]>
 
-export type DirectiveHook<
-  T = any | null,
-  V = any,
-  M extends string = string,
-> = (node: T, binding: DirectiveBinding<T, V, M>) => void
-
-// create node -> `created` -> node operation -> `beforeMount` -> node mounted -> `mounted`
-// effect update -> `beforeUpdate` -> node updated -> `updated`
-// `beforeUnmount`-> node unmount -> `unmounted`
-export type DirectiveHookName =
-  | 'created'
-  | 'beforeMount'
-  | 'mounted'
-  | 'beforeUpdate'
-  | 'updated'
-  | 'beforeUnmount'
-  | 'unmounted'
-export type ObjectDirective<T = any, V = any, M extends string = string> = {
-  [K in DirectiveHookName]?: DirectiveHook<T, V, M> | undefined
-} & {
-  /** Watch value deeply */
-  deep?: boolean | number
-}
-
-export type FunctionDirective<
-  T = any,
-  V = any,
-  M extends string = string,
-> = DirectiveHook<T, V, M>
-
-export type Directive<T = any, V = any, M extends string = string> =
-  | ObjectDirective<T, V, M>
-  | FunctionDirective<T, V, M>
+export type Directive<T = any, V = any, M extends string = string> = (
+  node: T,
+  binding: DirectiveBinding<T, V, M>,
+) => void
 
 export function validateDirectiveName(name: string): void {
   if (isBuiltInDirective(name)) {
@@ -77,7 +53,54 @@ export function withDirectives<T extends ComponentInternalInstance | Node>(
     return nodeOrComponent
   }
 
-  // NOOP
+  let node: Node
+  if (isVaporComponent(nodeOrComponent)) {
+    const root = getComponentNode(nodeOrComponent)
+    if (!root) return nodeOrComponent
+    node = root
+  } else {
+    node = nodeOrComponent
+  }
+
+  const instance = currentInstance!
+  const parentScope = getCurrentScope()
+
+  if (__DEV__ && !parentScope) {
+    warn(`Directives should be used inside of RenderEffectScope.`)
+  }
+
+  for (const directive of directives) {
+    let [dir, source = () => undefined, arg, modifiers] = directive
+    if (!dir) continue
+
+    const binding: DirectiveBinding = {
+      dir,
+      source,
+      instance,
+      arg,
+      modifiers,
+    }
+
+    callWithAsyncErrorHandling(dir, instance, VaporErrorCodes.DIRECTIVE_HOOK, [
+      node,
+      binding,
+    ])
+  }
 
   return nodeOrComponent
+}
+
+function getComponentNode(component: ComponentInternalInstance) {
+  if (!component.block) return
+
+  const nodes = normalizeBlock(component.block)
+  if (nodes.length !== 1) {
+    warn(
+      `Runtime directive used on component with non-element root node. ` +
+        `The directives will not function as intended.`,
+    )
+    return
+  }
+
+  return nodes[0]
 }

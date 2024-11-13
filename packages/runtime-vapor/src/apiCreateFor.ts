@@ -405,7 +405,7 @@ function getItem(
   } else if (typeof source === 'number') {
     return [idx + 1, idx, undefined]
   } else if (isObject(source)) {
-    if (source && source[Symbol.iterator as any]) {
+    if (source[Symbol.iterator as any]) {
       source = Array.from(source as Iterable<any>)
       return [source[idx], idx, undefined]
     } else {
