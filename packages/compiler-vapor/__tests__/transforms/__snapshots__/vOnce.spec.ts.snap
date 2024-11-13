@@ -15,7 +15,7 @@ exports[`compiler: v-once > basic 1`] = `
 "import { createTextNode as _createTextNode, setClass as _setClass, prepend as _prepend, template as _template } from 'vue/vapor';
 const t0 = _template("<div><span></span></div>")
 
-export function render(_ctx) {
+export function render(_ctx, $props) {
   const n2 = t0()
   const n1 = n2.firstChild
   const n0 = _createTextNode([_ctx.msg, " "])

@@ -1,0 +1,28 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`compiler: expression > basic 1`] = `
+"import { createTextNode as _createTextNode } from 'vue/vapor';
+
+export function render(_ctx) {
+  const n0 = _createTextNode(() => [_ctx.a])
+  return n0
+}"
+`;
+
+exports[`compiler: expression > props 1`] = `
+"import { createTextNode as _createTextNode } from 'vue/vapor';
+
+export function render(_ctx, $props) {
+  const n0 = _createTextNode(() => [$props.foo])
+  return n0
+}"
+`;
+
+exports[`compiler: expression > props aliased 1`] = `
+"import { createTextNode as _createTextNode } from 'vue/vapor';
+
+export function render(_ctx, $props) {
+  const n0 = _createTextNode(() => [$props['bar']])
+  return n0
+}"
+`;

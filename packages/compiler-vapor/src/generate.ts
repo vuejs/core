@@ -104,13 +104,22 @@ export function generate(
   const [frag, push] = buildCodeFragment()
   const context = new CodegenContext(ir, options)
   const { helpers, vaporHelpers } = context
-  const { inline } = options
+  const { inline, bindingMetadata } = options
   const functionName = 'render'
 
+  const args = ['_ctx']
+  if (bindingMetadata && !inline) {
+    // binding optimization args
+    args.push('$props')
+  }
+  const signature = (options.isTS ? args.map(arg => `${arg}: any`) : args).join(
+    ', ',
+  )
+
   if (inline) {
-    push(`(() => {`)
+    push(`((${signature}) => {`)
   } else {
-    push(NEWLINE, `export function ${functionName}(_ctx) {`)
+    push(NEWLINE, `export function ${functionName}(${signature}) {`)
   }
 
   push(INDENT_START)

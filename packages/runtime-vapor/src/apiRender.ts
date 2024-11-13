@@ -81,7 +81,10 @@ export function setupComponent(
         component.render,
         instance,
         VaporErrorCodes.RENDER_FUNCTION,
-        [instance.setupState],
+        [
+          instance.setupState, // _ctx
+          __DEV__ ? shallowReadonly(props) : props, // $props
+        ],
       )
       resetTracking()
     }

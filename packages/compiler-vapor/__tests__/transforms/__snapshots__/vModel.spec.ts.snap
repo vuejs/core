@@ -177,7 +177,7 @@ exports[`compiler: vModel transform > should support member expression 1`] = `
 "import { vModelText as _vModelText, withDirectives as _withDirectives, delegate as _delegate, template as _template } from 'vue/vapor';
 const t0 = _template("<input>")
 
-export function render(_ctx) {
+export function render(_ctx, $props) {
   const n0 = t0()
   _withDirectives(n0, [[_vModelText, () => _ctx.setupRef.child]])
   const n1 = t0()
@@ -192,7 +192,7 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: vModel transform > should support member expression w/ inline 1`] = `
-"(() => {
+"((_ctx) => {
   const n0 = t0()
   _withDirectives(n0, [[_vModelText, () => setupRef.value.child]])
   const n1 = t0()

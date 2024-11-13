@@ -132,8 +132,9 @@ function genIdentifier(
     prefix = `${raw}: `
   }
 
+  const type = bindingMetadata[raw]
   if (inline) {
-    switch (bindingMetadata[raw]) {
+    switch (type) {
       case BindingTypes.SETUP_LET:
         name = raw = assignment
           ? `_isRef(${raw}) ? (${raw}.value = ${assignment}) : (${raw} = ${assignment})`
@@ -167,7 +168,14 @@ function genIdentifier(
         raw = withAssignment(raw)
     }
   } else {
-    raw = withAssignment(canPrefix(raw) ? `_ctx.${raw}` : raw)
+    if (canPrefix(raw)) {
+      if (type === BindingTypes.PROPS_ALIASED) {
+        raw = `$props['${bindingMetadata.__propsAliases![raw]}']`
+      } else {
+        raw = `${type === BindingTypes.PROPS ? '$props' : '_ctx'}.${raw}`
+      }
+    }
+    raw = withAssignment(raw)
   }
   return [prefix, [raw, NewlineType.None, loc, name]]
 

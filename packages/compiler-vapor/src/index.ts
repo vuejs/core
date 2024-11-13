@@ -9,7 +9,7 @@ export {
 } from './transform'
 export {
   generate,
-  type CodegenContext,
+  CodegenContext,
   type CodegenOptions,
   type VaporCodegenResult,
 } from './generate'
