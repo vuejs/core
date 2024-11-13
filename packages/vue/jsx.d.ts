@@ -5,7 +5,7 @@ import type {
   AllowedComponentProps,
   ComponentCustomProps,
   NativeElements,
-  PublicProps,
+  ReservedProps,
   VNode,
 } from '@vue/runtime-dom'
 
