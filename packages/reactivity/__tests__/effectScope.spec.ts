@@ -358,5 +358,8 @@ describe('reactivity/effect/scope', () => {
     await nextTick()
     expect(watcherCalls).toBe(3)
     expect(cleanupCalls).toBe(1)
+
+    expect(scope.effects.length).toBe(0)
+    expect(scope.cleanups.length).toBe(0)
   })
 })
