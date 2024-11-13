@@ -10,7 +10,6 @@ import {
   ref,
   watch,
 } from '../src'
-import { expect } from 'vitest'
 
 const queue: (() => void)[] = []
 
