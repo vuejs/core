@@ -20,6 +20,7 @@ import {
   defineComponent,
   h,
   nextTick,
+  onMismatched,
   onMounted,
   openBlock,
   reactive,
@@ -32,14 +33,23 @@ import {
   withDirectives,
 } from '@vue/runtime-dom'
 import { type SSRContext, renderToString } from '@vue/server-renderer'
-import { PatchFlags, normalizeStyle } from '@vue/shared'
+import { PatchFlags, ShapeFlags, normalizeStyle } from '@vue/shared'
 import { vShowOriginalDisplay } from '../../runtime-dom/src/directives/vShow'
 import { expect } from 'vitest'
 
+import type { MismatchedHookParams } from '../src/apiLifecycle'
+let moclMisParams = [] as MismatchedHookParams[]
+let mockMismatchedFn = vi.fn()
 function mountWithHydration(html: string, render: () => any) {
   const container = document.createElement('div')
   container.innerHTML = html
   const app = createSSRApp({
+    setup() {
+      onMismatched(ctx => {
+        moclMisParams.push(ctx)
+        mockMismatchedFn()
+      })
+    },
     render,
   })
   return {
@@ -57,7 +67,9 @@ const triggerEvent = (type: string, el: Element) => {
 
 describe('SSR hydration', () => {
   beforeEach(() => {
+    mockMismatchedFn = vi.fn()
     document.body.innerHTML = ''
+    moclMisParams = []
   })
 
   test('text', async () => {
@@ -1730,6 +1742,14 @@ describe('SSR hydration', () => {
       const { container } = mountWithHydration(`foo`, () => 'bar')
       expect(container.textContent).toBe('bar')
       expect(`Hydration text mismatch`).toHaveBeenWarned()
+      // test hook
+      expect(moclMisParams[0].node!.nodeType).toBe(3)
+      expect(moclMisParams[0].vnode!.type.toString()).toBe('Symbol(v-txt)')
+      expect(moclMisParams[0].vnode!.children).toBe('bar')
+      expect(
+        moclMisParams[0].parentComponent!.vnode.shapeFlag &
+          ShapeFlags.COMPONENT,
+      ).toBeTruthy()
     })
 
     test('element text content', () => {
@@ -1738,6 +1758,14 @@ describe('SSR hydration', () => {
       )
       expect(container.innerHTML).toBe('<div>bar</div>')
       expect(`Hydration text content mismatch`).toHaveBeenWarned()
+      // test hook
+      expect(moclMisParams[0].node!.nodeType).toBe(1)
+      expect(moclMisParams[0].vnode!.type).toBe('div')
+      expect(moclMisParams[0].vnode!.children).toBe('bar')
+      expect(
+        moclMisParams[0].parentComponent!.vnode.shapeFlag &
+          ShapeFlags.COMPONENT,
+      ).toBeTruthy()
     })
 
     test('not enough children', () => {
@@ -1748,6 +1776,14 @@ describe('SSR hydration', () => {
         '<div><span>foo</span><span>bar</span></div>',
       )
       expect(`Hydration children mismatch`).toHaveBeenWarned()
+      // test hook
+      expect(moclMisParams[0].node).toBe(null)
+      expect(moclMisParams[0].vnode!.type).toBe('span')
+      expect(moclMisParams[0].vnode!.children).toBe('foo')
+      expect(
+        moclMisParams[0].parentComponent!.subTree.shapeFlag &
+          ShapeFlags.ARRAY_CHILDREN,
+      ).toBeTruthy()
     })
 
     test('too many children', () => {
@@ -1757,6 +1793,17 @@ describe('SSR hydration', () => {
       )
       expect(container.innerHTML).toBe('<div><span>foo</span></div>')
       expect(`Hydration children mismatch`).toHaveBeenWarned()
+      // test hook
+      expect(moclMisParams[0].node).toBe(null)
+      expect(moclMisParams[0].vnode!.type).toBe('div')
+      expect((moclMisParams[0].vnode!.children as VNode[])[0].children).toBe(
+        'foo',
+      )
+      expect((moclMisParams[0].vnode!.children as VNode[])[0].type).toBe('span')
+      expect(
+        moclMisParams[0].parentComponent!.subTree.shapeFlag &
+          ShapeFlags.ARRAY_CHILDREN,
+      ).toBeTruthy()
     })
 
     test('complete mismatch', () => {
@@ -1766,6 +1813,8 @@ describe('SSR hydration', () => {
       )
       expect(container.innerHTML).toBe('<div><div>foo</div><p>bar</p></div>')
       expect(`Hydration node mismatch`).toHaveBeenWarnedTimes(2)
+      // test hook
+      expect(mockMismatchedFn).toHaveBeenCalledTimes(2)
     })
 
     test('fragment mismatch removal', () => {
@@ -1775,6 +1824,14 @@ describe('SSR hydration', () => {
       )
       expect(container.innerHTML).toBe('<div><span>replaced</span></div>')
       expect(`Hydration node mismatch`).toHaveBeenWarned()
+      // test hook
+      expect(moclMisParams[0].node!.nodeType).toBe(8)
+      expect(moclMisParams[0].vnode!.type).toBe('span')
+      expect(moclMisParams[0].vnode!.children).toBe('replaced')
+      expect(
+        moclMisParams[0].parentComponent!.subTree.shapeFlag &
+          ShapeFlags.ARRAY_CHILDREN,
+      ).toBeTruthy()
     })
 
     test('fragment not enough children', () => {
@@ -1786,6 +1843,14 @@ describe('SSR hydration', () => {
         '<div><!--[--><div>foo</div><div>bar</div><!--]--><div>baz</div></div>',
       )
       expect(`Hydration node mismatch`).toHaveBeenWarned()
+      // test hook
+      expect(moclMisParams[0].node!.nodeType).toBe(8)
+      expect(moclMisParams[0].vnode!.type).toBe('div')
+      expect(moclMisParams[0].vnode!.children).toBe('bar')
+      expect(
+        moclMisParams[0].parentComponent!.subTree.shapeFlag &
+          ShapeFlags.ARRAY_CHILDREN,
+      ).toBeTruthy()
     })
 
     test('fragment too many children', () => {
@@ -1796,11 +1861,25 @@ describe('SSR hydration', () => {
       expect(container.innerHTML).toBe(
         '<div><!--[--><div>foo</div><!--]--><div>baz</div></div>',
       )
+
       // fragment ends early and attempts to hydrate the extra <div>bar</div>
       // as 2nd fragment child.
       expect(`Hydration text content mismatch`).toHaveBeenWarned()
+      // test hook
+      expect(moclMisParams[0].node!.nodeType).toBe(1)
+      expect(moclMisParams[0].vnode!.type).toBe('div')
+      expect(moclMisParams[0].vnode!.children).toBe('baz')
       // excessive children removal
       expect(`Hydration children mismatch`).toHaveBeenWarned()
+      // test hook
+      expect(moclMisParams[1].node).toBe(null)
+      expect(moclMisParams[1].vnode!.type).toBe('div')
+      expect(
+        (moclMisParams[1].vnode!.children as VNode[])[0].type.toString(),
+      ).toBe('Symbol(v-fgt)')
+      expect((moclMisParams[1].vnode!.children as VNode[])[1].children).toBe(
+        'baz',
+      )
     })
 
     test('Teleport target has empty children', () => {
@@ -1813,6 +1892,14 @@ describe('SSR hydration', () => {
       )
       expect(teleportContainer.innerHTML).toBe(`<span>value</span>`)
       expect(`Hydration children mismatch`).toHaveBeenWarned()
+      // test hook
+      expect(moclMisParams[0].node).toBe(null)
+      expect(moclMisParams[0].vnode!.type).toBe('span')
+      expect(moclMisParams[0].vnode!.children).toBe('value')
+      expect(
+        moclMisParams[0].parentComponent!.subTree.shapeFlag &
+          ShapeFlags.TELEPORT,
+      ).toBeTruthy()
     })
 
     test('comment mismatch (element)', () => {
