@@ -126,7 +126,7 @@ export {
   type ObjectPlugin,
   type FunctionPlugin,
 } from './apiCreateVaporApp'
-export { createIf } from './apiCreateIf'
+export { createBranch, createIf } from './apiCreateIf'
 export { createFor, createForSlots } from './apiCreateFor'
 export { createComponent } from './apiCreateComponent'
 export { createSelector } from './apiCreateSelector'
