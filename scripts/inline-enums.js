@@ -49,7 +49,7 @@ export function scanEnums() {
   const defines = Object.create(null)
 
   // 1. grep for files with exported enum
-  const { stdout } = spawnSync('git', ['grep', `export enum`])
+  const { stdout } = spawnSync('git', ['grep', `enum `])
   const files = [
     ...new Set(
       stdout
@@ -74,12 +74,19 @@ export function scanEnums() {
     /** @type {Set<string>} */
     const enumIds = new Set()
     for (const node of res.program.body) {
+      let decl
+      if (node.type === 'TSEnumDeclaration') {
+        decl = node
+      }
       if (
         node.type === 'ExportNamedDeclaration' &&
         node.declaration &&
         node.declaration.type === 'TSEnumDeclaration'
       ) {
-        const decl = node.declaration
+        decl = node.declaration
+      }
+
+      if (decl) {
         const id = decl.id.name
         if (enumIds.has(id)) {
           throw new Error(
