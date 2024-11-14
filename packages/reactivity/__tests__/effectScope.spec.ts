@@ -322,4 +322,41 @@ describe('reactivity/effect/scope', () => {
     scope.resume()
     expect(fnSpy).toHaveBeenCalledTimes(3)
   })
+
+  test('removing a watcher while stopping its effectScope', async () => {
+    const count = ref(0)
+    const scope = effectScope()
+    let watcherCalls = 0
+    let cleanupCalls = 0
+
+    scope.run(() => {
+      const stop1 = watch(count, () => {
+        watcherCalls++
+      })
+      watch(count, (val, old, onCleanup) => {
+        watcherCalls++
+        onCleanup(() => {
+          cleanupCalls++
+          stop1()
+        })
+      })
+      watch(count, () => {
+        watcherCalls++
+      })
+    })
+
+    expect(watcherCalls).toBe(0)
+    expect(cleanupCalls).toBe(0)
+
+    count.value++
+    await nextTick()
+    expect(watcherCalls).toBe(3)
+    expect(cleanupCalls).toBe(0)
+
+    scope.stop()
+    count.value++
+    await nextTick()
+    expect(watcherCalls).toBe(3)
+    expect(cleanupCalls).toBe(1)
+  })
 })

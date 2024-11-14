@@ -117,6 +117,7 @@ export class EffectScope {
 
   stop(fromParent?: boolean): void {
     if (this._active) {
+      this._active = false
       let i, l
       for (i = 0, l = this.effects.length; i < l; i++) {
         this.effects[i].stop()
@@ -139,7 +140,6 @@ export class EffectScope {
         }
       }
       this.parent = undefined
-      this._active = false
     }
   }
 }
