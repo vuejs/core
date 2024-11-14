@@ -60,7 +60,13 @@ export function patchAttrs(
 
       if (key === 'class' || key === 'style') {
         ;(key === 'class' ? classes : styles).push(
-          hasDynamicProps ? (getter ? value : () => value) : value,
+          hasDynamicProps
+            ? getter
+              ? value
+              : () => value
+            : getter
+              ? value()
+              : value,
         )
       } else if (getter) {
         Object.defineProperty(attrs, key, {

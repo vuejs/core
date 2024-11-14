@@ -12,7 +12,7 @@ import {
   walkRawProps,
 } from './componentProps'
 import { type RawSlots, isDynamicSlotFn } from './componentSlots'
-import { setInheritAttrs, withAttrs } from './componentAttrs'
+import { withAttrs } from './componentAttrs'
 import { isString } from '@vue/shared'
 import { renderEffect } from './renderEffect'
 import { normalizeBlock } from './dom/element'
@@ -90,7 +90,7 @@ function fallbackComponent(
   }
 
   if (singleRoot) {
-    setInheritAttrs(true)
+    instance.dynamicAttrs = true
   }
 
   return el
