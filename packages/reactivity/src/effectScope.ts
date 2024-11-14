@@ -126,23 +126,31 @@ export class EffectScope implements Subscriber {
 
   stop(fromParent?: boolean): void {
     if (this.active) {
+      this.pauseLevel = PauseLevels.Stop
       if (this.deps !== undefined) {
         clearTrack(this.deps)
         this.deps = undefined
         this.depsTail = undefined
       }
       let i, l
-      for (i = 0, l = this.effects.length; i < l; i++) {
-        this.effects[i].stop()
+      const effects = this.effects.slice()
+      for (i = 0, l = effects.length; i < l; i++) {
+        effects[i].stop()
       }
+      this.effects.length = 0
+
       for (i = 0, l = this.cleanups.length; i < l; i++) {
         this.cleanups[i]()
       }
+      this.cleanups.length = 0
+
       if (this.scopes) {
         for (i = 0, l = this.scopes.length; i < l; i++) {
           this.scopes[i].stop(true)
         }
+        this.scopes.length = 0
       }
+
       // nested scope, dereference from parent to avoid memory leaks
       if (!this.detached && this.parent && !fromParent) {
         // optimized O(1) removal
@@ -153,7 +161,6 @@ export class EffectScope implements Subscriber {
         }
       }
       this.parent = undefined
-      this.pauseLevel = PauseLevels.Stop
     }
   }
 }

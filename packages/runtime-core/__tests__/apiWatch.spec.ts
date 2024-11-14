@@ -1340,7 +1340,7 @@ describe('api: watch', () => {
     await nextTick()
     await nextTick()
 
-    expect(instance!.scope.effects[0].active).toBeFalsy()
+    expect(instance!.scope.effects.length).toBe(0)
   })
 
   test('this.$watch should pass `this.proxy` to watch source as the first argument ', () => {
