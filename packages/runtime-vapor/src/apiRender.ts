@@ -92,6 +92,7 @@ export function setupComponent(instance: ComponentInternalInstance): void {
     }
     instance.block = block
     fallThroughAttrs(instance)
+    attachScopeId(instance)
     return block
   })
   reset()
@@ -165,4 +166,17 @@ export function unmountComponent(instance: ComponentInternalInstance): void {
     true,
   )
   flushPostFlushCbs()
+}
+
+export function attachScopeId(instance: ComponentInternalInstance): void {
+  const scopeId = instance.type.__scopeId
+  if (scopeId) {
+    let blk: Block | null = instance.block
+    while (blk && componentKey in blk) {
+      blk = blk.block
+      if (blk instanceof Element) {
+        blk.setAttribute(scopeId, '')
+      }
+    }
+  }
 }
