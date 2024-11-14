@@ -163,7 +163,7 @@ describe('stringify static html', () => {
   })
 
   // #12391
-  test('serializing template string bindings', () => {
+  test('serializing template string style', () => {
     const { ast, code } = compileWithStringify(
       `<div><div :style="\`color:red;\`">${repeat(
         `<span :class="[{ foo: true }, { bar: true }]">{{ 1 }} + {{ false }}</span>`,

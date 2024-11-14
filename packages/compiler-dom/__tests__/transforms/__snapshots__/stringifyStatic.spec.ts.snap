@@ -32,7 +32,7 @@ return function render(_ctx, _cache) {
 }"
 `;
 
-exports[`stringify static html > serializing template string bindings 1`] = `
+exports[`stringify static html > serializing template string style 1`] = `
 "const { toDisplayString: _toDisplayString, normalizeClass: _normalizeClass, createElementVNode: _createElementVNode, createStaticVNode: _createStaticVNode, openBlock: _openBlock, createElementBlock: _createElementBlock } = Vue
 
 return function render(_ctx, _cache) {
