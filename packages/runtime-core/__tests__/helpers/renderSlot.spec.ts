@@ -32,6 +32,12 @@ describe('renderSlot', () => {
     expect(vnode.key).toBe('foo')
   })
 
+  it('should allow symbol values for slot prop key', () => {
+    const key = Symbol()
+    const vnode = renderSlot({ default: () => [h('div')] }, 'default', { key })
+    expect(vnode.key).toBe('_default')
+  })
+
   it('should render slot fallback', () => {
     const vnode = renderSlot({}, 'default', { key: 'foo' }, () => ['fallback'])
     expect(vnode.children).toEqual(['fallback'])

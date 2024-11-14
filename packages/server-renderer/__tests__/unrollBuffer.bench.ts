@@ -1,7 +1,11 @@
 import { bench, describe } from 'vitest'
 
 import { type SSRBuffer, createBuffer } from '../src/render'
-import { unrollBuffer } from '../src/renderToString'
+import { unrollBuffer as _unrollBuffer } from '../src/renderToString'
+
+// move to local const to avoid import access overhead
+// https://github.com/vitest-dev/vitest/issues/6903
+const unrollBuffer = _unrollBuffer
 
 function createSyncBuffer(levels: number, itemsPerLevel: number): SSRBuffer {
   const buffer = createBuffer()

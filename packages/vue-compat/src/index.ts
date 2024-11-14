@@ -12,7 +12,13 @@ import {
   registerRuntimeCompiler,
   warn,
 } from '@vue/runtime-dom'
-import { NOOP, extend, generateCodeFrame, isString } from '@vue/shared'
+import {
+  NOOP,
+  extend,
+  genCacheKey,
+  generateCodeFrame,
+  isString,
+} from '@vue/shared'
 import type { InternalRenderFunction } from 'packages/runtime-core/src/component'
 import * as runtimeDom from '@vue/runtime-dom'
 import {
@@ -35,7 +41,7 @@ function compileToFunction(
     }
   }
 
-  const key = template
+  const key = genCacheKey(template, options)
   const cached = compileCache[key]
   if (cached) {
     return cached

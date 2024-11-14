@@ -16,8 +16,6 @@ import {
   type TemplateChildNode,
   type TextCallNode,
   type TransformContext,
-  type VNodeCall,
-  createArrayExpression,
   createCallExpression,
   isStaticArgOf,
 } from '@vue/compiler-core'
@@ -26,6 +24,7 @@ import {
   isArray,
   isBooleanAttr,
   isKnownHtmlAttr,
+  isKnownMathMLAttr,
   isKnownSvgAttr,
   isString,
   isSymbol,
@@ -106,15 +105,23 @@ export const stringifyStatic: HoistTransform = (children, context, parent) => {
         String(currentChunk.length),
       ])
 
+      const deleteCount = currentChunk.length - 1
+
       if (isParentCached) {
-        ;((parent.codegenNode as VNodeCall).children as CacheExpression).value =
-          createArrayExpression([staticCall])
+        // if the parent is cached, then `children` is also the value of the
+        // CacheExpression. Just replace the corresponding range in the cached
+        // list with staticCall.
+        children.splice(
+          currentIndex - currentChunk.length,
+          currentChunk.length,
+          // @ts-expect-error
+          staticCall,
+        )
       } else {
         // replace the first node's hoisted expression with the static vnode call
         ;(currentChunk[0].codegenNode as CacheExpression).value = staticCall
         if (currentChunk.length > 1) {
           // remove merged nodes from children
-          const deleteCount = currentChunk.length - 1
           children.splice(currentIndex - currentChunk.length + 1, deleteCount)
           // also adjust index for the remaining cache items
           const cacheIndex = context.cached.indexOf(
@@ -128,9 +135,9 @@ export const stringifyStatic: HoistTransform = (children, context, parent) => {
             }
             context.cached.splice(cacheIndex - deleteCount + 1, deleteCount)
           }
-          return deleteCount
         }
       }
+      return deleteCount
     }
     return 0
   }
@@ -184,11 +191,13 @@ const isStringifiableAttr = (name: string, ns: Namespaces) => {
       ? isKnownHtmlAttr(name)
       : ns === Namespaces.SVG
         ? isKnownSvgAttr(name)
-        : false) || dataAriaRE.test(name)
+        : ns === Namespaces.MATH_ML
+          ? isKnownMathMLAttr(name)
+          : false) || dataAriaRE.test(name)
   )
 }
 
-const isNonStringifiable = /*#__PURE__*/ makeMap(
+const isNonStringifiable = /*@__PURE__*/ makeMap(
   `caption,thead,tr,th,tbody,td,tfoot,colgroup,col`,
 )
 
@@ -252,8 +261,7 @@ function analyzeNode(node: StringifiableNode): [number, number] | false {
           isOptionTag &&
           isStaticArgOf(p.arg, 'value') &&
           p.exp &&
-          p.exp.ast &&
-          p.exp.ast.type !== 'StringLiteral'
+          !p.exp.isStatic
         ) {
           return bail()
         }

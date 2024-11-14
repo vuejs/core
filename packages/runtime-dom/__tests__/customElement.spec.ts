@@ -2,6 +2,7 @@ import type { MockedFunction } from 'vitest'
 import {
   type HMRRuntime,
   type Ref,
+  Teleport,
   type VueElement,
   createApp,
   defineAsyncComponent,
@@ -10,6 +11,7 @@ import {
   h,
   inject,
   nextTick,
+  onMounted,
   provide,
   ref,
   render,
@@ -219,6 +221,21 @@ describe('defineCustomElement', () => {
       await nextTick()
       expect(e.shadowRoot!.innerHTML).toBe('<div></div><div>four</div>')
       expect(e.getAttribute('baz-qux')).toBe('four')
+    })
+
+    test('props via hyphen property', async () => {
+      const Comp = defineCustomElement({
+        props: {
+          fooBar: Boolean,
+        },
+        render() {
+          return 'Comp'
+        },
+      })
+      customElements.define('my-el-comp', Comp)
+      render(h('my-el-comp', { 'foo-bar': true }), container)
+      const el = container.children[0]
+      expect((el as any).outerHTML).toBe('<my-el-comp foo-bar=""></my-el-comp>')
     })
 
     test('attribute -> prop type casting', async () => {
@@ -975,6 +992,113 @@ describe('defineCustomElement', () => {
         `<span>default</span>text` + `<!---->` + `<div>fallback</div>`,
       )
     })
+
+    test('render nested customElement w/ shadowRoot false', async () => {
+      const calls: string[] = []
+
+      const Child = defineCustomElement(
+        {
+          setup() {
+            calls.push('child rendering')
+            onMounted(() => {
+              calls.push('child mounted')
+            })
+          },
+          render() {
+            return renderSlot(this.$slots, 'default')
+          },
+        },
+        { shadowRoot: false },
+      )
+      customElements.define('my-child', Child)
+
+      const Parent = defineCustomElement(
+        {
+          setup() {
+            calls.push('parent rendering')
+            onMounted(() => {
+              calls.push('parent mounted')
+            })
+          },
+          render() {
+            return renderSlot(this.$slots, 'default')
+          },
+        },
+        { shadowRoot: false },
+      )
+      customElements.define('my-parent', Parent)
+
+      const App = {
+        render() {
+          return h('my-parent', null, {
+            default: () => [
+              h('my-child', null, {
+                default: () => [h('span', null, 'default')],
+              }),
+            ],
+          })
+        },
+      }
+      const app = createApp(App)
+      app.mount(container)
+      await nextTick()
+      const e = container.childNodes[0] as VueElement
+      expect(e.innerHTML).toBe(
+        `<my-child data-v-app=""><span>default</span></my-child>`,
+      )
+      expect(calls).toEqual([
+        'parent rendering',
+        'parent mounted',
+        'child rendering',
+        'child mounted',
+      ])
+      app.unmount()
+    })
+
+    test('render nested Teleport w/ shadowRoot false', async () => {
+      const target = document.createElement('div')
+      const Child = defineCustomElement(
+        {
+          render() {
+            return h(
+              Teleport,
+              { to: target },
+              {
+                default: () => [renderSlot(this.$slots, 'default')],
+              },
+            )
+          },
+        },
+        { shadowRoot: false },
+      )
+      customElements.define('my-el-teleport-child', Child)
+      const Parent = defineCustomElement(
+        {
+          render() {
+            return renderSlot(this.$slots, 'default')
+          },
+        },
+        { shadowRoot: false },
+      )
+      customElements.define('my-el-teleport-parent', Parent)
+
+      const App = {
+        render() {
+          return h('my-el-teleport-parent', null, {
+            default: () => [
+              h('my-el-teleport-child', null, {
+                default: () => [h('span', null, 'default')],
+              }),
+            ],
+          })
+        },
+      }
+      const app = createApp(App)
+      app.mount(container)
+      await nextTick()
+      expect(target.innerHTML).toBe(`<span>default</span>`)
+      app.unmount()
+    })
   })
 
   describe('helpers', () => {
@@ -1261,5 +1385,40 @@ describe('defineCustomElement', () => {
     e.removeAttribute('boo')
     await nextTick()
     expect(e.shadowRoot!.innerHTML).toBe(`false,boolean`)
+  })
+
+  test('hyphenated attr removal', async () => {
+    const E = defineCustomElement({
+      props: {
+        fooBar: {
+          type: Boolean,
+        },
+      },
+      render() {
+        return this.fooBar
+      },
+    })
+    customElements.define('el-hyphenated-attr-removal', E)
+    const toggle = ref(true)
+    const Comp = {
+      render() {
+        return h('el-hyphenated-attr-removal', {
+          'foo-bar': toggle.value ? '' : null,
+        })
+      },
+    }
+    render(h(Comp), container)
+    const el = container.children[0]
+    expect(el.hasAttribute('foo-bar')).toBe(true)
+    expect((el as any).outerHTML).toBe(
+      `<el-hyphenated-attr-removal foo-bar=""></el-hyphenated-attr-removal>`,
+    )
+
+    toggle.value = false
+    await nextTick()
+    expect(el.hasAttribute('foo-bar')).toBe(false)
+    expect((el as any).outerHTML).toBe(
+      `<el-hyphenated-attr-removal></el-hyphenated-attr-removal>`,
+    )
   })
 })

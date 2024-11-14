@@ -351,6 +351,7 @@ describe('useCssVars', () => {
     expect(() => render(h(App), root)).not.toThrow(TypeError)
     await nextTick()
     expect(target.children.length).toBe(0)
+    expect(root.children[0].outerHTML.includes('data-v-owner')).toBe(true)
   })
 
   test('with string style', async () => {
@@ -442,5 +443,26 @@ describe('useCssVars', () => {
     expect(container.innerHTML).toBe(
       `<css-vars-ce style="--color: red;"></css-vars-ce>`,
     )
+  })
+
+  test('should set vars before child component onMount hook', () => {
+    const state = reactive({ color: 'red' })
+    const root = document.createElement('div')
+    let colorInOnMount
+
+    const App = {
+      setup() {
+        useCssVars(() => state)
+        onMounted(() => {
+          colorInOnMount = (
+            root.children[0] as HTMLElement
+          ).style.getPropertyValue(`--color`)
+        })
+        return () => h('div')
+      },
+    }
+
+    render(h(App), root)
+    expect(colorInOnMount).toBe(`red`)
   })
 })

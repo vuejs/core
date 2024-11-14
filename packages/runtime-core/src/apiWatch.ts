@@ -1,59 +1,35 @@
 import {
-  type ComputedRef,
+  type WatchOptions as BaseWatchOptions,
   type DebuggerOptions,
-  EffectFlags,
-  type EffectScheduler,
-  ReactiveEffect,
-  ReactiveFlags,
   type ReactiveMarker,
-  type Ref,
-  getCurrentScope,
-  isReactive,
-  isRef,
-  isShallow,
+  type WatchCallback,
+  type WatchEffect,
+  type WatchHandle,
+  type WatchSource,
+  watch as baseWatch,
 } from '@vue/reactivity'
 import { type SchedulerJob, SchedulerJobFlags, queueJob } from './scheduler'
-import {
-  EMPTY_OBJ,
-  NOOP,
-  extend,
-  hasChanged,
-  isArray,
-  isFunction,
-  isMap,
-  isObject,
-  isPlainObject,
-  isSet,
-  isString,
-  remove,
-} from '@vue/shared'
+import { EMPTY_OBJ, NOOP, extend, isFunction, isString } from '@vue/shared'
 import {
   type ComponentInternalInstance,
   currentInstance,
   isInSSRComponentSetup,
   setCurrentInstance,
 } from './component'
-import {
-  ErrorCodes,
-  callWithAsyncErrorHandling,
-  callWithErrorHandling,
-} from './errorHandling'
+import { callWithAsyncErrorHandling } from './errorHandling'
 import { queuePostRenderEffect } from './renderer'
 import { warn } from './warning'
-import { DeprecationTypes } from './compat/compatConfig'
-import { checkCompatEnabled, isCompatEnabled } from './compat/compatConfig'
 import type { ObjectWatchOptionItem } from './componentOptions'
 import { useSSRContext } from './helpers/useSsrContext'
 
-export type WatchEffect = (onCleanup: OnCleanup) => void
-
-export type WatchSource<T = any> = Ref<T, any> | ComputedRef<T> | (() => T)
-
-export type WatchCallback<V = any, OV = any> = (
-  value: V,
-  oldValue: OV,
-  onCleanup: OnCleanup,
-) => any
+export type {
+  WatchHandle,
+  WatchStopHandle,
+  WatchEffect,
+  WatchSource,
+  WatchCallback,
+  OnCleanup,
+} from '@vue/reactivity'
 
 type MaybeUndefined<T, I> = I extends true ? T | undefined : T
 
@@ -65,30 +41,20 @@ type MapSources<T, Immediate> = {
       : never
 }
 
-export type OnCleanup = (cleanupFn: () => void) => void
-
-export interface WatchOptionsBase extends DebuggerOptions {
+export interface WatchEffectOptions extends DebuggerOptions {
   flush?: 'pre' | 'post' | 'sync'
 }
 
-export interface WatchOptions<Immediate = boolean> extends WatchOptionsBase {
+export interface WatchOptions<Immediate = boolean> extends WatchEffectOptions {
   immediate?: Immediate
   deep?: boolean | number
   once?: boolean
 }
 
-export type WatchStopHandle = () => void
-
-export interface WatchHandle extends WatchStopHandle {
-  pause: () => void
-  resume: () => void
-  stop: () => void
-}
-
 // Simple effect.
 export function watchEffect(
   effect: WatchEffect,
-  options?: WatchOptionsBase,
+  options?: WatchEffectOptions,
 ): WatchHandle {
   return doWatch(effect, null, options)
 }
@@ -96,7 +62,7 @@ export function watchEffect(
 export function watchPostEffect(
   effect: WatchEffect,
   options?: DebuggerOptions,
-): WatchStopHandle {
+): WatchHandle {
   return doWatch(
     effect,
     null,
@@ -107,16 +73,13 @@ export function watchPostEffect(
 export function watchSyncEffect(
   effect: WatchEffect,
   options?: DebuggerOptions,
-): WatchStopHandle {
+): WatchHandle {
   return doWatch(
     effect,
     null,
     __DEV__ ? extend({}, options as any, { flush: 'sync' }) : { flush: 'sync' },
   )
 }
-
-// initial value for watchers to trigger on undefined initial values
-const INITIAL_WATCHER_VALUE = {}
 
 export type MultiWatchSources = (WatchSource<unknown> | object)[]
 
@@ -178,22 +141,9 @@ export function watch<T = any, Immediate extends Readonly<boolean> = false>(
 function doWatch(
   source: WatchSource | WatchSource[] | WatchEffect | object,
   cb: WatchCallback | null,
-  {
-    immediate,
-    deep,
-    flush,
-    once,
-    onTrack,
-    onTrigger,
-  }: WatchOptions = EMPTY_OBJ,
+  options: WatchOptions = EMPTY_OBJ,
 ): WatchHandle {
-  if (cb && once) {
-    const _cb = cb
-    cb = (...args) => {
-      _cb(...args)
-      watchHandle()
-    }
-  }
+  const { immediate, deep, flush, once } = options
 
   if (__DEV__ && !cb) {
     if (immediate !== undefined) {
@@ -216,232 +166,73 @@ function doWatch(
     }
   }
 
-  const warnInvalidSource = (s: unknown) => {
-    warn(
-      `Invalid watch source: `,
-      s,
-      `A watch source can only be a getter/effect function, a ref, ` +
-        `a reactive object, or an array of these types.`,
-    )
-  }
+  const baseWatchOptions: BaseWatchOptions = extend({}, options)
 
-  const instance = currentInstance
-  const reactiveGetter = (source: object) => {
-    // traverse will happen in wrapped getter below
-    if (deep) return source
-    // for `deep: false | 0` or shallow reactive, only traverse root-level properties
-    if (isShallow(source) || deep === false || deep === 0)
-      return traverse(source, 1)
-    // for `deep: undefined` on a reactive object, deeply traverse all properties
-    return traverse(source)
-  }
+  if (__DEV__) baseWatchOptions.onWarn = warn
 
-  let getter: () => any
-  let forceTrigger = false
-  let isMultiSource = false
-
-  if (isRef(source)) {
-    getter = () => source.value
-    forceTrigger = isShallow(source)
-  } else if (isReactive(source)) {
-    getter = () => reactiveGetter(source)
-    forceTrigger = true
-  } else if (isArray(source)) {
-    isMultiSource = true
-    forceTrigger = source.some(s => isReactive(s) || isShallow(s))
-    getter = () =>
-      source.map(s => {
-        if (isRef(s)) {
-          return s.value
-        } else if (isReactive(s)) {
-          return reactiveGetter(s)
-        } else if (isFunction(s)) {
-          return callWithErrorHandling(s, instance, ErrorCodes.WATCH_GETTER)
-        } else {
-          __DEV__ && warnInvalidSource(s)
-        }
-      })
-  } else if (isFunction(source)) {
-    if (cb) {
-      // getter with cb
-      getter = () =>
-        callWithErrorHandling(source, instance, ErrorCodes.WATCH_GETTER)
-    } else {
-      // no cb -> simple effect
-      getter = () => {
-        if (cleanup) {
-          cleanup()
-        }
-        return callWithAsyncErrorHandling(
-          source,
-          instance,
-          ErrorCodes.WATCH_CALLBACK,
-          [onCleanup],
-        )
-      }
-    }
-  } else {
-    getter = NOOP
-    __DEV__ && warnInvalidSource(source)
-  }
-
-  // 2.x array mutation watch compat
-  if (__COMPAT__ && cb && !deep) {
-    const baseGetter = getter
-    getter = () => {
-      const val = baseGetter()
-      if (
-        isArray(val) &&
-        checkCompatEnabled(DeprecationTypes.WATCH_ARRAY, instance)
-      ) {
-        traverse(val)
-      }
-      return val
-    }
-  }
-
-  if (cb && deep) {
-    const baseGetter = getter
-    const depth = deep === true ? Infinity : deep
-    getter = () => traverse(baseGetter(), depth)
-  }
-
-  let cleanup: (() => void) | undefined
-  let onCleanup: OnCleanup = (fn: () => void) => {
-    cleanup = effect.onStop = () => {
-      callWithErrorHandling(fn, instance, ErrorCodes.WATCH_CLEANUP)
-      cleanup = effect.onStop = undefined
-    }
-  }
-
-  // in SSR there is no need to setup an actual effect, and it should be noop
-  // unless it's eager or sync flush
+  // immediate watcher or watchEffect
+  const runsImmediately = (cb && immediate) || (!cb && flush !== 'post')
   let ssrCleanup: (() => void)[] | undefined
   if (__SSR__ && isInSSRComponentSetup) {
-    // we will also not call the invalidate callback (+ runner is not set up)
-    onCleanup = NOOP
-    if (!cb) {
-      getter()
-    } else if (immediate) {
-      callWithAsyncErrorHandling(cb, instance, ErrorCodes.WATCH_CALLBACK, [
-        getter(),
-        isMultiSource ? [] : undefined,
-        onCleanup,
-      ])
-    }
     if (flush === 'sync') {
       const ctx = useSSRContext()!
       ssrCleanup = ctx.__watcherHandles || (ctx.__watcherHandles = [])
-    } else {
-      const watchHandle: WatchHandle = () => {}
-      watchHandle.stop = NOOP
-      watchHandle.resume = NOOP
-      watchHandle.pause = NOOP
-      return watchHandle
+    } else if (!runsImmediately) {
+      const watchStopHandle = () => {}
+      watchStopHandle.stop = NOOP
+      watchStopHandle.resume = NOOP
+      watchStopHandle.pause = NOOP
+      return watchStopHandle
     }
   }
 
-  let oldValue: any = isMultiSource
-    ? new Array((source as []).length).fill(INITIAL_WATCHER_VALUE)
-    : INITIAL_WATCHER_VALUE
-  const job: SchedulerJob = (immediateFirstRun?: boolean) => {
-    if (
-      !(effect.flags & EffectFlags.ACTIVE) ||
-      (!effect.dirty && !immediateFirstRun)
-    ) {
-      return
+  const instance = currentInstance
+  baseWatchOptions.call = (fn, type, args) =>
+    callWithAsyncErrorHandling(fn, instance, type, args)
+
+  // scheduler
+  let isPre = false
+  if (flush === 'post') {
+    baseWatchOptions.scheduler = job => {
+      queuePostRenderEffect(job, instance && instance.suspense)
     }
-    if (cb) {
-      // watch(source, cb)
-      const newValue = effect.run()
-      if (
-        deep ||
-        forceTrigger ||
-        (isMultiSource
-          ? (newValue as any[]).some((v, i) => hasChanged(v, oldValue[i]))
-          : hasChanged(newValue, oldValue)) ||
-        (__COMPAT__ &&
-          isArray(newValue) &&
-          isCompatEnabled(DeprecationTypes.WATCH_ARRAY, instance))
-      ) {
-        // cleanup before running cb again
-        if (cleanup) {
-          cleanup()
-        }
-        callWithAsyncErrorHandling(cb, instance, ErrorCodes.WATCH_CALLBACK, [
-          newValue,
-          // pass undefined as the old value when it's changed for the first time
-          oldValue === INITIAL_WATCHER_VALUE
-            ? undefined
-            : isMultiSource && oldValue[0] === INITIAL_WATCHER_VALUE
-              ? []
-              : oldValue,
-          onCleanup,
-        ])
-        oldValue = newValue
-      }
-    } else {
-      // watchEffect
-      effect.run()
-    }
-  }
-
-  // important: mark the job as a watcher callback so that scheduler knows
-  // it is allowed to self-trigger (#1727)
-  if (cb) job.flags! |= SchedulerJobFlags.ALLOW_RECURSE
-
-  const effect = new ReactiveEffect(getter)
-
-  let scheduler: EffectScheduler
-  if (flush === 'sync') {
-    scheduler = job as any // the scheduler function gets called directly
-  } else if (flush === 'post') {
-    scheduler = () => queuePostRenderEffect(job, instance && instance.suspense)
-  } else {
+  } else if (flush !== 'sync') {
     // default: 'pre'
-    job.flags! |= SchedulerJobFlags.PRE
-    if (instance) {
-      job.id = instance.uid
-      job.i = instance
-    }
-    scheduler = () => queueJob(job)
-  }
-  effect.scheduler = scheduler
-
-  const scope = getCurrentScope()
-  const watchHandle: WatchHandle = () => {
-    effect.stop()
-    if (scope) {
-      remove(scope.effects, effect)
+    isPre = true
+    baseWatchOptions.scheduler = (job, isFirstRun) => {
+      if (isFirstRun) {
+        job()
+      } else {
+        queueJob(job)
+      }
     }
   }
 
-  watchHandle.pause = effect.pause.bind(effect)
-  watchHandle.resume = effect.resume.bind(effect)
-  watchHandle.stop = watchHandle
-
-  if (__DEV__) {
-    effect.onTrack = onTrack
-    effect.onTrigger = onTrigger
-  }
-
-  // initial run
-  if (cb) {
-    if (immediate) {
-      job(true)
-    } else {
-      oldValue = effect.run()
+  baseWatchOptions.augmentJob = (job: SchedulerJob) => {
+    // important: mark the job as a watcher callback so that scheduler knows
+    // it is allowed to self-trigger (#1727)
+    if (cb) {
+      job.flags! |= SchedulerJobFlags.ALLOW_RECURSE
     }
-  } else if (flush === 'post') {
-    queuePostRenderEffect(
-      effect.run.bind(effect),
-      instance && instance.suspense,
-    )
-  } else {
-    effect.run()
+    if (isPre) {
+      job.flags! |= SchedulerJobFlags.PRE
+      if (instance) {
+        job.id = instance.uid
+        ;(job as SchedulerJob).i = instance
+      }
+    }
   }
 
-  if (__SSR__ && ssrCleanup) ssrCleanup.push(watchHandle)
+  const watchHandle = baseWatch(source, cb, baseWatchOptions)
+
+  if (__SSR__ && isInSSRComponentSetup) {
+    if (ssrCleanup) {
+      ssrCleanup.push(watchHandle)
+    } else if (runsImmediately) {
+      watchHandle()
+    }
+  }
+
   return watchHandle
 }
 
@@ -480,42 +271,4 @@ export function createPathGetter(ctx: any, path: string) {
     }
     return cur
   }
-}
-
-export function traverse(
-  value: unknown,
-  depth: number = Infinity,
-  seen?: Set<unknown>,
-): unknown {
-  if (depth <= 0 || !isObject(value) || (value as any)[ReactiveFlags.SKIP]) {
-    return value
-  }
-
-  seen = seen || new Set()
-  if (seen.has(value)) {
-    return value
-  }
-  seen.add(value)
-  depth--
-  if (isRef(value)) {
-    traverse(value.value, depth, seen)
-  } else if (isArray(value)) {
-    for (let i = 0; i < value.length; i++) {
-      traverse(value[i], depth, seen)
-    }
-  } else if (isSet(value) || isMap(value)) {
-    value.forEach((v: any) => {
-      traverse(v, depth, seen)
-    })
-  } else if (isPlainObject(value)) {
-    for (const key in value) {
-      traverse(value[key], depth, seen)
-    }
-    for (const key of Object.getOwnPropertySymbols(value)) {
-      if (Object.prototype.propertyIsEnumerable.call(value, key)) {
-        traverse(value[key as any], depth, seen)
-      }
-    }
-  }
-  return value
 }
