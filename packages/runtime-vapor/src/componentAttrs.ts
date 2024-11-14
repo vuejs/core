@@ -1,14 +1,9 @@
 import { camelize, isArray, normalizeClass, normalizeStyle } from '@vue/shared'
-import {
-  type ComponentInternalInstance,
-  componentKey,
-  currentInstance,
-} from './component'
+import { type ComponentInternalInstance, currentInstance } from './component'
 import { isEmitListener } from './componentEmits'
 import { type RawProps, walkRawProps } from './componentProps'
 import { renderEffect } from './renderEffect'
 import { mergeProp, setDynamicProp } from './dom/prop'
-import type { Block } from './apiRender'
 
 export function patchAttrs(
   instance: ComponentInternalInstance,
@@ -97,34 +92,19 @@ export function withAttrs(props: RawProps): RawProps {
   return [attrsGetter, props]
 }
 
-function getFirstNode(block: Block | undefined): Node | undefined {
-  if (!block || componentKey in block) return
-  if (block instanceof Node) return block
-  if (isArray(block)) {
-    if (block.length === 1) {
-      return getFirstNode(block[0])
-    }
-  } else {
-    return getFirstNode(block.nodes)
-  }
-}
-
-export function fallThroughAttrs(instance: ComponentInternalInstance): void {
+export function fallThroughAttrs(
+  instance: ComponentInternalInstance,
+  element: Element,
+): void {
   const {
-    block,
     type: { inheritAttrs },
     dynamicAttrs,
   } = instance
   if (
     inheritAttrs === false ||
-    dynamicAttrs === true || // all props as dynamic
-    !block ||
-    componentKey in block
+    dynamicAttrs === true // all props as dynamic
   )
     return
-
-  const element = getFirstNode(block)
-  if (!element || !(element instanceof Element)) return
 
   const hasStaticAttrs = dynamicAttrs || dynamicAttrs === false
 

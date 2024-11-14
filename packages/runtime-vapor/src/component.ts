@@ -162,6 +162,7 @@ export interface ComponentInternalInstance {
   provides: Data
   scope: EffectScope
   comps: Set<ComponentInternalInstance>
+  scopeIds: string[]
 
   rawProps: NormalizedRawProps
   propsOptions: NormalizedPropsOptions
@@ -293,6 +294,7 @@ export function createComponentInstance(
     provides: parent ? parent.provides : Object.create(_appContext.provides),
     type: component,
     comps: new Set(),
+    scopeIds: [],
 
     // resolved props and emits options
     rawProps: null!, // set later

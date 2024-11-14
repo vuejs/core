@@ -38,6 +38,11 @@ export function createComponent(
     slots,
     once,
   )
+
+  instance.scopeIds = [...current.scopeIds]
+  const scopeId = current.type.__scopeId
+  if (scopeId) instance.scopeIds.push(scopeId)
+
   setupComponent(instance)
 
   // register sub-component with current component for lifecycle management

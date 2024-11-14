@@ -91,8 +91,17 @@ export function setupComponent(instance: ComponentInternalInstance): void {
       block = []
     }
     instance.block = block
-    fallThroughAttrs(instance)
-    attachScopeId(instance)
+
+    const rootElement = findFirstRootElement(instance)
+    if (rootElement) {
+      fallThroughAttrs(instance, rootElement)
+
+      // attach scopeId
+      for (const id of instance.scopeIds) {
+        rootElement.setAttribute(id, '')
+      }
+    }
+
     return block
   })
   reset()
@@ -168,15 +177,19 @@ export function unmountComponent(instance: ComponentInternalInstance): void {
   flushPostFlushCbs()
 }
 
-export function attachScopeId(instance: ComponentInternalInstance): void {
-  const scopeId = instance.type.__scopeId
-  if (scopeId) {
-    let blk: Block | null = instance.block
-    while (blk && componentKey in blk) {
-      blk = blk.block
-      if (blk instanceof Element) {
-        blk.setAttribute(scopeId, '')
-      }
+function findFirstRootElement(instance: ComponentInternalInstance) {
+  const element = getFirstNode(instance.block)
+  return element instanceof Element ? element : undefined
+}
+
+function getFirstNode(block: Block | null): Node | undefined {
+  if (!block || componentKey in block) return
+  if (block instanceof Node) return block
+  if (isArray(block)) {
+    if (block.length === 1) {
+      return getFirstNode(block[0])
     }
+  } else {
+    return getFirstNode(block.nodes)
   }
 }
