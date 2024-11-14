@@ -92,6 +92,7 @@ describe('compiler: template ref transform', () => {
 
     const { positive } = ir.block.operation[0] as IfIRNode
     expect(positive.operation).toMatchObject([
+      { type: IRNodeTypes.SET_INHERIT_ATTRS },
       {
         type: IRNodeTypes.SET_TEMPLATE_REF,
         element: 2,
@@ -113,6 +114,7 @@ describe('compiler: template ref transform', () => {
 
     const { render } = ir.block.operation[0] as ForIRNode
     expect(render.operation).toMatchObject([
+      { type: IRNodeTypes.SET_INHERIT_ATTRS },
       {
         type: IRNodeTypes.SET_TEMPLATE_REF,
         element: 2,

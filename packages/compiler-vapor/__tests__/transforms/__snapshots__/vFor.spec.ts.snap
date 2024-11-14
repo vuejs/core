@@ -45,14 +45,15 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: v-for > multi effect 1`] = `
-"import { renderEffect as _renderEffect, setDynamicProp as _setDynamicProp, createFor as _createFor, template as _template } from 'vue/vapor';
+"import { setInheritAttrs as _setInheritAttrs, renderEffect as _renderEffect, setDynamicProp as _setDynamicProp, createFor as _createFor, template as _template } from 'vue/vapor';
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = _createFor(() => (_ctx.items), (_ctx0) => {
     const n2 = t0()
-    _renderEffect(() => _setDynamicProp(n2, "item", _ctx0[0].value))
-    _renderEffect(() => _setDynamicProp(n2, "index", _ctx0[1].value))
+    _setInheritAttrs(["item", "index"])
+    _renderEffect(() => _setDynamicProp(n2, "item", _ctx0[0].value, true))
+    _renderEffect(() => _setDynamicProp(n2, "index", _ctx0[1].value, true))
     return n2
   })
   return n0

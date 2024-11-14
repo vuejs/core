@@ -1,9 +1,14 @@
 import { camelize, isArray, normalizeClass, normalizeStyle } from '@vue/shared'
-import { type ComponentInternalInstance, currentInstance } from './component'
+import {
+  type ComponentInternalInstance,
+  componentKey,
+  currentInstance,
+} from './component'
 import { isEmitListener } from './componentEmits'
 import { type RawProps, walkRawProps } from './componentProps'
 import { renderEffect } from './renderEffect'
 import { mergeProp, setDynamicProp } from './dom/prop'
+import type { Block } from './apiRender'
 
 export function patchAttrs(
   instance: ComponentInternalInstance,
@@ -92,6 +97,18 @@ export function withAttrs(props: RawProps): RawProps {
   return [attrsGetter, props]
 }
 
+function getFirstNode(block: Block | undefined): Node | undefined {
+  if (!block || componentKey in block) return
+  if (block instanceof Node) return block
+  if (isArray(block)) {
+    if (block.length === 1) {
+      return getFirstNode(block[0])
+    }
+  } else {
+    return getFirstNode(block.nodes)
+  }
+}
+
 export function fallThroughAttrs(instance: ComponentInternalInstance): void {
   const {
     block,
@@ -100,11 +117,14 @@ export function fallThroughAttrs(instance: ComponentInternalInstance): void {
   } = instance
   if (
     inheritAttrs === false ||
-    !(block instanceof Element) ||
-    // all props as dynamic
-    dynamicAttrs === true
+    dynamicAttrs === true || // all props as dynamic
+    !block ||
+    componentKey in block
   )
     return
+
+  const element = getFirstNode(block)
+  if (!element || !(element instanceof Element)) return
 
   const hasStaticAttrs = dynamicAttrs || dynamicAttrs === false
 
@@ -112,8 +132,8 @@ export function fallThroughAttrs(instance: ComponentInternalInstance): void {
   if (hasStaticAttrs) {
     // attrs in static template
     initial = {}
-    for (let i = 0; i < block.attributes.length; i++) {
-      const attr = block.attributes[i]
+    for (let i = 0; i < element.attributes.length; i++) {
+      const attr = element.attributes[i]
       if (dynamicAttrs && dynamicAttrs.includes(attr.name)) continue
       initial[attr.name] = attr.value
     }
@@ -124,13 +144,13 @@ export function fallThroughAttrs(instance: ComponentInternalInstance): void {
       if (dynamicAttrs && dynamicAttrs.includes(key)) continue
 
       let value: unknown
-      if (hasStaticAttrs) {
+      if (hasStaticAttrs && key in initial!) {
         value = mergeProp(key, instance.attrs[key], initial![key])
       } else {
         value = instance.attrs[key]
       }
 
-      setDynamicProp(block, key, value)
+      setDynamicProp(element, key, value)
     }
   })
 }

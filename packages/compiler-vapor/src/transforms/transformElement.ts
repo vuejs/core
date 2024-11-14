@@ -64,11 +64,20 @@ export const transformElement: NodeTransform = (node, context) => {
       isDynamicComponent,
     )
 
+    let { parent } = context
+    while (
+      parent &&
+      parent.parent &&
+      parent.node.type === NodeTypes.ELEMENT &&
+      parent.node.tagType === ElementTypes.TEMPLATE
+    ) {
+      parent = parent.parent
+    }
     const singleRoot =
-      context.root === context.parent &&
-      context.parent.node.children.filter(
-        child => child.type !== NodeTypes.COMMENT,
-      ).length === 1
+      context.root === parent &&
+      parent.node.children.filter(child => child.type !== NodeTypes.COMMENT)
+        .length === 1
+
     ;(isComponent ? transformComponentElement : transformNativeElement)(
       node as any,
       propsResult,
