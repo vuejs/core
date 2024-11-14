@@ -3,8 +3,10 @@ import {
   Static,
   type VNode,
   getCurrentInstance,
+  onBeforeUpdate,
   onMounted,
   onUnmounted,
+  queuePostFlushCb,
   warn,
   watch,
 } from '@vue/runtime-core'
@@ -46,6 +48,12 @@ export function useCssVars(getter: (ctx: any) => Record<string, string>): void {
     }
     updateTeleports(vars)
   }
+
+  // handle cases where child component root is affected
+  // and triggers reflow in onMounted
+  onBeforeUpdate(() => {
+    queuePostFlushCb(setVars)
+  })
 
   onMounted(() => {
     // run setVars synchronously here, but run as post-effect on changes
