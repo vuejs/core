@@ -16,10 +16,10 @@ import {
   shallowReadonly,
 } from '@vue/reactivity'
 import { isArray, isFunction, isObject } from '@vue/shared'
-import { fallThroughAttrs } from './componentAttrs'
 import { VaporErrorCodes, callWithErrorHandling } from './errorHandling'
 import { endMeasure, startMeasure } from './profiling'
 import { devtoolsComponentAdded } from './devtools'
+import { fallThroughAttrs } from './componentAttrs'
 
 export const fragmentKey: unique symbol = Symbol(__DEV__ ? `fragmentKey` : ``)
 
@@ -86,9 +86,6 @@ export function setupComponent(instance: ComponentInternalInstance): void {
       resetTracking()
     }
 
-    if (block instanceof DocumentFragment) {
-      block = Array.from(block.childNodes)
-    }
     if (!block) {
       // TODO: warn no template
       block = []

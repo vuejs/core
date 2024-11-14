@@ -8,6 +8,7 @@ import {
   IRDynamicPropsKind,
   type IRProp,
   type SetDynamicPropsIRNode,
+  type SetInheritAttrsIRNode,
   type SetPropIRNode,
   type VaporHelper,
 } from '../ir'
@@ -55,6 +56,7 @@ export function genSetProp(
       `n${oper.element}`,
       omitKey ? false : genExpression(key, context),
       genPropValue(values, context),
+      oper.root && 'true',
     ),
   ]
 }
@@ -70,14 +72,18 @@ export function genDynamicProps(
     ...genCall(
       vaporHelper('setDynamicProps'),
       `n${oper.element}`,
-      ...oper.props.map(
-        props =>
-          Array.isArray(props)
-            ? genLiteralObjectProps(props, context) // static and dynamic arg props
-            : props.kind === IRDynamicPropsKind.ATTRIBUTE
-              ? genLiteralObjectProps([props], context) // dynamic arg props
-              : genExpression(props.value, context), // v-bind=""
+      genMulti(
+        DELIMITERS_ARRAY,
+        ...oper.props.map(
+          props =>
+            Array.isArray(props)
+              ? genLiteralObjectProps(props, context) // static and dynamic arg props
+              : props.kind === IRDynamicPropsKind.ATTRIBUTE
+                ? genLiteralObjectProps([props], context) // dynamic arg props
+                : genExpression(props.value, context), // v-bind=""
+        ),
       ),
+      oper.root && 'true',
     ),
   ]
 }
@@ -125,7 +131,10 @@ export function genPropKey(
   return ['[', modifier && `${JSON.stringify(modifier)} + `, ...key, ']']
 }
 
-function genPropValue(values: SimpleExpressionNode[], context: CodegenContext) {
+export function genPropValue(
+  values: SimpleExpressionNode[],
+  context: CodegenContext,
+): CodeFragment[] {
   if (values.length === 1) {
     return genExpression(values[0], context)
   }
@@ -133,4 +142,29 @@ function genPropValue(values: SimpleExpressionNode[], context: CodegenContext) {
     DELIMITERS_ARRAY,
     ...values.map(expr => genExpression(expr, context)),
   )
+}
+
+export function genSetInheritAttrs(
+  { staticProps, dynamicProps }: SetInheritAttrsIRNode,
+  context: CodegenContext,
+): CodeFragment[] {
+  const { vaporHelper } = context
+
+  // - `undefined` : no props
+  // - `false`     : all props are static
+  // - `string[]`  : list of props are dynamic
+  // - `true`      : all props as dynamic
+  const value =
+    dynamicProps === true
+      ? 'true'
+      : dynamicProps.length
+        ? genMulti(
+            DELIMITERS_ARRAY,
+            ...dynamicProps.map(p => JSON.stringify(p)),
+          )
+        : staticProps
+          ? 'false'
+          : null
+  if (value == null) return []
+  return [NEWLINE, ...genCall(vaporHelper('setInheritAttrs'), value)]
 }

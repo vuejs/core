@@ -407,25 +407,25 @@ describe('patchProp', () => {
   describe('setDynamicProps', () => {
     test('basic set dynamic props', () => {
       const el = document.createElement('div')
-      setDynamicProps(el, { foo: 'val' }, { bar: 'val' })
+      setDynamicProps(el, [{ foo: 'val' }, { bar: 'val' }])
       expect(el.getAttribute('foo')).toBe('val')
       expect(el.getAttribute('bar')).toBe('val')
     })
 
     test('should merge props', () => {
       const el = document.createElement('div')
-      setDynamicProps(el, { foo: 'val' }, { foo: 'newVal' })
+      setDynamicProps(el, [{ foo: 'val' }, { foo: 'newVal' }])
       expect(el.getAttribute('foo')).toBe('newVal')
     })
 
     test('should reset old props', () => {
       const el = document.createElement('div')
 
-      setDynamicProps(el, { foo: 'val' })
+      setDynamicProps(el, [{ foo: 'val' }])
       expect(el.attributes.length).toBe(1)
       expect(el.getAttribute('foo')).toBe('val')
 
-      setDynamicProps(el, { bar: 'val' })
+      setDynamicProps(el, [{ bar: 'val' }])
       expect(el.attributes.length).toBe(1)
       expect(el.getAttribute('bar')).toBe('val')
       expect(el.getAttribute('foo')).toBeNull()
@@ -434,18 +434,18 @@ describe('patchProp', () => {
     test('should reset old modifier props', () => {
       const el = document.createElement('div')
 
-      setDynamicProps(el, { ['.foo']: 'val' })
+      setDynamicProps(el, [{ ['.foo']: 'val' }])
       expect((el as any).foo).toBe('val')
 
-      setDynamicProps(el, { ['.bar']: 'val' })
+      setDynamicProps(el, [{ ['.bar']: 'val' }])
       expect((el as any).bar).toBe('val')
       expect((el as any).foo).toBe('')
 
-      setDynamicProps(el, { ['^foo']: 'val' })
+      setDynamicProps(el, [{ ['^foo']: 'val' }])
       expect(el.attributes.length).toBe(1)
       expect(el.getAttribute('foo')).toBe('val')
 
-      setDynamicProps(el, { ['^bar']: 'val' })
+      setDynamicProps(el, [{ ['^bar']: 'val' }])
       expect(el.attributes.length).toBe(1)
       expect(el.getAttribute('bar')).toBe('val')
       expect(el.getAttribute('foo')).toBeNull()

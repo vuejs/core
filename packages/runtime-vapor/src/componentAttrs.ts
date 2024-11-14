@@ -1,11 +1,14 @@
-import { camelize, isArray } from '@vue/shared'
+import { camelize, isArray, normalizeClass, normalizeStyle } from '@vue/shared'
 import { type ComponentInternalInstance, currentInstance } from './component'
 import { isEmitListener } from './componentEmits'
-import { setDynamicProps } from './dom/prop'
 import { type RawProps, walkRawProps } from './componentProps'
 import { renderEffect } from './renderEffect'
+import { mergeProp, setDynamicProp } from './dom/prop'
 
-export function patchAttrs(instance: ComponentInternalInstance): void {
+export function patchAttrs(
+  instance: ComponentInternalInstance,
+  hasDynamicProps?: boolean,
+): void {
   const {
     attrs,
     rawProps,
@@ -14,6 +17,8 @@ export function patchAttrs(instance: ComponentInternalInstance): void {
 
   if (!rawProps.length) return
   const keys = new Set<string>()
+  const classes: any[] = []
+  const styles: any[] = []
 
   walkRawProps(rawProps, registerAttr)
   for (const key in attrs) {
@@ -22,14 +27,42 @@ export function patchAttrs(instance: ComponentInternalInstance): void {
     }
   }
 
+  setClassOrStyle(classes, 'class', normalizeClass)
+  setClassOrStyle(styles, 'style', normalizeStyle)
+
+  function setClassOrStyle(
+    values: any[],
+    field: 'class' | 'style',
+    normalize: (value: any) => any,
+  ) {
+    if (values.length) {
+      if (hasDynamicProps) {
+        Object.defineProperty(attrs, field, {
+          get() {
+            return normalize(values.map(value => value()))
+          },
+          enumerable: true,
+          configurable: true,
+        })
+      } else {
+        attrs[field] = normalizeClass(values)
+      }
+    }
+  }
+
   function registerAttr(key: string, value: any, getter?: boolean) {
     if (
       (!options || !(camelize(key) in options)) &&
       !isEmitListener(instance.emitsOptions, key) &&
-      !keys.has(key)
+      (key === 'class' || key === 'style' || !keys.has(key))
     ) {
       keys.add(key)
-      if (getter) {
+
+      if (key === 'class' || key === 'style') {
+        ;(key === 'class' ? classes : styles).push(
+          hasDynamicProps ? (getter ? value : () => value) : value,
+        )
+      } else if (getter) {
         Object.defineProperty(attrs, key, {
           get: value,
           enumerable: true,
@@ -57,16 +90,47 @@ export function fallThroughAttrs(instance: ComponentInternalInstance): void {
   const {
     block,
     type: { inheritAttrs },
+    dynamicAttrs,
   } = instance
-  if (inheritAttrs === false) return
+  if (
+    inheritAttrs === false ||
+    !(block instanceof Element) ||
+    // all props as dynamic
+    dynamicAttrs === true
+  )
+    return
 
-  if (block instanceof Element) {
+  const hasStaticAttrs = dynamicAttrs || dynamicAttrs === false
+
+  let initial: Record<string, string> | undefined
+  if (hasStaticAttrs) {
     // attrs in static template
-    const initial: Record<string, string> = {}
+    initial = {}
     for (let i = 0; i < block.attributes.length; i++) {
       const attr = block.attributes[i]
+      if (dynamicAttrs && dynamicAttrs.includes(attr.name)) continue
       initial[attr.name] = attr.value
     }
-    renderEffect(() => setDynamicProps(block, instance.attrs, initial))
   }
+
+  renderEffect(() => {
+    for (const key in instance.attrs) {
+      if (dynamicAttrs && dynamicAttrs.includes(key)) continue
+
+      let value: unknown
+      if (hasStaticAttrs) {
+        value = mergeProp(key, instance.attrs[key], initial![key])
+      } else {
+        value = instance.attrs[key]
+      }
+
+      setDynamicProp(block, key, value)
+    }
+  })
+}
+
+export function setInheritAttrs(dynamicAttrs?: string[] | boolean): void {
+  const instance = currentInstance!
+  if (instance.type.inheritAttrs === false) return
+  instance.dynamicAttrs = dynamicAttrs
 }

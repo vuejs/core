@@ -116,7 +116,7 @@ export function initProps(
   }
 
   if (hasDynamicProps) {
-    firstEffect(instance, () => patchAttrs(instance))
+    firstEffect(instance, () => patchAttrs(instance, true))
   } else {
     patchAttrs(instance)
   }

@@ -588,7 +588,7 @@ describe('compiler: element transform', () => {
         ],
       },
     ])
-    expect(code).contains('_setDynamicProps(n0, _ctx.obj)')
+    expect(code).contains('_setDynamicProps(n0, [_ctx.obj], true)')
   })
 
   test('v-bind="obj" after static prop', () => {
@@ -624,7 +624,9 @@ describe('compiler: element transform', () => {
         ],
       },
     ])
-    expect(code).contains('_setDynamicProps(n0, { id: "foo" }, _ctx.obj)')
+    expect(code).contains(
+      '_setDynamicProps(n0, [{ id: "foo" }, _ctx.obj], true)',
+    )
   })
 
   test('v-bind="obj" before static prop', () => {
@@ -650,7 +652,9 @@ describe('compiler: element transform', () => {
         ],
       },
     ])
-    expect(code).contains('_setDynamicProps(n0, _ctx.obj, { id: "foo" })')
+    expect(code).contains(
+      '_setDynamicProps(n0, [_ctx.obj, { id: "foo" }], true)',
+    )
   })
 
   test('v-bind="obj" between static props', () => {
@@ -678,7 +682,7 @@ describe('compiler: element transform', () => {
       },
     ])
     expect(code).contains(
-      '_setDynamicProps(n0, { id: "foo" }, _ctx.obj, { class: "bar" })',
+      '_setDynamicProps(n0, [{ id: "foo" }, _ctx.obj, { class: "bar" }], true)',
     )
   })
 
@@ -722,6 +726,9 @@ describe('compiler: element transform', () => {
         keyOverride: undefined,
         delegate: true,
         effect: false,
+      },
+      {
+        type: IRNodeTypes.SET_INHERIT_ATTRS,
       },
     ])
   })

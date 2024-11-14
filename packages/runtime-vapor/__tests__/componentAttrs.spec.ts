@@ -3,6 +3,7 @@ import {
   getCurrentInstance,
   nextTick,
   ref,
+  setInheritAttrs,
   setText,
   template,
   watchEffect,
@@ -18,7 +19,8 @@ describe('attribute fallthrough', () => {
       props: ['foo'],
       render() {
         const instance = getCurrentInstance()!
-        const n0 = t0()
+        const n0 = t0() as Element
+        setInheritAttrs()
         watchEffect(() => setText(n0, instance.props.foo))
         return n0
       },
@@ -62,7 +64,8 @@ describe('attribute fallthrough', () => {
       inheritAttrs: false,
       render() {
         const instance = getCurrentInstance()!
-        const n0 = t0()
+        const n0 = t0() as Element
+        setInheritAttrs()
         watchEffect(() => setText(n0, instance.props.foo))
         return n0
       },
@@ -105,7 +108,8 @@ describe('attribute fallthrough', () => {
       props: ['custom-attr'],
       render() {
         const instance = getCurrentInstance()!
-        const n0 = t0()
+        const n0 = t0() as Element
+        setInheritAttrs()
         watchEffect(() => setText(n0, instance.attrs.foo))
         return n0
       },

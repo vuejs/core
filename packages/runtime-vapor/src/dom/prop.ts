@@ -18,9 +18,20 @@ import {
 } from '../componentMetadata'
 import { on } from './event'
 import type { Data } from '@vue/runtime-shared'
+import { currentInstance } from '../component'
 
-export function setClass(el: Element, value: any): void {
-  const prev = recordPropMetadata(el, 'class', (value = normalizeClass(value)))
+export function mergeInheritAttr(key: string, value: any): unknown {
+  const instance = currentInstance!
+  return mergeProp(key, instance.attrs[key], value)
+}
+
+export function setClass(el: Element, value: any, root?: boolean): void {
+  const prev = recordPropMetadata(
+    el,
+    'class',
+    (value = normalizeClass(root ? mergeInheritAttr('class', value) : value)),
+  )
+
   if (value !== prev && (value || prev)) {
     el.className = value
   }
@@ -132,8 +143,15 @@ export function setDynamicProp(el: Element, key: string, value: any): void {
   }
 }
 
-export function setDynamicProps(el: Element, ...args: any): void {
+export function setDynamicProps(
+  el: Element,
+  args: any[],
+  root?: boolean,
+): void {
   const oldProps = getMetadata(el)[MetadataKind.prop]
+  if (root) {
+    args.unshift(currentInstance!.attrs)
+  }
   const props = args.length > 1 ? mergeProps(...args) : args[0]
 
   for (const key in oldProps) {
@@ -153,32 +171,36 @@ export function setDynamicProps(el: Element, ...args: any): void {
   }
 }
 
-// TODO copied from runtime-core
+export function mergeProp(
+  key: string,
+  existing: unknown,
+  incoming: unknown,
+): unknown {
+  if (key === 'class') {
+    if (existing !== incoming) {
+      return normalizeClass([existing, incoming])
+    }
+  } else if (key === 'style') {
+    return normalizeStyle([existing, incoming])
+  } else if (isOn(key)) {
+    if (
+      incoming &&
+      existing !== incoming &&
+      !(isArray(existing) && existing.includes(incoming))
+    ) {
+      return existing ? [].concat(existing as any, incoming as any) : incoming
+    }
+  }
+  return incoming
+}
+
 export function mergeProps(...args: Data[]): Data {
   const ret: Data = {}
   for (let i = 0; i < args.length; i++) {
     const toMerge = args[i]
     for (const key in toMerge) {
-      if (key === 'class') {
-        if (ret.class !== toMerge.class) {
-          ret.class = normalizeClass([ret.class, toMerge.class])
-        }
-      } else if (key === 'style') {
-        ret.style = normalizeStyle([ret.style, toMerge.style])
-      } else if (isOn(key)) {
-        const existing = ret[key]
-        const incoming = toMerge[key]
-        if (
-          incoming &&
-          existing !== incoming &&
-          !(isArray(existing) && existing.includes(incoming))
-        ) {
-          ret[key] = existing
-            ? [].concat(existing as any, incoming as any)
-            : incoming
-        }
-      } else if (key !== '') {
-        ret[key] = toMerge[key]
+      if (key !== '') {
+        ret[key] = mergeProp(key, ret[key], toMerge[key])
       }
     }
   }

@@ -12,7 +12,7 @@
     "vue": "workspace:*"
   },
   "devDependencies": {
-    "@vitejs/plugin-vue": "https://pkg.pr.new/@vitejs/plugin-vue@e3c5ce5",
+    "@vitejs/plugin-vue": "https://pkg.pr.new/@vitejs/plugin-vue@481bcd4",
     "vite": "catalog:",
     "vite-hyper-config": "^0.4.0",
     "vite-plugin-inspect": "^0.8.7"

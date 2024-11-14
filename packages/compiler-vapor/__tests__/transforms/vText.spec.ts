@@ -28,7 +28,11 @@ describe('v-text', () => {
     expect(vaporHelpers).contains('setText')
     expect(helpers.size).toBe(0)
 
-    expect(ir.block.operation).toEqual([])
+    expect(ir.block.operation).toMatchObject([
+      {
+        type: IRNodeTypes.SET_INHERIT_ATTRS,
+      },
+    ])
 
     expect(ir.block.effect).toMatchObject([
       {

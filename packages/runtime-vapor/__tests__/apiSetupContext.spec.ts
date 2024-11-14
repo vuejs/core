@@ -11,6 +11,7 @@ import {
   ref,
   renderEffect,
   setDynamicProps,
+  setInheritAttrs,
   template,
   watchEffect,
 } from '../src'
@@ -77,9 +78,7 @@ describe('api: setup context', () => {
       inheritAttrs: false,
       setup(props, { attrs }) {
         const el = document.createElement('div')
-        renderEffect(() => {
-          setDynamicProps(el, attrs)
-        })
+        renderEffect(() => setDynamicProps(el, [attrs]))
         return el
       },
     })
@@ -103,23 +102,24 @@ describe('api: setup context', () => {
     const toggle = ref(true)
 
     const Wrapper = defineComponent({
-      setup(_, { slots }) {
-        return slots.default!()
+      setup(_) {
+        const n0 = createSlot('default')
+        setInheritAttrs(false, true)
+        return n0
       },
     })
 
     const Child = defineComponent({
       inheritAttrs: false,
       setup(_: any, { attrs }: any) {
-        return createComponent(Wrapper, null, {
+        const n0 = createComponent(Wrapper, null, {
           default: () => {
             const n0 = template('<div>')() as HTMLDivElement
-            renderEffect(() => {
-              setDynamicProps(n0, attrs)
-            })
+            renderEffect(() => setDynamicProps(n0, [attrs], true))
             return n0
           },
         })
+        return n0
       },
     })
 

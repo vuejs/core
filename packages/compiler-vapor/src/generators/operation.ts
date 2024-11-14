@@ -6,7 +6,7 @@ import { genFor } from './for'
 import { genSetHtml } from './html'
 import { genIf } from './if'
 import { genSetModelValue } from './modelValue'
-import { genDynamicProps, genSetProp } from './prop'
+import { genDynamicProps, genSetInheritAttrs, genSetProp } from './prop'
 import { genDeclareOldRef, genSetTemplateRef } from './templateRef'
 import { genCreateTextNode, genSetText } from './text'
 import {
@@ -67,6 +67,8 @@ export function genOperation(
       return genDeclareOldRef(oper)
     case IRNodeTypes.SLOT_OUTLET_NODE:
       return genSlotOutlet(oper, context)
+    case IRNodeTypes.SET_INHERIT_ATTRS:
+      return genSetInheritAttrs(oper, context)
   }
 
   return []

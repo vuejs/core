@@ -286,22 +286,24 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: element transform > props + children 1`] = `
-"import { template as _template } from 'vue/vapor';
+"import { setInheritAttrs as _setInheritAttrs, template as _template } from 'vue/vapor';
 const t0 = _template("<div id=\\"foo\\"><span></span></div>")
 
 export function render(_ctx) {
   const n0 = t0()
+  _setInheritAttrs(false)
   return n0
 }"
 `;
 
 exports[`compiler: element transform > props merging: class 1`] = `
-"import { renderEffect as _renderEffect, setClass as _setClass, template as _template } from 'vue/vapor';
+"import { setInheritAttrs as _setInheritAttrs, renderEffect as _renderEffect, setClass as _setClass, template as _template } from 'vue/vapor';
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => _setClass(n0, ["foo", { bar: _ctx.isBar }]))
+  _setInheritAttrs(["class"])
+  _renderEffect(() => _setClass(n0, ["foo", { bar: _ctx.isBar }], true))
   return n0
 }"
 `;
@@ -324,66 +326,72 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: element transform > props merging: style 1`] = `
-"import { renderEffect as _renderEffect, setStyle as _setStyle, template as _template } from 'vue/vapor';
+"import { setInheritAttrs as _setInheritAttrs, renderEffect as _renderEffect, setStyle as _setStyle, template as _template } from 'vue/vapor';
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => _setStyle(n0, ["color: green", { color: 'red' }]))
+  _setInheritAttrs(["style"])
+  _renderEffect(() => _setStyle(n0, ["color: green", { color: 'red' }], true))
   return n0
 }"
 `;
 
 exports[`compiler: element transform > static props 1`] = `
-"import { template as _template } from 'vue/vapor';
+"import { setInheritAttrs as _setInheritAttrs, template as _template } from 'vue/vapor';
 const t0 = _template("<div id=\\"foo\\" class=\\"bar\\"></div>")
 
 export function render(_ctx) {
   const n0 = t0()
+  _setInheritAttrs(false)
   return n0
 }"
 `;
 
 exports[`compiler: element transform > v-bind="obj" 1`] = `
-"import { renderEffect as _renderEffect, setDynamicProps as _setDynamicProps, template as _template } from 'vue/vapor';
+"import { setInheritAttrs as _setInheritAttrs, renderEffect as _renderEffect, setDynamicProps as _setDynamicProps, template as _template } from 'vue/vapor';
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => _setDynamicProps(n0, _ctx.obj))
+  _setInheritAttrs(true)
+  _renderEffect(() => _setDynamicProps(n0, [_ctx.obj], true))
   return n0
 }"
 `;
 
 exports[`compiler: element transform > v-bind="obj" after static prop 1`] = `
-"import { renderEffect as _renderEffect, setDynamicProps as _setDynamicProps, template as _template } from 'vue/vapor';
+"import { setInheritAttrs as _setInheritAttrs, renderEffect as _renderEffect, setDynamicProps as _setDynamicProps, template as _template } from 'vue/vapor';
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => _setDynamicProps(n0, { id: "foo" }, _ctx.obj))
+  _setInheritAttrs(true)
+  _renderEffect(() => _setDynamicProps(n0, [{ id: "foo" }, _ctx.obj], true))
   return n0
 }"
 `;
 
 exports[`compiler: element transform > v-bind="obj" before static prop 1`] = `
-"import { renderEffect as _renderEffect, setDynamicProps as _setDynamicProps, template as _template } from 'vue/vapor';
+"import { setInheritAttrs as _setInheritAttrs, renderEffect as _renderEffect, setDynamicProps as _setDynamicProps, template as _template } from 'vue/vapor';
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => _setDynamicProps(n0, _ctx.obj, { id: "foo" }))
+  _setInheritAttrs(true)
+  _renderEffect(() => _setDynamicProps(n0, [_ctx.obj, { id: "foo" }], true))
   return n0
 }"
 `;
 
 exports[`compiler: element transform > v-bind="obj" between static props 1`] = `
-"import { renderEffect as _renderEffect, setDynamicProps as _setDynamicProps, template as _template } from 'vue/vapor';
+"import { setInheritAttrs as _setInheritAttrs, renderEffect as _renderEffect, setDynamicProps as _setDynamicProps, template as _template } from 'vue/vapor';
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => _setDynamicProps(n0, { id: "foo" }, _ctx.obj, { class: "bar" }))
+  _setInheritAttrs(true)
+  _renderEffect(() => _setDynamicProps(n0, [{ id: "foo" }, _ctx.obj, { class: "bar" }], true))
   return n0
 }"
 `;

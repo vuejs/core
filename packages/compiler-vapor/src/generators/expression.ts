@@ -132,7 +132,7 @@ function genIdentifier(
     prefix = `${raw}: `
   }
 
-  const type = bindingMetadata[raw]
+  const type = bindingMetadata && bindingMetadata[raw]
   if (inline) {
     switch (type) {
       case BindingTypes.SETUP_LET:

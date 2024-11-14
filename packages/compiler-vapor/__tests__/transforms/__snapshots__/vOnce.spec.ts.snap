@@ -1,12 +1,13 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
 exports[`compiler: v-once > as root node 1`] = `
-"import { setDynamicProp as _setDynamicProp, template as _template } from 'vue/vapor';
+"import { setDynamicProp as _setDynamicProp, setInheritAttrs as _setInheritAttrs, template as _template } from 'vue/vapor';
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
-  _setDynamicProp(n0, "id", _ctx.foo)
+  _setDynamicProp(n0, "id", _ctx.foo, true)
+  _setInheritAttrs(["id"])
   return n0
 }"
 `;

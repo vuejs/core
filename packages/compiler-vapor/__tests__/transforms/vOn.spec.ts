@@ -47,6 +47,9 @@ describe('v-on', () => {
         keyOverride: undefined,
         delegate: true,
       },
+      {
+        type: IRNodeTypes.SET_INHERIT_ATTRS,
+      },
     ])
   })
 
@@ -91,7 +94,11 @@ describe('v-on', () => {
     expect(vaporHelpers).contains('on')
     expect(vaporHelpers).contains('renderEffect')
     expect(helpers.size).toBe(0)
-    expect(ir.block.operation).toEqual([])
+    expect(ir.block.operation).toMatchObject([
+      {
+        type: IRNodeTypes.SET_INHERIT_ATTRS,
+      },
+    ])
 
     expect(ir.block.effect[0].operations[0]).toMatchObject({
       type: IRNodeTypes.SET_EVENT,
@@ -130,7 +137,11 @@ describe('v-on', () => {
     expect(vaporHelpers).contains('on')
     expect(vaporHelpers).contains('renderEffect')
     expect(helpers.size).toBe(0)
-    expect(ir.block.operation).toEqual([])
+    expect(ir.block.operation).toMatchObject([
+      {
+        type: IRNodeTypes.SET_INHERIT_ATTRS,
+      },
+    ])
 
     expect(ir.block.effect[0].operations[0]).toMatchObject({
       type: IRNodeTypes.SET_EVENT,
@@ -169,6 +180,9 @@ describe('v-on', () => {
         },
         delegate: true,
       },
+      {
+        type: IRNodeTypes.SET_INHERIT_ATTRS,
+      },
     ])
     expect(code).contains(`_delegate(n0, "click", () => $event => (_ctx.i++))`)
   })
@@ -206,6 +220,9 @@ describe('v-on', () => {
         type: IRNodeTypes.SET_EVENT,
         value: { content: 'foo();bar()' },
       },
+      {
+        type: IRNodeTypes.SET_INHERIT_ATTRS,
+      },
     ])
     // should wrap with `{` for multiple statements
     // in this case the return value is discarded and the behavior is
@@ -223,6 +240,9 @@ describe('v-on', () => {
       {
         type: IRNodeTypes.SET_EVENT,
         value: { content: '\nfoo();\nbar()\n' },
+      },
+      {
+        type: IRNodeTypes.SET_INHERIT_ATTRS,
       },
     ])
     // should wrap with `{` for multiple statements
@@ -244,6 +264,9 @@ describe('v-on', () => {
         type: IRNodeTypes.SET_EVENT,
         value: { content: 'foo($event)' },
       },
+      {
+        type: IRNodeTypes.SET_INHERIT_ATTRS,
+      },
     ])
     // should NOT prefix $event
     expect(code).contains(
@@ -262,6 +285,9 @@ describe('v-on', () => {
         type: IRNodeTypes.SET_EVENT,
         value: { content: 'foo($event);bar()' },
       },
+      {
+        type: IRNodeTypes.SET_INHERIT_ATTRS,
+      },
     ])
     // should NOT prefix $event
     expect(code).contains(
@@ -277,6 +303,9 @@ describe('v-on', () => {
       {
         type: IRNodeTypes.SET_EVENT,
         value: { content: '$event => foo($event)' },
+      },
+      {
+        type: IRNodeTypes.SET_INHERIT_ATTRS,
       },
     ])
     expect(code).contains(
@@ -295,6 +324,9 @@ describe('v-on', () => {
       {
         type: IRNodeTypes.SET_EVENT,
         value: { content: '(e: any): any => foo(e)' },
+      },
+      {
+        type: IRNodeTypes.SET_INHERIT_ATTRS,
       },
     ])
     expect(code).contains(
@@ -323,6 +355,9 @@ describe('v-on', () => {
     `,
         },
       },
+      {
+        type: IRNodeTypes.SET_INHERIT_ATTRS,
+      },
     ])
   })
 
@@ -349,6 +384,9 @@ describe('v-on', () => {
         type: IRNodeTypes.SET_EVENT,
         value: { content: `a['b' + c]` },
       },
+      {
+        type: IRNodeTypes.SET_INHERIT_ATTRS,
+      },
     ])
 
     expect(code).matchSnapshot()
@@ -360,6 +398,9 @@ describe('v-on', () => {
       {
         type: IRNodeTypes.SET_EVENT,
         value: { content: `a['b' + c]` },
+      },
+      {
+        type: IRNodeTypes.SET_INHERIT_ATTRS,
       },
     ])
 
@@ -377,6 +418,9 @@ describe('v-on', () => {
       {
         type: IRNodeTypes.SET_EVENT,
         value: { content: `e => foo(e)` },
+      },
+      {
+        type: IRNodeTypes.SET_INHERIT_ATTRS,
       },
     ])
     expect(code).contains(`_delegate(n0, "click", () => e => _ctx.foo(e))`)
@@ -431,6 +475,9 @@ describe('v-on', () => {
         },
         keyOverride: undefined,
         delegate: false,
+      },
+      {
+        type: IRNodeTypes.SET_INHERIT_ATTRS,
       },
     ])
     expect(code).contains(
@@ -487,6 +534,9 @@ describe('v-on', () => {
           options: [],
         },
       },
+      {
+        type: IRNodeTypes.SET_INHERIT_ATTRS,
+      },
     ])
 
     expect(code).matchSnapshot()
@@ -529,6 +579,9 @@ describe('v-on', () => {
           options: ['capture'],
         },
       },
+      {
+        type: IRNodeTypes.SET_INHERIT_ATTRS,
+      },
     ])
 
     expect(code).matchSnapshot()
@@ -542,6 +595,9 @@ describe('v-on', () => {
       {
         type: IRNodeTypes.SET_EVENT,
         modifiers: { nonKeys: ['exact'] },
+      },
+      {
+        type: IRNodeTypes.SET_INHERIT_ATTRS,
       },
     ])
 
@@ -561,6 +617,9 @@ describe('v-on', () => {
           nonKeys: [],
           options: [],
         },
+      },
+      {
+        type: IRNodeTypes.SET_INHERIT_ATTRS,
       },
     ])
 
@@ -604,6 +663,9 @@ describe('v-on', () => {
         modifiers: { nonKeys: ['right'] },
         keyOverride: undefined,
       },
+      {
+        type: IRNodeTypes.SET_INHERIT_ATTRS,
+      },
     ])
 
     expect(code).matchSnapshot()
@@ -644,6 +706,9 @@ describe('v-on', () => {
         },
         modifiers: { nonKeys: ['middle'] },
         keyOverride: undefined,
+      },
+      {
+        type: IRNodeTypes.SET_INHERIT_ATTRS,
       },
     ])
 
@@ -693,6 +758,9 @@ describe('v-on', () => {
       {
         type: IRNodeTypes.SET_EVENT,
         delegate: true,
+      },
+      {
+        type: IRNodeTypes.SET_INHERIT_ATTRS,
       },
     ])
   })

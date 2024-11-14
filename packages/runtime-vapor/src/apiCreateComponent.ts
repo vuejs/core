@@ -12,11 +12,12 @@ import {
   walkRawProps,
 } from './componentProps'
 import { type RawSlots, isDynamicSlotFn } from './componentSlots'
-import { withAttrs } from './componentAttrs'
+import { setInheritAttrs, withAttrs } from './componentAttrs'
 import { isString } from '@vue/shared'
 import { renderEffect } from './renderEffect'
 import { normalizeBlock } from './dom/element'
-import { setDynamicProp } from './dom/prop'
+import { setClass, setDynamicProp } from './dom/prop'
+import { setStyle } from './dom/style'
 
 export function createComponent(
   comp: Component | string,
@@ -25,11 +26,12 @@ export function createComponent(
   singleRoot: boolean = false,
   once: boolean = false,
 ): ComponentInternalInstance | HTMLElement {
+  const current = currentInstance!
+
   if (isString(comp)) {
-    return fallbackComponent(comp, rawProps, slots)
+    return fallbackComponent(comp, rawProps, slots, current, singleRoot)
   }
 
-  const current = currentInstance!
   const instance = createComponentInstance(
     comp,
     singleRoot ? withAttrs(rawProps) : rawProps,
@@ -48,16 +50,31 @@ function fallbackComponent(
   comp: string,
   rawProps: RawProps | null,
   slots: RawSlots | null,
+  instance: ComponentInternalInstance,
+  singleRoot: boolean = false,
 ): HTMLElement {
   // eslint-disable-next-line no-restricted-globals
   const el = document.createElement(comp)
 
-  if (rawProps) {
-    rawProps = normalizeRawProps(rawProps)
+  if (rawProps || Object.keys(instance.attrs).length) {
+    rawProps = [() => instance.attrs, ...normalizeRawProps(rawProps)]
+
     renderEffect(() => {
-      walkRawProps(rawProps as NormalizedRawProps, (key, value, getter) => {
-        setDynamicProp(el, key, getter ? value() : value)
-      })
+      let classes: unknown[] | undefined
+      let styles: unknown[] | undefined
+
+      walkRawProps(
+        rawProps as NormalizedRawProps,
+        (key, valueOrGetter, getter) => {
+          const value = getter ? valueOrGetter() : valueOrGetter
+          if (key === 'class') (classes ||= []).push(value)
+          else if (key === 'style') (styles ||= []).push(value)
+          else setDynamicProp(el, key, value)
+        },
+      )
+
+      if (classes) setClass(el, classes)
+      if (styles) setStyle(el, styles)
     })
   }
 
@@ -70,6 +87,10 @@ function fallbackComponent(
         if (block) el.append(...normalizeBlock(block))
       }
     }
+  }
+
+  if (singleRoot) {
+    setInheritAttrs(true)
   }
 
   return el

@@ -28,7 +28,7 @@ import {
   genMulti,
 } from './utils'
 import { genExpression } from './expression'
-import { genPropKey } from './prop'
+import { genPropKey, genPropValue } from './prop'
 import {
   createSimpleExpression,
   toValidAssetId,
@@ -121,14 +121,15 @@ function genStaticProps(
 }
 
 function genProp(prop: IRProp, context: CodegenContext, isStatic?: boolean) {
+  const values = genPropValue(prop.values, context)
   return [
     ...genPropKey(prop, context),
     ': ',
     ...(prop.handler
       ? genEventHandler(context, prop.values[0])
       : isStatic
-        ? ['() => (', ...genExpression(prop.values[0], context), ')']
-        : genExpression(prop.values[0], context)),
+        ? ['() => (', ...values, ')']
+        : values),
     ...(prop.model
       ? [...genModelEvent(prop, context), ...genModelModifiers(prop, context)]
       : []),

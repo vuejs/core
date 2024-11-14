@@ -130,6 +130,7 @@ export { createIf } from './apiCreateIf'
 export { createFor, createForSlots } from './apiCreateFor'
 export { createComponent } from './apiCreateComponent'
 export { createSelector } from './apiCreateSelector'
+export { setInheritAttrs } from './componentAttrs'
 
 export {
   resolveComponent,

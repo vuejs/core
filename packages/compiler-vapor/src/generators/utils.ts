@@ -46,7 +46,7 @@ export function genMulti(
   ...frags: CodeFragments[]
 ): CodeFragment[] {
   if (placeholder) {
-    while (!frags[frags.length - 1]) {
+    while (frags.length > 0 && !frags[frags.length - 1]) {
       frags.pop()
     }
     frags = frags.map(frag => frag || placeholder)

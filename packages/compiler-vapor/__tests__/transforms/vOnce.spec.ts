@@ -68,6 +68,7 @@ describe('compiler: v-once', () => {
         elements: [0],
         parent: 2,
       },
+      { type: IRNodeTypes.SET_INHERIT_ATTRS },
     ])
   })
 
@@ -95,6 +96,9 @@ describe('compiler: v-once', () => {
             },
           ],
         },
+      },
+      {
+        type: IRNodeTypes.SET_INHERIT_ATTRS,
       },
     ])
     expect(code).not.contains('effect')
@@ -128,6 +132,9 @@ describe('compiler: v-once', () => {
           ],
         },
       },
+      {
+        type: IRNodeTypes.SET_INHERIT_ATTRS,
+      },
     ])
   })
 
@@ -147,6 +154,7 @@ describe('compiler: v-once', () => {
         elements: [0],
         parent: 1,
       },
+      { type: IRNodeTypes.SET_INHERIT_ATTRS },
     ])
   })
 
@@ -160,7 +168,7 @@ describe('compiler: v-once', () => {
     expect(code).toMatchSnapshot()
     expect(helpers).lengthOf(0)
     expect(ir.block.effect).lengthOf(0)
-    expect(ir.block.operation).lengthOf(0)
+    expect(ir.block.operation).lengthOf(1)
   })
 
   test.todo('with hoistStatic: true')

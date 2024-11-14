@@ -140,11 +140,12 @@ export function render(_ctx) {
 `;
 
 exports[`compile > directives > v-pre > basic 1`] = `
-"import { template as _template } from 'vue/vapor';
+"import { setInheritAttrs as _setInheritAttrs, template as _template } from 'vue/vapor';
 const t0 = _template("<div :id=\\"foo\\"><Comp></Comp>{{ bar }}</div>")
 
 export function render(_ctx, $props) {
   const n0 = t0()
+  _setInheritAttrs(false)
   return n0
 }"
 `;
@@ -176,15 +177,16 @@ export function render(_ctx) {
 `;
 
 exports[`compile > dynamic root nodes and interpolation 1`] = `
-"import { delegate as _delegate, renderEffect as _renderEffect, setText as _setText, setDynamicProp as _setDynamicProp, delegateEvents as _delegateEvents, template as _template } from 'vue/vapor';
+"import { delegate as _delegate, setInheritAttrs as _setInheritAttrs, renderEffect as _renderEffect, setText as _setText, setDynamicProp as _setDynamicProp, delegateEvents as _delegateEvents, template as _template } from 'vue/vapor';
 const t0 = _template("<button></button>")
 _delegateEvents("click")
 
 export function render(_ctx) {
   const n0 = t0()
   _delegate(n0, "click", () => _ctx.handleClick)
+  _setInheritAttrs(["id"])
   _renderEffect(() => _setText(n0, _ctx.count, "foo", _ctx.count, "foo", _ctx.count))
-  _renderEffect(() => _setDynamicProp(n0, "id", _ctx.count))
+  _renderEffect(() => _setDynamicProp(n0, "id", _ctx.count, true))
   return n0
 }"
 `;
@@ -199,7 +201,8 @@ exports[`compile > expression parsing > interpolation 1`] = `
 exports[`compile > expression parsing > v-bind 1`] = `
 "((_ctx) => {
   const n0 = t0()
-  _renderEffect(() => _setDynamicProps(n0, { [key.value+1]: _unref(foo)[key.value+1]() }))
+  _setInheritAttrs(true)
+  _renderEffect(() => _setDynamicProps(n0, [{ [key.value+1]: _unref(foo)[key.value+1]() }], true))
   return n0
 })()"
 `;

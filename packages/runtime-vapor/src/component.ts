@@ -174,6 +174,13 @@ export interface ComponentInternalInstance {
   emit: EmitFn
   emitted: Record<string, boolean> | null
   attrs: Data
+  /**
+   * - `undefined` : no props
+   * - `false`     : all props are static
+   * - `string[]`  : list of props are dynamic
+   * - `true`      : all props as dynamic
+   */
+  dynamicAttrs?: string[] | boolean
   slots: StaticSlots
   refs: Data
   // exposed properties via expose()

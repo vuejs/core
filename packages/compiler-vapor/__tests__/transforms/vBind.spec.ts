@@ -74,7 +74,7 @@ describe('compiler v-bind', () => {
     })
 
     expect(code).matchSnapshot()
-    expect(code).contains('_setDynamicProp(n0, "id", _ctx.id)')
+    expect(code).contains('_setDynamicProp(n0, "id", _ctx.id, true)')
   })
 
   test('no expression', () => {
@@ -104,7 +104,7 @@ describe('compiler v-bind', () => {
         ],
       },
     })
-    expect(code).contains('_setDynamicProp(n0, "id", _ctx.id)')
+    expect(code).contains('_setDynamicProp(n0, "id", _ctx.id, true)')
   })
 
   test('no expression (shorthand)', () => {
@@ -126,7 +126,9 @@ describe('compiler v-bind', () => {
         ],
       },
     })
-    expect(code).contains('_setDynamicProp(n0, "camel-case", _ctx.camelCase)')
+    expect(code).contains(
+      '_setDynamicProp(n0, "camel-case", _ctx.camelCase, true)',
+    )
   })
 
   test('dynamic arg', () => {
@@ -171,7 +173,7 @@ describe('compiler v-bind', () => {
       ],
     })
     expect(code).contains(
-      '_setDynamicProps(n0, { [_ctx.id]: _ctx.id, [_ctx.title]: _ctx.title })',
+      '_setDynamicProps(n0, [{ [_ctx.id]: _ctx.id, [_ctx.title]: _ctx.title }], true)',
     )
   })
 
@@ -224,7 +226,7 @@ describe('compiler v-bind', () => {
       ],
     })
     expect(code).contains(
-      '_setDynamicProps(n0, { [_ctx.id]: _ctx.id, foo: "bar", checked: "" })',
+      '_setDynamicProps(n0, [{ [_ctx.id]: _ctx.id, foo: "bar", checked: "" }], true)',
     )
   })
 
@@ -286,7 +288,7 @@ describe('compiler v-bind', () => {
     })
 
     expect(code).matchSnapshot()
-    expect(code).contains('_setDynamicProp(n0, "fooBar", _ctx.id)')
+    expect(code).contains('_setDynamicProp(n0, "fooBar", _ctx.id, true)')
   })
 
   test('.camel modifier w/ no expression', () => {
@@ -310,7 +312,7 @@ describe('compiler v-bind', () => {
       },
     })
     expect(code).contains('renderEffect')
-    expect(code).contains('_setDynamicProp(n0, "fooBar", _ctx.fooBar)')
+    expect(code).contains('_setDynamicProp(n0, "fooBar", _ctx.fooBar, true)')
   })
 
   test('.camel modifier w/ dynamic arg', () => {
@@ -341,7 +343,7 @@ describe('compiler v-bind', () => {
     expect(code).matchSnapshot()
     expect(code).contains('renderEffect')
     expect(code).contains(
-      `_setDynamicProps(n0, { [_camelize(_ctx.foo)]: _ctx.id })`,
+      `_setDynamicProps(n0, [{ [_camelize(_ctx.foo)]: _ctx.id }], true)`,
     )
   })
 
@@ -368,7 +370,7 @@ describe('compiler v-bind', () => {
       },
     })
     expect(code).contains('renderEffect')
-    expect(code).contains('_setDOMProp(n0, "fooBar", _ctx.id)')
+    expect(code).contains('_setDOMProp(n0, "fooBar", _ctx.id, true)')
   })
 
   test('.prop modifier w/ no expression', () => {
@@ -392,7 +394,7 @@ describe('compiler v-bind', () => {
       },
     })
     expect(code).contains('renderEffect')
-    expect(code).contains('_setDOMProp(n0, "fooBar", _ctx.fooBar)')
+    expect(code).contains('_setDOMProp(n0, "fooBar", _ctx.fooBar, true)')
   })
 
   test('.prop modifier w/ dynamic arg', () => {
@@ -422,7 +424,7 @@ describe('compiler v-bind', () => {
     })
     expect(code).contains('renderEffect')
     expect(code).contains(
-      `_setDynamicProps(n0, { ["." + _ctx.fooBar]: _ctx.id })`,
+      `_setDynamicProps(n0, [{ ["." + _ctx.fooBar]: _ctx.id }], true)`,
     )
   })
 
@@ -449,7 +451,7 @@ describe('compiler v-bind', () => {
       },
     })
     expect(code).contains('renderEffect')
-    expect(code).contains('_setDOMProp(n0, "fooBar", _ctx.id)')
+    expect(code).contains('_setDOMProp(n0, "fooBar", _ctx.id, true)')
   })
 
   test('.prop modifier (shortband) w/ no expression', () => {
@@ -473,7 +475,7 @@ describe('compiler v-bind', () => {
       },
     })
     expect(code).contains('renderEffect')
-    expect(code).contains('_setDOMProp(n0, "fooBar", _ctx.fooBar)')
+    expect(code).contains('_setDOMProp(n0, "fooBar", _ctx.fooBar, true)')
   })
 
   test('.attr modifier', () => {
@@ -497,7 +499,7 @@ describe('compiler v-bind', () => {
       },
     })
     expect(code).contains('renderEffect')
-    expect(code).contains('_setAttr(n0, "foo-bar", _ctx.id)')
+    expect(code).contains('_setAttr(n0, "foo-bar", _ctx.id, true)')
   })
 
   test('.attr modifier w/ no expression', () => {
@@ -522,6 +524,6 @@ describe('compiler v-bind', () => {
     })
 
     expect(code).contains('renderEffect')
-    expect(code).contains('_setAttr(n0, "foo-bar", _ctx.fooBar)')
+    expect(code).contains('_setAttr(n0, "foo-bar", _ctx.fooBar, true)')
   })
 })

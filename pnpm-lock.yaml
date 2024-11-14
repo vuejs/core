@@ -521,8 +521,8 @@ importers:
         version: link:../packages/vue
     devDependencies:
       '@vitejs/plugin-vue':
-        specifier: https://pkg.pr.new/@vitejs/plugin-vue@e3c5ce5
-        version: https://pkg.pr.new/@vitejs/plugin-vue@e3c5ce5(vite@5.4.8(@types/node@22.8.7)(sass@1.80.6)(terser@5.33.0))(vue@packages+vue)
+        specifier: https://pkg.pr.new/@vitejs/plugin-vue@481bcd4
+        version: https://pkg.pr.new/@vitejs/plugin-vue@481bcd4(vite@5.4.8(@types/node@22.8.7)(sass@1.80.6)(terser@5.33.0))(vue@packages+vue)
       vite:
         specifier: 'catalog:'
         version: 5.4.8(@types/node@22.8.7)(sass@1.80.6)(terser@5.33.0)
@@ -1411,6 +1411,14 @@ packages:
 
   '@vitejs/plugin-vue@5.1.4':
     resolution: {integrity: sha512-N2XSI2n3sQqp5w7Y/AN/L2XDjBIRGqXko+eDp42sydYSBeJuSm5a1sLf8zakmo8u7tA8NmBgoDLA1HeOESjp9A==}
+    engines: {node: ^18.0.0 || >=20.0.0}
+    peerDependencies:
+      vite: ^5.0.0
+      vue: ^3.2.25
+
+  '@vitejs/plugin-vue@https://pkg.pr.new/@vitejs/plugin-vue@481bcd4':
+    resolution: {tarball: https://pkg.pr.new/@vitejs/plugin-vue@481bcd4}
+    version: 5.1.5
     engines: {node: ^18.0.0 || >=20.0.0}
     peerDependencies:
       vite: ^5.0.0
@@ -4495,15 +4503,15 @@ snapshots:
       vite: 5.4.8(@types/node@22.8.7)(sass@1.80.6)(terser@5.33.0)
       vue: link:packages/vue
 
+  '@vitejs/plugin-vue@https://pkg.pr.new/@vitejs/plugin-vue@481bcd4(vite@5.4.8(@types/node@22.8.7)(sass@1.80.6)(terser@5.33.0))(vue@packages+vue)':
+    dependencies:
+      vite: 5.4.8(@types/node@22.8.7)(sass@1.80.6)(terser@5.33.0)
+      vue: link:packages/vue
+
   '@vitejs/plugin-vue@https://pkg.pr.new/@vitejs/plugin-vue@e3c5ce5(vite@5.4.8(@types/node@22.8.7)(sass@1.80.6)(terser@5.33.0))(vue@3.5.12(typescript@5.6.2))':
     dependencies:
       vite: 5.4.8(@types/node@22.8.7)(sass@1.80.6)(terser@5.33.0)
       vue: 3.5.12(typescript@5.6.2)
-
-  '@vitejs/plugin-vue@https://pkg.pr.new/@vitejs/plugin-vue@e3c5ce5(vite@5.4.8(@types/node@22.8.7)(sass@1.80.6)(terser@5.33.0))(vue@packages+vue)':
-    dependencies:
-      vite: 5.4.8(@types/node@22.8.7)(sass@1.80.6)(terser@5.33.0)
-      vue: link:packages/vue
 
   '@vitest/coverage-v8@2.1.1(vitest@2.1.1)':
     dependencies:
