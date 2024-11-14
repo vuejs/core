@@ -96,7 +96,14 @@ function fallbackComponent(
 
   if (singleRoot) {
     instance.dynamicAttrs = true
+    for (let i = 0; i < instance.scopeIds.length; i++) {
+      const id = instance.scopeIds[i]
+      el.setAttribute(id, '')
+    }
   }
+
+  const scopeId = instance.type.__scopeId
+  if (scopeId) el.setAttribute(scopeId, '')
 
   return el
 }
