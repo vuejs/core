@@ -365,7 +365,7 @@ describe('component: slots', () => {
   describe('createSlot', () => {
     test('slot should be render correctly', () => {
       const Comp = defineComponent(() => {
-        const n0 = template('<div></div>')()
+        const n0 = template('<div>')()
         insert(createSlot('header'), n0 as any as ParentNode)
         return n0
       })
@@ -589,7 +589,7 @@ describe('component: slots', () => {
         return createComponent(Comp, {}, {})
       }).render()
 
-      expect(host.innerHTML).toBe('<div>fallback</div>')
+      expect(host.innerHTML).toBe('<div>fallback<!--slot--></div>')
     })
 
     test('dynamic slot should be updated correctly', async () => {
@@ -638,7 +638,7 @@ describe('component: slots', () => {
       const slotOutletName = ref('one')
 
       const Child = defineComponent(() => {
-        const temp0 = template('<p></p>')
+        const temp0 = template('<p>')
         const el0 = temp0()
         const slot1 = createSlot(
           () => slotOutletName.value,
@@ -671,6 +671,21 @@ describe('component: slots', () => {
       await nextTick()
 
       expect(host.innerHTML).toBe('<p>fallback<!--slot--></p>')
+    })
+
+    test('non-exist slot', async () => {
+      const Child = defineComponent(() => {
+        const el0 = template('<p>')()
+        const slot = createSlot('not-exist', undefined)
+        insert(slot, el0 as any as ParentNode)
+        return el0
+      })
+
+      const { host } = define(() => {
+        return createComponent(Child)
+      }).render()
+
+      expect(host.innerHTML).toBe('<p></p>')
     })
   })
 })

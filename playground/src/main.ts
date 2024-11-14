@@ -4,7 +4,7 @@ import { createVaporApp } from 'vue/vapor'
 import { createApp } from 'vue'
 import './style.css'
 
-const modules = import.meta.glob<any>('./**/*.(vue|js)')
+const modules = import.meta.glob<any>('./**/*.(vue|js|ts)')
 const mod = (modules['.' + location.pathname] || modules['./App.vue'])()
 
 mod.then(({ default: mod }) => {

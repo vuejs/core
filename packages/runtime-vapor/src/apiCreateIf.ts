@@ -1,6 +1,6 @@
 import { renderEffect } from './renderEffect'
 import { type Block, type Fragment, fragmentKey } from './apiRender'
-import { type EffectScope, effectScope } from '@vue/reactivity'
+import { type EffectScope, effectScope, shallowReactive } from '@vue/reactivity'
 import { createComment, createTextNode, insert, remove } from './dom/element'
 
 type BlockFn = () => Block
@@ -16,15 +16,14 @@ export const createIf = (
   let newValue: any
   let oldValue: any
   let branch: BlockFn | undefined
-  let parent: ParentNode | undefined | null
   let block: Block | undefined
   let scope: EffectScope | undefined
   const anchor = __DEV__ ? createComment('if') : createTextNode()
-  const fragment: Fragment = {
+  const fragment: Fragment = shallowReactive({
     nodes: [],
     anchor,
     [fragmentKey]: true,
-  }
+  })
 
   // TODO: SSR
   // if (isHydrating) {
@@ -47,7 +46,7 @@ export const createIf = (
 
   function doIf() {
     if ((newValue = !!condition()) !== oldValue) {
-      parent ||= anchor.parentNode
+      const parent = anchor.parentNode
       if (block) {
         scope!.stop()
         remove(block, parent!)
