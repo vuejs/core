@@ -48,7 +48,7 @@ export function useCssVars(getter: (ctx: any) => Record<string, string>): void {
     }
     updateTeleports(vars)
   }
-  
+
   // handle cases where child component root is affected
   // and triggers reflow in onMounted
   onBeforeUpdate(() => {
