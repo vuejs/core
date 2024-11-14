@@ -23,7 +23,7 @@ import {
 } from './effect'
 import { isReactive, isShallow } from './reactive'
 import { type Ref, isRef } from './ref'
-import { getCurrentScope, onScopeDispose } from './effectScope'
+import { getCurrentScope } from './effectScope'
 
 // These errors were transferred from `packages/runtime-core/src/errorHandling.ts`
 // to @vue/reactivity to allow co-location with the moved base watch logic, hence
@@ -215,10 +215,8 @@ export function watch(
     effect.stop()
     if (scope && scope.active) {
       remove(scope.effects, effect)
-      remove(scope.cleanups, watchHandle)
     }
   }
-  onScopeDispose(watchHandle, true)
 
   if (once && cb) {
     const _cb = cb

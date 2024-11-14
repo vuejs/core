@@ -176,7 +176,7 @@ describe('reactivity/effect/scope', () => {
 
     expect('[Vue warn] cannot run an inactive effect scope.').toHaveBeenWarned()
 
-    expect(scope.effects.length).toBe(1)
+    expect(scope.effects.length).toBe(0)
 
     counter.num = 7
     expect(dummy).toBe(0)
