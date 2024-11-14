@@ -112,6 +112,28 @@ describe('reactivity/reactive', () => {
     expect(dummy).toBe(false)
   })
 
+  // #8647
+  test('observing nest reactive in set', () => {
+    const observed = reactive({})
+    const observedSet = reactive(new Set([observed]))
+    expect(observedSet.size).toBe(1)
+    if (observedSet.has(observed)) {
+      // expect nothing happens
+      observedSet.add(observed)
+    }
+    expect(observedSet.size).toBe(1)
+
+    const observedMap = reactive(new Map())
+    observedMap.set('key', observed)
+    expect(observedMap.size).toBe(1)
+
+    if (observedMap.has(observed)) {
+      // expect nothing happens
+      observedMap.set('key1', observed)
+    }
+    expect(observedMap.size).toBe(1)
+  })
+
   test('observed value should proxy mutations to original (Object)', () => {
     const original: any = { foo: 1 }
     const observed = reactive(original)
