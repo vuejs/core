@@ -119,17 +119,24 @@ export class EffectScope {
     if (this._active) {
       this._active = false
       let i, l
-      for (i = 0, l = this.effects.length; i < l; i++) {
-        this.effects[i].stop()
+      const effects = this.effects.slice()
+      for (i = 0, l = effects.length; i < l; i++) {
+        effects[i].stop()
       }
+      this.effects.length = 0
+
       for (i = 0, l = this.cleanups.length; i < l; i++) {
         this.cleanups[i]()
       }
+      this.cleanups.length = 0
+
       if (this.scopes) {
         for (i = 0, l = this.scopes.length; i < l; i++) {
           this.scopes[i].stop(true)
         }
+        this.scopes.length = 0
       }
+
       // nested scope, dereference from parent to avoid memory leaks
       if (!this.detached && this.parent && !fromParent) {
         // optimized O(1) removal
