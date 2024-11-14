@@ -79,7 +79,7 @@ const INITIAL_WATCHER_VALUE = {}
 
 export type WatchScheduler = (job: () => void, isFirstRun: boolean) => void
 
-const cleanupMap: WeakMap<ReactiveEffect, (() => void)[]> = new WeakMap()
+const cleanupMap: WeakMap<ReactiveEffect, Set<() => void>> = new WeakMap()
 let activeWatcher: ReactiveEffect | undefined = undefined
 
 /**
@@ -107,8 +107,8 @@ export function onWatcherCleanup(
 ): void {
   if (owner) {
     let cleanups = cleanupMap.get(owner)
-    if (!cleanups) cleanupMap.set(owner, (cleanups = []))
-    cleanups.push(cleanupFn)
+    if (!cleanups) cleanupMap.set(owner, (cleanups = new Set()))
+    cleanups.add(cleanupFn)
   } else if (__DEV__ && !failSilently) {
     warn(
       `onWatcherCleanup() was called when there was no active watcher` +
@@ -295,9 +295,9 @@ export function watch(
     const cleanups = cleanupMap.get(effect)
     if (cleanups) {
       if (call) {
-        call(cleanups, WatchErrorCodes.WATCH_CLEANUP)
+        call([...cleanups], WatchErrorCodes.WATCH_CLEANUP)
       } else {
-        for (const cleanup of cleanups) cleanup()
+        cleanups.forEach(cleanup => cleanup())
       }
       cleanupMap.delete(effect)
     }
