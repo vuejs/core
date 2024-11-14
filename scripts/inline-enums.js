@@ -20,7 +20,7 @@ import {
   writeFileSync,
 } from 'node:fs'
 import * as path from 'node:path'
-import { parse } from '@babel/parser'
+import { parseSync } from 'oxc-parser'
 import { spawnSync } from 'node:child_process'
 import MagicString from 'magic-string'
 
@@ -61,17 +61,19 @@ export function scanEnums() {
   ]
 
   // 2. parse matched files to collect enum info
+  let i = 0
   for (const relativeFile of files) {
     const file = path.resolve(process.cwd(), relativeFile)
     const content = readFileSync(file, 'utf-8')
-    const ast = parse(content, {
-      plugins: ['typescript'],
+    const res = parseSync(content, {
+      // plugins: ['typescript'],
+      sourceFilename: file,
       sourceType: 'module',
     })
 
     /** @type {Set<string>} */
     const enumIds = new Set()
-    for (const node of ast.program.body) {
+    for (const node of res.program.body) {
       if (
         node.type === 'ExportNamedDeclaration' &&
         node.declaration &&
@@ -129,7 +131,11 @@ export function scanEnums() {
                   node.type === 'StringLiteral'
                 ) {
                   return node.value
-                } else if (node.type === 'MemberExpression') {
+                } else if (
+                  node.type === 'MemberExpression' ||
+                  // @ts-expect-error oxc only type
+                  node.type === 'StaticMemberExpression'
+                ) {
                   const exp = /** @type {`${string}.${string}`} */ (
                     content.slice(node.start, node.end)
                   )

@@ -1,6 +1,6 @@
 // @ts-check
 import assert from 'node:assert/strict'
-import { parse } from '@babel/parser'
+import { parseSync } from 'oxc-parser'
 import { existsSync, readFileSync, readdirSync, writeFileSync } from 'node:fs'
 import MagicString from 'magic-string'
 import dts from 'rollup-plugin-dts'
@@ -58,10 +58,14 @@ function patchTypes(pkg) {
     name: 'patch-types',
     renderChunk(code, chunk) {
       const s = new MagicString(code)
-      const ast = parse(code, {
-        plugins: ['typescript'],
+      const { program: ast, errors } = parseSync(code, {
+        sourceFilename: 'x.d.ts',
         sourceType: 'module',
       })
+
+      if (errors.length) {
+        throw new Error(errors.join('\n'))
+      }
 
       /**
        * @param {import('@babel/types').VariableDeclarator | import('@babel/types').TSTypeAliasDeclaration | import('@babel/types').TSInterfaceDeclaration | import('@babel/types').TSDeclareFunction | import('@babel/types').TSInterfaceDeclaration | import('@babel/types').TSEnumDeclaration | import('@babel/types').ClassDeclaration} node
@@ -88,20 +92,23 @@ function patchTypes(pkg) {
       const shouldRemoveExport = new Set()
 
       // pass 0: check all exported types
-      for (const node of ast.program.body) {
+      for (const node of ast.body) {
         if (node.type === 'ExportNamedDeclaration' && !node.source) {
           for (let i = 0; i < node.specifiers.length; i++) {
             const spec = node.specifiers[i]
             if (spec.type === 'ExportSpecifier') {
-              isExported.add(spec.local.name)
+              isExported.add(
+                'name' in spec.local ? spec.local.name : spec.local.value,
+              )
             }
           }
         }
       }
 
       // pass 1: add exports
-      for (const node of ast.program.body) {
+      for (const node of ast.body) {
         if (node.type === 'VariableDeclaration') {
+          // @ts-expect-error waiting for oxc-parser to expose types
           processDeclaration(node.declarations[0], node)
           if (node.declarations.length > 1) {
             assert(typeof node.start === 'number')
@@ -120,23 +127,26 @@ function patchTypes(pkg) {
           node.type === 'TSEnumDeclaration' ||
           node.type === 'ClassDeclaration'
         ) {
+          // @ts-expect-error waiting for oxc-parser to expose types
           processDeclaration(node)
         }
       }
 
       // pass 2: remove exports
-      for (const node of ast.program.body) {
+      for (const node of ast.body) {
         if (node.type === 'ExportNamedDeclaration' && !node.source) {
           let removed = 0
           for (let i = 0; i < node.specifiers.length; i++) {
             const spec = node.specifiers[i]
+            const localName =
+              'name' in spec.local ? spec.local.name : spec.local.value
             if (
               spec.type === 'ExportSpecifier' &&
-              shouldRemoveExport.has(spec.local.name)
+              shouldRemoveExport.has(localName)
             ) {
               assert(spec.exported.type === 'Identifier')
               const exported = spec.exported.name
-              if (exported !== spec.local.name) {
+              if (exported !== localName) {
                 // this only happens if we have something like
                 //   type Foo
                 //   export { Foo as Bar }

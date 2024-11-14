@@ -148,6 +148,7 @@ export default tseslint.config(
     files: [
       'eslint.config.js',
       'rollup*.config.js',
+      'rolldown*.config.js',
       'scripts/**',
       './*.{js,ts}',
       'packages/*/*.js',

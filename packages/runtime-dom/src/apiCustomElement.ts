@@ -219,7 +219,7 @@ export class VueElement
   /**
    * @internal
    */
-  _nonce: string | undefined = this._def.nonce
+  _nonce: string | undefined
 
   /**
    * @internal
@@ -253,6 +253,7 @@ export class VueElement
     private _createApp: CreateAppFunction<Element> = createApp,
   ) {
     super()
+    this._nonce = _def.nonce
     if (this.shadowRoot && _createApp !== createApp) {
       this._root = this.shadowRoot
     } else {
@@ -313,7 +314,7 @@ export class VueElement
     }
   }
 
-  private _setParent(parent = this._parent) {
+  private _setParent(parent: VueElement | undefined = this._parent): void {
     if (parent) {
       this._instance!.parent = parent._instance
       this._instance!.provides = parent._instance!.provides
