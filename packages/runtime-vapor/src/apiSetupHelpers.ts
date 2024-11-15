@@ -5,8 +5,6 @@ import {
 } from './component'
 import { warn } from './warning'
 
-// TODO: warning compiler-macros runtime usages
-
 export function useSlots(): SetupContext['slots'] {
   return getContext().slots
 }
