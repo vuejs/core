@@ -8,6 +8,7 @@ import {
 } from '@vue/runtime-core'
 import { addEventListener } from '../modules/events'
 import {
+  formatDateStamp,
   invokeArrayFns,
   isArray,
   isSet,
@@ -64,7 +65,8 @@ export const vModelText: ModelDirective<
         domValue = domValue.trim()
       }
       if (castToTimeStamp) {
-        domValue = new Date(domValue).getTime()
+        new Date('2024-03-15 16:49:20'.replace(/-/g, '/'))
+        domValue = formatDateStamp(domValue)
       } else if (castToNumber) {
         domValue = looseToNumber(domValue)
       }
@@ -116,7 +118,7 @@ export const vModelText: ModelDirective<
         return
       }
       if (number && (el.type === 'date' || el.type === 'datetime-local')) {
-        if (new Date(el.value).getTime() === value) {
+        if (formatDateStamp(el.value) === value) {
           return
         }
       }
