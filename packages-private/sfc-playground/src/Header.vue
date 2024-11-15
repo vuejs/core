@@ -46,6 +46,7 @@ function resetVueVersion() {
 
 async function copyLink(e: MouseEvent) {
   if (e.metaKey) {
+    resetVueVersion()
     // hidden logic for going to local debug from play.vuejs.org
     window.location.href = 'http://localhost:5173/' + window.location.hash
     return
