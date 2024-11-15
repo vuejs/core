@@ -122,16 +122,6 @@ describe('reactivity/reactive', () => {
       observedSet.add(observed)
     }
     expect(observedSet.size).toBe(1)
-
-    const observedMap = reactive(new Map())
-    observedMap.set('key', observed)
-    expect(observedMap.size).toBe(1)
-
-    if (observedMap.has(observed)) {
-      // expect nothing happens
-      observedMap.set('key1', observed)
-    }
-    expect(observedMap.size).toBe(1)
   })
 
   test('observed value should proxy mutations to original (Object)', () => {

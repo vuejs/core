@@ -169,17 +169,16 @@ function createInstrumentations(
           add(this: SetTypes, value: unknown) {
             const target = toRaw(this)
             const proto = getProto(target)
-            // 先获取原始值
-            const rawValue =
+            const valueToAdd =
               !shallow && !isShallow(value) && !isReadonly(value)
                 ? toRaw(value)
                 : value
             const hadKey =
-              proto.has.call(target, rawValue) ||
-              (value !== rawValue && proto.has.call(target, value))
+              proto.has.call(target, valueToAdd) ||
+              (value !== valueToAdd && proto.has.call(target, value))
             if (!hadKey) {
-              target.add(rawValue)
-              trigger(target, TriggerOpTypes.ADD, rawValue, rawValue)
+              target.add(valueToAdd)
+              trigger(target, TriggerOpTypes.ADD, valueToAdd, valueToAdd)
             }
             return this
           },
