@@ -169,6 +169,8 @@ export const ssrTransformModel: DirectiveTransform = (dir, node, context) => {
             processOption(child as PlainElementNode)
           } else if (child.type === NodeTypes.FOR) {
             processChildren(child.children)
+          } else if (child.type === NodeTypes.IF) {
+            child.branches.forEach(b => processChildren(b.children))
           }
         })
       }
