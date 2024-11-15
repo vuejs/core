@@ -50,11 +50,10 @@ export function setRef(
       vnode.component!.subTree.component
     ) {
       setRef(rawRef, oldRawRef, parentSuspense, vnode.component!.subTree)
-      return
     }
 
-    // when mounting async components, nothing needs to be done,
-    // because the template ref is forwarded to inner component
+    // otherwise, nothing needs to be done because the template ref
+    // is forwarded to inner component
     return
   }
 
