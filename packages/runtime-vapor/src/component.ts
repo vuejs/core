@@ -93,9 +93,7 @@ export function createSetupContext(
     })
   } else {
     return {
-      get attrs() {
-        return getAttrsProxy(instance)
-      },
+      attrs: instance.attrs,
       emit: instance.emit,
       slots: instance.slots,
       expose,
@@ -390,38 +388,34 @@ export function validateComponentName(
   }
 }
 
-function getAttrsProxy(instance: ComponentInternalInstance): Data {
+/**
+ * Dev-only
+ */
+export function getAttrsProxy(instance: ComponentInternalInstance): Data {
   return (
     instance.attrsProxy ||
-    (instance.attrsProxy = new Proxy(
-      instance.attrs,
-      __DEV__
-        ? {
-            get(target, key: string) {
-              return target[key]
-            },
-            set() {
-              warn(`setupContext.attrs is readonly.`)
-              return false
-            },
-            deleteProperty() {
-              warn(`setupContext.attrs is readonly.`)
-              return false
-            },
-          }
-        : {
-            get(target, key: string) {
-              return target[key]
-            },
-          },
-    ))
+    (instance.attrsProxy = new Proxy(instance.attrs, {
+      get(target, key: string) {
+        return target[key]
+      },
+      set() {
+        warn(`setupContext.attrs is readonly.`)
+        return false
+      },
+      deleteProperty() {
+        warn(`setupContext.attrs is readonly.`)
+        return false
+      },
+    }))
   )
 }
 
 /**
  * Dev-only
  */
-function getSlotsProxy(instance: ComponentInternalInstance): StaticSlots {
+export function getSlotsProxy(
+  instance: ComponentInternalInstance,
+): StaticSlots {
   return (
     instance.slotsProxy ||
     (instance.slotsProxy = new Proxy(instance.slots, {

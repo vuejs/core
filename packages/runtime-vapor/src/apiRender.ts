@@ -2,6 +2,8 @@ import {
   type ComponentInternalInstance,
   componentKey,
   createSetupContext,
+  getAttrsProxy,
+  getSlotsProxy,
   setCurrentInstance,
   validateComponentName,
 } from './component'
@@ -73,6 +75,9 @@ export function setupComponent(instance: ComponentInternalInstance): void {
         [
           instance.setupState, // _ctx
           __DEV__ ? shallowReadonly(props) : props, // $props
+          instance.emit, // $emit
+          __DEV__ ? getAttrsProxy(instance) : instance.attrs, // $attrs
+          __DEV__ ? getSlotsProxy(instance) : instance.slots, // $slots
         ],
       )
       resetTracking()

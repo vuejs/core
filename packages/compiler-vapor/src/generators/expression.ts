@@ -192,9 +192,14 @@ function canPrefix(name: string) {
   if (isGloballyAllowed(name)) {
     return false
   }
-  // special case for webpack compilation
-  if (name === 'require') {
+  if (
+    // special case for webpack compilation
+    name === 'require' ||
+    name === '$props' ||
+    name === '$emit' ||
+    name === '$attrs' ||
+    name === '$slots'
+  )
     return false
-  }
   return true
 }

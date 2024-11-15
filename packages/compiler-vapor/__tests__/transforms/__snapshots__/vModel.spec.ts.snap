@@ -180,7 +180,7 @@ exports[`compiler: vModel transform > should support member expression 1`] = `
 "import { vModelText as _vModelText, withDirectives as _withDirectives, delegate as _delegate, template as _template } from 'vue/vapor';
 const t0 = _template("<input>")
 
-export function render(_ctx, $props) {
+export function render(_ctx, $props, $emit, $attrs, $slots) {
   const n0 = t0()
   _withDirectives(n0, [[_vModelText, () => _ctx.setupRef.child]])
   const n1 = t0()

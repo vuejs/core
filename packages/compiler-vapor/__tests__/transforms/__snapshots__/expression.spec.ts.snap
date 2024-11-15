@@ -12,7 +12,7 @@ export function render(_ctx) {
 exports[`compiler: expression > props 1`] = `
 "import { createTextNode as _createTextNode } from 'vue/vapor';
 
-export function render(_ctx, $props) {
+export function render(_ctx, $props, $emit, $attrs, $slots) {
   const n0 = _createTextNode(() => [$props.foo])
   return n0
 }"
@@ -21,7 +21,7 @@ export function render(_ctx, $props) {
 exports[`compiler: expression > props aliased 1`] = `
 "import { createTextNode as _createTextNode } from 'vue/vapor';
 
-export function render(_ctx, $props) {
+export function render(_ctx, $props, $emit, $attrs, $slots) {
   const n0 = _createTextNode(() => [$props['bar']])
   return n0
 }"
