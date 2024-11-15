@@ -1,5 +1,9 @@
 import { bench } from 'vitest'
-import { effect, reactive, shallowReadArray } from '../src'
+import {
+  effect,
+  reactive,
+  shallowReadArray,
+} from '../dist/reactivity.esm-browser.prod'
 
 for (let amount = 1e1; amount < 1e4; amount *= 10) {
   {
