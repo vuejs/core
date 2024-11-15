@@ -65,7 +65,6 @@ export const vModelText: ModelDirective<
         domValue = domValue.trim()
       }
       if (castToTimeStamp) {
-        new Date('2024-03-15 16:49:20'.replace(/-/g, '/'))
         domValue = formatDateStamp(domValue)
       } else if (castToNumber) {
         domValue = looseToNumber(domValue)
