@@ -10,12 +10,9 @@ import { makeRender } from '../_utils'
 const define = makeRender()
 
 describe('resolveAssets', () => {
-  test('todo', () => {
-    expect(true).toBeTruthy()
-  })
   test('should work', () => {
     const FooBar = () => []
-    const BarBaz = { mounted: () => null }
+    const BarBaz = () => undefined
     let component1: Component | string
     let component2: Component | string
     let component3: Component | string

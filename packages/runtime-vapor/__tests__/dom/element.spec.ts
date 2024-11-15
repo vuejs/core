@@ -1,5 +1,5 @@
-import { insert, normalizeBlock, prepend, remove } from '../../src/dom/element'
-import { fragmentKey } from '../../src/apiRender'
+import { fragmentKey, normalizeBlock } from '../../src/block'
+import { insert, prepend, remove } from '../../src/dom/element'
 
 const node1 = document.createTextNode('node1')
 const node2 = document.createTextNode('node2')

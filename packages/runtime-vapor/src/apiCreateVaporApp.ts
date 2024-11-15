@@ -6,7 +6,7 @@ import {
   validateComponentName,
 } from './component'
 import { warn } from './warning'
-import { type Directive, version } from '.'
+import { version } from '.'
 import {
   normalizeContainer,
   render,
@@ -15,7 +15,7 @@ import {
 } from './apiRender'
 import type { InjectionKey } from './apiInject'
 import type { RawProps } from './componentProps'
-import { validateDirectiveName } from './directives'
+import { type Directive, validateDirectiveName } from './directives'
 import { devtoolsInitApp, setDevtoolsHook } from './devtools'
 
 let uid = 0

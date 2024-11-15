@@ -104,7 +104,7 @@ describe('api: setup context', () => {
     const Wrapper = defineComponent({
       setup(_) {
         const n0 = createSlot('default')
-        setInheritAttrs(false, true)
+        setInheritAttrs(true)
         return n0
       },
     })

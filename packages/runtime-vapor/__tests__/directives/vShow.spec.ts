@@ -28,7 +28,8 @@ const createDemo = (defaultValue: boolean) =>
     on(n1 as HTMLElement, 'click', () => handleClick)
     return n0
   })
-describe.todo('directive: v-show', () => {
+
+describe('directive: v-show', () => {
   test('basic', async () => {
     const { host } = createDemo(true).render()
     const btn = host.querySelector('button')
@@ -66,7 +67,7 @@ describe.todo('directive: v-show', () => {
       },
     })
 
-    const { instance, host } = define({
+    const { host } = define({
       render() {
         const n1 = t1()
         const n2 = createComponent(Child, [], null, true)
@@ -77,7 +78,6 @@ describe.todo('directive: v-show', () => {
     }).render()
 
     expect(host.innerHTML).toBe('<button>toggle</button><div>child</div>')
-    expect(instance?.scope.dirs!.get(n0)![0].dir).toBe(vShow)
 
     const btn = host.querySelector('button')
     btn?.click()

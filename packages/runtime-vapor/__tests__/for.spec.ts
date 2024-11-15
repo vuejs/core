@@ -1,17 +1,12 @@
 import {
-  type Directive,
-  children,
   createFor,
   nextTick,
   ref,
   renderEffect,
   shallowRef,
-  template,
   triggerRef,
-  withDirectives,
 } from '../src'
 import { makeRender } from './_utils'
-import { unmountComponent } from '../src/apiRender'
 
 const define = makeRender()
 
@@ -192,122 +187,6 @@ describe('createFor', () => {
     data.value = {}
     await nextTick()
     expect(host.innerHTML).toBe('<!--for-->')
-  })
-
-  test.fails('should work with directive hooks', async () => {
-    const calls: string[] = []
-    const list = ref([0])
-    const update = ref(0)
-    const add = () => list.value.push(list.value.length)
-    const spySrcFn = vi.fn(() => list.value)
-
-    const vDirective: Directive = {
-      created: (el, { value }) => calls.push(`${value} created`),
-      beforeMount: (el, { value }) => calls.push(`${value} beforeMount`),
-      mounted: (el, { value }) => calls.push(`${value} mounted`),
-      beforeUpdate: (el, { value }) => calls.push(`${value} beforeUpdate`),
-      updated: (el, { value }) => calls.push(`${value} updated`),
-      beforeUnmount: (el, { value }) => calls.push(`${value} beforeUnmount`),
-      unmounted: (el, { value }) => calls.push(`${value} unmounted`),
-    }
-
-    const t0 = template('<p></p>')
-    const { instance } = define(() => {
-      const n1 = createFor(spySrcFn, ctx0 => {
-        const n2 = t0()
-        const n3 = children(n2, 0)
-        withDirectives(n3, [[vDirective, () => ctx0[0]]])
-        renderEffect(() => {
-          calls.push(`${ctx0[0]} effecting`)
-        })
-        return n2
-      })
-      renderEffect(() => update.value)
-      return [n1]
-    }).render()
-
-    await nextTick()
-    // `${item index} ${hook name}`
-    expect(calls).toEqual([
-      '0 created',
-      '0 effecting',
-      '0 beforeMount',
-      '0 mounted',
-    ])
-    calls.length = 0
-    expect(spySrcFn).toHaveBeenCalledTimes(1)
-
-    add()
-    await nextTick()
-    expect(calls).toEqual([
-      '0 beforeUpdate',
-      '1 created',
-      '1 effecting',
-      '1 beforeMount',
-      '0 updated',
-      '1 mounted',
-    ])
-    calls.length = 0
-    expect(spySrcFn).toHaveBeenCalledTimes(2)
-
-    list.value.reverse()
-    await nextTick()
-    expect(calls).toEqual([
-      '1 beforeUpdate',
-      '0 beforeUpdate',
-      '1 effecting',
-      '0 effecting',
-      '1 updated',
-      '0 updated',
-    ])
-    expect(spySrcFn).toHaveBeenCalledTimes(3)
-    list.value.reverse()
-    await nextTick()
-    calls.length = 0
-    expect(spySrcFn).toHaveBeenCalledTimes(4)
-
-    update.value++
-    await nextTick()
-    expect(calls).toEqual([
-      '0 beforeUpdate',
-      '1 beforeUpdate',
-      '0 updated',
-      '1 updated',
-    ])
-    calls.length = 0
-    expect(spySrcFn).toHaveBeenCalledTimes(4)
-
-    // change item
-    list.value[1] = 2
-    await nextTick()
-    expect(calls).toEqual([
-      '0 beforeUpdate',
-      '2 beforeUpdate',
-      '2 effecting',
-      '0 updated',
-      '2 updated',
-    ])
-    expect(spySrcFn).toHaveBeenCalledTimes(5)
-    list.value[1] = 1
-    await nextTick()
-    calls.length = 0
-    expect(spySrcFn).toHaveBeenCalledTimes(6)
-
-    // remove the last item
-    list.value.pop()
-    await nextTick()
-    expect(calls).toEqual([
-      '0 beforeUpdate',
-      '1 beforeUnmount',
-      '0 updated',
-      '1 unmounted',
-    ])
-    calls.length = 0
-    expect(spySrcFn).toHaveBeenCalledTimes(7)
-
-    unmountComponent(instance!)
-    expect(calls).toEqual(['0 beforeUnmount', '0 unmounted'])
-    expect(spySrcFn).toHaveBeenCalledTimes(7)
   })
 
   test('de-structured value', async () => {

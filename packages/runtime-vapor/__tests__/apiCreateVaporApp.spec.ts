@@ -152,7 +152,7 @@ describe('api: createVaporApp', () => {
     expect(host.innerHTML).toBe(`foobar!barbaz!`)
   })
 
-  test.todo('directive', () => {
+  test('directive', () => {
     const spy1 = vi.fn()
     const spy2 = vi.fn()
 
@@ -167,12 +167,12 @@ describe('api: createVaporApp', () => {
       },
     }).create()
 
-    const FooBar = { mounted: spy1 }
+    const FooBar = spy1
     app.directive('FooBar', FooBar)
     expect(app.directive('FooBar')).toBe(FooBar)
 
-    app.directive('BarBaz', { mounted: spy2 })
-    app.directive('BarBaz', { mounted: spy2 })
+    app.directive('BarBaz', spy2)
+    app.directive('BarBaz', spy2)
     expect(
       'Directive "BarBaz" has already been registered in target app.',
     ).toHaveBeenWarnedTimes(1)

@@ -1,10 +1,11 @@
 import { camelize, capitalize, isString } from '@vue/shared'
-import { type Directive, warn } from '..'
+import { warn } from '../warning'
+import type { Directive } from '../directives'
 import { type Component, currentInstance } from '../component'
 import { getComponentName } from '../component'
 
-export const COMPONENTS = 'components'
-export const DIRECTIVES = 'directives'
+const COMPONENTS = 'components'
+const DIRECTIVES = 'directives'
 
 export type AssetTypes = typeof COMPONENTS | typeof DIRECTIVES
 
