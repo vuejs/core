@@ -181,6 +181,18 @@ export function render(_ctx) {
 }"
 `;
 
+exports[`compiler v-bind > number value 1`] = `
+"import { resolveComponent as _resolveComponent, createComponent as _createComponent } from 'vue/vapor';
+
+export function render(_ctx) {
+  const _component_Comp = _resolveComponent("Comp")
+  const n0 = _createComponent(_component_Comp, [
+    { depth: () => (0) }
+  ], null, true)
+  return n0
+}"
+`;
+
 exports[`compiler v-bind > should error if empty expression 1`] = `
 "import { setInheritAttrs as _setInheritAttrs, template as _template } from 'vue/vapor';
 const t0 = _template("<div arg></div>")

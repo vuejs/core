@@ -171,7 +171,7 @@ exports[`compile > dynamic root 1`] = `
 "import { createTextNode as _createTextNode } from 'vue/vapor';
 
 export function render(_ctx) {
-  const n0 = _createTextNode([1, 2])
+  const n0 = _createTextNode(() => [1, 2])
   return n0
 }"
 `;
@@ -225,7 +225,7 @@ exports[`compile > static + dynamic root 1`] = `
 "import { createTextNode as _createTextNode } from 'vue/vapor';
 
 export function render(_ctx) {
-  const n0 = _createTextNode([1, 2, "3", 4, 5, "6", 7, 8, "9", 'A', 'B'])
+  const n0 = _createTextNode(() => [1, 2, "3", 4, 5, "6", 7, 8, "9", 'A', 'B'])
   return n0
 }"
 `;

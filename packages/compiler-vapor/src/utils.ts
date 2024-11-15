@@ -61,11 +61,7 @@ export function getLiteralExpressionValue(
   exp: SimpleExpressionNode,
 ): number | string | boolean | null {
   if (exp.ast) {
-    if (
-      ['StringLiteral', 'NumericLiteral', 'BigIntLiteral'].includes(
-        exp.ast.type,
-      )
-    ) {
+    if (exp.ast.type === 'StringLiteral') {
       return (exp.ast as StringLiteral | NumericLiteral | BigIntLiteral).value
     } else if (
       exp.ast.type === 'TemplateLiteral' &&

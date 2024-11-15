@@ -526,4 +526,10 @@ describe('compiler v-bind', () => {
     expect(code).contains('renderEffect')
     expect(code).contains('_setAttr(n0, "foo-bar", _ctx.fooBar, true)')
   })
+
+  test('number value', () => {
+    const { code } = compileWithVBind(`<Comp :depth="0" />`)
+    expect(code).matchSnapshot()
+    expect(code).contains('{ depth: () => (0) }')
+  })
 })
