@@ -1324,6 +1324,84 @@ describe('SSR hydration', () => {
     resolve({})
   })
 
+  //#12362
+  test('nested async wrapper', async () => {
+    const Toggle = defineAsyncComponent(
+      () =>
+        new Promise(r => {
+          r(
+            defineComponent({
+              setup(_, { slots }) {
+                const show = ref(false)
+                onMounted(() => {
+                  nextTick(() => {
+                    show.value = true
+                  })
+                })
+                return () =>
+                  withDirectives(
+                    h('div', null, [renderSlot(slots, 'default')]),
+                    [[vShow, show.value]],
+                  )
+              },
+            }) as any,
+          )
+        }),
+    )
+
+    const Wrapper = defineAsyncComponent(() => {
+      return new Promise(r => {
+        r(
+          defineComponent({
+            render(this: any) {
+              return renderSlot(this.$slots, 'default')
+            },
+          }) as any,
+        )
+      })
+    })
+
+    const count = ref(0)
+    const fn = vi.fn()
+    const Child = {
+      setup() {
+        onMounted(() => {
+          fn()
+          count.value++
+        })
+        return () => h('div', count.value)
+      },
+    }
+
+    const App = {
+      render() {
+        return h(Toggle, null, {
+          default: () =>
+            h(Wrapper, null, {
+              default: () =>
+                h(Wrapper, null, {
+                  default: () => h(Child),
+                }),
+            }),
+        })
+      },
+    }
+
+    const root = document.createElement('div')
+    root.innerHTML = await renderToString(h(App))
+    expect(root.innerHTML).toMatchInlineSnapshot(
+      `"<div style="display:none;"><!--[--><!--[--><!--[--><div>0</div><!--]--><!--]--><!--]--></div>"`,
+    )
+
+    createSSRApp(App).mount(root)
+    await nextTick()
+    await nextTick()
+    expect(root.innerHTML).toMatchInlineSnapshot(
+      `"<div style=""><!--[--><!--[--><!--[--><div>1</div><!--]--><!--]--><!--]--></div>"`,
+    )
+    expect(fn).toBeCalledTimes(1)
+  })
+
   test('unmount async wrapper before load (fragment)', async () => {
     let resolve: any
     const AsyncComp = defineAsyncComponent(

@@ -11,7 +11,7 @@ import {
   normalizeVNode,
 } from './vnode'
 import { flushPostFlushCbs } from './scheduler'
-import type { ComponentInternalInstance } from './component'
+import type { ComponentInternalInstance, ComponentOptions } from './component'
 import { invokeDirectiveHook } from './directives'
 import { warn } from './warning'
 import {
@@ -308,7 +308,10 @@ export function createHydrationFunctions(
           // if component is async, it may get moved / unmounted before its
           // inner component is loaded, so we need to give it a placeholder
           // vnode that matches its adopted DOM.
-          if (isAsyncWrapper(vnode)) {
+          if (
+            isAsyncWrapper(vnode) &&
+            !(vnode.type as ComponentOptions).__asyncResolved
+          ) {
             let subTree
             if (isFragmentStart) {
               subTree = createVNode(Fragment)
