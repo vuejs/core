@@ -31,9 +31,13 @@ export function createComponent(
     once,
   )
 
-  instance.scopeIds = [...current.scopeIds]
+  if (singleRoot) {
+    instance.scopeIds.push(...current.scopeIds)
+  }
   const scopeId = current.type.__scopeId
-  if (scopeId) instance.scopeIds.push(scopeId)
+  if (scopeId) {
+    instance.scopeIds.push(scopeId)
+  }
 
   setupComponent(instance)
 
