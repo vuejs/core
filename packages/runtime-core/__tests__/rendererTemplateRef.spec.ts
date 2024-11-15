@@ -1,4 +1,5 @@
 import {
+  type ShallowRef,
   defineComponent,
   h,
   nextTick,
@@ -537,5 +538,28 @@ describe('api: template refs', () => {
     expect(serializeInner(root)).toBe(
       '<div><div>[object Object],[object Object]</div><ul><li>2</li><li>3</li></ul></div>',
     )
+  })
+
+  // 12246
+  test('should set last element if multiple with same key are defined', () => {
+    let refKey: ShallowRef
+
+    const Comp = {
+      setup() {
+        refKey = ref()
+      },
+      render() {
+        return h('div', [
+          h('div', { ref: refKey }),
+          h('div', { ref: refKey }),
+          h('span', { ref: refKey }),
+        ])
+      },
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(Comp), root)
+
+    expect(refKey!.value.tag).toBe('span')
   })
 })
