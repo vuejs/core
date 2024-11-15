@@ -76,6 +76,30 @@ describe('ssr: v-model', () => {
 
     expect(
       compileWithWrapper(
+        `<select v-model="model"><option v-if="true" :value="i"></option></select>`,
+      ).code,
+    ).toMatchInlineSnapshot(`
+      "const { ssrRenderAttr: _ssrRenderAttr, ssrIncludeBooleanAttr: _ssrIncludeBooleanAttr, ssrLooseContain: _ssrLooseContain, ssrLooseEqual: _ssrLooseEqual, ssrRenderAttrs: _ssrRenderAttrs } = require("vue/server-renderer")
+
+      return function ssrRender(_ctx, _push, _parent, _attrs) {
+        _push(\`<div\${_ssrRenderAttrs(_attrs)}><select>\`)
+        if (true) {
+          _push(\`<option\${
+            _ssrRenderAttr("value", _ctx.i)
+          }\${
+            (_ssrIncludeBooleanAttr((Array.isArray(_ctx.model))
+              ? _ssrLooseContain(_ctx.model, _ctx.i)
+              : _ssrLooseEqual(_ctx.model, _ctx.i))) ? " selected" : ""
+          }></option>\`)
+        } else {
+          _push(\`<!---->\`)
+        }
+        _push(\`</select></div>\`)
+      }"
+    `)
+
+    expect(
+      compileWithWrapper(
         `<select multiple v-model="model"><option value="1" selected></option><option value="2"></option></select>`,
       ).code,
     ).toMatchInlineSnapshot(`
