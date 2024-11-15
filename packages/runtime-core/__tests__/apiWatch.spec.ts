@@ -1564,8 +1564,7 @@ describe('api: watch', () => {
     expect(cb).toHaveBeenCalledTimes(1)
   })
 
-  // #3341
-  test('watchEffect should allow multiple onCleanup calls', async () => {
+  test('watchEffect should deduplicate multiple onCleanup calls for the same function', async () => {
     const spy1 = vi.fn()
     const spy2 = vi.fn()
     const stop = watchEffect(onCleanup => {
