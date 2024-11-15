@@ -3,9 +3,6 @@
 export const version: string = __VERSION__
 export {
   // core
-  type Ref,
-  type ShallowRef,
-  type DebuggerEvent,
   TrackOpTypes,
   TriggerOpTypes,
   reactive,
@@ -43,6 +40,34 @@ export {
   // baseWatch
   onWatcherCleanup,
   getCurrentWatcher,
+} from '@vue/reactivity'
+export type {
+  Ref,
+  MaybeRef,
+  MaybeRefOrGetter,
+  ToRef,
+  ToRefs,
+  UnwrapRef,
+  ShallowRef,
+  ShallowUnwrapRef,
+  CustomRefFactory,
+  ReactiveFlags,
+  DeepReadonly,
+  ShallowReactive,
+  UnwrapNestedRefs,
+  ComputedRef,
+  WritableComputedRef,
+  WritableComputedOptions,
+  ComputedGetter,
+  ComputedSetter,
+  ReactiveEffectRunner,
+  ReactiveEffectOptions,
+  EffectScheduler,
+  DebuggerOptions,
+  DebuggerEvent,
+  DebuggerEventExtraInfo,
+  Raw,
+  Reactive,
 } from '@vue/reactivity'
 
 import { NOOP } from '@vue/shared'
