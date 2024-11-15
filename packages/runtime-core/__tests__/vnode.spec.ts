@@ -629,7 +629,7 @@ describe('vnode', () => {
       const vnode =
         (openBlock(),
         createBlock('div', null, [
-          setBlockTracking(-1),
+          setBlockTracking(-1, true),
           (vnode1 = (openBlock(), createBlock('div'))),
           setBlockTracking(1),
           vnode1,
