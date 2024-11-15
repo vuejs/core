@@ -130,7 +130,7 @@ describe('compiler: v-for', () => {
     )
     expect(code).matchSnapshot()
     expect(code).contains(`([{ id, ...other }, index]) => [id, other, index]`)
-    expect(code).contains(`_ctx0[0].value + _ctx0[1].value + _ctx0[2].value`)
+    expect(code).contains(`_ctx0[0] + _ctx0[1] + _ctx0[2]`)
     expect(ir.block.operation[0]).toMatchObject({
       type: IRNodeTypes.FOR,
       source: {
@@ -163,7 +163,7 @@ describe('compiler: v-for', () => {
     )
     expect(code).matchSnapshot()
     expect(code).contains(`([[id, ...other], index]) => [id, other, index]`)
-    expect(code).contains(`_ctx0[0].value + _ctx0[1].value + _ctx0[2]`)
+    expect(code).contains(`_ctx0[0] + _ctx0[1] + _ctx0[2]`)
     expect(ir.block.operation[0]).toMatchObject({
       type: IRNodeTypes.FOR,
       source: {
@@ -199,7 +199,7 @@ describe('compiler: v-for', () => {
     expect(code).matchSnapshot()
     expect(code).contains(`([{ foo = bar, baz: [qux = quux] }]) => [foo, qux]`)
     expect(code).contains(
-      `_ctx0[0].value + _ctx.bar + _ctx.baz + _ctx0[1].value + _ctx.quux`,
+      `_ctx0[0] + _ctx.bar + _ctx.baz + _ctx0[1] + _ctx.quux`,
     )
     expect(ir.block.operation[0]).toMatchObject({
       type: IRNodeTypes.FOR,

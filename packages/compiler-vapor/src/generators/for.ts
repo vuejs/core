@@ -29,7 +29,7 @@ export function genFor(
     container,
   } = oper
 
-  let isDestructureAssignment = false
+  let isDestructure = false
   let rawValue: string | null = null
   const rawKey = key && key.content
   const rawIndex = index && index.content
@@ -39,7 +39,7 @@ export function genFor(
   let blockFn = genBlockFn()
   const simpleIdMap: Record<string, null> = genSimpleIdMap()
 
-  if (isDestructureAssignment) {
+  if (isDestructure) {
     const idMap: Record<string, null> = {}
     idsInValue.forEach(id => (idMap[id] = null))
     if (rawKey) idMap[rawKey] = null
@@ -82,7 +82,7 @@ export function genFor(
     const idsInValue = new Set<string>()
     if (value) {
       rawValue = value && value.content
-      if ((isDestructureAssignment = !!value.ast)) {
+      if ((isDestructure = !!value.ast)) {
         walkIdentifiers(
           value.ast,
           (id, _, __, ___, isLocal) => {
@@ -103,12 +103,13 @@ export function genFor(
     const idMap: Record<string, string | null> = {}
     if (context.options.prefixIdentifiers) {
       propsName = `_ctx${depth}`
+      let suffix = isDestructure ? '' : '.value'
       Array.from(idsInValue).forEach(
-        (id, idIndex) => (idMap[id] = `${propsName}[${idIndex}].value`),
+        (id, idIndex) => (idMap[id] = `${propsName}[${idIndex}]${suffix}`),
       )
-      if (rawKey) idMap[rawKey] = `${propsName}[${idsInValue.size}].value`
+      if (rawKey) idMap[rawKey] = `${propsName}[${idsInValue.size}]${suffix}`
       if (rawIndex)
-        idMap[rawIndex] = `${propsName}[${idsInValue.size + 1}].value`
+        idMap[rawIndex] = `${propsName}[${idsInValue.size + 1}]${suffix}`
     } else {
       propsName = `[${[rawValue || ((rawKey || rawIndex) && '_'), rawKey || (rawIndex && '__'), rawIndex].filter(Boolean).join(', ')}]`
     }

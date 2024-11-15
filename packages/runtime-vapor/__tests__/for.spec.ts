@@ -4,7 +4,9 @@ import {
   ref,
   renderEffect,
   shallowRef,
+  template,
   triggerRef,
+  withDestructure,
 } from '../src'
 import { makeRender } from './_utils'
 
@@ -578,5 +580,28 @@ describe('createFor', () => {
     list.value = []
     await nextTick()
     expectCalledTimesToBe('Clear rows', 1, 0, 0, 0)
+  })
+
+  test('withDestructure', () => {
+    const list = ref([{ name: 'a' }, { name: 'b' }, { name: 'c' }])
+
+    const { host } = define(() => {
+      const n1 = createFor(
+        () => list.value,
+        withDestructure(
+          ([{ name }, index]) => [name, index],
+          ctx => {
+            const span = template(`<li>${ctx[1]}. ${ctx[0]}</li>`)()
+            return span
+          },
+        ),
+        item => item.name,
+      )
+      return n1
+    }).render()
+
+    expect(host.innerHTML).toBe(
+      '<li>0. a</li><li>1. b</li><li>2. c</li><!--for-->',
+    )
   })
 })

@@ -1,14 +1,18 @@
-import { shallowReactive } from '@vue/reactivity'
+import {
+  type ShallowUnwrapRef,
+  proxyRefs,
+  shallowReactive,
+} from '@vue/reactivity'
 import { renderEffect } from './renderEffect'
 
-export function withDestructure<P extends any[], R>(
-  assign: (...args: P) => any[],
+export function withDestructure<T extends any[], R>(
+  assign: (data: ShallowUnwrapRef<T>) => any[],
   block: (ctx: any[]) => R,
-): (...args: P) => R {
-  return (...args: P) => {
+): (data: T) => R {
+  return (data: T) => {
     const ctx = shallowReactive<any[]>([])
     renderEffect(() => {
-      const res = assign(...args)
+      const res = assign(proxyRefs(data))
       const len = res.length
       for (let i = 0; i < len; i++) {
         ctx[i] = res[i]

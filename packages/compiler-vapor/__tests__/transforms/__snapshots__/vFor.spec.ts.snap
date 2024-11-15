@@ -7,7 +7,7 @@ const t0 = _template("<div></div>")
 export function render(_ctx) {
   const n0 = _createFor(() => (_ctx.list), _withDestructure(([[id, ...other], index]) => [id, other, index], (_ctx0) => {
     const n2 = t0()
-    _renderEffect(() => _setText(n2, _ctx0[0].value + _ctx0[1].value + _ctx0[2].value))
+    _renderEffect(() => _setText(n2, _ctx0[0] + _ctx0[1] + _ctx0[2]))
     return n2
   }), ([id, ...other], index) => (id))
   return n0
@@ -87,7 +87,7 @@ const t0 = _template("<div></div>")
 export function render(_ctx) {
   const n0 = _createFor(() => (_ctx.list), _withDestructure(([{ id, ...other }, index]) => [id, other, index], (_ctx0) => {
     const n2 = t0()
-    _renderEffect(() => _setText(n2, _ctx0[0].value + _ctx0[1].value + _ctx0[2].value))
+    _renderEffect(() => _setText(n2, _ctx0[0] + _ctx0[1] + _ctx0[2]))
     return n2
   }), ({ id, ...other }, index) => (id))
   return n0
@@ -101,7 +101,7 @@ const t0 = _template("<div></div>")
 export function render(_ctx) {
   const n0 = _createFor(() => (_ctx.list), _withDestructure(([{ foo = bar, baz: [qux = quux] }]) => [foo, qux], (_ctx0) => {
     const n2 = t0()
-    _renderEffect(() => _setText(n2, _ctx0[0].value + _ctx.bar + _ctx.baz + _ctx0[1].value + _ctx.quux))
+    _renderEffect(() => _setText(n2, _ctx0[0] + _ctx.bar + _ctx.baz + _ctx0[1] + _ctx.quux))
     return n2
   }))
   return n0
