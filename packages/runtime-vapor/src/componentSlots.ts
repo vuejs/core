@@ -11,15 +11,9 @@ import {
   currentInstance,
   setCurrentInstance,
 } from './component'
-import { type Block, type Fragment, fragmentKey } from './apiRender'
+import { type Block, type Fragment, fragmentKey, isValidBlock } from './block'
 import { firstEffect, renderEffect } from './renderEffect'
-import {
-  createComment,
-  createTextNode,
-  insert,
-  normalizeBlock,
-  remove,
-} from './dom/element'
+import { createComment, createTextNode, insert, remove } from './dom/element'
 import type { NormalizedRawProps } from './componentProps'
 import type { Data } from '@vue/runtime-shared'
 import { mergeProps } from './dom/prop'
@@ -270,10 +264,4 @@ function normalizeSlotProps(rawPropsList: NormalizedRawProps) {
       delete result[key]
     }
   }
-}
-
-function isValidBlock(block: Block) {
-  return (
-    normalizeBlock(block).filter(node => !(node instanceof Comment)).length > 0
-  )
 }

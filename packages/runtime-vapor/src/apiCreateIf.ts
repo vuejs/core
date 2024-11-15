@@ -1,5 +1,5 @@
 import { renderEffect } from './renderEffect'
-import { type Block, type Fragment, fragmentKey } from './apiRender'
+import { type Block, type Fragment, fragmentKey } from './block'
 import { type EffectScope, effectScope, shallowReactive } from '@vue/reactivity'
 import { createComment, createTextNode, insert, remove } from './dom/element'
 

@@ -11,7 +11,7 @@ import {
   insert,
   remove as removeBlock,
 } from './dom/element'
-import { type Block, type Fragment, fragmentKey } from './apiRender'
+import { type Block, type Fragment, fragmentKey } from './block'
 import { warn } from './warning'
 import { currentInstance } from './component'
 import { componentKey } from './component'

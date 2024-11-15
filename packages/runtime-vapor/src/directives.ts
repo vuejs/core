@@ -5,7 +5,7 @@ import {
   isVaporComponent,
 } from './component'
 import { warn } from './warning'
-import { normalizeBlock } from './dom/element'
+import { normalizeBlock } from './block'
 import { getCurrentScope } from '@vue/reactivity'
 import { VaporErrorCodes, callWithAsyncErrorHandling } from './errorHandling'
 

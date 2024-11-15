@@ -6,7 +6,7 @@ import {
   isBuiltInTag,
   isFunction,
 } from '@vue/shared'
-import type { Block } from './apiRender'
+import type { Block } from './block'
 import {
   type ComponentPropsOptions,
   type NormalizedPropsOptions,

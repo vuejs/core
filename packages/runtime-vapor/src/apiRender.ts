@@ -20,15 +20,7 @@ import { VaporErrorCodes, callWithErrorHandling } from './errorHandling'
 import { endMeasure, startMeasure } from './profiling'
 import { devtoolsComponentAdded } from './devtools'
 import { fallThroughAttrs } from './componentAttrs'
-
-export const fragmentKey: unique symbol = Symbol(__DEV__ ? `fragmentKey` : ``)
-
-export type Block = Node | Fragment | ComponentInternalInstance | Block[]
-export type Fragment = {
-  nodes: Block
-  anchor?: Node
-  [fragmentKey]: true
-}
+import { type Block, findFirstRootElement, fragmentKey } from './block'
 
 export function setupComponent(instance: ComponentInternalInstance): void {
   if (__DEV__) {
@@ -175,21 +167,4 @@ export function unmountComponent(instance: ComponentInternalInstance): void {
     true,
   )
   flushPostFlushCbs()
-}
-
-function findFirstRootElement(instance: ComponentInternalInstance) {
-  const element = getFirstNode(instance.block)
-  return element instanceof Element ? element : undefined
-}
-
-function getFirstNode(block: Block | null): Node | undefined {
-  if (!block || componentKey in block) return
-  if (block instanceof Node) return block
-  if (isArray(block)) {
-    if (block.length === 1) {
-      return getFirstNode(block[0])
-    }
-  } else {
-    return getFirstNode(block.nodes)
-  }
 }

@@ -1,24 +1,7 @@
 import { isArray } from '@vue/shared'
-import type { Block } from '../apiRender'
-import { componentKey } from '../component'
 import { renderEffect } from '../renderEffect'
 import { setText } from './prop'
-
-/*! #__NO_SIDE_EFFECTS__ */
-export function normalizeBlock(block: Block): Node[] {
-  const nodes: Node[] = []
-  if (block instanceof Node) {
-    nodes.push(block)
-  } else if (isArray(block)) {
-    block.forEach(child => nodes.push(...normalizeBlock(child)))
-  } else if (componentKey in block) {
-    nodes.push(...normalizeBlock(block.block!))
-  } else if (block) {
-    nodes.push(...normalizeBlock(block.nodes))
-    block.anchor && nodes.push(block.anchor)
-  }
-  return nodes
-}
+import { type Block, normalizeBlock } from '../block'
 
 export function insert(
   block: Block,
