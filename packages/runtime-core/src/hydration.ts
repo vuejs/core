@@ -41,6 +41,7 @@ import {
 import type { TeleportImpl, TeleportVNode } from './components/Teleport'
 import { isAsyncWrapper } from './apiAsyncComponent'
 import { isReactive } from '@vue/reactivity'
+import { updateHOCHostEl } from './componentRenderUtils'
 
 export type RootHydrateFunction = (
   vnode: VNode<Node, Element>,
@@ -716,6 +717,11 @@ export function createHydrationFunctions(
       getContainerType(container),
       slotScopeIds,
     )
+    // the component vnode's el should be updated when a mismatch occurs.
+    if (parentComponent) {
+      parentComponent.vnode.el = vnode.el
+      updateHOCHostEl(parentComponent, vnode.el)
+    }
     return next
   }
 
