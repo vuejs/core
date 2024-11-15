@@ -3,7 +3,7 @@ import path from 'node:path'
 import { Transition, createApp, h, nextTick, ref } from 'vue'
 
 describe('e2e: Transition', () => {
-  const { page, html, classList, isVisible, timeout, nextFrame, click } =
+  const { page, html, classList, style, isVisible, timeout, nextFrame, click } =
     setupPuppeteer()
   const baseUrl = `file://${path.resolve(__dirname, './transition.html')}`
 
@@ -2984,6 +2984,55 @@ describe('e2e: Transition', () => {
       },
       E2E_TIMEOUT,
     )
+  })
+
+  test('reflow after *-leave-from before *-leave-active', async () => {
+    await page().evaluate(() => {
+      const { createApp, ref } = (window as any).Vue
+      createApp({
+        template: `
+          <div id="container">
+            <transition name="test-reflow">
+              <div v-if="toggle" class="test-reflow">content</div>
+            </transition>
+          </div>
+          <button id="toggleBtn" @click="click">button</button>
+        `,
+        setup: () => {
+          const toggle = ref(false)
+          const click = () => (toggle.value = !toggle.value)
+          return {
+            toggle,
+            click,
+          }
+        },
+      }).mount('#app')
+    })
+
+    // if transition starts while there's v-leave-active added along with v-leave-from, its bad, it has to start when it doesnt have the v-leave-from
+
+    // enter
+    await classWhenTransitionStart()
+    await transitionFinish()
+
+    // leave
+    expect(await classWhenTransitionStart()).toStrictEqual([
+      'test-reflow',
+      'test-reflow-leave-from',
+      'test-reflow-leave-active',
+    ])
+
+    expect(await style('.test-reflow', 'opacity')).toStrictEqual('0.9')
+
+    await nextFrame()
+    expect(await classList('.test-reflow')).toStrictEqual([
+      'test-reflow',
+      'test-reflow-leave-active',
+      'test-reflow-leave-to',
+    ])
+
+    await transitionFinish()
+    expect(await html('#container')).toBe('<!--v-if-->')
   })
 
   test('warn when used on multiple elements', async () => {
