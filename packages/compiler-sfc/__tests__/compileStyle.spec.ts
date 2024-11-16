@@ -181,11 +181,39 @@ color: red
       ".foo .bar { color: red;
       }"
     `)
-    // global ignores anything before it
+
     expect(compileScoped(`.baz .qux ::v-global(.foo .bar) { color: red; }`))
       .toMatchInlineSnapshot(`
-      ".foo .bar { color: red;
+      ".baz .qux[data-v-test] .foo .bar { color: red;
       }"
+    `)
+
+    expect(compileScoped(`::v-global(body) h1 { color: red; }`))
+      .toMatchInlineSnapshot(`
+      "body h1[data-v-test] { color: red;
+      }"
+    `)
+
+    expect(compileScoped(`::v-global(body h1) { color: red; }`))
+      .toMatchInlineSnapshot(`
+      "body h1 { color: red;
+      }"
+    `)
+
+    expect(compileScoped(`html ::v-global(body) h1 { color: red; }`))
+      .toMatchInlineSnapshot(`
+      "html body h1[data-v-test] { color: red;
+      }"
+    `)
+
+    expect(compileScoped(`::v-global(body){ color: red; h1 { color: blue; } }`))
+      .toMatchInlineSnapshot(`
+      "body{
+&{ color: red;
+}
+h1[data-v-test] { color: blue;
+}
+}"
     `)
   })
 
