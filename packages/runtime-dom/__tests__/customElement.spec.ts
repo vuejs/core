@@ -145,6 +145,43 @@ describe('defineCustomElement', () => {
       expect(e._instance).toBeTruthy()
       expect(e.shadowRoot!.innerHTML).toBe('<div>hello</div>')
     })
+
+    // #12412
+    test('remove element with child custom element and wait fully disconnected then insert', async () => {
+      const El = defineCustomElement({
+        props: {
+          msg: String,
+        },
+        setup(props, { expose }) {
+          expose({
+            text: () => props.msg,
+          })
+          provide('context', props)
+          const context = inject('context', {}) as typeof props
+          return () => context.msg || props.msg
+        },
+      })
+      customElements.define('my-el-remove-insert-expose', El)
+      container.innerHTML = `<div><my-el-remove-insert-expose msg="msg1"><my-el-remove-insert-expose></my-el-remove-insert-expose></my-el-remove-insert-expose></div>`
+      const parent = container.children[0].children[0] as VueElement & {
+        text: () => string
+      }
+      const child = parent.children[0] as VueElement
+      parent.remove()
+      await nextTick()
+      await nextTick() // wait two ticks for disconnect
+      expect('text' in parent).toBe(false)
+      container.appendChild(parent) // should not throw Error
+      await nextTick()
+      expect(parent.text()).toBe('msg1')
+      expect(parent.shadowRoot!.textContent).toBe('msg1')
+      expect(child.shadowRoot!.textContent).toBe('msg1')
+      parent.setAttribute('msg', 'msg2')
+      await nextTick()
+      expect(parent.shadowRoot!.textContent).toBe('msg2')
+      await nextTick()
+      expect(child.shadowRoot!.textContent).toBe('msg2')
+    })
   })
 
   describe('props', () => {

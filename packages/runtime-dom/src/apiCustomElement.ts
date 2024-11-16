@@ -298,8 +298,9 @@ export class VueElement
 
     if (!this._instance) {
       if (this._resolved) {
-        this._setParent()
-        this._update()
+        // this element has been fully unmounted, should create observer again and re-mount
+        this._observe()
+        this._mount(this._def)
       } else {
         if (parent && parent._pendingResolve) {
           this._pendingResolve = parent._pendingResolve.then(() => {
@@ -330,10 +331,29 @@ export class VueElement
         }
         // unmount
         this._app && this._app.unmount()
-        if (this._instance) this._instance.ce = undefined
+        if (this._instance) {
+          const exposed = this._instance.exposed
+          if (exposed) {
+            for (const key in exposed) {
+              delete this[key as keyof this]
+            }
+          }
+          this._instance.ce = undefined
+        }
         this._app = this._instance = null
       }
     })
+  }
+
+  private _observe() {
+    if (!this._ob) {
+      this._ob = new MutationObserver(mutations => {
+        for (const m of mutations) {
+          this._setAttr(m.attributeName!)
+        }
+      })
+    }
+    this._ob.observe(this, { attributes: true })
   }
 
   /**
@@ -350,13 +370,7 @@ export class VueElement
     }
 
     // watch future attr changes
-    this._ob = new MutationObserver(mutations => {
-      for (const m of mutations) {
-        this._setAttr(m.attributeName!)
-      }
-    })
-
-    this._ob.observe(this, { attributes: true })
+    this._observe()
 
     const resolve = (def: InnerComponentDef, isAsync = false) => {
       this._resolved = true
@@ -430,11 +444,14 @@ export class VueElement
       if (!hasOwn(this, key)) {
         // exposed properties are readonly
         Object.defineProperty(this, key, {
+          configurable: true, // should be configurable to allow deleting when disconnected
           // unwrap ref to be consistent with public instance behavior
           get: () => unref(exposed[key]),
         })
-      } else if (__DEV__) {
-        warn(`Exposed property "${key}" already exists on custom element.`)
+      } else {
+        delete exposed[key] // delete it from exposed in case of deleting wrong exposed key when disconnected
+        if (__DEV__)
+          warn(`Exposed property "${key}" already exists on custom element.`)
       }
     }
   }
@@ -514,7 +531,7 @@ export class VueElement
         } else if (!val) {
           this.removeAttribute(hyphenate(key))
         }
-        ob && ob.observe(this, { attributes: true })
+        this._observe()
       }
     }
   }
