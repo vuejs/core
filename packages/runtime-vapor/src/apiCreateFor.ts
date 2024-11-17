@@ -17,7 +17,6 @@ import { currentInstance } from './component'
 import { componentKey } from './component'
 import type { DynamicSlot } from './componentSlots'
 import { renderEffect } from './renderEffect'
-import { withMemo } from './memo'
 
 interface ForBlock extends Fragment {
   scope: EffectScope
@@ -27,7 +26,6 @@ interface ForBlock extends Fragment {
     index: ShallowRef<number | undefined>,
   ]
   key: any
-  memo: any[] | undefined
 }
 
 type Source = any[] | Record<any, any> | number | Set<any> | Map<any, any>
@@ -37,7 +35,6 @@ export const createFor = (
   src: () => Source,
   renderItem: (block: ForBlock['state']) => Block,
   getKey?: (item: any, key: any, index?: number) => any,
-  getMemo?: (item: any, key: any, index?: number) => any[],
   container?: ParentNode,
   hydrationNode?: Node,
   once?: boolean,
@@ -61,7 +58,6 @@ export const createFor = (
     warn('createFor() can only be used inside setup()')
   }
 
-  const update = getMemo ? updateWithMemo : updateWithoutMemo
   once ? renderList() : renderEffect(renderList)
 
   return ref
@@ -276,23 +272,9 @@ export const createFor = (
       scope,
       state,
       key: getKey && getKey(item, key, index),
-      memo: getMemo && getMemo(item, key, index),
       [fragmentKey]: true,
     })
-    block.nodes = scope.run(() => {
-      if (getMemo) {
-        return withMemo(
-          () =>
-            getMemo(
-              block.state[0].value,
-              block.state[1].value,
-              block.state[2].value,
-            ),
-          () => renderItem(state),
-        )
-      }
-      return renderItem(state)
-    })!
+    block.nodes = scope.run(() => renderItem(state))!
 
     if (parent) insert(block.nodes, parent, anchor)
 
@@ -314,28 +296,7 @@ export const createFor = (
     }
   }
 
-  function updateWithMemo(
-    block: ForBlock,
-    newItem: any,
-    newKey = block.state[1].value,
-    newIndex = block.state[2].value,
-  ) {
-    const [, key, index] = block.state
-    let needsUpdate = newKey !== key.value || newIndex !== index.value
-    if (!needsUpdate) {
-      const oldMemo = block.memo!
-      const newMemo = (block.memo = getMemo!(newItem, newKey, newIndex))
-      for (let i = 0; i < newMemo.length; i++) {
-        if ((needsUpdate = newMemo[i] !== oldMemo[i])) {
-          break
-        }
-      }
-    }
-
-    if (needsUpdate) updateState(block, newItem, newKey, newIndex)
-  }
-
-  function updateWithoutMemo(
+  function update(
     block: ForBlock,
     newItem: any,
     newKey = block.state[1].value,

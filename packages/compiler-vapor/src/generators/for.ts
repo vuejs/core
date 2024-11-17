@@ -16,18 +16,8 @@ export function genFor(
   context: CodegenContext,
 ): CodeFragment[] {
   const { vaporHelper } = context
-  const {
-    source,
-    value,
-    key,
-    index,
-    render,
-    keyProp,
-    once,
-    id,
-    memo,
-    container,
-  } = oper
+  const { source, value, key, index, render, keyProp, once, id, container } =
+    oper
 
   let isDestructure = false
   let rawValue: string | null = null
@@ -71,7 +61,6 @@ export function genFor(
       sourceExpr,
       blockFn,
       genCallback(keyProp),
-      genCallback(memo),
       container != null && `n${container}`,
       false, // todo: hydrationNode
       once && 'true',
