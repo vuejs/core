@@ -538,31 +538,27 @@ export function checkDirty(deps: Link): boolean {
         if (dep.update()) {
           propagate(dep.subs!)
           let dirty = true
-          if (stack > 0) {
-            let sub = deps.sub as IComputed
-            do {
-              stack--
-              const subSubs = sub.subs!
-              const prevLink = subSubs.prevSub!
-              subSubs.prevSub = undefined
-              if (dirty) {
-                if (sub.update()) {
-                  propagate(subSubs)
-                  deps = prevLink
-                  sub = prevLink.sub as IComputed
-                  dirty = true
-                  continue
-                }
-              } else {
-                sub.dirtyLevel = DirtyLevels.None
+          while (stack > 0) {
+            stack--
+            const sub = deps.sub as IComputed
+            const subSubs = sub.subs!
+            const prevLink = subSubs.prevSub!
+            subSubs.prevSub = undefined
+            if (dirty) {
+              if (sub.update()) {
+                propagate(subSubs)
+                deps = prevLink
+                dirty = true
+                continue
               }
-              deps = prevLink.nextDep!
-              if (deps !== undefined) {
-                continue top
-              }
-              dirty = false
-              sub = prevLink.sub as IComputed
-            } while (stack > 0)
+            } else {
+              sub.dirtyLevel = DirtyLevels.None
+            }
+            deps = prevLink.nextDep!
+            if (deps !== undefined) {
+              continue top
+            }
+            dirty = false
           }
           return dirty
         }
@@ -572,31 +568,27 @@ export function checkDirty(deps: Link): boolean {
     const nextDep = deps.nextDep!
     if (nextDep === undefined) {
       let dirty = false
-      if (stack > 0) {
-        let sub = deps.sub as IComputed
-        do {
-          stack--
-          const subSubs = sub.subs!
-          const prevLink = subSubs.prevSub!
-          subSubs.prevSub = undefined
-          if (dirty) {
-            if (sub.update()) {
-              propagate(subSubs)
-              deps = prevLink
-              sub = prevLink.sub as IComputed
-              dirty = true
-              continue
-            }
-          } else {
-            sub.dirtyLevel = DirtyLevels.None
+      while (stack > 0) {
+        stack--
+        const sub = deps.sub as IComputed
+        const subSubs = sub.subs!
+        const prevLink = subSubs.prevSub!
+        subSubs.prevSub = undefined
+        if (dirty) {
+          if (sub.update()) {
+            propagate(subSubs)
+            deps = prevLink
+            dirty = true
+            continue
           }
-          deps = prevLink.nextDep!
-          if (deps !== undefined) {
-            continue top
-          }
-          sub = prevLink.sub as IComputed
-          dirty = false
-        } while (stack > 0)
+        } else {
+          sub.dirtyLevel = DirtyLevels.None
+        }
+        deps = prevLink.nextDep!
+        if (deps !== undefined) {
+          continue top
+        }
+        dirty = false
       }
       return dirty
     }
