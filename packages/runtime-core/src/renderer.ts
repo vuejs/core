@@ -2480,7 +2480,8 @@ export function traverseStaticChildren(
       }
       // also inherit for comment nodes, but not placeholders (e.g. v-if which
       // would have received .el during block patch)
-      if (__DEV__ && c2.type === Comment && !c2.el) {
+      // How to determine the user has enabled preserve comment at prod runtime?
+      if (c2.type === Comment && !c2.el) {
         c2.el = c1.el
       }
     }
