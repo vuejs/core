@@ -16,6 +16,7 @@ import {
   isShallow,
   readonly,
   shallowReactive,
+  shallowReadonly,
 } from '../src/reactive'
 
 describe('reactivity/ref', () => {
@@ -308,18 +309,83 @@ describe('reactivity/ref', () => {
     a.x = 4
     expect(dummyX).toBe(4)
 
-    // should keep ref
-    const r = { x: ref(1) }
-    expect(toRef(r, 'x')).toBe(r.x)
+    // a ref in a non-reactive object should be unwrapped
+    const r: any = { x: ref(1) }
+    const t = toRef(r, 'x')
+    expect(t.value).toBe(1)
+
+    r.x.value = 2
+    expect(t.value).toBe(2)
+
+    t.value = 3
+    expect(t.value).toBe(3)
+    expect(r.x.value).toBe(3)
+
+    // with a default
+    const u = toRef(r, 'x', 7)
+    expect(u.value).toBe(3)
+
+    r.x.value = undefined
+    expect(r.x.value).toBeUndefined()
+    expect(t.value).toBeUndefined()
+    expect(u.value).toBe(7)
+
+    u.value = 7
+    expect(r.x.value).toBe(7)
+    expect(t.value).toBe(7)
+    expect(u.value).toBe(7)
   })
 
   test('toRef on array', () => {
-    const a = reactive(['a', 'b'])
+    const a: any = reactive(['a', 'b'])
     const r = toRef(a, 1)
     expect(r.value).toBe('b')
     r.value = 'c'
     expect(r.value).toBe('c')
     expect(a[1]).toBe('c')
+
+    a[1] = ref('d')
+    expect(isRef(a[1]))
+    expect(r.value).toBe('d')
+    r.value = 'e'
+    expect(isRef(a[1]))
+    expect(a[1].value).toBe('e')
+
+    const s = toRef(a, 2, 'def')
+    const len = toRef(a, 'length')
+
+    expect(s.value).toBe('def')
+    expect(len.value).toBe(2)
+
+    a.push('f')
+    expect(s.value).toBe('f')
+    expect(len.value).toBe(3)
+
+    len.value = 2
+
+    expect(s.value).toBe('def')
+    expect(len.value).toBe(2)
+
+    const symbol = Symbol()
+    const t = toRef(a, 'foo')
+    const u = toRef(a, symbol)
+    expect(t.value).toBeUndefined()
+    expect(u.value).toBeUndefined()
+
+    const foo = ref(3)
+    const bar = ref(5)
+    a.foo = foo
+    a[symbol] = bar
+    expect(t.value).toBe(3)
+    expect(u.value).toBe(5)
+
+    t.value = 4
+    u.value = 6
+
+    expect(a.foo).toBe(4)
+    expect(foo.value).toBe(4)
+    expect(a[symbol]).toBe(6)
+    expect(bar.value).toBe(6)
   })
 
   test('toRef default value', () => {
@@ -343,6 +409,148 @@ describe('reactivity/ref', () => {
     expect(() => (x.value = 123)).toThrow()
 
     expect(isReadonly(x)).toBe(true)
+  })
+
+  test('toRef lazy evaluation of properties inside a proxy', () => {
+    const fn = vi.fn(() => 5)
+    const num = computed(fn)
+    const a = toRef({ num }, 'num')
+    const b = toRef(reactive({ num }), 'num')
+    const c = toRef(readonly({ num }), 'num')
+    const d = toRef(shallowReactive({ num }), 'num')
+    const e = toRef(shallowReadonly({ num }), 'num')
+
+    expect(fn).not.toHaveBeenCalled()
+
+    expect(a.value).toBe(5)
+    expect(b.value).toBe(5)
+    expect(c.value).toBe(5)
+    expect(d.value).toBe(5)
+    expect(e.value).toBe(5)
+    expect(fn).toHaveBeenCalledTimes(1)
+  })
+
+  test('toRef with shallowReactive/shallowReadonly', () => {
+    const r = ref(0)
+    const s1 = shallowReactive<{ foo: any }>({ foo: r })
+    const t1 = toRef(s1, 'foo', 2)
+    const s2 = shallowReadonly(s1)
+    const t2 = toRef(s2, 'foo', 3)
+
+    expect(r.value).toBe(0)
+    expect(s1.foo.value).toBe(0)
+    expect(t1.value).toBe(0)
+    expect(s2.foo.value).toBe(0)
+    expect(t2.value).toBe(0)
+
+    s1.foo = ref(1)
+
+    expect(r.value).toBe(0)
+    expect(s1.foo.value).toBe(1)
+    expect(t1.value).toBe(1)
+    expect(s2.foo.value).toBe(1)
+    expect(t2.value).toBe(1)
+
+    s1.foo.value = undefined
+
+    expect(r.value).toBe(0)
+    expect(s1.foo.value).toBeUndefined()
+    expect(t1.value).toBe(2)
+    expect(s2.foo.value).toBeUndefined()
+    expect(t2.value).toBe(3)
+
+    t1.value = 2
+
+    expect(r.value).toBe(0)
+    expect(s1.foo.value).toBe(2)
+    expect(t1.value).toBe(2)
+    expect(s2.foo.value).toBe(2)
+    expect(t2.value).toBe(2)
+
+    t2.value = 4
+
+    expect(r.value).toBe(0)
+    expect(s1.foo.value).toBe(4)
+    expect(t1.value).toBe(4)
+    expect(s2.foo.value).toBe(4)
+    expect(t2.value).toBe(4)
+
+    s1.foo = undefined
+
+    expect(r.value).toBe(0)
+    expect(s1.foo).toBeUndefined()
+    expect(t1.value).toBe(2)
+    expect(s2.foo).toBeUndefined()
+    expect(t2.value).toBe(3)
+  })
+
+  test('toRef for shallowReadonly around reactive', () => {
+    const get = vi.fn(() => 3)
+    const set = vi.fn()
+    const num = computed({ get, set })
+    const t = toRef(shallowReadonly(reactive({ num })), 'num')
+
+    expect(get).not.toHaveBeenCalled()
+    expect(set).not.toHaveBeenCalled()
+
+    t.value = 1
+
+    expect(
+      'Set operation on key "num" failed: target is readonly',
+    ).toHaveBeenWarned()
+
+    expect(get).not.toHaveBeenCalled()
+    expect(set).not.toHaveBeenCalled()
+
+    expect(t.value).toBe(3)
+
+    expect(get).toHaveBeenCalledTimes(1)
+    expect(set).not.toHaveBeenCalled()
+  })
+
+  test('toRef for readonly around shallowReactive', () => {
+    const get = vi.fn(() => 3)
+    const set = vi.fn()
+    const num = computed({ get, set })
+    const t: Ref<number> = toRef(readonly(shallowReactive({ num })), 'num')
+
+    expect(get).not.toHaveBeenCalled()
+    expect(set).not.toHaveBeenCalled()
+
+    t.value = 1
+
+    expect(
+      'Set operation on key "num" failed: target is readonly',
+    ).toHaveBeenWarned()
+
+    expect(get).not.toHaveBeenCalled()
+    expect(set).not.toHaveBeenCalled()
+
+    expect(t.value).toBe(3)
+
+    expect(get).toHaveBeenCalledTimes(1)
+    expect(set).not.toHaveBeenCalled()
+  })
+
+  test(`toRef doesn't bypass the proxy when getting/setting a nested ref`, () => {
+    const r = ref(2)
+    const obj = shallowReactive({ num: r })
+    const t = toRef(obj, 'num')
+
+    expect(t.value).toBe(2)
+
+    effect(() => {
+      t.value = 3
+    })
+
+    expect(t.value).toBe(3)
+    expect(r.value).toBe(3)
+
+    const s = ref(4)
+    obj.num = s
+
+    expect(t.value).toBe(3)
+    expect(s.value).toBe(3)
   })
 
   test('toRefs', () => {

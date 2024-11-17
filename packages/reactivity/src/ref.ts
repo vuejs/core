@@ -3,12 +3,14 @@ import {
   hasChanged,
   isArray,
   isFunction,
+  isIntegerKey,
   isObject,
 } from '@vue/shared'
 import { Dep, getDepFromReactive } from './dep'
 import {
   type Builtin,
   type ShallowReactiveMarker,
+  type Target,
   isProxy,
   isReactive,
   isReadonly,
@@ -351,23 +353,52 @@ class ObjectRefImpl<T extends object, K extends keyof T> {
   public readonly [ReactiveFlags.IS_REF] = true
   public _value: T[K] = undefined!
 
+  private readonly _raw: T
+  private readonly _shallow: boolean
+
   constructor(
     private readonly _object: T,
     private readonly _key: K,
     private readonly _defaultValue?: T[K],
-  ) {}
+  ) {
+    this._raw = toRaw(_object)
+
+    let shallow = true
+    let obj = _object
+
+    // For an array with integer key, refs are not unwrapped
+    if (!isArray(_object) || !isIntegerKey(String(_key))) {
+      // Otherwise, check each proxy layer for unwrapping
+      do {
+        shallow = !isProxy(obj) || isShallow(obj)
+      } while (shallow && (obj = (obj as Target)[ReactiveFlags.RAW]))
+    }
+
+    this._shallow = shallow
+  }
 
   get value() {
-    const val = this._object[this._key]
+    let val = this._object[this._key]
+    if (this._shallow) {
+      val = unref(val)
+    }
     return (this._value = val === undefined ? this._defaultValue! : val)
   }
 
   set value(newVal) {
+    if (this._shallow && isRef(this._raw[this._key])) {
+      const nestedRef = this._object[this._key]
+      if (isRef(nestedRef)) {
+        nestedRef.value = newVal
+        return
+      }
+    }
+
     this._object[this._key] = newVal
   }
 
   get dep(): Dep | undefined {
-    return getDepFromReactive(toRaw(this._object), this._key)
+    return getDepFromReactive(this._raw, this._key)
   }
 }
 
@@ -464,10 +495,7 @@ function propertyToRef(
   key: string,
   defaultValue?: unknown,
 ) {
-  const val = source[key]
-  return isRef(val)
-    ? val
-    : (new ObjectRefImpl(source, key, defaultValue) as any)
+  return new ObjectRefImpl(source, key, defaultValue) as any
 }
 
 /**
