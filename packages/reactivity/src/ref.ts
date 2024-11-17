@@ -14,10 +14,10 @@ import {
   type Link,
   activeSub,
   activeTrackId,
-  endBatch,
+  batchDepth,
+  drainQueuedEffects,
   link,
   propagate,
-  startBatch,
 } from './effect'
 import {
   type Builtin,
@@ -198,9 +198,10 @@ export function triggerRef(ref: Ref): void {
   // ref may be an instance of ObjectRefImpl
   const dep = (ref as unknown as RefImpl).dep
   if (dep !== undefined && dep.subs !== undefined) {
-    startBatch()
     propagate(dep.subs)
-    endBatch()
+    if (batchDepth === 0) {
+      drainQueuedEffects()
+    }
   }
 }
 

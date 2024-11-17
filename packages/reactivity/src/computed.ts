@@ -9,15 +9,15 @@ import {
   type Link,
   activeSub,
   activeTrackId,
+  checkDirty,
   endTrack,
   link,
   propagate,
-  resolveMaybeDirty,
   startTrack,
 } from './effect'
+import { activeEffectScope } from './effectScope'
 import type { Ref } from './ref'
 import { warn } from './warning'
-import { activeEffectScope } from './effectScope'
 
 declare const ComputedRefSymbol: unique symbol
 declare const WritableComputedRefSymbol: unique symbol
@@ -90,10 +90,14 @@ export class ComputedRefImpl<T = any> implements IComputed {
   get _dirty(): boolean {
     let dirtyLevel = this.dirtyLevel
     if (dirtyLevel === DirtyLevels.MaybeDirty) {
-      resolveMaybeDirty(this)
-      dirtyLevel = this.dirtyLevel
+      if (checkDirty(this.deps!)) {
+        return true
+      } else {
+        this.dirtyLevel = DirtyLevels.None
+        return false
+      }
     }
-    return dirtyLevel >= DirtyLevels.Dirty
+    return dirtyLevel === DirtyLevels.Dirty
   }
   set _dirty(v: boolean) {
     if (v) {
@@ -126,7 +130,12 @@ export class ComputedRefImpl<T = any> implements IComputed {
 
   get value(): T {
     if (this._dirty) {
-      this.update()
+      if (this.update()) {
+        const subs = this.subs
+        if (subs !== undefined) {
+          propagate(subs)
+        }
+      }
     }
     if (activeTrackId !== 0) {
       const subsTail = this.subsTail
@@ -154,7 +163,7 @@ export class ComputedRefImpl<T = any> implements IComputed {
     }
   }
 
-  update(): void {
+  update(): boolean {
     const prevSub = startTrack(this)
     const oldValue = this._value
     let newValue: T
@@ -165,11 +174,9 @@ export class ComputedRefImpl<T = any> implements IComputed {
     }
     if (hasChanged(oldValue, newValue)) {
       this._value = newValue
-      const subs = this.subs
-      if (subs !== undefined) {
-        propagate(subs)
-      }
+      return true
     }
+    return false
   }
 }
 
