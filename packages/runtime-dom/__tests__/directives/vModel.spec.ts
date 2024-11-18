@@ -1402,7 +1402,6 @@ describe('vModel', () => {
               class: 'datetime',
               type: 'datetime-local',
               'onUpdate:modelValue': (val: any) => {
-                console.log('zxxx', val)
                 this.datetime = val
               },
             }),
