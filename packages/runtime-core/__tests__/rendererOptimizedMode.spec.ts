@@ -270,63 +270,6 @@ describe('renderer: optimized mode', () => {
     )
   })
 
-  test('PatchFlags: PatchFlags.STABLE_FRAGMENT with change array item', async () => {
-    const count = ref(0)
-    const foo: any = []
-    function updateFoo() {
-      for (let n = 0; n < 3; n++) {
-        foo[n] = n + 1 + '_foo'
-      }
-    }
-    const Comp = {
-      setup() {
-        return () => {
-          // <div>{{ count }}</div>
-          // <div v-for='item in foo'>{{ item }}</div>
-          return (
-            openBlock(),
-            createElementBlock(
-              Fragment,
-              null,
-              [
-                createElementVNode(
-                  'div',
-                  null,
-                  toDisplayString(count.value),
-                  1 /* TEXT */,
-                ),
-                (openBlock(),
-                createElementBlock(
-                  Fragment,
-                  null,
-                  renderList(foo, item => {
-                    return createElementVNode(
-                      'div',
-                      null,
-                      toDisplayString(item),
-                      1 /* TEXT */,
-                    )
-                  }),
-                  64 /* STABLE_FRAGMENT */,
-                )),
-              ],
-              64 /* STABLE_FRAGMENT */,
-            )
-          )
-        }
-      },
-    }
-
-    render(h(Comp), root)
-    expect(inner(root)).toBe('<div>0</div>')
-    updateFoo()
-    count.value++
-    await nextTick()
-    expect(inner(root)).toBe(
-      '<div>1</div><div>1_foo</div><div>2_foo</div><div>3_foo</div>',
-    )
-  })
-
   // A Fragment with `UNKEYED_FRAGMENT` flag will always patch its children,
   // so there's no need for tracking dynamicChildren.
   test('PatchFlags: PatchFlags.UNKEYED_FRAGMENT', async () => {
@@ -1350,5 +1293,63 @@ describe('renderer: optimized mode', () => {
     await nextTick()
     expect(inner(root)).toBe('<!--v-if-->')
     expect(beforeUnmountSpy).toHaveBeenCalledTimes(1)
+  })
+
+  // #12411
+  test('handle patch stable fragment with non-reactive v-for source', async () => {
+    const count = ref(0)
+    const foo: any = []
+    function updateFoo() {
+      for (let n = 0; n < 3; n++) {
+        foo[n] = n + 1 + '_foo'
+      }
+    }
+    const Comp = {
+      setup() {
+        return () => {
+          // <div>{{ count }}</div>
+          // <div v-for='item in foo'>{{ item }}</div>
+          return (
+            openBlock(),
+            createElementBlock(
+              Fragment,
+              null,
+              [
+                createElementVNode(
+                  'div',
+                  null,
+                  toDisplayString(count.value),
+                  PatchFlags.TEXT,
+                ),
+                (openBlock(),
+                createElementBlock(
+                  Fragment,
+                  null,
+                  renderList(foo, item => {
+                    return createElementVNode(
+                      'div',
+                      null,
+                      toDisplayString(item),
+                      PatchFlags.TEXT,
+                    )
+                  }),
+                  PatchFlags.STABLE_FRAGMENT,
+                )),
+              ],
+              PatchFlags.STABLE_FRAGMENT,
+            )
+          )
+        }
+      },
+    }
+
+    render(h(Comp), root)
+    expect(inner(root)).toBe('<div>0</div>')
+    updateFoo()
+    count.value++
+    await nextTick()
+    expect(inner(root)).toBe(
+      '<div>1</div><div>1_foo</div><div>2_foo</div><div>3_foo</div>',
+    )
   })
 })
