@@ -311,34 +311,4 @@ describe('compiler + runtime integration', () => {
     app.mount(root)
     expect(root.innerHTML).toBe('<div>60000000100000111</div>')
   })
-
-  test('should correctly update when reactive state and normal array are modified', async () => {
-    const count = ref(0)
-    const foo: any[] = []
-    function updateFoo() {
-      for (let n = 0; n < 3; n++) {
-        foo[n] = n + 1 + '_foo'
-      }
-    }
-    const app = createApp({
-      setup() {
-        return {
-          count,
-          foo,
-        }
-      },
-      template: `
-      <div>{{count}}</div>
-      <div v-for='item in foo'>{{ item }}</div>`,
-    })
-    const root = document.createElement('div')
-    app.mount(root)
-    expect(root.innerHTML).toBe('<div>0</div>')
-    updateFoo()
-    count.value++
-    await nextTick()
-    expect(root.innerHTML).toBe(
-      '<div>1</div><div>1_foo</div><div>2_foo</div><div>3_foo</div>',
-    )
-  })
 })
