@@ -1,6 +1,7 @@
 import {
   type CacheExpression,
   type CallExpression,
+  type CommentNode,
   type ComponentNode,
   ConstantTypes,
   ElementTypes,
@@ -17,6 +18,7 @@ import {
   type TextCallNode,
   type VNodeCall,
   createArrayExpression,
+  createCallExpression,
   getVNodeBlockHelper,
   getVNodeHelper,
 } from '../ast'
@@ -24,12 +26,14 @@ import type { TransformContext } from '../transform'
 import { PatchFlags, isArray, isString, isSymbol } from '@vue/shared'
 import { findDir, isSlotOutlet } from '../utils'
 import {
+  CREATE_COMMENT,
   GUARD_REACTIVE_PROPS,
   NORMALIZE_CLASS,
   NORMALIZE_PROPS,
   NORMALIZE_STYLE,
   OPEN_BLOCK,
 } from '../runtimeHelpers'
+import { currentOptions } from '../parser'
 
 export function cacheStatic(root: RootNode, context: TransformContext): void {
   walk(
@@ -62,7 +66,7 @@ function walk(
   inFor = false,
 ) {
   const { children } = node
-  const toCache: (PlainElementNode | TextCallNode)[] = []
+  const toCache: (PlainElementNode | TextCallNode | CommentNode)[] = []
   for (let i = 0; i < children.length; i++) {
     const child = children[i]
     // only plain elements & text calls are eligible for caching.
@@ -110,6 +114,12 @@ function walk(
         toCache.push(child)
         continue
       }
+    } else if (currentOptions.comments && child.type === NodeTypes.COMMENT) {
+      ;(child.codegenNode = createCallExpression(
+        context.helper(CREATE_COMMENT),
+        [JSON.stringify(child.content)],
+      )),
+        toCache.push(child)
     }
 
     // walk further

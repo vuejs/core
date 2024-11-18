@@ -59,6 +59,7 @@ import {
   helperNameMap,
 } from './runtimeHelpers'
 import type { ImportItem } from './transform'
+import { currentOptions } from './parser'
 
 /**
  * The `SourceMapGenerator` type from `source-map-js` is a bit incomplete as it
@@ -803,11 +804,15 @@ function genComment(node: CommentNode, context: CodegenContext) {
   if (pure) {
     push(PURE_ANNOTATION)
   }
-  push(
-    `${helper(CREATE_COMMENT)}(${JSON.stringify(node.content)})`,
-    NewlineType.Unknown,
-    node,
-  )
+  if (currentOptions.comments && node.codegenNode) {
+    genNode(node.codegenNode, context)
+  } else {
+    push(
+      `${helper(CREATE_COMMENT)}(${JSON.stringify(node.content)})`,
+      NewlineType.Unknown,
+      node,
+    )
+  }
 }
 
 function genVNodeCall(node: VNodeCall, context: CodegenContext) {

@@ -80,7 +80,7 @@ export const defaultParserOptions: MergedParserOptions = {
   prefixIdentifiers: false,
 }
 
-let currentOptions: MergedParserOptions = defaultParserOptions
+export let currentOptions: MergedParserOptions = defaultParserOptions
 let currentRoot: RootNode | null = null
 
 // parser state

@@ -181,6 +181,7 @@ export interface TextNode extends Node {
 export interface CommentNode extends Node {
   type: NodeTypes.COMMENT
   content: string
+  codegenNode?: CallExpression | SimpleExpressionNode // when hoisted
 }
 
 export interface AttributeNode extends Node {
