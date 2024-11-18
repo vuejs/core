@@ -440,7 +440,7 @@ export function propagate(subs: Link): void {
   let stack = 0
 
   top: do {
-    const sub: Link['sub'] = link.sub
+    const sub = link.sub
     const subTrackId = sub.trackId
 
     if (subTrackId > 0) {
