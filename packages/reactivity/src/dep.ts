@@ -387,5 +387,7 @@ export function getDepFromReactive(
   key: string | number | symbol,
 ): Dep | undefined {
   const depMap = targetMap.get(object)
+  // #12427, while the target object is an array, the dep key(array index) must be string
+  if (isArray(object) && typeof key === 'number') key = key.toString()
   return depMap && depMap.get(key)
 }
