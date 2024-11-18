@@ -2,6 +2,7 @@ import { type ComputedRef, computed } from '../src/computed'
 import { isReactive, reactive, shallowReactive, toRaw } from '../src/reactive'
 import { isRef, ref } from '../src/ref'
 import { effect } from '../src/effect'
+import { getDepFromReactive } from '../src/dep'
 
 describe('reactivity/reactive/Array', () => {
   test('should make Array reactive', () => {
@@ -277,6 +278,13 @@ describe('reactivity/reactive/Array', () => {
     proxy.push(1)
     expect(array).toHaveLength(1)
     expect(proxy).toHaveLength(1)
+  })
+
+  // #12427
+  test('get reactive array dep', () => {
+    const array = reactive<number[]>([1])
+    effect(() => array[0])
+    expect(getDepFromReactive(toRaw(array), 0)).toBeDefined()
   })
 
   describe('Array methods w/ refs', () => {
