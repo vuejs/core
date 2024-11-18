@@ -51,7 +51,7 @@ export function renderComponentRoot(
     vnode,
     proxy,
     withProxy,
-    propsOptions: [propsOptions],
+    propsOptions: [propsOption],
     slots,
     attrs,
     emit,
@@ -158,15 +158,12 @@ export function renderComponentRoot(
     const keys = Object.keys(fallthroughAttrs)
     if (keys.length) {
       if (isElementRoot(root)) {
-        if (propsOptions && keys.some(isModelListener)) {
+        if (propsOption && keys.some(isModelListener)) {
           // If a v-model listener (onUpdate:xxx) has a corresponding declared
           // prop, it indicates this component expects to handle v-model and
           // it should not fallthrough.
           // related: #1543, #1643, #1989
-          fallthroughAttrs = filterModelListeners(
-            fallthroughAttrs,
-            propsOptions,
-          )
+          fallthroughAttrs = filterModelListeners(fallthroughAttrs, propsOption)
         }
         root = cloneVNode(root, fallthroughAttrs, false, true)
       } else if (__DEV__ && !accessedAttrs && root.type !== Comment) {
