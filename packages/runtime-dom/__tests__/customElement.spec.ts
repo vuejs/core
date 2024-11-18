@@ -147,22 +147,22 @@ describe('defineCustomElement', () => {
     })
 
     // #12412
-    test('remove element with child custom element and wait fully disconnected then insert', async () => {
-      const El = defineCustomElement({
-        props: {
-          msg: String,
-        },
-        setup(props, { expose }) {
-          expose({
-            text: () => props.msg,
-          })
-          provide('context', props)
-          const context = inject('context', {}) as typeof props
-          return () => context.msg || props.msg
-        },
-      })
-      customElements.define('my-el-remove-insert-expose', El)
-      container.innerHTML = `<div><my-el-remove-insert-expose msg="msg1"><my-el-remove-insert-expose></my-el-remove-insert-expose></my-el-remove-insert-expose></div>`
+    const ContextEl = defineCustomElement({
+      props: {
+        msg: String,
+      },
+      setup(props, { expose }) {
+        expose({
+          text: () => props.msg,
+        })
+        provide('context', props)
+        const context = inject('context', {}) as typeof props
+        return () => context.msg || props.msg
+      },
+    })
+    customElements.define('my-context-el', ContextEl)
+    test('remove element with child custom element and wait fully disconnected then append and change attribute', async () => {
+      container.innerHTML = `<div><my-context-el msg="msg1"><my-context-el></my-context-el></my-context-el></div>`
       const parent = container.children[0].children[0] as VueElement & {
         text: () => string
       }
@@ -181,6 +181,17 @@ describe('defineCustomElement', () => {
       expect(parent.shadowRoot!.textContent).toBe('msg2')
       await nextTick()
       expect(child.shadowRoot!.textContent).toBe('msg2')
+    })
+
+    test('move element to change parent and context', async () => {
+      container.innerHTML = `<my-context-el msg="msg1"></my-context-el><my-context-el msg="msg2"></my-context-el>`
+      const first = container.children[0] as VueElement,
+        second = container.children[1] as VueElement
+      await nextTick()
+      expect(second.shadowRoot!.textContent).toBe('msg2')
+      first.append(second)
+      await nextTick()
+      expect(second.shadowRoot!.textContent).toBe('msg1')
     })
   })
 

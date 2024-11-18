@@ -286,20 +286,24 @@ export class VueElement
     this._connected = true
 
     // locate nearest Vue custom element parent for provide/inject
-    let parent: Node | null = this
+    let parent: Node | null = this,
+      parentChanged = false
     while (
       (parent = parent && (parent.parentNode || (parent as ShadowRoot).host))
     ) {
       if (parent instanceof VueElement) {
+        parentChanged = parent !== this._parent
         this._parent = parent
         break
       }
     }
 
-    if (!this._instance) {
+    // unmount if parent changed and previously mounted
+    if (this._instance && parentChanged) this._unmount()
+    if (!this._instance || parentChanged) {
       if (this._resolved) {
-        // this element has been fully unmounted, should create observer again and re-mount
-        this._observe()
+        // no instance means observer is cleared, should observe again
+        if (!this._instance) this._observe()
         this._mount(this._def)
       } else {
         if (parent && parent._pendingResolve) {
@@ -321,6 +325,20 @@ export class VueElement
     }
   }
 
+  private _unmount() {
+    this._app && this._app.unmount()
+    if (this._instance) {
+      const exposed = this._instance.exposed
+      if (exposed) {
+        for (const key in exposed) {
+          delete this[key as keyof this]
+        }
+      }
+      this._instance.ce = undefined
+    }
+    this._app = this._instance = null
+  }
+
   disconnectedCallback(): void {
     this._connected = false
     nextTick(() => {
@@ -329,18 +347,7 @@ export class VueElement
           this._ob.disconnect()
           this._ob = null
         }
-        // unmount
-        this._app && this._app.unmount()
-        if (this._instance) {
-          const exposed = this._instance.exposed
-          if (exposed) {
-            for (const key in exposed) {
-              delete this[key as keyof this]
-            }
-          }
-          this._instance.ce = undefined
-        }
-        this._app = this._instance = null
+        this._unmount()
       }
     })
   }
