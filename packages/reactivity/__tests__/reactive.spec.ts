@@ -113,14 +113,15 @@ describe('reactivity/reactive', () => {
   })
 
   // #8647
-  test('observing nest reactive in set', () => {
+  test('observing Set with reactive initial value', () => {
     const observed = reactive({})
     const observedSet = reactive(new Set([observed]))
+
+    expect(observedSet.has(observed)).toBe(true)
     expect(observedSet.size).toBe(1)
-    if (observedSet.has(observed)) {
-      // expect nothing happens
-      observedSet.add(observed)
-    }
+
+    // expect nothing happens
+    observedSet.add(observed)
     expect(observedSet.size).toBe(1)
   })
 
