@@ -80,7 +80,7 @@ export function track(target: object, type: TrackOpTypes, key: unknown): void {
           key,
         })
       }
-      link(dep, activeSub!)
+      link(dep, activeSub!, activeTrackId)
     }
   }
 }

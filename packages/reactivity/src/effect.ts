@@ -133,7 +133,9 @@ export class ReactiveEffect<T = any> implements IEffect, ReactiveEffectOptions {
       return this.fn()
     }
     cleanupEffect(this)
-    const prevSub = startTrack(this)
+    const prevSub = activeSub
+    const prevTrackId = activeTrackId
+    setActiveSub(this, startTrack(this))
 
     try {
       return this.fn()
@@ -144,7 +146,8 @@ export class ReactiveEffect<T = any> implements IEffect, ReactiveEffectOptions {
             'this is likely a Vue internal bug.',
         )
       }
-      endTrack(this, prevSub)
+      setActiveSub(prevSub, prevTrackId)
+      endTrack(this)
       if (this.canPropagate && this.allowRecurse) {
         this.canPropagate = false
         this.notify()
@@ -310,7 +313,7 @@ function cleanupEffect(e: ReactiveEffect) {
   }
 }
 
-//#region Ported from https://github.com/stackblitz/alien-signals/blob/v0.3.0/src/system.ts
+//#region Ported from https://github.com/stackblitz/alien-signals/blob/v0.3.1/src/system.ts
 export interface IEffect extends Subscriber {
   nextNotify: IEffect | undefined
   notify(): void
@@ -360,8 +363,16 @@ let queuedEffects: IEffect | undefined = undefined
 let queuedEffectsTail: IEffect | undefined = undefined
 let linkPool: Link | undefined = undefined
 
+export function setActiveSub(
+  sub: Subscriber | undefined,
+  trackId: number,
+): void {
+  activeSub = sub
+  activeTrackId = trackId
+}
+
 export function startBatch(): void {
-  batchDepth++
+  ++batchDepth
 }
 
 export function endBatch(): void {
@@ -387,7 +398,7 @@ export function drainQueuedEffects(): void {
 //#endregion System
 
 //#region Dependency
-export function link(dep: Dependency, sub: Subscriber): void {
+export function link(dep: Dependency, sub: Subscriber, trackId: number): void {
   const depsTail = sub.depsTail
   const old = depsTail !== undefined ? depsTail.nextDep : sub.deps
 
@@ -400,12 +411,12 @@ export function link(dep: Dependency, sub: Subscriber): void {
       newLink.nextDep = old
       newLink.dep = dep
       newLink.sub = sub
-      newLink.trackId = sub.trackId
+      newLink.trackId = trackId
     } else {
       newLink = {
         dep,
         sub,
-        trackId: sub.trackId,
+        trackId: trackId,
         nextDep: old,
         prevSub: undefined,
         nextSub: undefined,
@@ -429,7 +440,7 @@ export function link(dep: Dependency, sub: Subscriber): void {
     sub.depsTail = newLink
     dep.subsTail = newLink
   } else {
-    old.trackId = sub.trackId
+    old.trackId = trackId
     sub.depsTail = old
   }
 }
@@ -442,28 +453,9 @@ export function propagate(subs: Link): void {
   top: do {
     const sub = link.sub
     const subTrackId = sub.trackId
+    const linkTrackId = link.trackId
 
-    if (subTrackId > 0) {
-      if (subTrackId === link.trackId) {
-        const subDirtyLevel = sub.dirtyLevel
-        if (subDirtyLevel < dirtyLevel) {
-          sub.dirtyLevel = dirtyLevel
-          if (subDirtyLevel === DirtyLevels.None) {
-            sub.canPropagate = true
-
-            if ('subs' in sub && sub.subs !== undefined) {
-              subs = sub.subs
-              subs.prevSub = link
-              link = subs
-              dirtyLevel = DirtyLevels.MaybeDirty
-              stack++
-
-              continue
-            }
-          }
-        }
-      }
-    } else if (subTrackId === -link.trackId) {
+    if (subTrackId === -linkTrackId) {
       const subDirtyLevel = sub.dirtyLevel
       const notDirty = subDirtyLevel === DirtyLevels.None
 
@@ -481,7 +473,7 @@ export function propagate(subs: Link): void {
           subs.prevSub = link
           link = subs
           dirtyLevel = DirtyLevels.MaybeDirty
-          stack++
+          ++stack
 
           continue
         } else if ('notify' in sub) {
@@ -493,12 +485,30 @@ export function propagate(subs: Link): void {
           queuedEffectsTail = sub
         }
       }
+    } else if (subTrackId === linkTrackId) {
+      const subDirtyLevel = sub.dirtyLevel
+      if (subDirtyLevel < dirtyLevel) {
+        sub.dirtyLevel = dirtyLevel
+        if (subDirtyLevel === DirtyLevels.None) {
+          sub.canPropagate = true
+
+          if ('subs' in sub && sub.subs !== undefined) {
+            subs = sub.subs
+            subs.prevSub = link
+            link = subs
+            dirtyLevel = DirtyLevels.MaybeDirty
+            ++stack
+
+            continue
+          }
+        }
+      }
     }
 
     link = link.nextSub!
     if (link === undefined) {
       while (stack > 0) {
-        stack--
+        --stack
         const prevLink = subs.prevSub!
         subs.prevSub = undefined
         subs = prevLink.dep.subs!
@@ -531,7 +541,7 @@ export function checkDirty(deps: Link): boolean {
       if (dirtyLevel === DirtyLevels.MaybeDirty) {
         dep.subs!.prevSub = deps
         deps = dep.deps!
-        stack++
+        ++stack
         continue
       }
       if (dirtyLevel === DirtyLevels.Dirty) {
@@ -541,7 +551,7 @@ export function checkDirty(deps: Link): boolean {
           if (stack > 0) {
             let sub = deps.sub as IComputed
             do {
-              stack--
+              --stack
               const subSubs = sub.subs!
               const prevLink = subSubs.prevSub!
               subSubs.prevSub = undefined
@@ -575,7 +585,7 @@ export function checkDirty(deps: Link): boolean {
       if (stack > 0) {
         let sub = deps.sub as IComputed
         do {
-          stack--
+          --stack
           const subSubs = sub.subs!
           const prevLink = subSubs.prevSub!
           subSubs.prevSub = undefined
@@ -604,33 +614,15 @@ export function checkDirty(deps: Link): boolean {
   } while (true)
 }
 
-export function startTrack(sub: Subscriber): Subscriber | undefined {
-  const newTrackId = lastTrackId + 1
-  const prevSub = activeSub
-
-  activeSub = sub
-  activeTrackId = newTrackId
-  lastTrackId = newTrackId
-
+export function startTrack(sub: Subscriber): number {
+  const newTrackId = ++lastTrackId
   sub.depsTail = undefined
   sub.trackId = newTrackId
   sub.dirtyLevel = DirtyLevels.None
-
-  return prevSub
+  return newTrackId
 }
 
-export function endTrack(
-  sub: Subscriber,
-  prevSub: Subscriber | undefined,
-): void {
-  if (prevSub !== undefined) {
-    activeSub = prevSub
-    activeTrackId = prevSub.trackId
-  } else {
-    activeSub = undefined
-    activeTrackId = 0
-  }
-
+export function endTrack(sub: Subscriber): void {
   const depsTail = sub.depsTail
   if (depsTail !== undefined) {
     if (depsTail.nextDep !== undefined) {

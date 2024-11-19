@@ -216,7 +216,7 @@ function trackRef(dep: Dependency) {
           key: 'value',
         })
       }
-      link(dep, activeSub!)
+      link(dep, activeSub!, activeTrackId)
     }
   }
 }

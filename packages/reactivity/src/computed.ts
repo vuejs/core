@@ -13,6 +13,7 @@ import {
   endTrack,
   link,
   propagate,
+  setActiveSub,
   startTrack,
 } from './effect'
 import { activeEffectScope } from './effectScope'
@@ -147,10 +148,10 @@ export class ComputedRefImpl<T = any> implements IComputed {
             key: 'value',
           })
         }
-        link(this, activeSub!)
+        link(this, activeSub!, activeTrackId)
       }
     } else if (activeEffectScope !== undefined) {
-      link(this, activeEffectScope)
+      link(this, activeEffectScope, Math.abs(activeEffectScope.trackId))
     }
     return this._value!
   }
@@ -164,13 +165,16 @@ export class ComputedRefImpl<T = any> implements IComputed {
   }
 
   update(): boolean {
-    const prevSub = startTrack(this)
+    const prevSub = activeSub
+    const prevTrackId = activeTrackId
+    setActiveSub(this, startTrack(this))
     const oldValue = this._value
     let newValue: T
     try {
       newValue = this.fn(oldValue)
     } finally {
-      endTrack(this, prevSub)
+      setActiveSub(prevSub, prevTrackId)
+      endTrack(this)
     }
     if (hasChanged(oldValue, newValue)) {
       this._value = newValue
