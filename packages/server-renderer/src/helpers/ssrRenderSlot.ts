@@ -62,7 +62,7 @@ export function ssrRenderSlotInner(
       parentComponent,
       slotScopeId ? ' ' + slotScopeId : '',
     )
-    if (isArray(ret)) {
+    if (isArray(ret) && slotBuffer.length === 0) {
       const validSlotContent = ensureValidVNode(ret)
       if (validSlotContent) {
         // normal slot
