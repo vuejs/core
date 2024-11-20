@@ -940,10 +940,7 @@ function resolveCssVars(
     for (const key in cssVars) {
       const value = cssVars[key]
       if (isString(value) || typeof value === 'number') {
-        expectedMap.set(
-          `--${getEscapedCssVarName(key, false)}`,
-          String(cssVars[key]),
-        )
+        expectedMap.set(`--${getEscapedCssVarName(key, false)}`, String(value))
       }
     }
   }
