@@ -904,7 +904,7 @@ function toStyleMap(str: string): Map<string, string> {
     let [key, value] = item.split(':')
     key = key.trim()
     value = value && value.trim()
-    if (key && value) {
+    if (key && isRenderableAttrValue(value)) {
       styleMap.set(key, value)
     }
   }
@@ -939,8 +939,11 @@ function resolveCssVars(
     const cssVars = instance.getCssVars()
     for (const key in cssVars) {
       const value = cssVars[key]
-      if ((isString(value) && value.trim()) || typeof value === 'number') {
-        expectedMap.set(`--${getEscapedCssVarName(key, false)}`, String(value))
+      if (isRenderableAttrValue(value)) {
+        expectedMap.set(
+          `--${getEscapedCssVarName(key, false)}`,
+          String(value).trim(),
+        )
       }
     }
   }

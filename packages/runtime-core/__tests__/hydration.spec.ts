@@ -2207,7 +2207,7 @@ describe('SSR hydration', () => {
 
     test('should not warn on css v-bind non-string & non-number & empty string value', () => {
       const container = document.createElement('div')
-      container.innerHTML = `<div style="padding: 4px;"></div>`
+      container.innerHTML = `<div style="padding: 4px;--bar:;"></div>`
       const app = createSSRApp({
         setup() {
           const value1 = ref<any>(null)
