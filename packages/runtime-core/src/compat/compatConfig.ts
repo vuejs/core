@@ -449,9 +449,8 @@ export function warnDeprecation(
 
   instance = instance || getCurrentInstance()
 
-  // check user config
-  const config = getCompatConfigForKey(key, instance)
-  if (config === 'suppress-warning') {
+  // check if compat is enabled
+  if (!isCompatEnabled(key, instance, true)) {
     return
   }
 
@@ -484,12 +483,6 @@ export function warnDeprecation(
       typeof message === 'function' ? message(...args) : message
     }${link ? `\n  Details: ${link}` : ``}`,
   )
-  if (!isCompatEnabled(key, instance, true)) {
-    console.error(
-      `^ The above deprecation's compat behavior is disabled and will likely ` +
-        `lead to runtime errors.`,
-    )
-  }
 }
 
 export type CompatConfig = Partial<
