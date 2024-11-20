@@ -2204,6 +2204,27 @@ describe('SSR hydration', () => {
       app.mount(container)
       expect(`Hydration style mismatch`).not.toHaveBeenWarned()
     })
+
+    test('should not warn on css v-bind non-string and number value', () => {
+      const container = document.createElement('div')
+      container.innerHTML = `<div style="padding: 4px;"></div>`
+      const app = createSSRApp({
+        setup() {
+          const backGroundColor = ref<any>(null)
+          useCssVars(() => ({
+            'foo.bar': backGroundColor.value,
+          }))
+          return () => h(Child)
+        },
+      })
+      const Child = {
+        setup() {
+          return () => h('div', { style: 'padding: 4px' })
+        },
+      }
+      app.mount(container)
+      expect(`Hydration style mismatch`).not.toHaveBeenWarned()
+    })
   })
 
   describe('data-allow-mismatch', () => {
