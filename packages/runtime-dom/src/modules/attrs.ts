@@ -59,7 +59,7 @@ export function compatCoerceAttr(
 ): boolean {
   if (isEnumeratedAttr(key)) {
     const v2CoercedValue =
-      value === null
+      value == null || value === false || value === 'false'
         ? 'false'
         : typeof value !== 'boolean' && value !== undefined
           ? 'true'
