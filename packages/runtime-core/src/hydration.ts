@@ -939,7 +939,7 @@ function resolveCssVars(
     const cssVars = instance.getCssVars()
     for (const key in cssVars) {
       const value = cssVars[key]
-      if (isString(value) || typeof value === 'number') {
+      if ((isString(value) && value.trim()) || typeof value === 'number') {
         expectedMap.set(`--${getEscapedCssVarName(key, false)}`, String(value))
       }
     }
