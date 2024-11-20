@@ -465,4 +465,31 @@ describe('useCssVars', () => {
     render(h(App), root)
     expect(colorInOnMount).toBe(`red`)
   })
+
+  test('filter non-string、non-boolean、non-number value', () => {
+    const state = reactive<any>({
+      color: 'red',
+      size: {},
+      width: false,
+      height: 10,
+    })
+    const root = document.createElement('div')
+    let style!: CSSStyleDeclaration
+
+    const App = {
+      setup() {
+        useCssVars(() => state)
+        onMounted(() => {
+          style = (root.children[0] as HTMLElement).style
+        })
+        return () => h('div')
+      },
+    }
+
+    render(h(App), root)
+    expect(style.getPropertyValue(`--color`)).toBe(`red`)
+    expect(style.getPropertyValue(`--size`)).toBe(``)
+    expect(style.getPropertyValue(`--width`)).toBe(`false`)
+    expect(style.getPropertyValue(`--height`)).toBe(`10`)
+  })
 })
