@@ -74,7 +74,7 @@
     "@types/node": "^22.9.0",
     "@types/semver": "^7.5.8",
     "@types/serve-handler": "^6.1.4",
-    "@vitest/coverage-v8": "^2.1.1",
+    "@vitest/coverage-v8": "^2.1.5",
     "@vue/consolidate": "1.0.0",
     "conventional-changelog-cli": "^5.0.0",
     "enquirer": "^2.4.1",
@@ -82,9 +82,9 @@
     "esbuild-plugin-polyfill-node": "^0.3.0",
     "eslint": "^9.15.0",
     "eslint-plugin-import-x": "^4.4.2",
-    "@vitest/eslint-plugin": "^1.0.1",
+    "@vitest/eslint-plugin": "^1.1.10",
     "estree-walker": "catalog:",
-    "jsdom": "^25.0.0",
+    "jsdom": "^25.0.1",
     "lint-staged": "^15.2.10",
     "lodash": "^4.17.21",
     "magic-string": "^0.30.12",
@@ -95,7 +95,7 @@
     "prettier": "^3.3.3",
     "pretty-bytes": "^6.1.1",
     "pug": "^3.0.3",
-    "puppeteer": "~23.3.0",
+    "puppeteer": "~23.9.0",
     "rimraf": "^6.0.1",
     "rollup": "^4.27.2",
     "rollup-plugin-dts": "^6.1.1",
@@ -110,7 +110,7 @@
     "typescript": "~5.6.2",
     "typescript-eslint": "^8.14.0",
     "vite": "catalog:",
-    "vitest": "^2.1.1"
+    "vitest": "^2.1.5"
   },
   "pnpm": {
     "peerDependencyRules": {
