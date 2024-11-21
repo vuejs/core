@@ -313,7 +313,7 @@ function cleanupEffect(e: ReactiveEffect) {
   }
 }
 
-//#region Ported from https://github.com/stackblitz/alien-signals/blob/v0.3.1/src/system.ts
+//#region Ported from https://github.com/stackblitz/alien-signals/blob/v0.3.2/src/system.ts
 export interface IEffect extends Subscriber {
   nextNotify: IEffect | undefined
   notify(): void
@@ -532,6 +532,8 @@ export function propagate(subs: Link): void {
 //#region Subscriber
 export function checkDirty(deps: Link): boolean {
   let stack = 0
+  let dirty: boolean
+  let nextDep: Link | undefined
 
   top: do {
     const dep = deps.dep
@@ -544,44 +546,17 @@ export function checkDirty(deps: Link): boolean {
         ++stack
         continue
       }
-      if (dirtyLevel === DirtyLevels.Dirty) {
-        if (dep.update()) {
-          propagate(dep.subs!)
-          let dirty = true
-          if (stack > 0) {
-            let sub = deps.sub as IComputed
-            do {
-              --stack
-              const subSubs = sub.subs!
-              const prevLink = subSubs.prevSub!
-              subSubs.prevSub = undefined
-              if (dirty) {
-                if (sub.update()) {
-                  propagate(subSubs)
-                  deps = prevLink
-                  sub = prevLink.sub as IComputed
-                  dirty = true
-                  continue
-                }
-              } else {
-                sub.dirtyLevel = DirtyLevels.None
-              }
-              deps = prevLink.nextDep!
-              if (deps !== undefined) {
-                continue top
-              }
-              dirty = false
-              sub = prevLink.sub as IComputed
-            } while (stack > 0)
-          }
-          return dirty
-        }
+      if (dirtyLevel === DirtyLevels.Dirty && dep.update()) {
+        propagate(dep.subs!)
+        dirty = true
+      } else {
+        dirty = false
       }
+    } else {
+      dirty = false
     }
 
-    const nextDep = deps.nextDep!
-    if (nextDep === undefined) {
-      let dirty = false
+    if (dirty || (nextDep = deps.nextDep) === undefined) {
       if (stack > 0) {
         let sub = deps.sub as IComputed
         do {
