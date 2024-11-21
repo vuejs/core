@@ -17,7 +17,6 @@ export class EffectScope implements Subscriber {
   depsTail: Link | undefined = undefined
   trackId: number = nextTrackId()
   dirtyLevel: DirtyLevels = DirtyLevels.Dirty
-  canPropagate = false
 
   /**
    * @internal
