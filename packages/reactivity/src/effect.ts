@@ -103,24 +103,7 @@ export class ReactiveEffect<T = any> implements IEffect, ReactiveEffectOptions {
   }
 
   scheduler(): void {
-    this.runIfDirty()
-  }
-
-  /**
-   * @internal
-   */
-  runIfDirty(): void {
-    const dirtyLevel = this.dirtyLevel
-    if (dirtyLevel === DirtyLevels.None) {
-      return
-    }
-    if (dirtyLevel === DirtyLevels.MaybeDirty) {
-      if (checkDirty(this.deps!)) {
-        this.run()
-      } else {
-        this.dirtyLevel = DirtyLevels.None
-      }
-    } else if (dirtyLevel === DirtyLevels.Dirty) {
+    if (this.dirty) {
       this.run()
     }
   }
