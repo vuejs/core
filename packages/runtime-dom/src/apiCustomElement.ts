@@ -575,7 +575,6 @@ export class VueElement
         this._setParent()
       }
     }
-
     return vnode
   }
 
