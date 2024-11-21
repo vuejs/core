@@ -501,7 +501,7 @@ test('local app config should not affect other local apps in v3 mode', () => {
   expect(app2.config.globalProperties.test).toBe(undefined)
 })
 
-test('ATTR_ENUMERATED_COERCION: false', () => {
+test('ATTR_ENUMERATED_COERCION: true', () => {
   const vm = new Vue({
     compatConfig: { ATTR_ENUMERATED_COERCION: true },
     template: `<div><div draggable="false">hello</div></div>`,
