@@ -67,7 +67,7 @@ describe('should warn deprecation while using compat', () => {
     expect(message('draggable', false, false)).not.toHaveBeenWarned()
   })
 
-  test('set compat config to "suppress-warning"', () => {
+  test('set compat config to false', () => {
     Vue.configureCompat({
       ATTR_ENUMERATED_COERCION: false,
     })
