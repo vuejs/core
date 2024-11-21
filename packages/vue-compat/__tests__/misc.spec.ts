@@ -158,35 +158,17 @@ test('CUSTOM_DIR', async () => {
 
   expect(getCalls()).toMatchObject([1, 1, 0, 0, 0])
 
-  expect(
-    (deprecationData[DeprecationTypes.CUSTOM_DIR].message as Function)(
-      'bind',
-      'beforeMount',
-    ),
-  ).toHaveBeenWarned()
-  expect(
-    (deprecationData[DeprecationTypes.CUSTOM_DIR].message as Function)(
-      'inserted',
-      'mounted',
-    ),
-  ).toHaveBeenWarned()
+  const message = deprecationData[DeprecationTypes.CUSTOM_DIR]
+    .message as Function
+  expect(message('bind', 'beforeMount')).toHaveBeenWarned()
+  expect(message('inserted', 'mounted')).toHaveBeenWarned()
 
   vm.foo++
   await nextTick()
   expect(getCalls()).toMatchObject([1, 1, 1, 1, 0])
 
-  expect(
-    (deprecationData[DeprecationTypes.CUSTOM_DIR].message as Function)(
-      'update',
-      'updated',
-    ),
-  ).toHaveBeenWarned()
-  expect(
-    (deprecationData[DeprecationTypes.CUSTOM_DIR].message as Function)(
-      'componentUpdated',
-      'updated',
-    ),
-  ).toHaveBeenWarned()
+  expect(message('update', 'updated')).toHaveBeenWarned()
+  expect(message('componentUpdated', 'updated')).toHaveBeenWarned()
 })
 
 test('ATTR_FALSE_VALUE', () => {
@@ -196,16 +178,28 @@ test('ATTR_FALSE_VALUE', () => {
   expect(vm.$el).toBeInstanceOf(HTMLDivElement)
   expect(vm.$el.hasAttribute('id')).toBe(false)
   expect(vm.$el.hasAttribute('foo')).toBe(false)
-  expect(
-    (deprecationData[DeprecationTypes.ATTR_FALSE_VALUE].message as Function)(
-      'id',
-    ),
-  ).toHaveBeenWarned()
-  expect(
-    (deprecationData[DeprecationTypes.ATTR_FALSE_VALUE].message as Function)(
-      'foo',
-    ),
-  ).toHaveBeenWarned()
+
+  const message = deprecationData[DeprecationTypes.ATTR_FALSE_VALUE]
+    .message as Function
+  expect(message('id')).toHaveBeenWarned()
+  expect(message('foo')).toHaveBeenWarned()
+})
+
+test(`ATTR_FALSE_VALUE with 'suppress-warning' value shouldn't throw warning`, () => {
+  const vm = new Vue({
+    template: `<div :id="false" :foo="false"/>`,
+    compatConfig: {
+      ATTR_FALSE_VALUE: 'suppress-warning',
+    },
+  }).$mount()
+  expect(vm.$el).toBeInstanceOf(HTMLDivElement)
+  expect(vm.$el.hasAttribute('id')).toBe(false)
+  expect(vm.$el.hasAttribute('foo')).toBe(false)
+
+  const message = deprecationData[DeprecationTypes.ATTR_FALSE_VALUE]
+    .message as Function
+  expect(message('id')).not.toHaveBeenWarned()
+  expect(message('foo')).not.toHaveBeenWarned()
 })
 
 test("ATTR_FALSE_VALUE with false value shouldn't throw warning", () => {
@@ -221,16 +215,11 @@ test("ATTR_FALSE_VALUE with false value shouldn't throw warning", () => {
   expect(vm.$el.getAttribute('id')).toBe('false')
   expect(vm.$el.hasAttribute('foo')).toBe(true)
   expect(vm.$el.getAttribute('foo')).toBe('false')
-  expect(
-    (deprecationData[DeprecationTypes.ATTR_FALSE_VALUE].message as Function)(
-      'id',
-    ),
-  ).not.toHaveBeenWarned()
-  expect(
-    (deprecationData[DeprecationTypes.ATTR_FALSE_VALUE].message as Function)(
-      'foo',
-    ),
-  ).not.toHaveBeenWarned()
+
+  const message = deprecationData[DeprecationTypes.ATTR_FALSE_VALUE]
+    .message as Function
+  expect(message('id')).not.toHaveBeenWarned()
+  expect(message('foo')).not.toHaveBeenWarned()
 })
 
 test('ATTR_ENUMERATED_COERCION', () => {
@@ -242,22 +231,10 @@ test('ATTR_ENUMERATED_COERCION', () => {
   expect(vm.$el.getAttribute('draggable')).toBe('false')
   expect(vm.$el.getAttribute('spellcheck')).toBe('true')
   expect(vm.$el.getAttribute('contenteditable')).toBe('true')
-  expect(
-    (
-      deprecationData[DeprecationTypes.ATTR_ENUMERATED_COERCION]
-        .message as Function
-    )('draggable', null, 'false'),
-  ).toHaveBeenWarned()
-  expect(
-    (
-      deprecationData[DeprecationTypes.ATTR_ENUMERATED_COERCION]
-        .message as Function
-    )('spellcheck', 0, 'true'),
-  ).toHaveBeenWarned()
-  expect(
-    (
-      deprecationData[DeprecationTypes.ATTR_ENUMERATED_COERCION]
-        .message as Function
-    )('contenteditable', 'foo', 'true'),
-  ).toHaveBeenWarned()
+
+  const message = deprecationData[DeprecationTypes.ATTR_ENUMERATED_COERCION]
+    .message as Function
+  expect(message('draggable', null, 'false')).toHaveBeenWarned()
+  expect(message('spellcheck', 0, 'true')).toHaveBeenWarned()
+  expect(message('contenteditable', 'foo', 'true')).toHaveBeenWarned()
 })
