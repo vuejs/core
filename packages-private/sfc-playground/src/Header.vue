@@ -15,6 +15,7 @@ const props = defineProps<{
   prod: boolean
   ssr: boolean
   autoSave: boolean
+  theme: 'dark' | 'light'
 }>()
 const emit = defineEmits([
   'toggle-theme',
@@ -45,6 +46,7 @@ function resetVueVersion() {
 
 async function copyLink(e: MouseEvent) {
   if (e.metaKey) {
+    resetVueVersion()
     // hidden logic for going to local debug from play.vuejs.org
     window.location.href = 'http://localhost:5173/' + window.location.hash
     return
@@ -117,7 +119,11 @@ function toggleDark() {
       >
         <span>{{ autoSave ? 'AutoSave ON' : 'AutoSave OFF' }}</span>
       </button>
-      <button title="Toggle dark mode" class="toggle-dark" @click="toggleDark">
+      <button
+        :title="`Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`"
+        class="toggle-dark"
+        @click="toggleDark"
+      >
         <Sun class="light" />
         <Moon class="dark" />
       </button>

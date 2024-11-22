@@ -5,6 +5,7 @@ import {
   type ExpressionNode,
   NodeTypes,
   type PlainElementNode,
+  type TemplateChildNode,
   createCallExpression,
   createConditionalExpression,
   createDOMCompilerError,
@@ -162,11 +163,18 @@ export const ssrTransformModel: DirectiveTransform = (dir, node, context) => {
       checkDuplicatedValue()
       node.children = [createInterpolation(model, model.loc)]
     } else if (node.tag === 'select') {
-      node.children.forEach(child => {
-        if (child.type === NodeTypes.ELEMENT) {
-          processOption(child as PlainElementNode)
-        }
-      })
+      const processChildren = (children: TemplateChildNode[]) => {
+        children.forEach(child => {
+          if (child.type === NodeTypes.ELEMENT) {
+            processOption(child as PlainElementNode)
+          } else if (child.type === NodeTypes.FOR) {
+            processChildren(child.children)
+          } else if (child.type === NodeTypes.IF) {
+            child.branches.forEach(b => processChildren(b.children))
+          }
+        })
+      }
+      processChildren(node.children)
     } else {
       context.onError(
         createDOMCompilerError(
