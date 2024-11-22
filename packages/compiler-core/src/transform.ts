@@ -116,7 +116,7 @@ export interface TransformContext
   addIdentifiers(exp: ExpressionNode | string): void
   removeIdentifiers(exp: ExpressionNode | string): void
   hoist(exp: string | JSChildNode | ArrayExpression): SimpleExpressionNode
-  cache(exp: JSChildNode, isVNode?: boolean): CacheExpression
+  cache(exp: JSChildNode, isVNode?: boolean, inVOnce?: boolean): CacheExpression
   constantCache: WeakMap<TemplateChildNode, ConstantTypes>
 
   // 2.x Compat only
@@ -297,11 +297,12 @@ export function createTransformContext(
       identifier.hoisted = exp
       return identifier
     },
-    cache(exp, isVNode = false) {
+    cache(exp, isVNode = false, inVOnce = false) {
       const cacheExp = createCacheExpression(
         context.cached.length,
         exp,
         isVNode,
+        inVOnce,
       )
       context.cached.push(cacheExp)
       return cacheExp

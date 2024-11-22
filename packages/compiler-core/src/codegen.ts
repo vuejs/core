@@ -1017,7 +1017,9 @@ function genCacheExpression(node: CacheExpression, context: CodegenContext) {
   push(`_cache[${node.index}] || (`)
   if (needPauseTracking) {
     indent()
-    push(`${helper(SET_BLOCK_TRACKING)}(-1),`)
+    push(`${helper(SET_BLOCK_TRACKING)}(-1`)
+    if (node.inVOnce) push(`, true`)
+    push(`),`)
     newline()
     push(`(`)
   }

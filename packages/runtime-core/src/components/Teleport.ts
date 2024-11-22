@@ -164,11 +164,32 @@ export const TeleportImpl = {
       }
 
       if (isTeleportDeferred(n2.props)) {
-        queuePostRenderEffect(mountToTarget, parentSuspense)
+        queuePostRenderEffect(() => {
+          mountToTarget()
+          n2.el!.__isMounted = true
+        }, parentSuspense)
       } else {
         mountToTarget()
       }
     } else {
+      if (isTeleportDeferred(n2.props) && !n1.el!.__isMounted) {
+        queuePostRenderEffect(() => {
+          TeleportImpl.process(
+            n1,
+            n2,
+            container,
+            anchor,
+            parentComponent,
+            parentSuspense,
+            namespace,
+            slotScopeIds,
+            optimized,
+            internals,
+          )
+          delete n1.el!.__isMounted
+        }, parentSuspense)
+        return
+      }
       // update content
       n2.el = n1.el
       n2.targetStart = n1.targetStart
