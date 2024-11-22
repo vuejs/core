@@ -904,7 +904,7 @@ function toStyleMap(str: string): Map<string, string> {
     let [key, value] = item.split(':')
     key = key.trim()
     value = value && value.trim()
-    if (key && isRenderableAttrValue(value)) {
+    if (key) {
       styleMap.set(key, value)
     }
   }

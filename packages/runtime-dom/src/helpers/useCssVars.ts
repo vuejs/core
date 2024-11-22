@@ -10,7 +10,7 @@ import {
   warn,
   watch,
 } from '@vue/runtime-core'
-import { NOOP, ShapeFlags, isRenderableAttrValue } from '@vue/shared'
+import { NOOP, ShapeFlags } from '@vue/shared'
 
 export const CSS_VAR_TEXT: unique symbol = Symbol(__DEV__ ? 'CSS_VAR_TEXT' : '')
 /**
@@ -99,12 +99,8 @@ function setVarsOnNode(el: Node, vars: Record<string, string>) {
     const style = (el as HTMLElement).style
     let cssText = ''
     for (const key in vars) {
-      const value = vars[key]
-      if (isRenderableAttrValue(value)) {
-        const trimVal = String(value).trim()
-        style.setProperty(`--${key}`, trimVal)
-        cssText += `--${key}: ${trimVal};`
-      }
+      style.setProperty(`--${key}`, vars[key])
+      cssText += `--${key}: ${vars[key]};`
     }
     ;(style as any)[CSS_VAR_TEXT] = cssText
   }
