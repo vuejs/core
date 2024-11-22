@@ -38,7 +38,7 @@ import { vShowOriginalDisplay } from '../../runtime-dom/src/directives/vShow'
 import type { HMRRuntime } from '../src/hmr'
 
 declare var __VUE_HMR_RUNTIME__: HMRRuntime
-const { createRecord, reload } = __VUE_HMR_RUNTIME__
+const { reload } = __VUE_HMR_RUNTIME__
 
 function mountWithHydration(html: string, render: () => any) {
   const container = document.createElement('div')
@@ -1852,7 +1852,6 @@ describe('SSR hydration', () => {
       __hmrId: appId,
       template: `<div>foo</div>`,
     }
-    createRecord(appId, App)
 
     const root = document.createElement('div')
     root.innerHTML = await renderToString(h(App))
