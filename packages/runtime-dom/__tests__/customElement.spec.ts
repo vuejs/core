@@ -1358,9 +1358,7 @@ describe('defineCustomElement', () => {
       )
 
       // hmr
-      __VUE_HMR_RUNTIME__.reload(__hmrId, {
-        ...def,
-      } as any)
+      __VUE_HMR_RUNTIME__.reload(__hmrId, def as any)
 
       await nextTick()
       expect(el.shadowRoot?.innerHTML).toBe(
