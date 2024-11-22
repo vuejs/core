@@ -2205,16 +2205,18 @@ describe('SSR hydration', () => {
       expect(`Hydration style mismatch`).not.toHaveBeenWarned()
     })
 
-    test('should not warn on css v-bind non-string & non-number & empty string value', () => {
+    test('style var with falsy values', () => {
       const container = document.createElement('div')
       container.innerHTML = `<div style="padding: 4px;--bar:;"></div>`
       const app = createSSRApp({
         setup() {
           const value1 = ref<any>(null)
           const value2 = ref('')
+          const value3 = ref<any>(undefined)
           useCssVars(() => ({
             foo: value1.value,
             bar: value2.value,
+            baz: value3.value,
           }))
           return () => h(Child)
         },
