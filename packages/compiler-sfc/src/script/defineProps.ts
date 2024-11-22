@@ -48,6 +48,7 @@ export function processDefineProps(
   ctx: ScriptCompileContext,
   node: Node,
   declId?: LVal,
+  isWithDefaults = false,
 ): boolean {
   if (!isCallOf(node, DEFINE_PROPS)) {
     return processWithDefaults(ctx, node, declId)
@@ -81,7 +82,7 @@ export function processDefineProps(
   }
 
   // handle props destructure
-  if (declId && declId.type === 'ObjectPattern') {
+  if (!isWithDefaults && declId && declId.type === 'ObjectPattern') {
     processPropsDestructure(ctx, declId)
   }
 
@@ -99,7 +100,14 @@ function processWithDefaults(
   if (!isCallOf(node, WITH_DEFAULTS)) {
     return false
   }
-  if (!processDefineProps(ctx, node.arguments[0], declId)) {
+  if (
+    !processDefineProps(
+      ctx,
+      node.arguments[0],
+      declId,
+      true /* isWithDefaults */,
+    )
+  ) {
     ctx.error(
       `${WITH_DEFAULTS}' first argument must be a ${DEFINE_PROPS} call.`,
       node.arguments[0] || node,
@@ -113,10 +121,11 @@ function processWithDefaults(
       node,
     )
   }
-  if (ctx.propsDestructureDecl) {
-    ctx.error(
+  if (declId && declId.type === 'ObjectPattern') {
+    ctx.warn(
       `${WITH_DEFAULTS}() is unnecessary when using destructure with ${DEFINE_PROPS}().\n` +
-        `Prefer using destructure default values, e.g. const { foo = 1 } = defineProps(...).`,
+        `Reactive destructure will be disabled when using withDefaults().\n` +
+        `Prefer using destructure default values, e.g. const { foo = 1 } = defineProps(...). `,
       node.callee,
     )
   }

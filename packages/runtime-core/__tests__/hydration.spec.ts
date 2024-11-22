@@ -1908,6 +1908,21 @@ describe('SSR hydration', () => {
       expect(`Hydration attribute mismatch`).toHaveBeenWarned()
     })
 
+    // #11873
+    test('<textarea> with newlines at the beginning', async () => {
+      const render = () => h('textarea', null, '\nhello')
+      const html = await renderToString(createSSRApp({ render }))
+      mountWithHydration(html, render)
+      expect(`Hydration text content mismatch`).not.toHaveBeenWarned()
+    })
+
+    test('<pre> with newlines at the beginning', async () => {
+      const render = () => h('pre', null, '\n')
+      const html = await renderToString(createSSRApp({ render }))
+      mountWithHydration(html, render)
+      expect(`Hydration text content mismatch`).not.toHaveBeenWarned()
+    })
+
     test('boolean attr handling', () => {
       mountWithHydration(`<input />`, () => h('input', { readonly: false }))
       expect(`Hydration attribute mismatch`).not.toHaveBeenWarned()

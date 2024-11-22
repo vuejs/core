@@ -41,11 +41,8 @@ export interface SchedulerJob extends Function {
 // 定义SchedulerJobs类型，可以是一个SchedulerJob实例或其数组
 export type SchedulerJobs = SchedulerJob | SchedulerJob[]
 
-let isFlushing = false // 标记当前是否正在执行队列中的任务
-let isFlushPending = false // 标记是否已有任务等待执行
-
-const queue: SchedulerJob[] = [] // 存储待执行任务的队列
-let flushIndex = 0 // 当前执行到队列中的哪个位置
+const queue: SchedulerJob[] = []
+let flushIndex = -1
 
 const pendingPostFlushCbs: SchedulerJob[] = [] // 存储待执行的后置回调函数
 let activePostFlushCbs: SchedulerJob[] | null = null // 当前正在执行的后置回调函数队列
@@ -84,7 +81,7 @@ export function nextTick<T = void, R = void>(
 // watcher should be inserted immediately before the update job. This allows
 // watchers to be skipped if the component is unmounted by the parent update.
 function findInsertionIndex(id: number) {
-  let start = isFlushing ? flushIndex + 1 : 0
+  let start = flushIndex + 1
   let end = queue.length
 
   while (start < end) {
@@ -128,8 +125,7 @@ export function queueJob(job: SchedulerJob): void {
  * 需要刷新队列时调用，触发任务的执行
  */
 function queueFlush() {
-  if (!isFlushing && !isFlushPending) {
-    isFlushPending = true
+  if (!currentFlushPromise) {
     currentFlushPromise = resolvedPromise.then(flushJobs)
   }
 }
@@ -161,8 +157,8 @@ export function queuePostFlushCb(cb: SchedulerJobs): void {
 export function flushPreFlushCbs(
   instance?: ComponentInternalInstance,
   seen?: CountMap,
-  // if currently flushing, skip the current job itself
-  i: number = isFlushing ? flushIndex + 1 : 0,
+  // skip the current job
+  i: number = flushIndex + 1,
 ): void {
   if (__DEV__) {
     seen = seen || new Map()
@@ -177,14 +173,15 @@ export function flushPreFlushCbs(
       if (__DEV__ && checkRecursiveUpdates(seen!, cb)) {
         continue
       }
-      // 从队列中移除已执行的任务，避免重复执行
       queue.splice(i, 1)
       i--
       if (cb.flags! & SchedulerJobFlags.ALLOW_RECURSE) {
         cb.flags! &= ~SchedulerJobFlags.QUEUED
       }
       cb()
-      cb.flags! &= ~SchedulerJobFlags.QUEUED
+      if (!(cb.flags! & SchedulerJobFlags.ALLOW_RECURSE)) {
+        cb.flags! &= ~SchedulerJobFlags.QUEUED
+      }
     }
   }
 }
@@ -237,8 +234,6 @@ const getId = (job: SchedulerJob): number =>
  * @param seen 记录已执行的任务，用于开发环境下的循环更新检查
  */
 function flushJobs(seen?: CountMap) {
-  isFlushPending = false
-  isFlushing = true
   if (__DEV__) {
     seen = seen || new Map()
   }
@@ -267,7 +262,9 @@ function flushJobs(seen?: CountMap) {
           job.i,
           job.i ? ErrorCodes.COMPONENT_UPDATE : ErrorCodes.SCHEDULER,
         )
-        job.flags! &= ~SchedulerJobFlags.QUEUED
+        if (!(job.flags! & SchedulerJobFlags.ALLOW_RECURSE)) {
+          job.flags! &= ~SchedulerJobFlags.QUEUED
+        }
       }
     }
   } finally {
@@ -279,16 +276,13 @@ function flushJobs(seen?: CountMap) {
       }
     }
 
-    flushIndex = 0
+    flushIndex = -1
     queue.length = 0
 
     flushPostFlushCbs(seen)
 
-    isFlushing = false
     currentFlushPromise = null
-    // 如果还有未执行完的任务或者有新的任务加入，则继续执行
-    // some postFlushCb queued jobs!
-    // keep flushing until it drains.
+    // If new jobs have been added to either queue, keep flushing
     if (queue.length || pendingPostFlushCbs.length) {
       flushJobs(seen)
     }
@@ -302,27 +296,23 @@ function flushJobs(seen?: CountMap) {
  * @returns 如果检测到递归更新，则返回true，否则返回false
  */
 function checkRecursiveUpdates(seen: CountMap, fn: SchedulerJob) {
-  if (!seen.has(fn)) {
-    seen.set(fn, 1)
-  } else {
-    const count = seen.get(fn)!
-    if (count > RECURSION_LIMIT) {
-      const instance = fn.i
-      const componentName = instance && getComponentName(instance.type)
-      handleError(
-        `Maximum recursive updates exceeded${
-          componentName ? ` in component <${componentName}>` : ``
-        }. ` +
-          `This means you have a reactive effect that is mutating its own ` +
-          `dependencies and thus recursively triggering itself. Possible sources ` +
-          `include component template, render function, updated hook or ` +
-          `watcher source function.`,
-        null,
-        ErrorCodes.APP_ERROR_HANDLER,
-      )
-      return true
-    } else {
-      seen.set(fn, count + 1)
-    }
+  const count = seen.get(fn) || 0
+  if (count > RECURSION_LIMIT) {
+    const instance = fn.i
+    const componentName = instance && getComponentName(instance.type)
+    handleError(
+      `Maximum recursive updates exceeded${
+        componentName ? ` in component <${componentName}>` : ``
+      }. ` +
+        `This means you have a reactive effect that is mutating its own ` +
+        `dependencies and thus recursively triggering itself. Possible sources ` +
+        `include component template, render function, updated hook or ` +
+        `watcher source function.`,
+      null,
+      ErrorCodes.APP_ERROR_HANDLER,
+    )
+    return true
   }
+  seen.set(fn, count + 1)
+  return false
 }
