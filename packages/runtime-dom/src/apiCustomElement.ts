@@ -298,12 +298,13 @@ export class VueElement
       }
     }
 
-    // unmount if parent changed and previously mounted, should keep parent
+    // unmount if parent changed and previously mounted, should keep parent and observer
     if (this._instance && parentChanged) this._unmount(true)
-    if (!this._instance) {
+    if (!this._instance || parentChanged) {
       if (this._resolved) {
-        this._setParent()
-        this._update()
+        // no instance means no observer
+        if (!this._instance) this._observe()
+        this._mount(this._def)
       } else {
         if (parent && parent._pendingResolve) {
           this._pendingResolve = parent._pendingResolve.then(() => {
@@ -324,10 +325,13 @@ export class VueElement
     }
   }
 
-  private _unmount(keepParent?: boolean) {
-    if (this._ob) {
-      this._ob.disconnect()
-      this._ob = null
+  private _unmount(keepParentAndOb?: boolean) {
+    if (!keepParentAndOb) {
+      this._parent = undefined
+      if (this._ob) {
+        this._ob.disconnect()
+        this._ob = null
+      }
     }
     this._app && this._app.unmount()
     if (this._instance) {
@@ -340,8 +344,6 @@ export class VueElement
       this._instance.ce = undefined
     }
     this._app = this._instance = null
-    if (!keepParent) this._parent = undefined
-    this._resolved = false
   }
 
   disconnectedCallback(): void {
@@ -351,6 +353,17 @@ export class VueElement
         this._unmount()
       }
     })
+  }
+
+  private _observe() {
+    if (!this._ob) {
+      this._ob = new MutationObserver(mutations => {
+        for (const m of mutations) {
+          this._setAttr(m.attributeName!)
+        }
+      })
+    }
+    this._ob.observe(this, { attributes: true })
   }
 
   /**
@@ -367,13 +380,7 @@ export class VueElement
     }
 
     // watch future attr changes
-    this._ob = new MutationObserver(mutations => {
-      for (const m of mutations) {
-        this._setAttr(m.attributeName!)
-      }
-    })
-
-    this._ob.observe(this, { attributes: true })
+    this._observe()
 
     const resolve = (def: InnerComponentDef, isAsync = false) => {
       this._resolved = true
@@ -534,7 +541,7 @@ export class VueElement
         } else if (!val) {
           this.removeAttribute(hyphenate(key))
         }
-        ob && ob.observe(this, { attributes: true })
+        this._observe()
       }
     }
   }

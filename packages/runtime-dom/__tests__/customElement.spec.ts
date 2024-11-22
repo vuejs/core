@@ -147,10 +147,12 @@ describe('defineCustomElement', () => {
     })
 
     // #12412
+    const contextElStyle = ':host { color: red }'
     const ContextEl = defineCustomElement({
       props: {
         msg: String,
       },
+      styles: [contextElStyle],
       setup(props, { expose }) {
         expose({
           text: () => props.msg,
@@ -171,27 +173,33 @@ describe('defineCustomElement', () => {
       await nextTick()
       await nextTick() // wait two ticks for disconnect
       expect('text' in parent).toBe(false)
+      expect(child.shadowRoot!.querySelectorAll('style').length).toBe(1)
       container.appendChild(parent) // should not throw Error
       await nextTick()
       expect(parent.text()).toBe('msg1')
-      expect(parent.shadowRoot!.textContent).toBe('msg1')
-      expect(child.shadowRoot!.textContent).toBe('msg1')
+      expect(parent.shadowRoot!.textContent).toBe(contextElStyle + 'msg1')
+      expect(child.shadowRoot!.textContent).toBe(contextElStyle + 'msg1')
       parent.setAttribute('msg', 'msg2')
       await nextTick()
-      expect(parent.shadowRoot!.textContent).toBe('msg2')
+      expect(parent.shadowRoot!.textContent).toBe(contextElStyle + 'msg2')
       await nextTick()
-      expect(child.shadowRoot!.textContent).toBe('msg2')
+      expect(child.shadowRoot!.textContent).toBe(contextElStyle + 'msg2')
+      expect(child.shadowRoot!.querySelectorAll('style').length).toBe(1)
     })
 
-    test('move element to change parent and context', async () => {
+    test('move element to new parent', async () => {
       container.innerHTML = `<my-context-el msg="msg1"></my-context-el><my-context-el msg="msg2"></my-context-el>`
       const first = container.children[0] as VueElement,
-        second = container.children[1] as VueElement
+        second = container.children[1] as VueElement & { text: () => string }
       await nextTick()
-      expect(second.shadowRoot!.textContent).toBe('msg2')
+      expect(second.shadowRoot!.textContent).toBe(contextElStyle + 'msg2')
       first.append(second)
       await nextTick()
-      expect(second.shadowRoot!.textContent).toBe('msg1')
+      expect(second.shadowRoot!.textContent).toBe(contextElStyle + 'msg1')
+      expect(second.shadowRoot!.querySelectorAll('style').length).toBe(1)
+      second.setAttribute('msg', 'msg3')
+      await nextTick()
+      expect(second.text()).toBe('msg3')
     })
   })
 
