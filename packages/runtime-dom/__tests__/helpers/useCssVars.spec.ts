@@ -465,4 +465,23 @@ describe('useCssVars', () => {
     render(h(App), root)
     expect(colorInOnMount).toBe(`red`)
   })
+
+  test('should set vars as `initial` for nullish values', async () => {
+    const state = reactive<Record<string, unknown>>({
+      color: undefined,
+      size: null,
+    })
+    const root = document.createElement('div')
+    const App = {
+      setup() {
+        useCssVars(() => state)
+        return () => h('div')
+      },
+    }
+    render(h(App), root)
+    await nextTick()
+    const style = (root.children[0] as HTMLElement).style
+    expect(style.getPropertyValue(`--color`)).toBe('initial')
+    expect(style.getPropertyValue(`--size`)).toBe('initial')
+  })
 })

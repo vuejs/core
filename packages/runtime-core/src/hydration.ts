@@ -938,10 +938,8 @@ function resolveCssVars(
   ) {
     const cssVars = instance.getCssVars()
     for (const key in cssVars) {
-      expectedMap.set(
-        `--${getEscapedCssVarName(key, false)}`,
-        String(cssVars[key]),
-      )
+      const value = String(cssVars[key] ?? 'initial')
+      expectedMap.set(`--${getEscapedCssVarName(key, false)}`, value)
     }
   }
   if (vnode === root && instance.parent) {
