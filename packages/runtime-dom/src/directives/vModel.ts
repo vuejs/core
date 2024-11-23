@@ -209,7 +209,7 @@ export const vModelRadio: ModelDirective<HTMLInputElement> = {
 export const vModelSelect: ModelDirective<HTMLSelectElement, 'number'> = {
   // <select multiple> value need to be deep traversed
   deep: true,
-  created(el, { value, oldValue, modifiers: { number } }, vnode) {
+  created(el, { value, modifiers: { number } }, vnode) {
     const isSetModel = isSet(value)
     addEventListener(el, 'change', () => {
       const selectedVal = Array.prototype.filter
