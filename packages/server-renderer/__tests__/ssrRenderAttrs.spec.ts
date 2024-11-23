@@ -203,4 +203,15 @@ describe('ssr: renderStyle', () => {
       }),
     ).toBe(`color:&quot;&gt;&lt;script;`)
   })
+
+  test('useCssVars handling', () => {
+    expect(
+      ssrRenderStyle({
+        fontSize: null,
+        ':--color': undefined,
+        ':--size': null,
+        '--foo': 1,
+      }),
+    ).toBe(`--color:initial;--size:initial;--foo:1;`)
+  })
 })
