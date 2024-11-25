@@ -503,7 +503,7 @@ function getInnerChild(vnode: VNode): VNode | undefined {
   }
   // #7121 ensure get the child component subtree in case
   // it's been replaced during HMR
-  if (__DEV__ && vnode.component) {
+  if (vnode.component) {
     return vnode.component.subTree
   }
 
