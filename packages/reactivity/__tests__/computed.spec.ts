@@ -26,7 +26,7 @@ import {
   triggerRef,
 } from '../src'
 import type { ComputedRef, ComputedRefImpl } from '../src/computed'
-import { DirtyLevels, pauseTracking, resetTracking } from '../src/effect'
+import { SubscriberFlags, pauseTracking, resetTracking } from '../src/effect'
 
 describe('reactivity/computed', () => {
   it('should return updated value', () => {
@@ -466,8 +466,8 @@ describe('reactivity/computed', () => {
     const c2 = computed(() => c1.value) as unknown as ComputedRefImpl
 
     c2.value
-    expect(c1.dirtyLevel).toBe(DirtyLevels.None)
-    expect(c2.dirtyLevel).toBe(DirtyLevels.None)
+    expect(c1.flags & SubscriberFlags.Dirtys).toBe(0)
+    expect(c2.flags & SubscriberFlags.Dirtys).toBe(0)
   })
 
   it('should chained computeds dirtyLevel update with first computed effect', () => {

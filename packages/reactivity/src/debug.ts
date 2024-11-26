@@ -1,6 +1,6 @@
 import { extend } from '@vue/shared'
 import type { DebuggerEventExtraInfo, ReactiveEffectOptions } from './effect'
-import { DirtyLevels, type Link, type Subscriber } from './effect'
+import { type Link, type Subscriber } from './effect'
 
 export const triggerEventInfos: DebuggerEventExtraInfo[] = []
 
@@ -44,26 +44,26 @@ export function onTrigger(sub: Link['sub']): void {
   }
 }
 
-export function setupDirtyLevelHandler(target: Subscriber): void {
+export function setupFlagsHandler(target: Subscriber): void {
   if (!__DEV__) {
     throw new Error(
-      `Internal error: setupDirtyLevelHandler should be called only in development.`,
+      `Internal error: setupFlagsHandler should be called only in development.`,
     )
   }
   // @ts-expect-error
-  target._dirtyLevel = target.dirtyLevel
-  Object.defineProperty(target, 'dirtyLevel', {
+  target._flags = target.flags
+  Object.defineProperty(target, 'flags', {
     get() {
       // @ts-expect-error
-      return target._dirtyLevel
+      return target._flags
     },
     set(value) {
       // @ts-expect-error
-      if (__DEV__ && target._dirtyLevel === DirtyLevels.None) {
+      if (!(target._flags >> 2) && !!(value >> 2)) {
         onTrigger(this)
       }
       // @ts-expect-error
-      target._dirtyLevel = value
+      target._flags = value
     },
   })
 }

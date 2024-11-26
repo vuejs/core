@@ -14,8 +14,6 @@ import {
   type Link,
   activeSub,
   activeTrackId,
-  batchDepth,
-  drainQueuedEffects,
   link,
   propagate,
 } from './effect'
@@ -120,6 +118,7 @@ class RefImpl<T = any> implements Dependency {
   // Dependency
   subs: Link | undefined = undefined
   subsTail: Link | undefined = undefined
+  lastTrackedId = 0
 
   _value: T
   private _rawValue: T
@@ -199,25 +198,20 @@ export function triggerRef(ref: Ref): void {
   const dep = (ref as unknown as RefImpl).dep
   if (dep !== undefined && dep.subs !== undefined) {
     propagate(dep.subs)
-    if (batchDepth === 0) {
-      drainQueuedEffects()
-    }
   }
 }
 
 function trackRef(dep: Dependency) {
-  if (activeTrackId !== 0) {
-    const subsTail = dep.subsTail
-    if (subsTail === undefined || subsTail.trackId !== activeTrackId) {
-      if (__DEV__) {
-        onTrack(activeSub!, {
-          target: dep,
-          type: TrackOpTypes.GET,
-          key: 'value',
-        })
-      }
-      link(dep, activeSub!, activeTrackId)
+  if (activeTrackId !== 0 && dep.lastTrackedId !== activeTrackId) {
+    if (__DEV__) {
+      onTrack(activeSub!, {
+        target: dep,
+        type: TrackOpTypes.GET,
+        key: 'value',
+      })
     }
+    dep.lastTrackedId = activeTrackId
+    link(dep, activeSub!)
   }
 }
 
@@ -313,6 +307,7 @@ class CustomRefImpl<T> implements Dependency {
   // Dependency
   subs: Link | undefined = undefined
   subsTail: Link | undefined = undefined
+  lastTrackedId = 0
 
   private readonly _get: ReturnType<CustomRefFactory<T>>['get']
   private readonly _set: ReturnType<CustomRefFactory<T>>['set']

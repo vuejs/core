@@ -1,20 +1,21 @@
 import { hasChanged, isFunction } from '@vue/shared'
 import { ReactiveFlags, TrackOpTypes } from './constants'
-import { onTrack, setupDirtyLevelHandler } from './debug'
-import type { DebuggerEvent, DebuggerOptions } from './effect'
+import { onTrack, setupFlagsHandler } from './debug'
 import {
   type Dependency,
-  DirtyLevels,
   type IComputed,
   type Link,
   activeSub,
   activeTrackId,
   checkDirty,
+  DebuggerEvent,
+  DebuggerOptions,
   endTrack,
   link,
-  propagate,
+  nextTrackId,
   setActiveSub,
   startTrack,
+  SubscriberFlags,
 } from './effect'
 import { activeEffectScope } from './effectScope'
 import type { Ref } from './ref'
@@ -56,16 +57,17 @@ export class ComputedRefImpl<T = any> implements IComputed {
    * @internal
    */
   _value: T | undefined = undefined
+  version = 0
 
   // Dependency
   subs: Link | undefined = undefined
   subsTail: Link | undefined = undefined
+  lastTrackedId = 0
 
   // Subscriber
   deps: Link | undefined = undefined
   depsTail: Link | undefined = undefined
-  trackId = 0
-  dirtyLevel: DirtyLevels = DirtyLevels.Dirty
+  flags: SubscriberFlags = SubscriberFlags.Dirty
 
   /**
    * @internal
@@ -88,22 +90,25 @@ export class ComputedRefImpl<T = any> implements IComputed {
   }
   // for backwards compat
   get _dirty(): boolean {
-    let dirtyLevel = this.dirtyLevel
-    if (dirtyLevel === DirtyLevels.MaybeDirty) {
+    const flags = this.flags
+    if (flags & SubscriberFlags.Dirty) {
+      return true
+    } else if (flags & SubscriberFlags.ToCheckDirty) {
       if (checkDirty(this.deps!)) {
+        this.flags |= SubscriberFlags.Dirty
         return true
       } else {
-        this.dirtyLevel = DirtyLevels.None
+        this.flags &= ~SubscriberFlags.ToCheckDirty
         return false
       }
     }
-    return dirtyLevel === DirtyLevels.Dirty
+    return false
   }
   set _dirty(v: boolean) {
     if (v) {
-      this.dirtyLevel = DirtyLevels.Dirty
+      this.flags |= SubscriberFlags.Dirty
     } else {
-      this.dirtyLevel = DirtyLevels.None
+      this.flags &= ~SubscriberFlags.Dirtys
     }
   }
 
@@ -124,33 +129,29 @@ export class ComputedRefImpl<T = any> implements IComputed {
   ) {
     this[ReactiveFlags.IS_READONLY] = !setter
     if (__DEV__) {
-      setupDirtyLevelHandler(this)
+      setupFlagsHandler(this)
     }
   }
 
   get value(): T {
     if (this._dirty) {
-      if (this.update()) {
-        const subs = this.subs
-        if (subs !== undefined) {
-          propagate(subs)
-        }
-      }
+      this.update()
     }
-    if (activeTrackId !== 0) {
-      const subsTail = this.subsTail
-      if (subsTail === undefined || subsTail.trackId !== activeTrackId) {
-        if (__DEV__) {
-          onTrack(activeSub!, {
-            target: this,
-            type: TrackOpTypes.GET,
-            key: 'value',
-          })
-        }
-        link(this, activeSub!, activeTrackId)
+    if (activeTrackId !== 0 && this.lastTrackedId !== activeTrackId) {
+      if (__DEV__) {
+        onTrack(activeSub!, {
+          target: this,
+          type: TrackOpTypes.GET,
+          key: 'value',
+        })
       }
-    } else if (activeEffectScope !== undefined) {
-      link(this, activeEffectScope, Math.abs(activeEffectScope.trackId))
+      this.lastTrackedId = activeTrackId
+      link(this, activeSub!).version = this.version
+    } else if (
+      activeEffectScope !== undefined &&
+      this.lastTrackedId !== activeEffectScope.trackId
+    ) {
+      link(this, activeEffectScope)
     }
     return this._value!
   }
@@ -166,7 +167,8 @@ export class ComputedRefImpl<T = any> implements IComputed {
   update(): boolean {
     const prevSub = activeSub
     const prevTrackId = activeTrackId
-    setActiveSub(this, startTrack(this))
+    setActiveSub(this, nextTrackId())
+    startTrack(this)
     const oldValue = this._value
     let newValue: T
     try {
@@ -177,6 +179,7 @@ export class ComputedRefImpl<T = any> implements IComputed {
     }
     if (hasChanged(oldValue, newValue)) {
       this._value = newValue
+      this.version++
       return true
     }
     return false

@@ -15,6 +15,7 @@ import {
 class Dep implements Dependency {
   _subs: Link | undefined = undefined
   subsTail: Link | undefined = undefined
+  lastTrackedId = 0
 
   constructor(
     private map: KeyToDepMap,
@@ -71,8 +72,7 @@ export function track(target: object, type: TrackOpTypes, key: unknown): void {
     if (!dep) {
       depsMap.set(key, (dep = new Dep(depsMap, key)))
     }
-    const subsTail = dep.subsTail
-    if (subsTail === undefined || subsTail.trackId !== activeTrackId) {
+    if (dep.lastTrackedId !== activeTrackId) {
       if (__DEV__) {
         onTrack(activeSub!, {
           target,
@@ -80,7 +80,8 @@ export function track(target: object, type: TrackOpTypes, key: unknown): void {
           key,
         })
       }
-      link(dep, activeSub!, activeTrackId)
+      dep.lastTrackedId = activeTrackId
+      link(dep, activeSub!)
     }
   }
 }
