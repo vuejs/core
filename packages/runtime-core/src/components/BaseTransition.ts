@@ -501,7 +501,7 @@ function getInnerChild(vnode: VNode): VNode | undefined {
 
     return vnode
   }
-  // #7121,#12465 ensure get the child component subtree in case
+  // #7121,#12465 get the component subtree if it's been mounted
   if (vnode.component) {
     return vnode.component.subTree
   }
