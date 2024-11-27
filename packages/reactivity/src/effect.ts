@@ -334,9 +334,9 @@ export interface Link {
   sub: Subscriber | IComputed | (Dependency & IEffect) | IEffect
   version: number
   // Reuse to link prev stack in checkDirty
+  // Reuse to link prev stack in propagate
   prevSub: Link | undefined
   nextSub: Link | undefined
-  // Reuse to link prev stack in propagate
   // Reuse to link next released link in linkPool
   nextDep: Link | undefined
 }
@@ -448,30 +448,28 @@ export function propagate(subs: Link): void {
     const subFlags = sub.flags
 
     if (!(subFlags & SubscriberFlags.Tracking)) {
-      sub.flags |= targetFlag
       let canPropagate = !(subFlags >> 2)
       if (!canPropagate && subFlags & SubscriberFlags.CanPropagate) {
         sub.flags &= ~SubscriberFlags.CanPropagate
         canPropagate = true
       }
       if (canPropagate) {
-        if ('subs' in sub) {
-          const subSubs = sub.subs
-          if (subSubs !== undefined) {
-            if (subSubs.nextSub !== undefined) {
-              sub.depsTail!.nextDep = subs
-              link = subs = subSubs
-              ++stack
-              targetFlag = SubscriberFlags.ToCheckDirty
-            } else {
-              link = subSubs
-              targetFlag =
-                'notify' in sub
-                  ? SubscriberFlags.RunInnerEffects
-                  : SubscriberFlags.ToCheckDirty
-            }
-            continue
+        sub.flags |= targetFlag
+        const subSubs = (sub as Dependency).subs
+        if (subSubs !== undefined) {
+          if (subSubs.nextSub !== undefined) {
+            subSubs.prevSub = subs
+            link = subs = subSubs
+            targetFlag = SubscriberFlags.ToCheckDirty
+            ++stack
+          } else {
+            link = subSubs
+            targetFlag =
+              'notify' in sub
+                ? SubscriberFlags.RunInnerEffects
+                : SubscriberFlags.ToCheckDirty
           }
+          continue
         }
         if ('notify' in sub) {
           if (queuedEffectsTail !== undefined) {
@@ -481,40 +479,41 @@ export function propagate(subs: Link): void {
           }
           queuedEffectsTail = sub
         }
+      } else if (!(sub.flags & targetFlag)) {
+        sub.flags |= targetFlag
       }
     } else if (isValidLink(link, sub)) {
-      sub.flags |= targetFlag
       if (!(subFlags >> 2)) {
-        sub.flags |= SubscriberFlags.CanPropagate
-        if ('subs' in sub) {
-          const subSubs = sub.subs
-          if (subSubs !== undefined) {
-            if (subSubs.nextSub !== undefined) {
-              sub.depsTail!.nextDep = subs
-              link = subs = subSubs
-              ++stack
-              targetFlag = SubscriberFlags.ToCheckDirty
-            } else {
-              link = subSubs
-              targetFlag =
-                'notify' in sub
-                  ? SubscriberFlags.RunInnerEffects
-                  : SubscriberFlags.ToCheckDirty
-            }
-            continue
+        sub.flags |= targetFlag | SubscriberFlags.CanPropagate
+        const subSubs = (sub as Dependency).subs
+        if (subSubs !== undefined) {
+          if (subSubs.nextSub !== undefined) {
+            subSubs.prevSub = subs
+            link = subs = subSubs
+            targetFlag = SubscriberFlags.ToCheckDirty
+            ++stack
+          } else {
+            link = subSubs
+            targetFlag =
+              'notify' in sub
+                ? SubscriberFlags.RunInnerEffects
+                : SubscriberFlags.ToCheckDirty
           }
+          continue
         }
+      } else if (!(sub.flags & targetFlag)) {
+        sub.flags |= targetFlag
       }
     }
 
     if ((nextSub = subs.nextSub) === undefined) {
       if (stack) {
-        let dep = subs.dep as Subscriber
+        let dep = subs.dep
         do {
           --stack
-          const depsTail = dep.depsTail!
-          const prevLink = depsTail.nextDep!
-          depsTail.nextDep = undefined
+          const depSubs = dep.subs!
+          const prevLink = depSubs.prevSub!
+          depSubs.prevSub = undefined
           link = subs = prevLink.nextSub!
           if (subs !== undefined) {
             targetFlag = stack
@@ -522,19 +521,13 @@ export function propagate(subs: Link): void {
               : SubscriberFlags.Dirty
             continue top
           }
-          dep = prevLink.dep as Subscriber
+          dep = prevLink.dep
         } while (stack)
       }
       break
     }
     if (link !== subs) {
-      const dep = subs.dep
-      targetFlag =
-        'update' in dep
-          ? SubscriberFlags.ToCheckDirty
-          : 'notify' in dep
-            ? SubscriberFlags.RunInnerEffects
-            : SubscriberFlags.Dirty
+      targetFlag = stack ? SubscriberFlags.ToCheckDirty : SubscriberFlags.Dirty
     }
     link = subs = nextSub
   } while (true)
@@ -594,7 +587,6 @@ export function checkDirty(deps: Link): boolean {
           subSubs.prevSub = undefined
           if (dirty) {
             if (sub.update()) {
-              deps = prevLink
               sub = prevLink.sub as IComputed
               dirty = true
               continue
