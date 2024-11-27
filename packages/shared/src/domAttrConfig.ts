@@ -79,6 +79,16 @@ export const isKnownHtmlAttr: (key: string) => boolean = /*@__PURE__*/ makeMap(
 )
 
 /**
+ * Generated from https://developer.mozilla.org/en-US/docs/Web/HTML/Global_attributes
+ */
+export const isHTMLGlobalAttr: (key: string) => boolean = /*@__PURE__*/ makeMap(
+  `accesskey,anchor,autocapitalize,autocorrect,autofocus,class,contenteditable,` +
+    `dir,draggable,enterkeyhint,exportparts,hidden,id,inert,inputmode,is,` +
+    `itemid,itemprop,itemref,itemscope,itemtype,lang,nonce,part,popover,role,slot,` +
+    `spellcheck,style,tabindex,title,translate,virtualkeyboardpolicy,writingsuggestions`,
+)
+
+/**
  * Generated from https://developer.mozilla.org/en-US/docs/Web/SVG/Attribute
  */
 export const isKnownSvgAttr: (key: string) => boolean = /*@__PURE__*/ makeMap(
@@ -124,6 +134,14 @@ export const isKnownSvgAttr: (key: string) => boolean = /*@__PURE__*/ makeMap(
 )
 
 /**
+ * Generated from https://developer.mozilla.org/en-US/docs/Web/SVG/Attribute#generic_attributes
+ */
+export const isSvgGlobalAttr: (key: string) => boolean = /*@__PURE__*/ makeMap(
+  `id,class,style,lang,tabindex,xml:base,xml:lang,xml:space,requiredExtensions,` +
+    `requiredFeatures,systemLanguage`,
+)
+
+/**
  * Generated from https://developer.mozilla.org/en-US/docs/Web/MathML/Attribute
  */
 export const isKnownMathMLAttr: (key: string) => boolean =
@@ -143,6 +161,15 @@ export const isKnownMathMLAttr: (key: string) => boolean =
   )
 
 /**
+ * Generated from https://developer.mozilla.org/en-US/docs/Web/MathML/Global_Attributes
+ */
+export const isMathMLGlobalAttr: (key: string) => boolean =
+  /*@__PURE__*/ makeMap(
+    `autofucus,class,dir,displaystyle,id,mathbackground,mathcolor,mathsize,nonce,scriptlevel,` +
+      `style,tabindex`,
+  )
+
+/**
  * Shared between server-renderer and runtime-core hydration logic
  */
 export function isRenderableAttrValue(value: unknown): boolean {
@@ -151,4 +178,55 @@ export function isRenderableAttrValue(value: unknown): boolean {
   }
   const type = typeof value
   return type === 'string' || type === 'number' || type === 'boolean'
+}
+
+/**
+ * cache seen attributes which must be set as attribute
+ */
+export const attributeCache: Record<string, boolean> = Object.create(null)
+
+/*
+ * The following attributes must be set as attribute
+ */
+export function shouldSetAsAttr(tagName: string, key: string): boolean {
+  // these are enumerated attrs, however their corresponding DOM properties
+  // are actually booleans - this leads to setting it with a string "false"
+  // value leading it to be coerced to `true`, so we need to always treat
+  // them as attributes.
+  // Note that `contentEditable` doesn't have this problem: its DOM
+  // property is also enumerated string values.
+  if (key === 'spellcheck' || key === 'draggable' || key === 'translate') {
+    return true
+  }
+
+  // #1787, #2840 form property on form elements is readonly and must be set as
+  // attribute.
+  if (key === 'form') {
+    return true
+  }
+
+  // #1526 <input list> must be set as attribute
+  if (key === 'list' && tagName === 'INPUT') {
+    return true
+  }
+
+  // #2766 <textarea type> must be set as attribute
+  if (key === 'type' && tagName === 'TEXTAREA') {
+    return true
+  }
+
+  // #8780 the width or height of embedded tags must be set as attribute
+  if (key === 'width' || key === 'height') {
+    const tag = tagName
+    if (
+      tag === 'IMG' ||
+      tag === 'VIDEO' ||
+      tag === 'CANVAS' ||
+      tag === 'SOURCE'
+    ) {
+      return true
+    }
+  }
+
+  return false
 }

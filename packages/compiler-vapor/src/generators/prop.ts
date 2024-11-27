@@ -21,7 +21,17 @@ import {
   genCall,
   genMulti,
 } from './utils'
-import { toHandlerKey } from '@vue/shared'
+import {
+  attributeCache,
+  isHTMLGlobalAttr,
+  isHTMLTag,
+  isMathMLGlobalAttr,
+  isMathMLTag,
+  isSVGTag,
+  isSvgGlobalAttr,
+  shouldSetAsAttr,
+  toHandlerKey,
+} from '@vue/shared'
 
 // only the static key prop will reach here
 export function genSetProp(
@@ -31,9 +41,12 @@ export function genSetProp(
   const { vaporHelper } = context
   const {
     prop: { key, values, modifier },
+    tag,
   } = oper
 
   const keyName = key.content
+  const tagName = tag.toUpperCase()
+  const attrCacheKey = `${tagName}_${keyName}`
 
   let helperName: VaporHelper
   let omitKey = false
@@ -45,6 +58,21 @@ export function genSetProp(
     omitKey = true
   } else if (modifier) {
     helperName = modifier === '.' ? 'setDOMProp' : 'setAttr'
+  } else if (
+    attributeCache[attrCacheKey] === undefined
+      ? (attributeCache[attrCacheKey] = shouldSetAsAttr(
+          tag.toUpperCase(),
+          keyName,
+        ))
+      : attributeCache[attrCacheKey]
+  ) {
+    helperName = 'setAttr'
+  } else if (
+    (isHTMLTag(tag) && isHTMLGlobalAttr(keyName)) ||
+    (isSVGTag(tag) && isSvgGlobalAttr(keyName)) ||
+    (isMathMLTag(tag) && isMathMLGlobalAttr(keyName))
+  ) {
+    helperName = 'setDOMProp'
   } else {
     helperName = 'setDynamicProp'
   }

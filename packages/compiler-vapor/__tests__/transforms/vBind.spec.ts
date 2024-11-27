@@ -74,7 +74,7 @@ describe('compiler v-bind', () => {
     })
 
     expect(code).matchSnapshot()
-    expect(code).contains('_setDynamicProp(n0, "id", _ctx.id, true)')
+    expect(code).contains('_setDOMProp(n0, "id", _ctx.id, true)')
   })
 
   test('no expression', () => {
@@ -104,7 +104,7 @@ describe('compiler v-bind', () => {
         ],
       },
     })
-    expect(code).contains('_setDynamicProp(n0, "id", _ctx.id, true)')
+    expect(code).contains('_setDOMProp(n0, "id", _ctx.id, true)')
   })
 
   test('no expression (shorthand)', () => {
@@ -525,6 +525,73 @@ describe('compiler v-bind', () => {
 
     expect(code).contains('renderEffect')
     expect(code).contains('_setAttr(n0, "foo-bar", _ctx.fooBar, true)')
+  })
+
+  test('attributes must be set as attribute', () => {
+    const { code } = compileWithVBind(`
+      <div :spellcheck :draggable :translate :form />
+      <input :list="list" />
+      <textarea :type="type" />
+      <img :width="width" :height="height"/>
+      <video :width="width" :height="height"/>
+      <canvas :width="width" :height="height"/>
+      <source :width="width" :height="height"/>
+    `)
+
+    expect(code).matchSnapshot()
+    expect(code).contains('_setAttr(n0, "spellcheck", _ctx.spellcheck)')
+    expect(code).contains('_setAttr(n0, "draggable", _ctx.draggable)')
+    expect(code).contains('_setAttr(n0, "translate", _ctx.translate)')
+    expect(code).contains('_setAttr(n0, "form", _ctx.form)')
+    expect(code).contains('_setAttr(n1, "list", _ctx.list)')
+    expect(code).contains('_setAttr(n2, "type", _ctx.type)')
+    expect(code).contains('_setAttr(n3, "width", _ctx.width)')
+    expect(code).contains('_setAttr(n3, "height", _ctx.height)')
+    expect(code).contains('_setAttr(n4, "width", _ctx.width)')
+    expect(code).contains('_setAttr(n4, "height", _ctx.height)')
+    expect(code).contains('_setAttr(n5, "width", _ctx.width)')
+    expect(code).contains('_setAttr(n5, "height", _ctx.height)')
+    expect(code).contains('_setAttr(n6, "width", _ctx.width)')
+    expect(code).contains('_setAttr(n6, "height", _ctx.height)')
+  })
+
+  test('HTML global attributes should set as dom prop', () => {
+    const { code } = compileWithVBind(`
+      <div :id="id" :title="title" :lang="lang" :dir="dir" :tabindex="tabindex" />
+    `)
+
+    expect(code).matchSnapshot()
+    expect(code).contains('_setDOMProp(n0, "id", _ctx.id, true)')
+    expect(code).contains('_setDOMProp(n0, "title", _ctx.title, true)')
+    expect(code).contains('_setDOMProp(n0, "lang", _ctx.lang, true)')
+    expect(code).contains('_setDOMProp(n0, "dir", _ctx.dir, true)')
+    expect(code).contains('_setDOMProp(n0, "tabindex", _ctx.tabindex, true)')
+  })
+
+  test('SVG global attributes should set as dom prop', () => {
+    const { code } = compileWithVBind(`
+      <svg :id="id" :lang="lang" :tabindex="tabindex" />
+    `)
+
+    expect(code).matchSnapshot()
+    expect(code).contains('_setDOMProp(n0, "id", _ctx.id, true)')
+    expect(code).contains('_setDOMProp(n0, "lang", _ctx.lang, true)')
+    expect(code).contains('_setDOMProp(n0, "tabindex", _ctx.tabindex, true)')
+  })
+
+  test('MathML global attributes should set as dom prop', () => {
+    const { code } = compileWithVBind(`
+      <math :autofucus :dir :displaystyle :mathcolor :tabindex/>
+    `)
+
+    expect(code).matchSnapshot()
+    expect(code).contains('_setDOMProp(n0, "autofucus", _ctx.autofucus, true)')
+    expect(code).contains('_setDOMProp(n0, "dir", _ctx.dir, true)')
+    expect(code).contains(
+      '_setDOMProp(n0, "displaystyle", _ctx.displaystyle, true)',
+    )
+    expect(code).contains('_setDOMProp(n0, "mathcolor", _ctx.mathcolor, true)')
+    expect(code).contains('_setDOMProp(n0, "tabindex", _ctx.tabindex, true)')
   })
 
   test('number value', () => {

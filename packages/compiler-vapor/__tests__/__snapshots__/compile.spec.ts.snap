@@ -151,7 +151,7 @@ export function render(_ctx, $props, $emit, $attrs, $slots) {
 `;
 
 exports[`compile > directives > v-pre > should not affect siblings after it 1`] = `
-"import { resolveComponent as _resolveComponent, createComponent as _createComponent, createTextNode as _createTextNode, insert as _insert, renderEffect as _renderEffect, setDynamicProp as _setDynamicProp, template as _template } from 'vue/vapor';
+"import { resolveComponent as _resolveComponent, createComponent as _createComponent, createTextNode as _createTextNode, insert as _insert, renderEffect as _renderEffect, setDOMProp as _setDOMProp, template as _template } from 'vue/vapor';
 const t0 = _template("<div :id=\\"foo\\"><Comp></Comp>{{ bar }}</div>")
 const t1 = _template("<div></div>")
 
@@ -162,7 +162,7 @@ export function render(_ctx, $props, $emit, $attrs, $slots) {
   const n1 = _createComponent(_component_Comp)
   const n2 = _createTextNode(() => [_ctx.bar])
   _insert([n1, n2], n3)
-  _renderEffect(() => _setDynamicProp(n3, "id", _ctx.foo))
+  _renderEffect(() => _setDOMProp(n3, "id", _ctx.foo))
   return [n0, n3]
 }"
 `;
@@ -177,7 +177,7 @@ export function render(_ctx) {
 `;
 
 exports[`compile > dynamic root nodes and interpolation 1`] = `
-"import { delegate as _delegate, setInheritAttrs as _setInheritAttrs, renderEffect as _renderEffect, setText as _setText, setDynamicProp as _setDynamicProp, delegateEvents as _delegateEvents, template as _template } from 'vue/vapor';
+"import { delegate as _delegate, setInheritAttrs as _setInheritAttrs, renderEffect as _renderEffect, setText as _setText, setDOMProp as _setDOMProp, delegateEvents as _delegateEvents, template as _template } from 'vue/vapor';
 const t0 = _template("<button></button>")
 _delegateEvents("click")
 
@@ -186,7 +186,7 @@ export function render(_ctx) {
   _delegate(n0, "click", () => _ctx.handleClick)
   _setInheritAttrs(["id"])
   _renderEffect(() => _setText(n0, _ctx.count, "foo", _ctx.count, "foo", _ctx.count))
-  _renderEffect(() => _setDynamicProp(n0, "id", _ctx.count, true))
+  _renderEffect(() => _setDOMProp(n0, "id", _ctx.count, true))
   return n0
 }"
 `;

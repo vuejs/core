@@ -94,6 +94,7 @@ export interface SetPropIRNode extends BaseIRNode {
   element: number
   prop: IRProp
   root: boolean
+  tag: string
 }
 
 export interface SetDynamicPropsIRNode extends BaseIRNode {

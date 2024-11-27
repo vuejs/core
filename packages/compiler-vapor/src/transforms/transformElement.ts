@@ -210,6 +210,7 @@ function transformNativeElement(
           element: context.reference(),
           prop,
           root: singleRoot,
+          tag,
         })
       }
     }
