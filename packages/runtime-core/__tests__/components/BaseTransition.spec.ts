@@ -1200,25 +1200,23 @@ describe('BaseTransition', () => {
   })
 
   // #12465
-  test('mode: "out-in" KeepAlive fallthroughAttrs by PROD', async () => {
+  test('mode: "out-in" w/ KeepAlive + fallthrough attrs (prod mode)', async () => {
     __DEV__ = false
     async function testOutIn({ trueBranch, falseBranch }: ToggleOptions) {
       const toggle = ref(true)
       const { props, cbs } = mockProps({ mode: 'out-in' }, true)
       const root = nodeOps.createElement('div')
-      const show = ref(true)
       const App = {
         render() {
-          return show.value
-            ? h(
-                BaseTransition,
-                {
-                  ...props,
-                  class: 'test',
-                },
-                h(KeepAlive, null, toggle.value ? trueBranch() : falseBranch()),
-              )
-            : null
+          return h(
+            BaseTransition,
+            {
+              ...props,
+              class: 'test',
+            },
+            () =>
+              h(KeepAlive, null, toggle.value ? trueBranch() : falseBranch()),
+          )
         },
       }
       render(h(App), root)
