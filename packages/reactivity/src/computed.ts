@@ -74,9 +74,7 @@ export class ComputedRefImpl<T = any> implements IComputed {
   /**
    * @internal
    */
-  get __v_isRef() {
-    return true
-  }
+  readonly __v_isRef = true
   // TODO isolatedDeclarations ReactiveFlags.IS_REF
   /**
    * @internal
@@ -84,17 +82,15 @@ export class ComputedRefImpl<T = any> implements IComputed {
   readonly __v_isReadonly: boolean
   // TODO isolatedDeclarations ReactiveFlags.IS_READONLY
 
-  /**
-   * for backwards compat
-   * @internal
-   */
+  // for backwards compat
+  get effect(): this {
+    return this
+  }
+  // for backwards compat
   get dep(): Dependency {
     return this
   }
-  /**
-   * for backwards compat
-   * @internal
-   */
+  // for backwards compat
   get _dirty(): boolean {
     const flags = this.flags
     if (flags & SubscriberFlags.Dirty) {
