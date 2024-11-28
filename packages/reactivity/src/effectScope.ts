@@ -1,10 +1,10 @@
-import { nextTrackId, PauseLevels, type ReactiveEffect } from './effect'
+import { PauseLevels, type ReactiveEffect, nextTrackId } from './effect'
 import {
-  endTrack,
   type Link,
-  startTrack,
   type Subscriber,
   SubscriberFlags,
+  endTrack,
+  startTrack,
 } from './system'
 import { warn } from './warning'
 

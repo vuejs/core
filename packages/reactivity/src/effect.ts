@@ -3,13 +3,13 @@ import type { TrackOpTypes, TriggerOpTypes } from './constants'
 import { setupFlagsHandler } from './debug'
 import { activeEffectScope } from './effectScope'
 import {
+  type IEffect,
+  type Link,
+  type Subscriber,
+  SubscriberFlags,
   checkDirty,
   endTrack,
-  IEffect,
-  Link,
   startTrack,
-  Subscriber,
-  SubscriberFlags,
 } from './system'
 import { warn } from './warning'
 

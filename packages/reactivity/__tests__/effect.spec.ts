@@ -22,7 +22,7 @@ import {
   stop,
   toRaw,
 } from '../src/index'
-import { Dependency, endBatch, startBatch } from '../src/system'
+import { type Dependency, endBatch, startBatch } from '../src/system'
 
 describe('reactivity/effect', () => {
   it('should run the passed function once (wrapped by a effect)', () => {

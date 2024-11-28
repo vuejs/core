@@ -2,10 +2,10 @@ import { hasChanged, isFunction } from '@vue/shared'
 import { ReactiveFlags, TrackOpTypes } from './constants'
 import { onTrack, setupFlagsHandler } from './debug'
 import {
+  type DebuggerEvent,
+  type DebuggerOptions,
   activeSub,
   activeTrackId,
-  DebuggerEvent,
-  DebuggerOptions,
   nextTrackId,
   setActiveSub,
 } from './effect'
@@ -15,11 +15,11 @@ import {
   type Dependency,
   type IComputed,
   type Link,
+  SubscriberFlags,
   checkDirty,
   endTrack,
   link,
   startTrack,
-  SubscriberFlags,
 } from './system'
 import { warn } from './warning'
 

@@ -34,7 +34,7 @@ export interface Link {
   nextDep: Link | undefined
 }
 
-export const enum SubscriberFlags {
+export enum SubscriberFlags {
   None = 0,
   Tracking = 1 << 0,
   CanPropagate = 1 << 1,
