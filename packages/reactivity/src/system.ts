@@ -38,7 +38,7 @@ export enum SubscriberFlags {
   None = 0,
   Tracking = 1 << 0,
   CanPropagate = 1 << 1,
-  RunInnerEffects = 1 << 2,
+  // RunInnerEffects = 1 << 2, // Not used in Vue
   ToCheckDirty = 1 << 3,
   Dirty = 1 << 4,
   Dirtys = SubscriberFlags.ToCheckDirty | SubscriberFlags.Dirty,
@@ -152,16 +152,11 @@ export function propagate(subs: Link): void {
         if (subSubs !== undefined) {
           if (subSubs.nextSub !== undefined) {
             subSubs.prevSub = subs
-            link = subs = subSubs
-            targetFlag = SubscriberFlags.ToCheckDirty
+            subs = subSubs
             ++stack
-          } else {
-            link = subSubs
-            targetFlag =
-              'notify' in sub
-                ? SubscriberFlags.RunInnerEffects
-                : SubscriberFlags.ToCheckDirty
           }
+          link = subSubs
+          targetFlag = SubscriberFlags.ToCheckDirty
           continue
         }
         if ('notify' in sub) {
@@ -182,16 +177,11 @@ export function propagate(subs: Link): void {
         if (subSubs !== undefined) {
           if (subSubs.nextSub !== undefined) {
             subSubs.prevSub = subs
-            link = subs = subSubs
-            targetFlag = SubscriberFlags.ToCheckDirty
+            subs = subSubs
             ++stack
-          } else {
-            link = subSubs
-            targetFlag =
-              'notify' in sub
-                ? SubscriberFlags.RunInnerEffects
-                : SubscriberFlags.ToCheckDirty
           }
+          link = subSubs
+          targetFlag = SubscriberFlags.ToCheckDirty
           continue
         }
       } else if (!(sub.flags & targetFlag)) {
