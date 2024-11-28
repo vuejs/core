@@ -26,7 +26,8 @@ import {
   triggerRef,
 } from '../src'
 import type { ComputedRef, ComputedRefImpl } from '../src/computed'
-import { SubscriberFlags, pauseTracking, resetTracking } from '../src/effect'
+import { pauseTracking, resetTracking } from '../src/effect'
+import { SubscriberFlags } from '../src/system'
 
 describe('reactivity/computed', () => {
   it('should return updated value', () => {

@@ -1,13 +1,11 @@
+import { nextTrackId, PauseLevels, type ReactiveEffect } from './effect'
 import {
   endTrack,
   type Link,
-  nextTrackId,
-  PauseLevels,
-  type ReactiveEffect,
   startTrack,
   type Subscriber,
   SubscriberFlags,
-} from './effect'
+} from './system'
 import { warn } from './warning'
 
 export let activeEffectScope: EffectScope | undefined

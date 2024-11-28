@@ -2,23 +2,25 @@ import { hasChanged, isFunction } from '@vue/shared'
 import { ReactiveFlags, TrackOpTypes } from './constants'
 import { onTrack, setupFlagsHandler } from './debug'
 import {
-  type Dependency,
-  type IComputed,
-  type Link,
   activeSub,
   activeTrackId,
-  checkDirty,
   DebuggerEvent,
   DebuggerOptions,
-  endTrack,
-  link,
   nextTrackId,
   setActiveSub,
-  startTrack,
-  SubscriberFlags,
 } from './effect'
 import { activeEffectScope } from './effectScope'
 import type { Ref } from './ref'
+import {
+  type Dependency,
+  type IComputed,
+  type Link,
+  checkDirty,
+  endTrack,
+  link,
+  startTrack,
+  SubscriberFlags,
+} from './system'
 import { warn } from './warning'
 
 declare const ComputedRefSymbol: unique symbol
