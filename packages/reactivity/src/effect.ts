@@ -13,13 +13,6 @@ import {
 } from './system'
 import { warn } from './warning'
 
-export enum EffectFlags {
-  ALLOW_RECURSE = 1 << 2,
-  PAUSED = 1 << 3,
-  NOTIFIED = 1 << 4,
-  STOP = 1 << 5,
-}
-
 export type EffectScheduler = (...args: any[]) => any
 
 export type DebuggerEvent = {
@@ -48,6 +41,16 @@ export interface ReactiveEffectOptions extends DebuggerOptions {
 export interface ReactiveEffectRunner<T = any> {
   (): T
   effect: ReactiveEffect
+}
+
+export enum EffectFlags {
+  /**
+   * ReactiveEffect only
+   */
+  ALLOW_RECURSE = 1 << 2,
+  PAUSED = 1 << 3,
+  NOTIFIED = 1 << 4,
+  STOP = 1 << 5,
 }
 
 export class ReactiveEffect<T = any> implements IEffect, ReactiveEffectOptions {
