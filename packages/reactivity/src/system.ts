@@ -1,4 +1,4 @@
-// Ported from https://github.com/stackblitz/alien-signals/blob/v0.4.3/src/system.ts
+// Ported from https://github.com/stackblitz/alien-signals/blob/v0.4.4/src/system.ts
 
 export interface IEffect extends Subscriber {
   nextNotify: IEffect | undefined
