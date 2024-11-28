@@ -48,7 +48,12 @@ import {
   queueJob,
   queuePostFlushCb,
 } from './scheduler'
-import { ReactiveEffect, pauseTracking, resetTracking } from '@vue/reactivity'
+import {
+  EffectFlags,
+  ReactiveEffect,
+  pauseTracking,
+  resetTracking,
+} from '@vue/reactivity'
 import { updateProps } from './componentProps'
 import { updateSlots } from './componentSlots'
 import { popWarningContext, pushWarningContext, warn } from './warning'
@@ -2419,10 +2424,10 @@ function toggleRecurse(
   allowed: boolean,
 ) {
   if (allowed) {
-    effect.allowRecurse = true
+    effect.flags |= EffectFlags.ALLOW_RECURSE
     job.flags! |= SchedulerJobFlags.ALLOW_RECURSE
   } else {
-    effect.allowRecurse = false
+    effect.flags &= ~EffectFlags.ALLOW_RECURSE
     job.flags! &= ~SchedulerJobFlags.ALLOW_RECURSE
   }
 }

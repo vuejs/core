@@ -13,6 +13,10 @@ import {
 } from './system'
 import { warn } from './warning'
 
+export enum EffectFlags {
+  ALLOW_RECURSE = 1 << 2,
+}
+
 export type EffectScheduler = (...args: any[]) => any
 
 export type DebuggerEvent = {
@@ -35,7 +39,6 @@ export interface DebuggerOptions {
 
 export interface ReactiveEffectOptions extends DebuggerOptions {
   scheduler?: EffectScheduler
-  allowRecurse?: boolean
   onStop?: () => void
 }
 
@@ -57,10 +60,9 @@ export class ReactiveEffect<T = any> implements IEffect, ReactiveEffectOptions {
   // Subscriber
   deps: Link | undefined = undefined
   depsTail: Link | undefined = undefined
-  flags: SubscriberFlags = SubscriberFlags.Dirty
+  flags: number = SubscriberFlags.Dirty
 
   pauseLevel: PauseLevels = PauseLevels.None
-  allowRecurse = false
 
   /**
    * @internal
@@ -139,7 +141,10 @@ export class ReactiveEffect<T = any> implements IEffect, ReactiveEffectOptions {
       }
       setActiveSub(prevSub, prevTrackId)
       endTrack(this)
-      if (this.allowRecurse && this.flags & SubscriberFlags.CanPropagate) {
+      if (
+        this.flags & SubscriberFlags.CanPropagate &&
+        this.flags & EffectFlags.ALLOW_RECURSE
+      ) {
         this.flags &= ~SubscriberFlags.CanPropagate
         this.notify()
       }

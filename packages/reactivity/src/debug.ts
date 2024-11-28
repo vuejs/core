@@ -1,6 +1,6 @@
 import { extend } from '@vue/shared'
 import type { DebuggerEventExtraInfo, ReactiveEffectOptions } from './effect'
-import type { Link, Subscriber } from './system'
+import { type Link, type Subscriber, SubscriberFlags } from './system'
 
 export const triggerEventInfos: DebuggerEventExtraInfo[] = []
 
@@ -58,8 +58,11 @@ export function setupFlagsHandler(target: Subscriber): void {
       return target._flags
     },
     set(value) {
-      // @ts-expect-error
-      if (!(target._flags >> 2) && !!(value >> 2)) {
+      if (
+        // @ts-expect-error
+        !(target._flags >> SubscriberFlags.DirtyFlagsIndex) &&
+        !!(value >> SubscriberFlags.DirtyFlagsIndex)
+      ) {
         onTrigger(this)
       }
       // @ts-expect-error

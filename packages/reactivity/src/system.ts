@@ -42,6 +42,11 @@ export enum SubscriberFlags {
   ToCheckDirty = 1 << 3,
   Dirty = 1 << 4,
   Dirtys = SubscriberFlags.ToCheckDirty | SubscriberFlags.Dirty,
+  All = SubscriberFlags.Tracking |
+    SubscriberFlags.CanPropagate |
+    SubscriberFlags.Dirtys,
+
+  DirtyFlagsIndex = 3,
 }
 
 let batchDepth = 0
@@ -141,7 +146,7 @@ export function propagate(subs: Link): void {
     const subFlags = sub.flags
 
     if (!(subFlags & SubscriberFlags.Tracking)) {
-      let canPropagate = !(subFlags >> 2)
+      let canPropagate = !(subFlags >> SubscriberFlags.DirtyFlagsIndex)
       if (!canPropagate && subFlags & SubscriberFlags.CanPropagate) {
         sub.flags &= ~SubscriberFlags.CanPropagate
         canPropagate = true
@@ -171,7 +176,7 @@ export function propagate(subs: Link): void {
         sub.flags |= targetFlag
       }
     } else if (isValidLink(link, sub)) {
-      if (!(subFlags >> 2)) {
+      if (!(subFlags >> SubscriberFlags.DirtyFlagsIndex)) {
         sub.flags |= targetFlag | SubscriberFlags.CanPropagate
         const subSubs = (sub as Dependency).subs
         if (subSubs !== undefined) {
@@ -293,7 +298,7 @@ export function checkDirty(deps: Link): boolean {
 
 export function startTrack(sub: Subscriber): void {
   sub.depsTail = undefined
-  sub.flags = SubscriberFlags.Tracking
+  sub.flags = (sub.flags & ~SubscriberFlags.All) | SubscriberFlags.Tracking
 }
 
 export function endTrack(sub: Subscriber): void {
@@ -343,7 +348,7 @@ function clearTrack(link: Link): void {
 
     if (dep.subs === undefined && 'deps' in dep) {
       if ('notify' in dep) {
-        dep.flags = SubscriberFlags.None
+        dep.flags &= ~SubscriberFlags.Dirtys
       } else {
         dep.flags |= SubscriberFlags.Dirty
       }
