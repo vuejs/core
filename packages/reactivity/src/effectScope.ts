@@ -1,4 +1,4 @@
-import { PauseLevels, type ReactiveEffect, nextTrackId } from './effect'
+import { EffectFlags, type ReactiveEffect, nextTrackId } from './effect'
 import {
   type Link,
   type Subscriber,
@@ -14,7 +14,7 @@ export class EffectScope implements Subscriber {
   // Subscriber: In order to collect orphans computeds
   deps: Link | undefined = undefined
   depsTail: Link | undefined = undefined
-  flags: SubscriberFlags = SubscriberFlags.None
+  flags: number = SubscriberFlags.None
 
   trackId: number = nextTrackId()
 
@@ -26,8 +26,6 @@ export class EffectScope implements Subscriber {
    * @internal
    */
   cleanups: (() => void)[] = []
-
-  private pauseLevel: PauseLevels = PauseLevels.None
 
   /**
    * only assigned by undetached scope
@@ -57,12 +55,12 @@ export class EffectScope implements Subscriber {
   }
 
   get active(): boolean {
-    return this.pauseLevel !== PauseLevels.Stop
+    return !(this.flags & EffectFlags.STOP)
   }
 
   pause(): void {
-    if (this.pauseLevel === PauseLevels.None) {
-      this.pauseLevel = PauseLevels.Paused
+    if (!(this.flags & EffectFlags.PAUSED)) {
+      this.flags |= EffectFlags.PAUSED
       let i, l
       if (this.scopes) {
         for (i = 0, l = this.scopes.length; i < l; i++) {
@@ -79,8 +77,8 @@ export class EffectScope implements Subscriber {
    * Resumes the effect scope, including all child scopes and effects.
    */
   resume(): void {
-    if (this.pauseLevel === PauseLevels.Paused) {
-      this.pauseLevel = PauseLevels.None
+    if (this.flags & EffectFlags.PAUSED) {
+      this.flags &= ~EffectFlags.PAUSED
       let i, l
       if (this.scopes) {
         for (i = 0, l = this.scopes.length; i < l; i++) {
@@ -125,7 +123,7 @@ export class EffectScope implements Subscriber {
 
   stop(fromParent?: boolean): void {
     if (this.active) {
-      this.pauseLevel = PauseLevels.Stop
+      this.flags |= EffectFlags.STOP
       startTrack(this)
       endTrack(this)
       let i, l

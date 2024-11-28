@@ -39,14 +39,15 @@ export enum SubscriberFlags {
   Tracking = 1 << 0,
   CanPropagate = 1 << 1,
   // RunInnerEffects = 1 << 2, // Not used in Vue
-  ToCheckDirty = 1 << 3,
-  Dirty = 1 << 4,
+  // 2~5 are using in EffectFlags
+  ToCheckDirty = 1 << 6,
+  Dirty = 1 << 7,
   Dirtys = SubscriberFlags.ToCheckDirty | SubscriberFlags.Dirty,
   All = SubscriberFlags.Tracking |
     SubscriberFlags.CanPropagate |
     SubscriberFlags.Dirtys,
 
-  DirtyFlagsIndex = 3,
+  DirtyFlagsIndex = 6,
 }
 
 let batchDepth = 0

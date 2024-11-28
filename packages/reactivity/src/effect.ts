@@ -15,6 +15,9 @@ import { warn } from './warning'
 
 export enum EffectFlags {
   ALLOW_RECURSE = 1 << 2,
+  PAUSED = 1 << 3,
+  NOTIFIED = 1 << 4,
+  STOP = 1 << 5,
 }
 
 export type EffectScheduler = (...args: any[]) => any
@@ -47,13 +50,6 @@ export interface ReactiveEffectRunner<T = any> {
   effect: ReactiveEffect
 }
 
-export enum PauseLevels {
-  None = 0,
-  Paused = 1,
-  Notify = 2,
-  Stop = 3,
-}
-
 export class ReactiveEffect<T = any> implements IEffect, ReactiveEffectOptions {
   nextNotify: IEffect | undefined = undefined
 
@@ -61,8 +57,6 @@ export class ReactiveEffect<T = any> implements IEffect, ReactiveEffectOptions {
   deps: Link | undefined = undefined
   depsTail: Link | undefined = undefined
   flags: number = SubscriberFlags.Dirty
-
-  pauseLevel: PauseLevels = PauseLevels.None
 
   /**
    * @internal
@@ -83,31 +77,32 @@ export class ReactiveEffect<T = any> implements IEffect, ReactiveEffectOptions {
   }
 
   get active(): boolean {
-    return this.pauseLevel !== PauseLevels.Stop
+    return !(this.flags & EffectFlags.STOP)
   }
 
   pause(): void {
-    if (this.pauseLevel === PauseLevels.None) {
-      this.pauseLevel = PauseLevels.Paused
+    if (!(this.flags & EffectFlags.PAUSED)) {
+      this.flags |= EffectFlags.PAUSED
     }
   }
 
   resume(): void {
-    const pauseLevel = this.pauseLevel
-    if (pauseLevel === PauseLevels.Notify) {
-      this.pauseLevel = PauseLevels.None
+    const flags = this.flags
+    if (flags & EffectFlags.PAUSED) {
+      this.flags &= ~EffectFlags.PAUSED
+    }
+    if (flags & EffectFlags.NOTIFIED) {
+      this.flags &= ~EffectFlags.NOTIFIED
       this.notify()
-    } else if (pauseLevel === PauseLevels.Paused) {
-      this.pauseLevel = PauseLevels.None
     }
   }
 
   notify(): void {
-    const pauseLevel = this.pauseLevel
-    if (pauseLevel === PauseLevels.None) {
+    const flags = this.flags
+    if (!(flags & EffectFlags.PAUSED)) {
       this.scheduler()
-    } else if (pauseLevel === PauseLevels.Paused) {
-      this.pauseLevel = PauseLevels.Notify
+    } else {
+      this.flags |= EffectFlags.NOTIFIED
     }
   }
 
@@ -157,7 +152,7 @@ export class ReactiveEffect<T = any> implements IEffect, ReactiveEffectOptions {
       endTrack(this)
       cleanupEffect(this)
       this.onStop && this.onStop()
-      this.pauseLevel = PauseLevels.Stop
+      this.flags |= EffectFlags.STOP
     }
   }
 
