@@ -43,9 +43,6 @@ export enum SubscriberFlags {
   ToCheckDirty = 1 << 6,
   Dirty = 1 << 7,
   Dirtys = SubscriberFlags.ToCheckDirty | SubscriberFlags.Dirty,
-  All = SubscriberFlags.Tracking |
-    SubscriberFlags.CanPropagate |
-    SubscriberFlags.Dirtys,
 
   DirtyFlagsIndex = 6,
 }
@@ -299,7 +296,9 @@ export function checkDirty(deps: Link): boolean {
 
 export function startTrack(sub: Subscriber): void {
   sub.depsTail = undefined
-  sub.flags = (sub.flags & ~SubscriberFlags.All) | SubscriberFlags.Tracking
+  sub.flags =
+    (sub.flags & ~(SubscriberFlags.CanPropagate | SubscriberFlags.Dirtys)) |
+    SubscriberFlags.Tracking
 }
 
 export function endTrack(sub: Subscriber): void {
