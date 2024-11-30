@@ -55,32 +55,38 @@ export function setupComponent(instance: ComponentInternalInstance): void {
 
     let block: Block | undefined
 
-    if (
-      stateOrNode &&
-      (stateOrNode instanceof Node ||
-        isArray(stateOrNode) ||
-        fragmentKey in stateOrNode ||
-        componentKey in stateOrNode)
-    ) {
+    // Skip the type check for production since this is only for Dev HMR
+    if (__DEV__) {
+      if (
+        stateOrNode &&
+        (stateOrNode instanceof Node ||
+          isArray(stateOrNode) ||
+          fragmentKey in stateOrNode ||
+          componentKey in stateOrNode)
+      ) {
+        block = stateOrNode
+      } else if (isObject(stateOrNode)) {
+        instance.setupState = proxyRefs(stateOrNode)
+      }
+
+      if (!block && component.render) {
+        pauseTracking()
+        block = callWithErrorHandling(
+          component.render,
+          instance,
+          VaporErrorCodes.RENDER_FUNCTION,
+          [
+            instance.setupState, // _ctx
+            shallowReadonly(props), // $props
+            instance.emit, // $emit
+            getAttrsProxy(instance), // $attrs
+            getSlotsProxy(instance), // $slots
+          ],
+        )
+        resetTracking()
+      }
+    } else {
       block = stateOrNode
-    } else if (isObject(stateOrNode)) {
-      instance.setupState = proxyRefs(stateOrNode)
-    }
-    if (!block && component.render) {
-      pauseTracking()
-      block = callWithErrorHandling(
-        component.render,
-        instance,
-        VaporErrorCodes.RENDER_FUNCTION,
-        [
-          instance.setupState, // _ctx
-          __DEV__ ? shallowReadonly(props) : props, // $props
-          instance.emit, // $emit
-          __DEV__ ? getAttrsProxy(instance) : instance.attrs, // $attrs
-          __DEV__ ? getSlotsProxy(instance) : instance.slots, // $slots
-        ],
-      )
-      resetTracking()
     }
 
     if (!block) {
