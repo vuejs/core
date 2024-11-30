@@ -28,6 +28,7 @@ import {
   isReservedProp,
   isString,
   normalizeClass,
+  normalizeCssVarValue,
   normalizeStyle,
   stringifyStyle,
 } from '@vue/shared'
@@ -938,7 +939,7 @@ function resolveCssVars(
   ) {
     const cssVars = instance.getCssVars()
     for (const key in cssVars) {
-      const value = String(cssVars[key] ?? 'initial')
+      const value = normalizeCssVarValue(cssVars[key])
       expectedMap.set(`--${getEscapedCssVarName(key, false)}`, value)
     }
   }

@@ -10,7 +10,7 @@ import {
   warn,
   watch,
 } from '@vue/runtime-core'
-import { NOOP, ShapeFlags } from '@vue/shared'
+import { NOOP, ShapeFlags, normalizeCssVarValue } from '@vue/shared'
 
 export const CSS_VAR_TEXT: unique symbol = Symbol(__DEV__ ? 'CSS_VAR_TEXT' : '')
 /**
@@ -101,7 +101,7 @@ function setVarsOnNode(el: Node, vars: Record<string, unknown>) {
     const style = (el as HTMLElement).style
     let cssText = ''
     for (const key in vars) {
-      const value = String(vars[key] ?? 'initial')
+      const value = normalizeCssVarValue(vars[key])
       style.setProperty(`--${key}`, value)
       cssText += `--${key}: ${value};`
     }

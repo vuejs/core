@@ -208,10 +208,14 @@ describe('ssr: renderStyle', () => {
     expect(
       ssrRenderStyle({
         fontSize: null,
-        ':--color': undefined,
-        ':--size': null,
+        ':--v1': undefined,
+        ':--v2': null,
+        ':--v3': '',
+        ':--v4': '  ',
+        ':--v5': 'foo',
+        ':--v6': 0,
         '--foo': 1,
       }),
-    ).toBe(`--color:initial;--size:initial;--foo:1;`)
+    ).toBe(`--v1:initial;--v2:initial;--v3: ;--v4:  ;--v5:foo;--v6:0;--foo:1;`)
   })
 })

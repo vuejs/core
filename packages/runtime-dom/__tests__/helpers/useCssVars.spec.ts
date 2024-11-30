@@ -467,9 +467,13 @@ describe('useCssVars', () => {
   })
 
   test('should set vars as `initial` for nullish values', async () => {
+    // `getPropertyValue` cannot reflect the real value for white spaces and JSDOM also
+    // doesn't 100% reflect the real behavior of browsers, so we only keep the test for
+    // `initial` value here.
+    // The value normalization is tested in packages/shared/__tests__/cssVars.spec.ts.
     const state = reactive<Record<string, unknown>>({
-      color: undefined,
-      size: null,
+      foo: undefined,
+      bar: null,
     })
     const root = document.createElement('div')
     const App = {
@@ -481,7 +485,7 @@ describe('useCssVars', () => {
     render(h(App), root)
     await nextTick()
     const style = (root.children[0] as HTMLElement).style
-    expect(style.getPropertyValue(`--color`)).toBe('initial')
-    expect(style.getPropertyValue(`--size`)).toBe('initial')
+    expect(style.getPropertyValue('--foo')).toBe('initial')
+    expect(style.getPropertyValue('--bar')).toBe('initial')
   })
 })

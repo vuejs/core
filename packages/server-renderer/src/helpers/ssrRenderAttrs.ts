@@ -14,6 +14,7 @@ import {
   isString,
   makeMap,
   normalizeClass,
+  normalizeCssVarValue,
   normalizeStyle,
   propsToAttrMap,
 } from '@vue/shared'
@@ -105,7 +106,7 @@ function ssrResetCssVars(raw: unknown) {
     for (const key in raw) {
       // `:` prefixed keys are coming from `ssrCssVars`
       if (key.startsWith(':--')) {
-        res[key.slice(1)] = raw[key] ?? 'initial'
+        res[key.slice(1)] = normalizeCssVarValue(raw[key])
       } else {
         res[key] = raw[key]
       }
