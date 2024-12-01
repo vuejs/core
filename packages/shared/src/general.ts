@@ -93,10 +93,13 @@ export const isBuiltInDirective: (key: string) => boolean =
 const cacheStringFunction = <T extends (str: string) => string>(fn: T): T => {
   const cache: Map<string, string> = new Map()
   return ((str: string) => {
-    if (!cache.has(str)) {
-      cache.set(str, fn(str))
+    const cached = cache.get(str)
+    if (cached) {
+      return cached
     }
-    return cache.get(str)!
+    const res = fn(str)
+    cache.set(str, res)
+    return res
   }) as T
 }
 

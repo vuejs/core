@@ -37,15 +37,18 @@ const unsafeAttrCharRE = /[>/="'\u0009\u000a\u000c\u0020]/
 const attrValidationCache: Map<string, boolean> = new Map()
 
 export function isSSRSafeAttrName(name: string): boolean {
-  if (!attrValidationCache.has(name)) {
-    const isUnsafe = unsafeAttrCharRE.test(name)
-    if (isUnsafe) {
-      console.error(`unsafe attribute name: ${name}`)
-    }
-    attrValidationCache.set(name, !isUnsafe)
+  const cached = attrValidationCache.get(name)
+  if (cached) {
+    return cached
   }
 
-  return attrValidationCache.get(name)!
+  const isUnsafe = unsafeAttrCharRE.test(name)
+  if (isUnsafe) {
+    console.error(`unsafe attribute name: ${name}`)
+  }
+  attrValidationCache.set(name, !isUnsafe)
+
+  return !isUnsafe
 }
 
 export const propsToAttrMap: Record<string, string | undefined> = {

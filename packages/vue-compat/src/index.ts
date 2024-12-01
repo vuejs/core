@@ -26,7 +26,7 @@ import {
   warnDeprecation,
 } from '../../runtime-core/src/compat/compatConfig'
 
-const compileCache: Record<string, RenderFunction> = Object.create(null)
+const compileCache: Map<string, RenderFunction> = new Map()
 
 function compileToFunction(
   template: string | HTMLElement,
@@ -42,7 +42,7 @@ function compileToFunction(
   }
 
   const key = genCacheKey(template, options)
-  const cached = compileCache[key]
+  const cached = compileCache.get(key)
   if (cached) {
     return cached
   }
@@ -101,7 +101,8 @@ function compileToFunction(
   // mark the function as runtime compiled
   ;(render as InternalRenderFunction)._rc = true
 
-  return (compileCache[key] = render)
+  compileCache.set(key, render)
+  return render
 }
 
 registerRuntimeCompiler(compileToFunction)
