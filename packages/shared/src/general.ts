@@ -37,15 +37,11 @@ export const hasOwn = (
 ): key is keyof typeof val => hasOwnProperty.call(val, key)
 
 export const isArray: typeof Array.isArray = Array.isArray
-export const isMap = (val: unknown): val is Map<any, any> =>
-  toTypeString(val) === '[object Map]'
-export const isSet = (val: unknown): val is Set<any> =>
-  toTypeString(val) === '[object Set]'
+export const isMap = (val: unknown): val is Map<any, any> => val instanceof Map
+export const isSet = (val: unknown): val is Set<any> => val instanceof Set
 
-export const isDate = (val: unknown): val is Date =>
-  toTypeString(val) === '[object Date]'
-export const isRegExp = (val: unknown): val is RegExp =>
-  toTypeString(val) === '[object RegExp]'
+export const isDate = (val: unknown): val is Date => val instanceof Date
+export const isRegExp = (val: unknown): val is RegExp => val instanceof RegExp
 export const isFunction = (val: unknown): val is Function =>
   typeof val === 'function'
 export const isString = (val: unknown): val is string => typeof val === 'string'
@@ -54,11 +50,7 @@ export const isObject = (val: unknown): val is Record<any, any> =>
   val !== null && typeof val === 'object'
 
 export const isPromise = <T = any>(val: unknown): val is Promise<T> => {
-  return (
-    (isObject(val) || isFunction(val)) &&
-    isFunction((val as any).then) &&
-    isFunction((val as any).catch)
-  )
+  return val instanceof Promise
 }
 
 export const objectToString: typeof Object.prototype.toString =
@@ -94,10 +86,12 @@ export const isBuiltInDirective: (key: string) => boolean =
   )
 
 const cacheStringFunction = <T extends (str: string) => string>(fn: T): T => {
-  const cache: Record<string, string> = Object.create(null)
+  const cache: Map<string, string> = new Map()
   return ((str: string) => {
-    const hit = cache[str]
-    return hit || (cache[str] = fn(str))
+    if (!cache.has(str)) {
+      cache.set(str, fn(str))
+    }
+    return cache.get(str)!
   }) as T
 }
 

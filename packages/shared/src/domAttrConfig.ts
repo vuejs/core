@@ -34,17 +34,18 @@ export function includeBooleanAttr(value: unknown): boolean {
 }
 
 const unsafeAttrCharRE = /[>/="'\u0009\u000a\u000c\u0020]/
-const attrValidationCache: Record<string, boolean> = {}
+const attrValidationCache: Map<string, boolean> = new Map()
 
 export function isSSRSafeAttrName(name: string): boolean {
-  if (attrValidationCache.hasOwnProperty(name)) {
-    return attrValidationCache[name]
+  if (!attrValidationCache.has(name)) {
+    const isUnsafe = unsafeAttrCharRE.test(name)
+    if (isUnsafe) {
+      console.error(`unsafe attribute name: ${name}`)
+    }
+    attrValidationCache.set(name, !isUnsafe)
   }
-  const isUnsafe = unsafeAttrCharRE.test(name)
-  if (isUnsafe) {
-    console.error(`unsafe attribute name: ${name}`)
-  }
-  return (attrValidationCache[name] = !isUnsafe)
+
+  return attrValidationCache.get(name)!
 }
 
 export const propsToAttrMap: Record<string, string | undefined> = {
