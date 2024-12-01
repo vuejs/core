@@ -52,8 +52,8 @@ export function render(_ctx) {
   const n0 = _createFor(() => (_ctx.items), (_ctx0) => {
     const n2 = t0()
     _setInheritAttrs(["item", "index"])
-    _renderEffect(() => _setDynamicProp(n2, "item", _ctx0[0].value, true))
-    _renderEffect(() => _setDynamicProp(n2, "index", _ctx0[1].value, true))
+    _renderEffect(() => _setDynamicProp(n2, "item", _ctx0[0].value))
+    _renderEffect(() => _setDynamicProp(n2, "index", _ctx0[1].value))
     return n2
   })
   return n0

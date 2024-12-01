@@ -186,7 +186,7 @@ export function render(_ctx) {
   _delegate(n0, "click", () => _ctx.handleClick)
   _setInheritAttrs(["id"])
   _renderEffect(() => _setText(n0, _ctx.count, "foo", _ctx.count, "foo", _ctx.count))
-  _renderEffect(() => _setDOMProp(n0, "id", _ctx.count, true))
+  _renderEffect(() => _setDOMProp(n0, "id", _ctx.count))
   return n0
 }"
 `;

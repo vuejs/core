@@ -7,6 +7,7 @@ import {
   setDynamicProps,
   setHtml,
   setText,
+  setValue,
 } from '../../src/dom/prop'
 import { setStyle } from '../../src/dom/style'
 import {
@@ -239,43 +240,32 @@ describe('patchProp', () => {
     })
   })
 
-  describe('setDOMProp', () => {
-    test('should set DOM property', () => {
-      const el = document.createElement('div')
-      setDOMProp(el, 'textContent', null)
-      expect(el.textContent).toBe('')
-      setDOMProp(el, 'textContent', 'foo')
-      expect(el.textContent).toBe('foo')
-
-      setDOMProp(el, 'innerHTML', null)
-      expect(el.innerHTML).toBe('')
-      setDOMProp(el, 'innerHTML', '<p>bar</p>')
-      expect(el.innerHTML).toBe('<p>bar</p>')
-    })
-
+  describe('setValue', () => {
     test('should set value prop', () => {
       const el = document.createElement('input')
-      setDOMProp(el, 'value', 'foo')
+      setValue(el, 'foo')
       expect(el.value).toBe('foo')
-      setDOMProp(el, 'value', null)
+      setValue(el, null)
       expect(el.value).toBe('')
       expect(el.getAttribute('value')).toBe(null)
       const obj = {}
-      setDOMProp(el, 'value', obj)
+      setValue(el, obj)
       expect(el.value).toBe(obj.toString())
       expect((el as any)._value).toBe(obj)
 
       const option = document.createElement('option')
-      setDOMProp(option, 'textContent', 'foo')
+      setText(option, 'foo')
       expect(option.value).toBe('foo')
       expect(option.getAttribute('value')).toBe(null)
 
-      setDOMProp(option, 'value', 'bar')
+      setValue(option, 'bar')
       expect(option.textContent).toBe('foo')
       expect(option.value).toBe('bar')
       expect(option.getAttribute('value')).toBe('bar')
     })
+  })
 
+  describe('setDOMProp', () => {
     test('should be boolean prop', () => {
       const el = document.createElement('select')
       setDOMProp(el, 'multiple', '')
@@ -455,6 +445,8 @@ describe('patchProp', () => {
   describe('setText', () => {
     test('should set textContent', () => {
       const el = document.createElement('div')
+      setText(el, null)
+      expect(el.textContent).toBe('')
       setText(el, 'foo')
       expect(el.textContent).toBe('foo')
       setText(el, 'bar')
@@ -465,6 +457,8 @@ describe('patchProp', () => {
   describe('setHtml', () => {
     test('should set innerHTML', () => {
       const el = document.createElement('div')
+      setHtml(el, null)
+      expect(el.innerHTML).toBe('')
       setHtml(el, '<p>foo</p>')
       expect(el.innerHTML).toBe('<p>foo</p>')
       setHtml(el, '<p>bar</p>')

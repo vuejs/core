@@ -227,3 +227,11 @@ export function genCacheKey(source: string, options: any): string {
     )
   )
 }
+
+export function canSetValueDirectly(tagName: string): boolean {
+  return (
+    tagName !== 'PROGRESS' &&
+    // custom elements may use _value internally
+    !tagName.includes('-')
+  )
+}

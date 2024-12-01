@@ -113,6 +113,7 @@ export {
   setHtml,
   setClass,
   setAttr,
+  setValue,
   setDOMProp,
   setDynamicProp,
   setDynamicProps,
