@@ -37,11 +37,16 @@ export const hasOwn = (
 ): key is keyof typeof val => hasOwnProperty.call(val, key)
 
 export const isArray: typeof Array.isArray = Array.isArray
-export const isMap = (val: unknown): val is Map<any, any> => val instanceof Map
-export const isSet = (val: unknown): val is Set<any> => val instanceof Set
+export const isMap = (val: unknown): val is Map<any, any> =>
+  !!val && (val as any)[Symbol.toStringTag] === 'Map'
+export const isSet = (val: unknown): val is Set<any> =>
+  !!val && (val as any)[Symbol.toStringTag] === 'Set'
 
-export const isDate = (val: unknown): val is Date => val instanceof Date
-export const isRegExp = (val: unknown): val is RegExp => val instanceof RegExp
+export const isDate = (val: unknown): val is Date =>
+  toTypeString(val) === '[object Date]'
+export const isRegExp = (val: unknown): val is RegExp =>
+  // refer https://262.ecma-international.org/15.0/index.html?_gl=1*tsu3al*_ga*ODYzNDU4MjA5LjE3MjQ3Nzc5NDY.*_ga_TDCK4DWEPP*MTczMTg0NTY5MS41LjAuMTczMTg0NTY5MS4wLjAuMA..#sec-isregexp
+  !!val && !!(val as any)[Symbol.match]
 export const isFunction = (val: unknown): val is Function =>
   typeof val === 'function'
 export const isString = (val: unknown): val is string => typeof val === 'string'
@@ -50,7 +55,7 @@ export const isObject = (val: unknown): val is Record<any, any> =>
   val !== null && typeof val === 'object'
 
 export const isPromise = <T = any>(val: unknown): val is Promise<T> => {
-  return val instanceof Promise
+  return !!val && (val as any)[Symbol.toStringTag] === 'Promise'
 }
 
 export const objectToString: typeof Object.prototype.toString =
