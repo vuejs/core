@@ -25,6 +25,6 @@ export function invokeLifecycle(
   }
 
   function invokeSub() {
-    // instance.comps.forEach(comp => invokeLifecycle(comp, lifecycle, cb, post))
+    instance.comps.forEach(comp => invokeLifecycle(comp, lifecycle, cb, post))
   }
 }

@@ -41,7 +41,7 @@ export function createComponent(
   setupComponent(instance)
 
   // register sub-component with current component for lifecycle management
-  // current.comps.add(instance)
+  current.comps.add(instance)
 
   return instance
 }
