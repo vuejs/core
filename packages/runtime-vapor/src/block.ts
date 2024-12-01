@@ -1,5 +1,5 @@
 import { isArray } from '@vue/shared'
-import { type ComponentInternalInstance, componentKey } from './component'
+import { type ComponentInternalInstance, isVaporComponent } from './component'
 
 export const fragmentKey: unique symbol = Symbol(__DEV__ ? `fragmentKey` : ``)
 
@@ -17,7 +17,7 @@ export function normalizeBlock(block: Block): Node[] {
     nodes.push(block)
   } else if (isArray(block)) {
     block.forEach(child => nodes.push(...normalizeBlock(child)))
-  } else if (componentKey in block) {
+  } else if (isVaporComponent(block)) {
     nodes.push(...normalizeBlock(block.block!))
   } else if (block) {
     nodes.push(...normalizeBlock(block.nodes))
@@ -34,7 +34,7 @@ export function findFirstRootElement(
 }
 
 export function getFirstNode(block: Block | null): Node | undefined {
-  if (!block || componentKey in block) return
+  if (!block || isVaporComponent(block)) return
   if (block instanceof Node) return block
   if (isArray(block)) {
     if (block.length === 1) {

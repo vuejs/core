@@ -1,7 +1,6 @@
 import {
   type Component,
-  type ComponentInternalInstance,
-  createComponentInstance,
+  ComponentInternalInstance,
   currentInstance,
 } from './component'
 import { setupComponent } from './apiRender'
@@ -24,7 +23,7 @@ export function createComponent(
     return fallbackComponent(comp, rawProps, slots, current, singleRoot)
   }
 
-  const instance = createComponentInstance(
+  const instance = new ComponentInternalInstance(
     comp,
     singleRoot ? withAttrs(rawProps) : rawProps,
     slots,
@@ -42,7 +41,7 @@ export function createComponent(
   setupComponent(instance)
 
   // register sub-component with current component for lifecycle management
-  current.comps.add(instance)
+  // current.comps.add(instance)
 
   return instance
 }

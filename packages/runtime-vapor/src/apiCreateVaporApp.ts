@@ -1,8 +1,7 @@
 import { NO, getGlobalThis, isFunction, isObject } from '@vue/shared'
 import {
   type Component,
-  type ComponentInternalInstance,
-  createComponentInstance,
+  ComponentInternalInstance,
   validateComponentName,
 } from './component'
 import { warn } from './warning'
@@ -126,7 +125,7 @@ export function createVaporApp(
           container.textContent = ''
         }
 
-        instance = createComponentInstance(
+        instance = new ComponentInternalInstance(
           rootComponent,
           rootProps,
           null,

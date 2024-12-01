@@ -13,8 +13,7 @@ import {
 } from './dom/element'
 import { type Block, type Fragment, fragmentKey } from './block'
 import { warn } from './warning'
-import { currentInstance } from './component'
-import { componentKey } from './component'
+import { currentInstance, isVaporComponent } from './component'
 import type { DynamicSlot } from './componentSlots'
 import { renderEffect } from './renderEffect'
 
@@ -382,7 +381,7 @@ function normalizeAnchor(node: Block): Node {
     return node
   } else if (isArray(node)) {
     return normalizeAnchor(node[0])
-  } else if (componentKey in node) {
+  } else if (isVaporComponent(node)) {
     return normalizeAnchor(node.block!)
   } else {
     return normalizeAnchor(node.nodes!)

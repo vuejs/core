@@ -1,11 +1,5 @@
 import { EffectScope, isRef } from '@vue/reactivity'
-import {
-  EMPTY_OBJ,
-  hasOwn,
-  isArray,
-  isBuiltInTag,
-  isFunction,
-} from '@vue/shared'
+import { EMPTY_OBJ, isArray, isBuiltInTag, isFunction } from '@vue/shared'
 import type { Block } from './block'
 import {
   type ComponentPropsOptions,
@@ -143,12 +137,31 @@ export interface ComponentInternalOptions {
 
 type LifecycleHook<TFn = Function> = TFn[] | null
 
-export const componentKey: unique symbol = Symbol(__DEV__ ? `componentKey` : ``)
+export let currentInstance: ComponentInternalInstance | null = null
 
-export interface ComponentInternalInstance {
-  [componentKey]: true
+export const getCurrentInstance: () => ComponentInternalInstance | null = () =>
+  currentInstance
+
+export const setCurrentInstance = (instance: ComponentInternalInstance) => {
+  const prev = currentInstance
+  currentInstance = instance
+  return (): void => {
+    currentInstance = prev
+  }
+}
+
+export const unsetCurrentInstance = (): void => {
+  currentInstance && currentInstance.scope.off()
+  currentInstance = null
+}
+
+const emptyAppContext = createAppContext()
+
+let uid = 0
+export class ComponentInternalInstance {
+  vapor = true
+
   uid: number
-  vapor: true
   appContext: AppContext
 
   type: Component
@@ -196,185 +209,121 @@ export interface ComponentInternalInstance {
   /**
    * @internal
    */
-  [VaporLifecycleHooks.BEFORE_MOUNT]: LifecycleHook
+  // [VaporLifecycleHooks.BEFORE_MOUNT]: LifecycleHook;
+  bm: LifecycleHook
   /**
    * @internal
    */
-  [VaporLifecycleHooks.MOUNTED]: LifecycleHook
+  // [VaporLifecycleHooks.MOUNTED]: LifecycleHook;
+  m: LifecycleHook
   /**
    * @internal
    */
-  [VaporLifecycleHooks.BEFORE_UPDATE]: LifecycleHook
+  // [VaporLifecycleHooks.BEFORE_UPDATE]: LifecycleHook;
+  bu: LifecycleHook
   /**
    * @internal
    */
-  [VaporLifecycleHooks.UPDATED]: LifecycleHook
+  // [VaporLifecycleHooks.UPDATED]: LifecycleHook;
+  u: LifecycleHook
   /**
    * @internal
    */
-  [VaporLifecycleHooks.BEFORE_UNMOUNT]: LifecycleHook
+  // [VaporLifecycleHooks.BEFORE_UNMOUNT]: LifecycleHook;
+  bum: LifecycleHook
   /**
    * @internal
    */
-  [VaporLifecycleHooks.UNMOUNTED]: LifecycleHook
+  // [VaporLifecycleHooks.UNMOUNTED]: LifecycleHook;
+  um: LifecycleHook
   /**
    * @internal
    */
-  [VaporLifecycleHooks.RENDER_TRACKED]: LifecycleHook
+  // [VaporLifecycleHooks.RENDER_TRACKED]: LifecycleHook;
+  rtc: LifecycleHook
   /**
    * @internal
    */
-  [VaporLifecycleHooks.RENDER_TRIGGERED]: LifecycleHook
+  // [VaporLifecycleHooks.RENDER_TRIGGERED]: LifecycleHook;
+  rtg: LifecycleHook
   /**
    * @internal
    */
-  [VaporLifecycleHooks.ACTIVATED]: LifecycleHook
+  // [VaporLifecycleHooks.ACTIVATED]: LifecycleHook;
+  a: LifecycleHook
   /**
    * @internal
    */
-  [VaporLifecycleHooks.DEACTIVATED]: LifecycleHook
+  // [VaporLifecycleHooks.DEACTIVATED]: LifecycleHook;
+  da: LifecycleHook
   /**
    * @internal
    */
-  [VaporLifecycleHooks.ERROR_CAPTURED]: LifecycleHook
-  /**
-   * @internal
-   */
-  // [VaporLifecycleHooks.SERVER_PREFETCH]: LifecycleHook<() => Promise<unknown>>
-}
+  // [VaporLifecycleHooks.ERROR_CAPTURED]: LifecycleHook
+  ec: LifecycleHook
 
-export let currentInstance: ComponentInternalInstance | null = null
-
-export const getCurrentInstance: () => ComponentInternalInstance | null = () =>
-  currentInstance
-
-export const setCurrentInstance = (instance: ComponentInternalInstance) => {
-  const prev = currentInstance
-  currentInstance = instance
-  return (): void => {
-    currentInstance = prev
-  }
-}
-
-export const unsetCurrentInstance = (): void => {
-  currentInstance && currentInstance.scope.off()
-  currentInstance = null
-}
-
-const emptyAppContext = createAppContext()
-
-let uid = 0
-export function createComponentInstance(
-  component: Component,
-  rawProps: RawProps | null,
-  slots: RawSlots | null,
-  once: boolean = false,
-  // application root node only
-  appContext?: AppContext,
-): ComponentInternalInstance {
-  const parent = getCurrentInstance()
-  const _appContext =
-    (parent ? parent.appContext : appContext) || emptyAppContext
-
-  const instance: ComponentInternalInstance = {
-    [componentKey]: true,
-    uid: uid++,
-    vapor: true,
-    appContext: _appContext,
-
-    block: null,
-    container: null!,
-
-    parent,
-    root: null!, // set later
-
-    scope: new EffectScope(true /* detached */)!,
-    provides: parent ? parent.provides : Object.create(_appContext.provides),
-    type: component,
-    comps: new Set(),
-    scopeIds: [],
-
-    // resolved props and emits options
-    rawProps: null!, // set later
-    propsOptions: normalizePropsOptions(component),
-    emitsOptions: normalizeEmitsOptions(component),
+  constructor(
+    component: Component,
+    rawProps: RawProps | null,
+    slots: RawSlots | null,
+    once: boolean = false,
+    // application root node only
+    appContext?: AppContext,
+  ) {
+    this.uid = uid++
+    const parent = (this.parent = currentInstance)
+    this.root = parent ? parent.root : this
+    const _appContext = (this.appContext =
+      (parent ? parent.appContext : appContext) || emptyAppContext)
+    this.block = null
+    this.container = null!
+    this.root = null!
+    this.scope = new EffectScope(true)
+    this.provides = parent
+      ? parent.provides
+      : Object.create(_appContext.provides)
+    this.type = component
+    this.comps = new Set()
+    this.scopeIds = []
+    this.rawProps = null!
+    this.propsOptions = normalizePropsOptions(component)
+    this.emitsOptions = normalizeEmitsOptions(component)
 
     // state
-    setupState: EMPTY_OBJ,
-    setupContext: null,
-    props: EMPTY_OBJ,
-    emit: null!,
-    emitted: null,
-    attrs: EMPTY_OBJ,
-    slots: EMPTY_OBJ,
-    refs: EMPTY_OBJ,
+    this.setupState = EMPTY_OBJ
+    this.setupContext = null
+    this.props = EMPTY_OBJ
+    this.emit = emit.bind(null, this)
+    this.emitted = null
+    this.attrs = EMPTY_OBJ
+    this.slots = EMPTY_OBJ
+    this.refs = EMPTY_OBJ
 
     // lifecycle
-    isMounted: false,
-    isUnmounted: false,
-    isUpdating: false,
-    // TODO: registory of provides, appContext, lifecycles, ...
-    /**
-     * @internal
-     */
-    [VaporLifecycleHooks.BEFORE_MOUNT]: null,
-    /**
-     * @internal
-     */
-    [VaporLifecycleHooks.MOUNTED]: null,
-    /**
-     * @internal
-     */
-    [VaporLifecycleHooks.BEFORE_UPDATE]: null,
-    /**
-     * @internal
-     */
-    [VaporLifecycleHooks.UPDATED]: null,
-    /**
-     * @internal
-     */
-    [VaporLifecycleHooks.BEFORE_UNMOUNT]: null,
-    /**
-     * @internal
-     */
-    [VaporLifecycleHooks.UNMOUNTED]: null,
-    /**
-     * @internal
-     */
-    [VaporLifecycleHooks.RENDER_TRACKED]: null,
-    /**
-     * @internal
-     */
-    [VaporLifecycleHooks.RENDER_TRIGGERED]: null,
-    /**
-     * @internal
-     */
-    [VaporLifecycleHooks.ACTIVATED]: null,
-    /**
-     * @internal
-     */
-    [VaporLifecycleHooks.DEACTIVATED]: null,
-    /**
-     * @internal
-     */
-    [VaporLifecycleHooks.ERROR_CAPTURED]: null,
-    /**
-     * @internal
-     */
-    // [VaporLifecycleHooks.SERVER_PREFETCH]: null,
-  }
-  instance.root = parent ? parent.root : instance
-  initProps(instance, rawProps, !isFunction(component), once)
-  initSlots(instance, slots)
-  instance.emit = emit.bind(null, instance)
+    this.isMounted = false
+    this.isUnmounted = false
+    this.isUpdating = false
+    this[VaporLifecycleHooks.BEFORE_MOUNT] = null
+    this[VaporLifecycleHooks.MOUNTED] = null
+    this[VaporLifecycleHooks.BEFORE_UPDATE] = null
+    this[VaporLifecycleHooks.UPDATED] = null
+    this[VaporLifecycleHooks.BEFORE_UNMOUNT] = null
+    this[VaporLifecycleHooks.UNMOUNTED] = null
+    this[VaporLifecycleHooks.RENDER_TRACKED] = null
+    this[VaporLifecycleHooks.RENDER_TRIGGERED] = null
+    this[VaporLifecycleHooks.ACTIVATED] = null
+    this[VaporLifecycleHooks.DEACTIVATED] = null
+    this[VaporLifecycleHooks.ERROR_CAPTURED] = null
 
-  return instance
+    initProps(this, rawProps, !isFunction(component), once)
+    initSlots(this, slots)
+  }
 }
 
 export function isVaporComponent(
   val: unknown,
 ): val is ComponentInternalInstance {
-  return !!val && hasOwn(val, componentKey)
+  return val instanceof ComponentInternalInstance
 }
 
 export function validateComponentName(

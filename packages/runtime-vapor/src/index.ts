@@ -77,7 +77,7 @@ export const warn = (__DEV__ ? _warn : NOOP) as typeof _warn
 export { nextTick } from './scheduler'
 export {
   getCurrentInstance,
-  type ComponentInternalInstance,
+  type ComponentInternalInstance as ComponentInternalInstance,
   type Component as Component,
   type ObjectComponent,
   type FunctionalComponent,

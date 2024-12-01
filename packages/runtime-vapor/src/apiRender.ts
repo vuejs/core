@@ -1,9 +1,9 @@
 import {
   type ComponentInternalInstance,
-  componentKey,
   createSetupContext,
   getAttrsProxy,
   getSlotsProxy,
+  isVaporComponent,
   setCurrentInstance,
   validateComponentName,
 } from './component'
@@ -60,9 +60,9 @@ export function setupComponent(instance: ComponentInternalInstance): void {
       if (
         stateOrNode &&
         (stateOrNode instanceof Node ||
+          isVaporComponent(stateOrNode) ||
           isArray(stateOrNode) ||
-          fragmentKey in stateOrNode ||
-          componentKey in stateOrNode)
+          fragmentKey in stateOrNode)
       ) {
         block = stateOrNode
       } else if (isObject(stateOrNode)) {
