@@ -34,42 +34,25 @@ export type FunctionalComponent = SetupFn &
     displayName?: string
   }
 
-export type SetupContext<E = EmitsOptions> = E extends any
-  ? {
-      attrs: Data
-      emit: EmitFn<E>
-      expose: (exposed?: Record<string, any>) => void
-      slots: Readonly<StaticSlots>
+export class SetupContext<E = EmitsOptions> {
+  attrs: Data
+  emit: EmitFn<E>
+  slots: Readonly<StaticSlots>
+  expose: (exposed?: Record<string, any>) => void
+
+  constructor(instance: ComponentInternalInstance) {
+    this.attrs = instance.attrs
+    this.emit = instance.emit as EmitFn<E>
+    this.slots = instance.slots
+    this.expose = (exposed = {}) => {
+      instance.exposed = exposed
     }
-  : never
+  }
+}
 
 export function createSetupContext(
   instance: ComponentInternalInstance,
 ): SetupContext {
-  const expose: SetupContext['expose'] = exposed => {
-    if (__DEV__) {
-      if (instance.exposed) {
-        warn(`expose() should be called only once per setup().`)
-      }
-      if (exposed != null) {
-        let exposedType: string = typeof exposed
-        if (exposedType === 'object') {
-          if (isArray(exposed)) {
-            exposedType = 'array'
-          } else if (isRef(exposed)) {
-            exposedType = 'ref'
-          }
-        }
-        if (exposedType !== 'object') {
-          warn(
-            `expose() should be passed a plain object, received ${exposedType}.`,
-          )
-        }
-      }
-    }
-    instance.exposed = exposed || {}
-  }
-
   if (__DEV__) {
     // We use getters in dev in case libs like test-utils overwrite instance
     // properties (overwrites should not be done in prod)
@@ -83,15 +66,30 @@ export function createSetupContext(
       get emit() {
         return (event: string, ...args: any[]) => instance.emit(event, ...args)
       },
-      expose,
-    })
+      expose: (exposed?: Record<string, any>) => {
+        if (instance.exposed) {
+          warn(`expose() should be called only once per setup().`)
+        }
+        if (exposed != null) {
+          let exposedType: string = typeof exposed
+          if (exposedType === 'object') {
+            if (isArray(exposed)) {
+              exposedType = 'array'
+            } else if (isRef(exposed)) {
+              exposedType = 'ref'
+            }
+          }
+          if (exposedType !== 'object') {
+            warn(
+              `expose() should be passed a plain object, received ${exposedType}.`,
+            )
+          }
+        }
+        instance.exposed = exposed || {}
+      },
+    }) as SetupContext
   } else {
-    return {
-      attrs: instance.attrs,
-      emit: instance.emit,
-      slots: instance.slots,
-      expose,
-    }
+    return new SetupContext(instance)
   }
 }
 
