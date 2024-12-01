@@ -4,8 +4,8 @@
   "type": "module",
   "scripts": {
     "dev": "node ./setup/vite.js",
-    "build": "node ./setup/vite.js build",
-    "preview": "node ./setup/vite.js preview"
+    "build": "vite build -c vite.prod.config.ts",
+    "preview": "vite preview -c vite.prod.config.ts"
   },
   "dependencies": {
     "@vueuse/core": "^11.1.0",
@@ -13,6 +13,7 @@
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "https://pkg.pr.new/@vitejs/plugin-vue@481bcd4",
+    "@vue/compiler-sfc": "workspace:*",
     "vite": "catalog:",
     "vite-hyper-config": "^0.4.0",
     "vite-plugin-inspect": "^0.8.7"
