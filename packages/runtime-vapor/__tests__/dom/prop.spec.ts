@@ -11,7 +11,7 @@ import {
 } from '../../src/dom/prop'
 import { setStyle } from '../../src/dom/style'
 import {
-  createComponentInstance,
+  ComponentInternalInstance,
   setCurrentInstance,
 } from '../../src/component'
 import { getMetadata, recordPropMetadata } from '../../src/componentMetadata'
@@ -19,7 +19,7 @@ import { getCurrentScope } from '@vue/reactivity'
 
 let removeComponentInstance = NOOP
 beforeEach(() => {
-  const instance = createComponentInstance((() => {}) as any, {}, null)
+  const instance = new ComponentInternalInstance((() => {}) as any, {}, null)
   const reset = setCurrentInstance(instance)
   const prev = getCurrentScope()
   instance.scope.on()
