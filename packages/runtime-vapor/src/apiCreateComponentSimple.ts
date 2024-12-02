@@ -48,14 +48,16 @@ export function createComponentSimple(
   ) as Block
 
   // single root, inherit attrs
-  // let i
-  // if (component.inheritAttrs !== false && node instanceof Element) {
-  //   renderEffectSimple(() => {
-  //     // for (const key in instance.attrs) {
-  //     //   i = key
-  //     // }
-  //   })
-  // }
+  if (
+    rawProps &&
+    component.inheritAttrs !== false &&
+    node instanceof Element &&
+    Object.keys(instance.attrs).length
+  ) {
+    renderEffectSimple(() => {
+      // TODO
+    })
+  }
 
   instance.scope.off()
   currentInstance = prevInstance
