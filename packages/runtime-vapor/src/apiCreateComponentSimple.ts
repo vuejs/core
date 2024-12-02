@@ -9,23 +9,26 @@ import {
   type ComponentInternalInstance,
   SetupContext,
 } from './component'
-import { EMPTY_OBJ, NO, hasOwn, isFunction } from '@vue/shared'
+import { NO, camelize, hasOwn, isFunction } from '@vue/shared'
 import { type SchedulerJob, queueJob } from '../../runtime-core/src/scheduler'
 import { insert } from './dom/element'
 import { normalizeContainer } from './apiRender'
-import { normalizePropsOptions } from './componentProps'
+import { normalizePropsOptions, resolvePropValue } from './componentProps'
+import type { Block } from './block'
 
 interface RawProps {
-  [key: string]: any
+  [key: string]: PropSource
   $?: DynamicPropsSource[]
 }
 
-type DynamicPropsSource = Record<string, any> | (() => Record<string, any>)
+type PropSource<T = any> = T | (() => T)
+
+type DynamicPropsSource = PropSource<Record<string, any>>
 
 export function createComponentSimple(
   component: Component,
   rawProps?: RawProps,
-): any {
+): Block {
   const instance = new ComponentInstance(
     component,
     rawProps,
@@ -39,11 +42,10 @@ export function createComponentSimple(
   const setupFn = isFunction(component) ? component : component.setup
   const setupContext = setupFn!.length > 1 ? new SetupContext(instance) : null
   const node = setupFn!(
-    // TODO __DEV__ ? shallowReadonly(props) :
     instance.props,
     // @ts-expect-error
     setupContext,
-  )
+  ) as Block
 
   // single root, inherit attrs
   // let i
@@ -74,47 +76,25 @@ export class ComponentInstance {
   attrs: Record<string, any>
   constructor(comp: Component, rawProps?: RawProps) {
     this.type = comp
+
     // init props
-
-    // TODO fast path for all static props
-
     let mayHaveFallthroughAttrs = false
-    if (rawProps && comp.props) {
-      if (rawProps.$) {
-        // has dynamic props, use full proxy
-        const handlers = getPropsProxyHandlers(comp)
-        this.props = new Proxy(rawProps, handlers[0])
-        this.attrs = new Proxy(rawProps, handlers[1])
-        mayHaveFallthroughAttrs = true
-      } else {
-        // fast path for all static prop keys
-        this.props = rawProps
-        this.attrs = {}
-        const propsOptions = normalizePropsOptions(comp)[0]!
-        for (const key in propsOptions) {
-          if (!(key in rawProps)) {
-            rawProps[key] = undefined // TODO default value / casting
-          } else {
-            // TODO override getter with default value / casting
-          }
-        }
-        for (const key in rawProps) {
-          if (!(key in propsOptions)) {
-            Object.defineProperty(
-              this.attrs,
-              key,
-              Object.getOwnPropertyDescriptor(rawProps, key)!,
-            )
-            delete rawProps[key]
-            mayHaveFallthroughAttrs = true
-          }
-        }
-      }
+    if (comp.props && rawProps && rawProps.$) {
+      // has dynamic props, use proxy
+      const handlers = getDynamicPropsHandlers(comp, this)
+      this.props = new Proxy(rawProps, handlers[0])
+      this.attrs = new Proxy(rawProps, handlers[1])
+      mayHaveFallthroughAttrs = true
     } else {
-      this.props = EMPTY_OBJ
-      this.attrs = rawProps || EMPTY_OBJ
-      mayHaveFallthroughAttrs = !!rawProps
+      mayHaveFallthroughAttrs = initStaticProps(
+        comp,
+        rawProps,
+        (this.props = {}),
+        (this.attrs = {}),
+      )
     }
+
+    // TODO validate props
 
     if (mayHaveFallthroughAttrs) {
       // TODO apply fallthrough attrs
@@ -123,36 +103,95 @@ export class ComponentInstance {
   }
 }
 
+function initStaticProps(
+  comp: Component,
+  rawProps: RawProps | undefined,
+  props: any,
+  attrs: any,
+): boolean {
+  let hasAttrs = false
+  const [propsOptions, needCastKeys] = normalizePropsOptions(comp)
+  for (const key in rawProps) {
+    const normalizedKey = camelize(key)
+    const needCast = needCastKeys && needCastKeys.includes(normalizedKey)
+    const source = rawProps[key]
+    if (propsOptions && normalizedKey in propsOptions) {
+      if (isFunction(source)) {
+        Object.defineProperty(props, normalizedKey, {
+          enumerable: true,
+          get: needCast
+            ? () =>
+                resolvePropValue(propsOptions, props, normalizedKey, source())
+            : source,
+        })
+      } else {
+        props[normalizedKey] = needCast
+          ? resolvePropValue(propsOptions, props, normalizedKey, source)
+          : source
+      }
+    } else {
+      if (isFunction(source)) {
+        Object.defineProperty(attrs, key, {
+          enumerable: true,
+          get: source,
+        })
+      } else {
+        attrs[normalizedKey] = source
+      }
+      hasAttrs = true
+    }
+  }
+  for (const key in propsOptions) {
+    if (!(key in props)) {
+      props[key] = resolvePropValue(propsOptions, props, key, undefined, true)
+    }
+  }
+  return hasAttrs
+}
+
 // TODO optimization: maybe convert functions into computeds
-function resolveSource(source: DynamicPropsSource): Record<string, any> {
+function resolveSource(source: PropSource): Record<string, any> {
   return isFunction(source) ? source() : source
 }
 
-function getPropsProxyHandlers(
+function getDynamicPropsHandlers(
   comp: Component,
+  instance: ComponentInstance,
 ): [ProxyHandler<RawProps>, ProxyHandler<RawProps>] {
   if (comp.__propsHandlers) {
     return comp.__propsHandlers
   }
   let normalizedKeys: string[] | undefined
-  const normalizedOptions = normalizePropsOptions(comp)[0]!
-  const isProp = (key: string | symbol) => hasOwn(normalizedOptions, key)
+  const propsOptions = normalizePropsOptions(comp)[0]!
+  const isProp = (key: string | symbol) => hasOwn(propsOptions, key)
 
   const getProp = (target: RawProps, key: string | symbol, asProp: boolean) => {
     if (key !== '$' && (asProp ? isProp(key) : !isProp(key))) {
-      if (hasOwn(target, key)) {
+      const castProp = (value: any, isAbsent?: boolean) =>
+        asProp
+          ? resolvePropValue(
+              propsOptions,
+              instance.props,
+              key as string,
+              value,
+              isAbsent,
+            )
+          : value
+
+      if (key in target) {
         // TODO default value, casting, etc.
-        return target[key]
+        return castProp(resolveSource(target[key as string]))
       }
       if (target.$) {
         let source, resolved
         for (source of target.$) {
           resolved = resolveSource(source)
           if (hasOwn(resolved, key)) {
-            return resolved[key]
+            return castProp(resolved[key])
           }
         }
       }
+      return castProp(undefined, true)
     }
   }
 
@@ -169,10 +208,9 @@ function getPropsProxyHandlers(
       }
     },
     ownKeys: () =>
-      normalizedKeys || (normalizedKeys = Object.keys(normalizedOptions)),
+      normalizedKeys || (normalizedKeys = Object.keys(propsOptions)),
     set: NO,
     deleteProperty: NO,
-    // TODO dev traps to prevent mutation
   } satisfies ProxyHandler<RawProps>
 
   const hasAttr = (target: RawProps, key: string | symbol) => {

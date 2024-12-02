@@ -11,11 +11,7 @@ import {
 import type { Data } from '@vue/runtime-shared'
 import { shallowReactive } from '@vue/reactivity'
 import { warn } from './warning'
-import {
-  type Component,
-  type ComponentInternalInstance,
-  setCurrentInstance,
-} from './component'
+import type { Component, ComponentInternalInstance } from './component'
 import { patchAttrs } from './componentAttrs'
 import { firstEffect } from './renderEffect'
 
@@ -144,7 +140,7 @@ function registerProp(
   const [options, needCastKeys] = instance.propsOptions
   const needCast = needCastKeys && needCastKeys.includes(key)
   const withCast = (value: unknown, absent?: boolean) =>
-    resolvePropValue(options!, props, key, value, instance, absent)
+    resolvePropValue(options!, props, key, value, absent)
 
   if (isAbsent) {
     props[key] = needCast ? withCast(undefined, true) : undefined
@@ -209,14 +205,13 @@ export function getDynamicPropValue(
   return [undefined, true]
 }
 
-function resolvePropValue(
+export function resolvePropValue(
   options: NormalizedProps,
   props: Data,
   key: string,
   value: unknown,
-  instance: ComponentInternalInstance,
   isAbsent?: boolean,
-) {
+): unknown {
   const opt = options[key]
   if (opt != null) {
     const hasDefault = hasOwn(opt, 'default')
@@ -228,15 +223,7 @@ function resolvePropValue(
         !opt.skipFactory &&
         isFunction(defaultValue)
       ) {
-        // TODO: caching?
-        // const { propsDefaults } = instance
-        // if (key in propsDefaults) {
-        //   value = propsDefaults[key]
-        // } else {
-        const reset = setCurrentInstance(instance)
-        instance.scope.run(() => (value = defaultValue.call(null, props)))
-        reset()
-        // }
+        value = defaultValue.call(null, props)
       } else {
         value = defaultValue
       }
