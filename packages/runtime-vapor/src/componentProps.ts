@@ -257,7 +257,8 @@ function resolvePropValue(
 }
 
 export function normalizePropsOptions(comp: Component): NormalizedPropsOptions {
-  // TODO: cahching?
+  const cached = comp.__propsOptions
+  if (cached) return cached
 
   const raw = comp.props
   const normalized: NormalizedProps | undefined = {}
@@ -296,7 +297,10 @@ export function normalizePropsOptions(comp: Component): NormalizedPropsOptions {
     }
   }
 
-  const res: NormalizedPropsOptions = [normalized, needCastKeys]
+  const res: NormalizedPropsOptions = (comp.__propsOptions = [
+    normalized,
+    needCastKeys,
+  ])
   return res
 }
 

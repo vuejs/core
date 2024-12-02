@@ -28,14 +28,20 @@ import type { Data } from '@vue/runtime-shared'
 
 export type Component = FunctionalComponent | ObjectComponent
 
+type SharedInternalOptions = {
+  __propsOptions?: NormalizedPropsOptions
+  __propsHandlers?: [ProxyHandler<any>, ProxyHandler<any>]
+}
+
 export type SetupFn = (
   props: any,
   ctx: SetupContext,
 ) => Block | Data | undefined
+
 export type FunctionalComponent = SetupFn &
   Omit<ObjectComponent, 'setup'> & {
     displayName?: string
-  }
+  } & SharedInternalOptions
 
 export class SetupContext<E = EmitsOptions> {
   attrs: Data
@@ -96,7 +102,9 @@ export function createSetupContext(
   }
 }
 
-export interface ObjectComponent extends ComponentInternalOptions {
+export interface ObjectComponent
+  extends ComponentInternalOptions,
+    SharedInternalOptions {
   setup?: SetupFn
   inheritAttrs?: boolean
   props?: ComponentPropsOptions

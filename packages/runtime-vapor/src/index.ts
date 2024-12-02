@@ -158,6 +158,7 @@ export { createComponent } from './apiCreateComponent'
 export {
   createComponentSimple,
   renderEffectSimple,
+  createVaporAppSimple,
 } from './apiCreateComponentSimple'
 export { createSelector } from './apiCreateSelector'
 export { setInheritAttrs } from './componentAttrs'
