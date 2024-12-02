@@ -77,7 +77,7 @@ export const warn = (__DEV__ ? _warn : NOOP) as typeof _warn
 export { nextTick } from './scheduler'
 export {
   getCurrentInstance,
-  type ComponentInternalInstance as ComponentInternalInstance,
+  ComponentInternalInstance,
   type Component as Component,
   type ObjectComponent,
   type FunctionalComponent,
@@ -155,6 +155,10 @@ export {
 export { createBranch, createIf } from './apiCreateIf'
 export { createFor, createForSlots } from './apiCreateFor'
 export { createComponent } from './apiCreateComponent'
+export {
+  createComponentSimple,
+  renderEffectSimple,
+} from './apiCreateComponentSimple'
 export { createSelector } from './apiCreateSelector'
 export { setInheritAttrs } from './componentAttrs'
 

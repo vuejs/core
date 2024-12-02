@@ -5,7 +5,7 @@ import * as CompilerSFC from '@vue/compiler-sfc'
 export default defineConfig({
   build: {
     target: 'esnext',
-    minify: 'terser',
+    minify: false,
     terserOptions: {
       compress: {
         pure_getters: true,

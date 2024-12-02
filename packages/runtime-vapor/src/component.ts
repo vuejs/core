@@ -28,7 +28,10 @@ import type { Data } from '@vue/runtime-shared'
 
 export type Component = FunctionalComponent | ObjectComponent
 
-export type SetupFn = (props: any, ctx: SetupContext) => Block | Data | void
+export type SetupFn = (
+  props: any,
+  ctx: SetupContext,
+) => Block | Data | undefined
 export type FunctionalComponent = SetupFn &
   Omit<ObjectComponent, 'setup'> & {
     displayName?: string

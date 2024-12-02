@@ -3,14 +3,30 @@ import { renderEffect } from '../renderEffect'
 import { setText } from './prop'
 import { type Block, normalizeBlock } from '../block'
 
+// export function insert(
+//   block: Block,
+//   parent: ParentNode,
+//   anchor: Node | null = null,
+// ): void {
+//   const nodes = normalizeBlock(block)
+//   for (let i = 0; i < nodes.length; i++) {
+//     parent.insertBefore(nodes[i], anchor)
+//   }
+// }
+
 export function insert(
   block: Block,
   parent: ParentNode,
   anchor: Node | null = null,
 ): void {
-  const nodes = normalizeBlock(block)
-  for (let i = 0; i < nodes.length; i++) {
-    parent.insertBefore(nodes[i], anchor)
+  if (block instanceof Node) {
+    parent.insertBefore(block, anchor)
+  } else if (isArray(block)) {
+    for (let i = 0; i < block.length; i++) {
+      insert(block[i], parent, anchor)
+    }
+  } else if (block) {
+    insert(block.nodes, parent, anchor)
   }
 }
 

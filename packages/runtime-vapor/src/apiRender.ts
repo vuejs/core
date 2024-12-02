@@ -29,7 +29,7 @@ export function setupComponent(instance: ComponentInternalInstance): void {
     startMeasure(instance, `init`)
   }
   const reset = setCurrentInstance(instance)
-  instance.scope.run(() => {
+  instance.scope.run(function componentSetupFn() {
     const { type: component, props } = instance
 
     if (__DEV__) {
