@@ -4,6 +4,7 @@ import * as CompilerSFC from '@vue/compiler-sfc'
 
 export default defineConfig({
   build: {
+    modulePreload: false,
     target: 'esnext',
     minify: false,
     terserOptions: {
