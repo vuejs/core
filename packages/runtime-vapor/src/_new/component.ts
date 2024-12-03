@@ -57,7 +57,7 @@ interface SharedInternalOptions {
   /**
    * Cached normalized props proxy handlers.
    */
-  __propsHandlers?: [ProxyHandler<any>, ProxyHandler<any>]
+  __propsHandlers?: [ProxyHandler<any> | null, ProxyHandler<any>]
   /**
    * Cached normalized emits options.
    */
@@ -124,6 +124,7 @@ export class VaporComponentInstance implements GenericComponentInstance {
 
   block: Block
   scope: EffectScope
+  rawProps: RawProps | undefined
   props: Record<string, any>
   attrs: Record<string, any>
   exposed?: Record<string, any>
@@ -138,29 +139,38 @@ export class VaporComponentInstance implements GenericComponentInstance {
 
   hasFallthrough: boolean
 
+  isMounted: boolean
+  isUnmounted: boolean
+  isDeactivated: boolean
   // LifecycleHooks.ERROR_CAPTURED
   ec: LifecycleHook
+
+  // dev only
+  propsOptions?: NormalizedPropsOptions
+  emitsOptions?: ObjectEmitsOptions | null
 
   constructor(comp: VaporComponent, rawProps?: RawProps) {
     this.uid = nextUid()
     this.type = comp
     this.parent = currentInstance
-    this.appContext = currentInstance ? currentInstance.appContext : null! // TODO
+    // @ts-expect-error TODO use proper appContext
+    this.appContext = currentInstance ? currentInstance.appContext : {}
 
     this.block = null! // to be set
     this.scope = new EffectScope(true)
 
+    this.rawProps = rawProps
     this.provides = this.refs = EMPTY_OBJ
-    this.emitted = null
-    this.ec = null
+    this.emitted = this.ec = null
+    this.isMounted = this.isUnmounted = this.isDeactivated = false
 
     // init props
     this.propsDefaults = null
     this.hasFallthrough = false
-    if (comp.props && rawProps && rawProps.$) {
+    if (rawProps && rawProps.$) {
       // has dynamic props, use proxy
       const handlers = getDynamicPropsHandlers(comp, this)
-      this.props = new Proxy(rawProps, handlers[0])
+      this.props = comp.props ? new Proxy(rawProps, handlers[0]!) : EMPTY_OBJ
       this.attrs = new Proxy(rawProps, handlers[1])
       this.hasFallthrough = true
     } else {

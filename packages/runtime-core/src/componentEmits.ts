@@ -18,6 +18,7 @@ import {
   type ComponentInternalInstance,
   type ComponentOptions,
   type ConcreteComponent,
+  type GenericComponentInstance,
   formatComponentName,
 } from './component'
 import { ErrorCodes, callWithAsyncErrorHandling } from './errorHandling'
@@ -114,13 +115,27 @@ export function emit(
   ...rawArgs: any[]
 ): ComponentPublicInstance | null | undefined {
   if (instance.isUnmounted) return
-  const props = instance.vnode.props || EMPTY_OBJ
+  return baseEmit(
+    instance,
+    instance.vnode.props || EMPTY_OBJ,
+    defaultPropGetter,
+    event,
+    ...rawArgs,
+  )
+}
 
+/**
+ * @internal for vapor only
+ */
+export function baseEmit(
+  instance: GenericComponentInstance,
+  props: Record<string, any>,
+  getter: (props: Record<string, any>, key: string) => unknown,
+  event: string,
+  ...rawArgs: any[]
+): ComponentPublicInstance | null | undefined {
   if (__DEV__) {
-    const {
-      emitsOptions,
-      propsOptions: [propsOptions],
-    } = instance
+    const { emitsOptions, propsOptions } = instance
     if (emitsOptions) {
       if (
         !(event in emitsOptions) &&
@@ -130,7 +145,11 @@ export function emit(
             event.startsWith(compatModelEventPrefix))
         )
       ) {
-        if (!propsOptions || !(toHandlerKey(camelize(event)) in propsOptions)) {
+        if (
+          !propsOptions ||
+          !propsOptions[0] ||
+          !(toHandlerKey(camelize(event)) in propsOptions[0])
+        ) {
           warn(
             `Component emitted event "${event}" but it is neither declared in ` +
               `the emits option nor as an "${toHandlerKey(camelize(event))}" prop.`,
@@ -170,7 +189,10 @@ export function emit(
 
   if (__DEV__) {
     const lowerCaseEvent = event.toLowerCase()
-    if (lowerCaseEvent !== event && props[toHandlerKey(lowerCaseEvent)]) {
+    if (
+      lowerCaseEvent !== event &&
+      getter(props, toHandlerKey(lowerCaseEvent))
+    ) {
       warn(
         `Event "${lowerCaseEvent}" is emitted in component ` +
           `${formatComponentName(
@@ -188,18 +210,18 @@ export function emit(
 
   let handlerName
   let handler =
-    props[(handlerName = toHandlerKey(event))] ||
+    getter(props, (handlerName = toHandlerKey(event))) ||
     // also try camelCase event handler (#2249)
-    props[(handlerName = toHandlerKey(camelize(event)))]
+    getter(props, (handlerName = toHandlerKey(camelize(event))))
   // for v-model update:xxx events, also trigger kebab-case equivalent
   // for props passed via kebab-case
   if (!handler && isModelListener) {
-    handler = props[(handlerName = toHandlerKey(hyphenate(event)))]
+    handler = getter(props, (handlerName = toHandlerKey(hyphenate(event))))
   }
 
   if (handler) {
     callWithAsyncErrorHandling(
-      handler,
+      handler as Function,
       instance,
       ErrorCodes.COMPONENT_EVENT_HANDLER,
       args,
@@ -222,10 +244,18 @@ export function emit(
     )
   }
 
-  if (__COMPAT__) {
-    compatModelEmit(instance, event, args)
-    return compatInstanceEmit(instance, event, args)
+  if (__COMPAT__ && args) {
+    compatModelEmit(instance as ComponentInternalInstance, event, args)
+    return compatInstanceEmit(
+      instance as ComponentInternalInstance,
+      event,
+      args,
+    )
   }
+}
+
+function defaultPropGetter(props: Record<string, any>, key: string): unknown {
+  return props[key]
 }
 
 export function normalizeEmitsOptions(

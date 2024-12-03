@@ -366,6 +366,23 @@ export interface GenericComponentInstance {
    */
   propsDefaults: Data | null
 
+  // lifecycle
+  isMounted: boolean
+  isUnmounted: boolean
+  isDeactivated: boolean
+
+  // for vapor the following two are dev only
+  /**
+   * resolved props options
+   * @internal
+   */
+  propsOptions?: NormalizedPropsOptions
+  /**
+   * resolved emits options
+   * @internal
+   */
+  emitsOptions?: ObjectEmitsOptions | null
+
   // the following are for error handling logic only
   proxy?: any
   /**
@@ -538,9 +555,6 @@ export interface ComponentInternalInstance extends GenericComponentInstance {
   asyncResolved: boolean
 
   // lifecycle
-  isMounted: boolean
-  isUnmounted: boolean
-  isDeactivated: boolean
   /**
    * @internal
    */
