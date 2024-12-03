@@ -282,11 +282,10 @@ export function updateProps(
             const camelizedKey = camelize(key)
             props[camelizedKey] = resolvePropValue(
               options,
-              rawCurrentProps,
               camelizedKey,
               value,
               instance,
-              false /* isAbsent */,
+              baseResolveDefault,
             )
           }
         } else {
@@ -331,10 +330,10 @@ export function updateProps(
           ) {
             props[key] = resolvePropValue(
               options,
-              rawCurrentProps,
               key,
               undefined,
               instance,
+              baseResolveDefault,
               true /* isAbsent */,
             )
           }
@@ -428,16 +427,15 @@ function setFullProps(
   }
 
   if (needCastKeys) {
-    const rawCurrentProps = toRaw(props)
     const castValues = rawCastValues || EMPTY_OBJ
     for (let i = 0; i < needCastKeys.length; i++) {
       const key = needCastKeys[i]
       props[key] = resolvePropValue(
         options!,
-        rawCurrentProps,
         key,
         castValues[key],
         instance,
+        baseResolveDefault,
         !hasOwn(castValues, key),
       )
     }
@@ -446,14 +444,32 @@ function setFullProps(
   return hasAttrsChanged
 }
 
-function resolvePropValue(
+/**
+ * A type that allows both vdom and vapor instances
+ */
+type CommonInstance = Pick<
+  ComponentInternalInstance,
+  'props' | 'propsDefaults' | 'ce'
+>
+
+/**
+ * @internal for runtime-vapor
+ */
+export function resolvePropValue<T extends CommonInstance>(
   options: NormalizedProps,
-  props: Data,
   key: string,
   value: unknown,
-  instance: ComponentInternalInstance,
-  isAbsent: boolean,
-) {
+  instance: T,
+  /**
+   * Allow runtime-specific default resolution logic
+   */
+  resolveDefault: (
+    factory: (props: Data) => unknown,
+    instance: T,
+    key: string,
+  ) => unknown,
+  isAbsent = false,
+): unknown {
   const opt = options[key]
   if (opt != null) {
     const hasDefault = hasOwn(opt, 'default')
@@ -465,19 +481,16 @@ function resolvePropValue(
         !opt.skipFactory &&
         isFunction(defaultValue)
       ) {
-        const { propsDefaults } = instance
-        if (key in propsDefaults) {
-          value = propsDefaults[key]
+        const cachedDefaults =
+          instance.propsDefaults || (instance.propsDefaults = {})
+        if (hasOwn(cachedDefaults, key)) {
+          value = cachedDefaults[key]
         } else {
-          const reset = setCurrentInstance(instance)
-          value = propsDefaults[key] = defaultValue.call(
-            __COMPAT__ &&
-              isCompatEnabled(DeprecationTypes.PROPS_DEFAULT_THIS, instance)
-              ? createPropsDefaultThis(instance, props, key)
-              : null,
-            props,
+          value = cachedDefaults[key] = resolveDefault(
+            defaultValue,
+            instance,
+            key,
           )
-          reset()
         }
       } else {
         value = defaultValue
@@ -499,6 +512,27 @@ function resolvePropValue(
       }
     }
   }
+  return value
+}
+
+/**
+ * runtime-dom-specific default resolving logic
+ */
+function baseResolveDefault(
+  factory: (props: Data) => unknown,
+  instance: ComponentInternalInstance,
+  key: string,
+) {
+  let value
+  const reset = setCurrentInstance(instance)
+  const props = toRaw(instance.props)
+  value = factory.call(
+    __COMPAT__ && isCompatEnabled(DeprecationTypes.PROPS_DEFAULT_THIS, instance)
+      ? createPropsDefaultThis(instance, props, key)
+      : null,
+    props,
+  )
+  reset()
   return value
 }
 
@@ -550,6 +584,22 @@ export function normalizePropsOptions(
     return EMPTY_ARR as any
   }
 
+  baseNormalizePropsOptions(raw, normalized, needCastKeys)
+  const res: NormalizedPropsOptions = [normalized, needCastKeys]
+  if (isObject(comp)) {
+    cache.set(comp, res)
+  }
+  return res
+}
+
+/**
+ * @internal for runtime-vapor only
+ */
+export function baseNormalizePropsOptions(
+  raw: ComponentPropsOptions | undefined,
+  normalized: NonNullable<NormalizedPropsOptions[0]>,
+  needCastKeys: NonNullable<NormalizedPropsOptions[1]>,
+): void {
   if (isArray(raw)) {
     for (let i = 0; i < raw.length; i++) {
       if (__DEV__ && !isString(raw[i])) {
@@ -604,12 +654,6 @@ export function normalizePropsOptions(
       }
     }
   }
-
-  const res: NormalizedPropsOptions = [normalized, needCastKeys]
-  if (isObject(comp)) {
-    cache.set(comp, res)
-  }
-  return res
 }
 
 function validatePropName(key: string) {

@@ -155,11 +155,6 @@ export {
 export { createBranch, createIf } from './apiCreateIf'
 export { createFor, createForSlots } from './apiCreateFor'
 export { createComponent } from './apiCreateComponent'
-export {
-  createComponentSimple,
-  renderEffectSimple,
-  createVaporAppSimple,
-} from './apiCreateComponentSimple'
 export { createSelector } from './apiCreateSelector'
 export { setInheritAttrs } from './componentAttrs'
 
@@ -195,3 +190,5 @@ export const devtools = (
 export const setDevtoolsHook = (
   __DEV__ || __ESM_BUNDLER__ ? _setDevtoolsHook : NOOP
 ) as typeof _setDevtoolsHook
+
+export * from './_new'

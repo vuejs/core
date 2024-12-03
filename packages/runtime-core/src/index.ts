@@ -320,6 +320,7 @@ export type {
   ExtractPropTypes,
   ExtractPublicPropTypes,
   ExtractDefaultPropTypes,
+  NormalizedPropsOptions,
 } from './componentProps'
 export type {
   Directive,
@@ -480,3 +481,10 @@ export const compatUtils = (
 export const DeprecationTypes = (
   __COMPAT__ ? _DeprecationTypes : null
 ) as typeof _DeprecationTypes
+
+// VAPOR -----------------------------------------------------------------------
+
+// **IMPORTANT** These APIs are exposed solely for @vue/runtime-vapor and may
+// change without notice between versions. User code should never rely on them.
+
+export { baseNormalizePropsOptions, resolvePropValue } from './componentProps'

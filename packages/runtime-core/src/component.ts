@@ -470,7 +470,7 @@ export interface ComponentInternalInstance {
    * avoid unnecessary watcher trigger
    * @internal
    */
-  propsDefaults: Data
+  propsDefaults: Data | null
   /**
    * setup related
    * @internal
@@ -647,7 +647,7 @@ export function createComponentInstance(
     emitted: null,
 
     // props default value
-    propsDefaults: EMPTY_OBJ,
+    propsDefaults: null,
 
     // inheritAttrs
     inheritAttrs: type.inheritAttrs,
