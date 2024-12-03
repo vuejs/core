@@ -1,12 +1,16 @@
-import type { ObjectEmitsOptions } from '@vue/runtime-core'
-import type { Component } from './component'
-import { isArray } from '@vue/shared'
+import type { EmitFn, ObjectEmitsOptions } from '@vue/runtime-core'
+import {
+  type VaporComponent,
+  type VaporComponentInstance,
+  currentInstance,
+} from './component'
+import { NOOP, isArray } from '@vue/shared'
 
 /**
  * The logic from core isn't too reusable so it's better to duplicate here
  */
 export function normalizeEmitsOptions(
-  comp: Component,
+  comp: VaporComponent,
 ): ObjectEmitsOptions | null {
   const cached = comp.__emitsOptions
   if (cached) return cached
@@ -23,4 +27,21 @@ export function normalizeEmitsOptions(
   }
 
   return (comp.__emitsOptions = normalized)
+}
+
+export function useEmit(): EmitFn {
+  if (!currentInstance) {
+    // TODO warn
+    return NOOP
+  } else {
+    return emit.bind(null, currentInstance)
+  }
+}
+
+export function emit(
+  instance: VaporComponentInstance,
+  event: string,
+  ...rawArgs: any[]
+): void {
+  // TODO extract reusable logic from core
 }

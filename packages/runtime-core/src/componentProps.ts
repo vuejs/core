@@ -30,6 +30,7 @@ import {
   type ComponentInternalInstance,
   type ComponentOptions,
   type ConcreteComponent,
+  type GenericComponentInstance,
   setCurrentInstance,
 } from './component'
 import { isEmitListener } from './componentEmits'
@@ -183,9 +184,15 @@ type NormalizedProp = PropOptions & {
   [BooleanFlags.shouldCastTrue]?: boolean
 }
 
-// normalized value is a tuple of the actual normalized options
-// and an array of prop keys that need value casting (booleans and defaults)
+/**
+ * normalized value is a tuple of the actual normalized options
+ * and an array of prop keys that need value casting (booleans and defaults)
+ * @internal
+ */
 export type NormalizedProps = Record<string, NormalizedProp>
+/**
+ * @internal
+ */
 export type NormalizedPropsOptions = [NormalizedProps, string[]] | []
 
 export function initProps(
@@ -445,17 +452,11 @@ function setFullProps(
 }
 
 /**
- * A type that allows both vdom and vapor instances
- */
-type CommonInstance = Pick<
-  ComponentInternalInstance,
-  'props' | 'propsDefaults' | 'ce'
->
-
-/**
  * @internal for runtime-vapor
  */
-export function resolvePropValue<T extends CommonInstance>(
+export function resolvePropValue<
+  T extends GenericComponentInstance & Pick<ComponentInternalInstance, 'ce'>,
+>(
   options: NormalizedProps,
   key: string,
   value: unknown,

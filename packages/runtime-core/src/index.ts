@@ -320,7 +320,6 @@ export type {
   ExtractPropTypes,
   ExtractPublicPropTypes,
   ExtractDefaultPropTypes,
-  NormalizedPropsOptions,
 } from './componentProps'
 export type {
   Directive,
@@ -487,6 +486,16 @@ export const DeprecationTypes = (
 // **IMPORTANT** These APIs are exposed solely for @vue/runtime-vapor and may
 // change without notice between versions. User code should never rely on them.
 
-export { baseNormalizePropsOptions, resolvePropValue } from './componentProps'
+export {
+  type NormalizedPropsOptions,
+  baseNormalizePropsOptions,
+  resolvePropValue,
+} from './componentProps'
 export { isEmitListener } from './componentEmits'
 export { type SchedulerJob, queueJob } from './scheduler'
+export {
+  type ComponentInternalOptions,
+  type GenericComponentInstance,
+  type LifecycleHook,
+  nextUid,
+} from './component'

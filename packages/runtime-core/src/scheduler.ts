@@ -1,6 +1,6 @@
 import { ErrorCodes, callWithErrorHandling, handleError } from './errorHandling'
 import { NOOP, isArray } from '@vue/shared'
-import { type ComponentInternalInstance, getComponentName } from './component'
+import { type GenericComponentInstance, getComponentName } from './component'
 
 export enum SchedulerJobFlags {
   QUEUED = 1 << 0,
@@ -38,7 +38,7 @@ export interface SchedulerJob extends Function {
    * Attached by renderer.ts when setting up a component's render effect
    * Used to obtain component information when reporting max recursive updates.
    */
-  i?: ComponentInternalInstance
+  i?: GenericComponentInstance
 }
 
 export type SchedulerJobs = SchedulerJob | SchedulerJob[]
@@ -141,7 +141,7 @@ export function queuePostFlushCb(cb: SchedulerJobs): void {
 }
 
 export function flushPreFlushCbs(
-  instance?: ComponentInternalInstance,
+  instance?: GenericComponentInstance,
   seen?: CountMap,
   // skip the current job
   i: number = flushIndex + 1,

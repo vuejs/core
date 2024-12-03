@@ -236,6 +236,17 @@ export interface ClassComponent {
 }
 
 /**
+ * Type used where a function accepts both vdom and vapor components.
+ */
+export type GenericComponent = (
+  | {
+      name?: string
+    }
+  | ((() => any) & { displayName?: string })
+) &
+  ComponentInternalOptions
+
+/**
  * Concrete component type matches its actual value: it's either an options
  * object, or a function. Use this where the code expects to work with actual
  * values, e.g. checking if its a function or not. This is mostly for internal
@@ -309,10 +320,65 @@ export type InternalRenderFunction = {
 }
 
 /**
+ * Base component instance interface that is shared between vdom mode and vapor
+ * mode, so that we can have a mixed instance tree and reuse core logic that
+ * operate on both.
+ */
+export interface GenericComponentInstance {
+  uid: number
+  type: GenericComponent
+  parent: GenericComponentInstance | null
+  appContext: AppContext
+  /**
+   * Object containing values this component provides for its descendants
+   * @internal
+   */
+  provides: Data
+  /**
+   * Tracking reactive effects (e.g. watchers) associated with this component
+   * so that they can be automatically stopped on component unmount
+   * @internal
+   */
+  scope: EffectScope
+  /**
+   * SSR render function
+   * (they are the same between vdom and vapor components.)
+   * @internal
+   */
+  ssrRender?: Function | null
+
+  // state
+  props: Data
+  attrs: Data
+  /**
+   * @internal
+   */
+  refs: Data
+  /**
+   * used for keeping track of .once event handlers on components
+   * @internal
+   */
+  emitted: Record<string, boolean> | null
+  /**
+   * used for caching the value returned from props default factory functions to
+   * avoid unnecessary watcher trigger
+   * @internal
+   */
+  propsDefaults: Data | null
+
+  // the following are for error handling logic only
+  proxy?: any
+  /**
+   * @internal
+   */
+  [LifecycleHooks.ERROR_CAPTURED]: LifecycleHook
+}
+
+/**
  * We expose a subset of properties on the internal instance as they are
  * useful for advanced external libraries and tools.
  */
-export interface ComponentInternalInstance {
+export interface ComponentInternalInstance extends GenericComponentInstance {
   uid: number
   type: ConcreteComponent
   parent: ComponentInternalInstance | null
@@ -349,28 +415,12 @@ export interface ComponentInternalInstance {
    */
   render: InternalRenderFunction | null
   /**
-   * SSR render function
-   * @internal
-   */
-  ssrRender?: Function | null
-  /**
-   * Object containing values this component provides for its descendants
-   * @internal
-   */
-  provides: Data
-  /**
    * for tracking useId()
    * first element is the current boundary prefix
    * second number is the index of the useId call within that boundary
    * @internal
    */
   ids: [string, number, number]
-  /**
-   * Tracking reactive effects (e.g. watchers) associated with this component
-   * so that they can be automatically stopped on component unmount
-   * @internal
-   */
-  scope: EffectScope
   /**
    * cache for proxy access type to avoid hasOwnProperty calls
    * @internal
@@ -430,10 +480,27 @@ export interface ComponentInternalInstance {
   ceReload?: (newStyles?: string[]) => void
 
   // the rest are only for stateful components ---------------------------------
+  /**
+   * @internal
+   */
+  setupContext: SetupContext | null
+  /**
+   * setup related
+   * @internal
+   */
+  setupState: Data | null
+  /**
+   * devtools access to additional info
+   * @internal
+   */
+  devtoolsRawSetupState?: any
 
   // main proxy that serves as the public instance (`this`)
   proxy: ComponentPublicInstance | null
 
+  data: Data // options API only
+  emit: EmitFn
+  slots: InternalSlots
   // exposed properties via expose()
   exposed: Record<string, any> | null
   exposeProxy: Record<string, any> | null
@@ -451,41 +518,6 @@ export interface ComponentInternalInstance {
    * @internal
    */
   ctx: Data
-
-  // state
-  data: Data
-  props: Data
-  attrs: Data
-  slots: InternalSlots
-  refs: Data
-  emit: EmitFn
-
-  /**
-   * used for keeping track of .once event handlers on components
-   * @internal
-   */
-  emitted: Record<string, boolean> | null
-  /**
-   * used for caching the value returned from props default factory functions to
-   * avoid unnecessary watcher trigger
-   * @internal
-   */
-  propsDefaults: Data | null
-  /**
-   * setup related
-   * @internal
-   */
-  setupState: Data
-  /**
-   * devtools access to additional info
-   * @internal
-   */
-  devtoolsRawSetupState?: any
-  /**
-   * @internal
-   */
-  setupContext: SetupContext | null
-
   /**
    * suspense related
    * @internal
@@ -599,6 +631,13 @@ export interface ComponentInternalInstance {
 const emptyAppContext = createAppContext()
 
 let uid = 0
+
+/**
+ * @internal for vapor
+ */
+export function nextUid(): number {
+  return uid++
+}
 
 export function createComponentInstance(
   vnode: VNode,
@@ -1202,7 +1241,7 @@ const classify = (str: string): string =>
   str.replace(classifyRE, c => c.toUpperCase()).replace(/[-_]/g, '')
 
 export function getComponentName(
-  Component: ConcreteComponent,
+  Component: GenericComponent,
   includeInferred = true,
 ): string | false | undefined {
   return isFunction(Component)
@@ -1211,8 +1250,8 @@ export function getComponentName(
 }
 
 export function formatComponentName(
-  instance: ComponentInternalInstance | null,
-  Component: ConcreteComponent,
+  instance: GenericComponentInstance | null,
+  Component: GenericComponent,
   isRoot = false,
 ): string {
   let name = getComponentName(Component)
@@ -1234,7 +1273,7 @@ export function formatComponentName(
     }
     name =
       inferFromRegistry(
-        instance.components ||
+        (instance as ComponentInternalInstance).components ||
           (instance.parent.type as ComponentOptions).components,
       ) || inferFromRegistry(instance.appContext.components)
   }

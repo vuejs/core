@@ -1,5 +1,5 @@
 import { EMPTY_ARR, NO, camelize, hasOwn, isFunction } from '@vue/shared'
-import type { Component, ComponentInstance } from './component'
+import type { VaporComponent, VaporComponentInstance } from './component'
 import {
   type NormalizedPropsOptions,
   baseNormalizePropsOptions,
@@ -18,9 +18,9 @@ type PropSource<T = any> = T | (() => T)
 type DynamicPropsSource = PropSource<Record<string, any>>
 
 export function initStaticProps(
-  comp: Component,
+  comp: VaporComponent,
   rawProps: RawProps | undefined,
-  instance: ComponentInstance,
+  instance: VaporComponentInstance,
 ): boolean {
   let hasAttrs = false
   const { props, attrs } = instance
@@ -85,7 +85,7 @@ export function initStaticProps(
 
 function resolveDefault(
   factory: (props: Record<string, any>) => unknown,
-  instance: ComponentInstance,
+  instance: VaporComponentInstance,
 ) {
   return factory.call(null, instance.props)
 }
@@ -96,8 +96,8 @@ function resolveSource(source: PropSource): Record<string, any> {
 }
 
 export function getDynamicPropsHandlers(
-  comp: Component,
-  instance: ComponentInstance,
+  comp: VaporComponent,
+  instance: VaporComponentInstance,
 ): [ProxyHandler<RawProps>, ProxyHandler<RawProps>] {
   if (comp.__propsHandlers) {
     return comp.__propsHandlers
@@ -204,7 +204,7 @@ export function getDynamicPropsHandlers(
   return (comp.__propsHandlers = [propsHandlers, attrsHandlers])
 }
 
-function normalizePropsOptions(comp: Component): NormalizedPropsOptions {
+function normalizePropsOptions(comp: VaporComponent): NormalizedPropsOptions {
   const cached = comp.__propsOptions
   if (cached) return cached
 

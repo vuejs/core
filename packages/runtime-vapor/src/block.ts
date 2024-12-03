@@ -1,9 +1,9 @@
 import { isArray } from '@vue/shared'
-import { type ComponentInstance, isVaporComponent } from './_new/component'
+import { type VaporComponentInstance, isVaporComponent } from './_new/component'
 
 export const fragmentKey: unique symbol = Symbol(__DEV__ ? `fragmentKey` : ``)
 
-export type Block = Node | Fragment | ComponentInstance | Block[]
+export type Block = Node | Fragment | VaporComponentInstance | Block[]
 export type Fragment = {
   nodes: Block
   anchor?: Node
@@ -27,7 +27,7 @@ export function normalizeBlock(block: Block): Node[] {
 }
 
 export function findFirstRootElement(
-  instance: ComponentInstance,
+  instance: VaporComponentInstance,
 ): Element | undefined {
   const element = getFirstNode(instance.block)
   return element instanceof Element ? element : undefined

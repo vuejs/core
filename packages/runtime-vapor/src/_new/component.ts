@@ -1,14 +1,19 @@
 import {
+  type AppContext,
+  type ComponentInternalOptions,
   type ComponentPropsOptions,
   EffectScope,
   type EmitsOptions,
+  type GenericComponentInstance,
+  type LifecycleHook,
   type NormalizedPropsOptions,
   type ObjectEmitsOptions,
+  nextUid,
 } from '@vue/runtime-core'
 import type { Block } from '../block'
 import type { Data } from '@vue/runtime-shared'
 import { pauseTracking, resetTracking } from '@vue/reactivity'
-import { isFunction } from '@vue/shared'
+import { EMPTY_OBJ, isFunction } from '@vue/shared'
 import {
   type RawProps,
   getDynamicPropsHandlers,
@@ -17,22 +22,22 @@ import {
 import { setDynamicProp } from '../dom/prop'
 import { renderEffect } from './renderEffect'
 
-export type Component = FunctionalComponent | ObjectComponent
+export type VaporComponent = FunctionalVaporComponent | ObjectVaporComponent
 
-export type SetupFn = (
+export type VaporSetupFn = (
   props: any,
   ctx: SetupContext,
 ) => Block | Data | undefined
 
-export type FunctionalComponent = SetupFn &
-  Omit<ObjectComponent, 'setup'> & {
+export type FunctionalVaporComponent = VaporSetupFn &
+  Omit<ObjectVaporComponent, 'setup'> & {
     displayName?: string
   } & SharedInternalOptions
 
-export interface ObjectComponent
+export interface ObjectVaporComponent
   extends ComponentInternalOptions,
     SharedInternalOptions {
-  setup?: SetupFn
+  setup?: VaporSetupFn
   inheritAttrs?: boolean
   props?: ComponentPropsOptions
   emits?: EmitsOptions
@@ -43,41 +48,27 @@ export interface ObjectComponent
 }
 
 interface SharedInternalOptions {
+  /**
+   * Cached normalized props options.
+   * In vapor mode there are no mixins so normalized options can be cached
+   * directly on the component
+   */
   __propsOptions?: NormalizedPropsOptions
+  /**
+   * Cached normalized props proxy handlers.
+   */
   __propsHandlers?: [ProxyHandler<any>, ProxyHandler<any>]
+  /**
+   * Cached normalized emits options.
+   */
   __emitsOptions?: ObjectEmitsOptions
 }
 
-// Note: can't mark this whole interface internal because some public interfaces
-// extend it.
-interface ComponentInternalOptions {
-  /**
-   * @internal
-   */
-  __scopeId?: string
-  /**
-   * @internal
-   */
-  __cssModules?: Data
-  /**
-   * @internal
-   */
-  __hmrId?: string
-  /**
-   * This one should be exposed so that devtools can make use of it
-   */
-  __file?: string
-  /**
-   * name inferred from filename
-   */
-  __name?: string
-}
-
 export function createComponent(
-  component: Component,
+  component: VaporComponent,
   rawProps?: RawProps,
   isSingleRoot?: boolean,
-): ComponentInstance {
+): VaporComponentInstance {
   // check if we are the single root of the parent
   // if yes, inject parent attrs as dynamic props source
   if (isSingleRoot && currentInstance && currentInstance.hasFallthrough) {
@@ -88,7 +79,7 @@ export function createComponent(
     }
   }
 
-  const instance = new ComponentInstance(component, rawProps)
+  const instance = new VaporComponentInstance(component, rawProps)
 
   pauseTracking()
   let prevInstance = currentInstance
@@ -123,23 +114,45 @@ export function createComponent(
   return instance
 }
 
-let uid = 0
-export let currentInstance: ComponentInstance | null = null
+export let currentInstance: VaporComponentInstance | null = null
 
-export class ComponentInstance {
-  type: Component
-  uid: number = uid++
-  scope: EffectScope = new EffectScope(true)
-  props: Record<string, any>
-  propsDefaults: Record<string, any> | null
-  attrs: Record<string, any>
+export class VaporComponentInstance implements GenericComponentInstance {
+  uid: number
+  type: VaporComponent
+  parent: GenericComponentInstance | null
+  appContext: AppContext
+
   block: Block
+  scope: EffectScope
+  props: Record<string, any>
+  attrs: Record<string, any>
   exposed?: Record<string, any>
+
+  emitted: Record<string, boolean> | null
+  propsDefaults: Record<string, any> | null
+
+  // for useTemplateRef()
+  refs: Data
+  // for provide / inject
+  provides: Data
+
   hasFallthrough: boolean
 
-  constructor(comp: Component, rawProps?: RawProps) {
+  // LifecycleHooks.ERROR_CAPTURED
+  ec: LifecycleHook
+
+  constructor(comp: VaporComponent, rawProps?: RawProps) {
+    this.uid = nextUid()
     this.type = comp
+    this.parent = currentInstance
+    this.appContext = currentInstance ? currentInstance.appContext : null! // TODO
+
     this.block = null! // to be set
+    this.scope = new EffectScope(true)
+
+    this.provides = this.refs = EMPTY_OBJ
+    this.emitted = null
+    this.ec = null
 
     // init props
     this.propsDefaults = null
@@ -161,8 +174,10 @@ export class ComponentInstance {
   }
 }
 
-export function isVaporComponent(value: unknown): value is ComponentInstance {
-  return value instanceof ComponentInstance
+export function isVaporComponent(
+  value: unknown,
+): value is VaporComponentInstance {
+  return value instanceof VaporComponentInstance
 }
 
 export class SetupContext<E = EmitsOptions> {
@@ -171,7 +186,7 @@ export class SetupContext<E = EmitsOptions> {
   // slots: Readonly<StaticSlots>
   expose: (exposed?: Record<string, any>) => void
 
-  constructor(instance: ComponentInstance) {
+  constructor(instance: VaporComponentInstance) {
     this.attrs = instance.attrs
     // this.emit = instance.emit as EmitFn<E>
     // this.slots = instance.slots

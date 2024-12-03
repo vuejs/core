@@ -1,8 +1,8 @@
 import { normalizeContainer } from '../apiRender'
 import { insert } from '../dom/element'
-import { type Component, createComponent } from './component'
+import { type VaporComponent, createComponent } from './component'
 
-export function createVaporApp(comp: Component): any {
+export function createVaporApp(comp: VaporComponent): any {
   return {
     mount(container: string | ParentNode) {
       container = normalizeContainer(container)
