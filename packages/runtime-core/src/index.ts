@@ -488,4 +488,5 @@ export const DeprecationTypes = (
 // change without notice between versions. User code should never rely on them.
 
 export { baseNormalizePropsOptions, resolvePropValue } from './componentProps'
+export { isEmitListener } from './componentEmits'
 export { type SchedulerJob, queueJob } from './scheduler'

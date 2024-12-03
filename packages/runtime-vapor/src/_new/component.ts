@@ -3,6 +3,7 @@ import {
   EffectScope,
   type EmitsOptions,
   type NormalizedPropsOptions,
+  type ObjectEmitsOptions,
 } from '@vue/runtime-core'
 import type { Block } from '../block'
 import type { Data } from '@vue/runtime-shared'
@@ -44,6 +45,7 @@ export interface ObjectComponent
 interface SharedInternalOptions {
   __propsOptions?: NormalizedPropsOptions
   __propsHandlers?: [ProxyHandler<any>, ProxyHandler<any>]
+  __emitsOptions?: ObjectEmitsOptions
 }
 
 // Note: can't mark this whole interface internal because some public interfaces

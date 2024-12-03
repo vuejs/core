@@ -3,8 +3,10 @@ import type { Component, ComponentInstance } from './component'
 import {
   type NormalizedPropsOptions,
   baseNormalizePropsOptions,
+  isEmitListener,
   resolvePropValue,
 } from '@vue/runtime-core'
+import { normalizeEmitsOptions } from './componentEmits'
 
 export interface RawProps {
   [key: string]: PropSource
@@ -23,7 +25,7 @@ export function initStaticProps(
   let hasAttrs = false
   const { props, attrs } = instance
   const [propsOptions, needCastKeys] = normalizePropsOptions(comp)
-  // TODO emits filtering
+  const emitsOptions = normalizeEmitsOptions(comp)
   for (const key in rawProps) {
     const normalizedKey = camelize(key)
     const needCast = needCastKeys && needCastKeys.includes(normalizedKey)
@@ -54,7 +56,7 @@ export function initStaticProps(
             )
           : source
       }
-    } else {
+    } else if (!isEmitListener(emitsOptions, key)) {
       if (isFunction(source)) {
         Object.defineProperty(attrs, key, {
           enumerable: true,
@@ -102,44 +104,48 @@ export function getDynamicPropsHandlers(
   }
   let normalizedKeys: string[] | undefined
   const propsOptions = normalizePropsOptions(comp)[0]!
-  const isProp = (key: string | symbol) => hasOwn(propsOptions, key)
+  const emitsOptions = normalizeEmitsOptions(comp)
+  const isProp = (key: string) => hasOwn(propsOptions, key)
 
-  const getProp = (target: RawProps, key: string | symbol, asProp: boolean) => {
-    if (key !== '$' && (asProp ? isProp(key) : !isProp(key))) {
-      const castProp = (value: any, isAbsent = false) =>
-        asProp
-          ? resolvePropValue(
-              propsOptions,
-              key as string,
-              value,
-              instance,
-              resolveDefault,
-              isAbsent,
-            )
-          : value
+  const getProp = (target: RawProps, key: string, asProp: boolean) => {
+    if (key === '$') return
+    if (asProp) {
+      if (!isProp(key)) return
+    } else if (isProp(key) || isEmitListener(emitsOptions, key)) {
+      return
+    }
+    const castProp = (value: any, isAbsent = false) =>
+      asProp
+        ? resolvePropValue(
+            propsOptions,
+            key as string,
+            value,
+            instance,
+            resolveDefault,
+            isAbsent,
+          )
+        : value
 
-      if (key in target) {
-        // TODO default value, casting, etc.
-        return castProp(resolveSource(target[key as string]))
-      }
-      if (target.$) {
-        let i = target.$.length
-        let source
-        while (i--) {
-          source = resolveSource(target.$[i])
-          if (hasOwn(source, key)) {
-            return castProp(source[key])
-          }
+    if (key in target) {
+      return castProp(resolveSource(target[key as string]))
+    }
+    if (target.$) {
+      let i = target.$.length
+      let source
+      while (i--) {
+        source = resolveSource(target.$[i])
+        if (hasOwn(source, key)) {
+          return castProp(source[key])
         }
       }
-      return castProp(undefined, true)
     }
+    return castProp(undefined, true)
   }
 
   const propsHandlers = {
-    get: (target, key) => getProp(target, key, true),
-    has: (_, key) => isProp(key),
-    getOwnPropertyDescriptor(target, key) {
+    get: (target, key: string) => getProp(target, key, true),
+    has: (_, key: string) => isProp(key),
+    getOwnPropertyDescriptor(target, key: string) {
       if (isProp(key)) {
         return {
           configurable: true,
@@ -154,8 +160,9 @@ export function getDynamicPropsHandlers(
     deleteProperty: NO,
   } satisfies ProxyHandler<RawProps>
 
-  const hasAttr = (target: RawProps, key: string | symbol) => {
-    if (key === '$' || isProp(key)) return false
+  const hasAttr = (target: RawProps, key: string) => {
+    if (key === '$' || isProp(key) || isEmitListener(emitsOptions, key))
+      return false
     if (hasOwn(target, key)) return true
     if (target.$) {
       let i = target.$.length
@@ -169,9 +176,9 @@ export function getDynamicPropsHandlers(
   }
 
   const attrsHandlers = {
-    get: (target, key) => getProp(target, key, false),
+    get: (target, key: string) => getProp(target, key, false),
     has: hasAttr,
-    getOwnPropertyDescriptor(target, key) {
+    getOwnPropertyDescriptor(target, key: string) {
       if (hasAttr(target, key)) {
         return {
           configurable: true,
@@ -181,16 +188,14 @@ export function getDynamicPropsHandlers(
       }
     },
     ownKeys(target) {
-      const staticKeys = Object.keys(target).filter(
-        key => key !== '$' && !isProp(key),
-      )
+      const staticKeys = Object.keys(target)
       if (target.$) {
         let i = target.$.length
         while (i--) {
           staticKeys.push(...Object.keys(resolveSource(target.$[i])))
         }
       }
-      return staticKeys
+      return staticKeys.filter(key => hasAttr(target, key))
     },
     set: NO,
     deleteProperty: NO,

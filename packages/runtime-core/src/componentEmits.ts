@@ -282,9 +282,13 @@ export function normalizeEmitsOptions(
   return normalized
 }
 
-// Check if an incoming prop key is a declared emit event listener.
-// e.g. With `emits: { click: null }`, props named `onClick` and `onclick` are
-// both considered matched listeners.
+/**
+ * Check if an incoming prop key is a declared emit event listener.
+ * e.g. With `emits: { click: null }`, props named `onClick` and `onclick` are
+ * both considered matched listeners.
+ *
+ * @internal for vapor only
+ */
 export function isEmitListener(
   options: ObjectEmitsOptions | null,
   key: string,
