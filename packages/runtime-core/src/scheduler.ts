@@ -24,6 +24,9 @@ export enum SchedulerJobFlags {
   DISPOSED = 1 << 3,
 }
 
+/**
+ * @internal
+ */
 export interface SchedulerJob extends Function {
   id?: number
   /**
@@ -91,6 +94,9 @@ function findInsertionIndex(id: number) {
   return start
 }
 
+/**
+ * @internal for runtime-vapor only
+ */
 export function queueJob(job: SchedulerJob): void {
   if (!(job.flags! & SchedulerJobFlags.QUEUED)) {
     const jobId = getId(job)

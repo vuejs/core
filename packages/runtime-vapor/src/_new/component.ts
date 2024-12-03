@@ -62,10 +62,6 @@ interface ComponentInternalOptions {
    */
   __hmrId?: string
   /**
-   * Compat build only, for bailing out of certain compatibility behavior
-   */
-  __isBuiltIn?: boolean
-  /**
    * This one should be exposed so that devtools can make use of it
    */
   __file?: string

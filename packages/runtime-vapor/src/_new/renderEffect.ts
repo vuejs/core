@@ -1,8 +1,5 @@
 import { ReactiveEffect } from '@vue/reactivity'
-import {
-  type SchedulerJob,
-  queueJob,
-} from '../../../runtime-core/src/scheduler'
+import { type SchedulerJob, queueJob } from '@vue/runtime-core'
 import { currentInstance } from './component'
 
 export function renderEffect(fn: () => void): void {
