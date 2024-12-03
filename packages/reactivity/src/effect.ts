@@ -1,6 +1,6 @@
 import { extend } from '@vue/shared'
 import type { TrackOpTypes, TriggerOpTypes } from './constants'
-import { setupFlagsHandler } from './debug'
+import { setupOnTrigger } from './debug'
 import { activeEffectScope } from './effectScope'
 import {
   type IEffect,
@@ -73,9 +73,6 @@ export class ReactiveEffect<T = any> implements IEffect, ReactiveEffectOptions {
   constructor(public fn: () => T) {
     if (activeEffectScope && activeEffectScope.active) {
       activeEffectScope.effects.push(this)
-    }
-    if (__DEV__) {
-      setupFlagsHandler(this)
     }
   }
 
@@ -174,6 +171,10 @@ export class ReactiveEffect<T = any> implements IEffect, ReactiveEffectOptions {
     }
     return false
   }
+}
+
+if (__DEV__) {
+  setupOnTrigger(ReactiveEffect)
 }
 
 export interface ReactiveEffectRunner<T = any> {

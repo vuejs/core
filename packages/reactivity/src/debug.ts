@@ -44,12 +44,24 @@ export function onTrigger(sub: Link['sub']): void {
   }
 }
 
-export function setupFlagsHandler(target: Subscriber): void {
+export function setupOnTrigger(target: { new (...args: any[]): any }): void {
   if (!__DEV__) {
     throw new Error(
-      `Internal error: setupFlagsHandler should be called only in development.`,
+      `Internal error: setupOnTrigger should be called only in development.`,
     )
   }
+  Object.defineProperty(target.prototype, 'onTrigger', {
+    get() {
+      return this._onTrigger
+    },
+    set(val) {
+      if (!this._onTrigger) setupFlagsHandler(this)
+      this._onTrigger = val
+    },
+  })
+}
+
+function setupFlagsHandler(target: Subscriber): void {
   // @ts-expect-error
   target._flags = target.flags
   Object.defineProperty(target, 'flags', {

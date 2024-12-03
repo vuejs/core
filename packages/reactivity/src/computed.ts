@@ -1,6 +1,6 @@
 import { hasChanged, isFunction } from '@vue/shared'
 import { ReactiveFlags, TrackOpTypes } from './constants'
-import { onTrack, setupFlagsHandler } from './debug'
+import { onTrack, setupOnTrigger } from './debug'
 import {
   type DebuggerEvent,
   type DebuggerOptions,
@@ -130,9 +130,6 @@ export class ComputedRefImpl<T = any> implements IComputed {
     private readonly setter: ComputedSetter<T> | undefined,
   ) {
     this[ReactiveFlags.IS_READONLY] = !setter
-    if (__DEV__) {
-      setupFlagsHandler(this)
-    }
   }
 
   get value(): T {
@@ -186,6 +183,10 @@ export class ComputedRefImpl<T = any> implements IComputed {
     }
     return false
   }
+}
+
+if (__DEV__) {
+  setupOnTrigger(ComputedRefImpl)
 }
 
 /**
