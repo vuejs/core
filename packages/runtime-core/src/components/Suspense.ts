@@ -788,7 +788,6 @@ function hydrateSuspense(
     parentSuspense,
     parentComponent,
     node.parentNode!,
-    // eslint-disable-next-line no-restricted-globals
     document.createElement('div'),
     null,
     namespace,

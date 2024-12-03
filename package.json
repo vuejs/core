@@ -13,7 +13,7 @@
     "size-esm-runtime": "node scripts/build.js vue -f esm-bundler-runtime",
     "size-esm": "node scripts/build.js runtime-dom runtime-core reactivity shared -f esm-bundler",
     "check": "tsc --incremental --noEmit",
-    "lint": "eslint --cache .",
+    "lint": "tsslint --project ./tsconfig.json",
     "format": "prettier --write --cache .",
     "format-check": "prettier --check --cache .",
     "test": "vitest",
@@ -54,7 +54,7 @@
       "prettier --write"
     ],
     "*.ts?(x)": [
-      "eslint --fix",
+      "npm run lint -- --fix",
       "prettier --parser=typescript --write"
     ]
   },
@@ -70,19 +70,22 @@
     "@rollup/plugin-node-resolve": "^15.3.0",
     "@rollup/plugin-replace": "5.0.4",
     "@swc/core": "^1.9.3",
+    "@tsslint/cli": "~1.2.4",
+    "@tsslint/config": "~1.2.4",
+    "@tsslint/eslint": "~1.2.4",
     "@types/hash-sum": "^1.0.2",
     "@types/node": "^22.10.0",
     "@types/semver": "^7.5.8",
     "@types/serve-handler": "^6.1.4",
+    "@typescript-eslint/eslint-plugin": "^8.17.0",
     "@vitest/coverage-v8": "^2.1.5",
+    "@vitest/eslint-plugin": "^1.1.14",
     "@vue/consolidate": "1.0.0",
     "conventional-changelog-cli": "^5.0.0",
     "enquirer": "^2.4.1",
     "esbuild": "^0.24.0",
     "esbuild-plugin-polyfill-node": "^0.3.0",
-    "eslint": "^9.15.0",
-    "eslint-plugin-import-x": "^4.4.2",
-    "@vitest/eslint-plugin": "^1.1.10",
+    "eslint-plugin-import-x": "^4.4.3",
     "estree-walker": "catalog:",
     "jsdom": "^25.0.1",
     "lint-staged": "^15.2.10",
@@ -108,19 +111,7 @@
     "todomvc-app-css": "^2.4.3",
     "tslib": "^2.8.1",
     "typescript": "~5.6.2",
-    "typescript-eslint": "^8.14.0",
     "vite": "catalog:",
     "vitest": "^2.1.5"
-  },
-  "pnpm": {
-    "peerDependencyRules": {
-      "allowedVersions": {
-        "typescript-eslint>eslint": "^9.0.0",
-        "@typescript-eslint/eslint-plugin>eslint": "^9.0.0",
-        "@typescript-eslint/parser>eslint": "^9.0.0",
-        "@typescript-eslint/type-utils>eslint": "^9.0.0",
-        "@typescript-eslint/utils>eslint": "^9.0.0"
-      }
-    }
   }
 }
