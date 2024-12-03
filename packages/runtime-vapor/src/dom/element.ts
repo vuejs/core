@@ -2,6 +2,7 @@ import { isArray } from '@vue/shared'
 import { renderEffect } from '../renderEffect'
 import { setText } from './prop'
 import { type Block, normalizeBlock } from '../block'
+import { isVaporComponent } from '../apiCreateComponentSimple'
 
 // export function insert(
 //   block: Block,
@@ -21,6 +22,8 @@ export function insert(
 ): void {
   if (block instanceof Node) {
     parent.insertBefore(block, anchor)
+  } else if (isVaporComponent(block)) {
+    insert(block.block, parent, anchor)
   } else if (isArray(block)) {
     for (let i = 0; i < block.length; i++) {
       insert(block[i], parent, anchor)

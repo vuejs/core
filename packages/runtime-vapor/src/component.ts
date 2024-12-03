@@ -25,6 +25,7 @@ import {
   createAppContext,
 } from './apiCreateVaporApp'
 import type { Data } from '@vue/runtime-shared'
+import type { ComponentInstance } from './apiCreateComponentSimple'
 
 export type Component = FunctionalComponent | ObjectComponent
 
@@ -49,7 +50,7 @@ export class SetupContext<E = EmitsOptions> {
   slots: Readonly<StaticSlots>
   expose: (exposed?: Record<string, any>) => void
 
-  constructor(instance: ComponentInternalInstance) {
+  constructor(instance: ComponentInstance) {
     this.attrs = instance.attrs
     this.emit = instance.emit as EmitFn<E>
     this.slots = instance.slots

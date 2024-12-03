@@ -4,17 +4,16 @@ import {
   pauseTracking,
   resetTracking,
 } from '@vue/reactivity'
-import {
-  type Component,
-  type ComponentInternalInstance,
-  SetupContext,
-} from './component'
+import type { Component } from './component'
 import { NO, camelize, hasOwn, isFunction } from '@vue/shared'
 import { type SchedulerJob, queueJob } from '../../runtime-core/src/scheduler'
 import { insert } from './dom/element'
 import { normalizeContainer } from './apiRender'
 import { normalizePropsOptions, resolvePropValue } from './componentProps'
 import type { Block } from './block'
+import { EmitFn, type EmitsOptions } from './componentEmits'
+import { StaticSlots } from './componentSlots'
+import { setDynamicProp } from './dom/prop'
 
 interface RawProps {
   [key: string]: PropSource
@@ -28,11 +27,19 @@ type DynamicPropsSource = PropSource<Record<string, any>>
 export function createComponentSimple(
   component: Component,
   rawProps?: RawProps,
-): Block {
-  const instance = new ComponentInstance(
-    component,
-    rawProps,
-  ) as any as ComponentInternalInstance
+  isSingleRoot?: boolean,
+): ComponentInstance {
+  // check if we are the single root of the parent
+  // if yes, inject parent attrs as dynamic props source
+  if (isSingleRoot && currentInstance && currentInstance.hasFallthrough) {
+    if (rawProps) {
+      ;(rawProps.$ || (rawProps.$ = [])).push(currentInstance.attrs)
+    } else {
+      rawProps = { $: [currentInstance.attrs] }
+    }
+  }
+
+  const instance = new ComponentInstance(component, rawProps)
 
   pauseTracking()
   let prevInstance = currentInstance
@@ -41,30 +48,46 @@ export function createComponentSimple(
 
   const setupFn = isFunction(component) ? component : component.setup
   const setupContext = setupFn!.length > 1 ? new SetupContext(instance) : null
-  const node = setupFn!(
+  instance.block = setupFn!(
     instance.props,
     // @ts-expect-error
     setupContext,
-  ) as Block
+  ) as Block // TODO handle return object
 
   // single root, inherit attrs
   if (
-    rawProps &&
+    instance.hasFallthrough &&
     component.inheritAttrs !== false &&
-    node instanceof Element &&
+    instance.block instanceof Element &&
     Object.keys(instance.attrs).length
   ) {
     renderEffectSimple(() => {
-      // TODO
+      for (const key in instance.attrs) {
+        setDynamicProp(instance.block as Element, key, instance.attrs[key])
+      }
     })
   }
 
   instance.scope.off()
   currentInstance = prevInstance
   resetTracking()
-  // @ts-expect-error
-  node.__vue__ = instance
-  return node
+  return instance
+}
+
+class SetupContext<E = EmitsOptions> {
+  attrs: Record<string, any>
+  // emit: EmitFn<E>
+  // slots: Readonly<StaticSlots>
+  expose: (exposed?: Record<string, any>) => void
+
+  constructor(instance: ComponentInstance) {
+    this.attrs = instance.attrs
+    // this.emit = instance.emit as EmitFn<E>
+    // this.slots = instance.slots
+    this.expose = (exposed = {}) => {
+      instance.exposed = exposed
+    }
+  }
 }
 
 let uid = 0
@@ -76,19 +99,24 @@ export class ComponentInstance {
   scope: EffectScope = new EffectScope(true)
   props: Record<string, any>
   attrs: Record<string, any>
+  block: Block
+  exposed?: Record<string, any>
+  hasFallthrough: boolean
+
   constructor(comp: Component, rawProps?: RawProps) {
     this.type = comp
+    this.block = null! // to be set
 
     // init props
-    let mayHaveFallthroughAttrs = false
+    this.hasFallthrough = false
     if (comp.props && rawProps && rawProps.$) {
       // has dynamic props, use proxy
       const handlers = getDynamicPropsHandlers(comp, this)
       this.props = new Proxy(rawProps, handlers[0])
       this.attrs = new Proxy(rawProps, handlers[1])
-      mayHaveFallthroughAttrs = true
+      this.hasFallthrough = true
     } else {
-      mayHaveFallthroughAttrs = initStaticProps(
+      this.hasFallthrough = initStaticProps(
         comp,
         rawProps,
         (this.props = {}),
@@ -97,12 +125,12 @@ export class ComponentInstance {
     }
 
     // TODO validate props
-
-    if (mayHaveFallthroughAttrs) {
-      // TODO apply fallthrough attrs
-    }
     // TODO init slots
   }
+}
+
+export function isVaporComponent(value: unknown): value is ComponentInstance {
+  return value instanceof ComponentInstance
 }
 
 function initStaticProps(
@@ -185,11 +213,12 @@ function getDynamicPropsHandlers(
         return castProp(resolveSource(target[key as string]))
       }
       if (target.$) {
-        let source, resolved
-        for (source of target.$) {
-          resolved = resolveSource(source)
-          if (hasOwn(resolved, key)) {
-            return castProp(resolved[key])
+        let i = target.$.length
+        let source
+        while (i--) {
+          source = resolveSource(target.$[i])
+          if (hasOwn(source, key)) {
+            return castProp(source[key])
           }
         }
       }
@@ -219,10 +248,9 @@ function getDynamicPropsHandlers(
     if (key === '$' || isProp(key)) return false
     if (hasOwn(target, key)) return true
     if (target.$) {
-      let source, resolved
-      for (source of target.$) {
-        resolved = resolveSource(source)
-        if (hasOwn(resolved, key)) {
+      let i = target.$.length
+      while (i--) {
+        if (hasOwn(resolveSource(target.$[i]), key)) {
           return true
         }
       }
@@ -247,8 +275,9 @@ function getDynamicPropsHandlers(
         key => key !== '$' && !isProp(key),
       )
       if (target.$) {
-        for (const source of target.$) {
-          staticKeys.push(...Object.keys(resolveSource(source)))
+        let i = target.$.length
+        while (i--) {
+          staticKeys.push(...Object.keys(resolveSource(target.$[i])))
         }
       }
       return staticKeys
