@@ -16,9 +16,8 @@ export function DevPlugin({ browser = false } = {}) {
       return {
         resolve: {
           alias: {
-            'vue/vapor': resolve('vue/vapor/index.mjs'),
+            'vue/vapor': resolve('runtime-vapor/src'),
             vue: resolve('vue/src/runtime.ts'),
-            '@vue/vapor': resolve('vue-vapor/src'),
 
             '@vue/runtime-core': resolve('runtime-core/src'),
             '@vue/runtime-dom': resolve('runtime-dom/src'),

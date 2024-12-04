@@ -468,15 +468,15 @@ importers:
       '@vue/runtime-dom':
         specifier: workspace:*
         version: link:../runtime-dom
+      '@vue/runtime-vapor':
+        specifier: workspace:*
+        version: link:../runtime-vapor
       '@vue/server-renderer':
         specifier: workspace:*
         version: link:../server-renderer
       '@vue/shared':
         specifier: workspace:*
         version: link:../shared
-      '@vue/vapor':
-        specifier: workspace:*
-        version: link:../vue-vapor
       typescript:
         specifier: '*'
         version: 5.5.4
@@ -495,12 +495,6 @@ importers:
       vue:
         specifier: workspace:*
         version: link:../vue
-
-  packages/vue-vapor:
-    dependencies:
-      '@vue/runtime-vapor':
-        specifier: workspace:*
-        version: link:../runtime-vapor
 
   playground:
     dependencies:

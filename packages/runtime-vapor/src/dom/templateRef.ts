@@ -1,10 +1,15 @@
 import { type Ref, isRef, onScopeDispose } from '@vue/reactivity'
 import {
-  type ComponentInternalInstance,
+  type VaporComponentInstance,
   currentInstance,
   isVaporComponent,
-} from '../_old/component'
-import { VaporErrorCodes, callWithErrorHandling } from '../_old/errorHandling'
+} from '../component'
+import {
+  type SchedulerJob,
+  callWithErrorHandling,
+  queuePostFlushCb,
+  warn,
+} from '@vue/runtime-dom'
 import {
   EMPTY_OBJ,
   hasOwn,
@@ -13,11 +18,9 @@ import {
   isString,
   remove,
 } from '@vue/shared'
-import { warn } from '../_old/warning'
-import { type SchedulerJob, queuePostFlushCb } from '../_old/scheduler'
 
 export type NodeRef = string | Ref | ((ref: Element) => void)
-export type RefEl = Element | ComponentInternalInstance
+export type RefEl = Element | VaporComponentInstance
 
 /**
  * Function for handling a template ref
@@ -29,6 +32,7 @@ export function setRef(
   refFor = false,
 ): NodeRef | undefined {
   if (!currentInstance) return
+  // @ts-expect-error TODO
   const { setupState, isUnmounted } = currentInstance
 
   if (isUnmounted) {
@@ -46,7 +50,7 @@ export function setRef(
   if (oldRef != null && oldRef !== ref) {
     if (isString(oldRef)) {
       refs[oldRef] = null
-      if (hasOwn(setupState, oldRef)) {
+      if (setupState && hasOwn(setupState, oldRef)) {
         setupState[oldRef] = null
       }
     } else if (isRef(oldRef)) {
@@ -59,7 +63,8 @@ export function setRef(
       callWithErrorHandling(
         ref,
         currentInstance,
-        VaporErrorCodes.FUNCTION_REF,
+        // @ts-expect-error
+        null,
         [value, refs],
       )
     }
@@ -126,7 +131,7 @@ export function setRef(
         })
       })
     } else if (__DEV__) {
-      warn('Invalid template ref type:', ref, `(${typeof ref})`)
+      // warn('Invalid template ref type:', ref, `(${typeof ref})`)
     }
   }
   return ref

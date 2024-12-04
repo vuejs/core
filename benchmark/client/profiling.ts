@@ -2,7 +2,7 @@
 /* eslint-disable no-restricted-syntax */
 /* eslint-disable no-restricted-globals */
 
-import { nextTick } from '@vue/vapor'
+import { nextTick } from 'vue/vapor'
 
 declare namespace globalThis {
   let doProfile: boolean

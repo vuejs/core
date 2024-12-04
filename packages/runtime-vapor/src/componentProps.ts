@@ -5,7 +5,7 @@ import {
   baseNormalizePropsOptions,
   isEmitListener,
   resolvePropValue,
-} from '@vue/runtime-core'
+} from '@vue/runtime-dom'
 import { normalizeEmitsOptions } from './componentEmits'
 
 export interface RawProps {

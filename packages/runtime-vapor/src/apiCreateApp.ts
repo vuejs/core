@@ -1,4 +1,3 @@
-import { normalizeContainer } from './_old/apiRender'
 import { insert } from './dom/element'
 import { type VaporComponent, createComponent } from './component'
 import {
@@ -6,7 +5,8 @@ import {
   type AppUnmountFn,
   type CreateAppFunction,
   createAppAPI,
-} from '@vue/runtime-core'
+  normalizeContainer,
+} from '@vue/runtime-dom'
 
 let _createApp: CreateAppFunction<ParentNode, VaporComponent>
 
@@ -32,7 +32,7 @@ export const createVaporApp: CreateAppFunction<
   const app = _createApp(comp)
   const mount = app.mount
   app.mount = (container, ...args: any[]) => {
-    container = normalizeContainer(container) // TODO reuse from runtime-dom
+    container = normalizeContainer(container) as ParentNode
     return mount(container, ...args)
   }
   return app

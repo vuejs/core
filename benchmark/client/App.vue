@@ -4,7 +4,7 @@ import {
   triggerRef,
   type ShallowRef,
   createSelector,
-} from '@vue/vapor'
+} from 'vue/vapor'
 import { buildData } from './data'
 import { defer, wrap } from './profiling'
 

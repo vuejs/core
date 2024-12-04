@@ -107,9 +107,9 @@
   "homepage": "https://github.com/vuejs/vue-vapor/tree/main/packages/vue#readme",
   "dependencies": {
     "@vue/shared": "workspace:*",
-    "@vue/vapor": "workspace:*",
     "@vue/compiler-dom": "workspace:*",
     "@vue/runtime-dom": "workspace:*",
+    "@vue/runtime-vapor": "workspace:*",
     "@vue/compiler-sfc": "workspace:*",
     "@vue/server-renderer": "workspace:*"
   },

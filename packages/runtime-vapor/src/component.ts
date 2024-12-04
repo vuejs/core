@@ -11,7 +11,7 @@ import {
   nextUid,
   popWarningContext,
   pushWarningContext,
-} from '@vue/runtime-core'
+} from '@vue/runtime-dom'
 import type { Block } from './block'
 import { pauseTracking, resetTracking } from '@vue/reactivity'
 import { EMPTY_OBJ, isFunction } from '@vue/shared'

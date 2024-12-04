@@ -230,9 +230,9 @@ function injectCompilerOptionsCheck(app: App) {
 /**
  * @internal
  */
-export function normalizeContainer(
-  container: Element | ShadowRoot | string,
-): Element | ShadowRoot | null {
+export function normalizeContainer<T extends ParentNode>(
+  container: T | string,
+): T | null {
   if (isString(container)) {
     const res = document.querySelector(container)
     if (__DEV__ && !res) {
@@ -240,7 +240,7 @@ export function normalizeContainer(
         `Failed to mount app: mount target selector "${container}" returned null.`,
       )
     }
-    return res
+    return res as any
   }
   if (
     __DEV__ &&

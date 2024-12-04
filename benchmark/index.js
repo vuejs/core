@@ -179,7 +179,6 @@ async function buildApp(isVapor) {
     },
     resolve: {
       alias: {
-        '@vue/vapor': runtimePath,
         'vue/vapor': runtimePath,
         vue: runtimePath,
       },

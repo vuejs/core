@@ -1,1 +1,1 @@
-export * from '@vue/vapor'
+export * from '@vue/runtime-vapor'

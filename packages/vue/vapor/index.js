@@ -1,1 +1,1 @@
-module.exports = require('@vue/vapor')
+module.exports = require('@vue/runtime-vapor')

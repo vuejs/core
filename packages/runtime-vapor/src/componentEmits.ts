@@ -2,7 +2,7 @@ import {
   type EmitFn,
   type ObjectEmitsOptions,
   baseEmit,
-} from '@vue/runtime-core'
+} from '@vue/runtime-dom'
 import {
   type VaporComponent,
   type VaporComponentInstance,

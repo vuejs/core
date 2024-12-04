@@ -12,7 +12,6 @@ import {
   shouldSetAsAttr,
   toDisplayString,
 } from '@vue/shared'
-import { warn } from '../_old/warning'
 import { setStyle } from './style'
 import {
   MetadataKind,
@@ -20,7 +19,8 @@ import {
   recordPropMetadata,
 } from '../componentMetadata'
 import { on } from './event'
-import { currentInstance } from '../_old/component'
+import { currentInstance } from '../component'
+import { warn } from '@vue/runtime-dom'
 
 export function mergeInheritAttr(key: string, value: any): unknown {
   const instance = currentInstance!
