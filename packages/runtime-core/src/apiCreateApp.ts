@@ -1,7 +1,8 @@
 import {
   type Component,
-  type ComponentInternalInstance,
   type ConcreteComponent,
+  type GenericComponent,
+  type GenericComponentInstance,
   getComponentPublicInstance,
   validateComponentName,
 } from './component'
@@ -18,8 +19,7 @@ import { type Directive, validateDirectiveName } from './directives'
 import type { ElementNamespace, RootRenderFunction } from './renderer'
 import type { InjectionKey } from './apiInject'
 import { warn } from './warning'
-import { type VNode, cloneVNode, createVNode } from './vnode'
-import type { RootHydrateFunction } from './hydration'
+import type { VNode } from './vnode'
 import { devtoolsInitApp, devtoolsUnmountApp } from './devtools'
 import { NO, extend, isFunction, isObject } from '@vue/shared'
 import type { Data } from '@vue/runtime-shared'
@@ -95,11 +95,11 @@ export interface App<HostElement = any> {
 
   // internal, but we need to expose these for the server-renderer and devtools
   _uid: number
-  _component: ConcreteComponent
+  _component: GenericComponent
   _props: Data | null
   _container: HostElement | null
   _context: AppContext
-  _instance: ComponentInternalInstance | null
+  _instance: GenericComponentInstance | null
 
   /**
    * @internal custom element vnode
@@ -257,15 +257,30 @@ export function createAppContext(): AppContext {
 }
 
 export type CreateAppFunction<HostElement> = (
-  rootComponent: Component,
+  rootComponent: GenericComponent,
   rootProps?: Data | null,
 ) => App<HostElement>
 
 let uid = 0
 
+export type AppMountFn<HostElement> = (
+  app: App,
+  rootContainer: HostElement,
+  isHydrate?: boolean,
+  namespace?: boolean | ElementNamespace,
+) => GenericComponentInstance
+
+export type AppUnmountFn = (app: App) => void
+
+/**
+ * @internal
+ */
 export function createAppAPI<HostElement>(
-  render: RootRenderFunction<HostElement>,
-  hydrate?: RootHydrateFunction,
+  // render: RootRenderFunction<HostElement>,
+  // hydrate?: RootHydrateFunction,
+  mount: AppMountFn<HostElement>,
+  unmount: AppUnmountFn,
+  render?: RootRenderFunction,
 ): CreateAppFunction<HostElement> {
   return function createApp(rootComponent, rootProps = null) {
     if (!isFunction(rootComponent)) {
@@ -369,59 +384,32 @@ export function createAppAPI<HostElement>(
       },
 
       mount(
-        rootContainer: HostElement,
+        rootContainer: HostElement & { __vue_app__?: App },
         isHydrate?: boolean,
         namespace?: boolean | ElementNamespace,
       ): any {
         if (!isMounted) {
           // #5571
-          if (__DEV__ && (rootContainer as any).__vue_app__) {
+          if (__DEV__ && rootContainer.__vue_app__) {
             warn(
               `There is already an app instance mounted on the host container.\n` +
                 ` If you want to mount another app on the same host container,` +
                 ` you need to unmount the previous app by calling \`app.unmount()\` first.`,
             )
           }
-          const vnode = app._ceVNode || createVNode(rootComponent, rootProps)
-          // store app context on the root VNode.
-          // this will be set on the root instance on initial mount.
-          vnode.appContext = context
-
-          if (namespace === true) {
-            namespace = 'svg'
-          } else if (namespace === false) {
-            namespace = undefined
-          }
-
-          // HMR root reload
-          if (__DEV__) {
-            context.reload = () => {
-              // casting to ElementNamespace because TS doesn't guarantee type narrowing
-              // over function boundaries
-              render(
-                cloneVNode(vnode),
-                rootContainer,
-                namespace as ElementNamespace,
-              )
-            }
-          }
-
-          if (isHydrate && hydrate) {
-            hydrate(vnode as VNode<Node, Element>, rootContainer as any)
-          } else {
-            render(vnode, rootContainer, namespace)
-          }
-          isMounted = true
-          app._container = rootContainer
-          // for devtools and telemetry
-          ;(rootContainer as any).__vue_app__ = app
+          const instance = mount(app, rootContainer, isHydrate, namespace)
 
           if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
-            app._instance = vnode.component
+            app._instance = instance
             devtoolsInitApp(app, version)
           }
 
-          return getComponentPublicInstance(vnode.component!)
+          isMounted = true
+          app._container = rootContainer
+          // for devtools and telemetry
+          rootContainer.__vue_app__ = app
+
+          return getComponentPublicInstance(instance)
         } else if (__DEV__) {
           warn(
             `App has already been mounted.\n` +
@@ -449,7 +437,7 @@ export function createAppAPI<HostElement>(
             app._instance,
             ErrorCodes.APP_UNMOUNT_CLEANUP,
           )
-          render(null, app._container)
+          unmount(app)
           if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
             app._instance = null
             devtoolsUnmountApp(app)
@@ -485,7 +473,12 @@ export function createAppAPI<HostElement>(
     })
 
     if (__COMPAT__) {
-      installAppCompatProperties(app, context, render)
+      installAppCompatProperties(
+        app,
+        context,
+        // vapor doesn't have compat mode so this is always passed
+        render!,
+      )
     }
 
     return app

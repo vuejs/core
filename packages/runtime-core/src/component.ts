@@ -367,6 +367,9 @@ export interface GenericComponentInstance {
    */
   propsDefaults: Data | null
 
+  // exposed properties via expose()
+  exposed: Record<string, any> | null
+
   // lifecycle
   isMounted: boolean
   isUnmounted: boolean
@@ -519,8 +522,7 @@ export interface ComponentInternalInstance extends GenericComponentInstance {
   data: Data // options API only
   emit: EmitFn
   slots: InternalSlots
-  // exposed properties via expose()
-  exposed: Record<string, any> | null
+
   exposeProxy: Record<string, any> | null
 
   /**
@@ -1228,24 +1230,33 @@ export function createSetupContext(
 }
 
 export function getComponentPublicInstance(
-  instance: ComponentInternalInstance,
+  instance: GenericComponentInstance,
 ): ComponentPublicInstance | ComponentInternalInstance['exposed'] | null {
   if (instance.exposed) {
-    return (
-      instance.exposeProxy ||
-      (instance.exposeProxy = new Proxy(proxyRefs(markRaw(instance.exposed)), {
-        get(target, key: string) {
-          if (key in target) {
-            return target[key]
-          } else if (key in publicPropertiesMap) {
-            return publicPropertiesMap[key](instance)
-          }
-        },
-        has(target, key: string) {
-          return key in target || key in publicPropertiesMap
-        },
-      }))
-    )
+    if ('exposeProxy' in instance) {
+      return (
+        instance.exposeProxy ||
+        (instance.exposeProxy = new Proxy(
+          proxyRefs(markRaw(instance.exposed)),
+          {
+            get(target, key: string) {
+              if (key in target) {
+                return target[key]
+              } else if (key in publicPropertiesMap) {
+                return publicPropertiesMap[key](
+                  instance as ComponentInternalInstance,
+                )
+              }
+            },
+            has(target, key: string) {
+              return key in target || key in publicPropertiesMap
+            },
+          },
+        ))
+      )
+    } else {
+      return instance.exposed
+    }
   } else {
     return instance.proxy
   }

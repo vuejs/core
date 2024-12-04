@@ -8,6 +8,7 @@ import {
   type VNodeHook,
   type VNodeProps,
   cloneIfMounted,
+  cloneVNode,
   createVNode,
   invokeVNodeHook,
   isSameVNodeType,
@@ -57,7 +58,12 @@ import {
 import { updateProps } from './componentProps'
 import { updateSlots } from './componentSlots'
 import { popWarningContext, pushWarningContext, warn } from './warning'
-import { type CreateAppFunction, createAppAPI } from './apiCreateApp'
+import {
+  type AppMountFn,
+  type AppUnmountFn,
+  type CreateAppFunction,
+  createAppAPI,
+} from './apiCreateApp'
 import { setRef } from './rendererTemplateRef'
 import {
   type SuspenseBoundary,
@@ -2397,10 +2403,49 @@ function baseCreateRenderer(
     )
   }
 
+  const mountApp: AppMountFn<Element> = (
+    app,
+    container,
+    isHydrate,
+    namespace,
+  ) => {
+    const vnode = app._ceVNode || createVNode(app._component, app._props)
+    // store app context on the root VNode.
+    // this will be set on the root instance on initial mount.
+    vnode.appContext = app._context
+
+    if (namespace === true) {
+      namespace = 'svg'
+    } else if (namespace === false) {
+      namespace = undefined
+    }
+
+    // HMR root reload
+    if (__DEV__) {
+      app._context.reload = () => {
+        // casting to ElementNamespace because TS doesn't guarantee type narrowing
+        // over function boundaries
+        render(cloneVNode(vnode), container, namespace as ElementNamespace)
+      }
+    }
+
+    if (isHydrate && hydrate) {
+      hydrate(vnode as VNode<Node, Element>, container as any)
+    } else {
+      render(vnode, container, namespace)
+    }
+
+    return vnode.component!
+  }
+
+  const unmountApp: AppUnmountFn = app => {
+    render(null, app._container)
+  }
+
   return {
     render,
     hydrate,
-    createApp: createAppAPI(render, hydrate),
+    createApp: createAppAPI(mountApp, unmountApp, render),
   }
 }
 

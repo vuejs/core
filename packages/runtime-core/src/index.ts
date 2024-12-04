@@ -501,3 +501,8 @@ export {
   nextUid,
 } from './component'
 export { pushWarningContext, popWarningContext } from './warning'
+export {
+  createAppAPI,
+  type AppMountFn,
+  type AppUnmountFn,
+} from './apiCreateApp'

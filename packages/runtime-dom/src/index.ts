@@ -1,5 +1,6 @@
 import {
   type App,
+  type ConcreteComponent,
   type CreateAppFunction,
   type DefineComponent,
   DeprecationTypes,
@@ -108,7 +109,7 @@ export const createApp = ((...args) => {
     const container = normalizeContainer(containerOrSelector)
     if (!container) return
 
-    const component = app._component
+    const component = app._component as ConcreteComponent
     if (!isFunction(component) && !component.render && !component.template) {
       // __UNSAFE__
       // Reason: potential execution of JS expressions in in-DOM template.
@@ -225,7 +226,10 @@ function injectCompilerOptionsCheck(app: App) {
   }
 }
 
-function normalizeContainer(
+/**
+ * @internal
+ */
+export function normalizeContainer(
   container: Element | ShadowRoot | string,
 ): Element | ShadowRoot | null {
   if (isString(container)) {

@@ -143,7 +143,7 @@ export class VaporComponentInstance implements GenericComponentInstance {
   rawProps: RawProps | undefined
   props: Record<string, any>
   attrs: Record<string, any>
-  exposed?: Record<string, any>
+  exposed: Record<string, any> | null
 
   emitted: Record<string, boolean> | null
   propsDefaults: Record<string, any> | null
@@ -178,7 +178,7 @@ export class VaporComponentInstance implements GenericComponentInstance {
 
     this.rawProps = rawProps
     this.provides = this.refs = EMPTY_OBJ
-    this.emitted = this.ec = null
+    this.emitted = this.ec = this.exposed = null
     this.isMounted = this.isUnmounted = this.isDeactivated = false
 
     // init props
