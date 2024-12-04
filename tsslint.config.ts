@@ -11,7 +11,9 @@ const banConstEnum = {
     'Please use non-const enums. This project automatically inlines enums.',
 }
 
-const enableTypeAwareRules = process.argv.includes('--type-aware-rules')
+const enableTypeAwareRules =
+  process.argv.includes('--type-aware-rules') ||
+  process.argv.includes('--useNodeIpc') // In IDE
 
 export default defineConfig([
   {
