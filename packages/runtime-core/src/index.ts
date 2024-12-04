@@ -240,6 +240,7 @@ export type {
   App,
   AppConfig,
   AppContext,
+  GenericAppContext,
   Plugin,
   ObjectPlugin,
   FunctionPlugin,
@@ -499,3 +500,4 @@ export {
   type LifecycleHook,
   nextUid,
 } from './component'
+export { pushWarningContext, popWarningContext } from './warning'

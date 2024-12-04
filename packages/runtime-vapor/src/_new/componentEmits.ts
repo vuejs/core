@@ -8,7 +8,7 @@ import {
   type VaporComponentInstance,
   currentInstance,
 } from './component'
-import { NOOP, hasOwn, isArray } from '@vue/shared'
+import { EMPTY_OBJ, NOOP, hasOwn, isArray } from '@vue/shared'
 import { resolveSource } from './componentProps'
 
 /**
@@ -48,9 +48,13 @@ export function emit(
   event: string,
   ...rawArgs: any[]
 ): void {
-  const rawProps = instance.rawProps
-  if (!rawProps || instance.isUnmounted) return
-  baseEmit(instance, rawProps, propGetter, event, ...rawArgs)
+  baseEmit(
+    instance,
+    instance.rawProps || EMPTY_OBJ,
+    propGetter,
+    event,
+    ...rawArgs,
+  )
 }
 
 function propGetter(rawProps: Record<string, any>, key: string) {

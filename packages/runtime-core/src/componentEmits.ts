@@ -114,7 +114,6 @@ export function emit(
   event: string,
   ...rawArgs: any[]
 ): ComponentPublicInstance | null | undefined {
-  if (instance.isUnmounted) return
   return baseEmit(
     instance,
     instance.vnode.props || EMPTY_OBJ,
@@ -134,6 +133,7 @@ export function baseEmit(
   event: string,
   ...rawArgs: any[]
 ): ComponentPublicInstance | null | undefined {
+  if (instance.isUnmounted) return
   if (__DEV__) {
     const { emitsOptions, propsOptions } = instance
     if (emitsOptions) {
@@ -173,6 +173,8 @@ export function baseEmit(
   const isModelListener = event.startsWith('update:')
 
   // for v-model update:xxx events, apply modifiers on args
+  // it's ok to use static get because modelModifiers can only be in the static
+  // part of the props
   const modifiers = isModelListener && getModelModifiers(props, event.slice(7))
   if (modifiers) {
     if (modifiers.trim) {

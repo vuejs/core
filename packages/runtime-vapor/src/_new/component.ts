@@ -1,14 +1,16 @@
 import {
-  type AppContext,
   type ComponentInternalOptions,
   type ComponentPropsOptions,
   EffectScope,
   type EmitsOptions,
+  type GenericAppContext,
   type GenericComponentInstance,
   type LifecycleHook,
   type NormalizedPropsOptions,
   type ObjectEmitsOptions,
   nextUid,
+  popWarningContext,
+  pushWarningContext,
 } from '@vue/runtime-core'
 import type { Block } from '../block'
 import type { Data } from '@vue/runtime-shared'
@@ -86,6 +88,10 @@ export function createComponent(
   currentInstance = instance
   instance.scope.on()
 
+  if (__DEV__) {
+    pushWarningContext(instance)
+  }
+
   const setupFn = isFunction(component) ? component : component.setup
   const setupContext = setupFn!.length > 1 ? new SetupContext(instance) : null
   instance.block = setupFn!(
@@ -108,6 +114,10 @@ export function createComponent(
     })
   }
 
+  if (__DEV__) {
+    popWarningContext()
+  }
+
   instance.scope.off()
   currentInstance = prevInstance
   resetTracking()
@@ -116,11 +126,17 @@ export function createComponent(
 
 export let currentInstance: VaporComponentInstance | null = null
 
+const emptyContext: GenericAppContext = {
+  app: null as any,
+  config: {},
+  provides: /*@__PURE__*/ Object.create(null),
+}
+
 export class VaporComponentInstance implements GenericComponentInstance {
   uid: number
   type: VaporComponent
   parent: GenericComponentInstance | null
-  appContext: AppContext
+  appContext: GenericAppContext
 
   block: Block
   scope: EffectScope
@@ -153,8 +169,9 @@ export class VaporComponentInstance implements GenericComponentInstance {
     this.uid = nextUid()
     this.type = comp
     this.parent = currentInstance
-    // @ts-expect-error TODO use proper appContext
-    this.appContext = currentInstance ? currentInstance.appContext : {}
+    this.appContext = currentInstance
+      ? currentInstance.appContext
+      : emptyContext
 
     this.block = null! // to be set
     this.scope = new EffectScope(true)

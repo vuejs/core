@@ -39,6 +39,7 @@ import { ErrorCodes, callWithErrorHandling, handleError } from './errorHandling'
 import {
   type AppConfig,
   type AppContext,
+  type GenericAppContext,
   createAppContext,
 } from './apiCreateApp'
 import { type Directive, validateDirectiveName } from './directives'
@@ -328,7 +329,7 @@ export interface GenericComponentInstance {
   uid: number
   type: GenericComponent
   parent: GenericComponentInstance | null
-  appContext: AppContext
+  appContext: GenericAppContext
   /**
    * Object containing values this component provides for its descendants
    * @internal

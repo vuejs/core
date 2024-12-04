@@ -18,12 +18,18 @@ type TraceEntry = {
 
 type ComponentTraceStack = TraceEntry[]
 
+/**
+ * @internal
+ */
 export function pushWarningContext(
   ctx: GenericComponentInstance | VNode,
 ): void {
   stack.push(ctx)
 }
 
+/**
+ * @internal
+ */
 export function popWarningContext(): void {
   stack.pop()
 }

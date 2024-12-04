@@ -120,13 +120,11 @@ export interface App<HostElement = any> {
 
 export type OptionMergeFunction = (to: unknown, from: unknown) => any
 
-export interface AppConfig {
-  // @private
-  readonly isNativeTag: (tag: string) => boolean
-
-  performance: boolean
-  optionMergeStrategies: Record<string, OptionMergeFunction>
-  globalProperties: ComponentCustomProperties & Record<string, any>
+/**
+ * Shared app config between vdom and vapor
+ */
+export interface GenericAppConfig {
+  performance?: boolean
   errorHandler?: (
     err: unknown,
     instance: ComponentPublicInstance | null,
@@ -137,17 +135,6 @@ export interface AppConfig {
     instance: ComponentPublicInstance | null,
     trace: string,
   ) => void
-
-  /**
-   * Options to pass to `@vue/compiler-dom`.
-   * Only supported in runtime compiler build.
-   */
-  compilerOptions: RuntimeCompilerOptions
-
-  /**
-   * @deprecated use config.compilerOptions.isCustomElement
-   */
-  isCustomElement?: (tag: string) => boolean
 
   /**
    * TODO document for 3.5
@@ -168,13 +155,46 @@ export interface AppConfig {
   idPrefix?: string
 }
 
-export interface AppContext {
+export interface AppConfig extends GenericAppConfig {
+  // @private
+  readonly isNativeTag: (tag: string) => boolean
+
+  optionMergeStrategies: Record<string, OptionMergeFunction>
+  globalProperties: ComponentCustomProperties & Record<string, any>
+
+  /**
+   * Options to pass to `@vue/compiler-dom`.
+   * Only supported in runtime compiler build.
+   */
+  compilerOptions: RuntimeCompilerOptions
+
+  /**
+   * @deprecated use config.compilerOptions.isCustomElement
+   */
+  isCustomElement?: (tag: string) => boolean
+}
+
+/**
+ * Minimal app context shared between vdom and vapor
+ */
+export interface GenericAppContext {
   app: App // for devtools
+  config: GenericAppConfig
+  provides: Record<string | symbol, any>
+  components?: Record<string, Component>
+  directives?: Record<string, Directive>
+  /**
+   * HMR only
+   * @internal
+   */
+  reload?: () => void
+}
+
+export interface AppContext extends GenericAppContext {
   config: AppConfig
-  mixins: ComponentOptions[]
   components: Record<string, Component>
   directives: Record<string, Directive>
-  provides: Record<string | symbol, any>
+  mixins: ComponentOptions[]
 
   /**
    * Cache for merged/normalized component options
@@ -193,11 +213,6 @@ export interface AppContext {
    * @internal
    */
   emitsCache: WeakMap<ConcreteComponent, ObjectEmitsOptions | null>
-  /**
-   * HMR only
-   * @internal
-   */
-  reload?: () => void
   /**
    * v2 compat only
    * @internal
