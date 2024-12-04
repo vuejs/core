@@ -24,6 +24,7 @@ export function isBlock(val: NonNullable<unknown>): val is Block {
 }
 
 /*! #__NO_SIDE_EFFECTS__ */
+// TODO this should be optimized away
 export function normalizeBlock(block: Block): Node[] {
   const nodes: Node[] = []
   if (block instanceof Node) {

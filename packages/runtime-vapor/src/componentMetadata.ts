@@ -1,6 +1,5 @@
 import { remove } from '@vue/shared'
 import type { DelegatedHandler } from './dom/event'
-import type { Data } from '@vue/runtime-shared'
 
 export enum MetadataKind {
   prop,
@@ -8,7 +7,7 @@ export enum MetadataKind {
 }
 
 export type ComponentMetadata = [
-  props: Data,
+  props: Record<string, any>,
   events: Record<string, DelegatedHandler[]>,
 ]
 

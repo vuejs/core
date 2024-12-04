@@ -4,17 +4,6 @@ import { setText } from './prop'
 import { type Block, normalizeBlock } from '../block'
 import { isVaporComponent } from '../component'
 
-// export function insert(
-//   block: Block,
-//   parent: ParentNode,
-//   anchor: Node | null = null,
-// ): void {
-//   const nodes = normalizeBlock(block)
-//   for (let i = 0; i < nodes.length; i++) {
-//     parent.insertBefore(nodes[i], anchor)
-//   }
-// }
-
 export function insert(
   block: Block,
   parent: ParentNode,
@@ -28,15 +17,18 @@ export function insert(
     for (let i = 0; i < block.length; i++) {
       insert(block[i], parent, anchor)
     }
-  } else if (block) {
+  } else {
+    // fragment
     insert(block.nodes, parent, anchor)
   }
 }
 
 export function prepend(parent: ParentNode, ...blocks: Block[]): void {
-  parent.prepend(...normalizeBlock(blocks))
+  const anchor = parent.firstChild
+  for (const b of blocks) insert(b, parent, anchor)
 }
 
+// TODO optimize
 export function remove(block: Block, parent: ParentNode): void {
   const nodes = normalizeBlock(block)
   for (let i = 0; i < nodes.length; i++) {
@@ -44,6 +36,7 @@ export function remove(block: Block, parent: ParentNode): void {
   }
 }
 
+// TODO optimize
 export function createTextNode(values?: any[] | (() => any[])): Text {
   // eslint-disable-next-line no-restricted-globals
   const node = document.createTextNode('')
