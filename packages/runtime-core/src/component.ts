@@ -73,7 +73,6 @@ import {
   isObject,
   isPromise,
 } from '@vue/shared'
-import type { Data } from '@vue/runtime-shared'
 import type { SuspenseBoundary } from './components/Suspense'
 import type { CompilerOptions } from '@vue/compiler-core'
 import { markAttrsAccessed } from './componentRenderUtils'
@@ -97,6 +96,8 @@ import type { DefineComponent } from './apiDefineComponent'
 import { markAsyncBoundary } from './helpers/useId'
 import { isAsyncWrapper } from './apiAsyncComponent'
 import type { RendererElement } from './renderer'
+
+export type Data = Record<string, unknown>
 
 /**
  * Public utility type for extracting the instance type of a component.
@@ -509,7 +510,7 @@ export interface ComponentInternalInstance extends GenericComponentInstance {
    * setup related
    * @internal
    */
-  setupState: Data | null
+  setupState: Data
   /**
    * devtools access to additional info
    * @internal

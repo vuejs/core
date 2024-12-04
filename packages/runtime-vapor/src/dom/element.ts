@@ -2,7 +2,7 @@ import { isArray } from '@vue/shared'
 import { renderEffect } from '../renderEffect'
 import { setText } from './prop'
 import { type Block, normalizeBlock } from '../block'
-import { isVaporComponent } from '../_new/component'
+import { isVaporComponent } from '../component'
 
 // export function insert(
 //   block: Block,

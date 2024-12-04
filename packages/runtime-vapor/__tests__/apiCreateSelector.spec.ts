@@ -1,6 +1,6 @@
 import { ref } from '@vue/reactivity'
 import { makeRender } from './_utils'
-import { createFor, createSelector, nextTick, renderEffect } from '../src'
+import { createFor, createSelector, nextTick, renderEffect } from '../src/_old'
 
 const define = makeRender()
 

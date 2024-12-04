@@ -399,9 +399,6 @@ importers:
       '@vue/reactivity':
         specifier: workspace:*
         version: link:../reactivity
-      '@vue/runtime-shared':
-        specifier: workspace:*
-        version: link:../runtime-shared
       '@vue/shared':
         specifier: workspace:*
         version: link:../shared
@@ -425,12 +422,6 @@ importers:
         specifier: ^2.0.7
         version: 2.0.7
 
-  packages/runtime-shared:
-    dependencies:
-      '@vue/shared':
-        specifier: workspace:*
-        version: link:../shared
-
   packages/runtime-test:
     dependencies:
       '@vue/runtime-core':
@@ -445,9 +436,9 @@ importers:
       '@vue/reactivity':
         specifier: workspace:*
         version: link:../reactivity
-      '@vue/runtime-shared':
+      '@vue/runtime-dom':
         specifier: workspace:*
-        version: link:../runtime-shared
+        version: link:../runtime-dom
       '@vue/shared':
         specifier: workspace:*
         version: link:../shared

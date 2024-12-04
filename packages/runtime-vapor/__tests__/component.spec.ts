@@ -1,4 +1,4 @@
-import { ref, setText, template, watchEffect } from '../src'
+import { ref, setText, template, watchEffect } from '../src/_old'
 import { describe, expect } from 'vitest'
 import { makeRender } from './_utils'
 

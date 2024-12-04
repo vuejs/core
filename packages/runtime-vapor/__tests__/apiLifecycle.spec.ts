@@ -24,7 +24,7 @@ import {
   renderEffect,
   setText,
   template,
-} from '../src'
+} from '../src/_old'
 import { makeRender } from './_utils'
 import { ITERATE_KEY } from '@vue/reactivity'
 

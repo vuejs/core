@@ -11,8 +11,8 @@ import {
   resolveComponent,
   resolveDirective,
   withDirectives,
-} from '../src'
-import { warn } from '../src/warning'
+} from '../src/_old'
+import { warn } from '../src/_old/warning'
 import { makeRender } from './_utils'
 
 const define = makeRender()

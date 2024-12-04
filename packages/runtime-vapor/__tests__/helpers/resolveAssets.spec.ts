@@ -4,7 +4,7 @@ import {
   createVaporApp,
   resolveComponent,
   resolveDirective,
-} from '@vue/runtime-vapor'
+} from 'packages/runtime-vapor/src/_old'
 import { makeRender } from '../_utils'
 
 const define = makeRender()

@@ -36,7 +36,9 @@
   "homepage": "https://github.com/vuejs/vue-vapor/tree/dev/packages/runtime-vapor#readme",
   "dependencies": {
     "@vue/shared": "workspace:*",
-    "@vue/reactivity": "workspace:*",
-    "@vue/runtime-shared": "workspace:*"
+    "@vue/reactivity": "workspace:*"
+  },
+  "peerDependencies": {
+    "@vue/runtime-dom": "workspace:*"
   }
 }

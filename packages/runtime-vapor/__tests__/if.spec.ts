@@ -8,10 +8,10 @@ import {
   setText,
   template,
   withDirectives,
-} from '../src'
+} from '../src/_old'
 import type { Mock } from 'vitest'
 import { makeRender } from './_utils'
-import { unmountComponent } from '../src/apiRender'
+import { unmountComponent } from '../src/_old/apiRender'
 
 const define = makeRender()
 

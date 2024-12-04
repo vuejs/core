@@ -43,7 +43,7 @@ export interface BaseIRNode {
   type: IRNodeTypes
 }
 
-export type VaporHelper = keyof typeof import('@vue/runtime-vapor')
+export type VaporHelper = keyof typeof import('packages/runtime-vapor/src')
 
 export interface BlockIRNode extends BaseIRNode {
   type: IRNodeTypes.BLOCK

@@ -1,10 +1,10 @@
 import {
   type ComponentInternalInstance,
+  type Data,
   type GenericComponentInstance,
   formatComponentName,
 } from './component'
 import { isFunction, isString } from '@vue/shared'
-import type { Data } from '@vue/runtime-shared'
 import { isRef, pauseTracking, resetTracking, toRaw } from '@vue/reactivity'
 import { ErrorCodes, callWithErrorHandling } from './errorHandling'
 import { type VNode, isVNode } from './vnode'

@@ -1,5 +1,5 @@
 import { isArray } from '@vue/shared'
-import { type VaporComponentInstance, isVaporComponent } from './_new/component'
+import { type VaporComponentInstance, isVaporComponent } from './component'
 
 export const fragmentKey: unique symbol = Symbol(__DEV__ ? `fragmentKey` : ``)
 

@@ -5,7 +5,7 @@ import {
   template,
   vShow,
   withDirectives,
-} from '../../src'
+} from '../../src/_old'
 import { nextTick, ref } from 'vue'
 import { describe, expect, test } from 'vitest'
 import { makeRender } from '../_utils'

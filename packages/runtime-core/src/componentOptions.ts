@@ -3,6 +3,7 @@ import {
   type ComponentInternalInstance,
   type ComponentInternalOptions,
   type ConcreteComponent,
+  type Data,
   type InternalRenderFunction,
   type SetupContext,
   currentInstance,
@@ -18,7 +19,6 @@ import {
   isPromise,
   isString,
 } from '@vue/shared'
-import type { Data } from '@vue/runtime-shared'
 import { type Ref, getCurrentScope, isRef, traverse } from '@vue/reactivity'
 import { computed } from './apiComputed'
 import {

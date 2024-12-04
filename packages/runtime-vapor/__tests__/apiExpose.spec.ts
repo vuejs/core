@@ -1,12 +1,12 @@
 import { ref, shallowRef } from '@vue/reactivity'
-import { createComponent } from '../src/apiCreateComponent'
+import { createComponent } from '../src/_old/apiCreateComponent'
 import { setRef } from '../src/dom/templateRef'
 import { makeRender } from './_utils'
 import {
   type ComponentInternalInstance,
   getCurrentInstance,
-} from '../src/component'
-import { defineComponent } from '../src/apiDefineComponent'
+} from '../src/_old/component'
+import { defineComponent } from '../src/_old/apiDefineComponent'
 
 const define = makeRender()
 describe('api: expose', () => {

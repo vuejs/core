@@ -6,7 +6,7 @@ import {
   isString,
   normalizeStyle,
 } from '@vue/shared'
-import { warn } from '../warning'
+import { warn } from '../_old/warning'
 import { recordPropMetadata } from '../componentMetadata'
 import { mergeInheritAttr } from './prop'
 

@@ -11,11 +11,11 @@ import {
   watchEffect,
   watchPostEffect,
   watchSyncEffect,
-} from '../src'
+} from '../src/_old'
 import {
   type ComponentInternalInstance,
   currentInstance,
-} from '../src/component'
+} from '../src/_old/component'
 import { makeRender } from './_utils'
 
 const define = makeRender<any>()

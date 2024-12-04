@@ -6,8 +6,8 @@ import {
   type SetupFn,
   createVaporApp,
   defineComponent,
-} from '../src'
-import type { RawProps } from '../src/componentProps'
+} from '../src/_old'
+import type { RawProps } from '../src/_old/componentProps'
 
 export interface RenderContext {
   component: Component

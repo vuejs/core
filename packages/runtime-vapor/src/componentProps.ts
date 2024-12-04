@@ -1,392 +1,231 @@
+import { EMPTY_ARR, NO, camelize, hasOwn, isFunction } from '@vue/shared'
+import type { VaporComponent, VaporComponentInstance } from './component'
 import {
-  EMPTY_ARR,
-  EMPTY_OBJ,
-  camelize,
-  extend,
-  hasOwn,
-  hyphenate,
-  isArray,
-  isFunction,
-} from '@vue/shared'
-import type { Data } from '@vue/runtime-shared'
-import { shallowReactive } from '@vue/reactivity'
-import { warn } from './warning'
-import type { Component, ComponentInternalInstance } from './component'
-import { patchAttrs } from './componentAttrs'
-import { firstEffect } from './renderEffect'
+  type NormalizedPropsOptions,
+  baseNormalizePropsOptions,
+  isEmitListener,
+  resolvePropValue,
+} from '@vue/runtime-core'
+import { normalizeEmitsOptions } from './componentEmits'
 
-export type ComponentPropsOptions<P = Data> =
-  | ComponentObjectPropsOptions<P>
-  | string[]
-
-export type ComponentObjectPropsOptions<P = Data> = {
-  [K in keyof P]: Prop<P[K]> | null
+export interface RawProps {
+  [key: string]: PropSource
+  $?: DynamicPropsSource[]
 }
 
-export type Prop<T, D = T> = PropOptions<T, D> | PropType<T>
+type PropSource<T = any> = T | (() => T)
 
-type DefaultFactory<T> = (props: Data) => T | null | undefined
+type DynamicPropsSource = PropSource<Record<string, any>>
 
-export interface PropOptions<T = any, D = T> {
-  type?: PropType<T> | true | null
-  required?: boolean
-  default?: D | DefaultFactory<D> | null | undefined | object
-  validator?(value: unknown, props: Data): boolean
-  /**
-   * @internal
-   */
-  skipFactory?: boolean
-}
+export function initStaticProps(
+  comp: VaporComponent,
+  rawProps: RawProps | undefined,
+  instance: VaporComponentInstance,
+): boolean {
+  let hasAttrs = false
+  const { props, attrs } = instance
+  const [propsOptions, needCastKeys] = normalizePropsOptions(comp)
+  const emitsOptions = normalizeEmitsOptions(comp)
 
-export type PropType<T> = PropConstructor<T> | PropConstructor<T>[]
+  // for dev emit check
+  if (__DEV__) {
+    instance.propsOptions = normalizePropsOptions(comp)
+    instance.emitsOptions = emitsOptions
+  }
 
-type PropConstructor<T = any> =
-  | { new (...args: any[]): T & {} }
-  | { (): T }
-  | PropMethod<T>
-
-type PropMethod<T, TConstructor = any> = [T] extends [
-  ((...args: any) => any) | undefined,
-] // if is function with args, allowing non-required functions
-  ? { new (): TConstructor; (): T; readonly prototype: TConstructor } // Create Function like constructor
-  : never
-
-enum BooleanFlags {
-  shouldCast,
-  shouldCastTrue,
-}
-
-type NormalizedProp =
-  | null
-  | (PropOptions & {
-      [BooleanFlags.shouldCast]?: boolean
-      [BooleanFlags.shouldCastTrue]?: boolean
-    })
-
-export type NormalizedProps = Record<string, NormalizedProp>
-export type NormalizedPropsOptions =
-  | [props: NormalizedProps, needCastKeys: string[]]
-  | []
-
-export type StaticProps = Record<string, () => unknown>
-type DynamicProps = () => Data
-export type NormalizedRawProps = Array<StaticProps | DynamicProps>
-export type RawProps = NormalizedRawProps | StaticProps | DynamicProps | null
-
-export function initProps(
-  instance: ComponentInternalInstance,
-  rawProps: RawProps,
-  isStateful: boolean,
-  once: boolean,
-): void {
-  instance.rawProps = rawProps = normalizeRawProps(rawProps)
-  const props: Data = {}
-  const attrs = (instance.attrs = shallowReactive<Data>({}))
-  const [options] = instance.propsOptions
-  // has v-bind or :[eventName]
-  const hasDynamicProps = rawProps.some(isFunction)
-
-  if (options) {
-    if (hasDynamicProps) {
-      for (const key in options) {
-        const getter = () =>
-          getDynamicPropValue(rawProps as NormalizedRawProps, key)
-        registerProp(instance, once, props, key, getter, true)
+  for (const key in rawProps) {
+    const normalizedKey = camelize(key)
+    const needCast = needCastKeys && needCastKeys.includes(normalizedKey)
+    const source = rawProps[key]
+    if (propsOptions && normalizedKey in propsOptions) {
+      if (isFunction(source)) {
+        Object.defineProperty(props, normalizedKey, {
+          enumerable: true,
+          get: needCast
+            ? () =>
+                resolvePropValue(
+                  propsOptions,
+                  normalizedKey,
+                  source(),
+                  instance,
+                  resolveDefault,
+                )
+            : source,
+        })
+      } else {
+        props[normalizedKey] = needCast
+          ? resolvePropValue(
+              propsOptions,
+              normalizedKey,
+              source,
+              instance,
+              resolveDefault,
+            )
+          : source
       }
-    } else {
-      const staticProps = rawProps[0] as StaticProps
-      for (const key in options) {
-        const rawKey = staticProps && getRawKey(staticProps, key)
-        if (rawKey) {
-          registerProp(instance, once, props, key, staticProps[rawKey])
-        } else {
-          registerProp(instance, once, props, key, undefined, false, true)
+    } else if (!isEmitListener(emitsOptions, key)) {
+      if (isFunction(source)) {
+        Object.defineProperty(attrs, key, {
+          enumerable: true,
+          get: source,
+        })
+      } else {
+        attrs[normalizedKey] = source
+      }
+      hasAttrs = true
+    }
+  }
+  for (const key in propsOptions) {
+    if (!(key in props)) {
+      props[key] = resolvePropValue(
+        propsOptions,
+        key,
+        undefined,
+        instance,
+        resolveDefault,
+        true,
+      )
+    }
+  }
+  return hasAttrs
+}
+
+function resolveDefault(
+  factory: (props: Record<string, any>) => unknown,
+  instance: VaporComponentInstance,
+) {
+  return factory.call(null, instance.props)
+}
+
+// TODO optimization: maybe convert functions into computeds
+export function resolveSource(source: PropSource): Record<string, any> {
+  return isFunction(source) ? source() : source
+}
+
+const passThrough = (val: any) => val
+
+export function getDynamicPropsHandlers(
+  comp: VaporComponent,
+  instance: VaporComponentInstance,
+): [ProxyHandler<RawProps> | null, ProxyHandler<RawProps>] {
+  if (comp.__propsHandlers) {
+    return comp.__propsHandlers
+  }
+  let normalizedKeys: string[] | undefined
+  const propsOptions = normalizePropsOptions(comp)[0]
+  const emitsOptions = normalizeEmitsOptions(comp)
+  const isProp = propsOptions ? (key: string) => hasOwn(propsOptions, key) : NO
+
+  const getProp = (target: RawProps, key: string, asProp: boolean) => {
+    if (key === '$') return
+    if (asProp) {
+      if (!isProp(key)) return
+    } else if (isProp(key) || isEmitListener(emitsOptions, key)) {
+      return
+    }
+    const castProp = propsOptions
+      ? (value: any, isAbsent = false) =>
+          asProp
+            ? resolvePropValue(
+                propsOptions,
+                key as string,
+                value,
+                instance,
+                resolveDefault,
+                isAbsent,
+              )
+            : value
+      : passThrough
+
+    if (key in target) {
+      return castProp(resolveSource(target[key as string]))
+    }
+    if (target.$) {
+      let i = target.$.length
+      let source
+      while (i--) {
+        source = resolveSource(target.$[i])
+        if (hasOwn(source, key)) {
+          return castProp(source[key])
         }
       }
     }
+    return castProp(undefined, true)
   }
 
-  // validation
-  if (__DEV__) {
-    validateProps(rawProps, props, options || {})
-  }
+  const propsHandlers = propsOptions
+    ? ({
+        get: (target, key: string) => getProp(target, key, true),
+        has: (_, key: string) => isProp(key),
+        getOwnPropertyDescriptor(target, key: string) {
+          if (isProp(key)) {
+            return {
+              configurable: true,
+              enumerable: true,
+              get: () => getProp(target, key, true),
+            }
+          }
+        },
+        ownKeys: () =>
+          normalizedKeys || (normalizedKeys = Object.keys(propsOptions)),
+        set: NO,
+        deleteProperty: NO,
+      } satisfies ProxyHandler<RawProps>)
+    : null
 
-  if (hasDynamicProps) {
-    firstEffect(instance, () => patchAttrs(instance, true))
-  } else {
-    patchAttrs(instance)
-  }
-
-  if (isStateful) {
-    instance.props = /* TODO isSSR ? props :  */ shallowReactive(props)
-  } else {
-    // functional w/ optional props, props === attrs
-    instance.props = instance.propsOptions === EMPTY_ARR ? attrs : props
-  }
-}
-
-function registerProp(
-  instance: ComponentInternalInstance,
-  once: boolean,
-  props: Data,
-  rawKey: string,
-  getter?: (() => unknown) | (() => DynamicPropResult),
-  isDynamic?: boolean,
-  isAbsent?: boolean,
-) {
-  const key = camelize(rawKey)
-  if (key in props) return
-
-  const [options, needCastKeys] = instance.propsOptions
-  const needCast = needCastKeys && needCastKeys.includes(key)
-  const withCast = (value: unknown, absent?: boolean) =>
-    resolvePropValue(options!, props, key, value, absent)
-
-  if (isAbsent) {
-    props[key] = needCast ? withCast(undefined, true) : undefined
-  } else {
-    const get: () => unknown = isDynamic
-      ? needCast
-        ? () => withCast(...(getter!() as DynamicPropResult))
-        : () => (getter!() as DynamicPropResult)[0]
-      : needCast
-        ? () => withCast(getter!())
-        : getter!
-
-    const descriptor: PropertyDescriptor = once ? { value: get() } : { get }
-    descriptor.enumerable = true
-    Object.defineProperty(props, key, descriptor)
-  }
-}
-
-export function normalizeRawProps(rawProps: RawProps): NormalizedRawProps {
-  if (!rawProps) return []
-  if (!isArray(rawProps)) return [rawProps]
-  return rawProps
-}
-
-export function walkRawProps(
-  rawProps: NormalizedRawProps,
-  cb: (key: string, value: any, getter?: boolean) => void,
-): void {
-  for (const props of Array.from(rawProps).reverse()) {
-    if (isFunction(props)) {
-      const resolved = props()
-      for (const rawKey in resolved) {
-        cb(rawKey, resolved[rawKey])
-      }
-    } else {
-      for (const rawKey in props) {
-        cb(rawKey, props[rawKey], true)
+  const hasAttr = (target: RawProps, key: string) => {
+    if (key === '$' || isProp(key) || isEmitListener(emitsOptions, key))
+      return false
+    if (target.$) {
+      let i = target.$.length
+      while (i--) {
+        if (hasOwn(resolveSource(target.$[i]), key)) {
+          return true
+        }
       }
     }
+    return hasOwn(target, key)
   }
-}
 
-function getRawKey(obj: Data, key: string) {
-  return Object.keys(obj).find(k => camelize(k) === key)
-}
-
-type DynamicPropResult = [value: unknown, absent: boolean]
-export function getDynamicPropValue(
-  rawProps: NormalizedRawProps,
-  key: string,
-): DynamicPropResult {
-  for (const props of Array.from(rawProps).reverse()) {
-    if (isFunction(props)) {
-      const resolved = props()
-      const rawKey = getRawKey(resolved, key)
-      if (rawKey) return [resolved[rawKey], false]
-    } else {
-      const rawKey = getRawKey(props, key)
-      if (rawKey) return [props[rawKey](), false]
-    }
-  }
-  return [undefined, true]
-}
-
-export function resolvePropValue(
-  options: NormalizedProps,
-  props: Data,
-  key: string,
-  value: unknown,
-  isAbsent?: boolean,
-): unknown {
-  const opt = options[key]
-  if (opt != null) {
-    const hasDefault = hasOwn(opt, 'default')
-    // default values
-    if (hasDefault && value === undefined) {
-      const defaultValue = opt.default
-      if (
-        opt.type !== Function &&
-        !opt.skipFactory &&
-        isFunction(defaultValue)
-      ) {
-        value = defaultValue.call(null, props)
-      } else {
-        value = defaultValue
+  const attrsHandlers = {
+    get: (target, key: string) => getProp(target, key, false),
+    has: hasAttr,
+    getOwnPropertyDescriptor(target, key: string) {
+      if (hasAttr(target, key)) {
+        return {
+          configurable: true,
+          enumerable: true,
+          get: () => getProp(target, key, false),
+        }
       }
-    }
-    // boolean casting
-    if (opt[BooleanFlags.shouldCast]) {
-      if (isAbsent && !hasDefault) {
-        value = false
-      } else if (
-        opt[BooleanFlags.shouldCastTrue] &&
-        (value === '' || value === hyphenate(key))
-      ) {
-        value = true
+    },
+    ownKeys(target) {
+      const keys = Object.keys(target)
+      if (target.$) {
+        let i = target.$.length
+        while (i--) {
+          keys.push(...Object.keys(resolveSource(target.$[i])))
+        }
       }
-    }
-  }
-  return value
+      return keys.filter(key => hasAttr(target, key))
+    },
+    set: NO,
+    deleteProperty: NO,
+  } satisfies ProxyHandler<RawProps>
+
+  return (comp.__propsHandlers = [propsHandlers, attrsHandlers])
 }
 
-export function normalizePropsOptions(comp: Component): NormalizedPropsOptions {
+function normalizePropsOptions(comp: VaporComponent): NormalizedPropsOptions {
   const cached = comp.__propsOptions
   if (cached) return cached
 
   const raw = comp.props
-  const normalized: NormalizedProps | undefined = {}
+  if (!raw) return EMPTY_ARR as []
+
+  const normalized: NormalizedPropsOptions[0] = {}
   const needCastKeys: NormalizedPropsOptions[1] = []
+  baseNormalizePropsOptions(raw, normalized, needCastKeys)
 
-  if (!raw) {
-    return EMPTY_ARR as []
-  }
-
-  if (isArray(raw)) {
-    for (let i = 0; i < raw.length; i++) {
-      const normalizedKey = camelize(raw[i])
-      if (validatePropName(normalizedKey)) {
-        normalized[normalizedKey] = EMPTY_OBJ
-      }
-    }
-  } else {
-    for (const key in raw) {
-      const normalizedKey = camelize(key)
-      if (validatePropName(normalizedKey)) {
-        const opt = raw[key]
-        const prop: NormalizedProp = (normalized[normalizedKey] =
-          isArray(opt) || isFunction(opt) ? { type: opt } : extend({}, opt))
-        if (prop) {
-          const booleanIndex = getTypeIndex(Boolean, prop.type)
-          const stringIndex = getTypeIndex(String, prop.type)
-          prop[BooleanFlags.shouldCast] = booleanIndex > -1
-          prop[BooleanFlags.shouldCastTrue] =
-            stringIndex < 0 || booleanIndex < stringIndex
-          // if the prop needs boolean casting or default value
-          if (booleanIndex > -1 || hasOwn(prop, 'default')) {
-            needCastKeys.push(normalizedKey)
-          }
-        }
-      }
-    }
-  }
-
-  const res: NormalizedPropsOptions = (comp.__propsOptions = [
-    normalized,
-    needCastKeys,
-  ])
-  return res
-}
-
-function validatePropName(key: string) {
-  if (key[0] !== '$') {
-    return true
-  } else if (__DEV__) {
-    warn(`Invalid prop name: "${key}" is a reserved property.`)
-  }
-  return false
-}
-
-function getType(ctor: Prop<any>): string {
-  const match = ctor && ctor.toString().match(/^\s*(function|class) (\w+)/)
-  return match ? match[2] : ctor === null ? 'null' : ''
-}
-
-function isSameType(a: Prop<any>, b: Prop<any>): boolean {
-  return getType(a) === getType(b)
-}
-
-function getTypeIndex(
-  type: Prop<any>,
-  expectedTypes: PropType<any> | void | null | true,
-): number {
-  if (isArray(expectedTypes)) {
-    return expectedTypes.findIndex(t => isSameType(t, type))
-  } else if (isFunction(expectedTypes)) {
-    return isSameType(expectedTypes, type) ? 0 : -1
-  }
-  return -1
-}
-
-/**
- * dev only
- */
-function validateProps(
-  rawProps: NormalizedRawProps,
-  props: Data,
-  options: NormalizedProps,
-) {
-  const presentKeys: string[] = []
-  for (const props of rawProps) {
-    presentKeys.push(...Object.keys(isFunction(props) ? props() : props))
-  }
-
-  for (const key in options) {
-    const opt = options[key]
-    if (opt != null)
-      validateProp(
-        key,
-        props[key],
-        opt,
-        props,
-        !presentKeys.some(k => camelize(k) === key),
-      )
-  }
-}
-
-/**
- * dev only
- */
-function validateProp(
-  name: string,
-  value: unknown,
-  option: PropOptions,
-  props: Data,
-  isAbsent: boolean,
-) {
-  const { required, validator } = option
-  // required!
-  if (required && isAbsent) {
-    warn('Missing required prop: "' + name + '"')
-    return
-  }
-  // missing but optional
-  if (value == null && !required) {
-    return
-  }
-  // NOTE: type check is not supported in vapor
-  // // type check
-  // if (type != null && type !== true) {
-  //   let isValid = false
-  //   const types = isArray(type) ? type : [type]
-  //   const expectedTypes = []
-  //   // value is valid as long as one of the specified types match
-  //   for (let i = 0; i < types.length && !isValid; i++) {
-  //     const { valid, expectedType } = assertType(value, types[i])
-  //     expectedTypes.push(expectedType || '')
-  //     isValid = valid
-  //   }
-  //   if (!isValid) {
-  //     warn(getInvalidTypeMessage(name, value, expectedTypes))
-  //     return
-  //   }
-  // }
-
-  // custom validator
-  if (validator && !validator(value, props)) {
-    warn('Invalid prop: custom validator check failed for prop "' + name + '".')
-  }
+  return (comp.__propsOptions = [normalized, needCastKeys])
 }

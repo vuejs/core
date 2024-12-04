@@ -1,6 +1,7 @@
 import {
   type Component,
   type ComponentInternalInstance,
+  type Data,
   getComponentPublicInstance,
   isStatefulComponent,
 } from './component'
@@ -23,7 +24,6 @@ import {
   isGloballyAllowed,
   isString,
 } from '@vue/shared'
-import type { Data } from '@vue/runtime-shared'
 import {
   ReactiveFlags,
   type ShallowUnwrapRef,

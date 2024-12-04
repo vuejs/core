@@ -1,4 +1,4 @@
-import type { SetupContext } from '../src/component'
+import type { SetupContext } from '../src/_old/component'
 import {
   createComponent,
   defineComponent,
@@ -6,7 +6,7 @@ import {
   template,
   useAttrs,
   useSlots,
-} from '../src'
+} from '../src/_old'
 import { makeRender } from './_utils'
 
 const define = makeRender<any>()

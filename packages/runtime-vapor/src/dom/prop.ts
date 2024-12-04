@@ -12,7 +12,7 @@ import {
   shouldSetAsAttr,
   toDisplayString,
 } from '@vue/shared'
-import { warn } from '../warning'
+import { warn } from '../_old/warning'
 import { setStyle } from './style'
 import {
   MetadataKind,
@@ -20,8 +20,7 @@ import {
   recordPropMetadata,
 } from '../componentMetadata'
 import { on } from './event'
-import type { Data } from '@vue/runtime-shared'
-import { currentInstance } from '../component'
+import { currentInstance } from '../_old/component'
 
 export function mergeInheritAttr(key: string, value: any): unknown {
   const instance = currentInstance!
@@ -198,6 +197,8 @@ export function mergeProp(
   }
   return incoming
 }
+
+type Data = Record<string, any>
 
 export function mergeProps(...args: Data[]): Data {
   const ret: Data = {}

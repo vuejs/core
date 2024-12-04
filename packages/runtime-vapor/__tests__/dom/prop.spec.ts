@@ -13,7 +13,7 @@ import { setStyle } from '../../src/dom/style'
 import {
   ComponentInternalInstance,
   setCurrentInstance,
-} from '../../src/component'
+} from '../../src/_old/component'
 import { getMetadata, recordPropMetadata } from '../../src/componentMetadata'
 import { getCurrentScope } from '@vue/reactivity'
 

@@ -1,112 +1,44 @@
-import { EffectScope, isRef } from '@vue/reactivity'
-import { EMPTY_OBJ, isArray, isBuiltInTag, isFunction } from '@vue/shared'
-import type { Block } from './block'
 import {
+  type ComponentInternalOptions,
   type ComponentPropsOptions,
-  type NormalizedPropsOptions,
-  type NormalizedRawProps,
-  type RawProps,
-  initProps,
-  normalizePropsOptions,
-} from './componentProps'
-import {
-  type EmitFn,
+  EffectScope,
   type EmitsOptions,
+  type GenericAppContext,
+  type GenericComponentInstance,
+  type LifecycleHook,
+  type NormalizedPropsOptions,
   type ObjectEmitsOptions,
-  emit,
-  normalizeEmitsOptions,
-} from './componentEmits'
-import { type RawSlots, type StaticSlots, initSlots } from './componentSlots'
-import { VaporLifecycleHooks } from './enums'
-import { warn } from './warning'
+  nextUid,
+  popWarningContext,
+  pushWarningContext,
+} from '@vue/runtime-core'
+import type { Block } from './block'
+import { pauseTracking, resetTracking } from '@vue/reactivity'
+import { EMPTY_OBJ, isFunction } from '@vue/shared'
 import {
-  type AppConfig,
-  type AppContext,
-  createAppContext,
-} from './apiCreateVaporApp'
-import type { Data } from '@vue/runtime-shared'
-import type { ComponentInstance } from './apiCreateComponentSimple'
+  type RawProps,
+  getDynamicPropsHandlers,
+  initStaticProps,
+} from './componentProps'
+import { setDynamicProp } from './dom/prop'
+import { renderEffect } from './renderEffect'
 
-export type Component = FunctionalComponent | ObjectComponent
+export type VaporComponent = FunctionalVaporComponent | ObjectVaporComponent
 
-type SharedInternalOptions = {
-  __propsOptions?: NormalizedPropsOptions
-  __propsHandlers?: [ProxyHandler<any>, ProxyHandler<any>]
-}
-
-export type SetupFn = (
+export type VaporSetupFn = (
   props: any,
   ctx: SetupContext,
-) => Block | Data | undefined
+) => Block | Record<string, any> | undefined
 
-export type FunctionalComponent = SetupFn &
-  Omit<ObjectComponent, 'setup'> & {
+export type FunctionalVaporComponent = VaporSetupFn &
+  Omit<ObjectVaporComponent, 'setup'> & {
     displayName?: string
   } & SharedInternalOptions
 
-export class SetupContext<E = EmitsOptions> {
-  attrs: Data
-  emit: EmitFn<E>
-  slots: Readonly<StaticSlots>
-  expose: (exposed?: Record<string, any>) => void
-
-  constructor(instance: ComponentInstance) {
-    this.attrs = instance.attrs
-    this.emit = instance.emit as EmitFn<E>
-    this.slots = instance.slots
-    this.expose = (exposed = {}) => {
-      instance.exposed = exposed
-    }
-  }
-}
-
-export function createSetupContext(
-  instance: ComponentInternalInstance,
-): SetupContext {
-  if (__DEV__) {
-    // We use getters in dev in case libs like test-utils overwrite instance
-    // properties (overwrites should not be done in prod)
-    return Object.freeze({
-      get attrs() {
-        return getAttrsProxy(instance)
-      },
-      get slots() {
-        return getSlotsProxy(instance)
-      },
-      get emit() {
-        return (event: string, ...args: any[]) => instance.emit(event, ...args)
-      },
-      expose: (exposed?: Record<string, any>) => {
-        if (instance.exposed) {
-          warn(`expose() should be called only once per setup().`)
-        }
-        if (exposed != null) {
-          let exposedType: string = typeof exposed
-          if (exposedType === 'object') {
-            if (isArray(exposed)) {
-              exposedType = 'array'
-            } else if (isRef(exposed)) {
-              exposedType = 'ref'
-            }
-          }
-          if (exposedType !== 'object') {
-            warn(
-              `expose() should be passed a plain object, received ${exposedType}.`,
-            )
-          }
-        }
-        instance.exposed = exposed || {}
-      },
-    }) as SetupContext
-  } else {
-    return new SetupContext(instance)
-  }
-}
-
-export interface ObjectComponent
+export interface ObjectVaporComponent
   extends ComponentInternalOptions,
     SharedInternalOptions {
-  setup?: SetupFn
+  setup?: VaporSetupFn
   inheritAttrs?: boolean
   props?: ComponentPropsOptions
   emits?: EmitsOptions
@@ -116,311 +48,176 @@ export interface ObjectComponent
   vapor?: boolean
 }
 
-// Note: can't mark this whole interface internal because some public interfaces
-// extend it.
-export interface ComponentInternalOptions {
+interface SharedInternalOptions {
   /**
-   * @internal
+   * Cached normalized props options.
+   * In vapor mode there are no mixins so normalized options can be cached
+   * directly on the component
    */
-  __scopeId?: string
+  __propsOptions?: NormalizedPropsOptions
   /**
-   * @internal
+   * Cached normalized props proxy handlers.
    */
-  __cssModules?: Data
+  __propsHandlers?: [ProxyHandler<any> | null, ProxyHandler<any>]
   /**
-   * @internal
+   * Cached normalized emits options.
    */
-  __hmrId?: string
-  /**
-   * Compat build only, for bailing out of certain compatibility behavior
-   */
-  __isBuiltIn?: boolean
-  /**
-   * This one should be exposed so that devtools can make use of it
-   */
-  __file?: string
-  /**
-   * name inferred from filename
-   */
-  __name?: string
+  __emitsOptions?: ObjectEmitsOptions
 }
 
-type LifecycleHook<TFn = Function> = TFn[] | null
-
-export let currentInstance: ComponentInternalInstance | null = null
-
-export const getCurrentInstance: () => ComponentInternalInstance | null = () =>
-  currentInstance
-
-export const setCurrentInstance = (instance: ComponentInternalInstance) => {
-  const prev = currentInstance
-  currentInstance = instance
-  return (): void => {
-    currentInstance = prev
+export function createComponent(
+  component: VaporComponent,
+  rawProps?: RawProps,
+  isSingleRoot?: boolean,
+): VaporComponentInstance {
+  // check if we are the single root of the parent
+  // if yes, inject parent attrs as dynamic props source
+  if (isSingleRoot && currentInstance && currentInstance.hasFallthrough) {
+    if (rawProps) {
+      ;(rawProps.$ || (rawProps.$ = [])).push(currentInstance.attrs)
+    } else {
+      rawProps = { $: [currentInstance.attrs] }
+    }
   }
+
+  const instance = new VaporComponentInstance(component, rawProps)
+
+  pauseTracking()
+  let prevInstance = currentInstance
+  currentInstance = instance
+  instance.scope.on()
+
+  if (__DEV__) {
+    pushWarningContext(instance)
+  }
+
+  const setupFn = isFunction(component) ? component : component.setup
+  const setupContext = setupFn!.length > 1 ? new SetupContext(instance) : null
+  instance.block = setupFn!(
+    instance.props,
+    // @ts-expect-error
+    setupContext,
+  ) as Block // TODO handle return object
+
+  // single root, inherit attrs
+  if (
+    instance.hasFallthrough &&
+    component.inheritAttrs !== false &&
+    instance.block instanceof Element &&
+    Object.keys(instance.attrs).length
+  ) {
+    renderEffect(() => {
+      for (const key in instance.attrs) {
+        setDynamicProp(instance.block as Element, key, instance.attrs[key])
+      }
+    })
+  }
+
+  if (__DEV__) {
+    popWarningContext()
+  }
+
+  instance.scope.off()
+  currentInstance = prevInstance
+  resetTracking()
+  return instance
 }
 
-export const unsetCurrentInstance = (): void => {
-  currentInstance && currentInstance.scope.off()
-  currentInstance = null
+export let currentInstance: VaporComponentInstance | null = null
+
+const emptyContext: GenericAppContext = {
+  app: null as any,
+  config: {},
+  provides: /*@__PURE__*/ Object.create(null),
 }
 
-const emptyAppContext = createAppContext()
-
-let uid = 0
-export class ComponentInternalInstance {
-  vapor = true
-
+export class VaporComponentInstance implements GenericComponentInstance {
   uid: number
-  appContext: AppContext
+  type: VaporComponent
+  parent: GenericComponentInstance | null
+  appContext: GenericAppContext
 
-  type: Component
-  block: Block | null
-  container: ParentNode
-  parent: ComponentInternalInstance | null
-  root: ComponentInternalInstance
-
-  provides: Data
+  block: Block
   scope: EffectScope
-  comps: Set<ComponentInternalInstance>
-  scopeIds: string[]
+  rawProps: RawProps | undefined
+  props: Record<string, any>
+  attrs: Record<string, any>
+  exposed: Record<string, any> | null
 
-  rawProps: NormalizedRawProps
-  propsOptions: NormalizedPropsOptions
-  emitsOptions: ObjectEmitsOptions | null
-
-  // state
-  setupState: Data
-  setupContext: SetupContext | null
-  props: Data
-  emit: EmitFn
   emitted: Record<string, boolean> | null
-  attrs: Data
-  /**
-   * - `undefined` : no props
-   * - `false`     : all props are static
-   * - `string[]`  : list of props are dynamic
-   * - `true`      : all props as dynamic
-   */
-  dynamicAttrs?: string[] | boolean
-  slots: StaticSlots
-  refs: Data
-  // exposed properties via expose()
-  exposed?: Record<string, any>
+  propsDefaults: Record<string, any> | null
 
-  attrsProxy?: Data
-  slotsProxy?: StaticSlots
+  // for useTemplateRef()
+  refs: Record<string, any>
+  // for provide / inject
+  provides: Record<string, any>
 
-  // lifecycle
+  hasFallthrough: boolean
+
   isMounted: boolean
   isUnmounted: boolean
-  isUpdating: boolean
-  // TODO: registory of provides, lifecycles, ...
-  /**
-   * @internal
-   */
-  // [VaporLifecycleHooks.BEFORE_MOUNT]: LifecycleHook;
-  bm: LifecycleHook
-  /**
-   * @internal
-   */
-  // [VaporLifecycleHooks.MOUNTED]: LifecycleHook;
-  m: LifecycleHook
-  /**
-   * @internal
-   */
-  // [VaporLifecycleHooks.BEFORE_UPDATE]: LifecycleHook;
-  bu: LifecycleHook
-  /**
-   * @internal
-   */
-  // [VaporLifecycleHooks.UPDATED]: LifecycleHook;
-  u: LifecycleHook
-  /**
-   * @internal
-   */
-  // [VaporLifecycleHooks.BEFORE_UNMOUNT]: LifecycleHook;
-  bum: LifecycleHook
-  /**
-   * @internal
-   */
-  // [VaporLifecycleHooks.UNMOUNTED]: LifecycleHook;
-  um: LifecycleHook
-  /**
-   * @internal
-   */
-  // [VaporLifecycleHooks.RENDER_TRACKED]: LifecycleHook;
-  rtc: LifecycleHook
-  /**
-   * @internal
-   */
-  // [VaporLifecycleHooks.RENDER_TRIGGERED]: LifecycleHook;
-  rtg: LifecycleHook
-  /**
-   * @internal
-   */
-  // [VaporLifecycleHooks.ACTIVATED]: LifecycleHook;
-  a: LifecycleHook
-  /**
-   * @internal
-   */
-  // [VaporLifecycleHooks.DEACTIVATED]: LifecycleHook;
-  da: LifecycleHook
-  /**
-   * @internal
-   */
-  // [VaporLifecycleHooks.ERROR_CAPTURED]: LifecycleHook
+  isDeactivated: boolean
+  // LifecycleHooks.ERROR_CAPTURED
   ec: LifecycleHook
 
-  constructor(
-    component: Component,
-    rawProps: RawProps | null,
-    slots: RawSlots | null,
-    once: boolean = false,
-    // application root node only
-    appContext?: AppContext,
-  ) {
-    this.uid = uid++
-    const parent = (this.parent = currentInstance)
-    this.root = parent ? parent.root : this
-    const _appContext = (this.appContext =
-      (parent ? parent.appContext : appContext) || emptyAppContext)
-    this.block = null
-    this.container = null!
-    this.root = null!
+  // dev only
+  propsOptions?: NormalizedPropsOptions
+  emitsOptions?: ObjectEmitsOptions | null
+
+  constructor(comp: VaporComponent, rawProps?: RawProps) {
+    this.uid = nextUid()
+    this.type = comp
+    this.parent = currentInstance
+    this.appContext = currentInstance
+      ? currentInstance.appContext
+      : emptyContext
+
+    this.block = null! // to be set
     this.scope = new EffectScope(true)
-    this.provides = parent
-      ? parent.provides
-      : Object.create(_appContext.provides)
-    this.type = component
-    this.comps = new Set()
-    this.scopeIds = []
-    this.rawProps = null!
-    this.propsOptions = normalizePropsOptions(component)
-    this.emitsOptions = normalizeEmitsOptions(component)
 
-    // state
-    this.setupState = EMPTY_OBJ
-    this.setupContext = null
-    this.props = EMPTY_OBJ
-    this.emit = emit.bind(null, this)
-    this.emitted = null
-    this.attrs = EMPTY_OBJ
-    this.slots = EMPTY_OBJ
-    this.refs = EMPTY_OBJ
+    this.rawProps = rawProps
+    this.provides = this.refs = EMPTY_OBJ
+    this.emitted = this.ec = this.exposed = null
+    this.isMounted = this.isUnmounted = this.isDeactivated = false
 
-    // lifecycle
-    this.isMounted = false
-    this.isUnmounted = false
-    this.isUpdating = false
-    this[VaporLifecycleHooks.BEFORE_MOUNT] = null
-    this[VaporLifecycleHooks.MOUNTED] = null
-    this[VaporLifecycleHooks.BEFORE_UPDATE] = null
-    this[VaporLifecycleHooks.UPDATED] = null
-    this[VaporLifecycleHooks.BEFORE_UNMOUNT] = null
-    this[VaporLifecycleHooks.UNMOUNTED] = null
-    this[VaporLifecycleHooks.RENDER_TRACKED] = null
-    this[VaporLifecycleHooks.RENDER_TRIGGERED] = null
-    this[VaporLifecycleHooks.ACTIVATED] = null
-    this[VaporLifecycleHooks.DEACTIVATED] = null
-    this[VaporLifecycleHooks.ERROR_CAPTURED] = null
+    // init props
+    this.propsDefaults = null
+    this.hasFallthrough = false
+    if (rawProps && rawProps.$) {
+      // has dynamic props, use proxy
+      const handlers = getDynamicPropsHandlers(comp, this)
+      this.props = comp.props ? new Proxy(rawProps, handlers[0]!) : EMPTY_OBJ
+      this.attrs = new Proxy(rawProps, handlers[1])
+      this.hasFallthrough = true
+    } else {
+      this.props = {}
+      this.attrs = {}
+      this.hasFallthrough = initStaticProps(comp, rawProps, this)
+    }
 
-    initProps(this, rawProps, !isFunction(component), once)
-    initSlots(this, slots)
+    // TODO validate props
+    // TODO init slots
   }
 }
 
 export function isVaporComponent(
-  val: unknown,
-): val is ComponentInternalInstance {
-  return val instanceof ComponentInternalInstance
+  value: unknown,
+): value is VaporComponentInstance {
+  return value instanceof VaporComponentInstance
 }
 
-export function validateComponentName(
-  name: string,
-  { isNativeTag }: AppConfig,
-): void {
-  if (isBuiltInTag(name) || isNativeTag(name)) {
-    warn(
-      'Do not use built-in or reserved HTML elements as component id: ' + name,
-    )
-  }
-}
+export class SetupContext<E = EmitsOptions> {
+  attrs: Record<string, any>
+  // emit: EmitFn<E>
+  // slots: Readonly<StaticSlots>
+  expose: (exposed?: Record<string, any>) => void
 
-/**
- * Dev-only
- */
-export function getAttrsProxy(instance: ComponentInternalInstance): Data {
-  return (
-    instance.attrsProxy ||
-    (instance.attrsProxy = new Proxy(instance.attrs, {
-      get(target, key: string) {
-        return target[key]
-      },
-      set() {
-        warn(`setupContext.attrs is readonly.`)
-        return false
-      },
-      deleteProperty() {
-        warn(`setupContext.attrs is readonly.`)
-        return false
-      },
-    }))
-  )
-}
-
-/**
- * Dev-only
- */
-export function getSlotsProxy(
-  instance: ComponentInternalInstance,
-): StaticSlots {
-  return (
-    instance.slotsProxy ||
-    (instance.slotsProxy = new Proxy(instance.slots, {
-      get(target, key: string) {
-        return target[key]
-      },
-    }))
-  )
-}
-
-export function getComponentName(
-  Component: Component,
-): string | false | undefined {
-  return isFunction(Component)
-    ? Component.displayName || Component.name
-    : Component.name || Component.__name
-}
-
-export function formatComponentName(
-  instance: ComponentInternalInstance | null,
-  Component: Component,
-  isRoot = false,
-): string {
-  let name = getComponentName(Component)
-  if (!name && Component.__file) {
-    const match = Component.__file.match(/([^/\\]+)\.\w+$/)
-    if (match) {
-      name = match[1]
+  constructor(instance: VaporComponentInstance) {
+    this.attrs = instance.attrs
+    // this.emit = instance.emit as EmitFn<E>
+    // this.slots = instance.slots
+    this.expose = (exposed = {}) => {
+      instance.exposed = exposed
     }
   }
-
-  if (!name && instance && instance.parent) {
-    // try to infer the name based on reverse resolution
-    const inferFromRegistry = (registry: Record<string, any> | undefined) => {
-      for (const key in registry) {
-        if (registry[key] === Component) {
-          return key
-        }
-      }
-    }
-    name = inferFromRegistry(instance.appContext.components)
-  }
-
-  return name ? classify(name) : isRoot ? `App` : `Anonymous`
 }
-
-const classifyRE = /(?:^|[-_])(\w)/g
-const classify = (str: string): string =>
-  str.replace(classifyRE, c => c.toUpperCase()).replace(/[-_]/g, '')

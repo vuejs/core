@@ -14,9 +14,9 @@ import {
   openBlock,
 } from '../vnode'
 import { PatchFlags, SlotFlags, isSymbol } from '@vue/shared'
-import type { Data } from '@vue/runtime-shared'
 import { warn } from '../warning'
 import { isAsyncWrapper } from '../apiAsyncComponent'
+import type { Data } from '../component'
 
 /**
  * Compiler runtime helper for rendering `<slot/>`

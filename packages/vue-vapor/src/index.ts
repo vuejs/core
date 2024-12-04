@@ -12,4 +12,4 @@ if (__DEV__ && __BROWSER__) {
   initCustomFormatter()
 }
 
-export * from '@vue/runtime-vapor'
+export * from '@vue/runtime-vapor/src'

@@ -1,11 +1,11 @@
-import type { Component } from '../src/component'
+import type { Component } from '../src/_old/component'
 import { type RefEl, setRef } from '../src/dom/templateRef'
-import { onErrorCaptured, onMounted } from '../src/apiLifecycle'
-import { createComponent } from '../src/apiCreateComponent'
+import { onErrorCaptured, onMounted } from '../src/_old/apiLifecycle'
+import { createComponent } from '../src/_old/apiCreateComponent'
 import { makeRender } from './_utils'
 import { template } from '../src/dom/template'
-import { watch, watchEffect } from '../src/apiWatch'
-import { nextTick } from '../src/scheduler'
+import { watch, watchEffect } from '../src/_old/apiWatch'
+import { nextTick } from '../src/_old/scheduler'
 import { ref } from '@vue/reactivity'
 
 const define = makeRender()

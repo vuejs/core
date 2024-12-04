@@ -1,5 +1,6 @@
 import {
   type App,
+  type Component,
   type ConcreteComponent,
   type CreateAppFunction,
   type DefineComponent,
@@ -144,7 +145,7 @@ export const createApp = ((...args) => {
   }
 
   return app
-}) as CreateAppFunction<Element>
+}) as CreateAppFunction<Element, Component>
 
 export const createSSRApp = ((...args) => {
   const app = ensureHydrationRenderer().createApp(...args)

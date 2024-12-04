@@ -9,8 +9,8 @@ import {
   defineComponent,
   nextTick,
   onBeforeUnmount,
-} from '../src'
-import { isEmitListener } from '../src/componentEmits'
+} from '../src/_old'
+import { isEmitListener } from '../src/_old/componentEmits'
 import { makeRender } from './_utils'
 
 const define = makeRender()

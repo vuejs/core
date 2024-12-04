@@ -3,8 +3,8 @@ import {
   type ComponentInternalInstance,
   currentInstance,
   isVaporComponent,
-} from '../component'
-import { VaporErrorCodes, callWithErrorHandling } from '../errorHandling'
+} from '../_old/component'
+import { VaporErrorCodes, callWithErrorHandling } from '../_old/errorHandling'
 import {
   EMPTY_OBJ,
   hasOwn,
@@ -13,8 +13,8 @@ import {
   isString,
   remove,
 } from '@vue/shared'
-import { warn } from '../warning'
-import { type SchedulerJob, queuePostFlushCb } from '../scheduler'
+import { warn } from '../_old/warning'
+import { type SchedulerJob, queuePostFlushCb } from '../_old/scheduler'
 
 export type NodeRef = string | Ref | ((ref: Element) => void)
 export type RefEl = Element | ComponentInternalInstance

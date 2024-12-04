@@ -1,6 +1,7 @@
 import {
   type Component,
   type ConcreteComponent,
+  type Data,
   type GenericComponent,
   type GenericComponentInstance,
   getComponentPublicInstance,
@@ -22,7 +23,6 @@ import { warn } from './warning'
 import type { VNode } from './vnode'
 import { devtoolsInitApp, devtoolsUnmountApp } from './devtools'
 import { NO, extend, isFunction, isObject } from '@vue/shared'
-import type { Data } from '@vue/runtime-shared'
 import { version } from '.'
 import { installAppCompatProperties } from './compat/global'
 import type { NormalizedPropsOptions } from './componentProps'
@@ -256,8 +256,8 @@ export function createAppContext(): AppContext {
   }
 }
 
-export type CreateAppFunction<HostElement> = (
-  rootComponent: GenericComponent,
+export type CreateAppFunction<HostElement, Comp = Component> = (
+  rootComponent: Comp,
   rootProps?: Data | null,
 ) => App<HostElement>
 
@@ -275,13 +275,13 @@ export type AppUnmountFn = (app: App) => void
 /**
  * @internal
  */
-export function createAppAPI<HostElement>(
+export function createAppAPI<HostElement, Comp = Component>(
   // render: RootRenderFunction<HostElement>,
   // hydrate?: RootHydrateFunction,
   mount: AppMountFn<HostElement>,
   unmount: AppUnmountFn,
   render?: RootRenderFunction,
-): CreateAppFunction<HostElement> {
+): CreateAppFunction<HostElement, Comp> {
   return function createApp(rootComponent, rootProps = null) {
     if (!isFunction(rootComponent)) {
       rootComponent = extend({}, rootComponent)

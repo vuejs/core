@@ -1,5 +1,5 @@
-import { normalizeContainer } from '../apiRender'
-import { insert } from '../dom/element'
+import { normalizeContainer } from './_old/apiRender'
+import { insert } from './dom/element'
 import { type VaporComponent, createComponent } from './component'
 import {
   type AppMountFn,
@@ -8,7 +8,7 @@ import {
   createAppAPI,
 } from '@vue/runtime-core'
 
-let _createApp: CreateAppFunction<ParentNode>
+let _createApp: CreateAppFunction<ParentNode, VaporComponent>
 
 const mountApp: AppMountFn<ParentNode> = (app, container) => {
   // clear content before mounting
@@ -24,7 +24,10 @@ const unmountApp: AppUnmountFn = app => {
   // TODO
 }
 
-export function createVaporApp(comp: VaporComponent): any {
+export const createVaporApp: CreateAppFunction<
+  ParentNode,
+  VaporComponent
+> = comp => {
   if (!_createApp) _createApp = createAppAPI(mountApp, unmountApp)
   const app = _createApp(comp)
   const mount = app.mount

@@ -11,7 +11,7 @@ import {
   toRefs,
   watch,
   watchEffect,
-} from '../src'
+} from '../src/_old'
 import { makeRender } from './_utils'
 
 const define = makeRender<any>()

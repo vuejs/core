@@ -9,7 +9,7 @@ import {
   recordEventMetadata,
 } from '../componentMetadata'
 import { withKeys, withModifiers } from '@vue/runtime-dom'
-import { queuePostFlushCb } from '../scheduler'
+import { queuePostFlushCb } from '@vue/runtime-dom'
 
 export function addEventListener(
   el: Element,
