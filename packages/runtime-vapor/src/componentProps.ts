@@ -36,7 +36,7 @@ export function getPropsProxyHandlers(
   const emitsOptions = normalizeEmitsOptions(comp)
   const isProp = propsOptions ? (key: string) => hasOwn(propsOptions, key) : NO
   const castProp = propsOptions
-    ? (key: string, value: any, isAbsent = false) =>
+    ? (value: any, key: string, isAbsent = false) =>
         resolvePropValue(
           propsOptions,
           key as string,
@@ -55,7 +55,7 @@ export function getPropsProxyHandlers(
     }
 
     if (key in target) {
-      return castProp(key, target[key as string]())
+      return castProp(target[key as string](), key)
     }
     const dynamicSources = target.$
     if (dynamicSources) {
@@ -66,11 +66,11 @@ export function getPropsProxyHandlers(
         isDynamic = isFunction(source)
         source = isDynamic ? (source as Function)() : source
         if (hasOwn(source, key)) {
-          return castProp(key, isDynamic ? source[key] : source[key]())
+          return castProp(isDynamic ? source[key] : source[key](), key)
         }
       }
     }
-    return castProp(key, undefined, true)
+    return castProp(undefined, key, true)
   }
 
   const propsHandlers = propsOptions
@@ -109,7 +109,9 @@ export function getPropsProxyHandlers(
   }
 
   const attrsHandlers = {
-    get: (target, key: string) => getProp(target, key, false),
+    get: (target, key: string) => {
+      return getProp(target, key, false)
+    },
     has: hasAttr,
     getOwnPropertyDescriptor(target, key: string) {
       if (hasAttr(target, key)) {

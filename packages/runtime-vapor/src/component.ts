@@ -212,13 +212,13 @@ export class VaporComponentInstance implements GenericComponentInstance {
     // determine fallthrough
     this.hasFallthrough = false
     if (rawProps) {
-      if (rawProps.$) {
+      if (rawProps.$ || !comp.props) {
         this.hasFallthrough = true
       } else {
         // check if rawProps contains any keys not declared
-        const propsOptions = normalizePropsOptions(comp)[0]!
+        const propsOptions = normalizePropsOptions(comp)[0]
         for (const key in rawProps) {
-          if (!hasOwn(propsOptions, key)) {
+          if (!hasOwn(propsOptions!, key)) {
             this.hasFallthrough = true
             break
           }
