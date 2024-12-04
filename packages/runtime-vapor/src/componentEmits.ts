@@ -1,14 +1,6 @@
-import {
-  type EmitFn,
-  type ObjectEmitsOptions,
-  baseEmit,
-} from '@vue/runtime-dom'
-import {
-  type VaporComponent,
-  type VaporComponentInstance,
-  currentInstance,
-} from './component'
-import { EMPTY_OBJ, NOOP, hasOwn, isArray } from '@vue/shared'
+import { type ObjectEmitsOptions, baseEmit } from '@vue/runtime-dom'
+import type { VaporComponent, VaporComponentInstance } from './component'
+import { EMPTY_OBJ, hasOwn, isArray } from '@vue/shared'
 import { resolveSource } from './componentProps'
 
 /**
@@ -32,15 +24,6 @@ export function normalizeEmitsOptions(
   }
 
   return (comp.__emitsOptions = normalized)
-}
-
-export function useEmit(): EmitFn {
-  if (!currentInstance) {
-    // TODO warn
-    return NOOP
-  } else {
-    return emit.bind(null, currentInstance)
-  }
 }
 
 export function emit(

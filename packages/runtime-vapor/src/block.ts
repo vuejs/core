@@ -10,6 +10,19 @@ export type Fragment = {
   [fragmentKey]: true
 }
 
+export function isFragment(val: NonNullable<unknown>): val is Fragment {
+  return fragmentKey in val
+}
+
+export function isBlock(val: NonNullable<unknown>): val is Block {
+  return (
+    val instanceof Node ||
+    isArray(val) ||
+    isVaporComponent(val) ||
+    isFragment(val)
+  )
+}
+
 /*! #__NO_SIDE_EFFECTS__ */
 export function normalizeBlock(block: Block): Node[] {
   const nodes: Node[] = []

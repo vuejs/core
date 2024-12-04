@@ -2,6 +2,7 @@ import {
   type ComponentInternalOptions,
   type ComponentPropsOptions,
   EffectScope,
+  type EmitFn,
   type EmitsOptions,
   type GenericAppContext,
   type GenericComponentInstance,
@@ -11,8 +12,9 @@ import {
   nextUid,
   popWarningContext,
   pushWarningContext,
+  warn,
 } from '@vue/runtime-dom'
-import type { Block } from './block'
+import { type Block, isBlock } from './block'
 import { pauseTracking, resetTracking } from '@vue/reactivity'
 import { EMPTY_OBJ, isFunction } from '@vue/shared'
 import {
@@ -22,6 +24,7 @@ import {
 } from './componentProps'
 import { setDynamicProp } from './dom/prop'
 import { renderEffect } from './renderEffect'
+import { emit } from './componentEmits'
 
 export type VaporComponent = FunctionalVaporComponent | ObjectVaporComponent
 
@@ -93,11 +96,29 @@ export function createComponent(
 
   const setupFn = isFunction(component) ? component : component.setup
   const setupContext = setupFn!.length > 1 ? new SetupContext(instance) : null
-  instance.block = setupFn!(
-    instance.props,
-    // @ts-expect-error
-    setupContext,
-  ) as Block // TODO handle return object
+  const setupResult =
+    setupFn!(
+      instance.props,
+      // @ts-expect-error
+      setupContext,
+    ) || EMPTY_OBJ
+
+  if (__DEV__ && !isBlock(setupResult)) {
+    if (isFunction(component)) {
+      warn(`Functional vapor component must return a block directly.`)
+      instance.block = []
+    } else if (!component.render) {
+      warn(
+        `Vapor component setup() returned non-block value, and has no render function.`,
+      )
+      instance.block = []
+    } else {
+      instance.block = component.render.call(null, setupResult)
+    }
+  } else {
+    // in prod result can only be block
+    instance.block = setupResult as Block
+  }
 
   // single root, inherit attrs
   if (
@@ -161,6 +182,7 @@ export class VaporComponentInstance implements GenericComponentInstance {
   ec: LifecycleHook
 
   // dev only
+  setupState?: Record<string, any>
   propsOptions?: NormalizedPropsOptions
   emitsOptions?: ObjectEmitsOptions | null
 
@@ -208,13 +230,13 @@ export function isVaporComponent(
 
 export class SetupContext<E = EmitsOptions> {
   attrs: Record<string, any>
-  // emit: EmitFn<E>
+  emit: EmitFn<E>
   // slots: Readonly<StaticSlots>
   expose: (exposed?: Record<string, any>) => void
 
   constructor(instance: VaporComponentInstance) {
     this.attrs = instance.attrs
-    // this.emit = instance.emit as EmitFn<E>
+    this.emit = emit.bind(null, instance) as EmitFn<E>
     // this.slots = instance.slots
     this.expose = (exposed = {}) => {
       instance.exposed = exposed

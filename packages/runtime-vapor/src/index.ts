@@ -1,7 +1,7 @@
 export { createComponent } from './component'
 export { renderEffect } from './renderEffect'
 export { createVaporApp } from './apiCreateApp'
-export { useEmit } from './componentEmits'
+export { defineComponent } from './apiDefineComponent'
 
 // DOM
 export { template, children, next } from './dom/template'
