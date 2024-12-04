@@ -464,9 +464,7 @@ exports[`compiler v-bind > number value 1`] = `
 
 export function render(_ctx) {
   const _component_Comp = _resolveComponent("Comp")
-  const n0 = _createComponent(_component_Comp, [
-    { depth: () => (0) }
-  ], null, true)
+  const n0 = _createComponent(_component_Comp, { depth: () => (0) }, null, true)
   return n0
 }"
 `;

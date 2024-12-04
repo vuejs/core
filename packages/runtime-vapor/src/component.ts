@@ -76,10 +76,11 @@ export function createComponent(
   // check if we are the single root of the parent
   // if yes, inject parent attrs as dynamic props source
   if (isSingleRoot && currentInstance && currentInstance.hasFallthrough) {
+    const attrs = currentInstance.attrs
     if (rawProps) {
-      ;(rawProps.$ || (rawProps.$ = [])).push(currentInstance.attrs)
+      ;(rawProps.$ || (rawProps.$ = [])).push(() => attrs)
     } else {
-      rawProps = { $: [currentInstance.attrs] }
+      rawProps = { $: [() => attrs] } as RawProps
     }
   }
 

@@ -40,19 +40,19 @@ import { genModelHandler } from './modelValue'
 import { genBlock } from './block'
 
 export function genCreateComponent(
-  oper: CreateComponentIRNode,
+  operation: CreateComponentIRNode,
   context: CodegenContext,
 ): CodeFragment[] {
   const { vaporHelper } = context
 
   const tag = genTag()
-  const { root, props, slots, once } = oper
+  const { root, props, slots, once } = operation
   const rawProps = genRawProps(props, context)
   const rawSlots = genRawSlots(slots, context)
 
   return [
     NEWLINE,
-    `const n${oper.id} = `,
+    `const n${operation.id} = `,
     ...genCall(
       vaporHelper('createComponent'),
       tag,
@@ -61,20 +61,20 @@ export function genCreateComponent(
       root ? 'true' : false,
       once && 'true',
     ),
-    ...genDirectivesForElement(oper.id, context),
+    ...genDirectivesForElement(operation.id, context),
   ]
 
   function genTag() {
-    if (oper.dynamic) {
+    if (operation.dynamic) {
       return genCall(
         vaporHelper('resolveDynamicComponent'),
-        genExpression(oper.dynamic, context),
+        genExpression(operation.dynamic, context),
       )
-    } else if (oper.asset) {
-      return toValidAssetId(oper.tag, 'component')
+    } else if (operation.asset) {
+      return toValidAssetId(operation.tag, 'component')
     } else {
       return genExpression(
-        extend(createSimpleExpression(oper.tag, false), { ast: null }),
+        extend(createSimpleExpression(operation.tag, false), { ast: null }),
         context,
       )
     }
@@ -85,39 +85,63 @@ export function genRawProps(
   props: IRProps[],
   context: CodegenContext,
 ): CodeFragment[] | undefined {
-  const { vaporHelper } = context
-  const frag = props
-    .map(props => {
-      if (isArray(props)) {
-        if (!props.length) return
-        return genStaticProps(props, context)
-      } else {
-        let expr: CodeFragment[]
-        if (props.kind === IRDynamicPropsKind.ATTRIBUTE)
-          expr = genMulti(DELIMITERS_OBJECT, genProp(props, context))
-        else {
-          expr = genExpression(props.value, context)
-          if (props.handler) expr = genCall(vaporHelper('toHandlers'), expr)
-        }
-        return ['() => (', ...expr, ')']
-      }
-    })
-    .filter(
-      Boolean as any as (v: CodeFragment[] | undefined) => v is CodeFragment[],
+  const staticProps = props[0]
+  if (isArray(staticProps)) {
+    if (!staticProps.length && props.length === 1) {
+      return
+    }
+    return genStaticProps(
+      staticProps,
+      context,
+      genDynamicProps(props.slice(1), context),
     )
-  if (frag.length) {
-    return genMulti(DELIMITERS_ARRAY_NEWLINE, ...frag)
+  } else if (props.length) {
+    // all dynamic
+    return genStaticProps([], context, genDynamicProps(props, context))
   }
 }
 
 function genStaticProps(
   props: IRPropsStatic,
   context: CodegenContext,
+  dynamicProps?: CodeFragment[],
 ): CodeFragment[] {
+  const args = props.map(prop => genProp(prop, context, true))
+  if (dynamicProps) {
+    args.push([`$: `, ...dynamicProps])
+  }
   return genMulti(
-    props.length > 1 ? DELIMITERS_OBJECT_NEWLINE : DELIMITERS_OBJECT,
-    ...props.map(prop => genProp(prop, context, true)),
+    args.length > 1 ? DELIMITERS_OBJECT_NEWLINE : DELIMITERS_OBJECT,
+    ...args,
   )
+}
+
+function genDynamicProps(
+  props: IRProps[],
+  context: CodegenContext,
+): CodeFragment[] | undefined {
+  const { vaporHelper } = context
+  const frags: CodeFragment[][] = []
+  for (const p of props) {
+    let expr: CodeFragment[]
+    if (isArray(p)) {
+      if (p.length) {
+        frags.push(genStaticProps(p, context))
+      }
+      continue
+    } else {
+      if (p.kind === IRDynamicPropsKind.ATTRIBUTE)
+        expr = genMulti(DELIMITERS_OBJECT, genProp(p, context))
+      else {
+        expr = genExpression(p.value, context)
+        if (p.handler) expr = genCall(vaporHelper('toHandlers'), expr)
+      }
+    }
+    frags.push(['() => (', ...expr, ')'])
+  }
+  if (frags.length) {
+    return genMulti(DELIMITERS_ARRAY_NEWLINE, ...frags)
+  }
 }
 
 function genProp(prop: IRProp, context: CodegenContext, isStatic?: boolean) {

@@ -100,9 +100,7 @@ exports[`compiler: element transform > component > should wrap as function if v-
 
 export function render(_ctx) {
   const _component_Foo = _resolveComponent("Foo")
-  const n0 = _createComponent(_component_Foo, [
-    { onBar: () => $event => (_ctx.handleBar($event)) }
-  ], null, true)
+  const n0 = _createComponent(_component_Foo, { onBar: () => $event => (_ctx.handleBar($event)) }, null, true)
   return n0
 }"
 `;
@@ -112,12 +110,10 @@ exports[`compiler: element transform > component > static props 1`] = `
 
 export function render(_ctx) {
   const _component_Foo = _resolveComponent("Foo")
-  const n0 = _createComponent(_component_Foo, [
-    {
-      id: () => ("foo"), 
-      class: () => ("bar")
-    }
-  ], null, true)
+  const n0 = _createComponent(_component_Foo, {
+    id: () => ("foo"), 
+    class: () => ("bar")
+  }, null, true)
   return n0
 }"
 `;
@@ -127,9 +123,9 @@ exports[`compiler: element transform > component > v-bind="obj" 1`] = `
 
 export function render(_ctx) {
   const _component_Foo = _resolveComponent("Foo")
-  const n0 = _createComponent(_component_Foo, [
+  const n0 = _createComponent(_component_Foo, { $: [
     () => (_ctx.obj)
-  ], null, true)
+  ] }, null, true)
   return n0
 }"
 `;
@@ -139,10 +135,12 @@ exports[`compiler: element transform > component > v-bind="obj" after static pro
 
 export function render(_ctx) {
   const _component_Foo = _resolveComponent("Foo")
-  const n0 = _createComponent(_component_Foo, [
-    { id: () => ("foo") }, 
-    () => (_ctx.obj)
-  ], null, true)
+  const n0 = _createComponent(_component_Foo, {
+    id: () => ("foo"), 
+    $: [
+      () => (_ctx.obj)
+    ]
+  }, null, true)
   return n0
 }"
 `;
@@ -152,10 +150,10 @@ exports[`compiler: element transform > component > v-bind="obj" before static pr
 
 export function render(_ctx) {
   const _component_Foo = _resolveComponent("Foo")
-  const n0 = _createComponent(_component_Foo, [
+  const n0 = _createComponent(_component_Foo, { $: [
     () => (_ctx.obj), 
     { id: () => ("foo") }
-  ], null, true)
+  ] }, null, true)
   return n0
 }"
 `;
@@ -165,11 +163,13 @@ exports[`compiler: element transform > component > v-bind="obj" between static p
 
 export function render(_ctx) {
   const _component_Foo = _resolveComponent("Foo")
-  const n0 = _createComponent(_component_Foo, [
-    { id: () => ("foo") }, 
-    () => (_ctx.obj), 
-    { class: () => ("bar") }
-  ], null, true)
+  const n0 = _createComponent(_component_Foo, {
+    id: () => ("foo"), 
+    $: [
+      () => (_ctx.obj), 
+      { class: () => ("bar") }
+    ]
+  }, null, true)
   return n0
 }"
 `;
@@ -179,9 +179,9 @@ exports[`compiler: element transform > component > v-on="obj" 1`] = `
 
 export function render(_ctx) {
   const _component_Foo = _resolveComponent("Foo")
-  const n0 = _createComponent(_component_Foo, [
+  const n0 = _createComponent(_component_Foo, { $: [
     () => (_toHandlers(_ctx.obj))
-  ], null, true)
+  ] }, null, true)
   return n0
 }"
 `;
@@ -192,10 +192,10 @@ import { resolveComponent as _resolveComponent, createComponent as _createCompon
 
 export function render(_ctx) {
   const _component_Foo = _resolveComponent("Foo")
-  const n0 = _createComponent(_component_Foo, [
+  const n0 = _createComponent(_component_Foo, { $: [
     () => ({ [_toHandlerKey(_ctx.foo-_ctx.bar)]: () => _ctx.bar }), 
     () => ({ [_toHandlerKey(_ctx.baz)]: () => _ctx.qux })
-  ], null, true)
+  ] }, null, true)
   return n0
 }"
 `;
@@ -205,10 +205,10 @@ exports[`compiler: element transform > component with dynamic prop arguments 1`]
 
 export function render(_ctx) {
   const _component_Foo = _resolveComponent("Foo")
-  const n0 = _createComponent(_component_Foo, [
+  const n0 = _createComponent(_component_Foo, { $: [
     () => ({ [_ctx.foo-_ctx.bar]: _ctx.bar }), 
     () => ({ [_ctx.baz]: _ctx.qux })
-  ], null, true)
+  ] }, null, true)
   return n0
 }"
 `;
@@ -245,9 +245,7 @@ exports[`compiler: element transform > dynamic component > normal component with
 
 export function render(_ctx) {
   const _component_custom_input = _resolveComponent("custom-input")
-  const n0 = _createComponent(_component_custom_input, [
-    { is: () => ("foo") }
-  ], null, true)
+  const n0 = _createComponent(_component_custom_input, { is: () => ("foo") }, null, true)
   return n0
 }"
 `;

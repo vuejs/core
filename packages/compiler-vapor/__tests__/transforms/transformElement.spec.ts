@@ -199,12 +199,10 @@ describe('compiler: element transform', () => {
       )
 
       expect(code).toMatchSnapshot()
-      expect(code).contains(`[
-    {
-      id: () => ("foo"), 
-      class: () => ("bar")
-    }
-  ]`)
+      expect(code).contains(`{
+    id: () => ("foo"), 
+    class: () => ("bar")
+  }`)
 
       expect(ir.block.operation).toMatchObject([
         {
@@ -273,10 +271,12 @@ describe('compiler: element transform', () => {
         `<Foo id="foo" v-bind="obj" />`,
       )
       expect(code).toMatchSnapshot()
-      expect(code).contains(`[
-    { id: () => ("foo") }, 
-    () => (_ctx.obj)
-  ]`)
+      expect(code).contains(`{
+    id: () => ("foo"), 
+    $: [
+      () => (_ctx.obj)
+    ]
+  }`)
       expect(ir.block.operation).toMatchObject([
         {
           type: IRNodeTypes.CREATE_COMPONENT_NODE,
@@ -321,11 +321,13 @@ describe('compiler: element transform', () => {
         `<Foo id="foo" v-bind="obj" class="bar" />`,
       )
       expect(code).toMatchSnapshot()
-      expect(code).contains(`[
-    { id: () => ("foo") }, 
-    () => (_ctx.obj), 
-    { class: () => ("bar") }
-  ]`)
+      expect(code).contains(`{
+    id: () => ("foo"), 
+    $: [
+      () => (_ctx.obj), 
+      { class: () => ("bar") }
+    ]
+  }`)
       expect(ir.block.operation).toMatchObject([
         {
           type: IRNodeTypes.CREATE_COMPONENT_NODE,

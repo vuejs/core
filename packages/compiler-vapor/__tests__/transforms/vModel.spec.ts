@@ -208,9 +208,9 @@ describe('compiler: vModel transform', () => {
     test('v-model for component should work', () => {
       const { code, ir } = compileWithVModel('<Comp v-model="foo" />')
       expect(code).toMatchSnapshot()
+      expect(code).contains(`modelValue: () => (_ctx.foo),`)
       expect(code).contains(
-        `modelValue: () => (_ctx.foo),
-    "onUpdate:modelValue": () => $event => (_ctx.foo = $event)`,
+        `"onUpdate:modelValue": () => $event => (_ctx.foo = $event)`,
       )
       expect(ir.block.operation).toMatchObject([
         {
@@ -233,9 +233,9 @@ describe('compiler: vModel transform', () => {
     test('v-model with arguments for component should work', () => {
       const { code, ir } = compileWithVModel('<Comp v-model:bar="foo" />')
       expect(code).toMatchSnapshot()
+      expect(code).contains(`bar: () => (_ctx.foo),`)
       expect(code).contains(
-        `bar: () => (_ctx.foo),
-    "onUpdate:bar": () => $event => (_ctx.foo = $event)`,
+        `"onUpdate:bar": () => $event => (_ctx.foo = $event)`,
       )
       expect(ir.block.operation).toMatchObject([
         {

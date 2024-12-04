@@ -8,14 +8,13 @@ import {
 } from '@vue/runtime-dom'
 import { normalizeEmitsOptions } from './componentEmits'
 
-export interface RawProps {
-  [key: string]: PropSource
+export type RawProps = Record<string, () => unknown> & {
   $?: DynamicPropsSource[]
 }
 
-type PropSource<T = any> = T | (() => T)
-
-type DynamicPropsSource = PropSource<Record<string, any>>
+type DynamicPropsSource =
+  | (() => Record<string, unknown>)
+  | Record<string, () => unknown>
 
 export function initStaticProps(
   comp: VaporComponent,
@@ -38,40 +37,24 @@ export function initStaticProps(
     const needCast = needCastKeys && needCastKeys.includes(normalizedKey)
     const source = rawProps[key]
     if (propsOptions && normalizedKey in propsOptions) {
-      if (isFunction(source)) {
-        Object.defineProperty(props, normalizedKey, {
-          enumerable: true,
-          get: needCast
-            ? () =>
-                resolvePropValue(
-                  propsOptions,
-                  normalizedKey,
-                  source(),
-                  instance,
-                  resolveDefault,
-                )
-            : source,
-        })
-      } else {
-        props[normalizedKey] = needCast
-          ? resolvePropValue(
-              propsOptions,
-              normalizedKey,
-              source,
-              instance,
-              resolveDefault,
-            )
-          : source
-      }
+      Object.defineProperty(props, normalizedKey, {
+        enumerable: true,
+        get: needCast
+          ? () =>
+              resolvePropValue(
+                propsOptions,
+                normalizedKey,
+                source(),
+                instance,
+                resolveDefault,
+              )
+          : source,
+      })
     } else if (!isEmitListener(emitsOptions, key)) {
-      if (isFunction(source)) {
-        Object.defineProperty(attrs, key, {
-          enumerable: true,
-          get: source,
-        })
-      } else {
-        attrs[normalizedKey] = source
-      }
+      Object.defineProperty(attrs, key, {
+        enumerable: true,
+        get: source,
+      })
       hasAttrs = true
     }
   }
@@ -98,7 +81,9 @@ function resolveDefault(
 }
 
 // TODO optimization: maybe convert functions into computeds
-export function resolveSource(source: PropSource): Record<string, any> {
+export function resolveSource(
+  source: Record<string, any> | (() => Record<string, any>),
+): Record<string, any> {
   return isFunction(source) ? source() : source
 }
 
@@ -138,15 +123,18 @@ export function getDynamicPropsHandlers(
       : passThrough
 
     if (key in target) {
-      return castProp(resolveSource(target[key as string]))
+      return castProp(target[key as string]())
     }
-    if (target.$) {
-      let i = target.$.length
-      let source
+    const dynamicSources = target.$
+    if (dynamicSources) {
+      let i = dynamicSources.length
+      let source, isDynamic
       while (i--) {
-        source = resolveSource(target.$[i])
+        source = dynamicSources[i]
+        isDynamic = isFunction(source)
+        source = isDynamic ? (source as Function)() : source
         if (hasOwn(source, key)) {
-          return castProp(source[key])
+          return castProp(isDynamic ? source[key] : source[key]())
         }
       }
     }
@@ -174,12 +162,14 @@ export function getDynamicPropsHandlers(
     : null
 
   const hasAttr = (target: RawProps, key: string) => {
-    if (key === '$' || isProp(key) || isEmitListener(emitsOptions, key))
+    if (key === '$' || isProp(key) || isEmitListener(emitsOptions, key)) {
       return false
-    if (target.$) {
-      let i = target.$.length
+    }
+    const dynamicSources = target.$
+    if (dynamicSources) {
+      let i = dynamicSources.length
       while (i--) {
-        if (hasOwn(resolveSource(target.$[i]), key)) {
+        if (hasOwn(resolveSource(dynamicSources[i]), key)) {
           return true
         }
       }
@@ -201,10 +191,11 @@ export function getDynamicPropsHandlers(
     },
     ownKeys(target) {
       const keys = Object.keys(target)
-      if (target.$) {
-        let i = target.$.length
+      const dynamicSources = target.$
+      if (dynamicSources) {
+        let i = dynamicSources.length
         while (i--) {
-          keys.push(...Object.keys(resolveSource(target.$[i])))
+          keys.push(...Object.keys(resolveSource(dynamicSources[i])))
         }
       }
       return keys.filter(key => hasAttr(target, key))
