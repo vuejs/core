@@ -16,11 +16,11 @@ import {
 } from '@vue/runtime-dom'
 import { type Block, isBlock } from './block'
 import { pauseTracking, resetTracking } from '@vue/reactivity'
-import { EMPTY_OBJ, isFunction } from '@vue/shared'
+import { EMPTY_OBJ, hasOwn, isFunction } from '@vue/shared'
 import {
   type RawProps,
-  getDynamicPropsHandlers,
-  initStaticProps,
+  getPropsProxyHandlers,
+  normalizePropsOptions,
 } from './componentProps'
 import { setDynamicProp } from './dom/prop'
 import { renderEffect } from './renderEffect'
@@ -200,22 +200,30 @@ export class VaporComponentInstance implements GenericComponentInstance {
 
     this.rawProps = rawProps
     this.provides = this.refs = EMPTY_OBJ
-    this.emitted = this.ec = this.exposed = null
+    this.emitted = this.ec = this.exposed = this.propsDefaults = null
     this.isMounted = this.isUnmounted = this.isDeactivated = false
 
     // init props
-    this.propsDefaults = null
+    const target = rawProps || EMPTY_OBJ
+    const handlers = getPropsProxyHandlers(comp, this)
+    this.props = comp.props ? new Proxy(target, handlers[0]!) : {}
+    this.attrs = new Proxy(target, handlers[1])
+
+    // determine fallthrough
     this.hasFallthrough = false
-    if (rawProps && rawProps.$) {
-      // has dynamic props, use proxy
-      const handlers = getDynamicPropsHandlers(comp, this)
-      this.props = comp.props ? new Proxy(rawProps, handlers[0]!) : EMPTY_OBJ
-      this.attrs = new Proxy(rawProps, handlers[1])
-      this.hasFallthrough = true
-    } else {
-      this.props = {}
-      this.attrs = {}
-      this.hasFallthrough = initStaticProps(comp, rawProps, this)
+    if (rawProps) {
+      if (rawProps.$) {
+        this.hasFallthrough = true
+      } else {
+        // check if rawProps contains any keys not declared
+        const propsOptions = normalizePropsOptions(comp)[0]!
+        for (const key in rawProps) {
+          if (!hasOwn(propsOptions, key)) {
+            this.hasFallthrough = true
+            break
+          }
+        }
+      }
     }
 
     // TODO validate props

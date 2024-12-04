@@ -1,4 +1,4 @@
-import { EMPTY_ARR, NO, camelize, hasOwn, isFunction } from '@vue/shared'
+import { EMPTY_ARR, NO, hasOwn, isFunction } from '@vue/shared'
 import type { VaporComponent, VaporComponentInstance } from './component'
 import {
   type NormalizedPropsOptions,
@@ -16,70 +16,6 @@ type DynamicPropsSource =
   | (() => Record<string, unknown>)
   | Record<string, () => unknown>
 
-export function initStaticProps(
-  comp: VaporComponent,
-  rawProps: RawProps | undefined,
-  instance: VaporComponentInstance,
-): boolean {
-  let hasAttrs = false
-  const { props, attrs } = instance
-  const [propsOptions, needCastKeys] = normalizePropsOptions(comp)
-  const emitsOptions = normalizeEmitsOptions(comp)
-
-  // for dev emit check
-  if (__DEV__) {
-    instance.propsOptions = normalizePropsOptions(comp)
-    instance.emitsOptions = emitsOptions
-  }
-
-  for (const key in rawProps) {
-    const normalizedKey = camelize(key)
-    const needCast = needCastKeys && needCastKeys.includes(normalizedKey)
-    const source = rawProps[key]
-    if (propsOptions && normalizedKey in propsOptions) {
-      Object.defineProperty(props, normalizedKey, {
-        enumerable: true,
-        get: needCast
-          ? () =>
-              resolvePropValue(
-                propsOptions,
-                normalizedKey,
-                source(),
-                instance,
-                resolveDefault,
-              )
-          : source,
-      })
-    } else if (!isEmitListener(emitsOptions, key)) {
-      Object.defineProperty(attrs, key, {
-        enumerable: true,
-        get: source,
-      })
-      hasAttrs = true
-    }
-  }
-  for (const key in propsOptions) {
-    if (!(key in props)) {
-      props[key] = resolvePropValue(
-        propsOptions,
-        key,
-        undefined,
-        instance,
-        resolveDefault,
-        true,
-      )
-    }
-  }
-  return hasAttrs
-}
-
-function resolveDefault(
-  factory: (props: Record<string, any>) => unknown,
-  instance: VaporComponentInstance,
-) {
-  return factory.call(null, instance.props)
-}
-
 // TODO optimization: maybe convert functions into computeds
 export function resolveSource(
   source: Record<string, any> | (() => Record<string, any>),
@@ -89,41 +25,37 @@ export function resolveSource(
 
 const passThrough = (val: any) => val
 
-export function getDynamicPropsHandlers(
+export function getPropsProxyHandlers(
   comp: VaporComponent,
   instance: VaporComponentInstance,
 ): [ProxyHandler<RawProps> | null, ProxyHandler<RawProps>] {
   if (comp.__propsHandlers) {
     return comp.__propsHandlers
   }
-  let normalizedKeys: string[] | undefined
   const propsOptions = normalizePropsOptions(comp)[0]
   const emitsOptions = normalizeEmitsOptions(comp)
   const isProp = propsOptions ? (key: string) => hasOwn(propsOptions, key) : NO
+  const castProp = propsOptions
+    ? (key: string, value: any, isAbsent = false) =>
+        resolvePropValue(
+          propsOptions,
+          key as string,
+          value,
+          instance,
+          resolveDefault,
+          isAbsent,
+        )
+    : passThrough
 
   const getProp = (target: RawProps, key: string, asProp: boolean) => {
-    if (key === '$') return
     if (asProp) {
-      if (!isProp(key)) return
+      if (!isProp(key) || key === '$') return
     } else if (isProp(key) || isEmitListener(emitsOptions, key)) {
       return
     }
-    const castProp = propsOptions
-      ? (value: any, isAbsent = false) =>
-          asProp
-            ? resolvePropValue(
-                propsOptions,
-                key as string,
-                value,
-                instance,
-                resolveDefault,
-                isAbsent,
-              )
-            : value
-      : passThrough
 
     if (key in target) {
-      return castProp(target[key as string]())
+      return castProp(key, target[key as string]())
     }
     const dynamicSources = target.$
     if (dynamicSources) {
@@ -134,11 +66,11 @@ export function getDynamicPropsHandlers(
         isDynamic = isFunction(source)
         source = isDynamic ? (source as Function)() : source
         if (hasOwn(source, key)) {
-          return castProp(isDynamic ? source[key] : source[key]())
+          return castProp(key, isDynamic ? source[key] : source[key]())
         }
       }
     }
-    return castProp(undefined, true)
+    return castProp(key, undefined, true)
   }
 
   const propsHandlers = propsOptions
@@ -154,8 +86,7 @@ export function getDynamicPropsHandlers(
             }
           }
         },
-        ownKeys: () =>
-          normalizedKeys || (normalizedKeys = Object.keys(propsOptions)),
+        ownKeys: () => Object.keys(propsOptions),
         set: NO,
         deleteProperty: NO,
       } satisfies ProxyHandler<RawProps>)
@@ -207,7 +138,9 @@ export function getDynamicPropsHandlers(
   return (comp.__propsHandlers = [propsHandlers, attrsHandlers])
 }
 
-function normalizePropsOptions(comp: VaporComponent): NormalizedPropsOptions {
+export function normalizePropsOptions(
+  comp: VaporComponent,
+): NormalizedPropsOptions {
   const cached = comp.__propsOptions
   if (cached) return cached
 
@@ -219,4 +152,11 @@ function normalizePropsOptions(comp: VaporComponent): NormalizedPropsOptions {
   baseNormalizePropsOptions(raw, normalized, needCastKeys)
 
   return (comp.__propsOptions = [normalized, needCastKeys])
+}
+
+function resolveDefault(
+  factory: (props: Record<string, any>) => unknown,
+  instance: VaporComponentInstance,
+) {
+  return factory.call(null, instance.props)
 }
