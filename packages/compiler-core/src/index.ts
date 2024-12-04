@@ -23,15 +23,19 @@ export {
 } from './transform'
 export {
   generate,
+  NewlineType,
   type CodegenContext,
   type CodegenResult,
   type CodegenSourceMapGenerator,
   type RawSourceMap,
+  type BaseCodegenResult,
 } from './codegen'
 export {
   ErrorCodes,
   errorMessages,
   createCompilerError,
+  defaultOnError,
+  defaultOnWarn,
   type CoreCompilerError,
   type CompilerError,
 } from './errors'
@@ -52,6 +56,7 @@ export {
   transformExpression,
   processExpression,
   stringifyExpression,
+  isLiteralWhitelisted,
 } from './transforms/transformExpression'
 export {
   buildSlots,
@@ -75,4 +80,5 @@ export {
   checkCompatEnabled,
   warnDeprecation,
   CompilerDeprecationTypes,
+  type CompilerCompatOptions,
 } from './compat/compatConfig'

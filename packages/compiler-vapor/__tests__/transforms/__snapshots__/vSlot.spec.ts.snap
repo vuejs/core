@@ -1,0 +1,234 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`compiler: transform slot > dynamic slots name 1`] = `
+"import { resolveComponent as _resolveComponent, createComponent as _createComponent, template as _template } from 'vue/vapor';
+const t0 = _template("foo")
+
+export function render(_ctx) {
+  const _component_Comp = _resolveComponent("Comp")
+  const n2 = _createComponent(_component_Comp, null, [
+    () => ({
+      name: _ctx.name, 
+      fn: () => {
+        const n0 = t0()
+        return n0
+      }
+    })
+  ], true)
+  return n2
+}"
+`;
+
+exports[`compiler: transform slot > dynamic slots name w/ v-for 1`] = `
+"import { resolveComponent as _resolveComponent, withDestructure as _withDestructure, createForSlots as _createForSlots, createComponent as _createComponent, template as _template } from 'vue/vapor';
+const t0 = _template("foo")
+
+export function render(_ctx) {
+  const _component_Comp = _resolveComponent("Comp")
+  const n2 = _createComponent(_component_Comp, null, [
+    () => (_createForSlots(_ctx.list, (item) => ({
+      name: item, 
+      fn: _withDestructure(({ bar }) => [bar], (_ctx0) => {
+        const n0 = t0()
+        return n0
+      })
+    })))
+  ], true)
+  return n2
+}"
+`;
+
+exports[`compiler: transform slot > dynamic slots name w/ v-for and provide absent key 1`] = `
+"import { resolveComponent as _resolveComponent, createForSlots as _createForSlots, createComponent as _createComponent, template as _template } from 'vue/vapor';
+const t0 = _template("foo")
+
+export function render(_ctx) {
+  const _component_Comp = _resolveComponent("Comp")
+  const n2 = _createComponent(_component_Comp, null, [
+    () => (_createForSlots(_ctx.list, (_, __, index) => ({
+      name: index, 
+      fn: () => {
+        const n0 = t0()
+        return n0
+      }
+    })))
+  ], true)
+  return n2
+}"
+`;
+
+exports[`compiler: transform slot > dynamic slots name w/ v-if / v-else[-if] 1`] = `
+"import { resolveComponent as _resolveComponent, withDestructure as _withDestructure, createComponent as _createComponent, template as _template } from 'vue/vapor';
+const t0 = _template("condition slot")
+const t1 = _template("another condition")
+const t2 = _template("else condition")
+
+export function render(_ctx) {
+  const _component_Comp = _resolveComponent("Comp")
+  const n6 = _createComponent(_component_Comp, null, [
+    () => (_ctx.condition
+      ? {
+        name: "condition", 
+        fn: () => {
+          const n0 = t0()
+          return n0
+        }
+      }
+      : _ctx.anotherCondition
+        ? {
+          name: "condition", 
+          fn: _withDestructure(({ foo, bar }) => [foo, bar], (_ctx0) => {
+            const n2 = t1()
+            return n2
+          })
+        }
+        : {
+          name: "condition", 
+          fn: () => {
+            const n4 = t2()
+            return n4
+          }
+        })
+  ], true)
+  return n6
+}"
+`;
+
+exports[`compiler: transform slot > implicit default slot 1`] = `
+"import { resolveComponent as _resolveComponent, createComponent as _createComponent, template as _template } from 'vue/vapor';
+const t0 = _template("<div></div>")
+
+export function render(_ctx) {
+  const _component_Comp = _resolveComponent("Comp")
+  const n1 = _createComponent(_component_Comp, null, [
+    {
+      "default": () => {
+        const n0 = t0()
+        return n0
+      }
+    }
+  ], true)
+  return n1
+}"
+`;
+
+exports[`compiler: transform slot > named slots w/ implicit default slot 1`] = `
+"import { resolveComponent as _resolveComponent, createComponent as _createComponent, template as _template } from 'vue/vapor';
+const t0 = _template("foo")
+const t1 = _template("bar")
+const t2 = _template("<span></span>")
+
+export function render(_ctx) {
+  const _component_Comp = _resolveComponent("Comp")
+  const n4 = _createComponent(_component_Comp, null, [
+    {
+      "one": () => {
+        const n0 = t0()
+        return n0
+      }, 
+      "default": () => {
+        const n2 = t1()
+        const n3 = t2()
+        return [n2, n3]
+      }
+    }
+  ], true)
+  return n4
+}"
+`;
+
+exports[`compiler: transform slot > nested slots scoping 1`] = `
+"import { resolveComponent as _resolveComponent, createTextNode as _createTextNode, withDestructure as _withDestructure, createComponent as _createComponent, template as _template } from 'vue/vapor';
+const t0 = _template(" ")
+
+export function render(_ctx) {
+  const _component_Inner = _resolveComponent("Inner")
+  const _component_Comp = _resolveComponent("Comp")
+  const n5 = _createComponent(_component_Comp, null, [
+    {
+      "default": _withDestructure(({ foo }) => [foo], (_ctx0) => {
+        const n2 = t0()
+        const n1 = _createComponent(_component_Inner, null, [
+          {
+            "default": _withDestructure(({ bar }) => [bar], (_ctx1) => {
+              const n0 = _createTextNode(() => [_ctx0[0] + _ctx1[0] + _ctx.baz])
+              return n0
+            })
+          }
+        ])
+        const n3 = _createTextNode(() => [_ctx0[0] + _ctx.bar + _ctx.baz])
+        return [n1, n2, n3]
+      })
+    }
+  ], true)
+  return n5
+}"
+`;
+
+exports[`compiler: transform slot > on component dynamically named slot 1`] = `
+"import { resolveComponent as _resolveComponent, createTextNode as _createTextNode, withDestructure as _withDestructure, createComponent as _createComponent } from 'vue/vapor';
+
+export function render(_ctx) {
+  const _component_Comp = _resolveComponent("Comp")
+  const n1 = _createComponent(_component_Comp, null, [
+    () => ({
+      name: _ctx.named, 
+      fn: _withDestructure(({ foo }) => [foo], (_ctx0) => {
+        const n0 = _createTextNode(() => [_ctx0[0] + _ctx.bar])
+        return n0
+      })
+    })
+  ], true)
+  return n1
+}"
+`;
+
+exports[`compiler: transform slot > on component named slot 1`] = `
+"import { resolveComponent as _resolveComponent, createTextNode as _createTextNode, withDestructure as _withDestructure, createComponent as _createComponent } from 'vue/vapor';
+
+export function render(_ctx) {
+  const _component_Comp = _resolveComponent("Comp")
+  const n1 = _createComponent(_component_Comp, null, [
+    {
+      "named": _withDestructure(({ foo }) => [foo], (_ctx0) => {
+        const n0 = _createTextNode(() => [_ctx0[0] + _ctx.bar])
+        return n0
+      })
+    }
+  ], true)
+  return n1
+}"
+`;
+
+exports[`compiler: transform slot > on-component default slot 1`] = `
+"import { resolveComponent as _resolveComponent, createTextNode as _createTextNode, withDestructure as _withDestructure, createComponent as _createComponent } from 'vue/vapor';
+
+export function render(_ctx) {
+  const _component_Comp = _resolveComponent("Comp")
+  const n1 = _createComponent(_component_Comp, null, [
+    {
+      "default": _withDestructure(({ foo }) => [foo], (_ctx0) => {
+        const n0 = _createTextNode(() => [_ctx0[0] + _ctx.bar])
+        return n0
+      })
+    }
+  ], true)
+  return n1
+}"
+`;
+
+exports[`compiler: transform slot > quote slot name 1`] = `
+"import { resolveComponent as _resolveComponent, createComponent as _createComponent } from 'vue/vapor';
+
+export function render(_ctx) {
+  const _component_Comp = _resolveComponent("Comp")
+  const n1 = _createComponent(_component_Comp, null, [
+    {
+      "nav-bar-title-before": () => {
+        return null
+      }
+    }
+  ], true)
+  return n1
+}"
+`;

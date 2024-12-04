@@ -12,6 +12,7 @@ export default defineConfig({
     __ESM_BROWSER__: false,
     __CJS__: true,
     __SSR__: true,
+    __BENCHMARK__: false,
     __FEATURE_OPTIONS_API__: true,
     __FEATURE_SUSPENSE__: true,
     __FEATURE_PROD_DEVTOOLS__: false,
@@ -31,7 +32,7 @@ export default defineConfig({
     },
     setupFiles: 'scripts/setup-vitest.ts',
     environmentMatchGlobs: [
-      ['packages/{vue,vue-compat,runtime-dom}/**', 'jsdom'],
+      ['packages/{vue,vue-compat,runtime-dom,runtime-vapor}/**', 'jsdom'],
     ],
     sequence: {
       hooks: 'list',

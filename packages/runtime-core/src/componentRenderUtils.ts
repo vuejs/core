@@ -1,6 +1,5 @@
 import {
   type ComponentInternalInstance,
-  type Data,
   type FunctionalComponent,
   getComponentName,
 } from './component'
@@ -16,6 +15,7 @@ import {
 } from './vnode'
 import { ErrorCodes, handleError } from './errorHandling'
 import { PatchFlags, ShapeFlags, isModelListener, isOn } from '@vue/shared'
+import type { Data } from '@vue/runtime-shared'
 import { warn } from './warning'
 import { isHmrUpdating } from './hmr'
 import type { NormalizedProps } from './componentProps'

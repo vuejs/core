@@ -46,6 +46,7 @@
     "@vue/compiler-core": "workspace:*",
     "@vue/compiler-dom": "workspace:*",
     "@vue/compiler-ssr": "workspace:*",
+    "@vue/compiler-vapor": "workspace:*",
     "@vue/shared": "workspace:*",
     "estree-walker": "catalog:",
     "magic-string": "catalog:",

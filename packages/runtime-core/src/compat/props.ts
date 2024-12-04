@@ -1,6 +1,7 @@
 import { isArray } from '@vue/shared'
+import type { Data } from '@vue/runtime-shared'
 import { inject } from '../apiInject'
-import type { ComponentInternalInstance, Data } from '../component'
+import type { ComponentInternalInstance } from '../component'
 import {
   type ComponentOptions,
   resolveMergedOptions,

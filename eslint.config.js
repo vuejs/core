@@ -126,6 +126,7 @@ export default tseslint.config(
     files: [
       'packages-private/template-explorer/**',
       'packages-private/sfc-playground/**',
+      'playground/**',
     ],
     rules: {
       'no-restricted-globals': ['error', ...NodeGlobals],
@@ -149,6 +150,7 @@ export default tseslint.config(
       'eslint.config.js',
       'rollup*.config.js',
       'scripts/**',
+      'benchmark/*',
       './*.{js,ts}',
       'packages/*/*.js',
       'packages/vue/*/*.js',

@@ -13,6 +13,7 @@
     "dist",
     "compiler-sfc",
     "server-renderer",
+    "vapor",
     "jsx-runtime",
     "jsx.d.ts"
   ],
@@ -55,6 +56,16 @@
         "default": "./compiler-sfc/index.js"
       }
     },
+    "./vapor": {
+      "import": {
+        "types": "./vapor/index.d.mts",
+        "default": "./vapor/index.mjs"
+      },
+      "require": {
+        "types": "./vapor/index.d.ts",
+        "default": "./vapor/index.js"
+      }
+    },
     "./jsx-runtime": {
       "types": "./jsx-runtime/index.d.ts",
       "import": "./jsx-runtime/index.mjs",
@@ -83,7 +94,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/vuejs/core.git"
+    "url": "git+https://github.com/vuejs/vue.git"
   },
   "keywords": [
     "vue"
@@ -91,11 +102,12 @@
   "author": "Evan You",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/vuejs/core/issues"
+    "url": "https://github.com/vuejs/vue/issues"
   },
-  "homepage": "https://github.com/vuejs/core/tree/main/packages/vue#readme",
+  "homepage": "https://github.com/vuejs/vue/tree/main/packages/vue#readme",
   "dependencies": {
     "@vue/shared": "workspace:*",
+    "@vue/vapor": "workspace:*",
     "@vue/compiler-dom": "workspace:*",
     "@vue/runtime-dom": "workspace:*",
     "@vue/compiler-sfc": "workspace:*",

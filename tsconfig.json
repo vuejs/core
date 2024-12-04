@@ -23,6 +23,7 @@
     "rootDir": ".",
     "paths": {
       "@vue/compat": ["packages/vue-compat/src"],
+      "@vue/vapor": ["packages/vue-vapor/src"],
       "@vue/*": ["packages/*/src"],
       "vue": ["packages/vue/src"]
     },

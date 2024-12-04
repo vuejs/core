@@ -328,6 +328,7 @@ export type {
   ObjectDirective,
   FunctionDirective,
   DirectiveArguments,
+  DirectiveModifiers,
 } from './directives'
 export type { SuspenseBoundary } from './components/Suspense'
 export type {

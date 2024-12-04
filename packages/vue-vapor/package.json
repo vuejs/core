@@ -1,0 +1,63 @@
+{
+  "name": "@vue/vapor",
+  "version": "3.0.0-vapor",
+  "description": "The progressive JavaScript framework for building modern web UI.",
+  "main": "index.js",
+  "module": "dist/vue-vapor.runtime.esm-bundler.js",
+  "types": "dist/vue-vapor.d.ts",
+  "unpkg": "dist/vue-vapor.global.js",
+  "jsdelivr": "dist/vue-vapor.global.js",
+  "files": [
+    "index.js",
+    "index.mjs",
+    "dist"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/vue-vapor.d.ts",
+      "import": {
+        "node": "./index.mjs",
+        "default": "./dist/vue-vapor.runtime.esm-bundler.js"
+      },
+      "require": {
+        "node": {
+          "production": "./dist/vue-vapor.cjs.prod.js",
+          "development": "./dist/vue-vapor.cjs.js",
+          "default": "./index.js"
+        },
+        "default": "./index.js"
+      }
+    },
+    "./dist/*": "./dist/*",
+    "./package.json": "./package.json"
+  },
+  "buildOptions": {
+    "name": "VueVapor",
+    "formats": [
+      "esm-bundler",
+      "esm-bundler-runtime",
+      "cjs",
+      "global",
+      "global-runtime",
+      "esm-browser",
+      "esm-browser-runtime"
+    ]
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vuejs/core.git"
+  },
+  "keywords": [
+    "vue"
+  ],
+  "author": "Evan You",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/vuejs/core/issues"
+  },
+  "homepage": "https://github.com/vuejs/core/tree/main/packages/vapor#readme",
+  "dependencies": {
+    "@vue/runtime-vapor": "workspace:*",
+    "@vue/compiler-vapor": "workspace:*"
+  }
+}

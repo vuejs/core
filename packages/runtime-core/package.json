@@ -47,6 +47,7 @@
   "homepage": "https://github.com/vuejs/core/tree/main/packages/runtime-core#readme",
   "dependencies": {
     "@vue/shared": "workspace:*",
-    "@vue/reactivity": "workspace:*"
+    "@vue/reactivity": "workspace:*",
+    "@vue/runtime-shared": "workspace:*"
   }
 }

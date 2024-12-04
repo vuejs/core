@@ -1,0 +1,44 @@
+{
+  "name": "@vue/compiler-vapor",
+  "version": "3.0.0-vapor",
+  "description": "@vue/compiler-vapor",
+  "main": "index.js",
+  "module": "dist/compiler-vapor.esm-bundler.js",
+  "types": "dist/compiler-vapor.d.ts",
+  "unpkg": "dist/compiler-vapor.global.js",
+  "jsdelivr": "dist/compiler-vapor.global.js",
+  "files": [
+    "index.js",
+    "dist"
+  ],
+  "sideEffects": false,
+  "buildOptions": {
+    "name": "VueCompilerVapor",
+    "compat": true,
+    "formats": [
+      "esm-bundler",
+      "esm-browser",
+      "cjs",
+      "global"
+    ]
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vuejs/core.git",
+    "directory": "packages/compiler-vapor"
+  },
+  "keywords": [
+    "vue"
+  ],
+  "author": "Evan You",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/vuejs/core/issues"
+  },
+  "homepage": "https://github.com/vuejs/core/tree/main/packages/compiler-vapor#readme",
+  "dependencies": {
+    "@vue/compiler-dom": "workspace:*",
+    "@vue/shared": "workspace:*",
+    "source-map-js": "^1.0.2"
+  }
+}

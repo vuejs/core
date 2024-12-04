@@ -136,7 +136,9 @@ function createConfig(format, output, plugins = []) {
   const isCJSBuild = format === 'cjs'
   const isGlobalBuild = /global/.test(format)
   const isCompatPackage =
-    pkg.name === '@vue/compat' || pkg.name === '@vue/compat-canary'
+    pkg.name === '@vue/compat' ||
+    pkg.name === '@vue/compat-canary' ||
+    pkg.name === '@vue-vapor/compat'
   const isCompatBuild = !!packageOptions.compat
   const isBrowserBuild =
     (isGlobalBuild || isBrowserESMBuild || isBundlerESMBuild) &&
@@ -157,15 +159,49 @@ function createConfig(format, output, plugins = []) {
     output.name = packageOptions.name
   }
 
-  let entryFile = /runtime$/.test(format) ? `src/runtime.ts` : `src/index.ts`
+  let entryFile = /\bruntime\b/.test(format) ? `runtime.ts` : `index.ts`
 
   // the compat build needs both default AND named exports. This will cause
   // Rollup to complain for non-ESM targets, so we use separate entries for
   // esm vs. non-esm builds.
   if (isCompatPackage && (isBrowserESMBuild || isBundlerESMBuild)) {
-    entryFile = /runtime$/.test(format)
-      ? `src/esm-runtime.ts`
-      : `src/esm-index.ts`
+    entryFile = `esm-${entryFile}`
+  }
+  entryFile = 'src/' + entryFile
+
+  return {
+    input: resolve(entryFile),
+    // Global and Browser ESM builds inlines everything so that they can be
+    // used alone.
+    external: resolveExternal(),
+    plugins: [
+      json({
+        namedExports: false,
+      }),
+      alias({
+        entries,
+      }),
+      enumPlugin,
+      ...resolveReplace(),
+      esbuild({
+        tsconfig: path.resolve(__dirname, 'tsconfig.json'),
+        sourceMap: output.sourcemap,
+        minify: false,
+        target: isServerRenderer || isCJSBuild ? 'es2019' : 'es2016',
+        define: resolveDefine(),
+      }),
+      ...resolveNodePlugins(),
+      ...plugins,
+    ],
+    output,
+    onwarn(msg, warn) {
+      if (msg.code !== 'CIRCULAR_DEPENDENCY') {
+        warn(msg)
+      }
+    },
+    treeshake: {
+      moduleSideEffects: false,
+    },
   }
 
   function resolveDefine() {
@@ -184,6 +220,7 @@ function createConfig(format, output, plugins = []) {
       __CJS__: String(isCJSBuild),
       // need SSR-specific branches?
       __SSR__: String(!isGlobalBuild),
+      __BENCHMARK__: process.env.BENCHMARK || 'false',
 
       // 2.x compat build
       __COMPAT__: String(isCompatBuild),
@@ -290,7 +327,8 @@ function createConfig(format, output, plugins = []) {
     let cjsIgnores = []
     if (
       pkg.name === '@vue/compiler-sfc' ||
-      pkg.name === '@vue/compiler-sfc-canary'
+      pkg.name === '@vue/compiler-sfc-canary' ||
+      pkg.name === '@vue-vapor/compiler-sfc'
     ) {
       cjsIgnores = [
         ...Object.keys(consolidatePkg.devDependencies),
@@ -319,47 +357,12 @@ function createConfig(format, output, plugins = []) {
 
     return nodePlugins
   }
-
-  return {
-    input: resolve(entryFile),
-    // Global and Browser ESM builds inlines everything so that they can be
-    // used alone.
-    external: resolveExternal(),
-    plugins: [
-      json({
-        namedExports: false,
-      }),
-      alias({
-        entries,
-      }),
-      enumPlugin,
-      ...resolveReplace(),
-      esbuild({
-        tsconfig: path.resolve(__dirname, 'tsconfig.json'),
-        sourceMap: output.sourcemap,
-        minify: false,
-        target: isServerRenderer || isCJSBuild ? 'es2019' : 'es2016',
-        define: resolveDefine(),
-      }),
-      ...resolveNodePlugins(),
-      ...plugins,
-    ],
-    output,
-    onwarn: (msg, warn) => {
-      if (msg.code !== 'CIRCULAR_DEPENDENCY') {
-        warn(msg)
-      }
-    },
-    treeshake: {
-      moduleSideEffects: false,
-    },
-  }
 }
 
 function createProductionConfig(/** @type {PackageFormat} */ format) {
   return createConfig(format, {
+    ...outputConfigs[format],
     file: resolve(`dist/${name}.${format}.prod.js`),
-    format: outputConfigs[format].format,
   })
 }
 
@@ -367,8 +370,8 @@ function createMinifiedConfig(/** @type {PackageFormat} */ format) {
   return createConfig(
     format,
     {
+      ...outputConfigs[format],
       file: outputConfigs[format].file.replace(/\.js$/, '.prod.js'),
-      format: outputConfigs[format].format,
     },
     [
       {

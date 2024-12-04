@@ -64,8 +64,9 @@ export class ScriptCompileContext {
   // codegen
   bindingMetadata: BindingMetadata = {}
   helperImports: Set<string> = new Set()
-  helper(key: string): string {
-    this.helperImports.add(key)
+  vaporHelperImports: Set<string> = new Set()
+  helper(key: string, vapor?: boolean): string {
+    ;(vapor ? this.vaporHelperImports : this.helperImports).add(key)
     return `_${key}`
   }
 

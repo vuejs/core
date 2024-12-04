@@ -16,7 +16,6 @@ import {
 import {
   type ComponentInternalInstance,
   type ComponentOptions,
-  type Data,
   type LifecycleHook,
   createComponentInstance,
   setupComponent,
@@ -39,6 +38,7 @@ import {
   isArray,
   isReservedProp,
 } from '@vue/shared'
+import type { Data } from '@vue/runtime-shared'
 import {
   type SchedulerJob,
   SchedulerJobFlags,

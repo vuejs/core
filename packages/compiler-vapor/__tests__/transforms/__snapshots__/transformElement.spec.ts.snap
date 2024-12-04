@@ -1,0 +1,352 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`compiler: element transform > component > do not resolve component from non-script-setup bindings 1`] = `
+"import { resolveComponent as _resolveComponent, createComponent as _createComponent } from 'vue/vapor';
+
+export function render(_ctx) {
+  const _component_Example = _resolveComponent("Example")
+  const n0 = _createComponent(_component_Example, null, null, true)
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > component > generate multi root component 1`] = `
+"import { createComponent as _createComponent, template as _template } from 'vue/vapor';
+const t0 = _template("123")
+
+export function render(_ctx) {
+  const n1 = t0()
+  const n0 = _createComponent(_ctx.Comp)
+  return [n0, n1]
+}"
+`;
+
+exports[`compiler: element transform > component > generate single root component 1`] = `
+"import { createComponent as _createComponent } from 'vue/vapor';
+
+export function render(_ctx) {
+  const n0 = _createComponent(_ctx.Comp, null, null, true)
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > component > import + resolve component 1`] = `
+"import { resolveComponent as _resolveComponent, createComponent as _createComponent } from 'vue/vapor';
+
+export function render(_ctx) {
+  const _component_Foo = _resolveComponent("Foo")
+  const n0 = _createComponent(_component_Foo, null, null, true)
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > component > resolve component from setup bindings (inline const) 1`] = `
+"(() => {
+  const n0 = _createComponent(Example, null, null, true)
+  return n0
+})()"
+`;
+
+exports[`compiler: element transform > component > resolve component from setup bindings (inline) 1`] = `
+"(() => {
+  const n0 = _createComponent(_unref(Example), null, null, true)
+  return n0
+})()"
+`;
+
+exports[`compiler: element transform > component > resolve component from setup bindings 1`] = `
+"import { createComponent as _createComponent } from 'vue/vapor';
+
+export function render(_ctx) {
+  const n0 = _createComponent(_ctx.Example, null, null, true)
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > component > resolve namespaced component from props bindings (inline) 1`] = `
+"(() => {
+  const n0 = _createComponent(Foo.Example, null, null, true)
+  return n0
+})()"
+`;
+
+exports[`compiler: element transform > component > resolve namespaced component from props bindings (non-inline) 1`] = `
+"import { createComponent as _createComponent } from 'vue/vapor';
+
+export function render(_ctx) {
+  const n0 = _createComponent(_ctx.Foo.Example, null, null, true)
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > component > resolve namespaced component from setup bindings (inline const) 1`] = `
+"(() => {
+  const n0 = _createComponent(Foo.Example, null, null, true)
+  return n0
+})()"
+`;
+
+exports[`compiler: element transform > component > resolve namespaced component from setup bindings 1`] = `
+"import { createComponent as _createComponent } from 'vue/vapor';
+
+export function render(_ctx) {
+  const n0 = _createComponent(_ctx.Foo.Example, null, null, true)
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > component > should wrap as function if v-on expression is inline statement 1`] = `
+"import { resolveComponent as _resolveComponent, createComponent as _createComponent } from 'vue/vapor';
+
+export function render(_ctx) {
+  const _component_Foo = _resolveComponent("Foo")
+  const n0 = _createComponent(_component_Foo, [
+    { onBar: () => $event => (_ctx.handleBar($event)) }
+  ], null, true)
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > component > static props 1`] = `
+"import { resolveComponent as _resolveComponent, createComponent as _createComponent } from 'vue/vapor';
+
+export function render(_ctx) {
+  const _component_Foo = _resolveComponent("Foo")
+  const n0 = _createComponent(_component_Foo, [
+    {
+      id: () => ("foo"), 
+      class: () => ("bar")
+    }
+  ], null, true)
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > component > v-bind="obj" 1`] = `
+"import { resolveComponent as _resolveComponent, createComponent as _createComponent } from 'vue/vapor';
+
+export function render(_ctx) {
+  const _component_Foo = _resolveComponent("Foo")
+  const n0 = _createComponent(_component_Foo, [
+    () => (_ctx.obj)
+  ], null, true)
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > component > v-bind="obj" after static prop 1`] = `
+"import { resolveComponent as _resolveComponent, createComponent as _createComponent } from 'vue/vapor';
+
+export function render(_ctx) {
+  const _component_Foo = _resolveComponent("Foo")
+  const n0 = _createComponent(_component_Foo, [
+    { id: () => ("foo") }, 
+    () => (_ctx.obj)
+  ], null, true)
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > component > v-bind="obj" before static prop 1`] = `
+"import { resolveComponent as _resolveComponent, createComponent as _createComponent } from 'vue/vapor';
+
+export function render(_ctx) {
+  const _component_Foo = _resolveComponent("Foo")
+  const n0 = _createComponent(_component_Foo, [
+    () => (_ctx.obj), 
+    { id: () => ("foo") }
+  ], null, true)
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > component > v-bind="obj" between static props 1`] = `
+"import { resolveComponent as _resolveComponent, createComponent as _createComponent } from 'vue/vapor';
+
+export function render(_ctx) {
+  const _component_Foo = _resolveComponent("Foo")
+  const n0 = _createComponent(_component_Foo, [
+    { id: () => ("foo") }, 
+    () => (_ctx.obj), 
+    { class: () => ("bar") }
+  ], null, true)
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > component > v-on="obj" 1`] = `
+"import { resolveComponent as _resolveComponent, toHandlers as _toHandlers, createComponent as _createComponent } from 'vue/vapor';
+
+export function render(_ctx) {
+  const _component_Foo = _resolveComponent("Foo")
+  const n0 = _createComponent(_component_Foo, [
+    () => (_toHandlers(_ctx.obj))
+  ], null, true)
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > component with dynamic event arguments 1`] = `
+"import { toHandlerKey as _toHandlerKey } from 'vue';
+import { resolveComponent as _resolveComponent, createComponent as _createComponent } from 'vue/vapor';
+
+export function render(_ctx) {
+  const _component_Foo = _resolveComponent("Foo")
+  const n0 = _createComponent(_component_Foo, [
+    () => ({ [_toHandlerKey(_ctx.foo-_ctx.bar)]: () => _ctx.bar }), 
+    () => ({ [_toHandlerKey(_ctx.baz)]: () => _ctx.qux })
+  ], null, true)
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > component with dynamic prop arguments 1`] = `
+"import { resolveComponent as _resolveComponent, createComponent as _createComponent } from 'vue/vapor';
+
+export function render(_ctx) {
+  const _component_Foo = _resolveComponent("Foo")
+  const n0 = _createComponent(_component_Foo, [
+    () => ({ [_ctx.foo-_ctx.bar]: _ctx.bar }), 
+    () => ({ [_ctx.baz]: _ctx.qux })
+  ], null, true)
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > empty template 1`] = `
+"
+export function render(_ctx) {
+  return null
+}"
+`;
+
+exports[`compiler: element transform > invalid html nesting 1`] = `
+"import { insert as _insert, template as _template } from 'vue/vapor';
+const t0 = _template("<div>123</div>")
+const t1 = _template("<p></p>")
+const t2 = _template("<form></form>")
+
+export function render(_ctx) {
+  const n1 = t1()
+  const n0 = t0()
+  const n3 = t2()
+  const n2 = t2()
+  _insert(n0, n1)
+  _insert(n2, n3)
+  return [n1, n3]
+}"
+`;
+
+exports[`compiler: element transform > props + children 1`] = `
+"import { template as _template } from 'vue/vapor';
+const t0 = _template("<div id=\\"foo\\"><span></span></div>")
+
+export function render(_ctx) {
+  const n0 = t0()
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > props merging: class 1`] = `
+"import { renderEffect as _renderEffect, setClass as _setClass, template as _template } from 'vue/vapor';
+const t0 = _template("<div></div>")
+
+export function render(_ctx) {
+  const n0 = t0()
+  _renderEffect(() => _setClass(n0, ["foo", { bar: _ctx.isBar }]))
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > props merging: event handlers 1`] = `
+"import { delegate as _delegate, delegateEvents as _delegateEvents, template as _template } from 'vue/vapor';
+const t0 = _template("<div></div>")
+_delegateEvents("click")
+
+export function render(_ctx) {
+  const n0 = t0()
+  _delegate(n0, "click", () => _ctx.a, {
+    keys: ["foo"]
+  })
+  _delegate(n0, "click", () => _ctx.b, {
+    keys: ["bar"]
+  })
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > props merging: style 1`] = `
+"import { renderEffect as _renderEffect, setStyle as _setStyle, template as _template } from 'vue/vapor';
+const t0 = _template("<div></div>")
+
+export function render(_ctx) {
+  const n0 = t0()
+  _renderEffect(() => _setStyle(n0, ["color: green", { color: 'red' }]))
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > static props 1`] = `
+"import { template as _template } from 'vue/vapor';
+const t0 = _template("<div id=\\"foo\\" class=\\"bar\\"></div>")
+
+export function render(_ctx) {
+  const n0 = t0()
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > v-bind="obj" 1`] = `
+"import { renderEffect as _renderEffect, setDynamicProps as _setDynamicProps, template as _template } from 'vue/vapor';
+const t0 = _template("<div></div>")
+
+export function render(_ctx) {
+  const n0 = t0()
+  _renderEffect(() => _setDynamicProps(n0, _ctx.obj))
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > v-bind="obj" after static prop 1`] = `
+"import { renderEffect as _renderEffect, setDynamicProps as _setDynamicProps, template as _template } from 'vue/vapor';
+const t0 = _template("<div></div>")
+
+export function render(_ctx) {
+  const n0 = t0()
+  _renderEffect(() => _setDynamicProps(n0, { id: "foo" }, _ctx.obj))
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > v-bind="obj" before static prop 1`] = `
+"import { renderEffect as _renderEffect, setDynamicProps as _setDynamicProps, template as _template } from 'vue/vapor';
+const t0 = _template("<div></div>")
+
+export function render(_ctx) {
+  const n0 = t0()
+  _renderEffect(() => _setDynamicProps(n0, _ctx.obj, { id: "foo" }))
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > v-bind="obj" between static props 1`] = `
+"import { renderEffect as _renderEffect, setDynamicProps as _setDynamicProps, template as _template } from 'vue/vapor';
+const t0 = _template("<div></div>")
+
+export function render(_ctx) {
+  const n0 = t0()
+  _renderEffect(() => _setDynamicProps(n0, { id: "foo" }, _ctx.obj, { class: "bar" }))
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > v-on="obj" 1`] = `
+"import { renderEffect as _renderEffect, setDynamicEvents as _setDynamicEvents, template as _template } from 'vue/vapor';
+const t0 = _template("<div></div>")
+
+export function render(_ctx) {
+  const n0 = t0()
+  _renderEffect(() => _setDynamicEvents(n0, _ctx.obj))
+  return n0
+}"
+`;

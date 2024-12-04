@@ -308,8 +308,8 @@ export const isFunctionType = (node: Node): node is Function => {
   return /Function(?:Expression|Declaration)$|Method$/.test(node.type)
 }
 
-export const isStaticProperty = (node: Node): node is ObjectProperty =>
-  node &&
+export const isStaticProperty = (node?: Node): node is ObjectProperty =>
+  !!node &&
   (node.type === 'ObjectProperty' || node.type === 'ObjectMethod') &&
   !node.computed
 

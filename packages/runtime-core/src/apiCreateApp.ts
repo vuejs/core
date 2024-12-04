@@ -2,7 +2,6 @@ import {
   type Component,
   type ComponentInternalInstance,
   type ConcreteComponent,
-  type Data,
   getComponentPublicInstance,
   validateComponentName,
 } from './component'
@@ -23,6 +22,7 @@ import { type VNode, cloneVNode, createVNode } from './vnode'
 import type { RootHydrateFunction } from './hydration'
 import { devtoolsInitApp, devtoolsUnmountApp } from './devtools'
 import { NO, extend, isFunction, isObject } from '@vue/shared'
+import type { Data } from '@vue/runtime-shared'
 import { version } from '.'
 import { installAppCompatProperties } from './compat/global'
 import type { NormalizedPropsOptions } from './componentProps'

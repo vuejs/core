@@ -1,0 +1,289 @@
+<script src="../../dist/vue-vapor.global.js"></script>
+<link
+  rel="stylesheet"
+  href="../../../../node_modules/todomvc-app-css/index.css"
+/>
+
+<div id="app"></div>
+
+<script>
+  const {
+    createVaporApp,
+    defineComponent,
+    reactive,
+    computed,
+    watchEffect,
+    onMounted,
+    onUnmounted,
+    nextTick,
+  } = VueVapor
+
+  const STORAGE_KEY = 'todos-vuejs-3.x'
+  const todoStorage = {
+    fetch() {
+      const todos = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]')
+      todos.forEach((todo, index) => {
+        todo.id = index
+      })
+      todoStorage.uid = todos.length
+      return todos
+    },
+    save(todos) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(todos))
+    },
+  }
+
+  const filters = {
+    all(todos) {
+      return todos
+    },
+    active(todos) {
+      return todos.filter(todo => {
+        return !todo.completed
+      })
+    },
+    completed(todos) {
+      return todos.filter(function (todo) {
+        return todo.completed
+      })
+    },
+  }
+
+  function pluralize(n) {
+    return n === 1 ? 'item' : 'items'
+  }
+
+  const _sfc_main = defineComponent({
+    setup() {
+      const state = reactive({
+        todos: todoStorage.fetch(),
+        editedTodo: null,
+        newTodo: '',
+        beforeEditCache: '',
+        visibility: 'all',
+        remaining: computed(() => {
+          return filters.active(state.todos).length
+        }),
+        remainingText: computed(() => {
+          return ` ${pluralize(state.remaining)} left`
+        }),
+        filteredTodos: computed(() => {
+          return filters[state.visibility](state.todos)
+        }),
+        allDone: computed({
+          get: function () {
+            return state.remaining === 0
+          },
+          set: function (value) {
+            state.todos.forEach(todo => {
+              todo.completed = value
+            })
+          },
+        }),
+      })
+
+      watchEffect(() => {
+        todoStorage.save(state.todos)
+      })
+
+      onMounted(() => {
+        window.addEventListener('hashchange', onHashChange)
+        onHashChange()
+      })
+
+      onUnmounted(() => {
+        window.removeEventListener('hashchange', onHashChange)
+      })
+
+      function onHashChange() {
+        const visibility = window.location.hash.replace(/#\/?/, '')
+        if (filters[visibility]) {
+          state.visibility = visibility
+        } else {
+          window.location.hash = ''
+          state.visibility = 'all'
+        }
+      }
+
+      function addTodo() {
+        const value = state.newTodo && state.newTodo.trim()
+        if (!value) {
+          return
+        }
+        state.todos.push({
+          id: todoStorage.uid++,
+          title: value,
+          completed: false,
+        })
+        state.newTodo = ''
+      }
+
+      function removeTodo(todo) {
+        state.todos.splice(state.todos.indexOf(todo), 1)
+      }
+
+      async function editTodo(todo) {
+        state.beforeEditCache = todo.title
+        state.editedTodo = todo
+        await nextTick()
+        document.getElementById(`todo-${todo.id}-input`).focus()
+      }
+
+      function doneEdit(todo) {
+        if (!state.editedTodo) {
+          return
+        }
+        state.editedTodo = null
+        todo.title = todo.title.trim()
+        if (!todo.title) {
+          removeTodo(todo)
+        }
+      }
+
+      function cancelEdit(todo) {
+        state.editedTodo = null
+        todo.title = state.beforeEditCache
+      }
+
+      function removeCompleted() {
+        state.todos = filters.active(state.todos)
+      }
+
+      return {
+        state,
+        addTodo,
+        removeTodo,
+        editTodo,
+        doneEdit,
+        cancelEdit,
+        removeCompleted,
+      }
+    },
+  })
+
+  const {
+    children: _children,
+    vModelText: _vModelText,
+    withDirectives: _withDirectives,
+    vShow: _vShow,
+    next: _next,
+    delegate: _delegate,
+    on: _on,
+    renderEffect: _renderEffect,
+    setDynamicProp: _setDynamicProp,
+    setText: _setText,
+    setClass: _setClass,
+    createFor: _createFor,
+    insert: _insert,
+    delegateEvents: _delegateEvents,
+    template: _template,
+  } = VueVapor
+  const t0 = _template(
+    '<li><div class="view"><input class="toggle" type="checkbox"><label></label><button class="destroy"></button></div><input class="edit" type="text"></li>',
+  )
+  const t1 = _template(
+    '<section class="todoapp"><header class="header"><h1>todos</h1><input class="new-todo" autofocus autocomplete="off" placeholder="What needs to be done?"></header><section class="main"><input id="toggle-all" class="toggle-all" type="checkbox"><label for="toggle-all">Mark all as complete</label><ul class="todo-list"></ul></section><footer class="footer"><span class="todo-count"><strong></strong><span></span></span><ul class="filters"><li><a href="#/all">All</a></li><li><a href="#/active">Active</a></li><li><a href="#/completed">Completed</a></li></ul><button class="clear-completed"> Clear completed </button></footer></section>',
+  )
+  _delegateEvents('keyup', 'dblclick', 'click', 'input')
+
+  function _sfc_render(_ctx) {
+    const n18 = t1()
+    const n0 = _children(n18, 0, 1)
+    _withDirectives(n0, [[_vModelText, () => _ctx.state.newTodo]])
+    const n10 = _children(n18, 1)
+    _withDirectives(n10, [[_vShow, () => _ctx.state.todos.length]])
+    const n1 = n10.firstChild
+    const n9 = _next(n1, 2)
+    const n17 = n10.nextSibling
+    _withDirectives(n17, [[_vShow, () => _ctx.state.todos.length]])
+    const n11 = _children(n17, 0, 0)
+    const n12 = n11.nextSibling
+    const n13 = _children(n17, 1, 0, 0)
+    const n14 = _children(n17, 1, 1, 0)
+    const n15 = _children(n17, 1, 2, 0)
+    const n16 = _children(n17, 2)
+    _withDirectives(n16, [
+      [_vShow, () => _ctx.state.todos.length > _ctx.state.remaining],
+    ])
+    _delegate(
+      n0,
+      'update:modelValue',
+      () => $event => (_ctx.state.newTodo = $event),
+    )
+    _delegate(n0, 'keyup', () => _ctx.addTodo, {
+      keys: ['enter'],
+    })
+    _on(
+      n1,
+      'change',
+      () => $event => (_ctx.state.allDone = $event.target.checked),
+    )
+    const n2 = _createFor(
+      () => _ctx.state.filteredTodos,
+      _ctx2 => {
+        const n8 = t0()
+        const n4 = _children(n8, 0, 0)
+        const n5 = n4.nextSibling
+        const n6 = n5.nextSibling
+        const n7 = _children(n8, 1)
+        _on(
+          n4,
+          'change',
+          () => $event => (_ctx2[0].completed = $event.target.checked),
+        )
+        _delegate(n5, 'dblclick', () => $event => _ctx.editTodo(_ctx2[0]))
+        _delegate(n6, 'click', () => $event => _ctx.removeTodo(_ctx2[0]))
+        _delegate(
+          n7,
+          'input',
+          () => $event => (_ctx2[0].title = $event.target.value),
+        )
+        _on(n7, 'blur', () => $event => _ctx.doneEdit(_ctx2[0]))
+        _delegate(n7, 'keyup', () => $event => _ctx.doneEdit(_ctx2[0]), {
+          keys: ['enter'],
+        })
+        _delegate(n7, 'keyup', () => $event => _ctx.cancelEdit(_ctx2[0]), {
+          keys: ['escape'],
+        })
+        _renderEffect(() => _setDynamicProp(n4, 'checked', _ctx2[0].completed))
+        _renderEffect(() => {
+          _setText(n5, _ctx2[0].title)
+          _setDynamicProp(n7, 'value', _ctx2[0].title)
+        })
+        _renderEffect(() =>
+          _setDynamicProp(n7, 'id', `todo-${_ctx2[0].id}-input`),
+        )
+        _renderEffect(() =>
+          _setClass(n8, [
+            'todo',
+            {
+              completed: _ctx2[0].completed,
+              editing: _ctx2[0] === _ctx.state.editedTodo,
+            },
+          ]),
+        )
+        return n8
+      },
+      todo => todo.id,
+    )
+    _insert(n2, n9)
+    _delegate(n16, 'click', () => _ctx.removeCompleted)
+    _renderEffect(() => _setDynamicProp(n1, 'checked', _ctx.state.allDone))
+    _renderEffect(() => _setText(n11, _ctx.state.remaining))
+    _renderEffect(() => _setText(n12, _ctx.state.remainingText))
+    _renderEffect(() =>
+      _setClass(n13, { selected: _ctx.state.visibility === 'all' }),
+    )
+    _renderEffect(() =>
+      _setClass(n14, { selected: _ctx.state.visibility === 'active' }),
+    )
+    _renderEffect(() =>
+      _setClass(n15, { selected: _ctx.state.visibility === 'completed' }),
+    )
+    return n18
+  }
+
+  _sfc_main.render = _sfc_render
+  const app = createVaporApp(_sfc_main, {})
+  app.mount('#app')
+</script>

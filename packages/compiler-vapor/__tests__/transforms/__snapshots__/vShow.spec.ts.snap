@@ -1,0 +1,12 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`compiler: v-show transform > simple expression 1`] = `
+"import { vShow as _vShow, withDirectives as _withDirectives, template as _template } from 'vue/vapor';
+const t0 = _template("<div></div>")
+
+export function render(_ctx) {
+  const n0 = t0()
+  _withDirectives(n0, [[_vShow, () => _ctx.foo]])
+  return n0
+}"
+`;

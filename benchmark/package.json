@@ -1,0 +1,21 @@
+{
+  "name": "benchmark",
+  "version": "0.0.0",
+  "author": "三咲智子 Kevin Deng <sxzz@sxzz.moe>",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "dev": "pnpm start --devBuild --noHeadless --skipBench --vdom",
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "@vitejs/plugin-vue": "https://pkg.pr.new/@vitejs/plugin-vue@e3c5ce5",
+    "connect": "^3.7.0",
+    "sirv": "^2.0.4",
+    "vite": "catalog:"
+  },
+  "devDependencies": {
+    "@types/connect": "^3.4.38",
+    "terser": "^5.33.0"
+  }
+}

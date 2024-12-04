@@ -67,11 +67,12 @@ import {
   extend,
   getGlobalThis,
   isArray,
+  isBuiltInTag,
   isFunction,
   isObject,
   isPromise,
-  makeMap,
 } from '@vue/shared'
+import type { Data } from '@vue/runtime-shared'
 import type { SuspenseBoundary } from './components/Suspense'
 import type { CompilerOptions } from '@vue/compiler-core'
 import { markAttrsAccessed } from './componentRenderUtils'
@@ -95,8 +96,6 @@ import type { DefineComponent } from './apiDefineComponent'
 import { markAsyncBoundary } from './helpers/useId'
 import { isAsyncWrapper } from './apiAsyncComponent'
 import type { RendererElement } from './renderer'
-
-export type Data = Record<string, unknown>
 
 /**
  * Public utility type for extracting the instance type of a component.
@@ -774,8 +773,6 @@ export const unsetCurrentInstance = (): void => {
   currentInstance && currentInstance.scope.off()
   internalSetCurrentInstance(null)
 }
-
-const isBuiltInTag = /*@__PURE__*/ makeMap('slot,component')
 
 export function validateComponentName(
   name: string,

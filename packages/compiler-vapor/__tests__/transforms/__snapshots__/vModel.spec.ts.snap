@@ -1,0 +1,268 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`compiler: vModel transform > component > v-model for component should generate modelModifiers 1`] = `
+"import { resolveComponent as _resolveComponent, createComponent as _createComponent } from 'vue/vapor';
+
+export function render(_ctx) {
+  const _component_Comp = _resolveComponent("Comp")
+  const n0 = _createComponent(_component_Comp, [
+    { modelValue: () => (_ctx.foo),
+    "onUpdate:modelValue": () => $event => (_ctx.foo = $event),
+    modelModifiers: () => ({ trim: true, "bar-baz": true }) }
+  ], null, true)
+  return n0
+}"
+`;
+
+exports[`compiler: vModel transform > component > v-model for component should work 1`] = `
+"import { resolveComponent as _resolveComponent, createComponent as _createComponent } from 'vue/vapor';
+
+export function render(_ctx) {
+  const _component_Comp = _resolveComponent("Comp")
+  const n0 = _createComponent(_component_Comp, [
+    { modelValue: () => (_ctx.foo),
+    "onUpdate:modelValue": () => $event => (_ctx.foo = $event) }
+  ], null, true)
+  return n0
+}"
+`;
+
+exports[`compiler: vModel transform > component > v-model with arguments for component should generate modelModifiers 1`] = `
+"import { resolveComponent as _resolveComponent, createComponent as _createComponent } from 'vue/vapor';
+
+export function render(_ctx) {
+  const _component_Comp = _resolveComponent("Comp")
+  const n0 = _createComponent(_component_Comp, [
+    {
+      foo: () => (_ctx.foo),
+      "onUpdate:foo": () => $event => (_ctx.foo = $event),
+      fooModifiers: () => ({ trim: true }), 
+      bar: () => (_ctx.bar),
+      "onUpdate:bar": () => $event => (_ctx.bar = $event),
+      barModifiers: () => ({ number: true })
+    }
+  ], null, true)
+  return n0
+}"
+`;
+
+exports[`compiler: vModel transform > component > v-model with arguments for component should work 1`] = `
+"import { resolveComponent as _resolveComponent, createComponent as _createComponent } from 'vue/vapor';
+
+export function render(_ctx) {
+  const _component_Comp = _resolveComponent("Comp")
+  const n0 = _createComponent(_component_Comp, [
+    { bar: () => (_ctx.foo),
+    "onUpdate:bar": () => $event => (_ctx.foo = $event) }
+  ], null, true)
+  return n0
+}"
+`;
+
+exports[`compiler: vModel transform > component > v-model with dynamic arguments for component should generate modelModifiers  1`] = `
+"import { resolveComponent as _resolveComponent, createComponent as _createComponent } from 'vue/vapor';
+
+export function render(_ctx) {
+  const _component_Comp = _resolveComponent("Comp")
+  const n0 = _createComponent(_component_Comp, [
+    () => ({ [_ctx.foo]: _ctx.foo,
+    ["onUpdate:" + _ctx.foo]: () => $event => (_ctx.foo = $event),
+    [_ctx.foo + "Modifiers"]: () => ({ trim: true }) }), 
+    () => ({ [_ctx.bar]: _ctx.bar,
+    ["onUpdate:" + _ctx.bar]: () => $event => (_ctx.bar = $event),
+    [_ctx.bar + "Modifiers"]: () => ({ number: true }) })
+  ], null, true)
+  return n0
+}"
+`;
+
+exports[`compiler: vModel transform > component > v-model with dynamic arguments for component should work 1`] = `
+"import { resolveComponent as _resolveComponent, createComponent as _createComponent } from 'vue/vapor';
+
+export function render(_ctx) {
+  const _component_Comp = _resolveComponent("Comp")
+  const n0 = _createComponent(_component_Comp, [
+    () => ({ [_ctx.arg]: _ctx.foo,
+    ["onUpdate:" + _ctx.arg]: () => $event => (_ctx.foo = $event) })
+  ], null, true)
+  return n0
+}"
+`;
+
+exports[`compiler: vModel transform > modifiers > .lazy 1`] = `
+"import { vModelText as _vModelText, withDirectives as _withDirectives, delegate as _delegate, template as _template } from 'vue/vapor';
+const t0 = _template("<input>")
+
+export function render(_ctx) {
+  const n0 = t0()
+  _withDirectives(n0, [[_vModelText, () => _ctx.model, void 0, { lazy: true }]])
+  _delegate(n0, "update:modelValue", () => $event => (_ctx.model = $event))
+  return n0
+}"
+`;
+
+exports[`compiler: vModel transform > modifiers > .number 1`] = `
+"import { vModelText as _vModelText, withDirectives as _withDirectives, delegate as _delegate, template as _template } from 'vue/vapor';
+const t0 = _template("<input>")
+
+export function render(_ctx) {
+  const n0 = t0()
+  _withDirectives(n0, [[_vModelText, () => _ctx.model, void 0, { number: true }]])
+  _delegate(n0, "update:modelValue", () => $event => (_ctx.model = $event))
+  return n0
+}"
+`;
+
+exports[`compiler: vModel transform > modifiers > .trim 1`] = `
+"import { vModelText as _vModelText, withDirectives as _withDirectives, delegate as _delegate, template as _template } from 'vue/vapor';
+const t0 = _template("<input>")
+
+export function render(_ctx) {
+  const n0 = t0()
+  _withDirectives(n0, [[_vModelText, () => _ctx.model, void 0, { trim: true }]])
+  _delegate(n0, "update:modelValue", () => $event => (_ctx.model = $event))
+  return n0
+}"
+`;
+
+exports[`compiler: vModel transform > should support input (checkbox) 1`] = `
+"import { vModelCheckbox as _vModelCheckbox, withDirectives as _withDirectives, delegate as _delegate, template as _template } from 'vue/vapor';
+const t0 = _template("<input type=\\"checkbox\\">")
+
+export function render(_ctx) {
+  const n0 = t0()
+  _withDirectives(n0, [[_vModelCheckbox, () => _ctx.model]])
+  _delegate(n0, "update:modelValue", () => $event => (_ctx.model = $event))
+  return n0
+}"
+`;
+
+exports[`compiler: vModel transform > should support input (dynamic type) 1`] = `
+"import { vModelDynamic as _vModelDynamic, withDirectives as _withDirectives, delegate as _delegate, template as _template } from 'vue/vapor';
+const t0 = _template("<input>")
+
+export function render(_ctx) {
+  const n0 = t0()
+  _withDirectives(n0, [[_vModelDynamic, () => _ctx.model]])
+  _delegate(n0, "update:modelValue", () => $event => (_ctx.model = $event))
+  return n0
+}"
+`;
+
+exports[`compiler: vModel transform > should support input (radio) 1`] = `
+"import { vModelRadio as _vModelRadio, withDirectives as _withDirectives, delegate as _delegate, template as _template } from 'vue/vapor';
+const t0 = _template("<input type=\\"radio\\">")
+
+export function render(_ctx) {
+  const n0 = t0()
+  _withDirectives(n0, [[_vModelRadio, () => _ctx.model]])
+  _delegate(n0, "update:modelValue", () => $event => (_ctx.model = $event))
+  return n0
+}"
+`;
+
+exports[`compiler: vModel transform > should support input (text) 1`] = `
+"import { vModelText as _vModelText, withDirectives as _withDirectives, delegate as _delegate, template as _template } from 'vue/vapor';
+const t0 = _template("<input type=\\"text\\">")
+
+export function render(_ctx) {
+  const n0 = t0()
+  _withDirectives(n0, [[_vModelText, () => _ctx.model]])
+  _delegate(n0, "update:modelValue", () => $event => (_ctx.model = $event))
+  return n0
+}"
+`;
+
+exports[`compiler: vModel transform > should support member expression 1`] = `
+"import { vModelText as _vModelText, withDirectives as _withDirectives, delegate as _delegate, template as _template } from 'vue/vapor';
+const t0 = _template("<input>")
+
+export function render(_ctx) {
+  const n0 = t0()
+  _withDirectives(n0, [[_vModelText, () => _ctx.setupRef.child]])
+  const n1 = t0()
+  _withDirectives(n1, [[_vModelText, () => _ctx.setupLet.child]])
+  const n2 = t0()
+  _withDirectives(n2, [[_vModelText, () => _ctx.setupMaybeRef.child]])
+  _delegate(n0, "update:modelValue", () => $event => (_ctx.setupRef.child = $event))
+  _delegate(n1, "update:modelValue", () => $event => (_ctx.setupLet.child = $event))
+  _delegate(n2, "update:modelValue", () => $event => (_ctx.setupMaybeRef.child = $event))
+  return [n0, n1, n2]
+}"
+`;
+
+exports[`compiler: vModel transform > should support member expression w/ inline 1`] = `
+"(() => {
+  const n0 = t0()
+  _withDirectives(n0, [[_vModelText, () => setupRef.value.child]])
+  const n1 = t0()
+  _withDirectives(n1, [[_vModelText, () => _unref(setupLet).child]])
+  const n2 = t0()
+  _withDirectives(n2, [[_vModelText, () => _unref(setupMaybeRef).child]])
+  _delegate(n0, "update:modelValue", () => $event => (setupRef.value.child = $event))
+  _delegate(n1, "update:modelValue", () => $event => (_unref(setupLet).child = $event))
+  _delegate(n2, "update:modelValue", () => $event => (_unref(setupMaybeRef).child = $event))
+  return [n0, n1, n2]
+})()"
+`;
+
+exports[`compiler: vModel transform > should support select 1`] = `
+"import { vModelSelect as _vModelSelect, withDirectives as _withDirectives, delegate as _delegate, template as _template } from 'vue/vapor';
+const t0 = _template("<select></select>")
+
+export function render(_ctx) {
+  const n0 = t0()
+  _withDirectives(n0, [[_vModelSelect, () => _ctx.model]])
+  _delegate(n0, "update:modelValue", () => $event => (_ctx.model = $event))
+  return n0
+}"
+`;
+
+exports[`compiler: vModel transform > should support simple expression 1`] = `
+"import { vModelText as _vModelText, withDirectives as _withDirectives, delegate as _delegate, template as _template } from 'vue/vapor';
+const t0 = _template("<input>")
+
+export function render(_ctx) {
+  const n0 = t0()
+  _withDirectives(n0, [[_vModelText, () => _ctx.model]])
+  _delegate(n0, "update:modelValue", () => $event => (_ctx.model = $event))
+  return n0
+}"
+`;
+
+exports[`compiler: vModel transform > should support textarea 1`] = `
+"import { vModelText as _vModelText, withDirectives as _withDirectives, delegate as _delegate, template as _template } from 'vue/vapor';
+const t0 = _template("<textarea></textarea>")
+
+export function render(_ctx) {
+  const n0 = t0()
+  _withDirectives(n0, [[_vModelText, () => _ctx.model]])
+  _delegate(n0, "update:modelValue", () => $event => (_ctx.model = $event))
+  return n0
+}"
+`;
+
+exports[`compiler: vModel transform > should support w/ dynamic v-bind 1`] = `
+"import { vModelDynamic as _vModelDynamic, withDirectives as _withDirectives, delegate as _delegate, renderEffect as _renderEffect, setDynamicProps as _setDynamicProps, template as _template } from 'vue/vapor';
+const t0 = _template("<input>")
+
+export function render(_ctx) {
+  const n0 = t0()
+  _withDirectives(n0, [[_vModelDynamic, () => _ctx.model]])
+  _delegate(n0, "update:modelValue", () => $event => (_ctx.model = $event))
+  _renderEffect(() => _setDynamicProps(n0, _ctx.obj))
+  return n0
+}"
+`;
+
+exports[`compiler: vModel transform > should support w/ dynamic v-bind 2`] = `
+"import { vModelDynamic as _vModelDynamic, withDirectives as _withDirectives, delegate as _delegate, template as _template } from 'vue/vapor';
+const t0 = _template("<input>")
+
+export function render(_ctx) {
+  const n0 = t0()
+  _withDirectives(n0, [[_vModelDynamic, () => _ctx.model]])
+  _delegate(n0, "update:modelValue", () => $event => (_ctx.model = $event))
+  return n0
+}"
+`;

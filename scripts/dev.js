@@ -151,6 +151,7 @@ for (const target of targets) {
         __ESM_BROWSER__: String(format.includes('esm-browser')),
         __CJS__: String(format === 'cjs'),
         __SSR__: String(format !== 'global'),
+        __BENCHMARK__: process.env.BENCHMARK || 'false',
         __COMPAT__: String(target === 'vue-compat'),
         __FEATURE_SUSPENSE__: `true`,
         __FEATURE_OPTIONS_API__: `true`,

@@ -7,18 +7,12 @@ import {
   camelize,
   isFunction,
   isModelListener,
+  isNativeOn,
   isOn,
   isString,
 } from '@vue/shared'
 import type { RendererOptions } from '@vue/runtime-core'
 import type { VueElement } from './apiCustomElement'
-
-const isNativeOn = (key: string) =>
-  key.charCodeAt(0) === 111 /* o */ &&
-  key.charCodeAt(1) === 110 /* n */ &&
-  // lowercase letter
-  key.charCodeAt(2) > 96 &&
-  key.charCodeAt(2) < 123
 
 type DOMRendererOptions = RendererOptions<Node, Element>
 

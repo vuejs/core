@@ -1,0 +1,133 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`compiler: v-if > basic v-if 1`] = `
+"import { renderEffect as _renderEffect, setText as _setText, createIf as _createIf, template as _template } from 'vue/vapor';
+const t0 = _template("<div></div>")
+
+export function render(_ctx) {
+  const n0 = _createIf(() => (_ctx.ok), () => {
+    const n2 = t0()
+    _renderEffect(() => _setText(n2, _ctx.msg))
+    return n2
+  })
+  return n0
+}"
+`;
+
+exports[`compiler: v-if > comment between branches 1`] = `
+"import { createIf as _createIf, renderEffect as _renderEffect, setText as _setText, template as _template } from 'vue/vapor';
+const t0 = _template("<div></div>")
+const t1 = _template("<!--foo-->")
+const t2 = _template("<p></p>")
+const t3 = _template("<!--bar-->")
+const t4 = _template("fine")
+const t5 = _template("<input>")
+
+export function render(_ctx) {
+  const n13 = t5()
+  const n0 = _createIf(() => (_ctx.ok), () => {
+    const n2 = t0()
+    return n2
+  }, () => _createIf(() => (_ctx.orNot), () => {
+    const n5 = t1()
+    const n6 = t2()
+    return [n5, n6]
+  }, () => {
+    const n10 = t3()
+    const n11 = t4()
+    return [n10, n11]
+  }))
+  _renderEffect(() => _setText(n13, _ctx.text))
+  return [n0, n13]
+}"
+`;
+
+exports[`compiler: v-if > dedupe same template 1`] = `
+"import { createIf as _createIf, template as _template } from 'vue/vapor';
+const t0 = _template("<div>hello</div>")
+
+export function render(_ctx) {
+  const n0 = _createIf(() => (_ctx.ok), () => {
+    const n2 = t0()
+    return n2
+  })
+  const n3 = _createIf(() => (_ctx.ok), () => {
+    const n5 = t0()
+    return n5
+  })
+  return [n0, n3]
+}"
+`;
+
+exports[`compiler: v-if > template v-if 1`] = `
+"import { renderEffect as _renderEffect, setText as _setText, createIf as _createIf, template as _template } from 'vue/vapor';
+const t0 = _template("<div></div>")
+const t1 = _template("hello")
+const t2 = _template("<p></p>")
+
+export function render(_ctx) {
+  const n0 = _createIf(() => (_ctx.ok), () => {
+    const n2 = t0()
+    const n3 = t1()
+    const n4 = t2()
+    _renderEffect(() => _setText(n4, _ctx.msg))
+    return [n2, n3, n4]
+  })
+  return n0
+}"
+`;
+
+exports[`compiler: v-if > v-if + v-else 1`] = `
+"import { createIf as _createIf, template as _template } from 'vue/vapor';
+const t0 = _template("<div></div>")
+const t1 = _template("<p></p>")
+
+export function render(_ctx) {
+  const n0 = _createIf(() => (_ctx.ok), () => {
+    const n2 = t0()
+    return n2
+  }, () => {
+    const n4 = t1()
+    return n4
+  })
+  return n0
+}"
+`;
+
+exports[`compiler: v-if > v-if + v-else-if + v-else 1`] = `
+"import { createIf as _createIf, template as _template } from 'vue/vapor';
+const t0 = _template("<div></div>")
+const t1 = _template("<p></p>")
+const t2 = _template("fine")
+
+export function render(_ctx) {
+  const n0 = _createIf(() => (_ctx.ok), () => {
+    const n2 = t0()
+    return n2
+  }, () => _createIf(() => (_ctx.orNot), () => {
+    const n4 = t1()
+    return n4
+  }, () => {
+    const n7 = t2()
+    return n7
+  }))
+  return n0
+}"
+`;
+
+exports[`compiler: v-if > v-if + v-else-if 1`] = `
+"import { createIf as _createIf, template as _template } from 'vue/vapor';
+const t0 = _template("<div></div>")
+const t1 = _template("<p></p>")
+
+export function render(_ctx) {
+  const n0 = _createIf(() => (_ctx.ok), () => {
+    const n2 = t0()
+    return n2
+  }, () => _createIf(() => (_ctx.orNot), () => {
+    const n4 = t1()
+    return n4
+  }))
+  return n0
+}"
+`;

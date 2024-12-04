@@ -125,6 +125,10 @@ export interface SFCScriptCompileOptions {
    * Transform Vue SFCs into custom elements.
    */
   customElement?: boolean | ((filename: string) => boolean)
+  /**
+   * Force to use of Vapor mode.
+   */
+  vapor?: boolean
 }
 
 export interface ImportBinding {
@@ -169,6 +173,7 @@ export function compileScript(
   const scopeId = options.id ? options.id.replace(/^data-v-/, '') : ''
   const scriptLang = script && script.lang
   const scriptSetupLang = scriptSetup && scriptSetup.lang
+  const vapor = sfc.vapor || options.vapor
 
   let refBindings: string[] | undefined
 
@@ -374,7 +379,8 @@ export function compileScript(
   const vueImportAliases: Record<string, string> = {}
   for (const key in ctx.userImports) {
     const { source, imported, local } = ctx.userImports[key]
-    if (source === 'vue') vueImportAliases[imported] = local
+    if (['vue', 'vue/vapor'].includes(source))
+      vueImportAliases[imported] = local
   }
 
   // 2.1 process normal <script> body
@@ -730,7 +736,7 @@ export function compileScript(
     ctx.bindingMetadata[key] =
       imported === '*' ||
       (imported === 'default' && source.endsWith('.vue')) ||
-      source === 'vue'
+      ['vue', 'vue/vapor'].includes(source)
         ? BindingTypes.SETUP_CONST
         : BindingTypes.SETUP_MAYBE_REF
   }
@@ -841,7 +847,7 @@ export function compileScript(
     for (const key in allBindings) {
       if (
         allBindings[key] === true &&
-        ctx.userImports[key].source !== 'vue' &&
+        !['vue', 'vue/vapor'].includes(ctx.userImports[key].source) &&
         !ctx.userImports[key].source.endsWith('.vue')
       ) {
         // generate getter for import bindings
@@ -866,7 +872,7 @@ export function compileScript(
       }
       // inline render function mode - we are going to compile the template and
       // inline it right here
-      const { code, ast, preamble, tips, errors } = compileTemplate({
+      const { code, preamble, tips, errors, helpers } = compileTemplate({
         filename,
         ast: sfc.template.ast,
         source: sfc.template.content,
@@ -911,7 +917,7 @@ export function compileScript(
       // avoid duplicated unref import
       // as this may get injected by the render function preamble OR the
       // css vars codegen
-      if (ast && ast.helpers.has(UNREF)) {
+      if (helpers && helpers.has(UNREF)) {
         ctx.helperImports.delete('unref')
       }
       returned = code
@@ -940,6 +946,9 @@ export function compileScript(
     : `export default`
 
   let runtimeOptions = ``
+  if (vapor) {
+    runtimeOptions += `\n  vapor: true,`
+  }
   if (!ctx.hasDefaultExportName && filename && filename !== DEFAULT_FILENAME) {
     const match = filename.match(/([^/\\]+)\.\w+$/)
     if (match) {
@@ -981,6 +990,7 @@ export function compileScript(
       startOffset,
       `\n${genDefaultAs} /*@__PURE__*/${ctx.helper(
         `defineComponent`,
+        vapor,
       )}({${def}${runtimeOptions}\n  ${
         hasAwait ? `async ` : ``
       }setup(${args}) {\n${exposeCall}`,
@@ -1019,6 +1029,13 @@ export function compileScript(
       `import { ${[...ctx.helperImports]
         .map(h => `${h} as _${h}`)
         .join(', ')} } from ${importSrc}\n`,
+    )
+  }
+  if (ctx.vaporHelperImports.size > 0) {
+    ctx.s.prepend(
+      `import { ${[...ctx.vaporHelperImports]
+        .map(h => `${h} as _${h}`)
+        .join(', ')} } from 'vue/vapor'\n`,
     )
   }
 

@@ -1,6 +1,8 @@
 packages:
   - 'packages/*'
   - 'packages-private/*'
+  - playground
+  - benchmark
 
 catalog:
   '@babel/parser': ^7.25.3

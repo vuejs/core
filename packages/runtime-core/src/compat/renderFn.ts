@@ -10,11 +10,11 @@ import {
   normalizeStyle,
   toHandlerKey,
 } from '@vue/shared'
+import type { Data } from '@vue/runtime-shared'
 import type {
   Component,
   ComponentInternalInstance,
   ComponentOptions,
-  Data,
   InternalRenderFunction,
 } from '../component'
 import { currentRenderingInstance } from '../componentRenderContext'

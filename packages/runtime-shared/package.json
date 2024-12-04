@@ -1,0 +1,50 @@
+{
+  "name": "@vue/runtime-shared",
+  "version": "3.0.0-vapor",
+  "description": "@vue/runtime-shared",
+  "main": "index.js",
+  "module": "dist/runtime-shared.esm-bundler.js",
+  "types": "dist/runtime-shared.d.ts",
+  "files": [
+    "index.js",
+    "dist"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/runtime-shared.d.ts",
+      "node": {
+        "production": "./dist/runtime-shared.cjs.prod.js",
+        "development": "./dist/runtime-shared.cjs.js",
+        "default": "./index.js"
+      },
+      "module": "./dist/runtime-shared.esm-bundler.js",
+      "import": "./dist/runtime-shared.esm-bundler.js",
+      "require": "./index.js"
+    },
+    "./*": "./*"
+  },
+  "sideEffects": false,
+  "buildOptions": {
+    "formats": [
+      "esm-bundler",
+      "cjs"
+    ]
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vuejs/core.git",
+    "directory": "packages/runtime-shared"
+  },
+  "keywords": [
+    "vue"
+  ],
+  "author": "Evan You",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/vuejs/core/issues"
+  },
+  "homepage": "https://github.com/vuejs/core/tree/main/packages/runtime-shared#readme",
+  "dependencies": {
+    "@vue/shared": "workspace:*"
+  }
+}

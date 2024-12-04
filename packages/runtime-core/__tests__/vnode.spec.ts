@@ -12,8 +12,8 @@ import {
   openBlock,
   transformVNodeArgs,
 } from '../src/vnode'
-import type { Data } from '../src/component'
 import { PatchFlags, ShapeFlags } from '@vue/shared'
+import type { Data } from '@vue/runtime-shared'
 import { h, isReactive, reactive, ref, setBlockTracking, withCtx } from '../src'
 import { createApp, nodeOps, serializeInner } from '@vue/runtime-test'
 import { setCurrentRenderingInstance } from '../src/componentRenderContext'

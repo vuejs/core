@@ -1,0 +1,20 @@
+{
+  "name": "playground",
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "node ./setup/vite.js",
+    "build": "node ./setup/vite.js build",
+    "preview": "node ./setup/vite.js preview"
+  },
+  "dependencies": {
+    "@vueuse/core": "^11.1.0",
+    "vue": "workspace:*"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "https://pkg.pr.new/@vitejs/plugin-vue@e3c5ce5",
+    "vite": "catalog:",
+    "vite-hyper-config": "^0.4.0",
+    "vite-plugin-inspect": "^0.8.7"
+  }
+}

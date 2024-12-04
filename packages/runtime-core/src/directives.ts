@@ -13,10 +13,10 @@ return withDirectives(h(comp), [
 
 import type { VNode } from './vnode'
 import { EMPTY_OBJ, isBuiltInDirective, isFunction } from '@vue/shared'
+import type { Data } from '@vue/runtime-shared'
 import { warn } from './warning'
 import {
   type ComponentInternalInstance,
-  type Data,
   getComponentPublicInstance,
 } from './component'
 import { currentRenderingInstance } from './componentRenderContext'

@@ -1,0 +1,121 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`compiler: v-for > array de-structured value 1`] = `
+"import { renderEffect as _renderEffect, setText as _setText, withDestructure as _withDestructure, createFor as _createFor, template as _template } from 'vue/vapor';
+const t0 = _template("<div></div>")
+
+export function render(_ctx) {
+  const n0 = _createFor(() => (_ctx.list), _withDestructure(([[id, ...other], index]) => [id, other, index], (_ctx0) => {
+    const n2 = t0()
+    _renderEffect(() => _setText(n2, _ctx0[0].value + _ctx0[1].value + _ctx0[2].value))
+    return n2
+  }), ([id, ...other], index) => (id))
+  return n0
+}"
+`;
+
+exports[`compiler: v-for > basic v-for 1`] = `
+"import { delegate as _delegate, renderEffect as _renderEffect, setText as _setText, createFor as _createFor, delegateEvents as _delegateEvents, template as _template } from 'vue/vapor';
+const t0 = _template("<div></div>")
+_delegateEvents("click")
+
+export function render(_ctx) {
+  const n0 = _createFor(() => (_ctx.items), (_ctx0) => {
+    const n2 = t0()
+    _delegate(n2, "click", () => $event => (_ctx.remove(_ctx0[0].value)))
+    _renderEffect(() => _setText(n2, _ctx0[0].value))
+    return n2
+  }, (item) => (item.id))
+  return n0
+}"
+`;
+
+exports[`compiler: v-for > function params w/ prefixIdentifiers: false 1`] = `
+"import { renderEffect as _renderEffect, setText as _setText, createFor as _createFor, template as _template } from 'vue/vapor';
+const t0 = _template("<div></div>")
+
+export function render(_ctx) {
+  const n0 = _createFor(() => (items), ([item, __, k]) => {
+    const n2 = t0()
+    _renderEffect(() => _setText(n2, item))
+    return n2
+  }, (item, __, k) => (k))
+  return n0
+}"
+`;
+
+exports[`compiler: v-for > multi effect 1`] = `
+"import { renderEffect as _renderEffect, setDynamicProp as _setDynamicProp, createFor as _createFor, template as _template } from 'vue/vapor';
+const t0 = _template("<div></div>")
+
+export function render(_ctx) {
+  const n0 = _createFor(() => (_ctx.items), (_ctx0) => {
+    const n2 = t0()
+    _renderEffect(() => _setDynamicProp(n2, "item", _ctx0[0].value))
+    _renderEffect(() => _setDynamicProp(n2, "index", _ctx0[1].value))
+    return n2
+  })
+  return n0
+}"
+`;
+
+exports[`compiler: v-for > nested v-for 1`] = `
+"import { renderEffect as _renderEffect, setText as _setText, createFor as _createFor, insert as _insert, template as _template } from 'vue/vapor';
+const t0 = _template("<span></span>")
+const t1 = _template("<div></div>")
+
+export function render(_ctx) {
+  const n0 = _createFor(() => (_ctx.list), (_ctx0) => {
+    const n5 = t1()
+    const n2 = _createFor(() => (_ctx0[0].value), (_ctx1) => {
+      const n4 = t0()
+      _renderEffect(() => _setText(n4, _ctx1[0].value+_ctx0[0].value))
+      return n4
+    }, null, null, n5)
+    _insert(n2, n5)
+    return n5
+  })
+  return n0
+}"
+`;
+
+exports[`compiler: v-for > object de-structured value 1`] = `
+"import { renderEffect as _renderEffect, setText as _setText, withDestructure as _withDestructure, createFor as _createFor, template as _template } from 'vue/vapor';
+const t0 = _template("<div></div>")
+
+export function render(_ctx) {
+  const n0 = _createFor(() => (_ctx.list), _withDestructure(([{ id, ...other }, index]) => [id, other, index], (_ctx0) => {
+    const n2 = t0()
+    _renderEffect(() => _setText(n2, _ctx0[0].value + _ctx0[1].value + _ctx0[2].value))
+    return n2
+  }), ({ id, ...other }, index) => (id))
+  return n0
+}"
+`;
+
+exports[`compiler: v-for > v-for aliases w/ complex expressions 1`] = `
+"import { renderEffect as _renderEffect, setText as _setText, withDestructure as _withDestructure, createFor as _createFor, template as _template } from 'vue/vapor';
+const t0 = _template("<div></div>")
+
+export function render(_ctx) {
+  const n0 = _createFor(() => (_ctx.list), _withDestructure(([{ foo = bar, baz: [qux = quux] }]) => [foo, qux], (_ctx0) => {
+    const n2 = t0()
+    _renderEffect(() => _setText(n2, _ctx0[0].value + _ctx.bar + _ctx.baz + _ctx0[1].value + _ctx.quux))
+    return n2
+  }))
+  return n0
+}"
+`;
+
+exports[`compiler: v-for > w/o value 1`] = `
+"import { createFor as _createFor, template as _template } from 'vue/vapor';
+const t0 = _template("<div>item</div>")
+
+export function render(_ctx) {
+  const n0 = _createFor(() => (_ctx.items), (_ctx0) => {
+    const n2 = t0()
+    return n2
+  })
+  return n0
+}"
+`;

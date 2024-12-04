@@ -11,6 +11,7 @@
     "packages/global.d.ts",
     "packages/vue/src",
     "packages/vue-compat/src",
+    "packages/vue-vapor/src",
     "packages/compiler-core/src",
     "packages/compiler-dom/src",
     "packages/runtime-core/src",

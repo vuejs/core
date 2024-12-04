@@ -14,6 +14,7 @@ const props = defineProps<{
   store: ReplStore
   prod: boolean
   ssr: boolean
+  vapor: boolean
   autoSave: boolean
   theme: 'dark' | 'light'
 }>()
@@ -21,6 +22,7 @@ const emit = defineEmits([
   'toggle-theme',
   'toggle-ssr',
   'toggle-prod',
+  'toggle-vapor',
   'toggle-autosave',
   'reload-page',
 ])
@@ -102,6 +104,14 @@ function toggleDark() {
         @click="$emit('toggle-prod')"
       >
         <span>{{ prod ? 'PROD' : 'DEV' }}</span>
+      </button>
+      <button
+        title="Toggle vapor mode"
+        class="toggle-vapor"
+        :class="{ enabled: vapor }"
+        @click="$emit('toggle-vapor')"
+      >
+        <span>{{ vapor ? 'VAPOR ON' : 'VAPOR OFF' }}</span>
       </button>
       <button
         title="Toggle server rendering mode"
@@ -215,6 +225,7 @@ h1 img {
 }
 
 .toggle-prod span,
+.toggle-vapor span,
 .toggle-ssr span,
 .toggle-autosave span {
   font-size: 12px;
@@ -238,6 +249,15 @@ h1 img {
 
 .toggle-ssr.enabled span,
 .toggle-autosave.enabled span {
+  color: #fff;
+  background-color: var(--green);
+}
+
+.toggle-vapor span {
+  background-color: var(--btn-bg);
+}
+
+.toggle-vapor.enabled span {
   color: #fff;
   background-color: var(--green);
 }

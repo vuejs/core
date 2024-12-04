@@ -18,7 +18,14 @@ export const isOn = (key: string): boolean =>
   // uppercase letter
   (key.charCodeAt(2) > 122 || key.charCodeAt(2) < 97)
 
-export const isModelListener = (key: string): key is `onUpdate:${string}` =>
+export const isNativeOn = (key: string): boolean =>
+  key.charCodeAt(0) === 111 /* o */ &&
+  key.charCodeAt(1) === 110 /* n */ &&
+  // lowercase letter
+  key.charCodeAt(2) > 96 &&
+  key.charCodeAt(2) < 123
+
+export const isModelListener = (key: string): boolean =>
   key.startsWith('onUpdate:')
 
 export const extend: typeof Object.assign = Object.assign
@@ -87,6 +94,9 @@ export const isReservedProp: (key: string) => boolean = /*@__PURE__*/ makeMap(
     'onVnodeBeforeUpdate,onVnodeUpdated,' +
     'onVnodeBeforeUnmount,onVnodeUnmounted',
 )
+
+export const isBuiltInTag: (key: string) => boolean =
+  /*#__PURE__*/ makeMap('slot,component')
 
 export const isBuiltInDirective: (key: string) => boolean =
   /*@__PURE__*/ makeMap(

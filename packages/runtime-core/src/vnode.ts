@@ -12,12 +12,12 @@ import {
   normalizeClass,
   normalizeStyle,
 } from '@vue/shared'
+import type { Data } from '@vue/runtime-shared'
 import {
   type ClassComponent,
   type Component,
   type ComponentInternalInstance,
   type ConcreteComponent,
-  type Data,
   isClassComponent,
 } from './component'
 import type { RawSlots } from './componentSlots'

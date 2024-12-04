@@ -175,6 +175,12 @@ interface SharedTransformCodegenOptions {
    */
   prefixIdentifiers?: boolean
   /**
+   * A list of parser plugins to enable for `@babel/parser`, which is used to
+   * parse expressions in bindings and interpolations.
+   * https://babeljs.io/docs/en/next/babel-parser#plugins
+   */
+  expressionPlugins?: ParserPlugin[]
+  /**
    * Control whether generate SSR-optimized render functions instead.
    * The resulting function must be attached to the component via the
    * `ssrRender` option instead of `render`.
@@ -273,12 +279,6 @@ export interface TransformOptions
    */
   cacheHandlers?: boolean
   /**
-   * A list of parser plugins to enable for `@babel/parser`, which is used to
-   * parse expressions in bindings and interpolations.
-   * https://babeljs.io/docs/en/next/babel-parser#plugins
-   */
-  expressionPlugins?: ParserPlugin[]
-  /**
    * SFC scoped styles ID
    */
   scopeId?: string | null
@@ -333,6 +333,11 @@ export interface CodegenOptions extends SharedTransformCodegenOptions {
    * @default 'vue'
    */
   runtimeModuleName?: string
+  /**
+   * Customize where to import runtime helpers from.
+   * @default 'vue/vapor'
+   */
+  vaporRuntimeModuleName?: string
   /**
    * Customize where to import ssr runtime helpers from/**
    * @default 'vue/server-renderer'

@@ -24,12 +24,12 @@ import {
   makeMap,
   toRawType,
 } from '@vue/shared'
+import type { Data } from '@vue/runtime-shared'
 import { warn } from './warning'
 import {
   type ComponentInternalInstance,
   type ComponentOptions,
   type ConcreteComponent,
-  type Data,
   setCurrentInstance,
 } from './component'
 import { isEmitListener } from './componentEmits'
