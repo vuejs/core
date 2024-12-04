@@ -24,7 +24,7 @@ import {
 } from './componentProps'
 import { setDynamicProp } from './dom/prop'
 import { renderEffect } from './renderEffect'
-import { emit } from './componentEmits'
+import { emit, normalizeEmitsOptions } from './componentEmits'
 
 export type VaporComponent = FunctionalVaporComponent | ObjectVaporComponent
 
@@ -208,6 +208,12 @@ export class VaporComponentInstance implements GenericComponentInstance {
     const handlers = getPropsProxyHandlers(comp, this)
     this.props = comp.props ? new Proxy(target, handlers[0]!) : {}
     this.attrs = new Proxy(target, handlers[1])
+
+    if (__DEV__) {
+      // cache normalized options for dev only emit check
+      this.propsOptions = normalizePropsOptions(comp)
+      this.emitsOptions = normalizeEmitsOptions(comp)
+    }
 
     // determine fallthrough
     this.hasFallthrough = false
