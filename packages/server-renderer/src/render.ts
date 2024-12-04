@@ -74,7 +74,7 @@ export function createBuffer() {
     push(item: SSRBufferItem): void {
       const isStringItem = isString(item)
       if (appendable && isStringItem) {
-        buffer[buffer.length - 1] += item as string
+        buffer[buffer.length - 1] += item
         return
       }
       buffer.push(item)

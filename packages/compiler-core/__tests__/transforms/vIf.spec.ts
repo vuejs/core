@@ -97,8 +97,8 @@ describe('compiler: v-if', () => {
       // #2058 since a component may fail to resolve and fallback to a plain
       // element, it still needs to be made a block
       expect(
-        ((node.branches[0].children[0] as ElementNode)!
-          .codegenNode as VNodeCall)!.isBlock,
+        ((node.branches[0].children[0] as ElementNode).codegenNode as VNodeCall)
+          .isBlock,
       ).toBe(true)
     })
 
@@ -702,8 +702,7 @@ describe('compiler: v-if', () => {
       expect(b1b1.children[0].type).toBe(NodeTypes.COMMENT)
       expect((b1b1.children[0] as CommentNode).content).toBe('comment2')
 
-      const b1b2: IfBranchNode = (b1.children[1] as IfNode)
-        .branches[1] as IfBranchNode
+      const b1b2: IfBranchNode = (b1.children[1] as IfNode).branches[1]
       expect(b1b2.children[0].type).toBe(NodeTypes.COMMENT)
       expect((b1b2.children[0] as CommentNode).content).toBe(`comment3`)
       expect(b1b2.children[1].type).toBe(NodeTypes.ELEMENT)

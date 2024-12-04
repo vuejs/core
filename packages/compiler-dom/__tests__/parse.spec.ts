@@ -131,7 +131,7 @@ describe('DOM parser', () => {
 
     test('CDATA', () => {
       const ast = parse('<svg><![CDATA[some text]]></svg>', parserOptions)
-      const text = (ast.children[0] as ElementNode).children![0] as TextNode
+      const text = (ast.children[0] as ElementNode).children[0] as TextNode
 
       expect(text).toStrictEqual({
         type: NodeTypes.TEXT,

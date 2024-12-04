@@ -339,7 +339,7 @@ const KeepAliveImpl: ComponentOptions = {
         vnode.component = cachedVNode.component
         if (vnode.transition) {
           // recursively update transition hooks on subTree
-          setTransitionHooks(vnode, vnode.transition!)
+          setTransitionHooks(vnode, vnode.transition)
         }
         // avoid vnode being mounted as fresh
         vnode.shapeFlag |= ShapeFlags.COMPONENT_KEPT_ALIVE

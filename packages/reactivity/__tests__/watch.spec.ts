@@ -107,7 +107,7 @@ describe('watch', () => {
       WatchErrorCodes.WATCH_CALLBACK,
     ])
 
-    effect!.stop()
+    effect.stop()
     source.value++
     expect(onError.mock.calls.length).toBe(3)
     expect(onError.mock.calls[2]).toMatchObject([

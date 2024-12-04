@@ -11,9 +11,11 @@ const banConstEnum = {
     'Please use non-const enums. This project automatically inlines enums.',
 }
 
+const enableTypeAwareRules = process.argv.includes('--type-aware-rules')
+
 export default defineConfig([
   {
-    plugins: [createDisableNextLinePlugin()],
+    plugins: [createDisableNextLinePlugin(enableTypeAwareRules)],
     rules: convertConfig({
       'no-debugger': 'error',
       'no-console': ['error', { allow: ['warn', 'error', 'info'] }],
@@ -66,6 +68,12 @@ export default defineConfig([
       ],
       // Enforce the use of top-level import type qualifier when an import only has specifiers with inline type qualifiers
       '@typescript-eslint/no-import-type-side-effects': 'error',
+
+      // Type-aware rules
+      '@typescript-eslint/no-unnecessary-type-assertion': [
+        enableTypeAwareRules ? 'error' : 'off',
+        { typesToIgnore: ['any'] },
+      ],
     }),
   },
 

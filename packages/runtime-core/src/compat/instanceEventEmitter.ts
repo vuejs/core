@@ -79,15 +79,15 @@ export function off(
   }
   // specific event
   const events = getRegistry(instance)
-  const cbs = events[event!]
+  const cbs = events[event]
   if (!cbs) {
     return vm
   }
   if (!fn) {
-    events[event!] = undefined
+    events[event] = undefined
     return vm
   }
-  events[event!] = cbs.filter(cb => !(cb === fn || (cb as any).fn === fn))
+  events[event] = cbs.filter(cb => !(cb === fn || (cb as any).fn === fn))
   return vm
 }
 

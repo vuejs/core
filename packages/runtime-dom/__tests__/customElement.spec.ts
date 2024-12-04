@@ -1314,8 +1314,8 @@ describe('defineCustomElement', () => {
     test('should work', () => {
       const E = defineCustomElement(
         () => {
-          const msg = inject('msg')
-          return () => h('div', msg!)
+          const msg = inject('msg')!
+          return () => h('div', msg)
         },
         {
           configureApp(app) {

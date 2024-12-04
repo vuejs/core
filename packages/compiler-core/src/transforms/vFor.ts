@@ -18,7 +18,6 @@ import {
   type PlainElementNode,
   type RenderSlotCall,
   type SimpleExpressionNode,
-  type SlotOutletNode,
   type VNodeCall,
   createBlockStatement,
   createCallExpression,
@@ -159,7 +158,7 @@ export const transformFor: NodeTransform = createStructuralDirectiveTransform(
           : isTemplate &&
               node.children.length === 1 &&
               isSlotOutlet(node.children[0])
-            ? (node.children[0] as SlotOutletNode) // api-extractor somehow fails to infer this
+            ? node.children[0] // api-extractor somehow fails to infer this
             : null
 
         if (slotOutlet) {

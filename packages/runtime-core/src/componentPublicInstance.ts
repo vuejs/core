@@ -442,7 +442,7 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
           case AccessTypes.CONTEXT:
             return ctx[key]
           case AccessTypes.PROPS:
-            return props![key]
+            return props[key]
           // default: just fallthrough
         }
       } else if (hasSetupBinding(setupState, key)) {
@@ -458,7 +458,7 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
         hasOwn(normalizedProps, key)
       ) {
         accessCache![key] = AccessTypes.PROPS
-        return props![key]
+        return props[key]
       } else if (ctx !== EMPTY_OBJ && hasOwn(ctx, key)) {
         accessCache![key] = AccessTypes.CONTEXT
         return ctx[key]

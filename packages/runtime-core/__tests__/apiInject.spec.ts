@@ -105,7 +105,7 @@ describe('api: provide/inject', () => {
         foo: {
           from: 'foo',
           default() {
-            return this!.$options.name
+            return this.$options.name
           },
         },
       },

@@ -539,9 +539,9 @@ function createBaseVNode(
 
 export { createBaseVNode as createElementVNode }
 
-export const createVNode = (
-  __DEV__ ? createVNodeWithArgsTransform : _createVNode
-) as typeof _createVNode
+export const createVNode: typeof _createVNode = __DEV__
+  ? createVNodeWithArgsTransform
+  : _createVNode
 
 function _createVNode(
   type: VNodeTypes | ClassComponent | typeof NULL_DYNAMIC_COMPONENT,

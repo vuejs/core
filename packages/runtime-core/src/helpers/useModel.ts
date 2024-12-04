@@ -64,7 +64,7 @@ export function useModel(
         ) {
           return
         }
-        const rawProps = i.vnode!.props
+        const rawProps = i.vnode.props
         if (
           !(
             rawProps &&

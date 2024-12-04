@@ -224,13 +224,13 @@ export function createHydrationFunctions(
           // if the static vnode has its content stripped during build,
           // adopt it from the server-rendered HTML.
           const needToAdoptContent = !(vnode.children as string).length
-          for (let i = 0; i < vnode.staticCount!; i++) {
+          for (let i = 0; i < vnode.staticCount; i++) {
             if (needToAdoptContent)
               vnode.children +=
                 nextNode.nodeType === DOMNodeTypes.ELEMENT
                   ? (nextNode as Element).outerHTML
                   : (nextNode as Text).data
-            if (i === vnode.staticCount! - 1) {
+            if (i === vnode.staticCount - 1) {
               vnode.anchor = nextNode
             }
             nextNode = nextSibling(nextNode)!
@@ -397,8 +397,7 @@ export function createHydrationFunctions(
           parentComponent.vnode.props &&
           parentComponent.vnode.props.appear
 
-        const content = (el as HTMLTemplateElement).content
-          .firstChild as Element
+        const content = el.content.firstChild as Element
 
         if (needCallTransitionHooks) {
           transition!.beforeEnter(content)
@@ -646,7 +645,7 @@ export function createHydrationFunctions(
 
     const container = parentNode(node)!
     const next = hydrateChildren(
-      nextSibling(node)!,
+      nextSibling(node),
       vnode,
       container,
       parentComponent,
@@ -675,7 +674,7 @@ export function createHydrationFunctions(
     slotScopeIds: string[] | null,
     isFragment: boolean,
   ): Node | null => {
-    if (!isMismatchAllowed(node.parentElement!, MismatchTypes.CHILDREN)) {
+    if (!isMismatchAllowed(node.parentElement, MismatchTypes.CHILDREN)) {
       ;(__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
         warn(
           `Hydration node mismatch:\n- rendered on server:`,

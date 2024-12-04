@@ -324,7 +324,7 @@ const tokenizer = new Tokenizer(stack, {
           // assign value
 
           // condense whitespaces in class
-          if (currentProp!.name === 'class') {
+          if (currentProp.name === 'class') {
             currentAttrValue = condense(currentAttrValue).trim()
           }
 
@@ -332,7 +332,7 @@ const tokenizer = new Tokenizer(stack, {
             emitError(ErrorCodes.MISSING_ATTRIBUTE_VALUE, end)
           }
 
-          currentProp!.value = {
+          currentProp.value = {
             type: NodeTypes.TEXT,
             content: currentAttrValue,
             loc:

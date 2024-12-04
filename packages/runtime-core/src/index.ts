@@ -130,7 +130,7 @@ export { useSSRContext, ssrContextKey } from './helpers/useSsrContext'
 export { createRenderer, createHydrationRenderer } from './renderer'
 export { queuePostFlushCb } from './scheduler'
 import { warn as _warn } from './warning'
-export const warn = (__DEV__ ? _warn : NOOP) as typeof _warn
+export const warn: typeof _warn = __DEV__ ? _warn : NOOP
 
 /** @internal */
 export { assertNumber } from './warning'
@@ -174,9 +174,8 @@ import {
 export const devtools = (
   __DEV__ || __ESM_BUNDLER__ ? _devtools : undefined
 ) as DevtoolsHook
-export const setDevtoolsHook = (
+export const setDevtoolsHook: typeof _setDevtoolsHook =
   __DEV__ || __ESM_BUNDLER__ ? _setDevtoolsHook : NOOP
-) as typeof _setDevtoolsHook
 
 // Types -----------------------------------------------------------------------
 

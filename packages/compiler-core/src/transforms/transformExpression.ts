@@ -33,12 +33,7 @@ import {
   makeMap,
 } from '@vue/shared'
 import { ErrorCodes, createCompilerError } from '../errors'
-import type {
-  AssignmentExpression,
-  Identifier,
-  Node,
-  UpdateExpression,
-} from '@babel/types'
+import type { Identifier, Node } from '@babel/types'
 import { validateBrowserExpression } from '../validateExpression'
 import { parseExpression } from '@babel/parser'
 import { IS_REF, UNREF } from '../runtimeHelpers'
@@ -169,7 +164,7 @@ export function processExpression(
           // let is a local non-ref value, and we need to replicate the
           // right hand side value.
           // x = y --> isRef(x) ? x.value = y : x = y
-          const { right: rVal, operator } = parent as AssignmentExpression
+          const { right: rVal, operator } = parent
           const rExp = rawExp.slice(rVal.start! - 1, rVal.end! - 1)
           const rExpString = stringifyExpression(
             processExpression(
@@ -186,9 +181,9 @@ export function processExpression(
         } else if (isUpdateArg) {
           // make id replace parent in the code range so the raw update operator
           // is removed
-          id!.start = parent!.start
-          id!.end = parent!.end
-          const { prefix: isPrefix, operator } = parent as UpdateExpression
+          id.start = parent.start
+          id.end = parent.end
+          const { prefix: isPrefix, operator } = parent
           const prefix = isPrefix ? operator : ``
           const postfix = isPrefix ? `` : operator
           // let binding.

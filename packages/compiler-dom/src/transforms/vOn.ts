@@ -61,9 +61,7 @@ const resolveModifiers = (
       // runtimeModifiers: modifiers that needs runtime guards
       if (maybeKeyModifier(modifier)) {
         if (isStaticExp(key)) {
-          if (
-            isKeyboardEvent((key as SimpleExpressionNode).content.toLowerCase())
-          ) {
+          if (isKeyboardEvent(key.content.toLowerCase())) {
             keyModifiers.push(modifier)
           } else {
             nonKeyModifiers.push(modifier)

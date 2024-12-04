@@ -394,7 +394,7 @@ describe('useCssVars', () => {
       setup() {
         onMounted(() => {
           const childEl = root.children[0]
-          expect(getComputedStyle(childEl!).getPropertyValue(`--color`)).toBe(
+          expect(getComputedStyle(childEl).getPropertyValue(`--color`)).toBe(
             `red`,
           )
         })

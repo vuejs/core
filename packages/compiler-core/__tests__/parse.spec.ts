@@ -114,7 +114,7 @@ describe('compiler: parse', () => {
     test('text with mix of tags and interpolations', () => {
       const ast = baseParse('some <span>{{ foo < bar + foo }} text</span>')
       const text1 = ast.children[0] as TextNode
-      const text2 = (ast.children[1] as ElementNode).children![1] as TextNode
+      const text2 = (ast.children[1] as ElementNode).children[1] as TextNode
 
       expect(text1).toStrictEqual({
         type: NodeTypes.TEXT,

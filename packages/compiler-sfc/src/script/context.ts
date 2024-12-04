@@ -136,7 +136,7 @@ export class ScriptCompileContext {
 
     this.scriptSetupAst =
       descriptor.scriptSetup &&
-      parse(descriptor.scriptSetup!.content, this.startOffset!)
+      parse(descriptor.scriptSetup.content, this.startOffset!)
   }
 
   getString(node: Node, scriptSetup = true): string {

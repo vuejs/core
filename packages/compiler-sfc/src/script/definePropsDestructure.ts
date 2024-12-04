@@ -278,7 +278,7 @@ export function transformDestructuredProps(
 
       if (node.type === 'Identifier') {
         if (
-          isReferencedIdentifier(node, parent!, parentStack) &&
+          isReferencedIdentifier(node, parent, parentStack) &&
           !excludedIds.has(node)
         ) {
           if (currentScope[node.name]) {

@@ -111,9 +111,9 @@ font-weight: bold;
         `${'\n'.repeat(padding)}<i18n>\n{\n  "greeting": "hello"\n}\n</i18n>\n`,
       ).descriptor.customBlocks[0]
 
-      expect(custom!.map).not.toBeUndefined()
+      expect(custom.map).not.toBeUndefined()
 
-      const consumer = new SourceMapConsumer(custom!.map!)
+      const consumer = new SourceMapConsumer(custom.map!)
       consumer.eachMapping(mapping => {
         expect(mapping.originalLine! - mapping.generatedLine).toBe(padding)
       })

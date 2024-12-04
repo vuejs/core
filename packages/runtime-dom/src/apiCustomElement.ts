@@ -632,7 +632,7 @@ export class VueElement
     const outlets = (this._teleportTarget || this).querySelectorAll('slot')
     const scopeId = this._instance!.type.__scopeId
     for (let i = 0; i < outlets.length; i++) {
-      const o = outlets[i] as HTMLSlotElement
+      const o = outlets[i]
       const slotName = o.getAttribute('name') || 'default'
       const content = this._slots![slotName]
       const parent = o.parentNode!

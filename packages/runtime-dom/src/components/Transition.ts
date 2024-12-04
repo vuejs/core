@@ -331,7 +331,7 @@ export function removeTransitionClass(el: Element, cls: string): void {
   const _vtc = (el as ElementWithTransition)[vtcKey]
   if (_vtc) {
     _vtc.delete(cls)
-    if (!_vtc!.size) {
+    if (!_vtc.size) {
       ;(el as ElementWithTransition)[vtcKey] = undefined
     }
   }
