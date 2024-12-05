@@ -566,7 +566,7 @@ function createSuspenseBoundary(
           // (got `pendingBranch.el`).
           // Therefore, after the mounting of activeBranch is completed,
           // it is necessary to get the latest anchor.
-          if (parentNode(activeBranch.el!) !== suspense.hiddenContainer) {
+          if (parentNode(activeBranch.el!) === container) {
             anchor = next(activeBranch)
           }
           unmount(activeBranch, parentComponent, suspense, true)

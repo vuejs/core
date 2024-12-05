@@ -1,8 +1,8 @@
 import {
-  Comment,
   Fragment,
   Static,
   Text,
+  Comment as VComment,
   type VNode,
   type VNodeHook,
   createTextVNode,
@@ -11,13 +11,14 @@ import {
   normalizeVNode,
 } from './vnode'
 import { flushPostFlushCbs } from './scheduler'
-import type { ComponentInternalInstance } from './component'
+import type { ComponentInternalInstance, ComponentOptions } from './component'
 import { invokeDirectiveHook } from './directives'
 import { warn } from './warning'
 import {
   PatchFlags,
   ShapeFlags,
   def,
+  getEscapedCssVarName,
   includeBooleanAttr,
   isBooleanAttr,
   isKnownHtmlAttr,
@@ -40,6 +41,7 @@ import {
 import type { TeleportImpl, TeleportVNode } from './components/Teleport'
 import { isAsyncWrapper } from './apiAsyncComponent'
 import { isReactive } from '@vue/reactivity'
+import { updateHOCHostEl } from './componentRenderUtils'
 
 export type RootHydrateFunction = (
   vnode: VNode<Node, Element>,
@@ -194,7 +196,7 @@ export function createHydrationFunctions(
           nextNode = nextSibling(node)
         }
         break
-      case Comment:
+      case VComment:
         if (isTemplateNode(node)) {
           nextNode = nextSibling(node)
           // wrapped <transition appear>
@@ -306,7 +308,10 @@ export function createHydrationFunctions(
           // if component is async, it may get moved / unmounted before its
           // inner component is loaded, so we need to give it a placeholder
           // vnode that matches its adopted DOM.
-          if (isAsyncWrapper(vnode)) {
+          if (
+            isAsyncWrapper(vnode) &&
+            !(vnode.type as ComponentOptions).__asyncResolved
+          ) {
             let subTree
             if (isFragmentStart) {
               subTree = createVNode(Fragment)
@@ -384,7 +389,10 @@ export function createHydrationFunctions(
       let needCallTransitionHooks = false
       if (isTemplateNode(el)) {
         needCallTransitionHooks =
-          needTransition(parentSuspense, transition) &&
+          needTransition(
+            null, // no need check parentSuspense in hydration
+            transition,
+          ) &&
           parentComponent &&
           parentComponent.vnode.props &&
           parentComponent.vnode.props.appear
@@ -439,7 +447,17 @@ export function createHydrationFunctions(
           remove(cur)
         }
       } else if (shapeFlag & ShapeFlags.TEXT_CHILDREN) {
-        if (el.textContent !== vnode.children) {
+        // #11873 the HTML parser will "eat" the first newline when parsing
+        // <pre> and <textarea>, so if the client value starts with a newline,
+        // we need to remove it before comparing
+        let clientText = vnode.children as string
+        if (
+          clientText[0] === '\n' &&
+          (el.tagName === 'PRE' || el.tagName === 'TEXTAREA')
+        ) {
+          clientText = clientText.slice(1)
+        }
+        if (el.textContent !== clientText) {
           if (!isMismatchAllowed(el, MismatchTypes.TEXT)) {
             ;(__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
               warn(
@@ -554,8 +572,7 @@ export function createHydrationFunctions(
           // JSX-compiled fns, but on the client the browser parses only 1 text
           // node.
           // look ahead for next possible text vnode
-          let next = children[i + 1]
-          if (next && (next = normalizeVNode(next)).type === Text) {
+          if (i + 1 < l && normalizeVNode(children[i + 1]).type === Text) {
             // create an extra TextNode on the client for the next vnode to
             // adopt
             insert(
@@ -703,6 +720,11 @@ export function createHydrationFunctions(
       getContainerType(container),
       slotScopeIds,
     )
+    // the component vnode's el should be updated when a mismatch occurs.
+    if (parentComponent) {
+      parentComponent.vnode.el = vnode.el
+      updateHOCHostEl(parentComponent, vnode.el)
+    }
     return next
   }
 
@@ -753,7 +775,7 @@ export function createHydrationFunctions(
   const isTemplateNode = (node: Node): node is HTMLTemplateElement => {
     return (
       node.nodeType === DOMNodeTypes.ELEMENT &&
-      (node as Element).tagName.toLowerCase() === 'template'
+      (node as Element).tagName === 'TEMPLATE'
     )
   }
 
@@ -916,7 +938,10 @@ function resolveCssVars(
   ) {
     const cssVars = instance.getCssVars()
     for (const key in cssVars) {
-      expectedMap.set(`--${key}`, String(cssVars[key]))
+      expectedMap.set(
+        `--${getEscapedCssVarName(key, false)}`,
+        String(cssVars[key]),
+      )
     }
   }
   if (vnode === root && instance.parent) {

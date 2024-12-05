@@ -14,11 +14,14 @@ const props = defineProps<{
   store: ReplStore
   prod: boolean
   ssr: boolean
+  autoSave: boolean
+  theme: 'dark' | 'light'
 }>()
 const emit = defineEmits([
   'toggle-theme',
   'toggle-ssr',
   'toggle-prod',
+  'toggle-autosave',
   'reload-page',
 ])
 
@@ -43,6 +46,7 @@ function resetVueVersion() {
 
 async function copyLink(e: MouseEvent) {
   if (e.metaKey) {
+    resetVueVersion()
     // hidden logic for going to local debug from play.vuejs.org
     window.location.href = 'http://localhost:5173/' + window.location.hash
     return
@@ -107,7 +111,19 @@ function toggleDark() {
       >
         <span>{{ ssr ? 'SSR ON' : 'SSR OFF' }}</span>
       </button>
-      <button title="Toggle dark mode" class="toggle-dark" @click="toggleDark">
+      <button
+        title="Toggle editor auto save mode"
+        class="toggle-autosave"
+        :class="{ enabled: autoSave }"
+        @click="$emit('toggle-autosave')"
+      >
+        <span>{{ autoSave ? 'AutoSave ON' : 'AutoSave OFF' }}</span>
+      </button>
+      <button
+        :title="`Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`"
+        class="toggle-dark"
+        @click="toggleDark"
+      >
         <Sun class="light" />
         <Moon class="dark" />
       </button>
@@ -199,7 +215,8 @@ h1 img {
 }
 
 .toggle-prod span,
-.toggle-ssr span {
+.toggle-ssr span,
+.toggle-autosave span {
   font-size: 12px;
   border-radius: 4px;
   padding: 4px 6px;
@@ -214,11 +231,13 @@ h1 img {
   background: var(--purple);
 }
 
-.toggle-ssr span {
+.toggle-ssr span,
+.toggle-autosave span {
   background-color: var(--btn-bg);
 }
 
-.toggle-ssr.enabled span {
+.toggle-ssr.enabled span,
+.toggle-autosave.enabled span {
   color: #fff;
   background-color: var(--green);
 }

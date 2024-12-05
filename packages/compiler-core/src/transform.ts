@@ -23,7 +23,6 @@ import {
 import {
   EMPTY_OBJ,
   NOOP,
-  PatchFlagNames,
   PatchFlags,
   camelize,
   capitalize,
@@ -117,7 +116,7 @@ export interface TransformContext
   addIdentifiers(exp: ExpressionNode | string): void
   removeIdentifiers(exp: ExpressionNode | string): void
   hoist(exp: string | JSChildNode | ArrayExpression): SimpleExpressionNode
-  cache(exp: JSChildNode, isVNode?: boolean): CacheExpression
+  cache(exp: JSChildNode, isVNode?: boolean, inVOnce?: boolean): CacheExpression
   constantCache: WeakMap<TemplateChildNode, ConstantTypes>
 
   // 2.x Compat only
@@ -298,11 +297,12 @@ export function createTransformContext(
       identifier.hoisted = exp
       return identifier
     },
-    cache(exp, isVNode = false) {
+    cache(exp, isVNode = false, inVOnce = false) {
       const cacheExp = createCacheExpression(
         context.cached.length,
         exp,
         isVNode,
+        inVOnce,
       )
       context.cached.push(cacheExp)
       return cacheExp
@@ -375,7 +375,6 @@ function createRootCodegen(root: RootNode, context: TransformContext) {
   } else if (children.length > 1) {
     // root has multiple nodes - return a fragment block.
     let patchFlag = PatchFlags.STABLE_FRAGMENT
-    let patchFlagText = PatchFlagNames[PatchFlags.STABLE_FRAGMENT]
     // check if the fragment actually contains a single valid child with
     // the rest being comments
     if (
@@ -383,7 +382,6 @@ function createRootCodegen(root: RootNode, context: TransformContext) {
       children.filter(c => c.type !== NodeTypes.COMMENT).length === 1
     ) {
       patchFlag |= PatchFlags.DEV_ROOT_FRAGMENT
-      patchFlagText += `, ${PatchFlagNames[PatchFlags.DEV_ROOT_FRAGMENT]}`
     }
     root.codegenNode = createVNodeCall(
       context,

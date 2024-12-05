@@ -31,7 +31,28 @@ export async function expectByPolling(
   }
 }
 
-export function setupPuppeteer(args?: string[]) {
+interface PuppeteerUtils {
+  page: () => Page
+  click(selector: string, options?: ClickOptions): Promise<void>
+  count(selector: string): Promise<number>
+  text(selector: string): Promise<string | null>
+  value(selector: string): Promise<string>
+  html(selector: string): Promise<string>
+  classList(selector: string): Promise<string[]>
+  style(selector: string, property: keyof CSSStyleDeclaration): Promise<any>
+  children(selector: string): Promise<any[]>
+  isVisible(selector: string): Promise<boolean>
+  isChecked(selector: string): Promise<boolean>
+  isFocused(selector: string): Promise<boolean>
+  setValue(selector: string, value: string): Promise<any>
+  typeValue(selector: string, value: string): Promise<any>
+  enterValue(selector: string, value: string): Promise<any>
+  clearValue(selector: string): Promise<any>
+  timeout(time: number): Promise<any>
+  nextFrame(): Promise<any>
+}
+
+export function setupPuppeteer(args?: string[]): PuppeteerUtils {
   let browser: Browser
   let page: Page
 
@@ -69,35 +90,51 @@ export function setupPuppeteer(args?: string[]) {
     await browser.close()
   })
 
-  async function click(selector: string, options?: ClickOptions) {
+  async function click(
+    selector: string,
+    options?: ClickOptions,
+  ): Promise<void> {
     await page.click(selector, options)
   }
 
-  async function count(selector: string) {
+  async function count(selector: string): Promise<number> {
     return (await page.$$(selector)).length
   }
 
-  async function text(selector: string) {
-    return await page.$eval(selector, node => node.textContent)
+  async function text(selector: string): Promise<string | null> {
+    return page.$eval(selector, node => node.textContent)
   }
 
-  async function value(selector: string) {
-    return await page.$eval(selector, node => (node as HTMLInputElement).value)
+  async function value(selector: string): Promise<string> {
+    return page.$eval(selector, node => (node as HTMLInputElement).value)
   }
 
-  async function html(selector: string) {
-    return await page.$eval(selector, node => node.innerHTML)
+  async function html(selector: string): Promise<string> {
+    return page.$eval(selector, node => node.innerHTML)
   }
 
-  async function classList(selector: string) {
-    return await page.$eval(selector, (node: any) => [...node.classList])
+  async function classList(selector: string): Promise<string[]> {
+    return page.$eval(selector, (node: any) => [...node.classList])
   }
 
-  async function children(selector: string) {
-    return await page.$eval(selector, (node: any) => [...node.children])
+  async function children(selector: string): Promise<any[]> {
+    return page.$eval(selector, (node: any) => [...node.children])
   }
 
-  async function isVisible(selector: string) {
+  async function style(
+    selector: string,
+    property: keyof CSSStyleDeclaration,
+  ): Promise<any> {
+    return await page.$eval(
+      selector,
+      (node, property) => {
+        return window.getComputedStyle(node)[property]
+      },
+      property,
+    )
+  }
+
+  async function isVisible(selector: string): Promise<boolean> {
     const display = await page.$eval(selector, node => {
       return window.getComputedStyle(node).display
     })
@@ -172,6 +209,7 @@ export function setupPuppeteer(args?: string[]) {
     value,
     html,
     classList,
+    style,
     children,
     isVisible,
     isChecked,
