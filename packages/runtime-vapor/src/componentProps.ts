@@ -1,4 +1,4 @@
-import { EMPTY_ARR, NO, hasOwn, isFunction } from '@vue/shared'
+import { EMPTY_ARR, NO, YES, hasOwn, isFunction } from '@vue/shared'
 import type { VaporComponent, VaporComponentInstance } from './component'
 import {
   type NormalizedPropsOptions,
@@ -35,6 +35,11 @@ export function getPropsProxyHandlers(
   const propsOptions = normalizePropsOptions(comp)[0]
   const emitsOptions = normalizeEmitsOptions(comp)
   const isProp = propsOptions ? (key: string) => hasOwn(propsOptions, key) : NO
+  const isAttr = propsOptions
+    ? (key: string) =>
+        key !== '$' && !isProp(key) && !isEmitListener(emitsOptions, key)
+    : YES
+
   const castProp = propsOptions
     ? (value: any, key: string, isAbsent = false) =>
         resolvePropValue(
@@ -53,10 +58,6 @@ export function getPropsProxyHandlers(
     } else if (isProp(key) || isEmitListener(emitsOptions, key)) {
       return
     }
-
-    if (key in target) {
-      return castProp(target[key as string](), key)
-    }
     const dynamicSources = target.$
     if (dynamicSources) {
       let i = dynamicSources.length
@@ -69,6 +70,9 @@ export function getPropsProxyHandlers(
           return castProp(isDynamic ? source[key] : source[key](), key)
         }
       }
+    }
+    if (key in target) {
+      return castProp(target[key as string](), key)
     }
     return castProp(undefined, key, true)
   }
@@ -93,19 +97,20 @@ export function getPropsProxyHandlers(
     : null
 
   const hasAttr = (target: RawProps, key: string) => {
-    if (key === '$' || isProp(key) || isEmitListener(emitsOptions, key)) {
-      return false
-    }
-    const dynamicSources = target.$
-    if (dynamicSources) {
-      let i = dynamicSources.length
-      while (i--) {
-        if (hasOwn(resolveSource(dynamicSources[i]), key)) {
-          return true
+    if (isAttr(key)) {
+      const dynamicSources = target.$
+      if (dynamicSources) {
+        let i = dynamicSources.length
+        while (i--) {
+          if (hasOwn(resolveSource(dynamicSources[i]), key)) {
+            return true
+          }
         }
       }
+      return hasOwn(target, key)
+    } else {
+      return false
     }
-    return hasOwn(target, key)
   }
 
   const attrsHandlers = {
@@ -123,15 +128,22 @@ export function getPropsProxyHandlers(
       }
     },
     ownKeys(target) {
-      const keys = Object.keys(target)
+      const keys: string[] = []
+      for (const key in target) {
+        if (isAttr(key)) keys.push(key)
+      }
       const dynamicSources = target.$
       if (dynamicSources) {
         let i = dynamicSources.length
+        let source
         while (i--) {
-          keys.push(...Object.keys(resolveSource(dynamicSources[i])))
+          source = resolveSource(dynamicSources[i])
+          for (const key in source) {
+            if (isAttr(key)) keys.push(key)
+          }
         }
       }
-      return keys.filter(key => hasAttr(target, key))
+      return Array.from(new Set(keys))
     },
     set: NO,
     deleteProperty: NO,

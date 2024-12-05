@@ -8,6 +8,11 @@ export const EMPTY_ARR: readonly never[] = __DEV__ ? Object.freeze([]) : []
 export const NOOP = (): void => {}
 
 /**
+ * Always return true.
+ */
+export const YES = () => true
+
+/**
  * Always return false.
  */
 export const NO = () => false
