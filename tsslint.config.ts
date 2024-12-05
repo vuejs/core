@@ -78,6 +78,7 @@ export default defineConfig([
       ],
       '@typescript-eslint/await-thenable': 'error',
       '@typescript-eslint/require-await': 'error',
+      '@typescript-eslint/consistent-type-exports': 'error',
     }),
   },
 
