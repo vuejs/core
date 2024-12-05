@@ -611,7 +611,7 @@ const methodsToPatch = [
   'reverse',
 ]
 
-const patched = new WeakSet<object>()
+const patched = new WeakSet()
 
 function defineReactive(obj: any, key: string, val: any) {
   // it's possible for the original object to be mutated after being defined

@@ -84,7 +84,7 @@ let activeWatcher: ReactiveEffect | undefined = undefined
 /**
  * Returns the current active effect if there is one.
  */
-export function getCurrentWatcher(): ReactiveEffect<any> | undefined {
+export function getCurrentWatcher(): ReactiveEffect | undefined {
   return activeWatcher
 }
 
