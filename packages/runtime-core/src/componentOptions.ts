@@ -322,7 +322,7 @@ export interface MethodOptions {
   [key: string]: Function
 }
 
-export type ExtractComputedReturns<T extends any> = {
+export type ExtractComputedReturns<T> = {
   [key in keyof T]: T[key] extends { get: (...args: any[]) => infer TReturn }
     ? TReturn
     : T[key] extends (...args: any[]) => infer TReturn

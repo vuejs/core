@@ -11,13 +11,15 @@ const banConstEnum = {
     'Please use non-const enums. This project automatically inlines enums.',
 }
 
-const enableTypeAwareRules =
+const typeAwareRulesSeverity =
   process.argv.includes('--type-aware-rules') ||
   process.argv.includes('--useNodeIpc') // In IDE
+    ? 'error'
+    : 'off'
 
 export default defineConfig([
   {
-    plugins: [createDisableNextLinePlugin(enableTypeAwareRules)],
+    plugins: [createDisableNextLinePlugin(typeAwareRulesSeverity === 'error')],
     rules: convertConfig({
       'no-debugger': 'error',
       'no-console': ['error', { allow: ['warn', 'error', 'info'] }],
@@ -70,16 +72,18 @@ export default defineConfig([
       ],
       // Enforce the use of top-level import type qualifier when an import only has specifiers with inline type qualifiers
       '@typescript-eslint/no-import-type-side-effects': 'error',
+      '@typescript-eslint/no-unnecessary-type-constraint': 'error',
 
       // Type-aware rules
+      '@typescript-eslint/await-thenable': typeAwareRulesSeverity,
+      '@typescript-eslint/require-await': typeAwareRulesSeverity,
+      '@typescript-eslint/consistent-type-exports': typeAwareRulesSeverity,
+      '@typescript-eslint/no-unnecessary-type-arguments':
+        typeAwareRulesSeverity,
       '@typescript-eslint/no-unnecessary-type-assertion': [
-        enableTypeAwareRules ? 'error' : 'off',
+        typeAwareRulesSeverity,
         { typesToIgnore: ['any'] },
       ],
-      '@typescript-eslint/await-thenable': 'error',
-      '@typescript-eslint/require-await': 'error',
-      '@typescript-eslint/consistent-type-exports': 'error',
-      '@typescript-eslint/no-unnecessary-type-arguments': 'error',
     }),
   },
 
