@@ -17,6 +17,9 @@ export default defineConfig({
   plugins: [
     Vue({
       compiler: CompilerSFC,
+      features: {
+        optionsAPI: false,
+      },
     }),
   ],
 })
