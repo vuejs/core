@@ -3,7 +3,7 @@ import { renderToString } from '../src/renderToString'
 
 describe('SSR Suspense', () => {
   const ResolvingAsync = {
-    setup() {
+    async setup() {
       return () => h('div', 'async')
     },
   }

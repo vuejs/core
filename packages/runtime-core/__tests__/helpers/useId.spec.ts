@@ -250,7 +250,7 @@ describe('useId', () => {
         },
       }
       const Three = {
-        setup() {
+        async setup() {
           const id = useId()
           return () => id
         },

@@ -122,7 +122,7 @@ describe('component: emit', () => {
     expect(barSpy).toHaveBeenCalled()
   })
 
-  test('should trigger array of listeners', () => {
+  test('should trigger array of listeners', async () => {
     const Child = defineComponent({
       setup(_, { emit }) {
         emit('foo', 1)
@@ -548,7 +548,7 @@ describe('component: emit', () => {
     expect(fn).not.toHaveBeenCalled()
   })
 
-  test('merge string array emits', () => {
+  test('merge string array emits', async () => {
     const ComponentA = defineComponent({
       emits: ['one', 'two'],
     })
@@ -569,7 +569,7 @@ describe('component: emit', () => {
     expect(renderFn).toHaveBeenCalledTimes(1)
   })
 
-  test('merge object emits', () => {
+  test('merge object emits', async () => {
     const twoFn = vi.fn((v: unknown) => !v)
     const ComponentA = defineComponent({
       emits: {

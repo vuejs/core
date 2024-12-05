@@ -232,7 +232,7 @@ describe('KeepAlive', () => {
   })
 
   // #1742
-  test('should call lifecycle hooks on nested components when root component no hooks', () => {
+  test('should call lifecycle hooks on nested components when root component no hooks', async () => {
     const two = {
       name: 'two',
       data: () => ({ msg: 'two' }),
@@ -1039,7 +1039,7 @@ describe('KeepAlive', () => {
 
     const Child = {
       setup() {
-        onActivated(() => {
+        onActivated(async () => {
           throw err
         })
       },

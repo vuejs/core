@@ -122,7 +122,7 @@ describe('api: options', () => {
     expect(serializeInner(root)).toBe(`<div>4</div>`)
   })
 
-  test("component's own methods have higher priority than global properties", () => {
+  test("component's own methods have higher priority than global properties", async () => {
     const app = createApp({
       methods: {
         foo() {
@@ -995,7 +995,7 @@ describe('api: options', () => {
     ])
   })
 
-  test('flatten merged options', () => {
+  test('flatten merged options', async () => {
     const MixinBase = {
       msg1: 'base',
     }
@@ -1031,7 +1031,7 @@ describe('api: options', () => {
     expect(root.innerHTML).toBe(`<h1>Foo</h1>`)
   })
 
-  test('options defined in component have higher priority', () => {
+  test('options defined in component have higher priority', async () => {
     const Mixin = {
       msg1: 'base',
     }

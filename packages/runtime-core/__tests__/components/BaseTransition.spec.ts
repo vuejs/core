@@ -519,15 +519,15 @@ describe('BaseTransition', () => {
       })
     }
 
-    test('w/ elements', () => {
+    test('w/ elements', async () => {
       runTestWithElements(testToggleBranches)
     })
 
-    test('w/ components', () => {
+    test('w/ components', async () => {
       runTestWithComponents(testToggleBranches)
     })
 
-    test('w/ KeepAlive', () => {
+    test('w/ KeepAlive', async () => {
       runTestWithKeepAlive(testToggleBranches)
     })
   })
@@ -652,15 +652,15 @@ describe('BaseTransition', () => {
       })
     }
 
-    test('w/ elements', () => {
+    test('w/ elements', async () => {
       runTestWithElements(testToggleBranchesBeforeFinish)
     })
 
-    test('w/ components', () => {
+    test('w/ components', async () => {
       runTestWithComponents(testToggleBranchesBeforeFinish)
     })
 
-    test('w/ KeepAlive', () => {
+    test('w/ KeepAlive', async () => {
       runTestWithKeepAlive(testToggleBranchesBeforeFinish)
     })
   })
@@ -757,15 +757,15 @@ describe('BaseTransition', () => {
       })
     }
 
-    test('w/ elements', () => {
+    test('w/ elements', async () => {
       runTestWithElements(testOutIn)
     })
 
-    test('w/ components', () => {
+    test('w/ components', async () => {
       runTestWithComponents(testOutIn)
     })
 
-    test('w/ KeepAlive', () => {
+    test('w/ KeepAlive', async () => {
       runTestWithKeepAlive(testOutIn)
     })
   })
@@ -839,15 +839,15 @@ describe('BaseTransition', () => {
       })
     }
 
-    test('w/ elements', () => {
+    test('w/ elements', async () => {
       runTestWithElements(testOutIn)
     })
 
-    test('w/ components', () => {
+    test('w/ components', async () => {
       runTestWithComponents(testOutIn)
     })
 
-    test('w/ KeepAlive', () => {
+    test('w/ KeepAlive', async () => {
       runTestWithKeepAlive(testOutIn)
     })
   })
@@ -911,15 +911,15 @@ describe('BaseTransition', () => {
       })
     }
 
-    test('w/ elements', () => {
+    test('w/ elements', async () => {
       runTestWithElements(testOutInBeforeFinish)
     })
 
-    test('w/ components', () => {
+    test('w/ components', async () => {
       runTestWithComponents(testOutInBeforeFinish)
     })
 
-    test('w/ KeepAlive', () => {
+    test('w/ KeepAlive', async () => {
       runTestWithKeepAlive(testOutInBeforeFinish)
     })
   })
@@ -989,15 +989,15 @@ describe('BaseTransition', () => {
       })
     }
 
-    test('w/ elements', () => {
+    test('w/ elements', async () => {
       runTestWithElements(testOutInDoubleToggle)
     })
 
-    test('w/ components', () => {
+    test('w/ components', async () => {
       runTestWithComponents(testOutInDoubleToggle)
     })
 
-    test('w/ KeepAlive', () => {
+    test('w/ KeepAlive', async () => {
       runTestWithKeepAlive(testOutInDoubleToggle)
     })
   })
@@ -1093,15 +1093,15 @@ describe('BaseTransition', () => {
       })
     }
 
-    test('w/ elements', () => {
+    test('w/ elements', async () => {
       runTestWithElements(testInOut)
     })
 
-    test('w/ components', () => {
+    test('w/ components', async () => {
       runTestWithComponents(testInOut)
     })
 
-    test('w/ KeepAlive', () => {
+    test('w/ KeepAlive', async () => {
       runTestWithKeepAlive(testInOut)
     })
   })
@@ -1181,15 +1181,15 @@ describe('BaseTransition', () => {
       })
     }
 
-    test('w/ elements', () => {
+    test('w/ elements', async () => {
       runTestWithElements(testInOutBeforeFinish)
     })
 
-    test('w/ components', () => {
+    test('w/ components', async () => {
       runTestWithComponents(testInOutBeforeFinish)
     })
 
-    test('w/ KeepAlive', () => {
+    test('w/ KeepAlive', async () => {
       runTestWithKeepAlive(testInOutBeforeFinish)
     })
   })

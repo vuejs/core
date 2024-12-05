@@ -19,7 +19,7 @@ afterEach(() => {
 })
 
 describe('COMPONENT_FUNCTIONAL', () => {
-  test('basic usage', () => {
+  test('basic usage', async () => {
     const func = {
       name: 'Func',
       functional: true,

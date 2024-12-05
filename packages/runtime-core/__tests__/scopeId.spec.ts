@@ -132,7 +132,7 @@ describe('scopeId runtime support', () => {
   })
 
   // #2892
-  test(':slotted on forwarded slots', () => {
+  test(':slotted on forwarded slots', async () => {
     const Wrapper = {
       __scopeId: 'wrapper',
       render(this: any) {
@@ -390,7 +390,7 @@ describe('backwards compat with <=3.0.7', () => {
     expect(serializeInner(root)).toBe(`<div parent></div>`)
   })
 
-  test('hoisted nodes', () => {
+  test('hoisted nodes', async () => {
     pushScopeId('foobar')
     const hoisted = h('div', 'hello')
     popScopeId()

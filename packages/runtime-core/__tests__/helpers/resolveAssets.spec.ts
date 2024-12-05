@@ -65,7 +65,7 @@ describe('resolveAssets', () => {
     expect(directive4!).toBe(BarBaz)
   })
 
-  test('maybeSelfReference', () => {
+  test('maybeSelfReference', async () => {
     let component1: Component | string
     let component2: Component | string
     let component3: Component | string

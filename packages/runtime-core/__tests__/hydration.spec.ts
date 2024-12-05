@@ -71,7 +71,7 @@ describe('SSR hydration', () => {
     expect(container.textContent).toBe('bar')
   })
 
-  test('empty text', () => {
+  test('empty text', async () => {
     const { container } = mountWithHydration('<div></div>', () =>
       h('div', createTextVNode('')),
     )
@@ -151,7 +151,7 @@ describe('SSR hydration', () => {
   })
 
   // #7285
-  test('element with multiple continuous text vnodes', () => {
+  test('element with multiple continuous text vnodes', async () => {
     // should no mismatch warning
     const { container } = mountWithHydration('<div>foo0o</div>', () =>
       h('div', ['fo', createTextVNode('o'), 0, 'o']),
@@ -251,7 +251,7 @@ describe('SSR hydration', () => {
   })
 
   // #7285
-  test('Fragment (multiple continuous text vnodes)', () => {
+  test('Fragment (multiple continuous text vnodes)', async () => {
     // should no mismatch warning
     const { container } = mountWithHydration('<!--[-->fooo<!--]-->', () => [
       'fo',
@@ -882,7 +882,7 @@ describe('SSR hydration', () => {
 
   test('Suspense', async () => {
     const AsyncChild = {
-      setup() {
+      async setup() {
         const count = ref(0)
         return () =>
           h(

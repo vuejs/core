@@ -284,7 +284,7 @@ describe('component props', () => {
   })
 
   describe('validator', () => {
-    test('validator should be called with two arguments', () => {
+    test('validator should be called with two arguments', async () => {
       const mockFn = vi.fn((...args: any[]) => true)
       const Comp = defineComponent({
         props: {
@@ -306,7 +306,7 @@ describe('component props', () => {
       expect(mockFn).toHaveBeenCalledWith(1, { foo: 1, bar: 2 })
     })
 
-    test('validator should not be able to mutate other props', () => {
+    test('validator should not be able to mutate other props', async () => {
       const mockFn = vi.fn((...args: any[]) => true)
       const Comp = defineComponent({
         props: {
@@ -462,7 +462,7 @@ describe('component props', () => {
   })
 
   // #3495
-  test('should not warn required props using kebab-case', () => {
+  test('should not warn required props using kebab-case', async () => {
     const Comp = {
       props: {
         fooBar: { type: String, required: true },

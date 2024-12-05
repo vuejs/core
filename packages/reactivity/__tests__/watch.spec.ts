@@ -116,7 +116,7 @@ describe('watch', () => {
     ])
   })
 
-  test('watch with onWatcherCleanup', () => {
+  test('watch with onWatcherCleanup', async () => {
     let dummy = 0
     let source: Ref<number>
     const scope = new EffectScope()
@@ -195,7 +195,7 @@ describe('watch', () => {
     expect(calls).toEqual(['sync 2', 'post 2'])
   })
 
-  test('once option should be ignored by simple watch', () => {
+  test('once option should be ignored by simple watch', async () => {
     let dummy: any
     const source = ref(0)
     watch(

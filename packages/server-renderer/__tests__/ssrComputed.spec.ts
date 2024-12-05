@@ -15,14 +15,14 @@ test('computed reactivity during SSR', async () => {
     state: reactive({ items: null }) as any,
 
     // pretend to fetch some data from an api
-    fetchData() {
+    async fetchData() {
       this.state.items = ['hello', 'world']
     },
   }
 
   const getterSpy = vi.fn()
 
-  const App = defineComponent(() => {
+  const App = defineComponent(async () => {
     const msg = computed(() => {
       getterSpy()
       return store.state.items?.join(' ')
@@ -31,7 +31,7 @@ test('computed reactivity during SSR', async () => {
     // If msg value is falsy then we are either in ssr context or on the client
     // and the initial state was not modified/hydrated.
     // In both cases we need to fetch data.
-    if (!msg.value) store.fetchData()
+    if (!msg.value) await store.fetchData()
 
     return () => h('div', null, msg.value + msg.value + msg.value)
   })
@@ -49,7 +49,7 @@ test('computed reactivity during SSR', async () => {
 // although we technically shouldn't allow state mutation during render,
 // it does sometimes happen
 test('computed mutation during render', async () => {
-  const App = defineComponent(() => {
+  const App = defineComponent(async () => {
     const n = ref(0)
     const m = computed(() => n.value + 1)
 

@@ -59,7 +59,7 @@ describe('ssr: <slot>', () => {
       `)
   })
 
-  test('with scopeId', () => {
+  test('with scopeId', async () => {
     expect(
       compile(`<slot/>`, {
         scopeId: 'hello',
@@ -73,7 +73,7 @@ describe('ssr: <slot>', () => {
     `)
   })
 
-  test('with scopeId + slotted:false', () => {
+  test('with scopeId + slotted:false', async () => {
     expect(
       compile(`<slot/>`, {
         scopeId: 'hello',
@@ -88,7 +88,7 @@ describe('ssr: <slot>', () => {
     `)
   })
 
-  test('with forwarded scopeId', () => {
+  test('with forwarded scopeId', async () => {
     expect(
       compile(`<Comp><slot/></Comp>`, {
         scopeId: 'hello',

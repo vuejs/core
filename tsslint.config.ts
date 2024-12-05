@@ -76,7 +76,6 @@ export default defineConfig([
 
       // Type-aware rules
       '@typescript-eslint/await-thenable': typeAwareRulesSeverity,
-      '@typescript-eslint/require-await': typeAwareRulesSeverity,
       '@typescript-eslint/consistent-type-exports': typeAwareRulesSeverity,
       '@typescript-eslint/no-unnecessary-type-arguments':
         typeAwareRulesSeverity,

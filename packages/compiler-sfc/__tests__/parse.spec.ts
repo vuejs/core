@@ -302,7 +302,7 @@ h1 { color: red }
     expect(errors.length).toBe(0)
   })
 
-  test('slotted detection', () => {
+  test('slotted detection', async () => {
     expect(parse(`<template>hi</template>`).descriptor.slotted).toBe(false)
     expect(
       parse(`<template>hi</template><style>h1{color:red;}</style>`).descriptor

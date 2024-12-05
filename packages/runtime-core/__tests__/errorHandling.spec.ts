@@ -108,7 +108,7 @@ describe('error handling', () => {
 
     const Child = {
       setup() {
-        onMounted(() => {
+        onMounted(async () => {
           throw err
         })
       },
@@ -436,7 +436,7 @@ describe('error handling', () => {
         })
         return () =>
           h(Child, {
-            onFoo() {
+            async onFoo() {
               throw err
             },
           })
@@ -563,7 +563,7 @@ describe('error handling', () => {
         )
         watch(
           count,
-          () => {
+          async () => {
             throw error2
           },
           { immediate: true },
@@ -571,7 +571,7 @@ describe('error handling', () => {
         watchEffect(() => {
           throw error3
         })
-        watchEffect(() => {
+        watchEffect(async () => {
           throw error4
         })
       },

@@ -730,7 +730,7 @@ describe('Suspense', () => {
 
   test('error handling', async () => {
     const Async = {
-      setup() {
+      async setup() {
         throw new Error('oops')
       },
     }
@@ -768,7 +768,7 @@ describe('Suspense', () => {
   // #3857
   test('error handling w/ template optimization', async () => {
     const Async = {
-      setup() {
+      async setup() {
         throw new Error('oops')
       },
     }
@@ -1536,7 +1536,7 @@ describe('Suspense', () => {
   test('toggling nested async setup component inside already resolved suspense', async () => {
     const toggle = ref(false)
     const Child = {
-      setup() {
+      async setup() {
         return () => h('div', 'child')
       },
     }
@@ -1567,7 +1567,7 @@ describe('Suspense', () => {
   test('warn if using async setup when not in a Suspense boundary', () => {
     const Child = {
       name: 'Child',
-      setup() {
+      async setup() {
         return () => h('div', 'child')
       },
     }
@@ -2190,41 +2190,41 @@ describe('Suspense', () => {
     const checkWarn = baseCheckWarn.bind(null, true)
     const checkNoWarn = baseCheckWarn.bind(null, false)
 
-    test('does not warn on single child', () => {
+    test('does not warn on single child', async () => {
       checkNoWarn({
         default: h('div'),
         fallback: h('div'),
       })
     })
 
-    test('does not warn on null', () => {
+    test('does not warn on null', async () => {
       checkNoWarn({
         default: null,
         fallback: null,
       })
     })
 
-    test('does not warn on <component :is="null" />', () => {
+    test('does not warn on <component :is="null" />', async () => {
       checkNoWarn({
         default: () => [resolveDynamicComponent(null)],
         fallback: () => null,
       })
     })
 
-    test('does not warn on empty array', () => {
+    test('does not warn on empty array', async () => {
       checkNoWarn({
         default: [],
         fallback: () => [],
       })
     })
 
-    test('warns on multiple children in default', () => {
+    test('warns on multiple children in default', async () => {
       checkWarn({
         default: [h('div'), h('div')],
       })
     })
 
-    test('warns on multiple children in fallback', () => {
+    test('warns on multiple children in fallback', async () => {
       checkWarn({
         default: h('div'),
         fallback: [h('div'), h('div')],

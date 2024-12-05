@@ -1,9 +1,9 @@
 import type { PushFn } from '../render'
 
-export function ssrRenderSuspense(
+export async function ssrRenderSuspense(
   push: PushFn,
   { default: renderContent }: Record<string, (() => void) | undefined>,
-): void {
+): Promise<void> {
   if (renderContent) {
     renderContent()
   } else {

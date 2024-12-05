@@ -223,7 +223,7 @@ describe('defineCustomElement', () => {
       expect(e.getAttribute('baz-qux')).toBe('four')
     })
 
-    test('props via hyphen property', () => {
+    test('props via hyphen property', async () => {
       const Comp = defineCustomElement({
         props: {
           fooBar: Boolean,
@@ -570,7 +570,7 @@ describe('defineCustomElement', () => {
       })
     })
 
-    test('emit with options', () => {
+    test('emit with options', async () => {
       container.innerHTML = `<my-el-emits></my-el-emits>`
       const e = container.childNodes[0] as VueElement
       const spy = vi.fn()

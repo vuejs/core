@@ -400,7 +400,7 @@ describe('directives', () => {
     expect(count.value).toBe(1)
   })
 
-  test('should receive exposeProxy for closed instances', () => {
+  test('should receive exposeProxy for closed instances', async () => {
     let res: string
     const App = defineComponent({
       setup(_, { expose }) {
@@ -425,7 +425,7 @@ describe('directives', () => {
     expect(res!).toBe('Test')
   })
 
-  test('should not throw with unknown directive', () => {
+  test('should not throw with unknown directive', async () => {
     const d1 = {
       mounted: vi.fn(),
     }

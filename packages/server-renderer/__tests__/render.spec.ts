@@ -322,7 +322,7 @@ function testRender(type: string, render: typeof renderToString) {
       test('async components', async () => {
         const Child = {
           // should wait for resolved render context from setup()
-          setup() {
+          async setup() {
             return {
               msg: 'hello',
             }
@@ -348,7 +348,7 @@ function testRender(type: string, render: typeof renderToString) {
       test('parallel async components', async () => {
         const OptimizedChild = {
           props: ['msg'],
-          setup(props: any) {
+          async setup(props: any) {
             return {
               localMsg: props.msg + '!',
             }
@@ -360,7 +360,7 @@ function testRender(type: string, render: typeof renderToString) {
 
         const VNodeChild = {
           props: ['msg'],
-          setup(props: any) {
+          async setup(props: any) {
             return {
               localMsg: props.msg + '!',
             }
@@ -1158,7 +1158,7 @@ function testRender(type: string, render: typeof renderToString) {
 
       const Child = {
         setup() {
-          onServerPrefetch(() => {
+          onServerPrefetch(async () => {
             throw new Error('An error')
           })
         },
@@ -1194,7 +1194,7 @@ function testRender(type: string, render: typeof renderToString) {
         state: reactive({ items: null as null | string[] }),
 
         // pretend to fetch some data from an api
-        fetchData() {
+        async fetchData() {
           this.state.items = ['hello', 'world']
         },
       }
