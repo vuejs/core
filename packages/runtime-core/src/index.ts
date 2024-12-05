@@ -507,3 +507,4 @@ export {
   type AppMountFn,
   type AppUnmountFn,
 } from './apiCreateApp'
+export { currentInstance, setCurrentInstance } from './componentCurrentInstance'

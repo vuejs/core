@@ -1,6 +1,5 @@
 import { ReactiveEffect } from '@vue/reactivity'
-import { type SchedulerJob, queueJob } from '@vue/runtime-dom'
-import { currentInstance } from './component'
+import { type SchedulerJob, currentInstance, queueJob } from '@vue/runtime-dom'
 
 export function renderEffect(fn: () => void): void {
   const updateFn = () => {

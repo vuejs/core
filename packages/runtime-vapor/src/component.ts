@@ -9,9 +9,11 @@ import {
   type LifecycleHook,
   type NormalizedPropsOptions,
   type ObjectEmitsOptions,
+  currentInstance,
   nextUid,
   popWarningContext,
   pushWarningContext,
+  setCurrentInstance,
   warn,
 } from '@vue/runtime-dom'
 import { type Block, isBlock } from './block'
@@ -27,6 +29,8 @@ import {
 import { setDynamicProp } from './dom/prop'
 import { renderEffect } from './renderEffect'
 import { emit, normalizeEmitsOptions } from './componentEmits'
+
+export { currentInstance } from '@vue/runtime-dom'
 
 export type VaporComponent = FunctionalVaporComponent | ObjectVaporComponent
 
@@ -77,7 +81,11 @@ export function createComponent(
 ): VaporComponentInstance {
   // check if we are the single root of the parent
   // if yes, inject parent attrs as dynamic props source
-  if (isSingleRoot && currentInstance && currentInstance.hasFallthrough) {
+  if (
+    isSingleRoot &&
+    isVaporComponent(currentInstance) &&
+    currentInstance.hasFallthrough
+  ) {
     const attrs = currentInstance.attrs
     if (rawProps) {
       ;(rawProps.$ || (rawProps.$ = [])).push(() => attrs)
@@ -87,12 +95,9 @@ export function createComponent(
   }
 
   const instance = new VaporComponentInstance(component, rawProps)
+  const resetCurrentInstance = setCurrentInstance(instance)
 
   pauseTracking()
-  let prevInstance = currentInstance
-  currentInstance = instance
-  instance.scope.on()
-
   if (__DEV__) {
     pushWarningContext(instance)
   }
@@ -140,14 +145,11 @@ export function createComponent(
   if (__DEV__) {
     popWarningContext()
   }
-
-  instance.scope.off()
-  currentInstance = prevInstance
   resetTracking()
+  resetCurrentInstance()
+
   return instance
 }
-
-export let currentInstance: VaporComponentInstance | null = null
 
 const emptyContext: GenericAppContext = {
   app: null as any,
@@ -156,6 +158,7 @@ const emptyContext: GenericAppContext = {
 }
 
 export class VaporComponentInstance implements GenericComponentInstance {
+  vapor: true
   uid: number
   type: VaporComponent
   parent: GenericComponentInstance | null
@@ -178,11 +181,25 @@ export class VaporComponentInstance implements GenericComponentInstance {
 
   hasFallthrough: boolean
 
+  // lifecycle hooks
   isMounted: boolean
   isUnmounted: boolean
   isDeactivated: boolean
-  // LifecycleHooks.ERROR_CAPTURED
-  ec: LifecycleHook
+
+  bc?: LifecycleHook // LifecycleHooks.BEFORE_CREATE
+  c?: LifecycleHook // LifecycleHooks.CREATED
+  bm?: LifecycleHook // LifecycleHooks.BEFORE_MOUNT
+  m?: LifecycleHook // LifecycleHooks.MOUNTED
+  bu?: LifecycleHook // LifecycleHooks.BEFORE_UPDATE
+  u?: LifecycleHook // LifecycleHooks.UPDATED
+  um?: LifecycleHook // LifecycleHooks.BEFORE_UNMOUNT
+  bum?: LifecycleHook // LifecycleHooks.UNMOUNTED
+  da?: LifecycleHook // LifecycleHooks.DEACTIVATED
+  a?: LifecycleHook // LifecycleHooks.ACTIVATED
+  rtg?: LifecycleHook // LifecycleHooks.RENDER_TRACKED
+  rtc?: LifecycleHook // LifecycleHooks.RENDER_TRIGGERED
+  ec?: LifecycleHook // LifecycleHooks.ERROR_CAPTURED
+  sp?: LifecycleHook<() => Promise<unknown>> // LifecycleHooks.SERVER_PREFETCH
 
   // dev only
   setupState?: Record<string, any>
@@ -190,9 +207,10 @@ export class VaporComponentInstance implements GenericComponentInstance {
   emitsOptions?: ObjectEmitsOptions | null
 
   constructor(comp: VaporComponent, rawProps?: RawProps) {
+    this.vapor = true
     this.uid = nextUid()
     this.type = comp
-    this.parent = currentInstance
+    this.parent = currentInstance // TODO when inside
     this.appContext = currentInstance
       ? currentInstance.appContext
       : emptyContext
@@ -200,14 +218,17 @@ export class VaporComponentInstance implements GenericComponentInstance {
     this.block = null! // to be set
     this.scope = new EffectScope(true)
 
-    this.rawProps = rawProps
-    this.provides = this.refs = EMPTY_OBJ
+    this.provides = currentInstance
+      ? currentInstance.provides
+      : Object.create(this.appContext.provides)
+    this.refs = EMPTY_OBJ
     this.emitted = this.ec = this.exposed = this.propsDefaults = null
     this.isMounted = this.isUnmounted = this.isDeactivated = false
 
     // init props
     const target = rawProps || EMPTY_OBJ
     const handlers = getPropsProxyHandlers(comp, this)
+    this.rawProps = rawProps
     this.props = comp.props ? new Proxy(target, handlers[0]!) : {}
     this.attrs = new Proxy(target, handlers[1])
     this.hasFallthrough = hasFallthroughAttrs(comp, rawProps)

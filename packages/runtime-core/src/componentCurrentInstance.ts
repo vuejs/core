@@ -1,18 +1,32 @@
 import { getGlobalThis } from '@vue/shared'
-import type { ComponentInternalInstance } from './component'
+import type {
+  ComponentInternalInstance,
+  GenericComponentInstance,
+} from './component'
 import { currentRenderingInstance } from './componentRenderContext'
 
-export let currentInstance: ComponentInternalInstance | null = null
+/**
+ * @internal
+ */
+export let currentInstance: GenericComponentInstance | null = null
+
+/**
+ * @internal
+ */
+export const getCurrentGenericInstance: () => GenericComponentInstance | null =
+  () => currentInstance || currentRenderingInstance
 
 export const getCurrentInstance: () => ComponentInternalInstance | null = () =>
-  currentInstance || currentRenderingInstance
+  currentInstance && !currentInstance.vapor
+    ? (currentInstance as ComponentInternalInstance)
+    : currentRenderingInstance
 
 export let isInSSRComponentSetup = false
 
 export let setInSSRSetupState: (state: boolean) => void
 
 let internalSetCurrentInstance: (
-  instance: ComponentInternalInstance | null,
+  instance: GenericComponentInstance | null,
 ) => void
 
 /**
@@ -60,7 +74,10 @@ if (__SSR__) {
   }
 }
 
-export const setCurrentInstance = (instance: ComponentInternalInstance) => {
+/**
+ * @internal
+ */
+export const setCurrentInstance = (instance: GenericComponentInstance) => {
   const prev = currentInstance
   internalSetCurrentInstance(instance)
   instance.scope.on()

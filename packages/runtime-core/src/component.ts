@@ -332,6 +332,7 @@ export type InternalRenderFunction = {
  * operate on both.
  */
 export interface GenericComponentInstance {
+  vapor?: boolean
   uid: number
   type: GenericComponent
   parent: GenericComponentInstance | null
@@ -395,10 +396,64 @@ export interface GenericComponentInstance {
 
   // the following are for error handling logic only
   proxy?: any
+
+  // lifecycle
   /**
    * @internal
    */
-  [LifecycleHooks.ERROR_CAPTURED]: LifecycleHook
+  [LifecycleHooks.BEFORE_CREATE]?: LifecycleHook
+  /**
+   * @internal
+   */
+  [LifecycleHooks.CREATED]?: LifecycleHook
+  /**
+   * @internal
+   */
+  [LifecycleHooks.BEFORE_MOUNT]?: LifecycleHook
+  /**
+   * @internal
+   */
+  [LifecycleHooks.MOUNTED]?: LifecycleHook
+  /**
+   * @internal
+   */
+  [LifecycleHooks.BEFORE_UPDATE]?: LifecycleHook
+  /**
+   * @internal
+   */
+  [LifecycleHooks.UPDATED]?: LifecycleHook
+  /**
+   * @internal
+   */
+  [LifecycleHooks.BEFORE_UNMOUNT]?: LifecycleHook
+  /**
+   * @internal
+   */
+  [LifecycleHooks.UNMOUNTED]?: LifecycleHook
+  /**
+   * @internal
+   */
+  [LifecycleHooks.RENDER_TRACKED]?: LifecycleHook
+  /**
+   * @internal
+   */
+  [LifecycleHooks.RENDER_TRIGGERED]?: LifecycleHook
+  /**
+   * @internal
+   */
+  [LifecycleHooks.ACTIVATED]?: LifecycleHook
+  /**
+   * @internal
+   */
+  [LifecycleHooks.DEACTIVATED]?: LifecycleHook
+  /**
+   * @internal
+   */
+  [LifecycleHooks.ERROR_CAPTURED]?: LifecycleHook
+  /**
+   * @internal
+   */
+  [LifecycleHooks.SERVER_PREFETCH]?: LifecycleHook<() => Promise<unknown>>
 }
 
 /**
@@ -406,6 +461,7 @@ export interface GenericComponentInstance {
  * useful for advanced external libraries and tools.
  */
 export interface ComponentInternalInstance extends GenericComponentInstance {
+  vapor?: never
   uid: number
   type: ConcreteComponent
   parent: ComponentInternalInstance | null
@@ -562,64 +618,6 @@ export interface ComponentInternalInstance extends GenericComponentInstance {
    * @internal
    */
   asyncResolved: boolean
-
-  // lifecycle
-  /**
-   * @internal
-   */
-  [LifecycleHooks.BEFORE_CREATE]: LifecycleHook
-  /**
-   * @internal
-   */
-  [LifecycleHooks.CREATED]: LifecycleHook
-  /**
-   * @internal
-   */
-  [LifecycleHooks.BEFORE_MOUNT]: LifecycleHook
-  /**
-   * @internal
-   */
-  [LifecycleHooks.MOUNTED]: LifecycleHook
-  /**
-   * @internal
-   */
-  [LifecycleHooks.BEFORE_UPDATE]: LifecycleHook
-  /**
-   * @internal
-   */
-  [LifecycleHooks.UPDATED]: LifecycleHook
-  /**
-   * @internal
-   */
-  [LifecycleHooks.BEFORE_UNMOUNT]: LifecycleHook
-  /**
-   * @internal
-   */
-  [LifecycleHooks.UNMOUNTED]: LifecycleHook
-  /**
-   * @internal
-   */
-  [LifecycleHooks.RENDER_TRACKED]: LifecycleHook
-  /**
-   * @internal
-   */
-  [LifecycleHooks.RENDER_TRIGGERED]: LifecycleHook
-  /**
-   * @internal
-   */
-  [LifecycleHooks.ACTIVATED]: LifecycleHook
-  /**
-   * @internal
-   */
-  [LifecycleHooks.DEACTIVATED]: LifecycleHook
-  /**
-   * @internal
-   */
-  [LifecycleHooks.ERROR_CAPTURED]: LifecycleHook
-  /**
-   * @internal
-   */
-  [LifecycleHooks.SERVER_PREFETCH]: LifecycleHook<() => Promise<unknown>>
 
   /**
    * For caching bound $forceUpdate on public proxy access
