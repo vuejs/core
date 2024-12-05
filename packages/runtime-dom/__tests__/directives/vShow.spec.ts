@@ -19,7 +19,7 @@ beforeEach(() => {
 })
 
 describe('runtime-dom: v-show directive', () => {
-  test('should check show value is truthy', async () => {
+  test('should check show value is truthy', () => {
     const component = defineComponent({
       data() {
         return { value: true }
@@ -35,7 +35,7 @@ describe('runtime-dom: v-show directive', () => {
     expect($div.style.display).toEqual('')
   })
 
-  test('should check show value is falsy', async () => {
+  test('should check show value is falsy', () => {
     const component = defineComponent({
       data() {
         return { value: false }

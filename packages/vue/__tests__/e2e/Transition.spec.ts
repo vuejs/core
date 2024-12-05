@@ -1682,7 +1682,7 @@ describe('e2e: Transition', () => {
           `,
             components: {
               Comp: {
-                async setup() {
+                setup() {
                   return () => h('div', { class: 'test' }, 'content')
                 },
               },
@@ -1821,12 +1821,12 @@ describe('e2e: Transition', () => {
         await page().evaluate(() => {
           const { createApp, shallowRef, h } = (window as any).Vue
           const One = {
-            async setup() {
+            setup() {
               return () => h('div', { class: 'test' }, 'one')
             },
           }
           const Two = {
-            async setup() {
+            setup() {
               return () => h('div', { class: 'test' }, 'two')
             },
           }
@@ -2033,12 +2033,12 @@ describe('e2e: Transition', () => {
         await page().evaluate(duration => {
           const { createApp, shallowRef, h } = (window as any).Vue
           const One = {
-            async setup() {
+            setup() {
               return () => h('div', { class: 'test' }, 'one')
             },
           }
           const Two = {
-            async setup() {
+            setup() {
               return () => h('div', { class: 'test' }, 'two')
             },
           }
@@ -2099,12 +2099,12 @@ describe('e2e: Transition', () => {
         await page().evaluate(duration => {
           const { createApp, shallowRef, h } = (window as any).Vue
           const One = {
-            async setup() {
+            setup() {
               return () => h('div', { class: 'test' }, 'one')
             },
           }
           const Two = {
-            async setup() {
+            setup() {
               return () => h('div', { class: 'test' }, 'two')
             },
           }
@@ -2950,7 +2950,7 @@ describe('e2e: Transition', () => {
 
     test(
       'warn invalid durations',
-      async () => {
+      () => {
         createApp({
           template: `
             <div id="container">
@@ -3035,7 +3035,7 @@ describe('e2e: Transition', () => {
     expect(await html('#container')).toBe('<!--v-if-->')
   })
 
-  test('warn when used on multiple elements', async () => {
+  test('warn when used on multiple elements', () => {
     createApp({
       render() {
         return h(Transition, null, {
@@ -3172,7 +3172,7 @@ describe('e2e: Transition', () => {
   )
 
   // https://github.com/vuejs/core/issues/12181#issuecomment-2414380955
-  describe('not leaking', async () => {
+  describe('not leaking', () => {
     test('switching VNodes', async () => {
       const client = await page().createCDPSession()
       await page().evaluate(async () => {

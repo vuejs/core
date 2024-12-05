@@ -59,7 +59,7 @@ describe('compiler sfc: rewriteDefault', () => {
     `)
   })
 
-  test('w/ comments', async () => {
+  test('w/ comments', () => {
     expect(rewriteDefault(`// export default\nexport default {}`, 'script'))
       .toMatchInlineSnapshot(`
       "// export default
@@ -113,7 +113,7 @@ describe('compiler sfc: rewriteDefault', () => {
     `)
   })
 
-  test(`export { default } from '...'`, async () => {
+  test(`export { default } from '...'`, () => {
     expect(
       rewriteDefault(`export { default, foo } from './index.js'`, 'script'),
     ).toMatchInlineSnapshot(`
@@ -196,7 +196,7 @@ describe('compiler sfc: rewriteDefault', () => {
     `)
   })
 
-  test('export default class', async () => {
+  test('export default class', () => {
     expect(rewriteDefault(`export default class Foo {}`, 'script'))
       .toMatchInlineSnapshot(`
         " class Foo {}
@@ -204,7 +204,7 @@ describe('compiler sfc: rewriteDefault', () => {
       `)
   })
 
-  test('export default class w/ comments', async () => {
+  test('export default class w/ comments', () => {
     expect(
       rewriteDefault(
         `// export default\nexport default class Foo {}`,
@@ -217,7 +217,7 @@ describe('compiler sfc: rewriteDefault', () => {
     `)
   })
 
-  test('export default class w/ comments 2', async () => {
+  test('export default class w/ comments 2', () => {
     expect(
       rewriteDefault(
         `export default {}\n` + `// export default class Foo {}`,
@@ -229,7 +229,7 @@ describe('compiler sfc: rewriteDefault', () => {
     `)
   })
 
-  test('export default class w/ comments 3', async () => {
+  test('export default class w/ comments 3', () => {
     expect(
       rewriteDefault(
         `/*\nexport default class Foo {}*/\n` + `export default class Bar {}`,
@@ -243,7 +243,7 @@ describe('compiler sfc: rewriteDefault', () => {
     `)
   })
 
-  test('@Component\nexport default class', async () => {
+  test('@Component\nexport default class', () => {
     expect(
       rewriteDefault(`@Component\nexport default class Foo {}`, 'script', [
         'decorators-legacy',
@@ -254,7 +254,7 @@ describe('compiler sfc: rewriteDefault', () => {
     `)
   })
 
-  test('@Component\nexport default class w/ comments', async () => {
+  test('@Component\nexport default class w/ comments', () => {
     expect(
       rewriteDefault(
         `// export default\n@Component\nexport default class Foo {}`,
@@ -268,7 +268,7 @@ describe('compiler sfc: rewriteDefault', () => {
     `)
   })
 
-  test('@Component\nexport default class w/ comments 2', async () => {
+  test('@Component\nexport default class w/ comments 2', () => {
     expect(
       rewriteDefault(
         `export default {}\n` + `// @Component\n// export default class Foo {}`,
@@ -281,7 +281,7 @@ describe('compiler sfc: rewriteDefault', () => {
     `)
   })
 
-  test('@Component\nexport default class w/ comments 3', async () => {
+  test('@Component\nexport default class w/ comments 3', () => {
     expect(
       rewriteDefault(
         `/*\n@Component\nexport default class Foo {}*/\n` +

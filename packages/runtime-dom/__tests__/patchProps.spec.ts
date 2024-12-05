@@ -159,7 +159,7 @@ describe('runtime-dom: props patching', () => {
     expect(root.innerHTML).toBe(`<div><del>baz</del></div>`)
   })
 
-  test('patch innerHTML porp w/ undefined value', async () => {
+  test('patch innerHTML porp w/ undefined value', () => {
     const root = document.createElement('div')
     render(h('div', { innerHTML: undefined }), root)
     expect(root.innerHTML).toBe(`<div></div>`)

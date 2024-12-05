@@ -168,7 +168,7 @@ describe(`runtime-dom: events patching`, () => {
   })
 
   // #2841
-  test('should patch event correctly in web-components', async () => {
+  test('should patch event correctly in web-components', () => {
     class TestElement extends HTMLElement {
       constructor() {
         super()

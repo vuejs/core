@@ -76,6 +76,8 @@ export default defineConfig([
         enableTypeAwareRules ? 'error' : 'off',
         { typesToIgnore: ['any'] },
       ],
+      '@typescript-eslint/await-thenable': 'error',
+      '@typescript-eslint/require-await': 'error',
     }),
   },
 

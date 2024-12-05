@@ -613,7 +613,7 @@ describe('useModel', () => {
     expect(compRender).toHaveBeenCalledTimes(3)
   })
 
-  test('set no change value', async () => {
+  test('set no change value', () => {
     let changeChildMsg!: (val: string) => void
 
     const setValue = vi.fn()

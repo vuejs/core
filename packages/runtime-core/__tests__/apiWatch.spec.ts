@@ -1055,7 +1055,7 @@ describe('api: watch', () => {
     expect(cb).toHaveBeenCalledTimes(2)
   })
 
-  it('immediate: triggers when initial value is null', async () => {
+  it('immediate: triggers when initial value is null', () => {
     const state = ref(null)
     const spy = vi.fn()
     watch(() => state.value, spy, { immediate: true })

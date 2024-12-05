@@ -719,7 +719,7 @@ describe('renderer: teleport', () => {
       expect(root.innerHTML).toBe('<!--v-if-->')
     })
 
-    test('accessing template refs inside teleport', async () => {
+    test('accessing template refs inside teleport', () => {
       const target = nodeOps.createElement('div')
       const tRef = ref()
       let tRefInMounted
