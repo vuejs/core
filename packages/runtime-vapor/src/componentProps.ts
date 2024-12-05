@@ -255,5 +255,5 @@ export function setupPropsValidation(instance: VaporComponentInstance): void {
       normalizePropsOptions(instance.type)[0]!,
     )
     popWarningContext()
-  })
+  }, true /* noLifecycle */)
 }

@@ -185,6 +185,7 @@ export class VaporComponentInstance implements GenericComponentInstance {
   isMounted: boolean
   isUnmounted: boolean
   isDeactivated: boolean
+  isUpdating: boolean
 
   bc?: LifecycleHook // LifecycleHooks.BEFORE_CREATE
   c?: LifecycleHook // LifecycleHooks.CREATED
@@ -223,7 +224,11 @@ export class VaporComponentInstance implements GenericComponentInstance {
       : Object.create(this.appContext.provides)
     this.refs = EMPTY_OBJ
     this.emitted = this.ec = this.exposed = this.propsDefaults = null
-    this.isMounted = this.isUnmounted = this.isDeactivated = false
+    this.isMounted =
+      this.isUnmounted =
+      this.isUpdating =
+      this.isDeactivated =
+        false
 
     // init props
     const target = rawProps || EMPTY_OBJ

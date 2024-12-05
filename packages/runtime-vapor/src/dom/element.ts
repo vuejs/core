@@ -12,9 +12,14 @@ export function insert(
   if (block instanceof Node) {
     parent.insertBefore(block, anchor)
   } else if (isVaporComponent(block)) {
-    if (block.bm) invokeArrayFns(block.bm)
-    insert(block.block, parent, anchor)
-    if (block.m) invokeArrayFns(block.m)
+    if (!block.isMounted) {
+      if (block.bm) invokeArrayFns(block.bm)
+      insert(block.block, parent, anchor)
+      if (block.m) invokeArrayFns(block.m)
+      block.isMounted = true
+    } else {
+      insert(block.block, parent, anchor)
+    }
   } else if (isArray(block)) {
     for (let i = 0; i < block.length; i++) {
       insert(block[i], parent, anchor)
