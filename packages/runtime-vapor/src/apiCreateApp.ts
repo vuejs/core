@@ -16,7 +16,7 @@ const mountApp: AppMountFn<ParentNode> = (app, container) => {
     container.textContent = ''
   }
   const instance = createComponent(app._component)
-  insert(instance.block, container)
+  insert(instance, container)
   return instance
 }
 

@@ -1,4 +1,4 @@
-import { isArray } from '@vue/shared'
+import { invokeArrayFns, isArray } from '@vue/shared'
 import { renderEffect } from '../renderEffect'
 import { setText } from './prop'
 import { type Block, normalizeBlock } from '../block'
@@ -12,7 +12,9 @@ export function insert(
   if (block instanceof Node) {
     parent.insertBefore(block, anchor)
   } else if (isVaporComponent(block)) {
+    if (block.bm) invokeArrayFns(block.bm)
     insert(block.block, parent, anchor)
+    if (block.m) invokeArrayFns(block.m)
   } else if (isArray(block)) {
     for (let i = 0; i < block.length; i++) {
       insert(block[i], parent, anchor)
