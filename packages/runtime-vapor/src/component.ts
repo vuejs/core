@@ -9,6 +9,7 @@ import {
   type LifecycleHook,
   type NormalizedPropsOptions,
   type ObjectEmitsOptions,
+  type SuspenseBoundary,
   currentInstance,
   nextUid,
   popWarningContext,
@@ -121,6 +122,7 @@ export function createComponent(
       )
       instance.block = []
     } else {
+      instance.setupState = setupResult
       instance.block = component.render.call(null, setupResult)
     }
   } else {
@@ -178,6 +180,10 @@ export class VaporComponentInstance implements GenericComponentInstance {
   refs: Record<string, any>
   // for provide / inject
   provides: Record<string, any>
+  // for useId
+  ids: [string, number, number]
+  // for suspense
+  suspense: SuspenseBoundary | null
 
   hasFallthrough: boolean
 
@@ -211,7 +217,7 @@ export class VaporComponentInstance implements GenericComponentInstance {
     this.vapor = true
     this.uid = nextUid()
     this.type = comp
-    this.parent = currentInstance // TODO when inside
+    this.parent = currentInstance // TODO proper parent source when inside vdom instance
     this.appContext = currentInstance
       ? currentInstance.appContext
       : emptyContext
@@ -223,7 +229,8 @@ export class VaporComponentInstance implements GenericComponentInstance {
       ? currentInstance.provides
       : Object.create(this.appContext.provides)
     this.refs = EMPTY_OBJ
-    this.emitted = this.ec = this.exposed = this.propsDefaults = null
+    this.ids = currentInstance ? currentInstance.ids : ['', 0, 0]
+    this.emitted = this.exposed = this.propsDefaults = this.suspense = null
     this.isMounted =
       this.isUnmounted =
       this.isUpdating =

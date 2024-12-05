@@ -2587,7 +2587,7 @@ function locateNonHydratedAsyncRoot(
   }
 }
 
-export function invalidateMount(hooks: LifecycleHook): void {
+export function invalidateMount(hooks: LifecycleHook | undefined): void {
   if (hooks) {
     for (let i = 0; i < hooks.length; i++)
       hooks[i].flags! |= SchedulerJobFlags.DISPOSED

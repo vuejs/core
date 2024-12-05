@@ -382,6 +382,14 @@ export interface GenericComponentInstance {
   isUnmounted: boolean
   isDeactivated: boolean
 
+  /**
+   * for tracking useId()
+   * first element is the current boundary prefix
+   * second number is the index of the useId call within that boundary
+   * @internal
+   */
+  ids: [string, number, number]
+
   // for vapor the following two are dev only
   /**
    * resolved props options
@@ -394,8 +402,15 @@ export interface GenericComponentInstance {
    */
   emitsOptions?: ObjectEmitsOptions | null
 
-  // the following are for error handling logic only
+  /**
+   * Public instance proxy, vdom only
+   */
   proxy?: any
+  /**
+   * suspense related
+   * @internal
+   */
+  suspense: SuspenseBoundary | null
 
   // lifecycle
   /**
@@ -498,13 +513,6 @@ export interface ComponentInternalInstance extends GenericComponentInstance {
    */
   render: InternalRenderFunction | null
   /**
-   * for tracking useId()
-   * first element is the current boundary prefix
-   * second number is the index of the useId call within that boundary
-   * @internal
-   */
-  ids: [string, number, number]
-  /**
    * cache for proxy access type to avoid hasOwnProperty calls
    * @internal
    */
@@ -600,11 +608,6 @@ export interface ComponentInternalInstance extends GenericComponentInstance {
    * @internal
    */
   ctx: Data
-  /**
-   * suspense related
-   * @internal
-   */
-  suspense: SuspenseBoundary | null
   /**
    * suspense pending batch id
    * @internal
