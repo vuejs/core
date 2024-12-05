@@ -1,4 +1,12 @@
-import { EMPTY_ARR, NO, YES, extend, hasOwn, isFunction } from '@vue/shared'
+import {
+  EMPTY_ARR,
+  NO,
+  YES,
+  camelize,
+  extend,
+  hasOwn,
+  isFunction,
+} from '@vue/shared'
 import type { VaporComponent, VaporComponentInstance } from './component'
 import {
   type NormalizedPropsOptions,
@@ -56,10 +64,54 @@ export function getPropsProxyHandlers(
         )
     : passThrough
 
-  const getProp = (target: RawProps, key: string, asProp: boolean) => {
-    if (asProp) {
-      if (!isProp(key) || key === '$') return
-    } else if (isProp(key) || isEmitListener(emitsOptions, key)) {
+  const getProp = (target: RawProps, key: string) => {
+    if (key === '$' || !isProp(key)) {
+      return
+    }
+    const dynamicSources = target.$
+    if (dynamicSources) {
+      let i = dynamicSources.length
+      let source, isDynamic, rawKey
+      while (i--) {
+        source = dynamicSources[i]
+        isDynamic = isFunction(source)
+        source = isDynamic ? (source as Function)() : source
+        for (rawKey in source) {
+          if (camelize(rawKey) === key) {
+            return castProp(isDynamic ? source[rawKey] : source[rawKey](), key)
+          }
+        }
+      }
+    }
+    for (const rawKey in target) {
+      if (camelize(rawKey) === key) {
+        return castProp(target[rawKey](), key)
+      }
+    }
+    return castProp(undefined, key, true)
+  }
+
+  const propsHandlers = propsOptions
+    ? ({
+        get: (target, key: string) => getProp(target, key),
+        has: (_, key: string) => isProp(key),
+        getOwnPropertyDescriptor(target, key: string) {
+          if (isProp(key)) {
+            return {
+              configurable: true,
+              enumerable: true,
+              get: () => getProp(target, key),
+            }
+          }
+        },
+        ownKeys: () => Object.keys(propsOptions),
+        set: NO,
+        deleteProperty: NO,
+      } satisfies ProxyHandler<RawProps>)
+    : null
+
+  const getAttr = (target: RawProps, key: string) => {
+    if (isProp(key) || isEmitListener(emitsOptions, key)) {
       return
     }
     const dynamicSources = target.$
@@ -71,34 +123,14 @@ export function getPropsProxyHandlers(
         isDynamic = isFunction(source)
         source = isDynamic ? (source as Function)() : source
         if (hasOwn(source, key)) {
-          return castProp(isDynamic ? source[key] : source[key](), key)
+          return isDynamic ? source[key] : source[key]()
         }
       }
     }
-    if (key in target) {
-      return castProp(target[key as string](), key)
+    if (hasOwn(target, key)) {
+      return target[key]
     }
-    return castProp(undefined, key, true)
   }
-
-  const propsHandlers = propsOptions
-    ? ({
-        get: (target, key: string) => getProp(target, key, true),
-        has: (_, key: string) => isProp(key),
-        getOwnPropertyDescriptor(target, key: string) {
-          if (isProp(key)) {
-            return {
-              configurable: true,
-              enumerable: true,
-              get: () => getProp(target, key, true),
-            }
-          }
-        },
-        ownKeys: () => Object.keys(propsOptions),
-        set: NO,
-        deleteProperty: NO,
-      } satisfies ProxyHandler<RawProps>)
-    : null
 
   const hasAttr = (target: RawProps, key: string) => {
     if (isAttr(key)) {
@@ -119,7 +151,7 @@ export function getPropsProxyHandlers(
 
   const attrsHandlers = {
     get: (target, key: string) => {
-      return getProp(target, key, false)
+      return getAttr(target, key)
     },
     has: hasAttr,
     getOwnPropertyDescriptor(target, key: string) {
@@ -127,7 +159,7 @@ export function getPropsProxyHandlers(
         return {
           configurable: true,
           enumerable: true,
-          get: () => getProp(target, key, false),
+          get: () => getAttr(target, key),
         }
       }
     },

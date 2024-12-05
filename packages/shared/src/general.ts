@@ -117,13 +117,12 @@ const cacheStringFunction = <T extends (str: string) => string>(fn: T): T => {
 }
 
 const camelizeRE = /-(\w)/g
+const camelizeReplacer = (_: any, c: string) => (c ? c.toUpperCase() : '')
 /**
  * @private
  */
 export const camelize: (str: string) => string = cacheStringFunction(
-  (str: string): string => {
-    return str.replace(camelizeRE, (_, c) => (c ? c.toUpperCase() : ''))
-  },
+  (str: string): string => str.replace(camelizeRE, camelizeReplacer),
 )
 
 const hyphenateRE = /\B([A-Z])/g
