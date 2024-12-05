@@ -488,20 +488,24 @@ function updateCssVars(vnode: VNode, isDisabled: boolean) {
   // presence of .ut method indicates owner component uses css vars.
   // code path here can assume browser environment.
   const ctx = vnode.ctx
+  let node, anchor
+  if (isDisabled) {
+    node = vnode.el
+    anchor = vnode.anchor
+  } else {
+    node = vnode.targetStart
+    anchor = vnode.targetAnchor
+  }
   if (ctx && ctx.ut) {
-    let node, anchor
-    if (isDisabled) {
-      node = vnode.el
-      anchor = vnode.anchor
-    } else {
-      node = vnode.targetStart
-      anchor = vnode.targetAnchor
-    }
-    while (node && node !== anchor) {
-      if (node.nodeType === 1) node.setAttribute('data-v-owner', ctx.uid)
-      node = node.nextSibling
-    }
-    ctx.ut()
+    ctx.ut.forEach(i => {
+      let currentNode = node
+      while (currentNode && currentNode !== anchor) {
+        if (currentNode.nodeType === 1)
+          currentNode.setAttribute(`data-v-owner-${i.uid}`, '')
+        currentNode = currentNode.nextSibling
+      }
+      i.update()
+    })
   }
 }
 
