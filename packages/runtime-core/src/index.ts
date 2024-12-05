@@ -491,6 +491,7 @@ export {
   type NormalizedPropsOptions,
   baseNormalizePropsOptions,
   resolvePropValue,
+  validateProps,
 } from './componentProps'
 export { baseEmit, isEmitListener } from './componentEmits'
 export { type SchedulerJob, queueJob } from './scheduler'

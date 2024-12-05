@@ -217,7 +217,7 @@ export function initProps(
 
   // validation
   if (__DEV__) {
-    validateProps(rawProps || {}, props, instance)
+    validateProps(rawProps || {}, props, instance.propsOptions[0]!)
   }
 
   if (isStateful) {
@@ -371,7 +371,7 @@ export function updateProps(
   }
 
   if (__DEV__) {
-    validateProps(rawProps || {}, props, instance)
+    validateProps(rawProps || {}, props, instance.propsOptions[0]!)
   }
 }
 
@@ -691,23 +691,23 @@ function getType(ctor: Prop<any> | null): string {
 
 /**
  * dev only
+ * @internal
  */
-function validateProps(
+export function validateProps(
   rawProps: Data,
-  props: Data,
-  instance: ComponentInternalInstance,
-) {
-  const resolvedValues = toRaw(props)
-  const options = instance.propsOptions[0]
+  resolvedProps: Data,
+  options: NormalizedProps,
+): void {
+  resolvedProps = toRaw(resolvedProps)
   const camelizePropsKey = Object.keys(rawProps).map(key => camelize(key))
   for (const key in options) {
     let opt = options[key]
     if (opt == null) continue
     validateProp(
       key,
-      resolvedValues[key],
+      resolvedProps[key],
       opt,
-      __DEV__ ? shallowReadonly(resolvedValues) : resolvedValues,
+      __DEV__ ? shallowReadonly(resolvedProps) : resolvedProps,
       !camelizePropsKey.includes(key),
     )
   }
@@ -717,16 +717,16 @@ function validateProps(
  * dev only
  */
 function validateProp(
-  name: string,
+  key: string,
   value: unknown,
-  prop: PropOptions,
-  props: Data,
+  propOptions: PropOptions,
+  resolvedProps: Data,
   isAbsent: boolean,
 ) {
-  const { type, required, validator, skipCheck } = prop
+  const { type, required, validator, skipCheck } = propOptions
   // required!
   if (required && isAbsent) {
-    warn('Missing required prop: "' + name + '"')
+    warn('Missing required prop: "' + key + '"')
     return
   }
   // missing but optional
@@ -745,13 +745,13 @@ function validateProp(
       isValid = valid
     }
     if (!isValid) {
-      warn(getInvalidTypeMessage(name, value, expectedTypes))
+      warn(getInvalidTypeMessage(key, value, expectedTypes))
       return
     }
   }
   // custom validator
-  if (validator && !validator(value, props)) {
-    warn('Invalid prop: custom validator check failed for prop "' + name + '".')
+  if (validator && !validator(value, resolvedProps)) {
+    warn('Invalid prop: custom validator check failed for prop "' + key + '".')
   }
 }
 

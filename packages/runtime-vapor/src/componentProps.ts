@@ -1,12 +1,16 @@
-import { EMPTY_ARR, NO, YES, hasOwn, isFunction } from '@vue/shared'
+import { EMPTY_ARR, NO, YES, extend, hasOwn, isFunction } from '@vue/shared'
 import type { VaporComponent, VaporComponentInstance } from './component'
 import {
   type NormalizedPropsOptions,
   baseNormalizePropsOptions,
   isEmitListener,
+  popWarningContext,
+  pushWarningContext,
   resolvePropValue,
+  validateProps,
 } from '@vue/runtime-dom'
 import { normalizeEmitsOptions } from './componentEmits'
+import { renderEffect } from './renderEffect'
 
 export type RawProps = Record<string, () => unknown> & {
   $?: DynamicPropsSource[]
@@ -173,4 +177,54 @@ function resolveDefault(
   instance: VaporComponentInstance,
 ) {
   return factory.call(null, instance.props)
+}
+
+export function hasFallthroughAttrs(
+  comp: VaporComponent,
+  rawProps: RawProps | undefined,
+): boolean {
+  if (rawProps) {
+    // determine fallthrough
+    if (rawProps.$ || !comp.props) {
+      return true
+    } else {
+      // check if rawProps contains any keys not declared
+      const propsOptions = normalizePropsOptions(comp)[0]
+      for (const key in rawProps) {
+        if (!hasOwn(propsOptions!, key)) {
+          return true
+        }
+      }
+    }
+  }
+  return false
+}
+
+/**
+ * dev only
+ */
+export function setupPropsValidation(instance: VaporComponentInstance): void {
+  const rawProps = instance.rawProps
+  if (!rawProps) return
+  renderEffect(() => {
+    const mergedRawProps = extend({}, rawProps)
+    if (rawProps.$) {
+      for (const source of rawProps.$) {
+        const isDynamic = isFunction(source)
+        const resolved = isDynamic ? source() : source
+        for (const key in resolved) {
+          mergedRawProps[key] = isDynamic
+            ? resolved[key]
+            : (resolved[key] as Function)()
+        }
+      }
+    }
+    pushWarningContext(instance)
+    validateProps(
+      mergedRawProps,
+      instance.props,
+      normalizePropsOptions(instance.type)[0]!,
+    )
+    popWarningContext()
+  })
 }

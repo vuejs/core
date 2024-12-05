@@ -16,11 +16,13 @@ import {
 } from '@vue/runtime-dom'
 import { type Block, isBlock } from './block'
 import { pauseTracking, resetTracking } from '@vue/reactivity'
-import { EMPTY_OBJ, hasOwn, isFunction } from '@vue/shared'
+import { EMPTY_OBJ, isFunction } from '@vue/shared'
 import {
   type RawProps,
   getPropsProxyHandlers,
+  hasFallthroughAttrs,
   normalizePropsOptions,
+  setupPropsValidation,
 } from './componentProps'
 import { setDynamicProp } from './dom/prop'
 import { renderEffect } from './renderEffect'
@@ -208,31 +210,16 @@ export class VaporComponentInstance implements GenericComponentInstance {
     const handlers = getPropsProxyHandlers(comp, this)
     this.props = comp.props ? new Proxy(target, handlers[0]!) : {}
     this.attrs = new Proxy(target, handlers[1])
+    this.hasFallthrough = hasFallthroughAttrs(comp, rawProps)
 
     if (__DEV__) {
+      // validate props
+      if (rawProps) setupPropsValidation(this)
       // cache normalized options for dev only emit check
       this.propsOptions = normalizePropsOptions(comp)
       this.emitsOptions = normalizeEmitsOptions(comp)
     }
 
-    // determine fallthrough
-    this.hasFallthrough = false
-    if (rawProps) {
-      if (rawProps.$ || !comp.props) {
-        this.hasFallthrough = true
-      } else {
-        // check if rawProps contains any keys not declared
-        const propsOptions = normalizePropsOptions(comp)[0]
-        for (const key in rawProps) {
-          if (!hasOwn(propsOptions!, key)) {
-            this.hasFallthrough = true
-            break
-          }
-        }
-      }
-    }
-
-    // TODO validate props
     // TODO init slots
   }
 }
