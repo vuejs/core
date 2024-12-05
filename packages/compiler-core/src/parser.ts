@@ -491,15 +491,25 @@ const tokenizer = new Tokenizer(stack, {
 const forIteratorRE = /,([^,\}\]]*)(?:,([^,\}\]]*))?$/
 const stripParensRE = /^\(|\)$/g
 
+function matchForAlias(exp: string) {
+  const inMatch = exp.match(forAliasRE)
+  if (!inMatch) return
+
+  const LHS = inMatch[1].trim()
+  const RHS = inMatch[2].trim()
+
+  if (LHS && RHS) return { LHS, RHS }
+}
+
 function parseForExpression(
   input: SimpleExpressionNode,
 ): ForParseResult | undefined {
   const loc = input.loc
   const exp = input.content
-  const inMatch = exp.match(forAliasRE)
+  const inMatch = matchForAlias(exp)
   if (!inMatch) return
 
-  const [, LHS, RHS] = inMatch
+  const { LHS, RHS } = inMatch
 
   const createAliasExpression = (
     content: string,
@@ -518,14 +528,14 @@ function parseForExpression(
   }
 
   const result: ForParseResult = {
-    source: createAliasExpression(RHS.trim(), exp.indexOf(RHS, LHS.length)),
+    source: createAliasExpression(RHS, exp.indexOf(RHS, LHS.length)),
     value: undefined,
     key: undefined,
     index: undefined,
     finalized: false,
   }
 
-  let valueContent = LHS.trim().replace(stripParensRE, '').trim()
+  let valueContent = LHS.replace(stripParensRE, '').trim()
   const trimmedOffset = LHS.indexOf(valueContent)
 
   const iteratorMatch = valueContent.match(forIteratorRE)
