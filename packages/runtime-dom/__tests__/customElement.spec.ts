@@ -412,7 +412,7 @@ describe('defineCustomElement', () => {
       customElements.define('my-el-default-true', E)
       container.innerHTML = `<my-el-default-true></my-el-default-true>`
       const e = container.childNodes[0] as HTMLElement & { foo: any },
-        shadowRoot = e.shadowRoot as ShadowRoot
+        shadowRoot = e.shadowRoot!
       expect(shadowRoot.innerHTML).toBe('true')
       e.foo = undefined
       await nextTick()
@@ -1393,7 +1393,7 @@ describe('defineCustomElement', () => {
     const app = createApp(R)
     app.mount(container)
     await new Promise(r => setTimeout(r))
-    const e = container.querySelector('my-el-async-4') as VueElement
+    const e = container.querySelector('my-el-async-4')!
     expect(e.shadowRoot!.innerHTML).toBe(`<div>fooValue</div>`)
     app.unmount()
   })

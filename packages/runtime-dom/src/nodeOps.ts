@@ -37,7 +37,7 @@ export const unsafeToTrustedHTML: (value: string) => TrustedHTML | string =
 export const svgNS = 'http://www.w3.org/2000/svg'
 export const mathmlNS = 'http://www.w3.org/1998/Math/MathML'
 
-const doc = (typeof document !== 'undefined' ? document : null) as Document
+const doc = (typeof document !== 'undefined' ? document : null)!
 
 const templateContainer = doc && /*@__PURE__*/ doc.createElement('template')
 

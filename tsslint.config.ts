@@ -84,6 +84,7 @@ export default defineConfig([
         typeAwareRulesSeverity,
         { typesToIgnore: ['any'] },
       ],
+      '@typescript-eslint/non-nullable-type-assertion-style': 'error',
     }),
   },
 

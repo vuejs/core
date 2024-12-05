@@ -4,7 +4,7 @@ import {
   type SFCTemplateCompileOptions,
   compileTemplate,
 } from '../src/compileTemplate'
-import { type SFCTemplateBlock, parse } from '../src/parse'
+import { parse } from '../src/parse'
 import { compileScript } from '../src'
 
 function compile(opts: Omit<SFCTemplateCompileOptions, 'id'>) {
@@ -52,7 +52,7 @@ body
 </template>
 `,
     { filename: 'example.vue', sourceMap: true },
-  ).descriptor.template as SFCTemplateBlock
+  ).descriptor.template!
 
   const result = compile({
     filename: 'example.vue',
@@ -76,7 +76,7 @@ test('preprocess pug with indents and blank lines', () => {
 </template>
 `,
     { filename: 'example.vue', sourceMap: true },
-  ).descriptor.template as SFCTemplateBlock
+  ).descriptor.template!
 
   const result = compile({
     filename: 'example.vue',
@@ -94,7 +94,7 @@ test('warn missing preprocessor', () => {
   const template = parse(`<template lang="unknownLang">hi</template>\n`, {
     filename: 'example.vue',
     sourceMap: true,
-  }).descriptor.template as SFCTemplateBlock
+  }).descriptor.template!
 
   const result = compile({
     filename: 'example.vue',
@@ -337,7 +337,7 @@ test('preprocessor errors', () => {
 </template>
 `,
     { filename: 'example.vue', sourceMap: true },
-  ).descriptor.template as SFCTemplateBlock
+  ).descriptor.template!
 
   const result = compile({
     filename: 'example.vue',

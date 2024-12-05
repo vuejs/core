@@ -3,7 +3,6 @@ import { EMPTY_OBJ, camelize, hasChanged, hyphenate } from '@vue/shared'
 import type { DefineModelOptions, ModelRef } from '../apiSetupHelpers'
 import { getCurrentInstance } from '../component'
 import { warn } from '../warning'
-import type { NormalizedProps } from '../componentProps'
 import { watchSyncEffect } from '../apiWatch'
 
 export function useModel<
@@ -29,7 +28,7 @@ export function useModel(
   }
 
   const camelizedName = camelize(name)
-  if (__DEV__ && !(i.propsOptions[0] as NormalizedProps)[camelizedName]) {
+  if (__DEV__ && !i.propsOptions[0]![camelizedName]) {
     warn(`useModel() called with prop "${name}" which is not declared.`)
     return ref() as any
   }

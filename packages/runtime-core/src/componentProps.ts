@@ -735,14 +735,14 @@ function assertType(
     valid = t === expectedType.toLowerCase()
     // for primitive wrapper objects
     if (!valid && t === 'object') {
-      valid = value instanceof (type as PropConstructor)
+      valid = value instanceof type!
     }
   } else if (expectedType === 'Object') {
     valid = isObject(value)
   } else if (expectedType === 'Array') {
     valid = isArray(value)
   } else {
-    valid = value instanceof (type as PropConstructor)
+    valid = value instanceof type!
   }
   return {
     valid,
