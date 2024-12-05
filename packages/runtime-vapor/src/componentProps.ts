@@ -1,12 +1,4 @@
-import {
-  EMPTY_ARR,
-  NO,
-  YES,
-  camelize,
-  extend,
-  hasOwn,
-  isFunction,
-} from '@vue/shared'
+import { EMPTY_ARR, NO, YES, camelize, hasOwn, isFunction } from '@vue/shared'
 import type { VaporComponent, VaporComponentInstance } from './component'
 import {
   type NormalizedPropsOptions,
@@ -239,7 +231,12 @@ export function setupPropsValidation(instance: VaporComponentInstance): void {
   const rawProps = instance.rawProps
   if (!rawProps) return
   renderEffect(() => {
-    const mergedRawProps = extend({}, rawProps)
+    const mergedRawProps: Record<string, any> = {}
+    for (const key in rawProps) {
+      if (key !== '$') {
+        mergedRawProps[key] = rawProps[key]()
+      }
+    }
     if (rawProps.$) {
       for (const source of rawProps.$) {
         const isDynamic = isFunction(source)

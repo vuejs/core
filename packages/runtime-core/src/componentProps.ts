@@ -701,15 +701,16 @@ export function validateProps(
   resolvedProps = toRaw(resolvedProps)
   const camelizePropsKey = Object.keys(rawProps).map(key => camelize(key))
   for (const key in options) {
-    let opt = options[key]
-    if (opt == null) continue
-    validateProp(
-      key,
-      resolvedProps[key],
-      opt,
-      __DEV__ ? shallowReadonly(resolvedProps) : resolvedProps,
-      !camelizePropsKey.includes(key),
-    )
+    const opt = options[key]
+    if (opt != null) {
+      validateProp(
+        key,
+        resolvedProps[key],
+        opt,
+        resolvedProps,
+        !camelizePropsKey.includes(key),
+      )
+    }
   }
 }
 
@@ -750,7 +751,10 @@ function validateProp(
     }
   }
   // custom validator
-  if (validator && !validator(value, resolvedProps)) {
+  if (
+    validator &&
+    !validator(value, __DEV__ ? shallowReadonly(resolvedProps) : resolvedProps)
+  ) {
     warn('Invalid prop: custom validator check failed for prop "' + key + '".')
   }
 }
