@@ -66,7 +66,6 @@ import {
   NOOP,
   ShapeFlags,
   extend,
-  getGlobalThis,
   isArray,
   isBuiltInTag,
   isFunction,
@@ -76,7 +75,6 @@ import {
 import type { SuspenseBoundary } from './components/Suspense'
 import type { CompilerOptions } from '@vue/compiler-core'
 import { markAttrsAccessed } from './componentRenderUtils'
-import { currentRenderingInstance } from './componentRenderContext'
 import { endMeasure, startMeasure } from './profiling'
 import { convertLegacyRenderFn } from './compat/renderFn'
 import {
@@ -96,6 +94,13 @@ import type { DefineComponent } from './apiDefineComponent'
 import { markAsyncBoundary } from './helpers/useId'
 import { isAsyncWrapper } from './apiAsyncComponent'
 import type { RendererElement } from './renderer'
+import {
+  setCurrentInstance,
+  setInSSRSetupState,
+  unsetCurrentInstance,
+} from './componentCurrentInstance'
+
+export * from './componentCurrentInstance'
 
 export type Data = Record<string, unknown>
 
@@ -761,76 +766,6 @@ export function createComponentInstance(
   return instance
 }
 
-export let currentInstance: ComponentInternalInstance | null = null
-
-export const getCurrentInstance: () => ComponentInternalInstance | null = () =>
-  currentInstance || currentRenderingInstance
-
-let internalSetCurrentInstance: (
-  instance: ComponentInternalInstance | null,
-) => void
-let setInSSRSetupState: (state: boolean) => void
-
-/**
- * The following makes getCurrentInstance() usage across multiple copies of Vue
- * work. Some cases of how this can happen are summarized in #7590. In principle
- * the duplication should be avoided, but in practice there are often cases
- * where the user is unable to resolve on their own, especially in complicated
- * SSR setups.
- *
- * Note this fix is technically incomplete, as we still rely on other singletons
- * for effectScope and global reactive dependency maps. However, it does make
- * some of the most common cases work. It also warns if the duplication is
- * found during browser execution.
- */
-if (__SSR__) {
-  type Setter = (v: any) => void
-  const g = getGlobalThis()
-  const registerGlobalSetter = (key: string, setter: Setter) => {
-    let setters: Setter[]
-    if (!(setters = g[key])) setters = g[key] = []
-    setters.push(setter)
-    return (v: any) => {
-      if (setters.length > 1) setters.forEach(set => set(v))
-      else setters[0](v)
-    }
-  }
-  internalSetCurrentInstance = registerGlobalSetter(
-    `__VUE_INSTANCE_SETTERS__`,
-    v => (currentInstance = v),
-  )
-  // also make `isInSSRComponentSetup` sharable across copies of Vue.
-  // this is needed in the SFC playground when SSRing async components, since
-  // we have to load both the runtime and the server-renderer from CDNs, they
-  // contain duplicated copies of Vue runtime code.
-  setInSSRSetupState = registerGlobalSetter(
-    `__VUE_SSR_SETTERS__`,
-    v => (isInSSRComponentSetup = v),
-  )
-} else {
-  internalSetCurrentInstance = i => {
-    currentInstance = i
-  }
-  setInSSRSetupState = v => {
-    isInSSRComponentSetup = v
-  }
-}
-
-export const setCurrentInstance = (instance: ComponentInternalInstance) => {
-  const prev = currentInstance
-  internalSetCurrentInstance(instance)
-  instance.scope.on()
-  return (): void => {
-    instance.scope.off()
-    internalSetCurrentInstance(prev)
-  }
-}
-
-export const unsetCurrentInstance = (): void => {
-  currentInstance && currentInstance.scope.off()
-  internalSetCurrentInstance(null)
-}
-
 export function validateComponentName(
   name: string,
   { isNativeTag }: AppConfig,
@@ -847,8 +782,6 @@ export function isStatefulComponent(
 ): number {
   return instance.vnode.shapeFlag & ShapeFlags.STATEFUL_COMPONENT
 }
-
-export let isInSSRComponentSetup = false
 
 export function setupComponent(
   instance: ComponentInternalInstance,
