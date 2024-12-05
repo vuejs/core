@@ -60,7 +60,11 @@ export const patchProp: DOMRendererOptions['patchProp'] = (
   } else if (
     // #11081 force set props for possible async custom element
     (el as VueElement)._isVueCE &&
-    (/[A-Z]/.test(key) || !isString(nextValue))
+    // #12408 check if it's hyphen prop or it's async custom element
+    (camelize(key) in el ||
+      // @ts-expect-error _def is private
+      ((el as VueElement)._def.__asyncLoader &&
+        (/[A-Z]/.test(key) || !isString(nextValue))))
   ) {
     patchDOMProp(el, camelize(key), nextValue, parentComponent, key)
   } else {
