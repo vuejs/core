@@ -11,15 +11,13 @@ const banConstEnum = {
     'Please use non-const enums. This project automatically inlines enums.',
 }
 
-const typeAwareRulesSeverity =
+const typeAwareEnabled =
   process.argv.includes('--type-aware-rules') ||
-  process.argv.includes('--useNodeIpc') // In IDE
-    ? 'error'
-    : 'off'
+  process.argv.includes('--useNodeIpc')
 
 export default defineConfig([
   {
-    plugins: [createDisableNextLinePlugin(typeAwareRulesSeverity === 'error')],
+    plugins: [createDisableNextLinePlugin(typeAwareEnabled)],
     rules: convertConfig({
       'no-debugger': 'error',
       'no-console': ['error', { allow: ['warn', 'error', 'info'] }],
@@ -75,16 +73,23 @@ export default defineConfig([
       '@typescript-eslint/no-unnecessary-type-constraint': 'error',
 
       // Type-aware rules
-      '@typescript-eslint/await-thenable': typeAwareRulesSeverity,
-      '@typescript-eslint/consistent-type-exports': typeAwareRulesSeverity,
-      '@typescript-eslint/no-unnecessary-type-arguments':
-        typeAwareRulesSeverity,
+      '@typescript-eslint/await-thenable': typeAwareEnabled ? 'error' : 'off',
+      '@typescript-eslint/require-await': typeAwareEnabled
+        ? 'suggestion'
+        : 'off',
+      '@typescript-eslint/consistent-type-exports': typeAwareEnabled
+        ? 'error'
+        : 'off',
+      '@typescript-eslint/no-unnecessary-type-arguments': typeAwareEnabled
+        ? 'error'
+        : 'off',
       '@typescript-eslint/no-unnecessary-type-assertion': [
-        typeAwareRulesSeverity,
+        typeAwareEnabled ? 'error' : 'off',
         { typesToIgnore: ['any'] },
       ],
-      '@typescript-eslint/non-nullable-type-assertion-style':
-        typeAwareRulesSeverity,
+      '@typescript-eslint/non-nullable-type-assertion-style': typeAwareEnabled
+        ? 'error'
+        : 'off',
     }),
   },
 
