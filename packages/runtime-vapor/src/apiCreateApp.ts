@@ -7,6 +7,7 @@ import {
   createAppAPI,
   normalizeContainer,
 } from '@vue/runtime-dom'
+import type { RawProps } from './componentProps'
 
 let _createApp: CreateAppFunction<ParentNode, VaporComponent>
 
@@ -15,7 +16,7 @@ const mountApp: AppMountFn<ParentNode> = (app, container) => {
   if (container.nodeType === 1 /* Node.ELEMENT_NODE */) {
     container.textContent = ''
   }
-  const instance = createComponent(app._component)
+  const instance = createComponent(app._component, app._props as RawProps)
   insert(instance, container)
   return instance
 }
