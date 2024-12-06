@@ -6,8 +6,9 @@ export default defineConfig({
   build: {
     modulePreload: false,
     target: 'esnext',
-    minify: false,
+    minify: 'terser',
     terserOptions: {
+      format: { comments: false },
       compress: {
         pure_getters: true,
       },
