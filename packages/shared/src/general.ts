@@ -92,9 +92,11 @@ export const isBuiltInDirective: (key: string) => boolean =
   /*@__PURE__*/ makeMap(
     'bind,cloak,else-if,else,for,html,if,model,on,once,pre,show,slot,text,memo',
   )
+export const Empty: any = function () {}
+Empty.prototype = Object.create(null)
 
 const cacheStringFunction = <T extends (str: string) => string>(fn: T): T => {
-  const cache: Record<string, string> = Object.create(null)
+  const cache: Record<string, string> = new Empty()
   return ((str: string) => {
     const hit = cache[str]
     return hit || (cache[str] = fn(str))

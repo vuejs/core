@@ -16,7 +16,7 @@ import { warn } from '../warning'
 import { isKeepAlive } from './KeepAlive'
 import { toRaw } from '@vue/reactivity'
 import { ErrorCodes, callWithAsyncErrorHandling } from '../errorHandling'
-import { PatchFlags, ShapeFlags, isArray, isFunction } from '@vue/shared'
+import { Empty, PatchFlags, ShapeFlags, isArray, isFunction } from '@vue/shared'
 import { onBeforeUnmount, onMounted } from '../apiLifecycle'
 import { isTeleport } from './Teleport'
 import type { RendererElement } from '../renderer'
@@ -312,7 +312,7 @@ function getLeavingNodesForType(
   const { leavingVNodes } = state
   let leavingVNodesCache = leavingVNodes.get(vnode.type)!
   if (!leavingVNodesCache) {
-    leavingVNodesCache = Object.create(null)
+    leavingVNodesCache = new Empty()
     leavingVNodes.set(vnode.type, leavingVNodesCache)
   }
   return leavingVNodesCache
