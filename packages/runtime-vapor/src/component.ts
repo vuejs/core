@@ -35,7 +35,7 @@ import { setClass, setDynamicProp } from './dom/prop'
 import {
   type RawSlots,
   type StaticSlots,
-  slotsProxyHandlers,
+  dynamicSlotsProxyHandlers,
 } from './componentSlots'
 
 export { currentInstance } from '@vue/runtime-dom'
@@ -257,7 +257,11 @@ export class VaporComponentInstance implements GenericComponentInstance {
     }
 
     // init slots
-    this.slots = rawSlots ? new Proxy(rawSlots, slotsProxyHandlers) : EMPTY_OBJ
+    this.slots = rawSlots
+      ? rawSlots.$
+        ? new Proxy(rawSlots, dynamicSlotsProxyHandlers)
+        : rawSlots
+      : EMPTY_OBJ
 
     if (__DEV__) {
       // validate props

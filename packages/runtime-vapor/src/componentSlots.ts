@@ -11,7 +11,7 @@ export type Slot = (...args: any[]) => Block
 export type DynamicSlot = { name: string; fn: Slot }
 export type DynamicSlotFn = () => DynamicSlot | DynamicSlot[]
 
-export const slotsProxyHandlers: ProxyHandler<RawSlots> = {
+export const dynamicSlotsProxyHandlers: ProxyHandler<RawSlots> = {
   get: getSlot,
   has: (target, key: string) => !!getSlot(target, key),
   getOwnPropertyDescriptor(target, key: string) {
