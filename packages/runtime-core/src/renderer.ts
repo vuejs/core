@@ -20,6 +20,7 @@ import {
   type Data,
   type LifecycleHook,
   createComponentInstance,
+  getComponentPublicInstance,
   setupComponent,
 } from './component'
 import {
@@ -2445,7 +2446,12 @@ function baseCreateRenderer(
   return {
     render,
     hydrate,
-    createApp: createAppAPI(mountApp, unmountApp, render),
+    createApp: createAppAPI(
+      mountApp,
+      unmountApp,
+      getComponentPublicInstance,
+      render,
+    ),
   }
 }
 

@@ -4,7 +4,6 @@ import {
   type Data,
   type GenericComponent,
   type GenericComponentInstance,
-  getComponentPublicInstance,
   validateComponentName,
 } from './component'
 import type {
@@ -280,6 +279,7 @@ export function createAppAPI<HostElement, Comp = Component>(
   // hydrate?: RootHydrateFunction,
   mount: AppMountFn<HostElement>,
   unmount: AppUnmountFn,
+  getPublicInstance: (instance: GenericComponentInstance) => any,
   render?: RootRenderFunction,
 ): CreateAppFunction<HostElement, Comp> {
   return function createApp(rootComponent, rootProps = null) {
@@ -409,7 +409,7 @@ export function createAppAPI<HostElement, Comp = Component>(
           // for devtools and telemetry
           rootContainer.__vue_app__ = app
 
-          return getComponentPublicInstance(instance)
+          return getPublicInstance(instance)
         } else if (__DEV__) {
           warn(
             `App has already been mounted.\n` +
