@@ -1804,6 +1804,35 @@ describe('__typeEmits backdoor, call signature syntax', () => {
   c.$emit('update', 123)
 })
 
+describe('__typeRefs backdoor, for this type', () => {
+  type Refs = {
+    foo: number
+  }
+  defineComponent({
+    __typeRefs: {} as { child: ComponentInstance<typeof Child> },
+    mounted() {
+      expectType<ComponentInstance<typeof Child>>(this.$refs.child)
+    },
+  })
+  const Child = defineComponent({
+    __typeRefs: {} as Refs,
+    methods: {
+      test() {
+        expectType<number>(this.$refs.foo)
+      },
+    },
+  })
+})
+
+describe('__typeEl backdoor, for this type', () => {
+  defineComponent({
+    __typeEl: {} as HTMLAnchorElement,
+    mounted() {
+      expectType<HTMLAnchorElement>(this.$el)
+    },
+  })
+})
+
 describe('__typeRefs backdoor, object syntax', () => {
   type Refs = {
     foo: number
