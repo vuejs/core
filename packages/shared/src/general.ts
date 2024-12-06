@@ -45,7 +45,7 @@ export const isSet = (val: unknown): val is Set<any> =>
 export const isDate = (val: unknown): val is Date =>
   toTypeString(val) === '[object Date]'
 export const isRegExp = (val: unknown): val is RegExp =>
-  // refer https://262.ecma-international.org/15.0/index.html?_gl=1*tsu3al*_ga*ODYzNDU4MjA5LjE3MjQ3Nzc5NDY.*_ga_TDCK4DWEPP*MTczMTg0NTY5MS41LjAuMTczMTg0NTY5MS4wLjAuMA..#sec-isregexp
+  // refer https://262.ecma-international.org/15.0/index.html#sec-isregexp
   !!val && !!(val as any)[Symbol.match]
 export const isFunction = (val: unknown): val is Function =>
   typeof val === 'function'
