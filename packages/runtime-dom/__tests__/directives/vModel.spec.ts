@@ -1377,6 +1377,60 @@ describe('vModel', () => {
     expect(data.value).toEqual('使用拼音输入')
   })
 
+  it('should trasform date to timestamp with numebr modifier', async () => {
+    const component = defineComponent({
+      data() {
+        return { date: null, datetime: null }
+      },
+      render() {
+        return [
+          withVModel(
+            h('input', {
+              class: 'date',
+              type: 'date',
+              'onUpdate:modelValue': (val: any) => {
+                this.date = val
+              },
+            }),
+            this.date,
+            {
+              number: true,
+            },
+          ),
+          withVModel(
+            h('input', {
+              class: 'datetime',
+              type: 'datetime-local',
+              'onUpdate:modelValue': (val: any) => {
+                this.datetime = val
+              },
+            }),
+            this.datetime,
+            {
+              number: true,
+            },
+          ),
+        ]
+      },
+    })
+    render(h(component), root)
+
+    const date = root.querySelector('.date')
+    const datetime = root.querySelector('.datetime')
+    const data = root._vnode.component.data
+
+    date.value = '2024-11-11'
+    triggerEvent('input', date)
+    await nextTick()
+    expect(data.date).toEqual(new Date('2024-11-11').getTime())
+
+    datetime.value = '2024-11-11T20:00'
+    triggerEvent('input', datetime)
+    await nextTick()
+    expect(data.datetime).toEqual(new Date('2024-11-11T20:00').getTime())
+  })
+
+  // #10503
   it('multiple select (model is number, option value is string)', async () => {
     const component = defineComponent({
       data() {
