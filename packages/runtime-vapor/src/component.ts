@@ -19,17 +19,19 @@ import {
 } from '@vue/runtime-dom'
 import { type Block, isBlock } from './block'
 import { pauseTracking, resetTracking } from '@vue/reactivity'
-import { EMPTY_OBJ, isFunction } from '@vue/shared'
+import { EMPTY_OBJ, isFunction, isString } from '@vue/shared'
 import {
   type RawProps,
   getPropsProxyHandlers,
   hasFallthroughAttrs,
   normalizePropsOptions,
+  resolveDynamicProps,
   setupPropsValidation,
 } from './componentProps'
-import { setDynamicProp } from './dom/prop'
 import { renderEffect } from './renderEffect'
 import { emit, normalizeEmitsOptions } from './componentEmits'
+import { setStyle } from './dom/style'
+import { setClass, setDynamicProp } from './dom/prop'
 
 export { currentInstance } from '@vue/runtime-dom'
 
@@ -266,7 +268,7 @@ export function isVaporComponent(
 export class SetupContext<E = EmitsOptions> {
   attrs: Record<string, any>
   emit: EmitFn<E>
-  // slots: Readonly<StaticSlots>
+  // TODO slots: Readonly<StaticSlots>
   expose: (exposed?: Record<string, any>) => void
 
   constructor(instance: VaporComponentInstance) {
@@ -277,4 +279,48 @@ export class SetupContext<E = EmitsOptions> {
       instance.exposed = exposed
     }
   }
+}
+
+export function createComponentWithFallback(
+  comp: VaporComponent | string,
+  rawProps: RawProps | undefined,
+  // TODO slots: RawSlots | null
+  isSingleRoot?: boolean,
+): HTMLElement | VaporComponentInstance {
+  if (!isString(comp)) {
+    return createComponent(comp, rawProps, isSingleRoot)
+  }
+
+  // eslint-disable-next-line no-restricted-globals
+  const el = document.createElement(comp)
+
+  if (rawProps) {
+    renderEffect(() => {
+      let classes: unknown[] | undefined
+      let styles: unknown[] | undefined
+      const resolved = resolveDynamicProps(rawProps)
+      for (const key in resolved) {
+        const value = resolved[key]
+        if (key === 'class') (classes ||= []).push(value)
+        else if (key === 'style') (styles ||= []).push(value)
+        else setDynamicProp(el, key, value)
+      }
+      if (classes) setClass(el, classes)
+      if (styles) setStyle(el, styles)
+    })
+  }
+
+  // TODO
+  // if (slots) {
+  //   if (!Array.isArray(slots)) slots = [slots]
+  //   for (let i = 0; i < slots.length; i++) {
+  //     const slot = slots[i]
+  //     if (!isDynamicSlotFn(slot) && slot.default) {
+  //       const block = slot.default && slot.default()
+  //       if (block) el.append(...normalizeBlock(block))
+  //     }
+  //   }
+  // }
+
+  return el
 }

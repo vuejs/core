@@ -54,7 +54,9 @@ export function genCreateComponent(
     NEWLINE,
     `const n${operation.id} = `,
     ...genCall(
-      vaporHelper('createComponent'),
+      operation.asset
+        ? vaporHelper('createComponentWithFallback')
+        : vaporHelper('createComponent'),
       tag,
       rawProps,
       rawSlots,

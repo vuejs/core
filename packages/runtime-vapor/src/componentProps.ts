@@ -231,29 +231,33 @@ export function setupPropsValidation(instance: VaporComponentInstance): void {
   const rawProps = instance.rawProps
   if (!rawProps) return
   renderEffect(() => {
-    const mergedRawProps: Record<string, any> = {}
-    for (const key in rawProps) {
-      if (key !== '$') {
-        mergedRawProps[key] = rawProps[key]()
-      }
-    }
-    if (rawProps.$) {
-      for (const source of rawProps.$) {
-        const isDynamic = isFunction(source)
-        const resolved = isDynamic ? source() : source
-        for (const key in resolved) {
-          mergedRawProps[key] = isDynamic
-            ? resolved[key]
-            : (resolved[key] as Function)()
-        }
-      }
-    }
     pushWarningContext(instance)
     validateProps(
-      mergedRawProps,
+      resolveDynamicProps(rawProps),
       instance.props,
       normalizePropsOptions(instance.type)[0]!,
     )
     popWarningContext()
   }, true /* noLifecycle */)
+}
+
+export function resolveDynamicProps(props: RawProps): Record<string, unknown> {
+  const mergedRawProps: Record<string, any> = {}
+  for (const key in props) {
+    if (key !== '$') {
+      mergedRawProps[key] = props[key]()
+    }
+  }
+  if (props.$) {
+    for (const source of props.$) {
+      const isDynamic = isFunction(source)
+      const resolved = isDynamic ? source() : source
+      for (const key in resolved) {
+        mergedRawProps[key] = isDynamic
+          ? resolved[key]
+          : (resolved[key] as Function)()
+      }
+    }
+  }
+  return mergedRawProps
 }
