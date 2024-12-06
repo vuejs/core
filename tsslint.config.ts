@@ -12,8 +12,7 @@ const banConstEnum = {
 }
 
 const typeAwareEnabled =
-  process.argv.includes('--type-aware-rules') ||
-  process.argv.includes('--useNodeIpc')
+  process.argv.includes('--type-aware') || process.argv.includes('--useNodeIpc')
 
 export default defineConfig([
   {
