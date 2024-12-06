@@ -18,7 +18,7 @@ import {
   warn,
 } from '@vue/runtime-dom'
 import { type Block, isBlock } from './block'
-import { pauseTracking, resetTracking } from '@vue/reactivity'
+import { pauseTracking, proxyRefs, resetTracking } from '@vue/reactivity'
 import { EMPTY_OBJ, isFunction, isString } from '@vue/shared'
 import {
   type RawProps,
@@ -125,7 +125,7 @@ export function createComponent(
       instance.block = []
     } else {
       instance.setupState = setupResult
-      instance.block = component.render.call(null, setupResult)
+      instance.block = component.render.call(null, proxyRefs(setupResult))
     }
   } else {
     // in prod result can only be block
