@@ -32,6 +32,11 @@ import { renderEffect } from './renderEffect'
 import { emit, normalizeEmitsOptions } from './componentEmits'
 import { setStyle } from './dom/style'
 import { setClass, setDynamicProp } from './dom/prop'
+import {
+  type RawSlots,
+  type Slot,
+  getSlotsProxyHandlers,
+} from './componentSlots'
 
 export { currentInstance } from '@vue/runtime-dom'
 
@@ -170,9 +175,10 @@ export class VaporComponentInstance implements GenericComponentInstance {
 
   block: Block
   scope: EffectScope
-  rawProps: RawProps | undefined
+  rawProps: RawProps
   props: Record<string, any>
   attrs: Record<string, any>
+  slots: Record<string, Slot>
   exposed: Record<string, any> | null
 
   emitted: Record<string, boolean> | null
@@ -215,7 +221,7 @@ export class VaporComponentInstance implements GenericComponentInstance {
   propsOptions?: NormalizedPropsOptions
   emitsOptions?: ObjectEmitsOptions | null
 
-  constructor(comp: VaporComponent, rawProps?: RawProps) {
+  constructor(comp: VaporComponent, rawProps?: RawProps, rawSlots?: RawSlots) {
     this.vapor = true
     this.uid = nextUid()
     this.type = comp
@@ -240,12 +246,20 @@ export class VaporComponentInstance implements GenericComponentInstance {
         false
 
     // init props
-    const target = rawProps || EMPTY_OBJ
-    const handlers = getPropsProxyHandlers(comp, this)
-    this.rawProps = rawProps
-    this.props = comp.props ? new Proxy(target, handlers[0]!) : {}
-    this.attrs = new Proxy(target, handlers[1])
+    this.rawProps = rawProps || EMPTY_OBJ
     this.hasFallthrough = hasFallthroughAttrs(comp, rawProps)
+    if (rawProps || comp.props) {
+      const [propsHandlers, attrsHandlers] = getPropsProxyHandlers(comp)
+      this.props = comp.props ? new Proxy(this, propsHandlers!) : {}
+      this.attrs = new Proxy(this, attrsHandlers)
+    } else {
+      this.props = this.attrs = EMPTY_OBJ
+    }
+
+    // init slots
+    this.slots = rawSlots
+      ? new Proxy(rawSlots, getSlotsProxyHandlers(comp))
+      : EMPTY_OBJ
 
     if (__DEV__) {
       // validate props
@@ -281,6 +295,11 @@ export class SetupContext<E = EmitsOptions> {
   }
 }
 
+/**
+ * Used when a component cannot be resolved at compile time
+ * and needs rely on runtime resolution - where it might fallback to a plain
+ * element if the resolution fails.
+ */
 export function createComponentWithFallback(
   comp: VaporComponent | string,
   rawProps: RawProps | undefined,
