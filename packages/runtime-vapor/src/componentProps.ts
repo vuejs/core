@@ -39,16 +39,16 @@ export function getPropsProxyHandlers(
   }
   const propsOptions = normalizePropsOptions(comp)[0]
   const emitsOptions = normalizeEmitsOptions(comp)
-  const isProp = propsOptions ? (key: string) => hasOwn(propsOptions, key) : NO
+  const isProp = propsOptions
+    ? (key: string) => hasOwn(propsOptions, camelize(key))
+    : NO
   const isAttr = propsOptions
     ? (key: string) =>
         key !== '$' && !isProp(key) && !isEmitListener(emitsOptions, key)
     : YES
 
   const getProp = (instance: VaporComponentInstance, key: string) => {
-    if (key === '$' || !isProp(key)) {
-      return
-    }
+    if (!isProp(key)) return
     const rawProps = instance.rawProps
     const dynamicSources = rawProps.$
     if (dynamicSources) {
@@ -88,6 +88,7 @@ export function getPropsProxyHandlers(
       undefined,
       instance,
       resolveDefault,
+      true,
     )
   }
 
@@ -128,7 +129,7 @@ export function getPropsProxyHandlers(
       }
     }
     if (hasOwn(target, key)) {
-      return target[key]
+      return target[key]()
     }
   }
 
@@ -220,9 +221,9 @@ export function hasFallthroughAttrs(
       return true
     } else {
       // check if rawProps contains any keys not declared
-      const propsOptions = normalizePropsOptions(comp)[0]
+      const propsOptions = normalizePropsOptions(comp)[0]!
       for (const key in rawProps) {
-        if (!hasOwn(propsOptions!, key)) {
+        if (!hasOwn(propsOptions, camelize(key))) {
           return true
         }
       }
