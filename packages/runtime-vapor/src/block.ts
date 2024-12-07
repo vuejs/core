@@ -1,6 +1,6 @@
 import { isArray } from '@vue/shared'
 import { type VaporComponentInstance, isVaporComponent } from './component'
-import { createComment, insert, remove } from './dom/element'
+import { createComment, insert, remove } from './dom/node'
 import { EffectScope } from '@vue/reactivity'
 
 export type Block = Node | Fragment | VaporComponentInstance | Block[]

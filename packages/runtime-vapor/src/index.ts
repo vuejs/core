@@ -6,7 +6,7 @@ export { createSlot } from './componentSlots'
 
 // DOM
 export { template, children, next } from './dom/template'
-export { insert, prepend, remove, createTextNode } from './dom/element'
+export { insert, prepend, remove, createTextNode } from './dom/node'
 export { setStyle } from './dom/style'
 export {
   setText,

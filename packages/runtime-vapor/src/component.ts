@@ -38,7 +38,7 @@ import {
   dynamicSlotsProxyHandlers,
   getSlot,
 } from './componentSlots'
-import { insert } from './dom/element'
+import { insert } from './dom/node'
 
 export { currentInstance } from '@vue/runtime-dom'
 

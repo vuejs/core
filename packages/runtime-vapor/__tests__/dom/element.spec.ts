@@ -1,5 +1,5 @@
 import { fragmentKey, normalizeBlock } from '../../src/block'
-import { insert, prepend, remove } from '../../src/dom/element'
+import { insert, prepend, remove } from '../../src/dom/node'
 
 const node1 = document.createTextNode('node1')
 const node2 = document.createTextNode('node2')

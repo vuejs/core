@@ -1,4 +1,4 @@
-import { insert } from './dom/element'
+import { insert } from './dom/node'
 import { type VaporComponent, createComponent } from './component'
 import {
   type AppMountFn,
