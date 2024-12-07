@@ -114,13 +114,15 @@ export function createComponent(
   }
 
   const setupFn = isFunction(component) ? component : component.setup
-  const setupContext = setupFn!.length > 1 ? new SetupContext(instance) : null
-  const setupResult =
-    setupFn!(
-      instance.props,
-      // @ts-expect-error
-      setupContext,
-    ) || EMPTY_OBJ
+  const setupContext =
+    setupFn && setupFn.length > 1 ? new SetupContext(instance) : null
+  const setupResult = setupFn
+    ? setupFn(
+        instance.props,
+        // @ts-expect-error
+        setupContext,
+      ) || EMPTY_OBJ
+    : EMPTY_OBJ
 
   if (__DEV__ && !isBlock(setupResult)) {
     if (isFunction(component)) {
@@ -341,10 +343,12 @@ export function createComponentWithFallback(
     })
   }
 
-  const defaultSlot = rawSlots && getSlot(rawSlots, 'default')
-  if (defaultSlot) {
-    const res = defaultSlot()
-    insert(res, el)
+  if (rawSlots) {
+    if (rawSlots.$) {
+      // TODO dynamic slot fragment
+    } else {
+      insert(getSlot(rawSlots, 'default')!(), el)
+    }
   }
 
   return el

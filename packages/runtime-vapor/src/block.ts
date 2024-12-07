@@ -1,19 +1,54 @@
 import { isArray } from '@vue/shared'
 import { type VaporComponentInstance, isVaporComponent } from './component'
-import { createComment } from './dom/element'
+import { createComment, insert, remove } from './dom/element'
+import { EffectScope } from '@vue/reactivity'
 
 export type Block = Node | Fragment | VaporComponentInstance | Block[]
+
+export type BlockRenderFn = (...args: any[]) => Block
 
 export class Fragment {
   nodes: Block
   anchor?: Node
-  constructor(nodes: Block, anchorLabel?: string) {
+
+  constructor(nodes: Block) {
     this.nodes = nodes
-    if (anchorLabel) {
-      this.anchor = __DEV__
+  }
+}
+
+export class DynamicFragment extends Fragment {
+  anchor: Node
+  scope: EffectScope | undefined
+  key: any
+
+  constructor(anchorLabel?: string) {
+    super([])
+    this.anchor =
+      __DEV__ && anchorLabel
         ? createComment(anchorLabel)
         : // eslint-disable-next-line no-restricted-globals
           document.createTextNode('')
+  }
+
+  update(render?: BlockRenderFn, key: any = render): void {
+    if (key === this.key) return
+    this.key = key
+
+    const parent = this.anchor.parentNode
+
+    // teardown previous branch
+    if (this.scope) {
+      this.scope.off()
+      parent && remove(this.nodes, parent)
+    }
+
+    if (render) {
+      this.scope = new EffectScope()
+      this.nodes = this.scope.run(render) || []
+      if (parent) insert(this.nodes, parent)
+    } else {
+      this.scope = undefined
+      this.nodes = []
     }
   }
 }

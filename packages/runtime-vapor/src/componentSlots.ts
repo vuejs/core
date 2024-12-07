@@ -1,8 +1,9 @@
-import { NO, hasOwn, isArray, isFunction } from '@vue/shared'
-import { type Block, Fragment, isValidBlock } from './block'
-import { type RawProps, resolveDynamicProps } from './componentProps'
+import { EMPTY_OBJ, NO, hasOwn, isArray, isFunction } from '@vue/shared'
+import { type Block, type BlockRenderFn, DynamicFragment } from './block'
+import type { RawProps } from './componentProps'
 import { currentInstance } from '@vue/runtime-core'
 import type { VaporComponentInstance } from './component'
+import { renderEffect } from './renderEffect'
 
 export type RawSlots = Record<string, Slot> & {
   $?: (StaticSlots | DynamicSlotFn)[]
@@ -10,7 +11,7 @@ export type RawSlots = Record<string, Slot> & {
 
 export type StaticSlots = Record<string, Slot>
 
-export type Slot = (...args: any[]) => Block
+export type Slot = BlockRenderFn
 export type DynamicSlot = { name: string; fn: Slot }
 export type DynamicSlotFn = () => DynamicSlot | DynamicSlot[]
 
@@ -77,29 +78,56 @@ export function getSlot(target: RawSlots, key: string): Slot | undefined {
   }
 }
 
+// TODO
+const dynamicSlotsPropsProxyHandlers: ProxyHandler<RawProps> = {
+  get(target, key: string) {
+    return target[key]
+  },
+  has(target, key) {
+    return key in target
+  },
+}
+
+// TODO how to handle empty slot return blocks?
+// e.g. a slot renders a v-if node that may toggle inside.
+// we may need special handling by passing the fallback into the slot
+// and make the v-if use it as fallback
 export function createSlot(
   name: string | (() => string),
-  props?: RawProps,
+  rawProps?: RawProps,
   fallback?: Slot,
 ): Block {
-  const slots = (currentInstance as VaporComponentInstance)!.rawSlots
-  if (isFunction(name) || slots.$) {
+  const rawSlots = (currentInstance as VaporComponentInstance)!.rawSlots
+  const resolveSlot = () => getSlot(rawSlots, isFunction(name) ? name() : name)
+  const slotProps = rawProps
+    ? rawProps.$
+      ? new Proxy(rawProps, dynamicSlotsPropsProxyHandlers)
+      : rawProps
+    : EMPTY_OBJ
+
+  if (isFunction(name) || rawSlots.$) {
     // dynamic slot name, or dynamic slot sources
-    // TODO togglable fragment class
-    const fragment = new Fragment([], 'slot')
+    const fragment = new DynamicFragment('slot')
+    renderEffect(() => {
+      const slot = resolveSlot()
+      if (slot) {
+        fragment.update(
+          () => slot(slotProps) || (fallback && fallback()),
+          // pass the stable slot fn as key to avoid toggling when resolving
+          // to the same slot
+          slot,
+        )
+      } else {
+        fragment.update(fallback)
+      }
+    })
     return fragment
   } else {
     // static
-    return renderSlot(name)
-  }
-
-  function renderSlot(name: string) {
-    const slot = getSlot(slots, name)
+    const slot = resolveSlot()
     if (slot) {
-      const block = slot(props ? resolveDynamicProps(props) : {})
-      if (isValidBlock(block)) {
-        return block
-      }
+      const block = slot(slotProps)
+      if (block) return block
     }
     return fallback ? fallback() : []
   }
