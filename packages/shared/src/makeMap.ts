@@ -8,7 +8,6 @@
 
 /*! #__NO_SIDE_EFFECTS__ */
 export function makeMap(str: string): (key: string) => boolean {
-  const map = new Set()
-  for (const key of str.split(',')) map.add(key)
+  const map = new Set(str.split(','))
   return val => map.has(val)
 }
