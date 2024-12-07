@@ -190,6 +190,42 @@ function genModelModifiers(
 
 function genRawSlots(slots: IRSlots[], context: CodegenContext) {
   if (!slots.length) return
+  const staticSlots = slots[0]
+  if (staticSlots.slotType === IRSlotType.STATIC) {
+    // single static slot
+    return genStaticSlots(
+      staticSlots,
+      context,
+      slots.length > 1 ? slots.slice(1) : undefined,
+    )
+  } else {
+    return genStaticSlots(
+      { slotType: IRSlotType.STATIC, slots: {} },
+      context,
+      slots,
+    )
+  }
+}
+
+function genStaticSlots(
+  { slots }: IRSlotsStatic,
+  context: CodegenContext,
+  dynamicSlots?: IRSlots[],
+) {
+  const args = Object.keys(slots).map(name => [
+    `${JSON.stringify(name)}: `,
+    ...genSlotBlockWithProps(slots[name], context),
+  ])
+  if (dynamicSlots) {
+    args.push([`$: `, ...genDynamicSlots(dynamicSlots, context)])
+  }
+  return genMulti(DELIMITERS_OBJECT_NEWLINE, ...args)
+}
+
+function genDynamicSlots(
+  slots: IRSlots[],
+  context: CodegenContext,
+): CodeFragment[] {
   return genMulti(
     DELIMITERS_ARRAY_NEWLINE,
     ...slots.map(slot =>
@@ -199,17 +235,6 @@ function genRawSlots(slots: IRSlots[], context: CodegenContext) {
           ? slot.slots.content
           : genDynamicSlot(slot, context, true),
     ),
-  )
-}
-
-function genStaticSlots({ slots }: IRSlotsStatic, context: CodegenContext) {
-  const names = Object.keys(slots)
-  return genMulti(
-    DELIMITERS_OBJECT_NEWLINE,
-    ...names.map(name => [
-      `${JSON.stringify(name)}: `,
-      ...genSlotBlockWithProps(slots[name], context),
-    ]),
   )
 }
 

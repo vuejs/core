@@ -3,7 +3,6 @@ import { type Block, Fragment, isValidBlock } from './block'
 import { type RawProps, resolveDynamicProps } from './componentProps'
 import { currentInstance } from '@vue/runtime-core'
 import type { VaporComponentInstance } from './component'
-import { renderEffect } from './renderEffect'
 
 export type RawSlots = Record<string, Slot> & {
   $?: (StaticSlots | DynamicSlotFn)[]
