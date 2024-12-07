@@ -27,6 +27,7 @@ export function insert(
   } else {
     // fragment
     insert(block.nodes, parent, anchor)
+    if (block.anchor) parent.insertBefore(block.anchor, anchor)
   }
 }
 
@@ -47,12 +48,13 @@ export function remove(block: Block, parent: ParentNode): void {
 export function createTextNode(values?: any[] | (() => any[])): Text {
   // eslint-disable-next-line no-restricted-globals
   const node = document.createTextNode('')
-  if (values)
+  if (values) {
     if (isArray(values)) {
       setText(node, ...values)
     } else {
       renderEffect(() => setText(node, ...values()))
     }
+  }
   return node
 }
 

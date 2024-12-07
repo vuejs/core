@@ -1,5 +1,9 @@
 import { NO, hasOwn, isArray, isFunction } from '@vue/shared'
-import type { Block } from './block'
+import { type Block, Fragment, isValidBlock } from './block'
+import { type RawProps, resolveDynamicProps } from './componentProps'
+import { currentInstance } from '@vue/runtime-core'
+import type { VaporComponentInstance } from './component'
+import { renderEffect } from './renderEffect'
 
 export type RawSlots = Record<string, Slot> & {
   $?: (StaticSlots | DynamicSlotFn)[]
@@ -47,7 +51,8 @@ export const dynamicSlotsProxyHandlers: ProxyHandler<RawSlots> = {
   deleteProperty: NO,
 }
 
-function getSlot(target: RawSlots, key: string) {
+export function getSlot(target: RawSlots, key: string): Slot | undefined {
+  if (key === '$') return
   const dynamicSources = target.$
   if (dynamicSources) {
     let i = dynamicSources.length
@@ -70,5 +75,33 @@ function getSlot(target: RawSlots, key: string) {
   }
   if (hasOwn(target, key)) {
     return target[key]
+  }
+}
+
+export function createSlot(
+  name: string | (() => string),
+  props?: RawProps,
+  fallback?: Slot,
+): Block {
+  const slots = (currentInstance as VaporComponentInstance)!.rawSlots
+  if (isFunction(name) || slots.$) {
+    // dynamic slot name, or dynamic slot sources
+    // TODO togglable fragment class
+    const fragment = new Fragment([], 'slot')
+    return fragment
+  } else {
+    // static
+    return renderSlot(name)
+  }
+
+  function renderSlot(name: string) {
+    const slot = getSlot(slots, name)
+    if (slot) {
+      const block = slot(props ? resolveDynamicProps(props) : {})
+      if (isValidBlock(block)) {
+        return block
+      }
+    }
+    return fallback ? fallback() : []
   }
 }

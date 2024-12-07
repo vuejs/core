@@ -2,6 +2,7 @@ export { createComponent, createComponentWithFallback } from './component'
 export { renderEffect } from './renderEffect'
 export { createVaporApp } from './apiCreateApp'
 export { defineComponent } from './apiDefineComponent'
+export { createSlot } from './componentSlots'
 
 // DOM
 export { template, children, next } from './dom/template'

@@ -1,17 +1,25 @@
 import { isArray } from '@vue/shared'
 import { type VaporComponentInstance, isVaporComponent } from './component'
-
-export const fragmentKey: unique symbol = Symbol(__DEV__ ? `fragmentKey` : ``)
+import { createComment } from './dom/element'
 
 export type Block = Node | Fragment | VaporComponentInstance | Block[]
-export type Fragment = {
+
+export class Fragment {
   nodes: Block
   anchor?: Node
-  [fragmentKey]: true
+  constructor(nodes: Block, anchorLabel?: string) {
+    this.nodes = nodes
+    if (anchorLabel) {
+      this.anchor = __DEV__
+        ? createComment(anchorLabel)
+        : // eslint-disable-next-line no-restricted-globals
+          document.createTextNode('')
+    }
+  }
 }
 
 export function isFragment(val: NonNullable<unknown>): val is Fragment {
-  return fragmentKey in val
+  return val instanceof Fragment
 }
 
 export function isBlock(val: NonNullable<unknown>): val is Block {
@@ -59,6 +67,7 @@ export function getFirstNode(block: Block | null): Node | undefined {
   }
 }
 
+// TODO optimize
 export function isValidBlock(block: Block): boolean {
   return (
     normalizeBlock(block).filter(node => !(node instanceof Comment)).length > 0

@@ -36,7 +36,9 @@ import {
   type RawSlots,
   type StaticSlots,
   dynamicSlotsProxyHandlers,
+  getSlot,
 } from './componentSlots'
+import { insert } from './dom/element'
 
 export { currentInstance } from '@vue/runtime-dom'
 
@@ -84,7 +86,8 @@ interface SharedInternalOptions {
 
 export function createComponent(
   component: VaporComponent,
-  rawProps?: RawProps,
+  rawProps?: RawProps | null,
+  rawSlots?: RawSlots | null,
   isSingleRoot?: boolean,
 ): VaporComponentInstance {
   // check if we are the single root of the parent
@@ -102,7 +105,7 @@ export function createComponent(
     }
   }
 
-  const instance = new VaporComponentInstance(component, rawProps)
+  const instance = new VaporComponentInstance(component, rawProps, rawSlots)
   const resetCurrentInstance = setCurrentInstance(instance)
 
   pauseTracking()
@@ -175,11 +178,13 @@ export class VaporComponentInstance implements GenericComponentInstance {
 
   block: Block
   scope: EffectScope
-  rawProps: RawProps
   props: Record<string, any>
   attrs: Record<string, any>
   slots: StaticSlots
   exposed: Record<string, any> | null
+
+  rawProps: RawProps
+  rawSlots: RawSlots
 
   emitted: Record<string, boolean> | null
   propsDefaults: Record<string, any> | null
@@ -221,7 +226,11 @@ export class VaporComponentInstance implements GenericComponentInstance {
   propsOptions?: NormalizedPropsOptions
   emitsOptions?: ObjectEmitsOptions | null
 
-  constructor(comp: VaporComponent, rawProps?: RawProps, rawSlots?: RawSlots) {
+  constructor(
+    comp: VaporComponent,
+    rawProps?: RawProps | null,
+    rawSlots?: RawSlots | null,
+  ) {
     this.vapor = true
     this.uid = nextUid()
     this.type = comp
@@ -257,6 +266,7 @@ export class VaporComponentInstance implements GenericComponentInstance {
     }
 
     // init slots
+    this.rawSlots = rawSlots || EMPTY_OBJ
     this.slots = rawSlots
       ? rawSlots.$
         ? new Proxy(rawSlots, dynamicSlotsProxyHandlers)
@@ -304,12 +314,12 @@ export class SetupContext<E = EmitsOptions> {
  */
 export function createComponentWithFallback(
   comp: VaporComponent | string,
-  rawProps: RawProps | undefined,
-  // TODO slots: RawSlots | null
+  rawProps: RawProps | null | undefined,
+  rawSlots: RawSlots | null | undefined,
   isSingleRoot?: boolean,
 ): HTMLElement | VaporComponentInstance {
   if (!isString(comp)) {
-    return createComponent(comp, rawProps, isSingleRoot)
+    return createComponent(comp, rawProps, rawSlots, isSingleRoot)
   }
 
   // eslint-disable-next-line no-restricted-globals
@@ -331,17 +341,11 @@ export function createComponentWithFallback(
     })
   }
 
-  // TODO
-  // if (slots) {
-  //   if (!Array.isArray(slots)) slots = [slots]
-  //   for (let i = 0; i < slots.length; i++) {
-  //     const slot = slots[i]
-  //     if (!isDynamicSlotFn(slot) && slot.default) {
-  //       const block = slot.default && slot.default()
-  //       if (block) el.append(...normalizeBlock(block))
-  //     }
-  //   }
-  // }
+  const defaultSlot = rawSlots && getSlot(rawSlots, 'default')
+  if (defaultSlot) {
+    const res = defaultSlot()
+    insert(res, el)
+  }
 
   return el
 }

@@ -213,7 +213,7 @@ function resolveDefault(
 
 export function hasFallthroughAttrs(
   comp: VaporComponent,
-  rawProps: RawProps | undefined,
+  rawProps: RawProps | null | undefined,
 ): boolean {
   if (rawProps) {
     // determine fallthrough
