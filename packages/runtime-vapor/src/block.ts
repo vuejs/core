@@ -5,7 +5,7 @@ import { EffectScope } from '@vue/reactivity'
 
 export type Block = Node | Fragment | VaporComponentInstance | Block[]
 
-export type BlockRenderFn = (...args: any[]) => Block
+export type BlockFn = (...args: any[]) => Block
 
 export class Fragment {
   nodes: Block
@@ -30,7 +30,7 @@ export class DynamicFragment extends Fragment {
           document.createTextNode('')
   }
 
-  update(render?: BlockRenderFn, key: any = render): void {
+  update(render?: BlockFn, key: any = render): void {
     if (key === this.key) return
     this.key = key
 

@@ -1,5 +1,5 @@
 import { EMPTY_OBJ, NO, hasOwn, isArray, isFunction } from '@vue/shared'
-import { type Block, type BlockRenderFn, DynamicFragment } from './block'
+import { type Block, type BlockFn, DynamicFragment } from './block'
 import type { RawProps } from './componentProps'
 import { currentInstance } from '@vue/runtime-core'
 import type { VaporComponentInstance } from './component'
@@ -11,7 +11,7 @@ export type RawSlots = Record<string, Slot> & {
 
 export type StaticSlots = Record<string, Slot>
 
-export type Slot = BlockRenderFn
+export type Slot = BlockFn
 export type DynamicSlot = { name: string; fn: Slot }
 export type DynamicSlotFn = () => DynamicSlot | DynamicSlot[]
 
