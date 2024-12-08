@@ -13,7 +13,7 @@
 export function trimVaporExportsPlugin(format, pkgName) {
   if (
     format === 'vapor' ||
-    format === 'esm-bundler' ||
+    format.startsWith('esm-bundler') ||
     pkgName === '@vue/runtime-vapor'
   ) {
     return []

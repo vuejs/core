@@ -167,7 +167,8 @@ function createConfig(format, output, plugins = []) {
   }
 
   let entryFile =
-    format === 'vapor'
+    pkg.name === 'vue' &&
+    (format === 'vapor' || format.startsWith('esm-bundler'))
       ? 'runtime-with-vapor.ts'
       : /\bruntime\b/.test(format)
         ? `runtime.ts`
