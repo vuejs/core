@@ -4,5 +4,5 @@
     "isolatedDeclarations": false,
     "allowJs": true
   },
-  "include": ["**/*"]
+  "include": ["./**/*", "../packages/*/src"]
 }
