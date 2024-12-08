@@ -13,7 +13,6 @@
     "dist",
     "compiler-sfc",
     "server-renderer",
-    "vapor",
     "jsx-runtime",
     "jsx.d.ts"
   ],
@@ -54,16 +53,6 @@
         "types": "./compiler-sfc/index.d.ts",
         "browser": "./compiler-sfc/index.browser.js",
         "default": "./compiler-sfc/index.js"
-      }
-    },
-    "./vapor": {
-      "import": {
-        "types": "./vapor/index.d.mts",
-        "default": "./vapor/index.mjs"
-      },
-      "require": {
-        "types": "./vapor/index.d.ts",
-        "default": "./vapor/index.js"
       }
     },
     "./jsx-runtime": {
