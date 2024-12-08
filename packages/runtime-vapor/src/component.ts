@@ -34,6 +34,7 @@ import { setStyle } from './dom/style'
 import { setClass, setDynamicProp } from './dom/prop'
 import {
   type RawSlots,
+  type Slot,
   type StaticSlots,
   dynamicSlotsProxyHandlers,
   getSlot,
@@ -61,7 +62,13 @@ export interface ObjectVaporComponent
   inheritAttrs?: boolean
   props?: ComponentPropsOptions
   emits?: EmitsOptions
-  render?(ctx: any): Block
+  render?(
+    ctx: any,
+    props?: any,
+    emit?: EmitFn,
+    attrs?: any,
+    slots?: Record<string, Slot>,
+  ): Block
 
   name?: string
   vapor?: boolean
@@ -114,13 +121,11 @@ export function createComponent(
   }
 
   const setupFn = isFunction(component) ? component : component.setup
-  const setupContext =
-    setupFn && setupFn.length > 1 ? new SetupContext(instance) : null
   const setupResult = setupFn
     ? setupFn(
         instance.props,
         // @ts-expect-error
-        setupContext,
+        setupFn.length > 1 ? new SetupContext(instance) : null,
       ) || EMPTY_OBJ
     : EMPTY_OBJ
 
@@ -135,7 +140,14 @@ export function createComponent(
       instance.block = []
     } else {
       instance.setupState = setupResult
-      instance.block = component.render.call(null, proxyRefs(setupResult))
+      instance.block = component.render.call(
+        null,
+        proxyRefs(setupResult),
+        instance.props,
+        instance.emit,
+        instance.attrs,
+        instance.slots,
+      )
     }
   } else {
     // in prod result can only be block
@@ -188,6 +200,7 @@ export class VaporComponentInstance implements GenericComponentInstance {
   rawProps: RawProps
   rawSlots: RawSlots
 
+  emit: EmitFn
   emitted: Record<string, boolean> | null
   propsDefaults: Record<string, any> | null
 
@@ -244,6 +257,7 @@ export class VaporComponentInstance implements GenericComponentInstance {
     this.block = null! // to be set
     this.scope = new EffectScope(true)
 
+    this.emit = emit.bind(null, this)
     this.provides = currentInstance
       ? currentInstance.provides
       : Object.create(this.appContext.provides)
@@ -282,8 +296,6 @@ export class VaporComponentInstance implements GenericComponentInstance {
       this.propsOptions = normalizePropsOptions(comp)
       this.emitsOptions = normalizeEmitsOptions(comp)
     }
-
-    // TODO init slots
   }
 }
 
@@ -293,16 +305,16 @@ export function isVaporComponent(
   return value instanceof VaporComponentInstance
 }
 
-export class SetupContext<E = EmitsOptions> {
+export class SetupContext {
   attrs: Record<string, any>
-  emit: EmitFn<E>
-  // TODO slots: Readonly<StaticSlots>
+  emit: EmitFn
+  slots: Readonly<StaticSlots>
   expose: (exposed?: Record<string, any>) => void
 
   constructor(instance: VaporComponentInstance) {
     this.attrs = instance.attrs
-    this.emit = emit.bind(null, instance) as EmitFn<E>
-    // this.slots = instance.slots
+    this.emit = instance.emit
+    this.slots = instance.slots
     this.expose = (exposed = {}) => {
       instance.exposed = exposed
     }
