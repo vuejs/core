@@ -508,3 +508,4 @@ export {
   type AppUnmountFn,
 } from './apiCreateApp'
 export { currentInstance, setCurrentInstance } from './componentCurrentInstance'
+export { registerHMR, unregisterHMR } from './hmr'

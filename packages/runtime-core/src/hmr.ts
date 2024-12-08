@@ -96,7 +96,8 @@ function rerender(id: string, newRender?: Function): void {
     // this flag forces child components with slot content to update
     isHmrUpdating = true
     if (instance.vapor) {
-      // TODO
+      // @ts-expect-error TODO
+      instance.hmrRerender()
     } else {
       const i = instance as ComponentInternalInstance
       i.renderCache = []

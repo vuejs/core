@@ -14,6 +14,7 @@ import {
   nextUid,
   popWarningContext,
   pushWarningContext,
+  registerHMR,
   setCurrentInstance,
   warn,
 } from '@vue/runtime-dom'
@@ -40,6 +41,7 @@ import {
   getSlot,
 } from './componentSlots'
 import { insert } from './dom/node'
+import { hmrRerender } from './hmr'
 
 export { currentInstance } from '@vue/runtime-dom'
 
@@ -139,15 +141,13 @@ export function createComponent(
       )
       instance.block = []
     } else {
-      instance.setupState = setupResult
-      instance.block = component.render.call(
-        null,
-        proxyRefs(setupResult),
-        instance.props,
-        instance.emit,
-        instance.attrs,
-        instance.slots,
-      )
+      instance.devtoolsRawSetupState = setupResult
+      instance.setupState = proxyRefs(setupResult)
+      devRender(instance)
+
+      // HMR
+      registerHMR(instance)
+      instance.hmrRerender = hmrRerender.bind(null, instance)
     }
   } else {
     // in prod result can only be block
@@ -175,6 +175,20 @@ export function createComponent(
   resetCurrentInstance()
 
   return instance
+}
+
+/**
+ * dev only
+ */
+export function devRender(instance: VaporComponentInstance): void {
+  instance.block = instance.type.render!.call(
+    null,
+    instance.setupState,
+    instance.props,
+    instance.emit,
+    instance.attrs,
+    instance.slots,
+  )
 }
 
 const emptyContext: GenericAppContext = {
@@ -238,6 +252,8 @@ export class VaporComponentInstance implements GenericComponentInstance {
 
   // dev only
   setupState?: Record<string, any>
+  devtoolsRawSetupState?: any
+  hmrRerender?: () => void
   propsOptions?: NormalizedPropsOptions
   emitsOptions?: ObjectEmitsOptions | null
 

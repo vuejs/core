@@ -381,6 +381,17 @@ export interface GenericComponentInstance {
   // exposed properties via expose()
   exposed: Record<string, any> | null
 
+  /**
+   * setup related
+   * @internal
+   */
+  setupState?: Data
+  /**
+   * devtools access to additional info
+   * @internal
+   */
+  devtoolsRawSetupState?: any
+
   // lifecycle
   isMounted: boolean
   isUnmounted: boolean
@@ -473,6 +484,10 @@ export interface GenericComponentInstance {
    * @internal
    */
   [LifecycleHooks.SERVER_PREFETCH]?: LifecycleHook<() => Promise<unknown>>
+  /**
+   * @internal vapor only
+   */
+  hmrRerender?: () => void
 }
 
 /**
@@ -584,11 +599,6 @@ export interface ComponentInternalInstance extends GenericComponentInstance {
    * @internal
    */
   setupState: Data
-  /**
-   * devtools access to additional info
-   * @internal
-   */
-  devtoolsRawSetupState?: any
 
   // main proxy that serves as the public instance (`this`)
   proxy: ComponentPublicInstance | null

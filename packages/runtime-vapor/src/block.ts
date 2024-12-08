@@ -40,6 +40,7 @@ export class DynamicFragment extends Fragment {
     if (this.scope) {
       this.scope.off()
       parent && remove(this.nodes, parent)
+      // TODO lifecycle unmount
     }
 
     if (render) {
