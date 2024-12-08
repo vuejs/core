@@ -90,10 +90,9 @@ export function defineProps() {
   return null as any
 }
 
-export type DefineProps<
-  T,
-  BKeys extends keyof T = BooleanKey<T>
-> = Readonly<LooseRequired<T>> & {
+export type DefineProps<T, BKeys extends keyof T = BooleanKey<T>> = Readonly<
+  LooseRequired<T>
+> & {
   readonly [K in BKeys]-?: boolean
 }
 

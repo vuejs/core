@@ -335,10 +335,7 @@ export type ComponentPublicInstance<
     P,
     P,
     Readonly<Defaults> &
-      Omit<
-        DefineProps<P>,
-        keyof ShallowUnwrapRef<B> | keyof Defaults
-      >
+      Omit<DefineProps<P>, keyof ShallowUnwrapRef<B> | keyof Defaults>
   > &
     ShallowUnwrapRef<B> &
     UnwrapNestedRefs<D> &
