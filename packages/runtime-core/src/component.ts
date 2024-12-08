@@ -349,6 +349,10 @@ export interface GenericComponentInstance {
    */
   scope: EffectScope
   /**
+   * render function will have different types between vdom and vapor
+   */
+  render?: Function | null
+  /**
    * SSR render function
    * (they are the same between vdom and vapor components.)
    * @internal
