@@ -1,4 +1,4 @@
-import { type ComponentInternalInstance, getCurrentInstance } from './component'
+import { type ComponentInternalInstance, currentInstance } from './component'
 import {
   type VNode,
   type VNodeChild,
@@ -94,15 +94,17 @@ const normalizeSlot = (
     return rawSlot as Slot
   }
   const normalized = withCtx((...args: any[]) => {
-    if (__DEV__) {
-      const currentInstance = getCurrentInstance()
-      if (currentInstance && (!ctx || ctx.root === currentInstance.root)) {
-        warn(
-          `Slot "${key}" invoked outside of the render function: ` +
-            `this will not track dependencies used in the slot. ` +
-            `Invoke the slot function inside the render function instead.`,
-        )
-      }
+    if (
+      __DEV__ &&
+      currentInstance &&
+      !currentInstance.vapor &&
+      (!ctx || ctx.root === (currentInstance as ComponentInternalInstance).root)
+    ) {
+      warn(
+        `Slot "${key}" invoked outside of the render function: ` +
+          `this will not track dependencies used in the slot. ` +
+          `Invoke the slot function inside the render function instead.`,
+      )
     }
     return normalizeSlotValue(rawSlot(...args))
   }, ctx) as Slot
