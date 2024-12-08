@@ -74,9 +74,6 @@ if (__SSR__) {
   }
 }
 
-/**
- * @internal
- */
 export const setCurrentInstance = (instance: GenericComponentInstance) => {
   const prev = currentInstance
   internalSetCurrentInstance(instance)
@@ -90,4 +87,21 @@ export const setCurrentInstance = (instance: GenericComponentInstance) => {
 export const unsetCurrentInstance = (): void => {
   currentInstance && currentInstance.scope.off()
   internalSetCurrentInstance(null)
+}
+
+/**
+ * Exposed for vapor only. Vapor never runs during SSR so we don't want to pay
+ * for the extra overhead
+ * @internal
+ */
+export const simpleSetCurrentInstance = (
+  i: GenericComponentInstance | null,
+  unset?: GenericComponentInstance,
+): void => {
+  currentInstance = i
+  if (unset) {
+    unset.scope.off()
+  } else if (i) {
+    i.scope.on()
+  }
 }

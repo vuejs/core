@@ -38,7 +38,7 @@ export class DynamicFragment extends Fragment {
 
     // teardown previous branch
     if (this.scope) {
-      this.scope.off()
+      this.scope.stop()
       parent && remove(this.nodes, parent)
       // TODO lifecycle unmount
     }

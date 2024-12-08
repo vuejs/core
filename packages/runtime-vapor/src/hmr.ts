@@ -1,7 +1,8 @@
 import {
+  currentInstance,
   popWarningContext,
   pushWarningContext,
-  setCurrentInstance,
+  simpleSetCurrentInstance,
 } from '@vue/runtime-core'
 import { normalizeBlock } from './block'
 import { type VaporComponentInstance, devRender } from './component'
@@ -12,11 +13,12 @@ export function hmrRerender(instance: VaporComponentInstance): void {
   const parent = normalized[0].parentNode!
   const anchor = normalized[normalized.length - 1].nextSibling
   remove(instance.block, parent)
-  const reset = setCurrentInstance(instance)
+  const prev = currentInstance
+  simpleSetCurrentInstance(instance)
   pushWarningContext(instance)
   devRender(instance)
-  reset()
   popWarningContext()
+  simpleSetCurrentInstance(prev, instance)
   insert(instance.block, parent, anchor)
 }
 

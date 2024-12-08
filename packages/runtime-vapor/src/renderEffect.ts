@@ -4,7 +4,7 @@ import {
   currentInstance,
   queueJob,
   queuePostFlushCb,
-  setCurrentInstance,
+  simpleSetCurrentInstance,
   warn,
 } from '@vue/runtime-dom'
 import { type VaporComponentInstance, isVaporComponent } from './component'
@@ -16,28 +16,30 @@ export function renderEffect(fn: () => void, noLifecycle = false): void {
     warn('renderEffect called without active vapor instance.')
   }
 
-  const effect = new ReactiveEffect(
-    noLifecycle
-      ? fn
-      : () => {
-          const reset = setCurrentInstance(instance)
-          const { isMounted, isUpdating, bu, u } = instance
-          // before update
-          if (isMounted && !isUpdating && (bu || u)) {
-            instance.isUpdating = true
-            bu && invokeArrayFns(bu)
-            fn()
-            queuePostFlushCb(() => {
-              instance.isUpdating = false
-              u && invokeArrayFns(u)
-            })
-          } else {
-            fn()
-          }
-          reset()
-        },
-  )
+  const renderEffectFn = noLifecycle
+    ? fn
+    : () => {
+        const prev = currentInstance
+        simpleSetCurrentInstance(instance)
+        if (
+          instance.isMounted &&
+          !instance.isUpdating &&
+          (instance.bu || instance.u)
+        ) {
+          instance.isUpdating = true
+          instance.bu && invokeArrayFns(instance.bu)
+          fn()
+          queuePostFlushCb(() => {
+            instance.isUpdating = false
+            instance.u && invokeArrayFns(instance.u)
+          })
+        } else {
+          fn()
+        }
+        simpleSetCurrentInstance(prev, instance)
+      }
 
+  const effect = new ReactiveEffect(renderEffectFn)
   const job: SchedulerJob = effect.runIfDirty.bind(effect)
   job.i = instance
   job.id = instance.uid

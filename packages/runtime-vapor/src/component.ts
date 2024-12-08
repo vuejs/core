@@ -15,7 +15,8 @@ import {
   popWarningContext,
   pushWarningContext,
   registerHMR,
-  setCurrentInstance,
+  simpleSetCurrentInstance,
+  unregisterHMR,
   warn,
 } from '@vue/runtime-dom'
 import { type Block, isBlock } from './block'
@@ -115,7 +116,8 @@ export function createComponent(
   }
 
   const instance = new VaporComponentInstance(component, rawProps, rawSlots)
-  const resetCurrentInstance = setCurrentInstance(instance)
+  const prev = currentInstance
+  simpleSetCurrentInstance(instance)
 
   pauseTracking()
   if (__DEV__) {
@@ -146,9 +148,11 @@ export function createComponent(
       devRender(instance)
 
       // HMR
-      registerHMR(instance)
-      instance.hmrRerender = hmrRerender.bind(null, instance)
-      instance.hmrReload = hmrReload.bind(null, instance)
+      if (component.__hmrId) {
+        registerHMR(instance)
+        instance.hmrRerender = hmrRerender.bind(null, instance)
+        instance.hmrReload = hmrReload.bind(null, instance)
+      }
     }
   } else {
     // in prod result can only be block
@@ -173,7 +177,7 @@ export function createComponent(
     popWarningContext()
   }
   resetTracking()
-  resetCurrentInstance()
+  simpleSetCurrentInstance(prev, instance)
 
   return instance
 }
@@ -414,7 +418,11 @@ export function unmountComponent(
   parent: ParentNode,
 ): void {
   if (instance.isMounted && !instance.isUnmounted) {
+    if (__DEV__ && instance.type.__hmrId) {
+      unregisterHMR(instance)
+    }
     if (instance.bum) invokeArrayFns(instance.bum)
+    instance.scope.stop()
     // TODO invoke unmount recursively for children
     remove(instance.block, parent)
     // queuePostFlushCb(() => {
