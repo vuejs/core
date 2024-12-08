@@ -69,7 +69,7 @@ importers:
         specifier: ^1.0.2
         version: 1.0.2
       '@types/node':
-        specifier: ^22.10.0
+        specifier: ^22.10.1
         version: 22.10.1
       '@types/semver':
         specifier: ^7.5.8
@@ -117,7 +117,7 @@ importers:
         specifier: ^4.17.21
         version: 4.17.21
       magic-string:
-        specifier: ^0.30.12
+        specifier: ^0.30.14
         version: 0.30.14
       markdown-table:
         specifier: ^3.0.4
@@ -339,7 +339,7 @@ importers:
         specifier: ^3.0.3
         version: 3.0.3
       sass:
-        specifier: ^1.81.0
+        specifier: ^1.82.0
         version: 1.82.0
 
   packages/compiler-ssr:
