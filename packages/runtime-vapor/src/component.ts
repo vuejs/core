@@ -150,6 +150,7 @@ export function createComponent(
       // HMR
       if (component.__hmrId) {
         registerHMR(instance)
+        instance.isSingleRoot = isSingleRoot
         instance.hmrRerender = hmrRerender.bind(null, instance)
         instance.hmrReload = hmrReload.bind(null, instance)
       }
@@ -260,9 +261,10 @@ export class VaporComponentInstance implements GenericComponentInstance {
   setupState?: Record<string, any>
   devtoolsRawSetupState?: any
   hmrRerender?: () => void
-  hmrReload?: () => void
+  hmrReload?: (newComp: VaporComponent) => void
   propsOptions?: NormalizedPropsOptions
   emitsOptions?: ObjectEmitsOptions | null
+  isSingleRoot?: boolean
 
   constructor(
     comp: VaporComponent,

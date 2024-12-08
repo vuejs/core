@@ -491,7 +491,7 @@ export interface GenericComponentInstance {
   /**
    * @internal vapor only
    */
-  hmrReload?: () => void
+  hmrReload?: (newComp: any) => void
 }
 
 /**

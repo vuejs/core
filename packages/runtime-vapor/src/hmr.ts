@@ -5,7 +5,14 @@ import {
   simpleSetCurrentInstance,
 } from '@vue/runtime-core'
 import { normalizeBlock } from './block'
-import { type VaporComponentInstance, devRender } from './component'
+import {
+  type VaporComponent,
+  type VaporComponentInstance,
+  createComponent,
+  devRender,
+  mountComponent,
+  unmountComponent,
+} from './component'
 import { insert, remove } from './dom/node'
 
 export function hmrRerender(instance: VaporComponentInstance): void {
@@ -22,7 +29,22 @@ export function hmrRerender(instance: VaporComponentInstance): void {
   insert(instance.block, parent, anchor)
 }
 
-export function hmrReload(instance: VaporComponentInstance): void {
-  // in parent block, find the corresponding block of this instance
-  // create new instance, replace
+export function hmrReload(
+  instance: VaporComponentInstance,
+  newComp: VaporComponent,
+): void {
+  const normalized = normalizeBlock(instance.block)
+  const parent = normalized[0].parentNode!
+  const anchor = normalized[normalized.length - 1].nextSibling
+  unmountComponent(instance, parent)
+  const prev = currentInstance
+  simpleSetCurrentInstance(instance.parent)
+  const newInstance = createComponent(
+    newComp,
+    instance.rawProps,
+    instance.rawSlots,
+    instance.isSingleRoot,
+  )
+  simpleSetCurrentInstance(prev, instance.parent)
+  mountComponent(newInstance, parent, anchor)
 }

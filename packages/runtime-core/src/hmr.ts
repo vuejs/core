@@ -119,7 +119,7 @@ function reload(id: string, newComp: HMRComponent): void {
 
   if (newComp.vapor) {
     for (const instance of instances) {
-      instance.hmrReload!()
+      instance.hmrReload!(newComp)
     }
   } else {
     for (const instance of instances as ComponentInternalInstance[]) {

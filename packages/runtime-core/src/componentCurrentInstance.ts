@@ -96,7 +96,7 @@ export const unsetCurrentInstance = (): void => {
  */
 export const simpleSetCurrentInstance = (
   i: GenericComponentInstance | null,
-  unset?: GenericComponentInstance,
+  unset?: GenericComponentInstance | null,
 ): void => {
   currentInstance = i
   if (unset) {
