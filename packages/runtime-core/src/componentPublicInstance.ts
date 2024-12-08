@@ -54,6 +54,7 @@ import { markAttrsAccessed } from './componentRenderUtils'
 import { currentRenderingInstance } from './componentRenderContext'
 import { warn } from './warning'
 import { installCompatInstanceProperties } from './compat/instance'
+import type { DefineProps } from './apiSetupHelpers'
 import type { Directive } from './directives'
 
 /**
@@ -333,7 +334,11 @@ export type ComponentPublicInstance<
   IfAny<
     P,
     P,
-    Readonly<Defaults> & Omit<P, keyof ShallowUnwrapRef<B> | keyof Defaults>
+    Readonly<Defaults> &
+      Omit<
+        DefineProps<P>,
+        keyof ShallowUnwrapRef<B> | keyof Defaults
+      >
   > &
     ShallowUnwrapRef<B> &
     UnwrapNestedRefs<D> &
