@@ -290,7 +290,7 @@ function convertLegacySlots(vnode: VNode): VNode {
 
   const scopedSlots = props && props.scopedSlots
   if (scopedSlots) {
-    delete props!.scopedSlots
+    delete props.scopedSlots
     if (slots) {
       extend(slots, scopedSlots)
     } else {

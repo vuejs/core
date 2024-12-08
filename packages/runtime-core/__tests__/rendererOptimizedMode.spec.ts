@@ -399,7 +399,7 @@ describe('renderer: optimized mode', () => {
     )
 
     expect(inner(root)).toBe('<div><p>foo</p></div>')
-    expect(block!.dynamicChildren!.length).toBe(0)
+    expect(block.dynamicChildren!.length).toBe(0)
 
     render(
       (openBlock(),
@@ -413,7 +413,7 @@ describe('renderer: optimized mode', () => {
     )
 
     expect(inner(root)).toBe('<div><i>bar</i></div>')
-    expect(block!.dynamicChildren).toBe(null)
+    expect(block.dynamicChildren).toBe(null)
   })
 
   // #1980

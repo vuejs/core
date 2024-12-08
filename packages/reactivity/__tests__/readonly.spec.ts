@@ -512,7 +512,7 @@ describe('reactivity/readonly', () => {
   })
 
   test('setting readonly object to writable nested ref', () => {
-    const r = ref<any>()
+    const r = ref()
     const obj = reactive({ r })
     const ro = readonly({})
     obj.r = ro

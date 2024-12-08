@@ -318,7 +318,7 @@ export function createTransformContext(
     if (identifiers[id] === undefined) {
       identifiers[id] = 0
     }
-    identifiers[id]!++
+    identifiers[id]++
   }
 
   function removeId(id: string) {
