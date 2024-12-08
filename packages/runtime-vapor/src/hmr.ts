@@ -19,3 +19,8 @@ export function hmrRerender(instance: VaporComponentInstance): void {
   popWarningContext()
   insert(instance.block, parent, anchor)
 }
+
+export function hmrReload(instance: VaporComponentInstance): void {
+  // in parent block, find the corresponding block of this instance
+  // create new instance, replace
+}

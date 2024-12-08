@@ -488,6 +488,10 @@ export interface GenericComponentInstance {
    * @internal vapor only
    */
   hmrRerender?: () => void
+  /**
+   * @internal vapor only
+   */
+  hmrReload?: () => void
 }
 
 /**

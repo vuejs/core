@@ -96,8 +96,7 @@ function rerender(id: string, newRender?: Function): void {
     // this flag forces child components with slot content to update
     isHmrUpdating = true
     if (instance.vapor) {
-      // @ts-expect-error TODO
-      instance.hmrRerender()
+      instance.hmrRerender!()
     } else {
       const i = instance as ComponentInternalInstance
       i.renderCache = []
@@ -119,7 +118,9 @@ function reload(id: string, newComp: HMRComponent): void {
   const instances = [...record.instances]
 
   if (newComp.vapor) {
-    // TODO
+    for (const instance of instances) {
+      instance.hmrReload!()
+    }
   } else {
     for (const instance of instances as ComponentInternalInstance[]) {
       const oldComp = normalizeClassComponent(instance.type as HMRComponent)

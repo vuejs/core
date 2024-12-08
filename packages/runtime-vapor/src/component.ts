@@ -20,7 +20,7 @@ import {
 } from '@vue/runtime-dom'
 import { type Block, isBlock } from './block'
 import { pauseTracking, proxyRefs, resetTracking } from '@vue/reactivity'
-import { EMPTY_OBJ, isFunction, isString } from '@vue/shared'
+import { EMPTY_OBJ, invokeArrayFns, isFunction, isString } from '@vue/shared'
 import {
   type RawProps,
   getPropsProxyHandlers,
@@ -40,8 +40,8 @@ import {
   dynamicSlotsProxyHandlers,
   getSlot,
 } from './componentSlots'
-import { insert } from './dom/node'
-import { hmrRerender } from './hmr'
+import { insert, remove } from './dom/node'
+import { hmrReload, hmrRerender } from './hmr'
 
 export { currentInstance } from '@vue/runtime-dom'
 
@@ -148,6 +148,7 @@ export function createComponent(
       // HMR
       registerHMR(instance)
       instance.hmrRerender = hmrRerender.bind(null, instance)
+      instance.hmrReload = hmrReload.bind(null, instance)
     }
   } else {
     // in prod result can only be block
@@ -202,6 +203,7 @@ export class VaporComponentInstance implements GenericComponentInstance {
   uid: number
   type: VaporComponent
   parent: GenericComponentInstance | null
+  children: VaporComponentInstance[] // TODO handle vdom children
   appContext: GenericAppContext
 
   block: Block
@@ -254,6 +256,7 @@ export class VaporComponentInstance implements GenericComponentInstance {
   setupState?: Record<string, any>
   devtoolsRawSetupState?: any
   hmrRerender?: () => void
+  hmrReload?: () => void
   propsOptions?: NormalizedPropsOptions
   emitsOptions?: ObjectEmitsOptions | null
 
@@ -266,19 +269,26 @@ export class VaporComponentInstance implements GenericComponentInstance {
     this.uid = nextUid()
     this.type = comp
     this.parent = currentInstance // TODO proper parent source when inside vdom instance
-    this.appContext = currentInstance
-      ? currentInstance.appContext
-      : emptyContext
+    this.children = []
+
+    if (currentInstance) {
+      if (isVaporComponent(currentInstance)) {
+        currentInstance.children.push(this)
+      }
+      this.appContext = currentInstance.appContext
+      this.provides = currentInstance.provides
+      this.ids = currentInstance.ids
+    } else {
+      this.appContext = emptyContext
+      this.provides = Object.create(this.appContext.provides)
+      this.ids = ['', 0, 0]
+    }
 
     this.block = null! // to be set
     this.scope = new EffectScope(true)
 
     this.emit = emit.bind(null, this)
-    this.provides = currentInstance
-      ? currentInstance.provides
-      : Object.create(this.appContext.provides)
     this.refs = EMPTY_OBJ
-    this.ids = currentInstance ? currentInstance.ids : ['', 0, 0]
     this.emitted = this.exposed = this.propsDefaults = this.suspense = null
     this.isMounted =
       this.isUnmounted =
@@ -380,4 +390,36 @@ export function createComponentWithFallback(
   }
 
   return el
+}
+
+export function mountComponent(
+  instance: VaporComponentInstance,
+  parent: ParentNode,
+  anchor: Node | null | 0,
+): void {
+  if (!instance.isMounted) {
+    if (instance.bm) invokeArrayFns(instance.bm)
+    insert(instance.block, parent, anchor)
+    // queuePostFlushCb(() => {
+    if (instance.m) invokeArrayFns(instance.m)
+    instance.isMounted = true
+    // })
+  } else {
+    insert(instance.block, parent, anchor)
+  }
+}
+
+export function unmountComponent(
+  instance: VaporComponentInstance,
+  parent: ParentNode,
+): void {
+  if (instance.isMounted && !instance.isUnmounted) {
+    if (instance.bum) invokeArrayFns(instance.bum)
+    // TODO invoke unmount recursively for children
+    remove(instance.block, parent)
+    // queuePostFlushCb(() => {
+    if (instance.um) invokeArrayFns(instance.um)
+    instance.isUnmounted = true
+    // })
+  }
 }

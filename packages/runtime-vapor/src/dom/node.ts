@@ -1,8 +1,12 @@
-import { invokeArrayFns, isArray } from '@vue/shared'
+import { isArray } from '@vue/shared'
 import { renderEffect } from '../renderEffect'
 import { setText } from './prop'
-import { type Block, normalizeBlock } from '../block'
-import { isVaporComponent } from '../component'
+import type { Block } from '../block'
+import {
+  isVaporComponent,
+  mountComponent,
+  unmountComponent,
+} from '../component'
 
 export function insert(
   block: Block,
@@ -12,14 +16,7 @@ export function insert(
   if (block instanceof Node) {
     parent.insertBefore(block, anchor === 0 ? parent.firstChild : anchor)
   } else if (isVaporComponent(block)) {
-    if (!block.isMounted) {
-      if (block.bm) invokeArrayFns(block.bm)
-      insert(block.block, parent, anchor)
-      if (block.m) invokeArrayFns(block.m)
-      block.isMounted = true
-    } else {
-      insert(block.block, parent, anchor)
-    }
+    mountComponent(block, parent, anchor)
   } else if (isArray(block)) {
     for (let i = 0; i < block.length; i++) {
       insert(block[i], parent, anchor)
@@ -35,15 +32,23 @@ export function prepend(parent: ParentNode, ...blocks: Block[]): void {
   for (const b of blocks) insert(b, parent, 0)
 }
 
-// TODO optimize
+// TODO invoke unmount recursive
 export function remove(block: Block, parent: ParentNode): void {
-  const nodes = normalizeBlock(block)
-  for (let i = 0; i < nodes.length; i++) {
-    parent.removeChild(nodes[i])
+  if (block instanceof Node) {
+    parent.removeChild(block)
+  } else if (isVaporComponent(block)) {
+    unmountComponent(block, parent)
+  } else if (isArray(block)) {
+    for (let i = 0; i < block.length; i++) {
+      remove(block[i], parent)
+    }
+  } else {
+    // fragment
+    remove(block.nodes, parent)
+    if (block.anchor) remove(block.anchor, parent)
   }
 }
 
-// TODO optimize
 export function createTextNode(values?: any[] | (() => any[])): Text {
   // eslint-disable-next-line no-restricted-globals
   const node = document.createTextNode('')
