@@ -15,6 +15,7 @@ import alias from '@rollup/plugin-alias'
 import { entries } from './scripts/aliases.js'
 import { inlineEnums } from './scripts/inline-enums.js'
 import { minify as minifySwc } from '@swc/core'
+import { trimVaporExportsPlugin } from './scripts/trim-vapor-exports.js'
 
 /**
  * @template T
@@ -186,6 +187,7 @@ function createConfig(format, output, plugins = []) {
     // used alone.
     external: resolveExternal(),
     plugins: [
+      ...trimVaporExportsPlugin(format, pkg.name),
       json({
         namedExports: false,
       }),
