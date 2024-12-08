@@ -89,7 +89,8 @@
       "global",
       "global-runtime",
       "esm-browser",
-      "esm-browser-runtime"
+      "esm-browser-runtime",
+      "vapor"
     ]
   },
   "repository": {

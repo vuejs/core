@@ -14,10 +14,7 @@
   "buildOptions": {
     "name": "VueRuntimeVapor",
     "formats": [
-      "esm-bundler",
-      "esm-browser",
-      "cjs",
-      "global"
+      "esm-bundler"
     ]
   },
   "repository": {

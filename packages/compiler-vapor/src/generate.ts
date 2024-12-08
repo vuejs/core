@@ -76,7 +76,6 @@ export class CodegenContext {
       scopeId: null,
       runtimeGlobalName: `Vue`,
       runtimeModuleName: `vue`,
-      vaporRuntimeModuleName: 'vue/vapor',
       ssrRuntimeModuleName: 'vue/server-renderer',
       ssr: false,
       isTS: false,
@@ -176,7 +175,7 @@ function genHelperImports({ helpers, vaporHelpers, options }: CodegenContext) {
   if (vaporHelpers.size) {
     imports += `import { ${[...vaporHelpers]
       .map(h => `${h} as _${h}`)
-      .join(', ')} } from '${options.vaporRuntimeModuleName}';\n`
+      .join(', ')} } from 'vue';\n`
   }
   return imports
 }

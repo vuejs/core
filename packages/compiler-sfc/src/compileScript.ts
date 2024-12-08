@@ -379,8 +379,7 @@ export function compileScript(
   const vueImportAliases: Record<string, string> = {}
   for (const key in ctx.userImports) {
     const { source, imported, local } = ctx.userImports[key]
-    if (['vue', 'vue/vapor'].includes(source))
-      vueImportAliases[imported] = local
+    if (source === 'vue') vueImportAliases[imported] = local
   }
 
   // 2.1 process normal <script> body
@@ -736,7 +735,7 @@ export function compileScript(
     ctx.bindingMetadata[key] =
       imported === '*' ||
       (imported === 'default' && source.endsWith('.vue')) ||
-      ['vue', 'vue/vapor'].includes(source)
+      source === 'vue'
         ? BindingTypes.SETUP_CONST
         : BindingTypes.SETUP_MAYBE_REF
   }
@@ -847,7 +846,7 @@ export function compileScript(
     for (const key in allBindings) {
       if (
         allBindings[key] === true &&
-        !['vue', 'vue/vapor'].includes(ctx.userImports[key].source) &&
+        ctx.userImports[key].source !== 'vue' &&
         !ctx.userImports[key].source.endsWith('.vue')
       ) {
         // generate getter for import bindings
@@ -989,8 +988,7 @@ export function compileScript(
     ctx.s.prependLeft(
       startOffset,
       `\n${genDefaultAs} /*@__PURE__*/${ctx.helper(
-        `defineComponent`,
-        vapor,
+        vapor ? `defineVaporComponent` : `defineComponent`,
       )}({${def}${runtimeOptions}\n  ${
         hasAwait ? `async ` : ``
       }setup(${args}) {\n${exposeCall}`,
@@ -1029,13 +1027,6 @@ export function compileScript(
       `import { ${[...ctx.helperImports]
         .map(h => `${h} as _${h}`)
         .join(', ')} } from ${importSrc}\n`,
-    )
-  }
-  if (ctx.vaporHelperImports.size > 0) {
-    ctx.s.prepend(
-      `import { ${[...ctx.vaporHelperImports]
-        .map(h => `${h} as _${h}`)
-        .join(', ')} } from 'vue/vapor'\n`,
     )
   }
 

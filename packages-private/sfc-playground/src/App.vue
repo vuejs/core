@@ -5,10 +5,8 @@ import {
   type SFCOptions,
   useStore,
   useVueImportMap,
-  mergeImportMap,
   File,
   StoreState,
-  ImportMap,
 } from '@vue/repl'
 import Monaco from '@vue/repl/monaco-editor'
 import { ref, watchEffect, onMounted, computed, watch } from 'vue'
@@ -31,34 +29,24 @@ const initAutoSave: boolean = JSON.parse(
 )
 const autoSave = ref(initAutoSave)
 
-const {
-  vueVersion,
-  productionMode,
-  importMap: vueImportMap,
-} = useVueImportMap({
-  runtimeDev: import.meta.env.PROD
-    ? `${location.origin}/vue.runtime.esm-browser.js`
-    : `${location.origin}/src/vue-dev-proxy`,
-  runtimeProd: import.meta.env.PROD
-    ? `${location.origin}/vue.runtime.esm-browser.prod.js`
-    : `${location.origin}/src/vue-dev-proxy-prod`,
+const { vueVersion, productionMode, importMap } = useVueImportMap({
+  runtimeDev: () => {
+    return import.meta.env.PROD
+      ? useVaporMode.value
+        ? `${location.origin}/vue.runtime-with-vapor.esm-browser.js`
+        : `${location.origin}/vue.runtime.esm-browser.js`
+      : `${location.origin}/src/vue-dev-proxy`
+  },
+  runtimeProd: () => {
+    return import.meta.env.PROD
+      ? useVaporMode.value
+        ? `${location.origin}/vue.runtime-with-vapor.esm-browser.prod.js`
+        : `${location.origin}/vue.runtime.esm-browser.prod.js`
+      : `${location.origin}/src/vue-dev-proxy-prod`
+  },
   serverRenderer: import.meta.env.PROD
     ? `${location.origin}/server-renderer.esm-browser.js`
     : `${location.origin}/src/vue-server-renderer-dev-proxy`,
-})
-
-const importMap = computed(() => {
-  const vapor = import.meta.env.PROD
-    ? `${location.origin}/vue-vapor.esm-browser.js`
-    : `${location.origin}/src/vue-vapor-dev-proxy`
-
-  const vaporImportMap: ImportMap = {
-    imports: {
-      'vue/vapor': vapor,
-    },
-  }
-
-  return mergeImportMap(vueImportMap.value, vaporImportMap)
 })
 
 let hash = location.hash.slice(1)
@@ -126,7 +114,7 @@ watch(
       files.value['src/index.html'] = new File(
         'src/index.html',
         `<script type="module">
-        import { createVaporApp } from 'vue/vapor'
+        import { createVaporApp } from 'vue'
         import App from './App.vue'
         createVaporApp(App).mount('#app')` +
           '<' +

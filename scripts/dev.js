@@ -49,9 +49,12 @@ const outputFormat = format.startsWith('global')
     ? 'cjs'
     : 'esm'
 
-const postfix = format.endsWith('-runtime')
-  ? `runtime.${format.replace(/-runtime$/, '')}`
-  : format
+const postfix =
+  format === 'vapor'
+    ? 'runtime-with-vapor.esm-browser'
+    : format.endsWith('-runtime')
+      ? `runtime.${format.replace(/-runtime$/, '')}`
+      : format
 
 const privatePackages = fs.readdirSync('packages-private')
 
@@ -127,9 +130,16 @@ for (const target of targets) {
     plugins.push(polyfillNode())
   }
 
+  const entry =
+    format === 'vapor'
+      ? 'runtime-with-vapor.ts'
+      : format.endsWith('-runtime')
+        ? 'runtime.ts'
+        : 'index.ts'
+
   esbuild
     .context({
-      entryPoints: [resolve(__dirname, `${pkgBasePath}/src/index.ts`)],
+      entryPoints: [resolve(__dirname, `${pkgBasePath}/src/${entry}`)],
       outfile,
       bundle: true,
       external,
