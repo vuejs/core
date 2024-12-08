@@ -342,7 +342,7 @@ function genSlotBlockWithProps(oper: SlotBlockIRNode, context: CodegenContext) {
     rawProps = props.content
     if ((isDestructureAssignment = !!props.ast)) {
       ;[depth, exitScope] = context.enterScope()
-      propsName = `_ctx${depth}`
+      propsName = `_slotProps${depth}`
       walkIdentifiers(
         props.ast,
         (id, _, __, ___, isLocal) => {
@@ -357,26 +357,17 @@ function genSlotBlockWithProps(oper: SlotBlockIRNode, context: CodegenContext) {
 
   const idMap: Record<string, string | null> = {}
 
-  Array.from(idsOfProps).forEach(
-    (id, idIndex) =>
-      (idMap[id] = isDestructureAssignment ? `${propsName}[${idIndex}]` : null),
+  idsOfProps.forEach(
+    id =>
+      (idMap[id] = isDestructureAssignment
+        ? `${propsName}[${JSON.stringify(id)}]`
+        : null),
   )
-  let blockFn = context.withId(
+  const blockFn = context.withId(
     () => genBlock(oper, context, [propsName]),
     idMap,
   )
   exitScope && exitScope()
-
-  if (isDestructureAssignment) {
-    const idMap: Record<string, null> = {}
-    idsOfProps.forEach(id => (idMap[id] = null))
-
-    blockFn = genCall(
-      context.vaporHelper('withDestructure'),
-      ['(', rawProps, ') => ', ...genMulti(DELIMITERS_ARRAY, ...idsOfProps)],
-      blockFn,
-    )
-  }
 
   return blockFn
 }
