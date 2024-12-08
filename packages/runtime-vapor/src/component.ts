@@ -399,12 +399,12 @@ export function createComponentWithFallback(
 export function mountComponent(
   instance: VaporComponentInstance,
   parent: ParentNode,
-  anchor: Node | null | 0,
+  anchor?: Node | null | 0,
 ): void {
   if (!instance.isMounted) {
     if (instance.bm) invokeArrayFns(instance.bm)
     insert(instance.block, parent, anchor)
-    // queuePostFlushCb(() => {
+    // TODO queuePostFlushCb(() => {
     if (instance.m) invokeArrayFns(instance.m)
     instance.isMounted = true
     // })
@@ -415,7 +415,7 @@ export function mountComponent(
 
 export function unmountComponent(
   instance: VaporComponentInstance,
-  parent: ParentNode,
+  parent?: ParentNode,
 ): void {
   if (instance.isMounted && !instance.isUnmounted) {
     if (__DEV__ && instance.type.__hmrId) {
@@ -423,11 +423,15 @@ export function unmountComponent(
     }
     if (instance.bum) invokeArrayFns(instance.bum)
     instance.scope.stop()
-    // TODO invoke unmount recursively for children
-    remove(instance.block, parent)
-    // queuePostFlushCb(() => {
+    for (const c of instance.children) {
+      unmountComponent(c)
+    }
+    if (parent) remove(instance.block, parent)
+    // TODO queuePostFlushCb(() => {
     if (instance.um) invokeArrayFns(instance.um)
     instance.isUnmounted = true
     // })
+  } else if (parent) {
+    remove(instance.block, parent)
   }
 }

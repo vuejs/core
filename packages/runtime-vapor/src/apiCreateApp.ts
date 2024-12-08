@@ -1,5 +1,10 @@
-import { insert } from './dom/node'
-import { type VaporComponent, createComponent } from './component'
+import {
+  type VaporComponent,
+  type VaporComponentInstance,
+  createComponent,
+  mountComponent,
+  unmountComponent,
+} from './component'
 import {
   type AppMountFn,
   type AppUnmountFn,
@@ -17,12 +22,12 @@ const mountApp: AppMountFn<ParentNode> = (app, container) => {
     container.textContent = ''
   }
   const instance = createComponent(app._component, app._props as RawProps)
-  insert(instance, container)
+  mountComponent(instance, container)
   return instance
 }
 
 const unmountApp: AppUnmountFn = app => {
-  // TODO
+  unmountComponent(app._instance as VaporComponentInstance, app._container)
 }
 
 export const createVaporApp: CreateAppFunction<
