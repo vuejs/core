@@ -112,39 +112,14 @@ export function getPropsProxyHandlers(
     : null
 
   const getAttr = (target: RawProps, key: string) => {
-    if (isProp(key) || isEmitListener(emitsOptions, key)) {
-      return
-    }
-    const dynamicSources = target.$
-    if (dynamicSources) {
-      let i = dynamicSources.length
-      let source, isDynamic
-      while (i--) {
-        source = dynamicSources[i]
-        isDynamic = isFunction(source)
-        source = isDynamic ? (source as Function)() : source
-        if (hasOwn(source, key)) {
-          return isDynamic ? source[key] : source[key]()
-        }
-      }
-    }
-    if (hasOwn(target, key)) {
-      return target[key]()
+    if (!isProp(key) && !isEmitListener(emitsOptions, key)) {
+      return getAttrFromRawProps(target, key)
     }
   }
 
   const hasAttr = (target: RawProps, key: string) => {
     if (isAttr(key)) {
-      const dynamicSources = target.$
-      if (dynamicSources) {
-        let i = dynamicSources.length
-        while (i--) {
-          if (hasOwn(resolveSource(dynamicSources[i]), key)) {
-            return true
-          }
-        }
-      }
-      return hasOwn(target, key)
+      return hasAttrFromRawProps(target, key)
     } else {
       return false
     }
@@ -186,6 +161,40 @@ export function getPropsProxyHandlers(
   } satisfies ProxyHandler<VaporComponentInstance>
 
   return (comp.__propsHandlers = [propsHandlers, attrsHandlers])
+}
+
+export function getAttrFromRawProps(rawProps: RawProps, key: string): unknown {
+  if (key === '$') return
+  const dynamicSources = rawProps.$
+  if (dynamicSources) {
+    let i = dynamicSources.length
+    let source, isDynamic
+    while (i--) {
+      source = dynamicSources[i]
+      isDynamic = isFunction(source)
+      source = isDynamic ? (source as Function)() : source
+      if (hasOwn(source, key)) {
+        return isDynamic ? source[key] : source[key]()
+      }
+    }
+  }
+  if (hasOwn(rawProps, key)) {
+    return rawProps[key]()
+  }
+}
+
+export function hasAttrFromRawProps(rawProps: RawProps, key: string): boolean {
+  if (key === '$') return false
+  const dynamicSources = rawProps.$
+  if (dynamicSources) {
+    let i = dynamicSources.length
+    while (i--) {
+      if (hasOwn(resolveSource(dynamicSources[i]), key)) {
+        return true
+      }
+    }
+  }
+  return hasOwn(rawProps, key)
 }
 
 export function normalizePropsOptions(

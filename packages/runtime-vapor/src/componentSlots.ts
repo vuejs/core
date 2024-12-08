@@ -1,6 +1,10 @@
 import { EMPTY_OBJ, NO, hasOwn, isArray, isFunction } from '@vue/shared'
 import { type Block, type BlockFn, DynamicFragment } from './block'
-import type { RawProps } from './componentProps'
+import {
+  type RawProps,
+  getAttrFromRawProps,
+  hasAttrFromRawProps,
+} from './componentProps'
 import { currentInstance } from '@vue/runtime-core'
 import type { VaporComponentInstance } from './component'
 import { renderEffect } from './renderEffect'
@@ -78,14 +82,10 @@ export function getSlot(target: RawSlots, key: string): Slot | undefined {
   }
 }
 
-// TODO
 const dynamicSlotsPropsProxyHandlers: ProxyHandler<RawProps> = {
-  get(target, key: string) {
-    return target[key]
-  },
-  has(target, key) {
-    return key in target
-  },
+  get: getAttrFromRawProps,
+  has: hasAttrFromRawProps,
+  ownKeys: target => Object.keys(target).filter(k => k !== '$'),
 }
 
 // TODO how to handle empty slot return blocks?
@@ -97,38 +97,27 @@ export function createSlot(
   rawProps?: RawProps,
   fallback?: Slot,
 ): Block {
+  const fragment = new DynamicFragment('slot')
   const rawSlots = (currentInstance as VaporComponentInstance)!.rawSlots
-  const resolveSlot = () => getSlot(rawSlots, isFunction(name) ? name() : name)
   const slotProps = rawProps
-    ? rawProps.$
-      ? new Proxy(rawProps, dynamicSlotsPropsProxyHandlers)
-      : rawProps
+    ? new Proxy(rawProps, dynamicSlotsPropsProxyHandlers)
     : EMPTY_OBJ
 
-  if (isFunction(name) || rawSlots.$) {
-    // dynamic slot name, or dynamic slot sources
-    const fragment = new DynamicFragment('slot')
-    renderEffect(() => {
-      const slot = resolveSlot()
-      if (slot) {
-        fragment.update(
-          () => slot(slotProps) || (fallback && fallback()),
-          // pass the stable slot fn as key to avoid toggling when resolving
-          // to the same slot
-          slot,
-        )
-      } else {
-        fragment.update(fallback)
-      }
-    })
-    return fragment
-  } else {
-    // static
-    const slot = resolveSlot()
+  // always create effect because a slot may contain dynamic root inside
+  // which affects fallback
+  renderEffect(() => {
+    const slot = getSlot(rawSlots, isFunction(name) ? name() : name)
     if (slot) {
-      const block = slot(slotProps)
-      if (block) return block
+      fragment.update(
+        () => slot(slotProps) || (fallback && fallback()),
+        // TODO this key needs to account for possible fallback (v-if)
+        // inside the slot
+        slot,
+      )
+    } else {
+      fragment.update(fallback)
     }
-    return fallback ? fallback() : []
-  }
+  })
+
+  return fragment
 }

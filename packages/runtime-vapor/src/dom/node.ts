@@ -7,10 +7,10 @@ import { isVaporComponent } from '../component'
 export function insert(
   block: Block,
   parent: ParentNode,
-  anchor: Node | null = null,
+  anchor: Node | null | 0 = null,
 ): void {
   if (block instanceof Node) {
-    parent.insertBefore(block, anchor)
+    parent.insertBefore(block, anchor === 0 ? parent.firstChild : anchor)
   } else if (isVaporComponent(block)) {
     if (!block.isMounted) {
       if (block.bm) invokeArrayFns(block.bm)
@@ -27,13 +27,12 @@ export function insert(
   } else {
     // fragment
     insert(block.nodes, parent, anchor)
-    if (block.anchor) parent.insertBefore(block.anchor, anchor)
+    if (block.anchor) insert(block.anchor, parent, anchor)
   }
 }
 
 export function prepend(parent: ParentNode, ...blocks: Block[]): void {
-  const anchor = parent.firstChild
-  for (const b of blocks) insert(b, parent, anchor)
+  for (const b of blocks) insert(b, parent, 0)
 }
 
 // TODO optimize
