@@ -119,7 +119,10 @@ export function queueJob(job: SchedulerJob): void {
 
 function queueFlush() {
   if (!currentFlushPromise) {
-    currentFlushPromise = resolvedPromise.then(flushJobs)
+    currentFlushPromise = resolvedPromise.then(flushJobs).catch(e => {
+      currentFlushPromise = null
+      throw e
+    })
   }
 }
 
@@ -201,8 +204,13 @@ export function flushPostFlushCbs(seen?: CountMap): void {
       if (cb.flags! & SchedulerJobFlags.ALLOW_RECURSE) {
         cb.flags! &= ~SchedulerJobFlags.QUEUED
       }
-      if (!(cb.flags! & SchedulerJobFlags.DISPOSED)) cb()
-      cb.flags! &= ~SchedulerJobFlags.QUEUED
+      if (!(cb.flags! & SchedulerJobFlags.DISPOSED)) {
+        try {
+          cb()
+        } finally {
+          cb.flags! &= ~SchedulerJobFlags.QUEUED
+        }
+      }
     }
     activePostFlushCbs = null
     postFlushIndex = 0
