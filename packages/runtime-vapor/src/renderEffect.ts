@@ -1,4 +1,4 @@
-import { ReactiveEffect } from '@vue/reactivity'
+import { ReactiveEffect, getCurrentScope } from '@vue/reactivity'
 import {
   type SchedulerJob,
   currentInstance,
@@ -12,7 +12,8 @@ import { invokeArrayFns } from '@vue/shared'
 
 export function renderEffect(fn: () => void, noLifecycle = false): void {
   const instance = currentInstance as VaporComponentInstance
-  if (__DEV__ && !isVaporComponent(instance)) {
+  const scope = getCurrentScope()
+  if (__DEV__ && !__TEST__ && !isVaporComponent(instance)) {
     warn('renderEffect called without active vapor instance.')
   }
 
@@ -21,7 +22,9 @@ export function renderEffect(fn: () => void, noLifecycle = false): void {
     : () => {
         const prev = currentInstance
         simpleSetCurrentInstance(instance)
+        if (scope) scope.on()
         if (
+          instance &&
           instance.isMounted &&
           !instance.isUpdating &&
           (instance.bu || instance.u)
@@ -36,17 +39,19 @@ export function renderEffect(fn: () => void, noLifecycle = false): void {
         } else {
           fn()
         }
+        if (scope) scope.off()
         simpleSetCurrentInstance(prev, instance)
       }
 
   const effect = new ReactiveEffect(renderEffectFn)
   const job: SchedulerJob = effect.runIfDirty.bind(effect)
-  job.i = instance
-  job.id = instance.uid
+  if (instance) {
+    job.i = instance
+    job.id = instance.uid
+  }
   effect.scheduler = () => queueJob(job)
   effect.run()
 
-  // TODO lifecycle
   // TODO recurse handling
   // TODO measure
 }

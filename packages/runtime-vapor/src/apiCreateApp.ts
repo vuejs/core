@@ -34,8 +34,7 @@ export const createVaporApp: CreateAppFunction<
   ParentNode,
   VaporComponent
 > = comp => {
-  if (!_createApp)
-    _createApp = createAppAPI(mountApp, unmountApp, i => i.exposed)
+  if (!_createApp) _createApp = createAppAPI(mountApp, unmountApp, i => i)
   const app = _createApp(comp)
   const mount = app.mount
   app.mount = (container, ...args: any[]) => {

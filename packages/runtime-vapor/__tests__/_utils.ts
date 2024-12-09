@@ -1,18 +1,17 @@
-import {
-  type App,
-  type Component,
-  type ComponentInternalInstance,
-  type ObjectComponent,
-  type SetupFn,
-  createVaporApp,
-  defineComponent,
-} from '../src/_old'
-import type { RawProps } from '../src/_old/componentProps'
+import { createVaporApp, defineVaporComponent } from '../src'
+import type { App } from '@vue/runtime-dom'
+import type {
+  ObjectVaporComponent,
+  VaporComponent,
+  VaporComponentInstance,
+  VaporSetupFn,
+} from '../src/component'
+import type { RawProps } from '../src/componentProps'
 
 export interface RenderContext {
-  component: Component
+  component: VaporComponent
   host: HTMLElement
-  instance: ComponentInternalInstance | undefined
+  instance: VaporComponentInstance | undefined
   app: App
   create: (props?: RawProps) => RenderContext
   mount: (container?: string | ParentNode) => RenderContext
@@ -21,7 +20,7 @@ export interface RenderContext {
   html: () => string
 }
 
-export function makeRender<C = ObjectComponent | SetupFn>(
+export function makeRender<C = ObjectVaporComponent | VaporSetupFn>(
   initHost = (): HTMLDivElement => {
     const host = document.createElement('div')
     host.setAttribute('id', 'host')
@@ -42,8 +41,8 @@ export function makeRender<C = ObjectComponent | SetupFn>(
   })
 
   function define(comp: C) {
-    const component = defineComponent(comp as any)
-    let instance: ComponentInternalInstance | undefined
+    const component = defineVaporComponent(comp as any)
+    let instance: VaporComponentInstance | undefined
     let app: App
 
     function render(
@@ -61,7 +60,7 @@ export function makeRender<C = ObjectComponent | SetupFn>(
     }
 
     function mount(container: string | ParentNode = host) {
-      instance = app.mount(container)
+      instance = app.mount(container) as any as VaporComponentInstance
       return res()
     }
 

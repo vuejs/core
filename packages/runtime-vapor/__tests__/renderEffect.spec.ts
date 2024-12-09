@@ -1,21 +1,18 @@
 import {
   EffectScope,
+  type GenericComponentInstance,
+  currentInstance,
   getCurrentScope,
   nextTick,
   onBeforeUpdate,
-  onEffectCleanup,
   onUpdated,
   ref,
-  renderEffect,
-  template,
   watchEffect,
   watchPostEffect,
   watchSyncEffect,
-} from '../src/_old'
-import {
-  type ComponentInternalInstance,
-  currentInstance,
-} from '../src/_old/component'
+} from '@vue/runtime-dom'
+import { renderEffect, template } from '../src'
+import { onEffectCleanup } from '@vue/reactivity'
 import { makeRender } from './_utils'
 
 const define = makeRender<any>()
@@ -110,8 +107,10 @@ describe('renderEffect', () => {
         })
       },
     ).render()
+
     const { change, changeRender } = instance?.setupState as any
 
+    await nextTick()
     expect(calls).toEqual(['pre 0', 'sync 0', 'renderEffect 0', 'post 0'])
     calls.length = 0
 
@@ -126,8 +125,8 @@ describe('renderEffect', () => {
     expect(calls).toEqual([
       'pre cleanup 0',
       'pre 1',
-      'beforeUpdate 1',
       'renderEffect cleanup 0',
+      'beforeUpdate 1',
       'renderEffect 1',
       'post cleanup 0',
       'post 1',
@@ -146,8 +145,8 @@ describe('renderEffect', () => {
     expect(calls).toEqual([
       'pre cleanup 1',
       'pre 2',
-      'beforeUpdate 2',
       'renderEffect cleanup 1',
+      'beforeUpdate 2',
       'renderEffect 2',
       'post cleanup 1',
       'post 2',
@@ -174,6 +173,7 @@ describe('renderEffect', () => {
       },
     ).render()
     const { update } = instance?.setupState as any
+
     await expect(async () => {
       update()
       await nextTick()
@@ -181,6 +181,9 @@ describe('renderEffect', () => {
 
     expect(
       '[Vue warn]: Unhandled error during execution of beforeUpdate hook',
+    ).toHaveBeenWarned()
+    expect(
+      '[Vue warn]: Unhandled error during execution of component update',
     ).toHaveBeenWarned()
   })
 
@@ -204,6 +207,7 @@ describe('renderEffect', () => {
     ).render()
 
     const { update } = instance?.setupState as any
+
     await expect(async () => {
       update()
       await nextTick()
@@ -217,15 +221,17 @@ describe('renderEffect', () => {
   test('should be called with the current instance and current scope', async () => {
     const source = ref(0)
     const scope = new EffectScope()
-    let instanceSnap: ComponentInternalInstance | null = null
+    let instanceSnap: GenericComponentInstance | null = null
     let scopeSnap: EffectScope | undefined = undefined
     const { instance } = define(() => {
       scope.run(() => {
         renderEffect(() => {
+          source.value
           instanceSnap = currentInstance
           scopeSnap = getCurrentScope()
         })
       })
+      return []
     }).render()
 
     expect(instanceSnap).toBe(instance)
