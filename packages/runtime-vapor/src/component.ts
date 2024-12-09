@@ -104,6 +104,7 @@ export function createComponent(
   // if yes, inject parent attrs as dynamic props source
   if (
     isSingleRoot &&
+    component.inheritAttrs !== false &&
     isVaporComponent(currentInstance) &&
     currentInstance.hasFallthrough
   ) {
