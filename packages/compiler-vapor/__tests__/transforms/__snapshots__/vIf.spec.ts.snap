@@ -1,7 +1,7 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
 exports[`compiler: v-if > basic v-if 1`] = `
-"import { renderEffect as _renderEffect, setText as _setText, createIf as _createIf, template as _template } from 'vue/vapor';
+"import { renderEffect as _renderEffect, setText as _setText, createIf as _createIf, template as _template } from 'vue';
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
@@ -15,7 +15,7 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: v-if > comment between branches 1`] = `
-"import { createIf as _createIf, renderEffect as _renderEffect, setText as _setText, template as _template } from 'vue/vapor';
+"import { createIf as _createIf, renderEffect as _renderEffect, setText as _setText, template as _template } from 'vue';
 const t0 = _template("<div></div>")
 const t1 = _template("<!--foo-->")
 const t2 = _template("<p></p>")
@@ -43,7 +43,7 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: v-if > dedupe same template 1`] = `
-"import { createIf as _createIf, template as _template } from 'vue/vapor';
+"import { createIf as _createIf, template as _template } from 'vue';
 const t0 = _template("<div>hello</div>")
 
 export function render(_ctx) {
@@ -60,7 +60,7 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: v-if > template v-if 1`] = `
-"import { renderEffect as _renderEffect, setText as _setText, createIf as _createIf, template as _template } from 'vue/vapor';
+"import { renderEffect as _renderEffect, setText as _setText, createIf as _createIf, template as _template } from 'vue';
 const t0 = _template("<div></div>")
 const t1 = _template("hello")
 const t2 = _template("<p></p>")
@@ -78,7 +78,7 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: v-if > v-if + v-else 1`] = `
-"import { createIf as _createIf, template as _template } from 'vue/vapor';
+"import { createIf as _createIf, template as _template } from 'vue';
 const t0 = _template("<div></div>")
 const t1 = _template("<p></p>")
 
@@ -95,7 +95,7 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: v-if > v-if + v-else-if + v-else 1`] = `
-"import { createIf as _createIf, template as _template } from 'vue/vapor';
+"import { createIf as _createIf, template as _template } from 'vue';
 const t0 = _template("<div></div>")
 const t1 = _template("<p></p>")
 const t2 = _template("fine")
@@ -116,7 +116,7 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: v-if > v-if + v-else-if 1`] = `
-"import { createIf as _createIf, template as _template } from 'vue/vapor';
+"import { createIf as _createIf, template as _template } from 'vue';
 const t0 = _template("<div></div>")
 const t1 = _template("<p></p>")
 

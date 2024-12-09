@@ -1,7 +1,7 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
 exports[`compiler: template ref transform > dynamic ref 1`] = `
-"import { renderEffect as _renderEffect, setRef as _setRef, template as _template } from 'vue/vapor';
+"import { renderEffect as _renderEffect, setRef as _setRef, template as _template } from 'vue';
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
@@ -13,7 +13,7 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: template ref transform > ref + v-for 1`] = `
-"import { setRef as _setRef, createFor as _createFor, template as _template } from 'vue/vapor';
+"import { setRef as _setRef, createFor as _createFor, template as _template } from 'vue';
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
@@ -27,7 +27,7 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: template ref transform > ref + v-if 1`] = `
-"import { setRef as _setRef, createIf as _createIf, template as _template } from 'vue/vapor';
+"import { setRef as _setRef, createIf as _createIf, template as _template } from 'vue';
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
@@ -41,7 +41,7 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: template ref transform > static ref 1`] = `
-"import { setRef as _setRef, template as _template } from 'vue/vapor';
+"import { setRef as _setRef, template as _template } from 'vue';
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {

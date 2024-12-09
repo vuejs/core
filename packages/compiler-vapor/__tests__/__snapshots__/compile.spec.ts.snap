@@ -1,7 +1,7 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
 exports[`compile > bindings 1`] = `
-"import { renderEffect as _renderEffect, setText as _setText, template as _template } from 'vue/vapor';
+"import { renderEffect as _renderEffect, setText as _setText, template as _template } from 'vue';
 const t0 = _template("<div></div>")
 
 export function render(_ctx, $props, $emit, $attrs, $slots) {
@@ -12,7 +12,7 @@ export function render(_ctx, $props, $emit, $attrs, $slots) {
 `;
 
 exports[`compile > custom directive > basic 1`] = `
-"import { resolveDirective as _resolveDirective, withDirectives as _withDirectives, template as _template } from 'vue/vapor';
+"import { resolveDirective as _resolveDirective, withDirectives as _withDirectives, template as _template } from 'vue';
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
@@ -25,7 +25,7 @@ export function render(_ctx) {
 `;
 
 exports[`compile > custom directive > component 1`] = `
-"import { resolveComponent as _resolveComponent, resolveDirective as _resolveDirective, createComponent as _createComponent, withDirectives as _withDirectives, insert as _insert, createIf as _createIf, template as _template } from 'vue/vapor';
+"import { resolveComponent as _resolveComponent, resolveDirective as _resolveDirective, createComponentWithFallback as _createComponentWithFallback, withDirectives as _withDirectives, insert as _insert, createIf as _createIf, template as _template } from 'vue';
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
@@ -33,27 +33,25 @@ export function render(_ctx) {
   const _component_Comp = _resolveComponent("Comp")
   const _directive_hello = _resolveDirective("hello")
   const _directive_test = _resolveDirective("test")
-  const n4 = _createComponent(_component_Comp, null, [
-    {
-      "default": () => {
-        const n0 = _createIf(() => (true), () => {
-          const n3 = t0()
-          const n2 = _createComponent(_component_Bar)
-          _withDirectives(n2, [[_directive_hello, void 0, void 0, { world: true }]])
-          _insert(n2, n3)
-          return n3
-        })
-        return n0
-      }
+  const n4 = _createComponentWithFallback(_component_Comp, null, {
+    "default": () => {
+      const n0 = _createIf(() => (true), () => {
+        const n3 = t0()
+        const n2 = _createComponentWithFallback(_component_Bar)
+        _withDirectives(n2, [[_directive_hello, void 0, void 0, { world: true }]])
+        _insert(n2, n3)
+        return n3
+      })
+      return n0
     }
-  ], true)
+  }, true)
   _withDirectives(n4, [[_directive_test]])
   return n4
 }"
 `;
 
 exports[`compile > directives > custom directive > basic 1`] = `
-"import { withDirectives as _withDirectives, template as _template } from 'vue/vapor';
+"import { withDirectives as _withDirectives, template as _template } from 'vue';
 const t0 = _template("<div></div>")
 
 export function render(_ctx, $props, $emit, $attrs, $slots) {
@@ -64,7 +62,7 @@ export function render(_ctx, $props, $emit, $attrs, $slots) {
 `;
 
 exports[`compile > directives > custom directive > binding value 1`] = `
-"import { withDirectives as _withDirectives, template as _template } from 'vue/vapor';
+"import { withDirectives as _withDirectives, template as _template } from 'vue';
 const t0 = _template("<div></div>")
 
 export function render(_ctx, $props, $emit, $attrs, $slots) {
@@ -75,7 +73,7 @@ export function render(_ctx, $props, $emit, $attrs, $slots) {
 `;
 
 exports[`compile > directives > custom directive > dynamic parameters 1`] = `
-"import { withDirectives as _withDirectives, template as _template } from 'vue/vapor';
+"import { withDirectives as _withDirectives, template as _template } from 'vue';
 const t0 = _template("<div></div>")
 
 export function render(_ctx, $props, $emit, $attrs, $slots) {
@@ -86,7 +84,7 @@ export function render(_ctx, $props, $emit, $attrs, $slots) {
 `;
 
 exports[`compile > directives > custom directive > modifiers 1`] = `
-"import { withDirectives as _withDirectives, template as _template } from 'vue/vapor';
+"import { withDirectives as _withDirectives, template as _template } from 'vue';
 const t0 = _template("<div></div>")
 
 export function render(_ctx, $props, $emit, $attrs, $slots) {
@@ -97,7 +95,7 @@ export function render(_ctx, $props, $emit, $attrs, $slots) {
 `;
 
 exports[`compile > directives > custom directive > modifiers w/o binding 1`] = `
-"import { withDirectives as _withDirectives, template as _template } from 'vue/vapor';
+"import { withDirectives as _withDirectives, template as _template } from 'vue';
 const t0 = _template("<div></div>")
 
 export function render(_ctx, $props, $emit, $attrs, $slots) {
@@ -108,7 +106,7 @@ export function render(_ctx, $props, $emit, $attrs, $slots) {
 `;
 
 exports[`compile > directives > custom directive > static parameters 1`] = `
-"import { withDirectives as _withDirectives, template as _template } from 'vue/vapor';
+"import { withDirectives as _withDirectives, template as _template } from 'vue';
 const t0 = _template("<div></div>")
 
 export function render(_ctx, $props, $emit, $attrs, $slots) {
@@ -119,7 +117,7 @@ export function render(_ctx, $props, $emit, $attrs, $slots) {
 `;
 
 exports[`compile > directives > custom directive > static parameters and modifiers 1`] = `
-"import { withDirectives as _withDirectives, template as _template } from 'vue/vapor';
+"import { withDirectives as _withDirectives, template as _template } from 'vue';
 const t0 = _template("<div></div>")
 
 export function render(_ctx, $props, $emit, $attrs, $slots) {
@@ -130,7 +128,7 @@ export function render(_ctx, $props, $emit, $attrs, $slots) {
 `;
 
 exports[`compile > directives > v-cloak > basic 1`] = `
-"import { template as _template } from 'vue/vapor';
+"import { template as _template } from 'vue';
 const t0 = _template("<div>test</div>")
 
 export function render(_ctx) {
@@ -140,7 +138,7 @@ export function render(_ctx) {
 `;
 
 exports[`compile > directives > v-pre > basic 1`] = `
-"import { setInheritAttrs as _setInheritAttrs, template as _template } from 'vue/vapor';
+"import { setInheritAttrs as _setInheritAttrs, template as _template } from 'vue';
 const t0 = _template("<div :id=\\"foo\\"><Comp></Comp>{{ bar }}</div>")
 
 export function render(_ctx, $props, $emit, $attrs, $slots) {
@@ -151,7 +149,7 @@ export function render(_ctx, $props, $emit, $attrs, $slots) {
 `;
 
 exports[`compile > directives > v-pre > should not affect siblings after it 1`] = `
-"import { resolveComponent as _resolveComponent, createComponent as _createComponent, createTextNode as _createTextNode, insert as _insert, renderEffect as _renderEffect, setDOMProp as _setDOMProp, template as _template } from 'vue/vapor';
+"import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback, createTextNode as _createTextNode, insert as _insert, renderEffect as _renderEffect, setDOMProp as _setDOMProp, template as _template } from 'vue';
 const t0 = _template("<div :id=\\"foo\\"><Comp></Comp>{{ bar }}</div>")
 const t1 = _template("<div></div>")
 
@@ -159,7 +157,7 @@ export function render(_ctx, $props, $emit, $attrs, $slots) {
   const _component_Comp = _resolveComponent("Comp")
   const n0 = t0()
   const n3 = t1()
-  const n1 = _createComponent(_component_Comp)
+  const n1 = _createComponentWithFallback(_component_Comp)
   const n2 = _createTextNode(() => [_ctx.bar])
   _insert([n1, n2], n3)
   _renderEffect(() => _setDOMProp(n3, "id", _ctx.foo))
@@ -168,7 +166,7 @@ export function render(_ctx, $props, $emit, $attrs, $slots) {
 `;
 
 exports[`compile > dynamic root 1`] = `
-"import { createTextNode as _createTextNode } from 'vue/vapor';
+"import { createTextNode as _createTextNode } from 'vue';
 
 export function render(_ctx) {
   const n0 = _createTextNode(() => [1, 2])
@@ -177,7 +175,7 @@ export function render(_ctx) {
 `;
 
 exports[`compile > dynamic root nodes and interpolation 1`] = `
-"import { delegate as _delegate, setInheritAttrs as _setInheritAttrs, renderEffect as _renderEffect, setText as _setText, setDOMProp as _setDOMProp, delegateEvents as _delegateEvents, template as _template } from 'vue/vapor';
+"import { delegate as _delegate, setInheritAttrs as _setInheritAttrs, renderEffect as _renderEffect, setText as _setText, setDOMProp as _setDOMProp, delegateEvents as _delegateEvents, template as _template } from 'vue';
 const t0 = _template("<button></button>")
 _delegateEvents("click")
 
@@ -208,7 +206,7 @@ exports[`compile > expression parsing > v-bind 1`] = `
 `;
 
 exports[`compile > fragment 1`] = `
-"import { template as _template } from 'vue/vapor';
+"import { template as _template } from 'vue';
 const t0 = _template("<p></p>")
 const t1 = _template("<span></span>")
 const t2 = _template("<div></div>")
@@ -222,7 +220,7 @@ export function render(_ctx) {
 `;
 
 exports[`compile > static + dynamic root 1`] = `
-"import { createTextNode as _createTextNode } from 'vue/vapor';
+"import { createTextNode as _createTextNode } from 'vue';
 
 export function render(_ctx) {
   const n0 = _createTextNode(() => [1, 2, "3", 4, 5, "6", 7, 8, "9", 'A', 'B'])
@@ -231,7 +229,7 @@ export function render(_ctx) {
 `;
 
 exports[`compile > static template 1`] = `
-"import { template as _template } from 'vue/vapor';
+"import { template as _template } from 'vue';
 const t0 = _template("<div><p>hello</p><input><span></span></div>")
 
 export function render(_ctx) {

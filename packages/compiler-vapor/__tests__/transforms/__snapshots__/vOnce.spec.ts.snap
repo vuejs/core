@@ -1,7 +1,7 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
 exports[`compiler: v-once > as root node 1`] = `
-"import { setDOMProp as _setDOMProp, setInheritAttrs as _setInheritAttrs, template as _template } from 'vue/vapor';
+"import { setDOMProp as _setDOMProp, setInheritAttrs as _setInheritAttrs, template as _template } from 'vue';
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
@@ -13,7 +13,7 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: v-once > basic 1`] = `
-"import { createTextNode as _createTextNode, setClass as _setClass, prepend as _prepend, template as _template } from 'vue/vapor';
+"import { createTextNode as _createTextNode, setClass as _setClass, prepend as _prepend, template as _template } from 'vue';
 const t0 = _template("<div><span></span></div>")
 
 export function render(_ctx, $props, $emit, $attrs, $slots) {
@@ -27,7 +27,7 @@ export function render(_ctx, $props, $emit, $attrs, $slots) {
 `;
 
 exports[`compiler: v-once > inside v-once 1`] = `
-"import { template as _template } from 'vue/vapor';
+"import { template as _template } from 'vue';
 const t0 = _template("<div><div></div></div>")
 
 export function render(_ctx) {
@@ -37,20 +37,20 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: v-once > on component 1`] = `
-"import { resolveComponent as _resolveComponent, createComponent as _createComponent, insert as _insert, template as _template } from 'vue/vapor';
+"import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback, insert as _insert, template as _template } from 'vue';
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const _component_Comp = _resolveComponent("Comp")
   const n1 = t0()
-  const n0 = _createComponent(_component_Comp, { id: () => (_ctx.foo) }, null, null, true)
+  const n0 = _createComponentWithFallback(_component_Comp, { id: () => (_ctx.foo) }, null, null, true)
   _insert(n0, n1)
   return n1
 }"
 `;
 
 exports[`compiler: v-once > on nested plain element 1`] = `
-"import { setDOMProp as _setDOMProp, template as _template } from 'vue/vapor';
+"import { setDOMProp as _setDOMProp, template as _template } from 'vue';
 const t0 = _template("<div><div></div></div>")
 
 export function render(_ctx) {
@@ -62,7 +62,7 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: v-once > with v-for 1`] = `
-"import { createFor as _createFor, template as _template } from 'vue/vapor';
+"import { createFor as _createFor, template as _template } from 'vue';
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
@@ -75,7 +75,7 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: v-once > with v-if 1`] = `
-"import { createIf as _createIf, template as _template } from 'vue/vapor';
+"import { createIf as _createIf, template as _template } from 'vue';
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
@@ -88,7 +88,7 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: v-once > with v-if/else 1`] = `
-"import { createIf as _createIf, template as _template } from 'vue/vapor';
+"import { createIf as _createIf, template as _template } from 'vue';
 const t0 = _template("<div></div>")
 const t1 = _template("<p></p>")
 

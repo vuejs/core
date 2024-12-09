@@ -29,7 +29,7 @@ describe('compiler: element transform', () => {
       expect(code).toMatchSnapshot()
       expect(vaporHelpers).contains.all.keys(
         'resolveComponent',
-        'createComponent',
+        'createComponentWithFallback',
       )
       expect(ir.block.operation).toMatchObject([
         {

@@ -1,7 +1,7 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
 exports[`compiler: transform <slot> outlets > default slot outlet 1`] = `
-"import { createSlot as _createSlot } from 'vue/vapor';
+"import { createSlot as _createSlot } from 'vue';
 
 export function render(_ctx) {
   const n0 = _createSlot("default", null)
@@ -10,7 +10,7 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: transform <slot> outlets > default slot outlet with fallback 1`] = `
-"import { createSlot as _createSlot, template as _template } from 'vue/vapor';
+"import { createSlot as _createSlot, template as _template } from 'vue';
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
@@ -23,7 +23,7 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: transform <slot> outlets > default slot outlet with props & fallback 1`] = `
-"import { createSlot as _createSlot, template as _template } from 'vue/vapor';
+"import { createSlot as _createSlot, template as _template } from 'vue';
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
@@ -36,7 +36,7 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: transform <slot> outlets > default slot outlet with props 1`] = `
-"import { createSlot as _createSlot } from 'vue/vapor';
+"import { createSlot as _createSlot } from 'vue';
 
 export function render(_ctx) {
   const n0 = _createSlot("default", {
@@ -49,7 +49,7 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: transform <slot> outlets > dynamically named slot outlet 1`] = `
-"import { createSlot as _createSlot } from 'vue/vapor';
+"import { createSlot as _createSlot } from 'vue';
 
 export function render(_ctx) {
   const n0 = _createSlot(() => (_ctx.foo + _ctx.bar), null)
@@ -58,7 +58,7 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: transform <slot> outlets > dynamically named slot outlet with v-bind shorthand 1`] = `
-"import { createSlot as _createSlot } from 'vue/vapor';
+"import { createSlot as _createSlot } from 'vue';
 
 export function render(_ctx) {
   const n0 = _createSlot(() => (_ctx.name), null)
@@ -67,7 +67,7 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: transform <slot> outlets > error on unexpected custom directive on <slot> 1`] = `
-"import { resolveDirective as _resolveDirective, createSlot as _createSlot } from 'vue/vapor';
+"import { resolveDirective as _resolveDirective, createSlot as _createSlot } from 'vue';
 
 export function render(_ctx) {
   const _directive_foo = _resolveDirective("foo")
@@ -77,7 +77,7 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: transform <slot> outlets > error on unexpected custom directive with v-show on <slot> 1`] = `
-"import { createSlot as _createSlot } from 'vue/vapor';
+"import { createSlot as _createSlot } from 'vue';
 
 export function render(_ctx) {
   const n0 = _createSlot("default", null)
@@ -86,7 +86,7 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: transform <slot> outlets > named slot outlet with fallback 1`] = `
-"import { createSlot as _createSlot, template as _template } from 'vue/vapor';
+"import { createSlot as _createSlot, template as _template } from 'vue';
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
@@ -99,7 +99,7 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: transform <slot> outlets > named slot outlet with props & fallback 1`] = `
-"import { createSlot as _createSlot, template as _template } from 'vue/vapor';
+"import { createSlot as _createSlot, template as _template } from 'vue';
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
@@ -112,7 +112,7 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: transform <slot> outlets > statically named slot outlet 1`] = `
-"import { createSlot as _createSlot } from 'vue/vapor';
+"import { createSlot as _createSlot } from 'vue';
 
 export function render(_ctx) {
   const n0 = _createSlot("foo", null)
@@ -121,7 +121,7 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: transform <slot> outlets > statically named slot outlet with props 1`] = `
-"import { createSlot as _createSlot } from 'vue/vapor';
+"import { createSlot as _createSlot } from 'vue';
 
 export function render(_ctx) {
   const n0 = _createSlot("foo", {
@@ -133,7 +133,7 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: transform <slot> outlets > statically named slot outlet with v-bind="obj" 1`] = `
-"import { createSlot as _createSlot } from 'vue/vapor';
+"import { createSlot as _createSlot } from 'vue';
 
 export function render(_ctx) {
   const n0 = _createSlot("foo", {
@@ -148,7 +148,7 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: transform <slot> outlets > statically named slot outlet with v-on 1`] = `
-"import { createSlot as _createSlot, toHandlers as _toHandlers } from 'vue/vapor';
+"import { createSlot as _createSlot, toHandlers as _toHandlers } from 'vue';
 
 export function render(_ctx) {
   const n0 = _createSlot("default", {
