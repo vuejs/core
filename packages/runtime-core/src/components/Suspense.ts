@@ -248,28 +248,34 @@ function patchSuspense(
         slotScopeIds,
         optimized,
       )
-      if (suspense.deps <= 0) {
-        suspense.resolve()
-      } else if (isInFallback) {
-        // It's possible that the app is in hydrating state when patching the
-        // suspense instance. If someone updates the dependency during component
-        // setup in children of suspense boundary, that would be problemtic
-        // because we aren't actually showing a fallback content when
-        // patchSuspense is called. In such case, patch of fallback content
-        // should be no op
-        if (!isHydrating) {
-          patch(
-            activeBranch,
-            newFallback,
-            container,
-            anchor,
-            parentComponent,
-            null, // fallback tree will not have suspense context
-            namespace,
-            slotScopeIds,
-            optimized,
-          )
-          setActiveBranch(suspense, newFallback)
+      // #7506 pendingBranch may be unmounted during patching. If so,
+      // resolve may be triggered and pendingBranch will be set to null.
+      // Therefore, we need to check that pendingBranch is not null here
+      // to avoid a double resolve.
+      if (suspense.pendingBranch) {
+        if (suspense.deps <= 0) {
+          suspense.resolve()
+        } else if (isInFallback) {
+          // It's possible that the app is in hydrating state when patching the
+          // suspense instance. If someone updates the dependency during component
+          // setup in children of suspense boundary, that would be problemtic
+          // because we aren't actually showing a fallback content when
+          // patchSuspense is called. In such case, patch of fallback content
+          // should be no op
+          if (!isHydrating) {
+            patch(
+              activeBranch,
+              newFallback,
+              container,
+              anchor,
+              parentComponent,
+              null, // fallback tree will not have suspense context
+              namespace,
+              slotScopeIds,
+              optimized,
+            )
+            setActiveBranch(suspense, newFallback)
+          }
         }
       }
     } else {
