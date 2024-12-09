@@ -657,7 +657,7 @@ export function createHydrationFunctions(
     if (next && isComment(next) && next.data === ']') {
       return nextSibling((vnode.anchor = next))
     } else {
-      if (!isMismatchAllowed(node.parentElement, 1 /* CHILDREN */)) {
+      if (!isMismatchAllowed(container, MismatchTypes.CHILDREN)) {
         // fragment didn't hydrate successfully, since we didn't get a end anchor
         // back. This should have led to node/children mismatch warnings.
         logMismatchError()
