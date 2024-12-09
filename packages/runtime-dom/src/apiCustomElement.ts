@@ -286,20 +286,25 @@ export class VueElement
     this._connected = true
 
     // locate nearest Vue custom element parent for provide/inject
-    let parent: Node | null = this
+    let parent: Node | null = this,
+      parentChanged = false
     while (
       (parent = parent && (parent.parentNode || (parent as ShadowRoot).host))
     ) {
       if (parent instanceof VueElement) {
+        parentChanged = parent !== this._parent
         this._parent = parent
         break
       }
     }
 
-    if (!this._instance) {
+    // unmount if parent changed and previously mounted, should keep parent and observer
+    if (this._instance && parentChanged) this._unmount(true)
+    if (!this._instance || parentChanged) {
       if (this._resolved) {
-        this._setParent()
-        this._update()
+        // no instance means no observer
+        if (!this._instance) this._observe()
+        this._mount(this._def)
       } else {
         if (parent && parent._pendingResolve) {
           this._pendingResolve = parent._pendingResolve.then(() => {
@@ -320,20 +325,45 @@ export class VueElement
     }
   }
 
+  private _unmount(keepParentAndOb?: boolean) {
+    if (!keepParentAndOb) {
+      this._parent = undefined
+      if (this._ob) {
+        this._ob.disconnect()
+        this._ob = null
+      }
+    }
+    this._app && this._app.unmount()
+    if (this._instance) {
+      const exposed = this._instance.exposed
+      if (exposed) {
+        for (const key in exposed) {
+          delete this[key as keyof this]
+        }
+      }
+      this._instance.ce = undefined
+    }
+    this._app = this._instance = null
+  }
+
   disconnectedCallback(): void {
     this._connected = false
     nextTick(() => {
       if (!this._connected) {
-        if (this._ob) {
-          this._ob.disconnect()
-          this._ob = null
-        }
-        // unmount
-        this._app && this._app.unmount()
-        if (this._instance) this._instance.ce = undefined
-        this._app = this._instance = null
+        this._unmount()
       }
     })
+  }
+
+  private _observe() {
+    if (!this._ob) {
+      this._ob = new MutationObserver(mutations => {
+        for (const m of mutations) {
+          this._setAttr(m.attributeName!)
+        }
+      })
+    }
+    this._ob.observe(this, { attributes: true })
   }
 
   /**
@@ -350,13 +380,7 @@ export class VueElement
     }
 
     // watch future attr changes
-    this._ob = new MutationObserver(mutations => {
-      for (const m of mutations) {
-        this._setAttr(m.attributeName!)
-      }
-    })
-
-    this._ob.observe(this, { attributes: true })
+    this._observe()
 
     const resolve = (def: InnerComponentDef, isAsync = false) => {
       this._resolved = true
@@ -430,11 +454,14 @@ export class VueElement
       if (!hasOwn(this, key)) {
         // exposed properties are readonly
         Object.defineProperty(this, key, {
+          configurable: true, // should be configurable to allow deleting when disconnected
           // unwrap ref to be consistent with public instance behavior
           get: () => unref(exposed[key]),
         })
-      } else if (__DEV__) {
-        warn(`Exposed property "${key}" already exists on custom element.`)
+      } else {
+        delete exposed[key] // delete it from exposed in case of deleting wrong exposed key when disconnected
+        if (__DEV__)
+          warn(`Exposed property "${key}" already exists on custom element.`)
       }
     }
   }
@@ -514,7 +541,7 @@ export class VueElement
         } else if (!val) {
           this.removeAttribute(hyphenate(key))
         }
-        ob && ob.observe(this, { attributes: true })
+        this._observe()
       }
     }
   }
