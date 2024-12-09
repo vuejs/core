@@ -191,6 +191,7 @@ function renderComponentSubTree(
       }
 
       if (vShowValue) {
+        // v-show has higher priority
         if (attrs) attrs = mergeProps(attrs, vShowValue)
         else attrs = vShowValue
       }
