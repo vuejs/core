@@ -7,11 +7,11 @@ export function genSetHtml(
   oper: SetHtmlIRNode,
   context: CodegenContext,
 ): CodeFragment[] {
-  const { vaporHelper } = context
+  const { helper } = context
   return [
     NEWLINE,
     ...genCall(
-      vaporHelper('setHtml'),
+      helper('setHtml'),
       `n${oper.element}`,
       genExpression(oper.value, context),
     ),

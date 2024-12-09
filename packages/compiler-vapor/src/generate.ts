@@ -2,7 +2,7 @@ import type {
   CodegenOptions as BaseCodegenOptions,
   BaseCodegenResult,
 } from '@vue/compiler-dom'
-import type { BlockIRNode, RootIRNode, VaporHelper } from './ir'
+import type { BlockIRNode, CoreHelper, RootIRNode, VaporHelper } from './ir'
 import { extend, remove } from '@vue/shared'
 import { genBlockContent } from './generators/block'
 import { genTemplates } from './generators/template'
@@ -23,13 +23,9 @@ export class CodegenContext {
   options: Required<CodegenOptions>
 
   helpers: Set<string> = new Set<string>([])
-  vaporHelpers: Set<string> = new Set<string>([])
-  helper = (name: string) => {
+
+  helper = (name: CoreHelper | VaporHelper) => {
     this.helpers.add(name)
-    return `_${name}`
-  }
-  vaporHelper = (name: VaporHelper) => {
-    this.vaporHelpers.add(name)
     return `_${name}`
   }
 
@@ -92,7 +88,6 @@ export class CodegenContext {
 export interface VaporCodegenResult extends BaseCodegenResult {
   ast: RootIRNode
   helpers: Set<string>
-  vaporHelpers: Set<string>
 }
 
 // IR -> JS codegen
@@ -102,7 +97,7 @@ export function generate(
 ): VaporCodegenResult {
   const [frag, push] = buildCodeFragment()
   const context = new CodegenContext(ir, options)
-  const { helpers, vaporHelpers } = context
+  const { helpers } = context
   const { inline, bindingMetadata } = options
   const functionName = 'render'
 
@@ -152,30 +147,24 @@ export function generate(
     preamble,
     map: map && map.toJSON(),
     helpers,
-    vaporHelpers,
   }
 }
 
-function genDelegates({ delegates, vaporHelper }: CodegenContext) {
+function genDelegates({ delegates, helper }: CodegenContext) {
   return delegates.size
     ? genCall(
-        vaporHelper('delegateEvents'),
+        helper('delegateEvents'),
         ...Array.from(delegates).map(v => `"${v}"`),
       ).join('') + '\n'
     : ''
 }
 
-function genHelperImports({ helpers, vaporHelpers, options }: CodegenContext) {
+function genHelperImports({ helpers, helper, options }: CodegenContext) {
   let imports = ''
   if (helpers.size) {
     imports += `import { ${[...helpers]
       .map(h => `${h} as _${h}`)
       .join(', ')} } from '${options.runtimeModuleName}';\n`
-  }
-  if (vaporHelpers.size) {
-    imports += `import { ${[...vaporHelpers]
-      .map(h => `${h} as _${h}`)
-      .join(', ')} } from 'vue';\n`
   }
   return imports
 }

@@ -26,13 +26,12 @@ const compileWithVFor = makeCompile({
 
 describe('compiler: v-for', () => {
   test('basic v-for', () => {
-    const { code, ir, vaporHelpers, helpers } = compileWithVFor(
+    const { code, ir, helpers } = compileWithVFor(
       `<div v-for="item of items" :key="item.id" @click="remove(item)">{{ item }}</div>`,
     )
 
     expect(code).matchSnapshot()
-    expect(vaporHelpers).contains('createFor')
-    expect(helpers.size).toBe(0)
+    expect(helpers).contains('createFor')
     expect(ir.template).toEqual(['<div></div>'])
     expect(ir.block.operation).toMatchObject([
       {

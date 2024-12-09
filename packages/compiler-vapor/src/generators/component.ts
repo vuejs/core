@@ -17,7 +17,6 @@ import {
 } from '../ir'
 import {
   type CodeFragment,
-  DELIMITERS_ARRAY,
   DELIMITERS_ARRAY_NEWLINE,
   DELIMITERS_OBJECT,
   DELIMITERS_OBJECT_NEWLINE,
@@ -43,7 +42,7 @@ export function genCreateComponent(
   operation: CreateComponentIRNode,
   context: CodegenContext,
 ): CodeFragment[] {
-  const { vaporHelper } = context
+  const { helper } = context
 
   const tag = genTag()
   const { root, props, slots, once } = operation
@@ -55,8 +54,8 @@ export function genCreateComponent(
     `const n${operation.id} = `,
     ...genCall(
       operation.asset
-        ? vaporHelper('createComponentWithFallback')
-        : vaporHelper('createComponent'),
+        ? helper('createComponentWithFallback')
+        : helper('createComponent'),
       tag,
       rawProps,
       rawSlots,
@@ -69,7 +68,7 @@ export function genCreateComponent(
   function genTag() {
     if (operation.dynamic) {
       return genCall(
-        vaporHelper('resolveDynamicComponent'),
+        helper('resolveDynamicComponent'),
         genExpression(operation.dynamic, context),
       )
     } else if (operation.asset) {
@@ -122,7 +121,7 @@ function genDynamicProps(
   props: IRProps[],
   context: CodegenContext,
 ): CodeFragment[] | undefined {
-  const { vaporHelper } = context
+  const { helper } = context
   const frags: CodeFragment[][] = []
   for (const p of props) {
     let expr: CodeFragment[]
@@ -136,7 +135,7 @@ function genDynamicProps(
         expr = genMulti(DELIMITERS_OBJECT, genProp(p, context))
       else {
         expr = genExpression(p.value, context)
-        if (p.handler) expr = genCall(vaporHelper('toHandlers'), expr)
+        if (p.handler) expr = genCall(helper('toHandlers'), expr)
       }
     }
     frags.push(['() => (', ...expr, ')'])
@@ -294,7 +293,7 @@ function genLoopSlot(
   )
   return [
     ...genCall(
-      context.vaporHelper('createForSlots'),
+      context.helper('createForSlots'),
       genExpression(source, context),
       [
         ...genMulti(

@@ -4,14 +4,14 @@ import { type CodeFragment, NEWLINE, genCall } from './utils'
 
 export function genInsertNode(
   { parent, elements, anchor }: InsertNodeIRNode,
-  { vaporHelper }: CodegenContext,
+  { helper }: CodegenContext,
 ): CodeFragment[] {
   let element = elements.map(el => `n${el}`).join(', ')
   if (elements.length > 1) element = `[${element}]`
   return [
     NEWLINE,
     ...genCall(
-      vaporHelper('insert'),
+      helper('insert'),
       element,
       `n${parent}`,
       anchor === undefined ? undefined : `n${anchor}`,
@@ -21,12 +21,12 @@ export function genInsertNode(
 
 export function genPrependNode(
   oper: PrependNodeIRNode,
-  { vaporHelper }: CodegenContext,
+  { helper }: CodegenContext,
 ): CodeFragment[] {
   return [
     NEWLINE,
     ...genCall(
-      vaporHelper('prepend'),
+      helper('prepend'),
       `n${oper.parent}`,
       ...oper.elements.map(el => `n${el}`),
     ),

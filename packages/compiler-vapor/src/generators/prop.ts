@@ -8,7 +8,6 @@ import {
   IRDynamicPropsKind,
   type IRProp,
   type SetDynamicPropsIRNode,
-  type SetInheritAttrsIRNode,
   type SetPropIRNode,
   type VaporHelper,
 } from '../ir'
@@ -39,7 +38,7 @@ export function genSetProp(
   oper: SetPropIRNode,
   context: CodegenContext,
 ): CodeFragment[] {
-  const { vaporHelper } = context
+  const { helper } = context
   const {
     prop: { key, values, modifier },
     tag,
@@ -49,7 +48,7 @@ export function genSetProp(
   return [
     NEWLINE,
     ...genCall(
-      [vaporHelper(helperName), null],
+      [helper(helperName), null],
       `n${oper.element}`,
       omitKey ? false : genExpression(key, context),
       genPropValue(values, context),
@@ -66,11 +65,11 @@ export function genDynamicProps(
   oper: SetDynamicPropsIRNode,
   context: CodegenContext,
 ): CodeFragment[] {
-  const { vaporHelper } = context
+  const { helper } = context
   return [
     NEWLINE,
     ...genCall(
-      vaporHelper('setDynamicProps'),
+      helper('setDynamicProps'),
       `n${oper.element}`,
       genMulti(
         DELIMITERS_ARRAY,
@@ -142,31 +141,6 @@ export function genPropValue(
     DELIMITERS_ARRAY,
     ...values.map(expr => genExpression(expr, context)),
   )
-}
-
-export function genSetInheritAttrs(
-  { staticProps, dynamicProps }: SetInheritAttrsIRNode,
-  context: CodegenContext,
-): CodeFragment[] {
-  const { vaporHelper } = context
-
-  // - `undefined` : no props
-  // - `false`     : all props are static
-  // - `string[]`  : list of props are dynamic
-  // - `true`      : all props as dynamic
-  const value =
-    dynamicProps === true
-      ? 'true'
-      : dynamicProps.length
-        ? genMulti(
-            DELIMITERS_ARRAY,
-            ...dynamicProps.map(p => JSON.stringify(p)),
-          )
-        : staticProps
-          ? 'false'
-          : null
-  if (value == null) return []
-  return [NEWLINE, ...genCall(vaporHelper('setInheritAttrs'), value)]
 }
 
 function getRuntimeHelper(

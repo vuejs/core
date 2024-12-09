@@ -32,16 +32,13 @@ export function genWithDirective(
   opers: WithDirectiveIRNode[],
   context: CodegenContext,
 ): CodeFragment[] {
-  const { vaporHelper } = context
+  const { helper } = context
 
   const element = `n${opers[0].element}`
   const directiveItems = opers.map(genDirective)
   const directives = genMulti(DELIMITERS_ARRAY, ...directiveItems)
 
-  return [
-    NEWLINE,
-    ...genCall(vaporHelper('withDirectives'), element, directives),
-  ]
+  return [NEWLINE, ...genCall(helper('withDirectives'), element, directives)]
 
   function genDirective({
     dir,
@@ -68,7 +65,7 @@ export function genWithDirective(
 
     function genDirective() {
       if (builtin) {
-        return vaporHelper(name as any)
+        return helper(name as any)
       } else if (asset) {
         return toValidAssetId(name, 'directive')
       } else {

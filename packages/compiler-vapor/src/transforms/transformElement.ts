@@ -186,7 +186,6 @@ function transformNativeElement(
   template += `<${tag}`
   if (scopeId) template += ` ${scopeId}`
 
-  let staticProps = false
   const dynamicProps: string[] = []
   if (propsResult[0] /* dynamic props */) {
     const [, dynamicArgs, expressions] = propsResult
@@ -200,7 +199,6 @@ function transformNativeElement(
     for (const prop of propsResult[1]) {
       const { key, values } = prop
       if (key.isStatic && values.length === 1 && values[0].isStatic) {
-        staticProps = true
         template += ` ${key.content}`
         if (values[0].content) template += `="${values[0].content}"`
       } else {
@@ -214,14 +212,6 @@ function transformNativeElement(
         })
       }
     }
-  }
-
-  if (singleRoot) {
-    context.registerOperation({
-      type: IRNodeTypes.SET_INHERIT_ATTRS,
-      staticProps: staticProps,
-      dynamicProps: propsResult[0] ? true : dynamicProps,
-    })
   }
 
   template += `>` + context.childrenTemplate.join('')

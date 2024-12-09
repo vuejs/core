@@ -1,325 +1,297 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
 exports[`compiler v-bind > .attr modifier 1`] = `
-"import { setInheritAttrs as _setInheritAttrs, renderEffect as _renderEffect, setAttr as _setAttr, template as _template } from 'vue';
+"import { renderEffect as _renderEffect, setAttr as _setAttr, template as _template } from 'vue';
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
-  _setInheritAttrs(["foo-bar"])
   _renderEffect(() => _setAttr(n0, "foo-bar", _ctx.id))
   return n0
 }"
 `;
 
 exports[`compiler v-bind > .attr modifier w/ innerHTML 1`] = `
-"import { setInheritAttrs as _setInheritAttrs, renderEffect as _renderEffect, setAttr as _setAttr, template as _template } from 'vue';
+"import { renderEffect as _renderEffect, setAttr as _setAttr, template as _template } from 'vue';
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
-  _setInheritAttrs(["innerHTML"])
   _renderEffect(() => _setAttr(n0, "innerHTML", _ctx.foo))
   return n0
 }"
 `;
 
 exports[`compiler v-bind > .attr modifier w/ no expression 1`] = `
-"import { setInheritAttrs as _setInheritAttrs, renderEffect as _renderEffect, setAttr as _setAttr, template as _template } from 'vue';
+"import { renderEffect as _renderEffect, setAttr as _setAttr, template as _template } from 'vue';
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
-  _setInheritAttrs(["foo-bar"])
   _renderEffect(() => _setAttr(n0, "foo-bar", _ctx.fooBar))
   return n0
 }"
 `;
 
 exports[`compiler v-bind > .attr modifier w/ progress value 1`] = `
-"import { setInheritAttrs as _setInheritAttrs, renderEffect as _renderEffect, setAttr as _setAttr, template as _template } from 'vue';
+"import { renderEffect as _renderEffect, setAttr as _setAttr, template as _template } from 'vue';
 const t0 = _template("<progress></progress>")
 
 export function render(_ctx) {
   const n0 = t0()
-  _setInheritAttrs(["value"])
   _renderEffect(() => _setAttr(n0, "value", _ctx.foo))
   return n0
 }"
 `;
 
 exports[`compiler v-bind > .attr modifier w/ textContent 1`] = `
-"import { setInheritAttrs as _setInheritAttrs, renderEffect as _renderEffect, setAttr as _setAttr, template as _template } from 'vue';
+"import { renderEffect as _renderEffect, setAttr as _setAttr, template as _template } from 'vue';
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
-  _setInheritAttrs(["textContent"])
   _renderEffect(() => _setAttr(n0, "textContent", _ctx.foo))
   return n0
 }"
 `;
 
 exports[`compiler v-bind > .attr modifier w/ value 1`] = `
-"import { setInheritAttrs as _setInheritAttrs, renderEffect as _renderEffect, setAttr as _setAttr, template as _template } from 'vue';
+"import { renderEffect as _renderEffect, setAttr as _setAttr, template as _template } from 'vue';
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
-  _setInheritAttrs(["value"])
   _renderEffect(() => _setAttr(n0, "value", _ctx.foo))
   return n0
 }"
 `;
 
 exports[`compiler v-bind > .camel modifier 1`] = `
-"import { setInheritAttrs as _setInheritAttrs, renderEffect as _renderEffect, setDynamicProp as _setDynamicProp, template as _template } from 'vue';
+"import { renderEffect as _renderEffect, setDynamicProp as _setDynamicProp, template as _template } from 'vue';
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
-  _setInheritAttrs(["fooBar"])
   _renderEffect(() => _setDynamicProp(n0, "fooBar", _ctx.id))
   return n0
 }"
 `;
 
 exports[`compiler v-bind > .camel modifier w/ dynamic arg 1`] = `
-"import { camelize as _camelize } from 'vue';
-import { setInheritAttrs as _setInheritAttrs, renderEffect as _renderEffect, setDynamicProps as _setDynamicProps, template as _template } from 'vue';
+"import { renderEffect as _renderEffect, setDynamicProps as _setDynamicProps, camelize as _camelize, template as _template } from 'vue';
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
-  _setInheritAttrs(true)
   _renderEffect(() => _setDynamicProps(n0, [{ [_camelize(_ctx.foo)]: _ctx.id }], true))
   return n0
 }"
 `;
 
 exports[`compiler v-bind > .camel modifier w/ no expression 1`] = `
-"import { setInheritAttrs as _setInheritAttrs, renderEffect as _renderEffect, setDynamicProp as _setDynamicProp, template as _template } from 'vue';
+"import { renderEffect as _renderEffect, setDynamicProp as _setDynamicProp, template as _template } from 'vue';
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
-  _setInheritAttrs(["fooBar"])
   _renderEffect(() => _setDynamicProp(n0, "fooBar", _ctx.fooBar))
   return n0
 }"
 `;
 
 exports[`compiler v-bind > .prop modifier (shorthand) 1`] = `
-"import { setInheritAttrs as _setInheritAttrs, renderEffect as _renderEffect, setDOMProp as _setDOMProp, template as _template } from 'vue';
+"import { renderEffect as _renderEffect, setDOMProp as _setDOMProp, template as _template } from 'vue';
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
-  _setInheritAttrs(["fooBar"])
   _renderEffect(() => _setDOMProp(n0, "fooBar", _ctx.id))
   return n0
 }"
 `;
 
 exports[`compiler v-bind > .prop modifier (shorthand) w/ innerHTML 1`] = `
-"import { setInheritAttrs as _setInheritAttrs, renderEffect as _renderEffect, setHtml as _setHtml, template as _template } from 'vue';
+"import { renderEffect as _renderEffect, setHtml as _setHtml, template as _template } from 'vue';
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
-  _setInheritAttrs(["innerHTML"])
   _renderEffect(() => _setHtml(n0, _ctx.foo))
   return n0
 }"
 `;
 
 exports[`compiler v-bind > .prop modifier (shorthand) w/ no expression 1`] = `
-"import { setInheritAttrs as _setInheritAttrs, renderEffect as _renderEffect, setDOMProp as _setDOMProp, template as _template } from 'vue';
+"import { renderEffect as _renderEffect, setDOMProp as _setDOMProp, template as _template } from 'vue';
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
-  _setInheritAttrs(["fooBar"])
   _renderEffect(() => _setDOMProp(n0, "fooBar", _ctx.fooBar))
   return n0
 }"
 `;
 
 exports[`compiler v-bind > .prop modifier (shorthand) w/ progress value 1`] = `
-"import { setInheritAttrs as _setInheritAttrs, renderEffect as _renderEffect, setDOMProp as _setDOMProp, template as _template } from 'vue';
+"import { renderEffect as _renderEffect, setDOMProp as _setDOMProp, template as _template } from 'vue';
 const t0 = _template("<progress></progress>")
 
 export function render(_ctx) {
   const n0 = t0()
-  _setInheritAttrs(["value"])
   _renderEffect(() => _setDOMProp(n0, "value", _ctx.foo))
   return n0
 }"
 `;
 
 exports[`compiler v-bind > .prop modifier (shorthand) w/ textContent 1`] = `
-"import { setInheritAttrs as _setInheritAttrs, renderEffect as _renderEffect, setText as _setText, template as _template } from 'vue';
+"import { renderEffect as _renderEffect, setText as _setText, template as _template } from 'vue';
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
-  _setInheritAttrs(["textContent"])
   _renderEffect(() => _setText(n0, _ctx.foo))
   return n0
 }"
 `;
 
 exports[`compiler v-bind > .prop modifier (shorthand) w/ value 1`] = `
-"import { setInheritAttrs as _setInheritAttrs, renderEffect as _renderEffect, setValue as _setValue, template as _template } from 'vue';
+"import { renderEffect as _renderEffect, setValue as _setValue, template as _template } from 'vue';
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
-  _setInheritAttrs(["value"])
   _renderEffect(() => _setValue(n0, _ctx.foo))
   return n0
 }"
 `;
 
 exports[`compiler v-bind > .prop modifier 1`] = `
-"import { setInheritAttrs as _setInheritAttrs, renderEffect as _renderEffect, setDOMProp as _setDOMProp, template as _template } from 'vue';
+"import { renderEffect as _renderEffect, setDOMProp as _setDOMProp, template as _template } from 'vue';
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
-  _setInheritAttrs(["fooBar"])
   _renderEffect(() => _setDOMProp(n0, "fooBar", _ctx.id))
   return n0
 }"
 `;
 
 exports[`compiler v-bind > .prop modifier w/ dynamic arg 1`] = `
-"import { setInheritAttrs as _setInheritAttrs, renderEffect as _renderEffect, setDynamicProps as _setDynamicProps, template as _template } from 'vue';
+"import { renderEffect as _renderEffect, setDynamicProps as _setDynamicProps, template as _template } from 'vue';
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
-  _setInheritAttrs(true)
   _renderEffect(() => _setDynamicProps(n0, [{ ["." + _ctx.fooBar]: _ctx.id }], true))
   return n0
 }"
 `;
 
 exports[`compiler v-bind > .prop modifier w/ innerHTML 1`] = `
-"import { setInheritAttrs as _setInheritAttrs, renderEffect as _renderEffect, setHtml as _setHtml, template as _template } from 'vue';
+"import { renderEffect as _renderEffect, setHtml as _setHtml, template as _template } from 'vue';
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
-  _setInheritAttrs(["innerHTML"])
   _renderEffect(() => _setHtml(n0, _ctx.foo))
   return n0
 }"
 `;
 
 exports[`compiler v-bind > .prop modifier w/ no expression 1`] = `
-"import { setInheritAttrs as _setInheritAttrs, renderEffect as _renderEffect, setDOMProp as _setDOMProp, template as _template } from 'vue';
+"import { renderEffect as _renderEffect, setDOMProp as _setDOMProp, template as _template } from 'vue';
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
-  _setInheritAttrs(["fooBar"])
   _renderEffect(() => _setDOMProp(n0, "fooBar", _ctx.fooBar))
   return n0
 }"
 `;
 
 exports[`compiler v-bind > .prop modifier w/ progress value 1`] = `
-"import { setInheritAttrs as _setInheritAttrs, renderEffect as _renderEffect, setDOMProp as _setDOMProp, template as _template } from 'vue';
+"import { renderEffect as _renderEffect, setDOMProp as _setDOMProp, template as _template } from 'vue';
 const t0 = _template("<progress></progress>")
 
 export function render(_ctx) {
   const n0 = t0()
-  _setInheritAttrs(["value"])
   _renderEffect(() => _setDOMProp(n0, "value", _ctx.foo))
   return n0
 }"
 `;
 
 exports[`compiler v-bind > .prop modifier w/ textContent 1`] = `
-"import { setInheritAttrs as _setInheritAttrs, renderEffect as _renderEffect, setText as _setText, template as _template } from 'vue';
+"import { renderEffect as _renderEffect, setText as _setText, template as _template } from 'vue';
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
-  _setInheritAttrs(["textContent"])
   _renderEffect(() => _setText(n0, _ctx.foo))
   return n0
 }"
 `;
 
 exports[`compiler v-bind > .prop modifier w/ value 1`] = `
-"import { setInheritAttrs as _setInheritAttrs, renderEffect as _renderEffect, setValue as _setValue, template as _template } from 'vue';
+"import { renderEffect as _renderEffect, setValue as _setValue, template as _template } from 'vue';
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
-  _setInheritAttrs(["value"])
   _renderEffect(() => _setValue(n0, _ctx.foo))
   return n0
 }"
 `;
 
 exports[`compiler v-bind > :innerHTML 1`] = `
-"import { setInheritAttrs as _setInheritAttrs, renderEffect as _renderEffect, setHtml as _setHtml, template as _template } from 'vue';
+"import { renderEffect as _renderEffect, setHtml as _setHtml, template as _template } from 'vue';
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
-  _setInheritAttrs(["innerHTML"])
   _renderEffect(() => _setHtml(n0, _ctx.foo))
   return n0
 }"
 `;
 
 exports[`compiler v-bind > :textContext 1`] = `
-"import { setInheritAttrs as _setInheritAttrs, renderEffect as _renderEffect, setText as _setText, template as _template } from 'vue';
+"import { renderEffect as _renderEffect, setText as _setText, template as _template } from 'vue';
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
-  _setInheritAttrs(["textContent"])
   _renderEffect(() => _setText(n0, _ctx.foo))
   return n0
 }"
 `;
 
 exports[`compiler v-bind > :value 1`] = `
-"import { setInheritAttrs as _setInheritAttrs, renderEffect as _renderEffect, setValue as _setValue, template as _template } from 'vue';
+"import { renderEffect as _renderEffect, setValue as _setValue, template as _template } from 'vue';
 const t0 = _template("<input>")
 
 export function render(_ctx) {
   const n0 = t0()
-  _setInheritAttrs(["value"])
   _renderEffect(() => _setValue(n0, _ctx.foo))
   return n0
 }"
 `;
 
 exports[`compiler v-bind > :value w/ progress 1`] = `
-"import { setInheritAttrs as _setInheritAttrs, renderEffect as _renderEffect, setDynamicProp as _setDynamicProp, template as _template } from 'vue';
+"import { renderEffect as _renderEffect, setDynamicProp as _setDynamicProp, template as _template } from 'vue';
 const t0 = _template("<progress></progress>")
 
 export function render(_ctx) {
   const n0 = t0()
-  _setInheritAttrs(["value"])
   _renderEffect(() => _setDynamicProp(n0, "value", _ctx.foo))
   return n0
 }"
 `;
 
 exports[`compiler v-bind > HTML global attributes should set as dom prop 1`] = `
-"import { setInheritAttrs as _setInheritAttrs, renderEffect as _renderEffect, setDOMProp as _setDOMProp, template as _template } from 'vue';
+"import { renderEffect as _renderEffect, setDOMProp as _setDOMProp, template as _template } from 'vue';
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
-  _setInheritAttrs(["id", "title", "lang", "dir", "tabindex"])
   _renderEffect(() => _setDOMProp(n0, "id", _ctx.id))
   _renderEffect(() => _setDOMProp(n0, "title", _ctx.title))
   _renderEffect(() => _setDOMProp(n0, "lang", _ctx.lang))
@@ -330,12 +302,11 @@ export function render(_ctx) {
 `;
 
 exports[`compiler v-bind > MathML global attributes should set as dom prop 1`] = `
-"import { setInheritAttrs as _setInheritAttrs, renderEffect as _renderEffect, setDOMProp as _setDOMProp, template as _template } from 'vue';
+"import { renderEffect as _renderEffect, setDOMProp as _setDOMProp, template as _template } from 'vue';
 const t0 = _template("<math></math>")
 
 export function render(_ctx) {
   const n0 = t0()
-  _setInheritAttrs(["autofucus", "dir", "displaystyle", "mathcolor", "tabindex"])
   _renderEffect(() => _setDOMProp(n0, "autofucus", _ctx.autofucus))
   _renderEffect(() => _setDOMProp(n0, "dir", _ctx.dir))
   _renderEffect(() => _setDOMProp(n0, "displaystyle", _ctx.displaystyle))
@@ -346,12 +317,11 @@ export function render(_ctx) {
 `;
 
 exports[`compiler v-bind > SVG global attributes should set as dom prop 1`] = `
-"import { setInheritAttrs as _setInheritAttrs, renderEffect as _renderEffect, setDOMProp as _setDOMProp, template as _template } from 'vue';
+"import { renderEffect as _renderEffect, setDOMProp as _setDOMProp, template as _template } from 'vue';
 const t0 = _template("<svg></svg>")
 
 export function render(_ctx) {
   const n0 = t0()
-  _setInheritAttrs(["id", "lang", "tabindex"])
   _renderEffect(() => _setDOMProp(n0, "id", _ctx.id))
   _renderEffect(() => _setDOMProp(n0, "lang", _ctx.lang))
   _renderEffect(() => _setDOMProp(n0, "tabindex", _ctx.tabindex))
@@ -400,60 +370,55 @@ export function render(_ctx) {
 `;
 
 exports[`compiler v-bind > basic 1`] = `
-"import { setInheritAttrs as _setInheritAttrs, renderEffect as _renderEffect, setDOMProp as _setDOMProp, template as _template } from 'vue';
+"import { renderEffect as _renderEffect, setDOMProp as _setDOMProp, template as _template } from 'vue';
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
-  _setInheritAttrs(["id"])
   _renderEffect(() => _setDOMProp(n0, "id", _ctx.id))
   return n0
 }"
 `;
 
 exports[`compiler v-bind > dynamic arg 1`] = `
-"import { setInheritAttrs as _setInheritAttrs, renderEffect as _renderEffect, setDynamicProps as _setDynamicProps, template as _template } from 'vue';
+"import { renderEffect as _renderEffect, setDynamicProps as _setDynamicProps, template as _template } from 'vue';
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
-  _setInheritAttrs(true)
   _renderEffect(() => _setDynamicProps(n0, [{ [_ctx.id]: _ctx.id, [_ctx.title]: _ctx.title }], true))
   return n0
 }"
 `;
 
 exports[`compiler v-bind > dynamic arg w/ static attribute 1`] = `
-"import { setInheritAttrs as _setInheritAttrs, renderEffect as _renderEffect, setDynamicProps as _setDynamicProps, template as _template } from 'vue';
+"import { renderEffect as _renderEffect, setDynamicProps as _setDynamicProps, template as _template } from 'vue';
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
-  _setInheritAttrs(true)
   _renderEffect(() => _setDynamicProps(n0, [{ [_ctx.id]: _ctx.id, foo: "bar", checked: "" }], true))
   return n0
 }"
 `;
 
 exports[`compiler v-bind > no expression (shorthand) 1`] = `
-"import { setInheritAttrs as _setInheritAttrs, renderEffect as _renderEffect, setDynamicProp as _setDynamicProp, template as _template } from 'vue';
+"import { renderEffect as _renderEffect, setDynamicProp as _setDynamicProp, template as _template } from 'vue';
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
-  _setInheritAttrs(["camel-case"])
   _renderEffect(() => _setDynamicProp(n0, "camel-case", _ctx.camelCase))
   return n0
 }"
 `;
 
 exports[`compiler v-bind > no expression 1`] = `
-"import { setInheritAttrs as _setInheritAttrs, renderEffect as _renderEffect, setDOMProp as _setDOMProp, template as _template } from 'vue';
+"import { renderEffect as _renderEffect, setDOMProp as _setDOMProp, template as _template } from 'vue';
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
-  _setInheritAttrs(["id"])
   _renderEffect(() => _setDOMProp(n0, "id", _ctx.id))
   return n0
 }"
@@ -470,12 +435,11 @@ export function render(_ctx) {
 `;
 
 exports[`compiler v-bind > should error if empty expression 1`] = `
-"import { setInheritAttrs as _setInheritAttrs, template as _template } from 'vue';
+"import { template as _template } from 'vue';
 const t0 = _template("<div arg></div>")
 
 export function render(_ctx) {
   const n0 = t0()
-  _setInheritAttrs(false)
   return n0
 }"
 `;

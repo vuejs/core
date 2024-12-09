@@ -16,7 +16,7 @@ const compileWithVOn = makeCompile({
 
 describe('v-on', () => {
   test('simple expression', () => {
-    const { code, ir, helpers, vaporHelpers } = compileWithVOn(
+    const { code, ir, helpers } = compileWithVOn(
       `<div @click="handleClick"></div>`,
       {
         bindingMetadata: {
@@ -26,8 +26,7 @@ describe('v-on', () => {
     )
 
     expect(code).matchSnapshot()
-    expect(vaporHelpers).contains('delegate')
-    expect(helpers.size).toBe(0)
+    expect(helpers).contains('delegate')
     expect(ir.block.effect).toEqual([])
     expect(ir.block.operation).toMatchObject([
       {
@@ -46,9 +45,6 @@ describe('v-on', () => {
         modifiers: { keys: [], nonKeys: [], options: [] },
         keyOverride: undefined,
         delegate: true,
-      },
-      {
-        type: IRNodeTypes.SET_INHERIT_ATTRS,
       },
     ])
   })
@@ -87,18 +83,13 @@ describe('v-on', () => {
   })
 
   test('dynamic arg', () => {
-    const { code, ir, helpers, vaporHelpers } = compileWithVOn(
+    const { code, ir, helpers } = compileWithVOn(
       `<div v-on:[event]="handler"/>`,
     )
 
-    expect(vaporHelpers).contains('on')
-    expect(vaporHelpers).contains('renderEffect')
-    expect(helpers.size).toBe(0)
-    expect(ir.block.operation).toMatchObject([
-      {
-        type: IRNodeTypes.SET_INHERIT_ATTRS,
-      },
-    ])
+    expect(helpers).contains('on')
+    expect(helpers).contains('renderEffect')
+    expect(ir.block.operation).toMatchObject([])
 
     expect(ir.block.effect[0].operations[0]).toMatchObject({
       type: IRNodeTypes.SET_EVENT,
@@ -127,21 +118,16 @@ describe('v-on', () => {
   })
 
   test('dynamic arg with complex exp prefixing', () => {
-    const { ir, code, helpers, vaporHelpers } = compileWithVOn(
+    const { ir, code, helpers } = compileWithVOn(
       `<div v-on:[event(foo)]="handler"/>`,
       {
         prefixIdentifiers: true,
       },
     )
 
-    expect(vaporHelpers).contains('on')
-    expect(vaporHelpers).contains('renderEffect')
-    expect(helpers.size).toBe(0)
-    expect(ir.block.operation).toMatchObject([
-      {
-        type: IRNodeTypes.SET_INHERIT_ATTRS,
-      },
-    ])
+    expect(helpers).contains('on')
+    expect(helpers).contains('renderEffect')
+    expect(ir.block.operation).toMatchObject([])
 
     expect(ir.block.effect[0].operations[0]).toMatchObject({
       type: IRNodeTypes.SET_EVENT,
@@ -162,12 +148,10 @@ describe('v-on', () => {
   })
 
   test('should wrap as function if expression is inline statement', () => {
-    const { code, ir, helpers, vaporHelpers } =
-      compileWithVOn(`<div @click="i++"/>`)
+    const { code, ir, helpers } = compileWithVOn(`<div @click="i++"/>`)
 
     expect(code).matchSnapshot()
-    expect(vaporHelpers).contains('delegate')
-    expect(helpers.size).toBe(0)
+    expect(helpers).contains('delegate')
     expect(ir.block.effect).toEqual([])
     expect(ir.block.operation).toMatchObject([
       {
@@ -180,15 +164,12 @@ describe('v-on', () => {
         },
         delegate: true,
       },
-      {
-        type: IRNodeTypes.SET_INHERIT_ATTRS,
-      },
     ])
     expect(code).contains(`_delegate(n0, "click", () => $event => (_ctx.i++))`)
   })
 
   test('should wrap in unref if identifier is setup-maybe-ref w/ inline: true', () => {
-    const { code, helpers, vaporHelpers } = compileWithVOn(
+    const { code, helpers } = compileWithVOn(
       `<div @click="x=y"/><div @click="x++"/><div @click="{ x } = y"/>`,
       {
         mode: 'module',
@@ -200,8 +181,7 @@ describe('v-on', () => {
       },
     )
     expect(code).matchSnapshot()
-    expect(vaporHelpers).contains('unref')
-    expect(helpers.size).toBe(0)
+    expect(helpers).contains('unref')
     expect(code).contains(
       `_delegate(n0, "click", () => $event => (x.value=_unref(y)))`,
     )
@@ -220,9 +200,6 @@ describe('v-on', () => {
         type: IRNodeTypes.SET_EVENT,
         value: { content: 'foo();bar()' },
       },
-      {
-        type: IRNodeTypes.SET_INHERIT_ATTRS,
-      },
     ])
     // should wrap with `{` for multiple statements
     // in this case the return value is discarded and the behavior is
@@ -240,9 +217,6 @@ describe('v-on', () => {
       {
         type: IRNodeTypes.SET_EVENT,
         value: { content: '\nfoo();\nbar()\n' },
-      },
-      {
-        type: IRNodeTypes.SET_INHERIT_ATTRS,
       },
     ])
     // should wrap with `{` for multiple statements
@@ -264,9 +238,6 @@ describe('v-on', () => {
         type: IRNodeTypes.SET_EVENT,
         value: { content: 'foo($event)' },
       },
-      {
-        type: IRNodeTypes.SET_INHERIT_ATTRS,
-      },
     ])
     // should NOT prefix $event
     expect(code).contains(
@@ -285,9 +256,6 @@ describe('v-on', () => {
         type: IRNodeTypes.SET_EVENT,
         value: { content: 'foo($event);bar()' },
       },
-      {
-        type: IRNodeTypes.SET_INHERIT_ATTRS,
-      },
     ])
     // should NOT prefix $event
     expect(code).contains(
@@ -303,9 +271,6 @@ describe('v-on', () => {
       {
         type: IRNodeTypes.SET_EVENT,
         value: { content: '$event => foo($event)' },
-      },
-      {
-        type: IRNodeTypes.SET_INHERIT_ATTRS,
       },
     ])
     expect(code).contains(
@@ -324,9 +289,6 @@ describe('v-on', () => {
       {
         type: IRNodeTypes.SET_EVENT,
         value: { content: '(e: any): any => foo(e)' },
-      },
-      {
-        type: IRNodeTypes.SET_INHERIT_ATTRS,
       },
     ])
     expect(code).contains(
@@ -355,9 +317,6 @@ describe('v-on', () => {
     `,
         },
       },
-      {
-        type: IRNodeTypes.SET_INHERIT_ATTRS,
-      },
     ])
   })
 
@@ -384,9 +343,6 @@ describe('v-on', () => {
         type: IRNodeTypes.SET_EVENT,
         value: { content: `a['b' + c]` },
       },
-      {
-        type: IRNodeTypes.SET_INHERIT_ATTRS,
-      },
     ])
 
     expect(code).matchSnapshot()
@@ -398,9 +354,6 @@ describe('v-on', () => {
       {
         type: IRNodeTypes.SET_EVENT,
         value: { content: `a['b' + c]` },
-      },
-      {
-        type: IRNodeTypes.SET_INHERIT_ATTRS,
       },
     ])
 
@@ -418,9 +371,6 @@ describe('v-on', () => {
       {
         type: IRNodeTypes.SET_EVENT,
         value: { content: `e => foo(e)` },
-      },
-      {
-        type: IRNodeTypes.SET_INHERIT_ATTRS,
       },
     ])
     expect(code).contains(`_delegate(n0, "click", () => e => _ctx.foo(e))`)
@@ -451,7 +401,7 @@ describe('v-on', () => {
   })
 
   test('should support multiple modifiers and event options w/ prefixIdentifiers: true', () => {
-    const { code, ir, vaporHelpers } = compileWithVOn(
+    const { code, ir, helpers } = compileWithVOn(
       `<div @click.stop.prevent.capture.once="test"/>`,
       {
         prefixIdentifiers: true,
@@ -459,7 +409,7 @@ describe('v-on', () => {
     )
 
     expect(code).matchSnapshot()
-    expect(vaporHelpers).contains('on')
+    expect(helpers).contains('on')
     expect(ir.block.operation).toMatchObject([
       {
         type: IRNodeTypes.SET_EVENT,
@@ -475,9 +425,6 @@ describe('v-on', () => {
         },
         keyOverride: undefined,
         delegate: false,
-      },
-      {
-        type: IRNodeTypes.SET_INHERIT_ATTRS,
       },
     ])
     expect(code).contains(
@@ -534,9 +481,6 @@ describe('v-on', () => {
           options: [],
         },
       },
-      {
-        type: IRNodeTypes.SET_INHERIT_ATTRS,
-      },
     ])
 
     expect(code).matchSnapshot()
@@ -579,9 +523,6 @@ describe('v-on', () => {
           options: ['capture'],
         },
       },
-      {
-        type: IRNodeTypes.SET_INHERIT_ATTRS,
-      },
     ])
 
     expect(code).matchSnapshot()
@@ -595,9 +536,6 @@ describe('v-on', () => {
       {
         type: IRNodeTypes.SET_EVENT,
         modifiers: { nonKeys: ['exact'] },
-      },
-      {
-        type: IRNodeTypes.SET_INHERIT_ATTRS,
       },
     ])
 
@@ -617,9 +555,6 @@ describe('v-on', () => {
           nonKeys: [],
           options: [],
         },
-      },
-      {
-        type: IRNodeTypes.SET_INHERIT_ATTRS,
       },
     ])
 
@@ -663,9 +598,6 @@ describe('v-on', () => {
         modifiers: { nonKeys: ['right'] },
         keyOverride: undefined,
       },
-      {
-        type: IRNodeTypes.SET_INHERIT_ATTRS,
-      },
     ])
 
     expect(code).matchSnapshot()
@@ -707,9 +639,6 @@ describe('v-on', () => {
         modifiers: { nonKeys: ['middle'] },
         keyOverride: undefined,
       },
-      {
-        type: IRNodeTypes.SET_INHERIT_ATTRS,
-      },
     ])
 
     expect(code).matchSnapshot()
@@ -749,18 +678,15 @@ describe('v-on', () => {
   })
 
   test('should delegate event', () => {
-    const { code, ir, vaporHelpers } = compileWithVOn(`<div @click="test"/>`)
+    const { code, ir, helpers } = compileWithVOn(`<div @click="test"/>`)
 
     expect(code).matchSnapshot()
     expect(code).contains('_delegateEvents("click")')
-    expect(vaporHelpers).contains('delegateEvents')
+    expect(helpers).contains('delegateEvents')
     expect(ir.block.operation).toMatchObject([
       {
         type: IRNodeTypes.SET_EVENT,
         delegate: true,
-      },
-      {
-        type: IRNodeTypes.SET_INHERIT_ATTRS,
       },
     ])
   })

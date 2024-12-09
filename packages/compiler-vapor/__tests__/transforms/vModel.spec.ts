@@ -16,71 +16,65 @@ const compileWithVModel = makeCompile({
 
 describe('compiler: vModel transform', () => {
   test('should support simple expression', () => {
-    const { code, vaporHelpers } = compileWithVModel(
-      '<input v-model="model" />',
-    )
+    const { code, helpers } = compileWithVModel('<input v-model="model" />')
     expect(code).toMatchSnapshot()
-    expect(vaporHelpers).toContain('vModelText')
+    expect(helpers).toContain('vModelText')
   })
 
   test('should support input (text)', () => {
-    const { code, vaporHelpers } = compileWithVModel(
+    const { code, helpers } = compileWithVModel(
       '<input type="text" v-model="model" />',
     )
     expect(code).toMatchSnapshot()
-    expect(vaporHelpers).toContain('vModelText')
+    expect(helpers).toContain('vModelText')
   })
 
   test('should support input (radio)', () => {
-    const { code, vaporHelpers } = compileWithVModel(
+    const { code, helpers } = compileWithVModel(
       '<input type="radio" v-model="model" />',
     )
     expect(code).toMatchSnapshot()
-    expect(vaporHelpers).toContain('vModelRadio')
+    expect(helpers).toContain('vModelRadio')
   })
 
   test('should support input (checkbox)', () => {
-    const { code, vaporHelpers } = compileWithVModel(
+    const { code, helpers } = compileWithVModel(
       '<input type="checkbox" v-model="model" />',
     )
     expect(code).toMatchSnapshot()
-    expect(vaporHelpers).toContain('vModelCheckbox')
+    expect(helpers).toContain('vModelCheckbox')
   })
 
   test('should support select', () => {
-    const { code, vaporHelpers } = compileWithVModel(
-      '<select v-model="model" />',
-    )
+    const { code, helpers } = compileWithVModel('<select v-model="model" />')
     expect(code).toMatchSnapshot()
-    expect(vaporHelpers).toContain('vModelSelect')
+    expect(helpers).toContain('vModelSelect')
   })
 
   test('should support textarea', () => {
-    const { code, vaporHelpers } = compileWithVModel(
-      '<textarea v-model="model" />',
-    )
+    const { code, helpers } = compileWithVModel('<textarea v-model="model" />')
     expect(code).toMatchSnapshot()
-    expect(vaporHelpers).toContain('vModelText')
+    expect(helpers).toContain('vModelText')
   })
 
   test('should support input (dynamic type)', () => {
-    const { code, vaporHelpers } = compileWithVModel(
+    const { code, helpers } = compileWithVModel(
       '<input :type="foo" v-model="model" />',
     )
     expect(code).toMatchSnapshot()
-    expect(vaporHelpers).toContain('vModelDynamic')
+    expect(helpers).toContain('vModelDynamic')
   })
 
   test('should support w/ dynamic v-bind', () => {
     const root1 = compileWithVModel('<input v-bind="obj" v-model="model" />')
     expect(root1.code).toMatchSnapshot()
-    expect(root1.vaporHelpers).toContain('vModelDynamic')
+    expect(root1.helpers).toContain('vModelDynamic')
 
     const root2 = compileWithVModel(
       '<input v-bind:[key]="val" v-model="model" />',
     )
     expect(root2.code).toMatchSnapshot()
-    expect(root2.vaporHelpers).toContain('vModelDynamic')
+    expect(root2.helpers).toContain('vModelDynamic')
   })
 
   describe('errors', () => {
@@ -109,7 +103,7 @@ describe('compiler: vModel transform', () => {
     })
 
     // TODO: component
-    test.fails('should allow usage on custom element', () => {
+    test.todo('should allow usage on custom element', () => {
       const onError = vi.fn()
       const root = compileWithVModel('<my-input v-model="model" />', {
         onError,

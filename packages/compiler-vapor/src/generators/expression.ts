@@ -110,7 +110,7 @@ export function genExpression(
 
 function genIdentifier(
   raw: string,
-  { options, vaporHelper, identifiers }: CodegenContext,
+  { options, helper, identifiers }: CodegenContext,
   loc?: SourceLocation,
   assignment?: string,
   id?: Identifier,
@@ -161,7 +161,7 @@ function genIdentifier(
           isAssignmentLVal || isUpdateArg || isDestructureAssignment
             ? (name = `${raw}.value`)
             : assignment
-              ? `${vaporHelper('isRef')}(${raw}) ? (${raw}.value = ${assignment}) : null`
+              ? `${helper('isRef')}(${raw}) ? (${raw}.value = ${assignment}) : null`
               : unref()
         break
       default:
@@ -183,7 +183,7 @@ function genIdentifier(
     return assignment ? `${s} = ${assignment}` : s
   }
   function unref() {
-    return `${vaporHelper('unref')}(${raw})`
+    return `${helper('unref')}(${raw})`
   }
 }
 

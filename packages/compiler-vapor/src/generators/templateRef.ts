@@ -7,12 +7,12 @@ export function genSetTemplateRef(
   oper: SetTemplateRefIRNode,
   context: CodegenContext,
 ): CodeFragment[] {
-  const { vaporHelper } = context
+  const { helper } = context
   return [
     NEWLINE,
     oper.effect && `r${oper.element} = `,
     ...genCall(
-      vaporHelper('setRef'),
+      helper('setRef'),
       `n${oper.element}`,
       genExpression(oper.value, context),
       oper.effect ? `r${oper.element}` : oper.refFor ? 'void 0' : undefined,

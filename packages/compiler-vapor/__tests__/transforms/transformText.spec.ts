@@ -20,11 +20,11 @@ const compileWithTextTransform = makeCompile({
 
 describe('compiler: text transform', () => {
   it('no consecutive text', () => {
-    const { code, ir, vaporHelpers } = compileWithTextTransform(
+    const { code, ir, helpers } = compileWithTextTransform(
       '{{ "hello world" }}',
     )
     expect(code).toMatchSnapshot()
-    expect(vaporHelpers).contains.all.keys('createTextNode')
+    expect(helpers).contains.all.keys('createTextNode')
     expect(ir.block.operation).toMatchObject([
       {
         type: IRNodeTypes.CREATE_TEXT_NODE,
@@ -42,9 +42,9 @@ describe('compiler: text transform', () => {
   })
 
   it('consecutive text', () => {
-    const { code, ir, vaporHelpers } = compileWithTextTransform('{{ msg }}')
+    const { code, ir, helpers } = compileWithTextTransform('{{ msg }}')
     expect(code).toMatchSnapshot()
-    expect(vaporHelpers).contains.all.keys('createTextNode')
+    expect(helpers).contains.all.keys('createTextNode')
     expect(ir.block.operation).toMatchObject([
       {
         type: IRNodeTypes.CREATE_TEXT_NODE,

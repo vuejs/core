@@ -19,7 +19,7 @@ describe('compiler: children transform', () => {
   test.todo('basic')
 
   test('children & sibling references', () => {
-    const { code, vaporHelpers } = compileWithElementTransform(
+    const { code, helpers } = compileWithElementTransform(
       `<div>
         <p>{{ first }}</p>
         {{ second }}
@@ -28,7 +28,7 @@ describe('compiler: children transform', () => {
       </div>`,
     )
     expect(code).toMatchSnapshot()
-    expect(Array.from(vaporHelpers)).containSubset([
+    expect(Array.from(helpers)).containSubset([
       'next',
       'setText',
       'createTextNode',

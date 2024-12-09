@@ -5,12 +5,12 @@ import { type CodeFragment, NEWLINE, buildCodeFragment, genCall } from './utils'
 
 export function genTemplates(
   templates: string[],
-  { vaporHelper }: CodegenContext,
+  { helper }: CodegenContext,
 ): string {
   return templates
     .map(
       (template, i) =>
-        `const t${i} = ${vaporHelper('template')}(${JSON.stringify(template)})\n`,
+        `const t${i} = ${helper('template')}(${JSON.stringify(template)})\n`,
     )
     .join('')
 }
@@ -21,7 +21,7 @@ export function genChildren(
   from: number,
   paths: number[] = [],
 ): CodeFragment[] {
-  const { vaporHelper } = context
+  const { helper } = context
   const [frag, push] = buildCodeFragment()
   let offset = 0
   const { children, id, template } = dynamic
@@ -58,18 +58,14 @@ export function genChildren(
       if (offset === 1) {
         push(`n${prev[0]}.nextSibling`)
       } else {
-        push(...genCall(vaporHelper('next'), `n${prev[0]}`, String(offset)))
+        push(...genCall(helper('next'), `n${prev[0]}`, String(offset)))
       }
     } else {
       if (newPaths.length === 1 && newPaths[0] === 0) {
         push(`n${from}.firstChild`)
       } else {
         push(
-          ...genCall(
-            vaporHelper('children'),
-            `n${from}`,
-            ...newPaths.map(String),
-          ),
+          ...genCall(helper('children'), `n${from}`, ...newPaths.map(String)),
         )
       }
     }

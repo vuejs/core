@@ -27,9 +27,9 @@ const compileWithSlotsOutlet = makeCompile({
 
 describe('compiler: transform <slot> outlets', () => {
   test('default slot outlet', () => {
-    const { ir, code, vaporHelpers } = compileWithSlotsOutlet(`<slot />`)
+    const { ir, code, helpers } = compileWithSlotsOutlet(`<slot />`)
     expect(code).toMatchSnapshot()
-    expect(vaporHelpers).toContain('createSlot')
+    expect(helpers).toContain('createSlot')
     expect(ir.block.effect).toEqual([])
     expect(ir.block.operation).toMatchObject([
       {

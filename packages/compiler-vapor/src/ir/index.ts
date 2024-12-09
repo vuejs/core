@@ -24,7 +24,6 @@ export enum IRNodeTypes {
   SET_HTML,
   SET_TEMPLATE_REF,
   SET_MODEL_VALUE,
-  SET_INHERIT_ATTRS,
 
   INSERT_NODE,
   PREPEND_NODE,
@@ -42,6 +41,8 @@ export enum IRNodeTypes {
 export interface BaseIRNode {
   type: IRNodeTypes
 }
+
+export type CoreHelper = keyof typeof import('packages/runtime-core/src')
 
 export type VaporHelper = keyof typeof import('packages/runtime-vapor/src')
 
@@ -159,12 +160,6 @@ export interface SetModelValueIRNode extends BaseIRNode {
   isComponent: boolean
 }
 
-export interface SetInheritAttrsIRNode extends BaseIRNode {
-  type: IRNodeTypes.SET_INHERIT_ATTRS
-  staticProps: boolean
-  dynamicProps: true | string[]
-}
-
 export interface CreateTextNodeIRNode extends BaseIRNode {
   type: IRNodeTypes.CREATE_TEXT_NODE
   id: number
@@ -229,7 +224,6 @@ export type OperationNode =
   | SetHtmlIRNode
   | SetTemplateRefIRNode
   | SetModelValueIRNode
-  | SetInheritAttrsIRNode
   | CreateTextNodeIRNode
   | InsertNodeIRNode
   | PrependNodeIRNode

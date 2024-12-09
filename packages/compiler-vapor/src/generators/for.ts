@@ -15,7 +15,7 @@ export function genFor(
   oper: ForIRNode,
   context: CodegenContext,
 ): CodeFragment[] {
-  const { vaporHelper } = context
+  const { helper } = context
   const { source, value, key, index, render, keyProp, once, id, container } =
     oper
 
@@ -47,7 +47,7 @@ export function genFor(
     ]
 
     blockFn = genCall(
-      vaporHelper('withDestructure'),
+      helper('withDestructure'),
       destructureAssignmentFn,
       blockFn,
     )
@@ -57,7 +57,7 @@ export function genFor(
     NEWLINE,
     `const n${id} = `,
     ...genCall(
-      vaporHelper('createFor'),
+      helper('createFor'),
       sourceExpr,
       blockFn,
       genCallback(keyProp),

@@ -28,12 +28,9 @@ const compileWithVIf = makeCompile({
 
 describe('compiler: v-if', () => {
   test('basic v-if', () => {
-    const { code, vaporHelpers, ir, helpers } = compileWithVIf(
-      `<div v-if="ok">{{msg}}</div>`,
-    )
+    const { code, helpers, ir } = compileWithVIf(`<div v-if="ok">{{msg}}</div>`)
 
-    expect(vaporHelpers).contains('createIf')
-    expect(helpers.size).toBe(0)
+    expect(helpers).contains('createIf')
 
     expect(ir.template).toEqual(['<div></div>'])
     expect(ir.block.operation).toMatchObject([
@@ -113,15 +110,12 @@ describe('compiler: v-if', () => {
   test.todo('component v-if')
 
   test('v-if + v-else', () => {
-    const { code, ir, vaporHelpers, helpers } = compileWithVIf(
-      `<div v-if="ok"/><p v-else/>`,
-    )
+    const { code, ir, helpers } = compileWithVIf(`<div v-if="ok"/><p v-else/>`)
     expect(code).matchSnapshot()
     expect(ir.template).toEqual(['<div></div>', '<p></p>'])
 
-    expect(vaporHelpers).contains('createIf')
+    expect(helpers).contains('createIf')
     expect(ir.block.effect).lengthOf(0)
-    expect(helpers).lengthOf(0)
     expect(ir.block.operation).toMatchObject([
       {
         type: IRNodeTypes.IF,

@@ -25,12 +25,10 @@ const compileWithElementTransform = makeCompile({
 describe('compiler: element transform', () => {
   describe('component', () => {
     test('import + resolve component', () => {
-      const { code, ir, vaporHelpers } = compileWithElementTransform(`<Foo/>`)
+      const { code, ir, helpers } = compileWithElementTransform(`<Foo/>`)
       expect(code).toMatchSnapshot()
-      expect(vaporHelpers).contains.all.keys(
-        'resolveComponent',
-        'createComponentWithFallback',
-      )
+      expect(helpers).contains.all.keys('resolveComponent')
+      expect(helpers).contains.all.keys('createComponentWithFallback')
       expect(ir.block.operation).toMatchObject([
         {
           type: IRNodeTypes.CREATE_COMPONENT_NODE,
@@ -44,24 +42,21 @@ describe('compiler: element transform', () => {
     })
 
     test.todo('resolve implicitly self-referencing component', () => {
-      const { code, vaporHelpers } = compileWithElementTransform(`<Example/>`, {
+      const { code, helpers } = compileWithElementTransform(`<Example/>`, {
         filename: `/foo/bar/Example.vue?vue&type=template`,
       })
       expect(code).toMatchSnapshot()
-      expect(vaporHelpers).toContain('resolveComponent')
+      expect(helpers).toContain('resolveComponent')
     })
 
     test('resolve component from setup bindings', () => {
-      const { code, ir, vaporHelpers } = compileWithElementTransform(
-        `<Example/>`,
-        {
-          bindingMetadata: {
-            Example: BindingTypes.SETUP_MAYBE_REF,
-          },
+      const { code, ir, helpers } = compileWithElementTransform(`<Example/>`, {
+        bindingMetadata: {
+          Example: BindingTypes.SETUP_MAYBE_REF,
         },
-      )
+      })
       expect(code).toMatchSnapshot()
-      expect(vaporHelpers).not.toContain('resolveComponent')
+      expect(helpers).not.toContain('resolveComponent')
       expect(ir.block.operation).toMatchObject([
         {
           type: IRNodeTypes.CREATE_COMPONENT_NODE,
@@ -72,7 +67,7 @@ describe('compiler: element transform', () => {
     })
 
     test('resolve component from setup bindings (inline)', () => {
-      const { code, vaporHelpers } = compileWithElementTransform(`<Example/>`, {
+      const { code, helpers } = compileWithElementTransform(`<Example/>`, {
         inline: true,
         bindingMetadata: {
           Example: BindingTypes.SETUP_MAYBE_REF,
@@ -80,78 +75,66 @@ describe('compiler: element transform', () => {
       })
       expect(code).toMatchSnapshot()
       expect(code).contains(`unref(Example)`)
-      expect(vaporHelpers).not.toContain('resolveComponent')
-      expect(vaporHelpers).toContain('unref')
+      expect(helpers).not.toContain('resolveComponent')
+      expect(helpers).toContain('unref')
     })
 
     test('resolve component from setup bindings (inline const)', () => {
-      const { code, vaporHelpers } = compileWithElementTransform(`<Example/>`, {
+      const { code, helpers } = compileWithElementTransform(`<Example/>`, {
         inline: true,
         bindingMetadata: {
           Example: BindingTypes.SETUP_CONST,
         },
       })
       expect(code).toMatchSnapshot()
-      expect(vaporHelpers).not.toContain('resolveComponent')
+      expect(helpers).not.toContain('resolveComponent')
     })
 
     test('resolve namespaced component from setup bindings', () => {
-      const { code, vaporHelpers } = compileWithElementTransform(
-        `<Foo.Example/>`,
-        {
-          bindingMetadata: {
-            Foo: BindingTypes.SETUP_MAYBE_REF,
-          },
+      const { code, helpers } = compileWithElementTransform(`<Foo.Example/>`, {
+        bindingMetadata: {
+          Foo: BindingTypes.SETUP_MAYBE_REF,
         },
-      )
+      })
       expect(code).toMatchSnapshot()
       expect(code).contains(`_ctx.Foo.Example`)
-      expect(vaporHelpers).not.toContain('resolveComponent')
+      expect(helpers).not.toContain('resolveComponent')
     })
 
     test('resolve namespaced component from setup bindings (inline const)', () => {
-      const { code, vaporHelpers } = compileWithElementTransform(
-        `<Foo.Example/>`,
-        {
-          inline: true,
-          bindingMetadata: {
-            Foo: BindingTypes.SETUP_CONST,
-          },
+      const { code, helpers } = compileWithElementTransform(`<Foo.Example/>`, {
+        inline: true,
+        bindingMetadata: {
+          Foo: BindingTypes.SETUP_CONST,
         },
-      )
+      })
       expect(code).toMatchSnapshot()
       expect(code).contains(`Foo.Example`)
-      expect(vaporHelpers).not.toContain('resolveComponent')
+      expect(helpers).not.toContain('resolveComponent')
     })
 
     test('resolve namespaced component from props bindings (inline)', () => {
-      const { code, vaporHelpers } = compileWithElementTransform(
-        `<Foo.Example/>`,
-        {
-          inline: true,
-          bindingMetadata: {
-            Foo: BindingTypes.PROPS,
-          },
+      const { code, helpers } = compileWithElementTransform(`<Foo.Example/>`, {
+        inline: true,
+        bindingMetadata: {
+          Foo: BindingTypes.PROPS,
         },
-      )
+      })
       expect(code).toMatchSnapshot()
       expect(code).contains(`Foo.Example`)
-      expect(vaporHelpers).not.toContain('resolveComponent')
+      expect(helpers).not.toContain('resolveComponent')
     })
 
     test('resolve namespaced component from props bindings (non-inline)', () => {
-      const { code, vaporHelpers } = compileWithElementTransform(
-        `<Foo.Example/>`,
-        {
-          inline: false,
-          bindingMetadata: {
-            Foo: BindingTypes.PROPS,
-          },
+      const { code, helpers } = compileWithElementTransform(`<Foo.Example/>`, {
+        inline: false,
+        bindingMetadata: {
+          Foo: BindingTypes.PROPS,
         },
-      )
+      })
       expect(code).toMatchSnapshot()
       expect(code).contains('_ctx.Foo.Example')
-      expect(vaporHelpers).not.toContain('resolveComponent')
+      expect(helpers).not.toContain('resolveComponent')
     })
 
     test('do not resolve component from non-script-setup bindings', () => {
@@ -161,12 +144,11 @@ describe('compiler: element transform', () => {
       Object.defineProperty(bindingMetadata, '__isScriptSetup', {
         value: false,
       })
-      const { code, ir, vaporHelpers } = compileWithElementTransform(
-        `<Example/>`,
-        { bindingMetadata },
-      )
+      const { code, ir, helpers } = compileWithElementTransform(`<Example/>`, {
+        bindingMetadata,
+      })
       expect(code).toMatchSnapshot()
-      expect(vaporHelpers).toContain('resolveComponent')
+      expect(helpers).toContain('resolveComponent')
       expect(ir.block.operation).toMatchObject([
         {
           type: IRNodeTypes.CREATE_COMPONENT_NODE,
@@ -427,11 +409,11 @@ describe('compiler: element transform', () => {
 
   describe('dynamic component', () => {
     test('static binding', () => {
-      const { code, ir, vaporHelpers } = compileWithElementTransform(
+      const { code, ir, helpers } = compileWithElementTransform(
         `<component is="foo" />`,
       )
       expect(code).toMatchSnapshot()
-      expect(vaporHelpers).toContain('resolveDynamicComponent')
+      expect(helpers).toContain('resolveDynamicComponent')
       expect(ir.block.operation).toMatchObject([
         {
           type: IRNodeTypes.CREATE_COMPONENT_NODE,
@@ -449,11 +431,11 @@ describe('compiler: element transform', () => {
     })
 
     test('capitalized version w/ static binding', () => {
-      const { code, ir, vaporHelpers } = compileWithElementTransform(
+      const { code, ir, helpers } = compileWithElementTransform(
         `<Component is="foo" />`,
       )
       expect(code).toMatchSnapshot()
-      expect(vaporHelpers).toContain('resolveDynamicComponent')
+      expect(helpers).toContain('resolveDynamicComponent')
       expect(ir.block.operation).toMatchObject([
         {
           type: IRNodeTypes.CREATE_COMPONENT_NODE,
@@ -471,11 +453,11 @@ describe('compiler: element transform', () => {
     })
 
     test('dynamic binding', () => {
-      const { code, ir, vaporHelpers } = compileWithElementTransform(
+      const { code, ir, helpers } = compileWithElementTransform(
         `<component :is="foo" />`,
       )
       expect(code).toMatchSnapshot()
-      expect(vaporHelpers).toContain('resolveDynamicComponent')
+      expect(helpers).toContain('resolveDynamicComponent')
       expect(ir.block.operation).toMatchObject([
         {
           type: IRNodeTypes.CREATE_COMPONENT_NODE,
@@ -493,10 +475,10 @@ describe('compiler: element transform', () => {
     })
 
     test('dynamic binding shorthand', () => {
-      const { code, ir, vaporHelpers } =
+      const { code, ir, helpers } =
         compileWithElementTransform(`<component :is />`)
       expect(code).toMatchSnapshot()
-      expect(vaporHelpers).toContain('resolveDynamicComponent')
+      expect(helpers).toContain('resolveDynamicComponent')
       expect(ir.block.operation).toMatchObject([
         {
           type: IRNodeTypes.CREATE_COMPONENT_NODE,
@@ -515,15 +497,15 @@ describe('compiler: element transform', () => {
 
     // #3934
     test('normal component with is prop', () => {
-      const { code, ir, vaporHelpers } = compileWithElementTransform(
+      const { code, ir, helpers } = compileWithElementTransform(
         `<custom-input is="foo" />`,
         {
           isNativeTag: () => false,
         },
       )
       expect(code).toMatchSnapshot()
-      expect(vaporHelpers).toContain('resolveComponent')
-      expect(vaporHelpers).not.toContain('resolveDynamicComponent')
+      expect(helpers).toContain('resolveComponent')
+      expect(helpers).not.toContain('resolveDynamicComponent')
       expect(ir.block.operation).toMatchObject([
         {
           type: IRNodeTypes.CREATE_COMPONENT_NODE,
@@ -728,9 +710,6 @@ describe('compiler: element transform', () => {
         keyOverride: undefined,
         delegate: true,
         effect: false,
-      },
-      {
-        type: IRNodeTypes.SET_INHERIT_ATTRS,
       },
     ])
   })

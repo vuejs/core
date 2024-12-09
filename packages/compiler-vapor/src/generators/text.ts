@@ -13,12 +13,12 @@ export function genSetText(
   oper: SetTextIRNode,
   context: CodegenContext,
 ): CodeFragment[] {
-  const { vaporHelper } = context
+  const { helper } = context
   const { element, values } = oper
   return [
     NEWLINE,
     ...genCall(
-      vaporHelper('setText'),
+      helper('setText'),
       `n${element}`,
       ...values.map(value => genExpression(value, context)),
     ),
@@ -29,12 +29,12 @@ export function genCreateTextNode(
   oper: CreateTextNodeIRNode,
   context: CodegenContext,
 ): CodeFragment[] {
-  const { vaporHelper } = context
+  const { helper } = context
   const { id, values, effect } = oper
   return [
     NEWLINE,
     `const n${id} = `,
-    ...genCall(vaporHelper('createTextNode'), [
+    ...genCall(helper('createTextNode'), [
       effect && '() => ',
       ...genMulti(
         DELIMITERS_ARRAY,

@@ -1,13 +1,12 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
 exports[`compiler: v-once > as root node 1`] = `
-"import { setDOMProp as _setDOMProp, setInheritAttrs as _setInheritAttrs, template as _template } from 'vue';
+"import { setDOMProp as _setDOMProp, template as _template } from 'vue';
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
   _setDOMProp(n0, "id", _ctx.foo)
-  _setInheritAttrs(["id"])
   return n0
 }"
 `;

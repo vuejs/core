@@ -16,7 +16,7 @@ export function makeCompile(options: CompilerOptions = {}) {
     ir: RootIRNode
     code: string
     helpers: Set<string>
-    vaporHelpers: Set<string>
+    helpers: Set<string>
   } => {
     const ast = parse(template, {
       prefixIdentifiers: true,
@@ -28,11 +28,11 @@ export function makeCompile(options: CompilerOptions = {}) {
       ...options,
       ...overrideOptions,
     })
-    const { code, helpers, vaporHelpers } = generate(ir, {
+    const { code, helpers } = generate(ir, {
       prefixIdentifiers: true,
       ...options,
       ...overrideOptions,
     })
-    return { ast, ir, code, helpers, vaporHelpers }
+    return { ast, ir, code, helpers }
   }
 }

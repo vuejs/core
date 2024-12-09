@@ -18,7 +18,7 @@ export function genSetEvent(
   oper: SetEventIRNode,
   context: CodegenContext,
 ): CodeFragment[] {
-  const { vaporHelper } = context
+  const { helper } = context
   const { element, key, keyOverride, value, modifiers, delegate, effect } = oper
 
   const name = genName()
@@ -33,7 +33,7 @@ export function genSetEvent(
   return [
     NEWLINE,
     ...genCall(
-      vaporHelper(delegate ? 'delegate' : 'on'),
+      helper(delegate ? 'delegate' : 'on'),
       `n${element}`,
       name,
       handler,
@@ -72,11 +72,11 @@ export function genSetDynamicEvents(
   oper: SetDynamicEventsIRNode,
   context: CodegenContext,
 ): CodeFragment[] {
-  const { vaporHelper } = context
+  const { helper } = context
   return [
     NEWLINE,
     ...genCall(
-      vaporHelper('setDynamicEvents'),
+      helper('setDynamicEvents'),
       `n${oper.element}`,
       genExpression(oper.event, context),
     ),

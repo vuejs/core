@@ -9,7 +9,7 @@ export function genSetModelValue(
   oper: SetModelValueIRNode,
   context: CodegenContext,
 ): CodeFragment[] {
-  const { vaporHelper } = context
+  const { helper } = context
   const name = oper.key.isStatic
     ? [JSON.stringify(`update:${camelize(oper.key.content)}`)]
     : ['`update:${', ...genExpression(oper.key, context), '}`']
@@ -18,7 +18,7 @@ export function genSetModelValue(
 
   return [
     NEWLINE,
-    ...genCall(vaporHelper('delegate'), `n${oper.element}`, name, handler),
+    ...genCall(helper('delegate'), `n${oper.element}`, name, handler),
   ]
 }
 

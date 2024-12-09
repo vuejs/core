@@ -1,4 +1,4 @@
-import type { BlockIRNode, VaporHelper } from '../ir'
+import type { BlockIRNode, CoreHelper } from '../ir'
 import {
   type CodeFragment,
   DELIMITERS_ARRAY,
@@ -69,13 +69,13 @@ export function genBlockContent(
 
   function genResolveAssets(
     kind: 'component' | 'directive',
-    helper: VaporHelper,
+    helper: CoreHelper,
   ) {
     for (const name of context.ir[kind]) {
       push(
         NEWLINE,
         `const ${toValidAssetId(name, kind)} = `,
-        ...genCall(context.vaporHelper(helper), JSON.stringify(name)),
+        ...genCall(context.helper(helper), JSON.stringify(name)),
       )
     }
   }

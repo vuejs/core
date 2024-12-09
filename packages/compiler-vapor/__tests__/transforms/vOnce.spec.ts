@@ -11,7 +11,7 @@ const compileWithOnce = makeCompile({
 
 describe('compiler: v-once', () => {
   test('basic', () => {
-    const { ir, code, helpers } = compileWithOnce(
+    const { ir, code } = compileWithOnce(
       `<div v-once>
         {{ msg }}
         <span :class="clz" />
@@ -25,7 +25,6 @@ describe('compiler: v-once', () => {
     )
 
     expect(code).toMatchSnapshot()
-    expect(helpers).lengthOf(0)
     expect(ir.block.effect).lengthOf(0)
     expect(ir.block.operation).toMatchObject([
       {
@@ -68,15 +67,14 @@ describe('compiler: v-once', () => {
         elements: [0],
         parent: 2,
       },
-      { type: IRNodeTypes.SET_INHERIT_ATTRS },
     ])
   })
 
   test('as root node', () => {
-    const { ir, code, helpers } = compileWithOnce(`<div :id="foo" v-once />`)
+    const { ir, code } = compileWithOnce(`<div :id="foo" v-once />`)
 
     expect(code).toMatchSnapshot()
-    expect(helpers).lengthOf(0)
+
     expect(ir.block.effect).lengthOf(0)
     expect(ir.block.operation).toMatchObject([
       {
@@ -97,20 +95,15 @@ describe('compiler: v-once', () => {
           ],
         },
       },
-      {
-        type: IRNodeTypes.SET_INHERIT_ATTRS,
-      },
     ])
     expect(code).not.contains('effect')
   })
 
   test('on nested plain element', () => {
-    const { ir, code, helpers } = compileWithOnce(
-      `<div><div :id="foo" v-once /></div>`,
-    )
+    const { ir, code } = compileWithOnce(`<div><div :id="foo" v-once /></div>`)
 
     expect(code).toMatchSnapshot()
-    expect(helpers).lengthOf(0)
+
     expect(ir.block.effect).lengthOf(0)
     expect(ir.block.operation).toMatchObject([
       {
@@ -132,9 +125,6 @@ describe('compiler: v-once', () => {
           ],
         },
       },
-      {
-        type: IRNodeTypes.SET_INHERIT_ATTRS,
-      },
     ])
   })
 
@@ -154,29 +144,26 @@ describe('compiler: v-once', () => {
         elements: [0],
         parent: 1,
       },
-      { type: IRNodeTypes.SET_INHERIT_ATTRS },
     ])
   })
 
   test.todo('on slot outlet')
 
   test('inside v-once', () => {
-    const { ir, code, helpers } = compileWithOnce(
-      `<div v-once><div v-once/></div>`,
-    )
+    const { ir, code } = compileWithOnce(`<div v-once><div v-once/></div>`)
 
     expect(code).toMatchSnapshot()
-    expect(helpers).lengthOf(0)
+
     expect(ir.block.effect).lengthOf(0)
-    expect(ir.block.operation).lengthOf(1)
+    expect(ir.block.operation).lengthOf(0)
   })
 
   test.todo('with hoistStatic: true')
 
   test('with v-if', () => {
-    const { ir, code, helpers } = compileWithOnce(`<div v-if="expr" v-once />`)
+    const { ir, code } = compileWithOnce(`<div v-if="expr" v-once />`)
     expect(code).toMatchSnapshot()
-    expect(helpers).lengthOf(0)
+
     expect(ir.block.effect).lengthOf(0)
     expect(ir.block.operation).toMatchObject([
       {
@@ -199,11 +186,11 @@ describe('compiler: v-once', () => {
   })
 
   test('with v-if/else', () => {
-    const { ir, code, helpers } = compileWithOnce(
+    const { ir, code } = compileWithOnce(
       `<div v-if="expr" v-once /><p v-else/>`,
     )
     expect(code).toMatchSnapshot()
-    expect(helpers).lengthOf(0)
+
     expect(ir.block.effect).lengthOf(0)
     expect(ir.block.operation).toMatchObject([
       {

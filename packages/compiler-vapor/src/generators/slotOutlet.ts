@@ -9,7 +9,7 @@ export function genSlotOutlet(
   oper: SlotOutletIRNode,
   context: CodegenContext,
 ): CodeFragment[] {
-  const { vaporHelper } = context
+  const { helper } = context
   const { id, name, fallback } = oper
   const [frag, push] = buildCodeFragment()
 
@@ -26,7 +26,7 @@ export function genSlotOutlet(
     NEWLINE,
     `const n${id} = `,
     ...genCall(
-      vaporHelper('createSlot'),
+      helper('createSlot'),
       nameExpr,
       genRawProps(oper.props, context) || 'null',
       fallbackArg,

@@ -16,23 +16,14 @@ const compileWithVText = makeCompile({
 
 describe('v-text', () => {
   test('should convert v-text to textContent', () => {
-    const { code, ir, helpers, vaporHelpers } = compileWithVText(
-      `<div v-text="str"></div>`,
-      {
-        bindingMetadata: {
-          str: BindingTypes.SETUP_REF,
-        },
+    const { code, ir, helpers } = compileWithVText(`<div v-text="str"></div>`, {
+      bindingMetadata: {
+        str: BindingTypes.SETUP_REF,
       },
-    )
+    })
 
-    expect(vaporHelpers).contains('setText')
-    expect(helpers.size).toBe(0)
-
-    expect(ir.block.operation).toMatchObject([
-      {
-        type: IRNodeTypes.SET_INHERIT_ATTRS,
-      },
-    ])
+    expect(helpers).contains('setText')
+    expect(ir.block.operation).toMatchObject([])
 
     expect(ir.block.effect).toMatchObject([
       {
