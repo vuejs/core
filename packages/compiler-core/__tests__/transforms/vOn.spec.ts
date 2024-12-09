@@ -1,4 +1,5 @@
 import {
+  BindingTypes,
   type CompilerOptions,
   type ElementNode,
   ErrorCodes,
@@ -755,6 +756,31 @@ describe('compiler: transform v-on', () => {
           children: [
             `$event => (`,
             { children: [{ content: `_ctx.foo` }, `++`] },
+            `)`,
+          ],
+        },
+      })
+    })
+
+    test('variable function handler ', () => {
+      const { node } = parseWithVOn(`<div v-on:click="foo" />`, {
+        prefixIdentifiers: true,
+        cacheHandlers: true,
+        bindingMetadata: {
+          foo: BindingTypes.SETUP_LET,
+        },
+      })
+      const vnodeCall = node.codegenNode as VNodeCall
+      expect(
+        (vnodeCall.props as ObjectExpression).properties[0].value,
+      ).toMatchObject({
+        type: NodeTypes.JS_CACHE_EXPRESSION,
+        index: 0,
+        value: {
+          type: NodeTypes.COMPOUND_EXPRESSION,
+          children: [
+            `(...args) => (`,
+            { content: `$setup.foo && $setup.foo.call(undefined, ...args)` },
             `)`,
           ],
         },
