@@ -10,24 +10,17 @@ import {
   setValue,
 } from '../../src/dom/prop'
 import { setStyle } from '../../src/dom/style'
-import {
-  ComponentInternalInstance,
-  setCurrentInstance,
-} from '../../src/_old/component'
+import { VaporComponentInstance } from '../../src/component'
+import { currentInstance, simpleSetCurrentInstance } from '@vue/runtime-dom'
 import { getMetadata, recordPropMetadata } from '../../src/componentMetadata'
-import { getCurrentScope } from '@vue/reactivity'
 
 let removeComponentInstance = NOOP
 beforeEach(() => {
-  const instance = new ComponentInternalInstance((() => {}) as any, {}, null)
-  const reset = setCurrentInstance(instance)
-  const prev = getCurrentScope()
-  instance.scope.on()
+  const instance = new VaporComponentInstance({}, {}, null)
+  const prev = currentInstance
+  simpleSetCurrentInstance(instance)
   removeComponentInstance = () => {
-    instance.scope.prevScope = prev
-    instance.scope.off()
-    reset()
-    removeComponentInstance = NOOP
+    simpleSetCurrentInstance(prev)
   }
 })
 afterEach(() => {

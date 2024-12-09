@@ -9,7 +9,7 @@ import {
   vModelDynamic,
   vModelSelect,
   withDirectives,
-} from '../../src/_old'
+} from '../../src'
 import { makeRender } from '../_utils'
 import { nextTick } from '@vue/runtime-dom'
 

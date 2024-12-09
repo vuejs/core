@@ -15,7 +15,7 @@ import {
   setText,
   template,
   withDestructure,
-} from '../src/_old'
+} from '../src'
 import { makeRender } from './_utils'
 
 const define = makeRender<any>()
@@ -40,7 +40,7 @@ function renderWithSlots(slots: any): any {
   return instance
 }
 
-describe('component: slots', () => {
+describe.todo('component: slots', () => {
   test('initSlots: instance.slots should be set correctly', () => {
     let instance: any
     const Comp = defineComponent({

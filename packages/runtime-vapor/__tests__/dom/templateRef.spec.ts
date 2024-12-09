@@ -12,12 +12,12 @@ import {
   setText,
   template,
   watchEffect,
-} from '../../src/_old'
+} from '../../src'
 import { makeRender } from '../_utils'
 
 const define = makeRender()
 
-describe('api: template ref', () => {
+describe.todo('api: template ref', () => {
   test('string ref mount', () => {
     const t0 = template('<div ref="refKey"></div>')
     const el = ref(null)

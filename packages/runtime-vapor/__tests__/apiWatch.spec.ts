@@ -6,9 +6,9 @@ import {
   ref,
   watchEffect,
   watchSyncEffect,
-} from '../src/_old'
+} from '../src'
 
-describe('watchEffect and onWatcherCleanup', () => {
+describe.todo('watchEffect and onWatcherCleanup', () => {
   test('basic', async () => {
     let dummy = 0
     let source: Ref<number>

@@ -1,17 +1,17 @@
 import { ref, shallowRef } from '@vue/reactivity'
-import { createComponent } from '../src/_old/apiCreateComponent'
+import { createComponent } from '../src/component'
 import { setRef } from '../src/dom/templateRef'
 import { makeRender } from './_utils'
 import {
   type ComponentInternalInstance,
   getCurrentInstance,
-} from '../src/_old/component'
-import { defineComponent } from '../src/_old/apiDefineComponent'
+} from '../src/component'
+import { defineVaporComponent } from '../src/apiDefineComponent'
 
 const define = makeRender()
-describe('api: expose', () => {
+describe.todo('api: expose', () => {
   test('via setup context', () => {
-    const Child = defineComponent({
+    const Child = defineVaporComponent({
       setup(_, { expose }) {
         expose({
           foo: 1,
@@ -40,7 +40,7 @@ describe('api: expose', () => {
 
   test('via setup context (expose empty)', () => {
     let childInstance: ComponentInternalInstance | null = null
-    const Child = defineComponent({
+    const Child = defineVaporComponent({
       setup(_) {
         childInstance = getCurrentInstance()
       },

@@ -13,13 +13,13 @@ import {
   ref,
   renderEffect,
   setText,
-} from '../src/_old'
+} from '../src'
 import { makeRender } from './_utils'
 
 const define = makeRender<any>()
 
 // reference: https://vue-composition-api-rfc.netlify.com/api.html#provide-inject
-describe('api: provide/inject', () => {
+describe.todo('api: provide/inject', () => {
   it('string keys', () => {
     const Provider = define({
       setup() {

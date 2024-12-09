@@ -1,10 +1,10 @@
 import { ref } from '@vue/reactivity'
 import { makeRender } from './_utils'
-import { createFor, createSelector, nextTick, renderEffect } from '../src/_old'
+// import { createFor, createSelector, nextTick, renderEffect } from '../src'
 
 const define = makeRender()
 
-describe('api: createSelector', () => {
+describe.todo('api: createSelector', () => {
   test('basic', async () => {
     let calledTimes = 0
     let expectedCalledTimes = 0

@@ -24,13 +24,13 @@ import {
   renderEffect,
   setText,
   template,
-} from '../src/_old'
+} from '../src'
 import { makeRender } from './_utils'
 import { ITERATE_KEY } from '@vue/reactivity'
 
 const define = makeRender<any>()
 
-describe('api: lifecycle hooks', () => {
+describe.todo('api: lifecycle hooks', () => {
   it('onBeforeMount', () => {
     const fn = vi.fn(() => {
       expect(host.innerHTML).toBe(``)

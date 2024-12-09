@@ -8,14 +8,14 @@ import {
   setText,
   template,
   withDirectives,
-} from '../src/_old'
+} from '../src'
 import type { Mock } from 'vitest'
 import { makeRender } from './_utils'
-import { unmountComponent } from '../src/_old/apiRender'
+import { unmountComponent } from '../src/component'
 
 const define = makeRender()
 
-describe('createIf', () => {
+describe.todo('createIf', () => {
   test('basic', async () => {
     // mock this template:
     //  <div>

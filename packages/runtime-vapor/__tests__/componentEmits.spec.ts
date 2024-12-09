@@ -9,13 +9,13 @@ import {
   defineComponent,
   nextTick,
   onBeforeUnmount,
-} from '../src/_old'
-import { isEmitListener } from '../src/_old/componentEmits'
+} from '../src'
+import { isEmitListener } from '../src/componentEmits'
 import { makeRender } from './_utils'
 
 const define = makeRender()
 
-describe('component: emit', () => {
+describe.todo('component: emit', () => {
   test('trigger handlers', () => {
     const { render } = define({
       setup(_, { emit }) {

@@ -38,8 +38,5 @@
     "scripts/*",
     "rollup.*.js"
   ],
-  "exclude": [
-    "packages-private/sfc-playground/src/vue-dev-proxy*",
-    "packages/runtime-vapor/src/_old"
-  ]
+  "exclude": ["packages-private/sfc-playground/src/vue-dev-proxy*"]
 }

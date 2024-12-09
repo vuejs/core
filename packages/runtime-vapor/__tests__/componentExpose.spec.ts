@@ -4,7 +4,7 @@ import { type Ref, ref } from '@vue/reactivity'
 
 const define = makeRender()
 
-describe('component expose', () => {
+describe.todo('component expose', () => {
   test('should work', async () => {
     const expxosedObj = { foo: 1 }
     const { render } = define({

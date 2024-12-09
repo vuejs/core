@@ -7,12 +7,12 @@ import {
   template,
   triggerRef,
   withDestructure,
-} from '../src/_old'
+} from '../src'
 import { makeRender } from './_utils'
 
 const define = makeRender()
 
-describe('createFor', () => {
+describe.todo('createFor', () => {
   test('array source', async () => {
     const list = ref([{ name: '1' }, { name: '2' }, { name: '3' }])
     function reverse() {

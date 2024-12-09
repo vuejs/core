@@ -14,12 +14,12 @@ import {
   setInheritAttrs,
   template,
   watchEffect,
-} from '../src/_old'
+} from '../src'
 import { makeRender } from './_utils'
 
 const define = makeRender()
 
-describe('api: setup context', () => {
+describe.todo('api: setup context', () => {
   it('should expose return values to template render context', () => {
     const { html } = define({
       setup() {

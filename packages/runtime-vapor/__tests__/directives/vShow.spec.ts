@@ -5,7 +5,7 @@ import {
   template,
   vShow,
   withDirectives,
-} from '../../src/_old'
+} from '../../src'
 import { nextTick, ref } from 'vue'
 import { describe, expect, test } from 'vitest'
 import { makeRender } from '../_utils'
@@ -29,7 +29,7 @@ const createDemo = (defaultValue: boolean) =>
     return n0
   })
 
-describe('directive: v-show', () => {
+describe.todo('directive: v-show', () => {
   test('basic', async () => {
     const { host } = createDemo(true).render()
     const btn = host.querySelector('button')

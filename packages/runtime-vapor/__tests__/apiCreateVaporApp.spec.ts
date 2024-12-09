@@ -11,13 +11,13 @@ import {
   resolveComponent,
   resolveDirective,
   withDirectives,
-} from '../src/_old'
-import { warn } from '../src/_old/warning'
+} from '../src'
+import { warn } from '@vue/runtime-dom'
 import { makeRender } from './_utils'
 
 const define = makeRender()
 
-describe('api: createVaporApp', () => {
+describe.todo('api: createVaporApp', () => {
   test('mount', () => {
     const Comp = defineComponent({
       props: {

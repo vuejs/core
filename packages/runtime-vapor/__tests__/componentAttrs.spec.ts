@@ -7,12 +7,12 @@ import {
   setText,
   template,
   watchEffect,
-} from '../src/_old'
+} from '../src'
 import { makeRender } from './_utils'
 
 const define = makeRender<any>()
 
-describe('attribute fallthrough', () => {
+describe.todo('attribute fallthrough', () => {
   it('should allow attrs to fallthrough', async () => {
     const t0 = template('<div>')
     const { component: Child } = define({

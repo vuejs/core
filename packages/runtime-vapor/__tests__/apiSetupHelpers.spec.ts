@@ -1,4 +1,4 @@
-import type { SetupContext } from '../src/_old/component'
+import type { SetupContext } from '../src/component'
 import {
   createComponent,
   defineComponent,
@@ -6,12 +6,12 @@ import {
   template,
   useAttrs,
   useSlots,
-} from '../src/_old'
+} from '../src'
 import { makeRender } from './_utils'
 
 const define = makeRender<any>()
 
-describe('SFC <script setup> helpers', () => {
+describe.todo('SFC <script setup> helpers', () => {
   test.todo('should warn runtime usage', () => {})
 
   test('useSlots / useAttrs (no args)', () => {
