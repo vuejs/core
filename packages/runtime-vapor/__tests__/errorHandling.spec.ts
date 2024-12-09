@@ -1,12 +1,15 @@
-import type { Component } from '../src/_old/component'
-import { type RefEl, setRef } from '../src/dom/templateRef'
-import { onErrorCaptured, onMounted } from '../src/_old/apiLifecycle'
-import { createComponent } from '../src/_old/apiCreateComponent'
+import {
+  nextTick,
+  onErrorCaptured,
+  onMounted,
+  ref,
+  watch,
+  watchEffect,
+} from '@vue/runtime-dom'
+import { createComponent, setRef, template } from '../src'
 import { makeRender } from './_utils'
-import { template } from '../src/dom/template'
-import { watch, watchEffect } from '../src/_old/apiWatch'
-import { nextTick } from '../src/_old/scheduler'
-import { ref } from '@vue/reactivity'
+import type { VaporComponent } from '../src/component'
+import type { RefEl } from '../src/dom/templateRef'
 
 const define = makeRender()
 
@@ -15,7 +18,7 @@ describe('error handling', () => {
     const err = new Error('foo')
     const fn = vi.fn()
 
-    const Comp: Component = {
+    const Comp: VaporComponent = {
       setup() {
         onErrorCaptured((err, instance, info) => {
           fn(err, info, 'root')
@@ -26,7 +29,7 @@ describe('error handling', () => {
       },
     }
 
-    const Child: Component = {
+    const Child: VaporComponent = {
       name: 'Child',
       setup() {
         onErrorCaptured((err, instance, info) => {
@@ -36,11 +39,12 @@ describe('error handling', () => {
       },
     }
 
-    const GrandChild: Component = {
+    const GrandChild: VaporComponent = {
       setup() {
         onMounted(() => {
           throw err
         })
+        return []
       },
     }
 
@@ -54,7 +58,7 @@ describe('error handling', () => {
     const err = new Error('foo')
     const fn = vi.fn()
 
-    const Comp = {
+    const Comp: VaporComponent = {
       setup() {
         onErrorCaptured((err, instance, info) => {
           fn(err, info, 'root')
@@ -64,7 +68,7 @@ describe('error handling', () => {
       },
     }
 
-    const Child = {
+    const Child: VaporComponent = {
       setup() {
         onErrorCaptured((err, instance, info) => {
           fn(err, info, 'child')
@@ -74,11 +78,12 @@ describe('error handling', () => {
       },
     }
 
-    const GrandChild = {
+    const GrandChild: VaporComponent = {
       setup() {
         onMounted(() => {
           throw err
         })
+        return []
       },
     }
 
@@ -91,7 +96,7 @@ describe('error handling', () => {
     const err = new Error('foo')
     const fn = vi.fn()
 
-    const Comp = {
+    const Comp: VaporComponent = {
       setup() {
         onErrorCaptured((err, instance, info) => {
           fn(err, info)
@@ -101,11 +106,12 @@ describe('error handling', () => {
       },
     }
 
-    const Child = {
+    const Child: VaporComponent = {
       setup() {
         onMounted(async () => {
           throw err
         })
+        return []
       },
     }
 
@@ -120,7 +126,7 @@ describe('error handling', () => {
     const err2 = new Error('bar')
     const fn = vi.fn()
 
-    const Comp = {
+    const Comp: VaporComponent = {
       setup() {
         onErrorCaptured((err, instance, info) => {
           fn(err, info)
@@ -130,7 +136,7 @@ describe('error handling', () => {
       },
     }
 
-    const Child = {
+    const Child: VaporComponent = {
       setup() {
         onErrorCaptured(() => {
           throw err2
@@ -139,11 +145,12 @@ describe('error handling', () => {
       },
     }
 
-    const GrandChild = {
+    const GrandChild: VaporComponent = {
       setup() {
         onMounted(() => {
           throw err
         })
+        return []
       },
     }
 
@@ -175,6 +182,7 @@ describe('error handling', () => {
 
     define(Comp).render()
     expect(fn).toHaveBeenCalledWith(err, 'setup function')
+    expect(`returned non-block value`).toHaveBeenWarned()
   })
 
   test('in render function', () => {
@@ -201,7 +209,7 @@ describe('error handling', () => {
     expect(fn).toHaveBeenCalledWith(err, 'render function')
   })
 
-  test('in function ref', () => {
+  test.todo('in function ref', () => {
     const err = new Error('foo')
     const ref = () => {
       throw err
@@ -234,7 +242,7 @@ describe('error handling', () => {
     const err = new Error('foo')
     const fn = vi.fn()
 
-    const Comp = {
+    const Comp: VaporComponent = {
       setup() {
         onErrorCaptured((err, instance, info) => {
           fn(err, info)
@@ -244,11 +252,12 @@ describe('error handling', () => {
       },
     }
 
-    const Child = {
+    const Child: VaporComponent = {
       setup() {
         watchEffect(() => {
           throw err
         })
+        return []
       },
     }
 
@@ -270,7 +279,7 @@ describe('error handling', () => {
       },
     }
 
-    const Child = {
+    const Child: VaporComponent = {
       setup() {
         watch(
           () => {
@@ -278,6 +287,7 @@ describe('error handling', () => {
           },
           () => {},
         )
+        return []
       },
     }
 
@@ -300,7 +310,7 @@ describe('error handling', () => {
     }
 
     const count = ref(0)
-    const Child = {
+    const Child: VaporComponent = {
       setup() {
         watch(
           () => count.value,
@@ -308,6 +318,7 @@ describe('error handling', () => {
             throw err
           },
         )
+        return []
       },
     }
 
@@ -333,7 +344,7 @@ describe('error handling', () => {
       },
     }
 
-    const Child = {
+    const Child: VaporComponent = {
       setup() {
         watchEffect(onCleanup => {
           count.value
@@ -341,6 +352,7 @@ describe('error handling', () => {
             throw err
           })
         })
+        return []
       },
     }
 
@@ -362,24 +374,25 @@ describe('error handling', () => {
           return false
         })
         return createComponent(Child, {
-          onFoo: () => {
+          onFoo: () => () => {
             throw err
           },
         })
       },
     }
 
-    const Child = {
+    const Child: VaporComponent = {
       setup(props: any, { emit }: any) {
         emit('foo')
+        return []
       },
     }
 
     define(Comp).render()
-    expect(fn).toHaveBeenCalledWith(err, 'setup function')
+    expect(fn).toHaveBeenCalledWith(err, 'component event handler')
   })
 
-  test.todo('in component event handler via emit (async)', async () => {
+  test('in component event handler via emit (async)', async () => {
     const err = new Error('foo')
     const fn = vi.fn()
 
@@ -390,26 +403,27 @@ describe('error handling', () => {
           return false
         })
         return createComponent(Child, {
-          async onFoo() {
+          onFoo: () => async () => {
             throw err
           },
         })
       },
     }
 
-    const Child = {
+    const Child: VaporComponent = {
       props: ['onFoo'],
       setup(props: any, { emit }: any) {
         emit('foo')
+        return []
       },
     }
 
     define(Comp).render()
     await nextTick()
-    expect(fn).toHaveBeenCalledWith(err, 'setup function')
+    expect(fn).toHaveBeenCalledWith(err, 'component event handler')
   })
 
-  test.todo('in component event handler via emit (async + array)', async () => {
+  test('in component event handler via emit (async + array)', async () => {
     const err = new Error('foo')
     const fn = vi.fn()
 
@@ -419,36 +433,33 @@ describe('error handling', () => {
       return p
     }
 
+    const handlers = [
+      createAsyncHandler(Promise.reject(err)),
+      createAsyncHandler(Promise.resolve(1)),
+    ]
+
     const Comp = {
       setup() {
         onErrorCaptured((err, instance, info) => {
           fn(err, info)
           return false
         })
-        return createComponent(Child, [
-          {
-            onFoo: () => {
-              createAsyncHandler(Promise.reject(err))
-              createAsyncHandler(Promise.resolve(1))
-            },
-          },
-        ])
+        return createComponent(Child, {
+          onFoo: () => handlers,
+        })
       },
     }
 
-    const Child = {
+    const Child: VaporComponent = {
       setup(props: any, { emit }: any) {
         emit('foo')
+        return []
       },
     }
 
     define(Comp).render()
 
-    try {
-      await Promise.all(res)
-    } catch (e: any) {
-      expect(e).toBe(err)
-    }
+    await expect(() => Promise.all(res)).rejects.toThrowError()
     expect(fn).toHaveBeenCalledWith(err, 'component event handler')
   })
 
@@ -523,6 +534,7 @@ describe('error handling', () => {
         watchEffect(async () => {
           throw error4
         })
+        return []
       },
     }).create()
 

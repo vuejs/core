@@ -4,12 +4,14 @@ import {
   EffectScope,
   type EmitFn,
   type EmitsOptions,
+  ErrorCodes,
   type GenericAppContext,
   type GenericComponentInstance,
   type LifecycleHook,
   type NormalizedPropsOptions,
   type ObjectEmitsOptions,
   type SuspenseBoundary,
+  callWithErrorHandling,
   currentInstance,
   nextUid,
   popWarningContext,
@@ -125,12 +127,13 @@ export function createComponent(
   }
 
   const setupFn = isFunction(component) ? component : component.setup
+  const setupContext = (instance.setupContext =
+    setupFn && setupFn.length > 1 ? new SetupContext(instance) : null)
   const setupResult = setupFn
-    ? setupFn(
+    ? callWithErrorHandling(setupFn, instance, ErrorCodes.SETUP_FUNCTION, [
         instance.props,
-        // @ts-expect-error
-        setupFn.length > 1 ? new SetupContext(instance) : null,
-      ) || EMPTY_OBJ
+        setupContext,
+      ]) || EMPTY_OBJ
     : EMPTY_OBJ
 
   if (__DEV__ && !isBlock(setupResult)) {
@@ -187,14 +190,19 @@ export function createComponent(
  * dev only
  */
 export function devRender(instance: VaporComponentInstance): void {
-  instance.block = instance.type.render!.call(
-    null,
-    instance.setupState,
-    instance.props,
-    instance.emit,
-    instance.attrs,
-    instance.slots,
-  )
+  instance.block =
+    callWithErrorHandling(
+      instance.type.render!,
+      instance,
+      ErrorCodes.RENDER_FUNCTION,
+      [
+        instance.setupState,
+        instance.props,
+        instance.emit,
+        instance.attrs,
+        instance.slots,
+      ],
+    ) || []
 }
 
 const emptyContext: GenericAppContext = {
@@ -256,6 +264,8 @@ export class VaporComponentInstance implements GenericComponentInstance {
   rtc?: LifecycleHook // LifecycleHooks.RENDER_TRIGGERED
   ec?: LifecycleHook // LifecycleHooks.ERROR_CAPTURED
   sp?: LifecycleHook<() => Promise<unknown>> // LifecycleHooks.SERVER_PREFETCH
+
+  setupContext?: SetupContext | null
 
   // dev only
   setupState?: Record<string, any>

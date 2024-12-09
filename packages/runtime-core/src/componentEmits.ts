@@ -223,7 +223,7 @@ export function baseEmit(
 
   if (handler) {
     callWithAsyncErrorHandling(
-      handler as Function,
+      handler as Function | Function[],
       instance,
       ErrorCodes.COMPONENT_EVENT_HANDLER,
       args,

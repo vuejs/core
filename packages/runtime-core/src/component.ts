@@ -387,6 +387,10 @@ export interface GenericComponentInstance {
    */
   setupState?: Data
   /**
+   * @internal
+   */
+  setupContext?: any
+  /**
    * devtools access to additional info
    * @internal
    */
@@ -594,10 +598,6 @@ export interface ComponentInternalInstance extends GenericComponentInstance {
   ceReload?: (newStyles?: string[]) => void
 
   // the rest are only for stateful components ---------------------------------
-  /**
-   * @internal
-   */
-  setupContext: SetupContext | null
   /**
    * setup related
    * @internal
