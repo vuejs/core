@@ -1,13 +1,24 @@
-import { EMPTY_ARR, NO, YES, camelize, hasOwn, isFunction } from '@vue/shared'
+import {
+  EMPTY_ARR,
+  NO,
+  YES,
+  camelize,
+  hasOwn,
+  isFunction,
+  isString,
+} from '@vue/shared'
 import type { VaporComponent, VaporComponentInstance } from './component'
 import {
   type NormalizedPropsOptions,
   baseNormalizePropsOptions,
+  currentInstance,
   isEmitListener,
   popWarningContext,
   pushWarningContext,
   resolvePropValue,
+  simpleSetCurrentInstance,
   validateProps,
+  warn,
 } from '@vue/runtime-dom'
 import { normalizeEmitsOptions } from './componentEmits'
 import { renderEffect } from './renderEffect'
@@ -39,15 +50,18 @@ export function getPropsProxyHandlers(
   }
   const propsOptions = normalizePropsOptions(comp)[0]
   const emitsOptions = normalizeEmitsOptions(comp)
-  const isProp = propsOptions
-    ? (key: string) => hasOwn(propsOptions, camelize(key))
-    : NO
+  const isProp = (
+    propsOptions
+      ? (key: string | symbol) =>
+          isString(key) && hasOwn(propsOptions, camelize(key))
+      : NO
+  ) as (key: string | symbol) => key is string
   const isAttr = propsOptions
     ? (key: string) =>
         key !== '$' && !isProp(key) && !isEmitListener(emitsOptions, key)
     : YES
 
-  const getProp = (instance: VaporComponentInstance, key: string) => {
+  const getProp = (instance: VaporComponentInstance, key: string | symbol) => {
     if (!isProp(key)) return
     const rawProps = instance.rawProps
     const dynamicSources = rawProps.$
@@ -94,9 +108,9 @@ export function getPropsProxyHandlers(
 
   const propsHandlers = propsOptions
     ? ({
-        get: (target, key: string) => getProp(target, key),
-        has: (_, key: string) => isProp(key),
-        getOwnPropertyDescriptor(target, key: string) {
+        get: (target, key) => getProp(target, key),
+        has: (_, key) => isProp(key),
+        getOwnPropertyDescriptor(target, key) {
           if (isProp(key)) {
             return {
               configurable: true,
@@ -106,10 +120,15 @@ export function getPropsProxyHandlers(
           }
         },
         ownKeys: () => Object.keys(propsOptions),
-        set: NO,
-        deleteProperty: NO,
       } satisfies ProxyHandler<VaporComponentInstance>)
     : null
+
+  if (__DEV__ && propsOptions) {
+    Object.assign(propsHandlers!, {
+      set: propsSetDevTrap,
+      deleteProperty: propsDeleteDevTrap,
+    })
+  }
 
   const getAttr = (target: RawProps, key: string) => {
     if (!isProp(key) && !isEmitListener(emitsOptions, key)) {
@@ -156,9 +175,14 @@ export function getPropsProxyHandlers(
       }
       return Array.from(new Set(keys))
     },
-    set: NO,
-    deleteProperty: NO,
   } satisfies ProxyHandler<VaporComponentInstance>
+
+  if (__DEV__) {
+    Object.assign(attrsHandlers, {
+      set: propsSetDevTrap,
+      deleteProperty: propsDeleteDevTrap,
+    })
+  }
 
   return (comp.__propsHandlers = [propsHandlers, attrsHandlers])
 }
@@ -217,7 +241,11 @@ function resolveDefault(
   factory: (props: Record<string, any>) => unknown,
   instance: VaporComponentInstance,
 ) {
-  return factory.call(null, instance.props)
+  const prev = currentInstance
+  simpleSetCurrentInstance(instance)
+  const res = factory.call(null, instance.props)
+  simpleSetCurrentInstance(prev, instance)
+  return res
 }
 
 export function hasFallthroughAttrs(
@@ -277,4 +305,18 @@ export function resolveDynamicProps(props: RawProps): Record<string, unknown> {
     }
   }
   return mergedRawProps
+}
+
+function propsSetDevTrap(_: any, key: string | symbol) {
+  warn(
+    `Attempt to mutate prop ${JSON.stringify(key)} failed. Props are readonly.`,
+  )
+  return true
+}
+
+function propsDeleteDevTrap(_: any, key: string | symbol) {
+  warn(
+    `Attempt to delete prop ${JSON.stringify(key)} failed. Props are readonly.`,
+  )
+  return true
 }

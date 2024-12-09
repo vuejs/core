@@ -1,5 +1,5 @@
-import { ref, setText, template, watchEffect } from '../src/_old'
-import { describe, expect } from 'vitest'
+import { ref, watchEffect } from '@vue/runtime-dom'
+import { setText, template } from '../src'
 import { makeRender } from './_utils'
 
 const define = makeRender()

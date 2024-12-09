@@ -30,12 +30,12 @@ const unmountApp: AppUnmountFn = app => {
   unmountComponent(app._instance as VaporComponentInstance, app._container)
 }
 
-export const createVaporApp: CreateAppFunction<
-  ParentNode,
-  VaporComponent
-> = comp => {
+export const createVaporApp: CreateAppFunction<ParentNode, VaporComponent> = (
+  comp,
+  props,
+) => {
   if (!_createApp) _createApp = createAppAPI(mountApp, unmountApp, i => i)
-  const app = _createApp(comp)
+  const app = _createApp(comp, props)
   const mount = app.mount
   app.mount = (container, ...args: any[]) => {
     container = normalizeContainer(container) as ParentNode

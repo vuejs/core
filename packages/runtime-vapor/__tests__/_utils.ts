@@ -1,11 +1,6 @@
 import { createVaporApp, defineVaporComponent } from '../src'
 import type { App } from '@vue/runtime-dom'
-import type {
-  ObjectVaporComponent,
-  VaporComponent,
-  VaporComponentInstance,
-  VaporSetupFn,
-} from '../src/component'
+import type { VaporComponent, VaporComponentInstance } from '../src/component'
 import type { RawProps } from '../src/componentProps'
 
 export interface RenderContext {
@@ -20,7 +15,7 @@ export interface RenderContext {
   html: () => string
 }
 
-export function makeRender<C = ObjectVaporComponent | VaporSetupFn>(
+export function makeRender<C = VaporComponent>(
   initHost = (): HTMLDivElement => {
     const host = document.createElement('div')
     host.setAttribute('id', 'host')
