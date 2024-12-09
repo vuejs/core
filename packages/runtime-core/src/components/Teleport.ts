@@ -405,29 +405,43 @@ function hydrateTeleport(
     optimized: boolean,
   ) => Node | null,
 ): Node | null {
+  function hydrateDisabledTeleport(
+    node: Node,
+    vnode: VNode,
+    targetStart: Node | null,
+    targetAnchor: Node | null,
+  ) {
+    vnode.anchor = hydrateChildren(
+      nextSibling(node),
+      vnode,
+      parentNode(node)!,
+      parentComponent,
+      parentSuspense,
+      slotScopeIds,
+      optimized,
+    )
+    vnode.targetStart = targetStart
+    vnode.targetAnchor = targetAnchor
+  }
+
   const target = (vnode.target = resolveTarget<Element>(
     vnode.props,
     querySelector,
   ))
+  const disabled = isTeleportDisabled(vnode.props)
   if (target) {
-    const disabled = isTeleportDisabled(vnode.props)
     // if multiple teleports rendered to the same target element, we need to
     // pick up from where the last teleport finished instead of the first node
     const targetNode =
       (target as TeleportTargetElement)._lpa || target.firstChild
     if (vnode.shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
       if (disabled) {
-        vnode.anchor = hydrateChildren(
-          nextSibling(node),
+        hydrateDisabledTeleport(
+          node,
           vnode,
-          parentNode(node)!,
-          parentComponent,
-          parentSuspense,
-          slotScopeIds,
-          optimized,
+          targetNode,
+          targetNode && nextSibling(targetNode),
         )
-        vnode.targetStart = targetNode
-        vnode.targetAnchor = targetNode && nextSibling(targetNode)
       } else {
         vnode.anchor = nextSibling(node)
 
@@ -469,6 +483,10 @@ function hydrateTeleport(
       }
     }
     updateCssVars(vnode, disabled)
+  } else if (disabled) {
+    if (vnode.shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
+      hydrateDisabledTeleport(node, vnode, node, nextSibling(node))
+    }
   }
   return vnode.anchor && nextSibling(vnode.anchor as Node)
 }
