@@ -1,6 +1,11 @@
 import { isArray } from '@vue/shared'
-import { type VaporComponentInstance, isVaporComponent } from './component'
-import { createComment, insert, remove } from './dom/node'
+import {
+  type VaporComponentInstance,
+  isVaporComponent,
+  mountComponent,
+  unmountComponent,
+} from './component'
+import { createComment } from './dom/node'
 import { EffectScope } from '@vue/reactivity'
 
 export type Block = Node | Fragment | VaporComponentInstance | Block[]
@@ -84,28 +89,50 @@ export function normalizeBlock(block: Block): Node[] {
   return nodes
 }
 
-export function findFirstRootElement(
-  instance: VaporComponentInstance,
-): Element | undefined {
-  const element = getFirstNode(instance.block)
-  return element instanceof Element ? element : undefined
-}
-
-export function getFirstNode(block: Block | null): Node | undefined {
-  if (!block || isVaporComponent(block)) return
-  if (block instanceof Node) return block
-  if (isArray(block)) {
-    if (block.length === 1) {
-      return getFirstNode(block[0])
-    }
-  } else {
-    return getFirstNode(block.nodes)
-  }
-}
-
 // TODO optimize
 export function isValidBlock(block: Block): boolean {
   return (
     normalizeBlock(block).filter(node => !(node instanceof Comment)).length > 0
   )
+}
+
+export function insert(
+  block: Block,
+  parent: ParentNode,
+  anchor: Node | null | 0 = null,
+): void {
+  if (block instanceof Node) {
+    parent.insertBefore(block, anchor === 0 ? parent.firstChild : anchor)
+  } else if (isVaporComponent(block)) {
+    mountComponent(block, parent, anchor)
+  } else if (isArray(block)) {
+    for (let i = 0; i < block.length; i++) {
+      insert(block[i], parent, anchor)
+    }
+  } else {
+    // fragment
+    insert(block.nodes, parent, anchor)
+    if (block.anchor) insert(block.anchor, parent, anchor)
+  }
+}
+
+export function prepend(parent: ParentNode, ...blocks: Block[]): void {
+  let i = blocks.length
+  while (i--) insert(blocks[i], parent, 0)
+}
+
+export function remove(block: Block, parent: ParentNode): void {
+  if (block instanceof Node) {
+    parent.removeChild(block)
+  } else if (isVaporComponent(block)) {
+    unmountComponent(block, parent)
+  } else if (isArray(block)) {
+    for (let i = 0; i < block.length; i++) {
+      remove(block[i], parent)
+    }
+  } else {
+    // fragment
+    remove(block.nodes, parent)
+    if (block.anchor) remove(block.anchor, parent)
+  }
 }

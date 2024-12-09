@@ -3,11 +3,12 @@ export { createVaporApp } from './apiCreateApp'
 export { defineVaporComponent } from './apiDefineComponent'
 
 // compiler-use only
+export { insert, prepend, remove } from './block'
 export { createComponent, createComponentWithFallback } from './component'
 export { renderEffect } from './renderEffect'
 export { createSlot } from './componentSlots'
 export { template, children, next } from './dom/template'
-export { insert, prepend, remove, createTextNode } from './dom/node'
+export { createTextNode } from './dom/node'
 export { setStyle } from './dom/style'
 export {
   setText,

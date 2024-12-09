@@ -1,4 +1,4 @@
-import type { NodeRef } from 'packages/runtime-vapor/src/dom/templateRef'
+import type { NodeRef } from '../../src/dom/templateRef'
 import {
   createFor,
   createIf,

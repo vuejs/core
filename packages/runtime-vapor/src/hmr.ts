@@ -4,7 +4,7 @@ import {
   pushWarningContext,
   simpleSetCurrentInstance,
 } from '@vue/runtime-core'
-import { normalizeBlock } from './block'
+import { insert, normalizeBlock, remove } from './block'
 import {
   type VaporComponent,
   type VaporComponentInstance,
@@ -13,7 +13,6 @@ import {
   mountComponent,
   unmountComponent,
 } from './component'
-import { insert, remove } from './dom/node'
 
 export function hmrRerender(instance: VaporComponentInstance): void {
   const normalized = normalizeBlock(instance.block)

@@ -19,7 +19,7 @@ import {
   unregisterHMR,
   warn,
 } from '@vue/runtime-dom'
-import { type Block, isBlock } from './block'
+import { type Block, insert, isBlock, remove } from './block'
 import { pauseTracking, proxyRefs, resetTracking } from '@vue/reactivity'
 import { EMPTY_OBJ, invokeArrayFns, isFunction, isString } from '@vue/shared'
 import {
@@ -41,7 +41,6 @@ import {
   dynamicSlotsProxyHandlers,
   getSlot,
 } from './componentSlots'
-import { insert, remove } from './dom/node'
 import { hmrReload, hmrRerender } from './hmr'
 
 export { currentInstance } from '@vue/runtime-dom'
