@@ -53,6 +53,7 @@
   "homepage": "https://github.com/vuejs/core/tree/main/packages/vue-compat#readme",
   "dependencies": {
     "@babel/parser": "catalog:",
+    "entities": "catalog:",
     "estree-walker": "catalog:",
     "source-map-js": "catalog:"
   },
