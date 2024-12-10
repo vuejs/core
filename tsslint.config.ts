@@ -1,4 +1,4 @@
-import { defineConfig } from '@tsslint/config'
+import { defineConfig, createIgnorePlugin } from '@tsslint/config'
 import { convertConfig, createDisableNextLinePlugin } from '@tsslint/eslint'
 import { builtinModules } from 'node:module'
 
@@ -16,7 +16,7 @@ const typeAwareEnabled =
 
 export default defineConfig([
   {
-    plugins: [createDisableNextLinePlugin(typeAwareEnabled)],
+    plugins: [createIgnorePlugin('eslint-disable-next-line', typeAwareEnabled)],
     rules: convertConfig({
       'no-debugger': 'error',
       'no-console': ['error', { allow: ['warn', 'error', 'info'] }],
