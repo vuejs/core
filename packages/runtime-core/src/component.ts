@@ -380,16 +380,13 @@ export interface GenericComponentInstance {
 
   // exposed properties via expose()
   exposed: Record<string, any> | null
+  exposeProxy: Record<string, any> | null
 
   /**
    * setup related
    * @internal
    */
   setupState?: Data
-  /**
-   * @internal
-   */
-  setupContext?: any
   /**
    * devtools access to additional info
    * @internal
@@ -603,6 +600,10 @@ export interface ComponentInternalInstance extends GenericComponentInstance {
    * @internal
    */
   setupState: Data
+  /**
+   * @internal
+   */
+  setupContext?: SetupContext | null
 
   // main proxy that serves as the public instance (`this`)
   proxy: ComponentPublicInstance | null
@@ -1131,30 +1132,6 @@ function getSlotsProxy(instance: ComponentInternalInstance): Slots {
 export function createSetupContext(
   instance: ComponentInternalInstance,
 ): SetupContext {
-  const expose: SetupContext['expose'] = exposed => {
-    if (__DEV__) {
-      if (instance.exposed) {
-        warn(`expose() should be called only once per setup().`)
-      }
-      if (exposed != null) {
-        let exposedType: string = typeof exposed
-        if (exposedType === 'object') {
-          if (isArray(exposed)) {
-            exposedType = 'array'
-          } else if (isRef(exposed)) {
-            exposedType = 'ref'
-          }
-        }
-        if (exposedType !== 'object') {
-          warn(
-            `expose() should be passed a plain object, received ${exposedType}.`,
-          )
-        }
-      }
-    }
-    instance.exposed = exposed || {}
-  }
-
   if (__DEV__) {
     // We use getters in dev in case libs like test-utils overwrite instance
     // properties (overwrites should not be done in prod)
@@ -1173,46 +1150,69 @@ export function createSetupContext(
       get emit() {
         return (event: string, ...args: any[]) => instance.emit(event, ...args)
       },
-      expose,
+      expose: exposed => expose(instance, exposed as any),
     })
   } else {
     return {
       attrs: new Proxy(instance.attrs, attrsProxyHandlers),
       slots: instance.slots,
       emit: instance.emit,
-      expose,
+      expose: exposed => expose(instance, exposed as any),
     }
   }
 }
 
-export function getComponentPublicInstance(
+/**
+ * @internal
+ */
+export function expose(
   instance: GenericComponentInstance,
+  exposed: Record<string, any>,
+): void {
+  if (__DEV__) {
+    if (instance.exposed) {
+      warn(`expose() should be called only once per setup().`)
+    }
+    if (exposed != null) {
+      let exposedType: string = typeof exposed
+      if (exposedType === 'object') {
+        if (isArray(exposed)) {
+          exposedType = 'array'
+        } else if (isRef(exposed)) {
+          exposedType = 'ref'
+        }
+      }
+      if (exposedType !== 'object') {
+        warn(
+          `expose() should be passed a plain object, received ${exposedType}.`,
+        )
+      }
+    }
+  }
+  instance.exposed = exposed || {}
+}
+
+export function getComponentPublicInstance(
+  instance: ComponentInternalInstance,
 ): ComponentPublicInstance | ComponentInternalInstance['exposed'] | null {
   if (instance.exposed) {
-    if ('exposeProxy' in instance) {
-      return (
-        instance.exposeProxy ||
-        (instance.exposeProxy = new Proxy(
-          proxyRefs(markRaw(instance.exposed)),
-          {
-            get(target, key: string) {
-              if (key in target) {
-                return target[key]
-              } else if (key in publicPropertiesMap) {
-                return publicPropertiesMap[key](
-                  instance as ComponentInternalInstance,
-                )
-              }
-            },
-            has(target, key: string) {
-              return key in target || key in publicPropertiesMap
-            },
-          },
-        ))
-      )
-    } else {
-      return instance.exposed
-    }
+    return (
+      instance.exposeProxy ||
+      (instance.exposeProxy = new Proxy(proxyRefs(markRaw(instance.exposed)), {
+        get(target, key: string) {
+          if (key in target) {
+            return target[key]
+          } else if (key in publicPropertiesMap) {
+            return publicPropertiesMap[key](
+              instance as ComponentInternalInstance,
+            )
+          }
+        },
+        has(target, key: string) {
+          return key in target || key in publicPropertiesMap
+        },
+      }))
+    )
   } else {
     return instance.proxy
   }

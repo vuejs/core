@@ -2,6 +2,7 @@ import {
   type VaporComponent,
   type VaporComponentInstance,
   createComponent,
+  getExposed,
   mountComponent,
   unmountComponent,
 } from './component'
@@ -41,7 +42,7 @@ export const createVaporApp: CreateAppFunction<ParentNode, VaporComponent> = (
   comp,
   props,
 ) => {
-  if (!_createApp) _createApp = createAppAPI(mountApp, unmountApp, i => i)
+  if (!_createApp) _createApp = createAppAPI(mountApp, unmountApp, getExposed)
   const app = _createApp(comp, props)
 
   if (__DEV__) {

@@ -14,6 +14,7 @@ import {
   callWithErrorHandling,
   currentInstance,
   endMeasure,
+  expose,
   nextUid,
   popWarningContext,
   pushWarningContext,
@@ -24,7 +25,12 @@ import {
   warn,
 } from '@vue/runtime-dom'
 import { type Block, insert, isBlock, remove } from './block'
-import { pauseTracking, proxyRefs, resetTracking } from '@vue/reactivity'
+import {
+  markRaw,
+  pauseTracking,
+  proxyRefs,
+  resetTracking,
+} from '@vue/reactivity'
 import { EMPTY_OBJ, invokeArrayFns, isFunction, isString } from '@vue/shared'
 import {
   type DynamicPropsSource,
@@ -55,7 +61,7 @@ export type VaporComponent = FunctionalVaporComponent | ObjectVaporComponent
 
 export type VaporSetupFn = (
   props: any,
-  ctx: SetupContext,
+  ctx: Pick<VaporComponentInstance, 'slots' | 'attrs' | 'emit' | 'expose'>,
 ) => Block | Record<string, any> | undefined
 
 export type FunctionalVaporComponent = VaporSetupFn &
@@ -156,12 +162,10 @@ export function createComponent(
   pauseTracking()
 
   const setupFn = isFunction(component) ? component : component.setup
-  const setupContext = (instance.setupContext =
-    setupFn && setupFn.length > 1 ? new SetupContext(instance) : null)
   const setupResult = setupFn
     ? callWithErrorHandling(setupFn, instance, ErrorCodes.SETUP_FUNCTION, [
         instance.props,
-        setupContext,
+        instance,
       ]) || EMPTY_OBJ
     : EMPTY_OBJ
 
@@ -252,17 +256,22 @@ export class VaporComponentInstance implements GenericComponentInstance {
 
   block: Block
   scope: EffectScope
-  props: Record<string, any>
-  attrs: Record<string, any>
-  slots: StaticSlots
-  exposed: Record<string, any> | null
 
   rawProps: RawProps
   rawSlots: RawSlots
 
+  props: Record<string, any>
+  attrs: Record<string, any>
+  propsDefaults: Record<string, any> | null
+
+  slots: StaticSlots
+
   emit: EmitFn
   emitted: Record<string, boolean> | null
-  propsDefaults: Record<string, any> | null
+
+  expose: (exposed: Record<string, any>) => void
+  exposed: Record<string, any> | null
+  exposeProxy: Record<string, any> | null
 
   // for useTemplateRef()
   refs: Record<string, any>
@@ -295,8 +304,6 @@ export class VaporComponentInstance implements GenericComponentInstance {
   rtc?: LifecycleHook // LifecycleHooks.RENDER_TRIGGERED
   ec?: LifecycleHook // LifecycleHooks.ERROR_CAPTURED
   sp?: LifecycleHook<() => Promise<unknown>> // LifecycleHooks.SERVER_PREFETCH
-
-  setupContext?: SetupContext | null
 
   // dev only
   setupState?: Record<string, any>
@@ -336,8 +343,15 @@ export class VaporComponentInstance implements GenericComponentInstance {
     this.scope = new EffectScope(true)
 
     this.emit = emit.bind(null, this)
+    this.expose = expose.bind(null, this)
     this.refs = EMPTY_OBJ
-    this.emitted = this.exposed = this.propsDefaults = this.suspense = null
+    this.emitted =
+      this.exposed =
+      this.exposeProxy =
+      this.propsDefaults =
+      this.suspense =
+        null
+
     this.isMounted =
       this.isUnmounted =
       this.isUpdating =
@@ -381,22 +395,6 @@ export function isVaporComponent(
   value: unknown,
 ): value is VaporComponentInstance {
   return value instanceof VaporComponentInstance
-}
-
-export class SetupContext {
-  attrs: Record<string, any>
-  emit: EmitFn
-  slots: Readonly<StaticSlots>
-  expose: (exposed?: Record<string, any>) => void
-
-  constructor(instance: VaporComponentInstance) {
-    this.attrs = instance.attrs
-    this.emit = instance.emit
-    this.slots = instance.slots
-    this.expose = (exposed = {}) => {
-      instance.exposed = exposed
-    }
-  }
 }
 
 /**
@@ -487,5 +485,16 @@ export function unmountComponent(
     // })
   } else if (parent) {
     remove(instance.block, parent)
+  }
+}
+
+export function getExposed(
+  instance: GenericComponentInstance,
+): Record<string, any> | undefined {
+  if (instance.exposed) {
+    return (
+      instance.exposeProxy ||
+      (instance.exposeProxy = proxyRefs(markRaw(instance.exposed)))
+    )
   }
 }

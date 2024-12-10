@@ -1,13 +1,7 @@
-import type { SetupContext } from '../src/component'
-import {
-  createComponent,
-  defineComponent,
-  ref,
-  template,
-  useAttrs,
-  useSlots,
-} from '../src'
+import { createComponent, defineVaporComponent, template } from '../src'
+import { ref, useAttrs, useSlots } from '@vue/runtime-dom'
 import { makeRender } from './_utils'
+import type { VaporComponentInstance } from '../src/component'
 
 const define = makeRender<any>()
 
@@ -15,15 +9,17 @@ describe.todo('SFC <script setup> helpers', () => {
   test.todo('should warn runtime usage', () => {})
 
   test('useSlots / useAttrs (no args)', () => {
-    let slots: SetupContext['slots'] | undefined
-    let attrs: SetupContext['attrs'] | undefined
+    let slots: VaporComponentInstance['slots'] | undefined
+    let attrs: VaporComponentInstance['attrs'] | undefined
 
-    const Comp = {
+    const Comp = defineVaporComponent({
       setup() {
+        // @ts-expect-error
         slots = useSlots()
         attrs = useAttrs()
+        return []
       },
-    }
+    })
     const count = ref(0)
     const passedAttrs = { id: () => count.value }
     const passedSlots = {
@@ -45,14 +41,16 @@ describe.todo('SFC <script setup> helpers', () => {
   })
 
   test('useSlots / useAttrs (with args)', () => {
-    let slots: SetupContext['slots'] | undefined
-    let attrs: SetupContext['attrs'] | undefined
-    let ctx: SetupContext | undefined
-    const Comp = defineComponent({
+    let slots: VaporComponentInstance['slots'] | undefined
+    let attrs: VaporComponentInstance['attrs'] | undefined
+    let ctx: VaporComponentInstance | undefined
+    const Comp = defineVaporComponent({
       setup(_, _ctx) {
+        // @ts-expect-error
         slots = useSlots()
         attrs = useAttrs()
-        ctx = _ctx
+        ctx = _ctx as VaporComponentInstance
+        return []
       },
     })
     const { render } = define({ render: () => createComponent(Comp) })

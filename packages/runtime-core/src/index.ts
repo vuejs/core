@@ -499,6 +499,7 @@ export {
   type ComponentInternalOptions,
   type GenericComponentInstance,
   type LifecycleHook,
+  expose,
   nextUid,
   validateComponentName,
 } from './component'

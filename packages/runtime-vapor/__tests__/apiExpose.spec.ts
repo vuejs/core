@@ -6,25 +6,22 @@ import { currentInstance } from '@vue/runtime-dom'
 import { defineVaporComponent } from '../src/apiDefineComponent'
 
 const define = makeRender()
-describe.todo('api: expose', () => {
-  test('via setup context', () => {
+
+describe('api: expose', () => {
+  test.todo('via setup context + template ref', () => {
     const Child = defineVaporComponent({
       setup(_, { expose }) {
         expose({
           foo: 1,
           bar: ref(2),
         })
-        return {
-          bar: ref(3),
-          baz: ref(4),
-        }
+        return []
       },
     })
     const childRef = ref()
     define({
       render: () => {
         const n0 = createComponent(Child)
-        setRef(n0, childRef)
         return n0
       },
     }).render()
@@ -35,7 +32,7 @@ describe.todo('api: expose', () => {
     expect(childRef.value.baz).toBeUndefined()
   })
 
-  test('via setup context (expose empty)', () => {
+  test.todo('via setup context + template ref (expose empty)', () => {
     let childInstance: VaporComponentInstance | null = null
     const Child = defineVaporComponent({
       setup(_) {
@@ -62,13 +59,11 @@ describe.todo('api: expose', () => {
         expose({
           foo: 1,
         })
-        return {
-          bar: 2,
-        }
+        return []
       },
     }).render()
-    expect(instance!.exposed!.foo).toBe(1)
-    expect(instance!.exposed!.bar).toBe(undefined)
+    expect(instance!.foo).toBe(1)
+    expect(instance!.bar).toBe(undefined)
   })
 
   test('warning for ref', () => {
