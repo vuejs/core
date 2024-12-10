@@ -57,13 +57,25 @@ describe('ssr: components', () => {
         `<component is="div" v-html="'<div>ssr dynamic component v-html</div>'" />`,
       ).code,
     ).toMatchInlineSnapshot(`
-          "const { resolveDynamicComponent: _resolveDynamicComponent, mergeProps: _mergeProps, createVNode: _createVNode } = require("vue")
-          const { ssrRenderVNode: _ssrRenderVNode } = require("vue/server-renderer")
+      "const { resolveDynamicComponent: _resolveDynamicComponent, mergeProps: _mergeProps, createVNode: _createVNode } = require("vue")
+      const { ssrRenderVNode: _ssrRenderVNode } = require("vue/server-renderer")
 
-          return function ssrRender(_ctx, _push, _parent, _attrs) {
-            _ssrRenderVNode(_push, _createVNode(_resolveDynamicComponent("div"), _mergeProps({ innerHTML: '<div>ssr dynamic component v-html</div>' }, _attrs), null), _parent)
-          }"
-        `)
+      return function ssrRender(_ctx, _push, _parent, _attrs) {
+        _ssrRenderVNode(_push, _createVNode(_resolveDynamicComponent("div"), _mergeProps({ innerHTML: '<div>ssr dynamic component v-html</div>' }, _attrs), null), _parent)
+      }"
+    `)
+
+    expect(
+      compile(`<component is="div" v-text="'ssr dynamic component v-text'" />`)
+        .code,
+    ).toMatchInlineSnapshot(`
+      "const { resolveDynamicComponent: _resolveDynamicComponent, mergeProps: _mergeProps, createVNode: _createVNode } = require("vue")
+      const { ssrRenderVNode: _ssrRenderVNode } = require("vue/server-renderer")
+
+      return function ssrRender(_ctx, _push, _parent, _attrs) {
+        _ssrRenderVNode(_push, _createVNode(_resolveDynamicComponent("div"), _mergeProps({ textContent: 'ssr dynamic component v-text' }, _attrs), null), _parent)
+      }"
+    `)
   })
 
   describe('slots', () => {

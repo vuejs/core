@@ -28,6 +28,7 @@ import { ssrTransformShow } from './transforms/ssrVShow'
 import { ssrInjectFallthroughAttrs } from './transforms/ssrInjectFallthroughAttrs'
 import { ssrInjectCssVars } from './transforms/ssrInjectCssVars'
 import { ssrTransformHtml } from './transforms/ssrVHtml'
+import { ssrTransformText } from './transforms/ssrVText'
 
 export function compile(
   source: string | RootNode,
@@ -73,9 +74,10 @@ export function compile(
       // reusing core v-bind
       bind: transformBind,
       on: transformOn,
-      // model, show and html have dedicated SSR handling
+      // model, show, text and html have dedicated SSR handling
       model: ssrTransformModel,
       show: ssrTransformShow,
+      text: ssrTransformText,
       html: ssrTransformHtml,
       // the following are ignored during SSR
       // on: noopDirectiveTransform,
