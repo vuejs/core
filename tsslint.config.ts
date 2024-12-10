@@ -1,5 +1,5 @@
-import { defineConfig, createIgnorePlugin } from '@tsslint/config'
-import { convertConfig, createDisableNextLinePlugin } from '@tsslint/eslint'
+import { createIgnorePlugin, defineConfig } from '@tsslint/config'
+import { convertConfig } from '@tsslint/eslint'
 import { builtinModules } from 'node:module'
 
 const DOMGlobals = ['window', 'document']
