@@ -23,16 +23,10 @@ export interface Target {
   [ReactiveFlags.RAW]?: any
 }
 
-export const reactiveMap: WeakMap<Target, any> = new WeakMap<Target, any>()
-export const shallowReactiveMap: WeakMap<Target, any> = new WeakMap<
-  Target,
-  any
->()
-export const readonlyMap: WeakMap<Target, any> = new WeakMap<Target, any>()
-export const shallowReadonlyMap: WeakMap<Target, any> = new WeakMap<
-  Target,
-  any
->()
+export const reactiveMap: WeakMap<Target, any> = new WeakMap()
+export const shallowReactiveMap: WeakMap<Target, any> = new WeakMap()
+export const readonlyMap: WeakMap<Target, any> = new WeakMap()
+export const shallowReadonlyMap: WeakMap<Target, any> = new WeakMap()
 
 enum TargetType {
   INVALID = 0,
@@ -418,7 +412,7 @@ export function markRaw<T extends object>(value: T): Raw<T> {
  *
  * @param value - The value for which a reactive proxy shall be created.
  */
-export const toReactive = <T extends unknown>(value: T): T =>
+export const toReactive = <T>(value: T): T =>
   isObject(value) ? reactive(value) : value
 
 /**
@@ -428,5 +422,5 @@ export const toReactive = <T extends unknown>(value: T): T =>
  *
  * @param value - The value for which a readonly proxy shall be created.
  */
-export const toReadonly = <T extends unknown>(value: T): DeepReadonly<T> =>
+export const toReadonly = <T>(value: T): DeepReadonly<T> =>
   isObject(value) ? readonly(value) : (value as DeepReadonly<T>)

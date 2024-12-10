@@ -25,7 +25,7 @@ type WeakCollections = (WeakMap<any, any> | WeakSet<any>) & Target
 type MapTypes = (Map<any, any> | WeakMap<any, any>) & Target
 type SetTypes = (Set<any> | WeakSet<any>) & Target
 
-const toShallow = <T extends unknown>(value: T): T => value
+const toShallow = <T>(value: T): T => value
 
 const getProto = <T extends CollectionTypes>(v: T): any =>
   Reflect.getPrototypeOf(v)
