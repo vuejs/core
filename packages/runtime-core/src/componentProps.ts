@@ -201,7 +201,7 @@ export function initProps(
   isStateful: number, // result of bitwise flag comparison
   isSSR = false,
 ): void {
-  const props: Data = {}
+  const props: Data = (instance.props = {})
   const attrs: Data = createInternalObject()
 
   instance.propsDefaults = Object.create(null)
