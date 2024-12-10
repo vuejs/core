@@ -92,7 +92,7 @@ export function renderComponentVNode(
   vnode: VNode,
   parentComponent: ComponentInternalInstance | null = null,
   slotScopeId?: string,
-  vShowValue?: Props | null,
+  vShowValue?: Props,
 ): SSRBuffer | Promise<SSRBuffer> {
   const instance = (vnode.component = createComponentInstance(
     vnode,
@@ -128,7 +128,7 @@ export function renderComponentVNode(
 function renderComponentSubTree(
   instance: ComponentInternalInstance,
   slotScopeId?: string,
-  vShowValue?: Props | null,
+  vShowValue?: Props,
 ): SSRBuffer | Promise<SSRBuffer> {
   if (__DEV__) pushWarningContext(instance.vnode)
   const comp = instance.type as Component
@@ -235,7 +235,7 @@ export function renderVNode(
   vnode: VNode,
   parentComponent: ComponentInternalInstance,
   slotScopeId?: string,
-  vShowValue?: Props | null,
+  vShowValue?: Props,
 ): void {
   const { type, shapeFlag, children, dirs, props } = vnode
   if (dirs) {

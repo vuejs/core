@@ -66,6 +66,38 @@ describe('ssr: directives', () => {
         ),
       ).toBe(`<div style="color:red;font-size:12;display:none;"></div>`)
     })
+
+    test('with component', async () => {
+      expect(
+        await renderToString(
+          createApp({
+            components: {
+              Foo: {
+                template: `<div><span v-bind="$attrs"></span></div>`,
+              },
+            },
+            data: () => ({ show: false }),
+            template: `<Foo v-show="show"/>`,
+          }),
+        ),
+      ).toBe(`<div style="display:none;"><span></span></div>`)
+    })
+
+    test('with dynamic component', async () => {
+      expect(
+        await renderToString(
+          createApp({
+            components: {
+              Foo: {
+                template: `<div><span v-bind="$attrs"></span></div>`,
+              },
+            },
+            data: () => ({ show: false }),
+            template: `<component is="Foo" v-show="show"/>`,
+          }),
+        ),
+      ).toBe(`<div style="display:none;"><span></span></div>`)
+    })
   })
 
   describe('template v-model', () => {
