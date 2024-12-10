@@ -448,7 +448,7 @@ export function render(_ctx) {
 `;
 
 exports[`v-on > should wrap in unref if identifier is setup-maybe-ref w/ inline: true 1`] = `
-"((_ctx) => {
+"
   const n0 = t0()
   const n1 = t0()
   const n2 = t0()
@@ -456,7 +456,7 @@ exports[`v-on > should wrap in unref if identifier is setup-maybe-ref w/ inline:
   _delegate(n1, "click", () => $event => (x.value++))
   _delegate(n2, "click", () => $event => ({ x: x.value } = _unref(y)))
   return [n0, n1, n2]
-})()"
+"
 `;
 
 exports[`v-on > should wrap keys guard for keyboard events or dynamic events 1`] = `

@@ -41,17 +41,17 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: element transform > component > resolve component from setup bindings (inline const) 1`] = `
-"((_ctx) => {
+"
   const n0 = _createComponent(Example, null, null, true)
   return n0
-})()"
+"
 `;
 
 exports[`compiler: element transform > component > resolve component from setup bindings (inline) 1`] = `
-"((_ctx) => {
+"
   const n0 = _createComponent(_unref(Example), null, null, true)
   return n0
-})()"
+"
 `;
 
 exports[`compiler: element transform > component > resolve component from setup bindings 1`] = `
@@ -64,10 +64,10 @@ export function render(_ctx, $props, $emit, $attrs, $slots) {
 `;
 
 exports[`compiler: element transform > component > resolve namespaced component from props bindings (inline) 1`] = `
-"((_ctx) => {
+"
   const n0 = _createComponent(Foo.Example, null, null, true)
   return n0
-})()"
+"
 `;
 
 exports[`compiler: element transform > component > resolve namespaced component from props bindings (non-inline) 1`] = `
@@ -80,10 +80,10 @@ export function render(_ctx, $props, $emit, $attrs, $slots) {
 `;
 
 exports[`compiler: element transform > component > resolve namespaced component from setup bindings (inline const) 1`] = `
-"((_ctx) => {
+"
   const n0 = _createComponent(Foo.Example, null, null, true)
   return n0
-})()"
+"
 `;
 
 exports[`compiler: element transform > component > resolve namespaced component from setup bindings 1`] = `

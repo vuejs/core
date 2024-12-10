@@ -188,18 +188,18 @@ export function render(_ctx) {
 `;
 
 exports[`compile > expression parsing > interpolation 1`] = `
-"((_ctx) => {
+"
   const n0 = _createTextNode(() => [a + b.value])
   return n0
-})()"
+"
 `;
 
 exports[`compile > expression parsing > v-bind 1`] = `
-"((_ctx) => {
+"
   const n0 = t0()
   _renderEffect(() => _setDynamicProps(n0, [{ [key.value+1]: _unref(foo)[key.value+1]() }], true))
   return n0
-})()"
+"
 `;
 
 exports[`compile > fragment 1`] = `
