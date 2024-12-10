@@ -17,7 +17,6 @@ import {
   template,
 } from '../src'
 import { makeRender } from './_utils'
-import type { RawProps } from '../src/componentProps'
 
 const define = makeRender<any>()
 
@@ -468,7 +467,7 @@ describe('component: props', () => {
     define(() =>
       createComponent(Comp, {
         $: [() => (passFoo.value ? { foo: 'ok' } : {})],
-      } as RawProps),
+      }),
     ).render()
 
     expect(initialKeys).toMatchObject(['foo'])

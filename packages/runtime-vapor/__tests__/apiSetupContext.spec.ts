@@ -2,24 +2,20 @@ import {
   createComponent,
   createSlot,
   createTextNode,
-  defineComponent,
+  defineVaporComponent,
   delegate,
   delegateEvents,
   insert,
-  nextTick,
-  reactive,
-  ref,
   renderEffect,
   setDynamicProps,
-  setInheritAttrs,
   template,
-  watchEffect,
 } from '../src'
+import { nextTick, reactive, ref, watchEffect } from '@vue/runtime-dom'
 import { makeRender } from './_utils'
 
 const define = makeRender()
 
-describe.todo('api: setup context', () => {
+describe('api: setup context', () => {
   it('should expose return values to template render context', () => {
     const { html } = define({
       setup() {
@@ -49,7 +45,7 @@ describe.todo('api: setup context', () => {
     const count = ref(0)
     let dummy
 
-    const Child = defineComponent({
+    const Child = defineVaporComponent({
       props: { count: Number },
       setup(props) {
         watchEffect(() => {
@@ -74,7 +70,7 @@ describe.todo('api: setup context', () => {
   it('context.attrs', async () => {
     const toggle = ref(true)
 
-    const Child = defineComponent({
+    const Child = defineVaporComponent({
       inheritAttrs: false,
       setup(props, { attrs }) {
         const el = document.createElement('div')
@@ -85,9 +81,9 @@ describe.todo('api: setup context', () => {
 
     const { html } = define({
       render: () =>
-        createComponent(Child, () =>
-          toggle.value ? { id: 'foo' } : { class: 'baz' },
-        ),
+        createComponent(Child, {
+          $: [() => (toggle.value ? { id: 'foo' } : { class: 'baz' })],
+        }),
     }).render()
 
     expect(html()).toMatch(`<div id="foo"></div>`)
@@ -101,15 +97,14 @@ describe.todo('api: setup context', () => {
   it('context.attrs in child component slots', async () => {
     const toggle = ref(true)
 
-    const Wrapper = defineComponent({
+    const Wrapper = defineVaporComponent({
       setup(_) {
         const n0 = createSlot('default')
-        setInheritAttrs(true)
         return n0
       },
     })
 
-    const Child = defineComponent({
+    const Child = defineVaporComponent({
       inheritAttrs: false,
       setup(_: any, { attrs }: any) {
         const n0 = createComponent(Wrapper, null, {
@@ -125,9 +120,9 @@ describe.todo('api: setup context', () => {
 
     const { html } = define({
       render: () =>
-        createComponent(Child, () =>
-          toggle.value ? { id: 'foo' } : { class: 'baz' },
-        ),
+        createComponent(Child, {
+          $: [() => (toggle.value ? { id: 'foo' } : { class: 'baz' })],
+        }),
     }).render()
 
     expect(html()).toMatch(`<div id="foo"></div>`)
@@ -141,7 +136,7 @@ describe.todo('api: setup context', () => {
   it('context.slots', async () => {
     const id = ref('foo')
 
-    const Child = defineComponent({
+    const Child = defineVaporComponent({
       render() {
         return [createSlot('foo'), createSlot('bar')]
       },
@@ -149,16 +144,18 @@ describe.todo('api: setup context', () => {
 
     const { html } = define({
       render() {
-        return createComponent(Child, null, [
-          () => ({
-            name: 'foo',
-            fn: () => createTextNode(() => [id.value]),
-          }),
-          () => ({
-            name: 'bar',
-            fn: () => createTextNode(['bar']),
-          }),
-        ])
+        return createComponent(Child, null, {
+          $: [
+            () => ({
+              name: 'foo',
+              fn: () => createTextNode(() => [id.value]),
+            }),
+            () => ({
+              name: 'bar',
+              fn: () => createTextNode(['bar']),
+            }),
+          ],
+        })
       },
     }).render()
 
@@ -175,7 +172,7 @@ describe.todo('api: setup context', () => {
 
     delegateEvents('click')
 
-    const Child = defineComponent({
+    const Child = defineVaporComponent({
       props: {
         count: { type: Number, default: 1 },
       },
