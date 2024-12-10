@@ -8,7 +8,12 @@ import {
 import { createComment } from './dom/node'
 import { EffectScope } from '@vue/reactivity'
 
-export type Block = Node | Fragment | VaporComponentInstance | Block[]
+export type Block =
+  | Node
+  | Fragment
+  | DynamicFragment
+  | VaporComponentInstance
+  | Block[]
 
 export type BlockFn = (...args: any[]) => Block
 
@@ -45,13 +50,12 @@ export class DynamicFragment extends Fragment {
     if (this.scope) {
       this.scope.stop()
       parent && remove(this.nodes, parent)
-      // TODO lifecycle unmount
     }
 
     if (render) {
       this.scope = new EffectScope()
       this.nodes = this.scope.run(render) || []
-      if (parent) insert(this.nodes, parent)
+      if (parent) insert(this.nodes, parent, this.anchor)
     } else {
       this.scope = undefined
       this.nodes = []
@@ -99,10 +103,11 @@ export function isValidBlock(block: Block): boolean {
 export function insert(
   block: Block,
   parent: ParentNode,
-  anchor: Node | null | 0 = null,
+  anchor: Node | null | 0 = null, // 0 means prepend
 ): void {
+  anchor = anchor === 0 ? parent.firstChild : anchor
   if (block instanceof Node) {
-    parent.insertBefore(block, anchor === 0 ? parent.firstChild : anchor)
+    parent.insertBefore(block, anchor)
   } else if (isVaporComponent(block)) {
     mountComponent(block, parent, anchor)
   } else if (isArray(block)) {
@@ -134,5 +139,8 @@ export function remove(block: Block, parent: ParentNode): void {
     // fragment
     remove(block.nodes, parent)
     if (block.anchor) remove(block.anchor, parent)
+    if ((block as DynamicFragment).scope) {
+      ;(block as DynamicFragment).scope!.stop()
+    }
   }
 }

@@ -110,6 +110,7 @@ export function getPropsProxyHandlers(
     ? ({
         get: (target, key) => getProp(target, key),
         has: (_, key) => isProp(key),
+        ownKeys: () => Object.keys(propsOptions),
         getOwnPropertyDescriptor(target, key) {
           if (isProp(key)) {
             return {
@@ -119,7 +120,6 @@ export function getPropsProxyHandlers(
             }
           }
         },
-        ownKeys: () => Object.keys(propsOptions),
       } satisfies ProxyHandler<VaporComponentInstance>)
     : null
 
@@ -147,6 +147,7 @@ export function getPropsProxyHandlers(
   const attrsHandlers = {
     get: (target, key: string) => getAttr(target.rawProps, key),
     has: (target, key: string) => hasAttr(target.rawProps, key),
+    ownKeys: target => getKeysFromRawProps(target.rawProps).filter(isAttr),
     getOwnPropertyDescriptor(target, key: string) {
       if (hasAttr(target.rawProps, key)) {
         return {
@@ -155,25 +156,6 @@ export function getPropsProxyHandlers(
           get: () => getAttr(target.rawProps, key),
         }
       }
-    },
-    ownKeys(target) {
-      const rawProps = target.rawProps
-      const keys: string[] = []
-      for (const key in rawProps) {
-        if (isAttr(key)) keys.push(key)
-      }
-      const dynamicSources = rawProps.$
-      if (dynamicSources) {
-        let i = dynamicSources.length
-        let source
-        while (i--) {
-          source = resolveSource(dynamicSources[i])
-          for (const key in source) {
-            if (isAttr(key)) keys.push(key)
-          }
-        }
-      }
-      return Array.from(new Set(keys))
     },
   } satisfies ProxyHandler<VaporComponentInstance>
 
@@ -219,6 +201,25 @@ export function hasAttrFromRawProps(rawProps: RawProps, key: string): boolean {
     }
   }
   return hasOwn(rawProps, key)
+}
+
+export function getKeysFromRawProps(rawProps: RawProps): string[] {
+  const keys: string[] = []
+  for (const key in rawProps) {
+    if (key !== '$') keys.push(key)
+  }
+  const dynamicSources = rawProps.$
+  if (dynamicSources) {
+    let i = dynamicSources.length
+    let source
+    while (i--) {
+      source = resolveSource(dynamicSources[i])
+      for (const key in source) {
+        keys.push(key)
+      }
+    }
+  }
+  return Array.from(new Set(keys))
 }
 
 export function normalizePropsOptions(

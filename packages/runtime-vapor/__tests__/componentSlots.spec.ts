@@ -2,30 +2,29 @@
 
 import {
   createComponent,
+  // @ts-expect-error
   createForSlots,
   createSlot,
   createVaporApp,
-  defineComponent,
-  getCurrentInstance,
+  defineVaporComponent,
   insert,
-  nextTick,
   prepend,
-  ref,
   renderEffect,
   setText,
   template,
-  withDestructure,
 } from '../src'
+import { currentInstance, nextTick, ref } from '@vue/runtime-dom'
 import { makeRender } from './_utils'
 
 const define = makeRender<any>()
+
 function renderWithSlots(slots: any): any {
   let instance: any
-  const Comp = defineComponent({
-    render() {
+  const Comp = defineVaporComponent({
+    setup() {
       const t0 = template('<div></div>')
       const n0 = t0()
-      instance = getCurrentInstance()
+      instance = currentInstance
       return n0
     },
   })
@@ -40,50 +39,11 @@ function renderWithSlots(slots: any): any {
   return instance
 }
 
-describe.todo('component: slots', () => {
-  test('initSlots: instance.slots should be set correctly', () => {
-    let instance: any
-    const Comp = defineComponent({
-      render() {
-        const t0 = template('<div></div>')
-        const n0 = t0()
-        instance = getCurrentInstance()
-        return n0
-      },
-    })
-
-    const { render } = define({
-      render() {
-        return createComponent(Comp, {}, { header: () => template('header')() })
-      },
-    })
-
-    render()
-
-    expect(instance.slots.header()).toMatchObject(
-      document.createTextNode('header'),
-    )
-  })
-
-  // NOTE: slot normalization is not supported
-  test.todo(
-    'initSlots: should normalize object slots (when value is null, string, array)',
-    () => {},
-  )
-  test.todo(
-    'initSlots: should normalize object slots (when value is function)',
-    () => {},
-  )
-
-  // runtime-core's "initSlots: instance.slots should be set correctly (when vnode.shapeFlag is not SLOTS_CHILDREN)"
+describe('component: slots', () => {
   test('initSlots: instance.slots should be set correctly', () => {
     const { slots } = renderWithSlots({
       default: () => template('<span></span>')(),
     })
-
-    // expect(
-    //   '[Vue warn]: Non-function value encountered for default slot. Prefer function slots for better performance.',
-    // ).toHaveBeenWarned()
 
     expect(slots.default()).toMatchObject(document.createElement('span'))
   })
@@ -93,18 +53,24 @@ describe.todo('component: slots', () => {
 
     let instance: any
     const Child = () => {
-      instance = getCurrentInstance()
+      instance = currentInstance
       return template('child')()
     }
 
     const { render } = define({
       render() {
-        return createComponent(Child, {}, [
-          () =>
-            flag1.value
-              ? { name: 'one', fn: () => template('<span></span>')() }
-              : { name: 'two', fn: () => template('<div></div>')() },
-        ])
+        return createComponent(
+          Child,
+          {},
+          {
+            $: [
+              () =>
+                flag1.value
+                  ? { name: 'one', fn: () => template('<span></span>')() }
+                  : { name: 'two', fn: () => template('<div></div>')() },
+            ],
+          },
+        )
       },
     })
 
@@ -120,196 +86,27 @@ describe.todo('component: slots', () => {
     expect(instance.slots).toHaveProperty('two')
   })
 
-  // NOTE: it is not supported
-  // test('updateSlots: instance.slots should be updated correctly (when slotType is null)', () => {})
-
-  // runtime-core's "updateSlots: instance.slots should be update correctly (when vnode.shapeFlag is not SLOTS_CHILDREN)"
-  test('updateSlots: instance.slots should be update correctly', async () => {
-    const flag1 = ref(true)
-
-    let instance: any
-    const Child = () => {
-      instance = getCurrentInstance()
-      return template('child')()
-    }
-
-    const { render } = define({
-      setup() {
-        return createComponent(Child, {}, [
-          () =>
-            flag1.value
-              ? { name: 'header', fn: () => template('header')() }
-              : { name: 'footer', fn: () => template('footer')() },
-        ])
-      },
-    })
-    render()
-
-    expect(instance.slots).toHaveProperty('header')
-    flag1.value = false
-    await nextTick()
-
-    // expect(
-    //   '[Vue warn]: Non-function value encountered for default slot. Prefer function slots for better performance.',
-    // ).toHaveBeenWarned()
-
-    expect(instance.slots).toHaveProperty('footer')
-  })
-
-  test('the current instance should be kept in the slot', async () => {
-    let instanceInDefaultSlot: any
-    let instanceInFooSlot: any
-
-    const Comp = defineComponent({
-      render() {
-        const instance = getCurrentInstance()
-        instance!.slots.default!()
-        instance!.slots.foo!()
-        return template('<div></div>')()
-      },
-    })
-
-    const { instance } = define({
-      render() {
-        return createComponent(Comp, {}, [
-          {
-            default: () => {
-              instanceInDefaultSlot = getCurrentInstance()
-              return template('content')()
-            },
-            foo: () => {
-              instanceInFooSlot = getCurrentInstance()
-              return template('content')()
-            },
-          },
-        ])
-      },
-    }).render()
-
-    expect(instanceInDefaultSlot).toBe(instance)
-    expect(instanceInFooSlot).toBe(instance)
-  })
-
-  test('the current instance should be kept in the dynamic slots', async () => {
-    let instanceInDefaultSlot: any
-    let instanceInVForSlot: any
-    let instanceInVIfSlot: any
-
-    const Comp = defineComponent({
-      render() {
-        const instance = getCurrentInstance()
-        instance!.slots.default!()
-        instance!.slots.inVFor!()
-        instance!.slots.inVIf!()
-        return template('<div></div>')()
-      },
-    })
-
-    const { instance } = define({
-      render() {
-        return createComponent(Comp, {}, [
-          {
-            default: () => {
-              instanceInDefaultSlot = getCurrentInstance()
-              return template('content')()
-            },
-          },
-          () => ({
-            name: 'inVFor',
-            fn: () => {
-              instanceInVForSlot = getCurrentInstance()
-              return template('content')()
-            },
-          }),
-          () => ({
-            name: 'inVIf',
-            fn: () => {
-              instanceInVIfSlot = getCurrentInstance()
-              return template('content')()
-            },
-          }),
-        ])
-      },
-    }).render()
-
-    expect(instanceInDefaultSlot).toBe(instance)
-    expect(instanceInVForSlot).toBe(instance)
-    expect(instanceInVIfSlot).toBe(instance)
-  })
-
-  test('dynamicSlots should update separately', async () => {
-    const flag1 = ref(true)
-    const flag2 = ref(true)
-    const slotFn1 = vitest.fn()
-    const slotFn2 = vitest.fn()
-
-    let instance: any
-    const Child = () => {
-      instance = getCurrentInstance()
-      return template('child')()
-    }
-
-    const { render } = define({
-      render() {
-        return createComponent(Child, {}, [
-          () => {
-            slotFn1()
-            return flag1.value
-              ? { name: 'one', fn: () => template('one')() }
-              : { name: 'two', fn: () => template('two')() }
-          },
-          () => {
-            slotFn2()
-            return flag2.value
-              ? { name: 'three', fn: () => template('three')() }
-              : { name: 'four', fn: () => template('four')() }
-          },
-        ])
-      },
-    })
-
-    render()
-
-    expect(instance.slots).toHaveProperty('one')
-    expect(instance.slots).toHaveProperty('three')
-    expect(slotFn1).toHaveBeenCalledTimes(1)
-    expect(slotFn2).toHaveBeenCalledTimes(1)
-
-    flag1.value = false
-    await nextTick()
-
-    expect(instance.slots).toHaveProperty('two')
-    expect(instance.slots).toHaveProperty('three')
-    expect(slotFn1).toHaveBeenCalledTimes(2)
-    expect(slotFn2).toHaveBeenCalledTimes(1)
-
-    flag2.value = false
-    await nextTick()
-
-    expect(instance.slots).toHaveProperty('two')
-    expect(instance.slots).toHaveProperty('four')
-    expect(slotFn1).toHaveBeenCalledTimes(2)
-    expect(slotFn2).toHaveBeenCalledTimes(2)
-  })
-
-  test('should work with createFlorSlots', async () => {
+  test.todo('should work with createFlorSlots', async () => {
     const loop = ref([1, 2, 3])
 
     let instance: any
     const Child = () => {
-      instance = getCurrentInstance()
+      instance = currentInstance
       return template('child')()
     }
 
     const { render } = define({
       setup() {
-        return createComponent(Child, {}, [
-          () =>
-            createForSlots(loop.value, (item, i) => ({
-              name: item,
-              fn: () => template(item + i)(),
-            })),
-        ])
+        return createComponent(Child, null, {
+          $: [
+            () =>
+              // @ts-expect-error
+              createForSlots(loop.value, (item, i) => ({
+                name: item,
+                fn: () => template(item + i)(),
+              })),
+          ],
+        })
       },
     })
     render()
@@ -325,16 +122,11 @@ describe.todo('component: slots', () => {
     expect(instance.slots).not.toHaveProperty('1')
   })
 
-  test.todo('should respect $stable flag', async () => {
-    // TODO: $stable flag?
-  })
-
+  // passes but no warning for slot invocation in vapor currently
   test.todo('should not warn when mounting another app in setup', () => {
-    // TODO: warning
-    const Comp = defineComponent({
-      render() {
-        const i = getCurrentInstance()
-        return i!.slots.default!()
+    const Comp = defineVaporComponent({
+      setup(_, { slots }) {
+        return slots.default!()
       },
     })
     const mountComp = () => {
@@ -351,9 +143,7 @@ describe.todo('component: slots', () => {
     const App = {
       setup() {
         mountComp()
-      },
-      render() {
-        return null!
+        return []
       },
     }
     createVaporApp(App).mount(document.createElement('div'))
@@ -363,63 +153,58 @@ describe.todo('component: slots', () => {
   })
 
   describe('createSlot', () => {
-    test('slot should be render correctly', () => {
-      const Comp = defineComponent(() => {
+    test('slot should be rendered correctly', () => {
+      const Comp = defineVaporComponent(() => {
         const n0 = template('<div>')()
         insert(createSlot('header'), n0 as any as ParentNode)
         return n0
       })
 
       const { host } = define(() => {
-        return createComponent(Comp, {}, { header: () => template('header')() })
+        return createComponent(Comp, null, {
+          header: () => template('header')(),
+        })
       }).render()
 
-      expect(host.innerHTML).toBe('<div>header</div>')
+      expect(host.innerHTML).toBe('<div>header<!--slot--></div>')
     })
 
-    test('slot should be render correctly with binds', async () => {
-      const Comp = defineComponent(() => {
+    test('slot should be rendered correctly with slot props', async () => {
+      const Comp = defineVaporComponent(() => {
         const n0 = template('<div></div>')()
         insert(
-          createSlot('header', [{ title: () => 'header' }]),
+          createSlot('header', { title: () => 'header' }),
           n0 as any as ParentNode,
         )
         return n0
       })
 
       const { host } = define(() => {
-        return createComponent(Comp, {}, [
-          {
-            header: withDestructure(
-              ({ title }) => [title],
-              ctx => {
-                const el = template('<h1></h1>')()
-                renderEffect(() => {
-                  setText(el, ctx[0])
-                })
-                return el
-              },
-            ),
+        return createComponent(Comp, null, {
+          header: props => {
+            const el = template('<h1></h1>')()
+            renderEffect(() => {
+              setText(el, props.title)
+            })
+            return el
           },
-        ])
+        })
       }).render()
 
-      expect(host.innerHTML).toBe('<div><h1>header</h1></div>')
+      expect(host.innerHTML).toBe('<div><h1>header</h1><!--slot--></div>')
     })
 
     test('dynamic slot props', async () => {
       let props: any
 
       const bindObj = ref<Record<string, any>>({ foo: 1, baz: 'qux' })
-      const Comp = defineComponent(() =>
-        createSlot('default', [() => bindObj.value]),
+      const Comp = defineVaporComponent(() =>
+        createSlot('default', { $: [() => bindObj.value] }),
       )
       define(() =>
-        createComponent(
-          Comp,
-          {},
-          { default: _props => ((props = _props), []) },
-        ),
+        createComponent(Comp, null, {
+          default: _props => ((props = _props), []),
+        }),
       ).render()
 
       expect(props).toEqual({ foo: 1, baz: 'qux' })
@@ -438,15 +223,16 @@ describe.todo('component: slots', () => {
 
       const foo = ref(0)
       const bindObj = ref<Record<string, any>>({ foo: 100, baz: 'qux' })
-      const Comp = defineComponent(() =>
-        createSlot('default', [{ foo: () => foo.value }, () => bindObj.value]),
+      const Comp = defineVaporComponent(() =>
+        createSlot('default', {
+          foo: () => foo.value,
+          $: [() => bindObj.value],
+        }),
       )
       define(() =>
-        createComponent(
-          Comp,
-          {},
-          { default: _props => ((props = _props), []) },
-        ),
+        createComponent(Comp, null, {
+          default: _props => ((props = _props), []),
+        }),
       ).render()
 
       expect(props).toEqual({ foo: 100, baz: 'qux' })
@@ -460,123 +246,67 @@ describe.todo('component: slots', () => {
       expect(props).toEqual({ foo: 2, baz: 'qux' })
     })
 
-    test('slot class binding should be merged', async () => {
-      let props: any
+    test('dynamic slot should be rendered correctly with slot props', async () => {
+      const val = ref('header')
 
-      const className = ref('foo')
-      const classObj = ref({ bar: true })
-      const Comp = defineComponent(() =>
-        createSlot('default', [
-          { class: () => className.value },
-          () => ({ class: ['baz', 'qux'] }),
-          { class: () => classObj.value },
-        ]),
-      )
-      define(() =>
-        createComponent(
-          Comp,
-          {},
-          { default: _props => ((props = _props), []) },
-        ),
-      ).render()
-
-      expect(props).toEqual({ class: 'foo baz qux bar' })
-
-      classObj.value.bar = false
-      await nextTick()
-      expect(props).toEqual({ class: 'foo baz qux' })
-
-      className.value = ''
-      await nextTick()
-      expect(props).toEqual({ class: 'baz qux' })
-    })
-
-    test('slot style binding should be merged', async () => {
-      let props: any
-
-      const style = ref<any>({ fontSize: '12px' })
-      const Comp = defineComponent(() =>
-        createSlot('default', [
-          { style: () => style.value },
-          () => ({ style: { width: '100px', color: 'blue' } }),
-          { style: () => 'color: red' },
-        ]),
-      )
-      define(() =>
-        createComponent(
-          Comp,
-          {},
-          { default: _props => ((props = _props), []) },
-        ),
-      ).render()
-
-      expect(props).toEqual({
-        style: {
-          fontSize: '12px',
-          width: '100px',
-          color: 'red',
-        },
-      })
-
-      style.value = null
-      await nextTick()
-      expect(props).toEqual({
-        style: {
-          width: '100px',
-          color: 'red',
-        },
-      })
-    })
-
-    test('dynamic slot should be render correctly with binds', async () => {
-      const Comp = defineComponent(() => {
+      const Comp = defineVaporComponent(() => {
         const n0 = template('<div></div>')()
         prepend(
           n0 as any as ParentNode,
-          createSlot('header', [{ title: () => 'header' }]),
+          createSlot('header', { title: () => val.value }),
         )
         return n0
       })
 
       const { host } = define(() => {
         // dynamic slot
-        return createComponent(Comp, {}, [
-          () => ({
-            name: 'header',
-            fn: (props: any) => template(props.title)(),
-          }),
-        ])
+        return createComponent(Comp, null, {
+          $: [
+            () => ({
+              name: 'header',
+              fn: (props: any) => template(props.title)(),
+            }),
+          ],
+        })
       }).render()
 
       expect(host.innerHTML).toBe('<div>header<!--slot--></div>')
+
+      val.value = 'footer'
+      await nextTick()
+      expect(host.innerHTML).toBe('<div>footer<!--slot--></div>')
     })
 
-    test('dynamic slot outlet should be render correctly with binds', async () => {
-      const Comp = defineComponent(() => {
+    test('dynamic slot outlet should be render correctly with slot props', async () => {
+      const val = ref('header')
+
+      const Comp = defineVaporComponent(() => {
         const n0 = template('<div></div>')()
         prepend(
           n0 as any as ParentNode,
           createSlot(
-            () => 'header', // dynamic slot outlet name
-            [{ title: () => 'header' }],
+            () => val.value, // dynamic slot outlet name
           ),
         )
         return n0
       })
 
       const { host } = define(() => {
-        return createComponent(
-          Comp,
-          {},
-          { header: props => template(props.title)() },
-        )
+        return createComponent(Comp, null, {
+          header: () => template('header')(),
+          footer: () => template('footer')(),
+        })
       }).render()
 
       expect(host.innerHTML).toBe('<div>header<!--slot--></div>')
+
+      val.value = 'footer'
+      await nextTick()
+      expect(host.innerHTML).toBe('<div>footer<!--slot--></div>')
     })
 
     test('fallback should be render correctly', () => {
-      const Comp = defineComponent(() => {
+      const Comp = defineVaporComponent(() => {
         const n0 = template('<div></div>')()
         insert(
           createSlot('header', undefined, () => template('fallback')()),
@@ -595,24 +325,26 @@ describe.todo('component: slots', () => {
     test('dynamic slot should be updated correctly', async () => {
       const flag1 = ref(true)
 
-      const Child = defineComponent(() => {
+      const Child = defineVaporComponent(() => {
         const temp0 = template('<p></p>')
         const el0 = temp0()
         const el1 = temp0()
-        const slot1 = createSlot('one', [], () => template('one fallback')())
-        const slot2 = createSlot('two', [], () => template('two fallback')())
+        const slot1 = createSlot('one', null, () => template('one fallback')())
+        const slot2 = createSlot('two', null, () => template('two fallback')())
         insert(slot1, el0 as any as ParentNode)
         insert(slot2, el1 as any as ParentNode)
         return [el0, el1]
       })
 
       const { host } = define(() => {
-        return createComponent(Child, {}, [
-          () =>
-            flag1.value
-              ? { name: 'one', fn: () => template('one content')() }
-              : { name: 'two', fn: () => template('two content')() },
-        ])
+        return createComponent(Child, null, {
+          $: [
+            () =>
+              flag1.value
+                ? { name: 'one', fn: () => template('one content')() }
+                : { name: 'two', fn: () => template('two content')() },
+          ],
+        })
       }).render()
 
       expect(host.innerHTML).toBe(
@@ -637,7 +369,7 @@ describe.todo('component: slots', () => {
     test('dynamic slot outlet should be updated correctly', async () => {
       const slotOutletName = ref('one')
 
-      const Child = defineComponent(() => {
+      const Child = defineVaporComponent(() => {
         const temp0 = template('<p>')
         const el0 = temp0()
         const slot1 = createSlot(
@@ -674,7 +406,7 @@ describe.todo('component: slots', () => {
     })
 
     test('non-exist slot', async () => {
-      const Child = defineComponent(() => {
+      const Child = defineVaporComponent(() => {
         const el0 = template('<p>')()
         const slot = createSlot('not-exist', undefined)
         insert(slot, el0 as any as ParentNode)
@@ -685,7 +417,7 @@ describe.todo('component: slots', () => {
         return createComponent(Child)
       }).render()
 
-      expect(host.innerHTML).toBe('<p></p>')
+      expect(host.innerHTML).toBe('<p><!--slot--></p>')
     })
   })
 })

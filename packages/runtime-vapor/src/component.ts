@@ -113,7 +113,10 @@ interface SharedInternalOptions {
 // 100% strict. Here we use intentionally wider types to make `createComponent`
 // more ergonomic in tests and internal call sites, where we immediately cast
 // them into the stricter types.
-type LooseRawProps = Record<string, (() => unknown) | DynamicPropsSource[]> & {
+export type LooseRawProps = Record<
+  string,
+  (() => unknown) | DynamicPropsSource[]
+> & {
   $?: DynamicPropsSource[]
 }
 

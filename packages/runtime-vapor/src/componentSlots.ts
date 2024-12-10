@@ -3,10 +3,11 @@ import { type Block, type BlockFn, DynamicFragment } from './block'
 import {
   type RawProps,
   getAttrFromRawProps,
+  getKeysFromRawProps,
   hasAttrFromRawProps,
 } from './componentProps'
 import { currentInstance } from '@vue/runtime-core'
-import type { VaporComponentInstance } from './component'
+import type { LooseRawProps, VaporComponentInstance } from './component'
 import { renderEffect } from './renderEffect'
 
 export type RawSlots = Record<string, Slot> & {
@@ -86,7 +87,16 @@ export function getSlot(target: RawSlots, key: string): Slot | undefined {
 const dynamicSlotsPropsProxyHandlers: ProxyHandler<RawProps> = {
   get: getAttrFromRawProps,
   has: hasAttrFromRawProps,
-  ownKeys: target => Object.keys(target).filter(k => k !== '$'),
+  ownKeys: getKeysFromRawProps,
+  getOwnPropertyDescriptor(target, key: string) {
+    if (hasAttrFromRawProps(target, key)) {
+      return {
+        configurable: true,
+        enumerable: true,
+        get: () => getAttrFromRawProps(target, key),
+      }
+    }
+  },
 }
 
 // TODO how to handle empty slot return blocks?
@@ -95,11 +105,11 @@ const dynamicSlotsPropsProxyHandlers: ProxyHandler<RawProps> = {
 // and make the v-if use it as fallback
 export function createSlot(
   name: string | (() => string),
-  rawProps?: RawProps,
+  rawProps?: LooseRawProps | null,
   fallback?: Slot,
 ): Block {
+  const instance = currentInstance as VaporComponentInstance
   const fragment = new DynamicFragment('slot')
-  const rawSlots = (currentInstance as VaporComponentInstance)!.rawSlots
   const slotProps = rawProps
     ? new Proxy(rawProps, dynamicSlotsPropsProxyHandlers)
     : EMPTY_OBJ
@@ -107,7 +117,7 @@ export function createSlot(
   // always create effect because a slot may contain dynamic root inside
   // which affects fallback
   renderEffect(() => {
-    const slot = getSlot(rawSlots, isFunction(name) ? name() : name)
+    const slot = getSlot(instance.rawSlots, isFunction(name) ? name() : name)
     if (slot) {
       fragment.update(
         () => slot(slotProps) || (fallback && fallback()),

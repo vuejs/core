@@ -476,11 +476,6 @@ describe('component: props', () => {
     expect(changeSpy).toHaveBeenCalledTimes(1)
   })
 
-  // #3371
-  test.todo(`avoid double-setting props when casting`, async () => {
-    // TODO: provide, slots
-  })
-
   test('support null in required + multiple-type declarations', () => {
     const { render } = define({
       props: {
