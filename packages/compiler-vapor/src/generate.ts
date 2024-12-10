@@ -111,7 +111,7 @@ export function generate(
   )
 
   if (inline) {
-    push(`((${signature}) => {`)
+    // push(`((${signature}) => {`)
   } else {
     push(NEWLINE, `export function ${functionName}(${signature}) {`)
   }
@@ -121,7 +121,7 @@ export function generate(
   push(INDENT_END, NEWLINE)
 
   if (inline) {
-    push('})()')
+    // push('})()')
   } else {
     push('}')
   }

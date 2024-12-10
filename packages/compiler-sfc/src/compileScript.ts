@@ -936,7 +936,11 @@ export function compileScript(
         `\n}\n\n`,
     )
   } else {
-    ctx.s.appendRight(endOffset, `\nreturn ${returned}\n}\n\n`)
+    ctx.s.appendRight(
+      endOffset,
+      // vapor mode generates its own return when inlined
+      `\n${vapor ? `` : `return `}${returned}\n}\n\n`,
+    )
   }
 
   // 10. finalize default export
