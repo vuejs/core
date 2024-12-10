@@ -54,16 +54,17 @@ describe('api: expose', () => {
   })
 
   test('with mount', () => {
-    const { instance } = define({
+    const { app, host } = define({
       setup(_, { expose }) {
         expose({
           foo: 1,
         })
         return []
       },
-    }).render()
-    expect(instance!.foo).toBe(1)
-    expect(instance!.bar).toBe(undefined)
+    }).create()
+    const exposed = app.mount(host) as any
+    expect(exposed.foo).toBe(1)
+    expect(exposed.bar).toBe(undefined)
   })
 
   test('warning for ref', () => {
