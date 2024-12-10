@@ -45,7 +45,7 @@ import {
   type SchedulerJob,
   SchedulerJobFlags,
   type SchedulerJobs,
-  flushPostFlushCbs,
+  flushOnAppMount,
   flushPreFlushCbs,
   queueJob,
   queuePostFlushCb,
@@ -2357,7 +2357,6 @@ function baseCreateRenderer(
     return teleportEnd ? hostNextSibling(teleportEnd) : el
   }
 
-  let isFlushing = false
   const render: RootRenderFunction = (vnode, container, namespace) => {
     if (vnode == null) {
       if (container._vnode) {
@@ -2375,12 +2374,7 @@ function baseCreateRenderer(
       )
     }
     container._vnode = vnode
-    if (!isFlushing) {
-      isFlushing = true
-      flushPreFlushCbs()
-      flushPostFlushCbs()
-      isFlushing = false
-    }
+    flushOnAppMount()
   }
 
   const internals: RendererInternals = {
@@ -2449,7 +2443,7 @@ function baseCreateRenderer(
     createApp: createAppAPI(
       mountApp,
       unmountApp,
-      getComponentPublicInstance,
+      getComponentPublicInstance as any,
       render,
     ),
   }

@@ -494,7 +494,7 @@ export {
   validateProps,
 } from './componentProps'
 export { baseEmit, isEmitListener } from './componentEmits'
-export { type SchedulerJob, queueJob } from './scheduler'
+export { type SchedulerJob, queueJob, flushOnAppMount } from './scheduler'
 export {
   type ComponentInternalOptions,
   type GenericComponentInstance,

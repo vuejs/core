@@ -18,6 +18,7 @@ import {
   nextUid,
   popWarningContext,
   pushWarningContext,
+  queuePostFlushCb,
   registerHMR,
   simpleSetCurrentInstance,
   startMeasure,
@@ -453,10 +454,8 @@ export function mountComponent(
   if (!instance.isMounted) {
     if (instance.bm) invokeArrayFns(instance.bm)
     insert(instance.block, parent, anchor)
-    // TODO queuePostFlushCb(() => {
-    if (instance.m) invokeArrayFns(instance.m)
+    if (instance.m) queuePostFlushCb(() => invokeArrayFns(instance.m!))
     instance.isMounted = true
-    // })
   } else {
     insert(instance.block, parent, anchor)
   }
@@ -479,10 +478,10 @@ export function unmountComponent(
       unmountComponent(c)
     }
     if (parent) remove(instance.block, parent)
-    // TODO queuePostFlushCb(() => {
-    if (instance.um) invokeArrayFns(instance.um)
+    if (instance.um) {
+      queuePostFlushCb(() => invokeArrayFns(instance.um!))
+    }
     instance.isUnmounted = true
-    // })
   } else if (parent) {
     remove(instance.block, parent)
   }

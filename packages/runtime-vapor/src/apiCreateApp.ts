@@ -11,6 +11,7 @@ import {
   type AppUnmountFn,
   type CreateAppFunction,
   createAppAPI,
+  flushOnAppMount,
   normalizeContainer,
   warn,
 } from '@vue/runtime-dom'
@@ -23,6 +24,7 @@ const mountApp: AppMountFn<ParentNode> = (app, container) => {
   if (container.nodeType === 1 /* Node.ELEMENT_NODE */) {
     container.textContent = ''
   }
+
   const instance = createComponent(
     app._component,
     app._props as RawProps,
@@ -30,7 +32,10 @@ const mountApp: AppMountFn<ParentNode> = (app, container) => {
     false,
     app._context,
   )
+
   mountComponent(instance, container)
+  flushOnAppMount()
+
   return instance
 }
 

@@ -217,6 +217,19 @@ export function flushPostFlushCbs(seen?: CountMap): void {
   }
 }
 
+let isFlushing = false
+/**
+ * @internal
+ */
+export function flushOnAppMount(): void {
+  if (!isFlushing) {
+    isFlushing = true
+    flushPreFlushCbs()
+    flushPostFlushCbs()
+    isFlushing = false
+  }
+}
+
 const getId = (job: SchedulerJob): number =>
   job.id == null ? (job.flags! & SchedulerJobFlags.PRE ? -1 : Infinity) : job.id
 

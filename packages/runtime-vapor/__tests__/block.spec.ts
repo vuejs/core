@@ -5,7 +5,7 @@ const node2 = document.createTextNode('node2')
 const node3 = document.createTextNode('node3')
 const anchor = document.createTextNode('anchor')
 
-describe('node ops', () => {
+describe('block + node ops', () => {
   test('normalizeBlock', () => {
     expect(normalizeBlock([node1, node2, node3])).toEqual([node1, node2, node3])
     expect(normalizeBlock([node1, [node2, [node3]]])).toEqual([
