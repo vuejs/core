@@ -3,7 +3,9 @@ import {
   createComponent,
   on,
   template,
+  // @ts-expect-error
   vShow,
+  // @ts-expect-error
   withDirectives,
 } from '../../src'
 import { nextTick, ref } from 'vue'
@@ -70,7 +72,7 @@ describe.todo('directive: v-show', () => {
     const { host } = define({
       render() {
         const n1 = t1()
-        const n2 = createComponent(Child, [], null, true)
+        const n2 = createComponent(Child, null, null, true)
         withDirectives(n2, [[vShow, () => visible.value]])
         on(n1 as HTMLElement, 'click', () => handleClick)
         return [n1, n2]

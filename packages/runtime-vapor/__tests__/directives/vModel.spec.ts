@@ -6,8 +6,11 @@ import {
   setClass,
   setDOMProp,
   template,
+  // @ts-expect-error
   vModelDynamic,
+  // @ts-expect-error
   vModelSelect,
+  // @ts-expect-error
   withDirectives,
 } from '../../src'
 import { makeRender } from '../_utils'
