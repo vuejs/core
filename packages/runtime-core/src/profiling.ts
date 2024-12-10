@@ -1,15 +1,15 @@
 /* eslint-disable no-restricted-globals */
-import {
-  type ComponentInternalInstance,
-  formatComponentName,
-} from './component'
+import { type GenericComponentInstance, formatComponentName } from './component'
 import { devtoolsPerfEnd, devtoolsPerfStart } from './devtools'
 
 let supported: boolean
 let perf: Performance
 
+/**
+ * @internal
+ */
 export function startMeasure(
-  instance: ComponentInternalInstance,
+  instance: GenericComponentInstance,
   type: string,
 ): void {
   if (instance.appContext.config.performance && isSupported()) {
@@ -21,8 +21,11 @@ export function startMeasure(
   }
 }
 
+/**
+ * @internal
+ */
 export function endMeasure(
-  instance: ComponentInternalInstance,
+  instance: GenericComponentInstance,
   type: string,
 ): void {
   if (instance.appContext.config.performance && isSupported()) {

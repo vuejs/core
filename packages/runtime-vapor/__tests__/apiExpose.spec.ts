@@ -1,11 +1,8 @@
 import { ref, shallowRef } from '@vue/reactivity'
-import { createComponent } from '../src/component'
+import { type VaporComponentInstance, createComponent } from '../src/component'
 import { setRef } from '../src/dom/templateRef'
 import { makeRender } from './_utils'
-import {
-  type ComponentInternalInstance,
-  getCurrentInstance,
-} from '../src/component'
+import { currentInstance } from '@vue/runtime-dom'
 import { defineVaporComponent } from '../src/apiDefineComponent'
 
 const define = makeRender()
@@ -39,10 +36,11 @@ describe.todo('api: expose', () => {
   })
 
   test('via setup context (expose empty)', () => {
-    let childInstance: ComponentInternalInstance | null = null
+    let childInstance: VaporComponentInstance | null = null
     const Child = defineVaporComponent({
       setup(_) {
-        childInstance = getCurrentInstance()
+        childInstance = currentInstance as VaporComponentInstance
+        return []
       },
     })
     const childRef = shallowRef()
@@ -77,6 +75,7 @@ describe.todo('api: expose', () => {
     define({
       setup(_, { expose }) {
         expose(ref(1))
+        return []
       },
     }).render()
 
@@ -89,6 +88,7 @@ describe.todo('api: expose', () => {
     define({
       setup(_, { expose }) {
         expose(['focus'])
+        return []
       },
     }).render()
 
@@ -101,6 +101,7 @@ describe.todo('api: expose', () => {
     define({
       setup(_, { expose }) {
         expose(() => null)
+        return []
       },
     }).render()
 

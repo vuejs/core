@@ -1,25 +1,29 @@
 import {
-  type ComponentInternalInstance,
-  type Plugin,
   createComponent,
   createTextNode,
   createVaporApp,
-  defineComponent,
-  getCurrentInstance,
+  defineVaporComponent,
+  // @ts-expect-error
+  withDirectives,
+} from '../src'
+import {
+  type GenericComponentInstance,
+  type Plugin,
+  currentInstance,
   inject,
   provide,
   resolveComponent,
   resolveDirective,
-  withDirectives,
-} from '../src'
-import { warn } from '@vue/runtime-dom'
+  warn,
+} from '@vue/runtime-dom'
 import { makeRender } from './_utils'
+import type { VaporComponent } from '../src/component'
 
 const define = makeRender()
 
-describe.todo('api: createVaporApp', () => {
+describe('api: createVaporApp', () => {
   test('mount', () => {
-    const Comp = defineComponent({
+    const Comp = defineVaporComponent({
       props: {
         count: { default: 0 },
       },
@@ -51,7 +55,7 @@ describe.todo('api: createVaporApp', () => {
   })
 
   test('unmount', () => {
-    const Comp = defineComponent({
+    const Comp = defineVaporComponent({
       props: {
         count: { default: 0 },
       },
@@ -82,22 +86,22 @@ describe.todo('api: createVaporApp', () => {
       },
     })
 
-    const Child = defineComponent({
+    const Child = defineVaporComponent({
       setup() {
         const foo = inject('foo')
         const bar = inject('bar')
         try {
           inject('__proto__')
         } catch (e: any) {}
-        return createTextNode(() => [`${foo},${bar}`])
+        return createTextNode([`${foo},${bar}`])
       },
     })
 
-    const { app, mount, create, host } = Root.create(null)
+    const { app, mount, create, html } = Root.create()
     app.provide('foo', 1)
     app.provide('bar', 2)
     mount()
-    expect(host.innerHTML).toBe(`3,2`)
+    expect(html()).toBe(`3,2`)
     expect('[Vue warn]: injection "__proto__" not found.').toHaveBeenWarned()
 
     const { app: app2 } = create()
@@ -132,8 +136,8 @@ describe.todo('api: createVaporApp', () => {
   test('component', () => {
     const { app, mount, host } = define({
       setup() {
-        const FooBar = resolveComponent('foo-bar')
-        const BarBaz = resolveComponent('bar-baz')
+        const FooBar = resolveComponent('foo-bar') as VaporComponent
+        const BarBaz = resolveComponent('bar-baz') as VaporComponent
         return [createComponent(FooBar), createComponent(BarBaz)]
       },
     }).create()
@@ -152,7 +156,7 @@ describe.todo('api: createVaporApp', () => {
     expect(host.innerHTML).toBe(`foobar!barbaz!`)
   })
 
-  test('directive', () => {
+  test.todo('directive', () => {
     const spy1 = vi.fn()
     const spy2 = vi.fn()
 
@@ -229,7 +233,7 @@ describe.todo('api: createVaporApp', () => {
 
   test('config.errorHandler', () => {
     const error = new Error()
-    let instance: ComponentInternalInstance
+    let instance: GenericComponentInstance
 
     const handler = vi.fn((err, _instance, info) => {
       expect(err).toBe(error)
@@ -239,7 +243,8 @@ describe.todo('api: createVaporApp', () => {
 
     const { app, mount } = define({
       setup() {
-        instance = getCurrentInstance()!
+        instance = currentInstance!
+        return {}
       },
       render() {
         throw error
@@ -251,7 +256,7 @@ describe.todo('api: createVaporApp', () => {
   })
 
   test('config.warnHandler', () => {
-    let instance: ComponentInternalInstance
+    let instance: GenericComponentInstance
 
     const handler = vi.fn((msg, _instance, trace) => {
       expect(msg).toMatch(`warn message`)
@@ -262,8 +267,9 @@ describe.todo('api: createVaporApp', () => {
     const { app, mount } = define({
       name: 'Hello',
       setup() {
-        instance = getCurrentInstance()!
+        instance = currentInstance!
         warn('warn message')
+        return []
       },
     }).create()
 
@@ -275,22 +281,23 @@ describe.todo('api: createVaporApp', () => {
   describe('config.isNativeTag', () => {
     const isNativeTag = vi.fn(tag => tag === 'div')
 
-    test('Component.name', () => {
-      const { app, mount } = define({
-        name: 'div',
-        render(): any {},
-      }).create()
+    // Not relevant for vapor
+    // test('Component.name', () => {
+    //   const { app, mount } = define({
+    //     name: 'div',
+    //     render(): any {},
+    //   }).create()
 
-      Object.defineProperty(app.config, 'isNativeTag', {
-        value: isNativeTag,
-        writable: false,
-      })
+    //   Object.defineProperty(app.config, 'isNativeTag', {
+    //     value: isNativeTag,
+    //     writable: false,
+    //   })
 
-      mount()
-      expect(
-        `Do not use built-in or reserved HTML elements as component id: div`,
-      ).toHaveBeenWarned()
-    })
+    //   mount()
+    //   expect(
+    //     `Do not use built-in or reserved HTML elements as component id: div`,
+    //   ).toHaveBeenWarned()
+    // })
 
     test('register using app.component', () => {
       const { app, mount } = define({
@@ -316,7 +323,7 @@ describe.todo('api: createVaporApp', () => {
     })
 
     test('with performance enabled', () => {
-      const { app, mount } = define({}).create()
+      const { app, mount } = define({ setup: () => [] }).create()
 
       app.config.performance = true
       mount()
@@ -324,7 +331,7 @@ describe.todo('api: createVaporApp', () => {
     })
 
     test('with performance disabled', () => {
-      const { app, mount } = define({}).create()
+      const { app, mount } = define({ setup: () => [] }).create()
 
       app.config.performance = false
       mount()
@@ -333,14 +340,16 @@ describe.todo('api: createVaporApp', () => {
   })
 
   test('config.globalProperty', () => {
-    const { app, mount, html } = define({
-      render() {
-        const instance = getCurrentInstance()!
-        return createTextNode([instance.appContext.config.globalProperties.msg])
+    const { app } = define({
+      setup() {
+        return []
       },
     }).create()
-    app.config.globalProperties.msg = 'hello world'
-    mount()
-    expect(html()).toBe('hello world')
+    try {
+      app.config.globalProperties.msg = 'hello world'
+    } catch (e) {}
+    expect(
+      `app.config.globalProperties is not supported in vapor mode`,
+    ).toHaveBeenWarned()
   })
 })

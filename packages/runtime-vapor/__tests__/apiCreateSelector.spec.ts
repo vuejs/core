@@ -1,6 +1,8 @@
 import { ref } from '@vue/reactivity'
 import { makeRender } from './_utils'
-// import { createFor, createSelector, nextTick, renderEffect } from '../src'
+// @ts-expect-error
+import { createFor, createSelector, renderEffect } from '../src'
+import { nextTick } from '@vue/runtime-dom'
 
 const define = makeRender()
 
@@ -16,6 +18,7 @@ describe.todo('api: createSelector', () => {
       const isSleected = createSelector(index)
       return createFor(
         () => list.value,
+        // @ts-expect-error
         ([item]) => {
           const span = document.createElement('li')
           renderEffect(() => {
@@ -25,6 +28,7 @@ describe.todo('api: createSelector', () => {
           })
           return span
         },
+        // @ts-expect-error
         item => item.id,
       )
     }).render()
@@ -66,10 +70,12 @@ describe.todo('api: createSelector', () => {
     const { host } = define(() => {
       const isSleected = createSelector(
         index,
+        // @ts-expect-error
         (key, value) => key === value + 1,
       )
       return createFor(
         () => list.value,
+        // @ts-expect-error
         ([item]) => {
           const span = document.createElement('li')
           renderEffect(() => {
@@ -79,6 +85,7 @@ describe.todo('api: createSelector', () => {
           })
           return span
         },
+        // @ts-expect-error
         item => item.id,
       )
     }).render()

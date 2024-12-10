@@ -785,6 +785,9 @@ export function createComponentInstance(
   return instance
 }
 
+/**
+ * @internal
+ */
 export function validateComponentName(
   name: string,
   { isNativeTag }: AppConfig,

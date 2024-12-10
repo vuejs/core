@@ -13,11 +13,13 @@ import {
   type SuspenseBoundary,
   callWithErrorHandling,
   currentInstance,
+  endMeasure,
   nextUid,
   popWarningContext,
   pushWarningContext,
   registerHMR,
   simpleSetCurrentInstance,
+  startMeasure,
   unregisterHMR,
   warn,
 } from '@vue/runtime-dom'
@@ -100,6 +102,7 @@ export function createComponent(
   rawProps?: RawProps | null,
   rawSlots?: RawSlots | null,
   isSingleRoot?: boolean,
+  appContext?: GenericAppContext,
 ): VaporComponentInstance {
   // check if we are the single root of the parent
   // if yes, inject parent attrs as dynamic props source
@@ -117,14 +120,21 @@ export function createComponent(
     }
   }
 
-  const instance = new VaporComponentInstance(component, rawProps, rawSlots)
-  const prev = currentInstance
-  simpleSetCurrentInstance(instance)
+  const instance = new VaporComponentInstance(
+    component,
+    rawProps,
+    rawSlots,
+    appContext,
+  )
 
-  pauseTracking()
   if (__DEV__) {
     pushWarningContext(instance)
+    startMeasure(instance, `init`)
   }
+
+  const prev = currentInstance
+  simpleSetCurrentInstance(instance)
+  pauseTracking()
 
   const setupFn = isFunction(component) ? component : component.setup
   const setupContext = (instance.setupContext =
@@ -177,11 +187,13 @@ export function createComponent(
     })
   }
 
-  if (__DEV__) {
-    popWarningContext()
-  }
   resetTracking()
   simpleSetCurrentInstance(prev, instance)
+
+  if (__DEV__) {
+    popWarningContext()
+    endMeasure(instance, 'init')
+  }
 
   return instance
 }
@@ -280,6 +292,7 @@ export class VaporComponentInstance implements GenericComponentInstance {
     comp: VaporComponent,
     rawProps?: RawProps | null,
     rawSlots?: RawSlots | null,
+    appContext?: GenericAppContext,
   ) {
     this.vapor = true
     this.uid = nextUid()
@@ -295,7 +308,7 @@ export class VaporComponentInstance implements GenericComponentInstance {
       this.provides = currentInstance.provides
       this.ids = currentInstance.ids
     } else {
-      this.appContext = emptyContext
+      this.appContext = appContext || emptyContext
       this.provides = Object.create(this.appContext.provides)
       this.ids = ['', 0, 0]
     }
@@ -417,6 +430,9 @@ export function mountComponent(
   parent: ParentNode,
   anchor?: Node | null | 0,
 ): void {
+  if (__DEV__) {
+    startMeasure(instance, `mount`)
+  }
   if (!instance.isMounted) {
     if (instance.bm) invokeArrayFns(instance.bm)
     insert(instance.block, parent, anchor)
@@ -426,6 +442,9 @@ export function mountComponent(
     // })
   } else {
     insert(instance.block, parent, anchor)
+  }
+  if (__DEV__) {
+    endMeasure(instance, `mount`)
   }
 }
 

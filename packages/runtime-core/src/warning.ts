@@ -57,7 +57,7 @@ export function warn(msg: string, ...args: any[]): void {
       [
         // eslint-disable-next-line no-restricted-syntax
         msg + args.map(a => a.toString?.() ?? JSON.stringify(a)).join(''),
-        instance && instance.proxy,
+        (instance && instance.proxy) || instance,
         trace
           .map(
             ({ ctx }) =>

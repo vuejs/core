@@ -500,6 +500,7 @@ export {
   type GenericComponentInstance,
   type LifecycleHook,
   nextUid,
+  validateComponentName,
 } from './component'
 export { pushWarningContext, popWarningContext } from './warning'
 export {
@@ -512,3 +513,4 @@ export {
   simpleSetCurrentInstance,
 } from './componentCurrentInstance'
 export { registerHMR, unregisterHMR } from './hmr'
+export { startMeasure, endMeasure } from './profiling'

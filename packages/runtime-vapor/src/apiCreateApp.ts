@@ -11,6 +11,7 @@ import {
   type CreateAppFunction,
   createAppAPI,
   normalizeContainer,
+  warn,
 } from '@vue/runtime-dom'
 import type { RawProps } from './componentProps'
 
@@ -21,7 +22,13 @@ const mountApp: AppMountFn<ParentNode> = (app, container) => {
   if (container.nodeType === 1 /* Node.ELEMENT_NODE */) {
     container.textContent = ''
   }
-  const instance = createComponent(app._component, app._props as RawProps)
+  const instance = createComponent(
+    app._component,
+    app._props as RawProps,
+    null,
+    false,
+    app._context,
+  )
   mountComponent(instance, container)
   return instance
 }
@@ -36,6 +43,19 @@ export const createVaporApp: CreateAppFunction<ParentNode, VaporComponent> = (
 ) => {
   if (!_createApp) _createApp = createAppAPI(mountApp, unmountApp, i => i)
   const app = _createApp(comp, props)
+
+  if (__DEV__) {
+    app.config.globalProperties = new Proxy(
+      {},
+      {
+        set() {
+          warn(`app.config.globalProperties is not supported in vapor mode.`)
+          return false
+        },
+      },
+    )
+  }
+
   const mount = app.mount
   app.mount = (container, ...args: any[]) => {
     container = normalizeContainer(container) as ParentNode

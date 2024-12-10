@@ -1,19 +1,23 @@
 import type { NodeRef } from '../../src/dom/templateRef'
 import {
+  // @ts-expect-error
   createFor,
+  // @ts-expect-error
   createIf,
-  getCurrentInstance,
   insert,
-  nextTick,
-  reactive,
-  ref,
   renderEffect,
   setRef,
   setText,
   template,
-  watchEffect,
 } from '../../src'
 import { makeRender } from '../_utils'
+import {
+  currentInstance,
+  nextTick,
+  reactive,
+  ref,
+  watchEffect,
+} from '@vue/runtime-dom'
 
 const define = makeRender()
 
@@ -257,7 +261,7 @@ describe.todo('api: template ref', () => {
     const t1 = template('<i></i>')
     const { render } = define({
       render() {
-        const instance = getCurrentInstance()!
+        const instance = currentInstance!
         const n0 = t0()
         const n1 = t1()
         let r0: NodeRef | undefined
@@ -303,7 +307,7 @@ describe.todo('api: template ref', () => {
     const t1 = template('<i></i>')
     const { render } = define({
       render() {
-        const instance = getCurrentInstance()!
+        const instance = currentInstance!
         const n0 = createIf(
           () => refToggle.value,
           () => {
@@ -355,6 +359,7 @@ describe.todo('api: template ref', () => {
             const n1 = t0()
             const n2 = createFor(
               () => list,
+              // @ts-expect-error
               state => {
                 const n1 = t1()
                 setRef(n1 as Element, listRefs, undefined, true)
@@ -413,6 +418,7 @@ describe.todo('api: template ref', () => {
             const n1 = t0()
             const n2 = createFor(
               () => list,
+              // @ts-expect-error
               state => {
                 const n1 = t1()
                 setRef(n1 as Element, 'listRefs', undefined, true)
@@ -469,6 +475,7 @@ describe.todo('api: template ref', () => {
         const n2 = n1!.nextSibling!
         const n3 = createFor(
           () => list.value,
+          // @ts-expect-error
           state => {
             const n4 = t1()
             setRef(n4 as Element, 'listRefs', undefined, true)
