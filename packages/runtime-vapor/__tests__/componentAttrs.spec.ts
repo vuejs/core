@@ -1,27 +1,17 @@
-import {
-  createComponent,
-  getCurrentInstance,
-  nextTick,
-  ref,
-  setInheritAttrs,
-  setText,
-  template,
-  watchEffect,
-} from '../src'
+import { nextTick, ref, watchEffect } from '@vue/runtime-dom'
+import { createComponent, setText, template } from '../src'
 import { makeRender } from './_utils'
 
 const define = makeRender<any>()
 
-describe.todo('attribute fallthrough', () => {
+describe('attribute fallthrough', () => {
   it('should allow attrs to fallthrough', async () => {
     const t0 = template('<div>')
     const { component: Child } = define({
       props: ['foo'],
-      render() {
-        const instance = getCurrentInstance()!
+      setup(props: any) {
         const n0 = t0() as Element
-        setInheritAttrs()
-        watchEffect(() => setText(n0, instance.props.foo))
+        watchEffect(() => setText(n0, props.foo))
         return n0
       },
     })
@@ -30,17 +20,12 @@ describe.todo('attribute fallthrough', () => {
     const id = ref('a')
     const { host } = define({
       setup() {
-        return { foo, id }
-      },
-      render(_ctx: Record<string, any>) {
         return createComponent(
           Child,
-          [
-            {
-              foo: () => _ctx.foo,
-              id: () => _ctx.id,
-            },
-          ],
+          {
+            foo: () => foo.value,
+            id: () => id.value,
+          },
           null,
           true,
         )
@@ -62,11 +47,9 @@ describe.todo('attribute fallthrough', () => {
     const { component: Child } = define({
       props: ['foo'],
       inheritAttrs: false,
-      render() {
-        const instance = getCurrentInstance()!
+      setup(props: any) {
         const n0 = t0() as Element
-        setInheritAttrs()
-        watchEffect(() => setText(n0, instance.props.foo))
+        watchEffect(() => setText(n0, props.foo))
         return n0
       },
     })
@@ -75,17 +58,12 @@ describe.todo('attribute fallthrough', () => {
     const id = ref('a')
     const { host } = define({
       setup() {
-        return { foo, id }
-      },
-      render(_ctx: Record<string, any>) {
         return createComponent(
           Child,
-          [
-            {
-              foo: () => _ctx.foo,
-              id: () => _ctx.id,
-            },
-          ],
+          {
+            foo: () => foo.value,
+            id: () => id.value,
+          },
           null,
           true,
         )
@@ -106,24 +84,20 @@ describe.todo('attribute fallthrough', () => {
     const t0 = template('<div>')
     const { component: Grandson } = define({
       props: ['custom-attr'],
-      render() {
-        const instance = getCurrentInstance()!
+      setup(_: any, { attrs }: any) {
         const n0 = t0() as Element
-        setInheritAttrs()
-        watchEffect(() => setText(n0, instance.attrs.foo))
+        watchEffect(() => setText(n0, attrs.foo))
         return n0
       },
     })
 
     const { component: Child } = define({
-      render() {
+      setup() {
         const n0 = createComponent(
           Grandson,
-          [
-            {
-              'custom-attr': () => 'custom-attr',
-            },
-          ],
+          {
+            'custom-attr': () => 'custom-attr',
+          },
           null,
           true,
         )
@@ -135,17 +109,12 @@ describe.todo('attribute fallthrough', () => {
     const id = ref('a')
     const { host } = define({
       setup() {
-        return { foo, id }
-      },
-      render(_ctx: Record<string, any>) {
         return createComponent(
           Child,
-          [
-            {
-              foo: () => _ctx.foo,
-              id: () => _ctx.id,
-            },
-          ],
+          {
+            foo: () => foo.value,
+            id: () => id.value,
+          },
           null,
           true,
         )

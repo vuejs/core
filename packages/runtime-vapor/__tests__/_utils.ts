@@ -55,7 +55,8 @@ export function makeRender<C = VaporComponent>(
     }
 
     function mount(container: string | ParentNode = host) {
-      instance = app.mount(container) as any as VaporComponentInstance
+      app.mount(container)
+      instance = app._instance as VaporComponentInstance
       return res()
     }
 
