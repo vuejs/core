@@ -1,9 +1,6 @@
 import {
   type InjectionKey,
   type Ref,
-  createComponent,
-  createTextNode,
-  createVaporApp,
   hasInjectionContext,
   inject,
   nextTick,
@@ -11,6 +8,11 @@ import {
   reactive,
   readonly,
   ref,
+} from '@vue/runtime-dom'
+import {
+  createComponent,
+  createTextNode,
+  createVaporApp,
   renderEffect,
   setText,
 } from '../src'
@@ -19,7 +21,7 @@ import { makeRender } from './_utils'
 const define = makeRender<any>()
 
 // reference: https://vue-composition-api-rfc.netlify.com/api.html#provide-inject
-describe.todo('api: provide/inject', () => {
+describe('api: provide/inject', () => {
   it('string keys', () => {
     const Provider = define({
       setup() {
@@ -375,7 +377,7 @@ describe.todo('api: provide/inject', () => {
       const Comp = define({
         setup() {
           expect(hasInjectionContext()).toBe(true)
-          return () => null
+          return []
         },
       })
 
