@@ -3,25 +3,25 @@
 // Note: emits and listener fallthrough is tested in
 // ./rendererAttrsFallthrough.spec.ts.
 
-import { toHandlers } from '@vue/runtime-core'
 import {
-  createComponent,
-  defineComponent,
+  isEmitListener,
   nextTick,
   onBeforeUnmount,
-} from '../src'
-import { isEmitListener } from '../src/componentEmits'
+  toHandlers,
+} from '@vue/runtime-dom'
+import { createComponent, defineVaporComponent } from '../src'
 import { makeRender } from './_utils'
 
 const define = makeRender()
 
-describe.todo('component: emit', () => {
+describe('component: emit', () => {
   test('trigger handlers', () => {
     const { render } = define({
       setup(_, { emit }) {
         emit('foo')
         emit('bar')
         emit('!baz')
+        return []
       },
     })
     const onFoo = vi.fn()
@@ -44,16 +44,17 @@ describe.todo('component: emit', () => {
         emit('foo')
         emit('bar')
         emit('!baz')
+        return []
       },
     })
     const onFoo = vi.fn()
     const onBar = vi.fn()
     const onBaz = vi.fn()
-    render(() => ({
-      onfoo: onFoo,
-      onBar,
-      ['on!baz']: onBaz,
-    }))
+    render({
+      onfoo: () => onFoo,
+      onBar: () => onBar,
+      ['on!baz']: () => onBaz,
+    })
 
     expect(onFoo).not.toHaveBeenCalled()
     expect(onBar).toHaveBeenCalled()
@@ -64,6 +65,7 @@ describe.todo('component: emit', () => {
     const { render } = define({
       setup(_, { emit }) {
         emit('test-event')
+        return []
       },
     })
 
@@ -76,6 +78,7 @@ describe.todo('component: emit', () => {
     const { render } = define({
       setup(_, { emit }) {
         emit('test-event')
+        return []
       },
     })
 
@@ -90,6 +93,7 @@ describe.todo('component: emit', () => {
       setup(_, { emit }) {
         emit('test-event')
         emit('testEvent')
+        return []
       },
     })
 
@@ -111,6 +115,7 @@ describe.todo('component: emit', () => {
       setup(_, { emit }) {
         emit('update:fooProp')
         emit('update:barProp')
+        return []
       },
     })
 
@@ -129,6 +134,7 @@ describe.todo('component: emit', () => {
     const { render } = define({
       setup(_, { emit }) {
         emit('foo', 1)
+        return []
       },
     })
 
@@ -148,6 +154,7 @@ describe.todo('component: emit', () => {
 
       setup(_, { emit }) {
         emit('bar')
+        return []
       },
     })
     render()
@@ -164,6 +171,7 @@ describe.todo('component: emit', () => {
 
       setup(_, { emit }) {
         emit('bar')
+        return []
       },
     })
     render()
@@ -179,6 +187,7 @@ describe.todo('component: emit', () => {
 
       setup(_, { emit }) {
         emit('foo')
+        return []
       },
     }).render()
     expect(
@@ -189,15 +198,6 @@ describe.todo('component: emit', () => {
   test.todo('validator warning', () => {
     // TODO: warning validator
   })
-
-  // NOTE: not supported mixins
-  // test.todo('merging from mixins', () => {})
-
-  // #2651
-  // test.todo(
-  //   'should not attach normalized object when mixins do not contain emits',
-  //   () => {},
-  // )
 
   test('.once', () => {
     const { render } = define({
@@ -210,6 +210,7 @@ describe.todo('component: emit', () => {
         emit('foo')
         emit('bar')
         emit('bar')
+        return []
       },
     })
     const fn = vi.fn()
@@ -230,6 +231,7 @@ describe.todo('component: emit', () => {
       setup(_, { emit }) {
         emit('foo')
         emit('foo')
+        return []
       },
     })
     const onFoo = vi.fn()
@@ -247,6 +249,7 @@ describe.todo('component: emit', () => {
       setup(_, { emit }) {
         emit('update:modelValue', '1')
         emit('update:foo', '2')
+        return []
       },
     })
     const fn1 = vi.fn()
@@ -270,6 +273,7 @@ describe.todo('component: emit', () => {
       setup(_, { emit }) {
         emit('update:modelValue', ' one ')
         emit('update:foo', '  two  ')
+        return []
       },
     })
     const fn1 = vi.fn()
@@ -305,6 +309,7 @@ describe.todo('component: emit', () => {
       setup(_, { emit }) {
         emit('update:modelValue', '    +01.2    ')
         emit('update:foo', '    1    ')
+        return []
       },
     })
     const fn1 = vi.fn()
@@ -339,6 +344,7 @@ describe.todo('component: emit', () => {
     const { render } = define({
       setup(_, { emit }) {
         emit('update:modelValue', ' foo ', { bar: ' bar ' })
+        return []
       },
     })
     const fn = vi.fn()
@@ -389,13 +395,14 @@ describe.todo('component: emit', () => {
   test('does not emit after unmount', async () => {
     const fn = vi.fn()
 
-    const Foo = defineComponent({
+    const Foo = defineVaporComponent({
       emits: ['closing'],
       setup(_, { emit }) {
         onBeforeUnmount(async () => {
           await nextTick()
           emit('closing', true)
         })
+        return []
       },
     })
 

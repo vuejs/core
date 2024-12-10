@@ -175,7 +175,8 @@ export function baseEmit(
   // for v-model update:xxx events, apply modifiers on args
   // it's ok to use static get because modelModifiers can only be in the static
   // part of the props
-  const modifiers = isModelListener && getModelModifiers(props, event.slice(7))
+  const modifiers =
+    isModelListener && getModelModifiers(props, event.slice(7), getter)
   if (modifiers) {
     if (modifiers.trim) {
       args = rawArgs.map(a => (isString(a) ? a.trim() : a))
@@ -230,7 +231,7 @@ export function baseEmit(
     )
   }
 
-  const onceHandler = props[handlerName + `Once`]
+  const onceHandler = getter(props, handlerName + `Once`)
   if (onceHandler) {
     if (!instance.emitted) {
       instance.emitted = {}
@@ -239,7 +240,7 @@ export function baseEmit(
     }
     instance.emitted[handlerName] = true
     callWithAsyncErrorHandling(
-      onceHandler,
+      onceHandler as Function | Function[],
       instance,
       ErrorCodes.COMPONENT_EVENT_HANDLER,
       args,
@@ -256,7 +257,10 @@ export function baseEmit(
   }
 }
 
-function defaultPropGetter(props: Record<string, any>, key: string): unknown {
+export function defaultPropGetter(
+  props: Record<string, any>,
+  key: string,
+): unknown {
   return props[key]
 }
 

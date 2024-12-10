@@ -4,6 +4,8 @@ import { makeRender } from './_utils'
 
 const define = makeRender<any>()
 
+// TODO: port more tests from rendererAttrsFallthrough.spec.ts
+
 describe('attribute fallthrough', () => {
   it('should allow attrs to fallthrough', async () => {
     const t0 = template('<div>')

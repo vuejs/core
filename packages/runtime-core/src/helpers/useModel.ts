@@ -5,6 +5,7 @@ import { getCurrentInstance } from '../component'
 import { warn } from '../warning'
 import type { NormalizedProps } from '../componentProps'
 import { watchSyncEffect } from '../apiWatch'
+import { defaultPropGetter } from '../componentEmits'
 
 export function useModel<
   M extends PropertyKey,
@@ -35,7 +36,7 @@ export function useModel(
   }
 
   const hyphenatedName = hyphenate(name)
-  const modifiers = getModelModifiers(props, camelizedName)
+  const modifiers = getModelModifiers(props, camelizedName, defaultPropGetter)
 
   const res = customRef((track, trigger) => {
     let localValue: any
@@ -120,10 +121,11 @@ export function useModel(
 export const getModelModifiers = (
   props: Record<string, any>,
   modelName: string,
+  getter: (props: Record<string, any>, key: string) => any,
 ): Record<string, boolean> | undefined => {
   return modelName === 'modelValue' || modelName === 'model-value'
-    ? props.modelModifiers
-    : props[`${modelName}Modifiers`] ||
-        props[`${camelize(modelName)}Modifiers`] ||
-        props[`${hyphenate(modelName)}Modifiers`]
+    ? getter(props, 'modelModifiers')
+    : getter(props, `${modelName}Modifiers`) ||
+        getter(props, `${camelize(modelName)}Modifiers`) ||
+        getter(props, `${hyphenate(modelName)}Modifiers`)
 }
