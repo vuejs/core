@@ -98,7 +98,7 @@ const outputConfigs = {
 const defaultFormats = ['esm-bundler', 'cjs']
 /** @type {ReadonlyArray<PackageFormat>} */
 const inlineFormats = /** @type {any} */ (
-  process.env.FORMATS && process.env.FORMATS.split(',')
+  process.env.FORMATS && process.env.FORMATS.split('+')
 )
 /** @type {ReadonlyArray<PackageFormat>} */
 const packageFormats = inlineFormats || packageOptions.formats || defaultFormats
