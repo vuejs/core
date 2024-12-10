@@ -201,7 +201,7 @@ export const ssrTransformComponent: NodeTransform = (node, context) => {
         ]),
         `_parent`,
       ]
-      if (vShowExp) args.push(`''`, vShowExp)
+      if (vShowExp) args.push(`undefined`, vShowExp)
       node.ssrCodegenNode = createCallExpression(
         context.helper(SSR_RENDER_VNODE),
         args,
@@ -213,7 +213,7 @@ export const ssrTransformComponent: NodeTransform = (node, context) => {
         slots,
         `_parent`,
       ]
-      if (vShowExp) args.push(`''`, vShowExp)
+      if (vShowExp) args.push(`undefined`, vShowExp)
       node.ssrCodegenNode = createCallExpression(
         context.helper(SSR_RENDER_COMPONENT),
         args,

@@ -37,19 +37,19 @@ describe('ssr: v-show', () => {
     expect(
       compileWithWrapper(`<Foo :style="{color:'red'}" v-show="foo"/>`).code,
     ).toMatchInlineSnapshot(`
-        "const { resolveComponent: _resolveComponent } = require("vue")
-        const { ssrRenderComponent: _ssrRenderComponent, ssrRenderAttrs: _ssrRenderAttrs } = require("vue/server-renderer")
+      "const { resolveComponent: _resolveComponent } = require("vue")
+      const { ssrRenderComponent: _ssrRenderComponent, ssrRenderAttrs: _ssrRenderAttrs } = require("vue/server-renderer")
 
-        return function ssrRender(_ctx, _push, _parent, _attrs) {
-          const _component_Foo = _resolveComponent("Foo")
+      return function ssrRender(_ctx, _push, _parent, _attrs) {
+        const _component_Foo = _resolveComponent("Foo")
 
-          _push(\`<div\${_ssrRenderAttrs(_attrs)}>\`)
-          _push(_ssrRenderComponent(_component_Foo, { style: {color:'red'} }, null, _parent, '', {
-            style: (_ctx.foo) ? null : { display: "none" }
-          }))
-          _push(\`</div>\`)
-        }"
-      `)
+        _push(\`<div\${_ssrRenderAttrs(_attrs)}>\`)
+        _push(_ssrRenderComponent(_component_Foo, { style: {color:'red'} }, null, _parent, undefined, {
+          style: (_ctx.foo) ? null : { display: "none" }
+        }))
+        _push(\`</div>\`)
+      }"
+    `)
   })
 
   test('with dynamic component', () => {
@@ -58,17 +58,17 @@ describe('ssr: v-show', () => {
         `<component is="Foo" :style="{color:'red'}" v-show="foo"/>`,
       ).code,
     ).toMatchInlineSnapshot(`
-        "const { resolveDynamicComponent: _resolveDynamicComponent, createVNode: _createVNode } = require("vue")
-        const { ssrRenderVNode: _ssrRenderVNode, ssrRenderAttrs: _ssrRenderAttrs } = require("vue/server-renderer")
+      "const { resolveDynamicComponent: _resolveDynamicComponent, createVNode: _createVNode } = require("vue")
+      const { ssrRenderVNode: _ssrRenderVNode, ssrRenderAttrs: _ssrRenderAttrs } = require("vue/server-renderer")
 
-        return function ssrRender(_ctx, _push, _parent, _attrs) {
-          _push(\`<div\${_ssrRenderAttrs(_attrs)}>\`)
-          _ssrRenderVNode(_push, _createVNode(_resolveDynamicComponent("Foo"), { style: {color:'red'} }, null), _parent, '', {
-            style: (_ctx.foo) ? null : { display: "none" }
-          })
-          _push(\`</div>\`)
-        }"
-      `)
+      return function ssrRender(_ctx, _push, _parent, _attrs) {
+        _push(\`<div\${_ssrRenderAttrs(_attrs)}>\`)
+        _ssrRenderVNode(_push, _createVNode(_resolveDynamicComponent("Foo"), { style: {color:'red'} }, null), _parent, undefined, {
+          style: (_ctx.foo) ? null : { display: "none" }
+        })
+        _push(\`</div>\`)
+      }"
+    `)
   })
 
   test('with static style', () => {
