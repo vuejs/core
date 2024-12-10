@@ -1,5 +1,6 @@
 import {
   type DirectiveTransform,
+  ElementTypes,
   createObjectProperty,
   createSimpleExpression,
 } from '@vue/compiler-core'
@@ -7,6 +8,11 @@ import { DOMErrorCodes, createDOMCompilerError } from '../errors'
 
 export const transformVHtml: DirectiveTransform = (dir, node, context) => {
   const { exp, loc } = dir
+  if (node.tagType !== ElementTypes.ELEMENT) {
+    context.onError(
+      createDOMCompilerError(DOMErrorCodes.X_V_HTML_ON_INVALID_ELEMENT, loc),
+    )
+  }
   if (!exp) {
     context.onError(
       createDOMCompilerError(DOMErrorCodes.X_V_HTML_NO_EXPRESSION, loc),
