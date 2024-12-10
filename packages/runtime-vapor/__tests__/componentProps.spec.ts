@@ -183,7 +183,6 @@ describe('component: props', () => {
 
     render({ foo: () => 2 })
     expect(props.foo).toBe(2)
-    // const prevBar = props.bar
     expect(props.bar).toEqual({ a: 1 })
     expect(props.baz).toEqual(defaultBaz)
     expect(defaultFn).toHaveBeenCalledTimes(1)
@@ -195,13 +194,10 @@ describe('component: props', () => {
 
     expect(props.foo).toBe(3)
     expect(props.bar).toEqual({ a: 1 })
-    // expect(props.bar).toBe(prevBar) // failed: (caching is not supported)
-    // expect(defaultFn).toHaveBeenCalledTimes(1) // failed: caching is not supported (called 2 times)
 
     render({ bar: () => ({ b: 2 }) })
     expect(props.foo).toBe(1)
     expect(props.bar).toEqual({ b: 2 })
-    // expect(defaultFn).toHaveBeenCalledTimes(1) // failed: caching is not supported (called 2 times)
 
     render({
       foo: () => 3,
@@ -209,12 +205,10 @@ describe('component: props', () => {
     })
     expect(props.foo).toBe(3)
     expect(props.bar).toEqual({ b: 3 })
-    // expect(defaultFn).toHaveBeenCalledTimes(1) // failed: caching is not supported (called 2 times)
 
     render({ bar: () => ({ b: 4 }) })
     expect(props.foo).toBe(1)
     expect(props.bar).toEqual({ b: 4 })
-    // expect(defaultFn).toHaveBeenCalledTimes(1) // failed: caching is not supported (called 2 times)
   })
 
   test('using inject in default value factory', () => {
