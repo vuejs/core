@@ -18,6 +18,8 @@ export function renderEffect(fn: () => void, noLifecycle = false): void {
     warn('renderEffect called without active vapor instance.')
   }
 
+  // renderEffect is always called after user has registered all hooks
+  const hasUpdateHooks = instance && (instance.bu || instance.u)
   const renderEffectFn = noLifecycle
     ? fn
     : () => {
@@ -27,12 +29,7 @@ export function renderEffect(fn: () => void, noLifecycle = false): void {
         const prev = currentInstance
         simpleSetCurrentInstance(instance)
         if (scope) scope.on()
-        if (
-          instance &&
-          instance.isMounted &&
-          !instance.isUpdating &&
-          (instance.bu || instance.u)
-        ) {
+        if (hasUpdateHooks && instance.isMounted && !instance.isUpdating) {
           instance.isUpdating = true
           instance.bu && invokeArrayFns(instance.bu)
           fn()
@@ -52,10 +49,20 @@ export function renderEffect(fn: () => void, noLifecycle = false): void {
 
   const effect = new ReactiveEffect(renderEffectFn)
   const job: SchedulerJob = effect.runIfDirty.bind(effect)
+
   if (instance) {
+    if (__DEV__) {
+      effect.onTrack = instance.rtc
+        ? e => invokeArrayFns(instance.rtc!, e)
+        : void 0
+      effect.onTrigger = instance.rtg
+        ? e => invokeArrayFns(instance.rtg!, e)
+        : void 0
+    }
     job.i = instance
     job.id = instance.uid
   }
+
   effect.scheduler = () => queueJob(job)
   effect.run()
 
