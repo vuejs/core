@@ -39,7 +39,7 @@
     "open": "open http://localhost:3000/packages-private/template-explorer/local.html",
     "build-sfc-playground": "run-s build-all-cjs build-all-esm build-sfc-playground-self",
     "build-all-cjs": "node scripts/build.js vue runtime compiler reactivity shared -af cjs",
-    "build-all-esm": "node scripts/build.js runtime reactivity shared -af esm-bundler && node scripts/build.js vue -f esm-bundler,esm-browser,esm-bundler-runtime,esm-browser-runtime && node scripts/build.js compiler-sfc server-renderer -f esm-browser",
+    "build-all-esm": "node scripts/build.js runtime reactivity shared -af esm-bundler && node scripts/build.js vue -f esm-bundler+esm-browser+esm-bundler-runtime+esm-browser-runtime+vapor && node scripts/build.js compiler-sfc server-renderer -f esm-browser",
     "build-sfc-playground-self": "cd packages-private/sfc-playground && npm run build",
     "preinstall": "npx only-allow pnpm",
     "postinstall": "simple-git-hooks"
