@@ -28,7 +28,7 @@ export type RawProps = Record<string, () => unknown> & {
   $?: DynamicPropsSource[]
 }
 
-type DynamicPropsSource =
+export type DynamicPropsSource =
   | (() => Record<string, unknown>)
   | Record<string, () => unknown>
 

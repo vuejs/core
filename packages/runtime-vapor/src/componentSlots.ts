@@ -10,7 +10,7 @@ import type { VaporComponentInstance } from './component'
 import { renderEffect } from './renderEffect'
 
 export type RawSlots = Record<string, Slot> & {
-  $?: (StaticSlots | DynamicSlotFn)[]
+  $?: DynamicSlotSource[]
 }
 
 export type StaticSlots = Record<string, Slot>
@@ -18,6 +18,7 @@ export type StaticSlots = Record<string, Slot>
 export type Slot = BlockFn
 export type DynamicSlot = { name: string; fn: Slot }
 export type DynamicSlotFn = () => DynamicSlot | DynamicSlot[]
+export type DynamicSlotSource = StaticSlots | DynamicSlotFn
 
 export const dynamicSlotsProxyHandlers: ProxyHandler<RawSlots> = {
   get: getSlot,

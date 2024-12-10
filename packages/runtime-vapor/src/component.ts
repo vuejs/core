@@ -27,6 +27,7 @@ import { type Block, insert, isBlock, remove } from './block'
 import { pauseTracking, proxyRefs, resetTracking } from '@vue/reactivity'
 import { EMPTY_OBJ, invokeArrayFns, isFunction, isString } from '@vue/shared'
 import {
+  type DynamicPropsSource,
   type RawProps,
   getPropsProxyHandlers,
   hasFallthroughAttrs,
@@ -39,6 +40,7 @@ import { emit, normalizeEmitsOptions } from './componentEmits'
 import { setStyle } from './dom/style'
 import { setClass, setDynamicProp } from './dom/prop'
 import {
+  type DynamicSlotSource,
   type RawSlots,
   type Slot,
   type StaticSlots,
@@ -97,10 +99,25 @@ interface SharedInternalOptions {
   __emitsOptions?: ObjectEmitsOptions
 }
 
+// In TypeScript, it is actually impossible to have a record type with only
+// specific properties that have a different type from the indexed type.
+// This makes our rawProps / rawSlots shape difficult to satisfy when calling
+// `createComponent` - luckily this is not user-facing, so we don't need to be
+// 100% strict. Here we use intentionally wider types to make `createComponent`
+// more ergonomic in tests and internal call sites, where we immediately cast
+// them into the stricter types.
+type LooseRawProps = Record<string, (() => unknown) | DynamicPropsSource[]> & {
+  $?: DynamicPropsSource[]
+}
+
+type LooseRawSlots = Record<string, Slot | DynamicSlotSource[]> & {
+  $?: DynamicSlotSource[]
+}
+
 export function createComponent(
   component: VaporComponent,
-  rawProps?: RawProps | null,
-  rawSlots?: RawSlots | null,
+  rawProps?: LooseRawProps | null,
+  rawSlots?: LooseRawSlots | null,
   isSingleRoot?: boolean,
   appContext?: GenericAppContext,
 ): VaporComponentInstance {
@@ -114,7 +131,9 @@ export function createComponent(
   ) {
     const attrs = currentInstance.attrs
     if (rawProps) {
-      ;(rawProps.$ || (rawProps.$ = [])).push(() => attrs)
+      ;((rawProps as RawProps).$ || ((rawProps as RawProps).$ = [])).push(
+        () => attrs,
+      )
     } else {
       rawProps = { $: [() => attrs] } as RawProps
     }
@@ -122,8 +141,8 @@ export function createComponent(
 
   const instance = new VaporComponentInstance(
     component,
-    rawProps,
-    rawSlots,
+    rawProps as RawProps,
+    rawSlots as RawSlots,
     appContext,
   )
 
