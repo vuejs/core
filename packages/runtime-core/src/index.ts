@@ -487,14 +487,26 @@ export const DeprecationTypes = (
 // **IMPORTANT** These APIs are exposed solely for @vue/runtime-vapor and may
 // change without notice between versions. User code should never rely on them.
 
+/**
+ * @internal
+ */
 export {
   type NormalizedPropsOptions,
   baseNormalizePropsOptions,
   resolvePropValue,
   validateProps,
 } from './componentProps'
+/**
+ * @internal
+ */
 export { baseEmit, isEmitListener } from './componentEmits'
+/**
+ * @internal
+ */
 export { type SchedulerJob, queueJob, flushOnAppMount } from './scheduler'
+/**
+ * @internal
+ */
 export {
   type ComponentInternalOptions,
   type GenericComponentInstance,
@@ -503,15 +515,30 @@ export {
   nextUid,
   validateComponentName,
 } from './component'
+/**
+ * @internal
+ */
 export { pushWarningContext, popWarningContext } from './warning'
+/**
+ * @internal
+ */
 export {
   createAppAPI,
   type AppMountFn,
   type AppUnmountFn,
 } from './apiCreateApp'
+/**
+ * @internal
+ */
 export {
   currentInstance,
   simpleSetCurrentInstance,
 } from './componentCurrentInstance'
+/**
+ * @internal
+ */
 export { registerHMR, unregisterHMR } from './hmr'
+/**
+ * @internal
+ */
 export { startMeasure, endMeasure } from './profiling'

@@ -24,9 +24,6 @@ export enum SchedulerJobFlags {
   DISPOSED = 1 << 3,
 }
 
-/**
- * @internal
- */
 export interface SchedulerJob extends Function {
   id?: number
   /**
