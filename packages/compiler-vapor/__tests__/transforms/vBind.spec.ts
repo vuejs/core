@@ -131,7 +131,7 @@ describe('compiler v-bind', () => {
       },
     })
     expect(code).contains(
-      '_camelCase !== _ctx.camelCase && (_prev_camelCase = _setDynamicProp(n0, "camel-case", _prev_camelCase, _ctx.camelCase))',
+      '_camelCase !== _ctx.camelCase && (_prev_camelCase = _setDynamicProp(n0, "camel-case", _prev_camelCase, (_camelCase = _ctx.camelCase)))',
     )
   })
 
@@ -177,7 +177,7 @@ describe('compiler v-bind', () => {
       ],
     })
     expect(code).contains(
-      '(_id !== _ctx.id || _title !== _ctx.title) && (_id_title = _setDynamicProps(n0, _id_title, [{ [_ctx.id]: _ctx.id, [_ctx.title]: _ctx.title }], true))',
+      '(_id !== _ctx.id || _title !== _ctx.title) && (_id_title = _setDynamicProps(n0, _id_title, [{ [(_id = _ctx.id)]: _ctx.id, [(_title = _ctx.title)]: _ctx.title }], true))',
     )
   })
 
@@ -230,7 +230,7 @@ describe('compiler v-bind', () => {
       ],
     })
     expect(code).contains(
-      '_id !== _ctx.id && (_prev_id = _setDynamicProps(n0, _prev_id, [{ [_ctx.id]: _ctx.id, foo: "bar", checked: "" }], true))',
+      '_id !== _ctx.id && (_prev_id = _setDynamicProps(n0, _prev_id, [{ [(_id = _ctx.id)]: _ctx.id, foo: "bar", checked: "" }], true))',
     )
   })
 
@@ -293,7 +293,7 @@ describe('compiler v-bind', () => {
 
     expect(code).matchSnapshot()
     expect(code).contains(
-      '_id !== _ctx.id && (_prev_id = _setDynamicProp(n0, "fooBar", _prev_id, _ctx.id))',
+      '_id !== _ctx.id && (_prev_id = _setDynamicProp(n0, "fooBar", _prev_id, (_id = _ctx.id)))',
     )
   })
 
@@ -319,7 +319,7 @@ describe('compiler v-bind', () => {
     })
     expect(code).contains('renderEffect')
     expect(code).contains(
-      '_fooBar !== _ctx.fooBar && (_prev_fooBar = _setDynamicProp(n0, "fooBar", _prev_fooBar, _ctx.fooBar))',
+      '_fooBar !== _ctx.fooBar && (_prev_fooBar = _setDynamicProp(n0, "fooBar", _prev_fooBar, (_fooBar = _ctx.fooBar)))',
     )
   })
 
@@ -351,7 +351,7 @@ describe('compiler v-bind', () => {
     expect(code).matchSnapshot()
     expect(code).contains('renderEffect')
     expect(code).contains(
-      `(_foo !== _ctx.foo || _id !== _ctx.id) && (_foo_id = _setDynamicProps(n0, _foo_id, [{ [_camelize(_ctx.foo)]: _ctx.id }], true))`,
+      `(_foo !== _ctx.foo || _id !== _ctx.id) && (_foo_id = _setDynamicProps(n0, _foo_id, [{ [_camelize((_foo = _ctx.foo))]: (_id = _ctx.id) }], true))`,
     )
   })
 
@@ -436,7 +436,7 @@ describe('compiler v-bind', () => {
     })
     expect(code).contains('renderEffect')
     expect(code).contains(
-      `(_fooBar !== _ctx.fooBar || _id !== _ctx.id) && (_fooBar_id = _setDynamicProps(n0, _fooBar_id, [{ ["." + _ctx.fooBar]: _ctx.id }], true))`,
+      `(_fooBar !== _ctx.fooBar || _id !== _ctx.id) && (_fooBar_id = _setDynamicProps(n0, _fooBar_id, [{ ["." + (_fooBar = _ctx.fooBar)]: (_id = _ctx.id) }], true))`,
     )
   })
 
@@ -788,7 +788,7 @@ describe('compiler v-bind', () => {
     `)
     expect(code).matchSnapshot()
     expect(code).contains(
-      '_foo !== _ctx.foo && (_prev_foo = _setDynamicProp(n0, "value", _prev_foo, _ctx.foo))',
+      '_foo !== _ctx.foo && (_prev_foo = _setDynamicProp(n0, "value", _prev_foo, (_foo = _ctx.foo)))',
     )
   })
 

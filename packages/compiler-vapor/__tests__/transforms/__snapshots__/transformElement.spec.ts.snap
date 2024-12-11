@@ -346,10 +346,10 @@ exports[`compiler: element transform > v-bind="obj" 1`] = `
 "import { setDynamicProps as _setDynamicProps, renderEffect as _renderEffect, template as _template } from 'vue';
 const t0 = _template("<div></div>")
 
-export function render(_ctx) {
+export function render(_ctx, $props, $emit, $attrs, $slots) {
   const n0 = t0()
-  let _obj, _prev_obj
-  _renderEffect(() => _obj !== _ctx.obj && (_prev_obj = _setDynamicProps(n0, _prev_obj, [_ctx.obj], true)))
+  let _prev_obj
+  _renderEffect(() => _prev_obj = _setDynamicProps(n0, _prev_obj, [_ctx.obj], true))
   return n0
 }"
 `;
@@ -358,10 +358,10 @@ exports[`compiler: element transform > v-bind="obj" after static prop 1`] = `
 "import { setDynamicProps as _setDynamicProps, renderEffect as _renderEffect, template as _template } from 'vue';
 const t0 = _template("<div></div>")
 
-export function render(_ctx) {
+export function render(_ctx, $props, $emit, $attrs, $slots) {
   const n0 = t0()
   let _obj, _prev_obj
-  _renderEffect(() => _obj !== _ctx.obj && (_prev_obj = _setDynamicProps(n0, _prev_obj, [{ id: "foo" }, _ctx.obj], true)))
+  _renderEffect(() => _obj !== _ctx.obj && (_prev_obj = _setDynamicProps(n0, _prev_obj, [{ id: "foo" }, (_obj = _ctx.obj)], true)))
   return n0
 }"
 `;
@@ -370,10 +370,10 @@ exports[`compiler: element transform > v-bind="obj" before static prop 1`] = `
 "import { setDynamicProps as _setDynamicProps, renderEffect as _renderEffect, template as _template } from 'vue';
 const t0 = _template("<div></div>")
 
-export function render(_ctx) {
+export function render(_ctx, $props, $emit, $attrs, $slots) {
   const n0 = t0()
-  let _obj, _prev_obj
-  _renderEffect(() => _obj !== _ctx.obj && (_prev_obj = _setDynamicProps(n0, _prev_obj, [_ctx.obj, { id: "foo" }], true)))
+  let _prev_obj
+  _renderEffect(() => _prev_obj = _setDynamicProps(n0, _prev_obj, [_ctx.obj, { id: "foo" }], true))
   return n0
 }"
 `;
@@ -385,7 +385,7 @@ const t0 = _template("<div></div>")
 export function render(_ctx) {
   const n0 = t0()
   let _obj, _prev_obj
-  _renderEffect(() => _obj !== _ctx.obj && (_prev_obj = _setDynamicProps(n0, _prev_obj, [{ id: "foo" }, _ctx.obj, { class: "bar" }], true)))
+  _renderEffect(() => _obj !== _ctx.obj && (_prev_obj = _setDynamicProps(n0, _prev_obj, [{ id: "foo" }, (_obj = _ctx.obj), { class: "bar" }], true)))
   return n0
 }"
 `;

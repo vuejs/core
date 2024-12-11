@@ -112,11 +112,11 @@ export function genEffect(
   context: CodegenContext,
   allDeclareNames: Set<string>,
 ): CodeFragment[] {
-  const { processingRenderEffect } = context
   const [frag, push] = buildCodeFragment()
-  const { declareNames, earlyCheckExps } = processingRenderEffect!
   const operationsExps = genOperations(operations, context)
 
+  const { processingRenderEffect } = context
+  const { declareNames, earlyCheckExps } = processingRenderEffect!
   if (declareNames.size) {
     allDeclareNames.add([...declareNames].join(', '))
   }
