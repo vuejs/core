@@ -251,7 +251,9 @@ function processPropValues(
   if (shouldCacheRenderEffectDeps()) {
     const { declareNames, operations, identifiers } = processingRenderEffect!
     // if render effect rely on any reactive object, it should not cache
-    const canCache = identifiers.every(name => canCacheValue(context, name))
+    const canCache = identifiers.every(name =>
+      isBindingCacheable(context, name),
+    )
     processValues(context, values, canCache)
     // if the operation needs to cache the return value and has multiple declareNames,
     // combine them into a single name as the return value name.
@@ -329,7 +331,7 @@ function processValue(
   }
 }
 
-function canCacheValue(context: CodegenContext, name: string): boolean {
+function isBindingCacheable(context: CodegenContext, name: string): boolean {
   const {
     options: { bindingMetadata },
   } = context
