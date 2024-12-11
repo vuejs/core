@@ -6,7 +6,7 @@ import type { RawProps } from '../src/componentProps'
 export interface RenderContext {
   component: VaporComponent
   host: HTMLElement
-  instance: Record<string, any> | undefined
+  instance: VaporComponentInstance | undefined
   app: App
   create: (props?: RawProps) => RenderContext
   mount: (container?: string | ParentNode) => RenderContext

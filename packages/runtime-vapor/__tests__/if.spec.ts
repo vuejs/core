@@ -2,13 +2,13 @@ import {
   children,
   createIf,
   insert,
-  nextTick,
-  ref,
   renderEffect,
   setText,
   template,
+  // @ts-expect-error
   withDirectives,
 } from '../src'
+import { nextTick, ref } from '@vue/runtime-dom'
 import type { Mock } from 'vitest'
 import { makeRender } from './_utils'
 import { unmountComponent } from '../src/component'

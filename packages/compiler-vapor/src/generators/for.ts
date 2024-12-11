@@ -47,6 +47,7 @@ export function genFor(
     ]
 
     blockFn = genCall(
+      // @ts-expect-error
       helper('withDestructure'),
       destructureAssignmentFn,
       blockFn,

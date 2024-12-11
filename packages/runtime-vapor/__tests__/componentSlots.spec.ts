@@ -2,7 +2,6 @@
 
 import {
   createComponent,
-  // @ts-expect-error
   createForSlots,
   createSlot,
   createVaporApp,

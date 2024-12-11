@@ -14,7 +14,7 @@ import {
   isStaticArgOf,
 } from '@vue/compiler-dom'
 import type { DirectiveTransform } from '../transform'
-import { IRNodeTypes, type VaporHelper } from '../ir'
+import { IRNodeTypes } from '../ir'
 
 export const transformVModel: DirectiveTransform = (dir, node, context) => {
   const { exp, arg } = dir
@@ -79,7 +79,8 @@ export const transformVModel: DirectiveTransform = (dir, node, context) => {
     )
   const { tag } = node
   const isCustomElement = context.options.isCustomElement(tag)
-  let runtimeDirective: VaporHelper | undefined = 'vModelText'
+  let runtimeDirective: string | undefined = 'vModelText'
+  // TODO let runtimeDirective: VaporHelper | undefined = 'vModelText'
   if (
     tag === 'input' ||
     tag === 'textarea' ||

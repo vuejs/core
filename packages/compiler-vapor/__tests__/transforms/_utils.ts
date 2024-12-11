@@ -16,7 +16,6 @@ export function makeCompile(options: CompilerOptions = {}) {
     ir: RootIRNode
     code: string
     helpers: Set<string>
-    helpers: Set<string>
   } => {
     const ast = parse(template, {
       prefixIdentifiers: true,

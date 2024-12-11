@@ -132,3 +132,6 @@ export function createSlot(
 
   return fragment
 }
+
+// TODO
+export function createForSlots(): any {}

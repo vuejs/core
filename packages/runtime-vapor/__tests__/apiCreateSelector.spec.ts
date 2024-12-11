@@ -18,7 +18,6 @@ describe.todo('api: createSelector', () => {
       const isSleected = createSelector(index)
       return createFor(
         () => list.value,
-        // @ts-expect-error
         ([item]) => {
           const span = document.createElement('li')
           renderEffect(() => {
@@ -28,7 +27,6 @@ describe.todo('api: createSelector', () => {
           })
           return span
         },
-        // @ts-expect-error
         item => item.id,
       )
     }).render()
@@ -75,7 +73,6 @@ describe.todo('api: createSelector', () => {
       )
       return createFor(
         () => list.value,
-        // @ts-expect-error
         ([item]) => {
           const span = document.createElement('li')
           renderEffect(() => {
@@ -85,7 +82,6 @@ describe.todo('api: createSelector', () => {
           })
           return span
         },
-        // @ts-expect-error
         item => item.id,
       )
     }).render()

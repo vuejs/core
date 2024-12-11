@@ -2,6 +2,7 @@ import { type Ref, isRef, onScopeDispose } from '@vue/reactivity'
 import {
   type VaporComponentInstance,
   currentInstance,
+  getExposed,
   isVaporComponent,
 } from '../component'
 import {
@@ -31,15 +32,10 @@ export function setRef(
   oldRef?: NodeRef,
   refFor = false,
 ): NodeRef | undefined {
-  if (!currentInstance) return
-  // @ts-expect-error TODO
-  const { setupState, isUnmounted } = currentInstance
+  if (!currentInstance || currentInstance.isUnmounted) return
 
-  if (isUnmounted) {
-    return
-  }
-
-  const refValue = isVaporComponent(el) ? el.exposed || el : el
+  const setupState = currentInstance.setupState || {}
+  const refValue = isVaporComponent(el) ? getExposed(el) || el : el
 
   const refs =
     currentInstance.refs === EMPTY_OBJ
@@ -50,7 +46,7 @@ export function setRef(
   if (oldRef != null && oldRef !== ref) {
     if (isString(oldRef)) {
       refs[oldRef] = null
-      if (setupState && hasOwn(setupState, oldRef)) {
+      if (hasOwn(setupState, oldRef)) {
         setupState[oldRef] = null
       }
     } else if (isRef(oldRef)) {

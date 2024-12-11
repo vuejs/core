@@ -1,8 +1,6 @@
 import type { NodeRef } from '../../src/dom/templateRef'
 import {
-  // @ts-expect-error
   createFor,
-  // @ts-expect-error
   createIf,
   insert,
   renderEffect,
@@ -359,7 +357,6 @@ describe.todo('api: template ref', () => {
             const n1 = t0()
             const n2 = createFor(
               () => list,
-              // @ts-expect-error
               state => {
                 const n1 = t1()
                 setRef(n1 as Element, listRefs, undefined, true)
@@ -418,7 +415,6 @@ describe.todo('api: template ref', () => {
             const n1 = t0()
             const n2 = createFor(
               () => list,
-              // @ts-expect-error
               state => {
                 const n1 = t1()
                 setRef(n1 as Element, 'listRefs', undefined, true)
@@ -475,7 +471,6 @@ describe.todo('api: template ref', () => {
         const n2 = n1!.nextSibling!
         const n3 = createFor(
           () => list.value,
-          // @ts-expect-error
           state => {
             const n4 = t1()
             setRef(n4 as Element, 'listRefs', undefined, true)
