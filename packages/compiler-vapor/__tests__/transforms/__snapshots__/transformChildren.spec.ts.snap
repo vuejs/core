@@ -11,10 +11,18 @@ export function render(_ctx) {
   const n2 = n3.nextSibling
   const n1 = _createTextNode(() => [_ctx.second, " ", _ctx.third, " "])
   _insert(n1, n4, n3)
-  let _first, _forth
+  let _first, __first, _forth, __forth
   _renderEffect(() => {
-    _first !== _ctx.first && _setText(n0, (_first = _ctx.first))
-    _forth !== _ctx.forth && _setText(n2, (_forth = _ctx.forth))
+    __first = _ctx.first
+    if(_first !== __first) {
+      _setText(n0, __first)
+      _first = __first
+    }
+    __forth = _ctx.forth
+    if(_forth !== __forth) {
+      _setText(n2, __forth)
+      _forth = __forth
+    }
   })
   return n4
 }"

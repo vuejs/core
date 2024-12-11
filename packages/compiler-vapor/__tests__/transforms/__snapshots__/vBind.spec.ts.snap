@@ -6,8 +6,14 @@ const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
-  let _id
-  _renderEffect(() => _id !== _ctx.id && _setAttr(n0, "foo-bar", (_id = _ctx.id)))
+  let _id, __id
+  _renderEffect(() => {
+    __id = _ctx.id
+    if(_id !== __id) {
+      _setAttr(n0, "foo-bar", __id)
+      _id = __id
+    }
+  })
   return n0
 }"
 `;
@@ -18,8 +24,14 @@ const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
-  let _foo
-  _renderEffect(() => _foo !== _ctx.foo && _setAttr(n0, "innerHTML", (_foo = _ctx.foo)))
+  let _foo, __foo
+  _renderEffect(() => {
+    __foo = _ctx.foo
+    if(_foo !== __foo) {
+      _setAttr(n0, "innerHTML", __foo)
+      _foo = __foo
+    }
+  })
   return n0
 }"
 `;
@@ -30,8 +42,14 @@ const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
-  let _fooBar
-  _renderEffect(() => _fooBar !== _ctx.fooBar && _setAttr(n0, "foo-bar", (_fooBar = _ctx.fooBar)))
+  let _fooBar, __fooBar
+  _renderEffect(() => {
+    __fooBar = _ctx.fooBar
+    if(_fooBar !== __fooBar) {
+      _setAttr(n0, "foo-bar", __fooBar)
+      _fooBar = __fooBar
+    }
+  })
   return n0
 }"
 `;
@@ -42,8 +60,14 @@ const t0 = _template("<progress></progress>")
 
 export function render(_ctx) {
   const n0 = t0()
-  let _foo
-  _renderEffect(() => _foo !== _ctx.foo && _setAttr(n0, "value", (_foo = _ctx.foo)))
+  let _foo, __foo
+  _renderEffect(() => {
+    __foo = _ctx.foo
+    if(_foo !== __foo) {
+      _setAttr(n0, "value", __foo)
+      _foo = __foo
+    }
+  })
   return n0
 }"
 `;
@@ -54,8 +78,14 @@ const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
-  let _foo
-  _renderEffect(() => _foo !== _ctx.foo && _setAttr(n0, "textContent", (_foo = _ctx.foo)))
+  let _foo, __foo
+  _renderEffect(() => {
+    __foo = _ctx.foo
+    if(_foo !== __foo) {
+      _setAttr(n0, "textContent", __foo)
+      _foo = __foo
+    }
+  })
   return n0
 }"
 `;
@@ -66,8 +96,14 @@ const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
-  let _foo
-  _renderEffect(() => _foo !== _ctx.foo && _setAttr(n0, "value", (_foo = _ctx.foo)))
+  let _foo, __foo
+  _renderEffect(() => {
+    __foo = _ctx.foo
+    if(_foo !== __foo) {
+      _setAttr(n0, "value", __foo)
+      _foo = __foo
+    }
+  })
   return n0
 }"
 `;
@@ -78,8 +114,14 @@ const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
-  let _id, _prev_id
-  _renderEffect(() => _id !== _ctx.id && (_prev_id = _setDynamicProp(n0, "fooBar", _prev_id, (_id = _ctx.id))))
+  let _id, __id, _id__id
+  _renderEffect(() => {
+    __id = _ctx.id
+    if(_id !== __id) {
+      (_id__id = _setDynamicProp(n0, "fooBar", _id__id, _ctx.id))
+      _id = __id
+    }
+  })
   return n0
 }"
 `;
@@ -90,8 +132,11 @@ const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
-  let _foo, _id, _foo_id
-  _renderEffect(() => (_foo !== _ctx.foo || _id !== _ctx.id) && (_foo_id = _setDynamicProps(n0, _foo_id, [{ [_camelize((_foo = _ctx.foo))]: (_id = _ctx.id) }], true)))
+  _renderEffect(() => {
+    __foo = _ctx.foo;__id = _ctx.id
+    
+    (_foo__foo_id__id = _setDynamicProps(n0, _foo__foo_id__id, [{ [_camelize(_ctx.foo)]: _ctx.id }], true))
+  })
   return n0
 }"
 `;
@@ -102,8 +147,14 @@ const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
-  let _fooBar, _prev_fooBar
-  _renderEffect(() => _fooBar !== _ctx.fooBar && (_prev_fooBar = _setDynamicProp(n0, "fooBar", _prev_fooBar, (_fooBar = _ctx.fooBar))))
+  let _fooBar, __fooBar, _fooBar__fooBar
+  _renderEffect(() => {
+    __fooBar = _ctx.fooBar
+    if(_fooBar !== __fooBar) {
+      (_fooBar__fooBar = _setDynamicProp(n0, "fooBar", _fooBar__fooBar, _ctx.fooBar))
+      _fooBar = __fooBar
+    }
+  })
   return n0
 }"
 `;
@@ -114,8 +165,14 @@ const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
-  let _id
-  _renderEffect(() => _id !== _ctx.id && _setDOMProp(n0, "fooBar", (_id = _ctx.id)))
+  let _id, __id
+  _renderEffect(() => {
+    __id = _ctx.id
+    if(_id !== __id) {
+      _setDOMProp(n0, "fooBar", __id)
+      _id = __id
+    }
+  })
   return n0
 }"
 `;
@@ -126,8 +183,14 @@ const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
-  let _foo
-  _renderEffect(() => _foo !== _ctx.foo && _setHtml(n0, (_foo = _ctx.foo)))
+  let _foo, __foo
+  _renderEffect(() => {
+    __foo = _ctx.foo
+    if(_foo !== __foo) {
+      _setHtml(n0, __foo)
+      _foo = __foo
+    }
+  })
   return n0
 }"
 `;
@@ -138,8 +201,14 @@ const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
-  let _fooBar
-  _renderEffect(() => _fooBar !== _ctx.fooBar && _setDOMProp(n0, "fooBar", (_fooBar = _ctx.fooBar)))
+  let _fooBar, __fooBar
+  _renderEffect(() => {
+    __fooBar = _ctx.fooBar
+    if(_fooBar !== __fooBar) {
+      _setDOMProp(n0, "fooBar", __fooBar)
+      _fooBar = __fooBar
+    }
+  })
   return n0
 }"
 `;
@@ -150,8 +219,14 @@ const t0 = _template("<progress></progress>")
 
 export function render(_ctx) {
   const n0 = t0()
-  let _foo
-  _renderEffect(() => _foo !== _ctx.foo && _setDOMProp(n0, "value", (_foo = _ctx.foo)))
+  let _foo, __foo
+  _renderEffect(() => {
+    __foo = _ctx.foo
+    if(_foo !== __foo) {
+      _setDOMProp(n0, "value", __foo)
+      _foo = __foo
+    }
+  })
   return n0
 }"
 `;
@@ -162,8 +237,14 @@ const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
-  let _foo
-  _renderEffect(() => _foo !== _ctx.foo && _setText(n0, (_foo = _ctx.foo)))
+  let _foo, __foo
+  _renderEffect(() => {
+    __foo = _ctx.foo
+    if(_foo !== __foo) {
+      _setText(n0, __foo)
+      _foo = __foo
+    }
+  })
   return n0
 }"
 `;
@@ -174,8 +255,14 @@ const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
-  let _foo
-  _renderEffect(() => _foo !== _ctx.foo && _setValue(n0, (_foo = _ctx.foo)))
+  let _foo, __foo
+  _renderEffect(() => {
+    __foo = _ctx.foo
+    if(_foo !== __foo) {
+      _setValue(n0, __foo)
+      _foo = __foo
+    }
+  })
   return n0
 }"
 `;
@@ -186,8 +273,14 @@ const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
-  let _id
-  _renderEffect(() => _id !== _ctx.id && _setDOMProp(n0, "fooBar", (_id = _ctx.id)))
+  let _id, __id
+  _renderEffect(() => {
+    __id = _ctx.id
+    if(_id !== __id) {
+      _setDOMProp(n0, "fooBar", __id)
+      _id = __id
+    }
+  })
   return n0
 }"
 `;
@@ -198,8 +291,11 @@ const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
-  let _fooBar, _id, _fooBar_id
-  _renderEffect(() => (_fooBar !== _ctx.fooBar || _id !== _ctx.id) && (_fooBar_id = _setDynamicProps(n0, _fooBar_id, [{ ["." + (_fooBar = _ctx.fooBar)]: (_id = _ctx.id) }], true)))
+  _renderEffect(() => {
+    __fooBar = _ctx.fooBar;__id = _ctx.id
+    
+    (_fooBar__fooBar_id__id = _setDynamicProps(n0, _fooBar__fooBar_id__id, [{ ["." + _ctx.fooBar]: _ctx.id }], true))
+  })
   return n0
 }"
 `;
@@ -210,8 +306,14 @@ const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
-  let _foo
-  _renderEffect(() => _foo !== _ctx.foo && _setHtml(n0, (_foo = _ctx.foo)))
+  let _foo, __foo
+  _renderEffect(() => {
+    __foo = _ctx.foo
+    if(_foo !== __foo) {
+      _setHtml(n0, __foo)
+      _foo = __foo
+    }
+  })
   return n0
 }"
 `;
@@ -222,8 +324,14 @@ const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
-  let _fooBar
-  _renderEffect(() => _fooBar !== _ctx.fooBar && _setDOMProp(n0, "fooBar", (_fooBar = _ctx.fooBar)))
+  let _fooBar, __fooBar
+  _renderEffect(() => {
+    __fooBar = _ctx.fooBar
+    if(_fooBar !== __fooBar) {
+      _setDOMProp(n0, "fooBar", __fooBar)
+      _fooBar = __fooBar
+    }
+  })
   return n0
 }"
 `;
@@ -234,8 +342,14 @@ const t0 = _template("<progress></progress>")
 
 export function render(_ctx) {
   const n0 = t0()
-  let _foo
-  _renderEffect(() => _foo !== _ctx.foo && _setDOMProp(n0, "value", (_foo = _ctx.foo)))
+  let _foo, __foo
+  _renderEffect(() => {
+    __foo = _ctx.foo
+    if(_foo !== __foo) {
+      _setDOMProp(n0, "value", __foo)
+      _foo = __foo
+    }
+  })
   return n0
 }"
 `;
@@ -246,8 +360,14 @@ const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
-  let _foo
-  _renderEffect(() => _foo !== _ctx.foo && _setText(n0, (_foo = _ctx.foo)))
+  let _foo, __foo
+  _renderEffect(() => {
+    __foo = _ctx.foo
+    if(_foo !== __foo) {
+      _setText(n0, __foo)
+      _foo = __foo
+    }
+  })
   return n0
 }"
 `;
@@ -258,8 +378,14 @@ const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
-  let _foo
-  _renderEffect(() => _foo !== _ctx.foo && _setValue(n0, (_foo = _ctx.foo)))
+  let _foo, __foo
+  _renderEffect(() => {
+    __foo = _ctx.foo
+    if(_foo !== __foo) {
+      _setValue(n0, __foo)
+      _foo = __foo
+    }
+  })
   return n0
 }"
 `;
@@ -270,8 +396,14 @@ const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
-  let _foo
-  _renderEffect(() => _foo !== _ctx.foo && _setHtml(n0, (_foo = _ctx.foo)))
+  let _foo, __foo
+  _renderEffect(() => {
+    __foo = _ctx.foo
+    if(_foo !== __foo) {
+      _setHtml(n0, __foo)
+      _foo = __foo
+    }
+  })
   return n0
 }"
 `;
@@ -282,8 +414,14 @@ const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
-  let _foo
-  _renderEffect(() => _foo !== _ctx.foo && _setText(n0, (_foo = _ctx.foo)))
+  let _foo, __foo
+  _renderEffect(() => {
+    __foo = _ctx.foo
+    if(_foo !== __foo) {
+      _setText(n0, __foo)
+      _foo = __foo
+    }
+  })
   return n0
 }"
 `;
@@ -294,8 +432,14 @@ const t0 = _template("<input>")
 
 export function render(_ctx) {
   const n0 = t0()
-  let _foo
-  _renderEffect(() => _foo !== _ctx.foo && _setValue(n0, (_foo = _ctx.foo)))
+  let _foo, __foo
+  _renderEffect(() => {
+    __foo = _ctx.foo
+    if(_foo !== __foo) {
+      _setValue(n0, __foo)
+      _foo = __foo
+    }
+  })
   return n0
 }"
 `;
@@ -306,8 +450,14 @@ const t0 = _template("<progress></progress>")
 
 export function render(_ctx) {
   const n0 = t0()
-  let _foo, _prev_foo
-  _renderEffect(() => _foo !== _ctx.foo && (_prev_foo = _setDynamicProp(n0, "value", _prev_foo, (_foo = _ctx.foo))))
+  let _foo, __foo, _foo__foo
+  _renderEffect(() => {
+    __foo = _ctx.foo
+    if(_foo !== __foo) {
+      (_foo__foo = _setDynamicProp(n0, "value", _foo__foo, _ctx.foo))
+      _foo = __foo
+    }
+  })
   return n0
 }"
 `;
@@ -318,13 +468,33 @@ const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
-  let _id, _title, _lang, _dir, _tabindex
+  let _id, __id, _title, __title, _lang, __lang, _dir, __dir, _tabindex, __tabindex
   _renderEffect(() => {
-    _id !== _ctx.id && _setDOMProp(n0, "id", (_id = _ctx.id))
-    _title !== _ctx.title && _setDOMProp(n0, "title", (_title = _ctx.title))
-    _lang !== _ctx.lang && _setDOMProp(n0, "lang", (_lang = _ctx.lang))
-    _dir !== _ctx.dir && _setDOMProp(n0, "dir", (_dir = _ctx.dir))
-    _tabindex !== _ctx.tabindex && _setDOMProp(n0, "tabindex", (_tabindex = _ctx.tabindex))
+    __id = _ctx.id
+    if(_id !== __id) {
+      _setDOMProp(n0, "id", __id)
+      _id = __id
+    }
+    __title = _ctx.title
+    if(_title !== __title) {
+      _setDOMProp(n0, "title", __title)
+      _title = __title
+    }
+    __lang = _ctx.lang
+    if(_lang !== __lang) {
+      _setDOMProp(n0, "lang", __lang)
+      _lang = __lang
+    }
+    __dir = _ctx.dir
+    if(_dir !== __dir) {
+      _setDOMProp(n0, "dir", __dir)
+      _dir = __dir
+    }
+    __tabindex = _ctx.tabindex
+    if(_tabindex !== __tabindex) {
+      _setDOMProp(n0, "tabindex", __tabindex)
+      _tabindex = __tabindex
+    }
   })
   return n0
 }"
@@ -336,13 +506,33 @@ const t0 = _template("<math></math>")
 
 export function render(_ctx) {
   const n0 = t0()
-  let _autofucus, _dir, _displaystyle, _mathcolor, _tabindex
+  let _autofucus, __autofucus, _dir, __dir, _displaystyle, __displaystyle, _mathcolor, __mathcolor, _tabindex, __tabindex
   _renderEffect(() => {
-    _autofucus !== _ctx.autofucus && _setDOMProp(n0, "autofucus", (_autofucus = _ctx.autofucus))
-    _dir !== _ctx.dir && _setDOMProp(n0, "dir", (_dir = _ctx.dir))
-    _displaystyle !== _ctx.displaystyle && _setDOMProp(n0, "displaystyle", (_displaystyle = _ctx.displaystyle))
-    _mathcolor !== _ctx.mathcolor && _setDOMProp(n0, "mathcolor", (_mathcolor = _ctx.mathcolor))
-    _tabindex !== _ctx.tabindex && _setDOMProp(n0, "tabindex", (_tabindex = _ctx.tabindex))
+    __autofucus = _ctx.autofucus
+    if(_autofucus !== __autofucus) {
+      _setDOMProp(n0, "autofucus", __autofucus)
+      _autofucus = __autofucus
+    }
+    __dir = _ctx.dir
+    if(_dir !== __dir) {
+      _setDOMProp(n0, "dir", __dir)
+      _dir = __dir
+    }
+    __displaystyle = _ctx.displaystyle
+    if(_displaystyle !== __displaystyle) {
+      _setDOMProp(n0, "displaystyle", __displaystyle)
+      _displaystyle = __displaystyle
+    }
+    __mathcolor = _ctx.mathcolor
+    if(_mathcolor !== __mathcolor) {
+      _setDOMProp(n0, "mathcolor", __mathcolor)
+      _mathcolor = __mathcolor
+    }
+    __tabindex = _ctx.tabindex
+    if(_tabindex !== __tabindex) {
+      _setDOMProp(n0, "tabindex", __tabindex)
+      _tabindex = __tabindex
+    }
   })
   return n0
 }"
@@ -354,11 +544,23 @@ const t0 = _template("<svg></svg>")
 
 export function render(_ctx) {
   const n0 = t0()
-  let _id, _lang, _tabindex
+  let _id, __id, _lang, __lang, _tabindex, __tabindex
   _renderEffect(() => {
-    _id !== _ctx.id && _setDOMProp(n0, "id", (_id = _ctx.id))
-    _lang !== _ctx.lang && _setDOMProp(n0, "lang", (_lang = _ctx.lang))
-    _tabindex !== _ctx.tabindex && _setDOMProp(n0, "tabindex", (_tabindex = _ctx.tabindex))
+    __id = _ctx.id
+    if(_id !== __id) {
+      _setDOMProp(n0, "id", __id)
+      _id = __id
+    }
+    __lang = _ctx.lang
+    if(_lang !== __lang) {
+      _setDOMProp(n0, "lang", __lang)
+      _lang = __lang
+    }
+    __tabindex = _ctx.tabindex
+    if(_tabindex !== __tabindex) {
+      _setDOMProp(n0, "tabindex", __tabindex)
+      _tabindex = __tabindex
+    }
   })
   return n0
 }"
@@ -382,27 +584,53 @@ export function render(_ctx) {
   const n4 = t4()
   const n5 = t5()
   const n6 = t6()
-  let _spellcheck, _draggable, _translate, _form, _list, _type, _width, _height
+  let _spellcheck, __spellcheck, _draggable, __draggable, _translate, __translate, _form, __form, _list, __list, _type, __type, _width, __width, _height, __height
   _renderEffect(() => {
-    _spellcheck !== _ctx.spellcheck && _setAttr(n0, "spellcheck", (_spellcheck = _ctx.spellcheck))
-    _draggable !== _ctx.draggable && _setAttr(n0, "draggable", (_draggable = _ctx.draggable))
-    _translate !== _ctx.translate && _setAttr(n0, "translate", (_translate = _ctx.translate))
-    _form !== _ctx.form && _setAttr(n0, "form", (_form = _ctx.form))
-    _list !== _ctx.list && _setAttr(n1, "list", (_list = _ctx.list))
-    _type !== _ctx.type && _setAttr(n2, "type", (_type = _ctx.type))
-    if(_width !== _ctx.width) {
-      _setAttr(n3, "width", _ctx.width)
-      _setAttr(n4, "width", _ctx.width)
-      _setAttr(n5, "width", _ctx.width)
-      _setAttr(n6, "width", _ctx.width)
-      _width = _ctx.width
+    __spellcheck = _ctx.spellcheck
+    if(_spellcheck !== __spellcheck) {
+      _setAttr(n0, "spellcheck", __spellcheck)
+      _spellcheck = __spellcheck
     }
-    if(_height !== _ctx.height) {
-      _setAttr(n3, "height", _ctx.height)
-      _setAttr(n4, "height", _ctx.height)
-      _setAttr(n5, "height", _ctx.height)
-      _setAttr(n6, "height", _ctx.height)
-      _height = _ctx.height
+    __draggable = _ctx.draggable
+    if(_draggable !== __draggable) {
+      _setAttr(n0, "draggable", __draggable)
+      _draggable = __draggable
+    }
+    __translate = _ctx.translate
+    if(_translate !== __translate) {
+      _setAttr(n0, "translate", __translate)
+      _translate = __translate
+    }
+    __form = _ctx.form
+    if(_form !== __form) {
+      _setAttr(n0, "form", __form)
+      _form = __form
+    }
+    __list = _ctx.list
+    if(_list !== __list) {
+      _setAttr(n1, "list", __list)
+      _list = __list
+    }
+    __type = _ctx.type
+    if(_type !== __type) {
+      _setAttr(n2, "type", __type)
+      _type = __type
+    }
+    __width = _ctx.width
+    if(_width !== __width) {
+      _setAttr(n3, "width", __width)
+      _setAttr(n4, "width", __width)
+      _setAttr(n5, "width", __width)
+      _setAttr(n6, "width", __width)
+      _width = __width
+    }
+    __height = _ctx.height
+    if(_height !== __height) {
+      _setAttr(n3, "height", __height)
+      _setAttr(n4, "height", __height)
+      _setAttr(n5, "height", __height)
+      _setAttr(n6, "height", __height)
+      _height = __height
     }
   })
   return [n0, n1, n2, n3, n4, n5, n6]
@@ -415,8 +643,14 @@ const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
-  let _id
-  _renderEffect(() => _id !== _ctx.id && _setDOMProp(n0, "id", (_id = _ctx.id)))
+  let _id, __id
+  _renderEffect(() => {
+    __id = _ctx.id
+    if(_id !== __id) {
+      _setDOMProp(n0, "id", __id)
+      _id = __id
+    }
+  })
   return n0
 }"
 `;
@@ -427,8 +661,14 @@ const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
-  let _obj
-  _renderEffect(() => _obj !== _ctx.obj.count.bar && _setDOMProp(n0, "id", (_obj = _ctx.obj.count.bar)))
+  let _obj, __obj
+  _renderEffect(() => {
+    __obj = _ctx.obj.count.bar
+    if(_obj !== __obj) {
+      _setDOMProp(n0, "id", __obj)
+      _obj = __obj
+    }
+  })
   return [n0, n1]
 }"
 `;
@@ -439,8 +679,11 @@ const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
-  let _id, _title, _id_title
-  _renderEffect(() => (_id !== _ctx.id || _title !== _ctx.title) && (_id_title = _setDynamicProps(n0, _id_title, [{ [(_id = _ctx.id)]: _ctx.id, [(_title = _ctx.title)]: _ctx.title }], true)))
+  _renderEffect(() => {
+    __id = _ctx.id;__title = _ctx.title
+    
+    (_id__id_title__title = _setDynamicProps(n0, _id__id_title__title, [{ [_ctx.id]: _ctx.id, [_ctx.title]: _ctx.title }], true))
+  })
   return n0
 }"
 `;
@@ -451,8 +694,11 @@ const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
-  let _id, _prev_id
-  _renderEffect(() => _id !== _ctx.id && (_prev_id = _setDynamicProps(n0, _prev_id, [{ [(_id = _ctx.id)]: _ctx.id, foo: "bar", checked: "" }], true)))
+  _renderEffect(() => {
+    __id = _ctx.id
+    
+    (_id__id = _setDynamicProps(n0, _id__id, [{ [_ctx.id]: _ctx.id, foo: "bar", checked: "" }], true))
+  })
   return n0
 }"
 `;
@@ -463,8 +709,14 @@ const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
-  let _camelCase, _prev_camelCase
-  _renderEffect(() => _camelCase !== _ctx.camelCase && (_prev_camelCase = _setDynamicProp(n0, "camel-case", _prev_camelCase, (_camelCase = _ctx.camelCase))))
+  let _camelCase, __camelCase, _camelCase__camelCase
+  _renderEffect(() => {
+    __camelCase = _ctx.camelCase
+    if(_camelCase !== __camelCase) {
+      (_camelCase__camelCase = _setDynamicProp(n0, "camel-case", _camelCase__camelCase, _ctx.camelCase))
+      _camelCase = __camelCase
+    }
+  })
   return n0
 }"
 `;
@@ -475,8 +727,14 @@ const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
-  let _id
-  _renderEffect(() => _id !== _ctx.id && _setDOMProp(n0, "id", (_id = _ctx.id)))
+  let _id, __id
+  _renderEffect(() => {
+    __id = _ctx.id
+    if(_id !== __id) {
+      _setDOMProp(n0, "id", __id)
+      _id = __id
+    }
+  })
   return n0
 }"
 `;

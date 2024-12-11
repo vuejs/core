@@ -242,8 +242,11 @@ export function render(_ctx) {
   const n0 = t0()
   _withDirectives(n0, [[_vModelDynamic, () => _ctx.model]])
   _delegate(n0, "update:modelValue", () => $event => (_ctx.model = $event))
-  let _obj, _prev_obj
-  _renderEffect(() => _obj !== _ctx.obj && (_prev_obj = _setDynamicProps(n0, _prev_obj, [(_obj = _ctx.obj)], true)))
+  _renderEffect(() => {
+    __obj = _ctx.obj
+    
+    (_obj__obj = _setDynamicProps(n0, _obj__obj, [_ctx.obj], true))
+  })
   return n0
 }"
 `;

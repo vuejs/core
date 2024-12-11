@@ -6,8 +6,14 @@ const t0 = _template("<div></div>")
 
 export function render(_ctx, $props, $emit, $attrs, $slots) {
   const n0 = t0()
-  let _count
-  _renderEffect(() => _count !== _ctx.count && _setText(n0, "count is ", (_count = _ctx.count), "."))
+  let _count, __count
+  _renderEffect(() => {
+    __count = _ctx.count
+    if(_count !== __count) {
+      _setText(n0, "count is ", __count, ".")
+      _count = __count
+    }
+  })
   return n0
 }"
 `;
@@ -160,8 +166,14 @@ export function render(_ctx, $props, $emit, $attrs, $slots) {
   const n1 = _createComponentWithFallback(_component_Comp)
   const n2 = _createTextNode(() => [_ctx.bar])
   _insert([n1, n2], n3)
-  let _foo
-  _renderEffect(() => _foo !== _ctx.foo && _setDOMProp(n3, "id", (_foo = _ctx.foo)))
+  let _foo, __foo
+  _renderEffect(() => {
+    __foo = _ctx.foo
+    if(_foo !== __foo) {
+      _setDOMProp(n3, "id", __foo)
+      _foo = __foo
+    }
+  })
   return [n0, n3]
 }"
 `;
@@ -183,12 +195,13 @@ _delegateEvents("click")
 export function render(_ctx) {
   const n0 = t0()
   _delegate(n0, "click", () => _ctx.handleClick)
-  let _count
+  let _count, __count
   _renderEffect(() => {
-    if(_count !== _ctx.count) {
-      _setText(n0, _ctx.count, "foo", _ctx.count, "foo", _ctx.count)
-      _setDOMProp(n0, "id", _ctx.count)
-      _count = _ctx.count
+    __count = _ctx.count
+    if(_count !== __count) {
+      _setText(n0, __count, "foo", __count, "foo", __count)
+      _setDOMProp(n0, "id", __count)
+      _count = __count
     }
   })
   return n0
@@ -205,8 +218,11 @@ exports[`compile > expression parsing > interpolation 1`] = `
 exports[`compile > expression parsing > v-bind 1`] = `
 "
   const n0 = t0()
-  let _key_value, _foo, _key_value_foo
-  _renderEffect(() => (_key_value !== key.value || _foo !== _unref(foo)) && (_key_value_foo = _setDynamicProps(n0, _key_value_foo, [{ [(_key_value = key.value)+1]: (_foo = _unref(foo))[key.value+1]() }], true)))
+  _renderEffect(() => {
+    __key_value = key.value;__foo = _unref(foo);__key_value = key.value+1]()
+    
+    (_key_value__key_value_foo__foo = _setDynamicProps(n0, _key_value__key_value_foo__foo, [{ [key.value+1]: _unref(foo)[key.value+1]() }], true))
+  })
   return n0
 "
 `;

@@ -298,8 +298,14 @@ const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
-  let _isBar
-  _renderEffect(() => _isBar !== _ctx.isBar && _setClass(n0, ["foo", { bar: (_isBar = _ctx.isBar) }], true))
+  let _isBar, __isBar
+  _renderEffect(() => {
+    __isBar = _ctx.isBar
+    if(_isBar !== __isBar) {
+      _setClass(n0, ["foo", { bar: __isBar }], true)
+      _isBar = __isBar
+    }
+  })
   return n0
 }"
 `;
@@ -327,7 +333,8 @@ const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => _setStyle(n0, ["color: green", { color: 'red' }], true))
+  _renderEffect(() => 
+  _setStyle(n0, ["color: green", { color: 'red' }], true))
   return n0
 }"
 `;
@@ -348,8 +355,11 @@ const t0 = _template("<div></div>")
 
 export function render(_ctx, $props, $emit, $attrs, $slots) {
   const n0 = t0()
-  let _prev_obj
-  _renderEffect(() => _prev_obj = _setDynamicProps(n0, _prev_obj, [_ctx.obj], true))
+  _renderEffect(() => {
+    __obj = _ctx.obj
+    
+    (_obj__obj = _setDynamicProps(n0, _obj__obj, [_ctx.obj], true))
+  })
   return n0
 }"
 `;
@@ -360,8 +370,11 @@ const t0 = _template("<div></div>")
 
 export function render(_ctx, $props, $emit, $attrs, $slots) {
   const n0 = t0()
-  let _obj, _prev_obj
-  _renderEffect(() => _obj !== _ctx.obj && (_prev_obj = _setDynamicProps(n0, _prev_obj, [{ id: "foo" }, (_obj = _ctx.obj)], true)))
+  _renderEffect(() => {
+    __obj = _ctx.obj
+    
+    (_obj__obj = _setDynamicProps(n0, _obj__obj, [{ id: "foo" }, _ctx.obj], true))
+  })
   return n0
 }"
 `;
@@ -372,8 +385,11 @@ const t0 = _template("<div></div>")
 
 export function render(_ctx, $props, $emit, $attrs, $slots) {
   const n0 = t0()
-  let _prev_obj
-  _renderEffect(() => _prev_obj = _setDynamicProps(n0, _prev_obj, [_ctx.obj, { id: "foo" }], true))
+  _renderEffect(() => {
+    __obj = _ctx.obj
+    
+    (_obj__obj = _setDynamicProps(n0, _obj__obj, [_ctx.obj, { id: "foo" }], true))
+  })
   return n0
 }"
 `;
@@ -384,8 +400,11 @@ const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
-  let _obj, _prev_obj
-  _renderEffect(() => _obj !== _ctx.obj && (_prev_obj = _setDynamicProps(n0, _prev_obj, [{ id: "foo" }, (_obj = _ctx.obj), { class: "bar" }], true)))
+  _renderEffect(() => {
+    __obj = _ctx.obj
+    
+    (_obj__obj = _setDynamicProps(n0, _obj__obj, [{ id: "foo" }, _ctx.obj, { class: "bar" }], true))
+  })
   return n0
 }"
 `;
@@ -396,7 +415,8 @@ const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => _setDynamicEvents(n0, _ctx.obj))
+  _renderEffect(() => 
+  _setDynamicEvents(n0, _ctx.obj))
   return n0
 }"
 `;
