@@ -1,5 +1,4 @@
 import {
-  BindingTypes,
   NewlineType,
   type SimpleExpressionNode,
   isSimpleIdentifier,
@@ -236,6 +235,8 @@ const helpersNeedCachedReturnValue = [
   'setDynamicProps',
 ]
 
+const helpersNoNeedCachedDeps = ['setStyle', 'setDynamicProps']
+
 function processPropValues(
   context: CodegenContext,
   helperName: string,
@@ -247,28 +248,26 @@ function processPropValues(
   // e.g. _foo === _ctx.foo && (_prev_foo = _setStyle(...))
   let shouldWrapInParentheses: boolean = false
   let prevValueName
-  const needReturnValue = helpersNeedCachedReturnValue.includes(helperName)
   if (shouldCacheRenderEffectDeps()) {
-    const { declareNames, operations, identifiers } = processingRenderEffect!
-    // if render effect rely on any reactive object, it should not cache
-    const canCache = identifiers.every(name =>
-      isBindingCacheable(context, name),
-    )
-    processValues(context, values, canCache)
+    const { declareNames, operations } = processingRenderEffect!
+    const needReturnValue = helpersNeedCachedReturnValue.includes(helperName)
+    processValues(context, values, !needReturnValue)
     // if the operation needs to cache the return value and has multiple declareNames,
     // combine them into a single name as the return value name.
     if (declareNames.size > 0 && needReturnValue) {
       const names = [...declareNames]
       prevValueName =
         declareNames.size === 1 ? `_prev${names[0]}` : names.join('')
-      if (!canCache) {
-        declareNames.clear()
-        processingRenderEffect!.earlyCheckExps = []
-      }
       declareNames.add(prevValueName)
     }
-    shouldWrapInParentheses = operations.length === 1 && canCache
+    shouldWrapInParentheses = operations.length === 1
+
+    if (helpersNoNeedCachedDeps.includes(helperName)) {
+      declareNames.clear()
+      processingRenderEffect!.earlyCheckExps = []
+    }
   }
+
   return { prevValueName, shouldWrapInParentheses }
 }
 
@@ -329,15 +328,4 @@ function processValue(
   if (earlyCheckExps.length > 0) {
     return [...new Set(earlyCheckExps)]
   }
-}
-
-function isBindingCacheable(context: CodegenContext, name: string): boolean {
-  const {
-    options: { bindingMetadata },
-  } = context
-  const bindingType = bindingMetadata[name]
-  return (
-    bindingType !== BindingTypes.SETUP_REACTIVE_CONST &&
-    bindingType !== BindingTypes.SETUP_CONST
-  )
 }
