@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - '**'
+      - '!vapor'
     tags:
       - '!**'
   pull_request:
