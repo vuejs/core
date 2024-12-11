@@ -573,7 +573,7 @@ describe('compiler: element transform', () => {
       },
     ])
     expect(code).contains(
-      '_obj !== _ctx.obj && (_obj = _setDynamicProps(n0, _obj, [_ctx.obj], true))',
+      '_obj !== _ctx.obj && (_prev_obj = _setDynamicProps(n0, _prev_obj, [_ctx.obj], true))',
     )
   })
 
@@ -611,7 +611,7 @@ describe('compiler: element transform', () => {
       },
     ])
     expect(code).contains(
-      '_obj !== _ctx.obj && (_obj = _setDynamicProps(n0, _obj, [{ id: "foo" }, _ctx.obj], true))',
+      '_obj !== _ctx.obj && (_prev_obj = _setDynamicProps(n0, _prev_obj, [{ id: "foo" }, _ctx.obj], true))',
     )
   })
 
@@ -639,7 +639,7 @@ describe('compiler: element transform', () => {
       },
     ])
     expect(code).contains(
-      '_obj !== _ctx.obj && (_obj = _setDynamicProps(n0, _obj, [_ctx.obj, { id: "foo" }], true))',
+      '_obj !== _ctx.obj && (_prev_obj = _setDynamicProps(n0, _prev_obj, [_ctx.obj, { id: "foo" }], true))',
     )
   })
 
@@ -668,7 +668,7 @@ describe('compiler: element transform', () => {
       },
     ])
     expect(code).contains(
-      '_obj !== _ctx.obj && (_obj = _setDynamicProps(n0, _obj, [{ id: "foo" }, _ctx.obj, { class: "bar" }], true))',
+      '_obj !== _ctx.obj && (_prev_obj = _setDynamicProps(n0, _prev_obj, [{ id: "foo" }, _ctx.obj, { class: "bar" }], true))',
     )
   })
 

@@ -78,8 +78,8 @@ const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
-  let _id
-  _renderEffect(() => _id !== _ctx.id && (_id = _setDynamicProp(n0, "fooBar", _id, _ctx.id)))
+  let _id, _prev_id
+  _renderEffect(() => _id !== _ctx.id && (_prev_id = _setDynamicProp(n0, "fooBar", _prev_id, _ctx.id)))
   return n0
 }"
 `;
@@ -102,8 +102,8 @@ const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
-  let _fooBar
-  _renderEffect(() => _fooBar !== _ctx.fooBar && (_fooBar = _setDynamicProp(n0, "fooBar", _fooBar, _ctx.fooBar)))
+  let _fooBar, _prev_fooBar
+  _renderEffect(() => _fooBar !== _ctx.fooBar && (_prev_fooBar = _setDynamicProp(n0, "fooBar", _prev_fooBar, _ctx.fooBar)))
   return n0
 }"
 `;
@@ -306,8 +306,8 @@ const t0 = _template("<progress></progress>")
 
 export function render(_ctx) {
   const n0 = t0()
-  let _foo
-  _renderEffect(() => _foo !== _ctx.foo && (_foo = _setDynamicProp(n0, "value", _foo, _ctx.foo)))
+  let _foo, _prev_foo
+  _renderEffect(() => _foo !== _ctx.foo && (_prev_foo = _setDynamicProp(n0, "value", _prev_foo, _ctx.foo)))
   return n0
 }"
 `;
@@ -451,8 +451,8 @@ const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
-  let _id
-  _renderEffect(() => _id !== _ctx.id && (_id = _setDynamicProps(n0, _id, [{ [_ctx.id]: _ctx.id, foo: "bar", checked: "" }], true)))
+  let _id, _prev_id
+  _renderEffect(() => _id !== _ctx.id && (_prev_id = _setDynamicProps(n0, _prev_id, [{ [_ctx.id]: _ctx.id, foo: "bar", checked: "" }], true)))
   return n0
 }"
 `;
@@ -463,8 +463,8 @@ const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
-  let _camelCase
-  _renderEffect(() => _camelCase !== _ctx.camelCase && (_camelCase = _setDynamicProp(n0, "camel-case", _camelCase, _ctx.camelCase)))
+  let _camelCase, _prev_camelCase
+  _renderEffect(() => _camelCase !== _ctx.camelCase && (_prev_camelCase = _setDynamicProp(n0, "camel-case", _prev_camelCase, _ctx.camelCase)))
   return n0
 }"
 `;

@@ -253,7 +253,9 @@ function processPropValues(
     // if the operation needs to cache the return value and has multiple declareNames,
     // combine them into a single name as the return value name.
     if (declareNames.size > 0 && needReturnValue) {
-      prevValueName = [...declareNames].join('')
+      const names = [...declareNames]
+      prevValueName =
+        declareNames.size === 1 ? `_prev${names[0]}` : names.join('')
       declareNames.add(prevValueName)
     }
     shouldWrapInParentheses = processingRenderEffect!.operations.length === 1
@@ -269,7 +271,8 @@ export function processValues(
   const allCheckExps: string[] = []
   values.forEach(value => {
     const checkExps = processValue(context, value, needRewrite)
-    if (checkExps) allCheckExps.push(...checkExps, ' && ')
+    if (checkExps && checkExps.length > 0)
+      allCheckExps.push(...checkExps, ' && ')
   })
 
   return allCheckExps.length > 0
