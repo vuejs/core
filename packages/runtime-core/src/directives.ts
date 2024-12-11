@@ -12,7 +12,12 @@ return withDirectives(h(comp), [
 */
 
 import type { VNode } from './vnode'
-import { EMPTY_OBJ, isBuiltInDirective, isFunction } from '@vue/shared'
+import {
+  EMPTY_OBJ,
+  ShapeFlags,
+  isBuiltInDirective,
+  isFunction,
+} from '@vue/shared'
 import { warn } from './warning'
 import {
   type ComponentInternalInstance,
@@ -127,6 +132,12 @@ export type DirectiveArguments = Array<
   | [Directive | undefined, any, string | undefined, DirectiveModifiers]
 >
 
+function isComponent(vnode: VNode): boolean {
+  const { shapeFlag } = vnode
+  if (shapeFlag & ShapeFlags.COMPONENT) return true
+  return false
+}
+
 /**
  * Adds directives to a VNode.
  */
@@ -143,6 +154,11 @@ export function withDirectives<T extends VNode>(
   for (let i = 0; i < directives.length; i++) {
     let [dir, value, arg, modifiers = EMPTY_OBJ] = directives[i]
     if (dir) {
+      // @ts-expect-error check v-html
+      if (isComponent(vnode) && dir.name === '__v-html') {
+        warn(`v-html can only be used on elements.`, vnode)
+        continue
+      }
       if (isFunction(dir)) {
         dir = {
           mounted: dir,
