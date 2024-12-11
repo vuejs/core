@@ -1,23 +1,25 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
 exports[`v-text > should convert v-text to textContent 1`] = `
-"import { renderEffect as _renderEffect, setText as _setText, template as _template } from 'vue';
+"import { setText as _setText, renderEffect as _renderEffect, template as _template } from 'vue';
 const t0 = _template("<div></div>")
 
 export function render(_ctx, $props, $emit, $attrs, $slots) {
   const n0 = t0()
-  _renderEffect(() => _setText(n0, _ctx.str))
+  let _str
+  _renderEffect(() => _str !== _ctx.str && _setText(n0, (_str = _ctx.str)))
   return n0
 }"
 `;
 
 exports[`v-text > should raise error and ignore children when v-text is present 1`] = `
-"import { renderEffect as _renderEffect, setText as _setText, template as _template } from 'vue';
+"import { setText as _setText, renderEffect as _renderEffect, template as _template } from 'vue';
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => _setText(n0, _ctx.test))
+  let _test
+  _renderEffect(() => _test !== _ctx.test && _setText(n0, (_test = _ctx.test)))
   return n0
 }"
 `;

@@ -1,7 +1,7 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
 exports[`compiler: children transform > children & sibling references 1`] = `
-"import { next as _next, createTextNode as _createTextNode, insert as _insert, renderEffect as _renderEffect, setText as _setText, template as _template } from 'vue';
+"import { next as _next, createTextNode as _createTextNode, insert as _insert, setText as _setText, renderEffect as _renderEffect, template as _template } from 'vue';
 const t0 = _template("<div><p></p> <!><p></p></div>")
 
 export function render(_ctx) {
@@ -11,8 +11,11 @@ export function render(_ctx) {
   const n2 = n3.nextSibling
   const n1 = _createTextNode(() => [_ctx.second, " ", _ctx.third, " "])
   _insert(n1, n4, n3)
-  _renderEffect(() => _setText(n0, _ctx.first))
-  _renderEffect(() => _setText(n2, _ctx.forth))
+  let _first, _forth
+  _renderEffect(() => {
+    _first !== _ctx.first && _setText(n0, (_first = _ctx.first))
+    _forth !== _ctx.forth && _setText(n2, (_forth = _ctx.forth))
+  })
   return n4
 }"
 `;

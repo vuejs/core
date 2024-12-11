@@ -1,7 +1,7 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
 exports[`compiler: v-for > array de-structured value 1`] = `
-"import { renderEffect as _renderEffect, setText as _setText, withDestructure as _withDestructure, createFor as _createFor, template as _template } from 'vue';
+"import { setText as _setText, renderEffect as _renderEffect, withDestructure as _withDestructure, createFor as _createFor, template as _template } from 'vue';
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
@@ -15,7 +15,7 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: v-for > basic v-for 1`] = `
-"import { delegate as _delegate, renderEffect as _renderEffect, setText as _setText, createFor as _createFor, delegateEvents as _delegateEvents, template as _template } from 'vue';
+"import { delegate as _delegate, setText as _setText, renderEffect as _renderEffect, createFor as _createFor, delegateEvents as _delegateEvents, template as _template } from 'vue';
 const t0 = _template("<div></div>")
 _delegateEvents("click")
 
@@ -31,7 +31,7 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: v-for > function params w/ prefixIdentifiers: false 1`] = `
-"import { renderEffect as _renderEffect, setText as _setText, createFor as _createFor, template as _template } from 'vue';
+"import { setText as _setText, renderEffect as _renderEffect, createFor as _createFor, template as _template } from 'vue';
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
@@ -45,14 +45,16 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: v-for > multi effect 1`] = `
-"import { renderEffect as _renderEffect, setDynamicProp as _setDynamicProp, createFor as _createFor, template as _template } from 'vue';
+"import { setDynamicProp as _setDynamicProp, renderEffect as _renderEffect, createFor as _createFor, template as _template } from 'vue';
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = _createFor(() => (_ctx.items), (_ctx0) => {
     const n2 = t0()
-    _renderEffect(() => _setDynamicProp(n2, "item", _ctx0[0].value))
-    _renderEffect(() => _setDynamicProp(n2, "index", _ctx0[1].value))
+    _renderEffect(() => {
+      _setDynamicProp(n2, "item", _ctx0[0].value)
+      _setDynamicProp(n2, "index", _ctx0[1].value)
+    })
     return n2
   })
   return n0
@@ -60,7 +62,7 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: v-for > nested v-for 1`] = `
-"import { renderEffect as _renderEffect, setText as _setText, createFor as _createFor, insert as _insert, template as _template } from 'vue';
+"import { setText as _setText, renderEffect as _renderEffect, createFor as _createFor, insert as _insert, template as _template } from 'vue';
 const t0 = _template("<span></span>")
 const t1 = _template("<div></div>")
 
@@ -80,7 +82,7 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: v-for > object de-structured value 1`] = `
-"import { renderEffect as _renderEffect, setText as _setText, withDestructure as _withDestructure, createFor as _createFor, template as _template } from 'vue';
+"import { setText as _setText, renderEffect as _renderEffect, withDestructure as _withDestructure, createFor as _createFor, template as _template } from 'vue';
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
@@ -94,7 +96,7 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: v-for > v-for aliases w/ complex expressions 1`] = `
-"import { renderEffect as _renderEffect, setText as _setText, withDestructure as _withDestructure, createFor as _createFor, template as _template } from 'vue';
+"import { setText as _setText, renderEffect as _renderEffect, withDestructure as _withDestructure, createFor as _createFor, template as _template } from 'vue';
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {

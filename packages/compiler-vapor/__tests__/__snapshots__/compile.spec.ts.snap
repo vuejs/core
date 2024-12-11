@@ -1,12 +1,13 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
 exports[`compile > bindings 1`] = `
-"import { renderEffect as _renderEffect, setText as _setText, template as _template } from 'vue';
+"import { setText as _setText, renderEffect as _renderEffect, template as _template } from 'vue';
 const t0 = _template("<div></div>")
 
 export function render(_ctx, $props, $emit, $attrs, $slots) {
   const n0 = t0()
-  _renderEffect(() => _setText(n0, "count is ", _ctx.count, "."))
+  let _count
+  _renderEffect(() => _count !== _ctx.count && _setText(n0, "count is ", (_count = _ctx.count), "."))
   return n0
 }"
 `;
@@ -148,7 +149,7 @@ export function render(_ctx, $props, $emit, $attrs, $slots) {
 `;
 
 exports[`compile > directives > v-pre > should not affect siblings after it 1`] = `
-"import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback, createTextNode as _createTextNode, insert as _insert, renderEffect as _renderEffect, setDOMProp as _setDOMProp, template as _template } from 'vue';
+"import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback, createTextNode as _createTextNode, insert as _insert, setDOMProp as _setDOMProp, renderEffect as _renderEffect, template as _template } from 'vue';
 const t0 = _template("<div :id=\\"foo\\"><Comp></Comp>{{ bar }}</div>")
 const t1 = _template("<div></div>")
 
@@ -159,7 +160,8 @@ export function render(_ctx, $props, $emit, $attrs, $slots) {
   const n1 = _createComponentWithFallback(_component_Comp)
   const n2 = _createTextNode(() => [_ctx.bar])
   _insert([n1, n2], n3)
-  _renderEffect(() => _setDOMProp(n3, "id", _ctx.foo))
+  let _foo
+  _renderEffect(() => _foo !== _ctx.foo && _setDOMProp(n3, "id", (_foo = _ctx.foo)))
   return [n0, n3]
 }"
 `;
@@ -174,15 +176,21 @@ export function render(_ctx) {
 `;
 
 exports[`compile > dynamic root nodes and interpolation 1`] = `
-"import { delegate as _delegate, renderEffect as _renderEffect, setText as _setText, setDOMProp as _setDOMProp, delegateEvents as _delegateEvents, template as _template } from 'vue';
+"import { delegate as _delegate, setText as _setText, setDOMProp as _setDOMProp, renderEffect as _renderEffect, delegateEvents as _delegateEvents, template as _template } from 'vue';
 const t0 = _template("<button></button>")
 _delegateEvents("click")
 
 export function render(_ctx) {
   const n0 = t0()
   _delegate(n0, "click", () => _ctx.handleClick)
-  _renderEffect(() => _setText(n0, _ctx.count, "foo", _ctx.count, "foo", _ctx.count))
-  _renderEffect(() => _setDOMProp(n0, "id", _ctx.count))
+  let _count
+  _renderEffect(() => {
+    if(_count !== _ctx.count) {
+      _setText(n0, _ctx.count, "foo", _ctx.count, "foo", _ctx.count)
+      _setDOMProp(n0, "id", _ctx.count)
+      _count = _ctx.count
+    }
+  })
   return n0
 }"
 `;
@@ -197,7 +205,8 @@ exports[`compile > expression parsing > interpolation 1`] = `
 exports[`compile > expression parsing > v-bind 1`] = `
 "
   const n0 = t0()
-  _renderEffect(() => _setDynamicProps(n0, [{ [key.value+1]: _unref(foo)[key.value+1]() }], true))
+  let _key_value, _foo, _key_value_foo
+  _renderEffect(() => (_key_value !== key.value || _foo !== _unref(foo)) && (_key_value_foo = _setDynamicProps(n0, _key_value_foo, [{ [key.value+1]: _unref(foo)[key.value+1]() }], true)))
   return n0
 "
 `;

@@ -12,7 +12,6 @@ import {
 import { setStyle } from '../../src/dom/style'
 import { VaporComponentInstance } from '../../src/component'
 import { currentInstance, simpleSetCurrentInstance } from '@vue/runtime-dom'
-import { getMetadata, recordPropMetadata } from '../../src/componentMetadata'
 
 let removeComponentInstance = NOOP
 beforeEach(() => {
@@ -28,34 +27,6 @@ afterEach(() => {
 })
 
 describe('patchProp', () => {
-  describe('recordPropMetadata', () => {
-    test('should record prop metadata', () => {
-      const node = {} as Node // the node is just a key
-      let prev = recordPropMetadata(node, 'class', 'foo')
-      expect(prev).toBeUndefined()
-      prev = recordPropMetadata(node, 'class', 'bar')
-      expect(prev).toBe('foo')
-      prev = recordPropMetadata(node, 'style', 'color: red')
-      expect(prev).toBeUndefined()
-      prev = recordPropMetadata(node, 'style', 'color: blue')
-      expect(prev).toBe('color: red')
-
-      expect(getMetadata(node)).toEqual([
-        { class: 'bar', style: 'color: blue' },
-        {},
-      ])
-    })
-
-    test('should have different metadata for different nodes', () => {
-      const node1 = {} as Node
-      const node2 = {} as Node
-      recordPropMetadata(node1, 'class', 'foo')
-      recordPropMetadata(node2, 'class', 'bar')
-      expect(getMetadata(node1)).toEqual([{ class: 'foo' }, {}])
-      expect(getMetadata(node2)).toEqual([{ class: 'bar' }, {}])
-    })
-  })
-
   describe('setClass', () => {
     test('should set class', () => {
       const el = document.createElement('div')
@@ -71,83 +42,87 @@ describe('patchProp', () => {
   describe('setStyle', () => {
     test('should set style', () => {
       const el = document.createElement('div')
-      setStyle(el, 'color: red')
+      setStyle(el, '', 'color: red')
       expect(el.style.cssText).toBe('color: red;')
     })
 
     test('should work with camelCase', () => {
       const el = document.createElement('div')
-      setStyle(el, { fontSize: '12px' })
+      setStyle(el, null, { fontSize: '12px' })
       expect(el.style.cssText).toBe('font-size: 12px;')
     })
 
     test('shoud set style with object and array property', () => {
       const el = document.createElement('div')
-      setStyle(el, { color: 'red' })
+      let prev: any
+      prev = setStyle(el, prev, { color: 'red' })
       expect(el.style.cssText).toBe('color: red;')
-      setStyle(el, [{ color: 'blue' }, { fontSize: '12px' }])
+      setStyle(el, prev, [{ color: 'blue' }, { fontSize: '12px' }])
       expect(el.style.cssText).toBe('color: blue; font-size: 12px;')
     })
 
     test('should remove if falsy value', () => {
       const el = document.createElement('div')
-      setStyle(el, { color: undefined, borderRadius: null })
+      let prev
+      prev = setStyle(el, prev, { color: undefined, borderRadius: null })
       expect(el.style.cssText).toBe('')
-      setStyle(el, { color: 'red' })
+      prev = setStyle(el, prev, { color: 'red' })
       expect(el.style.cssText).toBe('color: red;')
-      setStyle(el, { color: undefined, borderRadius: null })
+      setStyle(el, prev, { color: undefined, borderRadius: null })
       expect(el.style.cssText).toBe('')
     })
 
     test('should work with !important', () => {
       const el = document.createElement('div')
-      setStyle(el, { color: 'red !important' })
+      setStyle(el, null, { color: 'red !important' })
       expect(el.style.cssText).toBe('color: red !important;')
     })
 
     test('should work with camelCase and !important', () => {
       const el = document.createElement('div')
-      setStyle(el, { fontSize: '12px !important' })
+      setStyle(el, null, { fontSize: '12px !important' })
       expect(el.style.cssText).toBe('font-size: 12px !important;')
     })
 
     test('should work with multiple entries', () => {
       const el = document.createElement('div')
-      setStyle(el, { color: 'red', marginRight: '10px' })
+      setStyle(el, null, { color: 'red', marginRight: '10px' })
       expect(el.style.getPropertyValue('color')).toBe('red')
       expect(el.style.getPropertyValue('margin-right')).toBe('10px')
     })
 
     test('should patch with falsy style value', () => {
       const el = document.createElement('div')
-      setStyle(el, { width: '100px' })
+      let prev: any
+      prev = setStyle(el, prev, { width: '100px' })
       expect(el.style.cssText).toBe('width: 100px;')
-      setStyle(el, { width: 0 })
+      prev = setStyle(el, prev, { width: 0 })
       expect(el.style.cssText).toBe('width: 0px;')
     })
 
     test('should remove style attribute on falsy value', () => {
       const el = document.createElement('div')
-      setStyle(el, { width: '100px' })
+      let prev: any
+      prev = setStyle(el, prev, { width: '100px' })
       expect(el.style.cssText).toBe('width: 100px;')
-      setStyle(el, { width: undefined })
+      prev = setStyle(el, prev, { width: undefined })
       expect(el.style.cssText).toBe('')
 
-      setStyle(el, { width: '100px' })
+      prev = setStyle(el, prev, { width: '100px' })
       expect(el.style.cssText).toBe('width: 100px;')
-      setStyle(el, null)
+      setStyle(el, prev, null)
       expect(el.hasAttribute('style')).toBe(false)
       expect(el.style.cssText).toBe('')
     })
 
     test('should warn for trailing semicolons', () => {
       const el = document.createElement('div')
-      setStyle(el, { color: 'red;' })
+      setStyle(el, null, { color: 'red;' })
       expect(
         `Unexpected semicolon at the end of 'color' style value: 'red;'`,
       ).toHaveBeenWarned()
 
-      setStyle(el, { '--custom': '100; ' })
+      setStyle(el, null, { '--custom': '100; ' })
       expect(
         `Unexpected semicolon at the end of '--custom' style value: '100; '`,
       ).toHaveBeenWarned()
@@ -155,13 +130,16 @@ describe('patchProp', () => {
 
     test('should not warn for trailing semicolons', () => {
       const el = document.createElement('div')
-      setStyle(el, { '--custom': '100\\;' })
+      setStyle(el, null, { '--custom': '100\\;' })
       expect(el.style.getPropertyValue('--custom')).toBe('100\\;')
     })
 
     test('should work with shorthand properties', () => {
       const el = document.createElement('div')
-      setStyle(el, { borderBottom: '1px solid red', border: '1px solid green' })
+      setStyle(el, null, {
+        borderBottom: '1px solid red',
+        border: '1px solid green',
+      })
       expect(el.style.border).toBe('1px solid green')
       expect(el.style.borderBottom).toBe('1px solid green')
     })
@@ -186,19 +164,21 @@ describe('patchProp', () => {
 
     test('should work with css custom properties', () => {
       const el = mockElementWithStyle()
-      setStyle(el as any, { '--theme': 'red' })
+      setStyle(el as any, null, { '--theme': 'red' })
       expect(el.style.getPropertyValue('--theme')).toBe('red')
     })
 
     test('should auto vendor prefixing', () => {
       const el = mockElementWithStyle()
-      setStyle(el as any, { transition: 'all 1s' })
+      setStyle(el as any, null, { transition: 'all 1s' })
       expect(el.style.WebkitTransition).toBe('all 1s')
     })
 
     test('should work with multiple values', () => {
       const el = mockElementWithStyle()
-      setStyle(el as any, { display: ['-webkit-box', '-ms-flexbox', 'flex'] })
+      setStyle(el as any, null, {
+        display: ['-webkit-box', '-ms-flexbox', 'flex'],
+      })
       expect(el.style.display).toBe('flex')
     })
   })
@@ -328,12 +308,13 @@ describe('patchProp', () => {
 
   describe('setDynamicProp', () => {
     const element = document.createElement('div')
+    let prev: any
     function setDynamicProp(
       key: string,
       value: any,
       el = element.cloneNode(true) as HTMLElement,
     ) {
-      _setDynamicProp(el, key, value)
+      prev = _setDynamicProp(el, key, prev, value)
       return el
     }
 
@@ -390,25 +371,25 @@ describe('patchProp', () => {
   describe('setDynamicProps', () => {
     test('basic set dynamic props', () => {
       const el = document.createElement('div')
-      setDynamicProps(el, [{ foo: 'val' }, { bar: 'val' }])
+      setDynamicProps(el, null, [{ foo: 'val' }, { bar: 'val' }])
       expect(el.getAttribute('foo')).toBe('val')
       expect(el.getAttribute('bar')).toBe('val')
     })
 
     test('should merge props', () => {
       const el = document.createElement('div')
-      setDynamicProps(el, [{ foo: 'val' }, { foo: 'newVal' }])
+      setDynamicProps(el, null, [{ foo: 'val' }, { foo: 'newVal' }])
       expect(el.getAttribute('foo')).toBe('newVal')
     })
 
     test('should reset old props', () => {
       const el = document.createElement('div')
-
-      setDynamicProps(el, [{ foo: 'val' }])
+      let prev: any
+      prev = setDynamicProps(el, prev, [{ foo: 'val' }])
       expect(el.attributes.length).toBe(1)
       expect(el.getAttribute('foo')).toBe('val')
 
-      setDynamicProps(el, [{ bar: 'val' }])
+      prev = setDynamicProps(el, prev, [{ bar: 'val' }])
       expect(el.attributes.length).toBe(1)
       expect(el.getAttribute('bar')).toBe('val')
       expect(el.getAttribute('foo')).toBeNull()
@@ -417,18 +398,19 @@ describe('patchProp', () => {
     test('should reset old modifier props', () => {
       const el = document.createElement('div')
 
-      setDynamicProps(el, [{ ['.foo']: 'val' }])
+      let prev: any
+      prev = setDynamicProps(el, prev, [{ ['.foo']: 'val' }])
       expect((el as any).foo).toBe('val')
 
-      setDynamicProps(el, [{ ['.bar']: 'val' }])
+      prev = setDynamicProps(el, prev, [{ ['.bar']: 'val' }])
       expect((el as any).bar).toBe('val')
       expect((el as any).foo).toBe('')
 
-      setDynamicProps(el, [{ ['^foo']: 'val' }])
+      prev = setDynamicProps(el, prev, [{ ['^foo']: 'val' }])
       expect(el.attributes.length).toBe(1)
       expect(el.getAttribute('foo')).toBe('val')
 
-      setDynamicProps(el, [{ ['^bar']: 'val' }])
+      prev = setDynamicProps(el, prev, [{ ['^bar']: 'val' }])
       expect(el.attributes.length).toBe(1)
       expect(el.getAttribute('bar')).toBe('val')
       expect(el.getAttribute('foo')).toBeNull()
