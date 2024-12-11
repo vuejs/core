@@ -247,11 +247,11 @@ function processPropValues(
   // e.g. _foo === _ctx.foo && (_prev_foo = _setStyle(...))
   let shouldWrapInParentheses: boolean = false
   let prevValueName
+  const needReturnValue = helpersNeedCachedReturnValue.includes(helperName)
   if (shouldCacheRenderEffectDeps()) {
     const { declareNames, operations, identifiers } = processingRenderEffect!
     // if render effect rely on any reactive object, it should not cache
     const canCache = identifiers.every(name => canCacheValue(context, name))
-    const needReturnValue = helpersNeedCachedReturnValue.includes(helperName)
     processValues(context, values, canCache)
     // if the operation needs to cache the return value and has multiple declareNames,
     // combine them into a single name as the return value name.
@@ -261,7 +261,7 @@ function processPropValues(
         declareNames.size === 1 ? `_prev${names[0]}` : names.join('')
       if (!canCache) {
         declareNames.clear()
-        processingRenderEffect!.earlyCheckExps.splice(0)
+        processingRenderEffect!.earlyCheckExps = []
       }
       declareNames.add(prevValueName)
     }
@@ -333,5 +333,9 @@ function canCacheValue(context: CodegenContext, name: string): boolean {
   const {
     options: { bindingMetadata },
   } = context
-  return bindingMetadata[name] !== BindingTypes.SETUP_REACTIVE_CONST
+  const bindingType = bindingMetadata[name]
+  return (
+    bindingType !== BindingTypes.SETUP_REACTIVE_CONST &&
+    bindingType !== BindingTypes.SETUP_CONST
+  )
 }
