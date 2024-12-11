@@ -295,32 +295,32 @@ function processValue(
   needRewrite: boolean = true,
 ): string[] | undefined {
   const { processingRenderEffect, allRenderEffectSeenNames } = context
-  const { declareNames, rewrittenNames, earlyCheckExps, operations } =
+  const { declareNames, earlyCheckExps, preAccessExps } =
     processingRenderEffect!
 
-  const isSingleLine = operations.length === 1
+  // const isSingleLine = operations.length === 1
   for (const frag of values) {
     if (!isArray(frag)) continue
     // [code, newlineIndex, loc, name] -> [(_name = code), newlineIndex, loc, name]
     const [newName, , , rawName] = frag
     if (rawName) {
       let name = rawName.replace(/[^\w]/g, '_')
-      if (rewrittenNames.has(name)) continue
-      rewrittenNames.add(name)
+      // if (rewrittenNames.has(name)) continue
+      // rewrittenNames.add(name)
 
       name = `_${name}`
-      if (declareNames.has(name)) continue
-
-      if (allRenderEffectSeenNames[name] === undefined)
-        allRenderEffectSeenNames[name] = 0
-      else name += ++allRenderEffectSeenNames[name]
-
-      declareNames.add(name)
-      earlyCheckExps.push(`${name} !== ${newName}`)
-
-      if (needRewrite && isSingleLine) {
-        // replace the original code fragment with the assignment expression
-        frag[0] = `(${name} = ${newName})`
+      if (!declareNames.has(name)) {
+        if (allRenderEffectSeenNames[name] === undefined)
+          allRenderEffectSeenNames[name] = 0
+        else name += ++allRenderEffectSeenNames[name]
+        declareNames.add(name)
+      }
+      const preAccessName = `_${name}`
+      declareNames.add(`${preAccessName}`)
+      preAccessExps.add(`${preAccessName} = ${newName}`)
+      earlyCheckExps.push(`${name} !== ${preAccessName}`)
+      if (needRewrite) {
+        frag[0] = `${preAccessName}`
       }
     }
   }

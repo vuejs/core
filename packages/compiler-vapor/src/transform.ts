@@ -163,6 +163,7 @@ export class TransformContext<T extends AllNode = AllNode> {
         expressions,
         operations,
         earlyCheckExps: [],
+        preAccessExps: new Set<string>(),
         declareNames: new Set<string>(),
         rewrittenNames: new Set<string>(),
         inVFor: this.inVFor > 0,
