@@ -2,13 +2,7 @@ import type {
   CodegenOptions as BaseCodegenOptions,
   BaseCodegenResult,
 } from '@vue/compiler-dom'
-import type {
-  BlockIRNode,
-  CoreHelper,
-  IREffect,
-  RootIRNode,
-  VaporHelper,
-} from './ir'
+import type { BlockIRNode, CoreHelper, RootIRNode, VaporHelper } from './ir'
 import { extend, remove } from '@vue/shared'
 import { genBlockContent } from './generators/block'
 import { genTemplates } from './generators/template'
@@ -36,15 +30,6 @@ export class CodegenContext {
   }
 
   delegates: Set<string> = new Set<string>()
-
-  processingRenderEffect: IREffect | undefined = undefined
-  allRenderEffectSeenNames: Record<string, number> = Object.create(null)
-  shouldCacheRenderEffectDeps = (): boolean => {
-    // only need to generate effect deps when it's not nested in v-for
-    return !!(
-      this.processingRenderEffect && !this.processingRenderEffect.inVFor
-    )
-  }
 
   identifiers: Record<string, string[]> = Object.create(null)
 

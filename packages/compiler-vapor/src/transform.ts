@@ -5,7 +5,6 @@ import {
   type CompilerCompatOptions,
   type ElementNode,
   ElementTypes,
-  type ExpressionNode,
   NodeTypes,
   type RootNode,
   type SimpleExpressionNode,
@@ -13,16 +12,8 @@ import {
   defaultOnError,
   defaultOnWarn,
   isVSlot,
-  walkIdentifiers,
 } from '@vue/compiler-dom'
-import {
-  EMPTY_OBJ,
-  NOOP,
-  extend,
-  isArray,
-  isString,
-  looseEqual,
-} from '@vue/shared'
+import { EMPTY_OBJ, NOOP, extend, isArray, isString } from '@vue/shared'
 import {
   type BlockIRNode,
   DynamicFlag,
@@ -151,10 +142,8 @@ export class TransformContext<T extends AllNode = AllNode> {
     if (this.inVOnce || expressions.length === 0) {
       return this.registerOperation(...operations)
     }
-    const ids = new Set<string>()
-    expressions.forEach(exp => extractIdentifiers(ids, exp))
     const existing = this.block.effect.find(e =>
-      looseEqual(e.identifiers, Array.from(ids)),
+      isSameExpression(e.expressions, expressions),
     )
     if (existing) {
       existing.operations.push(...operations)
@@ -162,14 +151,18 @@ export class TransformContext<T extends AllNode = AllNode> {
       this.block.effect.push({
         expressions,
         operations,
-        earlyCheckExps: [],
-        declareNames: new Set<string>(),
-        rewrittenNames: new Set<string>(),
-        inVFor: this.inVFor > 0,
-        identifiers: Array.from(ids),
       })
     }
+
+    function isSameExpression(
+      a: SimpleExpressionNode[],
+      b: SimpleExpressionNode[],
+    ) {
+      if (a.length !== b.length) return false
+      return a.every((exp, i) => exp.content === b[i].content)
+    }
   }
+
   registerOperation(...node: OperationNode[]): void {
     this.block.operation.push(...node)
   }
@@ -302,13 +295,5 @@ export function createStructuralDirectiveTransform(
       }
       return exitFns
     }
-  }
-}
-
-function extractIdentifiers(ids: Set<string>, node: ExpressionNode) {
-  if (node.ast) {
-    walkIdentifiers(node.ast, n => ids.add(n.name), true)
-  } else if (node.ast === null) {
-    ids.add((node as SimpleExpressionNode).content)
   }
 }

@@ -8,18 +8,14 @@ import {
   genCall,
   genMulti,
 } from './utils'
-import { processValues } from './prop'
 
 export function genSetText(
   oper: SetTextIRNode,
   context: CodegenContext,
 ): CodeFragment[] {
-  const { helper, shouldCacheRenderEffectDeps } = context
+  const { helper } = context
   const { element, values } = oper
   const texts = values.map(value => genExpression(value, context))
-  if (shouldCacheRenderEffectDeps()) {
-    processValues(context, texts)
-  }
   return [NEWLINE, ...genCall(helper('setText'), `n${element}`, ...texts)]
 }
 

@@ -7,7 +7,7 @@ import {
 } from '../directives/vShow'
 import { CSS_VAR_TEXT } from '../helpers/useCssVars'
 
-type Style = string | Record<string, string | string[]> | null
+type Style = string | Record<string, string | string[]> | null | undefined
 
 const displayRE = /(^|;)\s*display\s*:/
 

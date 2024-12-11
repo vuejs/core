@@ -330,6 +330,23 @@ export function render(_ctx) {
 }"
 `;
 
+exports[`compiler v-bind > MathML global attributes should set as attribute 1`] = `
+"import { setAttr as _setAttr, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<math></math>")
+
+export function render(_ctx) {
+  const n0 = t0()
+  _renderEffect(() => {
+    _setAttr(n0, "autofucus", _ctx.autofucus)
+    _setAttr(n0, "dir", _ctx.dir)
+    _setAttr(n0, "displaystyle", _ctx.displaystyle)
+    _setAttr(n0, "mathcolor", _ctx.mathcolor)
+    _setAttr(n0, "tabindex", _ctx.tabindex)
+  })
+  return n0
+}"
+`;
+
 exports[`compiler v-bind > MathML global attributes should set as dom prop 1`] = `
 "import { setDOMProp as _setDOMProp, renderEffect as _renderEffect, template as _template } from 'vue';
 const t0 = _template("<math></math>")
@@ -343,6 +360,21 @@ export function render(_ctx) {
     _displaystyle !== _ctx.displaystyle && _setDOMProp(n0, "displaystyle", (_displaystyle = _ctx.displaystyle))
     _mathcolor !== _ctx.mathcolor && _setDOMProp(n0, "mathcolor", (_mathcolor = _ctx.mathcolor))
     _tabindex !== _ctx.tabindex && _setDOMProp(n0, "tabindex", (_tabindex = _ctx.tabindex))
+  })
+  return n0
+}"
+`;
+
+exports[`compiler v-bind > SVG global attributes should set as attribute 1`] = `
+"import { setAttr as _setAttr, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<svg></svg>")
+
+export function render(_ctx) {
+  const n0 = t0()
+  _renderEffect(() => {
+    _setAttr(n0, "id", _ctx.id)
+    _setAttr(n0, "lang", _ctx.lang)
+    _setAttr(n0, "tabindex", _ctx.tabindex)
   })
   return n0
 }"

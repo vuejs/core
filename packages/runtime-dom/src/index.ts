@@ -311,3 +311,14 @@ export const initDirectivesForSSR: () => void = __SSR__
 export * from '@vue/runtime-core'
 
 export * from './jsx'
+
+// VAPOR -----------------------------------------------------------------------
+
+/**
+ * @internal
+ */
+export { patchStyle } from './modules/style'
+/**
+ * @internal
+ */
+export { shouldSetAsProp } from './patchProp'

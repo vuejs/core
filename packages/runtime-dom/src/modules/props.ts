@@ -1,5 +1,5 @@
 import { DeprecationTypes, compatUtils, warn } from '@vue/runtime-core'
-import { includeBooleanAttr } from '@vue/shared'
+import { canSetValueDirectly, includeBooleanAttr } from '@vue/shared'
 import { unsafeToTrustedHTML } from '../nodeOps'
 
 // functions. The user is responsible for using them with only trusted content.
@@ -24,12 +24,7 @@ export function patchDOMProp(
 
   const tag = el.tagName
 
-  if (
-    key === 'value' &&
-    tag !== 'PROGRESS' &&
-    // custom elements may use _value internally
-    !tag.includes('-')
-  ) {
+  if (key === 'value' && canSetValueDirectly(tag)) {
     // #4956: <option> value will fallback to its text content so we need to
     // compare against its attribute value instead.
     const oldValue =

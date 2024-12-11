@@ -686,69 +686,6 @@ describe('compiler v-bind', () => {
     expect(code).contains(' _setAttr(n6, "width", _ctx.width)')
   })
 
-  test('HTML global attributes should set as dom prop', () => {
-    const { code } = compileWithVBind(`
-      <div :id="id" :title="title" :lang="lang" :dir="dir" :tabindex="tabindex" />
-    `)
-
-    expect(code).matchSnapshot()
-    expect(code).contains(
-      '_id !== _ctx.id && _setDOMProp(n0, "id", (_id = _ctx.id))',
-    )
-    expect(code).contains(
-      '_title !== _ctx.title && _setDOMProp(n0, "title", (_title = _ctx.title))',
-    )
-    expect(code).contains(
-      '_lang !== _ctx.lang && _setDOMProp(n0, "lang", (_lang = _ctx.lang))',
-    )
-    expect(code).contains(
-      '_dir !== _ctx.dir && _setDOMProp(n0, "dir", (_dir = _ctx.dir))',
-    )
-    expect(code).contains(
-      '_tabindex !== _ctx.tabindex && _setDOMProp(n0, "tabindex", (_tabindex = _ctx.tabindex))',
-    )
-  })
-
-  test('SVG global attributes should set as dom prop', () => {
-    const { code } = compileWithVBind(`
-      <svg :id="id" :lang="lang" :tabindex="tabindex" />
-    `)
-
-    expect(code).matchSnapshot()
-    expect(code).contains(
-      '_id !== _ctx.id && _setDOMProp(n0, "id", (_id = _ctx.id))',
-    )
-    expect(code).contains(
-      '_lang !== _ctx.lang && _setDOMProp(n0, "lang", (_lang = _ctx.lang))',
-    )
-    expect(code).contains(
-      '_tabindex !== _ctx.tabindex && _setDOMProp(n0, "tabindex", (_tabindex = _ctx.tabindex))',
-    )
-  })
-
-  test('MathML global attributes should set as dom prop', () => {
-    const { code } = compileWithVBind(`
-      <math :autofucus :dir :displaystyle :mathcolor :tabindex/>
-    `)
-
-    expect(code).matchSnapshot()
-    expect(code).contains(
-      '_autofucus !== _ctx.autofucus && _setDOMProp(n0, "autofucus", (_autofucus = _ctx.autofucus))',
-    )
-    expect(code).contains(
-      '_dir !== _ctx.dir && _setDOMProp(n0, "dir", (_dir = _ctx.dir))',
-    )
-    expect(code).contains(
-      '_displaystyle !== _ctx.displaystyle && _setDOMProp(n0, "displaystyle", (_displaystyle = _ctx.displaystyle))',
-    )
-    expect(code).contains(
-      '_mathcolor !== _ctx.mathcolor && _setDOMProp(n0, "mathcolor", (_mathcolor = _ctx.mathcolor))',
-    )
-    expect(code).contains(
-      '_tabindex !== _ctx.tabindex && _setDOMProp(n0, "tabindex", (_tabindex = _ctx.tabindex))',
-    )
-  })
-
   test(':innerHTML', () => {
     const { code } = compileWithVBind(`
       <div :innerHTML="foo"/>

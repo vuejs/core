@@ -241,8 +241,9 @@ describe('patchProp', () => {
   describe('setDOMProp', () => {
     test('should be boolean prop', () => {
       const el = document.createElement('select')
-      setDOMProp(el, 'multiple', '')
-      expect(el.multiple).toBe(true)
+      // In vapor static attrs are part of the template and this never happens
+      // setDOMProp(el, 'multiple', '')
+      // expect(el.multiple).toBe(true)
       setDOMProp(el, 'multiple', null)
       expect(el.multiple).toBe(false)
       setDOMProp(el, 'multiple', true)
@@ -261,33 +262,29 @@ describe('patchProp', () => {
 
     test('should remove attribute when value is falsy', () => {
       const el = document.createElement('div')
-      setDOMProp(el, 'id', '')
-      expect(el.hasAttribute('id')).toBe(true)
+      el.setAttribute('id', '')
       setDOMProp(el, 'id', null)
       expect(el.hasAttribute('id')).toBe(false)
 
-      setDOMProp(el, 'id', '')
-      expect(el.hasAttribute('id')).toBe(true)
+      el.setAttribute('id', '')
       setDOMProp(el, 'id', undefined)
       expect(el.hasAttribute('id')).toBe(false)
 
       setDOMProp(el, 'id', '')
-      expect(el.hasAttribute('id')).toBe(true)
+      expect(el.hasAttribute('id')).toBe(false)
 
       const img = document.createElement('img')
-      setDOMProp(img, 'width', '')
-      expect(img.hasAttribute('width')).toBe(false)
       setDOMProp(img, 'width', 0)
-      expect(img.hasAttribute('width')).toBe(true)
+      expect(img.hasAttribute('width')).toBe(false) // skipped
 
       setDOMProp(img, 'width', null)
       expect(img.hasAttribute('width')).toBe(false)
-      setDOMProp(img, 'width', 0)
+      setDOMProp(img, 'width', 1)
       expect(img.hasAttribute('width')).toBe(true)
 
       setDOMProp(img, 'width', undefined)
       expect(img.hasAttribute('width')).toBe(false)
-      setDOMProp(img, 'width', 0)
+      setDOMProp(img, 'width', 1)
       expect(img.hasAttribute('width')).toBe(true)
     })
 
@@ -371,25 +368,24 @@ describe('patchProp', () => {
   describe('setDynamicProps', () => {
     test('basic set dynamic props', () => {
       const el = document.createElement('div')
-      setDynamicProps(el, null, [{ foo: 'val' }, { bar: 'val' }])
+      setDynamicProps(el, [{ foo: 'val' }, { bar: 'val' }])
       expect(el.getAttribute('foo')).toBe('val')
       expect(el.getAttribute('bar')).toBe('val')
     })
 
     test('should merge props', () => {
       const el = document.createElement('div')
-      setDynamicProps(el, null, [{ foo: 'val' }, { foo: 'newVal' }])
+      setDynamicProps(el, [{ foo: 'val' }, { foo: 'newVal' }])
       expect(el.getAttribute('foo')).toBe('newVal')
     })
 
     test('should reset old props', () => {
       const el = document.createElement('div')
-      let prev: any
-      prev = setDynamicProps(el, prev, [{ foo: 'val' }])
+      setDynamicProps(el, [{ foo: 'val' }])
       expect(el.attributes.length).toBe(1)
       expect(el.getAttribute('foo')).toBe('val')
 
-      prev = setDynamicProps(el, prev, [{ bar: 'val' }])
+      setDynamicProps(el, [{ bar: 'val' }])
       expect(el.attributes.length).toBe(1)
       expect(el.getAttribute('bar')).toBe('val')
       expect(el.getAttribute('foo')).toBeNull()
@@ -398,19 +394,18 @@ describe('patchProp', () => {
     test('should reset old modifier props', () => {
       const el = document.createElement('div')
 
-      let prev: any
-      prev = setDynamicProps(el, prev, [{ ['.foo']: 'val' }])
+      setDynamicProps(el, [{ ['.foo']: 'val' }])
       expect((el as any).foo).toBe('val')
 
-      prev = setDynamicProps(el, prev, [{ ['.bar']: 'val' }])
+      setDynamicProps(el, [{ ['.bar']: 'val' }])
       expect((el as any).bar).toBe('val')
       expect((el as any).foo).toBe('')
 
-      prev = setDynamicProps(el, prev, [{ ['^foo']: 'val' }])
+      setDynamicProps(el, [{ ['^foo']: 'val' }])
       expect(el.attributes.length).toBe(1)
       expect(el.getAttribute('foo')).toBe('val')
 
-      prev = setDynamicProps(el, prev, [{ ['^bar']: 'val' }])
+      setDynamicProps(el, [{ ['^bar']: 'val' }])
       expect(el.attributes.length).toBe(1)
       expect(el.getAttribute('bar')).toBe('val')
       expect(el.getAttribute('foo')).toBeNull()

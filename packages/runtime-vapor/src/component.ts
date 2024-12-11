@@ -32,13 +32,7 @@ import {
   proxyRefs,
   resetTracking,
 } from '@vue/reactivity'
-import {
-  EMPTY_OBJ,
-  extend,
-  invokeArrayFns,
-  isFunction,
-  isString,
-} from '@vue/shared'
+import { EMPTY_OBJ, invokeArrayFns, isFunction, isString } from '@vue/shared'
 import {
   type DynamicPropsSource,
   type RawProps,
@@ -50,8 +44,7 @@ import {
 } from './componentProps'
 import { renderEffect } from './renderEffect'
 import { emit, normalizeEmitsOptions } from './componentEmits'
-import { setStyle } from './dom/style'
-import { setClass, setDynamicProp, setDynamicProps } from './dom/prop'
+import { setDynamicProps } from './dom/prop'
 import {
   type DynamicSlotSource,
   type RawSlots,
@@ -215,11 +208,8 @@ export function createComponent(
     instance.block instanceof Element &&
     Object.keys(instance.attrs).length
   ) {
-    let prevProps: any
     renderEffect(() => {
-      setDynamicProps(instance.block as Element, prevProps, [
-        (prevProps = extend({}, instance.attrs)),
-      ])
+      setDynamicProps(instance.block as Element, [instance.attrs])
     })
   }
 
@@ -429,23 +419,8 @@ export function createComponentWithFallback(
   const el = document.createElement(comp)
 
   if (rawProps) {
-    let prevProps: any, prevStyle: any
     renderEffect(() => {
-      let classes: unknown[] | undefined
-      let styles: unknown[] | undefined
-      const resolved = resolveDynamicProps(rawProps)
-      for (const key in resolved) {
-        const value = resolved[key]
-        if (key === 'class') {
-          ;(classes ||= []).push(value)
-        } else if (key === 'style') {
-          ;(styles ||= []).push(value)
-        } else if (value !== prevProps) {
-          setDynamicProp(el, key, prevProps, (prevProps = value))
-        }
-      }
-      if (classes) setClass(el, classes, isSingleRoot)
-      if (styles) setStyle(el, prevStyle, (prevStyle = styles), isSingleRoot)
+      setDynamicProps(el, [resolveDynamicProps(rawProps)])
     })
   }
 

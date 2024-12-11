@@ -1,6 +1,6 @@
 import { hyphenate, isArray, isObject, isString } from './general'
 
-export type NormalizedStyle = Record<string, string | number>
+export type NormalizedStyle = Record<string, string>
 
 export function normalizeStyle(
   value: unknown,

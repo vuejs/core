@@ -21,18 +21,30 @@ import {
   genMulti,
 } from './utils'
 import {
-  attributeCache,
   canSetValueDirectly,
-  isArray,
   isHTMLGlobalAttr,
-  isHTMLTag,
-  isMathMLGlobalAttr,
-  isMathMLTag,
-  isSVGTag,
-  isSvgGlobalAttr,
-  shouldSetAsAttr,
   toHandlerKey,
 } from '@vue/shared'
+
+export type HelperConfig = {
+  name: VaporHelper
+  needKey?: boolean
+  acceptRoot?: boolean
+}
+
+// this should be kept in sync with runtime-vapor/src/dom/prop.ts
+const helpers = {
+  setText: { name: 'setText' },
+  setHtml: { name: 'setHtml' },
+  setClass: { name: 'setClass' },
+  setClassIncremental: { name: 'setClassIncremental' },
+  setStyle: { name: 'setStyle' },
+  setStyleIncremental: { name: 'setStyleIncremental' },
+  setValue: { name: 'setValue' },
+  setAttr: { name: 'setAttr', needKey: true },
+  setDOMProp: { name: 'setDOMProp', needKey: true },
+  setDynamicProps: { name: 'setDynamicProps', acceptRoot: true },
+} as const satisfies Partial<Record<VaporHelper, HelperConfig>>
 
 // only the static key prop will reach here
 export function genSetProp(
@@ -43,31 +55,19 @@ export function genSetProp(
   const {
     prop: { key, values, modifier },
     tag,
+    root,
   } = oper
-  const { helperName, omitKey } = getRuntimeHelper(tag, key.content, modifier)
+  const resolvedHelper = getRuntimeHelper(tag, key.content, modifier, root)
   const propValue = genPropValue(values, context)
-  const { prevValueName, shouldWrapInParentheses } = processPropValues(
-    context,
-    helperName,
-    [propValue],
-  )
   return [
     NEWLINE,
-    ...(prevValueName
-      ? [shouldWrapInParentheses ? `(` : undefined, `${prevValueName} = `]
-      : []),
     ...genCall(
-      [helper(helperName), null],
+      [helper(resolvedHelper.name), null],
       `n${oper.element}`,
-      omitKey ? false : genExpression(key, context),
-      ...(prevValueName ? [`${prevValueName}`] : []),
+      resolvedHelper.needKey ? genExpression(key, context) : false,
       propValue,
-      // only `setClass` and `setStyle` need merge inherit attr
-      oper.root && (helperName === 'setClass' || helperName === 'setStyle')
-        ? 'true'
-        : undefined,
+      root && resolvedHelper.acceptRoot ? 'true' : undefined,
     ),
-    ...(prevValueName && shouldWrapInParentheses ? [`)`] : []),
   ]
 }
 
@@ -84,24 +84,14 @@ export function genDynamicProps(
         ? genLiteralObjectProps([props], context) // dynamic arg props
         : genExpression(props.value, context),
   ) // v-bind=""
-  const { prevValueName, shouldWrapInParentheses } = processPropValues(
-    context,
-    'setDynamicProps',
-    values,
-  )
   return [
     NEWLINE,
-    ...(prevValueName
-      ? [shouldWrapInParentheses ? `(` : undefined, `${prevValueName} = `]
-      : []),
     ...genCall(
       helper('setDynamicProps'),
       `n${oper.element}`,
-      ...(prevValueName ? [`${prevValueName}`] : []),
       genMulti(DELIMITERS_ARRAY, ...values),
       oper.root && 'true',
     ),
-    ...(prevValueName && shouldWrapInParentheses ? [`)`] : []),
   ]
 }
 
@@ -161,161 +151,75 @@ export function genPropValue(
   )
 }
 
+// TODO
+// - 1. textContent + innerHTML Known base dom properties in https://developer.mozilla.org/en-US/docs/Web/API/Element
+// - 2. special handling (class / style)
+// - 3. SVG: always attribute
+// - 4. Custom Elements
+//     - always properties unless known global attr or has hyphen (aria- / data-)
+// - 5. Normal Elements
+//   - 1. Known shared dom properties:
+//     - https://developer.mozilla.org/en-US/docs/Web/API/HTMLElement
+//   - 2. Each element's known dom properties
+//   - 3. Fallback to attribute
+
 function getRuntimeHelper(
   tag: string,
   keyName: string,
   modifier: '.' | '^' | undefined,
-) {
+  root: boolean,
+): HelperConfig {
   const tagName = tag.toUpperCase()
-  let helperName: VaporHelper
-  let omitKey = false
-
   if (modifier) {
     if (modifier === '.') {
-      const helper = getSpecialHelper(keyName, tagName)
-      if (helper) {
-        helperName = helper.name
-        omitKey = helper.omitKey
-      } else {
-        helperName = 'setDOMProp'
-        omitKey = false
-      }
+      return getSpecialHelper(keyName, tagName, root) || helpers.setDOMProp
     } else {
-      helperName = 'setAttr'
+      return helpers.setAttr
     }
   } else {
-    const attrCacheKey = `${tagName}_${keyName}`
-    const helper = getSpecialHelper(keyName, tagName)
+    const helper = getSpecialHelper(keyName, tagName, root)
     if (helper) {
-      helperName = helper.name
-      omitKey = helper.omitKey
-    } else if (
-      attributeCache[attrCacheKey] === undefined
-        ? (attributeCache[attrCacheKey] = shouldSetAsAttr(tagName, keyName))
-        : attributeCache[attrCacheKey]
-    ) {
-      helperName = 'setAttr'
-    } else if (
-      (isHTMLTag(tag) && isHTMLGlobalAttr(keyName)) ||
-      (isSVGTag(tag) && isSvgGlobalAttr(keyName)) ||
-      (isMathMLTag(tag) && isMathMLGlobalAttr(keyName))
-    ) {
-      helperName = 'setDOMProp'
+      return helper
+    } else if (tagName.includes('-')) {
+      // custom element
+      if (isHTMLGlobalAttr(keyName) || keyName.includes('-')) {
+        return helpers.setAttr
+      } else {
+        return helpers.setDOMProp
+      }
+    } else if (/[A-Z]/.test(keyName)) {
+      return helpers.setDOMProp
     } else {
-      helperName = 'setDynamicProp'
+      return helpers.setAttr
     }
   }
-  return { helperName, omitKey }
 }
-
-const specialHelpers: Record<string, { name: VaporHelper; omitKey: boolean }> =
-  {
-    class: { name: 'setClass', omitKey: true },
-    style: { name: 'setStyle', omitKey: true },
-    innerHTML: { name: 'setHtml', omitKey: true },
-    textContent: { name: 'setText', omitKey: true },
-  }
 
 const getSpecialHelper = (
   keyName: string,
   tagName: string,
-): { name: VaporHelper; omitKey: boolean } | null => {
+  root: boolean,
+): HelperConfig | undefined => {
   // special case for 'value' property
   if (keyName === 'value' && canSetValueDirectly(tagName)) {
-    return { name: 'setValue', omitKey: true }
+    return helpers.setValue
   }
 
-  return specialHelpers[keyName] || null
-}
-
-// those runtime helpers will return the prevValue
-const helpersNeedCachedReturnValue = [
-  'setStyle',
-  'setDynamicProp',
-  'setDynamicProps',
-]
-
-function processPropValues(
-  context: CodegenContext,
-  helperName: string,
-  values: CodeFragment[][],
-): { prevValueName: string | undefined; shouldWrapInParentheses: boolean } {
-  const { shouldCacheRenderEffectDeps, processingRenderEffect } = context
-  // single-line render effect and the operation needs cache return a value,
-  // the expression needs to be wrapped in parentheses.
-  // e.g. _foo === _ctx.foo && (_foo = _setStyle(...))
-  let shouldWrapInParentheses: boolean = false
-  let prevValueName
-  if (shouldCacheRenderEffectDeps()) {
-    const needReturnValue = helpersNeedCachedReturnValue.includes(helperName)
-    processValues(context, values, !needReturnValue)
-    const { declareNames } = processingRenderEffect!
-    // if the operation needs to cache the return value and has multiple declareNames,
-    // combine them into a single name as the return value name.
-    if (declareNames.size > 0 && needReturnValue) {
-      prevValueName = [...declareNames].join('')
-      declareNames.add(prevValueName)
-    }
-    shouldWrapInParentheses = processingRenderEffect!.operations.length === 1
-  }
-  return { prevValueName, shouldWrapInParentheses }
-}
-
-export function processValues(
-  context: CodegenContext,
-  values: CodeFragment[][],
-  needRewrite: boolean = true,
-): string[] {
-  const allCheckExps: string[] = []
-  values.forEach(value => {
-    const checkExps = processValue(context, value, needRewrite)
-    if (checkExps) allCheckExps.push(...checkExps, ' && ')
-  })
-
-  return allCheckExps.length > 0
-    ? (context.processingRenderEffect!.earlyCheckExps = [
-        ...new Set(allCheckExps),
-      ])
-    : []
-}
-
-function processValue(
-  context: CodegenContext,
-  values: CodeFragment[],
-  needRewrite: boolean = true,
-): string[] | undefined {
-  const { processingRenderEffect, allRenderEffectSeenNames } = context
-  const { declareNames, rewrittenNames, earlyCheckExps, operations } =
-    processingRenderEffect!
-
-  const isSingleLine = operations.length === 1
-  for (const frag of values) {
-    if (!isArray(frag)) continue
-    // [code, newlineIndex, loc, name] -> [(_name = code), newlineIndex, loc, name]
-    const [newName, , , rawName] = frag
-    if (rawName) {
-      let name = rawName.replace(/[^\w]/g, '_')
-      if (rewrittenNames.has(name)) continue
-      rewrittenNames.add(name)
-
-      name = `_${name}`
-      if (declareNames.has(name)) continue
-
-      if (allRenderEffectSeenNames[name] === undefined)
-        allRenderEffectSeenNames[name] = 0
-      else name += ++allRenderEffectSeenNames[name]
-
-      declareNames.add(name)
-      earlyCheckExps.push(`${name} !== ${newName}`)
-
-      if (needRewrite && isSingleLine) {
-        // replace the original code fragment with the assignment expression
-        frag[0] = `(${name} = ${newName})`
-      }
+  if (root) {
+    if (keyName === 'class') {
+      return helpers.setClassIncremental
+    } else if (keyName === 'style') {
+      return helpers.setStyleIncremental
     }
   }
 
-  if (earlyCheckExps.length > 0) {
-    return [[...new Set(earlyCheckExps)].join(' && ')]
+  if (keyName === 'class') {
+    return helpers.setClass
+  } else if (keyName === 'style') {
+    return helpers.setStyle
+  } else if (keyName === 'innerHTML') {
+    return helpers.setHtml
+  } else if (keyName === 'textContent') {
+    return helpers.setText
   }
 }

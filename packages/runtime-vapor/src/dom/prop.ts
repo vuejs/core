@@ -1,40 +1,102 @@
 import {
-  attributeCache,
+  type NormalizedStyle,
   canSetValueDirectly,
-  includeBooleanAttr,
-  isArray,
-  isFunction,
-  isNativeOn,
   isOn,
   isString,
   normalizeClass,
   normalizeStyle,
-  shouldSetAsAttr,
+  parseStringStyle,
   toDisplayString,
 } from '@vue/shared'
-import { setStyle } from './style'
 import { on } from './event'
-import { currentInstance } from '../component'
-import { warn } from '@vue/runtime-dom'
+import {
+  mergeProps,
+  patchStyle as setStyle,
+  shouldSetAsProp,
+  warn,
+} from '@vue/runtime-dom'
 
-export function mergeInheritAttr(key: string, value: any): unknown {
-  const instance = currentInstance!
-  return mergeProp(key, instance.attrs[key], value)
+type TargetElement = Element & {
+  $html?: string
+  $cls?: string
+  $clsi?: string
+  $sty?: NormalizedStyle
+  $styi?: NormalizedStyle
+  $dprops?: Record<string, any>
 }
 
-export function setClass(el: Element, value: any, root?: boolean): void {
-  el.className = normalizeClass(root ? mergeInheritAttr('class', value) : value)
-}
-
-export function setAttr(el: Element, key: string, value: any): void {
-  if (value != null) {
-    el.setAttribute(key, value)
-  } else {
-    el.removeAttribute(key)
+export function setText(el: Node & { $txt?: string }, ...values: any[]): void {
+  const value = values.map(v => toDisplayString(v)).join('')
+  if (el.$txt !== value) {
+    el.textContent = el.$txt = value
   }
 }
 
-export function setValue(el: any, value: any): void {
+export function setHtml(el: TargetElement, value: any): void {
+  value = value == null ? '' : value
+  if (el.$html !== value) {
+    el.innerHTML = el.$html = value
+  }
+}
+
+export function setClass(el: TargetElement, value: any): void {
+  if ((value = normalizeClass(value)) !== el.$cls) {
+    el.className = el.$cls = value
+  }
+}
+
+/**
+ * A version of setClass that does not overwrite pre-existing classes.
+ * Used on single root elements so it can patch class independent of fallthrough
+ * attributes.
+ */
+export function setClassIncremental(el: TargetElement, value: any): void {
+  const prev = el.$clsi
+  if ((value = normalizeClass(value)) !== prev) {
+    el.$clsi = value
+    const nextList = value.split(/\s+/)
+    el.classList.add(...nextList)
+    if (prev) {
+      for (const cls of prev.split(/\s+/)) {
+        if (!nextList.includes(cls)) el.classList.remove(cls)
+      }
+    }
+  }
+}
+
+/**
+ * Reuse from runtime-dom
+ */
+export { setStyle }
+
+/**
+ * A version of setStyle that does not overwrite pre-existing styles.
+ * Used on single root elements so it can patch class independent of fallthrough
+ * attributes.
+ */
+export function setStyleIncremental(el: TargetElement, value: any): void {
+  const prev = el.$styi
+  value = el.$styi = isString(value)
+    ? parseStringStyle(value)
+    : ((normalizeStyle(value) || {}) as NormalizedStyle)
+  setStyle(el, prev, value)
+}
+
+export function setAttr(el: any, key: string, value: any): void {
+  if (value !== el[`$${key}`]) {
+    el[`$${key}`] = value
+    if (value != null) {
+      el.setAttribute(key, value)
+    } else {
+      el.removeAttribute(key)
+    }
+  }
+}
+
+export function setValue(
+  el: Element & { value?: string; _value?: any },
+  value: any,
+): void {
   // store value as _value as well since
   // non-string values will be stringified.
   el._value = value
@@ -51,13 +113,15 @@ export function setValue(el: any, value: any): void {
 }
 
 export function setDOMProp(el: any, key: string, value: any): void {
+  const prev = el[key]
+  if (value === prev) {
+    return
+  }
+
   let needRemove = false
   if (value === '' || value == null) {
-    const type = typeof el[key]
-    if (type === 'boolean') {
-      // e.g. <select multiple> compiles to { multiple: '' }
-      value = includeBooleanAttr(value)
-    } else if (value == null && type === 'string') {
+    const type = typeof prev
+    if (value == null && type === 'string') {
       // e.g. <div :id="null">
       value = ''
       needRemove = true
@@ -86,60 +150,13 @@ export function setDOMProp(el: any, key: string, value: any): void {
   needRemove && el.removeAttribute(key)
 }
 
-export function setDynamicProp(
-  el: Element,
-  key: string,
-  prev: any,
-  value: any,
-): any {
-  // TODO
-  const isSVG = false
-  if (key === 'class') {
-    setClass(el, value)
-  } else if (key === 'style') {
-    return setStyle(el as HTMLElement, prev, value)
-  } else if (isOn(key)) {
-    on(el, key[2].toLowerCase() + key.slice(3), () => value, { effect: true })
-  } else if (
-    key[0] === '.'
-      ? ((key = key.slice(1)), true)
-      : key[0] === '^'
-        ? ((key = key.slice(1)), false)
-        : shouldSetAsProp(el, key, value, isSVG)
-  ) {
-    if (key === 'innerHTML') {
-      setHtml(el, value)
-      return
-    }
-
-    if (key === 'textContent') {
-      setText(el, value)
-      return
-    }
-
-    const tag = el.tagName
-    if (key === 'value' && canSetValueDirectly(tag)) {
-      setValue(el, value)
-      return
-    }
-
-    setDOMProp(el, key, value)
-  } else {
-    // TODO special case for <input v-model type="checkbox">
-    setAttr(el, key, value)
-  }
-}
-
 export function setDynamicProps(
-  el: Element,
-  oldProps: any,
+  el: TargetElement,
   args: any[],
-  root?: boolean,
+  root = false,
 ): void {
-  if (root) {
-    args.unshift(currentInstance!.attrs)
-  }
   const props = args.length > 1 ? mergeProps(...args) : args[0]
+  const oldProps = el.$dprops
 
   if (oldProps) {
     for (const key in oldProps) {
@@ -151,103 +168,67 @@ export function setDynamicProps(
       const oldValue = oldProps[key]
       const hasNewValue = props[key] || props['.' + key] || props['^' + key]
       if (oldValue && !hasNewValue) {
-        setDynamicProp(el, key, oldValue, null)
+        setDynamicProp(el, key, oldValue, null, root)
       }
     }
   }
 
-  const prev = Object.create(null)
+  const prev = (el.$dprops = Object.create(null))
   for (const key in props) {
     setDynamicProp(
       el,
       key,
       oldProps ? oldProps[key] : undefined,
       (prev[key] = props[key]),
+      root,
     )
   }
-
-  return prev
 }
 
-export function mergeProp(
+/**
+ * @internal
+ */
+export function setDynamicProp(
+  el: TargetElement,
   key: string,
-  existing: unknown,
-  incoming: unknown,
-): unknown {
+  prev: any,
+  value: any,
+  root?: boolean,
+): void {
+  // TODO
+  const isSVG = false
   if (key === 'class') {
-    if (existing !== incoming) {
-      return normalizeClass([existing, incoming])
+    if (root) {
+      setClassIncremental(el, value)
+    } else {
+      setClass(el, value)
     }
   } else if (key === 'style') {
-    return normalizeStyle([existing, incoming])
+    if (root) {
+      setStyleIncremental(el, value)
+    } else {
+      setStyle(el, prev, value)
+    }
   } else if (isOn(key)) {
-    if (
-      incoming &&
-      existing !== incoming &&
-      !(isArray(existing) && existing.includes(incoming))
-    ) {
-      return existing ? [].concat(existing as any, incoming as any) : incoming
-    }
-  }
-  return incoming
-}
-
-type Data = Record<string, any>
-
-export function mergeProps(...args: Data[]): Data {
-  const ret: Data = {}
-  for (let i = 0; i < args.length; i++) {
-    const toMerge = args[i]
-    for (const key in toMerge) {
-      if (key !== '') {
-        ret[key] = mergeProp(key, ret[key], toMerge[key])
-      }
-    }
-  }
-  return ret
-}
-
-export function setText(el: Node, ...values: any[]): void {
-  el.textContent = values.map(v => toDisplayString(v)).join('')
-}
-
-export function setHtml(el: Element, value: any): void {
-  el.innerHTML = value == null ? '' : value
-}
-
-// TODO copied from runtime-dom
-function shouldSetAsProp(
-  el: Element,
-  key: string,
-  value: unknown,
-  isSVG: boolean,
-) {
-  if (isSVG) {
-    // most keys must be set as attribute on svg elements to work
-    // ...except innerHTML & textContent
-    if (key === 'innerHTML' || key === 'textContent') {
-      return true
-    }
-    // or native onclick with function values
-    if (key in el && isNativeOn(key) && isFunction(value)) {
-      return true
-    }
-    return false
-  }
-
-  const attrCacheKey = `${el.tagName}_${key}`
-  if (
-    attributeCache[attrCacheKey] === undefined
-      ? (attributeCache[attrCacheKey] = shouldSetAsAttr(el.tagName, key))
-      : attributeCache[attrCacheKey]
+    on(el, key[2].toLowerCase() + key.slice(3), () => value, { effect: true })
+  } else if (
+    key[0] === '.'
+      ? ((key = key.slice(1)), true)
+      : key[0] === '^'
+        ? ((key = key.slice(1)), false)
+        : shouldSetAsProp(el, key, value, isSVG)
   ) {
-    return false
+    if (key === 'innerHTML') {
+      setHtml(el, value)
+    } else if (key === 'textContent') {
+      setText(el, value)
+    } else if (key === 'value' && canSetValueDirectly(el.tagName)) {
+      setValue(el, value)
+    } else {
+      setDOMProp(el, key, value)
+    }
+  } else {
+    // TODO special case for <input v-model type="checkbox">
+    setAttr(el, key, value)
   }
-
-  // native onclick with string value, must be set as attribute
-  if (isNativeOn(key) && isString(value)) {
-    return false
-  }
-
-  return key in el
 }

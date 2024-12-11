@@ -260,12 +260,7 @@ export interface IRDynamicInfo {
 
 export interface IREffect {
   expressions: SimpleExpressionNode[]
-  identifiers: string[]
   operations: OperationNode[]
-  declareNames: Set<string>
-  rewrittenNames: Set<string>
-  earlyCheckExps: string[]
-  inVFor: boolean
 }
 
 type Overwrite<T, U> = Pick<T, Exclude<keyof T, keyof U>> &

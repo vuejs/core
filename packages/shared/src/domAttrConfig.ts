@@ -180,11 +180,6 @@ export function isRenderableAttrValue(value: unknown): boolean {
   return type === 'string' || type === 'number' || type === 'boolean'
 }
 
-/**
- * cache seen attributes which must be set as attribute
- */
-export const attributeCache: Record<string, boolean> = Object.create(null)
-
 /*
  * The following attributes must be set as attribute
  */
