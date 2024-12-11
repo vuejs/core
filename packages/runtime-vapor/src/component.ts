@@ -139,6 +139,7 @@ export function createComponent(
 ): VaporComponentInstance {
   // check if we are the single root of the parent
   // if yes, inject parent attrs as dynamic props source
+  // TODO avoid child overwriting parent
   if (
     isSingleRoot &&
     component.inheritAttrs !== false &&
@@ -190,6 +191,7 @@ export function createComponent(
       instance.block = []
     } else {
       instance.devtoolsRawSetupState = setupResult
+      // TODO make the proxy warn non-existent property access during dev
       instance.setupState = proxyRefs(setupResult)
       devRender(instance)
 
