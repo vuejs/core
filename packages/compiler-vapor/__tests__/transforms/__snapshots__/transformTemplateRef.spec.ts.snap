@@ -1,7 +1,7 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
 exports[`compiler: template ref transform > dynamic ref 1`] = `
-"import { renderEffect as _renderEffect, setRef as _setRef, template as _template } from 'vue/vapor';
+"import { setRef as _setRef, renderEffect as _renderEffect, template as _template } from 'vue/vapor';
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {

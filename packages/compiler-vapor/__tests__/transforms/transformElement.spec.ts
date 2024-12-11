@@ -588,7 +588,9 @@ describe('compiler: element transform', () => {
         ],
       },
     ])
-    expect(code).contains('_setDynamicProps(n0, [_ctx.obj], true)')
+    expect(code).contains(
+      '_obj !== _ctx.obj && (_obj = _setDynamicProps(n0, _obj, [_ctx.obj], true))',
+    )
   })
 
   test('v-bind="obj" after static prop', () => {
@@ -625,7 +627,7 @@ describe('compiler: element transform', () => {
       },
     ])
     expect(code).contains(
-      '_setDynamicProps(n0, [{ id: "foo" }, _ctx.obj], true)',
+      '_obj !== _ctx.obj && (_obj = _setDynamicProps(n0, _obj, [{ id: "foo" }, _ctx.obj], true))',
     )
   })
 
@@ -653,7 +655,7 @@ describe('compiler: element transform', () => {
       },
     ])
     expect(code).contains(
-      '_setDynamicProps(n0, [_ctx.obj, { id: "foo" }], true)',
+      '_obj !== _ctx.obj && (_obj = _setDynamicProps(n0, _obj, [_ctx.obj, { id: "foo" }], true))',
     )
   })
 
@@ -682,7 +684,7 @@ describe('compiler: element transform', () => {
       },
     ])
     expect(code).contains(
-      '_setDynamicProps(n0, [{ id: "foo" }, _ctx.obj, { class: "bar" }], true)',
+      '_obj !== _ctx.obj && (_obj = _setDynamicProps(n0, _obj, [{ id: "foo" }, _ctx.obj, { class: "bar" }], true))',
     )
   })
 

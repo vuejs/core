@@ -1,366 +1,401 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
 exports[`compiler v-bind > .attr modifier 1`] = `
-"import { setInheritAttrs as _setInheritAttrs, renderEffect as _renderEffect, setAttr as _setAttr, template as _template } from 'vue/vapor';
+"import { setInheritAttrs as _setInheritAttrs, setAttr as _setAttr, renderEffect as _renderEffect, template as _template } from 'vue/vapor';
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
   _setInheritAttrs(["foo-bar"])
-  _renderEffect(() => _setAttr(n0, "foo-bar", _ctx.id))
+  let _id
+  _renderEffect(() => _id !== _ctx.id && _setAttr(n0, "foo-bar", (_id = _ctx.id)))
   return n0
 }"
 `;
 
 exports[`compiler v-bind > .attr modifier w/ innerHTML 1`] = `
-"import { setInheritAttrs as _setInheritAttrs, renderEffect as _renderEffect, setAttr as _setAttr, template as _template } from 'vue/vapor';
+"import { setInheritAttrs as _setInheritAttrs, setAttr as _setAttr, renderEffect as _renderEffect, template as _template } from 'vue/vapor';
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
   _setInheritAttrs(["innerHTML"])
-  _renderEffect(() => _setAttr(n0, "innerHTML", _ctx.foo))
+  let _foo
+  _renderEffect(() => _foo !== _ctx.foo && _setAttr(n0, "innerHTML", (_foo = _ctx.foo)))
   return n0
 }"
 `;
 
 exports[`compiler v-bind > .attr modifier w/ no expression 1`] = `
-"import { setInheritAttrs as _setInheritAttrs, renderEffect as _renderEffect, setAttr as _setAttr, template as _template } from 'vue/vapor';
+"import { setInheritAttrs as _setInheritAttrs, setAttr as _setAttr, renderEffect as _renderEffect, template as _template } from 'vue/vapor';
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
   _setInheritAttrs(["foo-bar"])
-  _renderEffect(() => _setAttr(n0, "foo-bar", _ctx.fooBar))
+  let _fooBar
+  _renderEffect(() => _fooBar !== _ctx.fooBar && _setAttr(n0, "foo-bar", (_fooBar = _ctx.fooBar)))
   return n0
 }"
 `;
 
 exports[`compiler v-bind > .attr modifier w/ progress value 1`] = `
-"import { setInheritAttrs as _setInheritAttrs, renderEffect as _renderEffect, setAttr as _setAttr, template as _template } from 'vue/vapor';
+"import { setInheritAttrs as _setInheritAttrs, setAttr as _setAttr, renderEffect as _renderEffect, template as _template } from 'vue/vapor';
 const t0 = _template("<progress></progress>")
 
 export function render(_ctx) {
   const n0 = t0()
   _setInheritAttrs(["value"])
-  _renderEffect(() => _setAttr(n0, "value", _ctx.foo))
+  let _foo
+  _renderEffect(() => _foo !== _ctx.foo && _setAttr(n0, "value", (_foo = _ctx.foo)))
   return n0
 }"
 `;
 
 exports[`compiler v-bind > .attr modifier w/ textContent 1`] = `
-"import { setInheritAttrs as _setInheritAttrs, renderEffect as _renderEffect, setAttr as _setAttr, template as _template } from 'vue/vapor';
+"import { setInheritAttrs as _setInheritAttrs, setAttr as _setAttr, renderEffect as _renderEffect, template as _template } from 'vue/vapor';
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
   _setInheritAttrs(["textContent"])
-  _renderEffect(() => _setAttr(n0, "textContent", _ctx.foo))
+  let _foo
+  _renderEffect(() => _foo !== _ctx.foo && _setAttr(n0, "textContent", (_foo = _ctx.foo)))
   return n0
 }"
 `;
 
 exports[`compiler v-bind > .attr modifier w/ value 1`] = `
-"import { setInheritAttrs as _setInheritAttrs, renderEffect as _renderEffect, setAttr as _setAttr, template as _template } from 'vue/vapor';
+"import { setInheritAttrs as _setInheritAttrs, setAttr as _setAttr, renderEffect as _renderEffect, template as _template } from 'vue/vapor';
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
   _setInheritAttrs(["value"])
-  _renderEffect(() => _setAttr(n0, "value", _ctx.foo))
+  let _foo
+  _renderEffect(() => _foo !== _ctx.foo && _setAttr(n0, "value", (_foo = _ctx.foo)))
   return n0
 }"
 `;
 
 exports[`compiler v-bind > .camel modifier 1`] = `
-"import { setInheritAttrs as _setInheritAttrs, renderEffect as _renderEffect, setDynamicProp as _setDynamicProp, template as _template } from 'vue/vapor';
+"import { setInheritAttrs as _setInheritAttrs, setDynamicProp as _setDynamicProp, renderEffect as _renderEffect, template as _template } from 'vue/vapor';
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
   _setInheritAttrs(["fooBar"])
-  _renderEffect(() => _setDynamicProp(n0, "fooBar", _ctx.id))
+  let _id
+  _renderEffect(() => _id !== _ctx.id && (_id = _setDynamicProp(n0, "fooBar", _id, _ctx.id)))
   return n0
 }"
 `;
 
 exports[`compiler v-bind > .camel modifier w/ dynamic arg 1`] = `
 "import { camelize as _camelize } from 'vue';
-import { setInheritAttrs as _setInheritAttrs, renderEffect as _renderEffect, setDynamicProps as _setDynamicProps, template as _template } from 'vue/vapor';
+import { setInheritAttrs as _setInheritAttrs, setDynamicProps as _setDynamicProps, renderEffect as _renderEffect, template as _template } from 'vue/vapor';
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
   _setInheritAttrs(true)
-  _renderEffect(() => _setDynamicProps(n0, [{ [_camelize(_ctx.foo)]: _ctx.id }], true))
+  let _foo, _id, _foo_id
+  _renderEffect(() => (_foo !== _ctx.foo || _id !== _ctx.id) && (_foo_id = _setDynamicProps(n0, _foo_id, [{ [_camelize(_ctx.foo)]: _ctx.id }], true)))
   return n0
 }"
 `;
 
 exports[`compiler v-bind > .camel modifier w/ no expression 1`] = `
-"import { setInheritAttrs as _setInheritAttrs, renderEffect as _renderEffect, setDynamicProp as _setDynamicProp, template as _template } from 'vue/vapor';
+"import { setInheritAttrs as _setInheritAttrs, setDynamicProp as _setDynamicProp, renderEffect as _renderEffect, template as _template } from 'vue/vapor';
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
   _setInheritAttrs(["fooBar"])
-  _renderEffect(() => _setDynamicProp(n0, "fooBar", _ctx.fooBar))
+  let _fooBar
+  _renderEffect(() => _fooBar !== _ctx.fooBar && (_fooBar = _setDynamicProp(n0, "fooBar", _fooBar, _ctx.fooBar)))
   return n0
 }"
 `;
 
 exports[`compiler v-bind > .prop modifier (shorthand) 1`] = `
-"import { setInheritAttrs as _setInheritAttrs, renderEffect as _renderEffect, setDOMProp as _setDOMProp, template as _template } from 'vue/vapor';
+"import { setInheritAttrs as _setInheritAttrs, setDOMProp as _setDOMProp, renderEffect as _renderEffect, template as _template } from 'vue/vapor';
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
   _setInheritAttrs(["fooBar"])
-  _renderEffect(() => _setDOMProp(n0, "fooBar", _ctx.id))
+  let _id
+  _renderEffect(() => _id !== _ctx.id && _setDOMProp(n0, "fooBar", (_id = _ctx.id)))
   return n0
 }"
 `;
 
 exports[`compiler v-bind > .prop modifier (shorthand) w/ innerHTML 1`] = `
-"import { setInheritAttrs as _setInheritAttrs, renderEffect as _renderEffect, setHtml as _setHtml, template as _template } from 'vue/vapor';
+"import { setInheritAttrs as _setInheritAttrs, setHtml as _setHtml, renderEffect as _renderEffect, template as _template } from 'vue/vapor';
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
   _setInheritAttrs(["innerHTML"])
-  _renderEffect(() => _setHtml(n0, _ctx.foo))
+  let _foo
+  _renderEffect(() => _foo !== _ctx.foo && _setHtml(n0, (_foo = _ctx.foo)))
   return n0
 }"
 `;
 
 exports[`compiler v-bind > .prop modifier (shorthand) w/ no expression 1`] = `
-"import { setInheritAttrs as _setInheritAttrs, renderEffect as _renderEffect, setDOMProp as _setDOMProp, template as _template } from 'vue/vapor';
+"import { setInheritAttrs as _setInheritAttrs, setDOMProp as _setDOMProp, renderEffect as _renderEffect, template as _template } from 'vue/vapor';
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
   _setInheritAttrs(["fooBar"])
-  _renderEffect(() => _setDOMProp(n0, "fooBar", _ctx.fooBar))
+  let _fooBar
+  _renderEffect(() => _fooBar !== _ctx.fooBar && _setDOMProp(n0, "fooBar", (_fooBar = _ctx.fooBar)))
   return n0
 }"
 `;
 
 exports[`compiler v-bind > .prop modifier (shorthand) w/ progress value 1`] = `
-"import { setInheritAttrs as _setInheritAttrs, renderEffect as _renderEffect, setDOMProp as _setDOMProp, template as _template } from 'vue/vapor';
+"import { setInheritAttrs as _setInheritAttrs, setDOMProp as _setDOMProp, renderEffect as _renderEffect, template as _template } from 'vue/vapor';
 const t0 = _template("<progress></progress>")
 
 export function render(_ctx) {
   const n0 = t0()
   _setInheritAttrs(["value"])
-  _renderEffect(() => _setDOMProp(n0, "value", _ctx.foo))
+  let _foo
+  _renderEffect(() => _foo !== _ctx.foo && _setDOMProp(n0, "value", (_foo = _ctx.foo)))
   return n0
 }"
 `;
 
 exports[`compiler v-bind > .prop modifier (shorthand) w/ textContent 1`] = `
-"import { setInheritAttrs as _setInheritAttrs, renderEffect as _renderEffect, setText as _setText, template as _template } from 'vue/vapor';
+"import { setInheritAttrs as _setInheritAttrs, setText as _setText, renderEffect as _renderEffect, template as _template } from 'vue/vapor';
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
   _setInheritAttrs(["textContent"])
-  _renderEffect(() => _setText(n0, _ctx.foo))
+  let _foo
+  _renderEffect(() => _foo !== _ctx.foo && _setText(n0, (_foo = _ctx.foo)))
   return n0
 }"
 `;
 
 exports[`compiler v-bind > .prop modifier (shorthand) w/ value 1`] = `
-"import { setInheritAttrs as _setInheritAttrs, renderEffect as _renderEffect, setValue as _setValue, template as _template } from 'vue/vapor';
+"import { setInheritAttrs as _setInheritAttrs, setValue as _setValue, renderEffect as _renderEffect, template as _template } from 'vue/vapor';
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
   _setInheritAttrs(["value"])
-  _renderEffect(() => _setValue(n0, _ctx.foo))
+  let _foo
+  _renderEffect(() => _foo !== _ctx.foo && _setValue(n0, (_foo = _ctx.foo)))
   return n0
 }"
 `;
 
 exports[`compiler v-bind > .prop modifier 1`] = `
-"import { setInheritAttrs as _setInheritAttrs, renderEffect as _renderEffect, setDOMProp as _setDOMProp, template as _template } from 'vue/vapor';
+"import { setInheritAttrs as _setInheritAttrs, setDOMProp as _setDOMProp, renderEffect as _renderEffect, template as _template } from 'vue/vapor';
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
   _setInheritAttrs(["fooBar"])
-  _renderEffect(() => _setDOMProp(n0, "fooBar", _ctx.id))
+  let _id
+  _renderEffect(() => _id !== _ctx.id && _setDOMProp(n0, "fooBar", (_id = _ctx.id)))
   return n0
 }"
 `;
 
 exports[`compiler v-bind > .prop modifier w/ dynamic arg 1`] = `
-"import { setInheritAttrs as _setInheritAttrs, renderEffect as _renderEffect, setDynamicProps as _setDynamicProps, template as _template } from 'vue/vapor';
+"import { setInheritAttrs as _setInheritAttrs, setDynamicProps as _setDynamicProps, renderEffect as _renderEffect, template as _template } from 'vue/vapor';
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
   _setInheritAttrs(true)
-  _renderEffect(() => _setDynamicProps(n0, [{ ["." + _ctx.fooBar]: _ctx.id }], true))
+  let _fooBar, _id, _fooBar_id
+  _renderEffect(() => (_fooBar !== _ctx.fooBar || _id !== _ctx.id) && (_fooBar_id = _setDynamicProps(n0, _fooBar_id, [{ ["." + _ctx.fooBar]: _ctx.id }], true)))
   return n0
 }"
 `;
 
 exports[`compiler v-bind > .prop modifier w/ innerHTML 1`] = `
-"import { setInheritAttrs as _setInheritAttrs, renderEffect as _renderEffect, setHtml as _setHtml, template as _template } from 'vue/vapor';
+"import { setInheritAttrs as _setInheritAttrs, setHtml as _setHtml, renderEffect as _renderEffect, template as _template } from 'vue/vapor';
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
   _setInheritAttrs(["innerHTML"])
-  _renderEffect(() => _setHtml(n0, _ctx.foo))
+  let _foo
+  _renderEffect(() => _foo !== _ctx.foo && _setHtml(n0, (_foo = _ctx.foo)))
   return n0
 }"
 `;
 
 exports[`compiler v-bind > .prop modifier w/ no expression 1`] = `
-"import { setInheritAttrs as _setInheritAttrs, renderEffect as _renderEffect, setDOMProp as _setDOMProp, template as _template } from 'vue/vapor';
+"import { setInheritAttrs as _setInheritAttrs, setDOMProp as _setDOMProp, renderEffect as _renderEffect, template as _template } from 'vue/vapor';
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
   _setInheritAttrs(["fooBar"])
-  _renderEffect(() => _setDOMProp(n0, "fooBar", _ctx.fooBar))
+  let _fooBar
+  _renderEffect(() => _fooBar !== _ctx.fooBar && _setDOMProp(n0, "fooBar", (_fooBar = _ctx.fooBar)))
   return n0
 }"
 `;
 
 exports[`compiler v-bind > .prop modifier w/ progress value 1`] = `
-"import { setInheritAttrs as _setInheritAttrs, renderEffect as _renderEffect, setDOMProp as _setDOMProp, template as _template } from 'vue/vapor';
+"import { setInheritAttrs as _setInheritAttrs, setDOMProp as _setDOMProp, renderEffect as _renderEffect, template as _template } from 'vue/vapor';
 const t0 = _template("<progress></progress>")
 
 export function render(_ctx) {
   const n0 = t0()
   _setInheritAttrs(["value"])
-  _renderEffect(() => _setDOMProp(n0, "value", _ctx.foo))
+  let _foo
+  _renderEffect(() => _foo !== _ctx.foo && _setDOMProp(n0, "value", (_foo = _ctx.foo)))
   return n0
 }"
 `;
 
 exports[`compiler v-bind > .prop modifier w/ textContent 1`] = `
-"import { setInheritAttrs as _setInheritAttrs, renderEffect as _renderEffect, setText as _setText, template as _template } from 'vue/vapor';
+"import { setInheritAttrs as _setInheritAttrs, setText as _setText, renderEffect as _renderEffect, template as _template } from 'vue/vapor';
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
   _setInheritAttrs(["textContent"])
-  _renderEffect(() => _setText(n0, _ctx.foo))
+  let _foo
+  _renderEffect(() => _foo !== _ctx.foo && _setText(n0, (_foo = _ctx.foo)))
   return n0
 }"
 `;
 
 exports[`compiler v-bind > .prop modifier w/ value 1`] = `
-"import { setInheritAttrs as _setInheritAttrs, renderEffect as _renderEffect, setValue as _setValue, template as _template } from 'vue/vapor';
+"import { setInheritAttrs as _setInheritAttrs, setValue as _setValue, renderEffect as _renderEffect, template as _template } from 'vue/vapor';
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
   _setInheritAttrs(["value"])
-  _renderEffect(() => _setValue(n0, _ctx.foo))
+  let _foo
+  _renderEffect(() => _foo !== _ctx.foo && _setValue(n0, (_foo = _ctx.foo)))
   return n0
 }"
 `;
 
 exports[`compiler v-bind > :innerHTML 1`] = `
-"import { setInheritAttrs as _setInheritAttrs, renderEffect as _renderEffect, setHtml as _setHtml, template as _template } from 'vue/vapor';
+"import { setInheritAttrs as _setInheritAttrs, setHtml as _setHtml, renderEffect as _renderEffect, template as _template } from 'vue/vapor';
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
   _setInheritAttrs(["innerHTML"])
-  _renderEffect(() => _setHtml(n0, _ctx.foo))
+  let _foo
+  _renderEffect(() => _foo !== _ctx.foo && _setHtml(n0, (_foo = _ctx.foo)))
   return n0
 }"
 `;
 
 exports[`compiler v-bind > :textContext 1`] = `
-"import { setInheritAttrs as _setInheritAttrs, renderEffect as _renderEffect, setText as _setText, template as _template } from 'vue/vapor';
+"import { setInheritAttrs as _setInheritAttrs, setText as _setText, renderEffect as _renderEffect, template as _template } from 'vue/vapor';
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
   _setInheritAttrs(["textContent"])
-  _renderEffect(() => _setText(n0, _ctx.foo))
+  let _foo
+  _renderEffect(() => _foo !== _ctx.foo && _setText(n0, (_foo = _ctx.foo)))
   return n0
 }"
 `;
 
 exports[`compiler v-bind > :value 1`] = `
-"import { setInheritAttrs as _setInheritAttrs, renderEffect as _renderEffect, setValue as _setValue, template as _template } from 'vue/vapor';
+"import { setInheritAttrs as _setInheritAttrs, setValue as _setValue, renderEffect as _renderEffect, template as _template } from 'vue/vapor';
 const t0 = _template("<input>")
 
 export function render(_ctx) {
   const n0 = t0()
   _setInheritAttrs(["value"])
-  _renderEffect(() => _setValue(n0, _ctx.foo))
+  let _foo
+  _renderEffect(() => _foo !== _ctx.foo && _setValue(n0, (_foo = _ctx.foo)))
   return n0
 }"
 `;
 
 exports[`compiler v-bind > :value w/ progress 1`] = `
-"import { setInheritAttrs as _setInheritAttrs, renderEffect as _renderEffect, setDynamicProp as _setDynamicProp, template as _template } from 'vue/vapor';
+"import { setInheritAttrs as _setInheritAttrs, setDynamicProp as _setDynamicProp, renderEffect as _renderEffect, template as _template } from 'vue/vapor';
 const t0 = _template("<progress></progress>")
 
 export function render(_ctx) {
   const n0 = t0()
   _setInheritAttrs(["value"])
-  _renderEffect(() => _setDynamicProp(n0, "value", _ctx.foo))
+  let _foo
+  _renderEffect(() => _foo !== _ctx.foo && (_foo = _setDynamicProp(n0, "value", _foo, _ctx.foo)))
   return n0
 }"
 `;
 
 exports[`compiler v-bind > HTML global attributes should set as dom prop 1`] = `
-"import { setInheritAttrs as _setInheritAttrs, renderEffect as _renderEffect, setDOMProp as _setDOMProp, template as _template } from 'vue/vapor';
+"import { setInheritAttrs as _setInheritAttrs, setDOMProp as _setDOMProp, renderEffect as _renderEffect, template as _template } from 'vue/vapor';
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
   _setInheritAttrs(["id", "title", "lang", "dir", "tabindex"])
-  _renderEffect(() => _setDOMProp(n0, "id", _ctx.id))
-  _renderEffect(() => _setDOMProp(n0, "title", _ctx.title))
-  _renderEffect(() => _setDOMProp(n0, "lang", _ctx.lang))
-  _renderEffect(() => _setDOMProp(n0, "dir", _ctx.dir))
-  _renderEffect(() => _setDOMProp(n0, "tabindex", _ctx.tabindex))
+  let _id, _title, _lang, _dir, _tabindex
+  _renderEffect(() => {
+    _id !== _ctx.id && _setDOMProp(n0, "id", (_id = _ctx.id))
+    _title !== _ctx.title && _setDOMProp(n0, "title", (_title = _ctx.title))
+    _lang !== _ctx.lang && _setDOMProp(n0, "lang", (_lang = _ctx.lang))
+    _dir !== _ctx.dir && _setDOMProp(n0, "dir", (_dir = _ctx.dir))
+    _tabindex !== _ctx.tabindex && _setDOMProp(n0, "tabindex", (_tabindex = _ctx.tabindex))
+  })
   return n0
 }"
 `;
 
 exports[`compiler v-bind > MathML global attributes should set as dom prop 1`] = `
-"import { setInheritAttrs as _setInheritAttrs, renderEffect as _renderEffect, setDOMProp as _setDOMProp, template as _template } from 'vue/vapor';
+"import { setInheritAttrs as _setInheritAttrs, setDOMProp as _setDOMProp, renderEffect as _renderEffect, template as _template } from 'vue/vapor';
 const t0 = _template("<math></math>")
 
 export function render(_ctx) {
   const n0 = t0()
   _setInheritAttrs(["autofucus", "dir", "displaystyle", "mathcolor", "tabindex"])
-  _renderEffect(() => _setDOMProp(n0, "autofucus", _ctx.autofucus))
-  _renderEffect(() => _setDOMProp(n0, "dir", _ctx.dir))
-  _renderEffect(() => _setDOMProp(n0, "displaystyle", _ctx.displaystyle))
-  _renderEffect(() => _setDOMProp(n0, "mathcolor", _ctx.mathcolor))
-  _renderEffect(() => _setDOMProp(n0, "tabindex", _ctx.tabindex))
+  let _autofucus, _dir, _displaystyle, _mathcolor, _tabindex
+  _renderEffect(() => {
+    _autofucus !== _ctx.autofucus && _setDOMProp(n0, "autofucus", (_autofucus = _ctx.autofucus))
+    _dir !== _ctx.dir && _setDOMProp(n0, "dir", (_dir = _ctx.dir))
+    _displaystyle !== _ctx.displaystyle && _setDOMProp(n0, "displaystyle", (_displaystyle = _ctx.displaystyle))
+    _mathcolor !== _ctx.mathcolor && _setDOMProp(n0, "mathcolor", (_mathcolor = _ctx.mathcolor))
+    _tabindex !== _ctx.tabindex && _setDOMProp(n0, "tabindex", (_tabindex = _ctx.tabindex))
+  })
   return n0
 }"
 `;
 
 exports[`compiler v-bind > SVG global attributes should set as dom prop 1`] = `
-"import { setInheritAttrs as _setInheritAttrs, renderEffect as _renderEffect, setDOMProp as _setDOMProp, template as _template } from 'vue/vapor';
+"import { setInheritAttrs as _setInheritAttrs, setDOMProp as _setDOMProp, renderEffect as _renderEffect, template as _template } from 'vue/vapor';
 const t0 = _template("<svg></svg>")
 
 export function render(_ctx) {
   const n0 = t0()
   _setInheritAttrs(["id", "lang", "tabindex"])
-  _renderEffect(() => _setDOMProp(n0, "id", _ctx.id))
-  _renderEffect(() => _setDOMProp(n0, "lang", _ctx.lang))
-  _renderEffect(() => _setDOMProp(n0, "tabindex", _ctx.tabindex))
+  let _id, _lang, _tabindex
+  _renderEffect(() => {
+    _id !== _ctx.id && _setDOMProp(n0, "id", (_id = _ctx.id))
+    _lang !== _ctx.lang && _setDOMProp(n0, "lang", (_lang = _ctx.lang))
+    _tabindex !== _ctx.tabindex && _setDOMProp(n0, "tabindex", (_tabindex = _ctx.tabindex))
+  })
   return n0
 }"
 `;
 
 exports[`compiler v-bind > attributes must be set as attribute 1`] = `
-"import { renderEffect as _renderEffect, setAttr as _setAttr, template as _template } from 'vue/vapor';
+"import { setAttr as _setAttr, renderEffect as _renderEffect, template as _template } from 'vue/vapor';
 const t0 = _template("<div></div>")
 const t1 = _template("<input>")
 const t2 = _template("<textarea></textarea>")
@@ -377,84 +412,106 @@ export function render(_ctx) {
   const n4 = t4()
   const n5 = t5()
   const n6 = t6()
-  _renderEffect(() => _setAttr(n0, "spellcheck", _ctx.spellcheck))
-  _renderEffect(() => _setAttr(n0, "draggable", _ctx.draggable))
-  _renderEffect(() => _setAttr(n0, "translate", _ctx.translate))
-  _renderEffect(() => _setAttr(n0, "form", _ctx.form))
-  _renderEffect(() => _setAttr(n1, "list", _ctx.list))
-  _renderEffect(() => _setAttr(n2, "type", _ctx.type))
+  let _spellcheck, _draggable, _translate, _form, _list, _type, _width, _height
   _renderEffect(() => {
-    _setAttr(n3, "width", _ctx.width)
-    _setAttr(n4, "width", _ctx.width)
-    _setAttr(n5, "width", _ctx.width)
-    _setAttr(n6, "width", _ctx.width)
-  })
-  _renderEffect(() => {
-    _setAttr(n3, "height", _ctx.height)
-    _setAttr(n4, "height", _ctx.height)
-    _setAttr(n5, "height", _ctx.height)
-    _setAttr(n6, "height", _ctx.height)
+    _spellcheck !== _ctx.spellcheck && _setAttr(n0, "spellcheck", (_spellcheck = _ctx.spellcheck))
+    _draggable !== _ctx.draggable && _setAttr(n0, "draggable", (_draggable = _ctx.draggable))
+    _translate !== _ctx.translate && _setAttr(n0, "translate", (_translate = _ctx.translate))
+    _form !== _ctx.form && _setAttr(n0, "form", (_form = _ctx.form))
+    _list !== _ctx.list && _setAttr(n1, "list", (_list = _ctx.list))
+    _type !== _ctx.type && _setAttr(n2, "type", (_type = _ctx.type))
+    if(_width !== _ctx.width) {
+      _setAttr(n3, "width", _ctx.width)
+      _setAttr(n4, "width", _ctx.width)
+      _setAttr(n5, "width", _ctx.width)
+      _setAttr(n6, "width", _ctx.width)
+      _width = _ctx.width
+    }
+    if(_height !== _ctx.height) {
+      _setAttr(n3, "height", _ctx.height)
+      _setAttr(n4, "height", _ctx.height)
+      _setAttr(n5, "height", _ctx.height)
+      _setAttr(n6, "height", _ctx.height)
+      _height = _ctx.height
+    }
   })
   return [n0, n1, n2, n3, n4, n5, n6]
 }"
 `;
 
 exports[`compiler v-bind > basic 1`] = `
-"import { setInheritAttrs as _setInheritAttrs, renderEffect as _renderEffect, setDOMProp as _setDOMProp, template as _template } from 'vue/vapor';
+"import { setInheritAttrs as _setInheritAttrs, setDOMProp as _setDOMProp, renderEffect as _renderEffect, template as _template } from 'vue/vapor';
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
   _setInheritAttrs(["id"])
-  _renderEffect(() => _setDOMProp(n0, "id", _ctx.id))
+  let _id
+  _renderEffect(() => _id !== _ctx.id && _setDOMProp(n0, "id", (_id = _ctx.id)))
   return n0
 }"
 `;
 
+exports[`compiler v-bind > bind member expression 1`] = `
+"import { setDOMProp as _setDOMProp, renderEffect as _renderEffect, template as _template } from 'vue/vapor';
+const t0 = _template("<div></div>")
+
+export function render(_ctx) {
+  const n0 = t0()
+  let _obj
+  _renderEffect(() => _obj !== _ctx.obj.count.bar && _setDOMProp(n0, "id", (_obj = _ctx.obj.count.bar)))
+  return [n0, n1]
+}"
+`;
+
 exports[`compiler v-bind > dynamic arg 1`] = `
-"import { setInheritAttrs as _setInheritAttrs, renderEffect as _renderEffect, setDynamicProps as _setDynamicProps, template as _template } from 'vue/vapor';
+"import { setInheritAttrs as _setInheritAttrs, setDynamicProps as _setDynamicProps, renderEffect as _renderEffect, template as _template } from 'vue/vapor';
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
   _setInheritAttrs(true)
-  _renderEffect(() => _setDynamicProps(n0, [{ [_ctx.id]: _ctx.id, [_ctx.title]: _ctx.title }], true))
+  let _id, _title, _id_title
+  _renderEffect(() => (_id !== _ctx.id || _title !== _ctx.title) && (_id_title = _setDynamicProps(n0, _id_title, [{ [_ctx.id]: _ctx.id, [_ctx.title]: _ctx.title }], true)))
   return n0
 }"
 `;
 
 exports[`compiler v-bind > dynamic arg w/ static attribute 1`] = `
-"import { setInheritAttrs as _setInheritAttrs, renderEffect as _renderEffect, setDynamicProps as _setDynamicProps, template as _template } from 'vue/vapor';
+"import { setInheritAttrs as _setInheritAttrs, setDynamicProps as _setDynamicProps, renderEffect as _renderEffect, template as _template } from 'vue/vapor';
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
   _setInheritAttrs(true)
-  _renderEffect(() => _setDynamicProps(n0, [{ [_ctx.id]: _ctx.id, foo: "bar", checked: "" }], true))
+  let _id
+  _renderEffect(() => _id !== _ctx.id && (_id = _setDynamicProps(n0, _id, [{ [_ctx.id]: _ctx.id, foo: "bar", checked: "" }], true)))
   return n0
 }"
 `;
 
 exports[`compiler v-bind > no expression (shorthand) 1`] = `
-"import { setInheritAttrs as _setInheritAttrs, renderEffect as _renderEffect, setDynamicProp as _setDynamicProp, template as _template } from 'vue/vapor';
+"import { setInheritAttrs as _setInheritAttrs, setDynamicProp as _setDynamicProp, renderEffect as _renderEffect, template as _template } from 'vue/vapor';
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
   _setInheritAttrs(["camel-case"])
-  _renderEffect(() => _setDynamicProp(n0, "camel-case", _ctx.camelCase))
+  let _camelCase
+  _renderEffect(() => _camelCase !== _ctx.camelCase && (_camelCase = _setDynamicProp(n0, "camel-case", _camelCase, _ctx.camelCase)))
   return n0
 }"
 `;
 
 exports[`compiler v-bind > no expression 1`] = `
-"import { setInheritAttrs as _setInheritAttrs, renderEffect as _renderEffect, setDOMProp as _setDOMProp, template as _template } from 'vue/vapor';
+"import { setInheritAttrs as _setInheritAttrs, setDOMProp as _setDOMProp, renderEffect as _renderEffect, template as _template } from 'vue/vapor';
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
   _setInheritAttrs(["id"])
-  _renderEffect(() => _setDOMProp(n0, "id", _ctx.id))
+  let _id
+  _renderEffect(() => _id !== _ctx.id && _setDOMProp(n0, "id", (_id = _ctx.id)))
   return n0
 }"
 `;

@@ -24,6 +24,7 @@ import {
 import {
   attributeCache,
   canSetValueDirectly,
+  isArray,
   isHTMLGlobalAttr,
   isHTMLTag,
   isMathMLGlobalAttr,
@@ -44,20 +45,30 @@ export function genSetProp(
     prop: { key, values, modifier },
     tag,
   } = oper
-
   const { helperName, omitKey } = getRuntimeHelper(tag, key.content, modifier)
+  const propValue = genPropValue(values, context)
+  const { prevValueName, shouldWrapInParentheses } = processPropValues(
+    context,
+    helperName,
+    [propValue],
+  )
   return [
     NEWLINE,
+    ...(prevValueName
+      ? [shouldWrapInParentheses ? `(` : undefined, `${prevValueName} = `]
+      : []),
     ...genCall(
       [vaporHelper(helperName), null],
       `n${oper.element}`,
       omitKey ? false : genExpression(key, context),
-      genPropValue(values, context),
+      ...(prevValueName ? [`${prevValueName}`] : []),
+      propValue,
       // only `setClass` and `setStyle` need merge inherit attr
       oper.root && (helperName === 'setClass' || helperName === 'setStyle')
         ? 'true'
         : undefined,
     ),
+    ...(prevValueName && shouldWrapInParentheses ? [`)`] : []),
   ]
 }
 
@@ -67,24 +78,31 @@ export function genDynamicProps(
   context: CodegenContext,
 ): CodeFragment[] {
   const { vaporHelper } = context
+  const values = oper.props.map(props =>
+    Array.isArray(props)
+      ? genLiteralObjectProps(props, context) // static and dynamic arg props
+      : props.kind === IRDynamicPropsKind.ATTRIBUTE
+        ? genLiteralObjectProps([props], context) // dynamic arg props
+        : genExpression(props.value, context),
+  ) // v-bind=""
+  const { prevValueName, shouldWrapInParentheses } = processPropValues(
+    context,
+    'setDynamicProps',
+    values,
+  )
   return [
     NEWLINE,
+    ...(prevValueName
+      ? [shouldWrapInParentheses ? `(` : undefined, `${prevValueName} = `]
+      : []),
     ...genCall(
       vaporHelper('setDynamicProps'),
       `n${oper.element}`,
-      genMulti(
-        DELIMITERS_ARRAY,
-        ...oper.props.map(
-          props =>
-            Array.isArray(props)
-              ? genLiteralObjectProps(props, context) // static and dynamic arg props
-              : props.kind === IRDynamicPropsKind.ATTRIBUTE
-                ? genLiteralObjectProps([props], context) // dynamic arg props
-                : genExpression(props.value, context), // v-bind=""
-        ),
-      ),
+      ...(prevValueName ? [`${prevValueName}`] : []),
+      genMulti(DELIMITERS_ARRAY, ...values),
       oper.root && 'true',
     ),
+    ...(prevValueName && shouldWrapInParentheses ? [`)`] : []),
   ]
 }
 
@@ -234,4 +252,96 @@ const getSpecialHelper = (
   }
 
   return specialHelpers[keyName] || null
+}
+
+// those runtime helpers will return the prevValue
+const helpersNeedCachedReturnValue = [
+  'setStyle',
+  'setDynamicProp',
+  'setDynamicProps',
+]
+
+function processPropValues(
+  context: CodegenContext,
+  helperName: string,
+  values: CodeFragment[][],
+): { prevValueName: string | undefined; shouldWrapInParentheses: boolean } {
+  const { shouldCacheRenderEffectDeps, processingRenderEffect } = context
+  // single-line render effect and the operation needs cache return a value,
+  // the expression needs to be wrapped in parentheses.
+  // e.g. _foo === _ctx.foo && (_foo = _setStyle(...))
+  let shouldWrapInParentheses: boolean = false
+  let prevValueName
+  if (shouldCacheRenderEffectDeps()) {
+    const needReturnValue = helpersNeedCachedReturnValue.includes(helperName)
+    processValues(context, values, !needReturnValue)
+    const { declareNames } = processingRenderEffect!
+    // if the operation needs to cache the return value and has multiple declareNames,
+    // combine them into a single name as the return value name.
+    if (declareNames.size > 0 && needReturnValue) {
+      prevValueName = [...declareNames].join('')
+      declareNames.add(prevValueName)
+    }
+    shouldWrapInParentheses = processingRenderEffect!.operations.length === 1
+  }
+  return { prevValueName, shouldWrapInParentheses }
+}
+
+export function processValues(
+  context: CodegenContext,
+  values: CodeFragment[][],
+  needRewrite: boolean = true,
+): string[] {
+  const allCheckExps: string[] = []
+  values.forEach(value => {
+    const checkExps = processValue(context, value, needRewrite)
+    if (checkExps) allCheckExps.push(...checkExps, ' && ')
+  })
+
+  return allCheckExps.length > 0
+    ? (context.processingRenderEffect!.earlyCheckExps = [
+        ...new Set(allCheckExps),
+      ])
+    : []
+}
+
+function processValue(
+  context: CodegenContext,
+  values: CodeFragment[],
+  needRewrite: boolean = true,
+): string[] | undefined {
+  const { processingRenderEffect, allRenderEffectSeenNames } = context
+  const { declareNames, rewrittenNames, earlyCheckExps, operations } =
+    processingRenderEffect!
+
+  const isSingleLine = operations.length === 1
+  for (const frag of values) {
+    if (!isArray(frag)) continue
+    // [code, newlineIndex, loc, name] -> [(_name = code), newlineIndex, loc, name]
+    const [newName, , , rawName] = frag
+    if (rawName) {
+      let name = rawName.replace(/[^\w]/g, '_')
+      if (rewrittenNames.has(name)) continue
+      rewrittenNames.add(name)
+
+      name = `_${name}`
+      if (declareNames.has(name)) continue
+
+      if (allRenderEffectSeenNames[name] === undefined)
+        allRenderEffectSeenNames[name] = 0
+      else name += ++allRenderEffectSeenNames[name]
+
+      declareNames.add(name)
+      earlyCheckExps.push(`${name} !== ${newName}`)
+
+      if (needRewrite && isSingleLine) {
+        // replace the original code fragment with the assignment expression
+        frag[0] = `(${name} = ${newName})`
+      }
+    }
+  }
+
+  if (earlyCheckExps.length > 0) {
+    return [[...new Set(earlyCheckExps)].join(' && ')]
+  }
 }

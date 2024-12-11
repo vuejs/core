@@ -119,6 +119,7 @@ export function fallThroughAttrs(
     }
   }
 
+  let prevAttrs = instance.attrs
   renderEffect(() => {
     for (const key in instance.attrs) {
       if (dynamicAttrs && dynamicAttrs.includes(key)) continue
@@ -130,7 +131,7 @@ export function fallThroughAttrs(
         value = instance.attrs[key]
       }
 
-      setDynamicProp(element, key, value)
+      setDynamicProp(element, key, prevAttrs[key], value)
     }
   })
 }

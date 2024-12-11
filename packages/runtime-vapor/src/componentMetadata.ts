@@ -18,13 +18,6 @@ export function getMetadata(
   return el.$$metadata || (el.$$metadata = [{}, {}])
 }
 
-export function recordPropMetadata(el: Node, key: string, value: any): any {
-  const metadata = getMetadata(el)[MetadataKind.prop]
-  const prev = metadata[key]
-  if (prev !== value) metadata[key] = value
-  return prev
-}
-
 export function recordEventMetadata(el: Node, key: string, value: any) {
   const metadata = getMetadata(el)[MetadataKind.event]
   const handlers = (metadata[key] ||= [])

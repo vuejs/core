@@ -29,9 +29,14 @@ export type CodeFragments = Exclude<CodeFragment, any[]> | CodeFragment[]
 
 export function buildCodeFragment(
   ...frag: CodeFragment[]
-): [CodeFragment[], (...items: CodeFragment[]) => number] {
+): [
+  CodeFragment[],
+  (...items: CodeFragment[]) => number,
+  (...items: CodeFragment[]) => number,
+] {
   const push = frag.push.bind(frag)
-  return [frag, push]
+  const unshift = frag.unshift.bind(frag)
+  return [frag, push, unshift]
 }
 
 export type CodeFragmentDelimiters = [

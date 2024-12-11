@@ -24,6 +24,7 @@ export function fallbackComponent(
   if (rawProps || Object.keys(instance.attrs).length) {
     rawProps = [() => instance.attrs, ...normalizeRawProps(rawProps)]
 
+    let prevValue: any, prevStyle: any
     renderEffect(() => {
       let classes: unknown[] | undefined
       let styles: unknown[] | undefined
@@ -34,12 +35,16 @@ export function fallbackComponent(
           const value = getter ? valueOrGetter() : valueOrGetter
           if (key === 'class') (classes ||= []).push(value)
           else if (key === 'style') (styles ||= []).push(value)
-          else setDynamicProp(el, key, value)
+          else {
+            prevValue = setDynamicProp(el, key, prevValue, value)
+          }
         },
       )
 
       if (classes) setClass(el, classes)
-      if (styles) setStyle(el, styles)
+      if (styles) {
+        prevStyle = setStyle(el, prevStyle, styles)
+      }
     })
   }
 

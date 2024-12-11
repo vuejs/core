@@ -13,12 +13,13 @@ export function render(_ctx) {
 `;
 
 exports[`v-on > dynamic arg 1`] = `
-"import { renderEffect as _renderEffect, on as _on, template as _template } from 'vue/vapor';
+"import { on as _on, renderEffect as _renderEffect, template as _template } from 'vue/vapor';
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
   _renderEffect(() => {
+    
     _on(n0, _ctx.event, () => _ctx.handler, {
       effect: true
     })
@@ -28,12 +29,13 @@ export function render(_ctx) {
 `;
 
 exports[`v-on > dynamic arg with complex exp prefixing 1`] = `
-"import { renderEffect as _renderEffect, on as _on, template as _template } from 'vue/vapor';
+"import { on as _on, renderEffect as _renderEffect, template as _template } from 'vue/vapor';
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
   _renderEffect(() => {
+    
     _on(n0, _ctx.event(_ctx.foo), () => _ctx.handler, {
       effect: true
     })
@@ -43,12 +45,13 @@ export function render(_ctx) {
 `;
 
 exports[`v-on > dynamic arg with prefixing 1`] = `
-"import { renderEffect as _renderEffect, on as _on, template as _template } from 'vue/vapor';
+"import { on as _on, renderEffect as _renderEffect, template as _template } from 'vue/vapor';
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
   _renderEffect(() => {
+    
     _on(n0, _ctx.event, () => _ctx.handler, {
       effect: true
     })
@@ -372,12 +375,13 @@ export function render(_ctx) {
 `;
 
 exports[`v-on > should transform click.middle 2`] = `
-"import { renderEffect as _renderEffect, on as _on, template as _template } from 'vue/vapor';
+"import { on as _on, renderEffect as _renderEffect, template as _template } from 'vue/vapor';
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
   _renderEffect(() => {
+    
     _on(n0, (_ctx.event) === "click" ? "mouseup" : (_ctx.event), () => _ctx.test, {
       modifiers: ["middle"], 
       effect: true
@@ -402,12 +406,13 @@ export function render(_ctx) {
 `;
 
 exports[`v-on > should transform click.right 2`] = `
-"import { renderEffect as _renderEffect, on as _on, template as _template } from 'vue/vapor';
+"import { on as _on, renderEffect as _renderEffect, template as _template } from 'vue/vapor';
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
   _renderEffect(() => {
+    
     _on(n0, (_ctx.event) === "click" ? "contextmenu" : (_ctx.event), () => _ctx.test, {
       modifiers: ["right"], 
       keys: ["right"], 
@@ -431,12 +436,13 @@ export function render(_ctx) {
 `;
 
 exports[`v-on > should wrap both for dynamic key event w/ left/right modifiers 1`] = `
-"import { renderEffect as _renderEffect, on as _on, template as _template } from 'vue/vapor';
+"import { on as _on, renderEffect as _renderEffect, template as _template } from 'vue/vapor';
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
   _renderEffect(() => {
+    
     _on(n0, _ctx.e, () => _ctx.test, {
       modifiers: ["left"], 
       keys: ["left"], 
