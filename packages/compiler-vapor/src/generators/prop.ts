@@ -46,16 +46,10 @@ export function genSetProp(
   } = oper
   const { helperName, omitKey } = getRuntimeHelper(tag, key.content, modifier)
   const propValue = genPropValue(values, context)
-  const { prevValueName, shouldWrapInParentheses } = processPropValues(
-    context,
-    helperName,
-    [propValue],
-  )
+  const { prevValueName } = processPropValues(context, helperName, [propValue])
   return [
     NEWLINE,
-    ...(prevValueName
-      ? [shouldWrapInParentheses ? `(` : undefined, `${prevValueName} = `]
-      : []),
+    ...(prevValueName ? [`${prevValueName} = `] : []),
     ...genCall(
       [helper(helperName), null],
       `n${oper.element}`,
@@ -67,7 +61,6 @@ export function genSetProp(
         ? 'true'
         : undefined,
     ),
-    ...(prevValueName && shouldWrapInParentheses ? [`)`] : []),
   ]
 }
 
@@ -84,16 +77,14 @@ export function genDynamicProps(
         ? genLiteralObjectProps([props], context) // dynamic arg props
         : genExpression(props.value, context),
   ) // v-bind=""
-  const { prevValueName, shouldWrapInParentheses } = processPropValues(
+  const { prevValueName } = processPropValues(
     context,
     'setDynamicProps',
     values,
   )
   return [
     NEWLINE,
-    ...(prevValueName
-      ? [shouldWrapInParentheses ? `(` : undefined, `${prevValueName} = `]
-      : []),
+    ...(prevValueName ? [`${prevValueName} = `] : []),
     ...genCall(
       helper('setDynamicProps'),
       `n${oper.element}`,
@@ -101,7 +92,6 @@ export function genDynamicProps(
       genMulti(DELIMITERS_ARRAY, ...values),
       oper.root && 'true',
     ),
-    ...(prevValueName && shouldWrapInParentheses ? [`)`] : []),
   ]
 }
 
@@ -241,12 +231,8 @@ function processPropValues(
   context: CodegenContext,
   helperName: string,
   values: CodeFragment[][],
-): { prevValueName: string | undefined; shouldWrapInParentheses: boolean } {
+): { prevValueName: string | undefined } {
   const { shouldCacheRenderEffectDeps, processingRenderEffect } = context
-  // single-line render effect and the operation needs cache return a value,
-  // the expression needs to be wrapped in parentheses.
-  // e.g. _foo === _ctx.foo && (_prev_foo = _setStyle(...))
-  let shouldWrapInParentheses: boolean = false
   let prevValueName
   if (shouldCacheRenderEffectDeps()) {
     const { declareNames, preAccessNames, preAccessExps } =
@@ -268,10 +254,9 @@ function processPropValues(
       }
       declareNames.add(prevValueName)
     }
-    shouldWrapInParentheses = false //operations.length === 1
   }
 
-  return { prevValueName, shouldWrapInParentheses }
+  return { prevValueName }
 }
 
 export function processValues(
@@ -301,15 +286,12 @@ function processValue(
   const { declareNames, earlyCheckExps, preAccessNames, preAccessExps } =
     processingRenderEffect!
 
-  // const isSingleLine = operations.length === 1
   for (const frag of values) {
     if (!isArray(frag)) continue
-    // [code, newlineIndex, loc, name] -> [(_name = code), newlineIndex, loc, name]
+    // [code, newlineIndex, loc, name] -> [(__name), newlineIndex, loc, name]
     const [newName, , , rawName] = frag
     if (rawName) {
       let name = rawName.replace(/[^\w]/g, '_')
-      // if (rewrittenNames.has(name)) continue
-      // rewrittenNames.add(name)
 
       name = `_${name}`
       if (!declareNames.has(name)) {
@@ -324,6 +306,7 @@ function processValue(
       preAccessExps.add(`${preAccessName} = ${newName}`)
       earlyCheckExps.push(`${name} !== ${preAccessName}`)
       if (needRewrite) {
+        // replace the original name with the preAccessName
         frag[0] = `${preAccessName}`
       }
     }
