@@ -283,22 +283,29 @@ function processValue(
   needRewrite: boolean = true,
 ): string[] | undefined {
   const { processingRenderEffect, allRenderEffectSeenNames } = context
-  const { declareNames, earlyCheckExps, preAccessNames, preAccessExps } =
-    processingRenderEffect!
+  const {
+    declareNames,
+    rewrittenNames,
+    earlyCheckExps,
+    preAccessNames,
+    preAccessExps,
+  } = processingRenderEffect!
 
   for (const frag of values) {
     if (!isArray(frag)) continue
     // [code, newlineIndex, loc, name] -> [(__name), newlineIndex, loc, name]
     const [newName, , , rawName] = frag
     if (rawName) {
-      let name = rawName.replace(/[^\w]/g, '_')
-
-      name = `_${name}`
-      if (!declareNames.has(name)) {
-        if (allRenderEffectSeenNames[name] === undefined)
-          allRenderEffectSeenNames[name] = 0
-        else name += ++allRenderEffectSeenNames[name]
-        declareNames.add(name)
+      let name = rewrittenNames.get(rawName)
+      if (!name) {
+        name = `_${rawName.replace(/[^\w]/g, '_')}`
+        if (!declareNames.has(name)) {
+          if (allRenderEffectSeenNames[name] === undefined)
+            allRenderEffectSeenNames[name] = 0
+          else name += ++allRenderEffectSeenNames[name]
+          declareNames.add(name)
+        }
+        rewrittenNames.set(newName, name)
       }
 
       const preAccessName = `_${name}`

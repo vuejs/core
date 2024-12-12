@@ -263,7 +263,7 @@ export interface IREffect {
   identifiers: string[]
   operations: OperationNode[]
   declareNames: Set<string>
-  rewrittenNames: Set<string>
+  rewrittenNames: Map<string, string>
   earlyCheckExps: string[]
   preAccessNames: Set<string>
   preAccessExps: Set<string>
