@@ -220,6 +220,7 @@ export function transform(
     component: new Set(),
     directive: new Set(),
     block: newBlock(node),
+    hasTemplateRef: false,
   }
 
   const context = new TransformContext(ir, node, options)

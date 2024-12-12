@@ -16,6 +16,7 @@ import {
   codeFragmentToString,
   genCall,
 } from './generators/utils'
+import { setTemplateRefIdent } from './generators/templateRef'
 
 export type CodegenOptions = Omit<BaseCodegenOptions, 'optimizeImports'>
 
@@ -110,19 +111,21 @@ export function generate(
     ', ',
   )
 
-  if (inline) {
-    // push(`((${signature}) => {`)
-  } else {
+  if (!inline) {
     push(NEWLINE, `export function ${functionName}(${signature}) {`)
   }
 
   push(INDENT_START)
+  if (ir.hasTemplateRef) {
+    push(
+      NEWLINE,
+      `const ${setTemplateRefIdent} = ${context.helper('createTemplateRefSetter')}()`,
+    )
+  }
   push(...genBlockContent(ir.block, context, true))
   push(INDENT_END, NEWLINE)
 
-  if (inline) {
-    // push('})()')
-  } else {
+  if (!inline) {
     push('}')
   }
 

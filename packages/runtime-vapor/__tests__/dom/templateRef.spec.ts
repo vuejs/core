@@ -1,10 +1,10 @@
-import type { NodeRef } from '../../src/dom/templateRef'
+import type { NodeRef } from '../../src/apiTemplateRef'
 import {
   createFor,
   createIf,
+  createTemplateRefSetter,
   insert,
   renderEffect,
-  setRef,
   setText,
   template,
 } from '../../src'
@@ -19,7 +19,7 @@ import {
 
 const define = makeRender()
 
-describe.todo('api: template ref', () => {
+describe('api: template ref', () => {
   test('string ref mount', () => {
     const t0 = template('<div ref="refKey"></div>')
     const el = ref(null)
@@ -31,7 +31,7 @@ describe.todo('api: template ref', () => {
       },
       render() {
         const n0 = t0()
-        setRef(n0 as Element, 'refKey')
+        createTemplateRefSetter()(n0 as Element, 'refKey')
         return n0
       },
     })
@@ -57,7 +57,7 @@ describe.todo('api: template ref', () => {
         const n0 = t0()
         let r0: NodeRef | undefined
         renderEffect(() => {
-          r0 = setRef(n0 as Element, refKey.value, r0)
+          r0 = createTemplateRefSetter()(n0 as Element, refKey.value, r0)
         })
         return n0
       },
@@ -72,7 +72,7 @@ describe.todo('api: template ref', () => {
     expect(fooEl.value).toBe(null)
   })
 
-  it('string ref unmount', async () => {
+  it.todo('string ref unmount', async () => {
     const t0 = template('<div></div>')
     const el = ref(null)
     const toggle = ref(true)
@@ -84,6 +84,7 @@ describe.todo('api: template ref', () => {
         }
       },
       render() {
+        const setRef = createTemplateRefSetter()
         const n0 = createIf(
           () => toggle.value,
           () => {
@@ -109,7 +110,7 @@ describe.todo('api: template ref', () => {
     const { render } = define({
       render() {
         const n0 = t0()
-        setRef(n0 as Element, fn)
+        createTemplateRefSetter()(n0 as Element, fn)
         return n0
       },
     })
@@ -129,7 +130,7 @@ describe.todo('api: template ref', () => {
         const n0 = t0()
         let r0: NodeRef | undefined
         renderEffect(() => {
-          r0 = setRef(n0 as Element, fn.value, r0)
+          r0 = createTemplateRefSetter()(n0 as Element, fn.value, r0)
         })
         return n0
       },
@@ -148,7 +149,7 @@ describe.todo('api: template ref', () => {
     expect(fn2.mock.calls[0][0]).toBe(host.children[0])
   })
 
-  it('function ref unmount', async () => {
+  it.todo('function ref unmount', async () => {
     const fn = vi.fn()
     const toggle = ref(true)
 
@@ -159,7 +160,7 @@ describe.todo('api: template ref', () => {
           () => toggle.value,
           () => {
             const n1 = t0()
-            setRef(n1 as Element, fn)
+            createTemplateRefSetter()(n1 as Element, fn)
             return n1
           },
         )
@@ -185,7 +186,7 @@ describe.todo('api: template ref', () => {
       },
       render() {
         const n0 = t0()
-        setRef(n0 as Element, 'refKey')
+        createTemplateRefSetter()(n0 as Element, 'refKey')
         return n0
       },
     })
@@ -213,9 +214,9 @@ describe.todo('api: template ref', () => {
         const n0 = t0()
         const n1 = t1()
         const n2 = t2()
-        setRef(n0 as Element, 'refKey1')
-        setRef(n1 as Element, 'refKey2')
-        setRef(n2 as Element, 'refKey3')
+        createTemplateRefSetter()(n0 as Element, 'refKey1')
+        createTemplateRefSetter()(n1 as Element, 'refKey2')
+        createTemplateRefSetter()(n2 as Element, 'refKey3')
         return [n0, n1, n2]
       },
     })
@@ -234,7 +235,7 @@ describe.todo('api: template ref', () => {
     const { render } = define({
       render() {
         const n0 = t0()
-        setRef(n0 as Element, el)
+        createTemplateRefSetter()(n0 as Element, el)
         renderEffect(() => {
           setText(n0, el.value && el.value.getAttribute('id'))
         })
@@ -265,10 +266,18 @@ describe.todo('api: template ref', () => {
         let r0: NodeRef | undefined
         let r1: NodeRef | undefined
         renderEffect(() => {
-          r0 = setRef(n0 as Element, refToggle.value ? 'foo' : 'bar', r0)
+          r0 = createTemplateRefSetter()(
+            n0 as Element,
+            refToggle.value ? 'foo' : 'bar',
+            r0,
+          )
         })
         renderEffect(() => {
-          r1 = setRef(n1 as Element, refToggle.value ? 'bar' : 'foo', r1)
+          r1 = createTemplateRefSetter()(
+            n1 as Element,
+            refToggle.value ? 'bar' : 'foo',
+            r1,
+          )
         })
         watchEffect(
           () => {
@@ -297,7 +306,7 @@ describe.todo('api: template ref', () => {
   })
 
   // #1789
-  test('toggle the same ref to different elements', async () => {
+  test.todo('toggle the same ref to different elements', async () => {
     const refToggle = ref(false)
     const spy = vi.fn()
 
@@ -306,6 +315,7 @@ describe.todo('api: template ref', () => {
     const { render } = define({
       render() {
         const instance = currentInstance!
+        const setRef = createTemplateRefSetter()
         const n0 = createIf(
           () => refToggle.value,
           () => {
@@ -341,7 +351,7 @@ describe.todo('api: template ref', () => {
   })
 
   // compiled output of v-for + template ref
-  test('ref in v-for', async () => {
+  test.todo('ref in v-for', async () => {
     const show = ref(true)
     const list = reactive([1, 2, 3])
     const listRefs = ref([])
@@ -359,7 +369,12 @@ describe.todo('api: template ref', () => {
               () => list,
               state => {
                 const n1 = t1()
-                setRef(n1 as Element, listRefs, undefined, true)
+                createTemplateRefSetter()(
+                  n1 as Element,
+                  listRefs,
+                  undefined,
+                  true,
+                )
                 renderEffect(() => {
                   const [item] = state
                   setText(n1, item)
@@ -396,7 +411,7 @@ describe.todo('api: template ref', () => {
     expect(mapRefs()).toMatchObject(['2', '3', '4'])
   })
 
-  test('named ref in v-for', async () => {
+  test.todo('named ref in v-for', async () => {
     const show = ref(true)
     const list = reactive([1, 2, 3])
     const listRefs = ref([])
@@ -417,7 +432,12 @@ describe.todo('api: template ref', () => {
               () => list,
               state => {
                 const n1 = t1()
-                setRef(n1 as Element, 'listRefs', undefined, true)
+                createTemplateRefSetter()(
+                  n1 as Element,
+                  'listRefs',
+                  undefined,
+                  true,
+                )
                 renderEffect(() => {
                   const [item] = state
                   setText(n1, item)
@@ -455,59 +475,67 @@ describe.todo('api: template ref', () => {
   })
 
   // #6697 v-for ref behaves differently under production and development
-  test('named ref in v-for , should be responsive when rendering', async () => {
-    const list = ref([1, 2, 3])
-    const listRefs = ref([])
+  test.todo(
+    'named ref in v-for , should be responsive when rendering',
+    async () => {
+      const list = ref([1, 2, 3])
+      const listRefs = ref([])
 
-    const t0 = template('<div><div></div><ul></ul></div>')
-    const t1 = template('<li></li>')
-    const { render } = define({
-      setup() {
-        return { listRefs }
-      },
-      render() {
-        const n0 = t0()
-        const n1 = n0.firstChild
-        const n2 = n1!.nextSibling!
-        const n3 = createFor(
-          () => list.value,
-          state => {
-            const n4 = t1()
-            setRef(n4 as Element, 'listRefs', undefined, true)
-            renderEffect(() => {
-              const [item] = state
-              setText(n4, item)
-            })
-            return n4
-          },
-        )
-        insert(n3, n2 as unknown as ParentNode)
-        renderEffect(() => {
-          setText(n1!, String(listRefs.value))
-        })
-        return n0
-      },
-    })
+      const t0 = template('<div><div></div><ul></ul></div>')
+      const t1 = template('<li></li>')
+      const { render } = define({
+        setup() {
+          return { listRefs }
+        },
+        render() {
+          const n0 = t0()
+          const n1 = n0.firstChild
+          const n2 = n1!.nextSibling!
+          const n3 = createFor(
+            () => list.value,
+            state => {
+              const n4 = t1()
+              createTemplateRefSetter()(
+                n4 as Element,
+                'listRefs',
+                undefined,
+                true,
+              )
+              renderEffect(() => {
+                const [item] = state
+                setText(n4, item)
+              })
+              return n4
+            },
+          )
+          insert(n3, n2 as unknown as ParentNode)
+          renderEffect(() => {
+            setText(n1!, String(listRefs.value))
+          })
+          return n0
+        },
+      })
 
-    const { host } = render()
+      const { host } = render()
 
-    await nextTick()
-    expect(String(listRefs.value)).toBe(
-      '[object HTMLLIElement],[object HTMLLIElement],[object HTMLLIElement]',
-    )
-    expect(host.innerHTML).toBe(
-      '<div><div>[object HTMLLIElement],[object HTMLLIElement],[object HTMLLIElement]</div><ul><li>1</li><li>2</li><li>3</li><!--for--></ul></div>',
-    )
+      await nextTick()
+      expect(String(listRefs.value)).toBe(
+        '[object HTMLLIElement],[object HTMLLIElement],[object HTMLLIElement]',
+      )
+      expect(host.innerHTML).toBe(
+        '<div><div>[object HTMLLIElement],[object HTMLLIElement],[object HTMLLIElement]</div><ul><li>1</li><li>2</li><li>3</li><!--for--></ul></div>',
+      )
 
-    list.value.splice(0, 1)
-    await nextTick()
-    expect(String(listRefs.value)).toBe(
-      '[object HTMLLIElement],[object HTMLLIElement]',
-    )
-    expect(host.innerHTML).toBe(
-      '<div><div>[object HTMLLIElement],[object HTMLLIElement]</div><ul><li>2</li><li>3</li><!--for--></ul></div>',
-    )
-  })
+      list.value.splice(0, 1)
+      await nextTick()
+      expect(String(listRefs.value)).toBe(
+        '[object HTMLLIElement],[object HTMLLIElement]',
+      )
+      expect(host.innerHTML).toBe(
+        '<div><div>[object HTMLLIElement],[object HTMLLIElement]</div><ul><li>2</li><li>3</li><!--for--></ul></div>',
+      )
+    },
+  )
 
   // TODO: need to implement Component slots
   // test('string ref inside slots', async () => {
@@ -523,7 +551,7 @@ describe.todo('api: template ref', () => {
   //         spy(this.$refs.foo.tag)
   //       })
   //       const n0 = createComponent(Child)
-  //       setRef(n0, 'foo')
+  //       createTemplateRefSetter()(n0, 'foo')
   //       return n0
   //     },
   //   })

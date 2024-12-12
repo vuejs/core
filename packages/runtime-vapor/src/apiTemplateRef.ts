@@ -4,7 +4,7 @@ import {
   currentInstance,
   getExposed,
   isVaporComponent,
-} from '../component'
+} from './component'
 import {
   type SchedulerJob,
   callWithErrorHandling,
@@ -23,30 +23,41 @@ import {
 export type NodeRef = string | Ref | ((ref: Element) => void)
 export type RefEl = Element | VaporComponentInstance
 
+export type setRefFn = (
+  el: RefEl,
+  ref: NodeRef,
+  oldRef?: NodeRef,
+  refFor?: boolean,
+) => NodeRef | undefined
+
+export function createTemplateRefSetter(): setRefFn {
+  const instance = currentInstance as VaporComponentInstance
+  return (...args) => setRef(instance, ...args)
+}
+
 /**
  * Function for handling a template ref
  */
 export function setRef(
+  instance: VaporComponentInstance,
   el: RefEl,
   ref: NodeRef,
   oldRef?: NodeRef,
   refFor = false,
 ): NodeRef | undefined {
-  if (!currentInstance || currentInstance.isUnmounted) return
+  if (!instance || instance.isUnmounted) return
 
-  const setupState = currentInstance.setupState || {}
+  const setupState: any = __DEV__ ? instance.setupState || {} : null
   const refValue = isVaporComponent(el) ? getExposed(el) || el : el
 
   const refs =
-    currentInstance.refs === EMPTY_OBJ
-      ? (currentInstance.refs = {})
-      : currentInstance.refs
+    instance.refs === EMPTY_OBJ ? (instance.refs = {}) : instance.refs
 
   // dynamic ref changed. unset old ref
   if (oldRef != null && oldRef !== ref) {
     if (isString(oldRef)) {
       refs[oldRef] = null
-      if (hasOwn(setupState, oldRef)) {
+      if (__DEV__ && hasOwn(setupState, oldRef)) {
         setupState[oldRef] = null
       }
     } else if (isRef(oldRef)) {
@@ -66,6 +77,7 @@ export function setRef(
     }
 
     invokeRefSetter(refValue)
+    // TODO this gets called repeatedly in renderEffect when it's dynamic ref?
     onScopeDispose(() => invokeRefSetter())
   } else {
     const _isString = isString(ref)
@@ -76,7 +88,7 @@ export function setRef(
       const doSet: SchedulerJob = () => {
         if (refFor) {
           existing = _isString
-            ? hasOwn(setupState, ref)
+            ? __DEV__ && hasOwn(setupState, ref)
               ? setupState[ref]
               : refs[ref]
             : ref.value
@@ -85,7 +97,7 @@ export function setRef(
             existing = [refValue]
             if (_isString) {
               refs[ref] = existing
-              if (hasOwn(setupState, ref)) {
+              if (__DEV__ && hasOwn(setupState, ref)) {
                 setupState[ref] = refs[ref]
                 // if setupState[ref] is a reactivity ref,
                 // the existing will also become reactivity too
@@ -100,7 +112,7 @@ export function setRef(
           }
         } else if (_isString) {
           refs[ref] = refValue
-          if (hasOwn(setupState, ref)) {
+          if (__DEV__ && hasOwn(setupState, ref)) {
             setupState[ref] = refValue
           }
         } else if (_isRef) {
@@ -112,13 +124,14 @@ export function setRef(
       doSet.id = -1
       queuePostFlushCb(doSet)
 
+      // TODO this gets called repeatedly in renderEffect when it's dynamic ref?
       onScopeDispose(() => {
         queuePostFlushCb(() => {
           if (isArray(existing)) {
             remove(existing, refValue)
           } else if (_isString) {
             refs[ref] = null
-            if (hasOwn(setupState, ref)) {
+            if (__DEV__ && hasOwn(setupState, ref)) {
               setupState[ref] = null
             }
           } else if (_isRef) {
@@ -127,7 +140,7 @@ export function setRef(
         })
       })
     } else if (__DEV__) {
-      // warn('Invalid template ref type:', ref, `(${typeof ref})`)
+      warn('Invalid template ref type:', ref, `(${typeof ref})`)
     }
   }
   return ref

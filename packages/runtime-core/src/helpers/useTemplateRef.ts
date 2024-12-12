@@ -1,5 +1,5 @@
 import { type ShallowRef, readonly, shallowRef } from '@vue/reactivity'
-import { getCurrentInstance } from '../component'
+import { getCurrentGenericInstance } from '../component'
 import { warn } from '../warning'
 import { EMPTY_OBJ } from '@vue/shared'
 
@@ -8,7 +8,7 @@ export const knownTemplateRefs: WeakSet<ShallowRef> = new WeakSet()
 export function useTemplateRef<T = unknown, Keys extends string = string>(
   key: Keys,
 ): Readonly<ShallowRef<T | null>> {
-  const i = getCurrentInstance()
+  const i = getCurrentGenericInstance()
   const r = shallowRef(null)
   if (i) {
     const refs = i.refs === EMPTY_OBJ ? (i.refs = {}) : i.refs

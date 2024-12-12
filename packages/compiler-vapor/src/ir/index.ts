@@ -63,6 +63,7 @@ export interface RootIRNode {
   component: Set<string>
   directive: Set<string>
   block: BlockIRNode
+  hasTemplateRef: boolean
 }
 
 export interface IfIRNode extends BaseIRNode {

@@ -7,7 +7,8 @@ import {
 } from '../directives/vShow'
 import { CSS_VAR_TEXT } from '../helpers/useCssVars'
 
-type Style = string | Record<string, string | string[]> | null | undefined
+type Style = StyleValue | Record<string, StyleValue | StyleValue[]>
+type StyleValue = string | null | undefined
 
 const displayRE = /(^|;)\s*display\s*:/
 
@@ -70,7 +71,7 @@ const importantRE = /\s*!important$/
 function setStyle(
   style: CSSStyleDeclaration,
   name: string,
-  val: string | string[],
+  val: StyleValue | StyleValue[],
 ) {
   if (isArray(val)) {
     val.forEach(v => setStyle(style, name, v))
