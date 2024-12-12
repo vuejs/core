@@ -61,7 +61,7 @@ export function render(_ctx) {
 `;
 
 exports[`v-on > event modifier 1`] = `
-"import { delegate as _delegate, on as _on, delegateEvents as _delegateEvents, template as _template } from 'vue';
+"import { withModifiers as _withModifiers, delegate as _delegate, on as _on, withKeys as _withKeys, delegateEvents as _delegateEvents, template as _template } from 'vue';
 const t0 = _template("<a></a>")
 const t1 = _template("<form></form>")
 const t2 = _template("<div></div>")
@@ -91,18 +91,10 @@ export function render(_ctx, $props, $emit, $attrs, $slots) {
   const n19 = t3()
   const n20 = t3()
   const n21 = t3()
-  _delegate(n0, "click", () => _ctx.handleEvent, {
-    modifiers: ["stop"]
-  })
-  _on(n1, "submit", () => _ctx.handleEvent, {
-    modifiers: ["prevent"]
-  })
-  _delegate(n2, "click", () => _ctx.handleEvent, {
-    modifiers: ["stop", "prevent"]
-  })
-  _delegate(n3, "click", () => _ctx.handleEvent, {
-    modifiers: ["self"]
-  })
+  _delegate(n0, "click", () => _withModifiers(_ctx.handleEvent, ["stop"]))
+  _on(n1, "submit", () => _withModifiers(_ctx.handleEvent, ["prevent"]))
+  _delegate(n2, "click", () => _withModifiers(_ctx.handleEvent, ["stop","prevent"]))
+  _delegate(n3, "click", () => _withModifiers(_ctx.handleEvent, ["self"]))
   _on(n4, "click", () => _ctx.handleEvent, {
     capture: true
   })
@@ -112,53 +104,21 @@ export function render(_ctx, $props, $emit, $attrs, $slots) {
   _on(n6, "scroll", () => _ctx.handleEvent, {
     passive: true
   })
-  _delegate(n7, "contextmenu", () => _ctx.handleEvent, {
-    modifiers: ["right"]
-  })
-  _delegate(n8, "click", () => _ctx.handleEvent, {
-    modifiers: ["left"]
-  })
-  _delegate(n9, "mouseup", () => _ctx.handleEvent, {
-    modifiers: ["middle"]
-  })
-  _delegate(n10, "contextmenu", () => _ctx.handleEvent, {
-    modifiers: ["right"], 
-    keys: ["enter"]
-  })
-  _delegate(n11, "keyup", () => _ctx.handleEvent, {
-    keys: ["enter"]
-  })
-  _delegate(n12, "keyup", () => _ctx.handleEvent, {
-    keys: ["tab"]
-  })
-  _delegate(n13, "keyup", () => _ctx.handleEvent, {
-    keys: ["delete"]
-  })
-  _delegate(n14, "keyup", () => _ctx.handleEvent, {
-    keys: ["esc"]
-  })
-  _delegate(n15, "keyup", () => _ctx.handleEvent, {
-    keys: ["space"]
-  })
-  _delegate(n16, "keyup", () => _ctx.handleEvent, {
-    keys: ["up"]
-  })
-  _delegate(n17, "keyup", () => _ctx.handleEvent, {
-    keys: ["down"]
-  })
-  _delegate(n18, "keyup", () => _ctx.handleEvent, {
-    keys: ["left"]
-  })
-  _delegate(n19, "keyup", () => _ctx.submit, {
-    modifiers: ["middle"]
-  })
-  _delegate(n20, "keyup", () => _ctx.submit, {
-    modifiers: ["middle", "self"]
-  })
-  _delegate(n21, "keyup", () => _ctx.handleEvent, {
-    modifiers: ["self"], 
-    keys: ["enter"]
-  })
+  _delegate(n7, "contextmenu", () => _withModifiers(_ctx.handleEvent, ["right"]))
+  _delegate(n8, "click", () => _withModifiers(_ctx.handleEvent, ["left"]))
+  _delegate(n9, "mouseup", () => _withModifiers(_ctx.handleEvent, ["middle"]))
+  _delegate(n10, "contextmenu", () => _withKeys(_withModifiers(_ctx.handleEvent, ["right"]), ["enter"]))
+  _delegate(n11, "keyup", () => _withKeys(_ctx.handleEvent, ["enter"]))
+  _delegate(n12, "keyup", () => _withKeys(_ctx.handleEvent, ["tab"]))
+  _delegate(n13, "keyup", () => _withKeys(_ctx.handleEvent, ["delete"]))
+  _delegate(n14, "keyup", () => _withKeys(_ctx.handleEvent, ["esc"]))
+  _delegate(n15, "keyup", () => _withKeys(_ctx.handleEvent, ["space"]))
+  _delegate(n16, "keyup", () => _withKeys(_ctx.handleEvent, ["up"]))
+  _delegate(n17, "keyup", () => _withKeys(_ctx.handleEvent, ["down"]))
+  _delegate(n18, "keyup", () => _withKeys(_ctx.handleEvent, ["left"]))
+  _delegate(n19, "keyup", () => _withModifiers(_ctx.submit, ["middle"]))
+  _delegate(n20, "keyup", () => _withModifiers(_ctx.submit, ["middle","self"]))
+  _delegate(n21, "keyup", () => _withKeys(_withModifiers(_ctx.handleEvent, ["self"]), ["enter"]))
   return [n0, n1, n2, n3, n4, n5, n6, n7, n8, n9, n10, n11, n12, n13, n14, n15, n16, n17, n18, n19, n20, n21]
 }"
 `;
@@ -315,44 +275,37 @@ export function render(_ctx) {
 `;
 
 exports[`v-on > should not wrap keys guard if no key modifier is present 1`] = `
-"import { delegate as _delegate, delegateEvents as _delegateEvents, template as _template } from 'vue';
+"import { withModifiers as _withModifiers, delegate as _delegate, delegateEvents as _delegateEvents, template as _template } from 'vue';
 const t0 = _template("<div></div>")
 _delegateEvents("keyup")
 
 export function render(_ctx) {
   const n0 = t0()
-  _delegate(n0, "keyup", () => _ctx.test, {
-    modifiers: ["exact"]
-  })
+  _delegate(n0, "keyup", () => _withModifiers(_ctx.test, ["exact"]))
   return n0
 }"
 `;
 
 exports[`v-on > should support multiple events and modifiers options w/ prefixIdentifiers: true 1`] = `
-"import { delegate as _delegate, delegateEvents as _delegateEvents, template as _template } from 'vue';
+"import { withModifiers as _withModifiers, delegate as _delegate, withKeys as _withKeys, delegateEvents as _delegateEvents, template as _template } from 'vue';
 const t0 = _template("<div></div>")
 _delegateEvents("click", "keyup")
 
 export function render(_ctx) {
   const n0 = t0()
-  _delegate(n0, "click", () => _ctx.test, {
-    modifiers: ["stop"]
-  })
-  _delegate(n0, "keyup", () => _ctx.test, {
-    keys: ["enter"]
-  })
+  _delegate(n0, "click", () => _withModifiers(_ctx.test, ["stop"]))
+  _delegate(n0, "keyup", () => _withKeys(_ctx.test, ["enter"]))
   return n0
 }"
 `;
 
 exports[`v-on > should support multiple modifiers and event options w/ prefixIdentifiers: true 1`] = `
-"import { on as _on, template as _template } from 'vue';
+"import { withModifiers as _withModifiers, on as _on, template as _template } from 'vue';
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
-  _on(n0, "click", () => _ctx.test, {
-    modifiers: ["stop", "prevent"], 
+  _on(n0, "click", () => _withModifiers(_ctx.test, ["stop","prevent"]), {
     capture: true, 
     once: true
   })
@@ -361,29 +314,26 @@ export function render(_ctx) {
 `;
 
 exports[`v-on > should transform click.middle 1`] = `
-"import { delegate as _delegate, delegateEvents as _delegateEvents, template as _template } from 'vue';
+"import { withModifiers as _withModifiers, delegate as _delegate, delegateEvents as _delegateEvents, template as _template } from 'vue';
 const t0 = _template("<div></div>")
 _delegateEvents("mouseup")
 
 export function render(_ctx) {
   const n0 = t0()
-  _delegate(n0, "mouseup", () => _ctx.test, {
-    modifiers: ["middle"]
-  })
+  _delegate(n0, "mouseup", () => _withModifiers(_ctx.test, ["middle"]))
   return n0
 }"
 `;
 
 exports[`v-on > should transform click.middle 2`] = `
-"import { on as _on, renderEffect as _renderEffect, template as _template } from 'vue';
+"import { withModifiers as _withModifiers, on as _on, renderEffect as _renderEffect, template as _template } from 'vue';
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
   _renderEffect(() => {
     
-    _on(n0, (_ctx.event) === "click" ? "mouseup" : (_ctx.event), () => _ctx.test, {
-      modifiers: ["middle"], 
+    _on(n0, (_ctx.event) === "click" ? "mouseup" : (_ctx.event), () => _withModifiers(_ctx.test, ["middle"]), {
       effect: true
     })
   })
@@ -392,30 +342,26 @@ export function render(_ctx) {
 `;
 
 exports[`v-on > should transform click.right 1`] = `
-"import { delegate as _delegate, delegateEvents as _delegateEvents, template as _template } from 'vue';
+"import { withModifiers as _withModifiers, delegate as _delegate, delegateEvents as _delegateEvents, template as _template } from 'vue';
 const t0 = _template("<div></div>")
 _delegateEvents("contextmenu")
 
 export function render(_ctx) {
   const n0 = t0()
-  _delegate(n0, "contextmenu", () => _ctx.test, {
-    modifiers: ["right"]
-  })
+  _delegate(n0, "contextmenu", () => _withModifiers(_ctx.test, ["right"]))
   return n0
 }"
 `;
 
 exports[`v-on > should transform click.right 2`] = `
-"import { on as _on, renderEffect as _renderEffect, template as _template } from 'vue';
+"import { withModifiers as _withModifiers, withKeys as _withKeys, on as _on, renderEffect as _renderEffect, template as _template } from 'vue';
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
   _renderEffect(() => {
     
-    _on(n0, (_ctx.event) === "click" ? "contextmenu" : (_ctx.event), () => _ctx.test, {
-      modifiers: ["right"], 
-      keys: ["right"], 
+    _on(n0, (_ctx.event) === "click" ? "contextmenu" : (_ctx.event), () => _withKeys(_withModifiers(_ctx.test, ["right"]), ["right"]), {
       effect: true
     })
   })
@@ -436,16 +382,14 @@ export function render(_ctx) {
 `;
 
 exports[`v-on > should wrap both for dynamic key event w/ left/right modifiers 1`] = `
-"import { on as _on, renderEffect as _renderEffect, template as _template } from 'vue';
+"import { withModifiers as _withModifiers, withKeys as _withKeys, on as _on, renderEffect as _renderEffect, template as _template } from 'vue';
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
   _renderEffect(() => {
     
-    _on(n0, _ctx.e, () => _ctx.test, {
-      modifiers: ["left"], 
-      keys: ["left"], 
+    _on(n0, _ctx.e, () => _withKeys(_withModifiers(_ctx.test, ["left"]), ["left"]), {
       effect: true
     })
   })
@@ -466,14 +410,12 @@ exports[`v-on > should wrap in unref if identifier is setup-maybe-ref w/ inline:
 `;
 
 exports[`v-on > should wrap keys guard for keyboard events or dynamic events 1`] = `
-"import { on as _on, template as _template } from 'vue';
+"import { withModifiers as _withModifiers, withKeys as _withKeys, on as _on, template as _template } from 'vue';
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
-  _on(n0, "keydown", () => _ctx.test, {
-    modifiers: ["stop", "ctrl"], 
-    keys: ["a"], 
+  _on(n0, "keydown", () => _withKeys(_withModifiers(_ctx.test, ["stop","ctrl"]), ["a"]), {
     capture: true
   })
   return n0
@@ -481,15 +423,13 @@ export function render(_ctx) {
 `;
 
 exports[`v-on > should wrap keys guard for static key event w/ left/right modifiers 1`] = `
-"import { delegate as _delegate, delegateEvents as _delegateEvents, template as _template } from 'vue';
+"import { withKeys as _withKeys, delegate as _delegate, delegateEvents as _delegateEvents, template as _template } from 'vue';
 const t0 = _template("<div></div>")
 _delegateEvents("keyup")
 
 export function render(_ctx) {
   const n0 = t0()
-  _delegate(n0, "keyup", () => _ctx.test, {
-    keys: ["left"]
-  })
+  _delegate(n0, "keyup", () => _withKeys(_ctx.test, ["left"]))
   return n0
 }"
 `;

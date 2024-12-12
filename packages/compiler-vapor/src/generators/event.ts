@@ -22,7 +22,7 @@ export function genSetEvent(
   const { element, key, keyOverride, value, modifiers, delegate, effect } = oper
 
   const name = genName()
-  const handler = genEventHandler(context, value)
+  const handler = genEventHandler(context, value, modifiers)
   const eventOptions = genEventOptions()
 
   if (delegate) {
@@ -55,13 +55,11 @@ export function genSetEvent(
   }
 
   function genEventOptions(): CodeFragment[] | undefined {
-    let { options, keys, nonKeys } = modifiers
-    if (!options.length && !nonKeys.length && !keys.length && !effect) return
+    let { options } = modifiers
+    if (!options.length && !effect) return
 
     return genMulti(
       DELIMITERS_OBJECT_NEWLINE,
-      !!nonKeys.length && ['modifiers: ', genArrayExpression(nonKeys)],
-      !!keys.length && ['keys: ', genArrayExpression(keys)],
       effect && ['effect: true'],
       ...options.map((option): CodeFragment[] => [`${option}: true`]),
     )
@@ -83,14 +81,15 @@ export function genSetDynamicEvents(
   ]
 }
 
-function genArrayExpression(elements: string[]) {
-  return `[${elements.map(it => JSON.stringify(it)).join(', ')}]`
-}
-
 export function genEventHandler(
   context: CodegenContext,
   value: SimpleExpressionNode | undefined,
+  modifiers: {
+    nonKeys: string[]
+    keys: string[]
+  } = { nonKeys: [], keys: [] },
 ): CodeFragment[] {
+  let handlerExp: CodeFragment[] = [`{}`]
   if (value && value.content.trim()) {
     const isMemberExp = isMemberExpression(value, context.options)
     const isInlineStatement = !(
@@ -102,16 +101,41 @@ export function genEventHandler(
         $event: null,
       })
       const hasMultipleStatements = value.content.includes(`;`)
-      return [
-        '() => $event => ',
+      handlerExp = [
+        '$event => ',
         hasMultipleStatements ? '{' : '(',
         ...expr,
         hasMultipleStatements ? '}' : ')',
       ]
     } else {
-      return ['() => ', ...genExpression(value, context)]
+      handlerExp = [...genExpression(value, context)]
     }
   }
 
-  return ['() => {}']
+  const { keys, nonKeys } = modifiers
+  if (nonKeys.length)
+    handlerExp = genWithModifiers(context, handlerExp, nonKeys)
+  if (keys.length) handlerExp = genWithKeys(context, handlerExp, keys)
+
+  return [`() => `, ...handlerExp]
+}
+
+function genWithModifiers(
+  context: CodegenContext,
+  handler: CodeFragment[],
+  nonKeys: string[],
+): CodeFragment[] {
+  return genCall(
+    context.helper('withModifiers'),
+    handler,
+    JSON.stringify(nonKeys),
+  )
+}
+
+function genWithKeys(
+  context: CodegenContext,
+  handler: CodeFragment[],
+  keys: string[],
+): CodeFragment[] {
+  return genCall(context.helper('withKeys'), handler, JSON.stringify(keys))
 }

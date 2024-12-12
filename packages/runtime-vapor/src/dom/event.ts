@@ -8,7 +8,6 @@ import {
   getMetadata,
   recordEventMetadata,
 } from '../componentMetadata'
-import { withKeys, withModifiers } from '@vue/runtime-dom'
 import { queuePostFlushCb } from '@vue/runtime-dom'
 
 export function addEventListener(
@@ -21,19 +20,13 @@ export function addEventListener(
   return (): void => el.removeEventListener(event, handler, options)
 }
 
-interface ModifierOptions {
-  modifiers?: string[]
-  keys?: string[]
-}
-
 export function on(
   el: Element,
   event: string,
   handlerGetter: () => undefined | ((...args: any[]) => any),
-  options: AddEventListenerOptions &
-    ModifierOptions & { effect?: boolean } = {},
+  options: AddEventListenerOptions & { effect?: boolean } = {},
 ): void {
-  const handler: DelegatedHandler = eventHandler(handlerGetter, options)
+  const handler: DelegatedHandler = eventHandler(handlerGetter)
   let cleanupEvent: (() => void) | undefined
   queuePostFlushCb(() => {
     cleanupEvent = addEventListener(el, event, handler, options)
@@ -59,23 +52,17 @@ export function delegate(
   el: HTMLElement,
   event: string,
   handlerGetter: () => undefined | ((...args: any[]) => any),
-  options: ModifierOptions = {},
 ): void {
-  const handler: DelegatedHandler = eventHandler(handlerGetter, options)
+  const handler: DelegatedHandler = eventHandler(handlerGetter)
   handler.delegate = true
   recordEventMetadata(el, event, handler)
 }
 
-function eventHandler(
-  getter: () => undefined | ((...args: any[]) => any),
-  { modifiers, keys }: ModifierOptions = {},
-) {
+function eventHandler(getter: () => undefined | ((...args: any[]) => any)) {
   return (...args: any[]) => {
     let handler = getter()
     if (!handler) return
 
-    if (modifiers) handler = withModifiers(handler, modifiers as any[])
-    if (keys) handler = withKeys(handler, keys)
     handler && handler(...args)
   }
 }
