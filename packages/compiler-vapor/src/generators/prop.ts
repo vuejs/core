@@ -161,11 +161,11 @@ export function genPropValue(
   )
 }
 
-function getRuntimeHelper(
+export function getRuntimeHelper(
   tag: string,
   keyName: string,
   modifier: '.' | '^' | undefined,
-) {
+): { helperName: VaporHelper; omitKey: boolean } {
   const tagName = tag.toUpperCase()
   let helperName: VaporHelper
   let omitKey = false

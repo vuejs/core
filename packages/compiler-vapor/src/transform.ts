@@ -32,10 +32,12 @@ import {
   type IRSlots,
   type OperationNode,
   type RootIRNode,
+  type SetPropIRNode,
   type VaporDirectiveNode,
 } from './ir'
 import { isConstantExpression } from './utils'
 import { newBlock, newDynamic } from './transforms/utils'
+import { getRuntimeHelper } from './generators/prop'
 
 export type NodeTransform = (
   node: RootNode | TemplateChildNode,
@@ -156,7 +158,8 @@ export class TransformContext<T extends AllNode = AllNode> {
     const existing = this.block.effect.find(e =>
       looseEqual(e.identifiers, Array.from(ids)),
     )
-    if (existing) {
+    const canMerge = isMergeableOperation(operations)
+    if (existing && canMerge) {
       existing.operations.push(...operations)
     } else {
       this.block.effect.push({
@@ -313,4 +316,34 @@ function extractIdentifiers(ids: Set<string>, node: ExpressionNode) {
   } else if (node.ast === null) {
     ids.add((node as SimpleExpressionNode).content)
   }
+}
+
+function getSetPropHelperName(op: SetPropIRNode): string {
+  const {
+    prop: { key, modifier },
+    tag,
+  } = op
+
+  const { helperName } = getRuntimeHelper(tag, key.content, modifier)
+  return helperName
+}
+
+function isMergeableOperation(operations: OperationNode[]): boolean {
+  // setStyle and setDynamicProps can't be merged into existing render effect,
+  // because they don't need to cache deps value. the existing render effect may cache deps value.
+  if (operations.some(op => op.type === IRNodeTypes.SET_DYNAMIC_PROPS)) {
+    return false
+  }
+
+  if (
+    operations.some(
+      op =>
+        op.type === IRNodeTypes.SET_PROP &&
+        getSetPropHelperName(op) === 'setStyle',
+    )
+  ) {
+    return false
+  }
+
+  return true
 }
