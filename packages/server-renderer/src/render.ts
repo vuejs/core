@@ -93,6 +93,11 @@ export function renderComponentVNode(
   parentComponent: ComponentInternalInstance | null = null,
   slotScopeId?: string,
 ): SSRBuffer | Promise<SSRBuffer> {
+  if (isString(vnode.type)) {
+    const { getBuffer, push } = createBuffer()
+    renderVNode(push, vnode, parentComponent!, slotScopeId)
+    return getBuffer()
+  }
   const instance = (vnode.component = createComponentInstance(
     vnode,
     parentComponent,
