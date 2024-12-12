@@ -293,13 +293,12 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: element transform > props merging: class 1`] = `
-"import { setClass as _setClass, renderEffect as _renderEffect, template as _template } from 'vue';
+"import { setClassIncremental as _setClassIncremental, renderEffect as _renderEffect, template as _template } from 'vue';
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
-  let _isBar
-  _renderEffect(() => _isBar !== _ctx.isBar && _setClass(n0, ["foo", { bar: (_isBar = _ctx.isBar) }], true))
+  _renderEffect(() => _setClassIncremental(n0, ["foo", { bar: _ctx.isBar }]))
   return n0
 }"
 `;
@@ -322,12 +321,12 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: element transform > props merging: style 1`] = `
-"import { setStyle as _setStyle, renderEffect as _renderEffect, template as _template } from 'vue';
+"import { setStyleIncremental as _setStyleIncremental, renderEffect as _renderEffect, template as _template } from 'vue';
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => _setStyle(n0, ["color: green", { color: 'red' }], true))
+  _renderEffect(() => _setStyleIncremental(n0, ["color: green", { color: 'red' }]))
   return n0
 }"
 `;
@@ -348,8 +347,7 @@ const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
-  let _obj
-  _renderEffect(() => _obj !== _ctx.obj && (_obj = _setDynamicProps(n0, _obj, [_ctx.obj], true)))
+  _renderEffect(() => _setDynamicProps(n0, [_ctx.obj], true))
   return n0
 }"
 `;
@@ -360,8 +358,7 @@ const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
-  let _obj
-  _renderEffect(() => _obj !== _ctx.obj && (_obj = _setDynamicProps(n0, _obj, [{ id: "foo" }, _ctx.obj], true)))
+  _renderEffect(() => _setDynamicProps(n0, [{ id: "foo" }, _ctx.obj], true))
   return n0
 }"
 `;
@@ -372,8 +369,7 @@ const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
-  let _obj
-  _renderEffect(() => _obj !== _ctx.obj && (_obj = _setDynamicProps(n0, _obj, [_ctx.obj, { id: "foo" }], true)))
+  _renderEffect(() => _setDynamicProps(n0, [_ctx.obj, { id: "foo" }], true))
   return n0
 }"
 `;
@@ -384,8 +380,7 @@ const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
-  let _obj
-  _renderEffect(() => _obj !== _ctx.obj && (_obj = _setDynamicProps(n0, _obj, [{ id: "foo" }, _ctx.obj, { class: "bar" }], true)))
+  _renderEffect(() => _setDynamicProps(n0, [{ id: "foo" }, _ctx.obj, { class: "bar" }], true))
   return n0
 }"
 `;

@@ -3,9 +3,9 @@ import {
   setDynamicProp as _setDynamicProp,
   setAttr,
   setClass,
-  setDOMProp,
   setDynamicProps,
   setHtml,
+  setProp,
   setText,
   setValue,
 } from '../../src/dom/prop'
@@ -244,47 +244,47 @@ describe('patchProp', () => {
       // In vapor static attrs are part of the template and this never happens
       // setDOMProp(el, 'multiple', '')
       // expect(el.multiple).toBe(true)
-      setDOMProp(el, 'multiple', null)
+      setProp(el, 'multiple', null)
       expect(el.multiple).toBe(false)
-      setDOMProp(el, 'multiple', true)
+      setProp(el, 'multiple', true)
       expect(el.multiple).toBe(true)
-      setDOMProp(el, 'multiple', 0)
+      setProp(el, 'multiple', 0)
       expect(el.multiple).toBe(false)
-      setDOMProp(el, 'multiple', '0')
+      setProp(el, 'multiple', '0')
       expect(el.multiple).toBe(true)
-      setDOMProp(el, 'multiple', false)
+      setProp(el, 'multiple', false)
       expect(el.multiple).toBe(false)
-      setDOMProp(el, 'multiple', 1)
+      setProp(el, 'multiple', 1)
       expect(el.multiple).toBe(true)
-      setDOMProp(el, 'multiple', undefined)
+      setProp(el, 'multiple', undefined)
       expect(el.multiple).toBe(false)
     })
 
     test('should remove attribute when value is falsy', () => {
       const el = document.createElement('div')
       el.setAttribute('id', '')
-      setDOMProp(el, 'id', null)
+      setProp(el, 'id', null)
       expect(el.hasAttribute('id')).toBe(false)
 
       el.setAttribute('id', '')
-      setDOMProp(el, 'id', undefined)
+      setProp(el, 'id', undefined)
       expect(el.hasAttribute('id')).toBe(false)
 
-      setDOMProp(el, 'id', '')
+      setProp(el, 'id', '')
       expect(el.hasAttribute('id')).toBe(false)
 
       const img = document.createElement('img')
-      setDOMProp(img, 'width', 0)
+      setProp(img, 'width', 0)
       expect(img.hasAttribute('width')).toBe(false) // skipped
 
-      setDOMProp(img, 'width', null)
+      setProp(img, 'width', null)
       expect(img.hasAttribute('width')).toBe(false)
-      setDOMProp(img, 'width', 1)
+      setProp(img, 'width', 1)
       expect(img.hasAttribute('width')).toBe(true)
 
-      setDOMProp(img, 'width', undefined)
+      setProp(img, 'width', undefined)
       expect(img.hasAttribute('width')).toBe(false)
-      setDOMProp(img, 'width', 1)
+      setProp(img, 'width', 1)
       expect(img.hasAttribute('width')).toBe(true)
     })
 
@@ -295,7 +295,7 @@ describe('patchProp', () => {
           throw new TypeError('Invalid type')
         },
       })
-      setDOMProp(el, 'someProp', 'foo')
+      setProp(el, 'someProp', 'foo')
 
       expect(
         `Failed setting prop "someProp" on <div>: value foo is invalid.`,

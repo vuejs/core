@@ -106,8 +106,6 @@ describe('v-on', () => {
       },
     })
 
-    console.log(code)
-
     expect(code).matchSnapshot()
   })
 

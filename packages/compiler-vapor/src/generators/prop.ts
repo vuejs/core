@@ -22,7 +22,8 @@ import {
 } from './utils'
 import {
   canSetValueDirectly,
-  isHTMLGlobalAttr,
+  isSVGTag,
+  shouldSetAsAttr,
   toHandlerKey,
 } from '@vue/shared'
 
@@ -42,6 +43,7 @@ const helpers = {
   setStyleIncremental: { name: 'setStyleIncremental' },
   setValue: { name: 'setValue' },
   setAttr: { name: 'setAttr', needKey: true },
+  setProp: { name: 'setProp', needKey: true },
   setDOMProp: { name: 'setDOMProp', needKey: true },
   setDynamicProps: { name: 'setDynamicProps', acceptRoot: true },
 } as const satisfies Partial<Record<VaporHelper, HelperConfig>>
@@ -151,55 +153,55 @@ export function genPropValue(
   )
 }
 
-// TODO
-// - 1. textContent + innerHTML Known base dom properties in https://developer.mozilla.org/en-US/docs/Web/API/Element
-// - 2. special handling (class / style)
-// - 3. SVG: always attribute
-// - 4. Custom Elements
-//     - always properties unless known global attr or has hyphen (aria- / data-)
-// - 5. Normal Elements
-//   - 1. Known shared dom properties:
-//     - https://developer.mozilla.org/en-US/docs/Web/API/HTMLElement
-//   - 2. Each element's known dom properties
-//   - 3. Fallback to attribute
-
 function getRuntimeHelper(
   tag: string,
-  keyName: string,
+  key: string,
   modifier: '.' | '^' | undefined,
   root: boolean,
 ): HelperConfig {
   const tagName = tag.toUpperCase()
   if (modifier) {
     if (modifier === '.') {
-      return getSpecialHelper(keyName, tagName, root) || helpers.setDOMProp
-    } else {
-      return helpers.setAttr
-    }
-  } else {
-    const helper = getSpecialHelper(keyName, tagName, root)
-    if (helper) {
-      return helper
-    } else if (tagName.includes('-')) {
-      // custom element
-      if (isHTMLGlobalAttr(keyName) || keyName.includes('-')) {
-        return helpers.setAttr
-      } else {
-        return helpers.setDOMProp
-      }
-    } else if (/[A-Z]/.test(keyName)) {
-      return helpers.setDOMProp
+      return getSpecialHelper(key, tagName, root) || helpers.setDOMProp
     } else {
       return helpers.setAttr
     }
   }
+
+  // 1. special handling for value / style / class / textContent /  innerHTML
+  const helper = getSpecialHelper(key, tagName, root)
+  if (helper) {
+    return helper
+  }
+
+  // 2. Aria DOM properties shared between all Elements in
+  //    https://developer.mozilla.org/en-US/docs/Web/API/Element
+  if (/aria[A-Z]/.test(key)) {
+    return helpers.setDOMProp
+  }
+
+  // 3. SVG: always attribute
+  if (isSVGTag(tag)) {
+    // TODO pass svg flag
+    return helpers.setAttr
+  }
+
+  // 4. respect shouldSetAsAttr used in vdom and setDynamicProp for consistency
+  //    also fast path for presence of hyphen (covers data-* and aria-*)
+  if (shouldSetAsAttr(tagName, key) || key.includes('-')) {
+    return helpers.setAttr
+  }
+
+  // 5. Fallback to setDOMProp, which has a runtime `key in el` check to
+  // ensure behavior consistency with vdom
+  return helpers.setProp
 }
 
-const getSpecialHelper = (
+function getSpecialHelper(
   keyName: string,
   tagName: string,
   root: boolean,
-): HelperConfig | undefined => {
+): HelperConfig | undefined {
   // special case for 'value' property
   if (keyName === 'value' && canSetValueDirectly(tagName)) {
     return helpers.setValue

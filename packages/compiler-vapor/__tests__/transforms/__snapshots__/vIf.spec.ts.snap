@@ -7,8 +7,7 @@ const t0 = _template("<div></div>")
 export function render(_ctx) {
   const n0 = _createIf(() => (_ctx.ok), () => {
     const n2 = t0()
-    let _msg
-    _renderEffect(() => _msg !== _ctx.msg && _setText(n2, (_msg = _ctx.msg)))
+    _renderEffect(() => _setText(n2, _ctx.msg))
     return n2
   })
   return n0
@@ -38,8 +37,7 @@ export function render(_ctx) {
     const n11 = t4()
     return [n10, n11]
   }))
-  let _text
-  _renderEffect(() => _text !== _ctx.text && _setText(n13, (_text = _ctx.text)))
+  _renderEffect(() => _setText(n13, _ctx.text))
   return [n0, n13]
 }"
 `;
@@ -72,8 +70,7 @@ export function render(_ctx) {
     const n2 = t0()
     const n3 = t1()
     const n4 = t2()
-    let _msg
-    _renderEffect(() => _msg !== _ctx.msg && _setText(n4, (_msg = _ctx.msg)))
+    _renderEffect(() => _setText(n4, _ctx.msg))
     return [n2, n3, n4]
   })
   return n0

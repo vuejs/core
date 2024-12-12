@@ -18,6 +18,7 @@ export {
   setStyleIncremental,
   setAttr,
   setValue,
+  setProp,
   setDOMProp,
   setDynamicProps,
 } from './dom/prop'

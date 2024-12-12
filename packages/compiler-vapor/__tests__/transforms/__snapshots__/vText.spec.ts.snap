@@ -6,8 +6,7 @@ const t0 = _template("<div></div>")
 
 export function render(_ctx, $props, $emit, $attrs, $slots) {
   const n0 = t0()
-  let _str
-  _renderEffect(() => _str !== _ctx.str && _setText(n0, (_str = _ctx.str)))
+  _renderEffect(() => _setText(n0, _ctx.str))
   return n0
 }"
 `;
@@ -18,8 +17,7 @@ const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
-  let _test
-  _renderEffect(() => _test !== _ctx.test && _setText(n0, (_test = _ctx.test)))
+  _renderEffect(() => _setText(n0, _ctx.test))
   return n0
 }"
 `;

@@ -26,7 +26,10 @@ type TargetElement = Element & {
 }
 
 export function setText(el: Node & { $txt?: string }, ...values: any[]): void {
-  const value = values.map(v => toDisplayString(v)).join('')
+  const value =
+    values.length > 1
+      ? values.map(toDisplayString).join('')
+      : toDisplayString(values[0])
   if (el.$txt !== value) {
     el.textContent = el.$txt = value
   }
@@ -109,6 +112,14 @@ export function setValue(
   }
   if (value == null) {
     el.removeAttribute('value')
+  }
+}
+
+export function setProp(el: any, key: string, value: any): void {
+  if (key in el) {
+    setDOMProp(el, key, value)
+  } else {
+    setAttr(el, key, value)
   }
 }
 
