@@ -9,7 +9,7 @@ import {
   setText,
   setValue,
 } from '../../src/dom/prop'
-import { setStyle } from '../../src/dom/style'
+import { setStyle } from '../../src/dom/prop'
 import { VaporComponentInstance } from '../../src/component'
 import { currentInstance, simpleSetCurrentInstance } from '@vue/runtime-dom'
 
@@ -42,87 +42,83 @@ describe('patchProp', () => {
   describe('setStyle', () => {
     test('should set style', () => {
       const el = document.createElement('div')
-      setStyle(el, '', 'color: red')
+      setStyle(el, 'color: red')
       expect(el.style.cssText).toBe('color: red;')
     })
 
     test('should work with camelCase', () => {
       const el = document.createElement('div')
-      setStyle(el, null, { fontSize: '12px' })
+      setStyle(el, { fontSize: '12px' })
       expect(el.style.cssText).toBe('font-size: 12px;')
     })
 
     test('shoud set style with object and array property', () => {
       const el = document.createElement('div')
-      let prev: any
-      prev = setStyle(el, prev, { color: 'red' })
+      setStyle(el, { color: 'red' })
       expect(el.style.cssText).toBe('color: red;')
-      setStyle(el, prev, [{ color: 'blue' }, { fontSize: '12px' }])
+      setStyle(el, [{ color: 'blue' }, { fontSize: '12px' }])
       expect(el.style.cssText).toBe('color: blue; font-size: 12px;')
     })
 
     test('should remove if falsy value', () => {
       const el = document.createElement('div')
-      let prev
-      prev = setStyle(el, prev, { color: undefined, borderRadius: null })
+      setStyle(el, { color: undefined, borderRadius: null })
       expect(el.style.cssText).toBe('')
-      prev = setStyle(el, prev, { color: 'red' })
+      setStyle(el, { color: 'red' })
       expect(el.style.cssText).toBe('color: red;')
-      setStyle(el, prev, { color: undefined, borderRadius: null })
+      setStyle(el, { color: undefined, borderRadius: null })
       expect(el.style.cssText).toBe('')
     })
 
     test('should work with !important', () => {
       const el = document.createElement('div')
-      setStyle(el, null, { color: 'red !important' })
+      setStyle(el, { color: 'red !important' })
       expect(el.style.cssText).toBe('color: red !important;')
     })
 
     test('should work with camelCase and !important', () => {
       const el = document.createElement('div')
-      setStyle(el, null, { fontSize: '12px !important' })
+      setStyle(el, { fontSize: '12px !important' })
       expect(el.style.cssText).toBe('font-size: 12px !important;')
     })
 
     test('should work with multiple entries', () => {
       const el = document.createElement('div')
-      setStyle(el, null, { color: 'red', marginRight: '10px' })
+      setStyle(el, { color: 'red', marginRight: '10px' })
       expect(el.style.getPropertyValue('color')).toBe('red')
       expect(el.style.getPropertyValue('margin-right')).toBe('10px')
     })
 
     test('should patch with falsy style value', () => {
       const el = document.createElement('div')
-      let prev: any
-      prev = setStyle(el, prev, { width: '100px' })
+      setStyle(el, { width: '100px' })
       expect(el.style.cssText).toBe('width: 100px;')
-      prev = setStyle(el, prev, { width: 0 })
+      setStyle(el, { width: 0 })
       expect(el.style.cssText).toBe('width: 0px;')
     })
 
     test('should remove style attribute on falsy value', () => {
       const el = document.createElement('div')
-      let prev: any
-      prev = setStyle(el, prev, { width: '100px' })
+      setStyle(el, { width: '100px' })
       expect(el.style.cssText).toBe('width: 100px;')
-      prev = setStyle(el, prev, { width: undefined })
+      setStyle(el, { width: undefined })
       expect(el.style.cssText).toBe('')
 
-      prev = setStyle(el, prev, { width: '100px' })
+      setStyle(el, { width: '100px' })
       expect(el.style.cssText).toBe('width: 100px;')
-      setStyle(el, prev, null)
+      setStyle(el, null)
       expect(el.hasAttribute('style')).toBe(false)
       expect(el.style.cssText).toBe('')
     })
 
     test('should warn for trailing semicolons', () => {
       const el = document.createElement('div')
-      setStyle(el, null, { color: 'red;' })
+      setStyle(el, { color: 'red;' })
       expect(
         `Unexpected semicolon at the end of 'color' style value: 'red;'`,
       ).toHaveBeenWarned()
 
-      setStyle(el, null, { '--custom': '100; ' })
+      setStyle(el, { '--custom': '100; ' })
       expect(
         `Unexpected semicolon at the end of '--custom' style value: '100; '`,
       ).toHaveBeenWarned()
@@ -130,13 +126,13 @@ describe('patchProp', () => {
 
     test('should not warn for trailing semicolons', () => {
       const el = document.createElement('div')
-      setStyle(el, null, { '--custom': '100\\;' })
+      setStyle(el, { '--custom': '100\\;' })
       expect(el.style.getPropertyValue('--custom')).toBe('100\\;')
     })
 
     test('should work with shorthand properties', () => {
       const el = document.createElement('div')
-      setStyle(el, null, {
+      setStyle(el, {
         borderBottom: '1px solid red',
         border: '1px solid green',
       })
@@ -164,24 +160,28 @@ describe('patchProp', () => {
 
     test('should work with css custom properties', () => {
       const el = mockElementWithStyle()
-      setStyle(el as any, null, { '--theme': 'red' })
+      setStyle(el as any, { '--theme': 'red' })
       expect(el.style.getPropertyValue('--theme')).toBe('red')
     })
 
     test('should auto vendor prefixing', () => {
       const el = mockElementWithStyle()
-      setStyle(el as any, null, { transition: 'all 1s' })
+      setStyle(el as any, { transition: 'all 1s' })
       expect(el.style.WebkitTransition).toBe('all 1s')
     })
 
     test('should work with multiple values', () => {
       const el = mockElementWithStyle()
-      setStyle(el as any, null, {
+      setStyle(el as any, {
         display: ['-webkit-box', '-ms-flexbox', 'flex'],
       })
       expect(el.style.display).toBe('flex')
     })
   })
+
+  describe.todo('setClassIncremental', () => {})
+
+  describe.todo('setStyleIncremental', () => {})
 
   describe('setAttr', () => {
     test('should set attribute', () => {
