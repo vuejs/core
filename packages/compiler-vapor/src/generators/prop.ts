@@ -46,16 +46,10 @@ export function genSetProp(
   } = oper
   const { helperName, omitKey } = getRuntimeHelper(tag, key.content, modifier)
   const propValue = genPropValue(values, context)
-  const { prevValueName, shouldWrapInParentheses } = processPropValues(
-    context,
-    helperName,
-    [propValue],
-  )
+  const { prevValueName } = processPropValues(context, helperName, [propValue])
   return [
     NEWLINE,
-    ...(prevValueName
-      ? [shouldWrapInParentheses ? `(` : undefined, `${prevValueName} = `]
-      : []),
+    ...(prevValueName ? [`${prevValueName} = `] : []),
     ...genCall(
       [helper(helperName), null],
       `n${oper.element}`,
@@ -67,7 +61,6 @@ export function genSetProp(
         ? 'true'
         : undefined,
     ),
-    ...(prevValueName && shouldWrapInParentheses ? [`)`] : []),
   ]
 }
 
@@ -84,16 +77,14 @@ export function genDynamicProps(
         ? genLiteralObjectProps([props], context) // dynamic arg props
         : genExpression(props.value, context),
   ) // v-bind=""
-  const { prevValueName, shouldWrapInParentheses } = processPropValues(
+  const { prevValueName } = processPropValues(
     context,
     'setDynamicProps',
     values,
   )
   return [
     NEWLINE,
-    ...(prevValueName
-      ? [shouldWrapInParentheses ? `(` : undefined, `${prevValueName} = `]
-      : []),
+    ...(prevValueName ? [`${prevValueName} = `] : []),
     ...genCall(
       helper('setDynamicProps'),
       `n${oper.element}`,
@@ -101,7 +92,6 @@ export function genDynamicProps(
       genMulti(DELIMITERS_ARRAY, ...values),
       oper.root && 'true',
     ),
-    ...(prevValueName && shouldWrapInParentheses ? [`)`] : []),
   ]
 }
 
@@ -161,11 +151,11 @@ export function genPropValue(
   )
 }
 
-function getRuntimeHelper(
+export function getRuntimeHelper(
   tag: string,
   keyName: string,
   modifier: '.' | '^' | undefined,
-) {
+): { helperName: VaporHelper; omitKey: boolean } {
   const tagName = tag.toUpperCase()
   let helperName: VaporHelper
   let omitKey = false
@@ -235,30 +225,38 @@ const helpersNeedCachedReturnValue = [
   'setDynamicProps',
 ]
 
+const helpersNoNeedCachedDeps = ['setStyle', 'setDynamicProps']
+
 function processPropValues(
   context: CodegenContext,
   helperName: string,
   values: CodeFragment[][],
-): { prevValueName: string | undefined; shouldWrapInParentheses: boolean } {
+): { prevValueName: string | undefined } {
   const { shouldCacheRenderEffectDeps, processingRenderEffect } = context
-  // single-line render effect and the operation needs cache return a value,
-  // the expression needs to be wrapped in parentheses.
-  // e.g. _foo === _ctx.foo && (_foo = _setStyle(...))
-  let shouldWrapInParentheses: boolean = false
   let prevValueName
   if (shouldCacheRenderEffectDeps()) {
+    const { declareNames, preAccessNames, preAccessExps } =
+      processingRenderEffect!
     const needReturnValue = helpersNeedCachedReturnValue.includes(helperName)
     processValues(context, values, !needReturnValue)
-    const { declareNames } = processingRenderEffect!
     // if the operation needs to cache the return value and has multiple declareNames,
     // combine them into a single name as the return value name.
     if (declareNames.size > 0 && needReturnValue) {
-      prevValueName = [...declareNames].join('')
+      const names = [...declareNames]
+      prevValueName =
+        declareNames.size === 1 ? `_prev${names[0]}` : names.join('')
+
+      if (helpersNoNeedCachedDeps.includes(helperName)) {
+        preAccessNames.clear()
+        preAccessExps.clear()
+        declareNames.clear()
+        processingRenderEffect!.earlyCheckExps = []
+      }
       declareNames.add(prevValueName)
     }
-    shouldWrapInParentheses = processingRenderEffect!.operations.length === 1
   }
-  return { prevValueName, shouldWrapInParentheses }
+
+  return { prevValueName }
 }
 
 export function processValues(
@@ -269,7 +267,7 @@ export function processValues(
   const allCheckExps: string[] = []
   values.forEach(value => {
     const checkExps = processValue(context, value, needRewrite)
-    if (checkExps) allCheckExps.push(...checkExps, ' && ')
+    if (checkExps && checkExps.length > 0) allCheckExps.push(...checkExps)
   })
 
   return allCheckExps.length > 0
@@ -285,37 +283,43 @@ function processValue(
   needRewrite: boolean = true,
 ): string[] | undefined {
   const { processingRenderEffect, allRenderEffectSeenNames } = context
-  const { declareNames, rewrittenNames, earlyCheckExps, operations } =
-    processingRenderEffect!
+  const {
+    declareNames,
+    rewrittenNames,
+    earlyCheckExps,
+    preAccessNames,
+    preAccessExps,
+  } = processingRenderEffect!
 
-  const isSingleLine = operations.length === 1
   for (const frag of values) {
     if (!isArray(frag)) continue
-    // [code, newlineIndex, loc, name] -> [(_name = code), newlineIndex, loc, name]
+    // [code, newlineIndex, loc, name] -> [(__name), newlineIndex, loc, name]
     const [newName, , , rawName] = frag
     if (rawName) {
-      let name = rawName.replace(/[^\w]/g, '_')
-      if (rewrittenNames.has(name)) continue
-      rewrittenNames.add(name)
+      let name = rewrittenNames.get(rawName)
+      if (!name) {
+        name = `_${rawName.replace(/[^\w]/g, '_')}`
+        if (!declareNames.has(name)) {
+          if (allRenderEffectSeenNames[name] === undefined)
+            allRenderEffectSeenNames[name] = 0
+          else name += ++allRenderEffectSeenNames[name]
+          declareNames.add(name)
+        }
+        rewrittenNames.set(newName, name)
+      }
 
-      name = `_${name}`
-      if (declareNames.has(name)) continue
-
-      if (allRenderEffectSeenNames[name] === undefined)
-        allRenderEffectSeenNames[name] = 0
-      else name += ++allRenderEffectSeenNames[name]
-
-      declareNames.add(name)
-      earlyCheckExps.push(`${name} !== ${newName}`)
-
-      if (needRewrite && isSingleLine) {
-        // replace the original code fragment with the assignment expression
-        frag[0] = `(${name} = ${newName})`
+      const preAccessName = `_${name}`
+      preAccessNames.add(`${preAccessName}`)
+      preAccessExps.add(`${preAccessName} = ${newName}`)
+      earlyCheckExps.push(`${name} !== ${preAccessName}`)
+      if (needRewrite) {
+        // replace the original name with the preAccessName
+        frag[0] = `${preAccessName}`
       }
     }
   }
 
   if (earlyCheckExps.length > 0) {
-    return [[...new Set(earlyCheckExps)].join(' && ')]
+    return [...new Set(earlyCheckExps)]
   }
 }
