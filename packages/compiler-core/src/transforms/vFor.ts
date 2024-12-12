@@ -33,6 +33,7 @@ import {
 } from '../ast'
 import { ErrorCodes, createCompilerError } from '../errors'
 import {
+  checkParameterName,
   findDir,
   findProp,
   injectProp,
@@ -215,6 +216,14 @@ export const transformFor: NodeTransform = createStructuralDirectiveTransform(
           } else {
             helper(getVNodeHelper(context.inSSR, childBlock.isComponent))
           }
+        }
+
+        if (__DEV__ || !__BROWSER__) {
+          checkParameterName(
+            forNode.parseResult.value,
+            childBlock as VNodeCall,
+            context,
+          )
         }
 
         if (memo) {
