@@ -1858,6 +1858,13 @@ describe('SSR hydration', () => {
       expect(`Hydration text content mismatch`).toHaveBeenWarned()
     })
 
+    test('element text content w/ escape characters', () => {
+      mountWithHydration(`<div>bar\r\nfoo\r</div>`, () =>
+        h('div', 'bar\r\nfoo\r'),
+      )
+      expect(`Hydration text content mismatch`).not.toHaveBeenWarned()
+    })
+
     test('not enough children', () => {
       const { container } = mountWithHydration(`<div></div>`, () =>
         h('div', [h('span', 'foo'), h('span', 'bar')]),

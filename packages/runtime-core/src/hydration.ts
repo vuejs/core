@@ -457,7 +457,7 @@ export function createHydrationFunctions(
         ) {
           clientText = clientText.slice(1)
         }
-        if (el.textContent !== clientText) {
+        if (normalizeText(el.textContent) !== normalizeText(clientText)) {
           if (!isMismatchAllowed(el, MismatchTypes.TEXT)) {
             ;(__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
               warn(
@@ -992,4 +992,19 @@ function isMismatchAllowed(
     }
     return allowedAttr.split(',').includes(MismatchTypeString[allowedType])
   }
+}
+
+// HTML parsing normalizes CR and CRLF to LF.
+// It also can turn \u0000 into \uFFFD inside attributes.
+// https://www.w3.org/TR/html5/single-page.html#preprocessing-the-input-stream
+// If we have a mismatch, it might be caused by that.
+// We will still patch up in this case but not fire the warning.
+const NORMALIZE_NEWLINES_REGEX = /\r\n?/g
+const NORMALIZE_NULL_AND_REPLACEMENT_REGEX = /\u0000|\uFFFD/g
+
+function normalizeText(s: string | null): string {
+  if (typeof s !== 'string') s = '' + s
+  return s
+    .replace(NORMALIZE_NEWLINES_REGEX, '\n')
+    .replace(NORMALIZE_NULL_AND_REPLACEMENT_REGEX, '')
 }
