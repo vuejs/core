@@ -249,7 +249,8 @@ function processPropValues(
   let shouldWrapInParentheses: boolean = false
   let prevValueName
   if (shouldCacheRenderEffectDeps()) {
-    const { declareNames, operations } = processingRenderEffect!
+    const { declareNames, preAccessNames, preAccessExps } =
+      processingRenderEffect!
     const needReturnValue = helpersNeedCachedReturnValue.includes(helperName)
     processValues(context, values, !needReturnValue)
     // if the operation needs to cache the return value and has multiple declareNames,
@@ -258,14 +259,16 @@ function processPropValues(
       const names = [...declareNames]
       prevValueName =
         declareNames.size === 1 ? `_prev${names[0]}` : names.join('')
+
+      if (helpersNoNeedCachedDeps.includes(helperName)) {
+        preAccessNames.clear()
+        preAccessExps.clear()
+        declareNames.clear()
+        processingRenderEffect!.earlyCheckExps = []
+      }
       declareNames.add(prevValueName)
     }
-    shouldWrapInParentheses = operations.length === 1
-
-    if (helpersNoNeedCachedDeps.includes(helperName)) {
-      declareNames.clear()
-      processingRenderEffect!.earlyCheckExps = []
-    }
+    shouldWrapInParentheses = false //operations.length === 1
   }
 
   return { prevValueName, shouldWrapInParentheses }
@@ -295,7 +298,7 @@ function processValue(
   needRewrite: boolean = true,
 ): string[] | undefined {
   const { processingRenderEffect, allRenderEffectSeenNames } = context
-  const { declareNames, earlyCheckExps, preAccessExps } =
+  const { declareNames, earlyCheckExps, preAccessNames, preAccessExps } =
     processingRenderEffect!
 
   // const isSingleLine = operations.length === 1
@@ -315,8 +318,9 @@ function processValue(
         else name += ++allRenderEffectSeenNames[name]
         declareNames.add(name)
       }
+
       const preAccessName = `_${name}`
-      declareNames.add(`${preAccessName}`)
+      preAccessNames.add(`${preAccessName}`)
       preAccessExps.add(`${preAccessName} = ${newName}`)
       earlyCheckExps.push(`${name} !== ${preAccessName}`)
       if (needRewrite) {

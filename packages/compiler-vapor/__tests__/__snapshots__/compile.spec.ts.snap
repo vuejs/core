@@ -218,11 +218,9 @@ exports[`compile > expression parsing > interpolation 1`] = `
 exports[`compile > expression parsing > v-bind 1`] = `
 "
   const n0 = t0()
-  _renderEffect(() => {
-    __key_value = key.value;__foo = _unref(foo);__key_value = key.value+1]()
-    
-    (_key_value__key_value_foo__foo = _setDynamicProps(n0, _key_value__key_value_foo__foo, [{ [key.value+1]: _unref(foo)[key.value+1]() }], true))
-  })
+  let _key_value_foo
+  _renderEffect(() => 
+  _key_value_foo = _setDynamicProps(n0, _key_value_foo, [{ [key.value+1]: _unref(foo)[key.value+1]() }], true))
   return n0
 "
 `;

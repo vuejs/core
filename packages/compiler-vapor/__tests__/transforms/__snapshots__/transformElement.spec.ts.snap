@@ -355,11 +355,9 @@ const t0 = _template("<div></div>")
 
 export function render(_ctx, $props, $emit, $attrs, $slots) {
   const n0 = t0()
-  _renderEffect(() => {
-    __obj = _ctx.obj
-    
-    (_obj__obj = _setDynamicProps(n0, _obj__obj, [_ctx.obj], true))
-  })
+  let _prev_obj
+  _renderEffect(() => 
+  _prev_obj = _setDynamicProps(n0, _prev_obj, [_ctx.obj], true))
   return n0
 }"
 `;
@@ -370,11 +368,9 @@ const t0 = _template("<div></div>")
 
 export function render(_ctx, $props, $emit, $attrs, $slots) {
   const n0 = t0()
-  _renderEffect(() => {
-    __obj = _ctx.obj
-    
-    (_obj__obj = _setDynamicProps(n0, _obj__obj, [{ id: "foo" }, _ctx.obj], true))
-  })
+  let _prev_obj
+  _renderEffect(() => 
+  _prev_obj = _setDynamicProps(n0, _prev_obj, [{ id: "foo" }, _ctx.obj], true))
   return n0
 }"
 `;
@@ -385,11 +381,9 @@ const t0 = _template("<div></div>")
 
 export function render(_ctx, $props, $emit, $attrs, $slots) {
   const n0 = t0()
-  _renderEffect(() => {
-    __obj = _ctx.obj
-    
-    (_obj__obj = _setDynamicProps(n0, _obj__obj, [_ctx.obj, { id: "foo" }], true))
-  })
+  let _prev_obj
+  _renderEffect(() => 
+  _prev_obj = _setDynamicProps(n0, _prev_obj, [_ctx.obj, { id: "foo" }], true))
   return n0
 }"
 `;
@@ -400,11 +394,9 @@ const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => {
-    __obj = _ctx.obj
-    
-    (_obj__obj = _setDynamicProps(n0, _obj__obj, [{ id: "foo" }, _ctx.obj, { class: "bar" }], true))
-  })
+  let _prev_obj
+  _renderEffect(() => 
+  _prev_obj = _setDynamicProps(n0, _prev_obj, [{ id: "foo" }, _ctx.obj, { class: "bar" }], true))
   return n0
 }"
 `;

@@ -116,10 +116,13 @@ export function genEffect(
   const operationsExps = genOperations(operations, context)
 
   const { processingRenderEffect } = context
-  const { declareNames, earlyCheckExps, preAccessExps } =
+  const { declareNames, earlyCheckExps, preAccessNames, preAccessExps } =
     processingRenderEffect!
   if (declareNames.size) {
     allDeclareNames.add([...declareNames].join(', '))
+  }
+  if (preAccessNames.size) {
+    allDeclareNames.add([...preAccessNames].join(', '))
   }
 
   const accessExps: CodeFragment[] =

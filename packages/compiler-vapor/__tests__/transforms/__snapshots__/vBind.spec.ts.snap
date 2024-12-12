@@ -114,11 +114,11 @@ const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
-  let _id, __id, _id__id
+  let _id, _prev_id, __id
   _renderEffect(() => {
     __id = _ctx.id
     if(_id !== __id) {
-      (_id__id = _setDynamicProp(n0, "fooBar", _id__id, _ctx.id))
+      _prev_id = _setDynamicProp(n0, "fooBar", _prev_id, _ctx.id)
       _id = __id
     }
   })
@@ -132,11 +132,9 @@ const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => {
-    __foo = _ctx.foo;__id = _ctx.id
-    
-    (_foo__foo_id__id = _setDynamicProps(n0, _foo__foo_id__id, [{ [_camelize(_ctx.foo)]: _ctx.id }], true))
-  })
+  let _foo_id
+  _renderEffect(() => 
+  _foo_id = _setDynamicProps(n0, _foo_id, [{ [_camelize(_ctx.foo)]: _ctx.id }], true))
   return n0
 }"
 `;
@@ -147,11 +145,11 @@ const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
-  let _fooBar, __fooBar, _fooBar__fooBar
+  let _fooBar, _prev_fooBar, __fooBar
   _renderEffect(() => {
     __fooBar = _ctx.fooBar
     if(_fooBar !== __fooBar) {
-      (_fooBar__fooBar = _setDynamicProp(n0, "fooBar", _fooBar__fooBar, _ctx.fooBar))
+      _prev_fooBar = _setDynamicProp(n0, "fooBar", _prev_fooBar, _ctx.fooBar)
       _fooBar = __fooBar
     }
   })
@@ -291,11 +289,9 @@ const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => {
-    __fooBar = _ctx.fooBar;__id = _ctx.id
-    
-    (_fooBar__fooBar_id__id = _setDynamicProps(n0, _fooBar__fooBar_id__id, [{ ["." + _ctx.fooBar]: _ctx.id }], true))
-  })
+  let _fooBar_id
+  _renderEffect(() => 
+  _fooBar_id = _setDynamicProps(n0, _fooBar_id, [{ ["." + _ctx.fooBar]: _ctx.id }], true))
   return n0
 }"
 `;
@@ -450,11 +446,11 @@ const t0 = _template("<progress></progress>")
 
 export function render(_ctx) {
   const n0 = t0()
-  let _foo, __foo, _foo__foo
+  let _foo, _prev_foo, __foo
   _renderEffect(() => {
     __foo = _ctx.foo
     if(_foo !== __foo) {
-      (_foo__foo = _setDynamicProp(n0, "value", _foo__foo, _ctx.foo))
+      _prev_foo = _setDynamicProp(n0, "value", _prev_foo, _ctx.foo)
       _foo = __foo
     }
   })
@@ -679,11 +675,9 @@ const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => {
-    __id = _ctx.id;__title = _ctx.title
-    
-    (_id__id_title__title = _setDynamicProps(n0, _id__id_title__title, [{ [_ctx.id]: _ctx.id, [_ctx.title]: _ctx.title }], true))
-  })
+  let _id_title
+  _renderEffect(() => 
+  _id_title = _setDynamicProps(n0, _id_title, [{ [_ctx.id]: _ctx.id, [_ctx.title]: _ctx.title }], true))
   return n0
 }"
 `;
@@ -694,11 +688,9 @@ const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => {
-    __id = _ctx.id
-    
-    (_id__id = _setDynamicProps(n0, _id__id, [{ [_ctx.id]: _ctx.id, foo: "bar", checked: "" }], true))
-  })
+  let _prev_id
+  _renderEffect(() => 
+  _prev_id = _setDynamicProps(n0, _prev_id, [{ [_ctx.id]: _ctx.id, foo: "bar", checked: "" }], true))
   return n0
 }"
 `;
@@ -709,11 +701,11 @@ const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
-  let _camelCase, __camelCase, _camelCase__camelCase
+  let _camelCase, _prev_camelCase, __camelCase
   _renderEffect(() => {
     __camelCase = _ctx.camelCase
     if(_camelCase !== __camelCase) {
-      (_camelCase__camelCase = _setDynamicProp(n0, "camel-case", _camelCase__camelCase, _ctx.camelCase))
+      _prev_camelCase = _setDynamicProp(n0, "camel-case", _prev_camelCase, _ctx.camelCase)
       _camelCase = __camelCase
     }
   })

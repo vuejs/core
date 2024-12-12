@@ -265,6 +265,7 @@ export interface IREffect {
   declareNames: Set<string>
   rewrittenNames: Set<string>
   earlyCheckExps: string[]
+  preAccessNames: Set<string>
   preAccessExps: Set<string>
   inVFor: boolean
 }
