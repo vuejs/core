@@ -210,7 +210,12 @@ export function createComponent(
     Object.keys(instance.attrs).length
   ) {
     renderEffect(() => {
-      setDynamicProps(instance.block as Element, [instance.attrs])
+      setDynamicProps(
+        instance.block as Element,
+        [instance.attrs],
+        true, // root
+        true, // fallthrough
+      )
     })
   }
 
@@ -421,7 +426,7 @@ export function createComponentWithFallback(
 
   if (rawProps) {
     renderEffect(() => {
-      setDynamicProps(el, [resolveDynamicProps(rawProps)])
+      setDynamicProps(el, [resolveDynamicProps(rawProps)], isSingleRoot)
     })
   }
 

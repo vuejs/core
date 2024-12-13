@@ -4,6 +4,7 @@ import {
   YES,
   camelize,
   hasOwn,
+  isArray,
   isFunction,
   isString,
 } from '@vue/shared'
@@ -171,6 +172,8 @@ export function getPropsProxyHandlers(
 
 export function getAttrFromRawProps(rawProps: RawProps, key: string): unknown {
   if (key === '$') return
+  // need special merging behavior for class & style
+  const merged = key === 'class' || key === 'style' ? ([] as any[]) : undefined
   const dynamicSources = rawProps.$
   if (dynamicSources) {
     let i = dynamicSources.length
@@ -180,13 +183,23 @@ export function getAttrFromRawProps(rawProps: RawProps, key: string): unknown {
       isDynamic = isFunction(source)
       source = isDynamic ? (source as Function)() : source
       if (hasOwn(source, key)) {
-        return isDynamic ? source[key] : source[key]()
+        const value = isDynamic ? source[key] : source[key]()
+        if (merged) {
+          merged.push(value)
+        } else {
+          return value
+        }
       }
     }
   }
   if (hasOwn(rawProps, key)) {
-    return rawProps[key]()
+    if (merged) {
+      merged.push(rawProps[key]())
+    } else {
+      return rawProps[key]()
+    }
   }
+  return merged
 }
 
 export function hasAttrFromRawProps(rawProps: RawProps, key: string): boolean {
@@ -299,9 +312,17 @@ export function resolveDynamicProps(props: RawProps): Record<string, unknown> {
       const isDynamic = isFunction(source)
       const resolved = isDynamic ? source() : source
       for (const key in resolved) {
-        mergedRawProps[key] = isDynamic
-          ? resolved[key]
-          : (resolved[key] as Function)()
+        const value = isDynamic ? resolved[key] : (resolved[key] as Function)()
+        if (key === 'class' || key === 'style') {
+          const existing = mergedRawProps[key]
+          if (isArray(existing)) {
+            existing.push(value)
+          } else {
+            mergedRawProps[key] = [existing, value]
+          }
+        } else {
+          mergedRawProps[key] = value
+        }
       }
     }
   }

@@ -14,10 +14,7 @@ import { mergeProps, patchStyle, shouldSetAsProp, warn } from '@vue/runtime-dom'
 type TargetElement = Element & {
   $html?: string
   $cls?: string
-  $clsi?: string
   $sty?: NormalizedStyle | string | undefined
-  $styi?: NormalizedStyle | undefined
-  $dprops?: Record<string, any>
 }
 
 export function setText(el: Node & { $txt?: string }, ...values: any[]): void {
@@ -48,10 +45,14 @@ export function setClass(el: TargetElement, value: any): void {
  * Used on single root elements so it can patch class independent of fallthrough
  * attributes.
  */
-export function setClassIncremental(el: TargetElement, value: any): void {
-  const prev = el.$clsi
-  if ((value = normalizeClass(value)) !== prev) {
-    el.$clsi = value
+export function setClassIncremental(
+  el: any,
+  value: any,
+  fallthrough?: boolean,
+): void {
+  const cacheKey = `$clsi${fallthrough ? '$' : ''}`
+  const prev = el[cacheKey]
+  if ((value = el[cacheKey] = normalizeClass(value)) !== prev) {
     const nextList = value.split(/\s+/)
     el.classList.add(...nextList)
     if (prev) {
@@ -73,12 +74,18 @@ export function setStyle(el: TargetElement, value: any): void {
  * Used on single root elements so it can patch class independent of fallthrough
  * attributes.
  */
-export function setStyleIncremental(el: TargetElement, value: any): void {
-  const prev = el.$styi
-  value = el.$styi = isString(value)
+export function setStyleIncremental(
+  el: any,
+  value: any,
+  fallthrough?: boolean,
+): NormalizedStyle | undefined {
+  const cacheKey = `$styi${fallthrough ? '$' : ''}`
+  const prev = el[cacheKey]
+  value = el[cacheKey] = isString(value)
     ? parseStringStyle(value)
     : (normalizeStyle(value) as NormalizedStyle | undefined)
   patchStyle(el, prev, value)
+  return value
 }
 
 export function setAttr(el: any, key: string, value: any): void {
@@ -158,37 +165,25 @@ export function setDOMProp(el: any, key: string, value: any): void {
 }
 
 export function setDynamicProps(
-  el: TargetElement,
+  el: any,
   args: any[],
   root = false,
+  fallthrough = false,
 ): void {
   const props = args.length > 1 ? mergeProps(...args) : args[0]
-  const oldProps = el.$dprops
+  const cacheKey = `$dprops${fallthrough ? '$' : ''}`
+  const prevKeys = el[cacheKey] as string[]
 
-  if (oldProps) {
-    for (const key in oldProps) {
-      // TODO should these keys be allowed as dynamic keys? The current logic of the runtime-core will throw an error
-      if (key === 'textContent' || key === 'innerHTML') {
-        continue
-      }
-
-      const oldValue = oldProps[key]
-      const hasNewValue = props[key] || props['.' + key] || props['^' + key]
-      if (oldValue && !hasNewValue) {
-        setDynamicProp(el, key, oldValue, null, root)
+  if (prevKeys) {
+    for (const key of prevKeys) {
+      if (!(key in props)) {
+        setDynamicProp(el, key, null, root, fallthrough)
       }
     }
   }
 
-  const prev = (el.$dprops = Object.create(null))
-  for (const key in props) {
-    setDynamicProp(
-      el,
-      key,
-      oldProps ? oldProps[key] : undefined,
-      (prev[key] = props[key]),
-      root,
-    )
+  for (const key of (el[cacheKey] = Object.keys(props))) {
+    setDynamicProp(el, key, props[key], root, fallthrough)
   }
 }
 
@@ -198,21 +193,21 @@ export function setDynamicProps(
 export function setDynamicProp(
   el: TargetElement,
   key: string,
-  prev: any,
   value: any,
   root?: boolean,
-): void {
+  fallthrough?: boolean,
+): any {
   // TODO
   const isSVG = false
   if (key === 'class') {
     if (root) {
-      setClassIncremental(el, value)
+      return setClassIncremental(el, value, fallthrough)
     } else {
       setClass(el, value)
     }
   } else if (key === 'style') {
     if (root) {
-      setStyleIncremental(el, value)
+      return setStyleIncremental(el, value, fallthrough)
     } else {
       setStyle(el, value)
     }
@@ -238,4 +233,5 @@ export function setDynamicProp(
     // TODO special case for <input v-model type="checkbox">
     setAttr(el, key, value)
   }
+  return value
 }
