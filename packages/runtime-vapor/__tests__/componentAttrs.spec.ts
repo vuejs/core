@@ -1,10 +1,12 @@
-import { type Ref, nextTick, ref, watchEffect } from '@vue/runtime-dom'
+import { type Ref, nextTick, ref } from '@vue/runtime-dom'
 import {
   createComponent,
   defineVaporComponent,
   renderEffect,
-  setClassIncremental,
-  setStyleIncremental,
+  setClass,
+  setDynamicProps,
+  setProp,
+  setStyle,
   setText,
   template,
 } from '../src'
@@ -17,12 +19,12 @@ const define = makeRender<any>()
 
 describe('attribute fallthrough', () => {
   it('should allow attrs to fallthrough', async () => {
-    const t0 = template('<div>')
+    const t0 = template('<div>', true)
     const { component: Child } = define({
       props: ['foo'],
       setup(props: any) {
         const n0 = t0() as Element
-        watchEffect(() => setText(n0, props.foo))
+        renderEffect(() => setText(n0, props.foo))
         return n0
       },
     })
@@ -54,13 +56,13 @@ describe('attribute fallthrough', () => {
   })
 
   it('should not fallthrough if explicitly pass inheritAttrs: false', async () => {
-    const t0 = template('<div>')
+    const t0 = template('<div>', true)
     const { component: Child } = define({
       props: ['foo'],
       inheritAttrs: false,
       setup(props: any) {
         const n0 = t0() as Element
-        watchEffect(() => setText(n0, props.foo))
+        renderEffect(() => setText(n0, props.foo))
         return n0
       },
     })
@@ -92,12 +94,12 @@ describe('attribute fallthrough', () => {
   })
 
   it('should pass through attrs in nested single root components', async () => {
-    const t0 = template('<div>')
+    const t0 = template('<div>', true)
     const { component: Grandson } = define({
       props: ['custom-attr'],
       setup(_: any, { attrs }: any) {
         const n0 = t0() as Element
-        watchEffect(() => setText(n0, attrs.foo))
+        renderEffect(() => setText(n0, attrs.foo))
         return n0
       },
     })
@@ -147,12 +149,13 @@ describe('attribute fallthrough', () => {
     const parentClass = ref('parent')
     const childClass = ref('child')
 
+    const t0 = template('<div>', true /* root */)
     const Child = defineVaporComponent({
       setup() {
-        const n = document.createElement('div')
+        const n = t0() as Element
         renderEffect(() => {
           // binding on template root generates incremental class setter
-          setClassIncremental(n, childClass.value)
+          setClass(n, childClass.value)
         })
         return n
       },
@@ -208,12 +211,13 @@ describe('attribute fallthrough', () => {
     const parentStyle: Ref<string | null> = ref('font-size:12px')
     const childStyle = ref('font-weight:bold')
 
+    const t0 = template('<div>', true /* root */)
     const Child = defineVaporComponent({
       setup() {
-        const n = document.createElement('div')
+        const n = t0() as Element
         renderEffect(() => {
           // binding on template root generates incremental class setter
-          setStyleIncremental(n, childStyle.value)
+          setStyle(n, childStyle.value)
         })
         return n
       },
@@ -271,5 +275,51 @@ describe('attribute fallthrough', () => {
     await nextTick()
     assertStyles()
     expect(getCSS()).not.toContain('font-size:bold')
+  })
+
+  test('parent value should take priority', async () => {
+    const parentVal = ref('parent')
+    const childVal = ref('child')
+
+    const t0 = template('<div>', true /* root */)
+    const Child = defineVaporComponent({
+      setup() {
+        const n = t0()
+        renderEffect(() => {
+          // prop bindings on template root generates extra `root: true` flag
+          setProp(n, 'id', childVal.value)
+          setProp(n, 'aria-x', childVal.value)
+          setDynamicProps(n, [{ 'aria-y': childVal.value }])
+        })
+        return n
+      },
+    })
+
+    const { host } = define({
+      setup() {
+        return createComponent(Child, {
+          id: () => parentVal.value,
+          'aria-x': () => parentVal.value,
+          'aria-y': () => parentVal.value,
+        })
+      },
+    }).render()
+
+    const el = host.children[0]
+    expect(el.id).toBe(parentVal.value)
+    expect(el.getAttribute('aria-x')).toBe(parentVal.value)
+    expect(el.getAttribute('aria-y')).toBe(parentVal.value)
+
+    childVal.value = 'child1'
+    await nextTick()
+    expect(el.id).toBe(parentVal.value)
+    expect(el.getAttribute('aria-x')).toBe(parentVal.value)
+    expect(el.getAttribute('aria-y')).toBe(parentVal.value)
+
+    parentVal.value = 'parent1'
+    await nextTick()
+    expect(el.id).toBe(parentVal.value)
+    expect(el.getAttribute('aria-x')).toBe(parentVal.value)
+    expect(el.getAttribute('aria-y')).toBe(parentVal.value)
   })
 })

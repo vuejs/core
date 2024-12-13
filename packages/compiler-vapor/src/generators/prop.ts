@@ -38,14 +38,12 @@ const helpers = {
   setText: { name: 'setText' },
   setHtml: { name: 'setHtml' },
   setClass: { name: 'setClass' },
-  setClassIncremental: { name: 'setClassIncremental' },
   setStyle: { name: 'setStyle' },
-  setStyleIncremental: { name: 'setStyleIncremental' },
   setValue: { name: 'setValue' },
   setAttr: { name: 'setAttr', needKey: true },
   setProp: { name: 'setProp', needKey: true },
   setDOMProp: { name: 'setDOMProp', needKey: true },
-  setDynamicProps: { name: 'setDynamicProps', acceptRoot: true },
+  setDynamicProps: { name: 'setDynamicProps' },
 } as const satisfies Partial<Record<VaporHelper, HelperConfig>>
 
 // only the static key prop will reach here
@@ -57,9 +55,8 @@ export function genSetProp(
   const {
     prop: { key, values, modifier },
     tag,
-    root,
   } = oper
-  const resolvedHelper = getRuntimeHelper(tag, key.content, modifier, root)
+  const resolvedHelper = getRuntimeHelper(tag, key.content, modifier)
   const propValue = genPropValue(values, context)
   return [
     NEWLINE,
@@ -68,7 +65,6 @@ export function genSetProp(
       `n${oper.element}`,
       resolvedHelper.needKey ? genExpression(key, context) : false,
       propValue,
-      root && resolvedHelper.acceptRoot ? 'true' : undefined,
     ),
   ]
 }
@@ -157,19 +153,18 @@ function getRuntimeHelper(
   tag: string,
   key: string,
   modifier: '.' | '^' | undefined,
-  root: boolean,
 ): HelperConfig {
   const tagName = tag.toUpperCase()
   if (modifier) {
     if (modifier === '.') {
-      return getSpecialHelper(key, tagName, root) || helpers.setDOMProp
+      return getSpecialHelper(key, tagName) || helpers.setDOMProp
     } else {
       return helpers.setAttr
     }
   }
 
   // 1. special handling for value / style / class / textContent /  innerHTML
-  const helper = getSpecialHelper(key, tagName, root)
+  const helper = getSpecialHelper(key, tagName)
   if (helper) {
     return helper
   }
@@ -200,22 +195,11 @@ function getRuntimeHelper(
 function getSpecialHelper(
   keyName: string,
   tagName: string,
-  root: boolean,
 ): HelperConfig | undefined {
   // special case for 'value' property
   if (keyName === 'value' && canSetValueDirectly(tagName)) {
     return helpers.setValue
-  }
-
-  if (root) {
-    if (keyName === 'class') {
-      return helpers.setClassIncremental
-    } else if (keyName === 'style') {
-      return helpers.setStyleIncremental
-    }
-  }
-
-  if (keyName === 'class') {
+  } else if (keyName === 'class') {
     return helpers.setClass
   } else if (keyName === 'style') {
     return helpers.setStyle

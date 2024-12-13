@@ -11,6 +11,12 @@ describe('api: template', () => {
     expect(root2).not.toBe(root)
   })
 
+  test('create root element', () => {
+    const t = template('<div>', true)
+    const root = t()
+    expect(root.$root).toBe(true)
+  })
+
   test('children', () => {
     const t = template('<div><span><b>nested</b></span><p></p></div>')
     const root = t()

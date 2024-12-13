@@ -210,12 +210,9 @@ export function createComponent(
     Object.keys(instance.attrs).length
   ) {
     renderEffect(() => {
-      setDynamicProps(
-        instance.block as Element,
-        [instance.attrs],
-        true, // root
-        true, // fallthrough
-      )
+      isApplyingFallthroughProps = true
+      setDynamicProps(instance.block as Element, [instance.attrs])
+      isApplyingFallthroughProps = false
     })
   }
 
@@ -229,6 +226,8 @@ export function createComponent(
 
   return instance
 }
+
+export let isApplyingFallthroughProps = false
 
 /**
  * dev only
@@ -423,10 +422,12 @@ export function createComponentWithFallback(
 
   // eslint-disable-next-line no-restricted-globals
   const el = document.createElement(comp)
+  // mark single root
+  ;(el as any).$root = isSingleRoot
 
   if (rawProps) {
     renderEffect(() => {
-      setDynamicProps(el, [resolveDynamicProps(rawProps)], isSingleRoot)
+      setDynamicProps(el, [resolveDynamicProps(rawProps)])
     })
   }
 

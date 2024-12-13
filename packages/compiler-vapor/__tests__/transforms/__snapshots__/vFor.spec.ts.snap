@@ -2,7 +2,7 @@
 
 exports[`compiler: v-for > array de-structured value 1`] = `
 "import { setText as _setText, renderEffect as _renderEffect, withDestructure as _withDestructure, createFor as _createFor, template as _template } from 'vue';
-const t0 = _template("<div></div>")
+const t0 = _template("<div></div>", true)
 
 export function render(_ctx) {
   const n0 = _createFor(() => (_ctx.list), _withDestructure(([[id, ...other], index]) => [id, other, index], (_ctx0) => {
@@ -16,7 +16,7 @@ export function render(_ctx) {
 
 exports[`compiler: v-for > basic v-for 1`] = `
 "import { delegate as _delegate, setText as _setText, renderEffect as _renderEffect, createFor as _createFor, delegateEvents as _delegateEvents, template as _template } from 'vue';
-const t0 = _template("<div></div>")
+const t0 = _template("<div></div>", true)
 _delegateEvents("click")
 
 export function render(_ctx) {
@@ -32,7 +32,7 @@ export function render(_ctx) {
 
 exports[`compiler: v-for > function params w/ prefixIdentifiers: false 1`] = `
 "import { setText as _setText, renderEffect as _renderEffect, createFor as _createFor, template as _template } from 'vue';
-const t0 = _template("<div></div>")
+const t0 = _template("<div></div>", true)
 
 export function render(_ctx) {
   const n0 = _createFor(() => (items), ([item, __, k]) => {
@@ -46,7 +46,7 @@ export function render(_ctx) {
 
 exports[`compiler: v-for > multi effect 1`] = `
 "import { setProp as _setProp, renderEffect as _renderEffect, createFor as _createFor, template as _template } from 'vue';
-const t0 = _template("<div></div>")
+const t0 = _template("<div></div>", true)
 
 export function render(_ctx) {
   const n0 = _createFor(() => (_ctx.items), (_ctx0) => {
@@ -64,7 +64,7 @@ export function render(_ctx) {
 exports[`compiler: v-for > nested v-for 1`] = `
 "import { setText as _setText, renderEffect as _renderEffect, createFor as _createFor, insert as _insert, template as _template } from 'vue';
 const t0 = _template("<span></span>")
-const t1 = _template("<div></div>")
+const t1 = _template("<div></div>", true)
 
 export function render(_ctx) {
   const n0 = _createFor(() => (_ctx.list), (_ctx0) => {
@@ -83,7 +83,7 @@ export function render(_ctx) {
 
 exports[`compiler: v-for > object de-structured value 1`] = `
 "import { setText as _setText, renderEffect as _renderEffect, withDestructure as _withDestructure, createFor as _createFor, template as _template } from 'vue';
-const t0 = _template("<div></div>")
+const t0 = _template("<div></div>", true)
 
 export function render(_ctx) {
   const n0 = _createFor(() => (_ctx.list), _withDestructure(([{ id, ...other }, index]) => [id, other, index], (_ctx0) => {
@@ -97,7 +97,7 @@ export function render(_ctx) {
 
 exports[`compiler: v-for > v-for aliases w/ complex expressions 1`] = `
 "import { setText as _setText, renderEffect as _renderEffect, withDestructure as _withDestructure, createFor as _createFor, template as _template } from 'vue';
-const t0 = _template("<div></div>")
+const t0 = _template("<div></div>", true)
 
 export function render(_ctx) {
   const n0 = _createFor(() => (_ctx.list), _withDestructure(([{ foo = bar, baz: [qux = quux] }]) => [foo, qux], (_ctx0) => {
@@ -111,7 +111,7 @@ export function render(_ctx) {
 
 exports[`compiler: v-for > w/o value 1`] = `
 "import { createFor as _createFor, template as _template } from 'vue';
-const t0 = _template("<div>item</div>")
+const t0 = _template("<div>item</div>", true)
 
 export function render(_ctx) {
   const n0 = _createFor(() => (_ctx.items), (_ctx0) => {
