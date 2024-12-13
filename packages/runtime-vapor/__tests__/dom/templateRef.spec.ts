@@ -1,7 +1,9 @@
 import type { NodeRef } from '../../src/apiTemplateRef'
 import {
+  createComponent,
   createFor,
   createIf,
+  createSlot,
   createTemplateRefSetter,
   insert,
   renderEffect,
@@ -10,10 +12,12 @@ import {
 } from '../../src'
 import { makeRender } from '../_utils'
 import {
+  type ShallowRef,
   currentInstance,
   nextTick,
   reactive,
   ref,
+  useTemplateRef,
   watchEffect,
 } from '@vue/runtime-dom'
 
@@ -172,6 +176,57 @@ describe('api: template ref', () => {
     toggle.value = false
     await nextTick()
     expect(fn.mock.calls[1][0]).toBe(undefined)
+  })
+
+  test('useTemplateRef mount', () => {
+    const t0 = template('<div ref="refKey"></div>')
+    let r
+    let n
+    const { render } = define({
+      setup() {
+        r = useTemplateRef('foo')
+        n = t0()
+        createTemplateRefSetter()(n as Element, 'foo')
+        return n
+      },
+    })
+
+    const { host } = render()
+    expect(r!.value).toBe(host.children[0])
+  })
+
+  test('useTemplateRef update', async () => {
+    const t0 = template('<div></div>')
+    let fooEl: ShallowRef
+    let barEl: ShallowRef
+    const refKey = ref('foo')
+
+    const { render } = define({
+      setup() {
+        return {
+          foo: fooEl,
+          bar: barEl,
+        }
+      },
+      render() {
+        fooEl = useTemplateRef('foo')
+        barEl = useTemplateRef('bar')
+        const n0 = t0()
+        let r0: NodeRef | undefined
+        renderEffect(() => {
+          r0 = createTemplateRefSetter()(n0 as Element, refKey.value, r0)
+        })
+        return n0
+      },
+    })
+    const { host } = render()
+    expect(fooEl!.value).toBe(host.children[0])
+    expect(barEl!.value).toBe(null)
+
+    refKey.value = 'bar'
+    await nextTick()
+    expect(barEl!.value).toBe(host.children[0])
+    expect(fooEl!.value).toBe(null)
   })
 
   it('should work with direct reactive property', () => {
@@ -537,82 +592,95 @@ describe('api: template ref', () => {
     },
   )
 
-  // TODO: need to implement Component slots
-  // test('string ref inside slots', async () => {
-  //   const spy = vi.fn()
-  //   const { component: Child } = define({
-  //     render(this: any) {
-  //       return this.$slots.default()
-  //     },
-  //   })
-  //   const { render } = define({
-  //     render() {
-  //       onMounted(function (this: any) {
-  //         spy(this.$refs.foo.tag)
-  //       })
-  //       const n0 = createComponent(Child)
-  //       createTemplateRefSetter()(n0, 'foo')
-  //       return n0
-  //     },
-  //   })
-  //   const { host } = render()
+  test('string ref inside slots', () => {
+    const { component: Child } = define({
+      setup() {
+        return createSlot('default')
+      },
+    })
 
-  //   expect(spy).toHaveBeenCalledWith('div')
-  // })
+    const r = ref()
+    let n
 
-  //TODO: need setup return render function
-  // it('render function ref mount', () => {
-  //   const el = ref(null)
+    const { render } = define({
+      setup() {
+        return {
+          foo: r,
+        }
+      },
+      render() {
+        const setRef = createTemplateRefSetter()
+        const n0 = createComponent(Child, null, {
+          default: () => {
+            n = document.createElement('div')
+            setRef(n, 'foo')
+            return n
+          },
+        })
+        return n0
+      },
+    })
 
-  //   const Comp = define({
-  //     setup() {
-  //       return () => h('div', { ref: el })
-  //     },
-  //   })
-  //   render(h(Comp), root)
-  //   expect(el.value).toBe(root.children[0])
-  // })
+    render()
+    expect(r.value).toBe(n)
+  })
 
-  // it('render function ref update', async () => {
-  //   const root = nodeOps.createElement('div')
-  //   const refs = {
-  //     foo: ref(null),
-  //     bar: ref(null),
-  //   }
-  //   const refKey = ref<keyof typeof refs>('foo')
+  test('inline ref inside slots', () => {
+    const { component: Child } = define({
+      setup() {
+        return createSlot('default')
+      },
+    })
 
-  //   const Comp = {
-  //     setup() {
-  //       return () => h('div', { ref: refs[refKey.value] })
-  //     },
-  //   }
-  //   render(h(Comp), root)
-  //   expect(refs.foo.value).toBe(root.children[0])
-  //   expect(refs.bar.value).toBe(null)
+    const r = ref()
+    let n
 
-  //   refKey.value = 'bar'
-  //   await nextTick()
-  //   expect(refs.foo.value).toBe(null)
-  //   expect(refs.bar.value).toBe(root.children[0])
-  // })
+    const { render } = define({
+      setup() {
+        const setRef = createTemplateRefSetter()
+        const n0 = createComponent(Child, null, {
+          default: () => {
+            n = document.createElement('div')
+            setRef(n, r)
+            return n
+          },
+        })
+        return n0
+      },
+    })
 
-  // it('render function ref unmount', async () => {
-  //   const root = nodeOps.createElement('div')
-  //   const el = ref(null)
-  //   const toggle = ref(true)
+    render()
+    expect(r.value).toBe(n)
+  })
 
-  //   const Comp = {
-  //     setup() {
-  //       return () => (toggle.value ? h('div', { ref: el }) : null)
-  //     },
-  //   }
-  //   render(h(Comp), root)
-  //   expect(el.value).toBe(root.children[0])
+  test('useTemplateRef ref inside slots', () => {
+    const { component: Child } = define({
+      setup() {
+        return createSlot('default')
+      },
+    })
 
-  //   toggle.value = false
-  //   await nextTick()
-  //   expect(el.value).toBe(null)
-  // })
+    let r: ShallowRef
+    let n
+
+    const { render } = define({
+      setup() {
+        r = useTemplateRef('foo')
+        const setRef = createTemplateRefSetter()
+        const n0 = createComponent(Child, null, {
+          default: () => {
+            n = document.createElement('div')
+            setRef(n, 'foo')
+            return n
+          },
+        })
+        return n0
+      },
+    })
+
+    render()
+    expect(r!.value).toBe(n)
+  })
 
   // TODO: can not reproduce in Vapor
   // // #2078
