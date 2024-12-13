@@ -1143,6 +1143,36 @@ describe('SFC analyze <script> bindings', () => {
     })
   })
 
+  it('recognizes data/setup return', () => {
+    const { bindings } = compile(`
+      <script>
+        const bar = 2
+        const foo = 2
+        const msg = 2
+        const hello = 2
+        export default {
+          setup() {
+            return {
+              foo: 1,
+              hello: numm
+            }
+          },
+          data() {
+            return {
+              foo: null,
+              msg: null
+            }
+          }
+        }
+      </script>
+    `)
+    expect(bindings).toStrictEqual({
+      foo: BindingTypes.SETUP_MAYBE_REF,
+      msg: BindingTypes.DATA,
+      hello: BindingTypes.SETUP_MAYBE_REF,
+    })
+  })
+
   it('recognizes methods', () => {
     const { bindings } = compile(`
       <script>
