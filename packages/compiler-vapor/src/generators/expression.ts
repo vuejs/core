@@ -1,4 +1,4 @@
-import { isGloballyAllowed } from '@vue/shared'
+import { genPropsAccessExp, isGloballyAllowed } from '@vue/shared'
 import {
   BindingTypes,
   NewlineType,
@@ -163,6 +163,12 @@ function genIdentifier(
             : assignment
               ? `${helper('isRef')}(${raw}) ? (${raw}.value = ${assignment}) : null`
               : unref()
+        break
+      case BindingTypes.PROPS:
+        raw = genPropsAccessExp(raw)
+        break
+      case BindingTypes.PROPS_ALIASED:
+        raw = genPropsAccessExp(bindingMetadata.__propsAliases![raw])
         break
       default:
         raw = withAssignment(raw)
