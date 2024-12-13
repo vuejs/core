@@ -3,16 +3,17 @@ import type { CodegenContext } from '../generate'
 import type { DeclareOldRefIRNode, SetTemplateRefIRNode } from '../ir'
 import { type CodeFragment, NEWLINE, genCall } from './utils'
 
+export const setTemplateRefIdent = `_setTemplateRef`
+
 export function genSetTemplateRef(
   oper: SetTemplateRefIRNode,
   context: CodegenContext,
 ): CodeFragment[] {
-  const { helper } = context
   return [
     NEWLINE,
     oper.effect && `r${oper.element} = `,
     ...genCall(
-      helper('setRef'),
+      setTemplateRefIdent, // will be generated in root scope
       `n${oper.element}`,
       genExpression(oper.value, context),
       oper.effect ? `r${oper.element}` : oper.refFor ? 'void 0' : undefined,

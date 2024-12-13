@@ -31,6 +31,7 @@ import {
   pauseTracking,
   proxyRefs,
   resetTracking,
+  unref,
 } from '@vue/reactivity'
 import { EMPTY_OBJ, invokeArrayFns, isFunction, isString } from '@vue/shared'
 import {
@@ -485,7 +486,9 @@ export function getExposed(
   if (instance.exposed) {
     return (
       instance.exposeProxy ||
-      (instance.exposeProxy = proxyRefs(markRaw(instance.exposed)))
+      (instance.exposeProxy = new Proxy(markRaw(instance.exposed), {
+        get: (target, key) => unref(target[key as any]),
+      }))
     )
   }
 }

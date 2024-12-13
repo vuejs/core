@@ -25,5 +25,5 @@ export {
 export { on, delegate, delegateEvents, setDynamicEvents } from './dom/event'
 export { createIf } from './apiCreateIf'
 export { createFor } from './apiCreateFor'
-export { setRef } from './dom/templateRef'
+export { createTemplateRefSetter } from './apiTemplateRef'
 export { withKeys, withModifiers } from '@vue/runtime-dom'

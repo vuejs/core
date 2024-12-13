@@ -1,6 +1,6 @@
 import { ref, shallowRef } from '@vue/reactivity'
 import { type VaporComponentInstance, createComponent } from '../src/component'
-import { setRef } from '../src/dom/templateRef'
+import { setRef } from '../src/apiTemplateRef'
 import { makeRender } from './_utils'
 import { currentInstance } from '@vue/runtime-dom'
 import { defineVaporComponent } from '../src/apiDefineComponent'
@@ -8,7 +8,8 @@ import { defineVaporComponent } from '../src/apiDefineComponent'
 const define = makeRender()
 
 describe('api: expose', () => {
-  test.todo('via setup context + template ref', () => {
+  test('via setup context + template ref', () => {
+    let i: any
     const Child = defineVaporComponent({
       setup(_, { expose }) {
         expose({
@@ -20,19 +21,20 @@ describe('api: expose', () => {
     })
     const childRef = ref()
     define({
-      render: () => {
-        const n0 = createComponent(Child)
+      setup: () => {
+        const n0 = (i = createComponent(Child))
+        setRef(currentInstance as VaporComponentInstance, n0, childRef)
         return n0
       },
     }).render()
 
-    expect(childRef.value).toBeTruthy()
+    expect(childRef.value).toBe(i.exposeProxy)
     expect(childRef.value.foo).toBe(1)
     expect(childRef.value.bar).toBe(2)
     expect(childRef.value.baz).toBeUndefined()
   })
 
-  test.todo('via setup context + template ref (expose empty)', () => {
+  test('via setup context + template ref (expose empty)', () => {
     let childInstance: VaporComponentInstance | null = null
     const Child = defineVaporComponent({
       setup(_) {
@@ -42,14 +44,14 @@ describe('api: expose', () => {
     })
     const childRef = shallowRef()
     define({
-      render: () => {
+      setup: () => {
         const n0 = createComponent(Child)
-        setRef(n0, childRef)
+        setRef(currentInstance as VaporComponentInstance, n0, childRef)
         return n0
       },
     }).render()
 
-    expect(childInstance!.exposed).toBeUndefined()
+    expect(childInstance!.exposed).toBeNull()
     expect(childRef.value).toBe(childInstance!)
   })
 

@@ -9,19 +9,14 @@ import {
   toDisplayString,
 } from '@vue/shared'
 import { on } from './event'
-import {
-  mergeProps,
-  patchStyle as setStyle,
-  shouldSetAsProp,
-  warn,
-} from '@vue/runtime-dom'
+import { mergeProps, patchStyle, shouldSetAsProp, warn } from '@vue/runtime-dom'
 
 type TargetElement = Element & {
   $html?: string
   $cls?: string
   $clsi?: string
-  $sty?: NormalizedStyle
-  $styi?: NormalizedStyle
+  $sty?: NormalizedStyle | string | undefined
+  $styi?: NormalizedStyle | undefined
   $dprops?: Record<string, any>
 }
 
@@ -67,10 +62,11 @@ export function setClassIncremental(el: TargetElement, value: any): void {
   }
 }
 
-/**
- * Reuse from runtime-dom
- */
-export { setStyle }
+export function setStyle(el: TargetElement, value: any): void {
+  const prev = el.$sty
+  value = el.$sty = normalizeStyle(value)
+  patchStyle(el, prev, value)
+}
 
 /**
  * A version of setStyle that does not overwrite pre-existing styles.
@@ -81,8 +77,8 @@ export function setStyleIncremental(el: TargetElement, value: any): void {
   const prev = el.$styi
   value = el.$styi = isString(value)
     ? parseStringStyle(value)
-    : ((normalizeStyle(value) || {}) as NormalizedStyle)
-  setStyle(el, prev, value)
+    : (normalizeStyle(value) as NormalizedStyle | undefined)
+  patchStyle(el, prev, value)
 }
 
 export function setAttr(el: any, key: string, value: any): void {
@@ -218,7 +214,7 @@ export function setDynamicProp(
     if (root) {
       setStyleIncremental(el, value)
     } else {
-      setStyle(el, prev, value)
+      setStyle(el, value)
     }
   } else if (isOn(key)) {
     on(el, key[2].toLowerCase() + key.slice(3), () => value, { effect: true })

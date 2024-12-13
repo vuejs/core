@@ -67,9 +67,14 @@ export function genOperation(
       return genDeclareOldRef(oper)
     case IRNodeTypes.SLOT_OUTLET_NODE:
       return genSlotOutlet(oper, context)
+    case IRNodeTypes.WITH_DIRECTIVE:
+      return [] // TODO
+    default:
+      const exhaustiveCheck: never = oper
+      throw new Error(
+        `Unhandled operation type in genOperation: ${exhaustiveCheck}`,
+      )
   }
-
-  return []
 }
 
 export function genEffects(

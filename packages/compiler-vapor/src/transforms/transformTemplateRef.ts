@@ -15,6 +15,8 @@ export const transformTemplateRef: NodeTransform = (node, context) => {
   const dir = findProp(node, 'ref', false, true)
   if (!dir) return
 
+  context.ir.hasTemplateRef = true
+
   let value: SimpleExpressionNode
   if (dir.type === NodeTypes.DIRECTIVE) {
     value = dir.exp || normalizeBindShorthand(dir.arg!, context)

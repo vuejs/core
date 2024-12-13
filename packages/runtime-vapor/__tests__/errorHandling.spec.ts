@@ -9,7 +9,7 @@ import {
 import { createComponent, setRef, template } from '../src'
 import { makeRender } from './_utils'
 import type { VaporComponent } from '../src/component'
-import type { RefEl } from '../src/dom/templateRef'
+import type { RefEl } from '../src/apiTemplateRef'
 
 const define = makeRender()
 
