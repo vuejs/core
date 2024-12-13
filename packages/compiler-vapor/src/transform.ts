@@ -142,6 +142,10 @@ export class TransformContext<T extends AllNode = AllNode> {
     if (this.inVOnce || expressions.length === 0) {
       return this.registerOperation(...operations)
     }
+
+    // TODO analyze expressions is static by identifiers
+    // operations.forEach(op => op.isStatic = true)
+
     const existing = this.block.effect.find(e =>
       isSameExpression(e.expressions, expressions),
     )

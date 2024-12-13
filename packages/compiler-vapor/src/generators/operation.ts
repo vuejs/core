@@ -25,7 +25,12 @@ export function genOperations(
 ): CodeFragment[] {
   const [frag, push] = buildCodeFragment()
   for (const operation of opers) {
-    push(...genOperation(operation, context))
+    const frag = genOperation(operation, context)
+    if (operation.isStatic) {
+      context.staticOperations.push(...frag)
+    } else {
+      push(...frag)
+    }
   }
   return frag
 }
@@ -81,7 +86,7 @@ export function genEffects(
   effects: IREffect[],
   context: CodegenContext,
 ): CodeFragment[] {
-  const { helper } = context
+  const { helper, staticOperations } = context
   const [frag, push, unshift] = buildCodeFragment()
   let operationsCount = 0
   for (let i = 0; i < effects.length; i++) {
@@ -95,15 +100,21 @@ export function genEffects(
     push(...frags)
   }
 
-  const newLineCount = frag.filter(frag => frag === NEWLINE).length
-  if (newLineCount > 1 || operationsCount > 1) {
-    unshift(`{`, INDENT_START, NEWLINE)
-    push(INDENT_END, NEWLINE, '}')
+  const shouldWrapInEffect = operationsCount > staticOperations.length
+  if (shouldWrapInEffect) {
+    const newLineCount = frag.filter(frag => frag === NEWLINE).length
+    if (newLineCount > 1 || operationsCount > 1) {
+      unshift(`{`, INDENT_START, NEWLINE)
+      push(INDENT_END, NEWLINE, '}')
+    }
+    if (effects.length) {
+      unshift(NEWLINE, `${helper('renderEffect')}(() => `)
+      push(`)`)
+    }
   }
 
-  if (effects.length) {
-    unshift(NEWLINE, `${helper('renderEffect')}(() => `)
-    push(`)`)
+  if(staticOperations.length) {
+    unshift(...staticOperations)
   }
 
   return frag

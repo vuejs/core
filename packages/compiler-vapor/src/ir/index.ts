@@ -40,6 +40,7 @@ export enum IRNodeTypes {
 
 export interface BaseIRNode {
   type: IRNodeTypes
+  isStatic?: boolean
 }
 
 export type CoreHelper = keyof typeof import('packages/runtime-core/src')
