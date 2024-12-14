@@ -130,7 +130,7 @@ export function generate(
   }
 
   const delegates = genDelegates(context)
-  const templates = genTemplates(ir.template, context)
+  const templates = genTemplates(ir.template, ir.rootTemplateIndex, context)
   const imports = genHelperImports(context)
   const preamble = imports + templates + delegates
 

@@ -220,6 +220,10 @@ function transformNativeElement(
     template += `</${tag}>`
   }
 
+  if (singleRoot) {
+    context.ir.rootTemplateIndex = context.ir.template.length
+  }
+
   if (
     context.parent &&
     context.parent.node.type === NodeTypes.ELEMENT &&

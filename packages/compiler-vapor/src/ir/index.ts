@@ -60,6 +60,7 @@ export interface RootIRNode {
   node: RootNode
   source: string
   template: string[]
+  rootTemplateIndex?: number
   component: Set<string>
   directive: Set<string>
   block: BlockIRNode
