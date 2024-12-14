@@ -94,7 +94,7 @@ export function genEffects(
     operationsCount += effect.operations.length
     staticOperationCount += effect.operations.filter(op => op.isStatic).length
     const frags = genEffect(effect, context)
-    i > 0 && push(NEWLINE)
+    i > 0 && operationsCount>staticOperationCount && push(NEWLINE)
     if (frag[frag.length - 1] === ')' && frags[0] === '(') {
       push(';')
     }

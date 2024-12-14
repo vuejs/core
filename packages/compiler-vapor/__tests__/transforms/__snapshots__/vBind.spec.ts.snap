@@ -423,19 +423,6 @@ export function render(_ctx, $props, $emit, $attrs, $slots) {
   _setProp(n0, "p", [1, ...[2, 3]])
   _setProp(n0, "q", [1, 2])
   _setProp(n0, "r", /\\s+/)
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
   return n0
 }"
 `;
