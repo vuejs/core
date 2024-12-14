@@ -88,10 +88,11 @@ export function genEffects(
 ): CodeFragment[] {
   const { helper, staticOperations } = context
   const [frag, push, unshift] = buildCodeFragment()
-  let operationsCount = 0
+  let operationsCount = 0, staticOperationCount = 0
   for (let i = 0; i < effects.length; i++) {
     const effect = effects[i]
     operationsCount += effect.operations.length
+    staticOperationCount += effect.operations.filter(op => op.isStatic).length
     const frags = genEffect(effect, context)
     i > 0 && push(NEWLINE)
     if (frag[frag.length - 1] === ')' && frags[0] === '(') {
@@ -100,7 +101,7 @@ export function genEffects(
     push(...frags)
   }
 
-  const shouldWrapInEffect = operationsCount > staticOperations.length
+  const shouldWrapInEffect = operationsCount > staticOperationCount
   if (shouldWrapInEffect) {
     const newLineCount = frag.filter(frag => frag === NEWLINE).length
     if (newLineCount > 1 || operationsCount > 1) {

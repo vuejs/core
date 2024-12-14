@@ -510,3 +510,71 @@ export function unwrapTSNode(node: Node): Node {
     return node
   }
 }
+
+export function isStaticNode(node: Node): boolean {
+  node = unwrapTSNode(node)
+
+  switch (node.type) {
+    case 'UnaryExpression': // void 0, !true
+      return isStaticNode(node.argument)
+
+    case 'LogicalExpression': // 1 > 2
+    case 'BinaryExpression': // 1 + 2
+      return isStaticNode(node.left) && isStaticNode(node.right)
+
+    case 'ConditionalExpression': {
+      // 1 ? 2 : 3
+      return (
+        isStaticNode(node.test) &&
+        isStaticNode(node.consequent) &&
+        isStaticNode(node.alternate)
+      )
+    }
+
+    case 'SequenceExpression': // (1, 2)
+    case 'TemplateLiteral': // `foo${1}`
+      return node.expressions.every(expr => isStaticNode(expr))
+
+    case 'ParenthesizedExpression': // (1)
+      return isStaticNode(node.expression)
+
+    case 'StringLiteral':
+    case 'NumericLiteral':
+    case 'BooleanLiteral':
+    case 'NullLiteral':
+    case 'BigIntLiteral':
+      return true
+  }
+  return false
+}
+
+export function isConstantNode(node: Node, onIdentifier: (name:string) => boolean): boolean {
+  if(isStaticNode(node)) return true
+
+  node = unwrapTSNode(node)
+  switch (node.type) {
+    case 'Identifier':
+      return onIdentifier(node.name)
+    case 'RegExpLiteral':
+      return true
+    case 'ObjectExpression':
+      return node.properties.every(prop => {
+        // { bar() {} } object methods are not considered static nodes
+        if (prop.type === 'ObjectMethod') return false
+        // { ...{ foo: 1 } }
+        if (prop.type === 'SpreadElement') return isConstantNode(prop.argument,onIdentifier)
+        // { foo: 1 }
+        return (!prop.computed || isConstantNode(prop.key, onIdentifier)) && isConstantNode(prop.value,onIdentifier)
+      })
+    case 'ArrayExpression':
+      return node.elements.every(element => {
+        // [1, , 3]
+        if (element === null) return true
+        // [1, ...[2, 3]]
+        if (element.type === 'SpreadElement') return isConstantNode(element.argument,onIdentifier)
+        // [1, 2]
+        return isConstantNode(element,onIdentifier)
+      })
+  }
+  return false
+}

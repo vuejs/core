@@ -321,12 +321,12 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: element transform > props merging: style 1`] = `
-"import { setStyleIncremental as _setStyleIncremental, renderEffect as _renderEffect, template as _template } from 'vue';
+"import { setStyleIncremental as _setStyleIncremental, template as _template } from 'vue';
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => _setStyleIncremental(n0, ["color: green", { color: 'red' }]))
+  _setStyleIncremental(n0, ["color: green", { color: 'red' }])
   return n0
 }"
 `;

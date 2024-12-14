@@ -1,6 +1,7 @@
 import {
   type AllNode,
   type TransformOptions as BaseTransformOptions,
+  BindingTypes,
   type CommentNode,
   type CompilerCompatOptions,
   type ElementNode,
@@ -11,6 +12,7 @@ import {
   type TemplateChildNode,
   defaultOnError,
   defaultOnWarn,
+  isConstantNode,
   isVSlot,
 } from '@vue/compiler-dom'
 import { EMPTY_OBJ, NOOP, extend, isArray, isString } from '@vue/shared'
@@ -143,8 +145,9 @@ export class TransformContext<T extends AllNode = AllNode> {
       return this.registerOperation(...operations)
     }
 
-    // TODO analyze expressions is static by identifiers
-    // operations.forEach(op => op.isStatic = true)
+    if(isStaticExpression(this.root,expressions)) {
+      operations.forEach(op => op.isStatic = true)
+    }
 
     const existing = this.block.effect.find(e =>
       isSameExpression(e.expressions, expressions),
@@ -301,4 +304,19 @@ export function createStructuralDirectiveTransform(
       return exitFns
     }
   }
+}
+
+function isStaticExpression(
+  context: TransformContext,
+  expressions: SimpleExpressionNode[]
+) {
+  const { options: { bindingMetadata } } = context
+  const isLiteralConst = (name: string) =>  bindingMetadata[name] === BindingTypes.LITERAL_CONST
+  return expressions.every(node => {
+    if (node.ast) {
+      return isConstantNode(node.ast,isLiteralConst)
+    } else if (node.ast === null) {
+      return isLiteralConst(node.content)
+    }
+  })
 }

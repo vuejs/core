@@ -2,6 +2,7 @@ import {
   BindingTypes,
   UNREF,
   isFunctionType,
+  isStaticNode,
   unwrapTSNode,
   walkIdentifiers,
 } from '@vue/compiler-dom'
@@ -1265,41 +1266,4 @@ function canNeverBeRef(node: Node, userReactiveImport?: string): boolean {
       }
       return false
   }
-}
-
-function isStaticNode(node: Node): boolean {
-  node = unwrapTSNode(node)
-
-  switch (node.type) {
-    case 'UnaryExpression': // void 0, !true
-      return isStaticNode(node.argument)
-
-    case 'LogicalExpression': // 1 > 2
-    case 'BinaryExpression': // 1 + 2
-      return isStaticNode(node.left) && isStaticNode(node.right)
-
-    case 'ConditionalExpression': {
-      // 1 ? 2 : 3
-      return (
-        isStaticNode(node.test) &&
-        isStaticNode(node.consequent) &&
-        isStaticNode(node.alternate)
-      )
-    }
-
-    case 'SequenceExpression': // (1, 2)
-    case 'TemplateLiteral': // `foo${1}`
-      return node.expressions.every(expr => isStaticNode(expr))
-
-    case 'ParenthesizedExpression': // (1)
-      return isStaticNode(node.expression)
-
-    case 'StringLiteral':
-    case 'NumericLiteral':
-    case 'BooleanLiteral':
-    case 'NullLiteral':
-    case 'BigIntLiteral':
-      return true
-  }
-  return false
 }

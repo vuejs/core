@@ -1,4 +1,4 @@
-import { ErrorCodes, NodeTypes } from '@vue/compiler-dom'
+import { BindingTypes, ErrorCodes, NodeTypes } from '@vue/compiler-dom'
 import {
   DynamicFlag,
   IRNodeTypes,
@@ -660,5 +660,34 @@ describe('compiler v-bind', () => {
     const { code } = compileWithVBind(`<Comp :depth="0" />`)
     expect(code).matchSnapshot()
     expect(code).contains('{ depth: () => (0) }')
+  })
+
+  test('with constant value', () => {
+    const { code } = compileWithVBind(`
+        <div
+          :a="void 0" 
+          :b="1 > 2" 
+          :c="1 + 2" 
+          :d="1 ? 2 : 3" 
+          :e="(2)" 
+          :f="\`foo${1}\`"
+          :g="1"
+          :h="'1'"
+          :i="true"
+          :j="null"
+          :k="x"
+          :l="{ foo: 1 }"
+          :m="{ [x]: 1 }"
+          :n="{ ...{ foo: 1 } }"
+          :o="[1, , 3]"
+          :p="[1, ...[2, 3]]"
+          :q="[1, 2]"
+          :r="/\\s+/"
+        />`, {
+      bindingMetadata: {
+        x: BindingTypes.LITERAL_CONST,
+      },
+    })
+    expect(code).matchSnapshot()
   })
 })
