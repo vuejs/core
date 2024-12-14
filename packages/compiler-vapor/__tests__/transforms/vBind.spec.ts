@@ -663,7 +663,8 @@ describe('compiler v-bind', () => {
   })
 
   test('with constant value', () => {
-    const { code } = compileWithVBind(`
+    const { code } = compileWithVBind(
+      `
         <div
           :a="void 0" 
           :b="1 > 2" 
@@ -683,11 +684,13 @@ describe('compiler v-bind', () => {
           :p="[1, ...[2, 3]]"
           :q="[1, 2]"
           :r="/\\s+/"
-        />`, {
-      bindingMetadata: {
-        x: BindingTypes.LITERAL_CONST,
+        />`,
+      {
+        bindingMetadata: {
+          x: BindingTypes.LITERAL_CONST,
+        },
       },
-    })
+    )
     expect(code).matchSnapshot()
   })
 })

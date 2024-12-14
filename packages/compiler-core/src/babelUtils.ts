@@ -548,8 +548,11 @@ export function isStaticNode(node: Node): boolean {
   return false
 }
 
-export function isConstantNode(node: Node, onIdentifier: (name:string) => boolean): boolean {
-  if(isStaticNode(node)) return true
+export function isConstantNode(
+  node: Node,
+  onIdentifier: (name: string) => boolean,
+): boolean {
+  if (isStaticNode(node)) return true
 
   node = unwrapTSNode(node)
   switch (node.type) {
@@ -562,18 +565,23 @@ export function isConstantNode(node: Node, onIdentifier: (name:string) => boolea
         // { bar() {} } object methods are not considered static nodes
         if (prop.type === 'ObjectMethod') return false
         // { ...{ foo: 1 } }
-        if (prop.type === 'SpreadElement') return isConstantNode(prop.argument,onIdentifier)
+        if (prop.type === 'SpreadElement')
+          return isConstantNode(prop.argument, onIdentifier)
         // { foo: 1 }
-        return (!prop.computed || isConstantNode(prop.key, onIdentifier)) && isConstantNode(prop.value,onIdentifier)
+        return (
+          (!prop.computed || isConstantNode(prop.key, onIdentifier)) &&
+          isConstantNode(prop.value, onIdentifier)
+        )
       })
     case 'ArrayExpression':
       return node.elements.every(element => {
         // [1, , 3]
         if (element === null) return true
         // [1, ...[2, 3]]
-        if (element.type === 'SpreadElement') return isConstantNode(element.argument,onIdentifier)
+        if (element.type === 'SpreadElement')
+          return isConstantNode(element.argument, onIdentifier)
         // [1, 2]
-        return isConstantNode(element,onIdentifier)
+        return isConstantNode(element, onIdentifier)
       })
   }
   return false

@@ -145,8 +145,8 @@ export class TransformContext<T extends AllNode = AllNode> {
       return this.registerOperation(...operations)
     }
 
-    if(isStaticExpression(this.root,expressions)) {
-      operations.forEach(op => op.isStatic = true)
+    if (isStaticExpression(this.root, expressions)) {
+      operations.forEach(op => (op.isStatic = true))
     }
 
     const existing = this.block.effect.find(e =>
@@ -308,13 +308,16 @@ export function createStructuralDirectiveTransform(
 
 function isStaticExpression(
   context: TransformContext,
-  expressions: SimpleExpressionNode[]
+  expressions: SimpleExpressionNode[],
 ) {
-  const { options: { bindingMetadata } } = context
-  const isLiteralConst = (name: string) =>  bindingMetadata[name] === BindingTypes.LITERAL_CONST
+  const {
+    options: { bindingMetadata },
+  } = context
+  const isLiteralConst = (name: string) =>
+    bindingMetadata[name] === BindingTypes.LITERAL_CONST
   return expressions.every(node => {
     if (node.ast) {
-      return isConstantNode(node.ast,isLiteralConst)
+      return isConstantNode(node.ast, isLiteralConst)
     } else if (node.ast === null) {
       return isLiteralConst(node.content)
     }
