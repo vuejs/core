@@ -169,10 +169,12 @@ describe('component: slots', () => {
     })
 
     test('slot should be rendered correctly with slot props', async () => {
+      const src = ref('header')
+
       const Comp = defineVaporComponent(() => {
         const n0 = template('<div></div>')()
         insert(
-          createSlot('header', { title: () => 'header' }),
+          createSlot('header', { title: () => src.value }),
           n0 as any as ParentNode,
         )
         return n0
@@ -191,6 +193,10 @@ describe('component: slots', () => {
       }).render()
 
       expect(host.innerHTML).toBe('<div><h1>header</h1><!--slot--></div>')
+
+      src.value = 'footer'
+      await nextTick()
+      expect(host.innerHTML).toBe('<div><h1>footer</h1><!--slot--></div>')
     })
 
     test('dynamic slot props', async () => {
@@ -263,17 +269,23 @@ describe('component: slots', () => {
           $: [
             () => ({
               name: 'header',
-              fn: (props: any) => template(props.title)(),
+              fn: (props: any) => {
+                const el = template('<h1></h1>')()
+                renderEffect(() => {
+                  setText(el, props.title)
+                })
+                return el
+              },
             }),
           ],
         })
       }).render()
 
-      expect(host.innerHTML).toBe('<div>header<!--slot--></div>')
+      expect(host.innerHTML).toBe('<div><h1>header</h1><!--slot--></div>')
 
       val.value = 'footer'
       await nextTick()
-      expect(host.innerHTML).toBe('<div>footer<!--slot--></div>')
+      expect(host.innerHTML).toBe('<div><h1>footer</h1><!--slot--></div>')
     })
 
     test('dynamic slot outlet should be render correctly with slot props', async () => {

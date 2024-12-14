@@ -109,26 +109,28 @@ export function createSlot(
   fallback?: Slot,
 ): Block {
   const instance = currentInstance as VaporComponentInstance
-  const fragment = new DynamicFragment('slot')
+  const rawSlots = instance.rawSlots
+  const isDynamicName = isFunction(name)
+  const fragment = __DEV__ ? new DynamicFragment('slot') : new DynamicFragment()
   const slotProps = rawProps
     ? new Proxy(rawProps, dynamicSlotsPropsProxyHandlers)
     : EMPTY_OBJ
 
-  // always create effect because a slot may contain dynamic root inside
-  // which affects fallback
-  renderEffect(() => {
-    const slot = getSlot(instance.rawSlots, isFunction(name) ? name() : name)
+  const renderSlot = (name: string) => {
+    const slot = getSlot(rawSlots, name)
     if (slot) {
-      fragment.update(
-        () => slot(slotProps) || (fallback && fallback()),
-        // TODO this key needs to account for possible fallback (v-if)
-        // inside the slot
-        slot,
-      )
+      fragment.update(() => slot(slotProps) || (fallback && fallback()))
     } else {
       fragment.update(fallback)
     }
-  })
+  }
+
+  // dynamic slot name or has dynamicSlots
+  if (isDynamicName || rawSlots.$) {
+    renderEffect(() => renderSlot(isFunction(name) ? name() : name))
+  } else {
+    renderSlot(name)
+  }
 
   return fragment
 }

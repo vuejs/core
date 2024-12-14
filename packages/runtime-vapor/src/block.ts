@@ -6,7 +6,7 @@ import {
   unmountComponent,
 } from './component'
 import { createComment } from './dom/node'
-import { EffectScope } from '@vue/reactivity'
+import { EffectScope, pauseTracking, resetTracking } from '@vue/reactivity'
 
 export type Block =
   | Node
@@ -29,7 +29,7 @@ export class Fragment {
 export class DynamicFragment extends Fragment {
   anchor: Node
   scope: EffectScope | undefined
-  key: any
+  current?: BlockFn
 
   constructor(anchorLabel?: string) {
     super([])
@@ -40,10 +40,13 @@ export class DynamicFragment extends Fragment {
           document.createTextNode('')
   }
 
-  update(render?: BlockFn, key: any = render): void {
-    if (key === this.key) return
-    this.key = key
+  update(render?: BlockFn): void {
+    if (render === this.current) {
+      return
+    }
+    this.current = render
 
+    pauseTracking()
     const parent = this.anchor.parentNode
 
     // teardown previous branch
@@ -60,6 +63,7 @@ export class DynamicFragment extends Fragment {
       this.scope = undefined
       this.nodes = []
     }
+    resetTracking()
   }
 }
 
