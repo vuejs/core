@@ -25,7 +25,13 @@ import {
   unregisterHMR,
   warn,
 } from '@vue/runtime-dom'
-import { type Block, insert, isBlock, remove } from './block'
+import {
+  type Block,
+  insert,
+  isBlock,
+  parentsWithUnmountedChildren,
+  remove,
+} from './block'
 import {
   markRaw,
   pauseTracking,
@@ -33,7 +39,14 @@ import {
   resetTracking,
   unref,
 } from '@vue/reactivity'
-import { EMPTY_OBJ, invokeArrayFns, isFunction, isString } from '@vue/shared'
+import {
+  EMPTY_ARR,
+  EMPTY_OBJ,
+  invokeArrayFns,
+  isFunction,
+  isString,
+  remove as removeItem,
+} from '@vue/shared'
 import {
   type DynamicPropsSource,
   type RawProps,
@@ -465,24 +478,45 @@ export function mountComponent(
 
 export function unmountComponent(
   instance: VaporComponentInstance,
-  parent?: ParentNode,
+  parentNode?: ParentNode,
 ): void {
   if (instance.isMounted && !instance.isUnmounted) {
     if (__DEV__ && instance.type.__hmrId) {
       unregisterHMR(instance)
     }
-    if (instance.bum) invokeArrayFns(instance.bum)
+    if (instance.bum) {
+      invokeArrayFns(instance.bum)
+    }
+
     instance.scope.stop()
+
     for (const c of instance.children) {
       unmountComponent(c)
     }
-    if (parent) remove(instance.block, parent)
+    instance.children = EMPTY_ARR as any
+
+    if (parentNode) {
+      // root remove: need to both remove this instance's DOM nodes
+      // and also remove it from the parent's children list.
+      remove(instance.block, parentNode)
+      const parentInstance = instance.parent
+      if (isVaporComponent(parentInstance)) {
+        if (parentsWithUnmountedChildren) {
+          // for optimize children removal
+          parentsWithUnmountedChildren.add(parentInstance)
+        } else {
+          removeItem(parentInstance.children, instance)
+        }
+        instance.parent = null
+      }
+    }
+
     if (instance.um) {
       queuePostFlushCb(() => invokeArrayFns(instance.um!))
     }
     instance.isUnmounted = true
-  } else if (parent) {
-    remove(instance.block, parent)
+  } else if (parentNode) {
+    remove(instance.block, parentNode)
   }
 }
 

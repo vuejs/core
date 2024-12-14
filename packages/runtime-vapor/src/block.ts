@@ -126,7 +126,19 @@ export function prepend(parent: ParentNode, ...blocks: Block[]): void {
   while (i--) insert(blocks[i], parent, 0)
 }
 
+/**
+ * Optimized children removal: record all parents with unmounted children
+ * during each root remove call, and update their children list by filtering
+ * unmounted children
+ */
+export let parentsWithUnmountedChildren: Set<VaporComponentInstance> | null =
+  null
+
 export function remove(block: Block, parent: ParentNode): void {
+  const isRoot = !parentsWithUnmountedChildren
+  if (isRoot) {
+    parentsWithUnmountedChildren = new Set()
+  }
   if (block instanceof Node) {
     parent.removeChild(block)
   } else if (isVaporComponent(block)) {
@@ -142,5 +154,11 @@ export function remove(block: Block, parent: ParentNode): void {
     if ((block as DynamicFragment).scope) {
       ;(block as DynamicFragment).scope!.stop()
     }
+  }
+  if (isRoot) {
+    for (const i of parentsWithUnmountedChildren!) {
+      i.children = i.children.filter(n => !n.isUnmounted)
+    }
+    parentsWithUnmountedChildren = null
   }
 }
