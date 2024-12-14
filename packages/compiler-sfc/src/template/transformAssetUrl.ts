@@ -114,6 +114,13 @@ export const transformAssetUrl: NodeTransform = (
       }
 
       const url = parseUrl(attr.value.content)
+      if (
+        node.tag === 'use' &&
+        attr.name === 'href' &&
+        url.path?.endsWith('.svg')
+      ) {
+        url.path = url.path + '?no-inline'
+      }
       if (options.base && attr.value.content[0] === '.') {
         // explicit base - directly rewrite relative urls into absolute url
         // to avoid generating extra imports

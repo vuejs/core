@@ -34,7 +34,7 @@ export function render(_ctx, _cache) {
 
 exports[`compiler sfc: transform asset url > support uri fragment 1`] = `
 "import { createElementVNode as _createElementVNode, Fragment as _Fragment, openBlock as _openBlock, createElementBlock as _createElementBlock } from "vue"
-import _imports_0 from '@svg/file.svg'
+import _imports_0 from '@svg/file.svg?no-inline'
 
 
 const _hoisted_1 = _imports_0 + '#fragment'
