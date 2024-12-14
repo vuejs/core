@@ -83,7 +83,7 @@ export function render(_ctx) {
 
 exports[`compiler: vModel transform > modifiers > .lazy 1`] = `
 "import { vModelText as _vModelText, withDirectives as _withDirectives, delegate as _delegate, template as _template } from 'vue';
-const t0 = _template("<input>")
+const t0 = _template("<input>", true)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -95,7 +95,7 @@ export function render(_ctx) {
 
 exports[`compiler: vModel transform > modifiers > .number 1`] = `
 "import { vModelText as _vModelText, withDirectives as _withDirectives, delegate as _delegate, template as _template } from 'vue';
-const t0 = _template("<input>")
+const t0 = _template("<input>", true)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -107,7 +107,7 @@ export function render(_ctx) {
 
 exports[`compiler: vModel transform > modifiers > .trim 1`] = `
 "import { vModelText as _vModelText, withDirectives as _withDirectives, delegate as _delegate, template as _template } from 'vue';
-const t0 = _template("<input>")
+const t0 = _template("<input>", true)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -119,7 +119,7 @@ export function render(_ctx) {
 
 exports[`compiler: vModel transform > should support input (checkbox) 1`] = `
 "import { vModelCheckbox as _vModelCheckbox, withDirectives as _withDirectives, delegate as _delegate, template as _template } from 'vue';
-const t0 = _template("<input type=\\"checkbox\\">")
+const t0 = _template("<input type=\\"checkbox\\">", true)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -131,7 +131,7 @@ export function render(_ctx) {
 
 exports[`compiler: vModel transform > should support input (dynamic type) 1`] = `
 "import { vModelDynamic as _vModelDynamic, withDirectives as _withDirectives, delegate as _delegate, template as _template } from 'vue';
-const t0 = _template("<input>")
+const t0 = _template("<input>", true)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -143,7 +143,7 @@ export function render(_ctx) {
 
 exports[`compiler: vModel transform > should support input (radio) 1`] = `
 "import { vModelRadio as _vModelRadio, withDirectives as _withDirectives, delegate as _delegate, template as _template } from 'vue';
-const t0 = _template("<input type=\\"radio\\">")
+const t0 = _template("<input type=\\"radio\\">", true)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -155,7 +155,7 @@ export function render(_ctx) {
 
 exports[`compiler: vModel transform > should support input (text) 1`] = `
 "import { vModelText as _vModelText, withDirectives as _withDirectives, delegate as _delegate, template as _template } from 'vue';
-const t0 = _template("<input type=\\"text\\">")
+const t0 = _template("<input type=\\"text\\">", true)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -200,7 +200,7 @@ exports[`compiler: vModel transform > should support member expression w/ inline
 
 exports[`compiler: vModel transform > should support select 1`] = `
 "import { vModelSelect as _vModelSelect, withDirectives as _withDirectives, delegate as _delegate, template as _template } from 'vue';
-const t0 = _template("<select></select>")
+const t0 = _template("<select></select>", true)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -212,7 +212,7 @@ export function render(_ctx) {
 
 exports[`compiler: vModel transform > should support simple expression 1`] = `
 "import { vModelText as _vModelText, withDirectives as _withDirectives, delegate as _delegate, template as _template } from 'vue';
-const t0 = _template("<input>")
+const t0 = _template("<input>", true)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -224,7 +224,7 @@ export function render(_ctx) {
 
 exports[`compiler: vModel transform > should support textarea 1`] = `
 "import { vModelText as _vModelText, withDirectives as _withDirectives, delegate as _delegate, template as _template } from 'vue';
-const t0 = _template("<textarea></textarea>")
+const t0 = _template("<textarea></textarea>", true)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -236,7 +236,7 @@ export function render(_ctx) {
 
 exports[`compiler: vModel transform > should support w/ dynamic v-bind 1`] = `
 "import { vModelDynamic as _vModelDynamic, withDirectives as _withDirectives, delegate as _delegate, setDynamicProps as _setDynamicProps, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<input>")
+const t0 = _template("<input>", true)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -249,7 +249,7 @@ export function render(_ctx) {
 
 exports[`compiler: vModel transform > should support w/ dynamic v-bind 2`] = `
 "import { vModelDynamic as _vModelDynamic, withDirectives as _withDirectives, delegate as _delegate, template as _template } from 'vue';
-const t0 = _template("<input>")
+const t0 = _template("<input>", true)
 
 export function render(_ctx) {
   const n0 = t0()

@@ -57,7 +57,10 @@ export const dynamicSlotsProxyHandlers: ProxyHandler<RawSlots> = {
   deleteProperty: NO,
 }
 
-export function getSlot(target: RawSlots, key: string): Slot | undefined {
+export function getSlot(
+  target: RawSlots,
+  key: string,
+): (Slot & { _bound?: Slot }) | undefined {
   if (key === '$') return
   const dynamicSources = target.$
   if (dynamicSources) {
@@ -109,26 +112,39 @@ export function createSlot(
   fallback?: Slot,
 ): Block {
   const instance = currentInstance as VaporComponentInstance
-  const fragment = new DynamicFragment('slot')
+  const rawSlots = instance.rawSlots
+  const isDynamicName = isFunction(name)
+  const fragment = __DEV__ ? new DynamicFragment('slot') : new DynamicFragment()
   const slotProps = rawProps
     ? new Proxy(rawProps, dynamicSlotsPropsProxyHandlers)
     : EMPTY_OBJ
 
-  // always create effect because a slot may contain dynamic root inside
-  // which affects fallback
-  renderEffect(() => {
-    const slot = getSlot(instance.rawSlots, isFunction(name) ? name() : name)
+  const renderSlot = () => {
+    const slot = getSlot(rawSlots, isFunction(name) ? name() : name)
     if (slot) {
+      // create and cache bound version of the slot to make it stable
+      // so that we avoid unnecessary updates if it resolves to the same slot
       fragment.update(
-        () => slot(slotProps) || (fallback && fallback()),
-        // TODO this key needs to account for possible fallback (v-if)
-        // inside the slot
-        slot,
+        slot._bound ||
+          (slot._bound = () => {
+            const slotContent = slot(slotProps)
+            if (slotContent instanceof DynamicFragment) {
+              slotContent.fallback = fallback
+            }
+            return slotContent
+          }),
       )
     } else {
       fragment.update(fallback)
     }
-  })
+  }
+
+  // dynamic slot name or has dynamicSlots
+  if (isDynamicName || rawSlots.$) {
+    renderEffect(renderSlot)
+  } else {
+    renderSlot()
+  }
 
   return fragment
 }
