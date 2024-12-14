@@ -57,7 +57,10 @@ export const dynamicSlotsProxyHandlers: ProxyHandler<RawSlots> = {
   deleteProperty: NO,
 }
 
-export function getSlot(target: RawSlots, key: string): Slot | undefined {
+export function getSlot(
+  target: RawSlots,
+  key: string,
+): (Slot & { _bound?: Slot }) | undefined {
   if (key === '$') return
   const dynamicSources = target.$
   if (dynamicSources) {
@@ -116,10 +119,21 @@ export function createSlot(
     ? new Proxy(rawProps, dynamicSlotsPropsProxyHandlers)
     : EMPTY_OBJ
 
-  const renderSlot = (name: string) => {
-    const slot = getSlot(rawSlots, name)
+  const renderSlot = () => {
+    const slot = getSlot(rawSlots, isFunction(name) ? name() : name)
     if (slot) {
-      fragment.update(() => slot(slotProps) || (fallback && fallback()))
+      // create and cache bound version of the slot to make it stable
+      // so that we avoid unnecessary updates if it resolves to the same slot
+      fragment.update(
+        slot._bound ||
+          (slot._bound = () => {
+            const slotContent = slot(slotProps)
+            if (slotContent instanceof DynamicFragment) {
+              slotContent.fallback = fallback
+            }
+            return slotContent
+          }),
+      )
     } else {
       fragment.update(fallback)
     }
@@ -127,9 +141,9 @@ export function createSlot(
 
   // dynamic slot name or has dynamicSlots
   if (isDynamicName || rawSlots.$) {
-    renderEffect(() => renderSlot(isFunction(name) ? name() : name))
+    renderEffect(renderSlot)
   } else {
-    renderSlot(name)
+    renderSlot()
   }
 
   return fragment

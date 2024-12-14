@@ -30,6 +30,7 @@ export class DynamicFragment extends Fragment {
   anchor: Node
   scope: EffectScope | undefined
   current?: BlockFn
+  fallback?: BlockFn
 
   constructor(anchorLabel?: string) {
     super([])
@@ -63,6 +64,15 @@ export class DynamicFragment extends Fragment {
       this.scope = undefined
       this.nodes = []
     }
+
+    if (this.fallback && !isValidBlock(this.nodes)) {
+      parent && remove(this.nodes, parent)
+      this.nodes =
+        (this.scope || (this.scope = new EffectScope())).run(this.fallback) ||
+        []
+      parent && insert(this.nodes, parent, this.anchor)
+    }
+
     resetTracking()
   }
 }
@@ -80,28 +90,17 @@ export function isBlock(val: NonNullable<unknown>): val is Block {
   )
 }
 
-/*! #__NO_SIDE_EFFECTS__ */
-// TODO this should be optimized away
-export function normalizeBlock(block: Block): Node[] {
-  const nodes: Node[] = []
-  if (block instanceof Node) {
-    nodes.push(block)
-  } else if (isArray(block)) {
-    block.forEach(child => nodes.push(...normalizeBlock(child)))
-  } else if (isVaporComponent(block)) {
-    nodes.push(...normalizeBlock(block.block!))
-  } else if (block) {
-    nodes.push(...normalizeBlock(block.nodes))
-    block.anchor && nodes.push(block.anchor)
-  }
-  return nodes
-}
-
-// TODO optimize
 export function isValidBlock(block: Block): boolean {
-  return (
-    normalizeBlock(block).filter(node => !(node instanceof Comment)).length > 0
-  )
+  if (block instanceof Node) {
+    return !(block instanceof Comment)
+  } else if (isVaporComponent(block)) {
+    return isValidBlock(block.block)
+  } else if (isArray(block)) {
+    return block.length > 0 && block.every(isValidBlock)
+  } else {
+    // fragment
+    return isValidBlock(block.nodes)
+  }
 }
 
 export function insert(
@@ -165,4 +164,27 @@ export function remove(block: Block, parent: ParentNode): void {
     }
     parentsWithUnmountedChildren = null
   }
+}
+
+/**
+ * dev / test only
+ */
+export function normalizeBlock(block: Block): Node[] {
+  if (!__DEV__ && !__TEST__) {
+    throw new Error(
+      'normalizeBlock should not be used in production code paths',
+    )
+  }
+  const nodes: Node[] = []
+  if (block instanceof Node) {
+    nodes.push(block)
+  } else if (isArray(block)) {
+    block.forEach(child => nodes.push(...normalizeBlock(child)))
+  } else if (isVaporComponent(block)) {
+    nodes.push(...normalizeBlock(block.block!))
+  } else {
+    nodes.push(...normalizeBlock(block.nodes))
+    block.anchor && nodes.push(block.anchor)
+  }
+  return nodes
 }

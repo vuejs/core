@@ -3,6 +3,7 @@
 import {
   createComponent,
   createForSlots,
+  createIf,
   createSlot,
   createVaporApp,
   defineVaporComponent,
@@ -429,6 +430,43 @@ describe('component: slots', () => {
       }).render()
 
       expect(host.innerHTML).toBe('<p><!--slot--></p>')
+    })
+
+    test('use fallback when inner content changes', async () => {
+      const Child = {
+        setup() {
+          return createSlot('default', null, () =>
+            document.createTextNode('fallback'),
+          )
+        },
+      }
+
+      const toggle = ref(true)
+
+      const { html } = define({
+        setup() {
+          return createComponent(Child, null, {
+            default: () => {
+              return createIf(
+                () => toggle.value,
+                () => {
+                  return document.createTextNode('content')
+                },
+              )
+            },
+          })
+        },
+      }).render()
+
+      expect(html()).toBe('content<!--if--><!--slot-->')
+
+      toggle.value = false
+      await nextTick()
+      expect(html()).toBe('fallback<!--if--><!--slot-->')
+
+      toggle.value = true
+      await nextTick()
+      expect(html()).toBe('content<!--if--><!--slot-->')
     })
   })
 })
