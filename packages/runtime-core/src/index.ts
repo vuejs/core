@@ -542,3 +542,7 @@ export { registerHMR, unregisterHMR } from './hmr'
  * @internal
  */
 export { startMeasure, endMeasure } from './profiling'
+/**
+ * @internal
+ */
+export { initFeatureFlags } from './featureFlags'
