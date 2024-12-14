@@ -68,6 +68,7 @@ export enum ErrorCodes {
   X_MISSING_END_TAG,
   X_MISSING_INTERPOLATION_END,
   X_MISSING_DIRECTIVE_NAME,
+  X_MISSING_DIRECTIVE_MODIFIER,
   X_MISSING_DYNAMIC_DIRECTIVE_ARGUMENT_END,
 
   // transform errors
@@ -151,6 +152,8 @@ export const errorMessages: Record<ErrorCodes, string> = {
     'End bracket for dynamic directive argument was not found. ' +
     'Note that dynamic directive argument cannot contain spaces.',
   [ErrorCodes.X_MISSING_DIRECTIVE_NAME]: 'Legal directive name was expected.',
+  [ErrorCodes.X_MISSING_DIRECTIVE_MODIFIER]:
+    'Legal directive modifier was expected.',
 
   // transform errors
   [ErrorCodes.X_V_IF_NO_EXPRESSION]: `v-if/v-else-if is missing expression.`,

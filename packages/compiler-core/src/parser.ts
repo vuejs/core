@@ -275,6 +275,9 @@ const tokenizer = new Tokenizer(stack, {
       }
     } else {
       const exp = createSimpleExpression(mod, true, getLoc(start, end))
+      if (exp.content === '') {
+        emitError(ErrorCodes.X_MISSING_DIRECTIVE_MODIFIER, start)
+      }
       ;(currentProp as DirectiveNode).modifiers.push(exp)
     }
   },
