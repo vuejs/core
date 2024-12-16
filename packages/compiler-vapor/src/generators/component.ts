@@ -93,7 +93,7 @@ export function genCreateComponent(
   }
 }
 
-type InlineHandlerValue = {
+type InlineHandler = {
   name: string
   value: SimpleExpressionNode
 }
@@ -101,9 +101,9 @@ type InlineHandlerValue = {
 function processInlineHandlers(
   props: IRProps[],
   context: CodegenContext,
-): [Record<string, null>, InlineHandlerValue[]] {
+): [Record<string, null>, InlineHandler[]] {
   const ids: Record<string, null> = Object.create(null)
-  const handlers: InlineHandlerValue[] = []
+  const handlers: InlineHandler[] = []
   const staticProps = props[0]
   if (isArray(staticProps)) {
     for (let i = 0; i < staticProps.length; i++) {
