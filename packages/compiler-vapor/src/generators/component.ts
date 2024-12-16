@@ -53,7 +53,8 @@ export function genCreateComponent(
   const rawProps = context.withId(() => genRawProps(props, context), ids)
   const inlineHandlers: CodeFragment[] = handlers.reduce<CodeFragment[]>(
     (acc, { name, value }) => {
-      const handler = genEventHandler(context, value, false)
+      // TODO should support .once modifier on component event
+      const handler = genEventHandler(context, value, undefined,false)
       return [...acc, `const ${name} = `, ...handler, NEWLINE]
     },
     [],

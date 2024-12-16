@@ -88,8 +88,9 @@ export function genEventHandler(
     nonKeys: string[]
     keys: string[]
   } = { nonKeys: [], keys: [] },
+  needWrap: boolean = true,
 ): CodeFragment[] {
-  let handlerExp: CodeFragment[] = [`() => {}`]
+  let handlerExp: CodeFragment[] = [`{}`]
   if (value && value.content.trim()) {
     const isMemberExp = isMemberExpression(value, context.options)
     const isInlineStatement = !(
@@ -117,7 +118,8 @@ export function genEventHandler(
     handlerExp = genWithModifiers(context, handlerExp, nonKeys)
   if (keys.length) handlerExp = genWithKeys(context, handlerExp, keys)
 
-  return [`() => `, ...handlerExp]
+  if(needWrap) handlerExp.unshift(`() => `)
+  return handlerExp
 }
 
 function genWithModifiers(
