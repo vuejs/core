@@ -109,20 +109,6 @@ export function render(_ctx, $props, $emit, $attrs, $slots) {
 }"
 `;
 
-exports[`compiler: element transform > component > should wrap as function if v-on expression is inline statement 1`] = `
-"import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback } from 'vue';
-
-export function render(_ctx) {
-  const _component_Foo = _resolveComponent("Foo")
-  const _component_Bar = _resolveComponent("Bar")
-  const _on_bar = $event => (_ctx.handleBar($event))
-  const n0 = _createComponentWithFallback(_component_Foo, { onBar: () => _on_bar })
-  const _on_bar1 = () => _ctx.handler
-  const n1 = _createComponentWithFallback(_component_Bar, { onBar: () => _on_bar1 })
-  return [n0, n1]
-}"
-`;
-
 exports[`compiler: element transform > component > static props 1`] = `
 "import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback } from 'vue';
 
