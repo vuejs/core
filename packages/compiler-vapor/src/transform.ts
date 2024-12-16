@@ -141,14 +141,13 @@ export class TransformContext<T extends AllNode = AllNode> {
     ...operations: OperationNode[]
   ): void {
     expressions = expressions.filter(exp => !isConstantExpression(exp))
-    if (this.inVOnce || expressions.length === 0) {
+    if (
+      this.inVOnce ||
+      expressions.length === 0 ||
+      isStaticExpression(this.root, expressions)
+    ) {
       return this.registerOperation(...operations)
     }
-
-    if (isStaticExpression(this.root, expressions)) {
-      operations.forEach(op => (op.isStatic = true))
-    }
-
     const existing = this.block.effect.find(e =>
       isSameExpression(e.expressions, expressions),
     )

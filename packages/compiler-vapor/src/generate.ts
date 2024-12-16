@@ -34,9 +34,6 @@ export class CodegenContext {
 
   identifiers: Record<string, string[]> = Object.create(null)
 
-  // operations that not rely on any reactivity value, will be moved out of renderEffect
-  staticOperations: CodeFragment[] = []
-
   block: BlockIRNode
   withId<T>(fn: () => T, map: Record<string, string | null>): T {
     const { identifiers } = this
