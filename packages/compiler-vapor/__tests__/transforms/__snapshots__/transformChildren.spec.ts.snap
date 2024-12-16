@@ -2,7 +2,7 @@
 
 exports[`compiler: children transform > children & sibling references 1`] = `
 "import { next as _next, createTextNode as _createTextNode, insert as _insert, setText as _setText, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<div><p></p> <!><p></p></div>")
+const t0 = _template("<div><p></p> <!><p></p></div>", true)
 
 export function render(_ctx) {
   const n4 = t0()

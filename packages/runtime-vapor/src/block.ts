@@ -6,7 +6,7 @@ import {
   unmountComponent,
 } from './component'
 import { createComment } from './dom/node'
-import { EffectScope } from '@vue/reactivity'
+import { EffectScope, pauseTracking, resetTracking } from '@vue/reactivity'
 
 export type Block =
   | Node
@@ -29,7 +29,8 @@ export class Fragment {
 export class DynamicFragment extends Fragment {
   anchor: Node
   scope: EffectScope | undefined
-  key: any
+  current?: BlockFn
+  fallback?: BlockFn
 
   constructor(anchorLabel?: string) {
     super([])
@@ -40,10 +41,13 @@ export class DynamicFragment extends Fragment {
           document.createTextNode('')
   }
 
-  update(render?: BlockFn, key: any = render): void {
-    if (key === this.key) return
-    this.key = key
+  update(render?: BlockFn): void {
+    if (render === this.current) {
+      return
+    }
+    this.current = render
 
+    pauseTracking()
     const parent = this.anchor.parentNode
 
     // teardown previous branch
@@ -60,6 +64,16 @@ export class DynamicFragment extends Fragment {
       this.scope = undefined
       this.nodes = []
     }
+
+    if (this.fallback && !isValidBlock(this.nodes)) {
+      parent && remove(this.nodes, parent)
+      this.nodes =
+        (this.scope || (this.scope = new EffectScope())).run(this.fallback) ||
+        []
+      parent && insert(this.nodes, parent, this.anchor)
+    }
+
+    resetTracking()
   }
 }
 
@@ -76,28 +90,17 @@ export function isBlock(val: NonNullable<unknown>): val is Block {
   )
 }
 
-/*! #__NO_SIDE_EFFECTS__ */
-// TODO this should be optimized away
-export function normalizeBlock(block: Block): Node[] {
-  const nodes: Node[] = []
-  if (block instanceof Node) {
-    nodes.push(block)
-  } else if (isArray(block)) {
-    block.forEach(child => nodes.push(...normalizeBlock(child)))
-  } else if (isVaporComponent(block)) {
-    nodes.push(...normalizeBlock(block.block!))
-  } else if (block) {
-    nodes.push(...normalizeBlock(block.nodes))
-    block.anchor && nodes.push(block.anchor)
-  }
-  return nodes
-}
-
-// TODO optimize
 export function isValidBlock(block: Block): boolean {
-  return (
-    normalizeBlock(block).filter(node => !(node instanceof Comment)).length > 0
-  )
+  if (block instanceof Node) {
+    return !(block instanceof Comment)
+  } else if (isVaporComponent(block)) {
+    return isValidBlock(block.block)
+  } else if (isArray(block)) {
+    return block.length > 0 && block.every(isValidBlock)
+  } else {
+    // fragment
+    return isValidBlock(block.nodes)
+  }
 }
 
 export function insert(
@@ -126,7 +129,19 @@ export function prepend(parent: ParentNode, ...blocks: Block[]): void {
   while (i--) insert(blocks[i], parent, 0)
 }
 
+/**
+ * Optimized children removal: record all parents with unmounted children
+ * during each root remove call, and update their children list by filtering
+ * unmounted children
+ */
+export let parentsWithUnmountedChildren: Set<VaporComponentInstance> | null =
+  null
+
 export function remove(block: Block, parent: ParentNode): void {
+  const isRoot = !parentsWithUnmountedChildren
+  if (isRoot) {
+    parentsWithUnmountedChildren = new Set()
+  }
   if (block instanceof Node) {
     parent.removeChild(block)
   } else if (isVaporComponent(block)) {
@@ -143,4 +158,33 @@ export function remove(block: Block, parent: ParentNode): void {
       ;(block as DynamicFragment).scope!.stop()
     }
   }
+  if (isRoot) {
+    for (const i of parentsWithUnmountedChildren!) {
+      i.children = i.children.filter(n => !n.isUnmounted)
+    }
+    parentsWithUnmountedChildren = null
+  }
+}
+
+/**
+ * dev / test only
+ */
+export function normalizeBlock(block: Block): Node[] {
+  if (!__DEV__ && !__TEST__) {
+    throw new Error(
+      'normalizeBlock should not be used in production code paths',
+    )
+  }
+  const nodes: Node[] = []
+  if (block instanceof Node) {
+    nodes.push(block)
+  } else if (isArray(block)) {
+    block.forEach(child => nodes.push(...normalizeBlock(child)))
+  } else if (isVaporComponent(block)) {
+    nodes.push(...normalizeBlock(block.block!))
+  } else {
+    nodes.push(...normalizeBlock(block.nodes))
+    block.anchor && nodes.push(block.anchor)
+  }
+  return nodes
 }

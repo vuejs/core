@@ -305,13 +305,12 @@ describe('patchProp', () => {
 
   describe('setDynamicProp', () => {
     const element = document.createElement('div')
-    let prev: any
     function setDynamicProp(
       key: string,
       value: any,
       el = element.cloneNode(true) as HTMLElement,
     ) {
-      prev = _setDynamicProp(el, key, prev, value)
+      _setDynamicProp(el, key, value)
       return el
     }
 

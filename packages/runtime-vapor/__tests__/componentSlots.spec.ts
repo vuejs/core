@@ -3,6 +3,7 @@
 import {
   createComponent,
   createForSlots,
+  createIf,
   createSlot,
   createVaporApp,
   defineVaporComponent,
@@ -169,10 +170,12 @@ describe('component: slots', () => {
     })
 
     test('slot should be rendered correctly with slot props', async () => {
+      const src = ref('header')
+
       const Comp = defineVaporComponent(() => {
         const n0 = template('<div></div>')()
         insert(
-          createSlot('header', { title: () => 'header' }),
+          createSlot('header', { title: () => src.value }),
           n0 as any as ParentNode,
         )
         return n0
@@ -191,6 +194,10 @@ describe('component: slots', () => {
       }).render()
 
       expect(host.innerHTML).toBe('<div><h1>header</h1><!--slot--></div>')
+
+      src.value = 'footer'
+      await nextTick()
+      expect(host.innerHTML).toBe('<div><h1>footer</h1><!--slot--></div>')
     })
 
     test('dynamic slot props', async () => {
@@ -263,17 +270,23 @@ describe('component: slots', () => {
           $: [
             () => ({
               name: 'header',
-              fn: (props: any) => template(props.title)(),
+              fn: (props: any) => {
+                const el = template('<h1></h1>')()
+                renderEffect(() => {
+                  setText(el, props.title)
+                })
+                return el
+              },
             }),
           ],
         })
       }).render()
 
-      expect(host.innerHTML).toBe('<div>header<!--slot--></div>')
+      expect(host.innerHTML).toBe('<div><h1>header</h1><!--slot--></div>')
 
       val.value = 'footer'
       await nextTick()
-      expect(host.innerHTML).toBe('<div>footer<!--slot--></div>')
+      expect(host.innerHTML).toBe('<div><h1>footer</h1><!--slot--></div>')
     })
 
     test('dynamic slot outlet should be render correctly with slot props', async () => {
@@ -417,6 +430,43 @@ describe('component: slots', () => {
       }).render()
 
       expect(host.innerHTML).toBe('<p><!--slot--></p>')
+    })
+
+    test('use fallback when inner content changes', async () => {
+      const Child = {
+        setup() {
+          return createSlot('default', null, () =>
+            document.createTextNode('fallback'),
+          )
+        },
+      }
+
+      const toggle = ref(true)
+
+      const { html } = define({
+        setup() {
+          return createComponent(Child, null, {
+            default: () => {
+              return createIf(
+                () => toggle.value,
+                () => {
+                  return document.createTextNode('content')
+                },
+              )
+            },
+          })
+        },
+      }).render()
+
+      expect(html()).toBe('content<!--if--><!--slot-->')
+
+      toggle.value = false
+      await nextTick()
+      expect(html()).toBe('fallback<!--if--><!--slot-->')
+
+      toggle.value = true
+      await nextTick()
+      expect(html()).toBe('content<!--if--><!--slot-->')
     })
   })
 })

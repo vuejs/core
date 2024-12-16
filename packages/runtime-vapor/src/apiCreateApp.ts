@@ -12,10 +12,13 @@ import {
   type CreateAppFunction,
   createAppAPI,
   flushOnAppMount,
+  initFeatureFlags,
   normalizeContainer,
+  setDevtoolsHook,
   warn,
 } from '@vue/runtime-dom'
 import type { RawProps } from './componentProps'
+import { getGlobalThis } from '@vue/shared'
 
 let _createApp: CreateAppFunction<ParentNode, VaporComponent>
 
@@ -47,6 +50,17 @@ export const createVaporApp: CreateAppFunction<ParentNode, VaporComponent> = (
   comp,
   props,
 ) => {
+  // compile-time feature flags check
+  if (__ESM_BUNDLER__ && !__TEST__) {
+    initFeatureFlags()
+  }
+
+  const target = getGlobalThis()
+  target.__VUE__ = true
+  if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
+    setDevtoolsHook(target.__VUE_DEVTOOLS_GLOBAL_HOOK__, target)
+  }
+
   if (!_createApp) _createApp = createAppAPI(mountApp, unmountApp, getExposed)
   const app = _createApp(comp, props)
 

@@ -14,8 +14,6 @@ export {
   setHtml,
   setClass,
   setStyle,
-  setClassIncremental,
-  setStyleIncremental,
   setAttr,
   setValue,
   setProp,

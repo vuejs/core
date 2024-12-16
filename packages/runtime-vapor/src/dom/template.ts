@@ -1,5 +1,5 @@
 /*! #__NO_SIDE_EFFECTS__ */
-export function template(html: string) {
+export function template(html: string, root?: boolean) {
   let node: ChildNode
   const create = () => {
     // eslint-disable-next-line no-restricted-globals
@@ -7,7 +7,11 @@ export function template(html: string) {
     t.innerHTML = html
     return t.content.firstChild!
   }
-  return (): Node => (node || (node = create())).cloneNode(true)
+  return (): Node & { $root?: true } => {
+    const ret = (node || (node = create())).cloneNode(true)
+    if (root) (ret as any).$root = true
+    return ret
+  }
 }
 
 /*! #__NO_SIDE_EFFECTS__ */

@@ -284,7 +284,7 @@ export function render(_ctx) {
 
 exports[`compiler: element transform > props + children 1`] = `
 "import { template as _template } from 'vue';
-const t0 = _template("<div id=\\"foo\\"><span></span></div>")
+const t0 = _template("<div id=\\"foo\\"><span></span></div>", true)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -293,19 +293,19 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: element transform > props merging: class 1`] = `
-"import { setClassIncremental as _setClassIncremental, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<div></div>")
+"import { setClass as _setClass, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<div></div>", true)
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => _setClassIncremental(n0, ["foo", { bar: _ctx.isBar }]))
+  _renderEffect(() => _setClass(n0, ["foo", { bar: _ctx.isBar }]))
   return n0
 }"
 `;
 
 exports[`compiler: element transform > props merging: event handlers 1`] = `
 "import { withKeys as _withKeys, delegate as _delegate, delegateEvents as _delegateEvents, template as _template } from 'vue';
-const t0 = _template("<div></div>")
+const t0 = _template("<div></div>", true)
 _delegateEvents("click")
 
 export function render(_ctx) {
@@ -317,19 +317,19 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: element transform > props merging: style 1`] = `
-"import { setStyleIncremental as _setStyleIncremental, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<div></div>")
+"import { setStyle as _setStyle, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<div></div>", true)
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => _setStyleIncremental(n0, ["color: green", { color: 'red' }]))
+  _renderEffect(() => _setStyle(n0, ["color: green", { color: 'red' }]))
   return n0
 }"
 `;
 
 exports[`compiler: element transform > static props 1`] = `
 "import { template as _template } from 'vue';
-const t0 = _template("<div id=\\"foo\\" class=\\"bar\\"></div>")
+const t0 = _template("<div id=\\"foo\\" class=\\"bar\\"></div>", true)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -339,7 +339,7 @@ export function render(_ctx) {
 
 exports[`compiler: element transform > v-bind="obj" 1`] = `
 "import { setDynamicProps as _setDynamicProps, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<div></div>")
+const t0 = _template("<div></div>", true)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -350,7 +350,7 @@ export function render(_ctx) {
 
 exports[`compiler: element transform > v-bind="obj" after static prop 1`] = `
 "import { setDynamicProps as _setDynamicProps, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<div></div>")
+const t0 = _template("<div></div>", true)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -361,7 +361,7 @@ export function render(_ctx) {
 
 exports[`compiler: element transform > v-bind="obj" before static prop 1`] = `
 "import { setDynamicProps as _setDynamicProps, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<div></div>")
+const t0 = _template("<div></div>", true)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -372,7 +372,7 @@ export function render(_ctx) {
 
 exports[`compiler: element transform > v-bind="obj" between static props 1`] = `
 "import { setDynamicProps as _setDynamicProps, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<div></div>")
+const t0 = _template("<div></div>", true)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -383,7 +383,7 @@ export function render(_ctx) {
 
 exports[`compiler: element transform > v-on="obj" 1`] = `
 "import { setDynamicEvents as _setDynamicEvents, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<div></div>")
+const t0 = _template("<div></div>", true)
 
 export function render(_ctx) {
   const n0 = t0()

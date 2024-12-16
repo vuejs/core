@@ -15,7 +15,7 @@ import { unmountComponent } from '../src/component'
 
 const define = makeRender()
 
-describe.todo('createIf', () => {
+describe('createIf', () => {
   test('basic', async () => {
     // mock this template:
     //  <div>

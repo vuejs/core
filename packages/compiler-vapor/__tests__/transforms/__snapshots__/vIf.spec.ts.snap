@@ -2,7 +2,7 @@
 
 exports[`compiler: v-if > basic v-if 1`] = `
 "import { setText as _setText, renderEffect as _renderEffect, createIf as _createIf, template as _template } from 'vue';
-const t0 = _template("<div></div>")
+const t0 = _template("<div></div>", true)
 
 export function render(_ctx) {
   const n0 = _createIf(() => (_ctx.ok), () => {
@@ -63,7 +63,7 @@ exports[`compiler: v-if > template v-if 1`] = `
 "import { setText as _setText, renderEffect as _renderEffect, createIf as _createIf, template as _template } from 'vue';
 const t0 = _template("<div></div>")
 const t1 = _template("hello")
-const t2 = _template("<p></p>")
+const t2 = _template("<p></p>", true)
 
 export function render(_ctx) {
   const n0 = _createIf(() => (_ctx.ok), () => {
