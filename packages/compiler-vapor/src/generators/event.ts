@@ -90,7 +90,7 @@ export function genEventHandler(
   } = { nonKeys: [], keys: [] },
   needWrap: boolean = true,
 ): CodeFragment[] {
-  let handlerExp: CodeFragment[] = [`{}`]
+  let handlerExp: CodeFragment[] = [`() => {}`]
   if (value && value.content.trim()) {
     const isMemberExp = isMemberExpression(value, context.options)
     const isInlineStatement = !(
