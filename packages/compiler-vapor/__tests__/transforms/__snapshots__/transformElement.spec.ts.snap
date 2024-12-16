@@ -1,5 +1,19 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
+exports[`compiler: element transform > component > cache v-on expression with unique handler name 1`] = `
+"import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback } from 'vue';
+
+export function render(_ctx) {
+  const _component_Foo = _resolveComponent("Foo")
+  const _component_Bar = _resolveComponent("Bar")
+  const _on_bar = $event => (_ctx.handleBar($event))
+  const n0 = _createComponentWithFallback(_component_Foo, { onBar: () => _on_bar })
+  const _on_bar1 = () => _ctx.handler
+  const n1 = _createComponentWithFallback(_component_Bar, { onBar: () => _on_bar1 })
+  return [n0, n1]
+}"
+`;
+
 exports[`compiler: element transform > component > do not resolve component from non-script-setup bindings 1`] = `
 "import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback } from 'vue';
 
@@ -95,16 +109,6 @@ export function render(_ctx, $props, $emit, $attrs, $slots) {
 }"
 `;
 
-exports[`compiler: element transform > component > should wrap as function if v-on expression is inline statement 1`] = `
-"import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback } from 'vue';
-
-export function render(_ctx) {
-  const _component_Foo = _resolveComponent("Foo")
-  const n0 = _createComponentWithFallback(_component_Foo, { onBar: () => $event => (_ctx.handleBar($event)) }, null, true)
-  return n0
-}"
-`;
-
 exports[`compiler: element transform > component > static props 1`] = `
 "import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback } from 'vue';
 
@@ -170,6 +174,28 @@ export function render(_ctx) {
       { class: () => ("bar") }
     ]
   }, null, true)
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > component > v-on expression is a function call 1`] = `
+"import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback } from 'vue';
+
+export function render(_ctx) {
+  const _component_Foo = _resolveComponent("Foo")
+  const _on_bar = $event => (_ctx.handleBar($event))
+  const n0 = _createComponentWithFallback(_component_Foo, { onBar: () => _on_bar }, null, true)
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > component > v-on expression is inline statement 1`] = `
+"import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback } from 'vue';
+
+export function render(_ctx) {
+  const _component_Foo = _resolveComponent("Foo")
+  const _on_bar = () => _ctx.handler
+  const n0 = _createComponentWithFallback(_component_Foo, { onBar: () => _on_bar }, null, true)
   return n0
 }"
 `;
