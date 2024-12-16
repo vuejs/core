@@ -13,9 +13,8 @@ const displayRE = /(^|;)\s*display\s*:/
 
 export function patchStyle(el: Element, prev: Style, next: Style): void {
   const style = (el as HTMLElement).style
-  const isCssString = isString(next)
   let hasControlledDisplay = false
-  if (next && !isCssString) {
+  if (next && !isString(next)) {
     if (prev) {
       if (!isString(prev)) {
         for (const key in prev) {
@@ -39,14 +38,14 @@ export function patchStyle(el: Element, prev: Style, next: Style): void {
       setStyle(style, key, next[key])
     }
   } else {
-    if (isCssString) {
+    if (isString(next)) {
       if (prev !== next) {
         // #9821
         const cssVarText = (style as any)[CSS_VAR_TEXT]
         if (cssVarText) {
-          ;(next as string) += ';' + cssVarText
+          next += ';' + cssVarText
         }
-        style.cssText = next as string
+        style.cssText = next
         hasControlledDisplay = displayRE.test(next)
       }
     } else if (prev) {

@@ -495,7 +495,6 @@ function installCompatMount(
 
       let container: Element
       if (typeof selectorOrEl === 'string') {
-        // eslint-disable-next-line
         const result = document.querySelector(selectorOrEl)
         if (!result) {
           __DEV__ &&
@@ -506,7 +505,6 @@ function installCompatMount(
         }
         container = result
       } else {
-        // eslint-disable-next-line
         container = selectorOrEl || document.createElement('div')
       }
 
@@ -613,7 +611,7 @@ const methodsToPatch = [
   'reverse',
 ]
 
-const patched = new WeakSet<object>()
+const patched = new WeakSet()
 
 function defineReactive(obj: any, key: string, val: any) {
   // it's possible for the original object to be mutated after being defined

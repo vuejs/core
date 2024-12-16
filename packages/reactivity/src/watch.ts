@@ -84,7 +84,7 @@ let activeWatcher: ReactiveEffect | undefined = undefined
 /**
  * Returns the current active effect if there is one.
  */
-export function getCurrentWatcher(): ReactiveEffect<any> | undefined {
+export function getCurrentWatcher(): ReactiveEffect | undefined {
   return activeWatcher
 }
 
@@ -261,9 +261,9 @@ export function watch(
             boundCleanup,
           ]
           call
-            ? call(cb!, WatchErrorCodes.WATCH_CALLBACK, args)
+            ? call(cb, WatchErrorCodes.WATCH_CALLBACK, args)
             : // @ts-expect-error
-              cb!(...args)
+              cb(...args)
           oldValue = newValue
         } finally {
           activeWatcher = currentWatcher

@@ -218,7 +218,7 @@ function doWatch(
       job.flags! |= SchedulerJobFlags.PRE
       if (instance) {
         job.id = instance.uid
-        ;(job as SchedulerJob).i = instance
+        job.i = instance
       }
     }
   }

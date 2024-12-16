@@ -83,7 +83,7 @@ export async function renderToString(
   input.provide(ssrContextKey, context)
   const buffer = await renderComponentVNode(vnode)
 
-  const result = await unrollBuffer(buffer as SSRBuffer)
+  const result = await unrollBuffer(buffer)
 
   await resolveTeleports(context)
 

@@ -520,15 +520,15 @@ describe('BaseTransition', () => {
     }
 
     test('w/ elements', async () => {
-      await runTestWithElements(testToggleBranches)
+      runTestWithElements(testToggleBranches)
     })
 
     test('w/ components', async () => {
-      await runTestWithComponents(testToggleBranches)
+      runTestWithComponents(testToggleBranches)
     })
 
     test('w/ KeepAlive', async () => {
-      await runTestWithKeepAlive(testToggleBranches)
+      runTestWithKeepAlive(testToggleBranches)
     })
   })
 
@@ -653,15 +653,15 @@ describe('BaseTransition', () => {
     }
 
     test('w/ elements', async () => {
-      await runTestWithElements(testToggleBranchesBeforeFinish)
+      runTestWithElements(testToggleBranchesBeforeFinish)
     })
 
     test('w/ components', async () => {
-      await runTestWithComponents(testToggleBranchesBeforeFinish)
+      runTestWithComponents(testToggleBranchesBeforeFinish)
     })
 
     test('w/ KeepAlive', async () => {
-      await runTestWithKeepAlive(testToggleBranchesBeforeFinish)
+      runTestWithKeepAlive(testToggleBranchesBeforeFinish)
     })
   })
 
@@ -758,15 +758,15 @@ describe('BaseTransition', () => {
     }
 
     test('w/ elements', async () => {
-      await runTestWithElements(testOutIn)
+      runTestWithElements(testOutIn)
     })
 
     test('w/ components', async () => {
-      await runTestWithComponents(testOutIn)
+      runTestWithComponents(testOutIn)
     })
 
     test('w/ KeepAlive', async () => {
-      await runTestWithKeepAlive(testOutIn)
+      runTestWithKeepAlive(testOutIn)
     })
   })
 
@@ -840,15 +840,15 @@ describe('BaseTransition', () => {
     }
 
     test('w/ elements', async () => {
-      await runTestWithElements(testOutIn)
+      runTestWithElements(testOutIn)
     })
 
     test('w/ components', async () => {
-      await runTestWithComponents(testOutIn)
+      runTestWithComponents(testOutIn)
     })
 
     test('w/ KeepAlive', async () => {
-      await runTestWithKeepAlive(testOutIn)
+      runTestWithKeepAlive(testOutIn)
     })
   })
 
@@ -912,15 +912,15 @@ describe('BaseTransition', () => {
     }
 
     test('w/ elements', async () => {
-      await runTestWithElements(testOutInBeforeFinish)
+      runTestWithElements(testOutInBeforeFinish)
     })
 
     test('w/ components', async () => {
-      await runTestWithComponents(testOutInBeforeFinish)
+      runTestWithComponents(testOutInBeforeFinish)
     })
 
     test('w/ KeepAlive', async () => {
-      await runTestWithKeepAlive(testOutInBeforeFinish)
+      runTestWithKeepAlive(testOutInBeforeFinish)
     })
   })
 
@@ -990,15 +990,15 @@ describe('BaseTransition', () => {
     }
 
     test('w/ elements', async () => {
-      await runTestWithElements(testOutInDoubleToggle)
+      runTestWithElements(testOutInDoubleToggle)
     })
 
     test('w/ components', async () => {
-      await runTestWithComponents(testOutInDoubleToggle)
+      runTestWithComponents(testOutInDoubleToggle)
     })
 
     test('w/ KeepAlive', async () => {
-      await runTestWithKeepAlive(testOutInDoubleToggle)
+      runTestWithKeepAlive(testOutInDoubleToggle)
     })
   })
 
@@ -1094,15 +1094,15 @@ describe('BaseTransition', () => {
     }
 
     test('w/ elements', async () => {
-      await runTestWithElements(testInOut)
+      runTestWithElements(testInOut)
     })
 
     test('w/ components', async () => {
-      await runTestWithComponents(testInOut)
+      runTestWithComponents(testInOut)
     })
 
     test('w/ KeepAlive', async () => {
-      await runTestWithKeepAlive(testInOut)
+      runTestWithKeepAlive(testInOut)
     })
   })
 
@@ -1182,15 +1182,15 @@ describe('BaseTransition', () => {
     }
 
     test('w/ elements', async () => {
-      await runTestWithElements(testInOutBeforeFinish)
+      runTestWithElements(testInOutBeforeFinish)
     })
 
     test('w/ components', async () => {
-      await runTestWithComponents(testInOutBeforeFinish)
+      runTestWithComponents(testInOutBeforeFinish)
     })
 
     test('w/ KeepAlive', async () => {
-      await runTestWithKeepAlive(testInOutBeforeFinish)
+      runTestWithKeepAlive(testInOutBeforeFinish)
     })
   })
 

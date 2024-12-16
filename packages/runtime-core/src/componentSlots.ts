@@ -23,7 +23,7 @@ import { DeprecationTypes, isCompatEnabled } from './compat/compatConfig'
 import { TriggerOpTypes, trigger } from '@vue/reactivity'
 import { createInternalObject } from './internalObject'
 
-export type Slot<T extends any = any> = (
+export type Slot<T = any> = (
   ...args: IfAny<T, any[], [T] | (T extends undefined ? [] : never)>
 ) => VNode[]
 

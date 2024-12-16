@@ -1349,7 +1349,7 @@ function recordType(
       if (existing) {
         if (node.type === 'TSModuleDeclaration') {
           if (existing.type === 'TSModuleDeclaration') {
-            mergeNamespaces(existing as typeof node, node)
+            mergeNamespaces(existing, node)
           } else {
             attachNamespace(existing, node)
           }

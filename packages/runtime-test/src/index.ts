@@ -13,8 +13,8 @@ const { render: baseRender, createApp: baseCreateApp } = createRenderer(
   extend({ patchProp }, nodeOps),
 )
 
-export const render = baseRender as RootRenderFunction<TestElement>
-export const createApp = baseCreateApp as CreateAppFunction<TestElement>
+export const render: RootRenderFunction<TestElement> = baseRender
+export const createApp: CreateAppFunction<TestElement> = baseCreateApp
 
 // convenience for one-off render validations
 export function renderToString(vnode: VNode): string {
