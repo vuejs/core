@@ -100,7 +100,8 @@ exports[`compiler: element transform > component > should wrap as function if v-
 
 export function render(_ctx) {
   const _component_Foo = _resolveComponent("Foo")
-  const n0 = _createComponentWithFallback(_component_Foo, { onBar: () => $event => (_ctx.handleBar($event)) }, null, true)
+  const _on_bar = $event => (_ctx.handleBar($event))
+  const n0 = _createComponentWithFallback(_component_Foo, { onBar: () => _on_bar }, null, true)
   return n0
 }"
 `;

@@ -388,7 +388,10 @@ describe('compiler: element transform', () => {
         `<Foo v-on:bar="handleBar($event)" />`,
       )
       expect(code).toMatchSnapshot()
-      expect(code).contains(`onBar: () => $event => (_ctx.handleBar($event))`)
+      expect(code).contains(
+        `const _on_bar = $event => (_ctx.handleBar($event))`,
+      )
+      expect(code).contains(`onBar: () => _on_bar`)
       expect(ir.block.operation).toMatchObject([
         {
           type: IRNodeTypes.CREATE_COMPONENT_NODE,
@@ -398,7 +401,7 @@ describe('compiler: element transform', () => {
               {
                 key: { content: 'bar' },
                 handler: true,
-                values: [{ content: 'handleBar($event)' }],
+                values: [{ content: '_on_bar' }],
               },
             ],
           ],
