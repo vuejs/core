@@ -400,3 +400,29 @@ export function render(_ctx) {
   return n0
 }"
 `;
+
+exports[`compiler v-bind > with constant value 1`] = `
+"import { setProp as _setProp, template as _template } from 'vue';
+const t0 = _template("<div f=\\"foo1\\" h=\\"1\\"></div>", true)
+
+export function render(_ctx, $props, $emit, $attrs, $slots) {
+  const n0 = t0()
+  _setProp(n0, "a", void 0)
+  _setProp(n0, "b", 1 > 2)
+  _setProp(n0, "c", 1 + 2)
+  _setProp(n0, "d", 1 ? 2 : 3)
+  _setProp(n0, "e", (2))
+  _setProp(n0, "g", 1)
+  _setProp(n0, "i", true)
+  _setProp(n0, "j", null)
+  _setProp(n0, "k", _ctx.x)
+  _setProp(n0, "l", { foo: 1 })
+  _setProp(n0, "m", { [_ctx.x]: 1 })
+  _setProp(n0, "n", { ...{ foo: 1 } })
+  _setProp(n0, "o", [1, , 3])
+  _setProp(n0, "p", [1, ...[2, 3]])
+  _setProp(n0, "q", [1, 2])
+  _setProp(n0, "r", /\\s+/)
+  return n0
+}"
+`;

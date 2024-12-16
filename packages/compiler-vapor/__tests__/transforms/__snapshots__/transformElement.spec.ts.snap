@@ -317,12 +317,12 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: element transform > props merging: style 1`] = `
-"import { setStyle as _setStyle, renderEffect as _renderEffect, template as _template } from 'vue';
+"import { setStyle as _setStyle, template as _template } from 'vue';
 const t0 = _template("<div></div>", true)
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => _setStyle(n0, ["color: green", { color: 'red' }]))
+  _setStyle(n0, ["color: green", { color: 'red' }])
   return n0
 }"
 `;
