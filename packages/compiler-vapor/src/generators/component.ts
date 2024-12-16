@@ -93,6 +93,16 @@ export function genCreateComponent(
   }
 }
 
+function getUniqueHandlerName(
+  context: CodegenContext,
+  name: string
+): string {
+  const { seemInlineHandlerNames } = context
+  const count = seemInlineHandlerNames[name] || 0
+  seemInlineHandlerNames[name] = count + 1
+  return count === 0 ? name : `${name}${count}`
+}
+
 type InlineHandler = {
   name: string
   value: SimpleExpressionNode
@@ -113,7 +123,7 @@ function processInlineHandlers(
         const isMemberExp = isMemberExpression(value, context.options)
         // cache inline handlers (fn expression or inline statement)
         if (!isMemberExp) {
-          const name = `_on_${prop.key.content}`
+          const name = getUniqueHandlerName(context, `_on_${prop.key.content}`)
           handlers.push({ name, value })
           ids[name] = null
           // replace the original prop value with the handler name
