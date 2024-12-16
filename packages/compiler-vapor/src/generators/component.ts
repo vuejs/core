@@ -98,9 +98,9 @@ function getUniqueHandlerName(
   context: CodegenContext,
   name: string
 ): string {
-  const { seemInlineHandlerNames } = context
-  const count = seemInlineHandlerNames[name] || 0
-  seemInlineHandlerNames[name] = count + 1
+  const { seenInlineHandlerNames } = context
+  const count = seenInlineHandlerNames[name] || 0
+  seenInlineHandlerNames[name] = count + 1
   return count === 0 ? name : `${name}${count}`
 }
 

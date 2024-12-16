@@ -34,7 +34,7 @@ export class CodegenContext {
 
   identifiers: Record<string, string[]> = Object.create(null)
 
-  seemInlineHandlerNames: Record<string, number> = Object.create(null)
+  seenInlineHandlerNames: Record<string, number> = Object.create(null)
 
   block: BlockIRNode
   withId<T>(fn: () => T, map: Record<string, string | null>): T {
