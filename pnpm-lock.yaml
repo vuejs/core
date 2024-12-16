@@ -57,14 +57,14 @@ importers:
         specifier: ^1.9.3
         version: 1.10.1
       '@tsslint/cli':
-        specifier: ~1.4.5
-        version: 1.4.5(typescript@5.6.3)
+        specifier: ~1.4.6
+        version: 1.4.6(typescript@5.6.3)
       '@tsslint/config':
-        specifier: ~1.4.5
-        version: 1.4.5(typescript@5.6.3)
+        specifier: ~1.4.6
+        version: 1.4.6(typescript@5.6.3)
       '@tsslint/eslint':
-        specifier: ~1.4.5
-        version: 1.4.5(typescript@5.6.3)
+        specifier: ~1.4.6
+        version: 1.4.6(typescript@5.6.3)
       '@types/hash-sum':
         specifier: ^1.0.2
         version: 1.0.2
@@ -1200,23 +1200,23 @@ packages:
   '@tootallnate/quickjs-emscripten@0.23.0':
     resolution: {integrity: sha512-C5Mc6rdnsaJDjO3UpGW/CQTHtCKaYlScZTly4JIu97Jxo/odCiH0ITnDXSJPTOrEKk/ycSZ0AOgTmkDtkOsvIA==}
 
-  '@tsslint/cli@1.4.5':
-    resolution: {integrity: sha512-by/N8eDz+del9gdfORaBc9f7RiEpIXVdXsqSITRiBQTgjWMVB35Uzx0fMI88mudDDwejvQF/ZcDZUW6QPucOZA==}
+  '@tsslint/cli@1.4.6':
+    resolution: {integrity: sha512-UIBHL+5ZFiPeLBO3k8g/GhEO+1E134v6pRioS/NuXUc1Lr1jQ9Qs9UwllNI4aT5Hol4KF0Hu1kj+PoJGk8+8vQ==}
     hasBin: true
     peerDependencies:
       typescript: '*'
 
-  '@tsslint/config@1.4.5':
-    resolution: {integrity: sha512-cTnVmTKX7kxjCz3TwiF59MTUrzbIE5AmAbSA4G3Mk0kRNTtaCff3v31E1eEn/H0DWyw2B7wcJd5FTGkbpWrOzA==}
+  '@tsslint/config@1.4.6':
+    resolution: {integrity: sha512-viB0/KhCnALQFDbYguvIlLgUdo0TH6LoUsafrA0sC/mXuccaNj3Xji/MjzAD83iWODCysB7+gPME0r3NF4CijQ==}
 
-  '@tsslint/core@1.4.5':
-    resolution: {integrity: sha512-I9PW7Gd8qD5jZLVnFnnqZbhywwrBUxzvLAYBJGYG3OchYEcYa3+aPxu8iXOGTOre5ty/4Fs/xK4DUjkTXH2kvQ==}
+  '@tsslint/core@1.4.6':
+    resolution: {integrity: sha512-GNB4MEQaAFBA/9wefdqqSqwROM1+UqSB1JlmdAsel3+z10S0jZRDLWzKQRI2jZNE8xPG4sqR+nk9wVir7VE/mQ==}
 
-  '@tsslint/eslint@1.4.5':
-    resolution: {integrity: sha512-WF/EfgZ8RydsMCJh9oY5wDxNh9r/gZHpt93hxwWs5XBzY5DyuEbRauBGT3hXINx8ykXE08BqkI5FZAnaFr3t/Q==}
+  '@tsslint/eslint@1.4.6':
+    resolution: {integrity: sha512-tw3uPDX0nHYDE+0/cnVzs2QCS/eYM6AiZOPON5L4DZdOYLOMtk5LC2atBhHz9yPtS6WzKJS/nlN3b8TKXay6ug==}
 
-  '@tsslint/types@1.4.5':
-    resolution: {integrity: sha512-USmbzTrqY4i6Tvuo7WULnJxD6FeohLYqc+y1gHKV2F1yZuVLh9miGq/2Z2cwZ645v9c71995AplFAE+Gpa7W+A==}
+  '@tsslint/types@1.4.6':
+    resolution: {integrity: sha512-l7EwsIl1kaVBjtPQRzeQYfmdHJPxCWCN4i9Y/XKM788xRrIaPdVN1uezZjEPilySrl2OgTv98jwDYgGk2utg3w==}
 
   '@types/estree@1.0.6':
     resolution: {integrity: sha512-AYnb1nQyY49te+VRAVgmzfcgjYS91mY5P0TKUDCLEM+gNnA+3T6rWITXRLYCpahpqSQbN5cE+gHpnPyXjHWxcw==}
@@ -3963,33 +3963,33 @@ snapshots:
 
   '@tootallnate/quickjs-emscripten@0.23.0': {}
 
-  '@tsslint/cli@1.4.5(typescript@5.6.3)':
+  '@tsslint/cli@1.4.6(typescript@5.6.3)':
     dependencies:
       '@clack/prompts': 0.8.2
-      '@tsslint/config': 1.4.5(typescript@5.6.3)
-      '@tsslint/core': 1.4.5
+      '@tsslint/config': 1.4.6(typescript@5.6.3)
+      '@tsslint/core': 1.4.6
       '@volar/language-core': 2.4.11
       '@volar/typescript': 2.4.11
       glob: 10.4.5
       typescript: 5.6.3
 
-  '@tsslint/config@1.4.5(typescript@5.6.3)':
+  '@tsslint/config@1.4.6(typescript@5.6.3)':
     dependencies:
-      '@tsslint/types': 1.4.5
+      '@tsslint/types': 1.4.6
       ts-api-utils: 2.0.0(typescript@5.6.3)
     transitivePeerDependencies:
       - typescript
 
-  '@tsslint/core@1.4.5':
+  '@tsslint/core@1.4.6':
     dependencies:
-      '@tsslint/types': 1.4.5
+      '@tsslint/types': 1.4.6
       error-stack-parser: 2.1.4
       esbuild: 0.24.0
       minimatch: 10.0.1
 
-  '@tsslint/eslint@1.4.5(typescript@5.6.3)':
+  '@tsslint/eslint@1.4.6(typescript@5.6.3)':
     dependencies:
-      '@tsslint/config': 1.4.5(typescript@5.6.3)
+      '@tsslint/config': 1.4.6(typescript@5.6.3)
       '@typescript-eslint/parser': 8.18.0(eslint@9.16.0)(typescript@5.6.3)
       eslint: 9.16.0
     transitivePeerDependencies:
@@ -3997,7 +3997,7 @@ snapshots:
       - supports-color
       - typescript
 
-  '@tsslint/types@1.4.5': {}
+  '@tsslint/types@1.4.6': {}
 
   '@types/estree@1.0.6': {}
 
