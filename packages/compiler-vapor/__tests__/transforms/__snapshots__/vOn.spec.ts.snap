@@ -301,7 +301,7 @@ export function render(_ctx) {
 
 exports[`v-on > should support multiple modifiers and event options w/ prefixIdentifiers: true 1`] = `
 "import { withModifiers as _withModifiers, on as _on, template as _template } from 'vue';
-const t0 = _template("<div></div>", ture)
+const t0 = _template("<div></div>", true)
 
 export function render(_ctx) {
   const n0 = t0()
