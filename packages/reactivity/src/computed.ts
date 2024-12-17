@@ -110,7 +110,7 @@ export class ComputedRefImpl<T = any> implements IComputed {
     if (v) {
       this.flags |= SubscriberFlags.Dirty
     } else {
-      this.flags &= ~SubscriberFlags.Dirtys
+      this.flags &= ~(SubscriberFlags.Dirty | SubscriberFlags.ToCheckDirty)
     }
   }
 
@@ -136,21 +136,22 @@ export class ComputedRefImpl<T = any> implements IComputed {
     if (this._dirty) {
       this.update()
     }
-    if (activeTrackId !== 0 && this.lastTrackedId !== activeTrackId) {
-      if (__DEV__) {
-        onTrack(activeSub!, {
-          target: this,
-          type: TrackOpTypes.GET,
-          key: 'value',
-        })
+    if (activeTrackId) {
+      if (this.lastTrackedId !== activeTrackId) {
+        if (__DEV__) {
+          onTrack(activeSub!, {
+            target: this,
+            type: TrackOpTypes.GET,
+            key: 'value',
+          })
+        }
+        this.lastTrackedId = activeTrackId
+        link(this, activeSub!).version = this.version
       }
-      this.lastTrackedId = activeTrackId
-      link(this, activeSub!).version = this.version
-    } else if (
-      activeEffectScope !== undefined &&
-      this.lastTrackedId !== activeEffectScope.trackId
-    ) {
-      link(this, activeEffectScope)
+    } else if (activeEffectScope !== undefined) {
+      if (this.lastTrackedId !== activeEffectScope.trackId) {
+        link(this, activeEffectScope)
+      }
     }
     return this._value!
   }

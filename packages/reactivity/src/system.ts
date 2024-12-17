@@ -1,4 +1,4 @@
-// Ported from https://github.com/stackblitz/alien-signals/blob/v0.4.4/src/system.ts
+// Ported from https://github.com/stackblitz/alien-signals/blob/v0.4.5/src/system.ts
 
 export interface IEffect extends Subscriber {
   nextNotify: IEffect | undefined
@@ -42,7 +42,6 @@ export enum SubscriberFlags {
   // 2~5 are using in EffectFlags
   ToCheckDirty = 1 << 6,
   Dirty = 1 << 7,
-  Dirtys = SubscriberFlags.ToCheckDirty | SubscriberFlags.Dirty,
 
   DirtyFlagsIndex = 6,
 }
@@ -278,7 +277,7 @@ export function checkDirty(deps: Link): boolean {
               continue
             }
           } else {
-            sub.flags &= ~SubscriberFlags.Dirtys
+            sub.flags &= ~SubscriberFlags.ToCheckDirty
           }
           deps = prevLink.nextDep!
           if (deps !== undefined) {
@@ -297,7 +296,12 @@ export function checkDirty(deps: Link): boolean {
 export function startTrack(sub: Subscriber): void {
   sub.depsTail = undefined
   sub.flags =
-    (sub.flags & ~(SubscriberFlags.CanPropagate | SubscriberFlags.Dirtys)) |
+    (sub.flags &
+      ~(
+        SubscriberFlags.CanPropagate |
+        SubscriberFlags.ToCheckDirty |
+        SubscriberFlags.Dirty
+      )) |
     SubscriberFlags.Tracking
 }
 
@@ -347,11 +351,8 @@ function clearTrack(link: Link): void {
     linkPool = link
 
     if (dep.subs === undefined && 'deps' in dep) {
-      if ('notify' in dep) {
-        dep.flags &= ~SubscriberFlags.Dirtys
-      } else {
-        dep.flags |= SubscriberFlags.Dirty
-      }
+      // dep is never be IEffect in Vue
+      dep.flags |= SubscriberFlags.Dirty
       const depDeps = dep.deps
       if (depDeps !== undefined) {
         link = depDeps
