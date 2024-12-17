@@ -52,6 +52,7 @@ export interface BlockIRNode extends BaseIRNode {
   dynamic: IRDynamicInfo
   effect: IREffect[]
   operation: OperationNode[]
+  expressions: SimpleExpressionNode[]
   returns: number[]
 }
 

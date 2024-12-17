@@ -18,6 +18,9 @@ import {
 } from './utils'
 import { genCreateComponent } from './component'
 import { genSlotOutlet } from './slotOutlet'
+import type { SimpleExpressionNode } from '@vue/compiler-core'
+import { extend } from '@vue/shared'
+import { genExpression } from './expression'
 
 export function genOperations(
   opers: OperationNode[],
@@ -84,10 +87,16 @@ export function genEffects(
   const { helper } = context
   const [frag, push, unshift] = buildCodeFragment()
   let operationsCount = 0
+  const declarations = processExpressions(context)
+  const [ids, declareFrag] = genDeclarations(declarations, context)
+  push(...declareFrag)
   for (let i = 0; i < effects.length; i++) {
     const effect = effects[i]
     operationsCount += effect.operations.length
-    const frags = genEffect(effect, context)
+    const frags = context.withId(
+      () => genEffect(effect, context),
+      ids
+    )
     i > 0 && push(NEWLINE)
     if (frag[frag.length - 1] === ')' && frags[0] === '(') {
       push(';')
@@ -124,4 +133,40 @@ export function genEffect(
   }
 
   return frag
+}
+
+function genDeclarations(
+  declarations: { key: string, value: SimpleExpressionNode}[],
+  context: CodegenContext,
+): [Record<string, null>,CodeFragment[]] {
+  const [frag, push] = buildCodeFragment()
+  const ids: Record<string, null> = Object.create(null)
+  for (let i = 0; i < declarations.length; i++) {
+    const {key,value} = declarations[i]
+    ids[key] = null
+    push(`const ${key} = `, ...genExpression(value,context), ';', NEWLINE)
+  }
+  return [ids, frag]
+}
+
+function processExpressions(
+  context: CodegenContext
+): { key: string, value: SimpleExpressionNode}[] {
+  const { block: { expressions } } = context
+  const declarations: { key: string, value: SimpleExpressionNode}[] = []
+  expressions.forEach(exp => {
+    const oldExp = extend({}, exp)
+    const varName = `_${exp.content
+      .replace(/[^a-zA-Z0-9]/g, '_')
+      .replace(/_+/g, '_')}`
+    exp.ast = null
+    exp.content = varName
+    if(!declarations.some(declaration => declaration.key === varName)) {
+      declarations.push({
+        key: varName,
+        value: oldExp,
+      })
+    }
+  })
+  return declarations
 }
