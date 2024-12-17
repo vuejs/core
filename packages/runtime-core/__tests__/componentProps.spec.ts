@@ -389,6 +389,7 @@ describe('component props', () => {
         bool: { type: Boolean, required: true },
         str: { type: String, required: true },
         num: { type: Number, required: true },
+        null: { type: null, required: true },
       },
       setup() {
         return () => null
@@ -398,6 +399,7 @@ describe('component props', () => {
     expect(`Missing required prop: "bool"`).toHaveBeenWarned()
     expect(`Missing required prop: "str"`).toHaveBeenWarned()
     expect(`Missing required prop: "num"`).toHaveBeenWarned()
+    expect(`Missing required prop: "null"`).toHaveBeenWarned()
   })
 
   test('warn on type mismatch', () => {
