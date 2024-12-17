@@ -305,6 +305,8 @@ export function render(_ctx) {
   const n5 = t5()
   const n6 = t6()
   _renderEffect(() => {
+    const _width = _ctx.width;
+    const _height = _ctx.height;
     _setAttr(n0, "spellcheck", _ctx.spellcheck)
     _setAttr(n0, "draggable", _ctx.draggable)
     _setAttr(n0, "translate", _ctx.translate)
@@ -312,15 +314,15 @@ export function render(_ctx) {
     _setAttr(n1, "list", _ctx.list)
     _setAttr(n2, "type", _ctx.type)
     
-    _setAttr(n3, "width", _ctx.width)
-    _setAttr(n4, "width", _ctx.width)
-    _setAttr(n5, "width", _ctx.width)
-    _setAttr(n6, "width", _ctx.width)
+    _setAttr(n3, "width", _width)
+    _setAttr(n4, "width", _width)
+    _setAttr(n5, "width", _width)
+    _setAttr(n6, "width", _width)
     
-    _setAttr(n3, "height", _ctx.height)
-    _setAttr(n4, "height", _ctx.height)
-    _setAttr(n5, "height", _ctx.height)
-    _setAttr(n6, "height", _ctx.height)
+    _setAttr(n3, "height", _height)
+    _setAttr(n4, "height", _height)
+    _setAttr(n5, "height", _height)
+    _setAttr(n6, "height", _height)
   })
   return [n0, n1, n2, n3, n4, n5, n6]
 }"
@@ -343,7 +345,11 @@ const t0 = _template("<div></div>", true)
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => _setDynamicProps(n0, [{ [_ctx.id]: _ctx.id, [_ctx.title]: _ctx.title }], true))
+  _renderEffect(() => {
+    const _id = _ctx.id;
+    const _title = _ctx.title;
+    _setDynamicProps(n0, [{ [_id]: _id, [_title]: _title }], true)
+  })
   return n0
 }"
 `;
@@ -354,7 +360,10 @@ const t0 = _template("<div></div>", true)
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => _setDynamicProps(n0, [{ [_ctx.id]: _ctx.id, foo: "bar", checked: "" }], true))
+  _renderEffect(() => {
+    const _id = _ctx.id;
+    _setDynamicProps(n0, [{ [_id]: _id, foo: "bar", checked: "" }], true)
+  })
   return n0
 }"
 `;

@@ -18,9 +18,18 @@ import {
 } from './utils'
 import { genCreateComponent } from './component'
 import { genSlotOutlet } from './slotOutlet'
-import type { SimpleExpressionNode } from '@vue/compiler-core'
+import {
+  type SimpleExpressionNode,
+  createSimpleExpression,
+} from '@vue/compiler-core'
 import { extend } from '@vue/shared'
 import { genExpression } from './expression'
+import { walk } from 'estree-walker'
+import type { Identifier, Node, StringLiteral } from '@babel/types'
+import {
+  type ParserOptions as BabelOptions,
+  parseExpression,
+} from '@babel/parser'
 
 export function genOperations(
   opers: OperationNode[],
@@ -93,10 +102,7 @@ export function genEffects(
   for (let i = 0; i < effects.length; i++) {
     const effect = effects[i]
     operationsCount += effect.operations.length
-    const frags = context.withId(
-      () => genEffect(effect, context),
-      ids
-    )
+    const frags = context.withId(() => genEffect(effect, context), ids)
     i > 0 && push(NEWLINE)
     if (frag[frag.length - 1] === ')' && frags[0] === '(') {
       push(';')
@@ -105,7 +111,7 @@ export function genEffects(
   }
 
   const newLineCount = frag.filter(frag => frag === NEWLINE).length
-  if (newLineCount > 1 || operationsCount > 1) {
+  if (newLineCount > 1 || operationsCount > 1 || declarations.length > 0) {
     unshift(`{`, INDENT_START, NEWLINE)
     push(INDENT_END, NEWLINE, '}')
   }
@@ -135,38 +141,107 @@ export function genEffect(
   return frag
 }
 
+type DeclarationValue = {
+  replacement: string
+  value: SimpleExpressionNode
+}
+
 function genDeclarations(
-  declarations: { key: string, value: SimpleExpressionNode}[],
+  declarations: DeclarationValue[],
   context: CodegenContext,
-): [Record<string, null>,CodeFragment[]] {
+): [Record<string, string>, CodeFragment[]] {
   const [frag, push] = buildCodeFragment()
-  const ids: Record<string, null> = Object.create(null)
+  const ids: Record<string, string> = Object.create(null)
   for (let i = 0; i < declarations.length; i++) {
-    const {key,value} = declarations[i]
-    ids[key] = null
-    push(`const ${key} = `, ...genExpression(value,context), ';', NEWLINE)
+    const { replacement, value } = declarations[i]
+    ids[replacement] = replacement
+    push(
+      `const ${replacement} = `,
+      ...genExpression(value, context),
+      ';',
+      NEWLINE,
+    )
   }
   return [ids, frag]
 }
 
-function processExpressions(
-  context: CodegenContext
-): { key: string, value: SimpleExpressionNode}[] {
-  const { block: { expressions } } = context
-  const declarations: { key: string, value: SimpleExpressionNode}[] = []
-  expressions.forEach(exp => {
-    const oldExp = extend({}, exp)
-    const varName = `_${exp.content
-      .replace(/[^a-zA-Z0-9]/g, '_')
-      .replace(/_+/g, '_')}`
-    exp.ast = null
-    exp.content = varName
-    if(!declarations.some(declaration => declaration.key === varName)) {
-      declarations.push({
-        key: varName,
-        value: oldExp,
+function processExpressions(context: CodegenContext): DeclarationValue[] {
+  const plugins = context.options.expressionPlugins
+  const options: BabelOptions = {
+    plugins: plugins ? [...plugins, 'typescript'] : ['typescript'],
+  }
+  const {
+    block: { expressions },
+  } = context
+  const seenExp: Record<string, number> = Object.create(null)
+  const expMap = new Map<string, SimpleExpressionNode[]>()
+  const declarations: DeclarationValue[] = []
+  expressions.forEach(exp => extractExpression(exp, seenExp, expMap))
+  for (const [key, values] of expMap) {
+    if (seenExp[key]! > 1 && values.length > 1) {
+      const varName = getReplacementName(key)
+      values.forEach(node => {
+        node.content = node.content.replace(key, varName)
+      })
+      if (!declarations.some(d => d.replacement === varName)) {
+        declarations.push({
+          replacement: varName,
+          value: extend({ ast: null }, createSimpleExpression(key)),
+        })
+      }
+    }
+  }
+  for (const [key, values] of expMap) {
+    if (seenExp[key]! > 1 && values.length > 1) {
+      values.forEach(node => {
+        node.ast = parseExpression(`(${node.content})`, options)
       })
     }
-  })
+  }
   return declarations
+}
+
+function getReplacementName(name: string): string {
+  return `_${name.replace(/[^a-zA-Z0-9]/g, '_').replace(/_+/g, '_')}`
+}
+
+function extractExpression(
+  node: SimpleExpressionNode,
+  seenExp: Record<string, number>,
+  expMap: Map<string, SimpleExpressionNode[]>,
+) {
+  const add = (name: string) => {
+    seenExp[name] = (seenExp[name] || 0) + 1
+    expMap.set(name, [...(expMap.get(name) || []), node])
+  }
+  if (node.ast) {
+    walk(node.ast, {
+      enter(node: Node) {
+        if (node.type === 'MemberExpression') {
+          add(getMemberExp(node))
+          return this.skip()
+        }
+        if (node.type === 'Identifier') {
+          add((node as Identifier).name)
+        }
+      },
+    })
+  } else if (node.ast === null) {
+    add((node as SimpleExpressionNode).content)
+  }
+}
+
+function getMemberExp(expr: Node): string {
+  if (expr.type === 'Identifier') {
+    return expr.name
+  }
+  if (expr.type !== 'MemberExpression') {
+    return ''
+  }
+  const object = getMemberExp(expr.object)
+  const prop = expr.computed
+    ? // eslint-disable-next-line no-restricted-syntax
+      `[${(expr.property as StringLiteral).extra?.raw}]`
+    : `.${(expr.property as Identifier).name}`
+  return `${object}${prop}`
 }
