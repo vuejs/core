@@ -11,7 +11,7 @@ return withDirectives(h(comp), [
 ])
 */
 
-import type { VNode } from './vnode'
+import { type VNode, currentBlock } from './vnode'
 import { EMPTY_OBJ, isBuiltInDirective, isFunction } from '@vue/shared'
 import { warn } from './warning'
 import {
@@ -143,6 +143,7 @@ export function withDirectives<T extends VNode>(
   for (let i = 0; i < directives.length; i++) {
     let [dir, value, arg, modifiers = EMPTY_OBJ] = directives[i]
     if (dir) {
+      currentBlock && currentBlock.push(vnode)
       if (isFunction(dir)) {
         dir = {
           mounted: dir,

@@ -105,16 +105,10 @@ export const transformFor: NodeTransform = createStructuralDirectiveTransform(
           )
         }
       }
-      const maybeRuntimeDir = findDir(
-        node,
-        /^(?!if$|else$|else-if$|bind$|for$|memo$|on$|once$|slot$|model$|show$|html$|text$|model$).*$/,
-        true,
-      )
+
       const isStableFragment =
         forNode.source.type === NodeTypes.SIMPLE_EXPRESSION &&
-        forNode.source.constType > ConstantTypes.NOT_CONSTANT &&
-        !maybeRuntimeDir
-
+        forNode.source.constType > ConstantTypes.NOT_CONSTANT
       const fragmentFlag = isStableFragment
         ? PatchFlags.STABLE_FRAGMENT
         : keyProp
