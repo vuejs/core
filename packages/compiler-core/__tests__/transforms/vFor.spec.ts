@@ -1073,5 +1073,12 @@ describe('compiler: v-for', () => {
         },
       })
     })
+
+    test('template w/ v-for + custom directive should not be STABLE_FRAGMENT', () => {
+      const { root } = parseWithForTransform(
+        '<template v-if="show"><h1 v-for="i in arr" :key="i" v-focus></h1></template>',
+      )
+      expect(generate(root).code).toMatchSnapshot()
+    })
   })
 })

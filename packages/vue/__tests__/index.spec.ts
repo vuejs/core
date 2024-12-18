@@ -276,6 +276,38 @@ describe('compiler + runtime integration', () => {
     expect(container.innerHTML).toBe(`<div>false<div>true</div></div>`)
   })
 
+  it('should trigger custom directive unmounted hook with v-for', async () => {
+    const mounted = vi.fn()
+    const unmounted = vi.fn()
+    const visible = ref(true)
+    const App = {
+      directives: {
+        foo: {
+          mounted,
+          unmounted,
+        },
+      },
+      setup() {
+        const arr = [1, 2, 3]
+        return {
+          arr,
+          visible,
+        }
+      },
+      template: `<template v-if="visible">
+        <h1 v-for="i in arr" :key="i" v-foo></h1>
+      </template>`,
+    }
+
+    const container = document.createElement('div')
+    createApp(App).mount(container)
+    await nextTick()
+    expect(mounted).toHaveBeenCalledTimes(3)
+    visible.value = false
+    await nextTick()
+    expect(unmounted).toHaveBeenCalledTimes(3)
+  })
+
   test('v-for + v-once', async () => {
     const list = reactive([1])
     const App = {
