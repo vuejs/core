@@ -2,6 +2,7 @@
 
 import {
   createComponent,
+  createFor,
   createForSlots,
   createIf,
   createSlot,
@@ -13,7 +14,14 @@ import {
   setText,
   template,
 } from '../src'
-import { currentInstance, nextTick, ref } from '@vue/runtime-dom'
+import {
+  type ComponentInternalInstance,
+  currentInstance,
+  getCurrentInstance,
+  nextTick,
+  ref,
+  useSlots,
+} from '@vue/runtime-dom'
 import { makeRender } from './_utils'
 
 const define = makeRender<any>()
@@ -332,6 +340,200 @@ describe('component: slots', () => {
       }).render()
 
       expect(host.innerHTML).toBe('<div>fallback<!--slot--></div>')
+    })
+
+    // test case could be previewed at
+    // https://deploy-preview-241--vapor-repl.netlify.app/#__VAPOR__eNp9VMtu2zAQ/JWFcrAMOBKC9JRKQR/IoT00RVP0YuWgSCuFNkUK4kq1Yfjfu6QefsQNYAPi7nC4HM7uzvtc10HXonfnRSZrRE1gkNoaZKrKOPHIJN59okRV64bgq65qKBpdwSwI7cJunX2c8jtosID9ALG5RCUq08oQEG4IYgvwZzkWaStpNh+TadMMueXNYkov4PaZIYkqWpWR0ApIl6VEfw67RAGIAnzeGXSpbDGQqEp6hTiO4XYAgCXu00y/vHm2wT2gNHgZcHq2QyeKf1HYi8NS8IKwqmVKyCuASKi6JeiuK52jtJLxRRMPwj5rVXJf/D3ug6vhlCEBYCglkcEQHuDhyTkAb1iW9qjniSTfqrRilt2uF3vPhb8hOifprgvdcNWCIyCU1YOLv1ra9YFaal3fWWIHu0hsl9Nlo5eWiN/rUyZFtraiuIdjL/UfUdgDGHxC4i08oXLcBK9UySNP0rZGZmGJW8cy1sUeGJ2XNcgcf1JesqePTRh2NshWPNtjYaOZhzY4Ap3y+fyfB5VuFfmzq7SuZ/PJE1EuOhA518dxLi4KOXDPVyHD7i5EGayMVnwbZ7nEy1glIbF5rK2nucFY2eGFvVRK/fe7i1HT4mKMZ6+YrS/EV2ZjY4n3s0GDTcfiTDlKmxLZijb98PTD2XJKjlK+k/yFRsvW1tjDvrQq57KPcK7ab05Nocrf5mFDqMx4KVuoayGHTzzW1xrkf1c/lHsbfBhbj1Uc58z5iDqMpR20Bp+kJnPh2Xk6jVPGOEg8of1p/qxxaxM8WOJ7eHxZYUaBjfluC8PeGQDcFQ46H/rC2WFsK86ALgbAZNzI0sIdt6t1NScP88J557wr9v8AXg7dEA==
+    test('should not delete new rendered slot when the old slot is removed in loop slot', async () => {
+      const loop = ref([1, 'default', 3])
+
+      let childInstance
+      const t0 = template('<div></div>')
+      const { component: Child } = define({
+        setup() {
+          childInstance = getCurrentInstance()
+          const slots = useSlots()
+          const keys = () => Object.keys(slots)
+          return {
+            keys,
+            slots,
+          }
+        },
+        render: (_ctx: any) => {
+          const n0 = createFor(
+            () => _ctx.keys(),
+            (_ctx0: any) => {
+              const n5 = t0()
+              const n4 = createSlot(() => _ctx0[0])
+              insert(n4, n5 as ParentNode)
+              return n5
+            },
+          )
+          return n0
+        },
+      })
+
+      const t1 = template(' static default ')
+      const { render } = define({
+        setup() {
+          return createComponent(
+            Child,
+            {},
+            {
+              default: () => {
+                return t1()
+              },
+              $: [
+                () =>
+                  // @ts-expect-error TODO createForSlots
+                  createForSlots(loop.value, (item, i) => ({
+                    name: item,
+                    fn: () => template(item)(),
+                  })),
+              ],
+            },
+          )
+        },
+      })
+      const { html } = render()
+
+      expect(childInstance!.slots).toHaveProperty('1')
+      expect(childInstance!.slots).toHaveProperty('default')
+      expect(childInstance!.slots).toHaveProperty('3')
+      expect(html()).toBe(
+        '<div>1<!--slot--></div><div>3<!--slot--></div><div>default<!--slot--></div><!--for-->',
+      )
+      loop.value = [1]
+      await nextTick()
+      expect(childInstance!.slots).toHaveProperty('1')
+      expect(childInstance!.slots).toHaveProperty('default')
+      expect(childInstance!.slots).not.toHaveProperty('3')
+      expect(html()).toBe(
+        '<div>1<!--slot--></div><div> static default <!--slot--></div><!--for-->',
+      )
+    })
+
+    test('should cleanup all slots when loop slot has same key', async () => {
+      const loop = ref([1, 1, 1])
+
+      let childInstance
+      const t0 = template('<div></div>')
+      const { component: Child } = define({
+        setup() {
+          childInstance = getCurrentInstance()
+          const slots = useSlots()
+          const keys = () => Object.keys(slots)
+          return {
+            keys,
+            slots,
+          }
+        },
+        render: (_ctx: any) => {
+          const n0 = createFor(
+            () => _ctx.keys(),
+            (_ctx0: any) => {
+              const n5 = t0()
+              const n4 = createSlot(() => _ctx0[0])
+              insert(n4, n5 as ParentNode)
+              return n5
+            },
+          )
+          return n0
+        },
+      })
+
+      const t1 = template(' static default ')
+      const { render } = define({
+        setup() {
+          return createComponent(
+            Child,
+            {},
+            {
+              default: () => {
+                return t1()
+              },
+              $: [
+                () =>
+                  // @ts-expect-error TODO createForSlots
+                  createForSlots(loop.value, (item, i) => ({
+                    name: item,
+                    fn: () => template(item)(),
+                  })),
+              ],
+            },
+          )
+        },
+      })
+      const { html } = render()
+      expect(childInstance!.slots).toHaveProperty('1')
+      expect(childInstance!.slots).toHaveProperty('default')
+      expect(html()).toBe(
+        '<div>1<!--slot--></div><div> static default <!--slot--></div><!--for-->',
+      )
+      loop.value = [1]
+      await nextTick()
+      expect(childInstance!.slots).toHaveProperty('1')
+      expect(childInstance!.slots).toHaveProperty('default')
+      expect(html()).toBe(
+        '<div>1<!--slot--></div><div> static default <!--slot--></div><!--for-->',
+      )
+      loop.value = [1, 2, 3]
+      await nextTick()
+      expect(childInstance!.slots).toHaveProperty('1')
+      expect(childInstance!.slots).toHaveProperty('2')
+      expect(childInstance!.slots).toHaveProperty('3')
+      expect(childInstance!.slots).toHaveProperty('default')
+      expect(html()).toBe(
+        '<div>1<!--slot--></div><div>2<!--slot--></div><div>3<!--slot--></div><div> static default <!--slot--></div><!--for-->',
+      )
+    })
+
+    test('dynamicSlots should not cover high level slots', async () => {
+      const dynamicFlag = ref(true)
+
+      let instance: ComponentInternalInstance
+      const { component: Child } = define({
+        render() {
+          instance = getCurrentInstance()!
+          return [createSlot('default'), createSlot('others')]
+        },
+      })
+
+      const { render, html } = define({
+        render() {
+          return createComponent(
+            Child,
+            {},
+            {
+              default: () => template('default')(),
+              $: [
+                () =>
+                  dynamicFlag.value
+                    ? {
+                        name: 'default',
+                        fn: () => template('dynamic default')(),
+                      }
+                    : { name: 'others', fn: () => template('others')() },
+              ],
+            },
+          )
+        },
+      })
+
+      render()
+
+      expect(html()).toBe('default<!--slot--><!--slot-->')
+
+      dynamicFlag.value = false
+      await nextTick()
+
+      expect(html()).toBe('default<!--slot-->others<!--slot-->')
+      expect(instance!.slots).haveOwnProperty('others')
+
+      dynamicFlag.value = true
+      await nextTick()
+      expect(html()).toBe('default<!--slot--><!--slot-->')
+      expect(instance!.slots).not.haveOwnProperty('others')
     })
 
     test('dynamic slot should be updated correctly', async () => {
