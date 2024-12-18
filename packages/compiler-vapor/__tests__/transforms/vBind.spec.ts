@@ -142,13 +142,13 @@ describe('compiler v-bind', () => {
           {
             key: {
               type: NodeTypes.SIMPLE_EXPRESSION,
-              content: '_id',
+              content: 'id',
               isStatic: false,
             },
             values: [
               {
                 type: NodeTypes.SIMPLE_EXPRESSION,
-                content: '_id',
+                content: 'id',
                 isStatic: false,
               },
             ],
@@ -156,13 +156,13 @@ describe('compiler v-bind', () => {
           {
             key: {
               type: NodeTypes.SIMPLE_EXPRESSION,
-              content: '_title',
+              content: 'title',
               isStatic: false,
             },
             values: [
               {
                 type: NodeTypes.SIMPLE_EXPRESSION,
-                content: '_title',
+                content: 'title',
                 isStatic: false,
               },
             ],
@@ -188,13 +188,13 @@ describe('compiler v-bind', () => {
           {
             key: {
               type: NodeTypes.SIMPLE_EXPRESSION,
-              content: '_id',
+              content: 'id',
               isStatic: false,
             },
             values: [
               {
                 type: NodeTypes.SIMPLE_EXPRESSION,
-                content: '_id',
+                content: 'id',
                 isStatic: false,
               },
             ],
