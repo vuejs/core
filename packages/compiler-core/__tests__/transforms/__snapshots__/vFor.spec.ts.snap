@@ -135,26 +135,6 @@ return function render(_ctx, _cache) {
 }"
 `;
 
-exports[`compiler: v-for > codegen > template w/ v-for + custom directive should not be STABLE_FRAGMENT 1`] = `
-"const _Vue = Vue
-
-return function render(_ctx, _cache) {
-  with (_ctx) {
-    const { renderList: _renderList, Fragment: _Fragment, openBlock: _openBlock, createElementBlock: _createElementBlock, resolveDirective: _resolveDirective, withDirectives: _withDirectives, createCommentVNode: _createCommentVNode } = _Vue
-
-    const _directive_focus = _resolveDirective("focus")
-
-    return show
-      ? (_openBlock(true), _createElementBlock(_Fragment, { key: 0 }, _renderList(arr, (i) => {
-          return _withDirectives((_openBlock(), _createElementBlock("h1", { key: i })), [
-            [_directive_focus]
-          ])
-        }), 128 /* KEYED_FRAGMENT */))
-      : _createCommentVNode("v-if", true)
-  }
-}"
-`;
-
 exports[`compiler: v-for > codegen > v-for on <slot/> 1`] = `
 "const _Vue = Vue
 
