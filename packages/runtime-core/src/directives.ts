@@ -143,7 +143,9 @@ export function withDirectives<T extends VNode>(
   for (let i = 0; i < directives.length; i++) {
     let [dir, value, arg, modifiers = EMPTY_OBJ] = directives[i]
     if (dir) {
-      currentBlock && currentBlock.push(vnode)
+      if (currentBlock && !currentBlock.find(i => i === vnode)) {
+        currentBlock.push(vnode)
+      }
       if (isFunction(dir)) {
         dir = {
           mounted: dir,

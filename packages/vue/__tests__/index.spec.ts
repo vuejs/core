@@ -276,7 +276,7 @@ describe('compiler + runtime integration', () => {
     expect(container.innerHTML).toBe(`<div>false<div>true</div></div>`)
   })
 
-  it('should trigger custom directive unmounted hook with v-for', async () => {
+  test('should trigger custom directive unmounted hook with v-for', async () => {
     const mounted = vi.fn()
     const unmounted = vi.fn()
     const visible = ref(true)
