@@ -305,8 +305,8 @@ export function render(_ctx) {
   const n5 = t5()
   const n6 = t6()
   _renderEffect(() => {
-    const _width = _ctx.width;
-    const _height = _ctx.height;
+    const _width = _ctx.width
+    const _height = _ctx.height
     _setAttr(n0, "spellcheck", _ctx.spellcheck)
     _setAttr(n0, "draggable", _ctx.draggable)
     _setAttr(n0, "translate", _ctx.translate)
@@ -346,8 +346,8 @@ const t0 = _template("<div></div>", true)
 export function render(_ctx) {
   const n0 = t0()
   _renderEffect(() => {
-    const _id = _ctx.id;
-    const _title = _ctx.title;
+    const _id = _ctx.id
+    const _title = _ctx.title
     _setDynamicProps(n0, [{ [_id]: _id, [_title]: _title }], true)
   })
   return n0
@@ -361,7 +361,7 @@ const t0 = _template("<div></div>", true)
 export function render(_ctx) {
   const n0 = t0()
   _renderEffect(() => {
-    const _id = _ctx.id;
+    const _id = _ctx.id
     _setDynamicProps(n0, [{ [_id]: _id, foo: "bar", checked: "" }], true)
   })
   return n0

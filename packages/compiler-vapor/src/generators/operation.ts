@@ -25,7 +25,7 @@ import {
 import { extend } from '@vue/shared'
 import { genExpression } from './expression'
 import { walk } from 'estree-walker'
-import type { Identifier, Node, StringLiteral } from '@babel/types'
+import type { Identifier, Node } from '@babel/types'
 import {
   type ParserOptions as BabelOptions,
   parseExpression,
@@ -155,14 +155,13 @@ function genDeclarations(
   for (let i = 0; i < declarations.length; i++) {
     const { replacement, value } = declarations[i]
     ids[replacement] = replacement
-    push(
-      `const ${replacement} = `,
-      ...genExpression(value, context),
-      ';',
-      NEWLINE,
-    )
+    push(`const ${replacement} = `, ...genExpression(value, context), NEWLINE)
   }
   return [ids, frag]
+}
+
+function escapeRegExp(string: string) {
+  return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
 
 function processExpressions(context: CodegenContext): DeclarationValue[] {
@@ -174,14 +173,16 @@ function processExpressions(context: CodegenContext): DeclarationValue[] {
     block: { expressions },
   } = context
   const seenExp: Record<string, number> = Object.create(null)
-  const expMap = new Map<string, SimpleExpressionNode[]>()
+  const expMap = new Map<string, Set<SimpleExpressionNode>>()
   const declarations: DeclarationValue[] = []
   expressions.forEach(exp => extractExpression(exp, seenExp, expMap))
   for (const [key, values] of expMap) {
-    if (seenExp[key]! > 1 && values.length > 1) {
+    if (seenExp[key]! > 1 && values.size > 0) {
       const varName = getReplacementName(key)
+      const replaceRE = new RegExp(escapeRegExp(key), 'g')
       values.forEach(node => {
-        node.content = node.content.replace(key, varName)
+        node.content = node.content.replace(replaceRE, varName)
+        node.ast = parseExpression(`(${node.content})`, options)
       })
       if (!declarations.some(d => d.replacement === varName)) {
         declarations.push({
@@ -191,34 +192,32 @@ function processExpressions(context: CodegenContext): DeclarationValue[] {
       }
     }
   }
-  for (const [key, values] of expMap) {
-    if (seenExp[key]! > 1 && values.length > 1) {
-      values.forEach(node => {
-        node.ast = parseExpression(`(${node.content})`, options)
-      })
-    }
-  }
+
+  // console.log({seenExp, expMap, declarations, expressions})
   return declarations
 }
 
 function getReplacementName(name: string): string {
-  return `_${name.replace(/[^a-zA-Z0-9]/g, '_').replace(/_+/g, '_')}`
+  return `_${name
+    .replace(/[^a-zA-Z0-9]/g, '_')
+    .replace(/_+/g, '_')
+    .replace(/_+$/, '')}`
 }
 
 function extractExpression(
   node: SimpleExpressionNode,
   seenExp: Record<string, number>,
-  expMap: Map<string, SimpleExpressionNode[]>,
+  expMap: Map<string, Set<SimpleExpressionNode>>,
 ) {
   const add = (name: string) => {
     seenExp[name] = (seenExp[name] || 0) + 1
-    expMap.set(name, [...(expMap.get(name) || []), node])
+    expMap.set(name, (expMap.get(name) ?? new Set()).add(node))
   }
   if (node.ast) {
     walk(node.ast, {
       enter(node: Node) {
         if (node.type === 'MemberExpression') {
-          add(getMemberExp(node))
+          add(getMemberExp(node, add))
           return this.skip()
         }
         if (node.type === 'Identifier') {
@@ -231,17 +230,28 @@ function extractExpression(
   }
 }
 
-function getMemberExp(expr: Node): string {
-  if (expr.type === 'Identifier') {
-    return expr.name
+function getMemberExp(expr: Node, add: (name: string) => void): string {
+  if (!expr) return ''
+
+  switch (expr.type) {
+    case 'Identifier': // foo[bar]
+      add(expr.name)
+      return expr.name
+    case 'StringLiteral': // foo['bar']
+      return expr.extra ? (expr.extra.raw as string) : expr.value
+    case 'NumericLiteral': // foo[0]
+      return expr.value.toString()
+    case 'BinaryExpression': // foo[bar + 1]
+      return `${getMemberExp(expr.left, add)} ${expr.operator} ${getMemberExp(expr.right, add)}`
+    case 'CallExpression': // foo[bar(baz)]
+      return `${getMemberExp(expr.callee, add)}(${expr.arguments.map(arg => getMemberExp(arg, add)).join(', ')})`
+    case 'MemberExpression': // foo[bar.baz]
+      const object = getMemberExp(expr.object, add)
+      const prop = expr.computed
+        ? `[${getMemberExp(expr.property, add)}]`
+        : `.${getMemberExp(expr.property, add)}`
+      return `${object}${prop}`
+    default:
+      return ''
   }
-  if (expr.type !== 'MemberExpression') {
-    return ''
-  }
-  const object = getMemberExp(expr.object)
-  const prop = expr.computed
-    ? // eslint-disable-next-line no-restricted-syntax
-      `[${(expr.property as StringLiteral).extra?.raw}]`
-    : `.${(expr.property as Identifier).name}`
-  return `${object}${prop}`
 }
