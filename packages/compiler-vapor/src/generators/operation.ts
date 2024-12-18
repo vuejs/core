@@ -152,17 +152,22 @@ function genDeclarations(
 ): [Record<string, string>, CodeFragment[]] {
   const [frag, push] = buildCodeFragment()
   const ids= declarations.reduce((acc, cur) => {
-    acc[cur.replacement] = `_${cur.replacement}`
+    if(!cur.replacement.includes('_')) {
+      acc[cur.replacement] = `_${cur.replacement}`
+      push(`const _${cur.replacement} = `, ...genExpression(cur.value, context), NEWLINE)
+    }
     return acc
   },{} as Record<string, string>)
 
   for (let i = 0; i < declarations.length; i++) {
     const { replacement, value } = declarations[i]
     const isExp = replacement.includes('_')
-    const descareFrag = context.withId(() => genExpression(value, context), isExp?ids:{})
-    push(`const _${replacement} = `, ...descareFrag, NEWLINE)
+    if(isExp) {
+      ids[replacement] = `_${replacement}`
+      const descareFrag = context.withId(() => genExpression(value, context), isExp ? ids : {})
+      push(`const _${replacement} = `, ...descareFrag, NEWLINE)
+    }
   }
-  console.log({ ids })
   return [ids, frag]
 }
 
@@ -175,28 +180,30 @@ function processExpressions(context: CodegenContext): DeclarationValue[] {
   const options: BabelOptions = {
     plugins: plugins ? [...plugins, 'typescript'] : ['typescript'],
   }
-  const {
-    block: { expressions },
-  } = context
+  const {    block: { expressions }  } = context
   const seenExp: Record<string, number> = Object.create(null)
   const replaceMap = new Map<string, Set<SimpleExpressionNode>>()
+  const expMap = new Map<string, Node>()
   const declarations: DeclarationValue[] = []
-  expressions.forEach(exp => extractExpression(exp, seenExp, replaceMap))
+  expressions.forEach(exp => extractExpression(exp, seenExp, replaceMap, expMap))
   for (const [key, values] of replaceMap) {
     if (seenExp[key]! > 1 && values.size > 0) {
       const varName = getReplacementName(key)
+      const isExp = expMap.get(key) !== null
+      // const cloned = extend({}, node)
+      if (!declarations.some(d => d.replacement === varName)) {
+        declarations.push({
+          replacement: varName,
+          // TODO 获取 key 对应的 node 表达式
+          value: extend({ ast: isExp ? parseExpression(`(${key})`, options) : null }, createSimpleExpression(key)),
+        })
+      }
       const replaceRE = new RegExp(escapeRegExp(key), 'g')
       values.forEach(node => {
-        const cloned = extend({}, node)
         node.content = node.content.replace(replaceRE, varName)
         node.ast = parseExpression(`(${node.content})`, options)
-        if (!declarations.some(d => d.replacement === varName)) {
-          declarations.push({
-            replacement: varName,
-            value: varName.includes("_") ? cloned: extend({ ast: null }, createSimpleExpression(key)),
-          })
-        }
       })
+
     }
   }
 
@@ -221,7 +228,7 @@ function processExpressions(context: CodegenContext): DeclarationValue[] {
   //   }
   // })
 
-  console.log({seenExp, replaceMap, declarations, expressions})
+  // console.log({seenExp, replaceMap, declarations, expressions})
   return declarations
 }
 
@@ -236,6 +243,7 @@ function extractExpression(
   node: SimpleExpressionNode,
   seenExp: Record<string, number>,
   replaceMap: Map<string, Set<SimpleExpressionNode>>,
+  expMap: Map<string, Node>,
 ) {
   const add = (name: string) => {
     seenExp[name] = (seenExp[name] || 0) + 1
@@ -245,7 +253,9 @@ function extractExpression(
     walk(node.ast, {
       enter(node: Node) {
         if (node.type === 'MemberExpression') {
-          add(getMemberExp(node, add))
+          const exp = getMemberExp(node, add)
+          add(exp)
+          expMap.set(exp, node)
           return this.skip()
         }
         if (node.type === 'Identifier') {
