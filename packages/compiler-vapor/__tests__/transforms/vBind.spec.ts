@@ -693,4 +693,21 @@ describe('compiler v-bind', () => {
     )
     expect(code).matchSnapshot()
   })
+
+  test('cache multiple access to the same expression', () => {
+    const { code } = compileWithVBind(`
+      <div :id="obj['foo']['baz'] + obj.bar"></div>
+      <div :id="obj['foo']['baz'] + obj.bar"></div>
+      <div :id="obj[1][baz] + obj.bar"></div>
+      <div  :id="foo + bar"></div>
+      <div  :id="foo + bar"></div>
+      <div  :id="foo + foo + bar"></div>
+      <div :id="foo"></div>
+      <div :id="foo[bar(baz)]"></div>
+      <div :id="foo[bar(baz)]"></div>
+      <div :id="bar() + foo"></div>
+      <div :[key+1]="foo[key+1]()" />
+    `)
+    expect(code).matchSnapshot()
+  })
 })

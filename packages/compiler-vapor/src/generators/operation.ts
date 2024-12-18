@@ -22,7 +22,7 @@ import {
   type SimpleExpressionNode,
   createSimpleExpression,
 } from '@vue/compiler-core'
-import { extend, NOOP } from '@vue/shared'
+import { NOOP, extend } from '@vue/shared'
 import { genExpression } from './expression'
 import { walk } from 'estree-walker'
 import type { Node } from '@babel/types'
@@ -151,33 +151,31 @@ function genDeclarations(
   context: CodegenContext,
 ): [Record<string, string>, CodeFragment[]] {
   const [frag, push] = buildCodeFragment()
-  const ids = declarations.reduce(
-    (acc, cur) => {
-      if (!cur.replacement.includes('_')) {
-        acc[cur.replacement] = `_${cur.replacement}`
-        push(
-          `const _${cur.replacement} = `,
-          ...genExpression(cur.value, context),
-          NEWLINE,
-        )
-      }
-      return acc
-    },
-    {} as Record<string, string>,
-  )
+  const ids: Record<string, string> = {}
 
-  for (let i = 0; i < declarations.length; i++) {
-    const { replacement, value } = declarations[i]
-    const isExp = replacement.includes('_')
-    if (isExp) {
-      ids[replacement] = `_${replacement}`
-      const descareFrag = context.withId(
-        () => genExpression(value, context),
-        isExp ? ids : {},
+  // process identifiers first
+  declarations.forEach(({ replacement, value }) => {
+    if (!replacement.includes('_')) {
+      const prefixedName = `_${replacement}`
+      ids[replacement] = prefixedName
+      push(
+        `const ${prefixedName} = `,
+        ...genExpression(value, context),
+        NEWLINE,
       )
-      push(`const _${replacement} = `, ...descareFrag, NEWLINE)
     }
-  }
+  })
+
+  // process expressions with potential identifier references
+  declarations.forEach(({ replacement, value }) => {
+    if (replacement.includes('_')) {
+      const prefixedName = `_${replacement}`
+      ids[replacement] = prefixedName
+      const expFrag = context.withId(() => genExpression(value, context), ids)
+      push(`const ${prefixedName} = `, ...expFrag, NEWLINE)
+    }
+  })
+
   return [ids, frag]
 }
 
@@ -186,29 +184,81 @@ function escapeRegExp(string: string) {
 }
 
 function processExpressions(context: CodegenContext): DeclarationValue[] {
-  const plugins = context.options.expressionPlugins
-  const options: BabelOptions = {
-    plugins: plugins ? [...plugins, 'typescript'] : ['typescript'],
-  }
   const {
     block: { expressions },
   } = context
+  // 1. extract identifiers and member expressions
+  const { seenExp, replaceMap, memberExpMap } =
+    extractRepeatedExpressions(expressions)
+  // 2. handle identifiers and member expressions that appear more than once
+  // foo + obj.bar -> _foo + _obj.bar
+  const declarations = processRepeatedExpressions(
+    context,
+    seenExp,
+    replaceMap,
+    memberExpMap,
+  )
+  // 3. after processing identifiers and member expressions, remaining expressions may still contain duplicates
+  // for example: `_foo + _obj.bar` may appear multiple times.
+  // `_foo + _obj.bar` -> `_foo_obj_bar`
+  processRemainingExpressions(context, expressions, declarations)
+
+  return declarations
+}
+
+function extractRepeatedExpressions(expressions: SimpleExpressionNode[]) {
   const seenExp: Record<string, number> = Object.create(null)
   const replaceMap = new Map<string, Set<SimpleExpressionNode>>()
-  const expMap = new Map<string, Node>()
+  const memberExpMap = new Map<string, Node>()
+
+  for (const exp of expressions) {
+    const addToMaps = (name: string) => {
+      seenExp[name] = (seenExp[name] || 0) + 1
+      const set = replaceMap.get(name) || new Set()
+      set.add(exp)
+      replaceMap.set(name, set)
+    }
+
+    if (!exp.ast) {
+      addToMaps(exp.content)
+      continue
+    }
+
+    walk(exp.ast, {
+      enter(currentNode: Node) {
+        if (currentNode.type === 'MemberExpression') {
+          const memberExp = getMemberExp(currentNode, addToMaps)
+          addToMaps(memberExp)
+          memberExpMap.set(memberExp, currentNode)
+          return this.skip()
+        }
+
+        if (currentNode.type === 'Identifier') {
+          addToMaps(currentNode.name)
+        }
+      },
+    })
+  }
+
+  return { seenExp, replaceMap, memberExpMap }
+}
+
+function processRepeatedExpressions(
+  context: CodegenContext,
+  seenExp: Record<string, number>,
+  replaceMap: Map<string, Set<SimpleExpressionNode>>,
+  memberExpMap: Map<string, Node>,
+): DeclarationValue[] {
   const declarations: DeclarationValue[] = []
-  expressions.forEach(exp =>
-    extractExpression(exp, seenExp, replaceMap, expMap),
-  )
   for (const [key, values] of replaceMap) {
     if (seenExp[key]! > 1 && values.size > 0) {
       const varName = getReplacementName(key)
-      const isExp = expMap.has(key)
+      const isMemberExp = memberExpMap.has(key)
       if (!declarations.some(d => d.replacement === varName)) {
         declarations.push({
           replacement: varName,
           value: extend(
-            { ast: isExp ? parseExpression(`(${key})`, options) : null },
+            { ast: isMemberExp ? parseExp(context, key) : null },
             createSimpleExpression(key),
           ),
         })
@@ -216,11 +266,19 @@ function processExpressions(context: CodegenContext): DeclarationValue[] {
       const replaceRE = new RegExp(escapeRegExp(key), 'g')
       values.forEach(node => {
         node.content = node.content.replace(replaceRE, varName)
-        node.ast = parseExpression(`(${node.content})`, options)
+        node.ast = parseExp(context, node.content)
       })
     }
   }
 
+  return declarations
+}
+
+function processRemainingExpressions(
+  context: CodegenContext,
+  expressions: SimpleExpressionNode[],
+  declarations: DeclarationValue[],
+): void {
   const seenContent: Record<string, number> = Object.create(null)
   expressions.forEach(exp => {
     if (exp.ast && exp.ast.type !== 'Identifier') {
@@ -236,18 +294,26 @@ function processExpressions(context: CodegenContext): DeclarationValue[] {
       const varName = getReplacementName(exp.content)
       const oldContent = exp.content
       exp.content = varName
-      exp.ast = parseExpression(`(${exp.content})`, options)
+      exp.ast = parseExp(context, exp.content)
       if (!declarations.some(d => d.replacement === varName)) {
         declarations.push({
           replacement: varName,
-          value: extend({ ast:  parseExpression(`(${oldContent})`, options) }, createSimpleExpression(oldContent)),
+          value: extend(
+            { ast: parseExp(context, oldContent) },
+            createSimpleExpression(oldContent),
+          ),
         })
       }
     }
   })
+}
 
-  // console.log({seenExp, replaceMap, declarations, expressions})
-  return declarations
+function parseExp(context: CodegenContext, content: string): Node {
+  const plugins = context.options.expressionPlugins
+  const options: BabelOptions = {
+    plugins: plugins ? [...plugins, 'typescript'] : ['typescript'],
+  }
+  return parseExpression(`(${content})`, options)
 }
 
 function getReplacementName(name: string): string {
@@ -255,35 +321,6 @@ function getReplacementName(name: string): string {
     .replace(/[^a-zA-Z0-9]/g, '_')
     .replace(/_+/g, '_')
     .replace(/_+$/, '')}`
-}
-
-function extractExpression(
-  node: SimpleExpressionNode,
-  seenExp: Record<string, number>,
-  replaceMap: Map<string, Set<SimpleExpressionNode>>,
-  expMap: Map<string, Node>,
-) {
-  const add = (name: string) => {
-    seenExp[name] = (seenExp[name] || 0) + 1
-    replaceMap.set(name, (replaceMap.get(name) ?? new Set()).add(node))
-  }
-  if (node.ast) {
-    walk(node.ast, {
-      enter(node: Node) {
-        if (node.type === 'MemberExpression') {
-          const exp = getMemberExp(node, add)
-          add(exp)
-          expMap.set(exp, node)
-          return this.skip()
-        }
-        if (node.type === 'Identifier') {
-          add(node.name)
-        }
-      },
-    })
-  } else if (node.ast === null) {
-    add((node as SimpleExpressionNode).content)
-  }
 }
 
 function getMemberExp(
