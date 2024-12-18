@@ -22,7 +22,7 @@ import {
   type SimpleExpressionNode,
   createSimpleExpression,
 } from '@vue/compiler-core'
-import { extend } from '@vue/shared'
+import { extend, NOOP } from '@vue/shared'
 import { genExpression } from './expression'
 import { walk } from 'estree-walker'
 import type { Node } from '@babel/types'
@@ -240,7 +240,7 @@ function processExpressions(context: CodegenContext): DeclarationValue[] {
       if (!declarations.some(d => d.replacement === varName)) {
         declarations.push({
           replacement: varName,
-          value: extend({ ast: null }, createSimpleExpression(oldContent)),
+          value: extend({ ast:  parseExpression(`(${oldContent})`, options) }, createSimpleExpression(oldContent)),
         })
       }
     }
@@ -308,7 +308,7 @@ function getMemberExp(
       const object = getMemberExp(expr.object, onIdentifier)
       const prop = expr.computed
         ? `[${getMemberExp(expr.property, onIdentifier)}]`
-        : `.${getMemberExp(expr.property, onIdentifier)}`
+        : `.${getMemberExp(expr.property, NOOP)}`
       return `${object}${prop}`
     default:
       return ''
