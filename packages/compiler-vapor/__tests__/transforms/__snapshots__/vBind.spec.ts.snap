@@ -305,6 +305,8 @@ export function render(_ctx) {
   const n5 = t5()
   const n6 = t6()
   _renderEffect(() => {
+    const _width = _ctx.width
+    const _height = _ctx.height
     _setAttr(n0, "spellcheck", _ctx.spellcheck)
     _setAttr(n0, "draggable", _ctx.draggable)
     _setAttr(n0, "translate", _ctx.translate)
@@ -312,15 +314,15 @@ export function render(_ctx) {
     _setAttr(n1, "list", _ctx.list)
     _setAttr(n2, "type", _ctx.type)
     
-    _setAttr(n3, "width", _ctx.width)
-    _setAttr(n4, "width", _ctx.width)
-    _setAttr(n5, "width", _ctx.width)
-    _setAttr(n6, "width", _ctx.width)
+    _setAttr(n3, "width", _width)
+    _setAttr(n4, "width", _width)
+    _setAttr(n5, "width", _width)
+    _setAttr(n6, "width", _width)
     
-    _setAttr(n3, "height", _ctx.height)
-    _setAttr(n4, "height", _ctx.height)
-    _setAttr(n5, "height", _ctx.height)
-    _setAttr(n6, "height", _ctx.height)
+    _setAttr(n3, "height", _height)
+    _setAttr(n4, "height", _height)
+    _setAttr(n5, "height", _height)
+    _setAttr(n6, "height", _height)
   })
   return [n0, n1, n2, n3, n4, n5, n6]
 }"
@@ -337,13 +339,63 @@ export function render(_ctx) {
 }"
 `;
 
+exports[`compiler v-bind > cache multiple access to the same expression 1`] = `
+"import { setProp as _setProp, setDynamicProps as _setDynamicProps, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<div></div>")
+
+export function render(_ctx) {
+  const n0 = t0()
+  const n1 = t0()
+  const n2 = t0()
+  const n3 = t0()
+  const n4 = t0()
+  const n5 = t0()
+  const n6 = t0()
+  const n7 = t0()
+  const n8 = t0()
+  const n9 = t0()
+  const n10 = t0()
+  _renderEffect(() => {
+    const _obj = _ctx.obj
+    const _baz = _ctx.baz
+    const _foo = _ctx.foo
+    const _bar = _ctx.bar
+    const _key = _ctx.key
+    const _obj_foo_baz = _obj['foo']['baz']
+    const _obj_bar = _obj.bar
+    const _foo_bar_baz = _foo[_bar(_baz)]
+    const _obj_foo_baz_obj_bar = _obj_foo_baz + _obj_bar
+    const _foo_bar = _foo + _bar
+    
+    _setProp(n0, "id", _obj_foo_baz_obj_bar)
+    _setProp(n1, "id", _obj_foo_baz_obj_bar)
+    _setProp(n2, "id", _obj[1][_baz] + _obj_bar)
+    
+    _setProp(n3, "id", _foo_bar)
+    _setProp(n4, "id", _foo_bar)
+    _setProp(n5, "id", _foo + _foo_bar)
+    _setProp(n6, "id", _foo)
+    
+    _setProp(n7, "id", _foo_bar_baz)
+    _setProp(n8, "id", _foo_bar_baz)
+    _setProp(n9, "id", _bar() + _foo)
+    _setDynamicProps(n10, [{ [_key+1]: _foo[_key+1]() }])
+  })
+  return [n0, n1, n2, n3, n4, n5, n6, n7, n8, n9, n10]
+}"
+`;
+
 exports[`compiler v-bind > dynamic arg 1`] = `
 "import { setDynamicProps as _setDynamicProps, renderEffect as _renderEffect, template as _template } from 'vue';
 const t0 = _template("<div></div>", true)
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => _setDynamicProps(n0, [{ [_ctx.id]: _ctx.id, [_ctx.title]: _ctx.title }], true))
+  _renderEffect(() => {
+    const _id = _ctx.id
+    const _title = _ctx.title
+    _setDynamicProps(n0, [{ [_id]: _id, [_title]: _title }], true)
+  })
   return n0
 }"
 `;
@@ -354,7 +406,10 @@ const t0 = _template("<div></div>", true)
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => _setDynamicProps(n0, [{ [_ctx.id]: _ctx.id, foo: "bar", checked: "" }], true))
+  _renderEffect(() => {
+    const _id = _ctx.id
+    _setDynamicProps(n0, [{ [_id]: _id, foo: "bar", checked: "" }], true)
+  })
   return n0
 }"
 `;

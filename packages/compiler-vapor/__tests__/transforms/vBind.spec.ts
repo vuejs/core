@@ -171,7 +171,7 @@ describe('compiler v-bind', () => {
       ],
     })
     expect(code).contains(
-      '_setDynamicProps(n0, [{ [_ctx.id]: _ctx.id, [_ctx.title]: _ctx.title }], true)',
+      '_setDynamicProps(n0, [{ [_id]: _id, [_title]: _title }], true)',
     )
   })
 
@@ -224,7 +224,7 @@ describe('compiler v-bind', () => {
       ],
     })
     expect(code).contains(
-      '_setDynamicProps(n0, [{ [_ctx.id]: _ctx.id, foo: "bar", checked: "" }], true)',
+      '_setDynamicProps(n0, [{ [_id]: _id, foo: "bar", checked: "" }], true)',
     )
   })
 
@@ -615,13 +615,13 @@ describe('compiler v-bind', () => {
     expect(code).contains('_setAttr(n0, "form", _ctx.form)')
     expect(code).contains('_setAttr(n1, "list", _ctx.list)')
     expect(code).contains('_setAttr(n2, "type", _ctx.type)')
-    expect(code).contains('_setAttr(n3, "width", _ctx.width)')
-    expect(code).contains('_setAttr(n3, "height", _ctx.height)')
-    expect(code).contains('_setAttr(n4, "width", _ctx.width)')
-    expect(code).contains('_setAttr(n4, "height", _ctx.height)')
-    expect(code).contains('_setAttr(n5, "width", _ctx.width)')
-    expect(code).contains('_setAttr(n5, "height", _ctx.height)')
-    expect(code).contains(' _setAttr(n6, "width", _ctx.width)')
+    expect(code).contains('_setAttr(n3, "width", _width)')
+    expect(code).contains('_setAttr(n3, "height", _height)')
+    expect(code).contains('_setAttr(n4, "width", _width)')
+    expect(code).contains('_setAttr(n4, "height", _height)')
+    expect(code).contains('_setAttr(n5, "width", _width)')
+    expect(code).contains('_setAttr(n5, "height", _height)')
+    expect(code).contains(' _setAttr(n6, "width", _width)')
   })
 
   test(':innerHTML', () => {
@@ -691,6 +691,23 @@ describe('compiler v-bind', () => {
         },
       },
     )
+    expect(code).matchSnapshot()
+  })
+
+  test('cache multiple access to the same expression', () => {
+    const { code } = compileWithVBind(`
+      <div :id="obj['foo']['baz'] + obj.bar"></div>
+      <div :id="obj['foo']['baz'] + obj.bar"></div>
+      <div :id="obj[1][baz] + obj.bar"></div>
+      <div :id="foo + bar"></div>
+      <div :id="foo + bar"></div>
+      <div :id="foo + foo + bar"></div>
+      <div :id="foo"></div>
+      <div :id="foo[bar(baz)]"></div>
+      <div :id="foo[bar(baz)]"></div>
+      <div :id="bar() + foo"></div>
+      <div :[key+1]="foo[key+1]()" />
+    `)
     expect(code).matchSnapshot()
   })
 })
