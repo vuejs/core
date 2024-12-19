@@ -149,7 +149,7 @@ export class TransformContext<T extends AllNode = AllNode> {
       return this.registerOperation(...operations)
     }
 
-    this.root.block.expressions.push(...expressions)
+    this.block.expressions.push(...expressions)
     const existing = this.block.effect.find(e =>
       isSameExpression(e.expressions, expressions),
     )
