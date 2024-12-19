@@ -176,6 +176,8 @@ export function defineCustomElement(
   if (isPlainObject(Comp)) extend(Comp, extraOptions)
   class VueCustomElement extends VueElement {
     static def = Comp
+    static formAssociated = !!options.formAssociated
+
     constructor(initialProps?: Record<string, any>) {
       super(Comp, initialProps, _createApp)
     }
@@ -204,6 +206,7 @@ export class VueElement
   implements ComponentCustomElementInterface
 {
   _isVueCE = true
+  _internals: ElementInternals | null = null
   /**
    * @internal
    */
@@ -253,6 +256,9 @@ export class VueElement
     private _createApp: CreateAppFunction<Element> = createApp,
   ) {
     super()
+
+    if (this.attachInternals) this._internals = this.attachInternals()
+
     if (this.shadowRoot && _createApp !== createApp) {
       this._root = this.shadowRoot
     } else {
@@ -709,4 +715,13 @@ export function useHost(caller?: string): VueElement | null {
 export function useShadowRoot(): ShadowRoot | null {
   const el = __DEV__ ? useHost('useShadowRoot') : useHost()
   return el && el.shadowRoot
+}
+
+/**
+ * Retrieve the ElementInternals of the current custom element. Only usable in setup()
+ * of a `defineCustomElement` component.
+ */
+export function useHostInternals(): ElementInternals | null {
+  const el = __DEV__ ? useHost('useHostInternals') : useHost()
+  return el && el._internals
 }
