@@ -246,6 +246,28 @@ return function render(_ctx, _cache) {
 }"
 `;
 
+exports[`compiler: transform component slots > with whitespace: 'preserve' > named slot with v-if + v-else 1`] = `
+"const { resolveComponent: _resolveComponent, withCtx: _withCtx, createSlots: _createSlots, openBlock: _openBlock, createBlock: _createBlock } = Vue
+
+return function render(_ctx, _cache) {
+  const _component_Comp = _resolveComponent("Comp")
+
+  return (_openBlock(), _createBlock(_component_Comp, null, _createSlots({ _: 2 /* DYNAMIC */ }, [
+    ok
+      ? {
+          name: "one",
+          fn: _withCtx(() => ["foo"]),
+          key: "0"
+        }
+      : {
+          name: "two",
+          fn: _withCtx(() => ["baz"]),
+          key: "1"
+        }
+  ]), 1024 /* DYNAMIC_SLOTS */))
+}"
+`;
+
 exports[`compiler: transform component slots > with whitespace: 'preserve' > should not generate whitespace only default slot 1`] = `
 "const { resolveComponent: _resolveComponent, withCtx: _withCtx, openBlock: _openBlock, createBlock: _createBlock } = Vue
 
