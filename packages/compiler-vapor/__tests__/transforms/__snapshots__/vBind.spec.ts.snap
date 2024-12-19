@@ -373,7 +373,7 @@ export function render(_ctx) {
     
     _setProp(n3, "id", _foo_bar)
     _setProp(n4, "id", _foo_bar)
-    _setProp(n5, "id", _foo + _foo + _bar)
+    _setProp(n5, "id", _foo + _foo_bar)
     _setProp(n6, "id", _foo)
     
     _setProp(n7, "id", _foo_bar_baz)
