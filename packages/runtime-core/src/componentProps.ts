@@ -21,7 +21,9 @@ import {
   isOn,
   isReservedProp,
   isString,
+  isSymbol,
   makeMap,
+  stringifySymbol,
   toRawType,
 } from '@vue/shared'
 import { warn } from './warning'
@@ -795,6 +797,8 @@ function styleValue(value: unknown, type: string): string {
     return `"${value}"`
   } else if (type === 'Number') {
     return `${Number(value)}`
+  } else if (isSymbol(value)) {
+    return stringifySymbol(value)
   } else {
     return `${value}`
   }
