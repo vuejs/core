@@ -27,7 +27,7 @@ import { genExpression } from './expression'
 import { walk } from 'estree-walker'
 import type { Node } from '@babel/types'
 import {
-  type ParserOptions as BabelOptions,
+  type ParserOptions,
   parseExpression,
 } from '@babel/parser'
 
@@ -99,8 +99,8 @@ export function genEffects(
   } = context
   const [frag, push, unshift] = buildCodeFragment()
   let operationsCount = 0
-  const { ids, frag: declareFrags } = processExpressions(context, expressions)
-  push(...declareFrags)
+  const { ids, frag: declarationFrags } = processExpressions(context, expressions)
+  push(...declarationFrags)
   for (let i = 0; i < effects.length; i++) {
     const effect = effects[i]
     operationsCount += effect.operations.length
@@ -113,7 +113,7 @@ export function genEffects(
   }
 
   const newLineCount = frag.filter(frag => frag === NEWLINE).length
-  if (newLineCount > 1 || operationsCount > 1 || declareFrags.length > 0) {
+  if (newLineCount > 1 || operationsCount > 1 || declarationFrags.length > 0) {
     unshift(`{`, INDENT_START, NEWLINE)
     push(INDENT_END, NEWLINE, '}')
   }
@@ -158,11 +158,11 @@ function processExpressions(
   context: CodegenContext,
   expressions: SimpleExpressionNode[],
 ): DeclarationResult {
-  // 1. analyze variables
+  // analyze variables
   const { seenVariable, variableToExpMap, seenIdentifier } =
     analyzeExpressions(expressions)
-  // 2. handle identifiers and member expressions that appear more than once
-  // foo[baz] -> foo_baz
+  // process repeated identifiers and member expressions
+  // e.g., `foo[baz]` will be transformed into `foo_baz`
   const varDeclarations = processRepeatedVariables(
     context,
     seenVariable,
@@ -170,9 +170,8 @@ function processExpressions(
     seenIdentifier,
   )
 
-  // 3. after processing identifiers and member expressions, remaining expressions
-  // may still contain duplicates.
-  // `foo + bar` -> `foo_bar`
+  // process duplicate expressions after identifier and member expression handling.
+  // example: `foo + bar` will be transformed into `foo_bar`
   const expDeclarations = processRepeatedExpressions(expressions)
 
   return genDeclarations([...varDeclarations, ...expDeclarations], context)
@@ -244,10 +243,10 @@ function processRepeatedVariables(
         })
       }
 
-      // replace all non-identifiers with the new name, if node content
-      // includes only one member expression, it will become an identifier
-      // eg. foo[baz] -> foo_baz
-      // for identifiers, we don't need to replace the content, they will be
+      // replaces all non-identifiers with the new name. if node content
+      // includes only one member expression, it will become an identifier,
+      // e.g., foo[baz] -> foo_baz.
+      // for identifiers, we don't need to replace the content - they will be
       // replaced during context.withId(..., ids)
       const replaceRE = new RegExp(escapeRegExp(key), 'g')
       values.forEach(node => {
@@ -276,8 +275,8 @@ function processRepeatedExpressions(
   })
 
   // replace all occurrences of the expression with a new variable.
-  // a expression will becomes an identifier
-  // eg. foo + bar + baz -> foo_bar_baz
+  // an expression will become an identifier
+  // e.g., foo + bar + baz -> foo_bar_baz
   expressions.forEach(exp => {
     if (seenExp[exp.content]! > 1) {
       const varName = genVarName(exp.content)
@@ -288,8 +287,8 @@ function processRepeatedExpressions(
         })
       }
 
-      // replace the content with the new variable name
-      // no longer need ast due to it becomes an identifier
+      // replace the content with the new variable name.
+      // ast is no longer needed since it becomes an identifier.
       exp.content = varName
       exp.ast = null
     }
@@ -305,7 +304,7 @@ function genDeclarations(
   const [frag, push] = buildCodeFragment()
   const ids: Record<string, string> = Object.create(null)
 
-  // 1. process identifiers first because expressions may reference identifiers
+  // process identifiers first as expressions may rely on them
   declarations.forEach(({ name, isIdentifier, value }) => {
     if (isIdentifier) {
       const prefixedName = `_${name}`
@@ -318,7 +317,7 @@ function genDeclarations(
     }
   })
 
-  // 2. process expressions
+  // process expressions
   declarations.forEach(({ name, isIdentifier, value }) => {
     if (!isIdentifier) {
       const prefixedName = `_${name}`
@@ -337,7 +336,7 @@ function escapeRegExp(string: string) {
 
 function parseExp(context: CodegenContext, content: string): Node {
   const plugins = context.options.expressionPlugins
-  const options: BabelOptions = {
+  const options: ParserOptions = {
     plugins: plugins ? [...plugins, 'typescript'] : ['typescript'],
   }
   return parseExpression(`(${content})`, options)
