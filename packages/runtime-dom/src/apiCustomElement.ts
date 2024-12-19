@@ -288,7 +288,12 @@ export class VueElement
     // locate nearest Vue custom element parent for provide/inject
     let parent: Node | null = this
     while (
-      (parent = parent && (parent.parentNode || (parent as ShadowRoot).host))
+      (parent =
+        parent &&
+        // #12479 should check assignedSlot first to get correct parent
+        ((parent as Element).assignedSlot ||
+          parent.parentNode ||
+          (parent as ShadowRoot).host))
     ) {
       if (parent instanceof VueElement) {
         this._parent = parent
