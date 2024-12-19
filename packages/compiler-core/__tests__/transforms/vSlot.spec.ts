@@ -107,6 +107,27 @@ describe('compiler: transform component slots', () => {
     expect(generate(root, { prefixIdentifiers: true }).code).toMatchSnapshot()
   })
 
+  test('implicit default slot for comments', () => {
+    const { root, slots } = parseWithSlots(`<Comp><!--foo--></Comp>`, {
+      prefixIdentifiers: true,
+    })
+    expect(slots).toMatchObject(
+      createSlotMatcher({
+        default: {
+          type: NodeTypes.JS_FUNCTION_EXPRESSION,
+          params: undefined,
+          returns: [
+            {
+              type: NodeTypes.COMMENT,
+              content: `foo`,
+            },
+          ],
+        },
+      }),
+    )
+    expect(generate(root, { prefixIdentifiers: true }).code).toMatchSnapshot()
+  })
+
   test('on-component default slot', () => {
     const { root, slots } = parseWithSlots(
       `<Comp v-slot="{ foo }">{{ foo }}{{ bar }}</Comp>`,
@@ -226,6 +247,36 @@ describe('compiler: transform component slots', () => {
               content: {
                 content: `bar`,
               },
+            },
+          ],
+        },
+      }),
+    )
+    expect(generate(root, { prefixIdentifiers: true }).code).toMatchSnapshot()
+  })
+
+  test('template named slots and an implicit default slot for comments', () => {
+    const { root, slots } = parseWithSlots(
+      `<Comp>
+        <!--foo-->
+        <template #one></template>
+      </Comp>`,
+      { prefixIdentifiers: true },
+    )
+    expect(slots).toMatchObject(
+      createSlotMatcher({
+        one: {
+          type: NodeTypes.JS_FUNCTION_EXPRESSION,
+          params: undefined,
+          returns: [],
+        },
+        default: {
+          type: NodeTypes.JS_FUNCTION_EXPRESSION,
+          params: undefined,
+          returns: [
+            {
+              type: NodeTypes.COMMENT,
+              content: `foo`,
             },
           ],
         },
