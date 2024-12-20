@@ -1324,12 +1324,12 @@ function recordTypes(
       }
     }
   }
-  for (const key of Object.keys(types)) {
+  for (const key in types) {
     const node = types[key]
     node._ownerScope = scope
     if (node._ns) node._ns._ownerScope = scope
   }
-  for (const key of Object.keys(declares)) {
+  for (const key in declares) {
     declares[key]._ownerScope = scope
   }
 }
