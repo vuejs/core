@@ -29,6 +29,7 @@ export const newBlock = (node: BlockIRNode['node']): BlockIRNode => ({
   effect: [],
   operation: [],
   returns: [],
+  expressions: [],
 })
 
 export function wrapTemplate(node: ElementNode, dirs: string[]): TemplateNode {
