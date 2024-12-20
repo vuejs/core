@@ -310,7 +310,7 @@ function processRepeatedVariables(
   for (const [name, exps] of variableToExpMap) {
     if (seenVariable[name] > 1 && exps.size > 0) {
       const isIdentifier = seenIdentifier.has(name)
-      const varName = genVarName(name)
+      const varName = isIdentifier ? name : genVarName(name)
       if (!declarations.some(d => d.name === varName)) {
         declarations.push({
           name: varName,
