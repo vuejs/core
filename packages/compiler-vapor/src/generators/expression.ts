@@ -220,6 +220,9 @@ type DeclarationValue = {
   name: string
   isIdentifier?: boolean
   value: SimpleExpressionNode
+  rawName?: string
+  exps?: Set<SimpleExpressionNode>
+  seenCount?: number
 }
 
 export function processExpressions(
@@ -241,7 +244,11 @@ export function processExpressions(
 
   // process duplicate expressions after identifier and member expression handling.
   // e.g., `foo + bar` will be transformed into `foo_bar`
-  const expDeclarations = processRepeatedExpressions(context, expressions)
+  const expDeclarations = processRepeatedExpressions(
+    context,
+    expressions,
+    varDeclarations,
+  )
 
   return genDeclarations([...varDeclarations, ...expDeclarations], context)
 }
@@ -312,6 +319,9 @@ function processRepeatedVariables(
             { ast: isIdentifier ? null : parseExp(context, name) },
             createSimpleExpression(name),
           ),
+          rawName: name,
+          exps,
+          seenCount: seenVariable[name],
         })
       }
 
@@ -337,6 +347,7 @@ function processRepeatedVariables(
 function processRepeatedExpressions(
   context: CodegenContext,
   expressions: SimpleExpressionNode[],
+  varDeclarations: DeclarationValue[],
 ): DeclarationValue[] {
   const declarations: DeclarationValue[] = []
   const seenExp = expressions.reduce(
@@ -352,11 +363,40 @@ function processRepeatedExpressions(
 
   Object.entries(seenExp).forEach(([content, count]) => {
     if (count > 1) {
+      // foo + baz -> foo_baz
       const varName = genVarName(content)
       if (!declarations.some(d => d.name === varName)) {
+        // if foo and baz have no other references, we don't need to declare separate variables
+        // instead of:
+        // const foo = _ctx.foo
+        // const baz = _ctx.baz
+        // const foo_baz = foo + baz
+        // we can generate:
+        // const foo_baz = _ctx.foo + _ctx.baz
+        const delVars: Record<string, string> = {}
+        for (let i = varDeclarations.length - 1; i >= 0; i--) {
+          const item = varDeclarations[i]
+          if (!item.exps || !item.seenCount) continue
+
+          const shouldRemove = [...item.exps].every(
+            node => node.content === content && item.seenCount === count,
+          )
+          if (shouldRemove) {
+            delVars[item.name] = item.rawName!
+            varDeclarations.splice(i, 1)
+          }
+        }
+        const value = extend(
+          {},
+          expressions.find(exp => exp.content === content)!,
+        )
+        Object.keys(delVars).forEach(name => {
+          value.content = value.content.replace(name, delVars[name])
+          if (value.ast) value.ast = parseExp(context, value.content)
+        })
         declarations.push({
           name: varName,
-          value: extend({}, expressions.find(exp => exp.content === content)!),
+          value: value,
         })
       }
 
