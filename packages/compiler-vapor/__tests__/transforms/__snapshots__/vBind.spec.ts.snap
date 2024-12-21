@@ -1,5 +1,153 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
+exports[`cache multiple access > dynamic key bindings with expressions 1`] = `
+"import { setDynamicProps as _setDynamicProps, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<div></div>", true)
+
+export function render(_ctx) {
+  const n0 = t0()
+  _renderEffect(() => {
+    const _key = _ctx.key
+    _setDynamicProps(n0, [{ [_key+1]: _ctx.foo[_key+1]() }], true)
+  })
+  return n0
+}"
+`;
+
+exports[`cache multiple access > dynamic property access 1`] = `
+"import { setProp as _setProp, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<div></div>", true)
+
+export function render(_ctx) {
+  const n0 = t0()
+  _renderEffect(() => {
+    const _obj = _ctx.obj
+    _setProp(n0, "id", _obj[1][_ctx.baz] + _obj.bar)
+  })
+  return n0
+}"
+`;
+
+exports[`cache multiple access > function calls with arguments 1`] = `
+"import { setProp as _setProp, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<div></div>")
+
+export function render(_ctx) {
+  const n0 = t0()
+  const n1 = t0()
+  const n2 = t0()
+  _renderEffect(() => {
+    const _foo = _ctx.foo
+    const _bar = _ctx.bar
+    const _foo_bar_baz = _foo[_bar(_ctx.baz)]
+    
+    _setProp(n0, "id", _foo_bar_baz)
+    _setProp(n1, "id", _foo_bar_baz)
+    _setProp(n2, "id", _bar() + _foo)
+  })
+  return [n0, n1, n2]
+}"
+`;
+
+exports[`cache multiple access > not cache variable and member expression with the same name 1`] = `
+"import { setProp as _setProp, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<div></div>", true)
+
+export function render(_ctx) {
+  const n0 = t0()
+  _renderEffect(() => _setProp(n0, "id", _ctx.bar + _ctx.obj.bar))
+  return n0
+}"
+`;
+
+exports[`cache multiple access > object property chain access 1`] = `
+"import { setProp as _setProp, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<div></div>")
+
+export function render(_ctx) {
+  const n0 = t0()
+  const n1 = t0()
+  _renderEffect(() => {
+    const _obj = _ctx.obj
+    const _obj_foo_baz_obj_bar = _obj['foo']['baz'] + _obj.bar
+    
+    _setProp(n0, "id", _obj_foo_baz_obj_bar)
+    _setProp(n1, "id", _obj_foo_baz_obj_bar)
+  })
+  return [n0, n1]
+}"
+`;
+
+exports[`cache multiple access > repeated expression in expressions 1`] = `
+"import { setProp as _setProp, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<div></div>")
+
+export function render(_ctx) {
+  const n0 = t0()
+  const n1 = t0()
+  const n2 = t0()
+  _renderEffect(() => {
+    const _foo = _ctx.foo
+    const _foo_bar = _foo + _ctx.bar
+    
+    _setProp(n0, "id", _foo_bar)
+    _setProp(n1, "id", _foo_bar)
+    _setProp(n2, "id", _foo + _foo_bar)
+  })
+  return [n0, n1, n2]
+}"
+`;
+
+exports[`cache multiple access > repeated expressions 1`] = `
+"import { setProp as _setProp, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<div></div>")
+
+export function render(_ctx) {
+  const n0 = t0()
+  const n1 = t0()
+  _renderEffect(() => {
+    const _foo_bar = _ctx.foo + _ctx.bar
+    
+    _setProp(n0, "id", _foo_bar)
+    _setProp(n1, "id", _foo_bar)
+  })
+  return [n0, n1]
+}"
+`;
+
+exports[`cache multiple access > repeated variable in expressions 1`] = `
+"import { setProp as _setProp, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<div></div>")
+
+export function render(_ctx) {
+  const n0 = t0()
+  const n1 = t0()
+  _renderEffect(() => {
+    const _foo = _ctx.foo
+    _setProp(n0, "id", _foo + _foo + _ctx.bar)
+    _setProp(n1, "id", _foo)
+  })
+  return [n0, n1]
+}"
+`;
+
+exports[`cache multiple access > repeated variables 1`] = `
+"import { setClass as _setClass, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<div></div>")
+
+export function render(_ctx) {
+  const n0 = t0()
+  const n1 = t0()
+  _renderEffect(() => {
+    const _foo = _ctx.foo
+    
+    _setClass(n0, _foo)
+    _setClass(n1, _foo)
+  })
+  return [n0, n1]
+}"
+`;
+
 exports[`compiler v-bind > .attr modifier 1`] = `
 "import { setAttr as _setAttr, renderEffect as _renderEffect, template as _template } from 'vue';
 const t0 = _template("<div></div>", true)
@@ -305,6 +453,8 @@ export function render(_ctx) {
   const n5 = t5()
   const n6 = t6()
   _renderEffect(() => {
+    const _width = _ctx.width
+    const _height = _ctx.height
     _setAttr(n0, "spellcheck", _ctx.spellcheck)
     _setAttr(n0, "draggable", _ctx.draggable)
     _setAttr(n0, "translate", _ctx.translate)
@@ -312,15 +462,15 @@ export function render(_ctx) {
     _setAttr(n1, "list", _ctx.list)
     _setAttr(n2, "type", _ctx.type)
     
-    _setAttr(n3, "width", _ctx.width)
-    _setAttr(n4, "width", _ctx.width)
-    _setAttr(n5, "width", _ctx.width)
-    _setAttr(n6, "width", _ctx.width)
+    _setAttr(n3, "width", _width)
+    _setAttr(n4, "width", _width)
+    _setAttr(n5, "width", _width)
+    _setAttr(n6, "width", _width)
     
-    _setAttr(n3, "height", _ctx.height)
-    _setAttr(n4, "height", _ctx.height)
-    _setAttr(n5, "height", _ctx.height)
-    _setAttr(n6, "height", _ctx.height)
+    _setAttr(n3, "height", _height)
+    _setAttr(n4, "height", _height)
+    _setAttr(n5, "height", _height)
+    _setAttr(n6, "height", _height)
   })
   return [n0, n1, n2, n3, n4, n5, n6]
 }"
@@ -343,7 +493,11 @@ const t0 = _template("<div></div>", true)
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => _setDynamicProps(n0, [{ [_ctx.id]: _ctx.id, [_ctx.title]: _ctx.title }], true))
+  _renderEffect(() => {
+    const _id = _ctx.id
+    const _title = _ctx.title
+    _setDynamicProps(n0, [{ [_id]: _id, [_title]: _title }], true)
+  })
   return n0
 }"
 `;
@@ -354,7 +508,10 @@ const t0 = _template("<div></div>", true)
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => _setDynamicProps(n0, [{ [_ctx.id]: _ctx.id, foo: "bar", checked: "" }], true))
+  _renderEffect(() => {
+    const _id = _ctx.id
+    _setDynamicProps(n0, [{ [_id]: _id, foo: "bar", checked: "" }], true)
+  })
   return n0
 }"
 `;
