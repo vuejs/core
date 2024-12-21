@@ -366,8 +366,7 @@ function shouldDeclareVariable(
     return true
   }
 
-  // if `foo` appears multiple times in each variable array,
-  // declaration is needed
+  // if `foo` appears multiple times in one array, declaration is needed
   // e.g., [[foo,foo]]
   if (vars.some(v => v.filter(e => e === name).length > 1)) {
     return true
