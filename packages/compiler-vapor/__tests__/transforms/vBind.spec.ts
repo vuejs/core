@@ -736,7 +736,7 @@ describe('cache multiple access', () => {
         <div :id="foo + foo + bar"></div>
       `)
     expect(code).matchSnapshot()
-    expect(code).contains('const _foo_bar = _foo + _bar')
+    expect(code).contains('const _foo_bar = _foo + _ctx.bar')
     expect(code).contains('_setProp(n0, "id", _foo_bar)')
     expect(code).contains('_setProp(n2, "id", _foo + _foo_bar)')
   })
@@ -748,7 +748,7 @@ describe('cache multiple access', () => {
         <div :id="bar() + foo"></div>
       `)
     expect(code).matchSnapshot()
-    expect(code).contains('const _foo_bar_baz = _foo[_bar(_baz)]')
+    expect(code).contains('const _foo_bar_baz = _foo[_bar(_ctx.baz)]')
     expect(code).contains('_setProp(n0, "id", _foo_bar_baz)')
     expect(code).contains('_setProp(n1, "id", _foo_bar_baz)')
     expect(code).contains('_setProp(n2, "id", _bar() + _foo)')

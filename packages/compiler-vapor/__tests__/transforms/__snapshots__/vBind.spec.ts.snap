@@ -39,8 +39,7 @@ export function render(_ctx) {
   _renderEffect(() => {
     const _foo = _ctx.foo
     const _bar = _ctx.bar
-    const _baz = _ctx.baz
-    const _foo_bar_baz = _foo[_bar(_baz)]
+    const _foo_bar_baz = _foo[_bar(_ctx.baz)]
     
     _setProp(n0, "id", _foo_bar_baz)
     _setProp(n1, "id", _foo_bar_baz)
@@ -89,8 +88,7 @@ export function render(_ctx) {
   const n2 = t0()
   _renderEffect(() => {
     const _foo = _ctx.foo
-    const _bar = _ctx.bar
-    const _foo_bar = _foo + _bar
+    const _foo_bar = _foo + _ctx.bar
     
     _setProp(n0, "id", _foo_bar)
     _setProp(n1, "id", _foo_bar)

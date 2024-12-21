@@ -230,7 +230,7 @@ export function processExpressions(
   expressions: SimpleExpressionNode[],
 ): DeclarationResult {
   // analyze variables
-  const { seenVariable, variableToExpMap, seenIdentifier } =
+  const { seenVariable, variableToExpMap, expToVariableMap, seenIdentifier } =
     analyzeExpressions(expressions)
 
   // process repeated identifiers and member expressions
@@ -239,6 +239,7 @@ export function processExpressions(
     context,
     seenVariable,
     variableToExpMap,
+    expToVariableMap,
     seenIdentifier,
   )
 
@@ -256,6 +257,7 @@ export function processExpressions(
 function analyzeExpressions(expressions: SimpleExpressionNode[]) {
   const seenVariable: Record<string, number> = Object.create(null)
   const variableToExpMap = new Map<string, Set<SimpleExpressionNode>>()
+  const expToVariableMap = new Map<SimpleExpressionNode, string[]>()
   const seenIdentifier = new Set<string>()
 
   const registerVariable = (
@@ -269,6 +271,7 @@ function analyzeExpressions(expressions: SimpleExpressionNode[]) {
       name,
       (variableToExpMap.get(name) || new Set()).add(exp),
     )
+    expToVariableMap.set(exp, (expToVariableMap.get(exp) || []).concat(name))
   }
 
   for (const exp of expressions) {
@@ -297,13 +300,14 @@ function analyzeExpressions(expressions: SimpleExpressionNode[]) {
     })
   }
 
-  return { seenVariable, seenIdentifier, variableToExpMap }
+  return { seenVariable, seenIdentifier, variableToExpMap, expToVariableMap }
 }
 
 function processRepeatedVariables(
   context: CodegenContext,
   seenVariable: Record<string, number>,
   variableToExpMap: Map<string, Set<SimpleExpressionNode>>,
+  expToVariableMap: Map<SimpleExpressionNode, string[]>,
   seenIdentifier: Set<string>,
 ): DeclarationValue[] {
   const declarations: DeclarationValue[] = []
@@ -311,19 +315,6 @@ function processRepeatedVariables(
     if (seenVariable[name] > 1 && exps.size > 0) {
       const isIdentifier = seenIdentifier.has(name)
       const varName = isIdentifier ? name : genVarName(name)
-      if (!declarations.some(d => d.name === varName)) {
-        declarations.push({
-          name: varName,
-          isIdentifier,
-          value: extend(
-            { ast: isIdentifier ? null : parseExp(context, name) },
-            createSimpleExpression(name),
-          ),
-          rawName: name,
-          exps,
-          seenCount: seenVariable[name],
-        })
-      }
 
       // replaces all non-identifiers with the new name. if node content
       // includes only one member expression, it will become an identifier,
@@ -338,10 +329,75 @@ function processRepeatedVariables(
           node.ast = parseExp(context, node.content)
         }
       })
+
+      if (
+        !declarations.some(d => d.name === varName) &&
+        (!isIdentifier || shouldDeclareVariable(name, expToVariableMap, exps))
+      ) {
+        declarations.push({
+          name: varName,
+          isIdentifier,
+          value: extend(
+            { ast: isIdentifier ? null : parseExp(context, name) },
+            createSimpleExpression(name),
+          ),
+          rawName: name,
+          exps,
+          seenCount: seenVariable[name],
+        })
+      }
     }
   }
 
   return declarations
+}
+
+function shouldDeclareVariable(
+  name: string,
+  expToVariableMap: Map<SimpleExpressionNode, string[]>,
+  exps: Set<SimpleExpressionNode>,
+): boolean {
+  const vars = Array.from(exps, exp => expToVariableMap.get(exp)!)
+  // assume name equals to `foo`
+  // if each expression only references `foo`, declaration is needed
+  // to avoid reactivity tracking
+  // e.g., [[foo],[foo]]
+  if (vars.every(v => v.length === 1)) {
+    return true
+  }
+
+  // if `foo` appears multiple times in each variable array,
+  // declaration is needed
+  // e.g., [[foo,foo]]
+  if (vars.some(v => v.filter(e => e === name).length > 1)) {
+    return true
+  }
+
+  const first = vars[0]
+  // if arrays have different lengths, declaration is needed
+  // e.g., [[foo],[foo,bar]]
+  if (vars.some(v => v.length !== first.length)) {
+    // special case, no declaration needed if one array is a subset of the other
+    // because they will be treated as repeated expressions
+    // e.g., [[foo,bar],[foo,foo,bar]] -> const foo_bar = _ctx.foo + _ctx.bar
+    if (
+      vars.some(
+        v => v.length > first.length && v.every(e => first.includes(e)),
+      ) ||
+      vars.some(v => first.length > v.length && first.every(e => v.includes(e)))
+    ) {
+      return false
+    }
+    return true
+  }
+  // if arrays share common elements, no declaration needed
+  // because they will be treat as repeated expressions
+  // e.g., [[foo,bar],[foo,bar]] -> const foo_bar = _ctx.foo + _ctx.bar
+  if (vars.some(v => v.some(e => first.includes(e)))) {
+    return false
+  }
+
+  return true
 }
 
 function processRepeatedExpressions(
