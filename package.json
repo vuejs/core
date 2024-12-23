@@ -1,7 +1,7 @@
 {
   "private": true,
   "version": "3.5.13",
-  "packageManager": "pnpm@9.15.0",
+  "packageManager": "pnpm@9.15.1",
   "type": "module",
   "scripts": {
     "dev": "node scripts/dev.js",
@@ -90,7 +90,7 @@
     "magic-string": "^0.30.15",
     "markdown-table": "^3.0.4",
     "marked": "13.0.3",
-    "npm-run-all2": "^7.0.1",
+    "npm-run-all2": "^7.0.2",
     "picocolors": "^1.1.1",
     "prettier": "^3.4.2",
     "pretty-bytes": "^6.1.1",
