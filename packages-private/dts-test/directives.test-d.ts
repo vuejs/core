@@ -29,7 +29,7 @@ describe('custom', () => {
     value: number
     oldValue: number | null
     arg?: 'Arg'
-    modifiers: Record<'a' | 'b', boolean>
+    modifiers: Partial<Record<'a' | 'b', boolean>>
   }>(testDirective<number, 'a' | 'b', 'Arg'>())
 
   expectType<{
