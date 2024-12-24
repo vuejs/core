@@ -389,9 +389,7 @@ describe('compiler: element transform', () => {
       )
       expect(code).toMatchSnapshot()
       expect(code).contains(`onBar: () => _on_bar`)
-      expect(code).contains(
-        `const _on_bar = () => _ctx.handler`,
-      )
+      expect(code).contains(`const _on_bar = () => _ctx.handler`)
       expect(ir.block.operation).toMatchObject([
         {
           type: IRNodeTypes.CREATE_COMPONENT_NODE,
@@ -445,9 +443,7 @@ describe('compiler: element transform', () => {
         `const _on_bar = $event => (_ctx.handleBar($event))`,
       )
       expect(code).contains(`onBar: () => _on_bar1`)
-      expect(code).contains(
-        `const _on_bar1 = () => _ctx.handler`,
-      )
+      expect(code).contains(`const _on_bar1 = () => _ctx.handler`)
       expect(ir.block.operation).toMatchObject([
         {
           type: IRNodeTypes.CREATE_COMPONENT_NODE,

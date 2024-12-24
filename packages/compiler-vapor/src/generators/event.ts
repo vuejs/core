@@ -118,7 +118,7 @@ export function genEventHandler(
     handlerExp = genWithModifiers(context, handlerExp, nonKeys)
   if (keys.length) handlerExp = genWithKeys(context, handlerExp, keys)
 
-  if(needWrap) handlerExp.unshift(`() => `)
+  if (needWrap) handlerExp.unshift(`() => `)
   return handlerExp
 }
 
