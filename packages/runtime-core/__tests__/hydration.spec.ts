@@ -35,7 +35,10 @@ import {
 import { type SSRContext, renderToString } from '@vue/server-renderer'
 import { PatchFlags, normalizeStyle } from '@vue/shared'
 import { vShowOriginalDisplay } from '../../runtime-dom/src/directives/vShow'
-import { expect } from 'vitest'
+import type { HMRRuntime } from '../src/hmr'
+
+declare var __VUE_HMR_RUNTIME__: HMRRuntime
+const { reload } = __VUE_HMR_RUNTIME__
 
 function mountWithHydration(html: string, render: () => any) {
   const container = document.createElement('div')
@@ -1841,6 +1844,26 @@ describe('SSR hydration', () => {
     } finally {
       __DEV__ = true
     }
+  })
+
+  test('hmr root reload', async () => {
+    const appId = 'test-app-id'
+    const App = {
+      __hmrId: appId,
+      template: `<div>foo</div>`,
+    }
+
+    const root = document.createElement('div')
+    root.innerHTML = await renderToString(h(App))
+    createSSRApp(App).mount(root)
+    expect(root.innerHTML).toBe('<div>foo</div>')
+
+    reload(appId, {
+      __hmrId: appId,
+      template: `<div>bar</div>`,
+    })
+    await nextTick()
+    expect(root.innerHTML).toBe('<div>bar</div>')
   })
 
   describe('mismatch handling', () => {
