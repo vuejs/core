@@ -22,6 +22,7 @@ import {
 } from './utils'
 import {
   canSetValueDirectly,
+  capitalize,
   isSVGTag,
   shouldSetAsAttr,
   toHandlerKey,
@@ -108,15 +109,20 @@ function genLiteralObjectProps(
 }
 
 export function genPropKey(
-  { key: node, modifier, runtimeCamelize, handler }: IRProp,
+  { key: node, modifier, runtimeCamelize, handler, handlerModifiers }: IRProp,
   context: CodegenContext,
 ): CodeFragment[] {
   const { helper } = context
 
+  const handlerModifierPostfix = handlerModifiers
+    ? handlerModifiers.map(capitalize).join('')
+    : ''
   // static arg was transformed by v-bind transformer
   if (node.isStatic) {
     // only quote keys if necessary
-    const keyName = handler ? toHandlerKey(node.content) : node.content
+    const keyName =
+      (handler ? toHandlerKey(node.content) : node.content) +
+      handlerModifierPostfix
     return [
       [
         isSimpleIdentifier(keyName) ? keyName : JSON.stringify(keyName),
@@ -133,7 +139,15 @@ export function genPropKey(
   if (handler) {
     key = genCall(helper('toHandlerKey'), key)
   }
-  return ['[', modifier && `${JSON.stringify(modifier)} + `, ...key, ']']
+  return [
+    '[',
+    modifier && `${JSON.stringify(modifier)} + `,
+    ...key,
+    handlerModifierPostfix
+      ? ` + ${JSON.stringify(handlerModifierPostfix)}`
+      : undefined,
+    ']',
+  ]
 }
 
 export function genPropValue(
