@@ -137,12 +137,10 @@ export function propagate(subs: Link): void {
 
     if (!(subFlags & SubscriberFlags.Tracking)) {
       if (
-        (!(subFlags & (SubscriberFlags.ToCheckDirty | SubscriberFlags.Dirty)) &&
-          ((sub.flags = subFlags | targetFlag), true)) ||
-        (subFlags & SubscriberFlags.Recursed &&
-          ((sub.flags = (subFlags & ~SubscriberFlags.Recursed) | targetFlag),
-          true))
+        !(subFlags & (SubscriberFlags.ToCheckDirty | SubscriberFlags.Dirty)) ||
+        subFlags & SubscriberFlags.Recursed
       ) {
+        sub.flags = (subFlags & ~SubscriberFlags.Recursed) | targetFlag
         const subSubs = (sub as Dependency).subs
         if (subSubs !== undefined) {
           if (subSubs.nextSub !== undefined) {
