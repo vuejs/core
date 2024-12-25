@@ -1,4 +1,4 @@
-// Ported from https://github.com/stackblitz/alien-signals/blob/v0.4.5/src/system.ts
+// Ported from https://github.com/stackblitz/alien-signals/blob/v0.4.10/src/system.ts
 
 export interface IEffect extends Subscriber {
   nextNotify: IEffect | undefined
@@ -6,7 +6,6 @@ export interface IEffect extends Subscriber {
 }
 
 export interface IComputed extends Dependency, Subscriber {
-  version: number
   update(): boolean
 }
 
@@ -25,7 +24,6 @@ export interface Subscriber {
 export interface Link {
   dep: Dependency | IComputed | (Dependency & IEffect)
   sub: Subscriber | IComputed | (Dependency & IEffect) | IEffect
-  version: number
   // Reuse to link prev stack in checkDirty
   // Reuse to link prev stack in propagate
   prevSub: Link | undefined
@@ -37,13 +35,9 @@ export interface Link {
 export enum SubscriberFlags {
   None = 0,
   Tracking = 1 << 0,
-  CanPropagate = 1 << 1,
-  // RunInnerEffects = 1 << 2, // Not used in Vue
-  // 2~5 are using in EffectFlags
-  ToCheckDirty = 1 << 6,
-  Dirty = 1 << 7,
-
-  DirtyFlagsIndex = 6,
+  Recursed = 1 << 1,
+  ToCheckDirty = 1 << 3,
+  Dirty = 1 << 4,
 }
 
 let batchDepth = 0
@@ -82,9 +76,8 @@ export function link(dep: Dependency, sub: Subscriber): Link {
   if (nextDep !== undefined && nextDep.dep === dep) {
     sub.depsTail = nextDep
     return nextDep
-  } else {
-    return linkNewDep(dep, sub, nextDep, currentDep)
   }
+  return linkNewDep(dep, sub, nextDep, currentDep)
 }
 
 function linkNewDep(
@@ -105,7 +98,6 @@ function linkNewDep(
     newLink = {
       dep,
       sub,
-      version: 0,
       nextDep,
       prevSub: undefined,
       nextSub: undefined,
@@ -132,6 +124,7 @@ function linkNewDep(
   return newLink
 }
 
+// See https://github.com/stackblitz/alien-signals#about-propagate-and-checkdirty-functions
 export function propagate(subs: Link): void {
   let targetFlag = SubscriberFlags.Dirty
   let link = subs
@@ -143,22 +136,24 @@ export function propagate(subs: Link): void {
     const subFlags = sub.flags
 
     if (!(subFlags & SubscriberFlags.Tracking)) {
-      let canPropagate = !(subFlags >> SubscriberFlags.DirtyFlagsIndex)
-      if (!canPropagate && subFlags & SubscriberFlags.CanPropagate) {
-        sub.flags &= ~SubscriberFlags.CanPropagate
-        canPropagate = true
-      }
-      if (canPropagate) {
-        sub.flags |= targetFlag
+      if (
+        (!(subFlags & (SubscriberFlags.ToCheckDirty | SubscriberFlags.Dirty)) &&
+          ((sub.flags = subFlags | targetFlag), true)) ||
+        (subFlags & SubscriberFlags.Recursed &&
+          ((sub.flags = (subFlags & ~SubscriberFlags.Recursed) | targetFlag),
+          true))
+      ) {
         const subSubs = (sub as Dependency).subs
         if (subSubs !== undefined) {
           if (subSubs.nextSub !== undefined) {
             subSubs.prevSub = subs
-            subs = subSubs
+            link = subs = subSubs
+            targetFlag = SubscriberFlags.ToCheckDirty
             ++stack
+          } else {
+            link = subSubs
+            targetFlag = SubscriberFlags.ToCheckDirty
           }
-          link = subSubs
-          targetFlag = SubscriberFlags.ToCheckDirty
           continue
         }
         if ('notify' in sub) {
@@ -169,25 +164,29 @@ export function propagate(subs: Link): void {
           }
           queuedEffectsTail = sub
         }
-      } else if (!(sub.flags & targetFlag)) {
-        sub.flags |= targetFlag
+      } else if (!(subFlags & targetFlag)) {
+        sub.flags = subFlags | targetFlag
       }
     } else if (isValidLink(link, sub)) {
-      if (!(subFlags >> SubscriberFlags.DirtyFlagsIndex)) {
-        sub.flags |= targetFlag | SubscriberFlags.CanPropagate
+      if (
+        !(subFlags & (SubscriberFlags.ToCheckDirty | SubscriberFlags.Dirty))
+      ) {
+        sub.flags = subFlags | targetFlag | SubscriberFlags.Recursed
         const subSubs = (sub as Dependency).subs
         if (subSubs !== undefined) {
           if (subSubs.nextSub !== undefined) {
             subSubs.prevSub = subs
-            subs = subSubs
+            link = subs = subSubs
+            targetFlag = SubscriberFlags.ToCheckDirty
             ++stack
+          } else {
+            link = subSubs
+            targetFlag = SubscriberFlags.ToCheckDirty
           }
-          link = subSubs
-          targetFlag = SubscriberFlags.ToCheckDirty
           continue
         }
-      } else if (!(sub.flags & targetFlag)) {
-        sub.flags |= targetFlag
+      } else if (!(subFlags & targetFlag)) {
+        sub.flags = subFlags | targetFlag
       }
     }
 
@@ -222,7 +221,22 @@ export function propagate(subs: Link): void {
   }
 }
 
-function isValidLink(subLink: Link, sub: Subscriber) {
+export function shallowPropagate(link: Link): void {
+  do {
+    const updateSub = link.sub
+    const updateSubFlags = updateSub.flags
+    if (
+      (updateSubFlags &
+        (SubscriberFlags.ToCheckDirty | SubscriberFlags.Dirty)) ===
+      SubscriberFlags.ToCheckDirty
+    ) {
+      updateSub.flags = updateSubFlags | SubscriberFlags.Dirty
+    }
+    link = link.nextSub!
+  } while (link !== undefined)
+}
+
+function isValidLink(subLink: Link, sub: Subscriber): boolean {
   const depsTail = sub.depsTail
   if (depsTail !== undefined) {
     let link = sub.deps!
@@ -239,48 +253,70 @@ function isValidLink(subLink: Link, sub: Subscriber) {
   return false
 }
 
-export function checkDirty(deps: Link): boolean {
+// See https://github.com/stackblitz/alien-signals#about-propagate-and-checkdirty-functions
+export function checkDirty(link: Link): boolean {
   let stack = 0
   let dirty: boolean
   let nextDep: Link | undefined
 
   top: do {
     dirty = false
-    const dep = deps.dep
+    const dep = link.dep
     if ('update' in dep) {
-      if (dep.version !== deps.version) {
-        dirty = true
-      } else {
-        const depFlags = dep.flags
-        if (depFlags & SubscriberFlags.Dirty) {
-          dirty = dep.update()
-        } else if (depFlags & SubscriberFlags.ToCheckDirty) {
-          dep.subs!.prevSub = deps
-          deps = dep.deps!
-          ++stack
-          continue
+      const depFlags = dep.flags
+      if (depFlags & SubscriberFlags.Dirty) {
+        if (dep.update()) {
+          const subs = dep.subs!
+          if (subs.nextSub !== undefined) {
+            shallowPropagate(subs)
+          }
+          dirty = true
         }
+      } else if (depFlags & SubscriberFlags.ToCheckDirty) {
+        const depSubs = dep.subs!
+        if (depSubs.nextSub !== undefined) {
+          depSubs.prevSub = link
+        }
+        link = dep.deps!
+        ++stack
+        continue
       }
     }
-    if (dirty || (nextDep = deps.nextDep) === undefined) {
+    if (dirty || (nextDep = link.nextDep) === undefined) {
       if (stack) {
-        let sub = deps.sub as IComputed
+        let sub = link.sub as IComputed
         do {
           --stack
           const subSubs = sub.subs!
-          const prevLink = subSubs.prevSub!
-          subSubs.prevSub = undefined
-          if (dirty) {
-            if (sub.update()) {
-              sub = prevLink.sub as IComputed
-              dirty = true
-              continue
+          let prevLink = subSubs.prevSub!
+          if (prevLink !== undefined) {
+            subSubs.prevSub = undefined
+            if (dirty) {
+              if (sub.update()) {
+                shallowPropagate(sub.subs!)
+                sub = prevLink.sub as IComputed
+                sub = prevLink.sub as IComputed
+                dirty = true
+                sub = prevLink.sub as IComputed
+                dirty = true
+                continue
+              }
+            } else {
+              sub.flags &= ~SubscriberFlags.ToCheckDirty
             }
           } else {
-            sub.flags &= ~SubscriberFlags.ToCheckDirty
+            if (dirty) {
+              if (sub.update()) {
+                sub = subSubs.sub as IComputed
+                continue
+              }
+            } else {
+              sub.flags &= ~SubscriberFlags.ToCheckDirty
+            }
+            prevLink = subSubs
           }
-          deps = prevLink.nextDep!
-          if (deps !== undefined) {
+          link = prevLink.nextDep!
+          if (link !== undefined) {
             continue top
           }
           sub = prevLink.sub as IComputed
@@ -289,7 +325,7 @@ export function checkDirty(deps: Link): boolean {
       }
       return dirty
     }
-    deps = nextDep
+    link = nextDep
   } while (true)
 }
 
@@ -298,7 +334,7 @@ export function startTrack(sub: Subscriber): void {
   sub.flags =
     (sub.flags &
       ~(
-        SubscriberFlags.CanPropagate |
+        SubscriberFlags.Recursed |
         SubscriberFlags.ToCheckDirty |
         SubscriberFlags.Dirty
       )) |
@@ -351,8 +387,14 @@ function clearTrack(link: Link): void {
     linkPool = link
 
     if (dep.subs === undefined && 'deps' in dep) {
-      // dep is never be IEffect in Vue
-      dep.flags |= SubscriberFlags.Dirty
+      if ('notify' in dep) {
+        dep.flags = SubscriberFlags.None
+      } else {
+        const depFlags = dep.flags
+        if (!(depFlags & SubscriberFlags.Dirty)) {
+          dep.flags = depFlags | SubscriberFlags.Dirty
+        }
+      }
       const depDeps = dep.deps
       if (depDeps !== undefined) {
         link = depDeps

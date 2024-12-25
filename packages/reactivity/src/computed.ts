@@ -19,6 +19,7 @@ import {
   checkDirty,
   endTrack,
   link,
+  shallowPropagate,
   startTrack,
 } from './system'
 import { warn } from './warning'
@@ -59,7 +60,6 @@ export class ComputedRefImpl<T = any> implements IComputed {
    * @internal
    */
   _value: T | undefined = undefined
-  version = 0
 
   // Dependency
   subs: Link | undefined = undefined
@@ -134,7 +134,12 @@ export class ComputedRefImpl<T = any> implements IComputed {
 
   get value(): T {
     if (this._dirty) {
-      this.update()
+      if (this.update()) {
+        const subs = this.subs
+        if (subs !== undefined) {
+          shallowPropagate(subs)
+        }
+      }
     }
     if (activeTrackId) {
       if (this.lastTrackedId !== activeTrackId) {
@@ -146,7 +151,7 @@ export class ComputedRefImpl<T = any> implements IComputed {
           })
         }
         this.lastTrackedId = activeTrackId
-        link(this, activeSub!).version = this.version
+        link(this, activeSub!)
       }
     } else if (activeEffectScope !== undefined) {
       if (this.lastTrackedId !== activeEffectScope.trackId) {
@@ -169,20 +174,18 @@ export class ComputedRefImpl<T = any> implements IComputed {
     const prevTrackId = activeTrackId
     setActiveSub(this, nextTrackId())
     startTrack(this)
-    const oldValue = this._value
-    let newValue: T
     try {
-      newValue = this.fn(oldValue)
+      const oldValue = this._value
+      const newValue = this.fn(oldValue)
+      if (hasChanged(oldValue, newValue)) {
+        this._value = newValue
+        return true
+      }
+      return false
     } finally {
       setActiveSub(prevSub, prevTrackId)
       endTrack(this)
     }
-    if (hasChanged(oldValue, newValue)) {
-      this._value = newValue
-      this.version++
-      return true
-    }
-    return false
   }
 }
 
