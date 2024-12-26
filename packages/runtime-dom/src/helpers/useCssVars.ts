@@ -49,19 +49,7 @@ export function useCssVars(getter: (ctx: any) => Record<string, string>): void {
     updateTeleports(vars)
   }
 
-  // handle cases where child component root is affected
-  // and triggers reflow in onMounted
-  onBeforeUpdate(() => {
-    queuePostFlushCb(setVars)
-  })
-
-  onMounted(() => {
-    // run setVars synchronously here, but run as post-effect on changes
-    watch(setVars, NOOP, { flush: 'post' })
-    const ob = new MutationObserver(setVars)
-    ob.observe(instance.subTree.el!.parentNode, { childList: true })
-    onUnmounted(() => ob.disconnect())
-  })
+  applyCssVars(() => instance.subTree.el!.parentNode!, setVars)
 }
 
 function setVarsOnVNode(vnode: VNode, vars: Record<string, string>) {
@@ -94,7 +82,26 @@ function setVarsOnVNode(vnode: VNode, vars: Record<string, string>) {
   }
 }
 
-function setVarsOnNode(el: Node, vars: Record<string, string>) {
+export function applyCssVars(
+  getParentNode: () => Node,
+  setVars: () => void,
+): void {
+  // handle cases where child component root is affected
+  // and triggers reflow in onMounted
+  onBeforeUpdate(() => {
+    queuePostFlushCb(setVars)
+  })
+
+  onMounted(() => {
+    // run setVars synchronously here, but run as post-effect on changes
+    watch(setVars, NOOP, { flush: 'post' })
+    const ob = new MutationObserver(setVars)
+    ob.observe(getParentNode(), { childList: true })
+    onUnmounted(() => ob.disconnect())
+  })
+}
+
+export function setVarsOnNode(el: Node, vars: Record<string, string>): void {
   if (el.nodeType === 1) {
     const style = (el as HTMLElement).style
     let cssText = ''
