@@ -4,9 +4,9 @@ import {
   setVarsOnNode,
   warn,
 } from '@vue/runtime-dom'
-import { type VaporComponentInstance, isVaporComponent } from './component'
+import { type VaporComponentInstance, isVaporComponent } from '../component'
 import { isArray } from '@vue/shared'
-import type { Block } from './block'
+import type { Block } from '../block'
 
 export function vaporUseCssVars(getter: () => Record<string, string>): void {
   if (!__BROWSER__ && !__TEST__) return
@@ -29,10 +29,10 @@ export function vaporUseCssVars(getter: () => Record<string, string>): void {
 function resolveParentNode(block: Block): Node {
   if (block instanceof Node) {
     return block.parentNode!
-  } else if (isVaporComponent(block)) {
-    return resolveParentNode(block.block!)
   } else if (isArray(block)) {
     return resolveParentNode(block[0])
+  } else if (isVaporComponent(block)) {
+    return resolveParentNode(block.block!)
   } else {
     return resolveParentNode(block.nodes)
   }
