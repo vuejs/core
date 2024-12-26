@@ -424,8 +424,4 @@ describe('component: emit', () => {
     await nextTick()
     expect(fn).not.toHaveBeenCalled()
   })
-
-  // NOTE: not supported mixins
-  // test.todo('merge string array emits', async () => {})
-  // test.todo('merge object emits', async () => {})
 })
