@@ -162,6 +162,7 @@ export function genCssVarsCode(
   bindings: BindingMetadata,
   id: string,
   isProd: boolean,
+  vapor?: boolean,
 ) {
   const varsExp = genCssVarsFromList(vars, id, isProd)
   const exp = createSimpleExpression(varsExp, false)
@@ -182,7 +183,7 @@ export function genCssVarsCode(
           })
           .join('')
 
-  return `_${CSS_VARS_HELPER}(_ctx => (${transformedString}))`
+  return `_${CSS_VARS_HELPER}(_ctx => (${transformedString})${vapor ? ', setVarsFactory' : ''})`
 }
 
 // <script setup> already gets the calls injected as part of the transform

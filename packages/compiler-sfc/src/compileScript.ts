@@ -760,6 +760,7 @@ export function compileScript(
     !options.templateOptions?.ssr
   ) {
     ctx.helperImports.add(CSS_VARS_HELPER)
+    if (vapor) ctx.helperImports.add('setVarsFactory')
     ctx.helperImports.add('unref')
     ctx.s.prependLeft(
       startOffset,
@@ -768,6 +769,7 @@ export function compileScript(
         ctx.bindingMetadata,
         scopeId,
         !!options.isProd,
+        vapor,
       )}\n`,
     )
   }

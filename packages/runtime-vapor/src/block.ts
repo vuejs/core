@@ -188,3 +188,42 @@ export function normalizeBlock(block: Block): Node[] {
   }
   return nodes
 }
+
+export function setVarsFactory(
+  instance: VaporComponentInstance,
+  setVarsOnNode: (node: Node, vars: Record<string, string>) => void,
+): [Node, (vars: Record<string, string>) => void] {
+  const { block } = instance
+  const setVars = (vars: Record<string, string>) => {
+    setVarsOnBlock(block!, vars, setVarsOnNode)
+  }
+  return [resolveParentNode(block), setVars]
+}
+
+function resolveParentNode(block: Block): Node {
+  if (block instanceof Node) {
+    return block.parentNode!
+  } else if (isVaporComponent(block)) {
+    return resolveParentNode(block.block!)
+  } else if (isArray(block)) {
+    return resolveParentNode(block[0])
+  } else {
+    return resolveParentNode(block.nodes)
+  }
+}
+
+function setVarsOnBlock(
+  block: Block,
+  vars: Record<string, string>,
+  setVarsOnNode: (node: Node, vars: Record<string, string>) => void,
+): void {
+  if (block instanceof Node) {
+    setVarsOnNode(block, vars)
+  } else if (isArray(block)) {
+    block.forEach(child => setVarsOnBlock(child, vars, setVarsOnNode))
+  } else if (isVaporComponent(block)) {
+    setVarsOnBlock(block.block!, vars, setVarsOnNode)
+  } else {
+    setVarsOnBlock(block.nodes, vars, setVarsOnNode)
+  }
+}

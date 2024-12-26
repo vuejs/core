@@ -1,8 +1,9 @@
 import {
   Fragment,
+  type GenericComponentInstance,
   Static,
   type VNode,
-  getCurrentInstance,
+  getCurrentGenericInstance,
   onBeforeUpdate,
   onMounted,
   onUnmounted,
@@ -13,14 +14,23 @@ import {
 import { NOOP, ShapeFlags } from '@vue/shared'
 
 export const CSS_VAR_TEXT: unique symbol = Symbol(__DEV__ ? 'CSS_VAR_TEXT' : '')
+
+type SetVarsFactoryResult = [Node, (vars: Record<string, string>) => void]
+type SetVarsFactory = (
+  instance: GenericComponentInstance,
+  setVarsOnNode: (node: Node, vars: Record<string, string>) => void,
+) => SetVarsFactoryResult
 /**
  * Runtime helper for SFC's CSS variable injection feature.
  * @private
  */
-export function useCssVars(getter: (ctx: any) => Record<string, string>): void {
+export function useCssVars(
+  getter: (ctx: any) => Record<string, string>,
+  setVarsFactory: SetVarsFactory = setVarsDefaultFactory,
+): void {
   if (!__BROWSER__ && !__TEST__) return
 
-  const instance = getCurrentInstance()
+  const instance = getCurrentGenericInstance()
   /* v8 ignore start */
   if (!instance) {
     __DEV__ &&
@@ -41,11 +51,7 @@ export function useCssVars(getter: (ctx: any) => Record<string, string>): void {
 
   const setVars = () => {
     const vars = getter(instance.proxy)
-    if (instance.ce) {
-      setVarsOnNode(instance.ce as any, vars)
-    } else {
-      setVarsOnVNode(instance.subTree, vars)
-    }
+    internalSetVars!(vars)
     updateTeleports(vars)
   }
 
@@ -55,13 +61,29 @@ export function useCssVars(getter: (ctx: any) => Record<string, string>): void {
     queuePostFlushCb(setVars)
   })
 
+  let parentNode: Node, internalSetVars: (vars: Record<string, string>) => void
   onMounted(() => {
+    ;[parentNode, internalSetVars] = setVarsFactory(instance, setVarsOnNode)
     // run setVars synchronously here, but run as post-effect on changes
     watch(setVars, NOOP, { flush: 'post' })
     const ob = new MutationObserver(setVars)
-    ob.observe(instance.subTree.el!.parentNode, { childList: true })
+    ob.observe(parentNode, { childList: true })
     onUnmounted(() => ob.disconnect())
   })
+}
+
+function setVarsDefaultFactory(
+  instance: GenericComponentInstance,
+  setVarsOnNode: (node: Node, vars: Record<string, string>) => void,
+): [Node, (vars: Record<string, string>) => void] {
+  const setVars = (vars: Record<string, string>) => {
+    if (instance.ce) {
+      setVarsOnNode(instance.ce as any, vars)
+    } else {
+      setVarsOnVNode(instance.subTree!, vars)
+    }
+  }
+  return [instance.subTree!.el!.parentNode, setVars]
 }
 
 function setVarsOnVNode(vnode: VNode, vars: Record<string, string>) {

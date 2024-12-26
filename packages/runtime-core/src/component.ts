@@ -423,6 +423,37 @@ export interface GenericComponentInstance {
    */
   proxy?: any
   /**
+   * Root vnode of this component's own vdom tree, vdom only
+   */
+  subTree?: VNode
+  /**
+   * Custom Element instance (if component is created by defineCustomElement)
+   * @internal
+   */
+  ce?: ComponentCustomElementInterface
+  /**
+   * is custom element? (kept only for compatibility)
+   * @internal
+   */
+  isCE?: boolean
+  /**
+   * custom element specific HMR method
+   * @internal
+   */
+  ceReload?: (newStyles?: string[]) => void
+  /**
+   * `updateTeleportCssVars`
+   * For updating css vars on contained teleports
+   * @internal
+   */
+  ut?: (vars?: Record<string, string>) => void
+
+  /**
+   * dev only. For style v-bind hydration mismatch checks
+   * @internal
+   */
+  getCssVars?: () => Record<string, string>
+  /**
    * suspense related
    * @internal
    */
@@ -578,21 +609,6 @@ export interface ComponentInternalInstance extends GenericComponentInstance {
    * @internal
    */
   inheritAttrs?: boolean
-  /**
-   * Custom Element instance (if component is created by defineCustomElement)
-   * @internal
-   */
-  ce?: ComponentCustomElementInterface
-  /**
-   * is custom element? (kept only for compatibility)
-   * @internal
-   */
-  isCE?: boolean
-  /**
-   * custom element specific HMR method
-   * @internal
-   */
-  ceReload?: (newStyles?: string[]) => void
 
   // the rest are only for stateful components ---------------------------------
   /**
@@ -651,19 +667,6 @@ export interface ComponentInternalInstance extends GenericComponentInstance {
    * @internal
    */
   n?: () => Promise<void>
-  /**
-   * `updateTeleportCssVars`
-   * For updating css vars on contained teleports
-   * @internal
-   */
-  ut?: (vars?: Record<string, string>) => void
-
-  /**
-   * dev only. For style v-bind hydration mismatch checks
-   * @internal
-   */
-  getCssVars?: () => Record<string, string>
-
   /**
    * v2 compat only, for caching mutated $options
    * @internal

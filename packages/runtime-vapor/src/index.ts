@@ -1,6 +1,7 @@
 // public APIs
 export { createVaporApp } from './apiCreateApp'
 export { defineVaporComponent } from './apiDefineComponent'
+export { setVarsFactory } from './block'
 
 // compiler-use only
 export { insert, prepend, remove } from './block'
