@@ -195,8 +195,17 @@ describe('component: emit', () => {
     ).not.toHaveBeenWarned()
   })
 
-  test.todo('validator warning', () => {
-    // TODO: warning validator
+  test('validator warning', () => {
+    define({
+      emits: {
+        foo: (arg: number) => arg > 0,
+      },
+      setup(_, { emit }) {
+        emit('foo', -1)
+        return []
+      },
+    }).render()
+    expect(`event validation failed for event "foo"`).toHaveBeenWarned()
   })
 
   test('.once', () => {
