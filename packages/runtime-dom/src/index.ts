@@ -322,3 +322,7 @@ export { patchStyle } from './modules/style'
  * @internal
  */
 export { shouldSetAsProp } from './patchProp'
+/**
+ * @internal
+ */
+export { baseUseCssVars, setVarsOnNode } from './helpers/useCssVars'
