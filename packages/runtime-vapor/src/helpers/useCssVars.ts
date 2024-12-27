@@ -1,8 +1,7 @@
 import {
-  applyCssVars,
+  baseUseCssVars,
   currentInstance,
   setVarsOnNode,
-  warn,
 } from '@vue/runtime-dom'
 import { type VaporComponentInstance, isVaporComponent } from '../component'
 import { isArray } from '@vue/shared'
@@ -12,17 +11,11 @@ export function vaporUseCssVars(getter: () => Record<string, string>): void {
   if (!__BROWSER__ && !__TEST__) return
 
   const instance = currentInstance as VaporComponentInstance
-  /* v8 ignore start */
-  if (!instance) {
-    __DEV__ &&
-      warn(`useCssVars is called without current active component instance.`)
-    return
-  }
-  /* v8 ignore stop */
-
-  applyCssVars(
+  baseUseCssVars(
+    instance,
     () => resolveParentNode(instance.block),
-    () => setVarsOnBlock(instance.block, getter()),
+    () => getter(),
+    vars => setVarsOnBlock(instance.block, vars),
   )
 }
 

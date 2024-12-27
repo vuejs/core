@@ -1,5 +1,6 @@
 import {
   Fragment,
+  type GenericComponentInstance,
   Static,
   type VNode,
   getCurrentInstance,
@@ -20,36 +21,22 @@ export const CSS_VAR_TEXT: unique symbol = Symbol(__DEV__ ? 'CSS_VAR_TEXT' : '')
 export function useCssVars(getter: (ctx: any) => Record<string, string>): void {
   if (!__BROWSER__ && !__TEST__) return
 
-  const instance = getCurrentInstance()
-  /* v8 ignore start */
-  if (!instance) {
-    __DEV__ &&
-      warn(`useCssVars is called without current active component instance.`)
-    return
-  }
-  /* v8 ignore stop */
-
-  const updateTeleports = (instance.ut = (vars = getter(instance.proxy)) => {
-    Array.from(
-      document.querySelectorAll(`[data-v-owner="${instance.uid}"]`),
-    ).forEach(node => setVarsOnNode(node, vars))
-  })
-
-  if (__DEV__) {
-    instance.getCssVars = () => getter(instance.proxy)
-  }
-
-  const setVars = () => {
-    const vars = getter(instance.proxy)
+  const instance = getCurrentInstance()! // to be check in baseUseCssVars
+  const getVars = () => getter(instance.proxy)
+  const setVars = (vars: Record<string, any>) => {
     if (instance.ce) {
       setVarsOnNode(instance.ce as any, vars)
     } else {
       setVarsOnVNode(instance.subTree, vars)
     }
-    updateTeleports(vars)
   }
 
-  applyCssVars(() => instance.subTree.el!.parentNode!, setVars)
+  baseUseCssVars(
+    instance,
+    () => instance.subTree.el!.parentNode!,
+    getVars,
+    setVars,
+  )
 }
 
 function setVarsOnVNode(vnode: VNode, vars: Record<string, string>) {
@@ -82,20 +69,46 @@ function setVarsOnVNode(vnode: VNode, vars: Record<string, string>) {
   }
 }
 
-export function applyCssVars(
+export function baseUseCssVars(
+  instance: GenericComponentInstance | null,
   getParentNode: () => Node,
-  setVars: () => void,
+  getVars: () => Record<string, any>,
+  setVars: (vars: Record<string, any>) => void,
 ): void {
+  /* v8 ignore start */
+  if (!instance) {
+    __DEV__ &&
+      warn(`useCssVars is called without current active component instance.`)
+    return
+  }
+  /* v8 ignore stop */
+
+  if (__DEV__) {
+    instance.getCssVars = () => getVars()
+  }
+
+  const updateTeleports = (instance.ut = (vars = getVars()) => {
+    Array.from(
+      document.querySelectorAll(`[data-v-owner="${instance.uid}"]`),
+    ).forEach(node => setVarsOnNode(node, vars))
+  })
+
+  const applyCssCars = () => {
+    const vars = getVars()
+    setVars(vars)
+    updateTeleports(vars)
+  }
+
   // handle cases where child component root is affected
   // and triggers reflow in onMounted
   onBeforeUpdate(() => {
-    queuePostFlushCb(setVars)
+    queuePostFlushCb(applyCssCars)
   })
 
   onMounted(() => {
     // run setVars synchronously here, but run as post-effect on changes
-    watch(setVars, NOOP, { flush: 'post' })
-    const ob = new MutationObserver(setVars)
+    watch(applyCssCars, NOOP, { flush: 'post' })
+    const ob = new MutationObserver(applyCssCars)
     ob.observe(getParentNode(), { childList: true })
     onUnmounted(() => ob.disconnect())
   })

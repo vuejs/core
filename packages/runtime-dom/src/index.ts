@@ -325,4 +325,4 @@ export { shouldSetAsProp } from './patchProp'
 /**
  * @internal
  */
-export { applyCssVars, setVarsOnNode } from './helpers/useCssVars'
+export { baseUseCssVars, setVarsOnNode } from './helpers/useCssVars'
