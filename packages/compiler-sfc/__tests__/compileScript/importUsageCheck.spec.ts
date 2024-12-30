@@ -23,8 +23,10 @@ test('components', () => {
   // FooQux: used as kebab-case component
   // foo: lowercase component
   expect(content).toMatch(
-    `return { fooBar, get FooBaz() { return FooBaz }, ` +
-      `get FooQux() { return FooQux }, get foo() { return foo } }`,
+    `return { get fooBar() { return fooBar }, set fooBar(v) { throw new Error('Assignment to constant variable.') }, ` +
+      `get FooBaz() { return FooBaz }, ` +
+      `get FooQux() { return FooQux }, ` +
+      `get foo() { return foo } }`,
   )
   assertCode(content)
 })
@@ -75,7 +77,8 @@ test('attribute expressions', () => {
     </template>
     `)
   expect(content).toMatch(
-    `return { cond, get bar() { return bar }, get baz() { return baz } }`,
+    `return { get cond() { return cond }, set cond(v) { throw new Error('Assignment to constant variable.') }, ` +
+      `get bar() { return bar }, get baz() { return baz } }`,
   )
   assertCode(content)
 })
@@ -147,7 +150,11 @@ test('TS annotations', () => {
       <div v-for="{ z = x as Qux } in list as Fred"/>
     </template>
     `)
-  expect(content).toMatch(`return { a, b, get Baz() { return Baz } }`)
+  expect(content).toMatch(
+    `return { get a() { return a }, set a(v) { throw new Error('Assignment to constant variable.') }, ` +
+      `get b() { return b }, set b(v) { throw new Error('Assignment to constant variable.') }, ` +
+      `get Baz() { return Baz } }`,
+  )
   assertCode(content)
 })
 
