@@ -13,7 +13,7 @@ export function genIf(
   const { condition, positive, negative, once } = oper
   const [frag, push] = buildCodeFragment()
 
-  const conditionExpr: CodeFragment[] = [
+  const codes: CodeFragment[] = [
     '() => (',
     ...genExpression(condition, context),
     ')',
@@ -23,23 +23,27 @@ export function genIf(
   let negativeArg: false | CodeFragment[] = false
 
   if (negative) {
+    positiveArg.unshift(' ? ')
+    negativeArg = [' : ']
     if (negative.type === IRNodeTypes.BLOCK) {
-      negativeArg = genBlock(negative, context)
+      negativeArg.push(...genBlock(negative, context))
     } else {
-      negativeArg = ['() => ', ...genIf(negative!, context, true)]
+      negativeArg.push(...genIf(negative!, context, true))
     }
+  } else {
+    positiveArg.unshift(' && (')
+    positiveArg.push(')')
   }
 
-  if (!isNested) push(NEWLINE, `const n${oper.id} = `)
-  push(
-    ...genCall(
-      helper('createIf'),
-      conditionExpr,
-      positiveArg,
-      negativeArg,
-      once && 'true',
-    ),
-  )
+  codes.push(...positiveArg)
+  if (negativeArg) codes.push(...negativeArg)
+
+  if (isNested) {
+    push(...codes)
+  } else {
+    push(NEWLINE, `const n${oper.id} = `)
+    push(...genCall(helper('createIf'), codes, once && 'true'))
+  }
 
   return frag
 }

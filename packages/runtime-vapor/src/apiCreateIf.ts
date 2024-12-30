@@ -2,17 +2,15 @@ import { type BlockFn, DynamicFragment } from './block'
 import { renderEffect } from './renderEffect'
 
 export function createIf(
-  condition: () => any,
-  b1: BlockFn,
-  b2?: BlockFn,
+  ifBlockFn: () => BlockFn,
   once?: boolean,
   // hydrationNode?: Node,
 ): DynamicFragment {
   const frag = __DEV__ ? new DynamicFragment('if') : new DynamicFragment()
   if (once) {
-    frag.update(condition() ? b1 : b2)
+    frag.update(ifBlockFn())
   } else {
-    renderEffect(() => frag.update(condition() ? b1 : b2))
+    renderEffect(() => frag.update(ifBlockFn()))
   }
   return frag
 }
