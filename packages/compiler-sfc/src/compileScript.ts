@@ -693,8 +693,8 @@ export function compileScript(
   checkInvalidScopeReference(ctx.propsDestructureDecl, DEFINE_PROPS)
   checkInvalidScopeReference(ctx.emitsRuntimeDecl, DEFINE_EMITS)
   checkInvalidScopeReference(ctx.optionsRuntimeDecl, DEFINE_OPTIONS)
-  for (const { runtimeOptionNodes } of Object.values(ctx.modelDecls)) {
-    for (const node of runtimeOptionNodes) {
+  for (const decl in ctx.modelDecls) {
+    for (const node of ctx.modelDecls[decl].runtimeOptionNodes) {
       checkInvalidScopeReference(node, DEFINE_MODEL)
     }
   }
@@ -723,9 +723,8 @@ export function compileScript(
   if (scriptAst) {
     Object.assign(ctx.bindingMetadata, analyzeScriptBindings(scriptAst.body))
   }
-  for (const [key, { isType, imported, source }] of Object.entries(
-    ctx.userImports,
-  )) {
+  for (const key in ctx.userImports) {
+    const { isType, imported, source } = ctx.userImports[key]
     if (isType) continue
     ctx.bindingMetadata[key] =
       imported === '*' ||
