@@ -708,6 +708,31 @@ describe('defineCustomElement', () => {
         `<div>changedA! changedB!</div>`,
       )
     })
+
+    test('should resolve correct parent when element is slotted in shadow DOM', async () => {
+      const GrandParent = defineCustomElement({
+        provide: {
+          foo: ref('GrandParent'),
+        },
+        render() {
+          return h('my-parent-in-shadow', h('slot'))
+        },
+      })
+      const Parent = defineCustomElement({
+        provide: {
+          foo: ref('Parent'),
+        },
+        render() {
+          return h('slot')
+        },
+      })
+      customElements.define('my-grand-parent', GrandParent)
+      customElements.define('my-parent-in-shadow', Parent)
+      container.innerHTML = `<my-grand-parent><my-consumer></my-consumer></my-grand-parent>`
+      const grandParent = container.childNodes[0] as VueElement,
+        consumer = grandParent.firstElementChild as VueElement
+      expect(consumer.shadowRoot!.textContent).toBe('Parent')
+    })
   })
 
   describe('styles', () => {
