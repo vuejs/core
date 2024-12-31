@@ -78,10 +78,10 @@ exports[`compiler: v-once > with v-if 1`] = `
 const t0 = _template("<div></div>", true)
 
 export function render(_ctx) {
-  const n0 = _createIf(() => (_ctx.expr) && (() => {
+  const n0 = _createIf(() => (_ctx.expr) ? () => {
     const n2 = t0()
     return n2
-  }), true)
+  } : undefined, true)
   return n0
 }"
 `;

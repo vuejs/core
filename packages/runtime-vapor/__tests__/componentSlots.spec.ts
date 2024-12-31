@@ -447,11 +447,12 @@ describe('component: slots', () => {
         setup() {
           return createComponent(Child, null, {
             default: () => {
-              return createIf(
-                () => toggle.value,
-                () => {
-                  return document.createTextNode('content')
-                },
+              return createIf(() =>
+                toggle.value
+                  ? () => {
+                      return document.createTextNode('content')
+                    }
+                  : () => [],
               )
             },
           })

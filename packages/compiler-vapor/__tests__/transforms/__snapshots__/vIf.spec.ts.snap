@@ -5,11 +5,11 @@ exports[`compiler: v-if > basic v-if 1`] = `
 const t0 = _template("<div></div>", true)
 
 export function render(_ctx) {
-  const n0 = _createIf(() => (_ctx.ok) && (() => {
+  const n0 = _createIf(() => (_ctx.ok) ? () => {
     const n2 = t0()
     _renderEffect(() => _setText(n2, _ctx.msg))
     return n2
-  }))
+  } : undefined)
   return n0
 }"
 `;
@@ -47,14 +47,14 @@ exports[`compiler: v-if > dedupe same template 1`] = `
 const t0 = _template("<div>hello</div>")
 
 export function render(_ctx) {
-  const n0 = _createIf(() => (_ctx.ok) && (() => {
+  const n0 = _createIf(() => (_ctx.ok) ? () => {
     const n2 = t0()
     return n2
-  }))
-  const n3 = _createIf(() => (_ctx.ok) && (() => {
+  } : undefined)
+  const n3 = _createIf(() => (_ctx.ok) ? () => {
     const n5 = t0()
     return n5
-  }))
+  } : undefined)
   return [n0, n3]
 }"
 `;
@@ -66,13 +66,13 @@ const t1 = _template("hello")
 const t2 = _template("<p></p>", true)
 
 export function render(_ctx) {
-  const n0 = _createIf(() => (_ctx.ok) && (() => {
+  const n0 = _createIf(() => (_ctx.ok) ? () => {
     const n2 = t0()
     const n3 = t1()
     const n4 = t2()
     _renderEffect(() => _setText(n4, _ctx.msg))
     return [n2, n3, n4]
-  }))
+  } : undefined)
   return n0
 }"
 `;
@@ -124,10 +124,10 @@ export function render(_ctx) {
   const n0 = _createIf(() => (_ctx.ok) ? () => {
     const n2 = t0()
     return n2
-  } : () => (_ctx.orNot) && (() => {
+  } : () => (_ctx.orNot) ? () => {
     const n4 = t1()
     return n4
-  }))
+  } : undefined)
   return n0
 }"
 `;

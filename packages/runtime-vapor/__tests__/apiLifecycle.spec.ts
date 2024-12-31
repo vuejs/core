@@ -138,9 +138,8 @@ describe('api: lifecycle hooks', () => {
     const { render, host } = define({
       setup() {
         // @ts-expect-error
-        const n0 = createIf(
-          () => toggle.value,
-          () => createComponent(Child),
+        const n0 = createIf(() =>
+          toggle.value ? () => createComponent(Child) : undefined,
         )
         return n0
       },
@@ -172,9 +171,8 @@ describe('api: lifecycle hooks', () => {
     const { render, host } = define({
       setup() {
         // @ts-expect-error
-        const n0 = createIf(
-          () => toggle.value,
-          () => createComponent(Child),
+        const n0 = createIf(() =>
+          toggle.value ? () => createComponent(Child) : undefined,
         )
         return n0
       },
@@ -206,9 +204,8 @@ describe('api: lifecycle hooks', () => {
     const { render, host } = define({
       setup() {
         // @ts-expect-error
-        const n0 = createIf(
-          () => toggle.value,
-          () => createComponent(Child),
+        const n0 = createIf(() =>
+          toggle.value ? () => createComponent(Child) : undefined,
         )
         return n0
       },
@@ -249,9 +246,10 @@ describe('api: lifecycle hooks', () => {
         onUnmounted(() => calls.push('onUnmounted'))
 
         // @ts-expect-error
-        const n0 = createIf(
-          () => toggle.value,
-          () => createComponent(Mid, { count: () => count.value }),
+        const n0 = createIf(() =>
+          toggle.value
+            ? () => createComponent(Mid, { count: () => count.value })
+            : undefined,
         )
         return n0
       },
@@ -428,9 +426,10 @@ describe('api: lifecycle hooks', () => {
     const { render } = define({
       setup() {
         // @ts-expect-error
-        return createIf(
-          () => toggle.value,
-          () => [createComponent(Child), createComponent(Child)],
+        return createIf(() =>
+          toggle.value
+            ? () => [createComponent(Child), createComponent(Child)]
+            : undefined,
         )
       },
     })

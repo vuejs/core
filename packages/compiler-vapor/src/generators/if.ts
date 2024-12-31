@@ -31,8 +31,8 @@ export function genIf(
       negativeArg.push(...genIf(negative!, context, true))
     }
   } else {
-    positiveArg.unshift(' && (')
-    positiveArg.push(')')
+    positiveArg.unshift(' ? ')
+    positiveArg.push(' : undefined')
   }
 
   codes.push(...positiveArg)
