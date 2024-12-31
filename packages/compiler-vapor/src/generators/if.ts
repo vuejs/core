@@ -14,9 +14,9 @@ export function genIf(
   const [frag, push] = buildCodeFragment()
 
   const codes: CodeFragment[] = [
-    isNested?undefined:'() => (',
+    isNested ? undefined : '() => (',
     ...genExpression(condition, context),
-    isNested?undefined:')',
+    isNested ? undefined : ')',
   ]
 
   let positiveArg = genBlock(positive, context)
