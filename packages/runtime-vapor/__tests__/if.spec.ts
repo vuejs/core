@@ -38,21 +38,21 @@ describe('createIf', () => {
       const n0 = t0()
 
       insert(
-        createIf(
-          spyConditionFn,
-          // v-if
-          (spyIfFn ||= vi.fn(() => {
-            const n2 = t1()
-            renderEffect(() => {
-              setText(n2, count.value)
-            })
-            return n2
-          })),
-          // v-else
-          (spyElseFn ||= vi.fn(() => {
-            const n4 = t2()
-            return n4
-          })),
+        createIf(() =>
+          spyConditionFn()
+            ? // v-if
+              (spyIfFn ||= vi.fn(() => {
+                const n2 = t1()
+                renderEffect(() => {
+                  setText(n2, count.value)
+                })
+                return n2
+              }))
+            : // v-else
+              (spyElseFn ||= vi.fn(() => {
+                const n4 = t2()
+                return n4
+              })),
         ),
         n0 as any as ParentNode,
       )
@@ -61,7 +61,7 @@ describe('createIf', () => {
 
     expect(host.innerHTML).toBe('<div><p>zero</p><!--if--></div>')
     expect(spyConditionFn).toHaveBeenCalledTimes(1)
-    expect(spyIfFn!).toHaveBeenCalledTimes(0)
+    expect(spyIfFn!).toBeUndefined()
     expect(spyElseFn!).toHaveBeenCalledTimes(1)
 
     count.value++
@@ -98,19 +98,21 @@ describe('createIf', () => {
     const t0 = template('Vapor')
     const t1 = template('Hello ')
     const { host } = define(() => {
-      const n1 = createIf(
-        () => ok1.value,
-        () => {
-          const n2 = t1()
-          const n3 = createIf(
-            () => ok2.value,
-            () => {
-              const n4 = t0()
-              return n4
-            },
-          )
-          return [n2, n3]
-        },
+      const n1 = createIf(() =>
+        ok1.value
+          ? () => {
+              const n2 = t1()
+              const n3 = createIf(() =>
+                ok2.value
+                  ? () => {
+                      const n4 = t0()
+                      return n4
+                    }
+                  : undefined,
+              )
+              return [n2, n3]
+            }
+          : undefined,
       )
       return n1
     }).render()
@@ -158,29 +160,29 @@ describe('createIf', () => {
 
     const t0 = template('<p></p>')
     const { instance } = define(() => {
-      const n1 = createIf(
-        spyConditionFn1,
-        () => {
-          const n2 = t0()
-          withDirectives(children(n2, 0), [
-            [vDirective, () => (update.value, '1')],
-          ])
-          return n2
-        },
-        () =>
-          createIf(
-            spyConditionFn2,
-            () => {
+      const n1 = createIf(() =>
+        spyConditionFn1()
+          ? () => {
               const n2 = t0()
-              withDirectives(children(n2, 0), [[vDirective, () => '2']])
+              withDirectives(children(n2, 0), [
+                [vDirective, () => (update.value, '1')],
+              ])
               return n2
-            },
-            () => {
-              const n2 = t0()
-              withDirectives(children(n2, 0), [[vDirective, () => '3']])
-              return n2
-            },
-          ),
+            }
+          : () =>
+              createIf(() =>
+                spyConditionFn2()
+                  ? () => {
+                      const n2 = t0()
+                      withDirectives(children(n2, 0), [[vDirective, () => '2']])
+                      return n2
+                    }
+                  : () => {
+                      const n2 = t0()
+                      withDirectives(children(n2, 0), [[vDirective, () => '3']])
+                      return n2
+                    },
+              ),
       )
       return [n1]
     }).render()

@@ -89,13 +89,14 @@ describe('api: template ref', () => {
       },
       render() {
         const setRef = createTemplateRefSetter()
-        const n0 = createIf(
-          () => toggle.value,
-          () => {
-            const n1 = t0()
-            setRef(n1 as Element, 'refKey')
-            return n1
-          },
+        const n0 = createIf(() =>
+          toggle.value
+            ? () => {
+                const n1 = t0()
+                setRef(n1 as Element, 'refKey')
+                return n1
+              }
+            : undefined,
         )
         return n0
       },
@@ -160,13 +161,14 @@ describe('api: template ref', () => {
     const t0 = template('<div></div>')
     const { render } = define({
       render() {
-        const n0 = createIf(
-          () => toggle.value,
-          () => {
-            const n1 = t0()
-            createTemplateRefSetter()(n1 as Element, fn)
-            return n1
-          },
+        const n0 = createIf(() =>
+          toggle.value
+            ? () => {
+                const n1 = t0()
+                createTemplateRefSetter()(n1 as Element, fn)
+                return n1
+              }
+            : undefined,
         )
         return n0
       },
@@ -371,18 +373,18 @@ describe('api: template ref', () => {
       render() {
         const instance = currentInstance!
         const setRef = createTemplateRefSetter()
-        const n0 = createIf(
-          () => refToggle.value,
-          () => {
-            const n1 = t0()
-            setRef(n1 as Element, 'foo')
-            return n1
-          },
-          () => {
-            const n1 = t1()
-            setRef(n1 as Element, 'foo')
-            return n1
-          },
+        const n0 = createIf(() =>
+          refToggle.value
+            ? () => {
+                const n1 = t0()
+                setRef(n1 as Element, 'foo')
+                return n1
+              }
+            : () => {
+                const n1 = t1()
+                setRef(n1 as Element, 'foo')
+                return n1
+              },
         )
         watchEffect(
           () => {
@@ -416,30 +418,31 @@ describe('api: template ref', () => {
     const t1 = template('<li></li>')
     const { render } = define({
       render() {
-        const n0 = createIf(
-          () => show.value,
-          () => {
-            const n1 = t0()
-            const n2 = createFor(
-              () => list,
-              state => {
-                const n1 = t1()
-                createTemplateRefSetter()(
-                  n1 as Element,
-                  listRefs,
-                  undefined,
-                  true,
+        const n0 = createIf(() =>
+          show.value
+            ? () => {
+                const n1 = t0()
+                const n2 = createFor(
+                  () => list,
+                  state => {
+                    const n1 = t1()
+                    createTemplateRefSetter()(
+                      n1 as Element,
+                      listRefs,
+                      undefined,
+                      true,
+                    )
+                    renderEffect(() => {
+                      const [item] = state
+                      setText(n1, item)
+                    })
+                    return n1
+                  },
                 )
-                renderEffect(() => {
-                  const [item] = state
-                  setText(n1, item)
-                })
+                insert(n2, n1 as ParentNode)
                 return n1
-              },
-            )
-            insert(n2, n1 as ParentNode)
-            return n1
-          },
+              }
+            : undefined,
         )
         return n0
       },
@@ -479,30 +482,31 @@ describe('api: template ref', () => {
         return { listRefs }
       },
       render() {
-        const n0 = createIf(
-          () => show.value,
-          () => {
-            const n1 = t0()
-            const n2 = createFor(
-              () => list,
-              state => {
-                const n1 = t1()
-                createTemplateRefSetter()(
-                  n1 as Element,
-                  'listRefs',
-                  undefined,
-                  true,
+        const n0 = createIf(() =>
+          show.value
+            ? () => {
+                const n1 = t0()
+                const n2 = createFor(
+                  () => list,
+                  state => {
+                    const n1 = t1()
+                    createTemplateRefSetter()(
+                      n1 as Element,
+                      'listRefs',
+                      undefined,
+                      true,
+                    )
+                    renderEffect(() => {
+                      const [item] = state
+                      setText(n1, item)
+                    })
+                    return n1
+                  },
                 )
-                renderEffect(() => {
-                  const [item] = state
-                  setText(n1, item)
-                })
+                insert(n2, n1 as ParentNode)
                 return n1
-              },
-            )
-            insert(n2, n1 as ParentNode)
-            return n1
-          },
+              }
+            : undefined,
         )
         return n0
       },
