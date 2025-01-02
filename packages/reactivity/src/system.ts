@@ -143,13 +143,11 @@ export function propagate(subs: Link): void {
         if (subSubs !== undefined) {
           if (subSubs.nextSub !== undefined) {
             subSubs.prevSub = subs
-            link = subs = subSubs
-            targetFlag = SubscriberFlags.ToCheckDirty
+            subs = subSubs
             ++stack
-          } else {
-            link = subSubs
-            targetFlag = SubscriberFlags.ToCheckDirty
           }
+          link = subSubs
+          targetFlag = SubscriberFlags.ToCheckDirty
           continue
         }
         if ('notify' in sub) {
@@ -172,13 +170,11 @@ export function propagate(subs: Link): void {
         if (subSubs !== undefined) {
           if (subSubs.nextSub !== undefined) {
             subSubs.prevSub = subs
-            link = subs = subSubs
-            targetFlag = SubscriberFlags.ToCheckDirty
+            subs = subSubs
             ++stack
-          } else {
-            link = subSubs
-            targetFlag = SubscriberFlags.ToCheckDirty
           }
+          link = subSubs
+          targetFlag = SubscriberFlags.ToCheckDirty
           continue
         }
       } else if (!(subFlags & targetFlag)) {
