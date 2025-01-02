@@ -93,12 +93,12 @@ export class EffectScope implements Subscriber {
 
   run<T>(fn: () => T): T | undefined {
     if (this.active) {
-      const currentEffectScope = activeEffectScope
+      const prevEffectScope = activeEffectScope
       try {
         activeEffectScope = this
         return fn()
       } finally {
-        activeEffectScope = currentEffectScope
+        activeEffectScope = prevEffectScope
       }
     } else if (__DEV__) {
       warn(`cannot run an inactive effect scope.`)

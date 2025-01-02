@@ -47,10 +47,10 @@ export enum EffectFlags {
   /**
    * ReactiveEffect only
    */
-  ALLOW_RECURSE = 1 << 2,
-  PAUSED = 1 << 3,
-  NOTIFIED = 1 << 4,
-  STOP = 1 << 5,
+  ALLOW_RECURSE = 1 << 5,
+  PAUSED = 1 << 6,
+  NOTIFIED = 1 << 7,
+  STOP = 1 << 8,
 }
 
 export class ReactiveEffect<T = any> implements IEffect, ReactiveEffectOptions {
@@ -137,10 +137,10 @@ export class ReactiveEffect<T = any> implements IEffect, ReactiveEffectOptions {
       setActiveSub(prevSub, prevTrackId)
       endTrack(this)
       if (
-        this.flags & SubscriberFlags.CanPropagate &&
+        this.flags & SubscriberFlags.Recursed &&
         this.flags & EffectFlags.ALLOW_RECURSE
       ) {
-        this.flags &= ~SubscriberFlags.CanPropagate
+        this.flags &= ~SubscriberFlags.Recursed
         this.notify()
       }
     }

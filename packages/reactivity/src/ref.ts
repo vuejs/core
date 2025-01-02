@@ -196,7 +196,7 @@ export function triggerRef(ref: Ref): void {
 }
 
 function trackRef(dep: Dependency) {
-  if (activeTrackId !== 0 && dep.lastTrackedId !== activeTrackId) {
+  if (activeTrackId && dep.lastTrackedId !== activeTrackId) {
     if (__DEV__) {
       onTrack(activeSub!, {
         target: dep,
