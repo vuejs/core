@@ -70,14 +70,14 @@ function drainQueuedEffects(): void {
   }
 }
 
-export function link(dep: Dependency, sub: Subscriber): Link {
+export function link(dep: Dependency, sub: Subscriber): void {
   const currentDep = sub.depsTail
   const nextDep = currentDep !== undefined ? currentDep.nextDep : sub.deps
   if (nextDep !== undefined && nextDep.dep === dep) {
     sub.depsTail = nextDep
-    return nextDep
+  } else {
+    linkNewDep(dep, sub, nextDep, currentDep)
   }
-  return linkNewDep(dep, sub, nextDep, currentDep)
 }
 
 function linkNewDep(
@@ -85,7 +85,7 @@ function linkNewDep(
   sub: Subscriber,
   nextDep: Link | undefined,
   depsTail: Link | undefined,
-): Link {
+): void {
   let newLink: Link
 
   if (linkPool !== undefined) {
@@ -120,8 +120,6 @@ function linkNewDep(
 
   sub.depsTail = newLink
   dep.subsTail = newLink
-
-  return newLink
 }
 
 // See https://github.com/stackblitz/alien-signals#about-propagate-and-checkdirty-functions
