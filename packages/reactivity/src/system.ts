@@ -291,7 +291,6 @@ export function checkDirty(link: Link): boolean {
               if (sub.update()) {
                 shallowPropagate(sub.subs!)
                 sub = prevLink.sub as IComputed
-                dirty = true
                 continue
               }
             } else {
