@@ -1,4 +1,4 @@
-// Ported from https://github.com/stackblitz/alien-signals/blob/v0.4.10/src/system.ts
+// Ported from https://github.com/stackblitz/alien-signals/blob/v0.4.12/src/system.ts
 
 export interface IEffect extends Subscriber {
   nextNotify: IEffect | undefined
@@ -342,8 +342,9 @@ export function startTrack(sub: Subscriber): void {
 export function endTrack(sub: Subscriber): void {
   const depsTail = sub.depsTail
   if (depsTail !== undefined) {
-    if (depsTail.nextDep !== undefined) {
-      clearTrack(depsTail.nextDep)
+    const nextDep = depsTail.nextDep
+    if (nextDep !== undefined) {
+      clearTrack(nextDep)
       depsTail.nextDep = undefined
     }
   } else if (sub.deps !== undefined) {
