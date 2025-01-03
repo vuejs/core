@@ -11,6 +11,7 @@ import type { NodeTransform, TransformContext } from '../transform'
 import {
   type CompoundExpressionNode,
   ConstantTypes,
+  type DirectiveNode,
   type ExpressionNode,
   NodeTypes,
   type SimpleExpressionNode,
@@ -85,6 +86,18 @@ export const transformExpression: NodeTransform = (node, context) => {
         if (arg && arg.type === NodeTypes.SIMPLE_EXPRESSION && !arg.isStatic) {
           dir.arg = processExpression(arg, context)
         }
+      }
+    }
+  } else if (node.type === NodeTypes.IF_BRANCH) {
+    if (node.isTemplateIf && node.userKey && node.userKey.name === 'bind') {
+      const useKey = node.userKey as DirectiveNode
+      const exp = useKey.exp
+      const arg = useKey.arg
+      if (exp && exp.type === NodeTypes.SIMPLE_EXPRESSION) {
+        useKey.exp = processExpression(exp, context, false)
+      }
+      if (arg && arg.type === NodeTypes.SIMPLE_EXPRESSION && !arg.isStatic) {
+        useKey.arg = processExpression(arg, context)
       }
     }
   }
