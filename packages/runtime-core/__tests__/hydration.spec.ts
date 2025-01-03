@@ -2204,6 +2204,31 @@ describe('SSR hydration', () => {
       app.mount(container)
       expect(`Hydration style mismatch`).not.toHaveBeenWarned()
     })
+
+    test('style var with falsy values', () => {
+      const container = document.createElement('div')
+      container.innerHTML = `<div style="padding: 4px;--bar:;"></div>`
+      const app = createSSRApp({
+        setup() {
+          const value1 = ref<any>(null)
+          const value2 = ref('')
+          const value3 = ref<any>(undefined)
+          useCssVars(() => ({
+            foo: value1.value,
+            bar: value2.value,
+            baz: value3.value,
+          }))
+          return () => h(Child)
+        },
+      })
+      const Child = {
+        setup() {
+          return () => h('div', { style: 'padding: 4px' })
+        },
+      }
+      app.mount(container)
+      expect(`Hydration style mismatch`).not.toHaveBeenWarned()
+    })
   })
 
   describe('data-allow-mismatch', () => {
