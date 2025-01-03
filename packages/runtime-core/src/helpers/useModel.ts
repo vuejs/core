@@ -10,7 +10,13 @@ export function useModel<
   M extends PropertyKey,
   T extends Record<string, any>,
   K extends keyof T,
->(props: T, name: K, options?: DefineModelOptions<T[K]>): ModelRef<T[K], M>
+  G = T[K],
+  S = T[K],
+>(
+  props: T,
+  name: K,
+  options?: DefineModelOptions<T[K], G, S>,
+): ModelRef<T[K], M, G, S>
 export function useModel(
   props: Record<string, any>,
   name: string,
@@ -22,14 +28,14 @@ export function useModel(
     return ref() as any
   }
 
-  if (__DEV__ && !(i.propsOptions[0] as NormalizedProps)[name]) {
+  const camelizedName = camelize(name)
+  if (__DEV__ && !(i.propsOptions[0] as NormalizedProps)[camelizedName]) {
     warn(`useModel() called with prop "${name}" which is not declared.`)
     return ref() as any
   }
 
-  const camelizedName = camelize(name)
   const hyphenatedName = hyphenate(name)
-  const modifiers = getModelModifiers(props, name)
+  const modifiers = getModelModifiers(props, camelizedName)
 
   const res = customRef((track, trigger) => {
     let localValue: any
@@ -37,7 +43,7 @@ export function useModel(
     let prevEmittedValue: any
 
     watchSyncEffect(() => {
-      const propValue = props[name]
+      const propValue = props[camelizedName]
       if (hasChanged(localValue, propValue)) {
         localValue = propValue
         trigger()

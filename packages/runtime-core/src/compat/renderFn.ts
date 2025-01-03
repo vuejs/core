@@ -172,7 +172,7 @@ export function compatH(
   }
 }
 
-const skipLegacyRootLevelProps = /*#__PURE__*/ makeMap(
+const skipLegacyRootLevelProps = /*@__PURE__*/ makeMap(
   'staticStyle,staticClass,directives,model,hook',
 )
 
@@ -306,7 +306,7 @@ function convertLegacySlots(vnode: VNode): VNode {
 }
 
 export function defineLegacyVNodeProperties(vnode: VNode): void {
-  /* istanbul ignore if */
+  /* v8 ignore start */
   if (
     isCompatEnabled(
       DeprecationTypes.RENDER_FUNCTION,
@@ -346,4 +346,5 @@ export function defineLegacyVNodeProperties(vnode: VNode): void {
       },
     })
   }
+  /* v8 ignore stop */
 }

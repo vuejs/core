@@ -64,7 +64,7 @@ const props = defineProps({ foo: String })
 </script>
     `)
     assertCode(content)
-    expect(content).toMatch(`export default /*#__PURE__*/_defineComponent({
+    expect(content).toMatch(`export default /*@__PURE__*/_defineComponent({
   props: { foo: String },
   setup(__props, { expose: __expose }) {`)
   })
@@ -258,6 +258,51 @@ const props = defineProps({ foo: String })
       x: BindingTypes.PROPS,
       y: BindingTypes.PROPS,
       z: BindingTypes.PROPS,
+    })
+  })
+
+  test('w/ extends intersection type', () => {
+    const { content, bindings } = compile(`
+    <script setup lang="ts">
+      type Foo = {
+        x?: number;
+      };
+      interface Props extends Foo {
+        z: number
+        y: string
+      }
+      defineProps<Props>()
+    </script>
+    `)
+    assertCode(content)
+    expect(content).toMatch(`z: { type: Number, required: true }`)
+    expect(content).toMatch(`y: { type: String, required: true }`)
+    expect(content).toMatch(`x: { type: Number, required: false }`)
+    expect(bindings).toStrictEqual({
+      x: BindingTypes.PROPS,
+      y: BindingTypes.PROPS,
+      z: BindingTypes.PROPS,
+    })
+  })
+
+  test('w/ intersection type', () => {
+    const { content, bindings } = compile(`
+    <script setup lang="ts">
+      type Foo = {
+        x?: number;
+      };
+      type Bar = {
+        y: string;
+      };
+      defineProps<Foo & Bar>()
+    </script>
+    `)
+    assertCode(content)
+    expect(content).toMatch(`y: { type: String, required: true }`)
+    expect(content).toMatch(`x: { type: Number, required: false }`)
+    expect(bindings).toStrictEqual({
+      x: BindingTypes.PROPS,
+      y: BindingTypes.PROPS,
     })
   })
 

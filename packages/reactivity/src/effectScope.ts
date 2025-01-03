@@ -53,12 +53,13 @@ export class EffectScope {
   pause(): void {
     if (this._active) {
       this._isPaused = true
+      let i, l
       if (this.scopes) {
-        for (let i = 0, l = this.scopes.length; i < l; i++) {
+        for (i = 0, l = this.scopes.length; i < l; i++) {
           this.scopes[i].pause()
         }
       }
-      for (let i = 0, l = this.effects.length; i < l; i++) {
+      for (i = 0, l = this.effects.length; i < l; i++) {
         this.effects[i].pause()
       }
     }
@@ -71,12 +72,13 @@ export class EffectScope {
     if (this._active) {
       if (this._isPaused) {
         this._isPaused = false
+        let i, l
         if (this.scopes) {
-          for (let i = 0, l = this.scopes.length; i < l; i++) {
+          for (i = 0, l = this.scopes.length; i < l; i++) {
             this.scopes[i].resume()
           }
         }
-        for (let i = 0, l = this.effects.length; i < l; i++) {
+        for (i = 0, l = this.effects.length; i < l; i++) {
           this.effects[i].resume()
         }
       }
@@ -115,18 +117,25 @@ export class EffectScope {
 
   stop(fromParent?: boolean): void {
     if (this._active) {
+      this._active = false
       let i, l
       for (i = 0, l = this.effects.length; i < l; i++) {
         this.effects[i].stop()
       }
+      this.effects.length = 0
+
       for (i = 0, l = this.cleanups.length; i < l; i++) {
         this.cleanups[i]()
       }
+      this.cleanups.length = 0
+
       if (this.scopes) {
         for (i = 0, l = this.scopes.length; i < l; i++) {
           this.scopes[i].stop(true)
         }
+        this.scopes.length = 0
       }
+
       // nested scope, dereference from parent to avoid memory leaks
       if (!this.detached && this.parent && !fromParent) {
         // optimized O(1) removal
@@ -137,7 +146,6 @@ export class EffectScope {
         }
       }
       this.parent = undefined
-      this._active = false
     }
   }
 }

@@ -33,9 +33,17 @@ import type { vShow } from './directives/vShow'
 import type { VOnDirective } from './directives/vOn'
 import type { VModelDirective } from './directives/vModel'
 
+/**
+ * This is a stub implementation to prevent the need to use dom types.
+ *
+ * To enable proper types, add `"dom"` to `"lib"` in your `tsconfig.json`.
+ */
+type DomStub = {}
+type DomType<T> = typeof globalThis extends { window: unknown } ? T : DomStub
+
 declare module '@vue/reactivity' {
   export interface RefUnwrapBailTypes {
-    runtimeDOMBailTypes: Node | Window
+    runtimeDOMBailTypes: DomType<Node | Window>
   }
 }
 
@@ -55,7 +63,7 @@ declare module '@vue/runtime-core' {
   }
 }
 
-const rendererOptions = /*#__PURE__*/ extend({ patchProp }, nodeOps)
+const rendererOptions = /*@__PURE__*/ extend({ patchProp }, nodeOps)
 
 // lazy create the renderer - this makes core renderer logic tree-shakable
 // in case the user only imports reactivity utilities from Vue.
@@ -283,7 +291,7 @@ let ssrDirectiveInitialized = false
 /**
  * @internal
  */
-export const initDirectivesForSSR = __SSR__
+export const initDirectivesForSSR: () => void = __SSR__
   ? () => {
       if (!ssrDirectiveInitialized) {
         ssrDirectiveInitialized = true

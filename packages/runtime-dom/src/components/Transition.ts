@@ -42,19 +42,6 @@ export interface ElementWithTransition extends HTMLElement {
   [vtcKey]?: Set<string>
 }
 
-// DOM Transition is a higher-order-component based on the platform-agnostic
-// base Transition component, with DOM-specific logic.
-export const Transition: FunctionalComponent<TransitionProps> = (
-  props,
-  { slots },
-) => h(BaseTransition, resolveTransitionProps(props), slots)
-
-Transition.displayName = 'Transition'
-
-if (__COMPAT__) {
-  Transition.__isBuiltIn = true
-}
-
 const DOMTransitionPropsValidators = {
   name: String,
   type: String,
@@ -74,12 +61,33 @@ const DOMTransitionPropsValidators = {
   leaveToClass: String,
 }
 
-export const TransitionPropsValidators: any = (Transition.props =
-  /*#__PURE__*/ extend(
-    {},
-    BaseTransitionPropsValidators as any,
-    DOMTransitionPropsValidators,
-  ))
+export const TransitionPropsValidators: any = /*@__PURE__*/ extend(
+  {},
+  BaseTransitionPropsValidators as any,
+  DOMTransitionPropsValidators,
+)
+
+/**
+ * Wrap logic that attaches extra properties to Transition in a function
+ * so that it can be annotated as pure
+ */
+const decorate = (t: typeof Transition) => {
+  t.displayName = 'Transition'
+  t.props = TransitionPropsValidators
+  if (__COMPAT__) {
+    t.__isBuiltIn = true
+  }
+  return t
+}
+
+/**
+ * DOM Transition is a higher-order-component based on the platform-agnostic
+ * base Transition component, with DOM-specific logic.
+ */
+export const Transition: FunctionalComponent<TransitionProps> =
+  /*@__PURE__*/ decorate((props, { slots }) =>
+    h(BaseTransition, resolveTransitionProps(props), slots),
+  )
 
 /**
  * #3227 Incoming hooks may be merged into arrays when wrapping Transition
@@ -173,7 +181,13 @@ export function resolveTransitionProps(
     onAppearCancelled = onEnterCancelled,
   } = baseProps
 
-  const finishEnter = (el: Element, isAppear: boolean, done?: () => void) => {
+  const finishEnter = (
+    el: Element & { _enterCancelled?: boolean },
+    isAppear: boolean,
+    done?: () => void,
+    isCancelled?: boolean,
+  ) => {
+    el._enterCancelled = isCancelled
     removeTransitionClass(el, isAppear ? appearToClass : enterToClass)
     removeTransitionClass(el, isAppear ? appearActiveClass : enterActiveClass)
     done && done()
@@ -232,7 +246,10 @@ export function resolveTransitionProps(
     },
     onEnter: makeEnterHook(false),
     onAppear: makeEnterHook(true),
-    onLeave(el: Element & { _isLeaving?: boolean }, done) {
+    onLeave(
+      el: Element & { _isLeaving?: boolean; _enterCancelled?: boolean },
+      done,
+    ) {
       el._isLeaving = true
       const resolve = () => finishLeave(el, done)
       addTransitionClass(el, leaveFromClass)
@@ -241,9 +258,14 @@ export function resolveTransitionProps(
       }
       // add *-leave-active class before reflow so in the case of a cancelled enter transition
       // the css will not get the final state (#10677)
-      addTransitionClass(el, leaveActiveClass)
-      // force reflow so *-leave-from classes immediately take effect (#2593)
-      forceReflow()
+      if (!el._enterCancelled) {
+        // force reflow so *-leave-from classes immediately take effect (#2593)
+        forceReflow()
+        addTransitionClass(el, leaveActiveClass)
+      } else {
+        addTransitionClass(el, leaveActiveClass)
+        forceReflow()
+      }
       nextFrame(() => {
         if (!el._isLeaving) {
           // cancelled
@@ -261,11 +283,11 @@ export function resolveTransitionProps(
       callHook(onLeave, [el, resolve])
     },
     onEnterCancelled(el) {
-      finishEnter(el, false)
+      finishEnter(el, false, undefined, true)
       callHook(onEnterCancelled, [el])
     },
     onAppearCancelled(el) {
-      finishEnter(el, true)
+      finishEnter(el, true, undefined, true)
       callHook(onAppearCancelled, [el])
     },
     onLeaveCancelled(el) {
@@ -336,7 +358,7 @@ function whenTransitionEnds(
     }
   }
 
-  if (explicitTimeout) {
+  if (explicitTimeout != null) {
     return setTimeout(resolveIfNotStale, explicitTimeout)
   }
 
@@ -397,7 +419,6 @@ export function getTransitionInfo(
   let type: CSSTransitionInfo['type'] = null
   let timeout = 0
   let propCount = 0
-  /* istanbul ignore if */
   if (expectedType === TRANSITION) {
     if (transitionTimeout > 0) {
       type = TRANSITION

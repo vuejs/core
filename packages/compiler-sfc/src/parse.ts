@@ -18,6 +18,7 @@ import { createCache } from './cache'
 import type { ImportBinding } from './compileScript'
 import { isImportUsed } from './script/importUsageCheck'
 import type { LRUCache } from 'lru-cache'
+import { genCacheKey } from '@vue/shared'
 
 export const DEFAULT_FILENAME = 'anonymous.vue'
 
@@ -29,11 +30,6 @@ export interface SFCParseOptions {
   ignoreEmpty?: boolean
   compiler?: TemplateCompiler
   templateParseOptions?: ParserOptions
-  /**
-   * TODO remove in 3.5
-   * @deprecated use `templateParseOptions: { prefixIdentifiers: false }` instead
-   */
-  parseExpressions?: boolean
 }
 
 export interface SFCBlock {
@@ -108,24 +104,14 @@ export const parseCache:
   | Map<string, SFCParseResult>
   | LRUCache<string, SFCParseResult> = createCache<SFCParseResult>()
 
-function genCacheKey(source: string, options: SFCParseOptions): string {
-  return (
-    source +
-    JSON.stringify(
-      {
-        ...options,
-        compiler: { parse: options.compiler?.parse },
-      },
-      (_, val) => (typeof val === 'function' ? val.toString() : val),
-    )
-  )
-}
-
 export function parse(
   source: string,
   options: SFCParseOptions = {},
 ): SFCParseResult {
-  const sourceKey = genCacheKey(source, options)
+  const sourceKey = genCacheKey(source, {
+    ...options,
+    compiler: { parse: options.compiler?.parse },
+  })
   const cache = parseCache.get(sourceKey)
   if (cache) {
     return cache
@@ -139,7 +125,6 @@ export function parse(
     ignoreEmpty = true,
     compiler = CompilerDOM,
     templateParseOptions = {},
-    parseExpressions = true,
   } = options
 
   const descriptor: SFCDescriptor = {
@@ -158,7 +143,7 @@ export function parse(
   const errors: (CompilerError | SyntaxError)[] = []
   const ast = compiler.parse(source, {
     parseMode: 'sfc',
-    prefixIdentifiers: parseExpressions,
+    prefixIdentifiers: true,
     ...templateParseOptions,
     onError: e => {
       errors.push(e)
@@ -241,7 +226,7 @@ export function parse(
   if (!descriptor.template && !descriptor.script && !descriptor.scriptSetup) {
     errors.push(
       new SyntaxError(
-        `At least one <template> or <script> is required in a single file component.`,
+        `At least one <template> or <script> is required in a single file component. ${descriptor.filename}`,
       ),
     )
   }
