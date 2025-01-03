@@ -221,8 +221,8 @@ const KeepAliveImpl: ComponentOptions = {
     watch(
       () => [props.include, props.exclude],
       ([include, exclude]) => {
-        include && pruneCache(name => matches(include, name))
-        exclude && pruneCache(name => !matches(exclude, name))
+        include != null && pruneCache(name => matches(include, name))
+        exclude != null && pruneCache(name => !matches(exclude, name))
       },
       // prune post-render after `current` has been updated
       { flush: 'post', deep: true },
@@ -307,8 +307,8 @@ const KeepAliveImpl: ComponentOptions = {
       const { include, exclude, max } = props
 
       if (
-        (include && (!name || !matches(include, name))) ||
-        (exclude && name && matches(exclude, name))
+        (include != null && (!name || !matches(include, name))) ||
+        (exclude != null && name && matches(exclude, name))
       ) {
         // #11717
         vnode.shapeFlag &= ~ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE
