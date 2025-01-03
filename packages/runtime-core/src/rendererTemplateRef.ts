@@ -13,12 +13,11 @@ import { isAsyncWrapper } from './apiAsyncComponent'
 import { warn } from './warning'
 import { isRef, toRaw } from '@vue/reactivity'
 import { ErrorCodes, callWithErrorHandling } from './errorHandling'
-import { type SchedulerJob, SchedulerJobFlags } from './scheduler'
+import type { SchedulerJob } from './scheduler'
 import { queuePostRenderEffect } from './renderer'
 import { type ComponentOptions, getComponentPublicInstance } from './component'
 import { knownTemplateRefs } from './helpers/useTemplateRef'
 
-const pendingSetRef = new WeakMap<VNode, SchedulerJob>()
 /**
  * Function for handling a template ref
  */
@@ -154,12 +153,13 @@ export function setRef(
         // #1789: for non-null values, set them after render
         // null values means this is unmount and it should not overwrite another
         // ref with the same key
-        ;(doSet as SchedulerJob).id = -1
-        pendingSetRef.set(vnode, doSet)
-        queuePostRenderEffect(doSet, parentSuspense)
+        const job: SchedulerJob = () => {
+          if (!(vnode as any).__isUnmounting) doSet()
+        }
+        job.id = -1
+        queuePostRenderEffect(job, parentSuspense)
       } else {
-        const pendingSet = pendingSetRef.get(vnode)
-        if (pendingSet) pendingSet.flags! |= SchedulerJobFlags.DISPOSED
+        ;(vnode as any).__isUnmounting = true
         doSet()
       }
     } else if (__DEV__) {
