@@ -760,7 +760,10 @@ if (__SSR__) {
   }
 }
 
-export const setCurrentInstance = (instance: ComponentInternalInstance) => {
+export const setCurrentInstance = (
+  instance: ComponentInternalInstance,
+): (() => void) => {
+  if (currentInstance === instance) return NOOP
   const prev = currentInstance
   internalSetCurrentInstance(instance)
   instance.scope.on()

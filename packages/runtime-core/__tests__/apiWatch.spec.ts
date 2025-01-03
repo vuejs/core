@@ -6,6 +6,7 @@ import {
   getCurrentInstance,
   nextTick,
   onErrorCaptured,
+  onScopeDispose,
   onWatcherCleanup,
   reactive,
   ref,
@@ -1360,6 +1361,32 @@ describe('api: watch', () => {
 
     expect(instance).toBeDefined()
     expect(source.mock.calls.some(args => args.includes(instance)))
+  })
+
+  test('this.$watch w/ onScopeDispose', () => {
+    const onCleanup = vi.fn()
+    const toggle = ref(true)
+
+    const Comp = defineComponent({
+      render() {},
+      created(this: any) {
+        this.$watch(
+          () => 1,
+          function () {},
+        )
+        onScopeDispose(onCleanup)
+      },
+    })
+
+    const App = defineComponent({
+      render() {
+        return toggle.value ? h(Comp) : null
+      },
+    })
+
+    const root = nodeOps.createElement('div')
+    createApp(App).mount(root)
+    expect(onCleanup).toBeCalledTimes(0)
   })
 
   test('should not leak `this.proxy` to setup()', () => {
