@@ -10,6 +10,7 @@ import {
   render,
   serializeInner,
   shallowRef,
+  watch,
 } from '@vue/runtime-test'
 
 describe('api: template refs', () => {
@@ -175,6 +176,51 @@ describe('api: template refs', () => {
     expect(el.value).toBe(root.children[0])
 
     toggle.value = false
+    await nextTick()
+    expect(el.value).toBe(null)
+  })
+
+  // #12639
+  it('update and unmount child in the same tick', async () => {
+    const root = nodeOps.createElement('div')
+    const el = ref(null)
+    const toggle = ref(true)
+    const show = ref(true)
+
+    const Comp = defineComponent({
+      emits: ['change'],
+      props: ['show'],
+      setup(props, { emit }) {
+        watch(
+          () => props.show,
+          () => {
+            emit('change')
+          },
+        )
+        return () => h('div', 'hi')
+      },
+    })
+
+    const App = {
+      setup() {
+        return {
+          refKey: el,
+        }
+      },
+      render() {
+        return toggle.value
+          ? h(Comp, {
+              ref: 'refKey',
+              show: show.value,
+              onChange: () => (toggle.value = false),
+            })
+          : null
+      },
+    }
+    render(h(App), root)
+    expect(el.value).not.toBe(null)
+
+    show.value = false
     await nextTick()
     expect(el.value).toBe(null)
   })
