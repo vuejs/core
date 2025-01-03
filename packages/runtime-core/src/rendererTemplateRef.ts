@@ -153,9 +153,13 @@ export function setRef(
         // #1789: for non-null values, set them after render
         // null values means this is unmount and it should not overwrite another
         // ref with the same key
-        ;(doSet as SchedulerJob).id = -1
-        queuePostRenderEffect(doSet, parentSuspense)
+        const job: SchedulerJob = () => {
+          if (!(vnode as any).__isUnmounting) doSet()
+        }
+        job.id = -1
+        queuePostRenderEffect(job, parentSuspense)
       } else {
+        ;(vnode as any).__isUnmounting = true
         doSet()
       }
     } else if (__DEV__) {
