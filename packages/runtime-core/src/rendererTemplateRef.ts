@@ -15,7 +15,7 @@ import { isRef, toRaw } from '@vue/reactivity'
 import { ErrorCodes, callWithErrorHandling } from './errorHandling'
 import type { SchedulerJob } from './scheduler'
 import { queuePostRenderEffect } from './renderer'
-import { getComponentPublicInstance } from './component'
+import { type ComponentOptions, getComponentPublicInstance } from './component'
 import { knownTemplateRefs } from './helpers/useTemplateRef'
 
 /**
@@ -42,8 +42,18 @@ export function setRef(
   }
 
   if (isAsyncWrapper(vnode) && !isUnmount) {
-    // when mounting async components, nothing needs to be done,
-    // because the template ref is forwarded to inner component
+    // #4999 if an async component already resolved and cached by KeepAlive,
+    // we need to set the ref to inner component
+    if (
+      vnode.shapeFlag & ShapeFlags.COMPONENT_KEPT_ALIVE &&
+      (vnode.type as ComponentOptions).__asyncResolved &&
+      vnode.component!.subTree.component
+    ) {
+      setRef(rawRef, oldRawRef, parentSuspense, vnode.component!.subTree)
+    }
+
+    // otherwise, nothing needs to be done because the template ref
+    // is forwarded to inner component
     return
   }
 
@@ -69,8 +79,17 @@ export function setRef(
     setupState === EMPTY_OBJ
       ? () => false
       : (key: string) => {
-          if (__DEV__ && knownTemplateRefs.has(rawSetupState[key] as any)) {
-            return false
+          if (__DEV__) {
+            if (hasOwn(rawSetupState, key) && !isRef(rawSetupState[key])) {
+              warn(
+                `Template ref "${key}" used on a non-ref value. ` +
+                  `It will not work in the production build.`,
+              )
+            }
+
+            if (knownTemplateRefs.has(rawSetupState[key] as any)) {
+              return false
+            }
           }
           return hasOwn(rawSetupState, key)
         }

@@ -82,6 +82,17 @@ export class Dep {
    */
   subsHead?: Link
 
+  /**
+   * For object property deps cleanup
+   */
+  map?: KeyToDepMap = undefined
+  key?: unknown = undefined
+
+  /**
+   * Subscriber counter
+   */
+  sc: number = 0
+
   constructor(public computed?: ComputedRefImpl | undefined) {
     if (__DEV__) {
       this.subsHead = undefined
@@ -106,9 +117,7 @@ export class Dep {
         activeSub.depsTail = link
       }
 
-      if (activeSub.flags & EffectFlags.TRACKING) {
-        addSub(link)
-      }
+      addSub(link)
     } else if (link.version === -1) {
       // reused from last run - already a sub, just sync version
       link.version = this.version
@@ -163,11 +172,7 @@ export class Dep {
         // original order at the end of the batch, but onTrigger hooks should
         // be invoked in original order here.
         for (let head = this.subsHead; head; head = head.nextSub) {
-          if (
-            __DEV__ &&
-            head.sub.onTrigger &&
-            !(head.sub.flags & EffectFlags.NOTIFIED)
-          ) {
+          if (head.sub.onTrigger && !(head.sub.flags & EffectFlags.NOTIFIED)) {
             head.sub.onTrigger(
               extend(
                 {
@@ -180,7 +185,12 @@ export class Dep {
         }
       }
       for (let link = this.subs; link; link = link.prevSub) {
-        link.sub.notify()
+        if (link.sub.notify()) {
+          // if notify() returns `true`, this is a computed. Also call notify
+          // on its dep - it's called here instead of inside computed's notify
+          // in order to reduce call stack depth.
+          ;(link.sub as ComputedRefImpl).dep.notify()
+        }
       }
     } finally {
       endBatch()
@@ -189,27 +199,30 @@ export class Dep {
 }
 
 function addSub(link: Link) {
-  const computed = link.dep.computed
-  // computed getting its first subscriber
-  // enable tracking + lazily subscribe to all its deps
-  if (computed && !link.dep.subs) {
-    computed.flags |= EffectFlags.TRACKING | EffectFlags.DIRTY
-    for (let l = computed.deps; l; l = l.nextDep) {
-      addSub(l)
+  link.dep.sc++
+  if (link.sub.flags & EffectFlags.TRACKING) {
+    const computed = link.dep.computed
+    // computed getting its first subscriber
+    // enable tracking + lazily subscribe to all its deps
+    if (computed && !link.dep.subs) {
+      computed.flags |= EffectFlags.TRACKING | EffectFlags.DIRTY
+      for (let l = computed.deps; l; l = l.nextDep) {
+        addSub(l)
+      }
     }
-  }
 
-  const currentTail = link.dep.subs
-  if (currentTail !== link) {
-    link.prevSub = currentTail
-    if (currentTail) currentTail.nextSub = link
-  }
+    const currentTail = link.dep.subs
+    if (currentTail !== link) {
+      link.prevSub = currentTail
+      if (currentTail) currentTail.nextSub = link
+    }
 
-  if (__DEV__ && link.dep.subsHead === undefined) {
-    link.dep.subsHead = link
-  }
+    if (__DEV__ && link.dep.subsHead === undefined) {
+      link.dep.subsHead = link
+    }
 
-  link.dep.subs = link
+    link.dep.subs = link
+  }
 }
 
 // The main WeakMap that stores {target -> key -> dep} connections.
@@ -217,7 +230,8 @@ function addSub(link: Link) {
 // which maintains a Set of subscribers, but we simply store them as
 // raw Maps to reduce memory overhead.
 type KeyToDepMap = Map<any, Dep>
-const targetMap = new WeakMap<object, KeyToDepMap>()
+
+export const targetMap: WeakMap<object, KeyToDepMap> = new WeakMap()
 
 export const ITERATE_KEY: unique symbol = Symbol(
   __DEV__ ? 'Object iterate' : '',
@@ -248,6 +262,8 @@ export function track(target: object, type: TrackOpTypes, key: unknown): void {
     let dep = depsMap.get(key)
     if (!dep) {
       depsMap.set(key, (dep = new Dep()))
+      dep.map = depsMap
+      dep.key = key
     }
     if (__DEV__) {
       dep.track({
@@ -324,7 +340,7 @@ export function trigger(
       })
     } else {
       // schedule runs for SET | ADD | DELETE
-      if (key !== void 0) {
+      if (key !== void 0 || depsMap.has(void 0)) {
         run(depsMap.get(key))
       }
 
@@ -366,13 +382,10 @@ export function trigger(
   endBatch()
 }
 
-/**
- * Test only
- */
 export function getDepFromReactive(
   object: any,
   key: string | number | symbol,
 ): Dep | undefined {
-  // eslint-disable-next-line
-  return targetMap.get(object)?.get(key)
+  const depMap = targetMap.get(object)
+  return depMap && depMap.get(key)
 }

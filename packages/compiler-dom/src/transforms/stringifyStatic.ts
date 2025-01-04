@@ -24,6 +24,7 @@ import {
   isArray,
   isBooleanAttr,
   isKnownHtmlAttr,
+  isKnownMathMLAttr,
   isKnownSvgAttr,
   isString,
   isSymbol,
@@ -190,7 +191,9 @@ const isStringifiableAttr = (name: string, ns: Namespaces) => {
       ? isKnownHtmlAttr(name)
       : ns === Namespaces.SVG
         ? isKnownSvgAttr(name)
-        : false) || dataAriaRE.test(name)
+        : ns === Namespaces.MATH_ML
+          ? isKnownMathMLAttr(name)
+          : false) || dataAriaRE.test(name)
   )
 }
 
@@ -258,8 +261,7 @@ function analyzeNode(node: StringifiableNode): [number, number] | false {
           isOptionTag &&
           isStaticArgOf(p.arg, 'value') &&
           p.exp &&
-          p.exp.ast &&
-          p.exp.ast.type !== 'StringLiteral'
+          !p.exp.isStatic
         ) {
           return bail()
         }

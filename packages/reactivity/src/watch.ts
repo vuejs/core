@@ -213,24 +213,16 @@ export function watch(
   const scope = getCurrentScope()
   const watchHandle: WatchHandle = () => {
     effect.stop()
-    if (scope) {
+    if (scope && scope.active) {
       remove(scope.effects, effect)
     }
   }
 
-  if (once) {
-    if (cb) {
-      const _cb = cb
-      cb = (...args) => {
-        _cb(...args)
-        watchHandle()
-      }
-    } else {
-      const _getter = getter
-      getter = () => {
-        _getter()
-        watchHandle()
-      }
+  if (once && cb) {
+    const _cb = cb
+    cb = (...args) => {
+      _cb(...args)
+      watchHandle()
     }
   }
 
