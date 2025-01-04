@@ -122,9 +122,9 @@ export const SuspenseImpl = {
       )
     }
   },
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
+  // @lint-ignore @typescript-eslint/no-unnecessary-type-assertion
   hydrate: hydrateSuspense as typeof hydrateSuspense,
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
+  // @lint-ignore @typescript-eslint/no-unnecessary-type-assertion
   normalize: normalizeSuspenseChildren as typeof normalizeSuspenseChildren,
 }
 
@@ -463,7 +463,7 @@ function createSuspenseBoundary(
   if (__DEV__ && !__TEST__ && !hasWarned) {
     hasWarned = true
     // @ts-expect-error `console.info` cannot be null error
-    // eslint-disable-next-line no-console
+    // @lint-ignore no-console
     console[console.info ? 'info' : 'log'](
       `<Suspense> is an experimental feature and its API will likely change.`,
     )

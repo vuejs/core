@@ -799,7 +799,7 @@ describe('SSR hydration', () => {
     expect(log).toHaveBeenCalledWith('click')
 
     // 2. child inc click + text interpolation
-    // eslint-disable-next-line @typescript-eslint/non-nullable-type-assertion-style
+    // @lint-ignore @typescript-eslint/non-nullable-type-assertion-style
     const count = container.querySelector('.count') as HTMLElement
     expect(count.textContent).toBe(`0`)
     triggerEvent('click', container.querySelector('.inc')!)

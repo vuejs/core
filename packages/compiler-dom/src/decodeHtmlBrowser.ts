@@ -2,7 +2,7 @@ let decoder: HTMLDivElement
 
 export function decodeHtmlBrowser(raw: string, asAttr = false): string {
   if (!decoder) {
-    // eslint-disable-next-line no-restricted-globals
+    // @lint-ignore no-restricted-globals
     decoder = document.createElement('div')
   }
   if (asAttr) {

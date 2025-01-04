@@ -16,7 +16,7 @@ const typeAwareEnabled =
 
 export default defineConfig([
   {
-    plugins: [createIgnorePlugin('eslint-disable-next-line', typeAwareEnabled)],
+    plugins: [createIgnorePlugin('@lint-ignore', false)],
     rules: convertConfig({
       'no-debugger': 'error',
       'no-console': ['error', { allow: ['warn', 'error', 'info'] }],
