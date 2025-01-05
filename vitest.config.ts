@@ -1,4 +1,4 @@
-import { configDefaults, defineConfig } from 'vitest/config'
+import { defineConfig } from 'vitest/config'
 import { entries } from './scripts/aliases.js'
 
 export default defineConfig({
