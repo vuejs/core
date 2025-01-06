@@ -2,12 +2,13 @@ import { isArray } from '@vue/shared'
 import type { ComponentInternalInstance } from '../component'
 import { ErrorCodes, callWithAsyncErrorHandling } from '../errorHandling'
 import { DeprecationTypes, assertCompatEnabled } from './compatConfig'
+import type { ComponentPublicInstance } from '../componentPublicInstance'
 
 interface EventRegistry {
   [event: string]: Function[] | undefined
 }
 
-const eventRegistryMap = /*#__PURE__*/ new WeakMap<
+const eventRegistryMap = /*@__PURE__*/ new WeakMap<
   ComponentInternalInstance,
   EventRegistry
 >()
@@ -26,7 +27,7 @@ export function on(
   instance: ComponentInternalInstance,
   event: string | string[],
   fn: Function,
-) {
+): ComponentPublicInstance | null {
   if (isArray(event)) {
     event.forEach(e => on(instance, e, fn))
   } else {
@@ -49,10 +50,10 @@ export function once(
   instance: ComponentInternalInstance,
   event: string,
   fn: Function,
-) {
+): ComponentPublicInstance | null {
   const wrapped = (...args: any[]) => {
     off(instance, event, wrapped)
-    fn.call(instance.proxy, ...args)
+    fn.apply(instance.proxy, args)
   }
   wrapped.fn = fn
   on(instance, event, wrapped)
@@ -63,7 +64,7 @@ export function off(
   instance: ComponentInternalInstance,
   event?: string | string[],
   fn?: Function,
-) {
+): ComponentPublicInstance | null {
   assertCompatEnabled(DeprecationTypes.INSTANCE_EVENT_EMITTER, instance)
   const vm = instance.proxy
   // all
@@ -94,7 +95,7 @@ export function emit(
   instance: ComponentInternalInstance,
   event: string,
   args: any[],
-) {
+): ComponentPublicInstance | null {
   const cbs = getRegistry(instance)[event]
   if (cbs) {
     callWithAsyncErrorHandling(

@@ -43,8 +43,15 @@ export type LegacyPublicInstance = ComponentPublicInstance &
   LegacyPublicProperties
 
 export interface LegacyPublicProperties {
-  $set(target: object, key: string, value: any): void
-  $delete(target: object, key: string): void
+  $set<T extends Record<keyof any, any>, K extends keyof T>(
+    target: T,
+    key: K,
+    value: T[K],
+  ): void
+  $delete<T extends Record<keyof any, any>, K extends keyof T>(
+    target: T,
+    key: K,
+  ): void
   $mount(el?: string | Element): this
   $destroy(): void
   $scopedSlots: Slots
@@ -55,7 +62,9 @@ export interface LegacyPublicProperties {
   $listeners: Record<string, Function | Function[]>
 }
 
-export function installCompatInstanceProperties(map: PublicPropertiesMap) {
+export function installCompatInstanceProperties(
+  map: PublicPropertiesMap,
+): void {
   const set = (target: any, key: any, val: any) => {
     target[key] = val
     return target[key]
