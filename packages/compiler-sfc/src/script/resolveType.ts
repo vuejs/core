@@ -960,7 +960,7 @@ function importSourceToScope(
 
 function resolveExt(filename: string, fs: FS) {
   // #8339 ts may import .js but we should resolve to corresponding ts or d.ts
-  filename = filename.replace(/\.js$/, '')
+  filename = filename.replace(/\.jsx?$/, '')
   const tryResolve = (filename: string) => {
     if (fs.fileExists(filename)) return filename
   }
