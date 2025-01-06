@@ -82,4 +82,62 @@ describe('COMPONENT_V_MODEL', () => {
       template: `<input :value="input" @input="$emit('update', $event.target.value)">`,
     })
   })
+
+  async function runTestWithModifier(CustomInput: ComponentOptions) {
+    const vm = new Vue({
+      data() {
+        return {
+          text: ' foo ',
+        }
+      },
+      components: {
+        CustomInput,
+      },
+      template: `
+      <div>
+        <span>{{ text }}</span>
+        <custom-input v-model.trim="text"></custom-input>
+      </div>
+      `,
+    }).$mount() as any
+
+    const input = vm.$el.querySelector('input')
+    const span = vm.$el.querySelector('span')
+
+    expect(input.value).toBe(' foo ')
+    expect(span.textContent).toBe(' foo ')
+
+    expect(
+      (deprecationData[DeprecationTypes.COMPONENT_V_MODEL].message as Function)(
+        CustomInput,
+      ),
+    ).toHaveBeenWarned()
+
+    input.value = ' bar '
+    triggerEvent(input, 'input')
+    await nextTick()
+
+    expect(input.value).toBe('bar')
+    expect(span.textContent).toBe('bar')
+  }
+
+  test('with model modifiers', async () => {
+    await runTestWithModifier({
+      name: 'CustomInput',
+      props: ['value'],
+      template: `<input :value="value" @input="$emit('input', $event.target.value)">`,
+    })
+  })
+
+  test('with model modifiers and model option', async () => {
+    await runTestWithModifier({
+      name: 'CustomInput',
+      props: ['foo'],
+      model: {
+        prop: 'foo',
+        event: 'bar',
+      },
+      template: `<input :value="foo" @input="$emit('bar', $event.target.value)">`,
+    })
+  })
 })

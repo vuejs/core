@@ -32,6 +32,7 @@ import {
 import type { ComponentTypeEmits } from './apiSetupHelpers'
 import { getModelModifiers } from './helpers/useModel'
 import type { ComponentPublicInstance } from './componentPublicInstance'
+import { DeprecationTypes, isCompatEnabled } from './compat/compatConfig'
 
 export type ObjectEmitsOptions = Record<
   string,
@@ -151,10 +152,14 @@ export function emit(
   }
 
   let args = rawArgs
-  const isModelListener = event.startsWith('update:')
+  const isModelListener =
+    __COMPAT__ && isCompatEnabled(DeprecationTypes.COMPONENT_V_MODEL, instance)
+      ? compatModelEventPrefix + event in props
+      : event.startsWith('update:')
 
   // for v-model update:xxx events, apply modifiers on args
-  const modifiers = isModelListener && getModelModifiers(props, event.slice(7))
+  const modifiers =
+    isModelListener && getModelModifiers(instance, props, event.slice(7))
   if (modifiers) {
     if (modifiers.trim) {
       args = rawArgs.map(a => (isString(a) ? a.trim() : a))
