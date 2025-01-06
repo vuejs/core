@@ -45,6 +45,19 @@ const bar = 1
   props: propsModel,`)
   })
 
+  // #12649
+  test('w/ external definition(.jsx)', () => {
+    const { content } = compile(`
+    <script setup>
+    import { propsModel } from './props.jsx'
+    const props = defineProps(propsModel)
+    </script>
+      `)
+    assertCode(content)
+    expect(content).toMatch(`export default {
+  props: propsModel,`)
+  })
+
   // #4764
   test('w/ leading code', () => {
     const { content } = compile(`

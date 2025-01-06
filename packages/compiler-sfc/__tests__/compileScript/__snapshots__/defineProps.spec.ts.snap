@@ -282,6 +282,22 @@ return { props, get propsModel() { return propsModel } }
 }"
 `;
 
+exports[`defineProps > w/ external definition(.jsx) 1`] = `
+"import { propsModel } from './props.jsx'
+    
+export default {
+  props: propsModel,
+  setup(__props, { expose: __expose }) {
+  __expose();
+
+    const props = __props
+    
+return { props, get propsModel() { return propsModel } }
+}
+
+}"
+`;
+
 exports[`defineProps > w/ interface 1`] = `
 "import { defineComponent as _defineComponent } from 'vue'
 interface Props { x?: number }
