@@ -274,16 +274,14 @@ describe('renderer: teleport', () => {
         root,
       )
       const commentNode = teleport!.children[0].el
-      expect(serializeInner(root)).toMatchInlineSnapshot(`"<div>0</div>"`)
-      expect(serializeInner(target)).toMatchInlineSnapshot(
-        `"<!--comment in teleport-->"`,
-      )
+      expect(serializeInner(root)).toBe(`<div>0</div>`)
+      expect(serializeInner(target)).toBe(`<!--comment in teleport-->`)
       expect(serialize(commentNode)).toBe(`<!--comment in teleport-->`)
 
       count.value = 1
       await nextTick()
       __DEV__ = true
-      expect(serializeInner(root)).toMatchInlineSnapshot(`"<div>1</div>"`)
+      expect(serializeInner(root)).toBe(`<div>1</div>`)
       expect(teleport!.children[0].el).toBe(commentNode)
     })
 
