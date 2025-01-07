@@ -1,4 +1,4 @@
-// Ported from https://github.com/stackblitz/alien-signals/blob/v0.4.12/src/system.ts
+// Ported from https://github.com/stackblitz/alien-signals/blob/d605271723ca9529c9a7efc0d8ce70e50d0cc96b/src/system.ts
 
 export interface IEffect extends Subscriber {
   nextNotify: IEffect | undefined
@@ -133,53 +133,49 @@ export function propagate(subs: Link): void {
     const sub = link.sub
     const subFlags = sub.flags
 
-    if (!(subFlags & SubscriberFlags.Tracking)) {
-      if (
-        !(subFlags & (SubscriberFlags.ToCheckDirty | SubscriberFlags.Dirty)) ||
-        subFlags & SubscriberFlags.Recursed
-      ) {
-        sub.flags = (subFlags & ~SubscriberFlags.Recursed) | targetFlag
-        const subSubs = (sub as Dependency).subs
-        if (subSubs !== undefined) {
-          if (subSubs.nextSub !== undefined) {
-            subSubs.prevSub = subs
-            subs = subSubs
-            ++stack
-          }
-          link = subSubs
-          targetFlag = SubscriberFlags.ToCheckDirty
-          continue
+    if (
+      (!(
+        subFlags &
+        (SubscriberFlags.Tracking |
+          SubscriberFlags.ToCheckDirty |
+          SubscriberFlags.Dirty)
+      ) &&
+        ((sub.flags = subFlags | targetFlag), true)) ||
+      ((subFlags & (SubscriberFlags.Tracking | SubscriberFlags.Recursed)) ===
+        SubscriberFlags.Recursed &&
+        ((sub.flags = (subFlags & ~SubscriberFlags.Recursed) | targetFlag),
+        true)) ||
+      (!(subFlags & (SubscriberFlags.ToCheckDirty | SubscriberFlags.Dirty)) &&
+        isValidLink(link, sub) &&
+        ((sub.flags = subFlags | SubscriberFlags.Recursed | targetFlag),
+        (sub as Dependency).subs !== undefined))
+    ) {
+      const subSubs = (sub as Dependency).subs
+      if (subSubs !== undefined) {
+        if (subSubs.nextSub !== undefined) {
+          subSubs.prevSub = subs
+          subs = subSubs
+          ++stack
         }
-        if ('notify' in sub) {
-          if (queuedEffectsTail !== undefined) {
-            queuedEffectsTail.nextNotify = sub
-          } else {
-            queuedEffects = sub
-          }
-          queuedEffectsTail = sub
-        }
-      } else if (!(subFlags & targetFlag)) {
-        sub.flags = subFlags | targetFlag
+        link = subSubs
+        targetFlag = SubscriberFlags.ToCheckDirty
+        continue
       }
-    } else if (isValidLink(link, sub)) {
-      if (
-        !(subFlags & (SubscriberFlags.ToCheckDirty | SubscriberFlags.Dirty))
-      ) {
-        sub.flags = subFlags | targetFlag | SubscriberFlags.Recursed
-        const subSubs = (sub as Dependency).subs
-        if (subSubs !== undefined) {
-          if (subSubs.nextSub !== undefined) {
-            subSubs.prevSub = subs
-            subs = subSubs
-            ++stack
-          }
-          link = subSubs
-          targetFlag = SubscriberFlags.ToCheckDirty
-          continue
+      if ('notify' in sub) {
+        if (queuedEffectsTail !== undefined) {
+          queuedEffectsTail.nextNotify = sub
+        } else {
+          queuedEffects = sub
         }
-      } else if (!(subFlags & targetFlag)) {
-        sub.flags = subFlags | targetFlag
+        queuedEffectsTail = sub
       }
+    } else if (
+      !(subFlags & (SubscriberFlags.Tracking | targetFlag)) ||
+      (!(subFlags & targetFlag) &&
+        subFlags & (SubscriberFlags.ToCheckDirty | SubscriberFlags.Dirty) &&
+        isValidLink(link, sub))
+    ) {
+      sub.flags = subFlags | targetFlag
     }
 
     if ((nextSub = subs.nextSub) === undefined) {
