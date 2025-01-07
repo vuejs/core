@@ -2,11 +2,9 @@ import { type Ref, customRef, ref } from '@vue/reactivity'
 import { EMPTY_OBJ, camelize, hasChanged, hyphenate } from '@vue/shared'
 import type { DefineModelOptions, ModelRef } from '../apiSetupHelpers'
 import { getCurrentInstance } from '../component'
-import type { ComponentInternalInstance } from '../component'
 import { warn } from '../warning'
 import type { NormalizedProps } from '../componentProps'
 import { watchSyncEffect } from '../apiWatch'
-import { DeprecationTypes, isCompatEnabled } from '../compat/compatConfig'
 
 export function useModel<
   M extends PropertyKey,
@@ -37,7 +35,7 @@ export function useModel(
   }
 
   const hyphenatedName = hyphenate(name)
-  const modifiers = getModelModifiers(i, props, camelizedName)
+  const modifiers = getModelModifiers(props, camelizedName)
 
   const res = customRef((track, trigger) => {
     let localValue: any
@@ -120,17 +118,9 @@ export function useModel(
 }
 
 export const getModelModifiers = (
-  instance: ComponentInternalInstance,
   props: Record<string, any>,
   modelName: string,
 ): Record<string, boolean> | undefined => {
-  if (
-    __COMPAT__ &&
-    isCompatEnabled(DeprecationTypes.COMPONENT_V_MODEL, instance)
-  ) {
-    return props.modelModifiers
-  }
-
   return modelName === 'modelValue' || modelName === 'model-value'
     ? props.modelModifiers
     : props[`${modelName}Modifiers`] ||

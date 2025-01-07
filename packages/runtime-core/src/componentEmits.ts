@@ -152,14 +152,19 @@ export function emit(
   }
 
   let args = rawArgs
-  const isModelListener =
-    __COMPAT__ && isCompatEnabled(DeprecationTypes.COMPONENT_V_MODEL, instance)
-      ? compatModelEventPrefix + event in props
-      : event.startsWith('update:')
+  let isModelListener
+  let modifiers
+  if (
+    __COMPAT__ &&
+    isCompatEnabled(DeprecationTypes.COMPONENT_V_MODEL, instance) &&
+    (isModelListener = compatModelEventPrefix + event in props)
+  ) {
+    modifiers = props.modelModifiers
+  } else if ((isModelListener = event.startsWith('update:'))) {
+    modifiers = getModelModifiers(props, event.slice(7))
+  }
 
   // for v-model update:xxx events, apply modifiers on args
-  const modifiers =
-    isModelListener && getModelModifiers(instance, props, event.slice(7))
   if (modifiers) {
     if (modifiers.trim) {
       args = rawArgs.map(a => (isString(a) ? a.trim() : a))
