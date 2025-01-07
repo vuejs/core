@@ -32,7 +32,6 @@ import {
 import type { ComponentTypeEmits } from './apiSetupHelpers'
 import { getModelModifiers } from './helpers/useModel'
 import type { ComponentPublicInstance } from './componentPublicInstance'
-import { DeprecationTypes, isCompatEnabled } from './compat/compatConfig'
 
 export type ObjectEmitsOptions = Record<
   string,
@@ -156,7 +155,6 @@ export function emit(
   let modifiers
   if (
     __COMPAT__ &&
-    isCompatEnabled(DeprecationTypes.COMPONENT_V_MODEL, instance) &&
     (isModelListener = compatModelEventPrefix + event in props)
   ) {
     modifiers = props.modelModifiers
