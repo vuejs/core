@@ -26,6 +26,6 @@ jobs:
 
       - run: pnpm install
 
-      - run: pnpm release --canary
+      - run: pnpm release --canary --publish
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

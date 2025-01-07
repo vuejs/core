@@ -110,7 +110,7 @@ export interface RootNode extends Node {
   directives: string[]
   hoists: (JSChildNode | null)[]
   imports: ImportItem[]
-  cached: number
+  cached: (CacheExpression | null)[]
   temps: number
   ssrHelpers?: symbol[]
   codegenNode?: TemplateChildNode | JSChildNode | BlockStatement
@@ -203,7 +203,7 @@ export interface DirectiveNode extends Node {
   rawName?: string
   exp: ExpressionNode | undefined
   arg: ExpressionNode | undefined
-  modifiers: string[]
+  modifiers: SimpleExpressionNode[]
   /**
    * optional property to cache the expression parse result for v-for
    */
@@ -218,7 +218,7 @@ export interface DirectiveNode extends Node {
 export enum ConstantTypes {
   NOT_CONSTANT = 0,
   CAN_SKIP_PATCH,
-  CAN_HOIST,
+  CAN_CACHE,
   CAN_STRINGIFY,
 }
 
@@ -330,6 +330,7 @@ export interface VNodeCall extends Node {
     | SlotsExpression // component slots
     | ForRenderListExpression // v-for fragment call
     | SimpleExpressionNode // hoisted
+    | CacheExpression // cached
     | undefined
   patchFlag: PatchFlags | undefined
   dynamicProps: string | SimpleExpressionNode | undefined
@@ -416,7 +417,9 @@ export interface CacheExpression extends Node {
   type: NodeTypes.JS_CACHE_EXPRESSION
   index: number
   value: JSChildNode
-  isVOnce: boolean
+  needPauseTracking: boolean
+  inVOnce: boolean
+  needArraySpread: boolean
 }
 
 export interface MemoExpression extends CallExpression {
@@ -511,7 +514,7 @@ export interface SlotsObjectProperty extends Property {
 }
 
 export interface SlotFunctionExpression extends FunctionExpression {
-  returns: TemplateChildNode[]
+  returns: TemplateChildNode[] | CacheExpression
 }
 
 // createSlots({ ... }, [
@@ -598,7 +601,7 @@ export function createRoot(
     directives: [],
     hoists: [],
     imports: [],
-    cached: 0,
+    cached: [],
     temps: 0,
     codegenNode: undefined,
     loc: locStub,
@@ -616,7 +619,7 @@ export function createVNodeCall(
   isBlock: VNodeCall['isBlock'] = false,
   disableTracking: VNodeCall['disableTracking'] = false,
   isComponent: VNodeCall['isComponent'] = false,
-  loc = locStub,
+  loc: SourceLocation = locStub,
 ): VNodeCall {
   if (context) {
     if (isBlock) {
@@ -771,13 +774,16 @@ export function createConditionalExpression(
 export function createCacheExpression(
   index: number,
   value: JSChildNode,
-  isVOnce: boolean = false,
+  needPauseTracking: boolean = false,
+  inVOnce: boolean = false,
 ): CacheExpression {
   return {
     type: NodeTypes.JS_CACHE_EXPRESSION,
     index,
     value,
-    isVOnce,
+    needPauseTracking: needPauseTracking,
+    inVOnce,
+    needArraySpread: false,
     loc: locStub,
   }
 }
@@ -848,18 +854,24 @@ export function createReturnStatement(
   }
 }
 
-export function getVNodeHelper(ssr: boolean, isComponent: boolean) {
+export function getVNodeHelper(
+  ssr: boolean,
+  isComponent: boolean,
+): typeof CREATE_VNODE | typeof CREATE_ELEMENT_VNODE {
   return ssr || isComponent ? CREATE_VNODE : CREATE_ELEMENT_VNODE
 }
 
-export function getVNodeBlockHelper(ssr: boolean, isComponent: boolean) {
+export function getVNodeBlockHelper(
+  ssr: boolean,
+  isComponent: boolean,
+): typeof CREATE_BLOCK | typeof CREATE_ELEMENT_BLOCK {
   return ssr || isComponent ? CREATE_BLOCK : CREATE_ELEMENT_BLOCK
 }
 
 export function convertToBlock(
   node: VNodeCall,
   { helper, removeHelper, inSSR }: TransformContext,
-) {
+): void {
   if (!node.isBlock) {
     node.isBlock = true
     removeHelper(getVNodeHelper(inSSR, node.isComponent))
