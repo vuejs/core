@@ -50,6 +50,7 @@ import {
 import {
   type DynamicPropsSource,
   type RawProps,
+  getKeysFromRawProps,
   getPropsProxyHandlers,
   hasFallthroughAttrs,
   normalizePropsOptions,
@@ -284,6 +285,7 @@ export class VaporComponentInstance implements GenericComponentInstance {
   props: Record<string, any>
   attrs: Record<string, any>
   propsDefaults: Record<string, any> | null
+  getRawProps: () => Record<string, any>
 
   slots: StaticSlots
 
@@ -392,6 +394,17 @@ export class VaporComponentInstance implements GenericComponentInstance {
           : EMPTY_OBJ
     } else {
       this.props = this.attrs = EMPTY_OBJ
+    }
+    this.getRawProps = () => {
+      const keys = getKeysFromRawProps(this.rawProps)
+      return keys.reduce(
+        (props, key) => {
+          // TODO
+          props[key] = null
+          return props
+        },
+        {} as Record<string, any>,
+      )
     }
 
     // init slots

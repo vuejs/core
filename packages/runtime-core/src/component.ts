@@ -366,6 +366,7 @@ export interface GenericComponentInstance {
    * @internal
    */
   refs: Data
+  emit: EmitFn
   /**
    * used for keeping track of .once event handlers on components
    * @internal
@@ -377,6 +378,10 @@ export interface GenericComponentInstance {
    * @internal
    */
   propsDefaults: Data | null
+  /**
+   * @internal
+   */
+  getRawProps: () => Record<string, any> | null
 
   // exposed properties via expose()
   exposed: Record<string, any> | null
@@ -730,6 +735,7 @@ export function createComponentInstance(
 
     // props default value
     propsDefaults: null,
+    getRawProps: null!,
 
     // inheritAttrs
     inheritAttrs: type.inheritAttrs,
@@ -777,6 +783,7 @@ export function createComponentInstance(
   }
   instance.root = parent ? parent.root : instance
   instance.emit = emit.bind(null, instance)
+  instance.getRawProps = () => instance.vnode.props
 
   // apply custom element special handling
   if (vnode.ce) {

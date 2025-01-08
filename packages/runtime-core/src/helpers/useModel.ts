@@ -1,7 +1,7 @@
 import { type Ref, customRef, ref } from '@vue/reactivity'
 import { EMPTY_OBJ, camelize, hasChanged, hyphenate } from '@vue/shared'
 import type { DefineModelOptions, ModelRef } from '../apiSetupHelpers'
-import { getCurrentInstance } from '../component'
+import { getCurrentGenericInstance } from '../component'
 import { warn } from '../warning'
 import type { NormalizedProps } from '../componentProps'
 import { watchSyncEffect } from '../apiWatch'
@@ -23,14 +23,14 @@ export function useModel(
   name: string,
   options: DefineModelOptions = EMPTY_OBJ,
 ): Ref {
-  const i = getCurrentInstance()!
+  const i = getCurrentGenericInstance()!
   if (__DEV__ && !i) {
     warn(`useModel() called without active instance.`)
     return ref() as any
   }
 
   const camelizedName = camelize(name)
-  if (__DEV__ && !(i.propsOptions[0] as NormalizedProps)[camelizedName]) {
+  if (__DEV__ && !(i.propsOptions![0] as NormalizedProps)[camelizedName]) {
     warn(`useModel() called with prop "${name}" which is not declared.`)
     return ref() as any
   }
@@ -65,7 +65,7 @@ export function useModel(
         ) {
           return
         }
-        const rawProps = i.vnode!.props
+        const rawProps = i.getRawProps()
         if (
           !(
             rawProps &&
