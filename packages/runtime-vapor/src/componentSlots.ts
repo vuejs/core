@@ -70,12 +70,14 @@ export function getSlot(
       source = dynamicSources[i]
       if (isFunction(source)) {
         const slot = source()
-        if (isArray(slot)) {
-          for (const s of slot) {
-            if (s.name === key) return s.fn
+        if (slot) {
+          if (isArray(slot)) {
+            for (const s of slot) {
+              if (s.name === key) return s.fn
+            }
+          } else if (slot.name === key) {
+            return slot.fn
           }
-        } else if (slot.name === key) {
-          return slot.fn
         }
       } else if (hasOwn(source, key)) {
         return source[key]

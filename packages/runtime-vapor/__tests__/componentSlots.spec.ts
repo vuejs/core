@@ -15,6 +15,7 @@ import {
 } from '../src'
 import { currentInstance, nextTick, ref } from '@vue/runtime-dom'
 import { makeRender } from './_utils'
+import type { DynamicSlot } from '../src/componentSlots'
 
 const define = makeRender<any>()
 
@@ -467,6 +468,40 @@ describe('component: slots', () => {
       toggle.value = true
       await nextTick()
       expect(html()).toBe('content<!--if--><!--slot-->')
+    })
+
+    test('dynamic slot work with v-if', async () => {
+      const val = ref('header')
+      const toggle = ref(false)
+
+      const Comp = defineVaporComponent(() => {
+        const n0 = template('<div></div>')()
+        prepend(n0 as any as ParentNode, createSlot('header', null))
+        return n0
+      })
+
+      const { host } = define(() => {
+        // dynamic slot
+        return createComponent(Comp, null, {
+          $: [
+            () =>
+              (toggle.value
+                ? {
+                    name: val.value,
+                    fn: () => {
+                      return template('<h1></h1>')()
+                    },
+                  }
+                : void 0) as DynamicSlot,
+          ],
+        })
+      }).render()
+
+      expect(host.innerHTML).toBe('<div><!--slot--></div>')
+
+      toggle.value = true
+      await nextTick()
+      expect(host.innerHTML).toBe('<div><h1></h1><!--slot--></div>')
     })
   })
 })
