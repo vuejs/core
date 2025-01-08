@@ -285,7 +285,7 @@ export class VaporComponentInstance implements GenericComponentInstance {
   props: Record<string, any>
   attrs: Record<string, any>
   propsDefaults: Record<string, any> | null
-  getRawProps: () => Record<string, any>
+  getKeysFromRawProps: () => string[] | undefined
 
   slots: StaticSlots
 
@@ -395,17 +395,7 @@ export class VaporComponentInstance implements GenericComponentInstance {
     } else {
       this.props = this.attrs = EMPTY_OBJ
     }
-    this.getRawProps = () => {
-      const keys = getKeysFromRawProps(this.rawProps)
-      return keys.reduce(
-        (props, key) => {
-          // TODO
-          props[key] = null
-          return props
-        },
-        {} as Record<string, any>,
-      )
-    }
+    this.getKeysFromRawProps = () => getKeysFromRawProps(this.rawProps)
 
     // init slots
     this.rawSlots = rawSlots || EMPTY_OBJ

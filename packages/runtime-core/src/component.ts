@@ -381,7 +381,7 @@ export interface GenericComponentInstance {
   /**
    * @internal
    */
-  getRawProps: () => Record<string, any> | null
+  getKeysFromRawProps: () => string[] | undefined
 
   // exposed properties via expose()
   exposed: Record<string, any> | null
@@ -735,7 +735,7 @@ export function createComponentInstance(
 
     // props default value
     propsDefaults: null,
-    getRawProps: null!,
+    getKeysFromRawProps: null!, // to be set immediately
 
     // inheritAttrs
     inheritAttrs: type.inheritAttrs,
@@ -783,7 +783,10 @@ export function createComponentInstance(
   }
   instance.root = parent ? parent.root : instance
   instance.emit = emit.bind(null, instance)
-  instance.getRawProps = () => instance.vnode.props
+  instance.getKeysFromRawProps = () => {
+    const { props } = instance.vnode
+    if (props) return Object.keys(props)
+  }
 
   // apply custom element special handling
   if (vnode.ce) {

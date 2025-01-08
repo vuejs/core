@@ -65,17 +65,17 @@ export function useModel(
         ) {
           return
         }
-        const rawProps = i.getRawProps()
+        const rawPropKeys = i.getKeysFromRawProps()
         if (
           !(
-            rawProps &&
+            rawPropKeys &&
             // check if parent has passed v-model
-            (name in rawProps ||
-              camelizedName in rawProps ||
-              hyphenatedName in rawProps) &&
-            (`onUpdate:${name}` in rawProps ||
-              `onUpdate:${camelizedName}` in rawProps ||
-              `onUpdate:${hyphenatedName}` in rawProps)
+            (rawPropKeys.includes(name) ||
+              rawPropKeys.includes(camelizedName) ||
+              rawPropKeys.includes(hyphenatedName)) &&
+            (rawPropKeys.includes(`onUpdate:${name}`) ||
+              rawPropKeys.includes(`onUpdate:${camelizedName}`) ||
+              rawPropKeys.includes(`onUpdate:${hyphenatedName}`))
           )
         ) {
           // no v-model, local update
