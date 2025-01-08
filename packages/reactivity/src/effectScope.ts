@@ -122,6 +122,7 @@ export class EffectScope {
   off(): void {
     if (this._on > 0 && --this._on === 0) {
       activeEffectScope = this.prevScope
+      this.prevScope = undefined
     }
   }
 
