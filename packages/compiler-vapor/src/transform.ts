@@ -47,6 +47,7 @@ export interface DirectiveTransformResult {
   modifier?: '.' | '^'
   runtimeCamelize?: boolean
   handler?: boolean
+  handlerModifiers?: string[]
   model?: boolean
   modelModifiers?: string[]
 }

@@ -940,6 +940,16 @@ describe('compiler: element transform', () => {
     ])
   })
 
+  test('component event with once modifier', () => {
+    const { code } = compileWithElementTransform(`<Foo @foo.once="bar" />`)
+    expect(code).toMatchSnapshot()
+  })
+
+  test('component dynamic event with once modifier', () => {
+    const { code } = compileWithElementTransform(`<Foo @[foo].once="bar" />`)
+    expect(code).toMatchSnapshot()
+  })
+
   test('invalid html nesting', () => {
     const { code, ir } = compileWithElementTransform(
       `<p><div>123</div></p>
