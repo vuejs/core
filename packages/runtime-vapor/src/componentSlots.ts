@@ -114,7 +114,7 @@ export function createSlot(
   const instance = currentInstance as VaporComponentInstance
   const rawSlots = instance.rawSlots
   const isDynamicName = isFunction(name)
-  const fragment = __DEV__ ? new DynamicFragment('slot') : new DynamicFragment()
+  const fragment = new DynamicFragment('slot')
   const slotProps = rawProps
     ? new Proxy(rawProps, dynamicSlotsPropsProxyHandlers)
     : EMPTY_OBJ

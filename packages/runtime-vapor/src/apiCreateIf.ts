@@ -8,7 +8,7 @@ export function createIf(
   once?: boolean,
   // hydrationNode?: Node,
 ): DynamicFragment {
-  const frag = __DEV__ ? new DynamicFragment('if') : new DynamicFragment()
+  const frag = new DynamicFragment('if')
   if (once) {
     frag.update(condition() ? b1 : b2)
   } else {
