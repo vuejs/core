@@ -296,6 +296,19 @@ describe('reactivity/effect/scope', () => {
     })
   })
 
+  it('calling on() and off() multiple times inside an active scope should not break currentScope', () => {
+    const parentScope = effectScope()
+    parentScope.run(() => {
+      const childScope = effectScope(true)
+      childScope.on()
+      childScope.on()
+      childScope.off()
+      childScope.off()
+      childScope.off()
+      expect(getCurrentScope()).toBe(parentScope)
+    })
+  })
+
   it('should pause/resume EffectScope', async () => {
     const counter = reactive({ num: 0 })
     const fnSpy = vi.fn(() => counter.num)

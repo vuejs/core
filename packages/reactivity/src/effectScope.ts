@@ -9,6 +9,10 @@ export class EffectScope {
    */
   private _active = true
   /**
+   * @internal track `on` calls, allow `on` call multiple times
+   */
+  private _on = 0
+  /**
    * @internal
    */
   effects: ReactiveEffect[] = []
@@ -105,8 +109,10 @@ export class EffectScope {
    * @internal
    */
   on(): void {
-    this.prevScope = activeEffectScope
-    activeEffectScope = this
+    if (++this._on === 1) {
+      this.prevScope = activeEffectScope
+      activeEffectScope = this
+    }
   }
 
   /**
@@ -114,7 +120,10 @@ export class EffectScope {
    * @internal
    */
   off(): void {
-    activeEffectScope = this.prevScope
+    if (this._on > 0 && --this._on === 0) {
+      activeEffectScope = this.prevScope
+      this.prevScope = undefined
+    }
   }
 
   stop(fromParent?: boolean): void {
