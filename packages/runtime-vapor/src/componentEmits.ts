@@ -18,7 +18,7 @@ export function normalizeEmitsOptions(
   let normalized: ObjectEmitsOptions
   if (isArray(raw)) {
     normalized = {}
-    for (const key in raw) normalized[key] = null
+    for (const key of raw) normalized[key] = null
   } else {
     normalized = raw
   }

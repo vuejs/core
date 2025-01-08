@@ -195,8 +195,17 @@ describe('component: emit', () => {
     ).not.toHaveBeenWarned()
   })
 
-  test.todo('validator warning', () => {
-    // TODO: warning validator
+  test('validator warning', () => {
+    define({
+      emits: {
+        foo: (arg: number) => arg > 0,
+      },
+      setup(_, { emit }) {
+        emit('foo', -1)
+        return []
+      },
+    }).render()
+    expect(`event validation failed for event "foo"`).toHaveBeenWarned()
   })
 
   test('.once', () => {
@@ -415,8 +424,4 @@ describe('component: emit', () => {
     await nextTick()
     expect(fn).not.toHaveBeenCalled()
   })
-
-  // NOTE: not supported mixins
-  // test.todo('merge string array emits', async () => {})
-  // test.todo('merge object emits', async () => {})
 })
