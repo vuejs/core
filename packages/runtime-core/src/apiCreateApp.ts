@@ -383,11 +383,10 @@ export function createAppAPI<HostElement>(
             context.reload = () => {
               // casting to ElementNamespace because TS doesn't guarantee type narrowing
               // over function boundaries
-              render(
-                cloneVNode(vnode),
-                rootContainer,
-                namespace as ElementNamespace,
-              )
+              const cloned = cloneVNode(vnode)
+              // avoid hydration for hmr updating
+              cloned.el = null
+              render(cloned, rootContainer, namespace as ElementNamespace)
             }
           }
 
