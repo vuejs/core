@@ -379,6 +379,7 @@ export interface GenericComponentInstance {
    */
   propsDefaults: Data | null
   /**
+   * used for getting the keys of a component's raw props
    * @internal
    */
   getKeysFromRawProps: () => string[] | undefined
