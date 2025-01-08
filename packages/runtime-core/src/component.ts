@@ -366,6 +366,7 @@ export interface GenericComponentInstance {
    * @internal
    */
   refs: Data
+  emit: EmitFn
   /**
    * used for keeping track of .once event handlers on components
    * @internal
@@ -377,6 +378,11 @@ export interface GenericComponentInstance {
    * @internal
    */
   propsDefaults: Data | null
+  /**
+   * used for getting the keys of a component's raw props
+   * @internal
+   */
+  getKeysFromRawProps: () => string[] | undefined
 
   // exposed properties via expose()
   exposed: Record<string, any> | null
@@ -730,6 +736,7 @@ export function createComponentInstance(
 
     // props default value
     propsDefaults: null,
+    getKeysFromRawProps: null!, // to be set immediately
 
     // inheritAttrs
     inheritAttrs: type.inheritAttrs,
@@ -777,6 +784,10 @@ export function createComponentInstance(
   }
   instance.root = parent ? parent.root : instance
   instance.emit = emit.bind(null, instance)
+  instance.getKeysFromRawProps = () => {
+    const { props } = instance.vnode
+    if (props) return Object.keys(props)
+  }
 
   // apply custom element special handling
   if (vnode.ce) {
