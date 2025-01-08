@@ -193,9 +193,10 @@ describe('compile', () => {
         },
       })
       expect(code).matchSnapshot()
-      expect(code).contains('key.value+1')
+      expect(code).contains('const _key = key.value')
+      expect(code).contains('_key+1')
       expect(code).contains(
-        '_setDynamicProps(n0, [{ [key.value+1]: _unref(foo)[key.value+1]() }], true)',
+        '_setDynamicProps(n0, [{ [_key+1]: _unref(foo)[_key+1]() }], true)',
       )
     })
 

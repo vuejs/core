@@ -171,7 +171,7 @@ describe('compiler v-bind', () => {
       ],
     })
     expect(code).contains(
-      '_setDynamicProps(n0, [{ [_ctx.id]: _ctx.id, [_ctx.title]: _ctx.title }], true)',
+      '_setDynamicProps(n0, [{ [_id]: _id, [_title]: _title }], true)',
     )
   })
 
@@ -224,7 +224,7 @@ describe('compiler v-bind', () => {
       ],
     })
     expect(code).contains(
-      '_setDynamicProps(n0, [{ [_ctx.id]: _ctx.id, foo: "bar", checked: "" }], true)',
+      '_setDynamicProps(n0, [{ [_id]: _id, foo: "bar", checked: "" }], true)',
     )
   })
 
@@ -615,13 +615,13 @@ describe('compiler v-bind', () => {
     expect(code).contains('_setAttr(n0, "form", _ctx.form)')
     expect(code).contains('_setAttr(n1, "list", _ctx.list)')
     expect(code).contains('_setAttr(n2, "type", _ctx.type)')
-    expect(code).contains('_setAttr(n3, "width", _ctx.width)')
-    expect(code).contains('_setAttr(n3, "height", _ctx.height)')
-    expect(code).contains('_setAttr(n4, "width", _ctx.width)')
-    expect(code).contains('_setAttr(n4, "height", _ctx.height)')
-    expect(code).contains('_setAttr(n5, "width", _ctx.width)')
-    expect(code).contains('_setAttr(n5, "height", _ctx.height)')
-    expect(code).contains(' _setAttr(n6, "width", _ctx.width)')
+    expect(code).contains('_setAttr(n3, "width", _width)')
+    expect(code).contains('_setAttr(n3, "height", _height)')
+    expect(code).contains('_setAttr(n4, "width", _width)')
+    expect(code).contains('_setAttr(n4, "height", _height)')
+    expect(code).contains('_setAttr(n5, "width", _width)')
+    expect(code).contains('_setAttr(n5, "height", _height)')
+    expect(code).contains(' _setAttr(n6, "width", _width)')
   })
 
   test(':innerHTML', () => {
@@ -692,5 +692,104 @@ describe('compiler v-bind', () => {
       },
     )
     expect(code).matchSnapshot()
+  })
+})
+
+describe('cache multiple access', () => {
+  test('repeated variables', () => {
+    const { code } = compileWithVBind(`
+        <div :class="foo"></div>
+        <div :class="foo"></div>
+      `)
+    expect(code).matchSnapshot()
+    expect(code).contains('const _foo = _ctx.foo')
+    expect(code).contains('setClass(n0, _foo)')
+    expect(code).contains('setClass(n1, _foo)')
+  })
+
+  test('repeated expressions', () => {
+    const { code } = compileWithVBind(`
+        <div :id="foo + bar"></div>
+        <div :id="foo + bar"></div>
+      `)
+    expect(code).matchSnapshot()
+    expect(code).contains('const _foo_bar = _ctx.foo + _ctx.bar')
+    expect(code).contains('_setProp(n0, "id", _foo_bar)')
+    expect(code).contains('_setProp(n1, "id", _foo_bar)')
+  })
+
+  test('repeated variable in expressions', () => {
+    const { code } = compileWithVBind(`
+        <div :id="foo + foo + bar"></div>
+        <div :id="foo"></div>
+      `)
+    expect(code).matchSnapshot()
+    expect(code).contains('const _foo = _ctx.foo')
+    expect(code).contains('_setProp(n0, "id", _foo + _foo + _ctx.bar)')
+    expect(code).contains('_setProp(n1, "id", _foo)')
+  })
+
+  test('repeated expression in expressions', () => {
+    const { code } = compileWithVBind(`
+        <div :id="foo + bar"></div>
+        <div :id="foo + bar"></div>
+        <div :id="foo + foo + bar"></div>
+      `)
+    expect(code).matchSnapshot()
+    expect(code).contains('const _foo_bar = _foo + _ctx.bar')
+    expect(code).contains('_setProp(n0, "id", _foo_bar)')
+    expect(code).contains('_setProp(n2, "id", _foo + _foo_bar)')
+  })
+
+  test('function calls with arguments', () => {
+    const { code } = compileWithVBind(`
+        <div :id="foo[bar(baz)]"></div>
+        <div :id="foo[bar(baz)]"></div>
+        <div :id="bar() + foo"></div>
+      `)
+    expect(code).matchSnapshot()
+    expect(code).contains('const _foo_bar_baz = _foo[_bar(_ctx.baz)]')
+    expect(code).contains('_setProp(n0, "id", _foo_bar_baz)')
+    expect(code).contains('_setProp(n1, "id", _foo_bar_baz)')
+    expect(code).contains('_setProp(n2, "id", _bar() + _foo)')
+  })
+
+  test('dynamic key bindings with expressions', () => {
+    const { code } = compileWithVBind(`
+        <div :[key+1]="foo[key+1]()" />
+      `)
+    expect(code).matchSnapshot()
+    expect(code).contains('const _key = _ctx.key')
+    expect(code).contains('[{ [_key+1]: _ctx.foo[_key+1]() }]')
+  })
+
+  test('object property chain access', () => {
+    const { code } = compileWithVBind(`
+        <div :id="obj['foo']['baz'] + obj.bar"></div>
+        <div :id="obj['foo']['baz'] + obj.bar"></div>
+      `)
+    expect(code).matchSnapshot()
+    expect(code).contains(
+      "const _obj_foo_baz_obj_bar = _obj['foo']['baz'] + _obj.bar",
+    )
+    expect(code).contains('_setProp(n0, "id", _obj_foo_baz_obj_bar)')
+    expect(code).contains('_setProp(n1, "id", _obj_foo_baz_obj_bar)')
+  })
+
+  test('dynamic property access', () => {
+    const { code } = compileWithVBind(`
+        <div :id="obj[1][baz] + obj.bar"></div>
+      `)
+    expect(code).matchSnapshot()
+    expect(code).contains('const _obj = _ctx.obj')
+    expect(code).contains('_setProp(n0, "id", _obj[1][_ctx.baz] + _obj.bar)')
+  })
+
+  test('not cache variable and member expression with the same name', () => {
+    const { code } = compileWithVBind(`
+        <div :id="bar + obj.bar"></div>
+      `)
+    expect(code).matchSnapshot()
+    expect(code).not.contains('const _bar = _ctx.bar')
   })
 })

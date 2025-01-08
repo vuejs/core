@@ -18,6 +18,7 @@ import {
 } from './utils'
 import { genCreateComponent } from './component'
 import { genSlotOutlet } from './slotOutlet'
+import { processExpressions } from './expression'
 
 export function genOperations(
   opers: OperationNode[],
@@ -81,13 +82,21 @@ export function genEffects(
   effects: IREffect[],
   context: CodegenContext,
 ): CodeFragment[] {
-  const { helper } = context
+  const {
+    helper,
+    block: { expressions },
+  } = context
   const [frag, push, unshift] = buildCodeFragment()
   let operationsCount = 0
+  const { ids, frag: declarationFrags } = processExpressions(
+    context,
+    expressions,
+  )
+  push(...declarationFrags)
   for (let i = 0; i < effects.length; i++) {
     const effect = effects[i]
     operationsCount += effect.operations.length
-    const frags = genEffect(effect, context)
+    const frags = context.withId(() => genEffect(effect, context), ids)
     i > 0 && push(NEWLINE)
     if (frag[frag.length - 1] === ')' && frags[0] === '(') {
       push(';')
@@ -96,7 +105,7 @@ export function genEffects(
   }
 
   const newLineCount = frag.filter(frag => frag === NEWLINE).length
-  if (newLineCount > 1 || operationsCount > 1) {
+  if (newLineCount > 1 || operationsCount > 1 || declarationFrags.length > 0) {
     unshift(`{`, INDENT_START, NEWLINE)
     push(INDENT_END, NEWLINE, '}')
   }

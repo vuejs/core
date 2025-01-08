@@ -1,19 +1,21 @@
-import { genPropsAccessExp, isGloballyAllowed } from '@vue/shared'
+import { NOOP, extend, genPropsAccessExp, isGloballyAllowed } from '@vue/shared'
 import {
   BindingTypes,
   NewlineType,
   type SimpleExpressionNode,
   type SourceLocation,
   advancePositionWithClone,
+  createSimpleExpression,
   isInDestructureAssignment,
   isStaticProperty,
   walkIdentifiers,
 } from '@vue/compiler-dom'
-import type { Identifier } from '@babel/types'
+import type { Identifier, Node } from '@babel/types'
 import type { CodegenContext } from '../generate'
-import type { Node } from '@babel/types'
 import { isConstantExpression } from '../utils'
-import { type CodeFragment, buildCodeFragment } from './utils'
+import { type CodeFragment, NEWLINE, buildCodeFragment } from './utils'
+import { walk } from 'estree-walker'
+import { type ParserOptions, parseExpression } from '@babel/parser'
 
 export function genExpression(
   node: SimpleExpressionNode,
@@ -208,4 +210,348 @@ function canPrefix(name: string) {
   )
     return false
   return true
+}
+
+type DeclarationResult = {
+  ids: Record<string, string>
+  frag: CodeFragment[]
+}
+type DeclarationValue = {
+  name: string
+  isIdentifier?: boolean
+  value: SimpleExpressionNode
+  rawName?: string
+  exps?: Set<SimpleExpressionNode>
+  seenCount?: number
+}
+
+export function processExpressions(
+  context: CodegenContext,
+  expressions: SimpleExpressionNode[],
+): DeclarationResult {
+  // analyze variables
+  const { seenVariable, variableToExpMap, expToVariableMap, seenIdentifier } =
+    analyzeExpressions(expressions)
+
+  // process repeated identifiers and member expressions
+  // e.g., `foo[baz]` will be transformed into `foo_baz`
+  const varDeclarations = processRepeatedVariables(
+    context,
+    seenVariable,
+    variableToExpMap,
+    expToVariableMap,
+    seenIdentifier,
+  )
+
+  // process duplicate expressions after identifier and member expression handling.
+  // e.g., `foo + bar` will be transformed into `foo_bar`
+  const expDeclarations = processRepeatedExpressions(
+    context,
+    expressions,
+    varDeclarations,
+  )
+
+  return genDeclarations([...varDeclarations, ...expDeclarations], context)
+}
+
+function analyzeExpressions(expressions: SimpleExpressionNode[]) {
+  const seenVariable: Record<string, number> = Object.create(null)
+  const variableToExpMap = new Map<string, Set<SimpleExpressionNode>>()
+  const expToVariableMap = new Map<SimpleExpressionNode, string[]>()
+  const seenIdentifier = new Set<string>()
+
+  const registerVariable = (
+    name: string,
+    exp: SimpleExpressionNode,
+    isIdentifier: boolean,
+  ) => {
+    if (isIdentifier) seenIdentifier.add(name)
+    seenVariable[name] = (seenVariable[name] || 0) + 1
+    variableToExpMap.set(
+      name,
+      (variableToExpMap.get(name) || new Set()).add(exp),
+    )
+    expToVariableMap.set(exp, (expToVariableMap.get(exp) || []).concat(name))
+  }
+
+  for (const exp of expressions) {
+    if (!exp.ast) {
+      exp.ast === null && registerVariable(exp.content, exp, true)
+      continue
+    }
+
+    walk(exp.ast, {
+      enter(currentNode: Node) {
+        if (currentNode.type === 'MemberExpression') {
+          const memberExp = extractMemberExpression(
+            currentNode,
+            (name: string) => {
+              registerVariable(name, exp, true)
+            },
+          )
+          registerVariable(memberExp, exp, false)
+          return this.skip()
+        }
+
+        if (currentNode.type === 'Identifier') {
+          registerVariable(currentNode.name, exp, true)
+        }
+      },
+    })
+  }
+
+  return { seenVariable, seenIdentifier, variableToExpMap, expToVariableMap }
+}
+
+function processRepeatedVariables(
+  context: CodegenContext,
+  seenVariable: Record<string, number>,
+  variableToExpMap: Map<string, Set<SimpleExpressionNode>>,
+  expToVariableMap: Map<SimpleExpressionNode, string[]>,
+  seenIdentifier: Set<string>,
+): DeclarationValue[] {
+  const declarations: DeclarationValue[] = []
+  for (const [name, exps] of variableToExpMap) {
+    if (seenVariable[name] > 1 && exps.size > 0) {
+      const isIdentifier = seenIdentifier.has(name)
+      const varName = isIdentifier ? name : genVarName(name)
+
+      // replaces all non-identifiers with the new name. if node content
+      // includes only one member expression, it will become an identifier,
+      // e.g., foo[baz] -> foo_baz.
+      // for identifiers, we don't need to replace the content - they will be
+      // replaced during context.withId(..., ids)
+      const replaceRE = new RegExp(escapeRegExp(name), 'g')
+      exps.forEach(node => {
+        if (node.ast) {
+          node.content = node.content.replace(replaceRE, varName)
+          // re-parse the expression
+          node.ast = parseExp(context, node.content)
+        }
+      })
+
+      if (
+        !declarations.some(d => d.name === varName) &&
+        (!isIdentifier || shouldDeclareVariable(name, expToVariableMap, exps))
+      ) {
+        declarations.push({
+          name: varName,
+          isIdentifier,
+          value: extend(
+            { ast: isIdentifier ? null : parseExp(context, name) },
+            createSimpleExpression(name),
+          ),
+          rawName: name,
+          exps,
+          seenCount: seenVariable[name],
+        })
+      }
+    }
+  }
+
+  return declarations
+}
+
+function shouldDeclareVariable(
+  name: string,
+  expToVariableMap: Map<SimpleExpressionNode, string[]>,
+  exps: Set<SimpleExpressionNode>,
+): boolean {
+  const vars = Array.from(exps, exp => expToVariableMap.get(exp)!)
+  // assume name equals to `foo`
+  // if each expression only references `foo`, declaration is needed
+  // to avoid reactivity tracking
+  // e.g., [[foo],[foo]]
+  if (vars.every(v => v.length === 1)) {
+    return true
+  }
+
+  // if `foo` appears multiple times in one array, declaration is needed
+  // e.g., [[foo,foo]]
+  if (vars.some(v => v.filter(e => e === name).length > 1)) {
+    return true
+  }
+
+  const first = vars[0]
+  // if arrays have different lengths, declaration is needed
+  // e.g., [[foo],[foo,bar]]
+  if (vars.some(v => v.length !== first.length)) {
+    // special case, no declaration needed if one array is a subset of the other
+    // because they will be treated as repeated expressions
+    // e.g., [[foo,bar],[foo,foo,bar]] -> const foo_bar = _ctx.foo + _ctx.bar
+    if (
+      vars.some(
+        v => v.length > first.length && v.every(e => first.includes(e)),
+      ) ||
+      vars.some(v => first.length > v.length && first.every(e => v.includes(e)))
+    ) {
+      return false
+    }
+    return true
+  }
+  // if arrays share common elements, no declaration needed
+  // because they will be treat as repeated expressions
+  // e.g., [[foo,bar],[foo,bar]] -> const foo_bar = _ctx.foo + _ctx.bar
+  if (vars.some(v => v.some(e => first.includes(e)))) {
+    return false
+  }
+
+  return true
+}
+
+function processRepeatedExpressions(
+  context: CodegenContext,
+  expressions: SimpleExpressionNode[],
+  varDeclarations: DeclarationValue[],
+): DeclarationValue[] {
+  const declarations: DeclarationValue[] = []
+  const seenExp = expressions.reduce(
+    (acc, exp) => {
+      // only handle expressions that are not identifiers
+      if (exp.ast && exp.ast.type !== 'Identifier') {
+        acc[exp.content] = (acc[exp.content] || 0) + 1
+      }
+      return acc
+    },
+    Object.create(null) as Record<string, number>,
+  )
+
+  Object.entries(seenExp).forEach(([content, count]) => {
+    if (count > 1) {
+      // foo + baz -> foo_baz
+      const varName = genVarName(content)
+      if (!declarations.some(d => d.name === varName)) {
+        // if foo and baz have no other references, we don't need to declare separate variables
+        // instead of:
+        // const foo = _ctx.foo
+        // const baz = _ctx.baz
+        // const foo_baz = foo + baz
+        // we can generate:
+        // const foo_baz = _ctx.foo + _ctx.baz
+        const delVars: Record<string, string> = {}
+        for (let i = varDeclarations.length - 1; i >= 0; i--) {
+          const item = varDeclarations[i]
+          if (!item.exps || !item.seenCount) continue
+
+          const shouldRemove = [...item.exps].every(
+            node => node.content === content && item.seenCount === count,
+          )
+          if (shouldRemove) {
+            delVars[item.name] = item.rawName!
+            varDeclarations.splice(i, 1)
+          }
+        }
+        const value = extend(
+          {},
+          expressions.find(exp => exp.content === content)!,
+        )
+        Object.keys(delVars).forEach(name => {
+          value.content = value.content.replace(name, delVars[name])
+          if (value.ast) value.ast = parseExp(context, value.content)
+        })
+        declarations.push({
+          name: varName,
+          value: value,
+        })
+      }
+
+      // assume content equals to `foo + baz`
+      expressions.forEach(exp => {
+        // foo + baz -> foo_baz
+        if (exp.content === content) {
+          exp.content = varName
+          // ast is no longer needed since it becomes an identifier.
+          exp.ast = null
+        }
+        // foo + foo + baz -> foo + foo_baz
+        else if (exp.content.includes(content)) {
+          exp.content = exp.content.replace(
+            new RegExp(escapeRegExp(content), 'g'),
+            varName,
+          )
+          // re-parse the expression
+          exp.ast = parseExp(context, exp.content)
+        }
+      })
+    }
+  })
+
+  return declarations
+}
+
+function genDeclarations(
+  declarations: DeclarationValue[],
+  context: CodegenContext,
+): DeclarationResult {
+  const [frag, push] = buildCodeFragment()
+  const ids: Record<string, string> = Object.create(null)
+
+  // process identifiers first as expressions may rely on them
+  declarations.forEach(({ name, isIdentifier, value }) => {
+    if (isIdentifier) {
+      const varName = (ids[name] = `_${name}`)
+      push(`const ${varName} = `, ...genExpression(value, context), NEWLINE)
+    }
+  })
+
+  // process expressions
+  declarations.forEach(({ name, isIdentifier, value }) => {
+    if (!isIdentifier) {
+      const varName = (ids[name] = `_${name}`)
+      push(
+        `const ${varName} = `,
+        ...context.withId(() => genExpression(value, context), ids),
+        NEWLINE,
+      )
+    }
+  })
+
+  return { ids, frag }
+}
+
+function escapeRegExp(string: string) {
+  return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
+function parseExp(context: CodegenContext, content: string): Node {
+  const plugins = context.options.expressionPlugins
+  const options: ParserOptions = {
+    plugins: plugins ? [...plugins, 'typescript'] : ['typescript'],
+  }
+  return parseExpression(`(${content})`, options)
+}
+
+function genVarName(exp: string): string {
+  return `${exp
+    .replace(/[^a-zA-Z0-9]/g, '_')
+    .replace(/_+/g, '_')
+    .replace(/_+$/, '')}`
+}
+
+function extractMemberExpression(
+  exp: Node,
+  onIdentifier: (name: string) => void,
+): string {
+  if (!exp) return ''
+  switch (exp.type) {
+    case 'Identifier': // foo[bar]
+      onIdentifier(exp.name)
+      return exp.name
+    case 'StringLiteral': // foo['bar']
+      return exp.extra ? (exp.extra.raw as string) : exp.value
+    case 'NumericLiteral': // foo[0]
+      return exp.value.toString()
+    case 'BinaryExpression': // foo[bar + 1]
+      return `${extractMemberExpression(exp.left, onIdentifier)} ${exp.operator} ${extractMemberExpression(exp.right, onIdentifier)}`
+    case 'CallExpression': // foo[bar(baz)]
+      return `${extractMemberExpression(exp.callee, onIdentifier)}(${exp.arguments.map(arg => extractMemberExpression(arg, onIdentifier)).join(', ')})`
+    case 'MemberExpression': // foo[bar.baz]
+      const object = extractMemberExpression(exp.object, onIdentifier)
+      const prop = exp.computed
+        ? `[${extractMemberExpression(exp.property, onIdentifier)}]`
+        : `.${extractMemberExpression(exp.property, NOOP)}`
+      return `${object}${prop}`
+    default:
+      return ''
+  }
 }

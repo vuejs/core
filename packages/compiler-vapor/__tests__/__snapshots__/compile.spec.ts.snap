@@ -182,8 +182,9 @@ export function render(_ctx) {
   const n0 = t0()
   _delegate(n0, "click", () => _ctx.handleClick)
   _renderEffect(() => {
-    _setText(n0, _ctx.count, "foo", _ctx.count, "foo", _ctx.count)
-    _setProp(n0, "id", _ctx.count)
+    const _count = _ctx.count
+    _setText(n0, _count, "foo", _count, "foo", _count)
+    _setProp(n0, "id", _count)
   })
   return n0
 }"
@@ -199,7 +200,10 @@ exports[`compile > expression parsing > interpolation 1`] = `
 exports[`compile > expression parsing > v-bind 1`] = `
 "
   const n0 = t0()
-  _renderEffect(() => _setDynamicProps(n0, [{ [key.value+1]: _unref(foo)[key.value+1]() }], true))
+  _renderEffect(() => {
+    const _key = key.value
+    _setDynamicProps(n0, [{ [_key+1]: _unref(foo)[_key+1]() }], true)
+  })
   return n0
 "
 `;
