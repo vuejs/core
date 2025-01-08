@@ -11,7 +11,7 @@ export class EffectScope {
   /**
    * @internal track `on` calls, allow `on` call multiple times
    */
-  private _onCallCount = 0
+  private _on = 0
   /**
    * @internal
    */
@@ -109,8 +109,7 @@ export class EffectScope {
    * @internal
    */
   on(): void {
-    this._onCallCount++
-    if (this._onCallCount === 1) {
+    if (++this._on === 1) {
       this.prevScope = activeEffectScope
       activeEffectScope = this
     }
@@ -121,8 +120,7 @@ export class EffectScope {
    * @internal
    */
   off(): void {
-    this._onCallCount = Math.max(0, this._onCallCount - 1)
-    if (this._onCallCount === 0) {
+    if (this._on > 0 && --this._on === 0) {
       activeEffectScope = this.prevScope
     }
   }
