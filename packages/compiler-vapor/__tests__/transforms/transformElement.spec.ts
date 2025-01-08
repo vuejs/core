@@ -383,12 +383,13 @@ describe('compiler: element transform', () => {
       ])
     })
 
-    test('should wrap as function if v-on expression is inline statement', () => {
+    test('v-on expression is inline statement', () => {
       const { code, ir } = compileWithElementTransform(
-        `<Foo v-on:bar="handleBar($event)" />`,
+        `<Foo v-on:bar="() => handler" />`,
       )
       expect(code).toMatchSnapshot()
-      expect(code).contains(`onBar: () => $event => (_ctx.handleBar($event))`)
+      expect(code).contains(`onBar: () => _on_bar`)
+      expect(code).contains(`const _on_bar = () => _ctx.handler`)
       expect(ir.block.operation).toMatchObject([
         {
           type: IRNodeTypes.CREATE_COMPONENT_NODE,
@@ -398,7 +399,74 @@ describe('compiler: element transform', () => {
               {
                 key: { content: 'bar' },
                 handler: true,
-                values: [{ content: 'handleBar($event)' }],
+                values: [{ content: '_on_bar' }],
+              },
+            ],
+          ],
+        },
+      ])
+    })
+
+    test('v-on expression is a function call', () => {
+      const { code, ir } = compileWithElementTransform(
+        `<Foo v-on:bar="handleBar($event)" />`,
+      )
+      expect(code).toMatchSnapshot()
+      expect(code).contains(`onBar: () => _on_bar`)
+      expect(code).contains(
+        `const _on_bar = $event => (_ctx.handleBar($event))`,
+      )
+      expect(ir.block.operation).toMatchObject([
+        {
+          type: IRNodeTypes.CREATE_COMPONENT_NODE,
+          tag: 'Foo',
+          props: [
+            [
+              {
+                key: { content: 'bar' },
+                handler: true,
+                values: [{ content: '_on_bar' }],
+              },
+            ],
+          ],
+        },
+      ])
+    })
+
+    test('cache v-on expression with unique handler name', () => {
+      const { code, ir } = compileWithElementTransform(
+        `<Foo v-on:bar="handleBar($event)" /><Bar v-on:bar="() => handler" />`,
+      )
+      expect(code).toMatchSnapshot()
+      expect(code).contains(`onBar: () => _on_bar`)
+      expect(code).contains(
+        `const _on_bar = $event => (_ctx.handleBar($event))`,
+      )
+      expect(code).contains(`onBar: () => _on_bar1`)
+      expect(code).contains(`const _on_bar1 = () => _ctx.handler`)
+      expect(ir.block.operation).toMatchObject([
+        {
+          type: IRNodeTypes.CREATE_COMPONENT_NODE,
+          tag: 'Foo',
+          props: [
+            [
+              {
+                key: { content: 'bar' },
+                handler: true,
+                values: [{ content: '_on_bar' }],
+              },
+            ],
+          ],
+        },
+        {
+          type: IRNodeTypes.CREATE_COMPONENT_NODE,
+          tag: 'Bar',
+          props: [
+            [
+              {
+                key: { content: 'bar' },
+                handler: true,
+                values: [{ content: '_on_bar1' }],
               },
             ],
           ],
