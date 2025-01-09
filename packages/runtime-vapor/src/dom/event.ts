@@ -3,12 +3,8 @@ import {
   onEffectCleanup,
   onScopeDispose,
 } from '@vue/reactivity'
-import {
-  MetadataKind,
-  getMetadata,
-  recordEventMetadata,
-} from '../componentMetadata'
 import { queuePostFlushCb } from '@vue/runtime-dom'
+import { remove } from '@vue/shared'
 
 export function addEventListener(
   el: Element,
@@ -49,13 +45,17 @@ export type DelegatedHandler = {
 }
 
 export function delegate(
-  el: HTMLElement,
+  el: any,
   event: string,
   handlerGetter: () => undefined | ((...args: any[]) => any),
 ): void {
   const handler: DelegatedHandler = eventHandler(handlerGetter)
   handler.delegate = true
-  recordEventMetadata(el, event, handler)
+
+  const cacheKey = `$evt${event}`
+  const handlers: DelegatedHandler[] = el[cacheKey] || (el[cacheKey] = [])
+  handlers.push(handler)
+  onScopeDispose(() => remove(handlers, handler))
 }
 
 function eventHandler(getter: () => undefined | ((...args: any[]) => any)) {
@@ -98,7 +98,7 @@ const delegatedEventHandler = (e: Event) => {
     },
   })
   while (node !== null) {
-    const handlers = getMetadata(node)[MetadataKind.event][e.type]
+    const handlers = node[`$evt${e.type}`] as DelegatedHandler[]
     if (handlers) {
       for (const handler of handlers) {
         if (handler.delegate && !node.disabled) {
