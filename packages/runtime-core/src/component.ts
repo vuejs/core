@@ -427,6 +427,17 @@ export interface GenericComponentInstance {
    * @internal
    */
   suspense: SuspenseBoundary | null
+  /**
+   * `updateTeleportCssVars`
+   * For updating css vars on contained teleports
+   * @internal
+   */
+  ut?: (vars?: Record<string, string>) => void
+  /**
+   * dev only. For style v-bind hydration mismatch checks
+   * @internal
+   */
+  getCssVars?: () => Record<string, string>
 
   // lifecycle
   /**
@@ -651,19 +662,6 @@ export interface ComponentInternalInstance extends GenericComponentInstance {
    * @internal
    */
   n?: () => Promise<void>
-  /**
-   * `updateTeleportCssVars`
-   * For updating css vars on contained teleports
-   * @internal
-   */
-  ut?: (vars?: Record<string, string>) => void
-
-  /**
-   * dev only. For style v-bind hydration mismatch checks
-   * @internal
-   */
-  getCssVars?: () => Record<string, string>
-
   /**
    * v2 compat only, for caching mutated $options
    * @internal
