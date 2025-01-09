@@ -252,7 +252,7 @@ export type StyleValue =
   | CSSProperties
   | Array<StyleValue>
 
-export interface HTMLAttributes extends AriaAttributes, EventHandlers<Events> {
+export interface HTMLAttributes extends AriaAttributes, EventHandlers {
   innerHTML?: string
 
   class?: any
@@ -808,7 +808,7 @@ export interface WebViewHTMLAttributes extends HTMLAttributes {
   webpreferences?: string
 }
 
-export interface SVGAttributes extends AriaAttributes, EventHandlers<Events> {
+export interface SVGAttributes extends AriaAttributes, EventHandlers {
   innerHTML?: string
 
   /**
@@ -1384,10 +1384,14 @@ export interface Events {
   onTransitionstart: TransitionEvent
 }
 
-type EventHandlers<E> = {
-  [K in keyof E]?: E[K] extends (...args: any) => any
-    ? E[K]
-    : (payload: E[K]) => void
+type CombineModifiers<T extends string, U extends string = T> = T extends any
+  ? T | `${T}${CombineModifiers<Exclude<U, T>>}`
+  : never
+
+type EventModifiers = CombineModifiers<'Capture' | 'Once' | 'Passive'> | ''
+
+type EventHandlers = {
+  [K in keyof Events as `${K}${EventModifiers}`]?: (payload: Events[K]) => void
 }
 
 import type { VNodeRef } from '@vue/runtime-core'
