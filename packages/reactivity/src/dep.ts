@@ -3,7 +3,7 @@ import { type TrackOpTypes, TriggerOpTypes } from './constants'
 import { onTrack, triggerEventInfos } from './debug'
 import { activeSub } from './effect'
 import {
-  type Dependency,
+  type IDependency,
   type ILink,
   endBatch,
   link,
@@ -11,7 +11,7 @@ import {
   startBatch,
 } from './system'
 
-class Dep implements Dependency {
+class Dep implements IDependency {
   _subs: ILink | undefined = undefined
   subsTail: ILink | undefined = undefined
 
@@ -103,7 +103,7 @@ export function trigger(
     return
   }
 
-  const run = (dep: Dependency | undefined) => {
+  const run = (dep: IDependency | undefined) => {
     if (dep !== undefined && dep.subs !== undefined) {
       if (__DEV__) {
         triggerEventInfos.push({
@@ -190,7 +190,7 @@ export function trigger(
 export function getDepFromReactive(
   object: any,
   key: string | number | symbol,
-): Dependency | undefined {
+): IDependency | undefined {
   const depMap = targetMap.get(object)
   return depMap && depMap.get(key)
 }

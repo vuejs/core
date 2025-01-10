@@ -20,7 +20,7 @@ import {
   toRaw,
   toReactive,
 } from './reactive'
-import { type Dependency, type ILink, link, propagate } from './system'
+import { type IDependency, type ILink, link, propagate } from './system'
 import { warn } from './warning'
 
 declare const RefSymbol: unique symbol
@@ -108,7 +108,7 @@ function createRef(rawValue: unknown, shallow: boolean) {
 /**
  * @internal
  */
-class RefImpl<T = any> implements Dependency {
+class RefImpl<T = any> implements IDependency {
   // Dependency
   subs: ILink | undefined = undefined
   subsTail: ILink | undefined = undefined
@@ -194,7 +194,7 @@ export function triggerRef(ref: Ref): void {
   }
 }
 
-function trackRef(dep: Dependency) {
+function trackRef(dep: IDependency) {
   if (activeSub !== undefined) {
     if (__DEV__) {
       onTrack(activeSub!, {
@@ -295,7 +295,7 @@ export type CustomRefFactory<T> = (
   set: (value: T) => void
 }
 
-class CustomRefImpl<T> implements Dependency {
+class CustomRefImpl<T> implements IDependency {
   // Dependency
   subs: ILink | undefined = undefined
   subsTail: ILink | undefined = undefined
@@ -382,7 +382,7 @@ class ObjectRefImpl<T extends object, K extends keyof T> {
     this._object[this._key] = newVal
   }
 
-  get dep(): Dependency | undefined {
+  get dep(): IDependency | undefined {
     return getDepFromReactive(toRaw(this._object), this._key)
   }
 }
