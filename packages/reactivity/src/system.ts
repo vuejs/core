@@ -38,7 +38,9 @@ export enum SubscriberFlags {
   InnerEffectsPending = 1 << 2,
   ToCheckDirty = 1 << 3,
   Dirty = 1 << 4,
-  Notified = InnerEffectsPending | ToCheckDirty | Dirty,
+  Notified = SubscriberFlags.InnerEffectsPending |
+    SubscriberFlags.ToCheckDirty |
+    SubscriberFlags.Dirty,
 }
 
 let batchDepth = 0
