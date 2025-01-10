@@ -141,8 +141,8 @@ export function propagate(link: Link): void {
           SubscriberFlags.Dirty)
       ) &&
         ((sub.flags = subFlags | targetFlag), true)) ||
-      ((subFlags & (SubscriberFlags.Tracking | SubscriberFlags.Recursed)) ===
-        SubscriberFlags.Recursed &&
+      (subFlags & SubscriberFlags.Recursed &&
+        !(subFlags & SubscriberFlags.Tracking) &&
         ((sub.flags = (subFlags & ~SubscriberFlags.Recursed) | targetFlag),
         true)) ||
       (!(subFlags & (SubscriberFlags.ToCheckDirty | SubscriberFlags.Dirty)) &&
