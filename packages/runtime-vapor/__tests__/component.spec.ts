@@ -21,8 +21,6 @@ import type { VaporComponentInstance } from '../src/component'
 
 const define = makeRender()
 
-// TODO port tests from rendererComponent.spec.ts
-
 describe('component', () => {
   it('should update parent(hoc) component host el when child component self update', async () => {
     const value = ref(true)
@@ -54,7 +52,7 @@ describe('component', () => {
     expect(host.children[0]).toBe(childNode2)
   })
 
-  it('should create a Component with props', () => {
+  it('should create a component with props', () => {
     const { component: Comp } = define({
       setup() {
         return template('<div>', true)()
@@ -170,13 +168,7 @@ describe('component', () => {
 
     const { host } = define({
       setup() {
-        return createComponent(
-          Child,
-          { count: () => a.value },
-          {
-            default: () => createTextNode(() => [a.value]),
-          },
-        )
+        return createComponent(Child, { count: () => a.value })
       },
     }).render()
 
@@ -190,24 +182,86 @@ describe('component', () => {
     expect(calls).toEqual(['update child'])
   })
 
-  it.todo(
-    `an earlier update doesn't lead to excessive subsequent updates`,
-    async () => {},
-  )
+  it(`an earlier update doesn't lead to excessive subsequent updates`, async () => {
+    const globalCount = ref(0)
+    const parentCount = ref(0)
+    const calls: string[] = []
 
-  it.todo(
-    'should pause tracking deps when initializing legacy options',
-    async () => {},
-  )
+    const { component: Child } = define({
+      props: ['count'],
+      setup(props: any) {
+        watch(
+          () => props.count,
+          () => {
+            calls.push('child watcher')
+            globalCount.value = props.count
+          },
+        )
+        onUpdated(() => calls.push('update child'))
+        return []
+      },
+    })
 
-  it.todo(
-    'child component props update should not lead to double update',
-    async () => {},
-  )
+    const { component: Parent } = define({
+      props: ['count'],
+      setup(props: any) {
+        onUpdated(() => calls.push('update parent'))
+        const n1 = createTextNode(() => [
+          `${globalCount.value} - ${props.count}`,
+        ])
+        const n2 = createComponent(Child, { count: () => parentCount.value })
+        return [n1, n2]
+      },
+    })
 
-  it.todo('should warn accessing `this` in a <script setup> template', () => {})
+    const { host } = define({
+      setup() {
+        onUpdated(() => calls.push('update root'))
+        return createComponent(Parent, { count: () => globalCount.value })
+      },
+    }).render()
 
-  it('unmountComponent', async () => {
+    expect(host.innerHTML).toBe(`0 - 0`)
+    expect(calls).toEqual([])
+
+    parentCount.value++
+    await nextTick()
+    expect(host.innerHTML).toBe(`1 - 1`)
+    expect(calls).toEqual(['child watcher', 'update parent'])
+  })
+
+  it('child component props update should not lead to double update', async () => {
+    const text = ref(0)
+    const spy = vi.fn()
+
+    const { component: Comp } = define({
+      props: ['text'],
+      setup(props: any) {
+        const n1 = template('<h1></h1>')()
+        renderEffect(() => {
+          spy()
+          setText(n1, props.text)
+        })
+        return n1
+      },
+    })
+
+    const { host } = define({
+      setup() {
+        return createComponent(Comp, { text: () => text.value })
+      },
+    }).render()
+
+    expect(host.innerHTML).toBe('<h1>0</h1>')
+    expect(spy).toHaveBeenCalledTimes(1)
+
+    text.value++
+    await nextTick()
+    expect(host.innerHTML).toBe('<h1>1</h1>')
+    expect(spy).toHaveBeenCalledTimes(2)
+  })
+
+  it('unmount component', async () => {
     const { host, app, instance } = define(() => {
       const count = ref(0)
       const t0 = template('<div></div>')
