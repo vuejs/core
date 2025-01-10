@@ -38,9 +38,6 @@ export enum SubscriberFlags {
   InnerEffectsPending = 1 << 2,
   ToCheckDirty = 1 << 3,
   Dirty = 1 << 4,
-  Notified = SubscriberFlags.InnerEffectsPending |
-    SubscriberFlags.ToCheckDirty |
-    SubscriberFlags.Dirty,
 }
 
 let batchDepth = 0
@@ -151,14 +148,21 @@ export function propagate(link: Link): void {
         subFlags &
         (SubscriberFlags.Tracking |
           SubscriberFlags.Recursed |
-          SubscriberFlags.Notified)
+          SubscriberFlags.InnerEffectsPending |
+          SubscriberFlags.ToCheckDirty |
+          SubscriberFlags.Dirty)
       ) &&
         ((sub.flags = subFlags | targetFlag), true)) ||
       (subFlags & SubscriberFlags.Recursed &&
         !(subFlags & SubscriberFlags.Tracking) &&
         ((sub.flags = (subFlags & ~SubscriberFlags.Recursed) | targetFlag),
         true)) ||
-      (!(subFlags & SubscriberFlags.Notified) &&
+      (!(
+        subFlags &
+        (SubscriberFlags.InnerEffectsPending |
+          SubscriberFlags.ToCheckDirty |
+          SubscriberFlags.Dirty)
+      ) &&
         isValidLink(link, sub) &&
         ((sub.flags = subFlags | SubscriberFlags.Recursed | targetFlag),
         (sub as Dependency).subs !== undefined))
@@ -190,7 +194,10 @@ export function propagate(link: Link): void {
     } else if (
       !(subFlags & (SubscriberFlags.Tracking | targetFlag)) ||
       (!(subFlags & targetFlag) &&
-        subFlags & SubscriberFlags.Notified &&
+        subFlags &
+          (SubscriberFlags.InnerEffectsPending |
+            SubscriberFlags.ToCheckDirty |
+            SubscriberFlags.Dirty) &&
         isValidLink(link, sub))
     ) {
       sub.flags = subFlags | targetFlag
@@ -338,7 +345,13 @@ export function checkDirty(link: Link): boolean {
 export function startTrack(sub: Subscriber): void {
   sub.depsTail = undefined
   sub.flags =
-    (sub.flags & ~(SubscriberFlags.Recursed | SubscriberFlags.Notified)) |
+    (sub.flags &
+      ~(
+        SubscriberFlags.Recursed |
+        SubscriberFlags.InnerEffectsPending |
+        SubscriberFlags.ToCheckDirty |
+        SubscriberFlags.Dirty
+      )) |
     SubscriberFlags.Tracking
 }
 
