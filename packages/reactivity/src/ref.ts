@@ -20,7 +20,7 @@ import {
   toRaw,
   toReactive,
 } from './reactive'
-import { type Dependency, type Link, link, propagate } from './system'
+import { type Dependency, type ILink, link, propagate } from './system'
 import { warn } from './warning'
 
 declare const RefSymbol: unique symbol
@@ -110,8 +110,8 @@ function createRef(rawValue: unknown, shallow: boolean) {
  */
 class RefImpl<T = any> implements Dependency {
   // Dependency
-  subs: Link | undefined = undefined
-  subsTail: Link | undefined = undefined
+  subs: ILink | undefined = undefined
+  subsTail: ILink | undefined = undefined
 
   _value: T
   private _rawValue: T
@@ -297,8 +297,8 @@ export type CustomRefFactory<T> = (
 
 class CustomRefImpl<T> implements Dependency {
   // Dependency
-  subs: Link | undefined = undefined
-  subsTail: Link | undefined = undefined
+  subs: ILink | undefined = undefined
+  subsTail: ILink | undefined = undefined
 
   private readonly _get: ReturnType<CustomRefFactory<T>>['get']
   private readonly _set: ReturnType<CustomRefFactory<T>>['set']

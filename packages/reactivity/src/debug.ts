@@ -1,11 +1,11 @@
 import { extend } from '@vue/shared'
 import type { DebuggerEventExtraInfo, ReactiveEffectOptions } from './effect'
-import { type Link, type Subscriber, SubscriberFlags } from './system'
+import { type ILink, type ISubscriber, SubscriberFlags } from './system'
 
 export const triggerEventInfos: DebuggerEventExtraInfo[] = []
 
 export function onTrack(
-  sub: Link['sub'],
+  sub: ILink['sub'],
   debugInfo: DebuggerEventExtraInfo,
 ): void {
   if (!__DEV__) {
@@ -25,7 +25,7 @@ export function onTrack(
   }
 }
 
-export function onTrigger(sub: Link['sub']): void {
+export function onTrigger(sub: ILink['sub']): void {
   if (!__DEV__) {
     throw new Error(
       `Internal error: onTrigger should be called only in development.`,
@@ -61,7 +61,7 @@ export function setupOnTrigger(target: { new (...args: any[]): any }): void {
   })
 }
 
-function setupFlagsHandler(target: Subscriber): void {
+function setupFlagsHandler(target: ISubscriber): void {
   ;(target as any)._flags = target.flags
   Object.defineProperty(target, 'flags', {
     get() {

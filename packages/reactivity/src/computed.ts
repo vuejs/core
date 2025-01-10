@@ -10,9 +10,9 @@ import {
 import { activeEffectScope } from './effectScope'
 import type { Ref } from './ref'
 import {
-  type Dependency,
   type IComputed,
-  type Link,
+  type IDependency,
+  type ILink,
   SubscriberFlags,
   endTrack,
   isDirty,
@@ -59,13 +59,13 @@ export class ComputedRefImpl<T = any> implements IComputed {
    */
   _value: T | undefined = undefined
 
-  // Dependency
-  subs: Link | undefined = undefined
-  subsTail: Link | undefined = undefined
+  // IDependency
+  subs: ILink | undefined = undefined
+  subsTail: ILink | undefined = undefined
 
   // Subscriber
-  deps: Link | undefined = undefined
-  depsTail: Link | undefined = undefined
+  deps: ILink | undefined = undefined
+  depsTail: ILink | undefined = undefined
   flags: SubscriberFlags = SubscriberFlags.Dirty
 
   /**
@@ -84,7 +84,7 @@ export class ComputedRefImpl<T = any> implements IComputed {
     return this
   }
   // for backwards compat
-  get dep(): Dependency {
+  get dep(): IDependency {
     return this
   }
   // for backwards compat

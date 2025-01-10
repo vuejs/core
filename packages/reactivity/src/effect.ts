@@ -4,8 +4,8 @@ import { setupOnTrigger } from './debug'
 import { activeEffectScope } from './effectScope'
 import {
   type IEffect,
-  type Link,
-  type Subscriber,
+  type ILink,
+  type ISubscriber,
   SubscriberFlags,
   endTrack,
   isDirty,
@@ -16,7 +16,7 @@ import { warn } from './warning'
 export type EffectScheduler = (...args: any[]) => any
 
 export type DebuggerEvent = {
-  effect: Subscriber
+  effect: ISubscriber
 } & DebuggerEventExtraInfo
 
 export type DebuggerEventExtraInfo = {
@@ -57,8 +57,8 @@ export class ReactiveEffect<T = any> implements IEffect, ReactiveEffectOptions {
   nextNotify: IEffect | undefined = undefined
 
   // Subscriber
-  deps: Link | undefined = undefined
-  depsTail: Link | undefined = undefined
+  deps: ILink | undefined = undefined
+  depsTail: ILink | undefined = undefined
   flags: number = SubscriberFlags.Dirty
 
   /**
@@ -201,7 +201,7 @@ export function stop(runner: ReactiveEffectRunner): void {
   runner.effect.stop()
 }
 
-const resetTrackingStack: (Subscriber | undefined)[] = []
+const resetTrackingStack: (ISubscriber | undefined)[] = []
 
 /**
  * Temporarily pauses tracking.
@@ -288,8 +288,8 @@ function cleanupEffect(e: ReactiveEffect) {
   }
 }
 
-export let activeSub: Subscriber | undefined = undefined
+export let activeSub: ISubscriber | undefined = undefined
 
-export function setActiveSub(sub: Subscriber | undefined): void {
+export function setActiveSub(sub: ISubscriber | undefined): void {
   activeSub = sub
 }

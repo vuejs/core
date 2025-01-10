@@ -4,7 +4,7 @@ import { onTrack, triggerEventInfos } from './debug'
 import { activeSub } from './effect'
 import {
   type Dependency,
-  type Link,
+  type ILink,
   endBatch,
   link,
   propagate,
@@ -12,19 +12,19 @@ import {
 } from './system'
 
 class Dep implements Dependency {
-  _subs: Link | undefined = undefined
-  subsTail: Link | undefined = undefined
+  _subs: ILink | undefined = undefined
+  subsTail: ILink | undefined = undefined
 
   constructor(
     private map: KeyToDepMap,
     private key: unknown,
   ) {}
 
-  get subs(): Link | undefined {
+  get subs(): ILink | undefined {
     return this._subs
   }
 
-  set subs(value: Link | undefined) {
+  set subs(value: ILink | undefined) {
     this._subs = value
     if (value === undefined) {
       this.map.delete(this.key)
