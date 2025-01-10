@@ -57,7 +57,7 @@ describe('renderer: component', () => {
     expect(serializeInner(root)).toBe(`<div id="foo" class="bar"></div>`)
   })
 
-  it('should create an Component with direct text children', () => {
+  it('should create a Component with direct text children', () => {
     const Comp = {
       render: () => {
         return h('div', 'test')

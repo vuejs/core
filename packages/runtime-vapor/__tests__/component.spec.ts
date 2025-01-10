@@ -1,7 +1,17 @@
-import { nextTick, ref, watchEffect } from '@vue/runtime-dom'
+import {
+  type Ref,
+  inject,
+  nextTick,
+  onUpdated,
+  provide,
+  ref,
+  watch,
+  watchEffect,
+} from '@vue/runtime-dom'
 import {
   createComponent,
   createIf,
+  createTextNode,
   renderEffect,
   setText,
   template,
@@ -44,33 +54,141 @@ describe('component', () => {
     expect(host.children[0]).toBe(childNode2)
   })
 
-  it.todo('should create an Component with props', () => {})
+  it('should create a Component with props', () => {
+    const { component: Comp } = define({
+      setup() {
+        return template('<div>', true)()
+      },
+    })
 
-  it.todo('should create an Component with direct text children', () => {})
+    const { host } = define({
+      setup() {
+        return createComponent(Comp, { id: () => 'foo', class: () => 'bar' })
+      },
+    }).render()
 
-  it.todo('should update an Component tag which is already mounted', () => {})
+    expect(host.innerHTML).toBe('<div id="foo" class="bar"></div>')
+  })
 
-  it.todo(
-    'should not update Component if only changed props are declared emit listeners',
-    () => {},
-  )
+  it('should not update Component if only changed props are declared emit listeners', async () => {
+    const updatedSyp = vi.fn()
+    const { component: Comp } = define({
+      emits: ['foo'],
+      setup() {
+        onUpdated(updatedSyp)
+        return template('<div>', true)()
+      },
+    })
 
-  it.todo(
-    'component child synchronously updating parent state should trigger parent re-render',
-    async () => {},
-  )
+    const toggle = ref(true)
+    const fn1 = () => {}
+    const fn2 = () => {}
+    define({
+      setup() {
+        const _on_foo = () => (toggle.value ? fn1() : fn2())
+        return createComponent(Comp, { onFoo: () => _on_foo })
+      },
+    }).render()
+    expect(updatedSyp).toHaveBeenCalledTimes(0)
 
-  it.todo('instance.$el should be exposed to watch options', async () => {})
+    toggle.value = false
+    await nextTick()
+    expect(updatedSyp).toHaveBeenCalledTimes(0)
+  })
 
-  it.todo(
-    'component child updating parent state in pre-flush should trigger parent re-render',
-    async () => {},
-  )
+  it('component child synchronously updating parent state should trigger parent re-render', async () => {
+    const { component: Child } = define({
+      setup() {
+        const n = inject<Ref<number>>('foo')!
+        n.value++
+        const n0 = template('<div></div>')()
+        renderEffect(() => setText(n0, n.value))
+        return n0
+      },
+    })
 
-  it.todo(
-    'child only updates once when triggered in multiple ways',
-    async () => {},
-  )
+    const { host } = define({
+      setup() {
+        const n = ref(0)
+        provide('foo', n)
+        const n0 = template('<div></div>')()
+        renderEffect(() => setText(n0, n.value))
+        return [n0, createComponent(Child)]
+      },
+    }).render()
+
+    expect(host.innerHTML).toBe('<div>0</div><div>1</div>')
+    await nextTick()
+    expect(host.innerHTML).toBe('<div>1</div><div>1</div>')
+  })
+
+  it('component child updating parent state in pre-flush should trigger parent re-render', async () => {
+    const { component: Child } = define({
+      props: ['value'],
+      setup(props: any, { emit }) {
+        watch(
+          () => props.value,
+          val => emit('update', val),
+        )
+        const n0 = template('<div></div>')()
+        renderEffect(() => setText(n0, props.value))
+        return n0
+      },
+    })
+
+    const outer = ref(0)
+    const { host } = define({
+      setup() {
+        const inner = ref(0)
+        const n0 = template('<div></div>')()
+        renderEffect(() => setText(n0, inner.value))
+        const n1 = createComponent(Child, {
+          value: () => outer.value,
+          onUpdate: () => (val: number) => (inner.value = val),
+        })
+        return [n0, n1]
+      },
+    }).render()
+
+    expect(host.innerHTML).toBe('<div>0</div><div>0</div>')
+    outer.value++
+    await nextTick()
+    expect(host.innerHTML).toBe('<div>1</div><div>1</div>')
+  })
+
+  it('child only updates once when triggered in multiple ways', async () => {
+    const a = ref(0)
+    const calls: string[] = []
+
+    const { component: Child } = define({
+      props: ['count'],
+      setup(props: any) {
+        onUpdated(() => calls.push('update child'))
+        return createTextNode(() => [`${props.count} - ${a.value}`])
+      },
+    })
+
+    const { host } = define({
+      setup() {
+        return createComponent(
+          Child,
+          { count: () => a.value },
+          {
+            default: () => createTextNode(() => [a.value]),
+          },
+        )
+      },
+    }).render()
+
+    expect(host.innerHTML).toBe('0 - 0')
+    expect(calls).toEqual([])
+
+    // This will trigger child rendering directly, as well as via a prop change
+    a.value++
+    await nextTick()
+    expect(host.innerHTML).toBe('1 - 1')
+    expect(calls).toEqual(['update child'])
+  })
 
   it.todo(
     `an earlier update doesn't lead to excessive subsequent updates`,
