@@ -7,8 +7,8 @@ import {
   type Link,
   type Subscriber,
   SubscriberFlags,
-  checkDirty,
   endTrack,
+  isDirty,
   startTrack,
 } from './system'
 import { warn } from './warning'
@@ -121,8 +121,7 @@ export class ReactiveEffect<T = any> implements IEffect, ReactiveEffectOptions {
     }
     cleanupEffect(this)
     const prevSub = activeSub
-    const prevTrackId = activeTrackId
-    setActiveSub(this, nextTrackId())
+    setActiveSub(this)
     startTrack(this)
 
     try {
@@ -134,7 +133,7 @@ export class ReactiveEffect<T = any> implements IEffect, ReactiveEffectOptions {
             'this is likely a Vue internal bug.',
         )
       }
-      setActiveSub(prevSub, prevTrackId)
+      setActiveSub(prevSub)
       endTrack(this)
       if (
         this.flags & SubscriberFlags.Recursed &&
@@ -157,19 +156,7 @@ export class ReactiveEffect<T = any> implements IEffect, ReactiveEffectOptions {
   }
 
   get dirty(): boolean {
-    const flags = this.flags
-    if (flags & SubscriberFlags.Dirty) {
-      return true
-    } else if (flags & SubscriberFlags.ToCheckDirty) {
-      if (checkDirty(this.deps!)) {
-        this.flags |= SubscriberFlags.Dirty
-        return true
-      } else {
-        this.flags &= ~SubscriberFlags.ToCheckDirty
-        return false
-      }
-    }
-    return false
+    return isDirty(this, this.flags)
   }
 }
 
@@ -214,15 +201,14 @@ export function stop(runner: ReactiveEffectRunner): void {
   runner.effect.stop()
 }
 
-const resetTrackingStack: [sub: typeof activeSub, trackId: number][] = []
+const resetTrackingStack: (Subscriber | undefined)[] = []
 
 /**
  * Temporarily pauses tracking.
  */
 export function pauseTracking(): void {
-  resetTrackingStack.push([activeSub, activeTrackId])
+  resetTrackingStack.push(activeSub)
   activeSub = undefined
-  activeTrackId = 0
 }
 
 /**
@@ -233,14 +219,14 @@ export function enableTracking(): void {
   if (!isPaused) {
     // Add the current active effect to the trackResetStack so it can be
     // restored by calling resetTracking.
-    resetTrackingStack.push([activeSub, activeTrackId])
+    resetTrackingStack.push(activeSub)
   } else {
     // Add a placeholder to the trackResetStack so we can it can be popped
     // to restore the previous active effect.
-    resetTrackingStack.push([undefined, 0])
+    resetTrackingStack.push(undefined)
     for (let i = resetTrackingStack.length - 1; i >= 0; i--) {
-      if (resetTrackingStack[i][0] !== undefined) {
-        ;[activeSub, activeTrackId] = resetTrackingStack[i]
+      if (resetTrackingStack[i] !== undefined) {
+        activeSub = resetTrackingStack[i]
         break
       }
     }
@@ -258,10 +244,9 @@ export function resetTracking(): void {
     )
   }
   if (resetTrackingStack.length) {
-    ;[activeSub, activeTrackId] = resetTrackingStack.pop()!
+    activeSub = resetTrackingStack.pop()!
   } else {
     activeSub = undefined
-    activeTrackId = 0
   }
 }
 
@@ -304,14 +289,7 @@ function cleanupEffect(e: ReactiveEffect) {
 }
 
 export let activeSub: Subscriber | undefined = undefined
-export let activeTrackId = 0
-export let lastTrackId = 0
-export const nextTrackId = (): number => ++lastTrackId
 
-export function setActiveSub(
-  sub: Subscriber | undefined,
-  trackId: number,
-): void {
+export function setActiveSub(sub: Subscriber | undefined): void {
   activeSub = sub
-  activeTrackId = trackId
 }

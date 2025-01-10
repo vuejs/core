@@ -1,4 +1,4 @@
-import { EffectFlags, type ReactiveEffect, nextTrackId } from './effect'
+import { EffectFlags, type ReactiveEffect } from './effect'
 import {
   type Link,
   type Subscriber,
@@ -15,8 +15,6 @@ export class EffectScope implements Subscriber {
   deps: Link | undefined = undefined
   depsTail: Link | undefined = undefined
   flags: number = SubscriberFlags.None
-
-  trackId: number = nextTrackId()
 
   /**
    * @internal

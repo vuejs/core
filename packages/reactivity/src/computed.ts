@@ -5,8 +5,6 @@ import {
   type DebuggerEvent,
   type DebuggerOptions,
   activeSub,
-  activeTrackId,
-  nextTrackId,
   setActiveSub,
 } from './effect'
 import { activeEffectScope } from './effectScope'
@@ -16,8 +14,8 @@ import {
   type IComputed,
   type Link,
   SubscriberFlags,
-  checkDirty,
   endTrack,
+  isDirty,
   link,
   shallowPropagate,
   startTrack,
@@ -64,7 +62,6 @@ export class ComputedRefImpl<T = any> implements IComputed {
   // Dependency
   subs: Link | undefined = undefined
   subsTail: Link | undefined = undefined
-  lastTrackedId = 0
 
   // Subscriber
   deps: Link | undefined = undefined
@@ -92,19 +89,7 @@ export class ComputedRefImpl<T = any> implements IComputed {
   }
   // for backwards compat
   get _dirty(): boolean {
-    const flags = this.flags
-    if (flags & SubscriberFlags.Dirty) {
-      return true
-    } else if (flags & SubscriberFlags.ToCheckDirty) {
-      if (checkDirty(this.deps!)) {
-        this.flags |= SubscriberFlags.Dirty
-        return true
-      } else {
-        this.flags &= ~SubscriberFlags.ToCheckDirty
-        return false
-      }
-    }
-    return false
+    return isDirty(this, this.flags)
   }
   set _dirty(v: boolean) {
     if (v) {
@@ -141,22 +126,17 @@ export class ComputedRefImpl<T = any> implements IComputed {
         }
       }
     }
-    if (activeTrackId) {
-      if (this.lastTrackedId !== activeTrackId) {
-        if (__DEV__) {
-          onTrack(activeSub!, {
-            target: this,
-            type: TrackOpTypes.GET,
-            key: 'value',
-          })
-        }
-        this.lastTrackedId = activeTrackId
-        link(this, activeSub!)
+    if (activeSub !== undefined) {
+      if (__DEV__) {
+        onTrack(activeSub!, {
+          target: this,
+          type: TrackOpTypes.GET,
+          key: 'value',
+        })
       }
+      link(this, activeSub)
     } else if (activeEffectScope !== undefined) {
-      if (this.lastTrackedId !== activeEffectScope.trackId) {
-        link(this, activeEffectScope)
-      }
+      link(this, activeEffectScope)
     }
     return this._value!
   }
@@ -171,8 +151,7 @@ export class ComputedRefImpl<T = any> implements IComputed {
 
   update(): boolean {
     const prevSub = activeSub
-    const prevTrackId = activeTrackId
-    setActiveSub(this, nextTrackId())
+    setActiveSub(this)
     startTrack(this)
     try {
       const oldValue = this._value
@@ -183,7 +162,7 @@ export class ComputedRefImpl<T = any> implements IComputed {
       }
       return false
     } finally {
-      setActiveSub(prevSub, prevTrackId)
+      setActiveSub(prevSub)
       endTrack(this)
     }
   }

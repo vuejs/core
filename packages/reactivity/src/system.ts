@@ -1,4 +1,4 @@
-// Ported from https://github.com/stackblitz/alien-signals/blob/v0.4.14/src/system.ts
+// Ported from https://github.com/stackblitz/alien-signals/blob/81b07f8313bc69662a5766543e84c6dd77238b6b/src/system.ts
 
 export interface IEffect extends Subscriber {
   nextNotify: IEffect | undefined
@@ -12,7 +12,6 @@ export interface IComputed extends Dependency, Subscriber {
 export interface Dependency {
   subs: Link | undefined
   subsTail: Link | undefined
-  lastTrackedId?: number
 }
 
 export interface Subscriber {
@@ -36,8 +35,10 @@ export enum SubscriberFlags {
   None = 0,
   Tracking = 1 << 0,
   Recursed = 1 << 1,
+  InnerEffectsPending = 1 << 2,
   ToCheckDirty = 1 << 3,
   Dirty = 1 << 4,
+  Notified = InnerEffectsPending | ToCheckDirty | Dirty,
 }
 
 let batchDepth = 0
@@ -72,12 +73,23 @@ function drainQueuedEffects(): void {
 
 export function link(dep: Dependency, sub: Subscriber): void {
   const currentDep = sub.depsTail
+  if (currentDep !== undefined && currentDep.dep === dep) {
+    return
+  }
   const nextDep = currentDep !== undefined ? currentDep.nextDep : sub.deps
   if (nextDep !== undefined && nextDep.dep === dep) {
     sub.depsTail = nextDep
-  } else {
-    linkNewDep(dep, sub, nextDep, currentDep)
+    return
   }
+  const depLastSub = dep.subsTail
+  if (
+    depLastSub !== undefined &&
+    depLastSub.sub === sub &&
+    isValidLink(depLastSub, sub)
+  ) {
+    return
+  }
+  linkNewDep(dep, sub, nextDep, currentDep)
 }
 
 function linkNewDep(
@@ -137,15 +149,14 @@ export function propagate(link: Link): void {
         subFlags &
         (SubscriberFlags.Tracking |
           SubscriberFlags.Recursed |
-          SubscriberFlags.ToCheckDirty |
-          SubscriberFlags.Dirty)
+          SubscriberFlags.Notified)
       ) &&
         ((sub.flags = subFlags | targetFlag), true)) ||
       (subFlags & SubscriberFlags.Recursed &&
         !(subFlags & SubscriberFlags.Tracking) &&
         ((sub.flags = (subFlags & ~SubscriberFlags.Recursed) | targetFlag),
         true)) ||
-      (!(subFlags & (SubscriberFlags.ToCheckDirty | SubscriberFlags.Dirty)) &&
+      (!(subFlags & SubscriberFlags.Notified) &&
         isValidLink(link, sub) &&
         ((sub.flags = subFlags | SubscriberFlags.Recursed | targetFlag),
         (sub as Dependency).subs !== undefined))
@@ -159,7 +170,10 @@ export function propagate(link: Link): void {
           ++stack
         } else {
           link = subSubs
-          targetFlag = SubscriberFlags.ToCheckDirty
+          targetFlag =
+            'notify' in sub
+              ? SubscriberFlags.InnerEffectsPending
+              : SubscriberFlags.ToCheckDirty
         }
         continue
       }
@@ -174,7 +188,7 @@ export function propagate(link: Link): void {
     } else if (
       !(subFlags & (SubscriberFlags.Tracking | targetFlag)) ||
       (!(subFlags & targetFlag) &&
-        subFlags & (SubscriberFlags.ToCheckDirty | SubscriberFlags.Dirty) &&
+        subFlags & SubscriberFlags.Notified &&
         isValidLink(link, sub))
     ) {
       sub.flags = subFlags | targetFlag
@@ -322,12 +336,7 @@ export function checkDirty(link: Link): boolean {
 export function startTrack(sub: Subscriber): void {
   sub.depsTail = undefined
   sub.flags =
-    (sub.flags &
-      ~(
-        SubscriberFlags.Recursed |
-        SubscriberFlags.ToCheckDirty |
-        SubscriberFlags.Dirty
-      )) |
+    (sub.flags & ~(SubscriberFlags.Recursed | SubscriberFlags.Notified)) |
     SubscriberFlags.Tracking
 }
 
@@ -358,9 +367,6 @@ function clearTrack(link: Link): void {
       link.nextSub = undefined
     } else {
       dep.subsTail = prevSub
-      if ('lastTrackedId' in dep) {
-        dep.lastTrackedId = 0
-      }
     }
 
     if (prevSub !== undefined) {
@@ -378,13 +384,9 @@ function clearTrack(link: Link): void {
     linkPool = link
 
     if (dep.subs === undefined && 'deps' in dep) {
-      if ('notify' in dep) {
-        dep.flags = SubscriberFlags.None
-      } else {
-        const depFlags = dep.flags
-        if (!(depFlags & SubscriberFlags.Dirty)) {
-          dep.flags = depFlags | SubscriberFlags.Dirty
-        }
+      const depFlags = dep.flags
+      if (!(depFlags & SubscriberFlags.Dirty)) {
+        dep.flags = depFlags | SubscriberFlags.Dirty
       }
       const depDeps = dep.deps
       if (depDeps !== undefined) {
@@ -397,4 +399,18 @@ function clearTrack(link: Link): void {
     }
     link = nextDep!
   } while (link !== undefined)
+}
+
+export function isDirty(sub: Subscriber, flags: SubscriberFlags): boolean {
+  if (flags & SubscriberFlags.Dirty) {
+    return true
+  } else if (flags & SubscriberFlags.ToCheckDirty) {
+    if (checkDirty(sub.deps!)) {
+      sub.flags = flags | SubscriberFlags.Dirty
+      return true
+    } else {
+      sub.flags = flags & ~SubscriberFlags.ToCheckDirty
+    }
+  }
+  return false
 }
