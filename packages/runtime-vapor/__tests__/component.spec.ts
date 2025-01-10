@@ -281,4 +281,26 @@ describe('component', () => {
     expect(host.innerHTML).toBe('')
     expect(i.scope.effects.length).toBe(0)
   })
+
+  it('warn if functional vapor component not return a block', () => {
+    define(() => {
+      return () => {}
+    }).render()
+
+    expect(
+      'Functional vapor component must return a block directly',
+    ).toHaveBeenWarned()
+  })
+
+  it('warn if setup return a function and no render function', () => {
+    define({
+      setup() {
+        return () => []
+      },
+    }).render()
+
+    expect(
+      'Vapor component setup() returned non-block value, and has no render function',
+    ).toHaveBeenWarned()
+  })
 })
