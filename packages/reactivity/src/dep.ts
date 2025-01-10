@@ -4,8 +4,8 @@ import { onTrack, triggerEventInfos } from './debug'
 import { activeSub } from './effect'
 import {
   type Dependency,
-  endBatch,
   type Link,
+  endBatch,
   link,
   propagate,
   startBatch,
