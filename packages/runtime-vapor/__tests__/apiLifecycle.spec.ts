@@ -301,15 +301,8 @@ describe('api: lifecycle hooks', () => {
     // update
     count.value++
     await nextTick()
-    // FIXME: not called
-    // expect(calls).toEqual([
-    //   'root onBeforeUpdate',
-    //   'mid onBeforeUpdate',
-    //   'child onBeforeUpdate',
-    //   'child onUpdated',
-    //   'mid onUpdated',
-    //   'root onUpdated',
-    // ])
+    // only child updated
+    expect(calls).toEqual(['child onBeforeUpdate', 'child onUpdated'])
 
     calls.length = 0
 
