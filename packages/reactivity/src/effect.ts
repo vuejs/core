@@ -54,8 +54,6 @@ export enum EffectFlags {
 }
 
 export class ReactiveEffect<T = any> implements IEffect, ReactiveEffectOptions {
-  nextNotify: IEffect | undefined = undefined
-
   // Subscriber
   deps: ILink | undefined = undefined
   depsTail: ILink | undefined = undefined

@@ -1,7 +1,6 @@
-// Ported from https://github.com/stackblitz/alien-signals/blob/v0.6.0/src/system.ts
+// Ported from https://github.com/stackblitz/alien-signals/blob/4551e66317a369f95dc2233e71987549e18bd695/src/system.ts
 
 export interface IEffect extends ISubscriber {
-  nextNotify: IEffect | undefined
   notify(): void
 }
 
@@ -58,10 +57,11 @@ export function endBatch(): void {
 function drainQueuedEffects(): void {
   while (queuedEffects !== undefined) {
     const effect = queuedEffects
-    const queuedNext = effect.nextNotify
+    const depsTail = effect.depsTail!
+    const queuedNext = depsTail.nextDep
     if (queuedNext !== undefined) {
-      effect.nextNotify = undefined
-      queuedEffects = queuedNext
+      depsTail.nextDep = undefined
+      queuedEffects = queuedNext.sub as IEffect
     } else {
       queuedEffects = undefined
       queuedEffectsTail = undefined
@@ -185,7 +185,7 @@ export function propagate(link: ILink): void {
       }
       if ('notify' in sub) {
         if (queuedEffectsTail !== undefined) {
-          queuedEffectsTail.nextNotify = sub
+          queuedEffectsTail.depsTail!.nextDep = sub.deps
         } else {
           queuedEffects = sub
         }
