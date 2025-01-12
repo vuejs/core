@@ -39,15 +39,15 @@ let queuedEffects: Effect | undefined
 let queuedEffectsTail: Effect | undefined
 let linkPool: Link | undefined
 
-function link(dep: Dependency, sub: Subscriber): boolean {
+function link(dep: Dependency, sub: Subscriber): void {
   const currentDep = sub.depsTail
   if (currentDep !== undefined && currentDep.dep === dep) {
-    return false
+    return
   }
   const nextDep = currentDep !== undefined ? currentDep.nextDep : sub.deps
   if (nextDep !== undefined && nextDep.dep === dep) {
     sub.depsTail = nextDep
-    return false
+    return
   }
   const depLastSub = dep.subsTail
   if (
@@ -55,10 +55,9 @@ function link(dep: Dependency, sub: Subscriber): boolean {
     depLastSub.sub === sub &&
     _isValidLink(depLastSub, sub)
   ) {
-    return false
+    return
   }
   _linkNewDep(dep, sub, nextDep, currentDep)
-  return true
 }
 
 function _linkNewDep(
@@ -119,20 +118,6 @@ function processQueuedEffects(): void {
   }
 }
 
-function isDirty(sub: Subscriber, flags: SubscriberFlags): boolean {
-  if (flags & SubscriberFlags.Dirty) {
-    return true
-  } else if (flags & SubscriberFlags.CheckRequired) {
-    if (checkDirty(sub.deps!)) {
-      sub.flags = flags | SubscriberFlags.Dirty
-      return true
-    } else {
-      sub.flags &= ~SubscriberFlags.CheckRequired
-    }
-  }
-  return false
-}
-
 function processComputedUpdate(
   computed: Computed,
   flags: SubscriberFlags,
@@ -145,6 +130,20 @@ function processComputedUpdate(
       }
     }
   }
+}
+
+function isDirty(sub: Subscriber, flags: SubscriberFlags): boolean {
+  if (flags & SubscriberFlags.Dirty) {
+    return true
+  } else if (flags & SubscriberFlags.CheckRequired) {
+    if (checkDirty(sub.deps!)) {
+      sub.flags = flags | SubscriberFlags.Dirty
+      return true
+    } else {
+      sub.flags &= ~SubscriberFlags.CheckRequired
+    }
+  }
+  return false
 }
 
 // See https://github.com/stackblitz/alien-signals#about-propagate-and-checkdirty-functions
