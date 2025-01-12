@@ -52,12 +52,15 @@ export const isString = (val: unknown): val is string => typeof val === 'string'
 export const isSymbol = (val: unknown): val is symbol => typeof val === 'symbol'
 export const isObject = (val: unknown): val is Record<any, any> =>
   val !== null && typeof val === 'object'
+export const notPrimitive = (
+  val: unknown,
+): val is Record<any, any> | Function => Object(val) === val
 
 export const isPromise = <T = any>(val: unknown): val is Promise<T> => {
   return (
-    (isObject(val) || isFunction(val)) &&
-    isFunction((val as any).then) &&
-    isFunction((val as any).catch)
+    notPrimitive(val) &&
+    isFunction((val as PromiseLike<T>).then) &&
+    isFunction((val as Promise<T>).catch)
   )
 }
 
