@@ -27,12 +27,12 @@ export interface Link {
 export const enum SubscriberFlags {
   None = 0,
   Tracking = 1 << 0,
-  Notified = 1 << 1,
+  // Notified = 1 << 1,
   Recursed = 1 << 2,
-  PendingInnerEffects = 1 << 3,
+  // PendingInnerEffects = 1 << 3,
   CheckRequired = 1 << 4,
   Dirty = 1 << 5,
-  Propagated = PendingInnerEffects | CheckRequired | Dirty,
+  Propagated = CheckRequired | Dirty,
 }
 
 export function createSystem<
@@ -62,7 +62,6 @@ export function createSystem<
     endTrack,
     isDirty,
     processComputedUpdate,
-    processInnerEffects,
     processQueuedEffects,
   }
 
@@ -142,20 +141,8 @@ export function createSystem<
         queuedEffects = undefined
         queuedEffectsTail = undefined
       }
-      if (!notifyEffect(effect)) {
-        effect.flags &= ~SubscriberFlags.Notified
-      }
+      notifyEffect(effect)
     }
-  }
-
-  function processInnerEffects(link: Link): void {
-    do {
-      const dep = link.dep
-      if ('flags' in dep && dep.flags && isEffect(dep)) {
-        notifyEffect(dep)
-      }
-      link = link.nextDep!
-    } while (link !== undefined)
   }
 
   function isDirty(sub: Subscriber, flags: SubscriberFlags): boolean {
@@ -176,23 +163,12 @@ export function createSystem<
     computed: Computed,
     flags: SubscriberFlags,
   ): void {
-    if (flags & SubscriberFlags.Dirty) {
+    if (isDirty(computed, flags)) {
       if (updateComputed(computed)) {
         const subs = computed.subs
         if (subs !== undefined) {
           shallowPropagate(subs)
         }
-      }
-    } else if (flags & SubscriberFlags.CheckRequired) {
-      if (checkDirty(computed.deps!)) {
-        if (updateComputed(computed)) {
-          const subs = computed.subs
-          if (subs !== undefined) {
-            shallowPropagate(subs)
-          }
-        }
-      } else {
-        computed.flags &= ~SubscriberFlags.CheckRequired
       }
     }
   }
@@ -285,17 +261,7 @@ export function createSystem<
         (subFlags & (SubscriberFlags.CheckRequired | SubscriberFlags.Dirty)) ===
         SubscriberFlags.CheckRequired
       ) {
-        sub.flags = subFlags | SubscriberFlags.Dirty | SubscriberFlags.Notified
-        if (!(subFlags & SubscriberFlags.Notified)) {
-          if (isEffect(sub)) {
-            if (queuedEffectsTail !== undefined) {
-              queuedEffectsTail.depsTail!.nextDep = sub.deps
-            } else {
-              queuedEffects = sub
-            }
-            queuedEffectsTail = sub
-          }
-        }
+        sub.flags = subFlags | SubscriberFlags.Dirty
       }
       link = link.nextSub!
     } while (link !== undefined)
@@ -318,22 +284,14 @@ export function createSystem<
             SubscriberFlags.Recursed |
             SubscriberFlags.Propagated)
         ) &&
-          ((sub.flags = subFlags | targetFlag | SubscriberFlags.Notified),
-          true)) ||
+          ((sub.flags = subFlags | targetFlag), true)) ||
         (subFlags & SubscriberFlags.Recursed &&
           !(subFlags & SubscriberFlags.Tracking) &&
-          ((sub.flags =
-            (subFlags & ~SubscriberFlags.Recursed) |
-            targetFlag |
-            SubscriberFlags.Notified),
+          ((sub.flags = (subFlags & ~SubscriberFlags.Recursed) | targetFlag),
           true)) ||
         (!(subFlags & SubscriberFlags.Propagated) &&
           _isValidLink(link, sub) &&
-          ((sub.flags =
-            subFlags |
-            SubscriberFlags.Recursed |
-            targetFlag |
-            SubscriberFlags.Notified),
+          ((sub.flags = subFlags | SubscriberFlags.Recursed | targetFlag),
           (sub as Dependency).subs !== undefined))
       ) {
         const subSubs = (sub as Dependency).subs
@@ -345,9 +303,7 @@ export function createSystem<
             ++stack
           } else {
             link = subSubs
-            targetFlag = isEffect(sub)
-              ? SubscriberFlags.PendingInnerEffects
-              : SubscriberFlags.CheckRequired
+            targetFlag = SubscriberFlags.CheckRequired
           }
           continue
         }
@@ -360,17 +316,7 @@ export function createSystem<
           queuedEffectsTail = sub
         }
       } else if (!(subFlags & (SubscriberFlags.Tracking | targetFlag))) {
-        sub.flags = subFlags | targetFlag | SubscriberFlags.Notified
-        if (!(subFlags & SubscriberFlags.Notified)) {
-          if (isEffect(sub)) {
-            if (queuedEffectsTail !== undefined) {
-              queuedEffectsTail.depsTail!.nextDep = sub.deps
-            } else {
-              queuedEffects = sub
-            }
-            queuedEffectsTail = sub
-          }
-        }
+        sub.flags = subFlags | targetFlag
       } else if (
         !(subFlags & targetFlag) &&
         subFlags & SubscriberFlags.Propagated &&
@@ -426,12 +372,7 @@ export function createSystem<
   function startTrack(sub: Subscriber): void {
     sub.depsTail = undefined
     sub.flags =
-      (sub.flags &
-        ~(
-          SubscriberFlags.Notified |
-          SubscriberFlags.Recursed |
-          SubscriberFlags.Propagated
-        )) |
+      (sub.flags & ~(SubscriberFlags.Recursed | SubscriberFlags.Propagated)) |
       SubscriberFlags.Tracking
   }
 
