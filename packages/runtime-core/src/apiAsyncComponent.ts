@@ -6,7 +6,7 @@ import {
   currentInstance,
   isInSSRComponentSetup,
 } from './component'
-import { isFunction, isObject } from '@vue/shared'
+import { isFunction, notPrimitive } from '@vue/shared'
 import type { ComponentPublicInstance } from './componentPublicInstance'
 import { type VNode, createVNode } from './vnode'
 import { defineComponent } from './apiDefineComponent'
@@ -106,7 +106,7 @@ export function defineAsyncComponent<
             ) {
               comp = comp.default
             }
-            if (__DEV__ && comp && !isObject(comp) && !isFunction(comp)) {
+            if (__DEV__ && comp && !notPrimitive(comp)) {
               throw new Error(`Invalid async component load result: ${comp}`)
             }
             resolvedComp = comp
