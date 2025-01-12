@@ -1,7 +1,7 @@
 import { EffectFlags, type ReactiveEffect } from './effect'
 import {
-  type ILink,
-  type ISubscriber,
+  type Link,
+  type Subscriber,
   SubscriberFlags,
   endTrack,
   startTrack,
@@ -10,10 +10,10 @@ import { warn } from './warning'
 
 export let activeEffectScope: EffectScope | undefined
 
-export class EffectScope implements ISubscriber {
+export class EffectScope implements Subscriber {
   // Subscriber: In order to collect orphans computeds
-  deps: ILink | undefined = undefined
-  depsTail: ILink | undefined = undefined
+  deps: Link | undefined = undefined
+  depsTail: Link | undefined = undefined
   flags: number = SubscriberFlags.None
 
   /**

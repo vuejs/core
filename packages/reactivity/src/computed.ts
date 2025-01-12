@@ -10,14 +10,14 @@ import {
 import { activeEffectScope } from './effectScope'
 import type { Ref } from './ref'
 import {
-  type IComputed,
-  type IDependency,
-  type ILink,
+  type Dependency,
+  type Link,
+  type Subscriber,
   SubscriberFlags,
   endTrack,
   isDirty,
   link,
-  shallowPropagate,
+  processComputedUpdate,
   startTrack,
 } from './system'
 import { warn } from './warning'
@@ -53,19 +53,19 @@ export interface WritableComputedOptions<T, S = T> {
  * @private exported by @vue/reactivity for Vue core use, but not exported from
  * the main vue package
  */
-export class ComputedRefImpl<T = any> implements IComputed {
+export class ComputedRefImpl<T = any> implements Dependency, Subscriber {
   /**
    * @internal
    */
   _value: T | undefined = undefined
 
-  // IDependency
-  subs: ILink | undefined = undefined
-  subsTail: ILink | undefined = undefined
+  // Dependency
+  subs: Link | undefined = undefined
+  subsTail: Link | undefined = undefined
 
   // Subscriber
-  deps: ILink | undefined = undefined
-  depsTail: ILink | undefined = undefined
+  deps: Link | undefined = undefined
+  depsTail: Link | undefined = undefined
   flags: SubscriberFlags = SubscriberFlags.Dirty
 
   /**
@@ -84,7 +84,7 @@ export class ComputedRefImpl<T = any> implements IComputed {
     return this
   }
   // for backwards compat
-  get dep(): IDependency {
+  get dep(): Dependency {
     return this
   }
   // for backwards compat
@@ -95,7 +95,7 @@ export class ComputedRefImpl<T = any> implements IComputed {
     if (v) {
       this.flags |= SubscriberFlags.Dirty
     } else {
-      this.flags &= ~(SubscriberFlags.Dirty | SubscriberFlags.ToCheckDirty)
+      this.flags &= ~(SubscriberFlags.Dirty | SubscriberFlags.CheckRequired)
     }
   }
 
@@ -118,13 +118,9 @@ export class ComputedRefImpl<T = any> implements IComputed {
   }
 
   get value(): T {
-    if (this._dirty) {
-      if (this.update()) {
-        const subs = this.subs
-        if (subs !== undefined) {
-          shallowPropagate(subs)
-        }
-      }
+    const flags = this.flags
+    if (flags) {
+      processComputedUpdate(this, flags)
     }
     if (activeSub !== undefined) {
       if (__DEV__) {

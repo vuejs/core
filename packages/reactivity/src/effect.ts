@@ -3,9 +3,8 @@ import type { TrackOpTypes, TriggerOpTypes } from './constants'
 import { setupOnTrigger } from './debug'
 import { activeEffectScope } from './effectScope'
 import {
-  type IEffect,
-  type ILink,
-  type ISubscriber,
+  type Link,
+  type Subscriber,
   SubscriberFlags,
   endTrack,
   isDirty,
@@ -16,7 +15,7 @@ import { warn } from './warning'
 export type EffectScheduler = (...args: any[]) => any
 
 export type DebuggerEvent = {
-  effect: ISubscriber
+  effect: Subscriber
 } & DebuggerEventExtraInfo
 
 export type DebuggerEventExtraInfo = {
@@ -47,17 +46,17 @@ export enum EffectFlags {
   /**
    * ReactiveEffect only
    */
-  ALLOW_RECURSE = 1 << 5,
-  PAUSED = 1 << 6,
-  NOTIFIED = 1 << 7,
-  STOP = 1 << 8,
+  ALLOW_RECURSE = 1 << 6,
+  PAUSED = 1 << 7,
+  NOTIFIED = 1 << 8,
+  STOP = 1 << 9,
 }
 
-export class ReactiveEffect<T = any> implements IEffect, ReactiveEffectOptions {
+export class ReactiveEffect<T = any> implements ReactiveEffectOptions {
   // Subscriber
-  deps: ILink | undefined = undefined
-  depsTail: ILink | undefined = undefined
-  flags: number = SubscriberFlags.Dirty
+  deps: Link | undefined = undefined
+  depsTail: Link | undefined = undefined
+  flags: number = 0
 
   /**
    * @internal
@@ -199,7 +198,7 @@ export function stop(runner: ReactiveEffectRunner): void {
   runner.effect.stop()
 }
 
-const resetTrackingStack: (ISubscriber | undefined)[] = []
+const resetTrackingStack: (Subscriber | undefined)[] = []
 
 /**
  * Temporarily pauses tracking.
@@ -286,8 +285,8 @@ function cleanupEffect(e: ReactiveEffect) {
   }
 }
 
-export let activeSub: ISubscriber | undefined = undefined
+export let activeSub: Subscriber | undefined = undefined
 
-export function setActiveSub(sub: ISubscriber | undefined): void {
+export function setActiveSub(sub: Subscriber | undefined): void {
   activeSub = sub
 }

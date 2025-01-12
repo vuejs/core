@@ -1,11 +1,11 @@
 import { extend } from '@vue/shared'
 import type { DebuggerEventExtraInfo, ReactiveEffectOptions } from './effect'
-import { type ILink, type ISubscriber, SubscriberFlags } from './system'
+import { type Link, type Subscriber, SubscriberFlags } from './system'
 
 export const triggerEventInfos: DebuggerEventExtraInfo[] = []
 
 export function onTrack(
-  sub: ILink['sub'],
+  sub: Link['sub'],
   debugInfo: DebuggerEventExtraInfo,
 ): void {
   if (!__DEV__) {
@@ -25,7 +25,7 @@ export function onTrack(
   }
 }
 
-export function onTrigger(sub: ILink['sub']): void {
+export function onTrigger(sub: Link['sub']): void {
   if (!__DEV__) {
     throw new Error(
       `Internal error: onTrigger should be called only in development.`,
@@ -61,7 +61,7 @@ export function setupOnTrigger(target: { new (...args: any[]): any }): void {
   })
 }
 
-function setupFlagsHandler(target: ISubscriber): void {
+function setupFlagsHandler(target: Subscriber): void {
   ;(target as any)._flags = target.flags
   Object.defineProperty(target, 'flags', {
     get() {
@@ -71,9 +71,9 @@ function setupFlagsHandler(target: ISubscriber): void {
       if (
         !(
           (target as any)._flags &
-          (SubscriberFlags.ToCheckDirty | SubscriberFlags.Dirty)
+          (SubscriberFlags.CheckRequired | SubscriberFlags.Dirty)
         ) &&
-        !!(value & (SubscriberFlags.ToCheckDirty | SubscriberFlags.Dirty))
+        !!(value & (SubscriberFlags.CheckRequired | SubscriberFlags.Dirty))
       ) {
         onTrigger(this)
       }

@@ -3,28 +3,28 @@ import { type TrackOpTypes, TriggerOpTypes } from './constants'
 import { onTrack, triggerEventInfos } from './debug'
 import { activeSub } from './effect'
 import {
-  type IDependency,
-  type ILink,
+  type Dependency,
+  type Link,
   endBatch,
   link,
   propagate,
   startBatch,
 } from './system'
 
-class Dep implements IDependency {
-  _subs: ILink | undefined = undefined
-  subsTail: ILink | undefined = undefined
+class Dep implements Dependency {
+  _subs: Link | undefined = undefined
+  subsTail: Link | undefined = undefined
 
   constructor(
     private map: KeyToDepMap,
     private key: unknown,
   ) {}
 
-  get subs(): ILink | undefined {
+  get subs(): Link | undefined {
     return this._subs
   }
 
-  set subs(value: ILink | undefined) {
+  set subs(value: Link | undefined) {
     this._subs = value
     if (value === undefined) {
       this.map.delete(this.key)
@@ -103,7 +103,7 @@ export function trigger(
     return
   }
 
-  const run = (dep: IDependency | undefined) => {
+  const run = (dep: Dependency | undefined) => {
     if (dep !== undefined && dep.subs !== undefined) {
       if (__DEV__) {
         triggerEventInfos.push({
@@ -190,7 +190,7 @@ export function trigger(
 export function getDepFromReactive(
   object: any,
   key: string | number | symbol,
-): IDependency | undefined {
+): Dependency | undefined {
   const depMap = targetMap.get(object)
   return depMap && depMap.get(key)
 }
