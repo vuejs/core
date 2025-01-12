@@ -1,5 +1,7 @@
 /* eslint-disable */
 // Ported from https://github.com/stackblitz/alien-signals/blob/master/src/system.ts
+import type { ComputedRefImpl as Computed } from './computed.js'
+import type { ReactiveEffect as Effect } from './effect.js'
 
 export interface Dependency {
   subs: Link | undefined
@@ -35,11 +37,38 @@ export const enum SubscriberFlags {
   Propagated = CheckRequired | Dirty,
 }
 
+let batchDepth = 0
 let queuedEffects: Effect | undefined
 let queuedEffectsTail: Effect | undefined
 let linkPool: Link | undefined
 
-function link(dep: Dependency, sub: Subscriber): void {
+export function startBatch(): void {
+  ++batchDepth
+}
+
+export function endBatch(): void {
+  if (!--batchDepth) {
+    processQueuedEffects()
+  }
+}
+
+function processQueuedEffects(): void {
+  while (queuedEffects !== undefined) {
+    const effect = queuedEffects
+    const depsTail = effect.depsTail!
+    const queuedNext = depsTail.nextDep
+    if (queuedNext !== undefined) {
+      depsTail.nextDep = undefined
+      queuedEffects = queuedNext.sub as Effect
+    } else {
+      queuedEffects = undefined
+      queuedEffectsTail = undefined
+    }
+    effect.notify()
+  }
+}
+
+export function link(dep: Dependency, sub: Subscriber): void {
   const currentDep = sub.depsTail
   if (currentDep !== undefined && currentDep.dep === dep) {
     return
@@ -102,146 +131,8 @@ function _linkNewDep(
   dep.subsTail = newLink
 }
 
-function processQueuedEffects(): void {
-  while (queuedEffects !== undefined) {
-    const effect = queuedEffects
-    const depsTail = effect.depsTail!
-    const queuedNext = depsTail.nextDep
-    if (queuedNext !== undefined) {
-      depsTail.nextDep = undefined
-      queuedEffects = queuedNext.sub as Effect
-    } else {
-      queuedEffects = undefined
-      queuedEffectsTail = undefined
-    }
-    effect.notify()
-  }
-}
-
-function processComputedUpdate(
-  computed: Computed,
-  flags: SubscriberFlags,
-): void {
-  if (isDirty(computed, flags)) {
-    if (computed.update()) {
-      const subs = computed.subs
-      if (subs !== undefined) {
-        shallowPropagate(subs)
-      }
-    }
-  }
-}
-
-function isDirty(sub: Subscriber, flags: SubscriberFlags): boolean {
-  if (flags & SubscriberFlags.Dirty) {
-    return true
-  } else if (flags & SubscriberFlags.CheckRequired) {
-    if (checkDirty(sub.deps!)) {
-      sub.flags = flags | SubscriberFlags.Dirty
-      return true
-    } else {
-      sub.flags &= ~SubscriberFlags.CheckRequired
-    }
-  }
-  return false
-}
-
 // See https://github.com/stackblitz/alien-signals#about-propagate-and-checkdirty-functions
-function checkDirty(link: Link): boolean {
-  let stack = 0
-  let dirty: boolean
-
-  top: do {
-    dirty = false
-    const dep = link.dep
-
-    if ('flags' in dep) {
-      const depFlags = dep.flags
-      if (depFlags & SubscriberFlags.Dirty) {
-        if ('update' in dep && dep.update()) {
-          const subs = dep.subs!
-          if (subs.nextSub !== undefined) {
-            shallowPropagate(subs)
-          }
-          dirty = true
-        }
-      } else if (depFlags & SubscriberFlags.CheckRequired) {
-        if ('update' in dep) {
-          const depSubs = dep.subs!
-          if (depSubs.nextSub !== undefined) {
-            depSubs.prevSub = link
-          }
-          link = dep.deps!
-          ++stack
-          continue
-        }
-      }
-    }
-
-    if (!dirty && link.nextDep !== undefined) {
-      link = link.nextDep
-      continue
-    }
-
-    if (stack) {
-      let sub = link.sub as Computed
-      do {
-        --stack
-        const subSubs = sub.subs!
-
-        if (dirty) {
-          if (sub.update()) {
-            if ((link = subSubs.prevSub!) !== undefined) {
-              subSubs.prevSub = undefined
-              shallowPropagate(sub.subs!)
-              sub = link.sub as Computed
-            } else {
-              sub = subSubs.sub as Computed
-            }
-            continue
-          }
-        } else {
-          sub.flags &= ~SubscriberFlags.CheckRequired
-        }
-
-        if ((link = subSubs.prevSub!) !== undefined) {
-          subSubs.prevSub = undefined
-          if (link.nextDep !== undefined) {
-            link = link.nextDep
-            continue top
-          }
-          sub = link.sub as Computed
-        } else {
-          if ((link = subSubs.nextDep!) !== undefined) {
-            continue top
-          }
-          sub = subSubs.sub as Computed
-        }
-
-        dirty = false
-      } while (stack)
-    }
-
-    return dirty
-  } while (true)
-}
-
-function shallowPropagate(link: Link): void {
-  do {
-    const sub = link.sub
-    const subFlags = sub.flags
-    if (
-      (subFlags & (SubscriberFlags.CheckRequired | SubscriberFlags.Dirty)) ===
-      SubscriberFlags.CheckRequired
-    ) {
-      sub.flags = subFlags | SubscriberFlags.Dirty
-    }
-    link = link.nextSub!
-  } while (link !== undefined)
-}
-
-// See https://github.com/stackblitz/alien-signals#about-propagate-and-checkdirty-functions
-function propagate(link: Link): void {
+export function propagate(link: Link): void {
   let targetFlag = SubscriberFlags.Dirty
   let subs = link
   let stack = 0
@@ -344,14 +235,136 @@ function _isValidLink(subLink: Link, sub: Subscriber): boolean {
   return false
 }
 
-function startTrack(sub: Subscriber): void {
+export function processComputedUpdate(
+  computed: Computed,
+  flags: SubscriberFlags,
+): void {
+  if (isDirty(computed, flags)) {
+    if (computed.update()) {
+      const subs = computed.subs
+      if (subs !== undefined) {
+        _shallowPropagate(subs)
+      }
+    }
+  }
+}
+
+export function isDirty(sub: Subscriber, flags: SubscriberFlags): boolean {
+  if (flags & SubscriberFlags.Dirty) {
+    return true
+  } else if (flags & SubscriberFlags.CheckRequired) {
+    if (_checkDirty(sub.deps!)) {
+      sub.flags = flags | SubscriberFlags.Dirty
+      return true
+    } else {
+      sub.flags &= ~SubscriberFlags.CheckRequired
+    }
+  }
+  return false
+}
+
+// See https://github.com/stackblitz/alien-signals#about-propagate-and-checkdirty-functions
+function _checkDirty(link: Link): boolean {
+  let stack = 0
+  let dirty: boolean
+
+  top: do {
+    dirty = false
+    const dep = link.dep
+
+    if ('flags' in dep) {
+      const depFlags = dep.flags
+      if (depFlags & SubscriberFlags.Dirty) {
+        if ('update' in dep && dep.update()) {
+          const subs = dep.subs!
+          if (subs.nextSub !== undefined) {
+            _shallowPropagate(subs)
+          }
+          dirty = true
+        }
+      } else if (depFlags & SubscriberFlags.CheckRequired) {
+        if ('update' in dep) {
+          const depSubs = dep.subs!
+          if (depSubs.nextSub !== undefined) {
+            depSubs.prevSub = link
+          }
+          link = dep.deps!
+          ++stack
+          continue
+        }
+      }
+    }
+
+    if (!dirty && link.nextDep !== undefined) {
+      link = link.nextDep
+      continue
+    }
+
+    if (stack) {
+      let sub = link.sub as Computed
+      do {
+        --stack
+        const subSubs = sub.subs!
+
+        if (dirty) {
+          if (sub.update()) {
+            if ((link = subSubs.prevSub!) !== undefined) {
+              subSubs.prevSub = undefined
+              _shallowPropagate(sub.subs!)
+              sub = link.sub as Computed
+            } else {
+              sub = subSubs.sub as Computed
+            }
+            continue
+          }
+        } else {
+          sub.flags &= ~SubscriberFlags.CheckRequired
+        }
+
+        if ((link = subSubs.prevSub!) !== undefined) {
+          subSubs.prevSub = undefined
+          if (link.nextDep !== undefined) {
+            link = link.nextDep
+            continue top
+          }
+          sub = link.sub as Computed
+        } else {
+          if ((link = subSubs.nextDep!) !== undefined) {
+            continue top
+          }
+          sub = subSubs.sub as Computed
+        }
+
+        dirty = false
+      } while (stack)
+    }
+
+    return dirty
+  } while (true)
+}
+
+function _shallowPropagate(link: Link): void {
+  do {
+    const sub = link.sub
+    const subFlags = sub.flags
+    if (
+      (subFlags & (SubscriberFlags.CheckRequired | SubscriberFlags.Dirty)) ===
+      SubscriberFlags.CheckRequired
+    ) {
+      sub.flags = subFlags | SubscriberFlags.Dirty
+    }
+    link = link.nextSub!
+  } while (link !== undefined)
+}
+
+export function startTrack(sub: Subscriber): void {
   sub.depsTail = undefined
   sub.flags =
     (sub.flags & ~(SubscriberFlags.Recursed | SubscriberFlags.Propagated)) |
     SubscriberFlags.Tracking
 }
 
-function endTrack(sub: Subscriber): void {
+export function endTrack(sub: Subscriber): void {
   const depsTail = sub.depsTail
   if (depsTail !== undefined) {
     const nextDep = depsTail.nextDep
@@ -411,20 +424,3 @@ function _clearTrack(link: Link): void {
     link = nextDep!
   } while (link !== undefined)
 }
-
-import type { ComputedRefImpl as Computed } from './computed.js'
-import type { ReactiveEffect as Effect } from './effect.js'
-
-let batchDepth = 0
-
-export function startBatch(): void {
-  ++batchDepth
-}
-
-export function endBatch(): void {
-  if (!--batchDepth) {
-    processQueuedEffects()
-  }
-}
-
-export { endTrack, link, isDirty, propagate, processComputedUpdate, startTrack }
