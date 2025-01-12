@@ -13,7 +13,7 @@
     "noUnusedLocals": true,
     "experimentalDecorators": true,
     "resolveJsonModule": true,
-    // "isolatedModules": true,
+    "isolatedModules": true,
     "skipLibCheck": true,
     "esModuleInterop": true,
     "removeComments": false,
@@ -26,7 +26,7 @@
       "@vue/*": ["packages/*/src"],
       "vue": ["packages/vue/src"]
     },
-    // "isolatedDeclarations": true,
+    "isolatedDeclarations": true,
     "composite": true
   },
   "include": [
