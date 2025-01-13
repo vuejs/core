@@ -25,6 +25,9 @@ import type {
   TemplateLiteral,
 } from '@babel/types'
 import {
+  DEFAULT_FILENAME,
+} from '../parse'
+import {
   UNKNOWN_TYPE,
   createGetCanonicalFileName,
   getId,
@@ -46,7 +49,7 @@ import * as process from 'process'
 export type SimpleTypeResolveOptions = Partial<
   Pick<
     SFCScriptCompileOptions,
-    'globalTypeFiles' | 'fs' | 'babelParserPlugins' | 'isProd'
+    'globalTypeFiles' | 'fs' | 'babelParserPlugins' | 'isProd' | 'id'
   >
 >
 
@@ -909,14 +912,19 @@ function importSourceToScope(
 
   let resolved: string | undefined = scope.resolvedImportSources[source]
   if (!resolved) {
+    let fullName = scope.filename;
+    const id = ctx.options.id;
+    if (id && fullName === DEFAULT_FILENAME){
+      fullName = id ;
+    }
     if (source.startsWith('..')) {
       const osSpecificJoinFn = process.platform === 'win32' ? join : joinPaths
 
-      const filename = osSpecificJoinFn(dirname(scope.filename), source)
+      const filename = osSpecificJoinFn(dirname(fullName), source)
       resolved = resolveExt(filename, fs)
     } else if (source[0] === '.') {
       // relative import - fast path
-      const filename = joinPaths(dirname(scope.filename), source)
+      const filename = joinPaths(dirname(fullName), source)
       resolved = resolveExt(filename, fs)
     } else {
       // module or aliased import - use full TS resolution, only supported in Node
@@ -939,7 +947,7 @@ function importSourceToScope(
           )
         }
       }
-      resolved = resolveWithTS(scope.filename, source, ts, fs)
+      resolved = resolveWithTS(fullName, source, ts, fs)
     }
     if (resolved) {
       resolved = scope.resolvedImportSources[source] = normalizePath(resolved)
