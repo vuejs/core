@@ -19,14 +19,13 @@ import { transformShow } from './transforms/vShow'
 import { transformTransition } from './transforms/Transition'
 import { stringifyStatic } from './transforms/stringifyStatic'
 import { ignoreSideEffectTags } from './transforms/ignoreSideEffectTags'
-import { validateHtmlNesting } from './transforms/validateHtmlNesting'
 import { extend } from '@vue/shared'
 
 export { parserOptions }
 
 export const DOMNodeTransforms: NodeTransform[] = [
   transformStyle,
-  ...(__DEV__ ? [transformTransition, validateHtmlNesting] : []),
+  ...(__DEV__ ? [transformTransition] : []),
 ]
 
 export const DOMDirectiveTransforms: Record<string, DirectiveTransform> = {

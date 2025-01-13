@@ -27,6 +27,7 @@ import { ssrTransformModel } from './transforms/ssrVModel'
 import { ssrTransformShow } from './transforms/ssrVShow'
 import { ssrInjectFallthroughAttrs } from './transforms/ssrInjectFallthroughAttrs'
 import { ssrInjectCssVars } from './transforms/ssrInjectCssVars'
+import { validateHtmlNesting } from './transforms/validateHtmlNesting'
 
 export function compile(
   source: string | RootNode,
@@ -66,6 +67,7 @@ export function compile(
       ssrTransformComponent,
       trackSlotScopes,
       transformStyle,
+      ...(__DEV__ ? [validateHtmlNesting] : []),
       ...(options.nodeTransforms || []), // user transforms
     ],
     directiveTransforms: {
