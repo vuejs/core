@@ -285,7 +285,7 @@ export type CreateComponentPublicInstanceWithMixins<
 export type ExposedKeys<
   T,
   Exposed extends string & keyof T,
-> = '' extends Exposed ? T : Pick<T, Exposed>
+> = Exposed extends string ? T : Pick<T, Exposed>
 
 // public properties exposed on the proxy, which is used as the render context
 // in templates (as `this` in the render option)
