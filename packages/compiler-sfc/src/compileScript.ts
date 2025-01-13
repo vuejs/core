@@ -23,7 +23,11 @@ import type {
   Statement,
 } from '@babel/types'
 import { walk } from 'estree-walker'
-import type { RawSourceMap } from 'source-map-js'
+import {
+  type RawSourceMap,
+  SourceMapConsumer,
+  SourceMapGenerator,
+} from 'source-map-js'
 import {
   normalScriptDefaultVar,
   processNormalScript,
@@ -32,7 +36,6 @@ import { CSS_VARS_HELPER, genCssVarsCode } from './style/cssVars'
 import {
   type SFCTemplateCompileOptions,
   compileTemplate,
-  mergeSourceMaps,
 } from './compileTemplate'
 import { warnOnce } from './warn'
 import { transformDestructuredProps } from './script/definePropsDestructure'
@@ -1034,10 +1037,12 @@ export function compileScript(
           includeContent: true,
         }) as unknown as RawSourceMap)
       : undefined
-  if (map && templateMap) {
+  // merge source maps of the script setup and template in inline mode
+  if (templateMap && map) {
     const offset = content.indexOf(returned)
-    const lineOffset = content.slice(0, offset).split(/\r?\n/).length - 1
-    map = mergeSourceMaps(map, templateMap, lineOffset)
+    const templateLineOffset =
+      content.slice(0, offset).split(/\r?\n/).length - 1
+    map = mergeSourceMaps(map, templateMap, templateLineOffset)
   }
   return {
     ...scriptSetup,
@@ -1300,4 +1305,43 @@ function isStaticNode(node: Node): boolean {
       return true
   }
   return false
+}
+
+export function mergeSourceMaps(
+  scriptMap: RawSourceMap,
+  templateMap: RawSourceMap,
+  templateLineOffset: number,
+): RawSourceMap {
+  const generator = new SourceMapGenerator()
+  const addMapping = (map: RawSourceMap, lineOffset = 0) => {
+    const consumer = new SourceMapConsumer(map)
+    ;(consumer as any).sources.forEach((sourceFile: string) => {
+      ;(generator as any)._sources.add(sourceFile)
+      const sourceContent = consumer.sourceContentFor(sourceFile)
+      if (sourceContent != null) {
+        generator.setSourceContent(sourceFile, sourceContent)
+      }
+    })
+    consumer.eachMapping(m => {
+      if (m.originalLine == null) return
+      generator.addMapping({
+        generated: {
+          line: m.generatedLine + lineOffset,
+          column: m.generatedColumn,
+        },
+        original: {
+          line: m.originalLine,
+          column: m.originalColumn,
+        },
+        source: m.source,
+        name: m.name,
+      })
+    })
+  }
+
+  addMapping(scriptMap)
+  addMapping(templateMap, templateLineOffset)
+  ;(generator as any)._sourceRoot = scriptMap.sourceRoot
+  ;(generator as any)._file = scriptMap.file
+  return (generator as any).toJSON()
 }

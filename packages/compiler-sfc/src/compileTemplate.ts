@@ -327,51 +327,6 @@ function mapLines(oldMap: RawSourceMap, newMap: RawSourceMap): RawSourceMap {
   return generator.toJSON()
 }
 
-export function mergeSourceMaps(
-  scriptMap: RawSourceMap,
-  templateMap: RawSourceMap,
-  templateLineOffset: number,
-): RawSourceMap {
-  if (!templateMap) return scriptMap
-  if (!scriptMap) return templateMap
-
-  const mergedMapGenerator = new SourceMapGenerator() as any
-  const scriptConsumer = new SourceMapConsumer(scriptMap)
-  scriptConsumer.eachMapping(mapping => {
-    if (mapping.originalLine == null) return
-    mergedMapGenerator.addMapping({
-      generated: {
-        line: mapping.generatedLine,
-        column: mapping.generatedColumn,
-      },
-      original: {
-        line: mapping.originalLine,
-        column: mapping.originalColumn,
-      },
-      source: mapping.source,
-      name: mapping.name,
-    })
-  })
-
-  const templateConsumer = new SourceMapConsumer(templateMap)
-  templateConsumer.eachMapping(mapping => {
-    if (mapping.originalLine == null) return
-    mergedMapGenerator.addMapping({
-      generated: {
-        line: mapping.generatedLine + templateLineOffset,
-        column: mapping.generatedColumn,
-      },
-      original: {
-        line: mapping.originalLine,
-        column: mapping.originalColumn,
-      },
-      source: mapping.source,
-      name: mapping.name,
-    })
-  })
-  return mergedMapGenerator.toJSON()
-}
-
 function patchErrors(
   errors: CompilerError[],
   source: string,
