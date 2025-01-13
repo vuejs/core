@@ -32,6 +32,7 @@ import { CSS_VARS_HELPER, genCssVarsCode } from './style/cssVars'
 import {
   type SFCTemplateCompileOptions,
   compileTemplate,
+  mergeSourceMaps,
 } from './compileTemplate'
 import { warnOnce } from './warn'
 import { transformDestructuredProps } from './script/definePropsDestructure'
@@ -817,6 +818,7 @@ export function compileScript(
     args += `, { ${destructureElements.join(', ')} }`
   }
 
+  let templateMap
   // 9. generate return statement
   let returned
   if (
@@ -866,7 +868,7 @@ export function compileScript(
       }
       // inline render function mode - we are going to compile the template and
       // inline it right here
-      const { code, ast, preamble, tips, errors } = compileTemplate({
+      const { code, ast, preamble, tips, errors, map } = compileTemplate({
         filename,
         ast: sfc.template.ast,
         source: sfc.template.content,
@@ -884,6 +886,7 @@ export function compileScript(
           bindingMetadata: ctx.bindingMetadata,
         },
       })
+      templateMap = map
       if (tips.length) {
         tips.forEach(warnOnce)
       }
@@ -1022,19 +1025,26 @@ export function compileScript(
     )
   }
 
+  const content = ctx.s.toString()
+  let map =
+    options.sourceMap !== false
+      ? (ctx.s.generateMap({
+          source: filename,
+          hires: true,
+          includeContent: true,
+        }) as unknown as RawSourceMap)
+      : undefined
+  if (map && templateMap) {
+    const offset = content.indexOf(returned)
+    const lineOffset = content.slice(0, offset).split(/\r?\n/).length - 1
+    map = mergeSourceMaps(map, templateMap, lineOffset)
+  }
   return {
     ...scriptSetup,
     bindings: ctx.bindingMetadata,
     imports: ctx.userImports,
-    content: ctx.s.toString(),
-    map:
-      options.sourceMap !== false
-        ? (ctx.s.generateMap({
-            source: filename,
-            hires: true,
-            includeContent: true,
-          }) as unknown as RawSourceMap)
-        : undefined,
+    content,
+    map,
     scriptAst: scriptAst?.body,
     scriptSetupAst: scriptSetupAst?.body,
     deps: ctx.deps ? [...ctx.deps] : undefined,
