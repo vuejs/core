@@ -668,7 +668,8 @@ export default class Tokenizer {
       c === CharCodes.Dot ||
       c === CharCodes.Colon ||
       c === CharCodes.At ||
-      c === CharCodes.Number
+      c === CharCodes.Number ||
+      c === CharCodes.ExclamationMark
     ) {
       this.cbs.ondirname(this.index, this.index + 1)
       this.state = State.InDirArg
