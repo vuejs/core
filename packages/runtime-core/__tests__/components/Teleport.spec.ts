@@ -1142,6 +1142,76 @@ describe('renderer: teleport', () => {
       expect(root.innerHTML).toBe('<!--v-if-->')
     })
 
+    test('skip unmount children if teleport not disabled & target missing', async () => {
+      const root = document.createElement('div')
+      const childShow = ref(true)
+
+      const Comp = {
+        setup() {
+          return () => h(Teleport, { to: null }, [h('div', 'foo')])
+        },
+      }
+
+      const App = defineComponent({
+        setup() {
+          return () => {
+            return h(Fragment, { key: 0 }, [
+              childShow.value ? h(Comp) : createCommentVNode('v-if'),
+            ])
+          }
+        },
+      })
+
+      domRender(h(App), root)
+      expect('Invalid Teleport target: null').toHaveBeenWarned()
+      expect('Invalid Teleport target on mount').toHaveBeenWarned()
+      expect(root.innerHTML).toBe('<!--teleport start--><!--teleport end-->')
+
+      childShow.value = false
+      await nextTick()
+      expect(root.innerHTML).toBe('<!--v-if-->')
+    })
+
+    test('unmount mounted children after target becomes missing', async () => {
+      const root = document.createElement('div')
+      const target = document.createElement('div')
+      const teleportTarget = ref<Element | null>(target)
+      const childShow = ref(true)
+
+      const Comp = {
+        setup() {
+          return () =>
+            h(Teleport, { to: teleportTarget.value }, [h('div', 'foo')])
+        },
+      }
+
+      const App = defineComponent({
+        setup() {
+          return () => {
+            return h(Fragment, { key: 0 }, [
+              childShow.value ? h(Comp) : createCommentVNode('v-if'),
+            ])
+          }
+        },
+      })
+
+      domRender(h(App), root)
+      expect(root.innerHTML).toBe('<!--teleport start--><!--teleport end-->')
+      expect(target.innerHTML).toBe('<div>foo</div>')
+
+      teleportTarget.value = null
+      await nextTick()
+      expect('Invalid Teleport target: null').toHaveBeenWarned()
+      expect('Invalid Teleport target on update').toHaveBeenWarned()
+      expect(target.innerHTML).toBe('<div>foo</div>')
+
+      childShow.value = false
+      await nextTick()
+      expect(root.innerHTML).toBe('<!--v-if-->')
+      expect(target.innerHTML).toBe('')
+      expect(target.childNodes.length).toBe(0)
+    })
+
     test('accessing template refs inside teleport', async () => {
       const target = nodeOps.createElement('div')
       const tRef = ref()
