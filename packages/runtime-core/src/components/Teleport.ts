@@ -308,18 +308,17 @@ export const TeleportImpl = {
       target,
       props,
     } = vnode
-
-    if (target) {
-      hostRemove(targetStart!)
-      hostRemove(targetAnchor!)
-    }
-
     // an unmounted teleport should always unmount its children whether it's disabled or not
     doRemove && hostRemove(anchor!)
 
     // skip unmount if not disabled & target missing (children not rendered)
     const disabled = isTeleportDisabled(props)
     if (!disabled && !target) return
+
+    if (target) {
+      hostRemove(targetStart!)
+      hostRemove(targetAnchor!)
+    }
 
     if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
       const shouldRemove = doRemove || !disabled
