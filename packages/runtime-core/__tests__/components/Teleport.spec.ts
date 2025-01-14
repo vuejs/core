@@ -719,6 +719,36 @@ describe('renderer: teleport', () => {
       expect(root.innerHTML).toBe('<!--v-if-->')
     })
 
+    test('skip unmount children if teleport not disabled & target missing', async () => {
+      const root = document.createElement('div')
+      const childShow = ref(true)
+
+      const Comp = {
+        setup() {
+          return () => h(Teleport, { to: null }, [h('div', 'foo')])
+        },
+      }
+
+      const App = defineComponent({
+        setup() {
+          return () => {
+            return h(Fragment, { key: 0 }, [
+              childShow.value ? h(Comp) : createCommentVNode('v-if'),
+            ])
+          }
+        },
+      })
+
+      domRender(h(App), root)
+      expect('Invalid Teleport target: null').toHaveBeenWarned()
+      expect('Invalid Teleport target on mount').toHaveBeenWarned()
+      expect(root.innerHTML).toBe('<!--teleport start--><!--teleport end-->')
+
+      childShow.value = false
+      await nextTick()
+      expect(root.innerHTML).toBe('<!--v-if-->')
+    })
+
     test('accessing template refs inside teleport', async () => {
       const target = nodeOps.createElement('div')
       const tRef = ref()
