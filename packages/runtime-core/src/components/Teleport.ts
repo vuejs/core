@@ -328,7 +328,6 @@ export const TeleportImpl = {
       target,
       props,
     } = vnode
-
     const disabled = isTeleportDisabled(props)
     const shouldRemove = doRemove || !disabled
     // A deferred teleport inside a pending suspense may be unmounted before its
