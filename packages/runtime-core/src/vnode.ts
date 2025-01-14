@@ -806,7 +806,8 @@ export function normalizeVNode(child: VNodeChild): VNode {
 // optimized normalization for template-compiled render fns
 export function cloneIfMounted(child: VNode): VNode {
   return (child.el === null && child.patchFlag !== PatchFlags.CACHED) ||
-    child.memo
+    child.memo ||
+    (child.el !== null && child.patchFlag !== PatchFlags.CACHED && !child.memo)
     ? child
     : cloneVNode(child)
 }
