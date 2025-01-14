@@ -218,6 +218,7 @@ export const transformFor: NodeTransform = createStructuralDirectiveTransform(
         }
 
         if (memo) {
+          forNode.parseResult.key = createSimpleExpression('_key')
           const loop = createFunctionExpression(
             createForLoopParams(forNode.parseResult, [
               createSimpleExpression(`_cached`),
@@ -234,6 +235,7 @@ export const transformFor: NodeTransform = createStructuralDirectiveTransform(
             ]),
             createCompoundExpression([`const _item = `, childBlock as any]),
             createSimpleExpression(`_item.memo = _memo`),
+            createSimpleExpression(`_item.cacheIndex = _key`),
             createSimpleExpression(`return _item`),
           ])
           renderExp.arguments.push(
