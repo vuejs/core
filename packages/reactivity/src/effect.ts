@@ -6,9 +6,9 @@ import {
   type Link,
   type Subscriber,
   SubscriberFlags,
-  endTrack,
-  isDirty,
-  startTrack,
+  endTracking,
+  startTracking,
+  updateDirtyFlag,
 } from './system'
 import { warn } from './warning'
 
@@ -46,17 +46,17 @@ export enum EffectFlags {
   /**
    * ReactiveEffect only
    */
-  ALLOW_RECURSE = 1 << 6,
-  PAUSED = 1 << 7,
-  NOTIFIED = 1 << 8,
-  STOP = 1 << 9,
+  ALLOW_RECURSE = 1 << 7,
+  PAUSED = 1 << 8,
+  NOTIFIED = 1 << 9,
+  STOP = 1 << 10,
 }
 
 export class ReactiveEffect<T = any> implements ReactiveEffectOptions {
   // Subscriber
   deps: Link | undefined = undefined
   depsTail: Link | undefined = undefined
-  flags: number = 0
+  flags: number = SubscriberFlags.Effect
 
   /**
    * @internal
@@ -119,7 +119,7 @@ export class ReactiveEffect<T = any> implements ReactiveEffectOptions {
     cleanupEffect(this)
     const prevSub = activeSub
     setActiveSub(this)
-    startTrack(this)
+    startTracking(this)
 
     try {
       return this.fn()
@@ -131,7 +131,7 @@ export class ReactiveEffect<T = any> implements ReactiveEffectOptions {
         )
       }
       setActiveSub(prevSub)
-      endTrack(this)
+      endTracking(this)
       if (
         this.flags & SubscriberFlags.Recursed &&
         this.flags & EffectFlags.ALLOW_RECURSE
@@ -144,8 +144,8 @@ export class ReactiveEffect<T = any> implements ReactiveEffectOptions {
 
   stop(): void {
     if (this.active) {
-      startTrack(this)
-      endTrack(this)
+      startTracking(this)
+      endTracking(this)
       cleanupEffect(this)
       this.onStop && this.onStop()
       this.flags |= EffectFlags.STOP
@@ -153,7 +153,14 @@ export class ReactiveEffect<T = any> implements ReactiveEffectOptions {
   }
 
   get dirty(): boolean {
-    return isDirty(this, this.flags)
+    const flags = this.flags
+    if (
+      flags & SubscriberFlags.Dirty ||
+      (flags & SubscriberFlags.PendingComputed && updateDirtyFlag(this, flags))
+    ) {
+      return true
+    }
+    return false
   }
 }
 

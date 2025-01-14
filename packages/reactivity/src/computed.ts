@@ -14,11 +14,11 @@ import {
   type Link,
   type Subscriber,
   SubscriberFlags,
-  endTrack,
-  isDirty,
+  endTracking,
   link,
   processComputedUpdate,
-  startTrack,
+  startTracking,
+  updateDirtyFlag,
 } from './system'
 import { warn } from './warning'
 
@@ -66,7 +66,7 @@ export class ComputedRefImpl<T = any> implements Dependency, Subscriber {
   // Subscriber
   deps: Link | undefined = undefined
   depsTail: Link | undefined = undefined
-  flags: SubscriberFlags = SubscriberFlags.Dirty
+  flags: SubscriberFlags = SubscriberFlags.Computed | SubscriberFlags.Dirty
 
   /**
    * @internal
@@ -89,13 +89,21 @@ export class ComputedRefImpl<T = any> implements Dependency, Subscriber {
   }
   // for backwards compat
   get _dirty(): boolean {
-    return isDirty(this, this.flags)
+    const flags = this.flags
+    if (
+      flags & SubscriberFlags.Dirty ||
+      (flags & SubscriberFlags.PendingComputed &&
+        updateDirtyFlag(this, this.flags))
+    ) {
+      return true
+    }
+    return false
   }
   set _dirty(v: boolean) {
     if (v) {
       this.flags |= SubscriberFlags.Dirty
     } else {
-      this.flags &= ~(SubscriberFlags.Dirty | SubscriberFlags.CheckRequired)
+      this.flags &= ~(SubscriberFlags.Dirty | SubscriberFlags.PendingComputed)
     }
   }
 
@@ -148,7 +156,7 @@ export class ComputedRefImpl<T = any> implements Dependency, Subscriber {
   update(): boolean {
     const prevSub = activeSub
     setActiveSub(this)
-    startTrack(this)
+    startTracking(this)
     try {
       const oldValue = this._value
       const newValue = this.fn(oldValue)
@@ -159,7 +167,7 @@ export class ComputedRefImpl<T = any> implements Dependency, Subscriber {
       return false
     } finally {
       setActiveSub(prevSub)
-      endTrack(this)
+      endTracking(this)
     }
   }
 }

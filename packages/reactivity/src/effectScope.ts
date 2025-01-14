@@ -2,9 +2,8 @@ import { EffectFlags, type ReactiveEffect } from './effect'
 import {
   type Link,
   type Subscriber,
-  SubscriberFlags,
-  endTrack,
-  startTrack,
+  endTracking,
+  startTracking,
 } from './system'
 import { warn } from './warning'
 
@@ -14,7 +13,7 @@ export class EffectScope implements Subscriber {
   // Subscriber: In order to collect orphans computeds
   deps: Link | undefined = undefined
   depsTail: Link | undefined = undefined
-  flags: number = SubscriberFlags.None
+  flags: number = 0
 
   /**
    * @internal
@@ -122,8 +121,8 @@ export class EffectScope implements Subscriber {
   stop(fromParent?: boolean): void {
     if (this.active) {
       this.flags |= EffectFlags.STOP
-      startTrack(this)
-      endTrack(this)
+      startTracking(this)
+      endTracking(this)
       let i, l
       for (i = 0, l = this.effects.length; i < l; i++) {
         this.effects[i].stop()

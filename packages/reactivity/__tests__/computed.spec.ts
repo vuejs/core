@@ -468,10 +468,10 @@ describe('reactivity/computed', () => {
 
     c2.value
     expect(
-      c1.flags & (SubscriberFlags.Dirty | SubscriberFlags.CheckRequired),
+      c1.flags & (SubscriberFlags.Dirty | SubscriberFlags.PendingComputed),
     ).toBe(0)
     expect(
-      c2.flags & (SubscriberFlags.Dirty | SubscriberFlags.CheckRequired),
+      c2.flags & (SubscriberFlags.Dirty | SubscriberFlags.PendingComputed),
     ).toBe(0)
   })
 

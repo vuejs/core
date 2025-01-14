@@ -71,9 +71,9 @@ function setupFlagsHandler(target: Subscriber): void {
       if (
         !(
           (target as any)._flags &
-          (SubscriberFlags.CheckRequired | SubscriberFlags.Dirty)
+          (SubscriberFlags.PendingComputed | SubscriberFlags.Dirty)
         ) &&
-        !!(value & (SubscriberFlags.CheckRequired | SubscriberFlags.Dirty))
+        !!(value & (SubscriberFlags.PendingComputed | SubscriberFlags.Dirty))
       ) {
         onTrigger(this)
       }
