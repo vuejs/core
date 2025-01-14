@@ -127,7 +127,7 @@ export class ComputedRefImpl<T = any> implements Dependency, Subscriber {
 
   get value(): T {
     const flags = this.flags
-    if (flags) {
+    if (flags & (SubscriberFlags.Dirty | SubscriberFlags.PendingComputed)) {
       processComputedUpdate(this, flags)
     }
     if (activeSub !== undefined) {
