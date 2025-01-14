@@ -409,7 +409,7 @@ describe('reactivity/readonly', () => {
     const eff = effect(() => {
       roArr.includes(2)
     })
-    expect(eff.effect.deps.length).toBe(0)
+    expect(eff.effect.deps).toBeUndefined()
   })
 
   test('readonly should track and trigger if wrapping reactive original (collection)', () => {
@@ -450,7 +450,7 @@ describe('reactivity/readonly', () => {
       bar: markRaw({ b: 2 }),
     })
     expect(isReadonly(obj.foo)).toBe(true)
-    expect(isReactive(obj.bar)).toBe(false)
+    expect(isReadonly(obj.bar)).toBe(false)
   })
 
   test('should make ref readonly', () => {

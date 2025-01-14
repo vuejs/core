@@ -8,6 +8,7 @@ import {
   KeepAlive,
   Suspense,
   type SuspenseProps,
+  createCommentVNode,
   h,
   nextTick,
   nodeOps,
@@ -2021,7 +2022,7 @@ describe('Suspense', () => {
     viewRef.value = 0
     await nextTick()
 
-    expect(serializeInner(root)).toBe('<!---->')
+    expect(serializeInner(root)).toBe('<div>sync</div>')
 
     await Promise.all(deps)
     await nextTick()
@@ -2033,6 +2034,91 @@ describe('Suspense', () => {
     // TypeError: Cannot read properties of null (reading 'parentNode')
     // This has been fixed
     expect(serializeInner(root)).toBe(`<div>sync</div>`)
+  })
+
+  // #10899 / #11427
+  test('KeepAlive + Suspense switch before branch resolves', async () => {
+    const Async1 = defineAsyncComponent({
+      render() {
+        return h('div', 'async1')
+      },
+    })
+    const Async2 = defineAsyncComponent({
+      render() {
+        return h('div', 'async2')
+      },
+    })
+    const components = [Async1, Async2]
+    const viewRef = ref(0)
+    const root = nodeOps.createElement('div')
+    const App = {
+      render() {
+        return h(
+          KeepAlive,
+          {
+            max: 1,
+          },
+          {
+            default: () => {
+              return h(Suspense, null, {
+                default: h(components[viewRef.value]),
+                fallback: h('div', 'loading'),
+              })
+            },
+          },
+        )
+      },
+    }
+    render(h(App), root)
+    expect(serializeInner(root)).toBe(`<div>loading</div>`)
+
+    // switch to Async2 before Async1 resolves
+    viewRef.value = 1
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<div>loading</div>`)
+
+    await Promise.all(deps)
+    await nextTick()
+    expect(serializeInner(root)).toBe('<div>async2</div>')
+
+    viewRef.value = 0
+    await nextTick()
+    await Promise.all(deps)
+    expect(serializeInner(root)).toBe(`<div>async1</div>`)
+
+    viewRef.value = 1
+    await nextTick()
+    await Promise.all(deps)
+    expect(serializeInner(root)).toBe(`<div>async2</div>`)
+  })
+
+  test('KeepAlive + Suspense + comment slot', async () => {
+    const toggle = ref(false)
+    const Async = defineAsyncComponent({
+      render() {
+        return h('div', 'async1')
+      },
+    })
+    const App = {
+      render() {
+        return h(KeepAlive, null, {
+          default: () => {
+            return h(Suspense, null, {
+              default: toggle.value ? h(Async) : createCommentVNode('v-if'),
+            })
+          },
+        })
+      },
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(App), root)
+    expect(serializeInner(root)).toBe(`<!--v-if-->`)
+
+    toggle.value = true
+    await nextTick()
+    await Promise.all(deps)
+    expect(serializeInner(root)).toBe(`<div>async1</div>`)
   })
 
   // #6416 follow up / #10017

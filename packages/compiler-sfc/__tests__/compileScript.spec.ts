@@ -472,6 +472,23 @@ describe('SFC compile <script setup>', () => {
       assertCode(content)
     })
 
+    test('v-model w/ newlines codegen', () => {
+      const { content } = compile(
+        `<script setup>
+        const count = ref(0)
+        </script>
+        <template>
+          <input v-model="
+          count
+          ">
+        </template>
+        `,
+        { inlineTemplate: true },
+      )
+      expect(content).toMatch(`_isRef(count) ? (count).value = $event : null`)
+      assertCode(content)
+    })
+
     test('v-model should not generate ref assignment code for non-setup bindings', () => {
       const { content } = compile(
         `<script setup>
@@ -606,6 +623,7 @@ describe('SFC compile <script setup>', () => {
         import { ref } from 'vue'
         const count = ref(0)
         const style = { color: 'red' }
+        const height = ref(0)
         </script>
         <template>
           <div>{{ count }}</div>
@@ -614,6 +632,7 @@ describe('SFC compile <script setup>', () => {
         <style>
         div { color: v-bind(count) }
         span { color: v-bind(style.color) }
+        span { color: v-bind(height + "px") }
         </style>
         `,
         {
@@ -629,6 +648,9 @@ describe('SFC compile <script setup>', () => {
       expect(content).not.toMatch(`useCssVars`)
       expect(content).toMatch(`"--${mockId}-count": (count.value)`)
       expect(content).toMatch(`"--${mockId}-style\\\\.color": (style.color)`)
+      expect(content).toMatch(
+        `"--${mockId}-height\\\\ \\\\+\\\\ \\\\\\"px\\\\\\"": (height.value + "px")`,
+      )
       assertCode(content)
     })
 
@@ -1352,7 +1374,7 @@ describe('SFC genDefaultAs', () => {
     )
     expect(content).not.toMatch('export default')
     expect(content).toMatch(
-      `const _sfc_ = /*#__PURE__*/Object.assign(__default__`,
+      `const _sfc_ = /*@__PURE__*/Object.assign(__default__`,
     )
     assertCode(content)
   })
@@ -1371,7 +1393,7 @@ describe('SFC genDefaultAs', () => {
     )
     expect(content).not.toMatch('export default')
     expect(content).toMatch(
-      `const _sfc_ = /*#__PURE__*/Object.assign(__default__`,
+      `const _sfc_ = /*@__PURE__*/Object.assign(__default__`,
     )
     assertCode(content)
   })
@@ -1400,7 +1422,7 @@ describe('SFC genDefaultAs', () => {
       },
     )
     expect(content).not.toMatch('export default')
-    expect(content).toMatch(`const _sfc_ = /*#__PURE__*/_defineComponent(`)
+    expect(content).toMatch(`const _sfc_ = /*@__PURE__*/_defineComponent(`)
     assertCode(content)
   })
 
@@ -1418,7 +1440,7 @@ describe('SFC genDefaultAs', () => {
     )
     expect(content).not.toMatch('export default')
     expect(content).toMatch(
-      `const _sfc_ = /*#__PURE__*/_defineComponent({\n  ...__default__`,
+      `const _sfc_ = /*@__PURE__*/_defineComponent({\n  ...__default__`,
     )
     assertCode(content)
   })

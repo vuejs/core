@@ -153,4 +153,54 @@ describe('ssr: slot', () => {
       ),
     ).toBe(`<div><p>1</p><p>2</p></div>`)
   })
+
+  // #11326
+  test('dynamic component slot', async () => {
+    expect(
+      await renderToString(
+        createApp({
+          components: {
+            ButtonComp: {
+              template: `<component is="button"><slot/></component>`,
+            },
+            Wrap: {
+              template: `<div><slot/></div>`,
+            },
+          },
+          template: `<ButtonComp><Wrap><div v-if="false">hello</div></Wrap></ButtonComp>`,
+        }),
+      ),
+    ).toBe(`<button><!--[--><div><!--[--><!--]--></div><!--]--></button>`)
+
+    expect(
+      await renderToString(
+        createApp({
+          components: {
+            ButtonComp: {
+              template: `<component is="button"><slot/></component>`,
+            },
+            Wrap: {
+              template: `<div><slot/></div>`,
+            },
+          },
+          template: `<ButtonComp><Wrap><div v-if="true">hello</div></Wrap></ButtonComp>`,
+        }),
+      ),
+    ).toBe(
+      `<button><!--[--><div><!--[--><div>hello</div><!--]--></div><!--]--></button>`,
+    )
+
+    expect(
+      await renderToString(
+        createApp({
+          components: {
+            ButtonComp: {
+              template: `<component is="button"><slot/></component>`,
+            },
+          },
+          template: `<ButtonComp><template v-if="false">hello</template></ButtonComp>`,
+        }),
+      ),
+    ).toBe(`<button><!--[--><!--]--></button>`)
+  })
 })

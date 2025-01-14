@@ -27,6 +27,10 @@ function parseWithExpressionTransform(
   return ast.children[0]
 }
 
+function compile(template: string) {
+  return baseCompile(template, { prefixIdentifiers: true })
+}
+
 describe('compiler: expression transform', () => {
   test('interpolation (root)', () => {
     const node = parseWithExpressionTransform(`{{ foo }}`) as InterpolationNode
@@ -291,6 +295,7 @@ describe('compiler: expression transform', () => {
       ],
     })
   })
+
   test('should not prefix an object property key', () => {
     const node = parseWithExpressionTransform(
       `{{ { foo() { baz() }, value: bar } }}`,
@@ -384,6 +389,17 @@ describe('compiler: expression transform', () => {
     )
   })
 
+  test('should not error', () => {
+    const onError = vi.fn()
+    parseWithExpressionTransform(
+      `<p :id="undefined /* force override the id */"/>`,
+      {
+        onError,
+      },
+    )
+    expect(onError).not.toHaveBeenCalled()
+  })
+
   test('should prefix in assignment', () => {
     const node = parseWithExpressionTransform(
       `{{ x = 1 }}`,
@@ -419,6 +435,115 @@ describe('compiler: expression transform', () => {
     expect(node.content).toMatchObject({
       constType: ConstantTypes.CAN_STRINGIFY,
     })
+  })
+
+  // #10807
+  test('should not bail constant on strings w/ ()', () => {
+    const node = parseWithExpressionTransform(
+      `{{ { foo: 'ok()' } }}`,
+    ) as InterpolationNode
+    expect(node.content).toMatchObject({
+      constType: ConstantTypes.CAN_STRINGIFY,
+    })
+  })
+
+  test('should bail constant for global identifiers w/ new or call expressions', () => {
+    const node = parseWithExpressionTransform(
+      `{{ new Date().getFullYear() }}`,
+    ) as InterpolationNode
+    expect(node.content).toMatchObject({
+      children: [
+        'new ',
+        { constType: ConstantTypes.NOT_CONSTANT },
+        '().',
+        { constType: ConstantTypes.NOT_CONSTANT },
+        '()',
+      ],
+    })
+  })
+
+  test('should not prefix temp variable of for...in', () => {
+    const { code } = compile(
+      `<div @click="() => {
+        for (const x in list) {
+          log(x)
+        }
+        error(x)
+      }"/>`,
+    )
+    expect(code).not.toMatch(`log(_ctx.x)`)
+    expect(code).toMatch(`error(_ctx.x)`)
+    expect(code).toMatchSnapshot()
+  })
+
+  test('should not prefix temp variable of for...of', () => {
+    const { code } = compile(
+      `<div @click="() => {
+        for (const x of list) {
+          log(x)
+        }
+        error(x)
+      }"/>`,
+    )
+    expect(code).not.toMatch(`log(_ctx.x)`)
+    expect(code).toMatch(`error(_ctx.x)`)
+    expect(code).toMatchSnapshot()
+  })
+
+  test('should not prefix temp variable of for loop', () => {
+    const { code } = compile(
+      `<div @click="() => {
+        for (let i = 0; i < list.length; i++) {
+          log(i)
+        }
+        error(i)
+      }"/>`,
+    )
+    expect(code).not.toMatch(`log(_ctx.i)`)
+    expect(code).toMatch(`error(_ctx.i)`)
+    expect(code).toMatchSnapshot()
+  })
+
+  test('should allow leak of var declarations in for loop', () => {
+    const { code } = compile(
+      `<div @click="() => {
+        for (var i = 0; i < list.length; i++) {
+          log(i)
+        }
+        error(i)
+      }"/>`,
+    )
+    expect(code).not.toMatch(`log(_ctx.i)`)
+    expect(code).not.toMatch(`error(_ctx.i)`)
+    expect(code).toMatchSnapshot()
+  })
+
+  test('should not prefix catch block param', () => {
+    const { code } = compile(
+      `<div @click="() => {
+         try {} catch (err) { console.error(err) }
+        console.log(err)
+      }"/>`,
+    )
+    expect(code).not.toMatch(`console.error(_ctx.err)`)
+    expect(code).toMatch(`console.log(_ctx.err)`)
+    expect(code).toMatchSnapshot()
+  })
+
+  test('should not prefix destructured catch block param', () => {
+    const { code } = compile(
+      `<div @click="() => {
+        try {
+          throw new Error('sup?')
+        } catch ({ message: { length } }) {
+          console.error(length)
+        }
+        console.log(length)
+      }"/>`,
+    )
+    expect(code).not.toMatch(`console.error(_ctx.length)`)
+    expect(code).toMatch(`console.log(_ctx.length)`)
+    expect(code).toMatchSnapshot()
   })
 
   describe('ES Proposals support', () => {
@@ -519,42 +644,6 @@ describe('compiler: expression transform', () => {
       expect(code).toMatchSnapshot()
     })
 
-    test('should not prefix temp variable of for...in', () => {
-      const { code } = compileWithBindingMetadata(
-        `<div @click="() => {
-          for (const x in list) {
-            log(x)
-          }
-        }"/>`,
-      )
-      expect(code).not.toMatch(`_ctx.x`)
-      expect(code).toMatchSnapshot()
-    })
-
-    test('should not prefix temp variable of for...of', () => {
-      const { code } = compileWithBindingMetadata(
-        `<div @click="() => {
-          for (const x of list) {
-            log(x)
-          }
-        }"/>`,
-      )
-      expect(code).not.toMatch(`_ctx.x`)
-      expect(code).toMatchSnapshot()
-    })
-
-    test('should not prefix temp variable of for loop', () => {
-      const { code } = compileWithBindingMetadata(
-        `<div @click="() => {
-          for (let i = 0; i < list.length; i++) {
-            log(i)
-          }
-        }"/>`,
-      )
-      expect(code).not.toMatch(`_ctx.i`)
-      expect(code).toMatchSnapshot()
-    })
-
     test('inline mode', () => {
       const { code } = compileWithBindingMetadata(
         `<div>{{ props }} {{ setup }} {{ setupConst }} {{ data }} {{ options }} {{ isNaN }}</div>`,
@@ -597,6 +686,34 @@ describe('compiler: expression transform', () => {
       expect(code).toMatch(
         `${PatchFlags.TEXT} /* ${PatchFlagNames[PatchFlags.TEXT]} */`,
       )
+    })
+
+    // #10754
+    test('await expression in right hand of assignment, inline mode', () => {
+      const node = parseWithExpressionTransform(
+        `{{ (async () => { x = await bar })() }}`,
+        {
+          inline: true,
+          bindingMetadata: {
+            x: BindingTypes.SETUP_LET,
+            bar: BindingTypes.SETUP_CONST,
+          },
+        },
+      ) as InterpolationNode
+      expect(node.content).toMatchObject({
+        type: NodeTypes.COMPOUND_EXPRESSION,
+        children: [
+          `(async () => { `,
+          {
+            content: `_isRef(x) ? x.value = await bar : x`,
+          },
+          ` = await `,
+          {
+            content: `bar`,
+          },
+          ` })()`,
+        ],
+      })
     })
   })
 })

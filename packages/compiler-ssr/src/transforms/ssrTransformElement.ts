@@ -22,11 +22,13 @@ import {
   createAssignmentExpression,
   createCallExpression,
   createCompilerError,
+  createCompoundExpression,
   createConditionalExpression,
   createInterpolation,
   createSequenceExpression,
   createSimpleExpression,
   createTemplateLiteral,
+  findDir,
   hasDynamicKeyVBind,
   isStaticArgOf,
   isStaticExp,
@@ -162,6 +164,29 @@ export const ssrTransformElement: NodeTransform = (node, context) => {
               ]),
             ]
           }
+        } else if (directives.length && !node.children.length) {
+          // v-text directive has higher priority than the merged props
+          const vText = findDir(node, 'text')
+          if (!vText) {
+            const tempId = `_temp${context.temps++}`
+            propsExp.arguments = [
+              createAssignmentExpression(
+                createSimpleExpression(tempId, false),
+                mergedProps,
+              ),
+            ]
+            rawChildrenMap.set(
+              node,
+              createConditionalExpression(
+                createSimpleExpression(`"textContent" in ${tempId}`, false),
+                createCallExpression(context.helper(SSR_INTERPOLATE), [
+                  createSimpleExpression(`${tempId}.textContent`, false),
+                ]),
+                createSimpleExpression(`${tempId}.innerHTML ?? ''`, false),
+                false,
+              ),
+            )
+          }
         }
 
         if (needTagForRuntime) {
@@ -188,7 +213,10 @@ export const ssrTransformElement: NodeTransform = (node, context) => {
       // special cases with children override
       if (prop.type === NodeTypes.DIRECTIVE) {
         if (prop.name === 'html' && prop.exp) {
-          rawChildrenMap.set(node, prop.exp)
+          rawChildrenMap.set(
+            node,
+            createCompoundExpression([`(`, prop.exp, `) ?? ''`]),
+          )
         } else if (prop.name === 'text' && prop.exp) {
           node.children = [createInterpolation(prop.exp, prop.loc)]
         } else if (prop.name === 'slot') {
@@ -413,7 +441,7 @@ function findVModel(node: PlainElementNode): DirectiveNode | undefined {
 export function ssrProcessElement(
   node: PlainElementNode,
   context: SSRTransformContext,
-) {
+): void {
   const isVoidTag = context.options.isVoidTag || NO
   const elementsToAdd = node.ssrCodegenNode!.elements
   for (let j = 0; j < elementsToAdd.length; j++) {

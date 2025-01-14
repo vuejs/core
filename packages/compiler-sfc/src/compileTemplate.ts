@@ -6,14 +6,11 @@ import {
   type NodeTransform,
   NodeTypes,
   type ParserOptions,
+  type RawSourceMap,
   type RootNode,
   createRoot,
 } from '@vue/compiler-core'
-import {
-  type RawSourceMap,
-  SourceMapConsumer,
-  SourceMapGenerator,
-} from 'source-map-js'
+import { SourceMapConsumer, SourceMapGenerator } from 'source-map-js'
 import {
   type AssetURLOptions,
   type AssetURLTagConfig,
@@ -194,11 +191,11 @@ function doCompileTemplate({
   if (ssr && !ssrCssVars) {
     warnOnce(
       `compileTemplate is called with \`ssr: true\` but no ` +
-        `corresponding \`cssVars\` option.\`.`,
+        `corresponding \`cssVars\` option.`,
     )
   }
   if (!id) {
-    warnOnce(`compileTemplate now requires the \`id\` option.\`.`)
+    warnOnce(`compileTemplate now requires the \`id\` option.`)
     id = ''
   }
 

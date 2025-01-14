@@ -3,6 +3,7 @@ import {
   NodeOpTypes,
   type TestElement,
   TestNodeTypes,
+  type VNode,
   createBlock,
   createCommentVNode,
   createTextVNode,
@@ -314,6 +315,64 @@ describe('renderer: fragment', () => {
     expect(serializeInner(root)).toBe(
       `<!--comment--><span></span><div>two</div><!--comment--><span></span><div>one</div>`,
     )
+  })
+
+  // #10547
+  test('`template` fragment w/ render function', () => {
+    const renderFn = (vnode: VNode) => {
+      return (
+        openBlock(),
+        createBlock(
+          Fragment,
+          null,
+          [createTextVNode('text'), (openBlock(), createBlock(vnode))],
+          PatchFlags.STABLE_FRAGMENT,
+        )
+      )
+    }
+
+    const root = nodeOps.createElement('div')
+    const foo = h('div', ['foo'])
+    const bar = h('div', [h('div', 'bar')])
+
+    render(renderFn(foo), root)
+    expect(serializeInner(root)).toBe(`text<div>foo</div>`)
+
+    render(renderFn(bar), root)
+    expect(serializeInner(root)).toBe(`text<div><div>bar</div></div>`)
+
+    render(renderFn(foo), root)
+    expect(serializeInner(root)).toBe(`text<div>foo</div>`)
+  })
+
+  // #10547
+  test('`template` fragment w/ render function + keyed vnode', () => {
+    const renderFn = (vnode: VNode) => {
+      return (
+        openBlock(),
+        createBlock(
+          Fragment,
+          null,
+          [createTextVNode('text'), (openBlock(), createBlock(vnode))],
+          PatchFlags.STABLE_FRAGMENT,
+        )
+      )
+    }
+
+    const root = nodeOps.createElement('div')
+    const foo = h('div', { key: 1 }, [h('div', 'foo')])
+    const bar = h('div', { key: 2 }, [h('div', 'bar'), h('div', 'bar')])
+
+    render(renderFn(foo), root)
+    expect(serializeInner(root)).toBe(`text<div><div>foo</div></div>`)
+
+    render(renderFn(bar), root)
+    expect(serializeInner(root)).toBe(
+      `text<div><div>bar</div><div>bar</div></div>`,
+    )
+
+    render(renderFn(foo), root)
+    expect(serializeInner(root)).toBe(`text<div><div>foo</div></div>`)
   })
 
   // #6852

@@ -6,6 +6,7 @@
 import {
   Fragment,
   type FunctionalComponent,
+  Teleport,
   createBlock,
   createCommentVNode,
   createElementBlock,
@@ -20,6 +21,7 @@ import {
   render,
   withModifiers,
 } from '@vue/runtime-dom'
+import { createApp } from 'vue'
 import { PatchFlags } from '@vue/shared'
 
 describe('attribute fallthrough', () => {
@@ -388,6 +390,26 @@ describe('attribute fallthrough', () => {
 
     expect(`Extraneous non-props attributes (class)`).toHaveBeenWarned()
     expect(`Extraneous non-emits event listeners`).toHaveBeenWarned()
+  })
+
+  it('should warn when fallthrough fails on teleport root node', () => {
+    const Parent = {
+      render() {
+        return h(Child, { class: 'parent' })
+      },
+    }
+    const root = document.createElement('div')
+
+    const Child = defineComponent({
+      render() {
+        return h(Teleport, { to: root }, h('div'))
+      },
+    })
+
+    document.body.appendChild(root)
+    render(h(Parent), root)
+
+    expect(`Extraneous non-props attributes (class)`).toHaveBeenWarned()
   })
 
   it('should dedupe same listeners when $attrs is used during render', () => {
@@ -782,5 +804,32 @@ describe('attribute fallthrough', () => {
     expect(click).toHaveBeenCalled()
     expect(textBar).toBe('from GrandChild')
     expect(textFoo).toBe('from Child')
+  })
+
+  // covers uncaught regression #10710
+  it('should track this.$attrs access in slots', async () => {
+    const GrandChild = {
+      template: `<slot/>`,
+    }
+    const Child = {
+      components: { GrandChild },
+      template: `<div><GrandChild>{{ $attrs.foo }}</GrandChild></div>`,
+    }
+
+    const obj = ref(1)
+    const App = {
+      render() {
+        return h(Child, { foo: obj.value })
+      },
+    }
+
+    const root = document.createElement('div')
+    createApp(App).mount(root)
+
+    expect(root.innerHTML).toBe('<div foo="1">1</div>')
+
+    obj.value = 2
+    await nextTick()
+    expect(root.innerHTML).toBe('<div foo="2">2</div>')
   })
 })

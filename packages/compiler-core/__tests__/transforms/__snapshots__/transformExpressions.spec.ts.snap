@@ -14,44 +14,92 @@ return function render(_ctx, _cache, $props, $setup, $data, $options) {
 }"
 `;
 
-exports[`compiler: expression transform > bindingMetadata > should not prefix temp variable of for loop 1`] = `
+exports[`compiler: expression transform > should allow leak of var declarations in for loop 1`] = `
 "const { openBlock: _openBlock, createElementBlock: _createElementBlock } = Vue
 
-return function render(_ctx, _cache, $props, $setup, $data, $options) {
+return function render(_ctx, _cache) {
   return (_openBlock(), _createElementBlock("div", {
     onClick: () => {
-          for (let i = 0; i < _ctx.list.length; i++) {
-            _ctx.log(i)
-          }
+        for (var i = 0; i < _ctx.list.length; i++) {
+          _ctx.log(i)
         }
+        _ctx.error(i)
+      }
   }, null, 8 /* PROPS */, ["onClick"]))
 }"
 `;
 
-exports[`compiler: expression transform > bindingMetadata > should not prefix temp variable of for...in 1`] = `
+exports[`compiler: expression transform > should not prefix catch block param 1`] = `
 "const { openBlock: _openBlock, createElementBlock: _createElementBlock } = Vue
 
-return function render(_ctx, _cache, $props, $setup, $data, $options) {
+return function render(_ctx, _cache) {
   return (_openBlock(), _createElementBlock("div", {
     onClick: () => {
-          for (const x in _ctx.list) {
-            _ctx.log(x)
-          }
-        }
+         try {} catch (err) { console.error(err) }
+        console.log(_ctx.err)
+      }
   }, null, 8 /* PROPS */, ["onClick"]))
 }"
 `;
 
-exports[`compiler: expression transform > bindingMetadata > should not prefix temp variable of for...of 1`] = `
+exports[`compiler: expression transform > should not prefix destructured catch block param 1`] = `
 "const { openBlock: _openBlock, createElementBlock: _createElementBlock } = Vue
 
-return function render(_ctx, _cache, $props, $setup, $data, $options) {
+return function render(_ctx, _cache) {
   return (_openBlock(), _createElementBlock("div", {
     onClick: () => {
-          for (const x of _ctx.list) {
-            _ctx.log(x)
-          }
+        try {
+          throw new Error('sup?')
+        } catch ({ message: { length } }) {
+          console.error(length)
         }
+        console.log(_ctx.length)
+      }
+  }, null, 8 /* PROPS */, ["onClick"]))
+}"
+`;
+
+exports[`compiler: expression transform > should not prefix temp variable of for loop 1`] = `
+"const { openBlock: _openBlock, createElementBlock: _createElementBlock } = Vue
+
+return function render(_ctx, _cache) {
+  return (_openBlock(), _createElementBlock("div", {
+    onClick: () => {
+        for (let i = 0; i < _ctx.list.length; i++) {
+          _ctx.log(i)
+        }
+        _ctx.error(_ctx.i)
+      }
+  }, null, 8 /* PROPS */, ["onClick"]))
+}"
+`;
+
+exports[`compiler: expression transform > should not prefix temp variable of for...in 1`] = `
+"const { openBlock: _openBlock, createElementBlock: _createElementBlock } = Vue
+
+return function render(_ctx, _cache) {
+  return (_openBlock(), _createElementBlock("div", {
+    onClick: () => {
+        for (const x in _ctx.list) {
+          _ctx.log(x)
+        }
+        _ctx.error(_ctx.x)
+      }
+  }, null, 8 /* PROPS */, ["onClick"]))
+}"
+`;
+
+exports[`compiler: expression transform > should not prefix temp variable of for...of 1`] = `
+"const { openBlock: _openBlock, createElementBlock: _createElementBlock } = Vue
+
+return function render(_ctx, _cache) {
+  return (_openBlock(), _createElementBlock("div", {
+    onClick: () => {
+        for (const x of _ctx.list) {
+          _ctx.log(x)
+        }
+        _ctx.error(_ctx.x)
+      }
   }, null, 8 /* PROPS */, ["onClick"]))
 }"
 `;

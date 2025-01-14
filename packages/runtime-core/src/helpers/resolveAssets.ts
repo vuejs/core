@@ -26,7 +26,7 @@ export function resolveComponent(
   return resolveAsset(COMPONENTS, name, true, maybeSelfReference) || name
 }
 
-export const NULL_DYNAMIC_COMPONENT = Symbol.for('v-ndc')
+export const NULL_DYNAMIC_COMPONENT: unique symbol = Symbol.for('v-ndc')
 
 /**
  * @private

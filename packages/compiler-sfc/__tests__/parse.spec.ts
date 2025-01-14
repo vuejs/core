@@ -425,5 +425,15 @@ h1 { color: red }
         `At least one <template> or <script> is required in a single file component`,
       )
     })
+
+    test('should throw error if template functional is given', () => {
+      assertWarning(
+        parse(`<template functional></template>`).errors,
+        `<template functional> is no longer supported in Vue 3, since ` +
+          `functional components no longer have significant performance ` +
+          `difference from stateful ones. Just use a normal <template> ` +
+          `instead.`,
+      )
+    })
   })
 })

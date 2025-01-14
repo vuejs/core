@@ -1,6 +1,6 @@
 {
   "name": "@vue/compiler-sfc",
-  "version": "3.4.21",
+  "version": "3.5.13",
   "description": "@vue/compiler-sfc",
   "main": "dist/compiler-sfc.cjs.js",
   "module": "dist/compiler-sfc.esm-browser.js",
@@ -42,26 +42,26 @@
   },
   "homepage": "https://github.com/vuejs/core/tree/main/packages/compiler-sfc#readme",
   "dependencies": {
-    "@babel/parser": "^7.24.0",
+    "@babel/parser": "catalog:",
     "@vue/compiler-core": "workspace:*",
     "@vue/compiler-dom": "workspace:*",
     "@vue/compiler-ssr": "workspace:*",
     "@vue/shared": "workspace:*",
-    "estree-walker": "^2.0.2",
-    "magic-string": "^0.30.8",
-    "postcss": "^8.4.35",
-    "source-map-js": "^1.1.0"
+    "estree-walker": "catalog:",
+    "magic-string": "catalog:",
+    "postcss": "^8.4.49",
+    "source-map-js": "catalog:"
   },
   "devDependencies": {
-    "@babel/types": "^7.24.0",
+    "@babel/types": "catalog:",
     "@vue/consolidate": "^1.0.0",
     "hash-sum": "^2.0.0",
     "lru-cache": "10.1.0",
     "merge-source-map": "^1.1.0",
-    "minimatch": "^9.0.3",
-    "postcss-modules": "^6.0.0",
-    "postcss-selector-parser": "^6.0.15",
-    "pug": "^3.0.2",
-    "sass": "^1.72.0"
+    "minimatch": "~10.0.1",
+    "postcss-modules": "^6.0.1",
+    "postcss-selector-parser": "^7.0.0",
+    "pug": "^3.0.3",
+    "sass": "^1.83.1"
   }
 }

@@ -53,4 +53,39 @@ describe('runtime-dom: attrs patching', () => {
     patchProp(el, 'onwards', 'a', null)
     expect(el.getAttribute('onwards')).toBe(null)
   })
+
+  // #10597
+  test('should allow setting attribute to symbol', () => {
+    const el = document.createElement('div')
+    const symbol = Symbol('foo')
+    patchProp(el, 'foo', null, symbol)
+    expect(el.getAttribute('foo')).toBe(symbol.toString())
+  })
+
+  // #10598
+  test('should allow setting value to symbol', () => {
+    const el = document.createElement('input')
+    const symbol = Symbol('foo')
+    patchProp(el, 'value', null, symbol)
+    expect(el.value).toBe(symbol.toString())
+  })
+
+  // #11177
+  test('should allow setting value to object, leaving stringification to the element/browser', () => {
+    // normal behavior
+    const el = document.createElement('div')
+    const obj = { toString: () => 'foo' }
+    patchProp(el, 'data-test', null, obj)
+    expect(el.dataset.test).toBe('foo')
+
+    const el2 = document.createElement('div')
+    let testvalue: null | typeof obj = null
+    // simulating a web component that implements its own setAttribute handler
+    el2.setAttribute = (name, value) => {
+      testvalue = value
+    }
+    patchProp(el2, 'data-test', null, obj)
+    expect(el2.dataset.test).toBe(undefined)
+    expect(testvalue).toBe(obj)
+  })
 })
