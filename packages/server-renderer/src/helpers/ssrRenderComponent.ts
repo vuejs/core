@@ -13,10 +13,12 @@ export function ssrRenderComponent(
   children: Slots | SSRSlots | null = null,
   parentComponent: ComponentInternalInstance | null = null,
   slotScopeId?: string,
+  vShowValue?: Props,
 ): SSRBuffer | Promise<SSRBuffer> {
   return renderComponentVNode(
     createVNode(comp, props, children),
     parentComponent,
     slotScopeId,
+    vShowValue,
   )
 }
