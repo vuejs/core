@@ -1284,7 +1284,7 @@ function baseCreateRenderer(
     const componentUpdateFn = () => {
       if (!instance.isMounted) {
         let vnodeHook: VNodeHook | null | undefined
-        const { el, props } = initialVNode
+        const { props } = initialVNode
         const { bm, m, parent, root, type } = instance
         const isAsyncWrapperVNode = isAsyncWrapper(initialVNode)
 
@@ -1308,7 +1308,7 @@ function baseCreateRenderer(
         }
         toggleRecurse(instance, true)
 
-        if (el && hydrateNode) {
+        if (initialVNode.el && hydrateNode) {
           // vnode has adopted host node - perform hydration instead of mount.
           const hydrateSubTree = () => {
             if (__DEV__) {
@@ -1322,7 +1322,7 @@ function baseCreateRenderer(
               startMeasure(instance, `hydrate`)
             }
             hydrateNode!(
-              el as Node,
+              initialVNode.el as Node,
               instance.subTree,
               instance,
               parentSuspense,
