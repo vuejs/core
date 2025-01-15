@@ -9,7 +9,7 @@ import type { ComputedRef, WritableComputedRef } from './computed'
 import { ReactiveFlags, TrackOpTypes, TriggerOpTypes } from './constants'
 import { onTrack, triggerEventInfos } from './debug'
 import { getDepFromReactive } from './dep'
-import { activeSub, activeTrackId } from './effect'
+import { activeSub } from './effect'
 import {
   type Builtin,
   type ShallowReactiveMarker,
@@ -112,7 +112,6 @@ class RefImpl<T = any> implements Dependency {
   // Dependency
   subs: Link | undefined = undefined
   subsTail: Link | undefined = undefined
-  lastTrackedId = 0
 
   _value: T
   private _rawValue: T
@@ -196,7 +195,7 @@ export function triggerRef(ref: Ref): void {
 }
 
 function trackRef(dep: Dependency) {
-  if (activeTrackId !== 0 && dep.lastTrackedId !== activeTrackId) {
+  if (activeSub !== undefined) {
     if (__DEV__) {
       onTrack(activeSub!, {
         target: dep,
@@ -204,7 +203,6 @@ function trackRef(dep: Dependency) {
         key: 'value',
       })
     }
-    dep.lastTrackedId = activeTrackId
     link(dep, activeSub!)
   }
 }
@@ -301,7 +299,6 @@ class CustomRefImpl<T> implements Dependency {
   // Dependency
   subs: Link | undefined = undefined
   subsTail: Link | undefined = undefined
-  lastTrackedId = 0
 
   private readonly _get: ReturnType<CustomRefFactory<T>>['get']
   private readonly _set: ReturnType<CustomRefFactory<T>>['set']

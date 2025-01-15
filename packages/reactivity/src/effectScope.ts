@@ -1,10 +1,9 @@
-import { EffectFlags, type ReactiveEffect, nextTrackId } from './effect'
+import { EffectFlags, type ReactiveEffect } from './effect'
 import {
   type Link,
   type Subscriber,
-  SubscriberFlags,
-  endTrack,
-  startTrack,
+  endTracking,
+  startTracking,
 } from './system'
 import { warn } from './warning'
 
@@ -14,9 +13,7 @@ export class EffectScope implements Subscriber {
   // Subscriber: In order to collect orphans computeds
   deps: Link | undefined = undefined
   depsTail: Link | undefined = undefined
-  flags: number = SubscriberFlags.None
-
-  trackId: number = nextTrackId()
+  flags: number = 0
 
   /**
    * @internal
@@ -93,12 +90,12 @@ export class EffectScope implements Subscriber {
 
   run<T>(fn: () => T): T | undefined {
     if (this.active) {
-      const currentEffectScope = activeEffectScope
+      const prevEffectScope = activeEffectScope
       try {
         activeEffectScope = this
         return fn()
       } finally {
-        activeEffectScope = currentEffectScope
+        activeEffectScope = prevEffectScope
       }
     } else if (__DEV__) {
       warn(`cannot run an inactive effect scope.`)
@@ -124,8 +121,8 @@ export class EffectScope implements Subscriber {
   stop(fromParent?: boolean): void {
     if (this.active) {
       this.flags |= EffectFlags.STOP
-      startTrack(this)
-      endTrack(this)
+      startTracking(this)
+      endTracking(this)
       let i, l
       for (i = 0, l = this.effects.length; i < l; i++) {
         this.effects[i].stop()
