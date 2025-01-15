@@ -74,7 +74,7 @@ export function createBuffer() {
     push(item: SSRBufferItem): void {
       const isStringItem = isString(item)
       if (appendable && isStringItem) {
-        buffer[buffer.length - 1] += item as string
+        buffer[buffer.length - 1] += item
         return
       }
       buffer.push(item)
@@ -104,7 +104,7 @@ export function renderComponentVNode(
   const hasAsyncSetup = isPromise(res)
   let prefetches = instance.sp /* LifecycleHooks.SERVER_PREFETCH */
   if (hasAsyncSetup || prefetches) {
-    const p: Promise<unknown> = Promise.resolve(res as Promise<void>)
+    const p: Promise<unknown> = Promise.resolve(res!)
       .then(() => {
         // instance.sp may be null until an async setup resolves, so evaluate it here
         if (hasAsyncSetup) prefetches = instance.sp

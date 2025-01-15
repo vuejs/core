@@ -10,7 +10,7 @@ export const computed: typeof _computed = (
   if (__DEV__) {
     const i = getCurrentInstance()
     if (i && i.appContext.config.warnRecursiveComputed) {
-      ;(c as unknown as ComputedRefImpl<any>)._warnRecursive = true
+      ;(c as unknown as ComputedRefImpl)._warnRecursive = true
     }
   }
   return c as any

@@ -44,7 +44,7 @@ describe('reactivity/collections', () => {
 
     it('should observe for of iteration', () => {
       let dummy
-      const set = reactive(new Set() as Set<number>)
+      const set = reactive(new Set<number>())
       effect(() => {
         dummy = 0
         for (let num of set) {
@@ -82,7 +82,7 @@ describe('reactivity/collections', () => {
 
     it('should observe values iteration', () => {
       let dummy
-      const set = reactive(new Set() as Set<number>)
+      const set = reactive(new Set<number>())
       effect(() => {
         dummy = 0
         for (let num of set.values()) {
@@ -102,7 +102,7 @@ describe('reactivity/collections', () => {
 
     it('should observe keys iteration', () => {
       let dummy
-      const set = reactive(new Set() as Set<number>)
+      const set = reactive(new Set<number>())
       effect(() => {
         dummy = 0
         for (let num of set.keys()) {
