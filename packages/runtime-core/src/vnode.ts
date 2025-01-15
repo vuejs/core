@@ -243,8 +243,9 @@ export interface VNode<
   memo?: any[]
   /**
    * @internal index for cleaning v-memo cache
+   * cacheIndex will be an array when vnode in vFor
    */
-  cacheIndex?: number
+  cacheIndex?: number | number[]
   /**
    * @internal __COMPAT__ only
    */

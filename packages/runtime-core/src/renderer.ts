@@ -2097,7 +2097,15 @@ function baseCreateRenderer(
 
     // #6593 should clean memo cache when unmount
     if (cacheIndex != null) {
-      parentComponent!.renderCache[cacheIndex] = undefined
+      if (isArray(cacheIndex)) {
+        const [parentIndex, itemIndex] = cacheIndex
+        const parentCache = parentComponent!.renderCache[
+          parentIndex
+        ]! as unknown as VNode[]
+        parentCache[itemIndex].el = null
+      } else {
+        parentComponent!.renderCache[cacheIndex] = undefined
+      }
     }
 
     if (shapeFlag & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE) {

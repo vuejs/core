@@ -227,7 +227,7 @@ export const transformFor: NodeTransform = createStructuralDirectiveTransform(
           loop.body = createBlockStatement([
             createCompoundExpression([`const _memo = (`, memo.exp!, `)`]),
             createCompoundExpression([
-              `if (_cached`,
+              `if (_cached && _cached.el`,
               ...(keyExp ? [` && _cached.key === `, keyExp] : []),
               ` && ${context.helperString(
                 IS_MEMO_SAME,
@@ -235,7 +235,9 @@ export const transformFor: NodeTransform = createStructuralDirectiveTransform(
             ]),
             createCompoundExpression([`const _item = `, childBlock as any]),
             createSimpleExpression(`_item.memo = _memo`),
-            createSimpleExpression(`_item.cacheIndex = _key`),
+            createSimpleExpression(
+              `_item.cacheIndex = [${context.cached.length}, _key]`,
+            ),
             createSimpleExpression(`return _item`),
           ])
           renderExp.arguments.push(
