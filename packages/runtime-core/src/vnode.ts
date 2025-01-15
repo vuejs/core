@@ -243,7 +243,7 @@ export interface VNode<
   memo?: any[]
   /**
    * @internal index for cleaning v-memo cache
-   * cacheIndex will be an array when vnode in vFor
+   * cacheIndex will be an array when vnode in vFor + vMemo
    */
   cacheIndex?: number | number[]
   /**
