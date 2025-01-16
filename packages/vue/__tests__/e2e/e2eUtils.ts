@@ -39,6 +39,7 @@ interface PuppeteerUtils {
   value(selector: string): Promise<string>
   html(selector: string): Promise<string>
   classList(selector: string): Promise<string[]>
+  style(selector: string, property: keyof CSSStyleDeclaration): Promise<any>
   children(selector: string): Promise<any[]>
   isVisible(selector: string): Promise<boolean>
   isChecked(selector: string): Promise<boolean>
@@ -120,6 +121,19 @@ export function setupPuppeteer(args?: string[]): PuppeteerUtils {
     return page.$eval(selector, (node: any) => [...node.children])
   }
 
+  async function style(
+    selector: string,
+    property: keyof CSSStyleDeclaration,
+  ): Promise<any> {
+    return await page.$eval(
+      selector,
+      (node, property) => {
+        return window.getComputedStyle(node)[property]
+      },
+      property,
+    )
+  }
+
   async function isVisible(selector: string): Promise<boolean> {
     const display = await page.$eval(selector, node => {
       return window.getComputedStyle(node).display
@@ -195,6 +209,7 @@ export function setupPuppeteer(args?: string[]): PuppeteerUtils {
     value,
     html,
     classList,
+    style,
     children,
     isVisible,
     isChecked,

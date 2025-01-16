@@ -62,7 +62,7 @@ export const patchProp: DOMRendererOptions['patchProp'] = (
     (el as VueElement)._isVueCE &&
     (/[A-Z]/.test(key) || !isString(nextValue))
   ) {
-    patchDOMProp(el, camelize(key), nextValue, parentComponent)
+    patchDOMProp(el, camelize(key), nextValue, parentComponent, key)
   } else {
     // special case for <input v-model type="checkbox"> with
     // :true-value & :false-value

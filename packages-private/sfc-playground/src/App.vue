@@ -123,6 +123,7 @@ onMounted(() => {
     :prod="productionMode"
     :ssr="useSSRMode"
     :autoSave="autoSave"
+    :theme="theme"
     @toggle-theme="toggleTheme"
     @toggle-prod="toggleProdMode"
     @toggle-ssr="toggleSSR"

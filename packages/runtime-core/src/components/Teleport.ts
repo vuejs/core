@@ -147,7 +147,7 @@ export const TeleportImpl = {
           }
           if (!disabled) {
             mount(target, targetAnchor)
-            updateCssVars(n2)
+            updateCssVars(n2, false)
           }
         } else if (__DEV__ && !disabled) {
           warn(
@@ -160,15 +160,36 @@ export const TeleportImpl = {
 
       if (disabled) {
         mount(container, mainAnchor)
-        updateCssVars(n2)
+        updateCssVars(n2, true)
       }
 
       if (isTeleportDeferred(n2.props)) {
-        queuePostRenderEffect(mountToTarget, parentSuspense)
+        queuePostRenderEffect(() => {
+          mountToTarget()
+          n2.el!.__isMounted = true
+        }, parentSuspense)
       } else {
         mountToTarget()
       }
     } else {
+      if (isTeleportDeferred(n2.props) && !n1.el!.__isMounted) {
+        queuePostRenderEffect(() => {
+          TeleportImpl.process(
+            n1,
+            n2,
+            container,
+            anchor,
+            parentComponent,
+            parentSuspense,
+            namespace,
+            slotScopeIds,
+            optimized,
+            internals,
+          )
+          delete n1.el!.__isMounted
+        }, parentSuspense)
+        return
+      }
       // update content
       n2.el = n1.el
       n2.targetStart = n1.targetStart
@@ -267,7 +288,7 @@ export const TeleportImpl = {
           )
         }
       }
-      updateCssVars(n2)
+      updateCssVars(n2, disabled)
     }
   },
 
@@ -389,12 +410,13 @@ function hydrateTeleport(
     querySelector,
   ))
   if (target) {
+    const disabled = isTeleportDisabled(vnode.props)
     // if multiple teleports rendered to the same target element, we need to
     // pick up from where the last teleport finished instead of the first node
     const targetNode =
       (target as TeleportTargetElement)._lpa || target.firstChild
     if (vnode.shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
-      if (isTeleportDisabled(vnode.props)) {
+      if (disabled) {
         vnode.anchor = hydrateChildren(
           nextSibling(node),
           vnode,
@@ -446,7 +468,7 @@ function hydrateTeleport(
         )
       }
     }
-    updateCssVars(vnode)
+    updateCssVars(vnode, disabled)
   }
   return vnode.anchor && nextSibling(vnode.anchor as Node)
 }
@@ -462,13 +484,20 @@ export const Teleport = TeleportImpl as unknown as {
   }
 }
 
-function updateCssVars(vnode: VNode) {
+function updateCssVars(vnode: VNode, isDisabled: boolean) {
   // presence of .ut method indicates owner component uses css vars.
   // code path here can assume browser environment.
   const ctx = vnode.ctx
   if (ctx && ctx.ut) {
-    let node = vnode.targetStart
-    while (node && node !== vnode.targetAnchor) {
+    let node, anchor
+    if (isDisabled) {
+      node = vnode.el
+      anchor = vnode.anchor
+    } else {
+      node = vnode.targetStart
+      anchor = vnode.targetAnchor
+    }
+    while (node && node !== anchor) {
       if (node.nodeType === 1) node.setAttribute('data-v-owner', ctx.uid)
       node = node.nextSibling
     }

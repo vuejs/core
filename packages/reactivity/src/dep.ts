@@ -340,7 +340,7 @@ export function trigger(
       })
     } else {
       // schedule runs for SET | ADD | DELETE
-      if (key !== void 0) {
+      if (key !== void 0 || depsMap.has(void 0)) {
         run(depsMap.get(key))
       }
 

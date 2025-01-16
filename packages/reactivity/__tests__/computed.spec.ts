@@ -1107,4 +1107,36 @@ describe('reactivity/computed', () => {
       end.prop4.value,
     ]).toMatchObject([-2, -4, 2, 3])
   })
+
+  test('performance when removing dependencies from deeply nested computeds', () => {
+    const base = ref(1)
+    const trigger = ref(true)
+    const computeds: ComputedRef<number>[] = []
+
+    const LAYERS = 30
+
+    for (let i = 0; i < LAYERS; i++) {
+      const earlier = [...computeds]
+
+      computeds.push(
+        computed(() => {
+          return base.value + earlier.reduce((sum, c) => sum + c.value, 0)
+        }),
+      )
+    }
+
+    const tail = computed(() =>
+      trigger.value ? computeds[computeds.length - 1].value : 0,
+    )
+
+    const t0 = performance.now()
+    expect(tail.value).toBe(2 ** (LAYERS - 1))
+    const t1 = performance.now()
+    expect(t1 - t0).toBeLessThan(process.env.CI ? 100 : 30)
+
+    trigger.value = false
+    expect(tail.value).toBe(0)
+    const t2 = performance.now()
+    expect(t2 - t1).toBeLessThan(process.env.CI ? 100 : 30)
+  })
 })

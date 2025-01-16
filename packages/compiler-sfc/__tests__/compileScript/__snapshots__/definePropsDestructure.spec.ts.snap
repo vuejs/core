@@ -320,3 +320,22 @@ return { rest }
 
 }"
 `;
+
+exports[`sfc reactive props destructure > with TSInstantiationExpression 1`] = `
+"import { defineComponent as _defineComponent } from 'vue'
+type Foo = <T extends string | number>(data: T) => void
+      
+export default /*@__PURE__*/_defineComponent({
+  props: {
+    value: { type: Function }
+  },
+  setup(__props: any) {
+
+      
+      const foo = __props.value<123>
+      
+return () => {}
+}
+
+})"
+`;
