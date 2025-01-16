@@ -1,5 +1,5 @@
 import { ref, watchEffect } from '@vue/runtime-dom'
-import { renderEffect, setText, template } from '../src'
+import { createComponent, renderEffect, setText, template } from '../src'
 import { makeRender } from './_utils'
 import type { VaporComponentInstance } from '../src/component'
 
@@ -27,5 +27,23 @@ describe('component', () => {
     app.unmount()
     expect(host.innerHTML).toBe('')
     expect(i.scope.effects.length).toBe(0)
+  })
+
+  test('should mount component only with template in production mode', () => {
+    __DEV__ = false
+    const { component: Child } = define({
+      render() {
+        return template('<div> HI </div>', true)()
+      },
+    })
+
+    const { host } = define({
+      setup() {
+        return createComponent(Child, null, null, true)
+      },
+    }).render()
+
+    expect(host.innerHTML).toBe('<div> HI </div>')
+    __DEV__ = true
   })
 })
