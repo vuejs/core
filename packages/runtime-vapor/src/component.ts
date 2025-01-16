@@ -211,8 +211,18 @@ export function createComponent(
       }
     }
   } else {
-    // in prod result can only be block
-    instance.block = setupResult as Block
+    // component has a render function but no setup function
+    // (typically components with only a template and no state)
+    if (!setupFn && component.render) {
+      instance.block = callWithErrorHandling(
+        component.render,
+        instance,
+        ErrorCodes.RENDER_FUNCTION,
+      )
+    } else {
+      // in prod result can only be block
+      instance.block = setupResult as Block
+    }
   }
 
   // single root, inherit attrs
