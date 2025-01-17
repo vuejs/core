@@ -130,7 +130,7 @@ export function setRef(
                   setupState[ref] = refs[ref]
                 }
               } else {
-                ref.value = shallowReactive([refValue])
+                ref.value = [refValue]
                 if (rawRef.k) refs[rawRef.k] = ref.value
               }
             } else if (!existing.includes(refValue)) {
