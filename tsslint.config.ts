@@ -100,32 +100,20 @@ export default defineConfig([
       'packages-private/dts-build-test/**',
     ],
     rules: convertConfig({
+      'no-console': 'off',
+      'no-restricted-globals': 'off',
+      'no-restricted-syntax': 'off',
       '@vitest/no-disabled-tests': 'error',
       '@vitest/no-focused-tests': 'error',
     }),
-    plugins: [
-      () => ({
-        resolveRules(fileName, rules) {
-          delete rules['no-console']
-          delete rules['no-restricted-globals']
-          delete rules['no-restricted-syntax']
-          return rules
-        },
-      }),
-    ],
   },
 
   // shared, may be used in any env
   {
     include: ['packages/shared/**'],
-    plugins: [
-      () => ({
-        resolveRules(fileName, rules) {
-          delete rules['no-restricted-globals']
-          return rules
-        },
-      }),
-    ],
+    rules: convertConfig({
+      'no-restricted-globals': 'off',
+    }),
   },
 
   // Packages targeting Node
@@ -161,17 +149,10 @@ export default defineConfig([
       'packages-private/sfc-playground/**',
     ],
     rules: convertConfig({
+      'no-console': 'off',
       'no-restricted-globals': ['error', ...NodeGlobals],
       'no-restricted-syntax': ['error', banConstEnum],
     }),
-    plugins: [
-      () => ({
-        resolveRules(fileName, rules) {
-          delete rules['no-console']
-          return rules
-        },
-      }),
-    ],
   },
 
   // JavaScript files
@@ -194,17 +175,10 @@ export default defineConfig([
       'packages/vue/*/*.js',
     ],
     rules: convertConfig({
+      'no-console': 'off',
+      'no-restricted-globals': 'off',
       'no-restricted-syntax': ['error', banConstEnum],
     }),
-    plugins: [
-      () => ({
-        resolveRules(fileName, rules) {
-          delete rules['no-restricted-globals']
-          delete rules['no-console']
-          return rules
-        },
-      }),
-    ],
   },
 
   // Import nodejs modules in compiler-sfc
