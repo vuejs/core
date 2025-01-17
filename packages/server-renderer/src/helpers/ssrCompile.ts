@@ -72,11 +72,7 @@ export function ssrCompile(
       const message = `[@vue/server-renderer] Template compilation error: ${err.message}`
       const codeFrame =
         err.loc &&
-        generateCodeFrame(
-          template as string,
-          err.loc.start.offset,
-          err.loc.end.offset,
-        )
+        generateCodeFrame(template, err.loc.start.offset, err.loc.end.offset)
       warn(codeFrame ? `${message}\n${codeFrame}` : message)
     } else {
       throw err
