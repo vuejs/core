@@ -264,9 +264,9 @@ export interface HTMLAttributes extends AriaAttributes, EventHandlers<Events> {
   contextmenu?: string
   dir?: string
   draggable?: Booleanish
-  hidden?: Booleanish | '' | 'hidden' | 'until-found'
+  hidden?: boolean | '' | 'hidden' | 'until-found'
   id?: string
-  inert?: Booleanish
+  inert?: boolean
   lang?: string
   placeholder?: string
   spellcheck?: Booleanish
@@ -296,7 +296,7 @@ export interface HTMLAttributes extends AriaAttributes, EventHandlers<Events> {
   autosave?: string
   color?: string
   itemprop?: string
-  itemscope?: Booleanish
+  itemscope?: boolean
   itemtype?: string
   itemid?: string
   itemref?: string
@@ -373,13 +373,13 @@ export interface BlockquoteHTMLAttributes extends HTMLAttributes {
 }
 
 export interface ButtonHTMLAttributes extends HTMLAttributes {
-  autofocus?: Booleanish
-  disabled?: Booleanish
+  autofocus?: boolean
+  disabled?: boolean
   form?: string
   formaction?: string
   formenctype?: string
   formmethod?: string
-  formnovalidate?: Booleanish
+  formnovalidate?: boolean
   formtarget?: string
   name?: string
   type?: 'submit' | 'reset' | 'button'
@@ -406,7 +406,7 @@ export interface DataHTMLAttributes extends HTMLAttributes {
 
 export interface DetailsHTMLAttributes extends HTMLAttributes {
   name?: string
-  open?: Booleanish
+  open?: boolean
   onToggle?: (payload: ToggleEvent) => void
 }
 
@@ -416,7 +416,7 @@ export interface DelHTMLAttributes extends HTMLAttributes {
 }
 
 export interface DialogHTMLAttributes extends HTMLAttributes {
-  open?: Booleanish
+  open?: boolean
   onClose?: (payload: Event) => void
 }
 
@@ -428,7 +428,7 @@ export interface EmbedHTMLAttributes extends HTMLAttributes {
 }
 
 export interface FieldsetHTMLAttributes extends HTMLAttributes {
-  disabled?: Booleanish
+  disabled?: boolean
   form?: string
   name?: string
 }
@@ -440,7 +440,7 @@ export interface FormHTMLAttributes extends HTMLAttributes {
   enctype?: string
   method?: string
   name?: string
-  novalidate?: Booleanish
+  novalidate?: boolean
   target?: string
 }
 
@@ -450,8 +450,8 @@ export interface HtmlHTMLAttributes extends HTMLAttributes {
 
 export interface IframeHTMLAttributes extends HTMLAttributes {
   allow?: string
-  allowfullscreen?: Booleanish
-  allowtransparency?: Booleanish
+  allowfullscreen?: boolean
+  allowtransparency?: boolean
   /** @deprecated */
   frameborder?: Numberish
   height?: Numberish
@@ -465,7 +465,7 @@ export interface IframeHTMLAttributes extends HTMLAttributes {
   sandbox?: string
   /** @deprecated */
   scrolling?: string
-  seamless?: Booleanish
+  seamless?: boolean
   src?: string
   srcdoc?: string
   width?: Numberish
@@ -519,11 +519,11 @@ export interface InputHTMLAttributes extends HTMLAttributes {
   accept?: string
   alt?: string
   autocomplete?: string
-  autofocus?: Booleanish
+  autofocus?: boolean
   capture?: boolean | 'user' | 'environment' // https://www.w3.org/tr/html-media-capture/#the-capture-attribute
-  checked?: Booleanish | any[] | Set<any> // for IDE v-model multi-checkbox support
+  checked?: boolean | any[] | Set<any> // for IDE v-model multi-checkbox support
   crossorigin?: string
-  disabled?: Booleanish
+  disabled?: boolean
   enterKeyHint?:
     | 'enter'
     | 'done'
@@ -536,7 +536,7 @@ export interface InputHTMLAttributes extends HTMLAttributes {
   formaction?: string
   formenctype?: string
   formmethod?: string
-  formnovalidate?: Booleanish
+  formnovalidate?: boolean
   formtarget?: string
   height?: Numberish
   indeterminate?: boolean
@@ -545,12 +545,12 @@ export interface InputHTMLAttributes extends HTMLAttributes {
   maxlength?: Numberish
   min?: Numberish
   minlength?: Numberish
-  multiple?: Booleanish
+  multiple?: boolean
   name?: string
   pattern?: string
   placeholder?: string
-  readonly?: Booleanish
-  required?: Booleanish
+  readonly?: boolean
+  required?: boolean
   size?: Numberish
   src?: string
   step?: Numberish
@@ -560,9 +560,9 @@ export interface InputHTMLAttributes extends HTMLAttributes {
 }
 
 export interface KeygenHTMLAttributes extends HTMLAttributes {
-  autofocus?: Booleanish
+  autofocus?: boolean
   challenge?: string
-  disabled?: Booleanish
+  disabled?: boolean
   form?: string
   keytype?: string
   keyparams?: string
@@ -601,14 +601,14 @@ export interface MenuHTMLAttributes extends HTMLAttributes {
 }
 
 export interface MediaHTMLAttributes extends HTMLAttributes {
-  autoplay?: Booleanish
-  controls?: Booleanish
+  autoplay?: boolean
+  controls?: boolean
   controlslist?: string
   crossorigin?: string
-  loop?: Booleanish
+  loop?: boolean
   mediagroup?: string
-  muted?: Booleanish
-  playsinline?: Booleanish
+  muted?: boolean
+  playsinline?: boolean
   preload?: string
   src?: string
 }
@@ -647,20 +647,20 @@ export interface ObjectHTMLAttributes extends HTMLAttributes {
 }
 
 export interface OlHTMLAttributes extends HTMLAttributes {
-  reversed?: Booleanish
+  reversed?: boolean
   start?: Numberish
   type?: '1' | 'a' | 'A' | 'i' | 'I'
 }
 
 export interface OptgroupHTMLAttributes extends HTMLAttributes {
-  disabled?: Booleanish
+  disabled?: boolean
   label?: string
 }
 
 export interface OptionHTMLAttributes extends HTMLAttributes {
-  disabled?: Booleanish
+  disabled?: boolean
   label?: string
-  selected?: Booleanish
+  selected?: boolean
   value?: any // we support :value to be bound to anything w/ v-model
 }
 
@@ -681,13 +681,13 @@ export interface ProgressHTMLAttributes extends HTMLAttributes {
 }
 
 export interface ScriptHTMLAttributes extends HTMLAttributes {
-  async?: Booleanish
+  async?: boolean
   /** @deprecated */
   charset?: string
   crossorigin?: string
-  defer?: Booleanish
+  defer?: boolean
   integrity?: string
-  nomodule?: Booleanish
+  nomodule?: boolean
   referrerpolicy?: HTMLAttributeReferrerPolicy
   nonce?: string
   src?: string
@@ -696,12 +696,12 @@ export interface ScriptHTMLAttributes extends HTMLAttributes {
 
 export interface SelectHTMLAttributes extends HTMLAttributes {
   autocomplete?: string
-  autofocus?: Booleanish
-  disabled?: Booleanish
+  autofocus?: boolean
+  disabled?: boolean
   form?: string
-  multiple?: Booleanish
+  multiple?: boolean
   name?: string
-  required?: Booleanish
+  required?: boolean
   size?: Numberish
   value?: any // we support :value to be bound to anything w/ v-model
 }
@@ -717,7 +717,7 @@ export interface SourceHTMLAttributes extends HTMLAttributes {
 export interface StyleHTMLAttributes extends HTMLAttributes {
   media?: string
   nonce?: string
-  scoped?: Booleanish
+  scoped?: boolean
   type?: string
 }
 
@@ -730,17 +730,17 @@ export interface TableHTMLAttributes extends HTMLAttributes {
 
 export interface TextareaHTMLAttributes extends HTMLAttributes {
   autocomplete?: string
-  autofocus?: Booleanish
+  autofocus?: boolean
   cols?: Numberish
   dirname?: string
-  disabled?: Booleanish
+  disabled?: boolean
   form?: string
   maxlength?: Numberish
   minlength?: Numberish
   name?: string
   placeholder?: string
-  readonly?: Booleanish
-  required?: Booleanish
+  readonly?: boolean
+  required?: boolean
   rows?: Numberish
   value?: string | ReadonlyArray<string> | number | null
   wrap?: string
@@ -772,7 +772,7 @@ export interface TimeHTMLAttributes extends HTMLAttributes {
 }
 
 export interface TrackHTMLAttributes extends HTMLAttributes {
-  default?: Booleanish
+  default?: boolean
   kind?: string
   label?: string
   src?: string
@@ -781,27 +781,27 @@ export interface TrackHTMLAttributes extends HTMLAttributes {
 
 export interface VideoHTMLAttributes extends MediaHTMLAttributes {
   height?: Numberish
-  playsinline?: Booleanish
+  playsinline?: boolean
   poster?: string
   width?: Numberish
-  disablePictureInPicture?: Booleanish
-  disableRemotePlayback?: Booleanish
+  disablePictureInPicture?: boolean
+  disableRemotePlayback?: boolean
 }
 
 export interface WebViewHTMLAttributes extends HTMLAttributes {
-  allowfullscreen?: Booleanish
-  allowpopups?: Booleanish
-  autoFocus?: Booleanish
-  autosize?: Booleanish
+  allowfullscreen?: boolean
+  allowpopups?: boolean
+  autoFocus?: boolean
+  autosize?: boolean
   blinkfeatures?: string
   disableblinkfeatures?: string
-  disableguestresize?: Booleanish
-  disablewebsecurity?: Booleanish
+  disableguestresize?: boolean
+  disablewebsecurity?: boolean
   guestinstance?: string
   httpreferrer?: string
-  nodeintegration?: Booleanish
+  nodeintegration?: boolean
   partition?: string
-  plugins?: Booleanish
+  plugins?: boolean
   preload?: string
   src?: string
   useragent?: string
@@ -861,7 +861,7 @@ export interface SVGAttributes extends AriaAttributes, EventHandlers<Events> {
   ascent?: Numberish
   attributeName?: string
   attributeType?: string
-  autoReverse?: Numberish
+  autoReverse?: Booleanish
   azimuth?: Numberish
   baseFrequency?: Numberish
   'baseline-shift'?: Numberish
@@ -901,7 +901,7 @@ export interface SVGAttributes extends AriaAttributes, EventHandlers<Events> {
   'enable-background'?: Numberish
   end?: Numberish
   exponent?: Numberish
-  externalResourcesRequired?: Numberish
+  externalResourcesRequired?: Booleanish
   fill?: string
   'fill-opacity'?: Numberish
   'fill-rule'?: 'nonzero' | 'evenodd' | 'inherit'
@@ -910,7 +910,7 @@ export interface SVGAttributes extends AriaAttributes, EventHandlers<Events> {
   filterUnits?: Numberish
   'flood-color'?: Numberish
   'flood-opacity'?: Numberish
-  focusable?: Numberish
+  focusable?: Booleanish | 'auto'
   'font-family'?: string
   'font-size'?: Numberish
   'font-size-adjust'?: Numberish
@@ -988,7 +988,7 @@ export interface SVGAttributes extends AriaAttributes, EventHandlers<Events> {
   pointsAtX?: Numberish
   pointsAtY?: Numberish
   pointsAtZ?: Numberish
-  preserveAlpha?: Numberish
+  preserveAlpha?: Booleanish
   preserveAspectRatio?: string
   primitiveUnits?: Numberish
   r?: Numberish
