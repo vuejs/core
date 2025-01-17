@@ -11,7 +11,7 @@ import {
 } from '@vue/shared'
 import { isAsyncWrapper } from './apiAsyncComponent'
 import { warn } from './warning'
-import { isRef, toRaw } from '@vue/reactivity'
+import { isRef, shallowReactive, toRaw } from '@vue/reactivity'
 import { ErrorCodes, callWithErrorHandling } from './errorHandling'
 import type { SchedulerJob } from './scheduler'
 import { queuePostRenderEffect } from './renderer'
@@ -125,12 +125,12 @@ export function setRef(
           } else {
             if (!isArray(existing)) {
               if (_isString) {
-                refs[ref] = [refValue]
+                refs[ref] = shallowReactive([refValue])
                 if (canSetSetupRef(ref)) {
                   setupState[ref] = refs[ref]
                 }
               } else {
-                ref.value = [refValue]
+                ref.value = shallowReactive([refValue])
                 if (rawRef.k) refs[rawRef.k] = ref.value
               }
             } else if (!existing.includes(refValue)) {
