@@ -3,13 +3,12 @@ import type { TrackOpTypes, TriggerOpTypes } from './constants'
 import { setupOnTrigger } from './debug'
 import { activeEffectScope } from './effectScope'
 import {
-  type IEffect,
   type Link,
   type Subscriber,
   SubscriberFlags,
-  checkDirty,
-  endTrack,
-  startTrack,
+  endTracking,
+  startTracking,
+  updateDirtyFlag,
 } from './system'
 import { warn } from './warning'
 
@@ -47,19 +46,17 @@ export enum EffectFlags {
   /**
    * ReactiveEffect only
    */
-  ALLOW_RECURSE = 1 << 2,
-  PAUSED = 1 << 3,
-  NOTIFIED = 1 << 4,
-  STOP = 1 << 5,
+  ALLOW_RECURSE = 1 << 7,
+  PAUSED = 1 << 8,
+  NOTIFIED = 1 << 9,
+  STOP = 1 << 10,
 }
 
-export class ReactiveEffect<T = any> implements IEffect, ReactiveEffectOptions {
-  nextNotify: IEffect | undefined = undefined
-
+export class ReactiveEffect<T = any> implements ReactiveEffectOptions {
   // Subscriber
   deps: Link | undefined = undefined
   depsTail: Link | undefined = undefined
-  flags: number = SubscriberFlags.Dirty
+  flags: number = SubscriberFlags.Effect
 
   /**
    * @internal
@@ -121,9 +118,8 @@ export class ReactiveEffect<T = any> implements IEffect, ReactiveEffectOptions {
     }
     cleanupEffect(this)
     const prevSub = activeSub
-    const prevTrackId = activeTrackId
-    setActiveSub(this, nextTrackId())
-    startTrack(this)
+    setActiveSub(this)
+    startTracking(this)
 
     try {
       return this.fn()
@@ -134,13 +130,13 @@ export class ReactiveEffect<T = any> implements IEffect, ReactiveEffectOptions {
             'this is likely a Vue internal bug.',
         )
       }
-      setActiveSub(prevSub, prevTrackId)
-      endTrack(this)
+      setActiveSub(prevSub)
+      endTracking(this)
       if (
-        this.flags & SubscriberFlags.CanPropagate &&
+        this.flags & SubscriberFlags.Recursed &&
         this.flags & EffectFlags.ALLOW_RECURSE
       ) {
-        this.flags &= ~SubscriberFlags.CanPropagate
+        this.flags &= ~SubscriberFlags.Recursed
         this.notify()
       }
     }
@@ -148,8 +144,8 @@ export class ReactiveEffect<T = any> implements IEffect, ReactiveEffectOptions {
 
   stop(): void {
     if (this.active) {
-      startTrack(this)
-      endTrack(this)
+      startTracking(this)
+      endTracking(this)
       cleanupEffect(this)
       this.onStop && this.onStop()
       this.flags |= EffectFlags.STOP
@@ -158,16 +154,11 @@ export class ReactiveEffect<T = any> implements IEffect, ReactiveEffectOptions {
 
   get dirty(): boolean {
     const flags = this.flags
-    if (flags & SubscriberFlags.Dirty) {
+    if (
+      flags & SubscriberFlags.Dirty ||
+      (flags & SubscriberFlags.PendingComputed && updateDirtyFlag(this, flags))
+    ) {
       return true
-    } else if (flags & SubscriberFlags.ToCheckDirty) {
-      if (checkDirty(this.deps!)) {
-        this.flags |= SubscriberFlags.Dirty
-        return true
-      } else {
-        this.flags &= ~SubscriberFlags.ToCheckDirty
-        return false
-      }
     }
     return false
   }
@@ -214,15 +205,14 @@ export function stop(runner: ReactiveEffectRunner): void {
   runner.effect.stop()
 }
 
-const resetTrackingStack: [sub: typeof activeSub, trackId: number][] = []
+const resetTrackingStack: (Subscriber | undefined)[] = []
 
 /**
  * Temporarily pauses tracking.
  */
 export function pauseTracking(): void {
-  resetTrackingStack.push([activeSub, activeTrackId])
+  resetTrackingStack.push(activeSub)
   activeSub = undefined
-  activeTrackId = 0
 }
 
 /**
@@ -233,14 +223,14 @@ export function enableTracking(): void {
   if (!isPaused) {
     // Add the current active effect to the trackResetStack so it can be
     // restored by calling resetTracking.
-    resetTrackingStack.push([activeSub, activeTrackId])
+    resetTrackingStack.push(activeSub)
   } else {
     // Add a placeholder to the trackResetStack so we can it can be popped
     // to restore the previous active effect.
-    resetTrackingStack.push([undefined, 0])
+    resetTrackingStack.push(undefined)
     for (let i = resetTrackingStack.length - 1; i >= 0; i--) {
-      if (resetTrackingStack[i][0] !== undefined) {
-        ;[activeSub, activeTrackId] = resetTrackingStack[i]
+      if (resetTrackingStack[i] !== undefined) {
+        activeSub = resetTrackingStack[i]
         break
       }
     }
@@ -258,10 +248,9 @@ export function resetTracking(): void {
     )
   }
   if (resetTrackingStack.length) {
-    ;[activeSub, activeTrackId] = resetTrackingStack.pop()!
+    activeSub = resetTrackingStack.pop()!
   } else {
     activeSub = undefined
-    activeTrackId = 0
   }
 }
 
@@ -304,14 +293,7 @@ function cleanupEffect(e: ReactiveEffect) {
 }
 
 export let activeSub: Subscriber | undefined = undefined
-export let activeTrackId = 0
-export let lastTrackId = 0
-export const nextTrackId = (): number => ++lastTrackId
 
-export function setActiveSub(
-  sub: Subscriber | undefined,
-  trackId: number,
-): void {
+export function setActiveSub(sub: Subscriber | undefined): void {
   activeSub = sub
-  activeTrackId = trackId
 }

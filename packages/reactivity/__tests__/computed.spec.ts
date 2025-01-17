@@ -467,8 +467,12 @@ describe('reactivity/computed', () => {
     const c2 = computed(() => c1.value) as unknown as ComputedRefImpl
 
     c2.value
-    expect(c1.flags & SubscriberFlags.Dirtys).toBe(0)
-    expect(c2.flags & SubscriberFlags.Dirtys).toBe(0)
+    expect(
+      c1.flags & (SubscriberFlags.Dirty | SubscriberFlags.PendingComputed),
+    ).toBe(0)
+    expect(
+      c2.flags & (SubscriberFlags.Dirty | SubscriberFlags.PendingComputed),
+    ).toBe(0)
   })
 
   it('should chained computeds dirtyLevel update with first computed effect', () => {

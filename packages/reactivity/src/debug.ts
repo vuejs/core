@@ -62,23 +62,22 @@ export function setupOnTrigger(target: { new (...args: any[]): any }): void {
 }
 
 function setupFlagsHandler(target: Subscriber): void {
-  // @ts-expect-error
-  target._flags = target.flags
+  ;(target as any)._flags = target.flags
   Object.defineProperty(target, 'flags', {
     get() {
-      // @ts-expect-error
-      return target._flags
+      return (target as any)._flags
     },
     set(value) {
       if (
-        // @ts-expect-error
-        !(target._flags >> SubscriberFlags.DirtyFlagsIndex) &&
-        !!(value >> SubscriberFlags.DirtyFlagsIndex)
+        !(
+          (target as any)._flags &
+          (SubscriberFlags.PendingComputed | SubscriberFlags.Dirty)
+        ) &&
+        !!(value & (SubscriberFlags.PendingComputed | SubscriberFlags.Dirty))
       ) {
         onTrigger(this)
       }
-      // @ts-expect-error
-      target._flags = value
+      ;(target as any)._flags = value
     },
   })
 }

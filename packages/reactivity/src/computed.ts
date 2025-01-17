@@ -5,21 +5,20 @@ import {
   type DebuggerEvent,
   type DebuggerOptions,
   activeSub,
-  activeTrackId,
-  nextTrackId,
   setActiveSub,
 } from './effect'
 import { activeEffectScope } from './effectScope'
 import type { Ref } from './ref'
 import {
   type Dependency,
-  type IComputed,
   type Link,
+  type Subscriber,
   SubscriberFlags,
-  checkDirty,
-  endTrack,
+  endTracking,
   link,
-  startTrack,
+  processComputedUpdate,
+  startTracking,
+  updateDirtyFlag,
 } from './system'
 import { warn } from './warning'
 
@@ -54,22 +53,20 @@ export interface WritableComputedOptions<T, S = T> {
  * @private exported by @vue/reactivity for Vue core use, but not exported from
  * the main vue package
  */
-export class ComputedRefImpl<T = any> implements IComputed {
+export class ComputedRefImpl<T = any> implements Dependency, Subscriber {
   /**
    * @internal
    */
   _value: T | undefined = undefined
-  version = 0
 
   // Dependency
   subs: Link | undefined = undefined
   subsTail: Link | undefined = undefined
-  lastTrackedId = 0
 
   // Subscriber
   deps: Link | undefined = undefined
   depsTail: Link | undefined = undefined
-  flags: SubscriberFlags = SubscriberFlags.Dirty
+  flags: SubscriberFlags = SubscriberFlags.Computed | SubscriberFlags.Dirty
 
   /**
    * @internal
@@ -93,16 +90,12 @@ export class ComputedRefImpl<T = any> implements IComputed {
   // for backwards compat
   get _dirty(): boolean {
     const flags = this.flags
-    if (flags & SubscriberFlags.Dirty) {
+    if (
+      flags & SubscriberFlags.Dirty ||
+      (flags & SubscriberFlags.PendingComputed &&
+        updateDirtyFlag(this, this.flags))
+    ) {
       return true
-    } else if (flags & SubscriberFlags.ToCheckDirty) {
-      if (checkDirty(this.deps!)) {
-        this.flags |= SubscriberFlags.Dirty
-        return true
-      } else {
-        this.flags &= ~SubscriberFlags.ToCheckDirty
-        return false
-      }
     }
     return false
   }
@@ -110,7 +103,7 @@ export class ComputedRefImpl<T = any> implements IComputed {
     if (v) {
       this.flags |= SubscriberFlags.Dirty
     } else {
-      this.flags &= ~SubscriberFlags.Dirtys
+      this.flags &= ~(SubscriberFlags.Dirty | SubscriberFlags.PendingComputed)
     }
   }
 
@@ -133,10 +126,11 @@ export class ComputedRefImpl<T = any> implements IComputed {
   }
 
   get value(): T {
-    if (this._dirty) {
-      this.update()
+    const flags = this.flags
+    if (flags & (SubscriberFlags.Dirty | SubscriberFlags.PendingComputed)) {
+      processComputedUpdate(this, flags)
     }
-    if (activeTrackId !== 0 && this.lastTrackedId !== activeTrackId) {
+    if (activeSub !== undefined) {
       if (__DEV__) {
         onTrack(activeSub!, {
           target: this,
@@ -144,12 +138,8 @@ export class ComputedRefImpl<T = any> implements IComputed {
           key: 'value',
         })
       }
-      this.lastTrackedId = activeTrackId
-      link(this, activeSub!).version = this.version
-    } else if (
-      activeEffectScope !== undefined &&
-      this.lastTrackedId !== activeEffectScope.trackId
-    ) {
+      link(this, activeSub)
+    } else if (activeEffectScope !== undefined) {
       link(this, activeEffectScope)
     }
     return this._value!
@@ -165,23 +155,20 @@ export class ComputedRefImpl<T = any> implements IComputed {
 
   update(): boolean {
     const prevSub = activeSub
-    const prevTrackId = activeTrackId
-    setActiveSub(this, nextTrackId())
-    startTrack(this)
-    const oldValue = this._value
-    let newValue: T
+    setActiveSub(this)
+    startTracking(this)
     try {
-      newValue = this.fn(oldValue)
+      const oldValue = this._value
+      const newValue = this.fn(oldValue)
+      if (hasChanged(oldValue, newValue)) {
+        this._value = newValue
+        return true
+      }
+      return false
     } finally {
-      setActiveSub(prevSub, prevTrackId)
-      endTrack(this)
+      setActiveSub(prevSub)
+      endTracking(this)
     }
-    if (hasChanged(oldValue, newValue)) {
-      this._value = newValue
-      this.version++
-      return true
-    }
-    return false
   }
 }
 

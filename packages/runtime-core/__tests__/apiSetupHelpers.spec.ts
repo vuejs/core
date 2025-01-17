@@ -454,11 +454,11 @@ describe('SFC <script setup> helpers', () => {
 
       await ready
       expect(e!.effect.active).toBeTruthy()
-      expect(c!.flags & 1 /* SubscriberFlags.Tracking */).toBe(0)
+      expect(c!.flags & 2 /* SubscriberFlags.Tracking */).toBe(0)
 
       app.unmount()
       expect(e!.effect.active).toBeFalsy()
-      expect(c!.flags & 1 /* SubscriberFlags.Tracking */).toBe(0)
+      expect(c!.flags & 2 /* SubscriberFlags.Tracking */).toBe(0)
     })
   })
 })
