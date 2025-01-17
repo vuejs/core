@@ -14,6 +14,7 @@ describe('e2e: todomvc', () => {
     classList,
     enterValue,
     clearValue,
+    timeout,
   } = setupPuppeteer()
 
   async function removeItemAt(n: number) {
@@ -101,6 +102,7 @@ describe('e2e: todomvc', () => {
 
     // active filter
     await click('.filters li:nth-child(2) a')
+    await timeout(1)
     expect(await count('.todo')).toBe(1)
     expect(await count('.todo.completed')).toBe(0)
     // add item with filter active
@@ -109,6 +111,7 @@ describe('e2e: todomvc', () => {
 
     // completed filter
     await click('.filters li:nth-child(3) a')
+    await timeout(1)
     expect(await count('.todo')).toBe(2)
     expect(await count('.todo.completed')).toBe(2)
 
@@ -128,12 +131,14 @@ describe('e2e: todomvc', () => {
     await click('.todo .toggle')
     expect(await count('.todo')).toBe(1)
     await click('.filters li:nth-child(2) a')
+    await timeout(1)
     expect(await count('.todo')).toBe(3)
     await click('.todo .toggle')
     expect(await count('.todo')).toBe(2)
 
     // editing triggered by blur
     await click('.filters li:nth-child(1) a')
+    await timeout(1)
     await click('.todo:nth-child(1) label', { clickCount: 2 })
     expect(await count('.todo.editing')).toBe(1)
     expect(await isFocused('.todo:nth-child(1) .edit')).toBe(true)

@@ -511,6 +511,8 @@ export class VueElement
       }
       // reflect
       if (shouldReflect) {
+        const ob = this._ob
+        ob && ob.disconnect()
         if (val === true) {
           this.setAttribute(hyphenate(key), '')
         } else if (typeof val === 'string' || typeof val === 'number') {
@@ -518,6 +520,7 @@ export class VueElement
         } else if (!val) {
           this.removeAttribute(hyphenate(key))
         }
+        ob && ob.observe(this, { attributes: true })
       }
     }
   }

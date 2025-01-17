@@ -46,6 +46,12 @@ const pkg = require(resolve(`package.json`))
 const packageOptions = pkg.buildOptions || {}
 const name = packageOptions.filename || path.basename(packageDir)
 
+const banner = `/**
+* ${pkg.name} v${masterVersion}
+* (c) 2018-present Yuxi (Evan) You and Vue contributors
+* @license MIT
+**/`
+
 const [enumPlugin, enumDefines] = inlineEnums()
 
 /** @type {Record<PackageFormat, OutputOptions>} */
@@ -136,11 +142,7 @@ function createConfig(format, output, plugins = []) {
     (isGlobalBuild || isBrowserESMBuild || isBundlerESMBuild) &&
     !packageOptions.enableNonBrowserBranches
 
-  output.banner = `/**
-* ${pkg.name} v${masterVersion}
-* (c) 2018-present Yuxi (Evan) You and Vue contributors
-* @license MIT
-**/`
+  output.banner = banner
 
   output.exports = isCompatPackage ? 'auto' : 'named'
   if (isCJSBuild) {
@@ -372,24 +374,21 @@ function createMinifiedConfig(/** @type {PackageFormat} */ format) {
       {
         name: 'swc-minify',
 
-        async renderChunk(
-          contents,
-          _,
-          { format, sourcemap, sourcemapExcludeSources },
-        ) {
-          const { code, map } = await minifySwc(contents, {
+        async renderChunk(contents, _, { format }) {
+          const { code } = await minifySwc(contents, {
             module: format === 'es',
+            format: {
+              comments: false,
+            },
             compress: {
               ecma: 2016,
               pure_getters: true,
             },
             safari10: true,
             mangle: true,
-            sourceMap: !!sourcemap,
-            inlineSourcesContent: !sourcemapExcludeSources,
           })
 
-          return { code, map: map || null }
+          return { code: banner + code, map: null }
         },
       },
     ],

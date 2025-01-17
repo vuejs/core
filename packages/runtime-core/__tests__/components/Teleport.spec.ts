@@ -87,6 +87,49 @@ describe('renderer: teleport', () => {
           `</div>`,
       )
     })
+
+    test('update before mounted with defer', async () => {
+      const root = document.createElement('div')
+      document.body.appendChild(root)
+
+      const show = ref(false)
+      const foo = ref('foo')
+      const Header = {
+        props: { foo: String },
+        setup(props: any) {
+          return () => h('div', props.foo)
+        },
+      }
+      const Footer = {
+        setup() {
+          foo.value = 'bar'
+          return () => h('div', 'Footer')
+        },
+      }
+      createDOMApp({
+        render() {
+          return show.value
+            ? [
+                h(
+                  Teleport,
+                  { to: '#targetId', defer: true },
+                  h(Header, { foo: foo.value }),
+                ),
+                h(Footer),
+                h('div', { id: 'targetId' }),
+              ]
+            : [h('div')]
+        },
+      }).mount(root)
+
+      expect(root.innerHTML).toMatchInlineSnapshot(`"<div></div>"`)
+
+      show.value = true
+      await nextTick()
+      expect(root.innerHTML).toMatchInlineSnapshot(
+        `"<!--teleport start--><!--teleport end--><div>Footer</div><div id="targetId"><div>bar</div></div>"`,
+      )
+    })
   })
 
   function runSharedTests(deferMode: boolean) {
