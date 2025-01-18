@@ -56,7 +56,7 @@ export interface PropOptions<T = any, D = T> {
   type?: PropType<T> | true | null
   required?: boolean
   default?: D | DefaultFactory<D> | null | undefined | object
-  validator?(value: unknown, props: Data): boolean
+  validator?(value: unknown, props: Data): boolean | string
   /**
    * @internal
    */
@@ -705,8 +705,15 @@ function validateProp(
     }
   }
   // custom validator
-  if (validator && !validator(value, props)) {
-    warn('Invalid prop: custom validator check failed for prop "' + name + '".')
+  if (validator) {
+    const validatorResult = validator(value, props)
+    let msg = `'Invalid prop: custom validator check failed for prop "${name}".'`
+    if (typeof validatorResult === 'string') {
+      msg += ` Reason: ${validatorResult}.`
+      warn(msg)
+    } else if (!validatorResult) {
+      warn(msg)
+    }
   }
 }
 

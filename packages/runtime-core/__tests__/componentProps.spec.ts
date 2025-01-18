@@ -333,6 +333,36 @@ describe('component props', () => {
     })
   })
 
+  test('validator should allow custom warning messages', async () => {
+    let warnMsg = ''
+    vi.spyOn(console, 'warn').mockImplementation(msg => {
+      warnMsg = msg
+    })
+    const Comp = defineComponent({
+      props: {
+        foo: {
+          type: Number,
+          validator: (value, props) => {
+            if (!Number.isInteger(value)) {
+              return `Invalid prop: ${props.foo}. Expected an integer.`
+            }
+            return true
+          },
+        },
+        bar: {
+          type: Number,
+        },
+      },
+      template: `<div />`,
+    })
+
+    // Note this one is using the main Vue render so it can compile template
+    // on the fly
+    const root = document.createElement('div')
+    domRender(h(Comp, { foo: 1.1, bar: 2 }), root)
+    expect(warnMsg).toMatch(`Invalid prop: 1.1. Expected an integer.`)
+  })
+
   //#12011
   test('replace camelize with hyphenate to handle props key', () => {
     const Comp = {
