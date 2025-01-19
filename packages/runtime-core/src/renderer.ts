@@ -1431,6 +1431,16 @@ function baseCreateRenderer(
       } else {
         let { next, bu, u, parent, vnode } = instance
 
+        const keepAliveParent = locateDeactiveKeepAlive(instance)
+        if (keepAliveParent) {
+          keepAliveParent.keepAliveEffect.push(() => {
+            if (!instance.isUnmounted) {
+              componentUpdateFn()
+            }
+          })
+          return
+        }
+
         if (__FEATURE_SUSPENSE__) {
           const nonHydratedAsyncRoot = locateNonHydratedAsyncRoot(instance)
           // we are trying to update some async comp before hydration
@@ -2540,6 +2550,19 @@ function locateNonHydratedAsyncRoot(
       return locateNonHydratedAsyncRoot(subComponent)
     }
   }
+}
+
+function locateDeactiveKeepAlive(instance: ComponentInternalInstance | null) {
+  while (instance) {
+    if (instance.isActivated) {
+      return instance
+    }
+    if (isKeepAlive(instance.vnode)) {
+      break
+    }
+    instance = instance.parent
+  }
+  return null
 }
 
 export function invalidateMount(hooks: LifecycleHook): void {
