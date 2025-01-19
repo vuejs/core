@@ -307,7 +307,7 @@ const KeepAliveImpl: ComponentOptions = {
       const { include, exclude, max } = props
 
       if (
-        (include && (!name || !matches(include, name))) ||
+        ((include || include === '') && (!name || !matches(include, name))) ||
         (exclude && name && matches(exclude, name))
       ) {
         // #11717

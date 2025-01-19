@@ -1173,4 +1173,53 @@ describe('KeepAlive', () => {
     expect(deactivatedHome).toHaveBeenCalledTimes(0)
     expect(unmountedHome).toHaveBeenCalledTimes(1)
   })
+
+  // #11366
+  test('component should be unmounted when include set to empty string', async () => {
+    const unmountedA = vi.fn()
+    const unmountedB = vi.fn()
+    const viewRef = ref(true)
+
+    const A = {
+      name: 'A',
+      setup() {
+        onUnmounted(unmountedA)
+        return () => 'A'
+      },
+    }
+
+    const B = {
+      name: 'B',
+      setup() {
+        onUnmounted(unmountedB)
+        return () => 'B'
+      },
+    }
+
+    const App = createApp({
+      setup() {
+        return () => {
+          return [
+            h(
+              KeepAlive,
+              {
+                include: '',
+              },
+              [viewRef.value ? h(A) : h(B)],
+            ),
+          ]
+        }
+      },
+    })
+
+    App.mount(root)
+    viewRef.value = false
+    await nextTick()
+    expect(unmountedA).toHaveBeenCalledTimes(1)
+    expect(unmountedB).toHaveBeenCalledTimes(0)
+    viewRef.value = true
+    await nextTick()
+    expect(unmountedA).toHaveBeenCalledTimes(1)
+    expect(unmountedB).toHaveBeenCalledTimes(1)
+  })
 })
