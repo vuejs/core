@@ -333,7 +333,7 @@ describe('component props', () => {
     })
   })
 
-  test('validator should allow custom warning messages', async () => {
+  test('extendValidator custom warn message', async () => {
     let warnMsg = ''
     vi.spyOn(console, 'warn').mockImplementation(msg => {
       warnMsg = msg
@@ -342,11 +342,16 @@ describe('component props', () => {
       props: {
         foo: {
           type: Number,
-          validator: (value, props) => {
-            if (!Number.isInteger(value)) {
-              return `Invalid prop: ${props.foo}. Expected an integer.`
+          extendValidator: (name, value, props, warn) => {
+            if (typeof value !== 'number') {
+              warn(
+                'Invalid prop: custom validator check failed for prop "' +
+                  name +
+                  '".',
+              )
+            } else if (!Number.isInteger(value)) {
+              warn(`Invalid prop: ${name}. Expected an integer.`)
             }
-            return true
           },
         },
         bar: {
@@ -360,7 +365,7 @@ describe('component props', () => {
     // on the fly
     const root = document.createElement('div')
     domRender(h(Comp, { foo: 1.1, bar: 2 }), root)
-    expect(warnMsg).toMatch(`Invalid prop: 1.1. Expected an integer.`)
+    expect(warnMsg).toMatch(`Invalid prop: foo. Expected an integer.`)
   })
 
   //#12011

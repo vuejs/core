@@ -25,6 +25,7 @@ import {
   toRawType,
 } from '@vue/shared'
 import { warn } from './warning'
+import type { WarnFunction } from './warning'
 import {
   type ComponentInternalInstance,
   type ComponentOptions,
@@ -56,7 +57,13 @@ export interface PropOptions<T = any, D = T> {
   type?: PropType<T> | true | null
   required?: boolean
   default?: D | DefaultFactory<D> | null | undefined | object
-  validator?(value: unknown, props: Data): boolean | string
+  validator?(value: unknown, props: Data): boolean
+  extendValidator?: (
+    name: string,
+    value: unknown,
+    props: Data,
+    warn: WarnFunction,
+  ) => unknown
   /**
    * @internal
    */
@@ -678,7 +685,7 @@ function validateProp(
   props: Data,
   isAbsent: boolean,
 ) {
-  const { type, required, validator, skipCheck } = prop
+  const { type, required, validator, skipCheck, extendValidator } = prop
   // required!
   if (required && isAbsent) {
     warn('Missing required prop: "' + name + '"')
@@ -705,15 +712,12 @@ function validateProp(
     }
   }
   // custom validator
-  if (validator) {
-    const validatorResult = validator(value, props)
-    let msg = `'Invalid prop: custom validator check failed for prop "${name}".'`
-    if (typeof validatorResult === 'string') {
-      msg += ` Reason: ${validatorResult}.`
-      warn(msg)
-    } else if (!validatorResult) {
-      warn(msg)
-    }
+  if (extendValidator) {
+    extendValidator(name, value, props, warn)
+    return
+  }
+  if (validator && !validator(value, props)) {
+    warn('Invalid prop: custom validator check failed for prop "' + name + '".')
   }
 }
 
