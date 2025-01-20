@@ -132,8 +132,8 @@ importers:
         specifier: ^3.0.3
         version: 3.0.3
       puppeteer:
-        specifier: ~24.0.0
-        version: 24.0.0(typescript@5.6.2)
+        specifier: ~24.1.0
+        version: 24.1.0(typescript@5.6.2)
       rimraf:
         specifier: ^6.0.1
         version: 6.0.1
@@ -1950,8 +1950,8 @@ packages:
     engines: {node: '>=0.10'}
     hasBin: true
 
-  devtools-protocol@0.0.1367902:
-    resolution: {integrity: sha512-XxtPuC3PGakY6PD7dG66/o8KwJ/LkH2/EKe19Dcw58w53dv4/vSQEkn/SzuyhHE2q4zPgCkxQBxus3VV4ql+Pg==}
+  devtools-protocol@0.0.1380148:
+    resolution: {integrity: sha512-1CJABgqLxbYxVI+uJY/UDUHJtJ0KZTSjNYJYKqd9FRoXT33WDakDHNxRapMEgzeJ/C3rcs01+avshMnPmKQbvA==}
 
   doctrine@3.0.0:
     resolution: {integrity: sha512-yS+Q5i3hBf7GBkd4KG8a7eBNNWNGLTaEwwYWUijIYM7zrlYDM0BFXHjjPWlWZ1Rg7UaddZeIDmi9jF3HmqiQ2w==}
@@ -3011,12 +3011,12 @@ packages:
     resolution: {integrity: sha512-vYt7UD1U9Wg6138shLtLOvdAu+8DsC/ilFtEVHcH+wydcSpNE20AfSOduf6MkRFahL5FY7X1oU7nKVZFtfq8Fg==}
     engines: {node: '>=6'}
 
-  puppeteer-core@24.0.0:
-    resolution: {integrity: sha512-bHVXmnkYnMVSbsD+pJGt8fmGZLaVYOAieVnJcDxtLIVTMq0s5RfYdzN4xVlFoBQ3T06/sPkXxca3VLVfaqLxzg==}
+  puppeteer-core@24.1.0:
+    resolution: {integrity: sha512-ReefWoQgqdyl67uWEBy/TMZ4mAB7hP0JB5HIxSE8B1ot/4ningX1gmzHCOSNfMbTiS/VJHCvaZAe3oJTXph7yw==}
     engines: {node: '>=18'}
 
-  puppeteer@24.0.0:
-    resolution: {integrity: sha512-KRF2iWdHGSZkQ8pqftR5XR1jqnTqKRVZghMGJfJ665zS8++0cErRG2tXWfp98YqvMzsVLHfzBtTQlk0MMhCxzg==}
+  puppeteer@24.1.0:
+    resolution: {integrity: sha512-F+3yKILaosLToT7amR7LIkTKkKMR0EGQPjFBch+MtgS8vRPS+4cPnLJuXDVTfCj2NqfrCnShtOr7yD+9dEgHRQ==}
     engines: {node: '>=18'}
     hasBin: true
 
@@ -4713,15 +4713,15 @@ snapshots:
     dependencies:
       readdirp: 4.0.1
 
-  chromium-bidi@0.11.0(devtools-protocol@0.0.1367902):
+  chromium-bidi@0.11.0(devtools-protocol@0.0.1380148):
     dependencies:
-      devtools-protocol: 0.0.1367902
+      devtools-protocol: 0.0.1380148
       mitt: 3.0.1
       zod: 3.23.8
 
-  chromium-bidi@0.12.0(devtools-protocol@0.0.1367902):
+  chromium-bidi@0.12.0(devtools-protocol@0.0.1380148):
     dependencies:
-      devtools-protocol: 0.0.1367902
+      devtools-protocol: 0.0.1380148
       mitt: 3.0.1
       zod: 3.24.1
 
@@ -4956,7 +4956,7 @@ snapshots:
   detect-libc@1.0.3:
     optional: true
 
-  devtools-protocol@0.0.1367902: {}
+  devtools-protocol@0.0.1380148: {}
 
   doctrine@3.0.0:
     dependencies:
@@ -6121,12 +6121,12 @@ snapshots:
 
   punycode@2.3.1: {}
 
-  puppeteer-core@24.0.0:
+  puppeteer-core@24.1.0:
     dependencies:
       '@puppeteer/browsers': 2.7.0
-      chromium-bidi: 0.11.0(devtools-protocol@0.0.1367902)
+      chromium-bidi: 0.11.0(devtools-protocol@0.0.1380148)
       debug: 4.4.0
-      devtools-protocol: 0.0.1367902
+      devtools-protocol: 0.0.1380148
       typed-query-selector: 2.12.0
       ws: 8.18.0
     transitivePeerDependencies:
@@ -6134,13 +6134,13 @@ snapshots:
       - supports-color
       - utf-8-validate
 
-  puppeteer@24.0.0(typescript@5.6.2):
+  puppeteer@24.1.0(typescript@5.6.2):
     dependencies:
       '@puppeteer/browsers': 2.7.0
-      chromium-bidi: 0.12.0(devtools-protocol@0.0.1367902)
+      chromium-bidi: 0.12.0(devtools-protocol@0.0.1380148)
       cosmiconfig: 9.0.0(typescript@5.6.2)
-      devtools-protocol: 0.0.1367902
-      puppeteer-core: 24.0.0
+      devtools-protocol: 0.0.1380148
+      puppeteer-core: 24.1.0
       typed-query-selector: 2.12.0
     transitivePeerDependencies:
       - bufferutil
