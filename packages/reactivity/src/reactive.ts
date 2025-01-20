@@ -107,6 +107,10 @@ export declare const ShallowReactiveMarker: unique symbol
 
 export type ShallowReactive<T> = T & { [ShallowReactiveMarker]?: true }
 
+export type IsShallowReactive<T> = T extends { [ShallowReactiveMarker]?: true }
+  ? true
+  : false
+
 /**
  * Shallow version of {@link reactive()}.
  *
