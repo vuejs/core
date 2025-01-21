@@ -10,5 +10,6 @@ export default mergeConfig(config, {
       },
     },
     include: ['packages/vue/__tests__/e2e/*.spec.ts'],
+    environment: 'jsdom',
   },
 })
