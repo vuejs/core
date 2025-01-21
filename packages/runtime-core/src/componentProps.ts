@@ -8,6 +8,7 @@ import {
 import {
   EMPTY_ARR,
   EMPTY_OBJ,
+  Empty,
   type IfAny,
   PatchFlags,
   camelize,
@@ -197,7 +198,7 @@ export function initProps(
   const props: Data = {}
   const attrs: Data = createInternalObject()
 
-  instance.propsDefaults = Object.create(null)
+  instance.propsDefaults = new Empty()
 
   setFullProps(instance, rawProps, props, attrs)
 
