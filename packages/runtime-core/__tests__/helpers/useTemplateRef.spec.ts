@@ -3,6 +3,7 @@ import {
   h,
   nextTick,
   nodeOps,
+  onMounted,
   ref,
   render,
   useTemplateRef,
@@ -124,5 +125,26 @@ describe('useTemplateRef', () => {
     } finally {
       __DEV__ = true
     }
+  })
+
+  // #12749
+  test(`don't update setup ref for useTemplateRef key`, () => {
+    let foo: ShallowRef
+    const Comp = {
+      setup() {
+        foo = useTemplateRef('bar')
+        const bar = ref(null)
+        onMounted(() => {
+          expect(bar.value).toBe(null)
+        })
+        return { bar }
+      },
+      render() {
+        return h('div', { ref: 'bar' })
+      },
+    }
+    const root = nodeOps.createElement('div')
+    render(h(Comp), root)
+    expect(foo!.value).toBe(root.children[0])
   })
 })
