@@ -36,12 +36,6 @@ export function useTemplateRef<T = unknown, Keys extends string = string>(
 
 export function isUseTemplateRefKey(refs: Data, key: string): boolean {
   let desc: PropertyDescriptor | undefined
-  if (
-    (desc = Object.getOwnPropertyDescriptor(refs, key)) &&
+  return (desc = Object.getOwnPropertyDescriptor(refs, key)) &&
     !desc.configurable
-  ) {
-    return true
-  }
-
-  return false
 }
