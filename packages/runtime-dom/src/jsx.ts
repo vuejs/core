@@ -253,56 +253,56 @@ export type StyleValue =
   | Array<StyleValue>
 
 export interface HTMLAttributes extends AriaAttributes, EventHandlers<Events> {
-  innerHTML?: string
+  innerHTML?: string | undefined
 
   class?: any
-  style?: StyleValue
+  style?: StyleValue | undefined
 
   // Standard HTML Attributes
-  accesskey?: string
-  contenteditable?: Booleanish | 'inherit' | 'plaintext-only'
-  contextmenu?: string
-  dir?: string
-  draggable?: Booleanish
-  hidden?: Booleanish | '' | 'hidden' | 'until-found'
-  id?: string
-  inert?: Booleanish
-  lang?: string
-  placeholder?: string
-  spellcheck?: Booleanish
-  tabindex?: Numberish
-  title?: string
-  translate?: 'yes' | 'no'
+  accesskey?: string | undefined
+  contenteditable?: Booleanish | 'inherit' | 'plaintext-only' | undefined
+  contextmenu?: string | undefined
+  dir?: string | undefined
+  draggable?: Booleanish | undefined
+  hidden?: Booleanish | '' | 'hidden' | 'until-found' | undefined
+  id?: string | undefined
+  inert?: Booleanish | undefined
+  lang?: string | undefined
+  placeholder?: string | undefined
+  spellcheck?: Booleanish | undefined
+  tabindex?: Numberish | undefined
+  title?: string | undefined
+  translate?: 'yes' | 'no' | undefined
 
   // Unknown
-  radiogroup?: string // <command>, <menuitem>
+  radiogroup?: string | undefined // <command>, <menuitem>
 
   // WAI-ARIA
-  role?: string
+  role?: string | undefined
 
   // RDFa Attributes
-  about?: string
-  datatype?: string
+  about?: string | undefined
+  datatype?: string | undefined
   inlist?: any
-  prefix?: string
-  property?: string
-  resource?: string
-  typeof?: string
-  vocab?: string
+  prefix?: string | undefined
+  property?: string | undefined
+  resource?: string | undefined
+  typeof?: string | undefined
+  vocab?: string | undefined
 
   // Non-standard Attributes
-  autocapitalize?: string
-  autocorrect?: string
-  autosave?: string
-  color?: string
-  itemprop?: string
-  itemscope?: Booleanish
-  itemtype?: string
-  itemid?: string
-  itemref?: string
-  results?: Numberish
-  security?: string
-  unselectable?: 'on' | 'off'
+  autocapitalize?: string | undefined
+  autocorrect?: string | undefined
+  autosave?: string | undefined
+  color?: string | undefined
+  itemprop?: string | undefined
+  itemscope?: Booleanish | undefined
+  itemtype?: string | undefined
+  itemid?: string | undefined
+  itemref?: string | undefined
+  results?: Numberish | undefined
+  security?: string | undefined
+  unselectable?: 'on' | 'off' | undefined
 
   // Living Standard
   /**
@@ -318,11 +318,12 @@ export interface HTMLAttributes extends AriaAttributes, EventHandlers<Events> {
     | 'numeric'
     | 'decimal'
     | 'search'
+    | undefined
   /**
    * Specify that a standard HTML element should behave like a defined custom built-in element
    * @see https://html.spec.whatwg.org/multipage/custom-elements.html#attr-is
    */
-  is?: string
+  is?: string | undefined
 }
 
 type HTMLAttributeReferrerPolicy =
@@ -338,156 +339,156 @@ type HTMLAttributeReferrerPolicy =
 
 export interface AnchorHTMLAttributes extends HTMLAttributes {
   download?: any
-  href?: string
-  hreflang?: string
-  media?: string
-  ping?: string
-  rel?: string
-  target?: string
-  type?: string
-  referrerpolicy?: HTMLAttributeReferrerPolicy
+  href?: string | undefined
+  hreflang?: string | undefined
+  media?: string | undefined
+  ping?: string | undefined
+  rel?: string | undefined
+  target?: string | undefined
+  type?: string | undefined
+  referrerpolicy?: HTMLAttributeReferrerPolicy | undefined
 }
 
 export interface AreaHTMLAttributes extends HTMLAttributes {
-  alt?: string
-  coords?: string
+  alt?: string | undefined
+  coords?: string | undefined
   download?: any
-  href?: string
-  hreflang?: string
-  media?: string
-  referrerpolicy?: HTMLAttributeReferrerPolicy
-  rel?: string
-  shape?: string
-  target?: string
+  href?: string | undefined
+  hreflang?: string | undefined
+  media?: string | undefined
+  referrerpolicy?: HTMLAttributeReferrerPolicy | undefined
+  rel?: string | undefined
+  shape?: string | undefined
+  target?: string | undefined
 }
 
 export interface AudioHTMLAttributes extends MediaHTMLAttributes {}
 
 export interface BaseHTMLAttributes extends HTMLAttributes {
-  href?: string
-  target?: string
+  href?: string | undefined
+  target?: string | undefined
 }
 
 export interface BlockquoteHTMLAttributes extends HTMLAttributes {
-  cite?: string
+  cite?: string | undefined
 }
 
 export interface ButtonHTMLAttributes extends HTMLAttributes {
-  autofocus?: Booleanish
-  disabled?: Booleanish
-  form?: string
-  formaction?: string
-  formenctype?: string
-  formmethod?: string
-  formnovalidate?: Booleanish
-  formtarget?: string
-  name?: string
-  type?: 'submit' | 'reset' | 'button'
-  value?: string | ReadonlyArray<string> | number
+  autofocus?: Booleanish | undefined
+  disabled?: Booleanish | undefined
+  form?: string | undefined
+  formaction?: string | undefined
+  formenctype?: string | undefined
+  formmethod?: string | undefined
+  formnovalidate?: Booleanish | undefined
+  formtarget?: string | undefined
+  name?: string | undefined
+  type?: 'submit' | 'reset' | 'button' | undefined
+  value?: string | ReadonlyArray<string> | number | undefined
 }
 
 export interface CanvasHTMLAttributes extends HTMLAttributes {
-  height?: Numberish
-  width?: Numberish
+  height?: Numberish | undefined
+  width?: Numberish | undefined
 }
 
 export interface ColHTMLAttributes extends HTMLAttributes {
-  span?: Numberish
-  width?: Numberish
+  span?: Numberish | undefined
+  width?: Numberish | undefined
 }
 
 export interface ColgroupHTMLAttributes extends HTMLAttributes {
-  span?: Numberish
+  span?: Numberish | undefined
 }
 
 export interface DataHTMLAttributes extends HTMLAttributes {
-  value?: string | ReadonlyArray<string> | number
+  value?: string | ReadonlyArray<string> | number | undefined
 }
 
 export interface DetailsHTMLAttributes extends HTMLAttributes {
-  name?: string
-  open?: Booleanish
-  onToggle?: (payload: ToggleEvent) => void
+  name?: string | undefined
+  open?: Booleanish | undefined
+  onToggle?: ((payload: ToggleEvent) => void) | undefined
 }
 
 export interface DelHTMLAttributes extends HTMLAttributes {
-  cite?: string
-  datetime?: string
+  cite?: string | undefined
+  datetime?: string | undefined
 }
 
 export interface DialogHTMLAttributes extends HTMLAttributes {
-  open?: Booleanish
-  onClose?: (payload: Event) => void
+  open?: Booleanish | undefined
+  onClose?: ((payload: Event) => void) | undefined
 }
 
 export interface EmbedHTMLAttributes extends HTMLAttributes {
-  height?: Numberish
-  src?: string
-  type?: string
-  width?: Numberish
+  height?: Numberish | undefined
+  src?: string | undefined
+  type?: string | undefined
+  width?: Numberish | undefined
 }
 
 export interface FieldsetHTMLAttributes extends HTMLAttributes {
-  disabled?: Booleanish
-  form?: string
-  name?: string
+  disabled?: Booleanish | undefined
+  form?: string | undefined
+  name?: string | undefined
 }
 
 export interface FormHTMLAttributes extends HTMLAttributes {
-  acceptcharset?: string
-  action?: string
-  autocomplete?: string
-  enctype?: string
-  method?: string
-  name?: string
-  novalidate?: Booleanish
-  target?: string
+  acceptcharset?: string | undefined
+  action?: string | undefined
+  autocomplete?: string | undefined
+  enctype?: string | undefined
+  method?: string | undefined
+  name?: string | undefined
+  novalidate?: Booleanish | undefined
+  target?: string | undefined
 }
 
 export interface HtmlHTMLAttributes extends HTMLAttributes {
-  manifest?: string
+  manifest?: string | undefined
 }
 
 export interface IframeHTMLAttributes extends HTMLAttributes {
-  allow?: string
-  allowfullscreen?: Booleanish
-  allowtransparency?: Booleanish
+  allow?: string | undefined
+  allowfullscreen?: Booleanish | undefined
+  allowtransparency?: Booleanish | undefined
   /** @deprecated */
   frameborder?: Numberish
-  height?: Numberish
-  loading?: 'eager' | 'lazy'
+  height?: Numberish | undefined
+  loading?: 'eager' | 'lazy' | undefined
   /** @deprecated */
   marginheight?: Numberish
   /** @deprecated */
   marginwidth?: Numberish
-  name?: string
-  referrerpolicy?: HTMLAttributeReferrerPolicy
-  sandbox?: string
+  name?: string | undefined
+  referrerpolicy?: HTMLAttributeReferrerPolicy | undefined
+  sandbox?: string | undefined
   /** @deprecated */
   scrolling?: string
-  seamless?: Booleanish
-  src?: string
-  srcdoc?: string
-  width?: Numberish
+  seamless?: Booleanish | undefined
+  src?: string | undefined
+  srcdoc?: string | undefined
+  width?: Numberish | undefined
 }
 
 export interface ImgHTMLAttributes extends HTMLAttributes {
-  alt?: string
-  crossorigin?: 'anonymous' | 'use-credentials' | ''
-  decoding?: 'async' | 'auto' | 'sync'
-  height?: Numberish
-  loading?: 'eager' | 'lazy'
-  referrerpolicy?: HTMLAttributeReferrerPolicy
-  sizes?: string
-  src?: string
-  srcset?: string
-  usemap?: string
-  width?: Numberish
+  alt?: string | undefined
+  crossorigin?: 'anonymous' | 'use-credentials' | '' | undefined
+  decoding?: 'async' | 'auto' | 'sync' | undefined
+  height?: Numberish | undefined
+  loading?: 'eager' | 'lazy' | undefined
+  referrerpolicy?: HTMLAttributeReferrerPolicy | undefined
+  sizes?: string | undefined
+  src?: string | undefined
+  srcset?: string | undefined
+  usemap?: string | undefined
+  width?: Numberish | undefined
 }
 
 export interface InsHTMLAttributes extends HTMLAttributes {
-  cite?: string
-  datetime?: string
+  cite?: string | undefined
+  datetime?: string | undefined
 }
 
 export type InputTypeHTMLAttribute =
@@ -516,14 +517,14 @@ export type InputTypeHTMLAttribute =
   | (string & {})
 
 export interface InputHTMLAttributes extends HTMLAttributes {
-  accept?: string
-  alt?: string
-  autocomplete?: string
-  autofocus?: Booleanish
-  capture?: boolean | 'user' | 'environment' // https://www.w3.org/tr/html-media-capture/#the-capture-attribute
-  checked?: Booleanish | any[] | Set<any> // for IDE v-model multi-checkbox support
-  crossorigin?: string
-  disabled?: Booleanish
+  accept?: string | undefined
+  alt?: string | undefined
+  autocomplete?: string | undefined
+  autofocus?: Booleanish | undefined
+  capture?: boolean | 'user' | 'environment' | undefined // https://www.w3.org/tr/html-media-capture/#the-capture-attribute
+  checked?: Booleanish | any[] | Set<any> | undefined // for IDE v-model multi-checkbox support
+  crossorigin?: string | undefined
+  disabled?: Booleanish | undefined
   enterKeyHint?:
     | 'enter'
     | 'done'
@@ -532,64 +533,65 @@ export interface InputHTMLAttributes extends HTMLAttributes {
     | 'previous'
     | 'search'
     | 'send'
-  form?: string
-  formaction?: string
-  formenctype?: string
-  formmethod?: string
-  formnovalidate?: Booleanish
-  formtarget?: string
-  height?: Numberish
-  indeterminate?: boolean
-  list?: string
-  max?: Numberish
-  maxlength?: Numberish
-  min?: Numberish
-  minlength?: Numberish
-  multiple?: Booleanish
-  name?: string
-  pattern?: string
-  placeholder?: string
-  readonly?: Booleanish
-  required?: Booleanish
-  size?: Numberish
-  src?: string
-  step?: Numberish
-  type?: InputTypeHTMLAttribute
+    | undefined
+  form?: string | undefined
+  formaction?: string | undefined
+  formenctype?: string | undefined
+  formmethod?: string | undefined
+  formnovalidate?: Booleanish | undefined
+  formtarget?: string | undefined
+  height?: Numberish | undefined
+  indeterminate?: boolean | undefined
+  list?: string | undefined
+  max?: Numberish | undefined
+  maxlength?: Numberish | undefined
+  min?: Numberish | undefined
+  minlength?: Numberish | undefined
+  multiple?: Booleanish | undefined
+  name?: string | undefined
+  pattern?: string | undefined
+  placeholder?: string | undefined
+  readonly?: Booleanish | undefined
+  required?: Booleanish | undefined
+  size?: Numberish | undefined
+  src?: string | undefined
+  step?: Numberish | undefined
+  type?: InputTypeHTMLAttribute | undefined
   value?: any // we support :value to be bound to anything w/ v-model
-  width?: Numberish
+  width?: Numberish | undefined
 }
 
 export interface KeygenHTMLAttributes extends HTMLAttributes {
-  autofocus?: Booleanish
-  challenge?: string
-  disabled?: Booleanish
-  form?: string
-  keytype?: string
-  keyparams?: string
-  name?: string
+  autofocus?: Booleanish | undefined
+  challenge?: string | undefined
+  disabled?: Booleanish | undefined
+  form?: string | undefined
+  keytype?: string | undefined
+  keyparams?: string | undefined
+  name?: string | undefined
 }
 
 export interface LabelHTMLAttributes extends HTMLAttributes {
-  for?: string
-  form?: string
+  for?: string | undefined
+  form?: string | undefined
 }
 
 export interface LiHTMLAttributes extends HTMLAttributes {
-  value?: string | ReadonlyArray<string> | number
+  value?: string | ReadonlyArray<string> | number | undefined
 }
 
 export interface LinkHTMLAttributes extends HTMLAttributes {
-  as?: string
-  crossorigin?: string
-  href?: string
-  hreflang?: string
-  integrity?: string
-  media?: string
-  referrerpolicy?: HTMLAttributeReferrerPolicy
-  rel?: string
-  sizes?: string
-  type?: string
-  charset?: string
+  as?: string | undefined
+  crossorigin?: string | undefined
+  href?: string | undefined
+  hreflang?: string | undefined
+  integrity?: string | undefined
+  media?: string | undefined
+  referrerpolicy?: HTMLAttributeReferrerPolicy | undefined
+  rel?: string | undefined
+  sizes?: string | undefined
+  type?: string | undefined
+  charset?: string | undefined
 }
 
 export interface MapHTMLAttributes extends HTMLAttributes {
