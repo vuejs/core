@@ -6,6 +6,7 @@ import {
   type WatchScheduler,
   computed,
   onWatcherCleanup,
+  reactive,
   ref,
   watch,
 } from '../src'
@@ -208,6 +209,27 @@ describe('watch', () => {
     expect(dummy).toBe(0)
 
     source.value++
+    expect(dummy).toBe(1)
+  })
+
+  test('skip option', async () => {
+    let dummy = 0
+    const source = reactive({
+      num1: 1,
+      nested: { _skip: true, num2: 0 },
+    })
+    watch(source, () => dummy++, {
+      deep: true,
+      skip(val) {
+        return val._skip
+      },
+    })
+    expect(dummy).toBe(0)
+    source.nested.num2++
+    expect(dummy).toBe(0)
+    source.num1++
+    expect(dummy).toBe(1)
+    source.nested.num2++
     expect(dummy).toBe(1)
   })
 
