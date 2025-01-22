@@ -63,7 +63,7 @@ export function ssrProcessIf(
   }
 }
 
-function processIfBranch(
+export function processIfBranch(
   branch: IfBranchNode,
   context: SSRTransformContext,
   disableNestedFragments = false,

@@ -57,6 +57,7 @@ import {
   type SSRTransformContext,
   processChildren,
 } from '../ssrCodegenTransform'
+import { ssrProcessSkip } from './ssrVSkip'
 
 // for directives with children overwrite (e.g. v-html & v-text), we need to
 // store the raw children so that they can be added in the 2nd pass.
@@ -442,6 +443,12 @@ export function ssrProcessElement(
   node: PlainElementNode,
   context: SSRTransformContext,
 ): void {
+  const skipDir = findDir(node, 'skip')
+  if (skipDir) {
+    ssrProcessSkip(node, skipDir, context)
+    return
+  }
+
   const isVoidTag = context.options.isVoidTag || NO
   const elementsToAdd = node.ssrCodegenNode!.elements
   for (let j = 0; j < elementsToAdd.length; j++) {
