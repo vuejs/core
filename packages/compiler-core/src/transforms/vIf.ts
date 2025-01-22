@@ -217,7 +217,7 @@ function createIfBranch(node: ElementNode, dir: DirectiveNode): IfBranchNode {
   }
 }
 
-function createCodegenNodeForBranch(
+export function createCodegenNodeForBranch(
   branch: IfBranchNode,
   keyIndex: number,
   context: TransformContext,

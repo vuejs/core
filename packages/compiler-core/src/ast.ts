@@ -144,6 +144,7 @@ export interface PlainElementNode extends BaseElementNode {
     | SimpleExpressionNode // when hoisted
     | CacheExpression // when cached by v-once
     | MemoExpression // when cached by v-memo
+    | ConditionalExpression
     | undefined
   ssrCodegenNode?: TemplateLiteral
 }
