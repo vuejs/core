@@ -1620,7 +1620,7 @@ describe('expose typing', () => {
       some: String,
     },
     data() {
-      return { a: 1, b: '2', c: 1 }
+      return { c: 1, d: '2', e: 1 }
     },
   })
 
@@ -1630,11 +1630,14 @@ describe('expose typing', () => {
   // internal should still be exposed
   vm.$props
 
-  expectType<number>(vm.a)
-  expectType<string>(vm.b)
+  expectType<number>(vm.c)
+  expectType<string>(vm.d)
+  expectType<number>(vm.e)
 
   // @ts-expect-error shouldn't be exposed
-  vm.c
+  vm.a
+  // @ts-expect-error shouldn't be exposed
+  vm.b
 })
 
 import type {
