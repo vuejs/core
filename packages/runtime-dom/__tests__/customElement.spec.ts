@@ -1330,6 +1330,41 @@ describe('defineCustomElement', () => {
 
       expect(e.shadowRoot?.innerHTML).toBe('<div>app-injected</div>')
     })
+
+    test('with hmr reload', async () => {
+      const __hmrId = '__hmrWithApp'
+      const def = defineComponent({
+        __hmrId,
+        setup() {
+          const msg = inject('msg')
+          return { msg }
+        },
+        render(this: any) {
+          return h('div', [h('span', this.msg), h('span', this.$foo)])
+        },
+      })
+      const E = defineCustomElement(def, {
+        configureApp(app) {
+          app.provide('msg', 'app-injected')
+          app.config.globalProperties.$foo = 'foo'
+        },
+      })
+      customElements.define('my-element-with-app-hmr', E)
+
+      container.innerHTML = `<my-element-with-app-hmr></my-element-with-app-hmr>`
+      const el = container.childNodes[0] as VueElement
+      expect(el.shadowRoot?.innerHTML).toBe(
+        `<div><span>app-injected</span><span>foo</span></div>`,
+      )
+
+      // hmr
+      __VUE_HMR_RUNTIME__.reload(__hmrId, def as any)
+
+      await nextTick()
+      expect(el.shadowRoot?.innerHTML).toBe(
+        `<div><span>app-injected</span><span>foo</span></div>`,
+      )
+    })
   })
 
   // #9885
