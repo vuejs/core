@@ -397,7 +397,11 @@ export function injectProp(
    * we need to get the real props before normalization
    */
   let props =
-    node.type === NodeTypes.VNODE_CALL ? node.props : node.arguments[2]
+    node.type === NodeTypes.VNODE_CALL
+      ? node.props
+      : node.type === NodeTypes.JS_CALL_EXPRESSION
+        ? node.arguments[2]
+        : undefined
   let callPath: CallExpression[] = []
   let parentCall: CallExpression | undefined
   if (
@@ -459,7 +463,7 @@ export function injectProp(
     } else {
       node.props = propsWithInjection
     }
-  } else {
+  } else if (node.type === NodeTypes.JS_CALL_EXPRESSION) {
     if (parentCall) {
       parentCall.arguments[0] = propsWithInjection
     } else {
