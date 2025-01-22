@@ -1,7 +1,10 @@
 import {
+  ElementTypes,
   type IfBranchNode,
   NodeTypes,
   type SimpleExpressionNode,
+  type SlotsExpression,
+  type TemplateChildNode,
   createConditionalExpression,
   createSimpleExpression,
 } from '../ast'
@@ -23,16 +26,15 @@ import { validateBrowserExpression } from '../validateExpression'
 export const transformSkip: NodeTransform = createStructuralDirectiveTransform(
   'skip',
   (node, dir, context) => {
+    const loc = dir.exp ? dir.exp.loc : node.loc
     if (isTemplateNode(node) || isSlotOutlet(node)) {
-      const loc = dir.exp ? dir.exp.loc : node.loc
       context.onError(createCompilerError(ErrorCodes.X_V_SKIP_ON_TEMPLATE, loc))
       return
     }
 
     if (!dir.exp || !(dir.exp as SimpleExpressionNode).content.trim()) {
-      const loc = dir.exp ? dir.exp.loc : node.loc
       context.onError(
-        createCompilerError(ErrorCodes.X_V_SKIP_NO_EXPRESSION, dir.loc),
+        createCompilerError(ErrorCodes.X_V_SKIP_NO_EXPRESSION, loc),
       )
       dir.exp = createSimpleExpression(`true`, false, loc)
     }
@@ -46,13 +48,43 @@ export const transformSkip: NodeTransform = createStructuralDirectiveTransform(
     }
 
     return () => {
+      let children: TemplateChildNode[] = []
+      // for components, extract default slot without props
+      // if not found, throw an error
+      if (node.tagType === ElementTypes.COMPONENT) {
+        const codegenNode = node.codegenNode!
+        if (codegenNode.type === NodeTypes.VNODE_CALL) {
+          const genChildren = codegenNode.children! as SlotsExpression
+          if (genChildren.type === NodeTypes.JS_OBJECT_EXPRESSION) {
+            const prop = genChildren.properties.find(
+              p =>
+                p.type === NodeTypes.JS_PROPERTY &&
+                p.key.type === NodeTypes.SIMPLE_EXPRESSION &&
+                p.key.content === 'default' &&
+                p.value.params === undefined,
+            )
+            if (prop) {
+              children = prop.value.returns as TemplateChildNode[]
+            } else {
+              context.onError(
+                createCompilerError(ErrorCodes.X_V_SKIP_UNEXPECTED_SLOT, loc),
+              )
+            }
+          }
+        }
+      }
+      // for plain elements, take all children
+      else {
+        children = node.children
+      }
       const consequent: IfBranchNode = {
         type: NodeTypes.IF_BRANCH,
         loc: node.loc,
         condition: undefined,
-        children: node.children,
+        children,
         userKey: findProp(node, `key`),
       }
+
       const alternate: IfBranchNode = {
         type: NodeTypes.IF_BRANCH,
         loc: node.loc,
@@ -60,6 +92,7 @@ export const transformSkip: NodeTransform = createStructuralDirectiveTransform(
         children: [node],
         userKey: findProp(node, `key`),
       }
+
       node.codegenNode = createConditionalExpression(
         dir.exp!,
         createCodegenNodeForBranch(consequent, 0, context),

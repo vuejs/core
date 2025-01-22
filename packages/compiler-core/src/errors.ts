@@ -92,6 +92,7 @@ export enum ErrorCodes {
   X_KEEP_ALIVE_INVALID_CHILDREN,
   X_V_SKIP_NO_EXPRESSION,
   X_V_SKIP_ON_TEMPLATE,
+  X_V_SKIP_UNEXPECTED_SLOT,
 
   // generic errors
   X_PREFIX_ID_NOT_SUPPORTED,
@@ -183,6 +184,7 @@ export const errorMessages: Record<ErrorCodes, string> = {
   [ErrorCodes.X_VNODE_HOOKS]: `@vnode-* hooks in templates are no longer supported. Use the vue: prefix instead. For example, @vnode-mounted should be changed to @vue:mounted. @vnode-* hooks support has been removed in 3.4.`,
   [ErrorCodes.X_V_SKIP_NO_EXPRESSION]: `v-skip is missing expression.`,
   [ErrorCodes.X_V_SKIP_ON_TEMPLATE]: `v-skip cannot be used on <template> or <slot> tags.`,
+  [ErrorCodes.X_V_SKIP_UNEXPECTED_SLOT]: `v-skip directive requires the component to have a default slot without slot props`,
 
   // generic errors
   [ErrorCodes.X_PREFIX_ID_NOT_SUPPORTED]: `"prefixIdentifiers" option is not supported in this build of compiler.`,
