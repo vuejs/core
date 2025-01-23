@@ -117,12 +117,13 @@ export function buildSlots(
   node: ComponentNode,
   context: TransformContext,
   buildSlotFn: SlotFnBuilder = buildClientSlotFn,
+  useCache: boolean = true,
 ): {
   slots: SlotsExpression
   hasDynamicSlots: boolean
 } {
-  // return early if slots are already built to avoid duplication
-  if (node.slots) {
+  // early return if slots are already built to avoid duplication
+  if (useCache && node.slots) {
     return {
       slots: node.slots,
       hasDynamicSlots: node.hasDynamicSlots,

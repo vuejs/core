@@ -173,7 +173,7 @@ export const ssrTransformComponent: NodeTransform = (node, context) => {
     }
 
     const slots = node.children.length
-      ? buildSlots(node, context, buildSSRSlotFn).slots
+      ? buildSlots(node, context, buildSSRSlotFn, false).slots
       : `null`
 
     if (typeof component !== 'string') {
