@@ -7,6 +7,7 @@ import {
   type SimpleExpressionNode,
   type SkipNode,
   type TemplateChildNode,
+  createCallExpression,
   createConditionalExpression,
   createSimpleExpression,
 } from '../ast'
@@ -16,6 +17,7 @@ import {
   createStructuralDirectiveTransform,
 } from '../transform'
 import {
+  CREATE_COMMENT,
   ErrorCodes,
   buildSlots,
   createCompilerError,
@@ -34,10 +36,16 @@ export const transformSkip: NodeTransform = createStructuralDirectiveTransform(
   (node, dir, context) => {
     return processSkip(node, dir, context, skipNode => {
       return () => {
+        const { consequent, alternate, test } = skipNode
+        const consequentNode =
+          consequent.type === NodeTypes.IF_BRANCH
+            ? createCodegenNodeForBranch(consequent, 0, context)
+            : consequent
+
         skipNode.codegenNode = createConditionalExpression(
-          dir.exp!,
-          createCodegenNodeForBranch(skipNode.consequent, 0, context),
-          createCodegenNodeForBranch(skipNode.alternate, 1, context),
+          test,
+          consequentNode,
+          createCodegenNodeForBranch(alternate, 1, context),
         )
       }
     })
@@ -100,13 +108,20 @@ export function processSkip(
     children = node.children
   }
 
-  const consequent: IfBranchNode = {
-    type: NodeTypes.IF_BRANCH,
-    loc: node.loc,
-    condition: undefined,
-    children,
-    userKey: findProp(node, `key`),
-  }
+  // if children is empty, create comment node
+  const consequent =
+    children.length !== 0
+      ? ({
+          type: NodeTypes.IF_BRANCH,
+          loc: node.loc,
+          condition: undefined,
+          children,
+          userKey: findProp(node, `key`),
+        } as IfBranchNode)
+      : createCallExpression(context.helper(CREATE_COMMENT), [
+          __DEV__ ? '"v-skip"' : '""',
+          'true',
+        ])
 
   const alternate: IfBranchNode = {
     type: NodeTypes.IF_BRANCH,

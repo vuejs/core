@@ -1,0 +1,263 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`compiler: v-skip > transform > basic 1`] = `
+"const _Vue = Vue
+
+return function render(_ctx, _cache) {
+  with (_ctx) {
+    const { createCommentVNode: _createCommentVNode, openBlock: _openBlock, createElementBlock: _createElementBlock } = _Vue
+
+    return (_ctx.ok)
+      ? _createCommentVNode("v-skip", true)
+      : (_openBlock(), _createElementBlock("div", { key: 1 }))
+  }
+}"
+`;
+
+exports[`compiler: v-skip > transform > nested v-skip 1`] = `
+"const _Vue = Vue
+
+return function render(_ctx, _cache) {
+  with (_ctx) {
+    const { createCommentVNode: _createCommentVNode, openBlock: _openBlock, createElementBlock: _createElementBlock, createElementVNode: _createElementVNode, Fragment: _Fragment } = _Vue
+
+    return (_ctx.ok)
+      ? (_openBlock(), _createElementBlock(_Fragment, { key: 0 }, [
+          (_ctx.nested)
+            ? _createCommentVNode("v-skip", true)
+            : (_openBlock(), _createElementBlock("span", { key: 1 }))
+        ], 2112 /* STABLE_FRAGMENT, DEV_ROOT_FRAGMENT */))
+      : (_openBlock(), _createElementBlock("div", { key: 1 }, [
+          (_ctx.nested)
+            ? _createCommentVNode("v-skip", true)
+            : (_openBlock(), _createElementBlock("span", { key: 1 }))
+        ]))
+  }
+}"
+`;
+
+exports[`compiler: v-skip > transform > on component 1`] = `
+"const _Vue = Vue
+
+return function render(_ctx, _cache) {
+  with (_ctx) {
+    const { withCtx: _withCtx, createCommentVNode: _createCommentVNode, resolveComponent: _resolveComponent, openBlock: _openBlock, createBlock: _createBlock } = _Vue
+
+    const _component_Comp = _resolveComponent("Comp")
+
+    return (_ctx.ok)
+      ? _createCommentVNode("v-skip", true)
+      : (_openBlock(), _createBlock(_component_Comp, { key: 1 }))
+  }
+}"
+`;
+
+exports[`compiler: v-skip > transform > on component with default slot 1`] = `
+"const _Vue = Vue
+
+return function render(_ctx, _cache) {
+  with (_ctx) {
+    const { withCtx: _withCtx, resolveComponent: _resolveComponent, Fragment: _Fragment, openBlock: _openBlock, createElementBlock: _createElementBlock, createBlock: _createBlock } = _Vue
+
+    const _component_Comp = _resolveComponent("Comp")
+
+    return (_ctx.ok)
+      ? (_openBlock(), _createElementBlock(_Fragment, { key: 0 }, ["foo"], 2112 /* STABLE_FRAGMENT, DEV_ROOT_FRAGMENT */))
+      : (_openBlock(), _createBlock(_component_Comp, { key: 1 }, {
+          default: _withCtx(() => ["foo"]),
+          _: 1 /* STABLE */
+        }))
+  }
+}"
+`;
+
+exports[`compiler: v-skip > transform > on component with multiple implicit slot 1`] = `
+"const _Vue = Vue
+
+return function render(_ctx, _cache) {
+  with (_ctx) {
+    const { withCtx: _withCtx, createElementVNode: _createElementVNode, resolveComponent: _resolveComponent, Fragment: _Fragment, openBlock: _openBlock, createElementBlock: _createElementBlock, createBlock: _createBlock } = _Vue
+
+    const _component_Comp = _resolveComponent("Comp")
+
+    return (_ctx.ok)
+      ? (_openBlock(), _createElementBlock(_Fragment, { key: 0 }, [
+          _createElementVNode("span"),
+          _createElementVNode("div")
+        ], 64 /* STABLE_FRAGMENT */))
+      : (_openBlock(), _createBlock(_component_Comp, { key: 1 }, {
+          foo: _withCtx(() => ["foo"]),
+          default: _withCtx(() => [
+            _createElementVNode("span"),
+            _createElementVNode("div")
+          ]),
+          _: 1 /* STABLE */
+        }))
+  }
+}"
+`;
+
+exports[`compiler: v-skip > transform > on component with multiple named slot 1`] = `
+"const _Vue = Vue
+
+return function render(_ctx, _cache) {
+  with (_ctx) {
+    const { withCtx: _withCtx, resolveComponent: _resolveComponent, Fragment: _Fragment, openBlock: _openBlock, createElementBlock: _createElementBlock, createBlock: _createBlock } = _Vue
+
+    const _component_Comp = _resolveComponent("Comp")
+
+    return (_ctx.ok)
+      ? (_openBlock(), _createElementBlock(_Fragment, { key: 0 }, ["default"], 2112 /* STABLE_FRAGMENT, DEV_ROOT_FRAGMENT */))
+      : (_openBlock(), _createBlock(_component_Comp, { key: 1 }, {
+          default: _withCtx(() => ["default"]),
+          foo: _withCtx(() => ["foo"]),
+          _: 1 /* STABLE */
+        }))
+  }
+}"
+`;
+
+exports[`compiler: v-skip > transform > on dynamic component 1`] = `
+"const _Vue = Vue
+
+return function render(_ctx, _cache) {
+  with (_ctx) {
+    const { withCtx: _withCtx, renderSlot: _renderSlot, resolveDynamicComponent: _resolveDynamicComponent, openBlock: _openBlock, createBlock: _createBlock } = _Vue
+
+    return (_ctx.ok)
+      ? _renderSlot(_ctx.$slots, "default", { key: 0 })
+      : (_openBlock(), _createBlock(_resolveDynamicComponent(_ctx.Comp), { key: 1 }, {
+          default: _withCtx(() => [
+            _renderSlot(_ctx.$slots, "default", { key: 0 })
+          ]),
+          _: 3 /* FORWARDED */
+        }))
+  }
+}"
+`;
+
+exports[`compiler: v-skip > transform > v-else + v-skip 1`] = `
+"const _Vue = Vue
+
+return function render(_ctx, _cache) {
+  with (_ctx) {
+    const { openBlock: _openBlock, createElementBlock: _createElementBlock, createCommentVNode: _createCommentVNode, Fragment: _Fragment } = _Vue
+
+    return (_ctx.ok)
+      ? (_openBlock(), _createElementBlock("div", { key: 0 }))
+      : (_openBlock(), _createElementBlock(_Fragment, { key: 1 }, [
+          (_ctx.nested)
+            ? _createCommentVNode("v-skip", true)
+            : (_openBlock(), _createElementBlock("div", { key: 1 }))
+        ], 2112 /* STABLE_FRAGMENT, DEV_ROOT_FRAGMENT */))
+  }
+}"
+`;
+
+exports[`compiler: v-skip > transform > v-else-if + v-skip 1`] = `
+"const _Vue = Vue
+
+return function render(_ctx, _cache) {
+  with (_ctx) {
+    const { openBlock: _openBlock, createElementBlock: _createElementBlock, createCommentVNode: _createCommentVNode, Fragment: _Fragment } = _Vue
+
+    return (_ctx.ok)
+      ? (_openBlock(), _createElementBlock("div", { key: 0 }))
+      : (_ctx.yes)
+        ? (_openBlock(), _createElementBlock(_Fragment, { key: 1 }, [
+            (_ctx.nested)
+              ? _createCommentVNode("v-skip", true)
+              : (_openBlock(), _createElementBlock("div", { key: 1 }))
+          ], 2112 /* STABLE_FRAGMENT, DEV_ROOT_FRAGMENT */))
+        : _createCommentVNode("v-if", true)
+  }
+}"
+`;
+
+exports[`compiler: v-skip > transform > v-if + v-skip 1`] = `
+"const _Vue = Vue
+
+return function render(_ctx, _cache) {
+  with (_ctx) {
+    const { createCommentVNode: _createCommentVNode, openBlock: _openBlock, createElementBlock: _createElementBlock, Fragment: _Fragment } = _Vue
+
+    return (_ctx.ok)
+      ? (_openBlock(), _createElementBlock(_Fragment, { key: 0 }, [
+          (_ctx.nested)
+            ? _createCommentVNode("v-skip", true)
+            : (_openBlock(), _createElementBlock("div", { key: 1 }))
+        ], 2112 /* STABLE_FRAGMENT, DEV_ROOT_FRAGMENT */))
+      : _createCommentVNode("v-if", true)
+  }
+}"
+`;
+
+exports[`compiler: v-skip > transform > with component children 1`] = `
+"const _Vue = Vue
+
+return function render(_ctx, _cache) {
+  with (_ctx) {
+    const { resolveComponent: _resolveComponent, createVNode: _createVNode, openBlock: _openBlock, createBlock: _createBlock, createElementBlock: _createElementBlock } = _Vue
+
+    const _component_Comp = _resolveComponent("Comp")
+
+    return (_ctx.ok)
+      ? (_openBlock(), _createBlock(_component_Comp, { key: 0 }))
+      : (_openBlock(), _createElementBlock("div", { key: 1 }, [
+          (_openBlock(), _createBlock(_component_Comp, { key: 0 }))
+        ]))
+  }
+}"
+`;
+
+exports[`compiler: v-skip > transform > with element children 1`] = `
+"const _Vue = Vue
+
+return function render(_ctx, _cache) {
+  with (_ctx) {
+    const { createElementVNode: _createElementVNode, openBlock: _openBlock, createElementBlock: _createElementBlock } = _Vue
+
+    return (_ctx.ok)
+      ? (_openBlock(), _createElementBlock("span", { key: 0 }))
+      : (_openBlock(), _createElementBlock("div", { key: 1 }, [
+          (_openBlock(), _createElementBlock("span", { key: 0 }))
+        ]))
+  }
+}"
+`;
+
+exports[`compiler: v-skip > transform > with multiple children 1`] = `
+"const _Vue = Vue
+
+return function render(_ctx, _cache) {
+  with (_ctx) {
+    const { createElementVNode: _createElementVNode, resolveComponent: _resolveComponent, createVNode: _createVNode, Fragment: _Fragment, openBlock: _openBlock, createElementBlock: _createElementBlock } = _Vue
+
+    const _component_Comp = _resolveComponent("Comp")
+
+    return (_ctx.ok)
+      ? (_openBlock(), _createElementBlock(_Fragment, { key: 0 }, [
+          _createElementVNode("span"),
+          _createVNode(_component_Comp)
+        ], 64 /* STABLE_FRAGMENT */))
+      : (_openBlock(), _createElementBlock("div", { key: 1 }, [
+          _createElementVNode("span"),
+          _createVNode(_component_Comp)
+        ]))
+  }
+}"
+`;
+
+exports[`compiler: v-skip > transform > with text children 1`] = `
+"const _Vue = Vue
+
+return function render(_ctx, _cache) {
+  with (_ctx) {
+    const { Fragment: _Fragment, openBlock: _openBlock, createElementBlock: _createElementBlock } = _Vue
+
+    return (_ctx.ok)
+      ? (_openBlock(), _createElementBlock(_Fragment, { key: 0 }, ["foo"], 2112 /* STABLE_FRAGMENT, DEV_ROOT_FRAGMENT */))
+      : (_openBlock(), _createElementBlock("div", { key: 1 }, "foo"))
+  }
+}"
+`;

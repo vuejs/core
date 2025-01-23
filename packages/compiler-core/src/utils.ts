@@ -529,9 +529,11 @@ export function hasScopeRef(
     case NodeTypes.IF:
       return node.branches.some(b => hasScopeRef(b, ids))
     case NodeTypes.SKIP:
+      const { consequent } = node
       return (
         hasScopeRef(node.test, ids) ||
-        node.consequent.children.some(c => hasScopeRef(c, ids)) ||
+        (consequent.type === NodeTypes.IF_BRANCH &&
+          consequent.children.some(c => hasScopeRef(c, ids))) ||
         node.alternate.children.some(c => hasScopeRef(c, ids))
       )
     case NodeTypes.IF_BRANCH:

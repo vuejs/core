@@ -1,5 +1,6 @@
 import {
   type NodeTransform,
+  NodeTypes,
   type SkipNode,
   createIfStatement,
   createStructuralDirectiveTransform,
@@ -15,10 +16,18 @@ export function ssrProcessSkip(
   node: SkipNode,
   context: SSRTransformContext,
 ): void {
+  const { consequent, alternate, test } = node
+
+  // if consequent is an if branch, process it as well
+  const consequentNode =
+    consequent.type === NodeTypes.IF_BRANCH
+      ? processIfBranch(consequent, context)
+      : consequent
+
   const ifStatement = createIfStatement(
-    node.test,
-    processIfBranch(node.consequent, context),
-    processIfBranch(node.alternate, context),
+    test,
+    consequentNode,
+    processIfBranch(alternate, context),
   )
   context.pushStatement(ifStatement)
 }

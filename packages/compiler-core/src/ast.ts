@@ -413,7 +413,7 @@ export interface FunctionExpression extends Node {
 export interface SkipNode extends Node {
   type: NodeTypes.SKIP
   test: ExpressionNode
-  consequent: IfBranchNode
+  consequent: IfBranchNode | CallExpression
   alternate: IfBranchNode
   newline: boolean
   codegenNode?: ConditionalExpression
@@ -468,7 +468,7 @@ export interface TemplateLiteral extends Node {
 export interface IfStatement extends Node {
   type: NodeTypes.JS_IF_STATEMENT
   test: ExpressionNode
-  consequent: BlockStatement
+  consequent: BlockStatement | CallExpression
   alternate: IfStatement | BlockStatement | ReturnStatement | undefined
 }
 

@@ -1,15 +1,18 @@
 import {
   type CompilerOptions,
   type ElementNode,
+  ElementTypes,
+  type IfBranchNode,
   type IfNode,
   NodeTypes,
   type RootNode,
   type SimpleExpressionNode,
   type SkipNode,
+  generate,
   baseParse as parse,
   transform,
-  transformBind,
   transformElement,
+  transformExpression,
 } from '@vue/compiler-core'
 import { transformIf } from '../../src/transforms/vIf'
 import { transformFor } from '../../src/transforms/vFor'
@@ -18,7 +21,7 @@ import { transformSkip } from '../../src/transforms/vSkip'
 
 export function parseWithSkipTransform(
   template: string,
-  options: CompilerOptions = {},
+  options: CompilerOptions = { prefixIdentifiers: true },
 ): {
   root: RootNode
   node: SkipNode
@@ -29,12 +32,10 @@ export function parseWithSkipTransform(
       transformIf,
       transformSkip,
       transformFor,
+      transformExpression,
       transformSlotOutlet,
       transformElement,
     ],
-    directiveTransforms: {
-      bind: transformBind,
-    },
     ...options,
   })
   return {
@@ -46,102 +47,151 @@ export function parseWithSkipTransform(
 describe('compiler: v-skip', () => {
   describe('transform', () => {
     test('basic', () => {
-      const { node } = parseWithSkipTransform(`<div v-skip="ok"/>`)
+      const { root, node } = parseWithSkipTransform(`<div v-skip="ok"/>`)
       expect(node.type).toBe(NodeTypes.SKIP)
-      expect((node.test as SimpleExpressionNode).content).toBe(`ok`)
-      expect(node.consequent.children.length).toBe(0)
+      expect((node.test as SimpleExpressionNode).content).toBe(`_ctx.ok`)
+      expect(node.consequent.type === NodeTypes.JS_CALL_EXPRESSION).toBe(true)
       expect(node.alternate.children.length).toBe(1)
       expect(node.alternate.children[0].type).toBe(NodeTypes.ELEMENT)
       expect((node.alternate.children[0] as ElementNode).tag).toBe(`div`)
+      expect(generate(root).code).toMatchSnapshot()
     })
 
     test('with text children', () => {
-      const { node } = parseWithSkipTransform(`<div v-skip="ok">foo</div>`)
+      const { root, node } = parseWithSkipTransform(
+        `<div v-skip="ok">foo</div>`,
+      )
       expect(node.type).toBe(NodeTypes.SKIP)
-      expect((node.test as SimpleExpressionNode).content).toBe(`ok`)
-      expect(node.consequent.children.length).toBe(1)
-      expect(node.consequent.children[0].type).toBe(NodeTypes.TEXT)
-      expect((node.consequent.children[0] as any).content).toBe(`foo`)
+      expect((node.test as SimpleExpressionNode).content).toBe(`_ctx.ok`)
+      expect((node.consequent as IfBranchNode).children.length).toBe(1)
+      expect((node.consequent as IfBranchNode).children[0].type).toBe(
+        NodeTypes.TEXT,
+      )
+      expect(
+        ((node.consequent as IfBranchNode).children[0] as any).content,
+      ).toBe(`foo`)
       expect(node.alternate.children.length).toBe(1)
       expect(node.alternate.children[0].type).toBe(NodeTypes.ELEMENT)
       expect((node.alternate.children[0] as ElementNode).tag).toBe(`div`)
+      expect(generate(root).code).toMatchSnapshot()
     })
 
     test('with element children', () => {
-      const { node } = parseWithSkipTransform(`<div v-skip="ok"><span/></div>`)
+      const { root, node } = parseWithSkipTransform(
+        `<div v-skip="ok"><span/></div>`,
+      )
       expect(node.type).toBe(NodeTypes.SKIP)
-      expect((node.test as SimpleExpressionNode).content).toBe(`ok`)
-      expect(node.consequent.children.length).toBe(1)
-      expect(node.consequent.children[0].type).toBe(NodeTypes.ELEMENT)
-      expect((node.consequent.children[0] as ElementNode).tag).toBe(`span`)
+      expect((node.test as SimpleExpressionNode).content).toBe(`_ctx.ok`)
+      expect((node.consequent as IfBranchNode).children.length).toBe(1)
+      expect((node.consequent as IfBranchNode).children[0].type).toBe(
+        NodeTypes.ELEMENT,
+      )
+      expect(
+        ((node.consequent as IfBranchNode).children[0] as ElementNode).tag,
+      ).toBe(`span`)
       expect(node.alternate.children.length).toBe(1)
       expect(node.alternate.children[0].type).toBe(NodeTypes.ELEMENT)
       expect((node.alternate.children[0] as ElementNode).tag).toBe(`div`)
+      expect(generate(root).code).toMatchSnapshot()
     })
 
     test('with component children', () => {
-      const { node } = parseWithSkipTransform(`<div v-skip="ok"><Comp/></div>`)
+      const { root, node } = parseWithSkipTransform(
+        `<div v-skip="ok"><Comp/></div>`,
+      )
       expect(node.type).toBe(NodeTypes.SKIP)
-      expect((node.test as SimpleExpressionNode).content).toBe(`ok`)
-      expect(node.consequent.children.length).toBe(1)
-      expect(node.consequent.children[0].type).toBe(NodeTypes.ELEMENT)
-      expect((node.consequent.children[0] as ElementNode).tag).toBe(`Comp`)
+      expect((node.test as SimpleExpressionNode).content).toBe(`_ctx.ok`)
+      expect((node.consequent as IfBranchNode).children.length).toBe(1)
+      expect((node.consequent as IfBranchNode).children[0].type).toBe(
+        NodeTypes.ELEMENT,
+      )
+      expect(
+        ((node.consequent as IfBranchNode).children[0] as ElementNode).tag,
+      ).toBe(`Comp`)
       expect(node.alternate.children.length).toBe(1)
       expect(node.alternate.children[0].type).toBe(NodeTypes.ELEMENT)
       expect((node.alternate.children[0] as ElementNode).tag).toBe(`div`)
+      expect(generate(root).code).toMatchSnapshot()
     })
 
     test('with multiple children', () => {
-      const { node } = parseWithSkipTransform(
+      const { root, node } = parseWithSkipTransform(
         `<div v-skip="ok"><span/><Comp/></div>`,
       )
       expect(node.type).toBe(NodeTypes.SKIP)
-      expect((node.test as SimpleExpressionNode).content).toBe(`ok`)
-      expect(node.consequent.children.length).toBe(2)
-      expect(node.consequent.children[0].type).toBe(NodeTypes.ELEMENT)
-      expect((node.consequent.children[0] as ElementNode).tag).toBe(`span`)
-      expect(node.consequent.children[1].type).toBe(NodeTypes.ELEMENT)
-      expect((node.consequent.children[1] as ElementNode).tag).toBe(`Comp`)
+      expect((node.test as SimpleExpressionNode).content).toBe(`_ctx.ok`)
+      expect((node.consequent as IfBranchNode).children.length).toBe(2)
+      expect((node.consequent as IfBranchNode).children[0].type).toBe(
+        NodeTypes.ELEMENT,
+      )
+      expect(
+        ((node.consequent as IfBranchNode).children[0] as ElementNode).tag,
+      ).toBe(`span`)
+      expect((node.consequent as IfBranchNode).children[1].type).toBe(
+        NodeTypes.ELEMENT,
+      )
+      expect(
+        ((node.consequent as IfBranchNode).children[1] as ElementNode).tag,
+      ).toBe(`Comp`)
       expect(node.alternate.children.length).toBe(1)
       expect(node.alternate.children[0].type).toBe(NodeTypes.ELEMENT)
       expect((node.alternate.children[0] as ElementNode).tag).toBe(`div`)
+      expect(generate(root).code).toMatchSnapshot()
     })
 
     test('nested v-skip', () => {
-      const { node } = parseWithSkipTransform(
-        `<div v-skip="ok"><div v-skip="nested"/></div>`,
+      const { root, node } = parseWithSkipTransform(
+        `<div v-skip="ok"><span v-skip="nested"/></div>`,
       )
       expect(node.type).toBe(NodeTypes.SKIP)
-      expect((node.test as SimpleExpressionNode).content).toBe(`ok`)
-      expect(node.consequent.children.length).toBe(1)
-      expect(node.consequent.children[0].type).toBe(NodeTypes.SKIP)
+      expect((node.test as SimpleExpressionNode).content).toBe(`_ctx.ok`)
+      expect((node.consequent as IfBranchNode).children.length).toBe(1)
+      expect((node.consequent as IfBranchNode).children[0].type).toBe(
+        NodeTypes.SKIP,
+      )
       expect(
-        ((node.consequent.children[0] as SkipNode).test as SimpleExpressionNode)
-          .content,
-      ).toBe(`nested`)
+        (
+          ((node.consequent as IfBranchNode).children[0] as SkipNode)
+            .test as SimpleExpressionNode
+        ).content,
+      ).toBe(`_ctx.nested`)
       expect(node.alternate.children.length).toBe(1)
       expect(node.alternate.children[0].type).toBe(NodeTypes.ELEMENT)
       expect((node.alternate.children[0] as ElementNode).tag).toBe(`div`)
+      const nestedNode = (node.consequent as IfBranchNode)
+        .children[0] as SkipNode
+      expect(nestedNode.type).toBe(NodeTypes.SKIP)
+      expect((nestedNode.test as SimpleExpressionNode).content).toBe(
+        `_ctx.nested`,
+      )
+      expect(nestedNode.consequent.type === NodeTypes.JS_CALL_EXPRESSION).toBe(
+        true,
+      )
+      expect(nestedNode.alternate.children.length).toBe(1)
+      expect(nestedNode.alternate.children[0].type).toBe(NodeTypes.ELEMENT)
+      expect((nestedNode.alternate.children[0] as ElementNode).tag).toBe(`span`)
+      expect(generate(root).code).toMatchSnapshot()
     })
 
     test('v-if + v-skip', () => {
-      const { node } = parseWithSkipTransform(
+      const { root, node } = parseWithSkipTransform(
         `<div v-if="ok" v-skip="nested"/>`,
       )
       expect(node.type).toBe(NodeTypes.IF)
       const ifNode = node as unknown as IfNode
       const branch = ifNode.branches[0]
-      expect((branch.condition as SimpleExpressionNode).content).toBe(`ok`)
+      expect((branch.condition as SimpleExpressionNode).content).toBe(`_ctx.ok`)
       expect(branch.children.length).toBe(1)
       // skipNode
       expect(branch.children[0].type).toBe(NodeTypes.SKIP)
       expect(
         ((branch.children[0] as SkipNode).test as SimpleExpressionNode).content,
-      ).toBe(`nested`)
+      ).toBe(`_ctx.nested`)
+      expect(generate(root).code).toMatchSnapshot()
     })
 
     test('v-else + v-skip', () => {
-      const { node } = parseWithSkipTransform(
+      const { root, node } = parseWithSkipTransform(
         `<div v-if="ok"/><div v-else v-skip="nested"/>`,
       )
       expect(node.type).toBe(NodeTypes.IF)
@@ -152,66 +202,89 @@ describe('compiler: v-skip', () => {
       expect(branch.children[0].type).toBe(NodeTypes.SKIP)
       expect(
         ((branch.children[0] as SkipNode).test as SimpleExpressionNode).content,
-      ).toBe(`nested`)
+      ).toBe(`_ctx.nested`)
+      expect(generate(root).code).toMatchSnapshot()
     })
 
     test('v-else-if + v-skip', () => {
-      const { node } = parseWithSkipTransform(
+      const { root, node } = parseWithSkipTransform(
         `<div v-if="ok"/><div v-else-if="yes" v-skip="nested"/>`,
       )
       expect(node.type).toBe(NodeTypes.IF)
       const elseIfNode = node as unknown as IfNode
       const branch = elseIfNode.branches[1]
-      expect((branch.condition as SimpleExpressionNode).content).toBe(`yes`)
+      expect((branch.condition as SimpleExpressionNode).content).toBe(
+        `_ctx.yes`,
+      )
       expect(branch.children.length).toBe(1)
       // skipNode
       expect(branch.children[0].type).toBe(NodeTypes.SKIP)
       expect(
         ((branch.children[0] as SkipNode).test as SimpleExpressionNode).content,
-      ).toBe(`nested`)
+      ).toBe(`_ctx.nested`)
+      expect(generate(root).code).toMatchSnapshot()
     })
 
     test('on component', () => {
-      const { node } = parseWithSkipTransform(`<Comp v-skip="ok"/>`)
+      const { root, node } = parseWithSkipTransform(`<Comp v-skip="ok"/>`)
       expect(node.type).toBe(NodeTypes.SKIP)
-      expect((node.test as SimpleExpressionNode).content).toBe(`ok`)
-      expect(node.consequent.children.length).toBe(0)
+      expect((node.test as SimpleExpressionNode).content).toBe(`_ctx.ok`)
+      expect(node.consequent.type === NodeTypes.JS_CALL_EXPRESSION).toBe(true)
       expect(node.alternate.children.length).toBe(1)
-      expect(node.alternate.children[0].type).toBe(NodeTypes.ELEMENT)
+      expect((node.alternate.children[0] as ElementNode).tagType).toBe(
+        ElementTypes.COMPONENT,
+      )
       expect((node.alternate.children[0] as ElementNode).tag).toBe(`Comp`)
+      expect(generate(root).code).toMatchSnapshot()
     })
 
     test('on component with default slot', () => {
-      const { node } = parseWithSkipTransform(`<Comp v-skip="ok">foo</Comp>`)
+      const { root, node } = parseWithSkipTransform(
+        `<Comp v-skip="ok">foo</Comp>`,
+      )
       expect(node.type).toBe(NodeTypes.SKIP)
-      expect((node.test as SimpleExpressionNode).content).toBe(`ok`)
-      expect(node.consequent.children.length).toBe(1)
-      expect(node.consequent.children[0].type).toBe(NodeTypes.TEXT)
-      expect((node.consequent.children[0] as any).content).toBe(`foo`)
+      expect((node.test as SimpleExpressionNode).content).toBe(`_ctx.ok`)
+      expect((node.consequent as IfBranchNode).children.length).toBe(1)
+      expect((node.consequent as IfBranchNode).children[0].type).toBe(
+        NodeTypes.TEXT,
+      )
+      expect(
+        ((node.consequent as IfBranchNode).children[0] as any).content,
+      ).toBe(`foo`)
       expect(node.alternate.children.length).toBe(1)
-      expect(node.alternate.children[0].type).toBe(NodeTypes.ELEMENT)
+      expect((node.alternate.children[0] as ElementNode).tagType).toBe(
+        ElementTypes.COMPONENT,
+      )
       expect((node.alternate.children[0] as ElementNode).tag).toBe(`Comp`)
+      expect(generate(root).code).toMatchSnapshot()
     })
 
     test('on component with multiple named slot', () => {
-      const { node } = parseWithSkipTransform(
+      const { root, node } = parseWithSkipTransform(
         `<Comp v-skip="ok">
           <template #default>default</template>
           <template #foo>foo</template>
         </Comp>`,
       )
       expect(node.type).toBe(NodeTypes.SKIP)
-      expect((node.test as SimpleExpressionNode).content).toBe(`ok`)
-      expect(node.consequent.children.length).toBe(1)
-      expect(node.consequent.children[0].type).toBe(NodeTypes.TEXT)
-      expect((node.consequent.children[0] as any).content).toBe(`default`)
+      expect((node.test as SimpleExpressionNode).content).toBe(`_ctx.ok`)
+      expect((node.consequent as IfBranchNode).children.length).toBe(1)
+      expect((node.consequent as IfBranchNode).children[0].type).toBe(
+        NodeTypes.TEXT,
+      )
+      expect(
+        ((node.consequent as IfBranchNode).children[0] as any).content,
+      ).toBe(`default`)
       expect(node.alternate.children.length).toBe(1)
-      expect(node.alternate.children[0].type).toBe(NodeTypes.ELEMENT)
+      expect((node.alternate.children[0] as ElementNode).tagType).toBe(
+        ElementTypes.COMPONENT,
+      )
       expect((node.alternate.children[0] as ElementNode).tag).toBe(`Comp`)
+      expect(generate(root).code).toMatchSnapshot()
     })
 
     test('on component with multiple implicit slot', () => {
-      const { node } = parseWithSkipTransform(
+      const { root, node } = parseWithSkipTransform(
         `<Comp v-skip="ok">
           <span/>
           <template #foo>foo</template>
@@ -219,19 +292,51 @@ describe('compiler: v-skip', () => {
         </Comp>`,
       )
       expect(node.type).toBe(NodeTypes.SKIP)
-      expect((node.test as SimpleExpressionNode).content).toBe(`ok`)
-      expect(node.consequent.children.length).toBe(2)
-      expect(node.consequent.children[0].type).toBe(NodeTypes.ELEMENT)
-      expect((node.consequent.children[0] as ElementNode).tag).toBe(`span`)
-      expect(node.consequent.children[1].type).toBe(NodeTypes.ELEMENT)
-      expect((node.consequent.children[1] as ElementNode).tag).toBe(`div`)
+      expect((node.test as SimpleExpressionNode).content).toBe(`_ctx.ok`)
+      expect((node.consequent as IfBranchNode).children.length).toBe(2)
+      expect((node.consequent as IfBranchNode).children[0].type).toBe(
+        NodeTypes.ELEMENT,
+      )
+      expect(
+        ((node.consequent as IfBranchNode).children[0] as ElementNode).tag,
+      ).toBe(`span`)
+      expect((node.consequent as IfBranchNode).children[1].type).toBe(
+        NodeTypes.ELEMENT,
+      )
+      expect(
+        ((node.consequent as IfBranchNode).children[1] as ElementNode).tag,
+      ).toBe(`div`)
       expect(node.alternate.children.length).toBe(1)
-      expect(node.alternate.children[0].type).toBe(NodeTypes.ELEMENT)
+      expect((node.alternate.children[0] as ElementNode).tagType).toBe(
+        ElementTypes.COMPONENT,
+      )
       expect((node.alternate.children[0] as ElementNode).tag).toBe(`Comp`)
+      expect(generate(root).code).toMatchSnapshot()
+    })
+
+    test('on dynamic component', () => {
+      const { root, node } = parseWithSkipTransform(
+        `<component :is="Comp" v-skip="ok">
+          <slot/>
+        </component>`,
+      )
+      expect(node.type).toBe(NodeTypes.SKIP)
+      expect((node.test as SimpleExpressionNode).content).toBe(`_ctx.ok`)
+      expect((node.consequent as IfBranchNode).children.length).toBe(1)
+      expect((node.consequent as IfBranchNode).children[0].type).toBe(
+        NodeTypes.ELEMENT,
+      )
+      expect(
+        ((node.consequent as IfBranchNode).children[0] as ElementNode).tag,
+      ).toBe(`slot`)
+      expect(node.alternate.children.length).toBe(1)
+      expect((node.alternate.children[0] as ElementNode).tagType).toBe(
+        ElementTypes.COMPONENT,
+      )
+      expect((node.alternate.children[0] as ElementNode).tag).toBe(`component`)
+      expect(generate(root).code).toMatchSnapshot()
     })
   })
-
-  describe.todo('codegen', () => {})
 
   describe.todo('errors', () => {})
 })
