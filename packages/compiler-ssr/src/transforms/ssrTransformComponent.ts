@@ -34,7 +34,6 @@ import {
   createRoot,
   createSimpleExpression,
   createTransformContext,
-  findDir,
   getBaseTransformPreset,
   locStub,
   resolveComponentType,
@@ -62,7 +61,6 @@ import {
   ssrProcessTransition,
   ssrTransformTransition,
 } from './ssrTransformTransition'
-import { ssrProcessSkip } from './ssrVSkip'
 
 // We need to construct the slot functions in the 1st pass to ensure proper
 // scope tracking, but the children of each slot cannot be processed until
@@ -208,12 +206,6 @@ export function ssrProcessComponent(
   context: SSRTransformContext,
   parent: { children: TemplateChildNode[] },
 ): void {
-  const skipDir = findDir(node, 'skip')
-  if (skipDir) {
-    ssrProcessSkip(node, skipDir, context)
-    return
-  }
-
   const component = componentTypeMap.get(node)!
   if (!node.ssrCodegenNode) {
     // this is a built-in component that fell-through.

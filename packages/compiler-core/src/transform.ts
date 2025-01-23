@@ -466,6 +466,10 @@ export function traverseNode(
         traverseNode(node.branches[i], context)
       }
       break
+    case NodeTypes.SKIP:
+      traverseNode(node.consequent, context)
+      traverseNode(node.alternate, context)
+      break
     case NodeTypes.IF_BRANCH:
     case NodeTypes.FOR:
     case NodeTypes.ELEMENT:

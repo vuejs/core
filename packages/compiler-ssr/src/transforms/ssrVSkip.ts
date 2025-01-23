@@ -1,10 +1,6 @@
 import {
-  type ComponentNode,
-  type DirectiveNode,
-  type IfBranchNode,
   type NodeTransform,
-  NodeTypes,
-  type PlainElementNode,
+  type SkipNode,
   createIfStatement,
   createStructuralDirectiveTransform,
   processSkip,
@@ -16,30 +12,13 @@ export const ssrTransformSkip: NodeTransform =
   createStructuralDirectiveTransform('skip', processSkip)
 
 export function ssrProcessSkip(
-  node: PlainElementNode | ComponentNode,
-  dir: DirectiveNode,
+  node: SkipNode,
   context: SSRTransformContext,
 ): void {
-  node.props = node.props.filter(x => x.name !== 'skip')
-  const consequent: IfBranchNode = {
-    type: NodeTypes.IF_BRANCH,
-    loc: node.loc,
-    condition: undefined,
-    children: node.children,
-  }
-
-  const alternate: IfBranchNode = {
-    type: NodeTypes.IF_BRANCH,
-    loc: node.loc,
-    condition: undefined,
-    children: [node],
-  }
-
-  const ifNode = createIfStatement(
-    dir.exp!,
-    processIfBranch(consequent, context),
-    processIfBranch(alternate, context),
+  const ifStatement = createIfStatement(
+    node.test,
+    processIfBranch(node.consequent, context),
+    processIfBranch(node.alternate, context),
   )
-
-  context.pushStatement(ifNode)
+  context.pushStatement(ifStatement)
 }

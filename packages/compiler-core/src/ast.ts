@@ -41,6 +41,7 @@ export enum NodeTypes {
   IF_BRANCH,
   FOR,
   TEXT_CALL,
+  SKIP,
   // codegen
   VNODE_CALL,
   JS_CALL_EXPRESSION,
@@ -100,6 +101,7 @@ export type TemplateChildNode =
   | IfBranchNode
   | ForNode
   | TextCallNode
+  | SkipNode
 
 export interface RootNode extends Node {
   type: NodeTypes.ROOT
@@ -404,6 +406,15 @@ export interface FunctionExpression extends Node {
    * the legacy $scopedSlots instance property.
    */
   isNonScopedSlot?: boolean
+}
+
+export interface SkipNode extends Node {
+  type: NodeTypes.SKIP
+  test: ExpressionNode
+  consequent: IfBranchNode
+  alternate: IfBranchNode
+  newline: boolean
+  codegenNode?: ConditionalExpression
 }
 
 export interface ConditionalExpression extends Node {
