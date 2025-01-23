@@ -48,6 +48,7 @@ export { transformBind } from './transforms/vBind'
 export { noopDirectiveTransform } from './transforms/noopDirectiveTransform'
 export { processIf } from './transforms/vIf'
 export { processFor, createForLoopParams } from './transforms/vFor'
+export { processSkip } from './transforms/vSkip'
 export {
   transformExpression,
   processExpression,

@@ -1,29 +1,25 @@
 import {
   type ComponentNode,
   type DirectiveNode,
-  ErrorCodes,
   type IfBranchNode,
+  type NodeTransform,
   NodeTypes,
   type PlainElementNode,
-  type SimpleExpressionNode,
-  createCompilerError,
   createIfStatement,
-  createSimpleExpression,
+  createStructuralDirectiveTransform,
+  processSkip,
 } from '@vue/compiler-core'
 import { processIfBranch } from './ssrVIf'
 import type { SSRTransformContext } from '../ssrCodegenTransform'
+
+export const ssrTransformSkip: NodeTransform =
+  createStructuralDirectiveTransform('skip', processSkip)
 
 export function ssrProcessSkip(
   node: PlainElementNode | ComponentNode,
   dir: DirectiveNode,
   context: SSRTransformContext,
 ): void {
-  if (!dir.exp || !(dir.exp as SimpleExpressionNode).content.trim()) {
-    const loc = dir.exp ? dir.exp.loc : node.loc
-    context.onError(createCompilerError(ErrorCodes.X_V_SKIP_NO_EXPRESSION, loc))
-    dir.exp = createSimpleExpression(`true`, false, loc)
-  }
-
   node.props = node.props.filter(x => x.name !== 'skip')
   const consequent: IfBranchNode = {
     type: NodeTypes.IF_BRANCH,
