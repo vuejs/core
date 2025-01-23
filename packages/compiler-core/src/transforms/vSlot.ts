@@ -1,8 +1,8 @@
 import {
   type CallExpression,
+  type ComponentNode,
   type ConditionalExpression,
   type DirectiveNode,
-  type ElementNode,
   ElementTypes,
   type ExpressionNode,
   type FunctionExpression,
@@ -114,13 +114,20 @@ const buildClientSlotFn: SlotFnBuilder = (props, _vForExp, children, loc) =>
 // Instead of being a DirectiveTransform, v-slot processing is called during
 // transformElement to build the slots object for a component.
 export function buildSlots(
-  node: ElementNode,
+  node: ComponentNode,
   context: TransformContext,
   buildSlotFn: SlotFnBuilder = buildClientSlotFn,
 ): {
   slots: SlotsExpression
   hasDynamicSlots: boolean
 } {
+  // return early if slots are already built to avoid duplication
+  if (node.slots) {
+    return {
+      slots: node.slots,
+      hasDynamicSlots: node.hasDynamicSlots,
+    }
+  }
   context.helper(WITH_CTX)
 
   const { children, loc } = node
@@ -364,6 +371,8 @@ export function buildSlots(
     ]) as SlotsExpression
   }
 
+  node.slots = slots
+  node.hasDynamicSlots = hasDynamicSlots
   return {
     slots,
     hasDynamicSlots,
