@@ -173,10 +173,7 @@ export const transformElement: NodeTransform = (node, context) => {
         vnodeTag !== KEEP_ALIVE
 
       if (shouldBuildAsSlots) {
-        const { slots, hasDynamicSlots } = buildSlots(
-          node as ComponentNode,
-          context,
-        )
+        const { slots, hasDynamicSlots } = buildSlots(node, context)
         vnodeChildren = slots
         if (hasDynamicSlots) {
           patchFlag |= PatchFlags.DYNAMIC_SLOTS

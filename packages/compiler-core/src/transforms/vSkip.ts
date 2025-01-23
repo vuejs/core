@@ -6,6 +6,7 @@ import {
   NodeTypes,
   type SimpleExpressionNode,
   type SkipNode,
+  type SlotsExpression,
   type TemplateChildNode,
   createConditionalExpression,
   createSimpleExpression,
@@ -78,8 +79,9 @@ export function processSkip(
   // if not found, throw an error
   if (node.tagType === ElementTypes.COMPONENT) {
     const { slots } = buildSlots(node, context)
-    if (slots.type === NodeTypes.JS_OBJECT_EXPRESSION) {
-      const prop = slots.properties.find(
+    const genChildren = slots as SlotsExpression
+    if (genChildren.type === NodeTypes.JS_OBJECT_EXPRESSION) {
+      const prop = genChildren.properties.find(
         p =>
           p.type === NodeTypes.JS_PROPERTY &&
           p.key.type === NodeTypes.SIMPLE_EXPRESSION &&

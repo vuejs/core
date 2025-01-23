@@ -153,8 +153,6 @@ export interface PlainElementNode extends BaseElementNode {
 
 export interface ComponentNode extends BaseElementNode {
   tagType: ElementTypes.COMPONENT
-  slots: SlotsExpression
-  hasDynamicSlots: boolean
   codegenNode:
     | VNodeCall
     | CacheExpression // when cached by v-once
