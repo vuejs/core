@@ -24,7 +24,6 @@ import {
   findDir,
   findProp,
   isSlotOutlet,
-  isTemplateNode,
   processExpression,
 } from '@vue/compiler-core'
 import { createCodegenNodeForBranch } from './vIf'
@@ -59,7 +58,10 @@ export function processSkip(
   processCodegen?: (skipNode: SkipNode) => () => void,
 ): (() => void) | undefined {
   const loc = dir.exp ? dir.exp.loc : node.loc
-  if (isTemplateNode(node) || isSlotOutlet(node)) {
+  if (
+    (node.type === NodeTypes.ELEMENT && node.tag === 'template') ||
+    isSlotOutlet(node)
+  ) {
     context.onError(createCompilerError(ErrorCodes.X_V_SKIP_ON_TEMPLATE, loc))
     return
   }

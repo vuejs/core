@@ -2,6 +2,7 @@ import {
   type CompilerOptions,
   type ElementNode,
   ElementTypes,
+  ErrorCodes,
   type IfBranchNode,
   type IfNode,
   NodeTypes,
@@ -190,6 +191,28 @@ describe('compiler: v-skip', () => {
       expect(generate(root).code).toMatchSnapshot()
     })
 
+    test('v-skip with key', () => {
+      const { root, node } = parseWithSkipTransform(
+        `<div v-skip="nested" key="foo"/>`,
+      )
+      expect(node.type).toBe(NodeTypes.SKIP)
+      expect((node.test as SimpleExpressionNode).content).toBe(`_ctx.nested`)
+      expect(node.consequent.type === NodeTypes.JS_CALL_EXPRESSION).toBe(true)
+      expect(node.alternate.children.length).toBe(1)
+      expect(node.alternate.children[0].type).toBe(NodeTypes.ELEMENT)
+      expect((node.alternate.children[0] as ElementNode).tag).toBe(`div`)
+      expect(
+        (node.alternate.children[0] as ElementNode).props[0],
+      ).toMatchObject({
+        name: 'key',
+        type: NodeTypes.ATTRIBUTE,
+        value: {
+          content: 'foo',
+        },
+      })
+      expect(generate(root).code).toMatchSnapshot()
+    })
+
     test('v-else + v-skip', () => {
       const { root, node } = parseWithSkipTransform(
         `<div v-if="ok"/><div v-else v-skip="nested"/>`,
@@ -338,5 +361,63 @@ describe('compiler: v-skip', () => {
     })
   })
 
-  describe.todo('errors', () => {})
+  describe('errors', () => {
+    test('no expression', () => {
+      const onError = vi.fn()
+      const { node } = parseWithSkipTransform(`<div v-skip/>`, { onError })
+      expect(onError.mock.calls[0]).toMatchObject([
+        {
+          code: ErrorCodes.X_V_SKIP_NO_EXPRESSION,
+          loc: node.loc,
+        },
+      ])
+    })
+
+    test('on <slot>', () => {
+      const onError = vi.fn()
+      parseWithSkipTransform(`<slot v-skip="ok"/>`, { onError })
+      expect(onError.mock.calls[0]).toMatchObject([
+        {
+          code: ErrorCodes.X_V_SKIP_ON_TEMPLATE,
+        },
+      ])
+    })
+
+    test('on <template>', () => {
+      const onError = vi.fn()
+      parseWithSkipTransform(`<template v-skip="ok"/>`, { onError })
+      expect(onError.mock.calls[0]).toMatchObject([
+        {
+          code: ErrorCodes.X_V_SKIP_ON_TEMPLATE,
+        },
+      ])
+    })
+
+    test('on component without default slot', () => {
+      const onError = vi.fn()
+      parseWithSkipTransform(
+        `<Comp v-skip="ok">
+          <template #foo>foo</template>
+        </Comp>`,
+        { onError },
+      )
+      expect(onError.mock.calls[0]).toMatchObject([
+        {
+          code: ErrorCodes.X_V_SKIP_UNEXPECTED_SLOT,
+        },
+      ])
+    })
+
+    test('with v-for', () => {
+      const onError = vi.fn()
+      parseWithSkipTransform(`<div v-for="i in items" v-skip="ok"/>`, {
+        onError,
+      })
+      expect(onError.mock.calls[0]).toMatchObject([
+        {
+          code: ErrorCodes.X_V_SKIP_WITH_V_FOR,
+        },
+      ])
+    })
+  })
 })

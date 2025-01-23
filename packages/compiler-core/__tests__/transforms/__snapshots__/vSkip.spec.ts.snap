@@ -192,6 +192,20 @@ return function render(_ctx, _cache) {
 }"
 `;
 
+exports[`compiler: v-skip > transform > v-skip with key 1`] = `
+"const _Vue = Vue
+
+return function render(_ctx, _cache) {
+  with (_ctx) {
+    const { createCommentVNode: _createCommentVNode, openBlock: _openBlock, createElementBlock: _createElementBlock } = _Vue
+
+    return (_ctx.nested)
+      ? _createCommentVNode("v-skip", true)
+      : (_openBlock(), _createElementBlock("div", { key: "foo" }))
+  }
+}"
+`;
+
 exports[`compiler: v-skip > transform > with component children 1`] = `
 "const _Vue = Vue
 
