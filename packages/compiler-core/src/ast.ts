@@ -556,7 +556,7 @@ export interface DynamicSlotFnProperty extends Property {
 export type BlockCodegenNode = VNodeCall | RenderSlotCall
 
 export interface IfConditionalExpression extends ConditionalExpression {
-  consequent: BlockCodegenNode | MemoExpression | ConditionalExpression
+  consequent: BlockCodegenNode | MemoExpression
   alternate: BlockCodegenNode | IfConditionalExpression | MemoExpression
 }
 

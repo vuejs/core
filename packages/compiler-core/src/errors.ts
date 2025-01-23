@@ -93,6 +93,7 @@ export enum ErrorCodes {
   X_V_SKIP_NO_EXPRESSION,
   X_V_SKIP_ON_TEMPLATE,
   X_V_SKIP_UNEXPECTED_SLOT,
+  X_V_SKIP_WITH_V_FOR,
 
   // generic errors
   X_PREFIX_ID_NOT_SUPPORTED,
@@ -185,6 +186,7 @@ export const errorMessages: Record<ErrorCodes, string> = {
   [ErrorCodes.X_V_SKIP_NO_EXPRESSION]: `v-skip is missing expression.`,
   [ErrorCodes.X_V_SKIP_ON_TEMPLATE]: `v-skip cannot be used on <template> or <slot> tags.`,
   [ErrorCodes.X_V_SKIP_UNEXPECTED_SLOT]: `v-skip directive requires the component to have a default slot without slot props`,
+  [ErrorCodes.X_V_SKIP_WITH_V_FOR]: `v-skip with v-for is not supported.`,
 
   // generic errors
   [ErrorCodes.X_PREFIX_ID_NOT_SUPPORTED]: `"prefixIdentifiers" option is not supported in this build of compiler.`,

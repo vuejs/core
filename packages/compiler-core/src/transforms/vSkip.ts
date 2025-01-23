@@ -15,6 +15,7 @@ import {
 import {
   ErrorCodes,
   createCompilerError,
+  findDir,
   findProp,
   isSlotOutlet,
   isTemplateNode,
@@ -30,6 +31,10 @@ export const transformSkip: NodeTransform = createStructuralDirectiveTransform(
     if (isTemplateNode(node) || isSlotOutlet(node)) {
       context.onError(createCompilerError(ErrorCodes.X_V_SKIP_ON_TEMPLATE, loc))
       return
+    }
+
+    if (findDir(node, 'for')) {
+      context.onWarn(createCompilerError(ErrorCodes.X_V_SKIP_WITH_V_FOR, loc))
     }
 
     if (!dir.exp || !(dir.exp as SimpleExpressionNode).content.trim()) {
