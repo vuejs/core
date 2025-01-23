@@ -4,12 +4,13 @@ describe('ssr: v-skip', () => {
   test('basic', () => {
     expect(compile(`<div v-skip="foo"/>`).code).toMatchInlineSnapshot(`
       "const { createCommentVNode: _createCommentVNode } = require("vue")
+      const { ssrRenderAttrs: _ssrRenderAttrs } = require("vue/server-renderer")
 
       return function ssrRender(_ctx, _push, _parent, _attrs) {
         if (_ctx.foo) {
           _createCommentVNode("v-skip", true)
         } else {
-          _push(\`<div></div>\`)
+          _push(\`<div\${_ssrRenderAttrs(_attrs)}></div>\`)
         }
       }"
     `)
@@ -18,36 +19,38 @@ describe('ssr: v-skip', () => {
   test('with text children', () => {
     expect(compile(`<div v-skip="foo">hello</div>`).code)
       .toMatchInlineSnapshot(`
-      "
-      return function ssrRender(_ctx, _push, _parent, _attrs) {
-        if (_ctx.foo) {
-          _push(\`<!--[-->hello<!--]-->\`)
-        } else {
-          _push(\`<div>hello</div>\`)
-        }
-      }"
-    `)
+        "const { ssrRenderAttrs: _ssrRenderAttrs } = require("vue/server-renderer")
+
+        return function ssrRender(_ctx, _push, _parent, _attrs) {
+          if (_ctx.foo) {
+            _push(\`<!--[-->hello<!--]-->\`)
+          } else {
+            _push(\`<div\${_ssrRenderAttrs(_attrs)}>hello</div>\`)
+          }
+        }"
+      `)
   })
 
   test('with element children', () => {
     expect(compile(`<div v-skip="foo"><span/></div>`).code)
       .toMatchInlineSnapshot(`
-      "
-      return function ssrRender(_ctx, _push, _parent, _attrs) {
-        if (_ctx.foo) {
-          _push(\`<span></span>\`)
-        } else {
-          _push(\`<div><span></span></div>\`)
-        }
-      }"
-    `)
+        "const { ssrRenderAttrs: _ssrRenderAttrs } = require("vue/server-renderer")
+
+        return function ssrRender(_ctx, _push, _parent, _attrs) {
+          if (_ctx.foo) {
+            _push(\`<span></span>\`)
+          } else {
+            _push(\`<div\${_ssrRenderAttrs(_attrs)}><span></span></div>\`)
+          }
+        }"
+      `)
   })
 
   test('with component children', () => {
     expect(compile(`<div v-skip="foo"><MyComponent/></div>`).code)
       .toMatchInlineSnapshot(`
         "const { resolveComponent: _resolveComponent } = require("vue")
-        const { ssrRenderComponent: _ssrRenderComponent } = require("vue/server-renderer")
+        const { ssrRenderComponent: _ssrRenderComponent, ssrRenderAttrs: _ssrRenderAttrs } = require("vue/server-renderer")
 
         return function ssrRender(_ctx, _push, _parent, _attrs) {
           const _component_MyComponent = _resolveComponent("MyComponent")
@@ -55,7 +58,7 @@ describe('ssr: v-skip', () => {
           if (_ctx.foo) {
             _push(_ssrRenderComponent(_component_MyComponent, null, null, _parent))
           } else {
-            _push(\`<div>\`)
+            _push(\`<div\${_ssrRenderAttrs(_attrs)}>\`)
             _push(_ssrRenderComponent(_component_MyComponent, null, null, _parent))
             _push(\`</div>\`)
           }
@@ -66,42 +69,44 @@ describe('ssr: v-skip', () => {
   test('with multiple children', () => {
     expect(compile(`<div v-skip="foo"><span/><span/></div>`).code)
       .toMatchInlineSnapshot(`
-      "
-      return function ssrRender(_ctx, _push, _parent, _attrs) {
-        if (_ctx.foo) {
-          _push(\`<!--[--><span></span><span></span><!--]-->\`)
-        } else {
-          _push(\`<div><span></span><span></span></div>\`)
-        }
-      }"
-    `)
+        "const { ssrRenderAttrs: _ssrRenderAttrs } = require("vue/server-renderer")
+
+        return function ssrRender(_ctx, _push, _parent, _attrs) {
+          if (_ctx.foo) {
+            _push(\`<!--[--><span></span><span></span><!--]-->\`)
+          } else {
+            _push(\`<div\${_ssrRenderAttrs(_attrs)}><span></span><span></span></div>\`)
+          }
+        }"
+      `)
   })
 
   test('nested v-skip', () => {
     expect(compile(`<div v-skip="foo"><div v-skip="bar"/></div>`).code)
       .toMatchInlineSnapshot(`
-      "const { createCommentVNode: _createCommentVNode } = require("vue")
+        "const { createCommentVNode: _createCommentVNode } = require("vue")
+        const { ssrRenderAttrs: _ssrRenderAttrs } = require("vue/server-renderer")
 
-      return function ssrRender(_ctx, _push, _parent, _attrs) {
-        if (_ctx.foo) {
-          _push(\`<!--[-->\`)
-          if (_ctx.bar) {
-            _createCommentVNode("v-skip", true)
+        return function ssrRender(_ctx, _push, _parent, _attrs) {
+          if (_ctx.foo) {
+            _push(\`<!--[-->\`)
+            if (_ctx.bar) {
+              _createCommentVNode("v-skip", true)
+            } else {
+              _push(\`<div></div>\`)
+            }
+            _push(\`<!--]-->\`)
           } else {
-            _push(\`<div></div>\`)
+            _push(\`<div\${_ssrRenderAttrs(_attrs)}>\`)
+            if (_ctx.bar) {
+              _createCommentVNode("v-skip", true)
+            } else {
+              _push(\`<div></div>\`)
+            }
+            _push(\`</div>\`)
           }
-          _push(\`<!--]-->\`)
-        } else {
-          _push(\`<div>\`)
-          if (_ctx.bar) {
-            _createCommentVNode("v-skip", true)
-          } else {
-            _push(\`<div></div>\`)
-          }
-          _push(\`</div>\`)
-        }
-      }"
-    `)
+        }"
+      `)
   })
 
   test('v-if + v-skip', () => {
@@ -126,15 +131,16 @@ describe('ssr: v-skip', () => {
     `)
   })
 
-  test.todo('with key', () => {
+  test('with key', () => {
     expect(compile(`<div v-skip="ok" key="foo"/>`).code).toMatchInlineSnapshot(`
-      "const { createCommentVNode: _createCommentVNode } = require("vue")
+      "const { createCommentVNode: _createCommentVNode, mergeProps: _mergeProps } = require("vue")
+      const { ssrRenderAttrs: _ssrRenderAttrs } = require("vue/server-renderer")
 
       return function ssrRender(_ctx, _push, _parent, _attrs) {
         if (_ctx.ok) {
           _createCommentVNode("v-skip", true)
         } else {
-          _push(\`<div></div>\`)
+          _push(\`<div\${_ssrRenderAttrs(_mergeProps({ key: "foo" }, _attrs))}></div>\`)
         }
       }"
     `)
@@ -198,7 +204,7 @@ describe('ssr: v-skip', () => {
         if (_ctx.foo) {
           _createCommentVNode("v-skip", true)
         } else {
-          _push(_ssrRenderComponent(_component_Comp, null, null, _parent))
+          _push(_ssrRenderComponent(_component_Comp, _attrs, null, _parent))
         }
       }"
     `)
@@ -215,7 +221,7 @@ describe('ssr: v-skip', () => {
         if (_ctx.ok) {
           _push(\`<!--[-->foo<!--]-->\`)
         } else {
-          _push(_ssrRenderComponent(_component_Comp, null, {
+          _push(_ssrRenderComponent(_component_Comp, _attrs, {
             default: _withCtx((_, _push, _parent, _scopeId) => {
               if (_push) {
                 _push(\`foo\`)
@@ -250,7 +256,7 @@ describe('ssr: v-skip', () => {
         if (_ctx.ok) {
           _push(\`<!--[-->default<!--]-->\`)
         } else {
-          _push(_ssrRenderComponent(_component_Comp, null, {
+          _push(_ssrRenderComponent(_component_Comp, _attrs, {
             default: _withCtx((_, _push, _parent, _scopeId) => {
               if (_push) {
                 _push(\`default\`)
@@ -295,7 +301,7 @@ describe('ssr: v-skip', () => {
         if (_ctx.ok) {
           _push(\`<!--[--><span></span><div></div><!--]-->\`)
         } else {
-          _push(_ssrRenderComponent(_component_Comp, null, {
+          _push(_ssrRenderComponent(_component_Comp, _attrs, {
             foo: _withCtx((_, _push, _parent, _scopeId) => {
               if (_push) {
                 _push(\`foo\`)
@@ -341,7 +347,7 @@ describe('ssr: v-skip', () => {
         if (_ctx.ok) {
           _ssrRenderSlot(_ctx.$slots, "default", {}, null, _push, _parent, _scopeId)
         } else {
-          _ssrRenderVNode(_push, _createVNode(_resolveDynamicComponent(_ctx.Comp), null, {
+          _ssrRenderVNode(_push, _createVNode(_resolveDynamicComponent(_ctx.Comp), _attrs, {
             default: _withCtx((_, _push, _parent, _scopeId) => {
               if (_push) {
                 _ssrRenderSlot(_ctx.$slots, "default", {}, null, _push, _parent, _scopeId)
