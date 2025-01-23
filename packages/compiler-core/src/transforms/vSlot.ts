@@ -117,7 +117,7 @@ export function buildSlots(
   node: ComponentNode,
   context: TransformContext,
   buildSlotFn: SlotFnBuilder = buildClientSlotFn,
-  useCache: boolean = true,
+  useCache: boolean = false,
 ): {
   slots: SlotsExpression
   hasDynamicSlots: boolean

@@ -176,6 +176,8 @@ export const transformElement: NodeTransform = (node, context) => {
         const { slots, hasDynamicSlots } = buildSlots(
           node as ComponentNode,
           context,
+          undefined,
+          true,
         )
         vnodeChildren = slots
         if (hasDynamicSlots) {

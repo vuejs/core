@@ -87,7 +87,7 @@ export function processSkip(
   // for components, extract default slot without props
   // if not found, throw an error
   if (node.tagType === ElementTypes.COMPONENT) {
-    const { slots } = buildSlots(node, context)
+    const { slots } = buildSlots(node, context, undefined, true)
     if (slots.type === NodeTypes.JS_OBJECT_EXPRESSION) {
       const prop = slots.properties.find(
         p =>
