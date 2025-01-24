@@ -413,7 +413,7 @@ function hasForwardedSlots(children: TemplateChildNode[]): boolean {
         if (hasForwardedSlots(child.branches)) return true
         break
       case NodeTypes.SKIP:
-        const consequent = child.consequent
+        const { consequent } = child
         if (
           (consequent.type === NodeTypes.IF_BRANCH &&
             hasForwardedSlots(consequent.children)) ||
