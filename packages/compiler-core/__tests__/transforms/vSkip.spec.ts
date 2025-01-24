@@ -408,6 +408,21 @@ describe('compiler: v-skip', () => {
       ])
     })
 
+    test('on component with default slot and slot props', () => {
+      const onError = vi.fn()
+      parseWithSkipTransform(
+        `<Comp v-skip="ok">
+          <template #default="foo">foo</template>
+        </Comp>`,
+        { onError },
+      )
+      expect(onError.mock.calls[0]).toMatchObject([
+        {
+          code: ErrorCodes.X_V_SKIP_UNEXPECTED_SLOT,
+        },
+      ])
+    })
+
     test('with v-for', () => {
       const onError = vi.fn()
       parseWithSkipTransform(`<div v-for="i in items" v-skip="ok"/>`, {
