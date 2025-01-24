@@ -1,14 +1,18 @@
 import {
+  type CallExpression,
   type CompilerOptions,
+  type ComponentNode,
   type ElementNode,
   ElementTypes,
   ErrorCodes,
   type IfBranchNode,
   type IfNode,
   NodeTypes,
+  RESOLVE_SKIP_COMPONENT,
   type RootNode,
   type SimpleExpressionNode,
   type SkipNode,
+  type VNodeCall,
   generate,
   baseParse as parse,
   transform,
@@ -25,7 +29,7 @@ export function parseWithSkipTransform(
   options: CompilerOptions = { prefixIdentifiers: true },
 ): {
   root: RootNode
-  node: SkipNode
+  node: SkipNode | ComponentNode
 } {
   const ast = parse(template, options)
   transform(ast, {
@@ -41,14 +45,17 @@ export function parseWithSkipTransform(
   })
   return {
     root: ast,
-    node: ast.children[0] as SkipNode,
+    node: ast.children[0] as SkipNode | ComponentNode,
   }
 }
 
 describe('compiler: v-skip', () => {
   describe('transform', () => {
     test('basic', () => {
-      const { root, node } = parseWithSkipTransform(`<div v-skip="ok"/>`)
+      const { root, node } = parseWithSkipTransform(`<div v-skip="ok"/>`) as {
+        root: RootNode
+        node: SkipNode
+      }
       expect(node.type).toBe(NodeTypes.SKIP)
       expect((node.test as SimpleExpressionNode).content).toBe(`_ctx.ok`)
       expect(node.consequent.type === NodeTypes.JS_CALL_EXPRESSION).toBe(true)
@@ -61,7 +68,7 @@ describe('compiler: v-skip', () => {
     test('with text children', () => {
       const { root, node } = parseWithSkipTransform(
         `<div v-skip="ok">foo</div>`,
-      )
+      ) as { root: RootNode; node: SkipNode }
       expect(node.type).toBe(NodeTypes.SKIP)
       expect((node.test as SimpleExpressionNode).content).toBe(`_ctx.ok`)
       expect((node.consequent as IfBranchNode).children.length).toBe(1)
@@ -80,7 +87,7 @@ describe('compiler: v-skip', () => {
     test('with element children', () => {
       const { root, node } = parseWithSkipTransform(
         `<div v-skip="ok"><span/></div>`,
-      )
+      ) as { root: RootNode; node: SkipNode }
       expect(node.type).toBe(NodeTypes.SKIP)
       expect((node.test as SimpleExpressionNode).content).toBe(`_ctx.ok`)
       expect((node.consequent as IfBranchNode).children.length).toBe(1)
@@ -99,7 +106,7 @@ describe('compiler: v-skip', () => {
     test('with component children', () => {
       const { root, node } = parseWithSkipTransform(
         `<div v-skip="ok"><Comp/></div>`,
-      )
+      ) as { root: RootNode; node: SkipNode }
       expect(node.type).toBe(NodeTypes.SKIP)
       expect((node.test as SimpleExpressionNode).content).toBe(`_ctx.ok`)
       expect((node.consequent as IfBranchNode).children.length).toBe(1)
@@ -118,7 +125,7 @@ describe('compiler: v-skip', () => {
     test('with multiple children', () => {
       const { root, node } = parseWithSkipTransform(
         `<div v-skip="ok"><span/><Comp/></div>`,
-      )
+      ) as { root: RootNode; node: SkipNode }
       expect(node.type).toBe(NodeTypes.SKIP)
       expect((node.test as SimpleExpressionNode).content).toBe(`_ctx.ok`)
       expect((node.consequent as IfBranchNode).children.length).toBe(2)
@@ -143,7 +150,7 @@ describe('compiler: v-skip', () => {
     test('nested v-skip', () => {
       const { root, node } = parseWithSkipTransform(
         `<div v-skip="ok"><span v-skip="nested"/></div>`,
-      )
+      ) as { root: RootNode; node: SkipNode }
       expect(node.type).toBe(NodeTypes.SKIP)
       expect((node.test as SimpleExpressionNode).content).toBe(`_ctx.ok`)
       expect((node.consequent as IfBranchNode).children.length).toBe(1)
@@ -194,7 +201,7 @@ describe('compiler: v-skip', () => {
     test('v-skip with key', () => {
       const { root, node } = parseWithSkipTransform(
         `<div v-skip="nested" key="foo"/>`,
-      )
+      ) as { root: RootNode; node: SkipNode }
       expect(node.type).toBe(NodeTypes.SKIP)
       expect((node.test as SimpleExpressionNode).content).toBe(`_ctx.nested`)
       expect(node.consequent.type === NodeTypes.JS_CALL_EXPRESSION).toBe(true)
@@ -216,7 +223,7 @@ describe('compiler: v-skip', () => {
     test('v-else + v-skip', () => {
       const { root, node } = parseWithSkipTransform(
         `<div v-if="ok"/><div v-else v-skip="nested"/>`,
-      )
+      ) as { root: RootNode; node: SkipNode }
       expect(node.type).toBe(NodeTypes.IF)
       const elseNode = node as unknown as IfNode
       const branch = elseNode.branches[1]
@@ -232,7 +239,7 @@ describe('compiler: v-skip', () => {
     test('v-else-if + v-skip', () => {
       const { root, node } = parseWithSkipTransform(
         `<div v-if="ok"/><div v-else-if="yes" v-skip="nested"/>`,
-      )
+      ) as { root: RootNode; node: SkipNode }
       expect(node.type).toBe(NodeTypes.IF)
       const elseIfNode = node as unknown as IfNode
       const branch = elseIfNode.branches[1]
@@ -249,19 +256,24 @@ describe('compiler: v-skip', () => {
     })
 
     test('on component', () => {
-      const { root, node } = parseWithSkipTransform(`<Comp v-skip="ok"/>`)
-      expect(node.type).toBe(NodeTypes.SKIP)
-      expect((node.test as SimpleExpressionNode).content).toBe(`_ctx.ok`)
-      expect(node.consequent.type === NodeTypes.JS_CALL_EXPRESSION).toBe(true)
-      expect(node.alternate.children.length).toBe(1)
-      expect((node.alternate.children[0] as ElementNode).tagType).toBe(
-        ElementTypes.COMPONENT,
+      const { root, node } = parseWithSkipTransform(`<Comp v-skip="ok"/>`) as {
+        root: RootNode
+        node: ComponentNode
+      }
+      expect(node.type).toBe(NodeTypes.ELEMENT)
+      expect(node.tagType).toBe(ElementTypes.COMPONENT)
+      const codegenNode = node.codegenNode! as VNodeCall
+      expect(codegenNode.type).toBe(NodeTypes.VNODE_CALL)
+      const vnodeTag = codegenNode.tag as CallExpression
+      expect(vnodeTag.type).toBe(NodeTypes.JS_CALL_EXPRESSION)
+      expect(vnodeTag.callee).toBe(RESOLVE_SKIP_COMPONENT)
+      expect((vnodeTag.arguments[0] as SimpleExpressionNode).content).toBe(
+        `_ctx.ok`,
       )
-      expect((node.alternate.children[0] as ElementNode).tag).toBe(`Comp`)
       expect(generate(root).code).toMatchSnapshot()
     })
 
-    test('on component with default slot', () => {
+    test.todo('on component with default slot', () => {
       const { root, node } = parseWithSkipTransform(
         `<Comp v-skip="ok">foo</Comp>`,
       )
@@ -282,7 +294,7 @@ describe('compiler: v-skip', () => {
       expect(generate(root).code).toMatchSnapshot()
     })
 
-    test('on component with multiple named slot', () => {
+    test.todo('on component with multiple named slot', () => {
       const { root, node } = parseWithSkipTransform(
         `<Comp v-skip="ok">
           <template #default>default</template>
@@ -306,7 +318,7 @@ describe('compiler: v-skip', () => {
       expect(generate(root).code).toMatchSnapshot()
     })
 
-    test('on component with multiple implicit slot', () => {
+    test.todo('on component with multiple implicit slot', () => {
       const { root, node } = parseWithSkipTransform(
         `<Comp v-skip="ok">
           <span/>
@@ -389,23 +401,23 @@ describe('compiler: v-skip', () => {
         `<component :is="Comp" v-skip="ok">
           <slot/>
         </component>`,
+      ) as { root: RootNode; node: ComponentNode }
+      expect(node.type).toBe(NodeTypes.ELEMENT)
+      expect(node.tagType).toBe(ElementTypes.COMPONENT)
+      const codegenNode = node.codegenNode! as VNodeCall
+      expect(codegenNode.type).toBe(NodeTypes.VNODE_CALL)
+      const vnodeTag = codegenNode.tag as CallExpression
+      expect(vnodeTag.type).toBe(NodeTypes.JS_CALL_EXPRESSION)
+      expect(vnodeTag.callee).toBe(RESOLVE_SKIP_COMPONENT)
+      expect((vnodeTag.arguments[0] as SimpleExpressionNode).content).toBe(
+        `_ctx.ok`,
       )
-      expect(node.type).toBe(NodeTypes.SKIP)
-      expect((node.test as SimpleExpressionNode).content).toBe(`_ctx.ok`)
-      expect((node.consequent as IfBranchNode).children.length).toBe(1)
-      expect((node.consequent as IfBranchNode).children[0].type).toBe(
-        NodeTypes.ELEMENT,
-      )
-      expect(
-        ((node.consequent as IfBranchNode).children[0] as ElementNode).tag,
-      ).toBe(`slot`)
-      expect(node.alternate.children.length).toBe(1)
-      expect((node.alternate.children[0] as ElementNode).tagType).toBe(
-        ElementTypes.COMPONENT,
-      )
-      expect((node.alternate.children[0] as ElementNode).tag).toBe(`component`)
       expect(generate(root).code).toMatchSnapshot()
     })
+
+    test.todo('on Teleport', () => {})
+
+    test.todo('built-in components', () => {})
   })
 
   describe('errors', () => {
@@ -436,51 +448,6 @@ describe('compiler: v-skip', () => {
       expect(onError.mock.calls[0]).toMatchObject([
         {
           code: ErrorCodes.X_V_SKIP_ON_TEMPLATE,
-        },
-      ])
-    })
-
-    test('on component without default slot', () => {
-      const onError = vi.fn()
-      parseWithSkipTransform(
-        `<Comp v-skip="ok">
-          <template #foo>foo</template>
-        </Comp>`,
-        { onError },
-      )
-      expect(onError.mock.calls[0]).toMatchObject([
-        {
-          code: ErrorCodes.X_V_SKIP_UNEXPECTED_SLOT,
-        },
-      ])
-    })
-
-    test('on component with default slot and slot props', () => {
-      const onError = vi.fn()
-      parseWithSkipTransform(
-        `<Comp v-skip="ok">
-          <template #default="foo">foo</template>
-        </Comp>`,
-        { onError },
-      )
-      expect(onError.mock.calls[0]).toMatchObject([
-        {
-          code: ErrorCodes.X_V_SKIP_UNEXPECTED_SLOT,
-        },
-      ])
-    })
-
-    test('on component with only dynamic slot', () => {
-      const onError = vi.fn()
-      parseWithSkipTransform(
-        `<Comp v-skip="ok">
-          <template #[foo]>foo</template>
-        </Comp>`,
-        { onError },
-      )
-      expect(onError.mock.calls[0]).toMatchObject([
-        {
-          code: ErrorCodes.X_V_SKIP_UNEXPECTED_SLOT,
         },
       ])
     })

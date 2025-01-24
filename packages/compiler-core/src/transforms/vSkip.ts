@@ -38,7 +38,10 @@ export const transformSkip: NodeTransform = createStructuralDirectiveTransform(
     return processSkip(node, dir, context, (skipNode?: SkipNode) => {
       return () => {
         const codegenNode = node.codegenNode!
-        if (node.tagType === ElementTypes.COMPONENT) {
+        if (
+          node.tagType === ElementTypes.COMPONENT &&
+          node.tag !== 'Teleport'
+        ) {
           if (codegenNode.type === NodeTypes.VNODE_CALL) {
             codegenNode.tag = getVNodeTag(
               context,
@@ -107,7 +110,10 @@ export function processSkip(
   }
 
   let skipNode: SkipNode | undefined
-  if (node.tagType === ElementTypes.ELEMENT) {
+  if (
+    node.tagType === ElementTypes.ELEMENT ||
+    (node.tagType === ElementTypes.COMPONENT && node.tag === 'Teleport')
+  ) {
     const children = node.children
     // if children is empty, create comment node
     const consequent =

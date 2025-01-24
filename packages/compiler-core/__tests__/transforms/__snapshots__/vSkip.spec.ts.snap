@@ -36,6 +36,37 @@ return function render(_ctx, _cache) {
 }"
 `;
 
+exports[`compiler: v-skip > transform > on component 1`] = `
+"const _Vue = Vue
+
+return function render(_ctx, _cache) {
+  with (_ctx) {
+    const { resolveComponent: _resolveComponent, resolveSkipComponent: _resolveSkipComponent, openBlock: _openBlock, createBlock: _createBlock } = _Vue
+
+    const _component_Comp = _resolveComponent("Comp")
+
+    return (_openBlock(), _createBlock(_resolveSkipComponent(_ctx.ok, _component_Comp)))
+  }
+}"
+`;
+
+exports[`compiler: v-skip > transform > on dynamic component 1`] = `
+"const _Vue = Vue
+
+return function render(_ctx, _cache) {
+  with (_ctx) {
+    const { renderSlot: _renderSlot, resolveDynamicComponent: _resolveDynamicComponent, withCtx: _withCtx, openBlock: _openBlock, createBlock: _createBlock, resolveSkipComponent: _resolveSkipComponent } = _Vue
+
+    return (_openBlock(), _createBlock(_resolveSkipComponent(_ctx.ok, _resolveDynamicComponent(_ctx.Comp)), null, {
+      default: _withCtx(() => [
+        _renderSlot(_ctx.$slots, "default")
+      ]),
+      _: 3 /* FORWARDED */
+    }))
+  }
+}"
+`;
+
 exports[`compiler: v-skip > transform > v-else + v-skip 1`] = `
 "const _Vue = Vue
 

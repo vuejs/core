@@ -11,6 +11,7 @@ import { warn } from '../warning'
 import type { VNodeTypes } from '../vnode'
 import {
   type ComponentPublicInstance,
+  createCommentVNode,
   defineComponent,
   renderSlot,
 } from '@vue/runtime-core'
@@ -156,7 +157,9 @@ export function resolveSkipComponent(
     ? _comp ||
         (_comp = defineComponent({
           render(this: ComponentPublicInstance) {
-            return renderSlot(this.$slots, 'default')
+            return renderSlot(this.$slots, 'default', undefined, () => [
+              createCommentVNode('v-skip'),
+            ])
           },
         }))
     : Comp

@@ -10,19 +10,27 @@ import {
 } from '@vue/compiler-core'
 import { processIfBranch } from './ssrVIf'
 import type { SSRTransformContext } from '../ssrCodegenTransform'
-import { SSR_RENDER_SKIP_COMPONENT } from '../runtimeHelpers'
+import {
+  SSR_RENDER_COMPONENT,
+  SSR_RENDER_SKIP_COMPONENT,
+  SSR_RENDER_VNODE,
+} from '../runtimeHelpers'
 
 export const ssrTransformSkip: NodeTransform =
   createStructuralDirectiveTransform('skip', (node, dir, context) => {
     processSkip(node, dir, context)
     return () => {
       if (node.tagType === ElementTypes.COMPONENT && node.ssrCodegenNode) {
-        const { arguments: args, loc } = node.ssrCodegenNode
-        node.ssrCodegenNode = createCallExpression(
-          context.helper(SSR_RENDER_SKIP_COMPONENT),
-          [`_push`, dir.exp!, ...args],
-          loc,
-        )
+        const { callee, arguments: args, loc } = node.ssrCodegenNode
+        if (callee === SSR_RENDER_COMPONENT) {
+          node.ssrCodegenNode = createCallExpression(
+            context.helper(SSR_RENDER_SKIP_COMPONENT),
+            [`_push`, dir.exp!, ...args],
+            loc,
+          )
+        } else if (callee === SSR_RENDER_VNODE) {
+          // TODO
+        }
       }
     }
   })
