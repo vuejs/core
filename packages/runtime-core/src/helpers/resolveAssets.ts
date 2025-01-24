@@ -9,6 +9,11 @@ import type { Directive } from '../directives'
 import { camelize, capitalize, isString } from '@vue/shared'
 import { warn } from '../warning'
 import type { VNodeTypes } from '../vnode'
+import {
+  type ComponentPublicInstance,
+  defineComponent,
+  renderSlot,
+} from '@vue/runtime-core'
 
 export const COMPONENTS = 'components'
 export const DIRECTIVES = 'directives'
@@ -137,4 +142,22 @@ function resolve(registry: Record<string, any> | undefined, name: string) {
       registry[camelize(name)] ||
       registry[capitalize(camelize(name))])
   )
+}
+
+let _comp: ConcreteComponent | undefined
+/**
+ * @private
+ */
+export function resolveSkipComponent(
+  isSkip: boolean,
+  Comp: ConcreteComponent,
+): ConcreteComponent {
+  return isSkip
+    ? _comp ||
+        (_comp = defineComponent({
+          render(this: ComponentPublicInstance) {
+            return renderSlot(this.$slots, 'default')
+          },
+        }))
+    : Comp
 }

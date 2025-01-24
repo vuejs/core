@@ -2,11 +2,12 @@ import {
   type DirectiveNode,
   type ElementNode,
   ElementTypes,
+  type ExpressionNode,
   type IfBranchNode,
   NodeTypes,
   type SimpleExpressionNode,
   type SkipNode,
-  type TemplateChildNode,
+  type VNodeCall,
   createCallExpression,
   createConditionalExpression,
   createSimpleExpression,
@@ -19,7 +20,8 @@ import {
 import {
   CREATE_COMMENT,
   ErrorCodes,
-  buildSlots,
+  RESOLVE_SKIP_COMPONENT,
+  WITH_MEMO,
   createCompilerError,
   findDir,
   findProp,
@@ -33,19 +35,40 @@ import { cloneLoc } from '../parser'
 export const transformSkip: NodeTransform = createStructuralDirectiveTransform(
   'skip',
   (node, dir, context) => {
-    return processSkip(node, dir, context, skipNode => {
+    return processSkip(node, dir, context, (skipNode?: SkipNode) => {
       return () => {
-        const { consequent, alternate, test } = skipNode
-        const consequentNode =
-          consequent.type === NodeTypes.IF_BRANCH
-            ? createCodegenNodeForBranch(consequent, 0, context)
-            : consequent
+        const codegenNode = node.codegenNode!
+        if (node.tagType === ElementTypes.COMPONENT) {
+          if (codegenNode.type === NodeTypes.VNODE_CALL) {
+            codegenNode.tag = getVNodeTag(
+              context,
+              dir.exp!,
+              codegenNode.tag as string,
+            )
+          } else if (
+            codegenNode.type === NodeTypes.JS_CALL_EXPRESSION &&
+            codegenNode.callee === WITH_MEMO
+          ) {
+            const vnodeCall = codegenNode.arguments[1].returns as VNodeCall
+            vnodeCall.tag = getVNodeTag(
+              context,
+              dir.exp!,
+              vnodeCall.tag as string,
+            )
+          }
+        } else {
+          const { consequent, alternate, test } = skipNode!
+          const consequentNode =
+            consequent.type === NodeTypes.IF_BRANCH
+              ? createCodegenNodeForBranch(consequent, 0, context)
+              : consequent
 
-        skipNode.codegenNode = createConditionalExpression(
-          test,
-          consequentNode,
-          createCodegenNodeForBranch(alternate, 1, context),
-        )
+          skipNode!.codegenNode = createConditionalExpression(
+            test,
+            consequentNode,
+            createCodegenNodeForBranch(alternate, 1, context),
+          )
+        }
       }
     })
   },
@@ -55,7 +78,7 @@ export function processSkip(
   node: ElementNode,
   dir: DirectiveNode,
   context: TransformContext,
-  processCodegen?: (skipNode: SkipNode) => () => void,
+  processCodegen?: (skipNode?: SkipNode) => () => void,
 ): (() => void) | undefined {
   const loc = dir.exp ? dir.exp.loc : node.loc
   if (
@@ -83,64 +106,53 @@ export function processSkip(
     validateBrowserExpression(dir.exp as SimpleExpressionNode, context)
   }
 
-  let children: TemplateChildNode[] = []
-  // for components, extract default slot without props
-  // if not found, throw an error
-  if (node.tagType === ElementTypes.COMPONENT) {
-    const { slots } = buildSlots(node, context, undefined, true)
-    if (slots.type === NodeTypes.JS_OBJECT_EXPRESSION) {
-      const prop = slots.properties.find(
-        p =>
-          p.type === NodeTypes.JS_PROPERTY &&
-          p.key.type === NodeTypes.SIMPLE_EXPRESSION &&
-          p.key.content === 'default' &&
-          p.value.params === undefined,
-      )
-      if (prop) {
-        children = prop.value.returns as TemplateChildNode[]
-      } else {
-        context.onError(
-          createCompilerError(ErrorCodes.X_V_SKIP_UNEXPECTED_SLOT, loc),
-        )
-      }
+  let skipNode: SkipNode | undefined
+  if (node.tagType === ElementTypes.ELEMENT) {
+    const children = node.children
+    // if children is empty, create comment node
+    const consequent =
+      children.length !== 0
+        ? ({
+            type: NodeTypes.IF_BRANCH,
+            loc: node.loc,
+            condition: undefined,
+            children,
+            userKey: findProp(node, `key`),
+          } as IfBranchNode)
+        : createCallExpression(context.helper(CREATE_COMMENT), [
+            __DEV__ ? '"v-skip"' : '""',
+            'true',
+          ])
+
+    const alternate: IfBranchNode = {
+      type: NodeTypes.IF_BRANCH,
+      loc: node.loc,
+      condition: undefined,
+      children: [node],
+      userKey: findProp(node, `key`),
     }
-  }
-  // for plain elements, take all children
-  else {
-    children = node.children
+
+    skipNode = {
+      type: NodeTypes.SKIP,
+      loc: cloneLoc(node.loc),
+      test: dir.exp,
+      consequent,
+      alternate,
+      newline: true,
+    }
+    context.replaceNode(skipNode)
   }
 
-  // if children is empty, create comment node
-  const consequent =
-    children.length !== 0
-      ? ({
-          type: NodeTypes.IF_BRANCH,
-          loc: node.loc,
-          condition: undefined,
-          children,
-          userKey: findProp(node, `key`),
-        } as IfBranchNode)
-      : createCallExpression(context.helper(CREATE_COMMENT), [
-          __DEV__ ? '"v-skip"' : '""',
-          'true',
-        ])
-
-  const alternate: IfBranchNode = {
-    type: NodeTypes.IF_BRANCH,
-    loc: node.loc,
-    condition: undefined,
-    children: [node],
-    userKey: findProp(node, `key`),
-  }
-
-  const skipNode: SkipNode = {
-    type: NodeTypes.SKIP,
-    loc: cloneLoc(node.loc),
-    test: dir.exp,
-    consequent,
-    alternate,
-    newline: true,
-  }
-  context.replaceNode(skipNode)
   if (processCodegen) return processCodegen(skipNode)
+}
+
+function getVNodeTag(
+  context: TransformContext,
+  exp: ExpressionNode,
+  tag: string,
+) {
+  return createCallExpression(context.helper(RESOLVE_SKIP_COMPONENT), [
+    exp,
+    tag,
+  ])
 }

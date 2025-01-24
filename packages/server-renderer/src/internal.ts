@@ -1,6 +1,7 @@
 // internal runtime helpers
 export { renderVNode as ssrRenderVNode } from './render'
 export { ssrRenderComponent } from './helpers/ssrRenderComponent'
+export { ssrRenderSkipComponent } from './helpers/ssrRenderSkipComponent'
 export { ssrRenderSlot, ssrRenderSlotInner } from './helpers/ssrRenderSlot'
 export { ssrRenderTeleport } from './helpers/ssrRenderTeleport'
 export {
