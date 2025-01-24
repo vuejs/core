@@ -16,6 +16,10 @@ export class EffectScope implements Subscriber {
   flags: number = 0
 
   /**
+   * @internal track `on` calls, allow `on` call multiple times
+   */
+  private _on = 0
+  /**
    * @internal
    */
   effects: ReactiveEffect[] = []
@@ -102,12 +106,16 @@ export class EffectScope implements Subscriber {
     }
   }
 
+  prevScope: EffectScope | undefined
   /**
    * This should only be called on non-detached scopes
    * @internal
    */
   on(): void {
-    activeEffectScope = this
+    if (++this._on === 1) {
+      this.prevScope = activeEffectScope
+      activeEffectScope = this
+    }
   }
 
   /**
@@ -115,7 +123,10 @@ export class EffectScope implements Subscriber {
    * @internal
    */
   off(): void {
-    activeEffectScope = this.parent
+    if (this._on > 0 && --this._on === 0) {
+      activeEffectScope = this.prevScope
+      this.prevScope = undefined
+    }
   }
 
   stop(fromParent?: boolean): void {
