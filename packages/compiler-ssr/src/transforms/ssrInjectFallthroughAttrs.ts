@@ -67,11 +67,14 @@ export const ssrInjectFallthroughAttrs: NodeTransform = (node, context) => {
       }
     }
     injectFallthroughAttrs(node.children[0])
-  } else if (node.type === NodeTypes.SKIP) {
-    const children = filterChild(node.alternate)
-    children.forEach(injectFallthroughAttrs)
   } else if (hasSingleChild(parent)) {
-    injectFallthroughAttrs(node)
+    if (node.type === NodeTypes.SKIP) {
+      // for skip node, inject fallthrough attrs to the alternate branch
+      const children = filterChild(node.alternate)
+      injectFallthroughAttrs(children[0])
+    } else {
+      injectFallthroughAttrs(node)
+    }
   }
 }
 

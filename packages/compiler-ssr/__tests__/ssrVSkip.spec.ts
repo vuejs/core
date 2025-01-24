@@ -363,4 +363,39 @@ describe('ssr: v-skip', () => {
       }"
     `)
   })
+
+  test('fragment with component v-skip', () => {
+    expect(
+      compile(`
+      <div></div>
+      <Comp v-skip="ok"><span/></Comp>
+    `).code,
+    ).toMatchInlineSnapshot(`
+        "const { withCtx: _withCtx, resolveComponent: _resolveComponent, createVNode: _createVNode } = require("vue")
+        const { ssrRenderComponent: _ssrRenderComponent } = require("vue/server-renderer")
+
+        return function ssrRender(_ctx, _push, _parent, _attrs) {
+          const _component_Comp = _resolveComponent("Comp")
+
+          _push(\`<!--[--><div></div>\`)
+          if (_ctx.ok) {
+            _push(\`<span></span>\`)
+          } else {
+            _push(_ssrRenderComponent(_component_Comp, null, {
+              default: _withCtx((_, _push, _parent, _scopeId) => {
+                if (_push) {
+                  _push(\`<span\${_scopeId}></span>\`)
+                } else {
+                  return [
+                    _createVNode("span")
+                  ]
+                }
+              }),
+              _: 1 /* STABLE */
+            }, _parent))
+          }
+          _push(\`<!--]-->\`)
+        }"
+      `)
+  })
 })
