@@ -337,6 +337,53 @@ describe('compiler: v-skip', () => {
       expect(generate(root).code).toMatchSnapshot()
     })
 
+    test.todo('on component with dynamic slot + default slot', () => {
+      const { root, node } = parseWithSkipTransform(
+        `<Comp v-skip="ok">
+          <template #[foo]>foo</template>
+          <template #default>default</template>
+        </Comp>`,
+      )
+      expect(node.type).toBe(NodeTypes.SKIP)
+      expect((node.test as SimpleExpressionNode).content).toBe(`_ctx.ok`)
+      expect((node.consequent as IfBranchNode).children.length).toBe(1)
+      expect((node.consequent as IfBranchNode).children[0].type).toBe(
+        NodeTypes.TEXT,
+      )
+      expect(
+        ((node.consequent as IfBranchNode).children[0] as any).content,
+      ).toBe(`default`)
+      expect(node.alternate.children.length).toBe(1)
+      expect((node.alternate.children[0] as ElementNode).tagType).toBe(
+        ElementTypes.COMPONENT,
+      )
+      expect((node.alternate.children[0] as ElementNode).tag).toBe(`Comp`)
+      expect(generate(root).code).toMatchSnapshot()
+    })
+
+    test.todo('on component with name default slot + v-if', () => {
+      const { root, node } = parseWithSkipTransform(
+        `<Comp v-skip="ok">
+          <template v-if="yes" #default>default</template>
+        </Comp>`,
+      )
+      expect(node.type).toBe(NodeTypes.SKIP)
+      expect((node.test as SimpleExpressionNode).content).toBe(`_ctx.ok`)
+      expect(node.consequent.type === NodeTypes.JS_CALL_EXPRESSION).toBe(true)
+      expect(generate(root).code).toMatchSnapshot()
+    })
+
+    test.todo('on component with implicit default slot + v-if', () => {
+      const { root, node } = parseWithSkipTransform(
+        `<Comp v-skip="ok">
+          <span v-if="yes">default</span>
+        </Comp>`,
+      )
+      expect(node.type).toBe(NodeTypes.SKIP)
+      expect((node.test as SimpleExpressionNode).content).toBe(`_ctx.ok`)
+      expect(generate(root).code).toMatchSnapshot()
+    })
+
     test('on dynamic component', () => {
       const { root, node } = parseWithSkipTransform(
         `<component :is="Comp" v-skip="ok">
@@ -413,6 +460,21 @@ describe('compiler: v-skip', () => {
       parseWithSkipTransform(
         `<Comp v-skip="ok">
           <template #default="foo">foo</template>
+        </Comp>`,
+        { onError },
+      )
+      expect(onError.mock.calls[0]).toMatchObject([
+        {
+          code: ErrorCodes.X_V_SKIP_UNEXPECTED_SLOT,
+        },
+      ])
+    })
+
+    test('on component with only dynamic slot', () => {
+      const onError = vi.fn()
+      parseWithSkipTransform(
+        `<Comp v-skip="ok">
+          <template #[foo]>foo</template>
         </Comp>`,
         { onError },
       )
