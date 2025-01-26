@@ -72,8 +72,9 @@ const isMathMLContainer = (container: Element) =>
   container.namespaceURI!.includes('MathML')
 
 const getContainerType = (
-  container: Element | ShadowRoot,
+  container: Element | ShadowRoot | null,
 ): 'svg' | 'mathml' | undefined => {
+  if (null === container) return undefined
   if (container.nodeType !== DOMNodeTypes.ELEMENT) return undefined
   if (isSVGContainer(container as Element)) return 'svg'
   if (isMathMLContainer(container as Element)) return 'mathml'
@@ -346,7 +347,7 @@ export function createHydrationFunctions(
             vnode,
             parentComponent,
             parentSuspense,
-            getContainerType(parentNode(node)!),
+            getContainerType(parentNode(node)),
             slotScopeIds,
             optimized,
             rendererInternals,
