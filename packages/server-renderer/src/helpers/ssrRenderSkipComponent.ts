@@ -10,9 +10,9 @@ import {
   type PushFn,
   type SSRBuffer,
   renderComponentVNode,
+  renderVNode as ssrRenderVNode,
 } from '../render'
 import { type SSRSlots, ssrRenderSlot } from './ssrRenderSlot'
-import { ssrRenderVNode } from '@vue/server-renderer'
 
 export function ssrRenderSkipComponent(
   push: PushFn,
