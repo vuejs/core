@@ -7,6 +7,7 @@ import {
   NodeTypes,
   type SimpleExpressionNode,
   type SkipNode,
+  type TemplateChildNode,
   type VNodeCall,
   createCallExpression,
   createConditionalExpression,
@@ -22,10 +23,10 @@ import {
   ErrorCodes,
   RESOLVE_SKIP_COMPONENT,
   WITH_MEMO,
+  buildSlots,
   createCompilerError,
   findDir,
   findProp,
-  isSlotOutlet,
   processExpression,
 } from '@vue/compiler-core'
 import { createCodegenNodeForBranch } from './vIf'
@@ -38,10 +39,7 @@ export const transformSkip: NodeTransform = createStructuralDirectiveTransform(
     return processSkip(node, dir, context, (skipNode?: SkipNode) => {
       return () => {
         const codegenNode = node.codegenNode!
-        if (
-          node.tagType === ElementTypes.COMPONENT &&
-          node.tag !== 'Teleport'
-        ) {
+        if (!skipNode) {
           if (codegenNode.type === NodeTypes.VNODE_CALL) {
             codegenNode.tag = getVNodeTag(
               context,
@@ -85,15 +83,22 @@ export function processSkip(
 ): (() => void) | undefined {
   const loc = dir.exp ? dir.exp.loc : node.loc
   if (
-    (node.type === NodeTypes.ELEMENT && node.tag === 'template') ||
-    isSlotOutlet(node)
+    // v-skip is not allowed on <template> or <slot>
+    !(
+      node.type === NodeTypes.ELEMENT &&
+      (node.tagType === ElementTypes.ELEMENT ||
+        node.tagType === ElementTypes.COMPONENT) &&
+      node.tag !== 'template' &&
+      node.tag !== 'slot'
+    )
   ) {
-    context.onError(createCompilerError(ErrorCodes.X_V_SKIP_ON_TEMPLATE, loc))
+    context.onError(createCompilerError(ErrorCodes.X_V_SKIP_MISPLACED, loc))
     return
   }
 
   if (findDir(node, 'for')) {
     context.onError(createCompilerError(ErrorCodes.X_V_SKIP_WITH_V_FOR, loc))
+    return
   }
 
   if (!dir.exp || !(dir.exp as SimpleExpressionNode).content.trim()) {
@@ -109,12 +114,48 @@ export function processSkip(
     validateBrowserExpression(dir.exp as SimpleExpressionNode, context)
   }
 
-  let skipNode: SkipNode | undefined
+  // element will be processed as a skip node
+  // - native element
+  // - teleport, since it has children
+  // - component without dynamic slots
+  let processAsSkipNode = false
+  const isComponent = node.tagType === ElementTypes.COMPONENT
+  let children: TemplateChildNode[] = []
   if (
     node.tagType === ElementTypes.ELEMENT ||
-    (node.tagType === ElementTypes.COMPONENT && node.tag === 'Teleport')
+    (isComponent && node.tag === 'Teleport')
   ) {
-    const children = node.children
+    processAsSkipNode = true
+    children = node.children
+  } else if (isComponent) {
+    const { slots, hasDynamicSlots } = buildSlots(
+      node,
+      context,
+      undefined,
+      true,
+    )
+    // find default slot if not has dynamic slots
+    if (!hasDynamicSlots && slots.type === NodeTypes.JS_OBJECT_EXPRESSION) {
+      processAsSkipNode = true
+      const prop = slots.properties.find(
+        p =>
+          p.type === NodeTypes.JS_PROPERTY &&
+          p.key.type === NodeTypes.SIMPLE_EXPRESSION &&
+          p.key.content === 'default' &&
+          p.value.params === undefined,
+      )
+      if (prop) {
+        children = prop.value.returns as TemplateChildNode[]
+      } else {
+        context.onError(
+          createCompilerError(ErrorCodes.X_V_SKIP_UNEXPECTED_SLOT, loc),
+        )
+      }
+    }
+  }
+
+  let skipNode: SkipNode | undefined
+  if (processAsSkipNode) {
     // if children is empty, create comment node
     const consequent =
       children.length !== 0

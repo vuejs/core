@@ -195,13 +195,17 @@ describe('ssr: v-skip', () => {
 
   test('on component', () => {
     expect(compile(`<Comp v-skip="foo"/>`).code).toMatchInlineSnapshot(`
-      "const { resolveComponent: _resolveComponent } = require("vue")
+      "const { withCtx: _withCtx, createCommentVNode: _createCommentVNode, resolveComponent: _resolveComponent } = require("vue")
       const { ssrRenderComponent: _ssrRenderComponent, ssrRenderSkipComponent: _ssrRenderSkipComponent } = require("vue/server-renderer")
 
       return function ssrRender(_ctx, _push, _parent, _attrs) {
         const _component_Comp = _resolveComponent("Comp")
 
-        _push(_ssrRenderSkipComponent(_push, _ctx.foo, _component_Comp, _attrs, null, _parent))
+        if (_ctx.foo) {
+          _createCommentVNode("v-skip", true)
+        } else {
+          _push(_ssrRenderSkipComponent(_push, _ctx.foo, _component_Comp, _attrs, null, _parent))
+        }
       }"
     `)
   })
@@ -324,22 +328,26 @@ describe('ssr: v-skip', () => {
       </component>`,
       ).code,
     ).toMatchInlineSnapshot(`
-      "const { resolveDynamicComponent: _resolveDynamicComponent, withCtx: _withCtx, renderSlot: _renderSlot, createVNode: _createVNode } = require("vue")
+      "const { withCtx: _withCtx, resolveDynamicComponent: _resolveDynamicComponent, renderSlot: _renderSlot, createVNode: _createVNode } = require("vue")
       const { ssrRenderSlot: _ssrRenderSlot, ssrRenderVNode: _ssrRenderVNode } = require("vue/server-renderer")
 
       return function ssrRender(_ctx, _push, _parent, _attrs) {
-        _ssrRenderVNode(_push, _createVNode(_resolveDynamicComponent(_ctx.Comp), _attrs, {
-          default: _withCtx((_, _push, _parent, _scopeId) => {
-            if (_push) {
-              _ssrRenderSlot(_ctx.$slots, "default", {}, null, _push, _parent, _scopeId)
-            } else {
-              return [
-                _renderSlot(_ctx.$slots, "default")
-              ]
-            }
-          }),
-          _: 3 /* FORWARDED */
-        }), _parent)
+        if (_ctx.ok) {
+          _ssrRenderSlot(_ctx.$slots, "default", {}, null, _push, _parent, _scopeId)
+        } else {
+          _ssrRenderVNode(_push, _createVNode(_resolveDynamicComponent(_ctx.Comp), _attrs, {
+            default: _withCtx((_, _push, _parent, _scopeId) => {
+              if (_push) {
+                _ssrRenderSlot(_ctx.$slots, "default", {}, null, _push, _parent, _scopeId)
+              } else {
+                return [
+                  _renderSlot(_ctx.$slots, "default")
+                ]
+              }
+            }),
+            _: 3 /* FORWARDED */
+          }), _parent)
+        }
       }"
     `)
   })
@@ -351,25 +359,29 @@ describe('ssr: v-skip', () => {
       <Comp v-skip="ok"><span/></Comp>
     `).code,
     ).toMatchInlineSnapshot(`
-      "const { resolveComponent: _resolveComponent, withCtx: _withCtx, createVNode: _createVNode } = require("vue")
+      "const { withCtx: _withCtx, resolveComponent: _resolveComponent, createVNode: _createVNode } = require("vue")
       const { ssrRenderComponent: _ssrRenderComponent, ssrRenderSkipComponent: _ssrRenderSkipComponent } = require("vue/server-renderer")
 
       return function ssrRender(_ctx, _push, _parent, _attrs) {
         const _component_Comp = _resolveComponent("Comp")
 
         _push(\`<!--[--><div></div>\`)
-        _push(_ssrRenderSkipComponent(_push, _ctx.ok, _component_Comp, null, {
-          default: _withCtx((_, _push, _parent, _scopeId) => {
-            if (_push) {
-              _push(\`<span\${_scopeId}></span>\`)
-            } else {
-              return [
-                _createVNode("span")
-              ]
-            }
-          }),
-          _: 1 /* STABLE */
-        }, _parent))
+        if (_ctx.ok) {
+          _push(\`<span></span>\`)
+        } else {
+          _push(_ssrRenderSkipComponent(_push, _ctx.ok, _component_Comp, null, {
+            default: _withCtx((_, _push, _parent, _scopeId) => {
+              if (_push) {
+                _push(\`<span\${_scopeId}></span>\`)
+              } else {
+                return [
+                  _createVNode("span")
+                ]
+              }
+            }),
+            _: 1 /* STABLE */
+          }, _parent))
+        }
         _push(\`<!--]-->\`)
       }"
     `)

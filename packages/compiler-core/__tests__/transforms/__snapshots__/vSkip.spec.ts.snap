@@ -36,33 +36,216 @@ return function render(_ctx, _cache) {
 }"
 `;
 
-exports[`compiler: v-skip > transform > on component 1`] = `
+exports[`compiler: v-skip > transform > on Teleport 1`] = `
 "const _Vue = Vue
 
 return function render(_ctx, _cache) {
   with (_ctx) {
-    const { resolveComponent: _resolveComponent, resolveSkipComponent: _resolveSkipComponent, openBlock: _openBlock, createBlock: _createBlock } = _Vue
+    const { withCtx: _withCtx, createCommentVNode: _createCommentVNode, Teleport: _Teleport, openBlock: _openBlock, createBlock: _createBlock } = _Vue
 
-    const _component_Comp = _resolveComponent("Comp")
-
-    return (_openBlock(), _createBlock(_resolveSkipComponent(_ctx.ok, _component_Comp)))
+    return (_ctx.ok)
+      ? _createCommentVNode("v-skip", true)
+      : (_openBlock(), _createBlock(_Teleport, {
+          key: 1,
+          to: "target"
+        }))
   }
 }"
 `;
 
-exports[`compiler: v-skip > transform > on dynamic component 1`] = `
+exports[`compiler: v-skip > transform > on component with default slot 1`] = `
 "const _Vue = Vue
 
 return function render(_ctx, _cache) {
   with (_ctx) {
-    const { renderSlot: _renderSlot, resolveDynamicComponent: _resolveDynamicComponent, withCtx: _withCtx, openBlock: _openBlock, createBlock: _createBlock, resolveSkipComponent: _resolveSkipComponent } = _Vue
+    const { withCtx: _withCtx, resolveComponent: _resolveComponent, Fragment: _Fragment, openBlock: _openBlock, createElementBlock: _createElementBlock, createBlock: _createBlock } = _Vue
+
+    const _component_Comp = _resolveComponent("Comp")
+
+    return (_ctx.ok)
+      ? (_openBlock(), _createElementBlock(_Fragment, { key: 0 }, ["foo"], 2112 /* STABLE_FRAGMENT, DEV_ROOT_FRAGMENT */))
+      : (_openBlock(), _createBlock(_component_Comp, { key: 1 }, {
+          default: _withCtx(() => ["foo"]),
+          _: 1 /* STABLE */
+        }))
+  }
+}"
+`;
+
+exports[`compiler: v-skip > transform > on component with dynamic slot + default slot 1`] = `
+"const _Vue = Vue
+
+return function render(_ctx, _cache) {
+  with (_ctx) {
+    const { withCtx: _withCtx, resolveComponent: _resolveComponent, resolveSkipComponent: _resolveSkipComponent, openBlock: _openBlock, createBlock: _createBlock } = _Vue
+
+    const _component_Comp = _resolveComponent("Comp")
+
+    return (_openBlock(), _createBlock(_resolveSkipComponent(_ctx.ok, _component_Comp), null, {
+      [_ctx.foo]: _withCtx(() => ["foo"]),
+      default: _withCtx(() => ["default"]),
+      _: 2 /* DYNAMIC */
+    }, 1024 /* DYNAMIC_SLOTS */))
+  }
+}"
+`;
+
+exports[`compiler: v-skip > transform > on component with dynamic slot 1`] = `
+"const _Vue = Vue
+
+return function render(_ctx, _cache) {
+  with (_ctx) {
+    const { withCtx: _withCtx, resolveComponent: _resolveComponent, resolveSkipComponent: _resolveSkipComponent, openBlock: _openBlock, createBlock: _createBlock } = _Vue
+
+    const _component_Comp = _resolveComponent("Comp")
+
+    return (_openBlock(), _createBlock(_resolveSkipComponent(_ctx.ok, _component_Comp), null, {
+      [_ctx.foo]: _withCtx(() => ["foo"]),
+      _: 2 /* DYNAMIC */
+    }, 1024 /* DYNAMIC_SLOTS */))
+  }
+}"
+`;
+
+exports[`compiler: v-skip > transform > on component with implicit default slot + v-if 1`] = `
+"const _Vue = Vue
+
+return function render(_ctx, _cache) {
+  with (_ctx) {
+    const { withCtx: _withCtx, openBlock: _openBlock, createElementBlock: _createElementBlock, createCommentVNode: _createCommentVNode, createElementVNode: _createElementVNode, resolveComponent: _resolveComponent, Fragment: _Fragment, createBlock: _createBlock } = _Vue
+
+    const _component_Comp = _resolveComponent("Comp")
+
+    return (_ctx.ok)
+      ? (_openBlock(), _createElementBlock(_Fragment, { key: 0 }, [
+          (_ctx.yes)
+            ? (_openBlock(), _createElementBlock("span", { key: 0 }, "default"))
+            : _createCommentVNode("v-if", true)
+        ], 2112 /* STABLE_FRAGMENT, DEV_ROOT_FRAGMENT */))
+      : (_openBlock(), _createBlock(_component_Comp, { key: 1 }, {
+          default: _withCtx(() => [
+            (_ctx.yes)
+              ? (_openBlock(), _createElementBlock("span", { key: 0 }, "default"))
+              : _createCommentVNode("v-if", true)
+          ]),
+          _: 1 /* STABLE */
+        }))
+  }
+}"
+`;
+
+exports[`compiler: v-skip > transform > on component with multiple implicit slot 1`] = `
+"const _Vue = Vue
+
+return function render(_ctx, _cache) {
+  with (_ctx) {
+    const { withCtx: _withCtx, createElementVNode: _createElementVNode, resolveComponent: _resolveComponent, Fragment: _Fragment, openBlock: _openBlock, createElementBlock: _createElementBlock, createBlock: _createBlock } = _Vue
+
+    const _component_Comp = _resolveComponent("Comp")
+
+    return (_ctx.ok)
+      ? (_openBlock(), _createElementBlock(_Fragment, { key: 0 }, [
+          _createElementVNode("span"),
+          _createElementVNode("div")
+        ], 64 /* STABLE_FRAGMENT */))
+      : (_openBlock(), _createBlock(_component_Comp, { key: 1 }, {
+          foo: _withCtx(() => ["foo"]),
+          default: _withCtx(() => [
+            _createElementVNode("span"),
+            _createElementVNode("div")
+          ]),
+          _: 1 /* STABLE */
+        }))
+  }
+}"
+`;
+
+exports[`compiler: v-skip > transform > on component with multiple named slot 1`] = `
+"const _Vue = Vue
+
+return function render(_ctx, _cache) {
+  with (_ctx) {
+    const { withCtx: _withCtx, resolveComponent: _resolveComponent, Fragment: _Fragment, openBlock: _openBlock, createElementBlock: _createElementBlock, createBlock: _createBlock } = _Vue
+
+    const _component_Comp = _resolveComponent("Comp")
+
+    return (_ctx.ok)
+      ? (_openBlock(), _createElementBlock(_Fragment, { key: 0 }, ["default"], 2112 /* STABLE_FRAGMENT, DEV_ROOT_FRAGMENT */))
+      : (_openBlock(), _createBlock(_component_Comp, { key: 1 }, {
+          default: _withCtx(() => ["default"]),
+          foo: _withCtx(() => ["foo"]),
+          _: 1 /* STABLE */
+        }))
+  }
+}"
+`;
+
+exports[`compiler: v-skip > transform > on component with name default slot + v-if 1`] = `
+"const _Vue = Vue
+
+return function render(_ctx, _cache) {
+  with (_ctx) {
+    const { withCtx: _withCtx, createSlots: _createSlots, resolveComponent: _resolveComponent, resolveSkipComponent: _resolveSkipComponent, openBlock: _openBlock, createBlock: _createBlock } = _Vue
+
+    const _component_Comp = _resolveComponent("Comp")
+
+    return (_openBlock(), _createBlock(_resolveSkipComponent(_ctx.ok, _component_Comp), null, _createSlots({ _: 2 /* DYNAMIC */ }, [
+      (_ctx.yes)
+        ? {
+            name: "default",
+            fn: _withCtx(() => ["default"]),
+            key: "0"
+          }
+        : undefined
+    ]), 1024 /* DYNAMIC_SLOTS */))
+  }
+}"
+`;
+
+exports[`compiler: v-skip > transform > on component without slot 1`] = `
+"const _Vue = Vue
+
+return function render(_ctx, _cache) {
+  with (_ctx) {
+    const { withCtx: _withCtx, createCommentVNode: _createCommentVNode, resolveComponent: _resolveComponent, openBlock: _openBlock, createBlock: _createBlock } = _Vue
+
+    const _component_Comp = _resolveComponent("Comp")
+
+    return (_ctx.ok)
+      ? _createCommentVNode("v-skip", true)
+      : (_openBlock(), _createBlock(_component_Comp, { key: 1 }))
+  }
+}"
+`;
+
+exports[`compiler: v-skip > transform > on dynamic component with default slot 1`] = `
+"const _Vue = Vue
+
+return function render(_ctx, _cache) {
+  with (_ctx) {
+    const { withCtx: _withCtx, resolveDynamicComponent: _resolveDynamicComponent, openBlock: _openBlock, createBlock: _createBlock, Fragment: _Fragment, createElementBlock: _createElementBlock } = _Vue
+
+    return (_ctx.ok)
+      ? (_openBlock(), _createElementBlock(_Fragment, { key: 0 }, ["foo"], 2112 /* STABLE_FRAGMENT, DEV_ROOT_FRAGMENT */))
+      : (_openBlock(), _createBlock(_resolveDynamicComponent(_ctx.Comp), { key: 1 }, {
+          default: _withCtx(() => ["foo"]),
+          _: 1 /* STABLE */
+        }))
+  }
+}"
+`;
+
+exports[`compiler: v-skip > transform > on dynamic component with dynamic slot 1`] = `
+"const _Vue = Vue
+
+return function render(_ctx, _cache) {
+  with (_ctx) {
+    const { withCtx: _withCtx, resolveDynamicComponent: _resolveDynamicComponent, openBlock: _openBlock, createBlock: _createBlock, resolveSkipComponent: _resolveSkipComponent } = _Vue
 
     return (_openBlock(), _createBlock(_resolveSkipComponent(_ctx.ok, _resolveDynamicComponent(_ctx.Comp)), null, {
-      default: _withCtx(() => [
-        _renderSlot(_ctx.$slots, "default")
-      ]),
-      _: 3 /* FORWARDED */
-    }))
+      [_ctx.foo]: _withCtx(() => ["foo"]),
+      _: 2 /* DYNAMIC */
+    }, 1024 /* DYNAMIC_SLOTS */))
   }
 }"
 `;
