@@ -134,7 +134,7 @@ return function render(_ctx, _cache) {
 }"
 `;
 
-exports[`compiler: v-skip > transform > on component with multiple implicit slot 1`] = `
+exports[`compiler: v-skip > transform > on component with multiple implicit default slot 1`] = `
 "const _Vue = Vue
 
 return function render(_ctx, _cache) {

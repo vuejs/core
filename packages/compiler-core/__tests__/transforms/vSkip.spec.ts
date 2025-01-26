@@ -315,7 +315,7 @@ describe('compiler: v-skip', () => {
       expect(generate(root).code).toMatchSnapshot()
     })
 
-    test('on component with multiple implicit slot', () => {
+    test('on component with multiple implicit default slot', () => {
       const { root, node } = parseWithSkipTransform(
         `<Comp v-skip="ok">
           <span/>

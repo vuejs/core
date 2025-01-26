@@ -193,7 +193,8 @@ describe('ssr: v-skip', () => {
       `)
   })
 
-  test('on component', () => {
+  test('on component without slot', () => {
+    // equivalent to <Comp v-if="ok"/>
     expect(compile(`<Comp v-skip="foo"/>`).code).toMatchInlineSnapshot(`
       "const { withCtx: _withCtx, createCommentVNode: _createCommentVNode, resolveComponent: _resolveComponent } = require("vue")
       const { ssrRenderComponent: _ssrRenderComponent } = require("vue/server-renderer")
@@ -210,31 +211,35 @@ describe('ssr: v-skip', () => {
     `)
   })
 
-  test.todo('on component with default slot', () => {
+  test('on component with default slot', () => {
     expect(compile(`<Comp v-skip="ok">foo</Comp>`).code).toMatchInlineSnapshot(`
-      "const { resolveComponent: _resolveComponent, withCtx: _withCtx, createTextVNode: _createTextVNode } = require("vue")
-      const { ssrRenderComponent: _ssrRenderComponent, ssrRenderSkipComponent: _ssrRenderSkipComponent } = require("vue/server-renderer")
+      "const { withCtx: _withCtx, resolveComponent: _resolveComponent, createTextVNode: _createTextVNode } = require("vue")
+      const { ssrRenderComponent: _ssrRenderComponent } = require("vue/server-renderer")
 
       return function ssrRender(_ctx, _push, _parent, _attrs) {
         const _component_Comp = _resolveComponent("Comp")
 
-        _push(_ssrRenderSkipComponent(_push, _ctx.ok, _component_Comp, _attrs, {
-          default: _withCtx((_, _push, _parent, _scopeId) => {
-            if (_push) {
-              _push(\`foo\`)
-            } else {
-              return [
-                _createTextVNode("foo")
-              ]
-            }
-          }),
-          _: 1 /* STABLE */
-        }, _parent))
+        if (_ctx.ok) {
+          _push(\`<!--[-->foo<!--]-->\`)
+        } else {
+          _push(_ssrRenderComponent(_component_Comp, _attrs, {
+            default: _withCtx((_, _push, _parent, _scopeId) => {
+              if (_push) {
+                _push(\`foo\`)
+              } else {
+                return [
+                  _createTextVNode("foo")
+                ]
+              }
+            }),
+            _: 1 /* STABLE */
+          }, _parent))
+        }
       }"
     `)
   })
 
-  test.todo('on component with multiple named slot', () => {
+  test('on component with multiple named slot', () => {
     expect(
       compile(
         `<Comp v-skip="ok">
@@ -243,38 +248,42 @@ describe('ssr: v-skip', () => {
         </Comp>`,
       ).code,
     ).toMatchInlineSnapshot(`
-      "const { resolveComponent: _resolveComponent, withCtx: _withCtx, createTextVNode: _createTextVNode } = require("vue")
-      const { ssrRenderComponent: _ssrRenderComponent, ssrRenderSkipComponent: _ssrRenderSkipComponent } = require("vue/server-renderer")
+      "const { withCtx: _withCtx, resolveComponent: _resolveComponent, createTextVNode: _createTextVNode } = require("vue")
+      const { ssrRenderComponent: _ssrRenderComponent } = require("vue/server-renderer")
 
       return function ssrRender(_ctx, _push, _parent, _attrs) {
         const _component_Comp = _resolveComponent("Comp")
 
-        _push(_ssrRenderSkipComponent(_push, _ctx.ok, _component_Comp, _attrs, {
-          default: _withCtx((_, _push, _parent, _scopeId) => {
-            if (_push) {
-              _push(\`default\`)
-            } else {
-              return [
-                _createTextVNode("default")
-              ]
-            }
-          }),
-          foo: _withCtx((_, _push, _parent, _scopeId) => {
-            if (_push) {
-              _push(\`foo\`)
-            } else {
-              return [
-                _createTextVNode("foo")
-              ]
-            }
-          }),
-          _: 1 /* STABLE */
-        }, _parent))
+        if (_ctx.ok) {
+          _push(\`<!--[-->default<!--]-->\`)
+        } else {
+          _push(_ssrRenderComponent(_component_Comp, _attrs, {
+            default: _withCtx((_, _push, _parent, _scopeId) => {
+              if (_push) {
+                _push(\`default\`)
+              } else {
+                return [
+                  _createTextVNode("default")
+                ]
+              }
+            }),
+            foo: _withCtx((_, _push, _parent, _scopeId) => {
+              if (_push) {
+                _push(\`foo\`)
+              } else {
+                return [
+                  _createTextVNode("foo")
+                ]
+              }
+            }),
+            _: 1 /* STABLE */
+          }, _parent))
+        }
       }"
     `)
   })
 
-  test.todo('on component with multiple implicit slot', () => {
+  test('on component with multiple implicit default slot', () => {
     expect(
       compile(
         `<Comp v-skip="ok">
@@ -284,14 +293,139 @@ describe('ssr: v-skip', () => {
         </Comp>`,
       ).code,
     ).toMatchInlineSnapshot(`
-      "const { resolveComponent: _resolveComponent, withCtx: _withCtx, createTextVNode: _createTextVNode, createVNode: _createVNode } = require("vue")
+      "const { withCtx: _withCtx, resolveComponent: _resolveComponent, createTextVNode: _createTextVNode, createVNode: _createVNode } = require("vue")
+      const { ssrRenderComponent: _ssrRenderComponent } = require("vue/server-renderer")
+
+      return function ssrRender(_ctx, _push, _parent, _attrs) {
+        const _component_Comp = _resolveComponent("Comp")
+
+        if (_ctx.ok) {
+          _push(\`<!--[--><span></span><div></div><!--]-->\`)
+        } else {
+          _push(_ssrRenderComponent(_component_Comp, _attrs, {
+            foo: _withCtx((_, _push, _parent, _scopeId) => {
+              if (_push) {
+                _push(\`foo\`)
+              } else {
+                return [
+                  _createTextVNode("foo")
+                ]
+              }
+            }),
+            default: _withCtx((_, _push, _parent, _scopeId) => {
+              if (_push) {
+                _push(\`<span\${
+                  _scopeId
+                }></span><div\${
+                  _scopeId
+                }></div>\`)
+              } else {
+                return [
+                  _createVNode("span"),
+                  _createVNode("div")
+                ]
+              }
+            }),
+            _: 1 /* STABLE */
+          }, _parent))
+        }
+      }"
+    `)
+  })
+
+  test('on component with name default slot + v-if', () => {
+    expect(
+      compile(
+        `<Comp v-skip="ok">
+          <template v-if="yes" #default>default</template>
+        </Comp>`,
+      ).code,
+    ).toMatchInlineSnapshot(`
+      "const { withCtx: _withCtx, createSlots: _createSlots, resolveComponent: _resolveComponent, createTextVNode: _createTextVNode } = require("vue")
+      const { ssrRenderComponent: _ssrRenderComponent, ssrRenderSkipComponent: _ssrRenderSkipComponent } = require("vue/server-renderer")
+
+      return function ssrRender(_ctx, _push, _parent, _attrs) {
+        const _component_Comp = _resolveComponent("Comp")
+
+        _push(_ssrRenderSkipComponent(_push, _ctx.ok, _component_Comp, _attrs, _createSlots({ _: 2 /* DYNAMIC */ }, [
+          (_ctx.yes)
+            ? {
+                name: "default",
+                fn: _withCtx((_, _push, _parent, _scopeId) => {
+                  if (_push) {
+                    _push(\`default\`)
+                  } else {
+                    return [
+                      _createTextVNode("default")
+                    ]
+                  }
+                }),
+                key: "0"
+              }
+            : undefined
+        ]), _parent))
+      }"
+    `)
+  })
+
+  test.todo('on component with implicit default slot + v-if', () => {
+    expect(
+      compile(
+        `<Comp v-skip="ok">
+          <span v-if="yes">default</span>
+        </Comp>`,
+      ).code,
+    ).toMatchInlineSnapshot(`
+    `)
+  })
+
+  test('on component with dynamic slot', () => {
+    expect(
+      compile(
+        `<Comp v-skip="ok">
+          <template #[foo]>foo</template>
+        </Comp>`,
+      ).code,
+    ).toMatchInlineSnapshot(`
+      "const { withCtx: _withCtx, resolveComponent: _resolveComponent, createTextVNode: _createTextVNode } = require("vue")
       const { ssrRenderComponent: _ssrRenderComponent, ssrRenderSkipComponent: _ssrRenderSkipComponent } = require("vue/server-renderer")
 
       return function ssrRender(_ctx, _push, _parent, _attrs) {
         const _component_Comp = _resolveComponent("Comp")
 
         _push(_ssrRenderSkipComponent(_push, _ctx.ok, _component_Comp, _attrs, {
-          foo: _withCtx((_, _push, _parent, _scopeId) => {
+          [_ctx.foo]: _withCtx((_, _push, _parent, _scopeId) => {
+            if (_push) {
+              _push(\`foo\`)
+            } else {
+              return [
+                _createTextVNode("foo")
+              ]
+            }
+          }),
+          _: 2 /* DYNAMIC */
+        }, _parent))
+      }"
+    `)
+  })
+
+  test('on component with dynamic slot + default slot', () => {
+    expect(
+      compile(
+        `<Comp v-skip="ok">
+          <template #[foo]>foo</template>
+          <template #default>default</template>
+        </Comp>`,
+      ).code,
+    ).toMatchInlineSnapshot(`
+      "const { withCtx: _withCtx, resolveComponent: _resolveComponent, createTextVNode: _createTextVNode } = require("vue")
+      const { ssrRenderComponent: _ssrRenderComponent, ssrRenderSkipComponent: _ssrRenderSkipComponent } = require("vue/server-renderer")
+
+      return function ssrRender(_ctx, _push, _parent, _attrs) {
+        const _component_Comp = _resolveComponent("Comp")
+
+        _push(_ssrRenderSkipComponent(_push, _ctx.ok, _component_Comp, _attrs, {
+          [_ctx.foo]: _withCtx((_, _push, _parent, _scopeId) => {
             if (_push) {
               _push(\`foo\`)
             } else {
@@ -302,57 +436,98 @@ describe('ssr: v-skip', () => {
           }),
           default: _withCtx((_, _push, _parent, _scopeId) => {
             if (_push) {
-              _push(\`<span\${
-                _scopeId
-              }></span><div\${
-                _scopeId
-              }></div>\`)
+              _push(\`default\`)
             } else {
               return [
-                _createVNode("span"),
-                _createVNode("div")
+                _createTextVNode("default")
               ]
             }
           }),
-          _: 1 /* STABLE */
+          _: 2 /* DYNAMIC */
         }, _parent))
       }"
     `)
   })
 
-  test('on dynamic component', () => {
+  test('on dynamic component with default slot', () => {
+    expect(compile(`<component :is="Comp" v-skip="ok">foo</component>`).code)
+      .toMatchInlineSnapshot(`
+        "const { withCtx: _withCtx, resolveDynamicComponent: _resolveDynamicComponent, createTextVNode: _createTextVNode, createVNode: _createVNode } = require("vue")
+        const { ssrRenderVNode: _ssrRenderVNode } = require("vue/server-renderer")
+
+        return function ssrRender(_ctx, _push, _parent, _attrs) {
+          if (_ctx.ok) {
+            _push(\`<!--[-->foo<!--]-->\`)
+          } else {
+            _ssrRenderVNode(_push, _createVNode(_resolveDynamicComponent(_ctx.Comp), _attrs, {
+              default: _withCtx((_, _push, _parent, _scopeId) => {
+                if (_push) {
+                  _push(\`foo\`)
+                } else {
+                  return [
+                    _createTextVNode("foo")
+                  ]
+                }
+              }),
+              _: 1 /* STABLE */
+            }), _parent)
+          }
+        }"
+      `)
+  })
+
+  test('on dynamic component with dynamic slot', () => {
     expect(
-      compile(
-        `<component :is="Comp" v-skip="ok">
-        <slot/>
-      </component>`,
-      ).code,
+      compile(`
+      <component :is="Comp" v-skip="ok">
+          <template #[foo]>foo</template>
+        </component>
+      `).code,
     ).toMatchInlineSnapshot(`
-      "const { withCtx: _withCtx, resolveDynamicComponent: _resolveDynamicComponent, renderSlot: _renderSlot, createVNode: _createVNode } = require("vue")
-      const { ssrRenderSlot: _ssrRenderSlot, ssrRenderVNode: _ssrRenderVNode } = require("vue/server-renderer")
+      "const { withCtx: _withCtx, resolveDynamicComponent: _resolveDynamicComponent, createTextVNode: _createTextVNode, createVNode: _createVNode } = require("vue")
+      const { ssrRenderVNode: _ssrRenderVNode, ssrRenderSkipVNode: _ssrRenderSkipVNode } = require("vue/server-renderer")
+
+      return function ssrRender(_ctx, _push, _parent, _attrs) {
+        _ssrRenderSkipVNode(_ctx.ok, _push, _createVNode(_resolveDynamicComponent(_ctx.Comp), _attrs, {
+          [_ctx.foo]: _withCtx((_, _push, _parent, _scopeId) => {
+            if (_push) {
+              _push(\`foo\`)
+            } else {
+              return [
+                _createTextVNode("foo")
+              ]
+            }
+          }),
+          _: 2 /* DYNAMIC */
+        }), _parent)
+      }"
+    `)
+  })
+
+  test('on Teleport', () => {
+    expect(
+      compile(`<teleport to="target" v-skip="ok">
+          <div>foo</div>
+        </teleport>`).code,
+    ).toMatchInlineSnapshot(`
+      "const { withCtx: _withCtx } = require("vue")
+      const { ssrRenderTeleport: _ssrRenderTeleport } = require("vue/server-renderer")
 
       return function ssrRender(_ctx, _push, _parent, _attrs) {
         if (_ctx.ok) {
-          _ssrRenderSlot(_ctx.$slots, "default", {}, null, _push, _parent, _scopeId)
+          _push(\`<div>foo</div>\`)
         } else {
-          _ssrRenderVNode(_push, _createVNode(_resolveDynamicComponent(_ctx.Comp), _attrs, {
-            default: _withCtx((_, _push, _parent, _scopeId) => {
-              if (_push) {
-                _ssrRenderSlot(_ctx.$slots, "default", {}, null, _push, _parent, _scopeId)
-              } else {
-                return [
-                  _renderSlot(_ctx.$slots, "default")
-                ]
-              }
-            }),
-            _: 3 /* FORWARDED */
-          }), _parent)
+          _ssrRenderTeleport(_push, (_push) => {
+            _push(\`<div>foo</div>\`)
+          }, "target", false, _parent)
         }
       }"
     `)
   })
 
   test('fragment with component v-skip', () => {
+    // here is verified that when root is a fragment, `_attrs` won't be injected
+    // into skip node's alternate branch
     expect(
       compile(`
       <div></div>
