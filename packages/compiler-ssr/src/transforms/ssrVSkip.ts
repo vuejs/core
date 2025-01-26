@@ -24,7 +24,7 @@ export const ssrTransformSkip: NodeTransform =
         // for non-skipNode, rewrite the ssrCodegenNode
         // `ssrRenderComponent` -> `ssrRenderSkipComponent`
         // `ssrRenderVNode` -> `ssrRenderSkipVNode`
-        if (!skipNode && node && (node as ComponentNode).ssrCodegenNode) {
+        if (!skipNode && (node as ComponentNode).ssrCodegenNode) {
           const {
             callee,
             arguments: args,

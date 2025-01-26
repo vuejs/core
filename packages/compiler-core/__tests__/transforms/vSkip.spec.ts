@@ -13,6 +13,7 @@ import {
   type SimpleExpressionNode,
   type SkipNode,
   type VNodeCall,
+  WITH_MEMO,
   generate,
   baseParse as parse,
   transform,
@@ -23,6 +24,7 @@ import { transformIf } from '../../src/transforms/vIf'
 import { transformFor } from '../../src/transforms/vFor'
 import { transformSlotOutlet } from '../../src/transforms/transformSlotOutlet'
 import { transformSkip } from '../../src/transforms/vSkip'
+import { transformMemo } from '../../src/transforms/vMemo'
 
 export function parseWithSkipTransform(
   template: string,
@@ -36,6 +38,7 @@ export function parseWithSkipTransform(
     nodeTransforms: [
       transformIf,
       transformSkip,
+      transformMemo,
       transformFor,
       transformExpression,
       transformSlotOutlet,
@@ -252,6 +255,25 @@ describe('compiler: v-skip', () => {
       expect(
         ((branch.children[0] as SkipNode).test as SimpleExpressionNode).content,
       ).toBe(`_ctx.nested`)
+      expect(generate(root).code).toMatchSnapshot()
+    })
+
+    test('with v-memo', () => {
+      const { root, node } = parseWithSkipTransform(
+        `<div v-skip="ok" v-memo="[1]"><span/></div>`,
+      ) as {
+        root: RootNode
+        node: SkipNode
+      }
+      expect(node.type).toBe(NodeTypes.SKIP)
+      expect((node.test as SimpleExpressionNode).content).toBe(`_ctx.ok`)
+      expect(node.alternate.children.length).toBe(1)
+      expect(node.alternate.children[0].type).toBe(NodeTypes.ELEMENT)
+      expect((node.alternate.children[0] as ElementNode).tag).toBe(`div`)
+      const codegenNode = (node.alternate.children[0] as ElementNode)
+        .codegenNode!
+      expect(codegenNode.type).toBe(NodeTypes.JS_CALL_EXPRESSION)
+      expect((codegenNode as any).callee).toBe(WITH_MEMO)
       expect(generate(root).code).toMatchSnapshot()
     })
 

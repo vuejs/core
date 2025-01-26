@@ -389,3 +389,19 @@ return function render(_ctx, _cache) {
   }
 }"
 `;
+
+exports[`compiler: v-skip > transform > with v-memo 1`] = `
+"const _Vue = Vue
+
+return function render(_ctx, _cache) {
+  with (_ctx) {
+    const { createElementVNode: _createElementVNode, openBlock: _openBlock, createElementBlock: _createElementBlock, withMemo: _withMemo } = _Vue
+
+    return (_ctx.ok)
+      ? (_openBlock(), _createElementBlock("span", { key: 0 }))
+      : _withMemo([1], () => (_openBlock(), _createElementBlock("div", { key: 1 }, [
+          (_openBlock(), _createElementBlock("span", { key: 0 }))
+        ])), _cache, 0)
+  }
+}"
+`;
