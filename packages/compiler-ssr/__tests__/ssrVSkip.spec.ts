@@ -196,7 +196,7 @@ describe('ssr: v-skip', () => {
   test('on component', () => {
     expect(compile(`<Comp v-skip="foo"/>`).code).toMatchInlineSnapshot(`
       "const { withCtx: _withCtx, createCommentVNode: _createCommentVNode, resolveComponent: _resolveComponent } = require("vue")
-      const { ssrRenderComponent: _ssrRenderComponent, ssrRenderSkipComponent: _ssrRenderSkipComponent } = require("vue/server-renderer")
+      const { ssrRenderComponent: _ssrRenderComponent } = require("vue/server-renderer")
 
       return function ssrRender(_ctx, _push, _parent, _attrs) {
         const _component_Comp = _resolveComponent("Comp")
@@ -204,7 +204,7 @@ describe('ssr: v-skip', () => {
         if (_ctx.foo) {
           _createCommentVNode("v-skip", true)
         } else {
-          _push(_ssrRenderSkipComponent(_push, _ctx.foo, _component_Comp, _attrs, null, _parent))
+          _push(_ssrRenderComponent(_component_Comp, _attrs, null, _parent))
         }
       }"
     `)
@@ -360,7 +360,7 @@ describe('ssr: v-skip', () => {
     `).code,
     ).toMatchInlineSnapshot(`
       "const { withCtx: _withCtx, resolveComponent: _resolveComponent, createVNode: _createVNode } = require("vue")
-      const { ssrRenderComponent: _ssrRenderComponent, ssrRenderSkipComponent: _ssrRenderSkipComponent } = require("vue/server-renderer")
+      const { ssrRenderComponent: _ssrRenderComponent } = require("vue/server-renderer")
 
       return function ssrRender(_ctx, _push, _parent, _attrs) {
         const _component_Comp = _resolveComponent("Comp")
@@ -369,7 +369,7 @@ describe('ssr: v-skip', () => {
         if (_ctx.ok) {
           _push(\`<span></span>\`)
         } else {
-          _push(_ssrRenderSkipComponent(_push, _ctx.ok, _component_Comp, null, {
+          _push(_ssrRenderComponent(_component_Comp, null, {
             default: _withCtx((_, _push, _parent, _scopeId) => {
               if (_push) {
                 _push(\`<span\${_scopeId}></span>\`)

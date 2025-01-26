@@ -2,6 +2,7 @@ import {
   type Component,
   type ComponentInternalInstance,
   type Slots,
+  type VNode,
   createVNode,
 } from 'vue'
 import {
@@ -11,6 +12,7 @@ import {
   renderComponentVNode,
 } from '../render'
 import { type SSRSlots, ssrRenderSlot } from './ssrRenderSlot'
+import { ssrRenderVNode } from '@vue/server-renderer'
 
 export function ssrRenderSkipComponent(
   push: PushFn,
@@ -39,4 +41,26 @@ export function ssrRenderSkipComponent(
     parentComponent,
     slotScopeId,
   )
+}
+
+export function ssrRenderSkipVNode(
+  isSkip: boolean,
+  push: PushFn,
+  vnode: VNode,
+  parentComponent: ComponentInternalInstance,
+  slotScopeId?: string,
+): void {
+  if (isSkip) {
+    ssrRenderSlot(
+      vnode.children as Slots,
+      'default',
+      {},
+      null,
+      push,
+      parentComponent,
+      slotScopeId,
+    )
+  } else {
+    ssrRenderVNode(push, vnode, parentComponent, slotScopeId)
+  }
 }

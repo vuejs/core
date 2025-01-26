@@ -1,5 +1,5 @@
 import {
-  ElementTypes,
+  type ComponentNode,
   type NodeTransform,
   NodeTypes,
   type SkipNode,
@@ -13,26 +13,39 @@ import type { SSRTransformContext } from '../ssrCodegenTransform'
 import {
   SSR_RENDER_COMPONENT,
   SSR_RENDER_SKIP_COMPONENT,
+  SSR_RENDER_SKIP_VNODE,
   SSR_RENDER_VNODE,
 } from '../runtimeHelpers'
 
 export const ssrTransformSkip: NodeTransform =
   createStructuralDirectiveTransform('skip', (node, dir, context) => {
-    processSkip(node, dir, context)
-    return () => {
-      if (node.tagType === ElementTypes.COMPONENT && node.ssrCodegenNode) {
-        const { callee, arguments: args, loc } = node.ssrCodegenNode
-        if (callee === SSR_RENDER_COMPONENT) {
-          node.ssrCodegenNode = createCallExpression(
-            context.helper(SSR_RENDER_SKIP_COMPONENT),
-            [`_push`, dir.exp!, ...args],
+    return processSkip(node, dir, context, (skipNode?: SkipNode) => {
+      return () => {
+        // for non-skipNode, rewrite the ssrCodegenNode
+        // `ssrRenderComponent` -> `ssrRenderSkipComponent`
+        // `ssrRenderVNode` -> `ssrRenderSkipVNode`
+        if (!skipNode && node && (node as ComponentNode).ssrCodegenNode) {
+          const {
+            callee,
+            arguments: args,
             loc,
-          )
-        } else if (callee === SSR_RENDER_VNODE) {
-          // TODO
+          } = (node as ComponentNode).ssrCodegenNode!
+          if (callee === SSR_RENDER_COMPONENT) {
+            ;(node as ComponentNode).ssrCodegenNode = createCallExpression(
+              context.helper(SSR_RENDER_SKIP_COMPONENT),
+              [`_push`, dir.exp!, ...args],
+              loc,
+            )
+          } else if (callee === SSR_RENDER_VNODE) {
+            ;(node as ComponentNode).ssrCodegenNode = createCallExpression(
+              context.helper(SSR_RENDER_SKIP_VNODE),
+              [dir.exp!, ...args],
+              loc,
+            )
+          }
         }
       }
-    }
+    })
   })
 
 export function ssrProcessSkip(
