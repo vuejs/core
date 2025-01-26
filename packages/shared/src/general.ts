@@ -217,3 +217,17 @@ export function genCacheKey(source: string, options: any): string {
     )
   )
 }
+
+export function clone(v: any): any {
+  if (isArray(v)) {
+    return v.map(clone)
+  } else if (isPlainObject(v)) {
+    const res: any = {}
+    for (const key in v) {
+      res[key] = clone(v[key as keyof typeof v])
+    }
+    return res
+  } else {
+    return v
+  }
+}

@@ -32,6 +32,7 @@ import {
 import { createCodegenNodeForBranch } from './vIf'
 import { validateBrowserExpression } from '../validateExpression'
 import { cloneLoc } from '../parser'
+import { clone } from '@vue/shared'
 
 export const transformSkip: NodeTransform = createStructuralDirectiveTransform(
   'skip',
@@ -134,7 +135,7 @@ export function processSkip(
       undefined,
       true,
     )
-    // find default slot if not has dynamic slots
+    // find default slot without slot props if not has dynamic slots
     if (!hasDynamicSlots && slots.type === NodeTypes.JS_OBJECT_EXPRESSION) {
       processAsSkipNode = true
       const prop = slots.properties.find(
@@ -145,7 +146,10 @@ export function processSkip(
           p.value.params === undefined,
       )
       if (prop) {
-        children = prop.value.returns as TemplateChildNode[]
+        const slotNode = prop.value.returns as TemplateChildNode[]
+        // clone the slot node to avoid mutating the original one, since it
+        // will be transformed again in ssr slot vnode fallback
+        children = context.inSSR ? clone(slotNode) : slotNode
       } else {
         context.onError(
           createCompilerError(ErrorCodes.X_V_SKIP_UNEXPECTED_SLOT, loc),

@@ -368,7 +368,7 @@ describe('ssr: v-skip', () => {
     `)
   })
 
-  test.todo('on component with implicit default slot + v-if', () => {
+  test('on component with implicit default slot + v-if', () => {
     expect(
       compile(
         `<Comp v-skip="ok">
@@ -376,6 +376,41 @@ describe('ssr: v-skip', () => {
         </Comp>`,
       ).code,
     ).toMatchInlineSnapshot(`
+      "const { withCtx: _withCtx, resolveComponent: _resolveComponent, openBlock: _openBlock, createBlock: _createBlock, createCommentVNode: _createCommentVNode } = require("vue")
+      const { ssrRenderComponent: _ssrRenderComponent } = require("vue/server-renderer")
+
+      return function ssrRender(_ctx, _push, _parent, _attrs) {
+        const _component_Comp = _resolveComponent("Comp")
+
+        if (_ctx.ok) {
+          _push(\`<!--[-->\`)
+          if (_ctx.yes) {
+            _push(\`<span>default</span>\`)
+          } else {
+            _push(\`<!---->\`)
+          }
+          _push(\`<!--]-->\`)
+        } else {
+          _push(_ssrRenderComponent(_component_Comp, _attrs, {
+            default: _withCtx((_, _push, _parent, _scopeId) => {
+              if (_push) {
+                if (_ctx.yes) {
+                  _push(\`<span\${_scopeId}>default</span>\`)
+                } else {
+                  _push(\`<!---->\`)
+                }
+              } else {
+                return [
+                  (_ctx.yes)
+                    ? (_openBlock(), _createBlock("span", { key: 0 }, "default"))
+                    : _createCommentVNode("v-if", true)
+                ]
+              }
+            }),
+            _: 1 /* STABLE */
+          }, _parent))
+        }
+      }"
     `)
   })
 
