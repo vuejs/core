@@ -128,13 +128,18 @@ export function processSkip(
     processAsSkipNode = true
     children = node.children
   } else if (isComponent) {
-    ;({ processAsSkipNode, children } = resolveDefaultSlot(
-      node,
-      context,
-      processAsSkipNode,
-      children,
-      loc,
-    ))
+    const { hasDynamicSlots, defaultSlot } = resolveDefaultSlot(node, context)
+    if (!hasDynamicSlots) {
+      if (defaultSlot) {
+        processAsSkipNode = true
+        // using the cloned node for ssr VNode-based slot
+        children = context.inSSR ? clone(defaultSlot) : defaultSlot
+      } else {
+        context.onError(
+          createCompilerError(ErrorCodes.X_V_SKIP_UNEXPECTED_SLOT, loc),
+        )
+      }
+    }
   }
 
   let skipNode: SkipNode | undefined
@@ -155,6 +160,7 @@ export function processSkip(
       consequent,
       alternate: createBranchNode(node, node.loc, [node]),
       newline: true,
+      codegenNode: undefined,
     }
 
     context.replaceNode(skipNode)
@@ -163,17 +169,11 @@ export function processSkip(
   if (processCodegen) return processCodegen(skipNode)
 }
 
-function resolveDefaultSlot(
-  node: ComponentNode,
-  context: TransformContext,
-  processAsSkipNode: boolean,
-  children: TemplateChildNode[],
-  loc: SourceLocation,
-) {
+function resolveDefaultSlot(node: ComponentNode, context: TransformContext) {
+  let defaultSlot: TemplateChildNode[] | undefined = undefined
   const { slots, hasDynamicSlots } = buildSlots(node, context, undefined, true)
   // find default slot without slot props if not has dynamic slots
   if (!hasDynamicSlots && slots.type === NodeTypes.JS_OBJECT_EXPRESSION) {
-    processAsSkipNode = true
     const prop = slots.properties.find(
       p =>
         p.type === NodeTypes.JS_PROPERTY &&
@@ -182,17 +182,10 @@ function resolveDefaultSlot(
         p.value.params === undefined,
     )
     if (prop) {
-      const slotNode = prop.value.returns as TemplateChildNode[]
-      // using the cloned node for ssr VNode-based slot
-      children = context.inSSR ? clone(slotNode) : slotNode
-    } else {
-      context.onError(
-        createCompilerError(ErrorCodes.X_V_SKIP_UNEXPECTED_SLOT, loc),
-      )
+      defaultSlot = prop.value.returns as TemplateChildNode[]
     }
   }
-
-  return { processAsSkipNode, children }
+  return { hasDynamicSlots, defaultSlot }
 }
 
 function createBranchNode(

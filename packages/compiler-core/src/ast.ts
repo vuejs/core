@@ -416,7 +416,7 @@ export interface SkipNode extends Node {
   consequent: IfBranchNode | CallExpression
   alternate: IfBranchNode
   newline: boolean
-  codegenNode?: ConditionalExpression
+  codegenNode: ConditionalExpression | undefined
 }
 
 export interface ConditionalExpression extends Node {
