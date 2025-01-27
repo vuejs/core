@@ -467,9 +467,15 @@ export function traverseNode(
       }
       break
     case NodeTypes.SKIP:
-      const { consequent } = node
-      if (consequent.type === NodeTypes.IF_BRANCH)
-        traverseNode(consequent, context)
+      // in non-SSR mode, `alternate` already includes `consequent` content,
+      // so no need to traverse `consequent` node
+      // during `inSSR` transform, we need to traverse both since we use the cloned nodes,
+      // see `createBranchNode` in `vSkip.ts`
+      if (context.inSSR) {
+        const { consequent } = node
+        if (consequent.type === NodeTypes.IF_BRANCH)
+          traverseNode(consequent, context)
+      }
       traverseNode(node.alternate, context)
       break
     case NodeTypes.IF_BRANCH:

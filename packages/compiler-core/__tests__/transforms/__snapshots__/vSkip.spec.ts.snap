@@ -19,7 +19,7 @@ exports[`compiler: v-skip > transform > nested v-skip 1`] = `
 
 return function render(_ctx, _cache) {
   with (_ctx) {
-    const { createCommentVNode: _createCommentVNode, openBlock: _openBlock, createElementBlock: _createElementBlock, createElementVNode: _createElementVNode, Fragment: _Fragment } = _Vue
+    const { createCommentVNode: _createCommentVNode, openBlock: _openBlock, createElementBlock: _createElementBlock, Fragment: _Fragment } = _Vue
 
     return (_ctx.ok)
       ? (_openBlock(), _createElementBlock(_Fragment, { key: 0 }, [
@@ -95,12 +95,12 @@ exports[`compiler: v-skip > transform > on component with dynamic slot 1`] = `
 
 return function render(_ctx, _cache) {
   with (_ctx) {
-    const { withCtx: _withCtx, resolveComponent: _resolveComponent, resolveSkipComponent: _resolveSkipComponent, openBlock: _openBlock, createBlock: _createBlock } = _Vue
+    const { withCtx: _withCtx, toDisplayString: _toDisplayString, resolveComponent: _resolveComponent, resolveSkipComponent: _resolveSkipComponent, openBlock: _openBlock, createBlock: _createBlock } = _Vue
 
     const _component_Comp = _resolveComponent("Comp")
 
     return (_openBlock(), _createBlock(_resolveSkipComponent(_ctx.ok, _component_Comp), null, {
-      [_ctx.foo]: _withCtx(() => ["foo"]),
+      [_ctx.foo]: _withCtx(() => [_toDisplayString(_ctx.foo)]),
       _: 2 /* DYNAMIC */
     }, 1024 /* DYNAMIC_SLOTS */))
   }
@@ -112,20 +112,20 @@ exports[`compiler: v-skip > transform > on component with implicit default slot 
 
 return function render(_ctx, _cache) {
   with (_ctx) {
-    const { withCtx: _withCtx, openBlock: _openBlock, createElementBlock: _createElementBlock, createCommentVNode: _createCommentVNode, createElementVNode: _createElementVNode, resolveComponent: _resolveComponent, Fragment: _Fragment, createBlock: _createBlock } = _Vue
+    const { withCtx: _withCtx, toDisplayString: _toDisplayString, openBlock: _openBlock, createElementBlock: _createElementBlock, createCommentVNode: _createCommentVNode, resolveComponent: _resolveComponent, Fragment: _Fragment, createBlock: _createBlock } = _Vue
 
     const _component_Comp = _resolveComponent("Comp")
 
     return (_ctx.ok)
       ? (_openBlock(), _createElementBlock(_Fragment, { key: 0 }, [
           (_ctx.yes)
-            ? (_openBlock(), _createElementBlock("span", { key: 0 }, "default"))
+            ? (_openBlock(), _createElementBlock("span", { key: 0 }, _toDisplayString(_ctx.default), 1 /* TEXT */))
             : _createCommentVNode("v-if", true)
         ], 2112 /* STABLE_FRAGMENT, DEV_ROOT_FRAGMENT */))
       : (_openBlock(), _createBlock(_component_Comp, { key: 1 }, {
           default: _withCtx(() => [
             (_ctx.yes)
-              ? (_openBlock(), _createElementBlock("span", { key: 0 }, "default"))
+              ? (_openBlock(), _createElementBlock("span", { key: 0 }, _toDisplayString(_ctx.default), 1 /* TEXT */))
               : _createCommentVNode("v-if", true)
           ]),
           _: 1 /* STABLE */
@@ -139,7 +139,7 @@ exports[`compiler: v-skip > transform > on component with multiple implicit defa
 
 return function render(_ctx, _cache) {
   with (_ctx) {
-    const { withCtx: _withCtx, createElementVNode: _createElementVNode, resolveComponent: _resolveComponent, Fragment: _Fragment, openBlock: _openBlock, createElementBlock: _createElementBlock, createBlock: _createBlock } = _Vue
+    const { withCtx: _withCtx, createElementVNode: _createElementVNode, toDisplayString: _toDisplayString, resolveComponent: _resolveComponent, Fragment: _Fragment, openBlock: _openBlock, createElementBlock: _createElementBlock, createBlock: _createBlock } = _Vue
 
     const _component_Comp = _resolveComponent("Comp")
 
@@ -149,7 +149,7 @@ return function render(_ctx, _cache) {
           _createElementVNode("div")
         ], 64 /* STABLE_FRAGMENT */))
       : (_openBlock(), _createBlock(_component_Comp, { key: 1 }, {
-          foo: _withCtx(() => ["foo"]),
+          foo: _withCtx(() => [_toDisplayString(_ctx.foo)]),
           default: _withCtx(() => [
             _createElementVNode("span"),
             _createElementVNode("div")
@@ -185,7 +185,7 @@ exports[`compiler: v-skip > transform > on component with name default slot + v-
 
 return function render(_ctx, _cache) {
   with (_ctx) {
-    const { withCtx: _withCtx, createSlots: _createSlots, resolveComponent: _resolveComponent, resolveSkipComponent: _resolveSkipComponent, openBlock: _openBlock, createBlock: _createBlock } = _Vue
+    const { withCtx: _withCtx, createSlots: _createSlots, toDisplayString: _toDisplayString, resolveComponent: _resolveComponent, resolveSkipComponent: _resolveSkipComponent, openBlock: _openBlock, createBlock: _createBlock } = _Vue
 
     const _component_Comp = _resolveComponent("Comp")
 
@@ -193,7 +193,7 @@ return function render(_ctx, _cache) {
       (_ctx.yes)
         ? {
             name: "default",
-            fn: _withCtx(() => ["default"]),
+            fn: _withCtx(() => [_toDisplayString(_ctx.default)]),
             key: "0"
           }
         : undefined
@@ -325,7 +325,7 @@ exports[`compiler: v-skip > transform > with component children 1`] = `
 
 return function render(_ctx, _cache) {
   with (_ctx) {
-    const { resolveComponent: _resolveComponent, createVNode: _createVNode, openBlock: _openBlock, createBlock: _createBlock, createElementBlock: _createElementBlock } = _Vue
+    const { resolveComponent: _resolveComponent, openBlock: _openBlock, createBlock: _createBlock, createElementBlock: _createElementBlock } = _Vue
 
     const _component_Comp = _resolveComponent("Comp")
 
@@ -343,7 +343,7 @@ exports[`compiler: v-skip > transform > with element children 1`] = `
 
 return function render(_ctx, _cache) {
   with (_ctx) {
-    const { createElementVNode: _createElementVNode, openBlock: _openBlock, createElementBlock: _createElementBlock } = _Vue
+    const { openBlock: _openBlock, createElementBlock: _createElementBlock } = _Vue
 
     return (_ctx.ok)
       ? (_openBlock(), _createElementBlock("span", { key: 0 }))
@@ -381,11 +381,11 @@ exports[`compiler: v-skip > transform > with text children 1`] = `
 
 return function render(_ctx, _cache) {
   with (_ctx) {
-    const { Fragment: _Fragment, openBlock: _openBlock, createElementBlock: _createElementBlock } = _Vue
+    const { toDisplayString: _toDisplayString, Fragment: _Fragment, openBlock: _openBlock, createElementBlock: _createElementBlock } = _Vue
 
     return (_ctx.ok)
-      ? (_openBlock(), _createElementBlock(_Fragment, { key: 0 }, ["foo"], 2112 /* STABLE_FRAGMENT, DEV_ROOT_FRAGMENT */))
-      : (_openBlock(), _createElementBlock("div", { key: 1 }, "foo"))
+      ? (_openBlock(), _createElementBlock(_Fragment, { key: 0 }, [_toDisplayString(_ctx.foo)], 2112 /* STABLE_FRAGMENT, DEV_ROOT_FRAGMENT */))
+      : (_openBlock(), _createElementBlock("div", { key: 1 }, _toDisplayString(_ctx.foo), 1 /* TEXT */))
   }
 }"
 `;
@@ -395,7 +395,7 @@ exports[`compiler: v-skip > transform > with v-memo 1`] = `
 
 return function render(_ctx, _cache) {
   with (_ctx) {
-    const { createElementVNode: _createElementVNode, openBlock: _openBlock, createElementBlock: _createElementBlock, withMemo: _withMemo } = _Vue
+    const { openBlock: _openBlock, createElementBlock: _createElementBlock, withMemo: _withMemo } = _Vue
 
     return (_ctx.ok)
       ? (_openBlock(), _createElementBlock("span", { key: 0 }))

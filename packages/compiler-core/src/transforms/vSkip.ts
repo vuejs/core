@@ -132,8 +132,7 @@ export function processSkip(
     if (!hasDynamicSlots) {
       if (defaultSlot) {
         processAsSkipNode = true
-        // using the cloned node for ssr VNode-based slot
-        children = context.inSSR ? clone(defaultSlot) : defaultSlot
+        children = defaultSlot
       } else {
         context.onError(
           createCompilerError(ErrorCodes.X_V_SKIP_UNEXPECTED_SLOT, loc),
@@ -147,7 +146,7 @@ export function processSkip(
     // if children is empty, create comment node
     const consequent =
       children.length !== 0
-        ? createBranchNode(node, node.loc, children)
+        ? createBranchNode(context, node, node.loc, children)
         : createCallExpression(context.helper(CREATE_COMMENT), [
             __DEV__ ? '"v-skip"' : '""',
             'true',
@@ -158,7 +157,7 @@ export function processSkip(
       loc: cloneLoc(node.loc),
       test: dir.exp,
       consequent,
-      alternate: createBranchNode(node, node.loc, [node]),
+      alternate: createBranchNode(context, node, node.loc, [node]),
       newline: true,
       codegenNode: undefined,
     }
@@ -189,6 +188,7 @@ function resolveDefaultSlot(node: ComponentNode, context: TransformContext) {
 }
 
 function createBranchNode(
+  context: TransformContext,
   node: ElementNode,
   loc: SourceLocation,
   children: TemplateChildNode[],
@@ -197,7 +197,8 @@ function createBranchNode(
     type: NodeTypes.IF_BRANCH,
     loc,
     condition: undefined,
-    children,
+    // using cloned node during `inSSR` transform
+    children: context.inSSR ? clone(children) : children,
     userKey: findProp(node, `key`),
   }
 }

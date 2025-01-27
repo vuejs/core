@@ -70,17 +70,20 @@ describe('compiler: v-skip', () => {
 
     test('with text children', () => {
       const { root, node } = parseWithSkipTransform(
-        `<div v-skip="ok">foo</div>`,
+        `<div v-skip="ok">{{foo}}</div>`,
       ) as { root: RootNode; node: SkipNode }
       expect(node.type).toBe(NodeTypes.SKIP)
       expect((node.test as SimpleExpressionNode).content).toBe(`_ctx.ok`)
       expect((node.consequent as IfBranchNode).children.length).toBe(1)
       expect((node.consequent as IfBranchNode).children[0].type).toBe(
-        NodeTypes.TEXT,
+        NodeTypes.INTERPOLATION,
       )
       expect(
-        ((node.consequent as IfBranchNode).children[0] as any).content,
-      ).toBe(`foo`)
+        (
+          ((node.consequent as IfBranchNode).children[0] as any)
+            .content as SimpleExpressionNode
+        ).content,
+      ).toBe(`_ctx.foo`)
       expect(node.alternate.children.length).toBe(1)
       expect(node.alternate.children[0].type).toBe(NodeTypes.ELEMENT)
       expect((node.alternate.children[0] as ElementNode).tag).toBe(`div`)
@@ -341,7 +344,7 @@ describe('compiler: v-skip', () => {
       const { root, node } = parseWithSkipTransform(
         `<Comp v-skip="ok">
           <span/>
-          <template #foo>foo</template>
+          <template #foo>{{foo}}</template>
           <div/>
         </Comp>`,
       ) as { root: RootNode; node: SkipNode }
@@ -371,7 +374,7 @@ describe('compiler: v-skip', () => {
     test('on component with name default slot + v-if', () => {
       const { root, node } = parseWithSkipTransform(
         `<Comp v-skip="ok">
-          <template v-if="yes" #default>default</template>
+          <template v-if="yes" #default>{{default}}</template>
         </Comp>`,
       ) as { root: RootNode; node: ComponentNode }
       expect(node.type).toBe(NodeTypes.ELEMENT)
@@ -390,7 +393,7 @@ describe('compiler: v-skip', () => {
     test('on component with implicit default slot + v-if', () => {
       const { root, node } = parseWithSkipTransform(
         `<Comp v-skip="ok">
-          <span v-if="yes">default</span>
+          <span v-if="yes">{{default}}</span>
         </Comp>`,
       ) as { root: RootNode; node: SkipNode }
       expect(node.type).toBe(NodeTypes.SKIP)
@@ -401,7 +404,7 @@ describe('compiler: v-skip', () => {
     test('on component with dynamic slot', () => {
       const { root, node } = parseWithSkipTransform(
         `<Comp v-skip="ok">
-          <template #[foo]>foo</template>
+          <template #[foo]>{{foo}}</template>
         </Comp>`,
       ) as { root: RootNode; node: ComponentNode }
       expect(node.type).toBe(NodeTypes.ELEMENT)
