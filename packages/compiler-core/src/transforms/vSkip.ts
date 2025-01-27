@@ -147,8 +147,7 @@ export function processSkip(
       )
       if (prop) {
         const slotNode = prop.value.returns as TemplateChildNode[]
-        // clone the slot node to avoid mutating the original one, since it
-        // will be transformed again in ssr slot vnode fallback
+        // using the cloned node for ssr VNode-based slot
         children = context.inSSR ? clone(slotNode) : slotNode
       } else {
         context.onError(
