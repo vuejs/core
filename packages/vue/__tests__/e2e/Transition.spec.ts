@@ -1938,6 +1938,74 @@ describe('e2e: Transition', () => {
       E2E_TIMEOUT,
     )
 
+    test(
+      'avoid unmount activeBranch twice with Suspense (out-in mode + timeout="0")',
+      async () => {
+        const unmountSpy = vi.fn()
+        await page().exposeFunction('unmountSpy', unmountSpy)
+        await page().evaluate(() => {
+          const { createApp, shallowRef, h } = (window as any).Vue
+          const One = {
+            setup() {
+              return () =>
+                h(
+                  'div',
+                  {
+                    onVnodeBeforeUnmount: () => unmountSpy(),
+                  },
+                  'one',
+                )
+            },
+          }
+          const Two = {
+            async setup() {
+              return () => h('div', null, 'two')
+            },
+          }
+          createApp({
+            template: `
+            <div id="container">
+              <transition mode="out-in">
+                <suspense timeout="0">
+                  <template #default>
+                    <component :is="view"></component>
+                  </template>
+                  <template #fallback>
+                    <div>Loading...</div>
+                  </template>
+                </suspense>
+              </transition>
+            </div>
+            <button id="toggleBtn" @click="click">button</button>
+            `,
+            setup: () => {
+              const view = shallowRef(One)
+              const click = () => {
+                view.value = view.value === One ? Two : One
+              }
+              return { view, click }
+            },
+          }).mount('#app')
+        })
+
+        expect(await html('#container')).toBe('<div>one</div>')
+
+        // leave
+        await classWhenTransitionStart()
+        await nextFrame()
+        expect(await html('#container')).toBe(
+          '<div class="v-enter-from v-enter-active">two</div>',
+        )
+
+        await transitionFinish()
+        expect(await html('#container')).toBe('<div class="">two</div>')
+
+        // should only call unmount once
+        expect(unmountSpy).toBeCalledTimes(1)
+      },
+      E2E_TIMEOUT,
+    )
+
     // #5844
     test('children mount should be called after html changes', async () => {
       const fooMountSpy = vi.fn()
