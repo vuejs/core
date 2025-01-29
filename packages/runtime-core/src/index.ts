@@ -210,6 +210,7 @@ export type {
   ReactiveFlags,
   DeepReadonly,
   ShallowReactive,
+  IsShallowReactive,
   UnwrapNestedRefs,
   ComputedRef,
   WritableComputedRef,
