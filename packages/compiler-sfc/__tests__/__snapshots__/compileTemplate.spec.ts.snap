@@ -64,3 +64,60 @@ exports[`template errors 1`] = `
   [SyntaxError: v-model can only be used on <input>, <textarea> and <select> elements.],
 ]
 `;
+
+exports[`user import binding used in both template and cssVar(inline) 1`] = `
+"import { useCssVars as _useCssVars, unref as _unref, defineComponent as _defineComponent } from 'vue'
+import { toDisplayString as _toDisplayString, openBlock as _openBlock, createElementBlock as _createElementBlock } from "vue"
+
+import { color } from './Color'
+  
+export default /*#__PURE__*/_defineComponent({
+  setup(__props) {
+
+_useCssVars(_ctx => ({
+  "xxx-color": (_unref(color))
+}))
+
+    
+return (_ctx: any,_cache: any) => {
+  return (_openBlock(), _createElementBlock("div", null, _toDisplayString(_unref(color)), 1 /* TEXT */))
+}
+}
+
+})"
+`;
+
+exports[`user import binding used in both template and cssVar(inline) 2`] = `
+"import { toDisplayString as _toDisplayString, openBlock as _openBlock, createElementBlock as _createElementBlock } from "vue"
+
+export function render(_ctx, _cache, $props, $setup, $data, $options) {
+  return (_openBlock(), _createElementBlock("div", null, _toDisplayString(_unref(color)), 1 /* TEXT */))
+}"
+`;
+
+exports[`user import binding used in both template and cssVar(non-inline) 1`] = `
+"import { useCssVars as _useCssVars, unref as _unref, defineComponent as _defineComponent } from 'vue'
+import { color } from './Color'
+  
+export default /*#__PURE__*/_defineComponent({
+  setup(__props, { expose: __expose }) {
+  __expose();
+
+_useCssVars(_ctx => ({
+  "xxx-color": (_unref(color))
+}))
+
+    
+return { get color() { return color } }
+}
+
+})"
+`;
+
+exports[`user import binding used in both template and cssVar(non-inline) 2`] = `
+"import { toDisplayString as _toDisplayString, openBlock as _openBlock, createElementBlock as _createElementBlock } from "vue"
+
+export function render(_ctx, _cache, $props, $setup, $data, $options) {
+  return (_openBlock(), _createElementBlock("div", null, _toDisplayString(_unref(color)), 1 /* TEXT */))
+}"
+`;
