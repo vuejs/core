@@ -21,7 +21,7 @@ import {
 } from '@vue/runtime-dom'
 import {
   createComponent,
-  // createIf,
+  createIf,
   createTextNode,
   renderEffect,
   setText,
@@ -130,14 +130,13 @@ describe('api: lifecycle hooks', () => {
     expect(fn).toHaveBeenCalledTimes(1)
   })
 
-  it.todo('onBeforeUnmount', async () => {
+  it('onBeforeUnmount', async () => {
     const toggle = ref(true)
     const fn = vi.fn(() => {
-      expect(host.innerHTML).toBe('<div></div>')
+      expect(host.innerHTML).toBe('<div></div><!--if-->')
     })
     const { render, host } = define({
       setup() {
-        // @ts-expect-error
         const n0 = createIf(
           () => toggle.value,
           () => createComponent(Child),
@@ -160,18 +159,17 @@ describe('api: lifecycle hooks', () => {
 
     toggle.value = false
     await nextTick()
-    // expect(fn).toHaveBeenCalledTimes(1) // FIXME: not called
+    expect(fn).toHaveBeenCalledTimes(1)
     expect(host.innerHTML).toBe('<!--if-->')
   })
 
-  it.todo('onUnmounted', async () => {
+  it('onUnmounted', async () => {
     const toggle = ref(true)
     const fn = vi.fn(() => {
-      expect(host.innerHTML).toBe('<div></div>')
+      expect(host.innerHTML).toBe('<!--if-->')
     })
     const { render, host } = define({
       setup() {
-        // @ts-expect-error
         const n0 = createIf(
           () => toggle.value,
           () => createComponent(Child),
@@ -194,18 +192,17 @@ describe('api: lifecycle hooks', () => {
 
     toggle.value = false
     await nextTick()
-    // expect(fn).toHaveBeenCalledTimes(1) // FIXME: not called
+    expect(fn).toHaveBeenCalledTimes(1)
     expect(host.innerHTML).toBe('<!--if-->')
   })
 
-  it.todo('onBeforeUnmount in onMounted', async () => {
+  it('onBeforeUnmount in onMounted', async () => {
     const toggle = ref(true)
     const fn = vi.fn(() => {
-      expect(host.innerHTML).toBe('<div></div>')
+      expect(host.innerHTML).toBe('<div></div><!--if-->')
     })
     const { render, host } = define({
       setup() {
-        // @ts-expect-error
         const n0 = createIf(
           () => toggle.value,
           () => createComponent(Child),
@@ -230,25 +227,24 @@ describe('api: lifecycle hooks', () => {
 
     toggle.value = false
     await nextTick()
-    // expect(fn).toHaveBeenCalledTimes(1) // FIXME: not called
+    expect(fn).toHaveBeenCalledTimes(1)
     expect(host.innerHTML).toBe('<!--if-->')
   })
 
-  it.todo('lifecycle call order', async () => {
+  it('lifecycle call order', async () => {
     const count = ref(0)
     const toggle = ref(true)
     const calls: string[] = []
 
     const { render } = define({
       setup() {
-        onBeforeMount(() => calls.push('onBeforeMount'))
-        onMounted(() => calls.push('onMounted'))
-        onBeforeUpdate(() => calls.push('onBeforeUpdate'))
-        onUpdated(() => calls.push('onUpdated'))
-        onBeforeUnmount(() => calls.push('onBeforeUnmount'))
-        onUnmounted(() => calls.push('onUnmounted'))
+        onBeforeMount(() => calls.push('root onBeforeMount'))
+        onMounted(() => calls.push('root onMounted'))
+        onBeforeUpdate(() => calls.push('root onBeforeUpdate'))
+        onUpdated(() => calls.push('root onUpdated'))
+        onBeforeUnmount(() => calls.push('root onBeforeUnmount'))
+        onUnmounted(() => calls.push('root onUnmounted'))
 
-        // @ts-expect-error
         const n0 = createIf(
           () => toggle.value,
           () => createComponent(Mid, { count: () => count.value }),
@@ -290,14 +286,14 @@ describe('api: lifecycle hooks', () => {
     }
 
     // mount
-    render()
+    const ctx = render()
     expect(calls).toEqual([
-      'onBeforeMount',
+      'root onBeforeMount',
       'mid onBeforeMount',
       'child onBeforeMount',
       'child onMounted',
       'mid onMounted',
-      'onMounted',
+      'root onMounted',
     ])
 
     calls.length = 0
@@ -305,29 +301,22 @@ describe('api: lifecycle hooks', () => {
     // update
     count.value++
     await nextTick()
-    // FIXME: not called
-    // expect(calls).toEqual([
-    //   'root onBeforeUpdate',
-    //   'mid onBeforeUpdate',
-    //   'child onBeforeUpdate',
-    //   'child onUpdated',
-    //   'mid onUpdated',
-    //   'root onUpdated',
-    // ])
+    // only child updated
+    expect(calls).toEqual(['child onBeforeUpdate', 'child onUpdated'])
 
     calls.length = 0
 
     // unmount
-    toggle.value = false
-    // FIXME: not called
-    // expect(calls).toEqual([
-    //   'root onBeforeUnmount',
-    //   'mid onBeforeUnmount',
-    //   'child onBeforeUnmount',
-    //   'child onUnmounted',
-    //   'mid onUnmounted',
-    //   'root onUnmounted',
-    // ])
+    ctx.app.unmount()
+    await nextTick()
+    expect(calls).toEqual([
+      'root onBeforeUnmount',
+      'mid onBeforeUnmount',
+      'child onBeforeUnmount',
+      'child onUnmounted',
+      'mid onUnmounted',
+      'root onUnmounted',
+    ])
   })
 
   it('onRenderTracked', async () => {
@@ -422,12 +411,11 @@ describe('api: lifecycle hooks', () => {
     })
   })
 
-  it.todo('runs shared hook fn for each instance', async () => {
+  it('runs shared hook fn for each instance', async () => {
     const fn = vi.fn()
     const toggle = ref(true)
     const { render } = define({
       setup() {
-        // @ts-expect-error
         return createIf(
           () => toggle.value,
           () => [createComponent(Child), createComponent(Child)],
@@ -446,7 +434,7 @@ describe('api: lifecycle hooks', () => {
     expect(fn).toHaveBeenCalledTimes(2)
     toggle.value = false
     await nextTick()
-    // expect(fn).toHaveBeenCalledTimes(4) // FIXME: not called unmounted hook
+    expect(fn).toHaveBeenCalledTimes(4)
   })
 
   // #136
