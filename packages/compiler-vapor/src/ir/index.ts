@@ -42,7 +42,7 @@ export interface BaseIRNode {
   type: IRNodeTypes
 }
 
-export type CoreHelper = keyof typeof import('packages/runtime-core/src')
+export type CoreHelper = keyof typeof import('packages/runtime-dom/src')
 
 export type VaporHelper = keyof typeof import('packages/runtime-vapor/src')
 

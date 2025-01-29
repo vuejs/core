@@ -74,10 +74,7 @@ describe('api: setup context', () => {
       inheritAttrs: false,
       setup(_props, { attrs }) {
         const el = document.createElement('div')
-        let prev: any
-        renderEffect(() => {
-          prev = setDynamicProps(el, [attrs], prev, true)
-        })
+        renderEffect(() => setDynamicProps(el, [attrs]))
         return el
       },
     })
@@ -113,10 +110,7 @@ describe('api: setup context', () => {
         const n0 = createComponent(Wrapper, null, {
           default: () => {
             const n0 = template('<div>')() as HTMLDivElement
-            let prev: any
-            renderEffect(() => {
-              prev = setDynamicProps(n0, [attrs], prev, true)
-            })
+            renderEffect(() => setDynamicProps(n0, [attrs]))
             return n0
           },
         })

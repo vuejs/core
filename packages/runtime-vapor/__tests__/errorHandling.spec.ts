@@ -6,7 +6,7 @@ import {
   watch,
   watchEffect,
 } from '@vue/runtime-dom'
-import { createComponent, setRef, template } from '../src'
+import { createComponent, createTemplateRefSetter, template } from '../src'
 import { makeRender } from './_utils'
 import type { VaporComponent } from '../src/component'
 import type { RefEl } from '../src/apiTemplateRef'
@@ -229,6 +229,7 @@ describe('error handling', () => {
     const Child = {
       render() {
         const el = template('<div>')()
+        const setRef = createTemplateRefSetter()
         setRef(el as RefEl, ref)
         return el
       },
