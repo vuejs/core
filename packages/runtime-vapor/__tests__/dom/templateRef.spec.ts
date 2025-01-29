@@ -76,7 +76,7 @@ describe('api: template ref', () => {
     expect(fooEl.value).toBe(null)
   })
 
-  it.todo('string ref unmount', async () => {
+  it('string ref unmount', async () => {
     const t0 = template('<div></div>')
     const el = ref(null)
     const toggle = ref(true)
@@ -153,7 +153,7 @@ describe('api: template ref', () => {
     expect(fn2.mock.calls[0][0]).toBe(host.children[0])
   })
 
-  it.todo('function ref unmount', async () => {
+  it('function ref unmount', async () => {
     const fn = vi.fn()
     const toggle = ref(true)
 
@@ -361,7 +361,7 @@ describe('api: template ref', () => {
   })
 
   // #1789
-  test.todo('toggle the same ref to different elements', async () => {
+  test('toggle the same ref to different elements', async () => {
     const refToggle = ref(false)
     const spy = vi.fn()
 
