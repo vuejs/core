@@ -160,12 +160,20 @@ export const vModelCheckbox: ModelDirective<HTMLInputElement> = {
 
 function setChecked(
   el: HTMLInputElement,
-  { value, oldValue }: DirectiveBinding,
+  { value }: DirectiveBinding,
   vnode: VNode,
 ) {
+  if (looseEqual(value, (el as any)._cachedValue)) {
+    return
+  }
   // store the v-model value on the element so it can be accessed by the
   // change listener.
   ;(el as any)._modelValue = value
+  ;(el as any)._cachedValue = isArray(value)
+    ? [...value]
+    : isSet(value)
+      ? new Set(value)
+      : value
   let checked: boolean
 
   if (isArray(value)) {
@@ -173,7 +181,6 @@ function setChecked(
   } else if (isSet(value)) {
     checked = value.has(vnode.props!.value)
   } else {
-    if (value === oldValue) return
     checked = looseEqual(value, getCheckboxValue(el, true))
   }
 
@@ -210,13 +217,14 @@ export const vModelSelect: ModelDirective<HTMLSelectElement, 'number'> = {
         .map((o: HTMLOptionElement) =>
           number ? looseToNumber(getValue(o)) : getValue(o),
         )
-      el[assignKey](
-        el.multiple
-          ? isSetModel
-            ? new Set(selectedVal)
-            : selectedVal
-          : selectedVal[0],
-      )
+      const modelValue = el.multiple
+        ? isSetModel
+          ? new Set(selectedVal)
+          : selectedVal
+        : selectedVal[0]
+      el[assignKey](modelValue)
+      ;(el as any)._cachedValue = isArray(value) ? [...value] : value
+
       el._assigning = true
       nextTick(() => {
         el._assigning = false
@@ -240,6 +248,15 @@ export const vModelSelect: ModelDirective<HTMLSelectElement, 'number'> = {
 }
 
 function setSelected(el: HTMLSelectElement, value: any) {
+  if ((el as any)._assigning && looseEqual(value, (el as any)._cachedValue)) {
+    return
+  }
+  ;(el as any)._cachedValue = isArray(value)
+    ? [...value]
+    : isSet(value)
+      ? new Set(value)
+      : value
+
   const isMultiple = el.multiple
   const isArrayValue = isArray(value)
   if (isMultiple && !isArrayValue && !isSet(value)) {
