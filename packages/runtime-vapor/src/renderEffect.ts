@@ -48,7 +48,7 @@ export function renderEffect(fn: () => void, noLifecycle = false): void {
       }
 
   const effect = new ReactiveEffect(renderEffectFn)
-  const job: SchedulerJob = effect.runIfDirty.bind(effect)
+  const job: SchedulerJob = () => effect.dirty && effect.run()
 
   if (instance) {
     if (__DEV__) {

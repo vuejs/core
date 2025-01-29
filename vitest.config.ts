@@ -1,9 +1,9 @@
-import { configDefaults, defineConfig } from 'vitest/config'
+import { defineConfig } from 'vitest/config'
 import { entries } from './scripts/aliases.js'
 
 export default defineConfig({
   define: {
-    __DEV__: true,
+    __DEV__: process.env.MODE !== 'benchmark',
     __TEST__: true,
     __VERSION__: '"test"',
     __BROWSER__: false,
@@ -25,6 +25,11 @@ export default defineConfig({
   test: {
     globals: true,
     pool: 'threads',
+    poolOptions: {
+      forks: {
+        execArgv: ['--expose-gc'],
+      },
+    },
     setupFiles: 'scripts/setup-vitest.ts',
     environmentMatchGlobs: [
       ['packages/{vue,vue-compat,runtime-dom,runtime-vapor}/**', 'jsdom'],

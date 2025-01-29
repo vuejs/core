@@ -38,10 +38,12 @@ export function injectHook(
         // This assumes the hook does not synchronously trigger other hooks, which
         // can only be false when the user does something really funky.
         const reset = setCurrentInstance(target)
-        const res = callWithAsyncErrorHandling(hook, target, type, args)
-        reset()
-        resetTracking()
-        return res
+        try {
+          return callWithAsyncErrorHandling(hook, target, type, args)
+        } finally {
+          reset()
+          resetTracking()
+        }
       })
     if (prepend) {
       hooks.unshift(wrappedHook)
