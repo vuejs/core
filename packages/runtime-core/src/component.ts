@@ -366,6 +366,7 @@ export interface GenericComponentInstance {
    * @internal
    */
   refs: Data
+  emit: EmitFn
   /**
    * used for keeping track of .once event handlers on components
    * @internal
@@ -377,6 +378,11 @@ export interface GenericComponentInstance {
    * @internal
    */
   propsDefaults: Data | null
+  /**
+   * used for getting the keys of a component's raw props, vapor only
+   * @internal
+   */
+  rawKeys?: () => string[]
 
   // exposed properties via expose()
   exposed: Record<string, any> | null

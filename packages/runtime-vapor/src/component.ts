@@ -50,6 +50,7 @@ import {
 import {
   type DynamicPropsSource,
   type RawProps,
+  getKeysFromRawProps,
   getPropsProxyHandlers,
   hasFallthroughAttrs,
   normalizePropsOptions,
@@ -409,6 +410,14 @@ export class VaporComponentInstance implements GenericComponentInstance {
       this.propsOptions = normalizePropsOptions(comp)
       this.emitsOptions = normalizeEmitsOptions(comp)
     }
+  }
+
+  /**
+   * Expose `getKeysFromRawProps` on the instance so it can be used in code
+   * paths where it's needed, e.g. `useModel`
+   */
+  rawKeys(): string[] {
+    return getKeysFromRawProps(this.rawProps)
   }
 }
 
