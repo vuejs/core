@@ -768,6 +768,52 @@ describe('e2e: Transition', () => {
     )
 
     test(
+      'onLeave event immediately done (out-in mode)',
+      async () => {
+        const onLeaveSpy = vi.fn()
+        await page().exposeFunction('onLeaveSpy', onLeaveSpy)
+
+        await page().evaluate(async () => {
+          const { onLeaveSpy } = window as any
+          const { createApp, ref } = (window as any).Vue
+          createApp({
+            template: `
+              <div id="container">
+                <transition mode="out-in" @leave="onLeave">
+                  <div v-if="toggle">True</div>
+                  <div v-else>False</div>
+                </transition>
+              </div>
+              <button id="toggleBtn" @click="click">button</button>
+            `,
+            setup: () => {
+              const toggle = ref(true)
+              function onLeave(el: Element, done: Function) {
+                onLeaveSpy()
+                // immediately done
+                done()
+              }
+              const click = () => (toggle.value = !toggle.value)
+              return {
+                toggle,
+                click,
+                onLeave,
+              }
+            },
+          }).mount('#app')
+        })
+
+        expect(await html('#container')).toBe('<div>True</div>')
+
+        await click('#toggleBtn')
+        await transitionFinish()
+        expect(onLeaveSpy).toBeCalled()
+        expect(await html('#container')).toBe('<div class="">False</div>')
+      },
+      E2E_TIMEOUT,
+    )
+
+    test(
       'css: false',
       async () => {
         const onBeforeEnterSpy = vi.fn()
