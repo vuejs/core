@@ -661,7 +661,9 @@ export class VueElement
    * @internal
    */
   _injectChildStyle(comp: ConcreteComponent & CustomElementOptions): void {
-    this._applyStyles(comp.styles, comp)
+    if (this._def.shadowRoot !== false) {
+      this._applyStyles(comp.styles, comp)
+    }
   }
 
   /**
