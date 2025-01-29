@@ -67,5 +67,4 @@ export function renderEffect(fn: () => void, noLifecycle = false): void {
   effect.run()
 
   // TODO recurse handling
-  // TODO measure
 }
