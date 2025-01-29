@@ -1,7 +1,10 @@
 import { type Ref, customRef, ref } from '@vue/reactivity'
 import { EMPTY_OBJ, camelize, hasChanged, hyphenate } from '@vue/shared'
 import type { DefineModelOptions, ModelRef } from '../apiSetupHelpers'
-import { getCurrentGenericInstance } from '../component'
+import {
+  type ComponentInternalInstance,
+  getCurrentGenericInstance,
+} from '../component'
 import { warn } from '../warning'
 import type { NormalizedProps } from '../componentProps'
 import { watchSyncEffect } from '../apiWatch'
@@ -65,19 +68,38 @@ export function useModel(
         ) {
           return
         }
-        const rawPropKeys = i.getKeysFromRawProps()
-        if (
-          !(
-            rawPropKeys &&
-            // check if parent has passed v-model
-            (rawPropKeys.includes(name) ||
-              rawPropKeys.includes(camelizedName) ||
-              rawPropKeys.includes(hyphenatedName)) &&
-            (rawPropKeys.includes(`onUpdate:${name}`) ||
-              rawPropKeys.includes(`onUpdate:${camelizedName}`) ||
-              rawPropKeys.includes(`onUpdate:${hyphenatedName}`))
-          )
-        ) {
+
+        let rawPropKeys
+        let parentPassedModelValue = false
+        let parentPassedModelUpdater = false
+
+        if (i.rawKeys) {
+          // vapor instance
+          rawPropKeys = i.rawKeys()
+        } else {
+          const rawProps = (i as ComponentInternalInstance).vnode!.props
+          rawPropKeys = rawProps && Object.keys(rawProps)
+        }
+
+        if (rawPropKeys) {
+          for (const key of rawPropKeys) {
+            if (
+              key === name ||
+              key === camelizedName ||
+              key === hyphenatedName
+            ) {
+              parentPassedModelValue = true
+            } else if (
+              key === `onUpdate:${name}` ||
+              key === `onUpdate:${camelizedName}` ||
+              key === `onUpdate:${hyphenatedName}`
+            ) {
+              parentPassedModelUpdater = true
+            }
+          }
+        }
+
+        if (!parentPassedModelValue || !parentPassedModelUpdater) {
           // no v-model, local update
           localValue = value
           trigger()
