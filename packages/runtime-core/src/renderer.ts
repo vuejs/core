@@ -115,6 +115,7 @@ export interface RendererOptions<
     nextValue: any,
     namespace?: ElementNamespace,
     parentComponent?: ComponentInternalInstance | null,
+    isVPre?: boolean,
   ): void
   insert(el: HostNode, parent: HostElement, anchor?: HostNode | null): void
   remove(el: HostNode): void
@@ -675,9 +676,18 @@ function baseCreateRenderer(
     setScopeId(el, vnode, vnode.scopeId, slotScopeIds, parentComponent)
     // props
     if (props) {
+      const isVPre = isVPreProps(props)
       for (const key in props) {
         if (key !== 'value' && !isReservedProp(key)) {
-          hostPatchProp(el, key, null, props[key], namespace, parentComponent)
+          hostPatchProp(
+            el,
+            key,
+            null,
+            props[key],
+            namespace,
+            parentComponent,
+            isVPre,
+          )
         }
       }
       /**
@@ -989,6 +999,7 @@ function baseCreateRenderer(
   ) => {
     if (oldProps !== newProps) {
       if (oldProps !== EMPTY_OBJ) {
+        const isVPreInOldProps = isVPreProps(oldProps)
         for (const key in oldProps) {
           if (!isReservedProp(key) && !(key in newProps)) {
             hostPatchProp(
@@ -1002,6 +1013,8 @@ function baseCreateRenderer(
           }
         }
       }
+
+      const isVPreInNewProps = isVPreProps(newProps)
       for (const key in newProps) {
         // empty string is not valid prop
         if (isReservedProp(key)) continue
@@ -1009,7 +1022,15 @@ function baseCreateRenderer(
         const prev = oldProps[key]
         // defer patching value
         if (next !== prev && key !== 'value') {
-          hostPatchProp(el, key, prev, next, namespace, parentComponent)
+          hostPatchProp(
+            el,
+            key,
+            prev,
+            next,
+            namespace,
+            parentComponent,
+            isVPreInNewProps,
+          )
         }
       }
       if ('value' in newProps) {
@@ -2547,4 +2568,8 @@ export function invalidateMount(hooks: LifecycleHook): void {
     for (let i = 0; i < hooks.length; i++)
       hooks[i].flags! |= SchedulerJobFlags.DISPOSED
   }
+}
+
+function isVPreProps(props: Data) {
+  return props.hasOwnProperty('v-pre')
 }
