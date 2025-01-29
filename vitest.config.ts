@@ -25,9 +25,6 @@ export default defineConfig({
     globals: true,
     pool: 'threads',
     setupFiles: 'scripts/setup-vitest.ts',
-    environmentMatchGlobs: [
-      ['packages/{vue,vue-compat,runtime-dom}/**', 'jsdom'],
-    ],
     sequence: {
       hooks: 'list',
     },
