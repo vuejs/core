@@ -4,7 +4,7 @@ import { makeRender } from './_utils'
 
 const define = makeRender()
 
-describe.todo('createFor', () => {
+describe('createFor', () => {
   test('array source', async () => {
     const list = ref([{ name: '1' }, { name: '2' }, { name: '3' }])
     function reverse() {
@@ -572,26 +572,5 @@ describe.todo('createFor', () => {
     list.value = []
     await nextTick()
     expectCalledTimesToBe('Clear rows', 1, 0, 0, 0)
-  })
-
-  test.todo('withDestructure', () => {
-    // const list = ref([{ name: 'a' }, { name: 'b' }, { name: 'c' }])
-    // const { host } = define(() => {
-    //   const n1 = createFor(
-    //     () => list.value,
-    //     withDestructure(
-    //       ([{ name }, index]) => [name, index],
-    //       ctx => {
-    //         const span = template(`<li>${ctx[1]}. ${ctx[0]}</li>`)()
-    //         return span
-    //       },
-    //     ),
-    //     item => item.name,
-    //   )
-    //   return n1
-    // }).render()
-    // expect(host.innerHTML).toBe(
-    //   '<li>0. a</li><li>1. b</li><li>2. c</li><!--for-->',
-    // )
   })
 })
