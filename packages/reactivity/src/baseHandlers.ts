@@ -153,7 +153,13 @@ class MutableReactiveHandler extends BaseReactiveHandler {
       }
       if (!isArray(target) && isRef(oldValue) && !isRef(value)) {
         if (isOldValueReadonly) {
-          return false
+          if (__DEV__) {
+            warn(
+              `Set operation on key "${String(key)}" failed: target is readonly.`,
+              oldValue,
+            )
+          }
+          return true
         } else {
           oldValue.value = value
           return true
