@@ -282,6 +282,24 @@ describe('component', () => {
     expect(i.scope.effects.length).toBe(0)
   })
 
+  test('should mount component only with template in production mode', () => {
+    __DEV__ = false
+    const { component: Child } = define({
+      render() {
+        return template('<div> HI </div>', true)()
+      },
+    })
+
+    const { host } = define({
+      setup() {
+        return createComponent(Child, null, null, true)
+      },
+    }).render()
+
+    expect(host.innerHTML).toBe('<div> HI </div>')
+    __DEV__ = true
+  })
+
   it('warn if functional vapor component not return a block', () => {
     define(() => {
       return () => {}
