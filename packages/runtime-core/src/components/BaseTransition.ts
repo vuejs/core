@@ -545,10 +545,16 @@ export function getTransitionRawChildren(
   for (let i = 0; i < children.length; i++) {
     let child = children[i]
     // #5360 inherit parent key in case of <template v-for>
+    // #5761 if child.key is a number, it would be potentially
+    // duplicated with index i. In this case, ignore whatever
+    // existing number type child key to avoid duplication
     const key =
       parentKey == null
         ? child.key
-        : String(parentKey) + String(child.key != null ? child.key : i)
+        : String(parentKey) +
+          String(
+            child.key != null && typeof child.key !== 'number' ? child.key : i,
+          )
     // handle fragment children case, e.g. v-for
     if (child.type === Fragment) {
       if (child.patchFlag & PatchFlags.KEYED_FRAGMENT) keyedFragmentCount++
