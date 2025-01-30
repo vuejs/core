@@ -109,6 +109,20 @@ export function render(_ctx) {
 }"
 `;
 
+exports[`compiler: v-for > v-for aliases w/ complex expressions 1`] = `
+"import { getDefaultValue as _getDefaultValue, setText as _setText, renderEffect as _renderEffect, createFor as _createFor, template as _template } from 'vue';
+const t0 = _template("<div></div>", true)
+
+export function render(_ctx) {
+  const n0 = _createFor(() => (_ctx.list), (_ctx0) => {
+    const n2 = t0()
+    _renderEffect(() => _setText(n2, _getDefaultValue(_ctx._ctx0[0].value.foo, _ctx.bar) + _ctx.bar + _ctx.baz + _getDefaultValue(_ctx._ctx0[0].value.baz[0], _ctx.quux) + _ctx.quux))
+    return n2
+  })
+  return n0
+}"
+`;
+
 exports[`compiler: v-for > w/o value 1`] = `
 "import { createFor as _createFor, template as _template } from 'vue';
 const t0 = _template("<div>item</div>", true)

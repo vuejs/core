@@ -239,16 +239,18 @@ describe('compiler: v-for', () => {
     })
   })
 
-  test.todo('v-for aliases w/ complex expressions', () => {
+  test('v-for aliases w/ complex expressions', () => {
     const { code, ir } = compileWithVFor(
       `<div v-for="({ foo = bar, baz: [qux = quux] }) in list">
         {{ foo + bar + baz + qux + quux }}
       </div>`,
     )
     expect(code).matchSnapshot()
-    expect(code).contains(`([{ foo = bar, baz: [qux = quux] }]) => [foo, qux]`)
-    expect(code).contains(
-      `_ctx0[0] + _ctx.bar + _ctx.baz + _ctx0[1] + _ctx.quux`,
+    expect(code).toContain(
+      `_getDefaultValue(_ctx._ctx0[0].value.foo, _ctx.bar)`,
+    )
+    expect(code).toContain(
+      `_getDefaultValue(_ctx._ctx0[0].value.baz[0], _ctx.quux)`,
     )
     expect(ir.block.operation[0]).toMatchObject({
       type: IRNodeTypes.FOR,

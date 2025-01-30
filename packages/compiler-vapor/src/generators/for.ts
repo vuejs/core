@@ -34,6 +34,7 @@ export function genFor(
     let path = `${propsName}[0].value${pathInfo ? pathInfo.path : ''}`
     if (pathInfo) {
       if (pathInfo.helper) {
+        idMap[pathInfo.helper] = null
         path = `${pathInfo.helper}(${path}, ${pathInfo.helperArgs})`
       }
       if (pathInfo.dynamic) {
@@ -146,6 +147,20 @@ export function genFor(
                       })
                       .join(', ') +
                     ']'
+                }
+
+                // default value
+                if (
+                  child.type === 'AssignmentPattern' &&
+                  (parent.type === 'ObjectProperty' ||
+                    parent.type === 'ArrayPattern')
+                ) {
+                  isDynamic = true
+                  helper = context.helper('getDefaultValue')
+                  helperArgs = value.content.slice(
+                    child.right.start! - 1,
+                    child.right.end! - 1,
+                  )
                 }
               }
               map.set(id.name, { path, dynamic: isDynamic, helper, helperArgs })

@@ -22,5 +22,10 @@ export {
 } from './dom/prop'
 export { on, delegate, delegateEvents, setDynamicEvents } from './dom/event'
 export { createIf } from './apiCreateIf'
-export { createFor, createForSlots, getRestElement } from './apiCreateFor'
+export {
+  createFor,
+  createForSlots,
+  getRestElement,
+  getDefaultValue,
+} from './apiCreateFor'
 export { createTemplateRefSetter } from './apiTemplateRef'

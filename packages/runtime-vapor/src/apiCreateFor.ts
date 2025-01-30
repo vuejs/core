@@ -389,3 +389,7 @@ export function getRestElement(val: any, keys: string[]): any {
   }
   return res
 }
+
+export function getDefaultValue(val: any, defaultVal: any): any {
+  return val === undefined ? defaultVal : val
+}
