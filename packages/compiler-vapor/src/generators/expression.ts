@@ -22,7 +22,6 @@ export function genExpression(
   context: CodegenContext,
   assignment?: string,
 ): CodeFragment[] {
-  const { prefixIdentifiers } = context.options
   const { content, ast, isStatic, loc } = node
 
   if (isStatic) {
@@ -30,7 +29,6 @@ export function genExpression(
   }
 
   if (
-    !prefixIdentifiers ||
     !node.content.trim() ||
     // there was a parsing error
     ast === false ||

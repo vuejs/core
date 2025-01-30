@@ -68,8 +68,8 @@ export class CodegenContext {
     options: CodegenOptions,
   ) {
     const defaultOptions: Required<CodegenOptions> = {
-      mode: 'function', // TODO
-      prefixIdentifiers: options.mode === 'module',
+      mode: 'module',
+      prefixIdentifiers: true,
       sourceMap: false,
       filename: `template.vue.html`,
       scopeId: null,

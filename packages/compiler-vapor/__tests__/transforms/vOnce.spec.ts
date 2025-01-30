@@ -3,7 +3,7 @@ import { IRNodeTypes } from '../../src'
 import { getBaseTransformPreset } from '../../src/compile'
 import { makeCompile } from './_utils'
 
-const [nodeTransforms, directiveTransforms] = getBaseTransformPreset(true)
+const [nodeTransforms, directiveTransforms] = getBaseTransformPreset()
 const compileWithOnce = makeCompile({
   nodeTransforms,
   directiveTransforms,

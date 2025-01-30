@@ -194,7 +194,7 @@ export class TransformContext<T extends AllNode = AllNode> {
 
 const defaultOptions = {
   filename: '',
-  prefixIdentifiers: false,
+  prefixIdentifiers: true,
   hoistStatic: false,
   hmr: false,
   cacheHandlers: false,

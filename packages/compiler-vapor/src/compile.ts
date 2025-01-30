@@ -1,9 +1,6 @@
 import {
   type CompilerOptions as BaseCompilerOptions,
-  ErrorCodes,
   type RootNode,
-  createCompilerError,
-  defaultOnError,
   parse,
 } from '@vue/compiler-dom'
 import { extend, isString } from '@vue/shared'
@@ -38,20 +35,9 @@ export function compile(
   source: string | RootNode,
   options: CompilerOptions = {},
 ): VaporCodegenResult {
-  const onError = options.onError || defaultOnError
-  const isModuleMode = options.mode === 'module'
-  const prefixIdentifiers = options.prefixIdentifiers === true || isModuleMode
-
-  if (options.scopeId && !isModuleMode) {
-    onError(createCompilerError(ErrorCodes.X_SCOPE_ID_NOT_SUPPORTED))
-  }
-
-  const resolvedOptions = extend({}, options, {
-    prefixIdentifiers,
-  })
+  const resolvedOptions = extend({}, options)
   const ast = isString(source) ? parse(source, resolvedOptions) : source
-  const [nodeTransforms, directiveTransforms] =
-    getBaseTransformPreset(prefixIdentifiers)
+  const [nodeTransforms, directiveTransforms] = getBaseTransformPreset()
 
   if (options.isTS) {
     const { expressionPlugins } = options
@@ -87,9 +73,7 @@ export type TransformPreset = [
   Record<string, DirectiveTransform>,
 ]
 
-export function getBaseTransformPreset(
-  prefixIdentifiers?: boolean,
-): TransformPreset {
+export function getBaseTransformPreset(): TransformPreset {
   return [
     [
       transformVOnce,
