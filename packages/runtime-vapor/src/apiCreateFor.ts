@@ -1,4 +1,12 @@
-import { EffectScope, type ShallowRef, shallowRef } from '@vue/reactivity'
+import {
+  EffectScope,
+  type ShallowRef,
+  isReactive,
+  isShallow,
+  shallowReadArray,
+  shallowRef,
+  toReactive,
+} from '@vue/reactivity'
 import { getSequence, isArray, isObject, isString } from '@vue/shared'
 import { createComment, createTextNode } from './dom/node'
 import { type Block, Fragment, insert, remove as removeBlock } from './block'
@@ -33,6 +41,12 @@ class ForBlock extends Fragment {
 
 type Source = any[] | Record<any, any> | number | Set<any> | Map<any, any>
 
+type ResolvedSource = {
+  values: any[]
+  needsWrap: boolean
+  keys?: string[]
+}
+
 /*! #__NO_SIDE_EFFECTS__ */
 export const createFor = (
   src: () => Source,
@@ -59,8 +73,8 @@ export const createFor = (
   }
 
   const renderList = () => {
-    const source = src()
-    const newLength = getLength(source)
+    const source = normalizeSource(src())
+    const newLength = source.values.length
     const oldLength = oldBlocks.length
     newBlocks = new Array(newLength)
 
@@ -85,8 +99,7 @@ export const createFor = (
         // unkeyed fast path
         const commonLength = Math.min(newLength, oldLength)
         for (let i = 0; i < commonLength; i++) {
-          const [item] = getItem(source, i)
-          update((newBlocks[i] = oldBlocks[i]), item)
+          update((newBlocks[i] = oldBlocks[i]), getItem(source, i)[0])
         }
         for (let i = oldLength; i < newLength; i++) {
           mount(source, i)
@@ -249,7 +262,7 @@ export const createFor = (
   }
 
   const mount = (
-    source: any,
+    source: ResolvedSource,
     idx: number,
     anchor: Node | undefined = parentAnchor,
   ): ForBlock => {
@@ -319,54 +332,59 @@ export const createFor = (
 }
 
 export function createForSlots(
-  source: Source,
+  rawSource: Source,
   getSlot: (item: any, key: any, index?: number) => DynamicSlot,
 ): DynamicSlot[] {
-  const sourceLength = getLength(source)
+  const source = normalizeSource(rawSource)
+  const sourceLength = source.values.length
   const slots = new Array<DynamicSlot>(sourceLength)
   for (let i = 0; i < sourceLength; i++) {
-    const [item, key, index] = getItem(source, i)
-    slots[i] = getSlot(item, key, index)
+    slots[i] = getSlot(...getItem(source, i))
   }
   return slots
 }
 
-function getLength(source: any): number {
-  if (isArray(source) || isString(source)) {
-    return source.length
+function normalizeSource(source: any): ResolvedSource {
+  let values = source
+  let needsWrap = false
+  let keys
+  if (isArray(source)) {
+    if (isReactive(source)) {
+      needsWrap = !isShallow(source)
+      values = shallowReadArray(source)
+    }
+  } else if (isString(source)) {
+    values = source.split('')
   } else if (typeof source === 'number') {
     if (__DEV__ && !Number.isInteger(source)) {
       warn(`The v-for range expect an integer value but got ${source}.`)
     }
-    return source
+    values = new Array(source)
+    for (let i = 0; i < source; i++) values[i] = i + 1
   } else if (isObject(source)) {
     if (source[Symbol.iterator as any]) {
-      return Array.from(source as Iterable<any>).length
+      values = Array.from(source as Iterable<any>)
     } else {
-      return Object.keys(source).length
+      keys = Object.keys(source)
+      values = new Array(keys.length)
+      for (let i = 0, l = keys.length; i < l; i++) {
+        values[i] = source[keys[i]]
+      }
     }
   }
-  return 0
+  return { values, needsWrap, keys }
 }
 
 function getItem(
-  source: any,
+  { keys, values, needsWrap }: ResolvedSource,
   idx: number,
 ): [item: any, key: any, index?: number] {
-  if (isArray(source) || isString(source)) {
-    return [source[idx], idx, undefined]
-  } else if (typeof source === 'number') {
-    return [idx + 1, idx, undefined]
-  } else if (isObject(source)) {
-    if (source[Symbol.iterator as any]) {
-      source = Array.from(source as Iterable<any>)
-      return [source[idx], idx, undefined]
-    } else {
-      const key = Object.keys(source)[idx]
-      return [source[key], key, idx]
-    }
+  const value = needsWrap ? toReactive(values[idx]) : values[idx]
+  if (keys) {
+    return [value, keys[idx], idx]
+  } else {
+    return [value, idx, undefined]
   }
-  return null!
 }
 
 function normalizeAnchor(node: Block): Node {
