@@ -35,16 +35,17 @@ export const dynamicSlotsProxyHandlers: ProxyHandler<RawSlots> = {
     }
   },
   ownKeys(target) {
-    const keys = Object.keys(target)
+    let keys = Object.keys(target)
     const dynamicSources = target.$
     if (dynamicSources) {
+      keys = keys.filter(k => k !== '$')
       for (const source of dynamicSources) {
         if (isFunction(source)) {
           const slot = source()
           if (isArray(slot)) {
-            for (const s of slot) keys.push(s.name)
+            for (const s of slot) keys.push(String(s.name))
           } else {
-            keys.push(slot.name)
+            keys.push(String(slot.name))
           }
         } else {
           keys.push(...Object.keys(source))
@@ -73,9 +74,9 @@ export function getSlot(
         if (slot) {
           if (isArray(slot)) {
             for (const s of slot) {
-              if (s.name === key) return s.fn
+              if (String(s.name) === key) return s.fn
             }
-          } else if (slot.name === key) {
+          } else if (String(slot.name) === key) {
             return slot.fn
           }
         }
@@ -150,6 +151,3 @@ export function createSlot(
 
   return fragment
 }
-
-// TODO
-export function createForSlots(): any {}

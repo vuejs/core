@@ -319,7 +319,7 @@ export const createFor = (
 }
 
 export function createForSlots(
-  source: any[] | Record<any, any> | number | Set<any> | Map<any, any>,
+  source: Source,
   getSlot: (item: any, key: any, index?: number) => DynamicSlot,
 ): DynamicSlot[] {
   const sourceLength = getLength(source)

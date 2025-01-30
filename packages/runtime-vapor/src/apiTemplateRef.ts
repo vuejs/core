@@ -6,6 +6,7 @@ import {
   isVaporComponent,
 } from './component'
 import {
+  ErrorCodes,
   type SchedulerJob,
   callWithErrorHandling,
   queuePostFlushCb,
@@ -67,13 +68,10 @@ export function setRef(
 
   if (isFunction(ref)) {
     const invokeRefSetter = (value?: Element | Record<string, any>) => {
-      callWithErrorHandling(
-        ref,
-        currentInstance,
-        // @ts-expect-error
-        null,
-        [value, refs],
-      )
+      callWithErrorHandling(ref, currentInstance, ErrorCodes.FUNCTION_REF, [
+        value,
+        refs,
+      ])
     }
 
     invokeRefSetter(refValue)

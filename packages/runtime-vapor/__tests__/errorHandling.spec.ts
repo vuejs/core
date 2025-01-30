@@ -209,7 +209,7 @@ describe('error handling', () => {
     expect(fn).toHaveBeenCalledWith(err, 'render function')
   })
 
-  test.todo('in function ref', () => {
+  test('in function ref', () => {
     const err = new Error('foo')
     const ref = () => {
       throw err

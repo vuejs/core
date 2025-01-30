@@ -406,7 +406,7 @@ describe('api: template ref', () => {
   })
 
   // compiled output of v-for + template ref
-  test.todo('ref in v-for', async () => {
+  test('ref in v-for', async () => {
     const show = ref(true)
     const list = reactive([1, 2, 3])
     const listRefs = ref([])
@@ -466,7 +466,7 @@ describe('api: template ref', () => {
     expect(mapRefs()).toMatchObject(['2', '3', '4'])
   })
 
-  test.todo('named ref in v-for', async () => {
+  test('named ref in v-for', async () => {
     const show = ref(true)
     const list = reactive([1, 2, 3])
     const listRefs = ref([])
@@ -530,67 +530,64 @@ describe('api: template ref', () => {
   })
 
   // #6697 v-for ref behaves differently under production and development
-  test.todo(
-    'named ref in v-for , should be responsive when rendering',
-    async () => {
-      const list = ref([1, 2, 3])
-      const listRefs = ref([])
+  test('named ref in v-for , should be responsive when rendering', async () => {
+    const list = ref([1, 2, 3])
+    const listRefs = ref([])
 
-      const t0 = template('<div><div></div><ul></ul></div>')
-      const t1 = template('<li></li>')
-      const { render } = define({
-        setup() {
-          return { listRefs }
-        },
-        render() {
-          const n0 = t0()
-          const n1 = n0.firstChild
-          const n2 = n1!.nextSibling!
-          const n3 = createFor(
-            () => list.value,
-            state => {
-              const n4 = t1()
-              createTemplateRefSetter()(
-                n4 as Element,
-                'listRefs',
-                undefined,
-                true,
-              )
-              renderEffect(() => {
-                const [item] = state
-                setText(n4, item)
-              })
-              return n4
-            },
-          )
-          insert(n3, n2 as unknown as ParentNode)
-          renderEffect(() => {
-            setText(n1!, String(listRefs.value))
-          })
-          return n0
-        },
-      })
+    const t0 = template('<div><div></div><ul></ul></div>')
+    const t1 = template('<li></li>')
+    const { render } = define({
+      setup() {
+        return { listRefs }
+      },
+      render() {
+        const n0 = t0()
+        const n1 = n0.firstChild
+        const n2 = n1!.nextSibling!
+        const n3 = createFor(
+          () => list.value,
+          state => {
+            const n4 = t1()
+            createTemplateRefSetter()(
+              n4 as Element,
+              'listRefs',
+              undefined,
+              true,
+            )
+            renderEffect(() => {
+              const [item] = state
+              setText(n4, item)
+            })
+            return n4
+          },
+        )
+        insert(n3, n2 as unknown as ParentNode)
+        renderEffect(() => {
+          setText(n1!, String(listRefs.value))
+        })
+        return n0
+      },
+    })
 
-      const { host } = render()
+    const { host } = render()
 
-      await nextTick()
-      expect(String(listRefs.value)).toBe(
-        '[object HTMLLIElement],[object HTMLLIElement],[object HTMLLIElement]',
-      )
-      expect(host.innerHTML).toBe(
-        '<div><div>[object HTMLLIElement],[object HTMLLIElement],[object HTMLLIElement]</div><ul><li>1</li><li>2</li><li>3</li><!--for--></ul></div>',
-      )
+    await nextTick()
+    expect(String(listRefs.value)).toBe(
+      '[object HTMLLIElement],[object HTMLLIElement],[object HTMLLIElement]',
+    )
+    expect(host.innerHTML).toBe(
+      '<div><div>[object HTMLLIElement],[object HTMLLIElement],[object HTMLLIElement]</div><ul><li>1</li><li>2</li><li>3</li><!--for--></ul></div>',
+    )
 
-      list.value.splice(0, 1)
-      await nextTick()
-      expect(String(listRefs.value)).toBe(
-        '[object HTMLLIElement],[object HTMLLIElement]',
-      )
-      expect(host.innerHTML).toBe(
-        '<div><div>[object HTMLLIElement],[object HTMLLIElement]</div><ul><li>2</li><li>3</li><!--for--></ul></div>',
-      )
-    },
-  )
+    list.value.splice(0, 1)
+    await nextTick()
+    expect(String(listRefs.value)).toBe(
+      '[object HTMLLIElement],[object HTMLLIElement]',
+    )
+    expect(host.innerHTML).toBe(
+      '<div><div>[object HTMLLIElement],[object HTMLLIElement]</div><ul><li>2</li><li>3</li><!--for--></ul></div>',
+    )
+  })
 
   test('string ref inside slots', () => {
     const { component: Child } = define({

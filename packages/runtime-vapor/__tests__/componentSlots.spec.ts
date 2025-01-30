@@ -87,7 +87,7 @@ describe('component: slots', () => {
     expect(instance.slots).toHaveProperty('two')
   })
 
-  test.todo('should work with createFlorSlots', async () => {
+  test('should work with createFlorSlots', async () => {
     const loop = ref([1, 2, 3])
 
     let instance: any
@@ -101,7 +101,6 @@ describe('component: slots', () => {
         return createComponent(Child, null, {
           $: [
             () =>
-              // @ts-expect-error
               createForSlots(loop.value, (item, i) => ({
                 name: item,
                 fn: () => template(item + i)(),
