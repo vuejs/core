@@ -1,10 +1,15 @@
-import { type SimpleExpressionNode, walkIdentifiers } from '@vue/compiler-dom'
+import {
+  type SimpleExpressionNode,
+  createSimpleExpression,
+  walkIdentifiers,
+} from '@vue/compiler-dom'
 import { genBlock } from './block'
 import { genExpression } from './expression'
 import type { CodegenContext } from '../generate'
 import type { ForIRNode } from '../ir'
 import { type CodeFragment, NEWLINE, genCall, genMulti } from './utils'
 import type { Identifier } from '@babel/types'
+import { parseExpression } from '@babel/parser'
 
 export function genFor(
   oper: ForIRNode,
@@ -23,10 +28,19 @@ export function genFor(
 
   const [depth, exitScope] = context.enterScope()
   const propsName = `_ctx${depth}`
-  const idMap: Record<string, string | null> = {}
+  const idMap: Record<string, string | SimpleExpressionNode | null> = {}
 
-  idToPathMap.forEach((path, id) => {
-    idMap[id] = `${propsName}[0].value${path}`
+  idToPathMap.forEach((pathInfo, id) => {
+    const path = `${propsName}[0].value${pathInfo ? pathInfo.path : ''}`
+    if (pathInfo && pathInfo.dynamic) {
+      const node = (idMap[id] = createSimpleExpression(path))
+      const plugins = context.options.expressionPlugins
+      node.ast = parseExpression(`(${path})`, {
+        plugins: plugins ? [...plugins, 'typescript'] : ['typescript'],
+      })
+    } else {
+      idMap[id] = path
+    }
   })
   if (rawKey) idMap[rawKey] = `${propsName}[1].value`
   if (rawIndex) idMap[rawIndex] = `${propsName}[2].value`
@@ -54,7 +68,7 @@ export function genFor(
   // construct a id -> accessor path map.
   // e.g. `{ x: { y: [z] }}` -> `Map{ 'z' => '.x.y[0]' }`
   function parseValueDestructure() {
-    const map = new Map<string, string>()
+    const map = new Map<string, { path: string; dynamic: boolean } | null>()
     if (value) {
       rawValue = value && value.content
       if (value.ast) {
@@ -63,6 +77,7 @@ export function genFor(
           (id, _, parentStack, ___, isLocal) => {
             if (isLocal) {
               let path = ''
+              let isDynamic = false
               for (let i = 0; i < parentStack.length; i++) {
                 const parent = parentStack[i]
                 const child = parentStack[i + 1] || id
@@ -71,10 +86,10 @@ export function genFor(
                   parent.value === child
                 ) {
                   if (parent.computed && parent.key.type !== 'StringLiteral') {
-                    // TODO need to process this
+                    isDynamic = true
                     path += `[${value.content.slice(
-                      parent.key.start!,
-                      parent.key.end!,
+                      parent.key.start! - 1,
+                      parent.key.end! - 1,
                     )}]`
                   } else if (parent.key.type === 'StringLiteral') {
                     path += `[${JSON.stringify(parent.key.value)}]`
@@ -88,13 +103,13 @@ export function genFor(
                 }
                 // TODO handle rest spread
               }
-              map.set(id.name, path)
+              map.set(id.name, { path, dynamic: isDynamic })
             }
           },
           true,
         )
       } else {
-        map.set(rawValue, '')
+        map.set(rawValue, null)
       }
     }
     return map

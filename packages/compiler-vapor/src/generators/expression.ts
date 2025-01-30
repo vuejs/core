@@ -1,4 +1,10 @@
-import { NOOP, extend, genPropsAccessExp, isGloballyAllowed } from '@vue/shared'
+import {
+  NOOP,
+  extend,
+  genPropsAccessExp,
+  isGloballyAllowed,
+  isString,
+} from '@vue/shared'
 import {
   BindingTypes,
   NewlineType,
@@ -110,19 +116,26 @@ export function genExpression(
 
 function genIdentifier(
   raw: string,
-  { options, helper, identifiers }: CodegenContext,
+  context: CodegenContext,
   loc?: SourceLocation,
   assignment?: string,
   id?: Identifier,
   parent?: Node,
   parentStack?: Node[],
 ): CodeFragment[] {
+  const { options, helper, identifiers } = context
   const { inline, bindingMetadata } = options
   let name: string | undefined = raw
 
   const idMap = identifiers[raw]
   if (idMap && idMap.length) {
-    return [[idMap[0], NewlineType.None, loc]]
+    const replacement = idMap[0]
+    if (isString(replacement)) {
+      return [[replacement, NewlineType.None, loc]]
+    } else {
+      // replacement is an expression - process it again
+      return genExpression(replacement, context, assignment)
+    }
   }
 
   let prefix: string | undefined

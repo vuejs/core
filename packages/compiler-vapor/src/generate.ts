@@ -1,6 +1,7 @@
 import type {
   CodegenOptions as BaseCodegenOptions,
   BaseCodegenResult,
+  SimpleExpressionNode,
 } from '@vue/compiler-dom'
 import type { BlockIRNode, CoreHelper, RootIRNode, VaporHelper } from './ir'
 import { extend, remove } from '@vue/shared'
@@ -32,12 +33,16 @@ export class CodegenContext {
 
   delegates: Set<string> = new Set<string>()
 
-  identifiers: Record<string, string[]> = Object.create(null)
+  identifiers: Record<string, (string | SimpleExpressionNode)[]> =
+    Object.create(null)
 
   seenInlineHandlerNames: Record<string, number> = Object.create(null)
 
   block: BlockIRNode
-  withId<T>(fn: () => T, map: Record<string, string | null>): T {
+  withId<T>(
+    fn: () => T,
+    map: Record<string, string | SimpleExpressionNode | null>,
+  ): T {
     const { identifiers } = this
     const ids = Object.keys(map)
 
