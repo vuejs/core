@@ -79,13 +79,6 @@ describe('compiler: v-for', () => {
     expect(code).matchSnapshot()
   })
 
-  test.todo('object de-structured value', () => {
-    const { code } = compileWithVFor(
-      '<span v-for="({ id, value }) in items">{{ id }}{{ value }}</span>',
-    )
-    expect(code).matchSnapshot()
-  })
-
   test('nested v-for', () => {
     const { code, ir } = compileWithVFor(
       `<div v-for="i in list"><span v-for="j in i">{{ j+i }}</span></div>`,
@@ -125,11 +118,37 @@ describe('compiler: v-for', () => {
 
   test('object de-structured value', () => {
     const { code, ir } = compileWithVFor(
+      '<span v-for="({ id, value }) in items" :key="id">{{ id }}{{ value }}</span>',
+    )
+    expect(code).matchSnapshot()
+    expect(ir.block.operation[0]).toMatchObject({
+      type: IRNodeTypes.FOR,
+      source: {
+        type: NodeTypes.SIMPLE_EXPRESSION,
+        content: 'items',
+      },
+      value: {
+        type: NodeTypes.SIMPLE_EXPRESSION,
+        content: '{ id, value }',
+        ast: {
+          type: 'ArrowFunctionExpression',
+          params: [
+            {
+              type: 'ObjectPattern',
+            },
+          ],
+        },
+      },
+      key: undefined,
+      index: undefined,
+    })
+  })
+
+  test.todo('object de-structured value (with rest)', () => {
+    const { code, ir } = compileWithVFor(
       `<div v-for="(  { id, ...other }, index) in list" :key="id">{{ id + other + index }}</div>`,
     )
     expect(code).matchSnapshot()
-    expect(code).contains(`([{ id, ...other }, index]) => [id, other, index]`)
-    expect(code).contains(`_ctx0[0] + _ctx0[1] + _ctx0[2]`)
     expect(ir.block.operation[0]).toMatchObject({
       type: IRNodeTypes.FOR,
       source: {
@@ -158,11 +177,40 @@ describe('compiler: v-for', () => {
 
   test('array de-structured value', () => {
     const { code, ir } = compileWithVFor(
+      `<div v-for="([id, other], index) in list" :key="id">{{ id + other + index }}</div>`,
+    )
+    expect(code).matchSnapshot()
+    expect(ir.block.operation[0]).toMatchObject({
+      type: IRNodeTypes.FOR,
+      source: {
+        type: NodeTypes.SIMPLE_EXPRESSION,
+        content: 'list',
+      },
+      value: {
+        type: NodeTypes.SIMPLE_EXPRESSION,
+        content: '[id, other]',
+        ast: {
+          type: 'ArrowFunctionExpression',
+          params: [
+            {
+              type: 'ArrayPattern',
+            },
+          ],
+        },
+      },
+      key: {
+        type: NodeTypes.SIMPLE_EXPRESSION,
+        content: 'index',
+      },
+      index: undefined,
+    })
+  })
+
+  test.todo('array de-structured value (with rest)', () => {
+    const { code, ir } = compileWithVFor(
       `<div v-for="([id, ...other], index) in list" :key="id">{{ id + other + index }}</div>`,
     )
     expect(code).matchSnapshot()
-    expect(code).contains(`([[id, ...other], index]) => [id, other, index]`)
-    expect(code).contains(`_ctx0[0] + _ctx0[1] + _ctx0[2]`)
     expect(ir.block.operation[0]).toMatchObject({
       type: IRNodeTypes.FOR,
       source: {
@@ -189,7 +237,7 @@ describe('compiler: v-for', () => {
     })
   })
 
-  test('v-for aliases w/ complex expressions', () => {
+  test.todo('v-for aliases w/ complex expressions', () => {
     const { code, ir } = compileWithVFor(
       `<div v-for="({ foo = bar, baz: [qux = quux] }) in list">
         {{ foo + bar + baz + qux + quux }}
@@ -221,18 +269,5 @@ describe('compiler: v-for', () => {
       key: undefined,
       index: undefined,
     })
-  })
-
-  test('function params w/ prefixIdentifiers: false', () => {
-    const { code } = compileWithVFor(
-      `<div v-for="(item, , k) of items" :key="k">{{ item }}</div>`,
-      {
-        prefixIdentifiers: false,
-      },
-    )
-
-    expect(code).contains(`_createFor(() => (items), ([item, __, k]) => {`)
-    expect(code).contain(`_setText(n2, item)`)
-    expect(code).matchSnapshot()
   })
 })

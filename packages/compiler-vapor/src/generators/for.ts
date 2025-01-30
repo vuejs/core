@@ -3,56 +3,39 @@ import { genBlock } from './block'
 import { genExpression } from './expression'
 import type { CodegenContext } from '../generate'
 import type { ForIRNode } from '../ir'
-import {
-  type CodeFragment,
-  DELIMITERS_ARRAY,
-  NEWLINE,
-  genCall,
-  genMulti,
-} from './utils'
+import { type CodeFragment, NEWLINE, genCall, genMulti } from './utils'
+import type { Identifier } from '@babel/types'
 
 export function genFor(
   oper: ForIRNode,
   context: CodegenContext,
 ): CodeFragment[] {
   const { helper } = context
-  const { source, value, key, index, render, keyProp, once, id, container } =
+  const { source, value, key, index, render, keyProp, once, id, component } =
     oper
 
-  let isDestructure = false
   let rawValue: string | null = null
   const rawKey = key && key.content
   const rawIndex = index && index.content
 
   const sourceExpr = ['() => (', ...genExpression(source, context), ')']
-  const idsInValue = getIdsInValue()
-  let blockFn = genBlockFn()
-  const simpleIdMap: Record<string, null> = genSimpleIdMap()
+  const idToPathMap = parseValueDestructure()
 
-  if (isDestructure) {
-    const idMap: Record<string, null> = {}
-    idsInValue.forEach(id => (idMap[id] = null))
-    if (rawKey) idMap[rawKey] = null
-    if (rawIndex) idMap[rawIndex] = null
-    const destructureAssignmentFn: CodeFragment[] = [
-      '(',
-      ...genMulti(
-        DELIMITERS_ARRAY,
-        rawValue ? rawValue : rawKey || rawIndex ? '_' : undefined,
-        rawKey ? rawKey : rawIndex ? '__' : undefined,
-        rawIndex,
-      ),
-      ') => ',
-      ...genMulti(DELIMITERS_ARRAY, ...idsInValue, rawKey, rawIndex),
-    ]
+  const [depth, exitScope] = context.enterScope()
+  const propsName = `_ctx${depth}`
+  const idMap: Record<string, string | null> = {}
 
-    blockFn = genCall(
-      // @ts-expect-error
-      helper('withDestructure'),
-      destructureAssignmentFn,
-      blockFn,
-    )
-  }
+  idToPathMap.forEach((path, id) => {
+    idMap[id] = `${propsName}[0].value${path}`
+  })
+  if (rawKey) idMap[rawKey] = `${propsName}[1].value`
+  if (rawIndex) idMap[rawIndex] = `${propsName}[2].value`
+
+  const blockFn = context.withId(
+    () => genBlock(render, context, [propsName]),
+    idMap,
+  )
+  exitScope()
 
   return [
     NEWLINE,
@@ -62,67 +45,68 @@ export function genFor(
       sourceExpr,
       blockFn,
       genCallback(keyProp),
-      container != null && `n${container}`,
-      false, // todo: hydrationNode
+      component && 'true',
       once && 'true',
+      // todo: hydrationNode
     ),
   ]
 
-  function getIdsInValue() {
-    const idsInValue = new Set<string>()
+  // construct a id -> accessor path map.
+  // e.g. `{ x: { y: [z] }}` -> `Map{ 'z' => '.x.y[0]' }`
+  function parseValueDestructure() {
+    const map = new Map<string, string>()
     if (value) {
       rawValue = value && value.content
-      if ((isDestructure = !!value.ast)) {
+      if (value.ast) {
         walkIdentifiers(
           value.ast,
-          (id, _, __, ___, isLocal) => {
-            if (isLocal) idsInValue.add(id.name)
+          (id, _, parentStack, ___, isLocal) => {
+            if (isLocal) {
+              let path = ''
+              for (let i = 0; i < parentStack.length; i++) {
+                const parent = parentStack[i]
+                const child = parentStack[i + 1] || id
+                if (
+                  parent.type === 'ObjectProperty' &&
+                  parent.value === child
+                ) {
+                  if (parent.computed && parent.key.type !== 'StringLiteral') {
+                    // TODO need to process this
+                    path += `[${value.content.slice(
+                      parent.key.start!,
+                      parent.key.end!,
+                    )}]`
+                  } else if (parent.key.type === 'StringLiteral') {
+                    path += `[${JSON.stringify(parent.key.value)}]`
+                  } else {
+                    // non-computed, can only be identifier
+                    path += `.${(parent.key as Identifier).name}`
+                  }
+                } else if (parent.type === 'ArrayPattern') {
+                  const index = parent.elements.indexOf(child as any)
+                  path += `[${index}]`
+                }
+                // TODO handle rest spread
+              }
+              map.set(id.name, path)
+            }
           },
           true,
         )
       } else {
-        idsInValue.add(rawValue)
+        map.set(rawValue, '')
       }
     }
-    return idsInValue
+    return map
   }
 
-  function genBlockFn() {
-    const [depth, exitScope] = context.enterScope()
-    let propsName: string
-    const idMap: Record<string, string | null> = {}
-    if (context.options.prefixIdentifiers) {
-      propsName = `_ctx${depth}`
-      let suffix = isDestructure ? '' : '.value'
-      Array.from(idsInValue).forEach(
-        (id, idIndex) => (idMap[id] = `${propsName}[${idIndex}]${suffix}`),
-      )
-      if (rawKey) idMap[rawKey] = `${propsName}[${idsInValue.size}]${suffix}`
-      if (rawIndex)
-        idMap[rawIndex] = `${propsName}[${idsInValue.size + 1}]${suffix}`
-    } else {
-      propsName = `[${[rawValue || ((rawKey || rawIndex) && '_'), rawKey || (rawIndex && '__'), rawIndex].filter(Boolean).join(', ')}]`
-    }
-
-    const blockFn = context.withId(
-      () => genBlock(render, context, [propsName]),
-      idMap,
-    )
-    exitScope()
-    return blockFn
-  }
-
-  function genSimpleIdMap() {
-    const idMap: Record<string, null> = {}
-    if (rawKey) idMap[rawKey] = null
-    if (rawIndex) idMap[rawIndex] = null
-    idsInValue.forEach(id => (idMap[id] = null))
-    return idMap
-  }
-
+  // TODO this should be looked at for destructure cases
   function genCallback(expr: SimpleExpressionNode | undefined) {
     if (!expr) return false
-    const res = context.withId(() => genExpression(expr, context), simpleIdMap)
+    const res = context.withId(
+      () => genExpression(expr, context),
+      genSimpleIdMap(),
+    )
     return [
       ...genMulti(
         ['(', ')', ', '],
@@ -134,5 +118,13 @@ export function genFor(
       ...res,
       ')',
     ]
+  }
+
+  function genSimpleIdMap() {
+    const idMap: Record<string, null> = {}
+    if (rawKey) idMap[rawKey] = null
+    if (rawIndex) idMap[rawIndex] = null
+    idToPathMap.forEach((_, id) => (idMap[id] = null))
+    return idMap
   }
 }

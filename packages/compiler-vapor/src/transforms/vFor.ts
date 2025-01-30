@@ -1,5 +1,6 @@
 import {
   type ElementNode,
+  ElementTypes,
   ErrorCodes,
   type SimpleExpressionNode,
   createCompilerError,
@@ -46,6 +47,7 @@ export function processFor(
 
   const keyProp = findProp(node, 'key')
   const keyProperty = keyProp && propToExpression(keyProp)
+  const isComponent = node.tagType === ElementTypes.COMPONENT
   context.node = node = wrapTemplate(node, ['for'])
   context.dynamic.flags |= DynamicFlag.NON_TEMPLATE | DynamicFlag.INSERT
   const id = context.reference()
@@ -55,15 +57,6 @@ export function processFor(
 
   return (): void => {
     exitBlock()
-    const { parent } = context
-    let container: number | undefined
-    if (
-      parent &&
-      parent.block.node !== parent.node &&
-      parent.node.children.length === 1
-    ) {
-      container = parent.reference()
-    }
     context.registerOperation({
       type: IRNodeTypes.FOR,
       id,
@@ -74,7 +67,7 @@ export function processFor(
       keyProp: keyProperty,
       render,
       once: context.inVOnce,
-      container,
+      component: isComponent,
     })
   }
 }

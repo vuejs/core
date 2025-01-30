@@ -90,7 +90,7 @@ export interface ForIRNode extends BaseIRNode, IRFor {
   keyProp?: SimpleExpressionNode
   render: BlockIRNode
   once: boolean
-  container?: number
+  component: boolean
 }
 
 export interface SetPropIRNode extends BaseIRNode {
