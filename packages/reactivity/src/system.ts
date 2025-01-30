@@ -201,17 +201,15 @@ export function processComputedUpdate(
         shallowPropagate(subs)
       }
     }
-  } else if (flags & SubscriberFlags.PendingComputed) {
-    if (checkDirty(computed.deps!)) {
-      if (computed.update()) {
-        const subs = computed.subs
-        if (subs !== undefined) {
-          shallowPropagate(subs)
-        }
+  } else if (checkDirty(computed.deps!)) {
+    if (computed.update()) {
+      const subs = computed.subs
+      if (subs !== undefined) {
+        shallowPropagate(subs)
       }
-    } else {
-      computed.flags = flags & ~SubscriberFlags.PendingComputed
     }
+  } else {
+    computed.flags = flags & ~SubscriberFlags.PendingComputed
   }
 }
 
