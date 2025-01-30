@@ -1,5 +1,19 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
+exports[`compiler: v-for > array de-structured value (with rest) 1`] = `
+"import { setText as _setText, renderEffect as _renderEffect, createFor as _createFor, template as _template } from 'vue';
+const t0 = _template("<div></div>", true)
+
+export function render(_ctx) {
+  const n0 = _createFor(() => (_ctx.list), (_ctx0) => {
+    const n2 = t0()
+    _renderEffect(() => _setText(n2, _ctx0[0].value[0] + _ctx0[0].value.slice(1) + _ctx0[1].value))
+    return n2
+  }, ([id, ...other], index) => (id))
+  return n0
+}"
+`;
+
 exports[`compiler: v-for > array de-structured value 1`] = `
 "import { setText as _setText, renderEffect as _renderEffect, createFor as _createFor, template as _template } from 'vue';
 const t0 = _template("<div></div>", true)
@@ -26,20 +40,6 @@ export function render(_ctx) {
     _renderEffect(() => _setText(n2, _ctx0[0].value))
     return n2
   }, (item) => (item.id))
-  return n0
-}"
-`;
-
-exports[`compiler: v-for > function params w/ prefixIdentifiers: false 1`] = `
-"import { setText as _setText, renderEffect as _renderEffect, createFor as _createFor, template as _template } from 'vue';
-const t0 = _template("<div></div>", true)
-
-export function render(_ctx) {
-  const n0 = _createFor(() => (items), ([item, __, k]) => {
-    const n2 = t0()
-    _renderEffect(() => _setText(n2, item))
-    return n2
-  }, (item, __, k) => (k))
   return n0
 }"
 `;
@@ -82,13 +82,13 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: v-for > object de-structured value (with rest) 1`] = `
-"import { setText as _setText, renderEffect as _renderEffect, createFor as _createFor, template as _template } from 'vue';
+"import { getRestElement as _getRestElement, setText as _setText, renderEffect as _renderEffect, createFor as _createFor, template as _template } from 'vue';
 const t0 = _template("<div></div>", true)
 
 export function render(_ctx) {
   const n0 = _createFor(() => (_ctx.list), (_ctx0) => {
     const n2 = t0()
-    _renderEffect(() => _setText(n2, _ctx0[0].value.id + _ctx0[0].value + _ctx0[1].value))
+    _renderEffect(() => _setText(n2, _ctx0[0].value.id + _getRestElement(_ctx0[0].value, ["id"]) + _ctx0[1].value))
     return n2
   }, ({ id, ...other }, index) => (id))
   return n0
@@ -105,34 +105,6 @@ export function render(_ctx) {
     _renderEffect(() => _setText(n2, _ctx0[0].value.id, _ctx0[0].value.value))
     return n2
   }, ({ id, value }) => (id))
-  return n0
-}"
-`;
-
-exports[`compiler: v-for > object de-structured value 2`] = `
-"import { setText as _setText, renderEffect as _renderEffect, createFor as _createFor, template as _template } from 'vue';
-const t0 = _template("<div></div>", true)
-
-export function render(_ctx) {
-  const n0 = _createFor(() => (_ctx.list), (_ctx0) => {
-    const n2 = t0()
-    _renderEffect(() => _setText(n2, _ctx0[0].value.id + _ctx0[0].value + _ctx0[1].value))
-    return n2
-  }, ({ id, ...other }, index) => (id))
-  return n0
-}"
-`;
-
-exports[`compiler: v-for > v-for aliases w/ complex expressions 1`] = `
-"import { setText as _setText, renderEffect as _renderEffect, withDestructure as _withDestructure, createFor as _createFor, template as _template } from 'vue';
-const t0 = _template("<div></div>", true)
-
-export function render(_ctx) {
-  const n0 = _createFor(() => (_ctx.list), _withDestructure(([{ foo = bar, baz: [qux = quux] }]) => [foo, qux], (_ctx0) => {
-    const n2 = t0()
-    _renderEffect(() => _setText(n2, _ctx0[0] + _ctx.bar + _ctx.baz + _ctx0[1] + _ctx.quux))
-    return n2
-  }))
   return n0
 }"
 `;

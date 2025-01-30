@@ -31,13 +31,20 @@ export function genFor(
   const idMap: Record<string, string | SimpleExpressionNode | null> = {}
 
   idToPathMap.forEach((pathInfo, id) => {
-    const path = `${propsName}[0].value${pathInfo ? pathInfo.path : ''}`
-    if (pathInfo && pathInfo.dynamic) {
-      const node = (idMap[id] = createSimpleExpression(path))
-      const plugins = context.options.expressionPlugins
-      node.ast = parseExpression(`(${path})`, {
-        plugins: plugins ? [...plugins, 'typescript'] : ['typescript'],
-      })
+    let path = `${propsName}[0].value${pathInfo ? pathInfo.path : ''}`
+    if (pathInfo) {
+      if (pathInfo.helper) {
+        path = `${pathInfo.helper}(${path}, ${pathInfo.helperArgs})`
+      }
+      if (pathInfo.dynamic) {
+        const node = (idMap[id] = createSimpleExpression(path))
+        const plugins = context.options.expressionPlugins
+        node.ast = parseExpression(`(${path})`, {
+          plugins: plugins ? [...plugins, 'typescript'] : ['typescript'],
+        })
+      } else {
+        idMap[id] = path
+      }
     } else {
       idMap[id] = path
     }
@@ -68,7 +75,15 @@ export function genFor(
   // construct a id -> accessor path map.
   // e.g. `{ x: { y: [z] }}` -> `Map{ 'z' => '.x.y[0]' }`
   function parseValueDestructure() {
-    const map = new Map<string, { path: string; dynamic: boolean } | null>()
+    const map = new Map<
+      string,
+      {
+        path: string
+        dynamic: boolean
+        helper?: string
+        helperArgs?: string
+      } | null
+    >()
     if (value) {
       rawValue = value && value.content
       if (value.ast) {
@@ -78,32 +93,62 @@ export function genFor(
             if (isLocal) {
               let path = ''
               let isDynamic = false
+              let helper
+              let helperArgs
               for (let i = 0; i < parentStack.length; i++) {
                 const parent = parentStack[i]
                 const child = parentStack[i + 1] || id
+
                 if (
                   parent.type === 'ObjectProperty' &&
                   parent.value === child
                 ) {
-                  if (parent.computed && parent.key.type !== 'StringLiteral') {
+                  if (parent.key.type === 'StringLiteral') {
+                    path += `[${JSON.stringify(parent.key.value)}]`
+                  } else if (parent.computed) {
                     isDynamic = true
                     path += `[${value.content.slice(
                       parent.key.start! - 1,
                       parent.key.end! - 1,
                     )}]`
-                  } else if (parent.key.type === 'StringLiteral') {
-                    path += `[${JSON.stringify(parent.key.value)}]`
                   } else {
                     // non-computed, can only be identifier
                     path += `.${(parent.key as Identifier).name}`
                   }
                 } else if (parent.type === 'ArrayPattern') {
                   const index = parent.elements.indexOf(child as any)
-                  path += `[${index}]`
+                  if (child.type === 'RestElement') {
+                    path += `.slice(${index})`
+                  } else {
+                    path += `[${index}]`
+                  }
+                } else if (
+                  parent.type === 'ObjectPattern' &&
+                  child.type === 'RestElement'
+                ) {
+                  helper = context.helper('getRestElement')
+                  helperArgs =
+                    '[' +
+                    parent.properties
+                      .filter(p => p.type === 'ObjectProperty')
+                      .map(p => {
+                        if (p.key.type === 'StringLiteral') {
+                          return JSON.stringify(p.key.value)
+                        } else if (p.computed) {
+                          isDynamic = true
+                          return value.content.slice(
+                            p.key.start! - 1,
+                            p.key.end! - 1,
+                          )
+                        } else {
+                          return JSON.stringify((p.key as Identifier).name)
+                        }
+                      })
+                      .join(', ') +
+                    ']'
                 }
-                // TODO handle rest spread
               }
-              map.set(id.name, { path, dynamic: isDynamic })
+              map.set(id.name, { path, dynamic: isDynamic, helper, helperArgs })
             }
           },
           true,
@@ -115,7 +160,6 @@ export function genFor(
     return map
   }
 
-  // TODO this should be looked at for destructure cases
   function genCallback(expr: SimpleExpressionNode | undefined) {
     if (!expr) return false
     const res = context.withId(

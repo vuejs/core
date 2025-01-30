@@ -380,3 +380,12 @@ function normalizeAnchor(node: Block): Node {
     return normalizeAnchor(node.nodes!)
   }
 }
+
+// runtime helper for rest element destructure
+export function getRestElement(val: any, keys: string[]): any {
+  const res: any = {}
+  for (const key in val) {
+    if (!keys.includes(key)) res[key] = val[key]
+  }
+  return res
+}

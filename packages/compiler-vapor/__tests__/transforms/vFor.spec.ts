@@ -144,11 +144,12 @@ describe('compiler: v-for', () => {
     })
   })
 
-  test.todo('object de-structured value (with rest)', () => {
+  test('object de-structured value (with rest)', () => {
     const { code, ir } = compileWithVFor(
       `<div v-for="(  { id, ...other }, index) in list" :key="id">{{ id + other + index }}</div>`,
     )
     expect(code).matchSnapshot()
+    expect(code).toContain('_getRestElement(_ctx0[0].value, ["id"])')
     expect(ir.block.operation[0]).toMatchObject({
       type: IRNodeTypes.FOR,
       source: {
@@ -206,11 +207,12 @@ describe('compiler: v-for', () => {
     })
   })
 
-  test.todo('array de-structured value (with rest)', () => {
+  test('array de-structured value (with rest)', () => {
     const { code, ir } = compileWithVFor(
       `<div v-for="([id, ...other], index) in list" :key="id">{{ id + other + index }}</div>`,
     )
     expect(code).matchSnapshot()
+    expect(code).toContain('_ctx0[0].value.slice(1)')
     expect(ir.block.operation[0]).toMatchObject({
       type: IRNodeTypes.FOR,
       source: {
