@@ -1,5 +1,5 @@
 /* eslint-disable */
-// Ported from https://github.com/stackblitz/alien-signals/blob/v1.0.2/src/system.ts
+// Ported from https://github.com/stackblitz/alien-signals/blob/v1.0.3/src/system.ts
 import type { ComputedRefImpl as Computed } from './computed.js'
 import type { ReactiveEffect as Effect } from './effect.js'
 
@@ -194,22 +194,18 @@ export function processComputedUpdate(
   computed: Computed,
   flags: SubscriberFlags,
 ): void {
-  if (flags & SubscriberFlags.Dirty) {
+  if (
+    flags & SubscriberFlags.Dirty ||
+    (checkDirty(computed.deps!)
+      ? true
+      : ((computed.flags = flags & ~SubscriberFlags.PendingComputed), false))
+  ) {
     if (computed.update()) {
       const subs = computed.subs
       if (subs !== undefined) {
         shallowPropagate(subs)
       }
     }
-  } else if (checkDirty(computed.deps!)) {
-    if (computed.update()) {
-      const subs = computed.subs
-      if (subs !== undefined) {
-        shallowPropagate(subs)
-      }
-    }
-  } else {
-    computed.flags = flags & ~SubscriberFlags.PendingComputed
   }
 }
 
