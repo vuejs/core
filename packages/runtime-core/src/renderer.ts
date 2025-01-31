@@ -8,6 +8,7 @@ import {
   type VNodeHook,
   type VNodeProps,
   cloneIfMounted,
+  cloneVNode,
   createVNode,
   invokeVNodeHook,
   isSameVNodeType,
@@ -19,6 +20,7 @@ import {
   type Data,
   type LifecycleHook,
   createComponentInstance,
+  getComponentPublicInstance,
   setupComponent,
 } from './component'
 import {
@@ -35,6 +37,7 @@ import {
   ShapeFlags,
   def,
   getGlobalThis,
+  getSequence,
   invokeArrayFns,
   isArray,
   isReservedProp,
@@ -43,7 +46,7 @@ import {
   type SchedulerJob,
   SchedulerJobFlags,
   type SchedulerJobs,
-  flushPostFlushCbs,
+  flushOnAppMount,
   flushPreFlushCbs,
   queueJob,
   queuePostFlushCb,
@@ -57,7 +60,12 @@ import {
 import { updateProps } from './componentProps'
 import { updateSlots } from './componentSlots'
 import { popWarningContext, pushWarningContext, warn } from './warning'
-import { type CreateAppFunction, createAppAPI } from './apiCreateApp'
+import {
+  type AppMountFn,
+  type AppUnmountFn,
+  type CreateAppFunction,
+  createAppAPI,
+} from './apiCreateApp'
 import { setRef } from './rendererTemplateRef'
 import {
   type SuspenseBoundary,
@@ -2351,7 +2359,6 @@ function baseCreateRenderer(
     return teleportEnd ? hostNextSibling(teleportEnd) : el
   }
 
-  let isFlushing = false
   const render: RootRenderFunction = (vnode, container, namespace) => {
     if (vnode == null) {
       if (container._vnode) {
@@ -2369,12 +2376,7 @@ function baseCreateRenderer(
       )
     }
     container._vnode = vnode
-    if (!isFlushing) {
-      isFlushing = true
-      flushPreFlushCbs()
-      flushPostFlushCbs()
-      isFlushing = false
-    }
+    flushOnAppMount()
   }
 
   const internals: RendererInternals = {
@@ -2398,10 +2400,54 @@ function baseCreateRenderer(
     )
   }
 
+  const mountApp: AppMountFn<Element> = (
+    app,
+    container,
+    isHydrate,
+    namespace,
+  ) => {
+    const vnode = app._ceVNode || createVNode(app._component, app._props)
+    // store app context on the root VNode.
+    // this will be set on the root instance on initial mount.
+    vnode.appContext = app._context
+
+    if (namespace === true) {
+      namespace = 'svg'
+    } else if (namespace === false) {
+      namespace = undefined
+    }
+
+    // HMR root reload
+    if (__DEV__) {
+      app._context.reload = () => {
+        // casting to ElementNamespace because TS doesn't guarantee type narrowing
+        // over function boundaries
+        render(cloneVNode(vnode), container, namespace as ElementNamespace)
+      }
+    }
+
+    if (isHydrate && hydrate) {
+      hydrate(vnode as VNode<Node, Element>, container as any)
+    } else {
+      render(vnode, container, namespace)
+    }
+
+    return vnode.component!
+  }
+
+  const unmountApp: AppUnmountFn = app => {
+    render(null, app._container)
+  }
+
   return {
     render,
     hydrate,
-    createApp: createAppAPI(render, hydrate),
+    createApp: createAppAPI(
+      mountApp,
+      unmountApp,
+      getComponentPublicInstance as any,
+      render,
+    ),
   }
 }
 
@@ -2488,48 +2534,6 @@ export function traverseStaticChildren(
   }
 }
 
-// https://en.wikipedia.org/wiki/Longest_increasing_subsequence
-function getSequence(arr: number[]): number[] {
-  const p = arr.slice()
-  const result = [0]
-  let i, j, u, v, c
-  const len = arr.length
-  for (i = 0; i < len; i++) {
-    const arrI = arr[i]
-    if (arrI !== 0) {
-      j = result[result.length - 1]
-      if (arr[j] < arrI) {
-        p[i] = j
-        result.push(i)
-        continue
-      }
-      u = 0
-      v = result.length - 1
-      while (u < v) {
-        c = (u + v) >> 1
-        if (arr[result[c]] < arrI) {
-          u = c + 1
-        } else {
-          v = c
-        }
-      }
-      if (arrI < arr[result[u]]) {
-        if (u > 0) {
-          p[i] = result[u - 1]
-        }
-        result[u] = i
-      }
-    }
-  }
-  u = result.length
-  v = result[u - 1]
-  while (u-- > 0) {
-    result[u] = v
-    v = p[v]
-  }
-  return result
-}
-
 function locateNonHydratedAsyncRoot(
   instance: ComponentInternalInstance,
 ): ComponentInternalInstance | undefined {
@@ -2543,7 +2547,7 @@ function locateNonHydratedAsyncRoot(
   }
 }
 
-export function invalidateMount(hooks: LifecycleHook): void {
+export function invalidateMount(hooks: LifecycleHook | undefined): void {
   if (hooks) {
     for (let i = 0; i < hooks.length; i++)
       hooks[i].flags! |= SchedulerJobFlags.DISPOSED

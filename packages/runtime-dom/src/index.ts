@@ -1,5 +1,7 @@
 import {
   type App,
+  type Component,
+  type ConcreteComponent,
   type CreateAppFunction,
   type DefineComponent,
   DeprecationTypes,
@@ -108,7 +110,7 @@ export const createApp = ((...args) => {
     const container = normalizeContainer(containerOrSelector)
     if (!container) return
 
-    const component = app._component
+    const component = app._component as ConcreteComponent
     if (!isFunction(component) && !component.render && !component.template) {
       // __UNSAFE__
       // Reason: potential execution of JS expressions in in-DOM template.
@@ -143,7 +145,7 @@ export const createApp = ((...args) => {
   }
 
   return app
-}) as CreateAppFunction<Element>
+}) as CreateAppFunction<Element, Component>
 
 export const createSSRApp = ((...args) => {
   const app = ensureHydrationRenderer().createApp(...args)
@@ -225,9 +227,12 @@ function injectCompilerOptionsCheck(app: App) {
   }
 }
 
-function normalizeContainer(
-  container: Element | ShadowRoot | string,
-): Element | ShadowRoot | null {
+/**
+ * @internal
+ */
+export function normalizeContainer<T extends ParentNode>(
+  container: T | string,
+): T | null {
   if (isString(container)) {
     const res = document.querySelector(container)
     if (__DEV__ && !res) {
@@ -235,7 +240,7 @@ function normalizeContainer(
         `Failed to mount app: mount target selector "${container}" returned null.`,
       )
     }
-    return res
+    return res as any
   }
   if (
     __DEV__ &&
@@ -306,3 +311,22 @@ export const initDirectivesForSSR: () => void = __SSR__
 export * from '@vue/runtime-core'
 
 export * from './jsx'
+
+// VAPOR -----------------------------------------------------------------------
+
+/**
+ * @internal
+ */
+export { patchStyle } from './modules/style'
+/**
+ * @internal
+ */
+export { shouldSetAsProp } from './patchProp'
+/**
+ * @internal
+ */
+export {
+  vShowOriginalDisplay,
+  vShowHidden,
+  type VShowElement,
+} from './directives/vShow'

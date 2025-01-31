@@ -3,19 +3,22 @@ import fs from 'node:fs'
 import pico from 'picocolors'
 import { createRequire } from 'node:module'
 import { spawn } from 'node:child_process'
+import path from 'node:path'
 
 const require = createRequire(import.meta.url)
+const packagesPath = path.resolve(import.meta.dirname, '../packages')
 
 export const targets = fs
-  .readdirSync('packages')
+  .readdirSync(packagesPath)
   .filter(f => {
+    const folder = path.resolve(packagesPath, f)
     if (
-      !fs.statSync(`packages/${f}`).isDirectory() ||
-      !fs.existsSync(`packages/${f}/package.json`)
+      !fs.statSync(folder).isDirectory() ||
+      !fs.existsSync(`${folder}/package.json`)
     ) {
       return false
     }
-    const pkg = require(`../packages/${f}/package.json`)
+    const pkg = require(`${folder}/package.json`)
     if (pkg.private && !pkg.buildOptions) {
       return false
     }
@@ -32,6 +35,10 @@ export function fuzzyMatchTarget(partialTargets, includeAllMatching) {
   /** @type {Array<string>} */
   const matched = []
   partialTargets.forEach(partialTarget => {
+    if (!includeAllMatching && targets.includes(partialTarget)) {
+      matched.push(partialTarget)
+      return
+    }
     for (const target of targets) {
       if (target.match(partialTarget)) {
         matched.push(target)
@@ -60,6 +67,7 @@ export function fuzzyMatchTarget(partialTargets, includeAllMatching) {
  * @param {string} command
  * @param {ReadonlyArray<string>} args
  * @param {object} [options]
+ * @returns {Promise<{ ok: boolean, code: number | null, stderr: string, stdout: string }>}
  */
 export async function exec(command, args, options) {
   return new Promise((resolve, reject) => {
@@ -111,4 +119,13 @@ export async function exec(command, args, options) {
       }
     })
   })
+}
+
+/**
+ * @param {boolean=} short
+ */
+export async function getSha(short) {
+  return (
+    await exec('git', ['rev-parse', ...(short ? ['--short'] : []), 'HEAD'])
+  ).stdout
 }

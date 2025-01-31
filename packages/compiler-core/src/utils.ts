@@ -160,7 +160,7 @@ export const isMemberExpressionBrowser = (exp: ExpressionNode): boolean => {
 
 export const isMemberExpressionNode: (
   exp: ExpressionNode,
-  context: TransformContext,
+  context: Pick<TransformContext, 'expressionPlugins'>,
 ) => boolean = __BROWSER__
   ? (NOOP as any)
   : (exp, context) => {
@@ -185,7 +185,7 @@ export const isMemberExpressionNode: (
 
 export const isMemberExpression: (
   exp: ExpressionNode,
-  context: TransformContext,
+  context: Pick<TransformContext, 'expressionPlugins'>,
 ) => boolean = __BROWSER__ ? isMemberExpressionBrowser : isMemberExpressionNode
 
 const fnExpRE =
@@ -196,7 +196,7 @@ export const isFnExpressionBrowser: (exp: ExpressionNode) => boolean = exp =>
 
 export const isFnExpressionNode: (
   exp: ExpressionNode,
-  context: TransformContext,
+  context: Pick<TransformContext, 'expressionPlugins'>,
 ) => boolean = __BROWSER__
   ? (NOOP as any)
   : (exp, context) => {
@@ -227,7 +227,7 @@ export const isFnExpressionNode: (
 
 export const isFnExpression: (
   exp: ExpressionNode,
-  context: TransformContext,
+  context: Pick<TransformContext, 'expressionPlugins'>,
 ) => boolean = __BROWSER__ ? isFnExpressionBrowser : isFnExpressionNode
 
 export function advancePositionWithClone(
@@ -279,6 +279,7 @@ export function assert(condition: boolean, msg?: string): void {
   }
 }
 
+/** find directive */
 export function findDir(
   node: ElementNode,
   name: string | RegExp,

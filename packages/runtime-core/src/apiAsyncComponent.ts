@@ -143,7 +143,7 @@ export function defineAsyncComponent<
     },
 
     setup() {
-      const instance = currentInstance!
+      const instance = currentInstance as ComponentInternalInstance
       markAsyncBoundary(instance)
 
       // already resolved

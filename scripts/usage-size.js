@@ -22,12 +22,14 @@ const {
 })
 
 const sizeDir = path.resolve('temp/size')
-const entry = path.resolve('./packages/vue/dist/vue.runtime.esm-bundler.js')
+const vue = path.resolve('./packages/vue/dist/vue.runtime.esm-bundler.js')
+const vapor = path.resolve('./packages/vue-vapor/dist/vue-vapor.esm-bundler.js')
 
 /**
  * @typedef {Object} Preset
  * @property {string} name - The name of the preset
- * @property {string[]} imports - The imports that are part of this preset
+ * @property {'*' | string[]} imports - The imports that are part of this preset
+ * @property {string} from - The path to the entry file
  * @property {Record<string, string>} [replace]
  */
 
@@ -37,10 +39,12 @@ const presets = [
     name: 'createApp (CAPI only)',
     imports: ['createApp'],
     replace: { __VUE_OPTIONS_API__: 'false' },
+    from: vue,
   },
-  { name: 'createApp', imports: ['createApp'] },
-  { name: 'createSSRApp', imports: ['createSSRApp'] },
-  { name: 'defineCustomElement', imports: ['defineCustomElement'] },
+  { name: 'createApp', imports: ['createApp'], from: vue },
+  { name: 'createVaporApp', imports: ['createVaporApp'], from: vapor },
+  { name: 'createSSRApp', imports: ['createSSRApp'], from: vue },
+  { name: 'defineCustomElement', imports: ['defineCustomElement'], from: vue },
   {
     name: 'overall',
     imports: [
@@ -51,6 +55,7 @@ const presets = [
       'KeepAlive',
       'Suspense',
     ],
+    from: vue,
   },
 ]
 
@@ -93,8 +98,11 @@ async function main() {
  */
 async function generateBundle(preset) {
   const id = 'virtual:entry'
-  const content = `export { ${preset.imports.join(', ')} } from '${entry}'`
-
+  const exportSpecifiers =
+    preset.imports === '*'
+      ? `* as ${preset.name}`
+      : `{ ${preset.imports.join(', ')} }`
+  const content = `export ${exportSpecifiers} from '${preset.from}'`
   const result = await rollup({
     input: id,
     plugins: [

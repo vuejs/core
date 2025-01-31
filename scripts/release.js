@@ -6,7 +6,7 @@ import semver from 'semver'
 import enquirer from 'enquirer'
 import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
-import { exec } from './utils.js'
+import { exec, getSha } from './utils.js'
 import { parseArgs } from 'node:util'
 
 /**
@@ -423,10 +423,6 @@ async function isInSyncWithRemote() {
     )
     return false
   }
-}
-
-async function getSha() {
-  return (await exec('git', ['rev-parse', 'HEAD'])).stdout
 }
 
 async function getBranch() {

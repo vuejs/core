@@ -84,6 +84,8 @@ export interface SFCDescriptor {
    */
   slotted: boolean
 
+  vapor: boolean
+
   /**
    * compare with an existing descriptor to determine whether HMR should perform
    * a reload vs. re-render.
@@ -137,6 +139,7 @@ export function parse(
     customBlocks: [],
     cssVars: [],
     slotted: false,
+    vapor: false,
     shouldForceReload: prevImports => hmrShouldReload(prevImports, descriptor),
   }
 
@@ -171,6 +174,7 @@ export function parse(
             source,
             false,
           ) as SFCTemplateBlock)
+          descriptor.vapor ||= !!templateBlock.attrs.vapor
 
           if (!templateBlock.attrs.src) {
             templateBlock.ast = createRoot(node.children, source)
@@ -195,6 +199,7 @@ export function parse(
         break
       case 'script':
         const scriptBlock = createBlock(node, source, pad) as SFCScriptBlock
+        descriptor.vapor ||= !!scriptBlock.attrs.vapor
         const isSetup = !!scriptBlock.attrs.setup
         if (isSetup && !descriptor.scriptSetup) {
           descriptor.scriptSetup = scriptBlock

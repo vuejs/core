@@ -1,4 +1,3 @@
-import type { Data } from '../component'
 import type { RawSlots, Slots } from '../componentSlots'
 import {
   type ContextualRenderFn,
@@ -17,6 +16,7 @@ import {
 import { PatchFlags, SlotFlags, isSymbol } from '@vue/shared'
 import { warn } from '../warning'
 import { isAsyncWrapper } from '../apiAsyncComponent'
+import type { Data } from '../component'
 
 /**
  * Compiler runtime helper for rendering `<slot/>`
