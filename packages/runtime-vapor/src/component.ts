@@ -444,8 +444,8 @@ export function isVaporComponent(
  */
 export function createComponentWithFallback(
   comp: VaporComponent | string,
-  rawProps: RawProps | null | undefined,
-  rawSlots: RawSlots | null | undefined,
+  rawProps?: RawProps | null,
+  rawSlots?: RawSlots | null,
   isSingleRoot?: boolean,
 ): HTMLElement | VaporComponentInstance {
   if (!isString(comp)) {

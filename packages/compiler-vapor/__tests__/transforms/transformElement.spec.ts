@@ -525,7 +525,7 @@ describe('compiler: element transform', () => {
         `<component :is="foo" />`,
       )
       expect(code).toMatchSnapshot()
-      expect(helpers).toContain('resolveDynamicComponent')
+      expect(helpers).toContain('createDynamicComponent')
       expect(ir.block.operation).toMatchObject([
         {
           type: IRNodeTypes.CREATE_COMPONENT_NODE,
@@ -546,7 +546,7 @@ describe('compiler: element transform', () => {
       const { code, ir, helpers } =
         compileWithElementTransform(`<component :is />`)
       expect(code).toMatchSnapshot()
-      expect(helpers).toContain('resolveDynamicComponent')
+      expect(helpers).toContain('createDynamicComponent')
       expect(ir.block.operation).toMatchObject([
         {
           type: IRNodeTypes.CREATE_COMPONENT_NODE,

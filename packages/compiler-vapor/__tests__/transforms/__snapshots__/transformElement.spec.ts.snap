@@ -270,19 +270,19 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: element transform > dynamic component > dynamic binding 1`] = `
-"import { resolveDynamicComponent as _resolveDynamicComponent, createComponentWithFallback as _createComponentWithFallback } from 'vue';
+"import { createDynamicComponent as _createDynamicComponent } from 'vue';
 
 export function render(_ctx) {
-  const n0 = _createComponentWithFallback(_resolveDynamicComponent(_ctx.foo), null, null, true)
+  const n0 = _createDynamicComponent(() => (_ctx.foo), null, null, true)
   return n0
 }"
 `;
 
 exports[`compiler: element transform > dynamic component > dynamic binding shorthand 1`] = `
-"import { resolveDynamicComponent as _resolveDynamicComponent, createComponentWithFallback as _createComponentWithFallback } from 'vue';
+"import { createDynamicComponent as _createDynamicComponent } from 'vue';
 
 export function render(_ctx) {
-  const n0 = _createComponentWithFallback(_resolveDynamicComponent(_ctx.is), null, null, true)
+  const n0 = _createDynamicComponent(() => (_ctx.is), null, null, true)
   return n0
 }"
 `;

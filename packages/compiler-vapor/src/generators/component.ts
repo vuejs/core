@@ -64,9 +64,11 @@ export function genCreateComponent(
     ...inlineHandlers,
     `const n${operation.id} = `,
     ...genCall(
-      operation.asset
-        ? helper('createComponentWithFallback')
-        : helper('createComponent'),
+      operation.dynamic && !operation.dynamic.isStatic
+        ? helper('createDynamicComponent')
+        : operation.asset
+          ? helper('createComponentWithFallback')
+          : helper('createComponent'),
       tag,
       rawProps,
       rawSlots,
@@ -78,10 +80,14 @@ export function genCreateComponent(
 
   function genTag() {
     if (operation.dynamic) {
-      return genCall(
-        helper('resolveDynamicComponent'),
-        genExpression(operation.dynamic, context),
-      )
+      if (operation.dynamic.isStatic) {
+        return genCall(
+          helper('resolveDynamicComponent'),
+          genExpression(operation.dynamic, context),
+        )
+      } else {
+        return ['() => (', ...genExpression(operation.dynamic, context), ')']
+      }
     } else if (operation.asset) {
       return toValidAssetId(operation.tag, 'component')
     } else {

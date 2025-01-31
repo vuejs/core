@@ -29,3 +29,4 @@ export {
   getDefaultValue,
 } from './apiCreateFor'
 export { createTemplateRefSetter } from './apiTemplateRef'
+export { createDynamicComponent } from './apiCreateDynamicComponent'

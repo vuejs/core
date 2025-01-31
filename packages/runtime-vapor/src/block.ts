@@ -41,11 +41,11 @@ export class DynamicFragment extends Fragment {
           document.createTextNode('')
   }
 
-  update(render?: BlockFn): void {
-    if (render === this.current) {
+  update(render?: BlockFn, key: any = render): void {
+    if (key === this.current) {
       return
     }
-    this.current = render
+    this.current = key
 
     pauseTracking()
     const parent = this.anchor.parentNode
