@@ -19,14 +19,13 @@ describe('createFor', () => {
     const { host } = define(() => {
       const n1 = createFor(
         () => list.value,
-        state => {
+        (item, key, index) => {
           const span = document.createElement('li')
           renderEffect(() => {
-            const [{ value: item }, { value: key }, { value: index }] = state
-            span.innerHTML = `${key}. ${item.name}`
+            span.innerHTML = `${key.value}. ${item.value.name}`
 
             // index should be undefined if source is not an object
-            expect(index).toBe(undefined)
+            expect(index.value).toBe(undefined)
           })
           return span
         },
@@ -85,11 +84,10 @@ describe('createFor', () => {
     const { host } = define(() => {
       const n1 = createFor(
         () => count.value,
-        state => {
+        (item, key, index) => {
           const span = document.createElement('li')
           renderEffect(() => {
-            const [{ value: item }, { value: key }, index] = state
-            span.innerHTML = `${key}. ${item}`
+            span.innerHTML = `${key.value}. ${item.value}`
 
             // index should be undefined if source is not an object
             expect(index.value).toBe(undefined)
@@ -130,12 +128,11 @@ describe('createFor', () => {
     const { host } = define(() => {
       const n1 = createFor(
         () => data.value,
-        state => {
+        (item, key, index) => {
           const span = document.createElement('li')
           renderEffect(() => {
-            const [{ value: item }, { value: key }, { value: index }] = state
-            span.innerHTML = `${key}${index}. ${item}`
-            expect(index).not.toBe(undefined)
+            span.innerHTML = `${key.value}${index.value}. ${item.value}`
+            expect(index.value).not.toBe(undefined)
           })
           return span
         },
@@ -197,17 +194,11 @@ describe('createFor', () => {
     const { host } = define(() => {
       const n1 = createFor(
         () => list.value,
-        state => {
+        (item, key, index) => {
           const span = document.createElement('li')
           renderEffect(() => {
-            const [
-              {
-                value: { name },
-              },
-              { value: key },
-              index,
-            ] = state
-            span.innerHTML = `${key}. ${name}`
+            // compiler rewrites { name } destructure to inline access
+            span.innerHTML = `${key.value}. ${item.value.name}`
             // index should be undefined if source is not an object
             expect(index.value).toBe(undefined)
           })
@@ -275,14 +266,14 @@ describe('createFor', () => {
     const { host } = define(() => {
       const n1 = createFor(
         () => list.value,
-        state => {
+        (item, _key, index) => {
           const span = document.createElement('li')
           renderEffect(() => {
             span.innerHTML = JSON.stringify(
-              getRestElement(state[0].value, ['name']),
+              getRestElement(item.value, ['name']),
             )
             // index should be undefined if source is not an object
-            expect(state[2].value).toBe(undefined)
+            expect(index.value).toBe(undefined)
           })
           return span
         },
@@ -341,12 +332,12 @@ describe('createFor', () => {
     const { host } = define(() => {
       const n1 = createFor(
         () => list.value,
-        state => {
+        (item, _key, index) => {
           const span = document.createElement('li')
           renderEffect(() => {
-            span.innerHTML = getDefaultValue(state[0].value.x, '0')
+            span.innerHTML = getDefaultValue(item.value.x, '0')
             // index should be undefined if source is not an object
-            expect(state[2].value).toBe(undefined)
+            expect(index.value).toBe(undefined)
           })
           return span
         },
@@ -378,14 +369,13 @@ describe('createFor', () => {
     const { host } = define(() => {
       const n1 = createFor(
         () => list.value,
-        state => {
+        (item, key, index) => {
           const span = document.createElement('li')
           renderEffect(() => {
-            const [{ value: item }, { value: key }, { value: index }] = state
-            span.innerHTML = `${key}. ${item.name}`
+            span.innerHTML = `${key.value}. ${item.value.name}`
 
             // index should be undefined if source is not an object
-            expect(index).toBe(undefined)
+            expect(index.value).toBe(undefined)
           })
           return span
         },
@@ -485,7 +475,7 @@ describe('createFor', () => {
     define(() => {
       const n1 = createFor(
         () => (++sourceCalledTimes, list.value),
-        ([item, index]) => {
+        (item, index) => {
           ++renderCalledTimes
           const span = document.createElement('li')
           renderEffect(() => {
@@ -604,7 +594,7 @@ describe('createFor', () => {
     define(() => {
       const n1 = createFor(
         () => (++sourceCalledTimes, list.value),
-        ([item, index]) => {
+        (item, index) => {
           ++renderCalledTimes
           const span = document.createElement('li')
           renderEffect(() => {

@@ -27,11 +27,13 @@ export function genFor(
   const idToPathMap = parseValueDestructure()
 
   const [depth, exitScope] = context.enterScope()
-  const propsName = `_ctx${depth}`
   const idMap: Record<string, string | SimpleExpressionNode | null> = {}
 
+  const itemVar = `_for_item${depth}`
+  idMap[itemVar] = null
+
   idToPathMap.forEach((pathInfo, id) => {
-    let path = `${propsName}[0].value${pathInfo ? pathInfo.path : ''}`
+    let path = `${itemVar}.value${pathInfo ? pathInfo.path : ''}`
     if (pathInfo) {
       if (pathInfo.helper) {
         idMap[pathInfo.helper] = null
@@ -50,13 +52,22 @@ export function genFor(
       idMap[id] = path
     }
   })
-  if (rawKey) idMap[rawKey] = `${propsName}[1].value`
-  if (rawIndex) idMap[rawIndex] = `${propsName}[2].value`
 
-  const blockFn = context.withId(
-    () => genBlock(render, context, [propsName]),
-    idMap,
-  )
+  const args = [itemVar]
+  if (rawKey) {
+    const keyVar = `_for_key${depth}`
+    args.push(`, ${keyVar}`)
+    idMap[rawKey] = `${keyVar}.value`
+    idMap[keyVar] = null
+  }
+  if (rawIndex) {
+    const indexVar = `_for_index${depth}`
+    args.push(`, ${indexVar}`)
+    idMap[rawIndex] = `${indexVar}.value`
+    idMap[indexVar] = null
+  }
+
+  const blockFn = context.withId(() => genBlock(render, context, args), idMap)
   exitScope()
 
   return [

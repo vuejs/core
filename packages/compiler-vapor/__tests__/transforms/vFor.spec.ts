@@ -84,9 +84,11 @@ describe('compiler: v-for', () => {
       `<div v-for="i in list"><span v-for="j in i">{{ j+i }}</span></div>`,
     )
     expect(code).matchSnapshot()
-    expect(code).contains(`_createFor(() => (_ctx.list), (_ctx0) => {`)
-    expect(code).contains(`_createFor(() => (_ctx0[0].value), (_ctx1) => {`)
-    expect(code).contains(`_ctx1[0].value+_ctx0[0].value`)
+    expect(code).contains(`_createFor(() => (_ctx.list), (_for_item0) => {`)
+    expect(code).contains(
+      `_createFor(() => (_for_item0.value), (_for_item1) => {`,
+    )
+    expect(code).contains(`_for_item1.value+_for_item0.value`)
     expect(ir.template).toEqual(['<span></span>', '<div></div>'])
     expect(ir.block.operation).toMatchObject([
       {
@@ -149,7 +151,7 @@ describe('compiler: v-for', () => {
       `<div v-for="(  { id, ...other }, index) in list" :key="id">{{ id + other + index }}</div>`,
     )
     expect(code).matchSnapshot()
-    expect(code).toContain('_getRestElement(_ctx0[0].value, ["id"])')
+    expect(code).toContain('_getRestElement(_for_item0.value, ["id"])')
     expect(ir.block.operation[0]).toMatchObject({
       type: IRNodeTypes.FOR,
       source: {
@@ -212,7 +214,7 @@ describe('compiler: v-for', () => {
       `<div v-for="([id, ...other], index) in list" :key="id">{{ id + other + index }}</div>`,
     )
     expect(code).matchSnapshot()
-    expect(code).toContain('_ctx0[0].value.slice(1)')
+    expect(code).toContain('_for_item0.value.slice(1)')
     expect(ir.block.operation[0]).toMatchObject({
       type: IRNodeTypes.FOR,
       source: {
@@ -246,11 +248,9 @@ describe('compiler: v-for', () => {
       </div>`,
     )
     expect(code).matchSnapshot()
+    expect(code).toContain(`_getDefaultValue(_for_item0.value.foo, _ctx.bar)`)
     expect(code).toContain(
-      `_getDefaultValue(_ctx._ctx0[0].value.foo, _ctx.bar)`,
-    )
-    expect(code).toContain(
-      `_getDefaultValue(_ctx._ctx0[0].value.baz[0], _ctx.quux)`,
+      `_getDefaultValue(_for_item0.value.baz[0], _ctx.quux)`,
     )
     expect(ir.block.operation[0]).toMatchObject({
       type: IRNodeTypes.FOR,

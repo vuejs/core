@@ -15,27 +15,28 @@ import { currentInstance, isVaporComponent } from './component'
 import type { DynamicSlot } from './componentSlots'
 import { renderEffect } from './renderEffect'
 
-type ForBlockState = [
-  item: ShallowRef<any>,
-  key: ShallowRef<any>,
-  index: ShallowRef<number | undefined>,
-]
-
 class ForBlock extends Fragment {
   scope: EffectScope | undefined
-  state: ForBlockState
   key: any
+
+  itemRef: ShallowRef<any>
+  keyRef: ShallowRef<any> | undefined
+  indexRef: ShallowRef<number | undefined> | undefined
 
   constructor(
     nodes: Block,
     scope: EffectScope | undefined,
-    state: ForBlockState,
-    key: any,
+    item: ShallowRef<any>,
+    key: ShallowRef<any> | undefined,
+    index: ShallowRef<number | undefined> | undefined,
+    renderKey: any,
   ) {
     super(nodes)
     this.scope = scope
-    this.state = state
-    this.key = key
+    this.itemRef = item
+    this.keyRef = key
+    this.indexRef = index
+    this.key = renderKey
   }
 }
 
@@ -50,7 +51,11 @@ type ResolvedSource = {
 /*! #__NO_SIDE_EFFECTS__ */
 export const createFor = (
   src: () => Source,
-  renderItem: (block: ForBlock['state']) => Block,
+  renderItem: (
+    item: ShallowRef<any>,
+    key: ShallowRef<any>,
+    index: ShallowRef<number | undefined>,
+  ) => Block,
   getKey?: (item: any, key: any, index?: number) => any,
   /**
    * Whether this v-for is used directly on a component. If true, we can avoid
@@ -261,32 +266,38 @@ export const createFor = (
     }
   }
 
+  const needKey = renderItem.length > 1
+  const needIndex = renderItem.length > 2
+
   const mount = (
     source: ResolvedSource,
     idx: number,
     anchor: Node | undefined = parentAnchor,
   ): ForBlock => {
     const [item, key, index] = getItem(source, idx)
-    const state = [
-      shallowRef(item),
-      shallowRef(key),
-      shallowRef(index),
-    ] as ForBlock['state']
+    const itemRef = shallowRef(item)
+    // avoid creating refs if the render fn doesn't need it
+    const keyRef = needKey ? shallowRef(key) : undefined
+    const indexRef = needIndex ? shallowRef(index) : undefined
 
     let nodes: Block
     let scope: EffectScope | undefined
     if (isComponent) {
       // component already has its own scope so no outer scope needed
-      nodes = renderItem(state)
+      nodes = renderItem(itemRef, keyRef as any, indexRef as any)
     } else {
       scope = new EffectScope()
-      nodes = scope.run(() => renderItem(state))!
+      nodes = scope.run(() =>
+        renderItem(itemRef, keyRef as any, indexRef as any),
+      )!
     }
 
     const block = (newBlocks[idx] = new ForBlock(
       nodes,
       scope,
-      state,
+      itemRef,
+      keyRef,
+      indexRef,
       getKey && getKey(item, key, index),
     ))
 
@@ -305,20 +316,19 @@ export const createFor = (
   }
 
   const update = (
-    block: ForBlock,
+    { itemRef, keyRef, indexRef }: ForBlock,
     newItem: any,
-    newKey = block.state[1].value,
-    newIndex = block.state[2].value,
+    newKey?: any,
+    newIndex?: any,
   ) => {
-    const [item, key, index] = block.state
-    if (
-      newItem !== item.value ||
-      newKey !== key.value ||
-      newIndex !== index.value
-    ) {
-      item.value = newItem
-      key.value = newKey
-      index.value = newIndex
+    if (newIndex !== itemRef.value) {
+      itemRef.value = newItem
+    }
+    if (keyRef && newKey !== undefined && newKey !== keyRef.value) {
+      keyRef.value = newKey
+    }
+    if (indexRef && newIndex !== undefined && newIndex !== indexRef.value) {
+      indexRef.value = newIndex
     }
   }
 

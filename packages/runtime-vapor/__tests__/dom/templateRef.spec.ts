@@ -422,7 +422,7 @@ describe('api: template ref', () => {
             const n1 = t0()
             const n2 = createFor(
               () => list,
-              state => {
+              item => {
                 const n1 = t1()
                 createTemplateRefSetter()(
                   n1 as Element,
@@ -431,7 +431,6 @@ describe('api: template ref', () => {
                   true,
                 )
                 renderEffect(() => {
-                  const [item] = state
                   setText(n1, item)
                 })
                 return n1
@@ -485,7 +484,7 @@ describe('api: template ref', () => {
             const n1 = t0()
             const n2 = createFor(
               () => list,
-              state => {
+              item => {
                 const n1 = t1()
                 createTemplateRefSetter()(
                   n1 as Element,
@@ -494,7 +493,6 @@ describe('api: template ref', () => {
                   true,
                 )
                 renderEffect(() => {
-                  const [item] = state
                   setText(n1, item)
                 })
                 return n1
@@ -546,7 +544,7 @@ describe('api: template ref', () => {
         const n2 = n1!.nextSibling!
         const n3 = createFor(
           () => list.value,
-          state => {
+          item => {
             const n4 = t1()
             createTemplateRefSetter()(
               n4 as Element,
@@ -555,7 +553,6 @@ describe('api: template ref', () => {
               true,
             )
             renderEffect(() => {
-              const [item] = state
               setText(n4, item)
             })
             return n4

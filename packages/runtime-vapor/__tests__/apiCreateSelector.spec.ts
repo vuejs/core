@@ -18,7 +18,7 @@ describe.todo('api: createSelector', () => {
       const isSleected = createSelector(index)
       return createFor(
         () => list.value,
-        ([item]) => {
+        item => {
           const span = document.createElement('li')
           renderEffect(() => {
             calledTimes += 1
@@ -73,7 +73,7 @@ describe.todo('api: createSelector', () => {
       )
       return createFor(
         () => list.value,
-        ([item]) => {
+        item => {
           const span = document.createElement('li')
           renderEffect(() => {
             calledTimes += 1

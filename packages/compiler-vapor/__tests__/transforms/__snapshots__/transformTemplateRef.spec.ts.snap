@@ -19,7 +19,7 @@ const t0 = _template("<div></div>", true)
 
 export function render(_ctx) {
   const _setTemplateRef = _createTemplateRefSetter()
-  const n0 = _createFor(() => ([1,2,3]), (_ctx0) => {
+  const n0 = _createFor(() => ([1,2,3]), (_for_item0) => {
     const n2 = t0()
     _setTemplateRef(n2, "foo", void 0, true)
     return n2
