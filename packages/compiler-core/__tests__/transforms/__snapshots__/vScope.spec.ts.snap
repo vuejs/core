@@ -1,0 +1,86 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`compiler: v-scope transform > complex expression 1`] = `
+"import { toDisplayString as _toDisplayString, createTextVNode as _createTextVNode, createElementVNode as _createElementVNode, openBlock as _openBlock, createElementBlock as _createElementBlock } from "vue"
+
+export function render(_ctx, _cache) {
+  return (_openBlock(), _createElementBlock("div", null, [
+    ((a = _ctx.foo + _ctx.bar) => _createElementVNode("div", null, [
+      ((b = a + _ctx.baz) => _createElementVNode("span", null, [
+        _createTextVNode(_toDisplayString(b), 1 /* TEXT */)
+      ]))()
+    ]))(),
+    ((exp = _ctx.getExp()) => _createElementVNode("div", null, [
+      _createTextVNode(_toDisplayString(exp), 1 /* TEXT */)
+    ]))()
+  ]))
+}"
+`;
+
+exports[`compiler: v-scope transform > nested v-scope 1`] = `
+"import { toDisplayString as _toDisplayString, createTextVNode as _createTextVNode, createElementVNode as _createElementVNode, openBlock as _openBlock, createElementBlock as _createElementBlock } from "vue"
+
+export function render(_ctx, _cache) {
+  return (_openBlock(), _createElementBlock("div", null, [
+    ((a = 1) => _createElementVNode("div", null, [
+      ((b = 1) => _createElementVNode("span", null, [
+        _createTextVNode(_toDisplayString(a) + _toDisplayString(b), 1 /* TEXT */)
+      ]))()
+    ]))()
+  ]))
+}"
+`;
+
+exports[`compiler: v-scope transform > ok v-if 1`] = `
+"import { toDisplayString as _toDisplayString, createTextVNode as _createTextVNode, openBlock as _openBlock, createElementBlock as _createElementBlock, createCommentVNode as _createCommentVNode } from "vue"
+
+export function render(_ctx, _cache) {
+  return (_openBlock(), _createElementBlock("div", null, [
+    (_ctx.ok)
+      ? ((a = true) => (_openBlock(), _createElementBlock("div", { key: 0 }, [
+          _createTextVNode(_toDisplayString(a), 1 /* TEXT */)
+        ])))()
+      : _createCommentVNode("v-if", true)
+  ]))
+}"
+`;
+
+exports[`compiler: v-scope transform > on v-for 1`] = `
+"import { renderList as _renderList, Fragment as _Fragment, openBlock as _openBlock, createElementBlock as _createElementBlock, toDisplayString as _toDisplayString, createTextVNode as _createTextVNode, createElementVNode as _createElementVNode } from "vue"
+
+export function render(_ctx, _cache) {
+  return (_openBlock(), _createElementBlock("div", null, [
+    (_openBlock(), _createElementBlock(_Fragment, null, _renderList([1,2,3], (i) => {
+      return ((a = i+1) => _createElementVNode("div", null, [
+        _createTextVNode(_toDisplayString(a), 1 /* TEXT */)
+      ]))()
+    }), 64 /* STABLE_FRAGMENT */))
+  ]))
+}"
+`;
+
+exports[`compiler: v-scope transform > should work 1`] = `
+"import { toDisplayString as _toDisplayString, createTextVNode as _createTextVNode, createElementVNode as _createElementVNode, openBlock as _openBlock, createElementBlock as _createElementBlock } from "vue"
+
+export function render(_ctx, _cache) {
+  return (_openBlock(), _createElementBlock("div", null, [
+    ((a = 1, b = 2) => _createElementVNode("div", null, [
+      _createTextVNode(_toDisplayString(a) + " " + _toDisplayString(b), 1 /* TEXT */)
+    ]))()
+  ]))
+}"
+`;
+
+exports[`compiler: v-scope transform > work with variable 1`] = `
+"import { toDisplayString as _toDisplayString, createTextVNode as _createTextVNode, createElementVNode as _createElementVNode, openBlock as _openBlock, createElementBlock as _createElementBlock } from "vue"
+
+export function render(_ctx, _cache) {
+  return (_openBlock(), _createElementBlock("div", null, [
+    ((a = _ctx.msg) => _createElementVNode("div", null, [
+      ((b = a) => _createElementVNode("span", null, [
+        _createTextVNode(_toDisplayString(b), 1 /* TEXT */)
+      ]))()
+    ]))()
+  ]))
+}"
+`;
