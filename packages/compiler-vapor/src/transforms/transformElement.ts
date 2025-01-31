@@ -1,4 +1,4 @@
-import { isValidHTMLNesting } from '../html-nesting'
+import { isValidHTMLNesting } from '@vue/compiler-dom'
 import {
   type AttributeNode,
   type ComponentNode,
