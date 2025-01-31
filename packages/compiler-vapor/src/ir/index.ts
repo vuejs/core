@@ -31,7 +31,7 @@ export enum IRNodeTypes {
   CREATE_COMPONENT_NODE,
   SLOT_OUTLET_NODE,
 
-  WITH_DIRECTIVE,
+  DIRECTIVE,
   DECLARE_OLD_REF, // consider make it more general
 
   IF,
@@ -183,13 +183,14 @@ export interface PrependNodeIRNode extends BaseIRNode {
   parent: number
 }
 
-export interface WithDirectiveIRNode extends BaseIRNode {
-  type: IRNodeTypes.WITH_DIRECTIVE
+export interface DirectiveIRNode extends BaseIRNode {
+  type: IRNodeTypes.DIRECTIVE
   element: number
   dir: VaporDirectiveNode
   name: string
   builtin?: boolean
   asset?: boolean
+  modelType?: 'text' | 'dynamic' | 'radio' | 'checkbox' | 'select'
 }
 
 export interface CreateComponentIRNode extends BaseIRNode {
@@ -230,7 +231,7 @@ export type OperationNode =
   | CreateTextNodeIRNode
   | InsertNodeIRNode
   | PrependNodeIRNode
-  | WithDirectiveIRNode
+  | DirectiveIRNode
   | IfIRNode
   | ForIRNode
   | CreateComponentIRNode

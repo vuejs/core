@@ -19,6 +19,7 @@ import {
 import { genCreateComponent } from './component'
 import { genSlotOutlet } from './slotOutlet'
 import { processExpressions } from './expression'
+import { genBuiltinDirective } from './directive'
 
 export function genOperations(
   opers: OperationNode[],
@@ -68,8 +69,8 @@ export function genOperation(
       return genDeclareOldRef(oper)
     case IRNodeTypes.SLOT_OUTLET_NODE:
       return genSlotOutlet(oper, context)
-    case IRNodeTypes.WITH_DIRECTIVE:
-      return [] // TODO
+    case IRNodeTypes.DIRECTIVE:
+      return genBuiltinDirective(oper, context)
     default:
       const exhaustiveCheck: never = oper
       throw new Error(

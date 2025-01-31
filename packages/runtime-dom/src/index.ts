@@ -322,3 +322,11 @@ export { patchStyle } from './modules/style'
  * @internal
  */
 export { shouldSetAsProp } from './patchProp'
+/**
+ * @internal
+ */
+export {
+  vShowOriginalDisplay,
+  vShowHidden,
+  type VShowElement,
+} from './directives/vShow'

@@ -381,7 +381,7 @@ function transformProp(
     }
 
     context.registerOperation({
-      type: IRNodeTypes.WITH_DIRECTIVE,
+      type: IRNodeTypes.DIRECTIVE,
       element: context.reference(),
       dir: prop,
       name,

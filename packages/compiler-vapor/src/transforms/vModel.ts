@@ -14,7 +14,7 @@ import {
   isStaticArgOf,
 } from '@vue/compiler-dom'
 import type { DirectiveTransform } from '../transform'
-import { IRNodeTypes } from '../ir'
+import { type DirectiveIRNode, IRNodeTypes } from '../ir'
 
 export const transformVModel: DirectiveTransform = (dir, node, context) => {
   const { exp, arg } = dir
@@ -79,7 +79,7 @@ export const transformVModel: DirectiveTransform = (dir, node, context) => {
     )
   const { tag } = node
   const isCustomElement = context.options.isCustomElement(tag)
-  let runtimeDirective: string | undefined = 'vModelText'
+  let modelType: DirectiveIRNode['modelType'] | undefined = 'text'
   // TODO let runtimeDirective: VaporHelper | undefined = 'vModelText'
   if (
     tag === 'input' ||
@@ -92,17 +92,17 @@ export const transformVModel: DirectiveTransform = (dir, node, context) => {
       if (type) {
         if (type.type === NodeTypes.DIRECTIVE) {
           // :type="foo"
-          runtimeDirective = 'vModelDynamic'
+          modelType = 'dynamic'
         } else if (type.value) {
           switch (type.value.content) {
             case 'radio':
-              runtimeDirective = 'vModelRadio'
+              modelType = 'radio'
               break
             case 'checkbox':
-              runtimeDirective = 'vModelCheckbox'
+              modelType = 'checkbox'
               break
             case 'file':
-              runtimeDirective = undefined
+              modelType = undefined
               context.options.onError(
                 createDOMCompilerError(
                   DOMErrorCodes.X_V_MODEL_ON_FILE_INPUT_ELEMENT,
@@ -119,13 +119,13 @@ export const transformVModel: DirectiveTransform = (dir, node, context) => {
       } else if (hasDynamicKeyVBind(node)) {
         // element has bindings with dynamic keys, which can possibly contain
         // "type".
-        runtimeDirective = 'vModelDynamic'
+        modelType = 'dynamic'
       } else {
         // text type
         __DEV__ && checkDuplicatedValue()
       }
     } else if (tag === 'select') {
-      runtimeDirective = 'vModelSelect'
+      modelType = 'select'
     } else {
       // textarea
       __DEV__ && checkDuplicatedValue()
@@ -139,6 +139,7 @@ export const transformVModel: DirectiveTransform = (dir, node, context) => {
     )
   }
 
+  // TODO this should no longer be needed
   context.registerOperation({
     type: IRNodeTypes.SET_MODEL_VALUE,
     element: context.reference(),
@@ -147,12 +148,13 @@ export const transformVModel: DirectiveTransform = (dir, node, context) => {
     isComponent,
   })
 
-  if (runtimeDirective)
+  if (modelType)
     context.registerOperation({
-      type: IRNodeTypes.WITH_DIRECTIVE,
+      type: IRNodeTypes.DIRECTIVE,
       element: context.reference(),
       dir,
-      name: runtimeDirective,
+      name: 'model',
+      modelType,
       builtin: true,
     })
 

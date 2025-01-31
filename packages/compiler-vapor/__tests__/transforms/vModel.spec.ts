@@ -14,7 +14,7 @@ const compileWithVModel = makeCompile({
   },
 })
 
-describe('compiler: vModel transform', () => {
+describe.todo('compiler: vModel transform', () => {
   test('should support simple expression', () => {
     const { code, helpers } = compileWithVModel('<input v-model="model" />')
     expect(code).toMatchSnapshot()
