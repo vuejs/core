@@ -1,4 +1,9 @@
-import { createFor, renderEffect } from '../src'
+import {
+  createFor,
+  getDefaultValue,
+  getRestElement,
+  renderEffect,
+} from '../src'
 import { nextTick, ref, shallowRef, triggerRef } from '@vue/runtime-dom'
 import { makeRender } from './_utils'
 
@@ -250,6 +255,112 @@ describe('createFor', () => {
     expect(host.innerHTML).toBe(
       '<li>0. a</li><li>1. 3</li><li>2. 4</li><!--for-->',
     )
+
+    // clear
+    list.value = []
+    await nextTick()
+    expect(host.innerHTML).toBe('<!--for-->')
+  })
+
+  test('de-structured value (rest element)', async () => {
+    const list = ref([
+      { name: '1', a: 1 },
+      { name: '2', a: 2 },
+      { name: '3', a: 3 },
+    ])
+    function reverse() {
+      list.value = list.value.reverse()
+    }
+
+    const { host } = define(() => {
+      const n1 = createFor(
+        () => list.value,
+        state => {
+          const span = document.createElement('li')
+          renderEffect(() => {
+            span.innerHTML = JSON.stringify(
+              getRestElement(state[0].value, ['name']),
+            )
+            // index should be undefined if source is not an object
+            expect(state[2].value).toBe(undefined)
+          })
+          return span
+        },
+        item => item.name,
+      )
+      return n1
+    }).render()
+
+    expect(host.innerHTML).toBe(
+      '<li>{"a":1}</li><li>{"a":2}</li><li>{"a":3}</li><!--for-->',
+    )
+
+    // add
+    list.value.push({ name: '4', a: 4 })
+    await nextTick()
+    expect(host.innerHTML).toBe(
+      '<li>{"a":1}</li><li>{"a":2}</li><li>{"a":3}</li><li>{"a":4}</li><!--for-->',
+    )
+
+    // move
+    reverse()
+    await nextTick()
+    expect(host.innerHTML).toBe(
+      '<li>{"a":4}</li><li>{"a":3}</li><li>{"a":2}</li><li>{"a":1}</li><!--for-->',
+    )
+
+    reverse()
+    await nextTick()
+    expect(host.innerHTML).toBe(
+      '<li>{"a":1}</li><li>{"a":2}</li><li>{"a":3}</li><li>{"a":4}</li><!--for-->',
+    )
+
+    // change
+    list.value[0].a = 5
+    await nextTick()
+    expect(host.innerHTML).toBe(
+      '<li>{"a":5}</li><li>{"a":2}</li><li>{"a":3}</li><li>{"a":4}</li><!--for-->',
+    )
+
+    // remove
+    list.value.splice(1, 1)
+    await nextTick()
+    expect(host.innerHTML).toBe(
+      '<li>{"a":5}</li><li>{"a":3}</li><li>{"a":4}</li><!--for-->',
+    )
+
+    // clear
+    list.value = []
+    await nextTick()
+    expect(host.innerHTML).toBe('<!--for-->')
+  })
+
+  test('de-structured value (default value)', async () => {
+    const list = ref<any[]>([{ name: '1' }, { name: '2' }, { name: '3' }])
+
+    const { host } = define(() => {
+      const n1 = createFor(
+        () => list.value,
+        state => {
+          const span = document.createElement('li')
+          renderEffect(() => {
+            span.innerHTML = getDefaultValue(state[0].value.x, '0')
+            // index should be undefined if source is not an object
+            expect(state[2].value).toBe(undefined)
+          })
+          return span
+        },
+        item => item.name,
+      )
+      return n1
+    }).render()
+
+    expect(host.innerHTML).toBe('<li>0</li><li>0</li><li>0</li><!--for-->')
+
+    // change
+    list.value[0].x = 5
+    await nextTick()
+    expect(host.innerHTML).toBe('<li>5</li><li>0</li><li>0</li><!--for-->')
 
     // clear
     list.value = []
