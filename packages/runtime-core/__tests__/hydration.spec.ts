@@ -2337,4 +2337,166 @@ describe('SSR hydration', () => {
       expect(`Hydration attribute mismatch`).not.toHaveBeenWarned()
     })
   })
+
+  describe('v-skip', () => {
+    test('on native element', async () => {
+      const App = {
+        setup() {
+          const toggle = ref(true)
+          return { toggle }
+        },
+        template: `
+          <button id="toggleBtn" @click="toggle=!toggle">toggle</button>
+          <div v-skip="toggle"><span>foo</span></div>
+        `,
+      }
+      const container = document.createElement('div')
+      // server render
+      container.innerHTML = await renderToString(h(App))
+      // hydrate
+      createSSRApp(App).mount(container)
+      expect(container.innerHTML).toBe(
+        '<!--[--><button id="toggleBtn">toggle</button><span>foo</span><!--]-->',
+      )
+
+      triggerEvent('click', container.querySelector('#toggleBtn')!)
+      await nextTick()
+      expect(container.innerHTML).toBe(
+        '<!--[--><button id="toggleBtn">toggle</button><div><span>foo</span></div><!--]-->',
+      )
+    })
+
+    test('on component with default slot', async () => {
+      const Child = {
+        template: `<div><slot/></div>`,
+      }
+      const App = {
+        components: { Child },
+        setup() {
+          const toggle = ref(true)
+          return { toggle }
+        },
+        template: `
+          <button id="toggleBtn" @click="toggle=!toggle">toggle</button>
+          <Child v-skip="toggle"><span>foo</span></Child>
+        `,
+      }
+      const container = document.createElement('div')
+      // server render
+      container.innerHTML = await renderToString(h(App))
+      // hydrate
+      createSSRApp(App).mount(container)
+      expect(container.innerHTML).toBe(
+        '<!--[--><button id="toggleBtn">toggle</button><span>foo</span><!--]-->',
+      )
+
+      triggerEvent('click', container.querySelector('#toggleBtn')!)
+      await nextTick()
+      expect(container.innerHTML).toBe(
+        '<!--[--><button id="toggleBtn">toggle</button><div><span>foo</span></div><!--]-->',
+      )
+    })
+
+    test('on component with default slot + v-if', async () => {
+      const Child = {
+        template: `<div><slot/></div>`,
+      }
+      const App = {
+        components: { Child },
+        setup() {
+          const toggle = ref(true)
+          return { toggle }
+        },
+        template: `
+          <button id="toggleBtn" @click="toggle=!toggle">toggle</button>
+          <Child v-skip="toggle"><span v-if="true">foo</span></Child>
+        `,
+      }
+      const container = document.createElement('div')
+      // server render
+      container.innerHTML = await renderToString(h(App))
+      // hydrate
+      createSSRApp(App).mount(container)
+      expect(container.innerHTML).toBe(
+        '<!--[--><button id="toggleBtn">toggle</button><!--[--><span>foo</span><!--]--><!--]-->',
+      )
+
+      triggerEvent('click', container.querySelector('#toggleBtn')!)
+      await nextTick()
+      expect(container.innerHTML).toBe(
+        '<!--[--><button id="toggleBtn">toggle</button><div><span>foo</span></div><!--]-->',
+      )
+    })
+
+    test('on component with dynamic slot', async () => {
+      const Child = {
+        template: `<div><slot/></div>`,
+      }
+      const App = {
+        components: { Child },
+        setup() {
+          const toggle = ref(true)
+          const slotName = ref('default')
+          return { toggle, slotName }
+        },
+        template: `
+          <button id="toggleBtn" @click="toggle=!toggle">toggle</button>
+          <Child v-skip="toggle">
+            <template #[slotName]>
+              <span>foo</span>
+            </template>
+          </Child>
+        `,
+      }
+      const container = document.createElement('div')
+      // server render
+      container.innerHTML = await renderToString(h(App))
+      // hydrate
+      createSSRApp(App).mount(container)
+      expect(container.innerHTML).toBe(
+        '<!--[--><button id="toggleBtn">toggle</button><!--[--><span>foo</span><!--]--><!--]-->',
+      )
+
+      triggerEvent('click', container.querySelector('#toggleBtn')!)
+      await nextTick()
+      expect(container.innerHTML).toBe(
+        '<!--[--><button id="toggleBtn">toggle</button><div><span>foo</span></div><!--]-->',
+      )
+    })
+
+    test('on dynamic component with dynamic slot', async () => {
+      const Child = {
+        template: `<div><slot/></div>`,
+      }
+      const App = {
+        setup() {
+          const toggle = ref(true)
+          const slotName = ref('default')
+          return { toggle, slotName, Child }
+        },
+        template: `
+          <button id="toggleBtn" @click="toggle=!toggle">toggle</button>
+          <component :is="Child" v-skip="toggle">
+            <template #[slotName]>
+              <span>foo</span>
+            </template>
+          </component>
+        `,
+      }
+      const container = document.createElement('div')
+      // server render
+      container.innerHTML = await renderToString(h(App))
+      // hydrate
+      createSSRApp(App).mount(container)
+      expect(container.innerHTML).toBe(
+        '<!--[--><button id="toggleBtn">toggle</button><!--[--><span>foo</span><!--]--><!--]-->',
+      )
+
+      triggerEvent('click', container.querySelector('#toggleBtn')!)
+      await nextTick()
+      expect(container.innerHTML).toBe(
+        '<!--[--><button id="toggleBtn">toggle</button><div><span>foo</span></div><!--]-->',
+      )
+    })
+  })
 })
