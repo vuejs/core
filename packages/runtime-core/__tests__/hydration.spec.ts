@@ -2347,7 +2347,7 @@ describe('SSR hydration', () => {
         },
         template: `
           <button id="toggleBtn" @click="toggle=!toggle">toggle</button>
-          <div v-skip="toggle"><span>foo</span></div>
+          <div v-skip="toggle"><span>{{toggle}}</span></div>
         `,
       }
       const container = document.createElement('div')
@@ -2356,13 +2356,13 @@ describe('SSR hydration', () => {
       // hydrate
       createSSRApp(App).mount(container)
       expect(container.innerHTML).toBe(
-        '<!--[--><button id="toggleBtn">toggle</button><span>foo</span><!--]-->',
+        '<!--[--><button id="toggleBtn">toggle</button><span>true</span><!--]-->',
       )
 
       triggerEvent('click', container.querySelector('#toggleBtn')!)
       await nextTick()
       expect(container.innerHTML).toBe(
-        '<!--[--><button id="toggleBtn">toggle</button><div><span>foo</span></div><!--]-->',
+        '<!--[--><button id="toggleBtn">toggle</button><div><span>false</span></div><!--]-->',
       )
     })
 
@@ -2378,7 +2378,7 @@ describe('SSR hydration', () => {
         },
         template: `
           <button id="toggleBtn" @click="toggle=!toggle">toggle</button>
-          <Child v-skip="toggle"><span>foo</span></Child>
+          <Child v-skip="toggle"><span>{{toggle}}</span></Child>
         `,
       }
       const container = document.createElement('div')
@@ -2387,13 +2387,13 @@ describe('SSR hydration', () => {
       // hydrate
       createSSRApp(App).mount(container)
       expect(container.innerHTML).toBe(
-        '<!--[--><button id="toggleBtn">toggle</button><span>foo</span><!--]-->',
+        '<!--[--><button id="toggleBtn">toggle</button><span>true</span><!--]-->',
       )
 
       triggerEvent('click', container.querySelector('#toggleBtn')!)
       await nextTick()
       expect(container.innerHTML).toBe(
-        '<!--[--><button id="toggleBtn">toggle</button><div><span>foo</span></div><!--]-->',
+        '<!--[--><button id="toggleBtn">toggle</button><div><span>false</span></div><!--]-->',
       )
     })
 
@@ -2409,7 +2409,7 @@ describe('SSR hydration', () => {
         },
         template: `
           <button id="toggleBtn" @click="toggle=!toggle">toggle</button>
-          <Child v-skip="toggle"><span v-if="true">foo</span></Child>
+          <Child v-skip="toggle"><span v-if="true">{{toggle}}</span></Child>
         `,
       }
       const container = document.createElement('div')
@@ -2418,13 +2418,13 @@ describe('SSR hydration', () => {
       // hydrate
       createSSRApp(App).mount(container)
       expect(container.innerHTML).toBe(
-        '<!--[--><button id="toggleBtn">toggle</button><!--[--><span>foo</span><!--]--><!--]-->',
+        '<!--[--><button id="toggleBtn">toggle</button><!--[--><span>true</span><!--]--><!--]-->',
       )
 
       triggerEvent('click', container.querySelector('#toggleBtn')!)
       await nextTick()
       expect(container.innerHTML).toBe(
-        '<!--[--><button id="toggleBtn">toggle</button><div><span>foo</span></div><!--]-->',
+        '<!--[--><button id="toggleBtn">toggle</button><div><span>false</span></div><!--]-->',
       )
     })
 
@@ -2443,7 +2443,7 @@ describe('SSR hydration', () => {
           <button id="toggleBtn" @click="toggle=!toggle">toggle</button>
           <Child v-skip="toggle">
             <template #[slotName]>
-              <span>foo</span>
+              <span>{{toggle}}</span>
             </template>
           </Child>
         `,
@@ -2454,13 +2454,13 @@ describe('SSR hydration', () => {
       // hydrate
       createSSRApp(App).mount(container)
       expect(container.innerHTML).toBe(
-        '<!--[--><button id="toggleBtn">toggle</button><!--[--><span>foo</span><!--]--><!--]-->',
+        '<!--[--><button id="toggleBtn">toggle</button><!--[--><span>true</span><!--]--><!--]-->',
       )
 
       triggerEvent('click', container.querySelector('#toggleBtn')!)
       await nextTick()
       expect(container.innerHTML).toBe(
-        '<!--[--><button id="toggleBtn">toggle</button><div><span>foo</span></div><!--]-->',
+        '<!--[--><button id="toggleBtn">toggle</button><div><span>false</span></div><!--]-->',
       )
     })
 
@@ -2478,7 +2478,7 @@ describe('SSR hydration', () => {
           <button id="toggleBtn" @click="toggle=!toggle">toggle</button>
           <component :is="Child" v-skip="toggle">
             <template #[slotName]>
-              <span>foo</span>
+              <span>{{toggle}}</span>
             </template>
           </component>
         `,
@@ -2489,13 +2489,13 @@ describe('SSR hydration', () => {
       // hydrate
       createSSRApp(App).mount(container)
       expect(container.innerHTML).toBe(
-        '<!--[--><button id="toggleBtn">toggle</button><!--[--><span>foo</span><!--]--><!--]-->',
+        '<!--[--><button id="toggleBtn">toggle</button><!--[--><span>true</span><!--]--><!--]-->',
       )
 
       triggerEvent('click', container.querySelector('#toggleBtn')!)
       await nextTick()
       expect(container.innerHTML).toBe(
-        '<!--[--><button id="toggleBtn">toggle</button><div><span>foo</span></div><!--]-->',
+        '<!--[--><button id="toggleBtn">toggle</button><div><span>false</span></div><!--]-->',
       )
     })
   })
