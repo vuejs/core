@@ -13,6 +13,7 @@ import {
   warn,
 } from '@vue/runtime-dom'
 import {
+  Empty,
   NOOP,
   extend,
   genCacheKey,
@@ -26,7 +27,7 @@ import {
   warnDeprecation,
 } from '../../runtime-core/src/compat/compatConfig'
 
-const compileCache: Record<string, RenderFunction> = Object.create(null)
+const compileCache: Record<string, RenderFunction> = new Empty()
 
 function compileToFunction(
   template: string | HTMLElement,

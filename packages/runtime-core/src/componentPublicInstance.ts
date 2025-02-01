@@ -14,6 +14,7 @@ import {
 } from './apiWatch'
 import {
   EMPTY_OBJ,
+  Empty,
   type IfAny,
   NOOP,
   type Prettify,
@@ -365,7 +366,7 @@ const getPublicInstance = (
 export const publicPropertiesMap: PublicPropertiesMap =
   // Move PURE marker to new line to workaround compiler discarding it
   // due to type annotation
-  /*@__PURE__*/ extend(Object.create(null), {
+  /*@__PURE__*/ extend(new Empty(), {
     $: i => i,
     $el: i => i.vnode.el,
     $data: i => i.data,
