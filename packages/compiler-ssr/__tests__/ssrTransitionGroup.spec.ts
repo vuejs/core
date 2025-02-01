@@ -132,8 +132,7 @@ describe('transition-group', () => {
   test('attribute fallthrough', () => {
     expect(
       compile(
-        `<transition-group tag="ul" class="red" id="ok">
-        </transition-group>`,
+        `<transition-group tag="ul" class="red" id="ok"></transition-group>`,
       ).code,
     ).toMatchInlineSnapshot(`
       "const { mergeProps: _mergeProps } = require("vue")
