@@ -1003,9 +1003,5 @@ function isMismatchAllowedForCommentNode(
   node: Node,
   { props }: VNode,
 ): boolean {
-  return (
-    node.nodeType === DOMNodeTypes.COMMENT &&
-    props != null &&
-    hasOwn(props, allowMismatchAttr)
-  )
+  return isComment(node) && props != null && hasOwn(props, allowMismatchAttr)
 }
