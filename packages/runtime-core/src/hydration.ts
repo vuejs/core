@@ -19,6 +19,7 @@ import {
   ShapeFlags,
   def,
   getEscapedCssVarName,
+  hasOwn,
   includeBooleanAttr,
   isBooleanAttr,
   isKnownHtmlAttr,
@@ -677,7 +678,7 @@ export function createHydrationFunctions(
   ): Node | null => {
     if (
       !isMismatchAllowed(node.parentElement!, MismatchTypes.CHILDREN) &&
-      !isCommentNodeMismatch(node, vnode)
+      !isMismatchAllowedForCommentNode(node, vnode)
     ) {
       ;(__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
         warn(
@@ -998,10 +999,13 @@ function isMismatchAllowed(
 }
 
 // data-allow-mismatch + v-if
-function isCommentNodeMismatch(node: Node, vnode: VNode): boolean {
-  if (node.nodeType !== DOMNodeTypes.COMMENT || !vnode.props) {
-    return false
-  }
-
-  return allowMismatchAttr in vnode.props
+function isMismatchAllowedForCommentNode(
+  node: Node,
+  { props }: VNode,
+): boolean {
+  return (
+    node.nodeType === DOMNodeTypes.COMMENT &&
+    props != null &&
+    hasOwn(props, allowMismatchAttr)
+  )
 }
