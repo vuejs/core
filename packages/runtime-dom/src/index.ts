@@ -333,4 +333,12 @@ export {
 /**
  * @internal
  */
-export { vModelTextInit, vModelTextUpdate } from './directives/vModel'
+export {
+  vModelTextInit,
+  vModelTextUpdate,
+  vModelCheckboxInit,
+  vModelCheckboxUpdate,
+  getValue as vModelGetValue,
+  vModelSelectInit,
+  vModelSetSelected,
+} from './directives/vModel'

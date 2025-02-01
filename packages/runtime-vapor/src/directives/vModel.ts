@@ -1,28 +1,104 @@
-import { onMounted, vModelTextInit, vModelTextUpdate } from '@vue/runtime-dom'
+import {
+  onMounted,
+  vModelCheckboxInit,
+  vModelCheckboxUpdate,
+  vModelGetValue,
+  vModelSelectInit,
+  vModelSetSelected,
+  vModelTextInit,
+  vModelTextUpdate,
+} from '@vue/runtime-dom'
 import { renderEffect } from '../renderEffect'
+import { looseEqual } from '@vue/shared'
+import { addEventListener } from '../dom/event'
+import { traverse } from '@vue/reactivity'
 
-type VaporModelDirective<T = Element> = (
+type VaporModelDirective<
+  T extends HTMLElement =
+    | HTMLInputElement
+    | HTMLTextAreaElement
+    | HTMLSelectElement,
+  Modifiers extends string = string,
+> = (
   el: T,
   get: () => any,
   set: (v: any) => void,
-  modifiers?: { number?: true; trim?: true; lazy?: true },
+  modifiers?: { [key in Modifiers]?: true },
 ) => void
 
 export const applyTextModel: VaporModelDirective<
-  HTMLInputElement | HTMLTextAreaElement
+  HTMLInputElement | HTMLTextAreaElement,
+  'trim' | 'number' | 'lazy'
 > = (el, get, set, { trim, number, lazy } = {}) => {
-  vModelTextInit(el, set, trim, number, lazy)
+  vModelTextInit(el, trim, number, lazy, set)
   onMounted(() => {
-    let oldValue: any
+    let value: any
     renderEffect(() => {
-      const value = get()
-      vModelTextUpdate(el, value, oldValue, trim, number, lazy)
-      oldValue = value
+      vModelTextUpdate(el, value, (value = get()), trim, number, lazy)
     })
   })
 }
 
-export const applyRadioModel: VaporModelDirective = (el, get, set) => {}
-export const applyCheckboxModel: VaporModelDirective = (el, get, set) => {}
-export const applySelectModel: VaporModelDirective = (el, get, set) => {}
-export const applyDynamicModel: VaporModelDirective = (el, get, set) => {}
+export const applyCheckboxModel: VaporModelDirective<HTMLInputElement> = (
+  el,
+  get,
+  set,
+) => {
+  vModelCheckboxInit(el, set)
+  onMounted(() => {
+    let value: any
+    renderEffect(() => {
+      vModelCheckboxUpdate(
+        el,
+        value,
+        // #4096 array checkboxes need to be deep traversed
+        traverse((value = get())),
+      )
+    })
+  })
+}
+
+export const applyRadioModel: VaporModelDirective<HTMLInputElement> = (
+  el,
+  get,
+  set,
+) => {
+  addEventListener(el, 'change', () => set(vModelGetValue(el)))
+  onMounted(() => {
+    let value: any
+    renderEffect(() => {
+      if (value !== (value = get())) {
+        el.checked = looseEqual(value, vModelGetValue(el))
+      }
+    })
+  })
+}
+
+export const applySelectModel: VaporModelDirective<
+  HTMLSelectElement,
+  'number'
+> = (el, get, set, modifiers) => {
+  vModelSelectInit(el, get(), modifiers && modifiers.number, set)
+  onMounted(() => {
+    renderEffect(() => vModelSetSelected(el, traverse(get())))
+  })
+}
+
+export const applyDynamicModel: VaporModelDirective = (
+  el,
+  get,
+  set,
+  modifiers,
+) => {
+  let apply: VaporModelDirective<any> = applyTextModel
+  if (el.tagName === 'SELECT') {
+    apply = applySelectModel
+  } else if (el.tagName === 'TEXTAREA') {
+    apply = applyTextModel
+  } else if ((el as HTMLInputElement).type === 'checkbox') {
+    apply = applyCheckboxModel
+  } else if ((el as HTMLInputElement).type === 'radio') {
+    apply = applyRadioModel
+  }
+  apply(el, get, set, modifiers)
+}

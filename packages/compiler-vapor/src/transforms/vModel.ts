@@ -139,15 +139,6 @@ export const transformVModel: DirectiveTransform = (dir, node, context) => {
     )
   }
 
-  // TODO this should no longer be needed
-  context.registerOperation({
-    type: IRNodeTypes.SET_MODEL_VALUE,
-    element: context.reference(),
-    key: arg || createSimpleExpression('modelValue', true),
-    value: exp,
-    isComponent,
-  })
-
   if (modelType)
     context.registerOperation({
       type: IRNodeTypes.DIRECTIVE,

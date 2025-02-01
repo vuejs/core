@@ -5,7 +5,6 @@ import { genSetDynamicEvents, genSetEvent } from './event'
 import { genFor } from './for'
 import { genSetHtml } from './html'
 import { genIf } from './if'
-import { genSetModelValue } from './modelValue'
 import { genDynamicProps, genSetProp } from './prop'
 import { genDeclareOldRef, genSetTemplateRef } from './templateRef'
 import { genCreateTextNode, genSetText } from './text'
@@ -51,8 +50,6 @@ export function genOperation(
       return genSetHtml(oper, context)
     case IRNodeTypes.SET_TEMPLATE_REF:
       return genSetTemplateRef(oper, context)
-    case IRNodeTypes.SET_MODEL_VALUE:
-      return genSetModelValue(oper, context)
     case IRNodeTypes.CREATE_TEXT_NODE:
       return genCreateTextNode(oper, context)
     case IRNodeTypes.INSERT_NODE:

@@ -37,8 +37,8 @@ import {
 } from '@vue/compiler-core'
 import { genEventHandler } from './event'
 import { genDirectiveModifiers, genDirectivesForElement } from './directive'
-import { genModelHandler } from './modelValue'
 import { genBlock } from './block'
+import { genModelHandler } from './vModel'
 
 export function genCreateComponent(
   operation: CreateComponentIRNode,
@@ -223,7 +223,7 @@ function genModelEvent(prop: IRProp, context: CodegenContext): CodeFragment[] {
     : ['["onUpdate:" + ', ...genExpression(prop.key, context), ']']
   const handler = genModelHandler(prop.values[0], context)
 
-  return [',', NEWLINE, ...name, ': ', ...handler]
+  return [',', NEWLINE, ...name, ': () => ', ...handler]
 }
 
 function genModelModifiers(

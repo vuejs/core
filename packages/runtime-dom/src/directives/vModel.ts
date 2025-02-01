@@ -52,9 +52,9 @@ export const vModelText: ModelDirective<
   'trim' | 'number' | 'lazy'
 > = {
   created(el, { modifiers: { lazy, trim, number } }, vnode) {
+    el[assignKey] = getModelAssigner(vnode)
     vModelTextInit(
       el,
-      (el[assignKey] = getModelAssigner(vnode)),
       trim,
       number || !!(vnode.props && vnode.props.type === 'number'),
       lazy,
@@ -70,7 +70,7 @@ export const vModelText: ModelDirective<
     vnode,
   ) {
     el[assignKey] = getModelAssigner(vnode)
-    vModelTextUpdate(el, value, oldValue, trim, number, lazy)
+    vModelTextUpdate(el, oldValue, value, trim, number, lazy)
   },
 }
 
@@ -79,10 +79,10 @@ export const vModelText: ModelDirective<
  */
 export const vModelTextInit = (
   el: HTMLInputElement | HTMLTextAreaElement,
-  set: (v: any) => void,
   trim: boolean | undefined,
   number: boolean | undefined,
   lazy: boolean | undefined,
+  set?: (v: any) => void,
 ): void => {
   addEventListener(el, lazy ? 'change' : 'input', e => {
     if ((e.target as any).composing) return
@@ -93,7 +93,7 @@ export const vModelTextInit = (
     if (number) {
       domValue = looseToNumber(domValue)
     }
-    set(domValue)
+    ;(set || (el as any)[assignKey])(domValue)
   })
   if (trim) {
     addEventListener(el, 'change', () => {
@@ -116,8 +116,8 @@ export const vModelTextInit = (
  */
 export const vModelTextUpdate = (
   el: HTMLInputElement | HTMLTextAreaElement,
-  value: any,
   oldValue: any,
+  value: any,
   trim: boolean | undefined,
   number: boolean | undefined,
   lazy: boolean | undefined,
@@ -152,56 +152,82 @@ export const vModelCheckbox: ModelDirective<HTMLInputElement> = {
   deep: true,
   created(el, _, vnode) {
     el[assignKey] = getModelAssigner(vnode)
-    addEventListener(el, 'change', () => {
-      const modelValue = (el as any)._modelValue
-      const elementValue = getValue(el)
-      const checked = el.checked
-      const assign = el[assignKey]
-      if (isArray(modelValue)) {
-        const index = looseIndexOf(modelValue, elementValue)
-        const found = index !== -1
-        if (checked && !found) {
-          assign(modelValue.concat(elementValue))
-        } else if (!checked && found) {
-          const filtered = [...modelValue]
-          filtered.splice(index, 1)
-          assign(filtered)
-        }
-      } else if (isSet(modelValue)) {
-        const cloned = new Set(modelValue)
-        if (checked) {
-          cloned.add(elementValue)
-        } else {
-          cloned.delete(elementValue)
-        }
-        assign(cloned)
-      } else {
-        assign(getCheckboxValue(el, checked))
-      }
-    })
+    vModelCheckboxInit(el)
   },
   // set initial checked on mount to wait for true-value/false-value
-  mounted: setChecked,
+  mounted(el, binding, vnode) {
+    vModelCheckboxUpdate(
+      el,
+      binding.oldValue,
+      binding.value,
+      vnode.props!.value,
+    )
+  },
   beforeUpdate(el, binding, vnode) {
     el[assignKey] = getModelAssigner(vnode)
-    setChecked(el, binding, vnode)
+    vModelCheckboxUpdate(
+      el,
+      binding.oldValue,
+      binding.value,
+      vnode.props!.value,
+    )
   },
 }
 
-function setChecked(
+/**
+ * @internal
+ */
+export const vModelCheckboxInit = (
   el: HTMLInputElement,
-  { value, oldValue }: DirectiveBinding,
-  vnode: VNode,
-) {
+  set?: (v: any) => void,
+): void => {
+  addEventListener(el, 'change', () => {
+    const assign = set || (el as any)[assignKey]
+    const modelValue = (el as any)._modelValue
+    const elementValue = getValue(el)
+    const checked = el.checked
+    if (isArray(modelValue)) {
+      const index = looseIndexOf(modelValue, elementValue)
+      const found = index !== -1
+      if (checked && !found) {
+        assign(modelValue.concat(elementValue))
+      } else if (!checked && found) {
+        const filtered = [...modelValue]
+        filtered.splice(index, 1)
+        assign(filtered)
+      }
+    } else if (isSet(modelValue)) {
+      const cloned = new Set(modelValue)
+      if (checked) {
+        cloned.add(elementValue)
+      } else {
+        cloned.delete(elementValue)
+      }
+      assign(cloned)
+    } else {
+      assign(getCheckboxValue(el, checked))
+    }
+  })
+}
+
+/**
+ * @internal
+ */
+export const vModelCheckboxUpdate = (
+  el: HTMLInputElement,
+  oldValue: any,
+  value: any,
+  rawValue: any = getValue(el),
+): void => {
   // store the v-model value on the element so it can be accessed by the
   // change listener.
   ;(el as any)._modelValue = value
   let checked: boolean
 
   if (isArray(value)) {
-    checked = looseIndexOf(value, vnode.props!.value) > -1
+    checked = looseIndexOf(value, rawValue) > -1
   } else if (isSet(value)) {
-    checked = value.has(vnode.props!.value)
+    checked = value.has(rawValue)
   } else {
     if (value === oldValue) return
     checked = looseEqual(value, getCheckboxValue(el, true))
@@ -233,43 +259,57 @@ export const vModelSelect: ModelDirective<HTMLSelectElement, 'number'> = {
   // <select multiple> value need to be deep traversed
   deep: true,
   created(el, { value, modifiers: { number } }, vnode) {
-    const isSetModel = isSet(value)
-    addEventListener(el, 'change', () => {
-      const selectedVal = Array.prototype.filter
-        .call(el.options, (o: HTMLOptionElement) => o.selected)
-        .map((o: HTMLOptionElement) =>
-          number ? looseToNumber(getValue(o)) : getValue(o),
-        )
-      el[assignKey](
-        el.multiple
-          ? isSetModel
-            ? new Set(selectedVal)
-            : selectedVal
-          : selectedVal[0],
-      )
-      el._assigning = true
-      nextTick(() => {
-        el._assigning = false
-      })
-    })
+    vModelSelectInit(el, value, number)
     el[assignKey] = getModelAssigner(vnode)
   },
   // set value in mounted & updated because <select> relies on its children
   // <option>s.
   mounted(el, { value }) {
-    setSelected(el, value)
+    vModelSetSelected(el, value)
   },
   beforeUpdate(el, _binding, vnode) {
     el[assignKey] = getModelAssigner(vnode)
   },
   updated(el, { value }) {
-    if (!el._assigning) {
-      setSelected(el, value)
-    }
+    vModelSetSelected(el, value)
   },
 }
 
-function setSelected(el: HTMLSelectElement, value: any) {
+/**
+ * @internal
+ */
+export const vModelSelectInit = (
+  el: HTMLSelectElement & { [assignKey]?: AssignerFn; _assigning?: boolean },
+  value: any,
+  number: boolean | undefined,
+  set?: (v: any) => void,
+): void => {
+  const isSetModel = isSet(value)
+  addEventListener(el, 'change', () => {
+    const selectedVal = Array.prototype.filter
+      .call(el.options, (o: HTMLOptionElement) => o.selected)
+      .map((o: HTMLOptionElement) =>
+        number ? looseToNumber(getValue(o)) : getValue(o),
+      )
+    ;(set || el[assignKey]!)(
+      el.multiple
+        ? isSetModel
+          ? new Set(selectedVal)
+          : selectedVal
+        : selectedVal[0],
+    )
+    el._assigning = true
+    nextTick(() => {
+      el._assigning = false
+    })
+  })
+}
+
+/**
+ * @internal
+ */
+export const vModelSetSelected = (el: HTMLSelectElement, value: any): void => {
+  if ((el as any)._assigning) return
   const isMultiple = el.multiple
   const isArrayValue = isArray(value)
   if (isMultiple && !isArrayValue && !isSet(value)) {
@@ -306,8 +346,10 @@ function setSelected(el: HTMLSelectElement, value: any) {
   }
 }
 
-// retrieve raw value set via :value bindings
-function getValue(el: HTMLOptionElement | HTMLInputElement) {
+/**
+ * @internal retrieve raw value set via :value bindings
+ */
+export function getValue(el: HTMLOptionElement | HTMLInputElement): any {
   return '_value' in el ? (el as any)._value : el.value
 }
 

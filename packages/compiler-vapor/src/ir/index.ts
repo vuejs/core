@@ -1,5 +1,4 @@
 import type {
-  BindingTypes,
   CompoundExpressionNode,
   DirectiveNode,
   RootNode,
@@ -23,7 +22,6 @@ export enum IRNodeTypes {
   SET_DYNAMIC_EVENTS,
   SET_HTML,
   SET_TEMPLATE_REF,
-  SET_MODEL_VALUE,
 
   INSERT_NODE,
   PREPEND_NODE,
@@ -154,15 +152,6 @@ export interface SetTemplateRefIRNode extends BaseIRNode {
   effect: boolean
 }
 
-export interface SetModelValueIRNode extends BaseIRNode {
-  type: IRNodeTypes.SET_MODEL_VALUE
-  element: number
-  key: SimpleExpressionNode
-  value: SimpleExpressionNode
-  bindingType?: BindingTypes
-  isComponent: boolean
-}
-
 export interface CreateTextNodeIRNode extends BaseIRNode {
   type: IRNodeTypes.CREATE_TEXT_NODE
   id: number
@@ -227,7 +216,6 @@ export type OperationNode =
   | SetDynamicEventsIRNode
   | SetHtmlIRNode
   | SetTemplateRefIRNode
-  | SetModelValueIRNode
   | CreateTextNodeIRNode
   | InsertNodeIRNode
   | PrependNodeIRNode
