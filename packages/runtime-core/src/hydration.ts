@@ -675,7 +675,10 @@ export function createHydrationFunctions(
     slotScopeIds: string[] | null,
     isFragment: boolean,
   ): Node | null => {
-    if (!isMismatchAllowed(node.parentElement!, MismatchTypes.CHILDREN)) {
+    if (
+      !isMismatchAllowed(node.parentElement!, MismatchTypes.CHILDREN) &&
+      !isCommentNodeMismatch(node, vnode)
+    ) {
       ;(__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
         warn(
           `Hydration node mismatch:\n- rendered on server:`,
@@ -992,4 +995,13 @@ function isMismatchAllowed(
     }
     return allowedAttr.split(',').includes(MismatchTypeString[allowedType])
   }
+}
+
+// data-allow-mismatch + v-if
+function isCommentNodeMismatch(node: Node, vnode: VNode): boolean {
+  if (node.nodeType !== DOMNodeTypes.COMMENT || !vnode.props) {
+    return false
+  }
+
+  return allowMismatchAttr in vnode.props
 }
