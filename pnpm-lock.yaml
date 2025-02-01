@@ -15,6 +15,9 @@ catalogs:
     '@vitejs/plugin-vue':
       specifier: ^5.1.2
       version: 5.1.2
+    entities:
+      specifier: ^4.5.0
+      version: 4.5.0
     estree-walker:
       specifier: ^2.0.2
       version: 2.0.2
@@ -250,7 +253,7 @@ importers:
         specifier: workspace:*
         version: link:../shared
       entities:
-        specifier: ^4.5.0
+        specifier: 'catalog:'
         version: 4.5.0
       estree-walker:
         specifier: 'catalog:'
@@ -425,6 +428,9 @@ importers:
       '@babel/parser':
         specifier: 'catalog:'
         version: 7.25.3
+      entities:
+        specifier: 'catalog:'
+        version: 4.5.0
       estree-walker:
         specifier: 'catalog:'
         version: 2.0.2
