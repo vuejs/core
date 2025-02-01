@@ -37,8 +37,7 @@ export class DynamicFragment extends Fragment {
     this.anchor =
       __DEV__ && anchorLabel
         ? createComment(anchorLabel)
-        : // eslint-disable-next-line no-restricted-globals
-          document.createTextNode('')
+        : document.createTextNode('')
   }
 
   update(render?: BlockFn, key: any = render): void {

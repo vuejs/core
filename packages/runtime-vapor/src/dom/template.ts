@@ -2,7 +2,6 @@
 export function template(html: string, root?: boolean) {
   let node: ChildNode
   const create = () => {
-    // eslint-disable-next-line no-restricted-globals
     const t = document.createElement('template')
     t.innerHTML = html
     return t.content.firstChild!

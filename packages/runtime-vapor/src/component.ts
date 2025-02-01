@@ -452,7 +452,6 @@ export function createComponentWithFallback(
     return createComponent(comp, rawProps, rawSlots, isSingleRoot)
   }
 
-  // eslint-disable-next-line no-restricted-globals
   const el = document.createElement(comp)
   // mark single root
   ;(el as any).$root = isSingleRoot

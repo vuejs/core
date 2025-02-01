@@ -76,7 +76,6 @@ export const delegateEvents = (...names: string[]): void => {
   for (const name of names) {
     if (!delegatedEvents[name]) {
       delegatedEvents[name] = true
-      // eslint-disable-next-line no-restricted-globals
       document.addEventListener(name, delegatedEventHandler)
     }
   }
@@ -93,7 +92,6 @@ const delegatedEventHandler = (e: Event) => {
   Object.defineProperty(e, 'currentTarget', {
     configurable: true,
     get() {
-      // eslint-disable-next-line no-restricted-globals
       return node || document
     },
   })

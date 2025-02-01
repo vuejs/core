@@ -106,7 +106,7 @@ export default tseslint.config(
 
   // Packages targeting DOM
   {
-    files: ['packages/{vue,vue-compat,runtime-dom}/**'],
+    files: ['packages/{vue,vue-compat,runtime-dom,runtime-vapor}/**'],
     rules: {
       'no-restricted-globals': ['error', ...NodeGlobals],
     },
