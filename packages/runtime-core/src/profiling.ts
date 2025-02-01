@@ -5,19 +5,19 @@ import {
 } from './component'
 import { devtoolsPerfEnd, devtoolsPerfStart } from './devtools'
 
-let supported: boolean
-let perf: Performance
+const perf = typeof window !== 'undefined' && window.performance
+const timer = perf ? () => perf.now() : Date.now
 
 export function startMeasure(
   instance: ComponentInternalInstance,
   type: string,
 ): void {
-  if (instance.appContext.config.performance && isSupported()) {
+  if (instance.appContext.config.performance && perf) {
     perf.mark(`vue-${type}-${instance.uid}`)
   }
 
   if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
-    devtoolsPerfStart(instance, type, isSupported() ? perf.now() : Date.now())
+    devtoolsPerfStart(instance, type, timer())
   }
 }
 
@@ -25,7 +25,7 @@ export function endMeasure(
   instance: ComponentInternalInstance,
   type: string,
 ): void {
-  if (instance.appContext.config.performance && isSupported()) {
+  if (instance.appContext.config.performance && perf) {
     const startTag = `vue-${type}-${instance.uid}`
     const endTag = startTag + `:end`
     perf.mark(endTag)
@@ -39,19 +39,6 @@ export function endMeasure(
   }
 
   if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
-    devtoolsPerfEnd(instance, type, isSupported() ? perf.now() : Date.now())
+    devtoolsPerfEnd(instance, type, timer())
   }
-}
-
-function isSupported() {
-  if (supported !== undefined) {
-    return supported
-  }
-  if (typeof window !== 'undefined' && window.performance) {
-    supported = true
-    perf = window.performance
-  } else {
-    supported = false
-  }
-  return supported
 }
