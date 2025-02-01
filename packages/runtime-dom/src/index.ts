@@ -330,3 +330,7 @@ export {
   vShowHidden,
   type VShowElement,
 } from './directives/vShow'
+/**
+ * @internal
+ */
+export { vModelTextInit, vModelTextUpdate } from './directives/vModel'

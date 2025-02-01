@@ -31,3 +31,10 @@ export {
 export { createTemplateRefSetter } from './apiTemplateRef'
 export { createDynamicComponent } from './apiCreateDynamicComponent'
 export { applyVShow } from './directives/vShow'
+export {
+  applyTextModel,
+  applyRadioModel,
+  applyCheckboxModel,
+  applySelectModel,
+  applyDynamicModel,
+} from './directives/vModel'

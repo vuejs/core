@@ -1,48 +1,44 @@
 import type { CodegenContext } from '../generate'
 import type { DirectiveIRNode } from '../ir'
-import type { CodeFragment } from './utils'
+import { type CodeFragment, NEWLINE, genCall } from './utils'
+import { genExpression } from './expression'
 
+const helperMap = {
+  text: 'applyTextModel',
+  radio: 'applyRadioModel',
+  checkbox: 'applyCheckboxModel',
+  select: 'applySelectModel',
+  dynamic: 'applyDynamicModel',
+} as const
+
+// This is only for built-in v-model on native elements.
 export function genVModel(
   oper: DirectiveIRNode,
   context: CodegenContext,
 ): CodeFragment[] {
-  return []
-}
-
-import { camelize } from '@vue/shared'
-import { genExpression } from './expression'
-import type { SetModelValueIRNode } from '../ir'
-import { NEWLINE, genCall } from './utils'
-import type { SimpleExpressionNode } from '@vue/compiler-dom'
-
-export function genSetModelValue(
-  oper: SetModelValueIRNode,
-  context: CodegenContext,
-): CodeFragment[] {
-  const { helper } = context
-  const name = oper.key.isStatic
-    ? [JSON.stringify(`update:${camelize(oper.key.content)}`)]
-    : ['`update:${', ...genExpression(oper.key, context), '}`']
-
-  const handler = genModelHandler(oper.value, context)
+  const {
+    modelType,
+    element,
+    dir: { exp, modifiers },
+  } = oper
 
   return [
     NEWLINE,
-    ...genCall(helper('delegate'), `n${oper.element}`, name, handler),
-  ]
-}
-
-export function genModelHandler(
-  value: SimpleExpressionNode,
-  context: CodegenContext,
-): CodeFragment[] {
-  const {
-    options: { isTS },
-  } = context
-
-  return [
-    `() => ${isTS ? `($event: any)` : `$event`} => (`,
-    ...genExpression(value, context, '$event'),
-    ')',
+    ...genCall(
+      context.helper(helperMap[modelType!]),
+      `n${element}`,
+      // getter
+      [`() => (`, ...genExpression(exp!, context), `)`],
+      // setter
+      [
+        `${context.options.isTS ? `($event: any)` : `$event`} => (`,
+        ...genExpression(exp!, context, '$event'),
+        ')',
+      ],
+      // modifiers
+      modifiers.length
+        ? `{ ${modifiers.map(e => e.content + ': true').join(',')} }`
+        : undefined,
+    ),
   ]
 }
