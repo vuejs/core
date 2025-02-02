@@ -41,14 +41,14 @@ export function makeRender<C = VaporComponent>(
     let app: App
 
     function render(
-      props: RawProps = {},
+      props: RawProps | undefined = undefined,
       container: string | ParentNode = host,
     ) {
       create(props)
       return mount(container)
     }
 
-    function create(props: RawProps = {}) {
+    function create(props: RawProps | undefined = undefined) {
       app?.unmount()
       app = createVaporApp(component, props)
       return res()

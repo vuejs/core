@@ -33,6 +33,7 @@ import {
   remove,
 } from './block'
 import {
+  type ShallowRef,
   markRaw,
   pauseTracking,
   proxyRefs,
@@ -180,6 +181,10 @@ export function createComponent(
   simpleSetCurrentInstance(instance)
   pauseTracking()
 
+  if (__DEV__) {
+    setupPropsValidation(instance)
+  }
+
   const setupFn = isFunction(component) ? component : component.setup
   const setupResult = setupFn
     ? callWithErrorHandling(setupFn, instance, ErrorCodes.SETUP_FUNCTION, [
@@ -295,6 +300,7 @@ export class VaporComponentInstance implements GenericComponentInstance {
   props: Record<string, any>
   attrs: Record<string, any>
   propsDefaults: Record<string, any> | null
+  rawPropsRef?: ShallowRef<any> // to hold vnode props in vdom interop mode
 
   slots: StaticSlots
 
@@ -414,8 +420,6 @@ export class VaporComponentInstance implements GenericComponentInstance {
       : EMPTY_OBJ
 
     if (__DEV__) {
-      // validate props
-      if (rawProps) setupPropsValidation(this)
       // cache normalized options for dev only emit check
       this.propsOptions = normalizePropsOptions(comp)
       this.emitsOptions = normalizeEmitsOptions(comp)
@@ -518,6 +522,7 @@ export function unmountComponent(
       // and also remove it from the parent's children list.
       remove(instance.block, parentNode)
       const parentInstance = instance.parent
+      instance.parent = null
       if (isVaporComponent(parentInstance)) {
         if (parentsWithUnmountedChildren) {
           // for optimize children removal
@@ -525,7 +530,6 @@ export function unmountComponent(
         } else {
           removeItem(parentInstance.children, instance)
         }
-        instance.parent = null
       }
     }
 

@@ -1,5 +1,6 @@
 import {
   type Component,
+  type ComponentInternalInstance,
   type ConcreteComponent,
   type Data,
   type GenericComponent,
@@ -171,6 +172,26 @@ export interface AppConfig extends GenericAppConfig {
    * @deprecated use config.compilerOptions.isCustomElement
    */
   isCustomElement?: (tag: string) => boolean
+
+  /**
+   * @internal
+   */
+  vapor?: VaporInVDOMInterface
+}
+
+/**
+ * @internal
+ */
+export interface VaporInVDOMInterface {
+  mount(
+    vnode: VNode,
+    container: any,
+    anchor: any,
+    parentComponent: ComponentInternalInstance | null,
+  ): GenericComponentInstance // VaporComponentInstance
+  update(n1: VNode, n2: VNode): void
+  unmount(vnode: VNode, doRemove?: boolean): void
+  move(vnode: VNode, container: any, anchor: any): void
 }
 
 /**

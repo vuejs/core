@@ -17,6 +17,7 @@ import {
 import {
   type ComponentInternalInstance,
   type ComponentOptions,
+  type ConcreteComponent,
   type Data,
   type LifecycleHook,
   createComponentInstance,
@@ -64,6 +65,7 @@ import {
   type AppMountFn,
   type AppUnmountFn,
   type CreateAppFunction,
+  type VaporInVDOMInterface,
   createAppAPI,
 } from './apiCreateApp'
 import { setRef } from './rendererTemplateRef'
@@ -234,6 +236,7 @@ type MoveFn = (
   container: RendererElement,
   anchor: RendererNode | null,
   type: MoveType,
+  parentComponent: ComponentInternalInstance | null,
   parentSuspense?: SuspenseBoundary | null,
 ) => void
 
@@ -1145,7 +1148,19 @@ function baseCreateRenderer(
     optimized: boolean,
   ) => {
     n2.slotScopeIds = slotScopeIds
-    if (n1 == null) {
+
+    if ((n2.type as ConcreteComponent).__vapor) {
+      if (n1 == null) {
+        getVaporInterface(parentComponent).mount(
+          n2,
+          container,
+          anchor,
+          parentComponent,
+        )
+      } else {
+        getVaporInterface(parentComponent).update(n1, n2)
+      }
+    } else if (n1 == null) {
       if (n2.shapeFlag & ShapeFlags.COMPONENT_KEPT_ALIVE) {
         ;(parentComponent!.ctx as KeepAliveContext).activate(
           n2,
@@ -2000,7 +2015,13 @@ function baseCreateRenderer(
           // There is no stable subsequence (e.g. a reverse)
           // OR current node is not among the stable sequence
           if (j < 0 || i !== increasingNewIndexSequence[j]) {
-            move(nextChild, container, anchor, MoveType.REORDER)
+            move(
+              nextChild,
+              container,
+              anchor,
+              MoveType.REORDER,
+              parentComponent,
+            )
           } else {
             j--
           }
@@ -2014,11 +2035,22 @@ function baseCreateRenderer(
     container,
     anchor,
     moveType,
+    parentComponent,
     parentSuspense = null,
   ) => {
     const { el, type, transition, children, shapeFlag } = vnode
     if (shapeFlag & ShapeFlags.COMPONENT) {
-      move(vnode.component!.subTree, container, anchor, moveType)
+      if ((type as ConcreteComponent).__vapor) {
+        getVaporInterface(parentComponent).move(vnode, container, anchor)
+      } else {
+        move(
+          vnode.component!.subTree,
+          container,
+          anchor,
+          moveType,
+          parentComponent,
+        )
+      }
       return
     }
 
@@ -2028,14 +2060,26 @@ function baseCreateRenderer(
     }
 
     if (shapeFlag & ShapeFlags.TELEPORT) {
-      ;(type as typeof TeleportImpl).move(vnode, container, anchor, internals)
+      ;(type as typeof TeleportImpl).move(
+        vnode,
+        container,
+        anchor,
+        internals,
+        parentComponent,
+      )
       return
     }
 
     if (type === Fragment) {
       hostInsert(el!, container, anchor)
       for (let i = 0; i < (children as VNode[]).length; i++) {
-        move((children as VNode[])[i], container, anchor, moveType)
+        move(
+          (children as VNode[])[i],
+          container,
+          anchor,
+          moveType,
+          parentComponent,
+        )
       }
       hostInsert(vnode.anchor!, container, anchor)
       return
@@ -2126,7 +2170,11 @@ function baseCreateRenderer(
     }
 
     if (shapeFlag & ShapeFlags.COMPONENT) {
-      unmountComponent(vnode.component!, parentSuspense, doRemove)
+      if ((type as ConcreteComponent).__vapor) {
+        getVaporInterface(parentComponent).unmount(vnode, doRemove)
+      } else {
+        unmountComponent(vnode.component!, parentSuspense, doRemove)
+      }
     } else {
       if (__FEATURE_SUSPENSE__ && shapeFlag & ShapeFlags.SUSPENSE) {
         vnode.suspense!.unmount(parentSuspense, doRemove)
@@ -2552,4 +2600,20 @@ export function invalidateMount(hooks: LifecycleHook | undefined): void {
     for (let i = 0; i < hooks.length; i++)
       hooks[i].flags! |= SchedulerJobFlags.DISPOSED
   }
+}
+
+function getVaporInterface(
+  instance: ComponentInternalInstance | null,
+): VaporInVDOMInterface {
+  const res = instance!.appContext.config.vapor
+  if (__DEV__ && !res) {
+    warn(
+      `Vapor component found in vdom tree but vapor-in-vdom interop was not installed. ` +
+        `Make sure to install it:\n` +
+        `\`\`\`\nimport { vaporInteropPlugin } from 'vue'\n` +
+        `app.use(vaporInteropPlugin)\n` +
+        `\`\`\``,
+    )
+  }
+  return res!
 }

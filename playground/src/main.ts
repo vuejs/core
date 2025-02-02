@@ -1,1 +1,2 @@
-import './_entry'
+// import './_entry'
+import './interop'

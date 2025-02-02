@@ -526,6 +526,7 @@ export {
   createAppAPI,
   type AppMountFn,
   type AppUnmountFn,
+  type VaporInVDOMInterface,
 } from './apiCreateApp'
 /**
  * @internal

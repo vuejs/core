@@ -274,7 +274,8 @@ describe('component', () => {
     }).render()
 
     const i = instance as VaporComponentInstance
-    expect(i.scope.effects.length).toBe(2)
+    // watchEffect + renderEffect + props validation effect
+    expect(i.scope.effects.length).toBe(3)
     expect(host.innerHTML).toBe('<div>0</div>')
 
     app.unmount()

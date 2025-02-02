@@ -193,6 +193,10 @@ export interface AllowedComponentProps {
 // extend it.
 export interface ComponentInternalOptions {
   /**
+   * indicates vapor component
+   */
+  __vapor?: boolean
+  /**
    * @internal
    */
   __scopeId?: string

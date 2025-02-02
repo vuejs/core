@@ -4,7 +4,13 @@ export { defineVaporComponent } from './apiDefineComponent'
 
 // compiler-use only
 export { insert, prepend, remove } from './block'
-export { createComponent, createComponentWithFallback } from './component'
+export {
+  createComponent,
+  createComponentWithFallback,
+  mountComponent,
+  unmountComponent,
+  type VaporComponentInstance,
+} from './component'
 export { renderEffect } from './renderEffect'
 export { createSlot } from './componentSlots'
 export { template, children, next } from './dom/template'
@@ -38,3 +44,4 @@ export {
   applySelectModel,
   applyDynamicModel,
 } from './directives/vModel'
+export { vaporInteropPlugin } from './vdomInterop'
