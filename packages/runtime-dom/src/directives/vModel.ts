@@ -90,7 +90,7 @@ export const vModelTextInit = (
     if (trim) {
       domValue = domValue.trim()
     }
-    if (number) {
+    if (number || el.type === 'number') {
       domValue = looseToNumber(domValue)
     }
     ;(set || (el as any)[assignKey])(domValue)
@@ -359,7 +359,14 @@ function getCheckboxValue(
   checked: boolean,
 ) {
   const key = checked ? '_trueValue' : '_falseValue'
-  return key in el ? el[key] : checked
+  if (key in el) {
+    return el[key]
+  }
+  const attr = checked ? 'true-value' : 'false-value'
+  if (el.hasAttribute(attr)) {
+    return el.getAttribute(attr)
+  }
+  return checked
 }
 
 export const vModelDynamic: ObjectDirective<

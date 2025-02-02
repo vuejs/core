@@ -47,6 +47,16 @@ export function setAttr(el: any, key: string, value: any): void {
     return
   }
 
+  // special case for <input v-model type="checkbox"> with
+  // :true-value & :false-value
+  // store value as dom properties since non-string values will be
+  // stringified.
+  if (key === 'true-value') {
+    ;(el as any)._trueValue = value
+  } else if (key === 'false-value') {
+    ;(el as any)._falseValue = value
+  }
+
   if (value !== el[`$${key}`]) {
     el[`$${key}`] = value
     if (value != null) {

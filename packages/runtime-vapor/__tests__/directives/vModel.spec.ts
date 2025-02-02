@@ -1,17 +1,16 @@
 import { reactive, ref } from '@vue/reactivity'
 import {
+  applyCheckboxModel,
+  applyRadioModel,
+  applySelectModel,
+  applyTextModel,
   delegate,
   delegateEvents,
   on,
   setClass,
-  setDOMProp,
+  setProp,
+  setValue,
   template,
-  // @ts-expect-error
-  vModelDynamic,
-  // @ts-expect-error
-  vModelSelect,
-  // @ts-expect-error
-  withDirectives,
 } from '../../src'
 import { makeRender } from '../_utils'
 import { nextTick } from '@vue/runtime-dom'
@@ -26,11 +25,11 @@ const triggerEvent = (type: string, el: Element) => {
 const setDOMProps = (el: any, props: Array<[key: string, value: any]>) => {
   props.forEach(prop => {
     const [key, value] = prop
-    key === 'class' ? setClass(el, value) : setDOMProp(el, key, value)
+    key === 'class' ? setClass(el, value) : setProp(el, key, value)
   })
 }
 
-describe.todo('directive: v-model', () => {
+describe('directive: v-model', () => {
   test('should work with text input', async () => {
     const spy = vi.fn()
 
@@ -39,8 +38,11 @@ describe.todo('directive: v-model', () => {
       const t0 = template('<input />')
       delegateEvents('input')
       const n0 = t0() as HTMLInputElement
-      withDirectives(n0, [[vModelDynamic, () => data.value]])
-      delegate(n0, 'update:modelValue', () => val => (data.value = val))
+      applyTextModel(
+        n0,
+        () => data.value,
+        val => (data.value = val),
+      )
       delegate(n0, 'input', () => () => spy(data.value))
       return n0
     }).render()
@@ -70,9 +72,12 @@ describe.todo('directive: v-model', () => {
       const t0 = template(
         '<select><option>red</option><option>green</option><option>blue</option></select>',
       )
-      const n0 = t0() as HTMLInputElement
-      withDirectives(n0, [[vModelSelect, () => data.value]])
-      delegate(n0, 'update:modelValue', () => val => (data.value = val))
+      const n0 = t0() as HTMLSelectElement
+      applySelectModel(
+        n0,
+        () => data.value,
+        val => (data.value = val),
+      )
       on(n0, 'change', () => () => spy(data.value))
       return n0
     }).render()
@@ -96,10 +101,12 @@ describe.todo('directive: v-model', () => {
     const { host } = define(() => {
       const t0 = template('<input />')
       const n0 = t0() as HTMLInputElement
-
-      setDOMProp(n0, 'type', 'number')
-      withDirectives(n0, [[vModelDynamic, () => data.value]])
-      delegate(n0, 'update:modelValue', () => val => (data.value = val))
+      applyTextModel(
+        n0,
+        () => data.value,
+        val => (data.value = val),
+      )
+      n0.type = 'number'
       return n0
     }).render()
 
@@ -115,66 +122,16 @@ describe.todo('directive: v-model', () => {
     expect(data.value).toEqual(1)
   })
 
-  test('should work with multiple listeners', async () => {
-    const spy = vi.fn()
-
-    const data = ref<string>('')
-    const { host } = define(() => {
-      const t0 = template('<input />')
-      const n0 = t0() as HTMLInputElement
-      withDirectives(n0, [[vModelDynamic, () => data.value]])
-      delegate(n0, 'update:modelValue', () => val => (data.value = val))
-      delegate(n0, 'update:modelValue', () => spy)
-      return n0
-    }).render()
-
-    const input = host.querySelector('input')!
-
-    input.value = 'foo'
-    triggerEvent('input', input)
-    await nextTick()
-    expect(data.value).toEqual('foo')
-    expect(spy).toHaveBeenCalledWith('foo')
-  })
-
-  test('should work with updated listeners', async () => {
-    const spy1 = vi.fn()
-    const spy2 = vi.fn()
-    const toggle = ref(true)
-
-    const data = ref<string>('')
-    const { host } = define(() => {
-      const t0 = template('<input />')
-      const n0 = t0() as HTMLInputElement
-      withDirectives(n0, [[vModelDynamic, () => data.value]])
-      delegate(n0, 'update:modelValue', () => (toggle.value ? spy1 : spy2))
-      return n0
-    }).render()
-
-    const input = host.querySelector('input')!
-    input.value = 'foo'
-    triggerEvent('input', input)
-    await nextTick()
-    expect(spy1).toHaveBeenCalledWith('foo')
-
-    // update listener
-    toggle.value = false
-    await nextTick()
-
-    input.value = 'bar'
-    triggerEvent('input', input)
-    await nextTick()
-    expect(spy1).not.toHaveBeenCalledWith('bar')
-    expect(spy2).toHaveBeenCalledWith('bar')
-  })
-
   test('should work with textarea', async () => {
     const data = ref<string>('')
     const { host } = define(() => {
       const t0 = template('<textarea />')
       const n0 = t0() as HTMLInputElement
-      withDirectives(n0, [[vModelDynamic, () => data.value]])
-      delegate(n0, 'update:modelValue', () => val => (data.value = val))
+      applyTextModel(
+        n0,
+        () => data.value,
+        val => (data.value = val),
+      )
       return n0
     }).render()
 
@@ -207,40 +164,39 @@ describe.todo('directive: v-model', () => {
 
       // number
       setClass(input1, 'number')
-      withDirectives(input1, [
-        [vModelDynamic, () => data.number, '', { number: true }],
-      ])
-      delegate(input1, 'update:modelValue', () => val => (data.number = val))
+      applyTextModel(
+        input1,
+        () => data.number,
+        val => (data.number = val),
+        { number: true },
+      )
 
       // trim
       setClass(input2, 'trim')
-      withDirectives(input2, [
-        [vModelDynamic, () => data.trim, '', { trim: true }],
-      ])
-      delegate(input2, 'update:modelValue', () => val => (data.trim = val))
+      applyTextModel(
+        input2,
+        () => data.trim,
+        val => (data.trim = val),
+        { trim: true },
+      )
 
       // trim & number
       setClass(input3, 'trim-number')
-      withDirectives(input3, [
-        [
-          vModelDynamic,
-          () => data.trimNumber,
-          '',
-          { trim: true, number: true },
-        ],
-      ])
-      delegate(
+      applyTextModel(
         input3,
-        'update:modelValue',
-        () => val => (data.trimNumber = val),
+        () => data.trimNumber,
+        val => (data.trimNumber = val),
+        { trim: true, number: true },
       )
 
       // lazy
       setClass(input4, 'lazy')
-      withDirectives(input4, [
-        [vModelDynamic, () => data.lazy, '', { lazy: true }],
-      ])
-      delegate(input4, 'update:modelValue', () => val => (data.lazy = val))
+      applyTextModel(
+        input4,
+        () => data.lazy,
+        val => (data.lazy = val),
+        { lazy: true },
+      )
 
       return n0
     }).render()
@@ -278,99 +234,98 @@ describe.todo('directive: v-model', () => {
 
   test('should work with range', async () => {
     const data = ref<number>(25)
-    const { host } = define(() => {
-      const t0 = template(`<div>${'<input />'.repeat(2)}</div>`)
+    let n1: HTMLInputElement, n2: HTMLInputElement
+    define(() => {
+      const t0 = template(
+        `<div>` +
+          `<input type="range" min="1" max="100">` +
+          `<input type="range" min="1" max="100">` +
+          `</div>`,
+      )
       const n0 = t0() as HTMLInputElement
-      const [n1, n2] = Array.from(n0.children) as Array<HTMLInputElement>
+      ;[n1, n2] = Array.from(n0.children) as Array<HTMLInputElement>
 
-      setDOMProps(n1, [
-        ['class', 'foo'],
-        ['type', 'range'],
-        ['min', 1],
-        ['max', 100],
-      ])
-      withDirectives(n1, [
-        [vModelDynamic, () => data.value, '', { number: true }],
-      ])
-      delegate(n1, 'update:modelValue', () => val => (data.value = val))
+      applyTextModel(
+        n1,
+        () => data.value,
+        val => (data.value = val),
+        { number: true },
+      )
 
-      setDOMProps(n2, [
-        ['class', 'bar'],
-        ['type', 'range'],
-        ['min', 1],
-        ['max', 100],
-      ])
+      applyTextModel(
+        n2,
+        () => data.value,
+        val => (data.value = val),
+        {
+          lazy: true,
+        },
+      )
 
-      withDirectives(n2, [
-        [vModelDynamic, () => data.value, '', { lazy: true }],
-      ])
-      delegate(n2, 'update:modelValue', () => val => (data.value = val))
       return n0
     }).render()
 
-    const foo = host.querySelector('.foo') as HTMLInputElement
-    const bar = host.querySelector('.bar') as HTMLInputElement
-
     // @ts-expect-error
-    foo.value = 20
-    triggerEvent('input', foo)
+    n1.value = 20
+    triggerEvent('input', n1!)
     await nextTick()
     expect(data.value).toEqual(20)
 
     // @ts-expect-error
-    foo.value = 200
-    triggerEvent('input', foo)
+    n1.value = 200
+    triggerEvent('input', n1!)
     await nextTick()
     expect(data.value).toEqual(100)
 
     // @ts-expect-error
-    foo.value = -1
-    triggerEvent('input', foo)
+    n1.value = -1
+    triggerEvent('input', n1!)
     await nextTick()
     expect(data.value).toEqual(1)
 
     // @ts-expect-error
-    bar.value = 30
-    triggerEvent('change', bar)
+    n2.value = 30
+    triggerEvent('change', n2!)
     await nextTick()
     expect(data.value).toEqual('30')
 
     // @ts-expect-error
-    bar.value = 200
-    triggerEvent('change', bar)
+    n2.value = 200
+    triggerEvent('change', n2!)
     await nextTick()
     expect(data.value).toEqual('100')
 
     // @ts-expect-error
-    bar.value = -1
-    triggerEvent('change', bar)
+    n2.value = -1
+    triggerEvent('change', n2!)
     await nextTick()
     expect(data.value).toEqual('1')
 
     data.value = 60
     await nextTick()
-    expect(foo.value).toEqual('60')
-    expect(bar.value).toEqual('60')
+    expect(n1!.value).toEqual('60')
+    expect(n2!.value).toEqual('60')
 
     data.value = -1
     await nextTick()
-    expect(foo.value).toEqual('1')
-    expect(bar.value).toEqual('1')
+    expect(n1!.value).toEqual('1')
+    expect(n2!.value).toEqual('1')
 
     data.value = 200
     await nextTick()
-    expect(foo.value).toEqual('100')
-    expect(bar.value).toEqual('100')
+    expect(n1!.value).toEqual('100')
+    expect(n2!.value).toEqual('100')
   })
 
   test('should work with checkbox', async () => {
     const data = ref<boolean | null>(null)
     const { host } = define(() => {
-      const t0 = template('<input />')
+      const t0 = template('<input type="checkbox" />')
       const n0 = t0() as HTMLInputElement
-      setDOMProp(n0, 'type', 'checkbox')
-      withDirectives(n0, [[vModelDynamic, () => data.value]])
-      delegate(n0, 'update:modelValue', () => val => (data.value = val))
+      applyCheckboxModel(
+        n0,
+        () => data.value,
+        val => (data.value = val),
+      )
       return n0
     }).render()
 
@@ -398,15 +353,15 @@ describe.todo('directive: v-model', () => {
   test('should work with checkbox and true-value/false-value', async () => {
     const data = ref<string | null>('yes')
     const { host } = define(() => {
-      const t0 = template('<input />')
+      const t0 = template(
+        '<input type="checkbox" true-value="yes" false-value="no" />',
+      )
       const n0 = t0() as HTMLInputElement
-      setDOMProps(n0, [
-        ['type', 'checkbox'],
-        ['true-value', 'yes'],
-        ['false-value', 'no'],
-      ])
-      withDirectives(n0, [[vModelDynamic, () => data.value]])
-      delegate(n0, 'update:modelValue', () => val => (data.value = val))
+      applyCheckboxModel(
+        n0,
+        () => data.value,
+        val => (data.value = val),
+      )
       return n0
     }).render()
 
@@ -436,15 +391,17 @@ describe.todo('directive: v-model', () => {
   test('should work with checkbox and true-value/false-value with object values', async () => {
     const data = ref<{ yes?: 'yes'; no?: 'no' } | null>(null)
     const { host } = define(() => {
-      const t0 = template('<input />')
+      const t0 = template('<input type="checkbox" />')
       const n0 = t0() as HTMLInputElement
       setDOMProps(n0, [
-        ['type', 'checkbox'],
         ['true-value', { yes: 'yes' }],
         ['false-value', { no: 'no' }],
       ])
-      withDirectives(n0, [[vModelDynamic, () => data.value]])
-      delegate(n0, 'update:modelValue', () => val => (data.value = val))
+      applyCheckboxModel(
+        n0,
+        () => data.value,
+        val => (data.value = val),
+      )
       return n0
     }).render()
 
@@ -470,310 +427,300 @@ describe.todo('directive: v-model', () => {
 
   test(`should support array as a checkbox model`, async () => {
     const data = ref<Array<string>>([])
-    const { host } = define(() => {
-      const t0 = template(`<div>${'<input />'.repeat(2)}</div>`)
+    let n1: HTMLInputElement, n2: HTMLInputElement
+    define(() => {
+      const t0 = template(
+        `<div>` +
+          `<input type="checkbox" value="foo">` +
+          `<input type="checkbox" value="bar">` +
+          `</div>`,
+      )
       const n0 = t0() as HTMLInputElement
-      const [n1, n2] = Array.from(n0.children) as Array<HTMLInputElement>
-      setDOMProps(n1, [
-        ['class', 'foo'],
-        ['type', 'checkbox'],
-        ['value', 'foo'],
-      ])
-      withDirectives(n1, [[vModelDynamic, () => data.value]])
-      delegate(n1, 'update:modelValue', () => val => (data.value = val))
+      ;[n1, n2] = Array.from(n0.children) as Array<HTMLInputElement>
 
-      setDOMProps(n2, [
-        ['class', 'bar'],
-        ['type', 'checkbox'],
-        ['value', 'bar'],
-      ])
-      withDirectives(n2, [[vModelDynamic, () => data.value]])
-      delegate(n2, 'update:modelValue', () => val => (data.value = val))
-
+      applyCheckboxModel(
+        n1,
+        () => data.value,
+        val => (data.value = val),
+      )
+      applyCheckboxModel(
+        n2,
+        () => data.value,
+        val => (data.value = val),
+      )
       return n0
     }).render()
 
-    const foo = host.querySelector('.foo') as HTMLInputElement
-    const bar = host.querySelector('.bar') as HTMLInputElement
-
-    foo.checked = true
-    triggerEvent('change', foo)
+    n1!.checked = true
+    triggerEvent('change', n1!)
     await nextTick()
     expect(data.value).toMatchObject(['foo'])
 
-    bar.checked = true
-    triggerEvent('change', bar)
+    n2!.checked = true
+    triggerEvent('change', n2!)
     await nextTick()
     expect(data.value).toMatchObject(['foo', 'bar'])
 
-    bar.checked = false
-    triggerEvent('change', bar)
+    n2!.checked = false
+    triggerEvent('change', n2!)
     await nextTick()
     expect(data.value).toMatchObject(['foo'])
 
-    foo.checked = false
-    triggerEvent('change', foo)
+    n1!.checked = false
+    triggerEvent('change', n1!)
     await nextTick()
     expect(data.value).toMatchObject([])
 
     data.value = ['foo']
     await nextTick()
-    expect(bar.checked).toEqual(false)
-    expect(foo.checked).toEqual(true)
+    expect(n2!.checked).toEqual(false)
+    expect(n1!.checked).toEqual(true)
 
     data.value = ['bar']
     await nextTick()
-    expect(foo.checked).toEqual(false)
-    expect(bar.checked).toEqual(true)
+    expect(n1!.checked).toEqual(false)
+    expect(n2!.checked).toEqual(true)
 
     data.value = []
     await nextTick()
-    expect(foo.checked).toEqual(false)
-    expect(bar.checked).toEqual(false)
+    expect(n1!.checked).toEqual(false)
+    expect(n2!.checked).toEqual(false)
   })
 
   test(`should support Set as a checkbox model`, async () => {
     const data = ref<Set<string>>(new Set())
-    const { host } = define(() => {
-      const t0 = template(`<div>${'<input />'.repeat(2)}</div>`)
+    let n1: HTMLInputElement, n2: HTMLInputElement
+    define(() => {
+      const t0 = template(
+        `<div>` +
+          `<input type="checkbox" value="foo">` +
+          `<input type="checkbox" value="bar">` +
+          `</div>`,
+      )
       const n0 = t0() as HTMLInputElement
-      const [n1, n2] = Array.from(n0.children) as Array<HTMLInputElement>
-      setDOMProps(n1, [
-        ['class', 'foo'],
-        ['type', 'checkbox'],
-        ['value', 'foo'],
-      ])
-      withDirectives(n1, [[vModelDynamic, () => data.value]])
-      delegate(n1, 'update:modelValue', () => val => (data.value = val))
+      ;[n1, n2] = Array.from(n0.children) as Array<HTMLInputElement>
 
-      setDOMProps(n2, [
-        ['class', 'bar'],
-        ['type', 'checkbox'],
-        ['value', 'bar'],
-      ])
-      withDirectives(n2, [[vModelDynamic, () => data.value]])
-      delegate(n2, 'update:modelValue', () => val => (data.value = val))
+      applyCheckboxModel(
+        n1,
+        () => data.value,
+        val => (data.value = val),
+      )
+      applyCheckboxModel(
+        n2,
+        () => data.value,
+        val => (data.value = val),
+      )
 
       return n0
     }).render()
 
-    const foo = host.querySelector('.foo') as HTMLInputElement
-    const bar = host.querySelector('.bar') as HTMLInputElement
-
-    foo.checked = true
-    triggerEvent('change', foo)
+    n1!.checked = true
+    triggerEvent('change', n1!)
     await nextTick()
     expect(data.value).toMatchObject(new Set(['foo']))
 
-    bar.checked = true
-    triggerEvent('change', bar)
+    n2!.checked = true
+    triggerEvent('change', n2!)
     await nextTick()
     expect(data.value).toMatchObject(new Set(['foo', 'bar']))
 
-    bar.checked = false
-    triggerEvent('change', bar)
+    n2!.checked = false
+    triggerEvent('change', n2!)
     await nextTick()
     expect(data.value).toMatchObject(new Set(['foo']))
 
-    foo.checked = false
-    triggerEvent('change', foo)
+    n1!.checked = false
+    triggerEvent('change', n1!)
     await nextTick()
     expect(data.value).toMatchObject(new Set())
 
     data.value = new Set(['foo'])
     await nextTick()
-    expect(bar.checked).toEqual(false)
-    expect(foo.checked).toEqual(true)
+    expect(n2!.checked).toEqual(false)
+    expect(n1!.checked).toEqual(true)
 
     data.value = new Set(['bar'])
     await nextTick()
-    expect(foo.checked).toEqual(false)
-    expect(bar.checked).toEqual(true)
+    expect(n1!.checked).toEqual(false)
+    expect(n2!.checked).toEqual(true)
 
     data.value = new Set()
     await nextTick()
-    expect(foo.checked).toEqual(false)
-    expect(bar.checked).toEqual(false)
+    expect(n1!.checked).toEqual(false)
+    expect(n2!.checked).toEqual(false)
   })
 
   test('should work with radio', async () => {
     const data = ref<string | null>(null)
-    const { host } = define(() => {
-      const t0 = template(`<div>${'<input />'.repeat(2)}</div>`)
+    let n1: HTMLInputElement, n2: HTMLInputElement
+    define(() => {
+      const t0 = template(
+        `<div>` +
+          `<input type="radio" value="foo">` +
+          `<input type="radio" value="bar">` +
+          `</div>`,
+      )
       const n0 = t0() as HTMLInputElement
-      const [n1, n2] = Array.from(n0.children) as Array<HTMLInputElement>
-      setDOMProps(n1, [
-        ['class', 'foo'],
-        ['type', 'radio'],
-        ['value', 'foo'],
-      ])
-      withDirectives(n1, [[vModelDynamic, () => data.value]])
-      delegate(n1, 'update:modelValue', () => val => (data.value = val))
+      ;[n1, n2] = Array.from(n0.children) as Array<HTMLInputElement>
 
-      setDOMProps(n2, [
-        ['class', 'bar'],
-        ['type', 'radio'],
-        ['value', 'bar'],
-      ])
-      withDirectives(n2, [[vModelDynamic, () => data.value]])
-      delegate(n2, 'update:modelValue', () => val => (data.value = val))
-
+      applyRadioModel(
+        n1,
+        () => data.value,
+        val => (data.value = val),
+      )
+      applyRadioModel(
+        n2,
+        () => data.value,
+        val => (data.value = val),
+      )
       return n0
     }).render()
 
-    const foo = host.querySelector('.foo') as HTMLInputElement
-    const bar = host.querySelector('.bar') as HTMLInputElement
-
-    foo.checked = true
-    triggerEvent('change', foo)
+    n1!.checked = true
+    triggerEvent('change', n1!)
     await nextTick()
     expect(data.value).toEqual('foo')
 
-    bar.checked = true
-    triggerEvent('change', bar)
+    n2!.checked = true
+    triggerEvent('change', n2!)
     await nextTick()
     expect(data.value).toEqual('bar')
 
     data.value = null
     await nextTick()
-    expect(foo.checked).toEqual(false)
-    expect(bar.checked).toEqual(false)
+    expect(n1!.checked).toEqual(false)
+    expect(n2!.checked).toEqual(false)
 
     data.value = 'foo'
     await nextTick()
-    expect(foo.checked).toEqual(true)
-    expect(bar.checked).toEqual(false)
+    expect(n1!.checked).toEqual(true)
+    expect(n2!.checked).toEqual(false)
 
     data.value = 'bar'
     await nextTick()
-    expect(foo.checked).toEqual(false)
-    expect(bar.checked).toEqual(true)
+    expect(n1!.checked).toEqual(false)
+    expect(n2!.checked).toEqual(true)
   })
 
   test('should work with single select', async () => {
     const data = ref<string | null>(null)
-    const { host } = define(() => {
-      const t0 = template('<select><option></option><option></option></select>')
-      const n0 = t0() as HTMLSelectElement
-      const [n1, n2] = Array.from(n0.childNodes) as Array<HTMLOptionElement>
-      setDOMProp(n1, 'value', 'foo')
-      setDOMProp(n2, 'value', 'bar')
+    let select: HTMLSelectElement, n1: HTMLOptionElement, n2: HTMLOptionElement
+    define(() => {
+      const t0 = template(
+        '<select><option value="foo"></option><option value="bar"></option></select>',
+      )
+      select = t0() as HTMLSelectElement
+      ;[n1, n2] = Array.from(select.childNodes) as Array<HTMLOptionElement>
 
-      setDOMProp(n0, 'value', null)
-      withDirectives(n0, [[vModelDynamic, () => data.value]])
-      delegate(n0, 'update:modelValue', () => val => (data.value = val))
-      return n0
+      applySelectModel(
+        select,
+        () => data.value,
+        val => (data.value = val),
+      )
+      return select
     }).render()
 
-    const select = host.querySelector('select') as HTMLSelectElement
-    const foo = host.querySelector('option[value=foo]') as HTMLOptionElement
-    const bar = host.querySelector('option[value=bar]') as HTMLOptionElement
-
-    foo.selected = true
-    triggerEvent('change', select)
+    n1!.selected = true
+    triggerEvent('change', select!)
     await nextTick()
     expect(data.value).toEqual('foo')
 
-    foo.selected = false
-    bar.selected = true
-    triggerEvent('change', select)
+    n1!.selected = false
+    n2!.selected = true
+    triggerEvent('change', select!)
     await nextTick()
     expect(data.value).toEqual('bar')
 
-    foo.selected = false
-    bar.selected = false
+    n1!.selected = false
+    n2!.selected = false
     data.value = 'foo'
     await nextTick()
-    expect(select.value).toEqual('foo')
-    expect(foo.selected).toEqual(true)
-    expect(bar.selected).toEqual(false)
+    expect(select!.value).toEqual('foo')
+    expect(n1!.selected).toEqual(true)
+    expect(n2!.selected).toEqual(false)
 
-    foo.selected = true
-    bar.selected = false
+    n1!.selected = true
+    n2!.selected = false
     data.value = 'bar'
     await nextTick()
-    expect(select.value).toEqual('bar')
-    expect(foo.selected).toEqual(false)
-    expect(bar.selected).toEqual(true)
+    expect(select!.value).toEqual('bar')
+    expect(n1!.selected).toEqual(false)
+    expect(n2!.selected).toEqual(true)
   })
 
-  test('should work wiht multiple select (model is Array)', async () => {
+  test('should work with multiple select (model is Array)', async () => {
     const data = ref<Array<string>>([])
-    const { host } = define(() => {
-      const t0 = template('<select><option></option><option></option></select>')
-      const n0 = t0() as HTMLSelectElement
-      const [n1, n2] = Array.from(n0.childNodes) as Array<HTMLOptionElement>
-      setDOMProp(n1, 'value', 'foo')
-      setDOMProp(n2, 'value', 'bar')
+    let select: HTMLSelectElement, n1: HTMLOptionElement, n2: HTMLOptionElement
+    define(() => {
+      const t0 = template(
+        '<select multiple>' +
+          '<option value="foo"></option><option value="bar"></option>' +
+          '</select>',
+      )
+      select = t0() as HTMLSelectElement
+      ;[n1, n2] = Array.from(select.childNodes) as Array<HTMLOptionElement>
 
-      setDOMProps(n0, [
-        ['value', null],
-        ['multiple', true],
-      ])
-      withDirectives(n0, [[vModelDynamic, () => data.value]])
-      delegate(n0, 'update:modelValue', () => val => (data.value = val))
-      return n0
+      applySelectModel(
+        select,
+        () => data.value,
+        val => (data.value = val),
+      )
+      return select
     }).render()
 
-    const select = host.querySelector('select') as HTMLSelectElement
-    const foo = host.querySelector('option[value=foo]') as HTMLOptionElement
-    const bar = host.querySelector('option[value=bar]') as HTMLOptionElement
-
-    foo.selected = true
-    triggerEvent('change', select)
+    n1!.selected = true
+    triggerEvent('change', select!)
     await nextTick()
     expect(data.value).toMatchObject(['foo'])
 
-    foo.selected = false
-    bar.selected = true
-    triggerEvent('change', select)
+    n1!.selected = false
+    n2!.selected = true
+    triggerEvent('change', select!)
     await nextTick()
     expect(data.value).toMatchObject(['bar'])
 
-    foo.selected = true
-    bar.selected = true
-    triggerEvent('change', select)
+    n1!.selected = true
+    n2!.selected = true
+    triggerEvent('change', select!)
     await nextTick()
     expect(data.value).toMatchObject(['foo', 'bar'])
 
-    foo.selected = false
-    bar.selected = false
+    n1!.selected = false
+    n2!.selected = false
     data.value = ['foo']
     await nextTick()
-    expect(select.value).toEqual('foo')
-    expect(foo.selected).toEqual(true)
-    expect(bar.selected).toEqual(false)
+    expect(select!.value).toEqual('foo')
+    expect(n1!.selected).toEqual(true)
+    expect(n2!.selected).toEqual(false)
 
-    foo.selected = false
-    bar.selected = false
+    n1!.selected = false
+    n2!.selected = false
     data.value = ['foo', 'bar']
     await nextTick()
-    expect(foo.selected).toEqual(true)
-    expect(bar.selected).toEqual(true)
+    expect(n1!.selected).toEqual(true)
+    expect(n2!.selected).toEqual(true)
   })
 
   test('v-model.number should work with single select', async () => {
     const data = ref<string | null>(null)
-    const { host } = define(() => {
-      const t0 = template('<select><option></option><option></option></select>')
-      const n0 = t0() as HTMLSelectElement
-      const [n1, n2] = Array.from(n0.childNodes) as Array<HTMLOptionElement>
-      setDOMProp(n1, 'value', '1')
-      setDOMProp(n2, 'value', '2')
-
-      setDOMProp(n0, 'value', null)
-      withDirectives(n0, [
-        [vModelDynamic, () => data.value, '', { number: true }],
-      ])
-      delegate(n0, 'update:modelValue', () => val => (data.value = val))
-      return n0
+    let select: HTMLSelectElement, n1: HTMLOptionElement
+    define(() => {
+      const t0 = template(
+        '<select><option value="1"></option><option value="2"></option></select>',
+      )
+      select = t0() as HTMLSelectElement
+      n1 = select.childNodes[0] as HTMLOptionElement
+      applySelectModel(
+        select,
+        () => data.value,
+        val => (data.value = val),
+        { number: true },
+      )
+      return select
     }).render()
 
-    const select = host.querySelector('select') as HTMLSelectElement
-    const one = host.querySelector('option[value="1"]') as HTMLOptionElement
-
-    one.selected = true
-    triggerEvent('change', select)
+    n1!.selected = true
+    triggerEvent('change', select!)
     await nextTick()
     expect(typeof data.value).toEqual('number')
     expect(data.value).toEqual(1)
@@ -781,43 +728,41 @@ describe.todo('directive: v-model', () => {
 
   test('v-model.number should work with multiple select', async () => {
     const data = ref<Array<number>>([])
+    let select: HTMLSelectElement
     const { host } = define(() => {
-      const t0 = template('<select><option></option><option></option></select>')
-      const n0 = t0() as HTMLSelectElement
-      const [n1, n2] = Array.from(n0.childNodes) as Array<HTMLOptionElement>
-      setDOMProp(n1, 'value', '1')
-      setDOMProp(n2, 'value', '2')
-
-      setDOMProps(n0, [
-        ['value', null],
-        ['multiple', true],
-      ])
-      withDirectives(n0, [
-        [vModelDynamic, () => data.value, '', { number: true }],
-      ])
-      delegate(n0, 'update:modelValue', () => val => (data.value = val))
-      return n0
+      const t0 = template(
+        '<select multiple>' +
+          '<option value="1"></option><option value="2"></option>' +
+          '</select>',
+      )
+      select = t0() as HTMLSelectElement
+      applySelectModel(
+        select,
+        () => data.value,
+        val => (data.value = val),
+        { number: true },
+      )
+      return select
     }).render()
 
-    const select = host.querySelector('select') as HTMLSelectElement
     const one = host.querySelector('option[value="1"]') as HTMLOptionElement
     const two = host.querySelector('option[value="2"]') as HTMLOptionElement
 
     one.selected = true
     two.selected = false
-    triggerEvent('change', select)
+    triggerEvent('change', select!)
     await nextTick()
     expect(data.value).toMatchObject([1])
 
     one.selected = false
     two.selected = true
-    triggerEvent('change', select)
+    triggerEvent('change', select!)
     await nextTick()
     expect(data.value).toMatchObject([2])
 
     one.selected = true
     two.selected = true
-    triggerEvent('change', select)
+    triggerEvent('change', select!)
     await nextTick()
     expect(data.value).toMatchObject([1, 2])
 
@@ -841,50 +786,49 @@ describe.todo('directive: v-model', () => {
     const barValue = { bar: 1 }
 
     const data = ref<Array<number>>([])
-    const { host } = define(() => {
-      const t0 = template('<select><option></option><option></option></select>')
-      const n0 = t0() as HTMLSelectElement
-      const [n1, n2] = Array.from(n0.childNodes) as Array<HTMLOptionElement>
-      setDOMProp(n1, 'value', fooValue)
-      setDOMProp(n2, 'value', barValue)
 
-      setDOMProps(n0, [
-        ['value', null],
-        ['multiple', true],
-      ])
-      withDirectives(n0, [
-        [vModelDynamic, () => data.value, '', { number: true }],
-      ])
-      delegate(n0, 'update:modelValue', () => val => (data.value = val))
-      return n0
+    let select: HTMLSelectElement
+    const { host } = define(() => {
+      const t0 = template(
+        '<select multiple><option></option><option></option></select>',
+      )
+      select = t0() as HTMLSelectElement
+      const [n1, n2] = Array.from(select.childNodes) as Array<HTMLOptionElement>
+      setValue(n1, fooValue)
+      setValue(n2, barValue)
+      applySelectModel(
+        select,
+        () => data.value,
+        val => (data.value = val),
+      )
+      return select
     }).render()
 
-    const select = host.querySelector('select') as HTMLSelectElement
     const [foo, bar] = Array.from(
       host.querySelectorAll('option'),
     ) as Array<HTMLOptionElement>
 
     foo.selected = true
-    triggerEvent('change', select)
+    triggerEvent('change', select!)
     await nextTick()
     expect(data.value).toMatchObject([fooValue])
 
     foo.selected = false
     bar.selected = true
-    triggerEvent('change', select)
+    triggerEvent('change', select!)
     await nextTick()
     expect(data.value).toMatchObject([barValue])
 
     foo.selected = true
     bar.selected = true
-    triggerEvent('change', select)
+    triggerEvent('change', select!)
     await nextTick()
     expect(data.value).toMatchObject([fooValue, barValue])
 
     // reset
     foo.selected = false
     bar.selected = false
-    triggerEvent('change', select)
+    triggerEvent('change', select!)
     await nextTick()
     expect(data.value).toMatchObject([])
 
@@ -897,7 +841,7 @@ describe.todo('directive: v-model', () => {
     // reset
     foo.selected = false
     bar.selected = false
-    triggerEvent('change', select)
+    triggerEvent('change', select!)
     await nextTick()
     expect(data.value).toMatchObject([])
 
@@ -912,18 +856,15 @@ describe.todo('directive: v-model', () => {
   test('multiple select (model is Set)', async () => {
     const data = ref<Set<string>>(new Set())
     const { host } = define(() => {
-      const t0 = template('<select><option></option><option></option></select>')
+      const t0 = template(
+        '<select multiple><option value="foo"></option><option value="bar"></option></select>',
+      )
       const n0 = t0() as HTMLSelectElement
-      const [n1, n2] = Array.from(n0.childNodes) as Array<HTMLOptionElement>
-      setDOMProp(n1, 'value', 'foo')
-      setDOMProp(n2, 'value', 'bar')
-
-      setDOMProps(n0, [
-        ['value', null],
-        ['multiple', true],
-      ])
-      withDirectives(n0, [[vModelDynamic, () => data.value]])
-      delegate(n0, 'update:modelValue', () => val => (data.value = val))
+      applySelectModel(
+        n0,
+        () => data.value,
+        val => (data.value = val),
+      )
       return n0
     }).render()
 
@@ -973,20 +914,18 @@ describe.todo('directive: v-model', () => {
 
     const data = ref<Set<string>>(new Set())
     const { host } = define(() => {
-      const t0 = template('<select><option></option><option></option></select>')
+      const t0 = template(
+        '<select multiple><option></option><option></option></select>',
+      )
       const n0 = t0() as HTMLSelectElement
       const [n1, n2] = Array.from(n0.childNodes) as Array<HTMLOptionElement>
-      setDOMProp(n1, 'value', fooValue)
-      setDOMProp(n2, 'value', barValue)
-
-      setDOMProps(n0, [
-        ['value', null],
-        ['multiple', true],
-      ])
-      withDirectives(n0, [
-        [vModelDynamic, () => data.value, '', { number: true }],
-      ])
-      delegate(n0, 'update:modelValue', () => val => (data.value = val))
+      setValue(n1, fooValue)
+      setValue(n2, barValue)
+      applySelectModel(
+        n0,
+        () => data.value,
+        val => (data.value = val),
+      )
       return n0
     }).render()
 
@@ -1035,8 +974,11 @@ describe.todo('directive: v-model', () => {
     const { host } = define(() => {
       const t0 = template('<input />')
       const n0 = t0() as HTMLInputElement
-      withDirectives(n0, [[vModelDynamic, () => data.value]])
-      delegate(n0, 'update:modelValue', () => val => (data.value = val))
+      applyTextModel(
+        n0,
+        () => data.value,
+        val => (data.value = val),
+      )
       return n0
     }).render()
 
