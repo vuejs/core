@@ -1,14 +1,13 @@
 import {
+  applyVShow,
   children,
   createComponent,
+  createIf,
+  defineVaporComponent,
   on,
   template,
-  // @ts-expect-error
-  vShow,
-  // @ts-expect-error
-  withDirectives,
 } from '../../src'
-import { nextTick, ref } from 'vue'
+import { type VShowElement, nextTick, ref } from 'vue'
 import { describe, expect, test } from 'vitest'
 import { makeRender } from '../_utils'
 
@@ -26,12 +25,12 @@ const createDemo = (defaultValue: boolean) =>
     const n0 = t0()
     const n1 = children(n0, 0)
     const n2 = children(n0, 1)
-    withDirectives(n2, [[vShow, () => visible.value]])
+    applyVShow(n2 as VShowElement, () => visible.value)
     on(n1 as HTMLElement, 'click', () => handleClick)
     return n0
   })
 
-describe.todo('directive: v-show', () => {
+describe('directive: v-show', () => {
   test('basic', async () => {
     const { host } = createDemo(true).render()
     const btn = host.querySelector('button')
@@ -56,36 +55,87 @@ describe.todo('directive: v-show', () => {
 
   test('should work on component', async () => {
     const t0 = template('<div>child</div>')
-    const t1 = template('<button>toggle</button>')
-    const n0 = t0()
     const visible = ref(true)
 
-    function handleClick() {
-      visible.value = !visible.value
-    }
     const { component: Child } = define({
-      render() {
-        return n0
+      setup() {
+        return t0()
       },
     })
 
     const { host } = define({
-      render() {
-        const n1 = t1()
-        const n2 = createComponent(Child, null, null, true)
-        withDirectives(n2, [[vShow, () => visible.value]])
-        on(n1 as HTMLElement, 'click', () => handleClick)
-        return [n1, n2]
+      setup() {
+        const n1 = createComponent(Child, null, null, true)
+        applyVShow(n1, () => visible.value)
+        return n1
       },
     }).render()
 
-    expect(host.innerHTML).toBe('<button>toggle</button><div>child</div>')
+    expect(host.innerHTML).toBe('<div>child</div>')
 
-    const btn = host.querySelector('button')
-    btn?.click()
+    visible.value = !visible.value
+    await nextTick()
+    expect(host.innerHTML).toBe('<div style="display: none;">child</div>')
+  })
+
+  test('warn on non-single-element-root component', () => {
+    const Child = defineVaporComponent({
+      setup() {
+        return document.createTextNode('b')
+      },
+    })
+    define({
+      setup() {
+        const n1 = createComponent(Child)
+        applyVShow(n1, () => true)
+        return n1
+      },
+    }).render()
+    expect(
+      'v-show used on component with non-single-element root node',
+    ).toHaveBeenWarned()
+  })
+
+  test('should work on component with dynamic fragment root', async () => {
+    const t0 = template('<div>child</div>')
+    const t1 = template('<span>child</span>')
+    const childIf = ref(true)
+    const visible = ref(true)
+
+    const { component: Child } = define({
+      setup() {
+        return createIf(
+          () => childIf.value,
+          () => t0(),
+          () => t1(),
+        )
+      },
+    })
+
+    const { host } = define({
+      setup() {
+        const n1 = createComponent(Child, null, null, true)
+        applyVShow(n1, () => visible.value)
+        return n1
+      },
+    }).render()
+
+    expect(host.innerHTML).toBe('<div>child</div><!--if-->')
+
+    visible.value = !visible.value
     await nextTick()
     expect(host.innerHTML).toBe(
-      '<button>toggle</button><div style="display: none;">child</div>',
+      '<div style="display: none;">child</div><!--if-->',
     )
+
+    childIf.value = !childIf.value
+    await nextTick()
+    expect(host.innerHTML).toBe(
+      '<span style="display: none;">child</span><!--if-->',
+    )
+
+    visible.value = !visible.value
+    await nextTick()
+    expect(host.innerHTML).toBe('<span style="">child</span><!--if-->')
   })
 })
