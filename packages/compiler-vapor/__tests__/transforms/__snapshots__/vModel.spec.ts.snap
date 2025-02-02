@@ -6,7 +6,7 @@ exports[`compiler: vModel transform > component > v-model for component should g
 export function render(_ctx) {
   const _component_Comp = _resolveComponent("Comp")
   const n0 = _createComponentWithFallback(_component_Comp, { modelValue: () => (_ctx.foo),
-  "onUpdate:modelValue": () => $event => (_ctx.foo = $event),
+  "onUpdate:modelValue": () => _value => (_ctx.foo = _value),
   modelModifiers: () => ({ trim: true, "bar-baz": true }) }, null, true)
   return n0
 }"
@@ -18,7 +18,7 @@ exports[`compiler: vModel transform > component > v-model for component should w
 export function render(_ctx) {
   const _component_Comp = _resolveComponent("Comp")
   const n0 = _createComponentWithFallback(_component_Comp, { modelValue: () => (_ctx.foo),
-  "onUpdate:modelValue": () => $event => (_ctx.foo = $event) }, null, true)
+  "onUpdate:modelValue": () => _value => (_ctx.foo = _value) }, null, true)
   return n0
 }"
 `;
@@ -30,10 +30,10 @@ export function render(_ctx) {
   const _component_Comp = _resolveComponent("Comp")
   const n0 = _createComponentWithFallback(_component_Comp, {
     foo: () => (_ctx.foo),
-    "onUpdate:foo": () => $event => (_ctx.foo = $event),
+    "onUpdate:foo": () => _value => (_ctx.foo = _value),
     fooModifiers: () => ({ trim: true }), 
     bar: () => (_ctx.bar),
-    "onUpdate:bar": () => $event => (_ctx.bar = $event),
+    "onUpdate:bar": () => _value => (_ctx.bar = _value),
     barModifiers: () => ({ number: true })
   }, null, true)
   return n0
@@ -46,7 +46,7 @@ exports[`compiler: vModel transform > component > v-model with arguments for com
 export function render(_ctx) {
   const _component_Comp = _resolveComponent("Comp")
   const n0 = _createComponentWithFallback(_component_Comp, { bar: () => (_ctx.foo),
-  "onUpdate:bar": () => $event => (_ctx.foo = $event) }, null, true)
+  "onUpdate:bar": () => _value => (_ctx.foo = _value) }, null, true)
   return n0
 }"
 `;
@@ -58,10 +58,10 @@ export function render(_ctx) {
   const _component_Comp = _resolveComponent("Comp")
   const n0 = _createComponentWithFallback(_component_Comp, { $: [
     () => ({ [_ctx.foo]: _ctx.foo,
-    ["onUpdate:" + _ctx.foo]: () => $event => (_ctx.foo = $event),
+    ["onUpdate:" + _ctx.foo]: () => _value => (_ctx.foo = _value),
     [_ctx.foo + "Modifiers"]: () => ({ trim: true }) }), 
     () => ({ [_ctx.bar]: _ctx.bar,
-    ["onUpdate:" + _ctx.bar]: () => $event => (_ctx.bar = $event),
+    ["onUpdate:" + _ctx.bar]: () => _value => (_ctx.bar = _value),
     [_ctx.bar + "Modifiers"]: () => ({ number: true }) })
   ] }, null, true)
   return n0
@@ -75,110 +75,100 @@ export function render(_ctx) {
   const _component_Comp = _resolveComponent("Comp")
   const n0 = _createComponentWithFallback(_component_Comp, { $: [
     () => ({ [_ctx.arg]: _ctx.foo,
-    ["onUpdate:" + _ctx.arg]: () => $event => (_ctx.foo = $event) })
+    ["onUpdate:" + _ctx.arg]: () => _value => (_ctx.foo = _value) })
   ] }, null, true)
   return n0
 }"
 `;
 
 exports[`compiler: vModel transform > modifiers > .lazy 1`] = `
-"import { vModelText as _vModelText, withDirectives as _withDirectives, delegate as _delegate, template as _template } from 'vue';
+"import { applyTextModel as _applyTextModel, template as _template } from 'vue';
 const t0 = _template("<input>", true)
 
 export function render(_ctx) {
   const n0 = t0()
-  _withDirectives(n0, [[_vModelText, () => _ctx.model, void 0, { lazy: true }]])
-  _delegate(n0, "update:modelValue", () => $event => (_ctx.model = $event))
+  _applyTextModel(n0, () => (_ctx.model), _value => (_ctx.model = _value), { lazy: true })
   return n0
 }"
 `;
 
 exports[`compiler: vModel transform > modifiers > .number 1`] = `
-"import { vModelText as _vModelText, withDirectives as _withDirectives, delegate as _delegate, template as _template } from 'vue';
+"import { applyTextModel as _applyTextModel, template as _template } from 'vue';
 const t0 = _template("<input>", true)
 
 export function render(_ctx) {
   const n0 = t0()
-  _withDirectives(n0, [[_vModelText, () => _ctx.model, void 0, { number: true }]])
-  _delegate(n0, "update:modelValue", () => $event => (_ctx.model = $event))
+  _applyTextModel(n0, () => (_ctx.model), _value => (_ctx.model = _value), { number: true })
   return n0
 }"
 `;
 
 exports[`compiler: vModel transform > modifiers > .trim 1`] = `
-"import { vModelText as _vModelText, withDirectives as _withDirectives, delegate as _delegate, template as _template } from 'vue';
+"import { applyTextModel as _applyTextModel, template as _template } from 'vue';
 const t0 = _template("<input>", true)
 
 export function render(_ctx) {
   const n0 = t0()
-  _withDirectives(n0, [[_vModelText, () => _ctx.model, void 0, { trim: true }]])
-  _delegate(n0, "update:modelValue", () => $event => (_ctx.model = $event))
+  _applyTextModel(n0, () => (_ctx.model), _value => (_ctx.model = _value), { trim: true })
   return n0
 }"
 `;
 
 exports[`compiler: vModel transform > should support input (checkbox) 1`] = `
-"import { vModelCheckbox as _vModelCheckbox, withDirectives as _withDirectives, delegate as _delegate, template as _template } from 'vue';
+"import { applyCheckboxModel as _applyCheckboxModel, template as _template } from 'vue';
 const t0 = _template("<input type=\\"checkbox\\">", true)
 
 export function render(_ctx) {
   const n0 = t0()
-  _withDirectives(n0, [[_vModelCheckbox, () => _ctx.model]])
-  _delegate(n0, "update:modelValue", () => $event => (_ctx.model = $event))
+  _applyCheckboxModel(n0, () => (_ctx.model), _value => (_ctx.model = _value))
   return n0
 }"
 `;
 
 exports[`compiler: vModel transform > should support input (dynamic type) 1`] = `
-"import { vModelDynamic as _vModelDynamic, withDirectives as _withDirectives, delegate as _delegate, template as _template } from 'vue';
+"import { applyDynamicModel as _applyDynamicModel, template as _template } from 'vue';
 const t0 = _template("<input>", true)
 
 export function render(_ctx) {
   const n0 = t0()
-  _withDirectives(n0, [[_vModelDynamic, () => _ctx.model]])
-  _delegate(n0, "update:modelValue", () => $event => (_ctx.model = $event))
+  _applyDynamicModel(n0, () => (_ctx.model), _value => (_ctx.model = _value))
   return n0
 }"
 `;
 
 exports[`compiler: vModel transform > should support input (radio) 1`] = `
-"import { vModelRadio as _vModelRadio, withDirectives as _withDirectives, delegate as _delegate, template as _template } from 'vue';
+"import { applyRadioModel as _applyRadioModel, template as _template } from 'vue';
 const t0 = _template("<input type=\\"radio\\">", true)
 
 export function render(_ctx) {
   const n0 = t0()
-  _withDirectives(n0, [[_vModelRadio, () => _ctx.model]])
-  _delegate(n0, "update:modelValue", () => $event => (_ctx.model = $event))
+  _applyRadioModel(n0, () => (_ctx.model), _value => (_ctx.model = _value))
   return n0
 }"
 `;
 
 exports[`compiler: vModel transform > should support input (text) 1`] = `
-"import { vModelText as _vModelText, withDirectives as _withDirectives, delegate as _delegate, template as _template } from 'vue';
+"import { applyTextModel as _applyTextModel, template as _template } from 'vue';
 const t0 = _template("<input type=\\"text\\">", true)
 
 export function render(_ctx) {
   const n0 = t0()
-  _withDirectives(n0, [[_vModelText, () => _ctx.model]])
-  _delegate(n0, "update:modelValue", () => $event => (_ctx.model = $event))
+  _applyTextModel(n0, () => (_ctx.model), _value => (_ctx.model = _value))
   return n0
 }"
 `;
 
 exports[`compiler: vModel transform > should support member expression 1`] = `
-"import { vModelText as _vModelText, withDirectives as _withDirectives, delegate as _delegate, template as _template } from 'vue';
+"import { applyTextModel as _applyTextModel, template as _template } from 'vue';
 const t0 = _template("<input>")
 
 export function render(_ctx, $props, $emit, $attrs, $slots) {
   const n0 = t0()
-  _withDirectives(n0, [[_vModelText, () => _ctx.setupRef.child]])
   const n1 = t0()
-  _withDirectives(n1, [[_vModelText, () => _ctx.setupLet.child]])
   const n2 = t0()
-  _withDirectives(n2, [[_vModelText, () => _ctx.setupMaybeRef.child]])
-  _delegate(n0, "update:modelValue", () => $event => (_ctx.setupRef.child = $event))
-  _delegate(n1, "update:modelValue", () => $event => (_ctx.setupLet.child = $event))
-  _delegate(n2, "update:modelValue", () => $event => (_ctx.setupMaybeRef.child = $event))
+  _applyTextModel(n0, () => (_ctx.setupRef.child), _value => (_ctx.setupRef.child = _value))
+  _applyTextModel(n1, () => (_ctx.setupLet.child), _value => (_ctx.setupLet.child = _value))
+  _applyTextModel(n2, () => (_ctx.setupMaybeRef.child), _value => (_ctx.setupMaybeRef.child = _value))
   return [n0, n1, n2]
 }"
 `;
@@ -186,75 +176,67 @@ export function render(_ctx, $props, $emit, $attrs, $slots) {
 exports[`compiler: vModel transform > should support member expression w/ inline 1`] = `
 "
   const n0 = t0()
-  _withDirectives(n0, [[_vModelText, () => setupRef.value.child]])
   const n1 = t0()
-  _withDirectives(n1, [[_vModelText, () => _unref(setupLet).child]])
   const n2 = t0()
-  _withDirectives(n2, [[_vModelText, () => _unref(setupMaybeRef).child]])
-  _delegate(n0, "update:modelValue", () => $event => (setupRef.value.child = $event))
-  _delegate(n1, "update:modelValue", () => $event => (_unref(setupLet).child = $event))
-  _delegate(n2, "update:modelValue", () => $event => (_unref(setupMaybeRef).child = $event))
+  _applyTextModel(n0, () => (setupRef.value.child), _value => (setupRef.value.child = _value))
+  _applyTextModel(n1, () => (_unref(setupLet).child), _value => (_unref(setupLet).child = _value))
+  _applyTextModel(n2, () => (_unref(setupMaybeRef).child), _value => (_unref(setupMaybeRef).child = _value))
   return [n0, n1, n2]
 "
 `;
 
 exports[`compiler: vModel transform > should support select 1`] = `
-"import { vModelSelect as _vModelSelect, withDirectives as _withDirectives, delegate as _delegate, template as _template } from 'vue';
+"import { applySelectModel as _applySelectModel, template as _template } from 'vue';
 const t0 = _template("<select></select>", true)
 
 export function render(_ctx) {
   const n0 = t0()
-  _withDirectives(n0, [[_vModelSelect, () => _ctx.model]])
-  _delegate(n0, "update:modelValue", () => $event => (_ctx.model = $event))
+  _applySelectModel(n0, () => (_ctx.model), _value => (_ctx.model = _value))
   return n0
 }"
 `;
 
 exports[`compiler: vModel transform > should support simple expression 1`] = `
-"import { vModelText as _vModelText, withDirectives as _withDirectives, delegate as _delegate, template as _template } from 'vue';
+"import { applyTextModel as _applyTextModel, template as _template } from 'vue';
 const t0 = _template("<input>", true)
 
 export function render(_ctx) {
   const n0 = t0()
-  _withDirectives(n0, [[_vModelText, () => _ctx.model]])
-  _delegate(n0, "update:modelValue", () => $event => (_ctx.model = $event))
+  _applyTextModel(n0, () => (_ctx.model), _value => (_ctx.model = _value))
   return n0
 }"
 `;
 
 exports[`compiler: vModel transform > should support textarea 1`] = `
-"import { vModelText as _vModelText, withDirectives as _withDirectives, delegate as _delegate, template as _template } from 'vue';
+"import { applyTextModel as _applyTextModel, template as _template } from 'vue';
 const t0 = _template("<textarea></textarea>", true)
 
 export function render(_ctx) {
   const n0 = t0()
-  _withDirectives(n0, [[_vModelText, () => _ctx.model]])
-  _delegate(n0, "update:modelValue", () => $event => (_ctx.model = $event))
+  _applyTextModel(n0, () => (_ctx.model), _value => (_ctx.model = _value))
   return n0
 }"
 `;
 
 exports[`compiler: vModel transform > should support w/ dynamic v-bind 1`] = `
-"import { vModelDynamic as _vModelDynamic, withDirectives as _withDirectives, delegate as _delegate, setDynamicProps as _setDynamicProps, renderEffect as _renderEffect, template as _template } from 'vue';
+"import { applyDynamicModel as _applyDynamicModel, setDynamicProps as _setDynamicProps, renderEffect as _renderEffect, template as _template } from 'vue';
 const t0 = _template("<input>", true)
 
 export function render(_ctx) {
   const n0 = t0()
-  _withDirectives(n0, [[_vModelDynamic, () => _ctx.model]])
-  _delegate(n0, "update:modelValue", () => $event => (_ctx.model = $event))
+  _applyDynamicModel(n0, () => (_ctx.model), _value => (_ctx.model = _value))
   _renderEffect(() => _setDynamicProps(n0, [_ctx.obj], true))
   return n0
 }"
 `;
 
 exports[`compiler: vModel transform > should support w/ dynamic v-bind 2`] = `
-"import { vModelDynamic as _vModelDynamic, withDirectives as _withDirectives, delegate as _delegate, template as _template } from 'vue';
+"import { applyDynamicModel as _applyDynamicModel, template as _template } from 'vue';
 const t0 = _template("<input>", true)
 
 export function render(_ctx) {
   const n0 = t0()
-  _withDirectives(n0, [[_vModelDynamic, () => _ctx.model]])
-  _delegate(n0, "update:modelValue", () => $event => (_ctx.model = $event))
+  _applyDynamicModel(n0, () => (_ctx.model), _value => (_ctx.model = _value))
   return n0
 }"
 `;

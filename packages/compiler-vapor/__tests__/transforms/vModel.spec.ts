@@ -14,11 +14,11 @@ const compileWithVModel = makeCompile({
   },
 })
 
-describe.todo('compiler: vModel transform', () => {
+describe('compiler: vModel transform', () => {
   test('should support simple expression', () => {
     const { code, helpers } = compileWithVModel('<input v-model="model" />')
     expect(code).toMatchSnapshot()
-    expect(helpers).toContain('vModelText')
+    expect(helpers).toContain('applyTextModel')
   })
 
   test('should support input (text)', () => {
@@ -26,7 +26,7 @@ describe.todo('compiler: vModel transform', () => {
       '<input type="text" v-model="model" />',
     )
     expect(code).toMatchSnapshot()
-    expect(helpers).toContain('vModelText')
+    expect(helpers).toContain('applyTextModel')
   })
 
   test('should support input (radio)', () => {
@@ -34,7 +34,7 @@ describe.todo('compiler: vModel transform', () => {
       '<input type="radio" v-model="model" />',
     )
     expect(code).toMatchSnapshot()
-    expect(helpers).toContain('vModelRadio')
+    expect(helpers).toContain('applyRadioModel')
   })
 
   test('should support input (checkbox)', () => {
@@ -42,19 +42,19 @@ describe.todo('compiler: vModel transform', () => {
       '<input type="checkbox" v-model="model" />',
     )
     expect(code).toMatchSnapshot()
-    expect(helpers).toContain('vModelCheckbox')
+    expect(helpers).toContain('applyCheckboxModel')
   })
 
   test('should support select', () => {
     const { code, helpers } = compileWithVModel('<select v-model="model" />')
     expect(code).toMatchSnapshot()
-    expect(helpers).toContain('vModelSelect')
+    expect(helpers).toContain('applySelectModel')
   })
 
   test('should support textarea', () => {
     const { code, helpers } = compileWithVModel('<textarea v-model="model" />')
     expect(code).toMatchSnapshot()
-    expect(helpers).toContain('vModelText')
+    expect(helpers).toContain('applyTextModel')
   })
 
   test('should support input (dynamic type)', () => {
@@ -62,19 +62,19 @@ describe.todo('compiler: vModel transform', () => {
       '<input :type="foo" v-model="model" />',
     )
     expect(code).toMatchSnapshot()
-    expect(helpers).toContain('vModelDynamic')
+    expect(helpers).toContain('applyDynamicModel')
   })
 
   test('should support w/ dynamic v-bind', () => {
     const root1 = compileWithVModel('<input v-bind="obj" v-model="model" />')
     expect(root1.code).toMatchSnapshot()
-    expect(root1.helpers).toContain('vModelDynamic')
+    expect(root1.helpers).toContain('applyDynamicModel')
 
     const root2 = compileWithVModel(
       '<input v-bind:[key]="val" v-model="model" />',
     )
     expect(root2.code).toMatchSnapshot()
-    expect(root2.helpers).toContain('vModelDynamic')
+    expect(root2.helpers).toContain('applyDynamicModel')
   })
 
   describe('errors', () => {
@@ -109,7 +109,7 @@ describe.todo('compiler: vModel transform', () => {
         onError,
         isCustomElement: tag => tag.startsWith('my-'),
       })
-      expect(root.helpers).toContain('vModelText')
+      expect(root.helpers).toContain('applyTextModel')
       expect(onError).not.toHaveBeenCalled()
     })
 
@@ -204,7 +204,7 @@ describe.todo('compiler: vModel transform', () => {
       expect(code).toMatchSnapshot()
       expect(code).contains(`modelValue: () => (_ctx.foo),`)
       expect(code).contains(
-        `"onUpdate:modelValue": () => $event => (_ctx.foo = $event)`,
+        `"onUpdate:modelValue": () => _value => (_ctx.foo = _value)`,
       )
       expect(ir.block.operation).toMatchObject([
         {
@@ -229,7 +229,7 @@ describe.todo('compiler: vModel transform', () => {
       expect(code).toMatchSnapshot()
       expect(code).contains(`bar: () => (_ctx.foo),`)
       expect(code).contains(
-        `"onUpdate:bar": () => $event => (_ctx.foo = $event)`,
+        `"onUpdate:bar": () => _value => (_ctx.foo = _value)`,
       )
       expect(ir.block.operation).toMatchObject([
         {
@@ -254,7 +254,7 @@ describe.todo('compiler: vModel transform', () => {
       expect(code).toMatchSnapshot()
       expect(code).contains(
         `[_ctx.arg]: _ctx.foo,
-    ["onUpdate:" + _ctx.arg]: () => $event => (_ctx.foo = $event)`,
+    ["onUpdate:" + _ctx.arg]: () => _value => (_ctx.foo = _value)`,
       )
       expect(ir.block.operation).toMatchObject([
         {
