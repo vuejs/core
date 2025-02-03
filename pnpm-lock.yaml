@@ -229,8 +229,8 @@ importers:
   packages-private/sfc-playground:
     dependencies:
       '@vue/repl':
-        specifier: ^4.4.3
-        version: 4.4.3
+        specifier: ^4.5.0
+        version: 4.5.0
       file-saver:
         specifier: ^2.0.5
         version: 2.0.5
@@ -1531,8 +1531,8 @@ packages:
   '@vue/reactivity@3.5.13':
     resolution: {integrity: sha512-NaCwtw8o48B9I6L1zl2p41OHo/2Z4wqYGGIK1Khu5T7yxrn+ATOixn/Udn2m+6kZKB/J7cuT9DbWWhRxqixACg==}
 
-  '@vue/repl@4.4.3':
-    resolution: {integrity: sha512-MKIaWgmpaDSfcQrzgsoEFW4jpFbdPYFDn9LBvXFQqEUcosheP9IoUcj/u4omp72oxsecFF5YO4/ssp4aaR8e+g==}
+  '@vue/repl@4.5.0':
+    resolution: {integrity: sha512-nWQfTzBePs5zN4qIK+vwEMEDHCuWWx2AY0utun37cSD2Qi4C84dlTtO/OL0xDzBB8Ob7250KYzIzDP3N3l3qLg==}
 
   '@vue/runtime-core@3.5.13':
     resolution: {integrity: sha512-Fj4YRQ3Az0WTZw1sFe+QDb0aXCerigEpw418pw1HBUKFtnQHWzwojaukAs2X/c9DQz4MQ4bsXTGlcpGxU/RCIw==}
@@ -4730,7 +4730,7 @@ snapshots:
     dependencies:
       '@vue/shared': 3.5.13
 
-  '@vue/repl@4.4.3': {}
+  '@vue/repl@4.5.0': {}
 
   '@vue/runtime-core@3.5.13':
     dependencies:

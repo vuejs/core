@@ -39,6 +39,7 @@ const vaporInVDOMInterface: VaporInVDOMInterface = {
 
   update(n1: VNode, n2: VNode) {
     n2.component = n1.component
+    // TODO if has patchFlag, do simple diff to skip unnecessary updates
     ;(n2.component as any as VaporComponentInstance).rawPropsRef!.value =
       n2.props
   },

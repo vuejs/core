@@ -874,6 +874,7 @@ export function compileScript(
         scoped: sfc.styles.some(s => s.scoped),
         isProd: options.isProd,
         ssrCssVars: sfc.cssVars,
+        vapor,
         compilerOptions: {
           ...(options.templateOptions &&
             options.templateOptions.compilerOptions),
@@ -942,9 +943,6 @@ export function compileScript(
     : `export default`
 
   let runtimeOptions = ``
-  if (vapor) {
-    runtimeOptions += `\n  __vapor: true,`
-  }
   if (!ctx.hasDefaultExportName && filename && filename !== DEFAULT_FILENAME) {
     const match = filename.match(/([^/\\]+)\.\w+$/)
     if (match) {
@@ -992,6 +990,10 @@ export function compileScript(
     )
     ctx.s.appendRight(endOffset, `})`)
   } else {
+    // in TS, defineVaporComponent adds the option already
+    if (vapor) {
+      runtimeOptions += `\n  __vapor: true,`
+    }
     if (defaultExport || definedOptions) {
       // without TS, can't rely on rest spread, so we use Object.assign
       // export default Object.assign(__default__, { ... })

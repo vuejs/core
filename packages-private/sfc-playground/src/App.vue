@@ -5,11 +5,10 @@ import {
   type SFCOptions,
   useStore,
   useVueImportMap,
-  File,
   StoreState,
 } from '@vue/repl'
 import Monaco from '@vue/repl/monaco-editor'
-import { ref, watchEffect, onMounted, computed, watch } from 'vue'
+import { ref, watchEffect, onMounted, computed } from 'vue'
 
 const replRef = ref<InstanceType<typeof Repl>>()
 
@@ -20,7 +19,6 @@ window.addEventListener('resize', setVH)
 setVH()
 
 const useSSRMode = ref(false)
-const useVaporMode = ref(true)
 
 const AUTO_SAVE_STORAGE_KEY = 'vue-sfc-playground-auto-save'
 const initAutoSave: boolean = JSON.parse(
@@ -31,16 +29,12 @@ const autoSave = ref(initAutoSave)
 const { vueVersion, productionMode, importMap } = useVueImportMap({
   runtimeDev: () => {
     return import.meta.env.PROD
-      ? useVaporMode.value
-        ? `${location.origin}/vue.runtime-with-vapor.esm-browser.js`
-        : `${location.origin}/vue.runtime.esm-browser.js`
+      ? `${location.origin}/vue.runtime-with-vapor.esm-browser.js`
       : `${location.origin}/src/vue-dev-proxy`
   },
   runtimeProd: () => {
     return import.meta.env.PROD
-      ? useVaporMode.value
-        ? `${location.origin}/vue.runtime-with-vapor.esm-browser.prod.js`
-        : `${location.origin}/vue.runtime.esm-browser.prod.js`
+      ? `${location.origin}/vue.runtime-with-vapor.esm-browser.prod.js`
       : `${location.origin}/src/vue-dev-proxy-prod`
   },
   serverRenderer: import.meta.env.PROD
@@ -61,10 +55,6 @@ if (hash.startsWith('__SSR__')) {
   hash = hash.slice(7)
   useSSRMode.value = true
 }
-if (hash.startsWith('__VAPOR__')) {
-  hash = hash.slice(9)
-  useVaporMode.value = true
-}
 
 const files: StoreState['files'] = ref(Object.create(null))
 
@@ -75,13 +65,13 @@ const sfcOptions = computed(
       inlineTemplate: productionMode.value,
       isProd: productionMode.value,
       propsDestructure: true,
-      vapor: useVaporMode.value,
+      // vapor: useVaporMode.value,
     },
     style: {
       isProd: productionMode.value,
     },
     template: {
-      vapor: useVaporMode.value,
+      // vapor: useVaporMode.value,
       isProd: productionMode.value,
       compilerOptions: {
         isCustomElement: (tag: string) =>
@@ -103,38 +93,10 @@ const store = useStore(
 // @ts-expect-error
 globalThis.store = store
 
-watch(
-  useVaporMode,
-  () => {
-    if (useVaporMode.value) {
-      files.value['src/index.html'] = new File(
-        'src/index.html',
-        `<script type="module">
-        import { createVaporApp } from 'vue'
-        import App from './App.vue'
-        createVaporApp(App).mount('#app')` +
-          '<' +
-          '/script>' +
-          `<div id="app"></div>`,
-        true,
-      )
-      store.mainFile = 'src/index.html'
-    } else if (files.value['src/index.html']?.hidden) {
-      delete files.value['src/index.html']
-      store.mainFile = 'src/App.vue'
-      if (store.activeFile.filename === 'src/index.html') {
-        store.activeFile = files.value['src/App.vue']
-      }
-    }
-  },
-  { immediate: true },
-)
-
 // persist state
 watchEffect(() => {
   const newHash = store
     .serialize()
-    .replace(/^#/, useVaporMode.value ? `#__VAPOR__` : `#`)
     .replace(/^#/, useSSRMode.value ? `#__SSR__` : `#`)
     .replace(/^#/, productionMode.value ? `#__PROD__` : `#`)
   history.replaceState({}, '', newHash)
@@ -146,10 +108,6 @@ function toggleProdMode() {
 
 function toggleSSR() {
   useSSRMode.value = !useSSRMode.value
-}
-
-function toggleVapor() {
-  useVaporMode.value = !useVaporMode.value
 }
 
 function toggleAutoSave() {
@@ -179,14 +137,12 @@ onMounted(() => {
     :store="store"
     :prod="productionMode"
     :ssr="useSSRMode"
-    :vapor="useVaporMode"
     :autoSave="autoSave"
     :theme="theme"
     @toggle-theme="toggleTheme"
     @toggle-prod="toggleProdMode"
     @toggle-ssr="toggleSSR"
     @toggle-autosave="toggleAutoSave"
-    @toggle-vapor="toggleVapor"
     @reload-page="reloadPage"
   />
   <Repl
@@ -204,8 +160,10 @@ onMounted(() => {
     :clearConsole="false"
     :preview-options="{
       customCode: {
-        importCode: `import { initCustomFormatter } from 'vue'`,
-        useCode: `if (window.devtoolsFormatters) {
+        importCode: `import { initCustomFormatter, vaporInteropPlugin } from 'vue'`,
+        useCode: `
+  app.use(vaporInteropPlugin)
+  if (window.devtoolsFormatters) {
     const index = window.devtoolsFormatters.findIndex((v) => v.__vue_custom_formatter)
     window.devtoolsFormatters.splice(index, 1)
     initCustomFormatter()

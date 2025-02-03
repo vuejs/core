@@ -209,11 +209,10 @@ function doCompileTemplate({
   const shortId = id.replace(/^data-v-/, '')
   const longId = `data-v-${shortId}`
 
-  const defaultCompiler = vapor
-    ? // TODO ssr
-      (CompilerVapor as TemplateCompiler)
-    : ssr
-      ? (CompilerSSR as TemplateCompiler)
+  const defaultCompiler = ssr
+    ? (CompilerSSR as TemplateCompiler)
+    : vapor
+      ? (CompilerVapor as TemplateCompiler)
       : CompilerDOM
   compiler = compiler || defaultCompiler
 
