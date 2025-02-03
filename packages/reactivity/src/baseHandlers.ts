@@ -25,9 +25,7 @@ import {
 import { isRef } from './ref'
 import { warn } from './warning'
 
-const isNonTrackableKeys = /*@__PURE__*/ makeMap(
-  `__proto__,__v_isRef,__isVue,dep`,
-)
+const isNonTrackableKeys = /*@__PURE__*/ makeMap(`__proto__,__v_isRef,__isVue`)
 
 const builtInSymbols = new Set(
   /*@__PURE__*/
