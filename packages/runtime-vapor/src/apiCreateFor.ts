@@ -9,13 +9,18 @@ import {
 } from '@vue/reactivity'
 import { getSequence, isArray, isObject, isString } from '@vue/shared'
 import { createComment, createTextNode } from './dom/node'
-import { type Block, Fragment, insert, remove as removeBlock } from './block'
+import {
+  type Block,
+  VaporFragment,
+  insert,
+  remove as removeBlock,
+} from './block'
 import { warn } from '@vue/runtime-dom'
 import { currentInstance, isVaporComponent } from './component'
 import type { DynamicSlot } from './componentSlots'
 import { renderEffect } from './renderEffect'
 
-class ForBlock extends Fragment {
+class ForBlock extends VaporFragment {
   scope: EffectScope | undefined
   key: any
 
@@ -64,13 +69,13 @@ export const createFor = (
   isComponent = false,
   once?: boolean,
   // hydrationNode?: Node,
-): Fragment => {
+): VaporFragment => {
   let isMounted = false
   let oldBlocks: ForBlock[] = []
   let newBlocks: ForBlock[]
   let parent: ParentNode | undefined | null
   const parentAnchor = __DEV__ ? createComment('for') : createTextNode()
-  const ref = new Fragment(oldBlocks)
+  const ref = new VaporFragment(oldBlocks)
   const instance = currentInstance!
 
   if (__DEV__ && !instance) {

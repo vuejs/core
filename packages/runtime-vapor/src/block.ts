@@ -10,14 +10,14 @@ import { EffectScope, pauseTracking, resetTracking } from '@vue/reactivity'
 
 export type Block =
   | Node
-  | Fragment
+  | VaporFragment
   | DynamicFragment
   | VaporComponentInstance
   | Block[]
 
 export type BlockFn = (...args: any[]) => Block
 
-export class Fragment {
+export class VaporFragment {
   nodes: Block
   anchor?: Node
 
@@ -26,7 +26,7 @@ export class Fragment {
   }
 }
 
-export class DynamicFragment extends Fragment {
+export class DynamicFragment extends VaporFragment {
   anchor: Node
   scope: EffectScope | undefined
   current?: BlockFn
@@ -76,8 +76,8 @@ export class DynamicFragment extends Fragment {
   }
 }
 
-export function isFragment(val: NonNullable<unknown>): val is Fragment {
-  return val instanceof Fragment
+export function isFragment(val: NonNullable<unknown>): val is VaporFragment {
+  return val instanceof VaporFragment
 }
 
 export function isBlock(val: NonNullable<unknown>): val is Block {

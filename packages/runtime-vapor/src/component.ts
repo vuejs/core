@@ -64,8 +64,8 @@ import { setDynamicProps } from './dom/prop'
 import {
   type DynamicSlotSource,
   type RawSlots,
-  type Slot,
   type StaticSlots,
+  type VaporSlot,
   dynamicSlotsProxyHandlers,
   getSlot,
 } from './componentSlots'
@@ -97,7 +97,7 @@ export interface ObjectVaporComponent
     props?: any,
     emit?: EmitFn,
     attrs?: any,
-    slots?: Record<string, Slot>,
+    slots?: Record<string, VaporSlot>,
   ): Block
 
   name?: string
@@ -135,7 +135,7 @@ export type LooseRawProps = Record<
   $?: DynamicPropsSource[]
 }
 
-type LooseRawSlots = Record<string, Slot | DynamicSlotSource[]> & {
+type LooseRawSlots = Record<string, VaporSlot | DynamicSlotSource[]> & {
   $?: DynamicSlotSource[]
 }
 

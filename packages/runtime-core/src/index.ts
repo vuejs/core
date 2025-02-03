@@ -488,10 +488,21 @@ export const DeprecationTypes = (
 // change without notice between versions. User code should never rely on them.
 
 /**
+ * these types cannot be marked internal because runtime-vapor's type relies on
+ * them, but they should be considered internal
+ * @private
+ */
+export {
+  type ComponentInternalOptions,
+  type GenericComponentInstance,
+  type LifecycleHook,
+} from './component'
+export { type NormalizedPropsOptions } from './componentProps'
+
+/**
  * @internal
  */
 export {
-  type NormalizedPropsOptions,
   baseNormalizePropsOptions,
   resolvePropValue,
   validateProps,
@@ -507,14 +518,7 @@ export { type SchedulerJob, queueJob, flushOnAppMount } from './scheduler'
 /**
  * @internal
  */
-export {
-  type ComponentInternalOptions,
-  type GenericComponentInstance,
-  type LifecycleHook,
-  expose,
-  nextUid,
-  validateComponentName,
-} from './component'
+export { expose, nextUid, validateComponentName } from './component'
 /**
  * @internal
  */

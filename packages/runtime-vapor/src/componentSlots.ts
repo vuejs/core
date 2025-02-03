@@ -10,14 +10,14 @@ import { currentInstance } from '@vue/runtime-core'
 import type { LooseRawProps, VaporComponentInstance } from './component'
 import { renderEffect } from './renderEffect'
 
-export type RawSlots = Record<string, Slot> & {
+export type RawSlots = Record<string, VaporSlot> & {
   $?: DynamicSlotSource[]
 }
 
-export type StaticSlots = Record<string, Slot>
+export type StaticSlots = Record<string, VaporSlot>
 
-export type Slot = BlockFn
-export type DynamicSlot = { name: string; fn: Slot }
+export type VaporSlot = BlockFn
+export type DynamicSlot = { name: string; fn: VaporSlot }
 export type DynamicSlotFn = () => DynamicSlot | DynamicSlot[]
 export type DynamicSlotSource = StaticSlots | DynamicSlotFn
 
@@ -61,7 +61,7 @@ export const dynamicSlotsProxyHandlers: ProxyHandler<RawSlots> = {
 export function getSlot(
   target: RawSlots,
   key: string,
-): (Slot & { _bound?: Slot }) | undefined {
+): (VaporSlot & { _bound?: VaporSlot }) | undefined {
   if (key === '$') return
   const dynamicSources = target.$
   if (dynamicSources) {
@@ -112,7 +112,7 @@ const dynamicSlotsPropsProxyHandlers: ProxyHandler<RawProps> = {
 export function createSlot(
   name: string | (() => string),
   rawProps?: LooseRawProps | null,
-  fallback?: Slot,
+  fallback?: VaporSlot,
 ): Block {
   const instance = currentInstance as VaporComponentInstance
   const rawSlots = instance.rawSlots

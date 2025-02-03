@@ -187,12 +187,9 @@ type NormalizedProp = PropOptions & {
 /**
  * normalized value is a tuple of the actual normalized options
  * and an array of prop keys that need value casting (booleans and defaults)
- * @internal
  */
 export type NormalizedProps = Record<string, NormalizedProp>
-/**
- * @internal
- */
+
 export type NormalizedPropsOptions = [NormalizedProps, string[]] | []
 
 export function initProps(

@@ -1,5 +1,5 @@
 import { resolveDynamicComponent } from '@vue/runtime-dom'
-import { DynamicFragment, type Fragment } from './block'
+import { DynamicFragment, type VaporFragment } from './block'
 import { createComponentWithFallback } from './component'
 import { renderEffect } from './renderEffect'
 import type { RawProps } from './componentProps'
@@ -10,7 +10,7 @@ export function createDynamicComponent(
   rawProps?: RawProps | null,
   rawSlots?: RawSlots | null,
   isSingleRoot?: boolean,
-): Fragment {
+): VaporFragment {
   const frag = __DEV__
     ? new DynamicFragment('dynamic-component')
     : new DynamicFragment()
