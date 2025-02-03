@@ -90,8 +90,9 @@ export type Reactive<T> = UnwrapNestedRefs<T> &
  */
 export function reactive<T extends object>(target: T): Reactive<T>
 export function reactive(target: object) {
-  // if trying to observe a readonly proxy, return the readonly version.
-  if (isReadonly(target)) {
+  // if trying to observe a readonly proxy, return the readonly version,
+  // or trying to observe a `skip` object, return the origin version.
+  if (isReadonly(target) || isSkip(target)) {
     return target
   }
   return createReactiveObject(
@@ -339,6 +340,10 @@ export function isReadonly(value: unknown): boolean {
 
 export function isShallow(value: unknown): boolean {
   return !!(value && (value as Target)[ReactiveFlags.IS_SHALLOW])
+}
+
+export function isSkip(value: unknown): boolean {
+  return !!(value && (value as Target)[ReactiveFlags.SKIP])
 }
 
 /**
