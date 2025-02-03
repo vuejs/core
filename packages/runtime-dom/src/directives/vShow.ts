@@ -1,16 +1,9 @@
 import type { ObjectDirective } from '@vue/runtime-core'
 
-/**
- * @internal
- */
 export const vShowOriginalDisplay: unique symbol = Symbol('_vod')
-/**
- * @internal
- */
+
 export const vShowHidden: unique symbol = Symbol('_vsh')
-/**
- * @internal
- */
+
 export interface VShowElement extends HTMLElement {
   // _vod = vue original display
   [vShowOriginalDisplay]?: string
