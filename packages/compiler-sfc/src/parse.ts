@@ -200,7 +200,7 @@ export function parse(
       case 'script':
         const scriptBlock = createBlock(node, source, pad) as SFCScriptBlock
         descriptor.vapor ||= !!scriptBlock.attrs.vapor
-        const isSetup = !!scriptBlock.attrs.setup
+        const isSetup = !!(scriptBlock.attrs.setup || scriptBlock.attrs.vapor)
         if (isSetup && !descriptor.scriptSetup) {
           descriptor.scriptSetup = scriptBlock
           break
