@@ -943,7 +943,7 @@ export function compileScript(
 
   let runtimeOptions = ``
   if (vapor) {
-    runtimeOptions += `\n  vapor: true,`
+    runtimeOptions += `\n  __vapor: true,`
   }
   if (!ctx.hasDefaultExportName && filename && filename !== DEFAULT_FILENAME) {
     const match = filename.match(/([^/\\]+)\.\w+$/)
