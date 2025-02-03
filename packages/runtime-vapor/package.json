@@ -12,7 +12,7 @@
   "exports": {
     ".": {
       "types": "./dist/runtime-vapor.d.ts",
-      "default": "./dist/runtime-dom.esm-bundler.js"
+      "default": "./dist/runtime-vapor.esm-bundler.js"
     },
     "./*": "./*"
   },
