@@ -23,7 +23,9 @@ const {
 
 const sizeDir = path.resolve('temp/size')
 const vue = path.resolve('./packages/vue/dist/vue.runtime.esm-bundler.js')
-const vapor = path.resolve('./packages/vue-vapor/dist/vue-vapor.esm-bundler.js')
+const vapor = path.resolve(
+  './packages/runtime-vapor/dist/runtime-vapor.esm-bundler.js',
+)
 
 /**
  * @typedef {Object} Preset
