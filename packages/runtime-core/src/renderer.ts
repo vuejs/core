@@ -759,8 +759,8 @@ function baseCreateRenderer(
         hostSetScopeId(el, slotScopeIds[i])
       }
     }
-    if (parentComponent) {
-      let subTree = parentComponent.subTree
+    let subTree = parentComponent && parentComponent.subTree
+    if (subTree) {
       if (
         __DEV__ &&
         subTree.patchFlag > 0 &&
@@ -774,13 +774,13 @@ function baseCreateRenderer(
         (isSuspense(subTree.type) &&
           (subTree.ssContent === vnode || subTree.ssFallback === vnode))
       ) {
-        const parentVNode = parentComponent.vnode
+        const parentVNode = parentComponent!.vnode
         setScopeId(
           el,
           parentVNode,
           parentVNode.scopeId,
           parentVNode.slotScopeIds,
-          parentComponent.parent,
+          parentComponent!.parent,
         )
       }
     }
