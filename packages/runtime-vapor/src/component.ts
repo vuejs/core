@@ -1,4 +1,5 @@
 import {
+  type ComponentInternalInstance,
   type ComponentInternalOptions,
   type ComponentPropsOptions,
   EffectScope,
@@ -135,7 +136,7 @@ export type LooseRawProps = Record<
   $?: DynamicPropsSource[]
 }
 
-type LooseRawSlots = Record<string, VaporSlot | DynamicSlotSource[]> & {
+export type LooseRawSlots = Record<string, VaporSlot | DynamicSlotSource[]> & {
   $?: DynamicSlotSource[]
 }
 
@@ -144,17 +145,23 @@ export function createComponent(
   rawProps?: LooseRawProps | null,
   rawSlots?: LooseRawSlots | null,
   isSingleRoot?: boolean,
-  appContext?: GenericAppContext,
+  appContext: GenericAppContext = (currentInstance &&
+    currentInstance.appContext) ||
+    emptyContext,
 ): VaporComponentInstance {
-  // check if we are the single root of the parent
-  // if yes, inject parent attrs as dynamic props source
-  // TODO avoid child overwriting parent
+  // vdom interop enabled and component is not an explicit vapor component
+  if (appContext.vdomMount && !component.__vapor) {
+    return appContext.vdomMount(component as any, rawProps, rawSlots)
+  }
+
   if (
     isSingleRoot &&
     component.inheritAttrs !== false &&
     isVaporComponent(currentInstance) &&
     currentInstance.hasFallthrough
   ) {
+    // check if we are the single root of the parent
+    // if yes, inject parent attrs as dynamic props source
     const attrs = currentInstance.attrs
     if (rawProps) {
       ;((rawProps as RawProps).$ || ((rawProps as RawProps).$ = [])).push(
@@ -175,6 +182,10 @@ export function createComponent(
   if (__DEV__) {
     pushWarningContext(instance)
     startMeasure(instance, `init`)
+
+    // cache normalized options for dev only emit check
+    instance.propsOptions = normalizePropsOptions(component)
+    instance.emitsOptions = normalizeEmitsOptions(component)
   }
 
   const prev = currentInstance
@@ -287,8 +298,10 @@ export class VaporComponentInstance implements GenericComponentInstance {
   vapor: true
   uid: number
   type: VaporComponent
+  root: GenericComponentInstance | null
   parent: GenericComponentInstance | null
-  children: VaporComponentInstance[] // TODO handle vdom children
+  children: VaporComponentInstance[]
+  vdomChildren?: ComponentInternalInstance[]
   appContext: GenericAppContext
 
   block: Block
@@ -361,7 +374,8 @@ export class VaporComponentInstance implements GenericComponentInstance {
     this.vapor = true
     this.uid = nextUid()
     this.type = comp
-    this.parent = currentInstance // TODO proper parent source when inside vdom instance
+    this.parent = currentInstance
+    this.root = currentInstance ? currentInstance.root : this
     this.children = []
 
     if (currentInstance) {
@@ -418,12 +432,6 @@ export class VaporComponentInstance implements GenericComponentInstance {
         ? new Proxy(rawSlots, dynamicSlotsProxyHandlers)
         : rawSlots
       : EMPTY_OBJ
-
-    if (__DEV__) {
-      // cache normalized options for dev only emit check
-      this.propsOptions = normalizePropsOptions(comp)
-      this.emitsOptions = normalizeEmitsOptions(comp)
-    }
   }
 
   /**
@@ -448,8 +456,8 @@ export function isVaporComponent(
  */
 export function createComponentWithFallback(
   comp: VaporComponent | string,
-  rawProps?: RawProps | null,
-  rawSlots?: RawSlots | null,
+  rawProps?: LooseRawProps | null,
+  rawSlots?: LooseRawSlots | null,
   isSingleRoot?: boolean,
 ): HTMLElement | VaporComponentInstance {
   if (!isString(comp)) {
@@ -462,7 +470,7 @@ export function createComponentWithFallback(
 
   if (rawProps) {
     renderEffect(() => {
-      setDynamicProps(el, [resolveDynamicProps(rawProps)])
+      setDynamicProps(el, [resolveDynamicProps(rawProps as RawProps)])
     })
   }
 
@@ -470,7 +478,7 @@ export function createComponentWithFallback(
     if (rawSlots.$) {
       // TODO dynamic slot fragment
     } else {
-      insert(getSlot(rawSlots, 'default')!(), el)
+      insert(getSlot(rawSlots as RawSlots, 'default')!(), el)
     }
   }
 
@@ -516,6 +524,14 @@ export function unmountComponent(
       unmountComponent(c)
     }
     instance.children = EMPTY_ARR as any
+
+    if (instance.vdomChildren) {
+      const unmount = instance.appContext.vdomUnmount!
+      for (const c of instance.vdomChildren) {
+        unmount(c, null)
+      }
+      instance.vdomChildren = EMPTY_ARR as any
+    }
 
     if (parentNode) {
       // root remove: need to both remove this instance's DOM nodes

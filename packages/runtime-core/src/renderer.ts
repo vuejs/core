@@ -65,7 +65,6 @@ import {
   type AppMountFn,
   type AppUnmountFn,
   type CreateAppFunction,
-  type VaporInVDOMInterface,
   createAppAPI,
 } from './apiCreateApp'
 import { setRef } from './rendererTemplateRef'
@@ -96,10 +95,12 @@ import { isAsyncWrapper } from './apiAsyncComponent'
 import { isCompatEnabled } from './compat/compatConfig'
 import { DeprecationTypes } from './compat/compatConfig'
 import type { TransitionHooks } from './components/BaseTransition'
+import type { VaporInteropInterface } from './vaporInterop'
 
 export interface Renderer<HostElement = RendererElement> {
   render: RootRenderFunction<HostElement>
   createApp: CreateAppFunction<HostElement>
+  internals: RendererInternals
 }
 
 export interface HydrationRenderer extends Renderer<Element | ShadowRoot> {
@@ -175,6 +176,7 @@ export interface RendererInternals<
   r: RemoveFn
   m: MoveFn
   mt: MountComponentFn
+  umt: UnmountComponentFn
   mc: MountChildrenFn
   pc: PatchChildrenFn
   pbc: PatchBlockChildrenFn
@@ -269,6 +271,12 @@ export type MountComponentFn = (
   parentSuspense: SuspenseBoundary | null,
   namespace: ElementNamespace,
   optimized: boolean,
+) => void
+
+export type UnmountComponentFn = (
+  instance: ComponentInternalInstance,
+  parentSuspense: SuspenseBoundary | null,
+  doRemove?: boolean,
 ) => void
 
 type ProcessTextOrCommentFn = (
@@ -1433,6 +1441,7 @@ function baseCreateRenderer(
         if (
           initialVNode.shapeFlag & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE ||
           (parent &&
+            parent.vnode &&
             isAsyncWrapper(parent.vnode) &&
             parent.vnode.shapeFlag & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE)
         ) {
@@ -2308,10 +2317,10 @@ function baseCreateRenderer(
     hostRemove(end)
   }
 
-  const unmountComponent = (
-    instance: ComponentInternalInstance,
-    parentSuspense: SuspenseBoundary | null,
-    doRemove?: boolean,
+  const unmountComponent: UnmountComponentFn = (
+    instance,
+    parentSuspense,
+    doRemove,
   ) => {
     if (__DEV__ && instance.type.__hmrId) {
       unregisterHMR(instance)
@@ -2437,6 +2446,7 @@ function baseCreateRenderer(
     m: move,
     r: remove,
     mt: mountComponent,
+    umt: unmountComponent,
     mc: mountChildren,
     pc: patchChildren,
     pbc: patchBlockChildren,
@@ -2494,6 +2504,7 @@ function baseCreateRenderer(
   return {
     render,
     hydrate,
+    internals,
     createApp: createAppAPI(
       mountApp,
       unmountApp,
@@ -2608,8 +2619,8 @@ export function invalidateMount(hooks: LifecycleHook | undefined): void {
 
 function getVaporInterface(
   instance: ComponentInternalInstance | null,
-): VaporInVDOMInterface {
-  const res = instance!.appContext.config.vapor
+): VaporInteropInterface {
+  const res = instance!.appContext.vapor
   if (__DEV__ && !res) {
     warn(
       `Vapor component found in vdom tree but vapor-in-vdom interop was not installed. ` +

@@ -20,6 +20,8 @@ export type BlockFn = (...args: any[]) => Block
 export class VaporFragment {
   nodes: Block
   anchor?: Node
+  insert?: (parent: ParentNode, anchor: Node | null) => void
+  remove?: () => void
 
   constructor(nodes: Block) {
     this.nodes = nodes
@@ -118,7 +120,11 @@ export function insert(
     }
   } else {
     // fragment
-    insert(block.nodes, parent, anchor)
+    if (block.insert) {
+      block.insert(parent, anchor)
+    } else {
+      insert(block.nodes, parent, anchor)
+    }
     if (block.anchor) insert(block.anchor, parent, anchor)
   }
 }
@@ -151,7 +157,11 @@ export function remove(block: Block, parent: ParentNode): void {
     }
   } else {
     // fragment
-    remove(block.nodes, parent)
+    if (block.remove) {
+      block.remove()
+    } else {
+      remove(block.nodes, parent)
+    }
     if (block.anchor) remove(block.anchor, parent)
     if ((block as DynamicFragment).scope) {
       ;(block as DynamicFragment).scope!.stop()

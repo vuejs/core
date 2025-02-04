@@ -498,7 +498,14 @@ export {
   type LifecycleHook,
 } from './component'
 export { type NormalizedPropsOptions } from './componentProps'
-
+/**
+ * @internal
+ */
+export { type VaporInteropInterface } from './vaporInterop'
+/**
+ * @internal
+ */
+export { type RendererInternals } from './renderer'
 /**
  * @internal
  */
@@ -530,7 +537,6 @@ export {
   createAppAPI,
   type AppMountFn,
   type AppUnmountFn,
-  type VaporInVDOMInterface,
 } from './apiCreateApp'
 /**
  * @internal

@@ -1,11 +1,6 @@
 import { EMPTY_OBJ, NO, hasOwn, isArray, isFunction } from '@vue/shared'
 import { type Block, type BlockFn, DynamicFragment } from './block'
-import {
-  type RawProps,
-  getAttrFromRawProps,
-  getKeysFromRawProps,
-  hasAttrFromRawProps,
-} from './componentProps'
+import { rawPropsProxyHandlers } from './componentProps'
 import { currentInstance } from '@vue/runtime-core'
 import type { LooseRawProps, VaporComponentInstance } from './component'
 import { renderEffect } from './renderEffect'
@@ -90,21 +85,6 @@ export function getSlot(
   }
 }
 
-const dynamicSlotsPropsProxyHandlers: ProxyHandler<RawProps> = {
-  get: getAttrFromRawProps,
-  has: hasAttrFromRawProps,
-  ownKeys: getKeysFromRawProps,
-  getOwnPropertyDescriptor(target, key: string) {
-    if (hasAttrFromRawProps(target, key)) {
-      return {
-        configurable: true,
-        enumerable: true,
-        get: () => getAttrFromRawProps(target, key),
-      }
-    }
-  },
-}
-
 // TODO how to handle empty slot return blocks?
 // e.g. a slot renders a v-if node that may toggle inside.
 // we may need special handling by passing the fallback into the slot
@@ -119,7 +99,7 @@ export function createSlot(
   const isDynamicName = isFunction(name)
   const fragment = __DEV__ ? new DynamicFragment('slot') : new DynamicFragment()
   const slotProps = rawProps
-    ? new Proxy(rawProps, dynamicSlotsPropsProxyHandlers)
+    ? new Proxy(rawProps, rawPropsProxyHandlers)
     : EMPTY_OBJ
 
   const renderSlot = () => {

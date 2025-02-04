@@ -339,6 +339,7 @@ export interface GenericComponentInstance {
   vapor?: boolean
   uid: number
   type: GenericComponent
+  root: GenericComponentInstance | null
   parent: GenericComponentInstance | null
   appContext: GenericAppContext
   /**
@@ -823,9 +824,15 @@ export function setupComponent(
 ): Promise<void> | undefined {
   isSSR && setInSSRSetupState(isSSR)
 
-  const { props, children } = instance.vnode
+  const { props, children, vi } = instance.vnode
   const isStateful = isStatefulComponent(instance)
-  initProps(instance, props, isStateful, isSSR)
+
+  if (vi) {
+    // Vapor interop override - use Vapor props/attrs proxy
+    vi(instance)
+  } else {
+    initProps(instance, props, isStateful, isSSR)
+  }
   initSlots(instance, children, optimized)
 
   const setupResult = isStateful

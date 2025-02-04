@@ -199,7 +199,9 @@ export function getAttrFromRawProps(rawProps: RawProps, key: string): unknown {
       return rawProps[key]()
     }
   }
-  return merged
+  if (merged && merged.length) {
+    return merged
+  }
 }
 
 export function hasAttrFromRawProps(rawProps: RawProps, key: string): boolean {
@@ -341,4 +343,19 @@ function propsDeleteDevTrap(_: any, key: string | symbol) {
     `Attempt to delete prop ${JSON.stringify(key)} failed. Props are readonly.`,
   )
   return true
+}
+
+export const rawPropsProxyHandlers: ProxyHandler<RawProps> = {
+  get: getAttrFromRawProps,
+  has: hasAttrFromRawProps,
+  ownKeys: getKeysFromRawProps,
+  getOwnPropertyDescriptor(target, key: string) {
+    if (hasAttrFromRawProps(target, key)) {
+      return {
+        configurable: true,
+        enumerable: true,
+        get: () => getAttrFromRawProps(target, key),
+      }
+    }
+  },
 }

@@ -1,6 +1,5 @@
 import {
   type Component,
-  type ComponentInternalInstance,
   type ConcreteComponent,
   type Data,
   type GenericComponent,
@@ -17,7 +16,11 @@ import type {
   ComponentPublicInstance,
 } from './componentPublicInstance'
 import { type Directive, validateDirectiveName } from './directives'
-import type { ElementNamespace, RootRenderFunction } from './renderer'
+import type {
+  ElementNamespace,
+  RootRenderFunction,
+  UnmountComponentFn,
+} from './renderer'
 import type { InjectionKey } from './apiInject'
 import { warn } from './warning'
 import type { VNode } from './vnode'
@@ -29,6 +32,7 @@ import type { NormalizedPropsOptions } from './componentProps'
 import type { ObjectEmitsOptions } from './componentEmits'
 import { ErrorCodes, callWithAsyncErrorHandling } from './errorHandling'
 import type { DefineComponent } from './apiDefineComponent'
+import type { VaporInteropInterface } from './vaporInterop'
 
 export interface App<HostElement = any> {
   version: string
@@ -172,26 +176,6 @@ export interface AppConfig extends GenericAppConfig {
    * @deprecated use config.compilerOptions.isCustomElement
    */
   isCustomElement?: (tag: string) => boolean
-
-  /**
-   * @internal
-   */
-  vapor?: VaporInVDOMInterface
-}
-
-/**
- * @internal
- */
-export interface VaporInVDOMInterface {
-  mount(
-    vnode: VNode,
-    container: any,
-    anchor: any,
-    parentComponent: ComponentInternalInstance | null,
-  ): GenericComponentInstance // VaporComponentInstance
-  update(n1: VNode, n2: VNode, shouldUpdate: boolean): void
-  unmount(vnode: VNode, doRemove?: boolean): void
-  move(vnode: VNode, container: any, anchor: any): void
 }
 
 /**
@@ -208,6 +192,19 @@ export interface GenericAppContext {
    * @internal
    */
   reload?: () => void
+
+  /**
+   * @internal vapor interop only, for creating vapor components in vdom
+   */
+  vapor?: VaporInteropInterface
+  /**
+   * @internal vapor interop only, for creating vdom components in vapor
+   */
+  vdomMount?: (component: ConcreteComponent, props?: any, slots?: any) => any
+  /**
+   * @internal
+   */
+  vdomUnmount?: UnmountComponentFn
 }
 
 export interface AppContext extends GenericAppContext {

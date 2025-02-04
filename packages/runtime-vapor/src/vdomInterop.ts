@@ -1,19 +1,29 @@
 import {
+  type ComponentInternalInstance,
+  type ConcreteComponent,
   type Plugin,
-  type VaporInVDOMInterface,
+  type RendererInternals,
+  type VaporInteropInterface,
+  createVNode,
   currentInstance,
+  ensureRenderer,
   shallowRef,
   simpleSetCurrentInstance,
 } from '@vue/runtime-dom'
 import {
-  type VaporComponentInstance,
+  type LooseRawProps,
+  type LooseRawSlots,
+  VaporComponentInstance,
   createComponent,
   mountComponent,
   unmountComponent,
 } from './component'
-import { insert } from './block'
+import { VaporFragment, insert } from './block'
+import { extend, remove } from '@vue/shared'
+import { type RawProps, rawPropsProxyHandlers } from './componentProps'
+import type { RawSlots } from './componentSlots'
 
-const vaporInVDOMInterface: VaporInVDOMInterface = {
+const vaporInteropImpl: VaporInteropInterface = {
   mount(vnode, container, anchor, parentComponent) {
     const selfAnchor = (vnode.anchor = document.createComment('vapor'))
     container.insertBefore(selfAnchor, anchor)
@@ -49,6 +59,63 @@ const vaporInVDOMInterface: VaporInVDOMInterface = {
   },
 }
 
+function createVDOMComponent(
+  internals: RendererInternals,
+  component: ConcreteComponent,
+  rawProps?: LooseRawProps | null,
+  rawSlots?: LooseRawSlots | null,
+): VaporFragment {
+  const frag = new VaporFragment([])
+  const vnode = createVNode(
+    component,
+    rawProps && new Proxy(rawProps, rawPropsProxyHandlers),
+  )
+  const wrapper = new VaporComponentInstance(
+    { props: component.props },
+    rawProps as RawProps,
+    rawSlots as RawSlots,
+  )
+
+  // overwrite how the vdom instance handles props
+  vnode.vi = (instance: ComponentInternalInstance) => {
+    instance.props = wrapper.props
+    instance.attrs = wrapper.attrs
+    // TODO slots
+  }
+
+  let isMounted = false
+  const parentInstance = currentInstance as VaporComponentInstance
+  frag.insert = (parent, anchor) => {
+    if (!isMounted) {
+      internals.mt(
+        vnode,
+        parent,
+        anchor,
+        parentInstance as any,
+        null,
+        undefined,
+        false,
+      )
+      ;(parentInstance.vdomChildren || (parentInstance.vdomChildren = [])).push(
+        vnode.component!,
+      )
+      isMounted = true
+    } else {
+      // TODO move
+    }
+  }
+  frag.remove = () => {
+    internals.umt(vnode.component!, null, true)
+    remove(parentInstance.vdomChildren!, vnode.component)
+    isMounted = false
+  }
+
+  return frag
+}
+
 export const vaporInteropPlugin: Plugin = app => {
-  app.config.vapor = vaporInVDOMInterface
+  app._context.vapor = extend(vaporInteropImpl)
+  const internals = ensureRenderer().internals
+  app._context.vdomMount = createVDOMComponent.bind(null, internals)
+  app._context.vdomUnmount = internals.umt
 }

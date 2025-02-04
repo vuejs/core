@@ -73,7 +73,7 @@ let renderer: Renderer<Element | ShadowRoot> | HydrationRenderer
 
 let enabledHydration = false
 
-function ensureRenderer() {
+function ensureRenderer(): Renderer<Element | ShadowRoot> {
   return (
     renderer ||
     (renderer = createRenderer<Node, Element | ShadowRoot>(rendererOptions))
@@ -230,7 +230,7 @@ function injectCompilerOptionsCheck(app: App) {
 /**
  * @internal
  */
-export function normalizeContainer<T extends ParentNode>(
+function normalizeContainer<T extends ParentNode>(
   container: T | string,
 ): T | null {
   if (isString(container)) {
@@ -313,7 +313,13 @@ export * from '@vue/runtime-core'
 export * from './jsx'
 
 // VAPOR -----------------------------------------------------------------------
+// Everything below are exposed for vapor only and can change any time.
+// They are also trimmed from non-bundler builds.
 
+/**
+ * @internal
+ */
+export { ensureRenderer, normalizeContainer }
 /**
  * @internal
  */
