@@ -1060,7 +1060,7 @@ describe('api: options', () => {
       },
       data() {
         return {
-          plusOne: (this as any).count + 1,
+          plusOne: this.count + 1,
         }
       },
       computed: {

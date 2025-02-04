@@ -1663,7 +1663,6 @@ declare const MyButton: DefineComponent<
   ComponentOptionsMixin,
   ComponentOptionsMixin,
   EmitsOptions,
-  string,
   VNodeProps & AllowedComponentProps & ComponentCustomProps,
   Readonly<ExtractPropTypes<{}>>,
   {},
@@ -1852,7 +1851,7 @@ interface ErrorMessageSlotProps {
  * relying on legacy CreateComponentPublicInstance signature
  */
 declare const ErrorMessage: {
-  new (...args: any[]): vue.CreateComponentPublicInstance<
+  new (...args: any[]): vue.CreateComponentPublicInstanceWithMixins<
     Readonly<
       vue.ExtractPropTypes<{
         as: {
@@ -1916,58 +1915,7 @@ declare const ErrorMessage: {
     },
     true,
     {},
-    {},
-    {
-      P: {}
-      B: {}
-      D: {}
-      C: {}
-      M: {}
-      Defaults: {}
-    },
-    Readonly<
-      vue.ExtractPropTypes<{
-        as: {
-          type: StringConstructor
-          default: any
-        }
-        name: {
-          type: StringConstructor
-          required: true
-        }
-      }>
-    >,
-    () =>
-      | VNode<
-          vue.RendererNode,
-          vue.RendererElement,
-          {
-            [key: string]: any
-          }
-        >
-      | vue.Slot<any>
-      | VNode<
-          vue.RendererNode,
-          vue.RendererElement,
-          {
-            [key: string]: any
-          }
-        >[]
-      | {
-          default: () => VNode<
-            vue.RendererNode,
-            vue.RendererElement,
-            {
-              [key: string]: any
-            }
-          >[]
-        },
-    {},
-    {},
-    {},
-    {
-      as: string
-    }
+    {}
   >
   __isFragment?: never
   __isTeleport?: never
@@ -2020,7 +1968,6 @@ declare const ErrorMessage: {
   {
     as: string
   },
-  {},
   string,
   {}
 > &

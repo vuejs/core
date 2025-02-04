@@ -150,6 +150,14 @@ export function h<
 // catch-all for generic component types
 export function h(type: Component, children?: RawChildren): VNode
 
+// fake constructor type returned by `defineComponent` or class component
+export function h(type: Constructor, children?: RawChildren): VNode
+export function h<P>(
+  type: Constructor<P>,
+  props?: (RawProps & P) | ({} extends P ? null : never),
+  children?: RawChildren | RawSlots,
+): VNode
+
 // concrete component
 export function h<P>(
   type: ConcreteComponent | string,
@@ -171,14 +179,6 @@ export function h<P>(
 // exclude `defineComponent` constructors
 export function h<P>(
   type: ComponentOptions<P>,
-  props?: (RawProps & P) | ({} extends P ? null : never),
-  children?: RawChildren | RawSlots,
-): VNode
-
-// fake constructor type returned by `defineComponent` or class component
-export function h(type: Constructor, children?: RawChildren): VNode
-export function h<P>(
-  type: Constructor<P>,
   props?: (RawProps & P) | ({} extends P ? null : never),
   children?: RawChildren | RawSlots,
 ): VNode

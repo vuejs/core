@@ -7,7 +7,6 @@ import {
   type ComponentObjectPropsOptions,
   type ComponentOptions,
   type ComponentOptionsBase,
-  type ComponentOptionsMixin,
   type ComponentProvideOptions,
   type ComponentPublicInstance,
   type ComputedOptions,
@@ -20,11 +19,13 @@ import {
   type EmitsToProps,
   type ExtractPropTypes,
   type MethodOptions,
+  type ObjectEmitsOptions,
   type RenderFunction,
   type SetupContext,
   type SlotsType,
   type VNode,
   type VNodeProps,
+  type ExtractMixinProps,
   createVNode,
   defineComponent,
   getCurrentInstance,
@@ -39,6 +40,8 @@ import {
   hyphenate,
   isArray,
   isPlainObject,
+  LooseRequired,
+  Prettify,
   toNumber,
 } from '@vue/shared'
 import { createApp, createSSRApp, render } from '.'
@@ -63,15 +66,21 @@ export interface CustomElementOptions {
 // overload 1: direct setup function
 export function defineCustomElement<Props, RawBindings = object>(
   setup: (props: Props, ctx: SetupContext) => RawBindings | RenderFunction,
-  options?: Pick<ComponentOptions, 'name' | 'inheritAttrs' | 'emits'> &
-    CustomElementOptions & {
+  options?: {
+    name?: string
+    inheritAttrs?: boolean
+    emits?: EmitsOptions
+  } & CustomElementOptions & {
       props?: (keyof Props)[]
     },
 ): VueElementConstructor<Props>
 export function defineCustomElement<Props, RawBindings = object>(
   setup: (props: Props, ctx: SetupContext) => RawBindings | RenderFunction,
-  options?: Pick<ComponentOptions, 'name' | 'inheritAttrs' | 'emits'> &
-    CustomElementOptions & {
+  options?: {
+    name?: string
+    inheritAttrs?: boolean
+    emits?: EmitsOptions
+  } & CustomElementOptions & {
       props?: ComponentObjectPropsOptions<Props>
     },
 ): VueElementConstructor<Props>
@@ -83,15 +92,15 @@ export function defineCustomElement<
     ComponentObjectPropsOptions = ComponentObjectPropsOptions,
   PropsKeys extends string = string,
   // emits
-  RuntimeEmitsOptions extends EmitsOptions = {},
+  RuntimeEmitsOptions extends ObjectEmitsOptions = {},
   EmitsKeys extends string = string,
   // other options
   Data = {},
   SetupBindings = {},
   Computed extends ComputedOptions = {},
   Methods extends MethodOptions = {},
-  Mixin extends ComponentOptionsMixin = ComponentOptionsMixin,
-  Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
+  Mixin = {},
+  Extends = {},
   InjectOptions extends ComponentInjectOptions = {},
   InjectKeys extends string = string,
   Slots extends SlotsType = {},
@@ -100,34 +109,47 @@ export function defineCustomElement<
   Exposed extends string = string,
   Provide extends ComponentProvideOptions = ComponentProvideOptions,
   // resolved types
+  ResolvedRuntimeEmitsOptions extends EmitsOptions = string extends EmitsKeys
+    ? RuntimeEmitsOptions
+    : EmitsKeys[],
   InferredProps = string extends PropsKeys
     ? ComponentObjectPropsOptions extends RuntimePropsOptions
       ? {}
       : ExtractPropTypes<RuntimePropsOptions>
     : { [key in PropsKeys]?: any },
   ResolvedProps = InferredProps & EmitsToProps<RuntimeEmitsOptions>,
+  PublicP = ResolvedProps &
+    Prettify<ExtractMixinProps<Mixin> & ExtractMixinProps<Extends>>,
+  DataVM = CreateComponentPublicInstanceWithMixins<
+    PublicP,
+    {},
+    {},
+    {},
+    MethodOptions,
+    Mixin,
+    Extends
+  >,
 >(
   options: CustomElementOptions & {
     props?: (RuntimePropsOptions & ThisType<void>) | PropsKeys[]
-  } & ComponentOptionsBase<
-      ResolvedProps,
-      SetupBindings,
-      Data,
-      Computed,
-      Methods,
-      Mixin,
-      Extends,
-      RuntimeEmitsOptions,
-      EmitsKeys,
-      {}, // Defaults
-      InjectOptions,
-      InjectKeys,
-      Slots,
-      LocalComponents,
-      Directives,
-      Exposed,
-      Provide
-    > &
+    emits?: (RuntimeEmitsOptions & ThisType<void>) | EmitsKeys[]
+    computed?: Computed
+    methods?: Methods
+    mixins?: Mixin[]
+    extends?: Extends
+    inject?: string extends InjectKeys ? InjectOptions : InjectKeys[]
+    slots?: Slots
+    components?: LocalComponents
+    directives?: Directives
+    expose?: Exposed[]
+    provide?: Provide
+    setup?: (
+      this: void,
+      props: NoInfer<LooseRequired<PublicP>>,
+      ctx: NoInfer<SetupContext<ResolvedRuntimeEmitsOptions, Slots>>,
+    ) => Promise<SetupBindings> | SetupBindings | RenderFunction | void
+    data?: (this: DataVM, vm: DataVM) => Data
+  } & ComponentOptionsBase &
     ThisType<
       CreateComponentPublicInstanceWithMixins<
         Readonly<ResolvedProps>,

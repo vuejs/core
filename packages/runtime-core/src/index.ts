@@ -274,7 +274,6 @@ export type {
 } from './apiDefineComponent'
 export type {
   ComponentOptions,
-  ComponentOptionsMixin,
   ComponentCustomOptions,
   ComponentOptionsBase,
   ComponentProvideOptions,
@@ -283,10 +282,6 @@ export type {
   ComputedOptions,
   RuntimeCompilerOptions,
   ComponentInjectOptions,
-  // deprecated
-  ComponentOptionsWithoutProps,
-  ComponentOptionsWithArrayProps,
-  ComponentOptionsWithObjectProps,
 } from './componentOptions'
 export type {
   EmitsOptions,
@@ -296,9 +291,9 @@ export type {
   EmitFn,
 } from './componentEmits'
 export type {
+  ExtractMixinProps,
   ComponentPublicInstance,
   ComponentCustomProperties,
-  CreateComponentPublicInstance,
   CreateComponentPublicInstanceWithMixins,
 } from './componentPublicInstance'
 export type {

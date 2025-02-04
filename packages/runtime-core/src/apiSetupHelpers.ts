@@ -18,7 +18,6 @@ import {
 import type { EmitFn, EmitsOptions, ObjectEmitsOptions } from './componentEmits'
 import type {
   ComponentOptionsBase,
-  ComponentOptionsMixin,
   ComputedOptions,
   MethodOptions,
 } from './componentOptions'
@@ -31,6 +30,7 @@ import type {
 import { warn } from './warning'
 import type { SlotsType, StrictUnwrapSlotsType } from './componentSlots'
 import type { Ref } from '@vue/reactivity'
+import { CreateComponentPublicInstanceWithMixins } from './componentPublicInstance'
 
 // dev only
 const warnRuntimeUsage = (method: string) =>
@@ -189,23 +189,31 @@ export function defineExpose<
  * @see {@link https://vuejs.org/api/sfc-script-setup.html#defineoptions}
  */
 export function defineOptions<
-  RawBindings = {},
   D = {},
   C extends ComputedOptions = {},
   M extends MethodOptions = {},
-  Mixin extends ComponentOptionsMixin = ComponentOptionsMixin,
-  Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
->(
-  options?: ComponentOptionsBase<
+  Mixin = {},
+  Extends = {},
+  DataVM = CreateComponentPublicInstanceWithMixins<
     {},
-    RawBindings,
-    D,
-    C,
-    M,
+    {},
+    {},
+    {},
+    MethodOptions,
     Mixin,
-    Extends,
-    {}
-  > & {
+    Extends
+  >,
+>(
+  options?: {
+    computed?: C
+    methods?: M
+    mixins?: Mixin[]
+    extends?: Extends
+    data?: (this: DataVM, vm: DataVM) => D
+    /**
+     * setup should be defined via `<script setup>`.
+     */
+    setup?: never
     /**
      * props should be defined via defineProps().
      */
@@ -222,7 +230,7 @@ export function defineOptions<
      * slots should be defined via defineSlots().
      */
     slots?: never
-  },
+  } & ComponentOptionsBase,
 ): void {
   if (__DEV__) {
     warnRuntimeUsage(`defineOptions`)
