@@ -189,7 +189,7 @@ export interface VaporInVDOMInterface {
     anchor: any,
     parentComponent: ComponentInternalInstance | null,
   ): GenericComponentInstance // VaporComponentInstance
-  update(n1: VNode, n2: VNode): void
+  update(n1: VNode, n2: VNode, shouldUpdate: boolean): void
   unmount(vnode: VNode, doRemove?: boolean): void
   move(vnode: VNode, container: any, anchor: any): void
 }

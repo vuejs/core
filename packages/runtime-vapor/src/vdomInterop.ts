@@ -1,7 +1,5 @@
 import {
-  type GenericComponentInstance,
   type Plugin,
-  type VNode,
   type VaporInVDOMInterface,
   currentInstance,
   shallowRef,
@@ -16,12 +14,7 @@ import {
 import { insert } from './block'
 
 const vaporInVDOMInterface: VaporInVDOMInterface = {
-  mount(
-    vnode: VNode,
-    container: ParentNode,
-    anchor: Node,
-    parentComponent: GenericComponentInstance | null,
-  ) {
+  mount(vnode, container, anchor, parentComponent) {
     const selfAnchor = (vnode.anchor = document.createComment('vapor'))
     container.insertBefore(selfAnchor, anchor)
     const prev = currentInstance
@@ -37,19 +30,20 @@ const vaporInVDOMInterface: VaporInVDOMInterface = {
     return instance
   },
 
-  update(n1: VNode, n2: VNode) {
+  update(n1, n2, shouldUpdate) {
     n2.component = n1.component
-    // TODO if has patchFlag, do simple diff to skip unnecessary updates
-    ;(n2.component as any as VaporComponentInstance).rawPropsRef!.value =
-      n2.props
+    if (shouldUpdate) {
+      ;(n2.component as any as VaporComponentInstance).rawPropsRef!.value =
+        n2.props
+    }
   },
 
-  unmount(vnode: VNode, doRemove?: boolean) {
+  unmount(vnode, doRemove) {
     const container = doRemove ? vnode.anchor!.parentNode : undefined
     unmountComponent(vnode.component as any, container)
   },
 
-  move(vnode: VNode, container: ParentNode, anchor: Node) {
+  move(vnode, container, anchor) {
     insert(vnode.component as any, container, anchor)
     insert(vnode.anchor as any, container, anchor)
   },

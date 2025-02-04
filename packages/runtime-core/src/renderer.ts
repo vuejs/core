@@ -1158,7 +1158,11 @@ function baseCreateRenderer(
           parentComponent,
         )
       } else {
-        getVaporInterface(parentComponent).update(n1, n2)
+        getVaporInterface(parentComponent).update(
+          n1,
+          n2,
+          shouldUpdateComponent(n1, n2, optimized),
+        )
       }
     } else if (n1 == null) {
       if (n2.shapeFlag & ShapeFlags.COMPONENT_KEPT_ALIVE) {
