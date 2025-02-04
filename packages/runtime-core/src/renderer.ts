@@ -19,6 +19,7 @@ import {
   type ComponentOptions,
   type ConcreteComponent,
   type Data,
+  type GenericComponentInstance,
   type LifecycleHook,
   createComponentInstance,
   getComponentPublicInstance,
@@ -749,7 +750,7 @@ function baseCreateRenderer(
     vnode: VNode,
     scopeId: string | null,
     slotScopeIds: string[] | null,
-    parentComponent: ComponentInternalInstance | null,
+    parentComponent: GenericComponentInstance | null,
   ) => {
     if (scopeId) {
       hostSetScopeId(el, scopeId)
@@ -774,7 +775,7 @@ function baseCreateRenderer(
         (isSuspense(subTree.type) &&
           (subTree.ssContent === vnode || subTree.ssFallback === vnode))
       ) {
-        const parentVNode = parentComponent!.vnode
+        const parentVNode = parentComponent!.vnode!
         setScopeId(
           el,
           parentVNode,
@@ -1382,8 +1383,8 @@ function baseCreateRenderer(
           }
         } else {
           // custom element style injection
-          if (root.ce) {
-            root.ce._injectChildStyle(type)
+          if ((root as ComponentInternalInstance).ce) {
+            ;(root as ComponentInternalInstance).ce!._injectChildStyle(type)
           }
 
           if (__DEV__) {

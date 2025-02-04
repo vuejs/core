@@ -2,6 +2,7 @@ import {
   type ComponentInternalInstance,
   type ComponentOptions,
   type ConcreteComponent,
+  type GenericComponentInstance,
   type SetupContext,
   getComponentName,
   getCurrentInstance,
@@ -436,7 +437,7 @@ function registerKeepAliveHook(
     hook.__wdc ||
     (hook.__wdc = () => {
       // only fire the hook if the target instance is NOT in a deactivated branch.
-      let current: ComponentInternalInstance | null = target
+      let current: GenericComponentInstance | null = target
       while (current) {
         if (current.isDeactivated) {
           return
@@ -453,7 +454,7 @@ function registerKeepAliveHook(
   // arrays.
   if (target) {
     let current = target.parent
-    while (current && current.parent) {
+    while (current && current.parent && current.parent.vnode) {
       if (isKeepAlive(current.parent.vnode)) {
         injectToKeepAliveRoot(wrappedHook, type, target, current)
       }
@@ -466,7 +467,7 @@ function injectToKeepAliveRoot(
   hook: Function & { __weh?: Function },
   type: LifecycleHooks,
   target: ComponentInternalInstance,
-  keepAliveRoot: ComponentInternalInstance,
+  keepAliveRoot: GenericComponentInstance,
 ) {
   // injectHook wraps the original for error handling, so make sure to remove
   // the wrapped version.

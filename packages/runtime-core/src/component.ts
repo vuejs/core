@@ -504,6 +504,26 @@ export interface GenericComponentInstance {
    * @internal vapor only
    */
   hmrReload?: (newComp: any) => void
+
+  // these only exist on vdom instances
+  vnode?: VNode
+  subTree?: VNode
+
+  /**
+   * Custom Element instance (if component is created by defineCustomElement)
+   * @internal
+   */
+  ce?: ComponentCustomElementInterface
+  /**
+   * is custom element? (kept only for compatibility)
+   * @internal
+   */
+  isCE?: boolean
+  /**
+   * custom element specific HMR method
+   * @internal
+   */
+  ceReload?: (newStyles?: string[]) => void
 }
 
 /**
@@ -514,8 +534,8 @@ export interface ComponentInternalInstance extends GenericComponentInstance {
   vapor?: never
   uid: number
   type: ConcreteComponent
-  parent: ComponentInternalInstance | null
-  root: ComponentInternalInstance
+  parent: GenericComponentInstance | null
+  root: GenericComponentInstance
   appContext: AppContext
   /**
    * Vnode representing this component in its parent's vdom tree
@@ -589,21 +609,6 @@ export interface ComponentInternalInstance extends GenericComponentInstance {
    * @internal
    */
   inheritAttrs?: boolean
-  /**
-   * Custom Element instance (if component is created by defineCustomElement)
-   * @internal
-   */
-  ce?: ComponentCustomElementInterface
-  /**
-   * is custom element? (kept only for compatibility)
-   * @internal
-   */
-  isCE?: boolean
-  /**
-   * custom element specific HMR method
-   * @internal
-   */
-  ceReload?: (newStyles?: string[]) => void
 
   // the rest are only for stateful components ---------------------------------
   /**
@@ -1210,7 +1215,7 @@ export function expose(
 }
 
 export function getComponentPublicInstance(
-  instance: ComponentInternalInstance,
+  instance: GenericComponentInstance,
 ): ComponentPublicInstance | ComponentInternalInstance['exposed'] | null {
   if (instance.exposed) {
     return (

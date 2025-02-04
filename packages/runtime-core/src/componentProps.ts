@@ -232,7 +232,7 @@ export function initProps(
   instance.attrs = attrs
 }
 
-function isInHmrContext(instance: ComponentInternalInstance | null) {
+function isInHmrContext(instance: GenericComponentInstance | null) {
   while (instance) {
     if (instance.type.__hmrId) return true
     instance = instance.parent

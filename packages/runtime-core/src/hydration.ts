@@ -768,7 +768,7 @@ export function createHydrationFunctions(
       if (parent.vnode.el === oldNode) {
         parent.vnode.el = parent.subTree.el = newNode
       }
-      parent = parent.parent
+      parent = parent.parent as ComponentInternalInstance
     }
   }
 
@@ -945,7 +945,11 @@ function resolveCssVars(
     }
   }
   if (vnode === root && instance.parent) {
-    resolveCssVars(instance.parent, instance.vnode, expectedMap)
+    resolveCssVars(
+      instance.parent as ComponentInternalInstance,
+      instance.vnode,
+      expectedMap,
+    )
   }
 }
 

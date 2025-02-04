@@ -154,7 +154,12 @@ function reload(id: string, newComp: HMRComponent): void {
         // don't end up forcing the same parent to re-render multiple times.
         queueJob(() => {
           isHmrUpdating = true
-          instance.parent!.update()
+          const parent = instance.parent!
+          if (parent.vapor) {
+            parent.hmrRerender!()
+          } else {
+            ;(parent as ComponentInternalInstance).update()
+          }
           isHmrUpdating = false
           // #6930, #11248 avoid infinite recursion
           dirtyInstances.delete(instance)

@@ -18,6 +18,7 @@ import {
   type ComponentInternalInstance,
   type ConcreteComponent,
   type Data,
+  type GenericComponentInstance,
   isClassComponent,
 } from './component'
 import type { RawSlots } from './componentSlots'
@@ -903,7 +904,7 @@ export function mergeProps(...args: (Data & VNodeProps)[]): Data {
 
 export function invokeVNodeHook(
   hook: VNodeHook,
-  instance: ComponentInternalInstance | null,
+  instance: GenericComponentInstance | null,
   vnode: VNode,
   prevVNode: VNode | null = null,
 ): void {

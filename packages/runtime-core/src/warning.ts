@@ -1,5 +1,4 @@
 import {
-  type ComponentInternalInstance,
   type Data,
   type GenericComponentInstance,
   formatComponentName,
@@ -106,9 +105,9 @@ export function getComponentTrace(): ComponentTraceStack {
       })
     }
     if (isVNode(currentCtx)) {
-      const parent: ComponentInternalInstance | null =
+      const parent: GenericComponentInstance | null =
         currentCtx.component && currentCtx.component.parent
-      currentCtx = parent && parent.vnode
+      currentCtx = (parent && parent.vnode) || parent
     } else {
       currentCtx = currentCtx.parent
     }
