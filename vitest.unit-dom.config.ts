@@ -3,7 +3,9 @@ import config from './vitest.config'
 
 export default mergeConfig(config, {
   test: {
-    name: 'unit',
+    name: 'unit-dom',
+    include: ['packages/{vue,vue-compat,runtime-dom}/**/*.spec.ts'],
     exclude: [...configDefaults.exclude, '**/e2e/**'],
+    environment: 'jsdom',
   },
 })
