@@ -48,6 +48,7 @@ import { devtoolsComponentAdded } from '../devtools'
 import { isAsyncWrapper } from '../apiAsyncComponent'
 import { isSuspense } from './Suspense'
 import { LifecycleHooks } from '../enums'
+import { queuePostFlushCb } from '../scheduler'
 
 type MatchPattern = string | RegExp | (string | RegExp)[]
 
@@ -136,6 +137,7 @@ const KeepAliveImpl: ComponentOptions = {
       optimized,
     ) => {
       const instance = vnode.component!
+      instance.isActivated = true
       move(vnode, container, anchor, MoveType.ENTER, parentSuspense)
       // in case props have changed
       patch(
@@ -149,6 +151,13 @@ const KeepAliveImpl: ComponentOptions = {
         vnode.slotScopeIds,
         optimized,
       )
+
+      const effects = instance.activatedEffects
+      if (effects) {
+        queuePostFlushCb(effects)
+        instance.activatedEffects!.length = 0
+      }
+
       queuePostRenderEffect(() => {
         instance.isDeactivated = false
         if (instance.a) {
@@ -168,6 +177,7 @@ const KeepAliveImpl: ComponentOptions = {
 
     sharedContext.deactivate = (vnode: VNode) => {
       const instance = vnode.component!
+      instance.isActivated = false
       invalidateMount(instance.m)
       invalidateMount(instance.a)
 
