@@ -1429,18 +1429,15 @@ function baseCreateRenderer(
         // #2458: deference mount-only object parameters to prevent memleaks
         initialVNode = container = anchor = null as any
       } else {
-        let { next, bu, u, parent, vnode, isDeactivating } = instance
+        let { next, bu, u, parent, vnode } = instance
 
-        // skip unnecessary update while component is deactivating.
-        // the update will be stored and applied once it reactivates.
-        if (isDeactivating) {
-          ;(instance.activateEffects || (instance.activateEffects = [])).push(
-            () => {
-              if (!instance.isUnmounted) {
-                componentUpdateFn()
-              }
-            },
-          )
+        const keepAliveParent = locateDeactiveKeepAlive(instance)
+        if (keepAliveParent) {
+          keepAliveParent.keepAliveEffect.push(() => {
+            if (!instance.isUnmounted) {
+              componentUpdateFn()
+            }
+          })
           return
         }
 
@@ -2553,6 +2550,19 @@ function locateNonHydratedAsyncRoot(
       return locateNonHydratedAsyncRoot(subComponent)
     }
   }
+}
+
+function locateDeactiveKeepAlive(instance: ComponentInternalInstance | null) {
+  while (instance) {
+    if (instance.isActivated) {
+      return instance
+    }
+    if (isKeepAlive(instance.vnode)) {
+      break
+    }
+    instance = instance.parent
+  }
+  return null
 }
 
 export function invalidateMount(hooks: LifecycleHook): void {
