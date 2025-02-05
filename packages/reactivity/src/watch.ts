@@ -213,7 +213,7 @@ export function watch(
   const scope = getCurrentScope()
   const watchHandle: WatchHandle = () => {
     effect.stop()
-    if (scope) {
+    if (scope && scope.active) {
       remove(scope.effects, effect)
     }
   }

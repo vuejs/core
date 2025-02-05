@@ -17,6 +17,7 @@ import {
   serializeInner as inner,
   nextTick,
   nodeOps,
+  onBeforeMount,
   onBeforeUnmount,
   onUnmounted,
   openBlock,
@@ -1199,7 +1200,7 @@ describe('renderer: optimized mode', () => {
             createBlock('div', null, [
               createVNode('div', null, [
                 cache[0] ||
-                  (setBlockTracking(-1),
+                  (setBlockTracking(-1, true),
                   ((cache[0] = createVNode('div', null, [
                     createVNode(Child),
                   ])).cacheIndex = 0),
@@ -1232,5 +1233,65 @@ describe('renderer: optimized mode', () => {
     await nextTick()
     expect(inner(root)).toBe('<!--v-if-->')
     expect(spyUnmounted).toHaveBeenCalledTimes(2)
+  })
+
+  // #12371
+  test('unmount children when the user calls a compiled slot', async () => {
+    const beforeMountSpy = vi.fn()
+    const beforeUnmountSpy = vi.fn()
+
+    const Child = {
+      setup() {
+        onBeforeMount(beforeMountSpy)
+        onBeforeUnmount(beforeUnmountSpy)
+        return () => 'child'
+      },
+    }
+
+    const Wrapper = {
+      setup(_: any, { slots }: SetupContext) {
+        return () => (
+          openBlock(),
+          createElementBlock('section', null, [
+            (openBlock(),
+            createElementBlock('div', { key: 1 }, [
+              createTextVNode(slots.header!() ? 'foo' : 'bar', 1 /* TEXT */),
+              renderSlot(slots, 'content'),
+            ])),
+          ])
+        )
+      },
+    }
+
+    const show = ref(false)
+    const app = createApp({
+      render() {
+        return show.value
+          ? (openBlock(),
+            createBlock(Wrapper, null, {
+              header: withCtx(() => [createVNode({})]),
+              content: withCtx(() => [createVNode(Child)]),
+              _: 1,
+            }))
+          : createCommentVNode('v-if', true)
+      },
+    })
+
+    app.mount(root)
+    expect(inner(root)).toMatchInlineSnapshot(`"<!--v-if-->"`)
+    expect(beforeMountSpy).toHaveBeenCalledTimes(0)
+    expect(beforeUnmountSpy).toHaveBeenCalledTimes(0)
+
+    show.value = true
+    await nextTick()
+    expect(inner(root)).toMatchInlineSnapshot(
+      `"<section><div>foochild</div></section>"`,
+    )
+    expect(beforeMountSpy).toHaveBeenCalledTimes(1)
+
+    show.value = false
+    await nextTick()
+    expect(inner(root)).toBe('<!--v-if-->')
+    expect(beforeUnmountSpy).toHaveBeenCalledTimes(1)
   })
 })
