@@ -84,7 +84,14 @@ export interface AriaAttributes {
    */
   'aria-controls'?: string | undefined
   /** Indicates the element that represents the current item within a container or set of related elements. */
-  'aria-current'?: Booleanish | 'page' | 'step' | 'location' | 'date' | 'time' | undefined
+  'aria-current'?:
+    | Booleanish
+    | 'page'
+    | 'step'
+    | 'location'
+    | 'date'
+    | 'time'
+    | undefined
   /**
    * Identifies the element (or elements) that describes the object.
    * @see aria-labelledby
@@ -104,7 +111,14 @@ export interface AriaAttributes {
    * Indicates what functions can be performed when a dragged object is released on the drop target.
    * @deprecated in ARIA 1.1
    */
-  'aria-dropeffect'?: 'none' | 'copy' | 'execute' | 'link' | 'move' | 'popup' | undefined
+  'aria-dropeffect'?:
+    | 'none'
+    | 'copy'
+    | 'execute'
+    | 'link'
+    | 'move'
+    | 'popup'
+    | undefined
   /**
    * Identifies the element that provides an error message for the object.
    * @see aria-invalid @see aria-describedby.
@@ -123,7 +137,14 @@ export interface AriaAttributes {
    */
   'aria-grabbed'?: Booleanish | undefined
   /** Indicates the availability and type of interactive popup element, such as menu or dialog, that can be triggered by an element. */
-  'aria-haspopup'?: Booleanish | 'menu' | 'listbox' | 'tree' | 'grid' | 'dialog' | undefined
+  'aria-haspopup'?:
+    | Booleanish
+    | 'menu'
+    | 'listbox'
+    | 'tree'
+    | 'grid'
+    | 'dialog'
+    | undefined
   /**
    * Indicates whether the element is exposed to an accessibility API.
    * @see aria-disabled.
@@ -188,7 +209,18 @@ export interface AriaAttributes {
    * Indicates what notifications the user agent will trigger when the accessibility tree within a live region is modified.
    * @see aria-atomic.
    */
-  'aria-relevant'?: 'additions' | 'additions removals' | 'additions text' | 'all' | 'removals' | 'removals additions' | 'removals text' | 'text' | 'text additions' | 'text removals' | undefined
+  'aria-relevant'?:
+    | 'additions'
+    | 'additions removals'
+    | 'additions text'
+    | 'all'
+    | 'removals'
+    | 'removals additions'
+    | 'removals text'
+    | 'text'
+    | 'text additions'
+    | 'text removals'
+    | undefined
   /** Indicates that user input is required on the element before a form may be submitted. */
   'aria-required'?: Booleanish | undefined
   /** Defines a human-readable, author-localized description for the role of an element. */
@@ -299,7 +331,16 @@ export interface HTMLAttributes extends AriaAttributes, EventHandlers<Events> {
    * Hints at the type of data that might be entered by the user while editing the element or its contents
    * @see https://html.spec.whatwg.org/multipage/interaction.html#input-modalities:-the-inputmode-attribute
    */
-  inputmode?: 'none' | 'text' | 'tel' | 'url' | 'email' | 'numeric' | 'decimal' | 'search' | undefined
+  inputmode?:
+    | 'none'
+    | 'text'
+    | 'tel'
+    | 'url'
+    | 'email'
+    | 'numeric'
+    | 'decimal'
+    | 'search'
+    | undefined
   /**
    * Specify that a standard HTML element should behave like a defined custom built-in element
    * @see https://html.spec.whatwg.org/multipage/custom-elements.html#attr-is
@@ -506,7 +547,15 @@ export interface InputHTMLAttributes extends HTMLAttributes {
   checked?: Booleanish | any[] | Set<any> | undefined // for IDE v-model multi-checkbox support
   crossorigin?: string | undefined
   disabled?: Booleanish | undefined
-  enterKeyHint?: 'enter' | 'done' | 'go' | 'next' | 'previous' | 'search' | 'send' | undefined
+  enterKeyHint?:
+    | 'enter'
+    | 'done'
+    | 'go'
+    | 'next'
+    | 'previous'
+    | 'search'
+    | 'send'
+    | undefined
   form?: string | undefined
   formaction?: string | undefined
   formenctype?: string | undefined
@@ -815,7 +864,21 @@ export interface SVGAttributes extends AriaAttributes, EventHandlers<Events> {
   'accent-height'?: Numberish | undefined
   accumulate?: 'none' | 'sum' | undefined
   additive?: 'replace' | 'sum' | undefined
-  'alignment-baseline'?: 'auto' | 'baseline' | 'before-edge' | 'text-before-edge' | 'middle' | 'central' | 'after-edge' | 'text-after-edge' | 'ideographic' | 'alphabetic' | 'hanging' | 'mathematical' | 'inherit' | undefined
+  'alignment-baseline'?:
+    | 'auto'
+    | 'baseline'
+    | 'before-edge'
+    | 'text-before-edge'
+    | 'middle'
+    | 'central'
+    | 'after-edge'
+    | 'text-after-edge'
+    | 'ideographic'
+    | 'alphabetic'
+    | 'hanging'
+    | 'mathematical'
+    | 'inherit'
+    | undefined
   allowReorder?: 'no' | 'yes' | undefined
   alphabetic?: Numberish | undefined
   amplitude?: Numberish | undefined
@@ -839,7 +902,12 @@ export interface SVGAttributes extends AriaAttributes, EventHandlers<Events> {
   clipPathUnits?: Numberish | undefined
   'clip-rule'?: Numberish | undefined
   'color-interpolation'?: Numberish | undefined
-  'color-interpolation-filters'?: 'auto' | 'sRGB' | 'linearRGB' | 'inherit' | undefined
+  'color-interpolation-filters'?:
+    | 'auto'
+    | 'sRGB'
+    | 'linearRGB'
+    | 'inherit'
+    | undefined
   'color-profile'?: Numberish | undefined
   'color-rendering'?: Numberish | undefined
   contentScriptType?: Numberish | undefined
