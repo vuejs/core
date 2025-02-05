@@ -1160,14 +1160,14 @@ function baseCreateRenderer(
 
     if ((n2.type as ConcreteComponent).__vapor) {
       if (n1 == null) {
-        getVaporInterface(parentComponent).mount(
+        getVaporInterface(parentComponent, n2).mount(
           n2,
           container,
           anchor,
           parentComponent,
         )
       } else {
-        getVaporInterface(parentComponent).update(
+        getVaporInterface(parentComponent, n2).update(
           n1,
           n2,
           shouldUpdateComponent(n1, n2, optimized),
@@ -2055,7 +2055,7 @@ function baseCreateRenderer(
     const { el, type, transition, children, shapeFlag } = vnode
     if (shapeFlag & ShapeFlags.COMPONENT) {
       if ((type as ConcreteComponent).__vapor) {
-        getVaporInterface(parentComponent).move(vnode, container, anchor)
+        getVaporInterface(parentComponent, vnode).move(vnode, container, anchor)
       } else {
         move(
           vnode.component!.subTree,
@@ -2185,7 +2185,7 @@ function baseCreateRenderer(
 
     if (shapeFlag & ShapeFlags.COMPONENT) {
       if ((type as ConcreteComponent).__vapor) {
-        getVaporInterface(parentComponent).unmount(vnode, doRemove)
+        getVaporInterface(parentComponent, vnode).unmount(vnode, doRemove)
       } else {
         unmountComponent(vnode.component!, parentSuspense, doRemove)
       }
@@ -2620,8 +2620,10 @@ export function invalidateMount(hooks: LifecycleHook | undefined): void {
 
 function getVaporInterface(
   instance: ComponentInternalInstance | null,
+  vnode: VNode,
 ): VaporInteropInterface {
-  const res = instance!.appContext.vapor
+  const ctx = instance ? instance.appContext : vnode.appContext
+  const res = ctx && ctx.vapor
   if (__DEV__ && !res) {
     warn(
       `Vapor component found in vdom tree but vapor-in-vdom interop was not installed. ` +
