@@ -137,7 +137,7 @@ const KeepAliveImpl: ComponentOptions = {
       optimized,
     ) => {
       const instance = vnode.component!
-      instance.isActivated = false
+      instance.isActivated = true
       move(vnode, container, anchor, MoveType.ENTER, parentSuspense)
       // in case props have changed
       patch(
@@ -152,9 +152,11 @@ const KeepAliveImpl: ComponentOptions = {
         optimized,
       )
 
-      const effects = instance.keepAliveEffect
-      queuePostFlushCb(effects)
-      instance.keepAliveEffect.length = 0
+      const effects = instance.activatedEffects
+      if (effects) {
+        queuePostFlushCb(effects)
+        instance.activatedEffects!.length = 0
+      }
 
       queuePostRenderEffect(() => {
         instance.isDeactivated = false
@@ -175,7 +177,7 @@ const KeepAliveImpl: ComponentOptions = {
 
     sharedContext.deactivate = (vnode: VNode) => {
       const instance = vnode.component!
-      instance.isActivated = true
+      instance.isActivated = false
       invalidateMount(instance.m)
       invalidateMount(instance.a)
 
