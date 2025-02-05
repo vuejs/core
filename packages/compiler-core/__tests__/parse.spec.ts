@@ -2254,6 +2254,9 @@ describe('compiler: parse', () => {
         exp: undefined,
         arg: undefined,
       })
+      expect(
+        `the directive shorthand '#' cannot be used without an argument`,
+      ).toHaveBeenWarned()
     })
 
     // edge case found in vue-macros where the input is TS or JSX
@@ -2550,7 +2553,8 @@ describe('compiler: parse', () => {
     const patterns: {
       [key: string]: Array<{
         code: string
-        errors: Array<{ type: ErrorCodes; loc: Position }>
+        errors?: Array<{ type: ErrorCodes; loc: Position }>
+        warnings?: Array<{ type: ErrorCodes; loc: Position }>
         options?: Partial<ParserOptions>
       }>
     } = {
@@ -3420,32 +3424,80 @@ describe('compiler: parse', () => {
           ],
         },
       ],
+      X_DIRECTIVE_SHORTHAND_NO_ARGUMENT: [
+        {
+          code: `<div :="obj" />`,
+          warnings: [
+            {
+              type: ErrorCodes.X_DIRECTIVE_SHORTHAND_NO_ARGUMENT,
+              loc: { offset: 5, line: 1, column: 6 },
+            },
+          ],
+        },
+        {
+          code: `<div .="obj" />`,
+          warnings: [
+            {
+              type: ErrorCodes.X_DIRECTIVE_SHORTHAND_NO_ARGUMENT,
+              loc: { offset: 5, line: 1, column: 6 },
+            },
+          ],
+        },
+        {
+          code: `<div @="obj" />`,
+          warnings: [
+            {
+              type: ErrorCodes.X_DIRECTIVE_SHORTHAND_NO_ARGUMENT,
+              loc: { offset: 5, line: 1, column: 6 },
+            },
+          ],
+        },
+        {
+          code: `<div #="obj" />`,
+          warnings: [
+            {
+              type: ErrorCodes.X_DIRECTIVE_SHORTHAND_NO_ARGUMENT,
+              loc: { offset: 5, line: 1, column: 6 },
+            },
+          ],
+        },
+      ],
     }
 
     for (const key of Object.keys(patterns)) {
       describe(key, () => {
-        for (const { code, errors, options } of patterns[key]) {
+        for (const { code, errors = [], warnings = [], options } of patterns[
+          key
+        ]) {
           test(
             code.replace(
               /[\r\n]/g,
               c => `\\x0${c.codePointAt(0)!.toString(16)};`,
             ),
             () => {
-              const spy = vi.fn()
+              const errorSpy = vi.fn()
+              const warnSpy = vi.fn()
               const ast = baseParse(code, {
                 parseMode: 'html',
                 getNamespace: tag =>
                   tag === 'svg' ? Namespaces.SVG : Namespaces.HTML,
                 ...options,
-                onError: spy,
+                onError: errorSpy,
+                onWarn: warnSpy,
               })
 
               expect(
-                spy.mock.calls.map(([err]) => ({
+                errorSpy.mock.calls.map(([err]) => ({
                   type: err.code,
                   loc: err.loc.start,
                 })),
               ).toMatchObject(errors)
+              expect(
+                warnSpy.mock.calls.map(([err]) => ({
+                  type: err.code,
+                  loc: err.loc.start,
+                })),
+              ).toMatchObject(warnings)
               expect(ast).toMatchSnapshot()
             },
           )
