@@ -188,17 +188,7 @@ export interface AriaAttributes {
    * Indicates what notifications the user agent will trigger when the accessibility tree within a live region is modified.
    * @see aria-atomic.
    */
-  'aria-relevant'?:
-    | 'additions'
-    | 'additions removals'
-    | 'additions text'
-    | 'all'
-    | 'removals'
-    | 'removals additions'
-    | 'removals text'
-    | 'text'
-    | 'text additions'
-    | 'text removals'
+  'aria-relevant'?: 'additions' | 'additions removals' | 'additions text' | 'all' | 'removals' | 'removals additions' | 'removals text' | 'text' | 'text additions' | 'text removals'
   /** Indicates that user input is required on the element before a form may be submitted. */
   'aria-required'?: Booleanish
   /** Defines a human-readable, author-localized description for the role of an element. */
@@ -309,15 +299,7 @@ export interface HTMLAttributes extends AriaAttributes, EventHandlers<Events> {
    * Hints at the type of data that might be entered by the user while editing the element or its contents
    * @see https://html.spec.whatwg.org/multipage/interaction.html#input-modalities:-the-inputmode-attribute
    */
-  inputmode?:
-    | 'none'
-    | 'text'
-    | 'tel'
-    | 'url'
-    | 'email'
-    | 'numeric'
-    | 'decimal'
-    | 'search'
+  inputmode?: 'none' | 'text' | 'tel' | 'url' | 'email' | 'numeric' | 'decimal' | 'search'
   /**
    * Specify that a standard HTML element should behave like a defined custom built-in element
    * @see https://html.spec.whatwg.org/multipage/custom-elements.html#attr-is
@@ -524,14 +506,7 @@ export interface InputHTMLAttributes extends HTMLAttributes {
   checked?: Booleanish | any[] | Set<any> // for IDE v-model multi-checkbox support
   crossorigin?: string
   disabled?: Booleanish
-  enterKeyHint?:
-    | 'enter'
-    | 'done'
-    | 'go'
-    | 'next'
-    | 'previous'
-    | 'search'
-    | 'send'
+  enterKeyHint?: 'enter' | 'done' | 'go' | 'next' | 'previous' | 'search' | 'send'
   form?: string
   formaction?: string
   formenctype?: string
@@ -840,20 +815,7 @@ export interface SVGAttributes extends AriaAttributes, EventHandlers<Events> {
   'accent-height'?: Numberish
   accumulate?: 'none' | 'sum'
   additive?: 'replace' | 'sum'
-  'alignment-baseline'?:
-    | 'auto'
-    | 'baseline'
-    | 'before-edge'
-    | 'text-before-edge'
-    | 'middle'
-    | 'central'
-    | 'after-edge'
-    | 'text-after-edge'
-    | 'ideographic'
-    | 'alphabetic'
-    | 'hanging'
-    | 'mathematical'
-    | 'inherit'
+  'alignment-baseline'?: 'auto' | 'baseline' | 'before-edge' | 'text-before-edge' | 'middle' | 'central' | 'after-edge' | 'text-after-edge' | 'ideographic' | 'alphabetic' | 'hanging' | 'mathematical' | 'inherit'
   allowReorder?: 'no' | 'yes'
   alphabetic?: Numberish
   amplitude?: Numberish
