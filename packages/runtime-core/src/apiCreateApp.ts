@@ -1,5 +1,6 @@
 import {
   type Component,
+  type ComponentInternalInstance,
   type ConcreteComponent,
   type Data,
   type GenericComponent,
@@ -32,7 +33,6 @@ import type { NormalizedPropsOptions } from './componentProps'
 import type { ObjectEmitsOptions } from './componentEmits'
 import { ErrorCodes, callWithAsyncErrorHandling } from './errorHandling'
 import type { DefineComponent } from './apiDefineComponent'
-import type { VaporInteropInterface } from './vaporInterop'
 
 export interface App<HostElement = any> {
   version: string
@@ -179,6 +179,24 @@ export interface AppConfig extends GenericAppConfig {
 }
 
 /**
+ * The vapor in vdom implementation is in runtime-vapor/src/vdomInterop.ts
+ * @internal
+ */
+export interface VaporInteropInterface {
+  mount(
+    vnode: VNode,
+    container: any,
+    anchor: any,
+    parentComponent: ComponentInternalInstance | null,
+  ): GenericComponentInstance // VaporComponentInstance
+  update(n1: VNode, n2: VNode, shouldUpdate: boolean): void
+  unmount(vnode: VNode, doRemove?: boolean): void
+  move(vnode: VNode, container: any, anchor: any): void
+  vdomMount: (component: ConcreteComponent, props?: any, slots?: any) => any
+  vdomUnmount: UnmountComponentFn
+}
+
+/**
  * Minimal app context shared between vdom and vapor
  */
 export interface GenericAppContext {
@@ -194,17 +212,9 @@ export interface GenericAppContext {
   reload?: () => void
 
   /**
-   * @internal vapor interop only, for creating vapor components in vdom
+   * @internal vapor interop only
    */
   vapor?: VaporInteropInterface
-  /**
-   * @internal vapor interop only, for creating vdom components in vapor
-   */
-  vdomMount?: (component: ConcreteComponent, props?: any, slots?: any) => any
-  /**
-   * @internal
-   */
-  vdomUnmount?: UnmountComponentFn
 }
 
 export interface AppContext extends GenericAppContext {

@@ -96,7 +96,7 @@ import { isAsyncWrapper } from './apiAsyncComponent'
 import { isCompatEnabled } from './compat/compatConfig'
 import { DeprecationTypes } from './compat/compatConfig'
 import type { TransitionHooks } from './components/BaseTransition'
-import type { VaporInteropInterface } from './vaporInterop'
+import type { VaporInteropInterface } from './apiCreateApp'
 
 export interface Renderer<HostElement = RendererElement> {
   render: RootRenderFunction<HostElement>

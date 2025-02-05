@@ -23,7 +23,10 @@ import { extend, remove } from '@vue/shared'
 import { type RawProps, rawPropsProxyHandlers } from './componentProps'
 import type { RawSlots } from './componentSlots'
 
-const vaporInteropImpl: VaporInteropInterface = {
+const vaporInteropImpl: Omit<
+  VaporInteropInterface,
+  'vdomMount' | 'vdomUnmount'
+> = {
   mount(vnode, container, anchor, parentComponent) {
     const selfAnchor = (vnode.anchor = document.createComment('vapor'))
     container.insertBefore(selfAnchor, anchor)
@@ -114,8 +117,9 @@ function createVDOMComponent(
 }
 
 export const vaporInteropPlugin: Plugin = app => {
-  app._context.vapor = extend(vaporInteropImpl)
   const internals = ensureRenderer().internals
-  app._context.vdomMount = createVDOMComponent.bind(null, internals)
-  app._context.vdomUnmount = internals.umt
+  app._context.vapor = extend(vaporInteropImpl, {
+    vdomMount: createVDOMComponent.bind(null, internals),
+    vdomUnmount: internals.umt,
+  })
 }

@@ -150,8 +150,8 @@ export function createComponent(
     emptyContext,
 ): VaporComponentInstance {
   // vdom interop enabled and component is not an explicit vapor component
-  if (appContext.vdomMount && !component.__vapor) {
-    return appContext.vdomMount(component as any, rawProps, rawSlots)
+  if (appContext.vapor && !component.__vapor) {
+    return appContext.vapor.vdomMount(component as any, rawProps, rawSlots)
   }
 
   if (
@@ -526,7 +526,7 @@ export function unmountComponent(
     instance.children = EMPTY_ARR as any
 
     if (instance.vdomChildren) {
-      const unmount = instance.appContext.vdomUnmount!
+      const unmount = instance.appContext.vapor!.vdomUnmount
       for (const c of instance.vdomChildren) {
         unmount(c, null)
       }
