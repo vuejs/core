@@ -85,10 +85,6 @@ export function getSlot(
   }
 }
 
-// TODO how to handle empty slot return blocks?
-// e.g. a slot renders a v-if node that may toggle inside.
-// we may need special handling by passing the fallback into the slot
-// and make the v-if use it as fallback
 export function createSlot(
   name: string | (() => string),
   rawProps?: LooseRawProps | null,
@@ -96,12 +92,22 @@ export function createSlot(
 ): Block {
   const instance = currentInstance as VaporComponentInstance
   const rawSlots = instance.rawSlots
-  const isDynamicName = isFunction(name)
-  const fragment = __DEV__ ? new DynamicFragment('slot') : new DynamicFragment()
   const slotProps = rawProps
     ? new Proxy(rawProps, rawPropsProxyHandlers)
     : EMPTY_OBJ
 
+  if (rawSlots._) {
+    return instance.appContext.vapor!.vdomSlot(
+      rawSlots._,
+      name,
+      slotProps,
+      instance,
+      fallback,
+    )
+  }
+
+  const isDynamicName = isFunction(name)
+  const fragment = __DEV__ ? new DynamicFragment('slot') : new DynamicFragment()
   const renderSlot = () => {
     const slot = getSlot(rawSlots, isFunction(name) ? name() : name)
     if (slot) {

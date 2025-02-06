@@ -7,7 +7,7 @@ import {
   type GenericComponentInstance,
   isClassComponent,
 } from './component'
-import { queueJob, queuePostFlushCb } from './scheduler'
+import { nextTick, queueJob, queuePostFlushCb } from './scheduler'
 import { extend, getGlobalThis } from '@vue/shared'
 
 type HMRComponent = ComponentOptions | ClassComponent
@@ -102,7 +102,9 @@ function rerender(id: string, newRender?: Function): void {
       i.renderCache = []
       i.update()
     }
-    isHmrUpdating = false
+    nextTick(() => {
+      isHmrUpdating = false
+    })
   })
 }
 
@@ -160,7 +162,9 @@ function reload(id: string, newComp: HMRComponent): void {
           } else {
             ;(parent as ComponentInternalInstance).update()
           }
-          isHmrUpdating = false
+          nextTick(() => {
+            isHmrUpdating = false
+          })
           // #6930, #11248 avoid infinite recursion
           dirtyInstances.delete(instance)
         })

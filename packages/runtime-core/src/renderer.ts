@@ -2530,15 +2530,17 @@ function resolveChildrenNamespace(
 }
 
 function toggleRecurse(
-  { effect, job }: ComponentInternalInstance,
+  { effect, job, vapor }: ComponentInternalInstance,
   allowed: boolean,
 ) {
-  if (allowed) {
-    effect.flags |= EffectFlags.ALLOW_RECURSE
-    job.flags! |= SchedulerJobFlags.ALLOW_RECURSE
-  } else {
-    effect.flags &= ~EffectFlags.ALLOW_RECURSE
-    job.flags! &= ~SchedulerJobFlags.ALLOW_RECURSE
+  if (!vapor) {
+    if (allowed) {
+      effect.flags |= EffectFlags.ALLOW_RECURSE
+      job.flags! |= SchedulerJobFlags.ALLOW_RECURSE
+    } else {
+      effect.flags &= ~EffectFlags.ALLOW_RECURSE
+      job.flags! &= ~SchedulerJobFlags.ALLOW_RECURSE
+    }
   }
 }
 

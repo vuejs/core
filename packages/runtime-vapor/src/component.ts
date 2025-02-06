@@ -313,9 +313,12 @@ export class VaporComponentInstance implements GenericComponentInstance {
   props: Record<string, any>
   attrs: Record<string, any>
   propsDefaults: Record<string, any> | null
-  rawPropsRef?: ShallowRef<any> // to hold vnode props in vdom interop mode
 
   slots: StaticSlots
+
+  // to hold vnode props / slots in vdom interop mode
+  rawPropsRef?: ShallowRef<any>
+  rawSlotsRef?: ShallowRef<any>
 
   emit: EmitFn
   emitted: Record<string, boolean> | null

@@ -194,6 +194,13 @@ export interface VaporInteropInterface {
   move(vnode: VNode, container: any, anchor: any): void
   vdomMount: (component: ConcreteComponent, props?: any, slots?: any) => any
   vdomUnmount: UnmountComponentFn
+  vdomSlot: (
+    slots: any,
+    name: string | (() => string),
+    props: Record<string, any>,
+    parentComponent: any, // VaporComponentInstance
+    fallback?: any, // VaporSlot
+  ) => any
 }
 
 /**
