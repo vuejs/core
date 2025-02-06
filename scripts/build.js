@@ -5,14 +5,17 @@ Produces production builds and stitches together d.ts files.
 
 To specify the package to build, simply pass its name and the desired build
 formats to output (defaults to `buildOptions.formats` specified in that package,
-or "esm,cjs"):
+or ["esm-bundler", "cjs"]):
 
 ```
 # name supports fuzzy match. will build all packages with name containing "dom":
 nr build dom
 
 # specify the format to output
-nr build core --formats cjs
+nr build vue -f cjs
+
+# to specify multiple formats, separate with "+":
+nr build vue -f esm-bundler+esm-browser
 ```
 */
 

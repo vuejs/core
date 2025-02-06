@@ -18,6 +18,7 @@ import {
   type ComponentInternalInstance,
   type ConcreteComponent,
   type Data,
+  type GenericComponentInstance,
   isClassComponent,
 } from './component'
 import type { RawSlots } from './componentSlots'
@@ -253,6 +254,10 @@ export interface VNode<
    * @internal custom element interception hook
    */
   ce?: (instance: ComponentInternalInstance) => void
+  /**
+   * @internal VDOM in Vapor interop hook
+   */
+  vi?: (instance: ComponentInternalInstance) => void
 }
 
 // Since v-if and v-for are the two possible ways node structure can dynamically
@@ -899,7 +904,7 @@ export function mergeProps(...args: (Data & VNodeProps)[]): Data {
 
 export function invokeVNodeHook(
   hook: VNodeHook,
-  instance: ComponentInternalInstance | null,
+  instance: GenericComponentInstance | null,
   vnode: VNode,
   prevVNode: VNode | null = null,
 ): void {
