@@ -235,6 +235,38 @@ describe('Type safety for `WritableComputedRef` and `ComputedRef`', () => {
   expectType<ComputedRef<string>>(immutableComputed)
 })
 
+declare class Foo {
+  private _: unknown
+}
+
+describe('omit the initial value and specify a generic w/ `Ref` type', <T>() => {
+  const a = ref<{ foo: Ref<number> }>()
+  expectType<{ foo: number } | undefined>(a.value)
+  expectType<number>(a.value!.foo)
+  a.value = undefined
+  a.value = { foo: ref(1) }
+  a.value!.foo = 2
+  // @ts-expect-error
+  a.value.foo.value = 2
+
+  const b = ref<Ref<number>>()
+  expectType<Ref<number> | undefined>(b.value)
+  expectType<number>(b.value!.value)
+  b.value = undefined
+  b.value = ref(1)
+  b.value!.value = 1
+
+  const c = ref<T>()
+  c.value = undefined
+  c.value = {} as T
+
+  // case from vueuse
+  const d = ref<Foo>()
+  expectType<Ref<Foo | undefined>>(d)
+  d.value = new Foo()
+  expectType<Foo | undefined>(d.value)
+})
+
 // shallowRef
 type Status = 'initial' | 'ready' | 'invalidating'
 const shallowStatus = shallowRef<Status>('initial')
