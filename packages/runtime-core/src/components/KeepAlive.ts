@@ -385,7 +385,10 @@ function matches(pattern: MatchPattern, name: string): boolean {
   if (isArray(pattern)) {
     return pattern.some((p: string | RegExp) => matches(p, name))
   } else if (isString(pattern)) {
-    return pattern.split(',').includes(name)
+    return pattern
+      .trim()
+      .split(/\s*,\s*/)
+      .includes(name)
   } else if (isRegExp(pattern)) {
     pattern.lastIndex = 0
     return pattern.test(name)
