@@ -17,7 +17,7 @@ import {
   type SimpleExpressionNode,
 } from '../../src/ast'
 import { ErrorCodes } from '../../src/errors'
-import { type CompilerOptions, generate } from '../../src'
+import { BindingTypes, type CompilerOptions, generate } from '../../src'
 import { FRAGMENT, RENDER_LIST, RENDER_SLOT } from '../../src/runtimeHelpers'
 import { PatchFlags } from '@vue/shared'
 import { createObjectMatcher } from '../testUtils'
@@ -319,6 +319,51 @@ describe('compiler: v-for', () => {
         { onError },
       )
       expect(onError).toHaveBeenCalledTimes(1)
+    })
+
+    test('v-for + the parameter name is the same as the component name.', () => {
+      const onError1 = vi.fn()
+      parseWithForTransform('<Comp v-for="Comp of list" />', {
+        onError: onError1,
+        bindingMetadata: {
+          Comp: BindingTypes.SETUP_CONST,
+        },
+      })
+      expect(onError1).toHaveBeenCalledTimes(1)
+      expect(onError1).toHaveBeenCalledWith(
+        expect.objectContaining({
+          code: ErrorCodes.X_INVALID_PARAMETER_NAME,
+        }),
+      )
+
+      const onError2 = vi.fn()
+      parseWithForTransform('<Comp v-for="Comp of list" />', {
+        onError: onError2,
+      })
+      expect(onError2).toHaveBeenCalledTimes(1)
+      expect(onError2).toHaveBeenCalledWith(
+        expect.objectContaining({
+          code: ErrorCodes.X_INVALID_PARAMETER_NAME,
+        }),
+      )
+
+      const onError3 = vi.fn()
+      parseWithForTransform(
+        `<div v-for="Comp of list">
+    <div>
+      <Comp>{{ Comp }}</Comp>
+    </div>
+  </div>`,
+        {
+          onError: onError3,
+        },
+      )
+      expect(onError3).toHaveBeenCalledTimes(1)
+      expect(onError3).toHaveBeenCalledWith(
+        expect.objectContaining({
+          code: ErrorCodes.X_INVALID_PARAMETER_NAME,
+        }),
+      )
     })
   })
 
