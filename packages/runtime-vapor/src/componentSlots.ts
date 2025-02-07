@@ -1,7 +1,7 @@
 import { EMPTY_OBJ, NO, hasOwn, isArray, isFunction } from '@vue/shared'
 import { type Block, type BlockFn, DynamicFragment } from './block'
 import { rawPropsProxyHandlers } from './componentProps'
-import { currentInstance } from '@vue/runtime-core'
+import { currentInstance, isRef } from '@vue/runtime-dom'
 import type { LooseRawProps, VaporComponentInstance } from './component'
 import { renderEffect } from './renderEffect'
 
@@ -96,7 +96,7 @@ export function createSlot(
     ? new Proxy(rawProps, rawPropsProxyHandlers)
     : EMPTY_OBJ
 
-  if (rawSlots._) {
+  if (isRef(rawSlots._)) {
     return instance.appContext.vapor!.vdomSlot(
       rawSlots._,
       name,

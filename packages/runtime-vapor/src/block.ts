@@ -5,7 +5,7 @@ import {
   mountComponent,
   unmountComponent,
 } from './component'
-import { createComment } from './dom/node'
+import { createComment, createTextNode } from './dom/node'
 import { EffectScope, pauseTracking, resetTracking } from '@vue/reactivity'
 
 export type Block =
@@ -37,9 +37,7 @@ export class DynamicFragment extends VaporFragment {
   constructor(anchorLabel?: string) {
     super([])
     this.anchor =
-      __DEV__ && anchorLabel
-        ? createComment(anchorLabel)
-        : document.createTextNode('')
+      __DEV__ && anchorLabel ? createComment(anchorLabel) : createTextNode()
   }
 
   update(render?: BlockFn, key: any = render): void {

@@ -25,6 +25,7 @@ import type { RawSlots } from './componentSlots'
 import {
   type ReactiveFlags,
   type Ref,
+  type ShallowRef,
   isProxy,
   isRef,
   toRaw,
@@ -70,6 +71,7 @@ export const Fragment = Symbol.for('v-fgt') as any as {
 export const Text: unique symbol = Symbol.for('v-txt')
 export const Comment: unique symbol = Symbol.for('v-cmt')
 export const Static: unique symbol = Symbol.for('v-stc')
+export const VaporSlot: unique symbol = Symbol.for('v-vps')
 
 export type VNodeTypes =
   | string
@@ -83,6 +85,7 @@ export type VNodeTypes =
   | typeof TeleportImpl
   | typeof Suspense
   | typeof SuspenseImpl
+  | typeof VaporSlot
 
 export type VNodeRef =
   | string
@@ -258,6 +261,18 @@ export interface VNode<
    * @internal VDOM in Vapor interop hook
    */
   vi?: (instance: ComponentInternalInstance) => void
+  /**
+   * @internal Vapor slot in VDOM metadata
+   */
+  vs?: {
+    slot: (props: any) => any
+    fallback: (() => VNodeArrayChildren) | undefined
+    ref?: ShallowRef<any>
+  }
+  /**
+   * @internal Vapor slot Block
+   */
+  vb?: any
 }
 
 // Since v-if and v-for are the two possible ways node structure can dynamically

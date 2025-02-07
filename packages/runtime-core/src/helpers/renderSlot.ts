@@ -8,6 +8,7 @@ import {
   Fragment,
   type VNode,
   type VNodeArrayChildren,
+  VaporSlot,
   createBlock,
   createVNode,
   isVNode,
@@ -31,6 +32,15 @@ export function renderSlot(
   fallback?: () => VNodeArrayChildren,
   noSlotted?: boolean,
 ): VNode {
+  let slot = slots[name]
+
+  // vapor slots rendered in vdom
+  if (slot && slots._vapor) {
+    const ret = (openBlock(), createBlock(VaporSlot, props))
+    ret.vs = { slot, fallback }
+    return ret
+  }
+
   if (
     currentRenderingInstance &&
     (currentRenderingInstance.ce ||
@@ -52,8 +62,6 @@ export function renderSlot(
       )
     )
   }
-
-  let slot = slots[name]
 
   if (__DEV__ && slot && slot.length > 1) {
     warn(

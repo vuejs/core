@@ -837,8 +837,8 @@ export function setupComponent(
     vi(instance)
   } else {
     initProps(instance, props, isStateful, isSSR)
+    initSlots(instance, children, optimized)
   }
-  initSlots(instance, children, optimized)
 
   const setupResult = isStateful
     ? setupStatefulComponent(instance, isSSR)
