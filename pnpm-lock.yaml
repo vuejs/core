@@ -506,8 +506,8 @@ importers:
         version: link:../packages/vue
     devDependencies:
       '@vitejs/plugin-vue':
-        specifier: https://pkg.pr.new/@vitejs/plugin-vue@481bcd4
-        version: https://pkg.pr.new/@vitejs/plugin-vue@481bcd4(vite@5.4.8(@types/node@22.10.7)(sass@1.83.4)(terser@5.33.0))(vue@packages+vue)
+        specifier: https://pkg.pr.new/@vitejs/plugin-vue@c156992
+        version: https://pkg.pr.new/@vitejs/plugin-vue@c156992(vite@5.4.8(@types/node@22.10.7)(sass@1.83.4)(terser@5.33.0))(vue@packages+vue)
       '@vue/compiler-sfc':
         specifier: workspace:*
         version: link:../packages/compiler-sfc
@@ -1434,12 +1434,12 @@ packages:
       vite: ^5.0.0
       vue: ^3.2.25
 
-  '@vitejs/plugin-vue@https://pkg.pr.new/@vitejs/plugin-vue@481bcd4':
-    resolution: {tarball: https://pkg.pr.new/@vitejs/plugin-vue@481bcd4}
-    version: 5.1.5
+  '@vitejs/plugin-vue@https://pkg.pr.new/@vitejs/plugin-vue@c156992':
+    resolution: {tarball: https://pkg.pr.new/@vitejs/plugin-vue@c156992}
+    version: 5.2.1
     engines: {node: ^18.0.0 || >=20.0.0}
     peerDependencies:
-      vite: ^5.0.0
+      vite: ^5.0.0 || ^6.0.0
       vue: ^3.2.25
 
   '@vitejs/plugin-vue@https://pkg.pr.new/@vitejs/plugin-vue@e3c5ce5':
@@ -4593,7 +4593,7 @@ snapshots:
       vite: 5.4.8(@types/node@22.10.7)(sass@1.83.4)(terser@5.33.0)
       vue: link:packages/vue
 
-  '@vitejs/plugin-vue@https://pkg.pr.new/@vitejs/plugin-vue@481bcd4(vite@5.4.8(@types/node@22.10.7)(sass@1.83.4)(terser@5.33.0))(vue@packages+vue)':
+  '@vitejs/plugin-vue@https://pkg.pr.new/@vitejs/plugin-vue@c156992(vite@5.4.8(@types/node@22.10.7)(sass@1.83.4)(terser@5.33.0))(vue@packages+vue)':
     dependencies:
       vite: 5.4.8(@types/node@22.10.7)(sass@1.83.4)(terser@5.33.0)
       vue: link:packages/vue
