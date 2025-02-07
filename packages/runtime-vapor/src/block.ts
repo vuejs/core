@@ -21,7 +21,7 @@ export class VaporFragment {
   nodes: Block
   anchor?: Node
   insert?: (parent: ParentNode, anchor: Node | null) => void
-  remove?: () => void
+  remove?: (parent?: ParentNode) => void
 
   constructor(nodes: Block) {
     this.nodes = nodes
@@ -139,16 +139,12 @@ export function prepend(parent: ParentNode, ...blocks: Block[]): void {
  * during each root remove call, and update their children list by filtering
  * unmounted children
  */
-export let parentsWithUnmountedChildren: Set<VaporComponentInstance> | null =
-  null
+// export let parentsWithUnmountedChildren: Set<VaporComponentInstance> | null =
+//   null
 
-export function remove(block: Block, parent: ParentNode): void {
-  const isRoot = !parentsWithUnmountedChildren
-  if (isRoot) {
-    parentsWithUnmountedChildren = new Set()
-  }
+export function remove(block: Block, parent?: ParentNode): void {
   if (block instanceof Node) {
-    parent.removeChild(block)
+    parent && parent.removeChild(block)
   } else if (isVaporComponent(block)) {
     unmountComponent(block, parent)
   } else if (isArray(block)) {
@@ -158,7 +154,7 @@ export function remove(block: Block, parent: ParentNode): void {
   } else {
     // fragment
     if (block.remove) {
-      block.remove()
+      block.remove(parent)
     } else {
       remove(block.nodes, parent)
     }
@@ -166,12 +162,6 @@ export function remove(block: Block, parent: ParentNode): void {
     if ((block as DynamicFragment).scope) {
       ;(block as DynamicFragment).scope!.stop()
     }
-  }
-  if (isRoot) {
-    for (const i of parentsWithUnmountedChildren!) {
-      i.children = i.children.filter(n => !n.isUnmounted)
-    }
-    parentsWithUnmountedChildren = null
   }
 }
 

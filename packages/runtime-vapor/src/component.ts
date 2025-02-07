@@ -1,5 +1,4 @@
 import {
-  type ComponentInternalInstance,
   type ComponentInternalOptions,
   type ComponentPropsOptions,
   EffectScope,
@@ -26,29 +25,17 @@ import {
   unregisterHMR,
   warn,
 } from '@vue/runtime-dom'
-import {
-  type Block,
-  insert,
-  isBlock,
-  parentsWithUnmountedChildren,
-  remove,
-} from './block'
+import { type Block, insert, isBlock, remove } from './block'
 import {
   type ShallowRef,
   markRaw,
+  onScopeDispose,
   pauseTracking,
   proxyRefs,
   resetTracking,
   unref,
 } from '@vue/reactivity'
-import {
-  EMPTY_ARR,
-  EMPTY_OBJ,
-  invokeArrayFns,
-  isFunction,
-  isString,
-  remove as removeItem,
-} from '@vue/shared'
+import { EMPTY_OBJ, invokeArrayFns, isFunction, isString } from '@vue/shared'
 import {
   type DynamicPropsSource,
   type RawProps,
@@ -264,6 +251,8 @@ export function createComponent(
     endMeasure(instance, 'init')
   }
 
+  onScopeDispose(() => unmountComponent(instance), true)
+
   return instance
 }
 
@@ -300,8 +289,6 @@ export class VaporComponentInstance implements GenericComponentInstance {
   type: VaporComponent
   root: GenericComponentInstance | null
   parent: GenericComponentInstance | null
-  children: VaporComponentInstance[]
-  vdomChildren?: ComponentInternalInstance[]
   appContext: GenericAppContext
 
   block: Block
@@ -379,12 +366,8 @@ export class VaporComponentInstance implements GenericComponentInstance {
     this.type = comp
     this.parent = currentInstance
     this.root = currentInstance ? currentInstance.root : this
-    this.children = []
 
     if (currentInstance) {
-      if (isVaporComponent(currentInstance)) {
-        currentInstance.children.push(this)
-      }
       this.appContext = currentInstance.appContext
       this.provides = currentInstance.provides
       this.ids = currentInstance.ids
@@ -523,40 +506,13 @@ export function unmountComponent(
 
     instance.scope.stop()
 
-    for (const c of instance.children) {
-      unmountComponent(c)
-    }
-    instance.children = EMPTY_ARR as any
-
-    if (instance.vdomChildren) {
-      const unmount = instance.appContext.vapor!.vdomUnmount
-      for (const c of instance.vdomChildren) {
-        unmount(c, null)
-      }
-      instance.vdomChildren = EMPTY_ARR as any
-    }
-
-    if (parentNode) {
-      // root remove: need to both remove this instance's DOM nodes
-      // and also remove it from the parent's children list.
-      remove(instance.block, parentNode)
-      const parentInstance = instance.parent
-      instance.parent = null
-      if (isVaporComponent(parentInstance)) {
-        if (parentsWithUnmountedChildren) {
-          // for optimize children removal
-          parentsWithUnmountedChildren.add(parentInstance)
-        } else {
-          removeItem(parentInstance.children, instance)
-        }
-      }
-    }
-
     if (instance.um) {
       queuePostFlushCb(() => invokeArrayFns(instance.um!))
     }
     instance.isUnmounted = true
-  } else if (parentNode) {
+  }
+
+  if (parentNode) {
     remove(instance.block, parentNode)
   }
 }

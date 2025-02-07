@@ -75,7 +75,7 @@ export const createFor = (
   let newBlocks: ForBlock[]
   let parent: ParentNode | undefined | null
   const parentAnchor = __DEV__ ? createComment('for') : createTextNode()
-  const ref = new VaporFragment(oldBlocks)
+  const frag = new VaporFragment(oldBlocks)
   const instance = currentInstance!
 
   if (__DEV__ && !instance) {
@@ -265,9 +265,9 @@ export const createFor = (
       }
     }
 
-    ref.nodes = [(oldBlocks = newBlocks)]
+    frag.nodes = [(oldBlocks = newBlocks)]
     if (parentAnchor) {
-      ref.nodes.push(parentAnchor)
+      frag.nodes.push(parentAnchor)
     }
   }
 
@@ -338,12 +338,12 @@ export const createFor = (
   }
 
   const unmount = ({ nodes, scope }: ForBlock) => {
-    removeBlock(nodes, parent!)
     scope && scope.stop()
+    removeBlock(nodes, parent!)
   }
 
   once ? renderList() : renderEffect(renderList)
-  return ref
+  return frag
 }
 
 export function createForSlots(

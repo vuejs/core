@@ -24,7 +24,7 @@ import {
   unmountComponent,
 } from './component'
 import { type Block, VaporFragment, insert, remove } from './block'
-import { extend, isFunction, remove as removeItem } from '@vue/shared'
+import { extend, isFunction } from '@vue/shared'
 import { type RawProps, rawPropsProxyHandlers } from './componentProps'
 import type { RawSlots, VaporSlot } from './componentSlots'
 import { renderEffect } from './renderEffect'
@@ -116,17 +116,14 @@ function createVDOMComponent(
         undefined,
         false,
       )
-      ;(parentInstance.vdomChildren || (parentInstance.vdomChildren = [])).push(
-        vnode.component!,
-      )
+      // TODO register unmount with onScopeDispose
       isMounted = true
     } else {
       // TODO move
     }
   }
-  frag.remove = () => {
-    internals.umt(vnode.component!, null, true)
-    removeItem(parentInstance.vdomChildren!, vnode.component)
+  frag.remove = parentNode => {
+    internals.umt(vnode.component!, null, !!parentNode)
   }
 
   return frag
@@ -144,11 +141,9 @@ function renderVDOMSlot(
 
   let isMounted = false
   let fallbackNodes: Block | undefined
-  let parentNode: ParentNode
   let oldVNode: VNode | null = null
 
-  frag.insert = (parent, anchor) => {
-    parentNode = parent
+  frag.insert = (parentNode, anchor) => {
     if (!isMounted) {
       renderEffect(() => {
         const vnode = renderSlot(
@@ -169,7 +164,7 @@ function renderVDOMSlot(
             if (oldVNode) {
               internals.um(oldVNode, parentComponent as any, null, true)
             }
-            insert((fallbackNodes = fallback(props)), parent, anchor)
+            insert((fallbackNodes = fallback(props)), parentNode, anchor)
           }
           oldVNode = null
         }
@@ -179,7 +174,7 @@ function renderVDOMSlot(
       // TODO move
     }
 
-    frag.remove = () => {
+    frag.remove = parentNode => {
       if (fallbackNodes) {
         remove(fallbackNodes, parentNode)
       } else if (oldVNode) {

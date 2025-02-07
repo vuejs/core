@@ -21,8 +21,10 @@ import {
 } from '@vue/runtime-dom'
 import {
   createComponent,
+  createFor,
   createIf,
   createTextNode,
+  insert,
   renderEffect,
   setText,
   template,
@@ -525,5 +527,91 @@ describe('api: lifecycle hooks', () => {
     expect(host.innerHTML).toBe('11')
     expect(handleUpdated).toHaveBeenCalledTimes(1)
     expect(handleUpdatedChild).toHaveBeenCalledTimes(1)
+  })
+
+  test('unmount hooks when nested in if block', async () => {
+    const toggle = ref(true)
+    const fn = vi.fn(() => {
+      expect(host.innerHTML).toBe('<div><span></span></div><!--if-->')
+    })
+    const fn2 = vi.fn(() => {
+      expect(host.innerHTML).toBe('<!--if-->')
+    })
+    const { render, host } = define({
+      setup() {
+        const n0 = createIf(
+          () => toggle.value,
+          () => {
+            const n1 = document.createElement('div')
+            const n2 = createComponent(Child)
+            insert(n2, n1)
+            return n1
+          },
+        )
+        return n0
+      },
+    })
+
+    const Child = {
+      setup() {
+        onBeforeUnmount(fn)
+        onUnmounted(fn2)
+
+        const t0 = template('<span></span>')
+        const n0 = t0()
+        return n0
+      },
+    }
+
+    render()
+
+    toggle.value = false
+    await nextTick()
+    expect(fn).toHaveBeenCalledTimes(1)
+    expect(fn2).toHaveBeenCalledTimes(1)
+    expect(host.innerHTML).toBe('<!--if-->')
+  })
+
+  test('unmount hooks when nested in for blocks', async () => {
+    const list = ref([1])
+    const fn = vi.fn(() => {
+      expect(host.innerHTML).toBe('<div><span></span></div><!--for-->')
+    })
+    const fn2 = vi.fn(() => {
+      expect(host.innerHTML).toBe('<!--for-->')
+    })
+    const { render, host } = define({
+      setup() {
+        const n0 = createFor(
+          () => list.value,
+          () => {
+            const n1 = document.createElement('div')
+            const n2 = createComponent(Child)
+            insert(n2, n1)
+            return n1
+          },
+        )
+        return n0
+      },
+    })
+
+    const Child = {
+      setup() {
+        onBeforeUnmount(fn)
+        onUnmounted(fn2)
+
+        const t0 = template('<span></span>')
+        const n0 = t0()
+        return n0
+      },
+    }
+
+    render()
+
+    list.value.pop()
+    await nextTick()
+    expect(fn).toHaveBeenCalledTimes(1)
+    expect(fn2).toHaveBeenCalledTimes(1)
+    expect(host.innerHTML).toBe('<!--for-->')
   })
 })
