@@ -131,7 +131,11 @@ function genIdentifier(
   if (idMap && idMap.length) {
     const replacement = idMap[0]
     if (isString(replacement)) {
-      return [[replacement, NewlineType.None, loc]]
+      if (parent && parent.type === 'ObjectProperty' && parent.shorthand) {
+        return [[`${name}: ${replacement}`, NewlineType.None, loc]]
+      } else {
+        return [[replacement, NewlineType.None, loc]]
+      }
     } else {
       // replacement is an expression - process it again
       return genExpression(replacement, context, assignment)
@@ -292,7 +296,7 @@ function analyzeExpressions(expressions: SimpleExpressionNode[]) {
     }
 
     walk(exp.ast, {
-      enter(currentNode: Node) {
+      enter(currentNode: Node, parent: Node | null) {
         if (currentNode.type === 'MemberExpression') {
           const memberExp = extractMemberExpression(
             currentNode,
@@ -301,6 +305,15 @@ function analyzeExpressions(expressions: SimpleExpressionNode[]) {
             },
           )
           registerVariable(memberExp, exp, false)
+          return this.skip()
+        }
+
+        if (
+          parent &&
+          parent.type === 'ObjectProperty' &&
+          parent.shorthand &&
+          parent.key === currentNode
+        ) {
           return this.skip()
         }
 
