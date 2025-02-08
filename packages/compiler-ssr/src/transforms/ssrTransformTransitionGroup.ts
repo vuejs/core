@@ -127,7 +127,7 @@ export function ssrProcessTransitionGroup(
     if (hasFallthroughAttrs) {
       context.pushStatement(
         createIfStatement(
-          createSimpleExpression('_attrs.tag'),
+          createSimpleExpression('_attrs && _attrs.tag'),
           createBlockStatement([
             createSimpleExpression('_push(`<${_attrs.tag}>`)'),
           ]),
@@ -140,7 +140,7 @@ export function ssrProcessTransitionGroup(
     if (hasFallthroughAttrs) {
       context.pushStatement(
         createIfStatement(
-          createSimpleExpression('_attrs.tag'),
+          createSimpleExpression('_attrs && _attrs.tag'),
           createBlockStatement([
             createSimpleExpression('_push(`</${_attrs.tag}>`)'),
           ]),
