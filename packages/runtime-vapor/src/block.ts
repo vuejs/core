@@ -132,14 +132,6 @@ export function prepend(parent: ParentNode, ...blocks: Block[]): void {
   while (i--) insert(blocks[i], parent, 0)
 }
 
-/**
- * Optimized children removal: record all parents with unmounted children
- * during each root remove call, and update their children list by filtering
- * unmounted children
- */
-// export let parentsWithUnmountedChildren: Set<VaporComponentInstance> | null =
-//   null
-
 export function remove(block: Block, parent?: ParentNode): void {
   if (block instanceof Node) {
     parent && parent.removeChild(block)

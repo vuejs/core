@@ -1,10 +1,4 @@
-import {
-  getCurrentScope,
-  onEffectCleanup,
-  onScopeDispose,
-} from '@vue/reactivity'
-import { queuePostFlushCb } from '@vue/runtime-dom'
-import { remove } from '@vue/shared'
+import { onEffectCleanup } from '@vue/reactivity'
 
 export function addEventListener(
   el: Element,
@@ -22,26 +16,13 @@ export function on(
   handlerGetter: () => undefined | ((...args: any[]) => any),
   options: AddEventListenerOptions & { effect?: boolean } = {},
 ): void {
-  const handler: DelegatedHandler = eventHandler(handlerGetter)
-  let cleanupEvent: (() => void) | undefined
-  queuePostFlushCb(() => {
-    cleanupEvent = addEventListener(el, event, handler, options)
-  })
-
+  const handler = eventHandler(handlerGetter)
+  addEventListener(el, event, handler, options)
   if (options.effect) {
-    onEffectCleanup(cleanup)
-  } else if (getCurrentScope()) {
-    onScopeDispose(cleanup)
+    onEffectCleanup(() => {
+      el.removeEventListener(event, handler, options)
+    })
   }
-
-  function cleanup() {
-    cleanupEvent && cleanupEvent()
-  }
-}
-
-export type DelegatedHandler = {
-  (...args: any[]): any
-  delegate?: boolean
 }
 
 export function delegate(
@@ -49,20 +30,22 @@ export function delegate(
   event: string,
   handlerGetter: () => undefined | ((...args: any[]) => any),
 ): void {
-  const handler: DelegatedHandler = eventHandler(handlerGetter)
+  const key = `$evt${event}`
+  const handler = eventHandler(handlerGetter)
   handler.delegate = true
-
-  const cacheKey = `$evt${event}`
-  const handlers: DelegatedHandler[] = el[cacheKey] || (el[cacheKey] = [])
-  handlers.push(handler)
-  onScopeDispose(() => remove(handlers, handler))
+  ;(el[key] || (el[key] = [])).push(handler)
 }
 
-function eventHandler(getter: () => undefined | ((...args: any[]) => any)) {
-  return (...args: any[]) => {
-    let handler = getter()
-    if (!handler) return
+type DelegatedHandler = {
+  (...args: any[]): any
+  delegate?: boolean
+}
 
+function eventHandler(
+  getter: () => undefined | ((...args: any[]) => any),
+): DelegatedHandler {
+  return (...args: any[]) => {
+    const handler = getter()
     handler && handler(...args)
   }
 }
