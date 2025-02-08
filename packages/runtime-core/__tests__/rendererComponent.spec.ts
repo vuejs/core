@@ -476,7 +476,7 @@ describe('renderer: component', () => {
     ).toHaveBeenWarned()
   })
 
-  test('should not update child component without changes', async () => {
+  test('should not update child component if style is not changed', async () => {
     const text = ref(0)
     const spy = vi.fn()
 
