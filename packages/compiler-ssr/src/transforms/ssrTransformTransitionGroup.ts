@@ -115,7 +115,7 @@ export function ssrProcessTransitionGroup(
       context.pushStringPart(`</${tag.value!.content}>`)
     }
   } else {
-    // #12827 _attrs fallthrough may contain tag property
+    // _attrs may contain tag property
     const hasFallthroughAttrs = node.props.some(
       p =>
         p.type === NodeTypes.DIRECTIVE &&
@@ -126,7 +126,9 @@ export function ssrProcessTransitionGroup(
     )
     if (hasFallthroughAttrs) {
       context.pushStatement(
-        createSimpleExpression('const _tag = _attrs && _attrs.tag'),
+        createSimpleExpression(
+          `const _tag = (_attrs && typeof _attrs.tag === 'string') ? _attrs.tag : ''`,
+        ),
       )
       context.pushStatement(
         createIfStatement(
