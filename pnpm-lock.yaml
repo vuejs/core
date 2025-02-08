@@ -223,8 +223,6 @@ importers:
         specifier: workspace:*
         version: link:../../packages/vue
 
-  packages-private/e2e-utils: {}
-
   packages-private/local-playground:
     dependencies:
       '@vueuse/core':

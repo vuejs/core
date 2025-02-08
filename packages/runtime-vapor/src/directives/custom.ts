@@ -10,7 +10,7 @@ export type VaporDirective = (
   modifiers?: DirectiveModifiers,
 ) => (() => void) | void
 
-type DirectiveArguments = Array<
+type VaporDirectiveArguments = Array<
   | [VaporDirective | undefined]
   | [VaporDirective | undefined, () => any]
   | [VaporDirective | undefined, () => any, argument: string]
@@ -24,7 +24,7 @@ type DirectiveArguments = Array<
 
 export function withVaporDirectives(
   node: Element | VaporComponentInstance,
-  dirs: DirectiveArguments,
+  dirs: VaporDirectiveArguments,
 ): void {
   // TODO handle custom directive on component
   for (const [dir, value, argument, modifiers] of dirs) {

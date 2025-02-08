@@ -80,6 +80,7 @@ export default defineConfig({
         extends: true,
         test: {
           name: 'e2e',
+          environment: 'jsdom',
           poolOptions: {
             threads: {
               singleThread: !!process.env.CI,
