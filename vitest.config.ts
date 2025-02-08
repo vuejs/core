@@ -1,4 +1,4 @@
-import { defineConfig } from 'vitest/config'
+import { configDefaults, defineConfig } from 'vitest/config'
 import { entries } from './scripts/aliases.js'
 
 export default defineConfig({
@@ -31,9 +31,6 @@ export default defineConfig({
       },
     },
     setupFiles: 'scripts/setup-vitest.ts',
-    environmentMatchGlobs: [
-      ['packages/{vue,vue-compat,runtime-dom,runtime-vapor}/**', 'jsdom'],
-    ],
     sequence: {
       hooks: 'list',
     },
@@ -55,5 +52,54 @@ export default defineConfig({
         'packages/runtime-dom/src/components/Transition*',
       ],
     },
+    workspace: [
+      {
+        extends: true,
+        test: {
+          name: 'unit',
+          exclude: [
+            ...configDefaults.exclude,
+            '**/e2e/**',
+            '**/vapor-e2e-test/**',
+            'packages/{vue,vue-compat,runtime-dom,runtime-vapor}/**',
+          ],
+        },
+      },
+      {
+        extends: true,
+        test: {
+          name: 'unit-jsdom',
+          environment: 'jsdom',
+          include: [
+            'packages/{vue,vue-compat,runtime-dom,runtime-vapor}/**/*.spec.ts',
+          ],
+          exclude: [...configDefaults.exclude, '**/e2e/**'],
+        },
+      },
+      {
+        extends: true,
+        test: {
+          name: 'e2e',
+          poolOptions: {
+            threads: {
+              singleThread: !!process.env.CI,
+            },
+          },
+          include: ['packages/vue/__tests__/e2e/*.spec.ts'],
+        },
+      },
+      {
+        extends: true,
+        test: {
+          name: 'e2e-vapor',
+          poolOptions: {
+            threads: {
+              singleThread: !!process.env.CI,
+            },
+          },
+          include: ['packages-private/vapor-e2e-test/__tests__/*.spec.ts'],
+        },
+      },
+    ],
   },
 })

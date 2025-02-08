@@ -173,11 +173,17 @@ async function build(target) {
     return
   }
 
+  let resolvedFormats
   if (formats) {
-    let resolvedFormats = formats.split('+')
+    const isNegation = formats.startsWith('~')
+    resolvedFormats = (isNegation ? formats.slice(1) : formats).split('+')
     const pkgFormats = pkg.buildOptions?.formats
     if (pkgFormats) {
-      resolvedFormats = resolvedFormats.filter(f => pkgFormats.includes(f))
+      if (isNegation) {
+        resolvedFormats = pkgFormats.filter(f => !resolvedFormats.includes(f))
+      } else {
+        resolvedFormats = resolvedFormats.filter(f => pkgFormats.includes(f))
+      }
     }
     if (!resolvedFormats.length) {
       return
@@ -202,7 +208,7 @@ async function build(target) {
         `COMMIT:${commit}`,
         `NODE_ENV:${env}`,
         `TARGET:${target}`,
-        formats ? `FORMATS:${formats}` : ``,
+        resolvedFormats ? `FORMATS:${resolvedFormats.join('+')}` : ``,
         prodOnly ? `PROD_ONLY:true` : ``,
         sourceMap ? `SOURCE_MAP:true` : ``,
       ]
@@ -219,7 +225,10 @@ async function build(target) {
  * @returns {Promise<void>}
  */
 async function checkAllSizes(targets) {
-  if (devOnly || (formats && !formats.includes('global'))) {
+  if (
+    devOnly ||
+    (formats && (formats.startsWith('~') || !formats.includes('global')))
+  ) {
     return
   }
   console.log()

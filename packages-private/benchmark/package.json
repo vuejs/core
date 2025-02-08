@@ -5,7 +5,7 @@
   "license": "MIT",
   "type": "module",
   "scripts": {
-    "dev": "pnpm start --devBuild --noHeadless --skipBench --vdom",
+    "dev": "pnpm start --devBuild --skipBench --vdom",
     "start": "node index.js"
   },
   "dependencies": {
@@ -15,7 +15,6 @@
     "vite": "catalog:"
   },
   "devDependencies": {
-    "@types/connect": "^3.4.38",
-    "terser": "^5.33.0"
+    "@types/connect": "^3.4.38"
   }
 }

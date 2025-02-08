@@ -13,7 +13,7 @@
     "vue": "workspace:*"
   },
   "devDependencies": {
-    "@vitejs/plugin-vue": "https://pkg.pr.new/@vitejs/plugin-vue@c156992",
+    "@vitejs/plugin-vue": "catalog:",
     "@vue/compiler-sfc": "workspace:*",
     "vite": "catalog:",
     "vite-hyper-config": "^0.4.0",

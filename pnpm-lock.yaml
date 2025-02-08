@@ -13,7 +13,7 @@ catalogs:
       specifier: ^7.25.2
       version: 7.26.0
     '@vitejs/plugin-vue':
-      specifier: ^5.2.1
+      specifier: https://pkg.pr.new/@vitejs/plugin-vue@c156992
       version: 5.2.1
     estree-walker:
       specifier: ^2.0.2
@@ -201,9 +201,6 @@ importers:
       '@types/connect':
         specifier: ^3.4.38
         version: 3.4.38
-      terser:
-        specifier: ^5.33.0
-        version: 5.33.0
 
   packages-private/dts-built-test:
     dependencies:
@@ -226,6 +223,8 @@ importers:
         specifier: workspace:*
         version: link:../../packages/vue
 
+  packages-private/e2e-utils: {}
+
   packages-private/local-playground:
     dependencies:
       '@vueuse/core':
@@ -236,7 +235,7 @@ importers:
         version: link:../../packages/vue
     devDependencies:
       '@vitejs/plugin-vue':
-        specifier: https://pkg.pr.new/@vitejs/plugin-vue@c156992
+        specifier: 'catalog:'
         version: https://pkg.pr.new/@vitejs/plugin-vue@c156992(vite@6.1.0(@types/node@22.10.7)(sass@1.83.4)(terser@5.33.0)(yaml@2.6.1))(vue@packages+vue)
       '@vue/compiler-sfc':
         specifier: workspace:*
@@ -268,7 +267,7 @@ importers:
     devDependencies:
       '@vitejs/plugin-vue':
         specifier: 'catalog:'
-        version: 5.2.1(vite@6.1.0(@types/node@22.10.7)(sass@1.83.4)(terser@5.33.0)(yaml@2.6.1))(vue@packages+vue)
+        version: https://pkg.pr.new/@vitejs/plugin-vue@c156992(vite@6.1.0(@types/node@22.10.7)(sass@1.83.4)(terser@5.33.0)(yaml@2.6.1))(vue@packages+vue)
       vite:
         specifier: 'catalog:'
         version: 6.1.0(@types/node@22.10.7)(sass@1.83.4)(terser@5.33.0)(yaml@2.6.1)
@@ -285,11 +284,32 @@ importers:
         specifier: ^1.2.1
         version: 1.2.1
 
+  packages-private/vapor-e2e-test:
+    devDependencies:
+      '@types/connect':
+        specifier: ^3.4.38
+        version: 3.4.38
+      '@vitejs/plugin-vue':
+        specifier: 'catalog:'
+        version: https://pkg.pr.new/@vitejs/plugin-vue@c156992(vite@6.1.0(@types/node@22.10.7)(sass@1.83.4)(terser@5.33.0)(yaml@2.6.1))(vue@packages+vue)
+      connect:
+        specifier: ^3.7.0
+        version: 3.7.0
+      sirv:
+        specifier: ^2.0.4
+        version: 2.0.4
+      vite:
+        specifier: 'catalog:'
+        version: 6.1.0(@types/node@22.10.7)(sass@1.83.4)(terser@5.33.0)(yaml@2.6.1)
+      vue:
+        specifier: workspace:*
+        version: link:../../packages/vue
+
   packages-private/vite-debug:
     devDependencies:
       '@vitejs/plugin-vue':
         specifier: 'catalog:'
-        version: 5.2.1(vite@6.1.0(@types/node@22.10.7)(sass@1.83.4)(terser@5.33.0)(yaml@2.6.1))(vue@packages+vue)
+        version: https://pkg.pr.new/@vitejs/plugin-vue@c156992(vite@6.1.0(@types/node@22.10.7)(sass@1.83.4)(terser@5.33.0)(yaml@2.6.1))(vue@packages+vue)
       vite:
         specifier: 'catalog:'
         version: 6.1.0(@types/node@22.10.7)(sass@1.83.4)(terser@5.33.0)(yaml@2.6.1)
@@ -1426,13 +1446,6 @@ packages:
   '@typescript-eslint/visitor-keys@8.20.0':
     resolution: {integrity: sha512-v/BpkeeYAsPkKCkR8BDwcno0llhzWVqPOamQrAEMdpZav2Y9OVjd9dwJyBLJWwf335B5DmlifECIkZRJCaGaHA==}
     engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
-
-  '@vitejs/plugin-vue@5.2.1':
-    resolution: {integrity: sha512-cxh314tzaWwOLqVes2gnnCtvBDcM1UMdn+iFR+UjAn411dPT3tOmqrJjbMd7koZpMAmBM/GqeV4n9ge7JSiJJQ==}
-    engines: {node: ^18.0.0 || >=20.0.0}
-    peerDependencies:
-      vite: ^5.0.0 || ^6.0.0
-      vue: ^3.2.25
 
   '@vitejs/plugin-vue@https://pkg.pr.new/@vitejs/plugin-vue@c156992':
     resolution: {tarball: https://pkg.pr.new/@vitejs/plugin-vue@c156992}
@@ -4196,6 +4209,7 @@ snapshots:
     dependencies:
       '@jridgewell/gen-mapping': 0.3.5
       '@jridgewell/trace-mapping': 0.3.25
+    optional: true
 
   '@jridgewell/sourcemap-codec@1.5.0': {}
 
@@ -4608,11 +4622,6 @@ snapshots:
       '@typescript-eslint/types': 8.20.0
       eslint-visitor-keys: 4.2.0
 
-  '@vitejs/plugin-vue@5.2.1(vite@6.1.0(@types/node@22.10.7)(sass@1.83.4)(terser@5.33.0)(yaml@2.6.1))(vue@packages+vue)':
-    dependencies:
-      vite: 6.1.0(@types/node@22.10.7)(sass@1.83.4)(terser@5.33.0)(yaml@2.6.1)
-      vue: link:packages/vue
-
   '@vitejs/plugin-vue@https://pkg.pr.new/@vitejs/plugin-vue@c156992(vite@6.1.0(@types/node@22.10.7)(sass@1.83.4)(terser@5.33.0)(yaml@2.6.1))(vue@3.5.13(typescript@5.6.2))':
     dependencies:
       vite: 6.1.0(@types/node@22.10.7)(sass@1.83.4)(terser@5.33.0)(yaml@2.6.1)
@@ -4925,7 +4934,8 @@ snapshots:
 
   buffer-crc32@0.2.13: {}
 
-  buffer-from@1.1.2: {}
+  buffer-from@1.1.2:
+    optional: true
 
   buffer@5.7.1:
     dependencies:
@@ -5046,7 +5056,8 @@ snapshots:
 
   commander@12.1.0: {}
 
-  commander@2.20.3: {}
+  commander@2.20.3:
+    optional: true
 
   commondir@1.0.1: {}
 
@@ -6747,6 +6758,7 @@ snapshots:
     dependencies:
       buffer-from: 1.1.2
       source-map: 0.6.1
+    optional: true
 
   source-map@0.6.1: {}
 
@@ -6864,6 +6876,7 @@ snapshots:
       acorn: 8.14.0
       commander: 2.20.3
       source-map-support: 0.5.21
+    optional: true
 
   test-exclude@7.0.1:
     dependencies:

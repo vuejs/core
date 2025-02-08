@@ -22,7 +22,7 @@ import { trimVaporExportsPlugin } from './scripts/trim-vapor-exports.js'
  * @template {keyof T} K
  * @typedef { Omit<T, K> & Required<Pick<T, K>> } MarkRequired
  */
-/** @typedef {'cjs' | 'esm-bundler' | 'global' | 'global-runtime' | 'esm-browser' | 'esm-bundler-runtime' | 'esm-browser-runtime' | 'vapor'} PackageFormat */
+/** @typedef {'cjs' | 'esm-bundler' | 'global' | 'global-runtime' | 'esm-browser' | 'esm-bundler-runtime' | 'esm-browser-runtime' | 'esm-browser-vapor'} PackageFormat */
 /** @typedef {MarkRequired<import('rollup').OutputOptions, 'file' | 'format'>} OutputOptions */
 
 if (!process.env.TARGET) {
@@ -88,7 +88,7 @@ const outputConfigs = {
   },
   // The vapor format is a esm-browser + runtime only build that is meant for
   // the SFC playground only.
-  vapor: {
+  'esm-browser-vapor': {
     file: resolve(`dist/${name}.runtime-with-vapor.esm-browser.js`),
     format: 'es',
   },
@@ -114,7 +114,10 @@ if (process.env.NODE_ENV === 'production') {
     if (format === 'cjs') {
       packageConfigs.push(createProductionConfig(format))
     }
-    if (format === 'vapor' || /^(global|esm-browser)(-runtime)?/.test(format)) {
+    if (
+      format === 'esm-browser-vapor' ||
+      /^(global|esm-browser)(-runtime)?/.test(format)
+    ) {
       packageConfigs.push(createMinifiedConfig(format))
     }
   })
@@ -138,7 +141,7 @@ function createConfig(format, output, plugins = []) {
   const isProductionBuild =
     process.env.__DEV__ === 'false' || /\.prod\.js$/.test(output.file)
   const isBundlerESMBuild = /esm-bundler/.test(format)
-  const isBrowserESMBuild = /esm-browser/.test(format) || format === 'vapor'
+  const isBrowserESMBuild = /esm-browser/.test(format)
   const isServerRenderer = name === 'server-renderer'
   const isCJSBuild = format === 'cjs'
   const isGlobalBuild = /global/.test(format)
@@ -164,13 +167,16 @@ function createConfig(format, output, plugins = []) {
     output.name = packageOptions.name
   }
 
-  let entryFile =
-    pkg.name === 'vue' &&
-    (format === 'vapor' || format.startsWith('esm-bundler'))
-      ? 'runtime-with-vapor.ts'
-      : /\bruntime\b/.test(format)
-        ? `runtime.ts`
-        : `index.ts`
+  let entryFile = 'index.ts'
+  if (pkg.name === 'vue') {
+    if (format === 'esm-browser-vapor' || format === 'esm-bundler-runtime') {
+      entryFile = 'runtime-with-vapor.ts'
+    } else if (format === 'esm-bundler') {
+      entryFile = 'index-with-vapor.ts'
+    } else if (format.includes('runtime')) {
+      entryFile = 'runtime.ts'
+    }
+  }
 
   // the compat build needs both default AND named exports. This will cause
   // Rollup to complain for non-ESM targets, so we use separate entries for

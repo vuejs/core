@@ -154,6 +154,7 @@ export default tseslint.config(
       'packages/*/*.js',
       'packages/vue/*/*.js',
       'packages-private/benchmark/*',
+      'packages-private/e2e-utils/*',
     ],
     rules: {
       'no-restricted-globals': 'off',

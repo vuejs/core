@@ -121,7 +121,7 @@ async function buildLib() {
     ),
     exec(
       'pnpm',
-      `run --silent build vue ${buildOptions} vapor`.split(' '),
+      `run --silent build vue ${buildOptions} esm-browser-vapor`.split(' '),
       options,
     ),
   ])
@@ -146,9 +146,7 @@ async function buildApp(isVapor) {
 
   const runtimePath = path.resolve(
     import.meta.dirname,
-    (isVapor
-      ? '../../packages/vue/dist/vue.runtime-with-vapor.esm-browser'
-      : '../../packages/vue/dist/vue.runtime.esm-browser') + prodSuffix,
+    '../../packages/vue/dist/vue.runtime-with-vapor.esm-browser' + prodSuffix,
   )
 
   const mode = isVapor ? 'vapor' : 'vdom'
@@ -159,7 +157,7 @@ async function buildApp(isVapor) {
       'import.meta.env.IS_VAPOR': String(isVapor),
     },
     build: {
-      minify: !devBuild && 'terser',
+      minify: !devBuild,
       outDir: path.resolve('./client/dist', mode),
       rollupOptions: {
         onwarn(log, handler) {
