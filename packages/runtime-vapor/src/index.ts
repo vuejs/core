@@ -2,6 +2,7 @@
 export { createVaporApp } from './apiCreateApp'
 export { defineVaporComponent } from './apiDefineComponent'
 export { vaporInteropPlugin } from './vdomInterop'
+export type { VaporDirective } from './directives/custom'
 
 // compiler-use only
 export { insert, prepend, remove } from './block'
@@ -39,3 +40,4 @@ export {
   applySelectModel,
   applyDynamicModel,
 } from './directives/vModel'
+export { withVaporDirectives } from './directives/custom'
