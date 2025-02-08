@@ -173,6 +173,17 @@ async function build(target) {
     return
   }
 
+  if (formats) {
+    let resolvedFormats = formats.split('+')
+    const pkgFormats = pkg.buildOptions?.formats
+    if (pkgFormats) {
+      resolvedFormats = resolvedFormats.filter(f => pkgFormats.includes(f))
+    }
+    if (!resolvedFormats.length) {
+      return
+    }
+  }
+
   // if building a specific format, do not remove dist.
   if (!formats && existsSync(`${pkgDir}/dist`)) {
     fs.rmSync(`${pkgDir}/dist`, { recursive: true })
