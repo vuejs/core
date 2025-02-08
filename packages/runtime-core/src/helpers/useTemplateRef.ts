@@ -9,7 +9,7 @@ export type TemplateRef<T = unknown> = Readonly<ShallowRef<T | null>>
 
 export function useTemplateRef<T = unknown, Keys extends string = string>(
   key: Keys,
-): TemplateRef<T | null> {
+): TemplateRef<T> {
   const i = getCurrentInstance()
   const r = shallowRef(null)
   if (i) {

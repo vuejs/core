@@ -536,7 +536,7 @@ expectType<string>(toValue(unref2))
 
 // useTemplateRef
 const tRef = useTemplateRef('foo')
-expectType<TemplateRef<unknown>>(tRef)
+expectType<TemplateRef>(tRef)
 
 const tRef2 = useTemplateRef<HTMLElement>('bar')
-expectType<TemplateRef<HTMLElement | null>>(tRef2)
+expectType<TemplateRef<HTMLElement>>(tRef2)
