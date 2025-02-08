@@ -15,7 +15,13 @@ import {
   normalizeVNode,
 } from './vnode'
 import { ErrorCodes, handleError } from './errorHandling'
-import { PatchFlags, ShapeFlags, isModelListener, isOn } from '@vue/shared'
+import {
+  PatchFlags,
+  ShapeFlags,
+  isModelListener,
+  isOn,
+  looseEqual,
+} from '@vue/shared'
 import { warn } from './warning'
 import { isHmrUpdating } from './hmr'
 import type { NormalizedProps } from './componentProps'
@@ -399,7 +405,7 @@ export function shouldUpdateComponent(
       for (let i = 0; i < dynamicProps.length; i++) {
         const key = dynamicProps[i]
         if (
-          nextProps![key] !== prevProps![key] &&
+          !looseEqual(nextProps![key], prevProps![key]) &&
           !isEmitListener(emits, key)
         ) {
           return true
@@ -441,7 +447,7 @@ function hasPropsChanged(
   for (let i = 0; i < nextKeys.length; i++) {
     const key = nextKeys[i]
     if (
-      nextProps[key] !== prevProps[key] &&
+      !looseEqual(nextProps[key], prevProps[key]) &&
       !isEmitListener(emitsOptions, key)
     ) {
       return true
