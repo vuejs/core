@@ -7,6 +7,7 @@ import {
   type TransformContext,
   buildProps,
   createCallExpression,
+  createSimpleExpression,
   findProp,
 } from '@vue/compiler-dom'
 import { SSR_RENDER_ATTRS } from '../runtimeHelpers'
@@ -30,7 +31,7 @@ export function ssrTransformTransitionGroup(
   context: TransformContext,
 ) {
   return (): void => {
-    const tag = findProp(node, 'tag')
+    const tag = findProp(node, 'tag', false, true)
     if (tag) {
       const otherProps = node.props.filter(p => p !== tag)
       const { props, directives } = buildProps(
@@ -65,9 +66,10 @@ export function ssrProcessTransitionGroup(
   if (entry) {
     const { tag, propsExp, scopeId } = entry
     if (tag.type === NodeTypes.DIRECTIVE) {
+      const tagExp = tag.exp ?? createSimpleExpression(`_ctx.tag`)
       // dynamic :tag
       context.pushStringPart(`<`)
-      context.pushStringPart(tag.exp!)
+      context.pushStringPart(tagExp)
       if (propsExp) {
         context.pushStringPart(propsExp)
       }
@@ -96,7 +98,7 @@ export function ssrProcessTransitionGroup(
         true,
       )
       context.pushStringPart(`</`)
-      context.pushStringPart(tag.exp!)
+      context.pushStringPart(tagExp)
       context.pushStringPart(`>`)
     } else {
       // static tag
