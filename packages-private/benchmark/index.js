@@ -8,7 +8,7 @@ import connect from 'connect'
 import sirv from 'sirv'
 import { launch } from 'puppeteer'
 import colors from 'picocolors'
-import { exec, getSha } from '../scripts/utils.js'
+import { exec, getSha } from '../../scripts/utils.js'
 import process from 'node:process'
 import readline from 'node:readline'
 
@@ -99,37 +99,34 @@ async function buildLib() {
 
   /** @type {import('node:child_process').SpawnOptions} */
   const options = {
-    cwd: path.resolve(import.meta.dirname, '..'),
+    cwd: path.resolve(import.meta.dirname, '../..'),
     stdio: 'inherit',
     env: { ...process.env, BENCHMARK: 'true' },
   }
   const buildOptions = devBuild ? '-df' : '-pf'
-  const [{ ok }, { ok: ok2 }, { ok: ok3 }, { ok: ok4 }] = await Promise.all([
+  const [{ ok }, { ok: ok2 }, { ok: ok3 }] = await Promise.all([
     exec(
       'pnpm',
-      `run --silent build shared compiler-core compiler-dom compiler-vapor ${buildOptions} cjs`.split(
+      `run --silent build shared compiler-core compiler-dom ${buildOptions} cjs`.split(
         ' ',
       ),
       options,
     ),
     exec(
       'pnpm',
-      'run --silent build compiler-sfc compiler-ssr -f cjs'.split(' '),
+      'run --silent build compiler-sfc compiler-ssr compiler-vapor -f cjs'.split(
+        ' ',
+      ),
       options,
     ),
     exec(
       'pnpm',
-      `run --silent build vue-vapor ${buildOptions} esm-browser`.split(' '),
-      options,
-    ),
-    exec(
-      'pnpm',
-      `run --silent build vue ${buildOptions} esm-browser-runtime`.split(' '),
+      `run --silent build vue ${buildOptions} vapor`.split(' '),
       options,
     ),
   ])
 
-  if (!ok || !ok2 || !ok3 || !ok4) {
+  if (!ok || !ok2 || !ok3) {
     console.error('Failed to build')
     process.exit(1)
   }
@@ -143,21 +140,15 @@ async function buildApp(isVapor) {
 
   if (!devBuild) process.env.NODE_ENV = 'production'
   const CompilerSFC = await import(
-    '../packages/compiler-sfc/dist/compiler-sfc.cjs.js'
+    '../../packages/compiler-sfc/dist/compiler-sfc.cjs.js'
   )
   const prodSuffix = devBuild ? '.js' : '.prod.js'
 
-  /** @type {any} */
-  const TemplateCompiler = await import(
-    (isVapor
-      ? '../packages/compiler-vapor/dist/compiler-vapor.cjs'
-      : '../packages/compiler-dom/dist/compiler-dom.cjs') + prodSuffix
-  )
   const runtimePath = path.resolve(
     import.meta.dirname,
     (isVapor
-      ? '../packages/vue-vapor/dist/vue-vapor.esm-browser'
-      : '../packages/vue/dist/vue.runtime.esm-browser') + prodSuffix,
+      ? '../../packages/vue/dist/vue.runtime-with-vapor.esm-browser'
+      : '../../packages/vue/dist/vue.runtime.esm-browser') + prodSuffix,
   )
 
   const mode = isVapor ? 'vapor' : 'vdom'
@@ -179,7 +170,6 @@ async function buildApp(isVapor) {
     },
     resolve: {
       alias: {
-        'vue/vapor': runtimePath,
         vue: runtimePath,
       },
     },
@@ -187,7 +177,6 @@ async function buildApp(isVapor) {
     plugins: [
       Vue({
         compiler: CompilerSFC,
-        template: { compiler: TemplateCompiler },
       }),
     ],
   })

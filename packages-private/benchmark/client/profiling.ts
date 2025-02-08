@@ -2,13 +2,13 @@
 /* eslint-disable no-restricted-syntax */
 /* eslint-disable no-restricted-globals */
 
-import { nextTick } from 'vue/vapor'
+import { nextTick } from 'vue'
 
-declare namespace globalThis {
-  let doProfile: boolean
-  let reactivity: boolean
-  let recordTime: boolean
-  let times: Record<string, number[]>
+declare global {
+  var doProfile: boolean
+  var reactivity: boolean
+  var recordTime: boolean
+  var times: Record<string, number[]>
 }
 
 globalThis.recordTime = true

@@ -1,10 +1,10 @@
-<script setup lang="ts" vapor>
+<script setup vapor lang="ts">
 import {
   shallowRef,
   triggerRef,
   type ShallowRef,
-  createSelector,
-} from 'vue/vapor'
+  // createSelector,
+} from 'vue'
 import { buildData } from './data'
 import { defer, wrap } from './profiling'
 
@@ -77,7 +77,7 @@ async function bench() {
   }
 }
 
-const isSelected = createSelector(selected)
+// const isSelected = createSelector(selected)
 
 const globalThis = window
 </script>
@@ -122,7 +122,7 @@ const globalThis = window
       <tr
         v-for="row of rows"
         :key="row.id"
-        :class="{ danger: isSelected(row.id) }"
+        :class="{ danger: selected === row.id }"
       >
         <td>{{ row.id }}</td>
         <td>
