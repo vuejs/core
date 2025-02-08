@@ -11,11 +11,17 @@ describe('transition-group', () => {
       "const { ssrRenderList: _ssrRenderList } = require("vue/server-renderer")
 
       return function ssrRender(_ctx, _push, _parent, _attrs) {
+        if (_attrs.tag) {
+          _push(\`<\${_attrs.tag}>\`)
+        }
         _push(\`<!--[-->\`)
         _ssrRenderList(_ctx.list, (i) => {
           _push(\`<div></div>\`)
         })
         _push(\`<!--]-->\`)
+        if (_attrs.tag) {
+          _push(\`</\${_attrs.tag}>\`)
+        }
       }"
     `)
   })
@@ -114,6 +120,9 @@ describe('transition-group', () => {
       "const { ssrRenderList: _ssrRenderList } = require("vue/server-renderer")
 
       return function ssrRender(_ctx, _push, _parent, _attrs) {
+        if (_attrs.tag) {
+          _push(\`<\${_attrs.tag}>\`)
+        }
         _push(\`<!--[-->\`)
         _ssrRenderList(10, (i) => {
           _push(\`<div></div>\`)
@@ -125,6 +134,9 @@ describe('transition-group', () => {
           _push(\`<div>ok</div>\`)
         }
         _push(\`<!--]-->\`)
+        if (_attrs.tag) {
+          _push(\`</\${_attrs.tag}>\`)
+        }
       }"
     `)
   })
