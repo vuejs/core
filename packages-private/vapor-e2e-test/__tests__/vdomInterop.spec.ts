@@ -25,7 +25,7 @@ describe('vdom / vapor interop', () => {
   test(
     'should work',
     async () => {
-      const baseUrl = `http://localhost:${port}/interop`
+      const baseUrl = `http://localhost:${port}/interop/`
       await page().goto(baseUrl)
 
       expect(await text('.vapor > h2')).toContain('Vapor component in VDOM')
