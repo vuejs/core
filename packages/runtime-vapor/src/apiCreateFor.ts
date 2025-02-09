@@ -3,6 +3,8 @@ import {
   type ShallowRef,
   isReactive,
   isShallow,
+  pauseTracking,
+  resetTracking,
   shallowReadArray,
   shallowRef,
   toReactive,
@@ -87,6 +89,8 @@ export const createFor = (
     const newLength = source.values.length
     const oldLength = oldBlocks.length
     newBlocks = new Array(newLength)
+
+    pauseTracking()
 
     if (!isMounted) {
       isMounted = true
@@ -269,6 +273,8 @@ export const createFor = (
     if (parentAnchor) {
       frag.nodes.push(parentAnchor)
     }
+
+    resetTracking()
   }
 
   const needKey = renderItem.length > 1
@@ -326,7 +332,7 @@ export const createFor = (
     newKey?: any,
     newIndex?: any,
   ) => {
-    if (newIndex !== itemRef.value) {
+    if (newItem !== itemRef.value) {
       itemRef.value = newItem
     }
     if (keyRef && newKey !== undefined && newKey !== keyRef.value) {
