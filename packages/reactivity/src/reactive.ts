@@ -55,10 +55,28 @@ function targetTypeMap(rawType: string) {
   }
 }
 
+function isPlainObject(value: unknown): value is object {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    (Object.getPrototypeOf(value) === Object.prototype ||
+      Object.getPrototypeOf(value) === null)
+  )
+}
+
 function getTargetType(value: Target) {
-  return value[ReactiveFlags.SKIP] || !Object.isExtensible(value)
-    ? TargetType.INVALID
-    : targetTypeMap(toRawType(value))
+  if (value[ReactiveFlags.SKIP] || !Object.isExtensible(value)) {
+    return TargetType.INVALID
+  }
+  const rawType = toRawType(value)
+  let type = targetTypeMap(rawType)
+
+  // If we got INVALID but the value is actually a plain object (even if its raw type was changed
+  // by a custom Symbol.toStringTag), then force it to be reactive.
+  if (type === TargetType.INVALID && isPlainObject(value)) {
+    type = TargetType.COMMON
+  }
+  return type
 }
 
 // only unwrap nested ref

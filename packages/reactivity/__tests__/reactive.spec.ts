@@ -112,6 +112,24 @@ describe('reactivity/reactive', () => {
     expect(dummy).toBe(false)
   })
 
+  test('reactive object with custom Symbol.toStringTag triggers reactivity', () => {
+    const original = { [Symbol.toStringTag]: 'Goat', foo: 1 }
+    const observed = reactive(original)
+
+    expect(isReactive(observed)).toBe(true)
+    expect(isProxy(observed)).toBe(true)
+
+    let dummy: number | undefined
+    effect(() => {
+      dummy = observed.foo
+    })
+
+    expect(dummy).toBe(1)
+
+    observed.foo = 2
+    expect(dummy).toBe(2)
+  })
+
   test('observed value should proxy mutations to original (Object)', () => {
     const original: any = { foo: 1 }
     const observed = reactive(original)
