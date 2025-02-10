@@ -24,7 +24,8 @@ const {
     count: countStr,
     warmupCount: warmupCountStr,
     noHeadless,
-    devBuild,
+    noMinify,
+    reference,
   },
 } = parseArgs({
   allowNegative: true,
@@ -67,9 +68,12 @@ const {
     noHeadless: {
       type: 'boolean',
     },
-    devBuild: {
+    noMinify: {
       type: 'boolean',
-      short: 'd',
+    },
+    reference: {
+      type: 'boolean',
+      short: 'r',
     },
   },
 })
@@ -79,10 +83,10 @@ const count = +(/** @type {string}*/ (countStr))
 const warmupCount = +(/** @type {string}*/ (warmupCountStr))
 const sha = await getSha(true)
 
-if (!skipLib) {
+if (!skipLib && !reference) {
   await buildLib()
 }
-if (!skipApp) {
+if (!skipApp && !reference) {
   await rm('client/dist', { recursive: true }).catch(() => {})
   vdom && (await buildApp(false))
   !noVapor && (await buildApp(true))
@@ -103,13 +107,10 @@ async function buildLib() {
     stdio: 'inherit',
     env: { ...process.env, BENCHMARK: 'true' },
   }
-  const buildOptions = devBuild ? '-df' : '-pf'
   const [{ ok }, { ok: ok2 }, { ok: ok3 }] = await Promise.all([
     exec(
       'pnpm',
-      `run --silent build shared compiler-core compiler-dom ${buildOptions} cjs`.split(
-        ' ',
-      ),
+      `run --silent build shared compiler-core compiler-dom -pf cjs`.split(' '),
       options,
     ),
     exec(
@@ -121,7 +122,9 @@ async function buildLib() {
     ),
     exec(
       'pnpm',
-      `run --silent build vue ${buildOptions} esm-browser-vapor`.split(' '),
+      `run --silent build shared reactivity runtime-core runtime-dom runtime-vapor vue -f esm-bundler+esm-bundler-runtime`.split(
+        ' ',
+      ),
       options,
     ),
   ])
@@ -138,15 +141,15 @@ async function buildApp(isVapor) {
     colors.blue(`\nBuilding ${isVapor ? 'Vapor' : 'Virtual DOM'} app...\n`),
   )
 
-  if (!devBuild) process.env.NODE_ENV = 'production'
+  process.env.NODE_ENV = 'production'
+
   const CompilerSFC = await import(
     '../../packages/compiler-sfc/dist/compiler-sfc.cjs.js'
   )
-  const prodSuffix = devBuild ? '.js' : '.prod.js'
 
   const runtimePath = path.resolve(
     import.meta.dirname,
-    '../../packages/vue/dist/vue.runtime-with-vapor.esm-browser' + prodSuffix,
+    '../../packages/vue/dist/vue.runtime.esm-bundler.js',
   )
 
   const mode = isVapor ? 'vapor' : 'vdom'
@@ -157,7 +160,7 @@ async function buildApp(isVapor) {
       'import.meta.env.IS_VAPOR': String(isVapor),
     },
     build: {
-      minify: !devBuild,
+      minify: !noMinify,
       outDir: path.resolve('./client/dist', mode),
       rollupOptions: {
         onwarn(log, handler) {
@@ -181,8 +184,10 @@ async function buildApp(isVapor) {
 }
 
 function startServer() {
-  const server = connect().use(sirv('./client/dist')).listen(port)
-  printPort(port)
+  const server = connect()
+    .use(sirv(reference ? './reference' : './client/dist', { dev: true }))
+    .listen(port)
+  printPort()
   process.on('SIGTERM', () => server.close())
   return server
 }
@@ -204,17 +209,24 @@ async function benchmark() {
 }
 
 /**
+ *  @param {boolean} isVapor
+ */
+function getURL(isVapor) {
+  return `http://localhost:${port}/${reference ? '' : isVapor ? 'vapor' : 'vdom'}/`
+}
+
+/**
  *
  * @param {import('puppeteer').Browser} browser
  * @param {boolean} isVapor
  */
 async function doBench(browser, isVapor) {
-  const mode = isVapor ? 'vapor' : 'vdom'
+  const mode = reference ? `reference` : isVapor ? 'vapor' : 'vdom'
   console.info('\n\nmode:', mode)
 
   const page = await browser.newPage()
   page.emulateCPUThrottling(4)
-  await page.goto(`http://localhost:${port}/${mode}`, {
+  await page.goto(getURL(isVapor), {
     waitUntil: 'networkidle0',
   })
 
@@ -256,7 +268,7 @@ async function doBench(browser, isVapor) {
     await clickButton('add') // append rows to large table
 
     await withoutRecord(() => clickButton('clear'))
-    await clickButton('runLots') // create many rows
+    await clickButton('runlots') // create many rows
     await withoutRecord(() => clickButton('clear'))
 
     // TODO replace all rows
@@ -293,7 +305,7 @@ async function doBench(browser, isVapor) {
     for (let i = 1; i <= 10; i++) {
       await page.click(`tbody > tr:nth-child(2) > td:nth-child(2) > a`)
       await page.waitForSelector(`tbody > tr:nth-child(2).danger`)
-      await page.click(`tbody > tr:nth-child(2) > td:nth-child(3) > button`)
+      await page.click(`tbody > tr:nth-child(2) > td:nth-child(3) > a`)
       await wait()
     }
   }
@@ -372,13 +384,10 @@ function round(n) {
   return +n.toFixed(2)
 }
 
-/** @param {number} port */
-function printPort(port) {
+function printPort() {
   const vaporLink = !noVapor
-    ? `\nVapor: ${colors.blue(`http://localhost:${port}/vapor`)}`
+    ? `\n${reference ? `Reference` : `Vapor`}: ${colors.blue(getURL(true))}`
     : ''
-  const vdomLink = vdom
-    ? `\nvDom:  ${colors.blue(`http://localhost:${port}/vdom`)}`
-    : ''
+  const vdomLink = vdom ? `\nvDom:  ${colors.blue(getURL(false))}` : ''
   console.info(`\n\nServer started at`, vaporLink, vdomLink)
 }

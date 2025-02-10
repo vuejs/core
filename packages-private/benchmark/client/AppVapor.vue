@@ -1,22 +1,10 @@
-<script setup vapor lang="ts">
-import {
-  shallowRef,
-  triggerRef,
-  type ShallowRef,
-  // createSelector,
-} from 'vue'
+<script setup vapor>
+import { shallowRef, triggerRef } from 'vue'
 import { buildData } from './data'
 import { defer, wrap } from './profiling'
 
-const isVapor = !!import.meta.env.IS_VAPOR
-
-const selected = shallowRef<number>()
-const rows = shallowRef<
-  {
-    id: number
-    label: ShallowRef<string>
-  }[]
->([])
+const selected = shallowRef()
+const rows = shallowRef([])
 
 // Bench Add: https://jsbench.me/45lzxprzmu/1
 const add = wrap('add', () => {
@@ -24,7 +12,7 @@ const add = wrap('add', () => {
   triggerRef(rows)
 })
 
-const remove = wrap('remove', (id: number) => {
+const remove = wrap('remove', id => {
   rows.value.splice(
     rows.value.findIndex(d => d.id === id),
     1,
@@ -32,7 +20,7 @@ const remove = wrap('remove', (id: number) => {
   triggerRef(rows)
 })
 
-const select = wrap('select', (id: number) => {
+const select = wrap('select', id => {
   selected.value = id
 })
 
@@ -77,13 +65,11 @@ async function bench() {
   }
 }
 
-// const isSelected = createSelector(selected)
-
 const globalThis = window
 </script>
 
 <template>
-  <h1>Vue.js ({{ isVapor ? 'Vapor' : 'Virtual DOM' }}) Benchmark</h1>
+  <h1>Vue.js (Vapor) Benchmark</h1>
 
   <div style="display: flex; gap: 4px; margin-bottom: 4px">
     <label>
@@ -110,31 +96,37 @@ const globalThis = window
   >
     <button @click="bench">Benchmark mounting</button>
     <button id="run" @click="run">Create 1,000 rows</button>
-    <button id="runLots" @click="runLots">Create 10,000 rows</button>
+    <button id="runlots" @click="runLots">Create 10,000 rows</button>
     <button id="add" @click="add">Append 1,000 rows</button>
     <button id="update" @click="update">Update every 10th row</button>
     <button id="clear" @click="clear">Clear</button>
     <button id="swaprows" @click="swapRows">Swap Rows</button>
   </div>
   <div id="time"></div>
-  <table>
+  <table class="table table-hover table-striped test-data">
     <tbody>
       <tr
         v-for="row of rows"
         :key="row.id"
-        :class="{ danger: selected === row.id }"
+        :class="selected === row.id ? 'danger' : ''"
       >
-        <td>{{ row.id }}</td>
-        <td>
+        <td class="col-md-1">{{ row.id }}</td>
+        <td class="col-md-4">
           <a @click="select(row.id)">{{ row.label.value }}</a>
         </td>
-        <td>
-          <button @click="remove(row.id)">x</button>
+        <td class="col-md-1">
+          <a @click="remove(row.id)">
+            <span class="glyphicon glyphicon-remove" aria-hidden="true">x</span>
+          </a>
         </td>
         <td class="col-md-6"></td>
       </tr>
     </tbody>
   </table>
+  <span
+    class="preloadicon glyphicon glyphicon-remove"
+    aria-hidden="true"
+  ></span>
 </template>
 
 <style>
