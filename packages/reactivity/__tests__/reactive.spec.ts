@@ -130,6 +130,35 @@ describe('reactivity/reactive', () => {
     expect(dummy).toBe(2)
   })
 
+  test('custom collection type with custom Symbol.toStringTag is handled as a collection', () => {
+    class MyCustomMap extends Map {
+      get [Symbol.toStringTag]() {
+        return 'MyCustomMap'
+      }
+    }
+
+    const myCustomMap = new MyCustomMap()
+
+    expect(Object.prototype.toString.call(myCustomMap)).toBe(
+      '[object MyCustomMap]',
+    )
+
+    const observed = reactive(myCustomMap)
+
+    expect(isReactive(observed)).toBe(true)
+    expect(isProxy(observed)).toBe(true)
+
+    let dummy: boolean = false
+    effect(() => {
+      dummy = observed.has('foo')
+    })
+
+    expect(dummy).toBe(false)
+
+    observed.set('foo', 'bar')
+    expect(dummy).toBe(true)
+  })
+
   test('observed value should proxy mutations to original (Object)', () => {
     const original: any = { foo: 1 }
     const observed = reactive(original)

@@ -68,14 +68,26 @@ function getTargetType(value: Target) {
   if (value[ReactiveFlags.SKIP] || !Object.isExtensible(value)) {
     return TargetType.INVALID
   }
-  const type = targetTypeMap(toRawType(value))
-  let type = targetTypeMap(rawType)
 
-  // If we got INVALID but the value is actually a plain object (even if its raw type was changed
-  // by a custom Symbol.toStringTag), then force it to be reactive.
-  if (type === TargetType.INVALID && isPlainObject(value)) {
-    type = TargetType.COMMON
+  let type = targetTypeMap(toRawType(value))
+
+  // If the raw type mapping fails, we add extra checks:
+  if (type === TargetType.INVALID) {
+    // Check for collection types even if they have a custom Symbol.toStringTag.
+    if (
+      value instanceof Map ||
+      value instanceof Set ||
+      value instanceof WeakMap ||
+      value instanceof WeakSet
+    ) {
+      type = TargetType.COLLECTION
+    }
+    // Check if the value is a plain object despite a custom tag.
+    else if (isPlainObject(value)) {
+      type = TargetType.COMMON
+    }
   }
+
   return type
 }
 
