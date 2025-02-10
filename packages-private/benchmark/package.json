@@ -9,7 +9,7 @@
     "start": "node index.js"
   },
   "dependencies": {
-    "@vitejs/plugin-vue": "https://pkg.pr.new/@vitejs/plugin-vue@c156992",
+    "@vitejs/plugin-vue": "catalog:",
     "connect": "^3.7.0",
     "sirv": "^2.0.4",
     "vite": "catalog:"
