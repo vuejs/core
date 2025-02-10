@@ -180,7 +180,7 @@ _delegateEvents("click")
 
 export function render(_ctx) {
   const n0 = t0()
-  _delegate(n0, "click", () => _ctx.handleClick)
+  _delegate(n0, "click", e => _ctx.handleClick(e))
   _renderEffect(() => {
     const _count = _ctx.count
     _setText(n0, _count, "foo", _count, "foo", _count)

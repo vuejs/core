@@ -7,7 +7,7 @@ _delegateEvents("click")
 
 export function render(_ctx) {
   const n0 = t0()
-  _delegate(n0, "click", () => _ctx.a['b' + _ctx.c])
+  _delegate(n0, "click", e => _ctx.a['b' + _ctx.c](e))
   return n0
 }"
 `;
@@ -20,7 +20,7 @@ export function render(_ctx) {
   const n0 = t0()
   _renderEffect(() => {
     
-    _on(n0, _ctx.event, () => _ctx.handler, {
+    _on(n0, _ctx.event, e => _ctx.handler(e), {
       effect: true
     })
   })
@@ -36,7 +36,7 @@ export function render(_ctx) {
   const n0 = t0()
   _renderEffect(() => {
     
-    _on(n0, _ctx.event(_ctx.foo), () => _ctx.handler, {
+    _on(n0, _ctx.event(_ctx.foo), e => _ctx.handler(e), {
       effect: true
     })
   })
@@ -52,7 +52,7 @@ export function render(_ctx) {
   const n0 = t0()
   _renderEffect(() => {
     
-    _on(n0, _ctx.event, () => _ctx.handler, {
+    _on(n0, _ctx.event, e => _ctx.handler(e), {
       effect: true
     })
   })
@@ -91,34 +91,34 @@ export function render(_ctx, $props, $emit, $attrs, $slots) {
   const n19 = t3()
   const n20 = t3()
   const n21 = t3()
-  _delegate(n0, "click", () => _withModifiers(_ctx.handleEvent, ["stop"]))
-  _on(n1, "submit", () => _withModifiers(_ctx.handleEvent, ["prevent"]))
-  _delegate(n2, "click", () => _withModifiers(_ctx.handleEvent, ["stop","prevent"]))
-  _delegate(n3, "click", () => _withModifiers(_ctx.handleEvent, ["self"]))
-  _on(n4, "click", () => _ctx.handleEvent, {
+  _delegate(n0, "click", _withModifiers(_ctx.handleEvent, ["stop"]))
+  _on(n1, "submit", _withModifiers(_ctx.handleEvent, ["prevent"]))
+  _delegate(n2, "click", _withModifiers(_ctx.handleEvent, ["stop","prevent"]))
+  _delegate(n3, "click", _withModifiers(_ctx.handleEvent, ["self"]))
+  _on(n4, "click", _ctx.handleEvent, {
     capture: true
   })
-  _on(n5, "click", () => _ctx.handleEvent, {
+  _on(n5, "click", _ctx.handleEvent, {
     once: true
   })
-  _on(n6, "scroll", () => _ctx.handleEvent, {
+  _on(n6, "scroll", _ctx.handleEvent, {
     passive: true
   })
-  _delegate(n7, "contextmenu", () => _withModifiers(_ctx.handleEvent, ["right"]))
-  _delegate(n8, "click", () => _withModifiers(_ctx.handleEvent, ["left"]))
-  _delegate(n9, "mouseup", () => _withModifiers(_ctx.handleEvent, ["middle"]))
-  _delegate(n10, "contextmenu", () => _withKeys(_withModifiers(_ctx.handleEvent, ["right"]), ["enter"]))
-  _delegate(n11, "keyup", () => _withKeys(_ctx.handleEvent, ["enter"]))
-  _delegate(n12, "keyup", () => _withKeys(_ctx.handleEvent, ["tab"]))
-  _delegate(n13, "keyup", () => _withKeys(_ctx.handleEvent, ["delete"]))
-  _delegate(n14, "keyup", () => _withKeys(_ctx.handleEvent, ["esc"]))
-  _delegate(n15, "keyup", () => _withKeys(_ctx.handleEvent, ["space"]))
-  _delegate(n16, "keyup", () => _withKeys(_ctx.handleEvent, ["up"]))
-  _delegate(n17, "keyup", () => _withKeys(_ctx.handleEvent, ["down"]))
-  _delegate(n18, "keyup", () => _withKeys(_ctx.handleEvent, ["left"]))
-  _delegate(n19, "keyup", () => _withModifiers(_ctx.submit, ["middle"]))
-  _delegate(n20, "keyup", () => _withModifiers(_ctx.submit, ["middle","self"]))
-  _delegate(n21, "keyup", () => _withKeys(_withModifiers(_ctx.handleEvent, ["self"]), ["enter"]))
+  _delegate(n7, "contextmenu", _withModifiers(_ctx.handleEvent, ["right"]))
+  _delegate(n8, "click", _withModifiers(_ctx.handleEvent, ["left"]))
+  _delegate(n9, "mouseup", _withModifiers(_ctx.handleEvent, ["middle"]))
+  _delegate(n10, "contextmenu", _withKeys(_withModifiers(_ctx.handleEvent, ["right"]), ["enter"]))
+  _delegate(n11, "keyup", _withKeys(_ctx.handleEvent, ["enter"]))
+  _delegate(n12, "keyup", _withKeys(_ctx.handleEvent, ["tab"]))
+  _delegate(n13, "keyup", _withKeys(_ctx.handleEvent, ["delete"]))
+  _delegate(n14, "keyup", _withKeys(_ctx.handleEvent, ["esc"]))
+  _delegate(n15, "keyup", _withKeys(_ctx.handleEvent, ["space"]))
+  _delegate(n16, "keyup", _withKeys(_ctx.handleEvent, ["up"]))
+  _delegate(n17, "keyup", _withKeys(_ctx.handleEvent, ["down"]))
+  _delegate(n18, "keyup", _withKeys(_ctx.handleEvent, ["left"]))
+  _delegate(n19, "keyup", _withModifiers(e => _ctx.submit(e), ["middle"]))
+  _delegate(n20, "keyup", _withModifiers(e => _ctx.submit(e), ["middle","self"]))
+  _delegate(n21, "keyup", _withKeys(_withModifiers(_ctx.handleEvent, ["self"]), ["enter"]))
   return [n0, n1, n2, n3, n4, n5, n6, n7, n8, n9, n10, n11, n12, n13, n14, n15, n16, n17, n18, n19, n20, n21]
 }"
 `;
@@ -130,7 +130,7 @@ _delegateEvents("click")
 
 export function render(_ctx) {
   const n0 = t0()
-  _delegate(n0, "click", () => e => _ctx.foo(e))
+  _delegate(n0, "click", e => _ctx.foo(e))
   return n0
 }"
 `;
@@ -142,7 +142,7 @@ _delegateEvents("click")
 
 export function render(_ctx) {
   const n0 = t0()
-  _delegate(n0, "click", () => $event => (_ctx.foo($event)))
+  _delegate(n0, "click", $event => (_ctx.foo($event)))
   return n0
 }"
 `;
@@ -154,7 +154,7 @@ _delegateEvents("click")
 
 export function render(_ctx) {
   const n0 = t0()
-  _delegate(n0, "click", () => $event => {_ctx.foo($event);_ctx.bar()})
+  _delegate(n0, "click", $event => {_ctx.foo($event);_ctx.bar()})
   return n0
 }"
 `;
@@ -166,7 +166,7 @@ _delegateEvents("click")
 
 export function render(_ctx) {
   const n0 = t0()
-  _delegate(n0, "click", () => $event => {_ctx.i++;_ctx.foo($event)})
+  _delegate(n0, "click", $event => {_ctx.i++;_ctx.foo($event)})
   return n0
 }"
 `;
@@ -178,7 +178,7 @@ _delegateEvents("click")
 
 export function render(_ctx) {
   const n0 = t0()
-  _delegate(n0, "click", () => (e: any): any => _ctx.foo(e))
+  _delegate(n0, "click", (e: any): any => _ctx.foo(e))
   return n0
 }"
 `;
@@ -190,7 +190,7 @@ _delegateEvents("click")
 
 export function render(_ctx) {
   const n0 = t0()
-  _delegate(n0, "click", () => 
+  _delegate(n0, "click", 
       $event => {
         _ctx.foo($event)
       }
@@ -206,7 +206,7 @@ _delegateEvents("click")
 
 export function render(_ctx) {
   const n0 = t0()
-  _delegate(n0, "click", () => $event => _ctx.foo($event))
+  _delegate(n0, "click", $event => _ctx.foo($event))
   return n0
 }"
 `;
@@ -218,7 +218,7 @@ _delegateEvents("click")
 
 export function render(_ctx) {
   const n0 = t0()
-  _delegate(n0, "click", () => _ctx.a['b' + _ctx.c])
+  _delegate(n0, "click", e => _ctx.a['b' + _ctx.c](e))
   return n0
 }"
 `;
@@ -230,7 +230,7 @@ _delegateEvents("click")
 
 export function render(_ctx) {
   const n0 = t0()
-  _delegate(n0, "click", () => _ctx.test)
+  _delegate(n0, "click", e => _ctx.test(e))
   return n0
 }"
 `;
@@ -242,7 +242,7 @@ _delegateEvents("click")
 
 export function render(_ctx) {
   const n0 = t0()
-  _delegate(n0, "click", () => $event => {
+  _delegate(n0, "click", () => {
 _ctx.foo();
 _ctx.bar()
 })
@@ -257,7 +257,7 @@ _delegateEvents("click")
 
 export function render(_ctx) {
   const n0 = t0()
-  _delegate(n0, "click", () => $event => {_ctx.foo();_ctx.bar()})
+  _delegate(n0, "click", () => {_ctx.foo();_ctx.bar()})
   return n0
 }"
 `;
@@ -269,7 +269,7 @@ _delegateEvents("click")
 
 export function render(_ctx) {
   const n0 = t0()
-  _delegate(n0, "click", () => _ctx.foo.bar)
+  _delegate(n0, "click", e => _ctx.foo.bar(e))
   return n0
 }"
 `;
@@ -281,7 +281,7 @@ _delegateEvents("keyup")
 
 export function render(_ctx) {
   const n0 = t0()
-  _delegate(n0, "keyup", () => _withModifiers(_ctx.test, ["exact"]))
+  _delegate(n0, "keyup", _withModifiers(e => _ctx.test(e), ["exact"]))
   return n0
 }"
 `;
@@ -293,8 +293,8 @@ _delegateEvents("click", "keyup")
 
 export function render(_ctx) {
   const n0 = t0()
-  _delegate(n0, "click", () => _withModifiers(_ctx.test, ["stop"]))
-  _delegate(n0, "keyup", () => _withKeys(_ctx.test, ["enter"]))
+  _delegate(n0, "click", _withModifiers(e => _ctx.test(e), ["stop"]))
+  _delegate(n0, "keyup", _withKeys(e => _ctx.test(e), ["enter"]))
   return n0
 }"
 `;
@@ -305,7 +305,7 @@ const t0 = _template("<div></div>", true)
 
 export function render(_ctx) {
   const n0 = t0()
-  _on(n0, "click", () => _withModifiers(_ctx.test, ["stop","prevent"]), {
+  _on(n0, "click", _withModifiers(e => _ctx.test(e), ["stop","prevent"]), {
     capture: true, 
     once: true
   })
@@ -320,7 +320,7 @@ _delegateEvents("mouseup")
 
 export function render(_ctx) {
   const n0 = t0()
-  _delegate(n0, "mouseup", () => _withModifiers(_ctx.test, ["middle"]))
+  _delegate(n0, "mouseup", _withModifiers(e => _ctx.test(e), ["middle"]))
   return n0
 }"
 `;
@@ -333,7 +333,7 @@ export function render(_ctx) {
   const n0 = t0()
   _renderEffect(() => {
     
-    _on(n0, (_ctx.event) === "click" ? "mouseup" : (_ctx.event), () => _withModifiers(_ctx.test, ["middle"]), {
+    _on(n0, (_ctx.event) === "click" ? "mouseup" : (_ctx.event), _withModifiers(e => _ctx.test(e), ["middle"]), {
       effect: true
     })
   })
@@ -348,7 +348,7 @@ _delegateEvents("contextmenu")
 
 export function render(_ctx) {
   const n0 = t0()
-  _delegate(n0, "contextmenu", () => _withModifiers(_ctx.test, ["right"]))
+  _delegate(n0, "contextmenu", _withModifiers(e => _ctx.test(e), ["right"]))
   return n0
 }"
 `;
@@ -361,7 +361,7 @@ export function render(_ctx) {
   const n0 = t0()
   _renderEffect(() => {
     
-    _on(n0, (_ctx.event) === "click" ? "contextmenu" : (_ctx.event), () => _withKeys(_withModifiers(_ctx.test, ["right"]), ["right"]), {
+    _on(n0, (_ctx.event) === "click" ? "contextmenu" : (_ctx.event), _withKeys(_withModifiers(e => _ctx.test(e), ["right"]), ["right"]), {
       effect: true
     })
   })
@@ -376,7 +376,7 @@ _delegateEvents("click")
 
 export function render(_ctx) {
   const n0 = t0()
-  _delegate(n0, "click", () => $event => (_ctx.i++))
+  _delegate(n0, "click", () => (_ctx.i++))
   return n0
 }"
 `;
@@ -389,7 +389,7 @@ export function render(_ctx) {
   const n0 = t0()
   _renderEffect(() => {
     
-    _on(n0, _ctx.e, () => _withKeys(_withModifiers(_ctx.test, ["left"]), ["left"]), {
+    _on(n0, _ctx.e, _withKeys(_withModifiers(e => _ctx.test(e), ["left"]), ["left"]), {
       effect: true
     })
   })
@@ -402,9 +402,9 @@ exports[`v-on > should wrap in unref if identifier is setup-maybe-ref w/ inline:
   const n0 = t0()
   const n1 = t0()
   const n2 = t0()
-  _delegate(n0, "click", () => $event => (x.value=_unref(y)))
-  _delegate(n1, "click", () => $event => (x.value++))
-  _delegate(n2, "click", () => $event => ({ x: x.value } = _unref(y)))
+  _delegate(n0, "click", () => (x.value=_unref(y)))
+  _delegate(n1, "click", () => (x.value++))
+  _delegate(n2, "click", () => ({ x: x.value } = _unref(y)))
   return [n0, n1, n2]
 "
 `;
@@ -415,7 +415,7 @@ const t0 = _template("<div></div>", true)
 
 export function render(_ctx) {
   const n0 = t0()
-  _on(n0, "keydown", () => _withKeys(_withModifiers(_ctx.test, ["stop","ctrl"]), ["a"]), {
+  _on(n0, "keydown", _withKeys(_withModifiers(e => _ctx.test(e), ["stop","ctrl"]), ["a"]), {
     capture: true
   })
   return n0
@@ -429,7 +429,7 @@ _delegateEvents("keyup")
 
 export function render(_ctx) {
   const n0 = t0()
-  _delegate(n0, "keyup", () => _withKeys(_ctx.test, ["left"]))
+  _delegate(n0, "keyup", _withKeys(e => _ctx.test(e), ["left"]))
   return n0
 }"
 `;
@@ -441,7 +441,7 @@ _delegateEvents("click")
 
 export function render(_ctx, $props, $emit, $attrs, $slots) {
   const n0 = t0()
-  _delegate(n0, "click", () => _ctx.handleClick)
+  _delegate(n0, "click", _ctx.handleClick)
   return n0
 }"
 `;

@@ -207,7 +207,12 @@ function genProp(prop: IRProp, context: CodegenContext, isStatic?: boolean) {
     ...genPropKey(prop, context),
     ': ',
     ...(prop.handler
-      ? genEventHandler(context, prop.values[0])
+      ? genEventHandler(
+          context,
+          prop.values[0],
+          undefined,
+          true /* wrap handlers passed to components */,
+        )
       : isStatic
         ? ['() => (', ...values, ')']
         : values),

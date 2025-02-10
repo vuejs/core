@@ -221,7 +221,7 @@ export function setDynamicProp(
   } else if (key === 'style') {
     setStyle(el, value)
   } else if (isOn(key)) {
-    on(el, key[2].toLowerCase() + key.slice(3), () => value, { effect: true })
+    on(el, key[2].toLowerCase() + key.slice(3), value, { effect: true })
   } else if (
     key[0] === '.'
       ? ((key = key.slice(1)), true)

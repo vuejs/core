@@ -1,4 +1,5 @@
 import { onEffectCleanup } from '@vue/reactivity'
+import { isArray } from '@vue/shared'
 
 export function addEventListener(
   el: Element,
@@ -13,10 +14,9 @@ export function addEventListener(
 export function on(
   el: Element,
   event: string,
-  handlerGetter: () => undefined | ((...args: any[]) => any),
+  handler: (e: Event) => any,
   options: AddEventListenerOptions & { effect?: boolean } = {},
 ): void {
-  const handler = eventHandler(handlerGetter)
   addEventListener(el, event, handler, options)
   if (options.effect) {
     onEffectCleanup(() => {
@@ -28,26 +28,23 @@ export function on(
 export function delegate(
   el: any,
   event: string,
-  handlerGetter: () => undefined | ((...args: any[]) => any),
+  handler: (e: Event) => any,
 ): void {
   const key = `$evt${event}`
-  const handler = eventHandler(handlerGetter)
-  handler.delegate = true
-  ;(el[key] || (el[key] = [])).push(handler)
+  const existing = el[key]
+  if (existing) {
+    if (isArray(existing)) {
+      existing.push(handler)
+    } else {
+      el[key] = [existing, handler]
+    }
+  } else {
+    el[key] = handler
+  }
 }
 
 type DelegatedHandler = {
   (...args: any[]): any
-  delegate?: boolean
-}
-
-function eventHandler(
-  getter: () => undefined | ((...args: any[]) => any),
-): DelegatedHandler {
-  return (...args: any[]) => {
-    const handler = getter()
-    handler && handler(...args)
-  }
 }
 
 /**
@@ -79,13 +76,19 @@ const delegatedEventHandler = (e: Event) => {
     },
   })
   while (node !== null) {
-    const handlers = node[`$evt${e.type}`] as DelegatedHandler[]
+    const handlers = node[`$evt${e.type}`] as
+      | DelegatedHandler
+      | DelegatedHandler[]
     if (handlers) {
-      for (const handler of handlers) {
-        if (handler.delegate && !node.disabled) {
-          handler(e)
-          if (e.cancelBubble) return
+      if (isArray(handlers)) {
+        for (const handler of handlers) {
+          if (!node.disabled) {
+            handler(e)
+            if (e.cancelBubble) return
+          }
         }
+      } else {
+        handlers(e)
       }
     }
     node =

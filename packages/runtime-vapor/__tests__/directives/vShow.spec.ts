@@ -26,7 +26,7 @@ const createDemo = (defaultValue: boolean) =>
     const n1 = children(n0, 0)
     const n2 = children(n0, 1)
     applyVShow(n2 as VShowElement, () => visible.value)
-    on(n1 as HTMLElement, 'click', () => handleClick)
+    on(n1 as HTMLElement, 'click', handleClick)
     return n0
   })
 

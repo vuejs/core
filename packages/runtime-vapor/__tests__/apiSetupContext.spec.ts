@@ -178,7 +178,7 @@ describe('api: setup context', () => {
       },
       setup(props, { emit }) {
         const n0 = template('<div>')() as HTMLDivElement
-        delegate(n0, 'click', () => () => {
+        delegate(n0, 'click', () => {
           emit('inc', props.count + 1)
         })
         insert(
