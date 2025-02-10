@@ -16,8 +16,6 @@ const compileWithElementTransform = makeCompile({
 })
 
 describe('compiler: children transform', () => {
-  test.todo('basic')
-
   test('children & sibling references', () => {
     const { code, helpers } = compileWithElementTransform(
       `<div>
@@ -35,5 +33,17 @@ describe('compiler: children transform', () => {
       'insert',
       'template',
     ])
+  })
+
+  test('efficient traversal', () => {
+    const { code } = compileWithElementTransform(
+      `<div>
+    <div>x</div>
+    <div><span>{{ msg }}</span></div>
+    <div><span>{{ msg }}</span></div>
+    <div><span>{{ msg }}</span></div>
+  </div>`,
+    )
+    expect(code).toMatchSnapshot()
   })
 })

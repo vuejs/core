@@ -48,6 +48,7 @@ export interface BlockIRNode extends BaseIRNode {
   type: IRNodeTypes.BLOCK
   node: RootNode | TemplateChildNode
   dynamic: IRDynamicInfo
+  tempId: number
   effect: IREffect[]
   operation: OperationNode[]
   expressions: SimpleExpressionNode[]
@@ -249,6 +250,7 @@ export interface IRDynamicInfo {
   anchor?: number
   children: IRDynamicInfo[]
   template?: number
+  hasDynamicChild?: boolean
 }
 
 export interface IREffect {

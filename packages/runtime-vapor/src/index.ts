@@ -9,7 +9,7 @@ export { insert, prepend, remove } from './block'
 export { createComponent, createComponentWithFallback } from './component'
 export { renderEffect } from './renderEffect'
 export { createSlot } from './componentSlots'
-export { template, children, next } from './dom/template'
+export { template, children, child, next, nextn } from './dom/template'
 export { createTextNode } from './dom/node'
 export {
   setText,

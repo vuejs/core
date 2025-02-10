@@ -73,7 +73,7 @@ export function render(_ctx) {
       const n4 = t0()
       _renderEffect(() => _setText(n4, _for_item1.value+_for_item0.value))
       return n4
-    })
+    }, null, null, null, true)
     _insert(n2, n5)
     return n5
   })

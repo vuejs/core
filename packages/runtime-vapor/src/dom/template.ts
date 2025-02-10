@@ -28,8 +28,15 @@ export function children(node: Node, ...paths: number[]): Node {
   return node
 }
 
-/*! #__NO_SIDE_EFFECTS__ */
-export function next(node: Node, offset: number): Node {
+export function child(node: ParentNode): Node {
+  return node.firstChild!
+}
+
+export function next(node: Node): Node {
+  return node.nextSibling!
+}
+
+export function nextn(node: Node, offset: number = 1): Node {
   for (let i = 0; i < offset; i++) {
     node = node.nextSibling!
   }
