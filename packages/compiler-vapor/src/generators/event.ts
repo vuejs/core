@@ -5,7 +5,12 @@ import {
   isMemberExpression,
 } from '@vue/compiler-dom'
 import type { CodegenContext } from '../generate'
-import type { SetDynamicEventsIRNode, SetEventIRNode } from '../ir'
+import {
+  IRNodeTypes,
+  type OperationNode,
+  type SetDynamicEventsIRNode,
+  type SetEventIRNode,
+} from '../ir'
 import { genExpression } from './expression'
 import {
   type CodeFragment,
@@ -29,6 +34,12 @@ export function genSetEvent(
   if (delegate) {
     // key is static
     context.delegates.add(key.content)
+    // if this is the only delegated event of this name on this element,
+    // we can generate optimized handler attachment code
+    // e.g. n1.$evtclick = () => {}
+    if (!context.block.operation.some(isSameDelegateEvent)) {
+      return [NEWLINE, `n${element}.$evt${key.content} = `, ...handler]
+    }
   }
 
   return [
@@ -64,6 +75,18 @@ export function genSetEvent(
       effect && ['effect: true'],
       ...options.map((option): CodeFragment[] => [`${option}: true`]),
     )
+  }
+
+  function isSameDelegateEvent(op: OperationNode) {
+    if (
+      op.type === IRNodeTypes.SET_EVENT &&
+      op !== oper &&
+      op.delegate &&
+      op.element === oper.element &&
+      op.key.content === key.content
+    ) {
+      return true
+    }
   }
 }
 
