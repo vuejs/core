@@ -86,6 +86,7 @@ import { isAsyncWrapper } from './apiAsyncComponent'
 import { isCompatEnabled } from './compat/compatConfig'
 import { DeprecationTypes } from './compat/compatConfig'
 import type { TransitionHooks } from './components/BaseTransition'
+import type { VueElement } from '@vue/runtime-dom'
 
 export interface Renderer<HostElement = RendererElement> {
   render: RootRenderFunction<HostElement>
@@ -1348,7 +1349,10 @@ function baseCreateRenderer(
         } else {
           // custom element style injection
           if (root.ce) {
-            root.ce._injectChildStyle(type)
+            // @ts-expect-error _def is private
+            if ((root.ce as VueElement)._def.shadowRoot !== false) {
+              root.ce._injectChildStyle(type)
+            }
           }
 
           if (__DEV__) {
