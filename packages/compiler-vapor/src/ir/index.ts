@@ -89,6 +89,7 @@ export interface ForIRNode extends BaseIRNode, IRFor {
   render: BlockIRNode
   once: boolean
   component: boolean
+  onlyChild: boolean
 }
 
 export interface SetPropIRNode extends BaseIRNode {

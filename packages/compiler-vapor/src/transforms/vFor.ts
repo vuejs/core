@@ -57,6 +57,16 @@ export function processFor(
 
   return (): void => {
     exitBlock()
+
+    const { parent } = context
+
+    // if v-for is the only child of a parent element, it can go the fast path
+    // when the entire list is emptied
+    const isOnlyChild =
+      parent &&
+      parent.block.node !== parent.node &&
+      parent.node.children.length === 1
+
     context.registerOperation({
       type: IRNodeTypes.FOR,
       id,
@@ -68,6 +78,7 @@ export function processFor(
       render,
       once: context.inVOnce,
       component: isComponent,
+      onlyChild: !!isOnlyChild,
     })
   }
 }

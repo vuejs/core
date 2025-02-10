@@ -16,8 +16,18 @@ export function genFor(
   context: CodegenContext,
 ): CodeFragment[] {
   const { helper } = context
-  const { source, value, key, index, render, keyProp, once, id, component } =
-    oper
+  const {
+    source,
+    value,
+    key,
+    index,
+    render,
+    keyProp,
+    once,
+    id,
+    component,
+    onlyChild,
+  } = oper
 
   let rawValue: string | null = null
   const rawKey = key && key.content
@@ -80,6 +90,7 @@ export function genFor(
       genCallback(keyProp),
       component && 'true',
       once && 'true',
+      onlyChild && `true`,
       // todo: hydrationNode
     ),
   ]

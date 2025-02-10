@@ -70,6 +70,7 @@ export const createFor = (
    */
   isComponent = false,
   once?: boolean,
+  canUseFastRemove?: boolean,
   // hydrationNode?: Node,
 ): VaporFragment => {
   let isMounted = false
@@ -105,9 +106,14 @@ export const createFor = (
           mount(source, i)
         }
       } else if (!newLength) {
-        // fast path for clearing
+        // fast path for clearing all
+        const doRemove = !canUseFastRemove
         for (let i = 0; i < oldLength; i++) {
-          unmount(oldBlocks[i])
+          unmount(oldBlocks[i], doRemove)
+        }
+        if (canUseFastRemove) {
+          parent!.textContent = ''
+          parent!.appendChild(parentAnchor)
         }
       } else if (!getKey) {
         // unkeyed fast path
@@ -343,9 +349,9 @@ export const createFor = (
     }
   }
 
-  const unmount = ({ nodes, scope }: ForBlock) => {
+  const unmount = ({ nodes, scope }: ForBlock, doRemove = true) => {
     scope && scope.stop()
-    removeBlock(nodes, parent!)
+    doRemove && removeBlock(nodes, parent!)
   }
 
   once ? renderList() : renderEffect(renderList)
