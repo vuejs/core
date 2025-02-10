@@ -68,7 +68,7 @@ function getTargetType(value: Target) {
   if (value[ReactiveFlags.SKIP] || !Object.isExtensible(value)) {
     return TargetType.INVALID
   }
-  const rawType = toRawType(value)
+  const type = targetTypeMap(toRawType(value))
   let type = targetTypeMap(rawType)
 
   // If we got INVALID but the value is actually a plain object (even if its raw type was changed
