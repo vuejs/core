@@ -1,4 +1,5 @@
 import {
+  type App,
   type ComponentInternalInstance,
   type ConcreteComponent,
   MoveType,
@@ -31,6 +32,7 @@ import { type RawProps, rawPropsProxyHandlers } from './componentProps'
 import type { RawSlots, VaporSlot } from './componentSlots'
 import { renderEffect } from './renderEffect'
 import { createTextNode } from './dom/node'
+import { optimizePropertyLookup } from './dom/prop'
 
 // mounting vapor components and slots in vdom
 const vaporInteropImpl: Omit<
@@ -283,4 +285,9 @@ export const vaporInteropPlugin: Plugin = app => {
     vdomUnmount: internals.umt,
     vdomSlot: renderVDOMSlot.bind(null, internals),
   })
+  const mount = app.mount
+  app.mount = ((...args) => {
+    optimizePropertyLookup()
+    return mount(...args)
+  }) satisfies App['mount']
 }

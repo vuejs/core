@@ -244,3 +244,22 @@ export function setDynamicProp(
   }
   return value
 }
+
+let isOptimized = false
+
+/**
+ * Optimize property lookup for cache properties on Element and Text nodes
+ */
+export function optimizePropertyLookup(): void {
+  if (isOptimized) return
+  isOptimized = true
+  const proto = Element.prototype as any
+  proto.$evtclick = undefined
+  proto.$root = false
+  proto.$html =
+    proto.$txt =
+    proto.$cls =
+    proto.$sty =
+    (Text.prototype as any).$txt =
+      ''
+}
