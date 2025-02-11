@@ -70,7 +70,7 @@ export function genChildren(
       if (offset === 1) {
         push(...genCall(helper('next'), prev[0]))
       } else {
-        push(...genCall(helper('nextn'), prev[0], String(offset)))
+        push(...genCall(helper('children'), from, String(offset)))
       }
     } else {
       if (newPath.length === 1 && newPath[0] === 0) {
@@ -113,7 +113,7 @@ export function genChildren(
           if (i === 1) {
             init = genCall(helper('next'), init)
           } else if (i > 1) {
-            init = genCall(helper('nextn'), init, String(i))
+            init = genCall(helper('children'), resolvedFrom, String(i))
           }
         }
         push(...init!)
