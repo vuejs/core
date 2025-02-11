@@ -76,12 +76,9 @@ function isPlainObject(value: unknown): value is object {
 }
 
 function getTargetType(value: Target) {
-  if (value[ReactiveFlags.SKIP] || !Object.isExtensible(value)) {
-    return TargetType.INVALID
-  }
-  // Note: We now pass both the raw type and the value to targetTypeMap,
-  // so that extra instanceof checks can be performed in the default case.
-  return targetTypeMap(toRawType(value), value)
+  return value[ReactiveFlags.SKIP] || !Object.isExtensible(value)
+    ? TargetType.INVALID
+    : targetTypeMap(toRawType(value), value)
 }
 
 // only unwrap nested ref
