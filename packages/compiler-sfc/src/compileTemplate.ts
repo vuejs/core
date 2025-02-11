@@ -251,9 +251,8 @@ function doCompileTemplate({
   // mapping. If it is present, we need to adjust the final map and errors to
   // reflect the original line numbers.
   if (inMap && !inAST) {
-    if (map) {
-      map = mapLines(inMap, map)
-    }
+    map = map && mapLines(inMap, map)
+
     if (errors.length) {
       patchErrors(errors, source, inMap)
     }
