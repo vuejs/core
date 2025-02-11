@@ -24,11 +24,11 @@ export function render(_ctx) {
 
 exports[`compiler: children transform > efficient find 1`] = `
 "import { child as _child, children as _children, setText as _setText, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<div><div>x</div><div>x</div><div>x</div><div>x</div><div>x</div><div></div></div>", true)
+const t0 = _template("<div><div>x</div><div>x</div><div></div></div>", true)
 
 export function render(_ctx) {
   const n1 = t0()
-  const n0 = _children(n1, 5)
+  const n0 = _children(n1, 2)
   _renderEffect(() => _setText(n0, _ctx.msg))
   return n1
 }"
