@@ -7,11 +7,11 @@ import {
   setDynamicProps,
   setProp,
   setStyle,
-  setText,
   template,
 } from '../src'
 import { makeRender } from './_utils'
 import { stringifyStyle } from '@vue/shared'
+import { setElementText } from '../src/dom/prop'
 
 const define = makeRender<any>()
 
@@ -24,7 +24,7 @@ describe('attribute fallthrough', () => {
       props: ['foo'],
       setup(props: any) {
         const n0 = t0() as Element
-        renderEffect(() => setText(n0, props.foo))
+        renderEffect(() => setElementText(n0, props.foo))
         return n0
       },
     })
@@ -62,7 +62,7 @@ describe('attribute fallthrough', () => {
       inheritAttrs: false,
       setup(props: any) {
         const n0 = t0() as Element
-        renderEffect(() => setText(n0, props.foo))
+        renderEffect(() => setElementText(n0, props.foo))
         return n0
       },
     })
@@ -99,7 +99,7 @@ describe('attribute fallthrough', () => {
       props: ['custom-attr'],
       setup(_: any, { attrs }: any) {
         const n0 = t0() as Element
-        renderEffect(() => setText(n0, attrs.foo))
+        renderEffect(() => setElementText(n0, attrs.foo))
         return n0
       },
     })

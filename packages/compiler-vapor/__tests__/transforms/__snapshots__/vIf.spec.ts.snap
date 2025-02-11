@@ -1,13 +1,14 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
 exports[`compiler: v-if > basic v-if 1`] = `
-"import { setText as _setText, renderEffect as _renderEffect, createIf as _createIf, template as _template } from 'vue';
-const t0 = _template("<div></div>", true)
+"import { child as _child, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, createIf as _createIf, template as _template } from 'vue';
+const t0 = _template("<div> </div>", true)
 
 export function render(_ctx) {
   const n0 = _createIf(() => (_ctx.ok), () => {
     const n2 = t0()
-    _renderEffect(() => _setText(n2, _ctx.msg))
+    const x2 = _child(n2)
+    _renderEffect(() => _setText(x2, _toDisplayString(_ctx.msg)))
     return n2
   })
   return n0
@@ -15,13 +16,13 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: v-if > comment between branches 1`] = `
-"import { createIf as _createIf, setText as _setText, renderEffect as _renderEffect, template as _template } from 'vue';
+"import { createIf as _createIf, child as _child, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, template as _template } from 'vue';
 const t0 = _template("<div></div>")
 const t1 = _template("<!--foo-->")
 const t2 = _template("<p></p>")
 const t3 = _template("<!--bar-->")
 const t4 = _template("fine")
-const t5 = _template("<input>")
+const t5 = _template("<div> </div>")
 
 export function render(_ctx) {
   const n13 = t5()
@@ -37,7 +38,8 @@ export function render(_ctx) {
     const n11 = t4()
     return [n10, n11]
   }))
-  _renderEffect(() => _setText(n13, _ctx.text))
+  const x13 = _child(n13)
+  _renderEffect(() => _setText(x13, _toDisplayString(_ctx.text)))
   return [n0, n13]
 }"
 `;
@@ -60,17 +62,18 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: v-if > template v-if 1`] = `
-"import { setText as _setText, renderEffect as _renderEffect, createIf as _createIf, template as _template } from 'vue';
+"import { child as _child, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, createIf as _createIf, template as _template } from 'vue';
 const t0 = _template("<div></div>")
 const t1 = _template("hello")
-const t2 = _template("<p></p>", true)
+const t2 = _template("<p> </p>", true)
 
 export function render(_ctx) {
   const n0 = _createIf(() => (_ctx.ok), () => {
     const n2 = t0()
     const n3 = t1()
     const n4 = t2()
-    _renderEffect(() => _setText(n4, _ctx.msg))
+    const x4 = _child(n4)
+    _renderEffect(() => _setText(x4, _toDisplayString(_ctx.msg)))
     return [n2, n3, n4]
   })
   return n0

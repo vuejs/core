@@ -3,7 +3,6 @@ import {
   createIf,
   insert,
   renderEffect,
-  setText,
   template,
   // @ts-expect-error
   withDirectives,
@@ -12,6 +11,7 @@ import { nextTick, ref } from '@vue/runtime-dom'
 import type { Mock } from 'vitest'
 import { makeRender } from './_utils'
 import { unmountComponent } from '../src/component'
+import { setElementText } from '../src/dom/prop'
 
 const define = makeRender()
 
@@ -44,7 +44,7 @@ describe('createIf', () => {
           (spyIfFn ||= vi.fn(() => {
             const n2 = t1()
             renderEffect(() => {
-              setText(n2, count.value)
+              setElementText(n2, count.value)
             })
             return n2
           })),

@@ -1,28 +1,31 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
 exports[`compiler: expression > basic 1`] = `
-"import { createTextNode as _createTextNode } from 'vue';
+"import { createTextNode as _createTextNode, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect } from 'vue';
 
 export function render(_ctx) {
-  const n0 = _createTextNode(() => [_ctx.a])
+  const n0 = _createTextNode()
+  _renderEffect(() => _setText(n0, _toDisplayString(_ctx.a)))
   return n0
 }"
 `;
 
 exports[`compiler: expression > props 1`] = `
-"import { createTextNode as _createTextNode } from 'vue';
+"import { createTextNode as _createTextNode, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect } from 'vue';
 
 export function render(_ctx, $props, $emit, $attrs, $slots) {
-  const n0 = _createTextNode(() => [$props.foo])
+  const n0 = _createTextNode()
+  _renderEffect(() => _setText(n0, _toDisplayString($props.foo)))
   return n0
 }"
 `;
 
 exports[`compiler: expression > props aliased 1`] = `
-"import { createTextNode as _createTextNode } from 'vue';
+"import { createTextNode as _createTextNode, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect } from 'vue';
 
 export function render(_ctx, $props, $emit, $attrs, $slots) {
-  const n0 = _createTextNode(() => [$props['bar']])
+  const n0 = _createTextNode()
+  _renderEffect(() => _setText(n0, _toDisplayString($props['bar'])))
   return n0
 }"
 `;

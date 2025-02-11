@@ -32,7 +32,7 @@ describe('compiler: v-if', () => {
 
     expect(helpers).contains('createIf')
 
-    expect(ir.template).toEqual(['<div></div>'])
+    expect(ir.template).toEqual(['<div> </div>'])
     expect(ir.block.operation).toMatchObject([
       {
         type: IRNodeTypes.IF,
@@ -68,7 +68,7 @@ describe('compiler: v-if', () => {
     )
     expect(code).matchSnapshot()
 
-    expect(ir.template).toEqual(['<div></div>', 'hello', '<p></p>'])
+    expect(ir.template).toEqual(['<div></div>', 'hello', '<p> </p>'])
     expect(ir.block.effect).toEqual([])
     expect((ir.block.operation[0] as IfIRNode).positive.effect).toMatchObject([
       {
@@ -227,7 +227,7 @@ describe('compiler: v-if', () => {
       <p v-else-if="orNot"/>
       <!--bar-->
       <template v-else>fine</template>
-      <input v-text="text" />
+      <div v-text="text" />
     `)
     expect(code).matchSnapshot()
     expect(ir.template).toEqual([
@@ -237,7 +237,7 @@ describe('compiler: v-if', () => {
       '<!--bar-->',
       'fine',
 
-      '<input>',
+      '<div> </div>',
     ])
   })
 

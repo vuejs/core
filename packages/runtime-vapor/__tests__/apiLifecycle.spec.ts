@@ -26,11 +26,11 @@ import {
   createTextNode,
   insert,
   renderEffect,
-  setText,
   template,
 } from '../src'
 import { makeRender } from './_utils'
 import { ITERATE_KEY } from '@vue/reactivity'
+import { setElementText } from '../src/dom/prop'
 
 const define = makeRender<any>()
 
@@ -73,7 +73,7 @@ describe('api: lifecycle hooks', () => {
         onBeforeUpdate(fn)
         const n0 = createTextNode()
         renderEffect(() => {
-          setText(n0, count.value)
+          setElementText(n0, count.value)
         })
         return n0
       },
@@ -99,7 +99,7 @@ describe('api: lifecycle hooks', () => {
         const n0 = createTextNode()
         renderEffect(() => {
           renderSpy()
-          setText(n0, count.value)
+          setElementText(n0, count.value)
         })
         return n0
       },
@@ -120,7 +120,7 @@ describe('api: lifecycle hooks', () => {
 
         const n0 = createTextNode()
         renderEffect(() => {
-          setText(n0, count.value)
+          setElementText(n0, count.value)
         })
         return n0
       },
@@ -282,7 +282,7 @@ describe('api: lifecycle hooks', () => {
 
         const t0 = template('<div></div>')
         const n0 = t0()
-        renderEffect(() => setText(n0, props.count))
+        renderEffect(() => setElementText(n0, props.count))
         return n0
       },
     }
@@ -334,7 +334,7 @@ describe('api: lifecycle hooks', () => {
 
         const n0 = createTextNode()
         renderEffect(() => {
-          setText(n0, [obj.foo, 'bar' in obj, Object.keys(obj).join('')])
+          setElementText(n0, [obj.foo, 'bar' in obj, Object.keys(obj).join('')])
         })
         return n0
       },
@@ -377,7 +377,7 @@ describe('api: lifecycle hooks', () => {
 
         const n0 = createTextNode()
         renderEffect(() => {
-          setText(n0, [obj.foo, 'bar' in obj, Object.keys(obj).join('')])
+          setElementText(n0, [obj.foo, 'bar' in obj, Object.keys(obj).join('')])
         })
         return n0
       },
@@ -451,7 +451,7 @@ describe('api: lifecycle hooks', () => {
         onUpdated(() => handleUpdated())
 
         const n0 = createTextNode()
-        renderEffect(() => setText(n0, count.value))
+        renderEffect(() => setElementText(n0, count.value))
         const n1 = createComponent(Child, { count: () => count.value })
         return [n0, n1]
       },
@@ -464,7 +464,7 @@ describe('api: lifecycle hooks', () => {
 
         const props = currentInstance!.props
         const n2 = createTextNode()
-        renderEffect(() => setText(n2, props.count))
+        renderEffect(() => setElementText(n2, props.count))
         return n2
       },
     }
@@ -496,7 +496,7 @@ describe('api: lifecycle hooks', () => {
         onUpdated(() => handleUpdated())
 
         const n0 = createTextNode()
-        renderEffect(() => setText(n0, count.value))
+        renderEffect(() => setElementText(n0, count.value))
         const n1 = createComponent(Child, { count: () => count.value })
         return [n0, n1]
       },
@@ -511,7 +511,7 @@ describe('api: lifecycle hooks', () => {
         update = () => count.value++
 
         const n2 = createTextNode()
-        renderEffect(() => setText(n2, count.value))
+        renderEffect(() => setElementText(n2, count.value))
         return n2
       },
     }

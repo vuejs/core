@@ -60,7 +60,9 @@ export function genChildren(
     const elementIndex = Number(index) + offset
     const newPath = [...path, elementIndex]
 
-    const variable = id === undefined ? `_n${context.block.tempId++}` : `n${id}`
+    // p for "placeholder" variables that are meant for possible reuse by
+    // other access paths
+    const variable = id === undefined ? `p${context.block.tempId++}` : `n${id}`
     push(NEWLINE, `const ${variable} = `)
 
     if (prev) {

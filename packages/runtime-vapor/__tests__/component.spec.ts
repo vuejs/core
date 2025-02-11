@@ -13,11 +13,11 @@ import {
   createIf,
   createTextNode,
   renderEffect,
-  setText,
   template,
 } from '../src'
 import { makeRender } from './_utils'
 import type { VaporComponentInstance } from '../src/component'
+import { setElementText, setText } from '../src/dom/prop'
 
 const define = makeRender()
 
@@ -100,7 +100,7 @@ describe('component', () => {
         const n = inject<Ref<number>>('foo')!
         n.value++
         const n0 = template('<div></div>')()
-        renderEffect(() => setText(n0, n.value))
+        renderEffect(() => setElementText(n0, n.value))
         return n0
       },
     })
@@ -110,7 +110,7 @@ describe('component', () => {
         const n = ref(0)
         provide('foo', n)
         const n0 = template('<div></div>')()
-        renderEffect(() => setText(n0, n.value))
+        renderEffect(() => setElementText(n0, n.value))
         return [n0, createComponent(Child)]
       },
     }).render()
@@ -129,7 +129,7 @@ describe('component', () => {
           val => emit('update', val),
         )
         const n0 = template('<div></div>')()
-        renderEffect(() => setText(n0, props.value))
+        renderEffect(() => setElementText(n0, props.value))
         return n0
       },
     })
@@ -139,7 +139,7 @@ describe('component', () => {
       setup() {
         const inner = ref(0)
         const n0 = template('<div></div>')()
-        renderEffect(() => setText(n0, inner.value))
+        renderEffect(() => setElementText(n0, inner.value))
         const n1 = createComponent(Child, {
           value: () => outer.value,
           onUpdate: () => (val: number) => (inner.value = val),
@@ -162,7 +162,11 @@ describe('component', () => {
       props: ['count'],
       setup(props: any) {
         onUpdated(() => calls.push('update child'))
-        return createTextNode(() => [`${props.count} - ${a.value}`])
+        const n = createTextNode()
+        renderEffect(() => {
+          setText(n, `${props.count} - ${a.value}`)
+        })
+        return n
       },
     })
 
@@ -206,10 +210,11 @@ describe('component', () => {
       props: ['count'],
       setup(props: any) {
         onUpdated(() => calls.push('update parent'))
-        const n1 = createTextNode(() => [
-          `${globalCount.value} - ${props.count}`,
-        ])
+        const n1 = createTextNode()
         const n2 = createComponent(Child, { count: () => parentCount.value })
+        renderEffect(() => {
+          setText(n1, `${globalCount.value} - ${props.count}`)
+        })
         return [n1, n2]
       },
     })
@@ -240,7 +245,7 @@ describe('component', () => {
         const n1 = template('<h1></h1>')()
         renderEffect(() => {
           spy()
-          setText(n1, props.text)
+          setElementText(n1, props.text)
         })
         return n1
       },
@@ -267,7 +272,7 @@ describe('component', () => {
       const t0 = template('<div></div>')
       const n0 = t0()
       watchEffect(() => {
-        setText(n0, count.value)
+        setElementText(n0, count.value)
       })
       renderEffect(() => {})
       return n0

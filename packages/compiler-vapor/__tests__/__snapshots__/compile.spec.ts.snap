@@ -1,12 +1,13 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
 exports[`compile > bindings 1`] = `
-"import { setText as _setText, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<div></div>", true)
+"import { child as _child, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<div> </div>", true)
 
 export function render(_ctx, $props, $emit, $attrs, $slots) {
   const n0 = t0()
-  _renderEffect(() => _setText(n0, "count is ", _ctx.count, "."))
+  const x0 = _child(n0)
+  _renderEffect(() => _setText(x0, "count is " + _toDisplayString(_ctx.count) + "."))
   return n0
 }"
 `;
@@ -148,7 +149,7 @@ export function render(_ctx, $props, $emit, $attrs, $slots) {
 `;
 
 exports[`compile > directives > v-pre > should not affect siblings after it 1`] = `
-"import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback, createTextNode as _createTextNode, insert as _insert, setProp as _setProp, renderEffect as _renderEffect, template as _template } from 'vue';
+"import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback, createTextNode as _createTextNode, insert as _insert, toDisplayString as _toDisplayString, setText as _setText, setProp as _setProp, renderEffect as _renderEffect, template as _template } from 'vue';
 const t0 = _template("<div :id=\\"foo\\"><Comp></Comp>{{ bar }}</div>")
 const t1 = _template("<div></div>")
 
@@ -157,33 +158,37 @@ export function render(_ctx, $props, $emit, $attrs, $slots) {
   const n0 = t0()
   const n3 = t1()
   const n1 = _createComponentWithFallback(_component_Comp)
-  const n2 = _createTextNode(() => [_ctx.bar])
+  const n2 = _createTextNode()
   _insert([n1, n2], n3)
-  _renderEffect(() => _setProp(n3, "id", _ctx.foo))
+  _renderEffect(() => {
+    _setText(n2, _toDisplayString(_ctx.bar))
+    _setProp(n3, "id", _ctx.foo)
+  })
   return [n0, n3]
 }"
 `;
 
 exports[`compile > dynamic root 1`] = `
-"import { createTextNode as _createTextNode } from 'vue';
+"import { createTextNode as _createTextNode, toDisplayString as _toDisplayString } from 'vue';
 
 export function render(_ctx) {
-  const n0 = _createTextNode(() => [1, 2])
+  const n0 = _createTextNode(_toDisplayString(1) + _toDisplayString(2))
   return n0
 }"
 `;
 
 exports[`compile > dynamic root nodes and interpolation 1`] = `
-"import { setText as _setText, setProp as _setProp, renderEffect as _renderEffect, delegateEvents as _delegateEvents, template as _template } from 'vue';
-const t0 = _template("<button></button>", true)
+"import { child as _child, toDisplayString as _toDisplayString, setText as _setText, setProp as _setProp, renderEffect as _renderEffect, delegateEvents as _delegateEvents, template as _template } from 'vue';
+const t0 = _template("<button> </button>", true)
 _delegateEvents("click")
 
 export function render(_ctx) {
   const n0 = t0()
+  const x0 = _child(n0)
   n0.$evtclick = e => _ctx.handleClick(e)
   _renderEffect(() => {
     const _count = _ctx.count
-    _setText(n0, _count, "foo", _count, "foo", _count)
+    _setText(x0, _toDisplayString(_count) + "foo" + _toDisplayString(_count) + "foo" + _toDisplayString(_count))
     _setProp(n0, "id", _count)
   })
   return n0
@@ -192,7 +197,8 @@ export function render(_ctx) {
 
 exports[`compile > expression parsing > interpolation 1`] = `
 "
-  const n0 = _createTextNode(() => [a + b.value])
+  const n0 = _createTextNode()
+  _renderEffect(() => _setText(n0, _toDisplayString(a + b.value)))
   return n0
 "
 `;
@@ -223,10 +229,10 @@ export function render(_ctx) {
 `;
 
 exports[`compile > static + dynamic root 1`] = `
-"import { createTextNode as _createTextNode } from 'vue';
+"import { createTextNode as _createTextNode, toDisplayString as _toDisplayString } from 'vue';
 
 export function render(_ctx) {
-  const n0 = _createTextNode(() => [1, 2, "3", 4, 5, "6", 7, 8, "9", 'A', 'B'])
+  const n0 = _createTextNode(_toDisplayString(1) + _toDisplayString(2) + "3" + _toDisplayString(4) + _toDisplayString(5) + "6" + _toDisplayString(7) + _toDisplayString(8) + "9" + 'A' + 'B')
   return n0
 }"
 `;

@@ -42,7 +42,6 @@ describe('compiler: v-once', () => {
             isStatic: true,
           },
         ],
-        effect: false,
       },
       {
         element: 1,

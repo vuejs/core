@@ -10,12 +10,12 @@ import {
   insert,
   prepend,
   renderEffect,
-  setText,
   template,
 } from '../src'
 import { currentInstance, nextTick, ref } from '@vue/runtime-dom'
 import { makeRender } from './_utils'
 import type { DynamicSlot } from '../src/componentSlots'
+import { setElementText } from '../src/dom/prop'
 
 const define = makeRender<any>()
 
@@ -186,7 +186,7 @@ describe('component: slots', () => {
           header: props => {
             const el = template('<h1></h1>')()
             renderEffect(() => {
-              setText(el, props.title)
+              setElementText(el, props.title)
             })
             return el
           },
@@ -273,7 +273,7 @@ describe('component: slots', () => {
               fn: (props: any) => {
                 const el = template('<h1></h1>')()
                 renderEffect(() => {
-                  setText(el, props.title)
+                  setElementText(el, props.title)
                 })
                 return el
               },

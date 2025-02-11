@@ -11,7 +11,11 @@ import {
 } from '@vue/compiler-dom'
 import type { NodeTransform, TransformContext } from '../transform'
 import { DynamicFlag, IRNodeTypes } from '../ir'
-import { getLiteralExpressionValue, isConstantExpression } from '../utils'
+import {
+  getLiteralExpressionValue,
+  isConstantExpression,
+  isStaticExpression,
+} from '../utils'
 
 type TextLike = TextNode | InterpolationNode
 const seen = new WeakMap<
@@ -52,12 +56,24 @@ function processTextLike(context: TransformContext<InterpolationNode>) {
 
   context.dynamic.flags |= DynamicFlag.INSERT | DynamicFlag.NON_TEMPLATE
 
+  const nonConstantExps = values.filter(v => !isConstantExpression(v))
+  const isStatic =
+    !nonConstantExps.length ||
+    isStaticExpression(context, nonConstantExps) ||
+    context.inVOnce
+
   context.registerOperation({
     type: IRNodeTypes.CREATE_TEXT_NODE,
     id,
-    values,
-    effect: !values.every(isConstantExpression) && !context.inVOnce,
+    values: isStatic ? values : undefined,
   })
+  if (!isStatic) {
+    context.registerEffect(values, {
+      type: IRNodeTypes.SET_TEXT,
+      element: id,
+      values,
+    })
+  }
 }
 
 function processTextLikeContainer(
@@ -69,10 +85,17 @@ function processTextLikeContainer(
   if (literals.every(l => l != null)) {
     context.childrenTemplate = literals.map(l => String(l))
   } else {
+    context.childrenTemplate = [' ']
+    context.registerOperation({
+      type: IRNodeTypes.GET_TEXT_CHILD,
+      parent: context.reference(),
+    })
     context.registerEffect(values, {
       type: IRNodeTypes.SET_TEXT,
       element: context.reference(),
       values,
+      // indicates this node is generated, so prefix should be "x" instead of "n"
+      generated: true,
     })
   }
 }

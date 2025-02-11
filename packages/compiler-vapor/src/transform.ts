@@ -1,7 +1,6 @@
 import {
   type AllNode,
   type TransformOptions as BaseTransformOptions,
-  BindingTypes,
   type CommentNode,
   type CompilerCompatOptions,
   type ElementNode,
@@ -12,7 +11,6 @@ import {
   type TemplateChildNode,
   defaultOnError,
   defaultOnWarn,
-  isConstantNode,
   isVSlot,
 } from '@vue/compiler-dom'
 import { EMPTY_OBJ, NOOP, extend, isArray, isString } from '@vue/shared'
@@ -27,7 +25,7 @@ import {
   type RootIRNode,
   type VaporDirectiveNode,
 } from './ir'
-import { isConstantExpression } from './utils'
+import { isConstantExpression, isStaticExpression } from './utils'
 import { newBlock, newDynamic } from './transforms/utils'
 
 export type NodeTransform = (
@@ -306,22 +304,4 @@ export function createStructuralDirectiveTransform(
       return exitFns
     }
   }
-}
-
-function isStaticExpression(
-  context: TransformContext,
-  expressions: SimpleExpressionNode[],
-) {
-  const {
-    options: { bindingMetadata },
-  } = context
-  const isLiteralConst = (name: string) =>
-    bindingMetadata[name] === BindingTypes.LITERAL_CONST
-  return expressions.every(node => {
-    if (node.ast) {
-      return isConstantNode(node.ast, isLiteralConst)
-    } else if (node.ast === null) {
-      return isLiteralConst(node.content)
-    }
-  })
 }

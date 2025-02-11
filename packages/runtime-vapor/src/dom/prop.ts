@@ -171,13 +171,26 @@ export function setValue(el: TargetElement, value: any): void {
   }
 }
 
-export function setText(el: Node & { $txt?: string }, ...values: any[]): void {
-  const value =
-    values.length > 1
-      ? values.map(toDisplayString).join('')
-      : toDisplayString(values[0])
+/**
+ * Only called on text nodes!
+ * Compiler should also ensure value passed here is already converted by
+ * `toDisplayString`
+ */
+export function setText(el: Text & { $txt?: string }, value: string): void {
   if (el.$txt !== value) {
-    el.textContent = el.$txt = value
+    el.nodeValue = el.$txt = value
+  }
+}
+
+/**
+ * Used by setDynamicProps only, so need to guard with `toDisplayString`
+ */
+export function setElementText(
+  el: Node & { $txt?: string },
+  value: unknown,
+): void {
+  if (el.$txt !== (value = toDisplayString(value))) {
+    el.textContent = el.$txt = value as string
   }
 }
 
@@ -232,7 +245,7 @@ export function setDynamicProp(
     if (key === 'innerHTML') {
       setHtml(el, value)
     } else if (key === 'textContent') {
-      setText(el, value)
+      setElementText(el, value)
     } else if (key === 'value' && canSetValueDirectly(el.tagName)) {
       setValue(el, value)
     } else {

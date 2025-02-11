@@ -34,6 +34,8 @@ export enum IRNodeTypes {
 
   IF,
   FOR,
+
+  GET_TEXT_CHILD,
 }
 
 export interface BaseIRNode {
@@ -118,6 +120,7 @@ export interface SetTextIRNode extends BaseIRNode {
   type: IRNodeTypes.SET_TEXT
   element: number
   values: SimpleExpressionNode[]
+  generated?: boolean // whether this is a generated empty text node by `processTextLikeContainer`
 }
 
 export type KeyOverride = [find: string, replacement: string]
@@ -157,8 +160,7 @@ export interface SetTemplateRefIRNode extends BaseIRNode {
 export interface CreateTextNodeIRNode extends BaseIRNode {
   type: IRNodeTypes.CREATE_TEXT_NODE
   id: number
-  values: SimpleExpressionNode[]
-  effect: boolean
+  values?: SimpleExpressionNode[]
 }
 
 export interface InsertNodeIRNode extends BaseIRNode {
@@ -209,6 +211,11 @@ export interface SlotOutletIRNode extends BaseIRNode {
   fallback?: BlockIRNode
 }
 
+export interface GetTextChildIRNode extends BaseIRNode {
+  type: IRNodeTypes.GET_TEXT_CHILD
+  parent: number
+}
+
 export type IRNode = OperationNode | RootIRNode
 export type OperationNode =
   | SetPropIRNode
@@ -227,6 +234,7 @@ export type OperationNode =
   | CreateComponentIRNode
   | DeclareOldRefIRNode
   | SlotOutletIRNode
+  | GetTextChildIRNode
 
 export enum DynamicFlag {
   NONE = 0,

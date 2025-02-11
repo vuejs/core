@@ -7,7 +7,6 @@ import {
   createTemplateRefSetter,
   insert,
   renderEffect,
-  setText,
   template,
 } from '../../src'
 import { makeRender } from '../_utils'
@@ -20,6 +19,7 @@ import {
   useTemplateRef,
   watchEffect,
 } from '@vue/runtime-dom'
+import { setElementText } from '../../src/dom/prop'
 
 const define = makeRender()
 
@@ -292,7 +292,7 @@ describe('api: template ref', () => {
         const n0 = t0()
         createTemplateRefSetter()(n0 as Element, el)
         renderEffect(() => {
-          setText(n0, el.value && el.value.getAttribute('id'))
+          setElementText(n0, el.value && el.value.getAttribute('id'))
         })
         return n0
       },
@@ -431,7 +431,7 @@ describe('api: template ref', () => {
                   true,
                 )
                 renderEffect(() => {
-                  setText(n1, item)
+                  setElementText(n1, item)
                 })
                 return n1
               },
@@ -493,7 +493,7 @@ describe('api: template ref', () => {
                   true,
                 )
                 renderEffect(() => {
-                  setText(n1, item)
+                  setElementText(n1, item)
                 })
                 return n1
               },
@@ -553,14 +553,14 @@ describe('api: template ref', () => {
               true,
             )
             renderEffect(() => {
-              setText(n4, item)
+              setElementText(n4, item)
             })
             return n4
           },
         )
         insert(n3, n2 as unknown as ParentNode)
         renderEffect(() => {
-          setText(n1!, String(listRefs.value))
+          setElementText(n1!, String(listRefs.value))
         })
         return n0
       },
