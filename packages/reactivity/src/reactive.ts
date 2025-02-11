@@ -40,7 +40,8 @@ enum TargetType {
   COLLECTION = 2,
 }
 
-function targetTypeMap(rawType: string, value: Target): TargetType {
+function targetTypeMap(value: Target): TargetType {
+  const rawType = toRawType(value)
   switch (rawType) {
     case 'Object':
     case 'Array':
@@ -78,7 +79,7 @@ function isPlainObject(value: unknown): value is object {
 function getTargetType(value: Target) {
   return value[ReactiveFlags.SKIP] || !Object.isExtensible(value)
     ? TargetType.INVALID
-    : targetTypeMap(toRawType(value), value)
+    : targetTypeMap(value)
 }
 
 // only unwrap nested ref
