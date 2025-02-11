@@ -2478,6 +2478,17 @@ describe('compiler: parse', () => {
       ])
     })
 
+    test('should preserve whitespaces between element and interpolation', () => {
+      const ast = parse(`<div> {{ foo }} </div>`)
+      const element = ast.children[0] as ElementNode
+      expect(element.children.length).toBe(3)
+      expect(element.children.map(c => c.type)).toMatchObject([
+        NodeTypes.TEXT,
+        NodeTypes.INTERPOLATION,
+        NodeTypes.TEXT,
+      ])
+    })
+
     test('should preserve consecutive whitespaces in text', () => {
       const content = `   foo  \n    bar     baz     `
       const ast = parse(content)
