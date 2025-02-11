@@ -386,8 +386,7 @@ export function refreshComputed(computed: ComputedRefImpl): undefined {
   if (
     dep.version > 0 &&
     !computed.isSSR &&
-    computed.deps &&
-    !isDirty(computed)
+    (computed.deps ? !isDirty(computed) : !(computed.flags & EffectFlags.DIRTY))
   ) {
     computed.flags &= ~EffectFlags.RUNNING
     return
