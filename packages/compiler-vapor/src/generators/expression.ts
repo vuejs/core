@@ -308,11 +308,12 @@ function analyzeExpressions(expressions: SimpleExpressionNode[]) {
           return this.skip()
         }
 
+        // skip shorthand or non-computed property keys
         if (
           parent &&
           parent.type === 'ObjectProperty' &&
-          parent.shorthand &&
-          parent.key === currentNode
+          parent.key === currentNode &&
+          (parent.shorthand || !parent.computed)
         ) {
           return this.skip()
         }
