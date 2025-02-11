@@ -269,11 +269,6 @@ export class VueElement
         this._root = this
       }
     }
-
-    if (!(this._def as ComponentOptions).__asyncLoader) {
-      // for sync component defs we can immediately resolve props
-      this._resolveProps(this._def)
-    }
   }
 
   connectedCallback(): void {
@@ -380,12 +375,7 @@ export class VueElement
         }
       }
       this._numberProps = numberProps
-
-      if (isAsync) {
-        // defining getter/setters on prototype
-        // for sync defs, this already happened in the constructor
-        this._resolveProps(def)
-      }
+      this._resolveProps(def)
 
       // apply CSS
       if (this.shadowRoot) {
