@@ -159,6 +159,33 @@ describe('reactivity/reactive', () => {
     expect(dummy).toBe(true)
   })
 
+  test('custom array type with custom Symbol.toStringTag is handled as a common object', () => {
+    class MyArray extends Array {
+      get [Symbol.toStringTag]() {
+        return 'MyArray'
+      }
+    }
+
+    const myArr = new MyArray()
+
+    expect(Object.prototype.toString.call(myArr)).toBe('[object MyArray]')
+
+    const observed = reactive(myArr)
+
+    expect(isReactive(observed)).toBe(true)
+    expect(isProxy(observed)).toBe(true)
+
+    let dummy: number = 0
+    effect(() => {
+      dummy = observed.length
+    })
+
+    expect(dummy).toBe(0)
+
+    observed.push(42)
+    expect(dummy).toBe(1)
+  })
+
   test('observed value should proxy mutations to original (Object)', () => {
     const original: any = { foo: 1 }
     const observed = reactive(original)

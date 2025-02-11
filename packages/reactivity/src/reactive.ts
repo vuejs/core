@@ -40,7 +40,7 @@ enum TargetType {
   COLLECTION = 2,
 }
 
-function targetTypeMap(rawType: string) {
+function targetTypeMap(rawType: string, value: Target): TargetType {
   switch (rawType) {
     case 'Object':
     case 'Array':
@@ -51,6 +51,17 @@ function targetTypeMap(rawType: string) {
     case 'WeakSet':
       return TargetType.COLLECTION
     default:
+      if (
+        value instanceof Map ||
+        value instanceof Set ||
+        value instanceof WeakMap ||
+        value instanceof WeakSet
+      ) {
+        return TargetType.COLLECTION
+      }
+      if (value instanceof Array || isPlainObject(value)) {
+        return TargetType.COMMON
+      }
       return TargetType.INVALID
   }
 }
@@ -68,27 +79,9 @@ function getTargetType(value: Target) {
   if (value[ReactiveFlags.SKIP] || !Object.isExtensible(value)) {
     return TargetType.INVALID
   }
-
-  let type = targetTypeMap(toRawType(value))
-
-  // If the raw type mapping fails, we add extra checks:
-  if (type === TargetType.INVALID) {
-    // Check for collection types even if they have a custom Symbol.toStringTag.
-    if (
-      value instanceof Map ||
-      value instanceof Set ||
-      value instanceof WeakMap ||
-      value instanceof WeakSet
-    ) {
-      type = TargetType.COLLECTION
-    }
-    // Check if the value is a plain object despite a custom tag.
-    else if (isPlainObject(value)) {
-      type = TargetType.COMMON
-    }
-  }
-
-  return type
+  // Note: We now pass both the raw type and the value to targetTypeMap,
+  // so that extra instanceof checks can be performed in the default case.
+  return targetTypeMap(toRawType(value), value)
 }
 
 // only unwrap nested ref
