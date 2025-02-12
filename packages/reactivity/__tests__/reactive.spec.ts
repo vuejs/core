@@ -112,6 +112,80 @@ describe('reactivity/reactive', () => {
     expect(dummy).toBe(false)
   })
 
+  test('reactive object with custom Symbol.toStringTag triggers reactivity', () => {
+    const original = { [Symbol.toStringTag]: 'Goat', foo: 1 }
+    const observed = reactive(original)
+
+    expect(isReactive(observed)).toBe(true)
+    expect(isProxy(observed)).toBe(true)
+
+    let dummy: number | undefined
+    effect(() => {
+      dummy = observed.foo
+    })
+
+    expect(dummy).toBe(1)
+
+    observed.foo = 2
+    expect(dummy).toBe(2)
+  })
+
+  test('custom collection type with custom Symbol.toStringTag is handled as a collection', () => {
+    class MyCustomMap extends Map {
+      get [Symbol.toStringTag]() {
+        return 'MyCustomMap'
+      }
+    }
+
+    const myCustomMap = new MyCustomMap()
+
+    expect(Object.prototype.toString.call(myCustomMap)).toBe(
+      '[object MyCustomMap]',
+    )
+
+    const observed = reactive(myCustomMap)
+
+    expect(isReactive(observed)).toBe(true)
+    expect(isProxy(observed)).toBe(true)
+
+    let dummy: boolean = false
+    effect(() => {
+      dummy = observed.has('foo')
+    })
+
+    expect(dummy).toBe(false)
+
+    observed.set('foo', 'bar')
+    expect(dummy).toBe(true)
+  })
+
+  test('custom array type with custom Symbol.toStringTag is handled as a common object', () => {
+    class MyArray extends Array {
+      get [Symbol.toStringTag]() {
+        return 'MyArray'
+      }
+    }
+
+    const myArr = new MyArray()
+
+    expect(Object.prototype.toString.call(myArr)).toBe('[object MyArray]')
+
+    const observed = reactive(myArr)
+
+    expect(isReactive(observed)).toBe(true)
+    expect(isProxy(observed)).toBe(true)
+
+    let dummy: number = 0
+    effect(() => {
+      dummy = observed.length
+    })
+
+    expect(dummy).toBe(0)
+
+    observed.push(42)
+    expect(dummy).toBe(1)
+  })
+
   test('observed value should proxy mutations to original (Object)', () => {
     const original: any = { foo: 1 }
     const observed = reactive(original)
