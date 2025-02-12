@@ -89,6 +89,7 @@ const delegatedEventHandler = (e: Event) => {
         }
       } else {
         handlers(e)
+        if (e.cancelBubble) return
       }
     }
     node =
@@ -103,6 +104,6 @@ export function setDynamicEvents(
   events: Record<string, (...args: any[]) => any>,
 ): void {
   for (const name in events) {
-    on(el, name, () => events[name], { effect: true })
+    on(el, name, events[name], { effect: true })
   }
 }
