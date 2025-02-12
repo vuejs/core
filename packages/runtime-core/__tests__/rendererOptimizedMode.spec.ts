@@ -29,7 +29,7 @@ import {
   setBlockTracking,
   withCtx,
 } from '@vue/runtime-test'
-import { PatchFlags, SlotFlags } from '@vue/shared'
+import { PatchFlags, SlotFlags, toDisplayString } from '@vue/shared'
 import { SuspenseImpl } from '../src/components/Suspense'
 
 describe('renderer: optimized mode', () => {
@@ -1293,5 +1293,63 @@ describe('renderer: optimized mode', () => {
     await nextTick()
     expect(inner(root)).toBe('<!--v-if-->')
     expect(beforeUnmountSpy).toHaveBeenCalledTimes(1)
+  })
+
+  // #12411
+  test('handle patch stable fragment with non-reactive v-for source', async () => {
+    const count = ref(0)
+    const foo: any = []
+    function updateFoo() {
+      for (let n = 0; n < 3; n++) {
+        foo[n] = n + 1 + '_foo'
+      }
+    }
+    const Comp = {
+      setup() {
+        return () => {
+          // <div>{{ count }}</div>
+          // <div v-for='item in foo'>{{ item }}</div>
+          return (
+            openBlock(),
+            createElementBlock(
+              Fragment,
+              null,
+              [
+                createElementVNode(
+                  'div',
+                  null,
+                  toDisplayString(count.value),
+                  PatchFlags.TEXT,
+                ),
+                (openBlock(),
+                createElementBlock(
+                  Fragment,
+                  null,
+                  renderList(foo, item => {
+                    return createElementVNode(
+                      'div',
+                      null,
+                      toDisplayString(item),
+                      PatchFlags.TEXT,
+                    )
+                  }),
+                  PatchFlags.STABLE_FRAGMENT,
+                )),
+              ],
+              PatchFlags.STABLE_FRAGMENT,
+            )
+          )
+        }
+      },
+    }
+
+    render(h(Comp), root)
+    expect(inner(root)).toBe('<div>0</div>')
+    updateFoo()
+    count.value++
+    await nextTick()
+    expect(inner(root)).toBe(
+      '<div>1</div><div>1_foo</div><div>2_foo</div><div>3_foo</div>',
+    )
   })
 })
