@@ -217,3 +217,10 @@ export function genCacheKey(source: string, options: any): string {
     )
   )
 }
+
+export function formatDateStamp(dateStr: string): number {
+  // Handle iOS compatibility issue by replacing - with /
+  // 2024-11-15T12:37' => 2024/11/15 12:37'
+  const normalizedDateStr = dateStr.replace(/-/g, '/').replace('T', ' ')
+  return new Date(normalizedDateStr).getTime()
+}
