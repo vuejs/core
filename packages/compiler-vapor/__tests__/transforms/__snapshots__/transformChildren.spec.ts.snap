@@ -1,13 +1,13 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
 exports[`compiler: children transform > children & sibling references 1`] = `
-"import { child as _child, nextn as _nextn, next as _next, createTextNode as _createTextNode, insert as _insert, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, template as _template } from 'vue';
+"import { child as _child, nthChild as _nthChild, next as _next, createTextNode as _createTextNode, insert as _insert, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, template as _template } from 'vue';
 const t0 = _template("<div><p> </p> <!><p> </p></div>", true)
 
 export function render(_ctx) {
   const n4 = t0()
   const n0 = _child(n4)
-  const n3 = _nextn(n0, 2)
+  const n3 = _nthChild(n4, 2)
   const n2 = _next(n3)
   const x0 = _child(n0)
   const n1 = _createTextNode()
@@ -23,12 +23,12 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: children transform > efficient find 1`] = `
-"import { child as _child, children as _children, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, template as _template } from 'vue';
+"import { child as _child, nthChild as _nthChild, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, template as _template } from 'vue';
 const t0 = _template("<div><div>x</div><div>x</div><div> </div></div>", true)
 
 export function render(_ctx) {
   const n1 = t0()
-  const n0 = _children(n1, 2)
+  const n0 = _nthChild(n1, 2)
   const x0 = _child(n0)
   _renderEffect(() => _setText(x0, _toDisplayString(_ctx.msg)))
   return n1

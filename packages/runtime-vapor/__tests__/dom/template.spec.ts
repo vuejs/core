@@ -1,5 +1,5 @@
 import { template } from '../../src/dom/template'
-import { child, next, nextn } from '../../src/dom/node'
+import { child, next, nthChild } from '../../src/dom/node'
 
 describe('api: template', () => {
   test('create element', () => {
@@ -18,6 +18,17 @@ describe('api: template', () => {
     expect(root.$root).toBe(true)
   })
 
+  test('nthChild', () => {
+    const t = template('<div><span><b>nested</b></span><p></p></div>')
+    const root = t()
+    const span = nthChild(root, 0)
+    const b = nthChild(span, 0)
+    const p = nthChild(root, 1)
+    expect(span).toBe(root.firstChild)
+    expect(b).toBe(root.firstChild!.firstChild)
+    expect(p).toBe(root.firstChild!.nextSibling)
+  })
+
   test('next', () => {
     const t = template('<div><span></span><b></b><p></p></div>')
     const root = t()
@@ -26,7 +37,7 @@ describe('api: template', () => {
 
     expect(span).toBe(root.childNodes[0])
     expect(b).toBe(root.childNodes[1])
-    expect(nextn(span, 2)).toBe(root.childNodes[2])
+    expect(nthChild(root, 2)).toBe(root.childNodes[2])
     expect(next(b)).toBe(root.childNodes[2])
   })
 })

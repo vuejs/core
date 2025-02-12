@@ -55,7 +55,7 @@ describe('compiler: children transform', () => {
         <div>{{ msg }}</div>
       </div>`,
     )
-    expect(code).contains(`const n0 = _children(n1, 2)`)
+    expect(code).contains(`const n0 = _nthChild(n1, 2)`)
     expect(code).toMatchSnapshot()
   })
 })

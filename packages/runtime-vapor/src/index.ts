@@ -10,7 +10,7 @@ export { createComponent, createComponentWithFallback } from './component'
 export { renderEffect } from './renderEffect'
 export { createSlot } from './componentSlots'
 export { template } from './dom/template'
-export { createTextNode, child, next, nextn } from './dom/node'
+export { createTextNode, child, nthChild, next } from './dom/node'
 export {
   setText,
   setHtml,
