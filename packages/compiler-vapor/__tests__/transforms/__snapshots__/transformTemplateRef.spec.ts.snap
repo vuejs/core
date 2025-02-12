@@ -23,7 +23,7 @@ export function render(_ctx) {
     const n2 = t0()
     _setTemplateRef(n2, "foo", void 0, true)
     return n2
-  })
+  }, null, null, true)
   return n0
 }"
 `;

@@ -16,7 +16,7 @@ import {
   IRNodeTypes,
   type VaporDirectiveNode,
 } from '../ir'
-import { findProp, propToExpression } from '../utils'
+import { findProp, isStaticExpression, propToExpression } from '../utils'
 import { newBlock, wrapTemplate } from './utils'
 
 export const transformVFor: NodeTransform = createStructuralDirectiveTransform(
@@ -76,7 +76,12 @@ export function processFor(
       index: index as SimpleExpressionNode | undefined,
       keyProp: keyProperty,
       render,
-      once: context.inVOnce,
+      once:
+        context.inVOnce ||
+        isStaticExpression(
+          source as SimpleExpressionNode,
+          context.options.bindingMetadata,
+        ),
       component: isComponent,
       onlyChild: !!isOnlyChild,
     })

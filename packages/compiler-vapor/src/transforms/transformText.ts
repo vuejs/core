@@ -59,7 +59,9 @@ function processTextLike(context: TransformContext<InterpolationNode>) {
   const nonConstantExps = values.filter(v => !isConstantExpression(v))
   const isStatic =
     !nonConstantExps.length ||
-    isStaticExpression(context, nonConstantExps) ||
+    nonConstantExps.every(e =>
+      isStaticExpression(e, context.options.bindingMetadata),
+    ) ||
     context.inVOnce
 
   context.registerOperation({

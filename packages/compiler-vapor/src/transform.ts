@@ -143,7 +143,9 @@ export class TransformContext<T extends AllNode = AllNode> {
     if (
       this.inVOnce ||
       expressions.length === 0 ||
-      isStaticExpression(this.root, expressions)
+      expressions.every(e =>
+        isStaticExpression(e, this.root.options.bindingMetadata),
+      )
     ) {
       return this.registerOperation(...operations)
     }
