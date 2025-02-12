@@ -5,6 +5,7 @@ import {
   type WatchCallback,
   type WatchEffect,
   type WatchHandle,
+  type WatchSkip,
   type WatchSource,
   watch as baseWatch,
 } from '@vue/reactivity'
@@ -48,6 +49,7 @@ export interface WatchEffectOptions extends DebuggerOptions {
 export interface WatchOptions<Immediate = boolean> extends WatchEffectOptions {
   immediate?: Immediate
   deep?: boolean | number
+  skip?: WatchSkip
   once?: boolean
 }
 
@@ -143,7 +145,7 @@ function doWatch(
   cb: WatchCallback | null,
   options: WatchOptions = EMPTY_OBJ,
 ): WatchHandle {
-  const { immediate, deep, flush, once } = options
+  const { immediate, deep, skip: skip, flush, once } = options
 
   if (__DEV__ && !cb) {
     if (immediate !== undefined) {
@@ -155,6 +157,12 @@ function doWatch(
     if (deep !== undefined) {
       warn(
         `watch() "deep" option is only respected when using the ` +
+          `watch(source, callback, options?) signature.`,
+      )
+    }
+    if (skip !== undefined) {
+      warn(
+        `watch() "skip" option is only respected when using the ` +
           `watch(source, callback, options?) signature.`,
       )
     }
