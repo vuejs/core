@@ -785,6 +785,23 @@ describe('cache multiple access', () => {
     expect(code).contains('_setProp(n0, "id", _obj[1][_ctx.baz] + _obj.bar)')
   })
 
+  test('cache variable used in both property shorthand and normal binding', () => {
+    const { code } = compileWithVBind(`
+        <div :style="{color}" :id="color"/>
+      `)
+    expect(code).matchSnapshot()
+    expect(code).contains('const _color = _ctx.color')
+    expect(code).contains('_setStyle(n0, {color: _color})')
+  })
+
+  test('not cache variable only used in property shorthand', () => {
+    const { code } = compileWithVBind(`
+        <div :style="{color}" />
+      `)
+    expect(code).matchSnapshot()
+    expect(code).not.contains('const _color = _ctx.color')
+  })
+
   test('not cache variable and member expression with the same name', () => {
     const { code } = compileWithVBind(`
         <div :id="bar + obj.bar"></div>
