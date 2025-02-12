@@ -419,6 +419,17 @@ const tokenizer = new Tokenizer(stack, {
 
   onend() {
     const end = currentInput.length
+    // resolve inner content for incomplete SFC root tag
+    if (currentRoot && currentRoot.children.length) {
+      const el = currentRoot.children[currentRoot.children.length - 1]
+      if (
+        el.type === 1 &&
+        el.innerLoc &&
+        !new RegExp(`<\/${el.tag}\s*>$`).test(el.loc.source)
+      ) {
+        el.innerLoc = getLoc(el.innerLoc.start.offset, end)
+      }
+    }
     // EOF ERRORS
     if ((__DEV__ || !__BROWSER__) && tokenizer.state !== State.Text) {
       switch (tokenizer.state) {
