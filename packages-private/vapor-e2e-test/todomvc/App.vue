@@ -2,11 +2,9 @@
 import {
   reactive,
   computed,
-  watchEffect,
   onMounted,
   onUnmounted,
-  next,
-  nextTick,
+  watchPostEffect,
 } from 'vue'
 
 const STORAGE_KEY = 'todos-vuejs-3.x'
@@ -72,7 +70,7 @@ const state = reactive({
   }),
 })
 
-watchEffect(() => {
+watchPostEffect(() => {
   todoStorage.save(state.todos)
 })
 
@@ -138,8 +136,8 @@ function removeCompleted() {
 }
 
 // vapor custom directive
-const vTodoFocus = (el, value) => () => {
-  if (value()) nextTick(() => el.focus())
+const vTodoFocus = (el, value) => {
+  watchPostEffect(() => value() && el.focus())
 }
 </script>
 
