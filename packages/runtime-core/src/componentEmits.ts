@@ -189,6 +189,9 @@ export function emit(
   let handlerName
   let handler =
     props[(handlerName = toHandlerKey(event))] ||
+    // try kebab-case with on- (#9812)
+    props[(handlerName = `on-${event}`)] ||
+    props[(handlerName = `on-${hyphenate(event)}`)] ||
     // also try camelCase event handler (#2249)
     props[(handlerName = toHandlerKey(camelize(event)))]
   // for v-model update:xxx events, also trigger kebab-case equivalent
@@ -283,8 +286,8 @@ export function normalizeEmitsOptions(
 }
 
 // Check if an incoming prop key is a declared emit event listener.
-// e.g. With `emits: { click: null }`, props named `onClick` and `onclick` are
-// both considered matched listeners.
+// e.g. With `emits: { click: null }`, props named `onClick`, `onclick` and
+// `on-click` are all considered matched listeners.
 export function isEmitListener(
   options: ObjectEmitsOptions | null,
   key: string,
@@ -297,10 +300,11 @@ export function isEmitListener(
     return true
   }
 
-  key = key.slice(2).replace(/Once$/, '')
+  key = key.slice(2).replace(/Once$/, '').replace(/^-/, '')
   return (
     hasOwn(options, key[0].toLowerCase() + key.slice(1)) ||
     hasOwn(options, hyphenate(key)) ||
+    hasOwn(options, camelize(key)) ||
     hasOwn(options, key)
   )
 }
