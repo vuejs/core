@@ -1,5 +1,5 @@
 import {
-  children,
+  child,
   createIf,
   insert,
   renderEffect,
@@ -161,23 +161,21 @@ describe('createIf', () => {
       const n1 = createIf(
         spyConditionFn1,
         () => {
-          const n2 = t0()
-          withDirectives(children(n2, 0), [
-            [vDirective, () => (update.value, '1')],
-          ])
+          const n2 = t0() as ParentNode
+          withDirectives(child(n2), [[vDirective, () => (update.value, '1')]])
           return n2
         },
         () =>
           createIf(
             spyConditionFn2,
             () => {
-              const n2 = t0()
-              withDirectives(children(n2, 0), [[vDirective, () => '2']])
+              const n2 = t0() as ParentNode
+              withDirectives(child(n2), [[vDirective, () => '2']])
               return n2
             },
             () => {
-              const n2 = t0()
-              withDirectives(children(n2, 0), [[vDirective, () => '3']])
+              const n2 = t0() as ParentNode
+              withDirectives(child(n2), [[vDirective, () => '3']])
               return n2
             },
           ),

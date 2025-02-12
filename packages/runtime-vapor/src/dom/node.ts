@@ -12,3 +12,21 @@ export function createComment(data: string): Comment {
 export function querySelector(selectors: string): Element | null {
   return document.querySelector(selectors)
 }
+
+/*! #__NO_SIDE_EFFECTS__ */
+export function child(node: ParentNode): Node {
+  return node.firstChild!
+}
+
+/*! #__NO_SIDE_EFFECTS__ */
+export function next(node: Node): Node {
+  return node.nextSibling!
+}
+
+/*! #__NO_SIDE_EFFECTS__ */
+export function nextn(node: Node, offset: number = 1): Node {
+  for (let i = 0; i < offset; i++) {
+    node = node.nextSibling!
+  }
+  return node
+}

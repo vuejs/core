@@ -9,8 +9,8 @@ export { insert, prepend, remove } from './block'
 export { createComponent, createComponentWithFallback } from './component'
 export { renderEffect } from './renderEffect'
 export { createSlot } from './componentSlots'
-export { template, children, child, next, nextn } from './dom/template'
-export { createTextNode } from './dom/node'
+export { template } from './dom/template'
+export { createTextNode, child, next, nextn } from './dom/node'
 export {
   setText,
   setHtml,

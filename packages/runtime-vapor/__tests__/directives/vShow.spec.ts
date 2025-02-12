@@ -1,6 +1,5 @@
 import {
   applyVShow,
-  children,
   createComponent,
   createIf,
   defineVaporComponent,
@@ -23,8 +22,8 @@ const createDemo = (defaultValue: boolean) =>
       '<div><button>toggle</button><h1>hello world</h1></div>',
     )
     const n0 = t0()
-    const n1 = children(n0, 0)
-    const n2 = children(n0, 1)
+    const n1 = n0.firstChild!
+    const n2 = n1.nextSibling
     applyVShow(n2 as VShowElement, () => visible.value)
     on(n1 as HTMLElement, 'click', handleClick)
     return n0
