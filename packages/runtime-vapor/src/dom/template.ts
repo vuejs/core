@@ -1,13 +1,29 @@
+import {
+  adoptHydrationNode,
+  currentHydrationNode,
+  isHydrating,
+} from './hydrate'
+import { child } from './node'
+
+let t: HTMLTemplateElement
+
 /*! #__NO_SIDE_EFFECTS__ */
 export function template(html: string, root?: boolean) {
-  let node: ChildNode
-  const create = () => {
-    const t = document.createElement('template')
-    t.innerHTML = html
-    return t.content.firstChild!
-  }
+  let node: Node
   return (): Node & { $root?: true } => {
-    const ret = (node || (node = create())).cloneNode(true)
+    if (isHydrating) {
+      if (__DEV__ && !currentHydrationNode) {
+        // TODO this should not happen
+        throw new Error('No current hydration node')
+      }
+      return adoptHydrationNode(currentHydrationNode, html)!
+    }
+    if (!node) {
+      t = t || document.createElement('template')
+      t.innerHTML = html
+      node = child(t.content)
+    }
+    const ret = node.cloneNode(true)
     if (root) (ret as any).$root = true
     return ret
   }

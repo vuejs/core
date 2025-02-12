@@ -1,5 +1,5 @@
 // public APIs
-export { createVaporApp } from './apiCreateApp'
+export { createVaporApp, createVaporSSRApp } from './apiCreateApp'
 export { defineVaporComponent } from './apiDefineComponent'
 export { vaporInteropPlugin } from './vdomInterop'
 export type { VaporDirective } from './directives/custom'

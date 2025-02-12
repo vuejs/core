@@ -479,14 +479,10 @@ export function mountComponent(
   if (__DEV__) {
     startMeasure(instance, `mount`)
   }
-  if (!instance.isMounted) {
-    if (instance.bm) invokeArrayFns(instance.bm)
-    insert(instance.block, parent, anchor)
-    if (instance.m) queuePostFlushCb(() => invokeArrayFns(instance.m!))
-    instance.isMounted = true
-  } else {
-    insert(instance.block, parent, anchor)
-  }
+  if (instance.bm) invokeArrayFns(instance.bm)
+  insert(instance.block, parent, anchor)
+  if (instance.m) queuePostFlushCb(() => invokeArrayFns(instance.m!))
+  instance.isMounted = true
   if (__DEV__) {
     endMeasure(instance, `mount`)
   }
