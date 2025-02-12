@@ -712,14 +712,12 @@ function baseCreateRenderer(
       transition!.beforeEnter(el)
     }
     hostInsert(el, container, anchor)
-    if (
-      (vnodeHook = props && props.onVnodeMounted) ||
-      needCallTransitionHooks ||
-      dirs
-    ) {
+    if (needCallTransitionHooks) {
+      transition!.enter(el)
+    }
+    if ((vnodeHook = props && props.onVnodeMounted) || dirs) {
       queuePostRenderEffect(() => {
         vnodeHook && invokeVNodeHook(vnodeHook, parentComponent, vnode)
-        needCallTransitionHooks && transition!.enter(el)
         dirs && invokeDirectiveHook(vnode, null, parentComponent, 'mounted')
       }, parentSuspense)
     }
