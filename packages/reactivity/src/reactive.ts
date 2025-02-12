@@ -279,15 +279,15 @@ function createReactiveObject(
   ) {
     return target
   }
-  // target already has corresponding Proxy
-  const existingProxy = proxyMap.get(target)
-  if (existingProxy) {
-    return existingProxy
-  }
   // only specific value types can be observed.
   const targetType = getTargetType(target)
   if (targetType === TargetType.INVALID) {
     return target
+  }
+  // target already has corresponding Proxy
+  const existingProxy = proxyMap.get(target)
+  if (existingProxy) {
+    return existingProxy
   }
   const proxy = new Proxy(
     target,
