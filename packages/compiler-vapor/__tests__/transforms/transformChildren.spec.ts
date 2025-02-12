@@ -46,4 +46,16 @@ describe('compiler: children transform', () => {
     )
     expect(code).toMatchSnapshot()
   })
+
+  test('efficient find', () => {
+    const { code } = compileWithElementTransform(
+      `<div>
+        <div>x</div>
+        <div>x</div>
+        <div>{{ msg }}</div>
+      </div>`,
+    )
+    expect(code).contains(`const n0 = _nthChild(n1, 2)`)
+    expect(code).toMatchSnapshot()
+  })
 })

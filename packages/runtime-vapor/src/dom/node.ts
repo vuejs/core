@@ -19,14 +19,11 @@ export function child(node: ParentNode): Node {
 }
 
 /*! #__NO_SIDE_EFFECTS__ */
-export function next(node: Node): Node {
-  return node.nextSibling!
+export function nthChild(node: Node, i: number): Node {
+  return node.childNodes[i]
 }
 
 /*! #__NO_SIDE_EFFECTS__ */
-export function nextn(node: Node, offset: number = 1): Node {
-  for (let i = 0; i < offset; i++) {
-    node = node.nextSibling!
-  }
-  return node
+export function next(node: Node): Node {
+  return node.nextSibling!
 }
