@@ -17,7 +17,11 @@ import {
 } from '@vue/shared'
 import { warn } from './warning'
 import { isKeepAlive } from './components/KeepAlive'
-import { type ContextualRenderFn, withCtx } from './componentRenderContext'
+import {
+  type ContextualRenderFn,
+  currentRenderingInstance,
+  withCtx,
+} from './componentRenderContext'
 import { isHmrUpdating } from './hmr'
 import { DeprecationTypes, isCompatEnabled } from './compat/compatConfig'
 import { TriggerOpTypes, trigger } from '@vue/reactivity'
@@ -97,7 +101,8 @@ const normalizeSlot = (
     if (
       __DEV__ &&
       currentInstance &&
-      (!ctx || ctx.root === currentInstance.root)
+      !(ctx === null && currentRenderingInstance) &&
+      !(ctx && ctx.root !== currentInstance.root)
     ) {
       warn(
         `Slot "${key}" invoked outside of the render function: ` +
