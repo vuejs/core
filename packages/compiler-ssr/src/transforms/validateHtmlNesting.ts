@@ -16,8 +16,8 @@ export const validateHtmlNesting: NodeTransform = (node, context) => {
     !isValidHTMLNesting(context.parent.tag, node.tag)
   ) {
     const error = new SyntaxError(
-      `<${node.tag}> cannot be child of <${context.parent.tag}>, ` +
-        'according to HTML specifications. ' +
+      `<${node.tag}> as a child of <${context.parent.tag}> ` +
+        'might result in the browser modifying the DOM. ' +
         'This can cause hydration errors or ' +
         'potentially disrupt future functionality.',
     ) as CompilerError
