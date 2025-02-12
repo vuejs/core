@@ -10,6 +10,7 @@ import type { ForIRNode } from '../ir'
 import { type CodeFragment, NEWLINE, genCall, genMulti } from './utils'
 import type { Identifier } from '@babel/types'
 import { parseExpression } from '@babel/parser'
+import { VaporVForFlags } from '../../../shared/src/vaporFlags'
 
 export function genFor(
   oper: ForIRNode,
@@ -80,6 +81,17 @@ export function genFor(
   const blockFn = context.withId(() => genBlock(render, context, args), idMap)
   exitScope()
 
+  let flags = 0
+  if (onlyChild) {
+    flags |= VaporVForFlags.FAST_REMOVE
+  }
+  if (component) {
+    flags |= VaporVForFlags.IS_COMPONENT
+  }
+  if (once) {
+    flags |= VaporVForFlags.ONCE
+  }
+
   return [
     NEWLINE,
     `const n${id} = `,
@@ -88,9 +100,7 @@ export function genFor(
       sourceExpr,
       blockFn,
       genCallback(keyProp),
-      component && 'true',
-      once && 'true',
-      onlyChild && `true`,
+      flags ? String(flags) : undefined,
       // todo: hydrationNode
     ),
   ]
