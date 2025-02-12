@@ -1,0 +1,47 @@
+{
+  "name": "@vue/runtime-vapor",
+  "version": "3.5.13",
+  "description": "@vue/runtime-vapor",
+  "main": "index.js",
+  "module": "dist/runtime-vapor.esm-bundler.js",
+  "types": "dist/runtime-vapor.d.ts",
+  "files": [
+    "index.js",
+    "dist"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/runtime-vapor.d.ts",
+      "default": "./dist/runtime-vapor.esm-bundler.js"
+    },
+    "./*": "./*"
+  },
+  "sideEffects": false,
+  "buildOptions": {
+    "name": "VueRuntimeVapor",
+    "formats": [
+      "esm-bundler"
+    ]
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vuejs/core.git",
+    "directory": "packages/runtime-vapor"
+  },
+  "keywords": [
+    "vue"
+  ],
+  "author": "Evan You",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/vuejs/core/issues"
+  },
+  "homepage": "https://github.com/vuejs/core/tree/dev/packages/runtime-vapor#readme",
+  "dependencies": {
+    "@vue/shared": "workspace:*",
+    "@vue/reactivity": "workspace:*"
+  },
+  "peerDependencies": {
+    "@vue/runtime-dom": "workspace:*"
+  }
+}

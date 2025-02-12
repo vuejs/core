@@ -1,11 +1,11 @@
 import {
-  type ComponentInternalInstance,
-  getCurrentInstance,
+  type GenericComponentInstance,
+  getCurrentGenericInstance,
 } from '../component'
 import { warn } from '../warning'
 
 export function useId(): string {
-  const i = getCurrentInstance()
+  const i = getCurrentGenericInstance()
   if (i) {
     return (i.appContext.config.idPrefix || 'v') + '-' + i.ids[0] + i.ids[1]++
   } else if (__DEV__) {
@@ -23,6 +23,6 @@ export function useId(): string {
  * - components with async setup()
  * - components with serverPrefetch
  */
-export function markAsyncBoundary(instance: ComponentInternalInstance): void {
+export function markAsyncBoundary(instance: GenericComponentInstance): void {
   instance.ids = [instance.ids[0] + instance.ids[2]++ + '-', 0, 0]
 }

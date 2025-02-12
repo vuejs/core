@@ -44,7 +44,8 @@ import { parseExpression } from '@babel/parser'
 import { IS_REF, UNREF } from '../runtimeHelpers'
 import { BindingTypes } from '../options'
 
-const isLiteralWhitelisted = /*@__PURE__*/ makeMap('true,false,null,this')
+export const isLiteralWhitelisted: (key: string) => boolean =
+  /*@__PURE__*/ makeMap('true,false,null,this')
 
 export const transformExpression: NodeTransform = (node, context) => {
   if (node.type === NodeTypes.INTERPOLATION) {

@@ -97,7 +97,8 @@ const normalizeSlot = (
     if (
       __DEV__ &&
       currentInstance &&
-      (!ctx || ctx.root === currentInstance.root)
+      !currentInstance.vapor &&
+      (!ctx || ctx.root === (currentInstance as ComponentInternalInstance).root)
     ) {
       warn(
         `Slot "${key}" invoked outside of the render function: ` +

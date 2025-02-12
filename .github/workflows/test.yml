@@ -80,6 +80,32 @@ jobs:
       - name: verify treeshaking
         run: node scripts/verify-treeshaking.js
 
+  e2e-vapor:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup cache for Chromium binary
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/puppeteer
+          key: chromium-${{ hashFiles('pnpm-lock.yaml') }}
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4.0.0
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.node-version'
+          cache: 'pnpm'
+
+      - run: pnpm install
+      - run: node node_modules/puppeteer/install.mjs
+
+      - name: Run e2e tests
+        run: pnpm run test-e2e-vapor
+
   lint-and-test-dts:
     runs-on: ubuntu-latest
     env:
