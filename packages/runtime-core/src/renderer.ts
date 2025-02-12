@@ -1444,9 +1444,9 @@ function baseCreateRenderer(
             // and continue the rest of operations once the deps are resolved
             nonHydratedAsyncRoot.asyncDep!.then(() => {
               // the instance may be destroyed during the time period
-              if (!instance.isUnmounted) {
-                componentUpdateFn()
-              }
+              queuePostRenderEffect(() => {
+                if (!instance.isUnmounted) update()
+              }, parentSuspense)
             })
             return
           }
