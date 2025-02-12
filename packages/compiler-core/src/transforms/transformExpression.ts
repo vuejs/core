@@ -129,7 +129,17 @@ export function processExpression(
     parent?: Node | null,
     id?: Identifier,
   ) => {
+    const isNewExpression = parent && isInNewExpression(parentStack)
+    const wrapWithUnref = (raw: string) => {
+      const wrapped = `${context.helperString(UNREF)}(${raw})`
+      return isNewExpression ? `(${wrapped})` : wrapped
+    }
+
     const type = hasOwn(bindingMetadata, raw) && bindingMetadata[raw]
+    if (type && type === BindingTypes.SETUP_IMPORTED_MAYBE_REF) {
+      return wrapWithUnref(raw)
+    }
+
     if (inline) {
       // x = y
       const isAssignmentLVal =
@@ -140,11 +150,6 @@ export function processExpression(
       // ({ x } = y)
       const isDestructureAssignment =
         parent && isInDestructureAssignment(parent, parentStack)
-      const isNewExpression = parent && isInNewExpression(parentStack)
-      const wrapWithUnref = (raw: string) => {
-        const wrapped = `${context.helperString(UNREF)}(${raw})`
-        return isNewExpression ? `(${wrapped})` : wrapped
-      }
 
       if (
         isConst(type) ||
