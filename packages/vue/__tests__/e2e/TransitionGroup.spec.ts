@@ -645,4 +645,60 @@ describe('e2e: TransitionGroup', () => {
     },
     E2E_TIMEOUT,
   )
+
+  // #6105
+  test(
+    'with scale',
+    async () => {
+      await page().evaluate(() => {
+        const { createApp, ref, onMounted } = (window as any).Vue
+        createApp({
+          template: `
+            <div id="container">
+              <div class="scale" style="transform: scale(2) translateX(50%) translateY(50%)">
+                <transition-group tag="ul">
+                  <li v-for="item in items" :key="item">{{item}}</li>
+                </transition-group>
+                <button id="toggleBtn" @click="click">button</button>
+              </div>
+            </div>
+          `,
+          setup: () => {
+            const items = ref(['a', 'b', 'c'])
+            const click = () => {
+              items.value.reverse()
+            }
+
+            onMounted(() => {
+              const styleNode = document.createElement('style')
+              styleNode.innerHTML = `.v-move {
+                transition: transform 0.5s ease;
+              }`
+              document.body.appendChild(styleNode)
+            })
+
+            return { items, click }
+          },
+        }).mount('#app')
+      })
+
+      const original_top = await page().$eval('ul li:nth-child(1)', node => {
+        return node.getBoundingClientRect().top
+      })
+      const new_top = await page().evaluate(() => {
+        const el = document.querySelector('ul li:nth-child(1)')
+        const p = new Promise(resolve => {
+          el!.addEventListener('transitionstart', () => {
+            const new_top = el!.getBoundingClientRect().top
+            resolve(new_top)
+          })
+        })
+        ;(document.querySelector('#toggleBtn') as any)!.click()
+        return p
+      })
+
+      expect(original_top).toBeLessThan(new_top as number)
+    },
+    E2E_TIMEOUT,
+  )
 })
