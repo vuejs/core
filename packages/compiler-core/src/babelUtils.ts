@@ -544,7 +544,6 @@ export function isStaticNode(node: Node): boolean {
     case 'BooleanLiteral':
     case 'NullLiteral':
     case 'BigIntLiteral':
-    case 'RegExpLiteral':
       return true
   }
   return false
@@ -558,6 +557,8 @@ export function isConstantNode(node: Node, bindings: BindingMetadata): boolean {
     case 'Identifier':
       const type = bindings[node.name]
       return type === BindingTypes.LITERAL_CONST
+    case 'RegExpLiteral':
+      return true
     case 'ObjectExpression':
       return node.properties.every(prop => {
         // { bar() {} } object methods are not considered static nodes
