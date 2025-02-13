@@ -69,11 +69,8 @@ function setupFlagsHandler(target: Subscriber): void {
     },
     set(value) {
       if (
-        !(
-          (target as any)._flags &
-          (SubscriberFlags.PendingComputed | SubscriberFlags.Dirty)
-        ) &&
-        !!(value & (SubscriberFlags.PendingComputed | SubscriberFlags.Dirty))
+        !((target as any)._flags & SubscriberFlags.Propagated) &&
+        !!(value & SubscriberFlags.Propagated)
       ) {
         onTrigger(this)
       }
