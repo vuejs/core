@@ -779,7 +779,7 @@ describe('resolveType', () => {
       })
     })
 
-    test('generic with union type', () => {
+    test('generic type parameter with union type', () => {
       expect(
         resolve(`
         type Wrapped<T> = T | symbol | number
