@@ -1466,7 +1466,7 @@ export function inferRuntimeType(
   node: Node & MaybeWithScope,
   scope: TypeScope = node._ownerScope || ctxToScope(ctx),
   isKeyOf = false,
-  typeParameters: Record<string, Node> | undefined = undefined,
+  typeParameters?: Record<string, Node>,
 ): string[] {
   try {
     switch (node.type) {
@@ -1563,7 +1563,7 @@ export function inferRuntimeType(
               isKeyOf,
             )
           } else if (resolved.type === 'TSTypeAliasDeclaration') {
-            const typeParams = Object.create(null)
+            const typeParams: Record<string, Node> = Object.create(null)
             if (resolved.typeParameters) {
               resolved.typeParameters.params.forEach((p, i) => {
                 typeParams![p.name] = node.typeParameters!.params[i]
@@ -1722,13 +1722,9 @@ export function inferRuntimeType(
       case 'TSUnionType':
         return flattenTypes(ctx, node.types, scope, isKeyOf, typeParameters)
       case 'TSIntersectionType': {
-        return flattenTypes(
-          ctx,
-          node.types,
-          scope,
-          isKeyOf,
-          typeParameters,
-        ).filter(t => t !== UNKNOWN_TYPE)
+        return flattenTypes(ctx, node.types, scope, isKeyOf).filter(
+          t => t !== UNKNOWN_TYPE,
+        )
       }
 
       case 'TSEnumDeclaration':

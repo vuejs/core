@@ -790,17 +790,6 @@ describe('resolveType', () => {
       })
     })
 
-    test('generic type /w intersection', () => {
-      expect(
-        resolve(`
-        type Wrapped<T> = T & symbol & number
-        defineProps<{foo?: Wrapped<boolean>}>()
-      `).props,
-      ).toStrictEqual({
-        foo: ['Boolean', 'Symbol', 'Number'],
-      })
-    })
-
     test('generic from external-file', () => {
       const files = {
         '/foo.ts': 'export type P<T> = { foo: T }',
