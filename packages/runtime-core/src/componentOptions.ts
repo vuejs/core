@@ -298,7 +298,7 @@ type ObjectProvideOptions = Record<string | symbol, unknown>
 
 export type ComponentInjectOptions = string[] | ObjectInjectOptions
 
-type ObjectInjectOptions = Record<
+export type ObjectInjectOptions = Record<
   string | symbol,
   string | symbol | { from?: string | symbol; default?: unknown }
 >

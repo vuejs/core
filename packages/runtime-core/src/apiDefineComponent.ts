@@ -15,12 +15,12 @@ import type {
   TypeEmitsToOptions,
 } from './componentEmits'
 import type {
-  ComponentInjectOptions,
   ComponentOptions,
   ComponentOptionsBase,
   ComponentProvideOptions,
   ComputedOptions,
   MethodOptions,
+  ObjectInjectOptions,
   RenderFunction,
 } from './componentOptions'
 import type {
@@ -197,47 +197,37 @@ export function defineComponent<
 
 // overload 2: defineComponent with options object, infer props from options
 export function defineComponent<
-  // type options
+  // input types
   TypeProps,
-  TypeEmits extends ComponentTypeEmits | unknown = unknown,
+  TypeEmits extends ComponentTypeEmits = {},
   TypeRefs extends Record<string, unknown> = {},
   TypeEl extends Element = any,
-  // props
-  RuntimePropsOptions extends
-    ComponentObjectPropsOptions = ComponentObjectPropsOptions,
   RuntimePropsKeys extends string = string,
-  // emits
-  RuntimeEmitsOptions extends ObjectEmitsOptions = {},
   RuntimeEmitsKeys extends string = string,
-  // other options
+  InjectKeys extends string = string,
+  Exposed extends string = string,
+  RuntimePropsOptions extends ComponentObjectPropsOptions = {},
+  RuntimeEmitsOptions extends ObjectEmitsOptions = {},
+  InjectOptions extends ObjectInjectOptions = {},
   Data = {},
   SetupBindings = {},
   Computed extends ComputedOptions = {},
   Methods extends MethodOptions = {},
   Mixin = {},
   Extends = {},
-  InjectOptions extends ComponentInjectOptions = {},
-  InjectKeys extends string = string,
   Slots extends SlotsType = {},
   LocalComponents extends Record<string, Component> = {},
   Directives extends Record<string, Directive> = {},
-  Exposed extends string = string,
-  Provide extends ComponentProvideOptions = ComponentProvideOptions,
+  Provide extends ComponentProvideOptions = {},
   // resolved types
-  NormalizedEmitsOptions extends EmitsOptions = unknown extends TypeEmits
-    ? string extends RuntimeEmitsKeys
-      ? RuntimeEmitsOptions
-      : RuntimeEmitsKeys[]
-    : TypeEmitsToOptions<
-        TypeEmits extends ComponentTypeEmits ? TypeEmits : never
-      >,
-  InferredProps = unknown extends TypeProps
-    ? string extends RuntimePropsKeys
-      ? ComponentObjectPropsOptions extends RuntimePropsOptions
-        ? {}
-        : ExtractPropTypes<RuntimePropsOptions>
-      : { [key in RuntimePropsKeys]?: any }
-    : TypeProps,
+  NormalizedEmitsOptions extends EmitsOptions = (string extends RuntimeEmitsKeys
+    ? RuntimeEmitsOptions
+    : RuntimeEmitsKeys[]) &
+    TypeEmitsToOptions<TypeEmits>,
+  InferredProps = (string extends RuntimePropsKeys
+    ? ExtractPropTypes<RuntimePropsOptions>
+    : { [key in RuntimePropsKeys]?: any }) &
+    TypeProps,
   ResolvedProps = ToResolvedProps<InferredProps, NormalizedEmitsOptions>,
   // mixin inference
   PublicP = ExtractMixinProps<Mixin> &
@@ -310,7 +300,9 @@ export function defineComponent<
   >,
 >(
   options: {
-    props?: (RuntimePropsOptions & ThisType<void>) | RuntimePropsKeys[]
+    props?:
+      | (ComponentObjectPropsOptions & (RuntimePropsOptions & ThisType<void>))
+      | RuntimePropsKeys[]
     emits?: (RuntimeEmitsOptions & ThisType<void>) | RuntimeEmitsKeys[]
     components?: LocalComponents
     directives?: Directives
@@ -367,11 +359,11 @@ export function defineComponent<
     ThisType<OptionsVM>,
 ): {
   props?: string extends RuntimePropsKeys
-    ? ComponentObjectPropsOptions extends RuntimePropsOptions
-      ? {}
-      : RuntimePropsOptions
+    ? RuntimePropsOptions
     : RuntimePropsKeys[]
-  emits?: NormalizedEmitsOptions
+  emits?: string extends RuntimeEmitsKeys
+    ? RuntimeEmitsOptions
+    : RuntimeEmitsKeys[]
   components?: LocalComponents & GlobalComponents
   directives?: Directives & GlobalDirectives
   slots?: Slots
@@ -384,6 +376,10 @@ export function defineComponent<
   extends?: Extends
   setup?(): SetupBindings
   data?(): Data
+  __typeProps?: TypeProps
+  __typeEmits?: TypeEmits
+  __typeRefs?: TypeRefs
+  __typeEl?: TypeEl
   new (...args: any[]): ReturnVM
 } & Omit<
   ComponentOptionsBase,

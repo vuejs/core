@@ -83,7 +83,7 @@ export interface ComponentCustomProperties {}
 export type ExtractMixinProps<T> = UnionToIntersection<
   T extends { props?: infer P }
     ? P extends (infer K extends string)[]
-      ? Record<K, null>
+      ? { [key in K]?: any }
       : NonNullable<P>
     : never
 >
