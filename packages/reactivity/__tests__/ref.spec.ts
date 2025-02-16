@@ -10,7 +10,13 @@ import {
   toValue,
 } from '../src/index'
 import { computed } from '@vue/runtime-dom'
-import { customRef, shallowRef, triggerRef, unref } from '../src/ref'
+import {
+  customRef,
+  shallowRef,
+  toShallowRef,
+  triggerRef,
+  unref,
+} from '../src/ref'
 import {
   isReadonly,
   isShallow,
@@ -533,5 +539,48 @@ describe('reactivity/ref', () => {
     objectRefValue.value
     // @ts-expect-error internal field
     expect(objectRefValue._value).toBe(1)
+  })
+})
+
+describe('toShallowRef', () => {
+  it('should convert a function value to a Readonly Ref', () => {
+    const value = () => ({
+      a: 1,
+    })
+
+    const result = toShallowRef(value)
+
+    // @ts-expect-error
+    expect(() => (result.value = { b: 2 })).toThrow()
+    expect(result.value).toEqual(value())
+  })
+
+  it('should convert a Ref object value to a Ref', () => {
+    const value: Ref<number> = ref(42)
+    const result = toShallowRef(value)
+    expect(result === value).toBe(true)
+  })
+
+  it('should convert a regular value to a ShallowRef', () => {
+    const value = 'Hello World'
+    const result = toShallowRef(value)
+
+    expect(result.value).toEqual(value)
+  })
+
+  it('should convert object to a ShallowRef', () => {
+    const value = { a: 1 }
+    const result = toShallowRef(value)
+
+    let dummy
+    effect(() => {
+      dummy = result.value.a
+    })
+    expect(result.value).toEqual(value)
+    result.value.a = 2
+    expect(dummy).toEqual(1)
+
+    triggerRef(result)
+    expect(dummy).toEqual(2)
   })
 })
