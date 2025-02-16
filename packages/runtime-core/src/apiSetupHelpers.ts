@@ -230,7 +230,19 @@ export function defineOptions<
      * slots should be defined via defineSlots().
      */
     slots?: never
-  } & ComponentOptionsBase,
+  } & Omit<
+    ComponentOptionsBase,
+    | 'computed'
+    | 'methods'
+    | 'mixins'
+    | 'extends'
+    | 'data'
+    | 'setup'
+    | 'props'
+    | 'emits'
+    | 'expose'
+    | 'slots'
+  >,
 ): void {
   if (__DEV__) {
     warnRuntimeUsage(`defineOptions`)

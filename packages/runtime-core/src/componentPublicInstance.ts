@@ -180,7 +180,24 @@ export type CreateComponentPublicInstanceWithMixins<
     provide?: Provide
     setup?: () => B
     data?: () => D
-  } & ComponentOptionsBase,
+
+    // allow any custom options
+    [key: string]: any
+  } & Omit<
+    ComponentOptionsBase,
+    | 'computed'
+    | 'methods'
+    | 'mixins'
+    | 'extends'
+    | 'inject'
+    | 'slots'
+    | 'components'
+    | 'directives'
+    | 'expose'
+    | 'provide'
+    | 'setup'
+    | 'data'
+  >,
   I,
   S,
   Exposed,
@@ -218,7 +235,24 @@ export type ComponentPublicInstance<
     provide?: any
     setup?: () => any
     data?: () => any
-  } & ComponentOptionsBase,
+
+    // allow any custom options
+    [key: string]: any
+  } & Omit<
+    ComponentOptionsBase,
+    | 'computed'
+    | 'methods'
+    | 'mixins'
+    | 'extends'
+    | 'inject'
+    | 'slots'
+    | 'components'
+    | 'directives'
+    | 'expose'
+    | 'provide'
+    | 'setup'
+    | 'data'
+  >,
   I extends ComponentInjectOptions = {},
   S extends SlotsType = {},
   Exposed extends string = '',

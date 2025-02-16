@@ -586,7 +586,7 @@ describe('component: emit', () => {
         two: twoFn,
         three: null,
       })
-      expect(this.$options.emits.two).toBe(twoFn)
+      expect((this.$options.emits as any).two).toBe(twoFn)
       return h('div')
     })
     const ComponentC = defineComponent({

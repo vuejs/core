@@ -108,7 +108,24 @@ export type DefineComponent<
   provide?: Provide
   setup?: () => RawBindings
   data?: () => D
-} & ComponentOptionsBase &
+
+  // allow any custom options
+  [key: string]: any
+} & Omit<
+    ComponentOptionsBase,
+    | 'computed'
+    | 'methods'
+    | 'mixins'
+    | 'extends'
+    | 'inject'
+    | 'slots'
+    | 'components'
+    | 'directives'
+    | 'expose'
+    | 'provide'
+    | 'setup'
+    | 'data'
+  > &
   PP
 
 export type DefineSetupFnComponent<
@@ -327,7 +344,26 @@ export function defineComponent<
      * @private for language-tools use only
      */
     __typeEl?: TypeEl
-  } & ComponentOptionsBase &
+
+    // allow any custom options
+    [key: string]: any
+  } & Omit<
+    ComponentOptionsBase,
+    | 'props'
+    | 'emits'
+    | 'components'
+    | 'directives'
+    | 'slots'
+    | 'expose'
+    | 'computed'
+    | 'methods'
+    | 'provide'
+    | 'inject'
+    | 'mixins'
+    | 'extends'
+    | 'setup'
+    | 'data'
+  > &
     ThisType<OptionsVM>,
 ): {
   props?: string extends RuntimePropsKeys
@@ -348,8 +384,24 @@ export function defineComponent<
   extends?: Extends
   setup?(): SetupBindings
   data?(): Data
-} & ComponentOptionsBase &
-  ComponentPublicInstanceConstructor<ReturnVM>
+  new (...args: any[]): ReturnVM
+} & Omit<
+  ComponentOptionsBase,
+  | 'props'
+  | 'emits'
+  | 'components'
+  | 'directives'
+  | 'slots'
+  | 'expose'
+  | 'computed'
+  | 'methods'
+  | 'provide'
+  | 'inject'
+  | 'mixins'
+  | 'extends'
+  | 'setup'
+  | 'data'
+>
 
 // implementation, close to no-op
 /*! #__NO_SIDE_EFFECTS__ */

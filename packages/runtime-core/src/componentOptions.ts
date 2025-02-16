@@ -95,24 +95,10 @@ export interface ComponentCustomOptions {}
 export type RenderFunction = () => VNodeChild
 
 export interface ComponentOptionsBase
-  extends ComponentInternalOptions,
+  extends LegacyOptions,
+    ComponentInternalOptions,
     ComponentCustomOptions {
-  components?: Record<string, Component>
-  directives?: Record<string, Directive>
-  slots?: unknown
-  expose?: string[]
-
-  //#region LegacyOptions
-  computed?: unknown // ComputedOptions
-  methods?: unknown // MethodOptions
-  provide?: unknown // ComponentProvideOptions
-  inject?: unknown // ComponentInjectOptions | string[]
-
-  // composition
-  mixins?: unknown
-  extends?: unknown
-  //#endregion
-
+  setup?: (props: any, ctx: SetupContext) => any
   name?: string
   template?: string | object // can be a direct DOM node
   // Note: we are intentionally using the signature-less `Function` type here
@@ -121,7 +107,16 @@ export interface ComponentOptionsBase
   // Luckily `render()` doesn't need any arguments nor does it care about return
   // type.
   render?: Function
+  // NOTE: extending both LC and Record<string, Component> allows objects to be forced
+  // to be of type Component, while still inferring LC generic
+  components?: Record<string, Component>
+  // NOTE: extending both Directives and Record<string, Directive> allows objects to be forced
+  // to be of type Directive, while still inferring Directives generic
+  directives?: Record<string, Directive>
   inheritAttrs?: boolean
+  emits?: EmitsOptions
+  slots?: SlotsType
+  expose?: string[]
   serverPrefetch?(): void | Promise<any>
 
   // Runtime compiler only -----------------------------------------------------
@@ -186,42 +181,7 @@ export interface ComponentOptionsBase
   __isTeleport?: never
   __isSuspense?: never
 
-  //#region LegacyOptions
-  compatConfig?: CompatConfig
-
-  // allow any custom options
-  [key: string]: any
-
-  watch?: ComponentWatchOptions
-
-  // assets
-  filters?: Record<string, Function>
-
-  // lifecycle
-  beforeCreate?(): any
-  created?(): any
-  beforeMount?(): any
-  mounted?(): any
-  beforeUpdate?(): any
-  updated?(): any
-  activated?(): any
-  deactivated?(): any
-  /** @deprecated use `beforeUnmount` instead */
-  beforeDestroy?(): any
-  beforeUnmount?(): any
-  /** @deprecated use `unmounted` instead */
-  destroyed?(): any
-  unmounted?(): any
-  renderTracked?: DebuggerHook
-  renderTriggered?: DebuggerHook
-  errorCaptured?: ErrorCapturedHook
-
-  /**
-   * runtime compile only
-   * @deprecated use `compilerOptions.delimiters` instead.
-   */
-  delimiters?: [string, string]
-  //#endregion
+  __defaults?: any
 }
 
 /**
@@ -281,6 +241,9 @@ export type ComponentOptions<
     ctx: NoInfer<SetupContext<E, S>>,
   ) => Promise<RawBindings> | RawBindings | RenderFunction | void
   data?: (this: DataVM, vm: DataVM) => D
+
+  // allow any custom options
+  [key: string]: any
 } & ComponentOptionsBase &
   ThisType<
     CreateComponentPublicInstanceWithMixins<
@@ -350,6 +313,53 @@ export type InjectToObject<T extends ComponentInjectOptions> =
           [K in keyof T]?: unknown
         }
       : never
+
+interface LegacyOptions {
+  compatConfig?: CompatConfig
+
+  // state
+  // Limitation: we cannot expose RawBindings on the `this` context for data
+  // since that leads to some sort of circular inference and breaks ThisType
+  // for the entire component.
+  data?: (vm: any) => any
+  computed?: ComputedOptions
+  methods?: MethodOptions
+  watch?: ComponentWatchOptions
+  provide?: ComponentProvideOptions
+  inject?: ComponentInjectOptions
+
+  // assets
+  filters?: Record<string, Function>
+
+  // composition
+  mixins?: any[]
+  extends?: any
+
+  // lifecycle
+  beforeCreate?(): any
+  created?(): any
+  beforeMount?(): any
+  mounted?(): any
+  beforeUpdate?(): any
+  updated?(): any
+  activated?(): any
+  deactivated?(): any
+  /** @deprecated use `beforeUnmount` instead */
+  beforeDestroy?(): any
+  beforeUnmount?(): any
+  /** @deprecated use `unmounted` instead */
+  destroyed?(): any
+  unmounted?(): any
+  renderTracked?: DebuggerHook
+  renderTriggered?: DebuggerHook
+  errorCaptured?: ErrorCapturedHook
+
+  /**
+   * runtime compile only
+   * @deprecated use `compilerOptions.delimiters` instead.
+   */
+  delimiters?: [string, string]
+}
 
 type MergedHook<T = () => void> = T | T[]
 

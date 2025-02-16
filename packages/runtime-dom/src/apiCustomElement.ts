@@ -8,12 +8,10 @@ import {
   type ComponentOptions,
   type ComponentOptionsBase,
   type ComponentProvideOptions,
-  type ComponentPublicInstance,
   type ComputedOptions,
   type ConcreteComponent,
   type CreateAppFunction,
   type CreateComponentPublicInstanceWithMixins,
-  type DefineComponent,
   type Directive,
   type EmitsOptions,
   type EmitsToProps,
@@ -149,7 +147,26 @@ export function defineCustomElement<
       ctx: NoInfer<SetupContext<ResolvedRuntimeEmitsOptions, Slots>>,
     ) => Promise<SetupBindings> | SetupBindings | RenderFunction | void
     data?: (this: DataVM, vm: DataVM) => Data
-  } & ComponentOptionsBase &
+
+    // allow any custom options
+    [key: string]: any
+  } & Omit<
+      ComponentOptionsBase,
+      | 'props'
+      | 'emits'
+      | 'computed'
+      | 'methods'
+      | 'mixins'
+      | 'extends'
+      | 'inject'
+      | 'slots'
+      | 'components'
+      | 'directives'
+      | 'expose'
+      | 'provide'
+      | 'setup'
+      | 'data'
+    > &
     ThisType<
       CreateComponentPublicInstanceWithMixins<
         Readonly<ResolvedProps>,
@@ -175,14 +192,11 @@ export function defineCustomElement<
 
 // overload 3: defining a custom element from the returned value of
 // `defineComponent`
-export function defineCustomElement<
-  // this should be `ComponentPublicInstanceConstructor` but that type is not exported
-  T extends { new (...args: any[]): ComponentPublicInstance<any> },
->(
+export function defineCustomElement<T extends { props?: any }>(
   options: T,
   extraOptions?: CustomElementOptions,
 ): VueElementConstructor<
-  T extends DefineComponent<infer P, any, any, any> ? P : unknown
+  ExtractPropTypes<T extends { props?: infer P } ? P : never>
 >
 
 /*! #__NO_SIDE_EFFECTS__ */
