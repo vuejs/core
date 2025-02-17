@@ -5,7 +5,7 @@ export { vaporInteropPlugin } from './vdomInterop'
 export type { VaporDirective } from './directives/custom'
 
 // compiler-use only
-export { insert, prepend, remove } from './block'
+export { insert, prepend, remove, isFragment, VaporFragment } from './block'
 export { createComponent, createComponentWithFallback } from './component'
 export { renderEffect } from './renderEffect'
 export { createSlot } from './componentSlots'
