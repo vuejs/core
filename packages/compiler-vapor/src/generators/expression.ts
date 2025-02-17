@@ -187,7 +187,7 @@ function genIdentifier(
         raw = withAssignment(raw)
     }
   } else {
-    if (canPrefix(raw) && prefixIdentifiers) {
+    if (prefixIdentifiers && canPrefix(raw)) {
       if (type === BindingTypes.PROPS_ALIASED) {
         raw = `$props['${bindingMetadata.__propsAliases![raw]}']`
       } else {
