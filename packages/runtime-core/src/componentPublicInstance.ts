@@ -83,25 +83,33 @@ export interface ComponentCustomProperties {}
 export type ExtractMixinProps<T> = UnionToIntersection<
   T extends { props?: infer P }
     ? P extends (infer K extends string)[]
-      ? { [key in K]?: any }
+      ? { [key in K]: null }
       : NonNullable<P>
-    : never
+    : {}
+>
+
+export type ExtractMixinEmits<T> = UnionToIntersection<
+  T extends { emits?: infer E }
+    ? E extends (infer K extends string)[]
+      ? { [key in K]: (...args: any) => any }
+      : NonNullable<E>
+    : {}
 >
 
 export type ExtractMixinMethods<T> = UnionToIntersection<
-  T extends { methods?: infer M } ? NonNullable<M> : never
+  T extends { methods?: infer M } ? NonNullable<M> : {}
 >
 
 export type ExtractMixinComputed<T> = UnionToIntersection<
-  T extends { computed?: infer C } ? NonNullable<C> : never
+  T extends { computed?: infer C } ? NonNullable<C> : {}
 >
 
 export type ExtractMixinData<T> = UnionToIntersection<
-  T extends { data?(): infer P } ? P : never
+  T extends { data?(): infer P } ? P : {}
 >
 
 export type ExtractMixinSetupBindings<T> = UnionToIntersection<
-  T extends { setup?(): infer B } ? B : never
+  T extends { setup?(): infer B } ? B : {}
 >
 
 export type EnsureNonVoid<T> = T extends void ? {} : T
@@ -167,37 +175,6 @@ export type CreateComponentPublicInstanceWithMixins<
   PublicProps,
   PublicDefaults,
   MakeDefaultsOptional,
-  {
-    computed?: C
-    methods?: M
-    mixins?: Mixin[]
-    extends?: Extends
-    inject?: {}
-    slots?: S
-    components?: LC
-    directives?: Directives
-    expose?: Exposed[]
-    provide?: Provide
-    setup?: () => B
-    data?: () => D
-
-    // allow any custom options
-    [key: string]: any
-  } & Omit<
-    ComponentOptionsBase,
-    | 'computed'
-    | 'methods'
-    | 'mixins'
-    | 'extends'
-    | 'inject'
-    | 'slots'
-    | 'components'
-    | 'directives'
-    | 'expose'
-    | 'provide'
-    | 'setup'
-    | 'data'
-  >,
   I,
   S,
   Exposed,
@@ -218,41 +195,10 @@ export type ComponentPublicInstance<
   D = {}, // return from data()
   C extends ComputedOptions = {},
   M extends MethodOptions = {},
-  E extends EmitsOptions = {},
+  E extends EmitsOptions = string[],
   PublicProps = {},
   Defaults = {},
   MakeDefaultsOptional extends boolean = false,
-  Options = {
-    computed?: any
-    methods?: any
-    mixins?: any
-    extends?: any
-    inject?: any
-    slots?: any
-    components?: any
-    directives?: any
-    expose?: any
-    provide?: any
-    setup?: () => any
-    data?: () => any
-
-    // allow any custom options
-    [key: string]: any
-  } & Omit<
-    ComponentOptionsBase,
-    | 'computed'
-    | 'methods'
-    | 'mixins'
-    | 'extends'
-    | 'inject'
-    | 'slots'
-    | 'components'
-    | 'directives'
-    | 'expose'
-    | 'provide'
-    | 'setup'
-    | 'data'
-  >,
   I extends ComponentInjectOptions = {},
   S extends SlotsType = {},
   Exposed extends string = '',
@@ -272,7 +218,7 @@ export type ComponentPublicInstance<
   $host: Element | null
   $emit: EmitFn<E>
   $el: TypeEl
-  $options: Options & MergedComponentOptionsOverride
+  $options: ComponentOptionsBase & MergedComponentOptionsOverride
   $forceUpdate: () => void
   $nextTick: typeof nextTick
   $watch<T extends string | ((...args: any) => any)>(
