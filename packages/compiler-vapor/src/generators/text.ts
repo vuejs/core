@@ -14,8 +14,8 @@ export function genSetText(
   context: CodegenContext,
 ): CodeFragment[] {
   const { helper } = context
-  const { element, values, generated } = oper
-  const texts = combineValues(values, context)
+  const { element, values, generated, jsx } = oper
+  const texts = combineValues(values, context, jsx)
   return [
     NEWLINE,
     ...genCall(helper('setText'), `${generated ? 'x' : 'n'}${element}`, texts),
@@ -27,13 +27,13 @@ export function genCreateTextNode(
   context: CodegenContext,
 ): CodeFragment[] {
   const { helper } = context
-  const { id, values } = oper
+  const { id, values, jsx } = oper
   return [
     NEWLINE,
     `const n${id} = `,
     ...genCall(
       helper('createTextNode'),
-      values && combineValues(values, context),
+      values && combineValues(values, context, jsx),
     ),
   ]
 }
@@ -41,15 +41,16 @@ export function genCreateTextNode(
 function combineValues(
   values: SimpleExpressionNode[],
   context: CodegenContext,
+  jsx?: boolean,
 ): CodeFragment[] {
   return values.flatMap((value, i) => {
     let exp = genExpression(value, context)
-    if (getLiteralExpressionValue(value) == null) {
+    if (!jsx && getLiteralExpressionValue(value) == null) {
       // dynamic, wrap with toDisplayString
       exp = genCall(context.helper('toDisplayString'), exp)
     }
     if (i > 0) {
-      exp.unshift(' + ')
+      exp.unshift(jsx ? ', ' : ' + ')
     }
     return exp
   })
