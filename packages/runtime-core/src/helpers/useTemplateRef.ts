@@ -14,7 +14,9 @@ export function useTemplateRef<T = unknown, Keys extends string = string>(
     const refs = i.refs === EMPTY_OBJ ? (i.refs = {}) : i.refs
     const desc = Object.getOwnPropertyDescriptor(refs, key)
     if (desc && !desc.configurable) {
-      warn(`useTemplateRef('${key}') already exists.`)
+      if (__DEV__) {
+        warn(`useTemplateRef('${key}') already exists.`)
+      }
     } else {
       Object.defineProperty(refs, key, {
         enumerable: true,
