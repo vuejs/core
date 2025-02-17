@@ -1,4 +1,4 @@
-import { type ShallowRef, readonly, shallowRef } from '@vue/reactivity'
+import { type ShallowRef, readonly, shallowRef, toRef } from '@vue/reactivity'
 import { getCurrentInstance } from '../component'
 import { warn } from '../warning'
 import { EMPTY_OBJ } from '@vue/shared'
@@ -20,6 +20,7 @@ export function useTemplateRef<T = unknown, Keys extends string = string>(
       if (__DEV__) {
         warn(`useTemplateRef('${key}') already exists.`)
       }
+      return toRef(() => refs[key]) as unknown as Readonly<ShallowRef<T>>
     } else {
       Object.defineProperty(refs, key, {
         enumerable: true,
