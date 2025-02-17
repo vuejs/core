@@ -124,7 +124,7 @@ function genIdentifier(
   parentStack?: Node[],
 ): CodeFragment[] {
   const { options, helper, identifiers } = context
-  const { inline, bindingMetadata } = options
+  const { inline, bindingMetadata, prefixIdentifiers } = options
   let name: string | undefined = raw
 
   const idMap = identifiers[raw]
@@ -187,7 +187,7 @@ function genIdentifier(
         raw = withAssignment(raw)
     }
   } else {
-    if (canPrefix(raw)) {
+    if (canPrefix(raw) && prefixIdentifiers) {
       if (type === BindingTypes.PROPS_ALIASED) {
         raw = `$props['${bindingMetadata.__propsAliases![raw]}']`
       } else {
