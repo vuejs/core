@@ -72,8 +72,8 @@ importers:
         specifier: ^3.0.5
         version: 3.0.5(vitest@3.0.5(@types/node@22.12.0)(jsdom@26.0.0)(sass@1.83.4))
       '@vitest/eslint-plugin':
-        specifier: ^1.1.27
-        version: 1.1.27(@typescript-eslint/utils@8.24.0(eslint@9.20.1)(typescript@5.6.2))(eslint@9.20.1)(typescript@5.6.2)(vitest@3.0.5(@types/node@22.12.0)(jsdom@26.0.0)(sass@1.83.4))
+        specifier: ^1.1.31
+        version: 1.1.31(@typescript-eslint/utils@8.24.0(eslint@9.20.1)(typescript@5.6.2))(eslint@9.20.1)(typescript@5.6.2)(vitest@3.0.5(@types/node@22.12.0)(jsdom@26.0.0)(sass@1.83.4))
       '@vue/consolidate':
         specifier: 1.0.0
         version: 1.0.0
@@ -132,8 +132,8 @@ importers:
         specifier: ^3.0.3
         version: 3.0.3
       puppeteer:
-        specifier: ~24.2.0
-        version: 24.2.0(typescript@5.6.2)
+        specifier: ~24.2.1
+        version: 24.2.1(typescript@5.6.2)
       rimraf:
         specifier: ^6.0.1
         version: 6.0.1
@@ -1461,8 +1461,8 @@ packages:
       '@vitest/browser':
         optional: true
 
-  '@vitest/eslint-plugin@1.1.27':
-    resolution: {integrity: sha512-aGPTmeaNiUDo2OIMPj1HKiF5q4fu2IIA9lMc0AwOk0nOvL2kLmQBY8AbFmYj895ApzamN46UtQYmxlRSjbTZqQ==}
+  '@vitest/eslint-plugin@1.1.31':
+    resolution: {integrity: sha512-xlsLr+e+AXZ/00eVZCtNmMeCJoJaRCoLDiAgLcxgQjSS1EertieB2MUHf8xIqPKs9lECc/UpL+y1xDcpvi02hw==}
     peerDependencies:
       '@typescript-eslint/utils': '>= 8.0'
       eslint: '>= 8.57.0'
@@ -1712,8 +1712,8 @@ packages:
     resolution: {integrity: sha512-n8enUVCED/KVRQlab1hr3MVpcVMvxtZjmEa956u+4YijlmQED223XMSYj2tLuKvr4jcCTzNNMpQDUer72MMmzA==}
     engines: {node: '>= 14.16.0'}
 
-  chromium-bidi@1.2.0:
-    resolution: {integrity: sha512-XtdJ1GSN6S3l7tO7F77GhNsw0K367p0IsLYf2yZawCVAKKC3lUvDhPdMVrB2FNhmhfW43QGYbEX3Wg6q0maGwQ==}
+  chromium-bidi@1.3.0:
+    resolution: {integrity: sha512-G3x1bkST13kmbL7+dT/oRkNH/7C4UqG+0YQpmySrzXspyOhYgDNc6lhSGpj3cuexvH25WTENhTYq2Tt9JRXtbw==}
     peerDependencies:
       devtools-protocol: '*'
 
@@ -2999,12 +2999,12 @@ packages:
     resolution: {integrity: sha512-vYt7UD1U9Wg6138shLtLOvdAu+8DsC/ilFtEVHcH+wydcSpNE20AfSOduf6MkRFahL5FY7X1oU7nKVZFtfq8Fg==}
     engines: {node: '>=6'}
 
-  puppeteer-core@24.2.0:
-    resolution: {integrity: sha512-e4A4/xqWdd4kcE6QVHYhJ+Qlx/+XpgjP4d8OwBx0DJoY/nkIRhSgYmKQnv7+XSs1ofBstalt+XPGrkaz4FoXOQ==}
+  puppeteer-core@24.2.1:
+    resolution: {integrity: sha512-bCypUh3WXzETafv1TCFAjIUnI8BiQ/d+XvEfEXDLcIMm9CAvROqnBmbt79yBjwasoDZsgfXnUmIJU7Y27AalVQ==}
     engines: {node: '>=18'}
 
-  puppeteer@24.2.0:
-    resolution: {integrity: sha512-z8vv7zPEgrilIbOo3WNvM+2mXMnyM9f4z6zdrB88Fzeuo43Oupmjrzk3EpuvuCtyK0A7Lsllfx7Z+4BvEEGJcQ==}
+  puppeteer@24.2.1:
+    resolution: {integrity: sha512-Euno62ou0cd0dTkOYTNioSOsFF4VpSnz4ldD38hi9ov9xCNtr8DbhmoJRUx+V9OuPgecueZbKOohRrnrhkbg3Q==}
     engines: {node: '>=18'}
     hasBin: true
 
@@ -3700,7 +3700,7 @@ snapshots:
   '@conventional-changelog/git-client@1.0.1(conventional-commits-filter@5.0.0)(conventional-commits-parser@6.0.0)':
     dependencies:
       '@types/semver': 7.5.8
-      semver: 7.6.3
+      semver: 7.7.1
     optionalDependencies:
       conventional-commits-filter: 5.0.0
       conventional-commits-parser: 6.0.0
@@ -4358,7 +4358,7 @@ snapshots:
       fast-glob: 3.3.2
       is-glob: 4.0.3
       minimatch: 9.0.5
-      semver: 7.6.3
+      semver: 7.7.1
       ts-api-utils: 1.3.0(typescript@5.6.2)
       typescript: 5.6.2
     transitivePeerDependencies:
@@ -4433,7 +4433,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@vitest/eslint-plugin@1.1.27(@typescript-eslint/utils@8.24.0(eslint@9.20.1)(typescript@5.6.2))(eslint@9.20.1)(typescript@5.6.2)(vitest@3.0.5(@types/node@22.12.0)(jsdom@26.0.0)(sass@1.83.4))':
+  '@vitest/eslint-plugin@1.1.31(@typescript-eslint/utils@8.24.0(eslint@9.20.1)(typescript@5.6.2))(eslint@9.20.1)(typescript@5.6.2)(vitest@3.0.5(@types/node@22.12.0)(jsdom@26.0.0)(sass@1.83.4))':
     dependencies:
       '@typescript-eslint/utils': 8.24.0(eslint@9.20.1)(typescript@5.6.2)
       eslint: 9.20.1
@@ -4676,7 +4676,7 @@ snapshots:
     dependencies:
       readdirp: 4.0.1
 
-  chromium-bidi@1.2.0(devtools-protocol@0.0.1402036):
+  chromium-bidi@1.3.0(devtools-protocol@0.0.1402036):
     dependencies:
       devtools-protocol: 0.0.1402036
       mitt: 3.0.1
@@ -4813,7 +4813,7 @@ snapshots:
       conventional-commits-filter: 5.0.0
       handlebars: 4.7.8
       meow: 13.2.0
-      semver: 7.6.3
+      semver: 7.7.1
 
   conventional-changelog@6.0.0(conventional-commits-filter@5.0.0):
     dependencies:
@@ -5770,7 +5770,7 @@ snapshots:
   normalize-package-data@6.0.2:
     dependencies:
       hosted-git-info: 7.0.2
-      semver: 7.6.3
+      semver: 7.7.1
       validate-npm-package-license: 3.0.4
 
   npm-normalize-package-bin@4.0.0: {}
@@ -6066,10 +6066,10 @@ snapshots:
 
   punycode@2.3.1: {}
 
-  puppeteer-core@24.2.0:
+  puppeteer-core@24.2.1:
     dependencies:
       '@puppeteer/browsers': 2.7.1
-      chromium-bidi: 1.2.0(devtools-protocol@0.0.1402036)
+      chromium-bidi: 1.3.0(devtools-protocol@0.0.1402036)
       debug: 4.4.0
       devtools-protocol: 0.0.1402036
       typed-query-selector: 2.12.0
@@ -6079,13 +6079,13 @@ snapshots:
       - supports-color
       - utf-8-validate
 
-  puppeteer@24.2.0(typescript@5.6.2):
+  puppeteer@24.2.1(typescript@5.6.2):
     dependencies:
       '@puppeteer/browsers': 2.7.1
-      chromium-bidi: 1.2.0(devtools-protocol@0.0.1402036)
+      chromium-bidi: 1.3.0(devtools-protocol@0.0.1402036)
       cosmiconfig: 9.0.0(typescript@5.6.2)
       devtools-protocol: 0.0.1402036
-      puppeteer-core: 24.2.0
+      puppeteer-core: 24.2.1
       typed-query-selector: 2.12.0
     transitivePeerDependencies:
       - bufferutil
