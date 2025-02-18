@@ -234,9 +234,18 @@ export function defineComponent<
   >,
   NormalizedEmitsOptions extends ObjectEmitsOptions = unknown extends TypeEmits
     ? string extends RuntimeEmitsKeys
-      ? RuntimeEmitsOptions
+      ? ObjectEmitsOptions extends RuntimeEmitsOptions
+        ? {}
+        : RuntimeEmitsOptions
       : { [K in RuntimeEmitsKeys]: (...args: any) => any }
     : {},
+  IsDefaultEmitsOptions = unknown extends TypeEmits
+    ? string extends RuntimeEmitsKeys
+      ? ObjectEmitsOptions extends RuntimeEmitsOptions
+        ? true
+        : false
+      : false
+    : false,
   NormalizedInjectOptions extends
     ObjectInjectOptions = string extends InjectKeys
     ? InjectOptions
@@ -260,30 +269,23 @@ export function defineComponent<
   CompleteData = MixinData & EnsureNonVoid<Data>,
   CompleteComputed extends ComputedOptions = MixinComputeds & Computed,
   CompleteMethods extends MethodOptions = MixinMethods & Methods,
-  CompleteEmits_Internal extends ObjectEmitsOptions = MixinEmits &
+  CompleteEmits extends ObjectEmitsOptions = MixinEmits &
     NormalizedEmitsOptions,
-  CompleteEmits_Public extends ObjectEmitsOptions = MixinEmits &
-    (ObjectEmitsOptions extends NormalizedEmitsOptions
-      ? {}
-      : NormalizedEmitsOptions),
   // resolved types
-  EmitsOptionsByType = TypeEmitsToOptions<TypeEmits & {}>,
+  ResolvedEmitsOptions extends ObjectEmitsOptions = CompleteEmits &
+    TypeEmitsToOptions<TypeEmits & {}>,
   ResolvedEmitsOptions_Internal extends
-    ObjectEmitsOptions = CompleteEmits_Internal & EmitsOptionsByType,
-  ResolvedEmitsOptions_Public extends
-    ObjectEmitsOptions = CompleteEmits_Public & EmitsOptionsByType,
-  InferredProps = ExtractPropTypes<CompleteProps> & TypeProps,
-  InferredProps_Internal = Readonly<
-    InferredProps &
-      EmitsToProps<CompleteEmits_Internal & ResolvedEmitsOptions_Internal>
-  >,
-  InferredProps_Public = Readonly<
-    InferredProps &
-      EmitsToProps<CompleteEmits_Public & ResolvedEmitsOptions_Public>
+    EmitsOptions = IsDefaultEmitsOptions extends true
+    ? string[]
+    : ResolvedEmitsOptions,
+  InferredProps = Readonly<
+    ExtractPropTypes<CompleteProps> &
+      TypeProps &
+      EmitsToProps<CompleteEmits & ResolvedEmitsOptions>
   >,
   // instance types
   DataInstance = ComponentPublicInstance<
-    InferredProps_Internal,
+    InferredProps,
     CompleteBindings,
     MixinData,
     MixinComputeds,
@@ -291,7 +293,7 @@ export function defineComponent<
     ResolvedEmitsOptions_Internal
   >,
   InternalInstance = ComponentPublicInstance<
-    InferredProps_Internal,
+    InferredProps,
     CompleteBindings,
     CompleteData,
     CompleteComputed,
@@ -307,12 +309,12 @@ export function defineComponent<
     TypeEl
   >,
   PublicInstance = ComponentPublicInstance<
-    InferredProps_Public,
+    InferredProps,
     CompleteBindings,
     CompleteData,
     CompleteComputed,
     CompleteMethods,
-    ResolvedEmitsOptions_Public,
+    ResolvedEmitsOptions,
     PublicProps,
     RuntimePropsOptionsDefaults,
     // MakeDefaultsOptional - if TypeProps is provided, set to false to use
@@ -340,8 +342,8 @@ export function defineComponent<
     extends?: Extends
     setup?: (
       this: void,
-      props: LooseRequired<InferredProps_Internal>,
-      ctx: SetupContext<NormalizedEmitsOptions, Slots>,
+      props: NoInfer<LooseRequired<InferredProps>>,
+      ctx: NoInfer<SetupContext<ResolvedEmitsOptions_Internal, Slots>>,
     ) => Promise<SetupBindings> | SetupBindings | RenderFunction | void
     data?: (this: DataInstance, vm: DataInstance) => Data
     /**
