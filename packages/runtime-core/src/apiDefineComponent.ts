@@ -268,14 +268,6 @@ export function defineComponent<
     ExtractPropTypes<CompleteProps> & TypeProps & EmitsToProps<CompleteEmits>
   >,
   // instance types
-  DataInstance = ComponentPublicInstance<
-    InferredProps,
-    CompleteBindings,
-    MixinData,
-    MixinComputeds,
-    CompleteMethods,
-    CompleteEmits_Internal
-  >,
   InternalInstance = ComponentPublicInstance<
     InferredProps,
     CompleteBindings,
@@ -292,6 +284,14 @@ export function defineComponent<
     TypeRefs,
     TypeEl
   >,
+  InternalInstance2 = InternalInstance &
+    ComponentPublicInstance<
+      {},
+      {},
+      CompleteData,
+      CompleteComputed,
+      CompleteMethods
+    >,
   PublicInstance = ComponentPublicInstance<
     InferredProps,
     CompleteBindings,
@@ -335,7 +335,10 @@ export function defineComponent<
       props: NoInfer<LooseRequired<InferredProps>>,
       ctx: NoInfer<SetupContext<CompleteEmits_Internal, Slots>>,
     ) => Promise<SetupBindings> | SetupBindings | RenderFunction | void
-    data?: (this: DataInstance, vm: DataInstance) => Data
+    data?: (
+      this: NoInfer<InternalInstance>,
+      vm: NoInfer<InternalInstance>,
+    ) => Data
     /**
      * @private for language-tools use only
      */
@@ -373,7 +376,7 @@ export function defineComponent<
     | 'data'
   > &
     ThisType<
-      Omit<InternalInstance, '$options'> & {
+      Omit<NoInfer<InternalInstance2>, '$options'> & {
         $options: typeof options
       }
     >,
