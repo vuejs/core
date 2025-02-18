@@ -218,7 +218,11 @@ export type ComponentPublicInstance<
   $host: Element | null
   $emit: EmitFn<E>
   $el: TypeEl
-  $options: ComponentOptionsBase & MergedComponentOptionsOverride
+  $options: ComponentOptionsBase &
+    MergedComponentOptionsOverride & {
+      // allow any custom options
+      [key: string]: any
+    }
   $forceUpdate: () => void
   $nextTick: typeof nextTick
   $watch<T extends string | ((...args: any) => any)>(
