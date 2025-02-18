@@ -1571,6 +1571,20 @@ describe('expose component types', () => {
 
   expectType<typeof child>(parent.components!.child)
   expectType<Component>(parent.components!.child2)
+
+  // global components
+  expectType<Readonly<KeepAliveProps>>(
+    new parent.components!.KeepAlive().$props,
+  )
+  expectType<Readonly<KeepAliveProps>>(new child.components!.KeepAlive().$props)
+
+  // runtime-dom components
+  expectType<Readonly<TransitionProps>>(
+    new parent.components!.Transition().$props,
+  )
+  expectType<Readonly<TransitionProps>>(
+    new child.components!.Transition().$props,
+  )
 })
 
 describe('directive typing', () => {
