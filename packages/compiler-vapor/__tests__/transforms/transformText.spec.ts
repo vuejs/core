@@ -36,7 +36,6 @@ describe('compiler: text transform', () => {
             isStatic: false,
           },
         ],
-        effect: false,
       },
     ])
   })
@@ -49,15 +48,9 @@ describe('compiler: text transform', () => {
       {
         type: IRNodeTypes.CREATE_TEXT_NODE,
         id: 0,
-        values: [
-          {
-            type: IRNodeTypes.SET_TEXT,
-            content: 'msg',
-            isStatic: false,
-          },
-        ],
-        effect: true,
+        values: undefined,
       },
     ])
+    expect(ir.block.effect.length).toBe(1)
   })
 })

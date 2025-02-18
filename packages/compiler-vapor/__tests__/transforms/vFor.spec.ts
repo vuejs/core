@@ -32,7 +32,7 @@ describe('compiler: v-for', () => {
 
     expect(code).matchSnapshot()
     expect(helpers).contains('createFor')
-    expect(ir.template).toEqual(['<div></div>'])
+    expect(ir.template).toEqual(['<div> </div>'])
     expect(ir.block.operation).toMatchObject([
       {
         type: IRNodeTypes.FOR,
@@ -89,7 +89,7 @@ describe('compiler: v-for', () => {
       `_createFor(() => (_for_item0.value), (_for_item1) => {`,
     )
     expect(code).contains(`_for_item1.value+_for_item0.value`)
-    expect(ir.template).toEqual(['<span></span>', '<div></div>'])
+    expect(ir.template).toEqual(['<span> </span>', '<div></div>'])
     expect(ir.block.operation).toMatchObject([
       {
         type: IRNodeTypes.FOR,

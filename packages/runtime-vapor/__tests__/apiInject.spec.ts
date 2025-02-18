@@ -8,15 +8,16 @@ import {
   reactive,
   readonly,
   ref,
+  toDisplayString,
 } from '@vue/runtime-dom'
 import {
   createComponent,
   createTextNode,
   createVaporApp,
   renderEffect,
-  setText,
 } from '../src'
 import { makeRender } from './_utils'
+import { setElementText } from '../src/dom/prop'
 
 const define = makeRender<any>()
 
@@ -41,7 +42,7 @@ describe('api: provide/inject', () => {
         const foo = inject('foo')
         return (() => {
           const n0 = createTextNode()
-          setText(n0, foo)
+          setElementText(n0, foo)
           return n0
         })()
       },
@@ -71,7 +72,7 @@ describe('api: provide/inject', () => {
         const foo = inject(key)
         return (() => {
           const n0 = createTextNode()
-          setText(n0, foo)
+          setElementText(n0, foo)
           return n0
         })()
       },
@@ -101,7 +102,7 @@ describe('api: provide/inject', () => {
         const bar = inject('bar', 'bar')
         return (() => {
           const n0 = createTextNode()
-          setText(n0, foo + bar)
+          setElementText(n0, foo + bar)
           return n0
         })()
       },
@@ -139,7 +140,7 @@ describe('api: provide/inject', () => {
         const baz = inject('baz')
         return (() => {
           const n0 = createTextNode()
-          setText(n0, [foo, bar, baz].join(','))
+          setElementText(n0, [foo, bar, baz].join(','))
           return n0
         })()
       },
@@ -169,7 +170,7 @@ describe('api: provide/inject', () => {
         return (() => {
           const n0 = createTextNode()
           renderEffect(() => {
-            setText(n0, count.value)
+            setElementText(n0, count.value)
           })
           return n0
         })()
@@ -206,7 +207,7 @@ describe('api: provide/inject', () => {
         return (() => {
           const n0 = createTextNode()
           renderEffect(() => {
-            setText(n0, count.value)
+            setElementText(n0, count.value)
           })
           return n0
         })()
@@ -245,7 +246,7 @@ describe('api: provide/inject', () => {
         return (() => {
           const n0 = createTextNode()
           renderEffect(() => {
-            setText(n0, state.count)
+            setElementText(n0, state.count)
           })
           return n0
         })()
@@ -282,7 +283,7 @@ describe('api: provide/inject', () => {
         return (() => {
           const n0 = createTextNode()
           renderEffect(() => {
-            setText(n0, state.count)
+            setElementText(n0, state.count)
           })
           return n0
         })()
@@ -318,7 +319,7 @@ describe('api: provide/inject', () => {
         expect(foo).toBeUndefined()
         return (() => {
           const n0 = createTextNode()
-          setText(n0, foo)
+          setElementText(n0, foo)
           return n0
         })()
       },
@@ -345,7 +346,7 @@ describe('api: provide/inject', () => {
         const foo = inject('foo', undefined)
         return (() => {
           const n0 = createTextNode()
-          setText(n0, foo)
+          setElementText(n0, foo)
           return n0
         })()
       },
@@ -361,7 +362,7 @@ describe('api: provide/inject', () => {
       setup() {
         provide('foo', 'foo')
         const injection = inject('foo', null)
-        return createTextNode(() => [injection])
+        return createTextNode(toDisplayString(injection))
       },
     }).render()
     expect(host.innerHTML).toBe('')

@@ -11,7 +11,11 @@ import {
   normalizeVNode,
 } from './vnode'
 import { flushPostFlushCbs } from './scheduler'
-import type { ComponentInternalInstance, ComponentOptions } from './component'
+import type {
+  ComponentInternalInstance,
+  ComponentOptions,
+  ConcreteComponent,
+} from './component'
 import { invokeDirectiveHook } from './directives'
 import { warn } from './warning'
 import {
@@ -274,6 +278,10 @@ export function createHydrationFunctions(
             )
           }
         } else if (shapeFlag & ShapeFlags.COMPONENT) {
+          if ((vnode.type as ConcreteComponent).__vapor) {
+            throw new Error('Vapor component hydration is not supported yet.')
+          }
+
           // when setting up the render effect, if the initial vnode already
           // has .el set, the component will perform hydration instead of mount
           // on its sub-tree.

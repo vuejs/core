@@ -1,4 +1,5 @@
 import {
+  currentInstance,
   onMounted,
   vModelCheckboxInit,
   vModelCheckboxUpdate,
@@ -26,12 +27,20 @@ type VaporModelDirective<
   modifiers?: { [key in Modifiers]?: true },
 ) => void
 
+function ensureMounted(cb: () => void) {
+  if (currentInstance!.isMounted) {
+    cb()
+  } else {
+    onMounted(cb)
+  }
+}
+
 export const applyTextModel: VaporModelDirective<
   HTMLInputElement | HTMLTextAreaElement,
   'trim' | 'number' | 'lazy'
 > = (el, get, set, { trim, number, lazy } = {}) => {
   vModelTextInit(el, trim, number, lazy, set)
-  onMounted(() => {
+  ensureMounted(() => {
     let value: any
     renderEffect(() => {
       vModelTextUpdate(el, value, (value = get()), trim, number, lazy)
@@ -45,7 +54,7 @@ export const applyCheckboxModel: VaporModelDirective<HTMLInputElement> = (
   set,
 ) => {
   vModelCheckboxInit(el, set)
-  onMounted(() => {
+  ensureMounted(() => {
     let value: any
     renderEffect(() => {
       vModelCheckboxUpdate(
@@ -64,7 +73,7 @@ export const applyRadioModel: VaporModelDirective<HTMLInputElement> = (
   set,
 ) => {
   addEventListener(el, 'change', () => set(vModelGetValue(el)))
-  onMounted(() => {
+  ensureMounted(() => {
     let value: any
     renderEffect(() => {
       if (value !== (value = get())) {
@@ -79,7 +88,7 @@ export const applySelectModel: VaporModelDirective<
   'number'
 > = (el, get, set, modifiers) => {
   vModelSelectInit(el, get(), modifiers && modifiers.number, set)
-  onMounted(() => {
+  ensureMounted(() => {
     renderEffect(() => vModelSetSelected(el, traverse(get())))
   })
 }

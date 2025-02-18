@@ -7,7 +7,7 @@ import { genSetHtml } from './html'
 import { genIf } from './if'
 import { genDynamicProps, genSetProp } from './prop'
 import { genDeclareOldRef, genSetTemplateRef } from './templateRef'
-import { genCreateTextNode, genSetText } from './text'
+import { genCreateTextNode, genGetTextChild, genSetText } from './text'
 import {
   type CodeFragment,
   INDENT_END,
@@ -68,6 +68,8 @@ export function genOperation(
       return genSlotOutlet(oper, context)
     case IRNodeTypes.DIRECTIVE:
       return genBuiltinDirective(oper, context)
+    case IRNodeTypes.GET_TEXT_CHILD:
+      return genGetTextChild(oper, context)
     default:
       const exhaustiveCheck: never = oper
       throw new Error(

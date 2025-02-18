@@ -297,7 +297,7 @@ describe('compiler: transform slot', () => {
     expect(code).toMatchSnapshot()
 
     expect(code).contains(`fn: (_slotProps0) =>`)
-    expect(code).contains(`_createTextNode(() => [_slotProps0["bar"]])`)
+    expect(code).contains(`_setText(n0, _toDisplayString(_slotProps0["bar"]))`)
 
     expect(ir.block.operation[0].type).toBe(IRNodeTypes.CREATE_COMPONENT_NODE)
     expect(ir.block.operation).toMatchObject([

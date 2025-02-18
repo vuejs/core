@@ -16,7 +16,7 @@ import {
   IRNodeTypes,
   type VaporDirectiveNode,
 } from '../ir'
-import { findProp, propToExpression } from '../utils'
+import { findProp, isStaticExpression, propToExpression } from '../utils'
 import { newBlock, wrapTemplate } from './utils'
 
 export const transformVFor: NodeTransform = createStructuralDirectiveTransform(
@@ -57,6 +57,16 @@ export function processFor(
 
   return (): void => {
     exitBlock()
+
+    const { parent } = context
+
+    // if v-for is the only child of a parent element, it can go the fast path
+    // when the entire list is emptied
+    const isOnlyChild =
+      parent &&
+      parent.block.node !== parent.node &&
+      parent.node.children.length === 1
+
     context.registerOperation({
       type: IRNodeTypes.FOR,
       id,
@@ -66,8 +76,14 @@ export function processFor(
       index: index as SimpleExpressionNode | undefined,
       keyProp: keyProperty,
       render,
-      once: context.inVOnce,
+      once:
+        context.inVOnce ||
+        isStaticExpression(
+          source as SimpleExpressionNode,
+          context.options.bindingMetadata,
+        ),
       component: isComponent,
+      onlyChild: !!isOnlyChild,
     })
   }
 }

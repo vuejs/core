@@ -49,7 +49,7 @@ export function genBlockContent(
   }
 
   for (const child of dynamic.children) {
-    push(...genChildren(child, context, child.id!))
+    push(...genChildren(child, context, `n${child.id!}`))
   }
 
   push(...genOperations(operation, context))

@@ -2,12 +2,15 @@ import type { BigIntLiteral, NumericLiteral, StringLiteral } from '@babel/types'
 import { isGloballyAllowed } from '@vue/shared'
 import {
   type AttributeNode,
+  type BindingMetadata,
+  BindingTypes,
   type ElementNode,
   NodeTypes,
   type SimpleExpressionNode,
   findDir as _findDir,
   findProp as _findProp,
   createSimpleExpression,
+  isConstantNode,
   isLiteralWhitelisted,
 } from '@vue/compiler-dom'
 import type { VaporDirectiveNode } from './ir'
@@ -43,6 +46,19 @@ export function isConstantExpression(exp: SimpleExpressionNode): boolean {
     isGloballyAllowed(exp.content) ||
     getLiteralExpressionValue(exp) !== null
   )
+}
+
+export function isStaticExpression(
+  node: SimpleExpressionNode,
+  bindings: BindingMetadata,
+): boolean {
+  if (node.ast) {
+    return isConstantNode(node.ast, bindings)
+  } else if (node.ast === null) {
+    const type = bindings[node.content]
+    return type === BindingTypes.LITERAL_CONST
+  }
+  return false
 }
 
 export function resolveExpression(

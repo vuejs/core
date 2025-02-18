@@ -30,6 +30,7 @@ export const newBlock = (node: BlockIRNode['node']): BlockIRNode => ({
   operation: [],
   returns: [],
   expressions: [],
+  tempId: 0,
 })
 
 export function wrapTemplate(node: ElementNode, dirs: string[]): TemplateNode {

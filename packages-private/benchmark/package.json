@@ -5,17 +5,16 @@
   "license": "MIT",
   "type": "module",
   "scripts": {
-    "dev": "pnpm start --devBuild --noHeadless --skipBench --vdom",
+    "dev": "pnpm start --noMinify --skipBench --vdom",
     "start": "node index.js"
   },
   "dependencies": {
-    "@vitejs/plugin-vue": "https://pkg.pr.new/@vitejs/plugin-vue@e3c5ce5",
+    "@vitejs/plugin-vue": "catalog:",
     "connect": "^3.7.0",
     "sirv": "^2.0.4",
     "vite": "catalog:"
   },
   "devDependencies": {
-    "@types/connect": "^3.4.38",
-    "terser": "^5.33.0"
+    "@types/connect": "^3.4.38"
   }
 }

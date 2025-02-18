@@ -7,6 +7,7 @@ import {
   type VNodeArrayChildren,
   type VNodeHook,
   type VNodeProps,
+  VaporSlot,
   cloneIfMounted,
   cloneVNode,
   createVNode,
@@ -444,6 +445,9 @@ function baseCreateRenderer(
           slotScopeIds,
           optimized,
         )
+        break
+      case VaporSlot:
+        getVaporInterface(parentComponent, n2).slot(n1, n2, container, anchor)
         break
       default:
         if (shapeFlag & ShapeFlags.ELEMENT) {
@@ -2186,6 +2190,7 @@ function baseCreateRenderer(
     if (shapeFlag & ShapeFlags.COMPONENT) {
       if ((type as ConcreteComponent).__vapor) {
         getVaporInterface(parentComponent, vnode).unmount(vnode, doRemove)
+        return
       } else {
         unmountComponent(vnode.component!, parentSuspense, doRemove)
       }
@@ -2234,6 +2239,11 @@ function baseCreateRenderer(
         (!optimized && shapeFlag & ShapeFlags.ARRAY_CHILDREN)
       ) {
         unmountChildren(children as VNode[], parentComponent, parentSuspense)
+      }
+
+      if (type === VaporSlot) {
+        getVaporInterface(parentComponent, vnode).unmount(vnode, doRemove)
+        return
       }
 
       if (doRemove) {

@@ -4,6 +4,7 @@ import {
   setAttr,
   setClass,
   setDynamicProps,
+  setElementText,
   setHtml,
   setProp,
   setText,
@@ -11,7 +12,11 @@ import {
 } from '../../src/dom/prop'
 import { setStyle } from '../../src/dom/prop'
 import { VaporComponentInstance } from '../../src/component'
-import { currentInstance, simpleSetCurrentInstance } from '@vue/runtime-dom'
+import {
+  currentInstance,
+  ref,
+  simpleSetCurrentInstance,
+} from '@vue/runtime-dom'
 
 let removeComponentInstance = NOOP
 beforeEach(() => {
@@ -227,7 +232,7 @@ describe('patchProp', () => {
       expect((el as any)._value).toBe(obj)
 
       const option = document.createElement('option')
-      setText(option, 'foo')
+      setElementText(option, 'foo')
       expect(option.value).toBe('foo')
       expect(option.getAttribute('value')).toBe(null)
 
@@ -412,13 +417,25 @@ describe('patchProp', () => {
   })
 
   describe('setText', () => {
-    test('should set textContent', () => {
-      const el = document.createElement('div')
-      setText(el, null)
+    test('should set nodeValue', () => {
+      const el = document.createTextNode('foo')
+      setText(el, '')
       expect(el.textContent).toBe('')
       setText(el, 'foo')
       expect(el.textContent).toBe('foo')
       setText(el, 'bar')
+      expect(el.textContent).toBe('bar')
+    })
+  })
+
+  describe('setElementText', () => {
+    test('should set textContent w/ toDisplayString', () => {
+      const el = document.createElement('div')
+      setElementText(el, null)
+      expect(el.textContent).toBe('')
+      setElementText(el, { a: 1 })
+      expect(el.textContent).toBe(JSON.stringify({ a: 1 }, null, 2))
+      setElementText(el, ref('bar'))
       expect(el.textContent).toBe('bar')
     })
   })

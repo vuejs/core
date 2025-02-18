@@ -14,8 +14,8 @@ import { invokeArrayFns } from '@vue/shared'
 export function renderEffect(fn: () => void, noLifecycle = false): void {
   const instance = currentInstance as VaporComponentInstance | null
   const scope = getCurrentScope()
-  if (__DEV__ && !__TEST__ && !isVaporComponent(instance)) {
-    warn('renderEffect called without active vapor instance.')
+  if (__DEV__ && !__TEST__ && !scope && !isVaporComponent(instance)) {
+    warn('renderEffect called without active EffectScope or Vapor instance.')
   }
 
   // renderEffect is always called after user has registered all hooks

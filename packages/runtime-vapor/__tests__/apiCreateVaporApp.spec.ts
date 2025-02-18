@@ -28,7 +28,7 @@ describe('api: createVaporApp', () => {
         count: { default: 0 },
       },
       setup(props) {
-        return createTextNode(() => [props.count])
+        return createTextNode(String(props.count))
       },
     })
 
@@ -60,7 +60,7 @@ describe('api: createVaporApp', () => {
         count: { default: 0 },
       },
       setup(props) {
-        return createTextNode(() => [props.count])
+        return createTextNode(String(props.count))
       },
     })
 
@@ -93,7 +93,7 @@ describe('api: createVaporApp', () => {
         try {
           inject('__proto__')
         } catch (e: any) {}
-        return createTextNode([`${foo},${bar}`])
+        return createTextNode(`${foo},${bar}`)
       },
     })
 
@@ -142,12 +142,12 @@ describe('api: createVaporApp', () => {
       },
     }).create()
 
-    const FooBar = () => createTextNode(['foobar!'])
+    const FooBar = () => createTextNode('foobar!')
     app.component('FooBar', FooBar)
     expect(app.component('FooBar')).toBe(FooBar)
 
-    app.component('BarBaz', () => createTextNode(['barbaz!']))
-    app.component('BarBaz', () => createTextNode(['barbaz!']))
+    app.component('BarBaz', () => createTextNode('barbaz!'))
+    app.component('BarBaz', () => createTextNode('barbaz!'))
     expect(
       'Component "BarBaz" has already been registered in target app.',
     ).toHaveBeenWarnedTimes(1)
@@ -309,7 +309,7 @@ describe('api: createVaporApp', () => {
         writable: false,
       })
 
-      app.component('div', () => createTextNode(['div']))
+      app.component('div', () => createTextNode('div'))
       mount()
       expect(
         `Do not use built-in or reserved HTML elements as component id: div`,

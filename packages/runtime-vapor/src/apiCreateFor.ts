@@ -3,6 +3,8 @@ import {
   type ShallowRef,
   isReactive,
   isShallow,
+  pauseTracking,
+  resetTracking,
   shallowReadArray,
   shallowRef,
   toReactive,
@@ -19,6 +21,7 @@ import { warn } from '@vue/runtime-dom'
 import { currentInstance, isVaporComponent } from './component'
 import type { DynamicSlot } from './componentSlots'
 import { renderEffect } from './renderEffect'
+import { VaporVForFlags } from '../../shared/src/vaporFlags'
 
 class ForBlock extends VaporFragment {
   scope: EffectScope | undefined
@@ -62,12 +65,7 @@ export const createFor = (
     index: ShallowRef<number | undefined>,
   ) => Block,
   getKey?: (item: any, key: any, index?: number) => any,
-  /**
-   * Whether this v-for is used directly on a component. If true, we can avoid
-   * creating an extra fragment / scope for each block
-   */
-  isComponent = false,
-  once?: boolean,
+  flags = 0,
   // hydrationNode?: Node,
 ): VaporFragment => {
   let isMounted = false
@@ -75,8 +73,10 @@ export const createFor = (
   let newBlocks: ForBlock[]
   let parent: ParentNode | undefined | null
   const parentAnchor = __DEV__ ? createComment('for') : createTextNode()
-  const ref = new VaporFragment(oldBlocks)
+  const frag = new VaporFragment(oldBlocks)
   const instance = currentInstance!
+  const canUseFastRemove = flags & VaporVForFlags.FAST_REMOVE
+  const isComponent = flags & VaporVForFlags.IS_COMPONENT
 
   if (__DEV__ && !instance) {
     warn('createFor() can only be used inside setup()')
@@ -87,6 +87,8 @@ export const createFor = (
     const newLength = source.values.length
     const oldLength = oldBlocks.length
     newBlocks = new Array(newLength)
+
+    pauseTracking()
 
     if (!isMounted) {
       isMounted = true
@@ -101,9 +103,14 @@ export const createFor = (
           mount(source, i)
         }
       } else if (!newLength) {
-        // fast path for clearing
+        // fast path for clearing all
+        const doRemove = !canUseFastRemove
         for (let i = 0; i < oldLength; i++) {
-          unmount(oldBlocks[i])
+          unmount(oldBlocks[i], doRemove)
+        }
+        if (canUseFastRemove) {
+          parent!.textContent = ''
+          parent!.appendChild(parentAnchor)
         }
       } else if (!getKey) {
         // unkeyed fast path
@@ -265,10 +272,12 @@ export const createFor = (
       }
     }
 
-    ref.nodes = [(oldBlocks = newBlocks)]
+    frag.nodes = [(oldBlocks = newBlocks)]
     if (parentAnchor) {
-      ref.nodes.push(parentAnchor)
+      frag.nodes.push(parentAnchor)
     }
+
+    resetTracking()
   }
 
   const needKey = renderItem.length > 1
@@ -326,7 +335,7 @@ export const createFor = (
     newKey?: any,
     newIndex?: any,
   ) => {
-    if (newIndex !== itemRef.value) {
+    if (newItem !== itemRef.value) {
       itemRef.value = newItem
     }
     if (keyRef && newKey !== undefined && newKey !== keyRef.value) {
@@ -337,13 +346,17 @@ export const createFor = (
     }
   }
 
-  const unmount = ({ nodes, scope }: ForBlock) => {
-    removeBlock(nodes, parent!)
+  const unmount = ({ nodes, scope }: ForBlock, doRemove = true) => {
     scope && scope.stop()
+    doRemove && removeBlock(nodes, parent!)
   }
 
-  once ? renderList() : renderEffect(renderList)
-  return ref
+  if (flags & VaporVForFlags.ONCE) {
+    renderList()
+  } else {
+    renderEffect(renderList)
+  }
+  return frag
 }
 
 export function createForSlots(

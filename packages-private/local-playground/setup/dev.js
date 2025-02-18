@@ -2,7 +2,7 @@
 import path from 'node:path'
 
 const resolve = (/** @type {string} */ p) =>
-  path.resolve(import.meta.dirname, '../../packages', p)
+  path.resolve(import.meta.dirname, '../../../packages', p)
 
 /**
  * @param {Object} [env]

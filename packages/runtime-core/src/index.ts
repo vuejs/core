@@ -505,7 +505,7 @@ export { type VaporInteropInterface } from './apiCreateApp'
 /**
  * @internal
  */
-export { type RendererInternals } from './renderer'
+export { type RendererInternals, MoveType } from './renderer'
 /**
  * @internal
  */

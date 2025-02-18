@@ -19,13 +19,15 @@ export const transformChildren: NodeTransform = (node, context) => {
     const childContext = context.create(child, i)
     transformNode(childContext)
 
+    const childDynamic = childContext.dynamic
+
     if (isFragment) {
       childContext.reference()
       childContext.registerTemplate()
 
       if (
-        !(childContext.dynamic.flags & DynamicFlag.NON_TEMPLATE) ||
-        childContext.dynamic.flags & DynamicFlag.INSERT
+        !(childDynamic.flags & DynamicFlag.NON_TEMPLATE) ||
+        childDynamic.flags & DynamicFlag.INSERT
       ) {
         context.block.returns.push(childContext.dynamic.id!)
       }
@@ -33,7 +35,16 @@ export const transformChildren: NodeTransform = (node, context) => {
       context.childrenTemplate.push(childContext.template)
     }
 
-    context.dynamic.children[i] = childContext.dynamic
+    if (
+      childDynamic.hasDynamicChild ||
+      childDynamic.id !== undefined ||
+      childDynamic.flags & DynamicFlag.NON_TEMPLATE ||
+      childDynamic.flags & DynamicFlag.INSERT
+    ) {
+      context.dynamic.hasDynamicChild = true
+    }
+
+    context.dynamic.children[i] = childDynamic
   }
 
   if (!isFragment) {

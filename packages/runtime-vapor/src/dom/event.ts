@@ -1,10 +1,5 @@
-import {
-  getCurrentScope,
-  onEffectCleanup,
-  onScopeDispose,
-} from '@vue/reactivity'
-import { queuePostFlushCb } from '@vue/runtime-dom'
-import { remove } from '@vue/shared'
+import { onEffectCleanup } from '@vue/reactivity'
+import { isArray } from '@vue/shared'
 
 export function addEventListener(
   el: Element,
@@ -19,52 +14,37 @@ export function addEventListener(
 export function on(
   el: Element,
   event: string,
-  handlerGetter: () => undefined | ((...args: any[]) => any),
+  handler: (e: Event) => any,
   options: AddEventListenerOptions & { effect?: boolean } = {},
 ): void {
-  const handler: DelegatedHandler = eventHandler(handlerGetter)
-  let cleanupEvent: (() => void) | undefined
-  queuePostFlushCb(() => {
-    cleanupEvent = addEventListener(el, event, handler, options)
-  })
-
+  addEventListener(el, event, handler, options)
   if (options.effect) {
-    onEffectCleanup(cleanup)
-  } else if (getCurrentScope()) {
-    onScopeDispose(cleanup)
+    onEffectCleanup(() => {
+      el.removeEventListener(event, handler, options)
+    })
   }
-
-  function cleanup() {
-    cleanupEvent && cleanupEvent()
-  }
-}
-
-export type DelegatedHandler = {
-  (...args: any[]): any
-  delegate?: boolean
 }
 
 export function delegate(
   el: any,
   event: string,
-  handlerGetter: () => undefined | ((...args: any[]) => any),
+  handler: (e: Event) => any,
 ): void {
-  const handler: DelegatedHandler = eventHandler(handlerGetter)
-  handler.delegate = true
-
-  const cacheKey = `$evt${event}`
-  const handlers: DelegatedHandler[] = el[cacheKey] || (el[cacheKey] = [])
-  handlers.push(handler)
-  onScopeDispose(() => remove(handlers, handler))
+  const key = `$evt${event}`
+  const existing = el[key]
+  if (existing) {
+    if (isArray(existing)) {
+      existing.push(handler)
+    } else {
+      el[key] = [existing, handler]
+    }
+  } else {
+    el[key] = handler
+  }
 }
 
-function eventHandler(getter: () => undefined | ((...args: any[]) => any)) {
-  return (...args: any[]) => {
-    let handler = getter()
-    if (!handler) return
-
-    handler && handler(...args)
-  }
+type DelegatedHandler = {
+  (...args: any[]): any
 }
 
 /**
@@ -96,13 +76,20 @@ const delegatedEventHandler = (e: Event) => {
     },
   })
   while (node !== null) {
-    const handlers = node[`$evt${e.type}`] as DelegatedHandler[]
+    const handlers = node[`$evt${e.type}`] as
+      | DelegatedHandler
+      | DelegatedHandler[]
     if (handlers) {
-      for (const handler of handlers) {
-        if (handler.delegate && !node.disabled) {
-          handler(e)
-          if (e.cancelBubble) return
+      if (isArray(handlers)) {
+        for (const handler of handlers) {
+          if (!node.disabled) {
+            handler(e)
+            if (e.cancelBubble) return
+          }
         }
+      } else {
+        handlers(e)
+        if (e.cancelBubble) return
       }
     }
     node =
@@ -117,6 +104,6 @@ export function setDynamicEvents(
   events: Record<string, (...args: any[]) => any>,
 ): void {
   for (const name in events) {
-    on(el, name, () => events[name], { effect: true })
+    on(el, name, events[name], { effect: true })
   }
 }

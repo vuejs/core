@@ -57,7 +57,6 @@ function genCustomDirectives(
 
   return [
     NEWLINE,
-    // @ts-expect-error
     ...genCall(helper('withVaporDirectives'), element, directives),
   ]
 

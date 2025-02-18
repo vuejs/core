@@ -12,6 +12,7 @@ import type {
   Program,
 } from '@babel/types'
 import { walk } from 'estree-walker'
+import { type BindingMetadata, BindingTypes } from './options'
 
 /**
  * Return value indicates whether the AST walked can be a constant
@@ -548,16 +549,14 @@ export function isStaticNode(node: Node): boolean {
   return false
 }
 
-export function isConstantNode(
-  node: Node,
-  onIdentifier: (name: string) => boolean,
-): boolean {
+export function isConstantNode(node: Node, bindings: BindingMetadata): boolean {
   if (isStaticNode(node)) return true
 
   node = unwrapTSNode(node)
   switch (node.type) {
     case 'Identifier':
-      return onIdentifier(node.name)
+      const type = bindings[node.name]
+      return type === BindingTypes.LITERAL_CONST
     case 'RegExpLiteral':
       return true
     case 'ObjectExpression':
@@ -566,11 +565,11 @@ export function isConstantNode(
         if (prop.type === 'ObjectMethod') return false
         // { ...{ foo: 1 } }
         if (prop.type === 'SpreadElement')
-          return isConstantNode(prop.argument, onIdentifier)
+          return isConstantNode(prop.argument, bindings)
         // { foo: 1 }
         return (
-          (!prop.computed || isConstantNode(prop.key, onIdentifier)) &&
-          isConstantNode(prop.value, onIdentifier)
+          (!prop.computed || isConstantNode(prop.key, bindings)) &&
+          isConstantNode(prop.value, bindings)
         )
       })
     case 'ArrayExpression':
@@ -579,9 +578,9 @@ export function isConstantNode(
         if (element === null) return true
         // [1, ...[2, 3]]
         if (element.type === 'SpreadElement')
-          return isConstantNode(element.argument, onIdentifier)
+          return isConstantNode(element.argument, bindings)
         // [1, 2]
-        return isConstantNode(element, onIdentifier)
+        return isConstantNode(element, bindings)
       })
   }
   return false

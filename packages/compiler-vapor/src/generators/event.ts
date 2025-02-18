@@ -1,10 +1,16 @@
 import {
+  BindingTypes,
   type SimpleExpressionNode,
   isFnExpression,
   isMemberExpression,
 } from '@vue/compiler-dom'
 import type { CodegenContext } from '../generate'
-import type { SetDynamicEventsIRNode, SetEventIRNode } from '../ir'
+import {
+  IRNodeTypes,
+  type OperationNode,
+  type SetDynamicEventsIRNode,
+  type SetEventIRNode,
+} from '../ir'
 import { genExpression } from './expression'
 import {
   type CodeFragment,
@@ -28,6 +34,12 @@ export function genSetEvent(
   if (delegate) {
     // key is static
     context.delegates.add(key.content)
+    // if this is the only delegated event of this name on this element,
+    // we can generate optimized handler attachment code
+    // e.g. n1.$evtclick = () => {}
+    if (!context.block.operation.some(isSameDelegateEvent)) {
+      return [NEWLINE, `n${element}.$evt${key.content} = `, ...handler]
+    }
   }
 
   return [
@@ -64,6 +76,18 @@ export function genSetEvent(
       ...options.map((option): CodeFragment[] => [`${option}: true`]),
     )
   }
+
+  function isSameDelegateEvent(op: OperationNode) {
+    if (
+      op.type === IRNodeTypes.SET_EVENT &&
+      op !== oper &&
+      op.delegate &&
+      op.element === oper.element &&
+      op.key.content === key.content
+    ) {
+      return true
+    }
+  }
 }
 
 export function genSetDynamicEvents(
@@ -88,28 +112,42 @@ export function genEventHandler(
     nonKeys: string[]
     keys: string[]
   } = { nonKeys: [], keys: [] },
-  needWrap: boolean = true,
+  // passed as component prop - need additional wrap
+  extraWrap: boolean = false,
 ): CodeFragment[] {
   let handlerExp: CodeFragment[] = [`() => {}`]
   if (value && value.content.trim()) {
-    const isMemberExp = isMemberExpression(value, context.options)
-    const isInlineStatement = !(
-      isMemberExp || isFnExpression(value, context.options)
-    )
-
-    if (isInlineStatement) {
-      const expr = context.withId(() => genExpression(value, context), {
-        $event: null,
-      })
+    // Determine how the handler should be wrapped so it always reference the
+    // latest value when invoked.
+    if (isMemberExpression(value, context.options)) {
+      // e.g. @click="foo.bar"
+      handlerExp = genExpression(value, context)
+      if (!isConstantBinding(value, context) && !extraWrap) {
+        // non constant, wrap with invocation as `e => foo.bar(e)`
+        // when passing as component handler, access is always dynamic so we
+        // can skip this
+        handlerExp = [`e => `, ...handlerExp, `(e)`]
+      }
+    } else if (isFnExpression(value, context.options)) {
+      // Fn expression: @click="e => foo(e)"
+      // no need to wrap in this case
+      handlerExp = genExpression(value, context)
+    } else {
+      // inline statement
+      // @click="foo($event)" ---> $event => foo($event)
+      const referencesEvent = value.content.includes('$event')
       const hasMultipleStatements = value.content.includes(`;`)
+      const expr = referencesEvent
+        ? context.withId(() => genExpression(value, context), {
+            $event: null,
+          })
+        : genExpression(value, context)
       handlerExp = [
-        '$event => ',
+        referencesEvent ? '$event => ' : '() => ',
         hasMultipleStatements ? '{' : '(',
         ...expr,
         hasMultipleStatements ? '}' : ')',
       ]
-    } else {
-      handlerExp = [...genExpression(value, context)]
     }
   }
 
@@ -118,7 +156,7 @@ export function genEventHandler(
     handlerExp = genWithModifiers(context, handlerExp, nonKeys)
   if (keys.length) handlerExp = genWithKeys(context, handlerExp, keys)
 
-  if (needWrap) handlerExp.unshift(`() => `)
+  if (extraWrap) handlerExp.unshift(`() => `)
   return handlerExp
 }
 
@@ -140,4 +178,16 @@ function genWithKeys(
   keys: string[],
 ): CodeFragment[] {
   return genCall(context.helper('withKeys'), handler, JSON.stringify(keys))
+}
+
+function isConstantBinding(
+  value: SimpleExpressionNode,
+  context: CodegenContext,
+) {
+  if (value.ast === null) {
+    const bindingType = context.options.bindingMetadata[value.content]
+    if (bindingType === BindingTypes.SETUP_CONST) {
+      return true
+    }
+  }
 }

@@ -13,10 +13,10 @@ import {
   createComponent,
   defineVaporComponent,
   renderEffect,
-  setText,
   template,
 } from '../src'
 import { makeRender } from './_utils'
+import { setElementText } from '../src/dom/prop'
 
 const define = makeRender<any>()
 
@@ -243,7 +243,7 @@ describe('component: props', () => {
       props: ['foo'],
       setup(props: any) {
         const n0 = t0()
-        renderEffect(() => setText(n0, props.foo))
+        renderEffect(() => setElementText(n0, props.foo))
         return n0
       },
     })
@@ -396,7 +396,7 @@ describe('component: props', () => {
       },
       setup(props: any) {
         const n0 = t0()
-        renderEffect(() => setText(n0, props.foo))
+        renderEffect(() => setElementText(n0, props.foo))
         return n0
       },
     }).render({
@@ -428,7 +428,7 @@ describe('component: props', () => {
         const t0 = template('<h1></h1>')
         const n0 = t0()
         renderEffect(() => {
-          setText(n0, props.foo.val, props.bar)
+          setElementText(n0, String(props.foo.val) + String(props.bar))
         })
         return n0
       },
@@ -503,7 +503,7 @@ describe('component: props', () => {
         const t0 = template('<div></div>')
         const n0 = t0()
         renderEffect(() =>
-          setText(n0, JSON.stringify(attrs) + Object.keys(attrs)),
+          setElementText(n0, JSON.stringify(attrs) + Object.keys(attrs)),
         )
         return n0
       },

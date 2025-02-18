@@ -1,6 +1,8 @@
 import {
+  type App,
   type ComponentInternalInstance,
   type ConcreteComponent,
+  MoveType,
   type Plugin,
   type RendererInternals,
   type ShallowRef,
@@ -10,6 +12,7 @@ import {
   createVNode,
   currentInstance,
   ensureRenderer,
+  onScopeDispose,
   renderSlot,
   shallowRef,
   simpleSetCurrentInstance,
@@ -24,17 +27,20 @@ import {
   unmountComponent,
 } from './component'
 import { type Block, VaporFragment, insert, remove } from './block'
-import { extend, isFunction, remove as removeItem } from '@vue/shared'
+import { EMPTY_OBJ, extend, isFunction } from '@vue/shared'
 import { type RawProps, rawPropsProxyHandlers } from './componentProps'
 import type { RawSlots, VaporSlot } from './componentSlots'
 import { renderEffect } from './renderEffect'
+import { createTextNode } from './dom/node'
+import { optimizePropertyLookup } from './dom/prop'
 
+// mounting vapor components and slots in vdom
 const vaporInteropImpl: Omit<
   VaporInteropInterface,
   'vdomMount' | 'vdomUnmount' | 'vdomSlot'
 > = {
   mount(vnode, container, anchor, parentComponent) {
-    const selfAnchor = (vnode.anchor = document.createComment('vapor'))
+    const selfAnchor = (vnode.el = vnode.anchor = createTextNode())
     container.insertBefore(selfAnchor, anchor)
     const prev = currentInstance
     simpleSetCurrentInstance(parentComponent)
@@ -61,6 +67,7 @@ const vaporInteropImpl: Omit<
 
   update(n1, n2, shouldUpdate) {
     n2.component = n1.component
+    n2.el = n2.anchor = n1.anchor
     if (shouldUpdate) {
       const instance = n2.component as any as VaporComponentInstance
       instance.rawPropsRef!.value = n2.props
@@ -70,15 +77,71 @@ const vaporInteropImpl: Omit<
 
   unmount(vnode, doRemove) {
     const container = doRemove ? vnode.anchor!.parentNode : undefined
-    unmountComponent(vnode.component as any, container)
+    if (vnode.component) {
+      unmountComponent(vnode.component as any, container)
+    } else if (vnode.vb) {
+      remove(vnode.vb, container)
+    }
+    remove(vnode.anchor as Node, container)
+  },
+
+  /**
+   * vapor slot in vdom
+   */
+  slot(n1: VNode, n2: VNode, container, anchor) {
+    if (!n1) {
+      // mount
+      const selfAnchor = (n2.el = n2.anchor = createTextNode())
+      insert(selfAnchor, container, anchor)
+      const { slot, fallback } = n2.vs!
+      const propsRef = (n2.vs!.ref = shallowRef(n2.props))
+      const slotBlock = slot(new Proxy(propsRef, vaporSlotPropsProxyHandler))
+      // TODO fallback for slot with v-if content
+      // fallback is a vnode slot function here, and slotBlock, if a DynamicFragment,
+      // expects a Vapor BlockFn as fallback
+      fallback
+      insert((n2.vb = slotBlock), container, selfAnchor)
+    } else {
+      // update
+      n2.el = n2.anchor = n1.anchor
+      n2.vb = n1.vb
+      ;(n2.vs!.ref = n1.vs!.ref)!.value = n2.props
+    }
   },
 
   move(vnode, container, anchor) {
-    insert(vnode.component as any, container, anchor)
+    insert(vnode.vb || (vnode.component as any), container, anchor)
     insert(vnode.anchor as any, container, anchor)
   },
 }
 
+const vaporSlotPropsProxyHandler: ProxyHandler<
+  ShallowRef<Record<string, any>>
+> = {
+  get(target, key: any) {
+    return target.value[key]
+  },
+  has(target, key: any) {
+    return target.value[key]
+  },
+  ownKeys(target) {
+    return Object.keys(target.value)
+  },
+}
+
+const vaporSlotsProxyHandler: ProxyHandler<any> = {
+  get(target, key) {
+    if (key === '_vapor') {
+      return target
+    } else {
+      return target[key]
+    }
+  },
+}
+
+/**
+ * Mount vdom component in vapor
+ */
 function createVDOMComponent(
   internals: RendererInternals,
   component: ConcreteComponent,
@@ -100,38 +163,51 @@ function createVDOMComponent(
   vnode.vi = (instance: ComponentInternalInstance) => {
     instance.props = wrapper.props
     instance.attrs = wrapper.attrs
-    // TODO slots
+    instance.slots =
+      wrapper.slots === EMPTY_OBJ
+        ? EMPTY_OBJ
+        : new Proxy(wrapper.slots, vaporSlotsProxyHandler)
   }
 
   let isMounted = false
   const parentInstance = currentInstance as VaporComponentInstance
-  frag.insert = (parent, anchor) => {
+  const unmount = (parentNode?: ParentNode) => {
+    internals.umt(vnode.component!, null, !!parentNode)
+  }
+
+  frag.insert = (parentNode, anchor) => {
     if (!isMounted) {
       internals.mt(
         vnode,
-        parent,
+        parentNode,
         anchor,
         parentInstance as any,
         null,
         undefined,
         false,
       )
-      ;(parentInstance.vdomChildren || (parentInstance.vdomChildren = [])).push(
-        vnode.component!,
-      )
+      onScopeDispose(unmount, true)
       isMounted = true
     } else {
-      // TODO move
+      // move
+      internals.m(
+        vnode,
+        parentNode,
+        anchor,
+        MoveType.REORDER,
+        parentInstance as any,
+      )
     }
   }
-  frag.remove = () => {
-    internals.umt(vnode.component!, null, true)
-    removeItem(parentInstance.vdomChildren!, vnode.component)
-  }
+
+  frag.remove = unmount
 
   return frag
 }
 
+/**
+ * Mount vdom slot in vapor
+ */
 function renderVDOMSlot(
   internals: RendererInternals,
   slotsRef: ShallowRef<Slots>,
@@ -144,11 +220,9 @@ function renderVDOMSlot(
 
   let isMounted = false
   let fallbackNodes: Block | undefined
-  let parentNode: ParentNode
   let oldVNode: VNode | null = null
 
-  frag.insert = (parent, anchor) => {
-    parentNode = parent
+  frag.insert = (parentNode, anchor) => {
     if (!isMounted) {
       renderEffect(() => {
         const vnode = renderSlot(
@@ -161,7 +235,13 @@ function renderVDOMSlot(
             remove(fallbackNodes, parentNode)
             fallbackNodes = undefined
           }
-          internals.p(oldVNode, vnode, parent, anchor, parentComponent as any)
+          internals.p(
+            oldVNode,
+            vnode,
+            parentNode,
+            anchor,
+            parentComponent as any,
+          )
           oldVNode = vnode
         } else {
           if (fallback && !fallbackNodes) {
@@ -169,17 +249,24 @@ function renderVDOMSlot(
             if (oldVNode) {
               internals.um(oldVNode, parentComponent as any, null, true)
             }
-            insert((fallbackNodes = fallback(props)), parent, anchor)
+            insert((fallbackNodes = fallback(props)), parentNode, anchor)
           }
           oldVNode = null
         }
       })
       isMounted = true
     } else {
-      // TODO move
+      // move
+      internals.m(
+        oldVNode!,
+        parentNode,
+        anchor,
+        MoveType.REORDER,
+        parentComponent as any,
+      )
     }
 
-    frag.remove = () => {
+    frag.remove = parentNode => {
       if (fallbackNodes) {
         remove(fallbackNodes, parentNode)
       } else if (oldVNode) {
@@ -198,4 +285,9 @@ export const vaporInteropPlugin: Plugin = app => {
     vdomUnmount: internals.umt,
     vdomSlot: renderVDOMSlot.bind(null, internals),
   })
+  const mount = app.mount
+  app.mount = ((...args) => {
+    optimizePropertyLookup()
+    return mount(...args)
+  }) satisfies App['mount']
 }

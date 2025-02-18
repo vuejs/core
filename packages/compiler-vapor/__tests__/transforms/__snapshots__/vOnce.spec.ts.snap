@@ -12,13 +12,13 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: v-once > basic 1`] = `
-"import { createTextNode as _createTextNode, setClass as _setClass, prepend as _prepend, template as _template } from 'vue';
+"import { child as _child, createTextNode as _createTextNode, toDisplayString as _toDisplayString, setClass as _setClass, prepend as _prepend, template as _template } from 'vue';
 const t0 = _template("<div><span></span></div>", true)
 
 export function render(_ctx, $props, $emit, $attrs, $slots) {
   const n2 = t0()
-  const n1 = n2.firstChild
-  const n0 = _createTextNode([_ctx.msg, " "])
+  const n1 = _child(n2)
+  const n0 = _createTextNode(_toDisplayString(_ctx.msg) + " ")
   _setClass(n1, _ctx.clz)
   _prepend(n2, n0)
   return n2
@@ -49,12 +49,12 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: v-once > on nested plain element 1`] = `
-"import { setProp as _setProp, template as _template } from 'vue';
+"import { child as _child, setProp as _setProp, template as _template } from 'vue';
 const t0 = _template("<div><div></div></div>", true)
 
 export function render(_ctx) {
   const n1 = t0()
-  const n0 = n1.firstChild
+  const n0 = _child(n1)
   _setProp(n0, "id", _ctx.foo)
   return n1
 }"
@@ -68,7 +68,7 @@ export function render(_ctx) {
   const n0 = _createFor(() => (_ctx.list), (_for_item0) => {
     const n2 = t0()
     return n2
-  }, null, null, true)
+  }, null, 4)
   return n0
 }"
 `;

@@ -1,4 +1,4 @@
-import { shallowRef } from 'vue/vapor'
+import { shallowRef } from 'vue'
 
 let ID = 1
 

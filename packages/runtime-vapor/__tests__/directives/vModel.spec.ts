@@ -43,7 +43,7 @@ describe('directive: v-model', () => {
         () => data.value,
         val => (data.value = val),
       )
-      delegate(n0, 'input', () => () => spy(data.value))
+      delegate(n0, 'input', () => spy(data.value))
       return n0
     }).render()
 
@@ -78,7 +78,7 @@ describe('directive: v-model', () => {
         () => data.value,
         val => (data.value = val),
       )
-      on(n0, 'change', () => () => spy(data.value))
+      on(n0, 'change', () => spy(data.value))
       return n0
     }).render()
 

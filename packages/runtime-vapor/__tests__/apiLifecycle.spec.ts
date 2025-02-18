@@ -21,14 +21,16 @@ import {
 } from '@vue/runtime-dom'
 import {
   createComponent,
+  createFor,
   createIf,
   createTextNode,
+  insert,
   renderEffect,
-  setText,
   template,
 } from '../src'
 import { makeRender } from './_utils'
 import { ITERATE_KEY } from '@vue/reactivity'
+import { setElementText } from '../src/dom/prop'
 
 const define = makeRender<any>()
 
@@ -71,7 +73,7 @@ describe('api: lifecycle hooks', () => {
         onBeforeUpdate(fn)
         const n0 = createTextNode()
         renderEffect(() => {
-          setText(n0, count.value)
+          setElementText(n0, count.value)
         })
         return n0
       },
@@ -97,7 +99,7 @@ describe('api: lifecycle hooks', () => {
         const n0 = createTextNode()
         renderEffect(() => {
           renderSpy()
-          setText(n0, count.value)
+          setElementText(n0, count.value)
         })
         return n0
       },
@@ -118,7 +120,7 @@ describe('api: lifecycle hooks', () => {
 
         const n0 = createTextNode()
         renderEffect(() => {
-          setText(n0, count.value)
+          setElementText(n0, count.value)
         })
         return n0
       },
@@ -280,7 +282,7 @@ describe('api: lifecycle hooks', () => {
 
         const t0 = template('<div></div>')
         const n0 = t0()
-        renderEffect(() => setText(n0, props.count))
+        renderEffect(() => setElementText(n0, props.count))
         return n0
       },
     }
@@ -332,7 +334,7 @@ describe('api: lifecycle hooks', () => {
 
         const n0 = createTextNode()
         renderEffect(() => {
-          setText(n0, [obj.foo, 'bar' in obj, Object.keys(obj).join('')])
+          setElementText(n0, [obj.foo, 'bar' in obj, Object.keys(obj).join('')])
         })
         return n0
       },
@@ -375,7 +377,7 @@ describe('api: lifecycle hooks', () => {
 
         const n0 = createTextNode()
         renderEffect(() => {
-          setText(n0, [obj.foo, 'bar' in obj, Object.keys(obj).join('')])
+          setElementText(n0, [obj.foo, 'bar' in obj, Object.keys(obj).join('')])
         })
         return n0
       },
@@ -449,7 +451,7 @@ describe('api: lifecycle hooks', () => {
         onUpdated(() => handleUpdated())
 
         const n0 = createTextNode()
-        renderEffect(() => setText(n0, count.value))
+        renderEffect(() => setElementText(n0, count.value))
         const n1 = createComponent(Child, { count: () => count.value })
         return [n0, n1]
       },
@@ -462,7 +464,7 @@ describe('api: lifecycle hooks', () => {
 
         const props = currentInstance!.props
         const n2 = createTextNode()
-        renderEffect(() => setText(n2, props.count))
+        renderEffect(() => setElementText(n2, props.count))
         return n2
       },
     }
@@ -494,7 +496,7 @@ describe('api: lifecycle hooks', () => {
         onUpdated(() => handleUpdated())
 
         const n0 = createTextNode()
-        renderEffect(() => setText(n0, count.value))
+        renderEffect(() => setElementText(n0, count.value))
         const n1 = createComponent(Child, { count: () => count.value })
         return [n0, n1]
       },
@@ -509,7 +511,7 @@ describe('api: lifecycle hooks', () => {
         update = () => count.value++
 
         const n2 = createTextNode()
-        renderEffect(() => setText(n2, count.value))
+        renderEffect(() => setElementText(n2, count.value))
         return n2
       },
     }
@@ -525,5 +527,91 @@ describe('api: lifecycle hooks', () => {
     expect(host.innerHTML).toBe('11')
     expect(handleUpdated).toHaveBeenCalledTimes(1)
     expect(handleUpdatedChild).toHaveBeenCalledTimes(1)
+  })
+
+  test('unmount hooks when nested in if block', async () => {
+    const toggle = ref(true)
+    const fn = vi.fn(() => {
+      expect(host.innerHTML).toBe('<div><span></span></div><!--if-->')
+    })
+    const fn2 = vi.fn(() => {
+      expect(host.innerHTML).toBe('<!--if-->')
+    })
+    const { render, host } = define({
+      setup() {
+        const n0 = createIf(
+          () => toggle.value,
+          () => {
+            const n1 = document.createElement('div')
+            const n2 = createComponent(Child)
+            insert(n2, n1)
+            return n1
+          },
+        )
+        return n0
+      },
+    })
+
+    const Child = {
+      setup() {
+        onBeforeUnmount(fn)
+        onUnmounted(fn2)
+
+        const t0 = template('<span></span>')
+        const n0 = t0()
+        return n0
+      },
+    }
+
+    render()
+
+    toggle.value = false
+    await nextTick()
+    expect(fn).toHaveBeenCalledTimes(1)
+    expect(fn2).toHaveBeenCalledTimes(1)
+    expect(host.innerHTML).toBe('<!--if-->')
+  })
+
+  test('unmount hooks when nested in for blocks', async () => {
+    const list = ref([1])
+    const fn = vi.fn(() => {
+      expect(host.innerHTML).toBe('<div><span></span></div><!--for-->')
+    })
+    const fn2 = vi.fn(() => {
+      expect(host.innerHTML).toBe('<!--for-->')
+    })
+    const { render, host } = define({
+      setup() {
+        const n0 = createFor(
+          () => list.value,
+          () => {
+            const n1 = document.createElement('div')
+            const n2 = createComponent(Child)
+            insert(n2, n1)
+            return n1
+          },
+        )
+        return n0
+      },
+    })
+
+    const Child = {
+      setup() {
+        onBeforeUnmount(fn)
+        onUnmounted(fn2)
+
+        const t0 = template('<span></span>')
+        const n0 = t0()
+        return n0
+      },
+    }
+
+    render()
+
+    list.value.pop()
+    await nextTick()
+    expect(fn).toHaveBeenCalledTimes(1)
+    expect(fn2).toHaveBeenCalledTimes(1)
+    expect(host.innerHTML).toBe('<!--for-->')
   })
 })

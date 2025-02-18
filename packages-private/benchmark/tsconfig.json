@@ -17,7 +17,7 @@
     "skipLibCheck": true,
     "noEmit": true,
     "paths": {
-      "vue": ["../packages/vue/src"],
+      "vue": ["../packages/vue/src/runtime-with-vapor.ts"],
       "@vue/*": ["../packages/*/src"]
     }
   },

@@ -171,13 +171,26 @@ export function setValue(el: TargetElement, value: any): void {
   }
 }
 
-export function setText(el: Node & { $txt?: string }, ...values: any[]): void {
-  const value =
-    values.length > 1
-      ? values.map(toDisplayString).join('')
-      : toDisplayString(values[0])
+/**
+ * Only called on text nodes!
+ * Compiler should also ensure value passed here is already converted by
+ * `toDisplayString`
+ */
+export function setText(el: Text & { $txt?: string }, value: string): void {
   if (el.$txt !== value) {
-    el.textContent = el.$txt = value
+    el.nodeValue = el.$txt = value
+  }
+}
+
+/**
+ * Used by setDynamicProps only, so need to guard with `toDisplayString`
+ */
+export function setElementText(
+  el: Node & { $txt?: string },
+  value: unknown,
+): void {
+  if (el.$txt !== (value = toDisplayString(value))) {
+    el.textContent = el.$txt = value as string
   }
 }
 
@@ -221,7 +234,7 @@ export function setDynamicProp(
   } else if (key === 'style') {
     setStyle(el, value)
   } else if (isOn(key)) {
-    on(el, key[2].toLowerCase() + key.slice(3), () => value, { effect: true })
+    on(el, key[2].toLowerCase() + key.slice(3), value, { effect: true })
   } else if (
     key[0] === '.'
       ? ((key = key.slice(1)), true)
@@ -232,7 +245,7 @@ export function setDynamicProp(
     if (key === 'innerHTML') {
       setHtml(el, value)
     } else if (key === 'textContent') {
-      setText(el, value)
+      setElementText(el, value)
     } else if (key === 'value' && canSetValueDirectly(el.tagName)) {
       setValue(el, value)
     } else {
@@ -243,4 +256,23 @@ export function setDynamicProp(
     setAttr(el, key, value)
   }
   return value
+}
+
+let isOptimized = false
+
+/**
+ * Optimize property lookup for cache properties on Element and Text nodes
+ */
+export function optimizePropertyLookup(): void {
+  if (isOptimized) return
+  isOptimized = true
+  const proto = Element.prototype as any
+  proto.$evtclick = undefined
+  proto.$root = false
+  proto.$html =
+    proto.$txt =
+    proto.$cls =
+    proto.$sty =
+    (Text.prototype as any).$txt =
+      ''
 }

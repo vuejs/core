@@ -358,8 +358,8 @@ _delegateEvents("click")
 
 export function render(_ctx) {
   const n0 = t0()
-  _delegate(n0, "click", () => _withKeys(_ctx.a, ["foo"]))
-  _delegate(n0, "click", () => _withKeys(_ctx.b, ["bar"]))
+  _delegate(n0, "click", _withKeys(e => _ctx.a(e), ["foo"]))
+  _delegate(n0, "click", _withKeys(e => _ctx.b(e), ["bar"]))
   return n0
 }"
 `;

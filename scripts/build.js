@@ -173,6 +173,23 @@ async function build(target) {
     return
   }
 
+  let resolvedFormats
+  if (formats) {
+    const isNegation = formats.startsWith('~')
+    resolvedFormats = (isNegation ? formats.slice(1) : formats).split('+')
+    const pkgFormats = pkg.buildOptions?.formats
+    if (pkgFormats) {
+      if (isNegation) {
+        resolvedFormats = pkgFormats.filter(f => !resolvedFormats.includes(f))
+      } else {
+        resolvedFormats = resolvedFormats.filter(f => pkgFormats.includes(f))
+      }
+    }
+    if (!resolvedFormats.length) {
+      return
+    }
+  }
+
   // if building a specific format, do not remove dist.
   if (!formats && existsSync(`${pkgDir}/dist`)) {
     fs.rmSync(`${pkgDir}/dist`, { recursive: true })
@@ -191,7 +208,7 @@ async function build(target) {
         `COMMIT:${commit}`,
         `NODE_ENV:${env}`,
         `TARGET:${target}`,
-        formats ? `FORMATS:${formats}` : ``,
+        resolvedFormats ? `FORMATS:${resolvedFormats.join('+')}` : ``,
         prodOnly ? `PROD_ONLY:true` : ``,
         sourceMap ? `SOURCE_MAP:true` : ``,
       ]
@@ -208,7 +225,10 @@ async function build(target) {
  * @returns {Promise<void>}
  */
 async function checkAllSizes(targets) {
-  if (devOnly || (formats && !formats.includes('global'))) {
+  if (
+    devOnly ||
+    (formats && (formats.startsWith('~') || !formats.includes('global')))
+  ) {
     return
   }
   console.log()
