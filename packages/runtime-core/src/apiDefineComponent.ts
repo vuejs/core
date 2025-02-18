@@ -9,6 +9,7 @@ import type {
   SetupContext,
 } from './component'
 import type {
+  EmitsOptions,
   EmitsToProps,
   ObjectEmitsOptions,
   TypeEmitsToOptions,
@@ -131,7 +132,7 @@ export type DefineComponent<
 
 export type DefineSetupFnComponent<
   P extends Record<string, any>,
-  E extends ObjectEmitsOptions = {},
+  E extends EmitsOptions = {},
   S extends SlotsType = SlotsType,
   Props = P & EmitsToProps<E>,
   PP = PublicProps,
@@ -162,7 +163,7 @@ export type DefineSetupFnComponent<
 // (uses user defined props interface)
 export function defineComponent<
   Props extends Record<string, any>,
-  E extends ObjectEmitsOptions = {},
+  E extends EmitsOptions = {},
   EE extends string = string,
   S extends SlotsType = {},
 >(
@@ -178,7 +179,7 @@ export function defineComponent<
 ): DefineSetupFnComponent<Props, E, S>
 export function defineComponent<
   Props extends Record<string, any>,
-  E extends ObjectEmitsOptions = {},
+  E extends EmitsOptions = {},
   EE extends string = string,
   S extends SlotsType = {},
 >(
