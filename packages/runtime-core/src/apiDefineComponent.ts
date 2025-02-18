@@ -227,7 +227,6 @@ export function defineComponent<
       ? { [K in Keys]: null }
       : PropsOptions
     : {},
-  RuntimePropsOptionsDefaults = ExtractDefaultPropTypes<PropsOptions>,
   NormalizedEmitsOptions extends ObjectEmitsOptions = unknown extends TypeEmits
     ? IsNever<RuntimeEmitsOptions> extends true
       ? {}
@@ -305,7 +304,7 @@ export function defineComponent<
     CompleteMethods,
     ResolvedEmitsOptions,
     PublicProps,
-    RuntimePropsOptionsDefaults,
+    ExtractDefaultPropTypes<MixinProps & PropsOptions>,
     // MakeDefaultsOptional - if TypeProps is provided, set to false to use
     // user props types verbatim
     unknown extends TypeProps ? true : false,
