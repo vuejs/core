@@ -387,8 +387,8 @@ export function defineComponent<
       ? {}
       : RuntimeEmitsOptions
     : RuntimeEmitsKeys[]
-  components?: LocalComponents & GlobalComponents
-  directives?: Directives & GlobalDirectives
+  components?: LocalComponents
+  directives?: Directives
   slots?: Slots
   expose?: Exposed[]
   computed?: Computed
