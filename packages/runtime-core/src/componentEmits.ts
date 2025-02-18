@@ -83,7 +83,7 @@ type IsStringLiteral<T> = T extends string
     : true
   : false
 
-type IsNever<T> = [T] extends [never] ? true : false
+export type IsNever<T> = [T] extends [never] ? true : false
 
 export type ShortEmitsToObject<E> =
   E extends Record<string, any[]>

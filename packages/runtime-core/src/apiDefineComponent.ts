@@ -11,6 +11,7 @@ import type {
 import type {
   EmitsOptions,
   EmitsToProps,
+  IsNever,
   ObjectEmitsOptions,
   TypeEmitsToOptions,
 } from './componentEmits'
@@ -203,7 +204,7 @@ export function defineComponent<
   TypeRefs extends Record<string, unknown> = {},
   TypeEl extends Element = any,
   PropsOptions extends ComponentPropsOptions = {},
-  RuntimeEmitsOptions extends EmitsOptions = ObjectEmitsOptions,
+  RuntimeEmitsOptions extends EmitsOptions = never,
   InjectOptions extends ComponentInjectOptions = {},
   Data = {},
   SetupBindings = {},
@@ -228,16 +229,14 @@ export function defineComponent<
     : {},
   RuntimePropsOptionsDefaults = ExtractDefaultPropTypes<PropsOptions>,
   NormalizedEmitsOptions extends ObjectEmitsOptions = unknown extends TypeEmits
-    ? RuntimeEmitsOptions extends (infer Keys extends string)[]
-      ? { [K in Keys]: (...args: any) => any }
-      : ObjectEmitsOptions extends RuntimeEmitsOptions
-        ? {}
+    ? IsNever<RuntimeEmitsOptions> extends true
+      ? {}
+      : RuntimeEmitsOptions extends (infer Keys extends string)[]
+        ? { [K in Keys]: (...args: any) => any }
         : RuntimeEmitsOptions
     : {},
   IsDefaultEmitsOptions = unknown extends TypeEmits
-    ? ObjectEmitsOptions extends RuntimeEmitsOptions
-      ? true
-      : false
+    ? IsNever<RuntimeEmitsOptions>
     : false,
   NormalizedInjectOptions extends
     ObjectInjectOptions = InjectOptions extends (infer Keys extends string)[]
@@ -322,15 +321,18 @@ export function defineComponent<
       | ComponentObjectPropsOptions
       | (PropsOptions & ThisType<void>)
       | _PropsKeys[]
-    emits?: (RuntimeEmitsOptions & ThisType<void>) | _EmitsKeys[]
-    components?: LocalComponents
+    emits?:
+      | ObjectEmitsOptions
+      | (RuntimeEmitsOptions & ThisType<void>)
+      | _EmitsKeys[]
+    components?: Record<string, Component> | LocalComponents
     directives?: Record<string, Directive> | Directives
     slots?: Slots
     expose?: Exposed[]
     computed?: Computed
     methods?: Methods
     provide?: Provide
-    inject?: InjectOptions | _InjectKeys[]
+    inject?: ObjectInjectOptions | InjectOptions | _InjectKeys[]
     mixins?: Mixin[]
     extends?: Extends
     setup?: (
@@ -382,9 +384,7 @@ export function defineComponent<
     >,
 ): {
   props?: PropsOptions
-  emits?: ObjectEmitsOptions extends RuntimeEmitsOptions
-    ? {}
-    : RuntimeEmitsOptions
+  emits?: IsNever<RuntimeEmitsOptions> extends true ? {} : RuntimeEmitsOptions
   components?: LocalComponents & GlobalComponents
   directives?: Directives & GlobalDirectives
   slots?: Slots
