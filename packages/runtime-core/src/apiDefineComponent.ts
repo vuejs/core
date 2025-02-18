@@ -297,13 +297,13 @@ export function defineComponent<
     TypeRefs,
     TypeEl
   >,
-  ReturnInstance = ComponentPublicInstance<
+  PublicInstance = ComponentPublicInstance<
     InferredProps_Public,
     CompleteBindings,
     CompleteData,
     CompleteComputed,
     CompleteMethods,
-    CompleteEmits_Public,
+    ResolvedEmitsOptions_Public,
     PublicProps,
     ExtractDefaultPropTypes<NormalizedPropsOptions>,
     // MakeDefaultsOptional - if TypeProps is provided, set to false to use
@@ -412,7 +412,7 @@ export function defineComponent<
    * because the `__differentiator` will be different
    */
   __differentiator?: keyof Data | keyof Computed | keyof Methods
-  new (...args: any[]): ReturnInstance
+  new (...args: any[]): PublicInstance
 } & Omit<
   ComponentOptionsBase,
   | 'props'
