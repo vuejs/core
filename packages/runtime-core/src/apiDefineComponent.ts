@@ -281,7 +281,7 @@ export function defineComponent<
     CompleteMethods,
     ResolvedEmitsOptions_Internal
   >,
-  OptionsInstance = ComponentPublicInstance<
+  InternalInstance = ComponentPublicInstance<
     InferredProps_Internal,
     CompleteBindings,
     CompleteData,
@@ -372,7 +372,7 @@ export function defineComponent<
     | 'data'
   > &
     ThisType<
-      Omit<OptionsInstance, '$options'> & {
+      Omit<InternalInstance, '$options'> & {
         $options: typeof options
       }
     >,
