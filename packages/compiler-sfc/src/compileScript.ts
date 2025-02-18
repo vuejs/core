@@ -106,10 +106,11 @@ export interface SFCScriptCompileOptions {
    */
   hoistStatic?: boolean
   /**
-   * (**Experimental**) Enable reactive destructure for `defineProps`
-   * @default false
+   * Set to `false` to disable reactive destructure for `defineProps` (pre-3.5
+   * behavior), or set to `'error'` to throw hard error on props destructures.
+   * @default true
    */
-  propsDestructure?: boolean
+  propsDestructure?: boolean | 'error'
   /**
    * File system access methods to be used when resolving types
    * imported in SFC macros. Defaults to ts.sys in Node.js, can be overwritten
@@ -168,8 +169,6 @@ export function compileScript(
   const scopeId = options.id ? options.id.replace(/^data-v-/, '') : ''
   const scriptLang = script && script.lang
   const scriptSetupLang = scriptSetup && scriptSetup.lang
-
-  let refBindings: string[] | undefined
 
   if (!scriptSetup) {
     if (!script) {
@@ -600,6 +599,7 @@ export function compileScript(
         setupBindings,
         vueImportAliases,
         hoistStatic,
+        !!ctx.propsDestructureDecl,
       )
     }
 
@@ -616,7 +616,7 @@ export function compileScript(
     ) {
       const scope: Statement[][] = [scriptSetupAst.body]
       walk(node, {
-        enter(child: Node, parent: Node | undefined) {
+        enter(child: Node, parent: Node | null) {
           if (isFunctionType(child)) {
             this.skip()
           }
@@ -737,12 +737,6 @@ export function compileScript(
   }
   for (const key in setupBindings) {
     ctx.bindingMetadata[key] = setupBindings[key]
-  }
-  // known ref bindings
-  if (refBindings) {
-    for (const key of refBindings) {
-      ctx.bindingMetadata[key] = BindingTypes.SETUP_REF
-    }
   }
 
   // 7. inject `useCssVars` calls
@@ -977,7 +971,7 @@ export function compileScript(
       (definedOptions ? `\n  ...${definedOptions},` : '')
     ctx.s.prependLeft(
       startOffset,
-      `\n${genDefaultAs} /*#__PURE__*/${ctx.helper(
+      `\n${genDefaultAs} /*@__PURE__*/${ctx.helper(
         `defineComponent`,
       )}({${def}${runtimeOptions}\n  ${
         hasAwait ? `async ` : ``
@@ -990,7 +984,7 @@ export function compileScript(
       // export default Object.assign(__default__, { ... })
       ctx.s.prependLeft(
         startOffset,
-        `\n${genDefaultAs} /*#__PURE__*/Object.assign(${
+        `\n${genDefaultAs} /*@__PURE__*/Object.assign(${
           defaultExport ? `${normalScriptDefaultVar}, ` : ''
         }${definedOptions ? `${definedOptions}, ` : ''}{${runtimeOptions}\n  ` +
           `${hasAwait ? `async ` : ``}setup(${args}) {\n${exposeCall}`,
@@ -1053,6 +1047,7 @@ function walkDeclaration(
   bindings: Record<string, BindingTypes>,
   userImportAliases: Record<string, string>,
   hoistStatic: boolean,
+  isPropsDestructureEnabled = false,
 ): boolean {
   let isAllLiteral = false
 
@@ -1121,7 +1116,7 @@ function walkDeclaration(
         }
         registerBinding(bindings, id, bindingType)
       } else {
-        if (isCallOf(init, DEFINE_PROPS)) {
+        if (isCallOf(init, DEFINE_PROPS) && isPropsDestructureEnabled) {
           continue
         }
         if (id.type === 'ObjectPattern') {

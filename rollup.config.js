@@ -2,6 +2,7 @@
 import assert from 'node:assert/strict'
 import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
+import fs from 'node:fs'
 import path from 'node:path'
 import replace from '@rollup/plugin-replace'
 import json from '@rollup/plugin-json'
@@ -33,13 +34,23 @@ const __dirname = fileURLToPath(new URL('.', import.meta.url))
 const masterVersion = require('./package.json').version
 const consolidatePkg = require('@vue/consolidate/package.json')
 
-const packagesDir = path.resolve(__dirname, 'packages')
+const privatePackages = fs.readdirSync('packages-private')
+const pkgBase = privatePackages.includes(process.env.TARGET)
+  ? `packages-private`
+  : `packages`
+const packagesDir = path.resolve(__dirname, pkgBase)
 const packageDir = path.resolve(packagesDir, process.env.TARGET)
 
 const resolve = (/** @type {string} */ p) => path.resolve(packageDir, p)
 const pkg = require(resolve(`package.json`))
 const packageOptions = pkg.buildOptions || {}
 const name = packageOptions.filename || path.basename(packageDir)
+
+const banner = `/**
+* ${pkg.name} v${masterVersion}
+* (c) 2018-present Yuxi (Evan) You and Vue contributors
+* @license MIT
+**/`
 
 const [enumPlugin, enumDefines] = inlineEnums()
 
@@ -131,11 +142,7 @@ function createConfig(format, output, plugins = []) {
     (isGlobalBuild || isBrowserESMBuild || isBundlerESMBuild) &&
     !packageOptions.enableNonBrowserBranches
 
-  output.banner = `/**
-* ${pkg.name} v${masterVersion}
-* (c) 2018-present Yuxi (Evan) You and Vue contributors
-* @license MIT
-**/`
+  output.banner = banner
 
   output.exports = isCompatPackage ? 'auto' : 'named'
   if (isCJSBuild) {
@@ -176,7 +183,7 @@ function createConfig(format, output, plugins = []) {
       // is targeting Node (SSR)?
       __CJS__: String(isCJSBuild),
       // need SSR-specific branches?
-      __SSR__: String(isCJSBuild || isBundlerESMBuild || isServerRenderer),
+      __SSR__: String(!isGlobalBuild),
 
       // 2.x compat build
       __COMPAT__: String(isCompatBuild),
@@ -218,10 +225,10 @@ function createConfig(format, output, plugins = []) {
 
     if (isProductionBuild && isBrowserBuild) {
       Object.assign(replacements, {
-        'context.onError(': `/*#__PURE__*/ context.onError(`,
-        'emitError(': `/*#__PURE__*/ emitError(`,
-        'createCompilerError(': `/*#__PURE__*/ createCompilerError(`,
-        'createDOMCompilerError(': `/*#__PURE__*/ createDOMCompilerError(`,
+        'context.onError(': `/*@__PURE__*/ context.onError(`,
+        'emitError(': `/*@__PURE__*/ emitError(`,
+        'createCompilerError(': `/*@__PURE__*/ createCompilerError(`,
+        'createDOMCompilerError(': `/*@__PURE__*/ createDOMCompilerError(`,
       })
     }
 
@@ -367,20 +374,21 @@ function createMinifiedConfig(/** @type {PackageFormat} */ format) {
       {
         name: 'swc-minify',
 
-        async renderChunk(
-          contents,
-          _,
-          { format, sourcemap, sourcemapExcludeSources },
-        ) {
-          const { code, map } = await minifySwc(contents, {
+        async renderChunk(contents, _, { format }) {
+          const { code } = await minifySwc(contents, {
             module: format === 'es',
-            compress: true,
+            format: {
+              comments: false,
+            },
+            compress: {
+              ecma: 2016,
+              pure_getters: true,
+            },
+            safari10: true,
             mangle: true,
-            sourceMap: !!sourcemap,
-            inlineSourcesContent: !sourcemapExcludeSources,
           })
 
-          return { code, map: map || null }
+          return { code: banner + code, map: null }
         },
       },
     ],

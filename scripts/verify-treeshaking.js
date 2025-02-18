@@ -1,8 +1,8 @@
 // @ts-check
 import fs from 'node:fs'
-import { execa } from 'execa'
+import { exec } from './utils.js'
 
-execa('pnpm', ['build', 'vue', '-f', 'global-runtime']).then(() => {
+exec('pnpm', ['build', 'vue', '-f', 'global-runtime']).then(() => {
   const errors = []
 
   const devBuild = fs.readFileSync(

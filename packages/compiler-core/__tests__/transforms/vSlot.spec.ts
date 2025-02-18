@@ -24,7 +24,7 @@ import {
   trackVForSlotScopes,
 } from '../../src/transforms/vSlot'
 import { CREATE_SLOTS, RENDER_LIST } from '../../src/runtimeHelpers'
-import { createObjectMatcher, genFlagText } from '../testUtils'
+import { createObjectMatcher } from '../testUtils'
 import { PatchFlags } from '@vue/shared'
 import { transformFor } from '../../src/transforms/vFor'
 import { transformIf } from '../../src/transforms/vIf'
@@ -432,7 +432,7 @@ describe('compiler: transform component slots', () => {
                 ),
                 // nested slot should be forced dynamic, since scope variables
                 // are not tracked as dependencies of the slot.
-                patchFlag: genFlagText(PatchFlags.DYNAMIC_SLOTS),
+                patchFlag: PatchFlags.DYNAMIC_SLOTS,
               },
             },
             // test scope
@@ -474,9 +474,7 @@ describe('compiler: transform component slots', () => {
     const div = ((root.children[0] as ForNode).children[0] as ElementNode)
       .codegenNode as any
     const comp = div.children[0]
-    expect(comp.codegenNode.patchFlag).toBe(
-      genFlagText(PatchFlags.DYNAMIC_SLOTS),
-    )
+    expect(comp.codegenNode.patchFlag).toBe(PatchFlags.DYNAMIC_SLOTS)
   })
 
   test('should only force dynamic slots when actually using scope vars w/ prefixIdentifiers: true', () => {
@@ -494,7 +492,7 @@ describe('compiler: transform component slots', () => {
         flag = (innerComp.codegenNode as VNodeCall).patchFlag
       }
       if (shouldForce) {
-        expect(flag).toBe(genFlagText(PatchFlags.DYNAMIC_SLOTS))
+        expect(flag).toBe(PatchFlags.DYNAMIC_SLOTS)
       } else {
         expect(flag).toBeUndefined()
       }
@@ -581,8 +579,8 @@ describe('compiler: transform component slots', () => {
         },
       ],
     })
-    expect((root as any).children[0].codegenNode.patchFlag).toMatch(
-      PatchFlags.DYNAMIC_SLOTS + '',
+    expect((root as any).children[0].codegenNode.patchFlag).toBe(
+      PatchFlags.DYNAMIC_SLOTS,
     )
     expect(generate(root).code).toMatchSnapshot()
   })
@@ -630,8 +628,8 @@ describe('compiler: transform component slots', () => {
         },
       ],
     })
-    expect((root as any).children[0].codegenNode.patchFlag).toMatch(
-      PatchFlags.DYNAMIC_SLOTS + '',
+    expect((root as any).children[0].codegenNode.patchFlag).toBe(
+      PatchFlags.DYNAMIC_SLOTS,
     )
     expect(generate(root, { prefixIdentifiers: true }).code).toMatchSnapshot()
   })
@@ -693,9 +691,10 @@ describe('compiler: transform component slots', () => {
         },
       ],
     })
-    expect((root as any).children[0].codegenNode.patchFlag).toMatch(
-      PatchFlags.DYNAMIC_SLOTS + '',
+    expect((root as any).children[0].codegenNode.patchFlag).toBe(
+      PatchFlags.DYNAMIC_SLOTS,
     )
+    expect((root as any).children[0].children.length).toBe(3)
     expect(generate(root).code).toMatchSnapshot()
   })
 
@@ -743,8 +742,8 @@ describe('compiler: transform component slots', () => {
         },
       ],
     })
-    expect((root as any).children[0].codegenNode.patchFlag).toMatch(
-      PatchFlags.DYNAMIC_SLOTS + '',
+    expect((root as any).children[0].codegenNode.patchFlag).toBe(
+      PatchFlags.DYNAMIC_SLOTS,
     )
     expect(generate(root, { prefixIdentifiers: true }).code).toMatchSnapshot()
   })

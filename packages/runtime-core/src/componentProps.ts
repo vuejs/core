@@ -67,7 +67,7 @@ export interface PropOptions<T = any, D = T> {
   skipFactory?: boolean
 }
 
-export type PropType<T> = PropConstructor<T> | PropConstructor<T>[]
+export type PropType<T> = PropConstructor<T> | (PropConstructor<T> | null)[]
 
 type PropConstructor<T = any> =
   | { new (...args: any[]): T & {} }
@@ -107,8 +107,10 @@ type DefaultKeys<T> = {
     : never
 }[keyof T]
 
-type InferPropType<T> = [T] extends [null]
-  ? any // null & true would fail to infer
+type InferPropType<T, NullAsAny = true> = [T] extends [null]
+  ? NullAsAny extends true
+    ? any
+    : null
   : [T] extends [{ type: null | true }]
     ? any // As TS issue https://github.com/Microsoft/TypeScript/issues/14829 // somehow `ObjectConstructor` when inferred from { (): T } becomes `any` // `BooleanConstructor` when inferred from PropConstructor(with PropMethod) becomes `Boolean`
     : [T] extends [ObjectConstructor | { type: ObjectConstructor }]
@@ -119,11 +121,13 @@ type InferPropType<T> = [T] extends [null]
           ? Date
           : [T] extends [(infer U)[] | { type: (infer U)[] }]
             ? U extends DateConstructor
-              ? Date | InferPropType<U>
-              : InferPropType<U>
+              ? Date | InferPropType<U, false>
+              : InferPropType<U, false>
             : [T] extends [Prop<infer V, infer D>]
               ? unknown extends V
-                ? IfAny<V, V, D>
+                ? keyof V extends never
+                  ? IfAny<V, V, D>
+                  : V
                 : V
               : T
 
@@ -174,12 +178,10 @@ export type ExtractDefaultPropTypes<O> = O extends object
     { [K in keyof Pick<O, DefaultKeys<O>>]: InferPropType<O[K]> }
   : {}
 
-type NormalizedProp =
-  | null
-  | (PropOptions & {
-      [BooleanFlags.shouldCast]?: boolean
-      [BooleanFlags.shouldCastTrue]?: boolean
-    })
+type NormalizedProp = PropOptions & {
+  [BooleanFlags.shouldCast]?: boolean
+  [BooleanFlags.shouldCastTrue]?: boolean
+}
 
 // normalized value is a tuple of the actual normalized options
 // and an array of prop keys that need value casting (booleans and defaults)
@@ -191,7 +193,7 @@ export function initProps(
   rawProps: Data | null,
   isStateful: number, // result of bitwise flag comparison
   isSSR = false,
-) {
+): void {
   const props: Data = {}
   const attrs: Data = createInternalObject()
 
@@ -238,7 +240,7 @@ export function updateProps(
   rawProps: Data | null,
   rawPrevProps: Data | null,
   optimized: boolean,
-) {
+): void {
   const {
     props,
     attrs,
@@ -480,6 +482,10 @@ function resolvePropValue(
       } else {
         value = defaultValue
       }
+      // #9006 reflect default value on custom element
+      if (instance.ce) {
+        instance.ce._setProp(key, value)
+      }
     }
     // boolean casting
     if (opt[BooleanFlags.shouldCast]) {
@@ -496,12 +502,15 @@ function resolvePropValue(
   return value
 }
 
+const mixinPropsCache = new WeakMap<ConcreteComponent, NormalizedPropsOptions>()
+
 export function normalizePropsOptions(
   comp: ConcreteComponent,
   appContext: AppContext,
   asMixin = false,
 ): NormalizedPropsOptions {
-  const cache = appContext.propsCache
+  const cache =
+    __FEATURE_OPTIONS_API__ && asMixin ? mixinPropsCache : appContext.propsCache
   const cached = cache.get(comp)
   if (cached) {
     return cached
@@ -561,16 +570,36 @@ export function normalizePropsOptions(
         const opt = raw[key]
         const prop: NormalizedProp = (normalized[normalizedKey] =
           isArray(opt) || isFunction(opt) ? { type: opt } : extend({}, opt))
-        if (prop) {
-          const booleanIndex = getTypeIndex(Boolean, prop.type)
-          const stringIndex = getTypeIndex(String, prop.type)
-          prop[BooleanFlags.shouldCast] = booleanIndex > -1
-          prop[BooleanFlags.shouldCastTrue] =
-            stringIndex < 0 || booleanIndex < stringIndex
-          // if the prop needs boolean casting or default value
-          if (booleanIndex > -1 || hasOwn(prop, 'default')) {
-            needCastKeys.push(normalizedKey)
+        const propType = prop.type
+        let shouldCast = false
+        let shouldCastTrue = true
+
+        if (isArray(propType)) {
+          for (let index = 0; index < propType.length; ++index) {
+            const type = propType[index]
+            const typeName = isFunction(type) && type.name
+
+            if (typeName === 'Boolean') {
+              shouldCast = true
+              break
+            } else if (typeName === 'String') {
+              // If we find `String` before `Boolean`, e.g. `[String, Boolean]`,
+              // we need to handle the casting slightly differently. Props
+              // passed as `<Comp checked="">` or `<Comp checked="checked">`
+              // will either be treated as strings or converted to a boolean
+              // `true`, depending on the order of the types.
+              shouldCastTrue = false
+            }
           }
+        } else {
+          shouldCast = isFunction(propType) && propType.name === 'Boolean'
+        }
+
+        prop[BooleanFlags.shouldCast] = shouldCast
+        prop[BooleanFlags.shouldCastTrue] = shouldCastTrue
+        // if the prop needs boolean casting or default value
+        if (shouldCast || hasOwn(prop, 'default')) {
+          needCastKeys.push(normalizedKey)
         }
       }
     }
@@ -592,9 +621,10 @@ function validatePropName(key: string) {
   return false
 }
 
+// dev only
 // use function string name to check type constructors
 // so that it works across vms / iframes.
-function getType(ctor: Prop<any>): string {
+function getType(ctor: Prop<any> | null): string {
   // Early return for null to avoid unnecessary computations
   if (ctor === null) {
     return 'null'
@@ -614,22 +644,6 @@ function getType(ctor: Prop<any>): string {
   return ''
 }
 
-function isSameType(a: Prop<any>, b: Prop<any>): boolean {
-  return getType(a) === getType(b)
-}
-
-function getTypeIndex(
-  type: Prop<any>,
-  expectedTypes: PropType<any> | void | null | true,
-): number {
-  if (isArray(expectedTypes)) {
-    return expectedTypes.findIndex(t => isSameType(t, type))
-  } else if (isFunction(expectedTypes)) {
-    return isSameType(expectedTypes, type) ? 0 : -1
-  }
-  return -1
-}
-
 /**
  * dev only
  */
@@ -640,6 +654,7 @@ function validateProps(
 ) {
   const resolvedValues = toRaw(props)
   const options = instance.propsOptions[0]
+  const camelizePropsKey = Object.keys(rawProps).map(key => camelize(key))
   for (const key in options) {
     let opt = options[key]
     if (opt == null) continue
@@ -648,7 +663,7 @@ function validateProps(
       resolvedValues[key],
       opt,
       __DEV__ ? shallowReadonly(resolvedValues) : resolvedValues,
-      !hasOwn(rawProps, key) && !hasOwn(rawProps, hyphenate(key)),
+      !camelizePropsKey.includes(key),
     )
   }
 }
@@ -695,7 +710,7 @@ function validateProp(
   }
 }
 
-const isSimpleType = /*#__PURE__*/ makeMap(
+const isSimpleType = /*@__PURE__*/ makeMap(
   'String,Number,Boolean,Function,Symbol,BigInt',
 )
 
@@ -707,24 +722,27 @@ type AssertionResult = {
 /**
  * dev only
  */
-function assertType(value: unknown, type: PropConstructor): AssertionResult {
+function assertType(
+  value: unknown,
+  type: PropConstructor | null,
+): AssertionResult {
   let valid
   const expectedType = getType(type)
-  if (isSimpleType(expectedType)) {
+  if (expectedType === 'null') {
+    valid = value === null
+  } else if (isSimpleType(expectedType)) {
     const t = typeof value
     valid = t === expectedType.toLowerCase()
     // for primitive wrapper objects
     if (!valid && t === 'object') {
-      valid = value instanceof type
+      valid = value instanceof (type as PropConstructor)
     }
   } else if (expectedType === 'Object') {
     valid = isObject(value)
   } else if (expectedType === 'Array') {
     valid = isArray(value)
-  } else if (expectedType === 'null') {
-    valid = value === null
   } else {
-    valid = value instanceof type
+    valid = value instanceof (type as PropConstructor)
   }
   return {
     valid,

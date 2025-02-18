@@ -1,7 +1,7 @@
 import type { ObjectDirective } from '@vue/runtime-core'
 
-export const vShowOriginalDisplay = Symbol('_vod')
-export const vShowHidden = Symbol('_vsh')
+export const vShowOriginalDisplay: unique symbol = Symbol('_vod')
+export const vShowHidden: unique symbol = Symbol('_vsh')
 
 export interface VShowElement extends HTMLElement {
   // _vod = vue original display
@@ -56,7 +56,7 @@ function setDisplay(el: VShowElement, value: unknown): void {
 
 // SSR vnode transforms, only used when user includes client-oriented render
 // function in SSR
-export function initVShowForSSR() {
+export function initVShowForSSR(): void {
   vShow.getSSRProps = ({ value }) => {
     if (!value) {
       return { style: { display: 'none' } }

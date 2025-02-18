@@ -2,6 +2,8 @@ import { isRef, ref } from '../src/ref'
 import {
   isProxy,
   isReactive,
+  isReadonly,
+  isShallow,
   markRaw,
   reactive,
   readonly,
@@ -11,6 +13,7 @@ import {
 } from '../src/reactive'
 import { computed } from '../src/computed'
 import { effect } from '../src/effect'
+import { targetMap } from '../src/dep'
 
 describe('reactivity/reactive', () => {
   test('Object', () => {
@@ -291,6 +294,13 @@ describe('reactivity/reactive', () => {
     expect(() => markRaw(obj)).not.toThrowError()
   })
 
+  test('markRaw should not redefine on an marked object', () => {
+    const obj = markRaw({ foo: 1 })
+    const raw = markRaw(obj)
+    expect(raw).toBe(obj)
+    expect(() => markRaw(obj)).not.toThrowError()
+  })
+
   test('should not observe non-extensible objects', () => {
     const obj = reactive({
       foo: Object.preventExtensions({ a: 1 }),
@@ -358,5 +368,55 @@ describe('reactivity/reactive', () => {
 
     const c = computed(() => {})
     expect(isProxy(c)).toBe(false)
+  })
+
+  test('The results of the shallow and readonly assignments are the same (Map)', () => {
+    const map = reactive(new Map())
+    map.set('foo', shallowReactive({ a: 2 }))
+    expect(isShallow(map.get('foo'))).toBe(true)
+
+    map.set('bar', readonly({ b: 2 }))
+    expect(isReadonly(map.get('bar'))).toBe(true)
+  })
+
+  test('The results of the shallow and readonly assignments are the same (Set)', () => {
+    const set = reactive(new Set())
+    set.add(shallowReactive({ a: 2 }))
+    set.add(readonly({ b: 2 }))
+    let count = 0
+    for (const i of set) {
+      if (count === 0) expect(isShallow(i)).toBe(true)
+      else expect(isReadonly(i)).toBe(true)
+      count++
+    }
+  })
+
+  // #11696
+  test('should use correct receiver on set handler for refs', () => {
+    const a = reactive(ref(1))
+    effect(() => a.value)
+    expect(() => {
+      a.value++
+    }).not.toThrow()
+  })
+
+  // #11979
+  test('should release property Dep instance if it no longer has subscribers', () => {
+    let obj = { x: 1 }
+    let a = reactive(obj)
+    const e = effect(() => a.x)
+    expect(targetMap.get(obj)?.get('x')).toBeTruthy()
+    e.effect.stop()
+    expect(targetMap.get(obj)?.get('x')).toBeFalsy()
+  })
+
+  test('should trigger reactivity when Map key is undefined', () => {
+    const map = reactive(new Map())
+    const c = computed(() => map.get(void 0))
+
+    expect(c.value).toBe(void 0)
+
+    map.set(void 0, 1)
+    expect(c.value).toBe(1)
   })
 })

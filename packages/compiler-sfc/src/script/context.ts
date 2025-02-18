@@ -8,6 +8,7 @@ import type { ModelDecl } from './defineModel'
 import type { BindingMetadata } from '../../../compiler-core/src'
 import MagicString from 'magic-string'
 import type { TypeScope } from './resolveType'
+import { warn } from '../warn'
 
 export class ScriptCompileContext {
   isJS: boolean
@@ -17,11 +18,12 @@ export class ScriptCompileContext {
   scriptAst: Program | null
   scriptSetupAst: Program | null
 
-  source = this.descriptor.source
-  filename = this.descriptor.filename
-  s = new MagicString(this.source)
-  startOffset = this.descriptor.scriptSetup?.loc.start.offset
-  endOffset = this.descriptor.scriptSetup?.loc.end.offset
+  source: string = this.descriptor.source
+  filename: string = this.descriptor.filename
+  s: MagicString = new MagicString(this.source)
+  startOffset: number | undefined =
+    this.descriptor.scriptSetup?.loc.start.offset
+  endOffset: number | undefined = this.descriptor.scriptSetup?.loc.end.offset
 
   // import / type analysis
   scope?: TypeScope
@@ -144,25 +146,36 @@ export class ScriptCompileContext {
     return block.content.slice(node.start!, node.end!)
   }
 
+  warn(msg: string, node: Node, scope?: TypeScope): void {
+    warn(generateError(msg, node, this, scope))
+  }
+
   error(msg: string, node: Node, scope?: TypeScope): never {
-    const offset = scope ? scope.offset : this.startOffset!
     throw new Error(
-      `[@vue/compiler-sfc] ${msg}\n\n${
-        (scope || this.descriptor).filename
-      }\n${generateCodeFrame(
-        (scope || this.descriptor).source,
-        node.start! + offset,
-        node.end! + offset,
-      )}`,
+      `[@vue/compiler-sfc] ${generateError(msg, node, this, scope)}`,
     )
   }
+}
+
+function generateError(
+  msg: string,
+  node: Node,
+  ctx: ScriptCompileContext,
+  scope?: TypeScope,
+) {
+  const offset = scope ? scope.offset : ctx.startOffset!
+  return `${msg}\n\n${(scope || ctx.descriptor).filename}\n${generateCodeFrame(
+    (scope || ctx.descriptor).source,
+    node.start! + offset,
+    node.end! + offset,
+  )}`
 }
 
 export function resolveParserPlugins(
   lang: string,
   userPlugins?: ParserPlugin[],
   dts = false,
-) {
+): ParserPlugin[] {
   const plugins: ParserPlugin[] = []
   if (
     !userPlugins ||

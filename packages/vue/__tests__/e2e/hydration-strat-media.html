@@ -1,0 +1,43 @@
+<script src="../../dist/vue.global.js"></script>
+
+<div>resize the window width to < 500px to hydrate</div>
+<div id="app"><button>0</button></div>
+
+<script>
+  window.isHydrated = false
+  const {
+    createSSRApp,
+    defineAsyncComponent,
+    h,
+    ref,
+    onMounted,
+    hydrateOnMediaQuery,
+  } = Vue
+
+  const Comp = {
+    setup() {
+      const count = ref(0)
+      onMounted(() => {
+        console.log('hydrated')
+        window.isHydrated = true
+      })
+      return () => {
+        return h('button', { onClick: () => count.value++ }, count.value)
+      }
+    },
+  }
+
+  const AsyncComp = defineAsyncComponent({
+    loader: () => Promise.resolve(Comp),
+    hydrate: hydrateOnMediaQuery('(max-width:500px)'),
+  })
+
+  createSSRApp({
+    setup() {
+      onMounted(() => {
+        window.isRootMounted = true
+      })
+      return () => h(AsyncComp)
+    },
+  }).mount('#app')
+</script>

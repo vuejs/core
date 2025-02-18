@@ -1,4 +1,5 @@
 import {
+  type NodeTransform,
   type TransformContext,
   createStructuralDirectiveTransform,
   traverseNode,
@@ -29,11 +30,12 @@ import {
 import { ErrorCodes, createCompilerError } from '../errors'
 import { processExpression } from './transformExpression'
 import { validateBrowserExpression } from '../validateExpression'
+import { cloneLoc } from '../parser'
 import { CREATE_COMMENT, FRAGMENT } from '../runtimeHelpers'
 import { findDir, findProp, getMemoedVNodeCall, injectProp } from '../utils'
-import { PatchFlagNames, PatchFlags } from '@vue/shared'
+import { PatchFlags } from '@vue/shared'
 
-export const transformIf = createStructuralDirectiveTransform(
+export const transformIf: NodeTransform = createStructuralDirectiveTransform(
   /^(if|else|else-if)$/,
   (node, dir, context) => {
     return processIf(node, dir, context, (ifNode, branch, isRoot) => {
@@ -83,7 +85,7 @@ export function processIf(
     branch: IfBranchNode,
     isRoot: boolean,
   ) => (() => void) | undefined,
-) {
+): (() => void) | undefined {
   if (
     dir.name !== 'else' &&
     (!dir.exp || !(dir.exp as SimpleExpressionNode).content.trim())
@@ -109,7 +111,7 @@ export function processIf(
     const branch = createIfBranch(node, dir)
     const ifNode: IfNode = {
       type: NodeTypes.IF,
-      loc: node.loc,
+      loc: cloneLoc(node.loc),
       branches: [branch],
     }
     context.replaceNode(ifNode)
@@ -248,7 +250,7 @@ function createChildrenCodegenNode(
       `${keyIndex}`,
       false,
       locStub,
-      ConstantTypes.CAN_HOIST,
+      ConstantTypes.CAN_CACHE,
     ),
   )
   const { children } = branch
@@ -263,7 +265,6 @@ function createChildrenCodegenNode(
       return vnodeCall
     } else {
       let patchFlag = PatchFlags.STABLE_FRAGMENT
-      let patchFlagText = PatchFlagNames[PatchFlags.STABLE_FRAGMENT]
       // check if the fragment actually contains a single valid child with
       // the rest being comments
       if (
@@ -272,7 +273,6 @@ function createChildrenCodegenNode(
         children.filter(c => c.type !== NodeTypes.COMMENT).length === 1
       ) {
         patchFlag |= PatchFlags.DEV_ROOT_FRAGMENT
-        patchFlagText += `, ${PatchFlagNames[PatchFlags.DEV_ROOT_FRAGMENT]}`
       }
 
       return createVNodeCall(
@@ -280,7 +280,7 @@ function createChildrenCodegenNode(
         helper(FRAGMENT),
         createObjectExpression([keyProperty]),
         children,
-        patchFlag + (__DEV__ ? ` /* ${patchFlagText} */` : ``),
+        patchFlag,
         undefined,
         undefined,
         true,

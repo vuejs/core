@@ -29,7 +29,7 @@ export function ssrTransformTransitionGroup(
   node: ComponentNode,
   context: TransformContext,
 ) {
-  return () => {
+  return (): void => {
     const tag = findProp(node, 'tag')
     if (tag) {
       const otherProps = node.props.filter(p => p !== tag)
@@ -60,7 +60,7 @@ export function ssrTransformTransitionGroup(
 export function ssrProcessTransitionGroup(
   node: ComponentNode,
   context: SSRTransformContext,
-) {
+): void {
   const entry = wipMap.get(node)
   if (entry) {
     const { tag, propsExp, scopeId } = entry
@@ -108,7 +108,7 @@ export function ssrProcessTransitionGroup(
         context.pushStringPart(` ${scopeId}`)
       }
       context.pushStringPart(`>`)
-      processChildren(node, context, false, true)
+      processChildren(node, context, false, true, true)
       context.pushStringPart(`</${tag.value!.content}>`)
     }
   } else {

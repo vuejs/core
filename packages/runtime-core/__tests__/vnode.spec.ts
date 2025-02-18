@@ -2,6 +2,7 @@ import {
   Comment,
   Fragment,
   Text,
+  type VNode,
   cloneVNode,
   createBlock,
   createVNode,
@@ -628,12 +629,14 @@ describe('vnode', () => {
       const vnode =
         (openBlock(),
         createBlock('div', null, [
-          setBlockTracking(-1),
+          setBlockTracking(-1, true),
           (vnode1 = (openBlock(), createBlock('div'))),
           setBlockTracking(1),
           vnode1,
         ]))
-      expect(vnode.dynamicChildren).toStrictEqual([])
+      const expected: VNode['dynamicChildren'] = []
+      expected.hasOnce = true
+      expect(vnode.dynamicChildren).toStrictEqual(expected)
     })
     // #5657
     test('error of slot function execution should not affect block tracking', () => {

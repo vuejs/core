@@ -27,6 +27,10 @@ function parseWithExpressionTransform(
   return ast.children[0]
 }
 
+function compile(template: string) {
+  return baseCompile(template, { prefixIdentifiers: true })
+}
+
 describe('compiler: expression transform', () => {
   test('interpolation (root)', () => {
     const node = parseWithExpressionTransform(`{{ foo }}`) as InterpolationNode
@@ -291,6 +295,7 @@ describe('compiler: expression transform', () => {
       ],
     })
   })
+
   test('should not prefix an object property key', () => {
     const node = parseWithExpressionTransform(
       `{{ { foo() { baz() }, value: bar } }}`,
@@ -384,6 +389,17 @@ describe('compiler: expression transform', () => {
     )
   })
 
+  test('should not error', () => {
+    const onError = vi.fn()
+    parseWithExpressionTransform(
+      `<p :id="undefined /* force override the id */"/>`,
+      {
+        onError,
+      },
+    )
+    expect(onError).not.toHaveBeenCalled()
+  })
+
   test('should prefix in assignment', () => {
     const node = parseWithExpressionTransform(
       `{{ x = 1 }}`,
@@ -444,6 +460,90 @@ describe('compiler: expression transform', () => {
         '()',
       ],
     })
+  })
+
+  test('should not prefix temp variable of for...in', () => {
+    const { code } = compile(
+      `<div @click="() => {
+        for (const x in list) {
+          log(x)
+        }
+        error(x)
+      }"/>`,
+    )
+    expect(code).not.toMatch(`log(_ctx.x)`)
+    expect(code).toMatch(`error(_ctx.x)`)
+    expect(code).toMatchSnapshot()
+  })
+
+  test('should not prefix temp variable of for...of', () => {
+    const { code } = compile(
+      `<div @click="() => {
+        for (const x of list) {
+          log(x)
+        }
+        error(x)
+      }"/>`,
+    )
+    expect(code).not.toMatch(`log(_ctx.x)`)
+    expect(code).toMatch(`error(_ctx.x)`)
+    expect(code).toMatchSnapshot()
+  })
+
+  test('should not prefix temp variable of for loop', () => {
+    const { code } = compile(
+      `<div @click="() => {
+        for (let i = 0; i < list.length; i++) {
+          log(i)
+        }
+        error(i)
+      }"/>`,
+    )
+    expect(code).not.toMatch(`log(_ctx.i)`)
+    expect(code).toMatch(`error(_ctx.i)`)
+    expect(code).toMatchSnapshot()
+  })
+
+  test('should allow leak of var declarations in for loop', () => {
+    const { code } = compile(
+      `<div @click="() => {
+        for (var i = 0; i < list.length; i++) {
+          log(i)
+        }
+        error(i)
+      }"/>`,
+    )
+    expect(code).not.toMatch(`log(_ctx.i)`)
+    expect(code).not.toMatch(`error(_ctx.i)`)
+    expect(code).toMatchSnapshot()
+  })
+
+  test('should not prefix catch block param', () => {
+    const { code } = compile(
+      `<div @click="() => {
+         try {} catch (err) { console.error(err) }
+        console.log(err)
+      }"/>`,
+    )
+    expect(code).not.toMatch(`console.error(_ctx.err)`)
+    expect(code).toMatch(`console.log(_ctx.err)`)
+    expect(code).toMatchSnapshot()
+  })
+
+  test('should not prefix destructured catch block param', () => {
+    const { code } = compile(
+      `<div @click="() => {
+        try {
+          throw new Error('sup?')
+        } catch ({ message: { length } }) {
+          console.error(length)
+        }
+        console.log(length)
+      }"/>`,
+    )
+    expect(code).not.toMatch(`console.error(_ctx.length)`)
+    expect(code).toMatch(`console.log(_ctx.length)`)
+    expect(code).toMatchSnapshot()
   })
 
   describe('ES Proposals support', () => {
@@ -541,42 +641,6 @@ describe('compiler: expression transform', () => {
       expect(code).toMatch(`$data.data`)
       expect(code).toMatch(`$options.options`)
       expect(code).toMatch(`_ctx, _cache, $props, $setup, $data, $options`)
-      expect(code).toMatchSnapshot()
-    })
-
-    test('should not prefix temp variable of for...in', () => {
-      const { code } = compileWithBindingMetadata(
-        `<div @click="() => {
-          for (const x in list) {
-            log(x)
-          }
-        }"/>`,
-      )
-      expect(code).not.toMatch(`_ctx.x`)
-      expect(code).toMatchSnapshot()
-    })
-
-    test('should not prefix temp variable of for...of', () => {
-      const { code } = compileWithBindingMetadata(
-        `<div @click="() => {
-          for (const x of list) {
-            log(x)
-          }
-        }"/>`,
-      )
-      expect(code).not.toMatch(`_ctx.x`)
-      expect(code).toMatchSnapshot()
-    })
-
-    test('should not prefix temp variable of for loop', () => {
-      const { code } = compileWithBindingMetadata(
-        `<div @click="() => {
-          for (let i = 0; i < list.length; i++) {
-            log(i)
-          }
-        }"/>`,
-      )
-      expect(code).not.toMatch(`_ctx.i`)
       expect(code).toMatchSnapshot()
     })
 

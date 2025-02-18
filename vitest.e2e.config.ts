@@ -3,6 +3,7 @@ import config from './vitest.config'
 
 export default mergeConfig(config, {
   test: {
+    name: 'e2e',
     poolOptions: {
       threads: {
         singleThread: !!process.env.CI,

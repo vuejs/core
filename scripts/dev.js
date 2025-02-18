@@ -5,19 +5,42 @@
 // smaller files and provides better tree-shaking.
 
 import esbuild from 'esbuild'
+import fs from 'node:fs'
 import { dirname, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { createRequire } from 'node:module'
-import minimist from 'minimist'
+import { parseArgs } from 'node:util'
 import { polyfillNode } from 'esbuild-plugin-polyfill-node'
 
 const require = createRequire(import.meta.url)
 const __dirname = dirname(fileURLToPath(import.meta.url))
-const args = minimist(process.argv.slice(2))
-const targets = args._.length ? args._ : ['vue']
-const format = args.f || 'global'
-const prod = args.p || false
-const inlineDeps = args.i || args.inline
+
+const {
+  values: { format: rawFormat, prod, inline: inlineDeps },
+  positionals,
+} = parseArgs({
+  allowPositionals: true,
+  options: {
+    format: {
+      type: 'string',
+      short: 'f',
+      default: 'global',
+    },
+    prod: {
+      type: 'boolean',
+      short: 'p',
+      default: false,
+    },
+    inline: {
+      type: 'boolean',
+      short: 'i',
+      default: false,
+    },
+  },
+})
+
+const format = rawFormat || 'global'
+const targets = positionals.length ? positionals : ['vue']
 
 // resolve output
 const outputFormat = format.startsWith('global')
@@ -30,11 +53,17 @@ const postfix = format.endsWith('-runtime')
   ? `runtime.${format.replace(/-runtime$/, '')}`
   : format
 
+const privatePackages = fs.readdirSync('packages-private')
+
 for (const target of targets) {
-  const pkg = require(`../packages/${target}/package.json`)
+  const pkgBase = privatePackages.includes(target)
+    ? `packages-private`
+    : `packages`
+  const pkgBasePath = `../${pkgBase}/${target}`
+  const pkg = require(`${pkgBasePath}/package.json`)
   const outfile = resolve(
     __dirname,
-    `../packages/${target}/dist/${
+    `${pkgBasePath}/dist/${
       target === 'vue-compat' ? `vue` : target
     }.${postfix}.${prod ? `prod.` : ``}js`,
   )
@@ -100,7 +129,7 @@ for (const target of targets) {
 
   esbuild
     .context({
-      entryPoints: [resolve(__dirname, `../packages/${target}/src/index.ts`)],
+      entryPoints: [resolve(__dirname, `${pkgBasePath}/src/index.ts`)],
       outfile,
       bundle: true,
       external,
@@ -121,12 +150,12 @@ for (const target of targets) {
         __ESM_BUNDLER__: String(format.includes('esm-bundler')),
         __ESM_BROWSER__: String(format.includes('esm-browser')),
         __CJS__: String(format === 'cjs'),
-        __SSR__: String(format === 'cjs' || format.includes('esm-bundler')),
+        __SSR__: String(format !== 'global'),
         __COMPAT__: String(target === 'vue-compat'),
         __FEATURE_SUSPENSE__: `true`,
         __FEATURE_OPTIONS_API__: `true`,
         __FEATURE_PROD_DEVTOOLS__: `false`,
-        __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__: `false`,
+        __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__: `true`,
       },
     })
     .then(ctx => ctx.watch())

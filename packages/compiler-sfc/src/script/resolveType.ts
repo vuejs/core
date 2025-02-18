@@ -177,6 +177,7 @@ function innerResolveTypeElements(
     case 'TSInterfaceDeclaration':
       return resolveInterfaceMembers(ctx, node, scope, typeParameters)
     case 'TSTypeAliasDeclaration':
+    case 'TSTypeAnnotation':
     case 'TSParenthesizedType':
       return resolveTypeElements(
         ctx,
@@ -822,7 +823,7 @@ let loadTS: (() => typeof TS) | undefined
 /**
  * @private
  */
-export function registerTS(_loadTS: () => typeof TS) {
+export function registerTS(_loadTS: () => typeof TS): void {
   loadTS = () => {
     try {
       return _loadTS()
@@ -1069,6 +1070,7 @@ function loadTSConfig(
   configPath: string,
   ts: typeof TS,
   fs: FS,
+  visited = new Set<string>(),
 ): TS.ParsedCommandLine[] {
   // The only case where `fs` is NOT `ts.sys` is during tests.
   // parse config host requires an extra `readDirectory` method
@@ -1088,14 +1090,15 @@ function loadTSConfig(
     configPath,
   )
   const res = [config]
+  visited.add(configPath)
   if (config.projectReferences) {
     for (const ref of config.projectReferences) {
       const refPath = ts.resolveProjectReferencePath(ref)
-      if (!fs.fileExists(refPath)) {
+      if (visited.has(refPath) || !fs.fileExists(refPath)) {
         continue
       }
       tsConfigRefMap.set(refPath, configPath)
-      res.unshift(...loadTSConfig(refPath, ts, fs))
+      res.unshift(...loadTSConfig(refPath, ts, fs, visited))
     }
   }
   return res
@@ -1106,7 +1109,7 @@ const fileToScopeCache = createCache<TypeScope>()
 /**
  * @private
  */
-export function invalidateTypeCache(filename: string) {
+export function invalidateTypeCache(filename: string): void {
   filename = normalizePath(filename)
   fileToScopeCache.delete(filename)
   tsConfigCache.delete(filename)
@@ -1438,7 +1441,7 @@ function attachNamespace(
   }
 }
 
-export function recordImports(body: Statement[]) {
+export function recordImports(body: Statement[]): Record<string, Import> {
   const imports: TypeScope['imports'] = Object.create(null)
   for (const s of body) {
     recordImport(s, imports)
@@ -1461,7 +1464,7 @@ function recordImport(node: Node, imports: TypeScope['imports']) {
 export function inferRuntimeType(
   ctx: TypeResolveContext,
   node: Node & MaybeWithScope,
-  scope = node._ownerScope || ctxToScope(ctx),
+  scope: TypeScope = node._ownerScope || ctxToScope(ctx),
   isKeyOf = false,
 ): string[] {
   try {
@@ -1702,7 +1705,7 @@ export function inferRuntimeType(
 
       case 'TSIndexedAccessType': {
         const types = resolveIndexType(ctx, node, scope)
-        return flattenTypes(ctx, types, scope)
+        return flattenTypes(ctx, types, scope, isKeyOf)
       }
 
       case 'ClassDeclaration':

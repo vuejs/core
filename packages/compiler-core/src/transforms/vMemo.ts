@@ -33,8 +33,10 @@ export const transformMemo: NodeTransform = (node, context) => {
           dir.exp!,
           createFunctionExpression(undefined, codegenNode),
           `_cache`,
-          String(context.cached++),
+          String(context.cached.length),
         ]) as MemoExpression
+        // increment cache count
+        context.cached.push(null)
       }
     }
   }
