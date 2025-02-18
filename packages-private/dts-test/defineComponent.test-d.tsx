@@ -1062,7 +1062,7 @@ describe('emits', () => {
   })
 
   // emit should be valid when ComponentPublicInstance is used.
-  const instance = {} as ComponentPublicInstance
+  const instance = {} as ComponentPublicInstance<{}, {}, {}, {}, {}, string[]>
   instance.$emit('test', 1)
   instance.$emit('test')
 
