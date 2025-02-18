@@ -260,7 +260,10 @@ export function defineComponent<
   CompleteEmits extends ObjectEmitsOptions = MixinEmits &
     NormalizedEmitsOptions &
     TypeEmitsToOptions<TypeEmits & {}>,
-  // resolved types
+  CompleteEmits_Internal extends
+    EmitsOptions = IsDefaultEmitsOptions extends true
+    ? string[]
+    : CompleteEmits,
   InferredProps = Readonly<
     ExtractPropTypes<CompleteProps> & TypeProps & EmitsToProps<CompleteEmits>
   >,
@@ -271,7 +274,7 @@ export function defineComponent<
     MixinData,
     MixinComputeds,
     CompleteMethods,
-    IsDefaultEmitsOptions extends true ? string[] : CompleteEmits
+    CompleteEmits_Internal
   >,
   InternalInstance = ComponentPublicInstance<
     InferredProps,
@@ -279,7 +282,7 @@ export function defineComponent<
     CompleteData,
     CompleteComputed,
     CompleteMethods,
-    IsDefaultEmitsOptions extends true ? string[] : CompleteEmits,
+    CompleteEmits_Internal,
     {}, // PublicProps
     {}, // Defaults
     false,
@@ -330,7 +333,7 @@ export function defineComponent<
     setup?: (
       this: void,
       props: NoInfer<LooseRequired<InferredProps>>,
-      ctx: NoInfer<SetupContext<ResolvedEmitsOptions_Internal, Slots>>,
+      ctx: NoInfer<SetupContext<CompleteEmits_Internal, Slots>>,
     ) => Promise<SetupBindings> | SetupBindings | RenderFunction | void
     data?: (this: DataInstance, vm: DataInstance) => Data
     /**
