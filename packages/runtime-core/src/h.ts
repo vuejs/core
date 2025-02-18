@@ -1,3 +1,17 @@
+import { type IfAny, isArray, isObject } from '@vue/shared'
+import type {
+  Component,
+  ConcreteComponent,
+  FunctionalComponent,
+} from './component'
+import type { EmitsOptions } from './componentEmits'
+import type {
+  ComponentObjectPropsOptions,
+  ExtractPublicPropTypes,
+} from './componentProps'
+import type { Suspense, SuspenseProps } from './components/Suspense'
+import type { Teleport, TeleportProps } from './components/Teleport'
+import type { RawSlots } from './componentSlots'
 import {
   type Comment,
   type Fragment,
@@ -8,17 +22,6 @@ import {
   createVNode,
   isVNode,
 } from './vnode'
-import type { Teleport, TeleportProps } from './components/Teleport'
-import type { Suspense, SuspenseProps } from './components/Suspense'
-import { type IfAny, isArray, isObject } from '@vue/shared'
-import type { RawSlots } from './componentSlots'
-import type {
-  Component,
-  ConcreteComponent,
-  FunctionalComponent,
-} from './component'
-import type { EmitsOptions } from './componentEmits'
-import type { DefineComponent } from './apiDefineComponent'
 
 // `h` is a more user-friendly version of `createVNode` that allows omitting the
 // props when possible. It is intended for manually written render functions.
@@ -157,6 +160,24 @@ export function h<P>(
   children?: RawChildren | RawSlots,
 ): VNode
 
+// export function h(type: { props: any }, children?: RawChildren): VNode
+export function h<
+  P extends string,
+  PP = ExtractPublicPropTypes<{ [K in P]: null }>,
+>(
+  type: { props: P[] },
+  props?: NoInfer<(RawProps & PP) | ({} extends PP ? null : never)>,
+  children?: RawChildren | RawSlots,
+): VNode
+export function h<
+  P extends ComponentObjectPropsOptions,
+  PP = ExtractPublicPropTypes<P>,
+>(
+  type: { props: P },
+  props?: NoInfer<(RawProps & PP) | ({} extends PP ? null : never)>,
+  children?: RawChildren | RawSlots,
+): VNode
+
 // concrete component
 export function h(
   type: ConcreteComponent | string,
@@ -166,21 +187,6 @@ export function h<P>(
   type: ConcreteComponent<P> | string,
   props?: NoInfer<(RawProps & P) | ({} extends P ? null : never)>,
   children?: RawChildren,
-): VNode
-
-// component without props
-export function h<P>(
-  type: Component<P>,
-  props?: NoInfer<(RawProps & P) | null>,
-  children?: RawChildren | RawSlots,
-): VNode
-
-// fake constructor type returned by `defineComponent`
-export function h(type: DefineComponent, children?: RawChildren): VNode
-export function h<P>(
-  type: DefineComponent<P>,
-  props?: NoInfer<(RawProps & P) | ({} extends P ? null : never)>,
-  children?: RawChildren | RawSlots,
 ): VNode
 
 // catch all types

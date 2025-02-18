@@ -214,7 +214,7 @@ export interface ComponentInternalOptions {
 
 export interface FunctionalComponent<
   P = {},
-  E extends EmitsOptions | Record<string, any[]> = string[],
+  E extends EmitsOptions | Record<string, any[]> = {},
   S extends Record<string, any> = any,
   EE extends EmitsOptions = ShortEmitsToObject<E>,
 > extends ComponentInternalOptions {
@@ -224,7 +224,7 @@ export interface FunctionalComponent<
     ctx: Omit<SetupContext<EE, IfAny<S, {}, SlotsType<S>>>, 'expose'>,
   ): any
   props?: ComponentPropsOptions<P>
-  emits?: EE | (keyof EE)[]
+  emits?: EE extends string[] ? EE : (keyof EE)[]
   slots?: IfAny<S, Slots, SlotsType<S>>
   inheritAttrs?: boolean
   displayName?: string
