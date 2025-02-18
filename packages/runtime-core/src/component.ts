@@ -214,7 +214,7 @@ export interface ComponentInternalOptions {
 
 export interface FunctionalComponent<
   P = {},
-  E extends EmitsOptions | Record<string, any[]> = {},
+  E extends EmitsOptions | Record<string, any[]> = string[],
   S extends Record<string, any> = any,
   EE extends EmitsOptions = ShortEmitsToObject<E>,
 > extends ComponentInternalOptions {
@@ -248,7 +248,7 @@ export type ConcreteComponent<
   D = any,
   C extends ComputedOptions = ComputedOptions,
   M extends MethodOptions = MethodOptions,
-  E extends EmitsOptions | Record<string, any[]> = {},
+  E extends EmitsOptions | Record<string, any[]> = string[],
   S extends Record<string, any> = any,
 > =
   | ComponentOptions<Props, RawBindings, D, C, M>
@@ -264,7 +264,7 @@ export type Component<
   D = any,
   C extends ComputedOptions = ComputedOptions,
   M extends MethodOptions = MethodOptions,
-  E extends EmitsOptions | Record<string, any[]> = {},
+  E extends EmitsOptions | Record<string, any[]> = string[],
   S extends Record<string, any> = any,
 > =
   | ConcreteComponent<Props, RawBindings, D, C, M, E, S>

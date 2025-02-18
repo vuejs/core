@@ -39,7 +39,14 @@ import { resolveFilter } from '../helpers/resolveAssets'
 import type { Slots } from '../componentSlots'
 import { resolveMergedOptions } from '../componentOptions'
 
-export type LegacyPublicInstance = ComponentPublicInstance &
+export type LegacyPublicInstance = ComponentPublicInstance<
+  {},
+  {},
+  {},
+  {},
+  {},
+  string[]
+> &
   LegacyPublicProperties
 
 export interface LegacyPublicProperties {

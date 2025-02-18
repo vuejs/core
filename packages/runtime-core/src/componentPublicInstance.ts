@@ -195,7 +195,7 @@ export type ComponentPublicInstance<
   D = {}, // return from data()
   C extends ComputedOptions = {},
   M extends MethodOptions = {},
-  E extends EmitsOptions = string[],
+  E extends EmitsOptions = {},
   PublicProps = {},
   Defaults = {},
   MakeDefaultsOptional extends boolean = false,

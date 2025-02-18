@@ -14,7 +14,6 @@ import { type IfAny, isArray, isObject } from '@vue/shared'
 import type { RawSlots } from './componentSlots'
 import type {
   Component,
-  ComponentOptions,
   ConcreteComponent,
   FunctionalComponent,
 } from './component'
@@ -85,12 +84,12 @@ type HTMLElementEventHandler = {
 // manually written render functions.
 
 // element
-export function h<K extends keyof HTMLElementTagNameMap>(
-  type: K,
+export function h(
+  type: keyof HTMLElementTagNameMap,
   children?: RawChildren,
 ): VNode
-export function h<K extends keyof HTMLElementTagNameMap>(
-  type: K,
+export function h(
+  type: keyof HTMLElementTagNameMap,
   props?: (RawProps & HTMLElementEventHandler) | null,
   children?: RawChildren | RawSlots,
 ): VNode
@@ -143,8 +142,8 @@ export function h<
   S extends Record<string, any> = any,
 >(
   type: FunctionalComponent<P, any, S, any>,
-  props?: (RawProps & P) | ({} extends P ? null : never),
-  children?: RawChildren | IfAny<S, RawSlots, S>,
+  props?: NoInfer<(RawProps & P) | ({} extends P ? null : never)>,
+  children?: NoInfer<RawChildren | IfAny<S, RawSlots, S>>,
 ): VNode
 
 // catch-all for generic component types
@@ -154,32 +153,25 @@ export function h(type: Component, children?: RawChildren): VNode
 export function h(type: Constructor, children?: RawChildren): VNode
 export function h<P>(
   type: Constructor<P>,
-  props?: (RawProps & P) | ({} extends P ? null : never),
+  props?: NoInfer<(RawProps & P) | ({} extends P ? null : never)>,
   children?: RawChildren | RawSlots,
 ): VNode
 
 // concrete component
-export function h<P>(
+export function h(
   type: ConcreteComponent | string,
   children?: RawChildren,
 ): VNode
 export function h<P>(
   type: ConcreteComponent<P> | string,
-  props?: (RawProps & P) | ({} extends P ? null : never),
+  props?: NoInfer<(RawProps & P) | ({} extends P ? null : never)>,
   children?: RawChildren,
 ): VNode
 
 // component without props
 export function h<P>(
   type: Component<P>,
-  props?: (RawProps & P) | null,
-  children?: RawChildren | RawSlots,
-): VNode
-
-// exclude `defineComponent` constructors
-export function h<P>(
-  type: ComponentOptions<P>,
-  props?: (RawProps & P) | ({} extends P ? null : never),
+  props?: NoInfer<(RawProps & P) | null>,
   children?: RawChildren | RawSlots,
 ): VNode
 
@@ -187,7 +179,7 @@ export function h<P>(
 export function h(type: DefineComponent, children?: RawChildren): VNode
 export function h<P>(
   type: DefineComponent<P>,
-  props?: (RawProps & P) | ({} extends P ? null : never),
+  props?: NoInfer<(RawProps & P) | ({} extends P ? null : never)>,
   children?: RawChildren | RawSlots,
 ): VNode
 
@@ -195,7 +187,7 @@ export function h<P>(
 export function h(type: string | Component, children?: RawChildren): VNode
 export function h<P>(
   type: string | Component<P>,
-  props?: (RawProps & P) | ({} extends P ? null : never),
+  props?: NoInfer<(RawProps & P) | ({} extends P ? null : never)>,
   children?: RawChildren | RawSlots,
 ): VNode
 
