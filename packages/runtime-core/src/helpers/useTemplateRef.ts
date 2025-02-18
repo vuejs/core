@@ -10,6 +10,7 @@ export function useTemplateRef<T = unknown, Keys extends string = string>(
 ): Readonly<ShallowRef<T | null>> {
   const i = getCurrentInstance()
   const r = shallowRef(null)
+  const ret = __DEV__ ? readonly(r) : r
   if (i) {
     const refs = i.refs === EMPTY_OBJ ? (i.refs = {}) : i.refs
     const refsCache =
@@ -17,7 +18,7 @@ export function useTemplateRef<T = unknown, Keys extends string = string>(
     if (refsCache.has(key)) {
       return refsCache.get(key)!
     } else {
-      refsCache.set(key, r)
+      refsCache.set(key, ret)
       Object.defineProperty(refs, key, {
         enumerable: true,
         get: () => r.value,
@@ -30,7 +31,6 @@ export function useTemplateRef<T = unknown, Keys extends string = string>(
         `instance to be associated with.`,
     )
   }
-  const ret = __DEV__ ? readonly(r) : r
   if (__DEV__) {
     knownTemplateRefs.add(ret)
   }
