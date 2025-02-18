@@ -459,10 +459,10 @@ export function createHydrationFunctions(
         }
         const { textContent } = el
         if (
-          textContent !== clientText && 
-           // innerHTML normalize \r\n or \r into a single \n in the DOM
+          textContent !== clientText &&
+          // innerHTML normalize \r\n or \r into a single \n in the DOM
           textContent !== clientText.replace(/\r\n|\r/g, '\n')
-         ) {
+        ) {
           if (!isMismatchAllowed(el, MismatchTypes.TEXT)) {
             ;(__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
               warn(
