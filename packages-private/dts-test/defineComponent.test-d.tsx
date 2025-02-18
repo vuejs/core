@@ -1261,7 +1261,7 @@ describe('should allow to assign props', () => {
 
   const Parent = defineComponent({
     props: {
-      ...Child.props,
+      ...Child.props!,
       foo: String,
     },
   })
