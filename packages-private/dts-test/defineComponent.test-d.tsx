@@ -1969,9 +1969,7 @@ declare const ErrorMessage: {
   string,
   {}
 > &
-  vue.VNodeProps &
-  vue.AllowedComponentProps &
-  vue.ComponentCustomProps &
+  vue.PublicProps &
   (new () => {
     $slots: {
       default: (arg: ErrorMessageSlotProps) => VNode[]

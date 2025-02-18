@@ -258,18 +258,11 @@ export function defineComponent<
   CompleteComputed extends ComputedOptions = MixinComputeds & Computed,
   CompleteMethods extends MethodOptions = MixinMethods & Methods,
   CompleteEmits extends ObjectEmitsOptions = MixinEmits &
-    NormalizedEmitsOptions,
-  // resolved types
-  ResolvedEmitsOptions extends ObjectEmitsOptions = CompleteEmits &
+    NormalizedEmitsOptions &
     TypeEmitsToOptions<TypeEmits & {}>,
-  ResolvedEmitsOptions_Internal extends
-    EmitsOptions = IsDefaultEmitsOptions extends true
-    ? string[]
-    : ResolvedEmitsOptions,
+  // resolved types
   InferredProps = Readonly<
-    ExtractPropTypes<CompleteProps> &
-      TypeProps &
-      EmitsToProps<CompleteEmits & ResolvedEmitsOptions>
+    ExtractPropTypes<CompleteProps> & TypeProps & EmitsToProps<CompleteEmits>
   >,
   // instance types
   DataInstance = ComponentPublicInstance<
@@ -278,7 +271,7 @@ export function defineComponent<
     MixinData,
     MixinComputeds,
     CompleteMethods,
-    ResolvedEmitsOptions_Internal
+    IsDefaultEmitsOptions extends true ? string[] : CompleteEmits
   >,
   InternalInstance = ComponentPublicInstance<
     InferredProps,
@@ -286,7 +279,7 @@ export function defineComponent<
     CompleteData,
     CompleteComputed,
     CompleteMethods,
-    ResolvedEmitsOptions_Internal,
+    IsDefaultEmitsOptions extends true ? string[] : CompleteEmits,
     {}, // PublicProps
     {}, // Defaults
     false,
@@ -302,7 +295,7 @@ export function defineComponent<
     CompleteData,
     CompleteComputed,
     CompleteMethods,
-    ResolvedEmitsOptions,
+    CompleteEmits,
     PublicProps,
     ExtractDefaultPropTypes<MixinProps & PropsOptions>,
     // MakeDefaultsOptional - if TypeProps is provided, set to false to use
