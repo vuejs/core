@@ -268,7 +268,7 @@ export function defineComponent<
     ExtractPropTypes<CompleteProps> & TypeProps & EmitsToProps<CompleteEmits>
   >,
   // instance types
-  InternalInstance = ComponentPublicInstance<
+  DataVM = ComponentPublicInstance<
     InferredProps,
     CompleteBindings,
     CompleteData,
@@ -284,7 +284,7 @@ export function defineComponent<
     TypeRefs,
     TypeEl
   >,
-  InternalInstance2 = InternalInstance &
+  InternalInstance = DataVM &
     ComponentPublicInstance<
       {},
       {},
@@ -335,10 +335,7 @@ export function defineComponent<
       props: NoInfer<LooseRequired<InferredProps>>,
       ctx: NoInfer<SetupContext<CompleteEmits_Internal, Slots>>,
     ) => Promise<SetupBindings> | SetupBindings | RenderFunction | void
-    data?: (
-      this: NoInfer<InternalInstance>,
-      vm: NoInfer<InternalInstance>,
-    ) => Data
+    data?: (this: NoInfer<DataVM>, vm: NoInfer<DataVM>) => Data
     /**
      * @private for language-tools use only
      */
@@ -376,7 +373,7 @@ export function defineComponent<
     | 'data'
   > &
     ThisType<
-      Omit<NoInfer<InternalInstance2>, '$options'> & {
+      Omit<NoInfer<InternalInstance>, '$options'> & {
         $options: typeof options
       }
     >,
