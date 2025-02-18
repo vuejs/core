@@ -216,7 +216,7 @@ export function defineComponent<
   Extends = {},
   Slots extends SlotsType = {},
   LocalComponents extends Record<string, Component> = {},
-  Directives extends Record<string, Directive> = {},
+  Directives extends Record<string, Directive> = Record<string, Directive>,
   Provide extends ComponentProvideOptions = {},
   // normalized types
   NormalizedPropsOptions = unknown extends TypeProps
@@ -240,6 +240,9 @@ export function defineComponent<
     ObjectInjectOptions = string extends InjectKeys
     ? InjectOptions
     : { [K in InjectKeys]: any },
+  NormalizedDirectives = Record<string, Directive> extends Directives
+    ? {}
+    : Directives,
   // mixin inference
   MixinProps = ExtractMixinProps<Mixin> & ExtractMixinProps<Extends>,
   MixinEmits = ExtractMixinEmits<Mixin> & ExtractMixinEmits<Extends>,
@@ -393,7 +396,7 @@ export function defineComponent<
       : RuntimeEmitsOptions
     : RuntimeEmitsKeys[]
   components?: LocalComponents
-  directives?: Directives
+  directives?: Record<string, Directive> extends Directives ? {} : Directives
   slots?: Slots
   expose?: Exposed[]
   computed?: Computed
