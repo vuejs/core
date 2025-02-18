@@ -226,6 +226,11 @@ export function defineComponent<
         : RuntimePropsOptions
       : { [K in RuntimePropsKeys]: null }
     : {},
+  RuntimePropsOptionsDefaults = ExtractDefaultPropTypes<
+    ComponentObjectPropsOptions extends RuntimePropsOptions
+      ? {}
+      : RuntimePropsOptions
+  >,
   NormalizedEmitsOptions extends ObjectEmitsOptions = unknown extends TypeEmits
     ? string extends RuntimeEmitsKeys
       ? RuntimeEmitsOptions
@@ -305,7 +310,7 @@ export function defineComponent<
     CompleteMethods,
     ResolvedEmitsOptions_Public,
     PublicProps,
-    ExtractDefaultPropTypes<NormalizedPropsOptions>,
+    RuntimePropsOptionsDefaults,
     // MakeDefaultsOptional - if TypeProps is provided, set to false to use
     // user props types verbatim
     unknown extends TypeProps ? true : false,
