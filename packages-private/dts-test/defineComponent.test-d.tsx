@@ -1638,15 +1638,11 @@ describe('expose typing', () => {
 })
 
 import type {
-  AllowedComponentProps,
-  ComponentCustomProps,
   ComponentInstance,
   DefineComponent,
   Directive,
-  ExtractPropTypes,
   KeepAliveProps,
   TransitionProps,
-  VNodeProps,
   vShow,
 } from 'vue'
 
@@ -1659,10 +1655,6 @@ declare const MyButton: DefineComponent<
   {},
   {},
   {},
-  {},
-  {},
-  VNodeProps & AllowedComponentProps & ComponentCustomProps,
-  Readonly<ExtractPropTypes<{}>>,
   {},
   {}
 >
