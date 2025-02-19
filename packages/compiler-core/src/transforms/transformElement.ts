@@ -13,6 +13,7 @@ import {
   NodeTypes,
   type ObjectExpression,
   type Property,
+  type SimpleExpressionNode,
   type TemplateTextChildNode,
   type VNodeCall,
   createArrayExpression,
@@ -665,7 +666,10 @@ export function buildProps(
       }
 
       // force hydration for v-bind with .prop modifier
-      if (isVBind && modifiers.some(mod => mod.content === 'prop')) {
+      if (
+        isVBind &&
+        modifiers.some(mod => (mod as SimpleExpressionNode).content === 'prop')
+      ) {
         patchFlag |= PatchFlags.NEED_HYDRATION
       }
 
@@ -909,15 +913,51 @@ export function buildDirectiveArgs(
       }
       dirArgs.push(`void 0`)
     }
+
     const trueExpression = createSimpleExpression(`true`, false, loc)
-    dirArgs.push(
-      createObjectExpression(
-        dir.modifiers.map(modifier =>
-          createObjectProperty(modifier, trueExpression),
+
+    const staticMods: ExpressionNode[] = []
+    const callArgs: (ObjectExpression | ExpressionNode)[] = []
+
+    for (let i = 0; i < dir.modifiers.length; i++) {
+      const modifier = dir.modifiers[i]
+
+      if ((modifier as SimpleExpressionNode).isStatic) {
+        staticMods.push(modifier)
+      } else {
+        // Object expression must be first to avoid null or undefined
+        if (staticMods.length || i === 0) {
+          callArgs.push(
+            createObjectExpression(
+              staticMods.map(modifier =>
+                createObjectProperty(modifier, trueExpression),
+              ),
+              loc,
+            ),
+          )
+          staticMods.length = 0
+        }
+
+        callArgs.push(modifier)
+      }
+    }
+
+    if (staticMods.length) {
+      callArgs.push(
+        createObjectExpression(
+          staticMods.map(modifier =>
+            createObjectProperty(modifier, trueExpression),
+          ),
+          loc,
         ),
-        loc,
-      ),
-    )
+      )
+    }
+
+    if (callArgs.length === 1) {
+      dirArgs.push(callArgs[0])
+    } else {
+      dirArgs.push(createCallExpression('Object.assign', callArgs))
+    }
   }
   return createArrayExpression(dirArgs, dir.loc)
 }
