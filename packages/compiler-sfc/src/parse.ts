@@ -162,7 +162,8 @@ export function parse(
       ignoreEmpty &&
       node.tag !== 'template' &&
       isEmpty(node) &&
-      !hasSrc(node)
+      !hasProp(node, 'src') &&
+      !hasProp(node, 'vapor')
     ) {
       return
     }
@@ -409,12 +410,12 @@ function padContent(
   }
 }
 
-function hasSrc(node: ElementNode) {
+function hasProp(node: ElementNode, name: string) {
   return node.props.some(p => {
     if (p.type !== NodeTypes.ATTRIBUTE) {
       return false
     }
-    return p.name === 'src'
+    return p.name === name
   })
 }
 
