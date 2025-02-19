@@ -292,26 +292,6 @@ export function defineComponent<
     TypeRefs,
     TypeEl
   >,
-  PublicInstance = ComponentPublicInstance<
-    InferredProps,
-    CompleteBindings,
-    CompleteData,
-    CompleteComputed,
-    CompleteMethods,
-    CompleteEmits,
-    PublicProps,
-    ExtractDefaultPropTypes<
-      ExtractMixinProps<Mixin> & ExtractMixinProps<Extends> & PropsOptions
-    >,
-    // MakeDefaultsOptional - if TypeProps is provided, set to false to use
-    // user props types verbatim
-    unknown extends TypeProps ? true : false,
-    {}, // InjectOptions
-    Slots,
-    Exposed,
-    TypeRefs,
-    TypeEl
-  >,
 >(
   options: {
     props?:
