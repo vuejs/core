@@ -1,10 +1,12 @@
 import {
   Fragment,
   type FunctionalComponent,
+  KeepAlive,
   type SetupContext,
   Teleport,
   type TestElement,
   type VNode,
+  computed,
   createApp,
   createBlock,
   createCommentVNode,
@@ -1293,5 +1295,52 @@ describe('renderer: optimized mode', () => {
     await nextTick()
     expect(inner(root)).toBe('<!--v-if-->')
     expect(beforeUnmountSpy).toHaveBeenCalledTimes(1)
+  })
+
+  //#12914
+  test('unmount KeepAlive children when wrapped in v-for with stable fragment', async () => {
+    const CompA = {
+      setup() {
+        return () => h('span', 'CompA')
+      },
+    }
+    const CompB = {
+      setup() {
+        return () => h('span', 'CompB')
+      },
+    }
+
+    const toggle = ref(true)
+    const view = computed(() => {
+      return toggle.value ? CompA : CompB
+    })
+
+    const app = createApp({
+      render() {
+        return (
+          openBlock(),
+          createElementBlock(
+            Fragment,
+            null,
+            renderList(1, () => {
+              return createVNode(
+                KeepAlive,
+                null,
+                [(openBlock(), createBlock(view.value))],
+                1024 /* DYNAMIC_SLOTS */,
+              )
+            }),
+            64 /* STABLE_FRAGMENT */,
+          )
+        )
+      },
+    })
+
+    app.mount(root)
+    expect(inner(root)).toBe('<span>CompA</span>')
+
+    toggle.value = false
+    await nextTick()
+    expect(inner(root)).toBe('<span>CompB</span>')
   })
 })
