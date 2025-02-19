@@ -4,7 +4,7 @@ import {
   type Ref,
   Teleport,
   type VueElement,
-  VueElementConstructor,
+  type VueElementConstructor,
   createApp,
   defineAsyncComponent,
   defineComponent,

@@ -55,7 +55,7 @@ import type { Directive } from './directives'
 import {
   type ComponentPublicInstance,
   type CreateComponentPublicInstanceWithMixins,
-  ExtractMixinProps,
+  type ExtractMixinProps,
   isReservedPrefix,
 } from './componentPublicInstance'
 import { warn } from './warning'

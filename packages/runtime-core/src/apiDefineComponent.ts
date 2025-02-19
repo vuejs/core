@@ -1,4 +1,4 @@
-import { extend, isFunction, LooseRequired } from '@vue/shared'
+import { type LooseRequired, extend, isFunction } from '@vue/shared'
 import type { ComponentTypeEmits } from './apiSetupHelpers'
 import type {
   AllowedComponentProps,

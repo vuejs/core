@@ -30,7 +30,7 @@ import type {
 import { warn } from './warning'
 import type { SlotsType, StrictUnwrapSlotsType } from './componentSlots'
 import type { Ref } from '@vue/reactivity'
-import { CreateComponentPublicInstanceWithMixins } from './componentPublicInstance'
+import type { CreateComponentPublicInstanceWithMixins } from './componentPublicInstance'
 
 // dev only
 const warnRuntimeUsage = (method: string) =>

@@ -15,6 +15,7 @@ import {
   type Directive,
   type EmitsOptions,
   type EmitsToProps,
+  type ExtractMixinProps,
   type ExtractPropTypes,
   type MethodOptions,
   type ObjectEmitsOptions,
@@ -23,7 +24,6 @@ import {
   type SlotsType,
   type VNode,
   type VNodeProps,
-  type ExtractMixinProps,
   createVNode,
   defineComponent,
   getCurrentInstance,
@@ -32,14 +32,14 @@ import {
   warn,
 } from '@vue/runtime-core'
 import {
+  type LooseRequired,
+  type Prettify,
   camelize,
   extend,
   hasOwn,
   hyphenate,
   isArray,
   isPlainObject,
-  LooseRequired,
-  Prettify,
   toNumber,
 } from '@vue/shared'
 import { createApp, createSSRApp, render } from '.'
