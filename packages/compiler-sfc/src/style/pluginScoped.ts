@@ -219,7 +219,6 @@ function rewriteSelector(
       // .foo * -> .foo *[xxxxxxx]
       if (node) {
         node = n
-        shouldInject = true
         return
       }
     }
