@@ -1918,57 +1918,7 @@ declare const ErrorMessage: {
   __isFragment?: never
   __isTeleport?: never
   __isSuspense?: never
-} & vue.ComponentOptionsBase<
-  Readonly<
-    vue.ExtractPropTypes<{
-      as: {
-        type: StringConstructor
-        default: any
-      }
-      name: {
-        type: StringConstructor
-        required: true
-      }
-    }>
-  >,
-  () =>
-    | VNode<
-        vue.RendererNode,
-        vue.RendererElement,
-        {
-          [key: string]: any
-        }
-      >
-    | vue.Slot<any>
-    | VNode<
-        vue.RendererNode,
-        vue.RendererElement,
-        {
-          [key: string]: any
-        }
-      >[]
-    | {
-        default: () => VNode<
-          vue.RendererNode,
-          vue.RendererElement,
-          {
-            [key: string]: any
-          }
-        >[]
-      },
-  unknown,
-  {},
-  {},
-  vue.ComponentOptionsMixin,
-  vue.ComponentOptionsMixin,
-  {},
-  string,
-  {
-    as: string
-  },
-  string,
-  {}
-> &
+} & vue.ComponentOptionsBase &
   vue.PublicProps &
   (new () => {
     $slots: {
