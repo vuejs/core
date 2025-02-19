@@ -222,11 +222,6 @@ export function defineComponent<
   _InjectKeys extends string = string,
   Exposed extends string = string,
   // normalized types
-  NormalizedPropsOptions = unknown extends TypeProps
-    ? PropsOptions extends (infer Keys extends string)[]
-      ? { [K in Keys]: null }
-      : PropsOptions
-    : {},
   NormalizedEmitsOptions extends ObjectEmitsOptions = unknown extends TypeEmits
     ? IsNever<RuntimeEmitsOptions> extends true
       ? {}
@@ -237,10 +232,6 @@ export function defineComponent<
   IsDefaultEmitsOptions = unknown extends TypeEmits
     ? IsNever<RuntimeEmitsOptions>
     : false,
-  NormalizedInjectOptions extends
-    ObjectInjectOptions = InjectOptions extends (infer Keys extends string)[]
-    ? { [K in Keys]: any }
-    : InjectOptions,
   // mixin inference
   MixinProps = ExtractMixinProps<Mixin> & ExtractMixinProps<Extends>,
   MixinEmits = ExtractMixinEmits<Mixin> & ExtractMixinEmits<Extends>,
@@ -250,9 +241,13 @@ export function defineComponent<
   MixinComputeds extends ComputedOptions = ExtractMixinComputed<Mixin> &
     ExtractMixinComputed<Extends> & {},
   MixinMethods = ExtractMixinMethods<Mixin> & ExtractMixinMethods<Extends>,
-  MixinDefaults = {}, // TODO
   // merged types
-  CompleteProps = MixinProps & NormalizedPropsOptions,
+  CompleteProps = MixinProps &
+    (unknown extends TypeProps
+      ? PropsOptions extends (infer Keys extends string)[]
+        ? { [K in Keys]: null }
+        : PropsOptions
+      : {}),
   CompleteBindings = MixinBindings & SetupBindings,
   CompleteData = MixinData & EnsureNonVoid<Data>,
   CompleteComputed extends ComputedOptions = MixinComputeds & Computed,
@@ -278,7 +273,7 @@ export function defineComponent<
     {}, // PublicProps
     {}, // Defaults
     false,
-    NormalizedInjectOptions,
+    InjectOptions,
     Slots,
     Exposed,
     TypeRefs,
