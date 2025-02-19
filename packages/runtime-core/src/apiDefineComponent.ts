@@ -216,48 +216,45 @@ export function defineComponent<
   LocalComponents extends Record<string, Component> = {},
   Directives extends Record<string, Directive> = {},
   Provide extends ComponentProvideOptions = {},
+  Exposed extends string = string,
   // assisted input types
   _PropsKeys extends string = string,
   _EmitsKeys extends string = string,
   _InjectKeys extends string = string,
-  Exposed extends string = string,
-  // normalized types
-  NormalizedEmitsOptions extends ObjectEmitsOptions = unknown extends TypeEmits
-    ? IsNever<RuntimeEmitsOptions> extends true
-      ? {}
-      : RuntimeEmitsOptions extends (infer Keys extends string)[]
-        ? { [K in Keys]: (...args: any) => any }
-        : RuntimeEmitsOptions
-    : {},
-  IsDefaultEmitsOptions = unknown extends TypeEmits
-    ? IsNever<RuntimeEmitsOptions>
-    : false,
-  // mixin inference
-  MixinProps = ExtractMixinProps<Mixin> & ExtractMixinProps<Extends>,
-  MixinEmits = ExtractMixinEmits<Mixin> & ExtractMixinEmits<Extends>,
-  MixinBindings = ExtractMixinSetupBindings<Mixin> &
-    ExtractMixinSetupBindings<Extends>,
-  MixinData = ExtractMixinData<Mixin> & ExtractMixinData<Extends>,
-  MixinComputeds extends ComputedOptions = ExtractMixinComputed<Mixin> &
-    ExtractMixinComputed<Extends> & {},
-  MixinMethods = ExtractMixinMethods<Mixin> & ExtractMixinMethods<Extends>,
   // merged types
-  CompleteProps = MixinProps &
+  CompleteProps = ExtractMixinProps<Mixin> &
+    ExtractMixinProps<Extends> &
     (unknown extends TypeProps
       ? PropsOptions extends (infer Keys extends string)[]
         ? { [K in Keys]: null }
         : PropsOptions
       : {}),
-  CompleteBindings = MixinBindings & SetupBindings,
-  CompleteData = MixinData & EnsureNonVoid<Data>,
-  CompleteComputed extends ComputedOptions = MixinComputeds & Computed,
-  CompleteMethods extends MethodOptions = MixinMethods & Methods,
-  CompleteEmits extends ObjectEmitsOptions = MixinEmits &
-    NormalizedEmitsOptions &
+  CompleteBindings = ExtractMixinSetupBindings<Mixin> &
+    ExtractMixinSetupBindings<Extends> &
+    SetupBindings,
+  CompleteData = ExtractMixinData<Mixin> &
+    ExtractMixinData<Extends> &
+    EnsureNonVoid<Data>,
+  CompleteComputed extends ComputedOptions = ExtractMixinComputed<Mixin> &
+    ExtractMixinComputed<Extends> &
+    Computed,
+  CompleteMethods extends MethodOptions = ExtractMixinMethods<Mixin> &
+    ExtractMixinMethods<Extends> &
+    Methods,
+  CompleteEmits extends ObjectEmitsOptions = ExtractMixinEmits<Mixin> &
+    ExtractMixinEmits<Extends> &
+    (unknown extends TypeEmits
+      ? IsNever<RuntimeEmitsOptions> extends true
+        ? {}
+        : RuntimeEmitsOptions extends (infer Keys extends string)[]
+          ? { [K in Keys]: (...args: any) => any }
+          : RuntimeEmitsOptions
+      : {}) &
     TypeEmitsToOptions<TypeEmits & {}>,
-  CompleteEmits_Internal extends
-    EmitsOptions = IsDefaultEmitsOptions extends true
-    ? string[]
+  CompleteEmits_Internal extends EmitsOptions = unknown extends TypeEmits
+    ? IsNever<RuntimeEmitsOptions> extends true
+      ? string[]
+      : CompleteEmits
     : CompleteEmits,
   InferredProps = Readonly<
     ExtractPropTypes<CompleteProps> & TypeProps & EmitsToProps<CompleteEmits>
@@ -295,7 +292,9 @@ export function defineComponent<
     CompleteMethods,
     CompleteEmits,
     PublicProps,
-    ExtractDefaultPropTypes<MixinProps & PropsOptions>,
+    ExtractDefaultPropTypes<
+      ExtractMixinProps<Mixin> & ExtractMixinProps<Extends> & PropsOptions
+    >,
     // MakeDefaultsOptional - if TypeProps is provided, set to false to use
     // user props types verbatim
     unknown extends TypeProps ? true : false,
