@@ -35,7 +35,6 @@ import {
 } from '@vue/reactivity'
 import {
   type ComponentInjectOptions,
-  type ComponentOptionsBase,
   type ComponentProvideOptions,
   type ComputedOptions,
   type ExtractComputedReturns,
@@ -218,11 +217,10 @@ export type ComponentPublicInstance<
   $host: Element | null
   $emit: EmitFn<E>
   $el: TypeEl
-  $options: ComponentOptionsBase &
-    MergedComponentOptionsOverride & {
-      // allow any custom options
-      [key: string]: any
-    }
+  $options: MergedComponentOptionsOverride & {
+    // allow any custom options
+    [key: string]: any
+  }
   $forceUpdate: () => void
   $nextTick: typeof nextTick
   $watch<T extends string | ((...args: any) => any)>(

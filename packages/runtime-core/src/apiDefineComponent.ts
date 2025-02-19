@@ -355,7 +355,7 @@ export function defineComponent<
     | 'data'
   > &
     ThisType<
-      Omit<NoInfer<InternalInstance>, '$options'> & {
+      NoInfer<InternalInstance> & {
         $options: typeof options
       }
     >,
