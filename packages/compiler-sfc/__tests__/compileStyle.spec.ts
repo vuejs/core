@@ -489,7 +489,7 @@ describe('SFC style preprocessors', () => {
       }"
     `)
     expect(compileScoped(`.foo * { color: red; }`)).toMatchInlineSnapshot(`
-      ".foo[data-v-test] * { color: red;
+      ".foo *[data-v-test] { color: red;
       }"
     `)
   })

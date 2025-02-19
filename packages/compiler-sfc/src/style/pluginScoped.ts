@@ -216,8 +216,12 @@ function rewriteSelector(
           return false
         }
       }
-      // .foo * -> .foo[xxxxxxx] *
-      if (node) return
+      // .foo * -> .foo *[xxxxxxx]
+      if (node) {
+        node = n
+        shouldInject = true
+        return
+      }
     }
 
     if (
