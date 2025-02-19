@@ -276,14 +276,22 @@ export function defineComponent<
     TypeRefs,
     TypeEl
   >,
-  InternalInstance = DataVM &
-    ComponentPublicInstance<
-      {},
-      {},
-      CompleteData,
-      CompleteComputed,
-      CompleteMethods
-    >,
+  InternalInstance = ComponentPublicInstance<
+    InferredProps,
+    CompleteBindings,
+    CompleteData,
+    CompleteComputed,
+    CompleteMethods,
+    CompleteEmits_Internal,
+    {}, // PublicProps
+    {}, // Defaults
+    false,
+    InjectOptions,
+    Slots,
+    Exposed,
+    TypeRefs,
+    TypeEl
+  >,
   PublicInstance = ComponentPublicInstance<
     InferredProps,
     CompleteBindings,
