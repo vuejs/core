@@ -264,7 +264,6 @@ export function defineComponent<
 
 // overload 2: defineComponent with options object, infer props from options
 export function defineComponent<
-  // input inference
   TypeProps,
   TypeEmits extends ComponentTypeEmits | unknown = unknown,
   TypeRefs extends Record<string, unknown> = {},
@@ -283,30 +282,18 @@ export function defineComponent<
   Directives extends Record<string, Directive> = {},
   Provide extends ComponentProvideOptions = {},
   Exposed extends string = string,
-  // assisted input types
+  // assisted input inference
   _PropsKeys extends string = string,
   _EmitsKeys extends string = string,
   _InjectKeys extends string = string,
-  // merged types
-  CompleteProps = ExtractMixinProps<Mixin> &
+  // resolved types
+  ResolvedProps = ExtractMixinProps<Mixin> &
     ExtractMixinProps<Extends> &
     (unknown extends TypeProps
       ? PropsOptions extends (infer Keys extends string)[]
         ? { [K in Keys]: null }
         : PropsOptions
       : {}),
-  CompleteBindings = ExtractMixinSetupBindings<Mixin> &
-    ExtractMixinSetupBindings<Extends> &
-    SetupBindings,
-  CompleteData = ExtractMixinData<Mixin> &
-    ExtractMixinData<Extends> &
-    EnsureNonVoid<Data>,
-  CompleteComputed extends ComputedOptions = ExtractMixinComputed<Mixin> &
-    ExtractMixinComputed<Extends> &
-    Computed,
-  CompleteMethods extends MethodOptions = ExtractMixinMethods<Mixin> &
-    ExtractMixinMethods<Extends> &
-    Methods,
   CompleteEmits extends ObjectEmitsOptions = ExtractMixinEmits<Mixin> &
     ExtractMixinEmits<Extends> &
     (unknown extends TypeEmits
@@ -323,15 +310,16 @@ export function defineComponent<
       : CompleteEmits
     : CompleteEmits,
   InferredProps = Readonly<
-    ExtractPropTypes<CompleteProps> & TypeProps & EmitsToProps<CompleteEmits>
+    ExtractPropTypes<ResolvedProps> & TypeProps & EmitsToProps<CompleteEmits>
   >,
-  // instance types
   InternalInstance = ComponentPublicInstance<
     InferredProps,
-    CompleteBindings,
-    CompleteData,
-    CompleteComputed,
-    CompleteMethods,
+    ExtractMixinSetupBindings<Mixin> &
+      ExtractMixinSetupBindings<Extends> &
+      SetupBindings,
+    ExtractMixinData<Mixin> & ExtractMixinData<Extends> & EnsureNonVoid<Data>,
+    ExtractMixinComputed<Mixin> & ExtractMixinComputed<Extends> & Computed,
+    ExtractMixinMethods<Mixin> & ExtractMixinMethods<Extends> & Methods,
     CompleteEmits_Internal,
     {}, // PublicProps
     {}, // Defaults
