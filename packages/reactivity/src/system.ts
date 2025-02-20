@@ -310,7 +310,7 @@ function checkDirty(link: Link): boolean {
           if (sub.update()) {
             if ((link = subSubs.prevSub!) !== undefined) {
               subSubs.prevSub = undefined
-              shallowPropagate(sub.subs!)
+              shallowPropagate(subSubs)
               sub = link.sub as Computed
             } else {
               sub = subSubs.sub as Computed
