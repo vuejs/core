@@ -4,9 +4,12 @@ import {
   ElementTypes,
   type ExpressionNode,
   NodeTypes,
+  type ObjectExpression,
   type Property,
   type SimpleExpressionNode,
+  createCallExpression,
   createCompoundExpression,
+  createObjectExpression,
   createObjectProperty,
   createSimpleExpression,
 } from '../ast'
@@ -131,26 +134,80 @@ export const transformModel: DirectiveTransform = (dir, node, context) => {
 
   // modelModifiers: { foo: true, "bar-baz": true }
   if (dir.modifiers.length && node.tagType === ElementTypes.COMPONENT) {
-    const modifiers = dir.modifiers
-      .map(m => (m as SimpleExpressionNode).content)
-      .map(m => (isSimpleIdentifier(m) ? m : JSON.stringify(m)) + `: true`)
-      .join(`, `)
+    const trueExpression = createSimpleExpression(
+      `true`,
+      false,
+      dir.loc,
+      ConstantTypes.CAN_CACHE,
+    )
+
+    const staticMods: ExpressionNode[] = []
+    const callArgs: (ObjectExpression | ExpressionNode)[] = []
+
     const modifiersKey = arg
       ? isStaticExp(arg)
         ? `${arg.content}Modifiers`
         : createCompoundExpression([arg, ' + "Modifiers"'])
       : `modelModifiers`
-    props.push(
-      createObjectProperty(
-        modifiersKey,
-        createSimpleExpression(
-          `{ ${modifiers} }`,
-          false,
-          dir.loc,
-          ConstantTypes.CAN_CACHE,
-        ),
-      ),
-    )
+
+    for (let i = 0; i < dir.modifiers.length; i++) {
+      const modifier = dir.modifiers[i]
+
+      if ((modifier as SimpleExpressionNode).isStatic) {
+        staticMods.push(modifier)
+      } else {
+        // Object expression must be first to avoid null or undefined
+        if (staticMods.length || i === 0) {
+          callArgs.push(
+            createObjectExpression(
+              staticMods.map(modifier =>
+                createObjectProperty(modifier, trueExpression),
+              ),
+              dir.loc,
+            ),
+          )
+          staticMods.length = 0
+        }
+
+        callArgs.push(modifier)
+      }
+    }
+
+    let val: Property['value']
+
+    // Only static mods were passed. Use simple expression to avoid adding modelModidifiers to dynamic prop keys
+    if (callArgs.length === 0) {
+      const modifiers = staticMods
+        .map(m => (m as SimpleExpressionNode).content)
+        .map(m => (isSimpleIdentifier(m) ? m : JSON.stringify(m)) + `: true`)
+        .join(`, `)
+
+      val = createSimpleExpression(
+        `{ ${modifiers} }`,
+        false,
+        dir.loc,
+        ConstantTypes.CAN_CACHE,
+      )
+    } else {
+      // push remaining static mods that werent added in the loop
+      if (staticMods.length) {
+        callArgs.push(
+          createObjectExpression(
+            staticMods.map(modifier =>
+              createObjectProperty(modifier, trueExpression),
+            ),
+            dir.loc,
+          ),
+        )
+      }
+
+      val =
+        callArgs.length !== 1
+          ? createCallExpression('Object.assign', callArgs)
+          : callArgs[0]
+    }
+
+    props.push(createObjectProperty(modifiersKey, val))
   }
 
   return createTransformProps(props)
