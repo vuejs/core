@@ -217,7 +217,7 @@ function rewriteSelector(
           return false
         }
       }
-      //                         v- store this
+      // store the universal selector so it can be rewritten later
       // .foo * -> .foo[xxxxxxx] [xxxxxxx]
       starNode = n
     }
