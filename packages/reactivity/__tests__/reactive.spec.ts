@@ -301,6 +301,13 @@ describe('reactivity/reactive', () => {
     expect(() => markRaw(obj)).not.toThrowError()
   })
 
+  test('should not markRaw object as reactive', () => {
+    const a = reactive({ a: 1 })
+    const b = reactive({ b: 2 }) as any
+    b.a = markRaw(toRaw(a))
+    expect(b.a === a).toBe(false)
+  })
+
   test('should not observe non-extensible objects', () => {
     const obj = reactive({
       foo: Object.preventExtensions({ a: 1 }),
