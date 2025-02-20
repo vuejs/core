@@ -451,7 +451,7 @@ function hasPropsChanged(
 }
 
 export function updateHOCHostEl(
-  { vnode, parent }: ComponentInternalInstance,
+  { vnode, parent, suspense }: ComponentInternalInstance,
   el: typeof vnode.el, // HostNode
 ): void {
   while (parent) {
@@ -461,6 +461,7 @@ export function updateHOCHostEl(
     }
     if (root === vnode) {
       ;(vnode = parent.vnode).el = el
+      if (suspense && suspense.activeBranch === vnode) suspense.vnode.el = el
       parent = parent.parent
     } else {
       break
