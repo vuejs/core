@@ -11,7 +11,6 @@ import type {
 import type {
   EmitsOptions,
   EmitsToProps,
-  IsNever,
   ObjectEmitsOptions,
   TypeEmitsToOptions,
 } from './componentEmits'
@@ -134,7 +133,7 @@ type InferComponentOptions<T> = T &
                 ExtractMixinEmits<Mixin> &
                   ExtractMixinEmits<Extends> &
                   (unknown extends TypeEmits
-                    ? IsNever<RuntimeEmitsOptions> extends true
+                    ? string[] extends RuntimeEmitsOptions
                       ? {}
                       : RuntimeEmitsOptions extends (infer Keys extends
                             string)[]
@@ -160,7 +159,7 @@ type InferComponentOptions<T> = T &
           ExtractMixinEmits<Mixin> &
             ExtractMixinEmits<Extends> &
             (unknown extends TypeEmits
-              ? IsNever<RuntimeEmitsOptions> extends true
+              ? string[] extends RuntimeEmitsOptions
                 ? {}
                 : RuntimeEmitsOptions extends (infer Keys extends string)[]
                   ? { [K in Keys]: (...args: any) => any }
@@ -271,7 +270,7 @@ export function defineComponent<
   TypeRefs extends Record<string, unknown> = {},
   TypeEl extends Element = any,
   PropsOptions extends ComponentPropsOptions = {},
-  RuntimeEmitsOptions extends EmitsOptions = never,
+  RuntimeEmitsOptions extends EmitsOptions = string[],
   InjectOptions extends ComponentInjectOptions = {},
   Data = {},
   SetupBindings = {},
@@ -311,7 +310,7 @@ export function defineComponent<
   CompleteEmits extends ObjectEmitsOptions = ExtractMixinEmits<Mixin> &
     ExtractMixinEmits<Extends> &
     (unknown extends TypeEmits
-      ? IsNever<RuntimeEmitsOptions> extends true
+      ? string[] extends RuntimeEmitsOptions
         ? {}
         : RuntimeEmitsOptions extends (infer Keys extends string)[]
           ? { [K in Keys]: (...args: any) => any }
@@ -319,7 +318,7 @@ export function defineComponent<
       : {}) &
     TypeEmitsToOptions<TypeEmits & {}>,
   CompleteEmits_Internal extends EmitsOptions = unknown extends TypeEmits
-    ? IsNever<RuntimeEmitsOptions> extends true
+    ? string[] extends RuntimeEmitsOptions
       ? string[]
       : CompleteEmits
     : CompleteEmits,
@@ -427,7 +426,7 @@ export function defineComponent<
     }>,
 ): DefineComponent<{
   props?: PropsOptions
-  emits?: IsNever<RuntimeEmitsOptions> extends true ? {} : RuntimeEmitsOptions
+  emits?: string[] extends RuntimeEmitsOptions ? {} : RuntimeEmitsOptions
   components?: LocalComponents & GlobalComponents
   directives?: Directives & GlobalDirectives
   slots?: Slots

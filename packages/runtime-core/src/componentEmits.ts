@@ -83,8 +83,6 @@ type IsStringLiteral<T> = T extends string
     : true
   : false
 
-export type IsNever<T> = [T] extends [never] ? true : false
-
 export type ShortEmitsToObject<E> =
   E extends Record<string, any[]>
     ? {
@@ -98,7 +96,7 @@ export type EmitFn<
 > =
   Options extends Array<infer V>
     ? (event: V, ...args: any[]) => void
-    : IsNever<Event> extends true
+    : string[] extends Event
       ? {}
       : UnionToIntersection<
           {
