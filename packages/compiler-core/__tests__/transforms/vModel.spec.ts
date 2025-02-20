@@ -536,7 +536,7 @@ describe('compiler: transform v-model', () => {
         },
       ],
     })
-    // should NOT include modelModifiers in dynamicPropNames because it's never
+    // should now include modelModifiers in dynamicPropNames because it's
     // gonna change
     expect(vnodeCall.dynamicProps).toBe(
       `["modelValue", "onUpdate:modelValue", "modelModifiers"]`,
