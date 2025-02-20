@@ -86,12 +86,9 @@ export function defineCustomElement<Props, RawBindings = object>(
 // overload 2: defineCustomElement with options object, infer props from options
 export function defineCustomElement<
   // props
-  RuntimePropsOptions extends
-    ComponentObjectPropsOptions = ComponentObjectPropsOptions,
-  PropsKeys extends string = string,
+  RuntimePropsOptions extends ComponentObjectPropsOptions = {},
   // emits
   RuntimeEmitsOptions extends ObjectEmitsOptions = {},
-  EmitsKeys extends string = string,
   // other options
   Data = {},
   SetupBindings = {},
@@ -100,21 +97,19 @@ export function defineCustomElement<
   Mixin = {},
   Extends = {},
   InjectOptions extends ComponentInjectOptions = {},
-  InjectKeys extends string = string,
   Slots extends SlotsType = {},
   LocalComponents extends Record<string, Component> = {},
   Directives extends Record<string, Directive> = {},
   Exposed extends string = string,
   Provide extends ComponentProvideOptions = ComponentProvideOptions,
+  // assisted input types
+  _PropsKeys extends string = string,
+  _EmitsKeys extends string = string,
+  _InjectKeys extends string = string,
   // resolved types
-  ResolvedRuntimeEmitsOptions extends EmitsOptions = string extends EmitsKeys
-    ? RuntimeEmitsOptions
-    : EmitsKeys[],
-  InferredProps = string extends PropsKeys
-    ? ComponentObjectPropsOptions extends RuntimePropsOptions
-      ? {}
-      : ExtractPropTypes<RuntimePropsOptions>
-    : { [key in PropsKeys]?: any },
+  InferredProps = RuntimePropsOptions extends (infer Keys extends string)[]
+    ? { [K in Keys]?: any }
+    : ExtractPropTypes<RuntimePropsOptions>,
   ResolvedProps = InferredProps & EmitsToProps<RuntimeEmitsOptions>,
   PublicP = ResolvedProps &
     Prettify<ExtractMixinProps<Mixin> & ExtractMixinProps<Extends>>,
@@ -129,13 +124,19 @@ export function defineCustomElement<
   >,
 >(
   options: CustomElementOptions & {
-    props?: (RuntimePropsOptions & ThisType<void>) | PropsKeys[]
-    emits?: (RuntimeEmitsOptions & ThisType<void>) | EmitsKeys[]
+    props?:
+      | ComponentObjectPropsOptions
+      | (RuntimePropsOptions & ThisType<void>)
+      | _PropsKeys[]
+    emits?:
+      | ObjectEmitsOptions
+      | (RuntimeEmitsOptions & ThisType<void>)
+      | _EmitsKeys[]
     computed?: Computed
     methods?: Methods
     mixins?: Mixin[]
     extends?: Extends
-    inject?: string extends InjectKeys ? InjectOptions : InjectKeys[]
+    inject?: ComponentInjectOptions | InjectOptions | _InjectKeys[]
     slots?: Slots
     components?: LocalComponents
     directives?: Directives
@@ -144,7 +145,7 @@ export function defineCustomElement<
     setup?: (
       this: void,
       props: NoInfer<LooseRequired<PublicP>>,
-      ctx: NoInfer<SetupContext<ResolvedRuntimeEmitsOptions, Slots>>,
+      ctx: NoInfer<SetupContext<RuntimeEmitsOptions, Slots>>,
     ) => Promise<SetupBindings> | SetupBindings | RenderFunction | void
     data?: (this: DataVM, vm: DataVM) => Data
 
@@ -177,7 +178,7 @@ export function defineCustomElement<
         Mixin,
         Extends,
         RuntimeEmitsOptions,
-        EmitsKeys,
+        _EmitsKeys,
         {},
         false,
         InjectOptions,
