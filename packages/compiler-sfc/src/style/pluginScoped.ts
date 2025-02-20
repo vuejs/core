@@ -218,7 +218,7 @@ function rewriteSelector(
         }
       }
       //                         v- store this
-      // .foo * -> .foo[xxxxxxx] *[xxxxxxx]
+      // .foo * -> .foo[xxxxxxx] [xxxxxxx]
       starNode = n
     }
 
