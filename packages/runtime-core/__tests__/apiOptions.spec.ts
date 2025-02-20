@@ -84,6 +84,13 @@ describe('api: options', () => {
 
   test('methods', async () => {
     const Comp = defineComponent({
+      data() {
+        // #3300 method on ctx should be overwritable
+        this.incBy = this.incBy.bind(this, 2)
+        return {
+          foo: 1,
+        }
+      },
       methods: {
         inc() {
           this.foo++
@@ -91,13 +98,6 @@ describe('api: options', () => {
         incBy(n = 0) {
           this.foo += n
         },
-      },
-      data() {
-        // #3300 method on ctx should be overwritable
-        this.incBy = this.incBy.bind(this, 2)
-        return {
-          foo: 1,
-        }
       },
       render() {
         return h(

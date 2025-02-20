@@ -326,22 +326,6 @@ export function defineComponent<
     ExtractPropTypes<CompleteProps> & TypeProps & EmitsToProps<CompleteEmits>
   >,
   // instance types
-  DataVM = ComponentPublicInstance<
-    InferredProps,
-    CompleteBindings,
-    CompleteData,
-    CompleteComputed,
-    CompleteMethods,
-    CompleteEmits_Internal,
-    {}, // PublicProps
-    {}, // Defaults
-    false,
-    InjectOptions,
-    Slots,
-    Exposed,
-    TypeRefs,
-    TypeEl
-  >,
   InternalInstance = ComponentPublicInstance<
     InferredProps,
     CompleteBindings,
@@ -383,7 +367,7 @@ export function defineComponent<
       props: NoInfer<LooseRequired<InferredProps>>,
       ctx: NoInfer<SetupContext<CompleteEmits_Internal, Slots>>,
     ) => Promise<SetupBindings> | SetupBindings | RenderFunction | void
-    data?: (this: NoInfer<DataVM>, vm: NoInfer<DataVM>) => Data
+    data?: (vm: NoInfer<InternalInstance>) => Data
     /**
      * @private for language-tools use only
      */
@@ -420,10 +404,11 @@ export function defineComponent<
     | 'setup'
     | 'data'
   > &
-    ThisType<NoInfer<InternalInstance>> &
-    ThisType<{
-      $options: typeof options
-    }>,
+    ThisType<
+      NoInfer<InternalInstance> & {
+        $options: typeof options
+      }
+    >,
 ): DefineComponent<{
   props?: PropsOptions
   emits?: string[] extends RuntimeEmitsOptions ? {} : RuntimeEmitsOptions
