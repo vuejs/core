@@ -49,6 +49,7 @@ export enum EffectFlags {
   DIRTY = 1 << 4,
   ALLOW_RECURSE = 1 << 5,
   PAUSED = 1 << 6,
+  RESUMING = 1 << 7,
 }
 
 /**
@@ -127,6 +128,7 @@ export class ReactiveEffect<T = any>
       this.flags &= ~EffectFlags.PAUSED
       if (pausedQueueEffects.has(this)) {
         pausedQueueEffects.delete(this)
+        this.flags |= EffectFlags.RESUMING
         this.trigger()
       }
     }

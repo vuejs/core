@@ -240,6 +240,14 @@ export function watch(
     if (cb) {
       // watch(source, cb)
       const newValue = effect.run()
+
+      // don't invoke cb during effect resuming
+      if (effect.flags & EffectFlags.RESUMING) {
+        oldValue = newValue
+        effect.flags &= ~EffectFlags.RESUMING
+        return
+      }
+
       if (
         deep ||
         forceTrigger ||
