@@ -8,13 +8,16 @@ import {
   KeepAlive,
   Suspense,
   type SuspenseProps,
+  createBlock,
   createCommentVNode,
+  createElementBlock,
   h,
   nextTick,
   nodeOps,
   onErrorCaptured,
   onMounted,
   onUnmounted,
+  openBlock,
   ref,
   render,
   resolveDynamicComponent,
@@ -26,6 +29,7 @@ import {
 import { computed, createApp, defineComponent, inject, provide } from 'vue'
 import type { RawSlots } from 'packages/runtime-core/src/componentSlots'
 import { resetSuspenseId } from '../../src/components/Suspense'
+import { PatchFlags } from '@vue/shared'
 
 describe('Suspense', () => {
   const deps: Promise<any>[] = []
@@ -2159,6 +2163,63 @@ describe('Suspense', () => {
     // should not throw error due to Suspense vnode.el being null
     data.value = 'data2'
     await Promise.all(deps)
+  })
+
+  // #12920
+  test('unmount Suspense after children self-update', async () => {
+    const Comp = defineAsyncComponent({
+      setup() {
+        const show = ref(true)
+        onMounted(() => {
+          // trigger self-update
+          show.value = !show.value
+        })
+        return () =>
+          show.value
+            ? (openBlock(), createElementBlock('div', { key: 0 }, 'show'))
+            : (openBlock(), createElementBlock('div', { key: 1 }, 'hidden'))
+      },
+    })
+
+    const toggle = ref(true)
+    const root = nodeOps.createElement('div')
+    const App = {
+      render() {
+        return (
+          openBlock(),
+          createElementBlock(
+            Fragment,
+            null,
+            [
+              h('h1', null, toggle.value),
+              toggle.value
+                ? (openBlock(),
+                  createBlock(
+                    Suspense,
+                    { key: 0 },
+                    {
+                      default: h(Comp),
+                    },
+                  ))
+                : createCommentVNode('v-if', true),
+            ],
+            PatchFlags.STABLE_FRAGMENT,
+          )
+        )
+      },
+    }
+    render(h(App), root)
+    expect(serializeInner(root)).toBe(`<h1>true</h1><!---->`)
+
+    await Promise.all(deps)
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<h1>true</h1><div>hidden</div>`)
+
+    // unmount suspense
+    toggle.value = false
+    await Promise.all(deps)
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<h1>true</h1><!--v-if-->`)
   })
 
   describe('warnings', () => {

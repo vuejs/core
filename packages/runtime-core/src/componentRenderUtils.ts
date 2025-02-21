@@ -457,14 +457,17 @@ export function updateHOCHostEl(
   while (parent) {
     const root = parent.subTree
     if (root.suspense && root.suspense.activeBranch === vnode) {
-      root.el = vnode.el
+      root.suspense.vnode.el = root.el = vnode.el
     }
     if (root === vnode) {
       ;(vnode = parent.vnode).el = el
-      if (suspense && suspense.activeBranch === vnode) suspense.vnode.el = el
       parent = parent.parent
     } else {
       break
     }
+  }
+  // also update suspense vnode el
+  if (suspense && suspense.activeBranch === vnode) {
+    suspense.vnode.el = el
   }
 }
