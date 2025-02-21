@@ -22,6 +22,7 @@ import {
 } from './ast'
 import {
   EMPTY_OBJ,
+  Empty,
   NOOP,
   PatchFlags,
   camelize,
@@ -187,7 +188,7 @@ export function createTransformContext(
     cached: [],
     constantCache: new WeakMap(),
     temps: 0,
-    identifiers: Object.create(null),
+    identifiers: new Empty(),
     scopes: {
       vFor: 0,
       vSlot: 0,
