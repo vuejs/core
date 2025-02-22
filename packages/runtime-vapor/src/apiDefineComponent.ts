@@ -12,6 +12,7 @@ export function defineVaporComponent(
     return /*@__PURE__*/ (() =>
       extend({ name: comp.name }, extraOptions, {
         setup: comp,
+        __vapor: true,
       }))()
   }
   // TODO type inference
