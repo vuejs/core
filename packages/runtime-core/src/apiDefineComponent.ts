@@ -129,7 +129,7 @@ type InferComponentOptions<T> = T &
             > &
               TypeProps &
               EmitsToProps<
-                // CompleteEmits
+                // ResolvedEmits
                 ExtractMixinEmits<Mixin> &
                   ExtractMixinEmits<Extends> &
                   (unknown extends TypeEmits
@@ -155,7 +155,7 @@ type InferComponentOptions<T> = T &
           ExtractMixinMethods<Mixin> &
             ExtractMixinMethods<Extends> &
             Methods & {},
-          // CompleteEmits
+          // ResolvedEmits
           ExtractMixinEmits<Mixin> &
             ExtractMixinEmits<Extends> &
             (unknown extends TypeEmits
@@ -294,7 +294,7 @@ export function defineComponent<
         ? { [K in Keys]: null }
         : PropsOptions
       : {}),
-  CompleteEmits extends ObjectEmitsOptions = ExtractMixinEmits<Mixin> &
+  ResolvedEmits extends ObjectEmitsOptions = ExtractMixinEmits<Mixin> &
     ExtractMixinEmits<Extends> &
     (unknown extends TypeEmits
       ? string[] extends RuntimeEmitsOptions
@@ -304,13 +304,13 @@ export function defineComponent<
           : RuntimeEmitsOptions
       : {}) &
     TypeEmitsToOptions<TypeEmits & {}>,
-  CompleteEmits_Internal extends EmitsOptions = unknown extends TypeEmits
+  ResolvedEmits_Internal extends EmitsOptions = unknown extends TypeEmits
     ? string[] extends RuntimeEmitsOptions
       ? string[]
-      : CompleteEmits
-    : CompleteEmits,
+      : ResolvedEmits
+    : ResolvedEmits,
   InferredProps = Readonly<
-    ExtractPropTypes<ResolvedProps> & TypeProps & EmitsToProps<CompleteEmits>
+    ExtractPropTypes<ResolvedProps> & TypeProps & EmitsToProps<ResolvedEmits>
   >,
   InternalInstance = ComponentPublicInstance<
     InferredProps,
@@ -320,7 +320,7 @@ export function defineComponent<
     ExtractMixinData<Mixin> & ExtractMixinData<Extends> & EnsureNonVoid<Data>,
     ExtractMixinComputed<Mixin> & ExtractMixinComputed<Extends> & Computed,
     ExtractMixinMethods<Mixin> & ExtractMixinMethods<Extends> & Methods,
-    CompleteEmits_Internal,
+    ResolvedEmits_Internal,
     {}, // PublicProps
     {}, // Defaults
     false,
@@ -353,7 +353,7 @@ export function defineComponent<
     setup?: (
       this: void,
       props: NoInfer<LooseRequired<InferredProps>>,
-      ctx: NoInfer<SetupContext<CompleteEmits_Internal, Slots>>,
+      ctx: NoInfer<SetupContext<ResolvedEmits_Internal, Slots>>,
     ) => Promise<SetupBindings> | SetupBindings | RenderFunction | void
     data?: (vm: NoInfer<InternalInstance>) => Data
     /**
