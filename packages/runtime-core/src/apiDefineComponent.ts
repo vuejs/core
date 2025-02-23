@@ -287,13 +287,6 @@ export function defineComponent<
   _EmitsKeys extends string = string,
   _InjectKeys extends string = string,
   // resolved types
-  ResolvedProps = ExtractMixinProps<Mixin> &
-    ExtractMixinProps<Extends> &
-    (unknown extends TypeProps
-      ? PropsOptions extends (infer Keys extends string)[]
-        ? { [K in Keys]: null }
-        : PropsOptions
-      : {}),
   ResolvedEmits extends ObjectEmitsOptions = ExtractMixinEmits<Mixin> &
     ExtractMixinEmits<Extends> &
     (unknown extends TypeEmits
@@ -310,7 +303,17 @@ export function defineComponent<
       : ResolvedEmits
     : ResolvedEmits,
   InferredProps = Readonly<
-    ExtractPropTypes<ResolvedProps> & TypeProps & EmitsToProps<ResolvedEmits>
+    ExtractPropTypes<
+      ExtractMixinProps<Mixin> &
+        ExtractMixinProps<Extends> &
+        (unknown extends TypeProps
+          ? PropsOptions extends (infer Keys extends string)[]
+            ? { [K in Keys]: null }
+            : PropsOptions
+          : {})
+    > &
+      TypeProps &
+      EmitsToProps<ResolvedEmits>
   >,
   InternalInstance = ComponentPublicInstance<
     InferredProps,
