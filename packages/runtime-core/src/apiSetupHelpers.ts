@@ -206,7 +206,7 @@ export function defineOptions<
     {},
     ExtractMixinSetupBindings<Mixin> &
       ExtractMixinSetupBindings<Extends> &
-      RawBindings,
+      EnsureNonVoid<RawBindings>,
     ExtractMixinData<Mixin> & ExtractMixinData<Extends> & EnsureNonVoid<D>,
     ExtractMixinComputed<Mixin> & ExtractMixinComputed<Extends> & C,
     ExtractMixinMethods<Mixin> & ExtractMixinMethods<Extends> & M

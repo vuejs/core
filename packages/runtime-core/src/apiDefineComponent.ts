@@ -145,7 +145,7 @@ type InferComponentOptions<T> = T &
           >,
           ExtractMixinSetupBindings<Mixin> &
             ExtractMixinSetupBindings<Extends> &
-            SetupBindings,
+            EnsureNonVoid<SetupBindings>,
           ExtractMixinData<Mixin> &
             ExtractMixinData<Extends> &
             EnsureNonVoid<Data>,

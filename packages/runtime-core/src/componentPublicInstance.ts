@@ -149,9 +149,7 @@ export type CreateComponentPublicInstanceWithMixins<
   TypeEl extends Element = any,
   Provide extends ComponentProvideOptions = ComponentProvideOptions,
   // mixin inference
-  PublicP = ExtractMixinProps<Mixin> &
-    ExtractMixinProps<Extends> &
-    EnsureNonVoid<P>,
+  PublicP = ExtractMixinProps<Mixin> & ExtractMixinProps<Extends> & P,
   PublicB = ExtractMixinSetupBindings<Mixin> &
     ExtractMixinSetupBindings<Extends> &
     EnsureNonVoid<B>,
@@ -160,11 +158,11 @@ export type CreateComponentPublicInstanceWithMixins<
     EnsureNonVoid<D>,
   PublicC extends ComputedOptions = ExtractMixinComputed<Mixin> &
     ExtractMixinComputed<Extends> &
-    EnsureNonVoid<C>,
+    C,
   PublicM extends MethodOptions = ExtractMixinMethods<Mixin> &
     ExtractMixinMethods<Extends> &
-    EnsureNonVoid<M>,
-  PublicDefaults = {} & EnsureNonVoid<Defaults>, // TODO
+    M,
+  PublicDefaults = {} & Defaults, // TODO
 > = ComponentPublicInstance<
   PublicP,
   PublicB,
