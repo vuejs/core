@@ -80,7 +80,10 @@ import {
 import type { OptionMergeFunction } from './apiCreateApp'
 import { LifecycleHooks } from './enums'
 import type { SlotsType } from './componentSlots'
-import { type ComponentTypeEmits, normalizePropsOrEmits } from './apiSetupHelpers'
+import {
+  type ComponentTypeEmits,
+  normalizePropsOrEmits,
+} from './apiSetupHelpers'
 import { markAsyncBoundary } from './helpers/useId'
 
 /**
@@ -352,9 +355,6 @@ export type InjectToObject<T extends ComponentInjectOptions> =
         }
       : never
 
-/**
- * @deprecated
- */
 interface LegacyOptions<
   Props,
   D,
@@ -367,9 +367,6 @@ interface LegacyOptions<
   Provide extends ComponentProvideOptions = ComponentProvideOptions,
 > {
   compatConfig?: CompatConfig
-
-  // // allow any custom options
-  // [key: string]: any
 
   // state
   // Limitation: we cannot expose RawBindings on the `this` context for data

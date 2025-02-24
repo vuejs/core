@@ -283,6 +283,10 @@ export type {
   ComputedOptions,
   RuntimeCompilerOptions,
   ComponentInjectOptions,
+  // deprecated
+  ComponentOptionsWithoutProps,
+  ComponentOptionsWithArrayProps,
+  ComponentOptionsWithObjectProps,
 } from './componentOptions'
 export type {
   EmitsOptions,
@@ -295,6 +299,7 @@ export type {
   ExtractMixinProps,
   ComponentPublicInstance,
   ComponentCustomProperties,
+  // CreateComponentPublicInstance,
   CreateComponentPublicInstanceWithMixins,
 } from './componentPublicInstance'
 export type {
