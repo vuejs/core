@@ -387,7 +387,7 @@ export function defineComponent<
     extends?: Extends
     setup?: (
       this: void,
-      props: NoInfer<LooseRequired<InferredProps>>,
+      props: LooseRequired<InferredProps>,
       ctx: NoInfer<SetupContext<ResolvedEmits_Internal, Slots>>,
     ) => Promise<SetupBindings> | SetupBindings | RenderFunction | void
     data?: (vm: NoInfer<InternalInstance>) => Data
