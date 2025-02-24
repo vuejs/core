@@ -11,6 +11,7 @@ import {
   defineComponent,
   h,
   reactive,
+  readonly,
   ref,
   withKeys,
   withModifiers,
@@ -190,6 +191,7 @@ describe('with object props', () => {
         f: reactive({
           g: ref('hello' as GT),
         }),
+        m: readonly(ref(1))
       }
     },
     provide() {
@@ -258,6 +260,9 @@ describe('with object props', () => {
 
       // setup context properties should be mutable
       this.c = 2
+
+      // @ts-expect-error setup context readonly properties should not be mutable
+      this.m = 2
 
       return null
     },
