@@ -279,7 +279,7 @@ type ResolveTypeEmits<
 // (uses user defined props interface)
 export function defineComponent<
   Props extends Record<string, any>,
-  E extends EmitsOptions = {},
+  E extends EmitsOptions = string[],
   EE extends string = string,
   S extends SlotsType = {},
 >(
@@ -295,7 +295,7 @@ export function defineComponent<
 ): DefineSetupFnComponent<Props, E, S>
 export function defineComponent<
   Props extends Record<string, any>,
-  E extends EmitsOptions = {},
+  E extends EmitsOptions = string[],
   EE extends string = string,
   S extends SlotsType = {},
 >(
