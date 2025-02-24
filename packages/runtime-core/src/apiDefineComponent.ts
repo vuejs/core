@@ -18,8 +18,8 @@ import type {
   ComponentInjectOptions,
   ComponentOptions,
   ComponentProvideOptions,
-  ComponentStaticOptions,
   ComputedOptions,
+  ConcreteComponentOptions,
   MethodOptions,
   ObjectInjectOptions,
   RenderFunction,
@@ -180,7 +180,7 @@ type InferComponentOptions<T> = T &
           TypeRefs & {},
           TypeEl & Element
         >
-      } & ComponentStaticOptions
+      } & ConcreteComponentOptions
     : {})
 
 export type DefineSetupFnComponent<
@@ -364,7 +364,7 @@ export function defineComponent<
 
     // allow any custom options
     [key: string]: any
-  } & ComponentStaticOptions &
+  } & ConcreteComponentOptions &
     ThisType<
       NoInfer<InternalInstance> & {
         $options: typeof options

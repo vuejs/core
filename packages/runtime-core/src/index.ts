@@ -277,7 +277,7 @@ export type {
   ComponentCustomOptions,
   ComponentOptionsBase,
   ComponentProvideOptions,
-  ComponentStaticOptions,
+  ConcreteComponentOptions,
   RenderFunction,
   MethodOptions,
   ComputedOptions,

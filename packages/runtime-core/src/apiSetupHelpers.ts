@@ -17,8 +17,8 @@ import {
 } from './component'
 import type { EmitFn, EmitsOptions, ObjectEmitsOptions } from './componentEmits'
 import type {
-  ComponentStaticOptions,
   ComputedOptions,
+  ConcreteComponentOptions,
   MethodOptions,
 } from './componentOptions'
 import type {
@@ -238,7 +238,7 @@ export function defineOptions<
      * slots should be defined via defineSlots().
      */
     slots?: never
-  } & ComponentStaticOptions &
+  } & ConcreteComponentOptions &
     ThisType<
       NoInfer<InternalInstance> & {
         $options: typeof options

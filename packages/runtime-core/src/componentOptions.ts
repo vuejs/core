@@ -106,7 +106,7 @@ export interface ComponentCustomOptions {}
 
 export type RenderFunction = () => VNodeChild
 
-export type ComponentStaticOptions = Omit<
+export type ConcreteComponentOptions = Omit<
   ComponentOptionsBase<{}, {}, {}, {}, {}, {}, {}, {}>,
   | 'emits'
   | 'components'

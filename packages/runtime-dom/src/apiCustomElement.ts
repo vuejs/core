@@ -7,9 +7,9 @@ import {
   type ComponentObjectPropsOptions,
   type ComponentOptions,
   type ComponentProvideOptions,
-  type ComponentStaticOptions,
   type ComputedOptions,
   type ConcreteComponent,
+  type ConcreteComponentOptions,
   type CreateAppFunction,
   type CreateComponentPublicInstanceWithMixins,
   type Directive,
@@ -151,7 +151,7 @@ export function defineCustomElement<
 
     // allow any custom options
     [key: string]: any
-  } & ComponentStaticOptions &
+  } & ConcreteComponentOptions &
     ThisType<
       CreateComponentPublicInstanceWithMixins<
         Readonly<ResolvedProps>,
