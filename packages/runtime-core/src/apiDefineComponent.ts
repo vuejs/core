@@ -77,14 +77,14 @@ export type DefineComponent<
   MakeDefaultsOptional extends boolean = true,
   TypeRefs extends Record<string, unknown> = {},
   TypeEl extends Element = any,
-> = 'props' extends keyof IfAny<
-  OptionsOrPropsOrPropOptions,
-  {},
-  OptionsOrPropsOrPropOptions
->
-  ? InferComponentOptions<OptionsOrPropsOrPropOptions, unknown>
-  : InferComponentOptions<
-      {
+> = InferComponentOptions<
+  'props' extends keyof IfAny<
+    OptionsOrPropsOrPropOptions,
+    {},
+    OptionsOrPropsOrPropOptions
+  >
+    ? OptionsOrPropsOrPropOptions
+    : {
         props?: OptionsOrPropsOrPropOptions extends ComponentPropsOptions
           ? OptionsOrPropsOrPropOptions
           : {}
@@ -106,9 +106,15 @@ export type DefineComponent<
         __typeRefs?: TypeRefs
         __typeEl?: TypeEl
       },
-      MakeDefaultsOptional,
-      Defaults
-    >
+  'props' extends keyof IfAny<
+    OptionsOrPropsOrPropOptions,
+    {},
+    OptionsOrPropsOrPropOptions
+  >
+    ? unknown
+    : MakeDefaultsOptional,
+  Defaults
+>
 
 type InferComponentOptions<
   T,
