@@ -80,7 +80,7 @@ import {
 import type { OptionMergeFunction } from './apiCreateApp'
 import { LifecycleHooks } from './enums'
 import type { SlotsType } from './componentSlots'
-import { ComponentTypeEmits, normalizePropsOrEmits } from './apiSetupHelpers'
+import { type ComponentTypeEmits, normalizePropsOrEmits } from './apiSetupHelpers'
 import { markAsyncBoundary } from './helpers/useId'
 
 /**

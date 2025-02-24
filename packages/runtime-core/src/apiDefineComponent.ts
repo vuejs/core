@@ -173,6 +173,7 @@ type InferComponentOptions<T> = T &
           // MakeDefaultsOptional - if TypeProps is provided, set to false to use
           // user props types verbatim
           unknown extends TypeProps ? true : false,
+          {},
           {}, // InjectOptions
           Slots & {},
           Exposed & string,
@@ -311,6 +312,7 @@ export function defineComponent<
     {}, // PublicProps
     {}, // Defaults
     false,
+    {},
     InjectOptions,
     Slots,
     Exposed,

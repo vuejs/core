@@ -35,6 +35,7 @@ import {
 } from '@vue/reactivity'
 import {
   type ComponentInjectOptions,
+  type ComponentOptionsBase,
   type ComponentProvideOptions,
   type ComputedOptions,
   type ExtractComputedReturns,
@@ -174,6 +175,25 @@ export type CreateComponentPublicInstanceWithMixins<
   PublicProps,
   PublicDefaults,
   MakeDefaultsOptional,
+  ComponentOptionsBase<
+    P,
+    B,
+    D,
+    C,
+    M,
+    Mixin,
+    Extends,
+    E,
+    string,
+    Defaults,
+    {},
+    string,
+    S,
+    LC,
+    Directives,
+    Exposed,
+    Provide
+  >,
   I,
   S,
   Exposed,
@@ -198,6 +218,7 @@ export type ComponentPublicInstance<
   PublicProps = {},
   Defaults = {},
   MakeDefaultsOptional extends boolean = false,
+  Options = {},
   I extends ComponentInjectOptions = {},
   S extends SlotsType = {},
   Exposed extends string = '',
@@ -217,10 +238,11 @@ export type ComponentPublicInstance<
   $host: Element | null
   $emit: EmitFn<E>
   $el: TypeEl
-  $options: MergedComponentOptionsOverride & {
-    // allow any custom options
-    [key: string]: any
-  }
+  $options: Options &
+    MergedComponentOptionsOverride & {
+      // allow any custom options
+      [key: string]: any
+    }
   $forceUpdate: () => void
   $nextTick: typeof nextTick
   $watch<T extends string | ((...args: any) => any)>(
