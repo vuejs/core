@@ -75,6 +75,7 @@
     "@types/semver": "^7.5.8",
     "@types/serve-handler": "^6.1.4",
     "@vitest/coverage-v8": "^3.0.5",
+    "@vitest/eslint-plugin": "^1.1.31",
     "@vue/consolidate": "1.0.0",
     "conventional-changelog-cli": "^5.0.0",
     "enquirer": "^2.4.1",
@@ -82,7 +83,6 @@
     "esbuild-plugin-polyfill-node": "^0.3.0",
     "eslint": "^9.20.1",
     "eslint-plugin-import-x": "^4.6.1",
-    "@vitest/eslint-plugin": "^1.1.31",
     "estree-walker": "catalog:",
     "jsdom": "^26.0.0",
     "lint-staged": "^15.4.3",
@@ -121,6 +121,12 @@
         "@typescript-eslint/type-utils>eslint": "^9.0.0",
         "@typescript-eslint/utils>eslint": "^9.0.0"
       }
-    }
+    },
+    "onlyBuiltDependencies": [
+      "@swc/core",
+      "esbuild",
+      "puppeteer",
+      "simple-git-hooks"
+    ]
   }
 }
