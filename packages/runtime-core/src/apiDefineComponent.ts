@@ -17,8 +17,8 @@ import type {
 import type {
   ComponentInjectOptions,
   ComponentOptions,
-  ComponentOptionsBase,
   ComponentProvideOptions,
+  ComponentStaticOptions,
   ComputedOptions,
   MethodOptions,
   ObjectInjectOptions,
@@ -179,23 +179,7 @@ type InferComponentOptions<T> = T &
           TypeRefs & {},
           TypeEl & Element
         >
-      } & Omit<
-        ComponentOptionsBase,
-        | 'props'
-        | 'emits'
-        | 'components'
-        | 'directives'
-        | 'slots'
-        | 'expose'
-        | 'computed'
-        | 'methods'
-        | 'provide'
-        | 'inject'
-        | 'mixins'
-        | 'extends'
-        | 'setup'
-        | 'data'
-      >
+      } & ComponentStaticOptions
     : {})
 
 export type DefineSetupFnComponent<
@@ -378,23 +362,7 @@ export function defineComponent<
 
     // allow any custom options
     [key: string]: any
-  } & Omit<
-    ComponentOptionsBase,
-    | 'props'
-    | 'emits'
-    | 'components'
-    | 'directives'
-    | 'slots'
-    | 'expose'
-    | 'computed'
-    | 'methods'
-    | 'provide'
-    | 'inject'
-    | 'mixins'
-    | 'extends'
-    | 'setup'
-    | 'data'
-  > &
+  } & ComponentStaticOptions &
     ThisType<
       NoInfer<InternalInstance> & {
         $options: typeof options

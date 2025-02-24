@@ -17,7 +17,7 @@ import {
 } from './component'
 import type { EmitFn, EmitsOptions, ObjectEmitsOptions } from './componentEmits'
 import type {
-  ComponentOptionsBase,
+  ComponentStaticOptions,
   ComputedOptions,
   MethodOptions,
 } from './componentOptions'
@@ -230,19 +230,7 @@ export function defineOptions<
      * slots should be defined via defineSlots().
      */
     slots?: never
-  } & Omit<
-    ComponentOptionsBase,
-    | 'computed'
-    | 'methods'
-    | 'mixins'
-    | 'extends'
-    | 'data'
-    | 'setup'
-    | 'props'
-    | 'emits'
-    | 'expose'
-    | 'slots'
-  >,
+  } & ComponentStaticOptions,
 ): void {
   if (__DEV__) {
     warnRuntimeUsage(`defineOptions`)

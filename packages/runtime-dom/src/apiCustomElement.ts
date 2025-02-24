@@ -6,8 +6,8 @@ import {
   type ComponentInternalInstance,
   type ComponentObjectPropsOptions,
   type ComponentOptions,
-  type ComponentOptionsBase,
   type ComponentProvideOptions,
+  type ComponentStaticOptions,
   type ComputedOptions,
   type ConcreteComponent,
   type CreateAppFunction,
@@ -151,23 +151,7 @@ export function defineCustomElement<
 
     // allow any custom options
     [key: string]: any
-  } & Omit<
-      ComponentOptionsBase,
-      | 'props'
-      | 'emits'
-      | 'computed'
-      | 'methods'
-      | 'mixins'
-      | 'extends'
-      | 'inject'
-      | 'slots'
-      | 'components'
-      | 'directives'
-      | 'expose'
-      | 'provide'
-      | 'setup'
-      | 'data'
-    > &
+  } & ComponentStaticOptions &
     ThisType<
       CreateComponentPublicInstanceWithMixins<
         Readonly<ResolvedProps>,
