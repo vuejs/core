@@ -13,7 +13,6 @@ import {
   type CreateAppFunction,
   type CreateComponentPublicInstanceWithMixins,
   type Directive,
-  type EmitsOptions,
   type EmitsToProps,
   type ExtractMixinProps,
   type ExtractPropTypes,
@@ -64,21 +63,15 @@ export interface CustomElementOptions {
 // overload 1: direct setup function
 export function defineCustomElement<Props, RawBindings = object>(
   setup: (props: Props, ctx: SetupContext) => RawBindings | RenderFunction,
-  options?: {
-    name?: string
-    inheritAttrs?: boolean
-    emits?: EmitsOptions
-  } & CustomElementOptions & {
+  options?: Pick<ComponentOptions, 'name' | 'inheritAttrs' | 'emits'> &
+    CustomElementOptions & {
       props?: (keyof Props)[]
     },
 ): VueElementConstructor<Props>
 export function defineCustomElement<Props, RawBindings = object>(
   setup: (props: Props, ctx: SetupContext) => RawBindings | RenderFunction,
-  options?: {
-    name?: string
-    inheritAttrs?: boolean
-    emits?: EmitsOptions
-  } & CustomElementOptions & {
+  options?: Pick<ComponentOptions, 'name' | 'inheritAttrs' | 'emits'> &
+    CustomElementOptions & {
       props?: ComponentObjectPropsOptions<Props>
     },
 ): VueElementConstructor<Props>
@@ -113,14 +106,23 @@ export function defineCustomElement<
   ResolvedProps = InferredProps & EmitsToProps<RuntimeEmitsOptions>,
   PublicP = ResolvedProps &
     Prettify<ExtractMixinProps<Mixin> & ExtractMixinProps<Extends>>,
-  DataVM = CreateComponentPublicInstanceWithMixins<
-    PublicP,
-    {},
-    {},
-    {},
-    MethodOptions,
+  InternalInstance = CreateComponentPublicInstanceWithMixins<
+    Readonly<ResolvedProps>,
+    SetupBindings,
+    Data,
+    Computed,
+    Methods,
     Mixin,
-    Extends
+    Extends,
+    RuntimeEmitsOptions,
+    _EmitsKeys,
+    {},
+    false,
+    InjectOptions,
+    Slots,
+    LocalComponents,
+    Directives,
+    Exposed
   >,
 >(
   options: CustomElementOptions & {
@@ -147,31 +149,12 @@ export function defineCustomElement<
       props: NoInfer<LooseRequired<PublicP>>,
       ctx: NoInfer<SetupContext<RuntimeEmitsOptions, Slots>>,
     ) => Promise<SetupBindings> | SetupBindings | RenderFunction | void
-    data?: (this: DataVM, vm: DataVM) => Data
+    data?: (vm: NoInfer<InternalInstance>) => Data
 
     // allow any custom options
     [key: string]: any
   } & ConcreteComponentOptions &
-    ThisType<
-      CreateComponentPublicInstanceWithMixins<
-        Readonly<ResolvedProps>,
-        SetupBindings,
-        Data,
-        Computed,
-        Methods,
-        Mixin,
-        Extends,
-        RuntimeEmitsOptions,
-        _EmitsKeys,
-        {},
-        false,
-        InjectOptions,
-        Slots,
-        LocalComponents,
-        Directives,
-        Exposed
-      >
-    >,
+    ThisType<NoInfer<InternalInstance>>,
   extraOptions?: CustomElementOptions,
 ): VueElementConstructor<ResolvedProps>
 
