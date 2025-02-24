@@ -12,6 +12,7 @@ import type {
   EmitsOptions,
   EmitsToProps,
   ObjectEmitsOptions,
+  ShortEmitsToObject,
   TypeEmitsToOptions,
 } from './componentEmits'
 import type {
@@ -169,18 +170,17 @@ type InferComponentOptions<
             > &
               TypeProps &
               EmitsToProps<
-                // ResolvedEmits
                 ExtractMixinEmits<Mixin> &
                   ExtractMixinEmits<Extends> &
-                  (unknown extends TypeEmits
-                    ? string[] extends RuntimeEmitsOptions
-                      ? {}
-                      : RuntimeEmitsOptions extends (infer Keys extends
-                            string)[]
-                        ? { [K in Keys]: (...args: any) => any }
-                        : RuntimeEmitsOptions
-                    : {}) &
-                  TypeEmitsToOptions<TypeEmits & {}>
+                  ResolveEmitsOptions<RuntimeEmitsOptions & {}, TypeEmits> &
+                  TypeEmitsToOptions<
+                    string[] extends RuntimeEmitsOptions
+                      ? TypeEmits & {}
+                      : ResolveTypeEmits<
+                          RuntimeEmitsOptions & {},
+                          TypeEmits
+                        > & {}
+                  >
               >
           >,
           ExtractMixinSetupBindings<Mixin> &
@@ -195,17 +195,9 @@ type InferComponentOptions<
           ExtractMixinMethods<Mixin> &
             ExtractMixinMethods<Extends> &
             Methods & {},
-          // ResolvedEmits
           ExtractMixinEmits<Mixin> &
             ExtractMixinEmits<Extends> &
-            (unknown extends TypeEmits
-              ? string[] extends RuntimeEmitsOptions
-                ? {}
-                : RuntimeEmitsOptions extends (infer Keys extends string)[]
-                  ? { [K in Keys]: (...args: any) => any }
-                  : RuntimeEmitsOptions
-              : {}) &
-            TypeEmitsToOptions<TypeEmits & {}>,
+            ResolveEmitsOptions<RuntimeEmitsOptions & {}, TypeEmits>,
           PublicProps,
           MakeDefaultsOptional extends boolean
             ? Defaults
@@ -226,7 +218,8 @@ type InferComponentOptions<
           Slots & {},
           Exposed & string,
           TypeRefs & {},
-          TypeEl & Element
+          TypeEl & Element,
+          ResolveTypeEmits<RuntimeEmitsOptions & {}, TypeEmits>
         >
       } & ConcreteComponentOptions
     : {})
@@ -254,6 +247,28 @@ export type DefineSetupFnComponent<
   {},
   S
 >
+
+type ResolveEmitsOptions<
+  RuntimeEmitsOptions extends EmitsOptions,
+  TypeEmits extends ComponentTypeEmits | unknown,
+> = unknown extends TypeEmits
+  ? RuntimeEmitsOptions extends ObjectEmitsOptions
+    ? RuntimeEmitsOptions
+    : {}
+  : TypeEmits extends Record<string, any[]>
+    ? ShortEmitsToObject<TypeEmits>
+    : {}
+
+type ResolveTypeEmits<
+  RuntimeEmitsOptions extends EmitsOptions,
+  TypeEmits extends ComponentTypeEmits | unknown,
+> = TypeEmits extends (...args: any[]) => any
+  ? TypeEmits
+  : TypeEmits extends Record<string, any[]>
+    ? {}
+    : RuntimeEmitsOptions extends (infer Keys extends string)[]
+      ? (event: Keys, ...args: any[]) => void
+      : {}
 
 // defineComponent is a utility that is primarily used for type inference
 // when declaring components. Type inference is provided in the component
@@ -322,19 +337,8 @@ export function defineComponent<
   // resolved types
   ResolvedEmits extends ObjectEmitsOptions = ExtractMixinEmits<Mixin> &
     ExtractMixinEmits<Extends> &
-    (unknown extends TypeEmits
-      ? string[] extends RuntimeEmitsOptions
-        ? {}
-        : RuntimeEmitsOptions extends (infer Keys extends string)[]
-          ? { [K in Keys]: (...args: any) => any }
-          : RuntimeEmitsOptions
-      : {}) &
-    TypeEmitsToOptions<TypeEmits & {}>,
-  ResolvedEmits_Internal extends EmitsOptions = unknown extends TypeEmits
-    ? string[] extends RuntimeEmitsOptions
-      ? string[]
-      : ResolvedEmits
-    : ResolvedEmits,
+    ResolveEmitsOptions<RuntimeEmitsOptions, TypeEmits>,
+  ResolvedTypeEmits = ResolveTypeEmits<RuntimeEmitsOptions, TypeEmits>,
   InferredProps = Readonly<
     ExtractPropTypes<
       ExtractMixinProps<Mixin> &
@@ -346,7 +350,14 @@ export function defineComponent<
           : {})
     > &
       TypeProps &
-      EmitsToProps<ResolvedEmits>
+      EmitsToProps<
+        ResolvedEmits &
+          TypeEmitsToOptions<
+            string[] extends RuntimeEmitsOptions
+              ? TypeEmits & {}
+              : ResolvedTypeEmits & {}
+          >
+      >
   >,
   InternalInstance = ComponentPublicInstance<
     InferredProps,
@@ -356,7 +367,7 @@ export function defineComponent<
     ExtractMixinData<Mixin> & ExtractMixinData<Extends> & EnsureNonVoid<Data>,
     ExtractMixinComputed<Mixin> & ExtractMixinComputed<Extends> & Computed,
     ExtractMixinMethods<Mixin> & ExtractMixinMethods<Extends> & Methods,
-    ResolvedEmits_Internal,
+    ResolvedEmits,
     {}, // PublicProps
     {}, // Defaults
     false,
@@ -365,7 +376,8 @@ export function defineComponent<
     Slots,
     Exposed,
     TypeRefs,
-    TypeEl
+    TypeEl,
+    ResolvedTypeEmits
   >,
 >(
   options: {
@@ -390,7 +402,11 @@ export function defineComponent<
     setup?: (
       this: void,
       props: LooseRequired<InferredProps>,
-      ctx: NoInfer<SetupContext<ResolvedEmits_Internal, Slots>>,
+      ctx: NoInfer<
+        SetupContext<ResolvedEmits, Slots> & {
+          emit: ResolvedTypeEmits
+        }
+      >,
     ) => Promise<SetupBindings> | SetupBindings | RenderFunction | void
     data?: (vm: NoInfer<InternalInstance>) => Data
     /**

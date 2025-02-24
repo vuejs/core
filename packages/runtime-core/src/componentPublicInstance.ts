@@ -291,6 +291,7 @@ export type ComponentPublicInstance<
   Exposed extends string = '',
   TypeRefs extends Data = {},
   TypeEl extends Element = any,
+  TypeEmits = {},
 > = {
   $: ComponentInternalInstance
   $data: D
@@ -303,7 +304,7 @@ export type ComponentPublicInstance<
   $root: ComponentPublicInstance | null
   $parent: ComponentPublicInstance | null
   $host: Element | null
-  $emit: EmitFn<E>
+  $emit: EmitFn<E> & TypeEmits
   $el: TypeEl
   $options: Options &
     MergedComponentOptionsOverride & {
