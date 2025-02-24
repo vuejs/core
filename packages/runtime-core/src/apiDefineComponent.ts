@@ -138,7 +138,7 @@ type InferComponentOptions<
     __typeProps?: infer TypeProps
     __typeEmits?: infer TypeEmits
     __typeRefs?: infer TypeRefs
-    __typeEl?: infer TypeEl
+    __typeEl?: infer TypeEl extends Element
   }
     ? {
         components?: GlobalComponents
@@ -218,7 +218,7 @@ type InferComponentOptions<
           Slots & {},
           Exposed & string,
           TypeRefs & {},
-          TypeEl & Element,
+          TypeEl,
           ResolveTypeEmits<RuntimeEmitsOptions & {}, TypeEmits>
         >
       } & ConcreteComponentOptions
