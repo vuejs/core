@@ -98,7 +98,7 @@ export type DefineComponent<
         directives?: Directives & GlobalDirectives
         expose?: Exposed[]
         provide?: Provide
-        setup?: () => RawBindings
+        setup?: (props: any, ctx: SetupContext) => RawBindings
         data?: () => D
         __typeProps?: OptionsOrPropsOrPropOptions extends ComponentPropsOptions
           ? unknown
