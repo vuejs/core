@@ -121,7 +121,6 @@ export type ConcreteComponentOptions = Omit<
   | 'extends'
   | 'setup'
   | 'data'
-  | '__differentiator'
 >
 
 export interface ComponentOptionsBase<
@@ -435,16 +434,6 @@ interface LegacyOptions<
    * @deprecated use `compilerOptions.delimiters` instead.
    */
   delimiters?: [string, string]
-
-  /**
-   * #3468
-   *
-   * type-only, used to assist Mixin's type inference,
-   * typescript will try to simplify the inferred `Mixin` type,
-   * with the `__differentiator`, typescript won't be able to combine different mixins,
-   * because the `__differentiator` will be different
-   */
-  __differentiator?: keyof D | keyof C | keyof M
 }
 
 type MergedHook<T = () => void> = T | T[]
