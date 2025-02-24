@@ -493,10 +493,10 @@ export type ShallowUnwrapRef<T> = {
 }
 
 type MutableKeys<T> = {
-  [P in keyof T]-?: IfEquals<
-    { [Q in P]: T[P] },
-    { -readonly [Q in P]: T[P] },
-    P,
+  [K in keyof T]-?: IfEquals<
+    { [P in keyof T[K]]: T[K][P] },
+    { -readonly [P in keyof T[K]]: T[K][P] },
+    K,
     never
   >
 }[keyof T]
