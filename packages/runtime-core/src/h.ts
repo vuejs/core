@@ -1,9 +1,5 @@
 import { type IfAny, isArray, isObject } from '@vue/shared'
-import type {
-  Component,
-  ConcreteComponent,
-  FunctionalComponent,
-} from './component'
+import type { Component, FunctionalComponent } from './component'
 import type { EmitsOptions } from './componentEmits'
 import type {
   ComponentObjectPropsOptions,
@@ -176,17 +172,6 @@ export function h<
   type: { props: P },
   props?: NoInfer<(RawProps & PP) | ({} extends PP ? null : never)>,
   children?: RawChildren | RawSlots,
-): VNode
-
-// concrete component
-export function h(
-  type: ConcreteComponent | string,
-  children?: RawChildren,
-): VNode
-export function h<P>(
-  type: ConcreteComponent<P> | string,
-  props?: NoInfer<(RawProps & P) | ({} extends P ? null : never)>,
-  children?: RawChildren,
 ): VNode
 
 // catch all types
