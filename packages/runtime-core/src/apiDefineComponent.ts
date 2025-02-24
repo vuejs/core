@@ -49,6 +49,13 @@ export type PublicProps = VNodeProps &
   AllowedComponentProps &
   ComponentCustomProps
 
+type ResolveProps<PropsOrPropOptions, E extends EmitsOptions> = Readonly<
+  PropsOrPropOptions extends ComponentPropsOptions
+    ? ExtractPropTypes<PropsOrPropOptions>
+    : PropsOrPropOptions
+> &
+  ({} extends E ? {} : EmitsToProps<E>)
+
 export type DefineComponent<
   OptionsOrPropsOrPropOptions = {},
   RawBindings = {},
@@ -57,6 +64,11 @@ export type DefineComponent<
   M extends MethodOptions = MethodOptions,
   Mixin = {},
   Extends = {},
+  E extends EmitsOptions = {},
+  _EE extends string = string,
+  _PP = PublicProps,
+  _Props = ResolveProps<OptionsOrPropsOrPropOptions, E>,
+  _Defaults = ExtractDefaultPropTypes<OptionsOrPropsOrPropOptions>,
   S extends SlotsType = {},
   LC extends Record<string, Component> = {},
   Directives extends Record<string, Directive> = {},
@@ -64,30 +76,32 @@ export type DefineComponent<
   Provide extends ComponentProvideOptions = ComponentProvideOptions,
   TypeRefs extends Record<string, unknown> = {},
   TypeEl extends Element = any,
-> = OptionsOrPropsOrPropOptions extends { props?: any }
-  ? InferComponentOptions<OptionsOrPropsOrPropOptions>
-  : InferComponentOptions<{
-      props?: OptionsOrPropsOrPropOptions extends ComponentPropsOptions
-        ? OptionsOrPropsOrPropOptions
-        : {}
-      computed?: C
-      methods?: M
-      mixins?: Mixin[]
-      extends?: Extends
-      inject?: {}
-      slots?: S
-      components?: LC & GlobalComponents
-      directives?: Directives & GlobalDirectives
-      expose?: Exposed[]
-      provide?: Provide
-      setup?: () => RawBindings
-      data?: () => D
-      __typeProps?: OptionsOrPropsOrPropOptions extends ComponentPropsOptions
-        ? unknown
-        : OptionsOrPropsOrPropOptions
-      __typeRefs?: TypeRefs
-      __typeEl?: TypeEl
-    }>
+> = InferComponentOptions<
+  OptionsOrPropsOrPropOptions extends { props?: any }
+    ? OptionsOrPropsOrPropOptions
+    : {
+        props?: OptionsOrPropsOrPropOptions extends ComponentPropsOptions
+          ? OptionsOrPropsOrPropOptions
+          : {}
+        computed?: C
+        methods?: M
+        mixins?: Mixin[]
+        extends?: Extends
+        inject?: {}
+        slots?: S
+        components?: LC & GlobalComponents
+        directives?: Directives & GlobalDirectives
+        expose?: Exposed[]
+        provide?: Provide
+        setup?: () => RawBindings
+        data?: () => D
+        __typeProps?: OptionsOrPropsOrPropOptions extends ComponentPropsOptions
+          ? unknown
+          : OptionsOrPropsOrPropOptions
+        __typeRefs?: TypeRefs
+        __typeEl?: TypeEl
+      }
+>
 
 type InferComponentOptions<T> = T &
   (T extends {
@@ -370,26 +384,46 @@ export function defineComponent<
         $options: typeof options
       }
     >,
-): DefineComponent<{
-  props?: PropsOptions
-  emits?: string[] extends RuntimeEmitsOptions ? {} : RuntimeEmitsOptions
-  components?: LocalComponents & GlobalComponents
-  directives?: Directives & GlobalDirectives
-  slots?: Slots
-  expose?: Exposed[]
-  computed?: Computed
-  methods?: Methods
-  provide?: Provide
-  inject?: InjectOptions
-  mixins?: Mixin[]
-  extends?: Extends
-  setup?(): SetupBindings
-  data?(): Data
-  __typeProps?: TypeProps
-  __typeEmits?: TypeEmits
-  __typeRefs?: TypeRefs
-  __typeEl?: TypeEl
-}>
+): DefineComponent<
+  {
+    props?: PropsOptions
+    emits?: string[] extends RuntimeEmitsOptions ? {} : RuntimeEmitsOptions
+    components?: LocalComponents & GlobalComponents
+    directives?: Directives & GlobalDirectives
+    slots?: Slots
+    expose?: Exposed[]
+    computed?: Computed
+    methods?: Methods
+    provide?: Provide
+    inject?: InjectOptions
+    mixins?: Mixin[]
+    extends?: Extends
+    setup?(): SetupBindings
+    data?(): Data
+    __typeProps?: TypeProps
+    __typeEmits?: TypeEmits
+    __typeRefs?: TypeRefs
+    __typeEl?: TypeEl
+  },
+  {},
+  {},
+  {},
+  {},
+  {},
+  {},
+  {},
+  string,
+  {},
+  {},
+  {},
+  {},
+  {},
+  {},
+  string,
+  {},
+  {},
+  any
+>
 
 // implementation, close to no-op
 /*! #__NO_SIDE_EFFECTS__ */
