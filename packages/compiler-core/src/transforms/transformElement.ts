@@ -52,6 +52,7 @@ import {
 import {
   findProp,
   isCoreComponent,
+  isSimpleIdentifier,
   isStaticArgOf,
   isStaticExp,
   toValidAssetId,
@@ -898,7 +899,6 @@ export function buildDirectiveArgs(
       dirArgs.push(toValidAssetId(dir.name, `directive`))
     }
   }
-  const { loc } = dir
   if (dir.exp) dirArgs.push(dir.exp)
   if (dir.arg) {
     if (!dir.exp) {
@@ -913,53 +913,73 @@ export function buildDirectiveArgs(
       }
       dirArgs.push(`void 0`)
     }
+    dirArgs.push(transformModifiers(dir))
+  }
+  return createArrayExpression(dirArgs, dir.loc)
+}
 
-    const trueExpression = createSimpleExpression(`true`, false, loc)
+export function transformModifiers(dir: DirectiveNode): Property['value'] {
+  const trueExpression = createSimpleExpression(
+    `true`,
+    false,
+    dir.loc,
+    ConstantTypes.CAN_CACHE,
+  )
 
-    const staticMods: ExpressionNode[] = []
-    const callArgs: (ObjectExpression | ExpressionNode)[] = []
+  const staticMods: ExpressionNode[] = []
+  const callArgs: (ObjectExpression | ExpressionNode)[] = []
 
-    for (let i = 0; i < dir.modifiers.length; i++) {
-      const modifier = dir.modifiers[i]
+  for (let i = 0; i < dir.modifiers.length; i++) {
+    const modifier = dir.modifiers[i] as SimpleExpressionNode
+    const isStatic = modifier.isStatic
 
-      if ((modifier as SimpleExpressionNode).isStatic) {
-        staticMods.push(modifier)
-      } else {
-        // Object expression must be first to avoid null or undefined
-        if (staticMods.length || i === 0) {
-          callArgs.push(
-            createObjectExpression(
-              staticMods.map(modifier =>
-                createObjectProperty(modifier, trueExpression),
-              ),
-              loc,
-            ),
-          )
-          staticMods.length = 0
-        }
-
-        callArgs.push(modifier)
-      }
+    if (isStatic) {
+      staticMods.push(modifier)
     }
 
-    if (staticMods.length) {
+    // Collect all static expressions into a single object
+    // This must also happen when we hit the last element in the array
+    // And it also must ensure that an object always comes first in callArgs
+    if (
+      (!isStatic && (staticMods.length || i === 0)) ||
+      (isStatic && i === dir.modifiers.length - 1)
+    ) {
       callArgs.push(
         createObjectExpression(
           staticMods.map(modifier =>
             createObjectProperty(modifier, trueExpression),
           ),
-          loc,
+          dir.loc,
         ),
       )
     }
 
-    if (callArgs.length === 1) {
-      dirArgs.push(callArgs[0])
-    } else {
-      dirArgs.push(createCallExpression('Object.assign', callArgs))
+    if (!isStatic) {
+      callArgs.push(modifier)
+      // We only reset the array on hitting a dynamic modifier so we can check its length
+      // after the loop has finished
+      staticMods.length = 0
     }
   }
-  return createArrayExpression(dirArgs, dir.loc)
+
+  // Only static mods were passed. Use simple expression to avoid adding modelModidifiers to dynamic prop keys
+  if (staticMods.length === dir.modifiers.length) {
+    const modifiers = staticMods
+      .map(m => (m as SimpleExpressionNode).content)
+      .map(m => (isSimpleIdentifier(m) ? m : JSON.stringify(m)) + `: true`)
+      .join(`, `)
+
+    return createSimpleExpression(
+      `{ ${modifiers} }`,
+      false,
+      dir.loc,
+      ConstantTypes.CAN_CACHE,
+    )
+  }
+
+  return callArgs.length !== 1
+    ? createCallExpression('Object.assign', callArgs)
+    : callArgs[0]
 }
 
 function stringifyDynamicPropNames(props: string[]): string {

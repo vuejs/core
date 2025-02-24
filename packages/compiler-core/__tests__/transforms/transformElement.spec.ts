@@ -709,35 +709,8 @@ describe('compiler: element transform', () => {
               },
               // modifiers
               {
-                type: NodeTypes.JS_OBJECT_EXPRESSION,
-                properties: [
-                  {
-                    type: NodeTypes.JS_PROPERTY,
-                    key: {
-                      type: NodeTypes.SIMPLE_EXPRESSION,
-                      content: `mod`,
-                      isStatic: true,
-                    },
-                    value: {
-                      type: NodeTypes.SIMPLE_EXPRESSION,
-                      content: `true`,
-                      isStatic: false,
-                    },
-                  },
-                  {
-                    type: NodeTypes.JS_PROPERTY,
-                    key: {
-                      type: NodeTypes.SIMPLE_EXPRESSION,
-                      content: `mad`,
-                      isStatic: true,
-                    },
-                    value: {
-                      type: NodeTypes.SIMPLE_EXPRESSION,
-                      content: `true`,
-                      isStatic: false,
-                    },
-                  },
-                ],
+                type: NodeTypes.SIMPLE_EXPRESSION,
+                content: '{ mod: true, mad: true }',
               },
             ],
           },
