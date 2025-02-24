@@ -486,8 +486,14 @@ function propertyToRef(
 export interface RefUnwrapBailTypes {}
 
 export type ShallowUnwrapRef<T> = {
-  [K in keyof T]: DistributeRef<T[K]>
+  readonly [K in keyof Pick<T, ReadonlyKeys<T>>]: DistributeRef<T[K]>
+} & {
+  [K in keyof Omit<T, ReadonlyKeys<T>>]: DistributeRef<T[K]>
 }
+
+type ReadonlyKeys<O> = {
+  [K in keyof O]: O[K] extends Readonly<any> ? K : never
+}[keyof O]
 
 type DistributeRef<T> = T extends Ref<infer V, unknown> ? V : T
 
