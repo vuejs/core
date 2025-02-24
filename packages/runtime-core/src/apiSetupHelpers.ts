@@ -30,7 +30,14 @@ import type {
 import { warn } from './warning'
 import type { SlotsType, StrictUnwrapSlotsType } from './componentSlots'
 import type { Ref } from '@vue/reactivity'
-import type { CreateComponentPublicInstanceWithMixins } from './componentPublicInstance'
+import type {
+  ComponentPublicInstance,
+  EnsureNonVoid,
+  ExtractMixinComputed,
+  ExtractMixinData,
+  ExtractMixinMethods,
+  ExtractMixinSetupBindings,
+} from './componentPublicInstance'
 
 // dev only
 const warnRuntimeUsage = (method: string) =>
@@ -189,19 +196,20 @@ export function defineExpose<
  * @see {@link https://vuejs.org/api/sfc-script-setup.html#defineoptions}
  */
 export function defineOptions<
+  RawBindings = {},
   D = {},
   C extends ComputedOptions = {},
   M extends MethodOptions = {},
   Mixin = {},
   Extends = {},
-  DataVM = CreateComponentPublicInstanceWithMixins<
+  InternalInstance = ComponentPublicInstance<
     {},
-    {},
-    {},
-    {},
-    MethodOptions,
-    Mixin,
-    Extends
+    ExtractMixinSetupBindings<Mixin> &
+      ExtractMixinSetupBindings<Extends> &
+      RawBindings,
+    ExtractMixinData<Mixin> & ExtractMixinData<Extends> & EnsureNonVoid<D>,
+    ExtractMixinComputed<Mixin> & ExtractMixinComputed<Extends> & C,
+    ExtractMixinMethods<Mixin> & ExtractMixinMethods<Extends> & M
   >,
 >(
   options?: {
@@ -209,7 +217,7 @@ export function defineOptions<
     methods?: M
     mixins?: Mixin[]
     extends?: Extends
-    data?: (this: DataVM, vm: DataVM) => D
+    data?: (vm: NoInfer<InternalInstance>) => D
     /**
      * setup should be defined via `<script setup>`.
      */
@@ -230,7 +238,12 @@ export function defineOptions<
      * slots should be defined via defineSlots().
      */
     slots?: never
-  } & ComponentStaticOptions,
+  } & ComponentStaticOptions &
+    ThisType<
+      NoInfer<InternalInstance> & {
+        $options: typeof options
+      }
+    >,
 ): void {
   if (__DEV__) {
     warnRuntimeUsage(`defineOptions`)
