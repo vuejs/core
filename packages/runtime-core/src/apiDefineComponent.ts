@@ -132,6 +132,9 @@ type InferComponentOptions<
     __typeEl?: infer TypeEl
   }
     ? {
+        components?: GlobalComponents
+        directives?: GlobalDirectives
+
         /**
          * #3468
          *
@@ -411,8 +414,8 @@ export function defineComponent<
   {
     props?: PropsOptions
     emits?: string[] extends RuntimeEmitsOptions ? {} : RuntimeEmitsOptions
-    components?: LocalComponents & GlobalComponents
-    directives?: Directives & GlobalDirectives
+    components?: LocalComponents
+    directives?: Directives
     slots?: Slots
     expose?: Exposed[]
     computed?: Computed
