@@ -1,4 +1,4 @@
-import { type LooseRequired, extend, isFunction } from '@vue/shared'
+import { IfAny, type LooseRequired, extend, isFunction } from '@vue/shared'
 import type { ComponentTypeEmits } from './apiSetupHelpers'
 import type {
   AllowedComponentProps,
@@ -77,16 +77,12 @@ export type DefineComponent<
   MakeDefaultsOptional extends boolean = true,
   TypeRefs extends Record<string, unknown> = {},
   TypeEl extends Element = any,
-> = OptionsOrPropsOrPropOptions extends {
-  props?: any
-  __typeProps?: infer TypeProps
-}
-  ? InferComponentOptions<
-      OptionsOrPropsOrPropOptions,
-      // MakeDefaultsOptional - if TypeProps is provided, set to false to use
-      // user props types verbatim
-      unknown extends TypeProps ? true : false
-    >
+> = 'props' extends keyof IfAny<
+  OptionsOrPropsOrPropOptions,
+  {},
+  OptionsOrPropsOrPropOptions
+>
+  ? InferComponentOptions<OptionsOrPropsOrPropOptions, unknown>
   : InferComponentOptions<
       {
         props?: OptionsOrPropsOrPropOptions extends ComponentPropsOptions
@@ -116,7 +112,7 @@ export type DefineComponent<
 
 type InferComponentOptions<
   T,
-  MakeDefaultsOptional extends boolean,
+  MakeDefaultsOptional extends boolean | unknown,
   Defaults = {},
 > = T &
   (T extends {
@@ -196,13 +192,20 @@ type InferComponentOptions<
               : {}) &
             TypeEmitsToOptions<TypeEmits & {}>,
           PublicProps,
-          Defaults &
-            ExtractDefaultPropTypes<
-              ExtractMixinProps<Mixin> &
-                ExtractMixinProps<Extends> &
-                PropsOptions
-            >,
-          MakeDefaultsOptional,
+          MakeDefaultsOptional extends boolean
+            ? Defaults
+            : ExtractDefaultPropTypes<
+                ExtractMixinProps<Mixin> &
+                  ExtractMixinProps<Extends> &
+                  PropsOptions
+              >,
+          MakeDefaultsOptional extends boolean
+            ? MakeDefaultsOptional
+            : // MakeDefaultsOptional - if TypeProps is provided, set to false to use
+              // user props types verbatim
+              unknown extends TypeProps
+              ? true
+              : false,
           {},
           {}, // InjectOptions
           Slots & {},
