@@ -98,8 +98,8 @@ export type DefineComponent<
         directives?: Directives & GlobalDirectives
         expose?: Exposed[]
         provide?: Provide
-        setup?: () => RawBindings
-        data?: () => D
+        setup?: (props: any, ctx: SetupContext) => RawBindings
+        data?: (vm: any) => D
         __typeProps?: OptionsOrPropsOrPropOptions extends ComponentPropsOptions
           ? unknown
           : OptionsOrPropsOrPropOptions
@@ -124,8 +124,8 @@ type InferComponentOptions<
     methods?: infer Methods
     mixins?: (infer Mixin)[]
     extends?: infer Extends
-    setup?(): infer SetupBindings
-    data?(): infer Data
+    setup?(props: any, ctx: any): infer SetupBindings
+    data?(vm: any): infer Data
     __typeProps?: infer TypeProps
     __typeEmits?: infer TypeEmits
     __typeRefs?: infer TypeRefs
@@ -141,6 +141,10 @@ type InferComponentOptions<
          * because the `__differentiator` will be different
          */
         __differentiator?: keyof Data | keyof Computed | keyof Methods
+
+        // allow any custom options
+        [key: string]: any
+
         new (...args: any[]): ComponentPublicInstance<
           Readonly<
             ExtractPropTypes<
