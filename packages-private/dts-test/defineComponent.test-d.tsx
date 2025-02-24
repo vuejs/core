@@ -191,7 +191,7 @@ describe('with object props', () => {
         f: reactive({
           g: ref('hello' as GT),
         }),
-        m: readonly(ref(1))
+        m: readonly(ref(1)),
       }
     },
     provide() {
