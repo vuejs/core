@@ -105,7 +105,6 @@ export type RenderFunction = () => VNodeChild
 
 export type ComponentStaticOptions = Omit<
   ComponentOptionsBase<{}, {}, {}, {}, {}, {}, {}, {}>,
-  | 'props'
   | 'emits'
   | 'components'
   | 'directives'
@@ -119,6 +118,7 @@ export type ComponentStaticOptions = Omit<
   | 'extends'
   | 'setup'
   | 'data'
+  | '__differentiator'
 >
 
 export interface ComponentOptionsBase<
@@ -439,15 +439,15 @@ interface LegacyOptions<
    */
   delimiters?: [string, string]
 
-  // /**
-  //  * #3468
-  //  *
-  //  * type-only, used to assist Mixin's type inference,
-  //  * typescript will try to simplify the inferred `Mixin` type,
-  //  * with the `__differentiator`, typescript won't be able to combine different mixins,
-  //  * because the `__differentiator` will be different
-  //  */
-  // __differentiator?: keyof D | keyof C | keyof M
+  /**
+   * #3468
+   *
+   * type-only, used to assist Mixin's type inference,
+   * typescript will try to simplify the inferred `Mixin` type,
+   * with the `__differentiator`, typescript won't be able to combine different mixins,
+   * because the `__differentiator` will be different
+   */
+  __differentiator?: keyof D | keyof C | keyof M
 }
 
 type MergedHook<T = () => void> = T | T[]
