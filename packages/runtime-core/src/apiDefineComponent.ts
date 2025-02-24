@@ -100,8 +100,8 @@ export type DefineComponent<
         directives?: Directives & GlobalDirectives
         expose?: Exposed[]
         provide?: Provide
-        setup?: (props: any, ctx: SetupContext) => RawBindings
-        data?: (vm: any) => D
+        setup?: (props: any, ctx: SetupContext) => RawBindings & {}
+        data?: (vm: any) => D & {}
         __typeProps?: OptionsOrPropsOrPropOptions extends ComponentPropsOptions
           ? unknown
           : OptionsOrPropsOrPropOptions
