@@ -274,6 +274,7 @@ export type {
 } from './apiDefineComponent'
 export type {
   ComponentOptions,
+  ComponentOptionsMixin,
   ComponentCustomOptions,
   ComponentOptionsBase,
   ComponentProvideOptions,
