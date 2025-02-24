@@ -299,7 +299,7 @@ export type {
   ExtractMixinProps,
   ComponentPublicInstance,
   ComponentCustomProperties,
-  // CreateComponentPublicInstance,
+  CreateComponentPublicInstance,
   CreateComponentPublicInstanceWithMixins,
 } from './componentPublicInstance'
 export type {
