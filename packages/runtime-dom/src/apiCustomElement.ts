@@ -41,7 +41,7 @@ import {
   isPlainObject,
   toNumber,
 } from '@vue/shared'
-import { createApp, createSSRApp, render } from '.'
+import { type ComponentOptionsMixin, createApp, createSSRApp, render } from '.'
 
 // marker for attr removal
 const REMOVAL = {}
@@ -87,8 +87,8 @@ export function defineCustomElement<
   SetupBindings = {},
   Computed extends ComputedOptions = {},
   Methods extends MethodOptions = {},
-  Mixin = {},
-  Extends = {},
+  Mixin extends ComponentOptionsMixin = {},
+  Extends extends ComponentOptionsMixin = {},
   InjectOptions extends ComponentInjectOptions = {},
   Slots extends SlotsType = {},
   LocalComponents extends Record<string, Component> = {},

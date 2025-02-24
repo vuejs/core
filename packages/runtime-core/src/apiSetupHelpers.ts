@@ -17,6 +17,7 @@ import {
 } from './component'
 import type { EmitFn, EmitsOptions, ObjectEmitsOptions } from './componentEmits'
 import type {
+  ComponentOptionsMixin,
   ComputedOptions,
   ConcreteComponentOptions,
   MethodOptions,
@@ -200,8 +201,8 @@ export function defineOptions<
   D = {},
   C extends ComputedOptions = {},
   M extends MethodOptions = {},
-  Mixin = {},
-  Extends = {},
+  Mixin extends ComponentOptionsMixin = {},
+  Extends extends ComponentOptionsMixin = {},
   InternalInstance = ComponentPublicInstance<
     {},
     ExtractMixinSetupBindings<Mixin> &

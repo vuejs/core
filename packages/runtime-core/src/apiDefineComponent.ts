@@ -17,6 +17,7 @@ import type {
 import type {
   ComponentInjectOptions,
   ComponentOptions,
+  ComponentOptionsMixin,
   ComponentProvideOptions,
   ComputedOptions,
   ConcreteComponentOptions,
@@ -62,10 +63,10 @@ export type DefineComponent<
   D = {},
   C extends ComputedOptions = ComputedOptions,
   M extends MethodOptions = MethodOptions,
-  Mixin = {},
-  Extends = {},
+  Mixin extends ComponentOptionsMixin = {},
+  Extends extends ComponentOptionsMixin = {},
   E extends EmitsOptions = {},
-  _EE extends string = string,
+  EE extends string = string,
   _PP = PublicProps,
   _Props = ResolveProps<OptionsOrPropsOrPropOptions, E>,
   Defaults = ExtractDefaultPropTypes<OptionsOrPropsOrPropOptions>,
@@ -88,6 +89,7 @@ export type DefineComponent<
         props?: OptionsOrPropsOrPropOptions extends ComponentPropsOptions
           ? OptionsOrPropsOrPropOptions
           : {}
+        emits?: string extends EE ? E : EE[]
         computed?: C
         methods?: M
         mixins?: Mixin[]
@@ -306,8 +308,8 @@ export function defineComponent<
   SetupBindings = {},
   Computed extends ComputedOptions = {},
   Methods extends MethodOptions = {},
-  Mixin = {},
-  Extends = {},
+  Mixin extends ComponentOptionsMixin = {},
+  Extends extends ComponentOptionsMixin = {},
   Slots extends SlotsType = {},
   LocalComponents extends Record<string, Component> = {},
   Directives extends Record<string, Directive> = {},
