@@ -68,19 +68,27 @@ export type DefineComponent<
   _EE extends string = string,
   _PP = PublicProps,
   _Props = ResolveProps<OptionsOrPropsOrPropOptions, E>,
-  _Defaults = ExtractDefaultPropTypes<OptionsOrPropsOrPropOptions>,
+  Defaults = ExtractDefaultPropTypes<OptionsOrPropsOrPropOptions>,
   S extends SlotsType = {},
   LC extends Record<string, Component> = {},
   Directives extends Record<string, Directive> = {},
   Exposed extends string = string,
   Provide extends ComponentProvideOptions = ComponentProvideOptions,
-  _MakeDefaultsOptional extends boolean = true,
+  MakeDefaultsOptional extends boolean = true,
   TypeRefs extends Record<string, unknown> = {},
   TypeEl extends Element = any,
-> = InferComponentOptions<
-  OptionsOrPropsOrPropOptions extends { props?: any }
-    ? OptionsOrPropsOrPropOptions
-    : {
+> = OptionsOrPropsOrPropOptions extends {
+  props?: any
+  __typeProps?: infer TypeProps
+}
+  ? InferComponentOptions<
+      OptionsOrPropsOrPropOptions,
+      // MakeDefaultsOptional - if TypeProps is provided, set to false to use
+      // user props types verbatim
+      unknown extends TypeProps ? true : false
+    >
+  : InferComponentOptions<
+      {
         props?: OptionsOrPropsOrPropOptions extends ComponentPropsOptions
           ? OptionsOrPropsOrPropOptions
           : {}
@@ -101,10 +109,16 @@ export type DefineComponent<
           : OptionsOrPropsOrPropOptions
         __typeRefs?: TypeRefs
         __typeEl?: TypeEl
-      }
->
+      },
+      MakeDefaultsOptional,
+      Defaults
+    >
 
-type InferComponentOptions<T> = T &
+type InferComponentOptions<
+  T,
+  MakeDefaultsOptional extends boolean,
+  Defaults = {},
+> = T &
   (T extends {
     props?: infer PropsOptions
     emits?: infer RuntimeEmitsOptions
@@ -182,12 +196,13 @@ type InferComponentOptions<T> = T &
               : {}) &
             TypeEmitsToOptions<TypeEmits & {}>,
           PublicProps,
-          ExtractDefaultPropTypes<
-            ExtractMixinProps<Mixin> & ExtractMixinProps<Extends> & PropsOptions
-          >,
-          // MakeDefaultsOptional - if TypeProps is provided, set to false to use
-          // user props types verbatim
-          unknown extends TypeProps ? true : false,
+          Defaults &
+            ExtractDefaultPropTypes<
+              ExtractMixinProps<Mixin> &
+                ExtractMixinProps<Extends> &
+                PropsOptions
+            >,
+          MakeDefaultsOptional,
           {},
           {}, // InjectOptions
           Slots & {},
