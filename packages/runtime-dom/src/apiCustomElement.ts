@@ -105,7 +105,9 @@ export function defineCustomElement<
     : ExtractPropTypes<RuntimePropsOptions>,
   ResolvedProps = InferredProps & EmitsToProps<RuntimeEmitsOptions>,
   PublicP = ResolvedProps &
-    Prettify<ExtractMixinProps<Mixin> & ExtractMixinProps<Extends>>,
+    Prettify<
+      ExtractPropTypes<ExtractMixinProps<Mixin> & ExtractMixinProps<Extends>>
+    >,
   InternalInstance = CreateComponentPublicInstanceWithMixins<
     Readonly<ResolvedProps>,
     SetupBindings,

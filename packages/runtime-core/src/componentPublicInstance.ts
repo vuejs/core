@@ -52,6 +52,7 @@ import { currentRenderingInstance } from './componentRenderContext'
 import { warn } from './warning'
 import { installCompatInstanceProperties } from './compat/instance'
 import type { Directive } from './directives'
+import type { ExtractPropTypes } from './componentProps'
 
 /**
  * Custom properties added to component instances in any way and can be accessed through `this`
@@ -139,7 +140,10 @@ export type CreateComponentPublicInstance<
   MakeDefaultsOptional extends boolean = false,
   I extends ComponentInjectOptions = {},
   S extends SlotsType = {},
-  PublicP = ExtractMixinProps<Mixin> & ExtractMixinProps<Extends> & P,
+  PublicP = ExtractPropTypes<
+    ExtractMixinProps<Mixin> & ExtractMixinProps<Extends>
+  > &
+    P,
   PublicB = ExtractMixinSetupBindings<Mixin> &
     ExtractMixinSetupBindings<Extends> &
     EnsureNonVoid<B>,
@@ -210,7 +214,10 @@ export type CreateComponentPublicInstanceWithMixins<
   TypeEl extends Element = any,
   Provide extends ComponentProvideOptions = ComponentProvideOptions,
   // mixin inference
-  PublicP = ExtractMixinProps<Mixin> & ExtractMixinProps<Extends> & P,
+  PublicP = ExtractPropTypes<
+    ExtractMixinProps<Mixin> & ExtractMixinProps<Extends>
+  > &
+    P,
   PublicB = ExtractMixinSetupBindings<Mixin> &
     ExtractMixinSetupBindings<Extends> &
     EnsureNonVoid<B>,

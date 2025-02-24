@@ -147,7 +147,12 @@ export interface ComponentOptionsBase<
   setup?: (
     this: void,
     props: LooseRequired<
-      Props & Prettify<ExtractMixinProps<Mixin> & ExtractMixinProps<Extends>>
+      Props &
+        Prettify<
+          ExtractPropTypes<
+            ExtractMixinProps<Mixin> & ExtractMixinProps<Extends>
+          >
+        >
     >,
     ctx: SetupContext<E, S>,
   ) => Promise<RawBindings> | RawBindings | RenderFunction | void
