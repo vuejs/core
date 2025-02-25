@@ -127,6 +127,27 @@ describe('component: props', () => {
     expect(props).toBe(attrs)
   })
 
+  test('functional defineVaporComponent without declaration', () => {
+    let props: any
+    let attrs: any
+
+    const { render } = define(
+      defineVaporComponent((_props: any, { attrs: _attrs }: any) => {
+        props = _props
+        attrs = _attrs
+        return []
+      }),
+    )
+
+    render({ foo: () => 1 })
+    expect(props).toEqual({})
+    expect(attrs).toEqual({ foo: 1 })
+
+    render({ bar: () => 2 })
+    expect(props).toEqual({})
+    expect(attrs).toEqual({ bar: 2 })
+  })
+
   test('boolean casting', () => {
     let props: any
     const { render } = define({
