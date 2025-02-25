@@ -277,7 +277,6 @@ export type {
   ComponentOptionsMixin,
   ComponentCustomOptions,
   ComponentOptionsBase,
-  ComponentOptionsBase2,
   ComponentProvideOptions,
   RenderFunction,
   MethodOptions,

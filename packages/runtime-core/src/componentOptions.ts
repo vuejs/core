@@ -64,7 +64,6 @@ import type { Directive } from './directives'
 import {
   type ComponentPublicInstance,
   type CreateComponentPublicInstanceWithMixins,
-  type ExtractMixinProps,
   isReservedPrefix,
 } from './componentPublicInstance'
 import { warn } from './warning'
@@ -115,60 +114,24 @@ export interface ComponentOptionsBase<
   Mixin extends ComponentOptionsMixin,
   Extends extends ComponentOptionsMixin,
   E extends EmitsOptions,
-  _EE extends string = never,
-  _Defaults = never,
+  _EE extends string = string,
+  _Defaults = {},
   I extends ComponentInjectOptions = {},
-  _II extends string = never,
+  _II extends string = string,
   S extends SlotsType = {},
   LC extends Record<string, Component> = {},
   Directives extends Record<string, Directive> = {},
   Exposed extends string = string,
   Provide extends ComponentProvideOptions = ComponentProvideOptions,
-> extends ComponentOptionsBase2<
-    Props &
-      Prettify<
-        ExtractPropTypes<ExtractMixinProps<Mixin> & ExtractMixinProps<Extends>>
-      >,
-    RawBindings,
-    D,
-    C,
-    M,
+  InternalInstance = CreateComponentPublicInstanceWithMixins<
+    Props,
+    {},
+    {},
+    {},
+    MethodOptions,
     Mixin,
-    Extends,
-    E,
-    I,
-    S,
-    LC,
-    Directives,
-    Exposed,
-    Provide,
-    CreateComponentPublicInstanceWithMixins<
-      Props,
-      {},
-      {},
-      {},
-      MethodOptions,
-      Mixin,
-      Extends
-    >
-  > {}
-
-export interface ComponentOptionsBase2<
-  Props,
-  RawBindings,
-  D,
-  C extends ComputedOptions,
-  M extends MethodOptions,
-  Mixin extends ComponentOptionsMixin,
-  Extends extends ComponentOptionsMixin,
-  E extends EmitsOptions,
-  I extends ComponentInjectOptions = {},
-  S extends SlotsType = {},
-  LC extends Record<string, Component> = {},
-  Directives extends Record<string, Directive> = {},
-  Exposed extends string = string,
-  Provide extends ComponentProvideOptions = ComponentProvideOptions,
-  InternalInstance = any,
+    Extends
+  >,
 > extends LegacyOptions<InternalInstance, D, C, M, Mixin, Extends, I, Provide>,
     ComponentInternalOptions,
     ComponentCustomOptions {

@@ -6,7 +6,7 @@ import {
   type ComponentInternalInstance,
   type ComponentObjectPropsOptions,
   type ComponentOptions,
-  type ComponentOptionsBase2,
+  type ComponentOptionsBase,
   type ComponentProvideOptions,
   type ComputedOptions,
   type ConcreteComponent,
@@ -132,7 +132,7 @@ export function defineCustomElement<
       | ComponentObjectPropsOptions
       | (RuntimePropsOptions & ThisType<void>)
       | _PropsKeys[]
-  } & ComponentOptionsBase2<
+  } & ComponentOptionsBase<
       InferredProps,
       SetupBindings,
       Data,
@@ -143,7 +143,10 @@ export function defineCustomElement<
       | ObjectEmitsOptions
       | (RuntimeEmitsOptions & ThisType<void>)
       | _EmitsKeys[],
+      never,
+      never,
       ObjectInjectOptions | InjectOptions | _InjectKeys[],
+      never,
       Slots,
       LocalComponents,
       Directives,
