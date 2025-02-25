@@ -76,7 +76,7 @@ export type DefineComponent<
   MakeDefaultsOptional extends boolean = true,
   TypeRefs extends Record<string, unknown> = {},
   TypeEl extends Element = any,
-> = OptionsOrPropsOrPropOptions extends {
+> = {} /* use `{} &` to avoid serialization */ & (OptionsOrPropsOrPropOptions extends {
   props?: infer PropsOptions
   emits?: infer RuntimeEmitsOptions
   slots?: infer Slots
@@ -92,7 +92,7 @@ export type DefineComponent<
   __typeRefs?: infer TypeRefs
   __typeEl?: infer TypeEl extends Element
 }
-  ? Omit<OptionsOrPropsOrPropOptions, 'data' | 'setup'> & {
+  ? OptionsOrPropsOrPropOptions & {
       components?: GlobalComponents
       directives?: GlobalDirectives
     } & ComponentOptionsBase<
@@ -181,7 +181,7 @@ export type DefineComponent<
         Exposed,
         MakeDefaultsOptional,
         Defaults
-      >
+      >)
 
 export interface InferComponentOptions<
   TypeProps,
@@ -473,8 +473,8 @@ export function defineComponent<
     inject?: InjectOptions
     mixins?: Mixin[]
     extends?: Extends
-    setup?(): SetupBindings
-    data?(): Data
+    setup?(props: any, ctx: any): SetupBindings
+    data?(vm: any): Data
     __typeProps?: TypeProps
     __typeEmits?: TypeEmits
     __typeRefs?: TypeRefs
