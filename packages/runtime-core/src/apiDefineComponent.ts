@@ -381,10 +381,7 @@ export function defineComponent<
   >,
 >(
   options: {
-    props?:
-      | ComponentObjectPropsOptions
-      | (PropsOptions & ThisType<void>)
-      | _PropsKeys[]
+    props?: ComponentObjectPropsOptions | PropsOptions | _PropsKeys[]
     emits?:
       | ObjectEmitsOptions
       | (RuntimeEmitsOptions & ThisType<void>)

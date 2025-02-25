@@ -321,11 +321,9 @@ describe('with object props', () => {
       myProp: {
         type: Number,
         validator(val: unknown): boolean {
-          // @ts-expect-error
           return val !== this.otherProp
         },
         default(): number {
-          // @ts-expect-error
           return this.otherProp + 1
         },
       },
