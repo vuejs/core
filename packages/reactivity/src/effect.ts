@@ -316,10 +316,11 @@ function cleanupDeps(sub: Subscriber) {
   let link = tail
   while (link) {
     const prev = link.prevDep
-    if (link.version === -1) {
+    const isPermanentDep = link.dep.permanent
+    if (link.version === -1 && !isPermanentDep) {
       if (link === tail) tail = prev
       // unused - remove it from the dep's subscribing effect list
-      removeSub(link)
+      removeSub(link, isPermanentDep)
       // also remove it from this effect's dep list
       removeDep(link)
     } else {

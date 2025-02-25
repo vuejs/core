@@ -1,6 +1,6 @@
 import { extend, isArray, isIntegerKey, isMap, isSymbol } from '@vue/shared'
 import type { ComputedRefImpl } from './computed'
-import { type TrackOpTypes, TriggerOpTypes } from './constants'
+import { TrackOpTypes, TriggerOpTypes } from './constants'
 import {
   type DebuggerEventExtraInfo,
   EffectFlags,
@@ -92,6 +92,12 @@ export class Dep {
    * Subscriber counter
    */
   sc: number = 0
+
+  /**
+   * Indicates whether this Dep instance can be deleted
+   * When set to true, the Dep should be preserved
+   */
+  permanent: boolean = false
 
   constructor(public computed?: ComputedRefImpl | undefined) {
     if (__DEV__) {
@@ -264,6 +270,10 @@ export function track(target: object, type: TrackOpTypes, key: unknown): void {
       depsMap.set(key, (dep = new Dep()))
       dep.map = depsMap
       dep.key = key
+
+      if (type === TrackOpTypes.HAS) {
+        dep.permanent = true
+      }
     }
     if (__DEV__) {
       dep.track({

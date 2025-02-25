@@ -199,7 +199,7 @@ class MutableReactiveHandler extends BaseReactiveHandler {
 
   has(target: Record<string | symbol, unknown>, key: string | symbol): boolean {
     const result = Reflect.has(target, key)
-    if (!isSymbol(key) || !builtInSymbols.has(key)) {
+    if (result && (!isSymbol(key) || !builtInSymbols.has(key))) {
       track(target, TrackOpTypes.HAS, key)
     }
     return result
