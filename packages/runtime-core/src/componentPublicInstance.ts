@@ -86,7 +86,7 @@ export type ExtractMixinProps<T> = UnionToIntersection<
   T extends { props?: infer P }
     ? P extends (infer K extends string)[]
       ? { [key in K]: null }
-      : NonNullable<P>
+      : P
     : {}
 >
 
@@ -94,16 +94,16 @@ export type ExtractMixinEmits<T> = UnionToIntersection<
   T extends { emits?: infer E }
     ? E extends (infer K extends string)[]
       ? { [key in K]: (...args: any) => any }
-      : NonNullable<E>
+      : E
     : {}
 >
 
 export type ExtractMixinMethods<T> = UnionToIntersection<
-  T extends { methods?: infer M } ? NonNullable<M> : {}
+  T extends { methods?: infer M } ? M : {}
 >
 
 export type ExtractMixinComputed<T> = UnionToIntersection<
-  T extends { computed?: infer C } ? NonNullable<C> : {}
+  T extends { computed?: infer C } ? C : {}
 >
 
 export type ExtractMixinData<T> = UnionToIntersection<
