@@ -56,18 +56,18 @@ type NormalizePropsOptions<T> = ComponentPropsOptions extends T ? {} : T
 type NormalizeEmitsOptions<T> = EmitsOptions extends T ? {} : T
 
 export type DefineComponent<
-  OptionsOrPropsOrPropOptions = {},
+  PropsOrPropOptions = [{}, unknown],
   RawBindings = {},
   D = {},
   C extends ComputedOptions = ComputedOptions,
   M extends MethodOptions = MethodOptions,
   Mixin extends ComponentOptionsMixin = {},
   Extends extends ComponentOptionsMixin = {},
-  E extends EmitsOptions = {},
+  E extends EmitsOptions | [EmitsOptions, any] = [{}, unknown],
   EE extends string = string,
   PP = never,
   Props = never,
-  Defaults = ExtractDefaultPropTypes<OptionsOrPropsOrPropOptions>,
+  Defaults = never,
   S extends SlotsType = {},
   LC extends Record<string, Component> = {},
   Directives extends Record<string, Directive> = {},
@@ -76,114 +76,52 @@ export type DefineComponent<
   MakeDefaultsOptional extends boolean = true,
   TypeRefs extends Record<string, unknown> = {},
   TypeEl extends Element = any,
-> = {} /* use `{} &` to avoid serialization */ & (OptionsOrPropsOrPropOptions extends {
-  props?: infer PropsOptions
-  emits?: infer RuntimeEmitsOptions
-  slots?: infer Slots
-  expose?: (infer Exposed)[]
-  computed?: infer Computed
-  methods?: infer Methods
-  mixins?: (infer Mixin)[]
-  extends?: infer Extends
-  setup?(props: any, ctx: any): infer SetupBindings
-  data?(vm: any): infer Data
-  __typeProps?: infer TypeProps
-  __typeEmits?: infer TypeEmits
-  __typeRefs?: infer TypeRefs
-  __typeEl?: infer TypeEl extends Element
-}
-  ? OptionsOrPropsOrPropOptions & {
-      components?: GlobalComponents
-      directives?: GlobalDirectives
-    } & ComponentOptionsBase<
-        {},
-        SetupBindings,
-        Data,
-        {},
-        {},
-        {},
-        {},
-        {},
-        string,
-        {},
-        {},
-        string,
-        {},
-        {},
-        {},
-        string,
-        {},
-        any
-      > &
-      InferComponentOptions<
-        TypeProps,
-        TypeEmits,
-        TypeRefs & {},
-        TypeEl,
-        PropsOptions & {},
-        RuntimeEmitsOptions & {},
-        Data & {},
-        SetupBindings,
-        Computed & {},
-        Methods & {},
-        Mixin & {},
-        Extends & {},
-        Slots & {},
-        Exposed & string,
-        // MakeDefaultsOptional - if TypeProps is provided, set to false to use
-        // user props types verbatim
-        unknown extends TypeProps ? true : false,
-        ExtractDefaultPropTypes<
-          ExtractMixinProps<Mixin> & ExtractMixinProps<Extends> & PropsOptions
-        >
-      >
-  : {
-      props?: OptionsOrPropsOrPropOptions extends ComponentPropsOptions
+> = ComponentOptionsBase<
+  any,
+  RawBindings,
+  D,
+  C,
+  M,
+  Mixin,
+  Extends,
+  E,
+  never,
+  never,
+  {},
+  never,
+  S,
+  LC & GlobalComponents,
+  Directives & GlobalDirectives,
+  Exposed,
+  Provide
+> &
+  InferDefineComponentoptions<
+    PropsOrPropOptions extends any[]
+      ? PropsOrPropOptions[1]
+      : PropsOrPropOptions extends ComponentPropsOptions
         ? unknown
-        : OptionsOrPropsOrPropOptions
-    } & ComponentOptionsBase<
-      any,
-      RawBindings,
-      D,
-      C,
-      M,
-      Mixin,
-      Extends,
-      E,
-      never,
-      never,
-      {},
-      never,
-      S,
-      LC & GlobalComponents,
-      Directives & GlobalDirectives,
-      Exposed,
-      Provide
-    > &
-      InferComponentOptions<
-        OptionsOrPropsOrPropOptions extends ComponentPropsOptions
-          ? unknown
-          : OptionsOrPropsOrPropOptions,
-        {},
-        TypeRefs,
-        TypeEl,
-        OptionsOrPropsOrPropOptions extends ComponentPropsOptions
-          ? NormalizePropsOptions<OptionsOrPropsOrPropOptions>
-          : {},
-        string extends EE ? NormalizeEmitsOptions<E> : EE[],
-        D & {},
-        RawBindings,
-        C,
-        M,
-        Mixin,
-        Extends,
-        S,
-        Exposed,
-        MakeDefaultsOptional,
-        Defaults
-      >)
+        : PropsOrPropOptions,
+    E extends any[] ? E[1] : unknown,
+    TypeRefs,
+    TypeEl,
+    PropsOrPropOptions extends any[]
+      ? PropsOrPropOptions[0]
+      : PropsOrPropOptions extends ComponentPropsOptions
+        ? PropsOrPropOptions
+        : {},
+    E extends any[] ? E[0] : E,
+    D & {},
+    RawBindings,
+    C,
+    M,
+    Mixin,
+    Extends,
+    S,
+    Exposed,
+    MakeDefaultsOptional
+  >
 
-export interface InferComponentOptions<
+export interface InferDefineComponentoptions<
   TypeProps,
   TypeEmits extends ComponentTypeEmits | unknown,
   TypeRefs extends Record<string, unknown>,
@@ -199,8 +137,10 @@ export interface InferComponentOptions<
   Slots extends SlotsType,
   Exposed extends string,
   MakeDefaultsOptional extends boolean,
-  Defaults,
   // resolved types
+  Defaults = ExtractDefaultPropTypes<
+    ExtractMixinProps<Mixin> & ExtractMixinProps<Extends> & PropsOptions
+  >,
   ResolvedEmits extends ObjectEmitsOptions = ExtractMixinEmits<Mixin> &
     ExtractMixinEmits<Extends> &
     ResolveEmitsOptions<RuntimeEmitsOptions, TypeEmits>,
@@ -226,6 +166,8 @@ export interface InferComponentOptions<
       >
   >,
 > {
+  props?: PropsOptions
+
   /**
    * #3468
    *
@@ -460,45 +402,28 @@ export function defineComponent<
       }
     >,
 ): DefineComponent<
-  {
-    props?: NormalizedProps
-    emits?: string[] extends NormalizedEmits ? {} : NormalizedEmits
-    components?: LocalComponents
-    directives?: Directives
-    slots?: Slots
-    expose?: Exposed[]
-    computed?: Computed
-    methods?: Methods
-    provide?: Provide
-    inject?: InjectOptions
-    mixins?: Mixin[]
-    extends?: Extends
-    setup?(props: any, ctx: any): SetupBindings
-    data?(vm: any): Data
-    __typeProps?: TypeProps
-    __typeEmits?: TypeEmits
-    __typeRefs?: TypeRefs
-    __typeEl?: TypeEl
-  },
-  any,
-  any,
-  any,
-  any,
-  any,
-  any,
-  any,
-  any,
-  any,
-  any,
-  any,
-  any,
-  any,
-  any,
-  any,
-  any,
-  any,
-  any,
-  any
+  [NormalizedProps, TypeProps],
+  SetupBindings,
+  Data,
+  Computed,
+  Methods,
+  Mixin,
+  Extends,
+  [string[] extends NormalizedEmits ? {} : NormalizedEmits, TypeEmits],
+  string,
+  never,
+  never,
+  never,
+  Slots,
+  LocalComponents,
+  Directives,
+  Exposed,
+  Provide,
+  // MakeDefaultsOptional - if TypeProps is provided, set to false to use
+  // user props types verbatim
+  unknown extends TypeProps ? true : false,
+  TypeRefs,
+  TypeEl
 >
 
 // implementation, close to no-op
