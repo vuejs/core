@@ -92,7 +92,7 @@ export type DefineComponent<
   __typeRefs?: infer TypeRefs
   __typeEl?: infer TypeEl extends Element
 }
-  ? Omit<OptionsOrPropsOrPropOptions, 'data' | 'seteup'> & {
+  ? Omit<OptionsOrPropsOrPropOptions, 'data' | 'setup'> & {
       components?: GlobalComponents
       directives?: GlobalDirectives
     } & ComponentOptionsBase<
