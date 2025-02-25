@@ -124,25 +124,57 @@ export interface ComponentOptionsBase<
   Directives extends Record<string, Directive> = {},
   Exposed extends string = string,
   Provide extends ComponentProvideOptions = ComponentProvideOptions,
-  ResolvedProps = Props &
-    Prettify<
-      ExtractPropTypes<ExtractMixinProps<Mixin> & ExtractMixinProps<Extends>>
-    >,
-  InternalInstance = CreateComponentPublicInstanceWithMixins<
-    Props,
-    {},
-    {},
-    {},
-    MethodOptions,
+> extends ComponentOptionsBase2<
+    Props &
+      Prettify<
+        ExtractPropTypes<ExtractMixinProps<Mixin> & ExtractMixinProps<Extends>>
+      >,
+    RawBindings,
+    D,
+    C,
+    M,
     Mixin,
-    Extends
-  >,
+    Extends,
+    E,
+    I,
+    S,
+    LC,
+    Directives,
+    Exposed,
+    Provide,
+    CreateComponentPublicInstanceWithMixins<
+      Props,
+      {},
+      {},
+      {},
+      MethodOptions,
+      Mixin,
+      Extends
+    >
+  > {}
+
+export interface ComponentOptionsBase2<
+  Props,
+  RawBindings,
+  D,
+  C extends ComputedOptions,
+  M extends MethodOptions,
+  Mixin extends ComponentOptionsMixin,
+  Extends extends ComponentOptionsMixin,
+  E extends EmitsOptions,
+  I extends ComponentInjectOptions = {},
+  S extends SlotsType = {},
+  LC extends Record<string, Component> = {},
+  Directives extends Record<string, Directive> = {},
+  Exposed extends string = string,
+  Provide extends ComponentProvideOptions = ComponentProvideOptions,
+  InternalInstance = any,
 > extends LegacyOptions<InternalInstance, D, C, M, Mixin, Extends, I, Provide>,
     ComponentInternalOptions,
     ComponentCustomOptions {
   setup?: (
     this: void,
-    props: LooseRequired<ResolvedProps>,
+    props: LooseRequired<Props>,
     ctx: SetupContext<E, S>,
   ) => Promise<RawBindings> | RawBindings | RenderFunction | void
   name?: string

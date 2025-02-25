@@ -18,7 +18,7 @@ import type {
 import type {
   ComponentInjectOptions,
   ComponentOptions,
-  ComponentOptionsBase,
+  ComponentOptionsBase2,
   ComponentOptionsMixin,
   ComponentProvideOptions,
   ComputedOptions,
@@ -131,8 +131,8 @@ type InferComponentOptions<
   __typeRefs?: infer TypeRefs
   __typeEl?: infer TypeEl extends Element
 }
-  ? ComponentOptionsBase<
-      {},
+  ? ComponentOptionsBase2<
+      any,
       SetupBindings,
       Data,
       Computed,
@@ -140,17 +140,12 @@ type InferComponentOptions<
       Mixin,
       Extends,
       RuntimeEmitsOptions,
-      never,
-      never,
       {},
-      never,
       Slots,
       LocalComponents & GlobalComponents,
       Directives & GlobalDirectives,
       Exposed,
-      Provide,
-      any,
-      any
+      Provide
     > & {
       props?: PropsOptions
 
@@ -404,7 +399,7 @@ export function defineComponent<
      * @private for language-tools use only
      */
     __typeEl?: TypeEl
-  } & ComponentOptionsBase<
+  } & ComponentOptionsBase2<
     InferredProps,
     SetupBindings,
     Data,
@@ -413,16 +408,12 @@ export function defineComponent<
     Mixin,
     Extends,
     ObjectEmitsOptions | (RawEmitsOptions & ThisType<void>) | _EmitsKeys[],
-    never,
-    never,
     ObjectInjectOptions | InjectOptions | _InjectKeys[],
-    never,
     Slots,
     Record<string, Component> | LocalComponents,
     Record<string, Directive> | Directives,
     Exposed,
     Provide,
-    InferredProps,
     InternalInstance
   > &
     ThisType<
