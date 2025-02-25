@@ -31,14 +31,6 @@ import type {
 import { warn } from './warning'
 import type { SlotsType, StrictUnwrapSlotsType } from './componentSlots'
 import type { Ref } from '@vue/reactivity'
-import type {
-  ComponentPublicInstance,
-  EnsureNonVoid,
-  ExtractMixinComputed,
-  ExtractMixinData,
-  ExtractMixinMethods,
-  ExtractMixinSetupBindings,
-} from './componentPublicInstance'
 
 // dev only
 const warnRuntimeUsage = (method: string) =>
@@ -203,15 +195,6 @@ export function defineOptions<
   M extends MethodOptions = {},
   Mixin extends ComponentOptionsMixin = {},
   Extends extends ComponentOptionsMixin = {},
-  InternalInstance = ComponentPublicInstance<
-    {},
-    ExtractMixinSetupBindings<Mixin> &
-      ExtractMixinSetupBindings<Extends> &
-      EnsureNonVoid<RawBindings>,
-    ExtractMixinData<Mixin> & ExtractMixinData<Extends> & EnsureNonVoid<D>,
-    ExtractMixinComputed<Mixin> & ExtractMixinComputed<Extends> & C,
-    ExtractMixinMethods<Mixin> & ExtractMixinMethods<Extends> & M
-  >,
 >(
   options?: {
     /**
@@ -234,32 +217,7 @@ export function defineOptions<
      * slots should be defined via defineSlots().
      */
     slots?: never
-  } & ComponentOptionsBase<
-    {},
-    RawBindings,
-    D,
-    C,
-    M,
-    Mixin,
-    Extends,
-    {},
-    string,
-    {},
-    {},
-    string,
-    {},
-    {},
-    {},
-    string,
-    {},
-    {},
-    InternalInstance
-  > &
-    ThisType<
-      NoInfer<InternalInstance> & {
-        $options: typeof options
-      }
-    >,
+  } & ComponentOptionsBase<{}, RawBindings, D, C, M, Mixin, Extends, {}>,
 ): void {
   if (__DEV__) {
     warnRuntimeUsage(`defineOptions`)
