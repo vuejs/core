@@ -51,14 +51,9 @@ export type PublicProps = VNodeProps &
   AllowedComponentProps &
   ComponentCustomProps
 
-type ResolveProps<PropsOrPropOptions, E extends EmitsOptions> = Readonly<
-  PropsOrPropOptions extends ComponentPropsOptions
-    ? ExtractPropTypes<PropsOrPropOptions>
-    : PropsOrPropOptions
-> &
-  ({} extends E ? {} : EmitsToProps<E>)
-
 type NormalizePropsOptions<T> = ComponentPropsOptions extends T ? {} : T
+
+type NormalizeEmitsOptions<T> = EmitsOptions extends T ? {} : T
 
 export type DefineComponent<
   OptionsOrPropsOrPropOptions = {},
@@ -70,8 +65,8 @@ export type DefineComponent<
   Extends extends ComponentOptionsMixin = {},
   E extends EmitsOptions = {},
   EE extends string = string,
-  _PP = PublicProps,
-  _Props = ResolveProps<OptionsOrPropsOrPropOptions, E>,
+  _PP = never,
+  _Props = never,
   Defaults = ExtractDefaultPropTypes<OptionsOrPropsOrPropOptions>,
   S extends SlotsType = {},
   LC extends Record<string, Component> = {},
@@ -88,7 +83,7 @@ export type DefineComponent<
         props?: OptionsOrPropsOrPropOptions extends ComponentPropsOptions
           ? OptionsOrPropsOrPropOptions
           : {}
-        emits?: string extends EE ? E : EE[]
+        emits?: string extends EE ? NormalizeEmitsOptions<E> : EE[]
         computed?: C
         methods?: M
         mixins?: Mixin[]
@@ -311,8 +306,8 @@ export function defineComponent<
   TypeEmits extends ComponentTypeEmits | unknown = unknown,
   TypeRefs extends Record<string, unknown> = {},
   TypeEl extends Element = any,
-  PropsOptions extends ComponentPropsOptions = {},
-  RuntimeEmitsOptions extends EmitsOptions = string[],
+  RawPropsOptions extends ComponentPropsOptions = {},
+  RawEmitsOptions extends EmitsOptions = string[],
   InjectOptions extends ComponentInjectOptions = {},
   Data = {},
   SetupBindings = {},
@@ -330,26 +325,27 @@ export function defineComponent<
   _EmitsKeys extends string = string,
   _InjectKeys extends string = string,
   // resolved types
+  NormalizedProps = NormalizePropsOptions<RawPropsOptions>,
+  NormalizedEmits extends EmitsOptions = NormalizeEmitsOptions<RawEmitsOptions>,
   ResolvedEmits extends ObjectEmitsOptions = ExtractMixinEmits<Mixin> &
     ExtractMixinEmits<Extends> &
-    ResolveEmitsOptions<RuntimeEmitsOptions, TypeEmits>,
-  ResolvedTypeEmits = ResolveTypeEmits<RuntimeEmitsOptions, TypeEmits>,
+    ResolveEmitsOptions<NormalizedEmits, TypeEmits>,
+  ResolvedTypeEmits = ResolveTypeEmits<NormalizedEmits, TypeEmits>,
   InferredProps = Readonly<
     ExtractPropTypes<
       ExtractMixinProps<Mixin> &
         ExtractMixinProps<Extends> &
         (unknown extends TypeProps
-          ? NormalizePropsOptions<PropsOptions> extends (infer Keys extends
-              string)[]
+          ? NormalizedProps extends (infer Keys extends string)[]
             ? { [K in Keys]: null }
-            : NormalizePropsOptions<PropsOptions>
+            : NormalizedProps
           : {})
     > &
       TypeProps &
       EmitsToProps<
         ResolvedEmits &
           TypeEmitsToOptions<
-            string[] extends RuntimeEmitsOptions
+            string[] extends NormalizedEmits
               ? TypeEmits & {}
               : ResolvedTypeEmits & {}
           >
@@ -377,10 +373,10 @@ export function defineComponent<
   >,
 >(
   options: {
-    props?: ComponentObjectPropsOptions | PropsOptions | _PropsKeys[]
+    props?: ComponentObjectPropsOptions | RawPropsOptions | _PropsKeys[]
     emits?:
       | ObjectEmitsOptions
-      | (RuntimeEmitsOptions & ThisType<void>)
+      | (RawEmitsOptions & ThisType<void>)
       | _EmitsKeys[]
     components?: Record<string, Component> | LocalComponents
     directives?: Record<string, Directive> | Directives
@@ -429,8 +425,8 @@ export function defineComponent<
     >,
 ): DefineComponent<
   {
-    props?: NormalizePropsOptions<PropsOptions>
-    emits?: string[] extends RuntimeEmitsOptions ? {} : RuntimeEmitsOptions
+    props?: NormalizedProps
+    emits?: NormalizedEmits
     components?: LocalComponents
     directives?: Directives
     slots?: Slots
