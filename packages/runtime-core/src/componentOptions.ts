@@ -352,6 +352,9 @@ interface LegacyOptions<
 > {
   compatConfig?: CompatConfig
 
+  // allow any custom options
+  [key: string]: any
+
   data?: (vm: NoInfer<InternalInstance>) => D
   computed?: C
   methods?: M
@@ -384,9 +387,6 @@ interface LegacyOptions<
   renderTracked?: DebuggerHook
   renderTriggered?: DebuggerHook
   errorCaptured?: ErrorCapturedHook
-
-  // allow any custom options
-  [key: string]: any
 
   /**
    * runtime compile only

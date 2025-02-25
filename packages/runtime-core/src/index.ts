@@ -261,7 +261,6 @@ export type {
   ComponentInternalInstance,
   SetupContext,
   ComponentCustomProps,
-  ComponentInternalOptions,
   AllowedComponentProps,
   GlobalComponents,
   GlobalDirectives,
