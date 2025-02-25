@@ -285,7 +285,7 @@ export type ComponentPublicInstance<
   PublicProps = {},
   Defaults = {},
   MakeDefaultsOptional extends boolean = false,
-  Options = {},
+  Options = any,
   I extends ComponentInjectOptions = {},
   S extends SlotsType = {},
   Exposed extends string = '',
@@ -306,11 +306,7 @@ export type ComponentPublicInstance<
   $host: Element | null
   $emit: EmitFn<E> & TypeEmits
   $el: TypeEl
-  $options: Options &
-    MergedComponentOptionsOverride & {
-      // allow any custom options
-      [key: string]: any
-    }
+  $options: Options & MergedComponentOptionsOverride
   $forceUpdate: () => void
   $nextTick: typeof nextTick
   $watch<T extends string | ((...args: any) => any)>(

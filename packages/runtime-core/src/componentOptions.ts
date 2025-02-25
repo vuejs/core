@@ -106,23 +106,6 @@ export interface ComponentCustomOptions {}
 
 export type RenderFunction = () => VNodeChild
 
-export type ConcreteComponentOptions = Omit<
-  ComponentOptionsBase<{}, {}, {}, {}, {}, {}, {}, {}>,
-  | 'emits'
-  | 'components'
-  | 'directives'
-  | 'slots'
-  | 'expose'
-  | 'computed'
-  | 'methods'
-  | 'provide'
-  | 'inject'
-  | 'mixins'
-  | 'extends'
-  | 'setup'
-  | 'data'
->
-
 export interface ComponentOptionsBase<
   Props,
   RawBindings,
@@ -132,28 +115,34 @@ export interface ComponentOptionsBase<
   Mixin extends ComponentOptionsMixin,
   Extends extends ComponentOptionsMixin,
   E extends EmitsOptions,
-  EE extends string = string,
+  _EE extends string = never,
   Defaults = {},
   I extends ComponentInjectOptions = {},
-  II extends string = string,
+  _II extends string = never,
   S extends SlotsType = {},
   LC extends Record<string, Component> = {},
   Directives extends Record<string, Directive> = {},
   Exposed extends string = string,
   Provide extends ComponentProvideOptions = ComponentProvideOptions,
-> extends LegacyOptions<Props, D, C, M, Mixin, Extends, I, II, Provide>,
+  ResolvedProps = Props &
+    Prettify<
+      ExtractPropTypes<ExtractMixinProps<Mixin> & ExtractMixinProps<Extends>>
+    >,
+  InternalInstance = CreateComponentPublicInstanceWithMixins<
+    Props,
+    {},
+    {},
+    {},
+    MethodOptions,
+    Mixin,
+    Extends
+  >,
+> extends LegacyOptions<InternalInstance, D, C, M, Mixin, Extends, I, Provide>,
     ComponentInternalOptions,
     ComponentCustomOptions {
   setup?: (
     this: void,
-    props: LooseRequired<
-      Props &
-        Prettify<
-          ExtractPropTypes<
-            ExtractMixinProps<Mixin> & ExtractMixinProps<Extends>
-          >
-        >
-    >,
+    props: LooseRequired<ResolvedProps>,
     ctx: SetupContext<E, S>,
   ) => Promise<RawBindings> | RawBindings | RenderFunction | void
   name?: string
@@ -167,7 +156,7 @@ export interface ComponentOptionsBase<
   components?: Record<string, Component> | LC
   directives?: Record<string, Directive> | Directives
   inheritAttrs?: boolean
-  emits?: (E | EE[]) & ThisType<void>
+  emits?: E
   slots?: S
   expose?: Exposed[]
   serverPrefetch?(): void | Promise<any>
@@ -283,10 +272,8 @@ export type ComponentOptions<
   Directives,
   Exposed,
   Provide
-> & {
-  // allow any custom options
-  [key: string]: any
-} & ThisType<
+> &
+  ThisType<
     CreateComponentPublicInstanceWithMixins<
       {},
       RawBindings,
@@ -356,60 +343,30 @@ export type InjectToObject<T extends ComponentInjectOptions> =
       : never
 
 interface LegacyOptions<
-  Props,
+  InternalInstance,
   D,
   C extends ComputedOptions,
   M extends MethodOptions,
   Mixin extends ComponentOptionsMixin,
   Extends extends ComponentOptionsMixin,
   I extends ComponentInjectOptions,
-  II extends string,
   Provide extends ComponentProvideOptions = ComponentProvideOptions,
 > {
   compatConfig?: CompatConfig
 
-  // state
-  // Limitation: we cannot expose RawBindings on the `this` context for data
-  // since that leads to some sort of circular inference and breaks ThisType
-  // for the entire component.
-  data?: (
-    this: CreateComponentPublicInstanceWithMixins<
-      Props,
-      {},
-      {},
-      {},
-      MethodOptions,
-      Mixin,
-      Extends
-    >,
-    vm: CreateComponentPublicInstanceWithMixins<
-      Props,
-      {},
-      {},
-      {},
-      MethodOptions,
-      Mixin,
-      Extends
-    >,
-  ) => D
+  data?: (vm: NoInfer<InternalInstance>) => D
   computed?: C
   methods?: M
   watch?: ComponentWatchOptions
   provide?: Provide
-  inject?: I | II[]
+  inject?: I
 
   // assets
   filters?: Record<string, Function>
 
   // composition
-  mixins?: (Mixin & {
-    // allow any custom options
-    [key: string]: any
-  })[]
-  extends?: Extends & {
-    // allow any custom options
-    [key: string]: any
-  }
+  mixins?: Mixin[]
+  extends?: Extends
 
   // lifecycle
   beforeCreate?(): any
@@ -429,6 +386,9 @@ interface LegacyOptions<
   renderTracked?: DebuggerHook
   renderTriggered?: DebuggerHook
   errorCaptured?: ErrorCapturedHook
+
+  // allow any custom options
+  [key: string]: any
 
   /**
    * runtime compile only

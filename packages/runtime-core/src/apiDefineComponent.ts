@@ -1,9 +1,10 @@
-import { type LooseRequired, extend, isFunction } from '@vue/shared'
+import { extend, isFunction } from '@vue/shared'
 import type { ComponentTypeEmits } from './apiSetupHelpers'
 import type {
   AllowedComponentProps,
   Component,
   ComponentCustomProps,
+  ComponentInternalOptions,
   GlobalComponents,
   GlobalDirectives,
   SetupContext,
@@ -16,12 +17,13 @@ import type {
   TypeEmitsToOptions,
 } from './componentEmits'
 import type {
+  ComponentCustomOptions,
   ComponentInjectOptions,
   ComponentOptions,
+  ComponentOptionsBase,
   ComponentOptionsMixin,
   ComponentProvideOptions,
   ComputedOptions,
-  ConcreteComponentOptions,
   MethodOptions,
   ObjectInjectOptions,
   RenderFunction,
@@ -113,6 +115,8 @@ type InferComponentOptions<
   MakeDefaultsOptional extends boolean | unknown,
   Defaults = {},
 > = T &
+  ComponentInternalOptions &
+  ComponentCustomOptions &
   (T extends {
     props?: infer PropsOptions
     emits?: infer RuntimeEmitsOptions
@@ -142,9 +146,6 @@ type InferComponentOptions<
          * because the `__differentiator` will be different
          */
         __differentiator?: keyof Data | keyof Computed | keyof Methods
-
-        // allow any custom options
-        [key: string]: any
 
         new (...args: any[]): ComponentPublicInstance<
           Readonly<
@@ -210,7 +211,7 @@ type InferComponentOptions<
           TypeEl,
           ResolveTypeEmits<RuntimeEmitsOptions & {}, TypeEmits>
         >
-      } & ConcreteComponentOptions
+      }
     : {})
 
 export type DefineSetupFnComponent<
@@ -373,30 +374,6 @@ export function defineComponent<
 >(
   options: {
     props?: ComponentObjectPropsOptions | RawPropsOptions | _PropsKeys[]
-    emits?:
-      | ObjectEmitsOptions
-      | (RawEmitsOptions & ThisType<void>)
-      | _EmitsKeys[]
-    components?: Record<string, Component> | LocalComponents
-    directives?: Record<string, Directive> | Directives
-    slots?: Slots
-    expose?: Exposed[]
-    computed?: Computed
-    methods?: Methods
-    provide?: Provide
-    inject?: ObjectInjectOptions | InjectOptions | _InjectKeys[]
-    mixins?: Mixin[]
-    extends?: Extends
-    setup?: (
-      this: void,
-      props: LooseRequired<InferredProps>,
-      ctx: NoInfer<
-        SetupContext<ResolvedEmits, Slots> & {
-          emit: ResolvedTypeEmits
-        }
-      >,
-    ) => Promise<SetupBindings> | SetupBindings | RenderFunction | void
-    data?: (vm: NoInfer<InternalInstance>) => Data
     /**
      * @private for language-tools use only
      */
@@ -413,10 +390,27 @@ export function defineComponent<
      * @private for language-tools use only
      */
     __typeEl?: TypeEl
-
-    // allow any custom options
-    [key: string]: any
-  } & ConcreteComponentOptions &
+  } & ComponentOptionsBase<
+    InferredProps,
+    SetupBindings,
+    Data,
+    Computed,
+    Methods,
+    Mixin,
+    Extends,
+    ObjectEmitsOptions | (RawEmitsOptions & ThisType<void>) | _EmitsKeys[],
+    never,
+    never,
+    ObjectInjectOptions | InjectOptions | _InjectKeys[],
+    never,
+    Slots,
+    LocalComponents,
+    Directives,
+    Exposed,
+    Provide,
+    InferredProps,
+    InternalInstance
+  > &
     ThisType<
       NoInfer<InternalInstance> & {
         $options: typeof options

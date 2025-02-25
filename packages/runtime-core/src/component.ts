@@ -251,7 +251,15 @@ export type ConcreteComponent<
   E extends EmitsOptions | Record<string, any[]> = string[],
   S extends Record<string, any> = any,
 > =
-  | ComponentOptions<Props, RawBindings, D, C, M>
+  | ComponentOptions<
+      Props,
+      RawBindings,
+      D,
+      C,
+      M,
+      ComponentOptions,
+      ComponentOptions
+    >
   | FunctionalComponent<Props, E, S>
 
 /**

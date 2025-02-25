@@ -17,9 +17,9 @@ import {
 } from './component'
 import type { EmitFn, EmitsOptions, ObjectEmitsOptions } from './componentEmits'
 import type {
+  ComponentOptionsBase,
   ComponentOptionsMixin,
   ComputedOptions,
-  ConcreteComponentOptions,
   MethodOptions,
 } from './componentOptions'
 import type {
@@ -214,11 +214,6 @@ export function defineOptions<
   >,
 >(
   options?: {
-    computed?: C
-    methods?: M
-    mixins?: Mixin[]
-    extends?: Extends
-    data?: (vm: NoInfer<InternalInstance>) => D
     /**
      * setup should be defined via `<script setup>`.
      */
@@ -239,7 +234,27 @@ export function defineOptions<
      * slots should be defined via defineSlots().
      */
     slots?: never
-  } & ConcreteComponentOptions &
+  } & ComponentOptionsBase<
+    {},
+    RawBindings,
+    D,
+    C,
+    M,
+    Mixin,
+    Extends,
+    {},
+    string,
+    {},
+    {},
+    string,
+    {},
+    {},
+    {},
+    string,
+    {},
+    {},
+    InternalInstance
+  > &
     ThisType<
       NoInfer<InternalInstance> & {
         $options: typeof options

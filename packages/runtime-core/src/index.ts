@@ -278,12 +278,12 @@ export type {
   ComponentCustomOptions,
   ComponentOptionsBase,
   ComponentProvideOptions,
-  ConcreteComponentOptions,
   RenderFunction,
   MethodOptions,
   ComputedOptions,
   RuntimeCompilerOptions,
   ComponentInjectOptions,
+  ObjectInjectOptions,
   // deprecated
   ComponentOptionsWithoutProps,
   ComponentOptionsWithArrayProps,

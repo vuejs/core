@@ -6,10 +6,10 @@ import {
   type ComponentInternalInstance,
   type ComponentObjectPropsOptions,
   type ComponentOptions,
+  type ComponentOptionsBase,
   type ComponentProvideOptions,
   type ComputedOptions,
   type ConcreteComponent,
-  type ConcreteComponentOptions,
   type CreateAppFunction,
   type CreateComponentPublicInstanceWithMixins,
   type Directive,
@@ -18,6 +18,7 @@ import {
   type ExtractPropTypes,
   type MethodOptions,
   type ObjectEmitsOptions,
+  type ObjectInjectOptions,
   type RenderFunction,
   type SetupContext,
   type SlotsType,
@@ -31,7 +32,6 @@ import {
   warn,
 } from '@vue/runtime-core'
 import {
-  type LooseRequired,
   type Prettify,
   camelize,
   extend,
@@ -132,30 +132,29 @@ export function defineCustomElement<
       | ComponentObjectPropsOptions
       | (RuntimePropsOptions & ThisType<void>)
       | _PropsKeys[]
-    emits?:
+  } & ComponentOptionsBase<
+      InferredProps,
+      SetupBindings,
+      Data,
+      Computed,
+      Methods,
+      Mixin,
+      Extends,
       | ObjectEmitsOptions
       | (RuntimeEmitsOptions & ThisType<void>)
-      | _EmitsKeys[]
-    computed?: Computed
-    methods?: Methods
-    mixins?: Mixin[]
-    extends?: Extends
-    inject?: ComponentInjectOptions | InjectOptions | _InjectKeys[]
-    slots?: Slots
-    components?: LocalComponents
-    directives?: Directives
-    expose?: Exposed[]
-    provide?: Provide
-    setup?: (
-      this: void,
-      props: NoInfer<LooseRequired<PublicP>>,
-      ctx: NoInfer<SetupContext<RuntimeEmitsOptions, Slots>>,
-    ) => Promise<SetupBindings> | SetupBindings | RenderFunction | void
-    data?: (vm: NoInfer<InternalInstance>) => Data
-
-    // allow any custom options
-    [key: string]: any
-  } & ConcreteComponentOptions &
+      | _EmitsKeys[],
+      never,
+      never,
+      ObjectInjectOptions | InjectOptions | _InjectKeys[],
+      never,
+      Slots,
+      LocalComponents,
+      Directives,
+      Exposed,
+      Provide,
+      InferredProps,
+      InternalInstance
+    > &
     ThisType<NoInfer<InternalInstance>>,
   extraOptions?: CustomElementOptions,
 ): VueElementConstructor<ResolvedProps>
