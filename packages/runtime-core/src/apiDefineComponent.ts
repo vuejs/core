@@ -237,7 +237,7 @@ export interface InferComponentOptions<
   __differentiator?: keyof Data | keyof Computed | keyof Methods
 
   new (...args: any[]): ComponentPublicInstance<
-    Readonly<InferredProps>,
+    InferredProps,
     ExtractMixinSetupBindings<Mixin> &
       ExtractMixinSetupBindings<Extends> &
       EnsureNonVoid<SetupBindings>,
