@@ -144,7 +144,24 @@ class MutableReactiveHandler extends BaseReactiveHandler {
     value: unknown,
     receiver: object,
   ): boolean {
-    let oldValue = target[key]
+    if (__DEV__) {
+      if (isArray(target)) {
+        if (
+          key === 'length' || 
+          !Number.isNaN(Number(key))
+        ) {
+          const targetValue = target[key as keyof typeof target]
+          if (targetValue === null || targetValue === undefined) {
+            console.warn(
+              `Attempting to perform array operation on null/undefined value at index ${key}. ` +
+              `This may cause unexpected behavior.`,
+            )
+          }
+        }
+      }
+    }
+
+    let oldValue = (target as any)[key]
     if (!this._isShallow) {
       const isOldValueReadonly = isReadonly(oldValue)
       if (!isShallow(value) && !isReadonly(value)) {
