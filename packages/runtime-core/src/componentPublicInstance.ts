@@ -107,11 +107,11 @@ export type ExtractMixinComputed<T> = UnionToIntersection<
 >
 
 export type ExtractMixinData<T> = UnionToIntersection<
-  T extends { data?(): infer P } ? P : {}
+  T extends { data?(...args: any): infer P } ? P : {}
 >
 
 export type ExtractMixinSetupBindings<T> = UnionToIntersection<
-  T extends { setup?(): infer B } ? B : {}
+  T extends { setup?(...args: any): infer B } ? B : {}
 >
 
 export type EnsureNonVoid<T> = T extends void ? {} : T

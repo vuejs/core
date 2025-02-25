@@ -116,7 +116,7 @@ export interface ComponentOptionsBase<
   Extends extends ComponentOptionsMixin,
   E extends EmitsOptions,
   _EE extends string = never,
-  Defaults = {},
+  _Defaults = never,
   I extends ComponentInjectOptions = {},
   _II extends string = never,
   S extends SlotsType = {},
@@ -153,8 +153,8 @@ export interface ComponentOptionsBase<
   // Luckily `render()` doesn't need any arguments nor does it care about return
   // type.
   render?: Function
-  components?: Record<string, Component> | LC
-  directives?: Record<string, Directive> | Directives
+  components?: LC
+  directives?: Directives
   inheritAttrs?: boolean
   emits?: E
   slots?: S
@@ -222,8 +222,6 @@ export interface ComponentOptionsBase<
   __isFragment?: never
   __isTeleport?: never
   __isSuspense?: never
-
-  __defaults?: Defaults
 }
 
 /**
@@ -268,8 +266,8 @@ export type ComponentOptions<
   I,
   II,
   S,
-  LC,
-  Directives,
+  Record<string, ComponentOptions> | LC,
+  Record<string, Directive> | Directives,
   Exposed,
   Provide
 > &

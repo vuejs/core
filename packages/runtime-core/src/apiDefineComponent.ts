@@ -4,7 +4,6 @@ import type {
   AllowedComponentProps,
   Component,
   ComponentCustomProps,
-  ComponentInternalOptions,
   GlobalComponents,
   GlobalDirectives,
   SetupContext,
@@ -17,7 +16,6 @@ import type {
   TypeEmitsToOptions,
 } from './componentEmits'
 import type {
-  ComponentCustomOptions,
   ComponentInjectOptions,
   ComponentOptions,
   ComponentOptionsBase,
@@ -92,8 +90,8 @@ export type DefineComponent<
         extends?: Extends
         inject?: {}
         slots?: S
-        components?: LC & GlobalComponents
-        directives?: Directives & GlobalDirectives
+        components?: LC
+        directives?: Directives
         expose?: Exposed[]
         provide?: Provide
         setup?: (props: any, ctx: SetupContext) => RawBindings & {}
@@ -114,105 +112,121 @@ type InferComponentOptions<
   T,
   MakeDefaultsOptional extends boolean | unknown,
   Defaults = {},
-> = T &
-  ComponentInternalOptions &
-  ComponentCustomOptions &
-  (T extends {
-    props?: infer PropsOptions
-    emits?: infer RuntimeEmitsOptions
-    slots?: infer Slots
-    expose?: (infer Exposed)[]
-    computed?: infer Computed
-    methods?: infer Methods
-    mixins?: (infer Mixin)[]
-    extends?: infer Extends
-    setup?(props: any, ctx: any): infer SetupBindings
-    data?(vm: any): infer Data
-    __typeProps?: infer TypeProps
-    __typeEmits?: infer TypeEmits
-    __typeRefs?: infer TypeRefs
-    __typeEl?: infer TypeEl extends Element
-  }
-    ? {
-        components?: GlobalComponents
-        directives?: GlobalDirectives
+> = T extends {
+  props?: infer PropsOptions
+  emits?: infer RuntimeEmitsOptions extends EmitsOptions
+  components?: infer LocalComponents extends Record<string, Component>
+  directives?: infer Directives extends Record<string, Directive>
+  slots?: infer Slots extends SlotsType
+  expose?: (infer Exposed extends string)[]
+  computed?: infer Computed extends ComputedOptions
+  methods?: infer Methods extends MethodOptions
+  provide?: infer Provide extends ComponentProvideOptions
+  mixins?: (infer Mixin extends ComponentOptionsMixin)[]
+  extends?: infer Extends extends ComponentOptionsMixin
+  setup?(props: any, ctx: any): infer SetupBindings
+  data?(vm: any): infer Data
+  __typeProps?: infer TypeProps
+  __typeEmits?: infer TypeEmits
+  __typeRefs?: infer TypeRefs
+  __typeEl?: infer TypeEl extends Element
+}
+  ? ComponentOptionsBase<
+      {},
+      SetupBindings,
+      Data,
+      Computed,
+      Methods,
+      Mixin,
+      Extends,
+      RuntimeEmitsOptions,
+      never,
+      never,
+      {},
+      never,
+      Slots,
+      LocalComponents & GlobalComponents,
+      Directives & GlobalDirectives,
+      Exposed,
+      Provide,
+      any,
+      any
+    > & {
+      props?: PropsOptions
 
-        /**
-         * #3468
-         *
-         * type-only, used to assist Mixin's type inference,
-         * typescript will try to simplify the inferred `Mixin` type,
-         * with the `__differentiator`, typescript won't be able to combine different mixins,
-         * because the `__differentiator` will be different
-         */
-        __differentiator?: keyof Data | keyof Computed | keyof Methods
+      /**
+       * #3468
+       *
+       * type-only, used to assist Mixin's type inference,
+       * typescript will try to simplify the inferred `Mixin` type,
+       * with the `__differentiator`, typescript won't be able to combine different mixins,
+       * because the `__differentiator` will be different
+       */
+      __differentiator?: keyof Data | keyof Computed | keyof Methods
 
-        new (...args: any[]): ComponentPublicInstance<
-          Readonly<
-            ExtractPropTypes<
+      new (...args: any[]): ComponentPublicInstance<
+        Readonly<
+          ExtractPropTypes<
+            ExtractMixinProps<Mixin> &
+              ExtractMixinProps<Extends> &
+              (unknown extends TypeProps
+                ? PropsOptions extends (infer Keys extends string)[]
+                  ? { [K in Keys]: null }
+                  : PropsOptions
+                : {})
+          > &
+            TypeProps &
+            EmitsToProps<
+              ExtractMixinEmits<Mixin> &
+                ExtractMixinEmits<Extends> &
+                ResolveEmitsOptions<RuntimeEmitsOptions & {}, TypeEmits> &
+                TypeEmitsToOptions<
+                  string[] extends RuntimeEmitsOptions
+                    ? TypeEmits & {}
+                    : ResolveTypeEmits<RuntimeEmitsOptions & {}, TypeEmits> & {}
+                >
+            >
+        >,
+        ExtractMixinSetupBindings<Mixin> &
+          ExtractMixinSetupBindings<Extends> &
+          EnsureNonVoid<SetupBindings>,
+        ExtractMixinData<Mixin> &
+          ExtractMixinData<Extends> &
+          EnsureNonVoid<Data>,
+        ExtractMixinComputed<Mixin> &
+          ExtractMixinComputed<Extends> &
+          Computed & {},
+        ExtractMixinMethods<Mixin> &
+          ExtractMixinMethods<Extends> &
+          Methods & {},
+        ExtractMixinEmits<Mixin> &
+          ExtractMixinEmits<Extends> &
+          ResolveEmitsOptions<RuntimeEmitsOptions & {}, TypeEmits>,
+        PublicProps,
+        MakeDefaultsOptional extends boolean
+          ? Defaults
+          : ExtractDefaultPropTypes<
               ExtractMixinProps<Mixin> &
                 ExtractMixinProps<Extends> &
-                (unknown extends TypeProps
-                  ? PropsOptions extends (infer Keys extends string)[]
-                    ? { [K in Keys]: null }
-                    : PropsOptions
-                  : {})
-            > &
-              TypeProps &
-              EmitsToProps<
-                ExtractMixinEmits<Mixin> &
-                  ExtractMixinEmits<Extends> &
-                  ResolveEmitsOptions<RuntimeEmitsOptions & {}, TypeEmits> &
-                  TypeEmitsToOptions<
-                    string[] extends RuntimeEmitsOptions
-                      ? TypeEmits & {}
-                      : ResolveTypeEmits<
-                          RuntimeEmitsOptions & {},
-                          TypeEmits
-                        > & {}
-                  >
-              >
-          >,
-          ExtractMixinSetupBindings<Mixin> &
-            ExtractMixinSetupBindings<Extends> &
-            EnsureNonVoid<SetupBindings>,
-          ExtractMixinData<Mixin> &
-            ExtractMixinData<Extends> &
-            EnsureNonVoid<Data>,
-          ExtractMixinComputed<Mixin> &
-            ExtractMixinComputed<Extends> &
-            Computed & {},
-          ExtractMixinMethods<Mixin> &
-            ExtractMixinMethods<Extends> &
-            Methods & {},
-          ExtractMixinEmits<Mixin> &
-            ExtractMixinEmits<Extends> &
-            ResolveEmitsOptions<RuntimeEmitsOptions & {}, TypeEmits>,
-          PublicProps,
-          MakeDefaultsOptional extends boolean
-            ? Defaults
-            : ExtractDefaultPropTypes<
-                ExtractMixinProps<Mixin> &
-                  ExtractMixinProps<Extends> &
-                  PropsOptions
-              >,
-          MakeDefaultsOptional extends boolean
-            ? MakeDefaultsOptional
-            : // MakeDefaultsOptional - if TypeProps is provided, set to false to use
-              // user props types verbatim
-              unknown extends TypeProps
-              ? true
-              : false,
-          {},
-          {}, // InjectOptions
-          Slots & {},
-          Exposed & string,
-          TypeRefs & {},
-          TypeEl,
-          ResolveTypeEmits<RuntimeEmitsOptions & {}, TypeEmits>
-        >
-      }
-    : {})
+                PropsOptions
+            >,
+        MakeDefaultsOptional extends boolean
+          ? MakeDefaultsOptional
+          : // MakeDefaultsOptional - if TypeProps is provided, set to false to use
+            // user props types verbatim
+            unknown extends TypeProps
+            ? true
+            : false,
+        {},
+        {}, // InjectOptions
+        Slots & {},
+        Exposed & string,
+        TypeRefs & {},
+        TypeEl,
+        ResolveTypeEmits<RuntimeEmitsOptions & {}, TypeEmits>
+      >
+    }
+  : {}
 
 export type DefineSetupFnComponent<
   P extends Record<string, any>,
@@ -404,8 +418,8 @@ export function defineComponent<
     ObjectInjectOptions | InjectOptions | _InjectKeys[],
     never,
     Slots,
-    LocalComponents,
-    Directives,
+    Record<string, Component> | LocalComponents,
+    Record<string, Directive> | Directives,
     Exposed,
     Provide,
     InferredProps,
