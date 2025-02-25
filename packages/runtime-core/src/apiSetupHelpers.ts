@@ -196,7 +196,16 @@ export function defineOptions<
   Mixin extends ComponentOptionsMixin = {},
   Extends extends ComponentOptionsMixin = {},
 >(
-  options?: {
+  options?: ComponentOptionsBase<
+    {},
+    RawBindings,
+    D,
+    C,
+    M,
+    Mixin,
+    Extends,
+    {}
+  > & {
     /**
      * setup should be defined via `<script setup>`.
      */
@@ -217,7 +226,7 @@ export function defineOptions<
      * slots should be defined via defineSlots().
      */
     slots?: never
-  } & ComponentOptionsBase<{}, RawBindings, D, C, M, Mixin, Extends, {}>,
+  },
 ): void {
   if (__DEV__) {
     warnRuntimeUsage(`defineOptions`)
