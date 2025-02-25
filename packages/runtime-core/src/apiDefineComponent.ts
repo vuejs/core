@@ -425,7 +425,7 @@ export function defineComponent<
 ): DefineComponent<
   {
     props?: NormalizedProps
-    emits?: NormalizedEmits
+    emits?: string[] extends NormalizedEmits ? {} : NormalizedEmits
     components?: LocalComponents
     directives?: Directives
     slots?: Slots
