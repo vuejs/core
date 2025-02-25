@@ -50,7 +50,7 @@ function combineValues(
       exp = genCall(context.helper('toDisplayString'), exp)
     }
     if (i > 0) {
-      exp.unshift(jsx ? ', ' : ' + ')
+      exp.unshift(jsx ? ' , ' : ' + ')
     }
     return exp
   })
