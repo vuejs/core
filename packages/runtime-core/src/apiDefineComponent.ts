@@ -81,7 +81,7 @@ export type DefineComponent<
     ? OptionsOrPropsOrPropOptions
     : {
         props?: OptionsOrPropsOrPropOptions extends ComponentPropsOptions
-          ? OptionsOrPropsOrPropOptions
+          ? NormalizePropsOptions<OptionsOrPropsOrPropOptions>
           : {}
         emits?: string extends EE ? NormalizeEmitsOptions<E> : EE[]
         computed?: C
@@ -152,10 +152,9 @@ type InferComponentOptions<
               ExtractMixinProps<Mixin> &
                 ExtractMixinProps<Extends> &
                 (unknown extends TypeProps
-                  ? NormalizePropsOptions<PropsOptions> extends (infer Keys extends
-                      string)[]
+                  ? PropsOptions extends (infer Keys extends string)[]
                     ? { [K in Keys]: null }
-                    : NormalizePropsOptions<PropsOptions>
+                    : PropsOptions
                   : {})
             > &
               TypeProps &
@@ -194,7 +193,7 @@ type InferComponentOptions<
             : ExtractDefaultPropTypes<
                 ExtractMixinProps<Mixin> &
                   ExtractMixinProps<Extends> &
-                  NormalizePropsOptions<PropsOptions>
+                  PropsOptions
               >,
           MakeDefaultsOptional extends boolean
             ? MakeDefaultsOptional
