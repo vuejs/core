@@ -1,4 +1,4 @@
-import { type IfAny, type LooseRequired, extend, isFunction } from '@vue/shared'
+import { type LooseRequired, extend, isFunction } from '@vue/shared'
 import type { ComponentTypeEmits } from './apiSetupHelpers'
 import type {
   AllowedComponentProps,
@@ -58,6 +58,8 @@ type ResolveProps<PropsOrPropOptions, E extends EmitsOptions> = Readonly<
 > &
   ({} extends E ? {} : EmitsToProps<E>)
 
+type NormalizePropsOptions<T> = ComponentPropsOptions extends T ? {} : T
+
 export type DefineComponent<
   OptionsOrPropsOrPropOptions = {},
   RawBindings = {},
@@ -80,11 +82,7 @@ export type DefineComponent<
   TypeRefs extends Record<string, unknown> = {},
   TypeEl extends Element = any,
 > = InferComponentOptions<
-  'props' extends keyof IfAny<
-    OptionsOrPropsOrPropOptions,
-    {},
-    OptionsOrPropsOrPropOptions
-  >
+  'props' extends keyof NormalizePropsOptions<OptionsOrPropsOrPropOptions>
     ? OptionsOrPropsOrPropOptions
     : {
         props?: OptionsOrPropsOrPropOptions extends ComponentPropsOptions
@@ -109,11 +107,7 @@ export type DefineComponent<
         __typeRefs?: TypeRefs
         __typeEl?: TypeEl
       },
-  'props' extends keyof IfAny<
-    OptionsOrPropsOrPropOptions,
-    {},
-    OptionsOrPropsOrPropOptions
-  >
+  'props' extends keyof NormalizePropsOptions<OptionsOrPropsOrPropOptions>
     ? unknown
     : MakeDefaultsOptional,
   Defaults
@@ -163,9 +157,10 @@ type InferComponentOptions<
               ExtractMixinProps<Mixin> &
                 ExtractMixinProps<Extends> &
                 (unknown extends TypeProps
-                  ? PropsOptions extends (infer Keys extends string)[]
+                  ? NormalizePropsOptions<PropsOptions> extends (infer Keys extends
+                      string)[]
                     ? { [K in Keys]: null }
-                    : PropsOptions
+                    : NormalizePropsOptions<PropsOptions>
                   : {})
             > &
               TypeProps &
@@ -204,7 +199,7 @@ type InferComponentOptions<
             : ExtractDefaultPropTypes<
                 ExtractMixinProps<Mixin> &
                   ExtractMixinProps<Extends> &
-                  PropsOptions
+                  NormalizePropsOptions<PropsOptions>
               >,
           MakeDefaultsOptional extends boolean
             ? MakeDefaultsOptional
@@ -344,9 +339,10 @@ export function defineComponent<
       ExtractMixinProps<Mixin> &
         ExtractMixinProps<Extends> &
         (unknown extends TypeProps
-          ? PropsOptions extends (infer Keys extends string)[]
+          ? NormalizePropsOptions<PropsOptions> extends (infer Keys extends
+              string)[]
             ? { [K in Keys]: null }
-            : PropsOptions
+            : NormalizePropsOptions<PropsOptions>
           : {})
     > &
       TypeProps &
@@ -433,7 +429,7 @@ export function defineComponent<
     >,
 ): DefineComponent<
   {
-    props?: PropsOptions
+    props?: ComponentPropsOptions extends PropsOptions ? {} : PropsOptions
     emits?: string[] extends RuntimeEmitsOptions ? {} : RuntimeEmitsOptions
     components?: LocalComponents
     directives?: Directives
