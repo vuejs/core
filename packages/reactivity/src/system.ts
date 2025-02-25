@@ -1,5 +1,5 @@
 /* eslint-disable */
-// Ported from https://github.com/stackblitz/alien-signals/blob/v1.0.0/src/system.ts
+// Ported from https://github.com/stackblitz/alien-signals/blob/v1.0.4/src/system.ts
 import type { ComputedRefImpl as Computed } from './computed.js'
 import type { ReactiveEffect as Effect } from './effect.js'
 
@@ -35,7 +35,6 @@ export const enum SubscriberFlags {
 let batchDepth = 0
 let queuedEffects: Effect | undefined
 let queuedEffectsTail: Effect | undefined
-let linkPool: Link | undefined
 
 export function startBatch(): void {
   ++batchDepth
@@ -195,23 +194,17 @@ export function processComputedUpdate(
   computed: Computed,
   flags: SubscriberFlags,
 ): void {
-  if (flags & SubscriberFlags.Dirty) {
+  if (
+    flags & SubscriberFlags.Dirty ||
+    (checkDirty(computed.deps!)
+      ? true
+      : ((computed.flags = flags & ~SubscriberFlags.PendingComputed), false))
+  ) {
     if (computed.update()) {
       const subs = computed.subs
       if (subs !== undefined) {
         shallowPropagate(subs)
       }
-    }
-  } else if (flags & SubscriberFlags.PendingComputed) {
-    if (checkDirty(computed.deps!)) {
-      if (computed.update()) {
-        const subs = computed.subs
-        if (subs !== undefined) {
-          shallowPropagate(subs)
-        }
-      }
-    } else {
-      computed.flags = flags & ~SubscriberFlags.PendingComputed
     }
   }
 }
@@ -238,22 +231,12 @@ function linkNewDep(
   nextDep: Link | undefined,
   depsTail: Link | undefined,
 ): Link {
-  let newLink: Link
-
-  if (linkPool !== undefined) {
-    newLink = linkPool
-    linkPool = newLink.nextDep
-    newLink.nextDep = nextDep
-    newLink.dep = dep
-    newLink.sub = sub
-  } else {
-    newLink = {
-      dep,
-      sub,
-      nextDep,
-      prevSub: undefined,
-      nextSub: undefined,
-    }
+  const newLink: Link = {
+    dep,
+    sub,
+    nextDep,
+    prevSub: undefined,
+    nextSub: undefined,
   }
 
   if (depsTail === undefined) {
@@ -327,7 +310,7 @@ function checkDirty(link: Link): boolean {
           if (sub.update()) {
             if ((link = subSubs.prevSub!) !== undefined) {
               subSubs.prevSub = undefined
-              shallowPropagate(sub.subs!)
+              shallowPropagate(subSubs)
               sub = link.sub as Computed
             } else {
               sub = subSubs.sub as Computed
@@ -400,24 +383,15 @@ function clearTracking(link: Link): void {
 
     if (nextSub !== undefined) {
       nextSub.prevSub = prevSub
-      link.nextSub = undefined
     } else {
       dep.subsTail = prevSub
     }
 
     if (prevSub !== undefined) {
       prevSub.nextSub = nextSub
-      link.prevSub = undefined
     } else {
       dep.subs = nextSub
     }
-
-    // @ts-expect-error
-    link.dep = undefined
-    // @ts-expect-error
-    link.sub = undefined
-    link.nextDep = linkPool
-    linkPool = link
 
     if (dep.subs === undefined && 'deps' in dep) {
       const depFlags = dep.flags
