@@ -429,7 +429,7 @@ export function defineComponent<
     >,
 ): DefineComponent<
   {
-    props?: NormalizePropsOptions<ComponentPropsOptions>
+    props?: ComponentPropsOptions extends PropsOptions ? {} : PropsOptions
     emits?: string[] extends RuntimeEmitsOptions ? {} : RuntimeEmitsOptions
     components?: LocalComponents
     directives?: Directives
