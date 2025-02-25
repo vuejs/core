@@ -84,7 +84,7 @@ export type DefineComponent<
   M,
   Mixin,
   Extends,
-  E,
+  E extends any[] ? E[0] : E,
   never,
   never,
   {},
