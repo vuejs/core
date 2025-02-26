@@ -17,6 +17,7 @@ import {
   render,
   renderSlot,
   useHost,
+  useHostInternals,
   useShadowRoot,
 } from '../src'
 
@@ -1164,6 +1165,21 @@ describe('defineCustomElement', () => {
       const style = el.shadowRoot?.querySelector('style')!
       expect(style.textContent).toBe(`div { color: red; }`)
     })
+
+    // wait for jsdom to fix https://github.com/jsdom/jsdom/issues/3732
+    test.todo('useHostInternals', async () => {
+      const Foo = defineCustomElement({
+        setup() {
+          const internals = useHostInternals()!
+          internals.ariaLive = 'polite'
+          return () => h('div', 'hello')
+        },
+      })
+      customElements.define('my-el-use-host-internals', Foo)
+      container.innerHTML = `<my-el-use-host-internals>`
+      const el = container.childNodes[0] as VueElement
+      expect(el._internals?.ariaLive).toBe('polite')
+    })
   })
 
   describe('expose', () => {
@@ -1417,6 +1433,20 @@ describe('defineCustomElement', () => {
     e.removeAttribute('boo')
     await nextTick()
     expect(e.shadowRoot!.innerHTML).toBe(`false,boolean`)
+  })
+
+  test('support attachInternals method', () => {
+    const E = defineCustomElement({
+      formAssociated: true,
+      render() {
+        return h('div', 'hello')
+      },
+    })
+    customElements.define('my-el-attach-internals', E)
+    container.innerHTML = `<my-el-attach-internals></my-el-attach-internals>`
+    const e = container.childNodes[0] as VueElement
+    expect(e.shadowRoot!.innerHTML).toBe(`<div>hello</div>`)
+    expect(e._internals).toBeTruthy()
   })
 
   test('hyphenated attr removal', async () => {
