@@ -123,16 +123,8 @@ export interface ComponentOptionsBase<
   Directives extends Record<string, Directive> = {},
   Exposed extends string = string,
   Provide extends ComponentProvideOptions = ComponentProvideOptions,
-  InternalInstance = CreateComponentPublicInstanceWithMixins<
-    Props,
-    {},
-    {},
-    {},
-    MethodOptions,
-    Mixin,
-    Extends
-  >,
-> extends LegacyOptions<InternalInstance, D, C, M, Mixin, Extends, I, Provide>,
+  DataVM = any,
+> extends LegacyOptions<DataVM, D, C, M, Mixin, Extends, I, Provide>,
     ComponentInternalOptions,
     ComponentCustomOptions {
   setup?: (
@@ -336,7 +328,7 @@ export type InjectToObject<T extends ComponentInjectOptions> =
       : never
 
 interface LegacyOptions<
-  InternalInstance,
+  DataVM,
   D,
   C extends ComputedOptions,
   M extends MethodOptions,
@@ -350,7 +342,7 @@ interface LegacyOptions<
   // allow any custom options
   [key: string]: any
 
-  data?: (vm: NoInfer<InternalInstance>) => D
+  data?: (this: DataVM, vm: DataVM) => D
   computed?: C
   methods?: M
   watch?: ComponentWatchOptions

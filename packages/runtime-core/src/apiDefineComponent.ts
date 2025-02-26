@@ -401,7 +401,15 @@ export function defineComponent<
     Record<string, Directive> | Directives,
     Exposed,
     Provide,
-    InternalInstance
+    CreateComponentPublicInstanceWithMixins<
+      InferredProps,
+      SetupBindings,
+      {},
+      {},
+      MethodOptions,
+      Mixin,
+      Extends
+    >
   > &
     ThisType<
       NoInfer<InternalInstance> & {
