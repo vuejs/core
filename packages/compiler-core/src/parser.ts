@@ -283,17 +283,11 @@ const tokenizer = new Tokenizer(stack, {
       )
 
       if (!exp.ast && !exp.content.trim()) {
-        if (isStatic) {
-          emitError(
-            ErrorCodes.X_MISSING_DIRECTIVE_MODIFIER_NAME,
-            exp.loc.start.offset,
-          )
-        } else {
-          emitError(
+        emitError(
+          isStatic ? ErrorCodes.X_MISSING_DIRECTIVE_MODIFIER_NAME : 
             ErrorCodes.X_MISSING_DYNAMIC_DIRECTIVE_MODIFIER_VALUE,
-            exp.loc.start.offset,
-          )
-        }
+          exp.loc.start.offset,
+        )
         return
       }
 
