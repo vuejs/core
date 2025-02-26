@@ -1058,7 +1058,7 @@ export type ComponentOptionsWithoutProps<
   M extends MethodOptions = {},
   Mixin extends ComponentOptionsMixin = {},
   Extends extends ComponentOptionsMixin = {},
-  E extends EmitsOptions = {},
+  E extends EmitsOptions = string[],
   EE extends string = string,
   I extends ComponentInjectOptions = {},
   II extends string = string,

@@ -92,23 +92,27 @@ export type ShortEmitsToObject<E> =
     : E
 
 export type EmitFn<
-  Options = ObjectEmitsOptions,
+  Options extends EmitsOptions = ObjectEmitsOptions,
   Event extends keyof Options = keyof Options,
-> = Options extends (infer V)[]
-  ? (event: V, ...args: any[]) => void
-  : IfAny<
-      Event,
-      {},
-      UnionToIntersection<
-        {
-          [key in Event]: Options[key] extends (...args: infer Args) => any
-            ? (event: key, ...args: Args) => void
-            : Options[key] extends any[]
-              ? (event: key, ...args: Options[key]) => void
-              : (event: key, ...args: any[]) => void
-        }[Event]
+> = EmitsOptions extends Options
+  ? keyof Options extends never
+    ? {}
+    : (event: string, ...args: any[]) => void
+  : Options extends (infer V)[]
+    ? (event: V, ...args: any[]) => void
+    : IfAny<
+        Event,
+        {},
+        UnionToIntersection<
+          {
+            [key in Event]: Options[key] extends (...args: infer Args) => any
+              ? (event: key, ...args: Args) => void
+              : Options[key] extends any[]
+                ? (event: key, ...args: Options[key]) => void
+                : (event: key, ...args: any[]) => void
+          }[Event]
+        >
       >
-    >
 
 export function emit(
   instance: ComponentInternalInstance,

@@ -112,8 +112,8 @@ export type Data = Record<string, unknown>
  */
 export type ComponentInstance<T> = T extends { new (): ComponentPublicInstance }
   ? InstanceType<T>
-  : T extends FunctionalComponent<infer Props, infer Emits>
-    ? ComponentPublicInstance<Props, {}, {}, {}, {}, ShortEmitsToObject<Emits>>
+  : T extends FunctionalComponent<infer Props, any, any, infer Emits>
+    ? ComponentPublicInstance<Props, {}, {}, {}, {}, Emits>
     : T extends Component<
           infer Props,
           infer RawBindings,
@@ -284,13 +284,13 @@ export type LifecycleHook<TFn = Function> = (TFn & SchedulerJob)[] | null
 
 // use `E extends any` to force evaluating type to fix #2362
 export type SetupContext<
-  E = EmitsOptions,
+  E extends EmitsOptions | Record<string, any[]> = EmitsOptions,
   S extends SlotsType = {},
 > = E extends any
   ? {
       attrs: Data
       slots: UnwrapSlotsType<S>
-      emit: EmitFn<E>
+      emit: EmitFn<ShortEmitsToObject<E>>
       expose: <Exposed extends Record<string, any> = Record<string, any>>(
         exposed?: Exposed,
       ) => void

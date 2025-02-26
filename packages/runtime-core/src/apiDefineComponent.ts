@@ -209,7 +209,7 @@ export interface InferDefineComponentOptions<
 
 export type DefineSetupFnComponent<
   P extends Record<string, any>,
-  E extends EmitsOptions = {},
+  E extends EmitsOptions = string[],
   S extends SlotsType = SlotsType,
   Props = P & EmitsToProps<E>,
   PP = PublicProps,
@@ -416,7 +416,7 @@ export function defineComponent<
   Methods,
   Mixin,
   Extends,
-  [string[] extends NormalizedEmits ? {} : NormalizedEmits, TypeEmits],
+  [NormalizedEmits, TypeEmits],
   string,
   never,
   never,

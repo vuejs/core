@@ -137,7 +137,7 @@ export function h(
 // functional component
 export function h<
   P,
-  E extends EmitsOptions = {},
+  E extends EmitsOptions = string[],
   S extends Record<string, any> = any,
 >(
   type: FunctionalComponent<P, any, S, any>,
