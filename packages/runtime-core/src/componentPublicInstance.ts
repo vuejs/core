@@ -304,7 +304,7 @@ export type ComponentPublicInstance<
   $root: ComponentPublicInstance | null
   $parent: ComponentPublicInstance | null
   $host: Element | null
-  $emit: EmitFn<E> & TypeEmits
+  $emit: EmitFn<E extends never[] ? {} : E> & TypeEmits
   $el: TypeEl
   $options: Options & MergedComponentOptionsOverride
   $forceUpdate: () => void
