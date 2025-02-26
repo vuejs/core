@@ -3,6 +3,7 @@
  */
 import type { Mock } from 'vitest'
 import {
+  type ComponentOptions,
   type TestElement,
   computed,
   createApp,
@@ -1060,7 +1061,7 @@ describe('api: options', () => {
       },
       data() {
         return {
-          plusOne: (this as any).count + 1,
+          plusOne: this.count + 1,
         }
       },
       computed: {
@@ -1414,7 +1415,7 @@ describe('api: options', () => {
     })
 
     test('computed with setter and no getter', () => {
-      const Comp = {
+      const Comp: ComponentOptions = {
         computed: {
           foo: {
             set() {},
@@ -1430,7 +1431,7 @@ describe('api: options', () => {
 
     test('assigning to computed with no setter', () => {
       let instance: any
-      const Comp = {
+      const Comp: ComponentOptions = {
         computed: {
           foo: {
             get() {},
@@ -1482,7 +1483,7 @@ describe('api: options', () => {
     })
 
     test('methods property is not a function', () => {
-      const Comp = {
+      const Comp: ComponentOptions = {
         methods: {
           foo: 1,
         },
