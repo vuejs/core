@@ -318,7 +318,6 @@ export function defineComponent<
   TypeEmits extends ComponentTypeEmits | unknown = unknown,
   TypeRefs extends Record<string, unknown> = {},
   TypeEl extends Element = any,
-  Defaults = {},
   RawPropsOptions extends ComponentPropsOptions = {},
   RawEmitsOptions extends EmitsOptions = string[],
   InjectOptions extends ComponentInjectOptions = {},
@@ -369,10 +368,6 @@ export function defineComponent<
 >(
   options: {
     props?: ComponentObjectPropsOptions | RawPropsOptions | _PropsKeys[]
-    /**
-     * @private for language-tools use only
-     */
-    __defaults?: Defaults
     /**
      * @private for language-tools use only
      */
@@ -460,7 +455,7 @@ export function defineComponent<
   directives: Directives
   provide: Provide
   expose: Exposed
-  __defaults: Defaults
+  __defaults: unknown
   __typeProps: TypeProps
   __typeEmits: TypeEmits
   __typeRefs: TypeRefs
