@@ -219,25 +219,7 @@ export type CreateComponentPublicInstanceWithMixins<
   Provide extends ComponentProvideOptions = ComponentProvideOptions,
   TypeEmits = unknown,
   StrictEmits extends boolean = false,
-  Options = ComponentOptionsBase<
-    P,
-    B,
-    D,
-    C,
-    M,
-    Mixin,
-    Extends,
-    E,
-    string,
-    Defaults,
-    {},
-    string,
-    S,
-    LC,
-    Directives,
-    Exposed,
-    Provide
-  >,
+  Options = any,
   // mixin inference
   PublicP = Readonly<
     ExtractPropTypes<ExtractMixinProps<Mixin> & ExtractMixinProps<Extends>>
