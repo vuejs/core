@@ -269,9 +269,9 @@ export type {
 } from './component'
 export type {
   DefineComponent,
+  DefineComponent2,
   DefineSetupFnComponent,
   PublicProps,
-  InferDefineComponentOptions,
 } from './apiDefineComponent'
 export type {
   ComponentOptions,
