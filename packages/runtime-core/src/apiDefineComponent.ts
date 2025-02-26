@@ -67,7 +67,9 @@ export type DefineComponent<
   EE = never,
   PP = never,
   Props = never,
-  Defaults = never,
+  Defaults = PropsOrPropOptions extends any[]
+    ? never
+    : ExtractDefaultPropTypes<PropsOrPropOptions>,
   S extends SlotsType = {},
   LC extends Record<string, Component> = {},
   Directives extends Record<string, Directive> = {},
@@ -118,7 +120,14 @@ export type DefineComponent<
     Extends,
     S,
     Exposed,
-    MakeDefaultsOptional
+    MakeDefaultsOptional,
+    PropsOrPropOptions extends any[]
+      ? ExtractDefaultPropTypes<
+          ExtractMixinProps<Mixin> &
+            ExtractMixinProps<Extends> &
+            PropsOrPropOptions[0]
+        >
+      : Defaults
   >
 
 export interface InferDefineComponentOptions<
@@ -137,10 +146,8 @@ export interface InferDefineComponentOptions<
   Slots extends SlotsType,
   Exposed extends string,
   MakeDefaultsOptional extends boolean,
+  Defaults,
   // resolved types
-  Defaults = ExtractDefaultPropTypes<
-    ExtractMixinProps<Mixin> & ExtractMixinProps<Extends> & PropsOptions
-  >,
   ResolvedEmits extends ObjectEmitsOptions = ExtractMixinEmits<Mixin> &
     ExtractMixinEmits<Extends> &
     ResolveEmitsOptions<RuntimeEmitsOptions, TypeEmits>,
