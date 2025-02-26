@@ -1,7 +1,7 @@
-import { TrackOpTypes } from './constants'
+import { TrackOpTypes, TriggerOpTypes } from './constants'
 import { endBatch, pauseTracking, resetTracking, startBatch } from './effect'
 import { isProxy, isShallow, toRaw, toReactive } from './reactive'
-import { ARRAY_ITERATE_KEY, track } from './dep'
+import { ARRAY_ITERATE_KEY, track, trigger } from './dep'
 import { isArray } from '@vue/shared'
 
 /**
@@ -49,6 +49,12 @@ export const arrayInstrumentations: Record<string | symbol, Function> = <any>{
     thisArg?: unknown,
   ) {
     return apply(this, 'every', fn, thisArg, undefined, arguments)
+  },
+
+  fill(value: unknown, ...args: number[]) {
+    const arr = shallowReadArray(this).fill(value, ...args)
+    triggerToJSON(arr)
+    return arr
   },
 
   filter(
@@ -152,6 +158,14 @@ export const arrayInstrumentations: Record<string | symbol, Function> = <any>{
     return reduce(this, 'reduceRight', fn, args)
   },
 
+  reverse() {
+    const arr = shallowReadArray(this)
+    arr.reverse()
+    trigger(arr, TriggerOpTypes.SET, ARRAY_ITERATE_KEY)
+    triggerToJSON(arr)
+    return arr
+  },
+
   shift() {
     return noTracking(this, 'shift')
   },
@@ -191,6 +205,11 @@ export const arrayInstrumentations: Record<string | symbol, Function> = <any>{
   values() {
     return iterator(this, 'values', toReactive)
   },
+}
+
+// trigger array which is directly print in Document
+function triggerToJSON(self: object) {
+  trigger(self, TriggerOpTypes.SET, 'toJSON')
 }
 
 // instrument iterators to take ARRAY_ITERATE dependency
