@@ -384,14 +384,14 @@ export function defineComponent<
     Record<string, Directive> | Directives,
     Exposed,
     Provide,
-    CreateComponentPublicInstanceWithMixins<
+    ComponentPublicInstance<
       InferredProps,
-      SetupBindings,
-      {},
-      {},
-      MethodOptions,
-      Mixin,
-      Extends
+      ExtractMixinSetupBindings<Mixin> &
+        ExtractMixinSetupBindings<Extends> &
+        SetupBindings,
+      ExtractMixinData<Mixin> & ExtractMixinData<Extends>,
+      ExtractMixinComputed<Mixin> & ExtractMixinComputed<Extends> & {},
+      ExtractMixinMethods<Mixin> & ExtractMixinMethods<Extends> & MethodOptions
     >
   > &
     ThisType<
