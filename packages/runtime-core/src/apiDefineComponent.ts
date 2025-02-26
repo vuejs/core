@@ -45,10 +45,6 @@ export type PublicProps = VNodeProps &
   AllowedComponentProps &
   ComponentCustomProps
 
-type NormalizePropsOptions<T> = ComponentPropsOptions extends T ? {} : T
-
-type NormalizeEmitsOptions<T> = EmitsOptions extends T ? {} : T
-
 export interface ComponentOptionsSchema {
   setup(): unknown
   data(): unknown
@@ -338,8 +334,12 @@ export function defineComponent<
   _InjectKeys extends string = string,
   // resolved types
   NormalizedProps extends
-    ComponentPropsOptions = NormalizePropsOptions<RawPropsOptions>,
-  NormalizedEmits extends EmitsOptions = NormalizeEmitsOptions<RawEmitsOptions>,
+    ComponentPropsOptions = ComponentPropsOptions extends RawPropsOptions
+    ? {}
+    : RawPropsOptions,
+  NormalizedEmits extends EmitsOptions = EmitsOptions extends RawEmitsOptions
+    ? string[]
+    : RawEmitsOptions,
   ResolvedEmits extends ObjectEmitsOptions = ResolveEmitsOptions<
     NormalizedEmits,
     TypeEmits
