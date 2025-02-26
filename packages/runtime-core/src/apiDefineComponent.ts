@@ -127,7 +127,8 @@ export type DefineComponent<
             ExtractMixinProps<Extends> &
             PropsOrPropOptions[0]
         >
-      : Defaults
+      : Defaults,
+    PropsOrPropOptions extends any[] ? true : false
   >
 
 export interface InferDefineComponentOptions<
@@ -147,6 +148,7 @@ export interface InferDefineComponentOptions<
   Exposed extends string,
   MakeDefaultsOptional extends boolean,
   Defaults,
+  StrictEmits extends boolean,
   // resolved types
   ResolvedEmits extends ObjectEmitsOptions = ExtractMixinEmits<Mixin> &
     ExtractMixinEmits<Extends> &
@@ -203,7 +205,8 @@ export interface InferDefineComponentOptions<
     Exposed,
     TypeRefs,
     TypeEl,
-    ResolvedTypeEmits
+    ResolvedTypeEmits,
+    StrictEmits
   >
 }
 
@@ -344,26 +347,6 @@ export function defineComponent<
           >
       >
   >,
-  InternalInstance = ComponentPublicInstance<
-    InferredProps,
-    ExtractMixinSetupBindings<Mixin> &
-      ExtractMixinSetupBindings<Extends> &
-      SetupBindings,
-    ExtractMixinData<Mixin> & ExtractMixinData<Extends> & EnsureNonVoid<Data>,
-    ExtractMixinComputed<Mixin> & ExtractMixinComputed<Extends> & Computed,
-    ExtractMixinMethods<Mixin> & ExtractMixinMethods<Extends> & Methods,
-    ResolvedEmits,
-    {}, // PublicProps
-    {}, // Defaults
-    false,
-    {},
-    InjectOptions,
-    Slots,
-    Exposed,
-    TypeRefs,
-    TypeEl,
-    ResolvedTypeEmits
-  >,
 >(
   options: {
     props?: ComponentObjectPropsOptions | RawPropsOptions | _PropsKeys[]
@@ -412,7 +395,29 @@ export function defineComponent<
     >
   > &
     ThisType<
-      NoInfer<InternalInstance> & {
+      ComponentPublicInstance<
+        InferredProps,
+        ExtractMixinSetupBindings<Mixin> &
+          ExtractMixinSetupBindings<Extends> &
+          SetupBindings,
+        ExtractMixinData<Mixin> &
+          ExtractMixinData<Extends> &
+          EnsureNonVoid<Data>,
+        ExtractMixinComputed<Mixin> & ExtractMixinComputed<Extends> & Computed,
+        ExtractMixinMethods<Mixin> & ExtractMixinMethods<Extends> & Methods,
+        ResolvedEmits,
+        {}, // PublicProps
+        {}, // Defaults
+        false,
+        {},
+        InjectOptions,
+        Slots,
+        Exposed,
+        TypeRefs,
+        TypeEl,
+        ResolvedTypeEmits,
+        true
+      > & {
         $options: typeof options
       }
     >,

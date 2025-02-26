@@ -292,6 +292,7 @@ export type ComponentPublicInstance<
   TypeRefs extends Data = {},
   TypeEl extends Element = any,
   TypeEmits = {},
+  StrictEmits extends boolean = false,
 > = {
   $: ComponentInternalInstance
   $data: D
@@ -304,7 +305,8 @@ export type ComponentPublicInstance<
   $root: ComponentPublicInstance | null
   $parent: ComponentPublicInstance | null
   $host: Element | null
-  $emit: EmitFn<E extends never[] ? {} : E> & TypeEmits
+  $emit: EmitFn<StrictEmits extends true ? E : {} extends E ? string[] : E> &
+    TypeEmits
   $el: TypeEl
   $options: Options & MergedComponentOptionsOverride
   $forceUpdate: () => void
