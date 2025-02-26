@@ -86,7 +86,7 @@ export type DefineComponent<
   M,
   Mixin,
   Extends,
-  E extends any[] ? E[0] : E,
+  E extends any[] ? E[0] : NormalizeEmitsOptions<E>,
   never,
   never,
   {},
@@ -111,7 +111,7 @@ export type DefineComponent<
       : PropsOrPropOptions extends ComponentPropsOptions
         ? PropsOrPropOptions
         : {},
-    E extends any[] ? E[0] : E,
+    E extends any[] ? E[0] : NormalizeEmitsOptions<E>,
     D & {},
     RawBindings,
     C,
