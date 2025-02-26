@@ -26,4 +26,9 @@ describe('compiler: v-show transform', () => {
       }),
     )
   })
+
+  test('on component', () => {
+    const { code } = compileWithVShow(`<Comp v-show="foo"/>`)
+    expect(code).toMatchSnapshot()
+  })
 })

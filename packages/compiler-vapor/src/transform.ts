@@ -147,7 +147,7 @@ export class TransformContext<T extends AllNode = AllNode> {
         isStaticExpression(e, this.root.options.bindingMetadata),
       )
     ) {
-      return this.registerOperation(...operations)
+      return operations.forEach(op => this.registerOperation(op))
     }
 
     this.block.expressions.push(...expressions)
@@ -172,12 +172,12 @@ export class TransformContext<T extends AllNode = AllNode> {
     }
   }
 
-  registerOperation(...node: OperationNode[]): void {
-    this.block.operation.push(...node)
-  }
-
-  registerOperationAt(node: OperationNode, index: number): void {
-    this.block.operation.splice(index, 0, node)
+  registerOperation(node: OperationNode, index?: number): void {
+    if (index !== undefined) {
+      this.block.operation.splice(index, 0, node)
+    } else {
+      this.block.operation.push(node)
+    }
   }
 
   create<T extends TemplateChildNode>(

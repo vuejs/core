@@ -1,5 +1,16 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
+exports[`compiler: v-show transform > on component 1`] = `
+"import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback, applyVShow as _applyVShow } from 'vue';
+
+export function render(_ctx) {
+  const _component_Comp = _resolveComponent("Comp")
+  const n0 = _createComponentWithFallback(_component_Comp, null, null, true)
+  _applyVShow(n0, () => (_ctx.foo))
+  return n0
+}"
+`;
+
 exports[`compiler: v-show transform > simple expression 1`] = `
 "import { applyVShow as _applyVShow, template as _template } from 'vue';
 const t0 = _template("<div></div>", true)
