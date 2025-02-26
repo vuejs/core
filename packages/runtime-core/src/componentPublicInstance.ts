@@ -53,7 +53,10 @@ import { currentRenderingInstance } from './componentRenderContext'
 import { warn } from './warning'
 import { installCompatInstanceProperties } from './compat/instance'
 import type { Directive } from './directives'
-import type { ExtractPropTypes } from './componentProps'
+import type {
+  ExtractDefaultPropTypes,
+  ExtractPropTypes,
+} from './componentProps'
 
 /**
  * Custom properties added to component instances in any way and can be accessed through `this`
@@ -214,35 +217,9 @@ export type CreateComponentPublicInstanceWithMixins<
   TypeRefs extends Data = {},
   TypeEl extends Element = any,
   Provide extends ComponentProvideOptions = ComponentProvideOptions,
-  // mixin inference
-  PublicP = ExtractPropTypes<
-    ExtractMixinProps<Mixin> & ExtractMixinProps<Extends>
-  > &
-    P,
-  PublicB = ExtractMixinSetupBindings<Mixin> &
-    ExtractMixinSetupBindings<Extends> &
-    EnsureNonVoid<B>,
-  PublicD = ExtractMixinData<Mixin> &
-    ExtractMixinData<Extends> &
-    EnsureNonVoid<D>,
-  PublicC extends ComputedOptions = ExtractMixinComputed<Mixin> &
-    ExtractMixinComputed<Extends> &
-    C,
-  PublicM extends MethodOptions = ExtractMixinMethods<Mixin> &
-    ExtractMixinMethods<Extends> &
-    M,
-  PublicDefaults = {} & Defaults, // TODO
-> = ComponentPublicInstance<
-  PublicP,
-  PublicB,
-  PublicD,
-  PublicC,
-  PublicM,
-  E,
-  PublicProps,
-  PublicDefaults,
-  MakeDefaultsOptional,
-  ComponentOptionsBase<
+  TypeEmits = unknown,
+  StrictEmits extends boolean = false,
+  Options = ComponentOptionsBase<
     P,
     B,
     D,
@@ -261,11 +238,45 @@ export type CreateComponentPublicInstanceWithMixins<
     Exposed,
     Provide
   >,
+  // mixin inference
+  PublicP = Readonly<
+    ExtractPropTypes<ExtractMixinProps<Mixin> & ExtractMixinProps<Extends>>
+  > &
+    P,
+  PublicB = ExtractMixinSetupBindings<Mixin> &
+    ExtractMixinSetupBindings<Extends> &
+    EnsureNonVoid<B>,
+  PublicD = ExtractMixinData<Mixin> &
+    ExtractMixinData<Extends> &
+    EnsureNonVoid<D>,
+  PublicC extends ComputedOptions = ExtractMixinComputed<Mixin> &
+    ExtractMixinComputed<Extends> &
+    C,
+  PublicM extends MethodOptions = ExtractMixinMethods<Mixin> &
+    ExtractMixinMethods<Extends> &
+    M,
+  PublicDefaults = ExtractDefaultPropTypes<
+    ExtractMixinProps<Mixin> & ExtractMixinProps<Extends>
+  > &
+    Defaults,
+> = ComponentPublicInstance<
+  PublicP,
+  PublicB,
+  PublicD,
+  PublicC,
+  PublicM,
+  E,
+  PublicProps,
+  PublicDefaults,
+  MakeDefaultsOptional,
+  Options,
   I,
   S,
   Exposed,
   TypeRefs,
-  TypeEl
+  TypeEl,
+  TypeEmits,
+  StrictEmits
 >
 
 export type ExposedKeys<

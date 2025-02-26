@@ -34,15 +34,8 @@ import type {
   ExtractPropTypes,
 } from './componentProps'
 import type {
-  ComponentPublicInstance,
   CreateComponentPublicInstanceWithMixins,
-  EnsureNonVoid,
-  ExtractMixinComputed,
-  ExtractMixinData,
   ExtractMixinEmits,
-  ExtractMixinMethods,
-  ExtractMixinProps,
-  ExtractMixinSetupBindings,
 } from './componentPublicInstance'
 import type { SlotsType } from './componentSlots'
 import type { Directive } from './directives'
@@ -62,10 +55,11 @@ export interface ComponentOptionsSchema {
   props: ComponentPropsOptions
   computed: ComputedOptions
   methods: MethodOptions
-  mixins: unknown[]
-  extends: unknown
+  mixins: ComponentOptionsMixin[]
+  extends: ComponentOptionsMixin
   emits: EmitsOptions
   slots: SlotsType
+  inject: ComponentInjectOptions
   components: Record<string, Component>
   directives: Record<string, Directive>
   provide: ComponentProvideOptions
@@ -111,6 +105,7 @@ export type DefineComponent<
     extends: Extends
     emits: E
     slots: S
+    inject: {}
     components: LC
     directives: Directives
     provide: Provide
@@ -140,25 +135,26 @@ type InferComponent<
   MakeDefaultsOptional extends boolean,
   StrictEmits extends boolean,
   // resolved types
-  Mixin = T['mixins'][number],
-  Extends = T['extends'],
-  ResolvedEmits extends ObjectEmitsOptions = ExtractMixinEmits<Mixin> &
-    ExtractMixinEmits<Extends> &
-    ResolveEmitsOptions<T['emits'], T['__typeEmits']>,
+  Mixin extends ComponentOptionsMixin = T['mixins'][number],
+  Extends extends ComponentOptionsMixin = T['extends'],
+  ResolvedEmits extends ObjectEmitsOptions = ResolveEmitsOptions<
+    T['emits'],
+    T['__typeEmits']
+  >,
   ResolvedTypeEmits = ResolveTypeEmits<T['emits'], T['__typeEmits']>,
   InferredProps = Readonly<
     ExtractPropTypes<
-      ExtractMixinProps<Mixin> &
-        ExtractMixinProps<Extends> &
-        (unknown extends T['__typeProps']
-          ? T['props'] extends (infer Keys extends string)[]
-            ? { [K in Keys]: null }
-            : T['props']
-          : {})
+      unknown extends T['__typeProps']
+        ? T['props'] extends (infer Keys extends string)[]
+          ? { [K in Keys]: null }
+          : T['props']
+        : {}
     > &
       T['__typeProps'] &
       EmitsToProps<
-        ResolvedEmits &
+        ExtractMixinEmits<Mixin> &
+          ExtractMixinEmits<Extends> &
+          ResolvedEmits &
           TypeEmitsToOptions<
             string[] extends T['emits']
               ? T['__typeEmits'] & {}
@@ -200,32 +196,33 @@ type InferComponent<
     | keyof T['computed']
     | keyof T['methods']
 
-  new (...args: any[]): ComponentPublicInstance<
+  new (
+    ...args: any[]
+  ): CreateComponentPublicInstanceWithMixins<
     InferredProps,
-    ExtractMixinSetupBindings<Mixin> &
-      ExtractMixinSetupBindings<Extends> &
-      EnsureNonVoid<ReturnType<T['setup']>>,
-    ExtractMixinData<Mixin> &
-      ExtractMixinData<Extends> &
-      EnsureNonVoid<ReturnType<T['data']>>,
-    ExtractMixinComputed<Mixin> & ExtractMixinComputed<Extends> & T['computed'],
-    ExtractMixinMethods<Mixin> & ExtractMixinMethods<Extends> & T['methods'],
-    ExtractMixinEmits<Mixin> & ExtractMixinEmits<Extends> & ResolvedEmits,
+    ReturnType<T['setup']>,
+    ReturnType<T['data']>,
+    T['computed'],
+    T['methods'],
+    Mixin,
+    Extends,
+    ResolvedEmits,
     PublicProps,
     unknown extends T['__defaults']
-      ? ExtractDefaultPropTypes<
-          ExtractMixinProps<Mixin> & ExtractMixinProps<Extends> & T['props']
-        >
+      ? ExtractDefaultPropTypes<T['props']>
       : T['__defaults'],
     MakeDefaultsOptional,
-    {},
-    {}, // InjectOptions
+    T['inject'],
     T['slots'],
+    T['components'] & GlobalComponents,
+    T['directives'] & GlobalDirectives,
     T['expose'],
     T['__typeRefs'],
     T['__typeEl'],
+    T['provide'],
     ResolvedTypeEmits,
-    StrictEmits
+    StrictEmits,
+    any
   >
 }
 
@@ -340,25 +337,27 @@ export function defineComponent<
   _EmitsKeys extends string = string,
   _InjectKeys extends string = string,
   // resolved types
-  NormalizedProps = NormalizePropsOptions<RawPropsOptions>,
+  NormalizedProps extends
+    ComponentPropsOptions = NormalizePropsOptions<RawPropsOptions>,
   NormalizedEmits extends EmitsOptions = NormalizeEmitsOptions<RawEmitsOptions>,
-  ResolvedEmits extends ObjectEmitsOptions = ExtractMixinEmits<Mixin> &
-    ExtractMixinEmits<Extends> &
-    ResolveEmitsOptions<NormalizedEmits, TypeEmits>,
+  ResolvedEmits extends ObjectEmitsOptions = ResolveEmitsOptions<
+    NormalizedEmits,
+    TypeEmits
+  >,
   ResolvedTypeEmits = ResolveTypeEmits<NormalizedEmits, TypeEmits>,
   InferredProps = Readonly<
     ExtractPropTypes<
-      ExtractMixinProps<Mixin> &
-        ExtractMixinProps<Extends> &
-        (unknown extends TypeProps
-          ? NormalizedProps extends (infer Keys extends string)[]
-            ? { [K in Keys]: null }
-            : NormalizedProps
-          : {})
+      unknown extends TypeProps
+        ? NormalizedProps extends (infer Keys extends string)[]
+          ? { [K in Keys]: null }
+          : NormalizedProps
+        : {}
     > &
       TypeProps &
       EmitsToProps<
-        ResolvedEmits &
+        ExtractMixinEmits<Mixin> &
+          ExtractMixinEmits<Extends> &
+          ResolvedEmits &
           TypeEmitsToOptions<
             string[] extends NormalizedEmits
               ? TypeEmits & {}
@@ -403,39 +402,40 @@ export function defineComponent<
     Record<string, Directive> | Directives,
     Exposed,
     Provide,
-    ComponentPublicInstance<
+    CreateComponentPublicInstanceWithMixins<
       InferredProps,
-      ExtractMixinSetupBindings<Mixin> &
-        ExtractMixinSetupBindings<Extends> &
-        SetupBindings,
-      ExtractMixinData<Mixin> & ExtractMixinData<Extends>,
-      ExtractMixinComputed<Mixin> & ExtractMixinComputed<Extends> & {},
-      ExtractMixinMethods<Mixin> & ExtractMixinMethods<Extends> & MethodOptions
+      SetupBindings,
+      {},
+      {},
+      MethodOptions,
+      Mixin,
+      Extends
     >
   > &
     ThisType<
-      ComponentPublicInstance<
+      CreateComponentPublicInstanceWithMixins<
         InferredProps,
-        ExtractMixinSetupBindings<Mixin> &
-          ExtractMixinSetupBindings<Extends> &
-          SetupBindings,
-        ExtractMixinData<Mixin> &
-          ExtractMixinData<Extends> &
-          EnsureNonVoid<Data>,
-        ExtractMixinComputed<Mixin> & ExtractMixinComputed<Extends> & Computed,
-        ExtractMixinMethods<Mixin> & ExtractMixinMethods<Extends> & Methods,
+        SetupBindings,
+        Data,
+        Computed,
+        Methods,
+        Mixin,
+        Extends,
         ResolvedEmits,
         {}, // PublicProps
         {}, // Defaults
         false,
-        {},
         InjectOptions,
         Slots,
+        {},
+        {},
         Exposed,
         TypeRefs,
         TypeEl,
+        {},
         ResolvedTypeEmits,
-        true
+        true,
+        {}
       > & {
         $options: typeof options
       }
@@ -443,13 +443,14 @@ export function defineComponent<
 ): DefineComponent2<{
   setup(): SetupBindings
   data(): Data
-  props: NormalizedProps & {}
+  props: NormalizedProps
   computed: Computed
   methods: Methods
   mixins: Mixin[]
   extends: Extends
   emits: NormalizedEmits
   slots: Slots
+  inject: {} // omitted
   components: LocalComponents
   directives: Directives
   provide: Provide

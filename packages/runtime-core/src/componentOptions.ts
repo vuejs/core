@@ -64,6 +64,7 @@ import type { Directive } from './directives'
 import {
   type ComponentPublicInstance,
   type CreateComponentPublicInstanceWithMixins,
+  type ExtractMixinProps,
   isReservedPrefix,
 } from './componentPublicInstance'
 import { warn } from './warning'
@@ -129,7 +130,10 @@ export interface ComponentOptionsBase<
     ComponentCustomOptions {
   setup?: (
     this: void,
-    props: LooseRequired<Props>,
+    props: LooseRequired<
+      Props &
+        ExtractPropTypes<ExtractMixinProps<Mixin> & ExtractMixinProps<Extends>>
+    >,
     ctx: SetupContext<E, S>,
   ) => Promise<RawBindings> | RawBindings | RenderFunction | void
   name?: string
