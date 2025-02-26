@@ -176,6 +176,10 @@ export class TransformContext<T extends AllNode = AllNode> {
     this.block.operation.push(...node)
   }
 
+  registerOperationAt(node: OperationNode, index: number): void {
+    this.block.operation.splice(index, 0, node)
+  }
+
   create<T extends TemplateChildNode>(
     node: T,
     index: number,

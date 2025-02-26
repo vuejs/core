@@ -33,10 +33,11 @@ import {
   type IRProps,
   type IRPropsDynamicAttribute,
   type IRPropsStatic,
+  type OperationNode,
   type VaporDirectiveNode,
 } from '../ir'
 import { EMPTY_EXPRESSION } from './utils'
-import { findProp } from '../utils'
+import { findDir, findProp } from '../utils'
 
 export const isReservedProp: (key: string) => boolean = /*#__PURE__*/ makeMap(
   // the leading comma is intentional so empty string "" is also included
@@ -124,7 +125,7 @@ function transformComponentElement(
   }
 
   context.dynamic.flags |= DynamicFlag.NON_TEMPLATE | DynamicFlag.INSERT
-  context.registerOperation({
+  const op: OperationNode = {
     type: IRNodeTypes.CREATE_COMPONENT_NODE,
     id: context.reference(),
     tag,
@@ -134,7 +135,16 @@ function transformComponentElement(
     slots: [...context.slots],
     once: context.inVOnce,
     dynamic: dynamicComponent,
-  })
+  }
+  const hasVShow = findDir(node, 'show')
+  if (hasVShow) {
+    const showOperationIndex = context.block.operation.findIndex(
+      op => op.type === IRNodeTypes.DIRECTIVE && op.name === 'show',
+    )
+    context.registerOperationAt(op, showOperationIndex)
+  } else {
+    context.registerOperation(op)
+  }
   context.slots = []
 }
 
