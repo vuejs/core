@@ -64,7 +64,7 @@ export type DefineComponent<
   Mixin extends ComponentOptionsMixin = {},
   Extends extends ComponentOptionsMixin = {},
   E extends EmitsOptions | [EmitsOptions, any] = [{}, unknown],
-  EE extends string = string,
+  EE = never,
   PP = never,
   Props = never,
   Defaults = never,
