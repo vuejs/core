@@ -95,7 +95,7 @@ export type DefineComponent<
   Exposed,
   Provide
 > &
-  InferDefineComponentoptions<
+  InferDefineComponentOptions<
     PropsOrPropOptions extends any[]
       ? PropsOrPropOptions[1]
       : PropsOrPropOptions extends ComponentPropsOptions
@@ -121,7 +121,7 @@ export type DefineComponent<
     MakeDefaultsOptional
   >
 
-export interface InferDefineComponentoptions<
+export interface InferDefineComponentOptions<
   TypeProps,
   TypeEmits extends ComponentTypeEmits | unknown,
   TypeRefs extends Record<string, unknown>,
