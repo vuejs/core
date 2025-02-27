@@ -1,6 +1,7 @@
 import {
   type ComponentInternalInstance,
   type ComponentOptions,
+  type GenericComponentInstance,
   type SetupContext,
   getCurrentInstance,
 } from '../component'
@@ -324,7 +325,7 @@ export function resolveTransitionHooks(
   vnode: VNode,
   props: BaseTransitionProps<any>,
   state: TransitionState,
-  instance: ComponentInternalInstance,
+  instance: GenericComponentInstance,
   postClone?: (hooks: TransitionHooks) => void,
 ): TransitionHooks {
   const {

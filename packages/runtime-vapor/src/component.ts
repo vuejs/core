@@ -11,6 +11,7 @@ import {
   type NormalizedPropsOptions,
   type ObjectEmitsOptions,
   type SuspenseBoundary,
+  type TransitionHooks,
   callWithErrorHandling,
   currentInstance,
   endMeasure,
@@ -475,17 +476,18 @@ export function mountComponent(
   instance: VaporComponentInstance,
   parent: ParentNode,
   anchor?: Node | null | 0,
+  transition?: TransitionHooks,
 ): void {
   if (__DEV__) {
     startMeasure(instance, `mount`)
   }
   if (!instance.isMounted) {
     if (instance.bm) invokeArrayFns(instance.bm)
-    insert(instance.block, parent, anchor)
+    insert(instance.block, parent, anchor, transition)
     if (instance.m) queuePostFlushCb(() => invokeArrayFns(instance.m!))
     instance.isMounted = true
   } else {
-    insert(instance.block, parent, anchor)
+    insert(instance.block, parent, anchor, transition)
   }
   if (__DEV__) {
     endMeasure(instance, `mount`)
@@ -495,6 +497,7 @@ export function mountComponent(
 export function unmountComponent(
   instance: VaporComponentInstance,
   parentNode?: ParentNode,
+  transition?: TransitionHooks,
 ): void {
   if (instance.isMounted && !instance.isUnmounted) {
     if (__DEV__ && instance.type.__hmrId) {
@@ -513,7 +516,7 @@ export function unmountComponent(
   }
 
   if (parentNode) {
-    remove(instance.block, parentNode)
+    remove(instance.block, parentNode, transition)
   }
 }
 

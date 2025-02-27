@@ -20,11 +20,13 @@ import {
 import type { RawProps } from './componentProps'
 import { getGlobalThis } from '@vue/shared'
 import { optimizePropertyLookup } from './dom/prop'
+import { ensureVaporTransition } from './components/Transition'
 
 let _createApp: CreateAppFunction<ParentNode, VaporComponent>
 
 const mountApp: AppMountFn<ParentNode> = (app, container) => {
   optimizePropertyLookup()
+  ensureVaporTransition()
 
   // clear content before mounting
   if (container.nodeType === 1 /* Node.ELEMENT_NODE */) {
