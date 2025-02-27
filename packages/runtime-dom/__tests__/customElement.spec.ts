@@ -471,6 +471,23 @@ describe('defineCustomElement', () => {
       container.appendChild(e)
       expect(e.shadowRoot!.innerHTML).toBe('<div></div>')
     })
+
+    // https://github.com/vuejs/core/issues/12964
+    // Disabled because of missing support for `delegatesFocus` in jsdom
+    // https://github.com/jsdom/jsdom/issues/3418
+    // eslint-disable-next-line vitest/no-disabled-tests
+    test.skip('shadowRoot should be initialized with delegatesFocus', () => {
+      const E = defineCustomElement({
+        render() {
+          return [h('input', { tabindex: 1 })]
+        },
+      }, { shadowRootOptions: { delegatesFocus: true } })
+      customElements.define('my-el-with-delegate-focus', E)
+
+      const e = new E()
+      container.appendChild(e)
+      expect(e.shadowRoot!.delegatesFocus).toBe(true)
+    })
   })
 
   describe('emits', () => {
