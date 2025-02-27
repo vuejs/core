@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Document</title>
+  <script src="./packages/vue/dist/vue.global.js"></script>
+</head>
+
+<body>
+  <div id="app"></div>
+  <script>
+    const { h, ref, reactive, watch, computed, watchEffect } = Vue
+    const MyComponent = Vue.defineComponent(
+      () => {
+        return () =>
+          h(
+            'h2',
+            {
+              onclick: function () {
+                console.log(this.__vnode)
+              },
+            },
+            'This is a custom component!',
+          )
+      },
+      {
+        name: 'MyComponent',
+      },
+    )
+    Vue.createApp({
+      components: {
+        MyComponent,
+      },
+      data() {
+        const m = ref('Hello!!!')
+        const message = reactive([m])
+
+        const c = ref(0)
+        const count = computed({
+          get: () => c.value,
+          set: val => (c.value = val),
+        })
+
+        watch(
+          message,
+          (newVal, oldVal) => {
+            console.log(`Message changed from ${oldVal} to ${newVal}`)
+          },
+          {
+            post: 'sync',
+          },
+        )
+
+
+        // const arr = reactive(Array.from({ length: 1000000 }).fill(1))
+        const a = Array.from({ length: 1000000 }).fill(1)
+        const b = ref(1)
+        const arr = reactive(Array(2000000).fill(0).map((_, i) => i))
+        const first = ref(0)
+        // arr.fill(1)
+        // watchEffect(() => {
+        //   // first.value = arr.at(0)
+        //   arr.fill(b.value)
+        //   first.value = arr.some(() => arr[0] === 1)
+        // })
+        // watchEffect(() => {
+        //   if (count.value != 5)
+        //   arr.fill(count.value)
+        //   else
+        //   arr.fill(-1)
+        // })
+        const reserveArr = () => {
+          arr.fill(Math.random())
+          // arr.reverse()
+        }
+        return {
+          message,
+          count,
+          arr,
+          first,
+          b,
+          reserveArr
+        }
+      },
+      template: `
+        <h1>Hello Vue.js!</h1>
+        <div ref="message" ref="MM">{{ message[0] }}</div>
+        <button @click="changeMessage()">Change Message</button>
+        <br>
+        <button @click="count++">Plus count</button>
+        <div>Current count: {{ count }}</div>
+        <button @click="reserveArr()">Reverse arr</button>
+        <div>Current arr: {{ arr }}</div>
+        <br>
+        <button @click="consoleVNode()">Log VNode</button>
+        <br>
+        <component ref="myComponent" is="MyComponent" />
+        `,
+      methods: {
+        consoleVNode() {
+          console.log(this.$refs.message.__vnode)
+          console.log(this.$refs.myComponent)
+        },
+        changeMessage() {
+          this.message[0].value =
+            this.message[0].value === 'Goodbye!!!' ? 'Hello!!!' : 'Goodbye!!!'
+        },
+      },
+    }).mount('#app')
+  </script>
+</body>
+
+</html>
