@@ -19,7 +19,16 @@ export type Block = (
   | DynamicFragment
   | VaporComponentInstance
   | Block[]
-) & { transition?: TransitionHooks }
+) &
+  TransitionBlock
+
+export type TransitionBlock = {
+  transition?: TransitionHooks
+  applyLeavingHooks?: (
+    block: Block,
+    afterLeaveCb: () => void,
+  ) => TransitionHooks
+}
 
 export type BlockFn = (...args: any[]) => Block
 
@@ -29,6 +38,10 @@ export class VaporFragment {
   insert?: (parent: ParentNode, anchor: Node | null) => void
   remove?: (parent?: ParentNode) => void
   transition?: TransitionHooks
+  applyLeavingHooks?: (
+    block: Block,
+    afterLeaveCb: () => void,
+  ) => TransitionHooks
 
   constructor(nodes: Block) {
     this.nodes = nodes
@@ -56,29 +69,39 @@ export class DynamicFragment extends VaporFragment {
     pauseTracking()
     const parent = this.anchor.parentNode
 
+    const renderNewBranch = () => {
+      if (render) {
+        this.scope = new EffectScope()
+        this.nodes = this.scope.run(render) || []
+        if (parent) insert(this.nodes, parent, this.anchor, this.transition)
+      } else {
+        this.scope = undefined
+        this.nodes = []
+      }
+
+      if (this.fallback && !isValidBlock(this.nodes)) {
+        parent && remove(this.nodes, parent, this.transition)
+        this.nodes =
+          (this.scope || (this.scope = new EffectScope())).run(this.fallback) ||
+          []
+        parent && insert(this.nodes, parent, this.anchor, this.transition)
+      }
+    }
+
     // teardown previous branch
     if (this.scope) {
       this.scope.stop()
-      parent && remove(this.nodes, parent, this.transition)
+      if (this.transition && this.transition.mode) {
+        const transition = this.applyLeavingHooks!(this.nodes, renderNewBranch)
+        parent && remove(this.nodes, parent, transition)
+        resetTracking()
+        return
+      } else {
+        parent && remove(this.nodes, parent, this.transition)
+      }
     }
 
-    if (render) {
-      this.scope = new EffectScope()
-      this.nodes = this.scope.run(render) || []
-      if (parent) insert(this.nodes, parent, this.anchor, this.transition)
-    } else {
-      this.scope = undefined
-      this.nodes = []
-    }
-
-    if (this.fallback && !isValidBlock(this.nodes)) {
-      parent && remove(this.nodes, parent)
-      this.nodes =
-        (this.scope || (this.scope = new EffectScope())).run(this.fallback) ||
-        []
-      parent && insert(this.nodes, parent, this.anchor, this.transition)
-    }
-
+    renderNewBranch()
     resetTracking()
   }
 }

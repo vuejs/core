@@ -392,10 +392,11 @@ export function resolveTransitionHooks(
       if (
         leavingVNode &&
         isSameVNodeType(vnode, leavingVNode) &&
-        (leavingVNode.el as TransitionElement)[leaveCbKey]
+        // TODO refactor
+        ((leavingVNode.el || leavingVNode) as TransitionElement)[leaveCbKey]
       ) {
         // force early removal (not cancelled)
-        ;(leavingVNode.el as TransitionElement)[leaveCbKey]!()
+        ;((leavingVNode.el || leavingVNode) as TransitionElement)[leaveCbKey]!()
       }
       callHook(hook, [el])
     },
