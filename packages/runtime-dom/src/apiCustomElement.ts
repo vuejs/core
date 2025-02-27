@@ -53,6 +53,7 @@ export type VueElementConstructor<P = {}> = {
 export interface CustomElementOptions {
   styles?: string[]
   shadowRoot?: boolean
+  shadowRootOptions?: ShadowRootInit
   nonce?: string
   configureApp?: (app: App) => void
 }
@@ -263,7 +264,7 @@ export class VueElement
         )
       }
       if (_def.shadowRoot !== false) {
-        this.attachShadow({ mode: 'open' })
+        this.attachShadow(extend({ mode: 'open' }, _def.shadowRootOptions))
         this._root = this.shadowRoot!
       } else {
         this._root = this
