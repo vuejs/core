@@ -25,7 +25,7 @@ import { SchedulerJobFlags } from '../scheduler'
 
 type Hook<T = () => void> = T | T[]
 
-const leaveCbKey: unique symbol = Symbol('_leaveCb')
+export const leaveCbKey: unique symbol = Symbol('_leaveCb')
 const enterCbKey: unique symbol = Symbol('_enterCb')
 
 export interface BaseTransitionProps<HostElement = RendererElement> {
@@ -88,7 +88,7 @@ export interface TransitionState {
   isUnmounting: boolean
   // Track pending leave callbacks for children of the same key.
   // This is used to force remove leaving a child when a new copy is entering.
-  leavingVNodes: Map<any, Record<string, VNode>>
+  leavingVNodes: Map<any, Record<string, any>>
 }
 
 export interface TransitionElement {
@@ -319,6 +319,13 @@ function getLeavingNodesForType(
   return leavingVNodesCache
 }
 
+export interface TransitionHooksContext {
+  setLeavingNodeCache: () => void
+  unsetLeavingNodeCache: () => void
+  earlyRemove: () => void
+  cloneHooks: (node: any) => TransitionHooks
+}
+
 // The transition hooks are attached to the vnode as vnode.transition
 // and will be called at appropriate timing in the renderer.
 export function resolveTransitionHooks(
@@ -328,6 +335,57 @@ export function resolveTransitionHooks(
   instance: GenericComponentInstance,
   postClone?: (hooks: TransitionHooks) => void,
 ): TransitionHooks {
+  const key = String(vnode.key)
+  const leavingVNodesCache = getLeavingNodesForType(state, vnode)
+  const context: TransitionHooksContext = {
+    setLeavingNodeCache: () => {
+      leavingVNodesCache[key] = vnode
+    },
+    unsetLeavingNodeCache: () => {
+      if (leavingVNodesCache[key] === vnode) {
+        delete leavingVNodesCache[key]
+      }
+    },
+    earlyRemove: () => {
+      const leavingVNode = leavingVNodesCache[key]
+      if (
+        leavingVNode &&
+        isSameVNodeType(vnode, leavingVNode) &&
+        (leavingVNode.el as TransitionElement)[leaveCbKey]
+      ) {
+        // force early removal (not cancelled)
+        ;(leavingVNode.el as TransitionElement)[leaveCbKey]!()
+      }
+    },
+    cloneHooks: vnode => {
+      const hooks = resolveTransitionHooks(
+        vnode,
+        props,
+        state,
+        instance,
+        postClone,
+      )
+      if (postClone) postClone(hooks)
+      return hooks
+    },
+  }
+
+  return baseResolveTransitionHooks(context, props, state, instance)
+}
+
+export function baseResolveTransitionHooks(
+  context: TransitionHooksContext,
+  props: BaseTransitionProps<any>,
+  state: TransitionState,
+  instance: GenericComponentInstance,
+): TransitionHooks {
+  const {
+    setLeavingNodeCache,
+    unsetLeavingNodeCache,
+    earlyRemove,
+    cloneHooks,
+  } = context
+
   const {
     appear,
     mode,
@@ -345,8 +403,6 @@ export function resolveTransitionHooks(
     onAfterAppear,
     onAppearCancelled,
   } = props
-  const key = String(vnode.key)
-  const leavingVNodesCache = getLeavingNodesForType(state, vnode)
 
   const callHook: TransitionHookCaller = (hook, args) => {
     hook &&
@@ -388,16 +444,7 @@ export function resolveTransitionHooks(
         el[leaveCbKey](true /* cancelled */)
       }
       // for toggled element with same key (v-if)
-      const leavingVNode = leavingVNodesCache[key]
-      if (
-        leavingVNode &&
-        isSameVNodeType(vnode, leavingVNode) &&
-        // TODO refactor
-        ((leavingVNode.el || leavingVNode) as TransitionElement)[leaveCbKey]
-      ) {
-        // force early removal (not cancelled)
-        ;((leavingVNode.el || leavingVNode) as TransitionElement)[leaveCbKey]!()
-      }
+      earlyRemove()
       callHook(hook, [el])
     },
 
@@ -436,7 +483,7 @@ export function resolveTransitionHooks(
     },
 
     leave(el, remove) {
-      const key = String(vnode.key)
+      // const key = String(vnode.key)
       if (el[enterCbKey]) {
         el[enterCbKey](true /* cancelled */)
       }
@@ -455,11 +502,9 @@ export function resolveTransitionHooks(
           callHook(onAfterLeave, [el])
         }
         el[leaveCbKey] = undefined
-        if (leavingVNodesCache[key] === vnode) {
-          delete leavingVNodesCache[key]
-        }
+        unsetLeavingNodeCache()
       })
-      leavingVNodesCache[key] = vnode
+      setLeavingNodeCache()
       if (onLeave) {
         callAsyncHook(onLeave, [el, done])
       } else {
@@ -467,16 +512,8 @@ export function resolveTransitionHooks(
       }
     },
 
-    clone(vnode) {
-      const hooks = resolveTransitionHooks(
-        vnode,
-        props,
-        state,
-        instance,
-        postClone,
-      )
-      if (postClone) postClone(hooks)
-      return hooks
+    clone(node) {
+      return cloneHooks(node)
     },
   }
 

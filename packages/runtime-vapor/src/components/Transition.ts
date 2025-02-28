@@ -1,10 +1,15 @@
 import {
+  type GenericComponentInstance,
+  type TransitionElement,
   type TransitionHooks,
+  type TransitionHooksContext,
   type TransitionProps,
+  type TransitionState,
   type VaporTransitionInterface,
+  baseResolveTransitionHooks,
   currentInstance,
+  leaveCbKey,
   registerVaporTransition,
-  resolveTransitionHooks,
   useTransitionState,
 } from '@vue/runtime-dom'
 import type { Block } from '../block'
@@ -62,6 +67,59 @@ export const vaporTransitionImpl: VaporTransitionInterface = {
 
     return children
   },
+}
+
+function resolveTransitionHooks(
+  block: Block & { key: string },
+  props: TransitionProps,
+  state: TransitionState,
+  instance: GenericComponentInstance,
+  postClone?: (hooks: TransitionHooks) => void,
+): TransitionHooks {
+  const key = String(block.key)
+  const leavingNodeCache = getLeavingNodesForBlock(state, block)
+  const context: TransitionHooksContext = {
+    setLeavingNodeCache: () => {
+      leavingNodeCache[key] = block
+    },
+    unsetLeavingNodeCache: () => {
+      if (leavingNodeCache[key] === block) {
+        delete leavingNodeCache[key]
+      }
+    },
+    earlyRemove: () => {
+      const leavingNode = leavingNodeCache[key]
+      if (leavingNode && (leavingNode as TransitionElement)[leaveCbKey]) {
+        // force early removal (not cancelled)
+        ;(leavingNode as TransitionElement)[leaveCbKey]!()
+      }
+    },
+    cloneHooks: block => {
+      const hooks = resolveTransitionHooks(
+        block,
+        props,
+        state,
+        instance,
+        postClone,
+      )
+      if (postClone) postClone(hooks)
+      return hooks
+    },
+  }
+  return baseResolveTransitionHooks(context, props, state, instance)
+}
+
+function getLeavingNodesForBlock(
+  state: TransitionState,
+  block: Block,
+): Record<string, Block> {
+  const { leavingVNodes } = state
+  let leavingNodesCache = leavingVNodes.get(block)!
+  if (!leavingNodesCache) {
+    leavingNodesCache = Object.create(null)
+    leavingVNodes.set(block, leavingNodesCache)
+  }
+  return leavingNodesCache
 }
 
 function setTransitionHooks(block: Block, hooks: TransitionHooks) {
