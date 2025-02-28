@@ -264,7 +264,11 @@ export class VueElement
         )
       }
       if (_def.shadowRoot !== false) {
-        this.attachShadow(extend({}, _def.shadowRootOptions, { mode: 'open' }) as ShadowRootInit)
+        this.attachShadow(
+          extend({}, _def.shadowRootOptions, {
+            mode: 'open',
+          }) as ShadowRootInit,
+        )
         this._root = this.shadowRoot!
       } else {
         this._root = this
