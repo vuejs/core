@@ -477,11 +477,14 @@ describe('defineCustomElement', () => {
     // https://github.com/jsdom/jsdom/issues/3418
     // eslint-disable-next-line vitest/no-disabled-tests
     test.skip('shadowRoot should be initialized with delegatesFocus', () => {
-      const E = defineCustomElement({
-        render() {
-          return [h('input', { tabindex: 1 })]
+      const E = defineCustomElement(
+        {
+          render() {
+            return [h('input', { tabindex: 1 })]
+          },
         },
-      }, { shadowRootOptions: { delegatesFocus: true } })
+        { shadowRootOptions: { delegatesFocus: true } },
+      )
       customElements.define('my-el-with-delegate-focus', E)
 
       const e = new E()
