@@ -5,13 +5,14 @@ exports[`compiler: v-memo transform > element v-for key expression prefixing + v
 
 export function render(_ctx, _cache) {
   return (_openBlock(), _createElementBlock("div", null, [
-    (_openBlock(true), _createElementBlock(_Fragment, null, _renderList(_ctx.tableData, (data, __, ___, _cached) => {
+    (_openBlock(true), _createElementBlock(_Fragment, null, _renderList(_ctx.tableData, (data, __, _i, _cached) => {
       const _memo = (_ctx.getLetter(data))
-      if (_cached && _cached.key === _ctx.getId(data) && _isMemoSame(_cached, _memo)) return _cached
+      if (_cached && _cached.el && _cached.key === _ctx.getId(data) && _isMemoSame(_cached, _memo)) return _cached
       const _item = (_openBlock(), _createElementBlock("span", {
         key: _ctx.getId(data)
       }))
       _item.memo = _memo
+      _item.cacheIndex = [0, _i]
       return _item
     }, _cache, 0), 128 /* KEYED_FRAGMENT */))
   ]))
@@ -53,11 +54,12 @@ exports[`compiler: v-memo transform > on template v-for 1`] = `
 
 export function render(_ctx, _cache) {
   return (_openBlock(), _createElementBlock("div", null, [
-    (_openBlock(true), _createElementBlock(_Fragment, null, _renderList(_ctx.list, ({ x, y }, __, ___, _cached) => {
+    (_openBlock(true), _createElementBlock(_Fragment, null, _renderList(_ctx.list, ({ x, y }, __, _i, _cached) => {
       const _memo = ([x, y === _ctx.z])
-      if (_cached && _cached.key === x && _isMemoSame(_cached, _memo)) return _cached
+      if (_cached && _cached.el && _cached.key === x && _isMemoSame(_cached, _memo)) return _cached
       const _item = (_openBlock(), _createElementBlock("span", { key: x }, "foobar"))
       _item.memo = _memo
+      _item.cacheIndex = [0, _i]
       return _item
     }, _cache, 0), 128 /* KEYED_FRAGMENT */))
   ]))
@@ -69,13 +71,14 @@ exports[`compiler: v-memo transform > on v-for 1`] = `
 
 export function render(_ctx, _cache) {
   return (_openBlock(), _createElementBlock("div", null, [
-    (_openBlock(true), _createElementBlock(_Fragment, null, _renderList(_ctx.list, ({ x, y }, __, ___, _cached) => {
+    (_openBlock(true), _createElementBlock(_Fragment, null, _renderList(_ctx.list, ({ x, y }, __, _i, _cached) => {
       const _memo = ([x, y === _ctx.z])
-      if (_cached && _cached.key === x && _isMemoSame(_cached, _memo)) return _cached
+      if (_cached && _cached.el && _cached.key === x && _isMemoSame(_cached, _memo)) return _cached
       const _item = (_openBlock(), _createElementBlock("div", { key: x }, [
         _createElementVNode("span", null, "foobar")
       ]))
       _item.memo = _memo
+      _item.cacheIndex = [0, _i]
       return _item
     }, _cache, 0), 128 /* KEYED_FRAGMENT */))
   ]))
