@@ -40,6 +40,12 @@ export interface WritableComputedOptions<T, S = T> {
   set: ComputedSetter<S>
 }
 
+export const COMPUTED_SELF_RECURSIVE_WARN: string =
+  `Computed has a self-recursive issue,` +
+  ` likely because a computed is mutating its own dependency in its getter.` +
+  ` State mutations in computed getters should be avoided. ` +
+  ` Check the documentation for more details: https://vuejs.org/guide/essentials/computed.html#getters-should-be-side-effect-free`
+
 /**
  * @private exported by @vue/reactivity for Vue core use, but not exported from
  * the main vue package
@@ -123,8 +129,12 @@ export class ComputedRefImpl<T = any> implements Subscriber {
     ) {
       batch(this, true)
       return true
-    } else if (__DEV__) {
-      // TODO warn
+    } else if (
+      __DEV__ &&
+      activeSub === this &&
+      (this._warnRecursive || __TEST__)
+    ) {
+      warn(COMPUTED_SELF_RECURSIVE_WARN, `\n\ngetter: `, this.fn)
     }
   }
 
