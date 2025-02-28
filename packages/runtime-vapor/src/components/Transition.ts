@@ -41,14 +41,17 @@ export const vaporTransitionImpl: VaporTransitionInterface = {
     const { mode } = props
     // TODO check mode
 
-    child.applyLeavingHooks = (block: Block, afterLeaveCb: () => void) => {
+    child.applyLeavingHooks = (
+      leavingBlock: Block,
+      afterLeaveCb: () => void,
+    ) => {
       let leavingHooks = resolveTransitionHooks(
-        block as any,
+        leavingBlock as any,
         props,
         state,
         currentInstance!,
       )
-      setTransitionHooks(block, leavingHooks)
+      setTransitionHooks(leavingBlock, leavingHooks)
 
       if (mode === 'out-in') {
         state.isLeaving = true
@@ -58,8 +61,23 @@ export const vaporTransitionImpl: VaporTransitionInterface = {
           delete leavingHooks.afterLeave
         }
       } else if (mode === 'in-out') {
-        leavingHooks.delayLeave = (block: Block, earlyRemove, delayedLeave) => {
-          // TODO delay leave
+        leavingHooks.delayLeave = (
+          block: TransitionElement,
+          earlyRemove,
+          delayedLeave,
+        ) => {
+          const leavingNodeCache = getLeavingNodesForBlock(state, leavingBlock)
+          leavingNodeCache[String(leavingBlock.key)] = leavingBlock
+          // early removal callback
+          block[leaveCbKey] = () => {
+            earlyRemove()
+            block[leaveCbKey] = undefined
+            delete enterHooks.delayedLeave
+          }
+          enterHooks.delayedLeave = () => {
+            delayedLeave()
+            delete enterHooks.delayedLeave
+          }
         }
       }
       return leavingHooks
@@ -70,7 +88,7 @@ export const vaporTransitionImpl: VaporTransitionInterface = {
 }
 
 function resolveTransitionHooks(
-  block: Block & { key: string },
+  block: Block,
   props: TransitionProps,
   state: TransitionState,
   instance: GenericComponentInstance,

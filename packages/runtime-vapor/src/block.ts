@@ -23,6 +23,7 @@ export type Block = (
   TransitionBlock
 
 export type TransitionBlock = {
+  key?: any
   transition?: TransitionHooks
   applyLeavingHooks?: (
     block: Block,
@@ -91,11 +92,14 @@ export class DynamicFragment extends VaporFragment {
     // teardown previous branch
     if (this.scope) {
       this.scope.stop()
-      if (this.transition && this.transition.mode) {
+      const mode = this.transition && this.transition.mode
+      if (mode) {
         const transition = this.applyLeavingHooks!(this.nodes, renderNewBranch)
         parent && remove(this.nodes, parent, transition)
-        resetTracking()
-        return
+        if (mode === 'out-in') {
+          resetTracking()
+          return
+        }
       } else {
         parent && remove(this.nodes, parent, this.transition)
       }
