@@ -1164,12 +1164,15 @@ function baseCreateRenderer(
 
     if ((n2.type as ConcreteComponent).__vapor) {
       if (n1 == null) {
-        getVaporInterface(parentComponent, n2).mount(
+        const instance = getVaporInterface(parentComponent, n2).mount(
           n2,
           container,
           anchor,
           parentComponent,
         )
+        if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
+          devtoolsComponentAdded(instance)
+        }
       } else {
         getVaporInterface(parentComponent, n2).update(
           n1,
@@ -2190,6 +2193,9 @@ function baseCreateRenderer(
     if (shapeFlag & ShapeFlags.COMPONENT) {
       if ((type as ConcreteComponent).__vapor) {
         getVaporInterface(parentComponent, vnode).unmount(vnode, doRemove)
+        if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
+          devtoolsComponentRemoved(vnode.component!)
+        }
         return
       } else {
         unmountComponent(vnode.component!, parentSuspense, doRemove)
