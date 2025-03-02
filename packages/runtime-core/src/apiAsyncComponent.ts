@@ -124,15 +124,22 @@ export function defineAsyncComponent<
 
     __asyncHydrate(el, instance, hydrate) {
       if (hydrateStrategy) {
-        let teardown: (() => void) | void
-        if (resolvedComp) {
-          teardown = hydrateStrategy(hydrate, cb => forEachElement(el, cb))
-        } else {
-          teardown = hydrateStrategy(
-            () => performLoad().then(() => !instance.isUnmounted && hydrate()),
-            cb => forEachElement(el, cb),
-          )
+        const hydrateWithCallback = (postHydrate?: () => void) => {
+          if (resolvedComp) {
+            hydrate()
+            postHydrate && postHydrate()
+          } else {
+            performLoad().then(() => {
+              if (!instance.isUnmounted) {
+                hydrate()
+                postHydrate && postHydrate()
+              }
+            })
+          }
         }
+        let teardown = hydrateStrategy(hydrateWithCallback, cb =>
+          forEachElement(el, cb),
+        )
         if (teardown) {
           ;(instance.bum || (instance.bum = [])).push(teardown)
         }
