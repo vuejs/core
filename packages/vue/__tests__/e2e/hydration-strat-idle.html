@@ -28,12 +28,8 @@
     loader: () =>
       new Promise(resolve => {
         setTimeout(() => {
-          debugger
           console.log('resolve')
           resolve(Comp)
-          requestIdleCallback(() => {
-            console.log('busy')
-          })
         }, 10)
       }),
     hydrate: hydrateOnIdle(),
