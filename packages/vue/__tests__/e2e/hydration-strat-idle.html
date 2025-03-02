@@ -28,6 +28,7 @@
     loader: () =>
       new Promise(resolve => {
         setTimeout(() => {
+          debugger
           console.log('resolve')
           resolve(Comp)
           requestIdleCallback(() => {
