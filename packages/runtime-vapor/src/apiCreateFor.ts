@@ -9,7 +9,16 @@ import {
   shallowRef,
   toReactive,
 } from '@vue/reactivity'
-import { getSequence, isArray, isObject, isString } from '@vue/shared'
+import {
+  extend,
+  getSequence,
+  isArray,
+  isMap,
+  isObject,
+  isSet,
+  isString,
+  looseEqual,
+} from '@vue/shared'
 import { createComment, createTextNode } from './dom/node'
 import {
   type Block,
@@ -116,7 +125,7 @@ export const createFor = (
         // unkeyed fast path
         const commonLength = Math.min(newLength, oldLength)
         for (let i = 0; i < commonLength; i++) {
-          update((newBlocks[i] = oldBlocks[i]), getItem(source, i)[0])
+          update(source, (newBlocks[i] = oldBlocks[i]), getItem(source, i)[0])
         }
         for (let i = oldLength; i < newLength; i++) {
           mount(source, i)
@@ -233,6 +242,7 @@ export const createFor = (
                   moved = true
                 }
                 update(
+                  source,
                   (newBlocks[newIndex] = prevBlock),
                   ...getItem(source, newIndex),
                 )
@@ -320,22 +330,27 @@ export const createFor = (
     return block
   }
 
-  const tryPatchIndex = (source: any, idx: number) => {
+  const tryPatchIndex = (source: ResolvedSource, idx: number) => {
     const block = oldBlocks[idx]
     const [item, key, index] = getItem(source, idx)
     if (block.key === getKey!(item, key, index)) {
-      update((newBlocks[idx] = block), item)
+      update(source, (newBlocks[idx] = block), item)
       return true
     }
   }
 
   const update = (
+    { needsWrap }: ResolvedSource,
     { itemRef, keyRef, indexRef }: ForBlock,
     newItem: any,
     newKey?: any,
     newIndex?: any,
   ) => {
-    if (newItem !== itemRef.value) {
+    if (
+      needsWrap
+        ? newItem !== itemRef.value
+        : !looseEqual(newItem, itemRef.value)
+    ) {
       itemRef.value = newItem
     }
     if (keyRef && newKey !== undefined && newKey !== keyRef.value) {
@@ -403,11 +418,23 @@ function normalizeSource(source: any): ResolvedSource {
   return { values, needsWrap, keys }
 }
 
+function shallowClone(val: any) {
+  return Array.isArray(val)
+    ? val.slice()
+    : isObject(val)
+      ? extend({}, val)
+      : isMap(val)
+        ? new Map(val)
+        : isSet(val)
+          ? new Set(val)
+          : val
+}
+
 function getItem(
   { keys, values, needsWrap }: ResolvedSource,
   idx: number,
 ): [item: any, key: any, index?: number] {
-  const value = needsWrap ? toReactive(values[idx]) : values[idx]
+  const value = needsWrap ? toReactive(values[idx]) : shallowClone(values[idx])
   if (keys) {
     return [value, keys[idx], idx]
   } else {

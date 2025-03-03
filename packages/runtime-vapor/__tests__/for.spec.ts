@@ -410,12 +410,12 @@ describe('createFor', () => {
       '<li>0. 1</li><li>1. 2</li><li>2. 3</li><li>3. 4</li><!--for-->',
     )
 
-    // change deep value should not update
+    // change
     list.value[0].name = 'a'
     setList()
     await nextTick()
     expect(host.innerHTML).toBe(
-      '<li>0. 1</li><li>1. 2</li><li>2. 3</li><li>3. 4</li><!--for-->',
+      '<li>0. a</li><li>1. 2</li><li>2. 3</li><li>3. 4</li><!--for-->',
     )
 
     // remove
@@ -423,7 +423,7 @@ describe('createFor', () => {
     setList()
     await nextTick()
     expect(host.innerHTML).toBe(
-      '<li>0. 1</li><li>1. 3</li><li>2. 4</li><!--for-->',
+      '<li>0. a</li><li>1. 3</li><li>2. 4</li><!--for-->',
     )
 
     // clear
