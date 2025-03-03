@@ -13,7 +13,7 @@ import {
   useTransitionState,
   warn,
 } from '@vue/runtime-dom'
-import type { Block } from '../block'
+import { type Block, type VaporTransitionHooks, isFragment } from '../block'
 import { isVaporComponent } from '../component'
 
 export const vaporTransitionImpl: VaporTransitionInterface = {
@@ -23,19 +23,6 @@ export const vaporTransitionImpl: VaporTransitionInterface = {
   ) => {
     const children = slots.default && slots.default()
     if (!children) return
-
-    const child = findElementChild(children)
-    if (!child) return
-
-    const state = useTransitionState()
-    let enterHooks = resolveTransitionHooks(
-      child as any,
-      props,
-      state,
-      currentInstance!,
-      hooks => (enterHooks = hooks),
-    )
-    setTransitionHooks(child, enterHooks)
 
     const { mode } = props
     if (
@@ -48,57 +35,19 @@ export const vaporTransitionImpl: VaporTransitionInterface = {
       warn(`invalid <transition> mode: ${mode}`)
     }
 
-    child.applyTransitionLeavingHooks = (
-      block: Block,
-      afterLeaveCb: () => void,
-    ) => {
-      const leavingBlock = findElementChild(block)
-      if (!leavingBlock) return undefined
-
-      let leavingHooks = resolveTransitionHooks(
-        leavingBlock as any,
-        props,
-        state,
-        currentInstance!,
-      )
-      setTransitionHooks(leavingBlock, leavingHooks)
-
-      if (mode === 'out-in') {
-        state.isLeaving = true
-        leavingHooks.afterLeave = () => {
-          state.isLeaving = false
-          afterLeaveCb()
-          delete leavingHooks.afterLeave
-        }
-      } else if (mode === 'in-out') {
-        leavingHooks.delayLeave = (
-          block: TransitionElement,
-          earlyRemove,
-          delayedLeave,
-        ) => {
-          const leavingNodeCache = getLeavingNodesForBlock(state, leavingBlock)
-          leavingNodeCache[String(leavingBlock.key)] = leavingBlock
-          // early removal callback
-          block[leaveCbKey] = () => {
-            earlyRemove()
-            block[leaveCbKey] = undefined
-            delete enterHooks.delayedLeave
-          }
-          enterHooks.delayedLeave = () => {
-            delayedLeave()
-            delete enterHooks.delayedLeave
-          }
-        }
-      }
-      return leavingHooks
-    }
+    applyTransitionEnterHooks(
+      children,
+      useTransitionState(),
+      props,
+      undefined,
+      false,
+    )
 
     return children
   },
 }
 
 const getTransitionHooksContext = (
-  leavingNodeCache: Record<string, Block>,
   key: string,
   block: Block,
   props: TransitionProps,
@@ -107,15 +56,18 @@ const getTransitionHooksContext = (
   postClone: ((hooks: TransitionHooks) => void) | undefined,
 ) => {
   const context: TransitionHooksContext = {
-    setLeavingNodeCache: () => {
-      leavingNodeCache[key] = block
+    setLeavingNodeCache: el => {
+      const leavingNodeCache = getLeavingNodesForBlock(state, block)
+      leavingNodeCache[key] = el
     },
-    unsetLeavingNodeCache: () => {
-      if (leavingNodeCache[key] === block) {
+    unsetLeavingNodeCache: el => {
+      const leavingNodeCache = getLeavingNodesForBlock(state, block)
+      if (leavingNodeCache[key] === el) {
         delete leavingNodeCache[key]
       }
     },
     earlyRemove: () => {
+      const leavingNodeCache = getLeavingNodesForBlock(state, block)
       const leavingNode = leavingNodeCache[key]
       if (leavingNode && (leavingNode as TransitionElement)[leaveCbKey]) {
         // force early removal (not cancelled)
@@ -143,11 +95,9 @@ function resolveTransitionHooks(
   state: TransitionState,
   instance: GenericComponentInstance,
   postClone?: (hooks: TransitionHooks) => void,
-): TransitionHooks {
+): VaporTransitionHooks {
   const key = String(block.key)
-  const leavingNodeCache = getLeavingNodesForBlock(state, block)
   const context = getTransitionHooksContext(
-    leavingNodeCache,
     key,
     block,
     props,
@@ -155,7 +105,15 @@ function resolveTransitionHooks(
     instance,
     postClone,
   )
-  return baseResolveTransitionHooks(context, props, state, instance)
+  const hooks: VaporTransitionHooks = baseResolveTransitionHooks(
+    context,
+    props,
+    state,
+    instance,
+  )
+  hooks.state = state
+  hooks.props = props
+  return hooks
 }
 
 function getLeavingNodesForBlock(
@@ -171,15 +129,96 @@ function getLeavingNodesForBlock(
   return leavingNodesCache
 }
 
-function setTransitionHooks(block: Block, hooks: TransitionHooks) {
-  block.transition = hooks
+function setTransitionHooks(block: Block, hooks: VaporTransitionHooks) {
+  if (!isFragment(block)) {
+    block.transition = hooks
+  }
 }
 
-function findElementChild(block: Block): Block | undefined {
+export function applyTransitionEnterHooks(
+  block: Block,
+  state: TransitionState,
+  props: TransitionProps,
+  enterHooks?: VaporTransitionHooks,
+  clone: boolean = true,
+): Block | undefined {
+  const child = findElementChild(block)
+  if (child) {
+    if (!enterHooks) {
+      enterHooks = resolveTransitionHooks(
+        child,
+        props,
+        state,
+        currentInstance!,
+        hooks => (enterHooks = hooks),
+      )
+    }
+
+    setTransitionHooks(
+      child,
+      clone ? enterHooks.clone(child as any) : enterHooks,
+    )
+
+    if (isFragment(block)) {
+      block.transitionChild = child
+    }
+  }
+  return child
+}
+
+export function applyTransitionLeaveHooks(
+  block: Block,
+  state: TransitionState,
+  props: TransitionProps,
+  afterLeaveCb: () => void,
+  enterHooks: TransitionHooks,
+): void {
+  const leavingBlock = findElementChild(block)
+  if (!leavingBlock) return undefined
+
+  let leavingHooks = resolveTransitionHooks(
+    leavingBlock,
+    props,
+    state,
+    currentInstance!,
+  )
+  setTransitionHooks(leavingBlock, leavingHooks)
+
+  const { mode } = props
+  if (mode === 'out-in') {
+    state.isLeaving = true
+    leavingHooks.afterLeave = () => {
+      state.isLeaving = false
+      afterLeaveCb()
+      delete leavingHooks.afterLeave
+    }
+  } else if (mode === 'in-out') {
+    leavingHooks.delayLeave = (
+      block: TransitionElement,
+      earlyRemove,
+      delayedLeave,
+    ) => {
+      const leavingNodeCache = getLeavingNodesForBlock(state, leavingBlock)
+      leavingNodeCache[String(leavingBlock.key)] = leavingBlock
+      // early removal callback
+      block[leaveCbKey] = () => {
+        earlyRemove()
+        block[leaveCbKey] = undefined
+        delete enterHooks.delayedLeave
+      }
+      enterHooks.delayedLeave = () => {
+        delayedLeave()
+        delete enterHooks.delayedLeave
+      }
+    }
+  }
+}
+
+export function findElementChild(block: Block): Block | undefined {
   let child: Block | undefined
-  // transition can only be applied on Element child
-  if (block instanceof Element) {
-    child = block
+  if (block instanceof Node) {
+    // transition can only be applied on Element child
+    if (block instanceof Element) child = block
   } else if (isVaporComponent(block)) {
     child = findElementChild(block.block)
   } else if (Array.isArray(block)) {
@@ -203,9 +242,7 @@ function findElementChild(block: Block): Block | undefined {
     }
   } else {
     // fragment
-    // store transition hooks on fragment itself, so it can apply to both
-    // previous and new branch during updates.
-    child = block
+    child = findElementChild(block.nodes)
   }
 
   if (__DEV__ && !child) {

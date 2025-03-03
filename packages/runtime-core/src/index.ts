@@ -564,4 +564,4 @@ export { initFeatureFlags } from './featureFlags'
 /**
  * @internal
  */
-export { applyTransitionEnter, applyTransitionLeave } from './renderer'
+export { performTransitionEnter, performTransitionLeave } from './renderer'

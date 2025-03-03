@@ -9,9 +9,15 @@ import { createComment, createTextNode } from './dom/node'
 import { EffectScope, pauseTracking, resetTracking } from '@vue/reactivity'
 import {
   type TransitionHooks,
-  applyTransitionEnter,
-  applyTransitionLeave,
+  type TransitionProps,
+  type TransitionState,
+  performTransitionEnter,
+  performTransitionLeave,
 } from '@vue/runtime-dom'
+import {
+  applyTransitionEnterHooks,
+  applyTransitionLeaveHooks,
+} from './components/Transition'
 
 export type Block = (
   | Node
@@ -22,13 +28,14 @@ export type Block = (
 ) &
   TransitionBlock
 
+export interface VaporTransitionHooks extends TransitionHooks {
+  state?: TransitionState
+  props?: TransitionProps
+}
+
 export type TransitionBlock = {
   key?: any
-  transition?: TransitionHooks
-  applyTransitionLeavingHooks?: (
-    block: Block,
-    afterLeaveCb: () => void,
-  ) => TransitionHooks | undefined
+  transition?: VaporTransitionHooks
 }
 
 export type BlockFn = (...args: any[]) => Block
@@ -38,11 +45,7 @@ export class VaporFragment {
   anchor?: Node
   insert?: (parent: ParentNode, anchor: Node | null) => void
   remove?: (parent?: ParentNode) => void
-  transition?: TransitionHooks
-  applyTransitionLeavingHooks?: (
-    block: Block,
-    afterLeaveCb: () => void,
-  ) => TransitionHooks | undefined
+  transitionChild?: TransitionBlock | undefined
 
   constructor(nodes: Block) {
     this.nodes = nodes
@@ -54,6 +57,7 @@ export class DynamicFragment extends VaporFragment {
   scope: EffectScope | undefined
   current?: BlockFn
   fallback?: BlockFn
+  transitionChild?: Block
 
   constructor(anchorLabel?: string) {
     super([])
@@ -72,9 +76,18 @@ export class DynamicFragment extends VaporFragment {
 
     const renderBranch = () => {
       if (render) {
+        const transition = this.transition
         this.scope = new EffectScope()
         this.nodes = this.scope.run(render) || []
-        if (parent) insert(this.nodes, parent, this.anchor, this.transition)
+        if (transition) {
+          this.transitionChild = applyTransitionEnterHooks(
+            this.nodes,
+            transition.state!,
+            transition.props!,
+            transition,
+          )
+        }
+        if (parent) insert(this.nodes, parent, this.anchor)
       } else {
         this.scope = undefined
         this.nodes = []
@@ -86,31 +99,38 @@ export class DynamicFragment extends VaporFragment {
       this.scope.stop()
       const mode = this.transition && this.transition.mode
       if (mode) {
-        const transition = this.applyTransitionLeavingHooks!(
+        applyTransitionLeaveHooks(
           this.nodes,
+          this.transition!.state!,
+          this.transition!.props!,
           renderBranch,
+          this.transition,
         )
-        parent && remove(this.nodes, parent, transition)
+        parent && remove(this.nodes, parent)
         if (mode === 'out-in') {
           resetTracking()
           return
         }
       } else {
-        parent && remove(this.nodes, parent, this.transition)
+        parent && remove(this.nodes, parent)
       }
     }
 
     renderBranch()
 
     if (this.fallback && !isValidBlock(this.nodes)) {
-      parent && remove(this.nodes, parent, this.transition)
+      parent && remove(this.nodes, parent)
       this.nodes =
         (this.scope || (this.scope = new EffectScope())).run(this.fallback) ||
         []
-      parent && insert(this.nodes, parent, this.anchor, this.transition)
+      parent && insert(this.nodes, parent, this.anchor)
     }
 
     resetTracking()
+  }
+
+  get transition(): VaporTransitionHooks | undefined {
+    return this.transitionChild && this.transitionChild.transition
   }
 }
 
@@ -144,16 +164,16 @@ export function insert(
   block: Block,
   parent: ParentNode,
   anchor: Node | null | 0 = null, // 0 means prepend
-  transition: TransitionHooks | undefined = block.transition,
   parentSuspense?: any, // TODO Suspense
 ): void {
   anchor = anchor === 0 ? parent.firstChild : anchor
   if (block instanceof Node) {
     // don't apply transition on text or comment nodes
-    if (transition && block instanceof Element) {
-      applyTransitionEnter(
+    if (block.transition && block instanceof Element) {
+      performTransitionEnter(
         block,
-        transition,
+        // @ts-expect-error
+        block.transition,
         () => parent.insertBefore(block, anchor),
         parentSuspense,
       )
@@ -161,7 +181,7 @@ export function insert(
       parent.insertBefore(block, anchor)
     }
   } else if (isVaporComponent(block)) {
-    mountComponent(block, parent, anchor, transition)
+    mountComponent(block, parent, anchor)
   } else if (isArray(block)) {
     for (let i = 0; i < block.length; i++) {
       insert(block[i], parent, anchor)
@@ -171,7 +191,7 @@ export function insert(
     if (block.insert) {
       block.insert(parent, anchor)
     } else {
-      insert(block.nodes, parent, anchor, block.transition)
+      insert(block.nodes, parent, anchor, parentSuspense)
     }
     if (block.anchor) insert(block.anchor, parent, anchor)
   }
@@ -182,23 +202,20 @@ export function prepend(parent: ParentNode, ...blocks: Block[]): void {
   while (i--) insert(blocks[i], parent, 0)
 }
 
-export function remove(
-  block: Block,
-  parent?: ParentNode,
-  transition: TransitionHooks | undefined = block.transition,
-): void {
+export function remove(block: Block, parent?: ParentNode): void {
   if (block instanceof Node) {
-    if (transition && block instanceof Element) {
-      applyTransitionLeave(
+    if (block.transition && block instanceof Element) {
+      performTransitionLeave(
         block,
-        transition,
+        // @ts-expect-error
+        block.transition,
         () => parent && parent.removeChild(block),
       )
     } else {
       parent && parent.removeChild(block)
     }
   } else if (isVaporComponent(block)) {
-    unmountComponent(block, parent, transition)
+    unmountComponent(block, parent)
   } else if (isArray(block)) {
     for (let i = 0; i < block.length; i++) {
       remove(block[i], parent)
@@ -208,7 +225,7 @@ export function remove(
     if (block.remove) {
       block.remove(parent)
     } else {
-      remove(block.nodes, parent, block.transition)
+      remove(block.nodes, parent)
     }
     if (block.anchor) remove(block.anchor, parent)
     if ((block as DynamicFragment).scope) {

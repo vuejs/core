@@ -732,7 +732,7 @@ function baseCreateRenderer(
     // #1583 For inside suspense + suspense not resolved case, enter hook should call when suspense resolved
     // #1689 For inside suspense + suspense resolved case, just call it
     if (transition) {
-      applyTransitionEnter(
+      performTransitionEnter(
         el,
         transition,
         () => hostInsert(el, container, anchor),
@@ -2116,7 +2116,7 @@ function baseCreateRenderer(
       transition
     if (needTransition) {
       if (moveType === MoveType.ENTER) {
-        applyTransitionEnter(
+        performTransitionEnter(
           el!,
           transition,
           () => hostInsert(el!, container, anchor),
@@ -2297,7 +2297,7 @@ function baseCreateRenderer(
     }
 
     if (transition) {
-      applyTransitionLeave(
+      performTransitionLeave(
         el!,
         transition,
         () => hostRemove(el!),
@@ -2622,7 +2622,7 @@ export function invalidateMount(hooks: LifecycleHook | undefined): void {
   }
 }
 
-export function applyTransitionEnter(
+export function performTransitionEnter(
   el: RendererElement,
   transition: TransitionHooks,
   insert: () => void,
@@ -2637,7 +2637,7 @@ export function applyTransitionEnter(
   }
 }
 
-export function applyTransitionLeave(
+export function performTransitionLeave(
   el: RendererElement,
   transition: TransitionHooks,
   remove: () => void,

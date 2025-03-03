@@ -320,8 +320,8 @@ function getLeavingNodesForType(
 }
 
 export interface TransitionHooksContext {
-  setLeavingNodeCache: () => void
-  unsetLeavingNodeCache: () => void
+  setLeavingNodeCache: (node: any) => void
+  unsetLeavingNodeCache: (node: any) => void
   earlyRemove: () => void
   cloneHooks: (node: any) => TransitionHooks
 }
@@ -502,9 +502,9 @@ export function baseResolveTransitionHooks(
           callHook(onAfterLeave, [el])
         }
         el[leaveCbKey] = undefined
-        unsetLeavingNodeCache()
+        unsetLeavingNodeCache(el)
       })
-      setLeavingNodeCache()
+      setLeavingNodeCache(el)
       if (onLeave) {
         callAsyncHook(onLeave, [el, done])
       } else {
