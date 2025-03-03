@@ -78,6 +78,7 @@ export const createFor = (
   // hydrationNode?: Node,
 ): VaporFragment => {
   let isMounted = false
+  let needsWrapCache: boolean
   let oldBlocks: ForBlock[] = []
   let newBlocks: ForBlock[]
   let parent: ParentNode | undefined | null
@@ -92,7 +93,10 @@ export const createFor = (
   }
 
   const renderList = () => {
-    const source = normalizeSource(src())
+    const source = normalizeSource(src(), needsWrapCache)
+    if (needsWrapCache === undefined) {
+      needsWrapCache = source.needsWrap
+    }
     const newLength = source.values.length
     const oldLength = oldBlocks.length
     newBlocks = new Array(newLength)
@@ -387,13 +391,14 @@ export function createForSlots(
   return slots
 }
 
-function normalizeSource(source: any): ResolvedSource {
+function normalizeSource(source: any, needsWrap?: boolean): ResolvedSource {
   let values = source
-  let needsWrap = false
   let keys
   if (isArray(source)) {
     if (isReactive(source)) {
-      needsWrap = !isShallow(source)
+      if (needsWrap === undefined) {
+        needsWrap = !isShallow(source)
+      }
       values = shallowReadArray(source)
     }
   } else if (isString(source)) {
@@ -415,7 +420,7 @@ function normalizeSource(source: any): ResolvedSource {
       }
     }
   }
-  return { values, needsWrap, keys }
+  return { values, needsWrap: !!needsWrap, keys }
 }
 
 function shallowClone(val: any) {
