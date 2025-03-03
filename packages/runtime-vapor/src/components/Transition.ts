@@ -11,6 +11,7 @@ import {
   leaveCbKey,
   registerVaporTransition,
   useTransitionState,
+  warn,
 } from '@vue/runtime-dom'
 import type { Block } from '../block'
 import { isVaporComponent } from '../component'
@@ -21,12 +22,10 @@ export const vaporTransitionImpl: VaporTransitionInterface = {
     slots: { default: () => Block },
   ) => {
     const children = slots.default && slots.default()
-    if (!children) {
-      return
-    }
+    if (!children) return
 
-    // TODO find non-comment node
-    const child = children
+    const child = findElementChild(children)
+    if (!child) return
 
     const state = useTransitionState()
     let enterHooks = resolveTransitionHooks(
@@ -39,12 +38,23 @@ export const vaporTransitionImpl: VaporTransitionInterface = {
     setTransitionHooks(child, enterHooks)
 
     const { mode } = props
-    // TODO check mode
+    if (
+      __DEV__ &&
+      mode &&
+      mode !== 'in-out' &&
+      mode !== 'out-in' &&
+      mode !== 'default'
+    ) {
+      warn(`invalid <transition> mode: ${mode}`)
+    }
 
-    child.applyLeavingHooks = (
-      leavingBlock: Block,
+    child.applyTransitionLeavingHooks = (
+      block: Block,
       afterLeaveCb: () => void,
     ) => {
+      const leavingBlock = findElementChild(block)
+      if (!leavingBlock) return undefined
+
       let leavingHooks = resolveTransitionHooks(
         leavingBlock as any,
         props,
@@ -87,15 +97,15 @@ export const vaporTransitionImpl: VaporTransitionInterface = {
   },
 }
 
-function resolveTransitionHooks(
+const getTransitionHooksContext = (
+  leavingNodeCache: Record<string, Block>,
+  key: string,
   block: Block,
   props: TransitionProps,
   state: TransitionState,
   instance: GenericComponentInstance,
-  postClone?: (hooks: TransitionHooks) => void,
-): TransitionHooks {
-  const key = String(block.key)
-  const leavingNodeCache = getLeavingNodesForBlock(state, block)
+  postClone: ((hooks: TransitionHooks) => void) | undefined,
+) => {
   const context: TransitionHooksContext = {
     setLeavingNodeCache: () => {
       leavingNodeCache[key] = block
@@ -124,6 +134,27 @@ function resolveTransitionHooks(
       return hooks
     },
   }
+  return context
+}
+
+function resolveTransitionHooks(
+  block: Block,
+  props: TransitionProps,
+  state: TransitionState,
+  instance: GenericComponentInstance,
+  postClone?: (hooks: TransitionHooks) => void,
+): TransitionHooks {
+  const key = String(block.key)
+  const leavingNodeCache = getLeavingNodesForBlock(state, block)
+  const context = getTransitionHooksContext(
+    leavingNodeCache,
+    key,
+    block,
+    props,
+    state,
+    instance,
+    postClone,
+  )
   return baseResolveTransitionHooks(context, props, state, instance)
 }
 
@@ -141,11 +172,47 @@ function getLeavingNodesForBlock(
 }
 
 function setTransitionHooks(block: Block, hooks: TransitionHooks) {
-  if (isVaporComponent(block)) {
-    setTransitionHooks(block.block, hooks)
+  block.transition = hooks
+}
+
+function findElementChild(block: Block): Block | undefined {
+  let child: Block | undefined
+  // transition can only be applied on Element child
+  if (block instanceof Element) {
+    child = block
+  } else if (isVaporComponent(block)) {
+    child = findElementChild(block.block)
+  } else if (Array.isArray(block)) {
+    child = block[0]
+    let hasFound = false
+    for (const c of block) {
+      const item = findElementChild(c)
+      if (item instanceof Element) {
+        if (__DEV__ && hasFound) {
+          // warn more than one non-comment child
+          warn(
+            '<transition> can only be used on a single element or component. ' +
+              'Use <transition-group> for lists.',
+          )
+          break
+        }
+        child = item
+        hasFound = true
+        if (!__DEV__) break
+      }
+    }
   } else {
-    block.transition = hooks
+    // fragment
+    // store transition hooks on fragment itself, so it can apply to both
+    // previous and new branch during updates.
+    child = block
   }
+
+  if (__DEV__ && !child) {
+    warn('Transition component has no valid child element')
+  }
+
+  return child
 }
 
 let registered = false
