@@ -263,7 +263,7 @@ export function processFor(
   dir: DirectiveNode,
   context: TransformContext,
   processCodegen?: (forNode: ForNode) => (() => void) | undefined,
-) {
+): (() => void) | undefined {
   if (!dir.exp) {
     context.onError(
       createCompilerError(ErrorCodes.X_V_FOR_NO_EXPRESSION, dir.loc),
