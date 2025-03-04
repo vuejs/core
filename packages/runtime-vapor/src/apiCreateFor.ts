@@ -78,7 +78,7 @@ export const createFor = (
   // hydrationNode?: Node,
 ): VaporFragment => {
   let isMounted = false
-  let needsWrapCache: boolean
+  let prevNeedsWrap: boolean
   let oldBlocks: ForBlock[] = []
   let newBlocks: ForBlock[]
   let parent: ParentNode | undefined | null
@@ -93,10 +93,8 @@ export const createFor = (
   }
 
   const renderList = () => {
-    const source = normalizeSource(src(), needsWrapCache)
-    if (needsWrapCache === undefined) {
-      needsWrapCache = source.needsWrap
-    }
+    const source = normalizeSource(src(), prevNeedsWrap)
+    prevNeedsWrap = source.needsWrap
     const newLength = source.values.length
     const oldLength = oldBlocks.length
     newBlocks = new Array(newLength)
@@ -396,9 +394,7 @@ function normalizeSource(source: any, needsWrap?: boolean): ResolvedSource {
   let keys
   if (isArray(source)) {
     if (isReactive(source)) {
-      if (needsWrap === undefined) {
-        needsWrap = !isShallow(source)
-      }
+      needsWrap = !isShallow(source)
       values = shallowReadArray(source)
     }
   } else if (isString(source)) {
