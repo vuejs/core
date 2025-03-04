@@ -109,6 +109,12 @@ function transformComponentElement(
       asset = false
     }
 
+    const builtInTag = isBuiltInComponent(tag)
+    if (builtInTag) {
+      tag = builtInTag
+      asset = false
+    }
+
     const dotIndex = tag.indexOf('.')
     if (dotIndex > 0) {
       const ns = resolveSetupReference(tag.slice(0, dotIndex), context)
@@ -434,4 +440,10 @@ function mergePropValues(existing: IRProp, incoming: IRProp) {
 
 function isComponentTag(tag: string) {
   return tag === 'component' || tag === 'Component'
+}
+
+export function isBuiltInComponent(tag: string): string | undefined {
+  if (tag === 'Transition' || tag === 'transition') {
+    return 'Transition'
+  }
 }
