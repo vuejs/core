@@ -418,6 +418,7 @@ export interface SuspenseBoundary {
   container: RendererElement
   hiddenContainer: RendererElement
   activeBranch: VNode | null
+  initialContent: VNode | null
   pendingBranch: VNode | null
   deps: number
   pendingId: number
@@ -503,6 +504,7 @@ function createSuspenseBoundary(
     pendingId: suspenseId++,
     timeout: typeof timeout === 'number' ? timeout : -1,
     activeBranch: null,
+    initialContent: null,
     pendingBranch: null,
     isInFallback: !isHydrating,
     isHydrating,
@@ -555,7 +557,11 @@ function createSuspenseBoundary(
           }
         }
         // unmount current active tree
-        if (activeBranch) {
+        // #7966 when Suspense is wrapped in Transition, the fallback node will be mounted
+        // in the afterLeave of Transition. This means that when Suspense is resolved,
+        // the activeBranch is not the fallback node but the initialContent.
+        // so avoid unmounting the activeBranch again.
+        if (activeBranch && activeBranch !== suspense.initialContent) {
           // if the fallback tree was mounted, it may have been moved
           // as part of a parent suspense. get the latest anchor for insertion
           // #8105 if `delayEnter` is true, it means that the mounting of
@@ -632,6 +638,7 @@ function createSuspenseBoundary(
 
       const anchor = next(activeBranch!)
       const mountFallback = () => {
+        suspense.initialContent = null
         if (!suspense.isInFallback) {
           return
         }
@@ -653,6 +660,7 @@ function createSuspenseBoundary(
       const delayEnter =
         fallbackVNode.transition && fallbackVNode.transition.mode === 'out-in'
       if (delayEnter) {
+        suspense.initialContent = activeBranch!
         activeBranch!.transition!.afterLeave = mountFallback
       }
       suspense.isInFallback = true
