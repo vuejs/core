@@ -594,8 +594,6 @@ export function buildProps(
         hasDynamicKeys = true
         if (exp) {
           if (isVBind) {
-            // #10696 in case a v-bind object contains ref
-            pushRefVForMarker()
             // have to merge early for compat build check
             pushMergeArg()
             if (__COMPAT__) {
@@ -641,6 +639,9 @@ export function buildProps(
               }
             }
 
+            // #10696 in case a v-bind object contains ref
+            pushRefVForMarker()
+            pushMergeArg()
             mergeArgs.push(exp)
           } else {
             // v-on="obj" -> toHandlers(obj)
