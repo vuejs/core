@@ -389,7 +389,7 @@ export function createForSlots(
   return slots
 }
 
-function normalizeSource(source: any, needsWrap?: boolean): ResolvedSource {
+function normalizeSource(source: any, needsWrap = false): ResolvedSource {
   let values = source
   let keys
   if (isArray(source)) {
@@ -416,7 +416,7 @@ function normalizeSource(source: any, needsWrap?: boolean): ResolvedSource {
       }
     }
   }
-  return { values, needsWrap: !!needsWrap, keys }
+  return { values, needsWrap, keys }
 }
 
 function shallowClone(val: any) {
