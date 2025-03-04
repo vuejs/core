@@ -130,11 +130,16 @@ export function createIfBranch(
   return [branch, exitBlock]
 }
 
-function isInTransition(context: TransformContext<ElementNode>): boolean {
+export function isInTransition(
+  context: TransformContext<ElementNode>,
+): boolean {
   const parentNode = context.parent && context.parent.node
-  return !!(
-    parentNode &&
-    parentNode.type === NodeTypes.ELEMENT &&
-    (parentNode.tag === 'transition' || parentNode.tag === 'Transition')
+  return !!(parentNode && isTransitionNode(parentNode as ElementNode))
+}
+
+export function isTransitionNode(node: ElementNode): boolean {
+  return (
+    node.type === NodeTypes.ELEMENT &&
+    (node.tag === 'transition' || node.tag === 'Transition')
   )
 }

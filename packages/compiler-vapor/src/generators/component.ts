@@ -99,7 +99,7 @@ export function genCreateComponent(
         return `_${builtInTag}`
       }
       return genExpression(
-        extend(createSimpleExpression(operation.tag, false), { ast: null }),
+        extend(createSimpleExpression(tag, false), { ast: null }),
         context,
       )
     }
@@ -402,7 +402,7 @@ function genSlotBlockWithProps(oper: SlotBlockIRNode, context: CodegenContext) {
   let propsName: string | undefined
   let exitScope: (() => void) | undefined
   let depth: number | undefined
-  const { props } = oper
+  const { props, key } = oper
   const idsOfProps = new Set<string>()
 
   if (props) {
@@ -430,11 +430,28 @@ function genSlotBlockWithProps(oper: SlotBlockIRNode, context: CodegenContext) {
         ? `${propsName}[${JSON.stringify(id)}]`
         : null),
   )
-  const blockFn = context.withId(
+  let blockFn = context.withId(
     () => genBlock(oper, context, [propsName]),
     idMap,
   )
   exitScope && exitScope()
+
+  if (key) {
+    blockFn = [
+      `() => {`,
+      INDENT_START,
+      NEWLINE,
+      `return `,
+      ...genCall(
+        context.helper('createKeyedFragment'),
+        [`() => `, ...genExpression(key, context)],
+        blockFn,
+      ),
+      INDENT_END,
+      NEWLINE,
+      `}`,
+    ]
+  }
 
   return blockFn
 }

@@ -13,6 +13,7 @@ import type { CodegenContext } from '../generate'
 import { genEffects, genOperations } from './operation'
 import { genChildren } from './template'
 import { toValidAssetId } from '@vue/compiler-dom'
+import { genExpression } from './expression'
 
 export function genBlock(
   oper: BlockIRNode,
@@ -40,7 +41,7 @@ export function genBlockContent(
   customReturns?: (returns: CodeFragment[]) => CodeFragment[],
 ): CodeFragment[] {
   const [frag, push] = buildCodeFragment()
-  const { dynamic, effect, operation, returns } = block
+  const { dynamic, effect, operation, returns, key } = block
   const resetBlock = context.enterBlock(block)
 
   if (root) {
@@ -57,7 +58,10 @@ export function genBlockContent(
 
   if (dynamic.needsKey) {
     for (const child of dynamic.children) {
-      push(NEWLINE, `n${child.id}.key = ${JSON.stringify(child.id)}`)
+      const keyValue = key
+        ? genExpression(key, context)
+        : JSON.stringify(child.id)
+      push(NEWLINE, `n${child.id}.key = `, ...keyValue)
     }
   }
 
