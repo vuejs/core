@@ -93,7 +93,7 @@ test('COMPILER_V_BIND_OBJECT_ORDER', () => {
   ).toHaveBeenWarned()
 })
 
-test('COMPILER_V_BIND_OBJECT_ORDER', () => {
+test('should not warn COMPILER_V_BIND_OBJECT_ORDER work with vFor', () => {
   const vm = new Vue({
     template: `<div><div v-bind="{ id: 'bar', class: 'baz' }" v-for="item in 5" /></div>`,
   }).$mount()
