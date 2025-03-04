@@ -29,8 +29,8 @@ export type Block = (
   TransitionBlock
 
 export interface VaporTransitionHooks extends TransitionHooks {
-  state?: TransitionState
-  props?: TransitionProps
+  state: TransitionState
+  props: TransitionProps
 }
 
 export type TransitionBlock = {
@@ -74,16 +74,14 @@ export class DynamicFragment extends VaporFragment {
     pauseTracking()
     const parent = this.anchor.parentNode
 
+    const transition = this.transition
     const renderBranch = () => {
       if (render) {
-        const transition = this.transition
         this.scope = new EffectScope()
         this.nodes = this.scope.run(render) || []
         if (transition) {
           this.transitionChild = applyTransitionEnterHooks(
             this.nodes,
-            transition.state!,
-            transition.props!,
             transition,
           )
         }
@@ -97,15 +95,9 @@ export class DynamicFragment extends VaporFragment {
     // teardown previous branch
     if (this.scope) {
       this.scope.stop()
-      const mode = this.transition && this.transition.mode
+      const mode = transition && transition.mode
       if (mode) {
-        applyTransitionLeaveHooks(
-          this.nodes,
-          this.transition!.state!,
-          this.transition!.props!,
-          renderBranch,
-          this.transition,
-        )
+        applyTransitionLeaveHooks(this.nodes, transition, renderBranch)
         parent && remove(this.nodes, parent)
         if (mode === 'out-in') {
           resetTracking()

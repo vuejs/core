@@ -88,7 +88,7 @@ export interface TransitionState {
   isUnmounting: boolean
   // Track pending leave callbacks for children of the same key.
   // This is used to force remove leaving a child when a new copy is entering.
-  leavingVNodes: Map<any, Record<string, any>>
+  leavingNodes: Map<any, Record<string, any>>
 }
 
 export interface TransitionElement {
@@ -104,7 +104,7 @@ export function useTransitionState(): TransitionState {
     isMounted: false,
     isLeaving: false,
     isUnmounting: false,
-    leavingVNodes: new Map(),
+    leavingNodes: new Map(),
   }
   onMounted(() => {
     state.isMounted = true
@@ -310,11 +310,11 @@ function getLeavingNodesForType(
   state: TransitionState,
   vnode: VNode,
 ): Record<string, VNode> {
-  const { leavingVNodes } = state
-  let leavingVNodesCache = leavingVNodes.get(vnode.type)!
+  const { leavingNodes } = state
+  let leavingVNodesCache = leavingNodes.get(vnode.type)!
   if (!leavingVNodesCache) {
     leavingVNodesCache = Object.create(null)
-    leavingVNodes.set(vnode.type, leavingVNodesCache)
+    leavingNodes.set(vnode.type, leavingVNodesCache)
   }
   return leavingVNodesCache
 }

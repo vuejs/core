@@ -35,40 +35,35 @@ export const vaporTransitionImpl: VaporTransitionInterface = {
       warn(`invalid <transition> mode: ${mode}`)
     }
 
-    applyTransitionEnterHooks(
-      children,
-      useTransitionState(),
+    applyTransitionEnterHooks(children, {
+      state: useTransitionState(),
       props,
-      undefined,
-      false,
-    )
+    } as VaporTransitionHooks)
 
     return children
   },
 }
 
 const getTransitionHooksContext = (
-  key: string,
-  block: Block,
+  key: String,
   props: TransitionProps,
   state: TransitionState,
   instance: GenericComponentInstance,
   postClone: ((hooks: TransitionHooks) => void) | undefined,
 ) => {
+  const { leavingNodes } = state
   const context: TransitionHooksContext = {
     setLeavingNodeCache: el => {
-      const leavingNodeCache = getLeavingNodesForBlock(state, block)
-      leavingNodeCache[key] = el
+      leavingNodes.set(key, el)
     },
     unsetLeavingNodeCache: el => {
-      const leavingNodeCache = getLeavingNodesForBlock(state, block)
-      if (leavingNodeCache[key] === el) {
-        delete leavingNodeCache[key]
+      const leavingNode = leavingNodes.get(key)
+      if (leavingNode === el) {
+        leavingNodes.delete(key)
       }
     },
     earlyRemove: () => {
-      const leavingNodeCache = getLeavingNodesForBlock(state, block)
-      const leavingNode = leavingNodeCache[key]
+      const leavingNode = leavingNodes.get(key)
       if (leavingNode && (leavingNode as TransitionElement)[leaveCbKey]) {
         // force early removal (not cancelled)
         ;(leavingNode as TransitionElement)[leaveCbKey]!()
@@ -96,37 +91,22 @@ function resolveTransitionHooks(
   instance: GenericComponentInstance,
   postClone?: (hooks: TransitionHooks) => void,
 ): VaporTransitionHooks {
-  const key = String(block.key)
   const context = getTransitionHooksContext(
-    key,
-    block,
+    String(block.key),
     props,
     state,
     instance,
     postClone,
   )
-  const hooks: VaporTransitionHooks = baseResolveTransitionHooks(
+  const hooks = baseResolveTransitionHooks(
     context,
     props,
     state,
     instance,
-  )
+  ) as VaporTransitionHooks
   hooks.state = state
   hooks.props = props
   return hooks
-}
-
-function getLeavingNodesForBlock(
-  state: TransitionState,
-  block: Block,
-): Record<string, Block> {
-  const { leavingVNodes } = state
-  let leavingNodesCache = leavingVNodes.get(block)!
-  if (!leavingNodesCache) {
-    leavingNodesCache = Object.create(null)
-    leavingVNodes.set(block, leavingNodesCache)
-  }
-  return leavingNodesCache
 }
 
 function setTransitionHooks(block: Block, hooks: VaporTransitionHooks) {
@@ -137,28 +117,20 @@ function setTransitionHooks(block: Block, hooks: VaporTransitionHooks) {
 
 export function applyTransitionEnterHooks(
   block: Block,
-  state: TransitionState,
-  props: TransitionProps,
-  enterHooks?: VaporTransitionHooks,
-  clone: boolean = true,
+  hooks: VaporTransitionHooks,
 ): Block | undefined {
   const child = findElementChild(block)
   if (child) {
-    if (!enterHooks) {
-      enterHooks = resolveTransitionHooks(
-        child,
-        props,
-        state,
-        currentInstance!,
-        hooks => (enterHooks = hooks),
-      )
-    }
-
-    setTransitionHooks(
+    const { props, state, delayedLeave } = hooks
+    let enterHooks = resolveTransitionHooks(
       child,
-      clone ? enterHooks.clone(child as any) : enterHooks,
+      props,
+      state,
+      currentInstance!,
+      hooks => (enterHooks = hooks as VaporTransitionHooks),
     )
-
+    enterHooks.delayedLeave = delayedLeave
+    setTransitionHooks(child, enterHooks)
     if (isFragment(block)) {
       block.transitionChild = child
     }
@@ -168,15 +140,14 @@ export function applyTransitionEnterHooks(
 
 export function applyTransitionLeaveHooks(
   block: Block,
-  state: TransitionState,
-  props: TransitionProps,
+  enterHooks: VaporTransitionHooks,
   afterLeaveCb: () => void,
-  enterHooks: TransitionHooks,
 ): void {
   const leavingBlock = findElementChild(block)
   if (!leavingBlock) return undefined
 
-  let leavingHooks = resolveTransitionHooks(
+  const { props, state } = enterHooks
+  const leavingHooks = resolveTransitionHooks(
     leavingBlock,
     props,
     state,
@@ -198,8 +169,7 @@ export function applyTransitionLeaveHooks(
       earlyRemove,
       delayedLeave,
     ) => {
-      const leavingNodeCache = getLeavingNodesForBlock(state, leavingBlock)
-      leavingNodeCache[String(leavingBlock.key)] = leavingBlock
+      state.leavingNodes.set(String(leavingBlock.key), leavingBlock)
       // early removal callback
       block[leaveCbKey] = () => {
         earlyRemove()
