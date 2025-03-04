@@ -259,6 +259,7 @@ export interface IRDynamicInfo {
   children: IRDynamicInfo[]
   template?: number
   hasDynamicChild?: boolean
+  needsKey?: boolean
 }
 
 export interface IREffect {

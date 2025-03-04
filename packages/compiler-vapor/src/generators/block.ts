@@ -55,6 +55,12 @@ export function genBlockContent(
   push(...genOperations(operation, context))
   push(...genEffects(effect, context))
 
+  if (dynamic.needsKey) {
+    for (const child of dynamic.children) {
+      push(NEWLINE, `n${child.id}.key = ${JSON.stringify(child.id)}`)
+    }
+  }
+
   push(NEWLINE, `return `)
 
   const returnNodes = returns.map(n => `n${n}`)
