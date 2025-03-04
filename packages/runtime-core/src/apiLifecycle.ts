@@ -64,7 +64,7 @@ export function injectHook(
 }
 
 const createHook =
-  <T extends Function = () => any>(lifecycle: LifecycleHooks) =>
+  <T extends Function = () => void>(lifecycle: LifecycleHooks) =>
   (
     hook: T,
     target: ComponentInternalInstance | null = currentInstance,
@@ -77,7 +77,7 @@ const createHook =
       injectHook(lifecycle, (...args: unknown[]) => hook(...args), target)
     }
   }
-type CreateHook<T = any> = (
+type CreateHook<T = () => void> = (
   hook: T,
   target?: ComponentInternalInstance | null,
 ) => void
