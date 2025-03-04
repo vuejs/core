@@ -32,6 +32,20 @@ export interface TransitionProps extends BaseTransitionProps<Element> {
   leaveToClass?: string
 }
 
+export interface VaporTransitionInterface {
+  applyTransition: (
+    props: TransitionProps,
+    slots: { default: () => any },
+  ) => void
+}
+
+let vaporTransitionImpl: VaporTransitionInterface | null = null
+export const registerVaporTransition = (
+  impl: VaporTransitionInterface,
+): void => {
+  vaporTransitionImpl = impl
+}
+
 export const vtcKey: unique symbol = Symbol('_vtc')
 
 export interface ElementWithTransition extends HTMLElement {
@@ -85,9 +99,13 @@ const decorate = (t: typeof Transition) => {
  * base Transition component, with DOM-specific logic.
  */
 export const Transition: FunctionalComponent<TransitionProps> =
-  /*@__PURE__*/ decorate((props, { slots }) =>
-    h(BaseTransition, resolveTransitionProps(props), slots),
-  )
+  /*@__PURE__*/ decorate((props, { slots, vapor }: any) => {
+    const resolvedProps = resolveTransitionProps(props)
+    if (vapor) {
+      return vaporTransitionImpl!.applyTransition(resolvedProps, slots)
+    }
+    return h(BaseTransition, resolvedProps, slots)
+  })
 
 /**
  * #3227 Incoming hooks may be merged into arrays when wrapping Transition

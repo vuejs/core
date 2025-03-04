@@ -1,6 +1,7 @@
 import {
   type ElementNode,
   ErrorCodes,
+  NodeTypes,
   createCompilerError,
   createSimpleExpression,
 } from '@vue/compiler-dom'
@@ -123,5 +124,22 @@ export function createIfBranch(
   const branch: BlockIRNode = newBlock(node)
   const exitBlock = context.enterBlock(branch)
   context.reference()
+  // generate key for branch result when it's in transition
+  // the key will be used to cache node at runtime
+  branch.dynamic.needsKey = isInTransition(context)
   return [branch, exitBlock]
+}
+
+export function isInTransition(
+  context: TransformContext<ElementNode>,
+): boolean {
+  const parentNode = context.parent && context.parent.node
+  return !!(parentNode && isTransitionNode(parentNode as ElementNode))
+}
+
+export function isTransitionNode(node: ElementNode): boolean {
+  return (
+    node.type === NodeTypes.ELEMENT &&
+    (node.tag === 'transition' || node.tag === 'Transition')
+  )
 }

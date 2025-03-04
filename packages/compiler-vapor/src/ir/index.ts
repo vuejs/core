@@ -40,6 +40,7 @@ export enum IRNodeTypes {
 
 export interface BaseIRNode {
   type: IRNodeTypes
+  key?: SimpleExpressionNode | undefined
 }
 
 export type CoreHelper = keyof typeof import('packages/runtime-dom/src')
@@ -261,6 +262,7 @@ export interface IRDynamicInfo {
   children: IRDynamicInfo[]
   template?: number
   hasDynamicChild?: boolean
+  needsKey?: boolean
 }
 
 export interface IREffect {

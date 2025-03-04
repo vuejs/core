@@ -33,6 +33,7 @@ import type { RawSlots, VaporSlot } from './componentSlots'
 import { renderEffect } from './renderEffect'
 import { createTextNode } from './dom/node'
 import { optimizePropertyLookup } from './dom/prop'
+import { ensureVaporTransition } from './components/Transition'
 
 // mounting vapor components and slots in vdom
 const vaporInteropImpl: Omit<
@@ -288,6 +289,7 @@ export const vaporInteropPlugin: Plugin = app => {
   const mount = app.mount
   app.mount = ((...args) => {
     optimizePropertyLookup()
+    ensureVaporTransition()
     return mount(...args)
   }) satisfies App['mount']
 }

@@ -39,6 +39,7 @@ import { genEventHandler } from './event'
 import { genDirectiveModifiers, genDirectivesForElement } from './directive'
 import { genBlock } from './block'
 import { genModelHandler } from './vModel'
+import { isBuiltInComponent } from '../transforms/transformElement'
 
 export function genCreateComponent(
   operation: CreateComponentIRNode,
@@ -52,13 +53,12 @@ export function genCreateComponent(
   const [ids, handlers] = processInlineHandlers(props, context)
   const rawProps = context.withId(() => genRawProps(props, context), ids)
   const inlineHandlers: CodeFragment[] = handlers.reduce<CodeFragment[]>(
-    (acc, { name, value }) => {
+    (acc, { name, value }: InlineHandler) => {
       const handler = genEventHandler(context, value, undefined, false)
       return [...acc, `const ${name} = `, ...handler, NEWLINE]
     },
     [],
   )
-
   return [
     NEWLINE,
     ...inlineHandlers,
@@ -91,8 +91,15 @@ export function genCreateComponent(
     } else if (operation.asset) {
       return toValidAssetId(operation.tag, 'component')
     } else {
+      const { tag } = operation
+      const builtInTag = isBuiltInComponent(tag)
+      if (builtInTag) {
+        // @ts-expect-error
+        helper(builtInTag)
+        return `_${builtInTag}`
+      }
       return genExpression(
-        extend(createSimpleExpression(operation.tag, false), { ast: null }),
+        extend(createSimpleExpression(tag, false), { ast: null }),
         context,
       )
     }
@@ -395,7 +402,7 @@ function genSlotBlockWithProps(oper: SlotBlockIRNode, context: CodegenContext) {
   let propsName: string | undefined
   let exitScope: (() => void) | undefined
   let depth: number | undefined
-  const { props } = oper
+  const { props, key } = oper
   const idsOfProps = new Set<string>()
 
   if (props) {
@@ -423,11 +430,28 @@ function genSlotBlockWithProps(oper: SlotBlockIRNode, context: CodegenContext) {
         ? `${propsName}[${JSON.stringify(id)}]`
         : null),
   )
-  const blockFn = context.withId(
+  let blockFn = context.withId(
     () => genBlock(oper, context, [propsName]),
     idMap,
   )
   exitScope && exitScope()
+
+  if (key) {
+    blockFn = [
+      `() => {`,
+      INDENT_START,
+      NEWLINE,
+      `return `,
+      ...genCall(
+        context.helper('createKeyedFragment'),
+        [`() => `, ...genExpression(key, context)],
+        blockFn,
+      ),
+      INDENT_END,
+      NEWLINE,
+      `}`,
+    ]
+  }
 
   return blockFn
 }
