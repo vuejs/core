@@ -25,6 +25,7 @@ import { isVaporComponent } from '../component'
 const decorate = (t: typeof VaporTransition) => {
   t.displayName = 'VaporTransition'
   t.props = TransitionPropsValidators
+  t.__vapor = true
   return t
 }
 

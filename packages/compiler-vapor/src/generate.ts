@@ -129,7 +129,6 @@ export function generate(
       `const ${setTemplateRefIdent} = ${context.helper('createTemplateRefSetter')}()`,
     )
   }
-
   push(...genBlockContent(ir.block, context, true))
   push(INDENT_END, NEWLINE)
 
