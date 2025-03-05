@@ -1,5 +1,20 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
+exports[`cache multiple access > cache variable used in both property shorthand and normal binding 1`] = `
+"import { setStyle as _setStyle, setProp as _setProp, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<div></div>", true)
+
+export function render(_ctx) {
+  const n0 = t0()
+  _renderEffect(() => {
+    const _color = _ctx.color
+    _setStyle(n0, {color: _color})
+    _setProp(n0, "id", _color)
+  })
+  return n0
+}"
+`;
+
 exports[`cache multiple access > dynamic key bindings with expressions 1`] = `
 "import { setDynamicProps as _setDynamicProps, renderEffect as _renderEffect, template as _template } from 'vue';
 const t0 = _template("<div></div>", true)
@@ -56,6 +71,17 @@ const t0 = _template("<div></div>", true)
 export function render(_ctx) {
   const n0 = t0()
   _renderEffect(() => _setProp(n0, "id", _ctx.bar + _ctx.obj.bar))
+  return n0
+}"
+`;
+
+exports[`cache multiple access > not cache variable only used in property shorthand 1`] = `
+"import { setStyle as _setStyle, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<div></div>", true)
+
+export function render(_ctx) {
+  const n0 = t0()
+  _renderEffect(() => _setStyle(n0, {color: _ctx.color}))
   return n0
 }"
 `;

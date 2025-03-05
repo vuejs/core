@@ -2410,6 +2410,9 @@ function baseCreateRenderer(
 
   const getNextHostNode: NextFn = vnode => {
     if (vnode.shapeFlag & ShapeFlags.COMPONENT) {
+      if ((vnode.type as ConcreteComponent).__vapor) {
+        return hostNextSibling((vnode.component! as any).block)
+      }
       return getNextHostNode(vnode.component!.subTree)
     }
     if (__FEATURE_SUSPENSE__ && vnode.shapeFlag & ShapeFlags.SUSPENSE) {

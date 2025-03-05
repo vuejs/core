@@ -162,8 +162,9 @@ export function parse(
       ignoreEmpty &&
       node.tag !== 'template' &&
       isEmpty(node) &&
-      !hasSrc(node)
+      !hasAttr(node, 'src')
     ) {
+      descriptor.vapor ||= hasAttr(node, 'vapor')
       return
     }
     switch (node.tag) {
@@ -409,13 +410,8 @@ function padContent(
   }
 }
 
-function hasSrc(node: ElementNode) {
-  return node.props.some(p => {
-    if (p.type !== NodeTypes.ATTRIBUTE) {
-      return false
-    }
-    return p.name === 'src'
-  })
+function hasAttr(node: ElementNode, name: string) {
+  return node.props.some(p => p.type === NodeTypes.ATTRIBUTE && p.name === name)
 }
 
 /**

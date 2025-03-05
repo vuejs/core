@@ -1,4 +1,4 @@
-import { createVaporApp, defineVaporComponent } from '../src'
+import { createVaporApp } from '../src'
 import type { App } from '@vue/runtime-dom'
 import type { VaporComponent, VaporComponentInstance } from '../src/component'
 import type { RawProps } from '../src/componentProps'
@@ -36,7 +36,8 @@ export function makeRender<C = VaporComponent>(
   })
 
   function define(comp: C) {
-    const component = defineVaporComponent(comp as any)
+    const component = comp as any
+    component.__vapor = true
     let instance: VaporComponentInstance | undefined
     let app: App
 
