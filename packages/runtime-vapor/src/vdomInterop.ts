@@ -7,6 +7,7 @@ import {
   type RendererInternals,
   type ShallowRef,
   type Slots,
+  type TransitionHooks,
   type VNode,
   type VaporInteropInterface,
   createVNode,
@@ -14,6 +15,7 @@ import {
   ensureRenderer,
   onScopeDispose,
   renderSlot,
+  setTransitionHooks,
   shallowRef,
   simpleSetCurrentInstance,
 } from '@vue/runtime-dom'
@@ -171,14 +173,16 @@ function createVDOMComponent(
 
   let isMounted = false
   const parentInstance = currentInstance as VaporComponentInstance
-  const unmount = (parentNode?: ParentNode) => {
+  const unmount = (parentNode?: ParentNode, transition?: TransitionHooks) => {
+    if (transition) setTransitionHooks(vnode, transition)
     internals.umt(vnode.component!, null, !!parentNode)
   }
 
-  frag.insert = (parentNode, anchor) => {
+  frag.insert = (parentNode, anchor, transition) => {
     const prev = currentInstance
     simpleSetCurrentInstance(parentInstance)
     if (!isMounted) {
+      if (transition) setTransitionHooks(vnode, transition)
       internals.mt(
         vnode,
         parentNode,

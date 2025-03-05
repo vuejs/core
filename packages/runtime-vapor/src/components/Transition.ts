@@ -230,7 +230,11 @@ export function findTransitionBlock(block: Block): TransitionBlock | undefined {
       }
     }
   } else if (isFragment(block)) {
-    child = findTransitionBlock(block.nodes)
+    if (block.insert) {
+      child = block
+    } else {
+      child = findTransitionBlock(block.nodes)
+    }
   }
 
   if (__DEV__ && !child) {

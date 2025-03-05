@@ -278,7 +278,7 @@ export function devRender(instance: VaporComponentInstance): void {
     ) || []
 }
 
-const emptyContext: GenericAppContext = {
+export const emptyContext: GenericAppContext = {
   app: null as any,
   config: {},
   provides: /*@__PURE__*/ Object.create(null),
@@ -446,9 +446,10 @@ export function createComponentWithFallback(
   rawProps?: LooseRawProps | null,
   rawSlots?: LooseRawSlots | null,
   isSingleRoot?: boolean,
+  appContext?: GenericAppContext,
 ): HTMLElement | VaporComponentInstance {
   if (!isString(comp)) {
-    return createComponent(comp, rawProps, rawSlots, isSingleRoot)
+    return createComponent(comp, rawProps, rawSlots, isSingleRoot, appContext)
   }
 
   const el = document.createElement(comp)

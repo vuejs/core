@@ -43,8 +43,12 @@ export class VaporFragment implements TransitionOptions {
   $transition?: VaporTransitionHooks | undefined
   nodes: Block
   anchor?: Node
-  insert?: (parent: ParentNode, anchor: Node | null) => void
-  remove?: (parent?: ParentNode) => void
+  insert?: (
+    parent: ParentNode,
+    anchor: Node | null,
+    transitionHooks?: TransitionHooks,
+  ) => void
+  remove?: (parent?: ParentNode, transitionHooks?: TransitionHooks) => void
 
   constructor(nodes: Block) {
     this.nodes = nodes
@@ -170,7 +174,7 @@ export function insert(
   } else {
     // fragment
     if (block.insert) {
-      block.insert(parent, anchor)
+      block.insert(parent, anchor, (block as TransitionBlock).$transition)
     } else {
       insert(block.nodes, parent, anchor, parentSuspense)
     }
@@ -203,7 +207,7 @@ export function remove(block: Block, parent?: ParentNode): void {
   } else {
     // fragment
     if (block.remove) {
-      block.remove(parent)
+      block.remove(parent, (block as TransitionBlock).$transition)
     } else {
       remove(block.nodes, parent)
     }
