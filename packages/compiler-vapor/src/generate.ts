@@ -130,10 +130,6 @@ export function generate(
     )
   }
 
-  if (ir.hasTransition) {
-    push(NEWLINE, `${context.helper('useVaporTransition')}()`)
-  }
-
   push(...genBlockContent(ir.block, context, true))
   push(INDENT_END, NEWLINE)
 

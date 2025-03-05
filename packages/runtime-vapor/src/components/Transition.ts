@@ -1,15 +1,16 @@
 import {
+  type FunctionalComponent,
   type GenericComponentInstance,
   type TransitionElement,
   type TransitionHooks,
   type TransitionHooksContext,
   type TransitionProps,
+  TransitionPropsValidators,
   type TransitionState,
-  type VaporTransitionInterface,
   baseResolveTransitionHooks,
   currentInstance,
   leaveCbKey,
-  registerVaporTransition,
+  resolveTransitionProps,
   useTransitionState,
   warn,
 } from '@vue/runtime-dom'
@@ -21,13 +22,15 @@ import {
 } from '../block'
 import { isVaporComponent } from '../component'
 
-/*#__NO_SIDE_EFFECTS__*/
-export const vaporTransitionImpl: VaporTransitionInterface = {
-  applyTransition: (
-    props: TransitionProps,
-    slots: { default: () => Block },
-  ): Block | undefined => {
-    const children = slots.default && slots.default()
+const decorate = (t: typeof VaporTransition) => {
+  t.displayName = 'VaporTransition'
+  t.props = TransitionPropsValidators
+  return t
+}
+
+export const VaporTransition: FunctionalComponent<TransitionProps> =
+  /*@__PURE__*/ decorate((props, { slots }) => {
+    const children = (slots.default && slots.default()) as any as Block
     if (!children) return
 
     const { mode } = props
@@ -43,12 +46,11 @@ export const vaporTransitionImpl: VaporTransitionInterface = {
 
     applyTransitionEnterHooks(children, {
       state: useTransitionState(),
-      props,
+      props: resolveTransitionProps(props),
     } as VaporTransitionHooks)
 
     return children
-  },
-}
+  })
 
 const getTransitionHooksContext = (
   key: String,
@@ -235,13 +237,4 @@ export function findTransitionBlock(block: Block): TransitionBlock | undefined {
   }
 
   return child
-}
-
-let registered = false
-/*#__NO_SIDE_EFFECTS__*/
-export function useVaporTransition(): void {
-  if (!registered) {
-    registerVaporTransition(vaporTransitionImpl)
-    registered = true
-  }
 }

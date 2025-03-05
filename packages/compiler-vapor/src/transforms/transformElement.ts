@@ -1,4 +1,3 @@
-import { isValidHTMLNesting } from '@vue/compiler-dom'
 import {
   type AttributeNode,
   type ComponentNode,
@@ -11,6 +10,7 @@ import {
   createCompilerError,
   createSimpleExpression,
   isStaticArgOf,
+  isValidHTMLNesting,
 } from '@vue/compiler-dom'
 import {
   camelize,
@@ -36,7 +36,7 @@ import {
   type VaporDirectiveNode,
 } from '../ir'
 import { EMPTY_EXPRESSION } from './utils'
-import { findProp } from '../utils'
+import { findProp, isBuiltInComponent } from '../utils'
 
 export const isReservedProp: (key: string) => boolean = /*#__PURE__*/ makeMap(
   // the leading comma is intentional so empty string "" is also included
@@ -440,10 +440,4 @@ function mergePropValues(existing: IRProp, incoming: IRProp) {
 
 function isComponentTag(tag: string) {
   return tag === 'component' || tag === 'Component'
-}
-
-export function isBuiltInComponent(tag: string): string | undefined {
-  if (tag === 'Transition' || tag === 'transition') {
-    return 'Transition'
-  }
 }

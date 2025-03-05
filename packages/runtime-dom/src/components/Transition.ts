@@ -4,11 +4,9 @@ import {
   BaseTransitionPropsValidators,
   DeprecationTypes,
   type FunctionalComponent,
-  type Slots,
   assertNumber,
   compatUtils,
   h,
-  renderSlot,
 } from '@vue/runtime-core'
 import { extend, isArray, isObject, toNumber } from '@vue/shared'
 
@@ -32,20 +30,6 @@ export interface TransitionProps extends BaseTransitionProps<Element> {
   leaveFromClass?: string
   leaveActiveClass?: string
   leaveToClass?: string
-}
-
-export interface VaporTransitionInterface {
-  applyTransition: (
-    props: TransitionProps,
-    slots: { default: () => any },
-  ) => any
-}
-
-let vaporTransitionImpl: VaporTransitionInterface | null = null
-export const registerVaporTransition = (
-  impl: VaporTransitionInterface,
-): void => {
-  vaporTransitionImpl = impl
 }
 
 export const vtcKey: unique symbol = Symbol('_vtc')
@@ -101,27 +85,9 @@ const decorate = (t: typeof Transition) => {
  * base Transition component, with DOM-specific logic.
  */
 export const Transition: FunctionalComponent<TransitionProps> =
-  /*@__PURE__*/ decorate((props, { slots }) => {
-    const resolvedProps = resolveTransitionProps(props)
-    if (slots.__vapor) {
-      // with vapor interop plugin
-      if (slots.__interop) {
-        const children = vaporTransitionImpl!.applyTransition(
-          resolvedProps,
-          slots as any,
-        )
-        const vaporSlots = {
-          default: () => children,
-          __interop: true,
-        } as any as Slots
-        return renderSlot(vaporSlots, 'default')
-      }
-
-      return vaporTransitionImpl!.applyTransition(resolvedProps, slots as any)
-    }
-
-    return h(BaseTransition, resolvedProps, slots)
-  })
+  /*@__PURE__*/ decorate((props, { slots }) =>
+    h(BaseTransition, resolveTransitionProps(props), slots),
+  )
 
 /**
  * #3227 Incoming hooks may be merged into arrays when wrapping Transition

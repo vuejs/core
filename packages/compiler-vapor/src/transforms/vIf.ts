@@ -1,7 +1,6 @@
 import {
   type ElementNode,
   ErrorCodes,
-  NodeTypes,
   createCompilerError,
   createSimpleExpression,
 } from '@vue/compiler-dom'
@@ -19,7 +18,7 @@ import {
 import { extend } from '@vue/shared'
 import { newBlock, wrapTemplate } from './utils'
 import { getSiblingIf } from './transformComment'
-import { isStaticExpression } from '../utils'
+import { isInTransition, isStaticExpression } from '../utils'
 
 export const transformVIf: NodeTransform = createStructuralDirectiveTransform(
   ['if', 'else', 'else-if'],
@@ -128,26 +127,4 @@ export function createIfBranch(
   // the key will be used to cache node at runtime
   branch.dynamic.needsKey = isInTransition(context)
   return [branch, exitBlock]
-}
-
-export function isInTransition(
-  context: TransformContext<ElementNode>,
-): boolean {
-  const parentNode = context.parent && context.parent.node
-  return !!(parentNode && isTransitionNode(parentNode as ElementNode, context))
-}
-
-export function isTransitionNode(
-  node: ElementNode,
-  context: TransformContext<ElementNode>,
-): boolean {
-  const inTransition =
-    node.type === NodeTypes.ELEMENT &&
-    (node.tag === 'transition' || node.tag === 'Transition')
-
-  if (inTransition) {
-    context.ir.hasTransition = true
-  }
-
-  return inTransition
 }

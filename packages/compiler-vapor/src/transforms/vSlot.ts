@@ -23,8 +23,12 @@ import {
   type SlotBlockIRNode,
   type VaporDirectiveNode,
 } from '../ir'
-import { findDir, findProp, resolveExpression } from '../utils'
-import { isTransitionNode } from './vIf'
+import {
+  findDir,
+  findProp,
+  isTransitionNode,
+  resolveExpression,
+} from '../utils'
 
 export const transformVSlot: NodeTransform = (node, context) => {
   if (node.type !== NodeTypes.ELEMENT) return
@@ -74,7 +78,7 @@ function transformComponentSlot(
   )
 
   let slotKey
-  if (isTransitionNode(node, context)) {
+  if (isTransitionNode(node)) {
     const keyProp = findProp(
       nonSlotTemplateChildren[0] as ElementNode,
       'key',

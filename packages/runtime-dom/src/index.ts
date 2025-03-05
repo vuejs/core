@@ -354,9 +354,4 @@ export {
 export {
   resolveTransitionProps,
   TransitionPropsValidators,
-  registerVaporTransition,
 } from './components/Transition'
-/**
- * @internal
- */
-export type { VaporTransitionInterface } from './components/Transition'
