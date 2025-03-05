@@ -1,5 +1,6 @@
 import {
   type IfAny,
+  type PublicOf,
   hasChanged,
   isArray,
   isFunction,
@@ -55,7 +56,13 @@ export function isRef(r: any): r is Ref {
 export function ref<T>(
   value: T,
 ): [T] extends [Ref] ? IfAny<T, Ref<T>, T> : Ref<UnwrapRef<T>, UnwrapRef<T> | T>
-export function ref<T = any>(): Ref<T | undefined>
+
+export function ref<T = any>(): [T] extends [Ref]
+  ? Ref<T | undefined>
+  : PublicOf<T> extends T
+    ? Ref<UnwrapRef<T> | undefined, UnwrapRef<T> | T | undefined>
+    : Ref<T | undefined>
+
 export function ref(value?: unknown) {
   return createRef(value, false)
 }
