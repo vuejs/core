@@ -19,33 +19,32 @@ import {
   applyTransitionLeaveHooks,
 } from './components/Transition'
 
-export type Block = (
-  | Node
-  | VaporFragment
-  | DynamicFragment
-  | VaporComponentInstance
-  | Block[]
-) &
-  TransitionBlock
+export interface TransitionOptions {
+  key?: any
+  $transition?: VaporTransitionHooks
+}
 
 export interface VaporTransitionHooks extends TransitionHooks {
   state: TransitionState
   props: TransitionProps
 }
 
-export type TransitionBlock = {
-  key?: any
-  $transition?: VaporTransitionHooks
-}
+export type TransitionBlock =
+  | (Node & TransitionOptions)
+  | (VaporFragment & TransitionOptions)
+  | (DynamicFragment & TransitionOptions)
+
+export type Block = TransitionBlock | VaporComponentInstance | Block[]
 
 export type BlockFn = (...args: any[]) => Block
 
-export class VaporFragment {
+export class VaporFragment implements TransitionOptions {
+  key?: any
+  $transition?: VaporTransitionHooks | undefined
   nodes: Block
   anchor?: Node
   insert?: (parent: ParentNode, anchor: Node | null) => void
   remove?: (parent?: ParentNode) => void
-  $transition?: VaporTransitionHooks | undefined
 
   constructor(nodes: Block) {
     this.nodes = nodes
@@ -72,7 +71,6 @@ export class DynamicFragment extends VaporFragment {
 
     pauseTracking()
     const parent = this.anchor.parentNode
-
     const transition = this.$transition
     const renderBranch = () => {
       if (render) {
@@ -153,11 +151,10 @@ export function insert(
   anchor = anchor === 0 ? parent.firstChild : anchor
   if (block instanceof Node) {
     // don't apply transition on text or comment nodes
-    if (block.$transition && block instanceof Element) {
+    if ((block as TransitionBlock).$transition && block instanceof Element) {
       performTransitionEnter(
         block,
-        // @ts-expect-error
-        block.$transition,
+        (block as TransitionBlock).$transition as TransitionHooks,
         () => parent.insertBefore(block, anchor),
         parentSuspense,
       )
@@ -188,11 +185,10 @@ export function prepend(parent: ParentNode, ...blocks: Block[]): void {
 
 export function remove(block: Block, parent?: ParentNode): void {
   if (block instanceof Node) {
-    if (block.$transition && block instanceof Element) {
+    if ((block as TransitionBlock).$transition && block instanceof Element) {
       performTransitionLeave(
         block,
-        // @ts-expect-error
-        block.$transition,
+        (block as TransitionBlock).$transition as TransitionHooks,
         () => parent && parent.removeChild(block),
       )
     } else {

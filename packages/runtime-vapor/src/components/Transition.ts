@@ -13,7 +13,12 @@ import {
   useTransitionState,
   warn,
 } from '@vue/runtime-dom'
-import { type Block, type VaporTransitionHooks, isFragment } from '../block'
+import {
+  type Block,
+  type TransitionBlock,
+  type VaporTransitionHooks,
+  isFragment,
+} from '../block'
 import { isVaporComponent } from '../component'
 
 export const vaporTransitionImpl: VaporTransitionInterface = {
@@ -85,7 +90,7 @@ const getTransitionHooksContext = (
 }
 
 function resolveTransitionHooks(
-  block: Block,
+  block: TransitionBlock,
   props: TransitionProps,
   state: TransitionState,
   instance: GenericComponentInstance,
@@ -109,7 +114,10 @@ function resolveTransitionHooks(
   return hooks
 }
 
-function setTransitionHooks(block: Block, hooks: VaporTransitionHooks) {
+function setTransitionHooks(
+  block: TransitionBlock,
+  hooks: VaporTransitionHooks,
+) {
   if (!isFragment(block)) {
     block.$transition = hooks
   }
@@ -188,20 +196,20 @@ export function applyTransitionLeaveHooks(
   }
 }
 
-const transitionChildCache = new WeakMap<Block, Block>()
-export function findElementChild(block: Block): Block | undefined {
+const transitionChildCache = new WeakMap<Block, TransitionBlock>()
+export function findElementChild(block: Block): TransitionBlock | undefined {
   if (transitionChildCache.has(block)) {
     return transitionChildCache.get(block)
   }
 
-  let child: Block | undefined
+  let child: TransitionBlock | undefined
   if (block instanceof Node) {
     // transition can only be applied on Element child
     if (block instanceof Element) child = block
   } else if (isVaporComponent(block)) {
     child = findElementChild(block.block)
   } else if (Array.isArray(block)) {
-    child = block[0]
+    child = block[0] as TransitionBlock
     let hasFound = false
     for (const c of block) {
       const item = findElementChild(c)
@@ -219,8 +227,7 @@ export function findElementChild(block: Block): Block | undefined {
         if (!__DEV__) break
       }
     }
-  } else {
-    // fragment
+  } else if (isFragment(block)) {
     child = findElementChild(block.nodes)
   }
 

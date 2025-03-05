@@ -6,7 +6,7 @@ import {
 } from '@vue/runtime-dom'
 import { renderEffect } from '../renderEffect'
 import { isVaporComponent } from '../component'
-import { type Block, DynamicFragment } from '../block'
+import { type Block, DynamicFragment, type TransitionBlock } from '../block'
 import { isArray } from '@vue/shared'
 
 export function applyVShow(target: Block, source: () => any): void {
@@ -39,7 +39,7 @@ function setDisplay(target: Block, value: unknown): void {
   if (target instanceof DynamicFragment) {
     return setDisplay(target.nodes, value)
   }
-  const { $transition } = target
+  const { $transition } = target as TransitionBlock
   if (target instanceof Element) {
     const el = target as VShowElement
     if (!(vShowOriginalDisplay in el)) {
