@@ -56,6 +56,7 @@ import {
   type VaporSlot,
   dynamicSlotsProxyHandlers,
   getSlot,
+  vaporSlotsProxyHandler,
 } from './componentSlots'
 import { hmrReload, hmrRerender } from './hmr'
 
@@ -416,7 +417,7 @@ export class VaporComponentInstance implements GenericComponentInstance {
     this.slots = rawSlots
       ? rawSlots.$
         ? new Proxy(rawSlots, dynamicSlotsProxyHandlers)
-        : rawSlots
+        : new Proxy(rawSlots, vaporSlotsProxyHandler)
       : EMPTY_OBJ
   }
 

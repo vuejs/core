@@ -16,8 +16,24 @@ export type DynamicSlot = { name: string; fn: VaporSlot }
 export type DynamicSlotFn = () => DynamicSlot | DynamicSlot[]
 export type DynamicSlotSource = StaticSlots | DynamicSlotFn
 
+export const vaporSlotsProxyHandler: ProxyHandler<any> = {
+  get(target, key) {
+    if (key === '_vapor') {
+      return target
+    } else {
+      return target[key]
+    }
+  },
+}
+
 export const dynamicSlotsProxyHandlers: ProxyHandler<RawSlots> = {
-  get: getSlot,
+  get: (target, key: string) => {
+    if (key === '_vapor') {
+      return target
+    } else {
+      return getSlot(target, key)
+    }
+  },
   has: (target, key: string) => !!getSlot(target, key),
   getOwnPropertyDescriptor(target, key: string) {
     const slot = getSlot(target, key)

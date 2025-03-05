@@ -26,7 +26,7 @@ export const vaporTransitionImpl: VaporTransitionInterface = {
   applyTransition: (
     props: TransitionProps,
     slots: { default: () => Block },
-  ) => {
+  ): Block | undefined => {
     const children = slots.default && slots.default()
     if (!children) return
 

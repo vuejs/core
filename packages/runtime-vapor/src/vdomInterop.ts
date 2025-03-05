@@ -29,7 +29,11 @@ import {
 import { type Block, VaporFragment, insert, remove } from './block'
 import { EMPTY_OBJ, extend, isFunction } from '@vue/shared'
 import { type RawProps, rawPropsProxyHandlers } from './componentProps'
-import type { RawSlots, VaporSlot } from './componentSlots'
+import {
+  type RawSlots,
+  type VaporSlot,
+  vaporSlotsProxyHandler,
+} from './componentSlots'
 import { renderEffect } from './renderEffect'
 import { createTextNode } from './dom/node'
 import { optimizePropertyLookup } from './dom/prop'
@@ -126,16 +130,6 @@ const vaporSlotPropsProxyHandler: ProxyHandler<
   },
   ownKeys(target) {
     return Object.keys(target.value)
-  },
-}
-
-const vaporSlotsProxyHandler: ProxyHandler<any> = {
-  get(target, key) {
-    if (key === '_vapor') {
-      return target
-    } else {
-      return target[key]
-    }
   },
 }
 
