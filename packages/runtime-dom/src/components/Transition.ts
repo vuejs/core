@@ -7,6 +7,7 @@ import {
   assertNumber,
   compatUtils,
   h,
+  isVNode,
 } from '@vue/runtime-core'
 import { extend, isArray, isObject, toNumber } from '@vue/shared'
 
@@ -99,12 +100,20 @@ const decorate = (t: typeof Transition) => {
  * base Transition component, with DOM-specific logic.
  */
 export const Transition: FunctionalComponent<TransitionProps> =
-  /*@__PURE__*/ decorate((props, { slots, vapor }: any) => {
+  /*@__PURE__*/ decorate((props, { slots }) => {
+    const children = slots.default && slots.default()
+    const isVNodeChildren = isArray(children) && children.some(c => isVNode(c))
     const resolvedProps = resolveTransitionProps(props)
-    if (vapor) {
-      return vaporTransitionImpl!.applyTransition(resolvedProps, slots)
+    if (isVNodeChildren) {
+      return h(BaseTransition, resolvedProps, {
+        default: () => children,
+      })
     }
-    return h(BaseTransition, resolvedProps, slots)
+
+    // vapor transition
+    return vaporTransitionImpl!.applyTransition(resolvedProps, {
+      default: () => children,
+    })
   })
 
 /**
