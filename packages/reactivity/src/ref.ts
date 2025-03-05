@@ -384,6 +384,8 @@ class GetterRefImpl<T> {
 
 export type ToRef<T> = IfAny<T, Ref<T>, [T] extends [Ref] ? T : Ref<T>>
 
+type SafeShallowRef<T> = T | ShallowRef<never>
+
 /**
  * Used to normalize values / refs / getters into refs.
  *
@@ -434,7 +436,7 @@ export function toRef<T>(value: T): T extends () => infer R
       // containing `ShallowRef`, without raising the minimum TS version
       // requirement.
       T extends { [ShallowRefMarker]?: true }
-      ? T | ShallowRef<never>
+      ? SafeShallowRef<T>
       : T
     : Ref<UnwrapRef<T>>
 export function toRef<T extends object, K extends keyof T>(
