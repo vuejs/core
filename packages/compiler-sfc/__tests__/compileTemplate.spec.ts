@@ -483,6 +483,71 @@ test('non-identifier expression in legacy filter syntax', () => {
   }).not.toThrow()
 })
 
+test('user import binding used in both template and cssVar(non-inline)', () => {
+  const src = `
+  <script setup lang='ts'>
+    import { color } from './Color'
+  </script>
+  <template>
+    <div>{{color}}</div>
+  </template>
+  <style>
+    div { color: v-bind(color) }
+  </style>
+  `
+  const { descriptor } = parse(src)
+  const { bindings, content } = compileScript(descriptor, { id: 'xxx' })
+  expect(content).contains('unref as _unref')
+  expect(content).toMatchSnapshot()
+
+  const result = compileTemplate({
+    id: 'xxx',
+    filename: 'test.vue',
+    source: descriptor.template!.content,
+    ssrCssVars: descriptor.cssVars,
+    compilerOptions: {
+      bindingMetadata: bindings,
+    },
+  })
+
+  // avoid generating duplicate unref
+  expect(result.code).not.contains('unref as _unref')
+  expect(result.code).toMatchSnapshot()
+})
+
+test('user import binding used in both template and cssVar(inline)', () => {
+  const src = `
+  <script setup lang='ts'>
+    import { color } from './Color'
+  </script>
+  <template>
+    <div>{{color}}</div>
+  </template>
+  <style>
+    div { color: v-bind(color) }
+  </style>
+  `
+  const { descriptor } = parse(src)
+  const { bindings, content } = compileScript(descriptor, {
+    id: 'xxx',
+    inlineTemplate: true,
+  })
+  expect(content).contains('unref as _unref')
+  expect(content).toMatchSnapshot()
+
+  const result = compileTemplate({
+    id: 'xxx',
+    filename: 'test.vue',
+    source: descriptor.template!.content,
+    ssrCssVars: descriptor.cssVars,
+    compilerOptions: {
+      bindingMetadata: bindings,
+    },
+  })
+  expect(result.code).not.contains('unref as _unref')
+  expect(result.code).toMatchSnapshot()
+})
+
 interface Pos {
   line: number
   column: number
