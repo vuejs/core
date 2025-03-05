@@ -214,6 +214,27 @@ export function readonly<T extends object>(
   )
 }
 
+export type ShallowReadonly<T> = T extends Builtin
+  ? T
+  : T extends Map<infer K, infer V>
+    ? ReadonlyMap<K, V>
+    : T extends ReadonlyMap<infer K, infer V>
+      ? ReadonlyMap<K, V>
+      : T extends WeakMap<infer K, infer V>
+        ? WeakMap<K, V>
+        : T extends Set<infer U>
+          ? ReadonlySet<U>
+          : T extends ReadonlySet<infer U>
+            ? ReadonlySet<U>
+            : T extends WeakSet<infer U>
+              ? WeakSet<U>
+              : T extends Promise<infer U>
+                ? Promise<U>
+                : T extends Ref<infer U>
+                  ? Readonly<Ref<U>>
+                  : T extends {}
+                    ? { readonly [K in keyof T]: T[K] }
+                    : Readonly<T>
 /**
  * Shallow version of {@link readonly()}.
  *
@@ -244,7 +265,9 @@ export function readonly<T extends object>(
  * @param target - The source object.
  * @see {@link https://vuejs.org/api/reactivity-advanced.html#shallowreadonly}
  */
-export function shallowReadonly<T extends object>(target: T): Readonly<T> {
+export function shallowReadonly<T extends object>(
+  target: T,
+): ShallowReadonly<T> {
   return createReactiveObject(
     target,
     true,
