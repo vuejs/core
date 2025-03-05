@@ -4,9 +4,11 @@ import {
   BaseTransitionPropsValidators,
   DeprecationTypes,
   type FunctionalComponent,
+  type Slots,
   assertNumber,
   compatUtils,
   h,
+  renderSlot,
 } from '@vue/runtime-core'
 import { extend, isArray, isObject, toNumber } from '@vue/shared'
 
@@ -101,8 +103,20 @@ const decorate = (t: typeof Transition) => {
 export const Transition: FunctionalComponent<TransitionProps> =
   /*@__PURE__*/ decorate((props, { slots }) => {
     const resolvedProps = resolveTransitionProps(props)
-    if (slots._vapor) {
-      // vapor transition
+    if (slots.__vapor) {
+      // with vapor interop plugin
+      if (slots.__interop) {
+        const children = vaporTransitionImpl!.applyTransition(
+          resolvedProps,
+          slots as any,
+        )
+        const vaporSlots = {
+          default: () => children,
+          __interop: true,
+        } as any as Slots
+        return renderSlot(vaporSlots, 'default')
+      }
+
       return vaporTransitionImpl!.applyTransition(resolvedProps, slots as any)
     }
 

@@ -35,7 +35,7 @@ export function renderSlot(
   let slot = slots[name]
 
   // vapor slots rendered in vdom
-  if (slot && slots._vapor) {
+  if (slot && slots.__interop) {
     const ret = (openBlock(), createBlock(VaporSlot, props))
     ret.vs = { slot, fallback }
     return ret

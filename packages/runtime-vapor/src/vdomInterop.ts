@@ -29,11 +29,7 @@ import {
 import { type Block, VaporFragment, insert, remove } from './block'
 import { EMPTY_OBJ, extend, isFunction } from '@vue/shared'
 import { type RawProps, rawPropsProxyHandlers } from './componentProps'
-import {
-  type RawSlots,
-  type VaporSlot,
-  vaporSlotsProxyHandler,
-} from './componentSlots'
+import type { RawSlots, VaporSlot } from './componentSlots'
 import { renderEffect } from './renderEffect'
 import { createTextNode } from './dom/node'
 import { optimizePropertyLookup } from './dom/prop'
@@ -133,6 +129,16 @@ const vaporSlotPropsProxyHandler: ProxyHandler<
   },
 }
 
+const vaporSlotsProxyHandler: ProxyHandler<any> = {
+  get(target, key) {
+    if (key === '__interop') {
+      return target
+    } else {
+      return target[key]
+    }
+  },
+}
+
 /**
  * Mount vdom component in vapor
  */
@@ -170,6 +176,8 @@ function createVDOMComponent(
   }
 
   frag.insert = (parentNode, anchor) => {
+    const prev = currentInstance
+    simpleSetCurrentInstance(parentInstance)
     if (!isMounted) {
       internals.mt(
         vnode,
@@ -192,6 +200,7 @@ function createVDOMComponent(
         parentInstance as any,
       )
     }
+    simpleSetCurrentInstance(prev)
   }
 
   frag.remove = unmount
