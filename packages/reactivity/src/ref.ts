@@ -427,12 +427,15 @@ export type ToRef<T> = IfAny<T, Ref<T>, [T] extends [Ref] ? T : Ref<T>>
  * @param [key] - (optional) Name of the property in the reactive object.
  * @see {@link https://vuejs.org/api/reactivity-utilities.html#toref}
  */
-export function toRef<T>(
-  value: T,
-): T extends () => infer R
+export function toRef<T>(value: T): T extends () => infer R
   ? Readonly<Ref<R>>
   : T extends Ref
-    ? T
+    ? // #12986 Workaround for TS <=5.3: Avoids type errors when T is a union
+      // containing `ShallowRef`, without raising the minimum TS version
+      // requirement.
+      T extends { [ShallowRefMarker]?: true }
+      ? T | ShallowRef<never>
+      : T
     : Ref<UnwrapRef<T>>
 export function toRef<T extends object, K extends keyof T>(
   object: T,
