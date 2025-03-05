@@ -21,6 +21,7 @@ import {
 } from '../block'
 import { isVaporComponent } from '../component'
 
+/*#__NO_SIDE_EFFECTS__*/
 export const vaporTransitionImpl: VaporTransitionInterface = {
   applyTransition: (
     props: TransitionProps,
@@ -118,31 +119,29 @@ function setTransitionHooks(
   block: TransitionBlock,
   hooks: VaporTransitionHooks,
 ) {
-  if (!isFragment(block)) {
-    block.$transition = hooks
-  }
+  block.$transition = hooks
 }
 
 export function applyTransitionEnterHooks(
   block: Block,
   hooks: VaporTransitionHooks,
-): VaporTransitionHooks | undefined {
-  const child = findElementChild(block)
-  let enterHooks
-  if (child) {
-    const { props, state, delayedLeave } = hooks
-    enterHooks = resolveTransitionHooks(
-      child,
-      props,
-      state,
-      currentInstance!,
-      hooks => (enterHooks = hooks as VaporTransitionHooks),
-    )
-    enterHooks.delayedLeave = delayedLeave
-    setTransitionHooks(child, enterHooks)
-    if (isFragment(block)) {
-      block.$transition = enterHooks
-    }
+): VaporTransitionHooks {
+  const child = findTransitionBlock(block)
+  if (!child) return hooks
+
+  const { props, state, delayedLeave } = hooks
+  let enterHooks = resolveTransitionHooks(
+    child,
+    props,
+    state,
+    currentInstance!,
+    hooks => (enterHooks = hooks as VaporTransitionHooks),
+  )
+  enterHooks.delayedLeave = delayedLeave
+  setTransitionHooks(child, enterHooks)
+  if (isFragment(block)) {
+    // also set transition hooks on fragment for reusing during it's updating
+    setTransitionHooks(block, enterHooks)
   }
   return enterHooks
 }
@@ -152,7 +151,7 @@ export function applyTransitionLeaveHooks(
   enterHooks: VaporTransitionHooks,
   afterLeaveCb: () => void,
 ): void {
-  const leavingBlock = findElementChild(block)
+  const leavingBlock = findTransitionBlock(block)
   if (!leavingBlock) return undefined
 
   const { props, state } = enterHooks
@@ -196,10 +195,10 @@ export function applyTransitionLeaveHooks(
   }
 }
 
-const transitionChildCache = new WeakMap<Block, TransitionBlock>()
-export function findElementChild(block: Block): TransitionBlock | undefined {
-  if (transitionChildCache.has(block)) {
-    return transitionChildCache.get(block)
+const transitionBlockCache = new WeakMap<Block, TransitionBlock>()
+export function findTransitionBlock(block: Block): TransitionBlock | undefined {
+  if (transitionBlockCache.has(block)) {
+    return transitionBlockCache.get(block)
   }
 
   let child: TransitionBlock | undefined
@@ -207,12 +206,12 @@ export function findElementChild(block: Block): TransitionBlock | undefined {
     // transition can only be applied on Element child
     if (block instanceof Element) child = block
   } else if (isVaporComponent(block)) {
-    child = findElementChild(block.block)
+    child = findTransitionBlock(block.block)
   } else if (Array.isArray(block)) {
     child = block[0] as TransitionBlock
     let hasFound = false
     for (const c of block) {
-      const item = findElementChild(c)
+      const item = findTransitionBlock(c)
       if (item instanceof Element) {
         if (__DEV__ && hasFound) {
           // warn more than one non-comment child
@@ -228,7 +227,7 @@ export function findElementChild(block: Block): TransitionBlock | undefined {
       }
     }
   } else if (isFragment(block)) {
-    child = findElementChild(block.nodes)
+    child = findTransitionBlock(block.nodes)
   }
 
   if (__DEV__ && !child) {
@@ -239,7 +238,8 @@ export function findElementChild(block: Block): TransitionBlock | undefined {
 }
 
 let registered = false
-export function ensureVaporTransition(): void {
+/*#__NO_SIDE_EFFECTS__*/
+export function useVaporTransition(): void {
   if (!registered) {
     registerVaporTransition(vaporTransitionImpl)
     registered = true

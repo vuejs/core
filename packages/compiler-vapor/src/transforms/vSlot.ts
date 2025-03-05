@@ -74,7 +74,7 @@ function transformComponentSlot(
   )
 
   let slotKey
-  if (isTransitionNode(node)) {
+  if (isTransitionNode(node, context)) {
     const keyProp = findProp(
       nonSlotTemplateChildren[0] as ElementNode,
       'key',

@@ -42,3 +42,4 @@ export {
   applyDynamicModel,
 } from './directives/vModel'
 export { withVaporDirectives } from './directives/custom'
+export { useVaporTransition } from './components/Transition'

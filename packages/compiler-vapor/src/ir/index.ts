@@ -68,6 +68,7 @@ export interface RootIRNode {
   directive: Set<string>
   block: BlockIRNode
   hasTemplateRef: boolean
+  hasTransition: boolean
 }
 
 export interface IfIRNode extends BaseIRNode {

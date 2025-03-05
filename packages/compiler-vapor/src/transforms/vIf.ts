@@ -134,12 +134,20 @@ export function isInTransition(
   context: TransformContext<ElementNode>,
 ): boolean {
   const parentNode = context.parent && context.parent.node
-  return !!(parentNode && isTransitionNode(parentNode as ElementNode))
+  return !!(parentNode && isTransitionNode(parentNode as ElementNode, context))
 }
 
-export function isTransitionNode(node: ElementNode): boolean {
-  return (
+export function isTransitionNode(
+  node: ElementNode,
+  context: TransformContext<ElementNode>,
+): boolean {
+  const inTransition =
     node.type === NodeTypes.ELEMENT &&
     (node.tag === 'transition' || node.tag === 'Transition')
-  )
+
+  if (inTransition) {
+    context.ir.hasTransition = true
+  }
+
+  return inTransition
 }
