@@ -35,7 +35,7 @@ export interface VaporTransitionHooks extends TransitionHooks {
 
 export type TransitionBlock = {
   key?: any
-  transition?: VaporTransitionHooks
+  $transition?: VaporTransitionHooks
 }
 
 export type BlockFn = (...args: any[]) => Block
@@ -45,7 +45,7 @@ export class VaporFragment {
   anchor?: Node
   insert?: (parent: ParentNode, anchor: Node | null) => void
   remove?: (parent?: ParentNode) => void
-  transitionChild?: TransitionBlock | undefined
+  $transition?: VaporTransitionHooks | undefined
 
   constructor(nodes: Block) {
     this.nodes = nodes
@@ -57,7 +57,6 @@ export class DynamicFragment extends VaporFragment {
   scope: EffectScope | undefined
   current?: BlockFn
   fallback?: BlockFn
-  transitionChild?: Block
 
   constructor(anchorLabel?: string) {
     super([])
@@ -74,16 +73,13 @@ export class DynamicFragment extends VaporFragment {
     pauseTracking()
     const parent = this.anchor.parentNode
 
-    const transition = this.transition
+    const transition = this.$transition
     const renderBranch = () => {
       if (render) {
         this.scope = new EffectScope()
         this.nodes = this.scope.run(render) || []
         if (transition) {
-          this.transitionChild = applyTransitionEnterHooks(
-            this.nodes,
-            transition,
-          )
+          this.$transition = applyTransitionEnterHooks(this.nodes, transition)
         }
         if (parent) insert(this.nodes, parent, this.anchor)
       } else {
@@ -119,10 +115,6 @@ export class DynamicFragment extends VaporFragment {
     }
 
     resetTracking()
-  }
-
-  get transition(): VaporTransitionHooks | undefined {
-    return this.transitionChild && this.transitionChild.transition
   }
 }
 
@@ -161,11 +153,11 @@ export function insert(
   anchor = anchor === 0 ? parent.firstChild : anchor
   if (block instanceof Node) {
     // don't apply transition on text or comment nodes
-    if (block.transition && block instanceof Element) {
+    if (block.$transition && block instanceof Element) {
       performTransitionEnter(
         block,
         // @ts-expect-error
-        block.transition,
+        block.$transition,
         () => parent.insertBefore(block, anchor),
         parentSuspense,
       )
@@ -196,11 +188,11 @@ export function prepend(parent: ParentNode, ...blocks: Block[]): void {
 
 export function remove(block: Block, parent?: ParentNode): void {
   if (block instanceof Node) {
-    if (block.transition && block instanceof Element) {
+    if (block.$transition && block instanceof Element) {
       performTransitionLeave(
         block,
         // @ts-expect-error
-        block.transition,
+        block.$transition,
         () => parent && parent.removeChild(block),
       )
     } else {

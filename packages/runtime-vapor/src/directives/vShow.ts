@@ -39,20 +39,20 @@ function setDisplay(target: Block, value: unknown): void {
   if (target instanceof DynamicFragment) {
     return setDisplay(target.nodes, value)
   }
-  const { transition } = target
+  const { $transition } = target
   if (target instanceof Element) {
     const el = target as VShowElement
     if (!(vShowOriginalDisplay in el)) {
       el[vShowOriginalDisplay] =
         el.style.display === 'none' ? '' : el.style.display
     }
-    if (transition) {
+    if ($transition) {
       if (value) {
-        transition.beforeEnter(target)
+        $transition.beforeEnter(target)
         el.style.display = el[vShowOriginalDisplay]!
-        transition.enter(target)
+        $transition.enter(target)
       } else {
-        transition.leave(target, () => {
+        $transition.leave(target, () => {
           el.style.display = 'none'
         })
       }

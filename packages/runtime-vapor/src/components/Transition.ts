@@ -111,18 +111,19 @@ function resolveTransitionHooks(
 
 function setTransitionHooks(block: Block, hooks: VaporTransitionHooks) {
   if (!isFragment(block)) {
-    block.transition = hooks
+    block.$transition = hooks
   }
 }
 
 export function applyTransitionEnterHooks(
   block: Block,
   hooks: VaporTransitionHooks,
-): Block | undefined {
+): VaporTransitionHooks | undefined {
   const child = findElementChild(block)
+  let enterHooks
   if (child) {
     const { props, state, delayedLeave } = hooks
-    let enterHooks = resolveTransitionHooks(
+    enterHooks = resolveTransitionHooks(
       child,
       props,
       state,
@@ -132,10 +133,10 @@ export function applyTransitionEnterHooks(
     enterHooks.delayedLeave = delayedLeave
     setTransitionHooks(child, enterHooks)
     if (isFragment(block)) {
-      block.transitionChild = child
+      block.$transition = enterHooks
     }
   }
-  return child
+  return enterHooks
 }
 
 export function applyTransitionLeaveHooks(
@@ -161,6 +162,7 @@ export function applyTransitionLeaveHooks(
     leavingHooks.afterLeave = () => {
       state.isLeaving = false
       afterLeaveCb()
+      leavingBlock.$transition = undefined
       delete leavingHooks.afterLeave
     }
   } else if (mode === 'in-out') {
@@ -174,17 +176,24 @@ export function applyTransitionLeaveHooks(
       block[leaveCbKey] = () => {
         earlyRemove()
         block[leaveCbKey] = undefined
+        leavingBlock.$transition = undefined
         delete enterHooks.delayedLeave
       }
       enterHooks.delayedLeave = () => {
         delayedLeave()
+        leavingBlock.$transition = undefined
         delete enterHooks.delayedLeave
       }
     }
   }
 }
 
+const transitionChildCache = new WeakMap<Block, Block>()
 export function findElementChild(block: Block): Block | undefined {
+  if (transitionChildCache.has(block)) {
+    return transitionChildCache.get(block)
+  }
+
   let child: Block | undefined
   if (block instanceof Node) {
     // transition can only be applied on Element child
