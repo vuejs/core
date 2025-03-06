@@ -139,7 +139,9 @@ export const BaseTransitionPropsValidators: Record<string, any> = {
 }
 
 const recursiveGetSubtree = (instance: ComponentInternalInstance): VNode => {
-  const subTree = instance.subTree
+  const subTree = instance.type.__vapor
+    ? (instance as any).block
+    : instance.subTree
   return subTree.component ? recursiveGetSubtree(subTree.component) : subTree
 }
 
@@ -564,8 +566,12 @@ function getInnerChild(vnode: VNode): VNode | undefined {
 
 export function setTransitionHooks(vnode: VNode, hooks: TransitionHooks): void {
   if (vnode.shapeFlag & ShapeFlags.COMPONENT && vnode.component) {
-    vnode.transition = hooks
-    setTransitionHooks(vnode.component.subTree, hooks)
+    if ((vnode.type as any).__vapor) {
+      ;(vnode.component as any).block.$transition = hooks
+    } else {
+      vnode.transition = hooks
+      setTransitionHooks(vnode.component.subTree, hooks)
+    }
   } else if (__FEATURE_SUSPENSE__ && vnode.shapeFlag & ShapeFlags.SUSPENSE) {
     vnode.ssContent!.transition = hooks.clone(vnode.ssContent!)
     vnode.ssFallback!.transition = hooks.clone(vnode.ssFallback!)
