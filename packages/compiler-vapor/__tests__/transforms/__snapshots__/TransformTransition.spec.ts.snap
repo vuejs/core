@@ -1,0 +1,53 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`compiler: transition > basic 1`] = `
+"import { VaporTransition as _VaporTransition, createComponent as _createComponent, template as _template } from 'vue';
+const t0 = _template("<h1>foo</h1>")
+
+export function render(_ctx) {
+  const n1 = _createComponent(_VaporTransition, { appear: () => ("") }, {
+    "default": () => {
+      const n0 = t0()
+      return n0
+    }
+  }, true)
+  return n1
+}"
+`;
+
+exports[`compiler: transition > work with dynamic keyed children 1`] = `
+"import { VaporTransition as _VaporTransition, createKeyedFragment as _createKeyedFragment, createComponent as _createComponent, template as _template } from 'vue';
+const t0 = _template("<h1>foo</h1>")
+
+export function render(_ctx) {
+  const n1 = _createComponent(_VaporTransition, null, {
+    "default": () => {
+      return _createKeyedFragment(() => _ctx.key, () => {
+        const n0 = t0()
+        n0.key = _ctx.key
+        return n0
+      })
+    }
+  }, true)
+  return n1
+}"
+`;
+
+exports[`compiler: transition > work with v-if 1`] = `
+"import { VaporTransition as _VaporTransition, createIf as _createIf, createComponent as _createComponent, template as _template } from 'vue';
+const t0 = _template("<h1>foo</h1>")
+
+export function render(_ctx) {
+  const n3 = _createComponent(_VaporTransition, null, {
+    "default": () => {
+      const n0 = _createIf(() => (_ctx.show), () => {
+        const n2 = t0()
+        n2.key = 2
+        return n2
+      })
+      return n0
+    }
+  }, true)
+  return n3
+}"
+`;
