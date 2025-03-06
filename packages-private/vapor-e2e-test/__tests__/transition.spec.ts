@@ -205,12 +205,14 @@ describe('vapor transition', () => {
         `<div class="fade-leave-active fade-leave-to">vapor compB</div>`,
       )
 
-      await transitionFinish()
-      expect(await html(containerSelector)).toBe(`<div>vapor compA</div>`)
+      await page().waitForSelector(`${containerSelector} > div.fade-enter-from`)
+      expect(await html(containerSelector)).toBe(
+        `<div class="fade-enter-from fade-enter-active">vapor compA</div>`,
+      )
 
       await nextFrame()
       expect(await html(containerSelector)).toBe(
-        `<div class="fade-enter-from fade-enter-active">vapor compA</div>`,
+        `<div class="fade-enter-active fade-enter-to">vapor compA</div>`,
       )
 
       await nextFrame()
