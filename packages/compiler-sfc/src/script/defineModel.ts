@@ -119,9 +119,8 @@ export function genModelProps(ctx: ScriptCompileContext) {
 
   const isProd = !!ctx.options.isProd
   let modelPropsDecl = ''
-  for (const [name, { type, options: runtimeOptions }] of Object.entries(
-    ctx.modelDecls,
-  )) {
+  for (const name in ctx.modelDecls) {
+    const { type, options: runtimeOptions } = ctx.modelDecls[name]
     let skipCheck = false
     let codegenOptions = ``
     let runtimeTypes = type && inferRuntimeType(ctx, type)

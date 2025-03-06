@@ -444,7 +444,7 @@ export class VueElement
     const declaredPropKeys = isArray(props) ? props : Object.keys(props || {})
 
     // check if there are props set pre-upgrade or connect
-    for (const key of Object.keys(this)) {
+    for (const key in this) {
       if (key[0] !== '_' && declaredPropKeys.includes(key)) {
         this._setProp(key, this[key as keyof this])
       }
