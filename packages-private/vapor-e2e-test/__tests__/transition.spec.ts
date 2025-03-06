@@ -5,17 +5,8 @@ import {
 } from '../../../packages/vue/__tests__/e2e/e2eUtils'
 import connect from 'connect'
 import sirv from 'sirv'
-const {
-  page,
-  click,
-  classList,
-  text,
-  nextFrame,
-  timeout,
-  isVisible,
-  count,
-  html,
-} = setupPuppeteer()
+const { page, classList, text, nextFrame, timeout, isVisible, count, html } =
+  setupPuppeteer()
 
 const duration = process.env.CI ? 200 : 50
 const buffer = process.env.CI ? 50 : 20
@@ -81,6 +72,7 @@ describe('vapor transition', () => {
       ])
 
       await transitionFinish()
+      await nextFrame()
       expect(await isVisible(containerSelector)).toBe(false)
 
       // enter
@@ -96,6 +88,7 @@ describe('vapor transition', () => {
       ])
 
       await transitionFinish()
+      await nextFrame()
       expect(await isVisible(containerSelector)).toBe(true)
     },
     E2E_TIMEOUT,
@@ -111,6 +104,7 @@ describe('vapor transition', () => {
       expect(await classList(containerSelector)).contains('v-enter-active')
       expect(await text(containerSelector)).toContain('vIf')
       await transitionFinish()
+      await nextFrame()
 
       // leave
       expect(
@@ -125,6 +119,7 @@ describe('vapor transition', () => {
       ])
 
       await transitionFinish()
+      await nextFrame()
       expect(await count(containerSelector)).toBe(0)
 
       // enter
@@ -140,6 +135,7 @@ describe('vapor transition', () => {
       ])
 
       await transitionFinish()
+      await nextFrame()
       expect(await isVisible(containerSelector)).toBe(true)
     },
     E2E_TIMEOUT,
@@ -166,6 +162,7 @@ describe('vapor transition', () => {
       ])
 
       await transitionFinish()
+      await nextFrame()
       expect(await text(containerSelector)).toContain('1')
 
       // change key again
@@ -181,6 +178,7 @@ describe('vapor transition', () => {
       ])
 
       await transitionFinish()
+      await nextFrame()
       expect(await text(containerSelector)).toContain('2')
     },
     E2E_TIMEOUT,
@@ -215,21 +213,17 @@ describe('vapor transition', () => {
         `<div class="fade-enter-active fade-enter-to">vapor compA</div>`,
       )
 
-      await nextFrame()
-      expect(await html(containerSelector)).toBe(
-        `<div class="fade-enter-active fade-enter-to">vapor compA</div>`,
-      )
-
       await transitionFinish()
+      await nextFrame()
       expect(await html(containerSelector)).toBe(
         `<div class="">vapor compA</div>`,
       )
 
       // compA -> compB
-      await click(btnSelector)
-      expect(await html(containerSelector)).toBe(
-        `<div class="fade-leave-from fade-leave-active">vapor compA</div>`,
-      )
+      expect(
+        (await classWhenTransitionStart(btnSelector, containerSelector))
+          .innerHTML,
+      ).toBe(`<div class="fade-leave-from fade-leave-active">vapor compA</div>`)
 
       await nextFrame()
       expect(await html(containerSelector)).toBe(
@@ -243,6 +237,7 @@ describe('vapor transition', () => {
       )
 
       await transitionFinish()
+      await nextFrame()
       expect(await html(containerSelector)).toBe(
         `<div class="">vapor compB</div>`,
       )
