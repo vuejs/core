@@ -199,6 +199,13 @@ describe('vapor transition', () => {
       )
 
       await transitionFinish()
+      expect(await html(containerSelector)).toBe(`<div>vapor compA</div>`)
+
+      await nextFrame()
+      expect(await html(containerSelector)).toBe(
+        `<div class="fade-enter-from fade-enter-active">vapor compA</div>`,
+      )
+
       await nextFrame()
       expect(await html(containerSelector)).toBe(
         `<div class="fade-enter-active fade-enter-to">vapor compA</div>`,
@@ -235,4 +242,16 @@ describe('vapor transition', () => {
   )
 
   test.todo('should work with in-out mode', async () => {}, E2E_TIMEOUT)
+
+  test.todo('transition hooks', async () => {}, E2E_TIMEOUT)
+
+  describe('interop', () => {
+    test.todo('interop: render vdom component', async () => {}, E2E_TIMEOUT)
+
+    test.todo(
+      'interop: switch between vdom/vapor component',
+      async () => {},
+      E2E_TIMEOUT,
+    )
+  })
 })

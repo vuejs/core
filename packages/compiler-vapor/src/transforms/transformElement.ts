@@ -130,7 +130,9 @@ function transformComponentElement(
   }
 
   context.dynamic.flags |= DynamicFlag.NON_TEMPLATE | DynamicFlag.INSERT
-  context.registerOperation({
+  // context.registerOperation()
+  // TODO revert wait for https://github.com/vuejs/core/pull/12951 get merged
+  context.block.operation.unshift({
     type: IRNodeTypes.CREATE_COMPONENT_NODE,
     id: context.reference(),
     tag,
