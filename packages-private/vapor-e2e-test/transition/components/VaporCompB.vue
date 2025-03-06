@@ -2,5 +2,5 @@
 const msg = 'vapor compA'
 </script>
 <template>
-    <div>{{ msg }}</div>
+  <div>{{ msg }}</div>
 </template>

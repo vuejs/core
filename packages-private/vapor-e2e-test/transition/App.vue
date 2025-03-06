@@ -8,7 +8,8 @@ import VaporCompA from './components/VaporCompA.vue'
 import VaporCompB from './components/VaporCompB.vue'
 const activeComponent = shallowRef(VaporCompA)
 function toggleComponent() {
-  activeComponent.value = activeComponent.value === VaporCompA ? VaporCompB : VaporCompA
+  activeComponent.value =
+    activeComponent.value === VaporCompA ? VaporCompB : VaporCompA
 }
 </script>
 
@@ -42,6 +43,6 @@ function toggleComponent() {
 </template>
 <style>
 .keyed {
-  height: 100px
+  height: 100px;
 }
 </style>
