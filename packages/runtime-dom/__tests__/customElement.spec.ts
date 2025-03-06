@@ -791,6 +791,30 @@ describe('defineCustomElement', () => {
       assertStyles(el, [`div { color: blue; }`, `div { color: red; }`])
     })
 
+    test("child components should not inject styles to root element's shadow root w/ shadowRoot false", async () => {
+      const Bar = defineComponent({
+        styles: [`div { color: green; }`],
+        render() {
+          return 'bar'
+        },
+      })
+      const Baz = () => h(Bar)
+      const Foo = defineCustomElement(
+        {
+          render() {
+            return [h(Baz)]
+          },
+        },
+        { shadowRoot: false },
+      )
+
+      customElements.define('my-foo-with-shadowroot-false', Foo)
+      container.innerHTML = `<my-foo-with-shadowroot-false></my-foo-with-shadowroot-false>`
+      const el = container.childNodes[0] as VueElement
+      const style = el.shadowRoot?.querySelector('style')
+      expect(style).toBeUndefined()
+    })
+
     test('with nonce', () => {
       const Foo = defineCustomElement(
         {
