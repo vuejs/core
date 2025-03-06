@@ -33,9 +33,17 @@ function toggleComponent() {
     </Transition>
   </div>
   <div class="out-in">
-    <button @click="toggleComponent">toggle component</button>
+    <button @click="toggleComponent">toggle out-in</button>
     <div>
       <Transition name="fade" mode="out-in">
+        <component :is="activeComponent"></component>
+      </Transition>
+    </div>
+  </div>
+  <div class="in-out">
+    <button @click="toggleComponent">toggle in-out</button>
+    <div>
+      <Transition name="fade" mode="in-out">
         <component :is="activeComponent"></component>
       </Transition>
     </div>
