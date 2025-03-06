@@ -58,11 +58,11 @@ Virtual DOM is consists by VNode. And VNode consists of three parts: tag, props,
 > - createCommentVNode: create a VNode with comment content.
 > - createStaticVNode: create a VNode with static content.
 
-### Benefits
+#### Benefits
 
 VNode can be created from generated code or dynamically components defination and form as a part of Virtual DOM's tree structure. And the tree structure can be updated by diff algorithm.
 
-### Example
+#### Example
 
 There is a example of generated code, Virtual DOM is start as a block and filled with VNode eventually:
 
@@ -122,7 +122,21 @@ return function render(_ctx, _cache) {
 }
 ```
 
-## Reactivity
+### Diff Algorithm
+
+Diff algorithm is a way to compare two Virtual DOM trees and generate a patch set that can be used to update the real DOM.
+
+> The diff algorithm is implemented in `runtime-core/src/renderer.ts`.
+
+> The diff algorithm is based on the following steps:
+>
+> - Compare the two trees and generate a list of patches. This process is implemented in function which name are suffix with `patch` and `process`.
+> - Apply the patches to the real DOM. Vue will queue the patches and batch update the real DOM in the next tick. Some optimiazations:
+> - - Use key to identify the same nodes.
+> - - Use same vnode type to identify the same nodes and patch them directly.
+> - - Use stable increasing subsequence to determine whether mount a new node or move it.
+
+## Reactivitys
 
 Reactivity is a core concept of Vue. It's a mechanism that allows Vue to track data changes and update the view accordingly.
 
