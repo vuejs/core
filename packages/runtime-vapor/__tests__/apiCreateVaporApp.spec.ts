@@ -35,8 +35,10 @@ describe('api: createVaporApp', () => {
     const root1 = document.createElement('div')
     createVaporApp(Comp).mount(root1)
     expect(root1.innerHTML).toBe(`0`)
+
     //#5571 mount multiple apps to the same host element
     createVaporApp(Comp).mount(root1)
+    expect(`mount target container is not empty`).toHaveBeenWarned()
     expect(
       `There is already an app instance mounted on the host container`,
     ).toHaveBeenWarned()
