@@ -118,6 +118,32 @@ describe('compiler: v-for', () => {
     })
   })
 
+  test('object value, key and index', () => {
+    const { code, ir } = compileWithVFor(
+      `<div v-for="(value, key, index) in list" :key="id">{{ value + key + index }}</div>`,
+    )
+    expect(code).matchSnapshot()
+    expect(ir.block.operation[0]).toMatchObject({
+      type: IRNodeTypes.FOR,
+      source: {
+        type: NodeTypes.SIMPLE_EXPRESSION,
+        content: 'list',
+      },
+      value: {
+        type: NodeTypes.SIMPLE_EXPRESSION,
+        content: 'value',
+      },
+      key: {
+        type: NodeTypes.SIMPLE_EXPRESSION,
+        content: 'key',
+      },
+      index: {
+        type: NodeTypes.SIMPLE_EXPRESSION,
+        content: 'index',
+      },
+    })
+  })
+
   test('object de-structured value', () => {
     const { code, ir } = compileWithVFor(
       '<span v-for="({ id, value }) in items" :key="id">{{ id }}{{ value }}</span>',
@@ -148,7 +174,7 @@ describe('compiler: v-for', () => {
 
   test('object de-structured value (with rest)', () => {
     const { code, ir } = compileWithVFor(
-      `<div v-for="(  { id, ...other }, index) in list" :key="id">{{ id + other + index }}</div>`,
+      `<div v-for="(  { id, ...other }, key) in list" :key="id">{{ id + other + index }}</div>`,
     )
     expect(code).matchSnapshot()
     expect(code).toContain('_getRestElement(_for_item0.value, ["id"])')
@@ -172,7 +198,7 @@ describe('compiler: v-for', () => {
       },
       key: {
         type: NodeTypes.SIMPLE_EXPRESSION,
-        content: 'index',
+        content: 'key',
       },
       index: undefined,
     })
