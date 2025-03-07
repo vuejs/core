@@ -20,7 +20,7 @@ import {
 } from './components/Transition'
 
 export interface TransitionOptions {
-  key?: any
+  $key?: any
   $transition?: VaporTransitionHooks
 }
 
@@ -39,7 +39,7 @@ export type Block = TransitionBlock | VaporComponentInstance | Block[]
 export type BlockFn = (...args: any[]) => Block
 
 export class VaporFragment implements TransitionOptions {
-  key?: any
+  $key?: any
   $transition?: VaporTransitionHooks | undefined
   nodes: Block
   anchor?: Node

@@ -61,7 +61,7 @@ export function genBlockContent(
       const keyValue = key
         ? genExpression(key, context)
         : JSON.stringify(child.id)
-      push(NEWLINE, `n${child.id}.key = `, ...keyValue)
+      push(NEWLINE, `n${child.id}.$key = `, ...keyValue)
     }
   }
 

@@ -101,7 +101,7 @@ function resolveTransitionHooks(
   postClone?: (hooks: TransitionHooks) => void,
 ): VaporTransitionHooks {
   const context = getTransitionHooksContext(
-    String(block.key),
+    String(block.$key),
     props,
     state,
     instance,
@@ -181,7 +181,7 @@ export function applyTransitionLeaveHooks(
       earlyRemove,
       delayedLeave,
     ) => {
-      state.leavingNodes.set(String(leavingBlock.key), leavingBlock)
+      state.leavingNodes.set(String(leavingBlock.$key), leavingBlock)
       // early removal callback
       block[leaveCbKey] = () => {
         earlyRemove()
@@ -210,7 +210,7 @@ export function findTransitionBlock(block: Block): TransitionBlock | undefined {
     if (block instanceof Element) child = block
   } else if (isVaporComponent(block)) {
     child = findTransitionBlock(block.block)
-    if (child && child.key === undefined) child.key = block.type.__name
+    if (child && child.$key === undefined) child.$key = block.type.__name
   } else if (Array.isArray(block)) {
     child = block[0] as TransitionBlock
     let hasFound = false

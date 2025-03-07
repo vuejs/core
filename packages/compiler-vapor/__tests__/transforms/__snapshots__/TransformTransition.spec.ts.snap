@@ -24,7 +24,7 @@ export function render(_ctx) {
     "default": () => {
       return _createKeyedFragment(() => _ctx.key, () => {
         const n0 = t0()
-        n0.key = _ctx.key
+        n0.$key = _ctx.key
         return n0
       })
     }
@@ -42,7 +42,7 @@ export function render(_ctx) {
     "default": () => {
       const n0 = _createIf(() => (_ctx.show), () => {
         const n2 = t0()
-        n2.key = 2
+        n2.$key = 2
         return n2
       })
       return n0
