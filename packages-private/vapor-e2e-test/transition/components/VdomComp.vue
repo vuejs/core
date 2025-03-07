@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 const msg = 'vdom comp'
 </script>
 <template>

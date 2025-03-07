@@ -20,7 +20,7 @@ import {
   type VaporTransitionHooks,
   isFragment,
 } from '../block'
-import { isVaporComponent } from '../component'
+import { type VaporComponentInstance, isVaporComponent } from '../component'
 
 const decorate = (t: typeof VaporTransition) => {
   t.displayName = 'VaporTransition'
@@ -243,4 +243,14 @@ export function findTransitionBlock(block: Block): TransitionBlock | undefined {
   }
 
   return child
+}
+
+export function setTransitionToInstance(
+  block: VaporComponentInstance,
+  hooks: VaporTransitionHooks,
+): void {
+  const child = findTransitionBlock(block.block)
+  if (!child) return
+
+  setTransitionHooks(child, hooks)
 }

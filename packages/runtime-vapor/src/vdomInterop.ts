@@ -15,7 +15,7 @@ import {
   ensureRenderer,
   onScopeDispose,
   renderSlot,
-  setTransitionHooks,
+  setTransitionHooks as setVNodeTransitionHooks,
   shallowRef,
   simpleSetCurrentInstance,
 } from '@vue/runtime-dom'
@@ -28,13 +28,20 @@ import {
   mountComponent,
   unmountComponent,
 } from './component'
-import { type Block, VaporFragment, insert, remove } from './block'
+import {
+  type Block,
+  VaporFragment,
+  type VaporTransitionHooks,
+  insert,
+  remove,
+} from './block'
 import { EMPTY_OBJ, extend, isFunction } from '@vue/shared'
 import { type RawProps, rawPropsProxyHandlers } from './componentProps'
 import type { RawSlots, VaporSlot } from './componentSlots'
 import { renderEffect } from './renderEffect'
 import { createTextNode } from './dom/node'
 import { optimizePropertyLookup } from './dom/prop'
+import { setTransitionToInstance } from './components/Transition'
 
 // mounting vapor components and slots in vdom
 const vaporInteropImpl: Omit<
@@ -62,6 +69,12 @@ const vaporInteropImpl: Omit<
     ))
     instance.rawPropsRef = propsRef
     instance.rawSlotsRef = slotsRef
+    if (vnode.transition) {
+      setTransitionToInstance(
+        instance,
+        vnode.transition as VaporTransitionHooks,
+      )
+    }
     mountComponent(instance, container, selfAnchor)
     simpleSetCurrentInstance(prev)
     return instance
@@ -174,7 +187,7 @@ function createVDOMComponent(
   let isMounted = false
   const parentInstance = currentInstance as VaporComponentInstance
   const unmount = (parentNode?: ParentNode, transition?: TransitionHooks) => {
-    if (transition) setTransitionHooks(vnode, transition)
+    if (transition) setVNodeTransitionHooks(vnode, transition)
     internals.umt(vnode.component!, null, !!parentNode)
   }
 
@@ -182,7 +195,7 @@ function createVDOMComponent(
     const prev = currentInstance
     simpleSetCurrentInstance(parentInstance)
     if (!isMounted) {
-      if (transition) setTransitionHooks(vnode, transition)
+      if (transition) setVNodeTransitionHooks(vnode, transition)
       internals.mt(
         vnode,
         parentNode,

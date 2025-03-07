@@ -1,4 +1,4 @@
-<script vapor>
+<script setup vapor lang="ts">
 const msg = 'vapor compB'
 </script>
 <template>

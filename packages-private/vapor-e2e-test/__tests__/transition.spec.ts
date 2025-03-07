@@ -5,8 +5,18 @@ import {
 } from '../../../packages/vue/__tests__/e2e/e2eUtils'
 import connect from 'connect'
 import sirv from 'sirv'
-const { page, classList, text, nextFrame, timeout, isVisible, count, html } =
-  setupPuppeteer()
+const {
+  page,
+  classList,
+  text,
+  nextFrame,
+  timeout,
+  isVisible,
+  count,
+  html,
+  transitionStart,
+  waitForElement,
+} = setupPuppeteer()
 
 const duration = process.env.CI ? 200 : 50
 const buffer = process.env.CI ? 50 : 20
@@ -31,43 +41,6 @@ describe('vapor transition', () => {
     await page().goto(baseUrl)
     await page().waitForSelector('#app')
   })
-
-  const transitionStart = (btnSelector: string, containerSelector: string) =>
-    page().evaluate(
-      ([btnSel, containerSel]) => {
-        ;(document.querySelector(btnSel) as HTMLElement)!.click()
-        return Promise.resolve().then(() => {
-          const container = document.querySelector(containerSel)!
-          return {
-            classNames: container.className.split(/\s+/g),
-            innerHTML: container.innerHTML,
-          }
-        })
-      },
-      [btnSelector, containerSelector],
-    )
-
-  const waitForElement = (
-    selector: string,
-    text: string,
-    classNames: string[], // if empty, check for no classes
-    timeout = 2000,
-  ) =>
-    page().waitForFunction(
-      (sel, expectedText, expectedClasses) => {
-        const el = document.querySelector(sel)
-        const hasClasses =
-          expectedClasses.length === 0
-            ? el?.classList.length === 0
-            : expectedClasses.every(c => el?.classList.contains(c))
-        const hasText = el?.textContent?.includes(expectedText)
-        return !!el && hasClasses && hasText
-      },
-      { timeout },
-      selector,
-      text,
-      classNames,
-    )
 
   test(
     'should work with v-show',
