@@ -55,11 +55,11 @@ describe('vapor transition', () => {
   ) =>
     page().waitForFunction(
       (sel, expectedText, expectedClasses) => {
-        const el = document.querySelector(sel)!
+        const el = document.querySelector(sel)
         const hasClasses =
           expectedClasses.length === 0
-            ? el.classList.length === 0
-            : expectedClasses.every(c => el.classList.contains(c))
+            ? el?.classList.length === 0
+            : expectedClasses.every(c => el?.classList.contains(c))
         const hasText = el?.textContent?.includes(expectedText)
         return !!el && hasClasses && hasText
       },
@@ -120,9 +120,9 @@ describe('vapor transition', () => {
       expect(await classList(containerSelector)).contains('v-enter-active')
       expect(await text(containerSelector)).toContain('vIf')
       await transitionFinish()
-      await nextFrame()
 
       // leave
+      await nextFrame()
       expect(
         (await transitionStart(btnSelector, containerSelector)).classNames,
       ).toStrictEqual(['v-leave-from', 'v-leave-active'])
@@ -134,7 +134,6 @@ describe('vapor transition', () => {
       ])
 
       await transitionFinish()
-      await nextFrame()
       expect(await count(containerSelector)).toBe(0)
 
       // enter
@@ -151,6 +150,22 @@ describe('vapor transition', () => {
       await transitionFinish()
       await nextFrame()
       expect(await isVisible(containerSelector)).toBe(true)
+
+      const calls = await page().evaluate(() => {
+        return (window as any).calls
+      })
+
+      expect(calls).toStrictEqual([
+        'beforeAppear',
+        'onEnter',
+        'afterAppear',
+        'beforeLeave',
+        'onLeave',
+        'afterLeave',
+        'beforeEnter',
+        'onEnter',
+        'afterEnter',
+      ])
     },
     E2E_TIMEOUT,
   )
@@ -303,14 +318,182 @@ describe('vapor transition', () => {
     E2E_TIMEOUT,
   )
 
-  test.todo('transition hooks', async () => {}, E2E_TIMEOUT)
-
+  // tests for using vdom component in createVaporApp + vaporInteropPlugin
   describe('interop', () => {
-    test.todo('interop: render vdom component', async () => {}, E2E_TIMEOUT)
+    test(
+      'render vdom component',
+      async () => {
+        const btnSelector = '.vdom > button'
+        const containerSelector = '.vdom > div'
 
-    test.todo(
-      'interop: switch between vdom/vapor component',
-      async () => {},
+        expect(await html(containerSelector)).toBe(`<div>vdom comp</div>`)
+
+        // comp leave
+        expect(
+          (await transitionStart(btnSelector, containerSelector)).innerHTML,
+        ).toBe(`<div class="v-leave-from v-leave-active">vdom comp</div>`)
+
+        await nextFrame()
+        expect(await html(containerSelector)).toBe(
+          `<div class="v-leave-active v-leave-to">vdom comp</div>`,
+        )
+
+        await transitionFinish()
+        expect(await html(containerSelector)).toBe(``)
+
+        // comp enter
+        expect(
+          (await transitionStart(btnSelector, containerSelector)).innerHTML,
+        ).toBe(`<div class="v-enter-from v-enter-active">vdom comp</div>`)
+
+        await nextFrame()
+        expect(await html(containerSelector)).toBe(
+          `<div class="v-enter-active v-enter-to">vdom comp</div>`,
+        )
+
+        await transitionFinish()
+        expect(await html(containerSelector)).toBe(
+          `<div class="">vdom comp</div>`,
+        )
+      },
+      E2E_TIMEOUT,
+    )
+
+    test(
+      'switch between vdom/vapor component (out-in mode)',
+      async () => {
+        const btnSelector = '.vdom-vapor-out-in > button'
+        const containerSelector = '.vdom-vapor-out-in > div'
+        const childSelector = `${containerSelector} > div`
+
+        expect(await html(containerSelector)).toBe(`<div>vdom comp</div>`)
+
+        // switch to vapor comp
+        // vdom comp leave
+        expect(
+          (await transitionStart(btnSelector, containerSelector)).innerHTML,
+        ).toBe(`<div class="fade-leave-from fade-leave-active">vdom comp</div>`)
+
+        await nextFrame()
+        expect(await html(containerSelector)).toBe(
+          `<div class="fade-leave-active fade-leave-to">vdom comp</div>`,
+        )
+
+        // vapor comp enter
+        await waitForElement(childSelector, 'vapor compA', [
+          'fade-enter-from',
+          'fade-enter-active',
+        ])
+
+        await nextFrame()
+        expect(await html(containerSelector)).toBe(
+          `<div class="fade-enter-active fade-enter-to">vapor compA</div>`,
+        )
+
+        await transitionFinish()
+        expect(await html(containerSelector)).toBe(
+          `<div class="">vapor compA</div>`,
+        )
+
+        // switch to vdom comp
+        // vapor comp leave
+        expect(
+          (await transitionStart(btnSelector, containerSelector)).innerHTML,
+        ).toBe(
+          `<div class="fade-leave-from fade-leave-active">vapor compA</div>`,
+        )
+
+        await nextFrame()
+        expect(await html(containerSelector)).toBe(
+          `<div class="fade-leave-active fade-leave-to">vapor compA</div>`,
+        )
+
+        // vdom comp enter
+        await waitForElement(childSelector, 'vdom comp', [
+          'fade-enter-from',
+          'fade-enter-active',
+        ])
+
+        await nextFrame()
+        expect(await html(containerSelector)).toBe(
+          `<div class="fade-enter-active fade-enter-to">vdom comp</div>`,
+        )
+
+        await transitionFinish()
+        expect(await html(containerSelector)).toBe(
+          `<div class="">vdom comp</div>`,
+        )
+      },
+      E2E_TIMEOUT,
+    )
+
+    test(
+      'switch between vdom/vapor component (in-out mode)',
+      async () => {
+        const btnSelector = '.vdom-vapor-in-out > button'
+        const containerSelector = '.vdom-vapor-in-out > div'
+        const childSelector = `${containerSelector} > div`
+
+        expect(await html(containerSelector)).toBe(`<div>vapor compA</div>`)
+
+        // switch to vdom comp
+        // vdom comp enter
+        expect(
+          (await transitionStart(btnSelector, containerSelector)).innerHTML,
+        ).toBe(
+          `<div>vapor compA</div><div class="fade-enter-from fade-enter-active">vdom comp</div>`,
+        )
+
+        await nextFrame()
+        expect(await html(containerSelector)).toBe(
+          `<div>vapor compA</div><div class="fade-enter-active fade-enter-to">vdom comp</div>`,
+        )
+
+        // vapor comp leave
+        await waitForElement(childSelector, 'vapor compA', [
+          'fade-leave-from',
+          'fade-leave-active',
+        ])
+
+        await nextFrame()
+        expect(await html(containerSelector)).toBe(
+          `<div class="fade-leave-active fade-leave-to">vapor compA</div><div class="">vdom comp</div>`,
+        )
+
+        await transitionFinish()
+        expect(await html(containerSelector)).toBe(
+          `<div class="">vdom comp</div>`,
+        )
+
+        // switch to vapor comp
+        // vapor comp enter
+        expect(
+          (await transitionStart(btnSelector, containerSelector)).innerHTML,
+        ).toBe(
+          `<div class="">vdom comp</div><div class="fade-enter-from fade-enter-active">vapor compA</div>`,
+        )
+
+        await nextFrame()
+        expect(await html(containerSelector)).toBe(
+          `<div class="">vdom comp</div><div class="fade-enter-active fade-enter-to">vapor compA</div>`,
+        )
+
+        // vdom comp leave
+        await waitForElement(childSelector, 'vdom comp', [
+          'fade-leave-from',
+          'fade-leave-active',
+        ])
+
+        await nextFrame()
+        expect(await html(containerSelector)).toBe(
+          `<div class="fade-leave-active fade-leave-to">vdom comp</div><div class="">vapor compA</div>`,
+        )
+
+        await transitionFinish()
+        expect(await html(containerSelector)).toBe(
+          `<div class="">vapor compA</div>`,
+        )
+      },
       E2E_TIMEOUT,
     )
   })
