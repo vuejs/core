@@ -7,7 +7,7 @@ import {
 } from './component'
 import { createComment, createTextNode } from './dom/node'
 import { EffectScope, pauseTracking, resetTracking } from '@vue/reactivity'
-import { isHydrating } from './dom/hydrate'
+import { isHydrating } from './dom/hydration'
 
 export type Block =
   | Node

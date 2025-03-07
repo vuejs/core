@@ -2,7 +2,7 @@ import {
   adoptHydrationNode,
   currentHydrationNode,
   isHydrating,
-} from './hydrate'
+} from './hydration'
 import { child } from './node'
 
 let t: HTMLTemplateElement
