@@ -32,11 +32,8 @@ describe('vapor transition', () => {
     await page().waitForSelector('#app')
   })
 
-  const classWhenTransitionStart = async (
-    btnSelector: string,
-    containerSelector: string,
-  ) => {
-    return page().evaluate(
+  const transitionStart = (btnSelector: string, containerSelector: string) =>
+    page().evaluate(
       ([btnSel, containerSel]) => {
         ;(document.querySelector(btnSel) as HTMLElement)!.click()
         return Promise.resolve().then(() => {
@@ -49,7 +46,28 @@ describe('vapor transition', () => {
       },
       [btnSelector, containerSelector],
     )
-  }
+
+  const waitForElement = (
+    selector: string,
+    text: string,
+    classNames: string[], // if empty, check for no classes
+    timeout = 2000,
+  ) =>
+    page().waitForFunction(
+      (sel, expectedText, expectedClasses) => {
+        const el = document.querySelector(sel)!
+        const hasClasses =
+          expectedClasses.length === 0
+            ? el.classList.length === 0
+            : expectedClasses.every(c => el.classList.contains(c))
+        const hasText = el?.textContent?.includes(expectedText)
+        return !!el && hasClasses && hasText
+      },
+      { timeout },
+      selector,
+      text,
+      classNames,
+    )
 
   test(
     'should work with v-show',
@@ -61,8 +79,7 @@ describe('vapor transition', () => {
 
       // leave
       expect(
-        (await classWhenTransitionStart(btnSelector, containerSelector))
-          .classNames,
+        (await transitionStart(btnSelector, containerSelector)).classNames,
       ).toStrictEqual(['v-leave-from', 'v-leave-active'])
 
       await nextFrame()
@@ -77,8 +94,7 @@ describe('vapor transition', () => {
 
       // enter
       expect(
-        (await classWhenTransitionStart(btnSelector, containerSelector))
-          .classNames,
+        (await transitionStart(btnSelector, containerSelector)).classNames,
       ).toStrictEqual(['v-enter-from', 'v-enter-active'])
 
       await nextFrame()
@@ -108,8 +124,7 @@ describe('vapor transition', () => {
 
       // leave
       expect(
-        (await classWhenTransitionStart(btnSelector, containerSelector))
-          .classNames,
+        (await transitionStart(btnSelector, containerSelector)).classNames,
       ).toStrictEqual(['v-leave-from', 'v-leave-active'])
 
       await nextFrame()
@@ -124,8 +139,7 @@ describe('vapor transition', () => {
 
       // enter
       expect(
-        (await classWhenTransitionStart(btnSelector, containerSelector))
-          .classNames,
+        (await transitionStart(btnSelector, containerSelector)).classNames,
       ).toStrictEqual(['v-enter-from', 'v-enter-active'])
 
       await nextFrame()
@@ -151,8 +165,7 @@ describe('vapor transition', () => {
 
       // change key
       expect(
-        (await classWhenTransitionStart(btnSelector, containerSelector))
-          .classNames,
+        (await transitionStart(btnSelector, containerSelector)).classNames,
       ).toStrictEqual(['v-leave-from', 'v-leave-active'])
 
       await nextFrame()
@@ -167,8 +180,7 @@ describe('vapor transition', () => {
 
       // change key again
       expect(
-        (await classWhenTransitionStart(btnSelector, containerSelector))
-          .classNames,
+        (await transitionStart(btnSelector, containerSelector)).classNames,
       ).toStrictEqual(['v-leave-from', 'v-leave-active'])
 
       await nextFrame()
@@ -189,13 +201,14 @@ describe('vapor transition', () => {
     async () => {
       const btnSelector = '.out-in > button'
       const containerSelector = '.out-in > div'
+      const childSelector = `${containerSelector} > div`
 
       expect(await html(containerSelector)).toBe(`<div>vapor compB</div>`)
 
       // compB -> compA
+      // compB leave
       expect(
-        (await classWhenTransitionStart(btnSelector, containerSelector))
-          .innerHTML,
+        (await transitionStart(btnSelector, containerSelector)).innerHTML,
       ).toBe(`<div class="fade-leave-from fade-leave-active">vapor compB</div>`)
 
       await nextFrame()
@@ -203,10 +216,11 @@ describe('vapor transition', () => {
         `<div class="fade-leave-active fade-leave-to">vapor compB</div>`,
       )
 
-      await page().waitForSelector(`${containerSelector} > div.fade-enter-from`)
-      expect(await html(containerSelector)).toBe(
-        `<div class="fade-enter-from fade-enter-active">vapor compA</div>`,
-      )
+      // compA enter
+      await waitForElement(childSelector, 'vapor compA', [
+        'fade-enter-from',
+        'fade-enter-active',
+      ])
 
       await nextFrame()
       expect(await html(containerSelector)).toBe(
@@ -220,9 +234,9 @@ describe('vapor transition', () => {
       )
 
       // compA -> compB
+      // compA leave
       expect(
-        (await classWhenTransitionStart(btnSelector, containerSelector))
-          .innerHTML,
+        (await transitionStart(btnSelector, containerSelector)).innerHTML,
       ).toBe(`<div class="fade-leave-from fade-leave-active">vapor compA</div>`)
 
       await nextFrame()
@@ -230,14 +244,18 @@ describe('vapor transition', () => {
         `<div class="fade-leave-active fade-leave-to">vapor compA</div>`,
       )
 
-      await transitionFinish()
+      // compB enter
+      await waitForElement(childSelector, 'vapor compB', [
+        'fade-enter-from',
+        'fade-enter-active',
+      ])
+
       await nextFrame()
       expect(await html(containerSelector)).toBe(
         `<div class="fade-enter-active fade-enter-to">vapor compB</div>`,
       )
 
       await transitionFinish()
-      await nextFrame()
       expect(await html(containerSelector)).toBe(
         `<div class="">vapor compB</div>`,
       )
@@ -245,20 +263,19 @@ describe('vapor transition', () => {
     E2E_TIMEOUT,
   )
 
-  test.todo(
+  test(
     'should work with in-out mode',
     async () => {
       const btnSelector = '.in-out > button'
       const containerSelector = '.in-out > div'
+      const childSelector = `${containerSelector} > div`
 
       expect(await html(containerSelector)).toBe(`<div>vapor compB</div>`)
 
       // compA enter
-      const { innerHTML } = await classWhenTransitionStart(
-        btnSelector,
-        containerSelector,
-      )
-      expect(innerHTML).toBe(
+      expect(
+        (await transitionStart(btnSelector, containerSelector)).innerHTML,
+      ).toBe(
         `<div>vapor compB</div><div class="fade-enter-from fade-enter-active">vapor compA</div>`,
       )
 
@@ -267,15 +284,11 @@ describe('vapor transition', () => {
         `<div>vapor compB</div><div class="fade-enter-active fade-enter-to">vapor compA</div>`,
       )
 
-      await transitionFinish()
-      expect(await html(containerSelector)).toBe(
-        `<div>vapor compB</div><div class="">vapor compA</div>`,
-      )
-
       // compB leave
-      expect(await html(containerSelector)).toBe(
-        `<div class="fade-leave-from fade-leave-active">vapor compB</div><div class="">vapor compA</div>`,
-      )
+      await waitForElement(childSelector, 'vapor compB', [
+        'fade-leave-from',
+        'fade-leave-active',
+      ])
 
       await nextFrame()
       expect(await html(containerSelector)).toBe(
@@ -283,7 +296,6 @@ describe('vapor transition', () => {
       )
 
       await transitionFinish()
-      await nextFrame()
       expect(await html(containerSelector)).toBe(
         `<div class="">vapor compA</div>`,
       )

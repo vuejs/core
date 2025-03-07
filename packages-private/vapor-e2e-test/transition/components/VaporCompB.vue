@@ -1,5 +1,5 @@
 <script vapor>
-const msg = 'vapor compA'
+const msg = 'vapor compB'
 </script>
 <template>
   <div>{{ msg }}</div>

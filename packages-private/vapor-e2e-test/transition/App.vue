@@ -6,7 +6,7 @@ const count = ref(0)
 
 import VaporCompA from './components/VaporCompA.vue'
 import VaporCompB from './components/VaporCompB.vue'
-const activeComponent = shallowRef(VaporCompA)
+const activeComponent = shallowRef(VaporCompB)
 function toggleComponent() {
   activeComponent.value =
     activeComponent.value === VaporCompA ? VaporCompB : VaporCompA
