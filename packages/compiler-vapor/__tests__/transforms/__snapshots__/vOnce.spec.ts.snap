@@ -12,15 +12,15 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: v-once > basic 1`] = `
-"import { child as _child, createTextNode as _createTextNode, toDisplayString as _toDisplayString, setClass as _setClass, prepend as _prepend, template as _template } from 'vue';
-const t0 = _template("<div><span></span></div>", true)
+"import { child as _child, next as _next, toDisplayString as _toDisplayString, setText as _setText, setClass as _setClass, template as _template } from 'vue';
+const t0 = _template("<div> <span></span></div>", true)
 
 export function render(_ctx, $props, $emit, $attrs, $slots) {
   const n2 = t0()
-  const n1 = _child(n2)
-  const n0 = _createTextNode(_toDisplayString(_ctx.msg) + " ")
+  const n0 = _child(n2)
+  const n1 = _next(n0)
+  _setText(n0, _toDisplayString(_ctx.msg) + " ")
   _setClass(n1, _ctx.clz)
-  _prepend(n2, n0)
   return n2
 }"
 `;

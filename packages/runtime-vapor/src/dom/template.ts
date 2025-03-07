@@ -3,7 +3,7 @@ import {
   currentHydrationNode,
   isHydrating,
 } from './hydration'
-import { child } from './node'
+import { child, createTextNode } from './node'
 
 let t: HTMLTemplateElement
 
@@ -17,6 +17,10 @@ export function template(html: string, root?: boolean) {
         throw new Error('No current hydration node')
       }
       return adoptHydrationNode(currentHydrationNode, html)!
+    }
+    // fast path for text nodes
+    if (html[0] !== '<') {
+      return createTextNode(html)
     }
     if (!node) {
       t = t || document.createElement('template')

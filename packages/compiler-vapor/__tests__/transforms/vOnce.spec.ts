@@ -28,8 +28,8 @@ describe('compiler: v-once', () => {
     expect(ir.block.effect).lengthOf(0)
     expect(ir.block.operation).toMatchObject([
       {
-        type: IRNodeTypes.CREATE_TEXT_NODE,
-        id: 0,
+        type: IRNodeTypes.SET_TEXT,
+        element: 0,
         values: [
           {
             type: NodeTypes.SIMPLE_EXPRESSION,
@@ -60,11 +60,6 @@ describe('compiler: v-once', () => {
             },
           ],
         },
-      },
-      {
-        type: IRNodeTypes.PREPEND_NODE,
-        elements: [0],
-        parent: 2,
       },
     ])
   })
