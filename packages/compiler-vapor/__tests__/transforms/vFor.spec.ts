@@ -174,7 +174,7 @@ describe('compiler: v-for', () => {
 
   test('object de-structured value (with rest)', () => {
     const { code, ir } = compileWithVFor(
-      `<div v-for="(  { id, ...other }, key) in list" :key="id">{{ id + other + index }}</div>`,
+      `<div v-for="(  { id, ...other }, index) in list" :key="id">{{ id + other + index }}</div>`,
     )
     expect(code).matchSnapshot()
     expect(code).toContain('_getRestElement(_for_item0.value, ["id"])')
@@ -198,7 +198,7 @@ describe('compiler: v-for', () => {
       },
       key: {
         type: NodeTypes.SIMPLE_EXPRESSION,
-        content: 'key',
+        content: 'index',
       },
       index: undefined,
     })
