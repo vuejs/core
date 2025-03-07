@@ -93,9 +93,9 @@ export function render(_ctx) {
   const n0 = _createFor(() => (_ctx.list), (_for_item0, _for_key0) => {
     const n2 = t0()
     const x2 = _child(n2)
-    _renderEffect(() => _setText(x2, _toDisplayString(_for_item0.value.id + _getRestElement(_for_item0.value, ["id"]) + _ctx.index)))
+    _renderEffect(() => _setText(x2, _toDisplayString(_for_item0.value.id + _getRestElement(_for_item0.value, ["id"]) + _for_key0.value)))
     return n2
-  }, ({ id, ...other }, key) => (id))
+  }, ({ id, ...other }, index) => (id))
   return n0
 }"
 `;
