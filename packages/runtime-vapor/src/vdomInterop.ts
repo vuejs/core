@@ -128,6 +128,10 @@ const vaporInteropImpl: Omit<
     insert(vnode.vb || (vnode.component as any), container, anchor)
     insert(vnode.anchor as any, container, anchor)
   },
+
+  setTransitionHooks(component, hooks) {
+    setTransitionToInstance(component as any, hooks as VaporTransitionHooks)
+  },
 }
 
 const vaporSlotPropsProxyHandler: ProxyHandler<

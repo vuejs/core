@@ -1,6 +1,7 @@
 import {
   type ComponentInternalInstance,
   type ComponentOptions,
+  type ConcreteComponent,
   type GenericComponentInstance,
   type SetupContext,
   getCurrentInstance,
@@ -20,7 +21,7 @@ import { ErrorCodes, callWithAsyncErrorHandling } from '../errorHandling'
 import { PatchFlags, ShapeFlags, isArray, isFunction } from '@vue/shared'
 import { onBeforeUnmount, onMounted } from '../apiLifecycle'
 import { isTeleport } from './Teleport'
-import type { RendererElement } from '../renderer'
+import { type RendererElement, getVaporInterface } from '../renderer'
 import { SchedulerJobFlags } from '../scheduler'
 
 type Hook<T = () => void> = T | T[]
@@ -566,8 +567,11 @@ function getInnerChild(vnode: VNode): VNode | undefined {
 
 export function setTransitionHooks(vnode: VNode, hooks: TransitionHooks): void {
   if (vnode.shapeFlag & ShapeFlags.COMPONENT && vnode.component) {
-    if ((vnode.type as any).__vapor) {
-      ;(vnode.component as any).block.$transition = hooks
+    if ((vnode.type as ConcreteComponent).__vapor) {
+      getVaporInterface(vnode.component, vnode).setTransitionHooks(
+        vnode.component,
+        hooks,
+      )
     } else {
       vnode.transition = hooks
       setTransitionHooks(vnode.component.subTree, hooks)

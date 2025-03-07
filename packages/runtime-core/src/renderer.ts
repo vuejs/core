@@ -2666,7 +2666,7 @@ export function performTransitionLeave(
   }
 }
 
-function getVaporInterface(
+export function getVaporInterface(
   instance: ComponentInternalInstance | null,
   vnode: VNode,
 ): VaporInteropInterface {
