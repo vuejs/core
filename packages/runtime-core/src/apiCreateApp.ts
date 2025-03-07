@@ -180,7 +180,6 @@ export interface AppConfig extends GenericAppConfig {
 
 /**
  * The vapor in vdom implementation is in runtime-vapor/src/vdomInterop.ts
- * @internal
  */
 export interface VaporInteropInterface {
   mount(
