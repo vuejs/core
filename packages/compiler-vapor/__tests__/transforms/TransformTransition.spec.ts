@@ -5,9 +5,11 @@ import {
   transformText,
   transformVBind,
   transformVIf,
+  transformVShow,
   transformVSlot,
 } from '@vue/compiler-vapor'
-import { expect } from 'vitest'
+import { transformTransition } from '../../src/transforms/transformTransition'
+import { DOMErrorCodes } from '@vue/compiler-dom'
 
 const compileWithElementTransform = makeCompile({
   nodeTransforms: [
@@ -16,9 +18,11 @@ const compileWithElementTransform = makeCompile({
     transformElement,
     transformVSlot,
     transformChildren,
+    transformTransition,
   ],
   directiveTransforms: {
     bind: transformVBind,
+    show: transformVShow,
   },
 })
 
@@ -52,4 +56,33 @@ describe('compiler: transition', () => {
     // should preserve key
     expect(code).contains('n0.$key = _ctx.key')
   })
+
+  test('warns if multiple children', () => {
+    const onError = vi.fn()
+    compileWithElementTransform(
+      `<Transition>
+        <h1>foo</h1>
+        <h2>bar</h2>
+      </Transition>`,
+      {
+        onError,
+      },
+    )
+    expect(onError).toHaveBeenCalled()
+    expect(onError.mock.calls).toMatchObject([
+      [{ code: DOMErrorCodes.X_TRANSITION_INVALID_CHILDREN }],
+    ])
+  })
+
+  test('inject persisted when child has v-show', () => {
+    expect(
+      compileWithElementTransform(`
+        <Transition>
+          <div v-show="ok" />
+        </Transition>
+    `).code,
+    ).toMatchSnapshot()
+  })
+
+  // TODO more tests
 })

@@ -1,13 +1,33 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
 exports[`compiler: transition > basic 1`] = `
-"import { VaporTransition as _VaporTransition, createComponent as _createComponent, template as _template } from 'vue';
+"import { VaporTransition as _VaporTransition, applyVShow as _applyVShow, createComponent as _createComponent, template as _template } from 'vue';
 const t0 = _template("<h1>foo</h1>")
 
 export function render(_ctx) {
-  const n1 = _createComponent(_VaporTransition, { appear: () => ("") }, {
+  const n1 = _createComponent(_VaporTransition, {
+    appear: () => (""), 
+    persisted: () => ("")
+  }, {
     "default": () => {
       const n0 = t0()
+      _applyVShow(n0, () => (_ctx.show))
+      return n0
+    }
+  }, true)
+  return n1
+}"
+`;
+
+exports[`compiler: transition > inject persisted when child has v-show 1`] = `
+"import { VaporTransition as _VaporTransition, applyVShow as _applyVShow, createComponent as _createComponent, template as _template } from 'vue';
+const t0 = _template("<div></div>")
+
+export function render(_ctx) {
+  const n1 = _createComponent(_VaporTransition, { persisted: () => ("") }, {
+    "default": () => {
+      const n0 = t0()
+      _applyVShow(n0, () => (_ctx.ok))
       return n0
     }
   }, true)
