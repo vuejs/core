@@ -120,7 +120,7 @@ describe('compiler: v-for', () => {
 
   test('object value, key and index', () => {
     const { code, ir } = compileWithVFor(
-      `<div v-for="(value, key, index) in list" :key="id">{{ value + key + index }}</div>`,
+      `<div v-for="(value, key, index) in list" :key="key">{{ value + key + index }}</div>`,
     )
     expect(code).matchSnapshot()
     expect(ir.block.operation[0]).toMatchObject({

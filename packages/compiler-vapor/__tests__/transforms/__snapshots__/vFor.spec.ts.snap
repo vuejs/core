@@ -125,7 +125,7 @@ export function render(_ctx) {
     const x2 = _child(n2)
     _renderEffect(() => _setText(x2, _toDisplayString(_for_item0.value + _for_key0.value + _for_index0.value)))
     return n2
-  }, (value, key, index) => (_ctx.id))
+  }, (value, key, index) => (key))
   return n0
 }"
 `;
