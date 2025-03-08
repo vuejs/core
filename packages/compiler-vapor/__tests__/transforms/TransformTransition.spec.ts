@@ -57,21 +57,132 @@ describe('compiler: transition', () => {
     expect(code).contains('n0.$key = _ctx.key')
   })
 
-  test('warns if multiple children', () => {
+  function checkWarning(template: string, shouldWarn = true) {
     const onError = vi.fn()
-    compileWithElementTransform(
+    compileWithElementTransform(template, { onError })
+    if (shouldWarn) {
+      expect(onError).toHaveBeenCalled()
+      expect(onError.mock.calls).toMatchObject([
+        [{ code: DOMErrorCodes.X_TRANSITION_INVALID_CHILDREN }],
+      ])
+    } else {
+      expect(onError).not.toHaveBeenCalled()
+    }
+  }
+
+  test('warns if multiple children', () => {
+    checkWarning(
       `<Transition>
         <h1>foo</h1>
         <h2>bar</h2>
       </Transition>`,
-      {
-        onError,
-      },
+      true,
     )
-    expect(onError).toHaveBeenCalled()
-    expect(onError.mock.calls).toMatchObject([
-      [{ code: DOMErrorCodes.X_TRANSITION_INVALID_CHILDREN }],
-    ])
+  })
+
+  test('warns with v-for', () => {
+    checkWarning(
+      `
+      <transition>
+        <div v-for="i in items">hey</div>
+      </transition>
+      `,
+      true,
+    )
+  })
+
+  test('warns with multiple v-if + v-for', () => {
+    checkWarning(
+      `
+      <transition>
+        <div v-if="a" v-for="i in items">hey</div>
+        <div v-else v-for="i in items">hey</div>
+      </transition>
+      `,
+      true,
+    )
+  })
+
+  test('warns with template v-if', () => {
+    checkWarning(
+      `
+      <transition>
+        <template v-if="ok"></template>
+      </transition>
+      `,
+      true,
+    )
+  })
+
+  test('warns with multiple templates', () => {
+    checkWarning(
+      `
+      <transition>
+        <template v-if="a"></template>
+        <template v-else></template>
+      </transition>
+      `,
+      true,
+    )
+  })
+
+  test('warns if multiple children with v-if', () => {
+    checkWarning(
+      `
+      <transition>
+        <div v-if="one">hey</div>
+        <div v-if="other">hey</div>
+      </transition>
+      `,
+      true,
+    )
+  })
+
+  test('does not warn with regular element', () => {
+    checkWarning(
+      `
+      <transition>
+        <div>hey</div>
+      </transition>
+      `,
+      false,
+    )
+  })
+
+  test('does not warn with one single v-if', () => {
+    checkWarning(
+      `
+      <transition>
+        <div v-if="a">hey</div>
+      </transition>
+      `,
+      false,
+    )
+  })
+
+  test('does not warn with v-if v-else-if v-else', () => {
+    checkWarning(
+      `
+      <transition>
+        <div v-if="a">hey</div>
+        <div v-else-if="b">hey</div>
+        <div v-else>hey</div>
+      </transition>
+      `,
+      false,
+    )
+  })
+
+  test('does not warn with v-if v-else', () => {
+    checkWarning(
+      `
+      <transition>
+        <div v-if="a">hey</div>
+        <div v-else>hey</div>
+      </transition>
+      `,
+      false,
+    )
   })
 
   test('inject persisted when child has v-show', () => {
@@ -84,5 +195,21 @@ describe('compiler: transition', () => {
     ).toMatchSnapshot()
   })
 
-  // TODO more tests
+  test('the v-if/else-if/else branches in Transition should ignore comments', () => {
+    expect(
+      compileWithElementTransform(`
+    <transition>
+      <div v-if="a">hey</div>
+      <!-- this should be ignored -->
+      <div v-else-if="b">hey</div>
+      <!-- this should be ignored -->
+      <div v-else>
+        <p v-if="c"/>
+        <!-- this should not be ignored -->
+        <p v-else/>
+      </div>
+    </transition>
+    `).code,
+    ).toMatchSnapshot()
+  })
 })

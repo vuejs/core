@@ -24,6 +24,9 @@ export const transformTransition: NodeTransform = (node, context) => {
 export function postTransformTransition(
   node: ComponentNode,
   onError: (error: CompilerError) => void,
+  hasMultipleChildren: (
+    node: ComponentNode,
+  ) => boolean = defaultHasMultipleChildren,
 ): () => void {
   return () => {
     if (!node.children.length) {
@@ -59,7 +62,9 @@ export function postTransformTransition(
   }
 }
 
-function hasMultipleChildren(node: ComponentNode | IfBranchNode): boolean {
+function defaultHasMultipleChildren(
+  node: ComponentNode | IfBranchNode,
+): boolean {
   // #1352 filter out potential comment nodes.
   const children = (node.children = node.children.filter(
     c =>
@@ -70,6 +75,7 @@ function hasMultipleChildren(node: ComponentNode | IfBranchNode): boolean {
   return (
     children.length !== 1 ||
     child.type === NodeTypes.FOR ||
-    (child.type === NodeTypes.IF && child.branches.some(hasMultipleChildren))
+    (child.type === NodeTypes.IF &&
+      child.branches.some(defaultHasMultipleChildren))
   )
 }
