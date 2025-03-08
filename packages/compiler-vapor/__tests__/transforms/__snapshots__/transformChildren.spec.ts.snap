@@ -1,24 +1,22 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
 exports[`compiler: children transform > children & sibling references 1`] = `
-"import { child as _child, nthChild as _nthChild, next as _next, createTextNode as _createTextNode, insert as _insert, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<div><p> </p> <!><p> </p></div>", true)
+"import { child as _child, next as _next, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<div><p> </p> <p> </p></div>", true)
 
 export function render(_ctx) {
-  const n4 = t0()
-  const n0 = _child(n4)
-  const n3 = _nthChild(n4, 2)
-  const n2 = _next(n3)
+  const n3 = t0()
+  const n0 = _child(n3)
+  const n1 = _next(n0)
+  const n2 = _next(n1)
   const x0 = _child(n0)
-  const n1 = _createTextNode()
   const x2 = _child(n2)
-  _insert(n1, n4, n3)
   _renderEffect(() => {
     _setText(x0, _toDisplayString(_ctx.first))
-    _setText(n1, _toDisplayString(_ctx.second) + " " + _toDisplayString(_ctx.third) + " ")
+    _setText(n1, " " + _toDisplayString(_ctx.second) + " " + _toDisplayString(_ctx.third) + " ")
     _setText(x2, _toDisplayString(_ctx.forth))
   })
-  return n4
+  return n3
 }"
 `;
 

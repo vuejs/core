@@ -7,6 +7,7 @@ import {
 } from './component'
 import { createComment, createTextNode } from './dom/node'
 import { EffectScope, pauseTracking, resetTracking } from '@vue/reactivity'
+import { isHydrating } from './dom/hydration'
 import {
   type TransitionHooks,
   type TransitionProps,
@@ -154,26 +155,33 @@ export function insert(
 ): void {
   anchor = anchor === 0 ? parent.firstChild : anchor
   if (block instanceof Node) {
-    // don't apply transition on text or comment nodes
-    if ((block as TransitionBlock).$transition && block instanceof Element) {
-      performTransitionEnter(
-        block,
-        (block as TransitionBlock).$transition as TransitionHooks,
-        () => parent.insertBefore(block, anchor),
-        parentSuspense,
-      )
-    } else {
-      parent.insertBefore(block, anchor)
+    if (!isHydrating) {
+      // don't apply transition on text or comment nodes
+      if ((block as TransitionBlock).$transition && block instanceof Element) {
+        performTransitionEnter(
+          block,
+          (block as TransitionBlock).$transition as TransitionHooks,
+          () => parent.insertBefore(block, anchor),
+          parentSuspense,
+        )
+      } else {
+        parent.insertBefore(block, anchor)
+      }
     }
   } else if (isVaporComponent(block)) {
-    mountComponent(block, parent, anchor)
+    if (block.isMounted) {
+      insert(block.block!, parent, anchor)
+    } else {
+      mountComponent(block, parent, anchor)
+    }
   } else if (isArray(block)) {
-    for (let i = 0; i < block.length; i++) {
-      insert(block[i], parent, anchor)
+    for (const b of block) {
+      insert(b, parent, anchor)
     }
   } else {
     // fragment
     if (block.insert) {
+      // TODO handle hydration for vdom interop
       block.insert(parent, anchor, (block as TransitionBlock).$transition)
     } else {
       insert(block.nodes, parent, anchor, parentSuspense)
@@ -181,6 +189,8 @@ export function insert(
     if (block.anchor) insert(block.anchor, parent, anchor)
   }
 }
+
+export type InsertFn = typeof insert
 
 export function prepend(parent: ParentNode, ...blocks: Block[]): void {
   let i = blocks.length

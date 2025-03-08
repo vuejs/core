@@ -66,11 +66,10 @@ export function genChildren(
     push(NEWLINE, `const ${variable} = `)
 
     if (prev) {
-      const offset = elementIndex - prev[1]
-      if (offset === 1) {
+      if (elementIndex - prev[1] === 1) {
         push(...genCall(helper('next'), prev[0]))
       } else {
-        push(...genCall(helper('nthChild'), from, String(offset)))
+        push(...genCall(helper('nthChild'), from, String(elementIndex)))
       }
     } else {
       if (newPath.length === 1 && newPath[0] === 0) {

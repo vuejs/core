@@ -27,10 +27,11 @@ describe('compiler: children transform', () => {
     )
     expect(code).toMatchSnapshot()
     expect(Array.from(helpers)).containSubset([
+      'child',
+      'toDisplayString',
+      'renderEffect',
       'next',
       'setText',
-      'createTextNode',
-      'insert',
       'template',
     ])
   })
