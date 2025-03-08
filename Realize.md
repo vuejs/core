@@ -130,7 +130,7 @@ Diff algorithm is a way to compare two Virtual DOM trees and generate a patch se
 
 > The diff algorithm is based on the following steps:
 >
-> - Compare the two trees and generate a list of patches. This process is implemented in function which name are suffix with `patch` and `process`.
+> - Compare the two trees and generate a list of patches(First compare from start to end, then compare from end to start, both will not end until found two nodes are diffent, then will start to patch the diff nodes in middle). This process is implemented in function which name are suffix with `patch` and `process`.
 > - Apply the patches to the real DOM. Vue will queue the patches and batch update the real DOM in the next tick. Some optimiazations:
 > - - Use key to identify the same nodes.
 > - - Use same vnode type to identify the same nodes and patch them directly.
