@@ -348,3 +348,10 @@ export {
   vModelSelectInit,
   vModelSetSelected,
 } from './directives/vModel'
+/**
+ * @internal
+ */
+export {
+  resolveTransitionProps,
+  TransitionPropsValidators,
+} from './components/Transition'
