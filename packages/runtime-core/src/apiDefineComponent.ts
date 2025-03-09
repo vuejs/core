@@ -99,7 +99,7 @@ export type DefineComponent<
     methods: M
     mixins: Mixin[]
     extends: Extends
-    emits: E
+    emits: Record<string, unknown> extends E ? {} : E
     slots: S
     inject: {}
     components: LC
