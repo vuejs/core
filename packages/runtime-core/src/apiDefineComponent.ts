@@ -91,7 +91,7 @@ export type DefineComponent<
 > = InferComponent<
   {
     setup(): RawBindings
-    data(): D
+    data(): unknown extends D ? {} : D
     props: PropsOrPropOptions extends ComponentPropsOptions
       ? PropsOrPropOptions
       : {}
