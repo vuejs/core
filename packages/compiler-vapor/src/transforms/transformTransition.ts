@@ -32,16 +32,11 @@ function hasMultipleChildren(node: ElementNode): boolean {
 
   const first = children[0]
 
-  // template
-  if (first && isTemplateNode(first)) {
-    return true
-  }
-
   // has v-for
   if (
     children.length === 1 &&
     first.type === NodeTypes.ELEMENT &&
-    findDir(first, 'for')
+    (findDir(first, 'for') || isTemplateNode(first))
   ) {
     return true
   }
@@ -51,10 +46,11 @@ function hasMultipleChildren(node: ElementNode): boolean {
 
   // has v-if/v-else-if/v-else
   if (
-    children.length > 1 &&
     children.every(
       (c, index) =>
         c.type === NodeTypes.ELEMENT &&
+        // not template
+        !isTemplateNode(c) &&
         // not has v-for
         !findDir(c, 'for') &&
         // if the first child has v-if, the rest should also have v-else-if/v-else
