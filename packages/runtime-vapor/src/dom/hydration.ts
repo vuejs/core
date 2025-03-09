@@ -116,6 +116,8 @@ function adoptHydrationNodeImpl(
         !template.startsWith((adopted as Text).data))
     ) {
       // TODO recover and provide more info
+      console.error(`adopted: `, adopted)
+      console.error(`template: ${template}`)
       throw new Error('hydration mismatch!')
     }
   }

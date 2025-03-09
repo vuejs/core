@@ -69,7 +69,6 @@ function processDynamicChildren(context: TransformContext<ElementNode>) {
 
           prevDynamics[0].flags -= DynamicFlag.NON_TEMPLATE
           const anchor = (prevDynamics[0].anchor = context.increaseId())
-
           context.registerOperation({
             type: IRNodeTypes.INSERT_NODE,
             elements: prevDynamics.map(child => child.id!),

@@ -1,9 +1,19 @@
 // import { type SSRContext, renderToString } from '@vue/server-renderer'
-import { createVaporSSRApp, renderEffect, setText, template } from '../src'
-import { nextTick, ref } from '@vue/runtime-dom'
+import {
+  child,
+  createVaporSSRApp,
+  delegateEvents,
+  next,
+  renderEffect,
+  setClass,
+  setText,
+  template,
+} from '../src'
+import { nextTick, ref, toDisplayString } from '@vue/runtime-dom'
 
 function mountWithHydration(html: string, setup: () => any) {
   const container = document.createElement('div')
+  document.body.appendChild(container)
   container.innerHTML = html
   const app = createVaporSSRApp({
     setup,
@@ -14,17 +24,19 @@ function mountWithHydration(html: string, setup: () => any) {
   }
 }
 
-// const triggerEvent = (type: string, el: Element) => {
-//   const event = new Event(type)
-//   el.dispatchEvent(event)
-// }
+const triggerEvent = (type: string, el: Element) => {
+  const event = new Event(type, { bubbles: true })
+  el.dispatchEvent(event)
+}
 
 describe('SSR hydration', () => {
+  delegateEvents('click')
+
   beforeEach(() => {
     document.body.innerHTML = ''
   })
 
-  test('text', async () => {
+  test('root text', async () => {
     const msg = ref('foo')
     const t = template(' ')
     const { container } = mountWithHydration('foo', () => {
@@ -38,128 +50,99 @@ describe('SSR hydration', () => {
     expect(container.textContent).toBe('bar')
   })
 
-  test('empty text', async () => {
-    const t0 = template('<div></div>', true)
-    const { container } = mountWithHydration('<div></div>', () => t0())
-    expect(container.innerHTML).toBe('<div></div>')
-    expect(`Hydration children mismatch in <div>`).not.toHaveBeenWarned()
-  })
-
-  test('comment', () => {
+  test('root comment', () => {
     const t0 = template('<!---->')
     const { container } = mountWithHydration('<!---->', () => t0())
     expect(container.innerHTML).toBe('<!---->')
     expect(`Hydration children mismatch in <div>`).not.toHaveBeenWarned()
   })
 
-  // test('static before text', () => {
-  //   const t0 = template(' A ')
-  //   const t1 = template('<span>foo bar</span>')
-  //   const t2 = template(' ')
-  //   const msg = ref('hello')
-  //   const { container } = mountWithHydration(
-  //     ' A <span>foo bar</span>hello',
-  //     () => {
-  //       const n0 = t0()
-  //       const n1 = t1()
-  //       const n2 = t2()
-  //       const n3 = createTextNode()
-  //       renderEffect(() => setText(n3, toDisplayString(msg.value)))
-  //       return [n0, n1, n2, n3]
-  //     },
-  //   )
-  // })
+  test('root with mixed element and text', async () => {
+    const t0 = template(' A')
+    const t1 = template('<span>foo bar</span>')
+    const t2 = template(' ')
+    const msg = ref('hello')
+    const { container } = mountWithHydration(
+      ' A<span>foo bar</span>hello',
+      () => {
+        const n0 = t0()
+        const n1 = t1()
+        const n2 = t2()
+        renderEffect(() => setText(n2 as Text, toDisplayString(msg.value)))
+        return [n0, n1, n2]
+      },
+    )
+    expect(container.innerHTML).toBe(' A<span>foo bar</span>hello')
+    msg.value = 'bar'
+    await nextTick()
+    expect(container.innerHTML).toBe(' A<span>foo bar</span>bar')
+  })
 
-  // test('static (multiple elements)', () => {
-  //   const staticContent = '<div></div><span>hello</span>'
-  //   const html = `<div><div>hi</div>` + staticContent + `<div>ho</div></div>`
+  test('empty element', async () => {
+    const t0 = template('<div></div>', true)
+    const { container } = mountWithHydration('<div></div>', () => t0())
+    expect(container.innerHTML).toBe('<div></div>')
+    expect(`Hydration children mismatch in <div>`).not.toHaveBeenWarned()
+  })
 
-  //   const n1 = h('div', 'hi')
-  //   const s = createStaticVNode('', 2)
-  //   const n2 = h('div', 'ho')
+  test('element with text children', async () => {
+    const t0 = template('<div> </div>', true)
+    const msg = ref('foo')
+    const { container } = mountWithHydration(
+      '<div class="foo">foo</div>',
+      () => {
+        const n0 = t0() as Element
+        const x0 = child(n0) as Text
+        renderEffect(() => {
+          const _msg = msg.value
 
-  //   const { container } = mountWithHydration(html, () => h('div', [n1, s, n2]))
+          setText(x0, toDisplayString(_msg))
+          setClass(n0, _msg)
+        })
+        return n0
+      },
+    )
+    expect(container.innerHTML).toBe(`<div class="foo">foo</div>`)
+    msg.value = 'bar'
+    await nextTick()
+    expect(container.innerHTML).toBe(`<div class="bar">bar</div>`)
+  })
 
-  //   const div = container.firstChild!
+  test('element with elements children', async () => {
+    const t0 = template('<div><span> </span><span></span></div>', true)
+    const msg = ref('foo')
+    const fn = vi.fn()
+    const { container } = mountWithHydration(
+      '<div><span>foo</span><span class="foo"></span></div>',
+      () => {
+        const n2 = t0() as Element
+        const n0 = child(n2) as Element
+        const n1 = next(n0) as Element
+        const x0 = child(n0) as Text
+        ;(n1 as any).$evtclick = fn
+        renderEffect(() => {
+          const _msg = msg.value
 
-  //   expect(n1.el).toBe(div.firstChild)
-  //   expect(n2.el).toBe(div.lastChild)
-  //   expect(s.el).toBe(div.childNodes[1])
-  //   expect(s.anchor).toBe(div.childNodes[2])
-  //   expect(s.children).toBe(staticContent)
-  // })
+          setText(x0, toDisplayString(_msg))
+          setClass(n1, _msg)
+        })
+        return n2
+      },
+    )
+    expect(container.innerHTML).toBe(
+      `<div><span>foo</span><span class="foo"></span></div>`,
+    )
 
-  // // #6008
-  // test('static (with text node as starting node)', () => {
-  //   const html = ` A <span>foo</span> B`
-  //   const { vnode, container } = mountWithHydration(html, () =>
-  //     createStaticVNode(` A <span>foo</span> B`, 3),
-  //   )
-  //   expect(vnode.el).toBe(container.firstChild)
-  //   expect(vnode.anchor).toBe(container.lastChild)
-  //   expect(`Hydration node mismatch`).not.toHaveBeenWarned()
-  // })
+    // event handler
+    triggerEvent('click', container.querySelector('.foo')!)
+    expect(fn).toHaveBeenCalled()
 
-  // test('static with content adoption', () => {
-  //   const html = ` A <span>foo</span> B`
-  //   const { vnode, container } = mountWithHydration(html, () =>
-  //     createStaticVNode(``, 3),
-  //   )
-  //   expect(vnode.el).toBe(container.firstChild)
-  //   expect(vnode.anchor).toBe(container.lastChild)
-  //   expect(vnode.children).toBe(html)
-  //   expect(`Hydration node mismatch`).not.toHaveBeenWarned()
-  // })
-
-  // test('element with text children', async () => {
-  //   const msg = ref('foo')
-  //   const { vnode, container } = mountWithHydration(
-  //     '<div class="foo">foo</div>',
-  //     () => h('div', { class: msg.value }, msg.value),
-  //   )
-  //   expect(vnode.el).toBe(container.firstChild)
-  //   expect(container.firstChild!.textContent).toBe('foo')
-  //   msg.value = 'bar'
-  //   await nextTick()
-  //   expect(container.innerHTML).toBe(`<div class="bar">bar</div>`)
-  // })
-
-  // // #7285
-  // test('element with multiple continuous text vnodes', async () => {
-  //   // should no mismatch warning
-  //   const { container } = mountWithHydration('<div>foo0o</div>', () =>
-  //     h('div', ['fo', createTextVNode('o'), 0, 'o']),
-  //   )
-  //   expect(container.textContent).toBe('foo0o')
-  // })
-
-  // test('element with elements children', async () => {
-  //   const msg = ref('foo')
-  //   const fn = vi.fn()
-  //   const { vnode, container } = mountWithHydration(
-  //     '<div><span>foo</span><span class="foo"></span></div>',
-  //     () =>
-  //       h('div', [
-  //         h('span', msg.value),
-  //         h('span', { class: msg.value, onClick: fn }),
-  //       ]),
-  //   )
-  //   expect(vnode.el).toBe(container.firstChild)
-  //   expect((vnode.children as VNode[])[0].el).toBe(
-  //     container.firstChild!.childNodes[0],
-  //   )
-  //   expect((vnode.children as VNode[])[1].el).toBe(
-  //     container.firstChild!.childNodes[1],
-  //   )
-
-  //   // event handler
-  //   triggerEvent('click', vnode.el.querySelector('.foo')!)
-  //   expect(fn).toHaveBeenCalled()
-
-  //   msg.value = 'bar'
-  //   await nextTick()
-  //   expect(vnode.el.innerHTML).toBe(`<span>bar</span><span class="bar"></span>`)
-  // })
+    msg.value = 'bar'
+    await nextTick()
+    expect(container.innerHTML).toBe(
+      `<div><span>bar</span><span class="bar"></span></div>`,
+    )
+  })
 
   // test('element with ref', () => {
   //   const el = ref()
