@@ -316,6 +316,7 @@ export function defineComponent<
   TypeEmits extends ComponentTypeEmits | unknown = unknown,
   TypeRefs extends Record<string, unknown> = {},
   TypeEl extends Element = any,
+  Defaults = unknown,
   RawPropsOptions extends ComponentPropsOptions = {},
   RawEmitsOptions extends EmitsOptions = string[],
   InjectOptions extends ComponentInjectOptions = {},
@@ -386,6 +387,10 @@ export function defineComponent<
      * @private for language-tools use only
      */
     __typeEl?: TypeEl
+    /**
+     * @private for language-tools use only
+     */
+    __defaults?: Defaults
   } & ComponentOptionsBase<
     InferredProps,
     SetupBindings,
@@ -457,11 +462,11 @@ export function defineComponent<
   directives: Directives
   provide: Provide
   expose: Exposed
-  __defaults: unknown
   __typeProps: TypeProps
   __typeEmits: TypeEmits
   __typeRefs: TypeRefs
   __typeEl: TypeEl
+  __defaults: Defaults
 }>
 
 // implementation, close to no-op
