@@ -93,6 +93,10 @@ export type ExtractMixinProps<T> = UnionToIntersection<
     : {}
 >
 
+export type ExtractMixinTypeProps<T> = UnionToIntersection<
+  T extends { __typeProps?: infer P } ? P : {}
+>
+
 export type ExtractMixinEmits<T> = UnionToIntersection<
   T extends { emits?: infer E }
     ? E extends (infer K extends string)[]
@@ -222,7 +226,9 @@ export type CreateComponentPublicInstanceWithMixins<
   Options = any,
   // mixin inference
   PublicP = Readonly<
-    ExtractPropTypes<ExtractMixinProps<Mixin> & ExtractMixinProps<Extends>>
+    ExtractPropTypes<ExtractMixinProps<Mixin> & ExtractMixinProps<Extends>> &
+      ExtractMixinTypeProps<Mixin> &
+      ExtractMixinTypeProps<Extends>
   > &
     P,
   PublicB = ExtractMixinSetupBindings<Mixin> &

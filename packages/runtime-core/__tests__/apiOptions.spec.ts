@@ -931,6 +931,18 @@ describe('api: options', () => {
     expect(calls).toEqual(['base', 'mixin', 'comp'])
   })
 
+  test('extends type props', () => {
+    const Base = defineComponent({
+      __typeProps: {} as { a: number },
+    })
+    defineComponent({
+      extends: Base,
+      render() {
+        return `${this.a}`
+      },
+    })
+  })
+
   test('beforeCreate/created in extends and mixins', () => {
     const calls: string[] = []
     const BaseA = {

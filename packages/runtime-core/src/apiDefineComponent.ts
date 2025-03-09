@@ -179,6 +179,8 @@ type InferComponent<
   T['expose'],
   T['provide']
 > & {
+  __typeProps?: T['__typeProps']
+
   /**
    * #3468
    *
