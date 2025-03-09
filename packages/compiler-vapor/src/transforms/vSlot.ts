@@ -66,11 +66,19 @@ function transformComponentSlot(
 ) {
   const { children } = node
   const arg = dir && dir.arg
-  const nonSlotTemplateChildren = children.filter(
-    n =>
-      isNonWhitespaceContent(node) &&
-      !(n.type === NodeTypes.ELEMENT && n.props.some(isVSlot)),
-  )
+
+  // whitespace: 'preserve'
+  let indexes: number[] = []
+  const nonSlotTemplateChildren = children.filter((n, i) => {
+    if (isNonWhitespaceContent(n)) {
+      return !(n.type === NodeTypes.ELEMENT && n.props.some(isVSlot))
+    } else {
+      indexes.push(i)
+    }
+  })
+  if (!nonSlotTemplateChildren.length) {
+    indexes.forEach(i => children.splice(i, 1))
+  }
 
   const [block, onExit] = createSlotBlock(node, dir, context)
 
