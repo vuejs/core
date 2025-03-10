@@ -1,4 +1,10 @@
-import { type IREffect, IRNodeTypes, type OperationNode } from '../ir'
+import {
+  type IREffect,
+  IRNodeTypes,
+  type InsertionStateTypes,
+  type OperationNode,
+  isTypeThatNeedsInsertionState,
+} from '../ir'
 import type { CodegenContext } from '../generate'
 import { genInsertNode, genPrependNode } from './dom'
 import { genSetDynamicEvents, genSetEvent } from './event'
@@ -14,6 +20,7 @@ import {
   INDENT_START,
   NEWLINE,
   buildCodeFragment,
+  genCall,
 } from './utils'
 import { genCreateComponent } from './component'
 import { genSlotOutlet } from './slotOutlet'
@@ -26,6 +33,9 @@ export function genOperations(
 ): CodeFragment[] {
   const [frag, push] = buildCodeFragment()
   for (const operation of opers) {
+    if (isTypeThatNeedsInsertionState(operation) && operation.parent) {
+      push(...genInsertionstate(operation, context))
+    }
     push(...genOperation(operation, context))
   }
   return frag
@@ -133,4 +143,22 @@ export function genEffect(
   }
 
   return frag
+}
+
+function genInsertionstate(
+  operation: InsertionStateTypes,
+  context: CodegenContext,
+): CodeFragment[] {
+  return [
+    NEWLINE,
+    ...genCall(
+      context.helper('setInsertionState'),
+      `n${operation.parent}`,
+      operation.anchor == null
+        ? undefined
+        : operation.anchor === -1 // -1 indicates prepend
+          ? `0` // runtime anchor value for prepend
+          : `n${operation.anchor}`,
+    ),
+  ]
 }

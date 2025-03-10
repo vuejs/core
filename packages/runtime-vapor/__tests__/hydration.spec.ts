@@ -1,11 +1,13 @@
 // import { type SSRContext, renderToString } from '@vue/server-renderer'
 import {
   child,
+  createComponent,
   createVaporSSRApp,
   delegateEvents,
   next,
   renderEffect,
   setClass,
+  setInsertionState,
   setText,
   template,
 } from '../src'
@@ -141,6 +143,117 @@ describe('SSR hydration', () => {
     await nextTick()
     expect(container.innerHTML).toBe(
       `<div><span>bar</span><span class="bar"></span></div>`,
+    )
+  })
+
+  test('basic component', async () => {
+    const t0 = template(' ')
+    const msg = ref('foo')
+    const Comp = {
+      setup() {
+        const n0 = t0() as Text
+        renderEffect(() => setText(n0, toDisplayString(msg.value)))
+        return n0
+      },
+    }
+
+    const t1 = template('<div><span></span></div>', true)
+    const { container } = mountWithHydration(
+      '<div><span></span>foo</div>',
+      () => {
+        const n1 = t1() as Element
+        setInsertionState(n1)
+        createComponent(Comp)
+        return n1
+      },
+    )
+
+    expect(container.innerHTML).toBe(`<div><span></span>foo</div>`)
+
+    msg.value = 'bar'
+    await nextTick()
+    expect(container.innerHTML).toBe(`<div><span></span>bar</div>`)
+  })
+
+  test('fragment component', async () => {
+    const t0 = template('<div> </div>')
+    const t1 = template(' ')
+    const msg = ref('foo')
+    const Comp = {
+      setup() {
+        const n0 = t0() as Element
+        const n1 = t1() as Text
+        const x0 = child(n0) as Text
+        renderEffect(() => {
+          const _msg = msg.value
+
+          setText(x0, toDisplayString(_msg))
+          setText(n1, toDisplayString(_msg))
+        })
+        return [n0, n1]
+      },
+    }
+
+    const t2 = template('<div><span></span></div>', true)
+    const { container } = mountWithHydration(
+      '<div><span></span><!--[--><div>foo</div>foo<!--]--></div>',
+      () => {
+        const n1 = t2() as Element
+        setInsertionState(n1)
+        createComponent(Comp)
+        return n1
+      },
+    )
+
+    expect(container.innerHTML).toBe(
+      `<div><span></span><!--[--><div>foo</div>foo<!--]--></div>`,
+    )
+
+    msg.value = 'bar'
+    await nextTick()
+    expect(container.innerHTML).toBe(
+      `<div><span></span><!--[--><div>bar</div>bar<!--]--></div>`,
+    )
+  })
+
+  test('fragment component with prepend', async () => {
+    const t0 = template('<div> </div>')
+    const t1 = template(' ')
+    const msg = ref('foo')
+    const Comp = {
+      setup() {
+        const n0 = t0() as Element
+        const n1 = t1() as Text
+        const x0 = child(n0) as Text
+        renderEffect(() => {
+          const _msg = msg.value
+
+          setText(x0, toDisplayString(_msg))
+          setText(n1, toDisplayString(_msg))
+        })
+        return [n0, n1]
+      },
+    }
+
+    const t2 = template('<div><span></span></div>', true)
+    const { container } = mountWithHydration(
+      '<div><!--[--><div>foo</div>foo<!--]--><span></span></div>',
+      () => {
+        const n1 = t2() as Element
+        setInsertionState(n1, 0)
+        createComponent(Comp)
+        return n1
+      },
+    )
+
+    expect(container.innerHTML).toBe(
+      `<div><!--[--><div>foo</div>foo<!--]--><span></span></div>`,
+    )
+
+    msg.value = 'bar'
+    await nextTick()
+    expect(container.innerHTML).toBe(
+      `<div><!--[--><div>bar</div>bar<!--]--><span></span></div>`,
     )
   })
 

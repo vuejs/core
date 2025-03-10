@@ -51,6 +51,7 @@ export function genCreateComponent(
   const rawSlots = genRawSlots(slots, context)
   const [ids, handlers] = processInlineHandlers(props, context)
   const rawProps = context.withId(() => genRawProps(props, context), ids)
+
   const inlineHandlers: CodeFragment[] = handlers.reduce<CodeFragment[]>(
     (acc, { name, value }) => {
       const handler = genEventHandler(context, value, undefined, false)

@@ -4,7 +4,12 @@ import {
   type TransformContext,
   transformNode,
 } from '../transform'
-import { DynamicFlag, type IRDynamicInfo, IRNodeTypes } from '../ir'
+import {
+  DynamicFlag,
+  type IRDynamicInfo,
+  IRNodeTypes,
+  isTypeThatNeedsInsertionState as isBlockOperation,
+} from '../ir'
 
 export const transformChildren: NodeTransform = (node, context) => {
   const isFragment =
@@ -66,21 +71,11 @@ function processDynamicChildren(context: TransformContext<ElementNode>) {
       if (prevDynamics.length) {
         if (hasStaticTemplate) {
           context.childrenTemplate[index - prevDynamics.length] = `<!>`
-
           prevDynamics[0].flags -= DynamicFlag.NON_TEMPLATE
           const anchor = (prevDynamics[0].anchor = context.increaseId())
-          context.registerOperation({
-            type: IRNodeTypes.INSERT_NODE,
-            elements: prevDynamics.map(child => child.id!),
-            parent: context.reference(),
-            anchor,
-          })
+          registerInsertion(prevDynamics, context, anchor)
         } else {
-          context.registerOperation({
-            type: IRNodeTypes.PREPEND_NODE,
-            elements: prevDynamics.map(child => child.id!),
-            parent: context.reference(),
-          })
+          registerInsertion(prevDynamics, context, -1 /* prepend */)
         }
         prevDynamics = []
       }
@@ -89,10 +84,32 @@ function processDynamicChildren(context: TransformContext<ElementNode>) {
   }
 
   if (prevDynamics.length) {
-    context.registerOperation({
-      type: IRNodeTypes.INSERT_NODE,
-      elements: prevDynamics.map(child => child.id!),
-      parent: context.reference(),
-    })
+    registerInsertion(prevDynamics, context)
+  }
+}
+
+function registerInsertion(
+  dynamics: IRDynamicInfo[],
+  context: TransformContext,
+  anchor?: number,
+) {
+  for (const child of dynamics) {
+    if (child.template != null) {
+      // template node due to invalid nesting - generate actual insertion
+      context.registerOperation({
+        type: IRNodeTypes.INSERT_NODE,
+        elements: dynamics.map(child => child.id!),
+        parent: context.reference(),
+        anchor,
+      })
+    } else {
+      // block types
+      for (const op of context.block.operation) {
+        if (isBlockOperation(op) && op.id === child.id) {
+          op.parent = context.reference()
+          op.anchor = anchor
+        }
+      }
+    }
   }
 }

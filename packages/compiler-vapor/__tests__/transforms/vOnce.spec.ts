@@ -132,10 +132,6 @@ describe('compiler: v-once', () => {
         id: 0,
         tag: 'Comp',
         once: true,
-      },
-      {
-        type: IRNodeTypes.INSERT_NODE,
-        elements: [0],
         parent: 1,
       },
     ])
