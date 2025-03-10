@@ -271,10 +271,21 @@ export { useCssModule } from './helpers/useCssModule'
 export { useCssVars } from './helpers/useCssVars'
 
 // DOM-only components
-export { Transition, type TransitionProps } from './components/Transition'
+export {
+  Transition,
+  type TransitionProps,
+  forceReflow,
+  addTransitionClass,
+  removeTransitionClass,
+} from './components/Transition'
+export type { ElementWithTransition } from './components/Transition'
 export {
   TransitionGroup,
   type TransitionGroupProps,
+  hasCSSTransform,
+  callPendingCbs,
+  moveCbKey,
+  handleMovedChildren,
 } from './components/TransitionGroup'
 
 // **Internal** DOM-only runtime directive helpers

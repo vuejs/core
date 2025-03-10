@@ -43,3 +43,4 @@ export {
 } from './directives/vModel'
 export { withVaporDirectives } from './directives/custom'
 export { VaporTransition } from './components/Transition'
+export { VaporTransitionGroup } from './components/TransitionGroup'

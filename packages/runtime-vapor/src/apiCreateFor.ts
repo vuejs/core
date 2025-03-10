@@ -14,6 +14,7 @@ import { createComment, createTextNode } from './dom/node'
 import {
   type Block,
   VaporFragment,
+  type VaporTransitionHooks,
   insert,
   remove as removeBlock,
 } from './block'
@@ -22,6 +23,7 @@ import { currentInstance, isVaporComponent } from './component'
 import type { DynamicSlot } from './componentSlots'
 import { renderEffect } from './renderEffect'
 import { VaporVForFlags } from '../../shared/src/vaporFlags'
+import { applyTransitionEnterHooks } from './components/Transition'
 
 class ForBlock extends VaporFragment {
   scope: EffectScope | undefined
@@ -314,6 +316,14 @@ export const createFor = (
       indexRef,
       getKey && getKey(item, key, index),
     ))
+
+    if (frag.$transition) {
+      const { state, props } = frag.$transition
+      applyTransitionEnterHooks(block.nodes, {
+        state,
+        props,
+      } as VaporTransitionHooks)
+    }
 
     if (parent) insert(block.nodes, parent, anchor)
 
