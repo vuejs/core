@@ -115,9 +115,7 @@ export type DefineComponent<
   false
 >
 
-export type DefineComponent2<T extends ComponentOptionsSchema> = {
-  props?: T['props']
-} & InferComponent<
+export type DefineComponent2<T extends ComponentOptionsSchema> = InferComponent<
   T,
   // MakeDefaultsOptional - if TypeProps is provided, set to false to use
   // user props types verbatim
@@ -174,6 +172,7 @@ type InferComponent<
   T['expose'],
   T['provide']
 > & {
+  props?: T['props']
   __typeProps?: T['__typeProps']
 
   /**
