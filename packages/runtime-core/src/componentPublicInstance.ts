@@ -46,7 +46,7 @@ import {
   resolveMergedOptions,
   shouldCacheAccess,
 } from './componentOptions'
-import type { EmitFn, EmitsOptions } from './componentEmits'
+import type { EmitFn, EmitsOptions, EmitsToProps } from './componentEmits'
 import type { SlotsType, UnwrapSlotsType } from './componentSlots'
 import { markAttrsAccessed } from './componentRenderUtils'
 import { currentRenderingInstance } from './componentRenderContext'
@@ -228,7 +228,8 @@ export type CreateComponentPublicInstanceWithMixins<
   PublicP = Readonly<
     ExtractPropTypes<ExtractMixinProps<Mixin> & ExtractMixinProps<Extends>> &
       ExtractMixinTypeProps<Mixin> &
-      ExtractMixinTypeProps<Extends>
+      ExtractMixinTypeProps<Extends> &
+      EmitsToProps<ExtractMixinEmits<Mixin> & ExtractMixinEmits<Extends> & {}>
   > &
     P,
   PublicB = ExtractMixinSetupBindings<Mixin> &

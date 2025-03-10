@@ -33,10 +33,7 @@ import type {
   ExtractDefaultPropTypes,
   ExtractPropTypes,
 } from './componentProps'
-import type {
-  CreateComponentPublicInstanceWithMixins,
-  ExtractMixinEmits,
-} from './componentPublicInstance'
+import type { CreateComponentPublicInstanceWithMixins } from './componentPublicInstance'
 import type { SlotsType } from './componentSlots'
 import type { Directive } from './directives'
 import type { VNodeProps } from './vnode'
@@ -150,9 +147,7 @@ type InferComponent<
     > &
       T['__typeProps'] &
       EmitsToProps<
-        ExtractMixinEmits<Mixin> &
-          ExtractMixinEmits<Extends> &
-          ResolvedEmits &
+        ResolvedEmits &
           TypeEmitsToOptions<
             string[] extends T['emits']
               ? T['__typeEmits'] & {}
@@ -358,9 +353,7 @@ export function defineComponent<
     > &
       TypeProps &
       EmitsToProps<
-        ExtractMixinEmits<Mixin> &
-          ExtractMixinEmits<Extends> &
-          ResolvedEmits &
+        ResolvedEmits &
           TypeEmitsToOptions<
             string[] extends NormalizedEmits
               ? TypeEmits & {}
