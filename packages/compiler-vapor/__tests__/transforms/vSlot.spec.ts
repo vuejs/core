@@ -535,7 +535,6 @@ describe('compiler: transform slot', () => {
       expect(
         `Extraneous children found when component already has explicitly named default slot.`,
       ).not.toHaveBeenWarned()
-      // expect(code).toMatchSnapshot()
       expect(code).toMatchSnapshot()
     })
 
