@@ -36,7 +36,7 @@ import {
   type VaporDirectiveNode,
 } from '../ir'
 import { EMPTY_EXPRESSION } from './utils'
-import { findProp } from '../utils'
+import { findDir, findProp } from '../utils'
 
 export const isReservedProp: (key: string) => boolean = /*#__PURE__*/ makeMap(
   // the leading comma is intentional so empty string "" is also included
@@ -124,17 +124,28 @@ function transformComponentElement(
   }
 
   context.dynamic.flags |= DynamicFlag.NON_TEMPLATE | DynamicFlag.INSERT
-  context.registerOperation({
-    type: IRNodeTypes.CREATE_COMPONENT_NODE,
-    id: context.reference(),
-    tag,
-    props: propsResult[0] ? propsResult[1] : [propsResult[1]],
-    asset,
-    root: singleRoot,
-    slots: [...context.slots],
-    once: context.inVOnce,
-    dynamic: dynamicComponent,
-  })
+
+  // ensure v-show is handled after the component is created
+  let showOperationIndex
+  if (findDir(node, 'show')) {
+    showOperationIndex = context.block.operation.findIndex(
+      op => op.type === IRNodeTypes.DIRECTIVE && op.name === 'show',
+    )
+  }
+  context.registerOperation(
+    {
+      type: IRNodeTypes.CREATE_COMPONENT_NODE,
+      id: context.reference(),
+      tag,
+      props: propsResult[0] ? propsResult[1] : [propsResult[1]],
+      asset,
+      root: singleRoot,
+      slots: [...context.slots],
+      once: context.inVOnce,
+      dynamic: dynamicComponent,
+    },
+    showOperationIndex,
+  )
   context.slots = []
 }
 
