@@ -32,7 +32,7 @@ import { extend } from '@vue/shared'
 
 const positionMap = new WeakMap<VNode, DOMRect>()
 const newPositionMap = new WeakMap<VNode, DOMRect>()
-const moveCbKey = Symbol('_moveCb')
+export const moveCbKey: symbol = Symbol('_moveCb')
 const enterCbKey = Symbol('_enterCb')
 
 export type TransitionGroupProps = Omit<TransitionProps, 'mode'> & {
@@ -87,7 +87,7 @@ const TransitionGroupImpl: ComponentOptions = /*@__PURE__*/ decorate({
 
       // we divide the work into three loops to avoid mixing DOM reads and writes
       // in each iteration - which helps prevent layout thrashing.
-      prevChildren.forEach(callPendingCbs)
+      prevChildren.forEach(vnode => callPendingCbs(vnode.el))
       prevChildren.forEach(recordPosition)
       const movedChildren = prevChildren.filter(applyTranslation)
 
@@ -96,20 +96,7 @@ const TransitionGroupImpl: ComponentOptions = /*@__PURE__*/ decorate({
 
       movedChildren.forEach(c => {
         const el = c.el as ElementWithTransition
-        const style = el.style
-        addTransitionClass(el, moveClass)
-        style.transform = style.webkitTransform = style.transitionDuration = ''
-        const cb = ((el as any)[moveCbKey] = (e: TransitionEvent) => {
-          if (e && e.target !== el) {
-            return
-          }
-          if (!e || /transform$/.test(e.propertyName)) {
-            el.removeEventListener('transitionend', cb)
-            ;(el as any)[moveCbKey] = null
-            removeTransitionClass(el, moveClass)
-          }
-        })
-        el.addEventListener('transitionend', cb)
+        handleMovedChildren(el, moveClass)
       })
     })
 
@@ -177,8 +164,7 @@ export const TransitionGroup = TransitionGroupImpl as unknown as {
   }
 }
 
-function callPendingCbs(c: VNode) {
-  const el = c.el as any
+export function callPendingCbs(el: any): void {
   if (el[moveCbKey]) {
     el[moveCbKey]()
   }
@@ -192,19 +178,34 @@ function recordPosition(c: VNode) {
 }
 
 function applyTranslation(c: VNode): VNode | undefined {
-  const oldPos = positionMap.get(c)!
-  const newPos = newPositionMap.get(c)!
-  const dx = oldPos.left - newPos.left
-  const dy = oldPos.top - newPos.top
-  if (dx || dy) {
-    const s = (c.el as HTMLElement).style
-    s.transform = s.webkitTransform = `translate(${dx}px,${dy}px)`
-    s.transitionDuration = '0s'
+  if (
+    baseApplyTranslation(
+      positionMap.get(c)!,
+      newPositionMap.get(c)!,
+      c.el as ElementWithTransition,
+    )
+  ) {
     return c
   }
 }
 
-function hasCSSTransform(
+export function baseApplyTranslation(
+  oldPos: DOMRect,
+  newPos: DOMRect,
+  el: ElementWithTransition,
+): boolean {
+  const dx = oldPos.left - newPos.left
+  const dy = oldPos.top - newPos.top
+  if (dx || dy) {
+    const s = (el as HTMLElement).style
+    s.transform = s.webkitTransform = `translate(${dx}px,${dy}px)`
+    s.transitionDuration = '0s'
+    return true
+  }
+  return false
+}
+
+export function hasCSSTransform(
   el: ElementWithTransition,
   root: Node,
   moveClass: string,
@@ -230,4 +231,24 @@ function hasCSSTransform(
   const { hasTransform } = getTransitionInfo(clone)
   container.removeChild(clone)
   return hasTransform
+}
+
+export const handleMovedChildren = (
+  el: ElementWithTransition,
+  moveClass: string,
+): void => {
+  const style = el.style
+  addTransitionClass(el, moveClass)
+  style.transform = style.webkitTransform = style.transitionDuration = ''
+  const cb = ((el as any)[moveCbKey] = (e: TransitionEvent) => {
+    if (e && e.target !== el) {
+      return
+    }
+    if (!e || /transform$/.test(e.propertyName)) {
+      el.removeEventListener('transitionend', cb)
+      ;(el as any)[moveCbKey] = null
+      removeTransitionClass(el, moveClass)
+    }
+  })
+  el.addEventListener('transitionend', cb)
 }

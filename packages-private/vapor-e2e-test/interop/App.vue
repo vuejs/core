@@ -3,6 +3,7 @@ import { ref, shallowRef } from 'vue'
 import VaporComp from './VaporComp.vue'
 import VaporCompA from '../transition/components/VaporCompA.vue'
 import VdomComp from '../transition/components/VdomComp.vue'
+import VaporSlot from '../transition/components/VaporSlot.vue'
 
 const msg = ref('hello')
 const passSlot = ref(true)
@@ -13,6 +14,9 @@ function toggleInteropComponent() {
   interopComponent.value =
     interopComponent.value === VaporCompA ? VdomComp : VaporCompA
 }
+
+const items = ref(['a', 'b', 'c'])
+const enterClick = () => items.value.push('d', 'e')
 </script>
 
 <template>
@@ -49,6 +53,19 @@ function toggleInteropComponent() {
         <Transition name="fade" mode="out-in">
           <component :is="interopComponent"></component>
         </Transition>
+      </div>
+    </div>
+  </div>
+  <!-- transition-group interop -->
+  <div>
+    <div class="trans-group-vapor">
+      <button @click="enterClick">insert items</button>
+      <div>
+        <transition-group name="test">
+          <VaporSlot v-for="item in items" :key="item">
+            <div>{{ item }}</div>
+          </VaporSlot>
+        </transition-group>
       </div>
     </div>
   </div>

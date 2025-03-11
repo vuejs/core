@@ -130,7 +130,7 @@ describe('vapor transition', () => {
 
       expect(calls).toStrictEqual([
         'beforeAppear',
-        'onEnter',
+        'onAppear',
         'afterAppear',
         'beforeLeave',
         'onLeave',

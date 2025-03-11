@@ -22,6 +22,7 @@ import { currentInstance, isVaporComponent } from './component'
 import type { DynamicSlot } from './componentSlots'
 import { renderEffect } from './renderEffect'
 import { VaporVForFlags } from '../../shared/src/vaporFlags'
+import { applyTransitionEnterHooks } from './components/Transition'
 
 class ForBlock extends VaporFragment {
   scope: EffectScope | undefined
@@ -315,6 +316,10 @@ export const createFor = (
       getKey && getKey(item, key, index),
     ))
 
+    if (frag.$transition) {
+      applyTransitionEnterHooks(block.nodes, frag.$transition)
+    }
+
     if (parent) insert(block.nodes, parent, anchor)
 
     return block
@@ -415,8 +420,8 @@ function getItem(
   }
 }
 
-function normalizeAnchor(node: Block): Node {
-  if (node instanceof Node) {
+function normalizeAnchor(node: Block): Node | undefined {
+  if (node && node instanceof Node) {
     return node
   } else if (isArray(node)) {
     return normalizeAnchor(node[0])
@@ -438,4 +443,8 @@ export function getRestElement(val: any, keys: string[]): any {
 
 export function getDefaultValue(val: any, defaultVal: any): any {
   return val === undefined ? defaultVal : val
+}
+
+export function isForBlock(block: Block): block is ForBlock {
+  return block instanceof ForBlock
 }

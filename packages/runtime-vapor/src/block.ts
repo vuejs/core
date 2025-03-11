@@ -28,6 +28,7 @@ export interface TransitionOptions {
 export interface VaporTransitionHooks extends TransitionHooks {
   state: TransitionState
   props: TransitionProps
+  disabledOnMoving?: boolean
 }
 
 export type TransitionBlock =
@@ -157,7 +158,11 @@ export function insert(
   if (block instanceof Node) {
     if (!isHydrating) {
       // don't apply transition on text or comment nodes
-      if ((block as TransitionBlock).$transition && block instanceof Element) {
+      if (
+        block instanceof Element &&
+        (block as TransitionBlock).$transition &&
+        !(block as TransitionBlock).$transition!.disabledOnMoving
+      ) {
         performTransitionEnter(
           block,
           (block as TransitionBlock).$transition as TransitionHooks,

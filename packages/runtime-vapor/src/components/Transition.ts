@@ -21,6 +21,7 @@ import {
   isFragment,
 } from '../block'
 import { type VaporComponentInstance, isVaporComponent } from '../component'
+import { isArray } from '@vue/shared'
 
 const decorate = (t: typeof VaporTransition) => {
   t.displayName = 'VaporTransition'
@@ -93,7 +94,7 @@ const getTransitionHooksContext = (
   return context
 }
 
-function resolveTransitionHooks(
+export function resolveTransitionHooks(
   block: TransitionBlock,
   props: TransitionProps,
   state: TransitionState,
@@ -118,10 +119,10 @@ function resolveTransitionHooks(
   return hooks
 }
 
-function setTransitionHooks(
+export function setTransitionHooks(
   block: TransitionBlock,
   hooks: VaporTransitionHooks,
-) {
+): void {
   block.$transition = hooks
 }
 
@@ -144,7 +145,7 @@ export function applyTransitionEnterHooks(
   setTransitionHooks(child, enterHooks)
   if (isFragment(block)) {
     // also set transition hooks on fragment for reusing during it's updating
-    setTransitionHooks(block, enterHooks)
+    setTransitionHooksToFragment(block, enterHooks)
   }
   return enterHooks
 }
@@ -211,7 +212,7 @@ export function findTransitionBlock(block: Block): TransitionBlock | undefined {
   } else if (isVaporComponent(block)) {
     child = findTransitionBlock(block.block)
     if (child && child.$key === undefined) child.$key = block.type.__name
-  } else if (Array.isArray(block)) {
+  } else if (isArray(block)) {
     child = block[0] as TransitionBlock
     let hasFound = false
     for (const c of block) {
@@ -253,4 +254,17 @@ export function setTransitionToInstance(
   if (!child) return
 
   setTransitionHooks(child, hooks)
+}
+
+export function setTransitionHooksToFragment(
+  block: Block,
+  hooks: VaporTransitionHooks,
+): void {
+  if (isFragment(block)) {
+    setTransitionHooks(block, hooks)
+  } else if (isArray(block)) {
+    for (let i = 0; i < block.length; i++) {
+      setTransitionHooksToFragment(block[i], hooks)
+    }
+  }
 }
