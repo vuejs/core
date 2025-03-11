@@ -126,4 +126,20 @@ const interopClick = () => (items.value = ['b', 'c', 'd'])
   border: 1px solid #f7f7f7;
   margin-top: 15px;
 }
+
+.test-move,
+.test-enter-active,
+.test-leave-active {
+  transition: all 50ms cubic-bezier(0.55, 0, 0.1, 1);
+}
+
+.test-enter-from,
+.test-leave-to {
+  opacity: 0;
+  transform: scaleY(0.01) translate(30px, 0);
+}
+
+.test-leave-active {
+  position: absolute;
+}
 </style>
