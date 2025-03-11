@@ -3,7 +3,7 @@ const msg = 'vdom comp'
 </script>
 
 <template>
-    <div>
-        <slot />
-    </div>
+  <div>
+    <slot />
+  </div>
 </template>

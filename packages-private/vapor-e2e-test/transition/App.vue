@@ -35,11 +35,18 @@ function toggleInteropComponent() {
     </div>
     <div class="vif">
       <button @click="toggle = !toggle">Toggle</button>
-      <Transition appear @beforeEnter="() => calls.push('beforeEnter')" @enter="() => calls.push('onEnter')"
-        @afterEnter="() => calls.push('afterEnter')" @beforeLeave="() => calls.push('beforeLeave')"
-        @leave="() => calls.push('onLeave')" @afterLeave="() => calls.push('afterLeave')"
-        @beforeAppear="() => calls.push('beforeAppear')" @appear="() => calls.push('onAppear')"
-        @afterAppear="() => calls.push('afterAppear')">
+      <Transition
+        appear
+        @beforeEnter="() => calls.push('beforeEnter')"
+        @enter="() => calls.push('onEnter')"
+        @afterEnter="() => calls.push('afterEnter')"
+        @beforeLeave="() => calls.push('beforeLeave')"
+        @leave="() => calls.push('onLeave')"
+        @afterLeave="() => calls.push('afterLeave')"
+        @beforeAppear="() => calls.push('beforeAppear')"
+        @appear="() => calls.push('onAppear')"
+        @afterAppear="() => calls.push('afterAppear')"
+      >
         <h1 v-if="toggle">vIf</h1>
       </Transition>
     </div>
@@ -102,7 +109,7 @@ function toggleInteropComponent() {
 }
 </style>
 <style>
-.transition-container>div {
+.transition-container > div {
   padding: 15px;
   border: 1px solid #f7f7f7;
   margin-top: 15px;
