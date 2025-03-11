@@ -17,6 +17,7 @@ import {
 import { extend, isArray } from '@vue/shared'
 import {
   type Block,
+  DynamicFragment,
   type TransitionBlock,
   type VaporTransitionHooks,
   insert,
@@ -29,6 +30,7 @@ import {
 } from './Transition'
 import { isVaporComponent } from '../component'
 import { isForBlock } from '../apiCreateFor'
+import { renderEffect, setDynamicProps } from '@vue/runtime-vapor'
 
 const positionMap = new WeakMap<TransitionBlock, DOMRect>()
 const newPositionMap = new WeakMap<TransitionBlock, DOMRect>()
@@ -133,12 +135,20 @@ export const VaporTransitionGroup: any = decorate({
       }
     }
 
-    const tag = props.tag || 'ul'
-    const el = document.createElement(tag)
-    // TODO
-    el.className = 'container'
-    insert(slottedBlock, el)
-    return [el]
+    const tag = props.tag
+    if (tag) {
+      const el = document.createElement(tag)
+      insert(slottedBlock, el)
+      // fallthrough attrs
+      renderEffect(() => setDynamicProps(el, [instance!.attrs]))
+      return [el]
+    } else {
+      const frag = __DEV__
+        ? new DynamicFragment('transitionGroup')
+        : new DynamicFragment()
+      renderEffect(() => frag.update(() => slottedBlock))
+      return frag
+    }
   },
 })
 
@@ -157,7 +167,7 @@ function getTransitionBlocks(block: Block) {
     }
   } else if (isFragment(block)) {
     if (block.insert) {
-      // vdom child
+      // vdom interop
       children.push(block)
     } else {
       children.push(...getTransitionBlocks(block.nodes))

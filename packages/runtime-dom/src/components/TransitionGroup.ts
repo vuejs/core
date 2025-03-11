@@ -33,7 +33,7 @@ import { extend } from '@vue/shared'
 const positionMap = new WeakMap<VNode, DOMRect>()
 const newPositionMap = new WeakMap<VNode, DOMRect>()
 export const moveCbKey: symbol = Symbol('_moveCb')
-const enterCbKey: symbol = Symbol('_enterCb')
+const enterCbKey = Symbol('_enterCb')
 
 export type TransitionGroupProps = Omit<TransitionProps, 'mode'> & {
   tag?: string
