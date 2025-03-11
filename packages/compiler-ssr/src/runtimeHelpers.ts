@@ -2,7 +2,11 @@ import { registerRuntimeHelpers } from '@vue/compiler-dom'
 
 export const SSR_INTERPOLATE: unique symbol = Symbol(`ssrInterpolate`)
 export const SSR_RENDER_VNODE: unique symbol = Symbol(`ssrRenderVNode`)
+export const SSR_RENDER_SKIP_VNODE: unique symbol = Symbol(`ssrRenderSkipVNode`)
 export const SSR_RENDER_COMPONENT: unique symbol = Symbol(`ssrRenderComponent`)
+export const SSR_RENDER_SKIP_COMPONENT: unique symbol = Symbol(
+  `ssrRenderSkipComponent`,
+)
 export const SSR_RENDER_SLOT: unique symbol = Symbol(`ssrRenderSlot`)
 export const SSR_RENDER_SLOT_INNER: unique symbol = Symbol(`ssrRenderSlotInner`)
 export const SSR_RENDER_CLASS: unique symbol = Symbol(`ssrRenderClass`)
@@ -31,7 +35,9 @@ export const SSR_GET_DIRECTIVE_PROPS: unique symbol =
 export const ssrHelpers: Record<symbol, string> = {
   [SSR_INTERPOLATE]: `ssrInterpolate`,
   [SSR_RENDER_VNODE]: `ssrRenderVNode`,
+  [SSR_RENDER_SKIP_VNODE]: `ssrRenderSkipVNode`,
   [SSR_RENDER_COMPONENT]: `ssrRenderComponent`,
+  [SSR_RENDER_SKIP_COMPONENT]: `ssrRenderSkipComponent`,
   [SSR_RENDER_SLOT]: `ssrRenderSlot`,
   [SSR_RENDER_SLOT_INNER]: `ssrRenderSlotInner`,
   [SSR_RENDER_CLASS]: `ssrRenderClass`,

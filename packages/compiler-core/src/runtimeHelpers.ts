@@ -26,6 +26,9 @@ export const CREATE_STATIC: unique symbol = Symbol(
 export const RESOLVE_COMPONENT: unique symbol = Symbol(
   __DEV__ ? `resolveComponent` : ``,
 )
+export const RESOLVE_SKIP_COMPONENT: unique symbol = Symbol(
+  __DEV__ ? `resolveSkipComponent` : ``,
+)
 export const RESOLVE_DYNAMIC_COMPONENT: unique symbol = Symbol(
   __DEV__ ? `resolveDynamicComponent` : ``,
 )
@@ -99,6 +102,7 @@ export const helperNameMap: Record<symbol, string> = {
   [CREATE_STATIC]: `createStaticVNode`,
   [RESOLVE_COMPONENT]: `resolveComponent`,
   [RESOLVE_DYNAMIC_COMPONENT]: `resolveDynamicComponent`,
+  [RESOLVE_SKIP_COMPONENT]: `resolveSkipComponent`,
   [RESOLVE_DIRECTIVE]: `resolveDirective`,
   [RESOLVE_FILTER]: `resolveFilter`,
   [WITH_DIRECTIVES]: `withDirectives`,

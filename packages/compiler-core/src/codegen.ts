@@ -656,10 +656,11 @@ function genNode(node: CodegenNode | symbol | string, context: CodegenContext) {
     case NodeTypes.ELEMENT:
     case NodeTypes.IF:
     case NodeTypes.FOR:
+    case NodeTypes.SKIP:
       __DEV__ &&
         assert(
           node.codegenNode != null,
-          `Codegen node is missing for element/if/for node. ` +
+          `Codegen node is missing for element/if/for/skip node. ` +
             `Apply appropriate transforms first.`,
         )
       genNode(node.codegenNode!, context)
