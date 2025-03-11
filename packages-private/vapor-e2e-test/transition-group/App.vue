@@ -2,9 +2,9 @@
 import { ref } from 'vue'
 const items = ref(['a', 'b', 'c'])
 const enterClick = () => items.value.push('d', 'e')
-const leaveClick = () => items.value = ['b']
-const enterLeaveClick = () => items.value = ['b', 'c', 'd']
-const moveClick = () => items.value = ['d', 'b', 'a']
+const leaveClick = () => (items.value = ['b'])
+const enterLeaveClick = () => (items.value = ['b', 'c', 'd'])
+const moveClick = () => (items.value = ['d', 'b', 'a'])
 </script>
 
 <template>
@@ -36,8 +36,13 @@ const moveClick = () => items.value = ['d', 'b', 'a']
     <div class="appear">
       <button @click="enterClick">appear button</button>
       <div>
-        <transition-group appear appear-from-class="test-appear-from" appear-to-class="test-appear-to"
-          appear-active-class="test-appear-active" name="test">
+        <transition-group
+          appear
+          appear-from-class="test-appear-from"
+          appear-to-class="test-appear-to"
+          appear-active-class="test-appear-active"
+          name="test"
+        >
           <div v-for="item in items" :key="item" class="test">{{ item }}</div>
         </transition-group>
       </div>
