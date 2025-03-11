@@ -239,6 +239,27 @@ describe('Vapor Mode hydration', () => {
     )
   })
 
+  // problem is the <!> placeholder does not exist in SSR output
+  test.todo('component with anchor insertion', async () => {
+    const { container, data } = await testHydration(
+      `
+      <template><div><span/><components.Child/><span/></div></template>
+      `,
+      {
+        Child: `<template>{{ data }}</template>`,
+      },
+    )
+    expect(container.innerHTML).toMatchInlineSnapshot(
+      `"<div><span></span>foo<span></span></div>"`,
+    )
+
+    data.value = 'bar'
+    await nextTick()
+    expect(container.innerHTML).toMatchInlineSnapshot(
+      `"<div><span></span>foo<span></span></div>"`,
+    )
+  })
+
   test.todo('if')
 
   test.todo('for')

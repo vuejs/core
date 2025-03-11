@@ -94,15 +94,23 @@ export function genChildren(
         push(...init)
       }
     }
+
+    if (id === child.anchor) {
+      push(...genSelf(child, context))
+    }
+
     if (id !== undefined) {
       push(...genDirectivesForElement(id, context))
     }
+
     prev = [variable, elementIndex]
     childrenToGen.push([child, variable])
   }
 
-  for (const [child, from] of childrenToGen) {
-    push(...genChildren(child, context, from))
+  if (childrenToGen.length) {
+    for (const [child, from] of childrenToGen) {
+      push(...genChildren(child, context, from))
+    }
   }
 
   return frag
