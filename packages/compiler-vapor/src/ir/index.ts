@@ -25,7 +25,6 @@ export enum IRNodeTypes {
 
   INSERT_NODE,
   PREPEND_NODE,
-  CREATE_TEXT_NODE,
   CREATE_COMPONENT_NODE,
   SLOT_OUTLET_NODE,
 
@@ -162,14 +161,6 @@ export interface SetTemplateRefIRNode extends BaseIRNode {
   effect: boolean
 }
 
-// TODO remove, no longer needed
-export interface CreateTextNodeIRNode extends BaseIRNode {
-  type: IRNodeTypes.CREATE_TEXT_NODE
-  id: number
-  values?: SimpleExpressionNode[]
-  jsx?: boolean
-}
-
 export interface InsertNodeIRNode extends BaseIRNode {
   type: IRNodeTypes.INSERT_NODE
   elements: number[]
@@ -236,7 +227,6 @@ export type OperationNode =
   | SetDynamicEventsIRNode
   | SetHtmlIRNode
   | SetTemplateRefIRNode
-  | CreateTextNodeIRNode
   | InsertNodeIRNode
   | PrependNodeIRNode
   | DirectiveIRNode
