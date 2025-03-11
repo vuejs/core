@@ -8,7 +8,7 @@ import {
   DynamicFlag,
   type IRDynamicInfo,
   IRNodeTypes,
-  isTypeThatNeedsInsertionState as isBlockOperation,
+  isBlockOperation,
 } from '../ir'
 
 export const transformChildren: NodeTransform = (node, context) => {
@@ -102,14 +102,10 @@ function registerInsertion(
         parent: context.reference(),
         anchor,
       })
-    } else {
+    } else if (child.operation && isBlockOperation(child.operation)) {
       // block types
-      for (const op of context.block.operation) {
-        if (isBlockOperation(op) && op.id === child.id) {
-          op.parent = context.reference()
-          op.anchor = anchor
-        }
-      }
+      child.operation.parent = context.reference()
+      child.operation.anchor = anchor
     }
   }
 }

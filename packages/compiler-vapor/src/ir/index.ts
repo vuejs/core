@@ -270,6 +270,7 @@ export interface IRDynamicInfo {
   children: IRDynamicInfo[]
   template?: number
   hasDynamicChild?: boolean
+  operation?: OperationNode
 }
 
 export interface IREffect {
@@ -304,9 +305,7 @@ export type InsertionStateTypes =
   | SlotOutletIRNode
   | CreateComponentIRNode
 
-export function isTypeThatNeedsInsertionState(
-  op: OperationNode,
-): op is InsertionStateTypes {
+export function isBlockOperation(op: OperationNode): op is InsertionStateTypes {
   const type = op.type
   return (
     type === IRNodeTypes.CREATE_COMPONENT_NODE ||

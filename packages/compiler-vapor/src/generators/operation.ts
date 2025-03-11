@@ -3,7 +3,7 @@ import {
   IRNodeTypes,
   type InsertionStateTypes,
   type OperationNode,
-  isTypeThatNeedsInsertionState,
+  isBlockOperation,
 } from '../ir'
 import type { CodegenContext } from '../generate'
 import { genInsertNode, genPrependNode } from './dom'
@@ -33,11 +33,20 @@ export function genOperations(
 ): CodeFragment[] {
   const [frag, push] = buildCodeFragment()
   for (const operation of opers) {
-    if (isTypeThatNeedsInsertionState(operation) && operation.parent) {
-      push(...genInsertionstate(operation, context))
-    }
-    push(...genOperation(operation, context))
+    push(...genOperationWithInsertionState(operation, context))
   }
+  return frag
+}
+
+export function genOperationWithInsertionState(
+  oper: OperationNode,
+  context: CodegenContext,
+): CodeFragment[] {
+  const [frag, push] = buildCodeFragment()
+  if (isBlockOperation(oper) && oper.parent) {
+    push(...genInsertionstate(oper, context))
+  }
+  push(...genOperation(oper, context))
   return frag
 }
 

@@ -1,5 +1,3 @@
-import { setCurrentHydrationNode } from './dom/hydration'
-
 export let insertionParent: ParentNode | undefined
 export let insertionAnchor: Node | 0 | undefined
 
@@ -15,5 +13,4 @@ export function setInsertionState(parent: ParentNode, anchor?: Node | 0): void {
 
 export function resetInsertionState(): void {
   insertionParent = insertionAnchor = undefined
-  setCurrentHydrationNode(null)
 }

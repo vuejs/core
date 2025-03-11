@@ -28,6 +28,7 @@ export function withHydration(container: ParentNode, fn: () => void): void {
   setInsertionState(container, 0)
   const res = fn()
   resetInsertionState()
+  currentHydrationNode = null
   isHydrating = false
   return res
 }
@@ -75,10 +76,6 @@ function adoptTemplateImpl(node: Node, template: string): Node | null {
 }
 
 function locateHydrationNodeImpl() {
-  if (__DEV__ && !insertionParent) {
-    warn('Hydration error: missing insertion state.')
-  }
-
   let node: Node | null
 
   // prepend / firstChild
@@ -87,7 +84,9 @@ function locateHydrationNodeImpl() {
   } else {
     node = insertionAnchor
       ? insertionAnchor.previousSibling
-      : insertionParent!.lastChild
+      : insertionParent
+        ? insertionParent.lastChild
+        : currentHydrationNode
 
     if (node && isComment(node, ']')) {
       // fragment backward search
@@ -120,10 +119,11 @@ function locateHydrationNodeImpl() {
     }
   }
 
-  currentHydrationNode = node
-
-  if (__DEV__ && !currentHydrationNode) {
+  if (__DEV__ && !node) {
     // TODO more info
     warn('Hydration mismatch in ', insertionParent)
   }
+
+  resetInsertionState()
+  currentHydrationNode = node
 }

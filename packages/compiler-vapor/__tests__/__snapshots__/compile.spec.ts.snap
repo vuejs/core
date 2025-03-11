@@ -149,7 +149,7 @@ export function render(_ctx, $props, $emit, $attrs, $slots) {
 `;
 
 exports[`compile > directives > v-pre > should not affect siblings after it 1`] = `
-"import { resolveComponent as _resolveComponent, child as _child, setInsertionState as _setInsertionState, createComponentWithFallback as _createComponentWithFallback, toDisplayString as _toDisplayString, setText as _setText, setProp as _setProp, renderEffect as _renderEffect, template as _template } from 'vue';
+"import { resolveComponent as _resolveComponent, setInsertionState as _setInsertionState, createComponentWithFallback as _createComponentWithFallback, child as _child, toDisplayString as _toDisplayString, setText as _setText, setProp as _setProp, renderEffect as _renderEffect, template as _template } from 'vue';
 const t0 = _template("<div :id=\\"foo\\"><Comp></Comp>{{ bar }}</div>")
 const t1 = _template("<div> </div>")
 
@@ -157,9 +157,9 @@ export function render(_ctx, $props, $emit, $attrs, $slots) {
   const _component_Comp = _resolveComponent("Comp")
   const n0 = t0()
   const n3 = t1()
-  const n2 = _child(n3)
   _setInsertionState(n3, 0)
   const n1 = _createComponentWithFallback(_component_Comp)
+  const n2 = _child(n3)
   _renderEffect(() => {
     _setText(n2, _toDisplayString(_ctx.bar))
     _setProp(n3, "id", _ctx.foo)

@@ -59,11 +59,7 @@ import {
 } from './componentSlots'
 import { hmrReload, hmrRerender } from './hmr'
 import { isHydrating, locateHydrationNode } from './dom/hydration'
-import {
-  insertionAnchor,
-  insertionParent,
-  resetInsertionState,
-} from './insertionState'
+import { insertionAnchor, insertionParent } from './insertionState'
 
 export { currentInstance } from '@vue/runtime-dom'
 
@@ -142,6 +138,8 @@ export function createComponent(
     currentInstance.appContext) ||
     emptyContext,
 ): VaporComponentInstance {
+  const _insertionParent = insertionParent
+  const _insertionAnchor = insertionAnchor
   if (isHydrating) {
     locateHydrationNode()
   }
@@ -263,9 +261,8 @@ export function createComponent(
 
   onScopeDispose(() => unmountComponent(instance), true)
 
-  if (!isHydrating && insertionParent) {
-    insert(instance.block, insertionParent, insertionAnchor)
-    resetInsertionState()
+  if (!isHydrating && _insertionParent) {
+    insert(instance.block, _insertionParent, _insertionAnchor)
   }
 
   return instance

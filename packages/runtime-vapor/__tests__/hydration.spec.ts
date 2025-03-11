@@ -257,6 +257,63 @@ describe('SSR hydration', () => {
     )
   })
 
+  test('nested fragment components', async () => {
+    const t0 = template('<div> </div>')
+    const t1 = template(' ')
+    const msg = ref('foo')
+    const Comp = {
+      setup() {
+        const n0 = t0() as Element
+        const n1 = t1() as Text
+        const x0 = child(n0) as Text
+        renderEffect(() => {
+          const _msg = msg.value
+
+          setText(x0, toDisplayString(_msg))
+          setText(n1, toDisplayString(_msg))
+        })
+        return [n0, n1]
+      },
+    }
+
+    const t2 = template('<div></div>')
+    const Parent = {
+      setup() {
+        const n0 = t2()
+        const n1 = createComponent(Comp)
+        const n2 = t2()
+        return [n0, n1, n2]
+      },
+    }
+
+    const t3 = template('<div><span></span></div>', true)
+    const { container } = mountWithHydration(
+      '<div><!--[-->' +
+        '<div></div><!--[--><div>foo</div>foo<!--]--><div></div>' +
+        '<!--]--><span></span></div>',
+      () => {
+        const n1 = t3() as Element
+        setInsertionState(n1, 0)
+        createComponent(Parent)
+        return n1
+      },
+    )
+
+    expect(container.innerHTML).toBe(
+      '<div><!--[-->' +
+        '<div></div><!--[--><div>foo</div>foo<!--]--><div></div>' +
+        '<!--]--><span></span></div>',
+    )
+
+    msg.value = 'bar'
+    await nextTick()
+    expect(container.innerHTML).toBe(
+      '<div><!--[-->' +
+        '<div></div><!--[--><div>bar</div>bar<!--]--><div></div>' +
+        '<!--]--><span></span></div>',
+    )
+  })
+
   // test('element with ref', () => {
   //   const el = ref()
   //   const { vnode, container } = mountWithHydration('<div></div>', () =>
