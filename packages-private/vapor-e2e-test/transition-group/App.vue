@@ -5,7 +5,7 @@ const enterClick = () => items.value.push('d', 'e')
 const leaveClick = () => (items.value = ['b'])
 const enterLeaveClick = () => (items.value = ['b', 'c', 'd'])
 const appear = ref(false)
-window.setAppear = () => appear.value = true
+window.setAppear = () => (appear.value = true)
 const moveClick = () => (items.value = ['d', 'b', 'a'])
 
 const name = ref('invalid')
@@ -53,8 +53,13 @@ const eventsClick = () => (items.value = ['b', 'c', 'd'])
     <div class="appear">
       <button @click="enterClick">appear button</button>
       <div v-if="appear">
-        <transition-group appear appear-from-class="test-appear-from" appear-to-class="test-appear-to"
-          appear-active-class="test-appear-active" name="test">
+        <transition-group
+          appear
+          appear-from-class="test-appear-from"
+          appear-to-class="test-appear-to"
+          appear-active-class="test-appear-active"
+          name="test"
+        >
           <div v-for="item in items" :key="item" class="test">{{ item }}</div>
         </transition-group>
       </div>
@@ -79,12 +84,22 @@ const eventsClick = () => (items.value = ['b', 'c', 'd'])
     <div class="events">
       <button @click="eventsClick">events button</button>
       <div v-if="appear">
-        <transition-group name="test" appear appear-from-class="test-appear-from" appear-to-class="test-appear-to"
-          appear-active-class="test-appear-active" @beforeEnter="() => calls.push('beforeEnter')"
-          @enter="() => calls.push('onEnter')" @afterEnter="() => calls.push('afterEnter')"
-          @beforeLeave="() => calls.push('beforeLeave')" @leave="() => calls.push('onLeave')"
-          @afterLeave="() => calls.push('afterLeave')" @beforeAppear="() => calls.push('beforeAppear')"
-          @appear="() => calls.push('onAppear')" @afterAppear="() => calls.push('afterAppear')">
+        <transition-group
+          name="test"
+          appear
+          appear-from-class="test-appear-from"
+          appear-to-class="test-appear-to"
+          appear-active-class="test-appear-active"
+          @beforeEnter="() => calls.push('beforeEnter')"
+          @enter="() => calls.push('onEnter')"
+          @afterEnter="() => calls.push('afterEnter')"
+          @beforeLeave="() => calls.push('beforeLeave')"
+          @leave="() => calls.push('onLeave')"
+          @afterLeave="() => calls.push('afterLeave')"
+          @beforeAppear="() => calls.push('beforeAppear')"
+          @appear="() => calls.push('onAppear')"
+          @afterAppear="() => calls.push('afterAppear')"
+        >
           <div v-for="item in items" :key="item" class="test">{{ item }}</div>
         </transition-group>
       </div>
