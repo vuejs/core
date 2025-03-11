@@ -6,8 +6,7 @@ import {
 import connect from 'connect'
 import sirv from 'sirv'
 import { expect } from 'vitest'
-const { page, nextFrame, timeout, html, transitionStart, waitForElement } =
-  setupPuppeteer()
+const { page, nextFrame, timeout, html, transitionStart } = setupPuppeteer()
 
 const duration = process.env.CI ? 200 : 50
 const buffer = process.env.CI ? 50 : 20
@@ -151,10 +150,26 @@ describe('vapor transition-group', () => {
     async () => {
       const btnSelector = '.appear > button'
       const containerSelector = '.appear > div'
-      const childSelector = `${containerSelector} > div`
+
+      expect(await html('.appear')).toBe(`<button>appear button</button>`)
+
+      await page().evaluate(() => {
+        return (window as any).setAppear()
+      })
 
       // appear
-      await waitForElement(childSelector, 'a', ['test-appear-active'])
+      expect(await html(containerSelector)).toBe(
+        `<div class="test test-appear-from test-appear-active">a</div>` +
+          `<div class="test test-appear-from test-appear-active">b</div>` +
+          `<div class="test test-appear-from test-appear-active">c</div>`,
+      )
+
+      await nextFrame()
+      expect(await html(containerSelector)).toBe(
+        `<div class="test test-appear-active test-appear-to">a</div>` +
+          `<div class="test test-appear-active test-appear-to">b</div>` +
+          `<div class="test test-appear-active test-appear-to">c</div>`,
+      )
 
       await transitionFinish()
       expect(await html(containerSelector)).toBe(
@@ -233,7 +248,124 @@ describe('vapor transition-group', () => {
     E2E_TIMEOUT,
   )
 
-  test.todo('dynamic name', async () => {})
-  test.todo('events', async () => {})
-  test.todo('warn unkeyed children', async () => {})
+  test('dynamic name', async () => {
+    const btnSelector = '.dynamic-name button.toggleBtn'
+    const btnChangeName = '.dynamic-name button.changeNameBtn'
+    const containerSelector = '.dynamic-name > div'
+
+    expect(await html(containerSelector)).toBe(
+      `<div>a</div>` + `<div>b</div>` + `<div>c</div>`,
+    )
+
+    // invalid name
+    expect(
+      (await transitionStart(btnSelector, containerSelector)).innerHTML,
+    ).toBe(`<div>b</div>` + `<div>c</div>` + `<div>a</div>`)
+
+    // change name
+    expect(
+      (await transitionStart(btnChangeName, containerSelector)).innerHTML,
+    ).toBe(
+      `<div class="group-move" style="">a</div>` +
+        `<div class="group-move" style="">b</div>` +
+        `<div class="group-move" style="">c</div>`,
+    )
+
+    await transitionFinish()
+    expect(await html(containerSelector)).toBe(
+      `<div class="" style="">a</div>` +
+        `<div class="" style="">b</div>` +
+        `<div class="" style="">c</div>`,
+    )
+  })
+
+  test('events', async () => {
+    const btnSelector = '.events > button'
+    const containerSelector = '.events > div'
+
+    expect(await html('.events')).toBe(`<button>events button</button>`)
+
+    await page().evaluate(() => {
+      return (window as any).setAppear()
+    })
+
+    // appear
+    expect(await html(containerSelector)).toBe(
+      `<div class="test test-appear-from test-appear-active">a</div>` +
+        `<div class="test test-appear-from test-appear-active">b</div>` +
+        `<div class="test test-appear-from test-appear-active">c</div>`,
+    )
+    await nextFrame()
+    expect(await html(containerSelector)).toBe(
+      `<div class="test test-appear-active test-appear-to">a</div>` +
+        `<div class="test test-appear-active test-appear-to">b</div>` +
+        `<div class="test test-appear-active test-appear-to">c</div>`,
+    )
+
+    let calls = await page().evaluate(() => {
+      return (window as any).getCalls()
+    })
+    expect(calls).toContain('beforeAppear')
+    expect(calls).toContain('onAppear')
+    expect(calls).not.toContain('afterAppear')
+
+    await transitionFinish()
+    expect(await html(containerSelector)).toBe(
+      `<div class="test">a</div>` +
+        `<div class="test">b</div>` +
+        `<div class="test">c</div>`,
+    )
+
+    expect(
+      await page().evaluate(() => {
+        return (window as any).getCalls()
+      }),
+    ).toContain('afterAppear')
+
+    // enter + leave
+    expect(
+      (await transitionStart(btnSelector, containerSelector)).innerHTML,
+    ).toBe(
+      `<div class="test test-leave-from test-leave-active">a</div>` +
+        `<div class="test">b</div>` +
+        `<div class="test">c</div>` +
+        `<div class="test test-enter-from test-enter-active">d</div>`,
+    )
+
+    calls = await page().evaluate(() => {
+      return (window as any).getCalls()
+    })
+    expect(calls).toContain('beforeLeave')
+    expect(calls).toContain('onLeave')
+    expect(calls).not.toContain('afterLeave')
+    expect(calls).toContain('beforeEnter')
+    expect(calls).toContain('onEnter')
+    expect(calls).not.toContain('afterEnter')
+
+    await nextFrame()
+    expect(await html(containerSelector)).toBe(
+      `<div class="test test-leave-active test-leave-to">a</div>` +
+        `<div class="test">b</div>` +
+        `<div class="test">c</div>` +
+        `<div class="test test-enter-active test-enter-to">d</div>`,
+    )
+    calls = await page().evaluate(() => {
+      return (window as any).getCalls()
+    })
+    expect(calls).not.toContain('afterLeave')
+    expect(calls).not.toContain('afterEnter')
+
+    await transitionFinish()
+    expect(await html(containerSelector)).toBe(
+      `<div class="test">b</div>` +
+        `<div class="test">c</div>` +
+        `<div class="test">d</div>`,
+    )
+
+    calls = await page().evaluate(() => {
+      return (window as any).getCalls()
+    })
+    expect(calls).toContain('afterLeave')
+    expect(calls).toContain('afterEnter')
+  })
 })
