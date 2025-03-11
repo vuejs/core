@@ -57,13 +57,8 @@ const interopClick = () => (items.value = ['b', 'c', 'd'])
     <div class="appear">
       <button @click="enterClick">appear button</button>
       <div v-if="appear">
-        <transition-group
-          appear
-          appear-from-class="test-appear-from"
-          appear-to-class="test-appear-to"
-          appear-active-class="test-appear-active"
-          name="test"
-        >
+        <transition-group appear appear-from-class="test-appear-from" appear-to-class="test-appear-to"
+          appear-active-class="test-appear-active" name="test">
           <div v-for="item in items" :key="item" class="test">{{ item }}</div>
         </transition-group>
       </div>
@@ -88,22 +83,12 @@ const interopClick = () => (items.value = ['b', 'c', 'd'])
     <div class="events">
       <button @click="eventsClick">events button</button>
       <div v-if="appear">
-        <transition-group
-          name="test"
-          appear
-          appear-from-class="test-appear-from"
-          appear-to-class="test-appear-to"
-          appear-active-class="test-appear-active"
-          @beforeEnter="() => calls.push('beforeEnter')"
-          @enter="() => calls.push('onEnter')"
-          @afterEnter="() => calls.push('afterEnter')"
-          @beforeLeave="() => calls.push('beforeLeave')"
-          @leave="() => calls.push('onLeave')"
-          @afterLeave="() => calls.push('afterLeave')"
-          @beforeAppear="() => calls.push('beforeAppear')"
-          @appear="() => calls.push('onAppear')"
-          @afterAppear="() => calls.push('afterAppear')"
-        >
+        <transition-group name="test" appear appear-from-class="test-appear-from" appear-to-class="test-appear-to"
+          appear-active-class="test-appear-active" @beforeEnter="() => calls.push('beforeEnter')"
+          @enter="() => calls.push('onEnter')" @afterEnter="() => calls.push('afterEnter')"
+          @beforeLeave="() => calls.push('beforeLeave')" @leave="() => calls.push('onLeave')"
+          @afterLeave="() => calls.push('afterLeave')" @beforeAppear="() => calls.push('beforeAppear')"
+          @appear="() => calls.push('onAppear')" @afterAppear="() => calls.push('afterAppear')">
           <div v-for="item in items" :key="item" class="test">{{ item }}</div>
         </transition-group>
       </div>
@@ -121,25 +106,9 @@ const interopClick = () => (items.value = ['b', 'c', 'd'])
   </div>
 </template>
 <style>
-.transition-group-container > div {
+.transition-group-container>div {
   padding: 15px;
   border: 1px solid #f7f7f7;
   margin-top: 15px;
-}
-
-.test-move,
-.test-enter-active,
-.test-leave-active {
-  transition: all 50ms cubic-bezier(0.55, 0, 0.1, 1);
-}
-
-.test-enter-from,
-.test-leave-to {
-  opacity: 0;
-  transform: scaleY(0.01) translate(30px, 0);
-}
-
-.test-leave-active {
-  position: absolute;
 }
 </style>
