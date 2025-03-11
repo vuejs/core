@@ -2,7 +2,7 @@
 const msg = 'vapor'
 </script>
 <template>
-    <div>
-        <slot></slot>
-    </div>
+  <div>
+    <slot></slot>
+  </div>
 </template>
