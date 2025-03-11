@@ -115,7 +115,7 @@ export function isTransitionTag(tag: string): boolean {
 }
 
 export function isTransitionGroupTag(tag: string): boolean {
-  tag = tag.toLowerCase()
+  tag = tag.toLowerCase().replace(/-/g, '')
   return tag === 'transitiongroup' || tag === 'vaportransitiongroup'
 }
 
