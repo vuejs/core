@@ -368,4 +368,39 @@ describe('vapor transition-group', () => {
     expect(calls).toContain('afterLeave')
     expect(calls).toContain('afterEnter')
   })
+
+  test('interop: render vdom component', async () => {
+    const btnSelector = '.interop > button'
+    const containerSelector = '.interop > div'
+
+    expect(await html(containerSelector)).toBe(
+      `<div><div>a</div></div>` +
+        `<div><div>b</div></div>` +
+        `<div><div>c</div></div>`,
+    )
+
+    expect(
+      (await transitionStart(btnSelector, containerSelector)).innerHTML,
+    ).toBe(
+      `<div class="test-leave-from test-leave-active"><div>a</div></div>` +
+        `<div class="test-move" style=""><div>b</div></div>` +
+        `<div class="test-move" style=""><div>c</div></div>` +
+        `<div class="test-enter-from test-enter-active"><div>d</div></div>`,
+    )
+
+    await nextFrame()
+    expect(await html(containerSelector)).toBe(
+      `<div class="test-leave-active test-leave-to"><div>a</div></div>` +
+        `<div class="test-move" style=""><div>b</div></div>` +
+        `<div class="test-move" style=""><div>c</div></div>` +
+        `<div class="test-enter-active test-enter-to"><div>d</div></div>`,
+    )
+
+    await transitionFinish()
+    expect(await html(containerSelector)).toBe(
+      `<div class="" style=""><div>b</div></div>` +
+        `<div class="" style=""><div>c</div></div>` +
+        `<div class=""><div>d</div></div>`,
+    )
+  })
 })

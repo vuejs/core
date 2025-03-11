@@ -1,5 +1,7 @@
-<script vapor>
+<script setup vapor>
 import { ref } from 'vue'
+import VdomComp from './components/VdomComp.vue'
+
 const items = ref(['a', 'b', 'c'])
 const enterClick = () => items.value.push('d', 'e')
 const leaveClick = () => (items.value = ['b'])
@@ -22,10 +24,12 @@ window.getCalls = () => {
   return ret
 }
 const eventsClick = () => (items.value = ['b', 'c', 'd'])
+
+const interopClick = () => (items.value = ['b', 'c', 'd'])
 </script>
 
 <template>
-  <div>
+  <div class="transition-group-container">
     <div class="enter">
       <button @click="enterClick">enter button</button>
       <div>
@@ -104,5 +108,38 @@ const eventsClick = () => (items.value = ['b', 'c', 'd'])
         </transition-group>
       </div>
     </div>
+    <div class="interop">
+      <button @click="interopClick">interop button</button>
+      <div>
+        <transition-group name="test">
+          <VdomComp v-for="item in items" :key="item">
+            <div>{{ item }}</div>
+          </VdomComp>
+        </transition-group>
+      </div>
+    </div>
   </div>
 </template>
+<style>
+.transition-group-container > div {
+  padding: 15px;
+  border: 1px solid #f7f7f7;
+  margin-top: 15px;
+}
+
+.test-move,
+.test-enter-active,
+.test-leave-active {
+  transition: all 50ms cubic-bezier(0.55, 0, 0.1, 1);
+}
+
+.test-enter-from,
+.test-leave-to {
+  opacity: 0;
+  transform: scaleY(0.01) translate(30px, 0);
+}
+
+.test-leave-active {
+  position: absolute;
+}
+</style>

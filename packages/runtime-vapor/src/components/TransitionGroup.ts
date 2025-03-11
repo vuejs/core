@@ -28,7 +28,7 @@ import {
   setTransitionHooks,
   setTransitionHooksToFragment,
 } from './Transition'
-import { isVaporComponent } from '../component'
+import { type ObjectVaporComponent, isVaporComponent } from '../component'
 import { isForBlock } from '../apiCreateFor'
 import { renderEffect, setDynamicProps } from '@vue/runtime-vapor'
 
@@ -36,11 +36,12 @@ const positionMap = new WeakMap<TransitionBlock, DOMRect>()
 const newPositionMap = new WeakMap<TransitionBlock, DOMRect>()
 
 const decorate = (t: typeof VaporTransitionGroup) => {
-  delete t.props.mode
+  delete (t.props! as any).mode
+  t.__vapor = true
   return t
 }
 
-export const VaporTransitionGroup: any = decorate({
+export const VaporTransitionGroup: ObjectVaporComponent = decorate({
   name: 'VaporTransitionGroup',
 
   props: /*@__PURE__*/ extend({}, TransitionPropsValidators, {
@@ -63,14 +64,14 @@ export const VaporTransitionGroup: any = decorate({
       if (children) {
         for (let i = 0; i < children.length; i++) {
           const child = children[i]
-          if (child instanceof Element) {
+          if (isValidTransitionBlock(child)) {
             prevChildren.push(child)
             const hook = (child as TransitionBlock).$transition!
             // disabled transition during moving, so the children will be
             // inserted into the correct position immediately. this prevents
             // `recordPosition` from getting incorrect positions in `onUpdated`
             hook.disabledOnMoving = true
-            positionMap.set(child, child.getBoundingClientRect())
+            positionMap.set(child, getEl(child).getBoundingClientRect())
           }
         }
       }
@@ -83,9 +84,7 @@ export const VaporTransitionGroup: any = decorate({
 
       const moveClass = props.moveClass || `${props.name || 'v'}-move`
 
-      const firstChild = prevChildren.find(
-        d => (d as Element).isConnected,
-      ) as Element
+      const firstChild = findFirstChild(prevChildren)
       if (
         !firstChild ||
         !hasCSSTransform(
@@ -108,7 +107,7 @@ export const VaporTransitionGroup: any = decorate({
       forceReflow()
 
       movedChildren.forEach(c =>
-        handleMovedChildren(c as ElementWithTransition, moveClass),
+        handleMovedChildren(getEl(c) as ElementWithTransition, moveClass),
       )
     })
 
@@ -123,7 +122,7 @@ export const VaporTransitionGroup: any = decorate({
     children = getTransitionBlocks(slottedBlock)
     for (let i = 0; i < children.length; i++) {
       const child = children[i]
-      if (child instanceof Element) {
+      if (isValidTransitionBlock(child)) {
         if ((child as TransitionBlock).$key != null) {
           setTransitionHooks(
             child,
@@ -167,7 +166,7 @@ function getTransitionBlocks(block: Block) {
     }
   } else if (isFragment(block)) {
     if (block.insert) {
-      // vdom interop
+      // vdom component
       children.push(block)
     } else {
       children.push(...getTransitionBlocks(block.nodes))
@@ -177,8 +176,16 @@ function getTransitionBlocks(block: Block) {
   return children
 }
 
+function isValidTransitionBlock(block: Block): boolean {
+  return !!(block instanceof Element || (isFragment(block) && block.insert))
+}
+
+function getEl(c: TransitionBlock): Element {
+  return (isFragment(c) ? c.nodes : c) as Element
+}
+
 function recordPosition(c: TransitionBlock) {
-  newPositionMap.set(c, (c as Element).getBoundingClientRect())
+  newPositionMap.set(c, getEl(c).getBoundingClientRect())
 }
 
 function applyTranslation(c: TransitionBlock): TransitionBlock | undefined {
@@ -186,9 +193,17 @@ function applyTranslation(c: TransitionBlock): TransitionBlock | undefined {
     baseApplyTranslation(
       positionMap.get(c)!,
       newPositionMap.get(c)!,
-      c as ElementWithTransition,
+      getEl(c) as ElementWithTransition,
     )
   ) {
     return c
+  }
+}
+
+function findFirstChild(children: TransitionBlock[]): Element | undefined {
+  for (let i = 0; i < children.length; i++) {
+    const child = children[i]
+    const el = getEl(child)
+    if (el.isConnected) return el
   }
 }

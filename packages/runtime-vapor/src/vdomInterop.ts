@@ -221,6 +221,7 @@ function createVDOMComponent(
         parentInstance as any,
       )
     }
+    frag.nodes = vnode.el as Node
     simpleSetCurrentInstance(prev)
   }
 
