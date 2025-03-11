@@ -286,6 +286,7 @@ export {
   callPendingCbs,
   moveCbKey,
   handleMovedChildren,
+  baseApplyTranslation,
 } from './components/TransitionGroup'
 
 // **Internal** DOM-only runtime directive helpers

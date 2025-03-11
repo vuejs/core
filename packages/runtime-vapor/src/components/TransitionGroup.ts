@@ -2,6 +2,7 @@ import {
   type ElementWithTransition,
   type TransitionGroupProps,
   TransitionPropsValidators,
+  baseApplyTranslation,
   callPendingCbs,
   currentInstance,
   forceReflow,
@@ -17,12 +18,17 @@ import { extend, isArray } from '@vue/shared'
 import {
   type Block,
   type TransitionBlock,
-  type VaporFragment,
+  type VaporTransitionHooks,
   insert,
   isFragment,
 } from '../block'
-import { resolveTransitionHooks, setTransitionHooks } from './Transition'
+import {
+  resolveTransitionHooks,
+  setTransitionHooks,
+  setTransitionHooksToFragment,
+} from './Transition'
 import { isVaporComponent } from '../component'
+import { isForBlock } from '../apiCreateFor'
 
 const positionMap = new WeakMap<TransitionBlock, DOMRect>()
 const newPositionMap = new WeakMap<TransitionBlock, DOMRect>()
@@ -32,7 +38,6 @@ const decorate = (t: typeof VaporTransitionGroup) => {
   return t
 }
 
-let frag: VaporFragment
 export const VaporTransitionGroup: any = decorate({
   name: 'VaporTransitionGroup',
 
@@ -48,10 +53,11 @@ export const VaporTransitionGroup: any = decorate({
 
     let prevChildren: TransitionBlock[]
     let children: TransitionBlock[]
+    let slottedBlock: Block
 
     onBeforeUpdate(() => {
       prevChildren = []
-      children = getTransitionChildren(frag)
+      children = getTransitionBlocks(slottedBlock)
       if (children) {
         for (let i = 0; i < children.length; i++) {
           const child = children[i]
@@ -74,9 +80,9 @@ export const VaporTransitionGroup: any = decorate({
       }
 
       const moveClass = props.moveClass || `${props.name || 'v'}-move`
-      // TODO
+
       const firstChild = prevChildren.find(
-        d => (d as Element).isConnected === true,
+        d => (d as Element).isConnected,
       ) as Element
       if (
         !firstChild ||
@@ -104,18 +110,15 @@ export const VaporTransitionGroup: any = decorate({
       )
     })
 
-    const block = slots.default && slots.default()
+    slottedBlock = slots.default && slots.default()
 
-    // store transition on fragment for reusing when insert new items
-    if (isFragment(block)) {
-      frag = block
-      setTransitionHooks(
-        block,
-        resolveTransitionHooks(block, cssTransitionProps, state, instance!),
-      )
-    }
+    // store props and state on fragment for reusing during insert new items
+    setTransitionHooksToFragment(slottedBlock, {
+      props: cssTransitionProps,
+      state,
+    } as VaporTransitionHooks)
 
-    children = getTransitionChildren(block)
+    children = getTransitionBlocks(slottedBlock)
     for (let i = 0; i < children.length; i++) {
       const child = children[i]
       if (child instanceof Element) {
@@ -134,27 +137,30 @@ export const VaporTransitionGroup: any = decorate({
     const el = document.createElement(tag)
     // TODO
     el.className = 'container'
-    insert(block, el)
+    insert(slottedBlock, el)
     return [el]
   },
 })
 
-function getTransitionChildren(block: Block) {
+function getTransitionBlocks(block: Block) {
   let children: TransitionBlock[] = []
   if (block instanceof Node) {
     children.push(block)
   } else if (isVaporComponent(block)) {
-    children.push(...getTransitionChildren(block.block))
+    children.push(...getTransitionBlocks(block.block))
   } else if (isArray(block)) {
     for (let i = 0; i < block.length; i++) {
-      children.push(...getTransitionChildren(block[i]))
+      const b = block[i]
+      const blocks = getTransitionBlocks(b)
+      if (isForBlock(b)) blocks.forEach(block => (block.$key = b.key))
+      children.push(...blocks)
     }
   } else if (isFragment(block)) {
     if (block.insert) {
       // vdom child
       children.push(block)
     } else {
-      children.push(...getTransitionChildren(block.nodes))
+      children.push(...getTransitionBlocks(block.nodes))
     }
   }
 
@@ -166,14 +172,13 @@ function recordPosition(c: TransitionBlock) {
 }
 
 function applyTranslation(c: TransitionBlock): TransitionBlock | undefined {
-  const oldPos = positionMap.get(c)!
-  const newPos = newPositionMap.get(c)!
-  const dx = oldPos.left - newPos.left
-  const dy = oldPos.top - newPos.top
-  if (dx || dy) {
-    const s = (c as HTMLElement).style
-    s.transform = s.webkitTransform = `translate(${dx}px,${dy}px)`
-    s.transitionDuration = '0s'
+  if (
+    baseApplyTranslation(
+      positionMap.get(c)!,
+      newPositionMap.get(c)!,
+      c as ElementWithTransition,
+    )
+  ) {
     return c
   }
 }

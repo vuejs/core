@@ -14,7 +14,6 @@ import { createComment, createTextNode } from './dom/node'
 import {
   type Block,
   VaporFragment,
-  type VaporTransitionHooks,
   insert,
   remove as removeBlock,
 } from './block'
@@ -318,11 +317,7 @@ export const createFor = (
     ))
 
     if (frag.$transition) {
-      const { state, props } = frag.$transition
-      applyTransitionEnterHooks(block.nodes, {
-        state,
-        props,
-      } as VaporTransitionHooks)
+      applyTransitionEnterHooks(block.nodes, frag.$transition)
     }
 
     if (parent) insert(block.nodes, parent, anchor)
@@ -448,4 +443,8 @@ export function getRestElement(val: any, keys: string[]): any {
 
 export function getDefaultValue(val: any, defaultVal: any): any {
   return val === undefined ? defaultVal : val
+}
+
+export function isForBlock(block: Block): block is ForBlock {
+  return block instanceof ForBlock
 }

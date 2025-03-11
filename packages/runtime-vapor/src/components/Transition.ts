@@ -145,7 +145,7 @@ export function applyTransitionEnterHooks(
   setTransitionHooks(child, enterHooks)
   if (isFragment(block)) {
     // also set transition hooks on fragment for reusing during it's updating
-    setTransitionHooks(block, enterHooks)
+    setTransitionHooksToFragment(block, enterHooks)
   }
   return enterHooks
 }
@@ -254,4 +254,17 @@ export function setTransitionToInstance(
   if (!child) return
 
   setTransitionHooks(child, hooks)
+}
+
+export function setTransitionHooksToFragment(
+  block: Block,
+  hooks: VaporTransitionHooks,
+): void {
+  if (isFragment(block)) {
+    setTransitionHooks(block, hooks)
+  } else if (isArray(block)) {
+    for (let i = 0; i < block.length; i++) {
+      setTransitionHooksToFragment(block[i], hooks)
+    }
+  }
 }

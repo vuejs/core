@@ -94,11 +94,19 @@ export function isInTransition(
   context: TransformContext<ElementNode>,
 ): boolean {
   const parentNode = context.parent && context.parent.node
-  return !!(parentNode && isTransitionNode(parentNode as ElementNode))
+  return !!(
+    parentNode &&
+    (isTransitionNode(parentNode as ElementNode) ||
+      isTransitionGroupNode(parentNode as ElementNode))
+  )
 }
 
 export function isTransitionNode(node: ElementNode): boolean {
   return node.type === NodeTypes.ELEMENT && isTransitionTag(node.tag)
+}
+
+export function isTransitionGroupNode(node: ElementNode): boolean {
+  return node.type === NodeTypes.ELEMENT && isTransitionGroupTag(node.tag)
 }
 
 export function isTransitionTag(tag: string): boolean {
@@ -106,8 +114,15 @@ export function isTransitionTag(tag: string): boolean {
   return tag === 'transition' || tag === 'vaportransition'
 }
 
+export function isTransitionGroupTag(tag: string): boolean {
+  tag = tag.toLowerCase()
+  return tag === 'transitiongroup' || tag === 'vaportransitiongroup'
+}
+
 export function isBuiltInComponent(tag: string): string | undefined {
   if (isTransitionTag(tag)) {
     return 'VaporTransition'
+  } else if (isTransitionGroupTag(tag)) {
+    return 'VaporTransitionGroup'
   }
 }

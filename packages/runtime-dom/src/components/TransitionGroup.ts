@@ -178,16 +178,31 @@ function recordPosition(c: VNode) {
 }
 
 function applyTranslation(c: VNode): VNode | undefined {
-  const oldPos = positionMap.get(c)!
-  const newPos = newPositionMap.get(c)!
+  if (
+    baseApplyTranslation(
+      positionMap.get(c)!,
+      newPositionMap.get(c)!,
+      c.el as ElementWithTransition,
+    )
+  ) {
+    return c
+  }
+}
+
+export function baseApplyTranslation(
+  oldPos: DOMRect,
+  newPos: DOMRect,
+  el: ElementWithTransition,
+): boolean {
   const dx = oldPos.left - newPos.left
   const dy = oldPos.top - newPos.top
   if (dx || dy) {
-    const s = (c.el as HTMLElement).style
+    const s = (el as HTMLElement).style
     s.transform = s.webkitTransform = `translate(${dx}px,${dy}px)`
     s.transitionDuration = '0s'
-    return c
+    return true
   }
+  return false
 }
 
 export function hasCSSTransform(
