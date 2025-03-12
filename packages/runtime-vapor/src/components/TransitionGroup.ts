@@ -67,10 +67,10 @@ export const VaporTransitionGroup: ObjectVaporComponent = decorate({
           if (isValidTransitionBlock(child)) {
             prevChildren.push(child)
             const hook = (child as TransitionBlock).$transition!
-            // disabled transition during moving, so the children will be
+            // disabled transition during enter, so the children will be
             // inserted into the correct position immediately. this prevents
             // `recordPosition` from getting incorrect positions in `onUpdated`
-            hook.disabledOnMoving = true
+            hook.disabled = true
             positionMap.set(
               child,
               getTransitionElement(child).getBoundingClientRect(),
@@ -101,7 +101,7 @@ export const VaporTransitionGroup: ObjectVaporComponent = decorate({
 
       prevChildren.forEach(callPendingCbs)
       prevChildren.forEach(child => {
-        delete child.$transition!.disabledOnMoving
+        delete child.$transition!.disabled
         recordPosition(child)
       })
       const movedChildren = prevChildren.filter(applyTranslation)

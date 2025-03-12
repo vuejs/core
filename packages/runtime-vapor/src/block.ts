@@ -28,7 +28,7 @@ export interface TransitionOptions {
 export interface VaporTransitionHooks extends TransitionHooks {
   state: TransitionState
   props: TransitionProps
-  disabledOnMoving?: boolean
+  disabled?: boolean
 }
 
 export type TransitionBlock =
@@ -161,7 +161,7 @@ export function insert(
       if (
         block instanceof Element &&
         (block as TransitionBlock).$transition &&
-        !(block as TransitionBlock).$transition!.disabledOnMoving
+        !(block as TransitionBlock).$transition!.disabled
       ) {
         performTransitionEnter(
           block,
