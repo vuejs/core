@@ -157,7 +157,7 @@ export function insert(
   anchor = anchor === 0 ? parent.firstChild : anchor
   if (block instanceof Node) {
     if (!isHydrating) {
-      // don't apply transition on text or comment nodes
+      // only apply transition on Element nodes
       if (
         block instanceof Element &&
         (block as TransitionBlock).$transition &&

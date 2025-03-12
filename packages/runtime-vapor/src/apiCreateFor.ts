@@ -316,6 +316,7 @@ export const createFor = (
       getKey && getKey(item, key, index),
     ))
 
+    // apply transition for new nodes
     if (frag.$transition) {
       applyTransitionEnterHooks(block.nodes, frag.$transition)
     }

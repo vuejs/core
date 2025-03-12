@@ -376,6 +376,7 @@ export function resolveTransitionHooks(
   return baseResolveTransitionHooks(context, props, state, instance)
 }
 
+// shared between vdom and vapor
 export function baseResolveTransitionHooks(
   context: TransitionHooksContext,
   props: BaseTransitionProps<any>,

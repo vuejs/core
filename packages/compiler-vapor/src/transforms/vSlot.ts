@@ -253,8 +253,10 @@ function createSlotBlock(
 ): [SlotBlockIRNode, () => void] {
   const block: SlotBlockIRNode = newBlock(slotNode)
   block.props = dir && dir.exp
-  block.key = key
-  if (key) block.dynamic.needsKey = true
+  if (key) {
+    block.key = key
+    block.dynamic.needsKey = true
+  }
   const exitBlock = context.enterBlock(block)
   return [block, exitBlock]
 }

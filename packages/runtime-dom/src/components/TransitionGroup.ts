@@ -189,6 +189,7 @@ function applyTranslation(c: VNode): VNode | undefined {
   }
 }
 
+// shared between vdom and vapor
 export function baseApplyTranslation(
   oldPos: DOMRect,
   newPos: DOMRect,
@@ -205,6 +206,7 @@ export function baseApplyTranslation(
   return false
 }
 
+// shared between vdom and vapor
 export function hasCSSTransform(
   el: ElementWithTransition,
   root: Node,
@@ -233,6 +235,7 @@ export function hasCSSTransform(
   return hasTransform
 }
 
+// shared between vdom and vapor
 export const handleMovedChildren = (
   el: ElementWithTransition,
   moveClass: string,

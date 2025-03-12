@@ -2625,6 +2625,7 @@ export function invalidateMount(hooks: LifecycleHook | undefined): void {
   }
 }
 
+// shared between vdom and vapor
 export function performTransitionEnter(
   el: RendererElement,
   transition: TransitionHooks,
@@ -2640,6 +2641,7 @@ export function performTransitionEnter(
   }
 }
 
+// shared between vdom and vapor
 export function performTransitionLeave(
   el: RendererElement,
   transition: TransitionHooks,

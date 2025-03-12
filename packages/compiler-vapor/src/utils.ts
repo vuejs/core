@@ -94,11 +94,7 @@ export function isInTransition(
   context: TransformContext<ElementNode>,
 ): boolean {
   const parentNode = context.parent && context.parent.node
-  return !!(
-    parentNode &&
-    (isTransitionNode(parentNode as ElementNode) ||
-      isTransitionGroupNode(parentNode as ElementNode))
-  )
+  return !!(parentNode && isTransitionNode(parentNode as ElementNode))
 }
 
 export function isTransitionNode(node: ElementNode): boolean {

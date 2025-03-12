@@ -124,7 +124,7 @@ export function createIfBranch(
   const exitBlock = context.enterBlock(branch)
   context.reference()
   // generate key for branch result when it's in transition
-  // the key will be used to cache node at runtime
+  // the key will be used to track node leaving at runtime
   branch.dynamic.needsKey = isInTransition(context)
   return [branch, exitBlock]
 }

@@ -71,7 +71,10 @@ export const VaporTransitionGroup: ObjectVaporComponent = decorate({
             // inserted into the correct position immediately. this prevents
             // `recordPosition` from getting incorrect positions in `onUpdated`
             hook.disabledOnMoving = true
-            positionMap.set(child, getEl(child).getBoundingClientRect())
+            positionMap.set(
+              child,
+              getTransitionElement(child).getBoundingClientRect(),
+            )
           }
         }
       }
@@ -84,7 +87,7 @@ export const VaporTransitionGroup: ObjectVaporComponent = decorate({
 
       const moveClass = props.moveClass || `${props.name || 'v'}-move`
 
-      const firstChild = findFirstChild(prevChildren)
+      const firstChild = getFirstConnectedChild(prevChildren)
       if (
         !firstChild ||
         !hasCSSTransform(
@@ -107,7 +110,10 @@ export const VaporTransitionGroup: ObjectVaporComponent = decorate({
       forceReflow()
 
       movedChildren.forEach(c =>
-        handleMovedChildren(getEl(c) as ElementWithTransition, moveClass),
+        handleMovedChildren(
+          getTransitionElement(c) as ElementWithTransition,
+          moveClass,
+        ),
       )
     })
 
@@ -180,12 +186,12 @@ function isValidTransitionBlock(block: Block): boolean {
   return !!(block instanceof Element || (isFragment(block) && block.insert))
 }
 
-function getEl(c: TransitionBlock): Element {
-  return (isFragment(c) ? c.nodes : c) as Element
+function getTransitionElement(c: TransitionBlock): Element {
+  return (isFragment(c) ? (c.nodes as Element[])[0] : c) as Element
 }
 
 function recordPosition(c: TransitionBlock) {
-  newPositionMap.set(c, getEl(c).getBoundingClientRect())
+  newPositionMap.set(c, getTransitionElement(c).getBoundingClientRect())
 }
 
 function applyTranslation(c: TransitionBlock): TransitionBlock | undefined {
@@ -193,17 +199,19 @@ function applyTranslation(c: TransitionBlock): TransitionBlock | undefined {
     baseApplyTranslation(
       positionMap.get(c)!,
       newPositionMap.get(c)!,
-      getEl(c) as ElementWithTransition,
+      getTransitionElement(c) as ElementWithTransition,
     )
   ) {
     return c
   }
 }
 
-function findFirstChild(children: TransitionBlock[]): Element | undefined {
+function getFirstConnectedChild(
+  children: TransitionBlock[],
+): Element | undefined {
   for (let i = 0; i < children.length; i++) {
     const child = children[i]
-    const el = getEl(child)
+    const el = getTransitionElement(child)
     if (el.isConnected) return el
   }
 }
