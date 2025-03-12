@@ -118,6 +118,7 @@ export { KeepAlive, type KeepAliveProps } from './components/KeepAlive'
 export {
   BaseTransition,
   BaseTransitionPropsValidators,
+  checkTransitionMode,
   type BaseTransitionProps,
 } from './components/BaseTransition'
 // For using custom directives

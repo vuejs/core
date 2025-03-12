@@ -66,11 +66,10 @@ export const VaporTransitionGroup: ObjectVaporComponent = decorate({
           const child = children[i]
           if (isValidTransitionBlock(child)) {
             prevChildren.push(child)
-            const hook = (child as TransitionBlock).$transition!
             // disabled transition during enter, so the children will be
             // inserted into the correct position immediately. this prevents
             // `recordPosition` from getting incorrect positions in `onUpdated`
-            hook.disabled = true
+            child.$transition!.disabled = true
             positionMap.set(
               child,
               getTransitionElement(child).getBoundingClientRect(),
@@ -129,12 +128,12 @@ export const VaporTransitionGroup: ObjectVaporComponent = decorate({
     for (let i = 0; i < children.length; i++) {
       const child = children[i]
       if (isValidTransitionBlock(child)) {
-        if ((child as TransitionBlock).$key != null) {
+        if (child.$key != null) {
           setTransitionHooks(
             child,
             resolveTransitionHooks(child, cssTransitionProps, state, instance!),
           )
-        } else if (__DEV__ && (child as TransitionBlock).$key == null) {
+        } else if (__DEV__ && child.$key == null) {
           warn(`<transition-group> children must be keyed`)
         }
       }

@@ -8,6 +8,7 @@ import {
   TransitionPropsValidators,
   type TransitionState,
   baseResolveTransitionHooks,
+  checkTransitionMode,
   currentInstance,
   leaveCbKey,
   resolveTransitionProps,
@@ -36,15 +37,7 @@ export const VaporTransition: FunctionalComponent<TransitionProps> =
     if (!children) return
 
     const { mode } = props
-    if (
-      __DEV__ &&
-      mode &&
-      mode !== 'in-out' &&
-      mode !== 'out-in' &&
-      mode !== 'default'
-    ) {
-      warn(`invalid <transition> mode: ${mode}`)
-    }
+    __DEV__ && checkTransitionMode(mode)
 
     applyTransitionEnterHooks(children, {
       state: useTransitionState(),
@@ -117,13 +110,6 @@ export function resolveTransitionHooks(
   hooks.state = state
   hooks.props = props
   return hooks
-}
-
-export function setTransitionHooks(
-  block: TransitionBlock,
-  hooks: VaporTransitionHooks,
-): void {
-  block.$transition = hooks
 }
 
 export function applyTransitionEnterHooks(
@@ -267,4 +253,11 @@ export function setTransitionHooksToFragment(
       setTransitionHooksToFragment(block[i], hooks)
     }
   }
+}
+
+export function setTransitionHooks(
+  block: TransitionBlock,
+  hooks: VaporTransitionHooks,
+): void {
+  block.$transition = hooks
 }
