@@ -23,10 +23,53 @@ function toggleInteropComponent() {
   interopComponent.value =
     interopComponent.value === VaporCompA ? VDomComp : VaporCompA
 }
+
+const name = ref('test')
 </script>
 
 <template>
   <div class="transition-container">
+    <div class="if-basic">
+      <div>
+        <transition>
+          <div v-if="toggle" class="test">content</div>
+        </transition>
+      </div>
+      <button @click="toggle = !toggle">basic toggle</button>
+    </div>
+    <div class="if-named">
+      <div>
+        <transition name="test">
+          <div v-if="toggle" class="test">content</div>
+        </transition>
+      </div>
+      <button @click="toggle = !toggle">button</button>
+    </div>
+    <div class="if-custom-classes">
+      <div>
+        <transition
+          enter-from-class="hello-from"
+          enter-active-class="hello-active"
+          enter-to-class="hello-to"
+          leave-from-class="bye-from"
+          leave-active-class="bye-active"
+          leave-to-class="bye-to"
+        >
+          <div v-if="toggle" class="test">content</div>
+        </transition>
+      </div>
+      <button @click="toggle = !toggle">button</button>
+    </div>
+    <div class="if-dynamic-name">
+      <div>
+        <transition :name="name">
+          <div v-if="toggle" class="test">content</div>
+        </transition>
+      </div>
+      <button class="toggle" @click="toggle = !toggle">button</button>
+      <button class="change" @click="name = 'changed'">{{ name }}</button>
+    </div>
+
     <div class="vshow">
       <button @click="show = !show">Show</button>
       <Transition>

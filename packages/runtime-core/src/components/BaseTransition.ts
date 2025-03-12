@@ -168,7 +168,7 @@ const BaseTransitionImpl: ComponentOptions = {
       const rawProps = toRaw(props)
       const { mode } = rawProps
       // check mode
-      __DEV__ && checkTransitionMode(mode)
+      checkTransitionMode(mode)
 
       if (state.isLeaving) {
         return emptyPlaceholder(child)
@@ -619,7 +619,13 @@ export function getTransitionRawChildren(
  * dev-only
  */
 export function checkTransitionMode(mode: string | undefined): void {
-  if (mode && mode !== 'in-out' && mode !== 'out-in' && mode !== 'default') {
+  if (
+    __DEV__ &&
+    mode &&
+    mode !== 'in-out' &&
+    mode !== 'out-in' &&
+    mode !== 'default'
+  ) {
     warn(`invalid <transition> mode: ${mode}`)
   }
 }

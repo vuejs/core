@@ -23,6 +23,7 @@ import {
 } from '../block'
 import { type VaporComponentInstance, isVaporComponent } from '../component'
 import { isArray } from '@vue/shared'
+import { renderEffect } from '../renderEffect'
 
 const decorate = (t: typeof VaporTransition) => {
   t.displayName = 'VaporTransition'
@@ -37,12 +38,21 @@ export const VaporTransition: FunctionalComponent<TransitionProps> =
     if (!children) return
 
     const { mode } = props
-    __DEV__ && checkTransitionMode(mode)
+    checkTransitionMode(mode)
 
-    applyTransitionEnterHooks(children, {
+    let resolvedProps
+    renderEffect(() => {
+      resolvedProps = resolveTransitionProps(props)
+      if (isFragment(children) && children.$transition) {
+        children.$transition.props = resolvedProps
+      }
+    })
+
+    const hooks = {
       state: useTransitionState(),
-      props: resolveTransitionProps(props),
-    } as VaporTransitionHooks)
+      props: resolvedProps!,
+    } as VaporTransitionHooks
+    applyTransitionEnterHooks(children, hooks)
 
     return children
   })

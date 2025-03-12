@@ -16,6 +16,7 @@ const {
   html,
   transitionStart,
   waitForElement,
+  click,
 } = setupPuppeteer()
 
 const duration = process.env.CI ? 200 : 50
@@ -40,6 +41,234 @@ describe('vapor transition', () => {
     const baseUrl = `http://localhost:${port}/transition/`
     await page().goto(baseUrl)
     await page().waitForSelector('#app')
+  })
+
+  describe('transition with v-if', () => {
+    test(
+      'basic transition',
+      async () => {
+        const btnSelector = '.if-basic > button'
+        const containerSelector = '.if-basic > div'
+        const childSelector = `${containerSelector} > div`
+
+        expect(await html(containerSelector)).toBe(
+          `<div class="test">content</div>`,
+        )
+
+        // leave
+        expect(
+          (await transitionStart(btnSelector, childSelector)).classNames,
+        ).toStrictEqual(['test', 'v-leave-from', 'v-leave-active'])
+
+        await nextFrame()
+        expect(await classList(childSelector)).toStrictEqual([
+          'test',
+          'v-leave-active',
+          'v-leave-to',
+        ])
+        await transitionFinish()
+        expect(await html(containerSelector)).toBe('')
+
+        // enter
+        expect(
+          (await transitionStart(btnSelector, childSelector)).classNames,
+        ).toStrictEqual(['test', 'v-enter-from', 'v-enter-active'])
+        await nextFrame()
+        expect(await classList(childSelector)).toStrictEqual([
+          'test',
+          'v-enter-active',
+          'v-enter-to',
+        ])
+        await transitionFinish()
+        expect(await html(containerSelector)).toBe(
+          '<div class="test">content</div>',
+        )
+      },
+      E2E_TIMEOUT,
+    )
+
+    test(
+      'named transition',
+      async () => {
+        const btnSelector = '.if-named > button'
+        const containerSelector = '.if-named > div'
+        const childSelector = `${containerSelector} > div`
+
+        expect(await html(containerSelector)).toBe(
+          '<div class="test">content</div>',
+        )
+
+        // leave
+        expect(
+          (await transitionStart(btnSelector, childSelector)).classNames,
+        ).toStrictEqual(['test', 'test-leave-from', 'test-leave-active'])
+        await nextFrame()
+        expect(await classList(childSelector)).toStrictEqual([
+          'test',
+          'test-leave-active',
+          'test-leave-to',
+        ])
+
+        await transitionFinish()
+        expect(await html(containerSelector)).toBe('')
+
+        // enter
+        expect(
+          (await transitionStart(btnSelector, childSelector)).classNames,
+        ).toStrictEqual(['test', 'test-enter-from', 'test-enter-active'])
+        await nextFrame()
+        expect(await classList(childSelector)).toStrictEqual([
+          'test',
+          'test-enter-active',
+          'test-enter-to',
+        ])
+        await transitionFinish()
+        expect(await html(containerSelector)).toBe(
+          '<div class="test">content</div>',
+        )
+      },
+      E2E_TIMEOUT,
+    )
+
+    test(
+      'custom transition classes',
+      async () => {
+        const btnSelector = '.if-custom-classes > button'
+        const containerSelector = '.if-custom-classes > div'
+        const childSelector = `${containerSelector} > div`
+
+        expect(await html(containerSelector)).toBe(
+          '<div class="test">content</div>',
+        )
+        // leave
+        expect(
+          (await transitionStart(btnSelector, childSelector)).classNames,
+        ).toStrictEqual(['test', 'bye-from', 'bye-active'])
+        await nextFrame()
+        expect(await classList(childSelector)).toStrictEqual([
+          'test',
+          'bye-active',
+          'bye-to',
+        ])
+        await transitionFinish()
+        expect(await html(containerSelector)).toBe('')
+
+        // enter
+        expect(
+          (await transitionStart(btnSelector, childSelector)).classNames,
+        ).toStrictEqual(['test', 'hello-from', 'hello-active'])
+        await nextFrame()
+        expect(await classList(childSelector)).toStrictEqual([
+          'test',
+          'hello-active',
+          'hello-to',
+        ])
+        await transitionFinish()
+        expect(await html(containerSelector)).toBe(
+          '<div class="test">content</div>',
+        )
+      },
+      E2E_TIMEOUT,
+    )
+
+    test(
+      'transition with dynamic name',
+      async () => {
+        const btnSelector = '.if-dynamic-name > button.toggle'
+        const btnChangeNameSelector = '.if-dynamic-name > button.change'
+        const containerSelector = '.if-dynamic-name > div'
+        const childSelector = `${containerSelector} > div`
+
+        expect(await html(containerSelector)).toBe(
+          '<div class="test">content</div>',
+        )
+
+        // leave
+        expect(
+          (await transitionStart(btnSelector, childSelector)).classNames,
+        ).toStrictEqual(['test', 'test-leave-from', 'test-leave-active'])
+        await nextFrame()
+        expect(await classList(childSelector)).toStrictEqual([
+          'test',
+          'test-leave-active',
+          'test-leave-to',
+        ])
+        await transitionFinish()
+        expect(await html(containerSelector)).toBe('')
+
+        // enter
+        await click(btnChangeNameSelector)
+        expect(
+          (await transitionStart(btnSelector, childSelector)).classNames,
+        ).toStrictEqual(['test', 'changed-enter-from', 'changed-enter-active'])
+        await nextFrame()
+        expect(await classList(childSelector)).toStrictEqual([
+          'test',
+          'changed-enter-active',
+          'changed-enter-to',
+        ])
+        await transitionFinish()
+        expect(await html(containerSelector)).toBe(
+          '<div class="test">content</div>',
+        )
+      },
+      E2E_TIMEOUT,
+    )
+    test.todo('transition events without appear', async () => {}, E2E_TIMEOUT)
+    test.todo('events with arguments', async () => {}, E2E_TIMEOUT)
+    test.todo('onEnterCancelled', async () => {}, E2E_TIMEOUT)
+    test.todo('transition on appear', async () => {}, E2E_TIMEOUT)
+    test.todo('transition events with appear', async () => {}, E2E_TIMEOUT)
+    test.todo('no transition detected', async () => {}, E2E_TIMEOUT)
+    test.todo('animations', async () => {}, E2E_TIMEOUT)
+    test.todo('explicit transition type', async () => {}, E2E_TIMEOUT)
+    test.todo('transition on SVG elements', async () => {}, E2E_TIMEOUT)
+    test.todo(
+      'custom transition higher-order component',
+      async () => {},
+      E2E_TIMEOUT,
+    )
+    test.todo(
+      'transition on child components with empty root node',
+      async () => {},
+      E2E_TIMEOUT,
+    )
+    test.todo(
+      'transition with v-if at component root-level',
+      async () => {},
+      E2E_TIMEOUT,
+    )
+    test.todo(
+      'wrapping transition + fallthrough attrs',
+      async () => {},
+      E2E_TIMEOUT,
+    )
+    test.todo(
+      'transition + fallthrough attrs (in-out mode)',
+      async () => {},
+      E2E_TIMEOUT,
+    )
+  })
+
+  describe('transition with v-show', () => {
+    test.todo('named transition with v-show', async () => {}, E2E_TIMEOUT)
+    test.todo('transition events with v-show', async () => {}, E2E_TIMEOUT)
+    test.todo('onLeaveCancelled (v-show only)', async () => {}, E2E_TIMEOUT)
+    test.todo('transition on appear with v-show', async () => {}, E2E_TIMEOUT)
+    test.todo(
+      'transition events should not call onEnter with v-show false',
+      async () => {},
+      E2E_TIMEOUT,
+    )
+    test.todo('transition on appear with v-show', async () => {}, E2E_TIMEOUT)
+  })
+
+  describe('explicit durations', () => {
+    test.todo('single value', async () => {}, E2E_TIMEOUT)
+    test.todo('enter with explicit durations', async () => {}, E2E_TIMEOUT)
+    test.todo('leave with explicit durations', async () => {}, E2E_TIMEOUT)
+    test.todo('separate enter and leave', async () => {}, E2E_TIMEOUT)
+    test.todo('warn invalid durations', async () => {}, E2E_TIMEOUT)
   })
 
   test(
