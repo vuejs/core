@@ -146,7 +146,15 @@ export function createComponent(
 
   // vdom interop enabled and component is not an explicit vapor component
   if (appContext.vapor && !component.__vapor) {
-    return appContext.vapor.vdomMount(component as any, rawProps, rawSlots)
+    const frag = appContext.vapor.vdomMount(
+      component as any,
+      rawProps,
+      rawSlots,
+    )
+    if (!isHydrating && _insertionParent) {
+      insert(frag, _insertionParent, _insertionAnchor)
+    }
+    return frag
   }
 
   if (
