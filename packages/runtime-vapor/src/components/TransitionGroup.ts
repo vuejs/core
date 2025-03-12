@@ -142,11 +142,11 @@ export const VaporTransitionGroup: ObjectVaporComponent = decorate({
 
     const tag = props.tag
     if (tag) {
-      const el = document.createElement(tag)
-      insert(slottedBlock, el)
+      const container = document.createElement(tag)
+      insert(slottedBlock, container)
       // fallthrough attrs
-      renderEffect(() => setDynamicProps(el, [instance!.attrs]))
-      return [el]
+      renderEffect(() => setDynamicProps(container, [instance!.attrs]))
+      return container
     } else {
       const frag = __DEV__
         ? new DynamicFragment('transitionGroup')
