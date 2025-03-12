@@ -243,21 +243,45 @@ describe('Vapor Mode hydration', () => {
   test.todo('component with anchor insertion', async () => {
     const { container, data } = await testHydration(
       `
-      <template><div><span/><components.Child/><span/></div></template>
+      <template>
+        <div>
+          <span/>
+          <components.Child/>
+          <span/>
+        </div>
+      </template>
       `,
       {
         Child: `<template>{{ data }}</template>`,
       },
     )
-    expect(container.innerHTML).toMatchInlineSnapshot(
-      `"<div><span></span>foo<span></span></div>"`,
-    )
+    expect(container.innerHTML).toMatchInlineSnapshot()
 
     data.value = 'bar'
     await nextTick()
-    expect(container.innerHTML).toMatchInlineSnapshot(
-      `"<div><span></span>foo<span></span></div>"`,
+    expect(container.innerHTML).toMatchInlineSnapshot()
+  })
+
+  test.todo('consecutive component with anchor insertion', async () => {
+    const { container, data } = await testHydration(
+      `<template>
+        <div>
+          <span/>
+          <components.Child/>
+          <components.Child/>
+          <span/>
+        </div>
+      </template>
+      `,
+      {
+        Child: `<template>{{ data }}</template>`,
+      },
     )
+    expect(container.innerHTML).toMatchInlineSnapshot()
+
+    data.value = 'bar'
+    await nextTick()
+    expect(container.innerHTML).toMatchInlineSnapshot()
   })
 
   test.todo('if')
