@@ -22,7 +22,7 @@ import {
   isFragment,
 } from '../block'
 import { type VaporComponentInstance, isVaporComponent } from '../component'
-import { isArray } from '@vue/shared'
+import { extend, isArray } from '@vue/shared'
 import { renderEffect } from '../renderEffect'
 import { setDynamicProps } from '../dom/prop'
 
@@ -34,10 +34,11 @@ const decorate = (t: typeof VaporTransition) => {
 }
 
 export const VaporTransition: FunctionalComponent<TransitionProps> =
-  /*@__PURE__*/ decorate((props, { slots }) => {
+  /*@__PURE__*/ decorate((props, { slots, attrs }) => {
     const children = (slots.default && slots.default()) as any as Block
     if (!children) return
 
+    const instance = currentInstance! as VaporComponentInstance
     const { mode } = props
     checkTransitionMode(mode)
 
@@ -48,15 +49,13 @@ export const VaporTransition: FunctionalComponent<TransitionProps> =
       if (isMounted) {
         // only update props for Fragment block, for later reusing
         if (isFragment(children)) {
-          if (children.$transition) {
-            children.$transition.props = resolvedProps
-          }
+          children.$transition!.props = resolvedProps
         } else {
-          // replace existing transition hooks
           const child = findTransitionBlock(children)
-          if (child && child.$transition) {
-            child.$transition.props = resolvedProps
-            applyTransitionHooks(child, child.$transition)
+          if (child) {
+            // replace existing transition hooks
+            child.$transition!.props = resolvedProps
+            applyTransitionHooks(child, child.$transition!)
           }
         }
       } else {
@@ -64,11 +63,31 @@ export const VaporTransition: FunctionalComponent<TransitionProps> =
       }
     })
 
-    applyTransitionHooks(children, {
-      state: useTransitionState(),
-      props: resolvedProps!,
-      instance: currentInstance!,
-    } as VaporTransitionHooks)
+    // fallthrough attrs
+    let fallthroughAttrs = true
+    if (instance.hasFallthrough) {
+      renderEffect(() => {
+        // attrs are accessed in advance
+        const resolvedAttrs = extend({}, attrs)
+        const child = findTransitionBlock(children)
+        if (child) {
+          setDynamicProps(child, [resolvedAttrs])
+          // ensure fallthrough attrs are not happened again in
+          // applyTransitionHooks
+          fallthroughAttrs = false
+        }
+      })
+    }
+
+    applyTransitionHooks(
+      children,
+      {
+        state: useTransitionState(),
+        props: resolvedProps!,
+        instance: instance,
+      } as VaporTransitionHooks,
+      fallthroughAttrs,
+    )
 
     return children
   })
@@ -164,7 +183,6 @@ export function applyTransitionHooks(
   setTransitionHooks(child, resolvedHooks)
   if (isFrag) setTransitionHooksToFragment(block, resolvedHooks)
 
-  // TODO handle attrs update
   // fallthrough attrs
   if (fallthroughAttrs && instance.hasFallthrough) {
     setDynamicProps(child, [instance.attrs])

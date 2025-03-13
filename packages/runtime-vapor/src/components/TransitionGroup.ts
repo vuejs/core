@@ -28,7 +28,11 @@ import {
   setTransitionHooks,
   setTransitionHooksToFragment,
 } from './Transition'
-import { type ObjectVaporComponent, isVaporComponent } from '../component'
+import {
+  type ObjectVaporComponent,
+  type VaporComponentInstance,
+  isVaporComponent,
+} from '../component'
 import { isForBlock } from '../apiCreateFor'
 import { renderEffect, setDynamicProps } from '@vue/runtime-vapor'
 
@@ -50,7 +54,7 @@ export const VaporTransitionGroup: ObjectVaporComponent = decorate({
   }),
 
   setup(props: TransitionGroupProps, { slots }) {
-    const instance = currentInstance
+    const instance = currentInstance as VaporComponentInstance
     const state = useTransitionState()
     const cssTransitionProps = resolveTransitionProps(props)
 
@@ -144,7 +148,9 @@ export const VaporTransitionGroup: ObjectVaporComponent = decorate({
       const container = document.createElement(tag)
       insert(slottedBlock, container)
       // fallthrough attrs
-      renderEffect(() => setDynamicProps(container, [instance!.attrs]))
+      if (instance!.hasFallthrough) {
+        renderEffect(() => setDynamicProps(container, [instance!.attrs]))
+      }
       return container
     } else {
       const frag = __DEV__
