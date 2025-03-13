@@ -5,6 +5,7 @@ import {
 } from '../../../packages/vue/__tests__/e2e/e2eUtils'
 import connect from 'connect'
 import sirv from 'sirv'
+import { nextTick } from 'vue'
 const {
   page,
   classList,
@@ -778,16 +779,72 @@ describe('vapor transition', () => {
       E2E_TIMEOUT,
     )
 
-    test.todo(
+    test(
       'transition with v-if at component root-level',
-      async () => {},
+      async () => {
+        const btnSelector = '.if-at-component-root-level > button.toggle'
+        const btnChangeSelector = '.if-at-component-root-level > button.change'
+        const containerSelector = '.if-at-component-root-level > div'
+        const childSelector = `${containerSelector} > div`
+
+        expect(await html(containerSelector)).toBe('')
+
+        // change view -> 'two'
+        await click(btnChangeSelector)
+        // enter
+        expect(
+          (await transitionStart(btnSelector, childSelector)).classNames,
+        ).toStrictEqual(['test', 'test-enter-from', 'test-enter-active'])
+        await nextFrame()
+        expect(await classList(childSelector)).toStrictEqual([
+          'test',
+          'test-enter-active',
+          'test-enter-to',
+        ])
+        await transitionFinish()
+        expect(await html(containerSelector)).toBe(
+          '<div class="test">two</div>',
+        )
+
+        // change view -> 'one'
+        await click(btnChangeSelector)
+        // leave
+        expect(
+          (await transitionStart(btnSelector, childSelector)).classNames,
+        ).toStrictEqual(['test', 'test-leave-from', 'test-leave-active'])
+        await nextFrame()
+        expect(await classList(childSelector)).toStrictEqual([
+          'test',
+          'test-leave-active',
+          'test-leave-to',
+        ])
+        await transitionFinish()
+        expect(await html(containerSelector)).toBe('')
+      },
       E2E_TIMEOUT,
     )
+
     test.todo(
       'wrapping transition + fallthrough attrs',
-      async () => {},
+      async () => {
+        const btnSelector = '.if-fallthrough-attr > button'
+        const containerSelector = '.if-fallthrough-attr > div'
+
+        expect(await html(containerSelector)).toBe('<div foo="1">content</div>')
+
+        await click(btnSelector)
+        // toggle again before leave finishes
+        await nextTick()
+        await click(btnSelector)
+
+        await transitionFinish(duration * 2)
+        expect(await html(containerSelector)).toBe(
+          '<div foo="1" class="">content</div>',
+        )
+      },
       E2E_TIMEOUT,
     )
+
     test.todo(
       'transition + fallthrough attrs (in-out mode)',
       async () => {},

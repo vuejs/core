@@ -49,7 +49,7 @@ export const VaporTransitionGroup: ObjectVaporComponent = decorate({
     moveClass: String,
   }),
 
-  setup(props: TransitionGroupProps, { slots }: any) {
+  setup(props: TransitionGroupProps, { slots }) {
     const instance = currentInstance
     const state = useTransitionState()
     const cssTransitionProps = resolveTransitionProps(props)

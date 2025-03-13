@@ -47,6 +47,14 @@ const MyTransition = defineVaporComponent((props, { slots }) => {
   return createComponent(VaporTransition, { name: () => 'test' }, slots)
 })
 
+const MyTransitionFallthroughAttr = defineVaporComponent((props, { slots }) => {
+  return createComponent(
+    VaporTransition,
+    { foo: () => 1, name: () => 'test' },
+    slots,
+  )
+})
+
 const One = defineVaporComponent({
   setup() {
     return createIf(
@@ -126,7 +134,7 @@ function changeView() {
       <button @click="toggle = !toggle">button</button>
     </div>
     <div class="if-events-with-args">
-      <div id="container">
+      <div>
         <transition
           :css="false"
           name="test"
@@ -282,6 +290,23 @@ function changeView() {
       </div>
       <button class="toggle" @click="toggle = !toggle">button</button>
       <button class="change" @click="changeView">changeView button</button>
+    </div>
+    <div class="if-at-component-root-level">
+      <div>
+        <transition name="test" mode="out-in">
+          <component class="test" :is="view"></component>
+        </transition>
+      </div>
+      <button class="toggle" @click="toggle = !toggle">button</button>
+      <button class="change" @click="changeView">changeView button</button>
+    </div>
+    <div class="if-fallthrough-attr">
+      <div>
+        <MyTransitionFallthroughAttr>
+          <div v-if="toggle">content</div>
+        </MyTransitionFallthroughAttr>
+      </div>
+      <button @click="toggle = !toggle">button fallthrough</button>
     </div>
 
     <div class="vshow">
