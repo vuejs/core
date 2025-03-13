@@ -1,5 +1,13 @@
 <script vapor>
-import { ref, shallowRef } from 'vue'
+import {
+  createComponent,
+  defineVaporComponent,
+  ref,
+  shallowRef,
+  VaporTransition,
+  createIf,
+  template,
+} from 'vue'
 const show = ref(true)
 const toggle = ref(true)
 const count = ref(0)
@@ -8,9 +16,11 @@ const timeout = (fn, time) => setTimeout(fn, time)
 
 let calls = {
   basic: [],
-  withOutAppear: [],
+  withoutAppear: [],
   withArgs: [],
   enterCancel: [],
+  withAppear: [],
+  cssFalse: [],
 }
 window.getCalls = key => calls[key]
 window.resetCalls = key => (calls[key] = [])
@@ -33,6 +43,28 @@ function toggleInteropComponent() {
 }
 
 const name = ref('test')
+const MyTransition = defineVaporComponent((props, { slots }) => {
+  return createComponent(VaporTransition, { name: () => 'test' }, slots)
+})
+
+const One = defineVaporComponent({
+  setup() {
+    return createIf(
+      () => false,
+      () => template('<div>one</div>', true)(),
+    )
+  },
+})
+
+const Two = defineVaporComponent({
+  setup() {
+    return template('<div>two</div>', true)()
+  },
+})
+const view = shallowRef(One)
+function changeView() {
+  view.value = view.value === One ? Two : One
+}
 </script>
 
 <template>
@@ -81,12 +113,12 @@ const name = ref('test')
       <div>
         <transition
           name="test"
-          @before-enter="() => calls.withOutAppear.push('beforeEnter')"
-          @enter="() => calls.withOutAppear.push('onEnter')"
-          @after-enter="() => calls.withOutAppear.push('afterEnter')"
-          @beforeLeave="() => calls.withOutAppear.push('beforeLeave')"
-          @leave="() => calls.withOutAppear.push('onLeave')"
-          @afterLeave="() => calls.withOutAppear.push('afterLeave')"
+          @before-enter="() => calls.withoutAppear.push('beforeEnter')"
+          @enter="() => calls.withoutAppear.push('onEnter')"
+          @after-enter="() => calls.withoutAppear.push('afterEnter')"
+          @beforeLeave="() => calls.withoutAppear.push('beforeLeave')"
+          @leave="() => calls.withoutAppear.push('onLeave')"
+          @afterLeave="() => calls.withoutAppear.push('afterLeave')"
         >
           <div v-if="toggle" class="test">content</div>
         </transition>
@@ -139,7 +171,7 @@ const name = ref('test')
           <div v-if="toggle" class="test">content</div>
         </transition>
       </div>
-      <button id="toggleBtn" @click="toggle = !toggle">button</button>
+      <button @click="toggle = !toggle">button</button>
     </div>
     <div class="if-enter-cancelled">
       <div>
@@ -169,6 +201,87 @@ const name = ref('test')
         </transition>
       </div>
       <button @click="toggle = !toggle">button</button>
+    </div>
+    <div class="if-events-with-appear">
+      <div>
+        <transition
+          name="test"
+          appear
+          appear-from-class="test-appear-from"
+          appear-to-class="test-appear-to"
+          appear-active-class="test-appear-active"
+          @beforeEnter="() => calls.withAppear.push('beforeEnter')"
+          @enter="() => calls.withAppear.push('onEnter')"
+          @afterEnter="() => calls.withAppear.push('afterEnter')"
+          @beforeLeave="() => calls.withAppear.push('beforeLeave')"
+          @leave="() => calls.withAppear.push('onLeave')"
+          @afterLeave="() => calls.withAppear.push('afterLeave')"
+          @beforeAppear="() => calls.withAppear.push('beforeAppear')"
+          @appear="() => calls.withAppear.push('onAppear')"
+          @afterAppear="() => calls.withAppear.push('afterAppear')"
+        >
+          <div v-if="toggle" class="test">content</div>
+        </transition>
+      </div>
+      <button @click="toggle = !toggle">button</button>
+    </div>
+    <div class="if-css-false">
+      <div>
+        <transition
+          :css="false"
+          name="test"
+          @beforeEnter="() => calls.cssFalse.push('beforeEnter')"
+          @enter="() => calls.cssFalse.push('onEnter')"
+          @afterEnter="() => calls.cssFalse.push('afterEnter')"
+          @beforeLeave="() => calls.cssFalse.push('beforeLeave')"
+          @leave="() => calls.cssFalse.push('onLeave')"
+          @afterLeave="() => calls.cssFalse.push('afterLeave')"
+        >
+          <div v-if="toggle" class="test">content</div>
+        </transition>
+      </div>
+      <button @click="toggle = !toggle"></button>
+    </div>
+    <div class="if-no-trans">
+      <div>
+        <transition name="noop">
+          <div v-if="toggle">content</div>
+        </transition>
+      </div>
+      <button @click="toggle = !toggle">button</button>
+    </div>
+    <div class="if-ani">
+      <div>
+        <transition name="test-anim">
+          <div v-if="toggle">content</div>
+        </transition>
+      </div>
+      <button @click="toggle = !toggle">button</button>
+    </div>
+    <div class="if-ani-explicit-type">
+      <div>
+        <transition name="test-anim-long" type="animation">
+          <div v-if="toggle">content</div>
+        </transition>
+      </div>
+      <button @click="toggle = !toggle">button</button>
+    </div>
+    <div class="if-high-order">
+      <div>
+        <MyTransition>
+          <div v-if="toggle" class="test">content</div>
+        </MyTransition>
+      </div>
+      <button @click="toggle = !toggle">button</button>
+    </div>
+    <div class="if-empty-root">
+      <div>
+        <transition name="test">
+          <component class="test" :is="view"></component>
+        </transition>
+      </div>
+      <button class="toggle" @click="toggle = !toggle">button</button>
+      <button class="change" @click="changeView">changeView button</button>
     </div>
 
     <div class="vshow">
