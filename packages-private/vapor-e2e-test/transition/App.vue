@@ -4,13 +4,16 @@ const show = ref(true)
 const toggle = ref(true)
 const count = ref(0)
 
+const timeout = (fn, time) => setTimeout(fn, time)
+
 let calls = {
   basic: [],
   withOutAppear: [],
-  withArgs: []
+  withArgs: [],
+  enterCancel: [],
 }
-window.getCalls = (key) => calls[key]
-window.resetCalls = (key) => calls[key] = []
+window.getCalls = key => calls[key]
+window.resetCalls = key => (calls[key] = [])
 
 import VaporCompA from './components/VaporCompA.vue'
 import VaporCompB from './components/VaporCompB.vue'
@@ -52,8 +55,14 @@ const name = ref('test')
     </div>
     <div class="if-custom-classes">
       <div>
-        <transition enter-from-class="hello-from" enter-active-class="hello-active" enter-to-class="hello-to"
-          leave-from-class="bye-from" leave-active-class="bye-active" leave-to-class="bye-to">
+        <transition
+          enter-from-class="hello-from"
+          enter-active-class="hello-active"
+          enter-to-class="hello-to"
+          leave-from-class="bye-from"
+          leave-active-class="bye-active"
+          leave-to-class="bye-to"
+        >
           <div v-if="toggle" class="test">content</div>
         </transition>
       </div>
@@ -70,10 +79,15 @@ const name = ref('test')
     </div>
     <div class="if-events-without-appear">
       <div>
-        <transition name="test" @before-enter="() => calls.withOutAppear.push('beforeEnter')"
-          @enter="() => calls.withOutAppear.push('onEnter')" @after-enter="() => calls.withOutAppear.push('afterEnter')"
+        <transition
+          name="test"
+          @before-enter="() => calls.withOutAppear.push('beforeEnter')"
+          @enter="() => calls.withOutAppear.push('onEnter')"
+          @after-enter="() => calls.withOutAppear.push('afterEnter')"
           @beforeLeave="() => calls.withOutAppear.push('beforeLeave')"
-          @leave="() => calls.withOutAppear.push('onLeave')" @afterLeave="() => calls.withOutAppear.push('afterLeave')">
+          @leave="() => calls.withOutAppear.push('onLeave')"
+          @afterLeave="() => calls.withOutAppear.push('afterLeave')"
+        >
           <div v-if="toggle" class="test">content</div>
         </transition>
       </div>
@@ -81,30 +95,80 @@ const name = ref('test')
     </div>
     <div class="if-events-with-args">
       <div id="container">
-        <transition :css="false" name="test" @before-enter="(el) => {
-          calls.withArgs.push('beforeEnter');
-          el.classList.add('before-enter')
-        }" @enter="(el, done) => {
-          calls.withArgs.push('onEnter');
-          el.classList.add('enter')
-          setTimeout(done, 200)
-        }" @after-enter="(el) => {
-          calls.withArgs.push('afterEnter');
-          el.classList.add('after-enter')
-        }" @before-leave="(el) => {
-          calls.withArgs.push('beforeLeave');
-          el.classList.add('before-leave')
-        }" @leave="(el, done) => {
-          calls.withArgs.push('onLeave');
-          el.classList.add('leave')
-          setTimeout(done, 200)
-        }" @after-leave="() => {
-          calls.withArgs.push('afterLeave');
-        }">
+        <transition
+          :css="false"
+          name="test"
+          @before-enter="
+            el => {
+              calls.withArgs.push('beforeEnter')
+              el.classList.add('before-enter')
+            }
+          "
+          @enter="
+            (el, done) => {
+              calls.withArgs.push('onEnter')
+              el.classList.add('enter')
+              timeout(done, 200)
+            }
+          "
+          @after-enter="
+            el => {
+              calls.withArgs.push('afterEnter')
+              el.classList.add('after-enter')
+            }
+          "
+          @before-leave="
+            el => {
+              calls.withArgs.push('beforeLeave')
+              el.classList.add('before-leave')
+            }
+          "
+          @leave="
+            (el, done) => {
+              calls.withArgs.push('onLeave')
+              el.classList.add('leave')
+              timeout(done, 200)
+            }
+          "
+          @after-leave="
+            () => {
+              calls.withArgs.push('afterLeave')
+            }
+          "
+        >
           <div v-if="toggle" class="test">content</div>
         </transition>
       </div>
       <button id="toggleBtn" @click="toggle = !toggle">button</button>
+    </div>
+    <div class="if-enter-cancelled">
+      <div>
+        <transition
+          name="test"
+          @enter-cancelled="
+            () => {
+              calls.enterCancel.push('enterCancelled')
+            }
+          "
+        >
+          <div v-if="!toggle" class="test">content</div>
+        </transition>
+      </div>
+      <button @click="toggle = !toggle">cancelled</button>
+    </div>
+    <div class="if-appear">
+      <div>
+        <transition
+          name="test"
+          appear
+          appear-from-class="test-appear-from"
+          appear-to-class="test-appear-to"
+          appear-active-class="test-appear-active"
+        >
+          <div v-if="toggle" class="test">content</div>
+        </transition>
+      </div>
+      <button @click="toggle = !toggle">button</button>
     </div>
 
     <div class="vshow">
@@ -115,11 +179,18 @@ const name = ref('test')
     </div>
     <div class="vif">
       <button @click="toggle = !toggle">Toggle</button>
-      <Transition appear @beforeEnter="() => calls.basic.push('beforeEnter')" @enter="() => calls.basic.push('onEnter')"
-        @afterEnter="() => calls.basic.push('afterEnter')" @beforeLeave="() => calls.basic.push('beforeLeave')"
-        @leave="() => calls.basic.push('onLeave')" @afterLeave="() => calls.basic.push('afterLeave')"
-        @beforeAppear="() => calls.basic.push('beforeAppear')" @appear="() => calls.basic.push('onAppear')"
-        @afterAppear="() => calls.basic.push('afterAppear')">
+      <Transition
+        appear
+        @beforeEnter="() => calls.basic.push('beforeEnter')"
+        @enter="() => calls.basic.push('onEnter')"
+        @afterEnter="() => calls.basic.push('afterEnter')"
+        @beforeLeave="() => calls.basic.push('beforeLeave')"
+        @leave="() => calls.basic.push('onLeave')"
+        @afterLeave="() => calls.basic.push('afterLeave')"
+        @beforeAppear="() => calls.basic.push('beforeAppear')"
+        @appear="() => calls.basic.push('onAppear')"
+        @afterAppear="() => calls.basic.push('afterAppear')"
+      >
         <h1 v-if="toggle">vIf</h1>
       </Transition>
     </div>
@@ -182,7 +253,7 @@ const name = ref('test')
 }
 </style>
 <style>
-.transition-container>div {
+.transition-container > div {
   padding: 15px;
   border: 1px solid #f7f7f7;
   margin-top: 15px;

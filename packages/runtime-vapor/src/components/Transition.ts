@@ -41,18 +41,23 @@ export const VaporTransition: FunctionalComponent<TransitionProps> =
     checkTransitionMode(mode)
 
     let resolvedProps
+    let isMounted = false
     renderEffect(() => {
       resolvedProps = resolveTransitionProps(props)
-      // only update props for Fragment block, for later reusing
-      if (isFragment(children) && children.$transition) {
-        children.$transition.props = resolvedProps
-      } else {
-        // replace existing transition hooks
-        const child = findTransitionBlock(children)
-        if (child && child.$transition) {
-          child.$transition.props = resolvedProps
-          applyTransitionHooks(child, child.$transition)
+      if (isMounted) {
+        // only update props for Fragment block, for later reusing
+        if (isFragment(children)) {
+          if (children.$transition) children.$transition.props = resolvedProps
+        } else {
+          // replace existing transition hooks
+          const child = findTransitionBlock(children)
+          if (child && child.$transition) {
+            child.$transition.props = resolvedProps
+            applyTransitionHooks(child, child.$transition)
+          }
         }
+      } else {
+        isMounted = true
       }
     })
 
@@ -133,8 +138,13 @@ export function applyTransitionHooks(
   block: Block,
   hooks: VaporTransitionHooks,
 ): VaporTransitionHooks {
-  const child = findTransitionBlock(block)
-  if (!child) return hooks
+  const inFragment = isFragment(block)
+  const child = findTransitionBlock(block, inFragment)
+  if (!child) {
+    // set transition hooks on fragment for reusing during it's updating
+    if (inFragment) setTransitionHooksToFragment(block, hooks)
+    return hooks
+  }
 
   const { props, state, delayedLeave } = hooks
   let resolvedHooks = resolveTransitionHooks(
@@ -146,10 +156,7 @@ export function applyTransitionHooks(
   )
   resolvedHooks.delayedLeave = delayedLeave
   setTransitionHooks(child, resolvedHooks)
-  if (isFragment(block)) {
-    // also set transition hooks on fragment for reusing during it's updating
-    setTransitionHooksToFragment(block, resolvedHooks)
-  }
+  if (inFragment) setTransitionHooksToFragment(block, resolvedHooks)
   return resolvedHooks
 }
 
@@ -203,7 +210,10 @@ export function applyTransitionLeaveHooks(
 }
 
 const transitionBlockCache = new WeakMap<Block, TransitionBlock>()
-export function findTransitionBlock(block: Block): TransitionBlock | undefined {
+export function findTransitionBlock(
+  block: Block,
+  inFragment: boolean = false,
+): TransitionBlock | undefined {
   if (transitionBlockCache.has(block)) {
     return transitionBlockCache.get(block)
   }
@@ -238,11 +248,11 @@ export function findTransitionBlock(block: Block): TransitionBlock | undefined {
     if (block.insert) {
       child = block
     } else {
-      child = findTransitionBlock(block.nodes)
+      child = findTransitionBlock(block.nodes, true)
     }
   }
 
-  if (__DEV__ && !child) {
+  if (__DEV__ && !child && !inFragment) {
     warn('Transition component has no valid child element')
   }
 

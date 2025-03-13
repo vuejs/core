@@ -349,8 +349,55 @@ describe('vapor transition', () => {
       E2E_TIMEOUT,
     )
 
-    test.todo('onEnterCancelled', async () => {}, E2E_TIMEOUT)
-    test.todo('transition on appear', async () => {}, E2E_TIMEOUT)
+    test(
+      'onEnterCancelled',
+      async () => {
+        const btnSelector = '.if-enter-cancelled > button'
+        const containerSelector = '.if-enter-cancelled > div'
+        const childSelector = `${containerSelector} > div`
+
+        expect(await html(containerSelector)).toBe('')
+
+        // enter
+        expect(
+          (await transitionStart(btnSelector, childSelector)).classNames,
+        ).toStrictEqual(['test', 'test-enter-from', 'test-enter-active'])
+        await nextFrame()
+        expect(await classList(childSelector)).toStrictEqual([
+          'test',
+          'test-enter-active',
+          'test-enter-to',
+        ])
+
+        // cancel (leave)
+        expect(
+          (await transitionStart(btnSelector, childSelector)).classNames,
+        ).toStrictEqual(['test', 'test-leave-from', 'test-leave-active'])
+        let calls = await page().evaluate(() => {
+          return (window as any).getCalls('enterCancel')
+        })
+        expect(calls).toStrictEqual(['enterCancelled'])
+        await nextFrame()
+        expect(await classList(childSelector)).toStrictEqual([
+          'test',
+          'test-leave-active',
+          'test-leave-to',
+        ])
+        await transitionFinish()
+        expect(await html(containerSelector)).toBe('')
+      },
+      E2E_TIMEOUT,
+    )
+
+    test.todo(
+      'transition on appear',
+      async () => {
+        const btnSelector = '.if-appear > button'
+        const containerSelector = '.if-appear > div'
+        const childSelector = `${containerSelector} > div`
+      },
+      E2E_TIMEOUT,
+    )
     test.todo('transition events with appear', async () => {}, E2E_TIMEOUT)
     test.todo('no transition detected', async () => {}, E2E_TIMEOUT)
     test.todo('animations', async () => {}, E2E_TIMEOUT)
