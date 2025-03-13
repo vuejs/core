@@ -43,16 +43,23 @@ export const VaporTransition: FunctionalComponent<TransitionProps> =
     let resolvedProps
     renderEffect(() => {
       resolvedProps = resolveTransitionProps(props)
+      // only update props for Fragment block, for later reusing
       if (isFragment(children) && children.$transition) {
         children.$transition.props = resolvedProps
+      } else {
+        // replace existing transition hooks
+        const child = findTransitionBlock(children)
+        if (child && child.$transition) {
+          child.$transition.props = resolvedProps
+          applyTransitionHooks(child, child.$transition)
+        }
       }
     })
 
-    const hooks = {
+    applyTransitionHooks(children, {
       state: useTransitionState(),
       props: resolvedProps!,
-    } as VaporTransitionHooks
-    applyTransitionEnterHooks(children, hooks)
+    } as VaporTransitionHooks)
 
     return children
   })
@@ -122,7 +129,7 @@ export function resolveTransitionHooks(
   return hooks
 }
 
-export function applyTransitionEnterHooks(
+export function applyTransitionHooks(
   block: Block,
   hooks: VaporTransitionHooks,
 ): VaporTransitionHooks {
@@ -130,20 +137,20 @@ export function applyTransitionEnterHooks(
   if (!child) return hooks
 
   const { props, state, delayedLeave } = hooks
-  let enterHooks = resolveTransitionHooks(
+  let resolvedHooks = resolveTransitionHooks(
     child,
     props,
     state,
     currentInstance!,
-    hooks => (enterHooks = hooks as VaporTransitionHooks),
+    hooks => (resolvedHooks = hooks as VaporTransitionHooks),
   )
-  enterHooks.delayedLeave = delayedLeave
-  setTransitionHooks(child, enterHooks)
+  resolvedHooks.delayedLeave = delayedLeave
+  setTransitionHooks(child, resolvedHooks)
   if (isFragment(block)) {
     // also set transition hooks on fragment for reusing during it's updating
-    setTransitionHooksToFragment(block, enterHooks)
+    setTransitionHooksToFragment(block, resolvedHooks)
   }
-  return enterHooks
+  return resolvedHooks
 }
 
 export function applyTransitionLeaveHooks(

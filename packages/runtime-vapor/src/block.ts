@@ -16,7 +16,7 @@ import {
   performTransitionLeave,
 } from '@vue/runtime-dom'
 import {
-  applyTransitionEnterHooks,
+  applyTransitionHooks,
   applyTransitionLeaveHooks,
 } from './components/Transition'
 
@@ -85,7 +85,7 @@ export class DynamicFragment extends VaporFragment {
         this.scope = new EffectScope()
         this.nodes = this.scope.run(render) || []
         if (transition) {
-          this.$transition = applyTransitionEnterHooks(this.nodes, transition)
+          this.$transition = applyTransitionHooks(this.nodes, transition)
         }
         if (parent) insert(this.nodes, parent, this.anchor)
       } else {

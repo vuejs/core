@@ -22,7 +22,7 @@ import { currentInstance, isVaporComponent } from './component'
 import type { DynamicSlot } from './componentSlots'
 import { renderEffect } from './renderEffect'
 import { VaporVForFlags } from '../../shared/src/vaporFlags'
-import { applyTransitionEnterHooks } from './components/Transition'
+import { applyTransitionHooks } from './components/Transition'
 
 class ForBlock extends VaporFragment {
   scope: EffectScope | undefined
@@ -318,7 +318,7 @@ export const createFor = (
 
     // apply transition for new nodes
     if (frag.$transition) {
-      applyTransitionEnterHooks(block.nodes, frag.$transition)
+      applyTransitionHooks(block.nodes, frag.$transition)
     }
 
     if (parent) insert(block.nodes, parent, anchor)
