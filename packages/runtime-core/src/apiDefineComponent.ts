@@ -174,6 +174,7 @@ type InferComponent<
 > & {
   props?: T['props']
   __typeProps?: T['__typeProps']
+  __typeEmits?: T['__typeEmits']
 
   /**
    * #3468
