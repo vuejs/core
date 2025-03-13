@@ -28,6 +28,7 @@ export interface TransitionOptions {
 export interface VaporTransitionHooks extends TransitionHooks {
   state: TransitionState
   props: TransitionProps
+  instance: VaporComponentInstance
   // mark transition hooks as disabled so that it skips during
   // inserting
   disabled?: boolean

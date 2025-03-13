@@ -24,6 +24,7 @@ import {
 import { type VaporComponentInstance, isVaporComponent } from '../component'
 import { isArray } from '@vue/shared'
 import { renderEffect } from '../renderEffect'
+import { setDynamicProps } from '../dom/prop'
 
 const decorate = (t: typeof VaporTransition) => {
   t.displayName = 'VaporTransition'
@@ -47,7 +48,9 @@ export const VaporTransition: FunctionalComponent<TransitionProps> =
       if (isMounted) {
         // only update props for Fragment block, for later reusing
         if (isFragment(children)) {
-          if (children.$transition) children.$transition.props = resolvedProps
+          if (children.$transition) {
+            children.$transition.props = resolvedProps
+          }
         } else {
           // replace existing transition hooks
           const child = findTransitionBlock(children)
@@ -64,6 +67,7 @@ export const VaporTransition: FunctionalComponent<TransitionProps> =
     applyTransitionHooks(children, {
       state: useTransitionState(),
       props: resolvedProps!,
+      instance: currentInstance!,
     } as VaporTransitionHooks)
 
     return children
@@ -131,32 +135,41 @@ export function resolveTransitionHooks(
   ) as VaporTransitionHooks
   hooks.state = state
   hooks.props = props
+  hooks.instance = instance as VaporComponentInstance
   return hooks
 }
 
 export function applyTransitionHooks(
   block: Block,
   hooks: VaporTransitionHooks,
+  fallthroughAttrs: boolean = true,
 ): VaporTransitionHooks {
-  const inFragment = isFragment(block)
-  const child = findTransitionBlock(block, inFragment)
+  const isFrag = isFragment(block)
+  const child = findTransitionBlock(block)
   if (!child) {
     // set transition hooks on fragment for reusing during it's updating
-    if (inFragment) setTransitionHooksToFragment(block, hooks)
+    if (isFrag) setTransitionHooksToFragment(block, hooks)
     return hooks
   }
 
-  const { props, state, delayedLeave } = hooks
+  const { props, instance, state, delayedLeave } = hooks
   let resolvedHooks = resolveTransitionHooks(
     child,
     props,
     state,
-    currentInstance!,
+    instance,
     hooks => (resolvedHooks = hooks as VaporTransitionHooks),
   )
   resolvedHooks.delayedLeave = delayedLeave
   setTransitionHooks(child, resolvedHooks)
-  if (inFragment) setTransitionHooksToFragment(block, resolvedHooks)
+  if (isFrag) setTransitionHooksToFragment(block, resolvedHooks)
+
+  // TODO handle attrs update
+  // fallthrough attrs
+  if (fallthroughAttrs && instance.hasFallthrough) {
+    setDynamicProps(child, [instance.attrs])
+  }
+
   return resolvedHooks
 }
 
@@ -168,12 +181,12 @@ export function applyTransitionLeaveHooks(
   const leavingBlock = findTransitionBlock(block)
   if (!leavingBlock) return undefined
 
-  const { props, state } = enterHooks
+  const { props, state, instance } = enterHooks
   const leavingHooks = resolveTransitionHooks(
     leavingBlock,
     props,
     state,
-    currentInstance!,
+    instance,
   )
   setTransitionHooks(leavingBlock, leavingHooks)
 
@@ -218,6 +231,7 @@ export function findTransitionBlock(
     return transitionBlockCache.get(block)
   }
 
+  let isFrag = false
   let child: TransitionBlock | undefined
   if (block instanceof Node) {
     // transition can only be applied on Element child
@@ -244,7 +258,7 @@ export function findTransitionBlock(
         if (!__DEV__) break
       }
     }
-  } else if (isFragment(block)) {
+  } else if ((isFrag = isFragment(block))) {
     if (block.insert) {
       child = block
     } else {
@@ -252,7 +266,7 @@ export function findTransitionBlock(
     }
   }
 
-  if (__DEV__ && !child && !inFragment) {
+  if (__DEV__ && !child && !inFragment && !isFrag) {
     warn('Transition component has no valid child element')
   }
 

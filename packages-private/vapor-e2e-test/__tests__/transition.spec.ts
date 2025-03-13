@@ -824,7 +824,7 @@ describe('vapor transition', () => {
       E2E_TIMEOUT,
     )
 
-    test.todo(
+    test(
       'wrapping transition + fallthrough attrs',
       async () => {
         const btnSelector = '.if-fallthrough-attr > button'
