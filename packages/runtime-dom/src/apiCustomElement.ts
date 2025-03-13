@@ -229,7 +229,7 @@ export class VueElement
   private _connected = false
   private _resolved = false
   private _numberProps: Record<string, true> | null = null
-  private _styleChildren = new WeakSet()
+  private _styleChildren = new WeakMap<ConcreteComponent, HTMLStyleElement[]>()
   private _pendingResolve: Promise<void> | undefined
   private _parent: VueElement | undefined
   /**
@@ -581,18 +581,29 @@ export class VueElement
     owner?: ConcreteComponent,
   ) {
     if (!styles) return
+    const styleList: HTMLStyleElement[] = []
     if (owner) {
-      if (owner === this._def || this._styleChildren.has(owner)) {
+      if (owner === this._def) {
         return
       }
-      this._styleChildren.add(owner)
+      if (this._styleChildren.has(owner)) {
+        const styleList = this._styleChildren.get(owner)!
+        styleList.forEach(s => s.remove())
+        this.shadowRoot!.prepend(...styleList)
+        return
+      }
+      this._styleChildren.set(owner, styleList)
     }
+
     const nonce = this._nonce
     for (let i = styles.length - 1; i >= 0; i--) {
       const s = document.createElement('style')
       if (nonce) s.setAttribute('nonce', nonce)
       s.textContent = styles[i]
       this.shadowRoot!.prepend(s)
+      if (owner) {
+        styleList.unshift(s)
+      }
       // record for HMR
       if (__DEV__) {
         if (owner) {
