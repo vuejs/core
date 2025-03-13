@@ -214,8 +214,141 @@ describe('vapor transition', () => {
       },
       E2E_TIMEOUT,
     )
-    test.todo('transition events without appear', async () => {}, E2E_TIMEOUT)
-    test.todo('events with arguments', async () => {}, E2E_TIMEOUT)
+
+    test(
+      'transition events without appear',
+      async () => {
+        const btnSelector = '.if-events-without-appear > button'
+        const containerSelector = '.if-events-without-appear > div'
+        const childSelector = `${containerSelector} > div`
+
+        expect(await html(containerSelector)).toBe(
+          '<div class="test">content</div>',
+        )
+        // leave
+        expect(
+          (await transitionStart(btnSelector, childSelector)).classNames,
+        ).toStrictEqual(['test', 'test-leave-from', 'test-leave-active'])
+
+        let calls = await page().evaluate(() => {
+          return (window as any).getCalls('withOutAppear')
+        })
+        expect(calls).toStrictEqual(['beforeLeave', 'onLeave'])
+        await nextFrame()
+        expect(await classList(childSelector)).toStrictEqual([
+          'test',
+          'test-leave-active',
+          'test-leave-to',
+        ])
+
+        expect(
+          await page().evaluate(() => {
+            return (window as any).getCalls('withOutAppear')
+          }),
+        ).not.contain('afterLeave')
+        await transitionFinish()
+        expect(await html(containerSelector)).toBe('')
+        expect(
+          await page().evaluate(() => {
+            return (window as any).getCalls('withOutAppear')
+          }),
+        ).toStrictEqual(['beforeLeave', 'onLeave', 'afterLeave'])
+
+        await page().evaluate(() => {
+          ;(window as any).resetCalls('withOutAppear')
+        })
+
+        // enter
+        expect(
+          (await transitionStart(btnSelector, childSelector)).classNames,
+        ).toStrictEqual(['test', 'test-enter-from', 'test-enter-active'])
+
+        calls = await page().evaluate(() => {
+          return (window as any).getCalls('withOutAppear')
+        })
+        expect(calls).toStrictEqual(['beforeEnter', 'onEnter'])
+        await nextFrame()
+        expect(await classList(childSelector)).toStrictEqual([
+          'test',
+          'test-enter-active',
+          'test-enter-to',
+        ])
+        expect(
+          await page().evaluate(() => {
+            return (window as any).getCalls('withOutAppear')
+          }),
+        ).not.contain('afterEnter')
+        await transitionFinish()
+        expect(await html(containerSelector)).toBe(
+          '<div class="test">content</div>',
+        )
+        expect(
+          await page().evaluate(() => {
+            return (window as any).getCalls('withOutAppear')
+          }),
+        ).toStrictEqual(['beforeEnter', 'onEnter', 'afterEnter'])
+      },
+      E2E_TIMEOUT,
+    )
+
+    test(
+      'events with arguments',
+      async () => {
+        const btnSelector = '.if-events-with-args > button'
+        const containerSelector = '.if-events-with-args > div'
+        const childSelector = `${containerSelector} > div`
+
+        expect(await html(containerSelector)).toBe(
+          '<div class="test">content</div>',
+        )
+
+        // leave
+        await click(btnSelector)
+        let calls = await page().evaluate(() => {
+          return (window as any).getCalls('withArgs')
+        })
+        expect(calls).toStrictEqual(['beforeLeave', 'onLeave'])
+        expect(await classList(childSelector)).toStrictEqual([
+          'test',
+          'before-leave',
+          'leave',
+        ])
+
+        await timeout(200 + buffer)
+        calls = await page().evaluate(() => {
+          return (window as any).getCalls('withArgs')
+        })
+        expect(calls).toStrictEqual(['beforeLeave', 'onLeave', 'afterLeave'])
+        expect(await html(containerSelector)).toBe('')
+
+        await page().evaluate(() => {
+          ;(window as any).resetCalls('withArgs')
+        })
+
+        // enter
+        await click(btnSelector)
+        calls = await page().evaluate(() => {
+          return (window as any).getCalls('withArgs')
+        })
+        expect(calls).toStrictEqual(['beforeEnter', 'onEnter'])
+        expect(await classList(childSelector)).toStrictEqual([
+          'test',
+          'before-enter',
+          'enter',
+        ])
+
+        await timeout(200 + buffer)
+        calls = await page().evaluate(() => {
+          return (window as any).getCalls('withArgs')
+        })
+        expect(calls).toStrictEqual(['beforeEnter', 'onEnter', 'afterEnter'])
+        expect(await html(containerSelector)).toBe(
+          '<div class="test before-enter enter after-enter">content</div>',
+        )
+      },
+      E2E_TIMEOUT,
+    )
+
     test.todo('onEnterCancelled', async () => {}, E2E_TIMEOUT)
     test.todo('transition on appear', async () => {}, E2E_TIMEOUT)
     test.todo('transition events with appear', async () => {}, E2E_TIMEOUT)
@@ -353,11 +486,11 @@ describe('vapor transition', () => {
       await nextFrame()
       expect(await isVisible(containerSelector)).toBe(true)
 
-      const calls = await page().evaluate(() => {
-        return (window as any).calls
-      })
-
-      expect(calls).toStrictEqual([
+      expect(
+        await page().evaluate(() => {
+          return (window as any).getCalls('basic')
+        }),
+      ).toStrictEqual([
         'beforeAppear',
         'onAppear',
         'afterAppear',
