@@ -586,10 +586,9 @@ export class VueElement
       if (owner === this._def) {
         return
       }
-      if (this._styleChildren.has(owner)) {
-        const styleList = this._styleChildren.get(owner)!
-        styleList.forEach(s => s.remove())
-        this.shadowRoot!.prepend(...styleList)
+      const styleChild = this._styleChildren.get(owner)
+      if (styleChild) {
+        this.shadowRoot!.prepend(...styleChild)
         return
       }
       this._styleChildren.set(owner, styleList)
