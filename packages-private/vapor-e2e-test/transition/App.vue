@@ -13,6 +13,7 @@ const toggle = ref(true)
 const count = ref(0)
 
 const timeout = (fn, time) => setTimeout(fn, time)
+const duration = typeof process !== 'undefined' && process.env.CI ? 200 : 50
 
 let calls = {
   basic: [],
@@ -22,6 +23,10 @@ let calls = {
   withAppear: [],
   cssFalse: [],
   ifInOut: [],
+
+  show: [],
+  showLeaveCancel: [],
+  showAppear: [],
 }
 window.getCalls = key => calls[key]
 window.resetCalls = key => (calls[key] = [])
@@ -88,6 +93,7 @@ function changeViewInOut() {
 
 <template>
   <div class="transition-container">
+    <!-- work with vif  -->
     <div class="if-basic">
       <div>
         <transition>
@@ -337,36 +343,111 @@ function changeViewInOut() {
       </div>
       <button @click="changeViewInOut">button</button>
     </div>
+    <!-- work with vif end -->
 
-    <div class="vshow">
-      <button @click="show = !show">Show</button>
-      <Transition>
-        <h1 v-show="show">vShow</h1>
-      </Transition>
+    <!-- work with vshow  -->
+    <div class="show-named">
+      <div>
+        <transition name="test">
+          <div v-show="toggle" class="test">content</div>
+        </transition>
+      </div>
+      <button @click="toggle = !toggle">button</button>
     </div>
-    <div class="vif">
-      <button @click="toggle = !toggle">Toggle</button>
-      <Transition
-        appear
-        @beforeEnter="() => calls.basic.push('beforeEnter')"
-        @enter="() => calls.basic.push('onEnter')"
-        @afterEnter="() => calls.basic.push('afterEnter')"
-        @beforeLeave="() => calls.basic.push('beforeLeave')"
-        @leave="() => calls.basic.push('onLeave')"
-        @afterLeave="() => calls.basic.push('afterLeave')"
-        @beforeAppear="() => calls.basic.push('beforeAppear')"
-        @appear="() => calls.basic.push('onAppear')"
-        @afterAppear="() => calls.basic.push('afterAppear')"
-      >
-        <h1 v-if="toggle">vIf</h1>
-      </Transition>
+    <div class="show-events">
+      <div>
+        <transition
+          name="test"
+          @beforeEnter="() => calls.show.push('beforeEnter')"
+          @enter="() => calls.show.push('onEnter')"
+          @afterEnter="() => calls.show.push('afterEnter')"
+          @beforeLeave="() => calls.show.push('beforeLeave')"
+          @leave="() => calls.show.push('onLeave')"
+          @afterLeave="() => calls.show.push('afterLeave')"
+        >
+          <div v-show="toggle" class="test">content</div>
+        </transition>
+      </div>
+      <button @click="toggle = !toggle">button</button>
     </div>
+    <div class="show-leave-cancelled">
+      <div>
+        <transition
+          name="test"
+          @leave-cancelled="() => calls.showLeaveCancel.push('leaveCancelled')"
+        >
+          <div v-show="toggle" class="test">content</div>
+        </transition>
+      </div>
+      <button @click="toggle = !toggle">leave cancelled</button>
+    </div>
+    <div class="show-appear">
+      <div>
+        <transition
+          name="test"
+          appear
+          appear-from-class="test-appear-from"
+          appear-to-class="test-appear-to"
+          appear-active-class="test-appear-active"
+          @beforeEnter="() => calls.showAppear.push('beforeEnter')"
+          @enter="() => calls.showAppear.push('onEnter')"
+          @afterEnter="() => calls.showAppear.push('afterEnter')"
+        >
+          <div v-show="toggle" class="test">content</div>
+        </transition>
+      </div>
+      <button @click="toggle = !toggle">button</button>
+    </div>
+    <!-- work with vshow end -->
+
+    <!-- explicit durations -->
+    <div class="duration-single-value">
+      <div>
+        <transition name="test" :duration="duration * 2">
+          <div v-if="toggle" class="test">content</div>
+        </transition>
+      </div>
+      <button @click="toggle = !toggle">button</button>
+    </div>
+    <div class="duration-enter">
+      <div>
+        <transition name="test" :duration="{ enter: duration * 2 }">
+          <div v-if="toggle" class="test">content</div>
+        </transition>
+      </div>
+      <button @click="toggle = !toggle">button</button>
+    </div>
+    <div class="duration-leave">
+      <div>
+        <transition name="test" :duration="{ leave: duration * 2 }">
+          <div v-if="toggle" class="test">content</div>
+        </transition>
+      </div>
+      <button @click="toggle = !toggle">button</button>
+    </div>
+    <div class="duration-enter-leave">
+      <div>
+        <transition
+          name="test"
+          :duration="{ enter: duration * 4, leave: duration * 2 }"
+        >
+          <div v-if="toggle" class="test">content</div>
+        </transition>
+      </div>
+      <button @click="toggle = !toggle">button</button>
+    </div>
+    <!-- explicit durations end -->
+
+    <!-- keyed fragment -->
     <div class="keyed">
       <button @click="count++">inc</button>
       <Transition>
         <h1 style="position: absolute" :key="count">{{ count }}</h1>
       </Transition>
     </div>
+    <!-- keyed fragment end -->
+
+    <!-- mode -->
     <div class="out-in">
       <button @click="toggleComponent">toggle out-in</button>
       <div>
@@ -383,6 +464,9 @@ function changeViewInOut() {
         </Transition>
       </div>
     </div>
+    <!-- mode end -->
+
+    <!-- vdom interop -->
     <div class="vdom">
       <button @click="toggleVdom = !toggleVdom">toggle vdom component</button>
       <div>
@@ -412,6 +496,7 @@ function changeViewInOut() {
         </Transition>
       </div>
     </div>
+    <!-- vdom interop end -->
   </div>
 </template>
 <style>

@@ -903,127 +903,352 @@ describe('vapor transition', () => {
     )
   })
 
+  describe.todo('transition with KeepAlive', () => {})
+  describe.todo('transition with Suspense', () => {})
+  describe.todo('transition with Teleport', () => {})
+
   describe('transition with v-show', () => {
-    test.todo('named transition with v-show', async () => {}, E2E_TIMEOUT)
-    test.todo('transition events with v-show', async () => {}, E2E_TIMEOUT)
-    test.todo('onLeaveCancelled (v-show only)', async () => {}, E2E_TIMEOUT)
-    test.todo('transition on appear with v-show', async () => {}, E2E_TIMEOUT)
+    test(
+      'named transition with v-show',
+      async () => {
+        const btnSelector = '.show-named > button'
+        const containerSelector = '.show-named > div'
+        const childSelector = `${containerSelector} > div`
+
+        expect(await html(containerSelector)).toBe(
+          '<div class="test">content</div>',
+        )
+        expect(await isVisible(childSelector)).toBe(true)
+
+        // leave
+        expect(
+          (await transitionStart(btnSelector, childSelector)).classNames,
+        ).toStrictEqual(['test', 'test-leave-from', 'test-leave-active'])
+        await nextFrame()
+        expect(await classList(childSelector)).toStrictEqual([
+          'test',
+          'test-leave-active',
+          'test-leave-to',
+        ])
+        await transitionFinish()
+        expect(await isVisible(childSelector)).toBe(false)
+
+        // enter
+        expect(
+          (await transitionStart(btnSelector, childSelector)).classNames,
+        ).toStrictEqual(['test', 'test-enter-from', 'test-enter-active'])
+        await nextFrame()
+        expect(await classList(childSelector)).toStrictEqual([
+          'test',
+          'test-enter-active',
+          'test-enter-to',
+        ])
+        await transitionFinish()
+        expect(await html(containerSelector)).toBe(
+          '<div class="test" style="">content</div>',
+        )
+      },
+      E2E_TIMEOUT,
+    )
+
+    test(
+      'transition events with v-show',
+      async () => {
+        const btnSelector = '.show-events > button'
+        const containerSelector = '.show-events > div'
+        const childSelector = `${containerSelector} > div`
+
+        expect(await html(containerSelector)).toBe(
+          '<div class="test">content</div>',
+        )
+
+        // leave
+        expect(
+          (await transitionStart(btnSelector, childSelector)).classNames,
+        ).toStrictEqual(['test', 'test-leave-from', 'test-leave-active'])
+
+        let calls = await page().evaluate(() => {
+          return (window as any).getCalls('show')
+        })
+        expect(calls).toStrictEqual(['beforeLeave', 'onLeave'])
+        await nextFrame()
+        expect(await classList(childSelector)).toStrictEqual([
+          'test',
+          'test-leave-active',
+          'test-leave-to',
+        ])
+        calls = await page().evaluate(() => {
+          return (window as any).getCalls('show')
+        })
+        expect(calls).not.contain('afterLeave')
+        await transitionFinish()
+        expect(await isVisible(childSelector)).toBe(false)
+        calls = await page().evaluate(() => {
+          return (window as any).getCalls('show')
+        })
+        expect(calls).toStrictEqual(['beforeLeave', 'onLeave', 'afterLeave'])
+
+        // clear calls
+        await page().evaluate(() => {
+          ;(window as any).resetCalls('show')
+        })
+
+        // enter
+        expect(
+          (await transitionStart(btnSelector, childSelector)).classNames,
+        ).toStrictEqual(['test', 'test-enter-from', 'test-enter-active'])
+        await nextFrame()
+        expect(await classList(childSelector)).toStrictEqual([
+          'test',
+          'test-enter-active',
+          'test-enter-to',
+        ])
+        calls = await page().evaluate(() => {
+          return (window as any).getCalls('show')
+        })
+        expect(calls).toStrictEqual(['beforeEnter', 'onEnter'])
+        await transitionFinish()
+        expect(await html(containerSelector)).toBe(
+          '<div class="test" style="">content</div>',
+        )
+        calls = await page().evaluate(() => {
+          return (window as any).getCalls('show')
+        })
+        expect(calls).toStrictEqual(['beforeEnter', 'onEnter', 'afterEnter'])
+      },
+      E2E_TIMEOUT,
+    )
+
+    test(
+      'onLeaveCancelled (v-show only)',
+      async () => {
+        const btnSelector = '.show-leave-cancelled > button'
+        const containerSelector = '.show-leave-cancelled > div'
+        const childSelector = `${containerSelector} > div`
+
+        expect(await html(containerSelector)).toBe(
+          '<div class="test">content</div>',
+        )
+
+        // leave
+        expect(
+          (await transitionStart(btnSelector, childSelector)).classNames,
+        ).toStrictEqual(['test', 'test-leave-from', 'test-leave-active'])
+        await nextFrame()
+        expect(await classList(childSelector)).toStrictEqual([
+          'test',
+          'test-leave-active',
+          'test-leave-to',
+        ])
+
+        // cancel (enter)
+        expect(
+          (await transitionStart(btnSelector, childSelector)).classNames,
+        ).toStrictEqual(['test', 'test-enter-from', 'test-enter-active'])
+        let calls = await page().evaluate(() => {
+          return (window as any).getCalls('showLeaveCancel')
+        })
+        expect(calls).toStrictEqual(['leaveCancelled'])
+        await nextFrame()
+        expect(await classList(childSelector)).toStrictEqual([
+          'test',
+          'test-enter-active',
+          'test-enter-to',
+        ])
+        await transitionFinish()
+        expect(await isVisible(childSelector)).toBe(true)
+      },
+      E2E_TIMEOUT,
+    )
+
+    test.todo(
+      'transition on appear with v-show',
+      async () => {
+        const btnSelector = '.show-appear > button'
+        const containerSelector = '.show-appear > div'
+        const childSelector = `${containerSelector} > div`
+      },
+      E2E_TIMEOUT,
+    )
+
     test.todo(
       'transition events should not call onEnter with v-show false',
       async () => {},
       E2E_TIMEOUT,
     )
+
     test.todo('transition on appear with v-show', async () => {}, E2E_TIMEOUT)
   })
 
   describe('explicit durations', () => {
-    test.todo('single value', async () => {}, E2E_TIMEOUT)
-    test.todo('enter with explicit durations', async () => {}, E2E_TIMEOUT)
-    test.todo('leave with explicit durations', async () => {}, E2E_TIMEOUT)
-    test.todo('separate enter and leave', async () => {}, E2E_TIMEOUT)
-    test.todo('warn invalid durations', async () => {}, E2E_TIMEOUT)
+    test(
+      'single value',
+      async () => {
+        const btnSelector = '.duration-single-value > button'
+        const containerSelector = '.duration-single-value > div'
+        const childSelector = `${containerSelector} > div`
+
+        expect(await html(containerSelector)).toBe(
+          '<div class="test">content</div>',
+        )
+
+        // leave
+        expect(
+          (await transitionStart(btnSelector, childSelector)).classNames,
+        ).toStrictEqual(['test', 'test-leave-from', 'test-leave-active'])
+        await nextFrame()
+        expect(await classList(childSelector)).toStrictEqual([
+          'test',
+          'test-leave-active',
+          'test-leave-to',
+        ])
+        await transitionFinish(duration * 2)
+        expect(await html(containerSelector)).toBe('')
+
+        // enter
+        expect(
+          (await transitionStart(btnSelector, childSelector)).classNames,
+        ).toStrictEqual(['test', 'test-enter-from', 'test-enter-active'])
+        await nextFrame()
+        expect(await classList(childSelector)).toStrictEqual([
+          'test',
+          'test-enter-active',
+          'test-enter-to',
+        ])
+        await transitionFinish(duration * 2)
+        expect(await html(containerSelector)).toBe(
+          '<div class="test">content</div>',
+        )
+      },
+      E2E_TIMEOUT,
+    )
+
+    test(
+      'enter with explicit durations',
+      async () => {
+        const btnSelector = '.duration-enter > button'
+        const containerSelector = '.duration-enter > div'
+        const childSelector = `${containerSelector} > div`
+
+        expect(await html(containerSelector)).toBe(
+          '<div class="test">content</div>',
+        )
+
+        // leave
+        expect(
+          (await transitionStart(btnSelector, childSelector)).classNames,
+        ).toStrictEqual(['test', 'test-leave-from', 'test-leave-active'])
+        await nextFrame()
+        expect(await classList(childSelector)).toStrictEqual([
+          'test',
+          'test-leave-active',
+          'test-leave-to',
+        ])
+        await transitionFinish()
+        expect(await html(containerSelector)).toBe('')
+
+        // enter
+        expect(
+          (await transitionStart(btnSelector, childSelector)).classNames,
+        ).toStrictEqual(['test', 'test-enter-from', 'test-enter-active'])
+        await nextFrame()
+        expect(await classList(childSelector)).toStrictEqual([
+          'test',
+          'test-enter-active',
+          'test-enter-to',
+        ])
+        await transitionFinish(duration * 2)
+        expect(await html(containerSelector)).toBe(
+          '<div class="test">content</div>',
+        )
+      },
+      E2E_TIMEOUT,
+    )
+
+    test(
+      'leave with explicit durations',
+      async () => {
+        const btnSelector = '.duration-leave > button'
+        const containerSelector = '.duration-leave > div'
+        const childSelector = `${containerSelector} > div`
+
+        expect(await html(containerSelector)).toBe(
+          '<div class="test">content</div>',
+        )
+
+        // leave
+        expect(
+          (await transitionStart(btnSelector, childSelector)).classNames,
+        ).toStrictEqual(['test', 'test-leave-from', 'test-leave-active'])
+        await nextFrame()
+        expect(await classList(childSelector)).toStrictEqual([
+          'test',
+          'test-leave-active',
+          'test-leave-to',
+        ])
+        await transitionFinish(duration * 2)
+        expect(await html(containerSelector)).toBe('')
+
+        // enter
+        expect(
+          (await transitionStart(btnSelector, childSelector)).classNames,
+        ).toStrictEqual(['test', 'test-enter-from', 'test-enter-active'])
+        await nextFrame()
+        expect(await classList(childSelector)).toStrictEqual([
+          'test',
+          'test-enter-active',
+          'test-enter-to',
+        ])
+        await transitionFinish()
+        expect(await html(containerSelector)).toBe(
+          '<div class="test">content</div>',
+        )
+      },
+      E2E_TIMEOUT,
+    )
+
+    test(
+      'separate enter and leave',
+      async () => {
+        const btnSelector = '.duration-enter-leave > button'
+        const containerSelector = '.duration-enter-leave > div'
+        const childSelector = `${containerSelector} > div`
+
+        expect(await html(containerSelector)).toBe(
+          '<div class="test">content</div>',
+        )
+
+        // leave
+        expect(
+          (await transitionStart(btnSelector, childSelector)).classNames,
+        ).toStrictEqual(['test', 'test-leave-from', 'test-leave-active'])
+        await nextFrame()
+        expect(await classList(childSelector)).toStrictEqual([
+          'test',
+          'test-leave-active',
+          'test-leave-to',
+        ])
+        await transitionFinish(duration * 2)
+        expect(await html(containerSelector)).toBe('')
+
+        // enter
+        expect(
+          (await transitionStart(btnSelector, childSelector)).classNames,
+        ).toStrictEqual(['test', 'test-enter-from', 'test-enter-active'])
+        await nextFrame()
+        expect(await classList(childSelector)).toStrictEqual([
+          'test',
+          'test-enter-active',
+          'test-enter-to',
+        ])
+        await transitionFinish(duration * 4)
+        expect(await html(containerSelector)).toBe(
+          '<div class="test">content</div>',
+        )
+      },
+      E2E_TIMEOUT,
+    )
   })
-
-  test(
-    'should work with v-show',
-    async () => {
-      const btnSelector = '.vshow > button'
-      const containerSelector = '.vshow > h1'
-
-      expect(await text(containerSelector)).toContain('vShow')
-
-      // leave
-      expect(
-        (await transitionStart(btnSelector, containerSelector)).classNames,
-      ).toStrictEqual(['v-leave-from', 'v-leave-active'])
-
-      await nextFrame()
-      expect(await classList(containerSelector)).toStrictEqual([
-        'v-leave-active',
-        'v-leave-to',
-      ])
-
-      await transitionFinish()
-      await nextFrame()
-      expect(await isVisible(containerSelector)).toBe(false)
-
-      // enter
-      expect(
-        (await transitionStart(btnSelector, containerSelector)).classNames,
-      ).toStrictEqual(['v-enter-from', 'v-enter-active'])
-
-      await nextFrame()
-      expect(await classList(containerSelector)).toStrictEqual([
-        'v-enter-active',
-        'v-enter-to',
-      ])
-
-      await transitionFinish()
-      await nextFrame()
-      expect(await isVisible(containerSelector)).toBe(true)
-    },
-    E2E_TIMEOUT,
-  )
-
-  test(
-    'should work with v-if + appear',
-    async () => {
-      const btnSelector = '.vif > button'
-      const containerSelector = '.vif > h1'
-
-      // appear
-      expect(await classList(containerSelector)).contains('v-enter-active')
-      expect(await text(containerSelector)).toContain('vIf')
-      await transitionFinish()
-
-      // leave
-      await nextFrame()
-      expect(
-        (await transitionStart(btnSelector, containerSelector)).classNames,
-      ).toStrictEqual(['v-leave-from', 'v-leave-active'])
-
-      await nextFrame()
-      expect(await classList(containerSelector)).toStrictEqual([
-        'v-leave-active',
-        'v-leave-to',
-      ])
-
-      await transitionFinish()
-      expect(await count(containerSelector)).toBe(0)
-
-      // enter
-      expect(
-        (await transitionStart(btnSelector, containerSelector)).classNames,
-      ).toStrictEqual(['v-enter-from', 'v-enter-active'])
-
-      await nextFrame()
-      expect(await classList(containerSelector)).toStrictEqual([
-        'v-enter-active',
-        'v-enter-to',
-      ])
-
-      await transitionFinish()
-      await nextFrame()
-      expect(await isVisible(containerSelector)).toBe(true)
-
-      expect(
-        await page().evaluate(() => {
-          return (window as any).getCalls('basic')
-        }),
-      ).toStrictEqual([
-        'beforeAppear',
-        'onAppear',
-        'afterAppear',
-        'beforeLeave',
-        'onLeave',
-        'afterLeave',
-        'beforeEnter',
-        'onEnter',
-        'afterEnter',
-      ])
-    },
-    E2E_TIMEOUT,
-  )
 
   test(
     'should work with keyed element',
