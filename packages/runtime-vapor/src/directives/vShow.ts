@@ -52,9 +52,15 @@ function setDisplay(target: Block, value: unknown): void {
         el.style.display = el[vShowOriginalDisplay]!
         $transition.enter(target)
       } else {
-        $transition.leave(target, () => {
+        // during initial render, the element is not yet inserted into the
+        // DOM, and it is hidden, no need to trigger transition
+        if (target.isConnected) {
+          $transition.leave(target, () => {
+            el.style.display = 'none'
+          })
+        } else {
           el.style.display = 'none'
-        })
+        }
       }
     } else {
       el.style.display = value ? el[vShowOriginalDisplay]! : 'none'

@@ -7,12 +7,15 @@ export function genVShow(
   oper: DirectiveIRNode,
   context: CodegenContext,
 ): CodeFragment[] {
+  const { lazy, element } = oper
   return [
     NEWLINE,
-    ...genCall(context.helper('applyVShow'), `n${oper.element}`, [
+    lazy ? `lazyApplyVShowFn.push(() => ` : undefined,
+    ...genCall(context.helper('applyVShow'), `n${element}`, [
       `() => (`,
       ...genExpression(oper.dir.exp!, context),
       `)`,
     ]),
+    lazy ? `)` : undefined,
   ]
 }

@@ -56,6 +56,7 @@ export interface BlockIRNode extends BaseIRNode {
   operation: OperationNode[]
   expressions: SimpleExpressionNode[]
   returns: number[]
+  hasLazyApplyVShow: boolean
 }
 
 export interface RootIRNode {
@@ -187,6 +188,7 @@ export interface DirectiveIRNode extends BaseIRNode {
   builtin?: boolean
   asset?: boolean
   modelType?: 'text' | 'dynamic' | 'radio' | 'checkbox' | 'select'
+  lazy?: boolean
 }
 
 export interface CreateComponentIRNode extends BaseIRNode {

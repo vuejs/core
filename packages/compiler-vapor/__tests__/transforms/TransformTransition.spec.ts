@@ -29,6 +29,13 @@ const compileWithElementTransform = makeCompile({
 describe('compiler: transition', () => {
   test('basic', () => {
     const { code } = compileWithElementTransform(
+      `<Transition><h1 v-show="show">foo</h1></Transition>`,
+    )
+    expect(code).toMatchSnapshot()
+  })
+
+  test('v-show + appear', () => {
+    const { code } = compileWithElementTransform(
       `<Transition appear><h1 v-show="show">foo</h1></Transition>`,
     )
     expect(code).toMatchSnapshot()

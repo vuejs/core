@@ -44,6 +44,10 @@ export function genBlockContent(
   const { dynamic, effect, operation, returns, key } = block
   const resetBlock = context.enterBlock(block)
 
+  if (block.hasLazyApplyVShow) {
+    push(NEWLINE, `const lazyApplyVShowFn = []`)
+  }
+
   if (root) {
     genResolveAssets('component', 'resolveComponent')
     genResolveAssets('directive', 'resolveDirective')
@@ -55,6 +59,10 @@ export function genBlockContent(
 
   push(...genOperations(operation, context))
   push(...genEffects(effect, context))
+
+  if (block.hasLazyApplyVShow) {
+    push(NEWLINE, `lazyApplyVShowFn.forEach(fn => fn())`)
+  }
 
   if (dynamic.needsKey) {
     for (const child of dynamic.children) {

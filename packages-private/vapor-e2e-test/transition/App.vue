@@ -27,6 +27,7 @@ let calls = {
   show: [],
   showLeaveCancel: [],
   showAppear: [],
+  notEnter: [],
 }
 window.getCalls = key => calls[key]
 window.resetCalls = key => (calls[key] = [])
@@ -394,6 +395,20 @@ function changeViewInOut() {
           @afterEnter="() => calls.showAppear.push('afterEnter')"
         >
           <div v-show="toggle" class="test">content</div>
+        </transition>
+      </div>
+      <button @click="toggle = !toggle">button</button>
+    </div>
+    <div class="show-appear-not-enter">
+      <div>
+        <transition
+          name="test"
+          appear
+          @beforeEnter="() => calls.notEnter.push('beforeEnter')"
+          @enter="() => calls.notEnter.push('onEnter')"
+          @afterEnter="() => calls.notEnter.push('afterEnter')"
+        >
+          <div v-show="!toggle" class="test">content</div>
         </transition>
       </div>
       <button @click="toggle = !toggle">button</button>

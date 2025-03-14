@@ -1061,23 +1061,103 @@ describe('vapor transition', () => {
       E2E_TIMEOUT,
     )
 
-    test.todo(
+    test(
       'transition on appear with v-show',
       async () => {
         const btnSelector = '.show-appear > button'
         const containerSelector = '.show-appear > div'
         const childSelector = `${containerSelector} > div`
+
+        let calls = await page().evaluate(() => {
+          return (window as any).getCalls('showAppear')
+        })
+        expect(calls).toStrictEqual(['beforeEnter', 'onEnter'])
+
+        // appear
+        expect(await classList(childSelector)).contains('test-appear-active')
+
+        await transitionFinish()
+        expect(await html(containerSelector)).toBe(
+          '<div class="test">content</div>',
+        )
+        calls = await page().evaluate(() => {
+          return (window as any).getCalls('showAppear')
+        })
+        expect(calls).toStrictEqual(['beforeEnter', 'onEnter', 'afterEnter'])
+
+        // leave
+        expect(
+          (await transitionStart(btnSelector, childSelector)).classNames,
+        ).toStrictEqual(['test', 'test-leave-from', 'test-leave-active'])
+        await nextFrame()
+        expect(await classList(childSelector)).toStrictEqual([
+          'test',
+          'test-leave-active',
+          'test-leave-to',
+        ])
+        await transitionFinish()
+        expect(await isVisible(childSelector)).toBe(false)
+
+        // enter
+        expect(
+          (await transitionStart(btnSelector, childSelector)).classNames,
+        ).toStrictEqual(['test', 'test-enter-from', 'test-enter-active'])
+        await nextFrame()
+        expect(await classList(childSelector)).toStrictEqual([
+          'test',
+          'test-enter-active',
+          'test-enter-to',
+        ])
+        await transitionFinish()
+        expect(await html(containerSelector)).toBe(
+          '<div class="test" style="">content</div>',
+        )
       },
       E2E_TIMEOUT,
     )
 
-    test.todo(
+    test(
       'transition events should not call onEnter with v-show false',
-      async () => {},
+      async () => {
+        const btnSelector = '.show-appear-not-enter > button'
+        const containerSelector = '.show-appear-not-enter > div'
+        const childSelector = `${containerSelector} > div`
+
+        expect(await isVisible(childSelector)).toBe(false)
+        let calls = await page().evaluate(() => {
+          return (window as any).getCalls('notEnter')
+        })
+        expect(calls).toStrictEqual([])
+
+        // enter
+        expect(
+          (await transitionStart(btnSelector, childSelector)).classNames,
+        ).toStrictEqual(['test', 'test-enter-from', 'test-enter-active'])
+        calls = await page().evaluate(() => {
+          return (window as any).getCalls('notEnter')
+        })
+        expect(calls).toStrictEqual(['beforeEnter', 'onEnter'])
+        await nextFrame()
+        expect(await classList(childSelector)).toStrictEqual([
+          'test',
+          'test-enter-active',
+          'test-enter-to',
+        ])
+        calls = await page().evaluate(() => {
+          return (window as any).getCalls('notEnter')
+        })
+        expect(calls).not.contain('afterEnter')
+        await transitionFinish()
+        expect(await html(containerSelector)).toBe(
+          '<div class="test" style="">content</div>',
+        )
+        calls = await page().evaluate(() => {
+          return (window as any).getCalls('notEnter')
+        })
+        expect(calls).toStrictEqual(['beforeEnter', 'onEnter', 'afterEnter'])
+      },
       E2E_TIMEOUT,
     )
-
-    test.todo('transition on appear with v-show', async () => {}, E2E_TIMEOUT)
   })
 
   describe('explicit durations', () => {
