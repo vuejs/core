@@ -1,8 +1,4 @@
-import {
-  adoptHydrationNode,
-  currentHydrationNode,
-  isHydrating,
-} from './hydration'
+import { adoptTemplate, currentHydrationNode, isHydrating } from './hydration'
 import { child, createTextNode } from './node'
 
 let t: HTMLTemplateElement
@@ -16,7 +12,7 @@ export function template(html: string, root?: boolean) {
         // TODO this should not happen
         throw new Error('No current hydration node')
       }
-      return adoptHydrationNode(currentHydrationNode, html)!
+      return adoptTemplate(currentHydrationNode!, html)!
     }
     // fast path for text nodes
     if (html[0] !== '<') {

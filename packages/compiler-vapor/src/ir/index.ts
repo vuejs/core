@@ -25,7 +25,6 @@ export enum IRNodeTypes {
 
   INSERT_NODE,
   PREPEND_NODE,
-  CREATE_TEXT_NODE,
   CREATE_COMPONENT_NODE,
   SLOT_OUTLET_NODE,
 
@@ -78,6 +77,8 @@ export interface IfIRNode extends BaseIRNode {
   positive: BlockIRNode
   negative?: BlockIRNode | IfIRNode
   once?: boolean
+  parent?: number
+  anchor?: number
 }
 
 export interface IRFor {
@@ -95,6 +96,8 @@ export interface ForIRNode extends BaseIRNode, IRFor {
   once: boolean
   component: boolean
   onlyChild: boolean
+  parent?: number
+  anchor?: number
 }
 
 export interface SetPropIRNode extends BaseIRNode {
@@ -160,13 +163,6 @@ export interface SetTemplateRefIRNode extends BaseIRNode {
   effect: boolean
 }
 
-export interface CreateTextNodeIRNode extends BaseIRNode {
-  type: IRNodeTypes.CREATE_TEXT_NODE
-  id: number
-  values?: SimpleExpressionNode[]
-  jsx?: boolean
-}
-
 export interface InsertNodeIRNode extends BaseIRNode {
   type: IRNodeTypes.INSERT_NODE
   elements: number[]
@@ -201,6 +197,8 @@ export interface CreateComponentIRNode extends BaseIRNode {
   root: boolean
   once: boolean
   dynamic?: SimpleExpressionNode
+  parent?: number
+  anchor?: number
 }
 
 export interface DeclareOldRefIRNode extends BaseIRNode {
@@ -214,6 +212,8 @@ export interface SlotOutletIRNode extends BaseIRNode {
   name: SimpleExpressionNode
   props: IRProps[]
   fallback?: BlockIRNode
+  parent?: number
+  anchor?: number
 }
 
 export interface GetTextChildIRNode extends BaseIRNode {
@@ -230,7 +230,6 @@ export type OperationNode =
   | SetDynamicEventsIRNode
   | SetHtmlIRNode
   | SetTemplateRefIRNode
-  | CreateTextNodeIRNode
   | InsertNodeIRNode
   | PrependNodeIRNode
   | DirectiveIRNode
@@ -265,6 +264,7 @@ export interface IRDynamicInfo {
   template?: number
   hasDynamicChild?: boolean
   needsKey?: boolean
+  operation?: OperationNode
 }
 
 export interface IREffect {
@@ -292,3 +292,19 @@ export type VaporDirectiveNode = Overwrite<
     arg: Exclude<DirectiveNode['arg'], CompoundExpressionNode>
   }
 >
+
+export type InsertionStateTypes =
+  | IfIRNode
+  | ForIRNode
+  | SlotOutletIRNode
+  | CreateComponentIRNode
+
+export function isBlockOperation(op: OperationNode): op is InsertionStateTypes {
+  const type = op.type
+  return (
+    type === IRNodeTypes.CREATE_COMPONENT_NODE ||
+    type === IRNodeTypes.SLOT_OUTLET_NODE ||
+    type === IRNodeTypes.IF ||
+    type === IRNodeTypes.FOR
+  )
+}

@@ -58,6 +58,8 @@ import {
   getSlot,
 } from './componentSlots'
 import { hmrReload, hmrRerender } from './hmr'
+import { isHydrating, locateHydrationNode } from './dom/hydration'
+import { insertionAnchor, insertionParent } from './insertionState'
 
 export { currentInstance } from '@vue/runtime-dom'
 
@@ -136,9 +138,23 @@ export function createComponent(
     currentInstance.appContext) ||
     emptyContext,
 ): VaporComponentInstance {
+  const _insertionParent = insertionParent
+  const _insertionAnchor = insertionAnchor
+  if (isHydrating) {
+    locateHydrationNode()
+  }
+
   // vdom interop enabled and component is not an explicit vapor component
   if (appContext.vapor && !component.__vapor) {
-    return appContext.vapor.vdomMount(component as any, rawProps, rawSlots)
+    const frag = appContext.vapor.vdomMount(
+      component as any,
+      rawProps,
+      rawSlots,
+    )
+    if (!isHydrating && _insertionParent) {
+      insert(frag, _insertionParent, _insertionAnchor)
+    }
+    return frag
   }
 
   if (
@@ -250,6 +266,10 @@ export function createComponent(
   }
 
   onScopeDispose(() => unmountComponent(instance), true)
+
+  if (!isHydrating && _insertionParent) {
+    insert(instance.block, _insertionParent, _insertionAnchor)
+  }
 
   return instance
 }

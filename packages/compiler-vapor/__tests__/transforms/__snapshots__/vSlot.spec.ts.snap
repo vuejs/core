@@ -167,7 +167,6 @@ export function render(_ctx) {
   const _component_Comp = _resolveComponent("Comp")
   const n5 = _createComponentWithFallback(_component_Comp, null, {
     "default": (_slotProps0) => {
-      const n3 = t0()
       const n1 = _createComponentWithFallback(_component_Inner, null, {
         "default": (_slotProps1) => {
           const n0 = t0()
@@ -175,6 +174,7 @@ export function render(_ctx) {
           return n0
         }
       })
+      const n3 = t0()
       _renderEffect(() => _setText(n3, " " + _toDisplayString(_slotProps0["foo"] + _ctx.bar + _ctx.baz)))
       return [n1, n3]
     }

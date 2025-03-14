@@ -1,4 +1,6 @@
-import { type Block, type BlockFn, DynamicFragment } from './block'
+import { type Block, type BlockFn, DynamicFragment, insert } from './block'
+import { isHydrating, locateHydrationNode } from './dom/hydration'
+import { insertionAnchor, insertionParent } from './insertionState'
 import { renderEffect } from './renderEffect'
 
 export function createIf(
@@ -6,13 +8,24 @@ export function createIf(
   b1: BlockFn,
   b2?: BlockFn,
   once?: boolean,
-  // hydrationNode?: Node,
 ): Block {
-  if (once) {
-    return condition() ? b1() : b2 ? b2() : []
-  } else {
-    const frag = __DEV__ ? new DynamicFragment('if') : new DynamicFragment()
-    renderEffect(() => frag.update(condition() ? b1 : b2))
-    return frag
+  const _insertionParent = insertionParent
+  const _insertionAnchor = insertionAnchor
+  if (isHydrating) {
+    locateHydrationNode()
   }
+
+  let frag: Block
+  if (once) {
+    frag = condition() ? b1() : b2 ? b2() : []
+  } else {
+    frag = __DEV__ ? new DynamicFragment('if') : new DynamicFragment()
+    renderEffect(() => (frag as DynamicFragment).update(condition() ? b1 : b2))
+  }
+
+  if (!isHydrating && _insertionParent) {
+    insert(frag, _insertionParent, _insertionAnchor)
+  }
+
+  return frag
 }
