@@ -7,6 +7,7 @@ import {
   type RendererInternals,
   type ShallowRef,
   type Slots,
+  type TransitionHooks,
   type VNode,
   type VaporInteropInterface,
   createVNode,
@@ -14,6 +15,7 @@ import {
   ensureRenderer,
   onScopeDispose,
   renderSlot,
+  setTransitionHooks as setVNodeTransitionHooks,
   shallowRef,
   simpleSetCurrentInstance,
 } from '@vue/runtime-dom'
@@ -26,13 +28,20 @@ import {
   mountComponent,
   unmountComponent,
 } from './component'
-import { type Block, VaporFragment, insert, remove } from './block'
-import { EMPTY_OBJ, extend, isFunction } from '@vue/shared'
+import {
+  type Block,
+  VaporFragment,
+  type VaporTransitionHooks,
+  insert,
+  remove,
+} from './block'
+import { EMPTY_OBJ, extend, isFunction, isReservedProp } from '@vue/shared'
 import { type RawProps, rawPropsProxyHandlers } from './componentProps'
 import type { RawSlots, VaporSlot } from './componentSlots'
 import { renderEffect } from './renderEffect'
 import { createTextNode } from './dom/node'
 import { optimizePropertyLookup } from './dom/prop'
+import { setTransitionToInstance } from './components/Transition'
 
 // mounting vapor components and slots in vdom
 const vaporInteropImpl: Omit<
@@ -45,7 +54,15 @@ const vaporInteropImpl: Omit<
     const prev = currentInstance
     simpleSetCurrentInstance(parentComponent)
 
-    const propsRef = shallowRef(vnode.props)
+    // filter out reserved props
+    const props: VNode['props'] = {}
+    for (const key in vnode.props) {
+      if (!isReservedProp(key)) {
+        props[key] = vnode.props[key]
+      }
+    }
+
+    const propsRef = shallowRef(props)
     const slotsRef = shallowRef(vnode.children)
 
     // @ts-expect-error
@@ -60,6 +77,12 @@ const vaporInteropImpl: Omit<
     ))
     instance.rawPropsRef = propsRef
     instance.rawSlotsRef = slotsRef
+    if (vnode.transition) {
+      setTransitionToInstance(
+        instance,
+        vnode.transition as VaporTransitionHooks,
+      )
+    }
     mountComponent(instance, container, selfAnchor)
     simpleSetCurrentInstance(prev)
     return instance
@@ -112,6 +135,10 @@ const vaporInteropImpl: Omit<
   move(vnode, container, anchor) {
     insert(vnode.vb || (vnode.component as any), container, anchor)
     insert(vnode.anchor as any, container, anchor)
+  },
+
+  setTransitionHooks(component, hooks) {
+    setTransitionToInstance(component as any, hooks as VaporTransitionHooks)
   },
 }
 
@@ -171,12 +198,16 @@ function createVDOMComponent(
 
   let isMounted = false
   const parentInstance = currentInstance as VaporComponentInstance
-  const unmount = (parentNode?: ParentNode) => {
+  const unmount = (parentNode?: ParentNode, transition?: TransitionHooks) => {
+    if (transition) setVNodeTransitionHooks(vnode, transition)
     internals.umt(vnode.component!, null, !!parentNode)
   }
 
-  frag.insert = (parentNode, anchor) => {
+  frag.insert = (parentNode, anchor, transition) => {
+    const prev = currentInstance
+    simpleSetCurrentInstance(parentInstance)
     if (!isMounted) {
+      if (transition) setVNodeTransitionHooks(vnode, transition)
       internals.mt(
         vnode,
         parentNode,
@@ -198,6 +229,9 @@ function createVDOMComponent(
         parentInstance as any,
       )
     }
+
+    frag.nodes = [vnode.el as Node]
+    simpleSetCurrentInstance(prev)
   }
 
   frag.remove = unmount
