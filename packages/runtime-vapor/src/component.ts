@@ -236,11 +236,9 @@ export function createComponent(
     instance.block instanceof Element &&
     Object.keys(instance.attrs).length
   ) {
-    renderEffect(() => {
-      isApplyingFallthroughProps = true
-      setDynamicProps(instance.block as Element, [instance.attrs])
-      isApplyingFallthroughProps = false
-    })
+    renderEffect(() =>
+      applyFallthroughProps(instance.block as Element, instance.attrs),
+    )
   }
 
   resetTracking()
@@ -257,6 +255,15 @@ export function createComponent(
 }
 
 export let isApplyingFallthroughProps = false
+
+export function applyFallthroughProps(
+  block: Block,
+  attrs: Record<string, any>,
+): void {
+  isApplyingFallthroughProps = true
+  setDynamicProps(block as Element, [attrs])
+  isApplyingFallthroughProps = false
+}
 
 /**
  * dev only

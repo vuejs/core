@@ -21,6 +21,7 @@ let calls = {
   enterCancel: [],
   withAppear: [],
   cssFalse: [],
+  ifInOut: [],
 }
 window.getCalls = key => calls[key]
 window.resetCalls = key => (calls[key] = [])
@@ -72,6 +73,16 @@ const Two = defineVaporComponent({
 const view = shallowRef(One)
 function changeView() {
   view.value = view.value === One ? Two : One
+}
+
+const SimpleOne = defineVaporComponent({
+  setup() {
+    return template('<div>one</div>', true)()
+  },
+})
+const viewInOut = shallowRef(SimpleOne)
+function changeViewInOut() {
+  viewInOut.value = viewInOut.value === SimpleOne ? Two : SimpleOne
 }
 </script>
 
@@ -307,6 +318,24 @@ function changeView() {
         </MyTransitionFallthroughAttr>
       </div>
       <button @click="toggle = !toggle">button fallthrough</button>
+    </div>
+    <div class="if-fallthrough-attr-in-out">
+      <div>
+        <transition
+          foo="1"
+          name="test"
+          mode="in-out"
+          @beforeEnter="() => calls.ifInOut.push('beforeEnter')"
+          @enter="() => calls.ifInOut.push('onEnter')"
+          @afterEnter="() => calls.ifInOut.push('afterEnter')"
+          @beforeLeave="() => calls.ifInOut.push('beforeLeave')"
+          @leave="() => calls.ifInOut.push('onLeave')"
+          @afterLeave="() => calls.ifInOut.push('afterLeave')"
+        >
+          <component :is="viewInOut"></component>
+        </transition>
+      </div>
+      <button @click="changeViewInOut">button</button>
     </div>
 
     <div class="vshow">

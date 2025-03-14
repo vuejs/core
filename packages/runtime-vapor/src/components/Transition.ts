@@ -21,10 +21,13 @@ import {
   type VaporTransitionHooks,
   isFragment,
 } from '../block'
-import { type VaporComponentInstance, isVaporComponent } from '../component'
+import {
+  type VaporComponentInstance,
+  applyFallthroughProps,
+  isVaporComponent,
+} from '../component'
 import { extend, isArray } from '@vue/shared'
 import { renderEffect } from '../renderEffect'
-import { setDynamicProps } from '../dom/prop'
 
 const decorate = (t: typeof VaporTransition) => {
   t.displayName = 'VaporTransition'
@@ -71,7 +74,7 @@ export const VaporTransition: FunctionalComponent<TransitionProps> =
         const resolvedAttrs = extend({}, attrs)
         const child = findTransitionBlock(children)
         if (child) {
-          setDynamicProps(child, [resolvedAttrs])
+          applyFallthroughProps(child, resolvedAttrs)
           // ensure fallthrough attrs are not happened again in
           // applyTransitionHooks
           fallthroughAttrs = false
@@ -185,7 +188,7 @@ export function applyTransitionHooks(
 
   // fallthrough attrs
   if (fallthroughAttrs && instance.hasFallthrough) {
-    setDynamicProps(child, [instance.attrs])
+    applyFallthroughProps(child, instance.attrs)
   }
 
   return resolvedHooks
@@ -256,7 +259,8 @@ export function findTransitionBlock(
     if (block instanceof Element) child = block
   } else if (isVaporComponent(block)) {
     child = findTransitionBlock(block.block)
-    if (child && child.$key === undefined) child.$key = block.type.__name
+    // use component id as key
+    if (child && child.$key === undefined) child.$key = block.uid
   } else if (isArray(block)) {
     child = block[0] as TransitionBlock
     let hasFound = false

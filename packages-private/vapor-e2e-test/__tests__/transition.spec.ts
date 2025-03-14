@@ -845,9 +845,60 @@ describe('vapor transition', () => {
       E2E_TIMEOUT,
     )
 
-    test.todo(
+    test(
       'transition + fallthrough attrs (in-out mode)',
-      async () => {},
+      async () => {
+        const btnSelector = '.if-fallthrough-attr-in-out > button'
+        const containerSelector = '.if-fallthrough-attr-in-out > div'
+
+        expect(await html(containerSelector)).toBe('<div foo="1">one</div>')
+
+        // toggle
+        await click(btnSelector)
+        await nextTick()
+        await transitionFinish(duration * 3)
+        let calls = await page().evaluate(() => {
+          return (window as any).getCalls('ifInOut')
+        })
+        expect(calls).toStrictEqual([
+          'beforeEnter',
+          'onEnter',
+          'afterEnter',
+          'beforeLeave',
+          'onLeave',
+          'afterLeave',
+        ])
+
+        expect(await html(containerSelector)).toBe(
+          '<div foo="1" class="">two</div>',
+        )
+
+        // clear calls
+        await page().evaluate(() => {
+          ;(window as any).resetCalls('ifInOut')
+        })
+
+        // toggle back
+        await click(btnSelector)
+        await nextTick()
+        await transitionFinish(duration * 3)
+
+        calls = await page().evaluate(() => {
+          return (window as any).getCalls('ifInOut')
+        })
+        expect(calls).toStrictEqual([
+          'beforeEnter',
+          'onEnter',
+          'afterEnter',
+          'beforeLeave',
+          'onLeave',
+          'afterLeave',
+        ])
+
+        expect(await html(containerSelector)).toBe(
+          '<div foo="1" class="">one</div>',
+        )
+      },
       E2E_TIMEOUT,
     )
   })

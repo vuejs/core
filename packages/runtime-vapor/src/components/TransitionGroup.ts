@@ -31,10 +31,11 @@ import {
 import {
   type ObjectVaporComponent,
   type VaporComponentInstance,
+  applyFallthroughProps,
   isVaporComponent,
 } from '../component'
 import { isForBlock } from '../apiCreateFor'
-import { renderEffect, setDynamicProps } from '@vue/runtime-vapor'
+import { renderEffect } from '../renderEffect'
 
 const positionMap = new WeakMap<TransitionBlock, DOMRect>()
 const newPositionMap = new WeakMap<TransitionBlock, DOMRect>()
@@ -149,7 +150,7 @@ export const VaporTransitionGroup: ObjectVaporComponent = decorate({
       insert(slottedBlock, container)
       // fallthrough attrs
       if (instance!.hasFallthrough) {
-        renderEffect(() => setDynamicProps(container, [instance!.attrs]))
+        renderEffect(() => applyFallthroughProps(container, instance!.attrs))
       }
       return container
     } else {
