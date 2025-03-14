@@ -791,6 +791,39 @@ describe('defineCustomElement', () => {
       assertStyles(el, [`div { color: blue; }`, `div { color: red; }`])
     })
 
+    test('child components styles should before parent styles', async () => {
+      const Baz = () => h(Bar)
+      const Bar = defineComponent({
+        styles: [`div { color: green; }`],
+        render() {
+          return 'bar'
+        },
+      })
+      const WarpperBar = defineComponent({
+        styles: [`div { color: blue; }`],
+        render() {
+          return h(Baz)
+        },
+      })
+      const WBaz = () => h(WarpperBar)
+      const Foo = defineCustomElement({
+        styles: [`div { color: red; }`],
+        render() {
+          return [h(Baz), h(WBaz)]
+        },
+      })
+      customElements.define('my-el-with-wrapper-child-styles', Foo)
+      container.innerHTML = `<my-el-with-wrapper-child-styles></my-el-with-wrapper-child-styles>`
+      const el = container.childNodes[0] as VueElement
+
+      // inject order should be child -> parent
+      assertStyles(el, [
+        `div { color: green; }`,
+        `div { color: blue; }`,
+        `div { color: red; }`,
+      ])
+    })
+
     test('with nonce', () => {
       const Foo = defineCustomElement(
         {
