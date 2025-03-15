@@ -545,7 +545,8 @@ describe('compiler: transform slot', () => {
         whitespace: 'preserve',
       })
 
-      const slots = (ir.block.operation[0] as any).slots[0].slots
+      const slots = (ir.block.dynamic.children[0].operation as any).slots[0]
+        .slots
       // should be: header, footer (no default)
       expect(Object.keys(slots).length).toBe(2)
       expect(!!slots['default']).toBe(false)
