@@ -1,11 +1,12 @@
 // public APIs
-export { createVaporApp } from './apiCreateApp'
+export { createVaporApp, createVaporSSRApp } from './apiCreateApp'
 export { defineVaporComponent } from './apiDefineComponent'
 export { vaporInteropPlugin } from './vdomInterop'
 export type { VaporDirective } from './directives/custom'
 
 // compiler-use only
 export { insert, prepend, remove, isFragment, VaporFragment } from './block'
+export { setInsertionState } from './insertionState'
 export { createComponent, createComponentWithFallback } from './component'
 export { renderEffect } from './renderEffect'
 export { createSlot } from './componentSlots'

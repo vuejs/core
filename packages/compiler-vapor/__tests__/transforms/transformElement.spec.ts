@@ -29,16 +29,14 @@ describe('compiler: element transform', () => {
       expect(code).toMatchSnapshot()
       expect(helpers).contains.all.keys('resolveComponent')
       expect(helpers).contains.all.keys('createComponentWithFallback')
-      expect(ir.block.operation).toMatchObject([
-        {
-          type: IRNodeTypes.CREATE_COMPONENT_NODE,
-          id: 0,
-          tag: 'Foo',
-          asset: true,
-          root: true,
-          props: [[]],
-        },
-      ])
+      expect(ir.block.dynamic.children[0].operation).toMatchObject({
+        type: IRNodeTypes.CREATE_COMPONENT_NODE,
+        id: 0,
+        tag: 'Foo',
+        asset: true,
+        root: true,
+        props: [[]],
+      })
     })
 
     test.todo('resolve implicitly self-referencing component', () => {
@@ -57,13 +55,11 @@ describe('compiler: element transform', () => {
       })
       expect(code).toMatchSnapshot()
       expect(helpers).not.toContain('resolveComponent')
-      expect(ir.block.operation).toMatchObject([
-        {
-          type: IRNodeTypes.CREATE_COMPONENT_NODE,
-          tag: 'Example',
-          asset: false,
-        },
-      ])
+      expect(ir.block.dynamic.children[0].operation).toMatchObject({
+        type: IRNodeTypes.CREATE_COMPONENT_NODE,
+        tag: 'Example',
+        asset: false,
+      })
     })
 
     test('resolve component from setup bindings (inline)', () => {
@@ -149,14 +145,12 @@ describe('compiler: element transform', () => {
       })
       expect(code).toMatchSnapshot()
       expect(helpers).toContain('resolveComponent')
-      expect(ir.block.operation).toMatchObject([
-        {
-          type: IRNodeTypes.CREATE_COMPONENT_NODE,
-          id: 0,
-          tag: 'Example',
-          asset: true,
-        },
-      ])
+      expect(ir.block.dynamic.children[0].operation).toMatchObject({
+        type: IRNodeTypes.CREATE_COMPONENT_NODE,
+        id: 0,
+        tag: 'Example',
+        asset: true,
+      })
     })
 
     test('generate single root component', () => {
@@ -186,46 +180,44 @@ describe('compiler: element transform', () => {
     class: () => ("bar")
   }`)
 
-      expect(ir.block.operation).toMatchObject([
-        {
-          type: IRNodeTypes.CREATE_COMPONENT_NODE,
-          tag: 'Foo',
-          asset: true,
-          root: true,
-          props: [
-            [
-              {
-                key: {
+      expect(ir.block.dynamic.children[0].operation).toMatchObject({
+        type: IRNodeTypes.CREATE_COMPONENT_NODE,
+        tag: 'Foo',
+        asset: true,
+        root: true,
+        props: [
+          [
+            {
+              key: {
+                type: NodeTypes.SIMPLE_EXPRESSION,
+                content: 'id',
+                isStatic: true,
+              },
+              values: [
+                {
                   type: NodeTypes.SIMPLE_EXPRESSION,
-                  content: 'id',
+                  content: 'foo',
                   isStatic: true,
                 },
-                values: [
-                  {
-                    type: NodeTypes.SIMPLE_EXPRESSION,
-                    content: 'foo',
-                    isStatic: true,
-                  },
-                ],
+              ],
+            },
+            {
+              key: {
+                type: NodeTypes.SIMPLE_EXPRESSION,
+                content: 'class',
+                isStatic: true,
               },
-              {
-                key: {
+              values: [
+                {
                   type: NodeTypes.SIMPLE_EXPRESSION,
-                  content: 'class',
+                  content: 'bar',
                   isStatic: true,
                 },
-                values: [
-                  {
-                    type: NodeTypes.SIMPLE_EXPRESSION,
-                    content: 'bar',
-                    isStatic: true,
-                  },
-                ],
-              },
-            ],
+              ],
+            },
           ],
-        },
-      ])
+        ],
+      })
     })
 
     test('v-bind="obj"', () => {
@@ -234,18 +226,16 @@ describe('compiler: element transform', () => {
       expect(code).contains(`[
     () => (_ctx.obj)
   ]`)
-      expect(ir.block.operation).toMatchObject([
-        {
-          type: IRNodeTypes.CREATE_COMPONENT_NODE,
-          tag: 'Foo',
-          props: [
-            {
-              kind: IRDynamicPropsKind.EXPRESSION,
-              value: { content: 'obj', isStatic: false },
-            },
-          ],
-        },
-      ])
+      expect(ir.block.dynamic.children[0].operation).toMatchObject({
+        type: IRNodeTypes.CREATE_COMPONENT_NODE,
+        tag: 'Foo',
+        props: [
+          {
+            kind: IRDynamicPropsKind.EXPRESSION,
+            value: { content: 'obj', isStatic: false },
+          },
+        ],
+      })
     })
 
     test('v-bind="obj" after static prop', () => {
@@ -259,19 +249,17 @@ describe('compiler: element transform', () => {
       () => (_ctx.obj)
     ]
   }`)
-      expect(ir.block.operation).toMatchObject([
-        {
-          type: IRNodeTypes.CREATE_COMPONENT_NODE,
-          tag: 'Foo',
-          props: [
-            [{ key: { content: 'id' }, values: [{ content: 'foo' }] }],
-            {
-              kind: IRDynamicPropsKind.EXPRESSION,
-              value: { content: 'obj' },
-            },
-          ],
-        },
-      ])
+      expect(ir.block.dynamic.children[0].operation).toMatchObject({
+        type: IRNodeTypes.CREATE_COMPONENT_NODE,
+        tag: 'Foo',
+        props: [
+          [{ key: { content: 'id' }, values: [{ content: 'foo' }] }],
+          {
+            kind: IRDynamicPropsKind.EXPRESSION,
+            value: { content: 'obj' },
+          },
+        ],
+      })
     })
 
     test('v-bind="obj" before static prop', () => {
@@ -283,19 +271,17 @@ describe('compiler: element transform', () => {
     () => (_ctx.obj), 
     { id: () => ("foo") }
   ]`)
-      expect(ir.block.operation).toMatchObject([
-        {
-          type: IRNodeTypes.CREATE_COMPONENT_NODE,
-          tag: 'Foo',
-          props: [
-            {
-              kind: IRDynamicPropsKind.EXPRESSION,
-              value: { content: 'obj' },
-            },
-            [{ key: { content: 'id' }, values: [{ content: 'foo' }] }],
-          ],
-        },
-      ])
+      expect(ir.block.dynamic.children[0].operation).toMatchObject({
+        type: IRNodeTypes.CREATE_COMPONENT_NODE,
+        tag: 'Foo',
+        props: [
+          {
+            kind: IRDynamicPropsKind.EXPRESSION,
+            value: { content: 'obj' },
+          },
+          [{ key: { content: 'id' }, values: [{ content: 'foo' }] }],
+        ],
+      })
     })
 
     test('v-bind="obj" between static props', () => {
@@ -310,20 +296,18 @@ describe('compiler: element transform', () => {
       { class: () => ("bar") }
     ]
   }`)
-      expect(ir.block.operation).toMatchObject([
-        {
-          type: IRNodeTypes.CREATE_COMPONENT_NODE,
-          tag: 'Foo',
-          props: [
-            [{ key: { content: 'id' }, values: [{ content: 'foo' }] }],
-            {
-              kind: IRDynamicPropsKind.EXPRESSION,
-              value: { content: 'obj' },
-            },
-            [{ key: { content: 'class' }, values: [{ content: 'bar' }] }],
-          ],
-        },
-      ])
+      expect(ir.block.dynamic.children[0].operation).toMatchObject({
+        type: IRNodeTypes.CREATE_COMPONENT_NODE,
+        tag: 'Foo',
+        props: [
+          [{ key: { content: 'id' }, values: [{ content: 'foo' }] }],
+          {
+            kind: IRDynamicPropsKind.EXPRESSION,
+            value: { content: 'obj' },
+          },
+          [{ key: { content: 'class' }, values: [{ content: 'bar' }] }],
+        ],
+      })
     })
 
     test.todo('props merging: event handlers', () => {
@@ -368,19 +352,17 @@ describe('compiler: element transform', () => {
       expect(code).contains(`[
     () => (_toHandlers(_ctx.obj))
   ]`)
-      expect(ir.block.operation).toMatchObject([
-        {
-          type: IRNodeTypes.CREATE_COMPONENT_NODE,
-          tag: 'Foo',
-          props: [
-            {
-              kind: IRDynamicPropsKind.EXPRESSION,
-              value: { content: 'obj' },
-              handler: true,
-            },
-          ],
-        },
-      ])
+      expect(ir.block.dynamic.children[0].operation).toMatchObject({
+        type: IRNodeTypes.CREATE_COMPONENT_NODE,
+        tag: 'Foo',
+        props: [
+          {
+            kind: IRDynamicPropsKind.EXPRESSION,
+            value: { content: 'obj' },
+            handler: true,
+          },
+        ],
+      })
     })
 
     test('v-on expression is inline statement', () => {
@@ -390,21 +372,19 @@ describe('compiler: element transform', () => {
       expect(code).toMatchSnapshot()
       expect(code).contains(`onBar: () => _on_bar`)
       expect(code).contains(`const _on_bar = () => _ctx.handler`)
-      expect(ir.block.operation).toMatchObject([
-        {
-          type: IRNodeTypes.CREATE_COMPONENT_NODE,
-          tag: 'Foo',
-          props: [
-            [
-              {
-                key: { content: 'bar' },
-                handler: true,
-                values: [{ content: '_on_bar' }],
-              },
-            ],
+      expect(ir.block.dynamic.children[0].operation).toMatchObject({
+        type: IRNodeTypes.CREATE_COMPONENT_NODE,
+        tag: 'Foo',
+        props: [
+          [
+            {
+              key: { content: 'bar' },
+              handler: true,
+              values: [{ content: '_on_bar' }],
+            },
           ],
-        },
-      ])
+        ],
+      })
     })
 
     test('v-on expression is a function call', () => {
@@ -416,21 +396,19 @@ describe('compiler: element transform', () => {
       expect(code).contains(
         `const _on_bar = $event => (_ctx.handleBar($event))`,
       )
-      expect(ir.block.operation).toMatchObject([
-        {
-          type: IRNodeTypes.CREATE_COMPONENT_NODE,
-          tag: 'Foo',
-          props: [
-            [
-              {
-                key: { content: 'bar' },
-                handler: true,
-                values: [{ content: '_on_bar' }],
-              },
-            ],
+      expect(ir.block.dynamic.children[0].operation).toMatchObject({
+        type: IRNodeTypes.CREATE_COMPONENT_NODE,
+        tag: 'Foo',
+        props: [
+          [
+            {
+              key: { content: 'bar' },
+              handler: true,
+              values: [{ content: '_on_bar' }],
+            },
           ],
-        },
-      ])
+        ],
+      })
     })
 
     test('cache v-on expression with unique handler name', () => {
@@ -444,34 +422,33 @@ describe('compiler: element transform', () => {
       )
       expect(code).contains(`onBar: () => _on_bar1`)
       expect(code).contains(`const _on_bar1 = () => _ctx.handler`)
-      expect(ir.block.operation).toMatchObject([
-        {
-          type: IRNodeTypes.CREATE_COMPONENT_NODE,
-          tag: 'Foo',
-          props: [
-            [
-              {
-                key: { content: 'bar' },
-                handler: true,
-                values: [{ content: '_on_bar' }],
-              },
-            ],
+      expect(ir.block.dynamic.children[0].operation).toMatchObject({
+        type: IRNodeTypes.CREATE_COMPONENT_NODE,
+        tag: 'Foo',
+        props: [
+          [
+            {
+              key: { content: 'bar' },
+              handler: true,
+              values: [{ content: '_on_bar' }],
+            },
           ],
-        },
-        {
-          type: IRNodeTypes.CREATE_COMPONENT_NODE,
-          tag: 'Bar',
-          props: [
-            [
-              {
-                key: { content: 'bar' },
-                handler: true,
-                values: [{ content: '_on_bar1' }],
-              },
-            ],
+        ],
+      })
+
+      expect(ir.block.dynamic.children[1].operation).toMatchObject({
+        type: IRNodeTypes.CREATE_COMPONENT_NODE,
+        tag: 'Bar',
+        props: [
+          [
+            {
+              key: { content: 'bar' },
+              handler: true,
+              values: [{ content: '_on_bar1' }],
+            },
           ],
-        },
-      ])
+        ],
+      })
     })
   })
 
@@ -482,20 +459,18 @@ describe('compiler: element transform', () => {
       )
       expect(code).toMatchSnapshot()
       expect(helpers).toContain('resolveDynamicComponent')
-      expect(ir.block.operation).toMatchObject([
-        {
-          type: IRNodeTypes.CREATE_COMPONENT_NODE,
-          tag: 'component',
-          asset: true,
-          root: true,
-          props: [[]],
-          dynamic: {
-            type: NodeTypes.SIMPLE_EXPRESSION,
-            content: 'foo',
-            isStatic: true,
-          },
+      expect(ir.block.dynamic.children[0].operation).toMatchObject({
+        type: IRNodeTypes.CREATE_COMPONENT_NODE,
+        tag: 'component',
+        asset: true,
+        root: true,
+        props: [[]],
+        dynamic: {
+          type: NodeTypes.SIMPLE_EXPRESSION,
+          content: 'foo',
+          isStatic: true,
         },
-      ])
+      })
     })
 
     test('capitalized version w/ static binding', () => {
@@ -504,20 +479,18 @@ describe('compiler: element transform', () => {
       )
       expect(code).toMatchSnapshot()
       expect(helpers).toContain('resolveDynamicComponent')
-      expect(ir.block.operation).toMatchObject([
-        {
-          type: IRNodeTypes.CREATE_COMPONENT_NODE,
-          tag: 'Component',
-          asset: true,
-          root: true,
-          props: [[]],
-          dynamic: {
-            type: NodeTypes.SIMPLE_EXPRESSION,
-            content: 'foo',
-            isStatic: true,
-          },
+      expect(ir.block.dynamic.children[0].operation).toMatchObject({
+        type: IRNodeTypes.CREATE_COMPONENT_NODE,
+        tag: 'Component',
+        asset: true,
+        root: true,
+        props: [[]],
+        dynamic: {
+          type: NodeTypes.SIMPLE_EXPRESSION,
+          content: 'foo',
+          isStatic: true,
         },
-      ])
+      })
     })
 
     test('dynamic binding', () => {
@@ -526,20 +499,18 @@ describe('compiler: element transform', () => {
       )
       expect(code).toMatchSnapshot()
       expect(helpers).toContain('createDynamicComponent')
-      expect(ir.block.operation).toMatchObject([
-        {
-          type: IRNodeTypes.CREATE_COMPONENT_NODE,
-          tag: 'component',
-          asset: true,
-          root: true,
-          props: [[]],
-          dynamic: {
-            type: NodeTypes.SIMPLE_EXPRESSION,
-            content: 'foo',
-            isStatic: false,
-          },
+      expect(ir.block.dynamic.children[0].operation).toMatchObject({
+        type: IRNodeTypes.CREATE_COMPONENT_NODE,
+        tag: 'component',
+        asset: true,
+        root: true,
+        props: [[]],
+        dynamic: {
+          type: NodeTypes.SIMPLE_EXPRESSION,
+          content: 'foo',
+          isStatic: false,
         },
-      ])
+      })
     })
 
     test('dynamic binding shorthand', () => {
@@ -547,20 +518,18 @@ describe('compiler: element transform', () => {
         compileWithElementTransform(`<component :is />`)
       expect(code).toMatchSnapshot()
       expect(helpers).toContain('createDynamicComponent')
-      expect(ir.block.operation).toMatchObject([
-        {
-          type: IRNodeTypes.CREATE_COMPONENT_NODE,
-          tag: 'component',
-          asset: true,
-          root: true,
-          props: [[]],
-          dynamic: {
-            type: NodeTypes.SIMPLE_EXPRESSION,
-            content: 'is',
-            isStatic: false,
-          },
+      expect(ir.block.dynamic.children[0].operation).toMatchObject({
+        type: IRNodeTypes.CREATE_COMPONENT_NODE,
+        tag: 'component',
+        asset: true,
+        root: true,
+        props: [[]],
+        dynamic: {
+          type: NodeTypes.SIMPLE_EXPRESSION,
+          content: 'is',
+          isStatic: false,
         },
-      ])
+      })
     })
 
     // #3934
@@ -574,15 +543,13 @@ describe('compiler: element transform', () => {
       expect(code).toMatchSnapshot()
       expect(helpers).toContain('resolveComponent')
       expect(helpers).not.toContain('resolveDynamicComponent')
-      expect(ir.block.operation).toMatchObject([
-        {
-          type: IRNodeTypes.CREATE_COMPONENT_NODE,
-          tag: 'custom-input',
-          asset: true,
-          root: true,
-          props: [[{ key: { content: 'is' }, values: [{ content: 'foo' }] }]],
-        },
-      ])
+      expect(ir.block.dynamic.children[0].operation).toMatchObject({
+        type: IRNodeTypes.CREATE_COMPONENT_NODE,
+        tag: 'custom-input',
+        asset: true,
+        root: true,
+        props: [[{ key: { content: 'is' }, values: [{ content: 'foo' }] }]],
+      })
     })
   })
 
@@ -893,24 +860,22 @@ describe('compiler: element transform', () => {
       `<Foo :[foo-bar]="bar" :[baz]="qux" />`,
     )
     expect(code).toMatchSnapshot()
-    expect(ir.block.operation).toMatchObject([
-      {
-        type: IRNodeTypes.CREATE_COMPONENT_NODE,
-        tag: 'Foo',
-        props: [
-          {
-            kind: IRDynamicPropsKind.ATTRIBUTE,
-            key: { content: 'foo-bar' },
-            values: [{ content: 'bar' }],
-          },
-          {
-            kind: IRDynamicPropsKind.ATTRIBUTE,
-            key: { content: 'baz' },
-            values: [{ content: 'qux' }],
-          },
-        ],
-      },
-    ])
+    expect(ir.block.dynamic.children[0].operation).toMatchObject({
+      type: IRNodeTypes.CREATE_COMPONENT_NODE,
+      tag: 'Foo',
+      props: [
+        {
+          kind: IRDynamicPropsKind.ATTRIBUTE,
+          key: { content: 'foo-bar' },
+          values: [{ content: 'bar' }],
+        },
+        {
+          kind: IRDynamicPropsKind.ATTRIBUTE,
+          key: { content: 'baz' },
+          values: [{ content: 'qux' }],
+        },
+      ],
+    })
   })
 
   test('component with dynamic event arguments', () => {
@@ -918,26 +883,24 @@ describe('compiler: element transform', () => {
       `<Foo @[foo-bar]="bar" @[baz]="qux" />`,
     )
     expect(code).toMatchSnapshot()
-    expect(ir.block.operation).toMatchObject([
-      {
-        type: IRNodeTypes.CREATE_COMPONENT_NODE,
-        tag: 'Foo',
-        props: [
-          {
-            kind: IRDynamicPropsKind.ATTRIBUTE,
-            key: { content: 'foo-bar' },
-            values: [{ content: 'bar' }],
-            handler: true,
-          },
-          {
-            kind: IRDynamicPropsKind.ATTRIBUTE,
-            key: { content: 'baz' },
-            values: [{ content: 'qux' }],
-            handler: true,
-          },
-        ],
-      },
-    ])
+    expect(ir.block.dynamic.children[0].operation).toMatchObject({
+      type: IRNodeTypes.CREATE_COMPONENT_NODE,
+      tag: 'Foo',
+      props: [
+        {
+          kind: IRDynamicPropsKind.ATTRIBUTE,
+          key: { content: 'foo-bar' },
+          values: [{ content: 'bar' }],
+          handler: true,
+        },
+        {
+          kind: IRDynamicPropsKind.ATTRIBUTE,
+          key: { content: 'baz' },
+          values: [{ content: 'qux' }],
+          handler: true,
+        },
+      ],
+    })
   })
 
   test('component event with once modifier', () => {

@@ -28,8 +28,8 @@ describe('compiler: v-once', () => {
     expect(ir.block.effect).lengthOf(0)
     expect(ir.block.operation).toMatchObject([
       {
-        type: IRNodeTypes.CREATE_TEXT_NODE,
-        id: 0,
+        type: IRNodeTypes.SET_TEXT,
+        element: 0,
         values: [
           {
             type: NodeTypes.SIMPLE_EXPRESSION,
@@ -60,11 +60,6 @@ describe('compiler: v-once', () => {
             },
           ],
         },
-      },
-      {
-        type: IRNodeTypes.PREPEND_NODE,
-        elements: [0],
-        parent: 2,
       },
     ])
   })
@@ -131,19 +126,13 @@ describe('compiler: v-once', () => {
     const { ir, code } = compileWithOnce(`<div><Comp :id="foo" v-once /></div>`)
     expect(code).toMatchSnapshot()
     expect(ir.block.effect).lengthOf(0)
-    expect(ir.block.operation).toMatchObject([
-      {
-        type: IRNodeTypes.CREATE_COMPONENT_NODE,
-        id: 0,
-        tag: 'Comp',
-        once: true,
-      },
-      {
-        type: IRNodeTypes.INSERT_NODE,
-        elements: [0],
-        parent: 1,
-      },
-    ])
+    expect(ir.block.dynamic.children[0].children[0].operation).toMatchObject({
+      type: IRNodeTypes.CREATE_COMPONENT_NODE,
+      id: 0,
+      tag: 'Comp',
+      once: true,
+      parent: 1,
+    })
   })
 
   test.todo('on slot outlet')
@@ -164,24 +153,22 @@ describe('compiler: v-once', () => {
     expect(code).toMatchSnapshot()
 
     expect(ir.block.effect).lengthOf(0)
-    expect(ir.block.operation).toMatchObject([
-      {
-        type: IRNodeTypes.IF,
-        id: 0,
-        once: true,
-        condition: {
-          type: NodeTypes.SIMPLE_EXPRESSION,
-          content: 'expr',
-          isStatic: false,
-        },
-        positive: {
-          type: IRNodeTypes.BLOCK,
-          dynamic: {
-            children: [{ template: 0 }],
-          },
+    expect(ir.block.dynamic.children[0].operation).toMatchObject({
+      type: IRNodeTypes.IF,
+      id: 0,
+      once: true,
+      condition: {
+        type: NodeTypes.SIMPLE_EXPRESSION,
+        content: 'expr',
+        isStatic: false,
+      },
+      positive: {
+        type: IRNodeTypes.BLOCK,
+        dynamic: {
+          children: [{ template: 0 }],
         },
       },
-    ])
+    })
   })
 
   test('with v-if/else', () => {
@@ -191,42 +178,38 @@ describe('compiler: v-once', () => {
     expect(code).toMatchSnapshot()
 
     expect(ir.block.effect).lengthOf(0)
-    expect(ir.block.operation).toMatchObject([
-      {
-        type: IRNodeTypes.IF,
-        id: 0,
-        once: true,
-        condition: {
-          type: NodeTypes.SIMPLE_EXPRESSION,
-          content: 'expr',
-          isStatic: false,
-        },
-        positive: {
-          type: IRNodeTypes.BLOCK,
-          dynamic: {
-            children: [{ template: 0 }],
-          },
-        },
-        negative: {
-          type: IRNodeTypes.BLOCK,
-          dynamic: {
-            children: [{ template: 1 }],
-          },
+    expect(ir.block.dynamic.children[0].operation).toMatchObject({
+      type: IRNodeTypes.IF,
+      id: 0,
+      once: true,
+      condition: {
+        type: NodeTypes.SIMPLE_EXPRESSION,
+        content: 'expr',
+        isStatic: false,
+      },
+      positive: {
+        type: IRNodeTypes.BLOCK,
+        dynamic: {
+          children: [{ template: 0 }],
         },
       },
-    ])
+      negative: {
+        type: IRNodeTypes.BLOCK,
+        dynamic: {
+          children: [{ template: 1 }],
+        },
+      },
+    })
   })
 
   test('with v-for', () => {
     const { ir, code } = compileWithOnce(`<div v-for="i in list" v-once />`)
     expect(code).toMatchSnapshot()
     expect(ir.block.effect).lengthOf(0)
-    expect(ir.block.operation).toMatchObject([
-      {
-        type: IRNodeTypes.FOR,
-        id: 0,
-        once: true,
-      },
-    ])
+    expect(ir.block.dynamic.children[0].operation).toMatchObject({
+      type: IRNodeTypes.FOR,
+      id: 0,
+      once: true,
+    })
   })
 })

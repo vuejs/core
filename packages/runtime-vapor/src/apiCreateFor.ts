@@ -22,6 +22,8 @@ import { currentInstance, isVaporComponent } from './component'
 import type { DynamicSlot } from './componentSlots'
 import { renderEffect } from './renderEffect'
 import { VaporVForFlags } from '../../shared/src/vaporFlags'
+import { isHydrating, locateHydrationNode } from './dom/hydration'
+import { insertionAnchor, insertionParent } from './insertionState'
 
 class ForBlock extends VaporFragment {
   scope: EffectScope | undefined
@@ -56,7 +58,6 @@ type ResolvedSource = {
   keys?: string[]
 }
 
-/*! #__NO_SIDE_EFFECTS__ */
 export const createFor = (
   src: () => Source,
   renderItem: (
@@ -66,12 +67,18 @@ export const createFor = (
   ) => Block,
   getKey?: (item: any, key: any, index?: number) => any,
   flags = 0,
-  // hydrationNode?: Node,
 ): VaporFragment => {
+  const _insertionParent = insertionParent
+  const _insertionAnchor = insertionAnchor
+  if (isHydrating) {
+    locateHydrationNode()
+  }
+
   let isMounted = false
   let oldBlocks: ForBlock[] = []
   let newBlocks: ForBlock[]
   let parent: ParentNode | undefined | null
+  // TODO handle this in hydration
   const parentAnchor = __DEV__ ? createComment('for') : createTextNode()
   const frag = new VaporFragment(oldBlocks)
   const instance = currentInstance!
@@ -356,6 +363,11 @@ export const createFor = (
   } else {
     renderEffect(renderList)
   }
+
+  if (!isHydrating && _insertionParent) {
+    insert(frag, _insertionParent, _insertionAnchor)
+  }
+
   return frag
 }
 

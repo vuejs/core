@@ -11,7 +11,7 @@ import {
 } from './utils'
 import type { CodegenContext } from '../generate'
 import { genEffects, genOperations } from './operation'
-import { genChildren } from './template'
+import { genChildren, genSelf } from './template'
 import { toValidAssetId } from '@vue/compiler-dom'
 
 export function genBlock(
@@ -48,6 +48,9 @@ export function genBlockContent(
     genResolveAssets('directive', 'resolveDirective')
   }
 
+  for (const child of dynamic.children) {
+    push(...genSelf(child, context))
+  }
   for (const child of dynamic.children) {
     push(...genChildren(child, context, `n${child.id!}`))
   }
