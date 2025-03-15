@@ -22,7 +22,8 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: transform slot > dynamic slots name w/ v-for 1`] = `
-"import { resolveComponent as _resolveComponent, createTextNode as _createTextNode, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, createForSlots as _createForSlots, createComponentWithFallback as _createComponentWithFallback } from 'vue';
+"import { resolveComponent as _resolveComponent, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, createForSlots as _createForSlots, createComponentWithFallback as _createComponentWithFallback, template as _template } from 'vue';
+const t0 = _template(" ")
 
 export function render(_ctx) {
   const _component_Comp = _resolveComponent("Comp")
@@ -31,7 +32,7 @@ export function render(_ctx) {
       () => (_createForSlots(_ctx.list, (item) => ({
         name: item, 
         fn: (_slotProps0) => {
-          const n0 = _createTextNode()
+          const n0 = t0()
           _renderEffect(() => _setText(n0, _toDisplayString(_slotProps0["bar"])))
           return n0
         }
@@ -158,7 +159,7 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: transform slot > nested slots scoping 1`] = `
-"import { resolveComponent as _resolveComponent, createTextNode as _createTextNode, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, createComponentWithFallback as _createComponentWithFallback, template as _template } from 'vue';
+"import { resolveComponent as _resolveComponent, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, createComponentWithFallback as _createComponentWithFallback, template as _template } from 'vue';
 const t0 = _template(" ")
 
 export function render(_ctx) {
@@ -166,17 +167,16 @@ export function render(_ctx) {
   const _component_Comp = _resolveComponent("Comp")
   const n5 = _createComponentWithFallback(_component_Comp, null, {
     "default": (_slotProps0) => {
-      const n2 = t0()
       const n1 = _createComponentWithFallback(_component_Inner, null, {
         "default": (_slotProps1) => {
-          const n0 = _createTextNode()
+          const n0 = t0()
           _renderEffect(() => _setText(n0, _toDisplayString(_slotProps0["foo"] + _slotProps1["bar"] + _ctx.baz)))
           return n0
         }
       })
-      const n3 = _createTextNode()
-      _renderEffect(() => _setText(n3, _toDisplayString(_slotProps0["foo"] + _ctx.bar + _ctx.baz)))
-      return [n1, n2, n3]
+      const n3 = t0()
+      _renderEffect(() => _setText(n3, " " + _toDisplayString(_slotProps0["foo"] + _ctx.bar + _ctx.baz)))
+      return [n1, n3]
     }
   }, true)
   return n5
@@ -184,7 +184,8 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: transform slot > on component dynamically named slot 1`] = `
-"import { resolveComponent as _resolveComponent, createTextNode as _createTextNode, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, createComponentWithFallback as _createComponentWithFallback } from 'vue';
+"import { resolveComponent as _resolveComponent, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, createComponentWithFallback as _createComponentWithFallback, template as _template } from 'vue';
+const t0 = _template(" ")
 
 export function render(_ctx) {
   const _component_Comp = _resolveComponent("Comp")
@@ -193,7 +194,7 @@ export function render(_ctx) {
       () => ({
         name: _ctx.named, 
         fn: (_slotProps0) => {
-          const n0 = _createTextNode()
+          const n0 = t0()
           _renderEffect(() => _setText(n0, _toDisplayString(_slotProps0["foo"] + _ctx.bar)))
           return n0
         }
@@ -205,13 +206,14 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: transform slot > on component named slot 1`] = `
-"import { resolveComponent as _resolveComponent, createTextNode as _createTextNode, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, createComponentWithFallback as _createComponentWithFallback } from 'vue';
+"import { resolveComponent as _resolveComponent, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, createComponentWithFallback as _createComponentWithFallback, template as _template } from 'vue';
+const t0 = _template(" ")
 
 export function render(_ctx) {
   const _component_Comp = _resolveComponent("Comp")
   const n1 = _createComponentWithFallback(_component_Comp, null, {
     "named": (_slotProps0) => {
-      const n0 = _createTextNode()
+      const n0 = t0()
       _renderEffect(() => _setText(n0, _toDisplayString(_slotProps0["foo"] + _ctx.bar)))
       return n0
     }
@@ -221,13 +223,14 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: transform slot > on-component default slot 1`] = `
-"import { resolveComponent as _resolveComponent, createTextNode as _createTextNode, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, createComponentWithFallback as _createComponentWithFallback } from 'vue';
+"import { resolveComponent as _resolveComponent, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, createComponentWithFallback as _createComponentWithFallback, template as _template } from 'vue';
+const t0 = _template(" ")
 
 export function render(_ctx) {
   const _component_Comp = _resolveComponent("Comp")
   const n1 = _createComponentWithFallback(_component_Comp, null, {
     "default": (_slotProps0) => {
-      const n0 = _createTextNode()
+      const n0 = t0()
       _renderEffect(() => _setText(n0, _toDisplayString(_slotProps0["foo"] + _ctx.bar)))
       return n0
     }

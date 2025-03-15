@@ -26,7 +26,7 @@ export function render(_ctx) {
 `;
 
 exports[`compile > custom directive > component 1`] = `
-"import { resolveComponent as _resolveComponent, resolveDirective as _resolveDirective, createComponentWithFallback as _createComponentWithFallback, withVaporDirectives as _withVaporDirectives, insert as _insert, createIf as _createIf, template as _template } from 'vue';
+"import { resolveComponent as _resolveComponent, resolveDirective as _resolveDirective, setInsertionState as _setInsertionState, createComponentWithFallback as _createComponentWithFallback, withVaporDirectives as _withVaporDirectives, createIf as _createIf, template as _template } from 'vue';
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
@@ -38,9 +38,9 @@ export function render(_ctx) {
     "default": () => {
       const n0 = _createIf(() => (true), () => {
         const n3 = t0()
+        _setInsertionState(n3)
         const n2 = _createComponentWithFallback(_component_Bar)
         _withVaporDirectives(n2, [[_directive_hello, void 0, void 0, { world: true }]])
-        _insert(n2, n3)
         return n3
       })
       return n0
@@ -149,17 +149,17 @@ export function render(_ctx, $props, $emit, $attrs, $slots) {
 `;
 
 exports[`compile > directives > v-pre > should not affect siblings after it 1`] = `
-"import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback, createTextNode as _createTextNode, insert as _insert, toDisplayString as _toDisplayString, setText as _setText, setProp as _setProp, renderEffect as _renderEffect, template as _template } from 'vue';
+"import { resolveComponent as _resolveComponent, setInsertionState as _setInsertionState, createComponentWithFallback as _createComponentWithFallback, child as _child, toDisplayString as _toDisplayString, setText as _setText, setProp as _setProp, renderEffect as _renderEffect, template as _template } from 'vue';
 const t0 = _template("<div :id=\\"foo\\"><Comp></Comp>{{ bar }}</div>")
-const t1 = _template("<div></div>")
+const t1 = _template("<div> </div>")
 
 export function render(_ctx, $props, $emit, $attrs, $slots) {
   const _component_Comp = _resolveComponent("Comp")
   const n0 = t0()
   const n3 = t1()
+  _setInsertionState(n3, 0)
   const n1 = _createComponentWithFallback(_component_Comp)
-  const n2 = _createTextNode()
-  _insert([n1, n2], n3)
+  const n2 = _child(n3)
   _renderEffect(() => {
     _setText(n2, _toDisplayString(_ctx.bar))
     _setProp(n3, "id", _ctx.foo)
@@ -169,10 +169,12 @@ export function render(_ctx, $props, $emit, $attrs, $slots) {
 `;
 
 exports[`compile > dynamic root 1`] = `
-"import { createTextNode as _createTextNode, toDisplayString as _toDisplayString } from 'vue';
+"import { toDisplayString as _toDisplayString, setText as _setText, template as _template } from 'vue';
+const t0 = _template(" ")
 
 export function render(_ctx) {
-  const n0 = _createTextNode(_toDisplayString(1) + _toDisplayString(2))
+  const n0 = t0()
+  _setText(n0, _toDisplayString(1) + _toDisplayString(2))
   return n0
 }"
 `;
@@ -197,7 +199,7 @@ export function render(_ctx) {
 
 exports[`compile > expression parsing > interpolation 1`] = `
 "
-  const n0 = _createTextNode()
+  const n0 = t0()
   _renderEffect(() => _setText(n0, _toDisplayString(a + b.value)))
   return n0
 "
@@ -229,10 +231,12 @@ export function render(_ctx) {
 `;
 
 exports[`compile > static + dynamic root 1`] = `
-"import { createTextNode as _createTextNode, toDisplayString as _toDisplayString } from 'vue';
+"import { toDisplayString as _toDisplayString, setText as _setText, template as _template } from 'vue';
+const t0 = _template(" ")
 
 export function render(_ctx) {
-  const n0 = _createTextNode(_toDisplayString(1) + _toDisplayString(2) + "3" + _toDisplayString(4) + _toDisplayString(5) + "6" + _toDisplayString(7) + _toDisplayString(8) + "9" + 'A' + 'B')
+  const n0 = t0()
+  _setText(n0, _toDisplayString(1) + _toDisplayString(2) + "3" + _toDisplayString(4) + _toDisplayString(5) + "6" + _toDisplayString(7) + _toDisplayString(8) + "9" + 'A' + 'B')
   return n0
 }"
 `;

@@ -27,10 +27,11 @@ describe('compiler: children transform', () => {
     )
     expect(code).toMatchSnapshot()
     expect(Array.from(helpers)).containSubset([
+      'child',
+      'toDisplayString',
+      'renderEffect',
       'next',
       'setText',
-      'createTextNode',
-      'insert',
       'template',
     ])
   })
@@ -56,6 +57,20 @@ describe('compiler: children transform', () => {
       </div>`,
     )
     expect(code).contains(`const n0 = _nthChild(n1, 2)`)
+    expect(code).toMatchSnapshot()
+  })
+
+  test('anchor insertion in middle', () => {
+    const { code } = compileWithElementTransform(
+      `<div>
+        <div></div>
+        <div v-if="1"></div>
+        <div></div>
+      </div>`,
+    )
+    // ensure the insertion anchor is generated before the insertion statement
+    expect(code).toMatch(`const n3 = _next(_child(n4))
+  _setInsertionState(n4, n3)`)
     expect(code).toMatchSnapshot()
   })
 })
