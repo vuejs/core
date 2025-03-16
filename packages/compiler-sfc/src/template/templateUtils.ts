@@ -3,7 +3,12 @@ import { isString } from '@vue/shared'
 
 export function isRelativeUrl(url: string): boolean {
   const firstChar = url.charAt(0)
-  return firstChar === '.' || firstChar === '~' || firstChar === '@'
+  return (
+    firstChar === '.' ||
+    firstChar === '~' ||
+    firstChar === '@' ||
+    firstChar === '#'
+  )
 }
 
 const externalRE = /^(https?:)?\/\//

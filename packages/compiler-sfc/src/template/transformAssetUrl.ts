@@ -101,13 +101,19 @@ export const transformAssetUrl: NodeTransform = (
 
     const assetAttrs = (attrs || []).concat(wildCardAttrs || [])
     node.props.forEach((attr, index) => {
+      const isHashFragment =
+        node.tag === 'use' &&
+        attr.type === NodeTypes.ATTRIBUTE &&
+        (attr.name === 'href' || attr.name === 'xlink:href') &&
+        attr.value?.content[0] === '#'
+
       if (
         attr.type !== NodeTypes.ATTRIBUTE ||
         !assetAttrs.includes(attr.name) ||
         !attr.value ||
         isExternalUrl(attr.value.content) ||
         isDataUrl(attr.value.content) ||
-        attr.value.content[0] === '#' ||
+        isHashFragment ||
         (!options.includeAbsolute && !isRelativeUrl(attr.value.content))
       ) {
         return
@@ -210,6 +216,33 @@ function getImportsExpressionExp(
       )
     }
     return context.hoist(finalExp)
+  } else if (hash) {
+    // Hash without path, e.g. subpath import
+    let name: string
+    let exp: SimpleExpressionNode
+    const existingIndex = context.imports.findIndex(i => i.path === hash)
+
+    if (existingIndex > -1) {
+      name = `_imports_${existingIndex}`
+      exp = context.imports[existingIndex].exp as SimpleExpressionNode
+    } else {
+      name = `_imports_${context.imports.length}`
+      exp = createSimpleExpression(
+        name,
+        false,
+        loc,
+        ConstantTypes.CAN_STRINGIFY,
+      )
+
+      // We need to ensure the path is not encoded (to %2F),
+      // so we decode it back in case it is encoded
+      context.imports.push({
+        exp,
+        path: decodeURIComponent(hash),
+      })
+    }
+
+    return exp
   } else {
     return createSimpleExpression(`''`, false, loc, ConstantTypes.CAN_STRINGIFY)
   }
