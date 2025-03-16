@@ -13,13 +13,7 @@ export {
   type CodegenOptions,
   type VaporCodegenResult,
 } from './generate'
-export {
-  genCall,
-  genMulti,
-  buildCodeFragment,
-  codeFragmentToString,
-  type CodeFragment,
-} from './generators/utils'
+export * from './generators/utils'
 export {
   wrapTemplate,
   compile,

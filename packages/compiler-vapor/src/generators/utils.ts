@@ -10,6 +10,8 @@ import {
 import { isArray, isString } from '@vue/shared'
 import type { CodegenContext } from '../generate'
 
+export { genExpression } from './expression'
+
 export const NEWLINE: unique symbol = Symbol(__DEV__ ? `newline` : ``)
 /** increase offset but don't push actual code */
 export const LF: unique symbol = Symbol(__DEV__ ? `line feed` : ``)
