@@ -170,7 +170,7 @@ export function applyTransitionHooks(
   const child = findTransitionBlock(block)
   if (!child) {
     // set transition hooks on fragment for reusing during it's updating
-    if (isFrag) setTransitionHooksToFragment(block, hooks)
+    if (isFrag) setTransitionHooksOnFragment(block, hooks)
     return hooks
   }
 
@@ -184,7 +184,7 @@ export function applyTransitionHooks(
   )
   resolvedHooks.delayedLeave = delayedLeave
   setTransitionHooks(child, resolvedHooks)
-  if (isFrag) setTransitionHooksToFragment(block, resolvedHooks)
+  if (isFrag) setTransitionHooksOnFragment(block, resolvedHooks)
 
   // fallthrough attrs
   if (fallthroughAttrs && instance.hasFallthrough) {
@@ -295,17 +295,7 @@ export function findTransitionBlock(
   return child
 }
 
-export function setTransitionToInstance(
-  block: VaporComponentInstance,
-  hooks: VaporTransitionHooks,
-): void {
-  const child = findTransitionBlock(block.block)
-  if (!child) return
-
-  setTransitionHooks(child, hooks)
-}
-
-export function setTransitionHooksToFragment(
+export function setTransitionHooksOnFragment(
   block: Block,
   hooks: VaporTransitionHooks,
 ): void {
@@ -313,14 +303,18 @@ export function setTransitionHooksToFragment(
     setTransitionHooks(block, hooks)
   } else if (isArray(block)) {
     for (let i = 0; i < block.length; i++) {
-      setTransitionHooksToFragment(block[i], hooks)
+      setTransitionHooksOnFragment(block[i], hooks)
     }
   }
 }
 
 export function setTransitionHooks(
-  block: TransitionBlock,
+  block: TransitionBlock | VaporComponentInstance,
   hooks: VaporTransitionHooks,
 ): void {
+  if (isVaporComponent(block)) {
+    block = findTransitionBlock(block.block) as TransitionBlock
+    if (!block) return
+  }
   block.$transition = hooks
 }

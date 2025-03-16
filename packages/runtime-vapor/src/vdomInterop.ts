@@ -41,7 +41,7 @@ import type { RawSlots, VaporSlot } from './componentSlots'
 import { renderEffect } from './renderEffect'
 import { createTextNode } from './dom/node'
 import { optimizePropertyLookup } from './dom/prop'
-import { setTransitionToInstance } from './components/Transition'
+import { setTransitionHooks as setVaporTransitionHooks } from './components/Transition'
 
 // mounting vapor components and slots in vdom
 const vaporInteropImpl: Omit<
@@ -78,7 +78,7 @@ const vaporInteropImpl: Omit<
     instance.rawPropsRef = propsRef
     instance.rawSlotsRef = slotsRef
     if (vnode.transition) {
-      setTransitionToInstance(
+      setVaporTransitionHooks(
         instance,
         vnode.transition as VaporTransitionHooks,
       )
@@ -138,7 +138,7 @@ const vaporInteropImpl: Omit<
   },
 
   setTransitionHooks(component, hooks) {
-    setTransitionToInstance(component as any, hooks as VaporTransitionHooks)
+    setVaporTransitionHooks(component as any, hooks as VaporTransitionHooks)
   },
 }
 

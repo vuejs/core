@@ -26,7 +26,7 @@ import {
 import {
   resolveTransitionHooks,
   setTransitionHooks,
-  setTransitionHooksToFragment,
+  setTransitionHooksOnFragment,
 } from './Transition'
 import {
   type ObjectVaporComponent,
@@ -124,7 +124,7 @@ export const VaporTransitionGroup: ObjectVaporComponent = decorate({
     slottedBlock = slots.default && slots.default()
 
     // store props and state on fragment for reusing during insert new items
-    setTransitionHooksToFragment(slottedBlock, {
+    setTransitionHooksOnFragment(slottedBlock, {
       props: cssTransitionProps,
       state,
     } as VaporTransitionHooks)
