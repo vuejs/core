@@ -26,7 +26,7 @@ export function render(_ctx) {
 `;
 
 exports[`compile > custom directive > component 1`] = `
-"import { resolveComponent as _resolveComponent, resolveDirective as _resolveDirective, setInsertionState as _setInsertionState, createComponentWithFallback as _createComponentWithFallback, withVaporDirectives as _withVaporDirectives, createIf as _createIf, template as _template } from 'vue';
+"import { resolveComponent as _resolveComponent, resolveDirective as _resolveDirective, createComponentWithFallback as _createComponentWithFallback, withVaporDirectives as _withVaporDirectives, setInsertionState as _setInsertionState, createIf as _createIf, template as _template } from 'vue';
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
@@ -38,9 +38,9 @@ export function render(_ctx) {
     "default": () => {
       const n0 = _createIf(() => (true), () => {
         const n3 = t0()
-        _setInsertionState(n3)
         const n2 = _createComponentWithFallback(_component_Bar)
         _withVaporDirectives(n2, [[_directive_hello, void 0, void 0, { world: true }]])
+        _setInsertionState(n3)
         return n3
       })
       return n0
@@ -149,7 +149,7 @@ export function render(_ctx, $props, $emit, $attrs, $slots) {
 `;
 
 exports[`compile > directives > v-pre > should not affect siblings after it 1`] = `
-"import { resolveComponent as _resolveComponent, setInsertionState as _setInsertionState, createComponentWithFallback as _createComponentWithFallback, child as _child, toDisplayString as _toDisplayString, setText as _setText, setProp as _setProp, renderEffect as _renderEffect, template as _template } from 'vue';
+"import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback, setInsertionState as _setInsertionState, child as _child, toDisplayString as _toDisplayString, setText as _setText, setProp as _setProp, renderEffect as _renderEffect, template as _template } from 'vue';
 const t0 = _template("<div :id=\\"foo\\"><Comp></Comp>{{ bar }}</div>")
 const t1 = _template("<div> </div>")
 
@@ -157,8 +157,8 @@ export function render(_ctx, $props, $emit, $attrs, $slots) {
   const _component_Comp = _resolveComponent("Comp")
   const n0 = t0()
   const n3 = t1()
-  _setInsertionState(n3, 0)
   const n1 = _createComponentWithFallback(_component_Comp)
+  _setInsertionState(n3, 0)
   const n2 = _child(n3)
   _renderEffect(() => {
     _setText(n2, _toDisplayString(_ctx.bar))

@@ -36,14 +36,14 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: v-once > on component 1`] = `
-"import { resolveComponent as _resolveComponent, setInsertionState as _setInsertionState, createComponentWithFallback as _createComponentWithFallback, template as _template } from 'vue';
+"import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback, setInsertionState as _setInsertionState, template as _template } from 'vue';
 const t0 = _template("<div></div>", true)
 
 export function render(_ctx) {
   const _component_Comp = _resolveComponent("Comp")
   const n1 = t0()
-  _setInsertionState(n1)
   const n0 = _createComponentWithFallback(_component_Comp, { id: () => (_ctx.foo) }, null, null, true)
+  _setInsertionState(n1)
   return n1
 }"
 `;
