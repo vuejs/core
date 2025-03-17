@@ -91,7 +91,6 @@ export const VaporTransitionGroup: ObjectVaporComponent = decorate({
       }
 
       const moveClass = props.moveClass || `${props.name || 'v'}-move`
-
       const firstChild = getFirstConnectedChild(prevChildren)
       if (
         !firstChild ||
@@ -128,6 +127,7 @@ export const VaporTransitionGroup: ObjectVaporComponent = decorate({
     setTransitionHooksOnFragment(slottedBlock, {
       props: cssTransitionProps,
       state,
+      instance,
     } as VaporTransitionHooks)
 
     children = getTransitionBlocks(slottedBlock)
