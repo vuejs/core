@@ -9,4 +9,4 @@ catalog:
   'magic-string': ^0.30.11
   'source-map-js': ^1.2.1
   'vite': ^5.4.14
-  '@vitejs/plugin-vue': ^5.2.1
+  '@vitejs/plugin-vue': ^5.2.2

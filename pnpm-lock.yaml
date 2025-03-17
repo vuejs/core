@@ -13,8 +13,8 @@ catalogs:
       specifier: ^7.25.2
       version: 7.25.2
     '@vitejs/plugin-vue':
-      specifier: ^5.2.1
-      version: 5.2.1
+      specifier: ^5.2.2
+      version: 5.2.2
     estree-walker:
       specifier: ^2.0.2
       version: 2.0.2
@@ -218,7 +218,7 @@ importers:
     devDependencies:
       '@vitejs/plugin-vue':
         specifier: 'catalog:'
-        version: 5.2.1(vite@5.4.14(@types/node@22.13.10)(sass@1.85.1))(vue@packages+vue)
+        version: 5.2.2(vite@5.4.14(@types/node@22.13.10)(sass@1.85.1))(vue@packages+vue)
       vite:
         specifier: 'catalog:'
         version: 5.4.14(@types/node@22.13.10)(sass@1.85.1)
@@ -236,7 +236,7 @@ importers:
     devDependencies:
       '@vitejs/plugin-vue':
         specifier: 'catalog:'
-        version: 5.2.1(vite@5.4.14(@types/node@22.13.10)(sass@1.85.1))(vue@packages+vue)
+        version: 5.2.2(vite@5.4.14(@types/node@22.13.10)(sass@1.85.1))(vue@packages+vue)
       vite:
         specifier: 'catalog:'
         version: 5.4.14(@types/node@22.13.10)(sass@1.85.1)
@@ -1490,8 +1490,8 @@ packages:
     cpu: [x64]
     os: [win32]
 
-  '@vitejs/plugin-vue@5.2.1':
-    resolution: {integrity: sha512-cxh314tzaWwOLqVes2gnnCtvBDcM1UMdn+iFR+UjAn411dPT3tOmqrJjbMd7koZpMAmBM/GqeV4n9ge7JSiJJQ==}
+  '@vitejs/plugin-vue@5.2.2':
+    resolution: {integrity: sha512-IY0aPonWZI2huxrWjoSBUQX14GThitmr1sc2OUJymcgnY5RlUI7HoXGAnFEoVNRsck/kS6inGvxCN6CoHu86yQ==}
     engines: {node: ^18.0.0 || >=20.0.0}
     peerDependencies:
       vite: ^5.0.0 || ^6.0.0
@@ -4468,7 +4468,7 @@ snapshots:
   '@unrs/rspack-resolver-binding-win32-x64-msvc@1.1.2':
     optional: true
 
-  '@vitejs/plugin-vue@5.2.1(vite@5.4.14(@types/node@22.13.10)(sass@1.85.1))(vue@packages+vue)':
+  '@vitejs/plugin-vue@5.2.2(vite@5.4.14(@types/node@22.13.10)(sass@1.85.1))(vue@packages+vue)':
     dependencies:
       vite: 5.4.14(@types/node@22.13.10)(sass@1.85.1)
       vue: link:packages/vue
