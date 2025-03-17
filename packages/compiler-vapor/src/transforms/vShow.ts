@@ -30,16 +30,16 @@ export const transformVShow: DirectiveTransform = (dir, node, context) => {
   }
 
   // lazy apply vshow if the node is inside a transition with appear
-  let lazyApplyVShow = false
+  let shouldDeferred = false
   const parentNode = context.parent && context.parent.node
   if (parentNode && parentNode.type === NodeTypes.ELEMENT) {
-    lazyApplyVShow = !!(
+    shouldDeferred = !!(
       isTransitionTag(parentNode.tag) &&
       findProp(parentNode, 'appear', false, true)
     )
 
-    if (lazyApplyVShow) {
-      context.parent!.parent!.block.hasLazyApplyVShow = true
+    if (shouldDeferred) {
+      context.parent!.parent!.block.hasDeferredVShow = true
     }
   }
 
@@ -49,6 +49,6 @@ export const transformVShow: DirectiveTransform = (dir, node, context) => {
     dir,
     name: 'show',
     builtin: true,
-    lazy: lazyApplyVShow,
+    deferred: shouldDeferred,
   })
 }

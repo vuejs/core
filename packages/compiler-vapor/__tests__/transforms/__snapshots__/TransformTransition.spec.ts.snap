@@ -74,18 +74,18 @@ exports[`compiler: transition > v-show + appear 1`] = `
 const t0 = _template("<h1>foo</h1>")
 
 export function render(_ctx) {
-  const lazyApplyVShowFn = []
+  const deferredApplyVShows = []
   const n1 = _createComponent(_VaporTransition, {
     appear: () => (""), 
     persisted: () => ("")
   }, {
     "default": () => {
       const n0 = t0()
-      lazyApplyVShowFn.push(() => _applyVShow(n0, () => (_ctx.show)))
+      deferredApplyVShows.push(() => _applyVShow(n0, () => (_ctx.show)))
       return n0
     }
   }, true)
-  lazyApplyVShowFn.forEach(fn => fn())
+  deferredApplyVShows.forEach(fn => fn())
   return n1
 }"
 `;
