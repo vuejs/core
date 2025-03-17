@@ -36,6 +36,7 @@ import {
 } from '../component'
 import { isForBlock } from '../apiCreateFor'
 import { renderEffect } from '../renderEffect'
+import { createElement } from '../dom/node'
 
 const positionMap = new WeakMap<TransitionBlock, DOMRect>()
 const newPositionMap = new WeakMap<TransitionBlock, DOMRect>()
@@ -105,7 +106,7 @@ export const VaporTransitionGroup: ObjectVaporComponent = decorate({
 
       prevChildren.forEach(callPendingCbs)
       prevChildren.forEach(child => {
-        delete child.$transition!.disabled
+        child.$transition!.disabled = false
         recordPosition(child)
       })
       const movedChildren = prevChildren.filter(applyTranslation)
@@ -146,7 +147,7 @@ export const VaporTransitionGroup: ObjectVaporComponent = decorate({
 
     const tag = props.tag
     if (tag) {
-      const container = document.createElement(tag)
+      const container = createElement(tag)
       insert(slottedBlock, container)
       // fallthrough attrs
       if (instance!.hasFallthrough) {

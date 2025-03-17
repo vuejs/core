@@ -58,6 +58,7 @@ import {
   getSlot,
 } from './componentSlots'
 import { hmrReload, hmrRerender } from './hmr'
+import { createElement } from './dom/node'
 
 export { currentInstance } from '@vue/runtime-dom'
 
@@ -458,7 +459,7 @@ export function createComponentWithFallback(
     return createComponent(comp, rawProps, rawSlots, isSingleRoot, appContext)
   }
 
-  const el = document.createElement(comp)
+  const el = createElement(comp)
   // mark single root
   ;(el as any).$root = isSingleRoot
 
