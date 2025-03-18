@@ -557,3 +557,14 @@ export { startMeasure, endMeasure } from './profiling'
  * @internal
  */
 export { initFeatureFlags } from './featureFlags'
+/**
+ * @internal
+ */
+export {
+  createAsyncComponentContext,
+  useAsyncComponentState,
+} from './apiAsyncComponent'
+/**
+ * @internal
+ */
+export { markAsyncBoundary } from './helpers/useId'
