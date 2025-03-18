@@ -456,9 +456,12 @@ export function buildProps(
         value.type === NodeTypes.JS_CACHE_EXPRESSION ||
         ((value.type === NodeTypes.SIMPLE_EXPRESSION ||
           value.type === NodeTypes.COMPOUND_EXPRESSION) &&
-          getConstantType(value, context) > 0)
+          getConstantType(value, context) > 0 &&
+          name !== 'ref')
       ) {
-        // skip if the prop is a cached handler or has constant value
+        // skip if:
+        // 1. the prop is a cached handler
+        // 2. has constant value (excluding :ref="setRefFn", setRefFn is a setup-const)
         return
       }
 
@@ -738,7 +741,6 @@ export function buildProps(
     }
   }
   if (
-    !shouldUseBlock &&
     (patchFlag === 0 || patchFlag === PatchFlags.NEED_HYDRATION) &&
     (hasRef || hasVnodeHook || runtimeDirectives.length > 0)
   ) {
