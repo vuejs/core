@@ -63,9 +63,6 @@ export const CAPITALIZE: unique symbol = Symbol(__DEV__ ? `capitalize` : ``)
 export const TO_HANDLER_KEY: unique symbol = Symbol(
   __DEV__ ? `toHandlerKey` : ``,
 )
-export const CHECK_DYNAMIC_EVENT: unique symbol = Symbol(
-  __DEV__ ? `checkDynamicEvent` : ``,
-)
 export const SET_BLOCK_TRACKING: unique symbol = Symbol(
   __DEV__ ? `setBlockTracking` : ``,
 )
@@ -118,7 +115,6 @@ export const helperNameMap: Record<symbol, string> = {
   [CAMELIZE]: `camelize`,
   [CAPITALIZE]: `capitalize`,
   [TO_HANDLER_KEY]: `toHandlerKey`,
-  [CHECK_DYNAMIC_EVENT]: `checkDynamicEvent`,
   [SET_BLOCK_TRACKING]: `setBlockTracking`,
   [PUSH_SCOPE_ID]: `pushScopeId`,
   [POP_SCOPE_ID]: `popScopeId`,

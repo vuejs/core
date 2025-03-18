@@ -5,12 +5,12 @@ exports[`compiler-dom: transform v-on > should wrap both for dynamic key event w
 
 return function render(_ctx, _cache) {
   with (_ctx) {
-    const { toHandlerKey: _toHandlerKey, checkDynamicEvent: _checkDynamicEvent, createElementVNode: _createElementVNode, Fragment: _Fragment, openBlock: _openBlock, createElementBlock: _createElementBlock } = _Vue
+    const { toHandlerKey: _toHandlerKey, withDynamicEventModifiers: _withDynamicEventModifiers, createElementVNode: _createElementVNode, Fragment: _Fragment, openBlock: _openBlock, createElementBlock: _createElementBlock } = _Vue
 
     return (_openBlock(), _createElementBlock(_Fragment, null, [
-      _createElementVNode("div", { [_checkDynamicEvent(_toHandlerKey(e),"Once")]: test }, null, 16 /* FULL_PROPS */),
-      _createElementVNode("div", { [_checkDynamicEvent(_toHandlerKey(e),"Passive")]: test }, null, 16 /* FULL_PROPS */),
-      _createElementVNode("div", { [_checkDynamicEvent(_toHandlerKey(e),"Capture")]: test }, null, 16 /* FULL_PROPS */)
+      _createElementVNode("div", { [_withDynamicEventModifiers(_toHandlerKey(e), "Once")]: test }, null, 16 /* FULL_PROPS */),
+      _createElementVNode("div", { [_withDynamicEventModifiers(_toHandlerKey(e), "Passive")]: test }, null, 16 /* FULL_PROPS */),
+      _createElementVNode("div", { [_withDynamicEventModifiers(_toHandlerKey(e), "Capture")]: test }, null, 16 /* FULL_PROPS */)
     ], 64 /* STABLE_FRAGMENT */))
   }
 }"

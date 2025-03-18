@@ -280,7 +280,11 @@ export {
   vModelSelect,
   vModelDynamic,
 } from './directives/vModel'
-export { withModifiers, withKeys } from './directives/vOn'
+export {
+  withModifiers,
+  withKeys,
+  withDynamicEventModifiers,
+} from './directives/vOn'
 export { vShow } from './directives/vShow'
 
 import { initVModelForSSR } from './directives/vModel'

@@ -1,5 +1,4 @@
 import {
-  CHECK_DYNAMIC_EVENT,
   CompilerDeprecationTypes,
   type DirectiveTransform,
   type ExpressionNode,
@@ -15,7 +14,11 @@ import {
   createSimpleExpression,
   isStaticExp,
 } from '@vue/compiler-core'
-import { V_ON_WITH_KEYS, V_ON_WITH_MODIFIERS } from '../runtimeHelpers'
+import {
+  V_ON_WITH_DYNAMIC_EVENT_MODIFIERS,
+  V_ON_WITH_KEYS,
+  V_ON_WITH_MODIFIERS,
+} from '../runtimeHelpers'
 import { capitalize, makeMap } from '@vue/shared'
 
 const isEventOptionModifier = /*@__PURE__*/ makeMap(`passive,once,capture`)
@@ -146,9 +149,9 @@ export const transformOn: DirectiveTransform = (dir, node, context) => {
       key = isStaticExp(key)
         ? createSimpleExpression(`${key.content}${modifierPostfix}`, true)
         : createCompoundExpression([
-            `${context.helperString(CHECK_DYNAMIC_EVENT)}(`,
+            `${context.helperString(V_ON_WITH_DYNAMIC_EVENT_MODIFIERS)}(`,
             key,
-            `,"${modifierPostfix}")`,
+            `, "${modifierPostfix}")`,
           ])
     }
 
