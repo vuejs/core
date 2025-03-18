@@ -32,7 +32,6 @@ const objectPluginOptional = {
   install(app: App, options?: PluginOptions) {},
 }
 app.use(objectPluginOptional)
-
 app.use(
   objectPluginOptional,
   // Test JSDoc and `go to definition` for options

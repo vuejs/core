@@ -217,6 +217,7 @@ export type FunctionPlugin<Options = any[]> = PluginInstallFunction<Options> &
 
 export type Plugin<
   Options = any[],
+  // TODO: in next major Options extends unknown[] and remove P
   P extends unknown[] = Options extends unknown[] ? Options : [Options],
 > = FunctionPlugin<P> | ObjectPlugin<P>
 
