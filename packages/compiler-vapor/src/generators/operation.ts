@@ -88,6 +88,11 @@ export function genOperation(
     case IRNodeTypes.GET_TEXT_CHILD:
       return genGetTextChild(oper, context)
     default:
+      if (context.options.customGenOperation) {
+        const result = context.options.customGenOperation(oper, context)
+        if (result) return result
+      }
+
       const exhaustiveCheck: never = oper
       throw new Error(
         `Unhandled operation type in genOperation: ${exhaustiveCheck}`,

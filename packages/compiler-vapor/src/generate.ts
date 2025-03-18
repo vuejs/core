@@ -19,7 +19,14 @@ import {
 } from './generators/utils'
 import { setTemplateRefIdent } from './generators/templateRef'
 
-export type CodegenOptions = Omit<BaseCodegenOptions, 'optimizeImports'>
+type CustomGenOperation = (
+  opers: any,
+  context: CodegenContext,
+) => CodeFragment[] | void
+
+export type CodegenOptions = Omit<BaseCodegenOptions, 'optimizeImports'> & {
+  customGenOperation?: CustomGenOperation | null
+}
 
 export class CodegenContext {
   options: Required<CodegenOptions>
@@ -87,6 +94,7 @@ export class CodegenContext {
       inline: false,
       bindingMetadata: {},
       expressionPlugins: [],
+      customGenOperation: null,
     }
     this.options = extend(defaultOptions, options)
     this.block = ir.block
