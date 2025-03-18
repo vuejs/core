@@ -2,7 +2,13 @@ import { nextTick, ref } from '@vue/runtime-dom'
 import { type VaporComponent, createComponent } from '../src/component'
 import { defineVaporAsyncComponent } from '../src/apiDefineAsyncComponent'
 import { makeRender } from './_utils'
-import { createIf, createTemplateRefSetter, template } from '@vue/runtime-vapor'
+import {
+  createIf,
+  createTemplateRefSetter,
+  renderEffect,
+  template,
+} from '@vue/runtime-vapor'
+import { setElementText } from '../src/dom/prop'
 
 const timeout = (n: number = 0) => new Promise(r => setTimeout(r, n))
 
@@ -484,12 +490,6 @@ describe('api: defineAsyncComponent', () => {
     expect(root.innerHTML).toBe('resolved<!--async component-->')
   })
 
-  test.todo('with suspense', async () => {})
-
-  test.todo('suspensible: false', async () => {})
-
-  test.todo('suspense with error handling', async () => {})
-
   test('retry (success)', async () => {
     let loaderCallCount = 0
     let resolve: (comp: VaporComponent) => void
@@ -687,10 +687,76 @@ describe('api: defineAsyncComponent', () => {
     expect(fooRef.value.id).toBe('foo')
   })
 
-  test.todo(
-    'the forwarded template ref should always exist when doing multi patching',
-    async () => {},
-  )
+  test('the forwarded template ref should always exist when doing multi patching', async () => {
+    let resolve: (comp: VaporComponent) => void
+    const Foo = defineVaporAsyncComponent(
+      () =>
+        new Promise(r => {
+          resolve = r as any
+        }),
+    )
+
+    const fooRef = ref<any>(null)
+    const toggle = ref(true)
+    const updater = ref(0)
+
+    const root = document.createElement('div')
+    const { mount } = define({
+      setup() {
+        return { fooRef, toggle, updater }
+      },
+      render() {
+        return createIf(
+          () => toggle.value,
+          () => {
+            const setTemplateRef = createTemplateRefSetter()
+            const n0 = createComponent(Foo, null, null, true)
+            setTemplateRef(n0, 'fooRef')
+            const n1 = template(`<span>`)()
+            renderEffect(() => setElementText(n1, updater.value))
+            return [n0, n1]
+          },
+        )
+      },
+    }).create()
+    mount(root)
+
+    expect(root.innerHTML).toBe('<!--async component--><span>0</span><!--if-->')
+    expect(fooRef.value).toBe(null)
+
+    resolve!({
+      setup: (props, { expose }) => {
+        expose({
+          id: 'foo',
+        })
+        return template('resolved')()
+      },
+    })
+
+    await timeout()
+    expect(root.innerHTML).toBe(
+      'resolved<!--async component--><span>0</span><!--if-->',
+    )
+    expect(fooRef.value.id).toBe('foo')
+
+    updater.value++
+    await nextTick()
+    expect(root.innerHTML).toBe(
+      'resolved<!--async component--><span>1</span><!--if-->',
+    )
+    expect(fooRef.value.id).toBe('foo')
+
+    toggle.value = false
+    await nextTick()
+    expect(root.innerHTML).toBe('<!--if-->')
+    expect(fooRef.value).toBe(null)
+  })
+
+  test.todo('with suspense', async () => {})
+
+  test.todo('suspensible: false', async () => {})
+
+  test.todo('suspense with error handling', async () => {})
 
   test.todo('with KeepAlive', async () => {})
 
