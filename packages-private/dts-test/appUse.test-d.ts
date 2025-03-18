@@ -110,7 +110,15 @@ const PluginTyped: Plugin<PluginOptions> = (app, options) => {}
 
 // @ts-expect-error: needs options
 app.use(PluginTyped)
-app.use(PluginTyped, { option2: 2, option3: true })
+app.use(
+  PluginTyped,
+  // Test autocomplete for options
+  {
+    option1: '',
+    option2: 2,
+    option3: true,
+  },
+)
 
 const functionPluginOptional = (app: App, options?: PluginOptions) => {}
 app.use(functionPluginOptional)
@@ -123,17 +131,6 @@ const functionPluginOptional2: Plugin<[options?: PluginOptions]> = (
 ) => {}
 app.use(functionPluginOptional2)
 app.use(functionPluginOptional2, { option2: 2, option3: true })
-
-const functionPluginOptional3: Plugin<PluginOptions> = (app, options) => {}
-app.use(
-  functionPluginOptional3,
-  // Test autocomplete for options
-  {
-    option1: 'foo',
-    option2: 1,
-    option3: true,
-  },
-)
 
 // vuetify usage
 const key: string = ''
