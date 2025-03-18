@@ -38,7 +38,6 @@ export function defineVaporAsyncComponent<T extends VaporComponent>(
   return defineVaporComponent({
     name: 'VaporAsyncComponentWrapper',
 
-    // @ts-expect-error
     __asyncLoader: load,
 
     // __asyncHydrate(el, instance, hydrate) {
@@ -97,7 +96,7 @@ export function defineVaporAsyncComponent<T extends VaporComponent>(
         resolvedComp = getResolvedComp()
         let blockFn
         if (loaded.value && resolvedComp) {
-          blockFn = () => createInnerComp(resolvedComp!, instance)
+          blockFn = () => createInnerComp(resolvedComp!, instance, frag)
         } else if (error.value && errorComponent) {
           blockFn = () =>
             createComponent(errorComponent, { error: () => error.value })
@@ -115,7 +114,17 @@ export function defineVaporAsyncComponent<T extends VaporComponent>(
 function createInnerComp(
   comp: VaporComponent,
   parent: VaporComponentInstance,
+  frag?: DynamicFragment,
 ): VaporComponentInstance {
   const { rawProps, rawSlots, isSingleRoot, appContext } = parent
-  return createComponent(comp, rawProps, rawSlots, isSingleRoot, appContext)
+  const i = createComponent(comp, rawProps, rawSlots, isSingleRoot, appContext)
+  // set ref
+  frag && frag.setRef && frag.setRef(i)
+
+  // TODO custom element
+  // pass the custom element callback on to the inner comp
+  // and remove it from the async wrapper
+  // i.ce = ce
+  // delete parent.ce
+  return i
 }

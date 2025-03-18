@@ -563,6 +563,7 @@ export { initFeatureFlags } from './featureFlags'
 export {
   createAsyncComponentContext,
   useAsyncComponentState,
+  isAsyncWrapper,
 } from './apiAsyncComponent'
 /**
  * @internal

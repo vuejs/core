@@ -629,7 +629,7 @@ describe('api: defineAsyncComponent', () => {
     expect(root.innerHTML).toBe('<!--async component-->')
   })
 
-  test.todo('template ref forwarding', async () => {
+  test('template ref forwarding', async () => {
     let resolve: (comp: VaporComponent) => void
     const Foo = defineVaporAsyncComponent(
       () =>
