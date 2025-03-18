@@ -7,7 +7,6 @@ import {
 } from './component'
 import {
   ErrorCodes,
-  type GenericComponentInstance,
   type SchedulerJob,
   callWithErrorHandling,
   isAsyncWrapper,
@@ -50,16 +49,19 @@ export function setRef(
   refFor = false,
 ): NodeRef | undefined {
   if (!instance || instance.isUnmounted) return
+
   const isVaporComp = isVaporComponent(el)
-  if (isVaporComp && isAsyncWrapper(el as GenericComponentInstance)) {
-    if (!(el as VaporComponentInstance).type.__asyncResolved) {
-      const frag = (el as VaporComponentInstance).block as DynamicFragment
-      frag.setRef = (el: RefEl) => setRef(instance, el, ref, oldRef, refFor)
+  if (isVaporComp && isAsyncWrapper(el as VaporComponentInstance)) {
+    const i = el as VaporComponentInstance
+    const frag = i.block as DynamicFragment
+    // async component not resolved yet
+    if (!i.type.__asyncResolved) {
+      frag.setRef = n => setRef(instance, n, ref, oldRef, refFor)
       return
-    } else {
-      el = ((el as VaporComponentInstance).block as DynamicFragment)
-        .nodes as RefEl
     }
+
+    // set ref to the inner component instead
+    el = frag.nodes as VaporComponentInstance
   }
 
   const setupState: any = __DEV__ ? instance.setupState || {} : null
