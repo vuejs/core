@@ -1,4 +1,5 @@
 import {
+  CHECK_DYNAMIC_EVENT,
   CompilerDeprecationTypes,
   type DirectiveTransform,
   type ExpressionNode,
@@ -144,7 +145,11 @@ export const transformOn: DirectiveTransform = (dir, node, context) => {
       const modifierPostfix = eventOptionModifiers.map(capitalize).join('')
       key = isStaticExp(key)
         ? createSimpleExpression(`${key.content}${modifierPostfix}`, true)
-        : createCompoundExpression([`(`, key, `) + "${modifierPostfix}"`])
+        : createCompoundExpression([
+            `${context.helperString(CHECK_DYNAMIC_EVENT)}(`,
+            key,
+            `,"${modifierPostfix}")`,
+          ])
     }
 
     return {

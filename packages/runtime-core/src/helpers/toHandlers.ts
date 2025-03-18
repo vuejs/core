@@ -23,3 +23,11 @@ export function toHandlers(
   }
   return ret
 }
+
+export function checkDynamicEvent(
+  eventName: string,
+  modifierPostfix: string,
+): string {
+  if (eventName != null && eventName !== '') return eventName + modifierPostfix
+  return ''
+}
