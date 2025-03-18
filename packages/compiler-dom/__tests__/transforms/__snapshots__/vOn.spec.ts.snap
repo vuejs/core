@@ -1,13 +1,17 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`compiler-dom: transform v-on > should wrap both for dynamic key event w/ once modifiers 1`] = `
+exports[`compiler-dom: transform v-on > should wrap both for dynamic key event w/ event modifiers 1`] = `
 "const _Vue = Vue
 
 return function render(_ctx, _cache) {
   with (_ctx) {
-    const { toHandlerKey: _toHandlerKey, checkDynamicEvent: _checkDynamicEvent, openBlock: _openBlock, createElementBlock: _createElementBlock } = _Vue
+    const { toHandlerKey: _toHandlerKey, checkDynamicEvent: _checkDynamicEvent, createElementVNode: _createElementVNode, Fragment: _Fragment, openBlock: _openBlock, createElementBlock: _createElementBlock } = _Vue
 
-    return (_openBlock(), _createElementBlock("div", { [_checkDynamicEvent(_toHandlerKey(e),"Once")]: test }, null, 16 /* FULL_PROPS */))
+    return (_openBlock(), _createElementBlock(_Fragment, null, [
+      _createElementVNode("div", { [_checkDynamicEvent(_toHandlerKey(e),"Once")]: test }, null, 16 /* FULL_PROPS */),
+      _createElementVNode("div", { [_checkDynamicEvent(_toHandlerKey(e),"Passive")]: test }, null, 16 /* FULL_PROPS */),
+      _createElementVNode("div", { [_checkDynamicEvent(_toHandlerKey(e),"Capture")]: test }, null, 16 /* FULL_PROPS */)
+    ], 64 /* STABLE_FRAGMENT */))
   }
 }"
 `;
