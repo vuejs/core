@@ -43,10 +43,10 @@ export function genOperationWithInsertionState(
   context: CodegenContext,
 ): CodeFragment[] {
   const [frag, push] = buildCodeFragment()
-  push(...genOperation(oper, context))
   if (isBlockOperation(oper) && oper.parent) {
     push(...genInsertionstate(oper, context))
   }
+  push(...genOperation(oper, context))
   return frag
 }
 
