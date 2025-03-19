@@ -1,5 +1,4 @@
 import {
-  type FunctionalComponent,
   type GenericComponentInstance,
   type TransitionElement,
   type TransitionHooks,
@@ -22,6 +21,7 @@ import {
   isFragment,
 } from '../block'
 import {
+  type FunctionalVaporComponent,
   type VaporComponentInstance,
   applyFallthroughProps,
   isVaporComponent,
@@ -36,8 +36,8 @@ const decorate = (t: typeof VaporTransition) => {
   return t
 }
 
-export const VaporTransition: FunctionalComponent<TransitionProps> =
-  /*@__PURE__*/ decorate((props, { slots, attrs }) => {
+export const VaporTransition: FunctionalVaporComponent = /*@__PURE__*/ decorate(
+  (props, { slots, attrs }) => {
     const children = (slots.default && slots.default()) as any as Block
     if (!children) return
 
@@ -93,7 +93,8 @@ export const VaporTransition: FunctionalComponent<TransitionProps> =
     )
 
     return children
-  })
+  },
+)
 
 const getTransitionHooksContext = (
   key: String,
