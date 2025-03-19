@@ -928,6 +928,45 @@ describe('compiler: transform component slots', () => {
         },
       })
     })
+
+    test('v-slot + the parameter name is the same as the component name.', () => {
+      const onError1 = vi.fn()
+      parseWithSlots(
+        `<CompB>
+          <template #default="Comp">
+            <Comp>{{Comp1}}</Comp>
+          </template>
+        </CompB>`,
+        {
+          onError: onError1,
+        },
+      )
+      expect(onError1).toHaveBeenCalledTimes(1)
+      expect(onError1).toHaveBeenCalledWith(
+        expect.objectContaining({
+          code: ErrorCodes.X_INVALID_PARAMETER_NAME,
+        }),
+      )
+
+      const onError2 = vi.fn()
+      parseWithSlots(
+        `<CompB>
+          <template #default="{ Comp }">
+            <Comp>{{Comp1}}</Comp>
+          </template>
+        </CompB>`,
+        {
+          onError: onError2,
+          prefixIdentifiers: true,
+        },
+      )
+      expect(onError2).toHaveBeenCalledTimes(1)
+      expect(onError2).toHaveBeenCalledWith(
+        expect.objectContaining({
+          code: ErrorCodes.X_INVALID_PARAMETER_NAME,
+        }),
+      )
+    })
   })
 
   describe(`with whitespace: 'preserve'`, () => {
