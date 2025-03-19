@@ -552,6 +552,7 @@ function createSuspenseBoundary(
               )
               queuePostFlushCb(effects)
             }
+            activeBranch!.transition!.afterLeave = undefined
           }
         }
         // unmount current active tree
