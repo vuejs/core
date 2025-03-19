@@ -1,4 +1,4 @@
-import { isRef, ref } from '../src/ref'
+import { isRef, ref, shallowRef } from '../src/ref'
 import {
   isProxy,
   isReactive,
@@ -13,6 +13,7 @@ import {
 } from '../src/reactive'
 import { computed } from '../src/computed'
 import { effect } from '../src/effect'
+import { targetMap } from '../src/dep'
 
 describe('reactivity/reactive', () => {
   test('Object', () => {
@@ -300,6 +301,13 @@ describe('reactivity/reactive', () => {
     expect(() => markRaw(obj)).not.toThrowError()
   })
 
+  test('should not markRaw object as reactive', () => {
+    const a = reactive({ a: 1 })
+    const b = reactive({ b: 2 }) as any
+    b.a = markRaw(toRaw(a))
+    expect(b.a === a).toBe(false)
+  })
+
   test('should not observe non-extensible objects', () => {
     const obj = reactive({
       foo: Object.preventExtensions({ a: 1 }),
@@ -397,5 +405,38 @@ describe('reactivity/reactive', () => {
     expect(() => {
       a.value++
     }).not.toThrow()
+  })
+
+  // #11979
+  test('should release property Dep instance if it no longer has subscribers', () => {
+    let obj = { x: 1 }
+    let a = reactive(obj)
+    const e = effect(() => a.x)
+    expect(targetMap.get(obj)?.get('x')).toBeTruthy()
+    e.effect.stop()
+    expect(targetMap.get(obj)?.get('x')).toBeFalsy()
+  })
+
+  test('should trigger reactivity when Map key is undefined', () => {
+    const map = reactive(new Map())
+    const c = computed(() => map.get(void 0))
+
+    expect(c.value).toBe(void 0)
+
+    map.set(void 0, 1)
+    expect(c.value).toBe(1)
+  })
+
+  test('should return true for reactive objects', () => {
+    expect(isReactive(reactive({}))).toBe(true)
+    expect(isReactive(readonly(reactive({})))).toBe(true)
+    expect(isReactive(ref({}).value)).toBe(true)
+    expect(isReactive(readonly(ref({})).value)).toBe(true)
+    expect(isReactive(shallowReactive({}))).toBe(true)
+  })
+
+  test('should return false for non-reactive objects', () => {
+    expect(isReactive(ref(true))).toBe(false)
+    expect(isReactive(shallowRef({}).value)).toBe(false)
   })
 })

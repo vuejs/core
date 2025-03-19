@@ -167,7 +167,7 @@ export type DeepReadonly<T> = T extends Builtin
               ? WeakSet<DeepReadonly<U>>
               : T extends Promise<infer U>
                 ? Promise<DeepReadonly<U>>
-                : T extends Ref<infer U>
+                : T extends Ref<infer U, unknown>
                   ? Readonly<Ref<DeepReadonly<U>>>
                   : T extends {}
                     ? { readonly [K in keyof T]: DeepReadonly<T[K]> }
@@ -279,15 +279,15 @@ function createReactiveObject(
   ) {
     return target
   }
-  // target already has corresponding Proxy
-  const existingProxy = proxyMap.get(target)
-  if (existingProxy) {
-    return existingProxy
-  }
   // only specific value types can be observed.
   const targetType = getTargetType(target)
   if (targetType === TargetType.INVALID) {
     return target
+  }
+  // target already has corresponding Proxy
+  const existingProxy = proxyMap.get(target)
+  if (existingProxy) {
+    return existingProxy
   }
   const proxy = new Proxy(
     target,

@@ -208,3 +208,12 @@ export function genPropsAccessExp(name: string): string {
     ? `__props.${name}`
     : `__props[${JSON.stringify(name)}]`
 }
+
+export function genCacheKey(source: string, options: any): string {
+  return (
+    source +
+    JSON.stringify(options, (_, val) =>
+      typeof val === 'function' ? val.toString() : val,
+    )
+  )
+}

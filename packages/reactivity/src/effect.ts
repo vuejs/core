@@ -1,7 +1,7 @@
 import { extend, hasChanged } from '@vue/shared'
 import type { ComputedRefImpl } from './computed'
 import type { TrackOpTypes, TriggerOpTypes } from './constants'
-import { type Link, globalVersion, targetMap } from './dep'
+import { type Link, globalVersion } from './dep'
 import { activeEffectScope } from './effectScope'
 import { warn } from './warning'
 
@@ -234,9 +234,15 @@ export class ReactiveEffect<T = any>
 
 let batchDepth = 0
 let batchedSub: Subscriber | undefined
+let batchedComputed: Subscriber | undefined
 
-export function batch(sub: Subscriber): void {
+export function batch(sub: Subscriber, isComputed = false): void {
   sub.flags |= EffectFlags.NOTIFIED
+  if (isComputed) {
+    sub.next = batchedComputed
+    batchedComputed = sub
+    return
+  }
   sub.next = batchedSub
   batchedSub = sub
 }
@@ -255,6 +261,17 @@ export function startBatch(): void {
 export function endBatch(): void {
   if (--batchDepth > 0) {
     return
+  }
+
+  if (batchedComputed) {
+    let e: Subscriber | undefined = batchedComputed
+    batchedComputed = undefined
+    while (e) {
+      const next: Subscriber | undefined = e.next
+      e.next = undefined
+      e.flags &= ~EffectFlags.NOTIFIED
+      e = next
+    }
   }
 
   let error: unknown
@@ -292,7 +309,7 @@ function prepareDeps(sub: Subscriber) {
   }
 }
 
-function cleanupDeps(sub: Subscriber, fromComputed = false) {
+function cleanupDeps(sub: Subscriber) {
   // Cleanup unsued deps
   let head
   let tail = sub.depsTail
@@ -302,7 +319,7 @@ function cleanupDeps(sub: Subscriber, fromComputed = false) {
     if (link.version === -1) {
       if (link === tail) tail = prev
       // unused - remove it from the dep's subscribing effect list
-      removeSub(link, fromComputed)
+      removeSub(link)
       // also remove it from this effect's dep list
       removeDep(link)
     } else {
@@ -394,12 +411,12 @@ export function refreshComputed(computed: ComputedRefImpl): undefined {
   } finally {
     activeSub = prevSub
     shouldTrack = prevShouldTrack
-    cleanupDeps(computed, true)
+    cleanupDeps(computed)
     computed.flags &= ~EffectFlags.RUNNING
   }
 }
 
-function removeSub(link: Link, fromComputed = false) {
+function removeSub(link: Link, soft = false) {
   const { dep, prevSub, nextSub } = link
   if (prevSub) {
     prevSub.nextSub = nextSub
@@ -409,29 +426,33 @@ function removeSub(link: Link, fromComputed = false) {
     nextSub.prevSub = prevSub
     link.nextSub = undefined
   }
-  if (dep.subs === link) {
-    // was previous tail, point new tail to prev
-    dep.subs = prevSub
-  }
   if (__DEV__ && dep.subsHead === link) {
     // was previous head, point new head to next
     dep.subsHead = nextSub
   }
 
-  if (!dep.subs) {
-    // last subscriber removed
-    if (dep.computed) {
+  if (dep.subs === link) {
+    // was previous tail, point new tail to prev
+    dep.subs = prevSub
+
+    if (!prevSub && dep.computed) {
       // if computed, unsubscribe it from all its deps so this computed and its
       // value can be GCed
       dep.computed.flags &= ~EffectFlags.TRACKING
       for (let l = dep.computed.deps; l; l = l.nextDep) {
+        // here we are only "soft" unsubscribing because the computed still keeps
+        // referencing the deps and the dep should not decrease its sub count
         removeSub(l, true)
       }
-    } else if (dep.map && !fromComputed) {
-      // property dep, remove it from the owner depsMap
-      dep.map.delete(dep.key)
-      if (!dep.map.size) targetMap.delete(dep.target!)
     }
+  }
+
+  if (!soft && !--dep.sc && dep.map) {
+    // #11979
+    // property dep no longer has effect subscribers, delete it
+    // this mostly is for the case where an object is kept in memory but only a
+    // subset of its properties is tracked at one time
+    dep.map.delete(dep.key)
   }
 }
 

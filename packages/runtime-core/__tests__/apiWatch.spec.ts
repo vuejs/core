@@ -25,13 +25,13 @@ import {
 } from '@vue/runtime-test'
 import {
   type DebuggerEvent,
-  EffectFlags,
   ITERATE_KEY,
   type Ref,
   type ShallowRef,
   TrackOpTypes,
   TriggerOpTypes,
   effectScope,
+  onScopeDispose,
   shallowReactive,
   shallowRef,
   toRef,
@@ -1341,7 +1341,7 @@ describe('api: watch', () => {
     await nextTick()
     await nextTick()
 
-    expect(instance!.scope.effects[0].flags & EffectFlags.ACTIVE).toBeFalsy()
+    expect(instance!.scope.effects.length).toBe(0)
   })
 
   test('this.$watch should pass `this.proxy` to watch source as the first argument ', () => {
@@ -1930,7 +1930,7 @@ describe('api: watch', () => {
     warn.mockRestore()
   })
 
-  it('should be executed correctly', () => {
+  test('should be executed correctly', () => {
     const v = ref(1)
     let foo = ''
 
@@ -1956,5 +1956,58 @@ describe('api: watch', () => {
     expect(foo).toBe('')
     v.value++
     expect(foo).toBe('12')
+  })
+
+  // 12045
+  test('sync watcher should not break pre watchers', async () => {
+    const count1 = ref(0)
+    const count2 = ref(0)
+
+    watch(
+      count1,
+      () => {
+        count2.value++
+      },
+      { flush: 'sync' },
+    )
+
+    const spy1 = vi.fn()
+    watch([count1, count2], spy1)
+
+    const spy2 = vi.fn()
+    watch(count1, spy2)
+
+    count1.value++
+
+    await nextTick()
+    expect(spy1).toHaveBeenCalled()
+    expect(spy2).toHaveBeenCalled()
+  })
+
+  // #12631
+  test('this.$watch w/ onScopeDispose', () => {
+    const onCleanup = vi.fn()
+    const toggle = ref(true)
+
+    const Comp = defineComponent({
+      render() {},
+      created(this: any) {
+        this.$watch(
+          () => 1,
+          function () {},
+        )
+        onScopeDispose(onCleanup)
+      },
+    })
+
+    const App = defineComponent({
+      render() {
+        return toggle.value ? h(Comp) : null
+      },
+    })
+
+    const root = nodeOps.createElement('div')
+    createApp(App).mount(root)
+    expect(onCleanup).toBeCalledTimes(0)
   })
 })

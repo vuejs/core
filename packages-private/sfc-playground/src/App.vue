@@ -123,6 +123,7 @@ onMounted(() => {
     :prod="productionMode"
     :ssr="useSSRMode"
     :autoSave="autoSave"
+    :theme="theme"
     @toggle-theme="toggleTheme"
     @toggle-prod="toggleProdMode"
     @toggle-ssr="toggleSSR"
@@ -164,8 +165,9 @@ onMounted(() => {
 
 body {
   font-size: 13px;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen,
-    Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+  font-family:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu,
+    Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
   margin: 0;
   --base: #444;
   --nav-height: 50px;

@@ -170,15 +170,14 @@ function doWatch(
 
   if (__DEV__) baseWatchOptions.onWarn = warn
 
+  // immediate watcher or watchEffect
+  const runsImmediately = (cb && immediate) || (!cb && flush !== 'post')
   let ssrCleanup: (() => void)[] | undefined
   if (__SSR__ && isInSSRComponentSetup) {
     if (flush === 'sync') {
       const ctx = useSSRContext()!
       ssrCleanup = ctx.__watcherHandles || (ctx.__watcherHandles = [])
-    } else if (!cb || immediate) {
-      // immediately watch or watchEffect
-      baseWatchOptions.once = true
-    } else {
+    } else if (!runsImmediately) {
       const watchStopHandle = () => {}
       watchStopHandle.stop = NOOP
       watchStopHandle.resume = NOOP
@@ -226,7 +225,14 @@ function doWatch(
 
   const watchHandle = baseWatch(source, cb, baseWatchOptions)
 
-  if (__SSR__ && ssrCleanup) ssrCleanup.push(watchHandle)
+  if (__SSR__ && isInSSRComponentSetup) {
+    if (ssrCleanup) {
+      ssrCleanup.push(watchHandle)
+    } else if (runsImmediately) {
+      watchHandle()
+    }
+  }
+
   return watchHandle
 }
 

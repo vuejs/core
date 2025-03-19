@@ -1,6 +1,6 @@
 import importX from 'eslint-plugin-import-x'
 import tseslint from 'typescript-eslint'
-import vitest from 'eslint-plugin-vitest'
+import vitest from '@vitest/eslint-plugin'
 import { builtinModules } from 'node:module'
 
 const DOMGlobals = ['window', 'document']

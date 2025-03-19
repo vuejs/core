@@ -1023,6 +1023,7 @@ describe('reactivity/computed', () => {
     expect(p.value).toBe(3)
   })
 
+  // #11995
   test('computed dep cleanup should not cause property dep to be deleted', () => {
     const toggle = ref(true)
     const state = reactive({ a: 1 })
@@ -1036,5 +1037,106 @@ describe('reactivity/computed', () => {
     toggle.value = false
     state.a++
     expect(pp.value).toBe(2)
+  })
+
+  // #12020
+  test('computed value updates correctly after dep cleanup', () => {
+    const obj = reactive({ foo: 1, flag: 1 })
+    const c1 = computed(() => obj.foo)
+
+    let foo
+    effect(() => {
+      foo = obj.flag ? (obj.foo, c1.value) : 0
+    })
+    expect(foo).toBe(1)
+
+    obj.flag = 0
+    expect(foo).toBe(0)
+
+    obj.foo = 2
+    obj.flag = 1
+    expect(foo).toBe(2)
+  })
+
+  // #11928
+  test('should not lead to exponential perf cost with deeply chained computed', () => {
+    const start = {
+      prop1: shallowRef(1),
+      prop2: shallowRef(2),
+      prop3: shallowRef(3),
+      prop4: shallowRef(4),
+    }
+
+    let layer = start
+
+    const LAYERS = 1000
+
+    for (let i = LAYERS; i > 0; i--) {
+      const m = layer
+      const s = {
+        prop1: computed(() => m.prop2.value),
+        prop2: computed(() => m.prop1.value - m.prop3.value),
+        prop3: computed(() => m.prop2.value + m.prop4.value),
+        prop4: computed(() => m.prop3.value),
+      }
+      effect(() => s.prop1.value)
+      effect(() => s.prop2.value)
+      effect(() => s.prop3.value)
+      effect(() => s.prop4.value)
+
+      s.prop1.value
+      s.prop2.value
+      s.prop3.value
+      s.prop4.value
+
+      layer = s
+    }
+
+    const t = performance.now()
+    start.prop1.value = 4
+    start.prop2.value = 3
+    start.prop3.value = 2
+    start.prop4.value = 1
+    expect(performance.now() - t).toBeLessThan(process.env.CI ? 100 : 30)
+
+    const end = layer
+    expect([
+      end.prop1.value,
+      end.prop2.value,
+      end.prop3.value,
+      end.prop4.value,
+    ]).toMatchObject([-2, -4, 2, 3])
+  })
+
+  test('performance when removing dependencies from deeply nested computeds', () => {
+    const base = ref(1)
+    const trigger = ref(true)
+    const computeds: ComputedRef<number>[] = []
+
+    const LAYERS = 30
+
+    for (let i = 0; i < LAYERS; i++) {
+      const earlier = [...computeds]
+
+      computeds.push(
+        computed(() => {
+          return base.value + earlier.reduce((sum, c) => sum + c.value, 0)
+        }),
+      )
+    }
+
+    const tail = computed(() =>
+      trigger.value ? computeds[computeds.length - 1].value : 0,
+    )
+
+    const t0 = performance.now()
+    expect(tail.value).toBe(2 ** (LAYERS - 1))
+    const t1 = performance.now()
+    expect(t1 - t0).toBeLessThan(process.env.CI ? 100 : 30)
+
+    trigger.value = false
+    expect(tail.value).toBe(0)
+    const t2 = performance.now()
+    expect(t2 - t1).toBeLessThan(process.env.CI ? 100 : 30)
   })
 })

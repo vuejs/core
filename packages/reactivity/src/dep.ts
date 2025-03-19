@@ -85,9 +85,13 @@ export class Dep {
   /**
    * For object property deps cleanup
    */
-  target?: unknown = undefined
   map?: KeyToDepMap = undefined
   key?: unknown = undefined
+
+  /**
+   * Subscriber counter
+   */
+  sc: number = 0
 
   constructor(public computed?: ComputedRefImpl | undefined) {
     if (__DEV__) {
@@ -113,9 +117,7 @@ export class Dep {
         activeSub.depsTail = link
       }
 
-      if (activeSub.flags & EffectFlags.TRACKING) {
-        addSub(link)
-      }
+      addSub(link)
     } else if (link.version === -1) {
       // reused from last run - already a sub, just sync version
       link.version = this.version
@@ -197,27 +199,30 @@ export class Dep {
 }
 
 function addSub(link: Link) {
-  const computed = link.dep.computed
-  // computed getting its first subscriber
-  // enable tracking + lazily subscribe to all its deps
-  if (computed && !link.dep.subs) {
-    computed.flags |= EffectFlags.TRACKING | EffectFlags.DIRTY
-    for (let l = computed.deps; l; l = l.nextDep) {
-      addSub(l)
+  link.dep.sc++
+  if (link.sub.flags & EffectFlags.TRACKING) {
+    const computed = link.dep.computed
+    // computed getting its first subscriber
+    // enable tracking + lazily subscribe to all its deps
+    if (computed && !link.dep.subs) {
+      computed.flags |= EffectFlags.TRACKING | EffectFlags.DIRTY
+      for (let l = computed.deps; l; l = l.nextDep) {
+        addSub(l)
+      }
     }
-  }
 
-  const currentTail = link.dep.subs
-  if (currentTail !== link) {
-    link.prevSub = currentTail
-    if (currentTail) currentTail.nextSub = link
-  }
+    const currentTail = link.dep.subs
+    if (currentTail !== link) {
+      link.prevSub = currentTail
+      if (currentTail) currentTail.nextSub = link
+    }
 
-  if (__DEV__ && link.dep.subsHead === undefined) {
-    link.dep.subsHead = link
-  }
+    if (__DEV__ && link.dep.subsHead === undefined) {
+      link.dep.subsHead = link
+    }
 
-  link.dep.subs = link
+    link.dep.subs = link
+  }
 }
 
 // The main WeakMap that stores {target -> key -> dep} connections.
@@ -257,7 +262,6 @@ export function track(target: object, type: TrackOpTypes, key: unknown): void {
     let dep = depsMap.get(key)
     if (!dep) {
       depsMap.set(key, (dep = new Dep()))
-      dep.target = target
       dep.map = depsMap
       dep.key = key
     }
@@ -336,7 +340,7 @@ export function trigger(
       })
     } else {
       // schedule runs for SET | ADD | DELETE
-      if (key !== void 0) {
+      if (key !== void 0 || depsMap.has(void 0)) {
         run(depsMap.get(key))
       }
 
@@ -378,13 +382,10 @@ export function trigger(
   endBatch()
 }
 
-/**
- * Test only
- */
 export function getDepFromReactive(
   object: any,
   key: string | number | symbol,
 ): Dep | undefined {
-  // eslint-disable-next-line
-  return targetMap.get(object)?.get(key)
+  const depMap = targetMap.get(object)
+  return depMap && depMap.get(key)
 }

@@ -13,6 +13,12 @@ export type LooseRequired<T> = { [P in keyof (T & Required<T>)]: T[P] }
 // https://stackoverflow.com/questions/49927523/disallow-call-with-any/49928360#49928360
 export type IfAny<T, Y, N> = 0 extends 1 & T ? Y : N
 
+export type IsKeyValues<T, K = string> = IfAny<
+  T,
+  false,
+  T extends object ? (keyof T extends K ? true : false) : false
+>
+
 /**
  * Utility for extracting the parameters from a function overload (for typed emits)
  * https://github.com/microsoft/TypeScript/issues/32164#issuecomment-1146737709
