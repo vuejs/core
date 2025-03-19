@@ -6,7 +6,7 @@ exports[`defineModel() > basic usage 1`] = `
 export default {
   props: {
     "modelValue": { required: true },
-    "modelModifiers": {},
+    "modelValueModifiers": {},
     "count": {},
     "countModifiers": {},
     "toString": { type: Function },
@@ -34,7 +34,7 @@ export default /*@__PURE__*/_defineComponent({
     "modelValue": {
         required: true
       },
-    "modelModifiers": {},
+    "modelValueModifiers": {},
   },
   emits: ["update:modelValue"],
   setup(__props, { expose: __expose }) {
@@ -60,7 +60,7 @@ export default /*@__PURE__*/_defineComponent({
         default: 0,
         required: true,
         },
-    "modelModifiers": {},
+    "modelValueModifiers": {},
   },
   emits: ["update:modelValue"],
   setup(__props, { expose: __expose }) {
@@ -86,7 +86,7 @@ export default /*@__PURE__*/_defineComponent({
   }, {
     "modelValue": {
         },
-    "modelModifiers": {},
+    "modelValueModifiers": {},
   }),
   emits: ["update:modelValue"],
   setup(__props: any, { expose: __expose }) {
@@ -109,7 +109,7 @@ exports[`defineModel() > w/ Boolean And Function types, production mode 1`] = `
 export default /*@__PURE__*/_defineComponent({
   props: {
     "modelValue": { type: [Boolean, String] },
-    "modelModifiers": {},
+    "modelValueModifiers": {},
   },
   emits: ["update:modelValue"],
   setup(__props, { expose: __expose }) {
@@ -150,7 +150,7 @@ exports[`defineModel() > w/ defineProps and defineEmits 1`] = `
 export default {
   props: /*@__PURE__*/_mergeModels({ foo: String }, {
     "modelValue": { default: 0 },
-    "modelModifiers": {},
+    "modelValueModifiers": {},
   }),
   emits: /*@__PURE__*/_mergeModels(['change'], ["update:modelValue"]),
   setup(__props, { expose: __expose }) {
@@ -172,7 +172,7 @@ exports[`defineModel() > w/ types, basic usage 1`] = `
 export default /*@__PURE__*/_defineComponent({
   props: {
     "modelValue": { type: [Boolean, String] },
-    "modelModifiers": {},
+    "modelValueModifiers": {},
     "count": { type: Number },
     "countModifiers": {},
     "disabled": { type: Number, ...{ required: false } },
@@ -201,7 +201,7 @@ exports[`defineModel() > w/ types, production mode 1`] = `
 export default /*@__PURE__*/_defineComponent({
   props: {
     "modelValue": { type: Boolean },
-    "modelModifiers": {},
+    "modelValueModifiers": {},
     "fn": {},
     "fnModifiers": {},
     "fnWithDefault": { type: Function, ...{ default: () => null } },
@@ -233,7 +233,7 @@ exports[`defineModel() > w/ types, production mode, boolean + multiple types 1`]
 export default /*@__PURE__*/_defineComponent({
   props: {
     "modelValue": { type: [Boolean, String, Object] },
-    "modelModifiers": {},
+    "modelValueModifiers": {},
   },
   emits: ["update:modelValue"],
   setup(__props, { expose: __expose }) {
@@ -253,7 +253,7 @@ exports[`defineModel() > w/ types, production mode, function + runtime opts + mu
 export default /*@__PURE__*/_defineComponent({
   props: {
     "modelValue": { type: [Number, Function], ...{ default: () => 1 } },
-    "modelModifiers": {},
+    "modelValueModifiers": {},
   },
   emits: ["update:modelValue"],
   setup(__props, { expose: __expose }) {

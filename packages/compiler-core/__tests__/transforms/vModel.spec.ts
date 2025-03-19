@@ -449,7 +449,7 @@ describe('compiler: transform v-model', () => {
     expect(codegen.dynamicProps).toBe(`["modelValue", "onUpdate:modelValue"]`)
   })
 
-  test('should generate modelModifiers for component v-model', () => {
+  test('should generate modelValueModifiers for component v-model', () => {
     const root = parseWithVModel('<Comp v-model.trim.bar-baz="foo" />', {
       prefixIdentifiers: true,
     })
@@ -461,7 +461,7 @@ describe('compiler: transform v-model', () => {
         { key: { content: `modelValue` } },
         { key: { content: `onUpdate:modelValue` } },
         {
-          key: { content: 'modelModifiers' },
+          key: { content: 'modelValueModifiers' },
           value: {
             content: `{ trim: true, "bar-baz": true }`,
             isStatic: false,
@@ -469,7 +469,7 @@ describe('compiler: transform v-model', () => {
         },
       ],
     })
-    // should NOT include modelModifiers in dynamicPropNames because it's never
+    // should NOT include modelValueModifiers in dynamicPropNames because it's never
     // gonna change
     expect(vnodeCall.dynamicProps).toBe(`["modelValue", "onUpdate:modelValue"]`)
   })
