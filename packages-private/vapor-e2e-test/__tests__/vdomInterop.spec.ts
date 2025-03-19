@@ -2,13 +2,15 @@ import path from 'node:path'
 import {
   E2E_TIMEOUT,
   setupPuppeteer,
+  timeout,
 } from '../../../packages/vue/__tests__/e2e/e2eUtils'
 import connect from 'connect'
 import sirv from 'sirv'
+const { page, click, text, enterValue, html } = setupPuppeteer()
+
+const duration = process.env.CI ? 200 : 50
 
 describe('vdom / vapor interop', () => {
-  const { page, click, text, enterValue } = setupPuppeteer()
-
   let server: any
   const port = '8193'
   beforeAll(() => {
@@ -22,12 +24,15 @@ describe('vdom / vapor interop', () => {
     server.close()
   })
 
+  beforeEach(async () => {
+    const baseUrl = `http://localhost:${port}/interop/`
+    await page().goto(baseUrl)
+    await page().waitForSelector('#app')
+  })
+
   test(
     'should work',
     async () => {
-      const baseUrl = `http://localhost:${port}/interop/`
-      await page().goto(baseUrl)
-
       expect(await text('.vapor > h2')).toContain('Vapor component in VDOM')
 
       expect(await text('.vapor-prop')).toContain('hello')
@@ -81,4 +86,19 @@ describe('vdom / vapor interop', () => {
     },
     E2E_TIMEOUT,
   )
+
+  describe('async component', () => {
+    const container = '.async-component-interop'
+    test(
+      'with-vdom-inner-component',
+      async () => {
+        const testContainer = `${container} .with-vdom-component`
+        expect(await html(testContainer)).toBe('<span>loading...</span>')
+
+        await timeout(duration)
+        expect(await html(testContainer)).toBe('<div> foo </div>')
+      },
+      E2E_TIMEOUT,
+    )
+  })
 })
