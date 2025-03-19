@@ -6,7 +6,7 @@ import VdomFoo from './components/VdomFoo.vue'
 const msg = ref('hello')
 const passSlot = ref(true)
 
-const duration = typeof process !== undefined && process.env.CI ? 200 : 50
+const duration = typeof process !== 'undefined' && process.env.CI ? 200 : 50
 
 const AsyncVDomFoo = defineVaporAsyncComponent({
   loader: () => {

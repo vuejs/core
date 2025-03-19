@@ -96,7 +96,7 @@ describe('vdom / vapor interop', () => {
         expect(await html(testContainer)).toBe('<span>loading...</span>')
 
         await timeout(duration)
-        expect(await html(testContainer)).toBe('<div> foo </div>')
+        expect(await html(testContainer)).toBe('<div>foo</div>')
       },
       E2E_TIMEOUT,
     )
