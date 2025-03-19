@@ -8,7 +8,6 @@ import {
 import { createComment, createTextNode } from './dom/node'
 import { EffectScope, pauseTracking, resetTracking } from '@vue/reactivity'
 import { isHydrating } from './dom/hydration'
-import type { RefEl } from './apiTemplateRef'
 
 export type Block =
   | Node
@@ -24,7 +23,7 @@ export class VaporFragment {
   anchor?: Node
   insert?: (parent: ParentNode, anchor: Node | null) => void
   remove?: (parent?: ParentNode) => void
-  setRef?: (el: RefEl) => void
+  setRef?: (comp: VaporComponentInstance) => void
 
   constructor(nodes: Block) {
     this.nodes = nodes

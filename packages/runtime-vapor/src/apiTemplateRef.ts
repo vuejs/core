@@ -56,7 +56,7 @@ export function setRef(
     const frag = i.block as DynamicFragment
     // async component not resolved yet
     if (!i.type.__asyncResolved) {
-      frag.setRef = n => setRef(instance, n, ref, oldRef, refFor)
+      frag.setRef = i => setRef(instance, i, ref, oldRef, refFor)
       return
     }
 
