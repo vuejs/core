@@ -115,26 +115,40 @@ export function defineAsyncComponent<
     )
   }
 
+  let performLoad: () => Promise<ConcreteComponent | void>
+
   return defineComponent({
     name: 'AsyncComponentWrapper',
 
     __asyncLoader: load,
 
     __asyncHydrate(el, instance, hydrate) {
-      const doHydrate = hydrateStrategy
-        ? () => {
-            const teardown = hydrateStrategy(hydrate, cb =>
-              forEachElement(el, cb),
-            )
-            if (teardown) {
-              ;(instance.bum || (instance.bum = [])).push(teardown)
-            }
+      if (hydrateStrategy) {
+        const hydrateWithCallback = (postHydrate?: () => void) => {
+          if (resolvedComp) {
+            hydrate()
+            postHydrate && postHydrate()
+          } else {
+            performLoad().then(() => {
+              if (!instance.isUnmounted) {
+                hydrate()
+                postHydrate && postHydrate()
+              }
+            })
           }
-        : hydrate
-      if (resolvedComp) {
-        doHydrate()
+        }
+        let teardown = hydrateStrategy(hydrateWithCallback, cb =>
+          forEachElement(el, cb),
+        )
+        if (teardown) {
+          ;(instance.bum || (instance.bum = [])).push(teardown)
+        }
       } else {
-        load().then(() => !instance.isUnmounted && doHydrate())
+        if (resolvedComp) {
+          hydrate()
+        } else {
+          load().then(() => !instance.isUnmounted && hydrate())
+        }
       }
     },
 
@@ -166,19 +180,25 @@ export function defineAsyncComponent<
         (__FEATURE_SUSPENSE__ && suspensible && instance.suspense) ||
         (__SSR__ && isInSSRComponentSetup)
       ) {
-        return load()
-          .then(comp => {
-            return () => createInnerComp(comp, instance)
-          })
-          .catch(err => {
-            onError(err)
-            return () =>
-              errorComponent
-                ? createVNode(errorComponent as ConcreteComponent, {
-                    error: err,
-                  })
-                : null
-          })
+        performLoad = () =>
+          load()
+            .then(comp => {
+              return () => createInnerComp(comp, instance)
+            })
+            .catch(err => {
+              onError(err)
+              return () =>
+                errorComponent
+                  ? createVNode(errorComponent as ConcreteComponent, {
+                      error: err,
+                    })
+                  : null
+            })
+
+        if (!hydrateStrategy) {
+          return performLoad()
+        }
+        return
       }
 
       const loaded = ref(false)
@@ -203,19 +223,25 @@ export function defineAsyncComponent<
         }, timeout)
       }
 
-      load()
-        .then(() => {
-          loaded.value = true
-          if (instance.parent && isKeepAlive(instance.parent.vnode)) {
-            // parent is keep-alive, force update so the loaded component's
-            // name is taken into account
-            instance.parent.update()
-          }
-        })
-        .catch(err => {
-          onError(err)
-          error.value = err
-        })
+      performLoad = () =>
+        load()
+          .then(() => {
+            loaded.value = true
+            if (instance.parent && isKeepAlive(instance.parent.vnode)) {
+              // parent is keep-alive, force update so the loaded component's
+              // name is taken into account
+              instance.parent.update()
+            }
+          })
+          .catch(err => {
+            onError(err)
+            error.value = err
+          })
+
+      // lazy perform load if hydrate strategy is present
+      if (!hydrateStrategy) {
+        performLoad()
+      }
 
       return () => {
         if (loaded.value && resolvedComp) {
