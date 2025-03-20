@@ -1,13 +1,13 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`compiler: vModel transform > component > v-model for component should generate modelModifiers 1`] = `
+exports[`compiler: vModel transform > component > v-model for component should generate modelValueModifiers 1`] = `
 "import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback } from 'vue';
 
 export function render(_ctx) {
   const _component_Comp = _resolveComponent("Comp")
   const n0 = _createComponentWithFallback(_component_Comp, { modelValue: () => (_ctx.foo),
   "onUpdate:modelValue": () => _value => (_ctx.foo = _value),
-  modelModifiers: () => ({ trim: true, "bar-baz": true }) }, null, true)
+  modelValueModifiers: () => ({ trim: true, "bar-baz": true }) }, null, true)
   return n0
 }"
 `;

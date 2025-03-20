@@ -94,7 +94,7 @@ describe('defineModel()', () => {
     )
     assertCode(content)
     expect(content).toMatch('"modelValue": { type: [Boolean, String] }')
-    expect(content).toMatch('"modelModifiers": {}')
+    expect(content).toMatch('"modelValueModifiers": {}')
     expect(content).toMatch('"count": { type: Number }')
     expect(content).toMatch(
       '"disabled": { type: Number, ...{ required: false } }',
