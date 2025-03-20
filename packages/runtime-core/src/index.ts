@@ -30,6 +30,8 @@ export {
   stop,
   getCurrentWatcher,
   onWatcherCleanup,
+  pauseTracking,
+  resetTracking,
   ReactiveEffect,
   // effect scope
   effectScope,
