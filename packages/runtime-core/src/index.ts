@@ -557,3 +557,12 @@ export { startMeasure, endMeasure } from './profiling'
  * @internal
  */
 export { initFeatureFlags } from './featureFlags'
+/**
+ * @internal
+ */
+export {
+  resolveTarget,
+  isTeleportDisabled,
+  isTeleportDeferred,
+  TeleportEndKey,
+} from './components/Teleport'

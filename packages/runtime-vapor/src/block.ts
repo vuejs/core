@@ -20,6 +20,8 @@ export type BlockFn = (...args: any[]) => Block
 
 export class VaporFragment {
   nodes: Block
+  target?: ParentNode | null
+  targetAnchor?: Node | null
   anchor?: Node
   insert?: (parent: ParentNode, anchor: Node | null) => void
   remove?: (parent?: ParentNode) => void
@@ -129,7 +131,7 @@ export function insert(
       // TODO handle hydration for vdom interop
       block.insert(parent, anchor)
     } else {
-      insert(block.nodes, parent, anchor)
+      insert(block.nodes, block.target || parent, block.targetAnchor || anchor)
     }
     if (block.anchor) insert(block.anchor, parent, anchor)
   }
