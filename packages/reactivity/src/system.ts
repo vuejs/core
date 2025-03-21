@@ -1,5 +1,5 @@
 /* eslint-disable */
-// Ported from https://github.com/stackblitz/alien-signals/blob/v1.0.4/src/system.ts
+// Ported from https://github.com/stackblitz/alien-signals/blob/v1.0.6/src/system.ts
 import type { ComputedRefImpl as Computed } from './computed.js'
 import type { ReactiveEffect as Effect } from './effect.js'
 
@@ -32,9 +32,14 @@ export const enum SubscriberFlags {
   Propagated = Dirty | PendingComputed,
 }
 
+interface QueuedLink {
+  effect: Effect
+  next: QueuedLink | undefined
+}
+
 let batchDepth = 0
-let queuedEffects: Effect | undefined
-let queuedEffectsTail: Effect | undefined
+let queuedEffects: QueuedLink | undefined
+let queuedEffectsTail: QueuedLink | undefined
 
 export function startBatch(): void {
   ++batchDepth
@@ -108,11 +113,16 @@ export function propagate(link: Link): void {
       }
       if (subFlags & SubscriberFlags.Effect) {
         if (queuedEffectsTail !== undefined) {
-          queuedEffectsTail.depsTail!.nextDep = sub.deps
+          queuedEffectsTail = queuedEffectsTail.next = {
+            effect: sub as Effect,
+            next: undefined,
+          }
         } else {
-          queuedEffects = sub as Effect
+          queuedEffectsTail = queuedEffects = {
+            effect: sub as Effect,
+            next: undefined,
+          }
         }
-        queuedEffectsTail = sub as Effect
       }
     } else if (!(subFlags & (SubscriberFlags.Tracking | targetFlag))) {
       sub.flags = subFlags | targetFlag
@@ -211,14 +221,9 @@ export function processComputedUpdate(
 
 export function processEffectNotifications(): void {
   while (queuedEffects !== undefined) {
-    const effect = queuedEffects
-    const depsTail = effect.depsTail!
-    const queuedNext = depsTail.nextDep
-    if (queuedNext !== undefined) {
-      depsTail.nextDep = undefined
-      queuedEffects = queuedNext.sub as Effect
-    } else {
-      queuedEffects = undefined
+    const effect = queuedEffects.effect
+    queuedEffects = queuedEffects.next
+    if (queuedEffects === undefined) {
       queuedEffectsTail = undefined
     }
     effect.notify()
