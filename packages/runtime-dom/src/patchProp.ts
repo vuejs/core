@@ -47,7 +47,9 @@ export const patchProp: DOMRendererOptions['patchProp'] = (
         ? ((key = key.slice(1)), false)
         : shouldSetAsProp(el, key, nextValue, isSVG)
   ) {
-    patchDOMProp(el, key, nextValue, parentComponent)
+    const camelKey = camelize(key)
+    const propKey = camelKey in el ? camelKey : key
+    patchDOMProp(el, propKey, nextValue, parentComponent, key)
     // #6007 also set form state as attributes so they work with
     // <input type="reset"> or libs / extensions that expect attributes
     // #11163 custom elements may use value as an prop and set it as object
@@ -140,5 +142,5 @@ function shouldSetAsProp(
     return false
   }
 
-  return key in el
+  return camelize(key) in el || key in el
 }
