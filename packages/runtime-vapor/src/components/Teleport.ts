@@ -35,10 +35,17 @@ export const VaporTeleportImpl = {
       rawPropsProxyHandlers,
     ) as any as TeleportProps
 
+    let children: Block
+
     renderEffect(() => {
-      const children = slots.default && (slots.default as BlockFn)()
+      frag.updateChildren(
+        (children = slots.default && (slots.default as BlockFn)()),
+      )
+    })
+
+    renderEffect(() => {
       // access the props to trigger tracking
-      frag.update(extend({}, resolvedProps), children)
+      frag.update(extend({}, resolvedProps), children!)
     })
 
     return frag
@@ -50,7 +57,8 @@ export class TeleportFragment extends VaporFragment {
   targetStart?: Node | null
   mainAnchor?: Node
   placeholder?: Node
-  currentParent?: ParentNode | null
+  container?: ParentNode | null
+  currentAnchor?: Node | null
 
   constructor(anchorLabel?: string) {
     super([])
@@ -58,18 +66,33 @@ export class TeleportFragment extends VaporFragment {
       __DEV__ && anchorLabel ? createComment(anchorLabel) : createTextNode()
   }
 
+  updateChildren(children: Block): void {
+    const parent = this.anchor.parentNode
+    if (!parent) return
+
+    const container = this.container || parent
+
+    // teardown previous
+    remove(this.nodes, container)
+
+    insert(
+      (this.nodes = children),
+      container,
+      this.currentAnchor || this.anchor,
+    )
+  }
+
   update(props: TeleportProps, children: Block): void {
     const parent = this.anchor.parentNode
-    // teardown previous
-    if (this.nodes && (this.currentParent || parent)) {
-      remove(this.nodes, (this.currentParent || parent)!)
-    }
-
     this.nodes = children
     const disabled = isTeleportDisabled(props)
 
     const mount = (parent: ParentNode, anchor: Node | null) => {
-      insert(this.nodes, (this.currentParent = parent), anchor)
+      insert(
+        this.nodes,
+        (this.container = parent),
+        (this.currentAnchor = anchor),
+      )
     }
 
     const mountToTarget = () => {
@@ -124,7 +147,7 @@ export class TeleportFragment extends VaporFragment {
 
   remove = (parent: ParentNode | undefined): void => {
     // remove nodes
-    remove(this.nodes, this.currentParent || parent)
+    remove(this.nodes, this.container || parent)
 
     // remove anchors
     if (this.targetStart) {
