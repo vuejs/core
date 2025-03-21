@@ -18,6 +18,7 @@ import { createComment, createTextNode, querySelector } from '../dom/node'
 import type { LooseRawProps, LooseRawSlots } from '../component'
 import { rawPropsProxyHandlers } from '../componentProps'
 import { renderEffect } from '../renderEffect'
+import { extend } from '@vue/shared'
 
 export const VaporTeleportImpl = {
   name: 'VaporTeleport',
@@ -25,7 +26,6 @@ export const VaporTeleportImpl = {
   __vapor: true,
 
   process(props: LooseRawProps, slots: LooseRawSlots): TeleportFragment {
-    const children = slots.default && (slots.default as BlockFn)()
     const frag = __DEV__
       ? new TeleportFragment('teleport')
       : new TeleportFragment()
@@ -35,31 +35,11 @@ export const VaporTeleportImpl = {
       rawPropsProxyHandlers,
     ) as any as TeleportProps
 
-    renderEffect(() => frag.update(resolvedProps, children))
-
-    frag.remove = parent => {
-      const {
-        nodes,
-        target,
-        cachedTargetAnchor,
-        targetStart,
-        placeholder,
-        mainAnchor,
-      } = frag
-
-      remove(nodes, target || parent)
-
-      // remove anchors
-      if (targetStart) {
-        let parentNode = targetStart.parentNode!
-        remove(targetStart!, parentNode)
-        remove(cachedTargetAnchor!, parentNode)
-      }
-      if (placeholder && placeholder.isConnected) {
-        remove(placeholder!, parent)
-        remove(mainAnchor!, parent)
-      }
-    }
+    renderEffect(() => {
+      const children = slots.default && (slots.default as BlockFn)()
+      // access the props to trigger tracking
+      frag.update(extend({}, resolvedProps), children)
+    })
 
     return frag
   },
@@ -67,12 +47,10 @@ export const VaporTeleportImpl = {
 
 export class TeleportFragment extends VaporFragment {
   anchor: Node
-  target?: ParentNode | null
   targetStart?: Node | null
-  targetAnchor?: Node | null
-  cachedTargetAnchor?: Node
   mainAnchor?: Node
   placeholder?: Node
+  currentParent?: ParentNode | null
 
   constructor(anchorLabel?: string) {
     super([])
@@ -81,33 +59,21 @@ export class TeleportFragment extends VaporFragment {
   }
 
   update(props: TeleportProps, children: Block): void {
+    // teardown previous
+    if (this.currentParent && this.nodes) {
+      remove(this.nodes, this.currentParent)
+    }
+
     this.nodes = children
+    const disabled = isTeleportDisabled(props)
     const parent = this.anchor.parentNode
 
-    if (!this.mainAnchor) {
-      this.mainAnchor = __DEV__
-        ? createComment('teleport end')
-        : createTextNode()
-    }
-    if (!this.placeholder) {
-      this.placeholder = __DEV__
-        ? createComment('teleport start')
-        : createTextNode()
-    }
-    if (parent) {
-      insert(this.placeholder, parent, this.anchor)
-      insert(this.mainAnchor, parent, this.anchor)
+    const mount = (parent: ParentNode, anchor: Node | null) => {
+      insert(this.nodes, (this.currentParent = parent), anchor)
     }
 
-    const disabled = isTeleportDisabled(props)
-    if (disabled) {
-      this.target = this.anchor.parentNode
-      this.targetAnchor = parent ? this.mainAnchor : null
-    } else {
-      const target = (this.target = resolveTarget(
-        props,
-        querySelector,
-      ) as ParentNode)
+    const mountToTarget = () => {
+      const target = (this.target = resolveTarget(props, querySelector))
       if (target) {
         if (
           // initial mount
@@ -116,26 +82,59 @@ export class TeleportFragment extends VaporFragment {
           this.targetStart.parentNode !== target
         ) {
           ;[this.targetAnchor, this.targetStart] = prepareAnchor(target)
-          this.cachedTargetAnchor = this.targetAnchor
-        } else {
-          // re-mount or target not changed, use cached target anchor
-          this.targetAnchor = this.cachedTargetAnchor
         }
+
+        mount(target, this.targetAnchor!)
       } else if (__DEV__) {
-        warn('Invalid Teleport target on mount:', target, `(${typeof target})`)
+        warn(
+          `Invalid Teleport target on ${this.targetStart ? 'update' : 'mount'}:`,
+          target,
+          `(${typeof target})`,
+        )
       }
     }
 
-    const mountToTarget = () => {
-      insert(this.nodes, this.target!, this.targetAnchor)
+    if (parent && disabled) {
+      if (!this.mainAnchor) {
+        this.mainAnchor = __DEV__
+          ? createComment('teleport end')
+          : createTextNode()
+      }
+      if (!this.placeholder) {
+        this.placeholder = __DEV__
+          ? createComment('teleport start')
+          : createTextNode()
+      }
+      if (!this.mainAnchor.isConnected) {
+        insert(this.placeholder, parent, this.anchor)
+        insert(this.mainAnchor, parent, this.anchor)
+      }
+
+      mount(parent, this.mainAnchor)
     }
 
-    if (parent) {
+    if (!disabled) {
       if (isTeleportDeferred(props)) {
         queuePostFlushCb(mountToTarget)
       } else {
         mountToTarget()
       }
+    }
+  }
+
+  remove = (parent: ParentNode | undefined): void => {
+    // remove nodes
+    remove(this.nodes, this.currentParent || parent)
+
+    // remove anchors
+    if (this.targetStart) {
+      let parentNode = this.targetStart.parentNode!
+      remove(this.targetStart!, parentNode)
+      remove(this.targetAnchor!, parentNode)
+    }
+    if (this.placeholder) {
+      remove(this.placeholder!, parent)
+      remove(this.mainAnchor!, parent)
     }
   }
 
@@ -145,8 +144,8 @@ export class TeleportFragment extends VaporFragment {
 }
 
 function prepareAnchor(target: ParentNode | null) {
-  const targetStart = createTextNode('targetStart')
-  const targetAnchor = createTextNode('targetAnchor')
+  const targetStart = createTextNode('')
+  const targetAnchor = createTextNode('')
 
   // attach a special property, so we can skip teleported content in
   // renderer's nextSibling search
