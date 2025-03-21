@@ -59,14 +59,14 @@ export class TeleportFragment extends VaporFragment {
   }
 
   update(props: TeleportProps, children: Block): void {
+    const parent = this.anchor.parentNode
     // teardown previous
-    if (this.currentParent && this.nodes) {
-      remove(this.nodes, this.currentParent)
+    if (this.nodes && (parent || this.currentParent)) {
+      remove(this.nodes, this.currentParent! || parent)
     }
 
     this.nodes = children
     const disabled = isTeleportDisabled(props)
-    const parent = this.anchor.parentNode
 
     const mount = (parent: ParentNode, anchor: Node | null) => {
       insert(this.nodes, (this.currentParent = parent), anchor)
