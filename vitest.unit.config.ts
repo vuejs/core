@@ -1,9 +1,12 @@
-import { configDefaults, mergeConfig } from 'vitest/config'
+import { configDefaults, defineProject, mergeConfig } from 'vitest/config'
 import config from './vitest.config'
 
-export default mergeConfig(config, {
-  test: {
-    name: 'unit',
-    exclude: [...configDefaults.exclude, '**/e2e/**'],
-  },
-})
+export default mergeConfig(
+  config,
+  defineProject({
+    test: {
+      name: 'unit',
+      exclude: [...configDefaults.exclude, '**/e2e/**'],
+    },
+  }),
+)
