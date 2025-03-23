@@ -1,4 +1,9 @@
-import { isReactive, reactive, shallowReactive } from '../../src/index'
+import {
+  isReactive,
+  reactive,
+  readonly,
+  shallowReactive,
+} from '../../src/index'
 import { renderList } from '../../src/helpers/renderList'
 
 describe('renderList', () => {
@@ -64,5 +69,18 @@ describe('renderList', () => {
 
     const shallowReactiveArray = shallowReactive([{ foo: 1 }])
     expect(renderList(shallowReactiveArray, isReactive)).toEqual([false])
+  })
+
+  it('should not allow mutation', () => {
+    const arr = readonly(reactive([{ foo: 1 }]))
+    expect(
+      renderList(arr, item => {
+        ;(item as any).foo = 0
+        return item.foo
+      }),
+    ).toEqual([1])
+    expect(
+      `Set operation on key "foo" failed: target is readonly.`,
+    ).toHaveBeenWarned()
   })
 })
