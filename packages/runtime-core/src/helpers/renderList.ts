@@ -68,9 +68,10 @@ export function renderList(
   const sourceIsArray = isArray(source)
 
   if (sourceIsArray || isString(source)) {
-    const sourceIsReactiveArray = sourceIsArray && isReactive(source)
+    const sourceIsReactiveArray =
+      sourceIsArray && !isReadonly(source) && isReactive(source)
     let needsWrap = false
-    if (!isReadonly(source) && sourceIsReactiveArray) {
+    if (sourceIsReactiveArray) {
       needsWrap = !isShallow(source)
       source = shallowReadArray(source)
     }
