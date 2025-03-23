@@ -1,6 +1,7 @@
 import type { VNode, VNodeChild } from '../vnode'
 import {
   isReactive,
+  isReadonly,
   isShallow,
   shallowReadArray,
   toReactive,
@@ -69,7 +70,7 @@ export function renderList(
   if (sourceIsArray || isString(source)) {
     const sourceIsReactiveArray = sourceIsArray && isReactive(source)
     let needsWrap = false
-    if (sourceIsReactiveArray) {
+    if (!isReadonly(source) && sourceIsReactiveArray) {
       needsWrap = !isShallow(source)
       source = shallowReadArray(source)
     }
