@@ -1,5 +1,5 @@
 /* eslint-disable */
-// Ported from https://github.com/stackblitz/alien-signals/blob/v1.0.7/src/system.ts
+// Ported from https://github.com/stackblitz/alien-signals/blob/4962714dadd133cee16060eb4eb99b90e9e6052d/src/system.ts
 import type { ComputedRefImpl as Computed } from './computed.js'
 import type { ReactiveEffect as Effect } from './effect.js'
 
@@ -82,23 +82,33 @@ export function propagate(current: Link): void {
     const sub = current.sub
     const subFlags = sub.flags
 
+    let shouldNotify = false
+
     if (
-      (!(
+      !(
         subFlags &
         (SubscriberFlags.Tracking |
           SubscriberFlags.Recursed |
           SubscriberFlags.Propagated)
-      ) &&
-        ((sub.flags = subFlags | targetFlag), true)) ||
-      (subFlags & SubscriberFlags.Recursed &&
-        !(subFlags & SubscriberFlags.Tracking) &&
-        ((sub.flags = (subFlags & ~SubscriberFlags.Recursed) | targetFlag),
-        true)) ||
-      (!(subFlags & SubscriberFlags.Propagated) &&
-        isValidLink(current, sub) &&
-        ((sub.flags = subFlags | SubscriberFlags.Recursed | targetFlag),
-        (sub as Dependency).subs !== undefined))
+      )
     ) {
+      sub.flags = subFlags | targetFlag
+      shouldNotify = true
+    } else if (
+      subFlags & SubscriberFlags.Recursed &&
+      !(subFlags & SubscriberFlags.Tracking)
+    ) {
+      sub.flags = (subFlags & ~SubscriberFlags.Recursed) | targetFlag
+      shouldNotify = true
+    } else if (
+      !(subFlags & SubscriberFlags.Propagated) &&
+      isValidLink(current, sub)
+    ) {
+      sub.flags = subFlags | SubscriberFlags.Recursed | targetFlag
+      shouldNotify = (sub as Dependency).subs !== undefined
+    }
+
+    if (shouldNotify) {
       const subSubs = (sub as Dependency).subs
       if (subSubs !== undefined) {
         current = subSubs
@@ -200,18 +210,15 @@ export function processComputedUpdate(
   computed: Computed,
   flags: SubscriberFlags,
 ): void {
-  if (
-    flags & SubscriberFlags.Dirty ||
-    (checkDirty(computed.deps!)
-      ? true
-      : ((computed.flags = flags & ~SubscriberFlags.PendingComputed), false))
-  ) {
+  if (flags & SubscriberFlags.Dirty || checkDirty(computed.deps!)) {
     if (computed.update()) {
       const subs = computed.subs
       if (subs !== undefined) {
         shallowPropagate(subs)
       }
     }
+  } else {
+    computed.flags = flags & ~SubscriberFlags.PendingComputed
   }
 }
 
