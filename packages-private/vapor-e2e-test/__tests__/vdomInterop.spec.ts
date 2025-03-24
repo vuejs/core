@@ -5,12 +5,13 @@ import {
 } from '../../../packages/vue/__tests__/e2e/e2eUtils'
 import connect from 'connect'
 import sirv from 'sirv'
+import { ports } from '../utils'
 
 describe('vdom / vapor interop', () => {
   const { page, click, text, enterValue } = setupPuppeteer()
 
   let server: any
-  const port = '8193'
+  const port = ports.vdomInterop
   beforeAll(() => {
     server = connect()
       .use(sirv(path.resolve(import.meta.dirname, '../dist')))
