@@ -4,14 +4,24 @@ import {
   createComponent as originalCreateComponent,
 } from '../../src/component'
 import {
+  type VaporDirective,
   VaporTeleport,
+  createIf,
   createTemplateRefSetter,
   setInsertionState,
   template,
+  withVaporDirectives,
 } from '@vue/runtime-vapor'
 
 import { makeRender } from '../_utils'
-import { nextTick, onBeforeUnmount, onUnmounted, ref, shallowRef } from 'vue'
+import {
+  nextTick,
+  onBeforeUnmount,
+  onMounted,
+  onUnmounted,
+  ref,
+  shallowRef,
+} from 'vue'
 
 const define = makeRender()
 
@@ -410,17 +420,254 @@ function runSharedTests(deferMode: boolean): void {
     expect(target.innerHTML).toBe('<div>teleported</div>')
   })
 
-  test.todo('moving teleport while disabled', async () => {})
-  test.todo('should work with block tree', async () => {})
-  test.todo(
-    `the dir hooks of the Teleport's children should be called correctly`,
-    async () => {},
-  )
-  test.todo(
-    `ensure that target changes when disabled are updated correctly when enabled`,
-    async () => {},
-  )
-  test.todo('toggle sibling node inside target node', async () => {})
-  test.todo('unmount previous sibling node inside target node', async () => {})
-  test.todo('accessing template refs inside teleport', async () => {})
+  test.todo('moving teleport while disabled', async () => {
+    const target = document.createElement('div')
+    const root = document.createElement('div')
+
+    const child1 = createComponent(
+      VaporTeleport,
+      { to: () => target, disabled: () => true },
+      { default: () => template('<div>teleported</div>')() },
+    )
+    const child2 = template('<div>root</div>')()
+
+    const children = shallowRef([child1, child2])
+    const { mount } = define({
+      setup() {
+        return children.value
+      },
+    }).create()
+    mount(root)
+
+    expect(root.innerHTML).toBe(
+      '<div>teleported</div><!--teleport--><div>root</div>',
+    )
+    expect(target.innerHTML).toBe('')
+
+    children.value = [child2, child1]
+    await nextTick()
+    expect(root.innerHTML).toBe(
+      '<div>root</div><div>teleported</div><!--teleport-->',
+    )
+    expect(target.innerHTML).toBe('')
+  })
+
+  test(`the dir hooks of the Teleport's children should be called correctly`, async () => {
+    const target = document.createElement('div')
+    const root = document.createElement('div')
+    const toggle = ref(true)
+
+    const spy = vi.fn()
+    const teardown = vi.fn()
+    const dir: VaporDirective = vi.fn((el, source) => {
+      spy()
+      return teardown
+    })
+
+    const { mount } = define({
+      setup() {
+        return createComponent(
+          VaporTeleport,
+          {
+            to: () => target,
+          },
+          {
+            default: () => {
+              return createIf(
+                () => toggle.value,
+                () => {
+                  const n1 = template('<div>foo</div>')() as any
+                  withVaporDirectives(n1, [[dir]])
+                  return n1
+                },
+              )
+            },
+          },
+        )
+      },
+    }).create()
+
+    mount(root)
+    expect(root.innerHTML).toBe('<!--teleport-->')
+    expect(target.innerHTML).toBe('<div>foo</div><!--if-->')
+    expect(spy).toHaveBeenCalledTimes(1)
+    expect(teardown).not.toHaveBeenCalled()
+
+    toggle.value = false
+    await nextTick()
+    expect(root.innerHTML).toBe('<!--teleport-->')
+    expect(target.innerHTML).toBe('<!--if-->')
+    expect(spy).toHaveBeenCalledTimes(1)
+    expect(teardown).toHaveBeenCalledTimes(1)
+  })
+
+  test(`ensure that target changes when disabled are updated correctly when enabled`, async () => {
+    const root = document.createElement('div')
+    const target1 = document.createElement('div')
+    const target2 = document.createElement('div')
+    const target3 = document.createElement('div')
+    const target = ref(target1)
+    const disabled = ref(true)
+
+    const { mount } = define({
+      setup() {
+        return createComponent(
+          VaporTeleport,
+          {
+            to: () => target.value,
+            disabled: () => disabled.value,
+          },
+          {
+            default: () => template('<div>teleported</div>')(),
+          },
+        )
+      },
+    }).create()
+    mount(root)
+
+    disabled.value = false
+    await nextTick()
+    expect(target1.innerHTML).toBe('<div>teleported</div>')
+    expect(target2.innerHTML).toBe('')
+    expect(target3.innerHTML).toBe('')
+
+    disabled.value = true
+    await nextTick()
+    target.value = target2
+    await nextTick()
+    expect(target1.innerHTML).toBe('')
+    expect(target2.innerHTML).toBe('')
+    expect(target3.innerHTML).toBe('')
+
+    target.value = target3
+    await nextTick()
+    expect(target1.innerHTML).toBe('')
+    expect(target2.innerHTML).toBe('')
+    expect(target3.innerHTML).toBe('')
+
+    disabled.value = false
+    await nextTick()
+    expect(target1.innerHTML).toBe('')
+    expect(target2.innerHTML).toBe('')
+    expect(target3.innerHTML).toBe('<div>teleported</div>')
+  })
+
+  test('toggle sibling node inside target node', async () => {
+    const root = document.createElement('div')
+    const show = ref(false)
+    const { mount } = define({
+      setup() {
+        return createIf(
+          () => show.value,
+          () => {
+            return createComponent(
+              VaporTeleport,
+              {
+                to: () => root,
+              },
+              {
+                default: () => template('<div>teleported</div>')(),
+              },
+            )
+          },
+          () => {
+            return template('<div>foo</div>')()
+          },
+        )
+      },
+    }).create()
+
+    mount(root)
+    expect(root.innerHTML).toBe('<div>foo</div><!--if-->')
+
+    show.value = true
+    await nextTick()
+    expect(root.innerHTML).toBe('<!--teleport--><!--if--><div>teleported</div>')
+
+    show.value = false
+    await nextTick()
+    expect(root.innerHTML).toBe('<div>foo</div><!--if-->')
+  })
+
+  test('unmount previous sibling node inside target node', async () => {
+    const root = document.createElement('div')
+    const parentShow = ref(false)
+    const childShow = ref(true)
+
+    const { component: Comp } = define({
+      setup() {
+        return createComponent(
+          VaporTeleport,
+          { to: () => root },
+          {
+            default: () => {
+              return template('<div>foo</div>')()
+            },
+          },
+        )
+      },
+    })
+
+    const { mount } = define({
+      setup() {
+        return createIf(
+          () => parentShow.value,
+          () =>
+            createIf(
+              () => childShow.value,
+              () => createComponent(Comp),
+              () => template('bar')(),
+            ),
+          () => template('foo')(),
+        )
+      },
+    }).create()
+
+    mount(root)
+    expect(root.innerHTML).toBe('foo<!--if-->')
+
+    parentShow.value = true
+    await nextTick()
+    expect(root.innerHTML).toBe(
+      '<!--teleport--><!--if--><!--if--><div>foo</div>',
+    )
+
+    parentShow.value = false
+    await nextTick()
+    expect(root.innerHTML).toBe('foo<!--if-->')
+  })
+
+  test('accessing template refs inside teleport', async () => {
+    const target = document.createElement('div')
+    const tRef = ref()
+    let tRefInMounted
+
+    const { mount } = define({
+      setup() {
+        onMounted(() => {
+          tRefInMounted = tRef.value
+        })
+        const n1 = createComponent(
+          VaporTeleport,
+          {
+            to: () => target,
+          },
+          {
+            default: () => {
+              const setTemplateRef = createTemplateRefSetter()
+              const n0 = template('<div>teleported</div>')() as any
+              setTemplateRef(n0, tRef)
+              return n0
+            },
+          },
+        )
+        return n1
+      },
+    }).create()
+    mount(target)
+
+    const child = target.children[0]
+    expect(child.outerHTML).toBe(`<div>teleported</div>`)
+    expect(tRefInMounted).toBe(child)
+  })
 }
