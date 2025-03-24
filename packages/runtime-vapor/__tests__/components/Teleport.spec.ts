@@ -392,66 +392,6 @@ function runSharedTests(deferMode: boolean): void {
     expect(target.innerHTML).toBe('<div>teleported</div>')
   })
 
-  test.todo('moving teleport while enabled', async () => {
-    const target = document.createElement('div')
-    const root = document.createElement('div')
-
-    const child1 = createComponent(
-      VaporTeleport,
-      { to: () => target },
-      { default: () => template('<div>teleported</div>')() },
-    )
-    const child2 = template('<div>root</div>')()
-
-    const children = shallowRef([child1, child2])
-    const { mount } = define({
-      setup() {
-        return children.value
-      },
-    }).create()
-    mount(root)
-
-    expect(root.innerHTML).toBe('<!--teleport--><div>root</div>')
-    expect(target.innerHTML).toBe('<div>teleported</div>')
-
-    children.value = [child2, child1]
-    await nextTick()
-    expect(root.innerHTML).toBe('<div>root</div><!--teleport-->')
-    expect(target.innerHTML).toBe('<div>teleported</div>')
-  })
-
-  test.todo('moving teleport while disabled', async () => {
-    const target = document.createElement('div')
-    const root = document.createElement('div')
-
-    const child1 = createComponent(
-      VaporTeleport,
-      { to: () => target, disabled: () => true },
-      { default: () => template('<div>teleported</div>')() },
-    )
-    const child2 = template('<div>root</div>')()
-
-    const children = shallowRef([child1, child2])
-    const { mount } = define({
-      setup() {
-        return children.value
-      },
-    }).create()
-    mount(root)
-
-    expect(root.innerHTML).toBe(
-      '<div>teleported</div><!--teleport--><div>root</div>',
-    )
-    expect(target.innerHTML).toBe('')
-
-    children.value = [child2, child1]
-    await nextTick()
-    expect(root.innerHTML).toBe(
-      '<div>root</div><div>teleported</div><!--teleport-->',
-    )
-    expect(target.innerHTML).toBe('')
-  })
-
   test(`the dir hooks of the Teleport's children should be called correctly`, async () => {
     const target = document.createElement('div')
     const root = document.createElement('div')
