@@ -19,6 +19,10 @@ export function hmrRerender(instance: VaporComponentInstance): void {
   const parent = normalized[0].parentNode!
   const anchor = normalized[normalized.length - 1].nextSibling
   remove(instance.block, parent)
+  if (instance.hmrEffects) {
+    instance.hmrEffects.forEach(e => e())
+    instance.hmrEffects.length = 0
+  }
   const prev = currentInstance
   simpleSetCurrentInstance(instance)
   pushWarningContext(instance)
@@ -36,6 +40,10 @@ export function hmrReload(
   const parent = normalized[0].parentNode!
   const anchor = normalized[normalized.length - 1].nextSibling
   unmountComponent(instance, parent)
+  if (instance.hmrEffects) {
+    instance.hmrEffects.forEach(e => e())
+    instance.hmrEffects.length = 0
+  }
   const prev = currentInstance
   simpleSetCurrentInstance(instance.parent)
   const newInstance = createComponent(

@@ -172,6 +172,13 @@ export function createComponent(
       frag.hydrate()
     }
 
+    if (__DEV__) {
+      const instance = currentInstance as VaporComponentInstance
+      ;(instance!.hmrEffects || (instance!.hmrEffects = [])).push(() =>
+        frag.remove(frag.anchor.parentNode!),
+      )
+    }
+
     return frag as any
   }
 
@@ -389,6 +396,7 @@ export class VaporComponentInstance implements GenericComponentInstance {
   devtoolsRawSetupState?: any
   hmrRerender?: () => void
   hmrReload?: (newComp: VaporComponent) => void
+  hmrEffects?: (() => void)[]
   propsOptions?: NormalizedPropsOptions
   emitsOptions?: ObjectEmitsOptions | null
   isSingleRoot?: boolean
