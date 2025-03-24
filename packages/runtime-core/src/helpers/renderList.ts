@@ -3,9 +3,9 @@ import {
   isReactive,
   isReadonly,
   isShallow,
-  readonly,
   shallowReadArray,
   toReactive,
+  toReadonly,
 } from '@vue/reactivity'
 import { isArray, isObject, isString } from '@vue/shared'
 import { warn } from '../warning'
@@ -82,7 +82,7 @@ export function renderList(
       ret[i] = renderItem(
         needsWrap
           ? isReadonlySource
-            ? readonly(source[i])
+            ? toReadonly(source[i])
             : toReactive(source[i])
           : source[i],
         i,
