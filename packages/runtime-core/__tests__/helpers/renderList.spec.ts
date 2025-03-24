@@ -1,4 +1,5 @@
 import {
+  effect,
   isReactive,
   reactive,
   readonly,
@@ -82,5 +83,19 @@ describe('renderList', () => {
     expect(
       `Set operation on key "foo" failed: target is readonly.`,
     ).toHaveBeenWarned()
+  })
+
+  it('should trigger effect for deep mutations in readonly reactive arrays', () => {
+    const arr = reactive([{ foo: 1 }])
+    const readonlyArr = readonly(arr)
+
+    let dummy
+    effect(() => {
+      dummy = renderList(readonlyArr, item => item.foo)
+    })
+    expect(dummy).toEqual([1])
+
+    arr[0].foo = 2
+    expect(dummy).toEqual([2])
   })
 })

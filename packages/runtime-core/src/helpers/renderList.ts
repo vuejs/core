@@ -82,7 +82,7 @@ export function renderList(
       ret[i] = renderItem(
         needsWrap
           ? isReadonlySource
-            ? toReadonly(source[i])
+            ? toReadonly(toReactive(source[i]))
             : toReactive(source[i])
           : source[i],
         i,
