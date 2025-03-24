@@ -189,3 +189,14 @@ function prepareAnchor(target: ParentNode | null) {
 
   return [targetAnchor, targetStart]
 }
+
+export const VaporTeleport = VaporTeleportImpl as unknown as {
+  __vapor: true
+  __isTeleport: true
+  new (): {
+    $props: TeleportProps
+    $slots: {
+      default(): Block
+    }
+  }
+}
