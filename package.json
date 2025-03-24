@@ -74,8 +74,8 @@
     "@types/node": "^22.13.10",
     "@types/semver": "^7.5.8",
     "@types/serve-handler": "^6.1.4",
-    "@vitest/coverage-v8": "^3.0.8",
-    "@vitest/eslint-plugin": "^1.1.37",
+    "@vitest/coverage-v8": "^3.0.9",
+    "@vitest/eslint-plugin": "^1.1.38",
     "@vue/consolidate": "1.0.0",
     "conventional-changelog-cli": "^5.0.0",
     "enquirer": "^2.4.1",
@@ -110,7 +110,7 @@
     "typescript": "~5.6.2",
     "typescript-eslint": "^8.26.1",
     "vite": "catalog:",
-    "vitest": "^3.0.8"
+    "vitest": "^3.0.9"
   },
   "pnpm": {
     "peerDependencyRules": {
