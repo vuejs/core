@@ -20,6 +20,8 @@ import { type IsAny, type IsUnion, describe, expectType } from './utils'
 describe('with object props', () => {
   interface ExpectedProps {
     a?: number | undefined
+    aa: number
+    aaa: number | null
     b: string
     e?: Function
     h: boolean
@@ -53,6 +55,14 @@ describe('with object props', () => {
 
   const props = {
     a: Number,
+    aa: {
+      type: Number as PropType<number | undefined>,
+      default: 1,
+    },
+    aaa: {
+      type: Number as PropType<number | null>,
+      default: 1,
+    },
     // required should make property non-void
     b: {
       type: String,
@@ -146,6 +156,8 @@ describe('with object props', () => {
     setup(props) {
       // type assertion. See https://github.com/SamVerschueren/tsd
       expectType<ExpectedProps['a']>(props.a)
+      expectType<ExpectedProps['aa']>(props.aa)
+      expectType<ExpectedProps['aaa']>(props.aaa)
       expectType<ExpectedProps['b']>(props.b)
       expectType<ExpectedProps['e']>(props.e)
       expectType<ExpectedProps['h']>(props.h)
@@ -198,6 +210,8 @@ describe('with object props', () => {
     render() {
       const props = this.$props
       expectType<ExpectedProps['a']>(props.a)
+      expectType<ExpectedProps['aa']>(props.aa)
+      expectType<ExpectedProps['aaa']>(props.aaa)
       expectType<ExpectedProps['b']>(props.b)
       expectType<ExpectedProps['e']>(props.e)
       expectType<ExpectedProps['h']>(props.h)
@@ -225,6 +239,8 @@ describe('with object props', () => {
 
       // should also expose declared props on `this`
       expectType<ExpectedProps['a']>(this.a)
+      expectType<ExpectedProps['aa']>(this.aa)
+      expectType<ExpectedProps['aaa']>(this.aaa)
       expectType<ExpectedProps['b']>(this.b)
       expectType<ExpectedProps['e']>(this.e)
       expectType<ExpectedProps['h']>(this.h)
