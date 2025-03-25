@@ -72,6 +72,26 @@ describe('component: emit', () => {
     expect(fooSpy).toHaveBeenCalledTimes(1)
   })
 
+  // #9812
+  test('trigger kebab-case handler with on-', () => {
+    const Foo = defineComponent({
+      render() {},
+      created() {
+        this.$emit('test-event')
+        this.$emit('testEvent')
+      },
+    })
+
+    const fooSpy = vi.fn()
+    const Comp = () =>
+      h(Foo, {
+        'on-test-event': fooSpy,
+      })
+    render(h(Comp), nodeOps.createElement('div'))
+
+    expect(fooSpy).toHaveBeenCalledTimes(2)
+  })
+
   // #3527
   test('trigger mixed case handlers', () => {
     const Foo = defineComponent({
@@ -515,6 +535,9 @@ describe('component: emit', () => {
     // .once listeners
     expect(isEmitListener(options, 'onClickOnce')).toBe(true)
     expect(isEmitListener(options, 'onclickOnce')).toBe(false)
+    // kebab-case option with on- listener #9812
+    expect(isEmitListener(options, 'on-test-event')).toBe(true)
+    expect(isEmitListener(options, 'on-foo-bar')).toBe(true)
     // kebab-case option
     expect(isEmitListener(options, 'onTestEvent')).toBe(true)
     // camelCase option
