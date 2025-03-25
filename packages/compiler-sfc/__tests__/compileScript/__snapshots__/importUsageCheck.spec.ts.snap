@@ -11,7 +11,7 @@ export default /*@__PURE__*/_defineComponent({
 
     function b() {}
     
-return { a, b, get Baz() { return Baz } }
+return { get a() { return a }, set a(v) { throw new Error('Assignment to constant variable.') }, get b() { return b }, set b(v) { throw new Error('Assignment to constant variable.') }, get Baz() { return Baz } }
 }
 
 })"
@@ -27,7 +27,7 @@ export default /*@__PURE__*/_defineComponent({
   __expose();
 
     
-return { cond, get bar() { return bar }, get baz() { return baz } }
+return { get cond() { return cond }, set cond(v) { throw new Error('Assignment to constant variable.') }, get bar() { return bar }, get baz() { return baz } }
 }
 
 })"
@@ -43,7 +43,7 @@ export default /*@__PURE__*/_defineComponent({
   __expose();
 
     
-return { fooBar, get FooBaz() { return FooBaz }, get FooQux() { return FooQux }, get foo() { return foo } }
+return { get fooBar() { return fooBar }, set fooBar(v) { throw new Error('Assignment to constant variable.') }, get FooBaz() { return FooBaz }, get FooQux() { return FooQux }, get foo() { return foo } }
 }
 
 })"
