@@ -2550,7 +2550,8 @@ describe('compiler: parse', () => {
     const patterns: {
       [key: string]: Array<{
         code: string
-        errors: Array<{ type: ErrorCodes; loc: Position }>
+        errors?: Array<{ type: ErrorCodes; loc: Position }>
+        warnings?: Array<{ type: ErrorCodes; loc: Position }>
         options?: Partial<ParserOptions>
       }>
     } = {
@@ -3420,32 +3421,53 @@ describe('compiler: parse', () => {
           ],
         },
       ],
+      X_COLON_BEFORE_DIRECTIVE: [
+        {
+          code: `<div :v-foo="obj" />`,
+          warnings: [
+            {
+              type: ErrorCodes.X_COLON_BEFORE_DIRECTIVE,
+              loc: { offset: 5, line: 1, column: 6 },
+            },
+          ],
+        },
+      ],
     }
 
     for (const key of Object.keys(patterns)) {
       describe(key, () => {
-        for (const { code, errors, options } of patterns[key]) {
+        for (const { code, errors = [], warnings = [], options } of patterns[
+          key
+        ]) {
           test(
             code.replace(
               /[\r\n]/g,
               c => `\\x0${c.codePointAt(0)!.toString(16)};`,
             ),
             () => {
-              const spy = vi.fn()
+              const errorSpy = vi.fn()
+              const warnSpy = vi.fn()
               const ast = baseParse(code, {
                 parseMode: 'html',
                 getNamespace: tag =>
                   tag === 'svg' ? Namespaces.SVG : Namespaces.HTML,
                 ...options,
-                onError: spy,
+                onError: errorSpy,
+                onWarn: warnSpy,
               })
 
               expect(
-                spy.mock.calls.map(([err]) => ({
+                errorSpy.mock.calls.map(([err]) => ({
                   type: err.code,
                   loc: err.loc.start,
                 })),
               ).toMatchObject(errors)
+              expect(
+                warnSpy.mock.calls.map(([err]) => ({
+                  type: err.code,
+                  loc: err.loc.start,
+                })),
+              ).toMatchObject(warnings)
               expect(ast).toMatchSnapshot()
             },
           )
