@@ -861,7 +861,7 @@ export default {
 return (_ctx, _cache) => {
   return (_openBlock(), _createElementBlock(_Fragment, null, [
     _createElementVNode("div", null, _toDisplayString(count.value), 1 /* TEXT */),
-    _cache[0] || (_cache[0] = _createElementVNode("div", null, "static", -1 /* HOISTED */))
+    _cache[0] || (_cache[0] = _createElementVNode("div", null, "static", -1 /* CACHED */))
   ], 64 /* STABLE_FRAGMENT */))
 }
 }
