@@ -1208,12 +1208,12 @@ function baseCreateRenderer(
       }
     }
 
+    // avoid hydration for hmr updating
+    if (__DEV__ && isHmrUpdating) initialVNode.el = null
+
     // setup() is async. This component relies on async logic to be resolved
     // before proceeding
     if (__FEATURE_SUSPENSE__ && instance.asyncDep) {
-      // avoid hydration for hmr updating
-      if (__DEV__ && isHmrUpdating) initialVNode.el = null
-
       parentSuspense &&
         parentSuspense.registerDep(instance, setupRenderEffect, optimized)
 
