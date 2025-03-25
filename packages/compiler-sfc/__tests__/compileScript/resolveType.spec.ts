@@ -521,7 +521,7 @@ describe('resolveType', () => {
 
     expect(props).toStrictEqual({
       foo: ['Symbol', 'String', 'Number'],
-      bar: [UNKNOWN_TYPE],
+      bar: ['String', 'Number'],
     })
   })
 
@@ -776,6 +776,17 @@ describe('resolveType', () => {
       `).props,
       ).toStrictEqual({
         foo: ['String'],
+      })
+    })
+
+    test('generic type parameter with union type', () => {
+      expect(
+        resolve(`
+        type Wrapped<T> = T | symbol | number
+        defineProps<{foo?: Wrapped<boolean>}>()
+      `).props,
+      ).toStrictEqual({
+        foo: ['Boolean', 'Symbol', 'Number'],
       })
     })
 
