@@ -2336,5 +2336,30 @@ describe('SSR hydration', () => {
       )
       expect(`Hydration attribute mismatch`).not.toHaveBeenWarned()
     })
+
+    // #9033
+    test('force patch dynamic props when hydrating', () => {
+      const timestamp = Date.now()
+      let timestampCur = 0
+      const { container } = mountWithHydration(
+        `<div><div>${timestamp}</div></div>`,
+        () => {
+          timestampCur = Date.now()
+          return (
+            openBlock(),
+            createElementBlock('div', null, [
+              createElementVNode(
+                'div',
+                { innerHTML: timestampCur },
+                null,
+                8 /* PROPS */,
+                ['innerHTML'],
+              ),
+            ])
+          )
+        },
+      )
+      expect(container.innerHTML).toBe(`<div><div>${timestampCur}</div></div>`)
+    })
   })
 })
