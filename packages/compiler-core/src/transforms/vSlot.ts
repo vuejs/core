@@ -24,6 +24,7 @@ import type { NodeTransform, TransformContext } from '../transform'
 import { ErrorCodes, createCompilerError } from '../errors'
 import {
   assert,
+  checkParameterName,
   findDir,
   hasScopeRef,
   isStaticExp,
@@ -173,6 +174,10 @@ export function buildSlots(
         implicitDefaultChildren.push(slotElement)
       }
       continue
+    }
+
+    if (__DEV__ || !__BROWSER__) {
+      checkParameterName(slotDir.exp, slotElement, context)
     }
 
     if (onComponentSlot) {
