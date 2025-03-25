@@ -2185,6 +2185,30 @@ describe('SSR hydration', () => {
       expect(`Hydration style mismatch`).not.toHaveBeenWarned()
     })
 
+    test('with disabled teleport + undefined target', async () => {
+      const container = document.createElement('div')
+      const isOpen = ref(false)
+      const App = {
+        setup() {
+          return { isOpen }
+        },
+        template: `
+          <Teleport :to="undefined" :disabled="true">
+            <div v-if="isOpen">
+              Menu is open...
+            </div>
+          </Teleport>`,
+      }
+      container.innerHTML = await renderToString(h(App))
+      const app = createSSRApp(App)
+      app.mount(container)
+      isOpen.value = true
+      await nextTick()
+      expect(container.innerHTML).toBe(
+        `<!--teleport start--><div> Menu is open... </div><!--teleport end-->`,
+      )
+    })
+
     test('escape css var name', () => {
       const container = document.createElement('div')
       container.innerHTML = `<div style="padding: 4px;--foo\\.bar:red;"></div>`
