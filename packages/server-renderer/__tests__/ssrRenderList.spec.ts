@@ -27,7 +27,14 @@ describe('ssr: renderList', () => {
   it('should warn when given a non-integer N', () => {
     ssrRenderList(3.1, () => {})
     expect(
-      `The v-for range expect an integer value but got 3.1.`,
+      `The v-for range expects a positive integer value but got 3.1.`,
+    ).toHaveBeenWarned()
+  })
+
+  it('should warn when given a negative N', () => {
+    ssrRenderList(-1, () => {})
+    expect(
+      `The v-for range expects a positive integer value but got -1.`,
     ).toHaveBeenWarned()
   })
 
