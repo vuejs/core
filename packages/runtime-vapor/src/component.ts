@@ -172,11 +172,12 @@ export function createComponent(
       frag.hydrate()
     }
 
+    // remove the teleport content from the parent tree for HMR updates
     if (__DEV__) {
       const instance = currentInstance as VaporComponentInstance
-      ;(instance!.hmrEffects || (instance!.hmrEffects = [])).push(() =>
-        frag.remove(frag.anchor.parentNode!),
-      )
+      ;(instance!.hmrEffects || (instance!.hmrEffects = [])).push(() => {
+        frag.remove(frag.anchor.parentNode!)
+      })
     }
 
     return frag as any

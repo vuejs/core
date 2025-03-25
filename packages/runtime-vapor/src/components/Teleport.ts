@@ -19,6 +19,7 @@ import type { LooseRawProps, LooseRawSlots } from '../component'
 import { rawPropsProxyHandlers } from '../componentProps'
 import { renderEffect } from '../renderEffect'
 import { extend } from '@vue/shared'
+import { EffectScope, pauseTracking, resetTracking } from '@vue/reactivity'
 
 export const VaporTeleportImpl = {
   name: 'VaporTeleport',
@@ -30,23 +31,28 @@ export const VaporTeleportImpl = {
       ? new TeleportFragment('teleport')
       : new TeleportFragment()
 
-    let children: Block
-    renderEffect(() => {
-      frag.updateChildren(
-        (children = slots.default && (slots.default as BlockFn)()),
-      )
-    })
+    pauseTracking()
+    const scope = (frag.scope = new EffectScope())
+    scope!.run(() => {
+      let children: Block
+      renderEffect(() => {
+        frag.updateChildren(
+          (children = slots.default && (slots.default as BlockFn)()),
+        )
+      })
 
-    renderEffect(() => {
-      frag.update(
-        // access the props to trigger tracking
-        extend(
-          {},
-          new Proxy(props, rawPropsProxyHandlers) as any as TeleportProps,
-        ),
-        children!,
-      )
+      renderEffect(() => {
+        frag.update(
+          // access the props to trigger tracking
+          extend(
+            {},
+            new Proxy(props, rawPropsProxyHandlers) as any as TeleportProps,
+          ),
+          children!,
+        )
+      })
     })
+    resetTracking()
 
     return frag
   },
@@ -54,6 +60,7 @@ export const VaporTeleportImpl = {
 
 class TeleportFragment extends VaporFragment {
   anchor: Node
+  scope: EffectScope | undefined
 
   private targetStart?: Node
   private mainAnchor?: Node
@@ -155,17 +162,31 @@ class TeleportFragment extends VaporFragment {
   }
 
   remove = (parent: ParentNode | undefined): void => {
+    // stop effect scope
+    if (this.scope) {
+      this.scope.stop()
+      this.scope = undefined
+    }
+
     // remove nodes
-    remove(this.nodes, this.currentParent)
+    if (this.nodes) {
+      remove(this.nodes, this.currentParent)
+      this.nodes = []
+    }
 
     // remove anchors
     if (this.targetStart) {
       remove(this.targetStart!, this.target!)
+      this.targetStart = undefined
       remove(this.targetAnchor!, this.target!)
+      this.targetAnchor = undefined
     }
+
     if (this.placeholder) {
       remove(this.placeholder!, parent)
+      this.placeholder = undefined
       remove(this.mainAnchor!, parent)
+      this.mainAnchor = undefined
     }
   }
 
