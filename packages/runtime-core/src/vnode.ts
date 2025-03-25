@@ -9,6 +9,7 @@ import {
   isObject,
   isOn,
   isString,
+  isVoidTag,
   normalizeClass,
   normalizeStyle,
 } from '@vue/shared'
@@ -617,6 +618,17 @@ function _createVNode(
           : isFunction(type)
             ? ShapeFlags.FUNCTIONAL_COMPONENT
             : 0
+
+  if (
+    __DEV__ &&
+    shapeFlag & ShapeFlags.ELEMENT &&
+    isVoidTag(type as string) &&
+    children != null
+  ) {
+    warn(
+      `don't render child nodes in a void element <${type as string} />, it may cause unexpected behavior`,
+    )
+  }
 
   if (__DEV__ && shapeFlag & ShapeFlags.STATEFUL_COMPONENT && isProxy(type)) {
     type = toRaw(type)
