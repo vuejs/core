@@ -73,7 +73,7 @@ return function render(_ctx, _cache) {
 
     return _withDirectives((_openBlock(), _createElementBlock("p", null, [
       _createTextVNode(_toDisplayString(foo), 1 /* TEXT */)
-    ])), [
+    ], 512 /* NEED_PATCH */)), [
       [_directive_foo]
     ])
   }
