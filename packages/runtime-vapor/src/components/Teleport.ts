@@ -54,6 +54,13 @@ export const VaporTeleportImpl = {
     })
     resetTracking()
 
+    if (__DEV__) {
+      // TODO
+      ;(frag as any).getNodes = () => {
+        return frag.parent !== frag.currentParent ? [] : frag.nodes
+      }
+    }
+
     return frag
   },
 }

@@ -184,7 +184,11 @@ export function normalizeBlock(block: Block): Node[] {
   } else if (isVaporComponent(block)) {
     nodes.push(...normalizeBlock(block.block!))
   } else {
-    nodes.push(...normalizeBlock(block.nodes))
+    if ((block as any).getNodes) {
+      nodes.push(...normalizeBlock((block as any).getNodes()))
+    } else {
+      nodes.push(...normalizeBlock(block.nodes))
+    }
     block.anchor && nodes.push(block.anchor)
   }
   return nodes

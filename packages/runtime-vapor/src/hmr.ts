@@ -54,4 +54,5 @@ export function hmrReload(
   )
   simpleSetCurrentInstance(prev, instance.parent)
   mountComponent(newInstance, parent, anchor)
+  instance.block = newInstance.block
 }

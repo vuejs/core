@@ -1,7 +1,7 @@
 import {
   type LooseRawProps,
   type VaporComponent,
-  createComponent as originalCreateComponent,
+  createComponent as createComp,
 } from '../../src/component'
 import {
   type VaporDirective,
@@ -12,7 +12,6 @@ import {
   template,
   withVaporDirectives,
 } from '@vue/runtime-vapor'
-
 import { makeRender } from '../_utils'
 import {
   nextTick,
@@ -23,6 +22,10 @@ import {
   shallowRef,
 } from 'vue'
 
+import type { HMRRuntime } from '@vue/runtime-dom'
+declare var __VUE_HMR_RUNTIME__: HMRRuntime
+const { createRecord, rerender, reload } = __VUE_HMR_RUNTIME__
+
 const define = makeRender()
 
 describe('renderer: VaporTeleport', () => {
@@ -32,6 +35,141 @@ describe('renderer: VaporTeleport', () => {
 
   describe('defer mode', () => {
     runSharedTests(true)
+  })
+
+  describe('HMR', () => {
+    test('rerender', async () => {
+      const target = document.createElement('div')
+      const root = document.createElement('div')
+      const childId = 'test1-child'
+      const parentId = 'test1-parent'
+
+      const { component: Child } = define({
+        __hmrId: childId,
+        render() {
+          return template('<div>teleported</div>')()
+        },
+      })
+      createRecord(childId, Child as any)
+
+      const { mount, component: Parent } = define({
+        __hmrId: parentId,
+        render() {
+          const n0 = createComp(
+            VaporTeleport,
+            {
+              to: () => target,
+            },
+            {
+              default: () => createComp(Child),
+            },
+          )
+          const n1 = template('<div>root</div>')()
+          return [n0, n1]
+        },
+      }).create()
+      createRecord(parentId, Parent as any)
+      mount(root)
+
+      expect(root.innerHTML).toBe('<!--teleport--><div>root</div>')
+      expect(target.innerHTML).toBe('<div>teleported</div>')
+
+      // rerender child
+      rerender(childId, () => {
+        return template('<div>teleported 2</div>')()
+      })
+
+      expect(root.innerHTML).toBe('<!--teleport--><div>root</div>')
+      expect(target.innerHTML).toBe('<div>teleported 2</div>')
+
+      // rerender parent
+      rerender(parentId, () => {
+        const n0 = createComp(
+          VaporTeleport,
+          {
+            to: () => target,
+          },
+          {
+            default: () => createComp(Child),
+          },
+        )
+        const n1 = template('<div>root 2</div>')()
+        return [n0, n1]
+      })
+
+      expect(root.innerHTML).toBe('<!--teleport--><div>root 2</div>')
+      expect(target.innerHTML).toBe('<div>teleported 2</div>')
+    })
+
+    test('reload', async () => {
+      const target = document.createElement('div')
+      const root = document.createElement('div')
+      const childId = 'test2-child'
+      const parentId = 'test2-parent'
+
+      const { component: Child } = define({
+        __hmrId: childId,
+        render() {
+          return template('<div>teleported</div>')()
+        },
+      })
+      createRecord(childId, Child as any)
+
+      const { mount, component: Parent } = define({
+        __hmrId: parentId,
+        render() {
+          const n0 = createComp(
+            VaporTeleport,
+            {
+              to: () => target,
+            },
+            {
+              default: () => createComp(Child),
+            },
+          )
+          const n1 = template('<div>root</div>')()
+          return [n0, n1]
+        },
+      }).create()
+      createRecord(parentId, Parent as any)
+      mount(root)
+
+      expect(root.innerHTML).toBe('<!--teleport--><div>root</div>')
+      expect(target.innerHTML).toBe('<div>teleported</div>')
+
+      // reload child
+      reload(childId, {
+        __hmrId: childId,
+        __vapor: true,
+        render() {
+          return template('<div>teleported 2</div>')()
+        },
+      })
+      expect(root.innerHTML).toBe('<!--teleport--><div>root</div>')
+      expect(target.innerHTML).toBe('<div>teleported 2</div>')
+
+      // reload parent
+      reload(parentId, {
+        __hmrId: parentId,
+        __vapor: true,
+        render() {
+          const n0 = createComp(
+            VaporTeleport,
+            {
+              to: () => target,
+            },
+            {
+              default: () => createComp(Child),
+            },
+          )
+          const n1 = template('<div>root 2</div>')()
+          return [n0, n1]
+        },
+      })
+
+      expect(root.innerHTML).toBe('<!--teleport--><div>root 2</div>')
+      expect(target.innerHTML).toBe('<div>teleported 2</div>')
+    })
   })
 })
 
@@ -45,9 +183,9 @@ function runSharedTests(deferMode: boolean): void {
         if (component === VaporTeleport) {
           rawProps!.defer = () => true
         }
-        return originalCreateComponent(component, rawProps, ...args)
+        return createComp(component, rawProps, ...args)
       }
-    : originalCreateComponent
+    : createComp
 
   test('should work', () => {
     const target = document.createElement('div')
