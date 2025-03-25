@@ -8,13 +8,16 @@ import {
   KeepAlive,
   Suspense,
   type SuspenseProps,
+  createBlock,
   createCommentVNode,
+  createElementBlock,
   h,
   nextTick,
   nodeOps,
   onErrorCaptured,
   onMounted,
   onUnmounted,
+  openBlock,
   ref,
   render,
   resolveDynamicComponent,
@@ -23,9 +26,17 @@ import {
   watch,
   watchEffect,
 } from '@vue/runtime-test'
-import { computed, createApp, defineComponent, inject, provide } from 'vue'
+import {
+  computed,
+  createApp,
+  defineAsyncComponent as defineAsyncComp,
+  defineComponent,
+  inject,
+  provide,
+} from 'vue'
 import type { RawSlots } from 'packages/runtime-core/src/componentSlots'
 import { resetSuspenseId } from '../../src/components/Suspense'
+import { PatchFlags } from '@vue/shared'
 
 describe('Suspense', () => {
   const deps: Promise<any>[] = []
@@ -2159,6 +2170,134 @@ describe('Suspense', () => {
     // should not throw error due to Suspense vnode.el being null
     data.value = 'data2'
     await Promise.all(deps)
+  })
+
+  // #12920
+  test('unmount Suspense after async child (with defineAsyncComponent) self-triggered update', async () => {
+    const Comp = defineComponent({
+      setup() {
+        const show = ref(true)
+        onMounted(() => {
+          // trigger update
+          show.value = !show.value
+        })
+        return () =>
+          show.value
+            ? (openBlock(), createElementBlock('div', { key: 0 }, 'show'))
+            : (openBlock(), createElementBlock('div', { key: 1 }, 'hidden'))
+      },
+    })
+
+    const AsyncComp = defineAsyncComp(() => {
+      const p = new Promise(resolve => {
+        resolve(Comp)
+      })
+      deps.push(p.then(() => Promise.resolve()))
+      return p as any
+    })
+
+    const toggle = ref(true)
+    const root = nodeOps.createElement('div')
+    const App = {
+      render() {
+        return (
+          openBlock(),
+          createElementBlock(
+            Fragment,
+            null,
+            [
+              h('h1', null, toggle.value),
+              toggle.value
+                ? (openBlock(),
+                  createBlock(
+                    Suspense,
+                    { key: 0 },
+                    {
+                      default: h(AsyncComp),
+                    },
+                  ))
+                : createCommentVNode('v-if', true),
+            ],
+            PatchFlags.STABLE_FRAGMENT,
+          )
+        )
+      },
+    }
+    render(h(App), root)
+    expect(serializeInner(root)).toBe(`<h1>true</h1><!---->`)
+
+    await Promise.all(deps)
+    await nextTick()
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<h1>true</h1><div>show</div>`)
+
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<h1>true</h1><div>hidden</div>`)
+
+    // unmount suspense
+    toggle.value = false
+    await Promise.all(deps)
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<h1>true</h1><!--v-if-->`)
+  })
+
+  test('unmount Suspense after async child (with async setup) self-triggered update', async () => {
+    const AsyncComp = defineComponent({
+      async setup() {
+        const show = ref(true)
+        onMounted(() => {
+          // trigger update
+          show.value = !show.value
+        })
+        const p = new Promise(r => setTimeout(r, 1))
+        // extra tick needed for Node 12+
+        deps.push(p.then(() => Promise.resolve()))
+        return () =>
+          show.value
+            ? (openBlock(), createElementBlock('div', { key: 0 }, 'show'))
+            : (openBlock(), createElementBlock('div', { key: 1 }, 'hidden'))
+      },
+    })
+
+    const toggle = ref(true)
+    const root = nodeOps.createElement('div')
+    const App = {
+      render() {
+        return (
+          openBlock(),
+          createElementBlock(
+            Fragment,
+            null,
+            [
+              h('h1', null, toggle.value),
+              toggle.value
+                ? (openBlock(),
+                  createBlock(
+                    Suspense,
+                    { key: 0 },
+                    {
+                      default: h(AsyncComp),
+                    },
+                  ))
+                : createCommentVNode('v-if', true),
+            ],
+            PatchFlags.STABLE_FRAGMENT,
+          )
+        )
+      },
+    }
+    render(h(App), root)
+    expect(serializeInner(root)).toBe(`<h1>true</h1><!---->`)
+
+    await Promise.all(deps)
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<h1>true</h1><div>hidden</div>`)
+
+    // unmount suspense
+    toggle.value = false
+    await Promise.all(deps)
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<h1>true</h1><!--v-if-->`)
   })
 
   describe('warnings', () => {
