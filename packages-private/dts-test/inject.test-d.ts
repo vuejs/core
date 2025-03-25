@@ -11,7 +11,11 @@ import { expectType } from './utils'
 
 // non-symbol keys
 provide('foo', 123)
+// @ts-expect-error
 provide(123, 123)
+// @ts-expect-error
+provide(true, 123)
+provide('true', 123)
 
 const key: InjectionKey<number> = Symbol()
 
@@ -41,7 +45,6 @@ provide(injectionKeyRef, ref({}))
 
 // naive-ui: explicit provide type parameter
 provide<Cube>('cube', { size: 123 })
-provide<Cube>(123, { size: 123 })
 provide<Cube>(injectionKeyRef, { size: 123 })
 
 // @ts-expect-error
