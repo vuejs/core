@@ -9,7 +9,7 @@ import { nextTick } from 'vue'
 import { ports } from '../utils'
 const { page, click, html } = setupPuppeteer()
 
-describe('vdom / vapor interop', () => {
+describe('vapor teleport', () => {
   let server: any
   const port = ports.teleport
   beforeAll(() => {
@@ -29,33 +29,34 @@ describe('vdom / vapor interop', () => {
     await page().waitForSelector('#app')
   })
 
-  describe('vapor teleport', () => {
-    test(
-      'render vdom component',
-      async () => {
-        const targetSelector = '.target'
-        const testSelector = '.interop-render-vdom-comp'
-        const containerSelector = `${testSelector} > div`
-        const btnSelector = `${testSelector} > button`
+  test(
+    'render vdom component',
+    async () => {
+      const targetSelector = '.target'
+      const testSelector = '.interop-render-vdom-comp'
+      const containerSelector = `${testSelector} > div`
+      const btnSelector = `${testSelector} > button`
 
-        // teleport is disabled
-        expect(await html(containerSelector)).toBe('<h1>vdom comp</h1>')
-        expect(await html(targetSelector)).toBe('')
+      const tt = await html('#app')
+      console.log(tt)
 
-        // enable teleport
-        await click(btnSelector)
-        await nextTick()
+      // teleport is disabled
+      expect(await html(containerSelector)).toBe('<h1>vdom comp</h1>')
+      expect(await html(targetSelector)).toBe('')
 
-        expect(await html(containerSelector)).toBe('')
-        expect(await html(targetSelector)).toBe('<h1>vdom comp</h1>')
+      // enable teleport
+      await click(btnSelector)
+      await nextTick()
 
-        // disable teleport
-        await click(btnSelector)
-        await nextTick()
-        expect(await html(containerSelector)).toBe('<h1>vdom comp</h1>')
-        expect(await html(targetSelector)).toBe('')
-      },
-      E2E_TIMEOUT,
-    )
-  })
+      expect(await html(containerSelector)).toBe('')
+      expect(await html(targetSelector)).toBe('<h1>vdom comp</h1>')
+
+      // disable teleport
+      await click(btnSelector)
+      await nextTick()
+      expect(await html(containerSelector)).toBe('<h1>vdom comp</h1>')
+      expect(await html(targetSelector)).toBe('')
+    },
+    E2E_TIMEOUT,
+  )
 })

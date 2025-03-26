@@ -7,13 +7,7 @@ import {
   resolveTarget,
   warn,
 } from '@vue/runtime-dom'
-import {
-  type Block,
-  type BlockFn,
-  VaporFragment,
-  insert,
-  remove,
-} from '../block'
+import { type Block, type BlockFn, insert, remove } from '../block'
 import { createComment, createTextNode, querySelector } from '../dom/node'
 import type {
   LooseRawProps,
@@ -24,6 +18,7 @@ import { rawPropsProxyHandlers } from '../componentProps'
 import { renderEffect } from '../renderEffect'
 import { extend, isArray } from '@vue/shared'
 import { EffectScope, pauseTracking, resetTracking } from '@vue/reactivity'
+import { VaporFragment } from '../fragment'
 
 export const teleportStack: TeleportFragment[] = __DEV__
   ? ([] as TeleportFragment[])
@@ -70,11 +65,11 @@ export const VaporTeleportImpl = {
     const scope = (frag.scope = new EffectScope())
     scope!.run(() => {
       renderEffect(() => {
-        teleportStack.push(frag)
+        __DEV__ && teleportStack.push(frag)
         frag.updateChildren(
           (frag.children = slots.default && (slots.default as BlockFn)()),
         )
-        teleportStack.pop()
+        __DEV__ && teleportStack.pop()
       })
 
       renderEffect(() => {

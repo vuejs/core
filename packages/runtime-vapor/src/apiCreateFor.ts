@@ -11,12 +11,7 @@ import {
 } from '@vue/reactivity'
 import { getSequence, isArray, isObject, isString } from '@vue/shared'
 import { createComment, createTextNode } from './dom/node'
-import {
-  type Block,
-  VaporFragment,
-  insert,
-  remove as removeBlock,
-} from './block'
+import { type Block, insert, remove as removeBlock } from './block'
 import { warn } from '@vue/runtime-dom'
 import { currentInstance, isVaporComponent } from './component'
 import type { DynamicSlot } from './componentSlots'
@@ -24,6 +19,7 @@ import { renderEffect } from './renderEffect'
 import { VaporVForFlags } from '../../shared/src/vaporFlags'
 import { isHydrating, locateHydrationNode } from './dom/hydration'
 import { insertionAnchor, insertionParent } from './insertionState'
+import { VaporFragment } from './fragment'
 
 class ForBlock extends VaporFragment {
   scope: EffectScope | undefined

@@ -26,13 +26,14 @@ import {
   mountComponent,
   unmountComponent,
 } from './component'
-import { type Block, VaporFragment, insert, remove } from './block'
+import { type Block, insert, remove } from './block'
 import { EMPTY_OBJ, extend, isFunction } from '@vue/shared'
 import { type RawProps, rawPropsProxyHandlers } from './componentProps'
 import type { RawSlots, VaporSlot } from './componentSlots'
 import { renderEffect } from './renderEffect'
 import { createTextNode } from './dom/node'
 import { optimizePropertyLookup } from './dom/prop'
+import { VaporFragment } from './fragment'
 
 // mounting vapor components and slots in vdom
 const vaporInteropImpl: Omit<

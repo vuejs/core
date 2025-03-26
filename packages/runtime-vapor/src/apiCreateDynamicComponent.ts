@@ -1,9 +1,9 @@
 import { resolveDynamicComponent } from '@vue/runtime-dom'
-import { DynamicFragment, type VaporFragment } from './block'
 import { createComponentWithFallback } from './component'
 import { renderEffect } from './renderEffect'
 import type { RawProps } from './componentProps'
 import type { RawSlots } from './componentSlots'
+import { DynamicFragment, type VaporFragment } from './fragment'
 
 export function createDynamicComponent(
   getter: () => any,

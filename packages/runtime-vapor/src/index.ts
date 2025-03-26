@@ -6,7 +6,7 @@ export type { VaporDirective } from './directives/custom'
 export { VaporTeleport } from './components/Teleport'
 
 // compiler-use only
-export { insert, prepend, remove, isFragment, VaporFragment } from './block'
+export { insert, prepend, remove } from './block'
 export { setInsertionState } from './insertionState'
 export { createComponent, createComponentWithFallback } from './component'
 export { renderEffect } from './renderEffect'
@@ -43,3 +43,5 @@ export {
   applyDynamicModel,
 } from './directives/vModel'
 export { withVaporDirectives } from './directives/custom'
+export { isFragment } from './fragment'
+export { VaporFragment } from './fragment'
