@@ -6,9 +6,13 @@ import {
 import {
   type VaporDirective,
   VaporTeleport,
+  child,
   createIf,
   createTemplateRefSetter,
+  defineVaporComponent,
+  renderEffect,
   setInsertionState,
+  setText,
   template,
   withVaporDirectives,
 } from '@vue/runtime-vapor'
@@ -35,6 +39,86 @@ describe('renderer: VaporTeleport', () => {
 
   describe('defer mode', () => {
     runSharedTests(true)
+
+    test('should be able to target content appearing later than the teleport with defer', () => {
+      const root = document.createElement('div')
+      document.body.appendChild(root)
+
+      const { mount } = define({
+        setup() {
+          const n1 = createComp(
+            VaporTeleport,
+            {
+              to: () => '#target',
+              defer: () => true,
+            },
+            {
+              default: () => template('<div>teleported</div>')(),
+            },
+          )
+          const n2 = template('<div id=target></div>')()
+          return [n1, n2]
+        },
+      }).create()
+      mount(root)
+
+      expect(root.innerHTML).toBe(
+        '<!--teleport--><div id="target"><div>teleported</div></div>',
+      )
+    })
+
+    test.todo('defer mode should work inside suspense', () => {})
+
+    test('update before mounted with defer', async () => {
+      const root = document.createElement('div')
+      document.body.appendChild(root)
+
+      const show = ref(false)
+      const foo = ref('foo')
+      const Header = defineVaporComponent({
+        props: { foo: String },
+        setup(props) {
+          const n0 = template(`<div> </div>`)()
+          const x0 = child(n0 as any)
+          renderEffect(() => setText(x0 as any, props.foo))
+          return [n0]
+        },
+      })
+      const Footer = defineVaporComponent({
+        setup() {
+          foo.value = 'bar'
+          return template('<div>Footer</div>')()
+        },
+      })
+
+      const { mount } = define({
+        setup() {
+          return createIf(
+            () => show.value,
+            () => {
+              const n1 = createComp(
+                VaporTeleport,
+                { to: () => '#targetId', defer: () => true },
+                { default: () => createComp(Header, { foo: () => foo.value }) },
+              )
+              const n2 = createComp(Footer)
+              const n3 = template('<div id="targetId"></div>')()
+              return [n1, n2, n3]
+            },
+            () => template('<div></div>')(),
+          )
+        },
+      }).create()
+      mount(root)
+
+      expect(root.innerHTML).toBe('<div></div><!--if-->')
+
+      show.value = true
+      await nextTick()
+      expect(root.innerHTML).toBe(
+        `<!--teleport--><div>Footer</div><div id="targetId"><div>bar</div></div><!--if-->`,
+      )
+    })
   })
 
   describe('HMR', () => {
