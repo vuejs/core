@@ -193,25 +193,40 @@ describe('renderer: VaporTeleport', () => {
 
       const { component: Child } = define({
         __hmrId: childId,
-        render() {
-          return template('<div>teleported</div>')()
+        setup() {
+          const msg = ref('teleported')
+          return { msg }
+        },
+        render(ctx) {
+          const n0 = template(`<div> </div>`)()
+          const x0 = child(n0 as any)
+          renderEffect(() => setText(x0 as any, ctx.msg))
+          return [n0]
         },
       })
       createRecord(childId, Child as any)
 
       const { mount, component: Parent } = define({
         __hmrId: parentId,
-        render() {
+        setup() {
+          const msg = ref('root')
+          const disabled = ref(false)
+          return { msg, disabled }
+        },
+        render(ctx) {
           const n0 = createComp(
             VaporTeleport,
             {
               to: () => target,
+              disabled: () => ctx.disabled,
             },
             {
               default: () => createComp(Child),
             },
           )
-          const n1 = template('<div>root</div>')()
+          const n1 = template(`<div> </div>`)()
+          const x0 = child(n1 as any)
+          renderEffect(() => setText(x0 as any, ctx.msg))
           return [n0, n1]
         },
       }).create()
@@ -221,38 +236,187 @@ describe('renderer: VaporTeleport', () => {
       expect(root.innerHTML).toBe('<!--teleport--><div>root</div>')
       expect(target.innerHTML).toBe('<div>teleported</div>')
 
-      // reload child
+      // reload child by changing msg
       reload(childId, {
         __hmrId: childId,
         __vapor: true,
-        render() {
-          return template('<div>teleported 2</div>')()
+        setup() {
+          const msg = ref('teleported 2')
+          return { msg }
+        },
+        render(ctx: any) {
+          const n0 = template(`<div> </div>`)()
+          const x0 = child(n0 as any)
+          renderEffect(() => setText(x0 as any, ctx.msg))
+          return [n0]
         },
       })
       expect(root.innerHTML).toBe('<!--teleport--><div>root</div>')
       expect(target.innerHTML).toBe('<div>teleported 2</div>')
 
-      // reload parent
+      // reload parent by changing msg
       reload(parentId, {
         __hmrId: parentId,
         __vapor: true,
-        render() {
+        setup() {
+          const msg = ref('root 2')
+          const disabled = ref(false)
+          return { msg, disabled }
+        },
+        render(ctx: any) {
           const n0 = createComp(
             VaporTeleport,
             {
               to: () => target,
+              disabled: () => ctx.disabled,
             },
             {
               default: () => createComp(Child),
             },
           )
-          const n1 = template('<div>root 2</div>')()
+          const n1 = template(`<div> </div>`)()
+          const x0 = child(n1 as any)
+          renderEffect(() => setText(x0 as any, ctx.msg))
           return [n0, n1]
         },
       })
 
       expect(root.innerHTML).toBe('<!--teleport--><div>root 2</div>')
       expect(target.innerHTML).toBe('<div>teleported 2</div>')
+
+      // reload parent again by changing disabled
+      reload(parentId, {
+        __hmrId: parentId,
+        __vapor: true,
+        setup() {
+          const msg = ref('root 2')
+          const disabled = ref(true)
+          return { msg, disabled }
+        },
+        render(ctx: any) {
+          const n0 = createComp(
+            VaporTeleport,
+            {
+              to: () => target,
+              disabled: () => ctx.disabled,
+            },
+            {
+              default: () => createComp(Child),
+            },
+          )
+          const n1 = template(`<div> </div>`)()
+          const x0 = child(n1 as any)
+          renderEffect(() => setText(x0 as any, ctx.msg))
+          return [n0, n1]
+        },
+      })
+
+      expect(root.innerHTML).toBe(
+        '<div>teleported 2</div><!--teleport--><div>root 2</div>',
+      )
+      expect(target.innerHTML).toBe('')
+    })
+
+    test.todo('reload child + toggle disabled', async () => {
+      const target = document.createElement('div')
+      const root = document.createElement('div')
+      const childId = 'test3-child'
+      const parentId = 'test3-parent'
+
+      const disabled = ref(true)
+      const { component: Child } = define({
+        __hmrId: childId,
+        setup() {
+          const msg = ref('teleported')
+          return { msg }
+        },
+        render(ctx) {
+          const n0 = template(`<div> </div>`)()
+          const x0 = child(n0 as any)
+          renderEffect(() => setText(x0 as any, ctx.msg))
+          return [n0]
+        },
+      })
+      createRecord(childId, Child as any)
+
+      const { mount, component: Parent } = define({
+        __hmrId: parentId,
+        setup() {
+          const msg = ref('root')
+          return { msg, disabled }
+        },
+        render(ctx) {
+          const n0 = createComp(
+            VaporTeleport,
+            {
+              to: () => target,
+              disabled: () => ctx.disabled,
+            },
+            {
+              default: () => createComp(Child),
+            },
+          )
+          const n1 = template(`<div> </div>`)()
+          const x0 = child(n1 as any)
+          renderEffect(() => setText(x0 as any, ctx.msg))
+          return [n0, n1]
+        },
+      }).create()
+      createRecord(parentId, Parent as any)
+      mount(root)
+
+      expect(root.innerHTML).toBe(
+        '<div>teleported</div><!--teleport--><div>root</div>',
+      )
+      expect(target.innerHTML).toBe('')
+
+      // reload child by changing msg
+      reload(childId, {
+        __hmrId: childId,
+        __vapor: true,
+        setup() {
+          const msg = ref('teleported 2')
+          return { msg }
+        },
+        render(ctx: any) {
+          const n0 = template(`<div> </div>`)()
+          const x0 = child(n0 as any)
+          renderEffect(() => setText(x0 as any, ctx.msg))
+          return [n0]
+        },
+      })
+      expect(root.innerHTML).toBe(
+        '<div>teleported 2</div><!--teleport--><div>root</div>',
+      )
+      expect(target.innerHTML).toBe('')
+
+      // reload child again by changing msg
+      reload(childId, {
+        __hmrId: childId,
+        __vapor: true,
+        setup() {
+          const msg = ref('teleported 3')
+          return { msg }
+        },
+        render(ctx: any) {
+          const n0 = template(`<div> </div>`)()
+          const x0 = child(n0 as any)
+          renderEffect(() => setText(x0 as any, ctx.msg))
+          return [n0]
+        },
+      })
+      expect(root.innerHTML).toBe(
+        '<div>teleported 3</div><!--teleport--><div>root</div>',
+      )
+      expect(target.innerHTML).toBe('')
+
+      //bug: child reload not update teleport fragment's nodes
+
+      // toggle disabled
+      disabled.value = false
+      await nextTick()
+      expect(root.innerHTML).toBe('<!--teleport--><div>root</div>')
+      expect(target.innerHTML).toBe('<div>teleported 3</div>')
     })
   })
 })
