@@ -13,6 +13,7 @@ import {
   mountComponent,
   unmountComponent,
 } from './component'
+import { handleTeleportChildrenHmrReload } from './components/Teleport'
 
 export function hmrRerender(instance: VaporComponentInstance): void {
   const normalized = normalizeBlock(instance.block)
@@ -54,5 +55,5 @@ export function hmrReload(
   )
   simpleSetCurrentInstance(prev, instance.parent)
   mountComponent(newInstance, parent, anchor)
-  instance.block = newInstance.block
+  handleTeleportChildrenHmrReload(instance, newInstance)
 }

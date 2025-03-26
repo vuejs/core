@@ -15,11 +15,44 @@ import {
   remove,
 } from '../block'
 import { createComment, createTextNode, querySelector } from '../dom/node'
-import type { LooseRawProps, LooseRawSlots } from '../component'
+import type {
+  LooseRawProps,
+  LooseRawSlots,
+  VaporComponentInstance,
+} from '../component'
 import { rawPropsProxyHandlers } from '../componentProps'
 import { renderEffect } from '../renderEffect'
-import { extend } from '@vue/shared'
+import { extend, isArray } from '@vue/shared'
 import { EffectScope, pauseTracking, resetTracking } from '@vue/reactivity'
+
+export const teleportStack: TeleportFragment[] = []
+export const instanceToTeleportMap: WeakMap<
+  VaporComponentInstance,
+  TeleportFragment
+> = __DEV__ ? new WeakMap() : (null as any)
+
+/**
+ * dev only.
+ * when the **root** child component updates, synchronously update
+ * the TeleportFragment's children and nodes.
+ */
+export function handleTeleportChildrenHmrReload(
+  instance: VaporComponentInstance,
+  newInstance: VaporComponentInstance,
+): void {
+  const teleport = instanceToTeleportMap.get(instance)
+  if (teleport) {
+    instanceToTeleportMap.set(newInstance, teleport)
+    if (teleport.nodes === instance) {
+      teleport.children = teleport.nodes = newInstance
+    } else if (isArray(teleport.nodes)) {
+      const i = teleport.nodes.indexOf(instance)
+      if (i > -1) {
+        ;(teleport.children as Block[])[i] = teleport.nodes[i] = newInstance
+      }
+    }
+  }
+}
 
 export const VaporTeleportImpl = {
   name: 'VaporTeleport',
@@ -34,11 +67,12 @@ export const VaporTeleportImpl = {
     pauseTracking()
     const scope = (frag.scope = new EffectScope())
     scope!.run(() => {
-      let children: Block
       renderEffect(() => {
+        teleportStack.push(frag)
         frag.updateChildren(
-          (children = slots.default && (slots.default as BlockFn)()),
+          (frag.children = slots.default && (slots.default as BlockFn)()),
         )
+        teleportStack.pop()
       })
 
       renderEffect(() => {
@@ -48,15 +82,17 @@ export const VaporTeleportImpl = {
             {},
             new Proxy(props, rawPropsProxyHandlers) as any as TeleportProps,
           ),
-          children!,
+          frag.children!,
         )
       })
     })
     resetTracking()
 
     if (__DEV__) {
-      // TODO
-      ;(frag as any).getNodes = () => {
+      // used in normalizeBlock to get the nodes of a TeleportFragment
+      // during hmr update. return empty array if the teleport content
+      // is mounted into the target container.
+      frag.getNodes = () => {
         return frag.parent !== frag.currentParent ? [] : frag.nodes
       }
     }
@@ -68,6 +104,7 @@ export const VaporTeleportImpl = {
 class TeleportFragment extends VaporFragment {
   anchor: Node
   scope: EffectScope | undefined
+  children: Block | undefined
 
   private targetStart?: Node
   private mainAnchor?: Node
@@ -178,7 +215,7 @@ class TeleportFragment extends VaporFragment {
     // remove nodes
     if (this.nodes) {
       remove(this.nodes, this.currentParent)
-      this.nodes = []
+      this.children = this.nodes = []
     }
 
     // remove anchors

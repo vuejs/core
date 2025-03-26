@@ -25,6 +25,7 @@ export class VaporFragment {
   anchor?: Node
   insert?: (parent: ParentNode, anchor: Node | null) => void
   remove?: (parent?: ParentNode) => void
+  getNodes?: () => Block
 
   constructor(nodes: Block) {
     this.nodes = nodes
@@ -184,8 +185,8 @@ export function normalizeBlock(block: Block): Node[] {
   } else if (isVaporComponent(block)) {
     nodes.push(...normalizeBlock(block.block!))
   } else {
-    if ((block as any).getNodes) {
-      nodes.push(...normalizeBlock((block as any).getNodes()))
+    if (block.getNodes) {
+      nodes.push(...normalizeBlock(block.getNodes()))
     } else {
       nodes.push(...normalizeBlock(block.nodes))
     }

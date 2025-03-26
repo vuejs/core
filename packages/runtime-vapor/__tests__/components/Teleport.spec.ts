@@ -317,7 +317,7 @@ describe('renderer: VaporTeleport', () => {
       expect(target.innerHTML).toBe('')
     })
 
-    test.todo('reload child + toggle disabled', async () => {
+    test('reload child + toggle disabled', async () => {
       const target = document.createElement('div')
       const root = document.createElement('div')
       const childId = 'test3-child'
@@ -409,8 +409,6 @@ describe('renderer: VaporTeleport', () => {
         '<div>teleported 3</div><!--teleport--><div>root</div>',
       )
       expect(target.innerHTML).toBe('')
-
-      //bug: child reload not update teleport fragment's nodes
 
       // toggle disabled
       disabled.value = false

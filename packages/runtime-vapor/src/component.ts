@@ -60,7 +60,11 @@ import {
 import { hmrReload, hmrRerender } from './hmr'
 import { isHydrating, locateHydrationNode } from './dom/hydration'
 import { insertionAnchor, insertionParent } from './insertionState'
-import type { VaporTeleportImpl } from './components/Teleport'
+import {
+  type VaporTeleportImpl,
+  instanceToTeleportMap,
+  teleportStack,
+} from './components/Teleport'
 
 export { currentInstance } from '@vue/runtime-dom'
 
@@ -209,6 +213,11 @@ export function createComponent(
   )
 
   if (__DEV__) {
+    let teleport = teleportStack[teleportStack.length - 1]
+    if (teleport) {
+      instanceToTeleportMap.set(instance, teleport)
+    }
+
     pushWarningContext(instance)
     startMeasure(instance, `init`)
 
@@ -296,7 +305,7 @@ export function createComponent(
   onScopeDispose(() => unmountComponent(instance), true)
 
   if (!isHydrating && _insertionParent) {
-    insert(instance.block, _insertionParent, _insertionAnchor)
+    mountComponent(instance, _insertionParent, _insertionAnchor)
   }
 
   return instance
