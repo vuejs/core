@@ -25,18 +25,20 @@ import { renderEffect } from '../renderEffect'
 import { extend, isArray } from '@vue/shared'
 import { EffectScope, pauseTracking, resetTracking } from '@vue/reactivity'
 
-export const teleportStack: TeleportFragment[] = []
+export const teleportStack: TeleportFragment[] = __DEV__
+  ? ([] as TeleportFragment[])
+  : (undefined as any)
 export const instanceToTeleportMap: WeakMap<
   VaporComponentInstance,
   TeleportFragment
-> = __DEV__ ? new WeakMap() : (null as any)
+> = __DEV__ ? new WeakMap() : (undefined as any)
 
 /**
  * dev only.
- * when the **root** child component updates, synchronously update
+ * when the root child component updates, synchronously update
  * the TeleportFragment's children and nodes.
  */
-export function handleTeleportChildrenHmrReload(
+export function handleTeleportRootComponentHmrReload(
   instance: VaporComponentInstance,
   newInstance: VaporComponentInstance,
 ): void {
