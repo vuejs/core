@@ -208,6 +208,9 @@ export class TeleportFragment extends VaporFragment {
       remove(this.mainAnchor!, parent)
       this.mainAnchor = undefined
     }
+
+    this.mountContainer = undefined
+    this.mountAnchor = undefined
   }
 
   hydrate(): void {
