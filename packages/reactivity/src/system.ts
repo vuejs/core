@@ -1,5 +1,5 @@
 /* eslint-disable */
-// Ported from https://github.com/stackblitz/alien-signals/blob/4962714dadd133cee16060eb4eb99b90e9e6052d/src/system.ts
+// Ported from https://github.com/stackblitz/alien-signals/blob/v1.0.10/src/system.ts
 import type { ComputedRefImpl as Computed } from './computed.js'
 import type { ReactiveEffect as Effect } from './effect.js'
 
@@ -37,9 +37,11 @@ interface OneWayLink<T> {
   linked: OneWayLink<T> | undefined
 }
 
+const notifyBuffer: (Effect | undefined)[] = []
+
 let batchDepth = 0
-let queuedEffects: OneWayLink<Effect> | undefined
-let queuedEffectsTail: OneWayLink<Effect> | undefined
+let notifyIndex = 0
+let notifyBufferLength = 0
 
 export function startBatch(): void {
   ++batchDepth
@@ -121,17 +123,7 @@ export function propagate(current: Link): void {
         continue
       }
       if (subFlags & SubscriberFlags.Effect) {
-        if (queuedEffectsTail !== undefined) {
-          queuedEffectsTail = queuedEffectsTail.linked = {
-            target: sub as Effect,
-            linked: undefined,
-          }
-        } else {
-          queuedEffectsTail = queuedEffects = {
-            target: sub as Effect,
-            linked: undefined,
-          }
-        }
+        notifyBuffer[notifyBufferLength++] = sub as Effect
       }
     } else if (!(subFlags & (SubscriberFlags.Tracking | targetFlag))) {
       sub.flags = subFlags | targetFlag
@@ -223,14 +215,13 @@ export function processComputedUpdate(
 }
 
 export function processEffectNotifications(): void {
-  while (queuedEffects !== undefined) {
-    const effect = queuedEffects.target
-    queuedEffects = queuedEffects.linked
-    if (queuedEffects === undefined) {
-      queuedEffectsTail = undefined
-    }
+  while (notifyIndex < notifyBufferLength) {
+    const effect = notifyBuffer[notifyIndex]!
+    notifyBuffer[notifyIndex++] = undefined
     effect.notify()
   }
+  notifyIndex = 0
+  notifyBufferLength = 0
 }
 
 function linkNewDep(
