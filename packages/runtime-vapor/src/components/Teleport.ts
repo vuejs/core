@@ -56,18 +56,29 @@ export const VaporTeleportImpl = {
         return frag.parent !== frag.currentParent ? [] : frag.nodes
       }
 
-      // for HMR re-render
+      // for HMR rerender
       const instance = currentInstance as VaporComponentInstance
       ;(
         instance!.hmrRerenderEffects || (instance!.hmrRerenderEffects = [])
       ).push(() => {
         // remove the teleport content
-        frag.remove(frag.anchor.parentNode!)
+        frag.remove()
 
         // stop effects
         updateChildrenEffect.stop()
         updateEffect.stop()
       })
+
+      // for HMR reload
+      const nodes = frag.nodes
+      if (isVaporComponent(nodes)) {
+        instanceToTeleportMap.set(nodes, frag)
+      } else if (isArray(nodes)) {
+        nodes.forEach(
+          node =>
+            isVaporComponent(node) && instanceToTeleportMap.set(node, frag),
+        )
+      }
     }
 
     return frag
@@ -105,24 +116,13 @@ class TeleportFragment extends VaporFragment {
     // not mounted yet
     if (!this.parent) {
       this.nodes = children
-    } else {
-      // teardown previous nodes
-      remove(this.nodes, this.currentParent)
-      // mount new nodes
-      insert((this.nodes = children), this.currentParent, this.currentAnchor)
+      return
     }
 
-    if (__DEV__) {
-      if (isVaporComponent(children)) {
-        instanceToTeleportMap.set(children, this)
-      } else if (isArray(children)) {
-        children.forEach(node => {
-          if (isVaporComponent(node)) {
-            instanceToTeleportMap.set(node, this)
-          }
-        })
-      }
-    }
+    // teardown previous nodes
+    remove(this.nodes, this.currentParent)
+    // mount new nodes
+    insert((this.nodes = children), this.currentParent, this.currentAnchor)
   }
 
   update(props: TeleportProps): void {
@@ -187,7 +187,7 @@ class TeleportFragment extends VaporFragment {
     }
   }
 
-  remove = (parent: ParentNode | undefined): void => {
+  remove = (parent: ParentNode | undefined = this.parent!): void => {
     // remove nodes
     if (this.nodes) {
       remove(this.nodes, this.currentParent)
@@ -244,8 +244,9 @@ export const VaporTeleport = VaporTeleportImpl as unknown as {
 
 /**
  * dev only
- * when the root child component updates, synchronously update
- * the TeleportFragment's nodes.
+ * during root component HMR reload, since the old component will be unmounted
+ * and a new one will be mounted, we need to update the teleport's nodes
+ * to ensure they are up to date.
  */
 export function handleTeleportRootComponentHmrReload(
   instance: VaporComponentInstance,
