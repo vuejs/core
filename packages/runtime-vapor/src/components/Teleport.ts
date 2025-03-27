@@ -10,44 +10,19 @@ import {
 } from '@vue/runtime-dom'
 import { type Block, type BlockFn, insert, remove } from '../block'
 import { createComment, createTextNode, querySelector } from '../dom/node'
-import type {
-  LooseRawProps,
-  LooseRawSlots,
-  VaporComponentInstance,
+import {
+  type LooseRawProps,
+  type LooseRawSlots,
+  type VaporComponentInstance,
+  isVaporComponent,
 } from '../component'
 import { rawPropsProxyHandlers } from '../componentProps'
 import { renderEffect } from '../renderEffect'
 import { extend, isArray } from '@vue/shared'
 import { VaporFragment } from '../fragment'
 
-export const teleportStack: TeleportFragment[] = __DEV__
-  ? ([] as TeleportFragment[])
-  : (undefined as any)
-export const instanceToTeleportMap: WeakMap<
-  VaporComponentInstance,
-  TeleportFragment
-> = __DEV__ ? new WeakMap() : (undefined as any)
-
-/**
- * dev only
- * when the root child component updates, synchronously update
- * the TeleportFragment's nodes.
- */
-export function handleTeleportRootComponentHmrReload(
-  instance: VaporComponentInstance,
-  newInstance: VaporComponentInstance,
-): void {
-  const teleport = instanceToTeleportMap.get(instance)
-  if (teleport) {
-    instanceToTeleportMap.set(newInstance, teleport)
-    if (teleport.nodes === instance) {
-      teleport.nodes = newInstance
-    } else if (isArray(teleport.nodes)) {
-      const i = teleport.nodes.indexOf(instance)
-      if (i !== -1) teleport.nodes[i] = newInstance
-    }
-  }
-}
+const instanceToTeleportMap: WeakMap<VaporComponentInstance, TeleportFragment> =
+  __DEV__ ? new WeakMap() : (undefined as any)
 
 export const VaporTeleportImpl = {
   name: 'VaporTeleport',
@@ -59,11 +34,9 @@ export const VaporTeleportImpl = {
       ? new TeleportFragment('teleport')
       : new TeleportFragment()
 
-    const updateChildrenEffect = renderEffect(() => {
-      __DEV__ && teleportStack.push(frag)
-      frag.updateChildren(slots.default && (slots.default as BlockFn)())
-      __DEV__ && teleportStack.pop()
-    })
+    const updateChildrenEffect = renderEffect(() =>
+      frag.updateChildren(slots.default && (slots.default as BlockFn)()),
+    )
 
     const updateEffect = renderEffect(() => {
       frag.update(
@@ -137,6 +110,18 @@ class TeleportFragment extends VaporFragment {
       remove(this.nodes, this.currentParent)
       // mount new nodes
       insert((this.nodes = children), this.currentParent, this.currentAnchor)
+    }
+
+    if (__DEV__) {
+      if (isVaporComponent(children)) {
+        instanceToTeleportMap.set(children, this)
+      } else if (isArray(children)) {
+        children.forEach(node => {
+          if (isVaporComponent(node)) {
+            instanceToTeleportMap.set(node, this)
+          }
+        })
+      }
     }
   }
 
@@ -253,6 +238,27 @@ export const VaporTeleport = VaporTeleportImpl as unknown as {
     $props: TeleportProps
     $slots: {
       default(): Block
+    }
+  }
+}
+
+/**
+ * dev only
+ * when the root child component updates, synchronously update
+ * the TeleportFragment's nodes.
+ */
+export function handleTeleportRootComponentHmrReload(
+  instance: VaporComponentInstance,
+  newInstance: VaporComponentInstance,
+): void {
+  const teleport = instanceToTeleportMap.get(instance)
+  if (teleport) {
+    instanceToTeleportMap.set(newInstance, teleport)
+    if (teleport.nodes === instance) {
+      teleport.nodes = newInstance
+    } else if (isArray(teleport.nodes)) {
+      const i = teleport.nodes.indexOf(instance)
+      if (i !== -1) teleport.nodes[i] = newInstance
     }
   }
 }
