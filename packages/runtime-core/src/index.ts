@@ -561,8 +561,7 @@ export { initFeatureFlags } from './featureFlags'
  * @internal
  */
 export {
-  resolveTarget,
+  resolveTarget as resolveTeleportTarget,
   isTeleportDisabled,
   isTeleportDeferred,
-  TeleportEndKey,
 } from './components/Teleport'

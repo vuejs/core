@@ -1,11 +1,10 @@
 import {
-  TeleportEndKey,
   type TeleportProps,
   currentInstance,
   isTeleportDeferred,
   isTeleportDisabled,
   queuePostFlushCb,
-  resolveTarget,
+  resolveTeleportTarget,
   warn,
 } from '@vue/runtime-dom'
 import { type Block, type BlockFn, insert, remove } from '../block'
@@ -135,7 +134,7 @@ export class TeleportFragment extends VaporFragment {
     }
 
     const mountToTarget = () => {
-      const target = (this.target = resolveTarget(props, querySelector))
+      const target = (this.target = resolveTeleportTarget(props, querySelector))
       if (target) {
         if (
           // initial mount into target
@@ -143,7 +142,8 @@ export class TeleportFragment extends VaporFragment {
           // target changed
           this.targetAnchor.parentNode !== target
         ) {
-          ;[this.targetAnchor, this.targetStart] = prepareAnchor(target)
+          insert((this.targetStart = createTextNode('')), target)
+          insert((this.targetAnchor = createTextNode('')), target)
         }
 
         mount(target, this.targetAnchor!)
@@ -216,22 +216,6 @@ export class TeleportFragment extends VaporFragment {
   hydrate(): void {
     // TODO
   }
-}
-
-function prepareAnchor(target: ParentNode | null) {
-  const targetStart = createTextNode('') as Text & { [TeleportEndKey]: Node }
-  const targetAnchor = createTextNode('')
-
-  // attach a special property, so we can skip teleported content in
-  // renderer's nextSibling search
-  targetStart[TeleportEndKey] = targetAnchor
-
-  if (target) {
-    insert(targetStart, target)
-    insert(targetAnchor, target)
-  }
-
-  return [targetAnchor, targetStart]
 }
 
 export const VaporTeleport = VaporTeleportImpl as unknown as {
