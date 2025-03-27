@@ -176,14 +176,6 @@ export function createComponent(
       frag.hydrate()
     }
 
-    // remove the teleport content from the parent tree for HMR updates
-    if (__DEV__) {
-      const instance = currentInstance as VaporComponentInstance
-      ;(instance!.hmrEffects || (instance!.hmrEffects = [])).push(() => {
-        frag.remove(frag.anchor.parentNode!)
-      })
-    }
-
     return frag as any
   }
 
@@ -405,8 +397,8 @@ export class VaporComponentInstance implements GenericComponentInstance {
   setupState?: Record<string, any>
   devtoolsRawSetupState?: any
   hmrRerender?: () => void
+  hmrRerenderEffects?: (() => void)[]
   hmrReload?: (newComp: VaporComponent) => void
-  hmrEffects?: (() => void)[]
   propsOptions?: NormalizedPropsOptions
   emitsOptions?: ObjectEmitsOptions | null
   isSingleRoot?: boolean
