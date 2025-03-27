@@ -85,7 +85,7 @@ export const VaporTeleportImpl = {
   },
 }
 
-class TeleportFragment extends VaporFragment {
+export class TeleportFragment extends VaporFragment {
   anchor: Node
 
   private targetStart?: Node
@@ -240,6 +240,12 @@ export const VaporTeleport = VaporTeleportImpl as unknown as {
       default(): Block
     }
   }
+}
+
+export function isVaporTeleport(
+  value: unknown,
+): value is typeof VaporTeleportImpl {
+  return value === VaporTeleportImpl
 }
 
 /**

@@ -60,7 +60,7 @@ import {
 import { hmrReload, hmrRerender } from './hmr'
 import { isHydrating, locateHydrationNode } from './dom/hydration'
 import { insertionAnchor, insertionParent } from './insertionState'
-import type { VaporTeleportImpl } from './components/Teleport'
+import { isVaporTeleport } from './components/Teleport'
 
 export { currentInstance } from '@vue/runtime-dom'
 
@@ -93,8 +93,6 @@ export interface ObjectVaporComponent
 
   name?: string
   vapor?: boolean
-
-  __isTeleport?: boolean
 }
 
 interface SharedInternalOptions {
@@ -161,11 +159,8 @@ export function createComponent(
   }
 
   // teleport
-  if (component.__isTeleport) {
-    const frag = (component as typeof VaporTeleportImpl).process(
-      rawProps!,
-      rawSlots!,
-    )
+  if (isVaporTeleport(component)) {
+    const frag = component.process(rawProps!, rawSlots!)
     if (!isHydrating && _insertionParent) {
       insert(frag, _insertionParent, _insertionAnchor)
     } else {
