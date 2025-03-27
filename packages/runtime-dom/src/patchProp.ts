@@ -47,10 +47,8 @@ export const patchProp: DOMRendererOptions['patchProp'] = (
         ? ((key = key.slice(1)), false)
         : shouldSetAsProp(el, key, nextValue, isSVG)
   ) {
-    let camelKey = ''
-    const propKey =
-      getElementPropKey(el, key) ??
-      ((camelKey = camelize(key)) in el ? camelKey : key)
+    const camelKey = camelize(key)
+    const propKey = camelKey in el ? camelKey : key
     patchDOMProp(el, propKey, nextValue, parentComponent, key)
     // #6007 also set form state as attributes so they work with
     // <input type="reset"> or libs / extensions that expect attributes
@@ -91,12 +89,10 @@ function shouldSetAsProp(
     // most keys must be set as attribute on svg elements to work
     // ...except innerHTML & textContent
     if (key === 'innerHTML' || key === 'textContent') {
-      setElementPropKey(el, key)
       return true
     }
     // or native onclick with function values
     if (key in el && isNativeOn(key) && isFunction(value)) {
-      setElementPropKey(el, key)
       return true
     }
     return false
@@ -146,24 +142,5 @@ function shouldSetAsProp(
     return false
   }
 
-  const camelKey = camelize(key)
-  if (camelKey in el) {
-    setElementPropKey(el, key, camelKey)
-    return true
-  }
-
-  if (key in el) {
-    setElementPropKey(el, key)
-    return true
-  }
-
-  return false
-}
-
-function getElementPropKey(el: Element, key: string) {
-  return (el as any)[`$_v_prop_${key}`]
-}
-
-function setElementPropKey(el: Element, key: string, propKey = key) {
-  ;(el as any)[`$_v_prop_${key}`] = propKey
+  return camelize(key) in el || key in el
 }
