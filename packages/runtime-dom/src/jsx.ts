@@ -321,6 +321,9 @@ export interface HTMLAttributes extends AriaAttributes, EventHandlers<Events> {
   security?: string | undefined
   unselectable?: 'on' | 'off' | undefined
 
+  // Popover API
+  popover?: '' | 'auto' | 'manual' | 'hint' | undefined
+
   // Living Standard
   /**
    * Hints at the type of data that might be entered by the user while editing the element or its contents
@@ -408,6 +411,8 @@ export interface ButtonHTMLAttributes extends HTMLAttributes {
   formnovalidate?: Booleanish | undefined
   formtarget?: string | undefined
   name?: string | undefined
+  popovertarget?: string | undefined
+  popovertargetaction?: 'toggle' | 'show' | 'hide' | undefined
   type?: 'submit' | 'reset' | 'button' | undefined
   value?: string | ReadonlyArray<string> | number | undefined
 }
@@ -630,6 +635,8 @@ export interface InputHTMLAttributes extends HTMLAttributes {
   name?: string | undefined
   pattern?: string | undefined
   placeholder?: string | undefined
+  popovertarget?: string | undefined
+  popovertargetaction?: 'toggle' | 'show' | 'hide' | undefined
   readonly?: Booleanish | undefined
   required?: Booleanish | undefined
   size?: Numberish | undefined
