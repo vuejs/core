@@ -69,11 +69,11 @@ export const transformText: NodeTransform = (node, context) => {
               // we need to avoid setting textContent of the element at runtime
               // to avoid accidentally overwriting the DOM elements added
               // by the user through custom directives.
-              !node.props.find(
+              node.props.find(
                 p =>
                   p.type === NodeTypes.DIRECTIVE &&
                   context.directiveTransforms[p.name] === undefined,
-              ) &&
+              ) === undefined &&
               // in compat mode, <template> tags with no special directives
               // will be rendered as a fragment so its children must be
               // converted into vnodes.
