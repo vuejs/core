@@ -70,6 +70,8 @@
     "@rollup/plugin-node-resolve": "^16.0.1",
     "@rollup/plugin-replace": "5.0.4",
     "@swc/core": "^1.11.12",
+    "@tsslint/cli": "~1.5.11",
+    "@tsslint/config": "~1.5.11",
     "@types/hash-sum": "^1.0.2",
     "@types/node": "^22.13.13",
     "@types/semver": "^7.5.8",
