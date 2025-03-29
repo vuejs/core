@@ -28,6 +28,9 @@ jobs:
       - name: Run eslint
         run: pnpm run lint --fix
 
+      - name: Run tsslint
+        run: pnpm run tsslint --fix
+
       - name: Run prettier
         run: pnpm run format
 

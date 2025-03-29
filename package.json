@@ -14,6 +14,7 @@
     "size-esm": "node scripts/build.js runtime-dom runtime-core reactivity shared -f esm-bundler",
     "check": "tsc --incremental --noEmit",
     "lint": "eslint --cache .",
+    "tsslint": "tsslint --project tsconfig.json",
     "format": "prettier --write --cache .",
     "format-check": "prettier --check --cache .",
     "test": "vitest",
