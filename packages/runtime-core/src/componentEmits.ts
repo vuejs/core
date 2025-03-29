@@ -130,7 +130,10 @@ export function emit(
             event.startsWith(compatModelEventPrefix))
         )
       ) {
-        if (!propsOptions || !(toHandlerKey(camelize(event)) in propsOptions)) {
+        if (
+          propsOptions === undefined ||
+          !(toHandlerKey(camelize(event)) in propsOptions)
+        ) {
           warn(
             `Component emitted event "${event}" but it is neither declared in ` +
               `the emits option nor as an "${toHandlerKey(camelize(event))}" prop.`,
@@ -208,7 +211,7 @@ export function emit(
 
   const onceHandler = props[handlerName + `Once`]
   if (onceHandler) {
-    if (!instance.emitted) {
+    if (instance.emitted === null) {
       instance.emitted = {}
     } else if (instance.emitted[handlerName]) {
       return
@@ -289,7 +292,7 @@ export function isEmitListener(
   options: ObjectEmitsOptions | null,
   key: string,
 ): boolean {
-  if (!options || !isOn(key)) {
+  if (options === null || !isOn(key)) {
     return false
   }
 

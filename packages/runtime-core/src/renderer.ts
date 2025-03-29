@@ -1219,7 +1219,7 @@ function baseCreateRenderer(
 
       // Give it a placeholder if this is not hydration
       // TODO handle self-defined fallback
-      if (!initialVNode.el) {
+      if (initialVNode.el === null) {
         const placeholder = (instance.subTree = createVNode(Comment))
         processCommentNode(null, placeholder, container!, anchor)
       }
@@ -2318,7 +2318,7 @@ function baseCreateRenderer(
       instance.suspenseId === parentSuspense.pendingId
     ) {
       parentSuspense.deps--
-      if (parentSuspense.deps === 0) {
+      if (!parentSuspense.deps) {
         parentSuspense.resolve()
       }
     }
@@ -2442,7 +2442,8 @@ export function needTransition(
   transition: TransitionHooks | null,
 ): boolean | null {
   return (
-    (!parentSuspense || (parentSuspense && !parentSuspense.pendingBranch)) &&
+    (parentSuspense === null ||
+      (parentSuspense && parentSuspense.pendingBranch === null)) &&
     transition &&
     !transition.persisted
   )
@@ -2486,7 +2487,7 @@ export function traverseStaticChildren(
       }
       // also inherit for comment nodes, but not placeholders (e.g. v-if which
       // would have received .el during block patch)
-      if (__DEV__ && c2.type === Comment && !c2.el) {
+      if (__DEV__ && c2.type === Comment && c2.el === null) {
         c2.el = c1.el
       }
     }

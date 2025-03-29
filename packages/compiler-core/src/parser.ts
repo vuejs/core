@@ -497,7 +497,7 @@ function parseForExpression(
   const loc = input.loc
   const exp = input.content
   const inMatch = exp.match(forAliasRE)
-  if (!inMatch) return
+  if (inMatch === null) return
 
   const [, LHS, RHS] = inMatch
 
@@ -1056,7 +1056,7 @@ export function baseParse(input: string, options?: ParserOptions): RootNode {
         `[@vue/compiler-core] decodeEntities option is passed but will be ` +
           `ignored in non-browser builds.`,
       )
-    } else if (__BROWSER__ && !currentOptions.decodeEntities) {
+    } else if (__BROWSER__ && currentOptions.decodeEntities === undefined) {
       throw new Error(
         `[@vue/compiler-core] decodeEntities option is required in browser builds.`,
       )

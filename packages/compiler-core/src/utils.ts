@@ -112,7 +112,7 @@ export const isMemberExpressionBrowser = (exp: ExpressionNode): boolean => {
           state = MemberExpLexState.inParens
           currentOpenParensCount++
         } else if (
-          !(i === 0 ? validFirstIdentCharRE : validIdentCharRE).test(char)
+          !(!i ? validFirstIdentCharRE : validIdentCharRE).test(char)
         ) {
           return false
         }
@@ -331,7 +331,7 @@ export function hasDynamicKeyVBind(node: ElementNode): boolean {
     p =>
       p.type === NodeTypes.DIRECTIVE &&
       p.name === 'bind' &&
-      (!p.arg || // v-bind="obj"
+      (p.arg === undefined || // v-bind="obj"
         p.arg.type !== NodeTypes.SIMPLE_EXPRESSION || // v-bind:[_ctx.foo]
         !p.arg.isStatic), // v-bind:[foo]
   )
@@ -434,7 +434,7 @@ export function injectProp(
         props.arguments.unshift(createObjectExpression([prop]))
       }
     }
-    !propsWithInjection && (propsWithInjection = props)
+    propsWithInjection === undefined && (propsWithInjection = props)
   } else if (props.type === NodeTypes.JS_OBJECT_EXPRESSION) {
     if (!hasProp(prop, props)) {
       props.properties.unshift(prop)
@@ -502,7 +502,7 @@ export function hasScopeRef(
     | undefined,
   ids: TransformContext['identifiers'],
 ): boolean {
-  if (!node || Object.keys(ids).length === 0) {
+  if (node === undefined || !Object.keys(ids).length) {
     return false
   }
   switch (node.type) {

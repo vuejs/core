@@ -223,10 +223,10 @@ export function createTransformContext(
     replaceNode(node) {
       /* v8 ignore start */
       if (__DEV__) {
-        if (!context.currentNode) {
+        if (context.currentNode === null) {
           throw new Error(`Node being replaced is already removed.`)
         }
-        if (!context.parent) {
+        if (context.parent === null) {
           throw new Error(`Cannot replace root node.`)
         }
       }
@@ -235,7 +235,7 @@ export function createTransformContext(
     },
     removeNode(node) {
       /* v8 ignore next 3 */
-      if (__DEV__ && !context.parent) {
+      if (__DEV__ && context.parent === null) {
         throw new Error(`Cannot remove root node.`)
       }
       const list = context.parent!.children
@@ -248,7 +248,7 @@ export function createTransformContext(
       if (__DEV__ && removalIndex < 0) {
         throw new Error(`node being removed is not a child of current parent`)
       }
-      if (!node || node === context.currentNode) {
+      if (node === undefined || node === context.currentNode) {
         // current node removed
         context.currentNode = null
         context.onNodeRemoved()

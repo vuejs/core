@@ -402,7 +402,7 @@ function patchSuspense(
               suspense.fallback(newFallback)
             }
           }, timeout)
-        } else if (timeout === 0) {
+        } else if (!timeout) {
           suspense.fallback(newFallback)
         }
       }
@@ -511,7 +511,7 @@ function createSuspenseBoundary(
 
     resolve(resume = false, sync = false) {
       if (__DEV__) {
-        if (!resume && !suspense.pendingBranch) {
+        if (!resume && suspense.pendingBranch === null) {
           throw new Error(
             `suspense.resolve() is called without a pending branch.`,
           )
@@ -609,7 +609,7 @@ function createSuspenseBoundary(
           parentSuspenseId === parentSuspense.pendingId
         ) {
           parentSuspense.deps--
-          if (parentSuspense.deps === 0 && !sync) {
+          if (!parentSuspense.deps && !sync) {
             parentSuspense.resolve()
           }
         }
@@ -620,7 +620,7 @@ function createSuspenseBoundary(
     },
 
     fallback(fallbackVNode) {
-      if (!suspense.pendingBranch) {
+      if (suspense.pendingBranch === null) {
         return
       }
 
@@ -681,7 +681,7 @@ function createSuspenseBoundary(
     },
 
     registerDep(instance, setupRenderEffect, optimized) {
-      const isInPendingSuspense = !!suspense.pendingBranch
+      const isInPendingSuspense = suspense.pendingBranch !== null
       if (isInPendingSuspense) {
         suspense.deps++
       }
@@ -712,7 +712,7 @@ function createSuspenseBoundary(
             // async dep is resolved.
             vnode.el = hydratedEl
           }
-          const placeholder = !hydratedEl && instance.subTree.el
+          const placeholder = hydratedEl === null && instance.subTree.el
           setupRenderEffect(
             instance,
             vnode,
@@ -735,7 +735,7 @@ function createSuspenseBoundary(
             popWarningContext()
           }
           // only decrease deps count if suspense is not already resolved
-          if (isInPendingSuspense && --suspense.deps === 0) {
+          if (isInPendingSuspense && !--suspense.deps) {
             suspense.resolve()
           }
         })
@@ -811,7 +811,7 @@ function hydrateSuspense(
     slotScopeIds,
     optimized,
   )
-  if (suspense.deps === 0) {
+  if (!suspense.deps) {
     suspense.resolve(false, true)
   }
   return result
@@ -850,7 +850,7 @@ function normalizeSuspenseSlot(s: any) {
     const singleChild = filterSingleRoot(s)
     if (
       __DEV__ &&
-      !singleChild &&
+      singleChild === undefined &&
       s.filter(child => child !== NULL_DYNAMIC_COMPONENT).length > 0
     ) {
       warn(`<Suspense> slots expect a single root node.`)
@@ -885,7 +885,7 @@ function setActiveBranch(suspense: SuspenseBoundary, branch: VNode) {
   let el = branch.el
   // if branch has no el after patch, it's a HOC wrapping async components
   // drill and locate the placeholder comment node
-  while (!el && branch.component) {
+  while (el === null && branch.component) {
     branch = branch.component.subTree
     el = branch.el
   }

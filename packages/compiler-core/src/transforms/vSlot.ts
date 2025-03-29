@@ -166,7 +166,7 @@ export function buildSlots(
 
     if (
       !isTemplateNode(slotElement) ||
-      !(slotDir = findDir(slotElement, 'slot', true))
+      (slotDir = findDir(slotElement, 'slot', true)) === undefined
     ) {
       // not a <template v-slot>, skip.
       if (slotElement.type !== NodeTypes.COMMENT) {
@@ -299,7 +299,7 @@ export function buildSlots(
     }
   }
 
-  if (!onComponentSlot) {
+  if (onComponentSlot === undefined) {
     const buildDefaultSlotProperty = (
       props: ExpressionNode | undefined,
       children: TemplateChildNode[],

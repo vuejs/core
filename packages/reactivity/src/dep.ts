@@ -100,7 +100,11 @@ export class Dep {
   }
 
   track(debugInfo?: DebuggerEventExtraInfo): Link | undefined {
-    if (!activeSub || !shouldTrack || activeSub === this.computed) {
+    if (
+      activeSub === undefined ||
+      !shouldTrack ||
+      activeSub === this.computed
+    ) {
       return
     }
 
@@ -109,7 +113,7 @@ export class Dep {
       link = this.activeLink = new Link(activeSub, this)
 
       // add the link to the activeEffect as a dep (as tail)
-      if (!activeSub.deps) {
+      if (activeSub.deps === undefined) {
         activeSub.deps = activeSub.depsTail = link
       } else {
         link.prevDep = activeSub.depsTail
@@ -204,7 +208,7 @@ function addSub(link: Link) {
     const computed = link.dep.computed
     // computed getting its first subscriber
     // enable tracking + lazily subscribe to all its deps
-    if (computed && !link.dep.subs) {
+    if (computed && link.dep.subs === undefined) {
       computed.flags |= EffectFlags.TRACKING | EffectFlags.DIRTY
       for (let l = computed.deps; l; l = l.nextDep) {
         addSub(l)
@@ -256,11 +260,11 @@ export const ARRAY_ITERATE_KEY: unique symbol = Symbol(
 export function track(target: object, type: TrackOpTypes, key: unknown): void {
   if (shouldTrack && activeSub) {
     let depsMap = targetMap.get(target)
-    if (!depsMap) {
+    if (depsMap === undefined) {
       targetMap.set(target, (depsMap = new Map()))
     }
     let dep = depsMap.get(key)
-    if (!dep) {
+    if (dep === undefined) {
       depsMap.set(key, (dep = new Dep()))
       dep.map = depsMap
       dep.key = key
@@ -294,7 +298,7 @@ export function trigger(
   oldTarget?: Map<unknown, unknown> | Set<unknown>,
 ): void {
   const depsMap = targetMap.get(target)
-  if (!depsMap) {
+  if (depsMap === undefined) {
     // never been tracked
     globalVersion++
     return

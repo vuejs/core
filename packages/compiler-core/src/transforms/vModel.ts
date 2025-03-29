@@ -22,7 +22,7 @@ import { camelize } from '@vue/shared'
 
 export const transformModel: DirectiveTransform = (dir, node, context) => {
   const { exp, arg } = dir
-  if (!exp) {
+  if (exp === undefined) {
     context.onError(
       createCompilerError(ErrorCodes.X_V_MODEL_NO_EXPRESSION, dir.loc),
     )

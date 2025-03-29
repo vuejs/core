@@ -19,7 +19,7 @@ export function generateCodeFrame(
 
   // Separate the lines and newline sequences into separate arrays for easier referencing
   const newlineSequences = lines.filter((_, idx) => idx % 2 === 1)
-  lines = lines.filter((_, idx) => idx % 2 === 0)
+  lines = lines.filter((_, idx) => !(idx % 2))
 
   let count = 0
   const res: string[] = []

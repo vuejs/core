@@ -22,7 +22,7 @@ export function useCssVars(getter: (ctx: any) => Record<string, string>): void {
 
   const instance = getCurrentInstance()
   /* v8 ignore start */
-  if (!instance) {
+  if (instance === null) {
     __DEV__ &&
       warn(`useCssVars is called without current active component instance.`)
     return

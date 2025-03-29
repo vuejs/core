@@ -12,7 +12,7 @@ export function provide<T, K = InjectionKey<T> | string | number>(
   key: K,
   value: K extends InjectionKey<infer V> ? V : T,
 ): void {
-  if (!currentInstance) {
+  if (currentInstance === null) {
     if (__DEV__) {
       warn(`provide() can only be used inside setup().`)
     }
@@ -88,5 +88,5 @@ export function inject(
  * user. One example is `useRoute()` in `vue-router`.
  */
 export function hasInjectionContext(): boolean {
-  return !!(currentInstance || currentRenderingInstance || currentApp)
+  return (currentInstance || currentRenderingInstance || currentApp) !== null
 }

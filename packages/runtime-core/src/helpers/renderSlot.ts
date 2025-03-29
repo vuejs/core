@@ -107,7 +107,7 @@ export function ensureValidVNode(
     if (child.type === Comment) return false
     if (
       child.type === Fragment &&
-      !ensureValidVNode(child.children as VNodeArrayChildren)
+      ensureValidVNode(child.children as VNodeArrayChildren) === null
     )
       return false
     return true

@@ -46,7 +46,12 @@ export function convertLegacyRenderFn(
   const render = Component.render as InternalRenderFunction | undefined
 
   // v3 runtime compiled, or already checked / wrapped
-  if (!render || render._rc || render._compatChecked || render._compatWrapped) {
+  if (
+    render === undefined ||
+    render._rc ||
+    render._compatChecked ||
+    render._compatWrapped
+  ) {
     return
   }
 
@@ -180,7 +185,7 @@ function convertLegacyProps(
   legacyProps: LegacyVNodeProps | undefined,
   type: any,
 ): (Data & VNodeProps) | null {
-  if (!legacyProps) {
+  if (legacyProps === undefined) {
     return null
   }
 

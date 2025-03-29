@@ -224,7 +224,7 @@ function rewriteSelector(
       (n.type !== 'pseudo' && n.type !== 'combinator') ||
       (n.type === 'pseudo' &&
         (n.value === ':is' || n.value === ':where') &&
-        !node)
+        node === null)
     ) {
       node = n
     }
@@ -282,7 +282,7 @@ function isSpaceCombinator(node: selectorParser.Node) {
 }
 
 function extractAndWrapNodes(parentNode: Rule | AtRule) {
-  if (!parentNode.nodes) return
+  if (parentNode.nodes === undefined) return
   const nodes = parentNode.nodes.filter(
     node => node.type === 'decl' || node.type === 'comment',
   )

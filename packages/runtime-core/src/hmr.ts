@@ -52,7 +52,7 @@ const map: Map<
 export function registerHMR(instance: ComponentInternalInstance): void {
   const id = instance.type.__hmrId!
   let record = map.get(id)
-  if (!record) {
+  if (record === undefined) {
     createRecord(id, instance.type as HMRComponent)
     record = map.get(id)!
   }
@@ -80,7 +80,7 @@ function normalizeClassComponent(component: HMRComponent): ComponentOptions {
 
 function rerender(id: string, newRender?: Function): void {
   const record = map.get(id)
-  if (!record) {
+  if (record === undefined) {
     return
   }
 
@@ -103,7 +103,7 @@ function rerender(id: string, newRender?: Function): void {
 
 function reload(id: string, newComp: HMRComponent): void {
   const record = map.get(id)
-  if (!record) return
+  if (record === undefined) return
 
   newComp = normalizeClassComponent(newComp)
   // update initial def (for not-yet-rendered components)
@@ -117,7 +117,7 @@ function reload(id: string, newComp: HMRComponent): void {
     const oldComp = normalizeClassComponent(instance.type as HMRComponent)
 
     let dirtyInstances = hmrDirtyComponents.get(oldComp)
-    if (!dirtyInstances) {
+    if (dirtyInstances === undefined) {
       // 1. Update existing comp definition to match new one
       if (oldComp !== record.initialDef) {
         updateComponentDef(oldComp, newComp)

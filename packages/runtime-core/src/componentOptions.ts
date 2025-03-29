@@ -758,7 +758,7 @@ export function applyOptions(instance: ComponentInternalInstance): void {
           set: val => (publicThis[key] = val),
         })
       })
-    } else if (!instance.exposed) {
+    } else if (instance.exposed === null) {
       instance.exposed = {}
     }
   }
@@ -937,7 +937,7 @@ export function resolveMergedOptions(
 
   if (cached) {
     resolved = cached
-  } else if (!globalMixins.length && !mixins && !extendsOptions) {
+  } else if (!globalMixins.length && mixins === undefined && !extendsOptions) {
     if (
       __COMPAT__ &&
       isCompatEnabled(DeprecationTypes.PRIVATE_APIS, instance)
@@ -1112,8 +1112,8 @@ function mergeWatchOptions(
   to: ComponentWatchOptions | undefined,
   from: ComponentWatchOptions | undefined,
 ) {
-  if (!to) return from
-  if (!from) return to
+  if (to === undefined) return from
+  if (from === undefined) return to
   const merged = extend(Object.create(null), to)
   for (const key in from) {
     merged[key] = mergeAsArray(to[key], from[key])

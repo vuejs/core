@@ -4,7 +4,7 @@ import { V_SHOW } from '../runtimeHelpers'
 
 export const transformShow: DirectiveTransform = (dir, node, context) => {
   const { exp, loc } = dir
-  if (!exp) {
+  if (exp === undefined) {
     context.onError(
       createDOMCompilerError(DOMErrorCodes.X_V_SHOW_NO_EXPRESSION, loc),
     )

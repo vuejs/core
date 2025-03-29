@@ -353,7 +353,7 @@ function installFilterMethod(app: App, context: AppContext) {
   context.filters = {}
   app.filter = (name: string, filter?: Function): any => {
     assertCompatEnabled(DeprecationTypes.FILTERS, null)
-    if (!filter) {
+    if (filter === undefined) {
       return context.filters![name]
     }
     if (__DEV__ && context.filters![name]) {
@@ -467,7 +467,9 @@ function installCompatMount(
     vnode.appContext = context
 
     const hasNoRender =
-      !isFunction(component) && !component.render && !component.template
+      !isFunction(component) &&
+      component.render === undefined &&
+      !component.template
     const emptyRender = () => {}
 
     // create root instance
@@ -497,7 +499,7 @@ function installCompatMount(
       if (typeof selectorOrEl === 'string') {
         // eslint-disable-next-line
         const result = document.querySelector(selectorOrEl)
-        if (!result) {
+        if (result === null) {
           __DEV__ &&
             warn(
               `Failed to mount root instance: selector "${selectorOrEl}" returned null.`,

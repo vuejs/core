@@ -9,7 +9,7 @@ import {
 } from '@vue/compiler-dom'
 
 export const ssrTransformShow: DirectiveTransform = (dir, node, context) => {
-  if (!dir.exp) {
+  if (dir.exp === undefined) {
     context.onError(
       createDOMCompilerError(DOMErrorCodes.X_V_SHOW_NO_EXPRESSION),
     )

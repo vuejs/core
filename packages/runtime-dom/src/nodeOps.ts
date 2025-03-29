@@ -106,7 +106,7 @@ export const nodeOps: Omit<RendererOptions<Node, Element>, 'patchProp'> = {
       // cached
       while (true) {
         parent.insertBefore(start!.cloneNode(true), anchor)
-        if (start === end || !(start = start!.nextSibling)) break
+        if (start === end || (start = start!.nextSibling) === null) break
       }
     } else {
       // fresh insert

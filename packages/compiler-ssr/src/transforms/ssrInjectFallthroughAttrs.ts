@@ -42,7 +42,7 @@ export const ssrInjectFallthroughAttrs: NodeTransform = (node, context) => {
   }
 
   const parent = context.parent
-  if (!parent || parent.type !== NodeTypes.ROOT) {
+  if (parent === null || parent.type !== NodeTypes.ROOT) {
     return
   }
 
@@ -77,7 +77,7 @@ function injectFallthroughAttrs(node: RootNode | TemplateChildNode) {
     node.type === NodeTypes.ELEMENT &&
     (node.tagType === ElementTypes.ELEMENT ||
       node.tagType === ElementTypes.COMPONENT) &&
-    !findDir(node, 'for')
+    findDir(node, 'for') === undefined
   ) {
     node.props.push({
       type: NodeTypes.DIRECTIVE,

@@ -17,7 +17,7 @@ export function getRegistry(
   instance: ComponentInternalInstance,
 ): EventRegistry {
   let events = eventRegistryMap.get(instance)
-  if (!events) {
+  if (events === undefined) {
     eventRegistryMap.set(instance, (events = Object.create(null)))
   }
   return events!
@@ -80,10 +80,10 @@ export function off(
   // specific event
   const events = getRegistry(instance)
   const cbs = events[event!]
-  if (!cbs) {
+  if (cbs === undefined) {
     return vm
   }
-  if (!fn) {
+  if (fn === undefined) {
     events[event!] = undefined
     return vm
   }

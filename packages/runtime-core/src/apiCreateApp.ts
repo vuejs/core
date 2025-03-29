@@ -345,7 +345,7 @@ export function createAppAPI<HostElement>(
           validateDirectiveName(name)
         }
 
-        if (!directive) {
+        if (directive === undefined) {
           return context.directives[name] as any
         }
         if (__DEV__ && context.directives[name]) {

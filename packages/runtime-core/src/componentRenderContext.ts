@@ -72,7 +72,7 @@ export function withCtx(
   ctx: ComponentInternalInstance | null = currentRenderingInstance,
   isNonScopedSlot?: boolean, // __COMPAT__ only
 ): Function {
-  if (!ctx) return fn
+  if (ctx === null) return fn
 
   // already normalized
   if ((fn as ContextualRenderFn)._n) {

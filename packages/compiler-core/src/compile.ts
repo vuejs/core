@@ -96,7 +96,10 @@ export function baseCompile(
 
   if (!__BROWSER__ && options.isTS) {
     const { expressionPlugins } = options
-    if (!expressionPlugins || !expressionPlugins.includes('typescript')) {
+    if (
+      expressionPlugins === undefined ||
+      !expressionPlugins.includes('typescript')
+    ) {
       options.expressionPlugins = [...(expressionPlugins || []), 'typescript']
     }
   }

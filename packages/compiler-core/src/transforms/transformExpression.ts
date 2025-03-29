@@ -242,7 +242,7 @@ export function processExpression(
     return node
   }
 
-  if (ast === null || (!ast && isSimpleIdentifier(rawExp))) {
+  if (ast === null || (ast === undefined && isSimpleIdentifier(rawExp))) {
     const isScopeVarReference = context.identifiers[rawExp]
     const isAllowedGlobal = isGloballyAllowed(rawExp)
     const isLiteral = isLiteralWhitelisted(rawExp)
@@ -268,7 +268,7 @@ export function processExpression(
     return node
   }
 
-  if (!ast) {
+  if (ast === undefined) {
     // exp needs to be parsed differently:
     // 1. Multiple inline statements (v-on, with presence of `;`): parse as raw
     //    exp, but make sure to pad with spaces for consistent ranges
@@ -325,7 +325,7 @@ export function processExpression(
         // local scope variable (a v-for alias, or a v-slot prop)
         if (
           !(needPrefix && isLocal) &&
-          (!parent ||
+          (parent === null ||
             (parent.type !== 'CallExpression' &&
               parent.type !== 'NewExpression' &&
               parent.type !== 'MemberExpression'))

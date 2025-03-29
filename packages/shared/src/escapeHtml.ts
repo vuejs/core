@@ -4,7 +4,7 @@ export function escapeHtml(string: unknown): string {
   const str = '' + string
   const match = escapeRE.exec(str)
 
-  if (!match) {
+  if (match === null) {
     return str
   }
 

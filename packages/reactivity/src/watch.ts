@@ -107,7 +107,7 @@ export function onWatcherCleanup(
 ): void {
   if (owner) {
     let cleanups = cleanupMap.get(owner)
-    if (!cleanups) cleanupMap.set(owner, (cleanups = []))
+    if (cleanups === undefined) cleanupMap.set(owner, (cleanups = []))
     cleanups.push(cleanupFn)
   } else if (__DEV__ && !failSilently) {
     warn(

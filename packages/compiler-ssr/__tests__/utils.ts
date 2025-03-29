@@ -9,7 +9,7 @@ export function getCompiledString(src: string): string {
     /_push\(\`<div\${\s*_ssrRenderAttrs\(_attrs\)\s*}>([^]*)<\/div>\`\)/,
   )
 
-  if (!match) {
+  if (match === null) {
     throw new Error(`Unexpected compile result:\n${code}`)
   }
 

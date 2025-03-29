@@ -277,7 +277,7 @@ const getChildRoot = (vnode: VNode): [VNode, SetRootFn] => {
   const rawChildren = vnode.children as VNodeArrayChildren
   const dynamicChildren = vnode.dynamicChildren
   const childRoot = filterSingleRoot(rawChildren, false)
-  if (!childRoot) {
+  if (childRoot === undefined) {
     return [vnode, undefined]
   } else if (
     __DEV__ &&

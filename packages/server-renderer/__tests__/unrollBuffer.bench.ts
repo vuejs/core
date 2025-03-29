@@ -30,7 +30,7 @@ function createMixedBuffer(levels: number, itemsPerLevel: number): SSRBuffer {
 
   function addItems(buf: ReturnType<typeof createBuffer>, level: number) {
     for (let i = 1; i <= levels * itemsPerLevel; i++) {
-      if (i % 3 === 0) {
+      if (!(i % 3)) {
         // @ts-expect-error testing...
         buf.push(Promise.resolve(`async${level}.${i}`))
       } else {

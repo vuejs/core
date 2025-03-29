@@ -88,7 +88,7 @@ export function processIf(
 ): (() => void) | undefined {
   if (
     dir.name !== 'else' &&
-    (!dir.exp || !(dir.exp as SimpleExpressionNode).content.trim())
+    (dir.exp === undefined || !(dir.exp as SimpleExpressionNode).content.trim())
   ) {
     const loc = dir.exp ? dir.exp.loc : node.loc
     context.onError(
@@ -211,7 +211,10 @@ function createIfBranch(node: ElementNode, dir: DirectiveNode): IfBranchNode {
     type: NodeTypes.IF_BRANCH,
     loc: node.loc,
     condition: dir.name === 'else' ? undefined : dir.exp,
-    children: isTemplateIf && !findDir(node, 'for') ? node.children : [node],
+    children:
+      isTemplateIf && findDir(node, 'for') === undefined
+        ? node.children
+        : [node],
     userKey: findProp(node, `key`),
     isTemplateIf,
   }
@@ -308,7 +311,7 @@ function isSameKey(
   a: AttributeNode | DirectiveNode | undefined,
   b: AttributeNode | DirectiveNode,
 ): boolean {
-  if (!a || a.type !== b.type) {
+  if (a === undefined || a.type !== b.type) {
     return false
   }
   if (a.type === NodeTypes.ATTRIBUTE) {

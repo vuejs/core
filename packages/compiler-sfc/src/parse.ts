@@ -165,7 +165,7 @@ export function parse(
     }
     switch (node.tag) {
       case 'template':
-        if (!descriptor.template) {
+        if (descriptor.template === null) {
           const templateBlock = (descriptor.template = createBlock(
             node,
             source,
@@ -196,11 +196,11 @@ export function parse(
       case 'script':
         const scriptBlock = createBlock(node, source, pad) as SFCScriptBlock
         const isSetup = !!scriptBlock.attrs.setup
-        if (isSetup && !descriptor.scriptSetup) {
+        if (isSetup && descriptor.scriptSetup === null) {
           descriptor.scriptSetup = scriptBlock
           break
         }
-        if (!isSetup && !descriptor.script) {
+        if (!isSetup && descriptor.script === null) {
           descriptor.script = scriptBlock
           break
         }
@@ -223,7 +223,11 @@ export function parse(
         break
     }
   })
-  if (!descriptor.template && !descriptor.script && !descriptor.scriptSetup) {
+  if (
+    descriptor.template === null &&
+    descriptor.script === null &&
+    descriptor.scriptSetup === null
+  ) {
     errors.push(
       new SyntaxError(
         `At least one <template> or <script> is required in a single file component. ${descriptor.filename}`,
@@ -437,7 +441,7 @@ export function hmrShouldReload(
   next: SFCDescriptor,
 ): boolean {
   if (
-    !next.scriptSetup ||
+    next.scriptSetup === null ||
     (next.scriptSetup.lang !== 'ts' && next.scriptSetup.lang !== 'tsx')
   ) {
     return false
@@ -471,7 +475,7 @@ function dedent(s: string): [string, number] {
     const indent = line.match(/^\s*/)?.[0]?.length || 0
     return Math.min(indent, minIndent)
   }, Infinity)
-  if (minIndent === 0) {
+  if (!minIndent) {
     return [s, minIndent]
   }
   return [

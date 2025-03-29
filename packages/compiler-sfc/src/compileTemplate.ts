@@ -112,7 +112,7 @@ export function compileTemplate(
   if (
     (__ESM_BROWSER__ || __GLOBAL__) &&
     preprocessLang &&
-    !preprocessCustomRequire
+    preprocessCustomRequire === undefined
   ) {
     throw new Error(
       `[@vue/compiler-sfc] Template preprocessing in the browser build must ` +
@@ -188,7 +188,7 @@ function doCompileTemplate({
     nodeTransforms = [transformAssetUrl, transformSrcset]
   }
 
-  if (ssr && !ssrCssVars) {
+  if (ssr && ssrCssVars === undefined) {
     warnOnce(
       `compileTemplate is called with \`ssr: true\` but no ` +
         `corresponding \`cssVars\` option.`,
@@ -250,7 +250,7 @@ function doCompileTemplate({
   // inMap should be the map produced by ./parse.ts which is a simple line-only
   // mapping. If it is present, we need to adjust the final map and errors to
   // reflect the original line numbers.
-  if (inMap && !inAST) {
+  if (inMap && inAST === undefined) {
     if (map) {
       map = mapLines(inMap, map)
     }

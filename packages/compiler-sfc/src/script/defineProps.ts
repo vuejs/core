@@ -354,7 +354,7 @@ function genDestructuredDefaultValue(
     // destructure w/ runtime declaration since we cannot safely infer
     // whether the expected runtime prop type is `Function`.
     const needSkipFactory =
-      !inferredType &&
+      inferredType === undefined &&
       (isFunctionType(unwrapped) || unwrapped.type === 'Identifier')
 
     const needFactoryWrap =

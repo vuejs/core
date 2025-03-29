@@ -213,7 +213,7 @@ export const transformElement: NodeTransform = (node, context) => {
       vnodeTag,
       vnodeProps,
       vnodeChildren,
-      patchFlag === 0 ? undefined : patchFlag,
+      !patchFlag ? undefined : patchFlag,
       vnodeDynamicProps,
       vnodeDirectives,
       !!shouldUseBlock,
@@ -248,7 +248,7 @@ export function resolveComponentType(
         exp = isProp.value && createSimpleExpression(isProp.value.content, true)
       } else {
         exp = isProp.exp
-        if (!exp) {
+        if (exp === undefined) {
           // #10469 handle :is shorthand
           exp = createSimpleExpression(`is`, false, isProp.arg!.loc)
           if (!__BROWSER__) {
@@ -590,7 +590,7 @@ export function buildProps(
       }
 
       // special case for v-bind and v-on with no argument
-      if (!arg && (isVBind || isVOn)) {
+      if (arg === undefined && (isVBind || isVOn)) {
         hasDynamicKeys = true
         if (exp) {
           if (isVBind) {
@@ -739,7 +739,7 @@ export function buildProps(
   }
   if (
     !shouldUseBlock &&
-    (patchFlag === 0 || patchFlag === PatchFlags.NEED_HYDRATION) &&
+    (!patchFlag || patchFlag === PatchFlags.NEED_HYDRATION) &&
     (hasRef || hasVnodeHook || runtimeDirectives.length > 0)
   ) {
     patchFlag |= PatchFlags.NEED_PATCH
@@ -897,14 +897,14 @@ export function buildDirectiveArgs(
   const { loc } = dir
   if (dir.exp) dirArgs.push(dir.exp)
   if (dir.arg) {
-    if (!dir.exp) {
+    if (dir.exp === undefined) {
       dirArgs.push(`void 0`)
     }
     dirArgs.push(dir.arg)
   }
   if (Object.keys(dir.modifiers).length) {
-    if (!dir.arg) {
-      if (!dir.exp) {
+    if (dir.arg === undefined) {
+      if (dir.exp === undefined) {
         dirArgs.push(`void 0`)
       }
       dirArgs.push(`void 0`)

@@ -22,7 +22,7 @@ export const ssrInjectCssVars: NodeTransform = (node, context) => {
   }
 
   const parent = context.parent
-  if (!parent || parent.type !== NodeTypes.ROOT) {
+  if (parent === null || parent.type !== NodeTypes.ROOT) {
     return
   }
 
@@ -40,7 +40,7 @@ function injectCssVars(node: RootNode | TemplateChildNode) {
     node.type === NodeTypes.ELEMENT &&
     (node.tagType === ElementTypes.ELEMENT ||
       node.tagType === ElementTypes.COMPONENT) &&
-    !findDir(node, 'for')
+    findDir(node, 'for') === undefined
   ) {
     if (node.tag === 'suspense' || node.tag === 'Suspense') {
       for (const child of node.children) {

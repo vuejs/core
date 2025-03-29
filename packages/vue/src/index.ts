@@ -48,7 +48,7 @@ function compileToFunction(
 
   if (template[0] === '#') {
     const el = document.querySelector(template)
-    if (__DEV__ && !el) {
+    if (__DEV__ && el === null) {
       warn(`Template element not found or is empty: ${template}`)
     }
     // __UNSAFE__
@@ -68,7 +68,7 @@ function compileToFunction(
   )
 
   if (!opts.isCustomElement && typeof customElements !== 'undefined') {
-    opts.isCustomElement = tag => !!customElements.get(tag)
+    opts.isCustomElement = tag => customElements.get(tag) !== undefined
   }
 
   const { code } = compile(template, opts)

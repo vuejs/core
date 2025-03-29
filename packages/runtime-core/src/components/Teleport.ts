@@ -45,7 +45,7 @@ const resolveTarget = <T = RendererElement>(
 ): T | null => {
   const targetSelector = props && props.to
   if (isString(targetSelector)) {
-    if (!select) {
+    if (select === undefined) {
       __DEV__ &&
         warn(
           `Current renderer does not support string target for Teleports. ` +
@@ -54,7 +54,7 @@ const resolveTarget = <T = RendererElement>(
       return null
     } else {
       const target = select(targetSelector)
-      if (__DEV__ && !target && !isTeleportDisabled(props)) {
+      if (__DEV__ && target === null && !isTeleportDisabled(props)) {
         warn(
           `Failed to locate Teleport target with selector "${targetSelector}". ` +
             `Note the target element must exist before the component is mounted - ` +
@@ -453,7 +453,7 @@ function hydrateTeleport(
         // correct position on the final page during SSR. the targetAnchor will
         // always be null, we need to manually add targetAnchor to ensure
         // Teleport it can properly unmount or move
-        if (!vnode.targetAnchor) {
+        if (vnode.targetAnchor === null) {
           prepareAnchor(target, vnode, createText, insert)
         }
 

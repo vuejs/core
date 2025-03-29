@@ -7,7 +7,7 @@ import { DOMErrorCodes, createDOMCompilerError } from '../errors'
 
 export const transformVHtml: DirectiveTransform = (dir, node, context) => {
   const { exp, loc } = dir
-  if (!exp) {
+  if (exp === undefined) {
     context.onError(
       createDOMCompilerError(DOMErrorCodes.X_V_HTML_NO_EXPRESSION, loc),
     )

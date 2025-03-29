@@ -165,13 +165,13 @@ export function compileScript(
 
   const ctx = new ScriptCompileContext(sfc, options)
   const { script, scriptSetup, source, filename } = sfc
-  const hoistStatic = options.hoistStatic !== false && !script
+  const hoistStatic = options.hoistStatic !== false && script === null
   const scopeId = options.id ? options.id.replace(/^data-v-/, '') : ''
   const scriptLang = script && script.lang
   const scriptSetupLang = scriptSetup && scriptSetup.lang
 
-  if (!scriptSetup) {
-    if (!script) {
+  if (scriptSetup === null) {
+    if (script === null) {
       throw new Error(`[@vue/compiler-sfc] SFC contains no <script> tags.`)
     }
     // normal <script> only
@@ -256,7 +256,7 @@ export function compileScript(
   }
 
   function checkInvalidScopeReference(node: Node | undefined, method: string) {
-    if (!node) return
+    if (node === undefined) return
     walkIdentifiers(node, id => {
       const binding = setupBindings[id.name]
       if (binding && binding !== BindingTypes.LITERAL_CONST) {
@@ -599,7 +599,7 @@ export function compileScript(
         setupBindings,
         vueImportAliases,
         hoistStatic,
-        !!ctx.propsDestructureDecl,
+        ctx.propsDestructureDecl !== undefined,
       )
     }
 
@@ -783,7 +783,7 @@ export function compileScript(
         startOffset + ctx.propsDestructureDecl!.end!,
         ctx.propsDestructureRestId,
       )
-    } else if (!ctx.propsDestructureDecl) {
+    } else if (ctx.propsDestructureDecl === undefined) {
       ctx.s.overwrite(
         startOffset + ctx.propsCall!.start!,
         startOffset + ctx.propsCall!.end!,
@@ -813,7 +813,7 @@ export function compileScript(
   let returned
   if (
     !options.inlineTemplate ||
-    (!sfc.template && ctx.hasDefaultExportRender)
+    (sfc.template === null && ctx.hasDefaultExportRender)
   ) {
     // non-inline mode, or has manual render in normal <script>
     // return bindings from script and script setup

@@ -893,7 +893,7 @@ function setupStatefulComponent(
         // async setup returned Promise.
         // bail here and wait for re-entry.
         instance.asyncDep = setupResult
-        if (__DEV__ && !instance.suspense) {
+        if (__DEV__ && instance.suspense === null) {
           const name = Component.name ?? 'Anonymous'
           warn(
             `Component <${name}>: setup function returned a promise, but no ` +
@@ -978,7 +978,7 @@ export function registerRuntimeCompiler(_compile: any): void {
 }
 
 // dev only
-export const isRuntimeOnly = (): boolean => !compile
+export const isRuntimeOnly = (): boolean => compile === undefined
 
 export function finishComponentSetup(
   instance: ComponentInternalInstance,
@@ -997,10 +997,10 @@ export function finishComponentSetup(
 
   // template / render function normalization
   // could be already set when returned from setup()
-  if (!instance.render) {
+  if (instance.render === null) {
     // only do on-the-fly compile if not in SSR - SSR on-the-fly compilation
     // is done by server-renderer
-    if (!isSSR && compile && !Component.render) {
+    if (!isSSR && compile && Component.render === undefined) {
       const template =
         (__COMPAT__ &&
           instance.vnode.props &&
@@ -1063,8 +1063,13 @@ export function finishComponentSetup(
 
   // warn missing template/render
   // the runtime compilation of template in SSR is done by server-render
-  if (__DEV__ && !Component.render && instance.render === NOOP && !isSSR) {
-    if (!compile && Component.template) {
+  if (
+    __DEV__ &&
+    Component.render === undefined &&
+    instance.render === NOOP &&
+    !isSSR
+  ) {
+    if (compile === undefined && Component.template) {
       /* v8 ignore start */
       warn(
         `Component provided template option but ` +

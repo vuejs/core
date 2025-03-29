@@ -45,7 +45,7 @@ export const transformSrcset: NodeTransform = (
     if (srcsetTags.includes(node.tag) && node.props.length) {
       node.props.forEach((attr, index) => {
         if (attr.name === 'srcset' && attr.type === NodeTypes.ATTRIBUTE) {
-          if (!attr.value) return
+          if (attr.value === undefined) return
           const value = attr.value.content
           if (!value) return
           const imageCandidates: ImageCandidate[] = value.split(',').map(s => {

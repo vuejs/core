@@ -126,7 +126,7 @@ export function forEachElement(
         }
       } else if (isComment(next)) {
         if (next.data === ']') {
-          if (--depth === 0) break
+          if (!--depth) break
         } else if (next.data === '[') {
           depth++
         }

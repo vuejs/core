@@ -9,7 +9,7 @@ export function useCssModule(name = '$style'): Record<string, string> {
       return EMPTY_OBJ
     }
     const modules = instance.type.__cssModules
-    if (!modules) {
+    if (modules === undefined) {
       __DEV__ && warn(`Current instance does not have CSS modules injected.`)
       return EMPTY_OBJ
     }

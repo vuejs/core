@@ -181,7 +181,7 @@ export function invokeDirectiveHook(
       binding.oldValue = oldBindings[i].value
     }
     let hook = binding.dir[name] as DirectiveHook | DirectiveHook[] | undefined
-    if (__COMPAT__ && !hook) {
+    if (__COMPAT__ && hook === undefined) {
       hook = mapCompatDirectiveHook(name, binding.dir, instance)
     }
     if (hook) {

@@ -38,7 +38,7 @@ const scss: StylePreprocessor = (source, map, options, load = require) => {
       const result = compileString(data, {
         ...options,
         url: pathToFileURL(options.filename),
-        sourceMap: !!map,
+        sourceMap: map !== undefined,
       })
       css = result.css
       dependencies = result.loadedUrls.map(url => fileURLToPath(url))
@@ -49,7 +49,7 @@ const scss: StylePreprocessor = (source, map, options, load = require) => {
         data,
         file: options.filename,
         outFile: options.filename,
-        sourceMap: !!map,
+        sourceMap: map !== undefined,
       })
       css = result.css.toString()
       dependencies = result.stats.includedFiles

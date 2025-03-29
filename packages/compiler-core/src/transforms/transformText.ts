@@ -36,7 +36,7 @@ export const transformText: NodeTransform = (node, context) => {
           for (let j = i + 1; j < children.length; j++) {
             const next = children[j]
             if (isText(next)) {
-              if (!currentContainer) {
+              if (currentContainer === undefined) {
                 currentContainer = children[i] = createCompoundExpression(
                   [child],
                   child.loc,
@@ -72,7 +72,7 @@ export const transformText: NodeTransform = (node, context) => {
               !node.props.find(
                 p =>
                   p.type === NodeTypes.DIRECTIVE &&
-                  !context.directiveTransforms[p.name],
+                  context.directiveTransforms[p.name] === undefined,
               ) &&
               // in compat mode, <template> tags with no special directives
               // will be rendered as a fragment so its children must be

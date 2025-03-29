@@ -133,7 +133,7 @@ function renderComponentSubTree(
     let root = renderComponentRoot(instance)
     // #5817 scope ID attrs not falling through if functional component doesn't
     // have props
-    if (!(comp as FunctionalComponent).props) {
+    if ((comp as FunctionalComponent).props === undefined) {
       for (const key in instance.attrs) {
         if (key.startsWith(`data-v-`)) {
           ;(root.props || (root.props = {}))[key] = ``
@@ -143,9 +143,9 @@ function renderComponentSubTree(
     renderVNode(push, (instance.subTree = root), instance, slotScopeId)
   } else {
     if (
-      (!instance.render || instance.render === NOOP) &&
+      (instance.render === null || instance.render === NOOP) &&
       !instance.ssrRender &&
-      !comp.ssrRender &&
+      comp.ssrRender === undefined &&
       isString(comp.template)
     ) {
       comp.ssrRender = ssrCompile(comp.template, instance)

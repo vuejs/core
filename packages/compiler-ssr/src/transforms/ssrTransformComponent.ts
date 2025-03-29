@@ -207,7 +207,7 @@ export function ssrProcessComponent(
   parent: { children: TemplateChildNode[] },
 ): void {
   const component = componentTypeMap.get(node)!
-  if (!node.ssrCodegenNode) {
+  if (node.ssrCodegenNode === undefined) {
     // this is a built-in component that fell-through.
     if (component === TELEPORT) {
       return ssrProcessTeleport(node, context)

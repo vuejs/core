@@ -259,7 +259,7 @@ export default class Tokenizer {
 
   public mode: ParseMode = ParseMode.BASE
   public get inSFCRoot(): boolean {
-    return this.mode === ParseMode.SFC && this.stack.length === 0
+    return this.mode === ParseMode.SFC && !this.stack.length
   }
 
   constructor(
@@ -430,7 +430,7 @@ export default class Tokenizer {
 
     if ((c | 0x20) === this.currentSequence[this.sequenceIndex]) {
       this.sequenceIndex += 1
-    } else if (this.sequenceIndex === 0) {
+    } else if (!this.sequenceIndex) {
       if (
         this.currentSequence === Sequences.TitleEnd ||
         (this.currentSequence === Sequences.TextareaEnd && !this.inSFCRoot)
@@ -518,7 +518,7 @@ export default class Tokenizer {
         this.sectionStart = this.index + 1
         this.state = State.Text
       }
-    } else if (this.sequenceIndex === 0) {
+    } else if (!this.sequenceIndex) {
       // Fast-forward to the first character of the sequence
       if (this.fastForwardTo(this.currentSequence[0])) {
         this.sequenceIndex = 1
@@ -910,7 +910,7 @@ export default class Tokenizer {
       if (length >= 0) {
         this.state = this.baseState
 
-        if (length === 0) {
+        if (!length) {
           this.index = this.entityStart
         }
       } else {
@@ -1084,7 +1084,7 @@ export default class Tokenizer {
     if (this.sectionStart !== this.index) {
       if (
         this.state === State.Text ||
-        (this.state === State.InRCDATA && this.sequenceIndex === 0)
+        (this.state === State.InRCDATA && !this.sequenceIndex)
       ) {
         this.cbs.ontext(this.sectionStart, this.index)
         this.sectionStart = this.index

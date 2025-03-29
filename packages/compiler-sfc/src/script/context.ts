@@ -178,7 +178,7 @@ export function resolveParserPlugins(
 ): ParserPlugin[] {
   const plugins: ParserPlugin[] = []
   if (
-    !userPlugins ||
+    userPlugins === undefined ||
     !userPlugins.some(
       p =>
         p === 'importAssertions' ||
@@ -197,7 +197,7 @@ export function resolveParserPlugins(
   }
   if (lang === 'ts' || lang === 'mts' || lang === 'tsx' || lang === 'mtsx') {
     plugins.push(['typescript', { dts }], 'explicitResourceManagement')
-    if (!userPlugins || !userPlugins.includes('decorators')) {
+    if (userPlugins === undefined || !userPlugins.includes('decorators')) {
       plugins.push('decorators-legacy')
     }
   }

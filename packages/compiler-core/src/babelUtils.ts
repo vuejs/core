@@ -95,7 +95,7 @@ export function walkIdentifiers(
       if (node !== rootExp && node.scopeIds) {
         for (const id of node.scopeIds) {
           knownIds[id]--
-          if (knownIds[id] === 0) {
+          if (!knownIds[id]) {
             delete knownIds[id]
           }
         }
@@ -113,7 +113,7 @@ export function isReferencedIdentifier(
     return false
   }
 
-  if (!parent) {
+  if (parent === null) {
     return true
   }
 
@@ -376,7 +376,7 @@ function isReferenced(node: Node, parent: Node, grandparent?: Node): boolean {
         return !!parent.computed
       }
       // parent.value === node
-      return !grandparent || grandparent.type !== 'ObjectPattern'
+      return grandparent === undefined || grandparent.type !== 'ObjectPattern'
     // no: class { NODE = value; }
     // yes: class { [NODE] = value; }
     // yes: class { key = NODE; }

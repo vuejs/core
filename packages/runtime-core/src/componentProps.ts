@@ -314,7 +314,7 @@ export function updateProps(
     let kebabKey: string
     for (const key in rawCurrentProps) {
       if (
-        !rawProps ||
+        rawProps === null ||
         // for camelCase
         (!hasOwn(rawProps, key) &&
           // it's possible the original props was passed in as kebab-case
@@ -348,7 +348,7 @@ export function updateProps(
     if (attrs !== rawCurrentProps) {
       for (const key in attrs) {
         if (
-          !rawProps ||
+          rawProps === null ||
           (!hasOwn(rawProps, key) &&
             (!__COMPAT__ || !hasOwn(rawProps, key + 'Native')))
         ) {
@@ -403,7 +403,7 @@ function setFullProps(
       // kebab -> camel conversion here we need to camelize the key.
       let camelKey
       if (options && hasOwn(options, (camelKey = camelize(key)))) {
-        if (!needCastKeys || !needCastKeys.includes(camelKey)) {
+        if (needCastKeys === undefined || !needCastKeys.includes(camelKey)) {
           props[camelKey] = value
         } else {
           ;(rawCastValues || (rawCastValues = {}))[camelKey] = value
@@ -758,7 +758,7 @@ function getInvalidTypeMessage(
   value: unknown,
   expectedTypes: string[],
 ): string {
-  if (expectedTypes.length === 0) {
+  if (!expectedTypes.length) {
     return (
       `Prop type [] for prop "${name}" won't match anything.` +
       ` Did you mean to use type Array instead?`

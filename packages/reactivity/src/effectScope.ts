@@ -120,7 +120,7 @@ export class EffectScope {
    * @internal
    */
   off(): void {
-    if (this._on > 0 && --this._on === 0) {
+    if (this._on > 0 && !--this._on) {
       activeEffectScope = this.prevScope
       this.prevScope = undefined
     }

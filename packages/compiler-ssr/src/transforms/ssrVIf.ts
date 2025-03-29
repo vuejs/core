@@ -56,7 +56,7 @@ export function ssrProcessIf(
     }
   }
 
-  if (!currentIf.alternate && !disableComment) {
+  if (currentIf.alternate === undefined && !disableComment) {
     currentIf.alternate = createBlockStatement([
       createCallExpression(`_push`, ['`<!---->`']),
     ])

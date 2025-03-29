@@ -64,7 +64,7 @@ export const transformFor: NodeTransform = createStructuralDirectiveTransform(
       const memo = findDir(node, 'memo')
       const keyProp = findProp(node, `key`, false, true)
       const isDirKey = keyProp && keyProp.type === NodeTypes.DIRECTIVE
-      if (isDirKey && !keyProp.exp) {
+      if (isDirKey && keyProp.exp === undefined) {
         // resolve :key shorthand #10882
         transformBindShorthand(keyProp, context)
       }
@@ -264,7 +264,7 @@ export function processFor(
   context: TransformContext,
   processCodegen?: (forNode: ForNode) => (() => void) | undefined,
 ) {
-  if (!dir.exp) {
+  if (dir.exp === undefined) {
     context.onError(
       createCompilerError(ErrorCodes.X_V_FOR_NO_EXPRESSION, dir.loc),
     )
@@ -273,7 +273,7 @@ export function processFor(
 
   const parseResult = dir.forParseResult
 
-  if (!parseResult) {
+  if (parseResult === undefined) {
     context.onError(
       createCompilerError(ErrorCodes.X_V_FOR_MALFORMED_EXPRESSION, dir.loc),
     )

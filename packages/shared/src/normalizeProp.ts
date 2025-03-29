@@ -84,7 +84,7 @@ export function normalizeClass(value: unknown): string {
 export function normalizeProps(
   props: Record<string, any> | null,
 ): Record<string, any> | null {
-  if (!props) return null
+  if (props === null) return null
   let { class: klass, style } = props
   if (klass && !isString(klass)) {
     props.class = normalizeClass(klass)

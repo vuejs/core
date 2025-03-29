@@ -112,7 +112,7 @@ function createSSRTransformContext(
       return name
     },
     pushStringPart(part) {
-      if (!currentString) {
+      if (currentString === null) {
         const currentCall = createCallExpression(`_push`)
         body.push(currentCall)
         currentString = createTemplateLiteral([])

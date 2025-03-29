@@ -146,7 +146,7 @@ export function resolveTypeElements(
   scope?: TypeScope,
   typeParameters?: Record<string, Node>,
 ): ResolvedElements {
-  const canCache = !typeParameters
+  const canCache = typeParameters === undefined
   if (canCache && node._resolvedElements) {
     return node._resolvedElements
   }
@@ -234,7 +234,7 @@ function innerResolveTypeElements(
           typeParams = Object.create(null)
           resolved.typeParameters.params.forEach((p, i) => {
             let param = typeParameters && typeParameters[p.name]
-            if (!param) param = node.typeParameters!.params[i]
+            if (param === undefined) param = node.typeParameters!.params[i]
             typeParams![p.name] = param
           })
         }
@@ -808,7 +808,7 @@ function qualifiedNameToPath(node: Identifier | TSQualifiedName): string[] {
 function resolveGlobalScope(ctx: TypeResolveContext): TypeScope[] | undefined {
   if (ctx.options.globalTypeFiles) {
     const fs = resolveFS(ctx)
-    if (!fs) {
+    if (fs === undefined) {
       throw new Error('[vue/compiler-sfc] globalTypeFiles requires fs access.')
     }
     return ctx.options.globalTypeFiles.map(file =>
@@ -851,11 +851,11 @@ function resolveFS(ctx: TypeResolveContext): FS | undefined {
   if (ctx.fs) {
     return ctx.fs
   }
-  if (!ts && loadTS) {
+  if (ts === undefined && loadTS) {
     ts = loadTS()
   }
   const fs = ctx.options.fs || ts?.sys
-  if (!fs) {
+  if (fs === undefined) {
     return
   }
   return (ctx.fs = {
@@ -898,7 +898,7 @@ function importSourceToScope(
   } catch (err: any) {
     return ctx.error(err.message, node, scope)
   }
-  if (!fs) {
+  if (fs === undefined) {
     return ctx.error(
       `No fs option provided to \`compileScript\` in non-Node environment. ` +
         `File system access is required for resolving imported types.`,
@@ -927,9 +927,9 @@ function importSourceToScope(
           scope,
         )
       }
-      if (!ts) {
+      if (ts === undefined) {
         if (loadTS) ts = loadTS()
-        if (!ts) {
+        if (ts === undefined) {
           return ctx.error(
             `Failed to resolve import source ${JSON.stringify(source)}. ` +
               `typescript is required as a peer dep for vue in order ` +
@@ -1000,7 +1000,7 @@ function resolveWithTS(
     let configs: CachedConfig[]
     const normalizedConfigPath = normalizePath(configPath)
     const cached = tsConfigCache.get(normalizedConfigPath)
-    if (!cached) {
+    if (cached === undefined) {
       configs = loadTSConfig(configPath, ts, fs).map(config => ({ config }))
       tsConfigCache.set(normalizedConfigPath, configs)
     } else {
@@ -1019,7 +1019,8 @@ function resolveWithTS(
         const included: string[] | undefined = c.config.raw?.include
         const excluded: string[] | undefined = c.config.raw?.exclude
         if (
-          (!included && (!base || containingFile.startsWith(base))) ||
+          (included === undefined &&
+            (!base || containingFile.startsWith(base))) ||
           included?.some(p => isMatch(containingFile, joinPaths(base, p)))
         ) {
           if (
@@ -1032,7 +1033,7 @@ function resolveWithTS(
           break
         }
       }
-      if (!matchedConfig) {
+      if (matchedConfig === undefined) {
         matchedConfig = configs[configs.length - 1]
       }
     }
@@ -1155,7 +1156,7 @@ function parseFile(
     const {
       descriptor: { script, scriptSetup },
     } = parse(content)
-    if (!script && !scriptSetup) {
+    if (script === null && scriptSetup === null) {
       return []
     }
 
@@ -1434,7 +1435,7 @@ function attachNamespace(
   to: Node & { _ns?: TSModuleDeclaration },
   ns: TSModuleDeclaration,
 ) {
-  if (!to._ns) {
+  if (to._ns === undefined) {
     to._ns = ns
   } else {
     mergeNamespaces(to._ns, ns)
@@ -1913,7 +1914,7 @@ function resolveReturnType(
   ) {
     resolved = resolveTypeReference(ctx, arg, scope)
   }
-  if (!resolved) return
+  if (resolved === undefined) return
   if (resolved.type === 'TSFunctionType') {
     return resolved.typeAnnotation?.typeAnnotation
   }

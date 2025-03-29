@@ -49,7 +49,7 @@ function compileToFunction(
 
   if (template[0] === '#') {
     const el = document.querySelector(template)
-    if (__DEV__ && !el) {
+    if (__DEV__ && el === null) {
       warn(`Template element not found or is empty: ${template}`)
     }
     // __UNSAFE__

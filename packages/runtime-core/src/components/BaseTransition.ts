@@ -154,7 +154,7 @@ const BaseTransitionImpl: ComponentOptions = {
     return () => {
       const children =
         slots.default && getTransitionRawChildren(slots.default(), true)
-      if (!children || !children.length) {
+      if (children === undefined || !children.length) {
         return
       }
 
@@ -181,7 +181,7 @@ const BaseTransitionImpl: ComponentOptions = {
       // in the case of <transition><keep-alive/></transition>, we need to
       // compare the type of the kept-alive children.
       const innerChild = getInnerChild(child)
-      if (!innerChild) {
+      if (innerChild === undefined) {
         return emptyPlaceholder(child)
       }
 

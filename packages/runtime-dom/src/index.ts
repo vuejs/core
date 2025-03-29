@@ -106,10 +106,14 @@ export const createApp = ((...args) => {
   const { mount } = app
   app.mount = (containerOrSelector: Element | ShadowRoot | string): any => {
     const container = normalizeContainer(containerOrSelector)
-    if (!container) return
+    if (container === null) return
 
     const component = app._component
-    if (!isFunction(component) && !component.render && !component.template) {
+    if (
+      !isFunction(component) &&
+      component.render === undefined &&
+      !component.template
+    ) {
       // __UNSAFE__
       // Reason: potential execution of JS expressions in in-DOM template.
       // The user must make sure the in-DOM template is trusted. If it's
@@ -230,7 +234,7 @@ function normalizeContainer(
 ): Element | ShadowRoot | null {
   if (isString(container)) {
     const res = document.querySelector(container)
-    if (__DEV__ && !res) {
+    if (__DEV__ && res === null) {
       warn(
         `Failed to mount app: mount target selector "${container}" returned null.`,
       )

@@ -124,7 +124,7 @@ export function legacyRenderStatic(
   index: number,
 ): any {
   let cache = staticCacheMap.get(instance)
-  if (!cache) {
+  if (cache === undefined) {
     staticCacheMap.set(instance, (cache = []))
   }
   if (cache[index]) {

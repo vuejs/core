@@ -33,7 +33,7 @@ export const transformOn: DirectiveTransform = (
   augmentor,
 ) => {
   const { loc, modifiers, arg } = dir as VOnDirectiveNode
-  if (!dir.exp && !modifiers.length) {
+  if (dir.exp === undefined && !modifiers.length) {
     context.onError(createCompilerError(ErrorCodes.X_V_ON_NO_EXPRESSION, loc))
   }
   let eventName: ExpressionNode
@@ -79,7 +79,8 @@ export const transformOn: DirectiveTransform = (
   if (exp && !exp.content.trim()) {
     exp = undefined
   }
-  let shouldCache: boolean = context.cacheHandlers && !exp && !context.inVOnce
+  let shouldCache: boolean =
+    context.cacheHandlers && exp === undefined && !context.inVOnce
   if (exp) {
     const isMemberExp = isMemberExpression(exp, context)
     const isInlineStatement = !(isMemberExp || isFnExpression(exp, context))

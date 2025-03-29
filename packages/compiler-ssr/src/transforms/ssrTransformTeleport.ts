@@ -20,7 +20,7 @@ export function ssrProcessTeleport(
   context: SSRTransformContext,
 ): void {
   const targetProp = findProp(node, 'to')
-  if (!targetProp) {
+  if (targetProp === undefined) {
     context.onError(
       createSSRCompilerError(SSRErrorCodes.X_SSR_NO_TELEPORT_TARGET, node.loc),
     )
@@ -34,7 +34,7 @@ export function ssrProcessTeleport(
   } else {
     target = targetProp.exp
   }
-  if (!target) {
+  if (target === undefined) {
     context.onError(
       createSSRCompilerError(
         SSRErrorCodes.X_SSR_NO_TELEPORT_TARGET,

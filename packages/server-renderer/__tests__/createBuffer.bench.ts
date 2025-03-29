@@ -29,7 +29,7 @@ describe('createBuffer', () => {
     'string with nested',
     () => {
       for (let i = 0; i < 10; i += 1) {
-        if (i % 3 === 0) {
+        if (!(i % 3)) {
           stringNestedBuffer.push('hello')
         } else {
           const buffer = createBuffer()
@@ -49,7 +49,7 @@ describe('createBuffer', () => {
     'string with nested async',
     () => {
       for (let i = 0; i < 10; i += 1) {
-        if (i % 3 === 0) {
+        if (!(i % 3)) {
           const buffer = createBuffer()
           buffer.push('hello')
           stringNestedBuffer.push(Promise.resolve(buffer.getBuffer()))

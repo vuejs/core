@@ -104,7 +104,7 @@ export const transformAssetUrl: NodeTransform = (
       if (
         attr.type !== NodeTypes.ATTRIBUTE ||
         !assetAttrs.includes(attr.name) ||
-        !attr.value ||
+        attr.value === undefined ||
         isExternalUrl(attr.value.content) ||
         isDataUrl(attr.value.content) ||
         attr.value.content[0] === '#' ||

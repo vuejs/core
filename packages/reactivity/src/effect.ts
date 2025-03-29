@@ -401,7 +401,7 @@ export function refreshComputed(computed: ComputedRefImpl): undefined {
   try {
     prepareDeps(computed)
     const value = computed.fn(computed._value)
-    if (dep.version === 0 || hasChanged(value, computed._value)) {
+    if (!dep.version || hasChanged(value, computed._value)) {
       computed._value = value
       dep.version++
     }
@@ -435,7 +435,7 @@ function removeSub(link: Link, soft = false) {
     // was previous tail, point new tail to prev
     dep.subs = prevSub
 
-    if (!prevSub && dep.computed) {
+    if (prevSub === undefined && dep.computed) {
       // if computed, unsubscribe it from all its deps so this computed and its
       // value can be GCed
       dep.computed.flags &= ~EffectFlags.TRACKING

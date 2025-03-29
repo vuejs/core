@@ -270,7 +270,7 @@ export class VueElement
       }
     }
 
-    if (!(this._def as ComponentOptions).__asyncLoader) {
+    if ((this._def as ComponentOptions).__asyncLoader === undefined) {
       // for sync component defs we can immediately resolve props
       this._resolveProps(this._def)
     }
@@ -280,7 +280,7 @@ export class VueElement
     // avoid resolving component if it's not connected
     if (!this.isConnected) return
 
-    if (!this.shadowRoot) {
+    if (this.shadowRoot === null) {
       this._parseSlots()
     }
     this._connected = true
@@ -296,7 +296,7 @@ export class VueElement
       }
     }
 
-    if (!this._instance) {
+    if (this._instance === null) {
       if (this._resolved) {
         this._setParent()
         this._update()
@@ -425,7 +425,7 @@ export class VueElement
 
     // apply expose after mount
     const exposed = this._instance && this._instance.exposed
-    if (!exposed) return
+    if (exposed === null) return
     for (const key in exposed) {
       if (!hasOwn(this, key)) {
         // exposed properties are readonly
@@ -525,12 +525,12 @@ export class VueElement
 
   private _createVNode(): VNode<any, any> {
     const baseProps: VNodeProps = {}
-    if (!this.shadowRoot) {
+    if (this.shadowRoot === null) {
       baseProps.onVnodeMounted = baseProps.onVnodeUpdated =
         this._renderSlots.bind(this)
     }
     const vnode = createVNode(this._def, extend(baseProps, this._props))
-    if (!this._instance) {
+    if (this._instance === null) {
       vnode.ce = instance => {
         this._instance = instance
         instance.ce = this
@@ -580,7 +580,7 @@ export class VueElement
     styles: string[] | undefined,
     owner?: ConcreteComponent,
   ) {
-    if (!styles) return
+    if (styles === undefined) return
     if (owner) {
       if (owner === this._def || this._styleChildren.has(owner)) {
         return
@@ -597,9 +597,9 @@ export class VueElement
       if (__DEV__) {
         if (owner) {
           if (owner.__hmrId) {
-            if (!this._childStyles) this._childStyles = new Map()
+            if (this._childStyles === undefined) this._childStyles = new Map()
             let entry = this._childStyles.get(owner.__hmrId)
-            if (!entry) {
+            if (entry === undefined) {
               this._childStyles.set(owner.__hmrId, (entry = []))
             }
             entry.push(s)
@@ -688,7 +688,7 @@ export function useHost(caller?: string): VueElement | null {
   if (el) {
     return el
   } else if (__DEV__) {
-    if (!instance) {
+    if (instance === null) {
       warn(
         `${caller || 'useHost'} called without an active component instance.`,
       )

@@ -40,7 +40,7 @@ export interface AsyncComponentOptions<T = any> {
 }
 
 export const isAsyncWrapper = (i: ComponentInternalInstance | VNode): boolean =>
-  !!(i.type as ComponentOptions).__asyncLoader
+  (i.type as ComponentOptions).__asyncLoader !== undefined
 
 /*! #__NO_SIDE_EFFECTS__ */
 export function defineAsyncComponent<

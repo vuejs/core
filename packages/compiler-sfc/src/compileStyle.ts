@@ -223,7 +223,10 @@ function preprocess(
   options: SFCStyleCompileOptions,
   preprocessor: StylePreprocessor,
 ): StylePreprocessorResults {
-  if ((__ESM_BROWSER__ || __GLOBAL__) && !options.preprocessCustomRequire) {
+  if (
+    (__ESM_BROWSER__ || __GLOBAL__) &&
+    options.preprocessCustomRequire === undefined
+  ) {
     throw new Error(
       `[@vue/compiler-sfc] Style preprocessing in the browser build must ` +
         `provide the \`preprocessCustomRequire\` option to return the in-browser ` +

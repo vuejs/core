@@ -740,7 +740,7 @@ export function createHydrationFunctions(
       if (node && isComment(node)) {
         if (node.data === open) match++
         if (node.data === close) {
-          if (match === 0) {
+          if (!match) {
             return nextSibling(node)
           } else {
             match--

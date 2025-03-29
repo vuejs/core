@@ -65,7 +65,7 @@ export function ssrProcessSuspense(
 ): void {
   // complete wip slots with ssr code
   const wipEntry = wipMap.get(node)
-  if (!wipEntry) {
+  if (wipEntry === undefined) {
     return
   }
   const { slotsExp, wipSlots } = wipEntry

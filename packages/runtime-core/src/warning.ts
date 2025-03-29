@@ -111,7 +111,7 @@ export function getComponentTrace(): ComponentTraceStack {
 function formatTrace(trace: ComponentTraceStack): any[] {
   const logs: any[] = []
   trace.forEach((entry, i) => {
-    logs.push(...(i === 0 ? [] : [`\n`]), ...formatTraceEntry(entry))
+    logs.push(...(!i ? [] : [`\n`]), ...formatTraceEntry(entry))
   })
   return logs
 }

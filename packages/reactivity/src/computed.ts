@@ -107,7 +107,7 @@ export class ComputedRefImpl<T = any> implements Subscriber {
     private readonly setter: ComputedSetter<T> | undefined,
     isSSR: boolean,
   ) {
-    this[ReactiveFlags.IS_READONLY] = !setter
+    this[ReactiveFlags.IS_READONLY] = setter === undefined
     this.isSSR = isSSR
   }
 

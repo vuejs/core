@@ -112,7 +112,7 @@ export function queueJob(job: SchedulerJob): void {
 }
 
 function queueFlush() {
-  if (!currentFlushPromise) {
+  if (currentFlushPromise === null) {
     currentFlushPromise = resolvedPromise.then(flushJobs)
   }
 }

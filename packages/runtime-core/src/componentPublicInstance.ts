@@ -357,7 +357,7 @@ export type PublicPropertiesMap = Record<
 const getPublicInstance = (
   i: ComponentInternalInstance | null,
 ): ComponentPublicInstance | ComponentInternalInstance['exposed'] | null => {
-  if (!i) return null
+  if (i === null) return null
   if (isStatefulComponent(i)) return getComponentPublicInstance(i)
   return getPublicInstance(i.parent)
 }

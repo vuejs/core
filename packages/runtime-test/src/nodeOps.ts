@@ -221,7 +221,7 @@ function parentNode(node: TestNode): TestElement | null {
 
 function nextSibling(node: TestNode): TestNode | null {
   const parent = node.parentNode
-  if (!parent) {
+  if (parent === null) {
     return null
   }
   const i = parent.children.indexOf(node)

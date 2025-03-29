@@ -145,7 +145,7 @@ function doWatch(
 ): WatchHandle {
   const { immediate, deep, flush, once } = options
 
-  if (__DEV__ && !cb) {
+  if (__DEV__ && cb === null) {
     if (immediate !== undefined) {
       warn(
         `watch() "immediate" option is only respected when using the ` +
@@ -171,7 +171,7 @@ function doWatch(
   if (__DEV__) baseWatchOptions.onWarn = warn
 
   // immediate watcher or watchEffect
-  const runsImmediately = (cb && immediate) || (!cb && flush !== 'post')
+  const runsImmediately = (cb && immediate) || (cb === null && flush !== 'post')
   let ssrCleanup: (() => void)[] | undefined
   if (__SSR__ && isInSSRComponentSetup) {
     if (flush === 'sync') {

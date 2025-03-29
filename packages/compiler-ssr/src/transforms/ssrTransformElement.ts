@@ -112,7 +112,10 @@ export const ssrTransformElement: NodeTransform = (node, context) => {
             | undefined
           // If interpolation, this is dynamic <textarea> content, potentially
           // injected by v-model and takes higher priority than v-bind value
-          if (!existingText || existingText.type !== NodeTypes.INTERPOLATION) {
+          if (
+            existingText === undefined ||
+            existingText.type !== NodeTypes.INTERPOLATION
+          ) {
             // <textarea> with dynamic v-bind. We don't know if the final props
             // will contain .value, so we will have to do something special:
             // assign the merged props to a temp variable, and check whether
@@ -167,7 +170,7 @@ export const ssrTransformElement: NodeTransform = (node, context) => {
         } else if (directives.length && !node.children.length) {
           // v-text directive has higher priority than the merged props
           const vText = findDir(node, 'text')
-          if (!vText) {
+          if (vText === undefined) {
             const tempId = `_temp${context.temps++}`
             propsExp.arguments = [
               createAssignmentExpression(
