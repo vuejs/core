@@ -49,7 +49,7 @@
     "@vue/shared": "workspace:*",
     "estree-walker": "catalog:",
     "magic-string": "catalog:",
-    "postcss": "^8.5.1",
+    "postcss": "^8.5.3",
     "source-map-js": "catalog:"
   },
   "devDependencies": {
@@ -60,8 +60,8 @@
     "merge-source-map": "^1.1.0",
     "minimatch": "~10.0.1",
     "postcss-modules": "^6.0.1",
-    "postcss-selector-parser": "^7.0.0",
+    "postcss-selector-parser": "^7.1.0",
     "pug": "^3.0.3",
-    "sass": "^1.85.0"
+    "sass": "^1.86.0"
   }
 }
