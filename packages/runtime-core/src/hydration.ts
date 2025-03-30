@@ -532,14 +532,12 @@ export function createHydrationFunctions(
       if (dirs) {
         invokeDirectiveHook(vnode, null, parentComponent, 'beforeMount')
       }
-      if (
-        (vnodeHooks = props && props.onVnodeMounted) ||
-        dirs ||
-        needCallTransitionHooks
-      ) {
+      if (needCallTransitionHooks) {
+        transition!.enter(el)
+      }
+      if ((vnodeHooks = props && props.onVnodeMounted) || dirs) {
         queueEffectWithSuspense(() => {
           vnodeHooks && invokeVNodeHook(vnodeHooks, parentComponent, vnode)
-          needCallTransitionHooks && transition!.enter(el)
           dirs && invokeDirectiveHook(vnode, null, parentComponent, 'mounted')
         }, parentSuspense)
       }
