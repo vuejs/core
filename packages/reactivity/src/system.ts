@@ -192,6 +192,8 @@ export function updateDirtyFlag(
   if (checkDirty(sub.deps!)) {
     sub.flags = flags | SubscriberFlags.Dirty
     return true
+  } else if (sub.flags & SubscriberFlags.Dirty) {
+    return true
   } else {
     sub.flags = flags & ~SubscriberFlags.PendingComputed
     return false
@@ -202,7 +204,11 @@ export function processComputedUpdate(
   computed: Computed,
   flags: SubscriberFlags,
 ): void {
-  if (flags & SubscriberFlags.Dirty || checkDirty(computed.deps!)) {
+  if (
+    flags & SubscriberFlags.Dirty ||
+    checkDirty(computed.deps!) ||
+    computed.flags & SubscriberFlags.Dirty
+  ) {
     if (computed.update()) {
       const subs = computed.subs
       if (subs !== undefined) {
