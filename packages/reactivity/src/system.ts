@@ -1,5 +1,5 @@
 /* eslint-disable */
-// Ported from https://github.com/stackblitz/alien-signals/blob/v1.0.10/src/system.ts
+// Ported from https://github.com/stackblitz/alien-signals/blob/v1.0.11/src/system.ts
 import type { ComputedRefImpl as Computed } from './computed.js'
 import type { ReactiveEffect as Effect } from './effect.js'
 
