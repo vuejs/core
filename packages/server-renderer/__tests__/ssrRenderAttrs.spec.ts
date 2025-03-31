@@ -55,6 +55,15 @@ describe('ssr: renderAttrs', () => {
     ).toBe(` checked disabled`) // boolean attr w/ false should be ignored
   })
 
+  test('combined boolean/string attribute', () => {
+    expect(ssrRenderAttrs({ hidden: true })).toBe(` hidden`)
+    expect(ssrRenderAttrs({ disabled: true, hidden: false })).toBe(` disabled`)
+    expect(ssrRenderAttrs({ hidden: 'until-found' })).toBe(
+      ` hidden="until-found"`,
+    )
+    expect(ssrRenderAttrs({ hidden: '' })).toBe(` hidden`)
+  })
+
   test('ignore falsy values', () => {
     expect(
       ssrRenderAttrs({
@@ -121,6 +130,13 @@ describe('ssr: renderAttr', () => {
     expect(ssrRenderAttr('foo', '<script>')).toBe(
       ` foo="${escapeHtml(`<script>`)}"`,
     )
+  })
+
+  test('combined boolean/string attribute', () => {
+    expect(ssrRenderAttr('hidden', true)).toBe(` hidden`)
+    expect(ssrRenderAttr('hidden', false)).toBe('')
+    expect(ssrRenderAttr('hidden', 'until-found')).toBe(` hidden="until-found"`)
+    expect(ssrRenderAttr('hidden', '')).toBe(` hidden`)
   })
 })
 

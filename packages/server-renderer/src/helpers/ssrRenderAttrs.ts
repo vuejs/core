@@ -2,6 +2,8 @@ import {
   escapeHtml,
   isArray,
   isObject,
+  isBooleanAttrValue,
+  isOverloadedBooleanAttr,
   isRenderableAttrValue,
   isSVGTag,
   stringifyStyle,
@@ -72,7 +74,10 @@ export function ssrRenderDynamicAttr(
     tag && (tag.indexOf('-') > 0 || isSVGTag(tag))
       ? key // preserve raw name on custom elements and svg
       : propsToAttrMap[key] || key.toLowerCase()
-  if (isBooleanAttr(attrKey)) {
+  if (
+    isBooleanAttr(attrKey) ||
+    (isOverloadedBooleanAttr(attrKey) && isBooleanAttrValue(value))
+  ) {
     return includeBooleanAttr(value) ? ` ${attrKey}` : ``
   } else if (isSSRSafeAttrName(attrKey)) {
     return value === '' ? ` ${attrKey}` : ` ${attrKey}="${escapeHtml(value)}"`
@@ -89,6 +94,9 @@ export function ssrRenderDynamicAttr(
 export function ssrRenderAttr(key: string, value: unknown): string {
   if (!isRenderableAttrValue(value)) {
     return ``
+  }
+  if (isOverloadedBooleanAttr(key) && isBooleanAttrValue(value)) {
+    return includeBooleanAttr(value) ? ` ${key}` : ``
   }
   return ` ${key}="${escapeHtml(value)}"`
 }
