@@ -2086,6 +2086,24 @@ describe('SSR hydration', () => {
       expect(`Hydration attribute mismatch`).not.toHaveBeenWarned()
     })
 
+    test('combined boolean/string attribute', () => {
+      mountWithHydration(`<div></div>`, () => h('div', { hidden: false }))
+      expect(`Hydration attribute mismatch`).not.toHaveBeenWarned()
+
+      mountWithHydration(`<div hidden></div>`, () => h('div', { hidden: true }))
+      expect(`Hydration attribute mismatch`).not.toHaveBeenWarned()
+
+      mountWithHydration(`<div hidden="until-found"></div>`, () =>
+        h('div', { hidden: 'until-found' }),
+      )
+      expect(`Hydration attribute mismatch`).not.toHaveBeenWarned()
+
+      mountWithHydration(`<div hidden=""></div>`, () =>
+        h('div', { hidden: true }),
+      )
+      expect(`Hydration attribute mismatch`).not.toHaveBeenWarned()
+    })
+
     test('client value is null or undefined', () => {
       mountWithHydration(`<div></div>`, () =>
         h('div', { draggable: undefined }),
