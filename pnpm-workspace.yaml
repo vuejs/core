@@ -8,5 +8,5 @@ catalog:
   'estree-walker': ^2.0.2
   'magic-string': ^0.30.17
   'source-map-js': ^1.2.1
-  'vite': ^5.4.14
+  'vite': ^5.4.15
   '@vitejs/plugin-vue': ^5.2.3
