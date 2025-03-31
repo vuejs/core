@@ -294,6 +294,9 @@ function checkDirty(current: Link): boolean {
       }
     }
 
+    if (!dirty && current.sub.flags & SubscriberFlags.Dirty) {
+      dirty = true
+    }
     if (!dirty && current.nextDep !== undefined) {
       current = current.nextDep
       continue
@@ -303,6 +306,9 @@ function checkDirty(current: Link): boolean {
       --checkDepth
       const sub = current.sub as Computed
       const firstSub = sub.subs!
+      if (!dirty && sub.flags & SubscriberFlags.Dirty) {
+        dirty = true
+      }
       if (dirty) {
         if (sub.update()) {
           if (firstSub.nextSub !== undefined) {
@@ -327,7 +333,7 @@ function checkDirty(current: Link): boolean {
         current = current.nextDep
         continue top
       }
-      dirty = !!(sub.flags & SubscriberFlags.Dirty)
+      dirty = false
     }
 
     return dirty || !!(current.sub.flags & SubscriberFlags.Dirty)
