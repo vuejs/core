@@ -267,7 +267,9 @@ function checkDirty(current: Link): boolean {
     dirty = false
     const dep = current.dep
 
-    if ('flags' in dep) {
+    if (current.sub.flags & SubscriberFlags.Dirty) {
+      dirty = true
+    } else if ('flags' in dep) {
       const depFlags = dep.flags
       if (
         (depFlags & (SubscriberFlags.Computed | SubscriberFlags.Dirty)) ===
@@ -294,9 +296,6 @@ function checkDirty(current: Link): boolean {
       }
     }
 
-    if (!dirty && current.sub.flags & SubscriberFlags.Dirty) {
-      dirty = true
-    }
     if (!dirty && current.nextDep !== undefined) {
       current = current.nextDep
       continue
@@ -306,9 +305,6 @@ function checkDirty(current: Link): boolean {
       --checkDepth
       const sub = current.sub as Computed
       const firstSub = sub.subs!
-      if (!dirty && sub.flags & SubscriberFlags.Dirty) {
-        dirty = true
-      }
       if (dirty) {
         if (sub.update()) {
           if (firstSub.nextSub !== undefined) {
@@ -336,7 +332,7 @@ function checkDirty(current: Link): boolean {
       dirty = false
     }
 
-    return dirty || !!(current.sub.flags & SubscriberFlags.Dirty)
+    return dirty
   } while (true)
 }
 
