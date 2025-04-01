@@ -224,6 +224,36 @@ export function render(_ctx) {
 }"
 `;
 
+exports[`compiler: element transform > component event with keys modifier 1`] = `
+"import { resolveComponent as _resolveComponent, withKeys as _withKeys, createComponentWithFallback as _createComponentWithFallback } from 'vue';
+
+export function render(_ctx) {
+  const _component_Foo = _resolveComponent("Foo")
+  const n0 = _createComponentWithFallback(_component_Foo, { onKeyup: () => _withKeys(_ctx.bar, ["enter"]) }, null, true)
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > component event with multiple modifiers and event options 1`] = `
+"import { resolveComponent as _resolveComponent, withModifiers as _withModifiers, withKeys as _withKeys, createComponentWithFallback as _createComponentWithFallback } from 'vue';
+
+export function render(_ctx) {
+  const _component_Foo = _resolveComponent("Foo")
+  const n0 = _createComponentWithFallback(_component_Foo, { onFooCaptureOnce: () => _withKeys(_withModifiers(_ctx.bar, ["stop","prevent"]), ["enter"]) }, null, true)
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > component event with nonKeys modifier 1`] = `
+"import { resolveComponent as _resolveComponent, withModifiers as _withModifiers, createComponentWithFallback as _createComponentWithFallback } from 'vue';
+
+export function render(_ctx) {
+  const _component_Foo = _resolveComponent("Foo")
+  const n0 = _createComponentWithFallback(_component_Foo, { onFoo: () => _withModifiers(_ctx.bar, ["stop","prevent"]) }, null, true)
+  return n0
+}"
+`;
+
 exports[`compiler: element transform > component event with once modifier 1`] = `
 "import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback } from 'vue';
 
