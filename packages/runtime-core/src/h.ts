@@ -75,8 +75,14 @@ interface Constructor<P = any> {
   new (...args: any[]): { $props: P }
 }
 
+type CombineModifiers<T extends string, U extends string = T> = T extends any
+  ? T | `${T}${CombineModifiers<Exclude<U, T>>}`
+  : never
+
+type EventModifiers = CombineModifiers<'Capture' | 'Once' | 'Passive'> | ''
+
 type HTMLElementEventHandler = {
-  [K in keyof HTMLElementEventMap as `on${Capitalize<K>}`]?: (
+  [K in keyof HTMLElementEventMap as `on${Capitalize<K>}${EventModifiers}`]?: (
     ev: HTMLElementEventMap[K],
   ) => any
 }
