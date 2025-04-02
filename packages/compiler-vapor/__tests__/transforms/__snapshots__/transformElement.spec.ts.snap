@@ -178,6 +178,19 @@ export function render(_ctx) {
 }"
 `;
 
+exports[`compiler: element transform > component > v-for on component should not mark as single root 1`] = `
+"import { resolveComponent as _resolveComponent, setInsertionState as _setInsertionState, createComponentWithFallback as _createComponentWithFallback, template as _template } from 'vue';
+const t0 = _template("<template></template>", true)
+
+export function render(_ctx) {
+  const _component_Comp = _resolveComponent("Comp")
+  const n1 = t0()
+  _setInsertionState(n1)
+  const n0 = _createComponentWithFallback(_component_Comp)
+  return n1
+}"
+`;
+
 exports[`compiler: element transform > component > v-on expression is a function call 1`] = `
 "import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback } from 'vue';
 

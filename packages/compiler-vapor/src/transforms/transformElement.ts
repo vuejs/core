@@ -123,6 +123,10 @@ function transformComponentElement(
     }
   }
 
+  const hasVFor = node.props.some(
+    p => p.type === NodeTypes.DIRECTIVE && p.name === 'for',
+  )
+
   context.dynamic.flags |= DynamicFlag.NON_TEMPLATE | DynamicFlag.INSERT
   context.dynamic.operation = {
     type: IRNodeTypes.CREATE_COMPONENT_NODE,
@@ -130,7 +134,7 @@ function transformComponentElement(
     tag,
     props: propsResult[0] ? propsResult[1] : [propsResult[1]],
     asset,
-    root: singleRoot,
+    root: singleRoot && !hasVFor,
     slots: [...context.slots],
     once: context.inVOnce,
     dynamic: dynamicComponent,

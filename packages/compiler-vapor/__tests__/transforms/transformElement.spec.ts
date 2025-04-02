@@ -169,6 +169,16 @@ describe('compiler: element transform', () => {
       expect(code).contains('_createComponent(_ctx.Comp)')
     })
 
+    test('v-for on component should not mark as single root', () => {
+      const { code } = compileWithElementTransform(
+        `<Comp v-for="item in items" :key="item"/>`,
+        {
+          bindingMetadata: { Comp: BindingTypes.SETUP_CONST },
+        },
+      )
+      expect(code).not.contains('_createComponent(_ctx.Comp, null, null, true)')
+    })
+
     test('static props', () => {
       const { code, ir } = compileWithElementTransform(
         `<Foo id="foo" class="bar" />`,
