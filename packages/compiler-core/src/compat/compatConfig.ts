@@ -41,7 +41,7 @@ const deprecationData: Record<CompilerDeprecationTypes, DeprecationData> = {
   [CompilerDeprecationTypes.COMPILER_V_BIND_SYNC]: {
     message: key =>
       `.sync modifier for v-bind has been removed. Use v-model with ` +
-      `argument instead. \`v-bind:${key}.sync\` should be changed to ` +
+      `argument instead. \`v-bind:${key}\` should be changed to ` +
       `\`v-model:${key}\`.`,
     link: `https://v3-migration.vuejs.org/breaking-changes/v-model.html`,
   },
