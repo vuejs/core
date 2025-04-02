@@ -5,9 +5,12 @@ import {
   mountComponent,
   unmountComponent,
 } from './component'
-import { createComment, createTextNode } from './dom/node'
-import { EffectScope, pauseTracking, resetTracking } from '@vue/reactivity'
 import { isHydrating } from './dom/hydration'
+import {
+  type DynamicFragment,
+  type VaporFragment,
+  isFragment,
+} from './fragment'
 
 export type Block =
   | Node
@@ -17,69 +20,6 @@ export type Block =
   | Block[]
 
 export type BlockFn = (...args: any[]) => Block
-
-export class VaporFragment {
-  nodes: Block
-  anchor?: Node
-  insert?: (parent: ParentNode, anchor: Node | null) => void
-  remove?: (parent?: ParentNode) => void
-
-  constructor(nodes: Block) {
-    this.nodes = nodes
-  }
-}
-
-export class DynamicFragment extends VaporFragment {
-  anchor: Node
-  scope: EffectScope | undefined
-  current?: BlockFn
-  fallback?: BlockFn
-
-  constructor(anchorLabel?: string) {
-    super([])
-    this.anchor =
-      __DEV__ && anchorLabel ? createComment(anchorLabel) : createTextNode()
-  }
-
-  update(render?: BlockFn, key: any = render): void {
-    if (key === this.current) {
-      return
-    }
-    this.current = key
-
-    pauseTracking()
-    const parent = this.anchor.parentNode
-
-    // teardown previous branch
-    if (this.scope) {
-      this.scope.stop()
-      parent && remove(this.nodes, parent)
-    }
-
-    if (render) {
-      this.scope = new EffectScope()
-      this.nodes = this.scope.run(render) || []
-      if (parent) insert(this.nodes, parent, this.anchor)
-    } else {
-      this.scope = undefined
-      this.nodes = []
-    }
-
-    if (this.fallback && !isValidBlock(this.nodes)) {
-      parent && remove(this.nodes, parent)
-      this.nodes =
-        (this.scope || (this.scope = new EffectScope())).run(this.fallback) ||
-        []
-      parent && insert(this.nodes, parent, this.anchor)
-    }
-
-    resetTracking()
-  }
-}
-
-export function isFragment(val: NonNullable<unknown>): val is VaporFragment {
-  return val instanceof VaporFragment
-}
 
 export function isBlock(val: NonNullable<unknown>): val is Block {
   return (
@@ -129,7 +69,7 @@ export function insert(
       // TODO handle hydration for vdom interop
       block.insert(parent, anchor)
     } else {
-      insert(block.nodes, parent, anchor)
+      insert(block.nodes, block.target || parent, block.targetAnchor || anchor)
     }
     if (block.anchor) insert(block.anchor, parent, anchor)
   }
@@ -182,7 +122,11 @@ export function normalizeBlock(block: Block): Node[] {
   } else if (isVaporComponent(block)) {
     nodes.push(...normalizeBlock(block.block!))
   } else {
-    nodes.push(...normalizeBlock(block.nodes))
+    if (block.getNodes) {
+      nodes.push(...normalizeBlock(block.getNodes()))
+    } else {
+      nodes.push(...normalizeBlock(block.nodes))
+    }
     block.anchor && nodes.push(block.anchor)
   }
   return nodes
