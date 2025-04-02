@@ -2,6 +2,7 @@ import { type VNode, type VNodeChild, isVNode } from './vnode'
 import {
   EffectScope,
   type ReactiveEffect,
+  type ShallowRef,
   TrackOpTypes,
   isRef,
   markRaw,
@@ -460,6 +461,12 @@ export interface ComponentInternalInstance {
   slots: InternalSlots
   refs: Data
   emit: EmitFn
+
+  /**
+   * used for caching useTemplateRef results
+   * @internal
+   */
+  refsCache?: Map<string, ShallowRef>
 
   /**
    * used for keeping track of .once event handlers on components
