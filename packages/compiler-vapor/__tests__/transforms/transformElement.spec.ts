@@ -6,6 +6,7 @@ import {
   transformElement,
   transformText,
   transformVBind,
+  transformVFor,
   transformVOn,
 } from '../../src'
 import {
@@ -15,7 +16,12 @@ import {
 } from '@vue/compiler-core'
 
 const compileWithElementTransform = makeCompile({
-  nodeTransforms: [transformElement, transformChildren, transformText],
+  nodeTransforms: [
+    transformElement,
+    transformChildren,
+    transformText,
+    transformVFor,
+  ],
   directiveTransforms: {
     bind: transformVBind,
     on: transformVOn,
