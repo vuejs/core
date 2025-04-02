@@ -85,7 +85,7 @@ import { initFeatureFlags } from './featureFlags'
 import { isAsyncWrapper } from './apiAsyncComponent'
 import { isCompatEnabled } from './compat/compatConfig'
 import { DeprecationTypes } from './compat/compatConfig'
-import type { TransitionHooks } from './components/BaseTransition'
+import { type TransitionHooks, leaveCbKey } from './components/BaseTransition'
 
 export interface Renderer<HostElement = RendererElement> {
   render: RootRenderFunction<HostElement>
@@ -2057,6 +2057,9 @@ function baseCreateRenderer(
           }
         }
         const performLeave = () => {
+          if (el!._isLeaving) {
+            el![leaveCbKey](true /* cancelled */)
+          }
           leave(el!, () => {
             remove()
             afterLeave && afterLeave()
