@@ -41,8 +41,8 @@ const _hoisted_1 = _imports_0 + '#fragment'
 
 export function render(_ctx, _cache) {
   return (_openBlock(), _createElementBlock(_Fragment, null, [
-    _cache[0] || (_cache[0] = _createElementVNode("use", { href: _hoisted_1 }, null, -1 /* HOISTED */)),
-    _cache[1] || (_cache[1] = _createElementVNode("use", { href: _hoisted_1 }, null, -1 /* HOISTED */))
+    _cache[0] || (_cache[0] = _createElementVNode("use", { href: _hoisted_1 }, null, -1 /* CACHED */)),
+    _cache[1] || (_cache[1] = _createElementVNode("use", { href: _hoisted_1 }, null, -1 /* CACHED */))
   ], 64 /* STABLE_FRAGMENT */))
 }"
 `;
