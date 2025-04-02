@@ -182,6 +182,7 @@ function doWatch(
       watchStopHandle.stop = NOOP
       watchStopHandle.resume = NOOP
       watchStopHandle.pause = NOOP
+      watchStopHandle.start = NOOP
       return watchStopHandle
     }
   }
