@@ -388,7 +388,7 @@ const tokenizer = new Tokenizer(stack, {
               CompilerDeprecationTypes.COMPILER_V_BIND_SYNC,
               currentOptions,
               currentProp.loc,
-              (currentProp.arg as SimpleExpressionNode).content,
+              currentProp.arg!.loc.source,
             )
           ) {
             currentProp.name = 'model'
