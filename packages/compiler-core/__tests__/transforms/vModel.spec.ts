@@ -394,6 +394,42 @@ describe('compiler: transform v-model', () => {
     expect(generate(root, { mode: 'module' }).code).toMatchSnapshot()
   })
 
+  test('no expression', () => {
+    const root = parseWithVModel('<input v-model:foo-value />')
+    const node = root.children[0] as ElementNode
+    const props = ((node.codegenNode as VNodeCall).props as ObjectExpression)
+      .properties
+    expect(props[0]).toMatchObject({
+      key: {
+        content: 'foo-value',
+        isStatic: true,
+      },
+      value: {
+        content: 'fooValue',
+        isStatic: false,
+      },
+    })
+
+    expect(props[1]).toMatchObject({
+      key: {
+        content: 'onUpdate:fooValue',
+        isStatic: true,
+      },
+      value: {
+        children: [
+          '$event => ((',
+          {
+            content: 'fooValue',
+            isStatic: false,
+          },
+          ') = $event)',
+        ],
+      },
+    })
+
+    expect(generate(root).code).toMatchSnapshot()
+  })
+
   test('should cache update handler w/ cacheHandlers: true', () => {
     const root = parseWithVModel('<input v-model="foo" />', {
       prefixIdentifiers: true,
@@ -508,14 +544,26 @@ describe('compiler: transform v-model', () => {
   })
 
   describe('errors', () => {
-    test('missing expression', () => {
+    test('missing argument and expression', () => {
       const onError = vi.fn()
       parseWithVModel('<span v-model />', { onError })
 
       expect(onError).toHaveBeenCalledTimes(1)
       expect(onError).toHaveBeenCalledWith(
         expect.objectContaining({
-          code: ErrorCodes.X_V_MODEL_NO_EXPRESSION,
+          code: ErrorCodes.X_V_MODEL_NO_ARGUMENT_AND_EXPRESSION,
+        }),
+      )
+    })
+
+    test('invalid argument for same-name shorthand', () => {
+      const onError = vi.fn()
+      parseWithVModel(`<div v-model:[arg] />`, { onError })
+
+      expect(onError).toHaveBeenCalledTimes(1)
+      expect(onError).toHaveBeenCalledWith(
+        expect.objectContaining({
+          code: ErrorCodes.X_V_MODEL_INVALID_SAME_NAME_ARGUMENT,
         }),
       )
     })
