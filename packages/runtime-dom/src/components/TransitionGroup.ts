@@ -29,8 +29,13 @@ import {
 } from '@vue/runtime-core'
 import { extend } from '@vue/shared'
 
-const positionMap = new WeakMap<VNode, DOMRect>()
-const newPositionMap = new WeakMap<VNode, DOMRect>()
+interface Position {
+  left: number
+  top: number
+}
+
+const positionMap = new WeakMap<VNode, Position>()
+const newPositionMap = new WeakMap<VNode, Position>()
 const moveCbKey = Symbol('_moveCb')
 const enterCbKey = Symbol('_enterCb')
 
@@ -143,10 +148,7 @@ const TransitionGroupImpl: ComponentOptions = /*@__PURE__*/ decorate({
                 instance,
               ),
             )
-            positionMap.set(
-              child,
-              (child.el as Element).getBoundingClientRect(),
-            )
+            positionMap.set(child, getRelativePosition(child.el as Element))
           }
         }
       }
@@ -186,8 +188,24 @@ function callPendingCbs(c: VNode) {
   }
 }
 
+function getRelativePosition(el: Element): Position {
+  const elRect = el.getBoundingClientRect()
+  if (!el.parentElement) {
+    return {
+      left: elRect.left,
+      top: elRect.top,
+    }
+  }
+
+  const parentRect = el.parentElement.getBoundingClientRect()
+  return {
+    left: elRect.left - parentRect.left,
+    top: elRect.top - parentRect.top,
+  }
+}
+
 function recordPosition(c: VNode) {
-  newPositionMap.set(c, (c.el as Element).getBoundingClientRect())
+  newPositionMap.set(c, getRelativePosition(c.el as Element))
 }
 
 function applyTranslation(c: VNode): VNode | undefined {
