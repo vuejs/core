@@ -291,7 +291,8 @@ export function transformDestructuredProps(
       parent && parentStack.pop()
       if (
         (node.type === 'BlockStatement' && !isFunctionType(parent!)) ||
-        isFunctionType(node)
+        isFunctionType(node) ||
+        node.type === 'CatchClause'
       ) {
         popScope()
       }
