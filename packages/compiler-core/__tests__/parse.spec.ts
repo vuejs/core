@@ -446,6 +446,16 @@ describe('compiler: parse', () => {
         type: NodeTypes.ELEMENT,
         ns: Namespaces.HTML,
         tag: 'div',
+        tagLoc: {
+          start: { offset: 1, line: 1, column: 2 },
+          end: { offset: 4, line: 1, column: 5 },
+          source: 'div',
+        },
+        closeTagLoc: {
+          start: { offset: 12, line: 1, column: 13 },
+          end: { offset: 15, line: 1, column: 16 },
+          source: 'div',
+        },
         tagType: ElementTypes.ELEMENT,
         codegenNode: undefined,
         props: [],
@@ -476,6 +486,16 @@ describe('compiler: parse', () => {
         type: NodeTypes.ELEMENT,
         ns: Namespaces.HTML,
         tag: 'div',
+        tagLoc: {
+          start: { offset: 1, line: 1, column: 2 },
+          end: { offset: 4, line: 1, column: 5 },
+          source: 'div',
+        },
+        closeTagLoc: {
+          start: { offset: 7, line: 1, column: 8 },
+          end: { offset: 10, line: 1, column: 11 },
+          source: 'div',
+        },
         tagType: ElementTypes.ELEMENT,
         codegenNode: undefined,
         props: [],
@@ -496,6 +516,11 @@ describe('compiler: parse', () => {
         type: NodeTypes.ELEMENT,
         ns: Namespaces.HTML,
         tag: 'div',
+        tagLoc: {
+          start: { offset: 1, line: 1, column: 2 },
+          end: { offset: 4, line: 1, column: 5 },
+          source: 'div',
+        },
         tagType: ElementTypes.ELEMENT,
         codegenNode: undefined,
         props: [],
@@ -519,6 +544,11 @@ describe('compiler: parse', () => {
         type: NodeTypes.ELEMENT,
         ns: Namespaces.HTML,
         tag: 'img',
+        tagLoc: {
+          start: { offset: 1, line: 1, column: 2 },
+          end: { offset: 4, line: 1, column: 5 },
+          source: 'img',
+        },
         tagType: ElementTypes.ELEMENT,
         codegenNode: undefined,
         props: [],
@@ -541,6 +571,11 @@ describe('compiler: parse', () => {
         type: NodeTypes.ELEMENT,
         ns: Namespaces.HTML,
         tag: 'img',
+        tagLoc: {
+          start: { offset: 1, line: 1, column: 2 },
+          end: { offset: 4, line: 1, column: 5 },
+          source: 'img',
+        },
         tagType: ElementTypes.ELEMENT,
         codegenNode: undefined,
         props: [],
@@ -728,6 +763,16 @@ describe('compiler: parse', () => {
         type: NodeTypes.ELEMENT,
         ns: Namespaces.HTML,
         tag: 'div',
+        tagLoc: {
+          start: { offset: 1, line: 1, column: 2 },
+          end: { offset: 4, line: 1, column: 5 },
+          source: 'div',
+        },
+        closeTagLoc: {
+          start: { offset: 10, line: 1, column: 11 },
+          end: { offset: 13, line: 1, column: 14 },
+          source: 'div',
+        },
         tagType: ElementTypes.ELEMENT,
         codegenNode: undefined,
         props: [
@@ -765,6 +810,16 @@ describe('compiler: parse', () => {
         type: NodeTypes.ELEMENT,
         ns: Namespaces.HTML,
         tag: 'div',
+        tagLoc: {
+          start: { offset: 1, line: 1, column: 2 },
+          end: { offset: 4, line: 1, column: 5 },
+          source: 'div',
+        },
+        closeTagLoc: {
+          start: { offset: 13, line: 1, column: 14 },
+          end: { offset: 16, line: 1, column: 17 },
+          source: 'div',
+        },
         tagType: ElementTypes.ELEMENT,
         codegenNode: undefined,
         props: [
@@ -810,6 +865,16 @@ describe('compiler: parse', () => {
         type: NodeTypes.ELEMENT,
         ns: Namespaces.HTML,
         tag: 'div',
+        tagLoc: {
+          start: { offset: 1, line: 1, column: 2 },
+          end: { offset: 4, line: 1, column: 5 },
+          source: 'div',
+        },
+        closeTagLoc: {
+          start: { offset: 13, line: 1, column: 14 },
+          end: { offset: 16, line: 1, column: 17 },
+          source: 'div',
+        },
         tagType: ElementTypes.ELEMENT,
         codegenNode: undefined,
         props: [
@@ -855,6 +920,16 @@ describe('compiler: parse', () => {
         type: NodeTypes.ELEMENT,
         ns: Namespaces.HTML,
         tag: 'div',
+        tagLoc: {
+          start: { offset: 1, line: 1, column: 2 },
+          end: { offset: 4, line: 1, column: 5 },
+          source: 'div',
+        },
+        closeTagLoc: {
+          start: { offset: 15, line: 1, column: 16 },
+          end: { offset: 18, line: 1, column: 19 },
+          source: 'div',
+        },
         tagType: ElementTypes.ELEMENT,
         codegenNode: undefined,
         props: [
@@ -900,6 +975,16 @@ describe('compiler: parse', () => {
         type: NodeTypes.ELEMENT,
         ns: Namespaces.HTML,
         tag: 'div',
+        tagLoc: {
+          start: { offset: 1, line: 1, column: 2 },
+          end: { offset: 4, line: 1, column: 5 },
+          source: 'div',
+        },
+        closeTagLoc: {
+          start: { offset: 15, line: 1, column: 16 },
+          end: { offset: 18, line: 1, column: 19 },
+          source: 'div',
+        },
         tagType: ElementTypes.ELEMENT,
         codegenNode: undefined,
         props: [
@@ -945,6 +1030,16 @@ describe('compiler: parse', () => {
         type: NodeTypes.ELEMENT,
         ns: Namespaces.HTML,
         tag: 'div',
+        tagLoc: {
+          start: { offset: 1, line: 1, column: 2 },
+          end: { offset: 4, line: 1, column: 5 },
+          source: 'div',
+        },
+        closeTagLoc: {
+          start: { offset: 13, line: 1, column: 14 },
+          end: { offset: 16, line: 1, column: 17 },
+          source: 'div',
+        },
         tagType: ElementTypes.ELEMENT,
         codegenNode: undefined,
         props: [
@@ -1073,6 +1168,16 @@ describe('compiler: parse', () => {
         type: NodeTypes.ELEMENT,
         ns: Namespaces.HTML,
         tag: 'div',
+        tagLoc: {
+          start: { offset: 1, line: 1, column: 2 },
+          end: { offset: 4, line: 1, column: 5 },
+          source: 'div',
+        },
+        closeTagLoc: {
+          start: { offset: 37, line: 1, column: 38 },
+          end: { offset: 40, line: 1, column: 41 },
+          source: 'div',
+        },
         tagType: ElementTypes.ELEMENT,
         codegenNode: undefined,
         props: [
@@ -1178,6 +1283,11 @@ describe('compiler: parse', () => {
 
       expect(element).toStrictEqual({
         children: [],
+        closeTagLoc: {
+          start: { column: 6, line: 3, offset: 25 },
+          end: { column: 9, line: 3, offset: 28 },
+          source: 'div',
+        },
         codegenNode: undefined,
         loc: {
           start: { column: 1, line: 1, offset: 0 },
@@ -1211,6 +1321,11 @@ describe('compiler: parse', () => {
           },
         ],
         tag: 'div',
+        tagLoc: {
+          start: { column: 2, line: 1, offset: 1 },
+          end: { column: 5, line: 1, offset: 4 },
+          source: 'div',
+        },
         tagType: ElementTypes.ELEMENT,
         type: NodeTypes.ELEMENT,
       })
