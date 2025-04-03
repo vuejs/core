@@ -58,7 +58,7 @@ export function nextTick<T = void, R = void>(
   fn?: (this: T) => R,
 ): Promise<Awaited<R>> {
   const p = currentFlushPromise || resolvedPromise
-  return fn ? p.then(this ? fn.bind(this) : fn) : p
+  return fn ? (p.then(this ? fn.bind(this) : fn) as Promise<Awaited<R>>) : p
 }
 
 // Use binary-search to find a suitable position in the queue. The queue needs
