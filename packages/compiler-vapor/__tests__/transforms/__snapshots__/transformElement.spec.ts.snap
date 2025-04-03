@@ -179,15 +179,14 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: element transform > component > v-for on component should not mark as single root 1`] = `
-"import { resolveComponent as _resolveComponent, setInsertionState as _setInsertionState, createComponentWithFallback as _createComponentWithFallback, template as _template } from 'vue';
-const t0 = _template("<template></template>", true)
+"import { createComponent as _createComponent, createFor as _createFor } from 'vue';
 
-export function render(_ctx) {
-  const _component_Comp = _resolveComponent("Comp")
-  const n1 = t0()
-  _setInsertionState(n1)
-  const n0 = _createComponentWithFallback(_component_Comp)
-  return n1
+export function render(_ctx, $props, $emit, $attrs, $slots) {
+  const n0 = _createFor(() => (_ctx.items), (_for_item0) => {
+    const n2 = _createComponent(_ctx.Comp)
+    return n2
+  }, (item) => (item), 2)
+  return n0
 }"
 `;
 

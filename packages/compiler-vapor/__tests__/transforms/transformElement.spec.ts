@@ -17,10 +17,10 @@ import {
 
 const compileWithElementTransform = makeCompile({
   nodeTransforms: [
+    transformVFor,
     transformElement,
     transformChildren,
     transformText,
-    transformVFor,
   ],
   directiveTransforms: {
     bind: transformVBind,
@@ -182,7 +182,8 @@ describe('compiler: element transform', () => {
           bindingMetadata: { Comp: BindingTypes.SETUP_CONST },
         },
       )
-      expect(code).not.contains('_createComponent(_ctx.Comp, null, null, true)')
+      expect(code).toMatchSnapshot()
+      expect(code).contains('_createComponent(_ctx.Comp)')
     })
 
     test('static props', () => {
