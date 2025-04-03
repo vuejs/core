@@ -2057,6 +2057,9 @@ function baseCreateRenderer(
           }
         }
         const performLeave = () => {
+          // #13153 move kept-alive node before v-show transition leave finishes
+          // it needs to call the leaving callback to ensure element's `display`
+          // is `none`
           if (el!._isLeaving) {
             el![leaveCbKey](true /* cancelled */)
           }
