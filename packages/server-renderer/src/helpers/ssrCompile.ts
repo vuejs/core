@@ -67,8 +67,8 @@ export function ssrCompile(
     return cached
   }
 
-  finalCompilerOptions.onError = (err: CompilerError) => {
-    if (__DEV__) {
+  if (__DEV__) {
+    const compilationErrorHandler = (err: CompilerError) => {
       const message = `[@vue/server-renderer] Template compilation error: ${err.message}`
       const codeFrame =
         err.loc &&
@@ -78,7 +78,11 @@ export function ssrCompile(
           err.loc.end.offset,
         )
       warn(codeFrame ? `${message}\n${codeFrame}` : message)
-    } else {
+    }
+    finalCompilerOptions.onWarn = compilationErrorHandler
+    finalCompilerOptions.onError = compilationErrorHandler
+  } else {
+    finalCompilerOptions.onError = (err: CompilerError) => {
       throw err
     }
   }
