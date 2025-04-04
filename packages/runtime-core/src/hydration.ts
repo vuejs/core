@@ -373,11 +373,21 @@ export function createHydrationFunctions(
     optimized: boolean,
   ) => {
     optimized = optimized || !!vnode.dynamicChildren
-    const { type, props, patchFlag, shapeFlag, dirs, transition } = vnode
+    const {
+      type,
+      dynamicProps,
+      props,
+      patchFlag,
+      shapeFlag,
+      dirs,
+      transition,
+    } = vnode
     // #4006 for form elements with non-string v-model value bindings
     // e.g. <option :value="obj">, <input type="checkbox" :true-value="1">
     // #7476 <input indeterminate>
-    const forcePatch = type === 'input' || type === 'option'
+    // #9033 force patch dynamic props when hydrating
+    // e.g. <div v-html="timestamp" /> & (let timestamp = Date.now();)
+    const forcePatch = type === 'input' || type === 'option' || dynamicProps
     // skip props & children if this is hoisted static nodes
     // #5405 in dev, always hydrate children for HMR
     if (__DEV__ || forcePatch || patchFlag !== PatchFlags.CACHED) {
@@ -500,7 +510,8 @@ export function createHydrationFunctions(
               (isOn(key) && !isReservedProp(key)) ||
               // force hydrate v-bind with .prop modifiers
               key[0] === '.' ||
-              isCustomElement
+              isCustomElement ||
+              (dynamicProps && dynamicProps.includes(key))
             ) {
               patchProp(el, key, null, props[key], undefined, parentComponent)
             }
