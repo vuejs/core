@@ -133,6 +133,29 @@ function rewriteSelector(
             selector.insertAfter(last, ss)
             last = ss
           })
+
+          // if css nesting is used, we need to insert a nesting combinator
+          // before the ::v-deep node
+          // .foo { ::v-deep(.bar) } -> .foo { &[xxxxxxx] .bar }
+          const isNestedRule = rule.parent && rule.parent.type === 'rule'
+          if (isNestedRule && n.parent) {
+            let hasNestingCombinator = false
+            let index = n.parent.index(n) - 1
+            while (index >= 0) {
+              const prev = n.parent.at(index)
+              if (!prev) break
+              if (prev.type === 'nesting') {
+                hasNestingCombinator = true
+                break
+              }
+              index--
+            }
+            if (!hasNestingCombinator) {
+              node = selectorParser.nesting()
+              selector.insertBefore(n, node)
+            }
+          }
+
           // insert a space combinator before if it doesn't already have one
           const prev = selector.at(selector.index(n) - 1)
           if (!prev || !isSpaceCombinator(prev)) {
