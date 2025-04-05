@@ -18,7 +18,7 @@ const cancelIdleCallback: Window['cancelIdleCallback'] =
  *          listeners.
  */
 export type HydrationStrategy = (
-  hydrate: () => void,
+  hydrate: (postHydrate?: () => void) => void,
   forEachElement: (cb: (el: Element) => any) => void,
 ) => (() => void) | void
 
@@ -29,7 +29,7 @@ export type HydrationStrategyFactory<Options> = (
 export const hydrateOnIdle: HydrationStrategyFactory<number> =
   (timeout = 10000) =>
   hydrate => {
-    const id = requestIdleCallback(hydrate, { timeout })
+    const id = requestIdleCallback(() => hydrate(), { timeout })
     return () => cancelIdleCallback(id)
   }
 
@@ -73,8 +73,9 @@ export const hydrateOnMediaQuery: HydrationStrategyFactory<string> =
       if (mql.matches) {
         hydrate()
       } else {
-        mql.addEventListener('change', hydrate, { once: true })
-        return () => mql.removeEventListener('change', hydrate)
+        const doHydrate = () => hydrate()
+        mql.addEventListener('change', doHydrate, { once: true })
+        return () => mql.removeEventListener('change', doHydrate)
       }
     }
   }
@@ -90,9 +91,10 @@ export const hydrateOnInteraction: HydrationStrategyFactory<
       if (!hasHydrated) {
         hasHydrated = true
         teardown()
-        hydrate()
-        // replay event
-        e.target!.dispatchEvent(new (e.constructor as any)(e.type, e))
+        hydrate(() => {
+          // replay event
+          e.target!.dispatchEvent(new (e.constructor as any)(e.type, e))
+        })
       }
     }
     const teardown = () => {

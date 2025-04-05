@@ -31,8 +31,8 @@ describe('async component hydration strategies', () => {
     expect(await page().evaluate(() => window.isHydrated)).toBe(false)
     // wait for hydration
     await page().waitForFunction(() => window.isHydrated)
-    // assert message order: hyration should happen after already queued main thread work
-    expect(messages.slice(1)).toMatchObject(['resolve', 'busy', 'hydrated'])
+    // assert message order
+    expect(messages.slice(1)).toMatchObject(['resolve', 'hydrated'])
     await assertHydrationSuccess()
   })
 
