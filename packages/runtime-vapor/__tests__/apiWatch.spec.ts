@@ -1,4 +1,5 @@
 import {
+  type EffectScope,
   currentInstance,
   effectScope,
   nextTick,
@@ -298,7 +299,7 @@ describe('apiWatch', () => {
     define(Comp).render()
     // should not record watcher in detached scope
     // the 1 is the props validation effect
-    expect(instance!.scope.effects.length).toBe(1)
+    expect(getEffectsCount(instance!.scope)).toBe(1)
   })
 
   test('watchEffect should keep running if created in a detached scope', async () => {
@@ -336,3 +337,13 @@ describe('apiWatch', () => {
     expect(countW).toBe(2)
   })
 })
+
+function getEffectsCount(scope: EffectScope): number {
+  let n = 0
+  for (let dep = scope.deps; dep !== undefined; dep = dep.nextDep) {
+    if ('notify' in dep.dep) {
+      n++
+    }
+  }
+  return n
+}

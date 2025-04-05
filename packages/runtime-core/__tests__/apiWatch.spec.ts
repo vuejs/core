@@ -25,6 +25,7 @@ import {
 } from '@vue/runtime-test'
 import {
   type DebuggerEvent,
+  type EffectScope,
   ITERATE_KEY,
   type Ref,
   type ShallowRef,
@@ -1332,16 +1333,15 @@ describe('api: watch', () => {
     render(h(Comp), nodeOps.createElement('div'))
 
     expect(instance!).toBeDefined()
-    expect(instance!.scope.effects).toBeInstanceOf(Array)
     // includes the component's own render effect AND the watcher effect
-    expect(instance!.scope.effects.length).toBe(2)
+    expect(getEffectsCount(instance!.scope)).toBe(2)
 
     _show!.value = false
 
     await nextTick()
     await nextTick()
 
-    expect(instance!.scope.effects.length).toBe(0)
+    expect(getEffectsCount(instance!.scope)).toBe(0)
   })
 
   test('this.$watch should pass `this.proxy` to watch source as the first argument ', () => {
@@ -1489,7 +1489,7 @@ describe('api: watch', () => {
     createApp(Comp).mount(root)
     // should not record watcher in detached scope and only the instance's
     // own update effect
-    expect(instance!.scope.effects.length).toBe(1)
+    expect(getEffectsCount(instance!.scope)).toBe(1)
   })
 
   test('watchEffect should keep running if created in a detached scope', async () => {
@@ -1796,9 +1796,9 @@ describe('api: watch', () => {
     }
     const root = nodeOps.createElement('div')
     createApp(Comp).mount(root)
-    expect(instance!.scope.effects.length).toBe(2)
+    expect(getEffectsCount(instance!.scope)).toBe(2)
     unwatch!()
-    expect(instance!.scope.effects.length).toBe(1)
+    expect(getEffectsCount(instance!.scope)).toBe(1)
 
     const scope = effectScope()
     scope.run(() => {
@@ -1806,14 +1806,14 @@ describe('api: watch', () => {
         console.log(num.value)
       })
     })
-    expect(scope.effects.length).toBe(1)
+    expect(getEffectsCount(scope)).toBe(1)
     unwatch!()
-    expect(scope.effects.length).toBe(0)
+    expect(getEffectsCount(scope)).toBe(0)
 
     scope.run(() => {
       watch(num, () => {}, { once: true, immediate: true })
     })
-    expect(scope.effects.length).toBe(0)
+    expect(getEffectsCount(scope)).toBe(0)
   })
 
   // simplified case of VueUse syncRef
@@ -2011,3 +2011,13 @@ describe('api: watch', () => {
     expect(onCleanup).toBeCalledTimes(0)
   })
 })
+
+function getEffectsCount(scope: EffectScope): number {
+  let n = 0
+  for (let dep = scope.deps; dep !== undefined; dep = dep.nextDep) {
+    if ('notify' in dep.dep) {
+      n++
+    }
+  }
+  return n
+}

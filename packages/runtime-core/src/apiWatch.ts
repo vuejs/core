@@ -203,7 +203,7 @@ function doWatch(
       if (isFirstRun) {
         job()
       } else {
-        queueJob(job)
+        queueJob(job, true)
       }
     }
   }
@@ -214,12 +214,9 @@ function doWatch(
     if (cb) {
       job.flags! |= SchedulerJobFlags.ALLOW_RECURSE
     }
-    if (isPre) {
-      job.flags! |= SchedulerJobFlags.PRE
-      if (instance) {
-        job.id = instance.uid
-        ;(job as SchedulerJob).i = instance
-      }
+    if (isPre && instance) {
+      job.id = instance.uid
+      ;(job as SchedulerJob).i = instance
     }
   }
 

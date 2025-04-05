@@ -6,9 +6,11 @@ import {
   type Link,
   type Subscriber,
   SubscriberFlags,
+  checkDirty,
   endTracking,
+  link,
   startTracking,
-  updateDirtyFlag,
+  unlink,
 } from './system'
 import { warn } from './warning'
 
@@ -56,7 +58,11 @@ export class ReactiveEffect<T = any> implements ReactiveEffectOptions {
   // Subscriber
   deps: Link | undefined = undefined
   depsTail: Link | undefined = undefined
-  flags: number = SubscriberFlags.Effect
+  flags: number = 0
+
+  // Dependency
+  subs: Link | undefined = undefined
+  subsTail: Link | undefined = undefined
 
   /**
    * @internal
@@ -69,7 +75,7 @@ export class ReactiveEffect<T = any> implements ReactiveEffectOptions {
 
   constructor(public fn: () => T) {
     if (activeEffectScope && activeEffectScope.active) {
-      activeEffectScope.effects.push(this)
+      link(this, activeEffectScope)
     }
   }
 
@@ -99,7 +105,7 @@ export class ReactiveEffect<T = any> implements ReactiveEffectOptions {
     if (!(flags & EffectFlags.PAUSED)) {
       this.scheduler()
     } else {
-      this.flags |= EffectFlags.NOTIFIED
+      this.flags = flags | EffectFlags.NOTIFIED
     }
   }
 
@@ -132,11 +138,12 @@ export class ReactiveEffect<T = any> implements ReactiveEffectOptions {
       }
       setActiveSub(prevSub)
       endTracking(this)
+      const flags = this.flags
       if (
-        this.flags & SubscriberFlags.Recursed &&
-        this.flags & EffectFlags.ALLOW_RECURSE
+        flags & SubscriberFlags.Recursed &&
+        flags & EffectFlags.ALLOW_RECURSE
       ) {
-        this.flags &= ~SubscriberFlags.Recursed
+        this.flags = flags & ~SubscriberFlags.Recursed
         this.notify()
       }
     }
@@ -149,16 +156,22 @@ export class ReactiveEffect<T = any> implements ReactiveEffectOptions {
       cleanupEffect(this)
       this.onStop && this.onStop()
       this.flags |= EffectFlags.STOP
+
+      if (this.subs !== undefined) {
+        unlink(this.subs)
+      }
     }
   }
 
   get dirty(): boolean {
     const flags = this.flags
-    if (
-      flags & SubscriberFlags.Dirty ||
-      (flags & SubscriberFlags.PendingComputed && updateDirtyFlag(this, flags))
-    ) {
-      return true
+    if (flags & (SubscriberFlags.Dirty | SubscriberFlags.Pending)) {
+      if (flags & SubscriberFlags.Dirty || checkDirty(this.deps!)) {
+        this.flags = flags | SubscriberFlags.Dirty
+        return true
+      } else {
+        this.flags = flags & ~SubscriberFlags.Pending
+      }
     }
     return false
   }

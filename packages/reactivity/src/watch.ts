@@ -8,7 +8,6 @@ import {
   isObject,
   isPlainObject,
   isSet,
-  remove,
 } from '@vue/shared'
 import type { ComputedRef } from './computed'
 import { ReactiveFlags } from './constants'
@@ -19,7 +18,6 @@ import {
   pauseTracking,
   resetTracking,
 } from './effect'
-import { getCurrentScope } from './effectScope'
 import { isReactive, isShallow } from './reactive'
 import { type Ref, isRef } from './ref'
 import { warn } from './warning'
@@ -209,12 +207,8 @@ export function watch(
     getter = () => traverse(baseGetter(), depth)
   }
 
-  const scope = getCurrentScope()
   const watchHandle: WatchHandle = () => {
     effect.stop()
-    if (scope && scope.active) {
-      remove(scope.effects, effect)
-    }
   }
 
   if (once && cb) {
