@@ -146,6 +146,12 @@ color: red
         &[data-v-test] .bar { color: red;
         }}"
       `)
+    expect(compileScoped(`.foo { :deep(.bar),:deep(.baz) { color: red; }}`))
+      .toMatchInlineSnapshot(`
+        ".foo {
+        &[data-v-test] .bar,&[data-v-test] .baz { color: red;
+        }}"
+      `)
     expect(compileScoped(`.foo { & :deep(.bar) { color: red; }}`))
       .toMatchInlineSnapshot(`
         ".foo {
