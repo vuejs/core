@@ -29,10 +29,7 @@ export const VaporTeleportImpl = {
   __vapor: true,
 
   process(props: LooseRawProps, slots: LooseRawSlots): TeleportFragment {
-    const frag = __DEV__
-      ? new TeleportFragment('teleport')
-      : new TeleportFragment()
-
+    const frag = new TeleportFragment()
     const updateChildrenEffect = renderEffect(() =>
       frag.updateChildren(slots.default && (slots.default as BlockFn)()),
     )
@@ -93,10 +90,9 @@ export class TeleportFragment extends VaporFragment {
   private mountContainer?: ParentNode | null
   private mountAnchor?: Node | null
 
-  constructor(anchorLabel?: string) {
+  constructor() {
     super([])
-    this.anchor =
-      __DEV__ && anchorLabel ? createComment(anchorLabel) : createTextNode()
+    this.anchor = __DEV__ ? createComment('teleport') : createTextNode()
   }
 
   get currentParent(): ParentNode {
