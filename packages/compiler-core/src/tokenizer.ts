@@ -107,6 +107,7 @@ export enum State {
   InDirArg,
   InDirDynamicArg,
   InDirModifier,
+  InDirDynamicModifier,
   AfterAttrName,
   BeforeAttrValue,
   InAttrValueDq, // "
@@ -749,9 +750,25 @@ export default class Tokenizer {
     if (c === CharCodes.Eq || isEndOfTagSection(c)) {
       this.cbs.ondirmodifier(this.sectionStart, this.index)
       this.handleAttrNameEnd(c)
+    } else if (c === CharCodes.LeftSquare) {
+      this.state = State.InDirDynamicModifier
     } else if (c === CharCodes.Dot) {
       this.cbs.ondirmodifier(this.sectionStart, this.index)
       this.sectionStart = this.index + 1
+    }
+  }
+  private stateInDirDynamicModifier(c: number): void {
+    if (c === CharCodes.RightSquare) {
+      this.state = State.InDirModifier
+    } else if (c === CharCodes.Eq || isEndOfTagSection(c)) {
+      this.cbs.ondirmodifier(this.sectionStart, this.index + 1)
+      this.handleAttrNameEnd(c)
+      if (__DEV__ || !__BROWSER__) {
+        this.cbs.onerr(
+          ErrorCodes.X_MISSING_DYNAMIC_DIRECTIVE_MODIFIER_END,
+          this.index,
+        )
+      }
     }
   }
   private handleAttrNameEnd(c: number): void {
@@ -983,6 +1000,10 @@ export default class Tokenizer {
         }
         case State.InDirModifier: {
           this.stateInDirModifier(c)
+          break
+        }
+        case State.InDirDynamicModifier: {
+          this.stateInDirDynamicModifier(c)
           break
         }
         case State.InCommentLike: {
