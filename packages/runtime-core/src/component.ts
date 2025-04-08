@@ -217,11 +217,12 @@ export interface FunctionalComponent<
   E extends EmitsOptions | Record<string, any[]> = {},
   S extends Record<string, any> = any,
   EE extends EmitsOptions = ShortEmitsToObject<E>,
+  Exposed extends Record<string, any> = Record<string, any>,
 > extends ComponentInternalOptions {
   // use of any here is intentional so it can be a valid JSX Element constructor
   (
     props: P & EmitsToProps<EE>,
-    ctx: Omit<SetupContext<EE, IfAny<S, {}, SlotsType<S>>>, 'expose'>,
+    ctx: Omit<SetupContext<EE, IfAny<S, {}, SlotsType<S>>, Exposed>, 'expose'>,
   ): any
   props?: ComponentPropsOptions<P>
   emits?: EE | (keyof EE)[]

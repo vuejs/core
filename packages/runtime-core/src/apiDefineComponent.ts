@@ -151,10 +151,11 @@ export function defineComponent<
   E extends EmitsOptions = {},
   EE extends string = string,
   S extends SlotsType = {},
+  Exposed extends Record<string, any> = Record<string, any>,
 >(
   setup: (
     props: Props,
-    ctx: SetupContext<E, S>,
+    ctx: SetupContext<E, S, Exposed>,
   ) => RenderFunction | Promise<RenderFunction>,
   options?: Pick<ComponentOptions, 'name' | 'inheritAttrs'> & {
     props?: (keyof Props)[]
@@ -167,10 +168,11 @@ export function defineComponent<
   E extends EmitsOptions = {},
   EE extends string = string,
   S extends SlotsType = {},
+  Exposed extends Record<string, any> = Record<string, any>,
 >(
   setup: (
     props: Props,
-    ctx: SetupContext<E, S>,
+    ctx: SetupContext<E, S, Exposed>,
   ) => RenderFunction | Promise<RenderFunction>,
   options?: Pick<ComponentOptions, 'name' | 'inheritAttrs'> & {
     props?: ComponentObjectPropsOptions<Props>
