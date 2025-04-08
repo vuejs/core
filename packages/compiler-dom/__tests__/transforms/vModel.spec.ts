@@ -63,6 +63,13 @@ describe('compiler: transform v-model', () => {
     expect(generate(root).code).toMatchSnapshot()
   })
 
+  test('input with v-bind shorthand type should use dynamic model', () => {
+    const root = transformWithModel('<input :type v-model="model" />')
+
+    expect(root.helpers).toContain(V_MODEL_DYNAMIC)
+    expect(generate(root).code).toMatchSnapshot()
+  })
+
   test('input w/ dynamic v-bind', () => {
     const root = transformWithModel('<input v-bind="obj" v-model="model" />')
 
