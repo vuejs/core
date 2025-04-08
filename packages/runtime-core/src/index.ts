@@ -505,7 +505,7 @@ export { type VaporInteropInterface } from './apiCreateApp'
 /**
  * @internal
  */
-export { type RendererInternals, MoveType } from './renderer'
+export { type RendererInternals, MoveType, invalidateMount } from './renderer'
 /**
  * @internal
  */
@@ -557,3 +557,15 @@ export { startMeasure, endMeasure } from './profiling'
  * @internal
  */
 export { initFeatureFlags } from './featureFlags'
+/**
+ * @internal
+ */
+export { getComponentName } from './component'
+/**
+ * @internal
+ */
+export { matches, isKeepAlive } from './components/KeepAlive'
+/**
+ * @internal
+ */
+export { devtoolsComponentAdded } from './devtools'

@@ -15,6 +15,7 @@ import {
   currentInstance,
   endMeasure,
   expose,
+  isKeepAlive,
   nextUid,
   popWarningContext,
   pushWarningContext,
@@ -60,6 +61,7 @@ import {
 import { hmrReload, hmrRerender } from './hmr'
 import { isHydrating, locateHydrationNode } from './dom/hydration'
 import { insertionAnchor, insertionParent } from './insertionState'
+import type { KeepAliveInstance } from './components/KeepAlive'
 
 export { currentInstance } from '@vue/runtime-dom'
 
@@ -270,7 +272,7 @@ export function createComponent(
   onScopeDispose(() => unmountComponent(instance), true)
 
   if (!isHydrating && _insertionParent) {
-    insert(instance.block, _insertionParent, _insertionAnchor)
+    mountComponent(instance, _insertionParent, _insertionAnchor)
   }
 
   return instance
@@ -493,14 +495,24 @@ export function createComponentWithFallback(
 
 export function mountComponent(
   instance: VaporComponentInstance,
-  parent: ParentNode,
+  parentNode: ParentNode,
   anchor?: Node | null | 0,
 ): void {
+  let parent
+  if (
+    (parent = instance.parent) &&
+    isKeepAlive(parent as any) &&
+    (parent as KeepAliveInstance).isKeptAlive(instance)
+  ) {
+    ;(parent as KeepAliveInstance).activate(instance, parentNode, anchor as any)
+    return
+  }
+
   if (__DEV__) {
     startMeasure(instance, `mount`)
   }
   if (instance.bm) invokeArrayFns(instance.bm)
-  insert(instance.block, parent, anchor)
+  insert(instance.block, parentNode, anchor)
   if (instance.m) queuePostFlushCb(() => invokeArrayFns(instance.m!))
   instance.isMounted = true
   if (__DEV__) {
@@ -512,6 +524,16 @@ export function unmountComponent(
   instance: VaporComponentInstance,
   parentNode?: ParentNode,
 ): void {
+  let parent
+  if (
+    (parent = instance.parent) &&
+    isKeepAlive(parent as any) &&
+    (parent as KeepAliveInstance).shouldKeepAlive(instance)
+  ) {
+    ;(parent as KeepAliveInstance).deactivate(instance)
+    return
+  }
+
   if (instance.isMounted && !instance.isUnmounted) {
     if (__DEV__ && instance.type.__hmrId) {
       unregisterHMR(instance)

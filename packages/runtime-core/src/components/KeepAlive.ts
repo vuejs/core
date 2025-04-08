@@ -1,10 +1,10 @@
 import {
-  type ComponentInternalInstance,
   type ComponentOptions,
   type ConcreteComponent,
   type GenericComponentInstance,
   type SetupContext,
   getComponentName,
+  getCurrentGenericInstance,
   getCurrentInstance,
 } from '../component'
 import {
@@ -398,7 +398,7 @@ export const KeepAlive = (__COMPAT__
   }
 }
 
-function matches(pattern: MatchPattern, name: string): boolean {
+export function matches(pattern: MatchPattern, name: string): boolean {
   if (isArray(pattern)) {
     return pattern.some((p: string | RegExp) => matches(p, name))
   } else if (isString(pattern)) {
@@ -413,14 +413,14 @@ function matches(pattern: MatchPattern, name: string): boolean {
 
 export function onActivated(
   hook: Function,
-  target?: ComponentInternalInstance | null,
+  target?: GenericComponentInstance | null,
 ): void {
   registerKeepAliveHook(hook, LifecycleHooks.ACTIVATED, target)
 }
 
 export function onDeactivated(
   hook: Function,
-  target?: ComponentInternalInstance | null,
+  target?: GenericComponentInstance | null,
 ): void {
   registerKeepAliveHook(hook, LifecycleHooks.DEACTIVATED, target)
 }
@@ -428,7 +428,7 @@ export function onDeactivated(
 function registerKeepAliveHook(
   hook: Function & { __wdc?: Function },
   type: LifecycleHooks,
-  target: ComponentInternalInstance | null = getCurrentInstance(),
+  target: GenericComponentInstance | null = getCurrentGenericInstance(),
 ) {
   // cache the deactivate branch check wrapper for injected hooks so the same
   // hook can be properly deduped by the scheduler. "__wdc" stands for "with
@@ -454,8 +454,9 @@ function registerKeepAliveHook(
   // arrays.
   if (target) {
     let current = target.parent
-    while (current && current.parent && current.parent.vnode) {
-      if (isKeepAlive(current.parent.vnode)) {
+    while (current && current.parent) {
+      let parent = current.parent
+      if (isKeepAlive(parent.vapor ? (parent as any) : current.parent.vnode)) {
         injectToKeepAliveRoot(wrappedHook, type, target, current)
       }
       current = current.parent
@@ -466,7 +467,7 @@ function registerKeepAliveHook(
 function injectToKeepAliveRoot(
   hook: Function & { __weh?: Function },
   type: LifecycleHooks,
-  target: ComponentInternalInstance,
+  target: GenericComponentInstance,
   keepAliveRoot: GenericComponentInstance,
 ) {
   // injectHook wraps the original for error handling, so make sure to remove
