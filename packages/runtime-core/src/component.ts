@@ -278,12 +278,13 @@ export type LifecycleHook<TFn = Function> = (TFn & SchedulerJob)[] | null
 export type SetupContext<
   E = EmitsOptions,
   S extends SlotsType = {},
+  EX extends Record<string, any> = Record<string, any>,
 > = E extends any
   ? {
       attrs: Data
       slots: UnwrapSlotsType<S>
       emit: EmitFn<E>
-      expose: <Exposed extends Record<string, any> = Record<string, any>>(
+      expose: <Exposed extends Record<string, any> = EX>(
         exposed?: Exposed,
       ) => void
     }
