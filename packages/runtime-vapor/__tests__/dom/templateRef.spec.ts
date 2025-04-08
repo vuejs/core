@@ -694,7 +694,7 @@ describe('api: template ref', () => {
 
     const views: Record<string, VaporComponent> = { child: Child }
     const view = ref('child')
-    const refKey = ref<InstanceType<any>>(null)
+    const refKey = ref<any>(null)
 
     const { html } = define({
       setup() {
