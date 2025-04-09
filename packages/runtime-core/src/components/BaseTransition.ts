@@ -493,7 +493,7 @@ function emptyPlaceholder(vnode: VNode): VNode | undefined {
   }
 }
 
-function getInnerChild(vnode: VNode): VNode | undefined {
+export function getInnerChild(vnode: VNode): VNode | undefined {
   if (!isKeepAlive(vnode)) {
     if (isTeleport(vnode.type) && vnode.children) {
       return findNonCommentChild(vnode.children as VNode[])
