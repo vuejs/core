@@ -365,7 +365,7 @@ describe('VaporKeepAlive', () => {
     expect(spy).toHaveBeenCalledTimes(1)
   })
 
-  test.todo('should call correct hooks for nested keep-alive', async () => {
+  test('should call correct hooks for nested keep-alive', async () => {
     const toggle2 = ref(true)
     const one = defineVaporComponent({
       name: 'one',
@@ -431,42 +431,42 @@ describe('VaporKeepAlive', () => {
     // the activated hook of two is not called
     assertHookCalls(twoHooks, [1, 1, 3, 2, 0])
 
-    // toggle1.value = false
-    // await nextTick()
-    // expect(html()).toBe(`<!--if-->`)
-    // assertHookCalls(oneHooks, [1, 1, 2, 2, 0])
-    // assertHookCalls(twoHooks, [1, 1, 3, 3, 0])
+    toggle1.value = false
+    await nextTick()
+    expect(html()).toBe(`<!--if-->`)
+    assertHookCalls(oneHooks, [1, 1, 2, 2, 0])
+    assertHookCalls(twoHooks, [1, 1, 3, 3, 0])
 
-    // // toggle nested instance when parent is deactivated
-    // toggle2.value = false
-    // await nextTick()
-    // expect(html()).toBe(`<!--if-->`)
-    // assertHookCalls(oneHooks, [1, 1, 2, 2, 0])
-    // // assertHookCalls(twoHooks, [1, 1, 3, 3, 0]) // should not be affected
+    // toggle nested instance when parent is deactivated
+    toggle2.value = false
+    await nextTick()
+    expect(html()).toBe(`<!--if-->`)
+    assertHookCalls(oneHooks, [1, 1, 2, 2, 0])
+    assertHookCalls(twoHooks, [1, 1, 3, 3, 0]) // should not be affected
 
-    // toggle2.value = true
-    // await nextTick()
-    // expect(html()).toBe(`<!--if-->`)
-    // assertHookCalls(oneHooks, [1, 1, 2, 2, 0])
-    // // assertHookCalls(twoHooks, [1, 1, 3, 3, 0]) // should not be affected
+    toggle2.value = true
+    await nextTick()
+    expect(html()).toBe(`<!--if-->`)
+    assertHookCalls(oneHooks, [1, 1, 2, 2, 0])
+    assertHookCalls(twoHooks, [1, 1, 3, 3, 0]) // should not be affected
 
-    // toggle1.value = true
-    // await nextTick()
-    // expect(html()).toBe(`<div>two</div><!--if--><!--if-->`)
-    // assertHookCalls(oneHooks, [1, 1, 3, 2, 0])
-    // // assertHookCalls(twoHooks, [1, 1, 4, 3, 0])
+    toggle1.value = true
+    await nextTick()
+    expect(html()).toBe(`<div>two</div><!--if--><!--if-->`)
+    assertHookCalls(oneHooks, [1, 1, 3, 2, 0])
+    assertHookCalls(twoHooks, [1, 1, 4, 3, 0])
 
-    // toggle1.value = false
-    // toggle2.value = false
-    // await nextTick()
-    // expect(html()).toBe(`<!--if-->`)
-    // assertHookCalls(oneHooks, [1, 1, 3, 3, 0])
-    // // assertHookCalls(twoHooks, [1, 1, 4, 4, 0])
+    toggle1.value = false
+    toggle2.value = false
+    await nextTick()
+    expect(html()).toBe(`<!--if-->`)
+    assertHookCalls(oneHooks, [1, 1, 3, 3, 0])
+    assertHookCalls(twoHooks, [1, 1, 4, 4, 0])
 
-    // toggle1.value = true
-    // await nextTick()
-    // expect(html()).toBe(`<!--if--><!--if-->`)
-    // assertHookCalls(oneHooks, [1, 1, 4, 3, 0])
-    // // assertHookCalls(twoHooks, [1, 1, 4, 4, 0]) // should remain inactive
+    toggle1.value = true
+    await nextTick()
+    expect(html()).toBe(`<!--if--><!--if-->`)
+    assertHookCalls(oneHooks, [1, 1, 4, 3, 0])
+    assertHookCalls(twoHooks, [1, 1, 4, 4, 0]) // should remain inactive
   })
 })

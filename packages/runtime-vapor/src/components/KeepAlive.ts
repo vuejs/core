@@ -31,6 +31,7 @@ export interface KeepAliveInstance extends VaporComponentInstance {
   ) => void
   deactivate: (instance: VaporComponentInstance) => void
   process: (instance: VaporComponentInstance) => void
+  getCache: (comp: VaporComponent) => VaporComponentInstance | undefined
 }
 
 type CacheKey = PropertyKey | VaporComponent
@@ -102,6 +103,8 @@ export const VaporKeepAliveImpl: ObjectVaporComponent = defineVaporComponent({
         unmountComponent(cached, storageContainer)
       })
     })
+
+    keepAliveInstance.getCache = (comp: VaporComponent) => cache.get(comp)
 
     keepAliveInstance.process = (instance: VaporComponentInstance) => {
       if (cache.has(instance.type)) {

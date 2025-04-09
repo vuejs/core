@@ -60,8 +60,10 @@ export class DynamicFragment extends VaporFragment {
         ;(instance as KeepAliveInstance).process(
           this.nodes as VaporComponentInstance,
         )
+        unmountComponent(this.nodes as VaporComponentInstance)
+      } else {
+        this.scope.stop()
       }
-      this.scope.stop()
       parent && remove(this.nodes, parent)
     }
 
@@ -128,7 +130,7 @@ export function insert(
       parent.insertBefore(block, anchor)
     }
   } else if (isVaporComponent(block)) {
-    if (block.isMounted) {
+    if (block.isMounted && !block.isDeactivated) {
       insert(block.block!, parent, anchor)
     } else {
       mountComponent(block, parent, anchor)

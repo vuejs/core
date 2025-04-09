@@ -15,6 +15,7 @@ import {
   currentInstance,
   endMeasure,
   expose,
+  isKeepAlive,
   nextUid,
   popWarningContext,
   pushWarningContext,
@@ -149,6 +150,11 @@ export function createComponent(
   const _insertionAnchor = insertionAnchor
   if (isHydrating) {
     locateHydrationNode()
+  }
+
+  if (currentInstance && isKeepAlive(currentInstance)) {
+    const cache = (currentInstance as KeepAliveInstance).getCache(component)
+    if (cache) return cache
   }
 
   // vdom interop enabled and component is not an explicit vapor component
