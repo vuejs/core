@@ -9,8 +9,8 @@ import {
 } from 'vue'
 import type { VaporComponent } from '../../src/component'
 import { makeRender } from '../_utils'
+import { VaporKeepAliveImpl as VaporKeepAlive } from '../../src/components/KeepAlive'
 import {
-  VaporKeepAlive,
   child,
   createComponent,
   createDynamicComponent,
@@ -144,7 +144,7 @@ describe('VaporKeepAlive', () => {
     const { mount } = define({
       setup() {
         const setTemplateRef = createTemplateRefSetter()
-        const n4 = createComponent(VaporKeepAlive as any, null, {
+        const n4 = createComponent(VaporKeepAlive, null, {
           default: () => {
             const n0 = createDynamicComponent(() => views[viewRef.value]) as any
             setTemplateRef(n0, instanceRef)
@@ -180,7 +180,7 @@ describe('VaporKeepAlive', () => {
         return createIf(
           () => toggle.value,
           () =>
-            createComponent(VaporKeepAlive as any, null, {
+            createComponent(VaporKeepAlive, null, {
               default: () => createDynamicComponent(() => views[viewRef.value]),
             }),
         )
@@ -235,7 +235,7 @@ describe('VaporKeepAlive', () => {
         return createIf(
           () => toggle.value,
           () =>
-            createComponent(VaporKeepAlive as any, null, {
+            createComponent(VaporKeepAlive, null, {
               default: () => createDynamicComponent(() => views[viewRef.value]),
             }),
         )
@@ -295,7 +295,7 @@ describe('VaporKeepAlive', () => {
     const toggle = ref(true)
     const { html } = define({
       setup() {
-        return createComponent(VaporKeepAlive as any, null, {
+        return createComponent(VaporKeepAlive, null, {
           default() {
             return createIf(
               () => toggle.value,
@@ -350,7 +350,7 @@ describe('VaporKeepAlive', () => {
     const toggle = ref(true)
     const { html } = define({
       setup() {
-        return createComponent(VaporKeepAlive as any, null, {
+        return createComponent(VaporKeepAlive, null, {
           default() {
             return createIf(
               () => toggle.value,
@@ -375,7 +375,7 @@ describe('VaporKeepAlive', () => {
         onActivated(() => oneHooks.activated())
         onDeactivated(() => oneHooks.deactivated())
         onUnmounted(() => oneHooks.unmounted())
-        return createComponent(VaporKeepAlive as any, null, {
+        return createComponent(VaporKeepAlive, null, {
           default() {
             return createIf(
               () => toggle2.value,
@@ -389,7 +389,7 @@ describe('VaporKeepAlive', () => {
     const toggle1 = ref(true)
     const { html } = define({
       setup() {
-        return createComponent(VaporKeepAlive as any, null, {
+        return createComponent(VaporKeepAlive, null, {
           default() {
             return createIf(
               () => toggle1.value,

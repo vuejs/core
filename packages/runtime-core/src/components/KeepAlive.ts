@@ -73,7 +73,7 @@ export interface KeepAliveContext extends ComponentRenderContext {
   deactivate: (vnode: VNode) => void
 }
 
-export const isKeepAlive = (vnode: VNode): boolean =>
+export const isKeepAlive = (vnode: any): boolean =>
   (vnode.type as any).__isKeepAlive
 
 const KeepAliveImpl: ComponentOptions = {
@@ -478,7 +478,7 @@ function injectToKeepAliveRoot(
   }, target)
 }
 
-function resetShapeFlag(vnode: VNode) {
+export function resetShapeFlag(vnode: any): void {
   // bitwise operations to remove keep alive flags
   vnode.shapeFlag &= ~ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE
   vnode.shapeFlag &= ~ShapeFlags.COMPONENT_KEPT_ALIVE

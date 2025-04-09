@@ -3,25 +3,25 @@ import {
   currentInstance,
   devtoolsComponentAdded,
   getComponentName,
-  invalidateMount,
-  isKeepAlive,
   matches,
   onBeforeUnmount,
   onMounted,
   onUpdated,
   queuePostFlushCb,
+  resetShapeFlag,
   warn,
   watch,
 } from '@vue/runtime-dom'
 import { type Block, insert, isFragment, isValidBlock } from '../block'
 import {
+  type ObjectVaporComponent,
   type VaporComponent,
   type VaporComponentInstance,
   isVaporComponent,
   unmountComponent,
 } from '../component'
 import { defineVaporComponent } from '../apiDefineComponent'
-import { invokeArrayFns, isArray } from '@vue/shared'
+import { ShapeFlags, invokeArrayFns, isArray } from '@vue/shared'
 
 export interface KeepAliveInstance extends VaporComponentInstance {
   activate: (
@@ -30,15 +30,14 @@ export interface KeepAliveInstance extends VaporComponentInstance {
     anchor: Node,
   ) => void
   deactivate: (instance: VaporComponentInstance) => void
-  shouldKeepAlive: (instance: VaporComponentInstance) => boolean
-  isKeptAlive: (instance: VaporComponentInstance) => boolean
+  process: (instance: VaporComponentInstance) => void
 }
 
 type CacheKey = PropertyKey | VaporComponent
 type Cache = Map<CacheKey, VaporComponentInstance>
 type Keys = Set<CacheKey>
 
-const VaporKeepAliveImpl = defineVaporComponent({
+export const VaporKeepAliveImpl: ObjectVaporComponent = defineVaporComponent({
   name: 'VaporKeepAlive',
   // @ts-expect-error
   __isKeepAlive: true,
@@ -57,7 +56,6 @@ const VaporKeepAliveImpl = defineVaporComponent({
     const keys: Keys = new Set()
     const storageContainer = document.createElement('div')
     let current: VaporComponentInstance | undefined
-    let isUnmounting = false
 
     if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
       ;(keepAliveInstance as any).__v_cache = cache
@@ -90,9 +88,10 @@ const VaporKeepAliveImpl = defineVaporComponent({
 
     onMounted(cacheBlock)
     onUpdated(cacheBlock)
+
     onBeforeUnmount(() => {
-      isUnmounting = true
       cache.forEach(cached => {
+        resetShapeFlag(cached)
         cache.delete(cached.type)
         // current instance will be unmounted as part of keep-alive's unmount
         if (current && current.type === cached.type) {
@@ -104,12 +103,20 @@ const VaporKeepAliveImpl = defineVaporComponent({
       })
     })
 
-    const children = slots.default()
-    if (isArray(children) && children.length > 1) {
-      if (__DEV__) {
-        warn(`KeepAlive should contain exactly one component child.`)
+    keepAliveInstance.process = (instance: VaporComponentInstance) => {
+      if (cache.has(instance.type)) {
+        instance.shapeFlag! |= ShapeFlags.COMPONENT_KEPT_ALIVE
       }
-      return children
+
+      const name = getComponentName(instance.type)
+      if (
+        !(
+          (include && (!name || !matches(include, name))) ||
+          (exclude && name && matches(exclude, name))
+        )
+      ) {
+        instance.shapeFlag! |= ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE
+      }
     }
 
     keepAliveInstance.activate = (
@@ -117,9 +124,6 @@ const VaporKeepAliveImpl = defineVaporComponent({
       parentNode: ParentNode,
       anchor: Node,
     ) => {
-      // invalidateMount(instance.m)
-      // invalidateMount(instance.a)
-
       const cachedBlock = cache.get(instance.type)!
       insert((instance.block = cachedBlock.block), parentNode, anchor)
       queuePostFlushCb(() => {
@@ -144,20 +148,12 @@ const VaporKeepAliveImpl = defineVaporComponent({
       }
     }
 
-    keepAliveInstance.shouldKeepAlive = (instance: VaporComponentInstance) => {
-      if (isUnmounting) return false
-      const name = getComponentName(instance.type)
-      if (
-        (include && (!name || !matches(include, name))) ||
-        (exclude && name && matches(exclude, name))
-      ) {
-        return false
+    const children = slots.default()
+    if (isArray(children) && children.length > 1) {
+      if (__DEV__) {
+        warn(`KeepAlive should contain exactly one component child.`)
       }
-      return true
-    }
-
-    keepAliveInstance.isKeptAlive = (instance: VaporComponentInstance) => {
-      return cache.has(instance.type)
+      return children
     }
 
     function pruneCache(filter: (name: string) => boolean) {

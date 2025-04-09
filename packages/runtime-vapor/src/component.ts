@@ -15,7 +15,6 @@ import {
   currentInstance,
   endMeasure,
   expose,
-  isKeepAlive,
   nextUid,
   popWarningContext,
   pushWarningContext,
@@ -36,7 +35,13 @@ import {
   resetTracking,
   unref,
 } from '@vue/reactivity'
-import { EMPTY_OBJ, invokeArrayFns, isFunction, isString } from '@vue/shared'
+import {
+  EMPTY_OBJ,
+  ShapeFlags,
+  invokeArrayFns,
+  isFunction,
+  isString,
+} from '@vue/shared'
 import {
   type DynamicPropsSource,
   type RawProps,
@@ -376,6 +381,7 @@ export class VaporComponentInstance implements GenericComponentInstance {
   propsOptions?: NormalizedPropsOptions
   emitsOptions?: ObjectEmitsOptions | null
   isSingleRoot?: boolean
+  shapeFlag?: number
 
   constructor(
     comp: VaporComponent,
@@ -498,13 +504,12 @@ export function mountComponent(
   parentNode: ParentNode,
   anchor?: Node | null | 0,
 ): void {
-  let parent
-  if (
-    (parent = instance.parent) &&
-    isKeepAlive(parent as any) &&
-    (parent as KeepAliveInstance).isKeptAlive(instance)
-  ) {
-    ;(parent as KeepAliveInstance).activate(instance, parentNode, anchor as any)
+  if (instance.shapeFlag! & ShapeFlags.COMPONENT_KEPT_ALIVE) {
+    ;(instance.parent as KeepAliveInstance).activate(
+      instance,
+      parentNode,
+      anchor as any,
+    )
     instance.isMounted = true
     return
   }
@@ -516,9 +521,7 @@ export function mountComponent(
   insert(instance.block, parentNode, anchor)
   if (instance.m) queuePostFlushCb(() => invokeArrayFns(instance.m!))
   if (
-    parent &&
-    isKeepAlive(parent as any) &&
-    (parent as KeepAliveInstance).shouldKeepAlive(instance) &&
+    instance.shapeFlag! & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE &&
     instance.a
   ) {
     queuePostFlushCb(instance.a!)
@@ -533,13 +536,8 @@ export function unmountComponent(
   instance: VaporComponentInstance,
   parentNode?: ParentNode,
 ): void {
-  let parent
-  if (
-    (parent = instance.parent) &&
-    isKeepAlive(parent as any) &&
-    (parent as KeepAliveInstance).shouldKeepAlive(instance)
-  ) {
-    ;(parent as KeepAliveInstance).deactivate(instance)
+  if (instance.shapeFlag! & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE) {
+    ;(instance.parent as KeepAliveInstance).deactivate(instance)
     return
   }
 
