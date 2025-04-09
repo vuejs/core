@@ -456,7 +456,7 @@ function registerKeepAliveHook(
     let current = target.parent
     while (current && current.parent) {
       let parent = current.parent
-      if (isKeepAlive(parent.vapor ? (parent as any) : current.parent.vnode)) {
+      if (isKeepAlive(parent.vapor ? (parent as any) : parent.vnode)) {
         injectToKeepAliveRoot(wrappedHook, type, target, current)
       }
       current = current.parent

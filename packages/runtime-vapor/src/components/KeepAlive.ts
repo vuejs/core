@@ -4,6 +4,7 @@ import {
   devtoolsComponentAdded,
   getComponentName,
   invalidateMount,
+  isKeepAlive,
   matches,
   onBeforeUnmount,
   onMounted,
@@ -12,11 +13,12 @@ import {
   warn,
   watch,
 } from '@vue/runtime-dom'
-import { type Block, insert, isFragment, isValidBlock, remove } from '../block'
+import { type Block, insert, isFragment, isValidBlock } from '../block'
 import {
   type VaporComponent,
   type VaporComponentInstance,
   isVaporComponent,
+  unmountComponent,
 } from '../component'
 import { defineVaporComponent } from '../apiDefineComponent'
 import { invokeArrayFns, isArray } from '@vue/shared'
@@ -54,6 +56,8 @@ const VaporKeepAliveImpl = defineVaporComponent({
     const cache: Cache = new Map()
     const keys: Keys = new Set()
     const storageContainer = document.createElement('div')
+    let current: VaporComponentInstance | undefined
+    let isUnmounting = false
 
     if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
       ;(keepAliveInstance as any).__v_cache = cache
@@ -63,10 +67,10 @@ const VaporKeepAliveImpl = defineVaporComponent({
 
     function cacheBlock() {
       // TODO suspense
-      const current = keepAliveInstance.block!
-      if (!isValidBlock(current)) return
+      const currentBlock = keepAliveInstance.block!
+      if (!isValidBlock(currentBlock)) return
 
-      const block = getInnerBlock(current)!
+      const block = getInnerBlock(currentBlock)!
       if (!block) return
 
       const key = block.type
@@ -81,12 +85,24 @@ const VaporKeepAliveImpl = defineVaporComponent({
           pruneCacheEntry(keys.values().next().value!)
         }
       }
-      cache.set(key, block)
+      cache.set(key, (current = block))
     }
 
     onMounted(cacheBlock)
     onUpdated(cacheBlock)
-    onBeforeUnmount(() => cache.forEach(cached => remove(cached)))
+    onBeforeUnmount(() => {
+      isUnmounting = true
+      cache.forEach(cached => {
+        cache.delete(cached.type)
+        // current instance will be unmounted as part of keep-alive's unmount
+        if (current && current.type === cached.type) {
+          const da = cached.da
+          da && queuePostFlushCb(da)
+          return
+        }
+        unmountComponent(cached, storageContainer)
+      })
+    })
 
     const children = slots.default()
     if (isArray(children) && children.length > 1) {
@@ -101,8 +117,8 @@ const VaporKeepAliveImpl = defineVaporComponent({
       parentNode: ParentNode,
       anchor: Node,
     ) => {
-      invalidateMount(instance.m)
-      invalidateMount(instance.a)
+      // invalidateMount(instance.m)
+      // invalidateMount(instance.a)
 
       const cachedBlock = cache.get(instance.type)!
       insert((instance.block = cachedBlock.block), parentNode, anchor)
@@ -129,6 +145,7 @@ const VaporKeepAliveImpl = defineVaporComponent({
     }
 
     keepAliveInstance.shouldKeepAlive = (instance: VaporComponentInstance) => {
+      if (isUnmounting) return false
       const name = getComponentName(instance.type)
       if (
         (include && (!name || !matches(include, name))) ||
@@ -155,7 +172,7 @@ const VaporKeepAliveImpl = defineVaporComponent({
     function pruneCacheEntry(key: CacheKey) {
       const cached = cache.get(key)
       if (cached) {
-        remove(cached)
+        unmountComponent(cached)
       }
       cache.delete(key)
       keys.delete(key)

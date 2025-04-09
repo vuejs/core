@@ -505,6 +505,7 @@ export function mountComponent(
     (parent as KeepAliveInstance).isKeptAlive(instance)
   ) {
     ;(parent as KeepAliveInstance).activate(instance, parentNode, anchor as any)
+    instance.isMounted = true
     return
   }
 
@@ -514,6 +515,14 @@ export function mountComponent(
   if (instance.bm) invokeArrayFns(instance.bm)
   insert(instance.block, parentNode, anchor)
   if (instance.m) queuePostFlushCb(() => invokeArrayFns(instance.m!))
+  if (
+    parent &&
+    isKeepAlive(parent as any) &&
+    (parent as KeepAliveInstance).shouldKeepAlive(instance) &&
+    instance.a
+  ) {
+    queuePostFlushCb(instance.a!)
+  }
   instance.isMounted = true
   if (__DEV__) {
     endMeasure(instance, `mount`)
