@@ -5,6 +5,7 @@ import {
   type WatchOptions,
   type WatchScheduler,
   computed,
+  onScopeDispose,
   onWatcherCleanup,
   ref,
   watch,
@@ -276,5 +277,25 @@ describe('watch', () => {
     n1.value++
 
     expect(dummy).toEqual([1, 2, 3])
+  })
+
+  // #12681
+  test('onScopeDispose inside non-immediate watcher', () => {
+    const cleanupSpy = vi.fn()
+    const cbSpy = vi.fn(() => {
+      onScopeDispose(cleanupSpy)
+    })
+    const scope = new EffectScope()
+
+    scope.run(() => {
+      const signal = ref(false)
+      watch(signal, cbSpy)
+      signal.value = true
+    })
+
+    scope.stop()
+
+    expect(cbSpy).toBeCalledTimes(1)
+    expect(cleanupSpy).toBeCalledTimes(1)
   })
 })
