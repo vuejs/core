@@ -64,13 +64,21 @@ export const VaporKeepAliveImpl: ObjectVaporComponent = defineVaporComponent({
 
     const { include, exclude, max } = props
 
+    function shouldCache(instance: VaporComponentInstance) {
+      const name = getComponentName(instance.type)
+      return !(
+        (include && (!name || !matches(include, name))) ||
+        (exclude && name && matches(exclude, name))
+      )
+    }
+
     function cacheBlock() {
       // TODO suspense
       const currentBlock = keepAliveInstance.block!
       if (!isValidBlock(currentBlock)) return
 
       const block = getInnerBlock(currentBlock)!
-      if (!block) return
+      if (!block || !shouldCache(block)) return
 
       const key = block.type
       if (cache.has(key)) {
@@ -111,13 +119,16 @@ export const VaporKeepAliveImpl: ObjectVaporComponent = defineVaporComponent({
         instance.shapeFlag! |= ShapeFlags.COMPONENT_KEPT_ALIVE
       }
 
-      const name = getComponentName(instance.type)
-      if (
-        !(
-          (include && (!name || !matches(include, name))) ||
-          (exclude && name && matches(exclude, name))
-        )
-      ) {
+      // const name = getComponentName(instance.type)
+      // if (
+      //   !(
+      //     (include && (!name || !matches(include, name))) ||
+      //     (exclude && name && matches(exclude, name))
+      //   )
+      // ) {
+      //   instance.shapeFlag! |= ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE
+      // }
+      if (shouldCache(instance)) {
         instance.shapeFlag! |= ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE
       }
     }

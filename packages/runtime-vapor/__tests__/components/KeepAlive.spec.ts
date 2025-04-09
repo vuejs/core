@@ -7,7 +7,7 @@ import {
   onUnmounted,
   ref,
 } from 'vue'
-import type { VaporComponent } from '../../src/component'
+import type { LooseRawProps, VaporComponent } from '../../src/component'
 import { makeRender } from '../_utils'
 import { VaporKeepAliveImpl as VaporKeepAlive } from '../../src/components/KeepAlive'
 import {
@@ -70,6 +70,13 @@ describe('VaporKeepAlive', () => {
         return n0
       },
     })
+    oneTestHooks = {
+      beforeMount: vi.fn(),
+      mounted: vi.fn(),
+      activated: vi.fn(),
+      deactivated: vi.fn(),
+      unmounted: vi.fn(),
+    }
     oneTest = defineVaporComponent({
       name: 'oneTest',
       setup() {
@@ -468,5 +475,216 @@ describe('VaporKeepAlive', () => {
     expect(html()).toBe(`<!--if--><!--if-->`)
     assertHookCalls(oneHooks, [1, 1, 4, 3, 0])
     assertHookCalls(twoHooks, [1, 1, 4, 4, 0]) // should remain inactive
+  })
+
+  async function assertNameMatch(props: LooseRawProps) {
+    const outerRef = ref(true)
+    const viewRef = ref('one')
+    const { html } = define({
+      setup() {
+        return createIf(
+          () => outerRef.value,
+          () =>
+            createComponent(VaporKeepAlive, props, {
+              default: () => createDynamicComponent(() => views[viewRef.value]),
+            }),
+        )
+      },
+    }).render()
+
+    expect(html()).toBe(`<div>one</div><!--dynamic-component--><!--if-->`)
+    assertHookCalls(oneHooks, [1, 1, 1, 0, 0])
+    assertHookCalls(twoHooks, [0, 0, 0, 0, 0])
+
+    viewRef.value = 'two'
+    await nextTick()
+    expect(html()).toBe(`<div>two</div><!--dynamic-component--><!--if-->`)
+    assertHookCalls(oneHooks, [1, 1, 1, 1, 0])
+    assertHookCalls(twoHooks, [1, 1, 0, 0, 0])
+
+    viewRef.value = 'one'
+    await nextTick()
+    expect(html()).toBe(`<div>one</div><!--dynamic-component--><!--if-->`)
+    assertHookCalls(oneHooks, [1, 1, 2, 1, 0])
+    assertHookCalls(twoHooks, [1, 1, 0, 0, 1])
+
+    viewRef.value = 'two'
+    await nextTick()
+    expect(html()).toBe(`<div>two</div><!--dynamic-component--><!--if-->`)
+    assertHookCalls(oneHooks, [1, 1, 2, 2, 0])
+    assertHookCalls(twoHooks, [2, 2, 0, 0, 1])
+
+    // teardown
+    outerRef.value = false
+    await nextTick()
+    expect(html()).toBe(`<!--if-->`)
+    assertHookCalls(oneHooks, [1, 1, 2, 2, 1])
+    assertHookCalls(twoHooks, [2, 2, 0, 0, 2])
+  }
+
+  async function assertNameMatchWithFlag(props: LooseRawProps) {
+    const outerRef = ref(true)
+    const viewRef = ref('one')
+    const { html } = define({
+      setup() {
+        return createIf(
+          () => outerRef.value,
+          () =>
+            createComponent(VaporKeepAlive, props, {
+              default: () => createDynamicComponent(() => views[viewRef.value]),
+            }),
+        )
+      },
+    }).render()
+
+    expect(html()).toBe(`<div>one</div><!--dynamic-component--><!--if-->`)
+    assertHookCalls(oneHooks, [1, 1, 1, 0, 0])
+    assertHookCalls(oneTestHooks, [0, 0, 0, 0, 0])
+    assertHookCalls(twoHooks, [0, 0, 0, 0, 0])
+
+    viewRef.value = 'oneTest'
+    await nextTick()
+    expect(html()).toBe(`<div>oneTest</div><!--dynamic-component--><!--if-->`)
+    assertHookCalls(oneHooks, [1, 1, 1, 1, 0])
+    assertHookCalls(oneTestHooks, [1, 1, 1, 0, 0])
+    assertHookCalls(twoHooks, [0, 0, 0, 0, 0])
+
+    viewRef.value = 'two'
+    await nextTick()
+    expect(html()).toBe(`<div>two</div><!--dynamic-component--><!--if-->`)
+    assertHookCalls(oneHooks, [1, 1, 1, 1, 0])
+    assertHookCalls(oneTestHooks, [1, 1, 1, 1, 0])
+    assertHookCalls(twoHooks, [1, 1, 0, 0, 0])
+
+    viewRef.value = 'one'
+    await nextTick()
+    expect(html()).toBe(`<div>one</div><!--dynamic-component--><!--if-->`)
+    assertHookCalls(oneHooks, [1, 1, 2, 1, 0])
+    assertHookCalls(oneTestHooks, [1, 1, 1, 1, 0])
+    assertHookCalls(twoHooks, [1, 1, 0, 0, 1])
+
+    viewRef.value = 'oneTest'
+    await nextTick()
+    expect(html()).toBe(`<div>oneTest</div><!--dynamic-component--><!--if-->`)
+    assertHookCalls(oneHooks, [1, 1, 2, 2, 0])
+    assertHookCalls(oneTestHooks, [1, 1, 2, 1, 0])
+    assertHookCalls(twoHooks, [1, 1, 0, 0, 1])
+
+    viewRef.value = 'two'
+    await nextTick()
+    expect(html()).toBe(`<div>two</div><!--dynamic-component--><!--if-->`)
+    assertHookCalls(oneHooks, [1, 1, 2, 2, 0])
+    assertHookCalls(oneTestHooks, [1, 1, 2, 2, 0])
+    assertHookCalls(twoHooks, [2, 2, 0, 0, 1])
+
+    // teardown
+    outerRef.value = false
+    await nextTick()
+    expect(html()).toBe(`<!--if-->`)
+    assertHookCalls(oneHooks, [1, 1, 2, 2, 1])
+    assertHookCalls(oneTestHooks, [1, 1, 2, 2, 1])
+    assertHookCalls(twoHooks, [2, 2, 0, 0, 2])
+  }
+
+  async function assertNameMatchWithFlagExclude(props: LooseRawProps) {
+    const outerRef = ref(true)
+    const viewRef = ref('one')
+    const { html } = define({
+      setup() {
+        return createIf(
+          () => outerRef.value,
+          () =>
+            createComponent(VaporKeepAlive, props, {
+              default: () => createDynamicComponent(() => views[viewRef.value]),
+            }),
+        )
+      },
+    }).render()
+
+    expect(html()).toBe(`<div>one</div><!--dynamic-component--><!--if-->`)
+    assertHookCalls(oneHooks, [1, 1, 0, 0, 0])
+    assertHookCalls(oneTestHooks, [0, 0, 0, 0, 0])
+    assertHookCalls(twoHooks, [0, 0, 0, 0, 0])
+
+    viewRef.value = 'oneTest'
+    await nextTick()
+    expect(html()).toBe(`<div>oneTest</div><!--dynamic-component--><!--if-->`)
+    assertHookCalls(oneHooks, [1, 1, 0, 0, 1])
+    assertHookCalls(oneTestHooks, [1, 1, 0, 0, 0])
+    assertHookCalls(twoHooks, [0, 0, 0, 0, 0])
+
+    viewRef.value = 'two'
+    await nextTick()
+    expect(html()).toBe(`<div>two</div><!--dynamic-component--><!--if-->`)
+    assertHookCalls(oneHooks, [1, 1, 0, 0, 1])
+    assertHookCalls(oneTestHooks, [1, 1, 0, 0, 1])
+    assertHookCalls(twoHooks, [1, 1, 1, 0, 0])
+
+    viewRef.value = 'one'
+    await nextTick()
+    expect(html()).toBe(`<div>one</div><!--dynamic-component--><!--if-->`)
+    assertHookCalls(oneHooks, [2, 2, 0, 0, 1])
+    assertHookCalls(oneTestHooks, [1, 1, 0, 0, 1])
+    assertHookCalls(twoHooks, [1, 1, 1, 1, 0])
+
+    viewRef.value = 'oneTest'
+    await nextTick()
+    expect(html()).toBe(`<div>oneTest</div><!--dynamic-component--><!--if-->`)
+    assertHookCalls(oneHooks, [2, 2, 0, 0, 2])
+    assertHookCalls(oneTestHooks, [2, 2, 0, 0, 1])
+    assertHookCalls(twoHooks, [1, 1, 1, 1, 0])
+
+    viewRef.value = 'two'
+    await nextTick()
+    expect(html()).toBe(`<div>two</div><!--dynamic-component--><!--if-->`)
+    assertHookCalls(oneHooks, [2, 2, 0, 0, 2])
+    assertHookCalls(oneTestHooks, [2, 2, 0, 0, 2])
+    assertHookCalls(twoHooks, [1, 1, 2, 1, 0])
+
+    // teardown
+    outerRef.value = false
+    await nextTick()
+    expect(html()).toBe(`<!--if-->`)
+    assertHookCalls(oneHooks, [2, 2, 0, 0, 2])
+    assertHookCalls(oneTestHooks, [2, 2, 0, 0, 2])
+    assertHookCalls(twoHooks, [1, 1, 2, 2, 1])
+  }
+
+  describe('props', () => {
+    test('include (string)', async () => {
+      await assertNameMatch({ include: () => 'one' })
+    })
+
+    test('include (regex)', async () => {
+      await assertNameMatch({ include: () => /^one$/ })
+    })
+
+    test('include (regex with g flag)', async () => {
+      await assertNameMatchWithFlag({ include: () => /one/g })
+    })
+
+    test('include (array)', async () => {
+      await assertNameMatch({ include: () => ['one'] })
+    })
+
+    test('exclude (string)', async () => {
+      await assertNameMatch({ exclude: () => 'two' })
+    })
+
+    test('exclude (regex)', async () => {
+      await assertNameMatch({ exclude: () => /^two$/ })
+    })
+
+    test('exclude (regex with a flag)', async () => {
+      await assertNameMatchWithFlagExclude({ exclude: () => /one/g })
+    })
+
+    test('exclude (array)', async () => {
+      await assertNameMatch({ exclude: () => ['two'] })
+    })
+
+    test('include + exclude', async () => {
+      await assertNameMatch({ include: () => 'one,two', exclude: () => 'two' })
+    })
   })
 })
