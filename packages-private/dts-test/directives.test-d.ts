@@ -17,9 +17,9 @@ declare function testDirective<
 >(): ExtractBinding<Directive<any, Value, Modifiers, Arg>>
 
 describe('vmodel', () => {
-  expectType<ObjectDirective<any, any, 'trim' | 'number' | 'lazy', string>>(
-    vModelText,
-  )
+  expectType<
+    ObjectDirective<any, any, 'trim' | 'number' | 'lazy' | 'date', string>
+  >(vModelText)
   // @ts-expect-error
   expectType<ObjectDirective<any, any, 'not-valid', string>>(vModelText)
 })
