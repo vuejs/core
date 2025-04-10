@@ -220,7 +220,8 @@ export const TeleportImpl = {
         // even in block tree mode we need to make sure all root-level nodes
         // in the teleport inherit previous DOM references so that they can
         // be moved in future patches.
-        traverseStaticChildren(n1, n2, true)
+        // in dev mode, deep traversal is necessary for HMR
+        traverseStaticChildren(n1, n2, !__DEV__)
       } else if (!optimized) {
         patchChildren(
           n1,
