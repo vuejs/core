@@ -506,9 +506,16 @@ export interface ComponentInternalInstance {
    */
   asyncResolved: boolean
 
+  /**
+   * effects to be triggered on component activated in keep-alive
+   * @internal
+   */
+  activatedEffects?: Function[]
+
   // lifecycle
   isMounted: boolean
   isUnmounted: boolean
+  isActivated: boolean
   isDeactivated: boolean
   /**
    * @internal
@@ -673,6 +680,7 @@ export function createComponentInstance(
     // not using enums here because it results in computed properties
     isMounted: false,
     isUnmounted: false,
+    isActivated: true,
     isDeactivated: false,
     bc: null,
     c: null,
