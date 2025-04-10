@@ -25,6 +25,7 @@ export {
 } from './dom/prop'
 export { on, delegate, delegateEvents, setDynamicEvents } from './dom/event'
 export { createIf } from './apiCreateIf'
+export { createKeyedFragment } from './apiCreateFragment'
 export {
   createFor,
   createForSlots,
@@ -42,3 +43,5 @@ export {
   applyDynamicModel,
 } from './directives/vModel'
 export { withVaporDirectives } from './directives/custom'
+export { VaporTransition } from './components/Transition'
+export { VaporTransitionGroup } from './components/TransitionGroup'

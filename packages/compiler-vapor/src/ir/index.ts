@@ -39,6 +39,7 @@ export enum IRNodeTypes {
 
 export interface BaseIRNode {
   type: IRNodeTypes
+  key?: SimpleExpressionNode | undefined
 }
 
 export type CoreHelper = keyof typeof import('packages/runtime-dom/src')
@@ -54,6 +55,7 @@ export interface BlockIRNode extends BaseIRNode {
   operation: OperationNode[]
   expressions: SimpleExpressionNode[]
   returns: number[]
+  hasDeferredVShow: boolean
 }
 
 export interface RootIRNode {
@@ -182,6 +184,7 @@ export interface DirectiveIRNode extends BaseIRNode {
   builtin?: boolean
   asset?: boolean
   modelType?: 'text' | 'dynamic' | 'radio' | 'checkbox' | 'select'
+  deferred?: boolean
 }
 
 export interface CreateComponentIRNode extends BaseIRNode {
@@ -260,6 +263,7 @@ export interface IRDynamicInfo {
   children: IRDynamicInfo[]
   template?: number
   hasDynamicChild?: boolean
+  needsKey?: boolean
   operation?: OperationNode
 }
 
