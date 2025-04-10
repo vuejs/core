@@ -1,8 +1,4 @@
-import {
-  adoptHydrationNode,
-  currentHydrationNode,
-  isHydrating,
-} from './hydration'
+import { adoptTemplate, currentHydrationNode, isHydrating } from './hydration'
 import { child, createElement, createTextNode } from './node'
 
 let t: HTMLTemplateElement
