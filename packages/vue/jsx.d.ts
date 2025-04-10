@@ -1,7 +1,13 @@
 /* eslint-disable @typescript-eslint/prefer-ts-expect-error */
 // global JSX namespace registration
 // somehow we have to copy=pase the jsx-runtime types here to make TypeScript happy
-import type { NativeElements, ReservedProps, VNode } from '@vue/runtime-dom'
+import type {
+  AllowedComponentProps,
+  ComponentCustomProps,
+  NativeElements,
+  ReservedProps,
+  VNode,
+} from '@vue/runtime-dom'
 
 declare global {
   namespace JSX {
@@ -17,6 +23,9 @@ declare global {
       // @ts-ignore suppress ts:2374 = Duplicate string index signature.
       [name: string]: any
     }
-    export interface IntrinsicAttributes extends ReservedProps {}
+    export interface IntrinsicAttributes
+      extends ReservedProps,
+        AllowedComponentProps,
+        ComponentCustomProps {}
   }
 }
