@@ -903,5 +903,138 @@ describe('VaporKeepAlive', () => {
       assertHookCalls(oneHooks, [1, 1, 1, 0, 1])
       assertHookCalls(twoHooks, [1, 1, 1, 0, 0])
     })
+
+    async function assertAnonymous(include: boolean) {
+      const oneBeforeMountHooks = vi.fn()
+      const one = defineVaporComponent({
+        name: 'one',
+        setup() {
+          onBeforeMount(() => oneBeforeMountHooks())
+          return template(`one`)()
+        },
+      })
+
+      const twoBeforeMountHooks = vi.fn()
+      const two = defineVaporComponent({
+        // anonymous
+        setup() {
+          onBeforeMount(() => twoBeforeMountHooks())
+          return template(`two`)()
+        },
+      })
+
+      const views: any = { one, two }
+      const viewRef = ref('one')
+
+      define({
+        setup() {
+          return createComponent(
+            VaporKeepAlive,
+            { include: () => (include ? 'one' : undefined) },
+            {
+              default: () => createDynamicComponent(() => views[viewRef.value]),
+            },
+          )
+        },
+      }).render()
+
+      function assert(oneCreateCount: number, twoCreateCount: number) {
+        expect(oneBeforeMountHooks.mock.calls.length).toBe(oneCreateCount)
+        expect(twoBeforeMountHooks.mock.calls.length).toBe(twoCreateCount)
+      }
+
+      assert(1, 0)
+
+      viewRef.value = 'two'
+      await nextTick()
+      assert(1, 1)
+
+      viewRef.value = 'one'
+      await nextTick()
+      assert(1, 1)
+
+      viewRef.value = 'two'
+      await nextTick()
+      // two should be re-created if include is specified, since it's not matched
+      // otherwise it should be cached.
+      assert(1, include ? 2 : 1)
+    }
+
+    test('should not cache anonymous component when include is specified', async () => {
+      await assertAnonymous(true)
+    })
+
+    test('should cache anonymous components if include is not specified', async () => {
+      await assertAnonymous(false)
+    })
+
+    test('should not destroy active instance when pruning cache', async () => {
+      const unmounted = vi.fn()
+      const Foo = defineVaporComponent({
+        setup() {
+          onUnmounted(() => unmounted())
+          return template(`foo`)()
+        },
+      })
+
+      const includeRef = ref(['foo'])
+      define({
+        setup() {
+          return createComponent(
+            VaporKeepAlive,
+            { include: () => includeRef.value },
+            {
+              default: () => createDynamicComponent(() => Foo),
+            },
+          )
+        },
+      }).render()
+
+      // condition: a render where a previous component is reused
+      includeRef.value = ['foo', 'bar']
+      await nextTick()
+      includeRef.value = []
+      await nextTick()
+      expect(unmounted).not.toHaveBeenCalled()
+    })
+
+    test('should update re-activated component if props have changed', async () => {
+      const Foo = defineVaporComponent({
+        props: ['n'],
+        setup(props) {
+          const n0 = template(`<div> </div>`)() as any
+          const x0 = child(n0) as any
+          renderEffect(() => setText(x0, props.n))
+          return n0
+        },
+      })
+
+      const toggle = ref(true)
+      const n = ref(0)
+      const { html } = define({
+        setup() {
+          return createComponent(VaporKeepAlive, null, {
+            default: () => {
+              return createIf(
+                () => toggle.value,
+                () => createComponent(Foo, { n: () => n.value }),
+              )
+            },
+          })
+        },
+      }).render()
+
+      expect(html()).toBe(`<div>0</div><!--if-->`)
+
+      toggle.value = false
+      await nextTick()
+      expect(html()).toBe(`<!--if-->`)
+
+      n.value++
+      await nextTick()
+      toggle.value = true
+      await nextTick()
+      expect(html()).toBe(`<div>1</div><!--if-->`)
+    })
   })
 })
