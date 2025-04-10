@@ -29,8 +29,8 @@ exports[`compiler: element transform > component > generate multi root component
 const t0 = _template("123")
 
 export function render(_ctx, $props, $emit, $attrs, $slots) {
-  const n1 = t0()
   const n0 = _createComponent(_ctx.Comp)
+  const n1 = t0()
   return [n0, n1]
 }"
 `;
@@ -321,8 +321,8 @@ const t2 = _template("<form></form>")
 
 export function render(_ctx) {
   const n1 = t1()
-  const n0 = t0()
   const n3 = t2()
+  const n0 = t0()
   const n2 = t2()
   _insert(n0, n1)
   _insert(n2, n3)

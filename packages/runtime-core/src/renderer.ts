@@ -2124,7 +2124,13 @@ function baseCreateRenderer(
         )
       } else {
         const { leave, delayLeave, afterLeave } = transition!
-        const remove = () => hostInsert(el!, container, anchor)
+        const remove = () => {
+          if (vnode.ctx!.isUnmounted) {
+            hostRemove(el!)
+          } else {
+            hostInsert(el!, container, anchor)
+          }
+        }
         const performLeave = () => {
           leave(el!, () => {
             remove()

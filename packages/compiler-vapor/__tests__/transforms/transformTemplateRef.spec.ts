@@ -86,10 +86,10 @@ describe('compiler: template ref transform', () => {
       `<div ref="foo" v-if="true" />`,
     )
 
-    expect(ir.block.operation).lengthOf(1)
-    expect(ir.block.operation[0].type).toBe(IRNodeTypes.IF)
+    const op = ir.block.dynamic.children[0].operation as IfIRNode
+    expect(op.type).toBe(IRNodeTypes.IF)
 
-    const { positive } = ir.block.operation[0] as IfIRNode
+    const { positive } = op
     expect(positive.operation).toMatchObject([
       {
         type: IRNodeTypes.SET_TEMPLATE_REF,
@@ -111,7 +111,7 @@ describe('compiler: template ref transform', () => {
       `<div ref="foo" v-for="item in [1,2,3]" />`,
     )
 
-    const { render } = ir.block.operation[0] as ForIRNode
+    const { render } = ir.block.dynamic.children[0].operation as ForIRNode
     expect(render.operation).toMatchObject([
       {
         type: IRNodeTypes.SET_TEMPLATE_REF,

@@ -25,7 +25,6 @@ const t4 = _template("fine")
 const t5 = _template("<div> </div>")
 
 export function render(_ctx) {
-  const n13 = t5()
   const n0 = _createIf(() => (_ctx.ok), () => {
     const n2 = t0()
     return n2
@@ -38,6 +37,7 @@ export function render(_ctx) {
     const n11 = t4()
     return [n10, n11]
   }))
+  const n13 = t5()
   const x13 = _child(n13)
   _renderEffect(() => _setText(x13, _toDisplayString(_ctx.text)))
   return [n0, n13]

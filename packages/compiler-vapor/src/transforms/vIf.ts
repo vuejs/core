@@ -46,7 +46,7 @@ export function processIf(
 
     return () => {
       onExit()
-      context.registerOperation({
+      context.dynamic.operation = {
         type: IRNodeTypes.IF,
         id,
         condition: dir.exp!,
@@ -54,14 +54,20 @@ export function processIf(
         once:
           context.inVOnce ||
           isStaticExpression(dir.exp!, context.options.bindingMetadata),
-      })
+      }
     }
   } else {
     // check the adjacent v-if
     const siblingIf = getSiblingIf(context, true)
 
-    const { operation } = context.block
-    let lastIfNode = operation[operation.length - 1]
+    const siblings = context.parent && context.parent.dynamic.children
+    let lastIfNode
+    if (siblings) {
+      let i = siblings.length
+      while (i--) {
+        if (siblings[i].operation) lastIfNode = siblings[i].operation
+      }
+    }
 
     if (
       // check if v-if is the sibling node

@@ -87,7 +87,10 @@ export class ComputedRefImpl<T = any> implements Dependency, Subscriber {
   get dep(): Dependency {
     return this
   }
-  // for backwards compat
+  /**
+   * @internal
+   * for backwards compat
+   */
   get _dirty(): boolean {
     const flags = this.flags
     if (
@@ -99,6 +102,10 @@ export class ComputedRefImpl<T = any> implements Dependency, Subscriber {
     }
     return false
   }
+  /**
+   * @internal
+   * for backwards compat
+   */
   set _dirty(v: boolean) {
     if (v) {
       this.flags |= SubscriberFlags.Dirty

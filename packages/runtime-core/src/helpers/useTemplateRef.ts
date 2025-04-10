@@ -5,6 +5,8 @@ import { EMPTY_OBJ } from '@vue/shared'
 
 export const knownTemplateRefs: WeakSet<ShallowRef> = new WeakSet()
 
+export type TemplateRef<T = unknown> = Readonly<ShallowRef<T | null>>
+
 export function useTemplateRef<T = unknown, Keys extends string = string>(
   key: Keys,
 ): Readonly<ShallowRef<T | null>> {

@@ -1,4 +1,4 @@
-import { isRef, ref } from '../src/ref'
+import { isRef, ref, shallowRef } from '../src/ref'
 import {
   isProxy,
   isReactive,
@@ -301,6 +301,13 @@ describe('reactivity/reactive', () => {
     expect(() => markRaw(obj)).not.toThrowError()
   })
 
+  test('should not markRaw object as reactive', () => {
+    const a = reactive({ a: 1 })
+    const b = reactive({ b: 2 }) as any
+    b.a = markRaw(toRaw(a))
+    expect(b.a === a).toBe(false)
+  })
+
   test('should not observe non-extensible objects', () => {
     const obj = reactive({
       foo: Object.preventExtensions({ a: 1 }),
@@ -418,5 +425,18 @@ describe('reactivity/reactive', () => {
 
     map.set(void 0, 1)
     expect(c.value).toBe(1)
+  })
+
+  test('should return true for reactive objects', () => {
+    expect(isReactive(reactive({}))).toBe(true)
+    expect(isReactive(readonly(reactive({})))).toBe(true)
+    expect(isReactive(ref({}).value)).toBe(true)
+    expect(isReactive(readonly(ref({})).value)).toBe(true)
+    expect(isReactive(shallowReactive({}))).toBe(true)
+  })
+
+  test('should return false for non-reactive objects', () => {
+    expect(isReactive(ref(true))).toBe(false)
+    expect(isReactive(shallowRef({}).value)).toBe(false)
   })
 })
