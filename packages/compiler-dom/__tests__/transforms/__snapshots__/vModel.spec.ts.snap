@@ -48,6 +48,22 @@ return function render(_ctx, _cache) {
 }"
 `;
 
+exports[`compiler: transform v-model > input with v-bind shorthand type should use dynamic model 1`] = `
+"const _Vue = Vue
+
+return function render(_ctx, _cache) {
+  with (_ctx) {
+    const { vModelDynamic: _vModelDynamic, withDirectives: _withDirectives, openBlock: _openBlock, createElementBlock: _createElementBlock } = _Vue
+
+    return _withDirectives((_openBlock(), _createElementBlock("input", {
+      "onUpdate:modelValue": $event => ((model) = $event)
+    }, null, 8 /* PROPS */, ["onUpdate:modelValue"])), [
+      [_vModelDynamic, model]
+    ])
+  }
+}"
+`;
+
 exports[`compiler: transform v-model > modifiers > .lazy 1`] = `
 "const _Vue = Vue
 
