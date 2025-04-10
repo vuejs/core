@@ -22,6 +22,7 @@ import {
 } from '../component'
 import { defineVaporComponent } from '../apiDefineComponent'
 import { ShapeFlags, invokeArrayFns, isArray } from '@vue/shared'
+import { createElement } from '../dom/node'
 
 export interface KeepAliveInstance extends VaporComponentInstance {
   activate: (
@@ -56,7 +57,7 @@ export const VaporKeepAliveImpl: ObjectVaporComponent = defineVaporComponent({
     const keepAliveInstance = currentInstance! as KeepAliveInstance
     const cache: Cache = new Map()
     const keys: Keys = new Set()
-    const storageContainer = document.createElement('div')
+    const storageContainer = createElement('div')
     let current: VaporComponentInstance | undefined
 
     if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
