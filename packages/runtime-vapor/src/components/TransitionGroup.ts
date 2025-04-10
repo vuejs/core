@@ -100,6 +100,7 @@ export const VaporTransitionGroup: ObjectVaporComponent = decorate({
           moveClass,
         )
       ) {
+        prevChildren = []
         return
       }
 
@@ -119,6 +120,7 @@ export const VaporTransitionGroup: ObjectVaporComponent = decorate({
           moveClass,
         ),
       )
+      prevChildren = []
     })
 
     slottedBlock = slots.default && slots.default()
