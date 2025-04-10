@@ -12,7 +12,13 @@ import {
   warn,
   watch,
 } from '@vue/runtime-dom'
-import { type Block, insert, isFragment, isValidBlock } from '../block'
+import {
+  type Block,
+  DynamicFragment,
+  insert,
+  isFragment,
+  isValidBlock,
+} from '../block'
 import {
   type ObjectVaporComponent,
   type VaporComponent,
@@ -153,12 +159,19 @@ export const VaporKeepAliveImpl: ObjectVaporComponent = defineVaporComponent({
       }
     }
 
-    const children = slots.default()
+    let children = slots.default()
     if (isArray(children) && children.length > 1) {
       if (__DEV__) {
         warn(`KeepAlive should contain exactly one component child.`)
       }
       return children
+    }
+
+    // wrap children in dynamic fragment
+    if (!isFragment(children)) {
+      const frag = new DynamicFragment()
+      frag.update(() => children)
+      children = frag
     }
 
     function pruneCache(filter: (name: string) => boolean) {
@@ -196,16 +209,6 @@ export const VaporKeepAliveImpl: ObjectVaporComponent = defineVaporComponent({
     return children
   },
 })
-
-export const VaporKeepAlive = VaporKeepAliveImpl as any as {
-  __isKeepAlive: true
-  new (): {
-    $props: KeepAliveProps
-    $slots: {
-      default(): Block
-    }
-  }
-}
 
 function getInnerBlock(block: Block): VaporComponentInstance | undefined {
   if (isVaporComponent(block)) {

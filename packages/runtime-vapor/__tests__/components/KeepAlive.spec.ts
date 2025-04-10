@@ -5,7 +5,9 @@ import {
   onDeactivated,
   onMounted,
   onUnmounted,
+  reactive,
   ref,
+  shallowRef,
 } from 'vue'
 import type { LooseRawProps, VaporComponent } from '../../src/component'
 import { makeRender } from '../_utils'
@@ -1036,5 +1038,152 @@ describe('VaporKeepAlive', () => {
       await nextTick()
       expect(html()).toBe(`<div>1</div><!--if-->`)
     })
+  })
+
+  test.todo('should work with async component', async () => {})
+
+  test('handle error in async onActivated', async () => {
+    const err = new Error('foo')
+    const handler = vi.fn()
+    const Child = defineVaporComponent({
+      setup() {
+        onActivated(async () => {
+          throw err
+        })
+
+        return template(`<span></span`)()
+      },
+    })
+
+    const { app } = define({
+      setup() {
+        return createComponent(VaporKeepAlive, null, {
+          default: () => createComponent(Child),
+        })
+      },
+    }).create()
+
+    app.config.errorHandler = handler
+    app.mount(document.createElement('div'))
+
+    await nextTick()
+    expect(handler).toHaveBeenCalledTimes(1)
+  })
+
+  test('should avoid unmount later included components', async () => {
+    const unmountedA = vi.fn()
+    const mountedA = vi.fn()
+    const activatedA = vi.fn()
+    const deactivatedA = vi.fn()
+    const unmountedB = vi.fn()
+    const mountedB = vi.fn()
+
+    const A = defineVaporComponent({
+      name: 'A',
+      setup() {
+        onMounted(mountedA)
+        onUnmounted(unmountedA)
+        onActivated(activatedA)
+        onDeactivated(deactivatedA)
+        return template(`<div>A</div>`)()
+      },
+    })
+
+    const B = defineVaporComponent({
+      name: 'B',
+      setup() {
+        onMounted(mountedB)
+        onUnmounted(unmountedB)
+        return template(`<div>B</div>`)()
+      },
+    })
+
+    const include = reactive<string[]>([])
+    const current = shallowRef(A)
+    const { html } = define({
+      setup() {
+        return createComponent(
+          VaporKeepAlive,
+          { include: () => include },
+          {
+            default: () => createDynamicComponent(() => current.value),
+          },
+        )
+      },
+    }).render()
+
+    expect(html()).toBe(`<div>A</div><!--dynamic-component-->`)
+    expect(mountedA).toHaveBeenCalledTimes(1)
+    expect(unmountedA).toHaveBeenCalledTimes(0)
+    expect(activatedA).toHaveBeenCalledTimes(0)
+    expect(deactivatedA).toHaveBeenCalledTimes(0)
+    expect(mountedB).toHaveBeenCalledTimes(0)
+    expect(unmountedB).toHaveBeenCalledTimes(0)
+
+    include.push('A') // cache A
+    await nextTick()
+    current.value = B // toggle to B
+    await nextTick()
+    expect(html()).toBe(`<div>B</div><!--dynamic-component-->`)
+    expect(mountedA).toHaveBeenCalledTimes(1)
+    expect(unmountedA).toHaveBeenCalledTimes(0)
+    expect(activatedA).toHaveBeenCalledTimes(0)
+    expect(deactivatedA).toHaveBeenCalledTimes(1)
+    expect(mountedB).toHaveBeenCalledTimes(1)
+    expect(unmountedB).toHaveBeenCalledTimes(0)
+  })
+
+  test('remove component from include then switching child', async () => {
+    const About = defineVaporComponent({
+      name: 'About',
+      setup() {
+        return template(`<h1>About</h1>`)()
+      },
+    })
+    const mountedHome = vi.fn()
+    const unmountedHome = vi.fn()
+    const activatedHome = vi.fn()
+    const deactivatedHome = vi.fn()
+
+    const Home = defineVaporComponent({
+      name: 'Home',
+      setup() {
+        onMounted(mountedHome)
+        onUnmounted(unmountedHome)
+        onDeactivated(deactivatedHome)
+        onActivated(activatedHome)
+        return template(`<h1>Home</h1>`)()
+      },
+    })
+
+    const activeViewName = ref('Home')
+    const cacheList = reactive(['Home'])
+
+    define({
+      setup() {
+        return createComponent(
+          VaporKeepAlive,
+          { include: () => cacheList },
+          {
+            default: () => {
+              return createIf(
+                () => activeViewName.value === 'Home',
+                () => createComponent(Home),
+                () => createComponent(About),
+              )
+            },
+          },
+        )
+      },
+    }).render()
+
+    expect(mountedHome).toHaveBeenCalledTimes(1)
+    expect(activatedHome).toHaveBeenCalledTimes(1)
+    cacheList.splice(0, 1)
+    await nextTick()
+    activeViewName.value = 'About'
+    await nextTick()
+    expect(deactivatedHome).toHaveBeenCalledTimes(0)
+    expect(unmountedHome).toHaveBeenCalledTimes(1)
   })
 })
