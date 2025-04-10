@@ -686,5 +686,222 @@ describe('VaporKeepAlive', () => {
     test('include + exclude', async () => {
       await assertNameMatch({ include: () => 'one,two', exclude: () => 'two' })
     })
+
+    test('max', async () => {
+      const spyAC = vi.fn()
+      const spyBC = vi.fn()
+      const spyCC = vi.fn()
+      const spyAA = vi.fn()
+      const spyBA = vi.fn()
+      const spyCA = vi.fn()
+      const spyADA = vi.fn()
+      const spyBDA = vi.fn()
+      const spyCDA = vi.fn()
+      const spyAUM = vi.fn()
+      const spyBUM = vi.fn()
+      const spyCUM = vi.fn()
+
+      function assertCount(calls: number[]) {
+        expect([
+          spyAC.mock.calls.length,
+          spyAA.mock.calls.length,
+          spyADA.mock.calls.length,
+          spyAUM.mock.calls.length,
+          spyBC.mock.calls.length,
+          spyBA.mock.calls.length,
+          spyBDA.mock.calls.length,
+          spyBUM.mock.calls.length,
+          spyCC.mock.calls.length,
+          spyCA.mock.calls.length,
+          spyCDA.mock.calls.length,
+          spyCUM.mock.calls.length,
+        ]).toEqual(calls)
+      }
+      const viewRef = ref('a')
+      const views: Record<string, VaporComponent> = {
+        a: defineVaporComponent({
+          name: 'a',
+          setup() {
+            onBeforeMount(() => spyAC())
+            onActivated(() => spyAA())
+            onDeactivated(() => spyADA())
+            onUnmounted(() => spyAUM())
+            return template(`one`)()
+          },
+        }),
+        b: defineVaporComponent({
+          name: 'b',
+          setup() {
+            onBeforeMount(() => spyBC())
+            onActivated(() => spyBA())
+            onDeactivated(() => spyBDA())
+            onUnmounted(() => spyBUM())
+            return template(`two`)()
+          },
+        }),
+        c: defineVaporComponent({
+          name: 'c',
+          setup() {
+            onBeforeMount(() => spyCC())
+            onActivated(() => spyCA())
+            onDeactivated(() => spyCDA())
+            onUnmounted(() => spyCUM())
+            return template(`three`)()
+          },
+        }),
+      }
+
+      define({
+        setup() {
+          return createComponent(
+            VaporKeepAlive,
+            { max: () => 2 },
+            {
+              default: () => createDynamicComponent(() => views[viewRef.value]),
+            },
+          )
+        },
+      }).render()
+      assertCount([1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
+
+      viewRef.value = 'b'
+      await nextTick()
+      assertCount([1, 1, 1, 0, 1, 1, 0, 0, 0, 0, 0, 0])
+
+      viewRef.value = 'c'
+      await nextTick()
+      // should prune A because max cache reached
+      assertCount([1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 0, 0])
+
+      viewRef.value = 'b'
+      await nextTick()
+      // B should be reused, and made latest
+      assertCount([1, 1, 1, 1, 1, 2, 1, 0, 1, 1, 1, 0])
+
+      viewRef.value = 'a'
+      await nextTick()
+      // C should be pruned because B was used last so C is the oldest cached
+      assertCount([2, 2, 1, 1, 1, 2, 2, 0, 1, 1, 1, 1])
+    })
+  })
+
+  describe('cache invalidation', () => {
+    function setup() {
+      const viewRef = ref('one')
+      const includeRef = ref('one,two')
+      define({
+        setup() {
+          return createComponent(
+            VaporKeepAlive,
+            { include: () => includeRef.value },
+            {
+              default: () => createDynamicComponent(() => views[viewRef.value]),
+            },
+          )
+        },
+      }).render()
+      return { viewRef, includeRef }
+    }
+
+    function setupExclude() {
+      const viewRef = ref('one')
+      const excludeRef = ref('')
+      define({
+        setup() {
+          return createComponent(
+            VaporKeepAlive,
+            { exclude: () => excludeRef.value },
+            {
+              default: () => createDynamicComponent(() => views[viewRef.value]),
+            },
+          )
+        },
+      }).render()
+      return { viewRef, excludeRef }
+    }
+
+    test('on include change', async () => {
+      const { viewRef, includeRef } = setup()
+
+      viewRef.value = 'two'
+      await nextTick()
+      assertHookCalls(oneHooks, [1, 1, 1, 1, 0])
+      assertHookCalls(twoHooks, [1, 1, 1, 0, 0])
+
+      includeRef.value = 'two'
+      await nextTick()
+      assertHookCalls(oneHooks, [1, 1, 1, 1, 1])
+      assertHookCalls(twoHooks, [1, 1, 1, 0, 0])
+
+      viewRef.value = 'one'
+      await nextTick()
+      assertHookCalls(oneHooks, [2, 2, 1, 1, 1])
+      assertHookCalls(twoHooks, [1, 1, 1, 1, 0])
+    })
+
+    test('on exclude change', async () => {
+      const { viewRef, excludeRef } = setupExclude()
+
+      viewRef.value = 'two'
+      await nextTick()
+      assertHookCalls(oneHooks, [1, 1, 1, 1, 0])
+      assertHookCalls(twoHooks, [1, 1, 1, 0, 0])
+
+      excludeRef.value = 'one'
+      await nextTick()
+      assertHookCalls(oneHooks, [1, 1, 1, 1, 1])
+      assertHookCalls(twoHooks, [1, 1, 1, 0, 0])
+
+      viewRef.value = 'one'
+      await nextTick()
+      assertHookCalls(oneHooks, [2, 2, 1, 1, 1])
+      assertHookCalls(twoHooks, [1, 1, 1, 1, 0])
+    })
+
+    test('on include change + view switch', async () => {
+      const { viewRef, includeRef } = setup()
+
+      viewRef.value = 'two'
+      await nextTick()
+      assertHookCalls(oneHooks, [1, 1, 1, 1, 0])
+      assertHookCalls(twoHooks, [1, 1, 1, 0, 0])
+
+      includeRef.value = 'one'
+      viewRef.value = 'one'
+      await nextTick()
+      assertHookCalls(oneHooks, [1, 1, 2, 1, 0])
+      // two should be pruned
+      assertHookCalls(twoHooks, [1, 1, 1, 1, 1])
+    })
+
+    test('on exclude change + view switch', async () => {
+      const { viewRef, excludeRef } = setupExclude()
+
+      viewRef.value = 'two'
+      await nextTick()
+      assertHookCalls(oneHooks, [1, 1, 1, 1, 0])
+      assertHookCalls(twoHooks, [1, 1, 1, 0, 0])
+
+      excludeRef.value = 'two'
+      viewRef.value = 'one'
+      await nextTick()
+      assertHookCalls(oneHooks, [1, 1, 2, 1, 0])
+      // two should be pruned
+      assertHookCalls(twoHooks, [1, 1, 1, 1, 1])
+    })
+
+    test('should not prune current active instance', async () => {
+      const { viewRef, includeRef } = setup()
+
+      includeRef.value = 'two'
+      await nextTick()
+      assertHookCalls(oneHooks, [1, 1, 1, 0, 0])
+      assertHookCalls(twoHooks, [0, 0, 0, 0, 0])
+
+      viewRef.value = 'two'
+      await nextTick()
+      assertHookCalls(oneHooks, [1, 1, 1, 0, 1])
+      assertHookCalls(twoHooks, [1, 1, 1, 0, 0])
+    })
   })
 })

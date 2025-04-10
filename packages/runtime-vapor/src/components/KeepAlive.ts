@@ -62,9 +62,8 @@ export const VaporKeepAliveImpl: ObjectVaporComponent = defineVaporComponent({
       ;(keepAliveInstance as any).__v_cache = cache
     }
 
-    const { include, exclude, max } = props
-
     function shouldCache(instance: VaporComponentInstance) {
+      const { include, exclude } = props
       const name = getComponentName(instance.type)
       return !(
         (include && (!name || !matches(include, name))) ||
@@ -73,6 +72,7 @@ export const VaporKeepAliveImpl: ObjectVaporComponent = defineVaporComponent({
     }
 
     function cacheBlock() {
+      const { max } = props
       // TODO suspense
       const currentBlock = keepAliveInstance.block!
       if (!isValidBlock(currentBlock)) return
@@ -119,15 +119,6 @@ export const VaporKeepAliveImpl: ObjectVaporComponent = defineVaporComponent({
         instance.shapeFlag! |= ShapeFlags.COMPONENT_KEPT_ALIVE
       }
 
-      // const name = getComponentName(instance.type)
-      // if (
-      //   !(
-      //     (include && (!name || !matches(include, name))) ||
-      //     (exclude && name && matches(exclude, name))
-      //   )
-      // ) {
-      //   instance.shapeFlag! |= ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE
-      // }
       if (shouldCache(instance)) {
         instance.shapeFlag! |= ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE
       }
@@ -138,7 +129,7 @@ export const VaporKeepAliveImpl: ObjectVaporComponent = defineVaporComponent({
       parentNode: ParentNode,
       anchor: Node,
     ) => {
-      const cachedBlock = cache.get(instance.type)!
+      const cachedBlock = (current = cache.get(instance.type)!)
       insert((instance.block = cachedBlock.block), parentNode, anchor)
       queuePostFlushCb(() => {
         instance.isDeactivated = false
@@ -182,7 +173,10 @@ export const VaporKeepAliveImpl: ObjectVaporComponent = defineVaporComponent({
     function pruneCacheEntry(key: CacheKey) {
       const cached = cache.get(key)
       if (cached) {
-        unmountComponent(cached)
+        resetShapeFlag(cached)
+        if (cached !== current) {
+          unmountComponent(cached)
+        }
       }
       cache.delete(key)
       keys.delete(key)
