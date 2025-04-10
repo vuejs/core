@@ -214,17 +214,6 @@ export class TeleportFragment extends VaporFragment {
   }
 }
 
-export const VaporTeleport = VaporTeleportImpl as unknown as {
-  __vapor: true
-  __isTeleport: true
-  new (): {
-    $props: TeleportProps
-    $slots: {
-      default(): Block
-    }
-  }
-}
-
 export function isVaporTeleport(
   value: unknown,
 ): value is typeof VaporTeleportImpl {

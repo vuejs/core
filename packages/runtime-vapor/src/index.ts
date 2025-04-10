@@ -3,7 +3,7 @@ export { createVaporApp, createVaporSSRApp } from './apiCreateApp'
 export { defineVaporComponent } from './apiDefineComponent'
 export { vaporInteropPlugin } from './vdomInterop'
 export type { VaporDirective } from './directives/custom'
-export { VaporTeleport } from './components/Teleport'
+export { VaporTeleportImpl as VaporTeleport } from './components/Teleport'
 
 // compiler-use only
 export { insert, prepend, remove } from './block'
