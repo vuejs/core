@@ -111,7 +111,7 @@ async function renderUsages() {
  */
 async function importJSON(filePath) {
   if (!existsSync(filePath)) return undefined
-  return (await import(filePath, { assert: { type: 'json' } })).default
+  return (await import(filePath, { with: { type: 'json' } })).default
 }
 
 /**
