@@ -50,11 +50,7 @@ export function setRef(
   if (!instance || instance.isUnmounted) return
 
   const setupState: any = __DEV__ ? instance.setupState || {} : null
-  const refValue = isVaporComponent(el)
-    ? getExposed(el) || el
-    : el instanceof DynamicFragment
-      ? getExposed(el.nodes as VaporComponentInstance) || el.nodes
-      : el
+  const refValue = getRefValue(el)
   const refs =
     instance.refs === EMPTY_OBJ ? (instance.refs = {}) : instance.refs
 
@@ -146,4 +142,13 @@ export function setRef(
     }
   }
   return ref
+}
+
+const getRefValue = (el: RefEl) => {
+  if (isVaporComponent(el)) {
+    return getExposed(el) || el
+  } else if (el instanceof DynamicFragment) {
+    return getRefValue(el.nodes as RefEl)
+  }
+  return el
 }

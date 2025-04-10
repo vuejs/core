@@ -152,9 +152,12 @@ export function createComponent(
     locateHydrationNode()
   }
 
+  // try to get the cached instance if inside keep-alive
   if (currentInstance && isKeepAlive(currentInstance)) {
-    const cache = (currentInstance as KeepAliveInstance).getCache(component)
-    if (cache) return cache
+    const cached = (currentInstance as KeepAliveInstance).getCachedInstance(
+      component,
+    )
+    if (cached) return cached
   }
 
   // vdom interop enabled and component is not an explicit vapor component
@@ -525,7 +528,7 @@ export function mountComponent(
   }
   if (instance.bm) invokeArrayFns(instance.bm)
   insert(instance.block, parentNode, anchor)
-  if (instance.m) queuePostFlushCb(() => invokeArrayFns(instance.m!))
+  if (instance.m) queuePostFlushCb(instance.m!)
   if (
     instance.shapeFlag! & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE &&
     instance.a
@@ -558,7 +561,7 @@ export function unmountComponent(
     instance.scope.stop()
 
     if (instance.um) {
-      queuePostFlushCb(() => invokeArrayFns(instance.um!))
+      queuePostFlushCb(instance.um!)
     }
     instance.isUnmounted = true
   }

@@ -12,13 +12,7 @@ import {
   warn,
   watch,
 } from '@vue/runtime-dom'
-import {
-  type Block,
-  DynamicFragment,
-  insert,
-  isFragment,
-  isValidBlock,
-} from '../block'
+import { type Block, insert, isFragment } from '../block'
 import {
   type ObjectVaporComponent,
   type VaporComponent,
@@ -37,16 +31,17 @@ export interface KeepAliveInstance extends VaporComponentInstance {
   ) => void
   deactivate: (instance: VaporComponentInstance) => void
   process: (instance: VaporComponentInstance) => void
-  getCache: (comp: VaporComponent) => VaporComponentInstance | undefined
+  getCachedInstance: (
+    comp: VaporComponent,
+  ) => VaporComponentInstance | undefined
 }
 
-type CacheKey = PropertyKey | VaporComponent
+type CacheKey = VaporComponent
 type Cache = Map<CacheKey, VaporComponentInstance>
 type Keys = Set<CacheKey>
 
 export const VaporKeepAliveImpl: ObjectVaporComponent = defineVaporComponent({
   name: 'VaporKeepAlive',
-  // @ts-expect-error
   __isKeepAlive: true,
   props: {
     include: [String, RegExp, Array],
@@ -80,13 +75,10 @@ export const VaporKeepAliveImpl: ObjectVaporComponent = defineVaporComponent({
     function cacheBlock() {
       const { max } = props
       // TODO suspense
-      const currentBlock = keepAliveInstance.block!
-      if (!isValidBlock(currentBlock)) return
+      const innerBlock = getInnerBlock(keepAliveInstance.block!)!
+      if (!innerBlock || !shouldCache(innerBlock)) return
 
-      const block = getInnerBlock(currentBlock)!
-      if (!block || !shouldCache(block)) return
-
-      const key = block.type
+      const key = innerBlock.type
       if (cache.has(key)) {
         // make this key the freshest
         keys.delete(key)
@@ -98,7 +90,7 @@ export const VaporKeepAliveImpl: ObjectVaporComponent = defineVaporComponent({
           pruneCacheEntry(keys.values().next().value!)
         }
       }
-      cache.set(key, (current = block))
+      cache.set(key, (current = innerBlock))
     }
 
     onMounted(cacheBlock)
@@ -118,9 +110,12 @@ export const VaporKeepAliveImpl: ObjectVaporComponent = defineVaporComponent({
       })
     })
 
-    keepAliveInstance.getCache = (comp: VaporComponent) => cache.get(comp)
+    keepAliveInstance.getCachedInstance = (comp: VaporComponent) =>
+      cache.get(comp)
 
-    keepAliveInstance.process = (instance: VaporComponentInstance) => {
+    const process = (keepAliveInstance.process = (
+      instance: VaporComponentInstance,
+    ) => {
       if (cache.has(instance.type)) {
         instance.shapeFlag! |= ShapeFlags.COMPONENT_KEPT_ALIVE
       }
@@ -128,15 +123,15 @@ export const VaporKeepAliveImpl: ObjectVaporComponent = defineVaporComponent({
       if (shouldCache(instance)) {
         instance.shapeFlag! |= ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE
       }
-    }
+    })
 
     keepAliveInstance.activate = (
       instance: VaporComponentInstance,
       parentNode: ParentNode,
       anchor: Node,
     ) => {
-      const cachedBlock = (current = cache.get(instance.type)!)
-      insert((instance.block = cachedBlock.block), parentNode, anchor)
+      current = instance
+      insert(instance.block, parentNode, anchor)
       queuePostFlushCb(() => {
         instance.isDeactivated = false
         if (instance.a) invokeArrayFns(instance.a)
@@ -167,12 +162,11 @@ export const VaporKeepAliveImpl: ObjectVaporComponent = defineVaporComponent({
       return children
     }
 
-    // wrap children in dynamic fragment
-    if (!isFragment(children)) {
-      const frag = new DynamicFragment()
-      frag.update(() => children)
-      children = frag
-    }
+    // `children` could be either a `VaporComponentInstance` or a `DynamicFragment`
+    // (when using `v-if` or `<component is/>`). For `DynamicFragment` children,
+    // the `shapeFlag` is processed in `DynamicFragment.update`. Here only need
+    // to process the `VaporComponentInstance`
+    if (isVaporComponent(children)) process(children)
 
     function pruneCache(filter: (name: string) => boolean) {
       cache.forEach((instance, key) => {
@@ -187,6 +181,7 @@ export const VaporKeepAliveImpl: ObjectVaporComponent = defineVaporComponent({
       const cached = cache.get(key)
       if (cached) {
         resetShapeFlag(cached)
+        // don't unmount if the instance is the current one
         if (cached !== current) {
           unmountComponent(cached)
         }
