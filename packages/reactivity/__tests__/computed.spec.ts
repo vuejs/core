@@ -26,7 +26,11 @@ import {
   triggerRef,
 } from '../src'
 import { EffectFlags, pauseTracking, resetTracking } from '../src/effect'
-import type { ComputedRef, ComputedRefImpl } from '../src/computed'
+import {
+  COMPUTED_SELF_RECURSIVE_WARN,
+  type ComputedRef,
+  type ComputedRefImpl,
+} from '../src/computed'
 
 describe('reactivity/computed', () => {
   it('should return updated value', () => {
@@ -482,7 +486,6 @@ describe('reactivity/computed', () => {
     const c3 = computed(() => c2.value)
 
     c3.value
-    // expect(COMPUTED_SIDE_EFFECT_WARN).toHaveBeenWarned()
   })
 
   it('should work when chained(ref+computed)', () => {
@@ -496,7 +499,6 @@ describe('reactivity/computed', () => {
     const c2 = computed(() => v.value + c1.value)
     expect(c2.value).toBe('0foo')
     expect(c2.value).toBe('1foo')
-    // expect(COMPUTED_SIDE_EFFECT_WARN).toHaveBeenWarned()
   })
 
   it('should trigger effect even computed already dirty', () => {
@@ -520,7 +522,7 @@ describe('reactivity/computed', () => {
     expect(fnSpy).toBeCalledTimes(2)
     expect(fnSpy.mock.calls).toMatchObject([['0foo'], ['2foo']])
     expect(v.value).toBe(2)
-    // expect(COMPUTED_SIDE_EFFECT_WARN).toHaveBeenWarned()
+    expect(COMPUTED_SELF_RECURSIVE_WARN).toHaveBeenWarned()
   })
 
   // #10185
@@ -551,7 +553,6 @@ describe('reactivity/computed', () => {
     v1.value.v.value = 999
 
     expect(c3.value).toBe('yes')
-    // expect(COMPUTED_SIDE_EFFECT_WARN).toHaveBeenWarned()
   })
 
   it('should be not dirty after deps mutate (mutate deps in computed)', async () => {
@@ -573,7 +574,7 @@ describe('reactivity/computed', () => {
     await nextTick()
     await nextTick()
     expect(serializeInner(root)).toBe(`2`)
-    // expect(COMPUTED_SIDE_EFFECT_WARN).toHaveBeenWarned()
+    expect(COMPUTED_SELF_RECURSIVE_WARN).toHaveBeenWarned()
   })
 
   it('should not trigger effect scheduler by recursive computed effect', async () => {
@@ -596,7 +597,7 @@ describe('reactivity/computed', () => {
     v.value += ' World'
     await nextTick()
     expect(serializeInner(root)).toBe('Hello World World World World')
-    // expect(COMPUTED_SIDE_EFFECT_WARN).toHaveBeenWarned()
+    expect(COMPUTED_SELF_RECURSIVE_WARN).toHaveBeenWarned()
   })
 
   test('should not trigger if value did not change', () => {
@@ -895,6 +896,7 @@ describe('reactivity/computed', () => {
     expect(serializeInner(root)).toBe(
       'Hello World World World World | Hello World World World World',
     )
+    expect(COMPUTED_SELF_RECURSIVE_WARN).toHaveBeenWarned()
   })
 
   it('should keep dirty level when side effect computed value changed', () => {
@@ -920,6 +922,7 @@ describe('reactivity/computed', () => {
 
     expect(d.value.d).toBe(1)
     expect(serializeInner(root)).toBe('11')
+    expect(COMPUTED_SELF_RECURSIVE_WARN).toHaveBeenWarned()
   })
 
   it('should be recomputed without being affected by side effects', () => {
@@ -935,7 +938,6 @@ describe('reactivity/computed', () => {
     expect(c2.value).toBe('0,0')
     v.value = 1
     expect(c2.value).toBe('1,0')
-    // expect(COMPUTED_SIDE_EFFECT_WARN).toHaveBeenWarned()
   })
 
   it('debug: onTrigger (ref)', () => {
@@ -1004,6 +1006,7 @@ describe('reactivity/computed', () => {
     triggerEvent(root.children[1] as TestElement, 'click')
     await nextTick()
     expect(serializeInner(root)).toBe(`<button>Step</button><p>Step 2</p>`)
+    expect(COMPUTED_SELF_RECURSIVE_WARN).toHaveBeenWarned()
   })
 
   test('manual trigger computed', () => {
