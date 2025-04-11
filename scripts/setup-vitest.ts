@@ -8,7 +8,7 @@ declare module 'vitest' {
 interface CustomMatchers<R = unknown> {
   toHaveBeenWarned(): R
   toHaveBeenWarnedLast(): R
-  toHaveBeenWarnedTimes(n: number): R
+  toHaveBeenWarnedTimes(received: string, n: number): R
 }
 
 vi.stubGlobal('MathMLElement', class MathMLElement {})
