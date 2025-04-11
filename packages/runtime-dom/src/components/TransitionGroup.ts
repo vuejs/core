@@ -81,6 +81,7 @@ const TransitionGroupImpl: ComponentOptions = /*@__PURE__*/ decorate({
           moveClass,
         )
       ) {
+        prevChildren = []
         return
       }
 
@@ -110,6 +111,7 @@ const TransitionGroupImpl: ComponentOptions = /*@__PURE__*/ decorate({
         })
         el.addEventListener('transitionend', cb)
       })
+      prevChildren = []
     })
 
     return () => {
