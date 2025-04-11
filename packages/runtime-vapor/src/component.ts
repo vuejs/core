@@ -154,10 +154,10 @@ export function createComponent(
 
   // try to get the cached instance if inside keep-alive
   if (currentInstance && isKeepAlive(currentInstance)) {
-    const cached = (currentInstance as KeepAliveInstance).getCachedInstance(
+    const cached = (currentInstance as KeepAliveInstance).getCachedComponent(
       component,
     )
-    if (cached) return cached
+    if (cached) return cached as any
   }
 
   // vdom interop enabled and component is not an explicit vapor component
@@ -517,9 +517,8 @@ export function mountComponent(
     ;(instance.parent as KeepAliveInstance).activate(
       instance,
       parentNode,
-      anchor as any,
+      anchor,
     )
-    instance.isMounted = true
     return
   }
 

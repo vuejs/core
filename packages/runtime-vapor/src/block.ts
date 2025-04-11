@@ -57,10 +57,7 @@ export class DynamicFragment extends VaporFragment {
     // teardown previous branch
     if (this.scope) {
       if (isKeepAlive(instance)) {
-        ;(instance as KeepAliveInstance).process(
-          this.nodes as VaporComponentInstance,
-        )
-        unmountComponent(this.nodes as VaporComponentInstance)
+        ;(instance as KeepAliveInstance).process(this.nodes)
       } else {
         this.scope.stop()
       }
@@ -71,9 +68,7 @@ export class DynamicFragment extends VaporFragment {
       this.scope = new EffectScope()
       this.nodes = this.scope.run(render) || []
       if (isKeepAlive(instance)) {
-        ;(instance as KeepAliveInstance).process(
-          this.nodes as VaporComponentInstance,
-        )
+        ;(instance as KeepAliveInstance).process(this.nodes)
       }
       if (parent) insert(this.nodes, parent, this.anchor)
     } else {
