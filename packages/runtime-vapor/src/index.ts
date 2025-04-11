@@ -37,6 +37,7 @@ export {
   createForSlots,
   getRestElement,
   getDefaultValue,
+  useSelectorPattern,
 } from './apiCreateFor'
 export { createTemplateRefSetter } from './apiTemplateRef'
 export { createDynamicComponent } from './apiCreateDynamicComponent'

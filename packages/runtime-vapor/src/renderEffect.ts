@@ -58,7 +58,7 @@ class RenderEffect extends ReactiveEffect {
     // TODO recurse handling
   }
 
-  callback() {
+  callback(): void {
     const instance = this.i!
     const scope = this.scope
     // renderEffect is always called after user has registered all hooks
@@ -84,7 +84,7 @@ class RenderEffect extends ReactiveEffect {
     }
   }
 
-  scheduler() {
+  scheduler(): void {
     queueJob(this.baseJob)
   }
 }

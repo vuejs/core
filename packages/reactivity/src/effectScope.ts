@@ -28,6 +28,10 @@ export class EffectScope implements Subscriber, Dependency {
    * @internal
    */
   cleanups: (() => void)[] = []
+  /**
+   * @internal
+   */
+  cleanupsLength = 0
 
   constructor(detached = false) {
     if (!detached && activeEffectScope) {
@@ -123,11 +127,11 @@ export class EffectScope implements Subscriber, Dependency {
         unlink(this.deps)
       }
 
-      let i, l
-      for (i = 0, l = this.cleanups.length; i < l; i++) {
+      const l = this.cleanupsLength
+      for (let i = 0; i < l; i++) {
         this.cleanups[i]()
       }
-      this.cleanups.length = 0
+      this.cleanupsLength = 0
 
       if (this.subs !== undefined) {
         unlink(this.subs)
@@ -167,7 +171,7 @@ export function getCurrentScope(): EffectScope | undefined {
  */
 export function onScopeDispose(fn: () => void, failSilently = false): void {
   if (activeEffectScope) {
-    activeEffectScope.cleanups.push(fn)
+    activeEffectScope.cleanups[activeEffectScope.cleanupsLength++] = fn
   } else if (__DEV__ && !failSilently) {
     warn(
       `onScopeDispose() is called when there is no active effect scope` +
