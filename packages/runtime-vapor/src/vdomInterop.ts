@@ -27,12 +27,13 @@ import {
   unmountComponent,
 } from './component'
 import { type Block, VaporFragment, insert, remove } from './block'
-import { EMPTY_OBJ, extend, isFunction } from '@vue/shared'
+import { EMPTY_OBJ, ShapeFlags, extend, isFunction } from '@vue/shared'
 import { type RawProps, rawPropsProxyHandlers } from './componentProps'
 import type { RawSlots, VaporSlot } from './componentSlots'
 import { renderEffect } from './renderEffect'
 import { createTextNode } from './dom/node'
 import { optimizePropertyLookup } from './dom/prop'
+import type { KeepAliveInstance } from './components/KeepAlive'
 
 // mounting vapor components and slots in vdom
 const vaporInteropImpl: Omit<
@@ -172,10 +173,18 @@ function createVDOMComponent(
   let isMounted = false
   const parentInstance = currentInstance as VaporComponentInstance
   const unmount = (parentNode?: ParentNode) => {
+    if (vnode.shapeFlag & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE) {
+      ;(parentInstance as KeepAliveInstance).deactivate(frag)
+      return
+    }
     internals.umt(vnode.component!, null, !!parentNode)
   }
 
   frag.insert = (parentNode, anchor) => {
+    if (vnode.shapeFlag & ShapeFlags.COMPONENT_KEPT_ALIVE) {
+      ;(parentInstance as KeepAliveInstance).activate(frag, parentNode, anchor)
+      return
+    }
     if (!isMounted) {
       internals.mt(
         vnode,
@@ -201,6 +210,7 @@ function createVDOMComponent(
   }
 
   frag.remove = unmount
+  frag.nodes = vnode as any
 
   return frag
 }

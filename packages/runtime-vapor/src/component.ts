@@ -15,6 +15,7 @@ import {
   currentInstance,
   endMeasure,
   expose,
+  isKeepAlive,
   nextUid,
   popWarningContext,
   pushWarningContext,
@@ -35,7 +36,13 @@ import {
   resetTracking,
   unref,
 } from '@vue/reactivity'
-import { EMPTY_OBJ, invokeArrayFns, isFunction, isString } from '@vue/shared'
+import {
+  EMPTY_OBJ,
+  ShapeFlags,
+  invokeArrayFns,
+  isFunction,
+  isString,
+} from '@vue/shared'
 import {
   type DynamicPropsSource,
   type RawProps,
@@ -60,6 +67,7 @@ import {
 import { hmrReload, hmrRerender } from './hmr'
 import { isHydrating, locateHydrationNode } from './dom/hydration'
 import { insertionAnchor, insertionParent } from './insertionState'
+import type { KeepAliveInstance } from './components/KeepAlive'
 
 export { currentInstance } from '@vue/runtime-dom'
 
@@ -142,6 +150,14 @@ export function createComponent(
   const _insertionAnchor = insertionAnchor
   if (isHydrating) {
     locateHydrationNode()
+  }
+
+  // try to get the cached instance if inside keep-alive
+  if (currentInstance && isKeepAlive(currentInstance)) {
+    const cached = (currentInstance as KeepAliveInstance).getCachedComponent(
+      component,
+    )
+    if (cached) return cached as any
   }
 
   // vdom interop enabled and component is not an explicit vapor component
@@ -270,7 +286,7 @@ export function createComponent(
   onScopeDispose(() => unmountComponent(instance), true)
 
   if (!isHydrating && _insertionParent) {
-    insert(instance.block, _insertionParent, _insertionAnchor)
+    mountComponent(instance, _insertionParent, _insertionAnchor)
   }
 
   return instance
@@ -374,6 +390,7 @@ export class VaporComponentInstance implements GenericComponentInstance {
   propsOptions?: NormalizedPropsOptions
   emitsOptions?: ObjectEmitsOptions | null
   isSingleRoot?: boolean
+  shapeFlag?: number
 
   constructor(
     comp: VaporComponent,
@@ -493,15 +510,30 @@ export function createComponentWithFallback(
 
 export function mountComponent(
   instance: VaporComponentInstance,
-  parent: ParentNode,
+  parentNode: ParentNode,
   anchor?: Node | null | 0,
 ): void {
+  if (instance.shapeFlag! & ShapeFlags.COMPONENT_KEPT_ALIVE) {
+    ;(instance.parent as KeepAliveInstance).activate(
+      instance,
+      parentNode,
+      anchor,
+    )
+    return
+  }
+
   if (__DEV__) {
     startMeasure(instance, `mount`)
   }
   if (instance.bm) invokeArrayFns(instance.bm)
-  insert(instance.block, parent, anchor)
-  if (instance.m) queuePostFlushCb(() => invokeArrayFns(instance.m!))
+  insert(instance.block, parentNode, anchor)
+  if (instance.m) queuePostFlushCb(instance.m!)
+  if (
+    instance.shapeFlag! & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE &&
+    instance.a
+  ) {
+    queuePostFlushCb(instance.a!)
+  }
   instance.isMounted = true
   if (__DEV__) {
     endMeasure(instance, `mount`)
@@ -512,6 +544,11 @@ export function unmountComponent(
   instance: VaporComponentInstance,
   parentNode?: ParentNode,
 ): void {
+  if (instance.shapeFlag! & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE) {
+    ;(instance.parent as KeepAliveInstance).deactivate(instance)
+    return
+  }
+
   if (instance.isMounted && !instance.isUnmounted) {
     if (__DEV__ && instance.type.__hmrId) {
       unregisterHMR(instance)
@@ -523,7 +560,7 @@ export function unmountComponent(
     instance.scope.stop()
 
     if (instance.um) {
-      queuePostFlushCb(() => invokeArrayFns(instance.um!))
+      queuePostFlushCb(instance.um!)
     }
     instance.isUnmounted = true
   }
