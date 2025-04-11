@@ -50,7 +50,7 @@ export class EffectScope implements Subscriber, Dependency {
       this.flags |= EffectFlags.PAUSED
       for (let link = this.deps; link !== undefined; link = link.nextDep) {
         const dep = link.dep
-        if ('notify' in dep) {
+        if ('pause' in dep) {
           dep.pause()
         }
       }
@@ -66,7 +66,7 @@ export class EffectScope implements Subscriber, Dependency {
       this.flags = flags & ~EffectFlags.PAUSED
       for (let link = this.deps; link !== undefined; link = link.nextDep) {
         const dep = link.dep
-        if ('notify' in dep) {
+        if ('resume' in dep) {
           dep.resume()
         }
       }
@@ -113,26 +113,14 @@ export class EffectScope implements Subscriber, Dependency {
   stop(): void {
     if (this.active) {
       this.flags |= EffectFlags.STOP
-
-      let link = this.deps
-      while (link !== undefined) {
-        const next = link.nextDep
-        const dep = link.dep
-        if ('notify' in dep) {
-          dep.stop()
-        }
-        link = next
-      }
       while (this.deps !== undefined) {
         unlink(this.deps)
       }
-
       const l = this.cleanupsLength
       for (let i = 0; i < l; i++) {
         this.cleanups[i]()
       }
       this.cleanupsLength = 0
-
       if (this.subs !== undefined) {
         unlink(this.subs)
       }

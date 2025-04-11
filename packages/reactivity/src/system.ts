@@ -127,7 +127,9 @@ export function unlink(link: Link): void {
   }
   if (dep.subs === undefined && 'deps' in dep) {
     const depFlags = dep.flags
-    if (!(depFlags & SubscriberFlags.Dirty)) {
+    if ('stop' in dep) {
+      dep.stop()
+    } else if (!(depFlags & SubscriberFlags.Dirty)) {
       dep.flags = depFlags | SubscriberFlags.Dirty
     }
     while (dep.deps !== undefined) {
