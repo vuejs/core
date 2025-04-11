@@ -1,19 +1,24 @@
-import { EffectFlags, type ReactiveEffect } from './effect'
+import { EffectFlags } from './effect'
 import {
+  type Dependency,
   type Link,
   type Subscriber,
-  endTracking,
-  startTracking,
+  link,
+  unlink,
 } from './system'
 import { warn } from './warning'
 
 export let activeEffectScope: EffectScope | undefined
 
-export class EffectScope implements Subscriber {
-  // Subscriber: In order to collect orphans computeds
+export class EffectScope implements Subscriber, Dependency {
+  // Subscriber
   deps: Link | undefined = undefined
   depsTail: Link | undefined = undefined
   flags: number = 0
+
+  // Dependency
+  subs: Link | undefined = undefined
+  subsTail: Link | undefined = undefined
 
   /**
    * @internal track `on` calls, allow `on` call multiple times
@@ -22,36 +27,15 @@ export class EffectScope implements Subscriber {
   /**
    * @internal
    */
-  effects: ReactiveEffect[] = []
-  /**
-   * @internal
-   */
   cleanups: (() => void)[] = []
+  /**
+   * @internal
+   */
+  cleanupsLength = 0
 
-  /**
-   * only assigned by undetached scope
-   * @internal
-   */
-  parent: EffectScope | undefined
-  /**
-   * record undetached scopes
-   * @internal
-   */
-  scopes: EffectScope[] | undefined
-  /**
-   * track a child scope's index in its parent's scopes array for optimized
-   * removal
-   * @internal
-   */
-  private index: number | undefined
-
-  constructor(
-    public detached = false,
-    parent: EffectScope | undefined = activeEffectScope,
-  ) {
-    this.parent = parent
-    if (!detached && parent) {
-      this.index = (parent.scopes || (parent.scopes = [])).push(this) - 1
+  constructor(detached = false) {
+    if (!detached && activeEffectScope) {
+      link(this, activeEffectScope)
     }
   }
 
@@ -59,17 +43,16 @@ export class EffectScope implements Subscriber {
     return !(this.flags & EffectFlags.STOP)
   }
 
+  notify(): void {}
+
   pause(): void {
     if (!(this.flags & EffectFlags.PAUSED)) {
       this.flags |= EffectFlags.PAUSED
-      let i, l
-      if (this.scopes) {
-        for (i = 0, l = this.scopes.length; i < l; i++) {
-          this.scopes[i].pause()
+      for (let link = this.deps; link !== undefined; link = link.nextDep) {
+        const dep = link.dep
+        if ('pause' in dep) {
+          dep.pause()
         }
-      }
-      for (i = 0, l = this.effects.length; i < l; i++) {
-        this.effects[i].pause()
       }
     }
   }
@@ -78,16 +61,14 @@ export class EffectScope implements Subscriber {
    * Resumes the effect scope, including all child scopes and effects.
    */
   resume(): void {
-    if (this.flags & EffectFlags.PAUSED) {
-      this.flags &= ~EffectFlags.PAUSED
-      let i, l
-      if (this.scopes) {
-        for (i = 0, l = this.scopes.length; i < l; i++) {
-          this.scopes[i].resume()
+    const flags = this.flags
+    if (flags & EffectFlags.PAUSED) {
+      this.flags = flags & ~EffectFlags.PAUSED
+      for (let link = this.deps; link !== undefined; link = link.nextDep) {
+        const dep = link.dep
+        if ('resume' in dep) {
+          dep.resume()
         }
-      }
-      for (i = 0, l = this.effects.length; i < l; i++) {
-        this.effects[i].resume()
       }
     }
   }
@@ -129,39 +110,20 @@ export class EffectScope implements Subscriber {
     }
   }
 
-  stop(fromParent?: boolean): void {
+  stop(): void {
     if (this.active) {
       this.flags |= EffectFlags.STOP
-      startTracking(this)
-      endTracking(this)
-      let i, l
-      for (i = 0, l = this.effects.length; i < l; i++) {
-        this.effects[i].stop()
+      while (this.deps !== undefined) {
+        unlink(this.deps)
       }
-      this.effects.length = 0
-
-      for (i = 0, l = this.cleanups.length; i < l; i++) {
+      const l = this.cleanupsLength
+      for (let i = 0; i < l; i++) {
         this.cleanups[i]()
       }
-      this.cleanups.length = 0
-
-      if (this.scopes) {
-        for (i = 0, l = this.scopes.length; i < l; i++) {
-          this.scopes[i].stop(true)
-        }
-        this.scopes.length = 0
+      this.cleanupsLength = 0
+      if (this.subs !== undefined) {
+        unlink(this.subs)
       }
-
-      // nested scope, dereference from parent to avoid memory leaks
-      if (!this.detached && this.parent && !fromParent) {
-        // optimized O(1) removal
-        const last = this.parent.scopes!.pop()
-        if (last && last !== this) {
-          this.parent.scopes![this.index!] = last
-          last.index = this.index!
-        }
-      }
-      this.parent = undefined
     }
   }
 }
@@ -197,7 +159,7 @@ export function getCurrentScope(): EffectScope | undefined {
  */
 export function onScopeDispose(fn: () => void, failSilently = false): void {
   if (activeEffectScope) {
-    activeEffectScope.cleanups.push(fn)
+    activeEffectScope.cleanups[activeEffectScope.cleanupsLength++] = fn
   } else if (__DEV__ && !failSilently) {
     warn(
       `onScopeDispose() is called when there is no active effect scope` +

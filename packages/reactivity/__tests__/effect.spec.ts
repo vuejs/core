@@ -624,7 +624,7 @@ describe('reactivity/effect', () => {
     const runner = effect(() => {})
     const otherRunner = effect(runner)
     expect(runner).not.toBe(otherRunner)
-    expect(runner.effect.fn).toBe(otherRunner.effect.fn)
+    expect(runner.effect.callback).toBe(otherRunner.effect.callback)
   })
 
   it('should wrap if the passed function is a fake effect', () => {
@@ -632,7 +632,7 @@ describe('reactivity/effect', () => {
     fakeRunner.effect = {}
     const runner = effect(fakeRunner)
     expect(fakeRunner).not.toBe(runner)
-    expect(runner.effect.fn).toBe(fakeRunner)
+    expect(runner.effect.callback).toBe(fakeRunner)
   })
 
   it('should not run multiple times for a single mutation', () => {

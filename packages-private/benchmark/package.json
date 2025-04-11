@@ -6,7 +6,9 @@
   "type": "module",
   "scripts": {
     "dev": "pnpm start --noMinify --skipBench --vdom",
-    "start": "node index.js"
+    "start": "node index.js",
+    "prefast-bench": "cd ../.. && npm run build",
+    "fast-bench": "node fast-bench.js"
   },
   "dependencies": {
     "@vitejs/plugin-vue": "catalog:",
@@ -15,6 +17,9 @@
     "vite": "catalog:"
   },
   "devDependencies": {
-    "@types/connect": "^3.4.38"
+    "@types/connect": "^3.4.38",
+    "@types/jsdom": "latest",
+    "jsdom": "latest",
+    "mitata": "latest"
   }
 }

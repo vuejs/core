@@ -218,7 +218,8 @@ function createConfig(format, output, plugins = []) {
       }
     },
     treeshake: {
-      moduleSideEffects: false,
+      // should be true to awllow @babel/types side effects
+      moduleSideEffects: true,
     },
   }
 

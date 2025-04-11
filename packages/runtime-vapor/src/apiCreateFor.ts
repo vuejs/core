@@ -3,11 +3,13 @@ import {
   type ShallowRef,
   isReactive,
   isShallow,
+  onScopeDispose,
   pauseTracking,
   resetTracking,
   shallowReadArray,
   shallowRef,
   toReactive,
+  watch,
 } from '@vue/reactivity'
 import { getSequence, isArray, isObject, isString } from '@vue/shared'
 import { createComment, createTextNode } from './dom/node'
@@ -450,4 +452,75 @@ export function getRestElement(val: any, keys: string[]): any {
 
 export function getDefaultValue(val: any, defaultVal: any): any {
   return val === undefined ? defaultVal : val
+}
+
+export function useSelectorPattern(
+  getActiveKey: () => any,
+  source: () => any[],
+): {
+  register: (key: any, cb: () => void) => void
+} {
+  let mapVersion = 1
+  let operMap = new Map<any, (() => void)[]>()
+  let activeOpers: (() => void)[] | undefined
+
+  watch(source, newValue => {
+    if (Array.isArray(newValue) && !newValue.length) {
+      operMap = new Map()
+      activeOpers = undefined
+      mapVersion++
+    }
+  })
+  watch(getActiveKey, newValue => {
+    if (activeOpers !== undefined) {
+      for (const oper of activeOpers) {
+        oper()
+      }
+    }
+    activeOpers = operMap.get(newValue)
+    if (activeOpers !== undefined) {
+      for (const oper of activeOpers) {
+        oper()
+      }
+    }
+  })
+
+  return { register }
+
+  function register(key: any, oper: () => void) {
+    oper()
+    let opers = operMap.get(key)
+    if (opers !== undefined) {
+      opers.push(oper)
+    } else {
+      opers = [oper]
+      operMap.set(key, opers)
+      if (getActiveKey() === key) {
+        activeOpers = opers
+      }
+    }
+    const currentMapVersion = mapVersion
+    onScopeDispose(() => {
+      if (currentMapVersion === mapVersion) {
+        deregister(key, oper)
+      }
+    })
+  }
+
+  function deregister(key: any, oper: () => void) {
+    const opers = operMap.get(key)
+    if (opers !== undefined) {
+      if (opers.length === 1) {
+        operMap.delete(key)
+        if (activeOpers === opers) {
+          activeOpers = undefined
+        }
+      } else {
+        const index = opers.indexOf(oper)
+        if (index >= 0) {
+          opers.splice(index, 1)
+        }
+      }
+    }
+  }
 }

@@ -14,11 +14,11 @@ import {
   type Link,
   type Subscriber,
   SubscriberFlags,
+  checkDirty,
   endTracking,
   link,
   processComputedUpdate,
   startTracking,
-  updateDirtyFlag,
 } from './system'
 import { warn } from './warning'
 
@@ -66,7 +66,7 @@ export class ComputedRefImpl<T = any> implements Dependency, Subscriber {
   // Subscriber
   deps: Link | undefined = undefined
   depsTail: Link | undefined = undefined
-  flags: SubscriberFlags = SubscriberFlags.Computed | SubscriberFlags.Dirty
+  flags: SubscriberFlags = SubscriberFlags.Dirty
 
   /**
    * @internal
@@ -93,12 +93,13 @@ export class ComputedRefImpl<T = any> implements Dependency, Subscriber {
    */
   get _dirty(): boolean {
     const flags = this.flags
-    if (
-      flags & SubscriberFlags.Dirty ||
-      (flags & SubscriberFlags.PendingComputed &&
-        updateDirtyFlag(this, this.flags))
-    ) {
-      return true
+    if (flags & (SubscriberFlags.Dirty | SubscriberFlags.Pending)) {
+      if (flags & SubscriberFlags.Dirty || checkDirty(this.deps!)) {
+        this.flags = flags | SubscriberFlags.Dirty
+        return true
+      } else {
+        this.flags = flags & ~SubscriberFlags.Pending
+      }
     }
     return false
   }
@@ -110,7 +111,7 @@ export class ComputedRefImpl<T = any> implements Dependency, Subscriber {
     if (v) {
       this.flags |= SubscriberFlags.Dirty
     } else {
-      this.flags &= ~(SubscriberFlags.Dirty | SubscriberFlags.PendingComputed)
+      this.flags &= ~(SubscriberFlags.Dirty | SubscriberFlags.Pending)
     }
   }
 
@@ -134,7 +135,7 @@ export class ComputedRefImpl<T = any> implements Dependency, Subscriber {
 
   get value(): T {
     const flags = this.flags
-    if (flags & (SubscriberFlags.Dirty | SubscriberFlags.PendingComputed)) {
+    if (flags & (SubscriberFlags.Dirty | SubscriberFlags.Pending)) {
       processComputedUpdate(this, flags)
     }
     if (activeSub !== undefined) {
