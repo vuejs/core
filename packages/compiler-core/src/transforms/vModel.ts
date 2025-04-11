@@ -19,14 +19,39 @@ import {
 import { IS_REF } from '../runtimeHelpers'
 import { BindingTypes } from '../options'
 import { camelize } from '@vue/shared'
+import { transformBindShorthand } from './vBind'
 
 export const transformModel: DirectiveTransform = (dir, node, context) => {
-  const { exp, arg } = dir
+  const { arg, loc } = dir
+  let { exp } = dir
+
   if (!exp) {
-    context.onError(
-      createCompilerError(ErrorCodes.X_V_MODEL_NO_EXPRESSION, dir.loc),
-    )
-    return createTransformProps()
+    if (!arg) {
+      context.onError(
+        createCompilerError(
+          ErrorCodes.X_V_MODEL_NO_ARGUMENT_AND_EXPRESSION,
+          dir.loc,
+        ),
+      )
+      return createTransformProps()
+    }
+
+    // same-name shorthand - v-model:arg is expanded to v-model:arg="arg"
+    if (arg.type !== NodeTypes.SIMPLE_EXPRESSION || !arg.isStatic) {
+      // only simple expression is allowed for same-name shorthand
+      context.onError(
+        createCompilerError(
+          ErrorCodes.X_V_MODEL_INVALID_SAME_NAME_ARGUMENT,
+          arg.loc,
+        ),
+      )
+      return createTransformProps([
+        createObjectProperty(arg, createSimpleExpression('', true, loc)),
+      ])
+    }
+
+    transformBindShorthand(dir, context)
+    exp = dir.exp!
   }
 
   // we assume v-model directives are always parsed
