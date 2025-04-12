@@ -46,4 +46,7 @@ exec('pnpm', ['build', 'vue', '-f', 'global-runtime']).then(() => {
       `Found the following treeshaking errors:\n\n- ${errors.join('\n\n- ')}`,
     )
   }
+}).catch(error => {
+  console.error(`Treeshaking verification failed: ${error.message}`)
+  process.exit(1)
 })
