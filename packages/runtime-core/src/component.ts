@@ -222,11 +222,12 @@ export interface FunctionalComponent<
   // use of any here is intentional so it can be a valid JSX Element constructor
   (
     props: P & EmitsToProps<EE>,
-    ctx: Omit<SetupContext<EE, IfAny<S, {}, SlotsType<S>>, Exposed>, 'expose'>,
+    ctx: SetupContext<EE, IfAny<S, {}, SlotsType<S>>, Exposed>,
   ): any
   props?: ComponentPropsOptions<P>
   emits?: EE | (keyof EE)[]
   slots?: IfAny<S, Slots, SlotsType<S>>
+  expose?: (keyof Exposed)[]
   inheritAttrs?: boolean
   displayName?: string
   compatConfig?: CompatConfig
