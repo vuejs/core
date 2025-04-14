@@ -39,6 +39,7 @@ import { genEventHandler } from './event'
 import { genDirectiveModifiers, genDirectivesForElement } from './directive'
 import { genBlock } from './block'
 import { genModelHandler } from './vModel'
+import { isBuiltInComponent } from '../utils'
 
 export function genCreateComponent(
   operation: CreateComponentIRNode,
@@ -92,8 +93,15 @@ export function genCreateComponent(
     } else if (operation.asset) {
       return toValidAssetId(operation.tag, 'component')
     } else {
+      const { tag } = operation
+      const builtInTag = isBuiltInComponent(tag)
+      if (builtInTag) {
+        // @ts-expect-error
+        helper(builtInTag)
+        return `_${builtInTag}`
+      }
       return genExpression(
-        extend(createSimpleExpression(operation.tag, false), { ast: null }),
+        extend(createSimpleExpression(tag, false), { ast: null }),
         context,
       )
     }

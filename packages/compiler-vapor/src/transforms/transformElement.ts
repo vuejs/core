@@ -36,7 +36,7 @@ import {
   type VaporDirectiveNode,
 } from '../ir'
 import { EMPTY_EXPRESSION } from './utils'
-import { findProp } from '../utils'
+import { findProp, isBuiltInComponent } from '../utils'
 
 export const isReservedProp: (key: string) => boolean = /*#__PURE__*/ makeMap(
   // the leading comma is intentional so empty string "" is also included
@@ -106,6 +106,12 @@ function transformComponentElement(
     const fromSetup = resolveSetupReference(tag, context)
     if (fromSetup) {
       tag = fromSetup
+      asset = false
+    }
+
+    const builtInTag = isBuiltInComponent(tag)
+    if (builtInTag) {
+      tag = builtInTag
       asset = false
     }
 
