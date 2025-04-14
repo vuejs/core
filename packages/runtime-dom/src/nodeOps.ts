@@ -43,7 +43,7 @@ const templateContainer = doc && /*@__PURE__*/ doc.createElement('template')
 
 export const nodeOps: Omit<RendererOptions<Node, Element>, 'patchProp'> = {
   insert: (child, parent, anchor) => {
-    parent.insertBefore(child, anchor || null)
+    getElementContainer(parent).insertBefore(child, anchor || null)
   },
 
   remove: child => {
@@ -79,7 +79,7 @@ export const nodeOps: Omit<RendererOptions<Node, Element>, 'patchProp'> = {
   },
 
   setElementText: (el, text) => {
-    el.textContent = text
+    getElementContainer(el).textContent = text
   },
 
   parentNode: node => node.parentNode as Element | null,
@@ -136,4 +136,8 @@ export const nodeOps: Omit<RendererOptions<Node, Element>, 'patchProp'> = {
       anchor ? anchor.previousSibling! : parent.lastChild!,
     ]
   },
+}
+
+function getElementContainer(el: Element) {
+  return el instanceof HTMLTemplateElement ? el.content : el
 }
