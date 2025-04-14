@@ -564,7 +564,13 @@ export { getComponentName } from './component'
 /**
  * @internal
  */
-export { matches, isKeepAlive, resetShapeFlag } from './components/KeepAlive'
+export {
+  matches,
+  isKeepAlive,
+  resetShapeFlag,
+  activate,
+  deactivate,
+} from './components/KeepAlive'
 /**
  * @internal
  */

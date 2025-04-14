@@ -1,4 +1,5 @@
 import {
+  type ComponentInternalInstance,
   type ComponentOptions,
   type ConcreteComponent,
   type GenericComponentInstance,
@@ -46,7 +47,7 @@ import { setTransitionHooks } from './BaseTransition'
 import type { ComponentRenderContext } from '../componentPublicInstance'
 import { devtoolsComponentAdded } from '../devtools'
 import { isAsyncWrapper } from '../apiAsyncComponent'
-import { isSuspense } from './Suspense'
+import { type SuspenseBoundary, isSuspense } from './Suspense'
 import { LifecycleHooks } from '../enums'
 
 type MatchPattern = string | RegExp | (string | RegExp)[]
@@ -118,14 +119,11 @@ const KeepAliveImpl: ComponentOptions = {
 
     const parentSuspense = keepAliveInstance.suspense
 
+    const { renderer } = sharedContext
     const {
-      renderer: {
-        p: patch,
-        m: move,
-        um: _unmount,
-        o: { createElement },
-      },
-    } = sharedContext
+      um: _unmount,
+      o: { createElement },
+    } = renderer
     const storageContainer = createElement('div')
 
     sharedContext.activate = (
@@ -135,72 +133,26 @@ const KeepAliveImpl: ComponentOptions = {
       namespace,
       optimized,
     ) => {
-      const instance = vnode.component!
-      move(
+      activate(
         vnode,
         container,
         anchor,
-        MoveType.ENTER,
+        renderer,
         keepAliveInstance,
         parentSuspense,
-      )
-      // in case props have changed
-      patch(
-        instance.vnode,
-        vnode,
-        container,
-        anchor,
-        instance,
-        parentSuspense,
         namespace,
-        vnode.slotScopeIds,
         optimized,
       )
-      queuePostRenderEffect(() => {
-        instance.isDeactivated = false
-        if (instance.a) {
-          invokeArrayFns(instance.a)
-        }
-        const vnodeHook = vnode.props && vnode.props.onVnodeMounted
-        if (vnodeHook) {
-          invokeVNodeHook(vnodeHook, instance.parent, vnode)
-        }
-      }, parentSuspense)
-
-      if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
-        // Update components tree
-        devtoolsComponentAdded(instance)
-      }
     }
 
     sharedContext.deactivate = (vnode: VNode) => {
-      const instance = vnode.component!
-      invalidateMount(instance.m)
-      invalidateMount(instance.a)
-
-      move(
+      deactivate(
         vnode,
         storageContainer,
-        null,
-        MoveType.LEAVE,
+        renderer,
         keepAliveInstance,
         parentSuspense,
       )
-      queuePostRenderEffect(() => {
-        if (instance.da) {
-          invokeArrayFns(instance.da)
-        }
-        const vnodeHook = vnode.props && vnode.props.onVnodeUnmounted
-        if (vnodeHook) {
-          invokeVNodeHook(vnodeHook, instance.parent, vnode)
-        }
-        instance.isDeactivated = true
-      }, parentSuspense)
-
-      if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
-        // Update components tree
-        devtoolsComponentAdded(instance)
-      }
     }
 
     function unmount(vnode: VNode) {
@@ -486,4 +438,87 @@ export function resetShapeFlag(vnode: any): void {
 
 function getInnerChild(vnode: VNode) {
   return vnode.shapeFlag & ShapeFlags.SUSPENSE ? vnode.ssContent! : vnode
+}
+
+/**
+ * shared between runtime-core and runtime-vapor
+ */
+export function activate(
+  vnode: VNode,
+  container: RendererElement,
+  anchor: RendererNode | null,
+  { p: patch, m: move }: RendererInternals,
+  parentComponent: ComponentInternalInstance | null,
+  parentSuspense: SuspenseBoundary | null,
+  namespace?: ElementNamespace,
+  optimized?: boolean,
+): void {
+  const instance = vnode.component!
+  move(
+    vnode,
+    container,
+    anchor,
+    MoveType.ENTER,
+    parentComponent,
+    parentSuspense,
+  )
+  // in case props have changed
+  patch(
+    instance.vnode,
+    vnode,
+    container,
+    anchor,
+    instance,
+    parentSuspense,
+    namespace,
+    vnode.slotScopeIds,
+    optimized,
+  )
+  queuePostRenderEffect(() => {
+    instance.isDeactivated = false
+    if (instance.a) {
+      invokeArrayFns(instance.a)
+    }
+    const vnodeHook = vnode.props && vnode.props.onVnodeMounted
+    if (vnodeHook) {
+      invokeVNodeHook(vnodeHook, instance.parent, vnode)
+    }
+  }, parentSuspense)
+
+  if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
+    // Update components tree
+    devtoolsComponentAdded(instance)
+  }
+}
+
+/**
+ * shared between runtime-core and runtime-vapor
+ */
+export function deactivate(
+  vnode: VNode,
+  container: RendererElement,
+  { m: move }: RendererInternals,
+  parentComponent: ComponentInternalInstance | null,
+  parentSuspense: SuspenseBoundary | null,
+): void {
+  const instance = vnode.component!
+  invalidateMount(instance.m)
+  invalidateMount(instance.a)
+
+  move(vnode, container, null, MoveType.LEAVE, parentComponent, parentSuspense)
+  queuePostRenderEffect(() => {
+    if (instance.da) {
+      invokeArrayFns(instance.da)
+    }
+    const vnodeHook = vnode.props && vnode.props.onVnodeUnmounted
+    if (vnodeHook) {
+      invokeVNodeHook(vnodeHook, instance.parent, vnode)
+    }
+    instance.isDeactivated = true
+  }, parentSuspense)
+
+  if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
+    // Update components tree
+    devtoolsComponentAdded(instance)
+  }
 }

@@ -31,15 +31,16 @@ import { createElement } from '../dom/node'
 
 export interface KeepAliveInstance extends VaporComponentInstance {
   activate: (
-    block: VaporComponentInstance | VaporFragment,
+    instance: VaporComponentInstance,
     parentNode: ParentNode,
     anchor?: Node | null | 0,
   ) => void
-  deactivate: (block: VaporComponentInstance | VaporFragment) => void
+  deactivate: (instance: VaporComponentInstance) => void
   process: (block: Block) => void
   getCachedComponent: (
     comp: VaporComponent,
   ) => VaporComponentInstance | VaporFragment | undefined
+  getStorageContainer: () => ParentNode
 }
 
 type CacheKey = VaporComponent
@@ -128,6 +129,7 @@ export const VaporKeepAliveImpl: ObjectVaporComponent = defineVaporComponent({
       })
     })
 
+    keepAliveInstance.getStorageContainer = () => storageContainer
     keepAliveInstance.getCachedComponent = comp => cache.get(comp)
 
     const process = (keepAliveInstance.process = block => {
@@ -143,18 +145,9 @@ export const VaporKeepAliveImpl: ObjectVaporComponent = defineVaporComponent({
       }
     })
 
-    keepAliveInstance.activate = (block, parentNode, anchor) => {
-      current = block
-      let instance
-      if (isVaporComponent(block)) {
-        instance = block
-        insert(block.block, parentNode, anchor)
-      } else {
-        // vdom interop
-        const comp = block.nodes as any
-        insert(comp.el, parentNode, anchor)
-        instance = comp.component
-      }
+    keepAliveInstance.activate = (instance, parentNode, anchor) => {
+      current = instance
+      insert(instance.block, parentNode, anchor)
 
       queuePostFlushCb(() => {
         instance.isDeactivated = false
@@ -166,17 +159,8 @@ export const VaporKeepAliveImpl: ObjectVaporComponent = defineVaporComponent({
       }
     }
 
-    keepAliveInstance.deactivate = block => {
-      let instance
-      if (isVaporComponent(block)) {
-        instance = block
-        insert(block.block, storageContainer)
-      } else {
-        // vdom interop
-        const comp = block.nodes as any
-        insert(comp.el, storageContainer)
-        instance = comp.component
-      }
+    keepAliveInstance.deactivate = instance => {
+      insert(instance.block, storageContainer)
 
       queuePostFlushCb(() => {
         if (instance.da) invokeArrayFns(instance.da)

@@ -9,8 +9,10 @@ import {
   type Slots,
   type VNode,
   type VaporInteropInterface,
+  activate,
   createVNode,
   currentInstance,
+  deactivate,
   ensureRenderer,
   onScopeDispose,
   renderSlot,
@@ -174,7 +176,13 @@ function createVDOMComponent(
   const parentInstance = currentInstance as VaporComponentInstance
   const unmount = (parentNode?: ParentNode) => {
     if (vnode.shapeFlag & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE) {
-      ;(parentInstance as KeepAliveInstance).deactivate(frag)
+      deactivate(
+        vnode,
+        (parentInstance as KeepAliveInstance).getStorageContainer(),
+        internals,
+        parentInstance as any,
+        null,
+      )
       return
     }
     internals.umt(vnode.component!, null, !!parentNode)
@@ -182,7 +190,16 @@ function createVDOMComponent(
 
   frag.insert = (parentNode, anchor) => {
     if (vnode.shapeFlag & ShapeFlags.COMPONENT_KEPT_ALIVE) {
-      ;(parentInstance as KeepAliveInstance).activate(frag, parentNode, anchor)
+      activate(
+        vnode,
+        parentNode,
+        anchor,
+        internals,
+        parentInstance as any,
+        null,
+        undefined,
+        false,
+      )
       return
     }
     if (!isMounted) {
