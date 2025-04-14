@@ -9,15 +9,16 @@ import {
   type Slots,
   type VNode,
   type VaporInteropInterface,
-  activate,
   createVNode,
   currentInstance,
-  deactivate,
   ensureRenderer,
+  isKeepAlive,
   onScopeDispose,
   renderSlot,
   shallowRef,
   simpleSetCurrentInstance,
+  activate as vdomActivate,
+  deactivate as vdomDeactivate,
 } from '@vue/runtime-dom'
 import {
   type LooseRawProps,
@@ -35,7 +36,12 @@ import type { RawSlots, VaporSlot } from './componentSlots'
 import { renderEffect } from './renderEffect'
 import { createTextNode } from './dom/node'
 import { optimizePropertyLookup } from './dom/prop'
-import type { KeepAliveInstance } from './components/KeepAlive'
+import {
+  type KeepAliveInstance,
+  activate,
+  deactivate,
+} from './components/KeepAlive'
+import type { KeepAliveContext } from 'packages/runtime-core/src/components/KeepAlive'
 
 // mounting vapor components and slots in vdom
 const vaporInteropImpl: Omit<
@@ -63,6 +69,8 @@ const vaporInteropImpl: Omit<
     ))
     instance.rawPropsRef = propsRef
     instance.rawSlotsRef = slotsRef
+    // copy the shape flag from the vdom component if inside a keep-alive
+    if (isKeepAlive(parentComponent)) instance.shapeFlag = vnode.shapeFlag
     mountComponent(instance, container, selfAnchor)
     simpleSetCurrentInstance(prev)
     return instance
@@ -115,6 +123,23 @@ const vaporInteropImpl: Omit<
   move(vnode, container, anchor) {
     insert(vnode.vb || (vnode.component as any), container, anchor)
     insert(vnode.anchor as any, container, anchor)
+  },
+
+  activate(vnode, container, anchor, parentComponent) {
+    const cached = (parentComponent.ctx as KeepAliveContext).getCachedComponent(
+      vnode,
+    )
+
+    vnode.el = cached.el
+    vnode.component = cached.component
+    vnode.anchor = cached.anchor
+    activate(vnode.component as any, container, anchor)
+    insert(vnode.anchor as any, container, anchor)
+  },
+
+  deactivate(vnode, container) {
+    deactivate(vnode.component as any, container)
+    insert(vnode.anchor as any, container)
   },
 }
 
@@ -176,7 +201,7 @@ function createVDOMComponent(
   const parentInstance = currentInstance as VaporComponentInstance
   const unmount = (parentNode?: ParentNode) => {
     if (vnode.shapeFlag & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE) {
-      deactivate(
+      vdomDeactivate(
         vnode,
         (parentInstance as KeepAliveInstance).getStorageContainer(),
         internals,
@@ -190,7 +215,7 @@ function createVDOMComponent(
 
   frag.insert = (parentNode, anchor) => {
     if (vnode.shapeFlag & ShapeFlags.COMPONENT_KEPT_ALIVE) {
-      activate(
+      vdomActivate(
         vnode,
         parentNode,
         anchor,

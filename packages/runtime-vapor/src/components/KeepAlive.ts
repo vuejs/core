@@ -147,29 +147,11 @@ export const VaporKeepAliveImpl: ObjectVaporComponent = defineVaporComponent({
 
     keepAliveInstance.activate = (instance, parentNode, anchor) => {
       current = instance
-      insert(instance.block, parentNode, anchor)
-
-      queuePostFlushCb(() => {
-        instance.isDeactivated = false
-        if (instance.a) invokeArrayFns(instance.a)
-      })
-
-      if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
-        devtoolsComponentAdded(instance)
-      }
+      activate(instance, parentNode, anchor)
     }
 
     keepAliveInstance.deactivate = instance => {
-      insert(instance.block, storageContainer)
-
-      queuePostFlushCb(() => {
-        if (instance.da) invokeArrayFns(instance.da)
-        instance.isDeactivated = true
-      })
-
-      if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
-        devtoolsComponentAdded(instance)
-      }
+      deactivate(instance, storageContainer)
     }
 
     let children = slots.default()
@@ -247,4 +229,37 @@ function getInnerComponent(block: Block): VaporComponentInstance | undefined {
 
 function isVdomInteropFragment(block: Block): block is VaporFragment {
   return !!(isFragment(block) && block.insert)
+}
+
+export function activate(
+  instance: VaporComponentInstance,
+  parentNode: ParentNode,
+  anchor?: Node | null | 0,
+): void {
+  insert(instance.block, parentNode, anchor)
+
+  queuePostFlushCb(() => {
+    instance.isDeactivated = false
+    if (instance.a) invokeArrayFns(instance.a)
+  })
+
+  if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
+    devtoolsComponentAdded(instance)
+  }
+}
+
+export function deactivate(
+  instance: VaporComponentInstance,
+  container: ParentNode,
+): void {
+  insert(instance.block, container)
+
+  queuePostFlushCb(() => {
+    if (instance.da) invokeArrayFns(instance.da)
+    instance.isDeactivated = true
+  })
+
+  if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
+    devtoolsComponentAdded(instance)
+  }
 }

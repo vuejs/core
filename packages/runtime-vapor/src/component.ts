@@ -152,12 +152,17 @@ export function createComponent(
     locateHydrationNode()
   }
 
-  // try to get the cached instance if inside keep-alive
-  if (currentInstance && isKeepAlive(currentInstance)) {
+  // keep-alive
+  if (
+    currentInstance &&
+    currentInstance.vapor &&
+    isKeepAlive(currentInstance)
+  ) {
     const cached = (currentInstance as KeepAliveInstance).getCachedComponent(
       component,
     )
-    if (cached) return cached as any
+    // @ts-expect-error cached may be a fragment
+    if (cached) return cached
   }
 
   // vdom interop enabled and component is not an explicit vapor component
@@ -167,6 +172,8 @@ export function createComponent(
       rawProps,
       rawSlots,
     )
+    // TODO: problem is `frag.insert` will be called multiple times
+    // if used in v-if
     if (!isHydrating && _insertionParent) {
       insert(frag, _insertionParent, _insertionAnchor)
     }
@@ -544,7 +551,12 @@ export function unmountComponent(
   instance: VaporComponentInstance,
   parentNode?: ParentNode,
 ): void {
-  if (instance.shapeFlag! & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE) {
+  if (
+    parentNode &&
+    instance.parent &&
+    instance.parent.vapor &&
+    instance.shapeFlag! & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE
+  ) {
     ;(instance.parent as KeepAliveInstance).deactivate(instance)
     return
   }

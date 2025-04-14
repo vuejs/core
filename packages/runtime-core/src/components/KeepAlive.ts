@@ -72,6 +72,8 @@ export interface KeepAliveContext extends ComponentRenderContext {
     optimized: boolean,
   ) => void
   deactivate: (vnode: VNode) => void
+  getCachedComponent: (vnode: VNode) => VNode
+  getStorageContainer: () => RendererElement
 }
 
 export const isKeepAlive = (vnode: any): boolean =>
@@ -125,6 +127,14 @@ const KeepAliveImpl: ComponentOptions = {
       o: { createElement },
     } = renderer
     const storageContainer = createElement('div')
+
+    sharedContext.getStorageContainer = () => storageContainer
+
+    sharedContext.getCachedComponent = (vnode: VNode) => {
+      const key =
+        vnode.key == null ? (vnode.type as ConcreteComponent) : vnode.key
+      return cache.get(key)!
+    }
 
     sharedContext.activate = (
       vnode,
