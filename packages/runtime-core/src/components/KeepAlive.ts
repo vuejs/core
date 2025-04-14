@@ -521,8 +521,7 @@ export function deactivate(
     // Update components tree
     devtoolsComponentAdded(instance)
   }
-  
-        
+
   // for e2e test
   if (__DEV__ && __BROWSER__) {
     ;(instance as any).__keepAliveStorageContainer = container
