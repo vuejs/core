@@ -4,12 +4,12 @@ import VaporComp from './VaporComp.vue'
 import SimpleVaporComp from './components/SimpleVaporComp.vue'
 
 const msg = ref('hello')
-const passSlot = ref(true);
+const passSlot = ref(true)
 
-(window as any).calls = [];
-(window as any).getCalls = () => {
-  const ret = (window as any).calls.slice();
-  (window as any).calls = []
+;(window as any).calls = []
+;(window as any).getCalls = () => {
+  const ret = (window as any).calls.slice()
+  ;(window as any).calls = []
   return ret
 }
 
