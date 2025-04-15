@@ -65,7 +65,7 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: v-for > nested v-for 1`] = `
-"import { setInsertionState as _setInsertionState, child as _child, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, createFor as _createFor, template as _template } from 'vue';
+"import { setInsertionState as _setInsertionState, child as _child, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, createFor as _createFor, insert as _insert, template as _template } from 'vue';
 const t0 = _template("<span> </span>")
 const t1 = _template("<div></div>", true)
 
@@ -79,6 +79,7 @@ export function render(_ctx) {
       _renderEffect(() => _setText(x4, _toDisplayString(_for_item1.value+_for_item0.value)))
       return n4
     }, null, 1)
+    _insert(n2, n5)
     return n5
   })
   return n0

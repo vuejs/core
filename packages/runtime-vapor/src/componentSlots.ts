@@ -1,10 +1,9 @@
 import { EMPTY_OBJ, NO, hasOwn, isArray, isFunction } from '@vue/shared'
-import { type Block, type BlockFn, DynamicFragment, insert } from './block'
+import { type Block, type BlockFn, DynamicFragment } from './block'
 import { rawPropsProxyHandlers } from './componentProps'
 import { currentInstance, isRef } from '@vue/runtime-dom'
 import type { LooseRawProps, VaporComponentInstance } from './component'
 import { renderEffect } from './renderEffect'
-import { insertionAnchor, insertionParent } from './insertionState'
 import { isHydrating, locateHydrationNode } from './dom/hydration'
 
 export type RawSlots = Record<string, VaporSlot> & {
@@ -92,8 +91,6 @@ export function createSlot(
   rawProps?: LooseRawProps | null,
   fallback?: VaporSlot,
 ): Block {
-  const _insertionParent = insertionParent
-  const _insertionAnchor = insertionAnchor
   if (isHydrating) {
     locateHydrationNode()
   }
@@ -143,10 +140,6 @@ export function createSlot(
     } else {
       renderSlot()
     }
-  }
-
-  if (!isHydrating && _insertionParent) {
-    insert(fragment, _insertionParent, _insertionAnchor)
   }
 
   return fragment

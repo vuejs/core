@@ -23,7 +23,6 @@ import type { DynamicSlot } from './componentSlots'
 import { renderEffect } from './renderEffect'
 import { VaporVForFlags } from '../../shared/src/vaporFlags'
 import { isHydrating, locateHydrationNode } from './dom/hydration'
-import { insertionAnchor, insertionParent } from './insertionState'
 
 class ForBlock extends VaporFragment {
   scope: EffectScope | undefined
@@ -68,8 +67,6 @@ export const createFor = (
   getKey?: (item: any, key: any, index?: number) => any,
   flags = 0,
 ): VaporFragment => {
-  const _insertionParent = insertionParent
-  const _insertionAnchor = insertionAnchor
   if (isHydrating) {
     locateHydrationNode()
   }
@@ -362,10 +359,6 @@ export const createFor = (
     renderList()
   } else {
     renderEffect(renderList)
-  }
-
-  if (!isHydrating && _insertionParent) {
-    insert(frag, _insertionParent, _insertionAnchor)
   }
 
   return frag

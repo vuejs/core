@@ -74,8 +74,19 @@ function processDynamicChildren(context: TransformContext<ElementNode>) {
           prevDynamics[0].flags -= DynamicFlag.NON_TEMPLATE
           const anchor = (prevDynamics[0].anchor = context.increaseId())
           registerInsertion(prevDynamics, context, anchor)
+          context.registerOperation({
+            type: IRNodeTypes.INSERT_NODE,
+            elements: prevDynamics.map(child => child.id!),
+            parent: context.reference(),
+            anchor,
+          })
         } else {
           registerInsertion(prevDynamics, context, -1 /* prepend */)
+          context.registerOperation({
+            type: IRNodeTypes.PREPEND_NODE,
+            elements: prevDynamics.map(child => child.id!),
+            parent: context.reference(),
+          })
         }
         prevDynamics = []
       }
@@ -85,6 +96,11 @@ function processDynamicChildren(context: TransformContext<ElementNode>) {
 
   if (prevDynamics.length) {
     registerInsertion(prevDynamics, context)
+    context.registerOperation({
+      type: IRNodeTypes.INSERT_NODE,
+      elements: prevDynamics.map(child => child.id!),
+      parent: context.reference(),
+    })
   }
 }
 
@@ -94,15 +110,7 @@ function registerInsertion(
   anchor?: number,
 ) {
   for (const child of dynamics) {
-    if (child.template != null) {
-      // template node due to invalid nesting - generate actual insertion
-      context.registerOperation({
-        type: IRNodeTypes.INSERT_NODE,
-        elements: dynamics.map(child => child.id!),
-        parent: context.reference(),
-        anchor,
-      })
-    } else if (child.operation && isBlockOperation(child.operation)) {
+    if (child.operation && isBlockOperation(child.operation)) {
       // block types
       child.operation.parent = context.reference()
       child.operation.anchor = anchor

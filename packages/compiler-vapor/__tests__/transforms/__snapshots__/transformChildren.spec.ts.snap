@@ -1,7 +1,7 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
 exports[`compiler: children transform > anchor insertion in middle 1`] = `
-"import { child as _child, next as _next, setInsertionState as _setInsertionState, createIf as _createIf, template as _template } from 'vue';
+"import { child as _child, next as _next, setInsertionState as _setInsertionState, createIf as _createIf, insert as _insert, template as _template } from 'vue';
 const t0 = _template("<div></div>")
 const t1 = _template("<div><div></div><!><div></div></div>", true)
 
@@ -13,6 +13,7 @@ export function render(_ctx) {
     const n2 = t0()
     return n2
   }, null, true)
+  _insert(n0, n4, n3)
   return n4
 }"
 `;
