@@ -1,6 +1,6 @@
 <script vapor>
 import { ref } from 'vue'
-import VdomComp from './components/VdomComp.vue';
+import VdomComp from './components/VdomComp.vue'
 
 window.calls = []
 window.getCalls = () => {
