@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite dev",
-    "build": "vite build"
+    "build": "vite build && vite preview"
   },
   "devDependencies": {
     "@types/connect": "^3.4.38",

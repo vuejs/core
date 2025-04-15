@@ -66,9 +66,9 @@ export const VaporKeepAliveImpl: ObjectVaporComponent = defineVaporComponent({
     const storageContainer = createElement('div')
     let current: VaporComponentInstance | VaporFragment | undefined
 
-    if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
-      ;(keepAliveInstance as any).__v_cache = cache
-    }
+    // if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
+    //   ;(keepAliveInstance as any).__v_cache = cache
+    // }
 
     function shouldCache(instance: VaporComponentInstance) {
       const { include, exclude } = props
@@ -120,12 +120,16 @@ export const VaporKeepAliveImpl: ObjectVaporComponent = defineVaporComponent({
         if (current) {
           const innerComp = getInnerComponent(current)!
           if (innerComp.type === cached.type) {
-            const da = cached.da
+            const instance = cached.vapor
+              ? cached
+              : // vdom interop
+                (cached as any).component
+            const da = instance.da
             da && queuePostFlushCb(da)
             return
           }
         }
-        remove(cached, storageContainer)
+        remove(item, storageContainer)
       })
     })
 
