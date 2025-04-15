@@ -6,28 +6,31 @@ import {
 import connect from 'connect'
 import sirv from 'sirv'
 
+const { page, click, html, value, text, enterValue } = setupPuppeteer()
+
+let server: any
+const port = '8193'
+beforeAll(() => {
+  server = connect()
+    .use(sirv(path.resolve(import.meta.dirname, '../dist')))
+    .listen(port)
+  process.on('SIGTERM', () => server && server.close())
+})
+
+afterAll(() => {
+  server.close()
+})
+
+beforeEach(async () => {
+  const baseUrl = `http://localhost:${port}/interop/`
+  await page().goto(baseUrl)
+  await page().waitForSelector('#app')
+})
+
 describe('vdom / vapor interop', () => {
-  const { page, click, text, enterValue } = setupPuppeteer()
-
-  let server: any
-  const port = '8193'
-  beforeAll(() => {
-    server = connect()
-      .use(sirv(path.resolve(import.meta.dirname, '../dist')))
-      .listen(port)
-    process.on('SIGTERM', () => server && server.close())
-  })
-
-  afterAll(() => {
-    server.close()
-  })
-
   test(
     'should work',
     async () => {
-      const baseUrl = `http://localhost:${port}/interop/`
-      await page().goto(baseUrl)
-
       expect(await text('.vapor > h2')).toContain('Vapor component in VDOM')
 
       expect(await text('.vapor-prop')).toContain('hello')
@@ -81,4 +84,64 @@ describe('vdom / vapor interop', () => {
     },
     E2E_TIMEOUT,
   )
+
+  describe('keepalive', () => {
+    test(
+      'render vapor component',
+      async () => {
+        const testSelector = '.render-vapor-component'
+        const btnShow = `${testSelector} .btn-show`
+        const btnToggle = `${testSelector} .btn-toggle`
+        const container = `${testSelector} > div`
+        const inputSelector = `${testSelector} input`
+
+        let calls = await page().evaluate(() => {
+          return (window as any).getCalls()
+        })
+        expect(calls).toStrictEqual(['mounted', 'activated'])
+
+        expect(await html(container)).toBe('<input type="text">')
+        expect(await value(inputSelector)).toBe('vapor')
+
+        // change input value
+        await enterValue(inputSelector, 'changed')
+        expect(await value(inputSelector)).toBe('changed')
+
+        // deactivate
+        await click(btnToggle)
+        expect(await html(container)).toBe('<!---->')
+        calls = await page().evaluate(() => {
+          return (window as any).getCalls()
+        })
+        expect(calls).toStrictEqual(['deactivated'])
+
+        // activate
+        await click(btnToggle)
+        expect(await html(container)).toBe('<input type="text">')
+        expect(await value(inputSelector)).toBe('changed')
+        calls = await page().evaluate(() => {
+          return (window as any).getCalls()
+        })
+        expect(calls).toStrictEqual(['activated'])
+
+        // unmount keepalive
+        await click(btnShow)
+        expect(await html(container)).toBe('<!---->')
+        calls = await page().evaluate(() => {
+          return (window as any).getCalls()
+        })
+        expect(calls).toStrictEqual(['deactivated', 'unmounted'])
+
+        // mount keepalive
+        await click(btnShow)
+        expect(await html(container)).toBe('<input type="text">')
+        expect(await value(inputSelector)).toBe('vapor')
+        calls = await page().evaluate(() => {
+          return (window as any).getCalls()
+        })
+        expect(calls).toStrictEqual(['mounted', 'activated'])
+      },
+      E2E_TIMEOUT,
+    )
+  })
 })
