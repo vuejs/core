@@ -174,9 +174,9 @@ export function createComponent(
     )
     // TODO: problem is `frag.insert` will be called multiple times
     // if used in v-if
-    // if (!isHydrating && _insertionParent) {
-    //   insert(frag, _insertionParent, _insertionAnchor)
-    // }
+    if (!isHydrating && _insertionParent && !isKeepAlive(currentInstance)) {
+      insert(frag, _insertionParent, _insertionAnchor)
+    }
     return frag
   }
 

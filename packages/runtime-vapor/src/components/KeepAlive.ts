@@ -183,13 +183,11 @@ export const VaporKeepAliveImpl: ObjectVaporComponent = defineVaporComponent({
     }
 
     function pruneCacheEntry(key: CacheKey) {
-      const cached = cache.get(key)
-      if (cached) {
-        resetShapeFlag(cached)
-        // don't unmount if the instance is the current one
-        if (cached !== current) {
-          remove(cached)
-        }
+      const cached = cache.get(key)!
+      resetShapeFlag(cached)
+      // don't unmount if the instance is the current one
+      if (cached !== current) {
+        remove(cached)
       }
       cache.delete(key)
       keys.delete(key)
