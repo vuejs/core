@@ -19,15 +19,18 @@ import {
   type EmitsOptions,
   type EmitsToProps,
   type ExtractPropTypes,
+  Fragment,
   type MethodOptions,
   type RenderFunction,
   type SetupContext,
   type SlotsType,
   type VNode,
+  type VNodeArrayChildren,
   type VNodeProps,
   createVNode,
   defineComponent,
   getCurrentInstance,
+  isVNode,
   nextTick,
   unref,
   warn,
@@ -660,6 +663,17 @@ export class VueElement
   /**
    * @internal
    */
+  _updateSlots(children: VNode[]): void {
+    children.forEach(child => {
+      this._slots![child.slotName!] = collectElements(
+        child.children as VNodeArrayChildren,
+      )
+    })
+  }
+
+  /**
+   * @internal
+   */
   _injectChildStyle(comp: ConcreteComponent & CustomElementOptions): void {
     this._applyStyles(comp.styles, comp)
   }
@@ -709,4 +723,20 @@ export function useHost(caller?: string): VueElement | null {
 export function useShadowRoot(): ShadowRoot | null {
   const el = __DEV__ ? useHost('useShadowRoot') : useHost()
   return el && el.shadowRoot
+}
+
+function collectElements(children: VNodeArrayChildren): Node[] {
+  const nodes: Node[] = []
+  for (const vnode of children) {
+    if (isArray(vnode)) {
+      nodes.push(...collectElements(vnode))
+    } else if (isVNode(vnode)) {
+      if (vnode.type === Fragment) {
+        nodes.push(...collectElements(vnode.children as VNodeArrayChildren))
+      } else if (vnode.el) {
+        nodes.push(vnode.el as Node)
+      }
+    }
+  }
+  return nodes
 }

@@ -934,6 +934,10 @@ function baseCreateRenderer(
         dirs && invokeDirectiveHook(n2, n1, parentComponent, 'updated')
       }, parentSuspense)
     }
+
+    if (el._isVueCE && !el._def.shadowRoot) {
+      el._updateSlots(n2.children)
+    }
   }
 
   // The fast path for blocks.

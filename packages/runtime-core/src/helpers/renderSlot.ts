@@ -96,6 +96,7 @@ export function renderSlot(
   if (slot && (slot as ContextualRenderFn)._c) {
     ;(slot as ContextualRenderFn)._d = true
   }
+  rendered.slotName = name
   return rendered
 }
 

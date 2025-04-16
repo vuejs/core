@@ -253,6 +253,10 @@ export interface VNode<
    * @internal custom element interception hook
    */
   ce?: (instance: ComponentInternalInstance) => void
+  /**
+   * @internal
+   */
+  slotName?: string
 }
 
 // Since v-if and v-for are the two possible ways node structure can dynamically
@@ -715,6 +719,7 @@ export function cloneVNode<T, U>(
     anchor: vnode.anchor,
     ctx: vnode.ctx,
     ce: vnode.ce,
+    slotName: vnode.slotName,
   }
 
   // if the vnode will be replaced by the cloned one, it is necessary
