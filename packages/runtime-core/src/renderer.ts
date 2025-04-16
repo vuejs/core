@@ -935,7 +935,7 @@ function baseCreateRenderer(
       }, parentSuspense)
     }
 
-    if (el._isVueCE && !el._def.shadowRoot) {
+    if (el._isVueCE && el._def.shadowRoot === false) {
       el._updateSlots(n2.children)
     }
   }
