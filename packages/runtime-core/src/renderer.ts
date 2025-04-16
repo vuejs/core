@@ -483,7 +483,9 @@ function baseCreateRenderer(
 
     // set ref
     if (ref != null && parentComponent) {
+      pauseTracking()
       setRef(ref, n1 && n1.ref, parentSuspense, n2 || n1, !n2)
+      resetTracking()
     }
   }
 
