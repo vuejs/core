@@ -665,9 +665,8 @@ export class VueElement
    */
   _updateSlots(children: VNode[]): void {
     children.forEach(child => {
-      this._slots![child.slotName!] = collectElements(
-        child.children as VNodeArrayChildren,
-      )
+      // slot children are always Fragments
+      this._slots![child.slotName!] = collectFragmentElements(child)
     })
   }
 
@@ -725,16 +724,24 @@ export function useShadowRoot(): ShadowRoot | null {
   return el && el.shadowRoot
 }
 
+function collectFragmentElements(child: VNode): Node[] {
+  return [
+    child.el as Node,
+    ...collectElements(child.children as VNodeArrayChildren),
+    child.anchor as Node,
+  ]
+}
+
 function collectElements(children: VNodeArrayChildren): Node[] {
   const nodes: Node[] = []
-  for (const vnode of children) {
-    if (isArray(vnode)) {
-      nodes.push(...collectElements(vnode))
-    } else if (isVNode(vnode)) {
-      if (vnode.type === Fragment) {
-        nodes.push(...collectElements(vnode.children as VNodeArrayChildren))
-      } else if (vnode.el) {
-        nodes.push(vnode.el as Node)
+  for (const child of children) {
+    if (isArray(child)) {
+      nodes.push(...collectElements(child))
+    } else if (isVNode(child)) {
+      if (child.type === Fragment) {
+        nodes.push(...collectFragmentElements(child))
+      } else if (child.el) {
+        nodes.push(child.el as Node)
       }
     }
   }

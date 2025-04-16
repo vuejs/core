@@ -5,6 +5,10 @@ import {
   Teleport,
   type VueElement,
   createApp,
+  createBlock,
+  createCommentVNode,
+  createElementBlock,
+  createElementVNode,
   defineAsyncComponent,
   defineComponent,
   defineCustomElement,
@@ -12,12 +16,14 @@ import {
   inject,
   nextTick,
   onMounted,
+  openBlock,
   provide,
   ref,
   render,
   renderSlot,
   useHost,
   useShadowRoot,
+  withCtx,
 } from '../src'
 
 declare var __VUE_HMR_RUNTIME__: HMRRuntime
@@ -1130,6 +1136,92 @@ describe('defineCustomElement', () => {
       await nextTick()
       expect(target.innerHTML).toBe(`<span>default</span>`)
       app.unmount()
+    })
+
+    //#13206
+    test('should update slotted children correctly w/ shadowRoot false', async () => {
+      const E = defineCustomElement(
+        defineComponent({
+          props: {
+            isShown: { type: Boolean, required: true },
+          },
+          render() {
+            return this.isShown
+              ? h('div', { key: 0 }, [renderSlot(this.$slots, 'default')])
+              : null
+          },
+        }),
+        { shadowRoot: false },
+      )
+      customElements.define('ce-shadow-root-false', E)
+
+      const Comp = defineComponent({
+        props: {
+          isShown: { type: Boolean, required: true },
+        },
+        render() {
+          return h('ce-shadow-root-false', { 'is-shown': this.isShown }, [
+            renderSlot(this.$slots, 'default'),
+          ])
+        },
+      })
+
+      const isShown = ref(false)
+      const count = ref(0)
+
+      function click() {
+        isShown.value = !isShown.value
+        count.value++
+      }
+
+      const App = {
+        render() {
+          return (
+            openBlock(),
+            createBlock(
+              Comp,
+              { isShown: isShown.value },
+              {
+                default: withCtx(() => [
+                  createElementVNode('div', null, isShown.value, 1 /* TEXT */),
+                  count.value > 1
+                    ? (openBlock(), createElementBlock('div', { key: 0 }, 'hi'))
+                    : createCommentVNode('v-if', true),
+                ]),
+                _: 1 /* STABLE */,
+              },
+              8 /* PROPS */,
+              ['isShown'],
+            )
+          )
+        },
+      }
+      const container = document.createElement('div')
+      document.body.appendChild(container)
+
+      const app = createApp(App)
+      app.mount(container)
+      expect(container.innerHTML).toBe(
+        `<ce-shadow-root-false data-v-app=""><!----></ce-shadow-root-false>`,
+      )
+
+      click()
+      await nextTick()
+      expect(container.innerHTML).toBe(
+        `<ce-shadow-root-false data-v-app="" is-shown=""><div><div>true</div><!--v-if--></div></ce-shadow-root-false>`,
+      )
+
+      click()
+      await nextTick()
+      expect(container.innerHTML).toBe(
+        `<ce-shadow-root-false data-v-app=""><!----></ce-shadow-root-false>`,
+      )
+
+      click()
+      await nextTick()
+      expect(container.innerHTML).toBe(
+        `<ce-shadow-root-false data-v-app="" is-shown=""><div><div>true</div><div>hi</div></div></ce-shadow-root-false>`,
+      )
     })
   })
 
