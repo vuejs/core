@@ -483,9 +483,7 @@ function baseCreateRenderer(
 
     // set ref
     if (ref != null && parentComponent) {
-      pauseTracking()
       setRef(ref, n1 && n1.ref, parentSuspense, n2 || n1, !n2)
-      resetTracking()
     }
   }
 
@@ -2100,7 +2098,9 @@ function baseCreateRenderer(
 
     // unset ref
     if (ref != null) {
+      pauseTracking()
       setRef(ref, null, parentSuspense, vnode, true)
+      resetTracking()
     }
 
     // #6593 should clean memo cache when unmount
