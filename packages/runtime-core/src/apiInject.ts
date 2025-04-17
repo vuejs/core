@@ -23,8 +23,10 @@ export function provide<T, K = InjectionKey<T> | string | number>(
     // own provides object using parent provides object as prototype.
     // this way in `inject` we can simply look up injections from direct
     // parent and let the prototype chain do the work.
-    const parentProvides =
-      currentInstance.parent && currentInstance.parent.provides
+    // #13212, custom elements inherit the provides object from appContext
+    const parentProvides = currentInstance.ce
+      ? currentInstance.appContext.provides
+      : currentInstance.parent && currentInstance.parent.provides
     if (parentProvides === provides) {
       provides = currentInstance.provides = Object.create(parentProvides)
     }
@@ -59,10 +61,12 @@ export function inject(
     // to support `app.use` plugins,
     // fallback to appContext's `provides` if the instance is at root
     // #11488, in a nested createApp, prioritize using the provides from currentApp
-    const provides = currentApp
+    // #13212, for custom elements we must get injected values from its appContext
+    // as it already inherits the provides object from the parent element
+    let provides = currentApp
       ? currentApp._context.provides
       : instance
-        ? instance.parent == null
+        ? instance.parent == null || instance.ce
           ? instance.vnode.appContext && instance.vnode.appContext.provides
           : instance.parent.provides
         : undefined
