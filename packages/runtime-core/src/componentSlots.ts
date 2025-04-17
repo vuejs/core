@@ -75,6 +75,11 @@ export type RawSlots = {
    * @internal
    */
   _?: SlotFlags
+  /**
+   * cache indexes for slot content
+   * @internal
+   */
+  __?: number[]
 }
 
 const isInternalKey = (key: string) => key[0] === '_' || key === '$stable'
@@ -170,7 +175,7 @@ const assignSlots = (
     // when rendering the optimized slots by manually written render function,
     // do not copy the `slots._` compiler flag so that `renderSlot` creates
     // slot Fragment with BAIL patchFlag to force full updates
-    if (optimized || key !== '_') {
+    if (optimized || !key.startsWith('_')) {
       slots[key] = children[key]
     }
   }
