@@ -292,7 +292,6 @@ export class VueElement
     ) {
       if (parent instanceof VueElement) {
         this._parent = parent
-        this._inheritParentContext()
         break
       }
     }
