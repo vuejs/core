@@ -23,10 +23,8 @@ export function provide<T, K = InjectionKey<T> | string | number>(
     // own provides object using parent provides object as prototype.
     // this way in `inject` we can simply look up injections from direct
     // parent and let the prototype chain do the work.
-    // #13212, custom elements inherit the provides object from appContext
-    const parentProvides = currentInstance.ce
-      ? currentInstance.appContext.provides
-      : currentInstance.parent && currentInstance.parent.provides
+    const parentProvides =
+      currentInstance.parent && currentInstance.parent.provides
     if (parentProvides === provides) {
       provides = currentInstance.provides = Object.create(parentProvides)
     }

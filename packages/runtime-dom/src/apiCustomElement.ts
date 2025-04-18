@@ -316,7 +316,6 @@ export class VueElement
   private _setParent(parent = this._parent) {
     if (parent) {
       this._instance!.parent = parent._instance
-      this._instance!.provides = this._instance!.appContext.provides
       this._inheritParentContext(parent)
     }
   }
