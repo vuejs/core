@@ -66,9 +66,9 @@ export const VaporKeepAliveImpl: ObjectVaporComponent = defineVaporComponent({
     const storageContainer = createElement('div')
     let current: VaporComponentInstance | VaporFragment | undefined
 
-    // if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
-    //   ;(keepAliveInstance as any).__v_cache = cache
-    // }
+    if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
+      ;(keepAliveInstance as any).__v_cache = cache
+    }
 
     function shouldCache(instance: VaporComponentInstance) {
       const { include, exclude } = props
@@ -136,7 +136,7 @@ export const VaporKeepAliveImpl: ObjectVaporComponent = defineVaporComponent({
     keepAliveInstance.getStorageContainer = () => storageContainer
     keepAliveInstance.getCachedComponent = comp => cache.get(comp)
 
-    const process = (keepAliveInstance.process = block => {
+    const processShapeFlag = (keepAliveInstance.process = block => {
       const instance = getInnerComponent(block)
       if (!instance) return
 
@@ -170,7 +170,7 @@ export const VaporKeepAliveImpl: ObjectVaporComponent = defineVaporComponent({
     // (when using `v-if` or `<component is/>`). For `DynamicFragment` children,
     // the `shapeFlag` is processed in `DynamicFragment.update`. Here only need
     // to process the `VaporComponentInstance`
-    if (isVaporComponent(children)) process(children)
+    if (isVaporComponent(children)) processShapeFlag(children)
 
     function pruneCache(filter: (name: string) => boolean) {
       cache.forEach((instance, key) => {
