@@ -175,7 +175,7 @@ const assignSlots = (
     // when rendering the optimized slots by manually written render function,
     // do not copy the `slots._` compiler flag so that `renderSlot` creates
     // slot Fragment with BAIL patchFlag to force full updates
-    if (optimized || !key.startsWith('_')) {
+    if (optimized || !isInternalKey(key)) {
       slots[key] = children[key]
     }
   }
