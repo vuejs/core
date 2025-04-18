@@ -250,3 +250,18 @@ test('check when has explicit parse options', () => {
   )
   expect(content).toMatch('return { get x() { return x } }')
 })
+
+// #11745
+test('shorthand binding w/ kebab-case', () => {
+  const { content } = compile(
+    `
+    <script setup lang="ts">
+      import { fooBar } from "./foo.ts"
+    </script>
+    <template>
+      <div :foo-bar></div>
+    </template>
+    `,
+  )
+  expect(content).toMatch('return { get fooBar() { return fooBar }')
+})

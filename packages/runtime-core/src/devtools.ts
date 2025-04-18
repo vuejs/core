@@ -101,12 +101,12 @@ export function devtoolsUnmountApp(app: App): void {
 }
 
 export const devtoolsComponentAdded: DevtoolsComponentHook =
-  /*#__PURE__*/ createDevtoolsComponentHook(DevtoolsHooks.COMPONENT_ADDED)
+  /*@__PURE__*/ createDevtoolsComponentHook(DevtoolsHooks.COMPONENT_ADDED)
 
 export const devtoolsComponentUpdated: DevtoolsComponentHook =
-  /*#__PURE__*/ createDevtoolsComponentHook(DevtoolsHooks.COMPONENT_UPDATED)
+  /*@__PURE__*/ createDevtoolsComponentHook(DevtoolsHooks.COMPONENT_UPDATED)
 
-const _devtoolsComponentRemoved = /*#__PURE__*/ createDevtoolsComponentHook(
+const _devtoolsComponentRemoved = /*@__PURE__*/ createDevtoolsComponentHook(
   DevtoolsHooks.COMPONENT_REMOVED,
 )
 
@@ -141,10 +141,10 @@ function createDevtoolsComponentHook(
 }
 
 export const devtoolsPerfStart: DevtoolsPerformanceHook =
-  /*#__PURE__*/ createDevtoolsPerformanceHook(DevtoolsHooks.PERFORMANCE_START)
+  /*@__PURE__*/ createDevtoolsPerformanceHook(DevtoolsHooks.PERFORMANCE_START)
 
 export const devtoolsPerfEnd: DevtoolsPerformanceHook =
-  /*#__PURE__*/ createDevtoolsPerformanceHook(DevtoolsHooks.PERFORMANCE_END)
+  /*@__PURE__*/ createDevtoolsPerformanceHook(DevtoolsHooks.PERFORMANCE_END)
 
 type DevtoolsPerformanceHook = (
   component: ComponentInternalInstance,

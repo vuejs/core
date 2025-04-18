@@ -36,9 +36,9 @@ export interface App<HostElement = any> {
 
   use<Options extends unknown[]>(
     plugin: Plugin<Options>,
-    ...options: Options
+    ...options: NoInfer<Options>
   ): this
-  use<Options>(plugin: Plugin<Options>, options: Options): this
+  use<Options>(plugin: Plugin<Options>, options: NoInfer<Options>): this
 
   mixin(mixin: ComponentOptions): this
   component(name: string): Component | undefined
@@ -46,8 +46,23 @@ export interface App<HostElement = any> {
     name: string,
     component: T,
   ): this
-  directive<T = any, V = any>(name: string): Directive<T, V> | undefined
-  directive<T = any, V = any>(name: string, directive: Directive<T, V>): this
+  directive<
+    HostElement = any,
+    Value = any,
+    Modifiers extends string = string,
+    Arg extends string = string,
+  >(
+    name: string,
+  ): Directive<HostElement, Value, Modifiers, Arg> | undefined
+  directive<
+    HostElement = any,
+    Value = any,
+    Modifiers extends string = string,
+    Arg extends string = string,
+  >(
+    name: string,
+    directive: Directive<HostElement, Value, Modifiers, Arg>,
+  ): this
   mount(
     rootContainer: HostElement | string,
     /**
@@ -200,9 +215,11 @@ export type ObjectPlugin<Options = any[]> = {
 export type FunctionPlugin<Options = any[]> = PluginInstallFunction<Options> &
   Partial<ObjectPlugin<Options>>
 
-export type Plugin<Options = any[]> =
-  | FunctionPlugin<Options>
-  | ObjectPlugin<Options>
+export type Plugin<
+  Options = any[],
+  // TODO: in next major Options extends unknown[] and remove P
+  P extends unknown[] = Options extends unknown[] ? Options : [Options],
+> = FunctionPlugin<P> | ObjectPlugin<P>
 
 export function createAppContext(): AppContext {
   return {

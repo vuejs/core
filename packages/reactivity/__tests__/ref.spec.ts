@@ -43,6 +43,28 @@ describe('reactivity/ref', () => {
     expect(fn).toHaveBeenCalledTimes(2)
   })
 
+  it('ref wrapped in reactive should not track internal _value access', () => {
+    const a = ref(1)
+    const b = reactive(a)
+    let dummy
+    const fn = vi.fn(() => {
+      dummy = b.value // this will observe both b.value and a.value access
+    })
+    effect(fn)
+    expect(fn).toHaveBeenCalledTimes(1)
+    expect(dummy).toBe(1)
+
+    // mutating a.value should only trigger effect once
+    a.value = 3
+    expect(fn).toHaveBeenCalledTimes(2)
+    expect(dummy).toBe(3)
+
+    // mutating b.value should trigger the effect twice. (once for a.value change and once for b.value change)
+    b.value = 5
+    expect(fn).toHaveBeenCalledTimes(4)
+    expect(dummy).toBe(5)
+  })
+
   it('should make nested properties reactive', () => {
     const a = ref({
       count: 1,

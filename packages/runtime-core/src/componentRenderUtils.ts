@@ -27,6 +27,7 @@ import {
   warnDeprecation,
 } from './compat/compatConfig'
 import { shallowReadonly } from '@vue/reactivity'
+import { setTransitionHooks } from './components/BaseTransition'
 
 /**
  * dev only flag to track whether $attrs was used during render.
@@ -189,7 +190,7 @@ export function renderComponentRoot(
             `Extraneous non-props attributes (` +
               `${extraAttrs.join(', ')}) ` +
               `were passed to component but could not be automatically inherited ` +
-              `because component renders fragment or text root nodes.`,
+              `because component renders fragment or text or teleport root nodes.`,
           )
         }
         if (eventAttrs.length) {
@@ -253,7 +254,7 @@ export function renderComponentRoot(
           `that cannot be animated.`,
       )
     }
-    root.transition = vnode.transition
+    setTransitionHooks(root, vnode.transition)
   }
 
   if (__DEV__ && setRoot) {

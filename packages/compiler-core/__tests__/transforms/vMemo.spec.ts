@@ -53,4 +53,12 @@ describe('compiler: v-memo transform', () => {
       ),
     ).toMatchSnapshot()
   })
+
+  test('element v-for key expression prefixing + v-memo', () => {
+    expect(
+      compile(
+        `<span v-for="data of tableData" :key="getId(data)" v-memo="getLetter(data)"></span>`,
+      ),
+    ).toMatchSnapshot()
+  })
 })

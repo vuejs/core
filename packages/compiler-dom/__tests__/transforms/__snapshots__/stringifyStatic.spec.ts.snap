@@ -1,5 +1,17 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
+exports[`stringify static html > eligible content (elements > 20) + non-eligible content 1`] = `
+"const { createElementVNode: _createElementVNode, createStaticVNode: _createStaticVNode, openBlock: _openBlock, createElementBlock: _createElementBlock } = Vue
+
+return function render(_ctx, _cache) {
+  return (_openBlock(), _createElementBlock("div", null, _cache[0] || (_cache[0] = [
+    _createStaticVNode("<span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span>", 20),
+    _createElementVNode("div", { key: "1" }, "1", -1 /* HOISTED */),
+    _createStaticVNode("<span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span>", 20)
+  ])))
+}"
+`;
+
 exports[`stringify static html > escape 1`] = `
 "const { toDisplayString: _toDisplayString, normalizeClass: _normalizeClass, createElementVNode: _createElementVNode, createStaticVNode: _createStaticVNode, openBlock: _openBlock, createElementBlock: _createElementBlock } = Vue
 
@@ -16,6 +28,33 @@ exports[`stringify static html > serializing constant bindings 1`] = `
 return function render(_ctx, _cache) {
   return (_openBlock(), _createElementBlock("div", null, _cache[0] || (_cache[0] = [
     _createStaticVNode("<div style=\\"color:red;\\"><span class=\\"foo bar\\">1 + false</span><span class=\\"foo bar\\">1 + false</span><span class=\\"foo bar\\">1 + false</span><span class=\\"foo bar\\">1 + false</span><span class=\\"foo bar\\">1 + false</span></div>", 1)
+  ])))
+}"
+`;
+
+exports[`stringify static html > serializing template string style 1`] = `
+"const { toDisplayString: _toDisplayString, normalizeClass: _normalizeClass, createElementVNode: _createElementVNode, createStaticVNode: _createStaticVNode, openBlock: _openBlock, createElementBlock: _createElementBlock } = Vue
+
+return function render(_ctx, _cache) {
+  return (_openBlock(), _createElementBlock("div", null, _cache[0] || (_cache[0] = [
+    _createStaticVNode("<div style=\\"color:red;\\"><span class=\\"foo bar\\">1 + false</span><span class=\\"foo bar\\">1 + false</span><span class=\\"foo bar\\">1 + false</span><span class=\\"foo bar\\">1 + false</span><span class=\\"foo bar\\">1 + false</span></div>", 1)
+  ])))
+}"
+`;
+
+exports[`stringify static html > should bail for <option> elements with null values 1`] = `
+"const { createElementVNode: _createElementVNode, openBlock: _openBlock, createElementBlock: _createElementBlock } = Vue
+
+return function render(_ctx, _cache) {
+  return (_openBlock(), _createElementBlock("div", null, _cache[0] || (_cache[0] = [
+    _createElementVNode("select", null, [
+      _createElementVNode("option", { value: null }),
+      _createElementVNode("option", { value: "1" }),
+      _createElementVNode("option", { value: "1" }),
+      _createElementVNode("option", { value: "1" }),
+      _createElementVNode("option", { value: "1" }),
+      _createElementVNode("option", { value: "1" })
+    ], -1 /* HOISTED */)
   ])))
 }"
 `;

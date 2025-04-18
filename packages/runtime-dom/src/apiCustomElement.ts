@@ -221,6 +221,11 @@ export class VueElement
    */
   _nonce: string | undefined = this._def.nonce
 
+  /**
+   * @internal
+   */
+  _teleportTarget?: HTMLElement
+
   private _connected = false
   private _resolved = false
   private _numberProps: Record<string, true> | null = null
@@ -272,6 +277,9 @@ export class VueElement
   }
 
   connectedCallback(): void {
+    // avoid resolving component if it's not connected
+    if (!this.isConnected) return
+
     if (!this.shadowRoot) {
       this._parseSlots()
     }
@@ -322,7 +330,7 @@ export class VueElement
         }
         // unmount
         this._app && this._app.unmount()
-        this._instance!.ce = undefined
+        if (this._instance) this._instance.ce = undefined
         this._app = this._instance = null
       }
     })
@@ -487,12 +495,18 @@ export class VueElement
         delete this._props[key]
       } else {
         this._props[key] = val
+        // support set key on ceVNode
+        if (key === 'key' && this._app) {
+          this._app._ceVNode!.key = val
+        }
       }
       if (shouldUpdate && this._instance) {
         this._update()
       }
       // reflect
       if (shouldReflect) {
+        const ob = this._ob
+        ob && ob.disconnect()
         if (val === true) {
           this.setAttribute(hyphenate(key), '')
         } else if (typeof val === 'string' || typeof val === 'number') {
@@ -500,6 +514,7 @@ export class VueElement
         } else if (!val) {
           this.removeAttribute(hyphenate(key))
         }
+        ob && ob.observe(this, { attributes: true })
       }
     }
   }
@@ -597,7 +612,7 @@ export class VueElement
   }
 
   /**
-   * Only called when shaddowRoot is false
+   * Only called when shadowRoot is false
    */
   private _parseSlots() {
     const slots: VueElement['_slots'] = (this._slots = {})
@@ -611,10 +626,10 @@ export class VueElement
   }
 
   /**
-   * Only called when shaddowRoot is false
+   * Only called when shadowRoot is false
    */
   private _renderSlots() {
-    const outlets = this.querySelectorAll('slot')
+    const outlets = (this._teleportTarget || this).querySelectorAll('slot')
     const scopeId = this._instance!.type.__scopeId
     for (let i = 0; i < outlets.length; i++) {
       const o = outlets[i] as HTMLSlotElement

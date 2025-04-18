@@ -72,6 +72,7 @@ export const defaultParserOptions: MergedParserOptions = {
   getNamespace: () => Namespaces.HTML,
   isVoidTag: NO,
   isPreTag: NO,
+  isIgnoreNewlineTag: NO,
   isCustomElement: NO,
   onError: defaultOnError,
   onWarn: defaultOnWarn,
@@ -225,7 +226,7 @@ const tokenizer = new Tokenizer(stack, {
         rawName: raw,
         exp: undefined,
         arg: undefined,
-        modifiers: raw === '.' ? ['prop'] : [],
+        modifiers: raw === '.' ? [createSimpleExpression('prop')] : [],
         loc: getLoc(start),
       }
       if (name === 'pre') {
@@ -273,7 +274,8 @@ const tokenizer = new Tokenizer(stack, {
         setLocEnd(arg.loc, end)
       }
     } else {
-      ;(currentProp as DirectiveNode).modifiers.push(mod)
+      const exp = createSimpleExpression(mod, true, getLoc(start, end))
+      ;(currentProp as DirectiveNode).modifiers.push(exp)
     }
   },
 
@@ -379,12 +381,14 @@ const tokenizer = new Tokenizer(stack, {
           if (
             __COMPAT__ &&
             currentProp.name === 'bind' &&
-            (syncIndex = currentProp.modifiers.indexOf('sync')) > -1 &&
+            (syncIndex = currentProp.modifiers.findIndex(
+              mod => mod.content === 'sync',
+            )) > -1 &&
             checkCompatEnabled(
               CompilerDeprecationTypes.COMPILER_V_BIND_SYNC,
               currentOptions,
               currentProp.loc,
-              currentProp.rawName,
+              currentProp.arg!.loc.source,
             )
           ) {
             currentProp.name = 'model'
@@ -630,7 +634,7 @@ function onCloseTag(el: ElementNode, end: number, isImplied = false) {
   }
 
   // refine element type
-  const { tag, ns } = el
+  const { tag, ns, children } = el
   if (!inVPre) {
     if (tag === 'slot') {
       el.tagType = ElementTypes.SLOT
@@ -643,8 +647,18 @@ function onCloseTag(el: ElementNode, end: number, isImplied = false) {
 
   // whitespace management
   if (!tokenizer.inRCDATA) {
-    el.children = condenseWhitespace(el.children, el.tag)
+    el.children = condenseWhitespace(children, tag)
   }
+
+  if (ns === Namespaces.HTML && currentOptions.isIgnoreNewlineTag(tag)) {
+    // remove leading newline for <textarea> and <pre> per html spec
+    // https://html.spec.whatwg.org/multipage/parsing.html#parsing-main-inbody
+    const first = children[0]
+    if (first && first.type === NodeTypes.TEXT) {
+      first.content = first.content.replace(/^\r?\n/, '')
+    }
+  }
+
   if (ns === Namespaces.HTML && currentOptions.isPreTag(tag)) {
     inPre--
   }
@@ -866,14 +880,6 @@ function condenseWhitespace(
       }
     }
   }
-  if (inPre && tag && currentOptions.isPreTag(tag)) {
-    // remove leading newline per html spec
-    // https://html.spec.whatwg.org/multipage/grouping-content.html#the-pre-element
-    const first = nodes[0]
-    if (first && first.type === NodeTypes.TEXT) {
-      first.content = first.content.replace(/^\r?\n/, '')
-    }
-  }
   return removedWhitespace ? nodes.filter(Boolean) : nodes
 }
 
@@ -925,6 +931,10 @@ function getLoc(start: number, end?: number): SourceLocation {
     // @ts-expect-error allow late attachment
     source: end == null ? end : getSlice(start, end),
   }
+}
+
+export function cloneLoc(loc: SourceLocation): SourceLocation {
+  return getLoc(loc.start.offset, loc.end.offset)
 }
 
 function setLocEnd(loc: SourceLocation, end: number) {

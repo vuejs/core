@@ -438,7 +438,7 @@ export default class Tokenizer {
         // We have to parse entities in <title> and <textarea> tags.
         if (!__BROWSER__ && c === CharCodes.Amp) {
           this.startEntity()
-        } else if (c === this.delimiterOpen[0]) {
+        } else if (!this.inVPre && c === this.delimiterOpen[0]) {
           // We also need to handle interpolation
           this.state = State.InterpolationOpen
           this.delimiterIndex = 0

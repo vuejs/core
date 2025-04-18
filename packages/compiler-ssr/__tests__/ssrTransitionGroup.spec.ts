@@ -39,7 +39,7 @@ describe('transition-group', () => {
   })
 
   // #11514
-  test('with static tag + comment', () => {
+  test('with static tag + v-if comment', () => {
     expect(
       compile(
         `<transition-group tag="ul"><div v-for="i in list"/><div v-if="false"></div></transition-group>`,
@@ -55,6 +55,25 @@ describe('transition-group', () => {
         if (false) {
           _push(\`<div></div>\`)
         }
+        _push(\`</ul>\`)
+      }"
+    `)
+  })
+
+  // #11958
+  test('with static tag + comment', () => {
+    expect(
+      compile(
+        `<transition-group tag="ul"><div v-for="i in list"/><!--test--></transition-group>`,
+      ).code,
+    ).toMatchInlineSnapshot(`
+      "const { ssrRenderAttrs: _ssrRenderAttrs, ssrRenderList: _ssrRenderList } = require("vue/server-renderer")
+
+      return function ssrRender(_ctx, _push, _parent, _attrs) {
+        _push(\`<ul\${_ssrRenderAttrs(_attrs)}>\`)
+        _ssrRenderList(_ctx.list, (i) => {
+          _push(\`<div></div>\`)
+        })
         _push(\`</ul>\`)
       }"
     `)
