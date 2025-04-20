@@ -2484,13 +2484,13 @@ export function traverseStaticChildren(
       if (c2.type === Text) {
         c2.el = c1.el
       }
-      if (__DEV__ ) {
+      if (__DEV__) {
         // #2324 also inherit for comment nodes, but not placeholders (e.g. v-if which
         // would have received .el during block patch)
-        if(c2.type === Comment && !c2.el) {
+        if (c2.type === Comment && !c2.el) {
           c2.el = c1.el
         }
-        
+
         c2.el && (c2.el.__vnode = c2)
       }
     }
