@@ -1843,6 +1843,36 @@ describe('SSR hydration', () => {
     }
   })
 
+  describe('dynamic child anchor', () => {
+    test('component with element siblings', () => {
+      const Comp = {
+        render() {
+          return createTextVNode('foo')
+        },
+      }
+      const { vnode, container } = mountWithHydration(
+        `<div><span></span><!--[[-->foo<!--]]--><span></span></div>`,
+        () => h('div', null, [h('span'), h(Comp), h('span')]),
+      )
+      expect(vnode.el).toBe(container.firstChild)
+      expect(`Hydration children mismatch`).not.toHaveBeenWarned()
+    })
+
+    test('with consecutive components', () => {
+      const Comp = {
+        render() {
+          return createTextVNode('foo')
+        },
+      }
+      const { vnode, container } = mountWithHydration(
+        `<div><span></span><!--[[-->foo<!--]]--><!--[[-->foo<!--]]--><span></span></div>`,
+        () => h('div', null, [h('span'), h(Comp), h(Comp), h('span')]),
+      )
+      expect(vnode.el).toBe(container.firstChild)
+      expect(`Hydration children mismatch`).not.toHaveBeenWarned()
+    })
+  })
+
   describe('mismatch handling', () => {
     test('text node', () => {
       const { container } = mountWithHydration(`foo`, () => 'bar')

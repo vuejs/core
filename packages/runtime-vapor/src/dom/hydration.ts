@@ -1,5 +1,6 @@
 import { warn } from '@vue/runtime-dom'
 import {
+  type Anchor,
   insertionAnchor,
   insertionParent,
   resetInsertionState,
@@ -36,12 +37,6 @@ export function withHydration(container: ParentNode, fn: () => void): void {
 export let adoptTemplate: (node: Node, template: string) => Node | null
 export let locateHydrationNode: () => void
 
-type Anchor = Comment & {
-  // cached matching fragment start to avoid repeated traversal
-  // on nested fragments
-  $fs?: Anchor
-}
-
 const isComment = (node: Node, data: string): node is Anchor =>
   node.nodeType === 8 && (node as Comment).data === data
 
@@ -77,41 +72,48 @@ function adoptTemplateImpl(node: Node, template: string): Node | null {
 
 function locateHydrationNodeImpl() {
   let node: Node | null
-
   // prepend / firstChild
   if (insertionAnchor === 0) {
     node = child(insertionParent!)
   } else {
-    node = insertionAnchor
-      ? insertionAnchor.previousSibling
-      : insertionParent
-        ? insertionParent.lastChild
-        : currentHydrationNode
-
-    if (node && isComment(node, ']')) {
-      // fragment backward search
-      if (node.$fs) {
-        // already cached matching fragment start
-        node = node.$fs
-      } else {
-        let cur: Node | null = node
-        let curFragEnd = node
-        let fragDepth = 0
-        node = null
-        while (cur) {
-          cur = cur.previousSibling
-          if (cur) {
-            if (isComment(cur, '[')) {
-              curFragEnd.$fs = cur
-              if (!fragDepth) {
-                node = cur
-                break
-              } else {
-                fragDepth--
+    // dynamic child anchor `<!--[[-->`
+    if (insertionAnchor && isDynamicStart(insertionAnchor)) {
+      const anchor = (insertionParent!.lds = insertionParent!.lds
+        ? // continuous dynamic children, the next dynamic start must exist
+          locateNextDynamicStart(insertionParent!.lds)!
+        : insertionAnchor)
+      node = anchor.nextSibling
+    } else {
+      node = insertionAnchor
+        ? insertionAnchor.previousSibling
+        : insertionParent
+          ? insertionParent.lastChild
+          : currentHydrationNode
+      if (node && isComment(node, ']')) {
+        // fragment backward search
+        if (node.$fs) {
+          // already cached matching fragment start
+          node = node.$fs
+        } else {
+          let cur: Node | null = node
+          let curFragEnd = node
+          let fragDepth = 0
+          node = null
+          while (cur) {
+            cur = cur.previousSibling
+            if (cur) {
+              if (isComment(cur, '[')) {
+                curFragEnd.$fs = cur
+                if (!fragDepth) {
+                  node = cur
+                  break
+                } else {
+                  fragDepth--
+                }
+              } else if (isComment(cur, ']')) {
+                curFragEnd = cur
+                fragDepth++
               }
-            } else if (isComment(cur, ']')) {
-              curFragEnd = cur
-              fragDepth++
             }
           }
         }
@@ -126,4 +128,33 @@ function locateHydrationNodeImpl() {
 
   resetInsertionState()
   currentHydrationNode = node
+}
+
+function isDynamicStart(node: Node): node is Anchor {
+  return isComment(node, '[[')
+}
+
+function locateNextDynamicStart(anchor: Anchor): Anchor | undefined {
+  let cur: Node | null = anchor
+  let end = null
+  let depth = 0
+  while (cur) {
+    cur = cur.nextSibling
+    if (cur) {
+      if (isComment(cur, '[[')) {
+        depth++
+      } else if (isComment(cur, ']]')) {
+        if (!depth) {
+          end = cur
+          break
+        } else {
+          depth--
+        }
+      }
+    }
+  }
+
+  if (end) {
+    return end!.nextSibling as Anchor
+  }
 }

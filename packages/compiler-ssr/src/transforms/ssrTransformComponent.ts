@@ -255,6 +255,13 @@ export function ssrProcessComponent(
       node.ssrCodegenNode.arguments.push(`_scopeId`)
     }
 
+    // `<!--[[-->` marks the start of the dynamic children
+    // Only used in Vapor hydration, VDOM hydration
+    // skips this marker.
+    const needDynamicAnchor = shouldAddDynamicAnchor(parent, node)
+    if (needDynamicAnchor) {
+      context.pushStatement(createCallExpression(`_push`, [`"<!--[[-->"`]))
+    }
     if (typeof component === 'string') {
       // static component
       context.pushStatement(
@@ -264,6 +271,9 @@ export function ssrProcessComponent(
       // dynamic component (`resolveDynamicComponent` call)
       // the codegen node is a `renderVNode` call
       context.pushStatement(node.ssrCodegenNode)
+    }
+    if (needDynamicAnchor) {
+      context.pushStatement(createCallExpression(`_push`, [`"<!--]]-->"`]))
     }
   }
 }
@@ -383,4 +393,40 @@ function clone(v: any): any {
   } else {
     return v
   }
+}
+
+function shouldAddDynamicAnchor(
+  parent: { tag?: string; children: TemplateChildNode[] },
+  node: TemplateChildNode,
+): boolean {
+  if (!parent.tag) return false
+
+  const children = parent.children
+  const len = children.length
+  const index = children.indexOf(node)
+
+  const isStaticElement = (c: TemplateChildNode): boolean =>
+    c.type === NodeTypes.ELEMENT && c.tagType !== ElementTypes.COMPONENT
+
+  let hasStaticPreviousSibling = false
+  if (index > 0) {
+    for (let i = index - 1; i >= 0; i--) {
+      if (isStaticElement(children[i])) {
+        hasStaticPreviousSibling = true
+        break
+      }
+    }
+  }
+
+  let hasStaticNextSibling = false
+  if (hasStaticPreviousSibling && index > -1 && index < len - 1) {
+    for (let i = index + 1; i < len; i++) {
+      if (isStaticElement(children[i])) {
+        hasStaticNextSibling = true
+        break
+      }
+    }
+  }
+
+  return hasStaticPreviousSibling && hasStaticNextSibling
 }
