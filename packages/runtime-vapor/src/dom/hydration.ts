@@ -75,9 +75,9 @@ function locateHydrationNodeImpl() {
   // prepend / firstChild
   if (insertionAnchor === 0) {
     node = child(insertionParent!)
-  } else if (insertionParent && insertionAnchor) {
-    // dynamic child anchor `<!--[[-->`
-    if (insertionAnchor && isDynamicStart(insertionAnchor)) {
+  } else if (insertionAnchor) {
+    // dynamic anchor `<!--[[-->`
+    if (isDynamicStart(insertionAnchor)) {
       const anchor = (insertionParent!.$lds = insertionParent!.$lds
         ? // continuous dynamic children, the next dynamic start must exist
           locateNextDynamicStart(insertionParent!.$lds)!
@@ -87,11 +87,7 @@ function locateHydrationNodeImpl() {
       node = insertionAnchor
     }
   } else {
-    node = insertionAnchor
-      ? insertionAnchor.previousSibling
-      : insertionParent
-        ? insertionParent.lastChild
-        : currentHydrationNode
+    node = insertionParent ? insertionParent.lastChild : currentHydrationNode
     if (node && isComment(node, ']')) {
       // fragment backward search
       if (node.$fs) {

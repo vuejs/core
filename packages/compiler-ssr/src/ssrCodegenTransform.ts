@@ -157,13 +157,29 @@ export function processChildren(
   asFragment = false,
   disableNestedFragments = false,
   disableComment = false,
+  asDynamic = false,
 ): void {
+  if (asDynamic) {
+    context.pushStringPart(`<!--[[-->`)
+  }
   if (asFragment) {
     context.pushStringPart(`<!--[-->`)
   }
+
   const { children } = parent
   for (let i = 0; i < children.length; i++) {
     const child = children[i]
+    if (shouldProcessAsDynamic(parent, child)) {
+      processChildren(
+        { children: [child] },
+        context,
+        asFragment,
+        disableNestedFragments,
+        disableComment,
+        true,
+      )
+      continue
+    }
     switch (child.type) {
       case NodeTypes.ELEMENT:
         switch (child.tagType) {
@@ -237,6 +253,9 @@ export function processChildren(
   if (asFragment) {
     context.pushStringPart(`<!--]-->`)
   }
+  if (asDynamic) {
+    context.pushStringPart(`<!--]]-->`)
+  }
 }
 
 export function processChildrenAsStatement(
@@ -248,4 +267,73 @@ export function processChildrenAsStatement(
   const childContext = createChildContext(parentContext, withSlotScopeId)
   processChildren(parent, childContext, asFragment)
   return createBlockStatement(childContext.body)
+}
+
+const isStaticElement = (c: TemplateChildNode): boolean =>
+  c.type === NodeTypes.ELEMENT && c.tagType !== ElementTypes.COMPONENT
+
+/**
+ * Check if a node should be processed as dynamic.
+ * This is primarily used in Vapor mode hydration to wrap dynamic parts
+ * with markers (`<!--[[-->` and `<!--]]-->`).
+ *
+ * <element>
+ *   <element/>  // Static previous sibling
+ *   <Comp/>     // Dynamic node (current)
+ *   <Comp/>     // Dynamic next sibling
+ *   <element/>  // Static next sibling
+ * </element>
+ */
+function shouldProcessAsDynamic(
+  parent: { tag?: string; children: TemplateChildNode[] },
+  node: TemplateChildNode,
+): boolean {
+  // 1. Must be a dynamic node type
+  if (isStaticElement(node)) return false
+  // 2. Must be inside a parent element
+  if (!parent.tag) return false
+
+  const children = parent.children
+  const len = children.length
+  const index = children.indexOf(node)
+
+  // 3. Check for a static previous sibling
+  let hasStaticPreviousSibling = false
+  if (index > 0) {
+    for (let i = index - 1; i >= 0; i--) {
+      if (isStaticElement(children[i])) {
+        hasStaticPreviousSibling = true
+        break
+      }
+    }
+  }
+  if (!hasStaticPreviousSibling) return false
+
+  // 4. Check for a static next sibling
+  let hasStaticNextSibling = false
+  if (index > -1 && index < len - 1) {
+    for (let i = index + 1; i < len; i++) {
+      if (isStaticElement(children[i])) {
+        hasStaticNextSibling = true
+        break
+      }
+    }
+  }
+  if (!hasStaticNextSibling) return false
+
+  // 5. Check for a consecutive dynamic sibling (immediately before or after)
+  let hasConsecutiveDynamicNodes = false
+  if (index > 0 && !isStaticElement(children[index - 1])) {
+    hasConsecutiveDynamicNodes = true
+  }
+  if (
+    !hasConsecutiveDynamicNodes &&
+    index < len - 1 &&
+    !isStaticElement(children[index + 1])
+  ) {
+    hasConsecutiveDynamicNodes = true
+  }
+
+  // Only process as dynamic if all conditions are met
+  return hasConsecutiveDynamicNodes
 }

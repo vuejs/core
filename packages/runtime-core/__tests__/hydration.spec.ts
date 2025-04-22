@@ -1843,8 +1843,8 @@ describe('SSR hydration', () => {
     }
   })
 
-  describe('dynamic child anchor', () => {
-    test('with consecutive components', () => {
+  describe('dynamic anchor', () => {
+    test('consecutive components', () => {
       const Comp = {
         render() {
           return createTextVNode('foo')
