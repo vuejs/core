@@ -1,7 +1,7 @@
 export let insertionParent:
   | (ParentNode & {
       // cached the last dynamic start anchor
-      lds?: Anchor
+      $lds?: Anchor
     })
   | undefined
 export let insertionAnchor: Node | 0 | undefined | null

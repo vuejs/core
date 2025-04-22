@@ -75,45 +75,47 @@ function locateHydrationNodeImpl() {
   // prepend / firstChild
   if (insertionAnchor === 0) {
     node = child(insertionParent!)
-  } else {
+  } else if (insertionParent && insertionAnchor) {
     // dynamic child anchor `<!--[[-->`
     if (insertionAnchor && isDynamicStart(insertionAnchor)) {
-      const anchor = (insertionParent!.lds = insertionParent!.lds
+      const anchor = (insertionParent!.$lds = insertionParent!.$lds
         ? // continuous dynamic children, the next dynamic start must exist
-          locateNextDynamicStart(insertionParent!.lds)!
+          locateNextDynamicStart(insertionParent!.$lds)!
         : insertionAnchor)
       node = anchor.nextSibling
     } else {
       node = insertionAnchor
-        ? insertionAnchor.previousSibling
-        : insertionParent
-          ? insertionParent.lastChild
-          : currentHydrationNode
-      if (node && isComment(node, ']')) {
-        // fragment backward search
-        if (node.$fs) {
-          // already cached matching fragment start
-          node = node.$fs
-        } else {
-          let cur: Node | null = node
-          let curFragEnd = node
-          let fragDepth = 0
-          node = null
-          while (cur) {
-            cur = cur.previousSibling
-            if (cur) {
-              if (isComment(cur, '[')) {
-                curFragEnd.$fs = cur
-                if (!fragDepth) {
-                  node = cur
-                  break
-                } else {
-                  fragDepth--
-                }
-              } else if (isComment(cur, ']')) {
-                curFragEnd = cur
-                fragDepth++
+    }
+  } else {
+    node = insertionAnchor
+      ? insertionAnchor.previousSibling
+      : insertionParent
+        ? insertionParent.lastChild
+        : currentHydrationNode
+    if (node && isComment(node, ']')) {
+      // fragment backward search
+      if (node.$fs) {
+        // already cached matching fragment start
+        node = node.$fs
+      } else {
+        let cur: Node | null = node
+        let curFragEnd = node
+        let fragDepth = 0
+        node = null
+        while (cur) {
+          cur = cur.previousSibling
+          if (cur) {
+            if (isComment(cur, '[')) {
+              curFragEnd.$fs = cur
+              if (!fragDepth) {
+                node = cur
+                break
+              } else {
+                fragDepth--
               }
+            } else if (isComment(cur, ']')) {
+              curFragEnd = cur
+              fragDepth++
             }
           }
         }

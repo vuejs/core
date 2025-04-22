@@ -241,8 +241,7 @@ describe('Vapor Mode hydration', () => {
 
   test('component with anchor insertion', async () => {
     const { container, data } = await testHydration(
-      `
-      <template>
+      `<template>
         <div>
           <span/>
           <components.Child/>
@@ -255,13 +254,13 @@ describe('Vapor Mode hydration', () => {
       },
     )
     expect(container.innerHTML).toMatchInlineSnapshot(
-      `"<div><span></span><!--[[-->foo<!--]]--><span></span></div>"`,
+      `"<div><span></span>foo<span></span></div>"`,
     )
 
     data.value = 'bar'
     await nextTick()
     expect(container.innerHTML).toMatchInlineSnapshot(
-      `"<div><span></span><!--[[-->bar<!--]]--><span></span></div>"`,
+      `"<div><span></span>bar<span></span></div>"`,
     )
   })
 
@@ -289,6 +288,56 @@ describe('Vapor Mode hydration', () => {
     expect(container.innerHTML).toMatchInlineSnapshot(
       `"<div><span></span><!--[[-->bar<!--]]--><!--[[-->bar<!--]]--><span></span></div>"`,
     )
+  })
+
+  test('mixed component and element with anchor insertion', async () => {
+    const { container, data } = await testHydration(
+      `<template>
+        <div>
+          <span/>
+          <components.Child/>
+          <span/>
+          <components.Child/>
+          <span/>
+        </div>
+      </template>
+      `,
+      {
+        Child: `<template>{{ data }}</template>`,
+      },
+    )
+    expect(container.innerHTML).toMatchInlineSnapshot(
+      `"<div><span></span>foo<span></span>foo<span></span></div>"`,
+    )
+
+    data.value = 'bar'
+    await nextTick()
+    expect(container.innerHTML).toMatchInlineSnapshot(
+      `"<div><span></span>bar<span></span>bar<span></span></div>"`,
+    )
+  })
+
+  test.todo('mixed component and text with anchor insertion', async () => {
+    const { container, data } = await testHydration(
+      `<template>
+        <div>
+          <span/>
+          <components.Child/>
+          {{ data }}
+          <components.Child/>
+          <span/>
+        </div>
+      </template>
+      `,
+      {
+        Child: `<template>{{ data }}</template>`,
+      },
+    )
+    expect(container.innerHTML).toMatchInlineSnapshot(``)
+
+    data.value = 'bar'
+    await nextTick()
+    expect(container.innerHTML).toMatchInlineSnapshot(``)
   })
 
   test.todo('if')

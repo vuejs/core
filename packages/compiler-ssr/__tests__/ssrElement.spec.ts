@@ -398,24 +398,6 @@ describe('ssr: element', () => {
   })
 
   describe('dynamic child anchor', () => {
-    test('component with element siblings', () => {
-      expect(
-        getCompiledString(`
-        <div>
-          <div/>
-          <Comp1/>
-          <div/>
-        </div>
-        `),
-      ).toMatchInlineSnapshot(`
-        "\`<div><div></div>\`)
-          _push("<!--[[-->")
-          _push(_ssrRenderComponent(_component_Comp1, null, null, _parent))
-          _push("<!--]]-->")
-          _push(\`<div></div></div>\`"
-      `)
-    })
-
     test('with consecutive components', () => {
       expect(
         getCompiledString(`

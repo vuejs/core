@@ -428,5 +428,24 @@ function shouldAddDynamicAnchor(
     }
   }
 
-  return hasStaticPreviousSibling && hasStaticNextSibling
+  let hasConsecutiveDynamicNodes = false
+  if (index > 0 && index < len - 1) {
+    if (index > 0 && !isStaticElement(children[index - 1])) {
+      hasConsecutiveDynamicNodes = true
+    }
+
+    if (
+      !hasConsecutiveDynamicNodes &&
+      index < len - 1 &&
+      !isStaticElement(children[index + 1])
+    ) {
+      hasConsecutiveDynamicNodes = true
+    }
+  }
+
+  return (
+    hasStaticPreviousSibling &&
+    hasStaticNextSibling &&
+    hasConsecutiveDynamicNodes
+  )
 }
