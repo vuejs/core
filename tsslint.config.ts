@@ -1,5 +1,5 @@
 import { createIgnorePlugin, defineConfig } from '@tsslint/config'
-import { convertConfig } from '@tsslint/eslint'
+import { convertRules } from '@tsslint/eslint'
 import { builtinModules } from 'node:module'
 
 const DOMGlobals = ['window', 'document']
@@ -14,7 +14,7 @@ const banConstEnum = {
 export default defineConfig([
   {
     plugins: [createIgnorePlugin('@lint-ignore', false)],
-    rules: convertConfig({
+    rules: await convertRules({
       'no-debugger': 'error',
       'no-console': ['error', { allow: ['warn', 'error', 'info'] }],
       // most of the codebase are expected to be env agnostic
@@ -89,7 +89,7 @@ export default defineConfig([
       'packages-private/dts-test/**',
       'packages-private/dts-build-test/**',
     ],
-    rules: convertConfig({
+    rules: await convertRules({
       'no-console': 'off',
       'no-restricted-globals': 'off',
       'no-restricted-syntax': 'off',
@@ -101,7 +101,7 @@ export default defineConfig([
   // shared, may be used in any env
   {
     include: ['packages/shared/**'],
-    rules: convertConfig({
+    rules: await convertRules({
       'no-restricted-globals': 'off',
     }),
   },
@@ -113,7 +113,7 @@ export default defineConfig([
       'packages/compiler-ssr/**',
       'packages/server-renderer/**',
     ],
-    rules: convertConfig({
+    rules: await convertRules({
       'no-restricted-globals': ['error', ...DOMGlobals],
       'no-restricted-syntax': ['error', banConstEnum],
     }),
@@ -127,7 +127,7 @@ export default defineConfig([
       'packages/vue/**',
       'packages/vue-compat/**',
     ],
-    rules: convertConfig({
+    rules: await convertRules({
       'no-restricted-globals': ['error', ...NodeGlobals],
     }),
   },
@@ -138,7 +138,7 @@ export default defineConfig([
       'packages-private/template-explorer/**',
       'packages-private/sfc-playground/**',
     ],
-    rules: convertConfig({
+    rules: await convertRules({
       'no-console': 'off',
       'no-restricted-globals': ['error', ...NodeGlobals],
       'no-restricted-syntax': ['error', banConstEnum],
@@ -148,7 +148,7 @@ export default defineConfig([
   // JavaScript files
   {
     include: ['**/*.js'],
-    rules: convertConfig({
+    rules: await convertRules({
       // We only do `no-unused-vars` checks for js files, TS files are checked by TypeScript itself.
       'no-unused-vars': ['error', { vars: 'all', args: 'none' }],
     }),
@@ -164,7 +164,7 @@ export default defineConfig([
       'packages/*/*.js',
       'packages/vue/*/*.js',
     ],
-    rules: convertConfig({
+    rules: await convertRules({
       'no-console': 'off',
       'no-restricted-globals': 'off',
       'no-restricted-syntax': ['error', banConstEnum],
@@ -174,7 +174,7 @@ export default defineConfig([
   // Import nodejs modules in compiler-sfc
   {
     include: ['packages/compiler-sfc/src/**'],
-    rules: convertConfig({
+    rules: await convertRules({
       'import-x/no-nodejs-modules': ['error', { allow: builtinModules }],
     }),
   },
