@@ -1,7 +1,12 @@
+import {
+  isComment,
+  isDynamicAnchor,
+  isEmptyText,
+  isHydrating,
+  locateEndAnchor,
+} from './hydration'
+
 /*! #__NO_SIDE_EFFECTS__ */
-
-import { isComment, isHydrating } from './hydration'
-
 export function createTextNode(value = ''): Text {
   return document.createTextNode(value)
 }
@@ -23,25 +28,28 @@ export function child(node: ParentNode): Node {
 
 /*! #__NO_SIDE_EFFECTS__ */
 export function nthChild(node: Node, i: number): Node {
-  return node.childNodes[i]
-}
+  if (!isHydrating) return node.childNodes[i]
 
-/*! #__NO_SIDE_EFFECTS__ */
-export function next(node: Node): Node {
-  let n = node.nextSibling!
-  if (isHydrating) {
-    // skip dynamic anchors and empty text nodes
-    while (n && (isDynamicAnchor(n) || isEmptyText(n))) {
-      n = n.nextSibling!
-    }
+  let n = node.firstChild!
+  for (let start = 0; start < i; start++) {
+    n = next(n) as ChildNode
   }
   return n
 }
 
-function isDynamicAnchor(node: Node): node is Comment {
-  return isComment(node, '[[') || isComment(node, ']]')
-}
+/*! #__NO_SIDE_EFFECTS__ */
+export function next(node: Node): Node {
+  if (!isHydrating) return node.nextSibling!
 
-function isEmptyText(node: Node): node is Text {
-  return node.nodeType === 3 && !(node as Text).data.trim()
+  // process fragment as a single node
+  if (node && isComment(node, '[')) {
+    node = locateEndAnchor(node)!
+  }
+
+  let n = node.nextSibling!
+  // skip dynamic anchors and empty text nodes
+  while (n && (isDynamicAnchor(n) || isEmptyText(n))) {
+    n = n.nextSibling!
+  }
+  return n
 }

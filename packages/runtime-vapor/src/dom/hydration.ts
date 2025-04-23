@@ -46,7 +46,7 @@ export const isComment = (node: Node, data: string): node is Anchor =>
  */
 function adoptTemplateImpl(node: Node, template: string): Node | null {
   if (!(template[0] === '<' && template[1] === '!')) {
-    while (node.nodeType === 8) node = next(node)
+    while (node.nodeType === 8) node = node.nextSibling!
   }
 
   if (__DEV__) {
@@ -118,4 +118,34 @@ function locateHydrationNodeImpl() {
 
   resetInsertionState()
   currentHydrationNode = node
+}
+
+export function isDynamicAnchor(node: Node): node is Comment {
+  return isComment(node, '[[') || isComment(node, ']]')
+}
+
+export function isEmptyText(node: Node): node is Text {
+  return node.nodeType === 3 && !(node as Text).data.trim()
+}
+
+export function locateEndAnchor(
+  node: Node | null,
+  open = '[',
+  close = ']',
+): Node | null {
+  let match = 0
+  while (node) {
+    node = node.nextSibling
+    if (node && node.nodeType === 8) {
+      if ((node as Comment).data === open) match++
+      if ((node as Comment).data === close) {
+        if (match === 0) {
+          return node
+        } else {
+          match--
+        }
+      }
+    }
+  }
+  return null
 }

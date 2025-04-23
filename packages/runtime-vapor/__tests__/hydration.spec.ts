@@ -264,7 +264,7 @@ describe('Vapor Mode hydration', () => {
     )
   })
 
-  test('consecutive component with anchor insertion', async () => {
+  test('consecutive components with anchor insertion', async () => {
     const { container, data } = await testHydration(
       `<template>
         <div>
@@ -341,6 +341,111 @@ describe('Vapor Mode hydration', () => {
     await nextTick()
     expect(container.innerHTML).toMatchInlineSnapshot(
       `"<div><span></span><!--[[-->bar<!--]]--><!--[[--> <!--]]--><!--[[--> bar <!--]]--><!--[[--> <!--]]--><!--[[-->bar<!--]]--><span></span></div>"`,
+    )
+  })
+
+  test('fragment component with anchor insertion', async () => {
+    const { container, data } = await testHydration(
+      `<template>
+        <div>
+          <span/>
+          <components.Child/>
+          <span/>
+        </div>
+      </template>
+      `,
+      {
+        Child: `<template><div>{{ data }}</div>-{{ data }}</template>`,
+      },
+    )
+    expect(container.innerHTML).toMatchInlineSnapshot(
+      `"<div><span></span><!--[--><div>foo</div>-foo<!--]--><span></span></div>"`,
+    )
+
+    data.value = 'bar'
+    await nextTick()
+    expect(container.innerHTML).toMatchInlineSnapshot(
+      `"<div><span></span><!--[--><div>bar</div>-bar<!--]--><span></span></div>"`,
+    )
+  })
+
+  test('consecutive fragment components with anchor insertion', async () => {
+    const { container, data } = await testHydration(
+      `<template>
+        <div>
+          <span/>
+          <components.Child/>
+          <components.Child/>
+          <span/>
+        </div>
+      </template>
+      `,
+      {
+        Child: `<template><div>{{ data }}</div>-{{ data }}</template>`,
+      },
+    )
+    expect(container.innerHTML).toMatchInlineSnapshot(
+      `"<div><span></span><!--[[--><!--[--><div>foo</div>-foo<!--]--><!--]]--><!--[[--><!--[--><div>foo</div>-foo<!--]--><!--]]--><span></span></div>"`,
+    )
+
+    data.value = 'bar'
+    await nextTick()
+    expect(container.innerHTML).toMatchInlineSnapshot(
+      `"<div><span></span><!--[[--><!--[--><div>bar</div>-bar<!--]--><!--]]--><!--[[--><!--[--><div>bar</div>-bar<!--]--><!--]]--><span></span></div>"`,
+    )
+  })
+
+  test('mixed fragment component and element with anchor insertion', async () => {
+    const { container, data } = await testHydration(
+      `<template>
+        <div>
+          <span/>
+          <components.Child/>
+          <span/>
+          <components.Child/>
+          <span/>
+        </div>
+      </template>
+      `,
+      {
+        Child: `<template><div>{{ data }}</div>-{{ data }}</template>`,
+      },
+    )
+    expect(container.innerHTML).toMatchInlineSnapshot(
+      `"<div><span></span><!--[--><div>foo</div>-foo<!--]--><span></span><!--[--><div>foo</div>-foo<!--]--><span></span></div>"`,
+    )
+
+    data.value = 'bar'
+    await nextTick()
+    expect(container.innerHTML).toMatchInlineSnapshot(
+      `"<div><span></span><!--[--><div>bar</div>-bar<!--]--><span></span><!--[--><div>bar</div>-bar<!--]--><span></span></div>"`,
+    )
+  })
+
+  test('mixed fragment component and text with anchor insertion', async () => {
+    const { container, data } = await testHydration(
+      `<template>
+        <div>
+          <span/>
+          <components.Child/>
+          {{ data }}
+          <components.Child/>
+          <span/>
+        </div>
+      </template>
+      `,
+      {
+        Child: `<template><div>{{ data }}</div>-{{ data }}</template>`,
+      },
+    )
+    expect(container.innerHTML).toMatchInlineSnapshot(
+      `"<div><span></span><!--[[--><!--[--><div>foo</div>-foo<!--]--><!--]]--><!--[[--> <!--]]--><!--[[--> foo <!--]]--><!--[[--> <!--]]--><!--[[--><!--[--><div>foo</div>-foo<!--]--><!--]]--><span></span></div>"`,
+    )
+
+    data.value = 'bar'
+    await nextTick()
+    expect(container.innerHTML).toMatchInlineSnapshot(
+      `"<div><span></span><!--[[--><!--[--><div>bar</div>-bar<!--]--><!--]]--><!--[[--> <!--]]--><!--[[--> bar <!--]]--><!--[[--> <!--]]--><!--[[--><!--[--><div>bar</div>-bar<!--]--><!--]]--><span></span></div>"`,
     )
   })
 
