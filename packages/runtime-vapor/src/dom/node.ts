@@ -42,8 +42,13 @@ function _next(node: Node): Node {
 
 /*! #__NO_SIDE_EFFECTS__ */
 function __next(node: Node): Node {
-  // process fragment as a single node
-  if (node && isComment(node, '[')) {
+  // treat dynamic node (<!--[[-->...<!--]]-->) as a single node
+  if (node && isComment(node, '[[')) {
+    node = locateEndAnchor(node, '[[', ']]')!
+  }
+
+  // treat dynamic node (<!--[-->...<!--]-->) as a single node
+  else if (node && isComment(node, '[')) {
     node = locateEndAnchor(node)!
   }
 

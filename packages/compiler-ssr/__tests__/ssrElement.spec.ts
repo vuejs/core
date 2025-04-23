@@ -398,7 +398,7 @@ describe('ssr: element', () => {
   })
 
   describe('dynamic anchor', () => {
-    test('consecutive components', () => {
+    test('two consecutive components', () => {
       expect(
         getCompiledString(`
         <div>
@@ -409,11 +409,36 @@ describe('ssr: element', () => {
         </div>
         `),
       ).toMatchInlineSnapshot(`
-        "\`<div><div></div><!--[[-->\`)
+        "\`<div><div></div>\`)
           _push(_ssrRenderComponent(_component_Comp1, null, null, _parent))
-          _push(\`<!--]]--><!--[[-->\`)
+          _push(\`<!--[[-->\`)
           _push(_ssrRenderComponent(_component_Comp2, null, null, _parent))
           _push(\`<!--]]--><div></div></div>\`"
+      `)
+    })
+
+    test('multiple consecutive components', () => {
+      expect(
+        getCompiledString(`
+        <div>
+          <div/>
+          <Comp1/>
+          <Comp2/>
+          <Comp3/>
+          <Comp4/>
+          <div/>
+        </div>
+        `),
+      ).toMatchInlineSnapshot(`
+        "\`<div><div></div>\`)
+          _push(_ssrRenderComponent(_component_Comp1, null, null, _parent))
+          _push(\`<!--[[-->\`)
+          _push(_ssrRenderComponent(_component_Comp2, null, null, _parent))
+          _push(\`<!--]]--><!--[[-->\`)
+          _push(_ssrRenderComponent(_component_Comp3, null, null, _parent))
+          _push(\`<!--]]-->\`)
+          _push(_ssrRenderComponent(_component_Comp4, null, null, _parent))
+          _push(\`<div></div></div>\`"
       `)
     })
   })

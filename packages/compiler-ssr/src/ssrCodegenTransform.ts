@@ -7,6 +7,7 @@ import {
   type IfStatement,
   type JSChildNode,
   NodeTypes,
+  type PlainElementNode,
   type RootNode,
   type TemplateChildNode,
   type TemplateLiteral,
@@ -166,10 +167,14 @@ export function processChildren(
     context.pushStringPart(`<!--[-->`)
   }
 
-  const { children } = parent
+  const { children, type, tagType } = parent as PlainElementNode
+  const inElement =
+    type === NodeTypes.ELEMENT && tagType === ElementTypes.ELEMENT
+  if (inElement) processChildrenDynamicInfo(children)
+
   for (let i = 0; i < children.length; i++) {
     const child = children[i]
-    if (shouldProcessAsDynamic(parent, child)) {
+    if (inElement && shouldProcessChildAsDynamic(parent, child)) {
       processChildren(
         { children: [child] },
         context,
@@ -274,87 +279,127 @@ const isStaticChildNode = (c: TemplateChildNode): boolean =>
   c.type === NodeTypes.TEXT ||
   c.type === NodeTypes.COMMENT
 
+interface DynamicInfo {
+  hasStaticPrevious: boolean
+  hasStaticNext: boolean
+  prevDynamicCount: number
+  nextDynamicCount: number
+}
+
+function processChildrenDynamicInfo(
+  children: (TemplateChildNode & { _ssrDynamicInfo?: DynamicInfo })[],
+): void {
+  const filteredChildren = children.filter(
+    child => !(child.type === NodeTypes.TEXT && !child.content.trim()),
+  )
+
+  for (let i = 0; i < filteredChildren.length; i++) {
+    const child = filteredChildren[i]
+    if (isStaticChildNode(child)) continue
+
+    child._ssrDynamicInfo = {
+      hasStaticPrevious: false,
+      hasStaticNext: false,
+      prevDynamicCount: 0,
+      nextDynamicCount: 0,
+    }
+
+    const info = child._ssrDynamicInfo
+
+    // Calculate the previous static and dynamic node counts
+    let foundStaticPrev = false
+    let dynamicCountPrev = 0
+    for (let j = i - 1; j >= 0; j--) {
+      const prevChild = filteredChildren[j]
+      if (isStaticChildNode(prevChild)) {
+        foundStaticPrev = true
+        break
+      }
+      // if the previous child has dynamic info, use it
+      else if (prevChild._ssrDynamicInfo) {
+        foundStaticPrev = prevChild._ssrDynamicInfo.hasStaticPrevious
+        dynamicCountPrev = prevChild._ssrDynamicInfo.prevDynamicCount + 1
+        break
+      }
+      dynamicCountPrev++
+    }
+    info.hasStaticPrevious = foundStaticPrev
+    info.prevDynamicCount = dynamicCountPrev
+
+    // Calculate the number of static and dynamic nodes afterwards
+    let foundStaticNext = false
+    let dynamicCountNext = 0
+    for (let j = i + 1; j < filteredChildren.length; j++) {
+      const nextChild = filteredChildren[j]
+      if (isStaticChildNode(nextChild)) {
+        foundStaticNext = true
+        break
+      }
+      // if the next child has dynamic info, use it
+      else if (nextChild._ssrDynamicInfo) {
+        foundStaticNext = nextChild._ssrDynamicInfo.hasStaticNext
+        dynamicCountNext = nextChild._ssrDynamicInfo.nextDynamicCount + 1
+        break
+      }
+      dynamicCountNext++
+    }
+    info.hasStaticNext = foundStaticNext
+    info.nextDynamicCount = dynamicCountNext
+  }
+}
+
 /**
  * Check if a node should be processed as dynamic.
  * This is primarily used in Vapor mode hydration to wrap dynamic parts
  * with markers (`<!--[[-->` and `<!--]]-->`).
+ * The purpose is to distinguish the boundaries of nodes during hydration
  *
+ * 1. two consecutive dynamic nodes should only wrap the second one
  * <element>
- *   <element/>  // Static previous sibling
- *   <Comp/>     // Dynamic node (current)
- *   <Comp/>     // Dynamic next sibling
- *   <element/>  // Static next sibling
+ *   <element/>  // Static node
+ *   <Comp/>     // Dynamic node -> should NOT be wrapped
+ *   <Comp/>     // Dynamic node -> should be wrapped
+ *   <element/>  // Static node
  * </element>
+ *
+ * 2. three or more consecutive dynamic nodes should only wrap the
+ *    middle nodes, leaving the first and last static.
+ * <element>
+ *  <element/>  // Static node
+ *  <Comp/>     // Dynamic node -> should NOT be wrapped
+ *  <Comp/>     // Dynamic node -> should be wrapped
+ *  <Comp/>     // Dynamic node -> should be wrapped
+ *  <Comp/>     // Dynamic node -> should NOT be wrapped
+ *  <element/>  // Static node
  */
-function shouldProcessAsDynamic(
+function shouldProcessChildAsDynamic(
   parent: { tag?: string; children: TemplateChildNode[] },
-  node: TemplateChildNode,
+  node: TemplateChildNode & { _ssrDynamicInfo?: DynamicInfo },
 ): boolean {
-  // 1. Must be a dynamic node type
-  if (isStaticChildNode(node)) return false
-  // 2. Must be inside a parent element
+  // must be inside a parent element
   if (!parent.tag) return false
 
-  const children = parent.children.filter(
-    child => !(child.type === NodeTypes.TEXT && !child.content.trim()),
-  )
-  const len = children.length
-  const index = children.indexOf(node)
+  // must has dynamic info
+  const { _ssrDynamicInfo: info } = node
+  if (!info) return false
 
-  // 3. Check for a static previous sibling
-  let hasStaticPreviousSibling = false
-  if (index > 0) {
-    for (let i = index - 1; i >= 0; i--) {
-      if (isStaticChildNode(children[i])) {
-        hasStaticPreviousSibling = true
-        break
-      }
-    }
-  }
-  if (!hasStaticPreviousSibling) return false
+  const {
+    hasStaticPrevious,
+    hasStaticNext,
+    prevDynamicCount,
+    nextDynamicCount,
+  } = info
 
-  // 4. Check for a static next sibling
-  let hasStaticNextSibling = false
-  if (index > -1 && index < len - 1) {
-    for (let i = index + 1; i < len; i++) {
-      if (isStaticChildNode(children[i])) {
-        hasStaticNextSibling = true
-        break
-      }
-    }
-  }
-  if (!hasStaticNextSibling) return false
+  // must have static nodes on both sides
+  if (!hasStaticPrevious || !hasStaticNext) return false
 
-  // 5. Calculate the number and location of continuous dynamic nodes
-  let dynamicNodeCount = 1 // The current node is counted as one
-  let prevDynamicCount = 0
-  let nextDynamicCount = 0
+  const dynamicNodeCount = 1 + prevDynamicCount + nextDynamicCount
 
-  // Count consecutive dynamic nodes forward
-  for (let i = index - 1; i >= 0; i--) {
-    if (!isStaticChildNode(children[i])) {
-      prevDynamicCount++
-    } else {
-      break
-    }
-  }
-
-  // Count consecutive dynamic nodes backwards
-  for (let i = index + 1; i < len; i++) {
-    if (!isStaticChildNode(children[i])) {
-      nextDynamicCount++
-    } else {
-      break
-    }
-  }
-
-  dynamicNodeCount = 1 + prevDynamicCount + nextDynamicCount
-
-  // For two consecutive dynamic nodes, mark both as dynamic
+  // For two consecutive dynamic nodes, mark the second one as dynamic
   if (dynamicNodeCount === 2) {
-    return prevDynamicCount > 0 || nextDynamicCount > 0
+    return prevDynamicCount > 0
   }
-  // For three or more dynamic nodes, only mark the intermediate nodes as dynamic
+  // For three or more dynamic nodes, mark the intermediate node as dynamic
   else if (dynamicNodeCount >= 3) {
     return prevDynamicCount > 0 && nextDynamicCount > 0
   }
