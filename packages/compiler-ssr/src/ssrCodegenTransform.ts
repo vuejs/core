@@ -269,8 +269,10 @@ export function processChildrenAsStatement(
   return createBlockStatement(childContext.body)
 }
 
-const isStaticElement = (c: TemplateChildNode): boolean =>
-  c.type === NodeTypes.ELEMENT && c.tagType !== ElementTypes.COMPONENT
+const isStaticChildNode = (c: TemplateChildNode): boolean =>
+  (c.type === NodeTypes.ELEMENT && c.tagType !== ElementTypes.COMPONENT) ||
+  c.type === NodeTypes.TEXT ||
+  c.type === NodeTypes.COMMENT
 
 /**
  * Check if a node should be processed as dynamic.
@@ -289,11 +291,13 @@ function shouldProcessAsDynamic(
   node: TemplateChildNode,
 ): boolean {
   // 1. Must be a dynamic node type
-  if (isStaticElement(node)) return false
+  if (isStaticChildNode(node)) return false
   // 2. Must be inside a parent element
   if (!parent.tag) return false
 
-  const children = parent.children
+  const children = parent.children.filter(
+    child => !(child.type === NodeTypes.TEXT && !child.content.trim()),
+  )
   const len = children.length
   const index = children.indexOf(node)
 
@@ -301,7 +305,7 @@ function shouldProcessAsDynamic(
   let hasStaticPreviousSibling = false
   if (index > 0) {
     for (let i = index - 1; i >= 0; i--) {
-      if (isStaticElement(children[i])) {
+      if (isStaticChildNode(children[i])) {
         hasStaticPreviousSibling = true
         break
       }
@@ -313,7 +317,7 @@ function shouldProcessAsDynamic(
   let hasStaticNextSibling = false
   if (index > -1 && index < len - 1) {
     for (let i = index + 1; i < len; i++) {
-      if (isStaticElement(children[i])) {
+      if (isStaticChildNode(children[i])) {
         hasStaticNextSibling = true
         break
       }
@@ -321,19 +325,39 @@ function shouldProcessAsDynamic(
   }
   if (!hasStaticNextSibling) return false
 
-  // 5. Check for a consecutive dynamic sibling (immediately before or after)
-  let hasConsecutiveDynamicNodes = false
-  if (index > 0 && !isStaticElement(children[index - 1])) {
-    hasConsecutiveDynamicNodes = true
-  }
-  if (
-    !hasConsecutiveDynamicNodes &&
-    index < len - 1 &&
-    !isStaticElement(children[index + 1])
-  ) {
-    hasConsecutiveDynamicNodes = true
+  // 5. Calculate the number and location of continuous dynamic nodes
+  let dynamicNodeCount = 1 // The current node is counted as one
+  let prevDynamicCount = 0
+  let nextDynamicCount = 0
+
+  // Count consecutive dynamic nodes forward
+  for (let i = index - 1; i >= 0; i--) {
+    if (!isStaticChildNode(children[i])) {
+      prevDynamicCount++
+    } else {
+      break
+    }
   }
 
-  // Only process as dynamic if all conditions are met
-  return hasConsecutiveDynamicNodes
+  // Count consecutive dynamic nodes backwards
+  for (let i = index + 1; i < len; i++) {
+    if (!isStaticChildNode(children[i])) {
+      nextDynamicCount++
+    } else {
+      break
+    }
+  }
+
+  dynamicNodeCount = 1 + prevDynamicCount + nextDynamicCount
+
+  // For two consecutive dynamic nodes, mark both as dynamic
+  if (dynamicNodeCount === 2) {
+    return prevDynamicCount > 0 || nextDynamicCount > 0
+  }
+  // For three or more dynamic nodes, only mark the intermediate nodes as dynamic
+  else if (dynamicNodeCount >= 3) {
+    return prevDynamicCount > 0 && nextDynamicCount > 0
+  }
+
+  return false
 }

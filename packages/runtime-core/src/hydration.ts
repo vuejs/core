@@ -125,7 +125,7 @@ export function createHydrationFunctions(
 
   function nextSibling(node: Node) {
     let n = next(node)
-    // skip dynamic child anchor
+    // skip dynamic anchors
     if (n && isDynamicAnchor(n)) {
       n = next(n)
     }
