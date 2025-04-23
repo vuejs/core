@@ -317,7 +317,7 @@ describe('Vapor Mode hydration', () => {
     )
   })
 
-  test.todo('mixed component and text with anchor insertion', async () => {
+  test('mixed component and text with anchor insertion', async () => {
     const { container, data } = await testHydration(
       `<template>
         <div>
@@ -333,11 +333,15 @@ describe('Vapor Mode hydration', () => {
         Child: `<template>{{ data }}</template>`,
       },
     )
-    expect(container.innerHTML).toMatchInlineSnapshot(``)
+    expect(container.innerHTML).toMatchInlineSnapshot(
+      `"<div><span></span><!--[[-->foo<!--]]--><!--[[--> <!--]]--><!--[[--> foo <!--]]--><!--[[--> <!--]]--><!--[[-->foo<!--]]--><span></span></div>"`,
+    )
 
     data.value = 'bar'
     await nextTick()
-    expect(container.innerHTML).toMatchInlineSnapshot(``)
+    expect(container.innerHTML).toMatchInlineSnapshot(
+      `"<div><span></span><!--[[-->bar<!--]]--><!--[[--> <!--]]--><!--[[--> bar <!--]]--><!--[[--> <!--]]--><!--[[-->bar<!--]]--><span></span></div>"`,
+    )
   })
 
   test.todo('if')

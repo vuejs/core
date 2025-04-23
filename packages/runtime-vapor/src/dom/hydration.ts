@@ -37,7 +37,7 @@ export function withHydration(container: ParentNode, fn: () => void): void {
 export let adoptTemplate: (node: Node, template: string) => Node | null
 export let locateHydrationNode: () => void
 
-const isComment = (node: Node, data: string): node is Anchor =>
+export const isComment = (node: Node, data: string): node is Anchor =>
   node.nodeType === 8 && (node as Comment).data === data
 
 /**
@@ -76,16 +76,8 @@ function locateHydrationNodeImpl() {
   if (insertionAnchor === 0) {
     node = child(insertionParent!)
   } else if (insertionAnchor) {
-    // dynamic anchor `<!--[[-->`
-    if (isDynamicStart(insertionAnchor)) {
-      const anchor = (insertionParent!.$lds = insertionParent!.$lds
-        ? // continuous dynamic children, the next dynamic start must exist
-          locateNextDynamicStart(insertionParent!.$lds)!
-        : insertionAnchor)
-      node = anchor.nextSibling
-    } else {
-      node = insertionAnchor
-    }
+    // for dynamic children, use insertionAnchor as the node
+    node = insertionAnchor
   } else {
     node = insertionParent ? insertionParent.lastChild : currentHydrationNode
     if (node && isComment(node, ']')) {
@@ -126,33 +118,4 @@ function locateHydrationNodeImpl() {
 
   resetInsertionState()
   currentHydrationNode = node
-}
-
-function isDynamicStart(node: Node): node is Anchor {
-  return isComment(node, '[[')
-}
-
-function locateNextDynamicStart(anchor: Anchor): Anchor | undefined {
-  let cur: Node | null = anchor
-  let end = null
-  let depth = 0
-  while (cur) {
-    cur = cur.nextSibling
-    if (cur) {
-      if (isComment(cur, '[[')) {
-        depth++
-      } else if (isComment(cur, ']]')) {
-        if (!depth) {
-          end = cur
-          break
-        } else {
-          depth--
-        }
-      }
-    }
-  }
-
-  if (end) {
-    return end!.nextSibling as Anchor
-  }
 }

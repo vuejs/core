@@ -1,4 +1,7 @@
 /*! #__NO_SIDE_EFFECTS__ */
+
+import { isComment, isHydrating } from './hydration'
+
 export function createTextNode(value = ''): Text {
   return document.createTextNode(value)
 }
@@ -25,5 +28,20 @@ export function nthChild(node: Node, i: number): Node {
 
 /*! #__NO_SIDE_EFFECTS__ */
 export function next(node: Node): Node {
-  return node.nextSibling!
+  let n = node.nextSibling!
+  if (isHydrating) {
+    // skip dynamic anchors and empty text nodes
+    while (n && (isDynamicAnchor(n) || isEmptyText(n))) {
+      n = n.nextSibling!
+    }
+  }
+  return n
+}
+
+function isDynamicAnchor(node: Node): node is Comment {
+  return isComment(node, '[[') || isComment(node, ']]')
+}
+
+function isEmptyText(node: Node): node is Text {
+  return node.nodeType === 3 && !(node as Text).data.trim()
 }
