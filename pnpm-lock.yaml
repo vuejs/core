@@ -57,14 +57,14 @@ importers:
         specifier: ^1.9.3
         version: 1.10.1
       '@tsslint/cli':
-        specifier: ~1.5.8
-        version: 1.5.8(typescript@5.6.3)
+        specifier: ~1.5.12
+        version: 1.5.12(typescript@5.6.3)
       '@tsslint/config':
-        specifier: ~1.5.8
-        version: 1.5.8(typescript@5.6.3)
+        specifier: ~1.5.12
+        version: 1.5.12(typescript@5.6.3)
       '@tsslint/eslint':
-        specifier: ~1.5.8
-        version: 1.5.8(typescript@5.6.3)
+        specifier: ~1.5.12
+        version: 1.5.12(typescript@5.6.3)
       '@types/hash-sum':
         specifier: ^1.0.2
         version: 1.0.2
@@ -1200,23 +1200,23 @@ packages:
   '@tootallnate/quickjs-emscripten@0.23.0':
     resolution: {integrity: sha512-C5Mc6rdnsaJDjO3UpGW/CQTHtCKaYlScZTly4JIu97Jxo/odCiH0ITnDXSJPTOrEKk/ycSZ0AOgTmkDtkOsvIA==}
 
-  '@tsslint/cli@1.5.8':
-    resolution: {integrity: sha512-ty2ZxHrRPAtGlu/v3DZheU4ciQxodSIvkzuRYLy7Or16JoDcjUjIMcBBOCADuw1lsj45HERCzUDX7HBMTE5Wjw==}
+  '@tsslint/cli@1.5.12':
+    resolution: {integrity: sha512-AJNdZr0/9fIARM/LSlzSk896+DesOI6jt3vTo/7O6b3v9cBryvJNnvuwjGDXDOnFtT/mOJWV+2T4m+GYOmVrag==}
     hasBin: true
     peerDependencies:
       typescript: '*'
 
-  '@tsslint/config@1.5.8':
-    resolution: {integrity: sha512-kJjCgp8+4IQDvUpUNIMA6YUg+D6Cl3FtxKw6ZMol+mFAhEbxcZ1PPtYc/oDTAmejvOG2TWFHmeJRQzSyPnCbWA==}
+  '@tsslint/config@1.5.12':
+    resolution: {integrity: sha512-P5zfu0L7tAWktGdToiDkjUSeQM8TNLErgcAG8JaVKqj64lKXbPYR8Xe7hZ1hK09MbbVNV3tEFfdTsz3+fOpWtg==}
 
-  '@tsslint/core@1.5.8':
-    resolution: {integrity: sha512-TC8KslLSD+nEVs1tSFe9odSNdU7TywuHR1UesmNWJ8YKQ5r/J1f2bc3f8vIsuS50AykdQlfVNdsgAdwUd9PHBg==}
+  '@tsslint/core@1.5.12':
+    resolution: {integrity: sha512-2fAa/lvmh/0P5o2PLN/bNWUPP0fAqVsqMkOUwjI5KFfzkNzfrZwx5iTI4emBtveXsciVayEKpolafwvEIiq/sg==}
 
-  '@tsslint/eslint@1.5.8':
-    resolution: {integrity: sha512-XAmRXRuTIsRbZaUQJPDbt8tOJFO5b8Lwgd7Vvw4rrsV4yuHLz//nJ5zFLwKUVz/dYlUhsWBsPCc2ExRU/MvH+w==}
+  '@tsslint/eslint@1.5.12':
+    resolution: {integrity: sha512-8w3h2wSMAmyLmDF3VYFvXjH9f0LtNPTJVgQYr6/uxfTZXyO9SJ+uiGj7+3eaLP5RGEcA8UZRB2Tvd5Q2SmBM1w==}
 
-  '@tsslint/types@1.5.8':
-    resolution: {integrity: sha512-YTu/m/rEov3mKA/HFxuTX1lb97dEaLlPsCJ1M88T2wf9ILNB/t5lvwxGF7OXDTv5N5xZOOE/a3R5rUUK3Wv+yg==}
+  '@tsslint/types@1.5.12':
+    resolution: {integrity: sha512-c0726qZMsbTMdI9RvKfrOn5oNNWo7CAR0amPh6jVZwDUPzzjX0wpwte+0nl9sylekVLhjsRidZlF9YImTLvtVg==}
 
   '@types/estree@1.0.6':
     resolution: {integrity: sha512-AYnb1nQyY49te+VRAVgmzfcgjYS91mY5P0TKUDCLEM+gNnA+3T6rWITXRLYCpahpqSQbN5cE+gHpnPyXjHWxcw==}
@@ -3968,34 +3968,34 @@ snapshots:
 
   '@tootallnate/quickjs-emscripten@0.23.0': {}
 
-  '@tsslint/cli@1.5.8(typescript@5.6.3)':
+  '@tsslint/cli@1.5.12(typescript@5.6.3)':
     dependencies:
       '@clack/prompts': 0.8.2
-      '@tsslint/config': 1.5.8(typescript@5.6.3)
-      '@tsslint/core': 1.5.8
+      '@tsslint/config': 1.5.12(typescript@5.6.3)
+      '@tsslint/core': 1.5.12
       '@volar/language-core': 2.4.11
       '@volar/typescript': 2.4.11
       glob: 10.4.5
       json5: 2.2.3
       typescript: 5.6.3
 
-  '@tsslint/config@1.5.8(typescript@5.6.3)':
+  '@tsslint/config@1.5.12(typescript@5.6.3)':
     dependencies:
-      '@tsslint/types': 1.5.8
+      '@tsslint/types': 1.5.12
       ts-api-utils: 2.0.0(typescript@5.6.3)
     transitivePeerDependencies:
       - typescript
 
-  '@tsslint/core@1.5.8':
+  '@tsslint/core@1.5.12':
     dependencies:
-      '@tsslint/types': 1.5.8
+      '@tsslint/types': 1.5.12
       error-stack-parser: 2.1.4
       esbuild: 0.24.0
       minimatch: 10.0.1
 
-  '@tsslint/eslint@1.5.8(typescript@5.6.3)':
+  '@tsslint/eslint@1.5.12(typescript@5.6.3)':
     dependencies:
-      '@tsslint/config': 1.5.8(typescript@5.6.3)
+      '@tsslint/config': 1.5.12(typescript@5.6.3)
       '@typescript-eslint/parser': 8.18.0(eslint@9.16.0)(typescript@5.6.3)
       eslint: 9.16.0
     transitivePeerDependencies:
@@ -4003,7 +4003,7 @@ snapshots:
       - supports-color
       - typescript
 
-  '@tsslint/types@1.5.8': {}
+  '@tsslint/types@1.5.12': {}
 
   '@types/estree@1.0.6': {}
 
