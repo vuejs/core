@@ -11,9 +11,6 @@ const banConstEnum = {
     'Please use non-const enums. This project automatically inlines enums.',
 }
 
-const typeAwareEnabled =
-  process.argv.includes('--type-aware') || process.argv.includes('--useNodeIpc')
-
 export default defineConfig([
   {
     plugins: [createIgnorePlugin('@lint-ignore', false)],
@@ -72,23 +69,16 @@ export default defineConfig([
       '@typescript-eslint/no-unnecessary-type-constraint': 'error',
 
       // Type-aware rules
-      '@typescript-eslint/await-thenable': typeAwareEnabled ? 'error' : 'off',
-      '@typescript-eslint/require-await': typeAwareEnabled
-        ? 'suggestion'
-        : 'off',
-      '@typescript-eslint/consistent-type-exports': typeAwareEnabled
-        ? 'error'
-        : 'off',
-      '@typescript-eslint/no-unnecessary-type-arguments': typeAwareEnabled
-        ? 'error'
-        : 'off',
+      '@typescript-eslint/await-thenable': 'error',
+      '@typescript-eslint/require-await': 'suggestion',
+      '@typescript-eslint/consistent-type-exports': 'error',
+      '@typescript-eslint/no-unnecessary-type-arguments': 'error',
       '@typescript-eslint/no-unnecessary-type-assertion': [
-        typeAwareEnabled ? 'error' : 'off',
+        'error',
         { typesToIgnore: ['any'] },
       ],
-      '@typescript-eslint/non-nullable-type-assertion-style': typeAwareEnabled
-        ? 'error'
-        : 'off',
+      '@typescript-eslint/non-nullable-type-assertion-style': 'error',
+      '@typescript-eslint/no-floating-promises': 'error',
     }),
   },
 

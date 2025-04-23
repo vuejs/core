@@ -132,7 +132,7 @@ export class ComputedRefImpl<T = any> implements Dependency, Subscriber {
     }
     if (activeSub !== undefined) {
       if (__DEV__) {
-        onTrack(activeSub!, {
+        onTrack(activeSub, {
           target: this,
           type: TrackOpTypes.GET,
           key: 'value',

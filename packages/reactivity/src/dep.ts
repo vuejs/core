@@ -71,13 +71,13 @@ export function track(target: object, type: TrackOpTypes, key: unknown): void {
       depsMap.set(key, (dep = new Dep(depsMap, key)))
     }
     if (__DEV__) {
-      onTrack(activeSub!, {
+      onTrack(activeSub, {
         target,
         type,
         key,
       })
     }
-    link(dep, activeSub!)
+    link(dep, activeSub)
   }
 }
 
