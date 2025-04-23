@@ -1,12 +1,16 @@
 import { warn } from '@vue/runtime-dom'
 import {
-  type Anchor,
   insertionAnchor,
   insertionParent,
   resetInsertionState,
   setInsertionState,
 } from '../insertionState'
-import { child, next } from './node'
+import {
+  child,
+  disableHydrationNodeLookup,
+  enableHydrationNodeLookup,
+  next,
+} from './node'
 
 export let isHydrating = false
 export let currentHydrationNode: Node | null = null
@@ -25,17 +29,25 @@ export function withHydration(container: ParentNode, fn: () => void): void {
     ;(Comment.prototype as any).$fs = undefined
     isOptimized = true
   }
+  enableHydrationNodeLookup()
   isHydrating = true
   setInsertionState(container, 0)
   const res = fn()
   resetInsertionState()
   currentHydrationNode = null
   isHydrating = false
+  disableHydrationNodeLookup()
   return res
 }
 
 export let adoptTemplate: (node: Node, template: string) => Node | null
 export let locateHydrationNode: () => void
+
+type Anchor = Comment & {
+  // cached matching fragment start to avoid repeated traversal
+  // on nested fragments
+  $fs?: Anchor
+}
 
 export const isComment = (node: Node, data: string): node is Anchor =>
   node.nodeType === 8 && (node as Comment).data === data
@@ -118,10 +130,6 @@ function locateHydrationNodeImpl() {
 
   resetInsertionState()
   currentHydrationNode = node
-}
-
-export function isDynamicAnchor(node: Node): node is Comment {
-  return isComment(node, '[[') || isComment(node, ']]')
 }
 
 export function isEmptyText(node: Node): node is Text {

@@ -84,6 +84,10 @@ const getContainerType = (
   return undefined
 }
 
+export function isDynamicAnchor(node: Node): boolean {
+  return isComment(node) && (node.data === '[[' || node.data === ']]')
+}
+
 export const isComment = (node: Node): node is Comment =>
   node.nodeType === DOMNodeTypes.COMMENT
 
@@ -118,10 +122,6 @@ export function createHydrationFunctions(
       createComment,
     },
   } = rendererInternals
-
-  function isDynamicAnchor(node: Node): boolean {
-    return isComment(node) && (node.data === '[[' || node.data === ']]')
-  }
 
   function nextSibling(node: Node) {
     let n = next(node)
