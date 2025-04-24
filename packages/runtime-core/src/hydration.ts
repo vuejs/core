@@ -84,8 +84,12 @@ const getContainerType = (
   return undefined
 }
 
-export function isDynamicAnchor(node: Node): boolean {
+export function isDynamicAnchor(node: Node): node is Comment {
   return isComment(node) && (node.data === '[[' || node.data === ']]')
+}
+
+export function isDynamicFragmentEndAnchor(node: Node): node is Comment {
+  return isComment(node) && node.data === '$'
 }
 
 export const isComment = (node: Node): node is Comment =>
@@ -125,8 +129,10 @@ export function createHydrationFunctions(
 
   function nextSibling(node: Node) {
     let n = next(node)
-    // skip dynamic anchors
-    if (n && isDynamicAnchor(n)) {
+    // skip if:
+    // - dynamic anchors (`<!--[-->`, `<!--]-->`)
+    // - dynamic fragment end anchors (`<!--$-->`)
+    if (n && (isDynamicAnchor(n) || isDynamicFragmentEndAnchor(n))) {
       n = next(n)
     }
     return n
@@ -158,7 +164,9 @@ export function createHydrationFunctions(
     slotScopeIds: string[] | null,
     optimized = false,
   ): Node | null => {
-    if (isDynamicAnchor(node)) node = nextSibling(node)!
+    if (isDynamicAnchor(node) || isDynamicFragmentEndAnchor(node)) {
+      node = nextSibling(node)!
+    }
     optimized = optimized || !!vnode.dynamicChildren
     const isFragmentStart = isComment(node) && node.data === '['
     const onMismatch = () =>

@@ -730,7 +730,97 @@ describe('Vapor Mode hydration', () => {
       expect(container.innerHTML).toMatchInlineSnapshot(`"<!--if-->"`)
     })
 
-    test.todo('on component', async () => {})
+    test('on component', async () => {
+      const data = ref(true)
+      const { container } = await testHydration(
+        `<template>
+          <components.Child v-if="data"/>
+        </template>`,
+        { Child: `<template>foo</template>` },
+        data,
+      )
+      expect(container.innerHTML).toMatchInlineSnapshot(`"foo<!--if-->"`)
+
+      data.value = false
+      await nextTick()
+      expect(container.innerHTML).toMatchInlineSnapshot(`"<!--if-->"`)
+    })
+
+    test('on component with anchor insertion', async () => {
+      const data = ref(true)
+      const { container } = await testHydration(
+        `<template>
+          <div>
+            <span/>
+            <components.Child v-if="data"/>
+            <span/>
+          </div>
+        </template>`,
+        { Child: `<template>foo</template>` },
+        data,
+      )
+      expect(container.innerHTML).toMatchInlineSnapshot(
+        `"<div><span></span>foo<!--if--><span></span></div>"`,
+      )
+
+      data.value = false
+      await nextTick()
+      expect(container.innerHTML).toMatchInlineSnapshot(
+        `"<div><span></span><!--if--><span></span></div>"`,
+      )
+    })
+
+    test('consecutive v-if on component with anchor insertion', async () => {
+      const data = ref(true)
+      const { container } = await testHydration(
+        `<template>
+          <div>
+            <span/>
+            <components.Child v-if="data"/>
+            <components.Child v-if="data"/>
+            <span/>
+          </div>
+        </template>`,
+        { Child: `<template>foo</template>` },
+        data,
+      )
+      expect(container.innerHTML).toMatchInlineSnapshot(
+        `"<div><span></span>foo<!--if-->foo<!--if--><span></span></div>"`,
+      )
+
+      data.value = false
+      await nextTick()
+      expect(container.innerHTML).toMatchInlineSnapshot(
+        `"<div><span></span><!--if--><!--if--><span></span></div>"`,
+      )
+    })
+
+    test('consecutive v-if on fragment component with anchor insertion', async () => {
+      const data = ref(true)
+      const { container } = await testHydration(
+        `<template>
+            <div>
+              <span/>
+              <components.Child v-if="data"/>
+              <components.Child v-if="data"/>
+              <span/>
+            </div>
+          </template>`,
+        {
+          Child: `<template><div>{{ data }}</div>-{{ data }}-</template>`,
+        },
+        data,
+      )
+      expect(container.innerHTML).toMatchInlineSnapshot(
+        `"<div><span></span><!--[--><div>true</div>-true-<!--]--><!--if--><!--[--><div>true</div>-true-<!--]--><!--if--><span></span></div>"`,
+      )
+
+      data.value = false
+      await nextTick()
+      expect(container.innerHTML).toMatchInlineSnapshot(
+        `"<div><span></span><!--[--><!--]--><!--if--><!--[--><!--]--><!--if--><span></span></div>"`,
+      )
+    })
   })
 
   test.todo('for')

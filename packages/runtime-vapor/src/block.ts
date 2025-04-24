@@ -5,9 +5,10 @@ import {
   mountComponent,
   unmountComponent,
 } from './component'
-import { createComment, createTextNode } from './dom/node'
+import { createComment, createTextNode, next } from './dom/node'
 import { EffectScope, pauseTracking, resetTracking } from '@vue/reactivity'
-import { isHydrating } from './dom/hydration'
+import { currentHydrationNode, isComment, isHydrating } from './dom/hydration'
+import { isDynamicFragmentEndAnchor, warn } from '@vue/runtime-dom'
 
 export type Block =
   | Node
@@ -30,15 +31,19 @@ export class VaporFragment {
 }
 
 export class DynamicFragment extends VaporFragment {
-  anchor: Node
+  anchor!: Node
   scope: EffectScope | undefined
   current?: BlockFn
   fallback?: BlockFn
 
   constructor(anchorLabel?: string) {
     super([])
-    this.anchor =
-      __DEV__ && anchorLabel ? createComment(anchorLabel) : createTextNode()
+    if (isHydrating) {
+      this.hydrate(anchorLabel)
+    } else {
+      this.anchor =
+        __DEV__ && anchorLabel ? createComment(anchorLabel) : createTextNode()
+    }
   }
 
   update(render?: BlockFn, key: any = render): void {
@@ -74,6 +79,24 @@ export class DynamicFragment extends VaporFragment {
     }
 
     resetTracking()
+  }
+
+  hydrate(label?: string): void {
+    // for v-if="false" the hydrationNode will be a empty comment node
+    // use it as anchor.
+    // otherwise, use the next sibling comment node as anchor
+    if (isComment(currentHydrationNode!, '')) {
+      this.anchor = currentHydrationNode
+    } else {
+      const anchor = next(currentHydrationNode!)
+      if (isDynamicFragmentEndAnchor(anchor)) {
+        this.anchor = anchor
+      } else if (__DEV__) {
+        // TODO warning
+        warn(`DynamicFragment anchor not found...`)
+      }
+    }
+    if (__DEV__ && label) (this.anchor as Comment).data = label
   }
 }
 

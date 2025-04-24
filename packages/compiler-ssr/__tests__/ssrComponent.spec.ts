@@ -245,6 +245,7 @@ describe('ssr: components', () => {
                     _push(\`<span\${_scopeId}></span>\`)
                   })
                   _push(\`<!--]--></div>\`)
+                  _push(\`<!--$-->\`)
                 } else {
                   _push(\`<!---->\`)
                 }
@@ -268,6 +269,7 @@ describe('ssr: components', () => {
                     _push(\`<span\${_scopeId}></span>\`)
                   })
                   _push(\`<!--]--></div>\`)
+                  _push(\`<!--$-->\`)
                 } else {
                   _push(\`<!---->\`)
                 }
@@ -361,6 +363,7 @@ describe('ssr: components', () => {
                   _push(\`\`)
                   if (false) {
                     _push(\`<div\${_scopeId}></div>\`)
+                    _push(\`<!--$-->\`)
                   } else {
                     _push(\`<!---->\`)
                   }

@@ -29,6 +29,7 @@ describe('ssr: attrs fallthrough', () => {
         _push(\`<!--[-->\`)
         if (true) {
           _push(\`<div></div>\`)
+          _push(\`<!--$-->\`)
         } else {
           _push(\`<!---->\`)
         }

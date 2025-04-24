@@ -560,4 +560,4 @@ export { initFeatureFlags } from './featureFlags'
 /**
  * @internal
  */
-export { isDynamicAnchor } from './hydration'
+export { isDynamicAnchor, isDynamicFragmentEndAnchor } from './hydration'

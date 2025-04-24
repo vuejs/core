@@ -8,6 +8,7 @@ describe('ssr: v-if', () => {
       return function ssrRender(_ctx, _push, _parent, _attrs) {
         if (_ctx.foo) {
           _push(\`<div\${_ssrRenderAttrs(_attrs)}></div>\`)
+          _push(\`<!--$-->\`)
         } else {
           _push(\`<!---->\`)
         }
@@ -23,6 +24,7 @@ describe('ssr: v-if', () => {
         return function ssrRender(_ctx, _push, _parent, _attrs) {
           if (_ctx.foo) {
             _push(\`<div\${_ssrRenderAttrs(_attrs)}>hello<span>ok</span></div>\`)
+            _push(\`<!--$-->\`)
           } else {
             _push(\`<!---->\`)
           }
@@ -38,6 +40,7 @@ describe('ssr: v-if', () => {
         return function ssrRender(_ctx, _push, _parent, _attrs) {
           if (_ctx.foo) {
             _push(\`<div\${_ssrRenderAttrs(_attrs)}></div>\`)
+            _push(\`<!--$-->\`)
           } else {
             _push(\`<span\${_ssrRenderAttrs(_attrs)}></span>\`)
           }
@@ -53,8 +56,10 @@ describe('ssr: v-if', () => {
         return function ssrRender(_ctx, _push, _parent, _attrs) {
           if (_ctx.foo) {
             _push(\`<div\${_ssrRenderAttrs(_attrs)}></div>\`)
+            _push(\`<!--$-->\`)
           } else if (_ctx.bar) {
             _push(\`<span\${_ssrRenderAttrs(_attrs)}></span>\`)
+            _push(\`<!--$-->\`)
           } else {
             _push(\`<!---->\`)
           }
@@ -70,8 +75,10 @@ describe('ssr: v-if', () => {
         return function ssrRender(_ctx, _push, _parent, _attrs) {
           if (_ctx.foo) {
             _push(\`<div\${_ssrRenderAttrs(_attrs)}></div>\`)
+            _push(\`<!--$-->\`)
           } else if (_ctx.bar) {
             _push(\`<span\${_ssrRenderAttrs(_attrs)}></span>\`)
+            _push(\`<!--$-->\`)
           } else {
             _push(\`<p\${_ssrRenderAttrs(_attrs)}></p>\`)
           }
@@ -82,15 +89,16 @@ describe('ssr: v-if', () => {
   test('<template v-if> (text)', () => {
     expect(compile(`<template v-if="foo">hello</template>`).code)
       .toMatchInlineSnapshot(`
-      "
-      return function ssrRender(_ctx, _push, _parent, _attrs) {
-        if (_ctx.foo) {
-          _push(\`<!--[-->hello<!--]-->\`)
-        } else {
-          _push(\`<!---->\`)
-        }
-      }"
-    `)
+        "
+        return function ssrRender(_ctx, _push, _parent, _attrs) {
+          if (_ctx.foo) {
+            _push(\`<!--[-->hello<!--]-->\`)
+            _push(\`<!--$-->\`)
+          } else {
+            _push(\`<!---->\`)
+          }
+        }"
+      `)
   })
 
   test('<template v-if> (single element)', () => {
@@ -102,6 +110,7 @@ describe('ssr: v-if', () => {
         return function ssrRender(_ctx, _push, _parent, _attrs) {
           if (_ctx.foo) {
             _push(\`<div\${_ssrRenderAttrs(_attrs)}>hi</div>\`)
+            _push(\`<!--$-->\`)
           } else {
             _push(\`<!---->\`)
           }
@@ -118,6 +127,7 @@ describe('ssr: v-if', () => {
       return function ssrRender(_ctx, _push, _parent, _attrs) {
         if (_ctx.foo) {
           _push(\`<!--[--><div>hi</div><div>ho</div><!--]-->\`)
+          _push(\`<!--$-->\`)
         } else {
           _push(\`<!---->\`)
         }
@@ -138,6 +148,7 @@ describe('ssr: v-if', () => {
             _push(\`<div></div>\`)
           })
           _push(\`<!--]-->\`)
+          _push(\`<!--$-->\`)
         } else {
           _push(\`<!---->\`)
         }
@@ -156,6 +167,7 @@ describe('ssr: v-if', () => {
       return function ssrRender(_ctx, _push, _parent, _attrs) {
         if (_ctx.foo) {
           _push(\`<!--[--><div>hi</div><div>ho</div><!--]-->\`)
+          _push(\`<!--$-->\`)
         } else {
           _push(\`<div\${_ssrRenderAttrs(_attrs)}></div>\`)
         }

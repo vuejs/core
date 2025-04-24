@@ -74,5 +74,13 @@ function processIfBranch(
     (children.length !== 1 || children[0].type !== NodeTypes.ELEMENT) &&
     // optimize away nested fragments when the only child is a ForNode
     !(children.length === 1 && children[0].type === NodeTypes.FOR)
-  return processChildrenAsStatement(branch, context, needFragmentWrapper)
+  const statement = processChildrenAsStatement(
+    branch,
+    context,
+    needFragmentWrapper,
+  )
+  if (branch.condition) {
+    statement.body.push(createCallExpression(`_push`, ['`<!--$-->`']))
+  }
+  return statement
 }

@@ -1,5 +1,10 @@
 import { isDynamicAnchor } from '@vue/runtime-dom'
-import { isComment, isEmptyText, locateEndAnchor } from './hydration'
+import {
+  isComment,
+  isEmptyText,
+  locateEndAnchor,
+  locateStartAnchor,
+} from './hydration'
 
 /*! #__NO_SIDE_EFFECTS__ */
 export function createTextNode(value = ''): Text {
@@ -43,21 +48,17 @@ function _next(node: Node): Node {
 /*! #__NO_SIDE_EFFECTS__ */
 function __next(node: Node): Node {
   // treat dynamic node (<!--[[-->...<!--]]-->) as a single node
-  if (node && isComment(node, '[[')) {
+  if (isComment(node, '[[')) {
     node = locateEndAnchor(node, '[[', ']]')!
   }
 
   // treat dynamic node (<!--[-->...<!--]-->) as a single node
-  else if (node && isComment(node, '[')) {
+  else if (isComment(node, '[')) {
     node = locateEndAnchor(node)!
   }
 
   let n = node.nextSibling!
-  // skip if:
-  // - dynamic anchors (<!--[[-->, <!--]]-->)
-  // - fragment end anchor (`<!--]-->`)
-  // - empty text nodes
-  while (n && (isDynamicAnchor(n) || isComment(n, ']') || isEmptyText(n))) {
+  while (n && isNonHydrationNode(n)) {
     n = n.nextSibling!
   }
   return n
@@ -104,4 +105,49 @@ export function enableHydrationNodeLookup(): void {
 export function disableHydrationNodeLookup(): void {
   next.impl = _next
   nthChild.impl = _nthChild
+}
+
+/*! #__NO_SIDE_EFFECTS__ */
+export function prev(node: Node): Node | null {
+  // treat dynamic node (<!--[[-->...<!--]]-->) as a single node
+  if (isComment(node, ']]')) {
+    node = locateStartAnchor(node, '[[', ']]')!
+  }
+
+  // treat dynamic node (<!--[-->...<!--]-->) as a single node
+  else if (isComment(node, ']')) {
+    node = locateStartAnchor(node)!
+  }
+
+  let n = node.previousSibling
+  while (n && isNonHydrationNode(n)) {
+    n = n.previousSibling
+  }
+  return n
+}
+
+function isNonHydrationNode(node: Node) {
+  return (
+    // empty text nodes, no need to hydrate
+    isEmptyText(node) ||
+    // dynamic anchors (<!--[[-->, <!--]]-->)
+    isDynamicAnchor(node) ||
+    // fragment end anchor (`<!--]-->`)
+    isComment(node, ']') ||
+    isDynamicFragmentAnchor(node)
+  )
+}
+
+function isDynamicFragmentAnchor(node: Node) {
+  return __DEV__
+    ? // v-if anchor (`<!--if-->`)
+      isComment(node, 'if') ||
+        // v-for anchor (`<!--for-->`)
+        isComment(node, 'for') ||
+        // v-slot anchor (`<!--slot-->`)
+        isComment(node, 'slot') ||
+        // dynamic-component anchor (`<!--dynamic-component-->`)
+        isComment(node, 'dynamic-component')
+    : // TODO ?
+      isComment(node, '$')
 }

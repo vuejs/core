@@ -295,8 +295,13 @@ function processChildrenDynamicInfo(
 
   for (let i = 0; i < filteredChildren.length; i++) {
     const child = filteredChildren[i]
-    if (isStaticChildNode(child)) continue
-
+    if (
+      isStaticChildNode(child) ||
+      // v-if has an anchor, which can be used to distinguish the boundary
+      child.type === NodeTypes.IF
+    ) {
+      continue
+    }
     child._ssrDynamicInfo = {
       hasStaticPrevious: false,
       hasStaticNext: false,

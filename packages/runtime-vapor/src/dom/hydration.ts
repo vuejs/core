@@ -1,4 +1,4 @@
-import { warn } from '@vue/runtime-dom'
+import { isDynamicFragmentEndAnchor, warn } from '@vue/runtime-dom'
 import {
   insertionAnchor,
   insertionParent,
@@ -10,6 +10,7 @@ import {
   disableHydrationNodeLookup,
   enableHydrationNodeLookup,
   next,
+  prev,
 } from './node'
 
 export let isHydrating = false
@@ -41,7 +42,7 @@ export function withHydration(container: ParentNode, fn: () => void): void {
 }
 
 export let adoptTemplate: (node: Node, template: string) => Node | null
-export let locateHydrationNode: () => void
+export let locateHydrationNode: (isFragment?: boolean) => void
 
 type Anchor = Comment & {
   // cached matching fragment start to avoid repeated traversal
@@ -82,7 +83,7 @@ function adoptTemplateImpl(node: Node, template: string): Node | null {
   return node
 }
 
-function locateHydrationNodeImpl() {
+function locateHydrationNodeImpl(isFragment?: boolean) {
   let node: Node | null
   // prepend / firstChild
   if (insertionAnchor === 0) {
@@ -92,6 +93,14 @@ function locateHydrationNodeImpl() {
     node = insertionAnchor
   } else {
     node = insertionParent ? insertionParent.lastChild : currentHydrationNode
+
+    // if the last child is a comment, it is the anchor for the fragment
+    // so it need to find the previous node
+    if (isFragment && node && isDynamicFragmentEndAnchor(node)) {
+      let previous = prev(node)
+      if (previous) node = previous
+    }
+
     if (node && isComment(node, ']')) {
       // fragment backward search
       if (node.$fs) {
@@ -154,6 +163,28 @@ export function locateEndAnchor(
         }
       }
     }
+  }
+  return null
+}
+
+export function locateStartAnchor(
+  node: Node | null,
+  open = '[',
+  close = ']',
+): Node | null {
+  let match = 0
+  while (node) {
+    if (node.nodeType === 8) {
+      if ((node as Comment).data === close) match++
+      if ((node as Comment).data === open) {
+        if (match === 0) {
+          return node
+        } else {
+          match--
+        }
+      }
+    }
+    node = node.previousSibling
   }
   return null
 }

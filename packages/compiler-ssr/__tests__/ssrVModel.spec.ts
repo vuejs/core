@@ -91,6 +91,7 @@ describe('ssr: v-model', () => {
               ? _ssrLooseContain(_ctx.model, _ctx.i)
               : _ssrLooseEqual(_ctx.model, _ctx.i))) ? " selected" : ""
           }></option>\`)
+          _push(\`<!--$-->\`)
         } else {
           _push(\`<!---->\`)
         }
