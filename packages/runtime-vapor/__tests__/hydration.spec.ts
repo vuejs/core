@@ -264,6 +264,48 @@ describe('Vapor Mode hydration', () => {
     )
   })
 
+  test('nested components with anchor insertion', async () => {
+    const { container, data } = await testHydration(
+      `
+      <template><components.Parent/></template>
+      `,
+      {
+        Parent: `<template><div><span/><components.Child/><span/></div></template>`,
+        Child: `<template><div>{{ data }}</div></template>`,
+      },
+    )
+    expect(container.innerHTML).toMatchInlineSnapshot(
+      `"<div><span></span><div>foo</div><span></span></div>"`,
+    )
+
+    data.value = 'bar'
+    await nextTick()
+    expect(container.innerHTML).toMatchInlineSnapshot(
+      `"<div><span></span><div>bar</div><span></span></div>"`,
+    )
+  })
+
+  test('nested components with multi level anchor insertion', async () => {
+    const { container, data } = await testHydration(
+      `
+      <template><div><span></span><components.Parent/><span></span></div></template>
+      `,
+      {
+        Parent: `<template><div><span/><components.Child/><span/></div></template>`,
+        Child: `<template><div>{{ data }}</div></template>`,
+      },
+    )
+    expect(container.innerHTML).toMatchInlineSnapshot(
+      `"<div><span></span><div><span></span><div>foo</div><span></span></div><span></span></div>"`,
+    )
+
+    data.value = 'bar'
+    await nextTick()
+    expect(container.innerHTML).toMatchInlineSnapshot(
+      `"<div><span></span><div><span></span><div>bar</div><span></span></div><span></span></div>"`,
+    )
+  })
+
   test('consecutive components with anchor insertion', async () => {
     const { container, data } = await testHydration(
       `<template>
@@ -287,6 +329,48 @@ describe('Vapor Mode hydration', () => {
     await nextTick()
     expect(container.innerHTML).toMatchInlineSnapshot(
       `"<div><span></span>bar<!--[[-->bar<!--]]--><span></span></div>"`,
+    )
+  })
+
+  test('nested consecutive components with anchor insertion', async () => {
+    const { container, data } = await testHydration(
+      `
+      <template><components.Parent/></template>
+      `,
+      {
+        Parent: `<template><div><span/><components.Child/><components.Child/><span/></div></template>`,
+        Child: `<template><div>{{ data }}</div></template>`,
+      },
+    )
+    expect(container.innerHTML).toMatchInlineSnapshot(
+      `"<div><span></span><div>foo</div><!--[[--><div>foo</div><!--]]--><span></span></div>"`,
+    )
+
+    data.value = 'bar'
+    await nextTick()
+    expect(container.innerHTML).toMatchInlineSnapshot(
+      `"<div><span></span><div>bar</div><!--[[--><div>bar</div><!--]]--><span></span></div>"`,
+    )
+  })
+
+  test('nested consecutive components with multi level anchor insertion', async () => {
+    const { container, data } = await testHydration(
+      `
+      <template><div><span></span><components.Parent/><span></span></div></template>
+      `,
+      {
+        Parent: `<template><div><span/><components.Child/><components.Child/><span/></div></template>`,
+        Child: `<template><div>{{ data }}</div></template>`,
+      },
+    )
+    expect(container.innerHTML).toMatchInlineSnapshot(
+      `"<div><span></span><div><span></span><div>foo</div><!--[[--><div>foo</div><!--]]--><span></span></div><span></span></div>"`,
+    )
+
+    data.value = 'bar'
+    await nextTick()
+    expect(container.innerHTML).toMatchInlineSnapshot(
+      `"<div><span></span><div><span></span><div>bar</div><!--[[--><div>bar</div><!--]]--><span></span></div><span></span></div>"`,
     )
   })
 
@@ -369,6 +453,48 @@ describe('Vapor Mode hydration', () => {
     )
   })
 
+  test('nested fragment component with anchor insertion', async () => {
+    const { container, data } = await testHydration(
+      `
+      <template><components.Parent/></template>
+      `,
+      {
+        Parent: `<template><div><span/><components.Child/><span/></div></template>`,
+        Child: `<template><div>{{ data }}</div>-{{ data }}-</template>`,
+      },
+    )
+    expect(container.innerHTML).toMatchInlineSnapshot(
+      `"<div><span></span><!--[--><div>foo</div>-foo-<!--]--><span></span></div>"`,
+    )
+
+    data.value = 'bar'
+    await nextTick()
+    expect(container.innerHTML).toMatchInlineSnapshot(
+      `"<div><span></span><!--[--><div>bar</div>-bar-<!--]--><span></span></div>"`,
+    )
+  })
+
+  test('nested fragment component with multi level anchor insertion', async () => {
+    const { container, data } = await testHydration(
+      `
+      <template><div><span/><components.Parent/><span/></div></template>
+      `,
+      {
+        Parent: `<template><div><span/><components.Child/><span/></div></template>`,
+        Child: `<template><div>{{ data }}</div>-{{ data }}-</template>`,
+      },
+    )
+    expect(container.innerHTML).toMatchInlineSnapshot(
+      `"<div><span></span><div><span></span><!--[--><div>foo</div>-foo-<!--]--><span></span></div><span></span></div>"`,
+    )
+
+    data.value = 'bar'
+    await nextTick()
+    expect(container.innerHTML).toMatchInlineSnapshot(
+      `"<div><span></span><div><span></span><!--[--><div>bar</div>-bar-<!--]--><span></span></div><span></span></div>"`,
+    )
+  })
+
   test('consecutive fragment components with anchor insertion', async () => {
     const { container, data } = await testHydration(
       `<template>
@@ -392,6 +518,69 @@ describe('Vapor Mode hydration', () => {
     await nextTick()
     expect(container.innerHTML).toMatchInlineSnapshot(
       `"<div><span></span><!--[--><div>bar</div>-bar<!--]--><!--[[--><!--[--><div>bar</div>-bar<!--]--><!--]]--><span></span></div>"`,
+    )
+  })
+
+  test('nested consecutive fragment components with anchor insertion', async () => {
+    const { container, data } = await testHydration(
+      `
+      <template><components.Parent/></template>
+      `,
+      {
+        Parent: `<template><div><span/><components.Child/><components.Child/><span/></div></template>`,
+        Child: `<template><div>{{ data }}</div>-{{ data }}-</template>`,
+      },
+    )
+    expect(container.innerHTML).toMatchInlineSnapshot(
+      `"<div><span></span><!--[--><div>foo</div>-foo-<!--]--><!--[[--><!--[--><div>foo</div>-foo-<!--]--><!--]]--><span></span></div>"`,
+    )
+
+    data.value = 'bar'
+    await nextTick()
+    expect(container.innerHTML).toMatchInlineSnapshot(
+      `"<div><span></span><!--[--><div>bar</div>-bar-<!--]--><!--[[--><!--[--><div>bar</div>-bar-<!--]--><!--]]--><span></span></div>"`,
+    )
+  })
+
+  test('nested consecutive fragment components with multi level anchor insertion', async () => {
+    const { container, data } = await testHydration(
+      `
+      <template><div><span></span><components.Parent/><span></span></div></template>
+      `,
+      {
+        Parent: `<template><div><span/><components.Child/><components.Child/><span/></div></template>`,
+        Child: `<template><div>{{ data }}</div>-{{ data }}-</template>`,
+      },
+    )
+    expect(container.innerHTML).toMatchInlineSnapshot(
+      `"<div><span></span><div><span></span><!--[--><div>foo</div>-foo-<!--]--><!--[[--><!--[--><div>foo</div>-foo-<!--]--><!--]]--><span></span></div><span></span></div>"`,
+    )
+
+    data.value = 'bar'
+    await nextTick()
+    expect(container.innerHTML).toMatchInlineSnapshot(
+      `"<div><span></span><div><span></span><!--[--><div>bar</div>-bar-<!--]--><!--[[--><!--[--><div>bar</div>-bar-<!--]--><!--]]--><span></span></div><span></span></div>"`,
+    )
+  })
+
+  test('nested consecutive fragment components with root level anchor insertion', async () => {
+    const { container, data } = await testHydration(
+      `
+      <template><div><span></span><components.Parent/><span></span></div></template>
+      `,
+      {
+        Parent: `<template><components.Child/><components.Child/></template>`,
+        Child: `<template><div>{{ data }}</div>-{{ data }}-</template>`,
+      },
+    )
+    expect(container.innerHTML).toMatchInlineSnapshot(
+      `"<div><span></span><!--[--><!--[--><div>foo</div>-foo-<!--]--><!--[--><div>foo</div>-foo-<!--]--><!--]--><span></span></div>"`,
+    )
+
+    data.value = 'bar'
+    await nextTick()
+    expect(container.innerHTML).toMatchInlineSnapshot(
+      `"<div><span></span><!--[--><!--[--><div>bar</div>-bar-<!--]--><!--[--><div>bar</div>-bar-<!--]--><!--]--><span></span></div>"`,
     )
   })
 

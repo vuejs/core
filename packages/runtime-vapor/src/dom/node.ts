@@ -53,8 +53,11 @@ function __next(node: Node): Node {
   }
 
   let n = node.nextSibling!
-  // skip dynamic anchors and empty text nodes
-  while (n && (isDynamicAnchor(n) || isEmptyText(n))) {
+  // skip if:
+  // - dynamic anchors (<!--[[-->, <!--]]-->)
+  // - fragment end anchor (`<!--]-->`)
+  // - empty text nodes
+  while (n && (isDynamicAnchor(n) || isComment(n, ']') || isEmptyText(n))) {
     n = n.nextSibling!
   }
   return n
