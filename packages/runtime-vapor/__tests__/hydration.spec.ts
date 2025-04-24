@@ -1,5 +1,5 @@
 import { createVaporSSRApp, delegateEvents } from '../src'
-import { nextTick, ref } from '@vue/runtime-dom'
+import { nextTick, reactive, ref } from '@vue/runtime-dom'
 import { compileScript, parse } from '@vue/compiler-sfc'
 import * as runtimeVapor from '../src'
 import * as runtimeDom from '@vue/runtime-dom'
@@ -50,8 +50,8 @@ function compile(
 async function testHydration(
   code: string,
   components: Record<string, string> = {},
+  data: any = ref('foo'),
 ) {
-  const data = ref('foo')
   const ssrComponents: any = {}
   const clientComponents: any = {}
   for (const key in components) {
@@ -638,7 +638,100 @@ describe('Vapor Mode hydration', () => {
     )
   })
 
-  test.todo('if')
+  describe('if', () => {
+    test('basic toggle - true -> false', async () => {
+      const data = ref(true)
+      const { container } = await testHydration(
+        `<template>
+          <div v-if="data">foo</div>
+        </template>`,
+        undefined,
+        data,
+      )
+      expect(container.innerHTML).toMatchInlineSnapshot(
+        `"<div>foo</div><!--if-->"`,
+      )
+
+      data.value = false
+      await nextTick()
+      expect(container.innerHTML).toMatchInlineSnapshot(`"<!--if-->"`)
+    })
+
+    test('basic toggle - false -> true', async () => {
+      const data = ref(false)
+      const { container } = await testHydration(
+        `<template>
+          <div v-if="data">foo</div>
+        </template>`,
+        undefined,
+        data,
+      )
+      expect(container.innerHTML).toMatchInlineSnapshot(`"<!--if-->"`)
+
+      data.value = true
+      await nextTick()
+      expect(container.innerHTML).toMatchInlineSnapshot(
+        `"<div>foo</div><!--if-->"`,
+      )
+    })
+
+    test('v-if/else-if/else chain - switch branches', async () => {
+      const data = ref('a')
+      const { container } = await testHydration(
+        `<template>
+            <div v-if="data === 'a'">foo</div>
+            <div v-else-if="data === 'b'">bar</div>
+            <div v-else>baz</div>
+          </template>`,
+        undefined,
+        data,
+      )
+      expect(container.innerHTML).toMatchInlineSnapshot(
+        `"<div>foo</div><!--if-->"`,
+      )
+
+      data.value = 'b'
+      await nextTick()
+      expect(container.innerHTML).toMatchInlineSnapshot(
+        `"<div>bar</div><!--if--><!--if-->"`,
+      )
+
+      data.value = 'c'
+      await nextTick()
+      expect(container.innerHTML).toMatchInlineSnapshot(
+        `"<div>baz</div><!--if--><!--if-->"`,
+      )
+    })
+
+    test('nested if', async () => {
+      const data = reactive({ outer: true, inner: true })
+      const { container } = await testHydration(
+        `<template>
+          <div v-if="data.outer">
+            <span>outer</span>
+            <div v-if="data.inner">inner</div>
+          </div>
+        </template>`,
+        undefined,
+        data,
+      )
+      expect(container.innerHTML).toMatchInlineSnapshot(
+        `"<div><span>outer</span><div>inner</div><!--if--></div><!--if-->"`,
+      )
+
+      data.inner = false
+      await nextTick()
+      expect(container.innerHTML).toMatchInlineSnapshot(
+        `"<div><span>outer</span><!--if--></div><!--if-->"`,
+      )
+
+      data.outer = false
+      await nextTick()
+      expect(container.innerHTML).toMatchInlineSnapshot(`"<!--if-->"`)
+    })
+
+    test.todo('on component', async () => {})
+  })
 
   test.todo('for')
 
