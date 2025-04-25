@@ -28,7 +28,7 @@ export enum SubscriberFlags {
   Recursed = 1 << 4,
   Dirty = 1 << 5,
   PendingComputed = 1 << 6,
-  Propagated = Dirty | PendingComputed,
+  Propagated = SubscriberFlags.Dirty | SubscriberFlags.PendingComputed,
 }
 
 interface OneWayLink<T> {
