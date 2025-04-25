@@ -57,14 +57,14 @@ importers:
         specifier: ^1.11.13
         version: 1.11.22
       '@tsslint/cli':
-        specifier: ~1.5.15
-        version: 1.5.15(typescript@5.6.3)
+        specifier: ~1.5.16
+        version: 1.5.16(typescript@5.6.3)
       '@tsslint/config':
-        specifier: ~1.5.15
-        version: 1.5.15(typescript@5.6.3)
+        specifier: ~1.5.16
+        version: 1.5.16(typescript@5.6.3)
       '@tsslint/eslint':
-        specifier: ~1.5.15
-        version: 1.5.15(typescript@5.6.3)
+        specifier: ~1.5.16
+        version: 1.5.16(typescript@5.6.3)
       '@types/hash-sum':
         specifier: ^1.0.2
         version: 1.0.2
@@ -1260,23 +1260,23 @@ packages:
   '@tootallnate/quickjs-emscripten@0.23.0':
     resolution: {integrity: sha512-C5Mc6rdnsaJDjO3UpGW/CQTHtCKaYlScZTly4JIu97Jxo/odCiH0ITnDXSJPTOrEKk/ycSZ0AOgTmkDtkOsvIA==}
 
-  '@tsslint/cli@1.5.15':
-    resolution: {integrity: sha512-dsgy28JIYq3I24PGnZsvcCADPlv5MucU6EQrXRPPIsjiRaE4NGbQ88A6BMkX576uUsnBDCZAx1rdnMc76ni/Uw==}
+  '@tsslint/cli@1.5.16':
+    resolution: {integrity: sha512-t67y5/w2t1XoOrPoLKYtAw53y84fQumC+6hIMUjwiTOuNV7SkyE3xvnDnI0BP7FjwPB63glpuz29HeN6XLbCBQ==}
     hasBin: true
     peerDependencies:
       typescript: '*'
 
-  '@tsslint/config@1.5.15':
-    resolution: {integrity: sha512-Afw3bcQJ+aWoWcuGmTL086M4IlN8ddiczypaW4CjrRiDI4SDpY3Qg55E6Npz3+mis2dG8h+HAedEcbOZ8143LA==}
+  '@tsslint/config@1.5.16':
+    resolution: {integrity: sha512-yBn0ixoU4Gu3aQb6F7M7IP+ruqFYANpZq3bplXvUaFbOiKfKaOQZtmai6HiYLWkbF8Qb3+jNjMbH14ZtP1XJug==}
 
-  '@tsslint/core@1.5.15':
-    resolution: {integrity: sha512-IKQUySzJ6UhDqpEY/9nizHZwfEAWuTODyDL4IBpX9y4W7K64L0gpG3FmMvbeSieNgi1w8OTyMfAqY8fwpWwI4w==}
+  '@tsslint/core@1.5.16':
+    resolution: {integrity: sha512-8liDXDp7NjmcLvR/R5OH3wLBIp9K9BbyS9j06AQlzeXpn9a0f3DWIjbqvewnGciJBCEl+SaMR8hKkm/8lxzD4A==}
 
-  '@tsslint/eslint@1.5.15':
-    resolution: {integrity: sha512-bK9uW267x/5W8CxbUmMJHornH4LfMxUy2tAGgK2pKUSy2kXLoK58soj58nBUnQq2icv0jdRDhVMzv2aEamGidA==}
+  '@tsslint/eslint@1.5.16':
+    resolution: {integrity: sha512-aAeCcOl4AlQ7LXJMTLkTfUCHX3w7hzqaJm/Xn3tvl/IxS+JQeS7j1aTlHzlAeQE1x2tDk21aEmbRQl8KeInIPA==}
 
-  '@tsslint/types@1.5.15':
-    resolution: {integrity: sha512-vm/ZEOjx9hQDEGmEkxxbS9qISPWxCacWT+qfinn424eCjaUBYv6TiqLY6nvKRAChM5XkQTz69UZCFhBgOF22yA==}
+  '@tsslint/types@1.5.16':
+    resolution: {integrity: sha512-1E1LiSmwaQ0/Z3U04fkyqTdSPpBH93Xx/QP6QBRUrxKOZOGZYWxE3VdlTP+izJgj7gJtVnzlcymnom1rExhFGQ==}
 
   '@tybys/wasm-util@0.9.0':
     resolution: {integrity: sha512-6+7nlbMVX/PVDCwaIQ8nTOPveOcFLSt8GcXdx8hD0bt39uWxYT88uXzqTd4fTvqta7oeUJqudepapKNt2DYJFw==}
@@ -4179,34 +4179,34 @@ snapshots:
 
   '@tootallnate/quickjs-emscripten@0.23.0': {}
 
-  '@tsslint/cli@1.5.15(typescript@5.6.3)':
+  '@tsslint/cli@1.5.16(typescript@5.6.3)':
     dependencies:
       '@clack/prompts': 0.8.2
-      '@tsslint/config': 1.5.15(typescript@5.6.3)
-      '@tsslint/core': 1.5.15
+      '@tsslint/config': 1.5.16(typescript@5.6.3)
+      '@tsslint/core': 1.5.16
       '@volar/language-core': 2.4.12
       '@volar/typescript': 2.4.12
       glob: 10.4.5
       json5: 2.2.3
       typescript: 5.6.3
 
-  '@tsslint/config@1.5.15(typescript@5.6.3)':
+  '@tsslint/config@1.5.16(typescript@5.6.3)':
     dependencies:
-      '@tsslint/types': 1.5.15
+      '@tsslint/types': 1.5.16
       ts-api-utils: 2.1.0(typescript@5.6.3)
     transitivePeerDependencies:
       - typescript
 
-  '@tsslint/core@1.5.15':
+  '@tsslint/core@1.5.16':
     dependencies:
-      '@tsslint/types': 1.5.15
+      '@tsslint/types': 1.5.16
       error-stack-parser: 2.1.4
       esbuild: 0.25.3
       minimatch: 10.0.1
 
-  '@tsslint/eslint@1.5.15(typescript@5.6.3)':
+  '@tsslint/eslint@1.5.16(typescript@5.6.3)':
     dependencies:
-      '@tsslint/config': 1.5.15(typescript@5.6.3)
+      '@tsslint/config': 1.5.16(typescript@5.6.3)
       '@typescript-eslint/parser': 8.31.0(eslint@9.25.1)(typescript@5.6.3)
       eslint: 9.25.1
     transitivePeerDependencies:
@@ -4214,7 +4214,7 @@ snapshots:
       - supports-color
       - typescript
 
-  '@tsslint/types@1.5.15': {}
+  '@tsslint/types@1.5.16': {}
 
   '@tybys/wasm-util@0.9.0':
     dependencies:
