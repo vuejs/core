@@ -98,7 +98,7 @@ jobs:
 
       - run: pnpm install
 
-      - name: Run eslint
+      - name: Run tsslint
         run: pnpm run lint
 
       - name: Run prettier

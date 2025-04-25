@@ -1,4 +1,3 @@
-/* eslint-disable */
 // Ported from https://github.com/stackblitz/alien-signals/blob/v1.0.13/src/system.ts
 import type { ComputedRefImpl as Computed } from './computed.js'
 import type { ReactiveEffect as Effect } from './effect.js'
@@ -22,14 +21,14 @@ export interface Link {
   nextDep: Link | undefined
 }
 
-export const enum SubscriberFlags {
+export enum SubscriberFlags {
   Computed = 1 << 0,
   Effect = 1 << 1,
   Tracking = 1 << 2,
   Recursed = 1 << 4,
   Dirty = 1 << 5,
   PendingComputed = 1 << 6,
-  Propagated = Dirty | PendingComputed,
+  Propagated = SubscriberFlags.Dirty | SubscriberFlags.PendingComputed,
 }
 
 interface OneWayLink<T> {
@@ -275,7 +274,7 @@ function checkDirty(current: Link): boolean {
         (depFlags & (SubscriberFlags.Computed | SubscriberFlags.Dirty)) ===
         (SubscriberFlags.Computed | SubscriberFlags.Dirty)
       ) {
-        if ((dep as Computed).update()) {
+        if (dep.update()) {
           const subs = dep.subs!
           if (subs.nextSub !== undefined) {
             shallowPropagate(subs)

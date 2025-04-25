@@ -13,7 +13,7 @@
     "size-esm-runtime": "node scripts/build.js vue -f esm-bundler-runtime",
     "size-esm": "node scripts/build.js runtime-dom runtime-core reactivity shared -f esm-bundler",
     "check": "tsc --incremental --noEmit",
-    "lint": "eslint --cache .",
+    "lint": "tsslint --project tsconfig.json",
     "format": "prettier --write --cache .",
     "format-check": "prettier --check --cache .",
     "test": "vitest",
@@ -54,7 +54,7 @@
       "prettier --write"
     ],
     "*.ts?(x)": [
-      "eslint --fix",
+      "npm run lint -- --fix",
       "prettier --parser=typescript --write"
     ]
   },
@@ -70,10 +70,14 @@
     "@rollup/plugin-node-resolve": "^16.0.1",
     "@rollup/plugin-replace": "5.0.4",
     "@swc/core": "^1.11.13",
+    "@tsslint/cli": "~1.5.16",
+    "@tsslint/config": "~1.5.16",
+    "@tsslint/eslint": "~1.5.16",
     "@types/hash-sum": "^1.0.2",
     "@types/node": "^22.13.14",
     "@types/semver": "^7.7.0",
     "@types/serve-handler": "^6.1.4",
+    "@typescript-eslint/eslint-plugin": "^8.31.0",
     "@vitest/coverage-v8": "^3.0.9",
     "@vitest/eslint-plugin": "^1.1.38",
     "@vue/consolidate": "1.0.0",
@@ -81,9 +85,7 @@
     "enquirer": "^2.4.1",
     "esbuild": "^0.25.2",
     "esbuild-plugin-polyfill-node": "^0.3.0",
-    "eslint": "^9.23.0",
     "eslint-plugin-import-x": "^4.9.4",
-    "estree-walker": "catalog:",
     "jsdom": "^26.0.0",
     "lint-staged": "^15.5.0",
     "lodash": "^4.17.21",
@@ -108,22 +110,14 @@
     "todomvc-app-css": "^2.4.3",
     "tslib": "^2.8.1",
     "typescript": "~5.6.2",
-    "typescript-eslint": "^8.28.0",
     "vite": "catalog:",
     "vitest": "^3.0.9"
   },
   "pnpm": {
-    "peerDependencyRules": {
-      "allowedVersions": {
-        "typescript-eslint>eslint": "^9.0.0",
-        "@typescript-eslint/eslint-plugin>eslint": "^9.0.0",
-        "@typescript-eslint/parser>eslint": "^9.0.0",
-        "@typescript-eslint/type-utils>eslint": "^9.0.0",
-        "@typescript-eslint/utils>eslint": "^9.0.0"
-      }
-    },
     "onlyBuiltDependencies": [
       "@swc/core",
+      "@tsslint/cli",
+      "@tsslint/eslint",
       "esbuild",
       "puppeteer",
       "simple-git-hooks"

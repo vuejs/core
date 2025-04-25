@@ -197,13 +197,13 @@ export function triggerRef(ref: Ref): void {
 function trackRef(dep: Dependency) {
   if (activeSub !== undefined) {
     if (__DEV__) {
-      onTrack(activeSub!, {
+      onTrack(activeSub, {
         target: dep,
         type: TrackOpTypes.GET,
         key: 'value',
       })
     }
-    link(dep, activeSub!)
+    link(dep, activeSub)
   }
 }
 

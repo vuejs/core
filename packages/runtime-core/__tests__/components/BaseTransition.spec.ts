@@ -519,16 +519,16 @@ describe('BaseTransition', () => {
       })
     }
 
-    test('w/ elements', async () => {
-      await runTestWithElements(testToggleBranches)
+    test('w/ elements', () => {
+      runTestWithElements(testToggleBranches)
     })
 
-    test('w/ components', async () => {
-      await runTestWithComponents(testToggleBranches)
+    test('w/ components', () => {
+      runTestWithComponents(testToggleBranches)
     })
 
-    test('w/ KeepAlive', async () => {
-      await runTestWithKeepAlive(testToggleBranches)
+    test('w/ KeepAlive', () => {
+      runTestWithKeepAlive(testToggleBranches)
     })
   })
 
@@ -652,16 +652,16 @@ describe('BaseTransition', () => {
       })
     }
 
-    test('w/ elements', async () => {
-      await runTestWithElements(testToggleBranchesBeforeFinish)
+    test('w/ elements', () => {
+      runTestWithElements(testToggleBranchesBeforeFinish)
     })
 
-    test('w/ components', async () => {
-      await runTestWithComponents(testToggleBranchesBeforeFinish)
+    test('w/ components', () => {
+      runTestWithComponents(testToggleBranchesBeforeFinish)
     })
 
-    test('w/ KeepAlive', async () => {
-      await runTestWithKeepAlive(testToggleBranchesBeforeFinish)
+    test('w/ KeepAlive', () => {
+      runTestWithKeepAlive(testToggleBranchesBeforeFinish)
     })
   })
 
@@ -757,16 +757,16 @@ describe('BaseTransition', () => {
       })
     }
 
-    test('w/ elements', async () => {
-      await runTestWithElements(testOutIn)
+    test('w/ elements', () => {
+      runTestWithElements(testOutIn)
     })
 
-    test('w/ components', async () => {
-      await runTestWithComponents(testOutIn)
+    test('w/ components', () => {
+      runTestWithComponents(testOutIn)
     })
 
-    test('w/ KeepAlive', async () => {
-      await runTestWithKeepAlive(testOutIn)
+    test('w/ KeepAlive', () => {
+      runTestWithKeepAlive(testOutIn)
     })
   })
 
@@ -839,16 +839,16 @@ describe('BaseTransition', () => {
       })
     }
 
-    test('w/ elements', async () => {
-      await runTestWithElements(testOutIn)
+    test('w/ elements', () => {
+      runTestWithElements(testOutIn)
     })
 
-    test('w/ components', async () => {
-      await runTestWithComponents(testOutIn)
+    test('w/ components', () => {
+      runTestWithComponents(testOutIn)
     })
 
-    test('w/ KeepAlive', async () => {
-      await runTestWithKeepAlive(testOutIn)
+    test('w/ KeepAlive', () => {
+      runTestWithKeepAlive(testOutIn)
     })
   })
 
@@ -911,16 +911,16 @@ describe('BaseTransition', () => {
       })
     }
 
-    test('w/ elements', async () => {
-      await runTestWithElements(testOutInBeforeFinish)
+    test('w/ elements', () => {
+      runTestWithElements(testOutInBeforeFinish)
     })
 
-    test('w/ components', async () => {
-      await runTestWithComponents(testOutInBeforeFinish)
+    test('w/ components', () => {
+      runTestWithComponents(testOutInBeforeFinish)
     })
 
-    test('w/ KeepAlive', async () => {
-      await runTestWithKeepAlive(testOutInBeforeFinish)
+    test('w/ KeepAlive', () => {
+      runTestWithKeepAlive(testOutInBeforeFinish)
     })
   })
 
@@ -989,16 +989,16 @@ describe('BaseTransition', () => {
       })
     }
 
-    test('w/ elements', async () => {
-      await runTestWithElements(testOutInDoubleToggle)
+    test('w/ elements', () => {
+      runTestWithElements(testOutInDoubleToggle)
     })
 
-    test('w/ components', async () => {
-      await runTestWithComponents(testOutInDoubleToggle)
+    test('w/ components', () => {
+      runTestWithComponents(testOutInDoubleToggle)
     })
 
-    test('w/ KeepAlive', async () => {
-      await runTestWithKeepAlive(testOutInDoubleToggle)
+    test('w/ KeepAlive', () => {
+      runTestWithKeepAlive(testOutInDoubleToggle)
     })
   })
 
@@ -1093,16 +1093,16 @@ describe('BaseTransition', () => {
       })
     }
 
-    test('w/ elements', async () => {
-      await runTestWithElements(testInOut)
+    test('w/ elements', () => {
+      runTestWithElements(testInOut)
     })
 
-    test('w/ components', async () => {
-      await runTestWithComponents(testInOut)
+    test('w/ components', () => {
+      runTestWithComponents(testInOut)
     })
 
-    test('w/ KeepAlive', async () => {
-      await runTestWithKeepAlive(testInOut)
+    test('w/ KeepAlive', () => {
+      runTestWithKeepAlive(testInOut)
     })
   })
 
@@ -1181,16 +1181,16 @@ describe('BaseTransition', () => {
       })
     }
 
-    test('w/ elements', async () => {
-      await runTestWithElements(testInOutBeforeFinish)
+    test('w/ elements', () => {
+      runTestWithElements(testInOutBeforeFinish)
     })
 
-    test('w/ components', async () => {
-      await runTestWithComponents(testInOutBeforeFinish)
+    test('w/ components', () => {
+      runTestWithComponents(testInOutBeforeFinish)
     })
 
-    test('w/ KeepAlive', async () => {
-      await runTestWithKeepAlive(testInOutBeforeFinish)
+    test('w/ KeepAlive', () => {
+      runTestWithKeepAlive(testInOutBeforeFinish)
     })
   })
 

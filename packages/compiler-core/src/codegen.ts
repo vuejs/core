@@ -768,8 +768,8 @@ function genCompoundExpression(
   node: CompoundExpressionNode,
   context: CodegenContext,
 ) {
-  for (let i = 0; i < node.children!.length; i++) {
-    const child = node.children![i]
+  for (let i = 0; i < node.children.length; i++) {
+    const child = node.children[i]
     if (isString(child)) {
       context.push(child, NewlineType.Unknown)
     } else {

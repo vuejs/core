@@ -331,7 +331,9 @@ export const TeleportImpl = {
     }
   },
 
+  // @tsslint-ignore @typescript-eslint/no-unnecessary-type-assertion
   move: moveTeleport as typeof moveTeleport,
+  // @tsslint-ignore @typescript-eslint/no-unnecessary-type-assertion
   hydrate: hydrateTeleport as typeof hydrateTeleport,
 }
 

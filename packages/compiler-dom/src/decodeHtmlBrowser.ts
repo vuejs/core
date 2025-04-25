@@ -1,9 +1,8 @@
-/* eslint-disable no-restricted-globals */
-
 let decoder: HTMLDivElement
 
 export function decodeHtmlBrowser(raw: string, asAttr = false): string {
   if (!decoder) {
+    // @tsslint-ignore no-restricted-globals
     decoder = document.createElement('div')
   }
   if (asAttr) {

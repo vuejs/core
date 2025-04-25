@@ -1130,7 +1130,7 @@ function walkDeclaration(
     isAllLiteral = node.members.every(
       member => !member.initializer || isStaticNode(member.initializer),
     )
-    bindings[node.id!.name] = isAllLiteral
+    bindings[node.id.name] = isAllLiteral
       ? BindingTypes.LITERAL_CONST
       : BindingTypes.SETUP_CONST
   } else if (

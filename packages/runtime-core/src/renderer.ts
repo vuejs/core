@@ -1221,7 +1221,7 @@ function baseCreateRenderer(
       // TODO handle self-defined fallback
       if (!initialVNode.el) {
         const placeholder = (instance.subTree = createVNode(Comment))
-        processCommentNode(null, placeholder, container!, anchor)
+        processCommentNode(null, placeholder, container, anchor)
       }
     } else {
       setupRenderEffect(
@@ -1528,7 +1528,7 @@ function baseCreateRenderer(
         // onVnodeUpdated
         if ((vnodeHook = next.props && next.props.onVnodeUpdated)) {
           queuePostRenderEffect(
-            () => invokeVNodeHook(vnodeHook!, parent, next!, vnode),
+            () => invokeVNodeHook(vnodeHook!, parent, next, vnode),
             parentSuspense,
           )
         }
@@ -2045,11 +2045,11 @@ function baseCreateRenderer(
       transition
     if (needTransition) {
       if (moveType === MoveType.ENTER) {
-        transition!.beforeEnter(el!)
+        transition.beforeEnter(el!)
         hostInsert(el!, container, anchor)
-        queuePostRenderEffect(() => transition!.enter(el!), parentSuspense)
+        queuePostRenderEffect(() => transition.enter(el!), parentSuspense)
       } else {
-        const { leave, delayLeave, afterLeave } = transition!
+        const { leave, delayLeave, afterLeave } = transition
         const remove = () => {
           if (vnode.ctx!.isUnmounted) {
             hostRemove(el!)

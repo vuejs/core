@@ -1,6 +1,5 @@
-import importX from 'eslint-plugin-import-x'
-import tseslint from 'typescript-eslint'
-import vitest from '@vitest/eslint-plugin'
+import { createIgnorePlugin, defineConfig } from '@tsslint/config'
+import { convertRules } from '@tsslint/eslint'
 import { builtinModules } from 'node:module'
 
 const DOMGlobals = ['window', 'document']
@@ -12,14 +11,10 @@ const banConstEnum = {
     'Please use non-const enums. This project automatically inlines enums.',
 }
 
-export default tseslint.config(
+export default defineConfig([
   {
-    files: ['**/*.js', '**/*.ts', '**/*.tsx'],
-    extends: [tseslint.configs.base],
-    plugins: {
-      'import-x': importX,
-    },
-    rules: {
+    plugins: [createIgnorePlugin('@tsslint-ignore', false)],
+    rules: await convertRules({
       'no-debugger': 'error',
       'no-console': ['error', { allow: ['warn', 'error', 'info'] }],
       // most of the codebase are expected to be env agnostic
@@ -71,111 +66,115 @@ export default tseslint.config(
       ],
       // Enforce the use of top-level import type qualifier when an import only has specifiers with inline type qualifiers
       '@typescript-eslint/no-import-type-side-effects': 'error',
-    },
+      '@typescript-eslint/no-unnecessary-type-constraint': 'error',
+
+      // Type-aware rules
+      '@typescript-eslint/await-thenable': 'error',
+      '@typescript-eslint/require-await': 'suggestion',
+      '@typescript-eslint/consistent-type-exports': 'error',
+      '@typescript-eslint/no-unnecessary-type-arguments': 'error',
+      '@typescript-eslint/no-unnecessary-type-assertion': [
+        'error',
+        { typesToIgnore: ['any'] },
+      ],
+      '@typescript-eslint/non-nullable-type-assertion-style': 'error',
+    }),
   },
 
   // tests, no restrictions (runs in Node / Vitest with jsdom)
   {
-    files: [
+    include: [
       '**/__tests__/**',
       'packages-private/dts-test/**',
       'packages-private/dts-build-test/**',
     ],
-    plugins: { vitest },
-    languageOptions: {
-      globals: {
-        ...vitest.environments.env.globals,
-      },
-    },
-    rules: {
+    rules: await convertRules({
       'no-console': 'off',
       'no-restricted-globals': 'off',
       'no-restricted-syntax': 'off',
-      'vitest/no-disabled-tests': 'error',
-      'vitest/no-focused-tests': 'error',
-    },
+      '@vitest/no-disabled-tests': 'error',
+      '@vitest/no-focused-tests': 'error',
+    }),
   },
 
   // shared, may be used in any env
   {
-    files: ['packages/shared/**', 'eslint.config.js'],
-    rules: {
+    include: ['packages/shared/**'],
+    rules: await convertRules({
       'no-restricted-globals': 'off',
-    },
-  },
-
-  // Packages targeting DOM
-  {
-    files: ['packages/{vue,vue-compat,runtime-dom}/**'],
-    rules: {
-      'no-restricted-globals': ['error', ...NodeGlobals],
-    },
+    }),
   },
 
   // Packages targeting Node
   {
-    files: ['packages/{compiler-sfc,compiler-ssr,server-renderer}/**'],
-    rules: {
+    include: [
+      'packages/compiler-sfc/**',
+      'packages/compiler-ssr/**',
+      'packages/server-renderer/**',
+    ],
+    rules: await convertRules({
       'no-restricted-globals': ['error', ...DOMGlobals],
       'no-restricted-syntax': ['error', banConstEnum],
-    },
+    }),
+  },
+
+  // Packages targeting DOM
+  {
+    include: [
+      'packages/runtime-core/**',
+      'packages/runtime-dom/**',
+      'packages/vue/**',
+      'packages/vue-compat/**',
+    ],
+    rules: await convertRules({
+      'no-restricted-globals': ['error', ...NodeGlobals],
+    }),
   },
 
   // Private package, browser only + no syntax restrictions
   {
-    files: [
+    include: [
       'packages-private/template-explorer/**',
       'packages-private/sfc-playground/**',
     ],
-    rules: {
+    rules: await convertRules({
+      'no-console': 'off',
       'no-restricted-globals': ['error', ...NodeGlobals],
       'no-restricted-syntax': ['error', banConstEnum],
-      'no-console': 'off',
-    },
+    }),
   },
 
   // JavaScript files
   {
-    files: ['*.js'],
-    rules: {
+    include: ['**/*.js'],
+    rules: await convertRules({
       // We only do `no-unused-vars` checks for js files, TS files are checked by TypeScript itself.
       'no-unused-vars': ['error', { vars: 'all', args: 'none' }],
-    },
+    }),
   },
 
   // Node scripts
   {
-    files: [
-      'eslint.config.js',
+    include: [
       'rollup*.config.js',
       'scripts/**',
-      './*.{js,ts}',
+      './*.js',
+      './*.ts',
       'packages/*/*.js',
       'packages/vue/*/*.js',
     ],
-    rules: {
+    rules: await convertRules({
+      'no-console': 'off',
       'no-restricted-globals': 'off',
       'no-restricted-syntax': ['error', banConstEnum],
-      'no-console': 'off',
-    },
+    }),
   },
 
   // Import nodejs modules in compiler-sfc
   {
-    files: ['packages/compiler-sfc/src/**'],
-    rules: {
+    include: ['packages/compiler-sfc/src/**'],
+    rules: await convertRules({
       'import-x/no-nodejs-modules': ['error', { allow: builtinModules }],
-    },
+    }),
   },
-
-  {
-    ignores: [
-      '**/dist/',
-      '**/temp/',
-      '**/coverage/',
-      '.idea/',
-      'explorations/',
-      'dts-build/packages',
-    ],
-  },
-)
+])

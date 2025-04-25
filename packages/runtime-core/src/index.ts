@@ -130,7 +130,7 @@ export { useSSRContext, ssrContextKey } from './helpers/useSsrContext'
 export { createRenderer, createHydrationRenderer } from './renderer'
 export { queuePostFlushCb } from './scheduler'
 import { warn as _warn } from './warning'
-export const warn = (__DEV__ ? _warn : NOOP) as typeof _warn
+export const warn: typeof _warn = __DEV__ ? _warn : NOOP
 
 /** @internal */
 export { assertNumber } from './warning'
@@ -160,9 +160,9 @@ import { ErrorTypeStrings as _ErrorTypeStrings } from './errorHandling'
  * Runtime error messages. Only exposed in dev or esm builds.
  * @internal
  */
-export const ErrorTypeStrings = (
+export const ErrorTypeStrings: typeof _ErrorTypeStrings = (
   __ESM_BUNDLER__ || __CJS__ || __DEV__ ? _ErrorTypeStrings : null
-) as typeof _ErrorTypeStrings
+)!
 
 // For devtools
 import {
@@ -171,12 +171,11 @@ import {
   setDevtoolsHook as _setDevtoolsHook,
 } from './devtools'
 
-export const devtools = (
+export const devtools: DevtoolsHook = (
   __DEV__ || __ESM_BUNDLER__ ? _devtools : undefined
-) as DevtoolsHook
-export const setDevtoolsHook = (
+)!
+export const setDevtoolsHook: typeof _setDevtoolsHook =
   __DEV__ || __ESM_BUNDLER__ ? _setDevtoolsHook : NOOP
-) as typeof _setDevtoolsHook
 
 // Types -----------------------------------------------------------------------
 
@@ -430,7 +429,7 @@ const _ssrUtils: {
  * SSR utils for \@vue/server-renderer. Only exposed in ssr-possible builds.
  * @internal
  */
-export const ssrUtils = (__SSR__ ? _ssrUtils : null) as typeof _ssrUtils
+export const ssrUtils: typeof _ssrUtils = (__SSR__ ? _ssrUtils : null)!
 
 // 2.x COMPAT ------------------------------------------------------------------
 
@@ -472,10 +471,10 @@ const _compatUtils: {
 /**
  * @internal only exposed in compat builds.
  */
-export const compatUtils = (
+export const compatUtils: typeof _compatUtils = (
   __COMPAT__ ? _compatUtils : null
-) as typeof _compatUtils
+)!
 
-export const DeprecationTypes = (
+export const DeprecationTypes: typeof _DeprecationTypes = (
   __COMPAT__ ? _DeprecationTypes : null
-) as typeof _DeprecationTypes
+)!

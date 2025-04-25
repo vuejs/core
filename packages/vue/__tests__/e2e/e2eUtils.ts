@@ -156,7 +156,7 @@ export function setupPuppeteer(args?: string[]): PuppeteerUtils {
     await page.$eval(
       selector,
       (node, value) => {
-        ;(node as HTMLInputElement).value = value as string
+        ;(node as HTMLInputElement).value = value
         node.dispatchEvent(new Event('input'))
       },
       value,
