@@ -105,6 +105,7 @@ export function disableHydrationNodeLookup(): void {
 }
 
 /*! #__NO_SIDE_EFFECTS__ */
+// TODO check if this is still needed
 export function prev(node: Node): Node | null {
   // process dynamic node (<!--[[-->...<!--]]-->) as a single one
   if (isComment(node, DYNAMIC_END_ANCHOR_LABEL)) {
@@ -145,6 +146,9 @@ export function nextSiblingAnchor(
   anchorLabel: string,
 ): Comment | null {
   node = handleWrappedNode(node)
+  if (isComment(node, anchorLabel)) {
+    return node as Comment
+  }
 
   let n = node.nextSibling
   while (n) {

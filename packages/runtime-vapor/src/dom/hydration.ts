@@ -10,7 +10,6 @@ import {
   disableHydrationNodeLookup,
   enableHydrationNodeLookup,
   next,
-  prev,
 } from './node'
 import { isDynamicFragmentEndAnchor } from '@vue/shared'
 
@@ -98,7 +97,7 @@ function locateHydrationNodeImpl(isFragment?: boolean) {
     // if the last child is a comment, it is the anchor for the fragment
     // so it need to find the previous node
     if (isFragment && node && isDynamicFragmentEndAnchor(node)) {
-      let previous = prev(node)
+      let previous = node.previousSibling //prev(node)
       if (previous) node = previous
     }
 

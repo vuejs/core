@@ -1123,6 +1123,73 @@ describe('Vapor Mode hydration', () => {
         })
       })
 
+      test('on fragment component', async () => {
+        runWithEnv(isProd, async () => {
+          const data = ref(true)
+          const { container } = await testHydration(
+            `<template>
+              <div>
+                <components.Child v-if="data"/>
+              </div>
+            </template>`,
+            {
+              Child: `<template><div>{{ data }}</div>-{{ data }}-</template>`,
+            },
+            data,
+          )
+          expect(container.innerHTML).toBe(
+            `<div>` +
+              `<!--[--><div>true</div>-true-<!--]-->` +
+              `<!--if-->` +
+              `</div>`,
+          )
+
+          data.value = false
+          await nextTick()
+          expect(container.innerHTML).toBe(
+            `<div>` + `<!--[--><!--]-->` + `<!--${anchorLabel}-->` + `</div>`,
+          )
+        })
+      })
+
+      test('on fragment component with anchor insertion', async () => {
+        runWithEnv(isProd, async () => {
+          const data = ref(true)
+          const { container } = await testHydration(
+            `<template>
+              <div>
+                <span/>
+                <components.Child v-if="data"/>
+                <span/>
+              </div>
+            </template>`,
+            {
+              Child: `<template><div>{{ data }}</div>-{{ data }}-</template>`,
+            },
+            data,
+          )
+          expect(container.innerHTML).toBe(
+            `<div>` +
+              `<span></span>` +
+              `<!--[--><div>true</div>-true-<!--]-->` +
+              `<!--if-->` +
+              `<span></span>` +
+              `</div>`,
+          )
+
+          data.value = false
+          await nextTick()
+          expect(container.innerHTML).toBe(
+            `<div>` +
+              `<span></span>` +
+              `<!--[--><!--]-->` +
+              `<!--${anchorLabel}-->` +
+              `<span></span>` +
+              `</div>`,
+          )
+        })
+      })
+
       test('consecutive v-if on fragment component with anchor insertion', async () => {
         runWithEnv(isProd, async () => {
           const data = ref(true)
@@ -1311,7 +1378,168 @@ describe('Vapor Mode hydration', () => {
     }
   })
 
-  test.todo('for')
+  describe('for', () => {
+    test('basic v-for', async () => {
+      const { container, data } = await testHydration(
+        `<template>
+          <div>
+            <span v-for="item in data" :key="item">{{ item }}</span>
+          </div>
+        </template>`,
+        undefined,
+        ref(['a', 'b', 'c']),
+      )
+      expect(container.innerHTML).toBe(
+        `<div>` +
+          `<!--[-->` +
+          `<span>a</span>` +
+          `<span>b</span>` +
+          `<span>c</span>` +
+          `<!--]-->` +
+          `</div>`,
+      )
+
+      data.value.push('d')
+      await nextTick()
+      expect(container.innerHTML).toBe(
+        `<div>` +
+          `<!--[-->` +
+          `<span>a</span>` +
+          `<span>b</span>` +
+          `<span>c</span>` +
+          `<span>d</span>` +
+          `<!--]-->` +
+          `</div>`,
+      )
+    })
+
+    test('v-for with text node', async () => {
+      const { container, data } = await testHydration(
+        `<template>
+          <div>
+            <span v-for="item in data" :key="item">{{ item }}</span>
+          </div>
+        </template>`,
+        undefined,
+        ref(['a', 'b', 'c']),
+      )
+      expect(container.innerHTML).toBe(
+        `<div><!--[--><span>a</span><span>b</span><span>c</span><!--]--></div>`,
+      )
+
+      data.value.push('d')
+      await nextTick()
+      expect(container.innerHTML).toBe(
+        `<div><!--[--><span>a</span><span>b</span><span>c</span><span>d</span><!--]--></div>`,
+      )
+    })
+
+    test('v-for with anchor insertion', async () => {
+      const { container, data } = await testHydration(
+        `<template>
+          <div>
+            <span/>
+            <span v-for="item in data" :key="item">{{ item }}</span>
+            <span/>
+          </div>
+        </template>`,
+        undefined,
+        ref(['a', 'b', 'c']),
+      )
+      expect(container.innerHTML).toBe(
+        `<div>` +
+          `<span></span>` +
+          `<!--[-->` +
+          `<span>a</span>` +
+          `<span>b</span>` +
+          `<span>c</span>` +
+          `<!--]-->` +
+          `<span></span>` +
+          `</div>`,
+      )
+
+      data.value.push('d')
+      await nextTick()
+      expect(container.innerHTML).toBe(
+        `<div>` +
+          `<span></span>` +
+          `<!--[-->` +
+          `<span>a</span>` +
+          `<span>b</span>` +
+          `<span>c</span>` +
+          `<span>d</span>` +
+          `<!--]-->` +
+          `<span></span>` +
+          `</div>`,
+      )
+    })
+
+    test('consecutive v-for with anchor insertion', async () => {
+      const { container, data } = await testHydration(
+        `<template>
+          <div>
+            <span/>
+            <span v-for="item in data" :key="item">{{ item }}</span>
+            <span v-for="item in data" :key="item">{{ item }}</span>
+            <span/>
+          </div>
+        </template>`,
+        undefined,
+        ref(['a', 'b', 'c']),
+      )
+      expect(container.innerHTML).toBe(
+        `<div>` +
+          `<span></span>` +
+          `<!--[-->` +
+          `<span>a</span>` +
+          `<span>b</span>` +
+          `<span>c</span>` +
+          `<!--]-->` +
+          `<!--[[-->` +
+          `<!--[-->` +
+          `<span>a</span>` +
+          `<span>b</span>` +
+          `<span>c</span>` +
+          `<!--]-->` +
+          `<!--]]-->` +
+          `<span></span>` +
+          `</div>`,
+      )
+
+      data.value.push('d')
+      await nextTick()
+      expect(container.innerHTML).toBe(
+        `<div>` +
+          `<span></span>` +
+          `<!--[-->` +
+          `<span>a</span>` +
+          `<span>b</span>` +
+          `<span>c</span>` +
+          `<span>d</span>` +
+          `<!--]-->` +
+          `<!--[[-->` +
+          `<!--[-->` +
+          `<span>a</span>` +
+          `<span>b</span>` +
+          `<span>c</span>` +
+          `<span>d</span>` +
+          `<!--]-->` +
+          `<!--]]-->` +
+          `<span></span>` +
+          `</div>`,
+      )
+    })
+
+    // TODO wait for slots hydration support
+    test.todo('v-for on component', async () => {})
+
+    // TODO wait for slots hydration support
+    test.todo('on fragment component', async () => {})
+
+    // TODO wait for vapor TransitionGroup support
+    // v-for inside TransitionGroup does not render as a fragment
+    test.todo('v-for in TransitionGroup', async () => {})
+  })
 
   test.todo('slots')
 
