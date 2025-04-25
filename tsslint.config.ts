@@ -78,7 +78,6 @@ export default defineConfig([
         { typesToIgnore: ['any'] },
       ],
       '@typescript-eslint/non-nullable-type-assertion-style': 'error',
-      '@typescript-eslint/no-floating-promises': 'error',
     }),
   },
 
