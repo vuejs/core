@@ -237,14 +237,28 @@ describe('Vapor Mode hydration', () => {
         Child: `<template><div>{{ data }}</div>-{{ data }}-</template>`,
       },
     )
-    expect(container.innerHTML).toMatchInlineSnapshot(
-      `"<div><!--[--><div></div><!--[--><div>foo</div>-foo-<!--]--><div></div><!--]--><span></span></div>"`,
+    expect(container.innerHTML).toBe(
+      `<div>` +
+        `<!--[-->` +
+        `<div></div>` +
+        `<!--[--><div>foo</div>-foo-<!--]-->` +
+        `<div></div>` +
+        `<!--]-->` +
+        `<span></span>` +
+        `</div>`,
     )
 
     data.value = 'bar'
     await nextTick()
-    expect(container.innerHTML).toMatchInlineSnapshot(
-      `"<div><!--[--><div></div><!--[--><div>bar</div>-bar-<!--]--><div></div><!--]--><span></span></div>"`,
+    expect(container.innerHTML).toBe(
+      `<div>` +
+        `<!--[-->` +
+        `<div></div>` +
+        `<!--[--><div>bar</div>-bar-<!--]-->` +
+        `<div></div>` +
+        `<!--]-->` +
+        `<span></span>` +
+        `</div>`,
     )
   })
 
@@ -283,14 +297,14 @@ describe('Vapor Mode hydration', () => {
         Child: `<template><div>{{ data }}</div></template>`,
       },
     )
-    expect(container.innerHTML).toMatchInlineSnapshot(
-      `"<div><span></span><div>foo</div><span></span></div>"`,
+    expect(container.innerHTML).toBe(
+      `<div><span></span><div>foo</div><span></span></div>`,
     )
 
     data.value = 'bar'
     await nextTick()
-    expect(container.innerHTML).toMatchInlineSnapshot(
-      `"<div><span></span><div>bar</div><span></span></div>"`,
+    expect(container.innerHTML).toBe(
+      `<div><span></span><div>bar</div><span></span></div>`,
     )
   })
 
@@ -304,14 +318,30 @@ describe('Vapor Mode hydration', () => {
         Child: `<template><div>{{ data }}</div></template>`,
       },
     )
-    expect(container.innerHTML).toMatchInlineSnapshot(
-      `"<div><span></span><div><span></span><div>foo</div><span></span></div><span></span></div>"`,
+    expect(container.innerHTML).toBe(
+      `<div>` +
+        `<span></span>` +
+        `<div>` +
+        `<span></span>` +
+        `<div>foo</div>` +
+        `<span></span>` +
+        `</div>` +
+        `<span></span>` +
+        `</div>`,
     )
 
     data.value = 'bar'
     await nextTick()
-    expect(container.innerHTML).toMatchInlineSnapshot(
-      `"<div><span></span><div><span></span><div>bar</div><span></span></div><span></span></div>"`,
+    expect(container.innerHTML).toBe(
+      `<div>` +
+        `<span></span>` +
+        `<div>` +
+        `<span></span>` +
+        `<div>bar</div>` +
+        `<span></span>` +
+        `</div>` +
+        `<span></span>` +
+        `</div>`,
     )
   })
 
@@ -330,14 +360,24 @@ describe('Vapor Mode hydration', () => {
         Child: `<template>{{ data }}</template>`,
       },
     )
-    expect(container.innerHTML).toMatchInlineSnapshot(
-      `"<div><span></span>foo<!--[[-->foo<!--]]--><span></span></div>"`,
+    expect(container.innerHTML).toBe(
+      `<div>` +
+        `<span></span>` +
+        `foo` +
+        `<!--[[-->foo<!--]]-->` +
+        `<span></span>` +
+        `</div>`,
     )
 
     data.value = 'bar'
     await nextTick()
-    expect(container.innerHTML).toMatchInlineSnapshot(
-      `"<div><span></span>bar<!--[[-->bar<!--]]--><span></span></div>"`,
+    expect(container.innerHTML).toBe(
+      `<div>` +
+        `<span></span>` +
+        `bar` +
+        `<!--[[-->bar<!--]]-->` +
+        `<span></span>` +
+        `</div>`,
     )
   })
 
@@ -351,14 +391,24 @@ describe('Vapor Mode hydration', () => {
         Child: `<template><div>{{ data }}</div></template>`,
       },
     )
-    expect(container.innerHTML).toMatchInlineSnapshot(
-      `"<div><span></span><div>foo</div><!--[[--><div>foo</div><!--]]--><span></span></div>"`,
+    expect(container.innerHTML).toBe(
+      `<div>` +
+        `<span></span>` +
+        `<div>foo</div>` +
+        `<!--[[--><div>foo</div><!--]]-->` +
+        `<span></span>` +
+        `</div>`,
     )
 
     data.value = 'bar'
     await nextTick()
-    expect(container.innerHTML).toMatchInlineSnapshot(
-      `"<div><span></span><div>bar</div><!--[[--><div>bar</div><!--]]--><span></span></div>"`,
+    expect(container.innerHTML).toBe(
+      `<div>` +
+        `<span></span>` +
+        `<div>bar</div>` +
+        `<!--[[--><div>bar</div><!--]]-->` +
+        `<span></span>` +
+        `</div>`,
     )
   })
 
@@ -372,14 +422,32 @@ describe('Vapor Mode hydration', () => {
         Child: `<template><div>{{ data }}</div></template>`,
       },
     )
-    expect(container.innerHTML).toMatchInlineSnapshot(
-      `"<div><span></span><div><span></span><div>foo</div><!--[[--><div>foo</div><!--]]--><span></span></div><span></span></div>"`,
+    expect(container.innerHTML).toBe(
+      `<div>` +
+        `<span></span>` +
+        `<div>` +
+        `<span></span>` +
+        `<div>foo</div>` +
+        `<!--[[--><div>foo</div><!--]]-->` +
+        `<span></span>` +
+        `</div>` +
+        `<span></span>` +
+        `</div>`,
     )
 
     data.value = 'bar'
     await nextTick()
-    expect(container.innerHTML).toMatchInlineSnapshot(
-      `"<div><span></span><div><span></span><div>bar</div><!--[[--><div>bar</div><!--]]--><span></span></div><span></span></div>"`,
+    expect(container.innerHTML).toBe(
+      `<div>` +
+        `<span></span>` +
+        `<div>` +
+        `<span></span>` +
+        `<div>bar</div>` +
+        `<!--[[--><div>bar</div><!--]]-->` +
+        `<span></span>` +
+        `</div>` +
+        `<span></span>` +
+        `</div>`,
     )
   })
 
@@ -399,14 +467,26 @@ describe('Vapor Mode hydration', () => {
         Child: `<template>{{ data }}</template>`,
       },
     )
-    expect(container.innerHTML).toMatchInlineSnapshot(
-      `"<div><span></span>foo<span></span>foo<span></span></div>"`,
+    expect(container.innerHTML).toBe(
+      `<div>` +
+        `<span></span>` +
+        `foo` +
+        `<span></span>` +
+        `foo` +
+        `<span></span>` +
+        `</div>`,
     )
 
     data.value = 'bar'
     await nextTick()
-    expect(container.innerHTML).toMatchInlineSnapshot(
-      `"<div><span></span>bar<span></span>bar<span></span></div>"`,
+    expect(container.innerHTML).toBe(
+      `<div>` +
+        `<span></span>` +
+        `bar` +
+        `<span></span>` +
+        `bar` +
+        `<span></span>` +
+        `</div>`,
     )
   })
 
@@ -426,14 +506,26 @@ describe('Vapor Mode hydration', () => {
         Child: `<template>{{ data }}</template>`,
       },
     )
-    expect(container.innerHTML).toMatchInlineSnapshot(
-      `"<div><span></span>foo<!--[[--> foo <!--]]-->foo<span></span></div>"`,
+    expect(container.innerHTML).toBe(
+      `<div>` +
+        `<span></span>` +
+        `foo` +
+        `<!--[[--> foo <!--]]-->` +
+        `foo` +
+        `<span></span>` +
+        `</div>`,
     )
 
     data.value = 'bar'
     await nextTick()
-    expect(container.innerHTML).toMatchInlineSnapshot(
-      `"<div><span></span>bar<!--[[--> bar <!--]]-->bar<span></span></div>"`,
+    expect(container.innerHTML).toBe(
+      `<div>` +
+        `<span></span>` +
+        `bar` +
+        `<!--[[--> bar <!--]]-->` +
+        `bar` +
+        `<span></span>` +
+        `</div>`,
     )
   })
 
@@ -451,14 +543,22 @@ describe('Vapor Mode hydration', () => {
         Child: `<template><div>{{ data }}</div>-{{ data }}</template>`,
       },
     )
-    expect(container.innerHTML).toMatchInlineSnapshot(
-      `"<div><span></span><!--[--><div>foo</div>-foo<!--]--><span></span></div>"`,
+    expect(container.innerHTML).toBe(
+      `<div>` +
+        `<span></span>` +
+        `<!--[--><div>foo</div>-foo<!--]-->` +
+        `<span></span>` +
+        `</div>`,
     )
 
     data.value = 'bar'
     await nextTick()
-    expect(container.innerHTML).toMatchInlineSnapshot(
-      `"<div><span></span><!--[--><div>bar</div>-bar<!--]--><span></span></div>"`,
+    expect(container.innerHTML).toBe(
+      `<div>` +
+        `<span></span>` +
+        `<!--[--><div>bar</div>-bar<!--]-->` +
+        `<span></span>` +
+        `</div>`,
     )
   })
 
@@ -472,14 +572,22 @@ describe('Vapor Mode hydration', () => {
         Child: `<template><div>{{ data }}</div>-{{ data }}-</template>`,
       },
     )
-    expect(container.innerHTML).toMatchInlineSnapshot(
-      `"<div><span></span><!--[--><div>foo</div>-foo-<!--]--><span></span></div>"`,
+    expect(container.innerHTML).toBe(
+      `<div>` +
+        `<span></span>` +
+        `<!--[--><div>foo</div>-foo-<!--]-->` +
+        `<span></span>` +
+        `</div>`,
     )
 
     data.value = 'bar'
     await nextTick()
-    expect(container.innerHTML).toMatchInlineSnapshot(
-      `"<div><span></span><!--[--><div>bar</div>-bar-<!--]--><span></span></div>"`,
+    expect(container.innerHTML).toBe(
+      `<div>` +
+        `<span></span>` +
+        `<!--[--><div>bar</div>-bar-<!--]-->` +
+        `<span></span>` +
+        `</div>`,
     )
   })
 
@@ -493,14 +601,30 @@ describe('Vapor Mode hydration', () => {
         Child: `<template><div>{{ data }}</div>-{{ data }}-</template>`,
       },
     )
-    expect(container.innerHTML).toMatchInlineSnapshot(
-      `"<div><span></span><div><span></span><!--[--><div>foo</div>-foo-<!--]--><span></span></div><span></span></div>"`,
+    expect(container.innerHTML).toBe(
+      `<div>` +
+        `<span></span>` +
+        `<div>` +
+        `<span></span>` +
+        `<!--[--><div>foo</div>-foo-<!--]-->` +
+        `<span></span>` +
+        `</div>` +
+        `<span></span>` +
+        `</div>`,
     )
 
     data.value = 'bar'
     await nextTick()
-    expect(container.innerHTML).toMatchInlineSnapshot(
-      `"<div><span></span><div><span></span><!--[--><div>bar</div>-bar-<!--]--><span></span></div><span></span></div>"`,
+    expect(container.innerHTML).toBe(
+      `<div>` +
+        `<span></span>` +
+        `<div>` +
+        `<span></span>` +
+        `<!--[--><div>bar</div>-bar-<!--]-->` +
+        `<span></span>` +
+        `</div>` +
+        `<span></span>` +
+        `</div>`,
     )
   })
 
@@ -519,14 +643,28 @@ describe('Vapor Mode hydration', () => {
         Child: `<template><div>{{ data }}</div>-{{ data }}</template>`,
       },
     )
-    expect(container.innerHTML).toMatchInlineSnapshot(
-      `"<div><span></span><!--[--><div>foo</div>-foo<!--]--><!--[[--><!--[--><div>foo</div>-foo<!--]--><!--]]--><span></span></div>"`,
+    expect(container.innerHTML).toBe(
+      `<div>` +
+        `<span></span>` +
+        `<!--[--><div>foo</div>-foo<!--]-->` +
+        `<!--[[-->` +
+        `<!--[--><div>foo</div>-foo<!--]-->` +
+        `<!--]]-->` +
+        `<span></span>` +
+        `</div>`,
     )
 
     data.value = 'bar'
     await nextTick()
-    expect(container.innerHTML).toMatchInlineSnapshot(
-      `"<div><span></span><!--[--><div>bar</div>-bar<!--]--><!--[[--><!--[--><div>bar</div>-bar<!--]--><!--]]--><span></span></div>"`,
+    expect(container.innerHTML).toBe(
+      `<div>` +
+        `<span></span>` +
+        `<!--[--><div>bar</div>-bar<!--]-->` +
+        `<!--[[-->` +
+        `<!--[--><div>bar</div>-bar<!--]-->` +
+        `<!--]]-->` +
+        `<span></span>` +
+        `</div>`,
     )
   })
 
@@ -540,14 +678,28 @@ describe('Vapor Mode hydration', () => {
         Child: `<template><div>{{ data }}</div>-{{ data }}-</template>`,
       },
     )
-    expect(container.innerHTML).toMatchInlineSnapshot(
-      `"<div><span></span><!--[--><div>foo</div>-foo-<!--]--><!--[[--><!--[--><div>foo</div>-foo-<!--]--><!--]]--><span></span></div>"`,
+    expect(container.innerHTML).toBe(
+      `<div>` +
+        `<span></span>` +
+        `<!--[--><div>foo</div>-foo-<!--]-->` +
+        `<!--[[-->` +
+        `<!--[--><div>foo</div>-foo-<!--]-->` +
+        `<!--]]-->` +
+        `<span></span>` +
+        `</div>`,
     )
 
     data.value = 'bar'
     await nextTick()
-    expect(container.innerHTML).toMatchInlineSnapshot(
-      `"<div><span></span><!--[--><div>bar</div>-bar-<!--]--><!--[[--><!--[--><div>bar</div>-bar-<!--]--><!--]]--><span></span></div>"`,
+    expect(container.innerHTML).toBe(
+      `<div>` +
+        `<span></span>` +
+        `<!--[--><div>bar</div>-bar-<!--]-->` +
+        `<!--[[-->` +
+        `<!--[--><div>bar</div>-bar-<!--]-->` +
+        `<!--]]-->` +
+        `<span></span>` +
+        `</div>`,
     )
   })
 
@@ -561,14 +713,36 @@ describe('Vapor Mode hydration', () => {
         Child: `<template><div>{{ data }}</div>-{{ data }}-</template>`,
       },
     )
-    expect(container.innerHTML).toMatchInlineSnapshot(
-      `"<div><span></span><div><span></span><!--[--><div>foo</div>-foo-<!--]--><!--[[--><!--[--><div>foo</div>-foo-<!--]--><!--]]--><span></span></div><span></span></div>"`,
+    expect(container.innerHTML).toBe(
+      `<div>` +
+        `<span></span>` +
+        `<div>` +
+        `<span></span>` +
+        `<!--[--><div>foo</div>-foo-<!--]-->` +
+        `<!--[[-->` +
+        `<!--[--><div>foo</div>-foo-<!--]-->` +
+        `<!--]]-->` +
+        `<span></span>` +
+        `</div>` +
+        `<span></span>` +
+        `</div>`,
     )
 
     data.value = 'bar'
     await nextTick()
-    expect(container.innerHTML).toMatchInlineSnapshot(
-      `"<div><span></span><div><span></span><!--[--><div>bar</div>-bar-<!--]--><!--[[--><!--[--><div>bar</div>-bar-<!--]--><!--]]--><span></span></div><span></span></div>"`,
+    expect(container.innerHTML).toBe(
+      `<div>` +
+        `<span></span>` +
+        `<div>` +
+        `<span></span>` +
+        `<!--[--><div>bar</div>-bar-<!--]-->` +
+        `<!--[[-->` +
+        `<!--[--><div>bar</div>-bar-<!--]-->` +
+        `<!--]]-->` +
+        `<span></span>` +
+        `</div>` +
+        `<span></span>` +
+        `</div>`,
     )
   })
 
@@ -582,14 +756,28 @@ describe('Vapor Mode hydration', () => {
         Child: `<template><div>{{ data }}</div>-{{ data }}-</template>`,
       },
     )
-    expect(container.innerHTML).toMatchInlineSnapshot(
-      `"<div><span></span><!--[--><!--[--><div>foo</div>-foo-<!--]--><!--[--><div>foo</div>-foo-<!--]--><!--]--><span></span></div>"`,
+    expect(container.innerHTML).toBe(
+      `<div>` +
+        `<span></span>` +
+        `<!--[-->` +
+        `<!--[--><div>foo</div>-foo-<!--]-->` +
+        `<!--[--><div>foo</div>-foo-<!--]-->` +
+        `<!--]-->` +
+        `<span></span>` +
+        `</div>`,
     )
 
     data.value = 'bar'
     await nextTick()
-    expect(container.innerHTML).toMatchInlineSnapshot(
-      `"<div><span></span><!--[--><!--[--><div>bar</div>-bar-<!--]--><!--[--><div>bar</div>-bar-<!--]--><!--]--><span></span></div>"`,
+    expect(container.innerHTML).toBe(
+      `<div>` +
+        `<span></span>` +
+        `<!--[-->` +
+        `<!--[--><div>bar</div>-bar-<!--]-->` +
+        `<!--[--><div>bar</div>-bar-<!--]-->` +
+        `<!--]-->` +
+        `<span></span>` +
+        `</div>`,
     )
   })
 
@@ -609,14 +797,26 @@ describe('Vapor Mode hydration', () => {
         Child: `<template><div>{{ data }}</div>-{{ data }}</template>`,
       },
     )
-    expect(container.innerHTML).toMatchInlineSnapshot(
-      `"<div><span></span><!--[--><div>foo</div>-foo<!--]--><span></span><!--[--><div>foo</div>-foo<!--]--><span></span></div>"`,
+    expect(container.innerHTML).toBe(
+      `<div>` +
+        `<span></span>` +
+        `<!--[--><div>foo</div>-foo<!--]-->` +
+        `<span></span>` +
+        `<!--[--><div>foo</div>-foo<!--]-->` +
+        `<span></span>` +
+        `</div>`,
     )
 
     data.value = 'bar'
     await nextTick()
-    expect(container.innerHTML).toMatchInlineSnapshot(
-      `"<div><span></span><!--[--><div>bar</div>-bar<!--]--><span></span><!--[--><div>bar</div>-bar<!--]--><span></span></div>"`,
+    expect(container.innerHTML).toBe(
+      `<div>` +
+        `<span></span>` +
+        `<!--[--><div>bar</div>-bar<!--]-->` +
+        `<span></span>` +
+        `<!--[--><div>bar</div>-bar<!--]-->` +
+        `<span></span>` +
+        `</div>`,
     )
   })
 
@@ -636,14 +836,26 @@ describe('Vapor Mode hydration', () => {
         Child: `<template><div>{{ data }}</div>-{{ data }}</template>`,
       },
     )
-    expect(container.innerHTML).toMatchInlineSnapshot(
-      `"<div><span></span><!--[--><div>foo</div>-foo<!--]--> <!--[[--> foo <!--]]--> <!--[--><div>foo</div>-foo<!--]--><span></span></div>"`,
+    expect(container.innerHTML).toBe(
+      `<div>` +
+        `<span></span>` +
+        `<!--[--><div>foo</div>-foo<!--]-->` +
+        ` <!--[[--> foo <!--]]--> ` +
+        `<!--[--><div>foo</div>-foo<!--]-->` +
+        `<span></span>` +
+        `</div>`,
     )
 
     data.value = 'bar'
     await nextTick()
-    expect(container.innerHTML).toMatchInlineSnapshot(
-      `"<div><span></span><!--[--><div>bar</div>-bar<!--]--> <!--[[--> bar <!--]]--> <!--[--><div>bar</div>-bar<!--]--><span></span></div>"`,
+    expect(container.innerHTML).toBe(
+      `<div>` +
+        `<span></span>` +
+        `<!--[--><div>bar</div>-bar<!--]-->` +
+        ` <!--[[--> bar <!--]]--> ` +
+        `<!--[--><div>bar</div>-bar<!--]-->` +
+        `<span></span>` +
+        `</div>`,
     )
   })
 
