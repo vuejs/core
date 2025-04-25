@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/prefer-ts-expect-error */
 import type { NativeElements, ReservedProps, VNode } from '@vue/runtime-dom'
 
 /**
@@ -18,7 +17,8 @@ export namespace JSX {
   }
   export interface IntrinsicElements extends NativeElements {
     // allow arbitrary elements
-    // @ts-expect-error suppress ts:2374 = Duplicate string index signature.
+    // @tsslint-ignore
+    // @ts-ignore suppress ts:2374 = Duplicate string index signature.
     [name: string]: any
   }
   export interface IntrinsicAttributes extends ReservedProps {}

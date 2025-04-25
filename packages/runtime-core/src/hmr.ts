@@ -1,4 +1,3 @@
-/* eslint-disable no-restricted-globals */
 import {
   type ClassComponent,
   type ComponentInternalInstance,

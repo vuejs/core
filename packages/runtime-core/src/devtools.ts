@@ -1,4 +1,3 @@
-/* eslint-disable no-restricted-globals */
 import type { App } from './apiCreateApp'
 import { Comment, Fragment, Static, Text } from './vnode'
 import type { ComponentInternalInstance } from './component'
