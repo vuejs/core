@@ -46,16 +46,8 @@ function _next(node: Node): Node {
 }
 
 /*! #__NO_SIDE_EFFECTS__ */
-function __next(node: Node): Node {
-  // treat dynamic node (<!--[[-->...<!--]]-->) as a single node
-  if (isComment(node, '[[')) {
-    node = locateEndAnchor(node, '[[', ']]')!
-  }
-
-  // treat dynamic node (<!--[-->...<!--]-->) as a single node
-  else if (isComment(node, '[')) {
-    node = locateEndAnchor(node)!
-  }
+export function __next(node: Node): Node {
+  node = handleWrappedNode(node)
 
   let n = node.nextSibling!
   while (n && isNonHydrationNode(n)) {
@@ -109,12 +101,12 @@ export function disableHydrationNodeLookup(): void {
 
 /*! #__NO_SIDE_EFFECTS__ */
 export function prev(node: Node): Node | null {
-  // treat dynamic node (<!--[[-->...<!--]]-->) as a single node
+  // process dynamic node (<!--[[-->...<!--]]-->) as a single one
   if (isComment(node, ']]')) {
     node = locateStartAnchor(node, '[[', ']]')!
   }
 
-  // treat dynamic node (<!--[-->...<!--]-->) as a single node
+  // process fragment node (<!--[-->...<!--]-->) as a single one
   else if (isComment(node, ']')) {
     node = locateStartAnchor(node)!
   }
@@ -134,20 +126,45 @@ function isNonHydrationNode(node: Node) {
     isDynamicAnchor(node) ||
     // fragment end anchor (`<!--]-->`)
     isComment(node, ']') ||
-    isDynamicFragmentAnchor(node)
-  )
-}
-
-function isDynamicFragmentAnchor(node: Node) {
-  return __DEV__
-    ? // v-if anchor (`<!--if-->`)
-      isComment(node, 'if') ||
+    // dynamic fragment anchors
+    (__DEV__
+      ? // v-if anchor (`<!--if-->`)
+        isComment(node, 'if') ||
         // v-for anchor (`<!--for-->`)
         isComment(node, 'for') ||
         // v-slot anchor (`<!--slot-->`)
         isComment(node, 'slot') ||
         // dynamic-component anchor (`<!--dynamic-component-->`)
         isComment(node, 'dynamic-component')
-    : // TODO ?
-      isComment(node, '$')
+      : isComment(node, '$'))
+  )
+}
+
+export function nextSiblingAnchor(
+  node: Node,
+  anchorLabel: string,
+): Comment | null {
+  node = handleWrappedNode(node)
+
+  let n = node.nextSibling
+  while (n) {
+    if (isComment(n, anchorLabel)) return n
+    n = n.nextSibling
+  }
+
+  return null
+}
+
+function handleWrappedNode(node: Node): Node {
+  // process dynamic node (<!--[[-->...<!--]]-->) as a single one
+  if (isComment(node, '[[')) {
+    return locateEndAnchor(node, '[[', ']]')!
+  }
+
+  // process fragment (<!--[-->...<!--]-->) as a single one
+  else if (isComment(node, '[')) {
+    return locateEndAnchor(node)!
+  }
+
+  return node
 }

@@ -94,7 +94,7 @@ describe('ssr: slot', () => {
           template: `<one><template v-if="true">hello</template></one>`,
         }),
       ),
-    ).toBe(`<div><!--[--><!--[-->hello<!--]--><!--]--></div>`)
+    ).toBe(`<div><!--[--><!--[-->hello<!--]--><!--$--><!--]--></div>`)
   })
 
   test('fragment slot (template v-if + multiple elements)', async () => {
@@ -106,7 +106,7 @@ describe('ssr: slot', () => {
         }),
       ),
     ).toBe(
-      `<div><!--[--><!--[--><div>one</div><div>two</div><!--]--><!--]--></div>`,
+      `<div><!--[--><!--[--><div>one</div><div>two</div><!--]--><!--$--><!--]--></div>`,
     )
   })
 
@@ -135,7 +135,7 @@ describe('ssr: slot', () => {
           template: `<one><div v-if="true">foo</div></one>`,
         }),
       ),
-    ).toBe(`<div>foo</div>`)
+    ).toBe(`<div>foo</div><!--$-->`)
   })
 
   // #9933
