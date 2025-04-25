@@ -212,17 +212,17 @@ color: red
       compileScoped(`.div { color: red; } .div:where(:hover) { color: blue; }`),
     ).toMatchInlineSnapshot(`
     ".div[data-v-test] { color: red;
-    }
-    .div[data-v-test]:where(:hover) { color: blue;
-    }"`)
+}
+.div[data-v-test]:where(:hover) { color: blue;
+}"`)
 
     expect(
       compileScoped(`.div { color: red; } .div:is(:hover) { color: blue; }`),
     ).toMatchInlineSnapshot(`
     ".div[data-v-test] { color: red;
-    }
-    .div[data-v-test]:is(:hover) { color: blue;
-    }"`)
+}
+.div[data-v-test]:is(:hover) { color: blue;
+}"`)
 
     expect(
       compileScoped(
@@ -230,9 +230,9 @@ color: red
       ),
     ).toMatchInlineSnapshot(`
     ".div[data-v-test] { color: red;
-    }
-    .div[data-v-test]:where(.foo:hover) { color: blue;
-    }"`)
+}
+.div[data-v-test]:where(.foo:hover) { color: blue;
+}"`)
 
     expect(
       compileScoped(
@@ -240,9 +240,9 @@ color: red
       ),
     ).toMatchInlineSnapshot(`
     ".div[data-v-test] { color: red;
-    }
-    .div[data-v-test]:is(.foo:hover) { color: blue;
-    }"`)
+}
+.div[data-v-test]:is(.foo:hover) { color: blue;
+}"`)
   })
 
   test('media query', () => {
