@@ -50,7 +50,7 @@ export function warn(msg: string, ...args: any[]): void {
       instance,
       ErrorCodes.APP_WARN_HANDLER,
       [
-        // @lint-ignore no-restricted-syntax
+        // @tsslint-ignore no-restricted-syntax
         msg + args.map(a => a.toString?.() ?? JSON.stringify(a)).join(''),
         instance && instance.proxy,
         trace

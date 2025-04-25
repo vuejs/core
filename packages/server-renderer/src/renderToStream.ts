@@ -206,7 +206,7 @@ export function pipeToWebWritable(
     },
     destroy(err) {
       // TODO better error handling?
-      // @lint-ignore no-console
+      // @tsslint-ignore no-console
       console.log(err)
       writer.close()
     },

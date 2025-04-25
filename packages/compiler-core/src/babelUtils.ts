@@ -56,7 +56,7 @@ export function walkIdentifiers(
         }
       } else if (
         node.type === 'ObjectProperty' &&
-        // @lint-ignore no-restricted-syntax
+        // @tsslint-ignore no-restricted-syntax
         parent?.type === 'ObjectPattern'
       ) {
         // mark property in destructure pattern
@@ -437,7 +437,7 @@ function isReferenced(node: Node, parent: Node, grandparent?: Node): boolean {
     // no: export { NODE as foo } from "foo";
     case 'ExportSpecifier':
       // @ts-expect-error
-      // @lint-ignore no-restricted-syntax
+      // @tsslint-ignore no-restricted-syntax
       if (grandparent?.source) {
         return false
       }

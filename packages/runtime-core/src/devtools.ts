@@ -63,7 +63,7 @@ export function setDevtoolsHook(hook: DevtoolsHook, target: any): void {
     // some envs mock window but not fully
     window.HTMLElement &&
     // also exclude jsdom
-    // @lint-ignore no-restricted-syntax
+    // @tsslint-ignore no-restricted-syntax
     !window.navigator?.userAgent?.includes('jsdom')
   ) {
     const replay = (target.__VUE_DEVTOOLS_HOOK_REPLAY__ =

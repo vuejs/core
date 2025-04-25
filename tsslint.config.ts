@@ -13,7 +13,7 @@ const banConstEnum = {
 
 export default defineConfig([
   {
-    plugins: [createIgnorePlugin('@lint-ignore', false)],
+    plugins: [createIgnorePlugin('@tsslint-ignore', false)],
     rules: await convertRules({
       'no-debugger': 'error',
       'no-console': ['error', { allow: ['warn', 'error', 'info'] }],
