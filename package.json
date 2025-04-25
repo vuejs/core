@@ -116,6 +116,8 @@
   "pnpm": {
     "onlyBuiltDependencies": [
       "@swc/core",
+      "@tsslint/cli",
+      "@tsslint/eslint",
       "esbuild",
       "puppeteer",
       "simple-git-hooks"
