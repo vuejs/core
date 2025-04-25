@@ -1,4 +1,4 @@
-import { isArray } from '@vue/shared'
+import { isArray, isDynamicFragmentEndAnchor } from '@vue/shared'
 import {
   type VaporComponentInstance,
   isVaporComponent,
@@ -7,8 +7,13 @@ import {
 } from './component'
 import { createComment, createTextNode, nextSiblingAnchor } from './dom/node'
 import { EffectScope, pauseTracking, resetTracking } from '@vue/reactivity'
-import { currentHydrationNode, isComment, isHydrating } from './dom/hydration'
-import { isDynamicFragmentEndAnchor, warn } from '@vue/runtime-dom'
+import {
+  currentHydrationNode,
+  isComment,
+  isHydrating,
+  locateHydrationNode,
+} from './dom/hydration'
+import { warn } from '@vue/runtime-dom'
 
 export type Block =
   | Node
@@ -39,7 +44,8 @@ export class DynamicFragment extends VaporFragment {
   constructor(anchorLabel?: string) {
     super([])
     if (isHydrating) {
-      this.hydrate(anchorLabel)
+      locateHydrationNode(true)
+      this.hydrate(anchorLabel!)
     } else {
       this.anchor =
         __DEV__ && anchorLabel ? createComment(anchorLabel) : createTextNode()
@@ -81,15 +87,15 @@ export class DynamicFragment extends VaporFragment {
     resetTracking()
   }
 
-  hydrate(label?: string): void {
+  hydrate(label: string): void {
     // for v-if="false" the hydrationNode will be a empty comment node
     // use it as anchor.
     // otherwise, use the next sibling comment node as anchor
     if (isComment(currentHydrationNode!, '')) {
       this.anchor = currentHydrationNode
     } else {
-      // find next sibling `<!--$-->` as anchor
-      const anchor = nextSiblingAnchor(currentHydrationNode!, '$')!
+      // find next sibling dynamic fragment end anchor
+      const anchor = nextSiblingAnchor(currentHydrationNode!, label)!
       if (anchor && isDynamicFragmentEndAnchor(anchor)) {
         this.anchor = anchor
       } else if (__DEV__) {
@@ -97,7 +103,6 @@ export class DynamicFragment extends VaporFragment {
         warn(`DynamicFragment anchor not found...`)
       }
     }
-    if (__DEV__ && label && this.anchor) (this.anchor as Comment).data = label
   }
 }
 

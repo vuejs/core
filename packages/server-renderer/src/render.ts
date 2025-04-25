@@ -264,7 +264,6 @@ export function renderVNode(
         renderElementVNode(push, vnode, parentComponent, slotScopeId)
       } else if (shapeFlag & ShapeFlags.COMPONENT) {
         push(renderComponentVNode(vnode, parentComponent, slotScopeId))
-        push(`<!--$-->`) // anchor for vapor hydration
       } else if (shapeFlag & ShapeFlags.TELEPORT) {
         renderTeleportVNode(push, vnode, parentComponent, slotScopeId)
       } else if (shapeFlag & ShapeFlags.SUSPENSE) {

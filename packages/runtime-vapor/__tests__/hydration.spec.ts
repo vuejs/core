@@ -4,6 +4,7 @@ import { compileScript, parse } from '@vue/compiler-sfc'
 import * as runtimeVapor from '../src'
 import * as runtimeDom from '@vue/runtime-dom'
 import * as VueServerRenderer from '@vue/server-renderer'
+import { DYNAMIC_COMPONENT_ANCHOR_LABEL, IF_ANCHOR_LABEL } from '@vue/shared'
 
 const Vue = { ...runtimeDom, ...runtimeVapor }
 
@@ -94,65 +95,66 @@ describe('Vapor Mode hydration', () => {
     document.body.innerHTML = ''
   })
 
-  test('root text', async () => {
-    const { data, container } = await testHydration(`
+  describe('element', () => {
+    test('root text', async () => {
+      const { data, container } = await testHydration(`
       <template>{{ data }}</template>
     `)
-    expect(container.innerHTML).toMatchInlineSnapshot(`"foo"`)
+      expect(container.innerHTML).toMatchInlineSnapshot(`"foo"`)
 
-    data.value = 'bar'
-    await nextTick()
-    expect(container.innerHTML).toMatchInlineSnapshot(`"bar"`)
-  })
+      data.value = 'bar'
+      await nextTick()
+      expect(container.innerHTML).toMatchInlineSnapshot(`"bar"`)
+    })
 
-  test('root comment', async () => {
-    const { container } = await testHydration(`
+    test('root comment', async () => {
+      const { container } = await testHydration(`
       <template><!----></template>
     `)
-    expect(container.innerHTML).toBe('<!---->')
-    expect(`Hydration children mismatch in <div>`).not.toHaveBeenWarned()
-  })
+      expect(container.innerHTML).toBe('<!---->')
+      expect(`Hydration children mismatch in <div>`).not.toHaveBeenWarned()
+    })
 
-  test('root with mixed element and text', async () => {
-    const { container, data } = await testHydration(`
+    test('root with mixed element and text', async () => {
+      const { container, data } = await testHydration(`
       <template> A<span>{{ data }}</span>{{ data }}</template>
     `)
-    expect(container.innerHTML).toMatchInlineSnapshot(
-      `"<!--[--> A<span>foo</span>foo<!--]-->"`,
-    )
+      expect(container.innerHTML).toMatchInlineSnapshot(
+        `"<!--[--> A<span>foo</span>foo<!--]-->"`,
+      )
 
-    data.value = 'bar'
-    await nextTick()
-    expect(container.innerHTML).toMatchInlineSnapshot(
-      `"<!--[--> A<span>bar</span>bar<!--]-->"`,
-    )
-  })
+      data.value = 'bar'
+      await nextTick()
+      expect(container.innerHTML).toMatchInlineSnapshot(
+        `"<!--[--> A<span>bar</span>bar<!--]-->"`,
+      )
+    })
 
-  test('empty element', async () => {
-    const { container } = await testHydration(`
+    test('empty element', async () => {
+      const { container } = await testHydration(`
       <template><div/></template>
     `)
-    expect(container.innerHTML).toBe('<div></div>')
-    expect(`Hydration children mismatch in <div>`).not.toHaveBeenWarned()
-  })
+      expect(container.innerHTML).toBe('<div></div>')
+      expect(`Hydration children mismatch in <div>`).not.toHaveBeenWarned()
+    })
 
-  test('element with binding and text children', async () => {
-    const { container, data } = await testHydration(`
+    test('element with binding and text children', async () => {
+      const { container, data } = await testHydration(`
       <template><div :class="data">{{ data }}</div></template>
     `)
-    expect(container.innerHTML).toMatchInlineSnapshot(
-      `"<div class="foo">foo</div>"`,
-    )
+      expect(container.innerHTML).toMatchInlineSnapshot(
+        `"<div class="foo">foo</div>"`,
+      )
 
-    data.value = 'bar'
-    await nextTick()
-    expect(container.innerHTML).toMatchInlineSnapshot(
-      `"<div class="bar">bar</div>"`,
-    )
-  })
+      data.value = 'bar'
+      await nextTick()
+      expect(container.innerHTML).toMatchInlineSnapshot(
+        `"<div class="bar">bar</div>"`,
+      )
+    })
 
-  test('element with elements children', async () => {
-    const { container } = await testHydration(`
+    test('element with elements children', async () => {
+      const { container } = await testHydration(`
       <template>
         <div>
           <span>{{ data }}</span>
@@ -160,111 +162,113 @@ describe('Vapor Mode hydration', () => {
         </div>
       </template>
     `)
-    expect(container.innerHTML).toMatchInlineSnapshot(
-      `"<div><span>foo</span><span class="foo"></span></div>"`,
-    )
+      expect(container.innerHTML).toMatchInlineSnapshot(
+        `"<div><span>foo</span><span class="foo"></span></div>"`,
+      )
 
-    // event handler
-    triggerEvent('click', container.querySelector('.foo')!)
+      // event handler
+      triggerEvent('click', container.querySelector('.foo')!)
 
-    await nextTick()
-    expect(container.innerHTML).toMatchInlineSnapshot(
-      `"<div><span>bar</span><span class="bar"></span></div>"`,
-    )
+      await nextTick()
+      expect(container.innerHTML).toMatchInlineSnapshot(
+        `"<div><span>bar</span><span class="bar"></span></div>"`,
+      )
+    })
   })
 
-  test('basic component', async () => {
-    const { container, data } = await testHydration(
-      `
+  describe('component', () => {
+    test('basic component', async () => {
+      const { container, data } = await testHydration(
+        `
       <template><div><span></span><components.Child/></div></template>
       `,
-      { Child: `<template>{{ data }}</template>` },
-    )
-    expect(container.innerHTML).toMatchInlineSnapshot(
-      `"<div><span></span>foo</div>"`,
-    )
+        { Child: `<template>{{ data }}</template>` },
+      )
+      expect(container.innerHTML).toMatchInlineSnapshot(
+        `"<div><span></span>foo</div>"`,
+      )
 
-    data.value = 'bar'
-    await nextTick()
-    expect(container.innerHTML).toMatchInlineSnapshot(
-      `"<div><span></span>bar</div>"`,
-    )
-  })
+      data.value = 'bar'
+      await nextTick()
+      expect(container.innerHTML).toMatchInlineSnapshot(
+        `"<div><span></span>bar</div>"`,
+      )
+    })
 
-  test('fragment component', async () => {
-    const { container, data } = await testHydration(
-      `
+    test('fragment component', async () => {
+      const { container, data } = await testHydration(
+        `
       <template><div><span></span><components.Child/></div></template>
       `,
-      { Child: `<template><div>{{ data }}</div>-{{ data }}-</template>` },
-    )
-    expect(container.innerHTML).toMatchInlineSnapshot(
-      `"<div><span></span><!--[--><div>foo</div>-foo-<!--]--></div>"`,
-    )
+        { Child: `<template><div>{{ data }}</div>-{{ data }}-</template>` },
+      )
+      expect(container.innerHTML).toMatchInlineSnapshot(
+        `"<div><span></span><!--[--><div>foo</div>-foo-<!--]--></div>"`,
+      )
 
-    data.value = 'bar'
-    await nextTick()
-    expect(container.innerHTML).toMatchInlineSnapshot(
-      `"<div><span></span><!--[--><div>bar</div>-bar-<!--]--></div>"`,
-    )
-  })
+      data.value = 'bar'
+      await nextTick()
+      expect(container.innerHTML).toMatchInlineSnapshot(
+        `"<div><span></span><!--[--><div>bar</div>-bar-<!--]--></div>"`,
+      )
+    })
 
-  test('fragment component with prepend', async () => {
-    const { container, data } = await testHydration(
-      `
+    test('fragment component with prepend', async () => {
+      const { container, data } = await testHydration(
+        `
       <template><div><components.Child/><span></span></div></template>
       `,
-      { Child: `<template><div>{{ data }}</div>-{{ data }}-</template>` },
-    )
-    expect(container.innerHTML).toMatchInlineSnapshot(
-      `"<div><!--[--><div>foo</div>-foo-<!--]--><span></span></div>"`,
-    )
+        { Child: `<template><div>{{ data }}</div>-{{ data }}-</template>` },
+      )
+      expect(container.innerHTML).toMatchInlineSnapshot(
+        `"<div><!--[--><div>foo</div>-foo-<!--]--><span></span></div>"`,
+      )
 
-    data.value = 'bar'
-    await nextTick()
-    expect(container.innerHTML).toMatchInlineSnapshot(
-      `"<div><!--[--><div>bar</div>-bar-<!--]--><span></span></div>"`,
-    )
-  })
+      data.value = 'bar'
+      await nextTick()
+      expect(container.innerHTML).toMatchInlineSnapshot(
+        `"<div><!--[--><div>bar</div>-bar-<!--]--><span></span></div>"`,
+      )
+    })
 
-  test('nested fragment components', async () => {
-    const { container, data } = await testHydration(
-      `
+    test('nested fragment components', async () => {
+      const { container, data } = await testHydration(
+        `
       <template><div><components.Parent/><span></span></div></template>
       `,
-      {
-        Parent: `<template><div/><components.Child/><div/></template>`,
-        Child: `<template><div>{{ data }}</div>-{{ data }}-</template>`,
-      },
-    )
-    expect(container.innerHTML).toBe(
-      `<div>` +
-        `<!--[-->` +
-        `<div></div>` +
-        `<!--[--><div>foo</div>-foo-<!--]-->` +
-        `<div></div>` +
-        `<!--]-->` +
-        `<span></span>` +
-        `</div>`,
-    )
+        {
+          Parent: `<template><div/><components.Child/><div/></template>`,
+          Child: `<template><div>{{ data }}</div>-{{ data }}-</template>`,
+        },
+      )
+      expect(container.innerHTML).toBe(
+        `<div>` +
+          `<!--[-->` +
+          `<div></div>` +
+          `<!--[--><div>foo</div>-foo-<!--]-->` +
+          `<div></div>` +
+          `<!--]-->` +
+          `<span></span>` +
+          `</div>`,
+      )
 
-    data.value = 'bar'
-    await nextTick()
-    expect(container.innerHTML).toBe(
-      `<div>` +
-        `<!--[-->` +
-        `<div></div>` +
-        `<!--[--><div>bar</div>-bar-<!--]-->` +
-        `<div></div>` +
-        `<!--]-->` +
-        `<span></span>` +
-        `</div>`,
-    )
-  })
+      data.value = 'bar'
+      await nextTick()
+      expect(container.innerHTML).toBe(
+        `<div>` +
+          `<!--[-->` +
+          `<div></div>` +
+          `<!--[--><div>bar</div>-bar-<!--]-->` +
+          `<div></div>` +
+          `<!--]-->` +
+          `<span></span>` +
+          `</div>`,
+      )
+    })
 
-  test('component with anchor insertion', async () => {
-    const { container, data } = await testHydration(
-      `<template>
+    test('component with anchor insertion', async () => {
+      const { container, data } = await testHydration(
+        `<template>
         <div>
           <span/>
           <components.Child/>
@@ -272,82 +276,82 @@ describe('Vapor Mode hydration', () => {
         </div>
       </template>
       `,
-      {
-        Child: `<template>{{ data }}</template>`,
-      },
-    )
-    expect(container.innerHTML).toMatchInlineSnapshot(
-      `"<div><span></span>foo<span></span></div>"`,
-    )
+        {
+          Child: `<template>{{ data }}</template>`,
+        },
+      )
+      expect(container.innerHTML).toMatchInlineSnapshot(
+        `"<div><span></span>foo<span></span></div>"`,
+      )
 
-    data.value = 'bar'
-    await nextTick()
-    expect(container.innerHTML).toMatchInlineSnapshot(
-      `"<div><span></span>bar<span></span></div>"`,
-    )
-  })
+      data.value = 'bar'
+      await nextTick()
+      expect(container.innerHTML).toMatchInlineSnapshot(
+        `"<div><span></span>bar<span></span></div>"`,
+      )
+    })
 
-  test('nested components with anchor insertion', async () => {
-    const { container, data } = await testHydration(
-      `
+    test('nested components with anchor insertion', async () => {
+      const { container, data } = await testHydration(
+        `
       <template><components.Parent/></template>
       `,
-      {
-        Parent: `<template><div><span/><components.Child/><span/></div></template>`,
-        Child: `<template><div>{{ data }}</div></template>`,
-      },
-    )
-    expect(container.innerHTML).toBe(
-      `<div><span></span><div>foo</div><span></span></div>`,
-    )
+        {
+          Parent: `<template><div><span/><components.Child/><span/></div></template>`,
+          Child: `<template><div>{{ data }}</div></template>`,
+        },
+      )
+      expect(container.innerHTML).toBe(
+        `<div><span></span><div>foo</div><span></span></div>`,
+      )
 
-    data.value = 'bar'
-    await nextTick()
-    expect(container.innerHTML).toBe(
-      `<div><span></span><div>bar</div><span></span></div>`,
-    )
-  })
+      data.value = 'bar'
+      await nextTick()
+      expect(container.innerHTML).toBe(
+        `<div><span></span><div>bar</div><span></span></div>`,
+      )
+    })
 
-  test('nested components with multi level anchor insertion', async () => {
-    const { container, data } = await testHydration(
-      `
+    test('nested components with multi level anchor insertion', async () => {
+      const { container, data } = await testHydration(
+        `
       <template><div><span></span><components.Parent/><span></span></div></template>
       `,
-      {
-        Parent: `<template><div><span/><components.Child/><span/></div></template>`,
-        Child: `<template><div>{{ data }}</div></template>`,
-      },
-    )
-    expect(container.innerHTML).toBe(
-      `<div>` +
-        `<span></span>` +
+        {
+          Parent: `<template><div><span/><components.Child/><span/></div></template>`,
+          Child: `<template><div>{{ data }}</div></template>`,
+        },
+      )
+      expect(container.innerHTML).toBe(
         `<div>` +
-        `<span></span>` +
-        `<div>foo</div>` +
-        `<span></span>` +
-        `</div>` +
-        `<span></span>` +
-        `</div>`,
-    )
+          `<span></span>` +
+          `<div>` +
+          `<span></span>` +
+          `<div>foo</div>` +
+          `<span></span>` +
+          `</div>` +
+          `<span></span>` +
+          `</div>`,
+      )
 
-    data.value = 'bar'
-    await nextTick()
-    expect(container.innerHTML).toBe(
-      `<div>` +
-        `<span></span>` +
+      data.value = 'bar'
+      await nextTick()
+      expect(container.innerHTML).toBe(
         `<div>` +
-        `<span></span>` +
-        `<div>bar</div>` +
-        `<span></span>` +
-        `</div>` +
-        `<span></span>` +
-        `</div>`,
-    )
-  })
+          `<span></span>` +
+          `<div>` +
+          `<span></span>` +
+          `<div>bar</div>` +
+          `<span></span>` +
+          `</div>` +
+          `<span></span>` +
+          `</div>`,
+      )
+    })
 
-  test('consecutive components with anchor insertion', async () => {
-    const { container, data } = await testHydration(
-      `<template>
+    test('consecutive components with anchor insertion', async () => {
+      const { container, data } = await testHydration(
+        `<template>
         <div>
           <span/>
           <components.Child/>
@@ -356,104 +360,104 @@ describe('Vapor Mode hydration', () => {
         </div>
       </template>
       `,
-      {
-        Child: `<template>{{ data }}</template>`,
-      },
-    )
-    expect(container.innerHTML).toBe(
-      `<div>` +
-        `<span></span>` +
-        `foo` +
-        `<!--[[-->foo<!--]]-->` +
-        `<span></span>` +
-        `</div>`,
-    )
+        {
+          Child: `<template>{{ data }}</template>`,
+        },
+      )
+      expect(container.innerHTML).toBe(
+        `<div>` +
+          `<span></span>` +
+          `foo` +
+          `<!--[[-->foo<!--]]-->` +
+          `<span></span>` +
+          `</div>`,
+      )
 
-    data.value = 'bar'
-    await nextTick()
-    expect(container.innerHTML).toBe(
-      `<div>` +
-        `<span></span>` +
-        `bar` +
-        `<!--[[-->bar<!--]]-->` +
-        `<span></span>` +
-        `</div>`,
-    )
-  })
+      data.value = 'bar'
+      await nextTick()
+      expect(container.innerHTML).toBe(
+        `<div>` +
+          `<span></span>` +
+          `bar` +
+          `<!--[[-->bar<!--]]-->` +
+          `<span></span>` +
+          `</div>`,
+      )
+    })
 
-  test('nested consecutive components with anchor insertion', async () => {
-    const { container, data } = await testHydration(
-      `
+    test('nested consecutive components with anchor insertion', async () => {
+      const { container, data } = await testHydration(
+        `
       <template><components.Parent/></template>
       `,
-      {
-        Parent: `<template><div><span/><components.Child/><components.Child/><span/></div></template>`,
-        Child: `<template><div>{{ data }}</div></template>`,
-      },
-    )
-    expect(container.innerHTML).toBe(
-      `<div>` +
-        `<span></span>` +
-        `<div>foo</div>` +
-        `<!--[[--><div>foo</div><!--]]-->` +
-        `<span></span>` +
-        `</div>`,
-    )
+        {
+          Parent: `<template><div><span/><components.Child/><components.Child/><span/></div></template>`,
+          Child: `<template><div>{{ data }}</div></template>`,
+        },
+      )
+      expect(container.innerHTML).toBe(
+        `<div>` +
+          `<span></span>` +
+          `<div>foo</div>` +
+          `<!--[[--><div>foo</div><!--]]-->` +
+          `<span></span>` +
+          `</div>`,
+      )
 
-    data.value = 'bar'
-    await nextTick()
-    expect(container.innerHTML).toBe(
-      `<div>` +
-        `<span></span>` +
-        `<div>bar</div>` +
-        `<!--[[--><div>bar</div><!--]]-->` +
-        `<span></span>` +
-        `</div>`,
-    )
-  })
+      data.value = 'bar'
+      await nextTick()
+      expect(container.innerHTML).toBe(
+        `<div>` +
+          `<span></span>` +
+          `<div>bar</div>` +
+          `<!--[[--><div>bar</div><!--]]-->` +
+          `<span></span>` +
+          `</div>`,
+      )
+    })
 
-  test('nested consecutive components with multi level anchor insertion', async () => {
-    const { container, data } = await testHydration(
-      `
+    test('nested consecutive components with multi level anchor insertion', async () => {
+      const { container, data } = await testHydration(
+        `
       <template><div><span></span><components.Parent/><span></span></div></template>
       `,
-      {
-        Parent: `<template><div><span/><components.Child/><components.Child/><span/></div></template>`,
-        Child: `<template><div>{{ data }}</div></template>`,
-      },
-    )
-    expect(container.innerHTML).toBe(
-      `<div>` +
-        `<span></span>` +
+        {
+          Parent: `<template><div><span/><components.Child/><components.Child/><span/></div></template>`,
+          Child: `<template><div>{{ data }}</div></template>`,
+        },
+      )
+      expect(container.innerHTML).toBe(
         `<div>` +
-        `<span></span>` +
-        `<div>foo</div>` +
-        `<!--[[--><div>foo</div><!--]]-->` +
-        `<span></span>` +
-        `</div>` +
-        `<span></span>` +
-        `</div>`,
-    )
+          `<span></span>` +
+          `<div>` +
+          `<span></span>` +
+          `<div>foo</div>` +
+          `<!--[[--><div>foo</div><!--]]-->` +
+          `<span></span>` +
+          `</div>` +
+          `<span></span>` +
+          `</div>`,
+      )
 
-    data.value = 'bar'
-    await nextTick()
-    expect(container.innerHTML).toBe(
-      `<div>` +
-        `<span></span>` +
+      data.value = 'bar'
+      await nextTick()
+      expect(container.innerHTML).toBe(
         `<div>` +
-        `<span></span>` +
-        `<div>bar</div>` +
-        `<!--[[--><div>bar</div><!--]]-->` +
-        `<span></span>` +
-        `</div>` +
-        `<span></span>` +
-        `</div>`,
-    )
-  })
+          `<span></span>` +
+          `<div>` +
+          `<span></span>` +
+          `<div>bar</div>` +
+          `<!--[[--><div>bar</div><!--]]-->` +
+          `<span></span>` +
+          `</div>` +
+          `<span></span>` +
+          `</div>`,
+      )
+    })
 
-  test('mixed component and element with anchor insertion', async () => {
-    const { container, data } = await testHydration(
-      `<template>
+    test('mixed component and element with anchor insertion', async () => {
+      const { container, data } = await testHydration(
+        `<template>
         <div>
           <span/>
           <components.Child/>
@@ -463,36 +467,36 @@ describe('Vapor Mode hydration', () => {
         </div>
       </template>
       `,
-      {
-        Child: `<template>{{ data }}</template>`,
-      },
-    )
-    expect(container.innerHTML).toBe(
-      `<div>` +
-        `<span></span>` +
-        `foo` +
-        `<span></span>` +
-        `foo` +
-        `<span></span>` +
-        `</div>`,
-    )
+        {
+          Child: `<template>{{ data }}</template>`,
+        },
+      )
+      expect(container.innerHTML).toBe(
+        `<div>` +
+          `<span></span>` +
+          `foo` +
+          `<span></span>` +
+          `foo` +
+          `<span></span>` +
+          `</div>`,
+      )
 
-    data.value = 'bar'
-    await nextTick()
-    expect(container.innerHTML).toBe(
-      `<div>` +
-        `<span></span>` +
-        `bar` +
-        `<span></span>` +
-        `bar` +
-        `<span></span>` +
-        `</div>`,
-    )
-  })
+      data.value = 'bar'
+      await nextTick()
+      expect(container.innerHTML).toBe(
+        `<div>` +
+          `<span></span>` +
+          `bar` +
+          `<span></span>` +
+          `bar` +
+          `<span></span>` +
+          `</div>`,
+      )
+    })
 
-  test('mixed component and text with anchor insertion', async () => {
-    const { container, data } = await testHydration(
-      `<template>
+    test('mixed component and text with anchor insertion', async () => {
+      const { container, data } = await testHydration(
+        `<template>
         <div>
           <span/>
           <components.Child/>
@@ -502,36 +506,36 @@ describe('Vapor Mode hydration', () => {
         </div>
       </template>
       `,
-      {
-        Child: `<template>{{ data }}</template>`,
-      },
-    )
-    expect(container.innerHTML).toBe(
-      `<div>` +
-        `<span></span>` +
-        `foo` +
-        `<!--[[--> foo <!--]]-->` +
-        `foo` +
-        `<span></span>` +
-        `</div>`,
-    )
+        {
+          Child: `<template>{{ data }}</template>`,
+        },
+      )
+      expect(container.innerHTML).toBe(
+        `<div>` +
+          `<span></span>` +
+          `foo` +
+          `<!--[[--> foo <!--]]-->` +
+          `foo` +
+          `<span></span>` +
+          `</div>`,
+      )
 
-    data.value = 'bar'
-    await nextTick()
-    expect(container.innerHTML).toBe(
-      `<div>` +
-        `<span></span>` +
-        `bar` +
-        `<!--[[--> bar <!--]]-->` +
-        `bar` +
-        `<span></span>` +
-        `</div>`,
-    )
-  })
+      data.value = 'bar'
+      await nextTick()
+      expect(container.innerHTML).toBe(
+        `<div>` +
+          `<span></span>` +
+          `bar` +
+          `<!--[[--> bar <!--]]-->` +
+          `bar` +
+          `<span></span>` +
+          `</div>`,
+      )
+    })
 
-  test('fragment component with anchor insertion', async () => {
-    const { container, data } = await testHydration(
-      `<template>
+    test('fragment component with anchor insertion', async () => {
+      const { container, data } = await testHydration(
+        `<template>
         <div>
           <span/>
           <components.Child/>
@@ -539,98 +543,98 @@ describe('Vapor Mode hydration', () => {
         </div>
       </template>
       `,
-      {
-        Child: `<template><div>{{ data }}</div>-{{ data }}</template>`,
-      },
-    )
-    expect(container.innerHTML).toBe(
-      `<div>` +
-        `<span></span>` +
-        `<!--[--><div>foo</div>-foo<!--]-->` +
-        `<span></span>` +
-        `</div>`,
-    )
+        {
+          Child: `<template><div>{{ data }}</div>-{{ data }}</template>`,
+        },
+      )
+      expect(container.innerHTML).toBe(
+        `<div>` +
+          `<span></span>` +
+          `<!--[--><div>foo</div>-foo<!--]-->` +
+          `<span></span>` +
+          `</div>`,
+      )
 
-    data.value = 'bar'
-    await nextTick()
-    expect(container.innerHTML).toBe(
-      `<div>` +
-        `<span></span>` +
-        `<!--[--><div>bar</div>-bar<!--]-->` +
-        `<span></span>` +
-        `</div>`,
-    )
-  })
+      data.value = 'bar'
+      await nextTick()
+      expect(container.innerHTML).toBe(
+        `<div>` +
+          `<span></span>` +
+          `<!--[--><div>bar</div>-bar<!--]-->` +
+          `<span></span>` +
+          `</div>`,
+      )
+    })
 
-  test('nested fragment component with anchor insertion', async () => {
-    const { container, data } = await testHydration(
-      `
+    test('nested fragment component with anchor insertion', async () => {
+      const { container, data } = await testHydration(
+        `
       <template><components.Parent/></template>
       `,
-      {
-        Parent: `<template><div><span/><components.Child/><span/></div></template>`,
-        Child: `<template><div>{{ data }}</div>-{{ data }}-</template>`,
-      },
-    )
-    expect(container.innerHTML).toBe(
-      `<div>` +
-        `<span></span>` +
-        `<!--[--><div>foo</div>-foo-<!--]-->` +
-        `<span></span>` +
-        `</div>`,
-    )
+        {
+          Parent: `<template><div><span/><components.Child/><span/></div></template>`,
+          Child: `<template><div>{{ data }}</div>-{{ data }}-</template>`,
+        },
+      )
+      expect(container.innerHTML).toBe(
+        `<div>` +
+          `<span></span>` +
+          `<!--[--><div>foo</div>-foo-<!--]-->` +
+          `<span></span>` +
+          `</div>`,
+      )
 
-    data.value = 'bar'
-    await nextTick()
-    expect(container.innerHTML).toBe(
-      `<div>` +
-        `<span></span>` +
-        `<!--[--><div>bar</div>-bar-<!--]-->` +
-        `<span></span>` +
-        `</div>`,
-    )
-  })
+      data.value = 'bar'
+      await nextTick()
+      expect(container.innerHTML).toBe(
+        `<div>` +
+          `<span></span>` +
+          `<!--[--><div>bar</div>-bar-<!--]-->` +
+          `<span></span>` +
+          `</div>`,
+      )
+    })
 
-  test('nested fragment component with multi level anchor insertion', async () => {
-    const { container, data } = await testHydration(
-      `
+    test('nested fragment component with multi level anchor insertion', async () => {
+      const { container, data } = await testHydration(
+        `
       <template><div><span/><components.Parent/><span/></div></template>
       `,
-      {
-        Parent: `<template><div><span/><components.Child/><span/></div></template>`,
-        Child: `<template><div>{{ data }}</div>-{{ data }}-</template>`,
-      },
-    )
-    expect(container.innerHTML).toBe(
-      `<div>` +
-        `<span></span>` +
+        {
+          Parent: `<template><div><span/><components.Child/><span/></div></template>`,
+          Child: `<template><div>{{ data }}</div>-{{ data }}-</template>`,
+        },
+      )
+      expect(container.innerHTML).toBe(
         `<div>` +
-        `<span></span>` +
-        `<!--[--><div>foo</div>-foo-<!--]-->` +
-        `<span></span>` +
-        `</div>` +
-        `<span></span>` +
-        `</div>`,
-    )
+          `<span></span>` +
+          `<div>` +
+          `<span></span>` +
+          `<!--[--><div>foo</div>-foo-<!--]-->` +
+          `<span></span>` +
+          `</div>` +
+          `<span></span>` +
+          `</div>`,
+      )
 
-    data.value = 'bar'
-    await nextTick()
-    expect(container.innerHTML).toBe(
-      `<div>` +
-        `<span></span>` +
+      data.value = 'bar'
+      await nextTick()
+      expect(container.innerHTML).toBe(
         `<div>` +
-        `<span></span>` +
-        `<!--[--><div>bar</div>-bar-<!--]-->` +
-        `<span></span>` +
-        `</div>` +
-        `<span></span>` +
-        `</div>`,
-    )
-  })
+          `<span></span>` +
+          `<div>` +
+          `<span></span>` +
+          `<!--[--><div>bar</div>-bar-<!--]-->` +
+          `<span></span>` +
+          `</div>` +
+          `<span></span>` +
+          `</div>`,
+      )
+    })
 
-  test('consecutive fragment components with anchor insertion', async () => {
-    const { container, data } = await testHydration(
-      `<template>
+    test('consecutive fragment components with anchor insertion', async () => {
+      const { container, data } = await testHydration(
+        `<template>
         <div>
           <span/>
           <components.Child/>
@@ -639,151 +643,151 @@ describe('Vapor Mode hydration', () => {
         </div>
       </template>
       `,
-      {
-        Child: `<template><div>{{ data }}</div>-{{ data }}</template>`,
-      },
-    )
-    expect(container.innerHTML).toBe(
-      `<div>` +
-        `<span></span>` +
-        `<!--[--><div>foo</div>-foo<!--]-->` +
-        `<!--[[-->` +
-        `<!--[--><div>foo</div>-foo<!--]-->` +
-        `<!--]]-->` +
-        `<span></span>` +
-        `</div>`,
-    )
+        {
+          Child: `<template><div>{{ data }}</div>-{{ data }}</template>`,
+        },
+      )
+      expect(container.innerHTML).toBe(
+        `<div>` +
+          `<span></span>` +
+          `<!--[--><div>foo</div>-foo<!--]-->` +
+          `<!--[[-->` +
+          `<!--[--><div>foo</div>-foo<!--]-->` +
+          `<!--]]-->` +
+          `<span></span>` +
+          `</div>`,
+      )
 
-    data.value = 'bar'
-    await nextTick()
-    expect(container.innerHTML).toBe(
-      `<div>` +
-        `<span></span>` +
-        `<!--[--><div>bar</div>-bar<!--]-->` +
-        `<!--[[-->` +
-        `<!--[--><div>bar</div>-bar<!--]-->` +
-        `<!--]]-->` +
-        `<span></span>` +
-        `</div>`,
-    )
-  })
+      data.value = 'bar'
+      await nextTick()
+      expect(container.innerHTML).toBe(
+        `<div>` +
+          `<span></span>` +
+          `<!--[--><div>bar</div>-bar<!--]-->` +
+          `<!--[[-->` +
+          `<!--[--><div>bar</div>-bar<!--]-->` +
+          `<!--]]-->` +
+          `<span></span>` +
+          `</div>`,
+      )
+    })
 
-  test('nested consecutive fragment components with anchor insertion', async () => {
-    const { container, data } = await testHydration(
-      `
+    test('nested consecutive fragment components with anchor insertion', async () => {
+      const { container, data } = await testHydration(
+        `
       <template><components.Parent/></template>
       `,
-      {
-        Parent: `<template><div><span/><components.Child/><components.Child/><span/></div></template>`,
-        Child: `<template><div>{{ data }}</div>-{{ data }}-</template>`,
-      },
-    )
-    expect(container.innerHTML).toBe(
-      `<div>` +
-        `<span></span>` +
-        `<!--[--><div>foo</div>-foo-<!--]-->` +
-        `<!--[[-->` +
-        `<!--[--><div>foo</div>-foo-<!--]-->` +
-        `<!--]]-->` +
-        `<span></span>` +
-        `</div>`,
-    )
+        {
+          Parent: `<template><div><span/><components.Child/><components.Child/><span/></div></template>`,
+          Child: `<template><div>{{ data }}</div>-{{ data }}-</template>`,
+        },
+      )
+      expect(container.innerHTML).toBe(
+        `<div>` +
+          `<span></span>` +
+          `<!--[--><div>foo</div>-foo-<!--]-->` +
+          `<!--[[-->` +
+          `<!--[--><div>foo</div>-foo-<!--]-->` +
+          `<!--]]-->` +
+          `<span></span>` +
+          `</div>`,
+      )
 
-    data.value = 'bar'
-    await nextTick()
-    expect(container.innerHTML).toBe(
-      `<div>` +
-        `<span></span>` +
-        `<!--[--><div>bar</div>-bar-<!--]-->` +
-        `<!--[[-->` +
-        `<!--[--><div>bar</div>-bar-<!--]-->` +
-        `<!--]]-->` +
-        `<span></span>` +
-        `</div>`,
-    )
-  })
+      data.value = 'bar'
+      await nextTick()
+      expect(container.innerHTML).toBe(
+        `<div>` +
+          `<span></span>` +
+          `<!--[--><div>bar</div>-bar-<!--]-->` +
+          `<!--[[-->` +
+          `<!--[--><div>bar</div>-bar-<!--]-->` +
+          `<!--]]-->` +
+          `<span></span>` +
+          `</div>`,
+      )
+    })
 
-  test('nested consecutive fragment components with multi level anchor insertion', async () => {
-    const { container, data } = await testHydration(
-      `
+    test('nested consecutive fragment components with multi level anchor insertion', async () => {
+      const { container, data } = await testHydration(
+        `
       <template><div><span></span><components.Parent/><span></span></div></template>
       `,
-      {
-        Parent: `<template><div><span/><components.Child/><components.Child/><span/></div></template>`,
-        Child: `<template><div>{{ data }}</div>-{{ data }}-</template>`,
-      },
-    )
-    expect(container.innerHTML).toBe(
-      `<div>` +
-        `<span></span>` +
+        {
+          Parent: `<template><div><span/><components.Child/><components.Child/><span/></div></template>`,
+          Child: `<template><div>{{ data }}</div>-{{ data }}-</template>`,
+        },
+      )
+      expect(container.innerHTML).toBe(
         `<div>` +
-        `<span></span>` +
-        `<!--[--><div>foo</div>-foo-<!--]-->` +
-        `<!--[[-->` +
-        `<!--[--><div>foo</div>-foo-<!--]-->` +
-        `<!--]]-->` +
-        `<span></span>` +
-        `</div>` +
-        `<span></span>` +
-        `</div>`,
-    )
+          `<span></span>` +
+          `<div>` +
+          `<span></span>` +
+          `<!--[--><div>foo</div>-foo-<!--]-->` +
+          `<!--[[-->` +
+          `<!--[--><div>foo</div>-foo-<!--]-->` +
+          `<!--]]-->` +
+          `<span></span>` +
+          `</div>` +
+          `<span></span>` +
+          `</div>`,
+      )
 
-    data.value = 'bar'
-    await nextTick()
-    expect(container.innerHTML).toBe(
-      `<div>` +
-        `<span></span>` +
+      data.value = 'bar'
+      await nextTick()
+      expect(container.innerHTML).toBe(
         `<div>` +
-        `<span></span>` +
-        `<!--[--><div>bar</div>-bar-<!--]-->` +
-        `<!--[[-->` +
-        `<!--[--><div>bar</div>-bar-<!--]-->` +
-        `<!--]]-->` +
-        `<span></span>` +
-        `</div>` +
-        `<span></span>` +
-        `</div>`,
-    )
-  })
+          `<span></span>` +
+          `<div>` +
+          `<span></span>` +
+          `<!--[--><div>bar</div>-bar-<!--]-->` +
+          `<!--[[-->` +
+          `<!--[--><div>bar</div>-bar-<!--]-->` +
+          `<!--]]-->` +
+          `<span></span>` +
+          `</div>` +
+          `<span></span>` +
+          `</div>`,
+      )
+    })
 
-  test('nested consecutive fragment components with root level anchor insertion', async () => {
-    const { container, data } = await testHydration(
-      `
+    test('nested consecutive fragment components with root level anchor insertion', async () => {
+      const { container, data } = await testHydration(
+        `
       <template><div><span></span><components.Parent/><span></span></div></template>
       `,
-      {
-        Parent: `<template><components.Child/><components.Child/></template>`,
-        Child: `<template><div>{{ data }}</div>-{{ data }}-</template>`,
-      },
-    )
-    expect(container.innerHTML).toBe(
-      `<div>` +
-        `<span></span>` +
-        `<!--[-->` +
-        `<!--[--><div>foo</div>-foo-<!--]-->` +
-        `<!--[--><div>foo</div>-foo-<!--]-->` +
-        `<!--]-->` +
-        `<span></span>` +
-        `</div>`,
-    )
+        {
+          Parent: `<template><components.Child/><components.Child/></template>`,
+          Child: `<template><div>{{ data }}</div>-{{ data }}-</template>`,
+        },
+      )
+      expect(container.innerHTML).toBe(
+        `<div>` +
+          `<span></span>` +
+          `<!--[-->` +
+          `<!--[--><div>foo</div>-foo-<!--]-->` +
+          `<!--[--><div>foo</div>-foo-<!--]-->` +
+          `<!--]-->` +
+          `<span></span>` +
+          `</div>`,
+      )
 
-    data.value = 'bar'
-    await nextTick()
-    expect(container.innerHTML).toBe(
-      `<div>` +
-        `<span></span>` +
-        `<!--[-->` +
-        `<!--[--><div>bar</div>-bar-<!--]-->` +
-        `<!--[--><div>bar</div>-bar-<!--]-->` +
-        `<!--]-->` +
-        `<span></span>` +
-        `</div>`,
-    )
-  })
+      data.value = 'bar'
+      await nextTick()
+      expect(container.innerHTML).toBe(
+        `<div>` +
+          `<span></span>` +
+          `<!--[-->` +
+          `<!--[--><div>bar</div>-bar-<!--]-->` +
+          `<!--[--><div>bar</div>-bar-<!--]-->` +
+          `<!--]-->` +
+          `<span></span>` +
+          `</div>`,
+      )
+    })
 
-  test('mixed fragment component and element with anchor insertion', async () => {
-    const { container, data } = await testHydration(
-      `<template>
+    test('mixed fragment component and element with anchor insertion', async () => {
+      const { container, data } = await testHydration(
+        `<template>
         <div>
           <span/>
           <components.Child/>
@@ -793,36 +797,36 @@ describe('Vapor Mode hydration', () => {
         </div>
       </template>
       `,
-      {
-        Child: `<template><div>{{ data }}</div>-{{ data }}</template>`,
-      },
-    )
-    expect(container.innerHTML).toBe(
-      `<div>` +
-        `<span></span>` +
-        `<!--[--><div>foo</div>-foo<!--]-->` +
-        `<span></span>` +
-        `<!--[--><div>foo</div>-foo<!--]-->` +
-        `<span></span>` +
-        `</div>`,
-    )
+        {
+          Child: `<template><div>{{ data }}</div>-{{ data }}</template>`,
+        },
+      )
+      expect(container.innerHTML).toBe(
+        `<div>` +
+          `<span></span>` +
+          `<!--[--><div>foo</div>-foo<!--]-->` +
+          `<span></span>` +
+          `<!--[--><div>foo</div>-foo<!--]-->` +
+          `<span></span>` +
+          `</div>`,
+      )
 
-    data.value = 'bar'
-    await nextTick()
-    expect(container.innerHTML).toBe(
-      `<div>` +
-        `<span></span>` +
-        `<!--[--><div>bar</div>-bar<!--]-->` +
-        `<span></span>` +
-        `<!--[--><div>bar</div>-bar<!--]-->` +
-        `<span></span>` +
-        `</div>`,
-    )
-  })
+      data.value = 'bar'
+      await nextTick()
+      expect(container.innerHTML).toBe(
+        `<div>` +
+          `<span></span>` +
+          `<!--[--><div>bar</div>-bar<!--]-->` +
+          `<span></span>` +
+          `<!--[--><div>bar</div>-bar<!--]-->` +
+          `<span></span>` +
+          `</div>`,
+      )
+    })
 
-  test('mixed fragment component and text with anchor insertion', async () => {
-    const { container, data } = await testHydration(
-      `<template>
+    test('mixed fragment component and text with anchor insertion', async () => {
+      const { container, data } = await testHydration(
+        `<template>
         <div>
           <span/>
           <components.Child/>
@@ -832,31 +836,32 @@ describe('Vapor Mode hydration', () => {
         </div>
       </template>
       `,
-      {
-        Child: `<template><div>{{ data }}</div>-{{ data }}</template>`,
-      },
-    )
-    expect(container.innerHTML).toBe(
-      `<div>` +
-        `<span></span>` +
-        `<!--[--><div>foo</div>-foo<!--]-->` +
-        ` <!--[[--> foo <!--]]--> ` +
-        `<!--[--><div>foo</div>-foo<!--]-->` +
-        `<span></span>` +
-        `</div>`,
-    )
+        {
+          Child: `<template><div>{{ data }}</div>-{{ data }}</template>`,
+        },
+      )
+      expect(container.innerHTML).toBe(
+        `<div>` +
+          `<span></span>` +
+          `<!--[--><div>foo</div>-foo<!--]-->` +
+          ` <!--[[--> foo <!--]]--> ` +
+          `<!--[--><div>foo</div>-foo<!--]-->` +
+          `<span></span>` +
+          `</div>`,
+      )
 
-    data.value = 'bar'
-    await nextTick()
-    expect(container.innerHTML).toBe(
-      `<div>` +
-        `<span></span>` +
-        `<!--[--><div>bar</div>-bar<!--]-->` +
-        ` <!--[[--> bar <!--]]--> ` +
-        `<!--[--><div>bar</div>-bar<!--]-->` +
-        `<span></span>` +
-        `</div>`,
-    )
+      data.value = 'bar'
+      await nextTick()
+      expect(container.innerHTML).toBe(
+        `<div>` +
+          `<span></span>` +
+          `<!--[--><div>bar</div>-bar<!--]-->` +
+          ` <!--[[--> bar <!--]]--> ` +
+          `<!--[--><div>bar</div>-bar<!--]-->` +
+          `<span></span>` +
+          `</div>`,
+      )
+    })
   })
 
   describe('if', () => {
@@ -869,7 +874,7 @@ describe('Vapor Mode hydration', () => {
     })
 
     function runTests(isProd: boolean = false) {
-      const anchorLabel = isProd ? '$' : 'if'
+      const anchorLabel = IF_ANCHOR_LABEL
 
       test('basic toggle - true -> false', async () => {
         runWithEnv(isProd, async () => {
@@ -893,9 +898,6 @@ describe('Vapor Mode hydration', () => {
 
       test('basic toggle - false -> true', async () => {
         runWithEnv(isProd, async () => {
-          // v-if="false" is rendered as <!----> in the server-rendered HTML
-          // it reused as anchor, so the anchor label is empty in PROD
-          let anchorLabel = isProd ? '' : 'if'
           if (isProd) __DEV__ = false
           const data = ref(false)
           const { container } = await testHydration(
@@ -905,13 +907,13 @@ describe('Vapor Mode hydration', () => {
             undefined,
             data,
           )
-          expect(container.innerHTML).toBe(`<!--${anchorLabel}-->`)
+          // v-if="false" is rendered as <!----> in the server-rendered HTML
+          // it reused as anchor, so the anchor label is empty
+          expect(container.innerHTML).toBe(`<!---->`)
 
           data.value = true
           await nextTick()
-          expect(container.innerHTML).toBe(
-            `<div>foo</div><!--${anchorLabel}-->`,
-          )
+          expect(container.innerHTML).toBe(`<div>foo</div><!---->`)
         })
       })
 
@@ -1160,10 +1162,9 @@ describe('Vapor Mode hydration', () => {
         })
       })
 
-      // problem is there is a continuous `<!--$-->`
-      test.todo('on dynamic component with anchor insertion', async () => {
+      test('on dynamic component with anchor insertion', async () => {
         runWithEnv(isProd, async () => {
-          const dynamicComponentAnchorLabel = isProd ? '$' : 'dynamic-component'
+          const dynamicComponentAnchorLabel = DYNAMIC_COMPONENT_ANCHOR_LABEL
           const data = ref(true)
           const { container } = await testHydration(
             `<template>
@@ -1207,7 +1208,7 @@ describe('Vapor Mode hydration', () => {
     })
 
     function runTests(isProd: boolean = false) {
-      const anchorLabel = isProd ? '$' : 'dynamic-component'
+      const anchorLabel = DYNAMIC_COMPONENT_ANCHOR_LABEL
 
       test('basic dynamic component', async () => {
         runWithEnv(isProd, async () => {

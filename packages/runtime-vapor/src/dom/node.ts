@@ -1,10 +1,15 @@
-import { isDynamicAnchor } from '@vue/runtime-dom'
 import {
   isComment,
   isEmptyText,
   locateEndAnchor,
   locateStartAnchor,
 } from './hydration'
+import {
+  DYNAMIC_END_ANCHOR_LABEL,
+  DYNAMIC_START_ANCHOR_LABEL,
+  isDynamicAnchor,
+  isDynamicFragmentEndAnchor,
+} from '@vue/shared'
 
 /*! #__NO_SIDE_EFFECTS__ */
 export function createTextNode(value = ''): Text {
@@ -102,8 +107,12 @@ export function disableHydrationNodeLookup(): void {
 /*! #__NO_SIDE_EFFECTS__ */
 export function prev(node: Node): Node | null {
   // process dynamic node (<!--[[-->...<!--]]-->) as a single one
-  if (isComment(node, ']]')) {
-    node = locateStartAnchor(node, '[[', ']]')!
+  if (isComment(node, DYNAMIC_END_ANCHOR_LABEL)) {
+    node = locateStartAnchor(
+      node,
+      DYNAMIC_START_ANCHOR_LABEL,
+      DYNAMIC_END_ANCHOR_LABEL,
+    )!
   }
 
   // process fragment node (<!--[-->...<!--]-->) as a single one
@@ -122,21 +131,12 @@ function isNonHydrationNode(node: Node) {
   return (
     // empty text nodes, no need to hydrate
     isEmptyText(node) ||
-    // dynamic anchors (<!--[[-->, <!--]]-->)
+    // dynamic node anchors (<!--[[-->, <!--]]-->)
     isDynamicAnchor(node) ||
     // fragment end anchor (`<!--]-->`)
     isComment(node, ']') ||
-    // dynamic fragment anchors
-    (__DEV__
-      ? // v-if anchor (`<!--if-->`)
-        isComment(node, 'if') ||
-        // v-for anchor (`<!--for-->`)
-        isComment(node, 'for') ||
-        // v-slot anchor (`<!--slot-->`)
-        isComment(node, 'slot') ||
-        // dynamic-component anchor (`<!--dynamic-component-->`)
-        isComment(node, 'dynamic-component')
-      : isComment(node, '$'))
+    // dynamic fragment end anchors
+    isDynamicFragmentEndAnchor(node)
   )
 }
 
@@ -157,8 +157,12 @@ export function nextSiblingAnchor(
 
 function handleWrappedNode(node: Node): Node {
   // process dynamic node (<!--[[-->...<!--]]-->) as a single one
-  if (isComment(node, '[[')) {
-    return locateEndAnchor(node, '[[', ']]')!
+  if (isComment(node, DYNAMIC_START_ANCHOR_LABEL)) {
+    return locateEndAnchor(
+      node,
+      DYNAMIC_START_ANCHOR_LABEL,
+      DYNAMIC_END_ANCHOR_LABEL,
+    )!
   }
 
   // process fragment (<!--[-->...<!--]-->) as a single one

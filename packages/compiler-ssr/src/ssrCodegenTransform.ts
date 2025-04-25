@@ -21,7 +21,12 @@ import {
   isText,
   processExpression,
 } from '@vue/compiler-dom'
-import { escapeHtml, isString } from '@vue/shared'
+import {
+  DYNAMIC_END_ANCHOR_LABEL,
+  DYNAMIC_START_ANCHOR_LABEL,
+  escapeHtml,
+  isString,
+} from '@vue/shared'
 import { SSR_INTERPOLATE, ssrHelpers } from './runtimeHelpers'
 import { ssrProcessIf } from './transforms/ssrVIf'
 import { ssrProcessFor } from './transforms/ssrVFor'
@@ -161,7 +166,7 @@ export function processChildren(
   asDynamic = false,
 ): void {
   if (asDynamic) {
-    context.pushStringPart(`<!--[[-->`)
+    context.pushStringPart(`<!--${DYNAMIC_START_ANCHOR_LABEL}-->`)
   }
   if (asFragment) {
     context.pushStringPart(`<!--[-->`)
@@ -259,7 +264,7 @@ export function processChildren(
     context.pushStringPart(`<!--]-->`)
   }
   if (asDynamic) {
-    context.pushStringPart(`<!--]]-->`)
+    context.pushStringPart(`<!--${DYNAMIC_END_ANCHOR_LABEL}-->`)
   }
 }
 

@@ -598,14 +598,14 @@ describe('SSR hydration', () => {
     const ctx: SSRContext = {}
     container.innerHTML = await renderToString(h(App), ctx)
     expect(container.innerHTML).toBe(
-      '<div><!--teleport start--><!--teleport end--><!--$--></div>',
+      '<div><!--teleport start--><!--teleport end--><!--if--></div>',
     )
     teleportContainer.innerHTML = ctx.teleports!['#target']
 
     // hydrate
     createSSRApp(App).mount(container)
     expect(container.innerHTML).toBe(
-      '<div><!--teleport start--><!--teleport end--><!--$--></div>',
+      '<div><!--teleport start--><!--teleport end--><!--if--></div>',
     )
     expect(teleportContainer.innerHTML).toBe(
       '<!--teleport start anchor--><span>Teleported Comp1</span><!--teleport anchor-->',
@@ -614,7 +614,7 @@ describe('SSR hydration', () => {
 
     toggle.value = false
     await nextTick()
-    expect(container.innerHTML).toBe('<div><div>Comp2</div><!--$--></div>')
+    expect(container.innerHTML).toBe('<div><div>Comp2</div><!--if--></div>')
     expect(teleportContainer.innerHTML).toBe('')
   })
 
@@ -657,21 +657,21 @@ describe('SSR hydration', () => {
     // server render
     container.innerHTML = await renderToString(h(App))
     expect(container.innerHTML).toBe(
-      '<div><!--teleport start--><!--teleport end--><!--$--></div>',
+      '<div><!--teleport start--><!--teleport end--><!--if--></div>',
     )
     expect(teleportContainer.innerHTML).toBe('')
 
     // hydrate
     createSSRApp(App).mount(container)
     expect(container.innerHTML).toBe(
-      '<div><!--teleport start--><!--teleport end--><!--$--></div>',
+      '<div><!--teleport start--><!--teleport end--><!--if--></div>',
     )
     expect(teleportContainer.innerHTML).toBe('<span>Teleported Comp1</span>')
     expect(`Hydration children mismatch`).toHaveBeenWarned()
 
     toggle.value = false
     await nextTick()
-    expect(container.innerHTML).toBe('<div><div>Comp2</div><!--$--></div>')
+    expect(container.innerHTML).toBe('<div><div>Comp2</div><!--if--></div>')
     expect(teleportContainer.innerHTML).toBe('')
   })
 

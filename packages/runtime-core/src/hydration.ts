@@ -25,6 +25,8 @@ import {
   getEscapedCssVarName,
   includeBooleanAttr,
   isBooleanAttr,
+  isDynamicAnchor,
+  isDynamicFragmentEndAnchor,
   isKnownHtmlAttr,
   isKnownSvgAttr,
   isOn,
@@ -84,14 +86,6 @@ const getContainerType = (
   return undefined
 }
 
-export function isDynamicAnchor(node: Node): node is Comment {
-  return isComment(node) && (node.data === '[[' || node.data === ']]')
-}
-
-export function isDynamicFragmentEndAnchor(node: Node): node is Comment {
-  return isComment(node) && node.data === '$'
-}
-
 export const isComment = (node: Node): node is Comment =>
   node.nodeType === DOMNodeTypes.COMMENT
 
@@ -130,8 +124,8 @@ export function createHydrationFunctions(
   function nextSibling(node: Node) {
     let n = next(node)
     // skip if:
-    // - dynamic anchors (`<!--[-->`, `<!--]-->`)
-    // - dynamic fragment end anchors (`<!--$-->`)
+    // - dynamic anchors (`<!--[[-->`, `<!--][-->`)
+    // - dynamic fragment end anchors (e.g. `<!--if-->`, `<!--for-->`)
     if (n && (isDynamicAnchor(n) || isDynamicFragmentEndAnchor(n))) {
       n = next(n)
     }

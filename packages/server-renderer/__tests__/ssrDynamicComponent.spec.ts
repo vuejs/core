@@ -14,7 +14,9 @@ describe('ssr: dynamic component', () => {
           template: `<component :is="'one'"><span>slot</span></component>`,
         }),
       ),
-    ).toBe(`<div><!--[--><span>slot</span><!--]--></div>`)
+    ).toBe(
+      `<div><!--[--><span>slot</span><!--]--></div><!--dynamic-component-->`,
+    )
   })
 
   test('resolved to component with v-show', async () => {
@@ -30,7 +32,7 @@ describe('ssr: dynamic component', () => {
         }),
       ),
     ).toBe(
-      `<div><!--[--><div style=\"display:none;\"><!--[-->hi<!--]--></div><!--]--></div>`,
+      `<div><!--[--><div style="display:none;"><!--[-->hi<!--]--></div><!--dynamic-component--><!--]--></div><!--dynamic-component-->`,
     )
   })
 
@@ -41,7 +43,7 @@ describe('ssr: dynamic component', () => {
           template: `<component :is="'p'"><span>slot</span></component>`,
         }),
       ),
-    ).toBe(`<p><span>slot</span></p>`)
+    ).toBe(`<p><span>slot</span></p><!--dynamic-component-->`)
   })
 
   test('resolve to component vnode', async () => {
@@ -60,7 +62,9 @@ describe('ssr: dynamic component', () => {
           template: `<component :is="vnode"><span>slot</span></component>`,
         }),
       ),
-    ).toBe(`<div>test<!--[--><span>slot</span><!--]--></div>`)
+    ).toBe(
+      `<div>test<!--[--><span>slot</span><!--]--></div><!--dynamic-component-->`,
+    )
   })
 
   test('resolve to element vnode', async () => {
@@ -75,6 +79,6 @@ describe('ssr: dynamic component', () => {
           template: `<component :is="vnode"><span>slot</span></component>`,
         }),
       ),
-    ).toBe(`<div id="test"><span>slot</span></div>`)
+    ).toBe(`<div id="test"><span>slot</span></div><!--dynamic-component-->`)
   })
 })

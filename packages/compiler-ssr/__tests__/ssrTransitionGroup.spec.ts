@@ -54,7 +54,7 @@ describe('transition-group', () => {
         })
         if (false) {
           _push(\`<div></div>\`)
-          _push(\`<!--$-->\`)
+          _push(\`<!--if-->\`)
         }
         _push(\`</ul>\`)
       }"
@@ -124,7 +124,7 @@ describe('transition-group', () => {
         })
         if (_ctx.ok) {
           _push(\`<div>ok</div>\`)
-          _push(\`<!--$-->\`)
+          _push(\`<!--if-->\`)
         }
         _push(\`<!--]-->\`)
       }"

@@ -55,7 +55,14 @@ import {
   ssrProcessTransitionGroup,
   ssrTransformTransitionGroup,
 } from './ssrTransformTransitionGroup'
-import { extend, isArray, isObject, isPlainObject, isSymbol } from '@vue/shared'
+import {
+  DYNAMIC_COMPONENT_ANCHOR_LABEL,
+  extend,
+  isArray,
+  isObject,
+  isPlainObject,
+  isSymbol,
+} from '@vue/shared'
 import { buildSSRProps } from './ssrTransformElement'
 import {
   ssrProcessTransition,
@@ -264,6 +271,8 @@ export function ssrProcessComponent(
       // dynamic component (`resolveDynamicComponent` call)
       // the codegen node is a `renderVNode` call
       context.pushStatement(node.ssrCodegenNode)
+      // anchor for dynamic component for vapor hydration
+      context.pushStringPart(`<!--${DYNAMIC_COMPONENT_ANCHOR_LABEL}-->`)
     }
   }
 }

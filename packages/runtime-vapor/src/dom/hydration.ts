@@ -1,4 +1,4 @@
-import { isDynamicFragmentEndAnchor, warn } from '@vue/runtime-dom'
+import { warn } from '@vue/runtime-dom'
 import {
   insertionAnchor,
   insertionParent,
@@ -12,6 +12,7 @@ import {
   next,
   prev,
 } from './node'
+import { isDynamicFragmentEndAnchor } from '@vue/shared'
 
 export let isHydrating = false
 export let currentHydrationNode: Node | null = null

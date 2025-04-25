@@ -9,7 +9,8 @@ import {
   insertionParent,
   resetInsertionState,
 } from './insertionState'
-import { isHydrating, locateHydrationNode } from './dom/hydration'
+import { isHydrating } from './dom/hydration'
+import { DYNAMIC_COMPONENT_ANCHOR_LABEL } from '@vue/shared'
 
 export function createDynamicComponent(
   getter: () => any,
@@ -19,15 +20,9 @@ export function createDynamicComponent(
 ): VaporFragment {
   const _insertionParent = insertionParent
   const _insertionAnchor = insertionAnchor
-  if (isHydrating) {
-    locateHydrationNode(true)
-  } else {
-    resetInsertionState()
-  }
+  if (!isHydrating) resetInsertionState()
 
-  const frag = __DEV__
-    ? new DynamicFragment('dynamic-component')
-    : new DynamicFragment()
+  const frag = new DynamicFragment(DYNAMIC_COMPONENT_ANCHOR_LABEL)
   renderEffect(() => {
     const value = getter()
     frag.update(

@@ -94,7 +94,7 @@ describe('ssr: slot', () => {
           template: `<one><template v-if="true">hello</template></one>`,
         }),
       ),
-    ).toBe(`<div><!--[--><!--[-->hello<!--]--><!--$--><!--]--></div>`)
+    ).toBe(`<div><!--[--><!--[-->hello<!--]--><!--if--><!--]--></div>`)
   })
 
   test('fragment slot (template v-if + multiple elements)', async () => {
@@ -106,7 +106,7 @@ describe('ssr: slot', () => {
         }),
       ),
     ).toBe(
-      `<div><!--[--><!--[--><div>one</div><div>two</div><!--]--><!--$--><!--]--></div>`,
+      `<div><!--[--><!--[--><div>one</div><div>two</div><!--]--><!--if--><!--]--></div>`,
     )
   })
 
@@ -135,7 +135,7 @@ describe('ssr: slot', () => {
           template: `<one><div v-if="true">foo</div></one>`,
         }),
       ),
-    ).toBe(`<div>foo</div><!--$-->`)
+    ).toBe(`<div>foo</div><!--if-->`)
   })
 
   // #9933
@@ -170,7 +170,9 @@ describe('ssr: slot', () => {
           template: `<ButtonComp><Wrap><div v-if="false">hello</div></Wrap></ButtonComp>`,
         }),
       ),
-    ).toBe(`<button><!--[--><div><!--[--><!--]--></div><!--]--></button>`)
+    ).toBe(
+      `<button><!--[--><div><!--[--><!--]--></div><!--]--></button><!--dynamic-component-->`,
+    )
 
     expect(
       await renderToString(
@@ -187,7 +189,7 @@ describe('ssr: slot', () => {
         }),
       ),
     ).toBe(
-      `<button><!--[--><div><!--[--><div>hello</div><!--]--></div><!--]--></button>`,
+      `<button><!--[--><div><!--[--><div>hello</div><!--]--></div><!--]--></button><!--dynamic-component-->`,
     )
 
     expect(
@@ -201,6 +203,6 @@ describe('ssr: slot', () => {
           template: `<ButtonComp><template v-if="false">hello</template></ButtonComp>`,
         }),
       ),
-    ).toBe(`<button><!--[--><!--]--></button>`)
+    ).toBe(`<button><!--[--><!--]--></button><!--dynamic-component-->`)
   })
 })
