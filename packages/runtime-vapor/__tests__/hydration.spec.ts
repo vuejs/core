@@ -1159,6 +1159,154 @@ describe('Vapor Mode hydration', () => {
           )
         })
       })
+
+      // problem is there is a continuous `<!--$-->`
+      test.todo('on dynamic component with anchor insertion', async () => {
+        runWithEnv(isProd, async () => {
+          const dynamicComponentAnchorLabel = isProd ? '$' : 'dynamic-component'
+          const data = ref(true)
+          const { container } = await testHydration(
+            `<template>
+              <div>
+                <span/>
+                <component :is="components.Child" v-if="data"/>
+                <span/>
+              </div>
+            </template>`,
+            { Child: `<template>foo</template>` },
+            data,
+          )
+          expect(container.innerHTML).toBe(
+            `<div>` +
+              `<span></span>` +
+              `foo<!--${dynamicComponentAnchorLabel}--><!--${anchorLabel}-->` +
+              `<span></span>` +
+              `</div>`,
+          )
+
+          data.value = false
+          await nextTick()
+          expect(container.innerHTML).toBe(
+            `<div>` +
+              `<span></span>` +
+              `<!--${anchorLabel}-->` +
+              `<span></span>` +
+              `</div>`,
+          )
+        })
+      })
+    }
+  })
+
+  describe('dynamic component', () => {
+    describe('DEV mode', () => {
+      runTests()
+    })
+    describe('PROD mode', () => {
+      runTests(true)
+    })
+
+    function runTests(isProd: boolean = false) {
+      const anchorLabel = isProd ? '$' : 'dynamic-component'
+
+      test('basic dynamic component', async () => {
+        runWithEnv(isProd, async () => {
+          const { container, data } = await testHydration(
+            `<template>
+              <component :is="components[data]"/>
+            </template>`,
+            {
+              foo: `<template><div>foo</div></template>`,
+              bar: `<template><div>bar</div></template>`,
+            },
+            ref('foo'),
+          )
+          expect(container.innerHTML).toBe(
+            `<div>foo</div><!--${anchorLabel}-->`,
+          )
+
+          data.value = 'bar'
+          await nextTick()
+          expect(container.innerHTML).toBe(
+            `<div>bar</div><!--${anchorLabel}-->`,
+          )
+        })
+      })
+
+      test('dynamic component with anchor insertion', async () => {
+        runWithEnv(isProd, async () => {
+          const { container, data } = await testHydration(
+            `<template>
+            <div>
+              <span/>
+              <component :is="components[data]"/>
+              <span/>
+            </div>
+          </template>`,
+            {
+              foo: `<template><div>foo</div></template>`,
+              bar: `<template><div>bar</div></template>`,
+            },
+            ref('foo'),
+          )
+          expect(container.innerHTML).toBe(
+            `<div>` +
+              `<span></span>` +
+              `<div>foo</div><!--${anchorLabel}-->` +
+              `<span></span>` +
+              `</div>`,
+          )
+
+          data.value = 'bar'
+          await nextTick()
+          expect(container.innerHTML).toBe(
+            `<div>` +
+              `<span></span>` +
+              `<div>bar</div><!--${anchorLabel}-->` +
+              `<span></span>` +
+              `</div>`,
+          )
+        })
+      })
+
+      test('consecutive dynamic components with anchor insertion', async () => {
+        runWithEnv(isProd, async () => {
+          const { container, data } = await testHydration(
+            `<template>
+              <div>
+                <span/>
+                <component :is="components[data]"/>
+                <component :is="components[data]"/>
+                <span/>
+              </div>
+            </template>`,
+            {
+              foo: `<template><div>foo</div></template>`,
+              bar: `<template><div>bar</div></template>`,
+            },
+            ref('foo'),
+          )
+          expect(container.innerHTML).toBe(
+            `<div>` +
+              `<span></span>` +
+              `<div>foo</div><!--${anchorLabel}-->` +
+              `<!--[[--><div>foo</div><!--${anchorLabel}--><!--]]-->` +
+              `<span></span>` +
+              `</div>`,
+          )
+
+          data.value = 'bar'
+          await nextTick()
+          expect(container.innerHTML).toBe(
+            `<div>` +
+              `<span></span>` +
+              `<div>bar</div><!--${anchorLabel}-->` +
+              `<!--[[--><div>bar</div><!--${anchorLabel}--><!--]]-->` +
+              `<span></span>` +
+              `</div>`,
+          )
+        })
+      })
     }
   })
 

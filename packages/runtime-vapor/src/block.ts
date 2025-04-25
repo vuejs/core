@@ -97,7 +97,7 @@ export class DynamicFragment extends VaporFragment {
         warn(`DynamicFragment anchor not found...`)
       }
     }
-    if (__DEV__ && label) (this.anchor as Comment).data = label
+    if (__DEV__ && label && this.anchor) (this.anchor as Comment).data = label
   }
 }
 
