@@ -98,7 +98,57 @@ describe('Vapor Mode hydration', () => {
       expect(container.innerHTML).toMatchInlineSnapshot(`"bar"`)
     })
 
-    test.todo('consecutive text nodes', () => {})
+    test('consecutive text nodes', async () => {
+      const { data, container } = await testHydration(`
+      <template>{{ data }}{{ data }}</template>
+    `)
+      expect(container.innerHTML).toMatchInlineSnapshot(`"foofoo"`)
+
+      data.value = 'bar'
+      await nextTick()
+      expect(container.innerHTML).toMatchInlineSnapshot(`"barbar"`)
+    })
+
+    test('consecutive text nodes with anchor insertion', async () => {
+      const { data, container } = await testHydration(`
+      <template><span/>{{ data }}{{ data }}<span/></template>
+    `)
+      expect(container.innerHTML).toMatchInlineSnapshot(
+        `"<!--[--><span></span>foofoo<span></span><!--]-->"`,
+      )
+
+      data.value = 'bar'
+      await nextTick()
+      expect(container.innerHTML).toMatchInlineSnapshot(
+        `"<!--[--><span></span>barbar<span></span><!--]-->"`,
+      )
+    })
+
+    test('mixed text nodes', async () => {
+      const { data, container } = await testHydration(`
+      <template>{{ data }}A{{ data }}B{{ data }}</template>
+    `)
+      expect(container.innerHTML).toMatchInlineSnapshot(`"fooAfooBfoo"`)
+
+      data.value = 'bar'
+      await nextTick()
+      expect(container.innerHTML).toMatchInlineSnapshot(`"barAbarBbar"`)
+    })
+
+    test('mixed text nodes with anchor insertion', async () => {
+      const { data, container } = await testHydration(`
+      <template><span/>{{ data }}A{{ data }}B{{ data }}<span/></template>
+    `)
+      expect(container.innerHTML).toMatchInlineSnapshot(
+        `"<!--[--><span></span>fooAfooBfoo<span></span><!--]-->"`,
+      )
+
+      data.value = 'bar'
+      await nextTick()
+      expect(container.innerHTML).toMatchInlineSnapshot(
+        `"<!--[--><span></span>barAbarBbar<span></span><!--]-->"`,
+      )
+    })
   })
 
   describe('element', () => {
