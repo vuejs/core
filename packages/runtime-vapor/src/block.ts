@@ -1,11 +1,15 @@
-import { isArray, isDynamicFragmentEndAnchor } from '@vue/shared'
+import { isArray, isVaporFragmentEndAnchor } from '@vue/shared'
 import {
   type VaporComponentInstance,
   isVaporComponent,
   mountComponent,
   unmountComponent,
 } from './component'
-import { createComment, createTextNode, nextSiblingAnchor } from './dom/node'
+import {
+  createComment,
+  createTextNode,
+  nextVaporFragmentAnchor,
+} from './dom/node'
 import { EffectScope, pauseTracking, resetTracking } from '@vue/reactivity'
 import {
   currentHydrationNode,
@@ -95,8 +99,8 @@ export class DynamicFragment extends VaporFragment {
       this.anchor = currentHydrationNode
     } else {
       // find next sibling dynamic fragment end anchor
-      const anchor = nextSiblingAnchor(currentHydrationNode!, label)!
-      if (anchor && isDynamicFragmentEndAnchor(anchor)) {
+      const anchor = nextVaporFragmentAnchor(currentHydrationNode!, label)!
+      if (anchor && isVaporFragmentEndAnchor(anchor)) {
         this.anchor = anchor
       } else if (__DEV__) {
         // TODO warning

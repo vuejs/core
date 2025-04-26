@@ -11,7 +11,7 @@ import {
   enableHydrationNodeLookup,
   next,
 } from './node'
-import { isDynamicFragmentEndAnchor } from '@vue/shared'
+import { isVaporFragmentEndAnchor } from '@vue/shared'
 
 export let isHydrating = false
 export let currentHydrationNode: Node | null = null
@@ -83,7 +83,7 @@ function adoptTemplateImpl(node: Node, template: string): Node | null {
   return node
 }
 
-function locateHydrationNodeImpl(isFragment?: boolean) {
+function locateHydrationNodeImpl(hasFragmentAnchor?: boolean) {
   let node: Node | null
   // prepend / firstChild
   if (insertionAnchor === 0) {
@@ -94,10 +94,9 @@ function locateHydrationNodeImpl(isFragment?: boolean) {
   } else {
     node = insertionParent ? insertionParent.lastChild : currentHydrationNode
 
-    // if the last child is a comment, it is the anchor for the fragment
-    // so it need to find the previous node
-    if (isFragment && node && isDynamicFragmentEndAnchor(node)) {
-      let previous = node.previousSibling //prev(node)
+    // if the last child is a vapor fragment end anchor, find the previous one
+    if (hasFragmentAnchor && node && isVaporFragmentEndAnchor(node)) {
+      let previous = node.previousSibling
       if (previous) node = previous
     }
 
@@ -163,28 +162,6 @@ export function locateEndAnchor(
         }
       }
     }
-  }
-  return null
-}
-
-export function locateStartAnchor(
-  node: Node | null,
-  open = '[',
-  close = ']',
-): Node | null {
-  let match = 0
-  while (node) {
-    if (node.nodeType === 8) {
-      if ((node as Comment).data === close) match++
-      if ((node as Comment).data === open) {
-        if (match === 0) {
-          return node
-        } else {
-          match--
-        }
-      }
-    }
-    node = node.previousSibling
   }
   return null
 }

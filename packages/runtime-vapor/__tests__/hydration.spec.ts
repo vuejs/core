@@ -79,15 +79,6 @@ const triggerEvent = (type: string, el: Element) => {
   el.dispatchEvent(event)
 }
 
-async function runWithEnv(isProd: boolean, fn: () => Promise<void>) {
-  if (isProd) __DEV__ = false
-  try {
-    await fn()
-  } finally {
-    if (isProd) __DEV__ = true
-  }
-}
-
 describe('Vapor Mode hydration', () => {
   delegateEvents('click')
 
@@ -95,7 +86,7 @@ describe('Vapor Mode hydration', () => {
     document.body.innerHTML = ''
   })
 
-  describe('element', () => {
+  describe('text', () => {
     test('root text', async () => {
       const { data, container } = await testHydration(`
       <template>{{ data }}</template>
@@ -107,6 +98,10 @@ describe('Vapor Mode hydration', () => {
       expect(container.innerHTML).toMatchInlineSnapshot(`"bar"`)
     })
 
+    test.todo('consecutive text nodes', () => {})
+  })
+
+  describe('element', () => {
     test('root comment', async () => {
       const { container } = await testHydration(`
       <template><!----></template>
@@ -635,13 +630,13 @@ describe('Vapor Mode hydration', () => {
     test('consecutive fragment components with anchor insertion', async () => {
       const { container, data } = await testHydration(
         `<template>
-        <div>
-          <span/>
-          <components.Child/>
-          <components.Child/>
-          <span/>
-        </div>
-      </template>
+          <div>
+            <span/>
+            <components.Child/>
+            <components.Child/>
+            <span/>
+          </div>
+        </template>
       `,
         {
           Child: `<template><div>{{ data }}</div>-{{ data }}</template>`,
@@ -864,518 +859,532 @@ describe('Vapor Mode hydration', () => {
     })
   })
 
-  describe('if', () => {
-    describe('DEV mode', () => {
-      runTests()
+  describe('dynamic component', () => {
+    const anchorLabel = DYNAMIC_COMPONENT_ANCHOR_LABEL
+
+    test('basic dynamic component', async () => {
+      const { container, data } = await testHydration(
+        `<template>
+          <component :is="components[data]"/>
+        </template>`,
+        {
+          foo: `<template><div>foo</div></template>`,
+          bar: `<template><div>bar</div></template>`,
+        },
+        ref('foo'),
+      )
+      expect(container.innerHTML).toBe(`<div>foo</div><!--${anchorLabel}-->`)
+
+      data.value = 'bar'
+      await nextTick()
+      expect(container.innerHTML).toBe(`<div>bar</div><!--${anchorLabel}-->`)
     })
 
-    describe('PROD mode', () => {
-      runTests(true)
+    test('dynamic component with anchor insertion', async () => {
+      const { container, data } = await testHydration(
+        `<template>
+          <div>
+            <span/>
+            <component :is="components[data]"/>
+            <span/>
+          </div>
+        </template>`,
+        {
+          foo: `<template><div>foo</div></template>`,
+          bar: `<template><div>bar</div></template>`,
+        },
+        ref('foo'),
+      )
+      expect(container.innerHTML).toBe(
+        `<div>` +
+          `<span></span>` +
+          `<div>foo</div><!--${anchorLabel}-->` +
+          `<span></span>` +
+          `</div>`,
+      )
+
+      data.value = 'bar'
+      await nextTick()
+      expect(container.innerHTML).toBe(
+        `<div>` +
+          `<span></span>` +
+          `<div>bar</div><!--${anchorLabel}-->` +
+          `<span></span>` +
+          `</div>`,
+      )
     })
 
-    function runTests(isProd: boolean = false) {
-      const anchorLabel = IF_ANCHOR_LABEL
+    test('consecutive dynamic components with anchor insertion', async () => {
+      const { container, data } = await testHydration(
+        `<template>
+          <div>
+            <span/>
+            <component :is="components[data]"/>
+            <component :is="components[data]"/>
+            <span/>
+          </div>
+        </template>`,
+        {
+          foo: `<template><div>foo</div></template>`,
+          bar: `<template><div>bar</div></template>`,
+        },
+        ref('foo'),
+      )
+      expect(container.innerHTML).toBe(
+        `<div>` +
+          `<span></span>` +
+          `<div>foo</div><!--${anchorLabel}-->` +
+          `<!--[[--><div>foo</div><!--${anchorLabel}--><!--]]-->` +
+          `<span></span>` +
+          `</div>`,
+      )
 
-      test('basic toggle - true -> false', async () => {
-        runWithEnv(isProd, async () => {
-          const data = ref(true)
-          const { container } = await testHydration(
-            `<template>
-              <div v-if="data">foo</div>
-            </template>`,
-            undefined,
-            data,
-          )
-          expect(container.innerHTML).toBe(
-            `<div>foo</div><!--${anchorLabel}-->`,
-          )
-
-          data.value = false
-          await nextTick()
-          expect(container.innerHTML).toBe(`<!--${anchorLabel}-->`)
-        })
-      })
-
-      test('basic toggle - false -> true', async () => {
-        runWithEnv(isProd, async () => {
-          if (isProd) __DEV__ = false
-          const data = ref(false)
-          const { container } = await testHydration(
-            `<template>
-              <div v-if="data">foo</div>
-            </template>`,
-            undefined,
-            data,
-          )
-          // v-if="false" is rendered as <!----> in the server-rendered HTML
-          // it reused as anchor, so the anchor label is empty
-          expect(container.innerHTML).toBe(`<!---->`)
-
-          data.value = true
-          await nextTick()
-          expect(container.innerHTML).toBe(`<div>foo</div><!---->`)
-        })
-      })
-
-      test('v-if/else-if/else chain - switch branches', async () => {
-        runWithEnv(isProd, async () => {
-          const data = ref('a')
-          const { container } = await testHydration(
-            `<template>
-              <div v-if="data === 'a'">foo</div>
-              <div v-else-if="data === 'b'">bar</div>
-              <div v-else>baz</div>
-            </template>`,
-            undefined,
-            data,
-          )
-          expect(container.innerHTML).toBe(
-            `<div>foo</div><!--${anchorLabel}-->`,
-          )
-
-          data.value = 'b'
-          await nextTick()
-          // In PROD, the anchor of v-else-if (DynamicFragment) is an empty text node,
-          // so it won't be rendered
-          expect(container.innerHTML).toBe(
-            `<div>bar</div><!--${anchorLabel}-->${isProd ? '' : `<!--${anchorLabel}-->`}`,
-          )
-
-          data.value = 'c'
-          await nextTick()
-          // same as above
-          expect(container.innerHTML).toBe(
-            `<div>baz</div><!--${anchorLabel}-->${isProd ? '' : `<!--${anchorLabel}-->`}`,
-          )
-
-          data.value = 'a'
-          await nextTick()
-          expect(container.innerHTML).toBe(
-            `<div>foo</div><!--${anchorLabel}-->`,
-          )
-        })
-      })
-
-      test('nested if', async () => {
-        runWithEnv(isProd, async () => {
-          const data = reactive({ outer: true, inner: true })
-          const { container } = await testHydration(
-            `<template>
-              <div v-if="data.outer">
-                <span>outer</span>
-                <div v-if="data.inner">inner</div>
-              </div>
-            </template>`,
-            undefined,
-            data,
-          )
-          expect(container.innerHTML).toBe(
-            `<div>` +
-              `<span>outer</span>` +
-              `<div>inner</div><!--${anchorLabel}-->` +
-              `</div><!--${anchorLabel}-->`,
-          )
-
-          data.inner = false
-          await nextTick()
-          expect(container.innerHTML).toBe(
-            `<div>` +
-              `<span>outer</span>` +
-              `<!--${anchorLabel}-->` +
-              `</div><!--${anchorLabel}-->`,
-          )
-
-          data.outer = false
-          await nextTick()
-          expect(container.innerHTML).toBe(`<!--${anchorLabel}-->`)
-        })
-      })
-
-      test('on component', async () => {
-        runWithEnv(isProd, async () => {
-          const data = ref(true)
-          const { container } = await testHydration(
-            `<template>
-              <components.Child v-if="data"/>
-            </template>`,
-            { Child: `<template>foo</template>` },
-            data,
-          )
-          expect(container.innerHTML).toBe(`foo<!--${anchorLabel}-->`)
-
-          data.value = false
-          await nextTick()
-          expect(container.innerHTML).toBe(`<!--${anchorLabel}-->`)
-        })
-      })
-
-      test('v-if/else-if/else chain on component - switch branches', async () => {
-        runWithEnv(isProd, async () => {
-          const data = ref('a')
-          const { container } = await testHydration(
-            `<template>
-              <components.Child1 v-if="data === 'a'"/>
-              <components.Child2 v-else-if="data === 'b'"/>
-              <components.Child3 v-else/>
-            </template>`,
-            {
-              Child1: `<template><span>{{data}} child1</span></template>`,
-              Child2: `<template><span>{{data}} child2</span></template>`,
-              Child3: `<template><span>{{data}} child3</span></template>`,
-            },
-            data,
-          )
-          expect(container.innerHTML).toBe(
-            `<span>a child1</span><!--${anchorLabel}-->`,
-          )
-
-          data.value = 'b'
-          await nextTick()
-          // In PROD, the anchor of v-else-if (DynamicFragment) is an empty text node,
-          // so it won't be rendered
-          expect(container.innerHTML).toBe(
-            `<span>b child2</span><!--${anchorLabel}-->${isProd ? '' : `<!--${anchorLabel}-->`}`,
-          )
-
-          data.value = 'c'
-          await nextTick()
-          // same as above
-          expect(container.innerHTML).toBe(
-            `<span>c child3</span><!--${anchorLabel}-->${isProd ? '' : `<!--${anchorLabel}-->`}`,
-          )
-
-          data.value = 'a'
-          await nextTick()
-          expect(container.innerHTML).toBe(
-            `<span>a child1</span><!--${anchorLabel}-->`,
-          )
-        })
-      })
-
-      test('on component with anchor insertion', async () => {
-        runWithEnv(isProd, async () => {
-          const data = ref(true)
-          const { container } = await testHydration(
-            `<template>
-              <div>
-                <span/>
-                <components.Child v-if="data"/>
-                <span/>
-              </div>
-            </template>`,
-            { Child: `<template>foo</template>` },
-            data,
-          )
-          expect(container.innerHTML).toBe(
-            `<div>` +
-              `<span></span>` +
-              `foo<!--${anchorLabel}-->` +
-              `<span></span>` +
-              `</div>`,
-          )
-
-          data.value = false
-          await nextTick()
-          expect(container.innerHTML).toBe(
-            `<div>` +
-              `<span></span>` +
-              `<!--${anchorLabel}-->` +
-              `<span></span>` +
-              `</div>`,
-          )
-        })
-      })
-
-      test('consecutive v-if on component with anchor insertion', async () => {
-        runWithEnv(isProd, async () => {
-          const data = ref(true)
-          const { container } = await testHydration(
-            `<template>
-              <div>
-                <span/>
-                <components.Child v-if="data"/>
-                <components.Child v-if="data"/>
-                <span/>
-              </div>
-            </template>`,
-            { Child: `<template>foo</template>` },
-            data,
-          )
-          expect(container.innerHTML).toBe(
-            `<div>` +
-              `<span></span>` +
-              `foo<!--${anchorLabel}-->` +
-              `foo<!--${anchorLabel}-->` +
-              `<span></span>` +
-              `</div>`,
-          )
-
-          data.value = false
-          await nextTick()
-          expect(container.innerHTML).toBe(
-            `<div>` +
-              `<span></span>` +
-              `<!--${anchorLabel}-->` +
-              `<!--${anchorLabel}-->` +
-              `<span></span>` +
-              `</div>`,
-          )
-        })
-      })
-
-      test('on fragment component', async () => {
-        runWithEnv(isProd, async () => {
-          const data = ref(true)
-          const { container } = await testHydration(
-            `<template>
-              <div>
-                <components.Child v-if="data"/>
-              </div>
-            </template>`,
-            {
-              Child: `<template><div>{{ data }}</div>-{{ data }}-</template>`,
-            },
-            data,
-          )
-          expect(container.innerHTML).toBe(
-            `<div>` +
-              `<!--[--><div>true</div>-true-<!--]-->` +
-              `<!--if-->` +
-              `</div>`,
-          )
-
-          data.value = false
-          await nextTick()
-          expect(container.innerHTML).toBe(
-            `<div>` + `<!--[--><!--]-->` + `<!--${anchorLabel}-->` + `</div>`,
-          )
-        })
-      })
-
-      test('on fragment component with anchor insertion', async () => {
-        runWithEnv(isProd, async () => {
-          const data = ref(true)
-          const { container } = await testHydration(
-            `<template>
-              <div>
-                <span/>
-                <components.Child v-if="data"/>
-                <span/>
-              </div>
-            </template>`,
-            {
-              Child: `<template><div>{{ data }}</div>-{{ data }}-</template>`,
-            },
-            data,
-          )
-          expect(container.innerHTML).toBe(
-            `<div>` +
-              `<span></span>` +
-              `<!--[--><div>true</div>-true-<!--]-->` +
-              `<!--if-->` +
-              `<span></span>` +
-              `</div>`,
-          )
-
-          data.value = false
-          await nextTick()
-          expect(container.innerHTML).toBe(
-            `<div>` +
-              `<span></span>` +
-              `<!--[--><!--]-->` +
-              `<!--${anchorLabel}-->` +
-              `<span></span>` +
-              `</div>`,
-          )
-        })
-      })
-
-      test('consecutive v-if on fragment component with anchor insertion', async () => {
-        runWithEnv(isProd, async () => {
-          const data = ref(true)
-          const { container } = await testHydration(
-            `<template>
-              <div>
-                <span/>
-                <components.Child v-if="data"/>
-                <components.Child v-if="data"/>
-                <span/>
-              </div>
-            </template>`,
-            {
-              Child: `<template><div>{{ data }}</div>-{{ data }}-</template>`,
-            },
-            data,
-          )
-          expect(container.innerHTML).toBe(
-            `<div>` +
-              `<span></span>` +
-              `<!--[--><div>true</div>-true-<!--]--><!--${anchorLabel}-->` +
-              `<!--[--><div>true</div>-true-<!--]--><!--${anchorLabel}-->` +
-              `<span></span>` +
-              `</div>`,
-          )
-
-          data.value = false
-          await nextTick()
-          expect(container.innerHTML).toBe(
-            `<div>` +
-              `<span></span>` +
-              `<!--[--><!--]--><!--${anchorLabel}-->` +
-              `<!--[--><!--]--><!--${anchorLabel}-->` +
-              `<span></span>` +
-              `</div>`,
-          )
-        })
-      })
-
-      test('on dynamic component with anchor insertion', async () => {
-        runWithEnv(isProd, async () => {
-          const dynamicComponentAnchorLabel = DYNAMIC_COMPONENT_ANCHOR_LABEL
-          const data = ref(true)
-          const { container } = await testHydration(
-            `<template>
-              <div>
-                <span/>
-                <component :is="components.Child" v-if="data"/>
-                <span/>
-              </div>
-            </template>`,
-            { Child: `<template>foo</template>` },
-            data,
-          )
-          expect(container.innerHTML).toBe(
-            `<div>` +
-              `<span></span>` +
-              `foo<!--${dynamicComponentAnchorLabel}--><!--${anchorLabel}-->` +
-              `<span></span>` +
-              `</div>`,
-          )
-
-          data.value = false
-          await nextTick()
-          expect(container.innerHTML).toBe(
-            `<div>` +
-              `<span></span>` +
-              `<!--${anchorLabel}-->` +
-              `<span></span>` +
-              `</div>`,
-          )
-        })
-      })
-    }
+      data.value = 'bar'
+      await nextTick()
+      expect(container.innerHTML).toBe(
+        `<div>` +
+          `<span></span>` +
+          `<div>bar</div><!--${anchorLabel}-->` +
+          `<!--[[--><div>bar</div><!--${anchorLabel}--><!--]]-->` +
+          `<span></span>` +
+          `</div>`,
+      )
+    })
   })
 
-  describe('dynamic component', () => {
-    describe('DEV mode', () => {
-      runTests()
+  describe('if', () => {
+    const anchorLabel = IF_ANCHOR_LABEL
+
+    test('basic toggle - true -> false', async () => {
+      const data = ref(true)
+      const { container } = await testHydration(
+        `<template>
+          <div v-if="data">foo</div>
+        </template>`,
+        undefined,
+        data,
+      )
+      expect(container.innerHTML).toBe(`<div>foo</div><!--${anchorLabel}-->`)
+
+      data.value = false
+      await nextTick()
+      expect(container.innerHTML).toBe(`<!--${anchorLabel}-->`)
     })
-    describe('PROD mode', () => {
-      runTests(true)
+
+    test('basic toggle - false -> true', async () => {
+      const data = ref(false)
+      const { container } = await testHydration(
+        `<template>
+          <div v-if="data">foo</div>
+        </template>`,
+        undefined,
+        data,
+      )
+      // v-if="false" is rendered as <!----> in the server-rendered HTML
+      // it reused as anchor, so the anchor label is empty
+      expect(container.innerHTML).toBe(`<!---->`)
+
+      data.value = true
+      await nextTick()
+      expect(container.innerHTML).toBe(`<div>foo</div><!---->`)
     })
 
-    function runTests(isProd: boolean = false) {
-      const anchorLabel = DYNAMIC_COMPONENT_ANCHOR_LABEL
+    test('v-if/else-if/else chain - switch branches', async () => {
+      const data = ref('a')
+      const { container } = await testHydration(
+        `<template>
+          <div v-if="data === 'a'">foo</div>
+          <div v-else-if="data === 'b'">bar</div>
+          <div v-else>baz</div>
+        </template>`,
+        undefined,
+        data,
+      )
+      expect(container.innerHTML).toBe(`<div>foo</div><!--${anchorLabel}-->`)
 
-      test('basic dynamic component', async () => {
-        runWithEnv(isProd, async () => {
-          const { container, data } = await testHydration(
-            `<template>
-              <component :is="components[data]"/>
-            </template>`,
-            {
-              foo: `<template><div>foo</div></template>`,
-              bar: `<template><div>bar</div></template>`,
-            },
-            ref('foo'),
-          )
-          expect(container.innerHTML).toBe(
-            `<div>foo</div><!--${anchorLabel}-->`,
-          )
+      data.value = 'b'
+      await nextTick()
+      expect(container.innerHTML).toBe(
+        `<div>bar</div><!--${anchorLabel}--><!--${anchorLabel}-->`,
+      )
 
-          data.value = 'bar'
-          await nextTick()
-          expect(container.innerHTML).toBe(
-            `<div>bar</div><!--${anchorLabel}-->`,
-          )
-        })
-      })
+      data.value = 'c'
+      await nextTick()
+      expect(container.innerHTML).toBe(
+        `<div>baz</div><!--${anchorLabel}--><!--${anchorLabel}-->`,
+      )
 
-      test('dynamic component with anchor insertion', async () => {
-        runWithEnv(isProd, async () => {
-          const { container, data } = await testHydration(
-            `<template>
-            <div>
-              <span/>
-              <component :is="components[data]"/>
-              <span/>
-            </div>
+      data.value = 'a'
+      await nextTick()
+      expect(container.innerHTML).toBe(`<div>foo</div><!--${anchorLabel}-->`)
+    })
+
+    test('v-if/else-if/else chain - switch branches (PROD)', async () => {
+      try {
+        __DEV__ = false
+        const data = ref('a')
+        const { container } = await testHydration(
+          `<template>
+            <div v-if="data === 'a'">foo</div>
+            <div v-else-if="data === 'b'">bar</div>
+            <div v-else>baz</div>
           </template>`,
-            {
-              foo: `<template><div>foo</div></template>`,
-              bar: `<template><div>bar</div></template>`,
-            },
-            ref('foo'),
-          )
-          expect(container.innerHTML).toBe(
-            `<div>` +
-              `<span></span>` +
-              `<div>foo</div><!--${anchorLabel}-->` +
-              `<span></span>` +
-              `</div>`,
-          )
+          undefined,
+          data,
+        )
+        expect(container.innerHTML).toBe(`<div>foo</div><!--${anchorLabel}-->`)
 
-          data.value = 'bar'
-          await nextTick()
-          expect(container.innerHTML).toBe(
-            `<div>` +
-              `<span></span>` +
-              `<div>bar</div><!--${anchorLabel}-->` +
-              `<span></span>` +
-              `</div>`,
-          )
-        })
-      })
+        data.value = 'b'
+        await nextTick()
+        // In PROD, the anchor of v-else-if (DynamicFragment) is an empty text node,
+        // so it won't be rendered
+        expect(container.innerHTML).toBe(`<div>bar</div><!--${anchorLabel}-->`)
 
-      test('consecutive dynamic components with anchor insertion', async () => {
-        runWithEnv(isProd, async () => {
-          const { container, data } = await testHydration(
-            `<template>
-              <div>
-                <span/>
-                <component :is="components[data]"/>
-                <component :is="components[data]"/>
-                <span/>
-              </div>
-            </template>`,
-            {
-              foo: `<template><div>foo</div></template>`,
-              bar: `<template><div>bar</div></template>`,
-            },
-            ref('foo'),
-          )
-          expect(container.innerHTML).toBe(
-            `<div>` +
-              `<span></span>` +
-              `<div>foo</div><!--${anchorLabel}-->` +
-              `<!--[[--><div>foo</div><!--${anchorLabel}--><!--]]-->` +
-              `<span></span>` +
-              `</div>`,
-          )
+        data.value = 'c'
+        await nextTick()
+        // same as above
+        expect(container.innerHTML).toBe(`<div>baz</div><!--${anchorLabel}-->`)
 
-          data.value = 'bar'
-          await nextTick()
-          expect(container.innerHTML).toBe(
-            `<div>` +
-              `<span></span>` +
-              `<div>bar</div><!--${anchorLabel}-->` +
-              `<!--[[--><div>bar</div><!--${anchorLabel}--><!--]]-->` +
-              `<span></span>` +
-              `</div>`,
-          )
-        })
-      })
-    }
+        data.value = 'a'
+        await nextTick()
+        expect(container.innerHTML).toBe(`<div>foo</div><!--${anchorLabel}-->`)
+      } finally {
+        __DEV__ = true
+      }
+    })
+
+    test('nested if', async () => {
+      const data = reactive({ outer: true, inner: true })
+      const { container } = await testHydration(
+        `<template>
+          <div v-if="data.outer">
+            <span>outer</span>
+            <div v-if="data.inner">inner</div>
+          </div>
+        </template>`,
+        undefined,
+        data,
+      )
+      expect(container.innerHTML).toBe(
+        `<div>` +
+          `<span>outer</span>` +
+          `<div>inner</div><!--${anchorLabel}-->` +
+          `</div><!--${anchorLabel}-->`,
+      )
+
+      data.inner = false
+      await nextTick()
+      expect(container.innerHTML).toBe(
+        `<div>` +
+          `<span>outer</span>` +
+          `<!--${anchorLabel}-->` +
+          `</div><!--${anchorLabel}-->`,
+      )
+
+      data.outer = false
+      await nextTick()
+      expect(container.innerHTML).toBe(`<!--${anchorLabel}-->`)
+    })
+
+    test('on component', async () => {
+      const data = ref(true)
+      const { container } = await testHydration(
+        `<template>
+          <components.Child v-if="data"/>
+        </template>`,
+        { Child: `<template>foo</template>` },
+        data,
+      )
+      expect(container.innerHTML).toBe(`foo<!--${anchorLabel}-->`)
+
+      data.value = false
+      await nextTick()
+      expect(container.innerHTML).toBe(`<!--${anchorLabel}-->`)
+    })
+
+    test('v-if/else-if/else chain on component - switch branches', async () => {
+      const data = ref('a')
+      const { container } = await testHydration(
+        `<template>
+          <components.Child1 v-if="data === 'a'"/>
+          <components.Child2 v-else-if="data === 'b'"/>
+          <components.Child3 v-else/>
+        </template>`,
+        {
+          Child1: `<template><span>{{data}} child1</span></template>`,
+          Child2: `<template><span>{{data}} child2</span></template>`,
+          Child3: `<template><span>{{data}} child3</span></template>`,
+        },
+        data,
+      )
+      expect(container.innerHTML).toBe(
+        `<span>a child1</span><!--${anchorLabel}-->`,
+      )
+
+      data.value = 'b'
+      await nextTick()
+      expect(container.innerHTML).toBe(
+        `<span>b child2</span><!--${anchorLabel}--><!--${anchorLabel}-->`,
+      )
+
+      data.value = 'c'
+      await nextTick()
+      expect(container.innerHTML).toBe(
+        `<span>c child3</span><!--${anchorLabel}--><!--${anchorLabel}-->`,
+      )
+
+      data.value = 'a'
+      await nextTick()
+      expect(container.innerHTML).toBe(
+        `<span>a child1</span><!--${anchorLabel}-->`,
+      )
+    })
+
+    test('v-if/else-if/else chain on component - switch branches (PROD)', async () => {
+      try {
+        __DEV__ = false
+        const data = ref('a')
+        const { container } = await testHydration(
+          `<template>
+            <components.Child1 v-if="data === 'a'"/>
+            <components.Child2 v-else-if="data === 'b'"/>
+            <components.Child3 v-else/>
+          </template>`,
+          {
+            Child1: `<template><span>{{data}} child1</span></template>`,
+            Child2: `<template><span>{{data}} child2</span></template>`,
+            Child3: `<template><span>{{data}} child3</span></template>`,
+          },
+          data,
+        )
+        expect(container.innerHTML).toBe(
+          `<span>a child1</span><!--${anchorLabel}-->`,
+        )
+
+        data.value = 'b'
+        await nextTick()
+        // In PROD, the anchor of v-else-if (DynamicFragment) is an empty text node,
+        // so it won't be rendered
+        expect(container.innerHTML).toBe(
+          `<span>b child2</span><!--${anchorLabel}-->`,
+        )
+
+        data.value = 'c'
+        await nextTick()
+        // same as above
+        expect(container.innerHTML).toBe(
+          `<span>c child3</span><!--${anchorLabel}-->`,
+        )
+
+        data.value = 'a'
+        await nextTick()
+        expect(container.innerHTML).toBe(
+          `<span>a child1</span><!--${anchorLabel}-->`,
+        )
+      } finally {
+        __DEV__ = true
+      }
+    })
+
+    test('on component with anchor insertion', async () => {
+      const data = ref(true)
+      const { container } = await testHydration(
+        `<template>
+          <div>
+            <span/>
+            <components.Child v-if="data"/>
+            <span/>
+          </div>
+        </template>`,
+        { Child: `<template>foo</template>` },
+        data,
+      )
+      expect(container.innerHTML).toBe(
+        `<div>` +
+          `<span></span>` +
+          `foo<!--${anchorLabel}-->` +
+          `<span></span>` +
+          `</div>`,
+      )
+
+      data.value = false
+      await nextTick()
+      expect(container.innerHTML).toBe(
+        `<div>` +
+          `<span></span>` +
+          `<!--${anchorLabel}-->` +
+          `<span></span>` +
+          `</div>`,
+      )
+    })
+
+    test('consecutive v-if on component with anchor insertion', async () => {
+      const data = ref(true)
+      const { container } = await testHydration(
+        `<template>
+          <div>
+            <span/>
+            <components.Child v-if="data"/>
+            <components.Child v-if="data"/>
+            <span/>
+          </div>
+        </template>`,
+        { Child: `<template>foo</template>` },
+        data,
+      )
+      expect(container.innerHTML).toBe(
+        `<div>` +
+          `<span></span>` +
+          `foo<!--${anchorLabel}-->` +
+          `foo<!--${anchorLabel}-->` +
+          `<span></span>` +
+          `</div>`,
+      )
+
+      data.value = false
+      await nextTick()
+      expect(container.innerHTML).toBe(
+        `<div>` +
+          `<span></span>` +
+          `<!--${anchorLabel}-->` +
+          `<!--${anchorLabel}-->` +
+          `<span></span>` +
+          `</div>`,
+      )
+    })
+
+    test('on fragment component', async () => {
+      const data = ref(true)
+      const { container } = await testHydration(
+        `<template>
+          <div>
+            <components.Child v-if="data"/>
+          </div>
+        </template>`,
+        {
+          Child: `<template><div>{{ data }}</div>-{{ data }}-</template>`,
+        },
+        data,
+      )
+      expect(container.innerHTML).toBe(
+        `<div>` +
+          `<!--[--><div>true</div>-true-<!--]-->` +
+          `<!--if-->` +
+          `</div>`,
+      )
+
+      data.value = false
+      await nextTick()
+      expect(container.innerHTML).toBe(
+        `<div><!--[--><!--]--><!--${anchorLabel}--></div>`,
+      )
+    })
+
+    test('on fragment component with anchor insertion', async () => {
+      const data = ref(true)
+      const { container } = await testHydration(
+        `<template>
+          <div>
+            <span/>
+            <components.Child v-if="data"/>
+            <span/>
+          </div>
+        </template>`,
+        {
+          Child: `<template><div>{{ data }}</div>-{{ data }}-</template>`,
+        },
+        data,
+      )
+      expect(container.innerHTML).toBe(
+        `<div>` +
+          `<span></span>` +
+          `<!--[--><div>true</div>-true-<!--]-->` +
+          `<!--if-->` +
+          `<span></span>` +
+          `</div>`,
+      )
+
+      data.value = false
+      await nextTick()
+      expect(container.innerHTML).toBe(
+        `<div>` +
+          `<span></span>` +
+          `<!--[--><!--]-->` +
+          `<!--${anchorLabel}-->` +
+          `<span></span>` +
+          `</div>`,
+      )
+    })
+
+    test('consecutive v-if on fragment component with anchor insertion', async () => {
+      const data = ref(true)
+      const { container } = await testHydration(
+        `<template>
+          <div>
+            <span/>
+            <components.Child v-if="data"/>
+            <components.Child v-if="data"/>
+            <span/>
+          </div>
+        </template>`,
+        {
+          Child: `<template><div>{{ data }}</div>-{{ data }}-</template>`,
+        },
+        data,
+      )
+      expect(container.innerHTML).toBe(
+        `<div>` +
+          `<span></span>` +
+          `<!--[--><div>true</div>-true-<!--]--><!--${anchorLabel}-->` +
+          `<!--[--><div>true</div>-true-<!--]--><!--${anchorLabel}-->` +
+          `<span></span>` +
+          `</div>`,
+      )
+
+      data.value = false
+      await nextTick()
+      expect(container.innerHTML).toBe(
+        `<div>` +
+          `<span></span>` +
+          `<!--[--><!--]--><!--${anchorLabel}-->` +
+          `<!--[--><!--]--><!--${anchorLabel}-->` +
+          `<span></span>` +
+          `</div>`,
+      )
+    })
+
+    test('on dynamic component with anchor insertion', async () => {
+      const dynamicComponentAnchorLabel = DYNAMIC_COMPONENT_ANCHOR_LABEL
+      const data = ref(true)
+      const { container } = await testHydration(
+        `<template>
+          <div>
+            <span/>
+            <component :is="components.Child" v-if="data"/>
+            <span/>
+          </div>
+        </template>`,
+        { Child: `<template>foo</template>` },
+        data,
+      )
+      expect(container.innerHTML).toBe(
+        `<div>` +
+          `<span></span>` +
+          `foo<!--${dynamicComponentAnchorLabel}--><!--${anchorLabel}-->` +
+          `<span></span>` +
+          `</div>`,
+      )
+
+      data.value = false
+      await nextTick()
+      expect(container.innerHTML).toBe(
+        `<div>` +
+          `<span></span>` +
+          `<!--${anchorLabel}-->` +
+          `<span></span>` +
+          `</div>`,
+      )
+    })
   })
 
   describe('for', () => {
@@ -1495,13 +1504,11 @@ describe('Vapor Mode hydration', () => {
           `<span>b</span>` +
           `<span>c</span>` +
           `<!--]-->` +
-          `<!--[[-->` +
           `<!--[-->` +
           `<span>a</span>` +
           `<span>b</span>` +
           `<span>c</span>` +
           `<!--]-->` +
-          `<!--]]-->` +
           `<span></span>` +
           `</div>`,
       )
@@ -1517,14 +1524,12 @@ describe('Vapor Mode hydration', () => {
           `<span>c</span>` +
           `<span>d</span>` +
           `<!--]-->` +
-          `<!--[[-->` +
           `<!--[-->` +
           `<span>a</span>` +
           `<span>b</span>` +
           `<span>c</span>` +
           `<span>d</span>` +
           `<!--]-->` +
-          `<!--]]-->` +
           `<span></span>` +
           `</div>`,
       )

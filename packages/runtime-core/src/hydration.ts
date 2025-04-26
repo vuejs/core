@@ -26,13 +26,13 @@ import {
   includeBooleanAttr,
   isBooleanAttr,
   isDynamicAnchor,
-  isDynamicFragmentEndAnchor,
   isKnownHtmlAttr,
   isKnownSvgAttr,
   isOn,
   isRenderableAttrValue,
   isReservedProp,
   isString,
+  isVaporFragmentEndAnchor,
   normalizeClass,
   normalizeStyle,
   stringifyStyle,
@@ -126,7 +126,7 @@ export function createHydrationFunctions(
     // skip if:
     // - dynamic anchors (`<!--[[-->`, `<!--][-->`)
     // - dynamic fragment end anchors (e.g. `<!--if-->`, `<!--for-->`)
-    if (n && (isDynamicAnchor(n) || isDynamicFragmentEndAnchor(n))) {
+    if (n && (isDynamicAnchor(n) || isVaporFragmentEndAnchor(n))) {
       n = next(n)
     }
     return n
@@ -158,7 +158,7 @@ export function createHydrationFunctions(
     slotScopeIds: string[] | null,
     optimized = false,
   ): Node | null => {
-    if (isDynamicAnchor(node) || isDynamicFragmentEndAnchor(node)) {
+    if (isDynamicAnchor(node) || isVaporFragmentEndAnchor(node)) {
       node = nextSibling(node)!
     }
     optimized = optimized || !!vnode.dynamicChildren

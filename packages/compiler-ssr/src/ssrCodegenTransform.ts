@@ -302,8 +302,8 @@ function processChildrenDynamicInfo(
     const child = filteredChildren[i]
     if (
       isStaticChildNode(child) ||
-      // v-if has an anchor, which can be used to distinguish the boundary
-      child.type === NodeTypes.IF
+      // fragment has it's own anchor, which can be used to distinguish the boundary
+      isFragmentChild(child)
     ) {
       continue
     }
@@ -359,10 +359,10 @@ function processChildrenDynamicInfo(
 }
 
 /**
- * Check if a node should be processed as dynamic.
+ * Check if a node should be processed as dynamic child.
  * This is primarily used in Vapor mode hydration to wrap dynamic parts
  * with markers (`<!--[[-->` and `<!--]]-->`).
- * The purpose is to distinguish the boundaries of nodes during hydration
+ * The purpose is to distinguish the boundaries of nodes during vapor hydration
  *
  * 1. two consecutive dynamic nodes should only wrap the second one
  * <element>
@@ -415,4 +415,9 @@ function shouldProcessChildAsDynamic(
   }
 
   return false
+}
+
+function isFragmentChild(child: TemplateChildNode): boolean {
+  const { type } = child
+  return type === NodeTypes.IF || type === NodeTypes.FOR
 }

@@ -16,7 +16,11 @@ import {
   isObject,
   isString,
 } from '@vue/shared'
-import { createComment, createTextNode, nextSiblingAnchor } from './dom/node'
+import {
+  createComment,
+  createTextNode,
+  nextVaporFragmentAnchor,
+} from './dom/node'
 import {
   type Block,
   VaporFragment,
@@ -97,7 +101,7 @@ export const createFor = (
   let parent: ParentNode | undefined | null
   const parentAnchor = isHydrating
     ? // Use fragment end anchor if available, otherwise use the specific for anchor.
-      nextSiblingAnchor(
+      nextVaporFragmentAnchor(
         currentHydrationNode!,
         isComment(currentHydrationNode!, '[') ? ']' : FOR_ANCHOR_LABEL,
       )!

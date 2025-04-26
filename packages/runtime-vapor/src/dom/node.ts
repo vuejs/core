@@ -1,14 +1,9 @@
-import {
-  isComment,
-  isEmptyText,
-  locateEndAnchor,
-  locateStartAnchor,
-} from './hydration'
+import { isComment, isEmptyText, locateEndAnchor } from './hydration'
 import {
   DYNAMIC_END_ANCHOR_LABEL,
   DYNAMIC_START_ANCHOR_LABEL,
   isDynamicAnchor,
-  isDynamicFragmentEndAnchor,
+  isVaporFragmentEndAnchor,
 } from '@vue/shared'
 
 /*! #__NO_SIDE_EFFECTS__ */
@@ -104,30 +99,6 @@ export function disableHydrationNodeLookup(): void {
   nthChild.impl = _nthChild
 }
 
-/*! #__NO_SIDE_EFFECTS__ */
-// TODO check if this is still needed
-export function prev(node: Node): Node | null {
-  // process dynamic node (<!--[[-->...<!--]]-->) as a single one
-  if (isComment(node, DYNAMIC_END_ANCHOR_LABEL)) {
-    node = locateStartAnchor(
-      node,
-      DYNAMIC_START_ANCHOR_LABEL,
-      DYNAMIC_END_ANCHOR_LABEL,
-    )!
-  }
-
-  // process fragment node (<!--[-->...<!--]-->) as a single one
-  else if (isComment(node, ']')) {
-    node = locateStartAnchor(node)!
-  }
-
-  let n = node.previousSibling
-  while (n && isNonHydrationNode(n)) {
-    n = n.previousSibling
-  }
-  return n
-}
-
 function isNonHydrationNode(node: Node) {
   return (
     // empty text nodes, no need to hydrate
@@ -136,12 +107,12 @@ function isNonHydrationNode(node: Node) {
     isDynamicAnchor(node) ||
     // fragment end anchor (`<!--]-->`)
     isComment(node, ']') ||
-    // dynamic fragment end anchors
-    isDynamicFragmentEndAnchor(node)
+    // vapor fragment end anchors
+    isVaporFragmentEndAnchor(node)
   )
 }
 
-export function nextSiblingAnchor(
+export function nextVaporFragmentAnchor(
   node: Node,
   anchorLabel: string,
 ): Comment | null {
