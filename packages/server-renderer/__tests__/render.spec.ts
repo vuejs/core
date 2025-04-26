@@ -446,7 +446,7 @@ function testRender(type: string, render: typeof renderToString) {
         ).toBe(
           `<div>parent<div class="child">` +
             `<!--[--><span>from slot</span><!--]-->` +
-            `</div></div>`,
+            `<!--slot--></div></div>`,
         )
 
         // test fallback
@@ -461,7 +461,7 @@ function testRender(type: string, render: typeof renderToString) {
             }),
           ),
         ).toBe(
-          `<div>parent<div class="child"><!--[-->fallback<!--]--></div></div>`,
+          `<div>parent<div class="child"><!--[-->fallback<!--]--><!--slot--></div></div>`,
         )
       })
 
@@ -507,7 +507,7 @@ function testRender(type: string, render: typeof renderToString) {
         ).toBe(
           `<div>parent<div class="child">` +
             `<!--[--><span>from slot</span><!--]-->` +
-            `</div></div>`,
+            `<!--slot--></div></div>`,
         )
       })
 
@@ -525,7 +525,7 @@ function testRender(type: string, render: typeof renderToString) {
         expect(await render(app)).toBe(
           `<div>parent<div class="child">` +
             `<!--[--><span>from slot</span><!--]-->` +
-            `</div></div>`,
+            `<!--slot--></div></div>`,
         )
       })
 
@@ -572,7 +572,7 @@ function testRender(type: string, render: typeof renderToString) {
         })
 
         expect(await render(app)).toBe(
-          `<div><!--[--><!--[-->hello<!--]--><!--]--></div>`,
+          `<div><!--[--><!--[-->hello<!--]--><!--slot--><!--]--><!--slot--></div>`,
         )
       })
 
@@ -593,7 +593,7 @@ function testRender(type: string, render: typeof renderToString) {
 
         expect(await render(app)).toBe(
           // should only have a single fragment
-          `<div><!--[--><!--]--></div>`,
+          `<div><!--[--><!--]--><!--slot--></div>`,
         )
       })
 
@@ -614,7 +614,7 @@ function testRender(type: string, render: typeof renderToString) {
 
         expect(await render(app)).toBe(
           // should only have a single fragment
-          `<div><!--[-->fallback<!--]--></div>`,
+          `<div><!--[-->fallback<!--]--><!--slot--></div>`,
         )
       })
     })

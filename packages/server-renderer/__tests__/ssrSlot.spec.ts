@@ -16,7 +16,7 @@ describe('ssr: slot', () => {
           template: `<one>hello</one>`,
         }),
       ),
-    ).toBe(`<div><!--[-->hello<!--]--></div>`)
+    ).toBe(`<div><!--[-->hello<!--]--><!--slot--></div>`)
   })
 
   test('element slot', async () => {
@@ -27,7 +27,7 @@ describe('ssr: slot', () => {
           template: `<one><div>hi</div></one>`,
         }),
       ),
-    ).toBe(`<div><!--[--><div>hi</div><!--]--></div>`)
+    ).toBe(`<div><!--[--><div>hi</div><!--]--><!--slot--></div>`)
   })
 
   test('empty slot', async () => {
@@ -42,7 +42,7 @@ describe('ssr: slot', () => {
           template: `<one><template v-if="false"/></one>`,
         }),
       ),
-    ).toBe(`<div><!--[--><!--]--></div>`)
+    ).toBe(`<div><!--[--><!--]--><!--slot--></div>`)
   })
 
   test('empty slot (manual comments)', async () => {
@@ -57,7 +57,7 @@ describe('ssr: slot', () => {
           template: `<one><!--hello--></one>`,
         }),
       ),
-    ).toBe(`<div><!--[--><!--]--></div>`)
+    ).toBe(`<div><!--[--><!--]--><!--slot--></div>`)
   })
 
   test('empty slot (multi-line comments)', async () => {
@@ -72,7 +72,7 @@ describe('ssr: slot', () => {
           template: `<one><!--he\nllo--></one>`,
         }),
       ),
-    ).toBe(`<div><!--[--><!--]--></div>`)
+    ).toBe(`<div><!--[--><!--]--><!--slot--></div>`)
   })
 
   test('multiple elements', async () => {
@@ -83,7 +83,7 @@ describe('ssr: slot', () => {
           template: `<one><div>one</div><div>two</div></one>`,
         }),
       ),
-    ).toBe(`<div><!--[--><div>one</div><div>two</div><!--]--></div>`)
+    ).toBe(`<div><!--[--><div>one</div><div>two</div><!--]--><!--slot--></div>`)
   })
 
   test('fragment slot (template v-if)', async () => {
@@ -94,7 +94,9 @@ describe('ssr: slot', () => {
           template: `<one><template v-if="true">hello</template></one>`,
         }),
       ),
-    ).toBe(`<div><!--[--><!--[-->hello<!--]--><!--if--><!--]--></div>`)
+    ).toBe(
+      `<div><!--[--><!--[-->hello<!--]--><!--if--><!--]--><!--slot--></div>`,
+    )
   })
 
   test('fragment slot (template v-if + multiple elements)', async () => {
@@ -106,7 +108,7 @@ describe('ssr: slot', () => {
         }),
       ),
     ).toBe(
-      `<div><!--[--><!--[--><div>one</div><div>two</div><!--]--><!--if--><!--]--></div>`,
+      `<div><!--[--><!--[--><div>one</div><div>two</div><!--]--><!--if--><!--]--><!--slot--></div>`,
     )
   })
 
@@ -171,7 +173,7 @@ describe('ssr: slot', () => {
         }),
       ),
     ).toBe(
-      `<button><!--[--><div><!--[--><!--]--></div><!--]--></button><!--dynamic-component-->`,
+      `<button><!--[--><div><!--[--><!--]--><!--slot--></div><!--]--></button><!--dynamic-component-->`,
     )
 
     expect(
@@ -189,7 +191,7 @@ describe('ssr: slot', () => {
         }),
       ),
     ).toBe(
-      `<button><!--[--><div><!--[--><div>hello</div><!--]--></div><!--]--></button><!--dynamic-component-->`,
+      `<button><!--[--><div><!--[--><div>hello</div><!--]--><!--slot--></div><!--]--></button><!--dynamic-component-->`,
     )
 
     expect(

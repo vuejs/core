@@ -15,7 +15,7 @@ describe('ssr: dynamic component', () => {
         }),
       ),
     ).toBe(
-      `<div><!--[--><span>slot</span><!--]--></div><!--dynamic-component-->`,
+      `<div><!--[--><span>slot</span><!--]--><!--slot--></div><!--dynamic-component-->`,
     )
   })
 
@@ -63,7 +63,7 @@ describe('ssr: dynamic component', () => {
         }),
       ),
     ).toBe(
-      `<div>test<!--[--><span>slot</span><!--]--></div><!--dynamic-component-->`,
+      `<div>test<!--[--><span>slot</span><!--]--><!--slot--></div><!--dynamic-component-->`,
     )
   })
 

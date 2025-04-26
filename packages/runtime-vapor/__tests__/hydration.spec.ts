@@ -1531,6 +1531,20 @@ describe('Vapor Mode hydration', () => {
           `<span></span>` +
           `</div>`,
       )
+
+      data.value.splice(0, 1)
+      await nextTick()
+      expect(container.innerHTML).toBe(
+        `<div>` +
+          `<span></span>` +
+          `<!--[-->` +
+          `<span>b</span>` +
+          `<span>c</span>` +
+          `<span>d</span>` +
+          `<!--]-->` +
+          `<span></span>` +
+          `</div>`,
+      )
     })
 
     test('consecutive v-for with anchor insertion', async () => {
@@ -1583,20 +1597,377 @@ describe('Vapor Mode hydration', () => {
           `<span></span>` +
           `</div>`,
       )
+
+      data.value.splice(0, 2)
+      await nextTick()
+      expect(container.innerHTML).toBe(
+        `<div>` +
+          `<span></span>` +
+          `<!--[-->` +
+          `<span>c</span>` +
+          `<span>d</span>` +
+          `<!--]-->` +
+          `<!--[-->` +
+          `<span>c</span>` +
+          `<span>d</span>` +
+          `<!--]-->` +
+          `<span></span>` +
+          `</div>`,
+      )
     })
 
-    // TODO wait for slots hydration support
-    test.todo('v-for on component', async () => {})
+    test('v-for on component', async () => {
+      const { container, data } = await testHydration(
+        `<template>
+          <div>
+            <components.Child v-for="item in data" :key="item"/>
+          </div>
+        </template>`,
+        {
+          Child: `<template><div>comp</div></template>`,
+        },
+        ref(['a', 'b', 'c']),
+      )
 
-    // TODO wait for slots hydration support
-    test.todo('on fragment component', async () => {})
+      expect(container.innerHTML).toBe(
+        `<div>` +
+          `<!--[-->` +
+          `<div>comp</div>` +
+          `<div>comp</div>` +
+          `<div>comp</div>` +
+          `<!--]-->` +
+          `</div>`,
+      )
+
+      data.value.push('d')
+      await nextTick()
+      expect(container.innerHTML).toBe(
+        `<div>` +
+          `<!--[-->` +
+          `<div>comp</div>` +
+          `<div>comp</div>` +
+          `<div>comp</div>` +
+          `<div>comp</div>` +
+          `<!--]-->` +
+          `</div>`,
+      )
+    })
+
+    test('v-for on component with slots', async () => {
+      const { container, data } = await testHydration(
+        `<template>
+          <div>
+            <components.Child v-for="item in data" :key="item">
+              <span>{{ item }}</span>
+            </components.Child>
+          </div>
+        </template>`,
+        {
+          Child: `<template><slot/></template>`,
+        },
+        ref(['a', 'b', 'c']),
+      )
+      expect(container.innerHTML).toBe(
+        `<div>` +
+          `<!--[-->` +
+          `<!--[--><span>a</span><!--]--><!--slot-->` +
+          `<!--[--><span>b</span><!--]--><!--slot-->` +
+          `<!--[--><span>c</span><!--]--><!--slot-->` +
+          `<!--]-->` +
+          `</div>`,
+      )
+
+      data.value.push('d')
+      await nextTick()
+      expect(container.innerHTML).toBe(
+        `<div>` +
+          `<!--[-->` +
+          `<!--[--><span>a</span><!--]--><!--slot-->` +
+          `<!--[--><span>b</span><!--]--><!--slot-->` +
+          `<!--[--><span>c</span><!--]--><!--slot-->` +
+          `<span>d</span><!--slot-->` +
+          `<!--]-->` +
+          `</div>`,
+      )
+    })
+
+    test('on fragment component', async () => {
+      const { container, data } = await testHydration(
+        `<template>
+          <div>
+            <components.Child v-for="item in data" :key="item"/>
+          </div>
+        </template>`,
+        {
+          Child: `<template><div>foo</div>-bar-</template>`,
+        },
+        ref(['a', 'b', 'c']),
+      )
+      expect(container.innerHTML).toBe(
+        `<div>` +
+          `<!--[-->` +
+          `<!--[--><div>foo</div>-bar-<!--]-->` +
+          `<!--[--><div>foo</div>-bar-<!--]-->` +
+          `<!--[--><div>foo</div>-bar-<!--]-->` +
+          `<!--]-->` +
+          `</div>`,
+      )
+
+      data.value.push('d')
+      await nextTick()
+      expect(container.innerHTML).toBe(
+        `<div>` +
+          `<!--[-->` +
+          `<!--[--><div>foo</div>-bar-<!--]-->` +
+          `<!--[--><div>foo</div>-bar-<!--]-->` +
+          `<!--[--><div>foo</div>-bar-<!--]-->` +
+          `<div>foo</div>-bar-` +
+          `<!--]-->` +
+          `</div>`,
+      )
+    })
 
     // TODO wait for vapor TransitionGroup support
     // v-for inside TransitionGroup does not render as a fragment
     test.todo('v-for in TransitionGroup', async () => {})
   })
 
-  test.todo('slots')
+  describe('slots', () => {
+    test('basic slot', async () => {
+      const { data, container } = await testHydration(
+        `<template>
+          <components.Child>
+            <span>{{data}}</span>
+          </components.Child>
+        </template>`,
+        {
+          Child: `<template><slot/></template>`,
+        },
+      )
+      expect(container.innerHTML).toBe(
+        `<!--[--><span>foo</span><!--]--><!--slot-->`,
+      )
+
+      data.value = 'bar'
+      await nextTick()
+      expect(container.innerHTML).toBe(
+        `<!--[--><span>bar</span><!--]--><!--slot-->`,
+      )
+    })
+
+    test('named slot', async () => {
+      const { data, container } = await testHydration(
+        `<template>
+          <components.Child>
+            <template #foo>
+              <span>{{data}}</span>
+            </template>
+          </components.Child>
+        </template>`,
+        {
+          Child: `<template><slot name="foo"/></template>`,
+        },
+      )
+      expect(container.innerHTML).toBe(
+        `<!--[--><span>foo</span><!--]--><!--slot-->`,
+      )
+
+      data.value = 'bar'
+      await nextTick()
+      expect(container.innerHTML).toBe(
+        `<!--[--><span>bar</span><!--]--><!--slot-->`,
+      )
+    })
+
+    test('named slot with v-if', async () => {
+      const { data, container } = await testHydration(
+        `<template>
+          <components.Child>
+            <template #foo v-if="data">
+              <span>{{data}}</span>
+            </template>
+          </components.Child>
+        </template>`,
+        {
+          Child: `<template><slot name="foo"/></template>`,
+        },
+      )
+      expect(container.innerHTML).toBe(
+        `<!--[--><span>foo</span><!--]--><!--slot-->`,
+      )
+
+      data.value = false
+      await nextTick()
+      expect(container.innerHTML).toBe(`<!--[--><!--]--><!--slot-->`)
+    })
+
+    test('named slot with v-if and v-for', async () => {
+      const data = reactive({
+        show: true,
+        items: ['a', 'b', 'c'],
+      })
+      const { container } = await testHydration(
+        `<template>
+          <components.Child>
+            <template #foo v-if="data.show">
+              <span v-for="item in data.items" :key="item">{{item}}</span>
+            </template>
+          </components.Child>
+        </template>`,
+        {
+          Child: `<template><slot name="foo"/></template>`,
+        },
+        data,
+      )
+      expect(container.innerHTML).toBe(
+        `<!--[-->` +
+          `<!--[--><span>a</span><span>b</span><span>c</span><!--]-->` +
+          `<!--]-->` +
+          `<!--slot-->`,
+      )
+
+      data.show = false
+      await nextTick()
+      expect(container.innerHTML).toBe(
+        `<!--[--><!--[--><!--]--><!--]--><!--slot-->`,
+      )
+    })
+
+    test('with anchor insertion', async () => {
+      const { data, container } = await testHydration(
+        `<template>
+          <components.Child>
+            <span/>
+            <span>{{data}}</span>
+            <span/>
+          </components.Child>
+        </template>`,
+        {
+          Child: `<template><slot/></template>`,
+        },
+      )
+      expect(container.innerHTML).toBe(
+        `<!--[-->` +
+          `<span></span>` +
+          `<span>foo</span>` +
+          `<span></span>` +
+          `<!--]-->` +
+          `<!--slot-->`,
+      )
+
+      data.value = 'bar'
+      await nextTick()
+      expect(container.innerHTML).toBe(
+        `<!--[-->` +
+          `<span></span>` +
+          `<span>bar</span>` +
+          `<span></span>` +
+          `<!--]-->` +
+          `<!--slot-->`,
+      )
+    })
+
+    test('with multi level anchor insertion', async () => {
+      const { data, container } = await testHydration(
+        `<template>
+          <components.Child>
+            <span/>
+            <span>{{data}}</span>
+            <span/>
+          </components.Child>
+        </template>`,
+        {
+          Child: `
+          <template>
+            <div/>
+              <div/>
+              <slot/>
+              <div/>
+            </div>
+          </template>`,
+        },
+      )
+      expect(container.innerHTML).toBe(
+        `<!--[-->` +
+          `<div></div>` +
+          `<div></div>` +
+          `<!--[-->` +
+          `<span></span>` +
+          `<span>foo</span>` +
+          `<span></span>` +
+          `<!--]-->` +
+          `<!--slot-->` +
+          `<div></div>` +
+          `<!--]-->`,
+      )
+
+      data.value = 'bar'
+      await nextTick()
+      expect(container.innerHTML).toBe(
+        `<!--[-->` +
+          `<div></div>` +
+          `<div></div>` +
+          `<!--[-->` +
+          `<span></span>` +
+          `<span>bar</span>` +
+          `<span></span>` +
+          `<!--]-->` +
+          `<!--slot-->` +
+          `<div></div>` +
+          `<!--]-->`,
+      )
+    })
+
+    // problem is next child is incorrect after slot
+    test.todo('mixed slot and text node', async () => {
+      const data = reactive({
+        text: 'foo',
+        msg: 'hi',
+      })
+      const { container } = await testHydration(
+        `<template>
+          <components.Child>
+            <span>{{data.text}}</span>
+          </components.Child>
+        </template>`,
+        {
+          Child: `<template><div><slot/>{{data.msg}}</div></template>`,
+        },
+        data,
+      )
+
+      expect(container.innerHTML).toMatchInlineSnapshot(
+        `"<div><!--[--><span>foo</span><!--]--><!--slot-->hi</div>"`,
+      )
+    })
+
+    test.todo('mixed slot and element', async () => {
+      const data = reactive({
+        text: 'foo',
+        msg: 'hi',
+      })
+      const { container } = await testHydration(
+        `<template>
+          <components.Child>
+            <span>{{data.text}}</span>
+          </components.Child>
+        </template>`,
+        {
+          Child: `<template><div><slot/><div>{{data.msg}}</div></div></template>`,
+        },
+        data,
+      )
+
+      expect(container.innerHTML).toMatchInlineSnapshot(
+        `"<div><!--hi--><span>foo</span><!--]--><!--slot--><div>hi</div></div>"`,
+      )
+    })
+
+    // mixed slot and component
+    // mixed slot and fragment component
+    // mixed slot and v-if
+    // mixed slot and v-for
+  })
 
   // test('element with ref', () => {
   //   const el = ref()

@@ -42,7 +42,7 @@ export function withHydration(container: ParentNode, fn: () => void): void {
 }
 
 export let adoptTemplate: (node: Node, template: string) => Node | null
-export let locateHydrationNode: (isFragment?: boolean) => void
+export let locateHydrationNode: (hasFragmentAnchor?: boolean) => void
 
 type Anchor = Comment & {
   // cached matching fragment start to avoid repeated traversal
@@ -94,10 +94,16 @@ function locateHydrationNodeImpl(hasFragmentAnchor?: boolean) {
   } else {
     node = insertionParent ? insertionParent.lastChild : currentHydrationNode
 
+    // if current node is fragment start anchor, find the next one
+    if (node && isComment(node, '[')) {
+      node = node.nextSibling
+    }
     // if the last child is a vapor fragment end anchor, find the previous one
-    if (hasFragmentAnchor && node && isVaporFragmentEndAnchor(node)) {
-      let previous = node.previousSibling
-      if (previous) node = previous
+    else if (hasFragmentAnchor && node && isVaporFragmentEndAnchor(node)) {
+      node = node.previousSibling
+      if (__DEV__ && !node) {
+        // TODO warning, should not happen
+      }
     }
 
     if (node && isComment(node, ']')) {

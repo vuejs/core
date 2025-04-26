@@ -1,4 +1,4 @@
-import { isArray, isVaporFragmentEndAnchor } from '@vue/shared'
+import { isArray } from '@vue/shared'
 import {
   type VaporComponentInstance,
   isVaporComponent,
@@ -100,10 +100,10 @@ export class DynamicFragment extends VaporFragment {
     } else {
       // find next sibling dynamic fragment end anchor
       const anchor = nextVaporFragmentAnchor(currentHydrationNode!, label)!
-      if (anchor && isVaporFragmentEndAnchor(anchor)) {
+      if (anchor) {
         this.anchor = anchor
       } else if (__DEV__) {
-        // TODO warning
+        // TODO warning, should not happen
         warn(`DynamicFragment anchor not found...`)
       }
     }
