@@ -300,7 +300,7 @@ function analyzeExpressions(expressions: SimpleExpressionNode[]) {
           registerVariable(name, exp, true)
         })
         registerVariable(memberExp, exp, false)
-      } else if (!parentStack.find(isMemberExpression)) {
+      } else if (!parentStack.some(isMemberExpression)) {
         registerVariable(currentNode.name, exp, true)
       }
     })
