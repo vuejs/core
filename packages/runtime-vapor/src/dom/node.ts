@@ -22,8 +22,40 @@ export function querySelector(selectors: string): Element | null {
 }
 
 /*! #__NO_SIDE_EFFECTS__ */
-export function child(node: ParentNode): Node {
+export function _child(node: ParentNode): Node {
   return node.firstChild!
+}
+
+/*! #__NO_SIDE_EFFECTS__ */
+export function __child(node: ParentNode): Node {
+  /**
+   * During hydration, the first child of a node not be the expected
+   * if the first child is slot
+   *
+   * for template code: `div><slot />{{ data }}</div>`
+   * - slot: 'slot',
+   * - data: 'hi',
+   *
+   * client side:
+   * const n2 = _template("<div> </div>")()
+   * const n1 = _child(n2) -> the text node
+   * _setInsertionState(n2, 0) -> slot fragment
+   *
+   * during hydration:
+   * const n2 = _template("<div><!--[-->slot<!--]--><!--slot-->Hi</div>")()
+   * const n1 = _child(n2) -> should be `Hi` instead of the slot fragment
+   * _setInsertionState(n2, 0) -> slot fragment
+   */
+  let n = node.firstChild!
+
+  if (isComment(n, '[')) {
+    n = locateEndAnchor(n)!.nextSibling!
+  }
+
+  while (n && isVaporFragmentEndAnchor(n)) {
+    n = n.nextSibling!
+  }
+  return n
 }
 
 /*! #__NO_SIDE_EFFECTS__ */
@@ -56,15 +88,25 @@ export function __next(node: Node): Node {
   return n
 }
 
+type ChildFn = (node: ParentNode) => Node
 type NextFn = (node: Node) => Node
 type NthChildFn = (node: Node, i: number) => Node
 
+interface DelegatedChildFunction extends ChildFn {
+  impl: ChildFn
+}
 interface DelegatedNextFunction extends NextFn {
   impl: NextFn
 }
 interface DelegatedNthChildFunction extends NthChildFn {
   impl: NthChildFn
 }
+
+/*! #__NO_SIDE_EFFECTS__ */
+export const child: DelegatedChildFunction = node => {
+  return child.impl(node)
+}
+child.impl = _child
 
 /*! #__NO_SIDE_EFFECTS__ */
 export const next: DelegatedNextFunction = node => {
@@ -90,11 +132,13 @@ nthChild.impl = _nthChild
 // of `next` and `nthChild`. After hydration is complete, their implementations
 // are restored to the original versions.
 export function enableHydrationNodeLookup(): void {
+  child.impl = __child
   next.impl = __next
   nthChild.impl = __nthChild
 }
 
 export function disableHydrationNodeLookup(): void {
+  child.impl = _child
   next.impl = _next
   nthChild.impl = _nthChild
 }
@@ -112,15 +156,10 @@ function isNonHydrationNode(node: Node) {
   )
 }
 
-export function nextVaporFragmentAnchor(
+export function findVaporFragmentAnchor(
   node: Node,
   anchorLabel: string,
 ): Comment | null {
-  node = handleWrappedNode(node)
-  if (isComment(node, anchorLabel)) {
-    return node as Comment
-  }
-
   let n = node.nextSibling
   while (n) {
     if (isComment(n, anchorLabel)) return n

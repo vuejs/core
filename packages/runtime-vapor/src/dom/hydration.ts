@@ -6,7 +6,7 @@ import {
   setInsertionState,
 } from '../insertionState'
 import {
-  child,
+  _child,
   disableHydrationNodeLookup,
   enableHydrationNodeLookup,
   next,
@@ -28,6 +28,7 @@ export function withHydration(container: ParentNode, fn: () => void): void {
   if (!isOptimized) {
     // optimize anchor cache lookup
     ;(Comment.prototype as any).$fs = undefined
+    ;(Node.prototype as any).$nc = undefined
     isOptimized = true
   }
   enableHydrationNodeLookup()
@@ -87,19 +88,17 @@ function locateHydrationNodeImpl(hasFragmentAnchor?: boolean) {
   let node: Node | null
   // prepend / firstChild
   if (insertionAnchor === 0) {
-    node = child(insertionParent!)
+    node = _child(insertionParent!)
   } else if (insertionAnchor) {
     // for dynamic children, use insertionAnchor as the node
     node = insertionAnchor
   } else {
-    node = insertionParent ? insertionParent.lastChild : currentHydrationNode
+    node = insertionParent
+      ? insertionParent.$nc || insertionParent.lastChild
+      : currentHydrationNode
 
-    // if current node is fragment start anchor, find the next one
-    if (node && isComment(node, '[')) {
-      node = node.nextSibling
-    }
     // if the last child is a vapor fragment end anchor, find the previous one
-    else if (hasFragmentAnchor && node && isVaporFragmentEndAnchor(node)) {
+    if (hasFragmentAnchor && node && isVaporFragmentEndAnchor(node)) {
       node = node.previousSibling
       if (__DEV__ && !node) {
         // TODO warning, should not happen
@@ -134,6 +133,10 @@ function locateHydrationNodeImpl(hasFragmentAnchor?: boolean) {
           }
         }
       }
+    }
+
+    if (insertionParent && node) {
+      insertionParent.$nc = node!.previousSibling
     }
   }
 

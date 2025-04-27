@@ -4,7 +4,12 @@ import { compileScript, parse } from '@vue/compiler-sfc'
 import * as runtimeVapor from '../src'
 import * as runtimeDom from '@vue/runtime-dom'
 import * as VueServerRenderer from '@vue/server-renderer'
-import { DYNAMIC_COMPONENT_ANCHOR_LABEL, IF_ANCHOR_LABEL } from '@vue/shared'
+import {
+  DYNAMIC_COMPONENT_ANCHOR_LABEL,
+  FOR_ANCHOR_LABEL,
+  IF_ANCHOR_LABEL,
+  SLOT_ANCHOR_LABEL,
+} from '@vue/shared'
 
 const Vue = { ...runtimeDom, ...runtimeVapor }
 
@@ -1438,6 +1443,9 @@ describe('Vapor Mode hydration', () => {
   })
 
   describe('for', () => {
+    const forAnchorLabel = FOR_ANCHOR_LABEL
+    const slotAnchorLabel = SLOT_ANCHOR_LABEL
+
     test('basic v-for', async () => {
       const { container, data } = await testHydration(
         `<template>
@@ -1454,7 +1462,7 @@ describe('Vapor Mode hydration', () => {
           `<span>a</span>` +
           `<span>b</span>` +
           `<span>c</span>` +
-          `<!--]-->` +
+          `<!--]--><!--${forAnchorLabel}-->` +
           `</div>`,
       )
 
@@ -1466,8 +1474,9 @@ describe('Vapor Mode hydration', () => {
           `<span>a</span>` +
           `<span>b</span>` +
           `<span>c</span>` +
-          `<span>d</span>` +
           `<!--]-->` +
+          `<span>d</span>` +
+          `<!--${forAnchorLabel}-->` +
           `</div>`,
       )
     })
@@ -1483,13 +1492,23 @@ describe('Vapor Mode hydration', () => {
         ref(['a', 'b', 'c']),
       )
       expect(container.innerHTML).toBe(
-        `<div><!--[--><span>a</span><span>b</span><span>c</span><!--]--></div>`,
+        `<div>` +
+          `<!--[-->` +
+          `<span>a</span><span>b</span><span>c</span>` +
+          `<!--]--><!--${forAnchorLabel}-->` +
+          `</div>`,
       )
 
       data.value.push('d')
       await nextTick()
       expect(container.innerHTML).toBe(
-        `<div><!--[--><span>a</span><span>b</span><span>c</span><span>d</span><!--]--></div>`,
+        `<div>` +
+          `<!--[-->` +
+          `<span>a</span><span>b</span><span>c</span>` +
+          `<!--]-->` +
+          `<span>d</span>` +
+          `<!--${forAnchorLabel}-->` +
+          `</div>`,
       )
     })
 
@@ -1512,7 +1531,7 @@ describe('Vapor Mode hydration', () => {
           `<span>a</span>` +
           `<span>b</span>` +
           `<span>c</span>` +
-          `<!--]-->` +
+          `<!--]--><!--${forAnchorLabel}-->` +
           `<span></span>` +
           `</div>`,
       )
@@ -1526,8 +1545,9 @@ describe('Vapor Mode hydration', () => {
           `<span>a</span>` +
           `<span>b</span>` +
           `<span>c</span>` +
-          `<span>d</span>` +
           `<!--]-->` +
+          `<span>d</span>` +
+          `<!--${forAnchorLabel}-->` +
           `<span></span>` +
           `</div>`,
       )
@@ -1540,8 +1560,9 @@ describe('Vapor Mode hydration', () => {
           `<!--[-->` +
           `<span>b</span>` +
           `<span>c</span>` +
-          `<span>d</span>` +
           `<!--]-->` +
+          `<span>d</span>` +
+          `<!--${forAnchorLabel}-->` +
           `<span></span>` +
           `</div>`,
       )
@@ -1567,12 +1588,12 @@ describe('Vapor Mode hydration', () => {
           `<span>a</span>` +
           `<span>b</span>` +
           `<span>c</span>` +
-          `<!--]-->` +
+          `<!--]--><!--${forAnchorLabel}-->` +
           `<!--[-->` +
           `<span>a</span>` +
           `<span>b</span>` +
           `<span>c</span>` +
-          `<!--]-->` +
+          `<!--]--><!--${forAnchorLabel}-->` +
           `<span></span>` +
           `</div>`,
       )
@@ -1586,14 +1607,16 @@ describe('Vapor Mode hydration', () => {
           `<span>a</span>` +
           `<span>b</span>` +
           `<span>c</span>` +
-          `<span>d</span>` +
           `<!--]-->` +
+          `<span>d</span>` +
+          `<!--${forAnchorLabel}-->` +
           `<!--[-->` +
           `<span>a</span>` +
           `<span>b</span>` +
           `<span>c</span>` +
-          `<span>d</span>` +
           `<!--]-->` +
+          `<span>d</span>` +
+          `<!--${forAnchorLabel}-->` +
           `<span></span>` +
           `</div>`,
       )
@@ -1605,12 +1628,14 @@ describe('Vapor Mode hydration', () => {
           `<span></span>` +
           `<!--[-->` +
           `<span>c</span>` +
-          `<span>d</span>` +
           `<!--]-->` +
+          `<span>d</span>` +
+          `<!--${forAnchorLabel}-->` +
           `<!--[-->` +
           `<span>c</span>` +
-          `<span>d</span>` +
           `<!--]-->` +
+          `<span>d</span>` +
+          `<!--${forAnchorLabel}-->` +
           `<span></span>` +
           `</div>`,
       )
@@ -1635,7 +1660,7 @@ describe('Vapor Mode hydration', () => {
           `<div>comp</div>` +
           `<div>comp</div>` +
           `<div>comp</div>` +
-          `<!--]-->` +
+          `<!--]--><!--${forAnchorLabel}-->` +
           `</div>`,
       )
 
@@ -1647,8 +1672,9 @@ describe('Vapor Mode hydration', () => {
           `<div>comp</div>` +
           `<div>comp</div>` +
           `<div>comp</div>` +
-          `<div>comp</div>` +
           `<!--]-->` +
+          `<div>comp</div>` +
+          `<!--${forAnchorLabel}-->` +
           `</div>`,
       )
     })
@@ -1670,10 +1696,10 @@ describe('Vapor Mode hydration', () => {
       expect(container.innerHTML).toBe(
         `<div>` +
           `<!--[-->` +
-          `<!--[--><span>a</span><!--]--><!--slot-->` +
-          `<!--[--><span>b</span><!--]--><!--slot-->` +
-          `<!--[--><span>c</span><!--]--><!--slot-->` +
-          `<!--]-->` +
+          `<!--[--><span>a</span><!--]--><!--${slotAnchorLabel}-->` +
+          `<!--[--><span>b</span><!--]--><!--${slotAnchorLabel}-->` +
+          `<!--[--><span>c</span><!--]--><!--${slotAnchorLabel}-->` +
+          `<!--]--><!--${forAnchorLabel}-->` +
           `</div>`,
       )
 
@@ -1682,11 +1708,12 @@ describe('Vapor Mode hydration', () => {
       expect(container.innerHTML).toBe(
         `<div>` +
           `<!--[-->` +
-          `<!--[--><span>a</span><!--]--><!--slot-->` +
-          `<!--[--><span>b</span><!--]--><!--slot-->` +
-          `<!--[--><span>c</span><!--]--><!--slot-->` +
-          `<span>d</span><!--slot-->` +
+          `<!--[--><span>a</span><!--]--><!--${slotAnchorLabel}-->` +
+          `<!--[--><span>b</span><!--]--><!--${slotAnchorLabel}-->` +
+          `<!--[--><span>c</span><!--]--><!--${slotAnchorLabel}-->` +
           `<!--]-->` +
+          `<span>d</span><!--${slotAnchorLabel}-->` +
+          `<!--${forAnchorLabel}-->` +
           `</div>`,
       )
     })
@@ -1709,7 +1736,7 @@ describe('Vapor Mode hydration', () => {
           `<!--[--><div>foo</div>-bar-<!--]-->` +
           `<!--[--><div>foo</div>-bar-<!--]-->` +
           `<!--[--><div>foo</div>-bar-<!--]-->` +
-          `<!--]-->` +
+          `<!--]--><!--${forAnchorLabel}-->` +
           `</div>`,
       )
 
@@ -1721,18 +1748,17 @@ describe('Vapor Mode hydration', () => {
           `<!--[--><div>foo</div>-bar-<!--]-->` +
           `<!--[--><div>foo</div>-bar-<!--]-->` +
           `<!--[--><div>foo</div>-bar-<!--]-->` +
-          `<div>foo</div>-bar-` +
           `<!--]-->` +
+          `<div>foo</div>-bar-` +
+          `<!--${forAnchorLabel}-->` +
           `</div>`,
       )
     })
-
-    // TODO wait for vapor TransitionGroup support
-    // v-for inside TransitionGroup does not render as a fragment
-    test.todo('v-for in TransitionGroup', async () => {})
   })
 
   describe('slots', () => {
+    const slotAnchorLabel = SLOT_ANCHOR_LABEL
+    const forAnchorLabel = FOR_ANCHOR_LABEL
     test('basic slot', async () => {
       const { data, container } = await testHydration(
         `<template>
@@ -1745,13 +1771,13 @@ describe('Vapor Mode hydration', () => {
         },
       )
       expect(container.innerHTML).toBe(
-        `<!--[--><span>foo</span><!--]--><!--slot-->`,
+        `<!--[--><span>foo</span><!--]--><!--${slotAnchorLabel}-->`,
       )
 
       data.value = 'bar'
       await nextTick()
       expect(container.innerHTML).toBe(
-        `<!--[--><span>bar</span><!--]--><!--slot-->`,
+        `<!--[--><span>bar</span><!--]--><!--${slotAnchorLabel}-->`,
       )
     })
 
@@ -1769,13 +1795,13 @@ describe('Vapor Mode hydration', () => {
         },
       )
       expect(container.innerHTML).toBe(
-        `<!--[--><span>foo</span><!--]--><!--slot-->`,
+        `<!--[--><span>foo</span><!--]--><!--${slotAnchorLabel}-->`,
       )
 
       data.value = 'bar'
       await nextTick()
       expect(container.innerHTML).toBe(
-        `<!--[--><span>bar</span><!--]--><!--slot-->`,
+        `<!--[--><span>bar</span><!--]--><!--${slotAnchorLabel}-->`,
       )
     })
 
@@ -1793,12 +1819,14 @@ describe('Vapor Mode hydration', () => {
         },
       )
       expect(container.innerHTML).toBe(
-        `<!--[--><span>foo</span><!--]--><!--slot-->`,
+        `<!--[--><span>foo</span><!--]--><!--${slotAnchorLabel}-->`,
       )
 
       data.value = false
       await nextTick()
-      expect(container.innerHTML).toBe(`<!--[--><!--]--><!--slot-->`)
+      expect(container.innerHTML).toBe(
+        `<!--[--><!--]--><!--${slotAnchorLabel}-->`,
+      )
     })
 
     test('named slot with v-if and v-for', async () => {
@@ -1821,15 +1849,15 @@ describe('Vapor Mode hydration', () => {
       )
       expect(container.innerHTML).toBe(
         `<!--[-->` +
-          `<!--[--><span>a</span><span>b</span><span>c</span><!--]-->` +
+          `<!--[--><span>a</span><span>b</span><span>c</span><!--]--><!--${forAnchorLabel}-->` +
           `<!--]-->` +
-          `<!--slot-->`,
+          `<!--${slotAnchorLabel}-->`,
       )
 
       data.show = false
       await nextTick()
       expect(container.innerHTML).toBe(
-        `<!--[--><!--[--><!--]--><!--]--><!--slot-->`,
+        `<!--[--><!--[--><!--]--><!--]--><!--${slotAnchorLabel}-->`,
       )
     })
 
@@ -1852,7 +1880,7 @@ describe('Vapor Mode hydration', () => {
           `<span>foo</span>` +
           `<span></span>` +
           `<!--]-->` +
-          `<!--slot-->`,
+          `<!--${slotAnchorLabel}-->`,
       )
 
       data.value = 'bar'
@@ -1863,7 +1891,7 @@ describe('Vapor Mode hydration', () => {
           `<span>bar</span>` +
           `<span></span>` +
           `<!--]-->` +
-          `<!--slot-->`,
+          `<!--${slotAnchorLabel}-->`,
       )
     })
 
@@ -1896,7 +1924,7 @@ describe('Vapor Mode hydration', () => {
           `<span>foo</span>` +
           `<span></span>` +
           `<!--]-->` +
-          `<!--slot-->` +
+          `<!--${slotAnchorLabel}-->` +
           `<div></div>` +
           `<!--]-->`,
       )
@@ -1912,14 +1940,13 @@ describe('Vapor Mode hydration', () => {
           `<span>bar</span>` +
           `<span></span>` +
           `<!--]-->` +
-          `<!--slot-->` +
+          `<!--${slotAnchorLabel}-->` +
           `<div></div>` +
           `<!--]-->`,
       )
     })
 
-    // problem is next child is incorrect after slot
-    test.todo('mixed slot and text node', async () => {
+    test('mixed slot and text node', async () => {
       const data = reactive({
         text: 'foo',
         msg: 'hi',
@@ -1937,11 +1964,11 @@ describe('Vapor Mode hydration', () => {
       )
 
       expect(container.innerHTML).toMatchInlineSnapshot(
-        `"<div><!--[--><span>foo</span><!--]--><!--slot-->hi</div>"`,
+        `"<div><!--[--><span>foo</span><!--]--><!--${slotAnchorLabel}-->hi</div>"`,
       )
     })
 
-    test.todo('mixed slot and element', async () => {
+    test('mixed slot and element', async () => {
       const data = reactive({
         text: 'foo',
         msg: 'hi',
@@ -1959,14 +1986,272 @@ describe('Vapor Mode hydration', () => {
       )
 
       expect(container.innerHTML).toMatchInlineSnapshot(
-        `"<div><!--hi--><span>foo</span><!--]--><!--slot--><div>hi</div></div>"`,
+        `"<div><!--[--><span>foo</span><!--]--><!--${slotAnchorLabel}--><div>hi</div></div>"`,
       )
     })
 
-    // mixed slot and component
-    // mixed slot and fragment component
-    // mixed slot and v-if
-    // mixed slot and v-for
+    test('mixed slot and component', async () => {
+      const data = reactive({
+        msg1: 'foo',
+        msg2: 'bar',
+      })
+      const { container } = await testHydration(
+        `<template>
+          <components.Child>
+            <span>{{data.msg1}}</span>
+          </components.Child>
+        </template>`,
+        {
+          Child: `
+          <template>
+            <div>
+              <components.Child2/>
+              <slot/>
+              <components.Child2/>
+            </div>
+          </template>`,
+          Child2: `
+          <template>
+            <div>{{data.msg2}}</div>
+          </template>`,
+        },
+        data,
+      )
+      expect(container.innerHTML).toBe(
+        `<div>` +
+          `<div>bar</div>` +
+          `<!--[--><span>foo</span><!--]--><!--${slotAnchorLabel}-->` +
+          `<div>bar</div>` +
+          `</div>`,
+      )
+      data.msg2 = 'hello'
+      await nextTick()
+      expect(container.innerHTML).toBe(
+        `<div>` +
+          `<div>hello</div>` +
+          `<!--[--><span>foo</span><!--]--><!--${slotAnchorLabel}-->` +
+          `<div>hello</div>` +
+          `</div>`,
+      )
+    })
+
+    test('mixed slot and fragment component', async () => {
+      const data = reactive({
+        msg1: 'foo',
+        msg2: 'bar',
+      })
+      const { container } = await testHydration(
+        `<template>
+          <components.Child>
+            <span>{{data.msg1}}</span>
+          </components.Child>
+        </template>`,
+        {
+          Child: `
+          <template>
+            <div>
+              <components.Child2/>
+              <slot/>
+              <components.Child2/>
+            </div>
+          </template>`,
+          Child2: `
+          <template>
+            <div>{{data.msg1}}</div> {{data.msg2}}
+          </template>`,
+        },
+        data,
+      )
+      expect(container.innerHTML).toBe(
+        `<div>` +
+          `<!--[--><div>foo</div> bar<!--]-->` +
+          `<!--[--><span>foo</span><!--]--><!--${slotAnchorLabel}-->` +
+          `<!--[--><div>foo</div> bar<!--]-->` +
+          `</div>`,
+      )
+
+      data.msg1 = 'hello'
+      data.msg2 = 'vapor'
+      await nextTick()
+      expect(container.innerHTML).toBe(
+        `<div>` +
+          `<!--[--><div>hello</div> vapor<!--]-->` +
+          `<!--[--><span>hello</span><!--]--><!--${slotAnchorLabel}-->` +
+          `<!--[--><div>hello</div> vapor<!--]-->` +
+          `</div>`,
+      )
+    })
+
+    test('mixed slot and v-if', async () => {
+      const data = reactive({
+        show: true,
+        msg: 'foo',
+      })
+      const { container } = await testHydration(
+        `<template>
+          <components.Child>
+            <span>{{data.msg}}</span>
+          </components.Child>
+        </template>`,
+        {
+          Child: `
+          <template>
+            <div v-if="data.show">{{data.msg}}</div>
+            <slot/>
+            <div v-if="data.show">{{data.msg}}</div>
+          </template>`,
+        },
+        data,
+      )
+
+      expect(container.innerHTML).toBe(
+        `<!--[-->` +
+          `<div>foo</div><!--if-->` +
+          `<!--[--><span>foo</span><!--]--><!--${slotAnchorLabel}-->` +
+          `<div>foo</div><!--if-->` +
+          `<!--]-->`,
+      )
+
+      data.show = false
+      await nextTick()
+      expect(container.innerHTML).toBe(
+        `<!--[-->` +
+          `<!--if-->` +
+          `<!--[--><span>foo</span><!--]--><!--${slotAnchorLabel}-->` +
+          `<!--if-->` +
+          `<!--]-->`,
+      )
+    })
+
+    test('mixed slot and v-for', async () => {
+      const data = reactive({
+        items: ['a', 'b', 'c'],
+        msg: 'foo',
+      })
+      const { container } = await testHydration(
+        `<template>
+          <components.Child>
+            <span>{{data.msg}}</span>
+          </components.Child>
+        </template>`,
+        {
+          Child: `
+          <template>
+            <div v-for="item in data.items" :key="item">{{item}}</div>
+            <slot/>
+            <div v-for="item in data.items" :key="item">{{item}}</div>
+          </template>`,
+        },
+        data,
+      )
+
+      expect(container.innerHTML).toBe(
+        `<!--[-->` +
+          `<!--[--><div>a</div><div>b</div><div>c</div><!--]--><!--${forAnchorLabel}-->` +
+          `<!--[--><span>foo</span><!--]--><!--${slotAnchorLabel}-->` +
+          `<!--[--><div>a</div><div>b</div><div>c</div><!--]--><!--${forAnchorLabel}-->` +
+          `<!--]-->`,
+      )
+
+      data.items.push('d')
+      await nextTick()
+      expect(container.innerHTML).toBe(
+        `<!--[-->` +
+          `<!--[--><div>a</div><div>b</div><div>c</div><!--]--><div>d</div><!--${forAnchorLabel}-->` +
+          `<!--[--><span>foo</span><!--]--><!--${slotAnchorLabel}-->` +
+          `<!--[--><div>a</div><div>b</div><div>c</div><!--]--><div>d</div><!--${forAnchorLabel}-->` +
+          `<!--]-->`,
+      )
+    })
+
+    test('consecutive slots', async () => {
+      const data = reactive({
+        msg1: 'foo',
+        msg2: 'bar',
+      })
+
+      const { container } = await testHydration(
+        `<template>
+          <components.Child>
+            <span>{{data.msg1}}</span>
+            <template #bar>
+              <span>{{data.msg2}}</span>
+            </template>
+          </components.Child>
+        </template>`,
+        {
+          Child: `<template><slot/><slot name="bar"/></template>`,
+        },
+        data,
+      )
+
+      expect(container.innerHTML).toBe(
+        `<!--[-->` +
+          `<!--[--><span>foo</span><!--]--><!--${slotAnchorLabel}-->` +
+          `<!--[--><span>bar</span><!--]--><!--${slotAnchorLabel}-->` +
+          `<!--]-->`,
+      )
+
+      data.msg1 = 'hello'
+      data.msg2 = 'vapor'
+      await nextTick()
+      expect(container.innerHTML).toBe(
+        `<!--[-->` +
+          `<!--[--><span>hello</span><!--]--><!--${slotAnchorLabel}-->` +
+          `<!--[--><span>vapor</span><!--]--><!--${slotAnchorLabel}-->` +
+          `<!--]-->`,
+      )
+    })
+
+    test('consecutive slots with anchor insertion', async () => {
+      const data = reactive({
+        msg1: 'foo',
+        msg2: 'bar',
+      })
+
+      const { container } = await testHydration(
+        `<template>
+          <components.Child>
+            <span>{{data.msg1}}</span>
+            <template #bar>
+              <span>{{data.msg2}}</span>
+            </template>
+          </components.Child>
+        </template>`,
+        {
+          Child: `<template>
+            <div>
+              <span/>
+              <slot/>
+              <slot name="bar"/>
+              <span/>
+            </div>
+          </template>`,
+        },
+        data,
+      )
+
+      expect(container.innerHTML).toBe(
+        `<div>` +
+          `<span></span>` +
+          `<!--[--><span>foo</span><!--]--><!--${slotAnchorLabel}-->` +
+          `<!--[--><span>bar</span><!--]--><!--${slotAnchorLabel}-->` +
+          `<span></span>` +
+          `</div>`,
+      )
+
+      data.msg1 = 'hello'
+      data.msg2 = 'vapor'
+      await nextTick()
+      expect(container.innerHTML).toBe(
+        `<div>` +
+          `<span></span>` +
+          `<!--[--><span>hello</span><!--]--><!--${slotAnchorLabel}-->` +
+          `<!--[--><span>vapor</span><!--]--><!--${slotAnchorLabel}-->` +
+          `<span></span>` +
+          `</div>`,
+      )
+    })
   })
 
   // test('element with ref', () => {

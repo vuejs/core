@@ -381,6 +381,7 @@ function processChildrenDynamicInfo(
  *  <Comp/>     // Dynamic node -> should be wrapped
  *  <Comp/>     // Dynamic node -> should NOT be wrapped
  *  <element/>  // Static node
+ * </element>
  */
 function shouldProcessChildAsDynamic(
   parent: { tag?: string; children: TemplateChildNode[] },

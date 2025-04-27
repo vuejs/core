@@ -147,7 +147,7 @@ describe('ssr: v-if', () => {
           _ssrRenderList(_ctx.list, (i) => {
             _push(\`<div></div>\`)
           })
-          _push(\`<!--]-->\`)
+          _push(\`<!--]--><!--for-->\`)
           _push(\`<!--if-->\`)
         } else {
           _push(\`<!---->\`)

@@ -104,7 +104,7 @@ export function ssrRenderSlotInner(
         if (
           transition &&
           slotBuffer[0] === '<!--[-->' &&
-          slotBuffer[end - 1] === '<!--]-->'
+          (slotBuffer[end - 1] as string).startsWith('<!--]-->')
         ) {
           start++
           end--

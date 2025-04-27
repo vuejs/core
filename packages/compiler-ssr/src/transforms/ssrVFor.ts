@@ -49,8 +49,7 @@ export function ssrProcessFor(
   )
   if (!disableNestedFragments) {
     context.pushStringPart(`<!--]-->`)
-  } else {
-    // add anchor for non-fragment v-for
-    context.pushStringPart(`<!--${FOR_ANCHOR_LABEL}-->`)
   }
+  // v-for anchor for vapor hydration
+  context.pushStringPart(`<!--${FOR_ANCHOR_LABEL}-->`)
 }

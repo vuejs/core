@@ -19,7 +19,7 @@ import {
 import {
   createComment,
   createTextNode,
-  nextVaporFragmentAnchor,
+  findVaporFragmentAnchor,
 } from './dom/node'
 import {
   type Block,
@@ -34,7 +34,6 @@ import { renderEffect } from './renderEffect'
 import { VaporVForFlags } from '../../shared/src/vaporFlags'
 import {
   currentHydrationNode,
-  isComment,
   isHydrating,
   locateHydrationNode,
 } from './dom/hydration'
@@ -99,15 +98,20 @@ export const createFor = (
   let oldBlocks: ForBlock[] = []
   let newBlocks: ForBlock[]
   let parent: ParentNode | undefined | null
-  const parentAnchor = isHydrating
-    ? // Use fragment end anchor if available, otherwise use the specific for anchor.
-      nextVaporFragmentAnchor(
-        currentHydrationNode!,
-        isComment(currentHydrationNode!, '[') ? ']' : FOR_ANCHOR_LABEL,
-      )!
-    : __DEV__
-      ? createComment('for')
-      : createTextNode()
+  let parentAnchor: Node
+  if (isHydrating) {
+    parentAnchor = findVaporFragmentAnchor(
+      currentHydrationNode!,
+      FOR_ANCHOR_LABEL,
+    )!
+    if (__DEV__ && !parentAnchor) {
+      // TODO warn, should not happen
+      warn(`createFor anchor not found...`)
+    }
+  } else {
+    parentAnchor = __DEV__ ? createComment('for') : createTextNode()
+  }
+
   const frag = new VaporFragment(oldBlocks)
   const instance = currentInstance!
   const canUseFastRemove = flags & VaporVForFlags.FAST_REMOVE

@@ -8,7 +8,7 @@ import {
 import {
   createComment,
   createTextNode,
-  nextVaporFragmentAnchor,
+  findVaporFragmentAnchor,
 } from './dom/node'
 import { EffectScope, pauseTracking, resetTracking } from '@vue/reactivity'
 import {
@@ -99,7 +99,7 @@ export class DynamicFragment extends VaporFragment {
       this.anchor = currentHydrationNode
     } else {
       // find next sibling dynamic fragment end anchor
-      const anchor = nextVaporFragmentAnchor(currentHydrationNode!, label)!
+      const anchor = findVaporFragmentAnchor(currentHydrationNode!, label)!
       if (anchor) {
         this.anchor = anchor
       } else if (__DEV__) {

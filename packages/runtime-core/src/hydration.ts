@@ -125,7 +125,7 @@ export function createHydrationFunctions(
     let n = next(node)
     // skip if:
     // - dynamic anchors (`<!--[[-->`, `<!--][-->`)
-    // - dynamic fragment end anchors (e.g. `<!--if-->`, `<!--for-->`)
+    // - vapor fragment end anchors (e.g. `<!--if-->`, `<!--for-->`)
     if (n && (isDynamicAnchor(n) || isVaporFragmentEndAnchor(n))) {
       n = next(n)
     }

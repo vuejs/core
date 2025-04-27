@@ -246,7 +246,7 @@ describe('ssr: components', () => {
                   _ssrRenderList(list, (i) => {
                     _push(\`<span\${_scopeId}></span>\`)
                   })
-                  _push(\`<!--]--></div>\`)
+                  _push(\`<!--]--><!--for--></div>\`)
                   _push(\`<!--if-->\`)
                 } else {
                   _push(\`<!---->\`)
@@ -270,7 +270,7 @@ describe('ssr: components', () => {
                   _ssrRenderList(_ctx.list, (i) => {
                     _push(\`<span\${_scopeId}></span>\`)
                   })
-                  _push(\`<!--]--></div>\`)
+                  _push(\`<!--]--><!--for--></div>\`)
                   _push(\`<!--if-->\`)
                 } else {
                   _push(\`<!---->\`)
