@@ -124,7 +124,10 @@ export function createSlot(
       fallback,
     )
   } else {
-    fragment = new DynamicFragment(SLOT_ANCHOR_LABEL)
+    fragment =
+      isHydrating || __DEV__
+        ? new DynamicFragment(SLOT_ANCHOR_LABEL)
+        : new DynamicFragment()
     const isDynamicName = isFunction(name)
     const renderSlot = () => {
       const slot = getSlot(rawSlots, isFunction(name) ? name() : name)

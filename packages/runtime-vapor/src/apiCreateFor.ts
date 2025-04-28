@@ -16,11 +16,7 @@ import {
   isObject,
   isString,
 } from '@vue/shared'
-import {
-  createComment,
-  createTextNode,
-  findVaporFragmentAnchor,
-} from './dom/node'
+import { createComment, createTextNode } from './dom/node'
 import {
   type Block,
   VaporFragment,
@@ -34,6 +30,7 @@ import { renderEffect } from './renderEffect'
 import { VaporVForFlags } from '../../shared/src/vaporFlags'
 import {
   currentHydrationNode,
+  findVaporFragmentAnchor,
   isHydrating,
   locateHydrationNode,
 } from './dom/hydration'

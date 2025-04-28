@@ -22,7 +22,10 @@ export function createDynamicComponent(
   const _insertionAnchor = insertionAnchor
   if (!isHydrating) resetInsertionState()
 
-  const frag = new DynamicFragment(DYNAMIC_COMPONENT_ANCHOR_LABEL)
+  const frag =
+    isHydrating || __DEV__
+      ? new DynamicFragment(DYNAMIC_COMPONENT_ANCHOR_LABEL)
+      : new DynamicFragment()
   renderEffect(() => {
     const value = getter()
     frag.update(

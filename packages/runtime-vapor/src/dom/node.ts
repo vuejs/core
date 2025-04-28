@@ -1,8 +1,7 @@
-import { isComment, isEmptyText, locateEndAnchor } from './hydration'
+import { isComment, isNonHydrationNode, locateEndAnchor } from './hydration'
 import {
   DYNAMIC_END_ANCHOR_LABEL,
   DYNAMIC_START_ANCHOR_LABEL,
-  isDynamicAnchor,
   isVaporFragmentEndAnchor,
 } from '@vue/shared'
 
@@ -42,7 +41,7 @@ export function __child(node: ParentNode): Node {
    * _setInsertionState(n2, 0) -> slot fragment
    *
    * during hydration:
-   * const n2 = _template("<div><!--[-->slot<!--]--><!--slot-->Hi</div>")()
+   * const n2 = <div><!--[-->slot<!--]--><!--slot-->Hi</div> // server output
    * const n1 = _child(n2) -> should be `Hi` instead of the slot fragment
    * _setInsertionState(n2, 0) -> slot fragment
    */
@@ -79,7 +78,19 @@ function _next(node: Node): Node {
 
 /*! #__NO_SIDE_EFFECTS__ */
 export function __next(node: Node): Node {
-  node = handleWrappedNode(node)
+  // process dynamic node (<!--[[-->...<!--]]-->) as a single node
+  if (isComment(node, DYNAMIC_START_ANCHOR_LABEL)) {
+    node = locateEndAnchor(
+      node,
+      DYNAMIC_START_ANCHOR_LABEL,
+      DYNAMIC_END_ANCHOR_LABEL,
+    )!
+  }
+
+  // process fragment (<!--[-->...<!--]-->) as a single node
+  else if (isComment(node, '[')) {
+    node = locateEndAnchor(node)!
+  }
 
   let n = node.nextSibling!
   while (n && isNonHydrationNode(n)) {
@@ -141,48 +152,4 @@ export function disableHydrationNodeLookup(): void {
   child.impl = _child
   next.impl = _next
   nthChild.impl = _nthChild
-}
-
-function isNonHydrationNode(node: Node) {
-  return (
-    // empty text nodes, no need to hydrate
-    isEmptyText(node) ||
-    // dynamic node anchors (<!--[[-->, <!--]]-->)
-    isDynamicAnchor(node) ||
-    // fragment end anchor (`<!--]-->`)
-    isComment(node, ']') ||
-    // vapor fragment end anchors
-    isVaporFragmentEndAnchor(node)
-  )
-}
-
-export function findVaporFragmentAnchor(
-  node: Node,
-  anchorLabel: string,
-): Comment | null {
-  let n = node.nextSibling
-  while (n) {
-    if (isComment(n, anchorLabel)) return n
-    n = n.nextSibling
-  }
-
-  return null
-}
-
-function handleWrappedNode(node: Node): Node {
-  // process dynamic node (<!--[[-->...<!--]]-->) as a single one
-  if (isComment(node, DYNAMIC_START_ANCHOR_LABEL)) {
-    return locateEndAnchor(
-      node,
-      DYNAMIC_START_ANCHOR_LABEL,
-      DYNAMIC_END_ANCHOR_LABEL,
-    )!
-  }
-
-  // process fragment (<!--[-->...<!--]-->) as a single one
-  else if (isComment(node, '[')) {
-    return locateEndAnchor(node)!
-  }
-
-  return node
 }

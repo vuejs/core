@@ -1963,8 +1963,56 @@ describe('Vapor Mode hydration', () => {
         data,
       )
 
-      expect(container.innerHTML).toMatchInlineSnapshot(
-        `"<div><!--[--><span>foo</span><!--]--><!--${slotAnchorLabel}-->hi</div>"`,
+      expect(container.innerHTML).toBe(
+        `<div>` +
+          `<!--[--><span>foo</span><!--]--><!--${slotAnchorLabel}-->` +
+          `hi` +
+          `</div>`,
+      )
+
+      data.msg = 'bar'
+      await nextTick()
+      expect(container.innerHTML).toBe(
+        `<div>` +
+          `<!--[--><span>foo</span><!--]--><!--${slotAnchorLabel}-->` +
+          `bar` +
+          `</div>`,
+      )
+    })
+
+    test('mixed root slot and text node', async () => {
+      const data = reactive({
+        text: 'foo',
+        msg: 'hi',
+      })
+      const { container } = await testHydration(
+        `<template>
+          <components.Child>
+            <span>{{data.text}}</span>
+          </components.Child>
+        </template>`,
+        {
+          Child: `<template>{{data.text}}<slot/>{{data.msg}}</template>`,
+        },
+        data,
+      )
+
+      expect(container.innerHTML).toBe(
+        `<!--[-->` +
+          `foo` +
+          `<!--[--><span>foo</span><!--]--><!--${slotAnchorLabel}-->` +
+          `hi` +
+          `<!--]-->`,
+      )
+
+      data.msg = 'bar'
+      await nextTick()
+      expect(container.innerHTML).toBe(
+        `<!--[-->` +
+          `foo` +
+          `<!--[--><span>foo</span><!--]--><!--${slotAnchorLabel}-->` +
+          `bar` +
+          `<!--]-->`,
       )
     })
 
@@ -1985,8 +2033,20 @@ describe('Vapor Mode hydration', () => {
         data,
       )
 
-      expect(container.innerHTML).toMatchInlineSnapshot(
-        `"<div><!--[--><span>foo</span><!--]--><!--${slotAnchorLabel}--><div>hi</div></div>"`,
+      expect(container.innerHTML).toBe(
+        `<div>` +
+          `<!--[--><span>foo</span><!--]--><!--${slotAnchorLabel}-->` +
+          `<div>hi</div>` +
+          `</div>`,
+      )
+
+      data.msg = 'bar'
+      await nextTick()
+      expect(container.innerHTML).toBe(
+        `<div>` +
+          `<!--[--><span>foo</span><!--]--><!--${slotAnchorLabel}-->` +
+          `<div>bar</div>` +
+          `</div>`,
       )
     })
 
@@ -2024,6 +2084,7 @@ describe('Vapor Mode hydration', () => {
           `<div>bar</div>` +
           `</div>`,
       )
+
       data.msg2 = 'hello'
       await nextTick()
       expect(container.innerHTML).toBe(

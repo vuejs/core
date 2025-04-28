@@ -11,7 +11,7 @@ import {
   enableHydrationNodeLookup,
   next,
 } from './node'
-import { isVaporFragmentEndAnchor } from '@vue/shared'
+import { isDynamicAnchor, isVaporFragmentEndAnchor } from '@vue/shared'
 
 export let isHydrating = false
 export let currentHydrationNode: Node | null = null
@@ -189,5 +189,31 @@ export function locateEndAnchor(
       }
     }
   }
+  return null
+}
+
+export function isNonHydrationNode(node: Node): boolean {
+  return (
+    // empty text nodes
+    isEmptyText(node) ||
+    // dynamic node anchors (<!--[[-->, <!--]]-->)
+    isDynamicAnchor(node) ||
+    // fragment end anchor (`<!--]-->`)
+    isComment(node, ']') ||
+    // vapor fragment end anchors
+    isVaporFragmentEndAnchor(node)
+  )
+}
+
+export function findVaporFragmentAnchor(
+  node: Node,
+  anchorLabel: string,
+): Comment | null {
+  let n = node.nextSibling
+  while (n) {
+    if (isComment(n, anchorLabel)) return n
+    n = n.nextSibling
+  }
+
   return null
 }

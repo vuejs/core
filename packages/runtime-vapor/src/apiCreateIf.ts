@@ -22,7 +22,10 @@ export function createIf(
   if (once) {
     frag = condition() ? b1() : b2 ? b2() : []
   } else {
-    frag = new DynamicFragment(IF_ANCHOR_LABEL)
+    frag =
+      isHydrating || __DEV__
+        ? new DynamicFragment(IF_ANCHOR_LABEL)
+        : new DynamicFragment()
     renderEffect(() => (frag as DynamicFragment).update(condition() ? b1 : b2))
   }
 
