@@ -149,6 +149,7 @@ export const createApp = ((...args) => {
 
 export const createSSRApp = ((...args) => {
   const app = ensureHydrationRenderer().createApp(...args)
+  app._ssr = true
 
   if (__DEV__) {
     injectNativeTagCheck(app)
@@ -319,7 +320,7 @@ export * from './jsx'
 /**
  * @internal
  */
-export { ensureRenderer, normalizeContainer }
+export { ensureRenderer, ensureHydrationRenderer, normalizeContainer }
 /**
  * @internal
  */

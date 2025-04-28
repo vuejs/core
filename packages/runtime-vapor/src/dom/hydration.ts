@@ -22,10 +22,15 @@ export function setCurrentHydrationNode(node: Node | null): void {
 
 let isOptimized = false
 
-export function withHydration(container: ParentNode, fn: () => void): void {
-  adoptTemplate = adoptTemplateImpl
-  locateHydrationNode = locateHydrationNodeImpl
+function performHydration<T>(
+  fn: () => T,
+  setup: () => void,
+  cleanup: () => void,
+): T {
   if (!isOptimized) {
+    adoptTemplate = adoptTemplateImpl
+    locateHydrationNode = locateHydrationNodeImpl
+
     // optimize anchor cache lookup
     ;(Comment.prototype as any).$fs = undefined
     ;(Node.prototype as any).$nc = undefined
@@ -33,13 +38,25 @@ export function withHydration(container: ParentNode, fn: () => void): void {
   }
   enableHydrationNodeLookup()
   isHydrating = true
-  setInsertionState(container, 0)
+  setup()
   const res = fn()
-  resetInsertionState()
+  cleanup()
   currentHydrationNode = null
   isHydrating = false
   disableHydrationNodeLookup()
   return res
+}
+
+export function withHydration(container: ParentNode, fn: () => void): void {
+  const setup = () => setInsertionState(container, 0)
+  const cleanup = () => resetInsertionState()
+  return performHydration(fn, setup, cleanup)
+}
+
+export function hydrateNode(node: Node, fn: () => void): void {
+  const setup = () => (currentHydrationNode = node)
+  const cleanup = () => {}
+  return performHydration(fn, setup, cleanup)
 }
 
 export let adoptTemplate: (node: Node, template: string) => Node | null

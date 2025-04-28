@@ -2,6 +2,7 @@ import {
   type App,
   type ComponentInternalInstance,
   type ConcreteComponent,
+  type HydrationRenderer,
   MoveType,
   type Plugin,
   type RendererInternals,
@@ -11,6 +12,7 @@ import {
   type VaporInteropInterface,
   createVNode,
   currentInstance,
+  ensureHydrationRenderer,
   ensureRenderer,
   onScopeDispose,
   renderSlot,
@@ -33,11 +35,12 @@ import type { RawSlots, VaporSlot } from './componentSlots'
 import { renderEffect } from './renderEffect'
 import { createTextNode } from './dom/node'
 import { optimizePropertyLookup } from './dom/prop'
+import { hydrateNode as vaporHydrateNode } from './dom/hydration'
 
 // mounting vapor components and slots in vdom
 const vaporInteropImpl: Omit<
   VaporInteropInterface,
-  'vdomMount' | 'vdomUnmount' | 'vdomSlot'
+  'vdomMount' | 'vdomUnmount' | 'vdomSlot' | 'vdomHydrate'
 > = {
   mount(vnode, container, anchor, parentComponent) {
     const selfAnchor = (vnode.el = vnode.anchor = createTextNode())
@@ -113,6 +116,8 @@ const vaporInteropImpl: Omit<
     insert(vnode.vb || (vnode.component as any), container, anchor)
     insert(vnode.anchor as any, container, anchor)
   },
+
+  hydrate: vaporHydrateNode,
 }
 
 const vaporSlotPropsProxyHandler: ProxyHandler<
@@ -147,7 +152,7 @@ function createVDOMComponent(
   component: ConcreteComponent,
   rawProps?: LooseRawProps | null,
   rawSlots?: LooseRawSlots | null,
-): VaporFragment {
+): [VaporFragment, VNode] {
   const frag = new VaporFragment([])
   const vnode = createVNode(
     component,
@@ -202,7 +207,7 @@ function createVDOMComponent(
 
   frag.remove = unmount
 
-  return frag
+  return [frag, vnode]
 }
 
 /**
@@ -279,11 +284,14 @@ function renderVDOMSlot(
 }
 
 export const vaporInteropPlugin: Plugin = app => {
-  const internals = ensureRenderer().internals
+  const { internals, hydrateNode } = (
+    app._ssr ? ensureHydrationRenderer() : ensureRenderer()
+  ) as HydrationRenderer
   app._context.vapor = extend(vaporInteropImpl, {
     vdomMount: createVDOMComponent.bind(null, internals),
     vdomUnmount: internals.umt,
     vdomSlot: renderVDOMSlot.bind(null, internals),
+    vdomHydrate: hydrateNode,
   })
   const mount = app.mount
   app.mount = ((...args) => {

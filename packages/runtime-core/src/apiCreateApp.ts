@@ -33,6 +33,7 @@ import type { NormalizedPropsOptions } from './componentProps'
 import type { ObjectEmitsOptions } from './componentEmits'
 import { ErrorCodes, callWithAsyncErrorHandling } from './errorHandling'
 import type { DefineComponent } from './apiDefineComponent'
+import type { createHydrationFunctions } from './hydration'
 
 export interface App<HostElement = any> {
   version: string
@@ -104,6 +105,7 @@ export interface App<HostElement = any> {
   _container: HostElement | null
   _context: AppContext
   _instance: GenericComponentInstance | null
+  _ssr?: boolean
 
   /**
    * @internal custom element vnode
@@ -193,6 +195,7 @@ export interface VaporInteropInterface {
   unmount(vnode: VNode, doRemove?: boolean): void
   move(vnode: VNode, container: any, anchor: any): void
   slot(n1: VNode | null, n2: VNode, container: any, anchor: any): void
+  hydrate(node: Node, fn: () => void): void
 
   vdomMount: (component: ConcreteComponent, props?: any, slots?: any) => any
   vdomUnmount: UnmountComponentFn
@@ -203,6 +206,7 @@ export interface VaporInteropInterface {
     parentComponent: any, // VaporComponentInstance
     fallback?: any, // VaporSlot
   ) => any
+  vdomHydrate: ReturnType<typeof createHydrationFunctions>[1] | undefined
 }
 
 /**

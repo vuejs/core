@@ -58,7 +58,11 @@ import {
   getSlot,
 } from './componentSlots'
 import { hmrReload, hmrRerender } from './hmr'
-import { isHydrating, locateHydrationNode } from './dom/hydration'
+import {
+  currentHydrationNode,
+  isHydrating,
+  locateHydrationNode,
+} from './dom/hydration'
 import {
   insertionAnchor,
   insertionParent,
@@ -152,13 +156,22 @@ export function createComponent(
 
   // vdom interop enabled and component is not an explicit vapor component
   if (appContext.vapor && !component.__vapor) {
-    const frag = appContext.vapor.vdomMount(
+    const [frag, vnode] = appContext.vapor.vdomMount(
       component as any,
       rawProps,
       rawSlots,
     )
     if (!isHydrating && _insertionParent) {
       insert(frag, _insertionParent, _insertionAnchor)
+    } else if (isHydrating) {
+      appContext.vapor.vdomHydrate!(
+        currentHydrationNode!,
+        vnode,
+        currentInstance as any,
+        null,
+        null,
+        false,
+      )
     }
     return frag
   }
