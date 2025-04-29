@@ -54,6 +54,14 @@ function compile(
   )
 }
 
+async function testHydrationInterop(
+  code: string,
+  components?: Record<string, string | { code: string; vapor: boolean }>,
+  data?: any,
+) {
+  return testHydration(code, components, data, { interop: true, vapor: false })
+}
+
 async function testHydration(
   code: string,
   components: Record<string, string | { code: string; vapor: boolean }> = {},
@@ -65,7 +73,7 @@ async function testHydration(
   for (const key in components) {
     const comp = components[key]
     const code = isString(comp) ? comp : comp.code
-    const isVaporComp = !isString(comp) ? comp.vapor : true
+    const isVaporComp = isString(comp) || !!comp.vapor
     clientComponents[key] = compile(code, data, clientComponents, {
       vapor: isVaporComp,
       ssr: false,
@@ -3838,9 +3846,9 @@ describe('Vapor Mode hydration', () => {
 })
 
 describe('VDOM hydration interop', () => {
-  test('basic component', async () => {
+  test('basic vapor component', async () => {
     const data = ref(true)
-    const { container } = await testHydration(
+    const { container } = await testHydrationInterop(
       `<script setup>const data = _data; const components = _components;</script>
       <template>
         <components.VaporChild/>
@@ -3852,7 +3860,6 @@ describe('VDOM hydration interop', () => {
         },
       },
       data,
-      { interop: true, vapor: false },
     )
 
     expect(container.innerHTML).toMatchInlineSnapshot(`"true"`)
@@ -3864,7 +3871,7 @@ describe('VDOM hydration interop', () => {
 
   test('nested components (VDOM -> Vapor -> VDOM)', async () => {
     const data = ref(true)
-    const { container } = await testHydration(
+    const { container } = await testHydrationInterop(
       `<script setup>const data = _data; const components = _components;</script>
       <template>
         <components.VaporChild/>
@@ -3881,7 +3888,6 @@ describe('VDOM hydration interop', () => {
         },
       },
       data,
-      { interop: true, vapor: false },
     )
 
     expect(container.innerHTML).toMatchInlineSnapshot(`"true"`)
@@ -3891,9 +3897,9 @@ describe('VDOM hydration interop', () => {
     expect(container.innerHTML).toMatchInlineSnapshot(`"false"`)
   })
 
-  test.todo('slots', async () => {
+  test('vapor slot render vdom component', async () => {
     const data = ref(true)
-    const { container } = await testHydration(
+    const { container } = await testHydrationInterop(
       `<script setup>const data = _data; const components = _components;</script>
       <template>
         <components.VaporChild>
@@ -3912,7 +3918,6 @@ describe('VDOM hydration interop', () => {
         },
       },
       data,
-      { interop: true, vapor: false },
     )
 
     expect(container.innerHTML).toMatchInlineSnapshot(

@@ -114,7 +114,6 @@ export function createSlot(
     : EMPTY_OBJ
 
   let fragment: DynamicFragment
-
   if (isRef(rawSlots._)) {
     fragment = instance.appContext.vapor!.vdomSlot(
       rawSlots._,
@@ -157,7 +156,12 @@ export function createSlot(
     }
   }
 
-  if (!isHydrating && _insertionParent) {
+  if (
+    _insertionParent &&
+    (!isHydrating ||
+      // for vdom interop fragment, `fragment.insert` handles both hydration and mounting
+      fragment.insert)
+  ) {
     insert(fragment, _insertionParent, _insertionAnchor)
   }
 

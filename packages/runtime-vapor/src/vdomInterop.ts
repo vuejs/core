@@ -35,12 +35,17 @@ import type { RawSlots, VaporSlot } from './componentSlots'
 import { renderEffect } from './renderEffect'
 import { createTextNode } from './dom/node'
 import { optimizePropertyLookup } from './dom/prop'
-import { hydrateNode as vaporHydrateNode } from './dom/hydration'
+import {
+  currentHydrationNode,
+  isHydrating,
+  locateHydrationNode,
+  hydrateNode as vaporHydrateNode,
+} from './dom/hydration'
 
 // mounting vapor components and slots in vdom
 const vaporInteropImpl: Omit<
   VaporInteropInterface,
-  'vdomMount' | 'vdomUnmount' | 'vdomSlot' | 'vdomHydrate'
+  'vdomMount' | 'vdomUnmount' | 'vdomSlot'
 > = {
   mount(vnode, container, anchor, parentComponent) {
     const selfAnchor = (vnode.el = vnode.anchor = createTextNode())
@@ -144,6 +149,8 @@ const vaporSlotsProxyHandler: ProxyHandler<any> = {
   },
 }
 
+let vdomHydrateNode: HydrationRenderer['hydrateNode'] | undefined
+
 /**
  * Mount vdom component in vapor
  */
@@ -152,7 +159,7 @@ function createVDOMComponent(
   component: ConcreteComponent,
   rawProps?: LooseRawProps | null,
   rawSlots?: LooseRawSlots | null,
-): [VaporFragment, VNode] {
+): VaporFragment {
   const frag = new VaporFragment([])
   const vnode = createVNode(
     component,
@@ -181,16 +188,30 @@ function createVDOMComponent(
   }
 
   frag.insert = (parentNode, anchor) => {
-    if (!isMounted) {
-      internals.mt(
-        vnode,
-        parentNode,
-        anchor,
-        parentInstance as any,
-        null,
-        undefined,
-        false,
-      )
+    if (!isMounted || isHydrating) {
+      if (isHydrating) {
+        ;(
+          vdomHydrateNode ||
+          (vdomHydrateNode = ensureHydrationRenderer().hydrateNode!)
+        )(
+          currentHydrationNode!,
+          vnode,
+          parentInstance as any,
+          null,
+          null,
+          false,
+        )
+      } else {
+        internals.mt(
+          vnode,
+          parentNode,
+          anchor,
+          parentInstance as any,
+          null,
+          undefined,
+          false,
+        )
+      }
       onScopeDispose(unmount, true)
       isMounted = true
     } else {
@@ -207,7 +228,7 @@ function createVDOMComponent(
 
   frag.remove = unmount
 
-  return [frag, vnode]
+  return frag
 }
 
 /**
@@ -235,28 +256,43 @@ function renderVDOMSlot(
           isFunction(name) ? name() : name,
           props,
         )
-        if ((vnode.children as any[]).length) {
-          if (fallbackNodes) {
-            remove(fallbackNodes, parentNode)
-            fallbackNodes = undefined
-          }
-          internals.p(
-            oldVNode,
+        if (isHydrating) {
+          locateHydrationNode(true)
+          ;(
+            vdomHydrateNode ||
+            (vdomHydrateNode = ensureHydrationRenderer().hydrateNode!)
+          )(
+            currentHydrationNode!,
             vnode,
-            parentNode,
-            anchor,
             parentComponent as any,
+            null,
+            null,
+            false,
           )
-          oldVNode = vnode
         } else {
-          if (fallback && !fallbackNodes) {
-            // mount fallback
-            if (oldVNode) {
-              internals.um(oldVNode, parentComponent as any, null, true)
+          if ((vnode.children as any[]).length) {
+            if (fallbackNodes) {
+              remove(fallbackNodes, parentNode)
+              fallbackNodes = undefined
             }
-            insert((fallbackNodes = fallback(props)), parentNode, anchor)
+            internals.p(
+              oldVNode,
+              vnode,
+              parentNode,
+              anchor,
+              parentComponent as any,
+            )
+            oldVNode = vnode
+          } else {
+            if (fallback && !fallbackNodes) {
+              // mount fallback
+              if (oldVNode) {
+                internals.um(oldVNode, parentComponent as any, null, true)
+              }
+              insert((fallbackNodes = fallback(props)), parentNode, anchor)
+            }
+            oldVNode = null
           }
-          oldVNode = null
         }
       })
       isMounted = true
@@ -284,14 +320,11 @@ function renderVDOMSlot(
 }
 
 export const vaporInteropPlugin: Plugin = app => {
-  const { internals, hydrateNode } = (
-    app._ssr ? ensureHydrationRenderer() : ensureRenderer()
-  ) as HydrationRenderer
+  const internals = ensureRenderer().internals
   app._context.vapor = extend(vaporInteropImpl, {
     vdomMount: createVDOMComponent.bind(null, internals),
     vdomUnmount: internals.umt,
     vdomSlot: renderVDOMSlot.bind(null, internals),
-    vdomHydrate: hydrateNode,
   })
   const mount = app.mount
   app.mount = ((...args) => {

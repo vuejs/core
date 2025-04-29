@@ -154,7 +154,6 @@ export function insert(
   } else {
     // fragment
     if (block.insert) {
-      // TODO handle hydration for vdom interop
       block.insert(parent, anchor)
     } else {
       insert(block.nodes, parent, anchor)
