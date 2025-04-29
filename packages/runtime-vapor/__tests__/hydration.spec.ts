@@ -9,6 +9,7 @@ import {
   FOR_ANCHOR_LABEL,
   IF_ANCHOR_LABEL,
   SLOT_ANCHOR_LABEL,
+  isString,
 } from '@vue/shared'
 
 const Vue = { ...runtimeDom, ...runtimeVapor }
@@ -17,7 +18,7 @@ function compile(
   sfc: string,
   data: runtimeDom.Ref<any>,
   components: Record<string, any> = {},
-  ssr = false,
+  { vapor = true, ssr = false } = {},
 ) {
   if (!sfc.includes(`<script`)) {
     sfc =
@@ -31,7 +32,7 @@ function compile(
     isProd: true,
     inlineTemplate: true,
     genDefaultAs: '__sfc__',
-    vapor: true,
+    vapor,
     templateOptions: {
       ssr,
     },
@@ -55,17 +56,27 @@ function compile(
 
 async function testHydration(
   code: string,
-  components: Record<string, string> = {},
+  components: Record<string, string | { code: string; vapor: boolean }> = {},
   data: any = ref('foo'),
+  { interop = false, vapor = true } = {},
 ) {
   const ssrComponents: any = {}
   const clientComponents: any = {}
   for (const key in components) {
-    clientComponents[key] = compile(components[key], data, clientComponents)
-    ssrComponents[key] = compile(components[key], data, ssrComponents, true)
+    const comp = components[key]
+    const code = isString(comp) ? comp : comp.code
+    const isVaporComp = !isString(comp) ? comp.vapor : true
+    clientComponents[key] = compile(code, data, clientComponents, {
+      vapor: isVaporComp,
+      ssr: false,
+    })
+    ssrComponents[key] = compile(code, data, ssrComponents, {
+      vapor: isVaporComp,
+      ssr: true,
+    })
   }
 
-  const serverComp = compile(code, data, ssrComponents, true)
+  const serverComp = compile(code, data, ssrComponents, { vapor, ssr: true })
   const html = await VueServerRenderer.renderToString(
     runtimeDom.createSSRApp(serverComp),
   )
@@ -73,8 +84,17 @@ async function testHydration(
   document.body.appendChild(container)
   container.innerHTML = html
 
-  const clientComp = compile(code, data, clientComponents)
-  const app = createVaporSSRApp(clientComp)
+  const clientComp = compile(code, data, clientComponents, {
+    vapor,
+    ssr: false,
+  })
+  let app
+  if (interop) {
+    app = runtimeDom.createSSRApp(clientComp)
+    app.use(runtimeVapor.vaporInteropPlugin)
+  } else {
+    app = createVaporSSRApp(clientComp)
+  }
   app.mount(container)
   return { data, container }
 }
@@ -84,13 +104,13 @@ const triggerEvent = (type: string, el: Element) => {
   el.dispatchEvent(event)
 }
 
+delegateEvents('click')
+
+beforeEach(() => {
+  document.body.innerHTML = ''
+})
+
 describe('Vapor Mode hydration', () => {
-  delegateEvents('click')
-
-  beforeEach(() => {
-    document.body.innerHTML = ''
-  })
-
   describe('text', () => {
     test('root text', async () => {
       const { data, container } = await testHydration(`
@@ -3815,4 +3835,94 @@ describe('Vapor Mode hydration', () => {
 
   test.todo('Teleport')
   test.todo('Suspense')
+})
+
+describe('VDOM hydration interop', () => {
+  test('basic component', async () => {
+    const data = ref(true)
+    const { container } = await testHydration(
+      `<script setup>const data = _data; const components = _components;</script>
+      <template>
+        <components.VaporChild/>
+      </template>`,
+      {
+        VaporChild: {
+          code: `<template>{{ data }}</template>`,
+          vapor: true,
+        },
+      },
+      data,
+      { interop: true, vapor: false },
+    )
+
+    expect(container.innerHTML).toMatchInlineSnapshot(`"true"`)
+
+    data.value = false
+    await nextTick()
+    expect(container.innerHTML).toMatchInlineSnapshot(`"false"`)
+  })
+
+  test('nested components (VDOM -> Vapor -> VDOM)', async () => {
+    const data = ref(true)
+    const { container } = await testHydration(
+      `<script setup>const data = _data; const components = _components;</script>
+      <template>
+        <components.VaporChild/>
+      </template>`,
+      {
+        VaporChild: {
+          code: `<template><components.VdomChild/></template>`,
+          vapor: true,
+        },
+        VdomChild: {
+          code: `<script setup>const data = _data;</script>
+            <template>{{ data }}</template>`,
+          vapor: false,
+        },
+      },
+      data,
+      { interop: true, vapor: false },
+    )
+
+    expect(container.innerHTML).toMatchInlineSnapshot(`"true"`)
+
+    data.value = false
+    await nextTick()
+    expect(container.innerHTML).toMatchInlineSnapshot(`"false"`)
+  })
+
+  test.todo('slots', async () => {
+    const data = ref(true)
+    const { container } = await testHydration(
+      `<script setup>const data = _data; const components = _components;</script>
+      <template>
+        <components.VaporChild>
+          <components.VdomChild/>
+        </components.VaporChild>
+      </template>`,
+      {
+        VaporChild: {
+          code: `<template><div><slot/></div></template>`,
+          vapor: true,
+        },
+        VdomChild: {
+          code: `<script setup>const data = _data;</script>
+            <template>{{ data }}</template>`,
+          vapor: false,
+        },
+      },
+      data,
+      { interop: true, vapor: false },
+    )
+
+    expect(container.innerHTML).toMatchInlineSnapshot(
+      `"<div><!--[-->true<!--]--><!--slot--></div>"`,
+    )
+
+    data.value = false
+    await nextTick()
+    expect(container.innerHTML).toMatchInlineSnapshot(
+      `"<div><!--[-->false<!--]--><!--slot--></div>"`,
+    )
+  })
 })
