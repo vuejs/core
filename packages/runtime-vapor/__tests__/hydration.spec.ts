@@ -252,6 +252,19 @@ describe('Vapor Mode hydration', () => {
         `"<div><span>bar</span><span class="bar"></span></div>"`,
       )
     })
+
+    test('element with ref', async () => {
+      const { data, container } = await testHydration(
+        `<template>
+          <div ref="data">hi</div>
+        </template>
+      `,
+        {},
+        ref(null),
+      )
+
+      expect(data.value).toBe(container.firstChild)
+    })
   })
 
   describe('component', () => {
@@ -2343,14 +2356,16 @@ describe('Vapor Mode hydration', () => {
     })
   })
 
-  // test('element with ref', () => {
-  //   const el = ref()
-  //   const { vnode, container } = mountWithHydration('<div></div>', () =>
-  //     h('div', { ref: el }),
-  //   )
-  //   expect(vnode.el).toBe(container.firstChild)
-  //   expect(el.value).toBe(vnode.el)
-  // })
+  describe.todo('transition', async () => {
+    test('transition appear', async () => {})
+    test('transition appear with v-if', async () => {})
+    test('transition appear with v-show', async () => {})
+    test('transition appear w/ event listener', async () => {})
+  })
+
+  describe.todo('async component')
+
+  describe.todo('data-allow-mismatch')
 
   // test('with data-allow-mismatch component when using onServerPrefetch', async () => {
   //   const Comp = {
