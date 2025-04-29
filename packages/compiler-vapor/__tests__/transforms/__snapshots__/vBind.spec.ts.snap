@@ -97,17 +97,6 @@ export function render(_ctx) {
 }"
 `;
 
-exports[`cache multiple access > not cache variable with inline function 1`] = `
-"import { setDynamicProps as _setDynamicProps, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<div></div>", true)
-
-export function render(_ctx) {
-  const n0 = t0()
-  _renderEffect(() => _setDynamicProps(n0, [{ foo: bar => _ctx.foo = bar }], true))
-  return n0
-}"
-`;
-
 exports[`cache multiple access > object property chain access 1`] = `
 "import { setProp as _setProp, renderEffect as _renderEffect, template as _template } from 'vue';
 const t0 = _template("<div></div>")
