@@ -210,6 +210,20 @@ const emit = defineEmits(['a', 'b'])
     assertCode(content)
   })
 
+  test('nested call expression', () => {
+    const { content } = compile(`
+    <script setup>
+    const transformed = transform(defineEmits(['foo', 'bar']));
+    </script>
+    `)
+
+    // should remove defineEmits import and call
+    expect(content).not.toMatch('defineEmits')
+
+    assertCode(content)
+    expect(content).toMatch(`const transformed = transform(__emit);`)
+  })
+
   describe('errors', () => {
     test('w/ both type and non-type args', () => {
       expect(() => {
