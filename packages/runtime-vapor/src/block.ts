@@ -9,12 +9,11 @@ import { createComment, createTextNode } from './dom/node'
 import { EffectScope, pauseTracking, resetTracking } from '@vue/reactivity'
 import {
   currentHydrationNode,
-  findVaporFragmentAnchor,
   isComment,
   isHydrating,
   locateHydrationNode,
+  locateVaporFragmentAnchor,
 } from './dom/hydration'
-import { warn } from '@vue/runtime-dom'
 
 export type Block =
   | Node
@@ -89,17 +88,17 @@ export class DynamicFragment extends VaporFragment {
   }
 
   hydrate(label: string): void {
-    // for `v-if="false"` the node will be an empty comment node use it as the anchor.
+    // for `v-if="false"` the node will be an empty comment, use it as the anchor.
     // otherwise, find next sibling vapor fragment anchor
     if (isComment(currentHydrationNode!, '')) {
       this.anchor = currentHydrationNode
     } else {
-      const anchor = findVaporFragmentAnchor(currentHydrationNode!, label)!
+      const anchor = locateVaporFragmentAnchor(currentHydrationNode!, label)!
       if (anchor) {
         this.anchor = anchor
       } else if (__DEV__) {
-        // TODO warning, should not happen
-        warn(`DynamicFragment anchor not found...`)
+        // this should not happen
+        throw new Error(`${label} fragment anchor node was not found.`)
       }
     }
   }

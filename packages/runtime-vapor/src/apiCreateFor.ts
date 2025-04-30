@@ -30,9 +30,9 @@ import { renderEffect } from './renderEffect'
 import { VaporVForFlags } from '../../shared/src/vaporFlags'
 import {
   currentHydrationNode,
-  findVaporFragmentAnchor,
   isHydrating,
   locateHydrationNode,
+  locateVaporFragmentAnchor,
 } from './dom/hydration'
 import {
   insertionAnchor,
@@ -97,13 +97,13 @@ export const createFor = (
   let parent: ParentNode | undefined | null
   let parentAnchor: Node
   if (isHydrating) {
-    parentAnchor = findVaporFragmentAnchor(
+    parentAnchor = locateVaporFragmentAnchor(
       currentHydrationNode!,
       FOR_ANCHOR_LABEL,
     )!
     if (__DEV__ && !parentAnchor) {
-      // TODO warn, should not happen
-      warn(`createFor anchor not found...`)
+      // this should not happen
+      throw new Error(`v-for fragment anchor node was not found.`)
     }
   } else {
     parentAnchor = __DEV__ ? createComment('for') : createTextNode()

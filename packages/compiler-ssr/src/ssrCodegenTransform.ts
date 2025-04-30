@@ -410,7 +410,7 @@ function shouldProcessChildAsDynamic(
   if (dynamicNodeCount === 2) {
     return prevDynamicCount > 0
   }
-  // For three or more dynamic nodes, mark the intermediate node as dynamic
+  // For three or more dynamic nodes, mark the middle nodes as dynamic
   else if (dynamicNodeCount >= 3) {
     return prevDynamicCount > 0 && nextDynamicCount > 0
   }

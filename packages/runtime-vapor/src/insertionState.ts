@@ -1,9 +1,4 @@
-export let insertionParent:
-  | (ParentNode & {
-      // the next child node to be hydrated
-      $nc?: Node | null
-    })
-  | undefined
+export let insertionParent: ParentNode | undefined
 export let insertionAnchor: Node | 0 | undefined
 
 /**

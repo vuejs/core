@@ -107,7 +107,7 @@ export interface Renderer<HostElement = RendererElement> {
 
 export interface HydrationRenderer extends Renderer<Element | ShadowRoot> {
   hydrate: RootHydrateFunction
-  hydrateNode: ReturnType<typeof createHydrationFunctions>[1] | undefined
+  hydrateNode: ReturnType<typeof createHydrationFunctions>[1]
 }
 
 export type ElementNamespace = 'svg' | 'mathml' | undefined

@@ -15,7 +15,7 @@ export function isDynamicAnchor(node: Node): node is Comment {
   )
 }
 
-export function isVaporFragmentEndAnchor(node: Node): node is Comment {
+export function isVaporFragmentAnchor(node: Node): node is Comment {
   if (node.nodeType !== 8) return false
 
   const data = (node as Comment).data
@@ -25,4 +25,8 @@ export function isVaporFragmentEndAnchor(node: Node): node is Comment {
     data === SLOT_ANCHOR_LABEL ||
     data === DYNAMIC_COMPONENT_ANCHOR_LABEL
   )
+}
+
+export function isVaporAnchors(node: Node): node is Comment {
+  return isDynamicAnchor(node) || isVaporFragmentAnchor(node)
 }
