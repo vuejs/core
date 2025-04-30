@@ -33,7 +33,7 @@ export function processNestedDefineEmits(
     return true
   }
   for (const arg of node.arguments) {
-    if (processNestedDefineEmits(ctx, arg)) {
+    if (processNestedDefineEmits(ctx, arg, declId)) {
       replaceDefineEmits(ctx, arg)
     }
   }

@@ -16,11 +16,10 @@ return { myEmit }
 `;
 
 exports[`defineEmits > nested call expression 1`] = `
-"import { defineComponent as _defineComponent } from 'vue'
-
-export default /*@__PURE__*/_defineComponent({
+"
+export default {
   emits: ['foo', 'bar'],
-  setup(__props, { expose: __expose }) {
+  setup(__props, { expose: __expose, emit: __emit }) {
   __expose();
 
     const transformed = transform(__emit);
@@ -28,7 +27,7 @@ export default /*@__PURE__*/_defineComponent({
 return { transformed }
 }
 
-})"
+}"
 `;
 
 exports[`defineEmits > w/ runtime options 1`] = `

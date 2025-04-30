@@ -222,6 +222,9 @@ const emit = defineEmits(['a', 'b'])
 
     assertCode(content)
     expect(content).toMatch(`const transformed = transform(__emit);`)
+    expect(content).toMatch(
+      `setup(__props, { expose: __expose, emit: __emit })`,
+    )
   })
 
   describe('errors', () => {
