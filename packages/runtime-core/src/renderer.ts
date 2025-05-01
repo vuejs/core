@@ -2098,7 +2098,9 @@ function baseCreateRenderer(
 
     // unset ref
     if (ref != null) {
+      pauseTracking()
       setRef(ref, null, parentSuspense, vnode, true)
+      resetTracking()
     }
 
     // #6593 should clean memo cache when unmount
