@@ -27,7 +27,7 @@ import {
   useTransitionState,
   warn,
 } from '@vue/runtime-core'
-import { extend } from '@vue/shared'
+import { extend, isNullish } from '@vue/shared'
 
 const positionMap = new WeakMap<VNode, DOMRect>()
 const newPositionMap = new WeakMap<VNode, DOMRect>()
@@ -157,7 +157,7 @@ const TransitionGroupImpl: ComponentOptions = /*@__PURE__*/ decorate({
 
       for (let i = 0; i < children.length; i++) {
         const child = children[i]
-        if (child.key != null) {
+        if (!isNullish(child.key)) {
           setTransitionHooks(
             child,
             resolveTransitionHooks(child, cssTransitionProps, state, instance),

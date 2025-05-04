@@ -1,5 +1,5 @@
 import { ErrorCodes, callWithErrorHandling, handleError } from './errorHandling'
-import { NOOP, isArray } from '@vue/shared'
+import { NOOP, isArray, isNullish } from '@vue/shared'
 import { type ComponentInternalInstance, getComponentName } from './component'
 
 export enum SchedulerJobFlags {
@@ -204,7 +204,11 @@ export function flushPostFlushCbs(seen?: CountMap): void {
 }
 
 const getId = (job: SchedulerJob): number =>
-  job.id == null ? (job.flags! & SchedulerJobFlags.PRE ? -1 : Infinity) : job.id
+  isNullish(job.id)
+    ? job.flags! & SchedulerJobFlags.PRE
+      ? -1
+      : Infinity
+    : job.id
 
 function flushJobs(seen?: CountMap) {
   if (__DEV__) {

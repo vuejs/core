@@ -17,6 +17,7 @@ import {
   hyphenate,
   isArray,
   isFunction,
+  isNullish,
   isObject,
   isOn,
   isReservedProp,
@@ -455,7 +456,7 @@ function resolvePropValue(
   isAbsent: boolean,
 ) {
   const opt = options[key]
-  if (opt != null) {
+  if (!isNullish(opt)) {
     const hasDefault = hasOwn(opt, 'default')
     // default values
     if (hasDefault && value === undefined) {
@@ -631,7 +632,7 @@ function getType(ctor: Prop<any> | null): string {
   }
 
   // Avoid using regex for common cases by checking the type directly
-  if (typeof ctor === 'function') {
+  if (isFunction(ctor)) {
     // Using name property to avoid converting function to string
     return ctor.name || ''
   } else if (typeof ctor === 'object') {
@@ -657,7 +658,7 @@ function validateProps(
   const camelizePropsKey = Object.keys(rawProps).map(key => camelize(key))
   for (const key in options) {
     let opt = options[key]
-    if (opt == null) continue
+    if (isNullish(opt)) continue
     validateProp(
       key,
       resolvedValues[key],
@@ -685,11 +686,11 @@ function validateProp(
     return
   }
   // missing but optional
-  if (value == null && !required) {
+  if (isNullish(value) && !required) {
     return
   }
   // type check
-  if (type != null && type !== true && !skipCheck) {
+  if (!isNullish(type) && type !== true && !skipCheck) {
     let isValid = false
     const types = isArray(type) ? type : [type]
     const expectedTypes = []

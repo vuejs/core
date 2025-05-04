@@ -15,6 +15,7 @@ import {
   extend,
   isArray,
   isFunction,
+  isNullish,
   isObject,
   isPromise,
   isString,
@@ -768,7 +769,7 @@ export function applyOptions(instance: ComponentInternalInstance): void {
   if (render && instance.render === NOOP) {
     instance.render = render as InternalRenderFunction
   }
-  if (inheritAttrs != null) {
+  if (!isNullish(inheritAttrs)) {
     instance.inheritAttrs = inheritAttrs
   }
 

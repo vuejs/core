@@ -6,6 +6,7 @@ import {
   hasOwn,
   isArray,
   isFunction,
+  isNullish,
   isString,
   remove,
 } from '@vue/shared'
@@ -95,7 +96,7 @@ export function setRef(
         }
 
   // dynamic ref changed. unset old ref
-  if (oldRef != null && oldRef !== ref) {
+  if (!isNullish(oldRef) && oldRef !== ref) {
     if (isString(oldRef)) {
       refs[oldRef] = null
       if (canSetSetupRef(oldRef)) {

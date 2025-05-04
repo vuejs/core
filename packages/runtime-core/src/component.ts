@@ -68,6 +68,7 @@ import {
   getGlobalThis,
   isArray,
   isFunction,
+  isNullish,
   isObject,
   isPromise,
   makeMap,
@@ -1127,7 +1128,7 @@ export function createSetupContext(
       if (instance.exposed) {
         warn(`expose() should be called only once per setup().`)
       }
-      if (exposed != null) {
+      if (!isNullish(exposed)) {
         let exposedType: string = typeof exposed
         if (exposedType === 'object') {
           if (isArray(exposed)) {

@@ -28,6 +28,7 @@ import {
   ShapeFlags,
   invokeArrayFns,
   isArray,
+  isNullish,
   isRegExp,
   isString,
   remove,
@@ -237,7 +238,7 @@ const KeepAliveImpl: ComponentOptions = {
     let pendingCacheKey: CacheKey | null = null
     const cacheSubtree = () => {
       // fix #1621, the pendingCacheKey could be 0
-      if (pendingCacheKey != null) {
+      if (!isNullish(pendingCacheKey)) {
         // if KeepAlive child is a Suspense, it needs to be cached after Suspense resolves
         // avoid caching vnode that not been mounted
         if (isSuspense(instance.subTree.type)) {
@@ -321,7 +322,7 @@ const KeepAliveImpl: ComponentOptions = {
         return rawVNode
       }
 
-      const key = vnode.key == null ? comp : vnode.key
+      const key = isNullish(vnode.key) ? comp : vnode.key
       const cachedVNode = cache.get(key)
 
       // clone vnode if it's reused because we are going to mutate it

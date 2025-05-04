@@ -6,7 +6,7 @@ import {
   currentInstance,
   isInSSRComponentSetup,
 } from './component'
-import { isFunction, isObject } from '@vue/shared'
+import { isFunction, isNullish, isObject } from '@vue/shared'
 import type { ComponentPublicInstance } from './componentPublicInstance'
 import { type VNode, createVNode } from './vnode'
 import { defineComponent } from './apiDefineComponent'
@@ -191,7 +191,7 @@ export function defineAsyncComponent<
         }, delay)
       }
 
-      if (timeout != null) {
+      if (!isNullish(timeout)) {
         setTimeout(() => {
           if (!loaded.value && !error.value) {
             const err = new Error(

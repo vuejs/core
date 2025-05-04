@@ -11,7 +11,7 @@ import {
   traverseStaticChildren,
 } from '../renderer'
 import type { VNode, VNodeArrayChildren, VNodeProps } from '../vnode'
-import { ShapeFlags, isString } from '@vue/shared'
+import { ShapeFlags, isFunction, isNullish, isString } from '@vue/shared'
 import { warn } from '../warning'
 import { isHmrUpdating } from '../hmr'
 
@@ -37,7 +37,7 @@ const isTargetSVG = (target: RendererElement): boolean =>
   typeof SVGElement !== 'undefined' && target instanceof SVGElement
 
 const isTargetMathML = (target: RendererElement): boolean =>
-  typeof MathMLElement === 'function' && target instanceof MathMLElement
+  isFunction(MathMLElement) && target instanceof MathMLElement
 
 const resolveTarget = <T = RendererElement>(
   props: TeleportProps | null,
@@ -104,7 +104,7 @@ export const TeleportImpl = {
       dynamicChildren = null
     }
 
-    if (n1 == null) {
+    if (isNullish(n1)) {
       // insert anchors in the main view
       const placeholder = (n2.el = __DEV__
         ? createComment('teleport start')

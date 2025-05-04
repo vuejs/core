@@ -4,6 +4,7 @@ import {
   isArray,
   isFunction,
   isMap,
+  isNullish,
   isObject,
   isPlainObject,
   isSet,
@@ -24,7 +25,7 @@ const isRef = (val: any): val is { value: unknown } => {
 export const toDisplayString = (val: unknown): string => {
   return isString(val)
     ? val
-    : val == null
+    : isNullish(val)
       ? ''
       : isArray(val) ||
           (isObject(val) &&

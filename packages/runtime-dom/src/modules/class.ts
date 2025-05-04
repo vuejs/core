@@ -1,3 +1,4 @@
+import { isNullish } from '@vue/shared'
 import { type ElementWithTransition, vtcKey } from '../components/Transition'
 
 // compiler should normalize class + :class bindings on the same element
@@ -16,7 +17,7 @@ export function patchClass(
       value ? [value, ...transitionClasses] : [...transitionClasses]
     ).join(' ')
   }
-  if (value == null) {
+  if (isNullish(value)) {
     el.removeAttribute('class')
   } else if (isSVG) {
     el.setAttribute('class', value)

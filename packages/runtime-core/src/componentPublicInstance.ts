@@ -22,6 +22,7 @@ import {
   hasOwn,
   isFunction,
   isGloballyAllowed,
+  isNullish,
   isString,
 } from '@vue/shared'
 import {
@@ -596,7 +597,7 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
     key: string,
     descriptor: PropertyDescriptor,
   ) {
-    if (descriptor.get != null) {
+    if (!isNullish(descriptor.get)) {
       // invalidate key cache of a getter based property #5417
       target._.accessCache![key] = 0
     } else if (hasOwn(descriptor, 'value')) {

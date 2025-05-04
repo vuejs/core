@@ -16,7 +16,13 @@ import { warn } from '../warning'
 import { isKeepAlive } from './KeepAlive'
 import { toRaw } from '@vue/reactivity'
 import { ErrorCodes, callWithAsyncErrorHandling } from '../errorHandling'
-import { PatchFlags, ShapeFlags, isArray, isFunction } from '@vue/shared'
+import {
+  PatchFlags,
+  ShapeFlags,
+  isArray,
+  isFunction,
+  isNullish,
+} from '@vue/shared'
 import { onBeforeUnmount, onMounted } from '../apiLifecycle'
 import { isTeleport } from './Teleport'
 import type { RendererElement } from '../renderer'
@@ -545,10 +551,9 @@ export function getTransitionRawChildren(
   for (let i = 0; i < children.length; i++) {
     let child = children[i]
     // #5360 inherit parent key in case of <template v-for>
-    const key =
-      parentKey == null
-        ? child.key
-        : String(parentKey) + String(child.key != null ? child.key : i)
+    const key = isNullish(parentKey)
+      ? child.key
+      : String(parentKey) + String(!isNullish(child.key) ? child.key : i)
     // handle fragment children case, e.g. v-for
     if (child.type === Fragment) {
       if (child.patchFlag & PatchFlags.KEYED_FRAGMENT) keyedFragmentCount++
@@ -558,7 +563,7 @@ export function getTransitionRawChildren(
     }
     // comment placeholders should be skipped, e.g. v-if
     else if (keepComment || child.type !== Comment) {
-      ret.push(key != null ? cloneVNode(child, { key }) : child)
+      ret.push(!isNullish(key) ? cloneVNode(child, { key }) : child)
     }
   }
   // #1126 if a transition children list contains multiple sub fragments, these

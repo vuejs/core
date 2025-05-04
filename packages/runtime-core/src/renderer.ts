@@ -37,6 +37,7 @@ import {
   getGlobalThis,
   invokeArrayFns,
   isArray,
+  isNullish,
   isReservedProp,
 } from '@vue/shared'
 import {
@@ -406,7 +407,7 @@ function baseCreateRenderer(
         processCommentNode(n1, n2, container, anchor)
         break
       case Static:
-        if (n1 == null) {
+        if (isNullish(n1)) {
           mountStaticNode(n2, container, anchor, namespace)
         } else if (__DEV__) {
           patchStaticNode(n1, n2, container, namespace)
@@ -482,13 +483,13 @@ function baseCreateRenderer(
     }
 
     // set ref
-    if (ref != null && parentComponent) {
+    if (!isNullish(ref) && parentComponent) {
       setRef(ref, n1 && n1.ref, parentSuspense, n2 || n1, !n2)
     }
   }
 
   const processText: ProcessTextOrCommentFn = (n1, n2, container, anchor) => {
-    if (n1 == null) {
+    if (isNullish(n1)) {
       hostInsert(
         (n2.el = hostCreateText(n2.children as string)),
         container,
@@ -508,7 +509,7 @@ function baseCreateRenderer(
     container,
     anchor,
   ) => {
-    if (n1 == null) {
+    if (isNullish(n1)) {
       hostInsert(
         (n2.el = hostCreateComment((n2.children as string) || '')),
         container,
@@ -606,7 +607,7 @@ function baseCreateRenderer(
       namespace = 'mathml'
     }
 
-    if (n1 == null) {
+    if (isNullish(n1)) {
       mountElement(
         n2,
         container,
@@ -837,8 +838,8 @@ function baseCreateRenderer(
     // #9135 innerHTML / textContent unset needs to happen before possible
     // new children mount
     if (
-      (oldProps.innerHTML && newProps.innerHTML == null) ||
-      (oldProps.textContent && newProps.textContent == null)
+      (oldProps.innerHTML && isNullish(newProps.innerHTML)) ||
+      (oldProps.textContent && isNullish(newProps.textContent))
     ) {
       hostSetElementText(el, '')
     }
@@ -923,7 +924,7 @@ function baseCreateRenderer(
           hostSetElementText(el, n2.children as string)
         }
       }
-    } else if (!optimized && dynamicChildren == null) {
+    } else if (!optimized && isNullish(dynamicChildren)) {
       // unoptimized, full diff
       patchProps(el, oldProps, newProps, parentComponent, namespace)
     }
@@ -1052,7 +1053,7 @@ function baseCreateRenderer(
         : fragmentSlotScopeIds
     }
 
-    if (n1 == null) {
+    if (isNullish(n1)) {
       hostInsert(fragmentStartAnchor, container, anchor)
       hostInsert(fragmentEndAnchor, container, anchor)
       // a fragment can only have array children
@@ -1100,7 +1101,7 @@ function baseCreateRenderer(
           //  get moved around. Make sure all root level vnodes inherit el.
           // #2134 or if it's a component root, it may also get moved around
           // as the component is being moved.
-          n2.key != null ||
+          !isNullish(n2.key) ||
           (parentComponent && n2 === parentComponent.subTree)
         ) {
           traverseStaticChildren(n1, n2, true /* shallow */)
@@ -1137,7 +1138,7 @@ function baseCreateRenderer(
     optimized: boolean,
   ) => {
     n2.slotScopeIds = slotScopeIds
-    if (n1 == null) {
+    if (isNullish(n1)) {
       if (n2.shapeFlag & ShapeFlags.COMPONENT_KEPT_ALIVE) {
         ;(parentComponent!.ctx as KeepAliveContext).activate(
           n2,
@@ -1887,7 +1888,7 @@ function baseCreateRenderer(
         const nextChild = (c2[i] = optimized
           ? cloneIfMounted(c2[i] as VNode)
           : normalizeVNode(c2[i]))
-        if (nextChild.key != null) {
+        if (!isNullish(nextChild.key)) {
           if (__DEV__ && keyToNewIndexMap.has(nextChild.key)) {
             warn(
               `Duplicate keys found during update:`,
@@ -1923,7 +1924,7 @@ function baseCreateRenderer(
           continue
         }
         let newIndex
-        if (prevChild.key != null) {
+        if (!isNullish(prevChild.key)) {
           newIndex = keyToNewIndexMap.get(prevChild.key)
         } else {
           // key-less node, try to locate a key-less node of the same type
@@ -2097,14 +2098,14 @@ function baseCreateRenderer(
     }
 
     // unset ref
-    if (ref != null) {
+    if (!isNullish(ref)) {
       pauseTracking()
       setRef(ref, null, parentSuspense, vnode, true)
       resetTracking()
     }
 
     // #6593 should clean memo cache when unmount
-    if (cacheIndex != null) {
+    if (!isNullish(cacheIndex)) {
       parentComponent!.renderCache[cacheIndex] = undefined
     }
 
@@ -2377,7 +2378,7 @@ function baseCreateRenderer(
 
   let isFlushing = false
   const render: RootRenderFunction = (vnode, container, namespace) => {
-    if (vnode == null) {
+    if (isNullish(vnode)) {
       if (container._vnode) {
         unmount(container._vnode, null, null, true)
       }

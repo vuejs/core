@@ -1,5 +1,6 @@
 import { warn } from '@vue/runtime-core'
 import type { RendererOptions } from '@vue/runtime-core'
+import { isNullish } from '@vue/shared'
 import type {
   TrustedHTML,
   TrustedTypePolicy,
@@ -63,7 +64,7 @@ export const nodeOps: Omit<RendererOptions<Node, Element>, 'patchProp'> = {
             ? doc.createElement(tag, { is })
             : doc.createElement(tag)
 
-    if (tag === 'select' && props && props.multiple != null) {
+    if (tag === 'select' && props && !isNullish(props.multiple)) {
       ;(el as HTMLSelectElement).setAttribute('multiple', props.multiple)
     }
 

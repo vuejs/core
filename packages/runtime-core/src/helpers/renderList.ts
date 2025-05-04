@@ -7,7 +7,7 @@ import {
   toReactive,
   toReadonly,
 } from '@vue/reactivity'
-import { isArray, isObject, isString } from '@vue/shared'
+import { isArray, isNumber, isObject, isString } from '@vue/shared'
 import { warn } from '../warning'
 
 /**
@@ -90,7 +90,7 @@ export function renderList(
         cached && cached[i],
       )
     }
-  } else if (typeof source === 'number') {
+  } else if (isNumber(source)) {
     if (__DEV__ && !Number.isInteger(source)) {
       warn(`The v-for range expect an integer value but got ${source}.`)
     }

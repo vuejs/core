@@ -1,3 +1,4 @@
+import { isNullish } from './general'
 import { makeMap } from './makeMap'
 
 /**
@@ -146,7 +147,7 @@ export const isKnownMathMLAttr: (key: string) => boolean =
  * Shared between server-renderer and runtime-core hydration logic
  */
 export function isRenderableAttrValue(value: unknown): boolean {
-  if (value == null) {
+  if (isNullish(value)) {
     return false
   }
   const type = typeof value

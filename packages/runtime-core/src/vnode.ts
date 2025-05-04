@@ -5,7 +5,10 @@ import {
   SlotFlags,
   extend,
   isArray,
+  isBoolean,
   isFunction,
+  isNullish,
+  isNumber,
   isObject,
   isOn,
   isString,
@@ -432,18 +435,18 @@ const createVNodeWithArgsTransform = (
 }
 
 const normalizeKey = ({ key }: VNodeProps): VNode['key'] =>
-  key != null ? key : null
+  !isNullish(key) ? key : null
 
 const normalizeRef = ({
   ref,
   ref_key,
   ref_for,
 }: VNodeProps): VNodeNormalizedRefAtom | null => {
-  if (typeof ref === 'number') {
+  if (isNumber(ref)) {
     ref = '' + ref
   }
   return (
-    ref != null
+    !isNullish(ref)
       ? isString(ref) || isRef(ref) || isFunction(ref)
         ? { i: currentRenderingInstance, r: ref, k: ref_key, f: !!ref_for }
         : ref
@@ -782,7 +785,7 @@ export function createCommentVNode(
 }
 
 export function normalizeVNode(child: VNodeChild): VNode {
-  if (child == null || typeof child === 'boolean') {
+  if (isNullish(child) || isBoolean(child)) {
     // empty placeholder
     return createVNode(Comment)
   } else if (isArray(child)) {
@@ -814,7 +817,7 @@ export function cloneIfMounted(child: VNode): VNode {
 export function normalizeChildren(vnode: VNode, children: unknown): void {
   let type = 0
   const { shapeFlag } = vnode
-  if (children == null) {
+  if (isNullish(children)) {
     children = null
   } else if (isArray(children)) {
     type = ShapeFlags.ARRAY_CHILDREN
