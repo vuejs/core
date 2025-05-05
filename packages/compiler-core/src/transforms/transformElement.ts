@@ -367,6 +367,11 @@ function resolveSetupReference(name: string, context: TransformContext) {
       context.inline ? '__props' : '$props'
     }[${JSON.stringify(fromProps)}])`
   }
+
+  const fromImport = checkType(BindingTypes.SETUP_IMPORTED_MAYBE_REF)
+  if (fromImport) {
+    return `${context.helperString(UNREF)}(${fromImport})`
+  }
 }
 
 export type PropsExpression = ObjectExpression | CallExpression | ExpressionNode
