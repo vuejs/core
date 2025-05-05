@@ -517,6 +517,7 @@ export default /*@__PURE__*/_defineComponent({
     qux: { type: Function, required: false, default() { return 1 } },
     quux: { type: Function, required: false, default() { } },
     quuxx: { type: Promise, required: false, async default() { return await Promise.resolve('hi') } },
+    quuux: { type: Number, required: false, default(a, [b, ...c], {d, ...e}, ...f) { return 1 } },
     fred: { type: String, required: false, get default() { return 'fred' } }
   },
   setup(__props: any, { expose: __expose }) {
