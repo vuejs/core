@@ -1,4 +1,4 @@
-import { Teleport, createApp, h } from 'vue'
+import { Teleport, createApp, defineAsyncComponent, h } from 'vue'
 import { renderToString } from '../src/renderToString'
 import { renderToSimpleStream } from '../src/renderToStream'
 import type { SSRContext } from '../src/render'
@@ -175,6 +175,50 @@ describe('ssrRenderTeleport', () => {
     expect(html).toBe('<!--teleport start--><!--teleport end-->')
     expect(ctx.teleports!['#target']).toBe(
       `<!--teleport start anchor--><div>content</div><!--teleport anchor-->`,
+    )
+  })
+
+  test('teleport work w/ suspense', async () => {
+    const ctx: SSRContext = {}
+
+    const AsyncComp = defineAsyncComponent(() =>
+      Promise.resolve({
+        render: () => h('div', 'content'),
+      }),
+    )
+
+    const Comp = {
+      template:
+        '<teleport to="#target"><Suspense><AsyncComp></AsyncComp></Suspense></teleport>',
+      components: { AsyncComp },
+      setup() {},
+    }
+    let html = ''
+    let resolve: any
+    const p = new Promise(r => (resolve = r))
+    renderToSimpleStream(
+      h({
+        template: '<Comp />',
+        components: { Comp },
+      }),
+      ctx,
+      {
+        push(chunk) {
+          if (chunk === null) {
+            resolve()
+          } else {
+            html += chunk
+          }
+        },
+        destroy(err) {
+          throw err
+        },
+      },
+    )
+    await p
+    expect(html).toBe('<!--teleport start--><!--teleport end-->')
+    expect(ctx.teleports!['#target']).toBe(
+      `<div>content</div><!--teleport anchor-->`,
     )
   })
 })
