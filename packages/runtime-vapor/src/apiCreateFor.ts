@@ -8,6 +8,7 @@ import {
   shallowReadArray,
   shallowRef,
   toReactive,
+  watch,
 } from '@vue/reactivity'
 import { getSequence, isArray, isObject, isString } from '@vue/shared'
 import { createComment, createTextNode } from './dom/node'
@@ -78,12 +79,18 @@ export const createFor = (
   let oldBlocks: ForBlock[] = []
   let newBlocks: ForBlock[]
   let parent: ParentNode | undefined | null
+  // useSelector only
+  let currentKey: any
   // TODO handle this in hydration
   const parentAnchor = __DEV__ ? createComment('for') : createTextNode()
   const frag = new VaporFragment(oldBlocks)
   const instance = currentInstance!
-  const canUseFastRemove = flags & VaporVForFlags.FAST_REMOVE
-  const isComponent = flags & VaporVForFlags.IS_COMPONENT
+  const canUseFastRemove = !!(flags & VaporVForFlags.FAST_REMOVE)
+  const isComponent = !!(flags & VaporVForFlags.IS_COMPONENT)
+  const selectors: {
+    deregister: (key: any) => void
+    cleanup: () => void
+  }[] = []
 
   if (__DEV__ && !instance) {
     warn('createFor() can only be used inside setup()')
@@ -111,9 +118,12 @@ export const createFor = (
         }
       } else if (!newLength) {
         // fast path for clearing all
+        for (const selector of selectors) {
+          selector.cleanup()
+        }
         const doRemove = !canUseFastRemove
         for (let i = 0; i < oldLength; i++) {
-          unmount(oldBlocks[i], doRemove)
+          unmount(oldBlocks[i], doRemove, false)
         }
         if (canUseFastRemove) {
           parent!.textContent = ''
@@ -353,9 +363,18 @@ export const createFor = (
     }
   }
 
-  const unmount = ({ nodes, scope }: ForBlock, doRemove = true) => {
-    scope && scope.stop()
-    doRemove && removeBlock(nodes, parent!)
+  const unmount = (block: ForBlock, doRemove = true, doDeregister = true) => {
+    if (!isComponent) {
+      block.scope!.stop()
+    }
+    if (doRemove) {
+      removeBlock(block.nodes, parent!)
+    }
+    if (doDeregister) {
+      for (const selector of selectors) {
+        selector.deregister(block.key)
+      }
+    }
   }
 
   if (flags & VaporVForFlags.ONCE) {
@@ -368,7 +387,59 @@ export const createFor = (
     insert(frag, _insertionParent, _insertionAnchor)
   }
 
+  // @ts-expect-error
+  frag.useSelector = useSelector
+
   return frag
+
+  function useSelector(source: () => any): (key: any, cb: () => void) => void {
+    let operMap = new Map<any, (() => void)[]>()
+    let activeKey = source()
+    let activeOpers: (() => void)[] | undefined
+
+    watch(source, newValue => {
+      if (activeOpers !== undefined) {
+        for (const oper of activeOpers) {
+          oper()
+        }
+      }
+      activeOpers = operMap.get(newValue)
+      if (activeOpers !== undefined) {
+        for (const oper of activeOpers) {
+          oper()
+        }
+      }
+    })
+
+    selectors.push({ deregister, cleanup })
+    return register
+
+    function cleanup() {
+      operMap = new Map()
+      activeOpers = undefined
+    }
+
+    function register(oper: () => void) {
+      oper()
+      let opers = operMap.get(currentKey)
+      if (opers !== undefined) {
+        opers.push(oper)
+      } else {
+        opers = [oper]
+        operMap.set(currentKey, opers)
+        if (currentKey === activeKey) {
+          activeOpers = opers
+        }
+      }
+    }
+
+    function deregister(key: any) {
+      operMap.delete(key)
+      if (key === activeKey) {
+        activeOpers = undefined
+      }
+    }
+  }
 }
 
 export function createForSlots(

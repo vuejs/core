@@ -94,7 +94,7 @@ describe('createFor', () => {
           })
           return span
         },
-        item => item.name,
+        item => item,
       )
       return n1
     }).render()
