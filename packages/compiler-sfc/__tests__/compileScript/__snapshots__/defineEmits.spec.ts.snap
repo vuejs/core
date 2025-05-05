@@ -9,7 +9,7 @@ export default {
 
 const myEmit = __emit
 
-return { myEmit }
+return { get myEmit() { return myEmit }, set myEmit(v) { throw new Error('Assignment to constant variable.') } }
 }
 
 }"
@@ -25,7 +25,7 @@ export default /*@__PURE__*/_defineComponent({
 
 const emit = __emit
 
-return { emit }
+return { get emit() { return emit }, set emit(v) { throw new Error('Assignment to constant variable.') } }
 }
 
 })"
@@ -42,7 +42,7 @@ export default /*@__PURE__*/_defineComponent({
 
     const emit = __emit
     
-return { emit }
+return { get emit() { return emit }, set emit(v) { throw new Error('Assignment to constant variable.') } }
 }
 
 })"
@@ -59,7 +59,7 @@ export default /*@__PURE__*/_defineComponent({
 
     const emit = __emit
     
-return { emit }
+return { get emit() { return emit }, set emit(v) { throw new Error('Assignment to constant variable.') } }
 }
 
 })"
@@ -76,7 +76,7 @@ export default /*@__PURE__*/_defineComponent({
 
     const emit: Emits = __emit
     
-return { emit }
+return { get emit() { return emit }, set emit(v) { throw new Error('Assignment to constant variable.') } }
 }
 
 })"
@@ -94,7 +94,7 @@ export default /*@__PURE__*/_defineComponent({
 
     const emit = __emit
     
-return { emit }
+return { get emit() { return emit }, set emit(v) { throw new Error('Assignment to constant variable.') } }
 }
 
 })"
@@ -111,7 +111,7 @@ export default /*@__PURE__*/_defineComponent({
 
     const emit = __emit
     
-return { emit }
+return { get emit() { return emit }, set emit(v) { throw new Error('Assignment to constant variable.') } }
 }
 
 })"
@@ -127,7 +127,7 @@ export default /*@__PURE__*/_defineComponent({
 
     const emit = __emit
     
-return { emit }
+return { get emit() { return emit }, set emit(v) { throw new Error('Assignment to constant variable.') } }
 }
 
 })"
@@ -143,7 +143,7 @@ export default /*@__PURE__*/_defineComponent({
 
     const emit = __emit
     
-return { emit }
+return { get emit() { return emit }, set emit(v) { throw new Error('Assignment to constant variable.') } }
 }
 
 })"
@@ -160,7 +160,7 @@ export default /*@__PURE__*/_defineComponent({
 
     const emit = __emit
     
-return { emit }
+return { get emit() { return emit }, set emit(v) { throw new Error('Assignment to constant variable.') } }
 }
 
 })"
@@ -177,7 +177,7 @@ export default /*@__PURE__*/_defineComponent({
 
     const emit = __emit
     
-return { emit }
+return { get emit() { return emit }, set emit(v) { throw new Error('Assignment to constant variable.') } }
 }
 
 })"
@@ -194,7 +194,7 @@ export default /*@__PURE__*/_defineComponent({
 
     const emit = __emit
     
-return { emit }
+return { get emit() { return emit }, set emit(v) { throw new Error('Assignment to constant variable.') } }
 }
 
 })"
@@ -210,7 +210,7 @@ export default /*@__PURE__*/_defineComponent({
 
     const emit = __emit
     
-return { emit }
+return { get emit() { return emit }, set emit(v) { throw new Error('Assignment to constant variable.') } }
 }
 
 })"
@@ -228,7 +228,7 @@ export default /*@__PURE__*/_defineComponent({
 
     const emit = __emit;
     
-return { emit }
+return { get emit() { return emit }, set emit(v) { throw new Error('Assignment to constant variable.') } }
 }
 
 })"
@@ -244,7 +244,7 @@ export default /*@__PURE__*/_defineComponent({
 
     const emit = __emit
     
-return { emit }
+return { get emit() { return emit }, set emit(v) { throw new Error('Assignment to constant variable.') } }
 }
 
 })"
@@ -260,7 +260,7 @@ export default /*@__PURE__*/_defineComponent({
 
     const emit = __emit
     
-return { emit }
+return { get emit() { return emit }, set emit(v) { throw new Error('Assignment to constant variable.') } }
 }
 
 })"
@@ -278,7 +278,7 @@ export default /*@__PURE__*/_defineComponent({
 
     const emit = __emit
     
-return { emit }
+return { get emit() { return emit }, set emit(v) { throw new Error('Assignment to constant variable.') } }
 }
 
 })"

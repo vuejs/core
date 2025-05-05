@@ -9,7 +9,10 @@ describe('SFC compile <script setup>', () => {
       const b = 2
       </script>
     `)
-    expect(content).toMatch(`return { a, b }`)
+    expect(content).toMatch(
+      `return { get a() { return a }, set a(v) { throw new Error('Assignment to constant variable.') }, ` +
+        `get b() { return b }, set b(v) { throw new Error('Assignment to constant variable.') } }`,
+    )
     assertCode(content)
   })
 
@@ -33,7 +36,13 @@ describe('SFC compile <script setup>', () => {
       `)
     expect(content).toMatch(
       `return { get aa() { return aa }, set aa(v) { aa = v }, ` +
-        `bb, cc, dd, get a() { return a }, set a(v) { a = v }, b, c, d, ` +
+        `get bb() { return bb }, set bb(v) { throw new Error('Assignment to constant variable.') }, ` +
+        `get cc() { return cc }, set cc(v) { throw new Error('Assignment to constant variable.') }, ` +
+        `get dd() { return dd }, set dd(v) { throw new Error('Assignment to constant variable.') }, ` +
+        `get a() { return a }, set a(v) { a = v }, ` +
+        `get b() { return b }, set b(v) { throw new Error('Assignment to constant variable.') }, ` +
+        `get c() { return c }, set c(v) { throw new Error('Assignment to constant variable.') }, ` +
+        `get d() { return d }, set d(v) { throw new Error('Assignment to constant variable.') }, ` +
         `get xx() { return xx }, get x() { return x } }`,
     )
     expect(bindings).toStrictEqual({
