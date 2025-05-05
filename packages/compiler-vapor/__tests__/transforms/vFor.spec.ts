@@ -67,6 +67,73 @@ describe('compiler: v-for', () => {
     ).lengthOf(1)
   })
 
+  test('key only binding pattern', () => {
+    expect(
+      compileWithVFor(
+        `
+          <tr
+            v-for="row of rows"
+            :key="row.id"
+          >
+            {{ row.id + row.id }}
+          </tr>
+      `,
+      ).code,
+    ).matchSnapshot()
+  })
+
+  test('selector pattern', () => {
+    expect(
+      compileWithVFor(
+        `
+          <tr
+            v-for="row of rows"
+            :key="row.id"
+          >
+            {{ selected === row.id ? 'danger' : '' }}
+          </tr>
+      `,
+      ).code,
+    ).matchSnapshot()
+
+    expect(
+      compileWithVFor(
+        `
+          <tr
+            v-for="row of rows"
+            :key="row.id"
+            :class="selected === row.id ? 'danger' : ''"
+          ></tr>
+      `,
+      ).code,
+    ).matchSnapshot()
+
+    // Should not be optimized because row.label is not from parent scope
+    expect(
+      compileWithVFor(
+        `
+          <tr
+            v-for="row of rows"
+            :key="row.id"
+            :class="row.label === row.id ? 'danger' : ''"
+          ></tr>
+      `,
+      ).code,
+    ).matchSnapshot()
+
+    expect(
+      compileWithVFor(
+        `
+          <tr
+            v-for="row of rows"
+            :key="row.id"
+            :class="{ danger: row.id === selected }"
+          ></tr>
+      `,
+      ).code,
+    ).matchSnapshot()
+  })
+
   test('multi effect', () => {
     const { code } = compileWithVFor(
       `<div v-for="(item, index) of items" :item="item" :index="index" />`,
