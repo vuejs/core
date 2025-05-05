@@ -296,8 +296,11 @@ export function isEmitListener(
   if (__COMPAT__ && key.startsWith(compatModelEventPrefix)) {
     return true
   }
-
-  key = key.slice(2).replace(/Once$/, '')
+  key = key.slice(2)
+  // #8342
+  // e.g. emits: { once: null } -> onOnce、ononce
+  // Does not require regular expression processing
+  key = key.toLowerCase() === 'once' ? key : key.replace(/Once$/, '')
   return (
     hasOwn(options, key[0].toLowerCase() + key.slice(1)) ||
     hasOwn(options, hyphenate(key)) ||
