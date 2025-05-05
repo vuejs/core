@@ -33,6 +33,7 @@ import {
   warn,
 } from '@vue/runtime-core'
 import {
+  Empty,
   camelize,
   extend,
   hasOwn,
@@ -373,9 +374,7 @@ export class VueElement
             if (key in this._props) {
               this._props[key] = toNumber(this._props[key])
             }
-            ;(numberProps || (numberProps = Object.create(null)))[
-              camelize(key)
-            ] = true
+            ;(numberProps || (numberProps = new Empty()))[camelize(key)] = true
           }
         }
       }

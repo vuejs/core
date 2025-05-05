@@ -61,6 +61,7 @@ import {
 } from './componentEmits'
 import {
   EMPTY_OBJ,
+  Empty,
   type IfAny,
   NOOP,
   ShapeFlags,
@@ -847,7 +848,7 @@ function setupStatefulComponent(
     }
   }
   // 0. create render proxy property access cache
-  instance.accessCache = Object.create(null)
+  instance.accessCache = new Empty()
   // 1. create public instance / render proxy
   instance.proxy = new Proxy(instance.ctx, PublicInstanceProxyHandlers)
   if (__DEV__) {

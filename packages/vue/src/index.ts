@@ -13,6 +13,7 @@ import {
 } from '@vue/runtime-dom'
 import * as runtimeDom from '@vue/runtime-dom'
 import {
+  Empty,
   NOOP,
   extend,
   genCacheKey,
@@ -25,7 +26,7 @@ if (__DEV__) {
   initDev()
 }
 
-const compileCache: Record<string, RenderFunction> = Object.create(null)
+const compileCache: Record<string, RenderFunction> = new Empty()
 
 function compileToFunction(
   template: string | HTMLElement,

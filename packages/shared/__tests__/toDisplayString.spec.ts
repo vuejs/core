@@ -2,7 +2,7 @@
  * @vitest-environment jsdom
  */
 import { computed, ref } from '@vue/reactivity'
-import { toDisplayString } from '../src'
+import { Empty, toDisplayString } from '../src'
 
 describe('toDisplayString', () => {
   test('nullish values', () => {
@@ -59,7 +59,7 @@ describe('toDisplayString', () => {
     )
 
     // object created from null does not have .toString in its prototype
-    const nullObjectWithoutToString = Object.create(null)
+    const nullObjectWithoutToString = new Empty()
     nullObjectWithoutToString.bar = 1
     expect(toDisplayString(nullObjectWithoutToString)).toBe(
       `{
