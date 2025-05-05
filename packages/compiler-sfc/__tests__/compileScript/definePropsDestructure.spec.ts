@@ -106,25 +106,28 @@ describe('sfc reactive props destructure', () => {
 })`)
     assertCode(content)
   })
+
   test('default values w/ runtime declaration & key is string', () => {
     const { content, bindings } = compile(`
       <script setup>
-      const { foo = 1, 'foo:bar': fooBar = 'foo-bar' } = defineProps(['foo', 'foo:bar'])
+      const { foo = 1, 'foo:bar': fooBar = 'foo-bar', baz = foo } = defineProps(['foo', 'foo:bar', 'baz'])
       </script>
     `)
     expect(bindings).toStrictEqual({
       __propsAliases: {
         fooBar: 'foo:bar',
       },
+      baz: BindingTypes.PROPS,
       foo: BindingTypes.PROPS,
       'foo:bar': BindingTypes.PROPS,
       fooBar: BindingTypes.PROPS_ALIASED,
     })
 
     expect(content).toMatch(`
-  props: /*@__PURE__*/_mergeDefaults(['foo', 'foo:bar'], {
+  props: /*@__PURE__*/_mergeDefaults(['foo', 'foo:bar', 'baz'], {
   foo: 1,
-  "foo:bar": 'foo-bar'
+  "foo:bar": 'foo-bar',
+  baz: (props) => (props["foo"])
 }),`)
     assertCode(content)
   })
@@ -132,7 +135,7 @@ describe('sfc reactive props destructure', () => {
   test('default values w/ type declaration', () => {
     const { content } = compile(`
       <script setup lang="ts">
-      const { foo = 1, bar = {}, func = () => {} } = defineProps<{ foo?: number, bar?: object, func?: () => any }>()
+      const { foo = 1, bar = {}, func = () => {}, baz = bar } = defineProps<{ foo?: number, bar?: object, func?: () => any, baz?: object }>()
       </script>
     `)
     // literals can be used as-is, non-literals are always returned from a
@@ -140,7 +143,8 @@ describe('sfc reactive props destructure', () => {
     expect(content).toMatch(`props: {
     foo: { type: Number, required: false, default: 1 },
     bar: { type: Object, required: false, default: () => ({}) },
-    func: { type: Function, required: false, default: () => {} }
+    func: { type: Function, required: false, default: () => {} },
+    baz: { type: Object, required: false, default: (props) => (props["bar"]) }
   }`)
     assertCode(content)
   })
