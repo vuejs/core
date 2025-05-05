@@ -167,7 +167,9 @@ const TransitionGroupImpl: ComponentOptions = /*@__PURE__*/ decorate({
         }
       }
 
-      return createVNode(tag, null, children)
+      const node = createVNode(tag, null, children)
+      node.slotScopeIds = instance.vnode.slotScopeIds
+      return node
     }
   },
 })
