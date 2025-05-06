@@ -537,6 +537,15 @@ export function resetTracking(): void {
   shouldTrack = last === undefined ? true : last
 }
 
+export function untrack<T>(fn: () => T): T {
+  try {
+    pauseTracking()
+    return fn()
+  } finally {
+    resetTracking()
+  }
+}
+
 /**
  * Registers a cleanup function for the current active effect.
  * The cleanup function is called right before the next effect run, or when the

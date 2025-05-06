@@ -34,6 +34,10 @@ export interface Ref<T = any, S = T> {
   [RefSymbol]: true
 }
 
+export interface RefWithPeek<T = any, S = T> extends Ref<T, S> {
+  peek: () => T
+}
+
 /**
  * Checks if a value is a ref object.
  *
@@ -54,7 +58,9 @@ export function isRef(r: any): r is Ref {
  */
 export function ref<T>(
   value: T,
-): [T] extends [Ref] ? IfAny<T, Ref<T>, T> : Ref<UnwrapRef<T>, UnwrapRef<T> | T>
+): [T] extends [Ref]
+  ? IfAny<T, Ref<T>, T>
+  : RefWithPeek<UnwrapRef<T>, UnwrapRef<T> | T>
 export function ref<T = any>(): Ref<T | undefined>
 export function ref(value?: unknown) {
   return createRef(value, false)
@@ -64,6 +70,10 @@ declare const ShallowRefMarker: unique symbol
 
 export type ShallowRef<T = any, S = T> = Ref<T, S> & {
   [ShallowRefMarker]?: true
+}
+
+export type ShallowRefWithPeek<T = any, S = T> = ShallowRef<T, S> & {
+  peek: () => T
 }
 
 /**
@@ -155,6 +165,10 @@ class RefImpl<T = any> {
         this.dep.trigger()
       }
     }
+  }
+
+  peek() {
+    return this._rawValue
   }
 }
 

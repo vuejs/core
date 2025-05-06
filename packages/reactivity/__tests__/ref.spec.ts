@@ -534,4 +534,26 @@ describe('reactivity/ref', () => {
     // @ts-expect-error internal field
     expect(objectRefValue._value).toBe(1)
   })
+
+  describe('peek', () => {
+    it('should hold a value', () => {
+      const a = ref(1)
+      expect(a.peek()).toBe(1)
+      a.value = 2
+      expect(a.peek()).toBe(2)
+    })
+
+    it('should not be reactive', () => {
+      const a = ref(1)
+      let dummy
+      const fn = vi.fn(() => {
+        dummy = a.peek()
+      })
+      effect(fn)
+      expect(fn).toHaveBeenCalledTimes(1)
+      expect(dummy).toBe(1)
+      a.value = 2
+      expect(fn).toHaveBeenCalledTimes(1)
+    })
+  })
 })

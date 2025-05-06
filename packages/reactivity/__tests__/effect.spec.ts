@@ -27,6 +27,7 @@ import {
   pauseTracking,
   resetTracking,
   startBatch,
+  untrack,
 } from '../src/effect'
 
 describe('reactivity/effect', () => {
@@ -1180,6 +1181,17 @@ describe('reactivity/effect', () => {
     expect(spy1).toHaveBeenCalledTimes(1)
     // inner effect should trigger
     expect(spy2).toHaveBeenCalledTimes(2)
+  })
+
+  it('should not track dependencies when using untrack', () => {
+    const value = ref(1)
+    let dummy
+    effect(() => {
+      dummy = untrack(() => value.value)
+    })
+    expect(dummy).toBe(1)
+    value.value = 2
+    expect(dummy).toBe(1)
   })
 
   describe('dep unsubscribe', () => {
