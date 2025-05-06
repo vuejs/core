@@ -26,9 +26,11 @@ interface BaseComputedRef<T, S = T> extends Ref<T, S> {
 
 export interface ComputedRef<T = any> extends BaseComputedRef<T> {
   readonly value: T
+  peek: () => T
 }
 
 export interface WritableComputedRef<T, S = T> extends BaseComputedRef<T, S> {
+  peek: () => T
   [WritableComputedRefSymbol]: true
 }
 
@@ -150,6 +152,12 @@ export class ComputedRefImpl<T = any> implements Subscriber {
     } else if (__DEV__) {
       warn('Write operation failed: computed value is readonly')
     }
+  }
+
+  peek(): T {
+    refreshComputed(this)
+
+    return this._value
   }
 }
 
