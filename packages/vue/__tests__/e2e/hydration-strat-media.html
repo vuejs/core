@@ -16,7 +16,7 @@
 
   const Comp = {
     props: {
-      value: Boolean
+      value: Boolean,
     },
     setup(props) {
       const count = ref(0)
@@ -43,7 +43,7 @@
       })
 
       const show = (window.show = ref(true))
-      return () => h(AsyncComp,{ value: show.value })
+      return () => h(AsyncComp, { value: show.value })
     },
   }).mount('#app')
 </script>
