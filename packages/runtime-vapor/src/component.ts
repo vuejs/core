@@ -234,6 +234,7 @@ export function createComponent(
         ErrorCodes.RENDER_FUNCTION,
       )
     } else {
+      // in prod result can only be block
       instance.block = normalizeNode(setupResult)
     }
   }
