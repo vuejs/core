@@ -163,12 +163,20 @@ export function compileScript(
     )
   }
 
-  const ctx = new ScriptCompileContext(sfc, options)
   const { script, scriptSetup, source, filename } = sfc
   const hoistStatic = options.hoistStatic !== false && !script
   const scopeId = options.id ? options.id.replace(/^data-v-/, '') : ''
   const scriptLang = script && script.lang
   const scriptSetupLang = scriptSetup && scriptSetup.lang
+
+  if (script && scriptSetup && scriptLang !== scriptSetupLang) {
+    throw new Error(
+      `[@vue/compiler-sfc] <script> and <script setup> must have the same ` +
+        `language type.`,
+    )
+  }
+
+  const ctx = new ScriptCompileContext(sfc, options)
 
   if (!scriptSetup) {
     if (!script) {
@@ -176,13 +184,6 @@ export function compileScript(
     }
     // normal <script> only
     return processNormalScript(ctx, scopeId)
-  }
-
-  if (script && scriptLang !== scriptSetupLang) {
-    throw new Error(
-      `[@vue/compiler-sfc] <script> and <script setup> must have the same ` +
-        `language type.`,
-    )
   }
 
   if (scriptSetupLang && !ctx.isJS && !ctx.isTS) {
