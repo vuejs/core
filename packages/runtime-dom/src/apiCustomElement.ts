@@ -520,7 +520,9 @@ export class VueElement
   }
 
   private _update() {
-    render(this._createVNode(), this._root)
+    const vnode = this._createVNode()
+    if (this._app && !this._instance) vnode.appContext = this._app._context
+    render(vnode, this._root)
   }
 
   private _createVNode(): VNode<any, any> {
