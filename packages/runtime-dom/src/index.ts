@@ -319,7 +319,7 @@ export * from './jsx'
 /**
  * @internal
  */
-export { ensureRenderer, normalizeContainer }
+export { ensureRenderer, ensureHydrationRenderer, normalizeContainer }
 /**
  * @internal
  */
