@@ -1,6 +1,7 @@
 import { isArray } from '@vue/shared'
 import {
   type VaporComponentInstance,
+  currentInstance,
   isVaporComponent,
   mountComponent,
   unmountComponent,
@@ -8,6 +9,8 @@ import {
 import { createComment, createTextNode } from './dom/node'
 import { EffectScope, pauseTracking, resetTracking } from '@vue/reactivity'
 import { isHydrating } from './dom/hydration'
+import { isKeepAlive } from 'vue'
+import type { KeepAliveInstance } from './components/KeepAlive'
 
 export type Block =
   | Node
@@ -50,15 +53,23 @@ export class DynamicFragment extends VaporFragment {
     pauseTracking()
     const parent = this.anchor.parentNode
 
+    const instance = currentInstance!
     // teardown previous branch
     if (this.scope) {
-      this.scope.stop()
+      if (isKeepAlive(instance)) {
+        ;(instance as KeepAliveInstance).process(this.nodes)
+      } else {
+        this.scope.stop()
+      }
       parent && remove(this.nodes, parent)
     }
 
     if (render) {
       this.scope = new EffectScope()
       this.nodes = this.scope.run(render) || []
+      if (isKeepAlive(instance)) {
+        ;(instance as KeepAliveInstance).process(this.nodes)
+      }
       if (parent) insert(this.nodes, parent, this.anchor)
     } else {
       this.scope = undefined
@@ -114,7 +125,7 @@ export function insert(
       parent.insertBefore(block, anchor)
     }
   } else if (isVaporComponent(block)) {
-    if (block.isMounted) {
+    if (block.isMounted && !block.isDeactivated) {
       insert(block.block!, parent, anchor)
     } else {
       mountComponent(block, parent, anchor)
