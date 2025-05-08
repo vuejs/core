@@ -4,7 +4,11 @@ import { rawPropsProxyHandlers } from './componentProps'
 import { currentInstance, isRef } from '@vue/runtime-dom'
 import type { LooseRawProps, VaporComponentInstance } from './component'
 import { renderEffect } from './renderEffect'
-import { insertionAnchor, insertionParent } from './insertionState'
+import {
+  insertionAnchor,
+  insertionParent,
+  resetInsertionState,
+} from './insertionState'
 import { isHydrating, locateHydrationNode } from './dom/hydration'
 
 export type RawSlots = Record<string, VaporSlot> & {
@@ -96,6 +100,8 @@ export function createSlot(
   const _insertionAnchor = insertionAnchor
   if (isHydrating) {
     locateHydrationNode()
+  } else {
+    resetInsertionState()
   }
 
   const instance = currentInstance as VaporComponentInstance

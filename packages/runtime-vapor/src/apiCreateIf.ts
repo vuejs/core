@@ -1,6 +1,10 @@
 import { type Block, type BlockFn, DynamicFragment, insert } from './block'
 import { isHydrating, locateHydrationNode } from './dom/hydration'
-import { insertionAnchor, insertionParent } from './insertionState'
+import {
+  insertionAnchor,
+  insertionParent,
+  resetInsertionState,
+} from './insertionState'
 import { renderEffect } from './renderEffect'
 
 export function createIf(
@@ -13,6 +17,8 @@ export function createIf(
   const _insertionAnchor = insertionAnchor
   if (isHydrating) {
     locateHydrationNode()
+  } else {
+    resetInsertionState()
   }
 
   let frag: Block
