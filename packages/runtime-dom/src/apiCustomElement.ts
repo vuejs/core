@@ -337,6 +337,9 @@ export class VueElement
         this._app && this._app.unmount()
         if (this._instance) this._instance.ce = undefined
         this._app = this._instance = null
+        this._slots = undefined
+        this._slotFallbacks = undefined
+        this._slotAnchors = undefined
       }
     })
   }
@@ -692,7 +695,10 @@ export class VueElement
     for (let i = 0; i < prevNodes.length; i++) {
       const prevNode = prevNodes[i]
       const newNode = newNodes[i]
-      if (isComment(prevNode, 'v-if') || isComment(newNode, 'v-if')) {
+      if (
+        prevNode !== newNode &&
+        (isComment(prevNode, 'v-if') || isComment(newNode, 'v-if'))
+      ) {
         Object.keys(this._slots!).forEach(name => {
           const slotNodes = this._slots![name]
           if (slotNodes) {

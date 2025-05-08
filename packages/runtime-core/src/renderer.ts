@@ -966,9 +966,7 @@ function baseCreateRenderer(
           !isSameVNodeType(oldVNode, newVNode) ||
           // - In the case of a component, it could contain anything.
           oldVNode.shapeFlag & (ShapeFlags.COMPONENT | ShapeFlags.TELEPORT))
-          ? oldVNode.el._parentNode && !oldVNode.el.isConnected
-            ? oldVNode.el._parentNode
-            : hostParentNode(oldVNode.el)!
+          ? hostParentNode(oldVNode.el) || oldVNode.el._parentNode
           : // In other cases, the parent container is not actually used so we
             // just pass the block element here to avoid a DOM parentNode call.
             fallbackContainer
