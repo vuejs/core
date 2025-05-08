@@ -9,6 +9,7 @@ import {
   ErrorCodes,
   type SchedulerJob,
   callWithErrorHandling,
+  isAsyncWrapper,
   queuePostFlushCb,
   warn,
 } from '@vue/runtime-dom'
@@ -20,6 +21,7 @@ import {
   isString,
   remove,
 } from '@vue/shared'
+import type { DynamicFragment } from './block'
 
 export type NodeRef = string | Ref | ((ref: Element) => void)
 export type RefEl = Element | VaporComponentInstance
@@ -48,8 +50,24 @@ export function setRef(
 ): NodeRef | undefined {
   if (!instance || instance.isUnmounted) return
 
+  const isVaporComp = isVaporComponent(el)
+  if (isVaporComp && isAsyncWrapper(el as VaporComponentInstance)) {
+    const i = el as VaporComponentInstance
+    const frag = i.block as DynamicFragment
+    // async component not resolved yet
+    if (!i.type.__asyncResolved) {
+      frag.setRef = i => setRef(instance, i, ref, oldRef, refFor)
+      return
+    }
+
+    // set ref to the inner component instead
+    el = frag.nodes as VaporComponentInstance
+  }
+
   const setupState: any = __DEV__ ? instance.setupState || {} : null
-  const refValue = isVaporComponent(el) ? getExposed(el) || el : el
+  const refValue = isVaporComp
+    ? getExposed(el as VaporComponentInstance) || el
+    : el
 
   const refs =
     instance.refs === EMPTY_OBJ ? (instance.refs = {}) : instance.refs
