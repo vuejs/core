@@ -79,6 +79,15 @@ export function processDefineProps(
       )
     }
     ctx.propsTypeDecl = node.typeParameters.params[0]
+    // register bindings
+    const { props } = resolveTypeElements(ctx, ctx.propsTypeDecl)
+    if (props) {
+      for (const key in props) {
+        if (!(key in ctx.bindingMetadata)) {
+          ctx.bindingMetadata[key] = BindingTypes.PROPS
+        }
+      }
+    }
   }
 
   // handle props destructure
@@ -190,10 +199,6 @@ export function extractRuntimeProps(
 
   for (const prop of props) {
     propStrings.push(genRuntimePropFromType(ctx, prop, hasStaticDefaults))
-    // register bindings
-    if ('bindingMetadata' in ctx && !(prop.key in ctx.bindingMetadata)) {
-      ctx.bindingMetadata[prop.key] = BindingTypes.PROPS
-    }
   }
 
   let propsDecls = `{
