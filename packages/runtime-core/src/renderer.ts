@@ -936,7 +936,7 @@ function baseCreateRenderer(
     }
 
     if (el._isVueCE && el._def.shadowRoot === false) {
-      el._updateSlots(n2.children)
+      el._updateSlots(n1, n2)
     }
   }
 
@@ -966,7 +966,9 @@ function baseCreateRenderer(
           !isSameVNodeType(oldVNode, newVNode) ||
           // - In the case of a component, it could contain anything.
           oldVNode.shapeFlag & (ShapeFlags.COMPONENT | ShapeFlags.TELEPORT))
-          ? hostParentNode(oldVNode.el)!
+          ? oldVNode.el._parentNode && !oldVNode.el.isConnected
+            ? oldVNode.el._parentNode
+            : hostParentNode(oldVNode.el)!
           : // In other cases, the parent container is not actually used so we
             // just pass the block element here to avoid a DOM parentNode call.
             fallbackContainer

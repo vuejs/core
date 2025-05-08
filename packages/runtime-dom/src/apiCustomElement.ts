@@ -245,6 +245,8 @@ export class VueElement
   private _childStyles?: Map<string, HTMLStyleElement[]>
   private _ob?: MutationObserver | null = null
   private _slots?: Record<string, Node[]>
+  private _slotFallbacks?: Record<string, Node[]>
+  private _slotAnchors?: Map<string, Node>
 
   constructor(
     /**
@@ -529,8 +531,11 @@ export class VueElement
   private _createVNode(): VNode<any, any> {
     const baseProps: VNodeProps = {}
     if (!this.shadowRoot) {
-      baseProps.onVnodeMounted = baseProps.onVnodeUpdated =
-        this._renderSlots.bind(this)
+      baseProps.onVnodeMounted = () => {
+        this._captureSlotFallbacks()
+        this._renderSlots()
+      }
+      baseProps.onVnodeUpdated = this._renderSlots.bind(this)
     }
     const vnode = createVNode(this._def, extend(baseProps, this._props))
     if (!this._instance) {
@@ -617,14 +622,19 @@ export class VueElement
   /**
    * Only called when shadowRoot is false
    */
-  private _parseSlots() {
+  private _parseSlots(remove: boolean = true) {
     const slots: VueElement['_slots'] = (this._slots = {})
-    let n
-    while ((n = this.firstChild)) {
+    let n = this.firstChild
+    while (n) {
       const slotName =
         (n.nodeType === 1 && (n as Element).getAttribute('slot')) || 'default'
       ;(slots[slotName] || (slots[slotName] = [])).push(n)
-      this.removeChild(n)
+      const next = n.nextSibling
+      // store the parentNode reference since node will be removed
+      // but it is needed during patching
+      ;(n as any)._parentNode = n.parentNode
+      if (remove) this.removeChild(n)
+      n = next
     }
   }
 
@@ -634,11 +644,18 @@ export class VueElement
   private _renderSlots() {
     const outlets = (this._teleportTarget || this).querySelectorAll('slot')
     const scopeId = this._instance!.type.__scopeId
+    this._slotAnchors = new Map()
     for (let i = 0; i < outlets.length; i++) {
       const o = outlets[i] as HTMLSlotElement
       const slotName = o.getAttribute('name') || 'default'
       const content = this._slots![slotName]
       const parent = o.parentNode!
+
+      // insert an anchor to facilitate updates
+      const anchor = document.createTextNode('')
+      this._slotAnchors.set(slotName, anchor)
+      parent.insertBefore(anchor, o)
+
       if (content) {
         for (const n of content) {
           // for :slotted css
@@ -651,23 +668,91 @@ export class VueElement
               ;(child as Element).setAttribute(id, '')
             }
           }
-          parent.insertBefore(n, o)
+          parent.insertBefore(n, anchor)
         }
-      } else {
-        while (o.firstChild) parent.insertBefore(o.firstChild, o)
+      } else if (this._slotFallbacks) {
+        const nodes = this._slotFallbacks[slotName]
+        if (nodes) {
+          for (const n of nodes) {
+            parent.insertBefore(n, anchor)
+          }
+        }
       }
       parent.removeChild(o)
     }
   }
 
   /**
-   * @internal
+   * Only called when shadowRoot is false
    */
-  _updateSlots(children: VNode[]): void {
-    children.forEach(child => {
-      // slot children are always Fragments
-      this._slots![child.slotName!] = collectFragmentElements(child)
-    })
+  _updateSlots(n1: VNode, n2: VNode): void {
+    // replace v-if nodes
+    const prevNodes = collectNodes(n1.children as VNodeArrayChildren)
+    const newNodes = collectNodes(n2.children as VNodeArrayChildren)
+    for (let i = 0; i < prevNodes.length; i++) {
+      const prevNode = prevNodes[i]
+      const newNode = newNodes[i]
+      if (isComment(prevNode, 'v-if') || isComment(newNode, 'v-if')) {
+        Object.keys(this._slots!).forEach(name => {
+          const slotNodes = this._slots![name]
+          if (slotNodes) {
+            for (const node of slotNodes) {
+              if (node === prevNode) {
+                this._slots![name][i] = newNode
+                break
+              }
+            }
+          }
+        })
+      }
+    }
+
+    // switch between fallback and provided content
+    if (this._slotFallbacks) {
+      const oldSlotNames = Object.keys(this._slots!)
+      // re-parse slots
+      this._parseSlots(false)
+      const newSlotNames = Object.keys(this._slots!)
+      const allSlotNames = new Set([...oldSlotNames, ...newSlotNames])
+      allSlotNames.forEach(name => {
+        const fallbackNodes = this._slotFallbacks![name]
+        if (fallbackNodes) {
+          // render fallback nodes for removed slots
+          if (!newSlotNames.includes(name)) {
+            const anchor = this._slotAnchors!.get(name)!
+            fallbackNodes.forEach(fallbackNode =>
+              this.insertBefore(fallbackNode, anchor),
+            )
+          }
+
+          // remove fallback nodes for added slots
+          if (!oldSlotNames.includes(name)) {
+            fallbackNodes.forEach(fallbackNode =>
+              this.removeChild(fallbackNode),
+            )
+          }
+        }
+      })
+    }
+  }
+
+  /**
+   * Only called when shadowRoot is false
+   */
+  private _captureSlotFallbacks() {
+    const outlets = (this._teleportTarget || this).querySelectorAll('slot')
+    for (let i = 0; i < outlets.length; i++) {
+      const slotElement = outlets[i] as HTMLSlotElement
+      const slotName = slotElement.getAttribute('name') || 'default'
+      const fallbackNodes: Node[] = []
+      while (slotElement.firstChild) {
+        fallbackNodes.push(slotElement.removeChild(slotElement.firstChild))
+      }
+      if (fallbackNodes.length) {
+        ;(this._slotFallbacks || (this._slotFallbacks = {}))[slotName] =
+          fallbackNodes
+      }
+    }
   }
 
   /**
@@ -724,26 +809,30 @@ export function useShadowRoot(): ShadowRoot | null {
   return el && el.shadowRoot
 }
 
-function collectFragmentElements(child: VNode): Node[] {
+function collectFragmentNodes(child: VNode): Node[] {
   return [
     child.el as Node,
-    ...collectElements(child.children as VNodeArrayChildren),
+    ...collectNodes(child.children as VNodeArrayChildren),
     child.anchor as Node,
   ]
 }
 
-function collectElements(children: VNodeArrayChildren): Node[] {
+function collectNodes(children: VNodeArrayChildren): Node[] {
   const nodes: Node[] = []
   for (const child of children) {
     if (isArray(child)) {
-      nodes.push(...collectElements(child))
+      nodes.push(...collectNodes(child))
     } else if (isVNode(child)) {
       if (child.type === Fragment) {
-        nodes.push(...collectFragmentElements(child))
+        nodes.push(...collectFragmentNodes(child))
       } else if (child.el) {
         nodes.push(child.el as Node)
       }
     }
   }
   return nodes
+}
+
+function isComment(node: Node, data: string): node is Comment {
+  return node.nodeType === 8 && (node as Comment).data === data
 }
