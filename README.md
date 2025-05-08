@@ -34,7 +34,7 @@ Please make sure to respect issue requirements and use [the new issue helper](ht
 
 ## Stay In Touch
 
-- [Twitter](https://twitter.com/vuejs)
+- [X](https://x.com/vuejs)
 - [Blog](https://blog.vuejs.org/)
 - [Job Board](https://vuejobs.com/?ref=vuejs)
 

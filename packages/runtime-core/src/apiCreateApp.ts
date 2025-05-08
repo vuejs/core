@@ -141,12 +141,6 @@ export interface GenericAppConfig {
   ) => void
 
   /**
-   * TODO document for 3.5
-   * Enable warnings for computed getters that recursively trigger itself.
-   */
-  warnRecursiveComputed?: boolean
-
-  /**
    * Whether to throw unhandled errors in production.
    * Default is `false` to avoid crashing on any error (and only logs it)
    * But in some cases, e.g. SSR, throwing might be more desirable.
