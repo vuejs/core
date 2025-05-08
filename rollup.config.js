@@ -314,6 +314,7 @@ function createConfig(format, output, plugins = []) {
     const treeShakenDeps = [
       'source-map-js',
       '@babel/parser',
+      '@babel/types',
       'estree-walker',
       'entities/lib/decode.js',
     ]
