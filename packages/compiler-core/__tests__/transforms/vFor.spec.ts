@@ -218,6 +218,43 @@ describe('compiler: v-for', () => {
         "state ['my items']",
       )
     })
+
+    test('no whitespace around (in|of) with simple expression', () => {
+      const { node: forNode } = parseWithForTransform(
+        '<span v-for="(item)in[items]" />',
+      )
+
+      expect(forNode.keyAlias).toBeUndefined()
+      expect(forNode.objectIndexAlias).toBeUndefined()
+      expect((forNode.valueAlias as SimpleExpressionNode).content).toBe('item')
+      expect((forNode.source as SimpleExpressionNode).content).toBe('[items]')
+    })
+
+    test('no whitespace around (in|of) with object de-structured value', () => {
+      const { node: forNode } = parseWithForTransform(
+        '<span v-for="{ id, value }in[item]" />',
+      )
+
+      expect(forNode.keyAlias).toBeUndefined()
+      expect(forNode.objectIndexAlias).toBeUndefined()
+      expect((forNode.valueAlias as SimpleExpressionNode).content).toBe(
+        '{ id, value }',
+      )
+      expect((forNode.source as SimpleExpressionNode).content).toBe('[item]')
+    })
+
+    test('no whitespace around (in|of) with array de-structured value', () => {
+      const { node: forNode } = parseWithForTransform(
+        '<span v-for="[ id ]in[item]" />',
+      )
+
+      expect(forNode.keyAlias).toBeUndefined()
+      expect(forNode.objectIndexAlias).toBeUndefined()
+      expect((forNode.valueAlias as SimpleExpressionNode).content).toBe(
+        '[ id ]',
+      )
+      expect((forNode.source as SimpleExpressionNode).content).toBe('[item]')
+    })
   })
 
   describe('errors', () => {
@@ -257,6 +294,18 @@ describe('compiler: v-for', () => {
       )
     })
 
+    test('invalid expression containing (in|of)', () => {
+      const onError = vi.fn()
+      parseWithForTransform('<span v-for="fooinbar" />', { onError })
+
+      expect(onError).toHaveBeenCalledTimes(1)
+      expect(onError).toHaveBeenCalledWith(
+        expect.objectContaining({
+          code: ErrorCodes.X_V_FOR_MALFORMED_EXPRESSION,
+        }),
+      )
+    })
+
     test('missing source', () => {
       const onError = vi.fn()
       parseWithForTransform('<span v-for="item in" />', { onError })
@@ -284,6 +333,18 @@ describe('compiler: v-for', () => {
     test('missing value', () => {
       const onError = vi.fn()
       parseWithForTransform('<span v-for="in items" />', { onError })
+
+      expect(onError).toHaveBeenCalledTimes(1)
+      expect(onError).toHaveBeenCalledWith(
+        expect.objectContaining({
+          code: ErrorCodes.X_V_FOR_MALFORMED_EXPRESSION,
+        }),
+      )
+    })
+
+    test('missing source and value', () => {
+      const onError = vi.fn()
+      parseWithForTransform('<span v-for=" in " />', { onError })
 
       expect(onError).toHaveBeenCalledTimes(1)
       expect(onError).toHaveBeenCalledWith(
@@ -434,6 +495,48 @@ describe('compiler: v-for', () => {
       expect(forNode.source.loc.end.line).toBe(1)
       expect(forNode.source.loc.end.column).toBe(
         itemsOffset + 1 + `items`.length,
+      )
+    })
+
+    test('no whitespace around (in|of) with bracketed value, key, index', () => {
+      const source = '<span v-for="( item, key, index )in[items]" />'
+      const { node: forNode } = parseWithForTransform(source)
+
+      const itemOffset = source.indexOf('item')
+      const value = forNode.valueAlias as SimpleExpressionNode
+      expect(value.content).toBe('item')
+      expect(value.loc.start.offset).toBe(itemOffset)
+      expect(value.loc.start.line).toBe(1)
+      expect(value.loc.start.column).toBe(itemOffset + 1)
+      expect(value.loc.end.line).toBe(1)
+      expect(value.loc.end.column).toBe(itemOffset + 1 + `item`.length)
+
+      const keyOffset = source.indexOf('key')
+      const key = forNode.keyAlias as SimpleExpressionNode
+      expect(key.content).toBe('key')
+      expect(key.loc.start.offset).toBe(keyOffset)
+      expect(key.loc.start.line).toBe(1)
+      expect(key.loc.start.column).toBe(keyOffset + 1)
+      expect(key.loc.end.line).toBe(1)
+      expect(key.loc.end.column).toBe(keyOffset + 1 + `key`.length)
+
+      const indexOffset = source.indexOf('index')
+      const index = forNode.objectIndexAlias as SimpleExpressionNode
+      expect(index.content).toBe('index')
+      expect(index.loc.start.offset).toBe(indexOffset)
+      expect(index.loc.start.line).toBe(1)
+      expect(index.loc.start.column).toBe(indexOffset + 1)
+      expect(index.loc.end.line).toBe(1)
+      expect(index.loc.end.column).toBe(indexOffset + 1 + `index`.length)
+
+      const itemsOffset = source.indexOf('[items]')
+      expect((forNode.source as SimpleExpressionNode).content).toBe('[items]')
+      expect(forNode.source.loc.start.offset).toBe(itemsOffset)
+      expect(forNode.source.loc.start.line).toBe(1)
+      expect(forNode.source.loc.start.column).toBe(itemsOffset + 1)
+      expect(forNode.source.loc.end.line).toBe(1)
+      expect(forNode.source.loc.end.column).toBe(
+        itemsOffset + 1 + `[items]`.length,
       )
     })
 
@@ -739,6 +842,21 @@ describe('compiler: v-for', () => {
       } = parseWithForTransform('<span v-for="(item) in items" />')
       expect(assertSharedCodegen(codegenNode)).toMatchObject({
         source: { content: `items` },
+        params: [{ content: `item` }],
+        innerVNodeCall: {
+          tag: `"span"`,
+        },
+      })
+      expect(generate(root).code).toMatchSnapshot()
+    })
+
+    test('no whitespace around (in|of) with basic v-for', () => {
+      const {
+        root,
+        node: { codegenNode },
+      } = parseWithForTransform('<span v-for="(item)in[items]" />')
+      expect(assertSharedCodegen(codegenNode)).toMatchObject({
+        source: { content: `[items]` },
         params: [{ content: `item` }],
         innerVNodeCall: {
           tag: `"span"`,
