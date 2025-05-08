@@ -24,7 +24,7 @@ import { SchedulerJobFlags } from '../scheduler'
 
 type Hook<T = () => void> = T | T[]
 
-const leaveCbKey: unique symbol = Symbol('_leaveCb')
+export const leaveCbKey: unique symbol = Symbol('_leaveCb')
 const enterCbKey: unique symbol = Symbol('_enterCb')
 
 export interface BaseTransitionProps<HostElement = RendererElement> {
