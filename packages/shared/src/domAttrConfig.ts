@@ -71,7 +71,8 @@ export const isKnownHtmlAttr: (key: string) => boolean = /*@__PURE__*/ makeMap(
     `height,hidden,high,href,hreflang,http-equiv,icon,id,importance,inert,integrity,` +
     `ismap,itemprop,keytype,kind,label,lang,language,loading,list,loop,low,` +
     `manifest,max,maxlength,minlength,media,min,multiple,muted,name,novalidate,` +
-    `open,optimum,pattern,ping,placeholder,poster,preload,radiogroup,readonly,` +
+    `open,optimum,pattern,ping,placeholder,popover,popovertarget,popovertargetaction,` +
+    `poster,preload,radiogroup,readonly,` +
     `referrerpolicy,rel,required,reversed,rows,rowspan,sandbox,scope,scoped,` +
     `selected,shape,size,sizes,slot,span,spellcheck,src,srcdoc,srclang,srcset,` +
     `start,step,style,summary,tabindex,target,title,translate,type,usemap,` +
