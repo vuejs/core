@@ -49,8 +49,8 @@ describe('scheduler', () => {
       const job1 = () => {
         calls.push('job1')
 
-        queueJob(job2)
-        queueJob(job3)
+        queueJob(job2, 10)
+        queueJob(job3, 1)
       }
 
       const job2 = () => {
@@ -58,12 +58,10 @@ describe('scheduler', () => {
         queueJob(job4)
         queueJob(job5)
       }
-      job2.id = 10
 
       const job3 = () => {
         calls.push('job3')
       }
-      job3.id = 1
 
       const job4 = () => {
         calls.push('job4')
@@ -125,9 +123,8 @@ describe('scheduler', () => {
         calls.push('cb1')
         queueJob(job1)
       }
-      cb1.flags! |= SchedulerJobFlags.PRE
 
-      queueJob(cb1)
+      queueJob(cb1, undefined, true)
       await nextTick()
       expect(calls).toEqual(['cb1', 'job1'])
     })
@@ -137,30 +134,23 @@ describe('scheduler', () => {
       const job1 = () => {
         calls.push('job1')
       }
-      job1.id = 1
 
       const cb1: SchedulerJob = () => {
         calls.push('cb1')
-        queueJob(job1)
+        queueJob(job1, 1)
         // cb2 should execute before the job
-        queueJob(cb2)
-        queueJob(cb3)
+        queueJob(cb2, 1, true)
+        queueJob(cb3, 1, true)
       }
-      cb1.flags! |= SchedulerJobFlags.PRE
 
       const cb2: SchedulerJob = () => {
         calls.push('cb2')
       }
-      cb2.flags! |= SchedulerJobFlags.PRE
-      cb2.id = 1
-
       const cb3: SchedulerJob = () => {
         calls.push('cb3')
       }
-      cb3.flags! |= SchedulerJobFlags.PRE
-      cb3.id = 1
 
-      queueJob(cb1)
+      queueJob(cb1, undefined, true)
       await nextTick()
       expect(calls).toEqual(['cb1', 'cb2', 'cb3', 'job1'])
     })
@@ -170,41 +160,30 @@ describe('scheduler', () => {
       const job1: SchedulerJob = () => {
         calls.push('job1')
       }
-      job1.id = 1
-      job1.flags! |= SchedulerJobFlags.PRE
       const job2: SchedulerJob = () => {
         calls.push('job2')
-        queueJob(job5)
-        queueJob(job6)
+        queueJob(job5, 2)
+        queueJob(job6, 2, true)
       }
-      job2.id = 2
-      job2.flags! |= SchedulerJobFlags.PRE
       const job3: SchedulerJob = () => {
         calls.push('job3')
       }
-      job3.id = 2
-      job3.flags! |= SchedulerJobFlags.PRE
       const job4: SchedulerJob = () => {
         calls.push('job4')
       }
-      job4.id = 3
-      job4.flags! |= SchedulerJobFlags.PRE
       const job5: SchedulerJob = () => {
         calls.push('job5')
       }
-      job5.id = 2
       const job6: SchedulerJob = () => {
         calls.push('job6')
       }
-      job6.id = 2
-      job6.flags! |= SchedulerJobFlags.PRE
 
       // We need several jobs to test this properly, otherwise
       // findInsertionIndex can yield the correct index by chance
-      queueJob(job4)
-      queueJob(job2)
-      queueJob(job3)
-      queueJob(job1)
+      queueJob(job4, 3, true)
+      queueJob(job2, 2, true)
+      queueJob(job3, 2, true)
+      queueJob(job1, 1, true)
 
       await nextTick()
       expect(calls).toEqual(['job1', 'job2', 'job3', 'job6', 'job5', 'job4'])
@@ -217,8 +196,8 @@ describe('scheduler', () => {
         // when updating the props of a child component. This is handled
         // directly inside `updateComponentPreRender` to avoid non atomic
         // cb triggers (#1763)
-        queueJob(cb1)
-        queueJob(cb2)
+        queueJob(cb1, undefined, true)
+        queueJob(cb2, undefined, true)
         flushPreFlushCbs()
         calls.push('job1')
       }
@@ -227,11 +206,9 @@ describe('scheduler', () => {
         // a cb triggers its parent job, which should be skipped
         queueJob(job1)
       }
-      cb1.flags! |= SchedulerJobFlags.PRE
       const cb2: SchedulerJob = () => {
         calls.push('cb2')
       }
-      cb2.flags! |= SchedulerJobFlags.PRE
 
       queueJob(job1)
       await nextTick()
@@ -242,29 +219,24 @@ describe('scheduler', () => {
       const calls: string[] = []
       const job1: SchedulerJob = () => {
         calls.push('job1')
-        queueJob(job3)
-        queueJob(job4)
+        queueJob(job3, undefined, true)
+        queueJob(job4, undefined, true)
       }
       // job1 has no id
-      job1.flags! |= SchedulerJobFlags.PRE
       const job2: SchedulerJob = () => {
         calls.push('job2')
       }
-      job2.id = 1
-      job2.flags! |= SchedulerJobFlags.PRE
       const job3: SchedulerJob = () => {
         calls.push('job3')
       }
       // job3 has no id
-      job3.flags! |= SchedulerJobFlags.PRE
       const job4: SchedulerJob = () => {
         calls.push('job4')
       }
       // job4 has no id
-      job4.flags! |= SchedulerJobFlags.PRE
 
-      queueJob(job1)
-      queueJob(job2)
+      queueJob(job1, undefined, true)
+      queueJob(job2, 1, true)
       await nextTick()
       expect(calls).toEqual(['job1', 'job3', 'job4', 'job2'])
     })
@@ -273,9 +245,8 @@ describe('scheduler', () => {
     it('queue preFlushCb inside postFlushCb', async () => {
       const spy = vi.fn()
       const cb: SchedulerJob = () => spy()
-      cb.flags! |= SchedulerJobFlags.PRE
       queuePostFlushCb(() => {
-        queueJob(cb)
+        queueJob(cb, undefined, true)
       })
       await nextTick()
       expect(spy).toHaveBeenCalled()
@@ -448,16 +419,13 @@ describe('scheduler', () => {
       const job1: SchedulerJob = () => {
         calls.push('job1')
       }
-      job1.id = 1
-
       const job2: SchedulerJob = () => {
         calls.push('job2')
       }
-      job2.id = 2
 
       queuePostFlushCb(() => {
-        queueJob(job2)
-        queueJob(job1)
+        queueJob(job2, 2)
+        queueJob(job1, 1)
       })
 
       await nextTick()
@@ -471,21 +439,16 @@ describe('scheduler', () => {
     const job1 = () => calls.push('job1')
     // job1 has no id
     const job2 = () => calls.push('job2')
-    job2.id = 2
     const job3 = () => calls.push('job3')
-    job3.id = 1
     const job4: SchedulerJob = () => calls.push('job4')
-    job4.id = 2
-    job4.flags! |= SchedulerJobFlags.PRE
     const job5: SchedulerJob = () => calls.push('job5')
     // job5 has no id
-    job5.flags! |= SchedulerJobFlags.PRE
 
     queueJob(job1)
-    queueJob(job2)
-    queueJob(job3)
-    queueJob(job4)
-    queueJob(job5)
+    queueJob(job2, 2)
+    queueJob(job3, 1)
+    queueJob(job4, 2, true)
+    queueJob(job5, undefined, true)
     await nextTick()
     expect(calls).toEqual(['job5', 'job3', 'job4', 'job2', 'job1'])
   })
@@ -495,13 +458,11 @@ describe('scheduler', () => {
     const cb1 = () => calls.push('cb1')
     // cb1 has no id
     const cb2 = () => calls.push('cb2')
-    cb2.id = 2
     const cb3 = () => calls.push('cb3')
-    cb3.id = 1
 
     queuePostFlushCb(cb1)
-    queuePostFlushCb(cb2)
-    queuePostFlushCb(cb3)
+    queuePostFlushCb(cb2, 2)
+    queuePostFlushCb(cb3, 1)
     await nextTick()
     expect(calls).toEqual(['cb3', 'cb2', 'cb1'])
   })
@@ -550,13 +511,10 @@ describe('scheduler', () => {
         throw err
       }
     })
-    job1.id = 1
-
     const job2: SchedulerJob = vi.fn()
-    job2.id = 2
 
-    queueJob(job1)
-    queueJob(job2)
+    queueJob(job1, 1)
+    queueJob(job2, 2)
 
     try {
       await nextTick()
@@ -570,8 +528,8 @@ describe('scheduler', () => {
     expect(job1).toHaveBeenCalledTimes(1)
     expect(job2).toHaveBeenCalledTimes(0)
 
-    queueJob(job1)
-    queueJob(job2)
+    queueJob(job1, 1)
+    queueJob(job2, 2)
 
     await nextTick()
 
@@ -622,11 +580,10 @@ describe('scheduler', () => {
 
   test('recursive jobs can only be queued once non-recursively', async () => {
     const job: SchedulerJob = vi.fn()
-    job.id = 1
     job.flags = SchedulerJobFlags.ALLOW_RECURSE
 
-    queueJob(job)
-    queueJob(job)
+    queueJob(job, 1)
+    queueJob(job, 1)
 
     await nextTick()
 
@@ -638,15 +595,14 @@ describe('scheduler', () => {
 
     const job: SchedulerJob = vi.fn(() => {
       if (recurse) {
-        queueJob(job)
-        queueJob(job)
+        queueJob(job, 1)
+        queueJob(job, 1)
         recurse = false
       }
     })
-    job.id = 1
     job.flags = SchedulerJobFlags.ALLOW_RECURSE
 
-    queueJob(job)
+    queueJob(job, 1)
 
     await nextTick()
 
@@ -659,22 +615,19 @@ describe('scheduler', () => {
     const job1: SchedulerJob = () => {
       if (recurse) {
         // job2 is already queued, so this shouldn't do anything
-        queueJob(job2)
+        queueJob(job2, 2)
         recurse = false
       }
     }
-    job1.id = 1
-
     const job2: SchedulerJob = vi.fn(() => {
       if (recurse) {
-        queueJob(job1)
-        queueJob(job2)
+        queueJob(job1, 1)
+        queueJob(job2, 2)
       }
     })
-    job2.id = 2
     job2.flags = SchedulerJobFlags.ALLOW_RECURSE
 
-    queueJob(job2)
+    queueJob(job2, 2)
 
     await nextTick()
 
@@ -685,40 +638,35 @@ describe('scheduler', () => {
     let recurse = true
 
     const job1: SchedulerJob = vi.fn(() => {
-      queueJob(job3)
-      queueJob(job3)
+      queueJob(job3, 3, true)
+      queueJob(job3, 3, true)
       flushPreFlushCbs()
     })
-    job1.id = 1
-    job1.flags = SchedulerJobFlags.PRE
 
     const job2: SchedulerJob = vi.fn(() => {
       if (recurse) {
         // job2 does not allow recurse, so this shouldn't do anything
-        queueJob(job2)
+        queueJob(job2, 2, true)
 
         // job3 is already queued, so this shouldn't do anything
-        queueJob(job3)
+        queueJob(job3, 3, true)
         recurse = false
       }
     })
-    job2.id = 2
-    job2.flags = SchedulerJobFlags.PRE
 
     const job3: SchedulerJob = vi.fn(() => {
       if (recurse) {
-        queueJob(job2)
-        queueJob(job3)
+        queueJob(job2, 2, true)
+        queueJob(job3, 3, true)
 
         // The jobs are already queued, so these should have no effect
-        queueJob(job2)
-        queueJob(job3)
+        queueJob(job2, 2, true)
+        queueJob(job3, 3, true)
       }
     })
-    job3.id = 3
-    job3.flags = SchedulerJobFlags.ALLOW_RECURSE | SchedulerJobFlags.PRE
+    job3.flags = SchedulerJobFlags.ALLOW_RECURSE
 
-    queueJob(job1)
+    queueJob(job1, 1, true)
 
     await nextTick()
 
@@ -775,8 +723,7 @@ describe('scheduler', () => {
       spy()
       flushPreFlushCbs()
     }
-    job.flags! |= SchedulerJobFlags.PRE
-    queueJob(job)
+    queueJob(job, undefined, true)
     await nextTick()
     expect(spy).toHaveBeenCalledTimes(1)
   })
@@ -788,18 +735,14 @@ describe('scheduler', () => {
     const job1: SchedulerJob = () => {
       calls.push('job1')
     }
-    job1.id = 1
-    job1.flags! |= SchedulerJobFlags.PRE
 
     const job2: SchedulerJob = () => {
       calls.push('job2')
     }
-    job2.id = 2
-    job2.flags! |= SchedulerJobFlags.PRE
 
     queuePostFlushCb(() => {
-      queueJob(job2)
-      queueJob(job1)
+      queueJob(job2, 2, true)
+      queueJob(job1, 1, true)
 
       // e.g. nested app.mount() call
       flushPreFlushCbs()
@@ -830,14 +773,14 @@ describe('scheduler', () => {
     const cb1 = () => calls.push('cb1')
     // cb1 has no id
     const cb2 = () => calls.push('cb2')
-    cb2.id = -1
     const queueAndFlush = (hook: Function) => {
       queuePostFlushCb(hook)
       flushPostFlushCbs()
     }
 
     queueAndFlush(() => {
-      queuePostFlushCb([cb1, cb2])
+      queuePostFlushCb(cb1)
+      queuePostFlushCb(cb2, -1)
       flushPostFlushCbs()
     })
 

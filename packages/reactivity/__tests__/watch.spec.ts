@@ -3,39 +3,11 @@ import {
   type Ref,
   WatchErrorCodes,
   type WatchOptions,
-  type WatchScheduler,
   computed,
   onWatcherCleanup,
   ref,
   watch,
 } from '../src'
-
-const queue: (() => void)[] = []
-
-// a simple scheduler for testing purposes
-let isFlushPending = false
-const resolvedPromise = /*@__PURE__*/ Promise.resolve() as Promise<any>
-const nextTick = (fn?: () => any) =>
-  fn ? resolvedPromise.then(fn) : resolvedPromise
-
-const scheduler: WatchScheduler = (job, isFirstRun) => {
-  if (isFirstRun) {
-    job()
-  } else {
-    queue.push(job)
-    flushJobs()
-  }
-}
-
-const flushJobs = () => {
-  if (isFlushPending) return
-  isFlushPending = true
-  resolvedPromise.then(() => {
-    queue.forEach(job => job())
-    queue.length = 0
-    isFlushPending = false
-  })
-}
 
 describe('watch', () => {
   test('effect', () => {
@@ -145,54 +117,6 @@ describe('watch', () => {
 
     scope.stop()
     expect(dummy).toBe(30)
-  })
-
-  test('nested calls to baseWatch and onWatcherCleanup', async () => {
-    let calls: string[] = []
-    let source: Ref<number>
-    let copyist: Ref<number>
-    const scope = new EffectScope()
-
-    scope.run(() => {
-      source = ref(0)
-      copyist = ref(0)
-      // sync by default
-      watch(
-        () => {
-          const current = (copyist.value = source.value)
-          onWatcherCleanup(() => calls.push(`sync ${current}`))
-        },
-        null,
-        {},
-      )
-      // with scheduler
-      watch(
-        () => {
-          const current = copyist.value
-          onWatcherCleanup(() => calls.push(`post ${current}`))
-        },
-        null,
-        { scheduler },
-      )
-    })
-
-    await nextTick()
-    expect(calls).toEqual([])
-
-    scope.run(() => source.value++)
-    expect(calls).toEqual(['sync 0'])
-    await nextTick()
-    expect(calls).toEqual(['sync 0', 'post 0'])
-    calls.length = 0
-
-    scope.run(() => source.value++)
-    expect(calls).toEqual(['sync 1'])
-    await nextTick()
-    expect(calls).toEqual(['sync 1', 'post 1'])
-    calls.length = 0
-
-    scope.stop()
-    expect(calls).toEqual(['sync 2', 'post 2'])
   })
 
   test('once option should be ignored by simple watch', async () => {

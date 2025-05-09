@@ -1,4 +1,4 @@
-import { pauseTracking, resetTracking } from '@vue/reactivity'
+import { setActiveSub } from '@vue/reactivity'
 import type { GenericComponentInstance } from './component'
 import { popWarningContext, pushWarningContext, warn } from './warning'
 import { EMPTY_OBJ, isArray, isFunction, isPromise } from '@vue/shared'
@@ -139,13 +139,13 @@ export function handleError(
     }
     // app-level handling
     if (errorHandler) {
-      pauseTracking()
+      const prevSub = setActiveSub()
       callWithErrorHandling(errorHandler, null, ErrorCodes.APP_ERROR_HANDLER, [
         err,
         exposedInstance,
         errorInfo,
       ])
-      resetTracking()
+      setActiveSub(prevSub)
       return
     }
   }
