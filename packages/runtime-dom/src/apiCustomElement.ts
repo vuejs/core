@@ -635,7 +635,7 @@ export class VueElement
       const next = n.nextSibling
       // store the parentNode reference since node will be removed
       // but it is needed during patching
-      ;(n as any)._parentNode = n.parentNode
+      ;(n as any).$parentNode = n.parentNode
       if (remove) this.removeChild(n)
       n = next
     }
@@ -648,9 +648,12 @@ export class VueElement
     const outlets = (this._teleportTarget || this).querySelectorAll('slot')
     const scopeId = this._instance!.type.__scopeId
     this._slotAnchors = new Map()
+    const processedSlots = new Set<string>()
+
     for (let i = 0; i < outlets.length; i++) {
       const o = outlets[i] as HTMLSlotElement
       const slotName = o.getAttribute('name') || 'default'
+      processedSlots.add(slotName)
       const content = this._slots![slotName]
       const parent = o.parentNode!
 
@@ -660,19 +663,7 @@ export class VueElement
       parent.insertBefore(anchor, o)
 
       if (content) {
-        for (const n of content) {
-          // for :slotted css
-          if (scopeId && n.nodeType === 1) {
-            const id = scopeId + '-s'
-            const walker = document.createTreeWalker(n, 1)
-            ;(n as Element).setAttribute(id, '')
-            let child
-            while ((child = walker.nextNode())) {
-              ;(child as Element).setAttribute(id, '')
-            }
-          }
-          parent.insertBefore(n, anchor)
-        }
+        insertSlottedContent(content, scopeId, parent, anchor)
       } else if (this._slotFallbacks) {
         const nodes = this._slotFallbacks[slotName]
         if (nodes) {
@@ -683,13 +674,25 @@ export class VueElement
       }
       parent.removeChild(o)
     }
+
+    // ensure default slot content is rendered if provided
+    if (!processedSlots.has('default')) {
+      let content = this._slots!['default']
+      if (content) {
+        // TODO
+        content = content.filter(
+          n => !(n.nodeType === 8 && (n as Comment).data === 'v-if'),
+        )
+        insertSlottedContent(content, scopeId, this, this.firstChild)
+      }
+    }
   }
 
   /**
    * Only called when shadowRoot is false
    */
   _updateSlots(n1: VNode, n2: VNode): void {
-    // replace v-if nodes
+    // switch v-if nodes
     const prevNodes = collectNodes(n1.children as VNodeArrayChildren)
     const newNodes = collectNodes(n2.children as VNodeArrayChildren)
     for (let i = 0; i < prevNodes.length; i++) {
@@ -699,15 +702,10 @@ export class VueElement
         prevNode !== newNode &&
         (isComment(prevNode, 'v-if') || isComment(newNode, 'v-if'))
       ) {
-        Object.keys(this._slots!).forEach(name => {
-          const slotNodes = this._slots![name]
-          if (slotNodes) {
-            for (const node of slotNodes) {
-              if (node === prevNode) {
-                this._slots![name][i] = newNode
-                break
-              }
-            }
+        Object.entries(this._slots!).forEach(([_, nodes]) => {
+          const nodeIndex = nodes.indexOf(prevNode)
+          if (nodeIndex > -1) {
+            nodes[nodeIndex] = newNode
           }
         })
       }
@@ -813,6 +811,27 @@ export function useHost(caller?: string): VueElement | null {
 export function useShadowRoot(): ShadowRoot | null {
   const el = __DEV__ ? useHost('useShadowRoot') : useHost()
   return el && el.shadowRoot
+}
+
+function insertSlottedContent(
+  content: Node[],
+  scopeId: string | undefined,
+  parent: ParentNode,
+  anchor: Node | null,
+) {
+  for (const n of content) {
+    // for :slotted css
+    if (scopeId && n.nodeType === 1) {
+      const id = scopeId + '-s'
+      const walker = document.createTreeWalker(n, 1)
+      ;(n as Element).setAttribute(id, '')
+      let child
+      while ((child = walker.nextNode())) {
+        ;(child as Element).setAttribute(id, '')
+      }
+    }
+    parent.insertBefore(n, anchor)
+  }
 }
 
 function collectFragmentNodes(child: VNode): Node[] {
