@@ -280,7 +280,8 @@ export class VueElement
     // avoid resolving component if it's not connected
     if (!this.isConnected) return
 
-    if (!this.shadowRoot) {
+    // avoid re-parsing slots if already resolved
+    if (!this.shadowRoot && !this._resolved) {
       this._parseSlots()
     }
     this._connected = true
@@ -298,8 +299,7 @@ export class VueElement
 
     if (!this._instance) {
       if (this._resolved) {
-        this._setParent()
-        this._update()
+        this._mount(this._def)
       } else {
         if (parent && parent._pendingResolve) {
           this._pendingResolve = parent._pendingResolve.then(() => {
