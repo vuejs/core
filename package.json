@@ -111,22 +111,5 @@
     "typescript-eslint": "^8.31.1",
     "vite": "catalog:",
     "vitest": "^3.0.9"
-  },
-  "pnpm": {
-    "peerDependencyRules": {
-      "allowedVersions": {
-        "typescript-eslint>eslint": "^9.0.0",
-        "@typescript-eslint/eslint-plugin>eslint": "^9.0.0",
-        "@typescript-eslint/parser>eslint": "^9.0.0",
-        "@typescript-eslint/type-utils>eslint": "^9.0.0",
-        "@typescript-eslint/utils>eslint": "^9.0.0"
-      }
-    },
-    "onlyBuiltDependencies": [
-      "@swc/core",
-      "esbuild",
-      "puppeteer",
-      "simple-git-hooks"
-    ]
   }
 }
