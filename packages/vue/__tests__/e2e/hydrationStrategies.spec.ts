@@ -86,6 +86,36 @@ describe('async component hydration strategies', () => {
     await assertHydrationSuccess()
   })
 
+  // #13255
+  test('media query (patched before hydration)', async () => {
+    const spy = vi.fn()
+    const currentPage = page()
+    currentPage.on('pageerror', spy)
+
+    const warn: any[] = []
+    currentPage.on('console', e => warn.push(e.text()))
+
+    await goToCase('media')
+    await page().waitForFunction(() => window.isRootMounted)
+    expect(await page().evaluate(() => window.isHydrated)).toBe(false)
+
+    // patch
+    await page().evaluate(() => (window.show.value = false))
+    await click('button')
+    expect(await text('button')).toBe('1')
+
+    // resize
+    await page().setViewport({ width: 400, height: 600 })
+    await page().waitForFunction(() => window.isHydrated)
+    await assertHydrationSuccess('2')
+
+    expect(spy).toBeCalledTimes(0)
+    currentPage.off('pageerror', spy)
+    expect(
+      warn.some(w => w.includes('Skipping lazy hydration for component')),
+    ).toBe(true)
+  })
+
   test('interaction', async () => {
     await goToCase('interaction')
     await page().waitForFunction(() => window.isRootMounted)
