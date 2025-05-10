@@ -45,14 +45,24 @@ export class EffectScope implements Subscriber {
    */
   private index: number | undefined
 
-  constructor(public detached = false) {
-    this.parent = activeEffectScope
-    if (!detached && activeEffectScope) {
+  /**
+   * @param relationship - Defines the parent scope of the current effect scope.
+   * - If `true`, the scope is detached from any parent.
+   * - If an instance of `EffectScope`, it becomes the parent scope.
+   * - Defaults to `false`, indicating the effect scope is attached to the parent if it exists.
+   */
+  constructor(relationship: EffectScope | boolean = false) {
+    this.parent =
+      relationship === true ? undefined : relationship || activeEffectScope
+
+    if (this.parent) {
       this.index =
-        (activeEffectScope.scopes || (activeEffectScope.scopes = [])).push(
-          this,
-        ) - 1
+        (this.parent.scopes || (this.parent.scopes = [])).push(this) - 1
     }
+  }
+
+  get detached(): boolean {
+    return !this.parent
   }
 
   get active(): boolean {
@@ -153,9 +163,9 @@ export class EffectScope implements Subscriber {
       }
 
       // nested scope, dereference from parent to avoid memory leaks
-      if (!this.detached && this.parent && !fromParent) {
+      if (!this.detached && this.parent && this.parent.scopes && !fromParent) {
         // optimized O(1) removal
-        const last = this.parent.scopes!.pop()
+        const last = this.parent.scopes.pop()
         if (last && last !== this) {
           this.parent.scopes![this.index!] = last
           last.index = this.index!
@@ -172,11 +182,14 @@ export class EffectScope implements Subscriber {
  * disposed together. For detailed use cases of this API, please consult its
  * corresponding {@link https://github.com/vuejs/rfcs/blob/master/active-rfcs/0041-reactivity-effect-scope.md | RFC}.
  *
- * @param detached - Can be used to create a "detached" effect scope.
+ * @param relationship - Defines the parent scope of the current effect scope.
+ * - If `true`, the scope is detached from any parent.
+ * - If an instance of `EffectScope`, it becomes the parent scope.
+ * - Defaults to `false`, indicating the effect scope is attached to the parent if it exists.
  * @see {@link https://vuejs.org/api/reactivity-advanced.html#effectscope}
  */
-export function effectScope(detached?: boolean): EffectScope {
-  return new EffectScope(detached)
+export function effectScope(relationship?: EffectScope | boolean): EffectScope {
+  return new EffectScope(relationship)
 }
 
 /**

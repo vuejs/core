@@ -623,7 +623,7 @@ export function createComponentInstance(
     effect: null!,
     update: null!, // will be set synchronously right after creation
     job: null!,
-    scope: new EffectScope(true /* detached */),
+    scope: parent ? new EffectScope(parent.scope) : new EffectScope(true),
     render: null,
     proxy: null,
     exposed: null,
