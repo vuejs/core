@@ -247,6 +247,7 @@ export class VueElement
   private _slots?: Record<string, Node[]>
   private _slotFallbacks?: Record<string, Node[]>
   private _slotAnchors?: Map<string, Node>
+  private _slotNames: Set<string> | undefined
 
   constructor(
     /**
@@ -632,10 +633,8 @@ export class VueElement
       const slotName =
         (n.nodeType === 1 && (n as Element).getAttribute('slot')) || 'default'
       ;(slots[slotName] || (slots[slotName] = [])).push(n)
+      ;(this._slotNames || (this._slotNames = new Set())).add(slotName)
       const next = n.nextSibling
-      // store the parentNode reference since node will be removed
-      // but it is needed during patching
-      ;(n as any).$parentNode = n.parentNode
       if (remove) this.removeChild(n)
       n = next
     }
@@ -647,7 +646,6 @@ export class VueElement
   private _renderSlots() {
     const outlets = (this._teleportTarget || this).querySelectorAll('slot')
     const scopeId = this._instance!.type.__scopeId
-    this._slotAnchors = new Map()
     const processedSlots = new Set<string>()
 
     for (let i = 0; i < outlets.length; i++) {
@@ -659,7 +657,10 @@ export class VueElement
 
       // insert an anchor to facilitate updates
       const anchor = document.createTextNode('')
-      this._slotAnchors.set(slotName, anchor)
+      ;(this._slotAnchors || (this._slotAnchors = new Map())).set(
+        slotName,
+        anchor,
+      )
       parent.insertBefore(anchor, o)
 
       if (content) {
@@ -679,11 +680,25 @@ export class VueElement
     if (!processedSlots.has('default')) {
       let content = this._slots!['default']
       if (content) {
-        // TODO
-        content = content.filter(
-          n => !(n.nodeType === 8 && (n as Comment).data === 'v-if'),
+        let anchor
+        // if the default slot is not the first one, insert it behind the previous slot
+        if (this._slotAnchors) {
+          const slotNames = Array.from(this._slotNames!)
+          const defaultSlotIndex = slotNames.indexOf('default')
+          if (defaultSlotIndex > 0) {
+            const prevSlotAnchor = this._slotAnchors.get(
+              slotNames[defaultSlotIndex - 1],
+            )
+            if (prevSlotAnchor) anchor = prevSlotAnchor.nextSibling
+          }
+        }
+
+        insertSlottedContent(
+          content,
+          scopeId,
+          this._root,
+          anchor || this.firstChild,
         )
-        insertSlottedContent(content, scopeId, this, this.firstChild)
       }
     }
   }
@@ -722,8 +737,8 @@ export class VueElement
         const fallbackNodes = this._slotFallbacks![name]
         if (fallbackNodes) {
           // render fallback nodes for removed slots
-          if (!newSlotNames.includes(name)) {
-            const anchor = this._slotAnchors!.get(name)!
+          if (!newSlotNames.includes(name) && this._slotAnchors) {
+            const anchor = this._slotAnchors.get(name)!
             fallbackNodes.forEach(fallbackNode =>
               this.insertBefore(fallbackNode, anchor),
             )
@@ -830,6 +845,7 @@ function insertSlottedContent(
         ;(child as Element).setAttribute(id, '')
       }
     }
+    ;(n as any).$parentNode = parent
     parent.insertBefore(n, anchor)
   }
 }
