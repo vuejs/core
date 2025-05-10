@@ -208,6 +208,20 @@ test('ATTR_FALSE_VALUE', () => {
   ).toHaveBeenWarned()
 })
 
+test('ATTR_FALSE_VALUE with false on input value', () => {
+  const vm = new Vue({
+    template: `<input :value="false"/>`,
+  }).$mount()
+  expect(vm.$el).toBeInstanceOf(HTMLInputElement)
+  expect(vm.$el.hasAttribute('value')).toBe(true)
+  expect(vm.$el.getAttribute('value')).toBe('false')
+  expect(
+    (deprecationData[DeprecationTypes.ATTR_FALSE_VALUE].message as Function)(
+      'value',
+    ),
+  ).not.toHaveBeenWarned()
+})
+
 test("ATTR_FALSE_VALUE with false value shouldn't throw warning", () => {
   const vm = new Vue({
     template: `<div :id="false" :foo="false"/>`,
