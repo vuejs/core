@@ -99,8 +99,10 @@ function setVarsOnNode(el: Node, vars: Record<string, string>) {
     const style = (el as HTMLElement).style
     let cssText = ''
     for (const key in vars) {
-      style.setProperty(`--${key}`, vars[key])
-      cssText += `--${key}: ${vars[key]};`
+      if (vars[key] != null) {
+        style.setProperty(`--${key}`, vars[key])
+        cssText += `--${key}: ${vars[key]};`
+      }
     }
     ;(style as any)[CSS_VAR_TEXT] = cssText
   }
