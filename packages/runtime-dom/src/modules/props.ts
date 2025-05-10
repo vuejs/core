@@ -1,5 +1,5 @@
 import { DeprecationTypes, compatUtils, warn } from '@vue/runtime-core'
-import { includeBooleanAttr } from '@vue/shared'
+import { includeBooleanAttr, isNullish } from '@vue/shared'
 import { unsafeToTrustedHTML } from '../nodeOps'
 
 // functions. The user is responsible for using them with only trusted content.
@@ -16,7 +16,7 @@ export function patchDOMProp(
   if (key === 'innerHTML' || key === 'textContent') {
     // null value case is handled in renderer patchElement before patching
     // children
-    if (value != null) {
+    if (!isNullish(value)) {
       el[key] = key === 'innerHTML' ? unsafeToTrustedHTML(value) : value
     }
     return
@@ -34,18 +34,17 @@ export function patchDOMProp(
     // compare against its attribute value instead.
     const oldValue =
       tag === 'OPTION' ? el.getAttribute('value') || '' : el.value
-    const newValue =
-      value == null
-        ? // #11647: value should be set as empty string for null and undefined,
-          // but <input type="checkbox"> should be set as 'on'.
-          el.type === 'checkbox'
-          ? 'on'
-          : ''
-        : String(value)
+    const newValue = isNullish(value)
+      ? // #11647: value should be set as empty string for null and undefined,
+        // but <input type="checkbox"> should be set as 'on'.
+        el.type === 'checkbox'
+        ? 'on'
+        : ''
+      : String(value)
     if (oldValue !== newValue || !('_value' in el)) {
       el.value = newValue
     }
-    if (value == null) {
+    if (isNullish(value)) {
       el.removeAttribute(key)
     }
     // store value as _value as well since
@@ -55,12 +54,12 @@ export function patchDOMProp(
   }
 
   let needRemove = false
-  if (value === '' || value == null) {
+  if (value === '' || isNullish(value)) {
     const type = typeof el[key]
     if (type === 'boolean') {
       // e.g. <select multiple> compiles to { multiple: '' }
       value = includeBooleanAttr(value)
-    } else if (value == null && type === 'string') {
+    } else if (isNullish(value) && type === 'string') {
       // e.g. <div :id="null">
       value = ''
       needRemove = true

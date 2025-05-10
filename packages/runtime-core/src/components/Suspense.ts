@@ -10,7 +10,14 @@ import {
   normalizeVNode,
   openBlock,
 } from '../vnode'
-import { ShapeFlags, isArray, isFunction, toNumber } from '@vue/shared'
+import {
+  ShapeFlags,
+  isArray,
+  isFunction,
+  isNullish,
+  isNumber,
+  toNumber,
+} from '@vue/shared'
 import { type ComponentInternalInstance, handleSetupResult } from '../component'
 import type { Slots } from '../componentSlots'
 import {
@@ -78,7 +85,7 @@ export const SuspenseImpl = {
     // platform-specific impl passed from renderer
     rendererInternals: RendererInternals,
   ): void {
-    if (n1 == null) {
+    if (isNullish(n1)) {
       mountSuspense(
         n2,
         container,
@@ -501,7 +508,7 @@ function createSuspenseBoundary(
     hiddenContainer,
     deps: 0,
     pendingId: suspenseId++,
-    timeout: typeof timeout === 'number' ? timeout : -1,
+    timeout: isNumber(timeout) ? timeout : -1,
     activeBranch: null,
     pendingBranch: null,
     isInFallback: !isHydrating,
@@ -900,5 +907,5 @@ function setActiveBranch(suspense: SuspenseBoundary, branch: VNode) {
 
 function isVNodeSuspensible(vnode: VNode) {
   const suspensible = vnode.props && vnode.props.suspensible
-  return suspensible != null && suspensible !== false
+  return !isNullish(suspensible) && suspensible !== false
 }

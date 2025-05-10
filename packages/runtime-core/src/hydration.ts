@@ -23,6 +23,7 @@ import {
   isBooleanAttr,
   isKnownHtmlAttr,
   isKnownSvgAttr,
+  isNullish,
   isOn,
   isRenderableAttrValue,
   isReservedProp,
@@ -357,7 +358,7 @@ export function createHydrationFunctions(
         }
     }
 
-    if (ref != null) {
+    if (!isNullish(ref)) {
       setRef(ref, null, parentSuspense, vnode)
     }
 
@@ -838,7 +839,7 @@ function propHasMismatch(
     if (isBooleanAttr(key)) {
       actual = el.hasAttribute(key)
       expected = includeBooleanAttr(clientValue)
-    } else if (clientValue == null) {
+    } else if (isNullish(clientValue)) {
       actual = el.hasAttribute(key)
       expected = false
     } else {
@@ -860,7 +861,7 @@ function propHasMismatch(
     }
   }
 
-  if (mismatchType != null && !isMismatchAllowed(el, mismatchType)) {
+  if (!isNullish(mismatchType) && !isMismatchAllowed(el, mismatchType)) {
     const format = (v: any) =>
       v === false ? `(not rendered)` : `${mismatchKey}="${v}"`
     const preSegment = `Hydration ${MismatchTypeString[mismatchType]} mismatch on`
@@ -980,7 +981,7 @@ function isMismatchAllowed(
     }
   }
   const allowedAttr = el && el.getAttribute(allowMismatchAttr)
-  if (allowedAttr == null) {
+  if (isNullish(allowedAttr)) {
     return false
   } else if (allowedAttr === '') {
     return true

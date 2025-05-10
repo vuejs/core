@@ -5,7 +5,13 @@ import {
   type Data,
   formatComponentName,
 } from './component'
-import { isFunction, isString } from '@vue/shared'
+import {
+  isBoolean,
+  isFunction,
+  isNullish,
+  isNumber,
+  isString,
+} from '@vue/shared'
 import { isRef, pauseTracking, resetTracking, toRaw } from '@vue/reactivity'
 import { ErrorCodes, callWithErrorHandling } from './errorHandling'
 
@@ -119,7 +125,7 @@ function formatTrace(trace: ComponentTraceStack): any[] {
 function formatTraceEntry({ vnode, recurseCount }: TraceEntry): any[] {
   const postfix =
     recurseCount > 0 ? `... (${recurseCount} recursive calls)` : ``
-  const isRoot = vnode.component ? vnode.component.parent == null : false
+  const isRoot = vnode.component ? isNullish(vnode.component.parent) : false
   const open = ` at <${formatComponentName(
     vnode.component,
     vnode.type,
@@ -149,11 +155,7 @@ function formatProp(key: string, value: unknown, raw?: boolean): any {
   if (isString(value)) {
     value = JSON.stringify(value)
     return raw ? value : [`${key}=${value}`]
-  } else if (
-    typeof value === 'number' ||
-    typeof value === 'boolean' ||
-    value == null
-  ) {
+  } else if (isNumber(value) || isBoolean(value) || isNullish(value)) {
     return raw ? value : [`${key}=${value}`]
   } else if (isRef(value)) {
     value = formatProp(key, toRaw(value.value), true)

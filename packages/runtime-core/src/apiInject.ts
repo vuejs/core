@@ -1,4 +1,4 @@
-import { isFunction } from '@vue/shared'
+import { isFunction, isNullish } from '@vue/shared'
 import { currentInstance } from './component'
 import { currentRenderingInstance } from './componentRenderContext'
 import { currentApp } from './apiCreateApp'
@@ -62,7 +62,7 @@ export function inject(
     const provides = currentApp
       ? currentApp._context.provides
       : instance
-        ? instance.parent == null
+        ? isNullish(instance.parent)
           ? instance.vnode.appContext && instance.vnode.appContext.provides
           : instance.parent.provides
         : undefined

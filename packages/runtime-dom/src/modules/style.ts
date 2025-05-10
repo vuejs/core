@@ -1,4 +1,10 @@
-import { capitalize, hyphenate, isArray, isString } from '@vue/shared'
+import {
+  capitalize,
+  hyphenate,
+  isArray,
+  isNullish,
+  isString,
+} from '@vue/shared'
 import { camelize, warn } from '@vue/runtime-core'
 import {
   type VShowElement,
@@ -19,14 +25,14 @@ export function patchStyle(el: Element, prev: Style, next: Style): void {
     if (prev) {
       if (!isString(prev)) {
         for (const key in prev) {
-          if (next[key] == null) {
+          if (isNullish(next[key])) {
             setStyle(style, key, '')
           }
         }
       } else {
         for (const prevStyle of prev.split(';')) {
           const key = prevStyle.slice(0, prevStyle.indexOf(':')).trim()
-          if (next[key] == null) {
+          if (isNullish(next[key])) {
             setStyle(style, key, '')
           }
         }
@@ -75,7 +81,7 @@ function setStyle(
   if (isArray(val)) {
     val.forEach(v => setStyle(style, name, v))
   } else {
-    if (val == null) val = ''
+    if (isNullish(val)) val = ''
     if (__DEV__) {
       if (semicolonRE.test(val)) {
         warn(

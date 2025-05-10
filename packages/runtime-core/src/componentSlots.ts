@@ -14,6 +14,7 @@ import {
   def,
   isArray,
   isFunction,
+  isNullish,
 } from '@vue/shared'
 import { warn } from './warning'
 import { isKeepAlive } from './components/KeepAlive'
@@ -133,7 +134,7 @@ const normalizeObjectSlots = (
     const value = rawSlots[key]
     if (isFunction(value)) {
       slots[key] = normalizeSlot(key, value, ctx)
-    } else if (value != null) {
+    } else if (!isNullish(value)) {
       if (
         __DEV__ &&
         !(
@@ -248,7 +249,7 @@ export const updateSlots = (
   // delete stale slots
   if (needDeletionCheck) {
     for (const key in slots) {
-      if (!isInternalKey(key) && deletionComparisonTarget[key] == null) {
+      if (!isInternalKey(key) && isNullish(deletionComparisonTarget[key])) {
         delete slots[key]
       }
     }

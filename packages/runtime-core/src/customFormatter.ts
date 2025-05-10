@@ -8,7 +8,16 @@ import {
   resetTracking,
   toRaw,
 } from '@vue/reactivity'
-import { EMPTY_OBJ, extend, isArray, isFunction, isObject } from '@vue/shared'
+import {
+  EMPTY_OBJ,
+  extend,
+  isArray,
+  isBoolean,
+  isFunction,
+  isNumber,
+  isObject,
+  isString,
+} from '@vue/shared'
 import type { ComponentInternalInstance, ComponentOptions } from './component'
 import type { ComponentPublicInstance } from './componentPublicInstance'
 
@@ -151,11 +160,11 @@ export function initCustomFormatter(): void {
   }
 
   function formatValue(v: unknown, asRaw = true) {
-    if (typeof v === 'number') {
+    if (isNumber(v)) {
       return ['span', numberStyle, v]
-    } else if (typeof v === 'string') {
+    } else if (isString(v)) {
       return ['span', stringStyle, JSON.stringify(v)]
-    } else if (typeof v === 'boolean') {
+    } else if (isBoolean(v)) {
       return ['span', keywordStyle, v]
     } else if (isObject(v)) {
       return ['object', { object: asRaw ? toRaw(v) : v }]
