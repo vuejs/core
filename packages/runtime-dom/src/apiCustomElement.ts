@@ -679,10 +679,6 @@ export class VueElement
     if (!processedSlots.has('default')) {
       let content = this._slots!['default']
       if (content) {
-        // TODO
-        content = content.filter(
-          n => !(n.nodeType === 8 && (n as Comment).data === 'v-if'),
-        )
         insertSlottedContent(content, scopeId, this, this.firstChild)
       }
     }
@@ -830,6 +826,7 @@ function insertSlottedContent(
         ;(child as Element).setAttribute(id, '')
       }
     }
+    ;(n as any).$parentNode = parent
     parent.insertBefore(n, anchor)
   }
 }
