@@ -30,6 +30,7 @@ import {
   createVNode,
   defineComponent,
   getCurrentInstance,
+  isTemplateNode,
   isVNode,
   nextTick,
   unref,
@@ -244,7 +245,7 @@ export class VueElement
    */
   private _childStyles?: Map<string, HTMLStyleElement[]>
   private _ob?: MutationObserver | null = null
-  private _slots?: Record<string, Node[]>
+  private _slots?: Record<string, (Node & { $parentNode?: Node })[]>
   private _slotFallbacks?: Record<string, Node[]>
   private _slotAnchors?: Map<string, Node>
   private _slotNames: Set<string> | undefined
@@ -627,17 +628,42 @@ export class VueElement
    * Only called when shadowRoot is false
    */
   private _parseSlots(remove: boolean = true) {
-    const slots: VueElement['_slots'] = (this._slots = {})
+    if (!this._slotNames) this._slotNames = new Set()
+    else this._slotNames.clear()
+    this._slots = {}
+
     let n = this.firstChild
     while (n) {
-      const slotName =
-        (n.nodeType === 1 && (n as Element).getAttribute('slot')) || 'default'
-      ;(slots[slotName] || (slots[slotName] = [])).push(n)
-      ;(this._slotNames || (this._slotNames = new Set())).add(slotName)
       const next = n.nextSibling
-      if (remove) this.removeChild(n)
+      if (isTemplateNode(n)) {
+        this.processTemplateChildren(n, remove)
+        this.removeChild(n)
+      } else {
+        const slotName =
+          (n.nodeType === 1 && (n as Element).getAttribute('slot')) || 'default'
+        this.addToSlot(slotName, n, remove)
+      }
+
       n = next
     }
+  }
+
+  private processTemplateChildren(template: Node, remove: boolean) {
+    let n = template.firstChild
+    while (n) {
+      const next = n.nextSibling
+      const slotName =
+        (n.nodeType === 1 && (n as Element).getAttribute('slot')) || 'default'
+      this.addToSlot(slotName, n, remove)
+      if (remove) template.removeChild(n)
+      n = next
+    }
+  }
+
+  private addToSlot(slotName: string, node: Node, remove: boolean) {
+    ;(this._slots![slotName] || (this._slots![slotName] = [])).push(node)
+    this._slotNames!.add(slotName)
+    if (remove) this.removeChild(node)
   }
 
   /**
@@ -664,7 +690,12 @@ export class VueElement
       parent.insertBefore(anchor, o)
 
       if (content) {
+        const parentNode = content[0].parentNode
         insertSlottedContent(content, scopeId, parent, anchor)
+        // remove empty template container
+        if (parentNode && isTemplateNode(parentNode)) {
+          this.removeChild(parentNode)
+        }
       } else if (this._slotFallbacks) {
         const nodes = this._slotFallbacks[slotName]
         if (nodes) {
@@ -676,29 +707,32 @@ export class VueElement
       parent.removeChild(o)
     }
 
-    // ensure default slot content is rendered if provided
-    if (!processedSlots.has('default')) {
-      let content = this._slots!['default']
-      if (content) {
+    // create template for unprocessed slots and insert their content
+    // this prevents errors during full diff when anchors are not in the DOM tree
+    for (const slotName of this._slotNames!) {
+      if (processedSlots.has(slotName)) continue
+
+      const content = this._slots![slotName]
+      if (content && !content[0].isConnected) {
         let anchor
-        // if the default slot is not the first one, insert it behind the previous slot
         if (this._slotAnchors) {
           const slotNames = Array.from(this._slotNames!)
-          const defaultSlotIndex = slotNames.indexOf('default')
-          if (defaultSlotIndex > 0) {
+          const slotIndex = slotNames.indexOf(slotName)
+          if (slotIndex > 0) {
             const prevSlotAnchor = this._slotAnchors.get(
-              slotNames[defaultSlotIndex - 1],
+              slotNames[slotIndex - 1],
             )
             if (prevSlotAnchor) anchor = prevSlotAnchor.nextSibling
           }
         }
 
-        insertSlottedContent(
-          content,
-          scopeId,
-          this._root,
-          anchor || this.firstChild,
-        )
+        const container = document.createElement('template')
+        container.setAttribute('name', slotName)
+        for (const n of content) {
+          n.$parentNode = container
+          container.insertBefore(n, null)
+        }
+        this.insertBefore(container, anchor || null)
       }
     }
   }
@@ -720,7 +754,10 @@ export class VueElement
         Object.entries(this._slots!).forEach(([_, nodes]) => {
           const nodeIndex = nodes.indexOf(prevNode)
           if (nodeIndex > -1) {
+            const oldNode = nodes[nodeIndex]
+            const parentNode = (newNode.$parentNode = oldNode.$parentNode)!
             nodes[nodeIndex] = newNode
+            if (oldNode.isConnected) parentNode.replaceChild(newNode, oldNode)
           }
         })
       }
@@ -728,10 +765,10 @@ export class VueElement
 
     // switch between fallback and provided content
     if (this._slotFallbacks) {
-      const oldSlotNames = Object.keys(this._slots!)
+      const oldSlotNames = Array.from(this._slotNames!)
       // re-parse slots
       this._parseSlots(false)
-      const newSlotNames = Object.keys(this._slots!)
+      const newSlotNames = Array.from(this._slotNames!)
       const allSlotNames = new Set([...oldSlotNames, ...newSlotNames])
       allSlotNames.forEach(name => {
         const fallbackNodes = this._slotFallbacks![name]
@@ -744,11 +781,21 @@ export class VueElement
             )
           }
 
-          // remove fallback nodes for added slots
+          // remove fallback nodes and render provided nodes for added slots
           if (!oldSlotNames.includes(name)) {
             fallbackNodes.forEach(fallbackNode =>
               this.removeChild(fallbackNode),
             )
+
+            const content = this._slots![name]
+            if (content) {
+              insertSlottedContent(
+                content,
+                this._instance!.type.__scopeId,
+                this._root,
+                (this._slotAnchors && this._slotAnchors!.get(name)) || null,
+              )
+            }
           }
         }
       })
@@ -829,7 +876,7 @@ export function useShadowRoot(): ShadowRoot | null {
 }
 
 function insertSlottedContent(
-  content: Node[],
+  content: (Node & { $parentNode?: Node })[],
   scopeId: string | undefined,
   parent: ParentNode,
   anchor: Node | null,
@@ -845,7 +892,7 @@ function insertSlottedContent(
         ;(child as Element).setAttribute(id, '')
       }
     }
-    ;(n as any).$parentNode = parent
+    n.$parentNode = parent
     parent.insertBefore(n, anchor)
   }
 }
@@ -858,7 +905,9 @@ function collectFragmentNodes(child: VNode): Node[] {
   ]
 }
 
-function collectNodes(children: VNodeArrayChildren): Node[] {
+function collectNodes(
+  children: VNodeArrayChildren,
+): (Node & { $parentNode?: Node })[] {
   const nodes: Node[] = []
   for (const child of children) {
     if (isArray(child)) {
