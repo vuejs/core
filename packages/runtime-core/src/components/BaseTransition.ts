@@ -55,6 +55,9 @@ export interface BaseTransitionProps<HostElement = RendererElement> {
   onAppear?: Hook<(el: HostElement, done: () => void) => void>
   onAfterAppear?: Hook<(el: HostElement) => void>
   onAppearCancelled?: Hook<(el: HostElement) => void>
+
+  // Ignore unmount optimization to execute full animation
+   skipUnmountingOptimization?: boolean
 }
 
 export interface TransitionHooks<HostElement = RendererElement> {
@@ -135,6 +138,8 @@ export const BaseTransitionPropsValidators: Record<string, any> = {
   onAppear: TransitionHookValidator,
   onAfterAppear: TransitionHookValidator,
   onAppearCancelled: TransitionHookValidator,
+
+  skipUnmountingOptimization: Boolean,
 }
 
 const recursiveGetSubtree = (instance: ComponentInternalInstance): VNode => {
@@ -343,6 +348,7 @@ export function resolveTransitionHooks(
     onAppear,
     onAfterAppear,
     onAppearCancelled,
+    skipUnmountingOptimization = false,
   } = props
   const key = String(vnode.key)
   const leavingVNodesCache = getLeavingNodesForType(state, vnode)
@@ -438,7 +444,7 @@ export function resolveTransitionHooks(
       if (el[enterCbKey]) {
         el[enterCbKey](true /* cancelled */)
       }
-      if (state.isUnmounting) {
+      if (state.isUnmounting && !skipUnmountingOptimization) {  
         return remove()
       }
       callHook(onBeforeLeave, [el])
