@@ -2508,7 +2508,7 @@ export function traverseStaticChildren(
       if (c2.type === Comment && !c2.el) {
         c2.el = c1.el
       }
-      
+
       if (__DEV__) {
         c2.el && (c2.el.__vnode = c2)
       }
