@@ -1029,10 +1029,7 @@ describe('defineCustomElement', () => {
       toggle.value = false
       await nextTick()
       expect(e.innerHTML).toBe(
-        `<span>default</span>text` +
-          `<template name="named"></template>` +
-          `<!---->` +
-          `<div>fallback</div>`,
+        `<span>default</span>text` + `<!---->` + `<div>fallback</div>`,
       )
     })
 
@@ -1215,7 +1212,7 @@ describe('defineCustomElement', () => {
       app.mount(container)
       expect(container.innerHTML).toBe(
         `<ce-shadow-root-false-optimized data-v-app="">` +
-          `<!--v-if--><template name="default"></template>` +
+          `<!--v-if-->` +
           `</ce-shadow-root-false-optimized>`,
       )
 
@@ -1231,7 +1228,7 @@ describe('defineCustomElement', () => {
       await nextTick()
       expect(container.innerHTML).toBe(
         `<ce-shadow-root-false-optimized data-v-app="">` +
-          `<!--v-if--><template name="default"></template>` +
+          `<!--v-if-->` +
           `</ce-shadow-root-false-optimized>`,
       )
 
@@ -1241,93 +1238,6 @@ describe('defineCustomElement', () => {
         `<ce-shadow-root-false-optimized data-v-app="" is-shown="">` +
           `<div><div>true</div><div>hi</div></div>` +
           `</ce-shadow-root-false-optimized>`,
-      )
-    })
-
-    test('update slotted v-if nodes w/ shadowRoot false', async () => {
-      const E = defineCustomElement(
-        defineComponent({
-          props: {
-            isShown: { type: Boolean, required: true },
-          },
-          render() {
-            return this.isShown
-              ? h('div', { key: 0 }, [renderSlot(this.$slots, 'default')])
-              : createCommentVNode('v-if')
-          },
-        }),
-        { shadowRoot: false },
-      )
-      customElements.define('ce-shadow-root-false', E)
-
-      const Comp = defineComponent({
-        props: {
-          isShown: { type: Boolean, required: true },
-        },
-        render() {
-          return h('ce-shadow-root-false', { 'is-shown': this.isShown }, [
-            renderSlot(this.$slots, 'default'),
-          ])
-        },
-      })
-
-      const isShown = ref(false)
-      const count = ref(0)
-
-      function click() {
-        isShown.value = !isShown.value
-        count.value++
-      }
-
-      const App = {
-        render() {
-          return h(
-            Comp,
-            { isShown: isShown.value },
-            {
-              default: () => [
-                h('div', null, String(isShown.value)),
-                count.value > 1
-                  ? h('div', { key: 0 }, 'hi')
-                  : createCommentVNode('v-if', true),
-              ],
-            },
-          )
-        },
-      }
-      const container = document.createElement('div')
-      document.body.appendChild(container)
-
-      const app = createApp(App)
-      app.mount(container)
-      expect(container.innerHTML).toBe(
-        `<ce-shadow-root-false data-v-app="">` +
-          `<!--v-if--><template name="default"></template>` +
-          `</ce-shadow-root-false>`,
-      )
-
-      click()
-      await nextTick()
-      expect(container.innerHTML).toBe(
-        `<ce-shadow-root-false data-v-app="" is-shown="">` +
-          `<div><div>true</div><!--v-if--></div>` +
-          `</ce-shadow-root-false>`,
-      )
-
-      click()
-      await nextTick()
-      expect(container.innerHTML).toBe(
-        `<ce-shadow-root-false data-v-app="">` +
-          `<!--v-if--><template name="default"></template>` +
-          `</ce-shadow-root-false>`,
-      )
-
-      click()
-      await nextTick()
-      expect(container.innerHTML).toBe(
-        `<ce-shadow-root-false data-v-app="" is-shown="">` +
-          `<div><div>true</div><div>hi</div></div>` +
-          `</ce-shadow-root-false>`,
       )
     })
 
@@ -1400,7 +1310,7 @@ describe('defineCustomElement', () => {
       app.mount(container)
       expect(container.innerHTML).toBe(
         `<ce-with-fallback-shadow-root-false-optimized data-v-app="">` +
-          `fallback<template name="default"></template>` +
+          `fallback` +
           `</ce-with-fallback-shadow-root-false-optimized>`,
       )
 
@@ -1416,86 +1326,9 @@ describe('defineCustomElement', () => {
       await nextTick()
       expect(container.innerHTML).toBe(
         `<ce-with-fallback-shadow-root-false-optimized data-v-app="">` +
-          `<!--v-if-->fallback` +
+          `fallback<!--v-if-->` +
           `</ce-with-fallback-shadow-root-false-optimized>`,
       )
-    })
-
-    test('switch between slotted and fallback nodes w/ shadowRoot false', async () => {
-      const E = defineCustomElement(
-        defineComponent({
-          render() {
-            return renderSlot(this.$slots, 'foo', {}, () => [
-              createTextVNode('fallback'),
-            ])
-          },
-        }),
-        { shadowRoot: false },
-      )
-      customElements.define('ce-with-fallback-shadow-root-false', E)
-
-      const Comp = defineComponent({
-        render() {
-          return h('ce-with-fallback-shadow-root-false', null, [
-            this.$slots.foo
-              ? h('div', { key: 0, slot: 'foo' }, [
-                  renderSlot(this.$slots, 'foo'),
-                ])
-              : createCommentVNode('v-if', true),
-            renderSlot(this.$slots, 'default'),
-          ])
-        },
-      })
-
-      const isShown = ref(false)
-      const App = defineComponent({
-        components: { Comp },
-        render() {
-          return h(
-            Comp,
-            null,
-            createSlots(
-              { _: 2 /* DYNAMIC */ } as any,
-              [
-                isShown.value
-                  ? {
-                      name: 'foo',
-                      fn: withCtx(() => [createTextVNode('foo')]),
-                      key: '0',
-                    }
-                  : undefined,
-              ] as any,
-            ),
-          )
-        },
-      })
-
-      const container = document.createElement('div')
-      document.body.appendChild(container)
-
-      const app = createApp(App)
-      app.mount(container)
-      expect(container.innerHTML).toBe(
-        `<ce-with-fallback-shadow-root-false data-v-app="">` +
-          `fallback<template name="default"></template>` +
-          `</ce-with-fallback-shadow-root-false>`,
-      )
-
-      isShown.value = true
-      await nextTick()
-      expect(container.innerHTML).toBe(
-        `<ce-with-fallback-shadow-root-false data-v-app="">` +
-          `<div slot="foo">foo</div>` +
-          `</ce-with-fallback-shadow-root-false>`,
-      )
-
-      // isShown.value = false
-      // await nextTick()
-      // expect(container.innerHTML).toBe(
-      //   `<ce-with-fallback-shadow-root-false data-v-app="">` +
-      //     `<!--v-if-->fallback` +
-      //     `</ce-with-fallback-shadow-root-false>`,
-      // )
     })
   })
 

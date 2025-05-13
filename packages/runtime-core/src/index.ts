@@ -382,7 +382,6 @@ export {
   normalizeClass,
   normalizeStyle,
 } from '@vue/shared'
-export { isTemplateNode } from './hydration'
 
 // For test-utils
 export { transformVNodeArgs } from './vnode'

@@ -772,6 +772,13 @@ export function createHydrationFunctions(
     }
   }
 
+  const isTemplateNode = (node: Node): node is HTMLTemplateElement => {
+    return (
+      node.nodeType === DOMNodeTypes.ELEMENT &&
+      (node as Element).tagName === 'TEMPLATE'
+    )
+  }
+
   return [hydrate, hydrateNode]
 }
 
@@ -985,11 +992,4 @@ function isMismatchAllowed(
     }
     return allowedAttr.split(',').includes(MismatchTypeString[allowedType])
   }
-}
-
-export const isTemplateNode = (node: Node): node is HTMLTemplateElement => {
-  return (
-    node.nodeType === DOMNodeTypes.ELEMENT &&
-    (node as Element).tagName === 'TEMPLATE'
-  )
 }

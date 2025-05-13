@@ -711,18 +711,6 @@ function baseCreateRenderer(
     if (needCallTransitionHooks) {
       transition!.beforeEnter(el)
     }
-
-    // For custom element with shadowRoot: false, the anchor node may be moved
-    // to the slot container. In this case, it need to use the anchor's parent
-    // node as the actual container.
-    if (
-      container._isVueCE &&
-      container._def.shadowRoot === false &&
-      anchor &&
-      anchor.$parentNode
-    ) {
-      container = anchor.$parentNode
-    }
     hostInsert(el, container, anchor)
     if (
       (vnodeHook = props && props.onVnodeMounted) ||
@@ -978,7 +966,7 @@ function baseCreateRenderer(
           !isSameVNodeType(oldVNode, newVNode) ||
           // - In the case of a component, it could contain anything.
           oldVNode.shapeFlag & (ShapeFlags.COMPONENT | ShapeFlags.TELEPORT))
-          ? hostParentNode(oldVNode.el)!
+          ? hostParentNode(oldVNode.el) || oldVNode.el.$parentNode
           : // In other cases, the parent container is not actually used so we
             // just pass the block element here to avoid a DOM parentNode call.
             fallbackContainer

@@ -30,7 +30,6 @@ import {
   createVNode,
   defineComponent,
   getCurrentInstance,
-  isTemplateNode,
   isVNode,
   nextTick,
   unref,
@@ -248,7 +247,6 @@ export class VueElement
   private _slots?: Record<string, (Node & { $parentNode?: Node })[]>
   private _slotFallbacks?: Record<string, Node[]>
   private _slotAnchors?: Map<string, Node>
-  private _slotNames: Set<string> | undefined
 
   constructor(
     /**
@@ -537,7 +535,7 @@ export class VueElement
     const baseProps: VNodeProps = {}
     if (!this.shadowRoot) {
       baseProps.onVnodeMounted = () => {
-        this._captureSlotFallbacks()
+        this._parseSlotFallbacks()
         this._renderSlots()
       }
       baseProps.onVnodeUpdated = this._renderSlots.bind(this)
@@ -628,42 +626,19 @@ export class VueElement
    * Only called when shadowRoot is false
    */
   private _parseSlots(remove: boolean = true) {
-    if (!this._slotNames) this._slotNames = new Set()
-    else this._slotNames.clear()
-    this._slots = {}
-
+    const slots: VueElement['_slots'] = (this._slots = {})
     let n = this.firstChild
     while (n) {
-      const next = n.nextSibling
-      if (isTemplateNode(n)) {
-        this.processTemplateChildren(n, remove)
-        this.removeChild(n)
-      } else {
-        const slotName =
-          (n.nodeType === 1 && (n as Element).getAttribute('slot')) || 'default'
-        this.addToSlot(slotName, n, remove)
-      }
-
-      n = next
-    }
-  }
-
-  private processTemplateChildren(template: Node, remove: boolean) {
-    let n = template.firstChild
-    while (n) {
-      const next = n.nextSibling
       const slotName =
         (n.nodeType === 1 && (n as Element).getAttribute('slot')) || 'default'
-      this.addToSlot(slotName, n, remove)
-      if (remove) template.removeChild(n)
+      ;(slots[slotName] || (slots[slotName] = [])).push(n)
+      const next = n.nextSibling
+      // store the parentNode reference since node will be removed
+      // but it is needed during patching
+      ;(n as any).$parentNode = n.parentNode
+      if (remove) this.removeChild(n)
       n = next
     }
-  }
-
-  private addToSlot(slotName: string, node: Node, remove: boolean) {
-    ;(this._slots![slotName] || (this._slots![slotName] = [])).push(node)
-    this._slotNames!.add(slotName)
-    if (remove) this.removeChild(node)
   }
 
   /**
@@ -672,12 +647,10 @@ export class VueElement
   private _renderSlots() {
     const outlets = (this._teleportTarget || this).querySelectorAll('slot')
     const scopeId = this._instance!.type.__scopeId
-    const processedSlots = new Set<string>()
 
     for (let i = 0; i < outlets.length; i++) {
       const o = outlets[i] as HTMLSlotElement
       const slotName = o.getAttribute('name') || 'default'
-      processedSlots.add(slotName)
       const content = this._slots![slotName]
       const parent = o.parentNode!
 
@@ -690,11 +663,19 @@ export class VueElement
       parent.insertBefore(anchor, o)
 
       if (content) {
-        const parentNode = content[0].parentNode
-        insertSlottedContent(content, scopeId, parent, anchor)
-        // remove empty template container
-        if (parentNode && isTemplateNode(parentNode)) {
-          this.removeChild(parentNode)
+        for (const n of content) {
+          // for :slotted css
+          if (scopeId && n.nodeType === 1) {
+            const id = scopeId + '-s'
+            const walker = document.createTreeWalker(n, 1)
+            ;(n as Element).setAttribute(id, '')
+            let child
+            while ((child = walker.nextNode())) {
+              ;(child as Element).setAttribute(id, '')
+            }
+          }
+          n.$parentNode = parent
+          parent.insertBefore(n, anchor)
         }
       } else if (this._slotFallbacks) {
         const nodes = this._slotFallbacks[slotName]
@@ -705,35 +686,6 @@ export class VueElement
         }
       }
       parent.removeChild(o)
-    }
-
-    // create template for unprocessed slots and insert their content
-    // this prevents errors during full diff when anchors are not in the DOM tree
-    for (const slotName of this._slotNames!) {
-      if (processedSlots.has(slotName)) continue
-
-      const content = this._slots![slotName]
-      if (content && !content[0].isConnected) {
-        let anchor
-        if (this._slotAnchors) {
-          const slotNames = Array.from(this._slotNames!)
-          const slotIndex = slotNames.indexOf(slotName)
-          if (slotIndex > 0) {
-            const prevSlotAnchor = this._slotAnchors.get(
-              slotNames[slotIndex - 1],
-            )
-            if (prevSlotAnchor) anchor = prevSlotAnchor.nextSibling
-          }
-        }
-
-        const container = document.createElement('template')
-        container.setAttribute('name', slotName)
-        for (const n of content) {
-          n.$parentNode = container
-          container.insertBefore(n, null)
-        }
-        this.insertBefore(container, anchor || null)
-      }
     }
   }
 
@@ -747,17 +699,11 @@ export class VueElement
     for (let i = 0; i < prevNodes.length; i++) {
       const prevNode = prevNodes[i]
       const newNode = newNodes[i]
-      if (
-        prevNode !== newNode &&
-        (isComment(prevNode, 'v-if') || isComment(newNode, 'v-if'))
-      ) {
+      if (isComment(prevNode, 'v-if') || isComment(newNode, 'v-if')) {
         Object.entries(this._slots!).forEach(([_, nodes]) => {
           const nodeIndex = nodes.indexOf(prevNode)
           if (nodeIndex > -1) {
-            const oldNode = nodes[nodeIndex]
-            const parentNode = (newNode.$parentNode = oldNode.$parentNode)!
             nodes[nodeIndex] = newNode
-            if (oldNode.isConnected) parentNode.replaceChild(newNode, oldNode)
           }
         })
       }
@@ -765,37 +711,27 @@ export class VueElement
 
     // switch between fallback and provided content
     if (this._slotFallbacks) {
-      const oldSlotNames = Array.from(this._slotNames!)
+      const oldSlotNames = Object.keys(this._slots!)
       // re-parse slots
       this._parseSlots(false)
-      const newSlotNames = Array.from(this._slotNames!)
+      const newSlotNames = Object.keys(this._slots!)
       const allSlotNames = new Set([...oldSlotNames, ...newSlotNames])
       allSlotNames.forEach(name => {
         const fallbackNodes = this._slotFallbacks![name]
         if (fallbackNodes) {
           // render fallback nodes for removed slots
-          if (!newSlotNames.includes(name) && this._slotAnchors) {
-            const anchor = this._slotAnchors.get(name)!
+          if (!newSlotNames.includes(name)) {
+            const anchor = this._slotAnchors!.get(name)!
             fallbackNodes.forEach(fallbackNode =>
               this.insertBefore(fallbackNode, anchor),
             )
           }
 
-          // remove fallback nodes and render provided nodes for added slots
+          // remove fallback nodes for added slots
           if (!oldSlotNames.includes(name)) {
             fallbackNodes.forEach(fallbackNode =>
               this.removeChild(fallbackNode),
             )
-
-            const content = this._slots![name]
-            if (content) {
-              insertSlottedContent(
-                content,
-                this._instance!.type.__scopeId,
-                this._root,
-                (this._slotAnchors && this._slotAnchors!.get(name)) || null,
-              )
-            }
           }
         }
       })
@@ -805,7 +741,7 @@ export class VueElement
   /**
    * Only called when shadowRoot is false
    */
-  private _captureSlotFallbacks() {
+  private _parseSlotFallbacks() {
     const outlets = (this._teleportTarget || this).querySelectorAll('slot')
     for (let i = 0; i < outlets.length; i++) {
       const slotElement = outlets[i] as HTMLSlotElement
@@ -873,28 +809,6 @@ export function useHost(caller?: string): VueElement | null {
 export function useShadowRoot(): ShadowRoot | null {
   const el = __DEV__ ? useHost('useShadowRoot') : useHost()
   return el && el.shadowRoot
-}
-
-function insertSlottedContent(
-  content: (Node & { $parentNode?: Node })[],
-  scopeId: string | undefined,
-  parent: ParentNode,
-  anchor: Node | null,
-) {
-  for (const n of content) {
-    // for :slotted css
-    if (scopeId && n.nodeType === 1) {
-      const id = scopeId + '-s'
-      const walker = document.createTreeWalker(n, 1)
-      ;(n as Element).setAttribute(id, '')
-      let child
-      while ((child = walker.nextNode())) {
-        ;(child as Element).setAttribute(id, '')
-      }
-    }
-    n.$parentNode = parent
-    parent.insertBefore(n, anchor)
-  }
 }
 
 function collectFragmentNodes(child: VNode): Node[] {
