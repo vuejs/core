@@ -1879,7 +1879,7 @@ describe('SSR hydration', () => {
     await nextTick()
     expect(root.innerHTML).toBe('<div><div>bar</div></div>')
   })
-  
+
   test('hmr root reload', async () => {
     const appId = 'test-app-id'
     const App = {
