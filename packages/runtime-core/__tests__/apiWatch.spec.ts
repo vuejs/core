@@ -25,13 +25,13 @@ import {
 } from '@vue/runtime-test'
 import {
   type DebuggerEvent,
-  EffectFlags,
   ITERATE_KEY,
   type Ref,
   type ShallowRef,
   TrackOpTypes,
   TriggerOpTypes,
   effectScope,
+  onScopeDispose,
   shallowReactive,
   shallowRef,
   toRef,
@@ -1341,7 +1341,7 @@ describe('api: watch', () => {
     await nextTick()
     await nextTick()
 
-    expect(instance!.scope.effects[0].flags & EffectFlags.ACTIVE).toBeFalsy()
+    expect(instance!.scope.effects.length).toBe(0)
   })
 
   test('this.$watch should pass `this.proxy` to watch source as the first argument ', () => {
@@ -1982,5 +1982,32 @@ describe('api: watch', () => {
     await nextTick()
     expect(spy1).toHaveBeenCalled()
     expect(spy2).toHaveBeenCalled()
+  })
+
+  // #12631
+  test('this.$watch w/ onScopeDispose', () => {
+    const onCleanup = vi.fn()
+    const toggle = ref(true)
+
+    const Comp = defineComponent({
+      render() {},
+      created(this: any) {
+        this.$watch(
+          () => 1,
+          function () {},
+        )
+        onScopeDispose(onCleanup)
+      },
+    })
+
+    const App = defineComponent({
+      render() {
+        return toggle.value ? h(Comp) : null
+      },
+    })
+
+    const root = nodeOps.createElement('div')
+    createApp(App).mount(root)
+    expect(onCleanup).toBeCalledTimes(0)
   })
 })
