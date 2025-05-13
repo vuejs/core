@@ -582,7 +582,7 @@ export interface ComponentInternalInstance {
    * For updating css vars on contained teleports
    * @internal
    */
-  ut?: (vars?: Record<string, string>) => void
+  ut?: (target: RendererElement | null, vars?: Record<string, string>) => void
 
   /**
    * dev only. For style v-bind hydration mismatch checks
