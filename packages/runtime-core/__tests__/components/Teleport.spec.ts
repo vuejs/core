@@ -14,10 +14,19 @@ import {
   h as originalH,
   ref,
   render,
+  serialize,
   serializeInner,
   withDirectives,
 } from '@vue/runtime-test'
-import { Fragment, createCommentVNode, createVNode } from '../../src/vnode'
+import {
+  Fragment,
+  createBlock,
+  createCommentVNode,
+  createTextVNode,
+  createVNode,
+  openBlock,
+} from '../../src/vnode'
+import { toDisplayString } from '@vue/shared'
 import { compile, createApp as createDOMApp, render as domRender } from 'vue'
 import type { HMRRuntime } from '../../src/hmr'
 
@@ -248,6 +257,39 @@ describe('renderer: teleport', () => {
       expect(serializeInner(target)).toBe(`teleported`)
     })
 
+    test('should traverse comment node after updating in optimize mode', async () => {
+      const target = nodeOps.createElement('div')
+      const root = nodeOps.createElement('div')
+      const count = ref(0)
+      let teleport
+
+      __DEV__ = false
+      render(
+        h(() => {
+          teleport =
+            (openBlock(),
+            createBlock(Teleport, { to: target }, [
+              createCommentVNode('comment in teleport'),
+            ]))
+          return h('div', null, [
+            createTextVNode(toDisplayString(count.value)),
+            teleport,
+          ])
+        }),
+        root,
+      )
+      const commentNode = teleport!.children[0].el
+      expect(serializeInner(root)).toBe(`<div>0</div>`)
+      expect(serializeInner(target)).toBe(`<!--comment in teleport-->`)
+      expect(serialize(commentNode)).toBe(`<!--comment in teleport-->`)
+
+      count.value = 1
+      await nextTick()
+      __DEV__ = true
+      expect(serializeInner(root)).toBe(`<div>1</div>`)
+      expect(teleport!.children[0].el).toBe(commentNode)
+    })
+
     test('should remove children when unmounted', () => {
       const target = nodeOps.createElement('div')
       const root = nodeOps.createElement('div')
@@ -272,6 +314,34 @@ describe('renderer: teleport', () => {
       testUnmount({ to: target, disabled: false })
       testUnmount({ to: target, disabled: true })
       testUnmount({ to: null, disabled: true })
+    })
+
+    // #10747
+    test('should unmount correctly when using top level comment in teleport', async () => {
+      const target = nodeOps.createElement('div')
+      const root = nodeOps.createElement('div')
+      const count = ref(0)
+
+      __DEV__ = false
+      render(
+        h(() => {
+          return h('div', null, [
+            createTextVNode(toDisplayString(count.value)),
+            (openBlock(),
+            createBlock(Teleport, { to: target }, [
+              createCommentVNode('comment in teleport'),
+            ])),
+          ])
+        }),
+        root,
+      )
+
+      count.value = 1
+
+      await nextTick()
+      __DEV__ = true
+      render(null, root)
+      expect(root.children.length).toBe(0)
     })
 
     test('component with multi roots should be removed when unmounted', () => {
