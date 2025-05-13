@@ -32,10 +32,13 @@ import {
   withCtx,
   withDirectives,
 } from '@vue/runtime-dom'
+import type { HMRRuntime } from '../src/hmr'
 import { type SSRContext, renderToString } from '@vue/server-renderer'
 import { PatchFlags, normalizeStyle } from '@vue/shared'
 import { vShowOriginalDisplay } from '../../runtime-dom/src/directives/vShow'
-import { expect } from 'vitest'
+
+declare var __VUE_HMR_RUNTIME__: HMRRuntime
+const { createRecord, reload } = __VUE_HMR_RUNTIME__
 
 function mountWithHydration(html: string, render: () => any) {
   const container = document.createElement('div')
@@ -1841,6 +1844,40 @@ describe('SSR hydration', () => {
     } finally {
       __DEV__ = true
     }
+  })
+
+  test('hmr reload child wrapped in KeepAlive', async () => {
+    const id = 'child-reload'
+    const Child = {
+      __hmrId: id,
+      template: `<div>foo</div>`,
+    }
+    createRecord(id, Child)
+
+    const appId = 'test-app-id'
+    const App = {
+      __hmrId: appId,
+      components: { Child },
+      template: `
+      <div>
+        <KeepAlive>
+          <Child />
+        </KeepAlive>
+      </div>
+      `,
+    }
+
+    const root = document.createElement('div')
+    root.innerHTML = await renderToString(h(App))
+    createSSRApp(App).mount(root)
+    expect(root.innerHTML).toBe('<div><div>foo</div></div>')
+
+    reload(id, {
+      __hmrId: id,
+      template: `<div>bar</div>`,
+    })
+    await nextTick()
+    expect(root.innerHTML).toBe('<div><div>bar</div></div>')
   })
 
   describe('mismatch handling', () => {
