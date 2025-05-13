@@ -8,6 +8,7 @@ import {
   type ShallowRef,
   type Slots,
   type VNode,
+  type VNodeNormalizedRef,
   type VaporInteropInterface,
   createVNode,
   currentInstance,
@@ -16,6 +17,7 @@ import {
   renderSlot,
   shallowRef,
   simpleSetCurrentInstance,
+  setRef as vdomSetRef,
 } from '@vue/runtime-dom'
 import {
   type LooseRawProps,
@@ -33,6 +35,7 @@ import type { RawSlots, VaporSlot } from './componentSlots'
 import { renderEffect } from './renderEffect'
 import { createTextNode } from './dom/node'
 import { optimizePropertyLookup } from './dom/prop'
+import type { NodeRef } from './apiTemplateRef'
 
 // mounting vapor components and slots in vdom
 const vaporInteropImpl: Omit<
@@ -169,9 +172,12 @@ function createVDOMComponent(
         : new Proxy(wrapper.slots, vaporSlotsProxyHandler)
   }
 
+  let rawRef: VNodeNormalizedRef | undefined
   let isMounted = false
   const parentInstance = currentInstance as VaporComponentInstance
   const unmount = (parentNode?: ParentNode) => {
+    // unset ref
+    if (rawRef) vdomSetRef(rawRef, null, null, vnode, true)
     internals.umt(vnode.component!, null, !!parentNode)
   }
 
@@ -186,6 +192,8 @@ function createVDOMComponent(
         undefined,
         false,
       )
+      // set ref
+      if (rawRef) vdomSetRef(rawRef, null, null, vnode)
       onScopeDispose(unmount, true)
       isMounted = true
     } else {
@@ -201,6 +209,14 @@ function createVDOMComponent(
   }
 
   frag.remove = unmount
+
+  frag.setRef = (
+    instance: VaporComponentInstance,
+    ref: NodeRef,
+    refFor: boolean,
+  ): void => {
+    rawRef = { i: instance as any, r: ref as any, k: undefined, f: refFor }
+  }
 
   return frag
 }

@@ -20,6 +20,7 @@ import {
   isString,
   remove,
 } from '@vue/shared'
+import { isFragment } from './block'
 
 export type NodeRef = string | Ref | ((ref: Element) => void)
 export type RefEl = Element | VaporComponentInstance
@@ -47,7 +48,10 @@ export function setRef(
   refFor = false,
 ): NodeRef | undefined {
   if (!instance || instance.isUnmounted) return
-
+  if (isFragment(el) && el.setRef) {
+    el.setRef(instance, ref, refFor)
+    return
+  }
   const setupState: any = __DEV__ ? instance.setupState || {} : null
   const refValue = isVaporComponent(el) ? getExposed(el) || el : el
 

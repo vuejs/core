@@ -76,7 +76,7 @@ export function setRef(
   const setupState = owner.setupState
   const rawSetupState = toRaw(setupState)
   const canSetSetupRef =
-    setupState === EMPTY_OBJ
+    setupState === undefined || setupState === EMPTY_OBJ
       ? () => false
       : (key: string) => {
           if (__DEV__) {

@@ -557,3 +557,11 @@ export { startMeasure, endMeasure } from './profiling'
  * @internal
  */
 export { initFeatureFlags } from './featureFlags'
+/**
+ * @internal
+ */
+export { setRef } from './rendererTemplateRef'
+/**
+ * @internal
+ */
+export type { VNodeNormalizedRef } from './vnode'
