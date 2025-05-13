@@ -10,6 +10,7 @@ import {
   markRaw,
   nextTick,
   nodeOps,
+  onMounted,
   h as originalH,
   ref,
   render,
@@ -27,6 +28,10 @@ import {
 } from '../../src/vnode'
 import { toDisplayString } from '@vue/shared'
 import { compile, createApp as createDOMApp, render as domRender } from 'vue'
+import type { HMRRuntime } from '../../src/hmr'
+
+declare var __VUE_HMR_RUNTIME__: HMRRuntime
+const { rerender, createRecord } = __VUE_HMR_RUNTIME__
 
 describe('renderer: teleport', () => {
   describe('eager mode', () => {
@@ -811,4 +816,56 @@ describe('renderer: teleport', () => {
       expect(tRefInMounted).toBe(target.children[1])
     })
   }
+
+  test('handle update and hmr rerender', async () => {
+    const target = document.createElement('div')
+    const root = document.createElement('div')
+
+    const Comp = {
+      setup() {
+        const cls = ref('foo')
+        onMounted(() => {
+          // trigger update
+          cls.value = 'bar'
+        })
+        return { cls, target }
+      },
+      template: `
+        <Teleport :to="target">
+          <div :class="cls">
+            <div>
+              <slot></slot>
+            </div>
+          </div>
+        </Teleport>
+      `,
+    }
+
+    const appId = 'test-app-id'
+    const App = {
+      __hmrId: appId,
+      components: { Comp },
+      render() {
+        return originalH(Comp, null, { default: () => originalH('div', 'foo') })
+      },
+    }
+    createRecord(appId, App)
+
+    domRender(originalH(App), root)
+    expect(target.innerHTML).toBe(
+      '<div class="foo"><div><div>foo</div></div></div>',
+    )
+    await nextTick()
+    expect(target.innerHTML).toBe(
+      '<div class="bar"><div><div>foo</div></div></div>',
+    )
+
+    rerender(appId, () =>
+      originalH(Comp, null, { default: () => originalH('div', 'bar') }),
+    )
+    await nextTick()
+    expect(target.innerHTML).toBe(
+      '<div class="bar"><div><div>bar</div></div></div>',
+    )
+  })
 })
