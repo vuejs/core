@@ -13,6 +13,7 @@ export const validateHtmlNesting: NodeTransform = (node, context) => {
     context.parent &&
     context.parent.type === NodeTypes.ELEMENT &&
     context.parent.tagType === ElementTypes.ELEMENT &&
+    context.parent.tag !== 'template' &&
     !isValidHTMLNesting(context.parent.tag, node.tag)
   ) {
     const error = new SyntaxError(
