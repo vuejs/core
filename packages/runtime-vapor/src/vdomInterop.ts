@@ -13,6 +13,7 @@ import {
   createVNode,
   currentInstance,
   ensureRenderer,
+  normalizeRef,
   onScopeDispose,
   renderSlot,
   shallowRef,
@@ -172,7 +173,7 @@ function createVDOMComponent(
         : new Proxy(wrapper.slots, vaporSlotsProxyHandler)
   }
 
-  let rawRef: VNodeNormalizedRef | undefined
+  let rawRef: VNodeNormalizedRef | null = null
   let isMounted = false
   const parentInstance = currentInstance as VaporComponentInstance
   const unmount = (parentNode?: ParentNode) => {
@@ -214,8 +215,16 @@ function createVDOMComponent(
     instance: VaporComponentInstance,
     ref: NodeRef,
     refFor: boolean,
+    refKey: string | undefined,
   ): void => {
-    rawRef = { i: instance as any, r: ref as any, k: undefined, f: refFor }
+    rawRef = normalizeRef(
+      {
+        ref: ref as any,
+        ref_for: refFor,
+        ref_key: refKey,
+      },
+      instance as any,
+    )
   }
 
   return frag

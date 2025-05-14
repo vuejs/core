@@ -454,18 +454,17 @@ const createVNodeWithArgsTransform = (
 const normalizeKey = ({ key }: VNodeProps): VNode['key'] =>
   key != null ? key : null
 
-const normalizeRef = ({
-  ref,
-  ref_key,
-  ref_for,
-}: VNodeProps): VNodeNormalizedRefAtom | null => {
+export const normalizeRef = (
+  { ref, ref_key, ref_for }: VNodeProps,
+  i: ComponentInternalInstance = currentRenderingInstance!,
+): VNodeNormalizedRefAtom | null => {
   if (typeof ref === 'number') {
     ref = '' + ref
   }
   return (
     ref != null
       ? isString(ref) || isRef(ref) || isFunction(ref)
-        ? { i: currentRenderingInstance, r: ref, k: ref_key, f: !!ref_for }
+        ? { i, r: ref, k: ref_key, f: !!ref_for }
         : ref
       : null
   ) as any

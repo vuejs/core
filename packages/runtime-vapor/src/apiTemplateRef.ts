@@ -22,7 +22,10 @@ import {
 } from '@vue/shared'
 import { isFragment } from './block'
 
-export type NodeRef = string | Ref | ((ref: Element) => void)
+export type NodeRef =
+  | string
+  | Ref
+  | ((ref: Element | VaporComponentInstance, refs: Record<string, any>) => void)
 export type RefEl = Element | VaporComponentInstance
 
 export type setRefFn = (
@@ -46,12 +49,16 @@ export function setRef(
   ref: NodeRef,
   oldRef?: NodeRef,
   refFor = false,
+  refKey?: string,
 ): NodeRef | undefined {
   if (!instance || instance.isUnmounted) return
+
+  // vdom interop
   if (isFragment(el) && el.setRef) {
-    el.setRef(instance, ref, refFor)
+    el.setRef(instance, ref, refFor, refKey)
     return
   }
+
   const setupState: any = __DEV__ ? instance.setupState || {} : null
   const refValue = isVaporComponent(el) ? getExposed(el) || el : el
 
@@ -108,6 +115,7 @@ export function setRef(
               }
             } else {
               ref.value = existing
+              if (refKey) refs[refKey] = existing
             }
           } else if (!existing.includes(refValue)) {
             existing.push(refValue)
@@ -119,6 +127,7 @@ export function setRef(
           }
         } else if (_isRef) {
           ref.value = refValue
+          if (refKey) refs[refKey] = refValue
         } else if (__DEV__) {
           warn('Invalid template ref type:', ref, `(${typeof ref})`)
         }
@@ -138,6 +147,7 @@ export function setRef(
             }
           } else if (_isRef) {
             ref.value = null
+            if (refKey) refs[refKey] = null
           }
         })
       })

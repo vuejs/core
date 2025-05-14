@@ -564,4 +564,4 @@ export { setRef } from './rendererTemplateRef'
 /**
  * @internal
  */
-export type { VNodeNormalizedRef } from './vnode'
+export { type VNodeNormalizedRef, normalizeRef } from './vnode'

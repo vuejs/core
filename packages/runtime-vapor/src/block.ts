@@ -28,6 +28,7 @@ export class VaporFragment {
     instance: VaporComponentInstance,
     ref: NodeRef,
     refFor: boolean,
+    refKey: string | undefined,
   ) => void
 
   constructor(nodes: Block) {
