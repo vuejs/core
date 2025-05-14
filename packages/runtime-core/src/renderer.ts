@@ -1208,12 +1208,12 @@ function baseCreateRenderer(
       }
     }
 
+    // avoid hydration for hmr updating
+    if (__DEV__ && isHmrUpdating) initialVNode.el = null
+
     // setup() is async. This component relies on async logic to be resolved
     // before proceeding
     if (__FEATURE_SUSPENSE__ && instance.asyncDep) {
-      // avoid hydration for hmr updating
-      if (__DEV__ && isHmrUpdating) initialVNode.el = null
-
       parentSuspense &&
         parentSuspense.registerDep(instance, setupRenderEffect, optimized)
 
@@ -2098,7 +2098,9 @@ function baseCreateRenderer(
 
     // unset ref
     if (ref != null) {
+      pauseTracking()
       setRef(ref, null, parentSuspense, vnode, true)
+      resetTracking()
     }
 
     // #6593 should clean memo cache when unmount
@@ -2262,13 +2264,30 @@ function baseCreateRenderer(
       unregisterHMR(instance)
     }
 
-    const { bum, scope, job, subTree, um, m, a } = instance
+    const {
+      bum,
+      scope,
+      job,
+      subTree,
+      um,
+      m,
+      a,
+      parent,
+      slots: { __: slotCacheKeys },
+    } = instance
     invalidateMount(m)
     invalidateMount(a)
 
     // beforeUnmount hook
     if (bum) {
       invokeArrayFns(bum)
+    }
+
+    // remove slots content from parent renderCache
+    if (parent && isArray(slotCacheKeys)) {
+      slotCacheKeys.forEach(v => {
+        parent.renderCache[v] = undefined
+      })
     }
 
     if (
@@ -2484,10 +2503,14 @@ export function traverseStaticChildren(
       if (c2.type === Text) {
         c2.el = c1.el
       }
-      // also inherit for comment nodes, but not placeholders (e.g. v-if which
+      // #2324 also inherit for comment nodes, but not placeholders (e.g. v-if which
       // would have received .el during block patch)
-      if (__DEV__ && c2.type === Comment && !c2.el) {
+      if (c2.type === Comment && !c2.el) {
         c2.el = c1.el
+      }
+
+      if (__DEV__) {
+        c2.el && (c2.el.__vnode = c2)
       }
     }
   }
