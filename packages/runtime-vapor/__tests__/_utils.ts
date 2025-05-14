@@ -87,7 +87,7 @@ export function makeRender<C = VaporComponent>(
   return define
 }
 
-export { runtimeDom, runtimeVapor }
+export { runtimeDom, runtimeVapor, VueServerRenderer }
 export function compile(
   sfc: string,
   data: runtimeDom.Ref<any>,

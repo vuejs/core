@@ -1,51 +1,6 @@
 import { createVaporSSRApp, delegateEvents } from '../src'
 import { nextTick, ref } from '@vue/runtime-dom'
-import { compileScript, parse } from '@vue/compiler-sfc'
-import * as runtimeVapor from '../src'
-import * as runtimeDom from '@vue/runtime-dom'
-import * as VueServerRenderer from '@vue/server-renderer'
-
-const Vue = { ...runtimeDom, ...runtimeVapor }
-
-function compile(
-  sfc: string,
-  data: runtimeDom.Ref<any>,
-  components: Record<string, any> = {},
-  ssr = false,
-) {
-  if (!sfc.includes(`<script`)) {
-    sfc =
-      `<script vapor>const data = _data; const components = _components;</script>` +
-      sfc
-  }
-  const descriptor = parse(sfc).descriptor
-
-  const script = compileScript(descriptor, {
-    id: 'x',
-    isProd: true,
-    inlineTemplate: true,
-    genDefaultAs: '__sfc__',
-    vapor: true,
-    templateOptions: {
-      ssr,
-    },
-  })
-
-  const code =
-    script.content
-      .replace(/\bimport {/g, 'const {')
-      .replace(/ as _/g, ': _')
-      .replace(/} from ['"]vue['"]/g, `} = Vue`)
-      .replace(/} from "vue\/server-renderer"/g, '} = VueServerRenderer') +
-    '\nreturn __sfc__'
-
-  return new Function('Vue', 'VueServerRenderer', '_data', '_components', code)(
-    Vue,
-    VueServerRenderer,
-    data,
-    components,
-  )
-}
+import { VueServerRenderer, compile, runtimeDom } from './_utils'
 
 async function testHydration(
   code: string,
@@ -56,10 +11,12 @@ async function testHydration(
   const clientComponents: any = {}
   for (const key in components) {
     clientComponents[key] = compile(components[key], data, clientComponents)
-    ssrComponents[key] = compile(components[key], data, ssrComponents, true)
+    ssrComponents[key] = compile(components[key], data, ssrComponents, {
+      ssr: true,
+    })
   }
 
-  const serverComp = compile(code, data, ssrComponents, true)
+  const serverComp = compile(code, data, ssrComponents, { ssr: true })
   const html = await VueServerRenderer.renderToString(
     runtimeDom.createSSRApp(serverComp),
   )
