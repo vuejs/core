@@ -521,7 +521,7 @@ export class VueElement
 
   private _update() {
     const vnode = this._createVNode()
-    if (this._app && !this._instance) vnode.appContext = this._app._context
+    if (this._app) vnode.appContext = this._app._context
     render(vnode, this._root)
   }
 
