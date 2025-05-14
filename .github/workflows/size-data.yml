@@ -18,13 +18,14 @@ env:
 
 jobs:
   upload:
+    if: github.repository == 'vuejs/core'
     runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v4
 
       - name: Install pnpm
-        uses: pnpm/action-setup@v4.0.0
+        uses: pnpm/action-setup@v4.1.0
 
       - name: Install Node.js
         uses: actions/setup-node@v4

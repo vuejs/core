@@ -843,4 +843,37 @@ describe('api: defineAsyncComponent', () => {
     await timeout()
     expect(serializeInner(root)).toBe('Bar')
   })
+
+  // 11916
+  test('with KeepAlive + include', async () => {
+    const spy = vi.fn()
+    let resolve: (comp: Component) => void
+
+    const Foo = defineAsyncComponent(
+      () =>
+        new Promise(r => {
+          resolve = r as any
+        }),
+    )
+
+    const root = nodeOps.createElement('div')
+    const app = createApp({
+      render: () => h(KeepAlive, { include: 'Foo' }, [h(Foo)]),
+    })
+
+    app.mount(root)
+    await nextTick()
+
+    resolve!({
+      name: 'Foo',
+      setup() {
+        onActivated(spy)
+        return () => 'Foo'
+      },
+    })
+
+    await timeout()
+    expect(serializeInner(root)).toBe('Foo')
+    expect(spy).toBeCalledTimes(1)
+  })
 })

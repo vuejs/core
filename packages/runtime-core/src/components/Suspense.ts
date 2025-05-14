@@ -457,7 +457,7 @@ function createSuspenseBoundary(
   rendererInternals: RendererInternals,
   isHydrating = false,
 ): SuspenseBoundary {
-  /* istanbul ignore if */
+  /* v8 ignore start */
   if (__DEV__ && !__TEST__ && !hasWarned) {
     hasWarned = true
     // @ts-expect-error `console.info` cannot be null error
@@ -466,6 +466,7 @@ function createSuspenseBoundary(
       `<Suspense> is an experimental feature and its API will likely change.`,
     )
   }
+  /* v8 ignore stop */
 
   const {
     p: patch,
@@ -565,7 +566,7 @@ function createSuspenseBoundary(
           // (got `pendingBranch.el`).
           // Therefore, after the mounting of activeBranch is completed,
           // it is necessary to get the latest anchor.
-          if (parentNode(activeBranch.el!) !== suspense.hiddenContainer) {
+          if (parentNode(activeBranch.el!) === container) {
             anchor = next(activeBranch)
           }
           unmount(activeBranch, parentComponent, suspense, true)

@@ -3,7 +3,13 @@ import { patchStyle } from './modules/style'
 import { patchAttr } from './modules/attrs'
 import { patchDOMProp } from './modules/props'
 import { patchEvent } from './modules/events'
-import { isFunction, isModelListener, isOn, isString } from '@vue/shared'
+import {
+  camelize,
+  isFunction,
+  isModelListener,
+  isOn,
+  isString,
+} from '@vue/shared'
 import type { RendererOptions } from '@vue/runtime-core'
 import type { VueElement } from './apiCustomElement'
 
@@ -51,6 +57,12 @@ export const patchProp: DOMRendererOptions['patchProp'] = (
     ) {
       patchAttr(el, key, nextValue, isSVG, parentComponent, key !== 'value')
     }
+  } else if (
+    // #11081 force set props for possible async custom element
+    (el as VueElement)._isVueCE &&
+    (/[A-Z]/.test(key) || !isString(nextValue))
+  ) {
+    patchDOMProp(el, camelize(key), nextValue, parentComponent, key)
   } else {
     // special case for <input v-model type="checkbox"> with
     // :true-value & :false-value
@@ -90,7 +102,12 @@ function shouldSetAsProp(
   // them as attributes.
   // Note that `contentEditable` doesn't have this problem: its DOM
   // property is also enumerated string values.
-  if (key === 'spellcheck' || key === 'draggable' || key === 'translate') {
+  if (
+    key === 'spellcheck' ||
+    key === 'draggable' ||
+    key === 'translate' ||
+    key === 'autocorrect'
+  ) {
     return false
   }
 
@@ -128,14 +145,5 @@ function shouldSetAsProp(
     return false
   }
 
-  if (key in el) {
-    return true
-  }
-
-  // #11081 force set props for possible async custom element
-  if ((el as VueElement)._isVueCE && (/[A-Z]/.test(key) || !isString(value))) {
-    return true
-  }
-
-  return false
+  return key in el
 }

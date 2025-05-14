@@ -41,6 +41,44 @@ describe('SFC scoped CSS', () => {
     )
   })
 
+  test('nesting selector', () => {
+    expect(compileScoped(`h1 { color: red; .foo { color: red; } }`)).toMatch(
+      `h1 {\n&[data-v-test] { color: red;\n}\n.foo[data-v-test] { color: red;`,
+    )
+  })
+
+  test('nesting selector with atrule and comment', () => {
+    expect(
+      compileScoped(
+        `h1 {
+color: red;
+/*background-color: pink;*/
+@media only screen and (max-width: 800px) {
+  background-color: green;
+  .bar { color: white }
+}
+.foo { color: red; }
+}`,
+      ),
+    ).toMatch(
+      `h1 {
+&[data-v-test] {
+color: red
+/*background-color: pink;*/
+}
+@media only screen and (max-width: 800px) {
+&[data-v-test] {
+  background-color: green
+}
+.bar[data-v-test] { color: white
+}
+}
+.foo[data-v-test] { color: red;
+}
+}`,
+    )
+  })
+
   test('multiple selectors', () => {
     expect(compileScoped(`h1 .foo, .bar, .baz { color: red; }`)).toMatch(
       `h1 .foo[data-v-test], .bar[data-v-test], .baz[data-v-test] { color: red;`,
@@ -93,6 +131,13 @@ describe('SFC scoped CSS', () => {
     expect(compileScoped(`:where(.foo :deep(.bar)) { color: red; }`))
       .toMatchInlineSnapshot(`
       ":where(.foo[data-v-test] .bar) { color: red;
+      }"
+    `)
+    expect(compileScoped(`:deep(.foo) { color: red; .bar { color: red; } }`))
+      .toMatchInlineSnapshot(`
+      "[data-v-test] .foo { color: red;
+      .bar { color: red;
+      }
       }"
     `)
   })
@@ -166,38 +211,42 @@ describe('SFC scoped CSS', () => {
     expect(
       compileScoped(`.div { color: red; } .div:where(:hover) { color: blue; }`),
     ).toMatchInlineSnapshot(`
-    ".div[data-v-test] { color: red;
-    }
-    .div[data-v-test]:where(:hover) { color: blue;
-    }"`)
+      ".div[data-v-test] { color: red;
+      }
+      .div[data-v-test]:where(:hover) { color: blue;
+      }"
+    `)
 
     expect(
       compileScoped(`.div { color: red; } .div:is(:hover) { color: blue; }`),
     ).toMatchInlineSnapshot(`
-    ".div[data-v-test] { color: red;
-    }
-    .div[data-v-test]:is(:hover) { color: blue;
-    }"`)
+      ".div[data-v-test] { color: red;
+      }
+      .div[data-v-test]:is(:hover) { color: blue;
+      }"
+    `)
 
     expect(
       compileScoped(
         `.div { color: red; } .div:where(.foo:hover) { color: blue; }`,
       ),
     ).toMatchInlineSnapshot(`
-    ".div[data-v-test] { color: red;
-    }
-    .div[data-v-test]:where(.foo:hover) { color: blue;
-    }"`)
+      ".div[data-v-test] { color: red;
+      }
+      .div[data-v-test]:where(.foo:hover) { color: blue;
+      }"
+    `)
 
     expect(
       compileScoped(
         `.div { color: red; } .div:is(.foo:hover) { color: blue; }`,
       ),
     ).toMatchInlineSnapshot(`
-    ".div[data-v-test] { color: red;
-    }
-    .div[data-v-test]:is(.foo:hover) { color: blue;
-    }"`)
+      ".div[data-v-test] { color: red;
+      }
+      .div[data-v-test]:is(.foo:hover) { color: blue;
+      }"
+    `)
   })
 
   test('media query', () => {

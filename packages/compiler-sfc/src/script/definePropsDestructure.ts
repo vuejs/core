@@ -10,6 +10,7 @@ import type {
 import { walk } from 'estree-walker'
 import {
   BindingTypes,
+  TS_NODE_TYPES,
   extractIdentifiers,
   isFunctionType,
   isInDestructureAssignment,
@@ -102,7 +103,7 @@ export function transformDestructuredProps(
     return
   }
 
-  const rootScope: Scope = {}
+  const rootScope: Scope = Object.create(null)
   const scopeStack: Scope[] = [rootScope]
   let currentScope: Scope = rootScope
   const excludedIds = new WeakSet<Identifier>()
@@ -240,9 +241,7 @@ export function transformDestructuredProps(
       if (
         parent &&
         parent.type.startsWith('TS') &&
-        parent.type !== 'TSAsExpression' &&
-        parent.type !== 'TSNonNullExpression' &&
-        parent.type !== 'TSTypeAssertion'
+        !TS_NODE_TYPES.includes(parent.type)
       ) {
         return this.skip()
       }
@@ -292,7 +291,8 @@ export function transformDestructuredProps(
       parent && parentStack.pop()
       if (
         (node.type === 'BlockStatement' && !isFunctionType(parent!)) ||
-        isFunctionType(node)
+        isFunctionType(node) ||
+        node.type === 'CatchClause'
       ) {
         popScope()
       }

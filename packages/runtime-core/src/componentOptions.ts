@@ -416,20 +416,20 @@ interface LegacyOptions<
   extends?: Extends
 
   // lifecycle
-  beforeCreate?(): void
-  created?(): void
-  beforeMount?(): void
-  mounted?(): void
-  beforeUpdate?(): void
-  updated?(): void
-  activated?(): void
-  deactivated?(): void
+  beforeCreate?(): any
+  created?(): any
+  beforeMount?(): any
+  mounted?(): any
+  beforeUpdate?(): any
+  updated?(): any
+  activated?(): any
+  deactivated?(): any
   /** @deprecated use `beforeUnmount` instead */
-  beforeDestroy?(): void
-  beforeUnmount?(): void
+  beforeDestroy?(): any
+  beforeUnmount?(): any
   /** @deprecated use `unmounted` instead */
-  destroyed?(): void
-  unmounted?(): void
+  destroyed?(): any
+  unmounted?(): any
   renderTracked?: DebuggerHook
   renderTriggered?: DebuggerHook
   errorCaptured?: ErrorCapturedHook
@@ -1279,7 +1279,9 @@ export type ComponentOptionsWithObjectProps<
   Directives extends Record<string, Directive> = {},
   Exposed extends string = string,
   Provide extends ComponentProvideOptions = ComponentProvideOptions,
-  Props = Prettify<Readonly<ExtractPropTypes<PropsOptions> & EmitsToProps<E>>>,
+  Props = Prettify<
+    Readonly<ExtractPropTypes<PropsOptions>> & Readonly<EmitsToProps<E>>
+  >,
   Defaults = ExtractDefaultPropTypes<PropsOptions>,
 > = ComponentOptionsBase<
   Props,

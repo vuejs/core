@@ -193,10 +193,12 @@ const BaseTransitionImpl: ComponentOptions = {
         // #11061, ensure enterHooks is fresh after clone
         hooks => (enterHooks = hooks),
       )
-      setTransitionHooks(innerChild, enterHooks)
 
-      const oldChild = instance.subTree
-      const oldInnerChild = oldChild && getInnerChild(oldChild)
+      if (innerChild.type !== Comment) {
+        setTransitionHooks(innerChild, enterHooks)
+      }
+
+      let oldInnerChild = instance.subTree && getInnerChild(instance.subTree)
 
       // handle mode
       if (
@@ -205,7 +207,7 @@ const BaseTransitionImpl: ComponentOptions = {
         !isSameVNodeType(innerChild, oldInnerChild) &&
         recursiveGetSubtree(instance).type !== Comment
       ) {
-        const leavingHooks = resolveTransitionHooks(
+        let leavingHooks = resolveTransitionHooks(
           oldInnerChild,
           rawProps,
           state,
@@ -224,6 +226,8 @@ const BaseTransitionImpl: ComponentOptions = {
             if (!(instance.job.flags! & SchedulerJobFlags.DISPOSED)) {
               instance.update()
             }
+            delete leavingHooks.afterLeave
+            oldInnerChild = undefined
           }
           return emptyPlaceholder(child)
         } else if (mode === 'in-out' && innerChild.type !== Comment) {
@@ -234,18 +238,27 @@ const BaseTransitionImpl: ComponentOptions = {
           ) => {
             const leavingVNodesCache = getLeavingNodesForType(
               state,
-              oldInnerChild,
+              oldInnerChild!,
             )
-            leavingVNodesCache[String(oldInnerChild.key)] = oldInnerChild
+            leavingVNodesCache[String(oldInnerChild!.key)] = oldInnerChild!
             // early removal callback
             el[leaveCbKey] = () => {
               earlyRemove()
               el[leaveCbKey] = undefined
               delete enterHooks.delayedLeave
+              oldInnerChild = undefined
             }
-            enterHooks.delayedLeave = delayedLeave
+            enterHooks.delayedLeave = () => {
+              delayedLeave()
+              delete enterHooks.delayedLeave
+              oldInnerChild = undefined
+            }
           }
+        } else {
+          oldInnerChild = undefined
         }
+      } else if (oldInnerChild) {
+        oldInnerChild = undefined
       }
 
       return child
@@ -488,9 +501,8 @@ function getInnerChild(vnode: VNode): VNode | undefined {
 
     return vnode
   }
-  // #7121 ensure get the child component subtree in case
-  // it's been replaced during HMR
-  if (__DEV__ && vnode.component) {
+  // #7121,#12465 get the component subtree if it's been mounted
+  if (vnode.component) {
     return vnode.component.subTree
   }
 
@@ -512,6 +524,7 @@ function getInnerChild(vnode: VNode): VNode | undefined {
 
 export function setTransitionHooks(vnode: VNode, hooks: TransitionHooks): void {
   if (vnode.shapeFlag & ShapeFlags.COMPONENT && vnode.component) {
+    vnode.transition = hooks
     setTransitionHooks(vnode.component.subTree, hooks)
   } else if (__FEATURE_SUSPENSE__ && vnode.shapeFlag & ShapeFlags.SUSPENSE) {
     vnode.ssContent!.transition = hooks.clone(vnode.ssContent!)

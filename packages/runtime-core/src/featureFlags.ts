@@ -4,8 +4,6 @@ import { getGlobalThis } from '@vue/shared'
  * This is only called in esm-bundler builds.
  * It is called when a renderer is created, in `baseCreateRenderer` so that
  * importing runtime-core is side-effects free.
- *
- * istanbul-ignore-next
  */
 export function initFeatureFlags(): void {
   const needWarn = []
