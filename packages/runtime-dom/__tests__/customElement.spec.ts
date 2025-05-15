@@ -471,6 +471,14 @@ describe('defineCustomElement', () => {
       container.appendChild(e)
       expect(e.shadowRoot!.innerHTML).toBe('<div></div>')
     })
+
+    // #12408
+    test('should set number tabindex as attribute', () => {
+      render(h('my-el-attrs', { tabindex: 1, 'data-test': true }), container)
+      const el = container.children[0] as HTMLElement
+      expect(el.getAttribute('tabindex')).toBe('1')
+      expect(el.getAttribute('data-test')).toBe('true')
+    })
   })
 
   describe('emits', () => {
