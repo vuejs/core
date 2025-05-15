@@ -124,7 +124,7 @@ function transformComponentElement(
   }
 
   context.dynamic.flags |= DynamicFlag.NON_TEMPLATE | DynamicFlag.INSERT
-  context.registerOperation({
+  context.dynamic.operation = {
     type: IRNodeTypes.CREATE_COMPONENT_NODE,
     id: context.reference(),
     tag,
@@ -134,7 +134,7 @@ function transformComponentElement(
     slots: [...context.slots],
     once: context.inVOnce,
     dynamic: dynamicComponent,
-  })
+  }
   context.slots = []
 }
 

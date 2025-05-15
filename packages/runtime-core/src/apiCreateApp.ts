@@ -40,9 +40,9 @@ export interface App<HostElement = any> {
 
   use<Options extends unknown[]>(
     plugin: Plugin<Options>,
-    ...options: Options
+    ...options: NoInfer<Options>
   ): this
-  use<Options>(plugin: Plugin<Options>, options: Options): this
+  use<Options>(plugin: Plugin<Options>, options: NoInfer<Options>): this
 
   mixin(mixin: ComponentOptions): this
   component(name: string): Component | undefined
@@ -139,12 +139,6 @@ export interface GenericAppConfig {
     instance: ComponentPublicInstance | null,
     trace: string,
   ) => void
-
-  /**
-   * TODO document for 3.5
-   * Enable warnings for computed getters that recursively trigger itself.
-   */
-  warnRecursiveComputed?: boolean
 
   /**
    * Whether to throw unhandled errors in production.
@@ -266,9 +260,11 @@ export type ObjectPlugin<Options = any[]> = {
 export type FunctionPlugin<Options = any[]> = PluginInstallFunction<Options> &
   Partial<ObjectPlugin<Options>>
 
-export type Plugin<Options = any[]> =
-  | FunctionPlugin<Options>
-  | ObjectPlugin<Options>
+export type Plugin<
+  Options = any[],
+  // TODO: in next major Options extends unknown[] and remove P
+  P extends unknown[] = Options extends unknown[] ? Options : [Options],
+> = FunctionPlugin<P> | ObjectPlugin<P>
 
 export function createAppContext(): AppContext {
   return {
