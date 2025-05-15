@@ -1558,7 +1558,8 @@ function baseCreateRenderer(
     instance.scope.off()
 
     const update = (instance.update = effect.run.bind(effect))
-    const job: SchedulerJob = (instance.job = effect.runIfDirty.bind(effect))
+    const job: SchedulerJob = (instance.job = () =>
+      effect.dirty && effect.run())
     job.i = instance
     job.id = instance.uid
     effect.scheduler = () => queueJob(job)

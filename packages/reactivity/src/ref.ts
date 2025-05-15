@@ -5,7 +5,11 @@ import {
   isFunction,
   isObject,
 } from '@vue/shared'
-import { Dep, getDepFromReactive } from './dep'
+import type { ComputedRef, WritableComputedRef } from './computed'
+import { ReactiveFlags, TrackOpTypes, TriggerOpTypes } from './constants'
+import { onTrack, triggerEventInfos } from './debug'
+import { getDepFromReactive } from './dep'
+import { activeSub } from './effect'
 import {
   type Builtin,
   type ShallowReactiveMarker,
@@ -16,8 +20,7 @@ import {
   toRaw,
   toReactive,
 } from './reactive'
-import type { ComputedRef, WritableComputedRef } from './computed'
-import { ReactiveFlags, TrackOpTypes, TriggerOpTypes } from './constants'
+import { type Dependency, type Link, link, propagate } from './system'
 import { warn } from './warning'
 
 declare const RefSymbol: unique symbol
@@ -105,11 +108,13 @@ function createRef(rawValue: unknown, shallow: boolean) {
 /**
  * @internal
  */
-class RefImpl<T = any> {
+class RefImpl<T = any> implements Dependency {
+  // Dependency
+  subs: Link | undefined = undefined
+  subsTail: Link | undefined = undefined
+
   _value: T
   private _rawValue: T
-
-  dep: Dep = new Dep()
 
   public readonly [ReactiveFlags.IS_REF] = true
   public readonly [ReactiveFlags.IS_SHALLOW]: boolean = false
@@ -120,16 +125,12 @@ class RefImpl<T = any> {
     this[ReactiveFlags.IS_SHALLOW] = isShallow
   }
 
+  get dep() {
+    return this
+  }
+
   get value() {
-    if (__DEV__) {
-      this.dep.track({
-        target: this,
-        type: TrackOpTypes.GET,
-        key: 'value',
-      })
-    } else {
-      this.dep.track()
-    }
+    trackRef(this)
     return this._value
   }
 
@@ -144,15 +145,17 @@ class RefImpl<T = any> {
       this._rawValue = newValue
       this._value = useDirectValue ? newValue : toReactive(newValue)
       if (__DEV__) {
-        this.dep.trigger({
+        triggerEventInfos.push({
           target: this,
           type: TriggerOpTypes.SET,
           key: 'value',
           newValue,
           oldValue,
         })
-      } else {
-        this.dep.trigger()
+      }
+      triggerRef(this as unknown as Ref)
+      if (__DEV__) {
+        triggerEventInfos.pop()
       }
     }
   }
@@ -185,17 +188,22 @@ class RefImpl<T = any> {
  */
 export function triggerRef(ref: Ref): void {
   // ref may be an instance of ObjectRefImpl
-  if ((ref as unknown as RefImpl).dep) {
+  const dep = (ref as unknown as RefImpl).dep
+  if (dep !== undefined && dep.subs !== undefined) {
+    propagate(dep.subs)
+  }
+}
+
+function trackRef(dep: Dependency) {
+  if (activeSub !== undefined) {
     if (__DEV__) {
-      ;(ref as unknown as RefImpl).dep.trigger({
-        target: ref,
-        type: TriggerOpTypes.SET,
+      onTrack(activeSub!, {
+        target: dep,
+        type: TrackOpTypes.GET,
         key: 'value',
-        newValue: (ref as unknown as RefImpl)._value,
       })
-    } else {
-      ;(ref as unknown as RefImpl).dep.trigger()
     }
+    link(dep, activeSub!)
   }
 }
 
@@ -287,8 +295,10 @@ export type CustomRefFactory<T> = (
   set: (value: T) => void
 }
 
-class CustomRefImpl<T> {
-  public dep: Dep
+class CustomRefImpl<T> implements Dependency {
+  // Dependency
+  subs: Link | undefined = undefined
+  subsTail: Link | undefined = undefined
 
   private readonly _get: ReturnType<CustomRefFactory<T>>['get']
   private readonly _set: ReturnType<CustomRefFactory<T>>['set']
@@ -298,10 +308,16 @@ class CustomRefImpl<T> {
   public _value: T = undefined!
 
   constructor(factory: CustomRefFactory<T>) {
-    const dep = (this.dep = new Dep())
-    const { get, set } = factory(dep.track.bind(dep), dep.trigger.bind(dep))
+    const { get, set } = factory(
+      () => trackRef(this),
+      () => triggerRef(this as unknown as Ref),
+    )
     this._get = get
     this._set = set
+  }
+
+  get dep() {
+    return this
   }
 
   get value() {
@@ -366,7 +382,7 @@ class ObjectRefImpl<T extends object, K extends keyof T> {
     this._object[this._key] = newVal
   }
 
-  get dep(): Dep | undefined {
+  get dep(): Dependency | undefined {
     return getDepFromReactive(toRaw(this._object), this._key)
   }
 }
