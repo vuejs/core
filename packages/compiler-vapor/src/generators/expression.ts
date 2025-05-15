@@ -20,7 +20,6 @@ import type { Identifier, Node } from '@babel/types'
 import type { CodegenContext } from '../generate'
 import { isConstantExpression } from '../utils'
 import { type CodeFragment, NEWLINE, buildCodeFragment } from './utils'
-import { walk } from 'estree-walker'
 import { type ParserOptions, parseExpression } from '@babel/parser'
 
 export function genExpression(
@@ -295,33 +294,15 @@ function analyzeExpressions(expressions: SimpleExpressionNode[]) {
       continue
     }
 
-    walk(exp.ast, {
-      enter(currentNode: Node, parent: Node | null) {
-        if (currentNode.type === 'MemberExpression') {
-          const memberExp = extractMemberExpression(
-            currentNode,
-            (name: string) => {
-              registerVariable(name, exp, true)
-            },
-          )
-          registerVariable(memberExp, exp, false)
-          return this.skip()
-        }
-
-        // skip shorthand or non-computed property keys
-        if (
-          parent &&
-          parent.type === 'ObjectProperty' &&
-          parent.key === currentNode &&
-          (parent.shorthand || !parent.computed)
-        ) {
-          return this.skip()
-        }
-
-        if (currentNode.type === 'Identifier') {
-          registerVariable(currentNode.name, exp, true)
-        }
-      },
+    walkIdentifiers(exp.ast, (currentNode, parent, parentStack) => {
+      if (parent && isMemberExpression(parent)) {
+        const memberExp = extractMemberExpression(parent, name => {
+          registerVariable(name, exp, true)
+        })
+        registerVariable(memberExp, exp, false)
+      } else if (!parentStack.some(isMemberExpression)) {
+        registerVariable(currentNode.name, exp, true)
+      }
     })
   }
 
@@ -579,4 +560,10 @@ function extractMemberExpression(
     default:
       return ''
   }
+}
+
+const isMemberExpression = (node: Node) => {
+  return (
+    node.type === 'MemberExpression' || node.type === 'OptionalMemberExpression'
+  )
 }
