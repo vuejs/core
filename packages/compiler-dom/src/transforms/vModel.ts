@@ -56,7 +56,7 @@ export const transformModel: DirectiveTransform = (dir, node, context) => {
     let directiveToUse = V_MODEL_TEXT
     let isInvalidType = false
     if (tag === 'input' || isCustomElement) {
-      const type = findProp(node, `type`)
+      const type = findProp(node, `type`, false, true)
       if (type) {
         if (type.type === NodeTypes.DIRECTIVE) {
           // :type="foo"
