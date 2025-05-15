@@ -5,10 +5,17 @@
  * To avoid runtime dependency on validate-html-nesting
  * This file should not change very often in the original repo
  * but we may need to keep it up-to-date from time to time.
+ *
+ * The parent-child nesting is considered valid if the Browser
+ * does not modify it, regardless of whether or not the HTML spec
+ * considers it valid or invalid. So, the library is purely for
+ * detecting the kind of element nesting which result in altered DOM.
+ *
  */
 
 /**
- * returns true if given parent-child nesting is valid HTML
+ * returns true if given parent-child nesting is not known to result
+ * in an altered DOM
  */
 export function isValidHTMLNesting(parent: string, child: string): boolean {
   // if we know the list of children that are the only valid children for the given parent
