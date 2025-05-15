@@ -5,9 +5,8 @@ import {
   TrackOpTypes,
   isRef,
   markRaw,
-  pauseTracking,
   proxyRefs,
-  resetTracking,
+  setActiveSub,
   shallowReadonly,
   track,
 } from '@vue/reactivity'
@@ -97,7 +96,6 @@ import type { RendererElement } from './renderer'
 import {
   setCurrentInstance,
   setInSSRSetupState,
-  unsetCurrentInstance,
 } from './componentCurrentInstance'
 
 export * from './componentCurrentInstance'
@@ -888,10 +886,10 @@ function setupStatefulComponent(
   // 2. call setup()
   const { setup } = Component
   if (setup) {
-    pauseTracking()
+    const prevSub = setActiveSub()
     const setupContext = (instance.setupContext =
       setup.length > 1 ? createSetupContext(instance) : null)
-    const reset = setCurrentInstance(instance)
+    const prev = setCurrentInstance(instance)
     const setupResult = callWithErrorHandling(
       setup,
       instance,
@@ -902,8 +900,8 @@ function setupStatefulComponent(
       ],
     )
     const isAsyncSetup = isPromise(setupResult)
-    resetTracking()
-    reset()
+    setActiveSub(prevSub)
+    setCurrentInstance(...prev)
 
     if ((isAsyncSetup || instance.sp) && !isAsyncWrapper(instance)) {
       // async setup / serverPrefetch, mark as async boundary for useId()
@@ -911,6 +909,9 @@ function setupStatefulComponent(
     }
 
     if (isAsyncSetup) {
+      const unsetCurrentInstance = (): void => {
+        setCurrentInstance(null, undefined)
+      }
       setupResult.then(unsetCurrentInstance, unsetCurrentInstance)
       if (isSSR) {
         // return the promise so server-renderer can wait on it
@@ -1083,13 +1084,13 @@ export function finishComponentSetup(
 
   // support for 2.x options
   if (__FEATURE_OPTIONS_API__ && !(__COMPAT__ && skipOptions)) {
-    const reset = setCurrentInstance(instance)
-    pauseTracking()
+    const prevInstance = setCurrentInstance(instance)
+    const prevSub = setActiveSub()
     try {
       applyOptions(instance)
     } finally {
-      resetTracking()
-      reset()
+      setActiveSub(prevSub)
+      setCurrentInstance(...prevInstance)
     }
   }
 

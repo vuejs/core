@@ -14,7 +14,6 @@ import {
   createSetupContext,
   getCurrentGenericInstance,
   setCurrentInstance,
-  unsetCurrentInstance,
 } from './component'
 import type { EmitFn, EmitsOptions, ObjectEmitsOptions } from './componentEmits'
 import type {
@@ -511,7 +510,7 @@ export function withAsyncContext(getAwaitable: () => any): [any, () => void] {
     )
   }
   let awaitable = getAwaitable()
-  unsetCurrentInstance()
+  setCurrentInstance(null, undefined)
   if (isPromise(awaitable)) {
     awaitable = awaitable.catch(e => {
       setCurrentInstance(ctx)

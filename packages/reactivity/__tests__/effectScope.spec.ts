@@ -2,6 +2,7 @@ import { nextTick, watch, watchEffect } from '@vue/runtime-core'
 import {
   type ComputedRef,
   EffectScope,
+  ReactiveEffect,
   computed,
   effect,
   effectScope,
@@ -9,6 +10,7 @@ import {
   onScopeDispose,
   reactive,
   ref,
+  setCurrentScope,
 } from '../src'
 
 describe('reactivity/effect/scope', () => {
@@ -20,7 +22,7 @@ describe('reactivity/effect/scope', () => {
 
   it('should accept zero argument', () => {
     const scope = effectScope()
-    expect(scope.effects.length).toBe(0)
+    expect(getEffectsCount(scope)).toBe(0)
   })
 
   it('should return run value', () => {
@@ -29,7 +31,8 @@ describe('reactivity/effect/scope', () => {
 
   it('should work w/ active property', () => {
     const scope = effectScope()
-    scope.run(() => 1)
+    const src = computed(() => 1)
+    scope.run(() => src.value)
     expect(scope.active).toBe(true)
     scope.stop()
     expect(scope.active).toBe(false)
@@ -47,7 +50,7 @@ describe('reactivity/effect/scope', () => {
       expect(dummy).toBe(7)
     })
 
-    expect(scope.effects.length).toBe(1)
+    expect(getEffectsCount(scope)).toBe(1)
   })
 
   it('stop', () => {
@@ -60,7 +63,7 @@ describe('reactivity/effect/scope', () => {
       effect(() => (doubled = counter.num * 2))
     })
 
-    expect(scope.effects.length).toBe(2)
+    expect(getEffectsCount(scope)).toBe(2)
 
     expect(dummy).toBe(0)
     counter.num = 7
@@ -87,9 +90,8 @@ describe('reactivity/effect/scope', () => {
       })
     })
 
-    expect(scope.effects.length).toBe(1)
-    expect(scope.scopes!.length).toBe(1)
-    expect(scope.scopes![0]).toBeInstanceOf(EffectScope)
+    expect(getEffectsCount(scope)).toBe(1)
+    expect(scope.deps?.nextDep?.dep).toBeInstanceOf(EffectScope)
 
     expect(dummy).toBe(0)
     counter.num = 7
@@ -117,7 +119,7 @@ describe('reactivity/effect/scope', () => {
       })
     })
 
-    expect(scope.effects.length).toBe(1)
+    expect(getEffectsCount(scope)).toBe(1)
 
     expect(dummy).toBe(0)
     counter.num = 7
@@ -142,13 +144,13 @@ describe('reactivity/effect/scope', () => {
       effect(() => (dummy = counter.num))
     })
 
-    expect(scope.effects.length).toBe(1)
+    expect(getEffectsCount(scope)).toBe(1)
 
     scope.run(() => {
       effect(() => (doubled = counter.num * 2))
     })
 
-    expect(scope.effects.length).toBe(2)
+    expect(getEffectsCount(scope)).toBe(2)
 
     counter.num = 7
     expect(dummy).toBe(7)
@@ -166,21 +168,21 @@ describe('reactivity/effect/scope', () => {
       effect(() => (dummy = counter.num))
     })
 
-    expect(scope.effects.length).toBe(1)
+    expect(getEffectsCount(scope)).toBe(1)
 
     scope.stop()
+
+    expect(getEffectsCount(scope)).toBe(0)
 
     scope.run(() => {
       effect(() => (doubled = counter.num * 2))
     })
 
-    expect('[Vue warn] cannot run an inactive effect scope.').toHaveBeenWarned()
-
-    expect(scope.effects.length).toBe(0)
+    expect(getEffectsCount(scope)).toBe(1)
 
     counter.num = 7
     expect(dummy).toBe(0)
-    expect(doubled).toBe(undefined)
+    expect(doubled).toBe(14)
   })
 
   it('should fire onScopeDispose hook', () => {
@@ -224,9 +226,9 @@ describe('reactivity/effect/scope', () => {
   it('should dereference child scope from parent scope after stopping child scope (no memleaks)', () => {
     const parent = effectScope()
     const child = parent.run(() => effectScope())!
-    expect(parent.scopes!.includes(child)).toBe(true)
+    expect(parent.deps?.dep).toBe(child)
     child.stop()
-    expect(parent.scopes!.includes(child)).toBe(false)
+    expect(parent.deps).toBeUndefined()
   })
 
   it('test with higher level APIs', async () => {
@@ -290,21 +292,7 @@ describe('reactivity/effect/scope', () => {
 
     parentScope.run(() => {
       const childScope = effectScope(true)
-      childScope.on()
-      childScope.off()
-      expect(getCurrentScope()).toBe(parentScope)
-    })
-  })
-
-  it('calling on() and off() multiple times inside an active scope should not break currentScope', () => {
-    const parentScope = effectScope()
-    parentScope.run(() => {
-      const childScope = effectScope(true)
-      childScope.on()
-      childScope.on()
-      childScope.off()
-      childScope.off()
-      childScope.off()
+      setCurrentScope(setCurrentScope(childScope))
       expect(getCurrentScope()).toBe(parentScope)
     })
   })
@@ -372,7 +360,17 @@ describe('reactivity/effect/scope', () => {
     expect(watcherCalls).toBe(3)
     expect(cleanupCalls).toBe(1)
 
-    expect(scope.effects.length).toBe(0)
-    expect(scope.cleanups.length).toBe(0)
+    expect(getEffectsCount(scope)).toBe(0)
+    expect(scope.cleanupsLength).toBe(0)
   })
 })
+
+function getEffectsCount(scope: EffectScope): number {
+  let n = 0
+  for (let dep = scope.deps; dep !== undefined; dep = dep.nextDep) {
+    if (dep.dep instanceof ReactiveEffect) {
+      n++
+    }
+  }
+  return n
+}

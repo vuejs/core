@@ -100,7 +100,7 @@ function rerender(id: string, newRender?: Function): void {
     } else {
       const i = instance as ComponentInternalInstance
       i.renderCache = []
-      i.update()
+      i.effect.run()
     }
     nextTick(() => {
       isHmrUpdating = false
@@ -160,7 +160,7 @@ function reload(id: string, newComp: HMRComponent): void {
           if (parent.vapor) {
             parent.hmrRerender!()
           } else {
-            ;(parent as ComponentInternalInstance).update()
+            ;(parent as ComponentInternalInstance).effect.run()
           }
           nextTick(() => {
             isHmrUpdating = false
