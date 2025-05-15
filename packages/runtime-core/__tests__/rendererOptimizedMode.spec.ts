@@ -221,6 +221,25 @@ describe('renderer: optimized mode', () => {
     )
   })
 
+  test('component PatchFlags: PatchFlags.FULL_PROPS w/ null props', () => {
+    const Comp = defineComponent({
+      setup() {
+        return () => createVNode('p')
+      },
+    })
+
+    renderWithBlock(() => [createVNode(Comp, null, '', PatchFlags.FULL_PROPS)])
+    expect(inner(root)).toBe('<div><p></p></div>')
+
+    renderWithBlock(() => [
+      createVNode(Comp, { foo: 'true' }, '', PatchFlags.FULL_PROPS),
+    ])
+    expect(inner(root)).toBe('<div><p foo="true"></p></div>')
+
+    renderWithBlock(() => [createVNode(Comp, null, '', PatchFlags.FULL_PROPS)])
+    expect(inner(root)).toBe('<div><p></p></div>')
+  })
+
   // the order and length of the list will not change
   test('PatchFlags: PatchFlags.STABLE_FRAGMENT', async () => {
     let list = ['foo', 'bar']

@@ -392,6 +392,10 @@ export function shouldUpdateComponent(
       if (!prevProps) {
         return !!nextProps
       }
+      if (!nextProps) {
+        return !!prevProps
+      }
+
       // presence of this flag indicates props are always non-null
       return hasPropsChanged(prevProps, nextProps!, emits)
     } else if (patchFlag & PatchFlags.PROPS) {
