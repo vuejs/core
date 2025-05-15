@@ -806,7 +806,7 @@ export function setupComponent(
   const { props, children } = instance.vnode
   const isStateful = isStatefulComponent(instance)
   initProps(instance, props, isStateful, isSSR)
-  initSlots(instance, children, optimized)
+  initSlots(instance, children, optimized || isSSR)
 
   const setupResult = isStateful
     ? setupStatefulComponent(instance, isSSR)

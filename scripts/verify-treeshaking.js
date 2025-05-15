@@ -36,7 +36,7 @@ exec('pnpm', ['build', 'vue', '-f', 'global-runtime']).then(() => {
     prodBuild.includes('annotation,annotation-xml,maction')
   ) {
     errors.push(
-      'prod build contains unexpected domTagConifg lists.\n' +
+      'prod build contains unexpected domTagConfig lists.\n' +
         'This means helpers like isHTMLTag() is used in runtime code paths when it should be compiler-only.',
     )
   }
