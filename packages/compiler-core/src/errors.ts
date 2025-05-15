@@ -69,6 +69,10 @@ export enum ErrorCodes {
   X_MISSING_INTERPOLATION_END,
   X_MISSING_DIRECTIVE_NAME,
   X_MISSING_DYNAMIC_DIRECTIVE_ARGUMENT_END,
+  X_MISSING_DYNAMIC_DIRECTIVE_MODIFIER_END,
+  X_MISSING_DIRECTIVE_MODIFIER_NAME,
+  X_MISSING_DYNAMIC_DIRECTIVE_MODIFIER_VALUE,
+  X_INVALID_VALUE_IN_DYNAMIC_DIRECTIVE_MODIFIER,
 
   // transform errors
   X_V_IF_NO_EXPRESSION,
@@ -150,6 +154,16 @@ export const errorMessages: Record<ErrorCodes, string> = {
   [ErrorCodes.X_MISSING_DYNAMIC_DIRECTIVE_ARGUMENT_END]:
     'End bracket for dynamic directive argument was not found. ' +
     'Note that dynamic directive argument cannot contain spaces.',
+  [ErrorCodes.X_MISSING_DYNAMIC_DIRECTIVE_MODIFIER_END]:
+    'End bracket for dynamic directive modifier was not found. ' +
+    'Note that dynamic directive modifier cannot contain spaces.',
+  [ErrorCodes.X_MISSING_DIRECTIVE_MODIFIER_NAME]:
+    'Directive modifier name cannot be empty. ',
+  [ErrorCodes.X_MISSING_DYNAMIC_DIRECTIVE_MODIFIER_VALUE]:
+    'Dynamic directive modifier value cannot be empty. ',
+  [ErrorCodes.X_INVALID_VALUE_IN_DYNAMIC_DIRECTIVE_MODIFIER]:
+    'Invalid value in dynamic directive modifier. ' +
+    'Note that dynamic directive modifier can only be objects or arrays.',
   [ErrorCodes.X_MISSING_DIRECTIVE_NAME]: 'Legal directive name was expected.',
 
   // transform errors
