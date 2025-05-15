@@ -761,11 +761,11 @@ describe('interop: template ref', () => {
     return { container }
   }
 
-  test('vdom app: useTemplateRef on vapor child', async () => {
+  test('vdom app: useTemplateRef with vapor child', async () => {
     const { container } = await testTemplateRefInterop(
       `<script setup>
         import { useTemplateRef } from 'vue'
-        const data = _data; const components = _components;
+        const components = _components;
         const elRef = useTemplateRef('el')
         function click() {
           elRef.value.change()
@@ -805,11 +805,11 @@ describe('interop: template ref', () => {
     )
   })
 
-  test('vdom app: static ref on vapor child', async () => {
+  test('vdom app: static ref with vapor child', async () => {
     const { container } = await testTemplateRefInterop(
       `<script setup>
         import { ref } from 'vue'
-        const data = _data; const components = _components;
+        const components = _components;
         const elRef = ref(null)
         function click() {
           elRef.value.change()
@@ -849,11 +849,11 @@ describe('interop: template ref', () => {
     )
   })
 
-  test('vapor app: useTemplateRef on vdom child', async () => {
+  test('vapor app: useTemplateRef with vdom child', async () => {
     const { container } = await testTemplateRefInterop(
       `<script vapor>
         import { useTemplateRef } from 'vue'
-        const data = _data; const components = _components;
+        const components = _components;
         const elRef = useTemplateRef('el')
         function click() {
           elRef.value.change()
@@ -895,11 +895,11 @@ describe('interop: template ref', () => {
     )
   })
 
-  test('vapor app: static ref on vdom child', async () => {
+  test('vapor app: static ref with vdom child', async () => {
     const { container } = await testTemplateRefInterop(
       `<script vapor>
         import { ref } from 'vue'
-        const data = _data; const components = _components;
+        const components = _components;
         const elRef = ref(null)
         function click() {
           elRef.value.change()
