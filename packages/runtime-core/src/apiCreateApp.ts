@@ -377,13 +377,12 @@ export function createAppAPI<HostElement>(
           // HMR root reload
           if (__DEV__) {
             context.reload = () => {
+              const cloned = cloneVNode(vnode)
+              // avoid hydration for hmr updating
+              cloned.el = null
               // casting to ElementNamespace because TS doesn't guarantee type narrowing
               // over function boundaries
-              render(
-                cloneVNode(vnode),
-                rootContainer,
-                namespace as ElementNamespace,
-              )
+              render(cloned, rootContainer, namespace as ElementNamespace)
             }
           }
 
