@@ -108,6 +108,36 @@ color: red
       "[data-v-test] .foo { color: red;
       }"
     `)
+    expect(compileScoped(`:deep(.foo) .bar { color: red; }`))
+      .toMatchInlineSnapshot(`
+      "[data-v-test] .foo .bar { color: red;
+      }"
+    `)
+    expect(compileScoped(`::v-deep(.foo,.baz) { color: red; }`))
+      .toMatchInlineSnapshot(`
+      "[data-v-test] .foo,[data-v-test] .baz { color: red;
+      }"
+    `)
+    expect(compileScoped(`::v-deep(.foo,.baz,.bar,.fcc) { color: red; }`))
+      .toMatchInlineSnapshot(`
+      "[data-v-test] .foo,[data-v-test] .baz,[data-v-test] .bar,[data-v-test] .fcc { color: red;
+      }"
+    `)
+    expect(compileScoped(`::v-deep(.foo,.baz) .fc { color: red; }`))
+      .toMatchInlineSnapshot(`
+      "[data-v-test] .foo .fc,[data-v-test] .baz .fc { color: red;
+      }"
+    `)
+    expect(compileScoped(`::v-deep(.foo,.baz .bar) .fc { color: red; }`))
+      .toMatchInlineSnapshot(`
+      "[data-v-test] .foo .fc,[data-v-test] .baz .bar .fc { color: red;
+      }"
+    `)
+    expect(compileScoped(`.bar :deep(.foo,.baz,.abc) { color: red; }`))
+      .toMatchInlineSnapshot(`
+      ".bar[data-v-test] .foo,.bar[data-v-test] .baz,.bar[data-v-test] .abc { color: red;
+      }"
+    `)
     expect(compileScoped(`::v-deep(.foo) { color: red; }`))
       .toMatchInlineSnapshot(`
       "[data-v-test] .foo { color: red;
@@ -121,6 +151,16 @@ color: red
     expect(compileScoped(`.baz .qux ::v-deep(.foo .bar) { color: red; }`))
       .toMatchInlineSnapshot(`
       ".baz .qux[data-v-test] .foo .bar { color: red;
+      }"
+    `)
+    expect(compileScoped(`.baz .qux ::v-deep(.foo,.bar) { color: red; }`))
+      .toMatchInlineSnapshot(`
+      ".baz .qux[data-v-test] .foo,.baz .qux[data-v-test] .bar { color: red;
+      }"
+    `)
+    expect(compileScoped(`.baz .qux ::v-deep(.foo,.bar) .m { color: red; }`))
+      .toMatchInlineSnapshot(`
+      ".baz .qux[data-v-test] .foo .m,.baz .qux[data-v-test] .bar .m { color: red;
       }"
     `)
     expect(compileScoped(`:is(.foo :deep(.bar)) { color: red; }`))
@@ -147,7 +187,22 @@ color: red
       .toMatchInlineSnapshot(`
     ".foo[data-v-test-s] { color: red;
     }"
-  `)
+    `)
+    expect(compileScoped(`:slotted(.foo) .bar { color: red; }`))
+      .toMatchInlineSnapshot(`
+      ".foo[data-v-test-s] .bar { color: red;
+      }"
+    `)
+    expect(compileScoped(`::v-slotted(.foo,.baz .bar) { color: red; }`))
+      .toMatchInlineSnapshot(`
+      ".foo[data-v-test-s],.baz .bar[data-v-test-s] { color: red;
+      }"
+    `)
+    expect(compileScoped(`::v-slotted(.foo,.baz) { color: red; }`))
+      .toMatchInlineSnapshot(`
+      ".foo[data-v-test-s],.baz[data-v-test-s] { color: red;
+      }"
+    `)
     expect(compileScoped(`::v-slotted(.foo) { color: red; }`))
       .toMatchInlineSnapshot(`
       ".foo[data-v-test-s] { color: red;
@@ -163,6 +218,16 @@ color: red
       ".baz .qux .foo .bar[data-v-test-s] { color: red;
       }"
     `)
+    expect(compileScoped(`.baz .qux ::v-slotted(.foo,.bar) { color: red; }`))
+      .toMatchInlineSnapshot(`
+      ".baz .qux .foo[data-v-test-s],.baz .qux .bar[data-v-test-s] { color: red;
+      }"
+    `)
+    expect(compileScoped(`.baz .qux ::v-slotted(.foo,.bar) .m { color: red; }`))
+      .toMatchInlineSnapshot(`
+      ".baz .qux .foo[data-v-test-s] .m,.baz .qux .bar[data-v-test-s] .m { color: red;
+      }"
+    `)
   })
 
   test('::v-global', () => {
@@ -171,6 +236,11 @@ color: red
     ".foo { color: red;
     }"
   `)
+    expect(compileScoped(`::v-global(.foo,.bar) { color: red; }`))
+      .toMatchInlineSnapshot(`
+      ".foo,.bar { color: red;
+      }"
+    `)
     expect(compileScoped(`::v-global(.foo) { color: red; }`))
       .toMatchInlineSnapshot(`
       ".foo { color: red;
@@ -185,6 +255,24 @@ color: red
     expect(compileScoped(`.baz .qux ::v-global(.foo .bar) { color: red; }`))
       .toMatchInlineSnapshot(`
       ".foo .bar { color: red;
+      }"
+    `)
+    expect(
+      compileScoped(`.baz .qux ::v-global(.foo .bar, .bar) { color: red; }`),
+    ).toMatchInlineSnapshot(`
+      ".foo .bar, .bar { color: red;
+      }"
+    `)
+    // global ignores anything after it
+    expect(compileScoped(`::v-global(.foo .bar) .baz { color: red; }`))
+      .toMatchInlineSnapshot(`
+      ".foo .bar { color: red;
+      }"
+    `)
+    expect(
+      compileScoped(`.baz ::v-global(.foo .bar,.faa) .qux { color: red; }`),
+    ).toMatchInlineSnapshot(`
+      ".foo .bar,.faa { color: red;
       }"
     `)
   })
