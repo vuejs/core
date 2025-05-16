@@ -398,9 +398,10 @@ export function createHydrationFunctions(
           parentComponent.vnode.props.appear
 
         const content = (el as HTMLTemplateElement).content
-          .firstChild as Element
+          .firstChild as Element & { $cls: string | null }
 
         if (needCallTransitionHooks) {
+          content.$cls = content.getAttribute('class')
           transition!.beforeEnter(content)
         }
 
@@ -786,7 +787,7 @@ export function createHydrationFunctions(
  * Dev only
  */
 function propHasMismatch(
-  el: Element,
+  el: Element & { $cls?: string | null },
   key: string,
   clientValue: any,
   vnode: VNode,
@@ -799,7 +800,7 @@ function propHasMismatch(
   if (key === 'class') {
     // classes might be in different order, but that doesn't affect cascade
     // so we just need to check if the class lists contain the same classes.
-    actual = el.getAttribute('class')
+    actual = el.$cls || el.getAttribute('class')
     expected = normalizeClass(clientValue)
     if (!isSetEqual(toClassSet(actual || ''), toClassSet(expected))) {
       mismatchType = MismatchTypes.CLASS
