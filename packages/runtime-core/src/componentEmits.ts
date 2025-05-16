@@ -32,6 +32,7 @@ import {
 import type { ComponentTypeEmits } from './apiSetupHelpers'
 import { getModelModifiers } from './helpers/useModel'
 import type { ComponentPublicInstance } from './componentPublicInstance'
+import { pauseTracking, resetTracking } from '@vue/reactivity'
 
 export type ObjectEmitsOptions = Record<
   string,
@@ -198,12 +199,14 @@ export function emit(
   }
 
   if (handler) {
+    pauseTracking()
     callWithAsyncErrorHandling(
       handler,
       instance,
       ErrorCodes.COMPONENT_EVENT_HANDLER,
       args,
     )
+    resetTracking()
   }
 
   const onceHandler = props[handlerName + `Once`]
@@ -214,12 +217,14 @@ export function emit(
       return
     }
     instance.emitted[handlerName] = true
+    pauseTracking()
     callWithAsyncErrorHandling(
       onceHandler,
       instance,
       ErrorCodes.COMPONENT_EVENT_HANDLER,
       args,
     )
+    resetTracking()
   }
 
   if (__COMPAT__) {
