@@ -158,6 +158,35 @@ test('source map', () => {
   ).toMatchObject(getPositionInCode(template.content, `foobar`))
 })
 
+test('source map: v-if generated comment should not have original position', () => {
+  const template = parse(
+    `
+      <template>
+        <div v-if="true"></div>
+      </template>
+    `,
+    { filename: 'example.vue', sourceMap: true },
+  ).descriptor.template!
+
+  const { code, map } = compile({
+    filename: 'example.vue',
+    source: template.content,
+  })
+
+  expect(map!.sources).toEqual([`example.vue`])
+  expect(map!.sourcesContent).toEqual([template.content])
+
+  const consumer = new SourceMapConsumer(map as RawSourceMap)
+  const commentNode = code.match(/_createCommentVNode\("v-if", true\)/)
+  expect(commentNode).not.toBeNull()
+  const commentPosition = getPositionInCode(code, commentNode![0])
+  const originalPosition = consumer.originalPositionFor(commentPosition)
+  // the comment node should not be mapped to the original source
+  expect(originalPosition.column).toBeNull()
+  expect(originalPosition.line).toBeNull()
+  expect(originalPosition.source).toBeNull()
+})
+
 test('should work w/ AST from descriptor', () => {
   const source = `
   <template>

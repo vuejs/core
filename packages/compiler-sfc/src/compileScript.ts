@@ -174,8 +174,6 @@ export function compileScript(
   const scriptLang = script && script.lang
   const scriptSetupLang = scriptSetup && scriptSetup.lang
 
-  let refBindings: string[] | undefined
-
   if (!scriptSetup) {
     if (!script) {
       throw new Error(`[@vue/compiler-sfc] SFC contains no <script> tags.`)
@@ -744,12 +742,6 @@ export function compileScript(
   for (const key in setupBindings) {
     ctx.bindingMetadata[key] = setupBindings[key]
   }
-  // known ref bindings
-  if (refBindings) {
-    for (const key of refBindings) {
-      ctx.bindingMetadata[key] = BindingTypes.SETUP_REF
-    }
-  }
 
   // 7. inject `useCssVars` calls
   if (
@@ -1127,6 +1119,7 @@ function walkDeclaration(
                 m === userImportAliases['shallowRef'] ||
                 m === userImportAliases['customRef'] ||
                 m === userImportAliases['toRef'] ||
+                m === userImportAliases['useTemplateRef'] ||
                 m === DEFINE_MODEL,
             )
           ) {
