@@ -143,7 +143,7 @@ type InferPropType<T, NullAsAny = true> = [T] extends [null]
 export type ExtractPropTypes<O> = {
   // use `keyof Pick<O, RequiredKeys<O>>` instead of `RequiredKeys<O>` to
   // support IDE features
-  [K in keyof Pick<O, RequiredKeys<O>>]: InferPropType<O[K]>
+  [K in keyof Pick<O, RequiredKeys<O>>]: Exclude<InferPropType<O[K]>, undefined>
 } & {
   // use `keyof Pick<O, OptionalKeys<O>>` instead of `OptionalKeys<O>` to
   // support IDE features
