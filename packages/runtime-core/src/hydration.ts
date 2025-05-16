@@ -800,7 +800,12 @@ function propHasMismatch(
   if (key === 'class') {
     // classes might be in different order, but that doesn't affect cascade
     // so we just need to check if the class lists contain the same classes.
-    actual = el.$cls || el.getAttribute('class')
+    if (el.$cls) {
+      actual = el.$cls
+      delete el.$cls
+    } else {
+      actual = el.getAttribute('class')
+    }
     expected = normalizeClass(clientValue)
     if (!isSetEqual(toClassSet(actual || ''), toClassSet(expected))) {
       mismatchType = MismatchTypes.CLASS
