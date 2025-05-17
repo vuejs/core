@@ -410,6 +410,32 @@ return function render(_ctx, _cache) {
 }"
 `;
 
+exports[`compiler: cacheStatic transform > should hoist props for root with single element excluding comments 1`] = `
+"const _Vue = Vue
+const { createElementVNode: _createElementVNode, createCommentVNode: _createCommentVNode } = _Vue
+
+const _hoisted_1 = { id: "a" }
+
+return function render(_ctx, _cache) {
+  with (_ctx) {
+    const { createCommentVNode: _createCommentVNode, createElementVNode: _createElementVNode, Fragment: _Fragment, openBlock: _openBlock, createElementBlock: _createElementBlock } = _Vue
+
+    return (_openBlock(), _createElementBlock(_Fragment, null, [
+      _createCommentVNode("comment"),
+      _createElementVNode("div", _hoisted_1, _cache[0] || (_cache[0] = [
+        _createElementVNode("div", { id: "b" }, [
+          _createElementVNode("div", { id: "c" }, [
+            _createElementVNode("div", { id: "d" }, [
+              _createElementVNode("div", { id: "e" }, "hello")
+            ])
+          ])
+        ], -1 /* HOISTED */)
+      ]))
+    ], 2112 /* STABLE_FRAGMENT, DEV_ROOT_FRAGMENT */))
+  }
+}"
+`;
+
 exports[`compiler: cacheStatic transform > should hoist v-for children if static 1`] = `
 "const _Vue = Vue
 const { createElementVNode: _createElementVNode } = _Vue
