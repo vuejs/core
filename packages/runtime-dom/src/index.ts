@@ -58,8 +58,8 @@ declare module '@vue/runtime-core' {
     vOn: VOnDirective
     vBind: VModelDirective
     vIf: Directive<any, boolean>
-    VOnce: Directive
-    VSlot: Directive
+    vOnce: Directive
+    vSlot: Directive
   }
 }
 
