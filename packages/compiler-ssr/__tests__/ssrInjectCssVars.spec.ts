@@ -133,4 +133,41 @@ describe('ssr: inject <style vars>', () => {
       }
     `)
   })
+
+  test('user import (non-inline)', () => {
+    const result = compile(`<div/>`, {
+      inline: false,
+      bindingMetadata: {
+        color: BindingTypes.SETUP_IMPORTED_MAYBE_REF,
+      },
+      ssrCssVars: '{ "color": color.red }',
+    })
+
+    expect(result.code).toMatchInlineSnapshot(`
+      "const { mergeProps: _mergeProps, unref: _unref } = require("vue")
+      const { ssrRenderAttrs: _ssrRenderAttrs } = require("vue/server-renderer")
+
+      return function ssrRender(_ctx, _push, _parent, _attrs, $props, $setup, $data, $options) {
+        const _cssVars = { style: { "color": _unref(color).red }}
+        _push(\`<div\${_ssrRenderAttrs(_mergeProps(_attrs, _cssVars))}></div>\`)
+      }"
+    `)
+  })
+
+  test('user import (inline)', () => {
+    const result = compile(`<div/>`, {
+      inline: true,
+      bindingMetadata: {
+        color: BindingTypes.SETUP_IMPORTED_MAYBE_REF,
+      },
+      ssrCssVars: '{ "color": color.red }',
+    })
+
+    expect(result.code).toMatchInlineSnapshot(`
+      "(_ctx, _push, _parent, _attrs) => {
+        const _cssVars = { style: { "color": _unref(color).red }}
+        _push(\`<div\${_ssrRenderAttrs(_mergeProps(_attrs, _cssVars))}></div>\`)
+      }"
+    `)
+  })
 })
