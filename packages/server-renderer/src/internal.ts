@@ -4,6 +4,10 @@ export { ssrRenderComponent } from './helpers/ssrRenderComponent'
 export { ssrRenderSlot, ssrRenderSlotInner } from './helpers/ssrRenderSlot'
 export { ssrRenderTeleport } from './helpers/ssrRenderTeleport'
 export {
+  ssrRenderSkipComponent,
+  ssrRenderSkipVNode,
+} from './helpers/ssrRenderSkipComponent'
+export {
   ssrRenderClass,
   ssrRenderStyle,
   ssrRenderAttrs,

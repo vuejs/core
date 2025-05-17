@@ -41,6 +41,7 @@ export enum NodeTypes {
   IF_BRANCH,
   FOR,
   TEXT_CALL,
+  SKIP,
   // codegen
   VNODE_CALL,
   JS_CALL_EXPRESSION,
@@ -100,6 +101,7 @@ export type TemplateChildNode =
   | IfBranchNode
   | ForNode
   | TextCallNode
+  | SkipNode
 
 export interface RootNode extends Node {
   type: NodeTypes.ROOT
@@ -144,12 +146,15 @@ export interface PlainElementNode extends BaseElementNode {
     | SimpleExpressionNode // when hoisted
     | CacheExpression // when cached by v-once
     | MemoExpression // when cached by v-memo
+    | ConditionalExpression
     | undefined
   ssrCodegenNode?: TemplateLiteral
 }
 
 export interface ComponentNode extends BaseElementNode {
   tagType: ElementTypes.COMPONENT
+  slots: SlotsExpression
+  hasDynamicSlots: boolean
   codegenNode:
     | VNodeCall
     | CacheExpression // when cached by v-once
@@ -405,6 +410,15 @@ export interface FunctionExpression extends Node {
   isNonScopedSlot?: boolean
 }
 
+export interface SkipNode extends Node {
+  type: NodeTypes.SKIP
+  test: ExpressionNode
+  consequent: IfBranchNode | CallExpression
+  alternate: IfBranchNode
+  newline: boolean
+  codegenNode: ConditionalExpression | undefined
+}
+
 export interface ConditionalExpression extends Node {
   type: NodeTypes.JS_CONDITIONAL_EXPRESSION
   test: JSChildNode
@@ -454,7 +468,7 @@ export interface TemplateLiteral extends Node {
 export interface IfStatement extends Node {
   type: NodeTypes.JS_IF_STATEMENT
   test: ExpressionNode
-  consequent: BlockStatement
+  consequent: BlockStatement | CallExpression
   alternate: IfStatement | BlockStatement | ReturnStatement | undefined
 }
 

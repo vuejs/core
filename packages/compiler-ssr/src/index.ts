@@ -27,6 +27,7 @@ import { ssrTransformModel } from './transforms/ssrVModel'
 import { ssrTransformShow } from './transforms/ssrVShow'
 import { ssrInjectFallthroughAttrs } from './transforms/ssrInjectFallthroughAttrs'
 import { ssrInjectCssVars } from './transforms/ssrInjectCssVars'
+import { ssrTransformSkip } from './transforms/ssrVSkip'
 
 export function compile(
   source: string | RootNode,
@@ -56,6 +57,7 @@ export function compile(
     hoistStatic: false,
     nodeTransforms: [
       ssrTransformIf,
+      ssrTransformSkip,
       ssrTransformFor,
       trackVForSlotScopes,
       transformExpression,

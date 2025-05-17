@@ -368,6 +368,7 @@ export function getConstantType(
     case NodeTypes.IF:
     case NodeTypes.FOR:
     case NodeTypes.IF_BRANCH:
+    case NodeTypes.SKIP:
       return ConstantTypes.NOT_CONSTANT
     case NodeTypes.INTERPOLATION:
     case NodeTypes.TEXT_CALL:

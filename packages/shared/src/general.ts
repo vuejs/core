@@ -90,7 +90,7 @@ export const isReservedProp: (key: string) => boolean = /*@__PURE__*/ makeMap(
 
 export const isBuiltInDirective: (key: string) => boolean =
   /*@__PURE__*/ makeMap(
-    'bind,cloak,else-if,else,for,html,if,model,on,once,pre,show,slot,text,memo',
+    'bind,cloak,else-if,else,for,html,if,model,on,once,pre,show,slot,text,memo,skip',
   )
 
 const cacheStringFunction = <T extends (str: string) => string>(fn: T): T => {
@@ -216,4 +216,18 @@ export function genCacheKey(source: string, options: any): string {
       typeof val === 'function' ? val.toString() : val,
     )
   )
+}
+
+export function clone(v: any): any {
+  if (isArray(v)) {
+    return v.map(clone)
+  } else if (isPlainObject(v)) {
+    const res: any = {}
+    for (const key in v) {
+      res[key] = clone(v[key as keyof typeof v])
+    }
+    return res
+  } else {
+    return v
+  }
 }

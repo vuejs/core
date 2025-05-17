@@ -1,8 +1,8 @@
 import {
   type CallExpression,
+  type ComponentNode,
   type ConditionalExpression,
   type DirectiveNode,
-  type ElementNode,
   ElementTypes,
   type ExpressionNode,
   type FunctionExpression,
@@ -114,13 +114,21 @@ const buildClientSlotFn: SlotFnBuilder = (props, _vForExp, children, loc) =>
 // Instead of being a DirectiveTransform, v-slot processing is called during
 // transformElement to build the slots object for a component.
 export function buildSlots(
-  node: ElementNode,
+  node: ComponentNode,
   context: TransformContext,
   buildSlotFn: SlotFnBuilder = buildClientSlotFn,
+  useCache: boolean = false,
 ): {
   slots: SlotsExpression
   hasDynamicSlots: boolean
 } {
+  // early return if slots are already built to avoid duplication
+  if (useCache && node.slots) {
+    return {
+      slots: node.slots,
+      hasDynamicSlots: node.hasDynamicSlots,
+    }
+  }
   context.helper(WITH_CTX)
 
   const { children, loc } = node
@@ -363,6 +371,8 @@ export function buildSlots(
     ]) as SlotsExpression
   }
 
+  node.slots = slots
+  node.hasDynamicSlots = hasDynamicSlots
   return {
     slots,
     hasDynamicSlots,
@@ -400,6 +410,10 @@ function hasForwardedSlots(children: TemplateChildNode[]): boolean {
         break
       case NodeTypes.IF:
         if (hasForwardedSlots(child.branches)) return true
+        break
+      case NodeTypes.SKIP:
+        // only check `alternate` branch since it contains the `consequent` node
+        if (hasForwardedSlots(child.alternate.children)) return true
         break
       case NodeTypes.IF_BRANCH:
       case NodeTypes.FOR:

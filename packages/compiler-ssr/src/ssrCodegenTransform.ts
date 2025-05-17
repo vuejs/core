@@ -28,6 +28,7 @@ import { ssrProcessSlotOutlet } from './transforms/ssrTransformSlotOutlet'
 import { ssrProcessComponent } from './transforms/ssrTransformComponent'
 import { ssrProcessElement } from './transforms/ssrTransformElement'
 import { SSRErrorCodes, createSSRCompilerError } from './errors'
+import { ssrProcessSkip } from './transforms/ssrVSkip'
 
 // Because SSR codegen output is completely different from client-side output
 // (e.g. multiple elements can be concatenated into a single template literal
@@ -216,6 +217,9 @@ export function processChildren(
         break
       case NodeTypes.IF_BRANCH:
         // no-op - handled by ssrProcessIf
+        break
+      case NodeTypes.SKIP:
+        ssrProcessSkip(child, context)
         break
       case NodeTypes.TEXT_CALL:
       case NodeTypes.COMPOUND_EXPRESSION:
