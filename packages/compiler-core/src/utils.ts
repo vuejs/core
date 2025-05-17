@@ -2,6 +2,7 @@ import {
   type BlockCodegenNode,
   type CacheExpression,
   type CallExpression,
+  type CompoundExpressionNode,
   type DirectiveNode,
   type ElementNode,
   ElementTypes,
@@ -42,6 +43,7 @@ import type { PropsExpression } from './transforms/transformElement'
 import { parseExpression } from '@babel/parser'
 import type { Expression, Node } from '@babel/types'
 import { unwrapTSNode } from './babelUtils'
+import { ErrorCodes, createCompilerError } from './errors'
 
 export const isStaticExp = (p: JSChildNode): p is SimpleExpressionNode =>
   p.type === NodeTypes.SIMPLE_EXPRESSION && p.isStatic
@@ -564,3 +566,51 @@ export function getMemoedVNodeCall(
 }
 
 export const forAliasRE: RegExp = /([\s\S]*?)\s+(?:in|of)\s+(\S[\s\S]*)/
+
+export function findComponentTagNode(
+  node: VNodeCall | ElementNode,
+  name: string,
+): VNodeCall | ElementNode | undefined {
+  if (
+    node.tag === name ||
+    node.tag === `$setup["${name}"]` ||
+    node.tag === `_component_${name}`
+  )
+    return node
+  if (node.children) {
+    const children = node.children as TemplateChildNode[]
+    for (let i = 0; i < children.length; i++) {
+      const child = children[i]
+      if ((child as ElementNode).tag) {
+        const targetTag = findComponentTagNode(child as ElementNode, name)
+        if (targetTag) return targetTag
+      }
+    }
+  }
+}
+
+export function checkParameterName(
+  exp: ExpressionNode | undefined,
+  blockNode: VNodeCall | ElementNode,
+  context: TransformContext,
+): void {
+  if (
+    exp &&
+    findComponentTagNode(blockNode, (exp as SimpleExpressionNode).content)
+  ) {
+    context.onError(
+      createCompilerError(ErrorCodes.X_INVALID_PARAMETER_NAME, exp.loc),
+    )
+  }
+
+  let identifiers: CompoundExpressionNode['identifiers'] = []
+  if (exp && (exp as CompoundExpressionNode).identifiers) {
+    identifiers = (exp as CompoundExpressionNode).identifiers
+  }
+
+  if (identifiers!.some(i => !!findComponentTagNode(blockNode, i))) {
+    context.onError(
+      createCompilerError(ErrorCodes.X_INVALID_PARAMETER_NAME, exp!.loc),
+    )
+  }
+}
