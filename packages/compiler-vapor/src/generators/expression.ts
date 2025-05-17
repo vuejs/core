@@ -244,8 +244,13 @@ export function processExpressions(
   expressions: SimpleExpressionNode[],
 ): DeclarationResult {
   // analyze variables
-  const { seenVariable, variableToExpMap, expToVariableMap, seenIdentifier } =
-    analyzeExpressions(expressions)
+  const {
+    seenVariable,
+    variableToExpMap,
+    expToVariableMap,
+    seenIdentifier,
+    updatedVariable,
+  } = analyzeExpressions(expressions)
 
   // process repeated identifiers and member expressions
   // e.g., `foo[baz]` will be transformed into `foo_baz`
@@ -255,6 +260,7 @@ export function processExpressions(
     variableToExpMap,
     expToVariableMap,
     seenIdentifier,
+    updatedVariable,
   )
 
   // process duplicate expressions after identifier and member expression handling.
@@ -263,6 +269,8 @@ export function processExpressions(
     context,
     expressions,
     varDeclarations,
+    updatedVariable,
+    expToVariableMap,
   )
 
   return genDeclarations([...varDeclarations, ...expDeclarations], context)
@@ -273,11 +281,13 @@ function analyzeExpressions(expressions: SimpleExpressionNode[]) {
   const variableToExpMap = new Map<string, Set<SimpleExpressionNode>>()
   const expToVariableMap = new Map<SimpleExpressionNode, string[]>()
   const seenIdentifier = new Set<string>()
+  const updatedVariable = new Set<string>()
 
   const registerVariable = (
     name: string,
     exp: SimpleExpressionNode,
     isIdentifier: boolean,
+    parentStack: Node[] = [],
   ) => {
     if (isIdentifier) seenIdentifier.add(name)
     seenVariable[name] = (seenVariable[name] || 0) + 1
@@ -286,6 +296,8 @@ function analyzeExpressions(expressions: SimpleExpressionNode[]) {
       (variableToExpMap.get(name) || new Set()).add(exp),
     )
     expToVariableMap.set(exp, (expToVariableMap.get(exp) || []).concat(name))
+    if (parentStack.some(p => p.type === 'UpdateExpression'))
+      updatedVariable.add(name)
   }
 
   for (const exp of expressions) {
@@ -299,14 +311,20 @@ function analyzeExpressions(expressions: SimpleExpressionNode[]) {
         const memberExp = extractMemberExpression(parent, name => {
           registerVariable(name, exp, true)
         })
-        registerVariable(memberExp, exp, false)
+        registerVariable(memberExp, exp, false, parentStack)
       } else if (!parentStack.some(isMemberExpression)) {
-        registerVariable(currentNode.name, exp, true)
+        registerVariable(currentNode.name, exp, true, parentStack)
       }
     })
   }
 
-  return { seenVariable, seenIdentifier, variableToExpMap, expToVariableMap }
+  return {
+    seenVariable,
+    seenIdentifier,
+    variableToExpMap,
+    expToVariableMap,
+    updatedVariable,
+  }
 }
 
 function processRepeatedVariables(
@@ -315,9 +333,11 @@ function processRepeatedVariables(
   variableToExpMap: Map<string, Set<SimpleExpressionNode>>,
   expToVariableMap: Map<SimpleExpressionNode, string[]>,
   seenIdentifier: Set<string>,
+  updatedVariable: Set<string>,
 ): DeclarationValue[] {
   const declarations: DeclarationValue[] = []
   for (const [name, exps] of variableToExpMap) {
+    if (updatedVariable.has(name)) continue
     if (seenVariable[name] > 1 && exps.size > 0) {
       const isIdentifier = seenIdentifier.has(name)
       const varName = isIdentifier ? name : genVarName(name)
@@ -409,12 +429,19 @@ function processRepeatedExpressions(
   context: CodegenContext,
   expressions: SimpleExpressionNode[],
   varDeclarations: DeclarationValue[],
+  updatedVariable: Set<string>,
+  expToVariableMap: Map<SimpleExpressionNode, string[]>,
 ): DeclarationValue[] {
   const declarations: DeclarationValue[] = []
   const seenExp = expressions.reduce(
     (acc, exp) => {
+      const variables = expToVariableMap.get(exp)
       // only handle expressions that are not identifiers
-      if (exp.ast && exp.ast.type !== 'Identifier') {
+      if (
+        exp.ast &&
+        exp.ast.type !== 'Identifier' &&
+        !(variables && variables.some(v => updatedVariable.has(v)))
+      ) {
         acc[exp.content] = (acc[exp.content] || 0) + 1
       }
       return acc
