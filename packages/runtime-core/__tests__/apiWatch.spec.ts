@@ -2010,4 +2010,24 @@ describe('api: watch', () => {
     createApp(App).mount(root)
     expect(onCleanup).toBeCalledTimes(0)
   })
+
+  // #12681
+  test('onScopeDispose inside non-immediate watcher that ran', () => {
+    const cleanupSpy = vi.fn()
+    const cbSpy = vi.fn(() => {
+      onScopeDispose(cleanupSpy)
+    })
+    const scope = effectScope()
+
+    scope.run(() => {
+      const signal = ref(false)
+      watch(signal, cbSpy)
+      signal.value = true
+    })
+
+    scope.stop()
+
+    expect(cbSpy).toBeCalledTimes(1)
+    expect(cleanupSpy).toBeCalledTimes(1)
+  })
 })
