@@ -167,7 +167,7 @@ export const TeleportImpl = {
         n2.el!.__isMounted = false
         queuePostRenderEffect(() => {
           mountToTarget()
-          n2.el!.__isMounted = true
+          delete n2.el!.__isMounted
         }, parentSuspense)
       } else {
         mountToTarget()
@@ -187,7 +187,6 @@ export const TeleportImpl = {
             optimized,
             internals,
           )
-          delete n1.el!.__isMounted
         }, parentSuspense)
         return
       }
