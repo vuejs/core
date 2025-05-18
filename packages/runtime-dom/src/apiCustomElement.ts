@@ -280,7 +280,7 @@ export class VueElement
     // avoid resolving component if it's not connected
     if (!this.isConnected) return
 
-    if (!this.shadowRoot) {
+    if (!this.shadowRoot && !this._instance) {
       this._parseSlots()
     }
     this._connected = true
