@@ -2,7 +2,12 @@ import type { LVal, Node, TSType } from '@babel/types'
 import type { ScriptCompileContext } from './context'
 import { inferRuntimeType } from './resolveType'
 import { UNKNOWN_TYPE, isCallOf, toRuntimeTypeString } from './utils'
-import { BindingTypes, unwrapTSNode } from '@vue/compiler-dom'
+import {
+  BindingTypes,
+  ErrorCodes,
+  errorMessages,
+  unwrapTSNode,
+} from '@vue/compiler-dom'
 
 export const DEFINE_MODEL = 'defineModel'
 
@@ -20,6 +25,10 @@ export function processDefineModel(
 ): boolean {
   if (!isCallOf(node, DEFINE_MODEL)) {
     return false
+  }
+
+  if (!declId) {
+    ctx.error(errorMessages[ErrorCodes.X_DEFINE_MODEL_NO_VARIABLE], node)
   }
 
   ctx.hasDefineModelCall = true

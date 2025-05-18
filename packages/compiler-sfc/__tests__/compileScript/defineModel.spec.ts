@@ -1,4 +1,4 @@
-import { BindingTypes } from '@vue/compiler-core'
+import { BindingTypes, ErrorCodes, errorMessages } from '@vue/compiler-core'
 import { assertCode, compileSFCScript as compile } from '../utils'
 
 describe('defineModel()', () => {
@@ -268,5 +268,15 @@ describe('defineModel()', () => {
     expect(bindings).toStrictEqual({
       modelValue: BindingTypes.SETUP_REF,
     })
+  })
+
+  test('error when defineModel is not assigned to a variable', () => {
+    expect(() =>
+      compile(`
+        <script setup>
+        defineModel()
+        </script>
+      `),
+    ).toThrow(errorMessages[ErrorCodes.X_DEFINE_MODEL_NO_VARIABLE])
   })
 })
