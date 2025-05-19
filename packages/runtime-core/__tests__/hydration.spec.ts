@@ -21,6 +21,7 @@ import {
   h,
   nextTick,
   onMounted,
+  onServerPrefetch,
   openBlock,
   reactive,
   ref,
@@ -31,10 +32,13 @@ import {
   withCtx,
   withDirectives,
 } from '@vue/runtime-dom'
+import type { HMRRuntime } from '../src/hmr'
 import { type SSRContext, renderToString } from '@vue/server-renderer'
 import { PatchFlags, normalizeStyle } from '@vue/shared'
 import { vShowOriginalDisplay } from '../../runtime-dom/src/directives/vShow'
-import { expect } from 'vitest'
+
+declare var __VUE_HMR_RUNTIME__: HMRRuntime
+const { createRecord, reload } = __VUE_HMR_RUNTIME__
 
 function mountWithHydration(html: string, render: () => any) {
   const container = document.createElement('div')
@@ -515,6 +519,45 @@ describe('SSR hydration', () => {
     expect(childTeleportVNode.targetAnchor).toBe(teleportContainer.lastChild)
     expect(childTeleportVNode.children[0].el).toBe(
       teleportContainer.lastChild?.previousSibling,
+    )
+  })
+
+  test('with data-allow-mismatch component when using onServerPrefetch', async () => {
+    const Comp = {
+      template: `
+        <div>Comp2</div>
+      `,
+    }
+    let foo: any
+    const App = {
+      setup() {
+        const flag = ref(true)
+        foo = () => {
+          flag.value = false
+        }
+        onServerPrefetch(() => (flag.value = false))
+        return { flag }
+      },
+      components: {
+        Comp,
+      },
+      template: `
+        <span data-allow-mismatch>
+          <Comp v-if="flag"></Comp>
+        </span>
+      `,
+    }
+    // hydrate
+    const container = document.createElement('div')
+    container.innerHTML = await renderToString(h(App))
+    createSSRApp(App).mount(container)
+    expect(container.innerHTML).toBe(
+      '<span data-allow-mismatch=""><div>Comp2</div></span>',
+    )
+    foo()
+    await nextTick()
+    expect(container.innerHTML).toBe(
+      '<span data-allow-mismatch=""><!--v-if--></span>',
     )
   })
 
@@ -1284,6 +1327,84 @@ describe('SSR hydration', () => {
     resolve({})
   })
 
+  //#12362
+  test('nested async wrapper', async () => {
+    const Toggle = defineAsyncComponent(
+      () =>
+        new Promise(r => {
+          r(
+            defineComponent({
+              setup(_, { slots }) {
+                const show = ref(false)
+                onMounted(() => {
+                  nextTick(() => {
+                    show.value = true
+                  })
+                })
+                return () =>
+                  withDirectives(
+                    h('div', null, [renderSlot(slots, 'default')]),
+                    [[vShow, show.value]],
+                  )
+              },
+            }) as any,
+          )
+        }),
+    )
+
+    const Wrapper = defineAsyncComponent(() => {
+      return new Promise(r => {
+        r(
+          defineComponent({
+            render(this: any) {
+              return renderSlot(this.$slots, 'default')
+            },
+          }) as any,
+        )
+      })
+    })
+
+    const count = ref(0)
+    const fn = vi.fn()
+    const Child = {
+      setup() {
+        onMounted(() => {
+          fn()
+          count.value++
+        })
+        return () => h('div', count.value)
+      },
+    }
+
+    const App = {
+      render() {
+        return h(Toggle, null, {
+          default: () =>
+            h(Wrapper, null, {
+              default: () =>
+                h(Wrapper, null, {
+                  default: () => h(Child),
+                }),
+            }),
+        })
+      },
+    }
+
+    const root = document.createElement('div')
+    root.innerHTML = await renderToString(h(App))
+    expect(root.innerHTML).toMatchInlineSnapshot(
+      `"<div style="display:none;"><!--[--><!--[--><!--[--><div>0</div><!--]--><!--]--><!--]--></div>"`,
+    )
+
+    createSSRApp(App).mount(root)
+    await nextTick()
+    await nextTick()
+    expect(root.innerHTML).toMatchInlineSnapshot(
+      `"<div style=""><!--[--><!--[--><!--[--><div>1</div><!--]--><!--]--><!--]--></div>"`,
+    )
+    expect(fn).toBeCalledTimes(1)
+  })
+
   test('unmount async wrapper before load (fragment)', async () => {
     let resolve: any
     const AsyncComp = defineAsyncComponent(
@@ -1723,6 +1844,60 @@ describe('SSR hydration', () => {
     } finally {
       __DEV__ = true
     }
+  })
+
+  test('hmr reload child wrapped in KeepAlive', async () => {
+    const id = 'child-reload'
+    const Child = {
+      __hmrId: id,
+      template: `<div>foo</div>`,
+    }
+    createRecord(id, Child)
+
+    const appId = 'test-app-id'
+    const App = {
+      __hmrId: appId,
+      components: { Child },
+      template: `
+      <div>
+        <KeepAlive>
+          <Child />
+        </KeepAlive>
+      </div>
+      `,
+    }
+
+    const root = document.createElement('div')
+    root.innerHTML = await renderToString(h(App))
+    createSSRApp(App).mount(root)
+    expect(root.innerHTML).toBe('<div><div>foo</div></div>')
+
+    reload(id, {
+      __hmrId: id,
+      template: `<div>bar</div>`,
+    })
+    await nextTick()
+    expect(root.innerHTML).toBe('<div><div>bar</div></div>')
+  })
+
+  test('hmr root reload', async () => {
+    const appId = 'test-app-id'
+    const App = {
+      __hmrId: appId,
+      template: `<div>foo</div>`,
+    }
+
+    const root = document.createElement('div')
+    root.innerHTML = await renderToString(h(App))
+    createSSRApp(App).mount(root)
+    expect(root.innerHTML).toBe('<div>foo</div>')
+
+    reload(appId, {
+      __hmrId: appId,
+      template: `<div>bar</div>`,
+    })
+    await nextTick()
+    expect(root.innerHTML).toBe('<div>bar</div>')
   })
 
   describe('mismatch handling', () => {

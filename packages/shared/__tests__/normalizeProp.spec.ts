@@ -153,10 +153,10 @@ describe('normalizeStyle', () => {
 })
 
 describe('stringifyStyle', () => {
-  test('should return empty string for undefined or string styles', () => {
+  test('should return empty string for undefined', () => {
     expect(stringifyStyle(undefined)).toBe('')
     expect(stringifyStyle('')).toBe('')
-    expect(stringifyStyle('color: blue;')).toBe('')
+    expect(stringifyStyle('color: blue;')).toBe('color: blue;')
   })
 
   test('should return valid CSS string for normalized style object', () => {

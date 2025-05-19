@@ -149,9 +149,7 @@ export function defineEmits() {
   return null as any
 }
 
-export type ComponentTypeEmits =
-  | ((...args: any[]) => any)
-  | Record<string, any[]>
+export type ComponentTypeEmits = ((...args: any[]) => any) | Record<string, any>
 
 type RecordToUnion<T extends Record<string, any>> = T[keyof T]
 
