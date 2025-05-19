@@ -398,10 +398,11 @@ export function createHydrationFunctions(
           parentComponent.vnode.props.appear
 
         const content = (el as HTMLTemplateElement).content
-          .firstChild as Element & { $cls: string | null }
+          .firstChild as Element & { $cls?: string }
 
         if (needCallTransitionHooks) {
-          content.$cls = content.getAttribute('class')
+          const cls = content.getAttribute('class')
+          if (cls) content.$cls = cls
           transition!.beforeEnter(content)
         }
 
@@ -787,7 +788,7 @@ export function createHydrationFunctions(
  * Dev only
  */
 function propHasMismatch(
-  el: Element & { $cls?: string | null },
+  el: Element & { $cls?: string },
   key: string,
   clientValue: any,
   vnode: VNode,
