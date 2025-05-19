@@ -170,6 +170,11 @@ describe('compiler: cacheStatic transform', () => {
         {
           /* _ slot flag */
         },
+        {
+          type: NodeTypes.JS_PROPERTY,
+          key: { content: '__' },
+          value: { content: '[0]' },
+        },
       ],
     })
   })
@@ -196,6 +201,11 @@ describe('compiler: cacheStatic transform', () => {
         },
         {
           /* _ slot flag */
+        },
+        {
+          type: NodeTypes.JS_PROPERTY,
+          key: { content: '__' },
+          value: { content: '[0]' },
         },
       ],
     })
