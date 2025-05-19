@@ -12,8 +12,11 @@ app.use(PluginWithoutType, 2)
 app.use(PluginWithoutType, { anything: 'goes' }, true)
 
 type PluginOptions = {
+  /** option1 */
   option1?: string
+  /** option2 */
   option2: number
+  /** option3 */
   option3: boolean
 }
 
@@ -24,6 +27,20 @@ const PluginWithObjectOptions = {
     options.option3
   },
 }
+
+const objectPluginOptional = {
+  install(app: App, options?: PluginOptions) {},
+}
+app.use(objectPluginOptional)
+app.use(
+  objectPluginOptional,
+  // Test JSDoc and `go to definition` for options
+  {
+    option1: 'foo',
+    option2: 1,
+    option3: true,
+  },
+)
 
 for (const Plugin of [
   PluginWithObjectOptions,
@@ -92,7 +109,27 @@ const PluginTyped: Plugin<PluginOptions> = (app, options) => {}
 
 // @ts-expect-error: needs options
 app.use(PluginTyped)
-app.use(PluginTyped, { option2: 2, option3: true })
+app.use(
+  PluginTyped,
+  // Test autocomplete for options
+  {
+    option1: '',
+    option2: 2,
+    option3: true,
+  },
+)
+
+const functionPluginOptional = (app: App, options?: PluginOptions) => {}
+app.use(functionPluginOptional)
+app.use(functionPluginOptional, { option2: 2, option3: true })
+
+// type optional params
+const functionPluginOptional2: Plugin<[options?: PluginOptions]> = (
+  app,
+  options,
+) => {}
+app.use(functionPluginOptional2)
+app.use(functionPluginOptional2, { option2: 2, option3: true })
 
 // vuetify usage
 const key: string = ''
