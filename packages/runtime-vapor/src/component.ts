@@ -270,7 +270,7 @@ export function createComponent(
   onScopeDispose(() => unmountComponent(instance), true)
 
   if (!isHydrating && _insertionParent) {
-    insert(instance.block, _insertionParent, _insertionAnchor)
+    insert(instance, _insertionParent, _insertionAnchor)
   }
 
   return instance

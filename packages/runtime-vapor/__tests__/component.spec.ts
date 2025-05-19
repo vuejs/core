@@ -13,6 +13,7 @@ import {
   createIf,
   createTextNode,
   renderEffect,
+  setInsertionState,
   template,
 } from '../src'
 import { makeRender } from './_utils'
@@ -326,5 +327,26 @@ describe('component', () => {
     expect(
       'Vapor component setup() returned non-block value, and has no render function',
     ).toHaveBeenWarned()
+  })
+
+  it('should mark instance of createComponent as mounted', async () => {
+    const { component: Child } = define({
+      setup() {
+        return []
+      },
+    })
+
+    let instance!: VaporComponentInstance
+    createComponent(
+      define({
+        setup() {
+          const n1 = template('<div></div>', true)()
+          setInsertionState(n1 as ParentNode)
+          instance = createComponent(Child)
+          return n1
+        },
+      }).component,
+    )
+    expect(instance.isMounted).toBe(true)
   })
 })
