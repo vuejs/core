@@ -1,4 +1,4 @@
-import { BindingTypes, ErrorCodes, errorMessages } from '@vue/compiler-core'
+import { BindingTypes } from '@vue/compiler-core'
 import { assertCode, compileSFCScript as compile } from '../utils'
 
 describe('defineModel()', () => {
@@ -277,6 +277,8 @@ describe('defineModel()', () => {
         defineModel()
         </script>
       `),
-    ).toThrow(errorMessages[ErrorCodes.X_DEFINE_MODEL_NO_ASSIGNMENT])
+    ).toThrow(
+      'defineModel() must be assigned to a variable. For example: const model = defineModel()',
+    )
   })
 })

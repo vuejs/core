@@ -2,12 +2,7 @@ import type { LVal, Node, TSType } from '@babel/types'
 import type { ScriptCompileContext } from './context'
 import { inferRuntimeType } from './resolveType'
 import { UNKNOWN_TYPE, isCallOf, toRuntimeTypeString } from './utils'
-import {
-  BindingTypes,
-  ErrorCodes,
-  errorMessages,
-  unwrapTSNode,
-} from '@vue/compiler-dom'
+import { BindingTypes, unwrapTSNode } from '@vue/compiler-dom'
 
 export const DEFINE_MODEL = 'defineModel'
 
@@ -28,7 +23,10 @@ export function processDefineModel(
   }
 
   if (!declId) {
-    ctx.error(errorMessages[ErrorCodes.X_DEFINE_MODEL_NO_ASSIGNMENT], node)
+    ctx.error(
+      'defineModel() must be assigned to a variable. For example: const model = defineModel()',
+      node,
+    )
   }
 
   ctx.hasDefineModelCall = true

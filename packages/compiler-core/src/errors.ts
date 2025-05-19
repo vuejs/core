@@ -90,7 +90,6 @@ export enum ErrorCodes {
   X_V_MODEL_ON_PROPS,
   X_INVALID_EXPRESSION,
   X_KEEP_ALIVE_INVALID_CHILDREN,
-  X_DEFINE_MODEL_NO_ASSIGNMENT,
   // generic errors
   X_PREFIX_ID_NOT_SUPPORTED,
   X_MODULE_MODE_NOT_SUPPORTED,
@@ -179,7 +178,6 @@ export const errorMessages: Record<ErrorCodes, string> = {
   [ErrorCodes.X_INVALID_EXPRESSION]: `Error parsing JavaScript expression: `,
   [ErrorCodes.X_KEEP_ALIVE_INVALID_CHILDREN]: `<KeepAlive> expects exactly one child component.`,
   [ErrorCodes.X_VNODE_HOOKS]: `@vnode-* hooks in templates are no longer supported. Use the vue: prefix instead. For example, @vnode-mounted should be changed to @vue:mounted. @vnode-* hooks support has been removed in 3.4.`,
-  [ErrorCodes.X_DEFINE_MODEL_NO_ASSIGNMENT]: `defineModel() must be assigned to a variable. For example: const model = defineModel()`,
 
   // generic errors
   [ErrorCodes.X_PREFIX_ID_NOT_SUPPORTED]: `"prefixIdentifiers" option is not supported in this build of compiler.`,
