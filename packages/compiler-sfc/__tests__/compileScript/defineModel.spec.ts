@@ -277,6 +277,6 @@ describe('defineModel()', () => {
         defineModel()
         </script>
       `),
-    ).toThrow(errorMessages[ErrorCodes.X_DEFINE_MODEL_NO_VARIABLE])
+    ).toThrow(errorMessages[ErrorCodes.X_DEFINE_MODEL_NO_ASSIGNMENT])
   })
 })

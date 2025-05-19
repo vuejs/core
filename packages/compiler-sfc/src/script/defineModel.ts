@@ -28,7 +28,7 @@ export function processDefineModel(
   }
 
   if (!declId) {
-    ctx.error(errorMessages[ErrorCodes.X_DEFINE_MODEL_NO_VARIABLE], node)
+    ctx.error(errorMessages[ErrorCodes.X_DEFINE_MODEL_NO_ASSIGNMENT], node)
   }
 
   ctx.hasDefineModelCall = true
