@@ -15,6 +15,7 @@ import {
   currentInstance,
   endMeasure,
   expose,
+  getComponentName,
   nextUid,
   popWarningContext,
   pushWarningContext,
@@ -35,7 +36,13 @@ import {
   resetTracking,
   unref,
 } from '@vue/reactivity'
-import { EMPTY_OBJ, invokeArrayFns, isFunction, isString } from '@vue/shared'
+import {
+  EMPTY_OBJ,
+  invokeArrayFns,
+  isFunction,
+  isPromise,
+  isString,
+} from '@vue/shared'
 import {
   type DynamicPropsSource,
   type RawProps,
@@ -137,6 +144,7 @@ export function createComponent(
   appContext: GenericAppContext = (currentInstance &&
     currentInstance.appContext) ||
     emptyContext,
+  parentSuspense?: SuspenseBoundary | null,
 ): VaporComponentInstance {
   const _insertionParent = insertionParent
   const _insertionAnchor = insertionAnchor
@@ -180,6 +188,7 @@ export function createComponent(
     rawProps as RawProps,
     rawSlots as RawSlots,
     appContext,
+    parentSuspense,
   )
 
   if (__DEV__) {
@@ -207,56 +216,24 @@ export function createComponent(
       ]) || EMPTY_OBJ
     : EMPTY_OBJ
 
-  if (__DEV__ && !isBlock(setupResult)) {
-    if (isFunction(component)) {
-      warn(`Functional vapor component must return a block directly.`)
-      instance.block = []
-    } else if (!component.render) {
+  const isAsyncSetup = isPromise(setupResult)
+  if (__FEATURE_SUSPENSE__ && isAsyncSetup) {
+    // async setup returned Promise.
+    // bail here and wait for re-entry.
+    instance.asyncDep = setupResult
+    if (__DEV__ && !instance.suspense) {
+      const name = getComponentName(component, true) ?? 'Anonymous'
       warn(
-        `Vapor component setup() returned non-block value, and has no render function.`,
+        `Component <${name}>: setup function returned a promise, but no ` +
+          `<Suspense> boundary was found in the parent component tree. ` +
+          `A component with async setup() must be nested in a <Suspense> ` +
+          `in order to be rendered.`,
       )
-      instance.block = []
-    } else {
-      instance.devtoolsRawSetupState = setupResult
-      // TODO make the proxy warn non-existent property access during dev
-      instance.setupState = proxyRefs(setupResult)
-      devRender(instance)
-
-      // HMR
-      if (component.__hmrId) {
-        registerHMR(instance)
-        instance.isSingleRoot = isSingleRoot
-        instance.hmrRerender = hmrRerender.bind(null, instance)
-        instance.hmrReload = hmrReload.bind(null, instance)
-      }
-    }
-  } else {
-    // component has a render function but no setup function
-    // (typically components with only a template and no state)
-    if (!setupFn && component.render) {
-      instance.block = callWithErrorHandling(
-        component.render,
-        instance,
-        ErrorCodes.RENDER_FUNCTION,
-      )
-    } else {
-      // in prod result can only be block
-      instance.block = setupResult as Block
     }
   }
 
-  // single root, inherit attrs
-  if (
-    instance.hasFallthrough &&
-    component.inheritAttrs !== false &&
-    instance.block instanceof Element &&
-    Object.keys(instance.attrs).length
-  ) {
-    renderEffect(() => {
-      isApplyingFallthroughProps = true
-      setDynamicProps(instance.block as Element, [instance.attrs])
-      isApplyingFallthroughProps = false
-    })
+  if (!isAsyncSetup) {
+    handleSetupResult(setupResult, component, instance, isSingleRoot, setupFn)
   }
 
   resetTracking()
@@ -269,7 +246,7 @@ export function createComponent(
 
   onScopeDispose(() => unmountComponent(instance), true)
 
-  if (!isHydrating && _insertionParent) {
+  if (!isHydrating && _insertionParent && !isAsyncSetup) {
     insert(instance.block, _insertionParent, _insertionAnchor)
   }
 
@@ -342,6 +319,9 @@ export class VaporComponentInstance implements GenericComponentInstance {
   ids: [string, number, number]
   // for suspense
   suspense: SuspenseBoundary | null
+  suspenseId: number
+  asyncDep: Promise<any> | null
+  asyncResolved: boolean
 
   hasFallthrough: boolean
 
@@ -380,6 +360,7 @@ export class VaporComponentInstance implements GenericComponentInstance {
     rawProps?: RawProps | null,
     rawSlots?: RawSlots | null,
     appContext?: GenericAppContext,
+    suspense?: SuspenseBoundary | null,
   ) {
     this.vapor = true
     this.uid = nextUid()
@@ -403,12 +384,13 @@ export class VaporComponentInstance implements GenericComponentInstance {
     this.emit = emit.bind(null, this)
     this.expose = expose.bind(null, this)
     this.refs = EMPTY_OBJ
-    this.emitted =
-      this.exposed =
-      this.exposeProxy =
-      this.propsDefaults =
-      this.suspense =
-        null
+    this.emitted = this.exposed = this.exposeProxy = this.propsDefaults = null
+
+    // suspense related
+    this.suspense = suspense!
+    this.suspenseId = suspense ? suspense.pendingId : 0
+    this.asyncDep = null
+    this.asyncResolved = false
 
     this.isMounted =
       this.isUnmounted =
@@ -543,5 +525,72 @@ export function getExposed(
         get: (target, key) => unref(target[key as any]),
       }))
     )
+  }
+}
+
+export function handleSetupResult(
+  setupResult: any,
+  component: VaporComponent,
+  instance: VaporComponentInstance,
+  isSingleRoot: boolean | undefined,
+  setupFn: VaporSetupFn | undefined,
+): void {
+  if (__DEV__) {
+    pushWarningContext(instance)
+  }
+  if (__DEV__ && !isBlock(setupResult)) {
+    if (isFunction(component)) {
+      warn(`Functional vapor component must return a block directly.`)
+      instance.block = []
+    } else if (!component.render) {
+      warn(
+        `Vapor component setup() returned non-block value, and has no render function.`,
+      )
+      instance.block = []
+    } else {
+      instance.devtoolsRawSetupState = setupResult
+      // TODO make the proxy warn non-existent property access during dev
+      instance.setupState = proxyRefs(setupResult)
+      devRender(instance)
+
+      // HMR
+      if (component.__hmrId) {
+        registerHMR(instance)
+        instance.isSingleRoot = isSingleRoot
+        instance.hmrRerender = hmrRerender.bind(null, instance)
+        instance.hmrReload = hmrReload.bind(null, instance)
+      }
+    }
+  } else {
+    // component has a render function but no setup function
+    // (typically components with only a template and no state)
+    if (!setupFn && component.render) {
+      instance.block = callWithErrorHandling(
+        component.render,
+        instance,
+        ErrorCodes.RENDER_FUNCTION,
+      )
+    } else {
+      // in prod result can only be block
+      instance.block = setupResult as Block
+    }
+  }
+
+  // single root, inherit attrs
+  if (
+    instance.hasFallthrough &&
+    component.inheritAttrs !== false &&
+    instance.block instanceof Element &&
+    Object.keys(instance.attrs).length
+  ) {
+    renderEffect(() => {
+      isApplyingFallthroughProps = true
+      setDynamicProps(instance.block as Element, [instance.attrs])
+      isApplyingFallthroughProps = false
+    })
+  }
+
+  if (__DEV__) {
+    popWarningContext()
   }
 }

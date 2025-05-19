@@ -692,7 +692,7 @@ function createSuspenseBoundary(
       if (isInPendingSuspense) {
         suspense.deps++
       }
-      const hydratedEl = instance.vnode.el
+      const hydratedEl = instance.vapor ? null : instance.vnode.el
       instance
         .asyncDep!.catch(err => {
           handleError(err, instance, ErrorCodes.SETUP_FUNCTION)
@@ -709,37 +709,44 @@ function createSuspenseBoundary(
           }
           // retry from this component
           instance.asyncResolved = true
-          const { vnode } = instance
-          if (__DEV__) {
-            pushWarningContext(vnode)
-          }
-          handleSetupResult(instance, asyncSetupResult, false)
-          if (hydratedEl) {
-            // vnode may have been replaced if an update happened before the
-            // async dep is resolved.
-            vnode.el = hydratedEl
-          }
-          const placeholder = !hydratedEl && instance.subTree.el
-          setupRenderEffect(
-            instance,
-            vnode,
-            // component may have been moved before resolve.
-            // if this is not a hydration, instance.subTree will be the comment
-            // placeholder.
-            parentNode(hydratedEl || instance.subTree.el!)!,
-            // anchor will not be used if this is hydration, so only need to
-            // consider the comment placeholder case.
-            hydratedEl ? null : next(instance.subTree),
-            suspense,
-            namespace,
-            optimized,
-          )
-          if (placeholder) {
-            remove(placeholder)
-          }
-          updateHOCHostEl(instance, vnode.el)
-          if (__DEV__) {
-            popWarningContext()
+
+          // vapor component
+          if (instance.vapor) {
+            // @ts-expect-error
+            setupRenderEffect(asyncSetupResult)
+          } else {
+            const { vnode } = instance
+            if (__DEV__) {
+              pushWarningContext(vnode)
+            }
+            handleSetupResult(instance, asyncSetupResult, false)
+            if (hydratedEl) {
+              // vnode may have been replaced if an update happened before the
+              // async dep is resolved.
+              vnode.el = hydratedEl
+            }
+            const placeholder = !hydratedEl && instance.subTree.el
+            setupRenderEffect(
+              instance,
+              vnode,
+              // component may have been moved before resolve.
+              // if this is not a hydration, instance.subTree will be the comment
+              // placeholder.
+              parentNode(hydratedEl || instance.subTree.el!)!,
+              // anchor will not be used if this is hydration, so only need to
+              // consider the comment placeholder case.
+              hydratedEl ? null : next(instance.subTree),
+              suspense,
+              namespace,
+              optimized,
+            )
+            if (placeholder) {
+              remove(placeholder)
+            }
+            updateHOCHostEl(instance, vnode.el)
+            if (__DEV__) {
+              popWarningContext()
+            }
           }
           // only decrease deps count if suspense is not already resolved
           if (isInPendingSuspense && --suspense.deps === 0) {
