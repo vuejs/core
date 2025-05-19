@@ -124,7 +124,7 @@ describe('compiler: v-for', () => {
       `<div v-for="(value, key, index) in list" :key="key">{{ value + key + index }}</div>`,
     )
     expect(code).matchSnapshot()
-    expect(ir.block.operation[0]).toMatchObject({
+    expect(ir.block.dynamic.children[0].operation).toMatchObject({
       type: IRNodeTypes.FOR,
       source: {
         type: NodeTypes.SIMPLE_EXPRESSION,
