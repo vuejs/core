@@ -714,7 +714,9 @@ function createSuspenseBoundary(
           if (instance.vapor) {
             // @ts-expect-error
             setupRenderEffect(asyncSetupResult)
-          } else {
+          }
+          // vdom component
+          else {
             const { vnode } = instance
             if (__DEV__) {
               pushWarningContext(vnode)

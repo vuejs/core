@@ -183,7 +183,6 @@ export interface VaporInteropInterface {
     anchor: any,
     parentComponent: ComponentInternalInstance | null,
     parentSuspense: SuspenseBoundary | null,
-    isSingleRoot?: boolean,
   ): GenericComponentInstance // VaporComponentInstance
   update(n1: VNode, n2: VNode, shouldUpdate: boolean): void
   unmount(vnode: VNode, doRemove?: boolean): void

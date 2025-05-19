@@ -217,22 +217,27 @@ export function createComponent(
     : EMPTY_OBJ
 
   const isAsyncSetup = isPromise(setupResult)
-  if (__FEATURE_SUSPENSE__ && isAsyncSetup) {
-    // async setup returned Promise.
-    // bail here and wait for re-entry.
-    instance.asyncDep = setupResult
-    if (__DEV__ && !instance.suspense) {
-      const name = getComponentName(component, true) ?? 'Anonymous'
+  if (isAsyncSetup) {
+    if (__FEATURE_SUSPENSE__) {
+      // async setup returned Promise.
+      // bail here and wait for re-entry.
+      instance.asyncDep = setupResult
+      if (__DEV__ && !instance.suspense) {
+        const name = getComponentName(component) ?? 'Anonymous'
+        warn(
+          `Component <${name}>: setup function returned a promise, but no ` +
+            `<Suspense> boundary was found in the parent component tree. ` +
+            `A component with async setup() must be nested in a <Suspense> ` +
+            `in order to be rendered.`,
+        )
+      }
+    } else if (__DEV__) {
       warn(
-        `Component <${name}>: setup function returned a promise, but no ` +
-          `<Suspense> boundary was found in the parent component tree. ` +
-          `A component with async setup() must be nested in a <Suspense> ` +
-          `in order to be rendered.`,
+        `setup() returned a Promise, but the version of Vue you are using ` +
+          `does not support it yet.`,
       )
     }
-  }
-
-  if (!isAsyncSetup) {
+  } else {
     handleSetupResult(setupResult, component, instance, isSingleRoot, setupFn)
   }
 
@@ -532,8 +537,8 @@ export function handleSetupResult(
   setupResult: any,
   component: VaporComponent,
   instance: VaporComponentInstance,
-  isSingleRoot: boolean | undefined,
-  setupFn: VaporSetupFn | undefined,
+  isSingleRoot?: boolean,
+  setupFn?: VaporSetupFn,
 ): void {
   if (__DEV__) {
     pushWarningContext(instance)

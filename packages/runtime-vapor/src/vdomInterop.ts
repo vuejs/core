@@ -40,14 +40,7 @@ const vaporInteropImpl: Omit<
   VaporInteropInterface,
   'vdomMount' | 'vdomUnmount' | 'vdomSlot'
 > = {
-  mount(
-    vnode,
-    container,
-    anchor,
-    parentComponent,
-    parentSuspense,
-    isSingleRoot,
-  ) {
+  mount(vnode, container, anchor, parentComponent, parentSuspense) {
     const selfAnchor = (vnode.el = vnode.anchor = createTextNode())
     container.insertBefore(selfAnchor, anchor)
     const prev = currentInstance
@@ -66,28 +59,27 @@ const vaporInteropImpl: Omit<
       {
         _: slotsRef, // pass the slots ref
       } as any as RawSlots,
-      isSingleRoot,
+      undefined,
       undefined,
       parentSuspense,
     ))
     instance.rawPropsRef = propsRef
     instance.rawSlotsRef = slotsRef
-    if (__FEATURE_SUSPENSE__ && instance.asyncDep) {
-      parentSuspense &&
-        parentSuspense.registerDep(
-          instance as any,
-          setupResult => {
-            handleSetupResult(
-              setupResult,
-              component,
-              instance,
-              isSingleRoot,
-              isFunction(component) ? component : component.setup,
-            )
-            mountComponent(instance, container, selfAnchor)
-          },
-          false,
-        )
+    if (__FEATURE_SUSPENSE__ && parentSuspense && instance.asyncDep) {
+      parentSuspense.registerDep(
+        instance as any,
+        (setupResult: any) => {
+          handleSetupResult(
+            setupResult,
+            component,
+            instance,
+            undefined,
+            isFunction(component) ? component : component.setup,
+          )
+          mountComponent(instance, container, selfAnchor)
+        },
+        false,
+      )
     } else {
       mountComponent(instance, container, selfAnchor)
     }
