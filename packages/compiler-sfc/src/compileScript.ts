@@ -1104,6 +1104,7 @@ function walkDeclaration(
                 m === userImportAliases['shallowRef'] ||
                 m === userImportAliases['customRef'] ||
                 m === userImportAliases['toRef'] ||
+                m === userImportAliases['useTemplateRef'] ||
                 m === DEFINE_MODEL,
             )
           ) {
