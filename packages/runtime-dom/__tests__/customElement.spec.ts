@@ -738,6 +738,101 @@ describe('defineCustomElement', () => {
         `<div>changedA! changedB!</div>`,
       )
     })
+
+    // #13212
+    test('inherited from app context within nested elements', async () => {
+      const outerValues: (string | undefined)[] = []
+      const innerValues: (string | undefined)[] = []
+      const innerChildValues: (string | undefined)[] = []
+
+      const Outer = defineCustomElement(
+        {
+          setup() {
+            outerValues.push(
+              inject<string>('shared'),
+              inject<string>('outer'),
+              inject<string>('inner'),
+            )
+          },
+          render() {
+            return h('div', [renderSlot(this.$slots, 'default')])
+          },
+        },
+        {
+          configureApp(app) {
+            app.provide('shared', 'shared')
+            app.provide('outer', 'outer')
+          },
+        },
+      )
+
+      const Inner = defineCustomElement(
+        {
+          setup() {
+            // ensure values are not self-injected
+            provide('inner', 'inner-child')
+
+            innerValues.push(
+              inject<string>('shared'),
+              inject<string>('outer'),
+              inject<string>('inner'),
+            )
+          },
+          render() {
+            return h('div', [renderSlot(this.$slots, 'default')])
+          },
+        },
+        {
+          configureApp(app) {
+            app.provide('outer', 'override-outer')
+            app.provide('inner', 'inner')
+          },
+        },
+      )
+
+      const InnerChild = defineCustomElement({
+        setup() {
+          innerChildValues.push(
+            inject<string>('shared'),
+            inject<string>('outer'),
+            inject<string>('inner'),
+          )
+        },
+        render() {
+          return h('div')
+        },
+      })
+
+      customElements.define('provide-from-app-outer', Outer)
+      customElements.define('provide-from-app-inner', Inner)
+      customElements.define('provide-from-app-inner-child', InnerChild)
+
+      container.innerHTML =
+        '<provide-from-app-outer>' +
+        '<provide-from-app-inner>' +
+        '<provide-from-app-inner-child></provide-from-app-inner-child>' +
+        '</provide-from-app-inner>' +
+        '</provide-from-app-outer>'
+
+      const outer = container.childNodes[0] as VueElement
+      expect(outer.shadowRoot!.innerHTML).toBe('<div><slot></slot></div>')
+
+      expect('[Vue warn]: injection "inner" not found.').toHaveBeenWarnedTimes(
+        1,
+      )
+      expect(
+        '[Vue warn]: App already provides property with key "outer" inherited from its parent element. ' +
+          'It will be overwritten with the new value.',
+      ).toHaveBeenWarnedTimes(1)
+
+      expect(outerValues).toEqual(['shared', 'outer', undefined])
+      expect(innerValues).toEqual(['shared', 'override-outer', 'inner'])
+      expect(innerChildValues).toEqual([
+        'shared',
+        'override-outer',
+        'inner-child',
+      ])
+    })
   })
 
   describe('styles', () => {

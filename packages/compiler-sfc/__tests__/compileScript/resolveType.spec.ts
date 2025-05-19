@@ -1434,6 +1434,29 @@ describe('resolveType', () => {
         colsLg: ['Number'],
       })
     })
+
+    test('allowArbitraryExtensions', () => {
+      const files = {
+        '/foo.d.vue.ts': 'export type Foo = number;',
+        '/foo.vue': '<template><div /></template>',
+        '/bar.d.css.ts': 'export type Bar = string;',
+        '/bar.css': ':root { --color: red; }',
+      }
+
+      const { props } = resolve(
+        `
+        import { Foo } from './foo.vue'
+        import { Bar } from './bar.css'
+        defineProps<{ foo: Foo; bar: Bar }>()
+        `,
+        files,
+      )
+
+      expect(props).toStrictEqual({
+        foo: ['Number'],
+        bar: ['String'],
+      })
+    })
   })
 })
 

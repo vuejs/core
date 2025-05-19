@@ -311,7 +311,18 @@ export class VueElement
   private _setParent(parent = this._parent) {
     if (parent) {
       this._instance!.parent = parent._instance
-      this._instance!.provides = parent._instance!.provides
+      this._inheritParentContext(parent)
+    }
+  }
+
+  private _inheritParentContext(parent = this._parent) {
+    // #13212, the provides object of the app context must inherit the provides
+    // object from the parent element so we can inject values from both places
+    if (parent && this._app) {
+      Object.setPrototypeOf(
+        this._app._context.provides,
+        parent._instance!.provides,
+      )
     }
   }
 
@@ -407,6 +418,8 @@ export class VueElement
       def.name = 'VueElement'
     }
     this._app = this._createApp(def)
+    // inherit before configureApp to detect context overwrites
+    this._inheritParentContext()
     if (def.configureApp) {
       def.configureApp(this._app)
     }
