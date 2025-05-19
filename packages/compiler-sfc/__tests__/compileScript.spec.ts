@@ -980,7 +980,7 @@ describe('SFC compile <script setup>', () => {
       expect(() =>
         compile(`<script setup>
         let bar = 1
-        const model =defineModel({
+        const model = defineModel({
           default: () => bar
         })
         </script>`),
