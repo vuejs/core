@@ -213,7 +213,7 @@ export function watch(
   const scope = getCurrentScope()
   const watchHandle: WatchHandle = () => {
     effect.stop()
-    if (scope) {
+    if (scope && scope.active) {
       remove(scope.effects, effect)
     }
   }
@@ -264,11 +264,11 @@ export function watch(
                 : oldValue,
             boundCleanup,
           ]
+          oldValue = newValue
           call
             ? call(cb!, WatchErrorCodes.WATCH_CALLBACK, args)
             : // @ts-expect-error
               cb!(...args)
-          oldValue = newValue
         } finally {
           activeWatcher = currentWatcher
         }
