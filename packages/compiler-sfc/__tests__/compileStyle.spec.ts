@@ -247,7 +247,7 @@ color: red
       .div[data-v-test]:is(.foo:hover) { color: blue;
       }"
     `)
-    
+
     expect(compileScoped(`#app :is(.foo) { color: red; }`))
       .toMatchInlineSnapshot(`
       "#app :is(.foo[data-v-test]) { color: red;
