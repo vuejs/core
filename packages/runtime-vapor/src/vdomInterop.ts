@@ -23,7 +23,6 @@ import {
   type VaporComponent,
   VaporComponentInstance,
   createComponent,
-  handleSetupResult,
   mountComponent,
   unmountComponent,
 } from './component'
@@ -34,6 +33,7 @@ import type { RawSlots, VaporSlot } from './componentSlots'
 import { renderEffect } from './renderEffect'
 import { createTextNode } from './dom/node'
 import { optimizePropertyLookup } from './dom/prop'
+import { setParentSuspense } from './components/Suspense'
 
 // mounting vapor components and slots in vdom
 const vaporInteropImpl: Omit<
@@ -49,6 +49,10 @@ const vaporInteropImpl: Omit<
     const propsRef = shallowRef(vnode.props)
     const slotsRef = shallowRef(vnode.children)
 
+    if (__FEATURE_SUSPENSE__) {
+      setParentSuspense(parentSuspense)
+    }
+
     const component = vnode.type as any as VaporComponent
     // @ts-expect-error
     const instance = (vnode.component = createComponent(
@@ -61,28 +65,10 @@ const vaporInteropImpl: Omit<
       } as any as RawSlots,
       undefined,
       undefined,
-      parentSuspense,
     ))
     instance.rawPropsRef = propsRef
     instance.rawSlotsRef = slotsRef
-    if (__FEATURE_SUSPENSE__ && parentSuspense && instance.asyncDep) {
-      parentSuspense.registerDep(
-        instance as any,
-        (setupResult: any) => {
-          handleSetupResult(
-            setupResult,
-            component,
-            instance,
-            undefined,
-            isFunction(component) ? component : component.setup,
-          )
-          mountComponent(instance, container, selfAnchor)
-        },
-        false,
-      )
-    } else {
-      mountComponent(instance, container, selfAnchor)
-    }
+    mountComponent(instance, container, selfAnchor)
     simpleSetCurrentInstance(prev)
     return instance
   },

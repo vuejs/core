@@ -67,6 +67,7 @@ import {
 import { hmrReload, hmrRerender } from './hmr'
 import { isHydrating, locateHydrationNode } from './dom/hydration'
 import { insertionAnchor, insertionParent } from './insertionState'
+import { parentSuspense } from './components/Suspense'
 
 export { currentInstance } from '@vue/runtime-dom'
 
@@ -144,7 +145,6 @@ export function createComponent(
   appContext: GenericAppContext = (currentInstance &&
     currentInstance.appContext) ||
     emptyContext,
-  parentSuspense?: SuspenseBoundary | null,
 ): VaporComponentInstance {
   const _insertionParent = insertionParent
   const _insertionAnchor = insertionAnchor
@@ -483,6 +483,30 @@ export function mountComponent(
   parent: ParentNode,
   anchor?: Node | null | 0,
 ): void {
+  if (
+    __FEATURE_SUSPENSE__ &&
+    instance.suspense &&
+    instance.asyncDep &&
+    !instance.asyncResolved
+  ) {
+    const component = instance.type as any
+    instance.suspense.registerDep(
+      instance as any,
+      (setupResult: any) => {
+        handleSetupResult(
+          setupResult,
+          component,
+          instance,
+          undefined,
+          isFunction(component) ? component : component.setup,
+        )
+        mountComponent(instance, parent, anchor)
+      },
+      false,
+    )
+    return
+  }
+
   if (__DEV__) {
     startMeasure(instance, `mount`)
   }

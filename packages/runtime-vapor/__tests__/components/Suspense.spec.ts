@@ -35,11 +35,12 @@ describe('vapor / vdom interop', () => {
     return { container }
   }
 
-  function asyncWrapper(code: string) {
+  function withAsyncScript(code: string) {
     return {
       code: `
     <script vapor>
-      const data = _data;
+      const data = _data; 
+      const components = _components;
       const p = new Promise(r => setTimeout(r, 5))
       data.deps.push(p.then(() => Promise.resolve()))
       await p
@@ -60,20 +61,54 @@ describe('vapor / vdom interop', () => {
         <Suspense>
           <components.VaporChild/>
           <template #fallback>
-            <span>loading</span>
+            <span>fallback</span>
           </template>
         </Suspense>
       </template>`,
       {
-        VaporChild: asyncWrapper(`<template><div>hi</div></template>`),
+        VaporChild: withAsyncScript(`<template><div>hi</div></template>`),
       },
       data,
     )
 
-    expect(container.innerHTML).toBe(`<span>loading</span>`)
+    expect(container.innerHTML).toBe(`<span>fallback</span>`)
     expect(data.deps.length).toBe(1)
     await Promise.all(data.deps)
     await nextTick()
     expect(container.innerHTML).toBe(`<div>hi</div>`)
+  })
+
+  test('vdom suspense: nested async vapor components', async () => {
+    const data = { deps: [] }
+    const { container } = await testSuspense(
+      `<script setup>
+        const components = _components;
+      </script>
+      <template>
+        <Suspense>
+          <components.AsyncOuter/>
+          <template #fallback>
+            <span>fallback</span>
+          </template>
+        </Suspense>
+      </template>`,
+      {
+        AsyncOuter: withAsyncScript(
+          `<template><components.AsyncInner/></template>`,
+        ),
+        AsyncInner: withAsyncScript(`<template><div>inner</div></template>`),
+      },
+      data,
+    )
+
+    expect(container.innerHTML).toBe(`<span>fallback</span>`)
+
+    await data.deps[0]
+    await nextTick()
+    expect(container.innerHTML).toBe(`<span>fallback</span>`)
+
+    await Promise.all(data.deps)
+    await nextTick()
+    expect(container.innerHTML).toBe(`<div>inner</div>`)
   })
 })
