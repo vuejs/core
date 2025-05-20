@@ -8,11 +8,7 @@ import type { ComponentPublicInstance } from './componentPublicInstance'
 import { ErrorTypeStrings, callWithAsyncErrorHandling } from './errorHandling'
 import { warn } from './warning'
 import { toHandlerKey } from '@vue/shared'
-import {
-  type DebuggerEvent,
-  pauseTracking,
-  resetTracking,
-} from '@vue/reactivity'
+import { type DebuggerEvent, setActiveSub } from '@vue/reactivity'
 import { LifecycleHooks } from './enums'
 
 export { onActivated, onDeactivated } from './components/KeepAlive'
@@ -33,16 +29,16 @@ export function injectHook(
       (hook.__weh = (...args: unknown[]) => {
         // disable tracking inside all lifecycle hooks
         // since they can potentially be called inside effects.
-        pauseTracking()
+        const prevSub = setActiveSub()
         // Set currentInstance during hook invocation.
         // This assumes the hook does not synchronously trigger other hooks, which
         // can only be false when the user does something really funky.
-        const reset = setCurrentInstance(target)
+        const prev = setCurrentInstance(target)
         try {
           return callWithAsyncErrorHandling(hook, target, type, args)
         } finally {
-          reset()
-          resetTracking()
+          setCurrentInstance(...prev)
+          setActiveSub(prevSub)
         }
       })
     if (prepend) {

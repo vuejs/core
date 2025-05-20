@@ -873,6 +873,7 @@ function normalizeSuspenseSlot(s: any) {
 
 export function queueEffectWithSuspense(
   fn: Function | Function[],
+  id: number | undefined,
   suspense: SuspenseBoundary | null,
 ): void {
   if (suspense && suspense.pendingBranch) {
@@ -882,7 +883,7 @@ export function queueEffectWithSuspense(
       suspense.effects.push(fn)
     }
   } else {
-    queuePostFlushCb(fn)
+    queuePostFlushCb(fn, id)
   }
 }
 

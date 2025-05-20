@@ -522,7 +522,7 @@ function baseResolveDefault(
   key: string,
 ) {
   let value
-  const reset = setCurrentInstance(instance)
+  const prev = setCurrentInstance(instance)
   const props = toRaw(instance.props)
   value = factory.call(
     __COMPAT__ && isCompatEnabled(DeprecationTypes.PROPS_DEFAULT_THIS, instance)
@@ -530,7 +530,7 @@ function baseResolveDefault(
       : null,
     props,
   )
-  reset()
+  setCurrentInstance(...prev)
   return value
 }
 

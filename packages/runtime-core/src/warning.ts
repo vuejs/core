@@ -4,7 +4,7 @@ import {
   formatComponentName,
 } from './component'
 import { isFunction, isString } from '@vue/shared'
-import { isRef, pauseTracking, resetTracking, toRaw } from '@vue/reactivity'
+import { isRef, setActiveSub, toRaw } from '@vue/reactivity'
 import { ErrorCodes, callWithErrorHandling } from './errorHandling'
 import { type VNode, isVNode } from './vnode'
 
@@ -41,7 +41,7 @@ export function warn(msg: string, ...args: any[]): void {
 
   // avoid props formatting or warn handler tracking deps that might be mutated
   // during patch, leading to infinite recursion.
-  pauseTracking()
+  const prevSub = setActiveSub()
 
   const entry = stack.length ? stack[stack.length - 1] : null
   const instance = isVNode(entry) ? entry.component : entry
@@ -79,7 +79,7 @@ export function warn(msg: string, ...args: any[]): void {
     console.warn(...warnArgs)
   }
 
-  resetTracking()
+  setActiveSub(prevSub)
   isWarning = false
 }
 

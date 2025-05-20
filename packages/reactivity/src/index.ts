@@ -76,6 +76,10 @@ export {
   effectScope,
   EffectScope,
   getCurrentScope,
+  /**
+   * @internal
+   */
+  setCurrentScope,
   onScopeDispose,
 } from './effectScope'
 export { reactiveReadArray, shallowReadArray } from './arrayInstrumentations'
@@ -86,8 +90,11 @@ export {
   traverse,
   onWatcherCleanup,
   WatchErrorCodes,
+  /**
+   * @internal
+   */
+  WatcherEffect,
   type WatchOptions,
-  type WatchScheduler,
   type WatchStopHandle,
   type WatchHandle,
   type WatchEffect,
@@ -95,3 +102,7 @@ export {
   type WatchCallback,
   type OnCleanup,
 } from './watch'
+/**
+ * @internal
+ */
+export { setActiveSub } from './system'

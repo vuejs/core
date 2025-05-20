@@ -1,70 +1,91 @@
-import { ReactiveEffect, getCurrentScope } from '@vue/reactivity'
+import { EffectFlags, type EffectScope, ReactiveEffect } from '@vue/reactivity'
 import {
   type SchedulerJob,
   currentInstance,
   queueJob,
   queuePostFlushCb,
-  simpleSetCurrentInstance,
+  setCurrentInstance,
   startMeasure,
   warn,
 } from '@vue/runtime-dom'
 import { type VaporComponentInstance, isVaporComponent } from './component'
 import { invokeArrayFns } from '@vue/shared'
 
-export function renderEffect(fn: () => void, noLifecycle = false): void {
-  const instance = currentInstance as VaporComponentInstance | null
-  const scope = getCurrentScope()
-  if (__DEV__ && !__TEST__ && !scope && !isVaporComponent(instance)) {
-    warn('renderEffect called without active EffectScope or Vapor instance.')
-  }
+class RenderEffect extends ReactiveEffect {
+  i: VaporComponentInstance | null
+  job: SchedulerJob
+  updateJob: SchedulerJob
 
-  // renderEffect is always called after user has registered all hooks
-  const hasUpdateHooks = instance && (instance.bu || instance.u)
-  const renderEffectFn = noLifecycle
-    ? fn
-    : () => {
-        if (__DEV__ && instance) {
-          startMeasure(instance, `renderEffect`)
-        }
-        const prev = currentInstance
-        simpleSetCurrentInstance(instance)
-        if (scope) scope.on()
-        if (hasUpdateHooks && instance.isMounted && !instance.isUpdating) {
-          instance.isUpdating = true
-          instance.bu && invokeArrayFns(instance.bu)
-          fn()
-          queuePostFlushCb(() => {
-            instance.isUpdating = false
-            instance.u && invokeArrayFns(instance.u)
-          })
-        } else {
-          fn()
-        }
-        if (scope) scope.off()
-        simpleSetCurrentInstance(prev, instance)
-        if (__DEV__ && instance) {
-          startMeasure(instance, `renderEffect`)
-        }
-      }
-
-  const effect = new ReactiveEffect(renderEffectFn)
-  const job: SchedulerJob = () => effect.dirty && effect.run()
-
-  if (instance) {
-    if (__DEV__) {
-      effect.onTrack = instance.rtc
-        ? e => invokeArrayFns(instance.rtc!, e)
-        : void 0
-      effect.onTrigger = instance.rtg
-        ? e => invokeArrayFns(instance.rtg!, e)
-        : void 0
+  constructor(public render: () => void) {
+    super()
+    const instance = currentInstance as VaporComponentInstance | null
+    if (__DEV__ && !__TEST__ && !this.subs && !isVaporComponent(instance)) {
+      warn('renderEffect called without active EffectScope or Vapor instance.')
     }
-    job.i = instance
-    job.id = instance.uid
+
+    const job: SchedulerJob = () => {
+      if (this.dirty) {
+        this.run()
+      }
+    }
+    this.updateJob = () => {
+      instance!.isUpdating = false
+      instance!.u && invokeArrayFns(instance!.u)
+    }
+
+    if (instance) {
+      if (__DEV__) {
+        this.onTrack = instance.rtc
+          ? e => invokeArrayFns(instance.rtc!, e)
+          : void 0
+        this.onTrigger = instance.rtg
+          ? e => invokeArrayFns(instance.rtg!, e)
+          : void 0
+      }
+      job.i = instance
+    }
+
+    this.job = job
+    this.i = instance
+
+    // TODO recurse handling
   }
 
-  effect.scheduler = () => queueJob(job)
-  effect.run()
+  fn(): void {
+    const instance = this.i
+    const scope = this.subs ? (this.subs.sub as EffectScope) : undefined
+    // renderEffect is always called after user has registered all hooks
+    const hasUpdateHooks = instance && (instance.bu || instance.u)
+    if (__DEV__ && instance) {
+      startMeasure(instance, `renderEffect`)
+    }
+    const prev = setCurrentInstance(instance, scope)
+    if (hasUpdateHooks && instance.isMounted && !instance.isUpdating) {
+      instance.isUpdating = true
+      instance.bu && invokeArrayFns(instance.bu)
+      this.render()
+      queuePostFlushCb(this.updateJob)
+    } else {
+      this.render()
+    }
+    setCurrentInstance(...prev)
+    if (__DEV__ && instance) {
+      startMeasure(instance, `renderEffect`)
+    }
+  }
 
-  // TODO recurse handling
+  notify(): void {
+    const flags = this.flags
+    if (!(flags & EffectFlags.PAUSED)) {
+      queueJob(this.job, this.i ? this.i.uid : undefined)
+    }
+  }
+}
+
+export function renderEffect(fn: () => void, noLifecycle = false): void {
+  const effect = new RenderEffect(fn)
+  if (noLifecycle) {
+    effect.fn = fn
+  }
+  effect.run()
 }
