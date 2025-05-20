@@ -33,13 +33,14 @@ import type { RawSlots, VaporSlot } from './componentSlots'
 import { renderEffect } from './renderEffect'
 import { createTextNode } from './dom/node'
 import { optimizePropertyLookup } from './dom/prop'
+import { setParentSuspense } from './components/Suspense'
 
 // mounting vapor components and slots in vdom
 const vaporInteropImpl: Omit<
   VaporInteropInterface,
   'vdomMount' | 'vdomUnmount' | 'vdomSlot'
 > = {
-  mount(vnode, container, anchor, parentComponent) {
+  mount(vnode, container, anchor, parentComponent, parentSuspense) {
     const selfAnchor = (vnode.el = vnode.anchor = createTextNode())
     container.insertBefore(selfAnchor, anchor)
     const prev = currentInstance
@@ -48,15 +49,22 @@ const vaporInteropImpl: Omit<
     const propsRef = shallowRef(vnode.props)
     const slotsRef = shallowRef(vnode.children)
 
+    if (__FEATURE_SUSPENSE__) {
+      setParentSuspense(parentSuspense)
+    }
+
+    const component = vnode.type as any as VaporComponent
     // @ts-expect-error
     const instance = (vnode.component = createComponent(
-      vnode.type as any as VaporComponent,
+      component,
       {
         $: [() => propsRef.value],
       } as RawProps,
       {
         _: slotsRef, // pass the slots ref
       } as any as RawSlots,
+      undefined,
+      undefined,
     ))
     instance.rawPropsRef = propsRef
     instance.rawSlotsRef = slotsRef
@@ -77,8 +85,30 @@ const vaporInteropImpl: Omit<
 
   unmount(vnode, doRemove) {
     const container = doRemove ? vnode.anchor!.parentNode : undefined
-    if (vnode.component) {
-      unmountComponent(vnode.component as any, container)
+    const instance = vnode.component as any as VaporComponentInstance
+    if (instance) {
+      // the async component may not be resolved yet, block is null
+      if (instance.block) {
+        unmountComponent(instance, container)
+      }
+      // A component with async dep inside a pending suspense is unmounted before
+      // its async dep resolves. This should remove the dep from the suspense, and
+      // cause the suspense to resolve immediately if that was the last dep.
+      const parentSuspense = instance.suspense
+      if (
+        __FEATURE_SUSPENSE__ &&
+        parentSuspense &&
+        parentSuspense.pendingBranch &&
+        !parentSuspense.isUnmounted &&
+        instance.asyncDep &&
+        !instance.asyncResolved &&
+        instance.suspenseId === parentSuspense.pendingId
+      ) {
+        parentSuspense.deps--
+        if (parentSuspense.deps === 0) {
+          parentSuspense.resolve()
+        }
+      }
     } else if (vnode.vb) {
       remove(vnode.vb, container)
     }
