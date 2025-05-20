@@ -225,7 +225,14 @@ function rewriteSelector(
       (n.type !== 'pseudo' && n.type !== 'combinator') ||
       (n.type === 'pseudo' &&
         (n.value === ':is' || n.value === ':where') &&
-        (!node || !n.nodes.some(n => n.nodes.some(x => x.type === 'pseudo'))))
+        (!node ||
+          n.nodes.some(
+            s =>
+              // has nested :is or :where
+              s.nodes.some(x => x.type === n.type && x.value === n.value) ||
+              // has non-pseudo selector
+              !s.nodes.some(x => x.type === 'pseudo'),
+          )))
     ) {
       node = n
     }
