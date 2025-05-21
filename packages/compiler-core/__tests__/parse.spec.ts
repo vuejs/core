@@ -2274,7 +2274,6 @@ describe('compiler: parse', () => {
 
     test('correct loc when a line in attribute value ends with &', () => {
       const [span] = baseParse(`<span v-if="foo &&\nbar"></span>`).children
-
       expect(span.loc.end.line).toBe(2)
     })
   })
