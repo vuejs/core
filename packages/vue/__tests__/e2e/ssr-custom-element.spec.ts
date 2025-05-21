@@ -100,7 +100,6 @@ test('work with Teleport (shadowRoot: false)', async () => {
       },
       { shadowRoot: false },
     )
-    customElements.define('my-y', Y)
     const P = defineSSRCustomElement(
       {
         render() {
@@ -110,6 +109,7 @@ test('work with Teleport (shadowRoot: false)', async () => {
       { shadowRoot: false },
     )
     customElements.define('my-p', P)
+    customElements.define('my-y', Y)
   })
 
   function getInnerHTML() {
