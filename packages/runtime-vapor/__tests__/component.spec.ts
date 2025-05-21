@@ -2,6 +2,7 @@ import {
   type Ref,
   inject,
   nextTick,
+  onMounted,
   onUpdated,
   provide,
   ref,
@@ -13,6 +14,7 @@ import {
   createIf,
   createTextNode,
   renderEffect,
+  setInsertionState,
   template,
 } from '../src'
 import { makeRender } from './_utils'
@@ -266,6 +268,29 @@ describe('component', () => {
     expect(spy).toHaveBeenCalledTimes(2)
   })
 
+  it('properly mount child component when using setInsertionState', async () => {
+    const spy = vi.fn()
+
+    const { component: Comp } = define({
+      setup() {
+        onMounted(spy)
+        return template('<h1>hi</h1>')()
+      },
+    })
+
+    const { host } = define({
+      setup() {
+        const n2 = template('<div></div>', true)()
+        setInsertionState(n2 as any)
+        createComponent(Comp)
+        return n2
+      },
+    }).render()
+
+    expect(host.innerHTML).toBe('<div><h1>hi</h1></div>')
+    expect(spy).toHaveBeenCalledTimes(1)
+  })
+
   it('unmount component', async () => {
     const { host, app, instance } = define(() => {
       const count = ref(0)
@@ -306,25 +331,29 @@ describe('component', () => {
     __DEV__ = true
   })
 
-  it('warn if functional vapor component not return a block', () => {
-    define(() => {
-      return () => {}
+  it('functional vapor component return a object', () => {
+    const { host } = define(() => {
+      return {}
     }).render()
 
-    expect(
-      'Functional vapor component must return a block directly',
-    ).toHaveBeenWarned()
+    expect(host.textContent).toBe(`[object Object]`)
   })
 
-  it('warn if setup return a function and no render function', () => {
-    define({
+  it('functional vapor component return a function', () => {
+    const { host } = define(() => {
+      return () => ({})
+    }).render()
+
+    expect(host.textContent).toBe(`() => ({})`)
+  })
+
+  it('setup return a function and no render function', () => {
+    const { host } = define({
       setup() {
         return () => []
       },
     }).render()
 
-    expect(
-      'Vapor component setup() returned non-block value, and has no render function',
-    ).toHaveBeenWarned()
+    expect(host.textContent).toBe(`() => []`)
   })
 })

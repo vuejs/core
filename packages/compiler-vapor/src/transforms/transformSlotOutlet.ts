@@ -9,7 +9,7 @@ import {
   createSimpleExpression,
   isStaticArgOf,
   isStaticExp,
-} from '@vue/compiler-core'
+} from '@vue/compiler-dom'
 import type { NodeTransform, TransformContext } from '../transform'
 import {
   type BlockIRNode,
