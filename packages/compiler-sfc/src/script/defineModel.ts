@@ -22,6 +22,13 @@ export function processDefineModel(
     return false
   }
 
+  if (!declId) {
+    ctx.error(
+      'defineModel() must be assigned to a variable. For example: const model = defineModel()',
+      node,
+    )
+  }
+
   ctx.hasDefineModelCall = true
 
   const type =

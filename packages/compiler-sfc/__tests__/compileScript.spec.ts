@@ -1,5 +1,11 @@
 import { BindingTypes } from '@vue/compiler-core'
-import { assertCode, compileSFCScript as compile, mockId } from './utils'
+import {
+  assertCode,
+  compileSFCScript as compile,
+  getPositionInCode,
+  mockId,
+} from './utils'
+import { type RawSourceMap, SourceMapConsumer } from 'source-map-js'
 
 describe('SFC compile <script setup>', () => {
   test('should compile JS syntax', () => {
@@ -690,6 +696,27 @@ describe('SFC compile <script setup>', () => {
       expect(content).toMatch(`new (_unref(Foo)).Bar()`)
       assertCode(content)
     })
+
+    // #12682
+    test('source map', () => {
+      const source = `
+      <script setup>
+        const count = ref(0)
+      </script>
+      <template>
+        <button @click="throw new Error(\`msg\`);"></button>
+      </template>
+      `
+      const { content, map } = compile(source, { inlineTemplate: true })
+      expect(map).not.toBeUndefined()
+      const consumer = new SourceMapConsumer(map as RawSourceMap)
+      expect(
+        consumer.originalPositionFor(getPositionInCode(content, 'count')),
+      ).toMatchObject(getPositionInCode(source, `count`))
+      expect(
+        consumer.originalPositionFor(getPositionInCode(content, 'Error')),
+      ).toMatchObject(getPositionInCode(source, `Error`))
+    })
   })
 
   describe('with TypeScript', () => {
@@ -980,7 +1007,7 @@ describe('SFC compile <script setup>', () => {
       expect(() =>
         compile(`<script setup>
         let bar = 1
-        defineModel({
+        const model = defineModel({
           default: () => bar
         })
         </script>`),
@@ -990,7 +1017,7 @@ describe('SFC compile <script setup>', () => {
       expect(() =>
         compile(`<script setup>
         const bar = 1
-        defineModel({
+        const model = defineModel({
           default: () => bar
         })
         </script>`),
@@ -1000,7 +1027,7 @@ describe('SFC compile <script setup>', () => {
       expect(() =>
         compile(`<script setup>
         let bar = 1
-        defineModel({
+        const model = defineModel({
           get: () => bar,
           set: () => bar
         })
