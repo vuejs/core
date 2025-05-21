@@ -1,7 +1,7 @@
 {
   "private": true,
   "version": "3.5.14",
-  "packageManager": "pnpm@10.9.0",
+  "packageManager": "pnpm@10.11.0",
   "type": "module",
   "scripts": {
     "dev": "node scripts/dev.js",
@@ -71,7 +71,7 @@
     "@rollup/plugin-replace": "5.0.4",
     "@swc/core": "^1.11.24",
     "@types/hash-sum": "^1.0.2",
-    "@types/node": "^22.14.1",
+    "@types/node": "^22.15.21",
     "@types/semver": "^7.7.0",
     "@types/serve-handler": "^6.1.4",
     "@vitest/coverage-v8": "^3.1.4",
@@ -101,7 +101,7 @@
     "rollup-plugin-dts": "^6.2.1",
     "rollup-plugin-esbuild": "^6.2.1",
     "rollup-plugin-polyfill-node": "^0.13.0",
-    "semver": "^7.7.1",
+    "semver": "^7.7.2",
     "serve": "^14.2.4",
     "serve-handler": "^6.1.6",
     "simple-git-hooks": "^2.13.0",
