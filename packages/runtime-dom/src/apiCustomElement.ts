@@ -581,17 +581,16 @@ export class VueElement
     owner?: ConcreteComponent,
   ) {
     if (!styles) return
-    const styleList: HTMLStyleElement[] = []
+    const styleElements: HTMLStyleElement[] = []
     if (owner) {
-      if (owner === this._def) {
+      if (owner === this._def) return
+      const existingStyles = this._styleChildren.get(owner)
+      if (existingStyles) {
+        // move existing styles to the top
+        this.shadowRoot!.prepend(...existingStyles)
         return
       }
-      const styleChild = this._styleChildren.get(owner)
-      if (styleChild) {
-        this.shadowRoot!.prepend(...styleChild)
-        return
-      }
-      this._styleChildren.set(owner, styleList)
+      this._styleChildren.set(owner, styleElements)
     }
 
     const nonce = this._nonce
@@ -600,9 +599,7 @@ export class VueElement
       if (nonce) s.setAttribute('nonce', nonce)
       s.textContent = styles[i]
       this.shadowRoot!.prepend(s)
-      if (owner) {
-        styleList.unshift(s)
-      }
+      if (owner) styleElements.unshift(s)
       // record for HMR
       if (__DEV__) {
         if (owner) {

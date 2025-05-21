@@ -799,13 +799,13 @@ describe('defineCustomElement', () => {
           return 'bar'
         },
       })
-      const WarpperBar = defineComponent({
+      const WrapperBar = defineComponent({
         styles: [`div { color: blue; }`],
         render() {
           return h(Baz)
         },
       })
-      const WBaz = () => h(WarpperBar)
+      const WBaz = () => h(WrapperBar)
       const Foo = defineCustomElement({
         styles: [`div { color: red; }`],
         render() {
