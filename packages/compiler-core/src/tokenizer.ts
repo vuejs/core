@@ -322,7 +322,7 @@ export default class Tokenizer {
       }
       this.state = State.BeforeTagName
       this.sectionStart = this.index
-    } else if (!__BROWSER__ && c === CharCodes.Amp) {
+    } else if (!__BROWSER__ && c === CharCodes.Amp && !this.isLogicalAnd()) {
       this.startEntity()
     } else if (!this.inVPre && c === this.delimiterOpen[0]) {
       this.state = State.InterpolationOpen
@@ -436,7 +436,7 @@ export default class Tokenizer {
         (this.currentSequence === Sequences.TextareaEnd && !this.inSFCRoot)
       ) {
         // We have to parse entities in <title> and <textarea> tags.
-        if (!__BROWSER__ && c === CharCodes.Amp) {
+        if (!__BROWSER__ && c === CharCodes.Amp && !this.isLogicalAnd()) {
           this.startEntity()
         } else if (!this.inVPre && c === this.delimiterOpen[0]) {
           // We also need to handle interpolation
@@ -795,7 +795,7 @@ export default class Tokenizer {
         this.index + 1,
       )
       this.state = State.BeforeAttrName
-    } else if (!__BROWSER__ && c === CharCodes.Amp) {
+    } else if (!__BROWSER__ && c === CharCodes.Amp && !this.isLogicalAnd()) {
       this.startEntity()
     }
   }
@@ -823,7 +823,7 @@ export default class Tokenizer {
         ErrorCodes.UNEXPECTED_CHARACTER_IN_UNQUOTED_ATTRIBUTE_VALUE,
         this.index,
       )
-    } else if (!__BROWSER__ && c === CharCodes.Amp) {
+    } else if (!__BROWSER__ && c === CharCodes.Amp && !this.isLogicalAnd()) {
       this.startEntity()
     }
   }
@@ -1177,5 +1177,12 @@ export default class Tokenizer {
         )
       }
     }
+  }
+
+  private isLogicalAnd(): boolean {
+    return (
+      this.buffer.charCodeAt(this.index - 1) === CharCodes.Amp ||
+      this.buffer.charCodeAt(this.index + 1) === CharCodes.Amp
+    )
   }
 }

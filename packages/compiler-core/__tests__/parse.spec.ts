@@ -1264,6 +1264,17 @@ describe('compiler: parse', () => {
       })
     })
 
+    // #13361
+    test('directive with multiline value', () => {
+      const ast = baseParse(
+        `<div v-if="
+          foo &&
+          bar
+        "></div>`,
+      )
+      expect(ast.loc.end.line).toBe(4)
+    })
+
     test('directive with argument', () => {
       const ast = baseParse('<div v-on:click/>')
       const directive = (ast.children[0] as ElementNode).props[0]
