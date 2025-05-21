@@ -2,7 +2,7 @@ import {
   NewlineType,
   type SimpleExpressionNode,
   isSimpleIdentifier,
-} from '@vue/compiler-core'
+} from '@vue/compiler-dom'
 import type { CodegenContext } from '../generate'
 import {
   IRDynamicPropsKind,

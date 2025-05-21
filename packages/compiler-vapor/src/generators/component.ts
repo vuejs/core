@@ -34,7 +34,7 @@ import {
   isMemberExpression,
   toValidAssetId,
   walkIdentifiers,
-} from '@vue/compiler-core'
+} from '@vue/compiler-dom'
 import { genEventHandler } from './event'
 import { genDirectiveModifiers, genDirectivesForElement } from './directive'
 import { genBlock } from './block'
