@@ -81,11 +81,11 @@
     "enquirer": "^2.4.1",
     "esbuild": "^0.25.4",
     "esbuild-plugin-polyfill-node": "^0.3.0",
-    "eslint": "^9.25.1",
-    "eslint-plugin-import-x": "^4.11.0",
+    "eslint": "^9.27.0",
+    "eslint-plugin-import-x": "^4.12.2",
     "estree-walker": "catalog:",
     "jsdom": "^26.1.0",
-    "lint-staged": "^15.5.1",
+    "lint-staged": "^15.5.2",
     "lodash": "^4.17.21",
     "magic-string": "^0.30.17",
     "markdown-table": "^3.0.4",
@@ -108,7 +108,7 @@
     "todomvc-app-css": "^2.4.3",
     "tslib": "^2.8.1",
     "typescript": "~5.6.2",
-    "typescript-eslint": "^8.31.1",
+    "typescript-eslint": "^8.32.1",
     "vite": "catalog:",
     "vitest": "^3.1.3"
   }
