@@ -222,13 +222,12 @@ function rewriteSelector(
 
     if (
       (n.type !== 'pseudo' && n.type !== 'combinator') ||
-      (n.type === 'pseudo' &&
-        (n.value === ':is' || n.value === ':where') &&
+      (isPseudoClassIsOrWhere(n) &&
         (!node ||
           n.nodes.some(
             s =>
               // has nested :is or :where
-              s.nodes.some(x => x.type === n.type && x.value === n.value) ||
+              s.nodes.some(x => isPseudoClassIsOrWhere(x)) ||
               // has non-pseudo selector
               !s.nodes.some(x => x.type === 'pseudo'),
           )))
@@ -250,8 +249,7 @@ function rewriteSelector(
   }
 
   if (node) {
-    const { type, value } = node as selectorParser.Node
-    if (type === 'pseudo' && (value === ':is' || value === ':where')) {
+    if (isPseudoClassIsOrWhere(node)) {
       ;(node as selectorParser.Pseudo).nodes.forEach(value =>
         rewriteSelector(id, rule, value, selectorRoot, deep, slotted),
       )
@@ -286,6 +284,14 @@ function rewriteSelector(
 
 function isSpaceCombinator(node: selectorParser.Node) {
   return node.type === 'combinator' && /^\s+$/.test(node.value)
+}
+
+function isPseudoClassIsOrWhere(
+  node: selectorParser.Node,
+): node is selectorParser.Pseudo {
+  return (
+    node.type === 'pseudo' && (node.value === ':is' || node.value === ':where')
+  )
 }
 
 function extractAndWrapNodes(parentNode: Rule | AtRule) {

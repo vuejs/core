@@ -271,6 +271,18 @@ color: red
         "#app :where(:where(.foo[data-v-test])) { color: red;
         }"
       `)
+
+    expect(compileScoped(`#app :is(:where(.foo)) { color: red; }`))
+      .toMatchInlineSnapshot(`
+        "#app :is(:where(.foo[data-v-test])) { color: red;
+        }"
+      `)
+
+    expect(compileScoped(`#app :where(:is(.foo)) { color: red; }`))
+      .toMatchInlineSnapshot(`
+        "#app :where(:is(.foo[data-v-test])) { color: red;
+        }"
+      `)
   })
 
   test('media query', () => {
