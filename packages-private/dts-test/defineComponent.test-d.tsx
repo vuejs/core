@@ -22,6 +22,7 @@ describe('with object props', () => {
     a?: number | undefined
     aa: number
     aaa: number | null
+    aaaa: number | undefined
     b: string
     e?: Function
     h: boolean
@@ -62,6 +63,11 @@ describe('with object props', () => {
     aaa: {
       type: Number as PropType<number | null>,
       default: 1,
+    },
+    aaaa: {
+      type: Number as PropType<number | undefined>,
+      // `as const` prevents widening to `boolean` (keeps literal `true` type)
+      required: true as const,
     },
     // required should make property non-void
     b: {
@@ -158,6 +164,11 @@ describe('with object props', () => {
       expectType<ExpectedProps['a']>(props.a)
       expectType<ExpectedProps['aa']>(props.aa)
       expectType<ExpectedProps['aaa']>(props.aaa)
+
+      // @ts-expect-error should included `undefined`
+      expectType<number>(props.aaaa)
+      expectType<ExpectedProps['aaaa']>(props.aaaa)
+
       expectType<ExpectedProps['b']>(props.b)
       expectType<ExpectedProps['e']>(props.e)
       expectType<ExpectedProps['h']>(props.h)
@@ -285,6 +296,7 @@ describe('with object props', () => {
   expectType<JSX.Element>(
     <MyComponent
       a={1}
+      aaaa={1}
       b="b"
       bb="bb"
       e={() => {}}
@@ -311,6 +323,7 @@ describe('with object props', () => {
 
   expectType<Component>(
     <MyComponent
+      aaaa={1}
       b="b"
       dd={{ n: 1 }}
       ddd={['ddd']}
