@@ -12,11 +12,14 @@ import {
   type RootNode,
   type SimpleExpressionNode,
   type SlotFunctionExpression,
+  type SlotsObjectProperty,
   type TemplateChildNode,
   type TemplateNode,
   type TextCallNode,
   type VNodeCall,
   createArrayExpression,
+  createObjectProperty,
+  createSimpleExpression,
   getVNodeBlockHelper,
   getVNodeHelper,
 } from '../ast'
@@ -140,6 +143,7 @@ function walk(
   }
 
   let cachedAsArray = false
+  const slotCacheKeys = []
   if (toCache.length === children.length && node.type === NodeTypes.ELEMENT) {
     if (
       node.tagType === ElementTypes.ELEMENT &&
@@ -163,6 +167,7 @@ function walk(
       // default slot
       const slot = getSlotNode(node.codegenNode, 'default')
       if (slot) {
+        slotCacheKeys.push(context.cached.length)
         slot.returns = getCacheExpression(
           createArrayExpression(slot.returns as TemplateChildNode[]),
         )
@@ -186,6 +191,7 @@ function walk(
         slotName.arg &&
         getSlotNode(parent.codegenNode, slotName.arg)
       if (slot) {
+        slotCacheKeys.push(context.cached.length)
         slot.returns = getCacheExpression(
           createArrayExpression(slot.returns as TemplateChildNode[]),
         )
@@ -196,8 +202,29 @@ function walk(
 
   if (!cachedAsArray) {
     for (const child of toCache) {
+      slotCacheKeys.push(context.cached.length)
       child.codegenNode = context.cache(child.codegenNode!)
     }
+  }
+
+  // put the slot cached keys on the slot object, so that the cache
+  // can be removed when component unmounting to prevent memory leaks
+  if (
+    slotCacheKeys.length &&
+    node.type === NodeTypes.ELEMENT &&
+    node.tagType === ElementTypes.COMPONENT &&
+    node.codegenNode &&
+    node.codegenNode.type === NodeTypes.VNODE_CALL &&
+    node.codegenNode.children &&
+    !isArray(node.codegenNode.children) &&
+    node.codegenNode.children.type === NodeTypes.JS_OBJECT_EXPRESSION
+  ) {
+    node.codegenNode.children.properties.push(
+      createObjectProperty(
+        `__`,
+        createSimpleExpression(JSON.stringify(slotCacheKeys), false),
+      ) as SlotsObjectProperty,
+    )
   }
 
   function getCacheExpression(value: JSChildNode): CacheExpression {
