@@ -418,6 +418,7 @@ export interface CacheExpression extends Node {
   index: number
   value: JSChildNode
   needPauseTracking: boolean
+  inVOnce: boolean
   needArraySpread: boolean
 }
 
@@ -774,12 +775,14 @@ export function createCacheExpression(
   index: number,
   value: JSChildNode,
   needPauseTracking: boolean = false,
+  inVOnce: boolean = false,
 ): CacheExpression {
   return {
     type: NodeTypes.JS_CACHE_EXPRESSION,
     index,
     value,
     needPauseTracking: needPauseTracking,
+    inVOnce,
     needArraySpread: false,
     loc: locStub,
   }

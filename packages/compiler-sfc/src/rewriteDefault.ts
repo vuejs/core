@@ -39,7 +39,7 @@ export function rewriteDefaultAST(
   ast.forEach(node => {
     if (node.type === 'ExportDefaultDeclaration') {
       if (node.declaration.type === 'ClassDeclaration' && node.declaration.id) {
-        let start: number =
+        const start: number =
           node.declaration.decorators && node.declaration.decorators.length > 0
             ? node.declaration.decorators[
                 node.declaration.decorators.length - 1

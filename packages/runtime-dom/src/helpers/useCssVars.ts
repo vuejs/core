@@ -3,13 +3,14 @@ import {
   Static,
   type VNode,
   getCurrentInstance,
-  onBeforeMount,
+  onBeforeUpdate,
   onMounted,
   onUnmounted,
+  queuePostFlushCb,
   warn,
-  watchPostEffect,
+  watch,
 } from '@vue/runtime-core'
-import { ShapeFlags } from '@vue/shared'
+import { NOOP, ShapeFlags } from '@vue/shared'
 
 export const CSS_VAR_TEXT: unique symbol = Symbol(__DEV__ ? 'CSS_VAR_TEXT' : '')
 /**
@@ -55,11 +56,15 @@ export function useCssVars(getter: (ctx: any) => Record<string, string>): void {
     updateTeleports()
   }
 
-  onBeforeMount(() => {
-    watchPostEffect(setVars)
+  // handle cases where child component root is affected
+  // and triggers reflow in onMounted
+  onBeforeUpdate(() => {
+    queuePostFlushCb(setVars)
   })
 
   onMounted(() => {
+    // run setVars synchronously here, but run as post-effect on changes
+    watch(setVars, NOOP, { flush: 'post' })
     const ob = new MutationObserver(setVars)
     ob.observe(instance.subTree.el!.parentNode, { childList: true })
     onUnmounted(() => ob.disconnect())
