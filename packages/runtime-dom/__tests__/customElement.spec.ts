@@ -444,6 +444,36 @@ describe('defineCustomElement', () => {
       const e = container.childNodes[0] as VueElement
       expect(e.shadowRoot!.innerHTML).toBe('hello')
     })
+
+    test('prop types validation', async () => {
+      const E = defineCustomElement({
+        props: {
+          num: {
+            type: [Number, String],
+          },
+          bool: {
+            type: Boolean,
+          },
+        },
+        render() {
+          return h('div', [
+            h('span', [`${this.num} is ${typeof this.num}`]),
+            h('span', [`${this.bool} is ${typeof this.bool}`]),
+          ])
+        },
+      })
+
+      customElements.define('my-el-with-type-props', E)
+      render(h('my-el-with-type-props', { num: 1, bool: true }), container)
+      const e = container.childNodes[0] as VueElement
+      // @ts-expect-error
+      expect(e.num).toBe(1)
+      // @ts-expect-error
+      expect(e.bool).toBe(true)
+      expect(e.shadowRoot!.innerHTML).toBe(
+        '<div><span>1 is number</span><span>true is boolean</span></div>',
+      )
+    })
   })
 
   describe('attrs', () => {
