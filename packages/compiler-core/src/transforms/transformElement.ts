@@ -594,9 +594,9 @@ export function buildProps(
         hasDynamicKeys = true
         if (exp) {
           if (isVBind) {
-            // have to merge early for compat build check
-            pushMergeArg()
             if (__COMPAT__) {
+              // have to merge early for compat build check
+              pushMergeArg()
               // 2.x v-bind object order compat
               if (__DEV__) {
                 const hasOverridableKeys = mergeArgs.some(arg => {
