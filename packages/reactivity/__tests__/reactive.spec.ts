@@ -1,4 +1,4 @@
-import { isRef, ref } from '../src/ref'
+import { isRef, ref, shallowRef } from '../src/ref'
 import {
   isProxy,
   isReactive,
@@ -425,5 +425,18 @@ describe('reactivity/reactive', () => {
 
     map.set(void 0, 1)
     expect(c.value).toBe(1)
+  })
+
+  test('should return true for reactive objects', () => {
+    expect(isReactive(reactive({}))).toBe(true)
+    expect(isReactive(readonly(reactive({})))).toBe(true)
+    expect(isReactive(ref({}).value)).toBe(true)
+    expect(isReactive(readonly(ref({})).value)).toBe(true)
+    expect(isReactive(shallowReactive({}))).toBe(true)
+  })
+
+  test('should return false for non-reactive objects', () => {
+    expect(isReactive(ref(true))).toBe(false)
+    expect(isReactive(shallowRef({}).value)).toBe(false)
   })
 })
