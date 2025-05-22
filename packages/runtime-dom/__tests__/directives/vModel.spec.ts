@@ -5,7 +5,9 @@ import {
   nextTick,
   ref,
   render,
+  vModelCheckbox,
   vModelDynamic,
+  vModelText,
   withDirectives,
 } from '@vue/runtime-dom'
 
@@ -1444,5 +1446,112 @@ describe('vModel', () => {
     expect(data.num).toBe(1)
 
     expect(inputNum1.value).toBe('1')
+  })
+
+  // #12460
+  it('prevent input value update in mounted hook if value was updated', async () => {
+    const Comp = defineComponent({
+      data() {
+        return {
+          val: 'bug',
+        }
+      },
+      methods: {
+        onUpdate() {
+          this.val = 'ok'
+        },
+      },
+      render() {
+        return h('div', null, [
+          withDirectives(
+            h('input', {
+              'onUpdate:modelValue': (v: any) => (this.val = v),
+              type: 'search',
+            }),
+            [[vModelText, this.val]],
+          ),
+          'should be ' + this.val,
+          this.$slots.default!({ onUpdate: this.onUpdate }),
+        ])
+      },
+    })
+
+    const show = ref(false)
+    const Page = defineComponent({
+      render() {
+        return show.value
+          ? h(Comp, null, {
+              default: (attrs: any) => {
+                attrs.onUpdate()
+                return h('div')
+              },
+            })
+          : h('div')
+      },
+    })
+
+    render(h(Page), root)
+    expect(root.innerHTML).toBe('<div></div>')
+
+    show.value = true
+    await nextTick()
+    expect(root.innerHTML).toBe(
+      '<div><input type="search">should be ok<div></div></div>',
+    )
+    const input = root.querySelector('input')!
+    expect(input.value).toEqual('ok')
+  })
+
+  it('prevent checkbox value update in mounted hook if value was updated', async () => {
+    const Comp = defineComponent({
+      data() {
+        return {
+          val: false,
+        }
+      },
+      methods: {
+        onUpdate() {
+          this.val = true
+        },
+      },
+      render() {
+        return h('div', null, [
+          withDirectives(
+            h('input', {
+              'onUpdate:modelValue': (v: any) => (this.val = v),
+              type: 'checkbox',
+            }),
+            [[vModelCheckbox, this.val]],
+          ),
+          'should be ' + this.val,
+          this.$slots.default!({ onUpdate: this.onUpdate }),
+        ])
+      },
+    })
+
+    const show = ref(false)
+    const Page = defineComponent({
+      render() {
+        return show.value
+          ? h(Comp, null, {
+              default: (attrs: any) => {
+                attrs.onUpdate()
+                return h('div')
+              },
+            })
+          : h('div')
+      },
+    })
+
+    render(h(Page), root)
+    expect(root.innerHTML).toBe('<div></div>')
+
+    show.value = true
+    await nextTick()
+    expect(root.innerHTML).toBe(
+      '<div><input type="checkbox">should be true<div></div></div>',
+    )
+    const input = root.querySelector('input')!
+    expect(input.checked).toEqual(true)
   })
 })
