@@ -276,7 +276,38 @@ describe('useCssVars', () => {
       expect((c as HTMLElement).style.getPropertyValue(`--color`)).toBe('red')
     }
   })
+  test('with nested teleport', async () => {
+    document.body.innerHTML = ''
+    const state = { color: 'red' }
+    const root = document.createElement('div')
+    const target = document.body
 
+    const App = {
+      setup() {
+        useCssVars(() => state)
+        return () => h(Comp)
+      },
+    }
+    const Comp = {
+      setup() {
+        return () => h(NestedTeleport)
+      },
+    }
+    const NestedTeleport = {
+      setup() {
+        return () =>
+          h(
+            Teleport,
+            { to: target },
+            h('div', { class: 'color' }, 'Another teleport'),
+          )
+      },
+    }
+    render(h(App), root)
+    await nextTick()
+    const dom: HTMLElement = target.querySelector('.color')!
+    expect(dom.style.getPropertyValue(`--color`)).toBe('red')
+  })
   test('with teleport in child slot', async () => {
     document.body.innerHTML = ''
     const state = reactive({ color: 'red' })
