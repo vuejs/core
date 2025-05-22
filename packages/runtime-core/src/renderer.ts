@@ -2110,7 +2110,7 @@ function baseCreateRenderer(
     }
 
     if (shapeFlag & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE) {
-      ;(vnode.component!.parent!.ctx as KeepAliveContext).deactivate(vnode)
+      ;(parentComponent!.ctx as KeepAliveContext).deactivate(vnode)
       return
     }
 

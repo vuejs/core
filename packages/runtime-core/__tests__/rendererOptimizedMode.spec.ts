@@ -1431,11 +1431,14 @@ describe('renderer: optimized mode', () => {
             Fragment,
             null,
             renderList(1, () => {
-              return createVNode(
-                KeepAlive,
-                null,
-                [(openBlock(), createBlock(view.value))],
-                1024 /* DYNAMIC_SLOTS */,
+              return (
+                openBlock(),
+                createBlock(
+                  KeepAlive,
+                  { include: [] },
+                  [(openBlock(), createBlock(view.value))],
+                  1024 /* DYNAMIC_SLOTS */,
+                )
               )
             }),
             64 /* STABLE_FRAGMENT */,
