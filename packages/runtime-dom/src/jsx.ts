@@ -264,6 +264,14 @@ export interface HTMLAttributes extends AriaAttributes, EventHandlers<Events> {
   contextmenu?: string
   dir?: string
   draggable?: Booleanish
+  enterKeyHint?:
+    | 'enter'
+    | 'done'
+    | 'go'
+    | 'next'
+    | 'previous'
+    | 'search'
+    | 'send'
   hidden?: Booleanish | '' | 'hidden' | 'until-found'
   id?: string
   inert?: Booleanish
@@ -323,6 +331,14 @@ export interface HTMLAttributes extends AriaAttributes, EventHandlers<Events> {
    * @see https://html.spec.whatwg.org/multipage/custom-elements.html#attr-is
    */
   is?: string
+  /**
+   * @see https://developer.mozilla.org/en-US/docs/Web/HTML/Global_attributes/exportparts
+   */
+  exportparts?: string
+  /**
+   * @see https://developer.mozilla.org/en-US/docs/Web/HTML/Global_attributes/part
+   */
+  part?: string
 }
 
 type HTMLAttributeReferrerPolicy =
@@ -475,6 +491,7 @@ export interface ImgHTMLAttributes extends HTMLAttributes {
   alt?: string
   crossorigin?: 'anonymous' | 'use-credentials' | ''
   decoding?: 'async' | 'auto' | 'sync'
+  fetchpriority?: 'high' | 'low' | 'auto'
   height?: Numberish
   loading?: 'eager' | 'lazy'
   referrerpolicy?: HTMLAttributeReferrerPolicy
@@ -524,14 +541,6 @@ export interface InputHTMLAttributes extends HTMLAttributes {
   checked?: Booleanish | any[] | Set<any> // for IDE v-model multi-checkbox support
   crossorigin?: string
   disabled?: Booleanish
-  enterKeyHint?:
-    | 'enter'
-    | 'done'
-    | 'go'
-    | 'next'
-    | 'previous'
-    | 'search'
-    | 'send'
   form?: string
   formaction?: string
   formenctype?: string
@@ -1257,6 +1266,7 @@ export interface IntrinsicElementAttributes {
   polyline: SVGAttributes
   radialGradient: SVGAttributes
   rect: SVGAttributes
+  set: SVGAttributes
   stop: SVGAttributes
   switch: SVGAttributes
   symbol: SVGAttributes
