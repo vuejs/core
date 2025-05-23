@@ -1256,7 +1256,7 @@ export interface ComponentCustomElementInterface {
   /**
    * @internal
    */
-  _injectChildStyle(type: ConcreteComponent): void
+  _injectChildStyle(type: ConcreteComponent, parent?: ConcreteComponent): void
   /**
    * @internal
    */

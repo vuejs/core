@@ -1349,7 +1349,8 @@ function baseCreateRenderer(
         } else {
           // custom element style injection
           if (root.ce) {
-            root.ce._injectChildStyle(type)
+            const parent = instance.parent ? instance.parent.type : undefined
+            root.ce._injectChildStyle(type, parent)
           }
 
           if (__DEV__) {

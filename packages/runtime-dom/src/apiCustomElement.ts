@@ -232,6 +232,8 @@ export class VueElement
   private _styleChildren = new WeakSet()
   private _pendingResolve: Promise<void> | undefined
   private _parent: VueElement | undefined
+  private _styleAnchors: WeakMap<ConcreteComponent, HTMLStyleElement | Text> =
+    new WeakMap()
   /**
    * dev only
    */
@@ -584,6 +586,7 @@ export class VueElement
   private _applyStyles(
     styles: string[] | undefined,
     owner?: ConcreteComponent,
+    parentComp?: ConcreteComponent & CustomElementOptions,
   ) {
     if (!styles) return
     if (owner) {
@@ -592,12 +595,43 @@ export class VueElement
       }
       this._styleChildren.add(owner)
     }
+
+    // if parent has no styles but child does, create an anchor
+    // to inject child styles before it.
+    if (parentComp && !parentComp.styles) {
+      const anchor = document.createTextNode('')
+      const styleAnchor = this._styleAnchors.get(this._def)
+      if (styleAnchor) {
+        this.shadowRoot!.insertBefore(anchor, styleAnchor)
+      } else {
+        this.shadowRoot!.prepend(anchor)
+      }
+      this._styleAnchors.set(this._def, anchor)
+    }
+
     const nonce = this._nonce
+    let last = undefined
     for (let i = styles.length - 1; i >= 0; i--) {
       const s = document.createElement('style')
       if (nonce) s.setAttribute('nonce', nonce)
       s.textContent = styles[i]
-      this.shadowRoot!.prepend(s)
+
+      // inject styles before parent styles
+      if (parentComp) {
+        this.shadowRoot!.insertBefore(
+          s,
+          last ||
+            this._styleAnchors.get(parentComp) ||
+            this._styleAnchors.get(this._def) ||
+            null,
+        )
+      } else {
+        this.shadowRoot!.prepend(s)
+        this._styleAnchors.set(this._def, s)
+      }
+      last = s
+      if (owner && i === 0) this._styleAnchors.set(owner, s)
+
       // record for HMR
       if (__DEV__) {
         if (owner) {
@@ -665,8 +699,11 @@ export class VueElement
   /**
    * @internal
    */
-  _injectChildStyle(comp: ConcreteComponent & CustomElementOptions): void {
-    this._applyStyles(comp.styles, comp)
+  _injectChildStyle(
+    comp: ConcreteComponent & CustomElementOptions,
+    parentComp?: ConcreteComponent,
+  ): void {
+    this._applyStyles(comp.styles, comp, parentComp)
   }
 
   /**
