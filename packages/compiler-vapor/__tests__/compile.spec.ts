@@ -220,4 +220,21 @@ describe('compile', () => {
       expect(code).matchSnapshot()
     })
   })
+
+  describe('execution order', () => {
+    test('basic', () => {
+      const code = compile(`<div :id="foo">{{ bar }}</div>`)
+      expect(code).matchSnapshot()
+    })
+    test('with v-once', () => {
+      const code = compile(
+        `<div :id="foo">
+          <span v-once>{{ foo }}</span>
+          {{ bar }}<br>
+          {{ baz }}
+        </div>`,
+      )
+      expect(code).matchSnapshot()
+    })
+  })
 })
