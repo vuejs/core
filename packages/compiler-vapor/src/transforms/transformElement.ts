@@ -83,7 +83,7 @@ export const transformElement: NodeTransform = (node, context) => {
 
     if (isComponent) {
       transformComponentElement(
-        node,
+        node as ComponentNode,
         propsResult,
         singleRoot,
         context,
@@ -91,7 +91,7 @@ export const transformElement: NodeTransform = (node, context) => {
       )
     } else {
       transformNativeElement(
-        node,
+        node as PlainElementNode,
         propsResult,
         singleRoot,
         context,
