@@ -977,6 +977,49 @@ describe('defineCustomElement', () => {
       assertStyles(el, [`div { color: green; }`, `div { color: blue; }`])
     })
 
+    test('inject nested child component styles', async () => {
+      const Baz = defineComponent({
+        styles: [`div { color: yellow; }`],
+        render() {
+          return h(Bar)
+        },
+      })
+      const Bar = defineComponent({
+        styles: [`div { color: green; }`],
+        render() {
+          return 'bar'
+        },
+      })
+      const WrapperBar = defineComponent({
+        styles: [`div { color: blue; }`],
+        render() {
+          return h(Baz)
+        },
+      })
+      const WBaz = defineComponent({
+        styles: [`div { color: black; }`],
+        render() {
+          return h(WrapperBar)
+        },
+      })
+      const Foo = defineCustomElement({
+        styles: [`div { color: red; }`],
+        render() {
+          return [h(Baz), h(WBaz)]
+        },
+      })
+      customElements.define('my-el-with-inject-nested-child-styles', Foo)
+      container.innerHTML = `<my-el-with-inject-nested-child-styles></my-el-with-inject-nested-child-styles>`
+      const el = container.childNodes[0] as VueElement
+      assertStyles(el, [
+        `div { color: green; }`,
+        `div { color: yellow; }`,
+        `div { color: blue; }`,
+        `div { color: black; }`,
+        `div { color: red; }`,
+      ])
+    })
+
     test('with nonce', () => {
       const Foo = defineCustomElement(
         {

@@ -232,7 +232,8 @@ export class VueElement
   private _styleChildren = new WeakSet()
   private _pendingResolve: Promise<void> | undefined
   private _parent: VueElement | undefined
-  private _styleAnchor?: HTMLStyleElement | Text
+  private _styleAnchors: WeakMap<ConcreteComponent, HTMLStyleElement | Text> =
+    new WeakMap()
   /**
    * dev only
    */
@@ -599,12 +600,13 @@ export class VueElement
     // to inject child styles before it.
     if (parentComp && !parentComp.styles) {
       const anchor = document.createTextNode('')
-      if (this._styleAnchor) {
-        this.shadowRoot!.insertBefore(anchor, this._styleAnchor)
+      const styleAnchor = this._styleAnchors.get(this._def)
+      if (styleAnchor) {
+        this.shadowRoot!.insertBefore(anchor, styleAnchor)
       } else {
         this.shadowRoot!.prepend(anchor)
       }
-      this._styleAnchor = anchor
+      this._styleAnchors.set(this._def, anchor)
     }
 
     const nonce = this._nonce
@@ -616,12 +618,19 @@ export class VueElement
 
       // inject styles before parent styles
       if (parentComp) {
-        this.shadowRoot!.insertBefore(s, last || this._styleAnchor!)
+        this.shadowRoot!.insertBefore(
+          s,
+          last ||
+            this._styleAnchors.get(parentComp) ||
+            this._styleAnchors.get(this._def) ||
+            null,
+        )
       } else {
         this.shadowRoot!.prepend(s)
-        this._styleAnchor = s
+        this._styleAnchors.set(this._def, s)
       }
       last = s
+      if (owner && i === 0) this._styleAnchors.set(owner, s)
 
       // record for HMR
       if (__DEV__) {
