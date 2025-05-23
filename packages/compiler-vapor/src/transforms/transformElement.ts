@@ -81,7 +81,7 @@ export const transformElement: NodeTransform = (node, context) => {
       parent.node.children.filter(child => child.type !== NodeTypes.COMMENT)
         .length === 1
 
-    if (node.tagType === ElementTypes.COMPONENT) {
+    if (isComponent) {
       transformComponentElement(
         node,
         propsResult,
