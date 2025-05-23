@@ -211,7 +211,7 @@ function transformNativeElement(
         props: dynamicArgs,
         root: singleRoot,
       },
-      getEffectIndex(),
+      getEffectIndex,
     )
   } else {
     for (const prop of propsResult[1]) {
@@ -230,7 +230,7 @@ function transformNativeElement(
             root: singleRoot,
             tag,
           },
-          getEffectIndex(),
+          getEffectIndex,
         )
       }
     }
@@ -320,7 +320,7 @@ export function buildProps(
                 element: context.reference(),
                 event: prop.exp,
               },
-              getEffectIndex && getEffectIndex(),
+              getEffectIndex,
             )
           }
         } else {

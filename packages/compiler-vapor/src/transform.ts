@@ -138,7 +138,7 @@ export class TransformContext<T extends AllNode = AllNode> {
   registerEffect(
     expressions: SimpleExpressionNode[],
     operation: OperationNode | OperationNode[],
-    index: number = this.block.effect.length,
+    getIndex: () => number = () => this.block.effect.length,
   ): void {
     const operations = [operation].flat()
     expressions = expressions.filter(exp => !isConstantExpression(exp))
@@ -152,7 +152,7 @@ export class TransformContext<T extends AllNode = AllNode> {
       return this.registerOperation(...operations)
     }
 
-    this.block.effect.splice(index, 0, {
+    this.block.effect.splice(getIndex(), 0, {
       expressions,
       operations,
     })
