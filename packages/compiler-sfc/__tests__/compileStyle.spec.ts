@@ -247,6 +247,42 @@ color: red
       .div[data-v-test]:is(.foo:hover) { color: blue;
       }"
     `)
+
+    expect(compileScoped(`#app :is(.foo) { color: red; }`))
+      .toMatchInlineSnapshot(`
+      "#app :is(.foo[data-v-test]) { color: red;
+      }"
+    `)
+
+    expect(compileScoped(`#app :is(:is(.foo)) { color: red; }`))
+      .toMatchInlineSnapshot(`
+        "#app :is(:is(.foo[data-v-test])) { color: red;
+        }"
+      `)
+
+    expect(compileScoped(`#app :where(.foo) { color: red; }`))
+      .toMatchInlineSnapshot(`
+      "#app :where(.foo[data-v-test]) { color: red;
+      }"
+    `)
+
+    expect(compileScoped(`#app :where(:where(.foo)) { color: red; }`))
+      .toMatchInlineSnapshot(`
+        "#app :where(:where(.foo[data-v-test])) { color: red;
+        }"
+      `)
+
+    expect(compileScoped(`#app :is(:where(.foo)) { color: red; }`))
+      .toMatchInlineSnapshot(`
+        "#app :is(:where(.foo[data-v-test])) { color: red;
+        }"
+      `)
+
+    expect(compileScoped(`#app :where(:is(.foo)) { color: red; }`))
+      .toMatchInlineSnapshot(`
+        "#app :where(:is(.foo[data-v-test])) { color: red;
+        }"
+      `)
   })
 
   test('media query', () => {
