@@ -79,6 +79,7 @@ export function compatCoerceAttr(
     }
   } else if (
     value === false &&
+    !(el.tagName === 'INPUT' && key === 'value') &&
     !isSpecialBooleanAttr(key) &&
     compatUtils.isCompatEnabled(DeprecationTypes.ATTR_FALSE_VALUE, instance)
   ) {

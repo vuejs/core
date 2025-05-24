@@ -164,15 +164,16 @@ export const TeleportImpl = {
       }
 
       if (isTeleportDeferred(n2.props)) {
+        n2.el!.__isMounted = false
         queuePostRenderEffect(() => {
           mountToTarget()
-          n2.el!.__isMounted = true
+          delete n2.el!.__isMounted
         }, parentSuspense)
       } else {
         mountToTarget()
       }
     } else {
-      if (isTeleportDeferred(n2.props) && !n1.el!.__isMounted) {
+      if (isTeleportDeferred(n2.props) && n1.el!.__isMounted === false) {
         queuePostRenderEffect(() => {
           TeleportImpl.process(
             n1,
@@ -186,7 +187,6 @@ export const TeleportImpl = {
             optimized,
             internals,
           )
-          delete n1.el!.__isMounted
         }, parentSuspense)
         return
       }
