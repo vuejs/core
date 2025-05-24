@@ -1,5 +1,6 @@
 import {
   type VNode,
+  computed,
   defineComponent,
   h,
   nextTick,
@@ -1407,6 +1408,51 @@ describe('vModel', () => {
 
     expect(foo.selected).toEqual(true)
     expect(bar.selected).toEqual(true)
+  })
+
+  it('multiple select (v-model has custom setter)', async () => {
+    const selected = ref([])
+
+    const multipleSelected = computed({
+      get() {
+        return selected.value
+      },
+      set(newVal) {
+        selected.value = newVal.slice(0, 1)
+      },
+    })
+    const setValue = (v: any) => {
+      multipleSelected.value = v
+    }
+    const component = defineComponent({
+      render() {
+        return [
+          withVModel(
+            h(
+              'select',
+              {
+                multiple: true,
+                'onUpdate:modelValue': setValue,
+              },
+              [h('option', { value: '1' }), h('option', { value: '2' })],
+            ),
+            multipleSelected.value,
+          ),
+        ]
+      },
+    })
+    render(h(component), root)
+
+    await nextTick()
+    const select = root.querySelector('select')
+    const [foo, bar] = root.querySelectorAll('option')
+    foo.selected = true
+    bar.selected = true
+    triggerEvent('change', select)
+    await nextTick()
+    expect(selected.value).toEqual(['1'])
+    expect(foo.selected).toEqual(true)
+    expect(bar.selected).toEqual(false)
   })
 
   // #10503
