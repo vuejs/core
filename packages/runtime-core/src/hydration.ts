@@ -911,7 +911,7 @@ function toStyleMap(str: string): Map<string, string> {
     let [key, value] = item.split(':')
     key = key.trim()
     value = value && value.trim()
-    if (key && value) {
+    if (key) {
       styleMap.set(key, value)
     }
   }
@@ -945,10 +945,13 @@ function resolveCssVars(
   ) {
     const cssVars = instance.getCssVars()
     for (const key in cssVars) {
-      expectedMap.set(
-        `--${getEscapedCssVarName(key, false)}`,
-        String(cssVars[key]),
-      )
+      const value = cssVars[key]
+      if (isRenderableAttrValue(value)) {
+        expectedMap.set(
+          `--${getEscapedCssVarName(key, false)}`,
+          String(value).trim(),
+        )
+      }
     }
   }
   if (vnode === root && instance.parent) {
