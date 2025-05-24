@@ -104,8 +104,14 @@ function rewriteSelector(
   let node: selectorParser.Node | null = null
   let starNode: selectorParser.Node | null = null
   let shouldInject = !deep
+  let wrappedGlobal = false
   // find the last child node to insert attribute selector
   selector.each(n => {
+    if ((rule as any).__global) {
+      shouldInject = false
+      return false
+    }
+
     // DEPRECATED ">>>" and "/deep/" combinator
     if (
       n.type === 'combinator' &&
@@ -190,8 +196,12 @@ function rewriteSelector(
       // global: replace with inner selector and do not inject [id].
       // ::v-global(.foo) -> .foo
       if (value === ':global' || value === '::v-global') {
-        selector.replaceWith(n.nodes[0])
-        return false
+        n.replaceWith(...n.nodes)
+        if (selector.nodes.length === 1) {
+          shouldInject = false
+          wrappedGlobal = true
+          return false
+        }
       }
     }
 
@@ -238,7 +248,7 @@ function rewriteSelector(
   if (rule.nodes.some(node => node.type === 'rule')) {
     const deep = (rule as any).__deep
     if (!deep) {
-      extractAndWrapNodes(rule)
+      extractAndWrapNodes(rule, wrappedGlobal)
       const atruleNodes = rule.nodes.filter(node => node.type === 'atrule')
       for (const atnode of atruleNodes) {
         extractAndWrapNodes(atnode)
@@ -300,7 +310,7 @@ function isSpaceCombinator(node: selectorParser.Node) {
   return node.type === 'combinator' && /^\s+$/.test(node.value)
 }
 
-function extractAndWrapNodes(parentNode: Rule | AtRule) {
+function extractAndWrapNodes(parentNode: Rule | AtRule, wrappedGlobal = false) {
   if (!parentNode.nodes) return
   const nodes = parentNode.nodes.filter(
     node => node.type === 'decl' || node.type === 'comment',
@@ -313,6 +323,7 @@ function extractAndWrapNodes(parentNode: Rule | AtRule) {
       nodes: nodes,
       selector: '&',
     })
+    ;(wrappedRule as any).__global = wrappedGlobal
     parentNode.prepend(wrappedRule)
   }
 }
