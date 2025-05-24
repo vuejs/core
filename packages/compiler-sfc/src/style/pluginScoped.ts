@@ -223,7 +223,9 @@ function rewriteSelector(
     }
 
     if (
-      (n.type !== 'pseudo' && n.type !== 'combinator' && n.type !== 'universal') ||
+      (n.type !== 'pseudo' &&
+        n.type !== 'combinator' &&
+        n.type !== 'universal') ||
       (isPseudoClassIsOrWhere(n) &&
         (!node ||
           n.nodes.some(
