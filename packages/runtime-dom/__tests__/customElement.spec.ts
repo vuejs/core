@@ -444,6 +444,36 @@ describe('defineCustomElement', () => {
       const e = container.childNodes[0] as VueElement
       expect(e.shadowRoot!.innerHTML).toBe('hello')
     })
+
+    test('prop types validation', async () => {
+      const E = defineCustomElement({
+        props: {
+          num: {
+            type: [Number, String],
+          },
+          bool: {
+            type: Boolean,
+          },
+        },
+        render() {
+          return h('div', [
+            h('span', [`${this.num} is ${typeof this.num}`]),
+            h('span', [`${this.bool} is ${typeof this.bool}`]),
+          ])
+        },
+      })
+
+      customElements.define('my-el-with-type-props', E)
+      render(h('my-el-with-type-props', { num: 1, bool: true }), container)
+      const e = container.childNodes[0] as VueElement
+      // @ts-expect-error
+      expect(e.num).toBe(1)
+      // @ts-expect-error
+      expect(e.bool).toBe(true)
+      expect(e.shadowRoot!.innerHTML).toBe(
+        '<div><span>1 is number</span><span>true is boolean</span></div>',
+      )
+    })
   })
 
   describe('attrs', () => {
@@ -1225,6 +1255,92 @@ describe('defineCustomElement', () => {
       await nextTick()
       expect(target.innerHTML).toBe(`<span>default</span>`)
       app.unmount()
+    })
+
+    test('toggle nested custom element with shadowRoot: false', async () => {
+      customElements.define(
+        'my-el-child-shadow-false',
+        defineCustomElement(
+          {
+            render(ctx: any) {
+              return h('div', null, [renderSlot(ctx.$slots, 'default')])
+            },
+          },
+          { shadowRoot: false },
+        ),
+      )
+      const ChildWrapper = {
+        render() {
+          return h('my-el-child-shadow-false', null, 'child')
+        },
+      }
+
+      customElements.define(
+        'my-el-parent-shadow-false',
+        defineCustomElement(
+          {
+            props: {
+              isShown: { type: Boolean, required: true },
+            },
+            render(ctx: any, _: any, $props: any) {
+              return $props.isShown
+                ? h('div', { key: 0 }, [renderSlot(ctx.$slots, 'default')])
+                : null
+            },
+          },
+          { shadowRoot: false },
+        ),
+      )
+      const ParentWrapper = {
+        props: {
+          isShown: { type: Boolean, required: true },
+        },
+        render(ctx: any, _: any, $props: any) {
+          return h('my-el-parent-shadow-false', { isShown: $props.isShown }, [
+            renderSlot(ctx.$slots, 'default'),
+          ])
+        },
+      }
+
+      const isShown = ref(true)
+      const App = {
+        render() {
+          return h(ParentWrapper, { isShown: isShown.value } as any, {
+            default: () => [h(ChildWrapper)],
+          })
+        },
+      }
+      const container = document.createElement('div')
+      document.body.appendChild(container)
+      const app = createApp(App)
+      app.mount(container)
+      expect(container.innerHTML).toBe(
+        `<my-el-parent-shadow-false is-shown="" data-v-app="">` +
+          `<div>` +
+          `<my-el-child-shadow-false data-v-app="">` +
+          `<div>child</div>` +
+          `</my-el-child-shadow-false>` +
+          `</div>` +
+          `</my-el-parent-shadow-false>`,
+      )
+
+      isShown.value = false
+      await nextTick()
+      expect(container.innerHTML).toBe(
+        `<my-el-parent-shadow-false data-v-app=""><!----></my-el-parent-shadow-false>`,
+      )
+
+      isShown.value = true
+      await nextTick()
+      expect(container.innerHTML).toBe(
+        `<my-el-parent-shadow-false data-v-app="" is-shown="">` +
+          `<div>` +
+          `<my-el-child-shadow-false data-v-app="">` +
+          `<div>child</div>` +
+          `</my-el-child-shadow-false>` +
+          `</div>` +
+          `</my-el-parent-shadow-false>`,
+      )
     })
   })
 

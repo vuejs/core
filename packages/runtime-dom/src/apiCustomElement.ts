@@ -269,18 +269,14 @@ export class VueElement
         this._root = this
       }
     }
-
-    if (!(this._def as ComponentOptions).__asyncLoader) {
-      // for sync component defs we can immediately resolve props
-      this._resolveProps(this._def)
-    }
   }
 
   connectedCallback(): void {
     // avoid resolving component if it's not connected
     if (!this.isConnected) return
 
-    if (!this.shadowRoot) {
+    // avoid re-parsing slots if already resolved
+    if (!this.shadowRoot && !this._resolved) {
       this._parseSlots()
     }
     this._connected = true
@@ -298,8 +294,7 @@ export class VueElement
 
     if (!this._instance) {
       if (this._resolved) {
-        this._setParent()
-        this._update()
+        this._mount(this._def)
       } else {
         if (parent && parent._pendingResolve) {
           this._pendingResolve = parent._pendingResolve.then(() => {
@@ -391,12 +386,7 @@ export class VueElement
         }
       }
       this._numberProps = numberProps
-
-      if (isAsync) {
-        // defining getter/setters on prototype
-        // for sync defs, this already happened in the constructor
-        this._resolveProps(def)
-      }
+      this._resolveProps(def)
 
       // apply CSS
       if (this.shadowRoot) {

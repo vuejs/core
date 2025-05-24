@@ -1007,7 +1007,7 @@ describe('SFC compile <script setup>', () => {
       expect(() =>
         compile(`<script setup>
         let bar = 1
-        defineModel({
+        const model = defineModel({
           default: () => bar
         })
         </script>`),
@@ -1017,7 +1017,7 @@ describe('SFC compile <script setup>', () => {
       expect(() =>
         compile(`<script setup>
         const bar = 1
-        defineModel({
+        const model = defineModel({
           default: () => bar
         })
         </script>`),
@@ -1027,7 +1027,7 @@ describe('SFC compile <script setup>', () => {
       expect(() =>
         compile(`<script setup>
         let bar = 1
-        defineModel({
+        const model = defineModel({
           get: () => bar,
           set: () => bar
         })

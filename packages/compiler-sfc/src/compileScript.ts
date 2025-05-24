@@ -1324,7 +1324,7 @@ export function mergeSourceMaps(
         },
         original: {
           line: m.originalLine,
-          column: m.originalColumn,
+          column: m.originalColumn!,
         },
         source: m.source,
         name: m.name,
