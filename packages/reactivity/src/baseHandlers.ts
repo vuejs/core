@@ -156,7 +156,7 @@ class MutableReactiveHandler extends BaseReactiveHandler {
           if (__DEV__) {
             warn(
               `Set operation on key "${String(key)}" failed: target is readonly.`,
-              oldValue,
+              target[key],
             )
           }
           return true
