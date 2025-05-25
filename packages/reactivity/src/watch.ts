@@ -245,7 +245,8 @@ export function watch(
         forceTrigger ||
         (isMultiSource
           ? (newValue as any[]).some((v, i) => hasChanged(v, oldValue[i]))
-          : hasChanged(newValue, oldValue))
+          : hasChanged(newValue, oldValue)) ||
+        (__COMPAT__ && (options as any).compatWatchArray && isArray(newValue))
       ) {
         // cleanup before running cb again
         if (cleanup) {
@@ -264,15 +265,6 @@ export function watch(
                 : oldValue,
             boundCleanup,
           ]
-
-          if (__COMPAT__) {
-            for (let i = 0; i < args.length - 1; i++) {
-              if (args[i] && args[i].WATCH_ARRAY_UNWRAP) {
-                args[i] = args[i].WATCH_ARRAY_UNWRAP
-              }
-            }
-          }
-
           oldValue = newValue
           call
             ? call(cb!, WatchErrorCodes.WATCH_CALLBACK, args)

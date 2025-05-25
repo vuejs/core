@@ -47,54 +47,377 @@ test('mode as function', () => {
   expect(vm.$el.innerHTML).toBe(`<div>foo</div><div>bar</div>`)
 })
 
-test('WATCH_ARRAY', async () => {
-  const spy = vi.fn()
-  const vm = new Vue({
-    data() {
-      return {
-        foo: [],
-      }
-    },
-    watch: {
-      foo: spy,
-    },
-  }) as any
-  expect(
-    deprecationData[DeprecationTypes.WATCH_ARRAY].message,
-  ).toHaveBeenWarned()
+describe('WATCH_ARRAY', () => {
+  describe('watch option', () => {
+    test('basic usage', async () => {
+      const spy = vi.fn()
+      const vm = new Vue({
+        data() {
+          return {
+            foo: [],
+          }
+        },
+        watch: {
+          foo: spy,
+        },
+      }) as any
+      expect(
+        deprecationData[DeprecationTypes.WATCH_ARRAY].message,
+      ).toHaveBeenWarned()
 
-  expect(spy).not.toHaveBeenCalled()
-  vm.foo.push(1)
-  await nextTick()
-  expect(spy).toHaveBeenCalledTimes(1)
-})
+      expect(spy).not.toHaveBeenCalled()
+      vm.foo.push(1)
+      await nextTick()
+      expect(spy).toHaveBeenCalledTimes(1)
+    })
 
-test('WATCH_ARRAY with non-array initial value', async () => {
-  const spy = vi.fn()
-  const vm = new Vue({
-    data() {
-      return {
-        foo: null,
-      }
-    },
-    watch: {
-      foo: spy,
-    },
-  }) as any
-  expect(
-    deprecationData[DeprecationTypes.WATCH_ARRAY].message,
-  ).not.toHaveBeenWarned()
+    test('dynamic depth depending on the value', async () => {
+      const spy = vi.fn()
+      const vm = new Vue({
+        data() {
+          return {
+            foo: {},
+          }
+        },
+        watch: {
+          foo: spy,
+        },
+      }) as any
 
-  expect(spy).not.toHaveBeenCalled()
-  vm.foo = []
-  await nextTick()
-  expect(
-    deprecationData[DeprecationTypes.WATCH_ARRAY].message,
-  ).toHaveBeenWarned()
-  expect(spy).toHaveBeenCalledTimes(1)
-  vm.foo.push(1)
-  await nextTick()
-  expect(spy).toHaveBeenCalledTimes(2)
+      vm.foo.bar = 1
+      await nextTick()
+      expect(
+        deprecationData[DeprecationTypes.WATCH_ARRAY].message,
+      ).not.toHaveBeenWarned()
+      expect(spy).not.toHaveBeenCalled()
+
+      vm.foo = []
+      await nextTick()
+      expect(
+        deprecationData[DeprecationTypes.WATCH_ARRAY].message,
+      ).toHaveBeenWarned()
+      expect(spy).toHaveBeenCalledTimes(1)
+
+      vm.foo.push({})
+      await nextTick()
+      expect(spy).toHaveBeenCalledTimes(2)
+
+      vm.foo[0].bar = 2
+      await nextTick()
+      expect(spy).toHaveBeenCalledTimes(2)
+
+      vm.foo = {}
+      await nextTick()
+      expect(spy).toHaveBeenCalledTimes(3)
+
+      vm.foo.bar = 3
+      await nextTick()
+      expect(spy).toHaveBeenCalledTimes(3)
+    })
+
+    test('deep: true', async () => {
+      const spy = vi.fn()
+      const vm = new Vue({
+        data() {
+          return {
+            foo: {},
+          }
+        },
+        watch: {
+          foo: {
+            handler: spy,
+            deep: true,
+          },
+        },
+      }) as any
+
+      vm.foo.bar = 1
+      await nextTick()
+      expect(spy).toHaveBeenCalledTimes(1)
+
+      vm.foo = []
+      await nextTick()
+      expect(spy).toHaveBeenCalledTimes(2)
+
+      vm.foo.push({})
+      await nextTick()
+      expect(spy).toHaveBeenCalledTimes(3)
+
+      vm.foo[0].bar = 2
+      await nextTick()
+      expect(spy).toHaveBeenCalledTimes(4)
+
+      vm.foo = {}
+      await nextTick()
+      expect(spy).toHaveBeenCalledTimes(5)
+
+      vm.foo.bar = 3
+      await nextTick()
+      expect(spy).toHaveBeenCalledTimes(6)
+
+      expect(
+        deprecationData[DeprecationTypes.WATCH_ARRAY].message,
+      ).not.toHaveBeenWarned()
+    })
+
+    test('checks correct instance for compat config', async () => {
+      const spy = vi.fn()
+      const vm = new Vue({
+        compatConfig: {
+          WATCH_ARRAY: false,
+        },
+        data() {
+          return {
+            foo: [],
+          }
+        },
+        watch: {
+          foo: spy,
+        },
+      }) as any
+
+      vm.foo.push(1)
+      await nextTick()
+      expect(spy).not.toHaveBeenCalled()
+
+      const orig = vm.foo
+      vm.foo = []
+      vm.foo = orig
+      await nextTick()
+      expect(spy).not.toHaveBeenCalled()
+
+      vm.foo = []
+      await nextTick()
+      expect(spy).toHaveBeenCalledTimes(1)
+
+      expect(
+        deprecationData[DeprecationTypes.WATCH_ARRAY].message,
+      ).not.toHaveBeenWarned()
+    })
+
+    test('passing other options', async () => {
+      const spy = vi.fn()
+      const vm = new Vue({
+        data() {
+          return {
+            foo: [],
+          }
+        },
+        watch: {
+          foo: {
+            handler: spy,
+            immediate: true,
+          },
+        },
+      }) as any
+
+      expect(spy).toHaveBeenCalledTimes(1)
+      expect(
+        deprecationData[DeprecationTypes.WATCH_ARRAY].message,
+      ).toHaveBeenWarned()
+
+      vm.foo.push({})
+      await nextTick()
+      expect(spy).toHaveBeenCalledTimes(2)
+
+      vm.foo[0].bar = 1
+      await nextTick()
+      expect(spy).toHaveBeenCalledTimes(2)
+    })
+  })
+
+  describe('$watch()', () => {
+    test('basic usage', async () => {
+      const spy = vi.fn()
+      const vm = new Vue({
+        data() {
+          return {
+            foo: [],
+          }
+        },
+      }) as any
+      vm.$watch('foo', spy)
+      expect(
+        deprecationData[DeprecationTypes.WATCH_ARRAY].message,
+      ).toHaveBeenWarned()
+
+      expect(spy).not.toHaveBeenCalled()
+      vm.foo.push(1)
+      await nextTick()
+      expect(spy).toHaveBeenCalledTimes(1)
+    })
+
+    test('dynamic depth depending on the value', async () => {
+      const spy = vi.fn()
+      const vm = new Vue({
+        data() {
+          return {
+            foo: {},
+          }
+        },
+      }) as any
+      vm.$watch('foo', spy)
+
+      vm.foo.bar = 1
+      await nextTick()
+      expect(
+        deprecationData[DeprecationTypes.WATCH_ARRAY].message,
+      ).not.toHaveBeenWarned()
+      expect(spy).not.toHaveBeenCalled()
+
+      vm.foo = []
+      await nextTick()
+      expect(
+        deprecationData[DeprecationTypes.WATCH_ARRAY].message,
+      ).toHaveBeenWarned()
+      expect(spy).toHaveBeenCalledTimes(1)
+
+      vm.foo.push({})
+      await nextTick()
+      expect(spy).toHaveBeenCalledTimes(2)
+
+      vm.foo[0].bar = 2
+      await nextTick()
+      expect(spy).toHaveBeenCalledTimes(2)
+
+      vm.foo = {}
+      await nextTick()
+      expect(spy).toHaveBeenCalledTimes(3)
+
+      vm.foo.bar = 3
+      await nextTick()
+      expect(spy).toHaveBeenCalledTimes(3)
+    })
+
+    test('deep: true', async () => {
+      const spy = vi.fn()
+      const vm = new Vue({
+        data() {
+          return {
+            foo: {},
+          }
+        },
+      }) as any
+      vm.$watch('foo', spy, { deep: true })
+
+      vm.foo.bar = 1
+      await nextTick()
+      expect(spy).toHaveBeenCalledTimes(1)
+
+      vm.foo = []
+      await nextTick()
+      expect(spy).toHaveBeenCalledTimes(2)
+
+      vm.foo.push({})
+      await nextTick()
+      expect(spy).toHaveBeenCalledTimes(3)
+
+      vm.foo[0].bar = 2
+      await nextTick()
+      expect(spy).toHaveBeenCalledTimes(4)
+
+      vm.foo = {}
+      await nextTick()
+      expect(spy).toHaveBeenCalledTimes(5)
+
+      vm.foo.bar = 3
+      await nextTick()
+      expect(spy).toHaveBeenCalledTimes(6)
+
+      expect(
+        deprecationData[DeprecationTypes.WATCH_ARRAY].message,
+      ).not.toHaveBeenWarned()
+    })
+
+    test('not deep for a function getter', async () => {
+      const spy = vi.fn()
+      const vm = new Vue({
+        data() {
+          return {
+            foo: [],
+          }
+        },
+      }) as any
+      vm.$watch(() => vm.foo, spy)
+
+      expect(spy).not.toHaveBeenCalled()
+      vm.foo.push(1)
+      await nextTick()
+      expect(spy).not.toHaveBeenCalled()
+      vm.foo = []
+      await nextTick()
+      expect(spy).toHaveBeenCalledTimes(1)
+      vm.foo.push(1)
+      await nextTick()
+      expect(spy).toHaveBeenCalledTimes(1)
+
+      expect(
+        deprecationData[DeprecationTypes.WATCH_ARRAY].message,
+      ).not.toHaveBeenWarned()
+    })
+
+    test('checks correct instance for compat config', async () => {
+      const spy = vi.fn()
+      const vm = new Vue({
+        compatConfig: {
+          WATCH_ARRAY: false,
+        },
+        data() {
+          return {
+            foo: [],
+          }
+        },
+      }) as any
+      vm.$watch('foo', spy)
+
+      vm.foo.push(1)
+      await nextTick()
+      expect(spy).not.toHaveBeenCalled()
+
+      const orig = vm.foo
+      vm.foo = []
+      vm.foo = orig
+      await nextTick()
+      expect(spy).not.toHaveBeenCalled()
+
+      vm.foo = []
+      await nextTick()
+      expect(spy).toHaveBeenCalledTimes(1)
+
+      expect(
+        deprecationData[DeprecationTypes.WATCH_ARRAY].message,
+      ).not.toHaveBeenWarned()
+    })
+
+    test('passing other options', async () => {
+      const spy = vi.fn()
+      const vm = new Vue({
+        data() {
+          return {
+            foo: [],
+          }
+        },
+      }) as any
+
+      vm.$watch('foo', {
+        handler: spy,
+        immediate: true,
+      })
+
+      expect(spy).toHaveBeenCalledTimes(1)
+      expect(
+        deprecationData[DeprecationTypes.WATCH_ARRAY].message,
+      ).toHaveBeenWarned()
+
+      vm.foo.push({})
+      await nextTick()
+      expect(spy).toHaveBeenCalledTimes(2)
+
+      vm.foo[0].bar = 1
+      await nextTick()
+      expect(spy).toHaveBeenCalledTimes(2)
+    })
+  })
 })
 
 test('PROPS_DEFAULT_THIS', () => {
