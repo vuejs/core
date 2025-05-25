@@ -181,7 +181,13 @@ export function resolveTransitionProps(
     onAppearCancelled = onEnterCancelled,
   } = baseProps
 
-  const finishEnter = (el: Element, isAppear: boolean, done?: () => void) => {
+  const finishEnter = (
+    el: Element & { _enterCancelled?: boolean },
+    isAppear: boolean,
+    done?: () => void,
+    isCancelled?: boolean,
+  ) => {
+    el._enterCancelled = isCancelled
     removeTransitionClass(el, isAppear ? appearToClass : enterToClass)
     removeTransitionClass(el, isAppear ? appearActiveClass : enterActiveClass)
     done && done()
@@ -240,7 +246,10 @@ export function resolveTransitionProps(
     },
     onEnter: makeEnterHook(false),
     onAppear: makeEnterHook(true),
-    onLeave(el: Element & { _isLeaving?: boolean }, done) {
+    onLeave(
+      el: Element & { _isLeaving?: boolean; _enterCancelled?: boolean },
+      done,
+    ) {
       el._isLeaving = true
       const resolve = () => finishLeave(el, done)
       addTransitionClass(el, leaveFromClass)
@@ -249,9 +258,14 @@ export function resolveTransitionProps(
       }
       // add *-leave-active class before reflow so in the case of a cancelled enter transition
       // the css will not get the final state (#10677)
-      addTransitionClass(el, leaveActiveClass)
-      // force reflow so *-leave-from classes immediately take effect (#2593)
-      forceReflow()
+      if (!el._enterCancelled) {
+        // force reflow so *-leave-from classes immediately take effect (#2593)
+        forceReflow()
+        addTransitionClass(el, leaveActiveClass)
+      } else {
+        addTransitionClass(el, leaveActiveClass)
+        forceReflow()
+      }
       nextFrame(() => {
         if (!el._isLeaving) {
           // cancelled
@@ -269,11 +283,11 @@ export function resolveTransitionProps(
       callHook(onLeave, [el, resolve])
     },
     onEnterCancelled(el) {
-      finishEnter(el, false)
+      finishEnter(el, false, undefined, true)
       callHook(onEnterCancelled, [el])
     },
     onAppearCancelled(el) {
-      finishEnter(el, true)
+      finishEnter(el, true, undefined, true)
       callHook(onAppearCancelled, [el])
     },
     onLeaveCancelled(el) {
