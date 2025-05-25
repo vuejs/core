@@ -306,6 +306,14 @@ describe('defineEmits w/ type declaration', () => {
   emit2('baz')
 })
 
+describe('defineEmits w/ interface declaration', () => {
+  interface Emits {
+    foo: [value: string]
+  }
+  const emit = defineEmits<Emits>()
+  emit('foo', 'hi')
+})
+
 describe('defineEmits w/ alt type declaration', () => {
   const emit = defineEmits<{
     foo: [id: string]
