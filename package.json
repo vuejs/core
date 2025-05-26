@@ -75,7 +75,7 @@
     "@types/semver": "^7.7.0",
     "@types/serve-handler": "^6.1.4",
     "@vitest/coverage-v8": "^3.1.4",
-    "@vitest/eslint-plugin": "^1.2.0",
+    "@vitest/eslint-plugin": "^1.2.1",
     "@vue/consolidate": "1.0.0",
     "conventional-changelog-cli": "^5.0.0",
     "enquirer": "^2.4.1",
