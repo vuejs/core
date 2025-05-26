@@ -48,7 +48,7 @@ return function render(_ctx, _cache) {
 }"
 `;
 
-exports[`compiler: transform v-model > input with v-bind shorthand type should use dynamic model 1`] = `
+exports[`compiler: transform v-model > input with v-bind shorthand type after v-model should use dynamic model 1`] = `
 "const _Vue = Vue
 
 return function render(_ctx, _cache) {
