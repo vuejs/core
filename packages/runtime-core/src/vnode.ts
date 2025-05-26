@@ -666,7 +666,12 @@ export function guardReactiveProps(
   props: (Data & VNodeProps) | null,
 ): (Data & VNodeProps) | null {
   if (!props) return null
-  return isProxy(props) || isInternalObject(props) ? extend({}, props) : props
+  return isProxy(props) ||
+    isInternalObject(props) ||
+    // handling for vapor props
+    props.__vapor
+    ? extend({}, props)
+    : props
 }
 
 export function cloneVNode<T, U>(
