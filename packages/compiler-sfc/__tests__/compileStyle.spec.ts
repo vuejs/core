@@ -211,38 +211,42 @@ color: red
     expect(
       compileScoped(`.div { color: red; } .div:where(:hover) { color: blue; }`),
     ).toMatchInlineSnapshot(`
-    ".div[data-v-test] { color: red;
-    }
-    .div[data-v-test]:where(:hover) { color: blue;
-    }"`)
+      ".div[data-v-test] { color: red;
+      }
+      .div[data-v-test]:where(:hover) { color: blue;
+      }"
+    `)
 
     expect(
       compileScoped(`.div { color: red; } .div:is(:hover) { color: blue; }`),
     ).toMatchInlineSnapshot(`
-    ".div[data-v-test] { color: red;
-    }
-    .div[data-v-test]:is(:hover) { color: blue;
-    }"`)
+      ".div[data-v-test] { color: red;
+      }
+      .div[data-v-test]:is(:hover) { color: blue;
+      }"
+    `)
 
     expect(
       compileScoped(
         `.div { color: red; } .div:where(.foo:hover) { color: blue; }`,
       ),
     ).toMatchInlineSnapshot(`
-    ".div[data-v-test] { color: red;
-    }
-    .div[data-v-test]:where(.foo:hover) { color: blue;
-    }"`)
+      ".div[data-v-test] { color: red;
+      }
+      .div[data-v-test]:where(.foo:hover) { color: blue;
+      }"
+    `)
 
     expect(
       compileScoped(
         `.div { color: red; } .div:is(.foo:hover) { color: blue; }`,
       ),
     ).toMatchInlineSnapshot(`
-    ".div[data-v-test] { color: red;
-    }
-    .div[data-v-test]:is(.foo:hover) { color: blue;
-    }"`)
+      ".div[data-v-test] { color: red;
+      }
+      .div[data-v-test]:is(.foo:hover) { color: blue;
+      }"
+    `)
   })
 
   test('media query', () => {
@@ -489,7 +493,31 @@ describe('SFC style preprocessors', () => {
       }"
     `)
     expect(compileScoped(`.foo * { color: red; }`)).toMatchInlineSnapshot(`
-      ".foo[data-v-test] * { color: red;
+      ".foo[data-v-test] [data-v-test] { color: red;
+      }"
+    `)
+    expect(compileScoped(`.foo :active { color: red; }`))
+      .toMatchInlineSnapshot(`
+      ".foo[data-v-test] :active { color: red;
+      }"
+    `)
+    expect(compileScoped(`.foo *:active { color: red; }`))
+      .toMatchInlineSnapshot(`
+      ".foo[data-v-test] [data-v-test]:active { color: red;
+      }"
+    `)
+    expect(compileScoped(`.foo * .bar { color: red; }`)).toMatchInlineSnapshot(`
+      ".foo * .bar[data-v-test] { color: red;
+      }"
+    `)
+    expect(compileScoped(`:last-child * { color: red; }`))
+      .toMatchInlineSnapshot(`
+      "[data-v-test]:last-child [data-v-test] { color: red;
+      }"
+    `)
+    expect(compileScoped(`:last-child *:active { color: red; }`))
+      .toMatchInlineSnapshot(`
+      "[data-v-test]:last-child [data-v-test]:active { color: red;
       }"
     `)
   })

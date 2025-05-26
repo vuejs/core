@@ -4,6 +4,7 @@ import {
   type ComponentOptions,
   type ConcreteComponent,
   currentInstance,
+  getComponentName,
   isInSSRComponentSetup,
 } from './component'
 import { isFunction, isObject } from '@vue/shared'
@@ -121,14 +122,27 @@ export function defineAsyncComponent<
     __asyncLoader: load,
 
     __asyncHydrate(el, instance, hydrate) {
+      let patched = false
       const doHydrate = hydrateStrategy
         ? () => {
-            const teardown = hydrateStrategy(hydrate, cb =>
+            const performHydrate = () => {
+              // skip hydration if the component has been patched
+              if (__DEV__ && patched) {
+                warn(
+                  `Skipping lazy hydration for component '${getComponentName(resolvedComp!)}': ` +
+                    `it was updated before lazy hydration performed.`,
+                )
+                return
+              }
+              hydrate()
+            }
+            const teardown = hydrateStrategy(performHydrate, cb =>
               forEachElement(el, cb),
             )
             if (teardown) {
               ;(instance.bum || (instance.bum = [])).push(teardown)
             }
+            ;(instance.u || (instance.u = [])).push(() => (patched = true))
           }
         : hydrate
       if (resolvedComp) {
