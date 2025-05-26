@@ -296,8 +296,13 @@ function analyzeExpressions(expressions: SimpleExpressionNode[]) {
       (variableToExpMap.get(name) || new Set()).add(exp),
     )
     expToVariableMap.set(exp, (expToVariableMap.get(exp) || []).concat(name))
-    if (parentStack.some(p => p.type === 'UpdateExpression'))
+    if (
+      parentStack.some(
+        p => p.type === 'UpdateExpression' || p.type === 'AssignmentExpression',
+      )
+    ) {
       updatedVariable.add(name)
+    }
   }
 
   for (const exp of expressions) {
