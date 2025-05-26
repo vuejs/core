@@ -16,6 +16,7 @@ import {
   ensureRenderer,
   onScopeDispose,
   renderSlot,
+  shallowReactive,
   shallowRef,
   simpleSetCurrentInstance,
 } from '@vue/runtime-dom'
@@ -173,7 +174,15 @@ function createVDOMComponent(
 
   // overwrite how the vdom instance handles props
   vnode.vi = (instance: ComponentInternalInstance) => {
-    instance.props = wrapper.props
+    // Ensure props are shallow reactive to align with VDOM behavior.
+    // This enables direct watching of props and prevents DEV warnings.
+    //
+    // Example:
+    // const props = defineProps(...)
+    // watch(props, () => { ... }) // props must be reactive for this to work
+    //
+    // Without reactivity, Vue will warn in DEV about non-reactive watch sources
+    instance.props = shallowReactive(wrapper.props)
     instance.attrs = wrapper.attrs
     instance.slots =
       wrapper.slots === EMPTY_OBJ
