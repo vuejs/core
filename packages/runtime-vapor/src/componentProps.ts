@@ -172,7 +172,6 @@ export function getPropsProxyHandlers(
 
 export function getAttrFromRawProps(rawProps: RawProps, key: string): unknown {
   if (key === '$') return
-  if (key === '__vapor') return true
   // need special merging behavior for class & style
   const merged = key === 'class' || key === 'style' ? ([] as any[]) : undefined
   const dynamicSources = rawProps.$
