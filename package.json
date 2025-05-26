@@ -82,7 +82,7 @@
     "esbuild": "^0.25.4",
     "esbuild-plugin-polyfill-node": "^0.3.0",
     "eslint": "^9.27.0",
-    "eslint-plugin-import-x": "^4.12.2",
+    "eslint-plugin-import-x": "^4.13.1",
     "estree-walker": "catalog:",
     "jsdom": "^26.1.0",
     "lint-staged": "^15.5.2",
