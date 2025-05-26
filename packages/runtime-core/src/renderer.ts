@@ -1349,11 +1349,12 @@ function baseCreateRenderer(
           }
         } else {
           // custom element style injection
-          if (root.ce) {
+          if (
+            root.ce &&
             // @ts-expect-error _def is private
-            if ((root.ce as VueElement)._def.shadowRoot !== false) {
-              root.ce._injectChildStyle(type)
-            }
+            (root.ce as VueElement)._def.shadowRoot !== false
+          ) {
+            root.ce._injectChildStyle(type)
           }
 
           if (__DEV__) {
