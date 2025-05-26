@@ -144,8 +144,9 @@ export function createComponent(
     locateHydrationNode()
   }
 
+  const isFnComponent = isFunction(component)
   // vdom interop enabled and component is not an explicit vapor component
-  if (appContext.vapor && !component.__vapor) {
+  if (appContext.vapor && !isFnComponent && !component.__vapor) {
     const frag = appContext.vapor.vdomMount(
       component as any,
       rawProps,
@@ -199,7 +200,7 @@ export function createComponent(
     setupPropsValidation(instance)
   }
 
-  const setupFn = isFunction(component) ? component : component.setup
+  const setupFn = isFnComponent ? component : component.setup
   const setupResult = setupFn
     ? callWithErrorHandling(setupFn, instance, ErrorCodes.SETUP_FUNCTION, [
         instance.props,
@@ -208,7 +209,7 @@ export function createComponent(
     : EMPTY_OBJ
 
   if (__DEV__ && !isBlock(setupResult)) {
-    if (isFunction(component)) {
+    if (isFnComponent) {
       warn(`Functional vapor component must return a block directly.`)
       instance.block = []
     } else if (!component.render) {
