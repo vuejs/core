@@ -27,7 +27,8 @@ const slotProp = ref('slot prop')
         change slot prop
       </button>
       <div class="vdom-slot-in-vapor-default">
-        #default: <slot :foo="slotProp" />
+        #default:
+        <slot :foo="slotProp" />
       </div>
       <div class="vdom-slot-in-vapor-test">
         #test: <slot name="test">fallback content</slot>
@@ -40,7 +41,7 @@ const slotProp = ref('slot prop')
     >
       Toggle default slot to vdom
     </button>
-    <VdomComp :msg="msg">
+    <VdomComp :msg="msg" class="foo">
       <template #default="{ foo }" v-if="passSlot">
         <div>slot prop: {{ foo }}</div>
         <div>component prop: {{ msg }}</div>
