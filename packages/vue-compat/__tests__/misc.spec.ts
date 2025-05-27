@@ -275,3 +275,11 @@ test('ATTR_ENUMERATED_COERCION', () => {
     )('contenteditable', 'foo', 'true'),
   ).toHaveBeenWarned()
 })
+
+test('ATTR_ENUMERATED_COERCION: true', () => {
+  const vm = new Vue({
+    compatConfig: { ATTR_ENUMERATED_COERCION: true },
+    template: `<div><div draggable="false">hello</div></div>`,
+  }).$mount()
+  expect(vm.$el.innerHTML).toBe(`<div draggable="false">hello</div>`)
+})
