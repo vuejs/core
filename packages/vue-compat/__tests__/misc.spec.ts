@@ -282,4 +282,10 @@ test('ATTR_ENUMERATED_COERCION: true', () => {
     template: `<div><div draggable="false">hello</div></div>`,
   }).$mount()
   expect(vm.$el.innerHTML).toBe(`<div draggable="false">hello</div>`)
+  expect(
+    (
+      deprecationData[DeprecationTypes.ATTR_ENUMERATED_COERCION]
+        .message as Function
+    )('draggable', 'false', 'false'),
+  ).toHaveBeenWarned()
 })
