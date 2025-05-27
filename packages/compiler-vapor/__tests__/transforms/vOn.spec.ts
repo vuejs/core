@@ -682,4 +682,14 @@ describe('v-on', () => {
       '_delegate(n0, "click", _withModifiers(e => _ctx.test(e), ["stop"]))',
     )
   })
+
+  test('expression with type', () => {
+    const { code } = compileWithVOn(`<div @click="handleClick as any"></div>`, {
+      bindingMetadata: {
+        handleClick: BindingTypes.SETUP_CONST,
+      },
+    })
+    expect(code).matchSnapshot()
+    expect(code).include('n0.$evtclick = e => (_ctx.handleClick as any)(e)')
+  })
 })

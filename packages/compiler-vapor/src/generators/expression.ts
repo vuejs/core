@@ -10,6 +10,7 @@ import {
   NewlineType,
   type SimpleExpressionNode,
   type SourceLocation,
+  TS_NODE_TYPES,
   advancePositionWithClone,
   createSimpleExpression,
   isInDestructureAssignment,
@@ -48,6 +49,7 @@ export function genExpression(
     return genIdentifier(content, context, loc, assignment)
   }
 
+  const shouldWrap = ast && TS_NODE_TYPES.includes(ast.type)
   const ids: Identifier[] = []
   const parentStackMap = new Map<Identifier, Node[]>()
   const parentStack: Node[] = []
@@ -85,6 +87,7 @@ export function genExpression(
             parent.type === 'OptionalMemberExpression')
 
         push(
+          shouldWrap ? '(' : '',
           ...genIdentifier(
             source,
             context,
@@ -103,6 +106,7 @@ export function genExpression(
         if (i === ids.length - 1 && end < content.length) {
           push([content.slice(end), NewlineType.Unknown])
         }
+        push(shouldWrap ? ')' : '')
       })
 
     if (assignment && hasMemberExpression) {
