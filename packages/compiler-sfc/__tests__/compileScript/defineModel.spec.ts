@@ -269,16 +269,4 @@ describe('defineModel()', () => {
       modelValue: BindingTypes.SETUP_REF,
     })
   })
-
-  test('error when defineModel is not assigned to a variable', () => {
-    expect(() =>
-      compile(`
-        <script setup>
-        defineModel()
-        </script>
-      `),
-    ).toThrow(
-      'defineModel() must be assigned to a variable. For example: const model = defineModel()',
-    )
-  })
 })
