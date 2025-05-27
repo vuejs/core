@@ -255,6 +255,13 @@ function rewriteSelector(
       )
       shouldInject = false
     }
+  } else {
+    // #13387 don't inject [id] at the selector start if node is null
+    // and the selector starts with `>`
+    const { type, value } = selector.first
+    if (type === 'combinator' && value === '>') {
+      shouldInject = false
+    }
   }
 
   if (node) {
@@ -266,8 +273,8 @@ function rewriteSelector(
     selector.first.spaces.before = ''
   }
 
+  const idToAdd = slotted ? id + '-s' : id
   if (shouldInject) {
-    const idToAdd = slotted ? id + '-s' : id
     selector.insertAfter(
       // If node is null it means we need to inject [id] at the start
       // insertAfter can handle `null` here
@@ -279,20 +286,21 @@ function rewriteSelector(
         quoteMark: `"`,
       }),
     )
-    // Used for trailing universal selectors (#12906)
-    // `.foo * {}` -> `.foo[xxxxxxx] [xxxxxxx] {}`
-    if (starNode) {
-      selector.insertBefore(
-        starNode,
-        selectorParser.attribute({
-          attribute: idToAdd,
-          value: idToAdd,
-          raws: {},
-          quoteMark: `"`,
-        }),
-      )
-      selector.removeChild(starNode)
-    }
+  }
+
+  // Used for trailing universal selectors (#12906)
+  // `.foo * {}` -> `.foo[xxxxxxx] [xxxxxxx] {}`
+  if (starNode) {
+    selector.insertBefore(
+      starNode,
+      selectorParser.attribute({
+        attribute: idToAdd,
+        value: idToAdd,
+        raws: {},
+        quoteMark: `"`,
+      }),
+    )
+    selector.removeChild(starNode)
   }
 }
 

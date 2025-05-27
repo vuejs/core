@@ -520,5 +520,12 @@ describe('SFC style preprocessors', () => {
       "[data-v-test]:last-child [data-v-test]:active { color: red;
       }"
     `)
+    expect(compileScoped(`main { > * { background-color: yellow; } }`))
+      .toMatchInlineSnapshot(`
+        "main {
+        > [data-v-test] { background-color: yellow;
+        }
+        }"
+      `)
   })
 })
