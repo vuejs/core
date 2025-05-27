@@ -40,6 +40,11 @@ export function validateBrowserExpression(
   }
 
   try {
+    // Perform static validation to reject expressions containing potentially unsafe characters.
+    // This regex allows only basic JavaScript syntax used in simple expressions or arrow functions.
+    if (!/^[\w\s.;(){}[\]()=>,+\-*/%!<>=?:'"|&^~]*$/.test(exp)) {
+      throw new Error('Unsafe expression');
+    }
     new Function(
       asRawStatements
         ? ` ${exp} `
