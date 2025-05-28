@@ -684,12 +684,15 @@ describe('v-on', () => {
   })
 
   test('expression with type', () => {
-    const { code } = compileWithVOn(`<div @click="handleClick as any"></div>`, {
-      bindingMetadata: {
-        handleClick: BindingTypes.SETUP_CONST,
+    const { code } = compileWithVOn(
+      `<div @click="(<number>handleClick as any)"></div>`,
+      {
+        bindingMetadata: {
+          handleClick: BindingTypes.SETUP_CONST,
+        },
       },
-    })
+    )
     expect(code).matchSnapshot()
-    expect(code).include('n0.$evtclick = e => (_ctx.handleClick as any)(e)')
+    expect(code).include('n0.$evtclick = e => _ctx.handleClick(e)')
   })
 })

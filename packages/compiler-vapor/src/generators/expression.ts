@@ -65,8 +65,7 @@ export function genExpression(
   let hasMemberExpression = false
   if (ids.length) {
     const [frag, push] = buildCodeFragment()
-    const shouldWrap = ast && TS_NODE_TYPES.includes(ast.type)
-    if (shouldWrap) push('(')
+    const isTSNode = ast && TS_NODE_TYPES.includes(ast.type)
     ids
       .sort((a, b) => a.start! - b.start!)
       .forEach((id, i) => {
@@ -75,8 +74,10 @@ export function genExpression(
         const end = id.end! - 1
         const last = ids[i - 1]
 
-        const leadingText = content.slice(last ? last.end! - 1 : 0, start)
-        if (leadingText.length) push([leadingText, NewlineType.Unknown])
+        if (!(isTSNode && i === 0)) {
+          const leadingText = content.slice(last ? last.end! - 1 : 0, start)
+          if (leadingText.length) push([leadingText, NewlineType.Unknown])
+        }
 
         const source = content.slice(start, end)
         const parentStack = parentStackMap.get(id)!
@@ -103,11 +104,10 @@ export function genExpression(
           ),
         )
 
-        if (i === ids.length - 1 && end < content.length) {
+        if (i === ids.length - 1 && end < content.length && !isTSNode) {
           push([content.slice(end), NewlineType.Unknown])
         }
       })
-    if (shouldWrap) push(')')
 
     if (assignment && hasMemberExpression) {
       push(` = ${assignment}`)
