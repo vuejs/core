@@ -252,3 +252,25 @@ export function render(_ctx) {
   return n1
 }"
 `;
+
+exports[`compiler: transform slot > slot + v-if / v-else[-if] should not cause error 1`] = `
+"import { resolveComponent as _resolveComponent, setInsertionState as _setInsertionState, createSlot as _createSlot, createComponentWithFallback as _createComponentWithFallback, createIf as _createIf, template as _template } from 'vue';
+const t0 = _template("<div></div>", true)
+
+export function render(_ctx) {
+  const _component_Foo = _resolveComponent("Foo")
+  const _component_Bar = _resolveComponent("Bar")
+  const n6 = t0()
+  _setInsertionState(n6)
+  const n0 = _createSlot("foo", null)
+  _setInsertionState(n6)
+  const n1 = _createIf(() => (true), () => {
+    const n3 = _createComponentWithFallback(_component_Foo)
+    return n3
+  }, () => {
+    const n5 = _createComponentWithFallback(_component_Bar)
+    return n5
+  })
+  return n6
+}"
+`;
