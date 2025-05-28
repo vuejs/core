@@ -18,7 +18,7 @@ import { queuePostRenderEffect } from './renderer'
 import { type ComponentOptions, getComponentPublicInstance } from './component'
 import { knownTemplateRefs } from './helpers/useTemplateRef'
 
-const pendingSetRefMap = new WeakMap<VNode, SchedulerJob>()
+const pendingSetRefMap = new WeakMap<VNodeNormalizedRef, SchedulerJob>()
 /**
  * Function for handling a template ref
  */
@@ -97,6 +97,7 @@ export function setRef(
 
   // dynamic ref changed. unset old ref
   if (oldRef != null && oldRef !== ref) {
+    invalidatePendingSetRef(oldRawRef!)
     if (isString(oldRef)) {
       refs[oldRef] = null
       if (canSetSetupRef(oldRef)) {
@@ -156,21 +157,25 @@ export function setRef(
         // ref with the same key
         const job: SchedulerJob = () => {
           doSet()
-          pendingSetRefMap.delete(vnode)
+          pendingSetRefMap.delete(rawRef)
         }
         job.id = -1
-        pendingSetRefMap.set(vnode, job)
+        pendingSetRefMap.set(rawRef, job)
         queuePostRenderEffect(job, parentSuspense)
       } else {
-        const pendingSetRef = pendingSetRefMap.get(vnode)
-        if (pendingSetRef) {
-          pendingSetRef.flags! |= SchedulerJobFlags.DISPOSED
-          pendingSetRefMap.delete(vnode)
-        }
+        invalidatePendingSetRef(rawRef)
         doSet()
       }
     } else if (__DEV__) {
       warn('Invalid template ref type:', ref, `(${typeof ref})`)
     }
+  }
+}
+
+function invalidatePendingSetRef(rawRef: VNodeNormalizedRef) {
+  const pendingSetRef = pendingSetRefMap.get(rawRef)
+  if (pendingSetRef) {
+    pendingSetRef.flags! |= SchedulerJobFlags.DISPOSED
+    pendingSetRefMap.delete(rawRef)
   }
 }

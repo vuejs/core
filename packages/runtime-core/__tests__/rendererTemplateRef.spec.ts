@@ -225,6 +225,44 @@ describe('api: template refs', () => {
     expect(el.value).toBe(null)
   })
 
+  it('set and change ref in the same tick', async () => {
+    const root = nodeOps.createElement('div')
+    const show = ref(false)
+    const refName = ref('a')
+
+    const Child = defineComponent({
+      setup() {
+        refName.value = 'b'
+        return () => {}
+      },
+    })
+
+    const Comp = {
+      render() {
+        return h(Child, {
+          ref: refName.value,
+        })
+      },
+      updated(this: any) {
+        expect(this.$refs.a).toBe(null)
+        expect(this.$refs.b).not.toBe(null)
+      },
+    }
+
+    const App = {
+      render() {
+        return show.value ? h(Comp) : null
+      },
+    }
+
+    render(h(App), root)
+    expect(refName.value).toBe('a')
+
+    show.value = true
+    await nextTick()
+    expect(refName.value).toBe('b')
+  })
+
   test('string ref inside slots', async () => {
     const root = nodeOps.createElement('div')
     const spy = vi.fn()
