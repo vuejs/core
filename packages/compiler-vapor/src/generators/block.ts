@@ -44,7 +44,21 @@ export function genBlockContent(
   const resetBlock = context.enterBlock(block)
 
   if (root) {
-    genResolveAssets('component', 'resolveComponent')
+    for (let name of context.ir.component) {
+      const id = toValidAssetId(name, 'component')
+      const maybeSelfReference = name.endsWith('__self')
+      if (maybeSelfReference) name = name.slice(0, -6)
+      push(
+        NEWLINE,
+        `const ${id} = `,
+        ...genCall(
+          context.helper('resolveComponent'),
+          JSON.stringify(name),
+          // pass additional `maybeSelfReference` flag
+          maybeSelfReference ? 'true' : undefined,
+        ),
+      )
+    }
     genResolveAssets('directive', 'resolveDirective')
   }
 

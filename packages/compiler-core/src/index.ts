@@ -17,6 +17,7 @@ export {
   createTransformContext,
   traverseNode,
   createStructuralDirectiveTransform,
+  getSelfName,
   type NodeTransform,
   type StructuralDirectiveTransform,
   type DirectiveTransform,
