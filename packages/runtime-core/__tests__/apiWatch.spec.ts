@@ -31,6 +31,7 @@ import {
   TrackOpTypes,
   TriggerOpTypes,
   effectScope,
+  onScopeDispose,
   shallowReactive,
   shallowRef,
   toRef,
@@ -1594,7 +1595,7 @@ describe('api: watch', () => {
 
     num.value++
     await nextTick()
-    // would not be calld when value>1
+    // would not be called when value>1
     expect(spy1).toHaveBeenCalledTimes(1)
     expect(spy2).toHaveBeenCalledTimes(1)
   })
@@ -1873,7 +1874,7 @@ describe('api: watch', () => {
     expect(foo.value.a).toBe(2)
   })
 
-  test('watch immediate error in effect scope should be catched by onErrorCaptured', async () => {
+  test('watch immediate error in effect scope should be caught by onErrorCaptured', async () => {
     const warn = vi.spyOn(console, 'warn')
     warn.mockImplementation(() => {})
     const ERROR_IN_SCOPE = 'ERROR_IN_SCOPE'
@@ -1981,5 +1982,32 @@ describe('api: watch', () => {
     await nextTick()
     expect(spy1).toHaveBeenCalled()
     expect(spy2).toHaveBeenCalled()
+  })
+
+  // #12631
+  test('this.$watch w/ onScopeDispose', () => {
+    const onCleanup = vi.fn()
+    const toggle = ref(true)
+
+    const Comp = defineComponent({
+      render() {},
+      created(this: any) {
+        this.$watch(
+          () => 1,
+          function () {},
+        )
+        onScopeDispose(onCleanup)
+      },
+    })
+
+    const App = defineComponent({
+      render() {
+        return toggle.value ? h(Comp) : null
+      },
+    })
+
+    const root = nodeOps.createElement('div')
+    createApp(App).mount(root)
+    expect(onCleanup).toBeCalledTimes(0)
   })
 })

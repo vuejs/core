@@ -808,4 +808,30 @@ const props = defineProps({ foo: String })
     expect(content).toMatch(`foo: { default: 5.5, type: Number }`)
     assertCode(content)
   })
+
+  test('w/ TSTypeAliasDeclaration', () => {
+    const { content } = compile(`
+    <script setup lang="ts">
+    type FunFoo<O> = (item: O) => boolean;
+    type FunBar = FunFoo<number>;
+    withDefaults(
+      defineProps<{
+        foo?: FunFoo<number>;
+        bar?: FunBar;
+      }>(),
+      {
+        foo: () => true,
+        bar: () => true,
+      },
+    );
+    </script>
+      `)
+    assertCode(content)
+    expect(content).toMatch(
+      `foo: { type: Function, required: false, default: () => true }`,
+    )
+    expect(content).toMatch(
+      `bar: { type: Function, required: false, default: () => true }`,
+    )
+  })
 })
