@@ -761,7 +761,8 @@ export function createHydrationFunctions(
     // replace node
     const parentNode = oldNode.parentNode
     if (parentNode) {
-      parentNode.replaceChild(newNode, oldNode)
+      if (newNode) parentNode.replaceChild(newNode, oldNode)
+      else remove(oldNode)
     }
 
     // update vnode
