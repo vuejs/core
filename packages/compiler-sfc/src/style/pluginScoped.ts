@@ -218,7 +218,7 @@ function rewriteSelector(
         }
       }
       // store the universal selector so it can be rewritten later
-      // .foo * -> .foo[xxxxxxx] [xxxxxxx]
+      // .foo * -> .foo[xxxxxxx] :where([xxxxxxx])
       starNode = n
     }
 
@@ -280,15 +280,20 @@ function rewriteSelector(
       }),
     )
     // Used for trailing universal selectors (#12906)
-    // `.foo * {}` -> `.foo[xxxxxxx] [xxxxxxx] {}`
+    // `.foo * {}` -> `.foo[xxxxxxx] :where([xxxxxxx]) {}`
     if (starNode) {
       selector.insertBefore(
         starNode,
-        selectorParser.attribute({
-          attribute: idToAdd,
-          value: idToAdd,
-          raws: {},
-          quoteMark: `"`,
+        selectorParser.pseudo({
+          value: ':where',
+          nodes: [
+            selectorParser.attribute({
+              attribute: idToAdd,
+              value: idToAdd,
+              raws: {},
+              quoteMark: `"`,
+            }),
+          ],
         }),
       )
       selector.removeChild(starNode)

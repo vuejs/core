@@ -493,7 +493,7 @@ describe('SFC style preprocessors', () => {
       }"
     `)
     expect(compileScoped(`.foo * { color: red; }`)).toMatchInlineSnapshot(`
-      ".foo[data-v-test] [data-v-test] { color: red;
+      ".foo[data-v-test] :where([data-v-test]) { color: red;
       }"
     `)
     expect(compileScoped(`.foo :active { color: red; }`))
@@ -503,7 +503,7 @@ describe('SFC style preprocessors', () => {
     `)
     expect(compileScoped(`.foo *:active { color: red; }`))
       .toMatchInlineSnapshot(`
-      ".foo[data-v-test] [data-v-test]:active { color: red;
+      ".foo[data-v-test] :where([data-v-test]):active { color: red;
       }"
     `)
     expect(compileScoped(`.foo * .bar { color: red; }`)).toMatchInlineSnapshot(`
@@ -512,12 +512,12 @@ describe('SFC style preprocessors', () => {
     `)
     expect(compileScoped(`:last-child * { color: red; }`))
       .toMatchInlineSnapshot(`
-      "[data-v-test]:last-child [data-v-test] { color: red;
+      "[data-v-test]:last-child :where([data-v-test]) { color: red;
       }"
     `)
     expect(compileScoped(`:last-child *:active { color: red; }`))
       .toMatchInlineSnapshot(`
-      "[data-v-test]:last-child [data-v-test]:active { color: red;
+      "[data-v-test]:last-child :where([data-v-test]):active { color: red;
       }"
     `)
   })
