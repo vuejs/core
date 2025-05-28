@@ -716,4 +716,10 @@ describe('compiler: expression transform', () => {
       })
     })
   })
+
+  test('expression with type', () => {
+    const { code } = compile(`<div @click="handleClick as any"></div>`)
+    expect(code).toMatch(`onClick: (_ctx.handleClick as any)`)
+    expect(code).toMatchSnapshot()
+  })
 })
