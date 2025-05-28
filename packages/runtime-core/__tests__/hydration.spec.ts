@@ -1677,6 +1677,24 @@ describe('SSR hydration', () => {
     expect(`mismatch`).not.toHaveBeenWarned()
   })
 
+  // #13394
+  test('transition appear work with empty content', () => {
+    const { vnode, container } = mountWithHydration(
+      `<template></template>`,
+      () =>
+        h(
+          Transition,
+          { appear: true },
+          {
+            default: () => null,
+          },
+        ),
+    )
+    expect(container.firstChild).toBe(null)
+    expect(vnode.el).toBe(container.firstChild)
+    expect(`mismatch`).not.toHaveBeenWarned()
+  })
+
   test('transition appear with v-if', () => {
     const show = false
     const { vnode, container } = mountWithHydration(
