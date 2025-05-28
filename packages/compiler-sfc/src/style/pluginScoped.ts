@@ -257,9 +257,9 @@ function rewriteSelector(
     }
   } else {
     // #13387 don't inject [id] at the selector start if node is null
-    // and the selector starts with `>`
+    // and the selector starts with a non-empty combinator
     const { type, value } = selector.first
-    if (type === 'combinator' && value === '>') {
+    if (type === 'combinator' && value !== ' ') {
       shouldInject = false
     }
   }
