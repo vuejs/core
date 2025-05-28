@@ -19,7 +19,7 @@ exports[`compiler: expression transform > expression with type 1`] = `
 
 return function render(_ctx, _cache) {
   return (_openBlock(), _createElementBlock("div", {
-    onClick: (_ctx.handleClick as any)
+    onClick: _ctx.handleClick
   }, null, 8 /* PROPS */, ["onClick"]))
 }"
 `;
