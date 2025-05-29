@@ -114,7 +114,7 @@ export function createSlot(
     : EMPTY_OBJ
 
   let fragment: DynamicFragment
-  if (isRef(rawSlots._)) {
+  if (isRef(rawSlots._) && rawSlots._.value) {
     fragment = instance.appContext.vapor!.vdomSlot(
       rawSlots._,
       name,
