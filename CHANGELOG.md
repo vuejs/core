@@ -3,8 +3,8 @@
 
 ### Reverts
 
-* Revert "fix(compiler-sfc): add scoping tag to trailing universal selector (#1…" (#13406) ([19f23b1](https://github.com/vuejs/core/commit/19f23b180bb679e38db95d6a10a420abeedc8e1c)), closes [#1](https://github.com/vuejs/core/issues/1) [#13406](https://github.com/vuejs/core/issues/13406)
-* Revert "fix(compiler-sfc): add error handling for defineModel() without varia…" (#13390) ([42f879f](https://github.com/vuejs/core/commit/42f879fcab48e0e1011967a771b4ad9e8838d760)), closes [#13390](https://github.com/vuejs/core/issues/13390)
+* Revert "fix(compiler-sfc): add scoping tag to trailing universal selector" (#13406) ([19f23b1](https://github.com/vuejs/core/commit/19f23b180bb679e38db95d6a10a420abeedc8e1c)), closes [#13406](https://github.com/vuejs/core/issues/13406)
+* Revert "fix(compiler-sfc): add error handling for defineModel() without variable" (#13390) ([42f879f](https://github.com/vuejs/core/commit/42f879fcab48e0e1011967a771b4ad9e8838d760)), closes [#13390](https://github.com/vuejs/core/issues/13390)
 
 
 
