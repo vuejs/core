@@ -230,6 +230,7 @@ export function transform(
     directive: new Set(),
     block: newBlock(node),
     hasTemplateRef: false,
+    hasForwardedSlot: false,
   }
 
   const context = new TransformContext(ir, node, options)
