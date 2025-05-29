@@ -237,7 +237,14 @@ function createSlotBlock(
   const block: SlotBlockIRNode = newBlock(slotNode)
   block.props = dir && dir.exp
   const exitBlock = context.enterBlock(block)
-  return [block, exitBlock]
+  context.inSlot++
+  return [
+    block,
+    () => {
+      context.inSlot--
+      exitBlock()
+    },
+  ]
 }
 
 function isNonWhitespaceContent(node: TemplateChildNode): boolean {

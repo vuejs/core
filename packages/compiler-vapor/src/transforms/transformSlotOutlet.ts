@@ -100,11 +100,14 @@ export const transformSlotOutlet: NodeTransform = (node, context) => {
   }
 
   return () => {
-    let forwarded = false
-    const slotNode = context.block.node
-    if (slotNode.type === NodeTypes.ELEMENT) {
-      forwarded = hasForwardedSlots(slotNode.children)
-    }
+    const {
+      block: { node: slotNode },
+      inSlot,
+    } = context
+    const forwarded =
+      inSlot !== 0 &&
+      slotNode.type === NodeTypes.ELEMENT &&
+      hasForwardedSlots(slotNode.children)
     if (forwarded) context.ir.hasForwardedSlot = true
 
     exitBlock && exitBlock()
@@ -141,7 +144,6 @@ function createFallback(
   return [fallback, exitBlock]
 }
 
-// TODO
 function hasForwardedSlots(children: TemplateChildNode[]): boolean {
   for (let i = 0; i < children.length; i++) {
     const child = children[i]

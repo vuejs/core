@@ -76,6 +76,7 @@ export class TransformContext<T extends AllNode = AllNode> {
 
   inVOnce: boolean = false
   inVFor: number = 0
+  inSlot: number = 0
 
   comment: CommentNode[] = []
   component: Set<string> = this.ir.component
