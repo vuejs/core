@@ -137,7 +137,7 @@ export function watch(
     // traverse will happen in wrapped getter below
     if (deep) return source
     // for `deep: false | 0` or shallow reactive, only traverse root-level properties
-    if (isShallow(source) || deep === false || deep === 0)
+    if (isShallow(source) || !deep)
       return traverse(source, 1)
     // for `deep: undefined` on a reactive object, deeply traverse all properties
     return traverse(source)
