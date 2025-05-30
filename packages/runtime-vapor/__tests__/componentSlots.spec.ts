@@ -470,6 +470,43 @@ describe('component: slots', () => {
       expect(html()).toBe('content<!--if--><!--slot-->')
     })
 
+    test('use fallback on initial render', async () => {
+      const Child = {
+        setup() {
+          return createSlot('default', null, () =>
+            document.createTextNode('fallback'),
+          )
+        },
+      }
+
+      const toggle = ref(false)
+
+      const { html } = define({
+        setup() {
+          return createComponent(Child, null, {
+            default: () => {
+              return createIf(
+                () => toggle.value,
+                () => {
+                  return document.createTextNode('content')
+                },
+              )
+            },
+          })
+        },
+      }).render()
+
+      expect(html()).toBe('fallback<!--if--><!--slot-->')
+
+      toggle.value = true
+      await nextTick()
+      expect(html()).toBe('content<!--if--><!--slot-->')
+
+      toggle.value = false
+      await nextTick()
+      expect(html()).toBe('fallback<!--if--><!--slot-->')
+    })
+
     test('dynamic slot work with v-if', async () => {
       const val = ref('header')
       const toggle = ref(false)
