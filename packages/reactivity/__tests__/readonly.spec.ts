@@ -523,7 +523,7 @@ describe('reactivity/readonly', () => {
   })
 })
 
-test('should able to trigger on triggerRef', () => {
+test('should be able to trigger with triggerRef', () => {
   const r = shallowRef({ a: 1 })
   const ror = readonly(r)
   let dummy
