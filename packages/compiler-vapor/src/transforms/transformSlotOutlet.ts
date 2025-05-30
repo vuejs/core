@@ -99,6 +99,7 @@ export const transformSlotOutlet: NodeTransform = (node, context) => {
   }
 
   return () => {
+    if (context.inSlot) context.ir.hasForwardedSlot = true
     exitBlock && exitBlock()
     context.dynamic.operation = {
       type: IRNodeTypes.SLOT_OUTLET_NODE,
@@ -106,6 +107,7 @@ export const transformSlotOutlet: NodeTransform = (node, context) => {
       name: slotName,
       props: irProps,
       fallback,
+      forwarded: context.inSlot,
     }
   }
 }
