@@ -29,7 +29,14 @@ import {
   mountComponent,
   unmountComponent,
 } from './component'
-import { type Block, VaporFragment, insert, remove } from './block'
+import {
+  type Block,
+  VaporFragment,
+  insert,
+  isFragment,
+  isValidBlock,
+  remove,
+} from './block'
 import { EMPTY_OBJ, extend, isFunction } from '@vue/shared'
 import { type RawProps, rawPropsProxyHandlers } from './componentProps'
 import type { RawSlots, VaporSlot } from './componentSlots'
@@ -279,7 +286,36 @@ function renderVDOMSlot(
             false,
           )
         } else {
-          if ((vnode.children as any[]).length) {
+          let isValidSlotContent
+          let children = vnode.children as any[]
+          /*
+           * Handle forwarded vapor slot inside VDOM slot
+           * Example: In a vapor component template:
+           * <VDOMComp>
+           *   <template #header>
+           *     <slot name="header" />  <!-- This vapor slot gets forwarded -->
+           *   </template>
+           * </VDOMComp>
+           */
+          let vaporSlot
+          if (children.length === 1 && (vaporSlot = children[0].vs)) {
+            const block = vaporSlot.slot(props)
+            isValidSlotContent =
+              isValidBlock(block) ||
+              /*
+               * If block is a vapor fragment with insert, it indicates a forwarded VDOM slot
+               * Example: In a VDOM component template:
+               * <VaporComp>
+               *   <template #header>
+               *     <slot name="header" />  <!-- This VDOM slot gets forwarded -->
+               *   </template>
+               * </VaporComp>
+               */
+              (isFragment(block) && block.insert)
+          } else {
+            isValidSlotContent = children.length > 0
+          }
+          if (isValidSlotContent) {
             if (fallbackNodes) {
               remove(fallbackNodes, parentNode)
               fallbackNodes = undefined
