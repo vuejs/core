@@ -98,16 +98,27 @@ export function getSlot(
   }
 }
 
+export function forwardedSlotCreator(): (
+  name: string | (() => string),
+  rawProps?: LooseRawProps | null,
+  fallback?: VaporSlot,
+) => Block {
+  const instance = currentInstance as VaporComponentInstance
+  return (name, rawProps, fallback) =>
+    createSlot(name, rawProps, fallback, instance)
+}
+
 export function createSlot(
   name: string | (() => string),
   rawProps?: LooseRawProps | null,
   fallback?: VaporSlot,
+  i?: VaporComponentInstance,
 ): Block {
   const _insertionParent = insertionParent
   const _insertionAnchor = insertionAnchor
   if (!isHydrating) resetInsertionState()
 
-  const instance = currentInstance as VaporComponentInstance
+  const instance = i || (currentInstance as VaporComponentInstance)
   const rawSlots = instance.rawSlots
   const slotProps = rawProps
     ? new Proxy(rawProps, rawPropsProxyHandlers)
