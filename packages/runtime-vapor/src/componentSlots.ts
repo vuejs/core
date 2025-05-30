@@ -93,11 +93,8 @@ export function forwardedSlotCreator(): (
   fallback?: VaporSlot,
 ) => Block {
   const instance = currentInstance as VaporComponentInstance
-  return (
-    name: string | (() => string),
-    rawProps?: LooseRawProps | null,
-    fallback?: VaporSlot,
-  ) => createSlot(name, rawProps, fallback, instance)
+  return (name, rawProps, fallback) =>
+    createSlot(name, rawProps, fallback, instance)
 }
 
 export function createSlot(

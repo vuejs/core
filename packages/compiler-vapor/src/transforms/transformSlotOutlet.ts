@@ -5,7 +5,6 @@ import {
   ErrorCodes,
   NodeTypes,
   type SimpleExpressionNode,
-  type TemplateChildNode,
   createCompilerError,
   createSimpleExpression,
   isStaticArgOf,
@@ -100,16 +99,7 @@ export const transformSlotOutlet: NodeTransform = (node, context) => {
   }
 
   return () => {
-    const {
-      block: { node: slotNode },
-      inSlot,
-    } = context
-    const forwarded =
-      inSlot !== 0 &&
-      slotNode.type === NodeTypes.ELEMENT &&
-      hasForwardedSlots(slotNode.children)
-    if (forwarded) context.ir.hasForwardedSlot = true
-
+    if (context.inSlot) context.ir.hasForwardedSlot = true
     exitBlock && exitBlock()
     context.dynamic.operation = {
       type: IRNodeTypes.SLOT_OUTLET_NODE,
@@ -117,7 +107,7 @@ export const transformSlotOutlet: NodeTransform = (node, context) => {
       name: slotName,
       props: irProps,
       fallback,
-      forwarded,
+      forwarded: context.inSlot,
     }
   }
 }
@@ -142,21 +132,4 @@ function createFallback(
   const exitBlock = context.enterBlock(fallback)
   context.reference()
   return [fallback, exitBlock]
-}
-
-function hasForwardedSlots(children: TemplateChildNode[]): boolean {
-  for (let i = 0; i < children.length; i++) {
-    const child = children[i]
-    switch (child.type) {
-      case NodeTypes.ELEMENT:
-        if (
-          child.tagType === ElementTypes.SLOT ||
-          hasForwardedSlots(child.children)
-        ) {
-          return true
-        }
-        break
-    }
-  }
-  return false
 }

@@ -554,5 +554,56 @@ describe('component: slots', () => {
       await nextTick()
       expect(host.innerHTML).toBe('bar<!--slot--><!--slot-->')
     })
+
+    test('mixed with non-forwarded slot', async () => {
+      const Child = defineVaporComponent({
+        setup() {
+          return [createSlot('foo', null)]
+        },
+      })
+      const Parent = defineVaporComponent({
+        setup() {
+          const createForwardedSlot = forwardedSlotCreator()
+          const n2 = createComponent(Child, null, {
+            foo: () => {
+              const n0 = createForwardedSlot('foo', null)
+              return n0
+            },
+          })
+          const n3 = createSlot('default', null)
+          return [n2, n3]
+        },
+      })
+
+      const foo = ref('foo')
+      const { host } = define({
+        setup() {
+          const n2 = createComponent(
+            Parent,
+            null,
+            {
+              foo: () => {
+                const n0 = template(' ')() as any
+                renderEffect(() => setText(n0, foo.value))
+                return n0
+              },
+              default: () => {
+                const n3 = template(' ')() as any
+                renderEffect(() => setText(n3, foo.value))
+                return n3
+              },
+            },
+            true,
+          )
+          return n2
+        },
+      }).render()
+
+      expect(host.innerHTML).toBe('foo<!--slot--><!--slot-->foo<!--slot-->')
+
+      foo.value = 'bar'
+      await nextTick()
+      expect(host.innerHTML).toBe('bar<!--slot--><!--slot-->bar<!--slot-->')
+    })
   })
 })

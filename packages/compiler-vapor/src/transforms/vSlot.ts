@@ -237,11 +237,11 @@ function createSlotBlock(
   const block: SlotBlockIRNode = newBlock(slotNode)
   block.props = dir && dir.exp
   const exitBlock = context.enterBlock(block)
-  context.inSlot++
+  context.inSlot = true
   return [
     block,
     () => {
-      context.inSlot--
+      context.inSlot = false
       exitBlock()
     },
   ]
