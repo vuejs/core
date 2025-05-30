@@ -40,29 +40,21 @@ describe('SFC scoped CSS', () => {
       `h1 .foo[data-v-test] { color: red;`,
     )
 
-    // https://github.com/vuejs/core/issues/13387
+    // #13387
     expect(
       compileScoped(`main {
-  display: flex;
-  flex-direction: column;
-  background: yellowgreen;
   width: 100%;
   > * {
     max-width: 200px;
-    background-color: yellow;
   }
 }`),
     ).toMatchInlineSnapshot(`
       "main {
 &[data-v-test] {
-  display: flex;
-  flex-direction: column;
-  background: yellowgreen;
   width: 100%;
 }
 > *[data-v-test] {
     max-width: 200px;
-    background-color: yellow;
 }
 }"`)
   })
