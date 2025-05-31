@@ -82,6 +82,11 @@ describe('SSR hydration', () => {
     expect(`Hydration children mismatch in <div>`).not.toHaveBeenWarned()
   })
 
+  test('text w/ newlines', async () => {
+    mountWithHydration('<div>1\n2\n3</div>', () => h('div', '1\r\n2\r3'))
+    expect(`Hydration text mismatch`).not.toHaveBeenWarned()
+  })
+
   test('comment', () => {
     const { vnode, container } = mountWithHydration('<!---->', () => null)
     expect(vnode.el).toBe(container.firstChild)
