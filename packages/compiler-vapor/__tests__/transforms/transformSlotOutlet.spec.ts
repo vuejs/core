@@ -1,4 +1,4 @@
-import { ErrorCodes, NodeTypes } from '@vue/compiler-core'
+import { ErrorCodes, NodeTypes } from '@vue/compiler-dom'
 import {
   IRNodeTypes,
   transformChildren,

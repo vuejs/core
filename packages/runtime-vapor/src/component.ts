@@ -23,9 +23,8 @@ import {
   simpleSetCurrentInstance,
   startMeasure,
   unregisterHMR,
-  warn,
 } from '@vue/runtime-dom'
-import { type Block, insert, isBlock, remove } from './block'
+import { type Block, insert, remove } from './block'
 import {
   type ShallowRef,
   markRaw,
@@ -60,6 +59,7 @@ import {
 import { hmrReload, hmrRerender } from './hmr'
 import { isHydrating, locateHydrationNode } from './dom/hydration'
 import { insertionAnchor, insertionParent } from './insertionState'
+import { normalizeNode } from './dom/node'
 
 export { currentInstance } from '@vue/runtime-dom'
 
@@ -144,8 +144,9 @@ export function createComponent(
     locateHydrationNode()
   }
 
+  const isFnComponent = isFunction(component)
   // vdom interop enabled and component is not an explicit vapor component
-  if (appContext.vapor && !component.__vapor) {
+  if (appContext.vapor && !isFnComponent && !component.__vapor) {
     const frag = appContext.vapor.vdomMount(
       component as any,
       rawProps,
@@ -182,6 +183,14 @@ export function createComponent(
     appContext,
   )
 
+  // HMR
+  if (__DEV__ && component.__hmrId) {
+    registerHMR(instance)
+    instance.isSingleRoot = isSingleRoot
+    instance.hmrRerender = hmrRerender.bind(null, instance)
+    instance.hmrReload = hmrReload.bind(null, instance)
+  }
+
   if (__DEV__) {
     pushWarningContext(instance)
     startMeasure(instance, `init`)
@@ -199,36 +208,22 @@ export function createComponent(
     setupPropsValidation(instance)
   }
 
-  const setupFn = isFunction(component) ? component : component.setup
+  const setupFn = isFnComponent ? component : component.setup
   const setupResult = setupFn
     ? callWithErrorHandling(setupFn, instance, ErrorCodes.SETUP_FUNCTION, [
         instance.props,
         instance,
-      ]) || EMPTY_OBJ
-    : EMPTY_OBJ
+      ]) || []
+    : []
 
-  if (__DEV__ && !isBlock(setupResult)) {
-    if (isFunction(component)) {
-      warn(`Functional vapor component must return a block directly.`)
-      instance.block = []
-    } else if (!component.render) {
-      warn(
-        `Vapor component setup() returned non-block value, and has no render function.`,
-      )
-      instance.block = []
+  if (__DEV__) {
+    if (isFnComponent || !component.render) {
+      instance.block = normalizeNode(setupResult)
     } else {
       instance.devtoolsRawSetupState = setupResult
       // TODO make the proxy warn non-existent property access during dev
       instance.setupState = proxyRefs(setupResult)
       devRender(instance)
-
-      // HMR
-      if (component.__hmrId) {
-        registerHMR(instance)
-        instance.isSingleRoot = isSingleRoot
-        instance.hmrRerender = hmrRerender.bind(null, instance)
-        instance.hmrReload = hmrReload.bind(null, instance)
-      }
     }
   } else {
     // component has a render function but no setup function
@@ -241,7 +236,7 @@ export function createComponent(
       )
     } else {
       // in prod result can only be block
-      instance.block = setupResult as Block
+      instance.block = normalizeNode(setupResult)
     }
   }
 
@@ -270,7 +265,7 @@ export function createComponent(
   onScopeDispose(() => unmountComponent(instance), true)
 
   if (!isHydrating && _insertionParent) {
-    insert(instance.block, _insertionParent, _insertionAnchor)
+    mountComponent(instance, _insertionParent, _insertionAnchor)
   }
 
   return instance
@@ -283,18 +278,33 @@ export let isApplyingFallthroughProps = false
  */
 export function devRender(instance: VaporComponentInstance): void {
   instance.block =
-    callWithErrorHandling(
-      instance.type.render!,
-      instance,
-      ErrorCodes.RENDER_FUNCTION,
-      [
-        instance.setupState,
-        instance.props,
-        instance.emit,
-        instance.attrs,
-        instance.slots,
-      ],
-    ) || []
+    (instance.type.render
+      ? callWithErrorHandling(
+          instance.type.render,
+          instance,
+          ErrorCodes.RENDER_FUNCTION,
+          [
+            instance.setupState,
+            instance.props,
+            instance.emit,
+            instance.attrs,
+            instance.slots,
+          ],
+        )
+      : callWithErrorHandling(
+          isFunction(instance.type) ? instance.type : instance.type.setup!,
+          instance,
+          ErrorCodes.SETUP_FUNCTION,
+          [
+            instance.props,
+            {
+              slots: instance.slots,
+              attrs: instance.attrs,
+              emit: instance.emit,
+              expose: instance.expose,
+            },
+          ],
+        )) || []
 }
 
 const emptyContext: GenericAppContext = {

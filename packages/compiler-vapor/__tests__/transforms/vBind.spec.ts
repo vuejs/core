@@ -809,4 +809,12 @@ describe('cache multiple access', () => {
     expect(code).matchSnapshot()
     expect(code).not.contains('const _bar = _ctx.bar')
   })
+
+  test('not cache variable in function expression', () => {
+    const { code } = compileWithVBind(`
+        <div v-bind="{ foo: bar => foo = bar }"></div>
+      `)
+    expect(code).matchSnapshot()
+    expect(code).not.contains('const _bar = _ctx.bar')
+  })
 })
