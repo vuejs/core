@@ -368,7 +368,6 @@ export function shouldUpdateComponent(
 ): boolean {
   const { props: prevProps, children: prevChildren, component } = prevVNode
   const { props: nextProps, children: nextChildren, patchFlag } = nextVNode
-  const emits = component!.emitsOptions
 
   // Parent component's render function was hot-updated. Since this may have
   // caused the child component's slots content to have changed, we need to
@@ -381,6 +380,8 @@ export function shouldUpdateComponent(
   if (nextVNode.dirs || nextVNode.transition) {
     return true
   }
+
+  const emits = component!.emitsOptions
 
   if (optimized && patchFlag >= 0) {
     if (patchFlag & PatchFlags.DYNAMIC_SLOTS) {
