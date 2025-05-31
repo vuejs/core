@@ -244,7 +244,21 @@ const tokenizer = new Tokenizer(stack, {
   },
 
   ondirarg(start, end) {
-    if (start === end) return
+    if (start === end) {
+      if (__DEV__) {
+        const currentDir = currentProp as DirectiveNode
+
+        if (currentDir.rawName?.length === 1) {
+          emitWarning(
+            ErrorCodes.X_DIRECTIVE_SHORTHAND_NO_ARGUMENT,
+            start - 1,
+            `the directive shorthand '${currentDir.rawName}' cannot be used without an argument. ` +
+              `Use v-${currentDir.name} instead or provide an argument.`,
+          )
+        }
+      }
+      return
+    }
     const arg = getSlice(start, end)
     if (inVPre) {
       ;(currentProp as AttributeNode).name += arg
@@ -1021,6 +1035,12 @@ function createExp(
 
 function emitError(code: ErrorCodes, index: number, message?: string) {
   currentOptions.onError(
+    createCompilerError(code, getLoc(index, index), undefined, message),
+  )
+}
+
+function emitWarning(code: ErrorCodes, index: number, message?: string) {
+  currentOptions.onWarn(
     createCompilerError(code, getLoc(index, index), undefined, message),
   )
 }
