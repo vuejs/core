@@ -842,7 +842,8 @@ function condenseWhitespace(
     const node = nodes[i]
     if (node.type === NodeTypes.TEXT) {
       if (!inPre) {
-        if (isAllWhitespace(node.content)) {
+        // #7789
+        if (isAllWhitespace(node.content) && nodes.length > 1) {
           const prev = nodes[i - 1] && nodes[i - 1].type
           const next = nodes[i + 1] && nodes[i + 1].type
           // Remove if:
