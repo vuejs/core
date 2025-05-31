@@ -309,6 +309,11 @@ describe('DOM parser', () => {
         type: NodeTypes.ELEMENT,
         ns: Namespaces.HTML,
         tag: 'img',
+        tagLoc: {
+          start: { offset: 1, line: 1, column: 2 },
+          end: { offset: 4, line: 1, column: 5 },
+          source: 'img',
+        },
         tagType: ElementTypes.ELEMENT,
         props: [],
         children: [],
