@@ -257,6 +257,17 @@ const tokenizer = new Tokenizer(stack, {
         getLoc(start, end),
         isStatic ? ConstantTypes.CAN_STRINGIFY : ConstantTypes.NOT_CONSTANT,
       )
+      if (
+        __DEV__ &&
+        arg.startsWith('v-') &&
+        (currentProp as DirectiveNode).rawName === ':'
+      ) {
+        emitWarning(
+          ErrorCodes.X_COLON_BEFORE_DIRECTIVE,
+          start - 1,
+          `the attribute name :${arg} is probably a mistake. Did you mean ${arg} instead?`,
+        )
+      }
     }
   },
 
@@ -1021,6 +1032,12 @@ function createExp(
 
 function emitError(code: ErrorCodes, index: number, message?: string) {
   currentOptions.onError(
+    createCompilerError(code, getLoc(index, index), undefined, message),
+  )
+}
+
+function emitWarning(code: ErrorCodes, index: number, message?: string) {
+  currentOptions.onWarn(
     createCompilerError(code, getLoc(index, index), undefined, message),
   )
 }
