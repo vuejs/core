@@ -1028,6 +1028,46 @@ describe('compiler: element transform', () => {
       expect(node.patchFlag).toBe(PatchFlags.NEED_PATCH)
     })
 
+    test('NEED_PATCH (vFor + static ref)', () => {
+      const { node } = parseWithBind(
+        `<div v-for="item in arr" :key="item" ref="foo" />`,
+      )
+      expect(node.patchFlag).toBe(PatchFlags.NEED_PATCH)
+    })
+
+    test('NEED_PATCH (vFor + custom directives)', () => {
+      const { node } = parseWithBind(
+        `<div v-for="item in arr" :key="item" v-dir />`,
+      )
+      expect(node.patchFlag).toBe(PatchFlags.NEED_PATCH)
+    })
+
+    test('NEED_PATCH (vFor + vnode hooks)', () => {
+      const root = baseCompile(
+        `<div v-for="item in arr" :key="item" @vue:updated="foo" />`,
+        {
+          prefixIdentifiers: true,
+          cacheHandlers: true,
+        },
+      ).ast
+      const node = (root as any).children[0].children[0].codegenNode
+      expect(node.patchFlag).toBe(PatchFlags.NEED_PATCH)
+    })
+
+    test('NEED_PATCH (vFor + setRef function)', () => {
+      const root = baseCompile(
+        `<div v-for="item in arr" :key="item" :ref="setRefFn" />`,
+        {
+          prefixIdentifiers: true,
+          bindingMetadata: {
+            setRefFn: BindingTypes.SETUP_CONST,
+          },
+        },
+      ).ast
+      const node = (root as any).children[0].children[0].codegenNode
+      expect(node.patchFlag).toBe(PatchFlags.NEED_PATCH)
+    })
+
     test('script setup inline mode template ref (binding exists)', () => {
       const { node } = parseWithElementTransform(`<input ref="input"/>`, {
         inline: true,

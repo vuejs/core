@@ -217,7 +217,7 @@ return function render(_ctx, _cache) {
     return (_openBlock(), _createElementBlock("div", null, [
       _withDirectives((_openBlock(), _createElementBlock("svg", null, _cache[0] || (_cache[0] = [
         _createElementVNode("path", { d: "M2,3H5.5L12" }, null, -1 /* HOISTED */)
-      ]))), [
+      ]), 512 /* NEED_PATCH */)), [
         [_directive_foo]
       ])
     ]))
