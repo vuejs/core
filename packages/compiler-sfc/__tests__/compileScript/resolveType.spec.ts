@@ -967,6 +967,43 @@ describe('resolveType', () => {
       expect(deps && [...deps]).toStrictEqual(Object.keys(files))
     })
 
+    test('relative (import * as)', () => {
+      const files = {
+        '/foo.ts': `export type Foo = { bar: string }`,
+      }
+      const { props, deps } = resolve(
+        `
+        import * as F from './foo'
+        defineProps<F.Foo>()
+      `,
+        files,
+      )
+      expect(props).toStrictEqual({
+        bar: ['String'],
+      })
+      expect(deps && [...deps]).toStrictEqual(Object.keys(files))
+    })
+
+    test('relative (import * as w/ namespace)', () => {
+      const files = {
+        '/foo.ts': `
+        export namespace Foo { 
+          export type Bar = { bar: string } 
+        }`,
+      }
+      const { props, deps } = resolve(
+        `
+        import * as F from './foo'
+        defineProps<F.Foo.Bar>()
+      `,
+        files,
+      )
+      expect(props).toStrictEqual({
+        bar: ['String'],
+      })
+      expect(deps && [...deps]).toStrictEqual(Object.keys(files))
+    })
+
     test('relative (default export)', () => {
       const files = {
         '/foo.ts': `export default interface P { foo: string }`,

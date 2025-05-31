@@ -731,7 +731,9 @@ function innerResolveTypeReference(
   onlyExported: boolean,
 ): ScopeTypeNode | undefined {
   if (typeof name === 'string') {
-    if (scope.imports[name]) {
+    if (name === '*') {
+      return undefined
+    } else if (scope.imports[name]) {
       return resolveTypeFromImport(ctx, node, name, scope)
     } else {
       const lookupSource =
@@ -759,24 +761,40 @@ function innerResolveTypeReference(
       }
     }
   } else {
-    let ns = innerResolveTypeReference(ctx, scope, name[0], node, onlyExported)
+    const typeName = name[0]
+    let ns = innerResolveTypeReference(ctx, scope, typeName, node, onlyExported)
     if (ns) {
       if (ns.type !== 'TSModuleDeclaration') {
         // namespace merged with other types, attached as _ns
         ns = ns._ns
       }
       if (ns) {
-        const childScope = moduleDeclToScope(ctx, ns, ns._ownerScope || scope)
         return innerResolveTypeReference(
           ctx,
-          childScope,
-          name.length > 2 ? name.slice(1) : name[name.length - 1],
+          moduleDeclToScope(ctx, ns, ns._ownerScope || scope),
+          getChainedTypeName(name),
           node,
           !ns.declare,
         )
       }
+    } else {
+      const importType = scope.imports[typeName]
+      if (importType?.imported === '*') {
+        const importPath = scope.resolvedImportSources[importType.source]
+        return innerResolveTypeReference(
+          ctx,
+          fileToScope(ctx, normalizePath(importPath)),
+          getChainedTypeName(name),
+          node,
+          true,
+        )
+      }
     }
   }
+}
+
+function getChainedTypeName(name: string[]): string | string[] {
+  return name.length > 2 ? name.slice(1) : name[name.length - 1]
 }
 
 function getReferenceName(node: ReferenceTypes): string | string[] {
