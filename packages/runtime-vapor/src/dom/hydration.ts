@@ -2,7 +2,6 @@ import { warn } from '@vue/runtime-dom'
 import {
   insertionAnchor,
   insertionParent,
-  resetInsertionState,
   setInsertionState,
 } from '../insertionState'
 import { child, next } from './node'
@@ -27,7 +26,7 @@ export function withHydration(container: ParentNode, fn: () => void): void {
   isHydrating = true
   setInsertionState(container, 0)
   const res = fn()
-  resetInsertionState()
+  setInsertionState()
   currentHydrationNode = null
   isHydrating = false
   return res
@@ -124,6 +123,6 @@ function locateHydrationNodeImpl() {
     warn('Hydration mismatch in ', insertionParent)
   }
 
-  resetInsertionState()
+  setInsertionState()
   currentHydrationNode = node
 }
