@@ -1,11 +1,5 @@
 /* eslint-disable @typescript-eslint/prefer-ts-expect-error */
-import type {
-  AllowedComponentProps,
-  ComponentCustomProps,
-  NativeElements,
-  ReservedProps,
-  VNode,
-} from '@vue/runtime-dom'
+import type { NativeElements, ReservedProps, VNode } from '@vue/runtime-dom'
 
 /**
  * JSX namespace for usage with @jsxImportsSource directive
@@ -27,8 +21,5 @@ export namespace JSX {
     // @ts-ignore suppress ts:2374 = Duplicate string index signature.
     [name: string]: any
   }
-  export interface IntrinsicAttributes
-    extends ReservedProps,
-      AllowedComponentProps,
-      ComponentCustomProps {}
+  export interface IntrinsicAttributes extends ReservedProps {}
 }
