@@ -9,6 +9,10 @@ export class EffectScope {
    */
   private _active = true
   /**
+   * @internal track `on` calls, allow `on` call multiple times
+   */
+  private _on = 0
+  /**
    * @internal
    */
   effects: ReactiveEffect[] = []
@@ -99,12 +103,16 @@ export class EffectScope {
     }
   }
 
+  prevScope: EffectScope | undefined
   /**
    * This should only be called on non-detached scopes
    * @internal
    */
   on(): void {
-    activeEffectScope = this
+    if (++this._on === 1) {
+      this.prevScope = activeEffectScope
+      activeEffectScope = this
+    }
   }
 
   /**
@@ -112,23 +120,33 @@ export class EffectScope {
    * @internal
    */
   off(): void {
-    activeEffectScope = this.parent
+    if (this._on > 0 && --this._on === 0) {
+      activeEffectScope = this.prevScope
+      this.prevScope = undefined
+    }
   }
 
   stop(fromParent?: boolean): void {
     if (this._active) {
+      this._active = false
       let i, l
       for (i = 0, l = this.effects.length; i < l; i++) {
         this.effects[i].stop()
       }
+      this.effects.length = 0
+
       for (i = 0, l = this.cleanups.length; i < l; i++) {
         this.cleanups[i]()
       }
+      this.cleanups.length = 0
+
       if (this.scopes) {
         for (i = 0, l = this.scopes.length; i < l; i++) {
           this.scopes[i].stop(true)
         }
+        this.scopes.length = 0
       }
+
       // nested scope, dereference from parent to avoid memory leaks
       if (!this.detached && this.parent && !fromParent) {
         // optimized O(1) removal
@@ -139,7 +157,6 @@ export class EffectScope {
         }
       }
       this.parent = undefined
-      this._active = false
     }
   }
 }

@@ -24,7 +24,7 @@ import {
   isStaticPropertyKey,
   walkIdentifiers,
 } from '../babelUtils'
-import { advancePositionWithClone, isSimpleIdentifier } from '../utils'
+import { advancePositionWithClone, findDir, isSimpleIdentifier } from '../utils'
 import {
   genPropsAccessExp,
   hasOwn,
@@ -54,6 +54,7 @@ export const transformExpression: NodeTransform = (node, context) => {
     )
   } else if (node.type === NodeTypes.ELEMENT) {
     // handle directives on element
+    const memo = findDir(node, 'memo')
     for (let i = 0; i < node.props.length; i++) {
       const dir = node.props[i]
       // do not process for v-on & v-for since they are special handled
@@ -65,7 +66,14 @@ export const transformExpression: NodeTransform = (node, context) => {
         if (
           exp &&
           exp.type === NodeTypes.SIMPLE_EXPRESSION &&
-          !(dir.name === 'on' && arg)
+          !(dir.name === 'on' && arg) &&
+          // key has been processed in transformFor(vMemo + vFor)
+          !(
+            memo &&
+            arg &&
+            arg.type === NodeTypes.SIMPLE_EXPRESSION &&
+            arg.content === 'key'
+          )
         ) {
           dir.exp = processExpression(
             exp,
