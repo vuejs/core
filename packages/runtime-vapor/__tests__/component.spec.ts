@@ -1,4 +1,5 @@
 import {
+  Fragment,
   type Ref,
   inject,
   nextTick,
@@ -326,5 +327,17 @@ describe('component', () => {
     expect(
       'Vapor component setup() returned non-block value, and has no render function',
     ).toHaveBeenWarned()
+  })
+
+  it('Fragment slots should be rendered', () => {
+    const { host } = define({
+      setup() {
+        return createComponent(Fragment as any, null, {
+          default: () => template('HI', true)(),
+        })
+      },
+    }).render()
+
+    expect(host.innerHTML).toBe('HI')
   })
 })
