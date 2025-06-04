@@ -32,10 +32,13 @@ import {
   withCtx,
   withDirectives,
 } from '@vue/runtime-dom'
+import type { HMRRuntime } from '../src/hmr'
 import { type SSRContext, renderToString } from '@vue/server-renderer'
 import { PatchFlags, normalizeStyle } from '@vue/shared'
 import { vShowOriginalDisplay } from '../../runtime-dom/src/directives/vShow'
-import { expect } from 'vitest'
+
+declare var __VUE_HMR_RUNTIME__: HMRRuntime
+const { createRecord, reload } = __VUE_HMR_RUNTIME__
 
 function mountWithHydration(html: string, render: () => any) {
   const container = document.createElement('div')
@@ -1651,6 +1654,29 @@ describe('SSR hydration', () => {
     expect(`mismatch`).not.toHaveBeenWarned()
   })
 
+  test('transition appear work with pre-existing class', () => {
+    const { vnode, container } = mountWithHydration(
+      `<template><div class="foo">foo</div></template>`,
+      () =>
+        h(
+          Transition,
+          { appear: true },
+          {
+            default: () => h('div', { class: 'foo' }, 'foo'),
+          },
+        ),
+    )
+    expect(container.firstChild).toMatchInlineSnapshot(`
+      <div
+        class="foo v-enter-from v-enter-active"
+      >
+        foo
+      </div>
+    `)
+    expect(vnode.el).toBe(container.firstChild)
+    expect(`mismatch`).not.toHaveBeenWarned()
+  })
+
   test('transition appear with v-if', () => {
     const show = false
     const { vnode, container } = mountWithHydration(
@@ -1841,6 +1867,60 @@ describe('SSR hydration', () => {
     } finally {
       __DEV__ = true
     }
+  })
+
+  test('hmr reload child wrapped in KeepAlive', async () => {
+    const id = 'child-reload'
+    const Child = {
+      __hmrId: id,
+      template: `<div>foo</div>`,
+    }
+    createRecord(id, Child)
+
+    const appId = 'test-app-id'
+    const App = {
+      __hmrId: appId,
+      components: { Child },
+      template: `
+      <div>
+        <KeepAlive>
+          <Child />
+        </KeepAlive>
+      </div>
+      `,
+    }
+
+    const root = document.createElement('div')
+    root.innerHTML = await renderToString(h(App))
+    createSSRApp(App).mount(root)
+    expect(root.innerHTML).toBe('<div><div>foo</div></div>')
+
+    reload(id, {
+      __hmrId: id,
+      template: `<div>bar</div>`,
+    })
+    await nextTick()
+    expect(root.innerHTML).toBe('<div><div>bar</div></div>')
+  })
+
+  test('hmr root reload', async () => {
+    const appId = 'test-app-id'
+    const App = {
+      __hmrId: appId,
+      template: `<div>foo</div>`,
+    }
+
+    const root = document.createElement('div')
+    root.innerHTML = await renderToString(h(App))
+    createSSRApp(App).mount(root)
+    expect(root.innerHTML).toBe('<div>foo</div>')
+
+    reload(appId, {
+      __hmrId: appId,
+      template: `<div>bar</div>`,
+    })
+    await nextTick()
+    expect(root.innerHTML).toBe('<div>bar</div>')
   })
 
   describe('mismatch handling', () => {
