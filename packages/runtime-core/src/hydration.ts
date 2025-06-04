@@ -202,9 +202,7 @@ export function createHydrationFunctions(
           // wrapped <transition appear>
           // replace <template> node with inner child
           replaceNode(
-            // #13394, the server may render an empty <template>, a comment node
-            // needs to be created to be consistent with the client's behavior
-            (vnode.el = node.content.firstChild || createComment('')),
+            (vnode.el = node.content.firstChild!),
             node,
             parentComponent,
           )
@@ -399,11 +397,10 @@ export function createHydrationFunctions(
           parentComponent.vnode.props &&
           parentComponent.vnode.props.appear
 
-        let content =
-          (el.content.firstChild as Element & { $cls?: string }) ||
-          createComment('')
+        const content = (el as HTMLTemplateElement).content
+          .firstChild as Element & { $cls?: string }
 
-        if (needCallTransitionHooks && content instanceof Element) {
+        if (needCallTransitionHooks) {
           const cls = content.getAttribute('class')
           if (cls) content.$cls = cls
           transition!.beforeEnter(content)

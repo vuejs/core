@@ -127,6 +127,22 @@ describe('ssr: slot', () => {
     expect(
       await renderToString(
         createApp({
+          template: `<transition><slot/></transition>`,
+        }),
+      ),
+    ).toBe(`<!---->`)
+
+    expect(
+      await renderToString(
+        createApp({
+          template: `<transition appear><slot/></transition>`,
+        }),
+      ),
+    ).toBe(`<template><!----></template>`)
+
+    expect(
+      await renderToString(
+        createApp({
           components: {
             one: {
               template: `<transition><slot/></transition>`,

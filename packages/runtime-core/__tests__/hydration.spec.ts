@@ -1681,7 +1681,7 @@ describe('SSR hydration', () => {
   test('transition appear work with empty content', async () => {
     const show = ref(true)
     const { vnode, container } = mountWithHydration(
-      `<template></template>`,
+      `<template><!----></template>`,
       function (this: any) {
         return h(
           Transition,
@@ -1696,7 +1696,7 @@ describe('SSR hydration', () => {
       },
     )
 
-    // expect empty slot render as a comment node
+    // empty slot render as a comment node
     expect(container.firstChild!.nodeType).toBe(Node.COMMENT_NODE)
     expect(vnode.el).toBe(container.firstChild)
     expect(`mismatch`).not.toHaveBeenWarned()

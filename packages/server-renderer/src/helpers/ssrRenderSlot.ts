@@ -117,6 +117,8 @@ export function ssrRenderSlotInner(
     }
   } else if (fallbackRenderFn) {
     fallbackRenderFn()
+  } else if (transition) {
+    push(`<!---->`)
   }
 }
 
