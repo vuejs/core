@@ -566,7 +566,6 @@ describe('compiler: cacheStatic transform', () => {
         },
       },
     ])
-    console.log(generate(root).code)
     expect(generate(root).code).toMatchSnapshot()
   })
 
