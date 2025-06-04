@@ -389,6 +389,23 @@ describe('stringify static html', () => {
     ])
   })
 
+  test('should remove overloaded boolean attribute for `false`', () => {
+    const { ast } = compileWithStringify(
+      `<div>
+      ${repeat(
+        `<span :hidden="false"></span>`,
+        StringifyThresholds.ELEMENT_WITH_BINDING_COUNT,
+      )}
+    </div>`,
+    )
+    expect(ast.cached).toMatchObject([
+      cachedArrayStaticNodeMatcher(
+        repeat(`<span></span>`, StringifyThresholds.ELEMENT_WITH_BINDING_COUNT),
+        StringifyThresholds.ELEMENT_WITH_BINDING_COUNT,
+      ),
+    ])
+  })
+
   test('should stringify svg', () => {
     const svg = `<svg width="50" height="50" viewBox="0 0 50 50" fill="none" xmlns="http://www.w3.org/2000/svg">`
     const repeated = `<rect width="50" height="50" fill="#C4C4C4"></rect>`
