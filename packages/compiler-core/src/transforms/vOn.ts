@@ -17,7 +17,7 @@ import { hasScopeRef, isFnExpression, isMemberExpression } from '../utils'
 import { TO_HANDLER_KEY } from '../runtimeHelpers'
 
 export interface VOnDirectiveNode extends DirectiveNode {
-  // v-on without arg is handled directly in ./transformElements.ts due to it affecting
+  // v-on without arg is handled directly in ./transformElement.ts due to its affecting
   // codegen for the entire props object. This transform here is only for v-on
   // *with* args.
   arg: ExpressionNode
