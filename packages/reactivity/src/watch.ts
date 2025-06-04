@@ -333,35 +333,63 @@ export function traverse(
   depth: number = Infinity,
   seen?: Set<unknown>,
 ): unknown {
+  const activeSeen = seen || new Set()
+  const queue: Array<[any, number]> = []
   if (depth <= 0 || !isObject(value) || (value as any)[ReactiveFlags.SKIP]) {
     return value
   }
-
-  seen = seen || new Set()
-  if (seen.has(value)) {
+  if (activeSeen.has(value)) {
     return value
   }
-  seen.add(value)
-  depth--
-  if (isRef(value)) {
-    traverse(value.value, depth, seen)
-  } else if (isArray(value)) {
-    for (let i = 0; i < value.length; i++) {
-      traverse(value[i], depth, seen)
+  queue.push([value, depth])
+
+  while (queue.length > 0) {
+    const [currentValue, currentDepth] = queue.shift()!
+
+    // 1. Check if 'currentValue' itself should be skipped based on its depth or type.
+    //    If currentDepth is <= 0, 'currentValue' is not added to 'activeSeen' by this path,
+    //    and its children are not explored.
+    if (
+      currentDepth <= 0 ||
+      !isObject(currentValue) ||
+      (currentValue as any)[ReactiveFlags.SKIP]
+    ) {
+      continue
     }
-  } else if (isSet(value) || isMap(value)) {
-    value.forEach((v: any) => {
-      traverse(v, depth, seen)
-    })
-  } else if (isPlainObject(value)) {
-    for (const key in value) {
-      traverse(value[key], depth, seen)
+
+    // 2. Check if 'currentValue' has already been seen.
+    if (activeSeen.has(currentValue)) {
+      continue
     }
-    for (const key of Object.getOwnPropertySymbols(value)) {
-      if (Object.prototype.propertyIsEnumerable.call(value, key)) {
-        traverse(value[key as any], depth, seen)
+
+    // 3. If 'currentValue' is traversable and not yet seen, mark it as seen.
+    activeSeen.add(currentValue)
+
+    // 4. Prepare for children: calculate their depth.
+    const childrenDepth = currentDepth - 1
+
+    // 5. Enqueue children for processing.
+    if (isRef(currentValue)) {
+      queue.push([currentValue.value, childrenDepth])
+    } else if (isArray(currentValue)) {
+      for (let i = 0; i < currentValue.length; i++) {
+        queue.push([currentValue[i], childrenDepth])
+      }
+    } else if (isSet(currentValue) || isMap(currentValue)) {
+      currentValue.forEach((v: any) => {
+        queue.push([v, childrenDepth])
+      })
+    } else if (isPlainObject(currentValue)) {
+      for (const key in currentValue) {
+        queue.push([currentValue[key], childrenDepth])
+      }
+      for (const key of Object.getOwnPropertySymbols(currentValue)) {
+        if (Object.prototype.propertyIsEnumerable.call(currentValue, key)) {
+          queue.push([currentValue[key as any], childrenDepth])
+        }
       }
     }
   }
+
   return value
 }
