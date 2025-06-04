@@ -179,7 +179,7 @@ describe('api: template refs', () => {
     expect(el.value).toBe(null)
   })
 
-  it('render function ref unmount with conditional update', async () => {
+  it('unset old ref when new ref is absent', async () => {
     const root1 = nodeOps.createElement('div')
     const root2 = nodeOps.createElement('div')
     const el1 = ref(null)
