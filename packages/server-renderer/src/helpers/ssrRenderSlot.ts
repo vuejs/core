@@ -110,8 +110,12 @@ export function ssrRenderSlotInner(
           end--
         }
 
-        for (let i = start; i < end; i++) {
-          push(slotBuffer[i])
+        if (start < end) {
+          for (let i = start; i < end; i++) {
+            push(slotBuffer[i])
+          }
+        } else if (transition) {
+          push(`<!---->`)
         }
       }
     }
