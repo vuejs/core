@@ -79,7 +79,7 @@
     "@vue/consolidate": "1.0.0",
     "conventional-changelog-cli": "^5.0.0",
     "enquirer": "^2.4.1",
-    "esbuild": "^0.25.4",
+    "esbuild": "^0.25.5",
     "esbuild-plugin-polyfill-node": "^0.3.0",
     "eslint": "^9.27.0",
     "eslint-plugin-import-x": "^4.13.1",
