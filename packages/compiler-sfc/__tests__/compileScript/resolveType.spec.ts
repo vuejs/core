@@ -278,6 +278,23 @@ describe('resolveType', () => {
     })
   })
 
+  test('utility type: mapped type with Omit and Pick', () => {
+    expect(
+      resolve(`
+      type Optional<T, K extends keyof T> = Omit<T, K> & Partial<Pick<T, K>>
+      interface Test {
+        foo: string;
+        bar?: string;
+      }
+      type OptionalTest = Optional<Test, 'foo'>
+      defineProps<OptionalTest>()
+    `).props,
+    ).toStrictEqual({
+      foo: ['String'],
+      bar: ['String'],
+    })
+  })
+
   test('utility type: ReadonlyArray', () => {
     expect(
       resolve(`
