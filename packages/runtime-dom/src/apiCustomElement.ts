@@ -404,9 +404,10 @@ export class VueElement
 
     const asyncDef = (this._def as ComponentOptions).__asyncLoader
     if (asyncDef) {
-      this._pendingResolve = asyncDef().then(def =>
-        resolve((this._def = def), true),
-      )
+      this._pendingResolve = asyncDef().then((def: InnerComponentDef) => {
+        def.configureApp = this._def.configureApp
+        resolve((this._def = def), true)
+      })
     } else {
       resolve(this._def)
     }
