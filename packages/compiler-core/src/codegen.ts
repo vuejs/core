@@ -188,7 +188,9 @@ function createCodegenContext(
               name = content
             }
           }
-          addMapping(node.loc.start, name)
+          if (node.loc.source) {
+            addMapping(node.loc.start, name)
+          }
         }
         if (newlineIndex === NewlineType.Unknown) {
           // multiple newlines, full iteration
@@ -225,7 +227,7 @@ function createCodegenContext(
             context.column = code.length - newlineIndex
           }
         }
-        if (node && node.loc !== locStub) {
+        if (node && node.loc !== locStub && node.loc.source) {
           addMapping(node.loc.end)
         }
       }
