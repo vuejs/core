@@ -264,7 +264,7 @@ export interface HTMLAttributes extends AriaAttributes, EventHandlers<Events> {
   contextmenu?: string
   dir?: string
   draggable?: Booleanish
-  enterKeyHint?:
+  enterkeyhint?:
     | 'enter'
     | 'done'
     | 'go'
