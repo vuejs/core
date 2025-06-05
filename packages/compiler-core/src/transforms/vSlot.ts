@@ -222,7 +222,7 @@ export function buildSlots(
       let prev
       while (j--) {
         prev = children[j]
-        if (prev.type !== NodeTypes.COMMENT) {
+        if (prev.type !== NodeTypes.COMMENT && isNonWhitespaceContent(prev)) {
           break
         }
       }
@@ -342,7 +342,6 @@ export function buildSlots(
     : hasForwardedSlots(node.children)
       ? SlotFlags.FORWARDED
       : SlotFlags.STABLE
-
   let slots = createObjectExpression(
     slotsProperties.concat(
       createObjectProperty(

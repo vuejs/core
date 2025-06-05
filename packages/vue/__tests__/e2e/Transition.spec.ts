@@ -1,3 +1,4 @@
+import type { ElementHandle } from 'puppeteer'
 import { E2E_TIMEOUT, setupPuppeteer } from './e2eUtils'
 import path from 'node:path'
 import { Transition, createApp, h, nextTick, ref } from 'vue'
@@ -1653,6 +1654,74 @@ describe('e2e: Transition', () => {
       },
       E2E_TIMEOUT,
     )
+
+    // #12860
+    test(
+      'unmount children',
+      async () => {
+        const unmountSpy = vi.fn()
+        let storageContainer: ElementHandle<HTMLDivElement>
+        const setStorageContainer = (container: any) =>
+          (storageContainer = container)
+        await page().exposeFunction('unmountSpy', unmountSpy)
+        await page().exposeFunction('setStorageContainer', setStorageContainer)
+        await page().evaluate(() => {
+          const { unmountSpy, setStorageContainer } = window as any
+          const { createApp, ref, h, onUnmounted, getCurrentInstance } = (
+            window as any
+          ).Vue
+          createApp({
+            template: `
+            <div id="container">
+              <transition>
+                <KeepAlive :include="includeRef">
+                  <TrueBranch v-if="toggle"></TrueBranch>
+                </KeepAlive>
+              </transition>
+            </div>
+            <button id="toggleBtn" @click="click">button</button>
+          `,
+            components: {
+              TrueBranch: {
+                name: 'TrueBranch',
+                setup() {
+                  const instance = getCurrentInstance()
+                  onUnmounted(() => {
+                    unmountSpy()
+                    setStorageContainer(instance.__keepAliveStorageContainer)
+                  })
+                  const count = ref(0)
+                  return () => h('div', count.value)
+                },
+              },
+            },
+            setup: () => {
+              const includeRef = ref(['TrueBranch'])
+              const toggle = ref(true)
+              const click = () => {
+                toggle.value = !toggle.value
+                if (toggle.value) {
+                  includeRef.value = ['TrueBranch']
+                } else {
+                  includeRef.value = []
+                }
+              }
+              return { toggle, click, unmountSpy, includeRef }
+            },
+          }).mount('#app')
+        })
+
+        await transitionFinish()
+        expect(await html('#container')).toBe('<div>0</div>')
+
+        await click('#toggleBtn')
+        await transitionFinish()
+        expect(await html('#container')).toBe('<!--v-if-->')
+        expect(unmountSpy).toBeCalledTimes(1)
+        expect(await storageContainer!.evaluate(x => x.innerHTML)).toBe(``)
+      },
+      E2E_TIMEOUT,
+    )
   })
 
   describe('transition with Suspense', () => {
@@ -3185,7 +3254,7 @@ describe('e2e: Transition', () => {
               setup: () => {
                 // Big arrays kick GC earlier
                 const test = ref([...Array(30_000_000)].map((_, i) => ({ i })))
-                // TODO: Use a diferent TypeScript env for testing
+                // TODO: Use a different TypeScript env for testing
                 // @ts-expect-error - Custom property and same lib as runtime is used
                 window.__REF__ = new WeakRef(test)
 
@@ -3240,7 +3309,7 @@ describe('e2e: Transition', () => {
               setup: () => {
                 // Big arrays kick GC earlier
                 const test = ref([...Array(30_000_000)].map((_, i) => ({ i })))
-                // TODO: Use a diferent TypeScript env for testing
+                // TODO: Use a different TypeScript env for testing
                 // @ts-expect-error - Custom property and same lib as runtime is used
                 window.__REF__ = new WeakRef(test)
 
