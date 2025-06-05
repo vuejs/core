@@ -111,7 +111,9 @@ export type Directive<
   | ObjectDirective<HostElement, Value, Modifiers, Arg>
   | FunctionDirective<HostElement, Value, Modifiers, Arg>
 
-export type DirectiveModifiers<K extends string = string> = Record<K, boolean>
+export type DirectiveModifiers<K extends string = string> = Partial<
+  Record<K, boolean>
+>
 
 export function validateDirectiveName(name: string): void {
   if (isBuiltInDirective(name)) {

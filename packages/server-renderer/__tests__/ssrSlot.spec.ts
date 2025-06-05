@@ -1,4 +1,4 @@
-import { createApp } from 'vue'
+import { createApp, defineAsyncComponent, h } from 'vue'
 import { renderToString } from '../src/renderToString'
 
 const components = {
@@ -152,6 +152,38 @@ describe('ssr: slot', () => {
         }),
       ),
     ).toBe(`<div><p>1</p><p>2</p></div>`)
+  })
+
+  // #12438
+  test('async component slot with v-if true', async () => {
+    const Layout = defineAsyncComponent(() =>
+      Promise.resolve({
+        template: `<div><slot name="header">default header</slot></div>`,
+      }),
+    )
+    const LayoutLoader = {
+      setup(_: any, context: any) {
+        return () => h(Layout, {}, context.slots)
+      },
+    }
+    expect(
+      await renderToString(
+        createApp({
+          components: {
+            LayoutLoader,
+          },
+          template: `
+            <Suspense>
+              <LayoutLoader>
+                <template v-if="true" #header>
+                  new header
+                </template>
+              </LayoutLoader>
+            </Suspense>
+          `,
+        }),
+      ),
+    ).toBe(`<div><!--[--> new header <!--]--></div>`)
   })
 
   // #11326
