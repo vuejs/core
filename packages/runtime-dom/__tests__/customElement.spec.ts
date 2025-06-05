@@ -1588,7 +1588,7 @@ describe('defineCustomElement', () => {
       await new Promise(r => setTimeout(r))
       expect(e.shadowRoot?.innerHTML).toBe('<div>app-injected</div>')
     })
-      
+
     test('with hmr reload', async () => {
       const __hmrId = '__hmrWithApp'
       const def = defineComponent({
