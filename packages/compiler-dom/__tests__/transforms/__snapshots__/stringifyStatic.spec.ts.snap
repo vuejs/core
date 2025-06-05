@@ -75,6 +75,22 @@ return function render(_ctx, _cache) {
 }"
 `;
 
+exports[`stringify static html > should bail for comments 1`] = `
+"const { createCommentVNode: _createCommentVNode, createElementVNode: _createElementVNode, createStaticVNode: _createStaticVNode, Fragment: _Fragment, openBlock: _openBlock, createElementBlock: _createElementBlock } = Vue
+
+const _hoisted_1 = { class: "a" }
+
+return function render(_ctx, _cache) {
+  return (_openBlock(), _createElementBlock(_Fragment, null, [
+    _createCommentVNode(" Comment 1 "),
+    _createElementVNode("div", _hoisted_1, [
+      _createCommentVNode(" Comment 2 "),
+      _cache[0] || (_cache[0] = _createStaticVNode("<span class=\\"b\\"></span><span class=\\"b\\"></span><span class=\\"b\\"></span><span class=\\"b\\"></span><span class=\\"b\\"></span>", 5))
+    ])
+  ], 2112 /* STABLE_FRAGMENT, DEV_ROOT_FRAGMENT */))
+}"
+`;
+
 exports[`stringify static html > should bail on bindings that are cached but not stringifiable 1`] = `
 "const { createElementVNode: _createElementVNode, openBlock: _openBlock, createElementBlock: _createElementBlock } = Vue
 
