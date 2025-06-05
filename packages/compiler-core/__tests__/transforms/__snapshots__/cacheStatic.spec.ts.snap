@@ -429,7 +429,7 @@ return function render(_ctx, _cache) {
               _createElementVNode("div", { id: "e" }, "hello")
             ])
           ])
-        ], -1 /* HOISTED */)
+        ], -1 /* CACHED */)
       ]))
     ], 2112 /* STABLE_FRAGMENT, DEV_ROOT_FRAGMENT */))
   }
