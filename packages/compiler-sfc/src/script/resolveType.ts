@@ -546,26 +546,43 @@ function resolveStringType(
   ctx: TypeResolveContext,
   node: Node,
   scope: TypeScope,
+  typeParameters?: Record<string, Node>,
 ): string[] {
   switch (node.type) {
     case 'StringLiteral':
       return [node.value]
     case 'TSLiteralType':
-      return resolveStringType(ctx, node.literal, scope)
+      return resolveStringType(ctx, node.literal, scope, typeParameters)
     case 'TSUnionType':
-      return node.types.map(t => resolveStringType(ctx, t, scope)).flat()
+      return node.types
+        .map(t => resolveStringType(ctx, t, scope, typeParameters))
+        .flat()
     case 'TemplateLiteral': {
       return resolveTemplateKeys(ctx, node, scope)
     }
     case 'TSTypeReference': {
       const resolved = resolveTypeReference(ctx, node, scope)
       if (resolved) {
-        return resolveStringType(ctx, resolved, scope)
+        return resolveStringType(ctx, resolved, scope, typeParameters)
       }
       if (node.typeName.type === 'Identifier') {
+        const name = node.typeName.name
+        if (typeParameters && typeParameters[name]) {
+          return resolveStringType(
+            ctx,
+            typeParameters[name],
+            scope,
+            typeParameters,
+          )
+        }
         const getParam = (index = 0) =>
-          resolveStringType(ctx, node.typeParameters!.params[index], scope)
-        switch (node.typeName.name) {
+          resolveStringType(
+            ctx,
+            node.typeParameters!.params[index],
+            scope,
+            typeParameters,
+          )
+        switch (name) {
           case 'Extract':
             return getParam(1)
           case 'Exclude': {
@@ -671,6 +688,7 @@ function resolveBuiltin(
         ctx,
         node.typeParameters!.params[1],
         scope,
+        typeParameters,
       )
       const res: ResolvedElements = { props: {}, calls: t.calls }
       for (const key of picked) {
@@ -683,6 +701,7 @@ function resolveBuiltin(
         ctx,
         node.typeParameters!.params[1],
         scope,
+        typeParameters,
       )
       const res: ResolvedElements = { props: {}, calls: t.calls }
       for (const key in t.props) {
