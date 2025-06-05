@@ -576,7 +576,12 @@ function resolveStringType(
           )
         }
         const getParam = (index = 0) =>
-          resolveStringType(ctx, node.typeParameters!.params[index], scope)
+          resolveStringType(
+            ctx,
+            node.typeParameters!.params[index],
+            scope,
+            typeParameters,
+          )
         switch (name) {
           case 'Extract':
             return getParam(1)
