@@ -371,6 +371,17 @@ describe('compiler: transform slot', () => {
     })
   })
 
+  test('slot + v-if / v-else[-if] should not cause error', () => {
+    const { code } = compileWithSlots(
+      `<div>
+        <slot name="foo"></slot>
+        <Foo v-if="true"></Foo>
+        <Bar v-else />
+      </div>`,
+    )
+    expect(code).toMatchSnapshot()
+  })
+
   test('quote slot name', () => {
     const { code } = compileWithSlots(
       `<Comp><template #nav-bar-title-before></template></Comp>`,
@@ -406,6 +417,35 @@ describe('compiler: transform slot', () => {
           },
         },
       ],
+    })
+  })
+
+  describe('forwarded slots', () => {
+    test('<slot> tag only', () => {
+      const { code } = compileWithSlots(`<Comp><slot/></Comp>`)
+      expect(code).toMatchSnapshot()
+    })
+
+    test('<slot> tag w/ v-if', () => {
+      const { code } = compileWithSlots(`<Comp><slot v-if="ok"/></Comp>`)
+      expect(code).toMatchSnapshot()
+    })
+
+    test('<slot> tag w/ v-for', () => {
+      const { code } = compileWithSlots(`<Comp><slot v-for="a in b"/></Comp>`)
+      expect(code).toMatchSnapshot()
+    })
+
+    test('<slot> tag w/ template', () => {
+      const { code } = compileWithSlots(
+        `<Comp><template #default><slot/></template></Comp>`,
+      )
+      expect(code).toMatchSnapshot()
+    })
+
+    test('<slot w/ nested component>', () => {
+      const { code } = compileWithSlots(`<Comp><Comp><slot/></Comp></Comp>`)
+      expect(code).toMatchSnapshot()
     })
   })
 

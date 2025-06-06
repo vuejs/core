@@ -1,13 +1,21 @@
 import { isArray } from '@vue/shared'
 import {
   type VaporComponentInstance,
+  currentInstance,
   isVaporComponent,
   mountComponent,
   unmountComponent,
 } from './component'
 import { createComment, createTextNode } from './dom/node'
 import { EffectScope, pauseTracking, resetTracking } from '@vue/reactivity'
-import { isHydrating } from './dom/hydration'
+import {
+  currentHydrationNode,
+  isComment,
+  isHydrating,
+  locateHydrationNode,
+  locateVaporFragmentAnchor,
+} from './dom/hydration'
+import { queuePostFlushCb } from '@vue/runtime-dom'
 
 export type Block =
   | Node
@@ -30,15 +38,20 @@ export class VaporFragment {
 }
 
 export class DynamicFragment extends VaporFragment {
-  anchor: Node
+  anchor!: Node
   scope: EffectScope | undefined
   current?: BlockFn
   fallback?: BlockFn
 
   constructor(anchorLabel?: string) {
     super([])
-    this.anchor =
-      __DEV__ && anchorLabel ? createComment(anchorLabel) : createTextNode()
+    if (isHydrating) {
+      locateHydrationNode(true)
+      this.hydrate(anchorLabel!)
+    } else {
+      this.anchor =
+        __DEV__ && anchorLabel ? createComment(anchorLabel) : createTextNode()
+    }
   }
 
   update(render?: BlockFn, key: any = render): void {
@@ -74,6 +87,22 @@ export class DynamicFragment extends VaporFragment {
     }
 
     resetTracking()
+  }
+
+  hydrate(label: string): void {
+    // for `v-if="false"` the node will be an empty comment, use it as the anchor.
+    // otherwise, find next sibling vapor fragment anchor
+    if (isComment(currentHydrationNode!, '')) {
+      this.anchor = currentHydrationNode
+    } else {
+      const anchor = locateVaporFragmentAnchor(currentHydrationNode!, label)!
+      if (anchor) {
+        this.anchor = anchor
+      } else if (__DEV__) {
+        // this should not happen
+        throw new Error(`${label} fragment anchor node was not found.`)
+      }
+    }
   }
 }
 
@@ -126,7 +155,6 @@ export function insert(
   } else {
     // fragment
     if (block.insert) {
-      // TODO handle hydration for vdom interop
       block.insert(parent, anchor)
     } else {
       insert(block.nodes, parent, anchor)
@@ -186,4 +214,58 @@ export function normalizeBlock(block: Block): Node[] {
     block.anchor && nodes.push(block.anchor)
   }
   return nodes
+}
+
+export function setScopeId(block: Block, scopeId?: string): void {
+  if (block instanceof Node) {
+    if (scopeId && block instanceof Element) {
+      block.setAttribute(scopeId, '')
+    }
+  } else if (isVaporComponent(block)) {
+    setComponentScopeId(block, scopeId, true)
+  } else if (isArray(block)) {
+    for (const b of block) {
+      setScopeId(b, scopeId)
+    }
+  } else {
+    setScopeId(block.nodes, scopeId)
+  }
+}
+
+export function setComponentScopeId(
+  instance: VaporComponentInstance,
+  scopeId: string | undefined = currentInstance
+    ? currentInstance.type.__scopeId
+    : undefined,
+  immediate: boolean = false,
+): void {
+  function doSet() {
+    if (scopeId) {
+      setScopeId(instance.block, scopeId)
+    }
+    // inherit scopeId from parent component. this requires initial rendering
+    // to be finished, due to `parent.block` is null during initial rendering
+    const parent = instance.parent
+    if (parent && parent.type.__scopeId) {
+      // vapor parent
+      if (
+        parent.vapor &&
+        (parent as VaporComponentInstance).block === instance
+      ) {
+        setScopeId(instance.block, parent.type.__scopeId)
+      }
+      // vdom parent
+      else if (
+        parent.subTree &&
+        (parent.subTree.component as any) === instance
+      ) {
+        setScopeId(instance.block, parent.vnode!.scopeId!)
+      }
+    }
+  }
+  if (immediate) {
+    doSet()
+  } else {
+    queuePostFlushCb(doSet)
+  }
 }

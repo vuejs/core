@@ -497,6 +497,36 @@ describe('component: props', () => {
     expect(changeSpy).toHaveBeenCalledTimes(1)
   })
 
+  test('should not warn invalid watch source when directly watching props', async () => {
+    const changeSpy = vi.fn()
+    const { render, html } = define({
+      props: {
+        foo: {
+          type: String,
+        },
+      },
+      setup(props: any) {
+        watch(props, changeSpy)
+        const t0 = template('<h1></h1>')
+        const n0 = t0()
+        renderEffect(() => {
+          setElementText(n0, String(props.foo))
+        })
+        return n0
+      },
+    })
+
+    const foo = ref('foo')
+    render({ foo: () => foo.value })
+    expect(html()).toBe(`<h1>foo</h1>`)
+    expect('Invalid watch source').not.toHaveBeenWarned()
+
+    foo.value = 'bar'
+    await nextTick()
+    expect(html()).toBe(`<h1>bar</h1>`)
+    expect(changeSpy).toHaveBeenCalledTimes(1)
+  })
+
   test('support null in required + multiple-type declarations', () => {
     const { render } = define({
       props: {

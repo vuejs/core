@@ -1,11 +1,28 @@
-import { EMPTY_OBJ, NO, hasOwn, isArray, isFunction } from '@vue/shared'
-import { type Block, type BlockFn, DynamicFragment, insert } from './block'
+import {
+  EMPTY_OBJ,
+  NO,
+  SLOT_ANCHOR_LABEL,
+  hasOwn,
+  isArray,
+  isFunction,
+} from '@vue/shared'
+import {
+  type Block,
+  type BlockFn,
+  DynamicFragment,
+  insert,
+  isValidBlock,
+} from './block'
 import { rawPropsProxyHandlers } from './componentProps'
 import { currentInstance, isRef } from '@vue/runtime-dom'
 import type { LooseRawProps, VaporComponentInstance } from './component'
 import { renderEffect } from './renderEffect'
-import { insertionAnchor, insertionParent } from './insertionState'
-import { isHydrating, locateHydrationNode } from './dom/hydration'
+import {
+  insertionAnchor,
+  insertionParent,
+  resetInsertionState,
+} from './insertionState'
+import { isHydrating } from './dom/hydration'
 
 export type RawSlots = Record<string, VaporSlot> & {
   $?: DynamicSlotSource[]
@@ -87,26 +104,34 @@ export function getSlot(
   }
 }
 
+export function forwardedSlotCreator(): (
+  name: string | (() => string),
+  rawProps?: LooseRawProps | null,
+  fallback?: VaporSlot,
+) => Block {
+  const instance = currentInstance as VaporComponentInstance
+  return (name, rawProps, fallback) =>
+    createSlot(name, rawProps, fallback, instance)
+}
+
 export function createSlot(
   name: string | (() => string),
   rawProps?: LooseRawProps | null,
   fallback?: VaporSlot,
+  i?: VaporComponentInstance,
 ): Block {
   const _insertionParent = insertionParent
   const _insertionAnchor = insertionAnchor
-  if (isHydrating) {
-    locateHydrationNode()
-  }
+  if (!isHydrating) resetInsertionState()
 
-  const instance = currentInstance as VaporComponentInstance
+  const instance = i || (currentInstance as VaporComponentInstance)
   const rawSlots = instance.rawSlots
   const slotProps = rawProps
     ? new Proxy(rawProps, rawPropsProxyHandlers)
     : EMPTY_OBJ
 
   let fragment: DynamicFragment
-
-  if (isRef(rawSlots._)) {
+  if (isRef(rawSlots._) && rawSlots._.value) {
     fragment = instance.appContext.vapor!.vdomSlot(
       rawSlots._,
       name,
@@ -115,7 +140,10 @@ export function createSlot(
       fallback,
     )
   } else {
-    fragment = __DEV__ ? new DynamicFragment('slot') : new DynamicFragment()
+    fragment =
+      isHydrating || __DEV__
+        ? new DynamicFragment(SLOT_ANCHOR_LABEL)
+        : new DynamicFragment()
     const isDynamicName = isFunction(name)
     const renderSlot = () => {
       const slot = getSlot(rawSlots, isFunction(name) ? name() : name)
@@ -127,7 +155,13 @@ export function createSlot(
             (slot._bound = () => {
               const slotContent = slot(slotProps)
               if (slotContent instanceof DynamicFragment) {
-                slotContent.fallback = fallback
+                if (
+                  (slotContent.fallback = fallback) &&
+                  !isValidBlock(slotContent.nodes)
+                ) {
+                  // use fallback if the slot content is invalid
+                  slotContent.update(fallback)
+                }
               }
               return slotContent
             }),
@@ -145,7 +179,12 @@ export function createSlot(
     }
   }
 
-  if (!isHydrating && _insertionParent) {
+  if (
+    _insertionParent &&
+    (!isHydrating ||
+      // for vdom interop fragment, `fragment.insert` handles both hydration and mounting
+      fragment.insert)
+  ) {
     insert(fragment, _insertionParent, _insertionAnchor)
   }
 

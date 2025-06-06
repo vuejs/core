@@ -70,7 +70,7 @@ describe('ssr: v-model', () => {
               : _ssrLooseEqual(_ctx.model, i))) ? " selected" : ""
           }></option>\`)
         })
-        _push(\`<!--]--></select></div>\`)
+        _push(\`<!--]--><!--for--></select></div>\`)
       }"
     `)
 
@@ -91,6 +91,7 @@ describe('ssr: v-model', () => {
               ? _ssrLooseContain(_ctx.model, _ctx.i)
               : _ssrLooseEqual(_ctx.model, _ctx.i))) ? " selected" : ""
           }></option>\`)
+          _push(\`<!--if-->\`)
         } else {
           _push(\`<!---->\`)
         }

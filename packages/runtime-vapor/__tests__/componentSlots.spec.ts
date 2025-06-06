@@ -7,6 +7,7 @@ import {
   createSlot,
   createVaporApp,
   defineVaporComponent,
+  forwardedSlotCreator,
   insert,
   prepend,
   renderEffect,
@@ -15,7 +16,7 @@ import {
 import { currentInstance, nextTick, ref } from '@vue/runtime-dom'
 import { makeRender } from './_utils'
 import type { DynamicSlot } from '../src/componentSlots'
-import { setElementText } from '../src/dom/prop'
+import { setElementText, setText } from '../src/dom/prop'
 
 const define = makeRender<any>()
 
@@ -469,6 +470,43 @@ describe('component: slots', () => {
       expect(html()).toBe('content<!--if--><!--slot-->')
     })
 
+    test('use fallback on initial render', async () => {
+      const Child = {
+        setup() {
+          return createSlot('default', null, () =>
+            document.createTextNode('fallback'),
+          )
+        },
+      }
+
+      const toggle = ref(false)
+
+      const { html } = define({
+        setup() {
+          return createComponent(Child, null, {
+            default: () => {
+              return createIf(
+                () => toggle.value,
+                () => {
+                  return document.createTextNode('content')
+                },
+              )
+            },
+          })
+        },
+      }).render()
+
+      expect(html()).toBe('fallback<!--if--><!--slot-->')
+
+      toggle.value = true
+      await nextTick()
+      expect(html()).toBe('content<!--if--><!--slot-->')
+
+      toggle.value = false
+      await nextTick()
+      expect(html()).toBe('fallback<!--if--><!--slot-->')
+    })
+
     test('dynamic slot work with v-if', async () => {
       const val = ref('header')
       const toggle = ref(false)
@@ -501,6 +539,108 @@ describe('component: slots', () => {
       toggle.value = true
       await nextTick()
       expect(host.innerHTML).toBe('<div><h1></h1><!--slot--></div>')
+    })
+  })
+
+  describe('forwarded slot', () => {
+    test('should work', async () => {
+      const Child = defineVaporComponent({
+        setup() {
+          return createSlot('foo', null)
+        },
+      })
+      const Parent = defineVaporComponent({
+        setup() {
+          const createForwardedSlot = forwardedSlotCreator()
+          const n2 = createComponent(
+            Child,
+            null,
+            {
+              foo: () => {
+                return createForwardedSlot('foo', null)
+              },
+            },
+            true,
+          )
+          return n2
+        },
+      })
+
+      const foo = ref('foo')
+      const { host } = define({
+        setup() {
+          const n2 = createComponent(
+            Parent,
+            null,
+            {
+              foo: () => {
+                const n0 = template(' ')() as any
+                renderEffect(() => setText(n0, foo.value))
+                return n0
+              },
+            },
+            true,
+          )
+          return n2
+        },
+      }).render()
+
+      expect(host.innerHTML).toBe('foo<!--slot--><!--slot-->')
+
+      foo.value = 'bar'
+      await nextTick()
+      expect(host.innerHTML).toBe('bar<!--slot--><!--slot-->')
+    })
+
+    test('mixed with non-forwarded slot', async () => {
+      const Child = defineVaporComponent({
+        setup() {
+          return [createSlot('foo', null)]
+        },
+      })
+      const Parent = defineVaporComponent({
+        setup() {
+          const createForwardedSlot = forwardedSlotCreator()
+          const n2 = createComponent(Child, null, {
+            foo: () => {
+              const n0 = createForwardedSlot('foo', null)
+              return n0
+            },
+          })
+          const n3 = createSlot('default', null)
+          return [n2, n3]
+        },
+      })
+
+      const foo = ref('foo')
+      const { host } = define({
+        setup() {
+          const n2 = createComponent(
+            Parent,
+            null,
+            {
+              foo: () => {
+                const n0 = template(' ')() as any
+                renderEffect(() => setText(n0, foo.value))
+                return n0
+              },
+              default: () => {
+                const n3 = template(' ')() as any
+                renderEffect(() => setText(n3, foo.value))
+                return n3
+              },
+            },
+            true,
+          )
+          return n2
+        },
+      }).render()
+
+      expect(host.innerHTML).toBe('foo<!--slot--><!--slot-->foo<!--slot-->')
+
+      foo.value = 'bar'
+      await nextTick()
+      expect(host.innerHTML).toBe('bar<!--slot--><!--slot-->bar<!--slot-->')
     })
   })
 })
