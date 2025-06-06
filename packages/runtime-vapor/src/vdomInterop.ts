@@ -77,6 +77,7 @@ const vaporInteropImpl: Omit<
     instance.rawPropsRef = propsRef
     instance.rawSlotsRef = slotsRef
     mountComponent(instance, container, selfAnchor)
+    vnode.el = instance.block
     simpleSetCurrentInstance(prev)
     return instance
   },
@@ -203,6 +204,8 @@ function createVDOMComponent(
     internals.umt(vnode.component!, null, !!parentNode)
   }
 
+  vnode.scopeId = parentInstance.type.__scopeId!
+
   frag.insert = (parentNode, anchor) => {
     if (!isMounted || isHydrating) {
       if (isHydrating) {
@@ -240,6 +243,9 @@ function createVDOMComponent(
         parentInstance as any,
       )
     }
+
+    // update the fragment nodes
+    frag.nodes = vnode.el as Block
   }
 
   frag.remove = unmount
