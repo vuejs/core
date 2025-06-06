@@ -25,7 +25,14 @@ import {
   unregisterHMR,
   warn,
 } from '@vue/runtime-dom'
-import { type Block, insert, isBlock, remove } from './block'
+import {
+  type Block,
+  insert,
+  isBlock,
+  remove,
+  setComponentScopeId,
+  setScopeId,
+} from './block'
 import {
   type ShallowRef,
   markRaw,
@@ -59,7 +66,11 @@ import {
 } from './componentSlots'
 import { hmrReload, hmrRerender } from './hmr'
 import { isHydrating, locateHydrationNode } from './dom/hydration'
-import { insertionAnchor, insertionParent } from './insertionState'
+import {
+  insertionAnchor,
+  insertionParent,
+  resetInsertionState,
+} from './insertionState'
 
 export { currentInstance } from '@vue/runtime-dom'
 
@@ -142,6 +153,8 @@ export function createComponent(
   const _insertionAnchor = insertionAnchor
   if (isHydrating) {
     locateHydrationNode()
+  } else {
+    resetInsertionState()
   }
 
   // vdom interop enabled and component is not an explicit vapor component
@@ -270,9 +283,8 @@ export function createComponent(
   onScopeDispose(() => unmountComponent(instance), true)
 
   if (!isHydrating && _insertionParent) {
-    insert(instance.block, _insertionParent, _insertionAnchor)
+    mountComponent(instance, _insertionParent, _insertionAnchor)
   }
-
   return instance
 }
 
@@ -474,6 +486,9 @@ export function createComponentWithFallback(
   // mark single root
   ;(el as any).$root = isSingleRoot
 
+  const scopeId = currentInstance!.type.__scopeId
+  if (scopeId) setScopeId(el, scopeId)
+
   if (rawProps) {
     renderEffect(() => {
       setDynamicProps(el, [resolveDynamicProps(rawProps as RawProps)])
@@ -501,6 +516,7 @@ export function mountComponent(
   }
   if (instance.bm) invokeArrayFns(instance.bm)
   insert(instance.block, parent, anchor)
+  setComponentScopeId(instance)
   if (instance.m) queuePostFlushCb(() => invokeArrayFns(instance.m!))
   instance.isMounted = true
   if (__DEV__) {
