@@ -1,6 +1,7 @@
 import { isArray } from '@vue/shared'
 import {
   type VaporComponentInstance,
+  currentInstance,
   isVaporComponent,
   mountComponent,
   unmountComponent,
@@ -8,6 +9,7 @@ import {
 import { createComment, createTextNode } from './dom/node'
 import { EffectScope, pauseTracking, resetTracking } from '@vue/reactivity'
 import { isHydrating } from './dom/hydration'
+import { queuePostFlushCb } from '@vue/runtime-dom'
 
 export type Block =
   | Node
@@ -186,4 +188,58 @@ export function normalizeBlock(block: Block): Node[] {
     block.anchor && nodes.push(block.anchor)
   }
   return nodes
+}
+
+export function setScopeId(block: Block, scopeId?: string): void {
+  if (block instanceof Node) {
+    if (scopeId && block instanceof Element) {
+      block.setAttribute(scopeId, '')
+    }
+  } else if (isVaporComponent(block)) {
+    setComponentScopeId(block, scopeId, true)
+  } else if (isArray(block)) {
+    for (const b of block) {
+      setScopeId(b, scopeId)
+    }
+  } else {
+    setScopeId(block.nodes, scopeId)
+  }
+}
+
+export function setComponentScopeId(
+  instance: VaporComponentInstance,
+  scopeId: string | undefined = currentInstance
+    ? currentInstance.type.__scopeId
+    : undefined,
+  immediate: boolean = false,
+): void {
+  function doSet() {
+    if (scopeId) {
+      setScopeId(instance.block, scopeId)
+    }
+    // inherit scopeId from parent component. this requires initial rendering
+    // to be finished, due to `parent.block` is null during initial rendering
+    const parent = instance.parent
+    if (parent && parent.type.__scopeId) {
+      // vapor parent
+      if (
+        parent.vapor &&
+        (parent as VaporComponentInstance).block === instance
+      ) {
+        setScopeId(instance.block, parent.type.__scopeId)
+      }
+      // vdom parent
+      else if (
+        parent.subTree &&
+        (parent.subTree.component as any) === instance
+      ) {
+        setScopeId(instance.block, parent.vnode!.scopeId!)
+      }
+    }
+  }
+  if (immediate) {
+    doSet()
+  } else {
+    queuePostFlushCb(doSet)
+  }
 }
