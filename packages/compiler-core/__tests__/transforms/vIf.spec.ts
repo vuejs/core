@@ -17,7 +17,12 @@ import {
   type VNodeCall,
 } from '../../src/ast'
 import { ErrorCodes } from '../../src/errors'
-import { type CompilerOptions, TO_HANDLERS, generate } from '../../src'
+import {
+  type CompilerOptions,
+  TO_HANDLERS,
+  generate,
+  transformVBindShorthand,
+} from '../../src'
 import {
   CREATE_COMMENT,
   FRAGMENT,
@@ -35,7 +40,12 @@ function parseWithIfTransform(
 ) {
   const ast = parse(template, options)
   transform(ast, {
-    nodeTransforms: [transformIf, transformSlotOutlet, transformElement],
+    nodeTransforms: [
+      transformVBindShorthand,
+      transformIf,
+      transformSlotOutlet,
+      transformElement,
+    ],
     ...options,
   })
   if (!options.onError) {
@@ -207,6 +217,16 @@ describe('compiler: v-if', () => {
       expect(node.branches[0].condition).toMatchObject({
         type: NodeTypes.SIMPLE_EXPRESSION,
         content: `_ctx.ok`,
+      })
+    })
+
+    //#11321
+    test('v-if + :key shorthand', () => {
+      const { node } = parseWithIfTransform(`<div v-if="ok" :key></div>`)
+      expect(node.type).toBe(NodeTypes.IF)
+      expect(node.branches[0].userKey).toMatchObject({
+        arg: { content: 'key' },
+        exp: { content: 'key' },
       })
     })
   })

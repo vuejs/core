@@ -17,6 +17,7 @@ import {
   helperNameMap,
 } from '../../src/runtimeHelpers'
 import { transformExpression } from '../../src/transforms/transformExpression'
+import { transformVBindShorthand } from '../../src/transforms/transformVBindShorthand'
 
 function parseWithVBind(
   template: string,
@@ -25,6 +26,7 @@ function parseWithVBind(
   const ast = parse(template)
   transform(ast, {
     nodeTransforms: [
+      transformVBindShorthand,
       ...(options.prefixIdentifiers ? [transformExpression] : []),
       transformElement,
     ],
