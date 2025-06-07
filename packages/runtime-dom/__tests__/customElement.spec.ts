@@ -916,6 +916,30 @@ describe('defineCustomElement', () => {
       assertStyles(el, [`div { color: blue; }`, `div { color: red; }`])
     })
 
+    test("child components should not inject styles to root element's shadow root w/ shadowRoot false", async () => {
+      const Bar = defineComponent({
+        styles: [`div { color: green; }`],
+        render() {
+          return 'bar'
+        },
+      })
+      const Baz = () => h(Bar)
+      const Foo = defineCustomElement(
+        {
+          render() {
+            return [h(Baz)]
+          },
+        },
+        { shadowRoot: false },
+      )
+
+      customElements.define('my-foo-with-shadowroot-false', Foo)
+      container.innerHTML = `<my-foo-with-shadowroot-false></my-foo-with-shadowroot-false>`
+      const el = container.childNodes[0] as VueElement
+      const style = el.shadowRoot?.querySelector('style')
+      expect(style).toBeUndefined()
+    })
+
     test('with nonce', () => {
       const Foo = defineCustomElement(
         {
@@ -1539,6 +1563,29 @@ describe('defineCustomElement', () => {
       container.innerHTML = `<my-element-with-app></my-element-with-app>`
       const e = container.childNodes[0] as VueElement
 
+      expect(e.shadowRoot?.innerHTML).toBe('<div>app-injected</div>')
+    })
+
+    // #12448
+    test('work with async component', async () => {
+      const AsyncComp = defineAsyncComponent(() => {
+        return Promise.resolve({
+          render() {
+            const msg: string | undefined = inject('msg')
+            return h('div', {}, msg)
+          },
+        } as any)
+      })
+      const E = defineCustomElement(AsyncComp, {
+        configureApp(app) {
+          app.provide('msg', 'app-injected')
+        },
+      })
+      customElements.define('my-async-element-with-app', E)
+
+      container.innerHTML = `<my-async-element-with-app></my-async-element-with-app>`
+      const e = container.childNodes[0] as VueElement
+      await new Promise(r => setTimeout(r))
       expect(e.shadowRoot?.innerHTML).toBe('<div>app-injected</div>')
     })
 
