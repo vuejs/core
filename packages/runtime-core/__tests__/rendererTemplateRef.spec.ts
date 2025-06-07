@@ -260,7 +260,7 @@ describe('api: template refs', () => {
 
     show.value = true
     await nextTick()
-    expect(refName.value).toBe('b')  
+    expect(refName.value).toBe('b')
   })
 
   it('unset old ref when new ref is absent', async () => {
