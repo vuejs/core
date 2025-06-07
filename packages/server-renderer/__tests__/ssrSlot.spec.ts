@@ -111,34 +111,36 @@ describe('ssr: slot', () => {
   })
 
   test('transition slot', async () => {
+    const ReusableTransition = {
+      template: `<transition><slot/></transition>`,
+    }
+
+    const ReusableTransitionWithAppear = {
+      template: `<transition appear><slot/></transition>`,
+    }
+
     expect(
       await renderToString(
         createApp({
           components: {
-            one: {
-              template: `<transition><slot/></transition>`,
-            },
+            one: ReusableTransition,
           },
           template: `<one><div v-if="false">foo</div></one>`,
         }),
       ),
     ).toBe(`<!---->`)
 
-    expect(
-      await renderToString(
-        createApp({
-          template: `<transition><slot/></transition>`,
-        }),
-      ),
-    ).toBe(`<!---->`)
+    expect(await renderToString(createApp(ReusableTransition))).toBe(`<!---->`)
+
+    expect(await renderToString(createApp(ReusableTransitionWithAppear))).toBe(
+      `<template><!----></template>`,
+    )
 
     expect(
       await renderToString(
         createApp({
           components: {
-            one: {
-              template: `<transition><slot/></transition>`,
-            },
+            one: ReusableTransition,
           },
           template: `<one><slot/></one>`,
         }),
@@ -148,18 +150,8 @@ describe('ssr: slot', () => {
     expect(
       await renderToString(
         createApp({
-          template: `<transition appear><slot/></transition>`,
-        }),
-      ),
-    ).toBe(`<template><!----></template>`)
-
-    expect(
-      await renderToString(
-        createApp({
           components: {
-            one: {
-              template: `<transition appear><slot/></transition>`,
-            },
+            one: ReusableTransitionWithAppear,
           },
           template: `<one><slot/></one>`,
         }),
@@ -169,10 +161,56 @@ describe('ssr: slot', () => {
     expect(
       await renderToString(
         createApp({
+          render() {
+            return h(ReusableTransition, null, {
+              default: () => null,
+            })
+          },
+        }),
+      ),
+    ).toBe(`<!---->`)
+
+    expect(
+      await renderToString(
+        createApp({
+          render() {
+            return h(ReusableTransitionWithAppear, null, {
+              default: () => null,
+            })
+          },
+        }),
+      ),
+    ).toBe(`<template><!----></template>`)
+
+    expect(
+      await renderToString(
+        createApp({
+          render() {
+            return h(ReusableTransitionWithAppear, null, {
+              default: () => [],
+            })
+          },
+        }),
+      ),
+    ).toBe(`<template><!----></template>`)
+
+    expect(
+      await renderToString(
+        createApp({
+          render() {
+            return h(ReusableTransition, null, {
+              default: () => [],
+            })
+          },
+        }),
+      ),
+    ).toBe(`<!---->`)
+
+    expect(
+      await renderToString(
+        createApp({
           components: {
-            one: {
-              template: `<transition><slot/></transition>`,
-            },
+            one: ReusableTransition,
           },
           template: `<one><div v-if="true">foo</div></one>`,
         }),
