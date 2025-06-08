@@ -8,6 +8,7 @@ import {
 import { createComment, createTextNode } from './dom/node'
 import { EffectScope, pauseTracking, resetTracking } from '@vue/reactivity'
 import { isHydrating } from './dom/hydration'
+import { getInheritedScopeIds } from '@vue/runtime-dom'
 
 export type Block =
   | Node
@@ -213,12 +214,16 @@ export function setComponentScopeId(instance: VaporComponentInstance): void {
     setScopeId(instance.block, scopeId)
   }
 
-  // vdom parent
+  // inherit scopeId from vdom parent
   if (
     parent.subTree &&
     (parent.subTree.component as any) === instance &&
     parent.vnode!.scopeId
   ) {
     setScopeId(instance.block, parent.vnode!.scopeId)
+    const scopeIds = getInheritedScopeIds(parent.vnode!, parent.parent)
+    for (const id of scopeIds) {
+      setScopeId(instance.block, id)
+    }
   }
 }
