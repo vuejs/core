@@ -145,6 +145,8 @@ export function createComponent(
   rawProps?: LooseRawProps | null,
   rawSlots?: LooseRawSlots | null,
   isSingleRoot?: boolean,
+  once?: boolean, // TODO once support
+  scopeId?: string,
   appContext: GenericAppContext = (currentInstance &&
     currentInstance.appContext) ||
     emptyContext,
@@ -163,6 +165,7 @@ export function createComponent(
       component as any,
       rawProps,
       rawSlots,
+      scopeId,
     )
     if (!isHydrating && _insertionParent) {
       insert(frag, _insertionParent, _insertionAnchor)
@@ -281,6 +284,8 @@ export function createComponent(
   }
 
   onScopeDispose(() => unmountComponent(instance), true)
+
+  if (scopeId) setScopeId(instance.block, scopeId)
 
   if (!isHydrating && _insertionParent) {
     mountComponent(instance, _insertionParent, _insertionAnchor)
@@ -477,16 +482,25 @@ export function createComponentWithFallback(
   rawProps?: LooseRawProps | null,
   rawSlots?: LooseRawSlots | null,
   isSingleRoot?: boolean,
+  once?: boolean,
+  scopeId?: string,
 ): HTMLElement | VaporComponentInstance {
   if (!isString(comp)) {
-    return createComponent(comp, rawProps, rawSlots, isSingleRoot)
+    return createComponent(
+      comp,
+      rawProps,
+      rawSlots,
+      isSingleRoot,
+      once,
+      scopeId,
+    )
   }
 
   const el = document.createElement(comp)
   // mark single root
   ;(el as any).$root = isSingleRoot
 
-  const scopeId = currentInstance!.type.__scopeId
+  scopeId = scopeId || currentInstance!.type.__scopeId
   if (scopeId) setScopeId(el, scopeId)
 
   if (rawProps) {

@@ -35,6 +35,11 @@ export class DynamicFragment extends VaporFragment {
   scope: EffectScope | undefined
   current?: BlockFn
   fallback?: BlockFn
+  /**
+   * slot only
+   * indicates forwarded slot
+   */
+  forwarded?: boolean
 
   constructor(anchorLabel?: string) {
     super([])
@@ -206,7 +211,6 @@ export function setScopeId(block: Block, scopeId: string): void {
 export function setComponentScopeId(instance: VaporComponentInstance): void {
   const parent = instance.parent
   if (!parent) return
-
   if (isArray(instance.block) && instance.block.length > 1) return
 
   const scopeId = parent.type.__scopeId

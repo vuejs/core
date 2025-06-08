@@ -188,7 +188,12 @@ export interface VaporInteropInterface {
   move(vnode: VNode, container: any, anchor: any): void
   slot(n1: VNode | null, n2: VNode, container: any, anchor: any): void
 
-  vdomMount: (component: ConcreteComponent, props?: any, slots?: any) => any
+  vdomMount: (
+    component: ConcreteComponent,
+    props?: any,
+    slots?: any,
+    scopeId?: string,
+  ) => any
   vdomUnmount: UnmountComponentFn
   vdomSlot: (
     slots: any,

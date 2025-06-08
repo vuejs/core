@@ -4,6 +4,7 @@ import {
   createDynamicComponent,
   createSlot,
   defineVaporComponent,
+  forwardedSlotCreator,
   setInsertionState,
   template,
   vaporInteropPlugin,
@@ -200,7 +201,7 @@ describe('scopeId', () => {
   test.todo('should attach scopeId to suspense content', async () => {})
 
   // :slotted basic
-  test.todo('should work on slots', () => {
+  test('should work on slots', () => {
     const Child = defineVaporComponent({
       __scopeId: 'child',
       setup() {
@@ -227,7 +228,14 @@ describe('scopeId', () => {
           {
             default: () => {
               const n0 = template('<div parent></div>')()
-              const n1 = createComponent(Child2)
+              const n1 = createComponent(
+                Child2,
+                null,
+                null,
+                undefined,
+                undefined,
+                'parent',
+              )
               return [n0, n1]
             },
           },
@@ -244,17 +252,239 @@ describe('scopeId', () => {
         // - scopeId from template context
         // - slotted scopeId from slot owner
         // - its own scopeId
-        `<span child2="" child="" parent="" child-s=""></span>` +
+        `<span child2="" parent="" child="" child-s=""></span>` +
         `<!--slot-->` +
         `</div>`,
     )
   })
 
-  test.todo(':slotted on forwarded slots', async () => {})
+  test(':slotted on forwarded slots', async () => {
+    const Wrapper = defineVaporComponent({
+      __scopeId: 'wrapper',
+      setup() {
+        // <div><slot/></div>
+        const n1 = template('<div wrapper></div>', true)() as any
+        setInsertionState(n1)
+        createSlot('default', null)
+        return n1
+      },
+    })
+
+    const Slotted = defineVaporComponent({
+      __scopeId: 'slotted',
+      setup() {
+        // <Wrapper><slot/></Wrapper>
+        const _createForwardedSlot = forwardedSlotCreator()
+        const n1 = createComponent(
+          Wrapper,
+          null,
+          {
+            default: () => {
+              const n0 = _createForwardedSlot('default', null)
+              return n0
+            },
+          },
+          true,
+        )
+        return n1
+      },
+    })
+
+    const { html } = define({
+      __scopeId: 'root',
+      setup() {
+        // <Slotted><div></div></Slotted>
+        const n2 = createComponent(
+          Slotted,
+          null,
+          {
+            default: () => {
+              return template('<div root></div>')()
+            },
+          },
+          true,
+        )
+        return n2
+      },
+    }).render()
+
+    expect(html()).toBe(
+      `<div wrapper="" slotted="" root="">` +
+        `<div root="" slotted-s=""></div>` +
+        `<!--slot--><!--slot-->` +
+        `</div>`,
+    )
+  })
 })
 
 describe('vdom interop', () => {
   test('vdom parent > vapor child', () => {
+    const VaporChild = defineVaporComponent({
+      __scopeId: 'vapor-child',
+      setup() {
+        return template('<button vapor-child></button>', true)()
+      },
+    })
+
+    const VdomParent = {
+      __scopeId: 'vdom-parent',
+      setup() {
+        return () => h(VaporChild as any)
+      },
+    }
+
+    const App = {
+      setup() {
+        return () => h(VdomParent)
+      },
+    }
+
+    const root = document.createElement('div')
+    createApp(App).use(vaporInteropPlugin).mount(root)
+
+    expect(root.innerHTML).toBe(
+      `<button vapor-child="" vdom-parent=""></button>`,
+    )
+  })
+
+  test('vdom parent > vapor > vdom child', () => {
+    const VdomChild = {
+      __scopeId: 'vdom-child',
+      setup() {
+        return () => h('button')
+      },
+    }
+
+    const VaporChild = defineVaporComponent({
+      __scopeId: 'vapor-child',
+      setup() {
+        return createComponent(VdomChild as any, null, null, true)
+      },
+    })
+
+    const VdomParent = {
+      __scopeId: 'vdom-parent',
+      setup() {
+        return () => h(VaporChild as any)
+      },
+    }
+
+    const App = {
+      setup() {
+        return () => h(VdomParent)
+      },
+    }
+
+    const root = document.createElement('div')
+    createApp(App).use(vaporInteropPlugin).mount(root)
+
+    expect(root.innerHTML).toBe(
+      `<button vdom-child="" vapor-child="" vdom-parent=""></button>`,
+    )
+  })
+
+  test('vdom parent > vapor > vapor > vdom child', () => {
+    const VdomChild = {
+      __scopeId: 'vdom-child',
+      setup() {
+        return () => h('button')
+      },
+    }
+
+    const NestedVaporChild = defineVaporComponent({
+      __scopeId: 'nested-vapor-child',
+      setup() {
+        return createComponent(VdomChild as any, null, null, true)
+      },
+    })
+
+    const VaporChild = defineVaporComponent({
+      __scopeId: 'vapor-child',
+      setup() {
+        return createComponent(NestedVaporChild as any, null, null, true)
+      },
+    })
+
+    const VdomParent = {
+      __scopeId: 'vdom-parent',
+      setup() {
+        return () => h(VaporChild as any)
+      },
+    }
+
+    const App = {
+      setup() {
+        return () => h(VdomParent)
+      },
+    }
+
+    const root = document.createElement('div')
+    createApp(App).use(vaporInteropPlugin).mount(root)
+
+    expect(root.innerHTML).toBe(
+      `<button vdom-child="" nested-vapor-child="" vapor-child="" vdom-parent=""></button>`,
+    )
+  })
+
+  test('vdom parent > vapor dynamic child', () => {
+    const VaporChild = defineVaporComponent({
+      __scopeId: 'vapor-child',
+      setup() {
+        return createDynamicComponent(() => 'button', null, null, true)
+      },
+    })
+
+    const VdomParent = {
+      __scopeId: 'vdom-parent',
+      setup() {
+        return () => h(VaporChild as any)
+      },
+    }
+
+    const App = {
+      setup() {
+        return () => h(VdomParent)
+      },
+    }
+
+    const root = document.createElement('div')
+    createApp(App).use(vaporInteropPlugin).mount(root)
+
+    expect(root.innerHTML).toBe(
+      `<button vapor-child="" vdom-parent=""></button><!--dynamic-component-->`,
+    )
+  })
+
+  test('vapor parent > vdom child', () => {
+    const VdomChild = {
+      __scopeId: 'vdom-child',
+      setup() {
+        return () => h('button')
+      },
+    }
+
+    const VaporParent = defineVaporComponent({
+      __scopeId: 'vapor-parent',
+      setup() {
+        return createComponent(VdomChild as any, null, null, true)
+      },
+    })
+
+    const App = {
+      setup() {
+        return () => h(VaporParent as any)
+      },
+    }
+
+    const root = document.createElement('div')
+    createApp(App).use(vaporInteropPlugin).mount(root)
+
+    expect(root.innerHTML).toBe(
+      `<button vdom-child="" vapor-parent=""></button>`,
+    )
+  })
+
+  test('vapor parent > vdom > vapor child', () => {
     const VaporChild = defineVaporComponent({
       __scopeId: 'vapor-child',
       setup() {
@@ -269,151 +499,16 @@ describe('vdom interop', () => {
       },
     }
 
-    const App = {
-      __scopeId: 'parent',
-      setup() {
-        return () => h(VdomChild)
-      },
-    }
-
-    const root = document.createElement('div')
-    createApp(App).use(vaporInteropPlugin).mount(root)
-
-    expect(root.innerHTML).toBe(
-      `<button vapor-child="" vdom-child="" parent=""></button>`,
-    )
-  })
-
-  test('vdom parent > vapor > vdom child', () => {
-    const InnerVdomChild = {
-      __scopeId: 'inner-vdom-child',
-      setup() {
-        return () => h('button')
-      },
-    }
-
-    const VaporChild = defineVaporComponent({
-      __scopeId: 'vapor-child',
-      setup() {
-        return createComponent(InnerVdomChild as any, null, null, true)
-      },
-    })
-
-    const VdomChild = {
-      __scopeId: 'vdom-child',
-      setup() {
-        return () => h(VaporChild as any)
-      },
-    }
-
-    const App = {
-      __scopeId: 'parent',
-      setup() {
-        return () => h(VdomChild)
-      },
-    }
-
-    const root = document.createElement('div')
-    createApp(App).use(vaporInteropPlugin).mount(root)
-
-    expect(root.innerHTML).toBe(
-      `<button inner-vdom-child="" vapor-child="" vdom-child="" parent=""></button>`,
-    )
-  })
-
-  test('vdom parent > vapor > vapor > vdom child', () => {
-    const InnerVdomChild = {
-      __scopeId: 'inner-vdom-child',
-      setup() {
-        return () => h('button')
-      },
-    }
-
-    const VaporChild = defineVaporComponent({
-      __scopeId: 'vapor-child',
-      setup() {
-        return createComponent(InnerVdomChild as any, null, null, true)
-      },
-    })
-
-    const VaporChild2 = defineVaporComponent({
-      __scopeId: 'vapor-child2',
-      setup() {
-        return createComponent(VaporChild as any, null, null, true)
-      },
-    })
-
-    const VdomChild = {
-      __scopeId: 'vdom-child',
-      setup() {
-        return () => h(VaporChild2 as any)
-      },
-    }
-
-    const App = {
-      __scopeId: 'parent',
-      setup() {
-        return () => h(VdomChild)
-      },
-    }
-
-    const root = document.createElement('div')
-    createApp(App).use(vaporInteropPlugin).mount(root)
-
-    expect(root.innerHTML).toBe(
-      `<button inner-vdom-child="" vapor-child="" vapor-child2="" vdom-child="" parent=""></button>`,
-    )
-  })
-
-  test('vdom parent > vapor dynamic child', () => {
-    const VaporChild = defineVaporComponent({
-      __scopeId: 'vapor-child',
-      setup() {
-        return createDynamicComponent(() => 'button', null, null, true)
-      },
-    })
-
-    const VdomChild = {
-      __scopeId: 'vdom-child',
-      setup() {
-        return () => h(VaporChild as any)
-      },
-    }
-
-    const App = {
-      __scopeId: 'parent',
-      setup() {
-        return () => h(VdomChild)
-      },
-    }
-
-    const root = document.createElement('div')
-    createApp(App).use(vaporInteropPlugin).mount(root)
-
-    expect(root.innerHTML).toBe(
-      `<button vapor-child="" vdom-child="" parent=""></button><!--dynamic-component-->`,
-    )
-  })
-
-  test('vapor parent > vdom child', () => {
-    const VdomChild = {
-      __scopeId: 'vdom-child',
-      setup() {
-        return () => h('button')
-      },
-    }
-
-    const VaporChild = defineVaporComponent({
-      __scopeId: 'vapor-child',
+    const VaporParent = defineVaporComponent({
+      __scopeId: 'vapor-parent',
       setup() {
         return createComponent(VdomChild as any, null, null, true)
       },
     })
 
     const App = {
-      __scopeId: 'parent',
       setup() {
-        return () => h(VaporChild as any)
+        return () => h(VaporParent as any)
       },
     }
 
@@ -421,80 +516,42 @@ describe('vdom interop', () => {
     createApp(App).use(vaporInteropPlugin).mount(root)
 
     expect(root.innerHTML).toBe(
-      `<button vdom-child="" vapor-child="" parent=""></button>`,
-    )
-  })
-
-  test('vapor parent > vdom > vapor child', () => {
-    const InnerVaporChild = defineVaporComponent({
-      __scopeId: 'inner-vapor-child',
-      setup() {
-        return template('<button inner-vapor-child></button>', true)()
-      },
-    })
-
-    const VdomChild = {
-      __scopeId: 'vdom-child',
-      setup() {
-        return () => h(InnerVaporChild as any)
-      },
-    }
-
-    const VaporChild = defineVaporComponent({
-      __scopeId: 'vapor-child',
-      setup() {
-        return createComponent(VdomChild as any, null, null, true)
-      },
-    })
-
-    const App = {
-      __scopeId: 'parent',
-      setup() {
-        return () => h(VaporChild as any)
-      },
-    }
-
-    const root = document.createElement('div')
-    createApp(App).use(vaporInteropPlugin).mount(root)
-
-    expect(root.innerHTML).toBe(
-      `<button inner-vapor-child="" vdom-child="" vapor-child="" parent=""></button>`,
+      `<button vapor-child="" vdom-child="" vapor-parent=""></button>`,
     )
   })
 
   test('vapor parent > vdom > vdom > vapor child', () => {
-    const InnerVaporChild = defineVaporComponent({
-      __scopeId: 'inner-vapor-child',
+    const VaporChild = defineVaporComponent({
+      __scopeId: 'vapor-child',
       setup() {
-        return template('<button inner-vapor-child></button>', true)()
+        return template('<button vapor-child></button>', true)()
       },
     })
 
     const VdomChild = {
       __scopeId: 'vdom-child',
       setup() {
-        return () => h(InnerVaporChild as any)
+        return () => h(VaporChild as any)
       },
     }
 
-    const VdomChild2 = {
-      __scopeId: 'vdom-child2',
+    const VdomParent = {
+      __scopeId: 'vdom-parent',
       setup() {
         return () => h(VdomChild as any)
       },
     }
 
-    const VaporChild = defineVaporComponent({
-      __scopeId: 'vapor-child',
+    const VaporParent = defineVaporComponent({
+      __scopeId: 'vapor-parent',
       setup() {
-        return createComponent(VdomChild2 as any, null, null, true)
+        return createComponent(VdomParent as any, null, null, true)
       },
     })
 
     const App = {
-      __scopeId: 'parent',
       setup() {
-        return () => h(VaporChild as any)
+        return () => h(VaporParent as any)
       },
     }
 
@@ -502,7 +559,69 @@ describe('vdom interop', () => {
     createApp(App).use(vaporInteropPlugin).mount(root)
 
     expect(root.innerHTML).toBe(
-      `<button inner-vapor-child="" vdom-child="" vdom-child2="" vapor-child="" parent=""></button>`,
+      `<button vapor-child="" vdom-child="" vdom-parent="" vapor-parent=""></button>`,
+    )
+  })
+
+  test('vapor parent > vapor slot > vdom child', () => {
+    const VaporSlot = defineVaporComponent({
+      __scopeId: 'vapor-slot',
+      setup() {
+        const n1 = template('<div vapor-slot></div>', true)() as any
+        setInsertionState(n1)
+        createSlot('default', null)
+        return n1
+      },
+    })
+
+    const VdomChild = {
+      __scopeId: 'vdom-child',
+      setup() {
+        return () => h('span')
+      },
+    }
+
+    const VaporParent = defineVaporComponent({
+      __scopeId: 'vapor-parent',
+      setup() {
+        const n2 = createComponent(
+          VaporSlot,
+          null,
+          {
+            default: () => {
+              const n0 = template('<div vapor-parent></div>')()
+              const n1 = createComponent(
+                VdomChild,
+                undefined,
+                undefined,
+                undefined,
+                undefined,
+                'vapor-parent',
+              )
+              return [n0, n1]
+            },
+          },
+          true,
+        )
+        return n2
+      },
+    })
+
+    const App = {
+      setup() {
+        return () => h(VaporParent as any)
+      },
+    }
+
+    const root = document.createElement('div')
+    createApp(App).use(vaporInteropPlugin).mount(root)
+
+    expect(root.innerHTML).toBe(
+      `<div vapor-slot="" vapor-parent="">` +
+        `<div vapor-parent="" vapor-slot-s=""></div>` +
+        `<span vdom-child="" vapor-parent="" vapor-slot-s=""></span>` +
+        `<!--slot-->` +
+        `</div>`,
     )
   })
 })

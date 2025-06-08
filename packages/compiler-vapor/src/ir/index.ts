@@ -197,6 +197,7 @@ export interface CreateComponentIRNode extends BaseIRNode {
   dynamic?: SimpleExpressionNode
   parent?: number
   anchor?: number
+  scopeId?: string | null
 }
 
 export interface DeclareOldRefIRNode extends BaseIRNode {

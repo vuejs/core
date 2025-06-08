@@ -155,6 +155,7 @@ function createVDOMComponent(
   component: ConcreteComponent,
   rawProps?: LooseRawProps | null,
   rawSlots?: LooseRawSlots | null,
+  scopeId?: string,
 ): VaporFragment {
   const frag = new VaporFragment([])
   const vnode = createVNode(
@@ -183,7 +184,7 @@ function createVDOMComponent(
     internals.umt(vnode.component!, null, !!parentNode)
   }
 
-  vnode.scopeId = parentInstance.type.__scopeId!
+  vnode.scopeId = scopeId || parentInstance.type.__scopeId!
 
   frag.insert = (parentNode, anchor) => {
     if (!isMounted) {

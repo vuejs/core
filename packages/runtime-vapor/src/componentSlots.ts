@@ -1,5 +1,11 @@
 import { EMPTY_OBJ, NO, hasOwn, isArray, isFunction } from '@vue/shared'
-import { type Block, type BlockFn, DynamicFragment, insert } from './block'
+import {
+  type Block,
+  type BlockFn,
+  DynamicFragment,
+  insert,
+  setScopeId,
+} from './block'
 import { rawPropsProxyHandlers } from './componentProps'
 import { currentInstance, isRef } from '@vue/runtime-dom'
 import type { LooseRawProps, VaporComponentInstance } from './component'
@@ -156,9 +162,27 @@ export function createSlot(
     }
   }
 
+  if (i) fragment.forwarded = true
+  if (i || !hasForwardedSlot(fragment.nodes)) {
+    const scopeId = instance!.type.__scopeId
+    if (scopeId) setScopeId(fragment, `${scopeId}-s`)
+  }
+
   if (!isHydrating && _insertionParent) {
     insert(fragment, _insertionParent, _insertionAnchor)
   }
 
   return fragment
+}
+
+function isForwardedSlot(block: Block): block is DynamicFragment {
+  return block instanceof DynamicFragment && !!block.forwarded
+}
+
+function hasForwardedSlot(block: Block): block is DynamicFragment {
+  if (isArray(block)) {
+    return block.some(isForwardedSlot)
+  } else {
+    return isForwardedSlot(block)
+  }
 }
