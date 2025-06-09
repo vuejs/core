@@ -140,6 +140,7 @@ const tokenizer = new Tokenizer(stack, {
       type: NodeTypes.ELEMENT,
       tag: name,
       ns: currentOptions.getNamespace(name, stack[0], currentOptions.ns),
+      tagLoc: getLoc(start, end),
       tagType: ElementTypes.ELEMENT, // will be refined on tag close
       props: [],
       children: [],
@@ -165,6 +166,9 @@ const tokenizer = new Tokenizer(stack, {
           }
           for (let j = 0; j <= i; j++) {
             const el = stack.shift()!
+            if (j === i) {
+              el.closeTagLoc = getLoc(start, end)
+            }
             onCloseTag(el, end, j < i)
           }
           break
