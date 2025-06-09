@@ -764,30 +764,9 @@ function baseCreateRenderer(
         hostSetScopeId(el, slotScopeIds[i])
       }
     }
-    let subTree = parentComponent && parentComponent.subTree
-    if (subTree) {
-      if (
-        __DEV__ &&
-        subTree.patchFlag > 0 &&
-        subTree.patchFlag & PatchFlags.DEV_ROOT_FRAGMENT
-      ) {
-        subTree =
-          filterSingleRoot(subTree.children as VNodeArrayChildren) || subTree
-      }
-      if (
-        vnode === subTree ||
-        (isSuspense(subTree.type) &&
-          (subTree.ssContent === vnode || subTree.ssFallback === vnode))
-      ) {
-        const parentVNode = parentComponent!.vnode!
-        setScopeId(
-          el,
-          parentVNode,
-          parentVNode.scopeId,
-          parentVNode.slotScopeIds,
-          parentComponent!.parent,
-        )
-      }
+    const inheritedScopeIds = getInheritedScopeIds(vnode, parentComponent)
+    for (let i = 0; i < inheritedScopeIds.length; i++) {
+      hostSetScopeId(el, inheritedScopeIds[i])
     }
   }
 
@@ -2655,4 +2634,55 @@ function getVaporInterface(
     )
   }
   return res!
+}
+
+/**
+ * shared between vdom and vapor
+ */
+export function getInheritedScopeIds(
+  vnode: VNode,
+  parentComponent: GenericComponentInstance | null,
+): string[] {
+  const inheritedScopeIds: string[] = []
+
+  let currentParent = parentComponent
+  let currentVNode = vnode
+
+  while (currentParent) {
+    let subTree = currentParent.subTree
+    if (!subTree) break
+
+    if (
+      __DEV__ &&
+      subTree.patchFlag > 0 &&
+      subTree.patchFlag & PatchFlags.DEV_ROOT_FRAGMENT
+    ) {
+      subTree =
+        filterSingleRoot(subTree.children as VNodeArrayChildren) || subTree
+    }
+
+    if (
+      currentVNode === subTree ||
+      (isSuspense(subTree.type) &&
+        (subTree.ssContent === currentVNode ||
+          subTree.ssFallback === currentVNode))
+    ) {
+      const parentVNode = currentParent.vnode!
+
+      if (parentVNode.scopeId) {
+        inheritedScopeIds.push(parentVNode.scopeId)
+      }
+
+      if (parentVNode.slotScopeIds) {
+        inheritedScopeIds.push(...parentVNode.slotScopeIds)
+      }
+
+      currentVNode = parentVNode
+      currentParent = currentParent.parent
+    } else {
+      break
+    }
+  }
+
+  return inheritedScopeIds
 }

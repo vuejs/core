@@ -25,7 +25,14 @@ import {
   unregisterHMR,
   warn,
 } from '@vue/runtime-dom'
-import { type Block, insert, isBlock, remove } from './block'
+import {
+  type Block,
+  insert,
+  isBlock,
+  remove,
+  setComponentScopeId,
+  setScopeId,
+} from './block'
 import {
   type ShallowRef,
   markRaw,
@@ -59,7 +66,11 @@ import {
 } from './componentSlots'
 import { hmrReload, hmrRerender } from './hmr'
 import { isHydrating, locateHydrationNode } from './dom/hydration'
-import { insertionAnchor, insertionParent } from './insertionState'
+import {
+  insertionAnchor,
+  insertionParent,
+  resetInsertionState,
+} from './insertionState'
 
 export { currentInstance } from '@vue/runtime-dom'
 
@@ -134,6 +145,8 @@ export function createComponent(
   rawProps?: LooseRawProps | null,
   rawSlots?: LooseRawSlots | null,
   isSingleRoot?: boolean,
+  once?: boolean, // TODO once support
+  scopeId?: string,
   appContext: GenericAppContext = (currentInstance &&
     currentInstance.appContext) ||
     emptyContext,
@@ -142,6 +155,8 @@ export function createComponent(
   const _insertionAnchor = insertionAnchor
   if (isHydrating) {
     locateHydrationNode()
+  } else {
+    resetInsertionState()
   }
 
   // vdom interop enabled and component is not an explicit vapor component
@@ -150,6 +165,7 @@ export function createComponent(
       component as any,
       rawProps,
       rawSlots,
+      scopeId,
     )
     if (!isHydrating && _insertionParent) {
       insert(frag, _insertionParent, _insertionAnchor)
@@ -269,10 +285,11 @@ export function createComponent(
 
   onScopeDispose(() => unmountComponent(instance), true)
 
-  if (!isHydrating && _insertionParent) {
-    insert(instance.block, _insertionParent, _insertionAnchor)
-  }
+  if (scopeId) setScopeId(instance.block, scopeId)
 
+  if (!isHydrating && _insertionParent) {
+    mountComponent(instance, _insertionParent, _insertionAnchor)
+  }
   return instance
 }
 
@@ -465,14 +482,26 @@ export function createComponentWithFallback(
   rawProps?: LooseRawProps | null,
   rawSlots?: LooseRawSlots | null,
   isSingleRoot?: boolean,
+  once?: boolean,
+  scopeId?: string,
 ): HTMLElement | VaporComponentInstance {
   if (!isString(comp)) {
-    return createComponent(comp, rawProps, rawSlots, isSingleRoot)
+    return createComponent(
+      comp,
+      rawProps,
+      rawSlots,
+      isSingleRoot,
+      once,
+      scopeId,
+    )
   }
 
   const el = document.createElement(comp)
   // mark single root
   ;(el as any).$root = isSingleRoot
+
+  scopeId = scopeId || currentInstance!.type.__scopeId
+  if (scopeId) setScopeId(el, scopeId)
 
   if (rawProps) {
     renderEffect(() => {
@@ -501,6 +530,7 @@ export function mountComponent(
   }
   if (instance.bm) invokeArrayFns(instance.bm)
   insert(instance.block, parent, anchor)
+  setComponentScopeId(instance)
   if (instance.m) queuePostFlushCb(() => invokeArrayFns(instance.m!))
   instance.isMounted = true
   if (__DEV__) {
