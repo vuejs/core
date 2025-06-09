@@ -731,6 +731,38 @@ describe('resolveType', () => {
     })
   })
 
+  describe('type alias declaration', () => {
+    // #13240
+    test('function type', () => {
+      expect(
+        resolve(`
+      type FunFoo<O> = (item: O) => boolean;
+      type FunBar = FunFoo<number>;
+      defineProps<{
+        foo?: FunFoo<number>;
+        bar?: FunBar;
+      }>()
+      `).props,
+      ).toStrictEqual({
+        foo: ['Function'],
+        bar: ['Function'],
+      })
+    })
+
+    test('fallback to Unknown', () => {
+      expect(
+        resolve(`
+      type Brand<T> = T & {};
+      defineProps<{
+        foo: Brand<string>;
+      }>()
+      `).props,
+      ).toStrictEqual({
+        foo: [UNKNOWN_TYPE],
+      })
+    })
+  })
+
   describe('generics', () => {
     test('generic with type literal', () => {
       expect(
