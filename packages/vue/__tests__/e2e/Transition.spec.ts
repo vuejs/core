@@ -3082,7 +3082,6 @@ describe('e2e: Transition', () => {
 
     // enter
     await classWhenTransitionStart()
-    await nextFrame()
     await transitionFinish()
 
     // leave
