@@ -1,4 +1,4 @@
-import { shallowRef } from '@vue/reactivity'
+import { ref, shallowRef } from '@vue/reactivity'
 import { nextTick } from '@vue/runtime-dom'
 import { createDynamicComponent } from '../src'
 import { makeRender } from './_utils'
@@ -53,5 +53,43 @@ describe('api: createDynamicComponent', () => {
     val.value = 'baz'
     await nextTick()
     expect(html()).toBe('<baz></baz><!--dynamic-component-->')
+  })
+
+  test('with v-once', async () => {
+    const val = shallowRef<any>(A)
+
+    const { html } = define({
+      setup() {
+        return createDynamicComponent(() => val.value, null, null, true, true)
+      },
+    }).render()
+
+    expect(html()).toBe('AAA<!--dynamic-component-->')
+
+    val.value = B
+    await nextTick()
+    expect(html()).toBe('AAA<!--dynamic-component-->') // still AAA
+  })
+
+  test('fallback with v-once', async () => {
+    const val = shallowRef<any>('button')
+    const id = ref(0)
+    const { html } = define({
+      setup() {
+        return createDynamicComponent(
+          () => val.value,
+          { id: () => id.value },
+          null,
+          true,
+          true,
+        )
+      },
+    }).render()
+
+    expect(html()).toBe('<button id="0"></button><!--dynamic-component-->')
+
+    id.value++
+    await nextTick()
+    expect(html()).toBe('<button id="0"></button><!--dynamic-component-->')
   })
 })

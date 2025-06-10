@@ -479,9 +479,10 @@ export function createComponentWithFallback(
   ;(el as any).$root = isSingleRoot
 
   if (rawProps) {
-    renderEffect(() => {
+    const setFn = () =>
       setDynamicProps(el, [resolveDynamicProps(rawProps as RawProps)])
-    })
+    if (once) setFn()
+    else renderEffect(setFn)
   }
 
   if (rawSlots) {

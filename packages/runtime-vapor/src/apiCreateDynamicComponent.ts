@@ -15,7 +15,8 @@ export function createDynamicComponent(
   const frag = __DEV__
     ? new DynamicFragment('dynamic-component')
     : new DynamicFragment()
-  renderEffect(() => {
+
+  const renderFn = () => {
     const value = getter()
     frag.update(
       () =>
@@ -28,6 +29,10 @@ export function createDynamicComponent(
         ),
       value,
     )
-  })
+  }
+
+  if (once) renderFn()
+  else renderEffect(renderFn)
+
   return frag
 }
