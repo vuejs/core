@@ -884,9 +884,9 @@ export default {
         
 return (_ctx, _push, _parent, _attrs) => {
   const _cssVars = { style: {
-  "--xxxxxxxx-count": (count.value),
-  "--xxxxxxxx-style\\\\.color": (style.color),
-  "--xxxxxxxx-height\\\\ \\\\+\\\\ \\\\\\"px\\\\\\"": (height.value + "px")
+  ":--xxxxxxxx-count": (count.value),
+  ":--xxxxxxxx-style\\\\.color": (style.color),
+  ":--xxxxxxxx-height\\\\ \\\\+\\\\ \\\\\\"px\\\\\\"": (height.value + "px")
 }}
   _push(\`<!--[--><div\${
     _ssrRenderAttrs(_cssVars)
