@@ -10,6 +10,7 @@ export function createDynamicComponent(
   rawProps?: RawProps | null,
   rawSlots?: RawSlots | null,
   isSingleRoot?: boolean,
+  once?: boolean,
 ): VaporFragment {
   const frag = __DEV__
     ? new DynamicFragment('dynamic-component')
@@ -23,6 +24,7 @@ export function createDynamicComponent(
           rawProps,
           rawSlots,
           isSingleRoot,
+          once,
         ),
       value,
     )

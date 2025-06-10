@@ -41,6 +41,7 @@ const mountApp: AppMountFn<ParentNode> = (app, container) => {
     app._props as RawProps,
     null,
     false,
+    false,
     app._context,
   )
   mountComponent(instance, container)
@@ -60,6 +61,7 @@ const hydrateApp: AppMountFn<ParentNode> = (app, container) => {
       app._component,
       app._props as RawProps,
       null,
+      false,
       false,
       app._context,
     )

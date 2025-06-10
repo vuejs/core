@@ -134,6 +134,7 @@ export function createComponent(
   rawProps?: LooseRawProps | null,
   rawSlots?: LooseRawSlots | null,
   isSingleRoot?: boolean,
+  once?: boolean,
   appContext: GenericAppContext = (currentInstance &&
     currentInstance.appContext) ||
     emptyContext,
@@ -180,6 +181,7 @@ export function createComponent(
     rawProps as RawProps,
     rawSlots as RawSlots,
     appContext,
+    once,
   )
 
   if (__DEV__) {
@@ -380,6 +382,7 @@ export class VaporComponentInstance implements GenericComponentInstance {
     rawProps?: RawProps | null,
     rawSlots?: RawSlots | null,
     appContext?: GenericAppContext,
+    once?: boolean,
   ) {
     this.vapor = true
     this.uid = nextUid()
@@ -420,7 +423,7 @@ export class VaporComponentInstance implements GenericComponentInstance {
     this.rawProps = rawProps || EMPTY_OBJ
     this.hasFallthrough = hasFallthroughAttrs(comp, rawProps)
     if (rawProps || comp.props) {
-      const [propsHandlers, attrsHandlers] = getPropsProxyHandlers(comp)
+      const [propsHandlers, attrsHandlers] = getPropsProxyHandlers(comp, once)
       this.attrs = new Proxy(this, attrsHandlers)
       this.props = comp.props
         ? new Proxy(this, propsHandlers!)
@@ -465,9 +468,10 @@ export function createComponentWithFallback(
   rawProps?: LooseRawProps | null,
   rawSlots?: LooseRawSlots | null,
   isSingleRoot?: boolean,
+  once?: boolean,
 ): HTMLElement | VaporComponentInstance {
   if (!isString(comp)) {
-    return createComponent(comp, rawProps, rawSlots, isSingleRoot)
+    return createComponent(comp, rawProps, rawSlots, isSingleRoot, once)
   }
 
   const el = document.createElement(comp)
