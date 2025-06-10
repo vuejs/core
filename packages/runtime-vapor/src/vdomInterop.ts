@@ -91,24 +91,6 @@ const vaporInteropImpl: Omit<
       if (instance.block) {
         unmountComponent(instance, container)
       }
-      // A component with async dep inside a pending suspense is unmounted before
-      // its async dep resolves. This should remove the dep from the suspense, and
-      // cause the suspense to resolve immediately if that was the last dep.
-      const parentSuspense = instance.suspense
-      if (
-        __FEATURE_SUSPENSE__ &&
-        parentSuspense &&
-        parentSuspense.pendingBranch &&
-        !parentSuspense.isUnmounted &&
-        instance.asyncDep &&
-        !instance.asyncResolved &&
-        instance.suspenseId === parentSuspense.pendingId
-      ) {
-        parentSuspense.deps--
-        if (parentSuspense.deps === 0) {
-          parentSuspense.resolve()
-        }
-      }
     } else if (vnode.vb) {
       remove(vnode.vb, container)
     }
