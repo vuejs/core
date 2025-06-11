@@ -108,7 +108,7 @@ export const transformSrcset: NodeTransform = (
           const compoundExpression = createCompoundExpression([], attr.loc)
           imageCandidates.forEach(({ url, descriptor }, index) => {
             if (shouldProcessUrl(url)) {
-              const { path } = parseUrl(url)
+              const { path } = parseUrl(url, options.preserveTilde)
               let exp: SimpleExpressionNode
               if (path) {
                 const existingImportsIndex = context.imports.findIndex(
