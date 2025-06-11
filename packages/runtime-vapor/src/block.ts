@@ -23,6 +23,7 @@ export class VaporFragment {
   anchor?: Node
   insert?: (parent: ParentNode, anchor: Node | null) => void
   remove?: (parent?: ParentNode) => void
+  fallback?: BlockFn
 
   constructor(nodes: Block) {
     this.nodes = nodes
@@ -33,7 +34,6 @@ export class DynamicFragment extends VaporFragment {
   anchor: Node
   scope: EffectScope | undefined
   current?: BlockFn
-  fallback?: BlockFn
 
   constructor(anchorLabel?: string) {
     super([])

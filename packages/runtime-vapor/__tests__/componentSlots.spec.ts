@@ -12,8 +12,17 @@ import {
   prepend,
   renderEffect,
   template,
+  vaporInteropPlugin,
 } from '../src'
-import { currentInstance, nextTick, ref } from '@vue/runtime-dom'
+import {
+  createApp,
+  createSlots,
+  currentInstance,
+  h,
+  nextTick,
+  ref,
+  renderSlot,
+} from '@vue/runtime-dom'
 import { makeRender } from './_utils'
 import type { DynamicSlot } from '../src/componentSlots'
 import { setElementText, setText } from '../src/dom/prop'
@@ -470,6 +479,43 @@ describe('component: slots', () => {
       expect(html()).toBe('content<!--if--><!--slot-->')
     })
 
+    test('use fallback on initial render', async () => {
+      const Child = {
+        setup() {
+          return createSlot('default', null, () =>
+            document.createTextNode('fallback'),
+          )
+        },
+      }
+
+      const toggle = ref(false)
+
+      const { html } = define({
+        setup() {
+          return createComponent(Child, null, {
+            default: () => {
+              return createIf(
+                () => toggle.value,
+                () => {
+                  return document.createTextNode('content')
+                },
+              )
+            },
+          })
+        },
+      }).render()
+
+      expect(html()).toBe('fallback<!--if--><!--slot-->')
+
+      toggle.value = true
+      await nextTick()
+      expect(html()).toBe('content<!--if--><!--slot-->')
+
+      toggle.value = false
+      await nextTick()
+      expect(html()).toBe('fallback<!--if--><!--slot-->')
+    })
+
     test('dynamic slot work with v-if', async () => {
       const val = ref('header')
       const toggle = ref(false)
@@ -604,6 +650,2085 @@ describe('component: slots', () => {
       foo.value = 'bar'
       await nextTick()
       expect(host.innerHTML).toBe('bar<!--slot--><!--slot-->bar<!--slot-->')
+    })
+
+    describe('vdom interop', () => {
+      test('vdom slot > vapor forwarded slot > vapor slot', async () => {
+        const foo = ref('foo')
+        const show = ref(true)
+
+        const VaporSlot = defineVaporComponent({
+          setup() {
+            const n0 = createSlot('foo', null, () => {
+              const n2 = template('<div>fallback</div>')()
+              return n2
+            })
+            return n0
+          },
+        })
+
+        const VaporForwardedSlot = defineVaporComponent({
+          setup() {
+            const createForwardedSlot = forwardedSlotCreator()
+            const n2 = createComponent(
+              VaporSlot,
+              null,
+              {
+                foo: () => {
+                  return createForwardedSlot('foo', null)
+                },
+              },
+              true,
+            )
+            return n2
+          },
+        })
+
+        const App = {
+          setup() {
+            return () =>
+              h(
+                VaporForwardedSlot as any,
+                null,
+                createSlots({ _: 2 /* DYNAMIC */ } as any, [
+                  show.value
+                    ? {
+                        name: 'foo',
+                        fn: () => [h('span', foo.value)],
+                        key: '0',
+                      }
+                    : undefined,
+                ]),
+              )
+          },
+        }
+
+        const root = document.createElement('div')
+        createApp(App).use(vaporInteropPlugin).mount(root)
+        expect(root.innerHTML).toBe('<span>foo</span><!--slot-->')
+
+        foo.value = 'bar'
+        await nextTick()
+        expect(root.innerHTML).toBe('<span>bar</span><!--slot-->')
+
+        show.value = false
+        await nextTick()
+        expect(root.innerHTML).toBe('<!--slot--><div>fallback</div>')
+      })
+
+      test('vdom slot > vapor forwarded slot(with fallback) > vapor slot', async () => {
+        const foo = ref('foo')
+        const show = ref(true)
+
+        const VaporSlot = defineVaporComponent({
+          setup() {
+            const n0 = createSlot('foo', null, () => {
+              const n2 = template('<div>fallback</div>')()
+              return n2
+            })
+            return n0
+          },
+        })
+
+        const VaporForwardedSlotWithFallback = defineVaporComponent({
+          setup() {
+            const createForwardedSlot = forwardedSlotCreator()
+            const n2 = createComponent(
+              VaporSlot,
+              null,
+              {
+                foo: () => {
+                  return createForwardedSlot('foo', null, () => {
+                    const n2 = template('<div>forwarded fallback</div>')()
+                    return n2
+                  })
+                },
+              },
+              true,
+            )
+            return n2
+          },
+        })
+
+        const App = {
+          setup() {
+            return () =>
+              h(
+                VaporForwardedSlotWithFallback as any,
+                null,
+                createSlots({ _: 2 /* DYNAMIC */ } as any, [
+                  show.value
+                    ? {
+                        name: 'foo',
+                        fn: () => [h('span', foo.value)],
+                        key: '0',
+                      }
+                    : undefined,
+                ]),
+              )
+          },
+        }
+
+        const root = document.createElement('div')
+        createApp(App).use(vaporInteropPlugin).mount(root)
+        expect(root.innerHTML).toBe('<span>foo</span><!--slot-->')
+
+        foo.value = 'bar'
+        await nextTick()
+        expect(root.innerHTML).toBe('<span>bar</span><!--slot-->')
+
+        show.value = false
+        await nextTick()
+        expect(root.innerHTML).toBe('<!--slot--><div>forwarded fallback</div>')
+      })
+
+      test('vdom slot > vapor forwarded slot > vdom slot', async () => {
+        const foo = ref('foo')
+        const show = ref(true)
+
+        const VdomSlot = {
+          render(this: any) {
+            return renderSlot(this.$slots, 'foo', {}, () => [
+              h('div', 'fallback'),
+            ])
+          },
+        }
+
+        const VaporForwardedSlot = defineVaporComponent({
+          setup() {
+            const createForwardedSlot = forwardedSlotCreator()
+            const n2 = createComponent(
+              VdomSlot as any,
+              null,
+              {
+                foo: () => {
+                  return createForwardedSlot('foo', null)
+                },
+              },
+              true,
+            )
+            return n2
+          },
+        })
+
+        const App = {
+          setup() {
+            return () =>
+              h(
+                VaporForwardedSlot as any,
+                null,
+                createSlots({ _: 2 /* DYNAMIC */ } as any, [
+                  show.value
+                    ? {
+                        name: 'foo',
+                        fn: () => [h('span', foo.value)],
+                        key: '0',
+                      }
+                    : undefined,
+                ]),
+              )
+          },
+        }
+
+        const root = document.createElement('div')
+        createApp(App).use(vaporInteropPlugin).mount(root)
+        expect(root.innerHTML).toBe('<span>foo</span>')
+
+        foo.value = 'bar'
+        await nextTick()
+        expect(root.innerHTML).toBe('<span>bar</span>')
+
+        show.value = false
+        await nextTick()
+        expect(root.innerHTML).toBe('<div>fallback</div>')
+
+        show.value = true
+        await nextTick()
+        expect(root.innerHTML).toBe('<span>bar</span>')
+      })
+
+      test('vdom slot > vapor forwarded slot(with fallback) > vdom slot', async () => {
+        const foo = ref('foo')
+        const show = ref(true)
+
+        const VdomSlot = {
+          render(this: any) {
+            return renderSlot(this.$slots, 'foo', {}, () => [
+              h('div', 'fallback'),
+            ])
+          },
+        }
+
+        const VaporForwardedSlotWithFallback = defineVaporComponent({
+          setup() {
+            const createForwardedSlot = forwardedSlotCreator()
+            const n2 = createComponent(
+              VdomSlot as any,
+              null,
+              {
+                foo: () => {
+                  return createForwardedSlot('foo', null, () => {
+                    const n2 = template('<div>forwarded fallback</div>')()
+                    return n2
+                  })
+                },
+              },
+              true,
+            )
+            return n2
+          },
+        })
+
+        const App = {
+          setup() {
+            return () =>
+              h(
+                VaporForwardedSlotWithFallback as any,
+                null,
+                createSlots({ _: 2 /* DYNAMIC */ } as any, [
+                  show.value
+                    ? {
+                        name: 'foo',
+                        fn: () => [h('span', foo.value)],
+                        key: '0',
+                      }
+                    : undefined,
+                ]),
+              )
+          },
+        }
+
+        const root = document.createElement('div')
+        createApp(App).use(vaporInteropPlugin).mount(root)
+        expect(root.innerHTML).toBe('<span>foo</span>')
+
+        foo.value = 'bar'
+        await nextTick()
+        expect(root.innerHTML).toBe('<span>bar</span>')
+
+        show.value = false
+        await nextTick()
+        expect(root.innerHTML).toBe('<div>forwarded fallback</div>')
+      })
+
+      test('vdom slot > vapor forwarded slot > vdom forwarded slot > vapor slot', async () => {
+        const foo = ref('foo')
+        const show = ref(true)
+
+        const VaporSlot = defineVaporComponent({
+          setup() {
+            const n0 = createSlot('foo', null, () => {
+              const n2 = template('<div>fallback</div>')()
+              return n2
+            })
+            return n0
+          },
+        })
+
+        const VdomForwardedSlot = {
+          render(this: any) {
+            return h(VaporSlot as any, null, {
+              foo: () => [renderSlot(this.$slots, 'foo')],
+              _: 3 /* FORWARDED */,
+            })
+          },
+        }
+
+        const VaporForwardedSlot = defineVaporComponent({
+          setup() {
+            const createForwardedSlot = forwardedSlotCreator()
+            const n2 = createComponent(
+              VdomForwardedSlot as any,
+              null,
+              {
+                foo: () => {
+                  return createForwardedSlot('foo', null)
+                },
+              },
+              true,
+            )
+            return n2
+          },
+        })
+
+        const App = {
+          setup() {
+            return () =>
+              h(
+                VaporForwardedSlot as any,
+                null,
+                createSlots({ _: 2 /* DYNAMIC */ } as any, [
+                  show.value
+                    ? {
+                        name: 'foo',
+                        fn: () => [h('span', foo.value)],
+                        key: '0',
+                      }
+                    : undefined,
+                ]),
+              )
+          },
+        }
+
+        const root = document.createElement('div')
+        createApp(App).use(vaporInteropPlugin).mount(root)
+        expect(root.innerHTML).toBe('<span>foo</span>')
+
+        foo.value = 'bar'
+        await nextTick()
+        expect(root.innerHTML).toBe('<span>bar</span>')
+
+        show.value = false
+        await nextTick()
+        expect(root.innerHTML).toBe('<div>fallback</div>')
+
+        show.value = true
+        await nextTick()
+        expect(root.innerHTML).toBe('<span>bar</span>')
+      })
+
+      test('vdom slot > vapor forwarded slot(with fallback) > vdom forwarded slot > vapor slot', async () => {
+        const foo = ref('foo')
+        const show = ref(true)
+
+        const VaporSlot = defineVaporComponent({
+          setup() {
+            const n0 = createSlot('foo', null, () => {
+              const n2 = template('<div>fallback</div>')()
+              return n2
+            })
+            return n0
+          },
+        })
+
+        const VdomForwardedSlot = {
+          render(this: any) {
+            return h(VaporSlot as any, null, {
+              foo: () => [renderSlot(this.$slots, 'foo')],
+              _: 3 /* FORWARDED */,
+            })
+          },
+        }
+
+        const VaporForwardedSlotWithFallback = defineVaporComponent({
+          setup() {
+            const createForwardedSlot = forwardedSlotCreator()
+            const n2 = createComponent(
+              VdomForwardedSlot as any,
+              null,
+              {
+                foo: () => {
+                  return createForwardedSlot('foo', null, () => {
+                    const n2 = template('<div>forwarded fallback</div>')()
+                    return n2
+                  })
+                },
+              },
+              true,
+            )
+            return n2
+          },
+        })
+
+        const App = {
+          setup() {
+            return () =>
+              h(
+                VaporForwardedSlotWithFallback as any,
+                null,
+                createSlots({ _: 2 /* DYNAMIC */ } as any, [
+                  show.value
+                    ? {
+                        name: 'foo',
+                        fn: () => [h('span', foo.value)],
+                        key: '0',
+                      }
+                    : undefined,
+                ]),
+              )
+          },
+        }
+
+        const root = document.createElement('div')
+        createApp(App).use(vaporInteropPlugin).mount(root)
+        expect(root.innerHTML).toBe('<span>foo</span>')
+
+        foo.value = 'bar'
+        await nextTick()
+        expect(root.innerHTML).toBe('<span>bar</span>')
+
+        show.value = false
+        await nextTick()
+        expect(root.innerHTML).toBe('<div>forwarded fallback</div>')
+
+        show.value = true
+        await nextTick()
+        expect(root.innerHTML).toBe('<span>bar</span>')
+      })
+
+      test('vdom slot > vapor forwarded slot > vdom forwarded slot(with fallback) > vapor slot', async () => {
+        const foo = ref('foo')
+        const show = ref(true)
+
+        const VaporSlot = defineVaporComponent({
+          setup() {
+            const n0 = createSlot('foo', null, () => {
+              const n2 = template('<div>fallback</div>')()
+              return n2
+            })
+            return n0
+          },
+        })
+
+        const VdomForwardedSlotWithFallback = {
+          render(this: any) {
+            return h(VaporSlot as any, null, {
+              foo: () => [
+                renderSlot(this.$slots, 'foo', {}, () => {
+                  return [h('div', 'vdom fallback')]
+                }),
+              ],
+              _: 3 /* FORWARDED */,
+            })
+          },
+        }
+
+        const VaporForwardedSlot = defineVaporComponent({
+          setup() {
+            const createForwardedSlot = forwardedSlotCreator()
+            const n2 = createComponent(
+              VdomForwardedSlotWithFallback as any,
+              null,
+              {
+                foo: () => {
+                  return createForwardedSlot('foo', null)
+                },
+              },
+              true,
+            )
+            return n2
+          },
+        })
+
+        const App = {
+          setup() {
+            return () =>
+              h(
+                VaporForwardedSlot as any,
+                null,
+                createSlots({ _: 2 /* DYNAMIC */ } as any, [
+                  show.value
+                    ? {
+                        name: 'foo',
+                        fn: () => [h('span', foo.value)],
+                        key: '0',
+                      }
+                    : undefined,
+                ]),
+              )
+          },
+        }
+
+        const root = document.createElement('div')
+        createApp(App).use(vaporInteropPlugin).mount(root)
+        expect(root.innerHTML).toBe('<span>foo</span>')
+
+        foo.value = 'bar'
+        await nextTick()
+        expect(root.innerHTML).toBe('<span>bar</span>')
+
+        show.value = false
+        await nextTick()
+        expect(root.innerHTML).toBe('<div>vdom fallback</div>')
+
+        show.value = true
+        await nextTick()
+        expect(root.innerHTML).toBe('<span>bar</span>')
+      })
+
+      test('vdom slot(empty) > vapor forwarded slot > vdom forwarded slot(with fallback) > vapor slot', async () => {
+        const VaporSlot = defineVaporComponent({
+          setup() {
+            const n0 = createSlot('foo', null, () => {
+              const n2 = template('<div>fallback</div>')()
+              return n2
+            })
+            return n0
+          },
+        })
+
+        const VdomForwardedSlotWithFallback = {
+          render(this: any) {
+            return h(VaporSlot as any, null, {
+              foo: () => [
+                renderSlot(this.$slots, 'foo', {}, () => {
+                  return [h('div', 'vdom fallback')]
+                }),
+              ],
+              _: 3 /* FORWARDED */,
+            })
+          },
+        }
+
+        const VaporForwardedSlot = defineVaporComponent({
+          setup() {
+            const createForwardedSlot = forwardedSlotCreator()
+            const n2 = createComponent(
+              VdomForwardedSlotWithFallback as any,
+              null,
+              {
+                foo: () => {
+                  return createForwardedSlot('foo', null)
+                },
+              },
+              true,
+            )
+            return n2
+          },
+        })
+
+        const App = {
+          setup() {
+            return () => h(VaporForwardedSlot as any)
+          },
+        }
+
+        const root = document.createElement('div')
+        createApp(App).use(vaporInteropPlugin).mount(root)
+        expect(root.innerHTML).toBe('<div>vdom fallback</div>')
+      })
+
+      test('vdom slot > vapor forwarded slot > vdom forwarded slot > vdom slot', async () => {
+        const foo = ref('foo')
+        const show = ref(true)
+
+        const VdomSlot = {
+          render(this: any) {
+            return renderSlot(this.$slots, 'foo', {}, () => [
+              h('div', 'fallback'),
+            ])
+          },
+        }
+
+        const VdomForwardedSlot = {
+          render(this: any) {
+            return h(VdomSlot, null, {
+              foo: () => [renderSlot(this.$slots, 'foo')],
+              _: 3 /* FORWARDED */,
+            })
+          },
+        }
+
+        const VaporForwardedSlot = defineVaporComponent({
+          setup() {
+            const createForwardedSlot = forwardedSlotCreator()
+            const n2 = createComponent(
+              VdomForwardedSlot as any,
+              null,
+              {
+                foo: () => {
+                  return createForwardedSlot('foo', null)
+                },
+              },
+              true,
+            )
+            return n2
+          },
+        })
+
+        const App = {
+          setup() {
+            return () =>
+              h(
+                VaporForwardedSlot as any,
+                null,
+                createSlots({ _: 2 /* DYNAMIC */ } as any, [
+                  show.value
+                    ? {
+                        name: 'foo',
+                        fn: () => [h('span', foo.value)],
+                        key: '0',
+                      }
+                    : undefined,
+                ]),
+              )
+          },
+        }
+
+        const root = document.createElement('div')
+        createApp(App).use(vaporInteropPlugin).mount(root)
+        expect(root.innerHTML).toBe('<span>foo</span>')
+
+        foo.value = 'bar'
+        await nextTick()
+        expect(root.innerHTML).toBe('<span>bar</span>')
+
+        show.value = false
+        await nextTick()
+        expect(root.innerHTML).toBe('<div>fallback</div>')
+
+        show.value = true
+        await nextTick()
+        expect(root.innerHTML).toBe('<span>bar</span>')
+      })
+
+      test('vdom slot > vapor forwarded slot(with fallback) > vdom forwarded slot > vdom slot', async () => {
+        const foo = ref('foo')
+        const show = ref(true)
+
+        const VdomSlot = {
+          render(this: any) {
+            return renderSlot(this.$slots, 'foo', {}, () => [
+              h('div', 'fallback'),
+            ])
+          },
+        }
+
+        const VdomForwardedSlot = {
+          render(this: any) {
+            return h(VdomSlot, null, {
+              foo: () => [renderSlot(this.$slots, 'foo')],
+              _: 3 /* FORWARDED */,
+            })
+          },
+        }
+
+        const VaporForwardedSlotWithFallback = defineVaporComponent({
+          setup() {
+            const createForwardedSlot = forwardedSlotCreator()
+            const n2 = createComponent(
+              VdomForwardedSlot as any,
+              null,
+              {
+                foo: () => {
+                  return createForwardedSlot('foo', null, () => {
+                    const n2 = template('<div>vapor fallback</div>')()
+                    return n2
+                  })
+                },
+              },
+              true,
+            )
+            return n2
+          },
+        })
+
+        const App = {
+          setup() {
+            return () =>
+              h(
+                VaporForwardedSlotWithFallback as any,
+                null,
+                createSlots({ _: 2 /* DYNAMIC */ } as any, [
+                  show.value
+                    ? {
+                        name: 'foo',
+                        fn: () => [h('span', foo.value)],
+                        key: '0',
+                      }
+                    : undefined,
+                ]),
+              )
+          },
+        }
+
+        const root = document.createElement('div')
+        createApp(App).use(vaporInteropPlugin).mount(root)
+        expect(root.innerHTML).toBe('<span>foo</span>')
+
+        foo.value = 'bar'
+        await nextTick()
+        expect(root.innerHTML).toBe('<span>bar</span>')
+
+        show.value = false
+        await nextTick()
+        expect(root.innerHTML).toBe('<div>vapor fallback</div>')
+
+        show.value = true
+        await nextTick()
+        expect(root.innerHTML).toBe('<span>bar</span>')
+      })
+
+      test('vdom slot > vapor forwarded slot > vdom forwarded slot(with fallback) > vdom slot', async () => {
+        const foo = ref('foo')
+        const show = ref(true)
+
+        const VdomSlot = {
+          render(this: any) {
+            return renderSlot(this.$slots, 'foo', {}, () => [
+              h('div', 'fallback'),
+            ])
+          },
+        }
+
+        const VdomForwardedSlotWithFallback = {
+          render(this: any) {
+            return h(VdomSlot, null, {
+              foo: () => [
+                renderSlot(this.$slots, 'foo', {}, () => [
+                  h('div', 'vdom fallback'),
+                ]),
+              ],
+              _: 3 /* FORWARDED */,
+            })
+          },
+        }
+
+        const VaporForwardedSlot = defineVaporComponent({
+          setup() {
+            const createForwardedSlot = forwardedSlotCreator()
+            const n2 = createComponent(
+              VdomForwardedSlotWithFallback as any,
+              null,
+              {
+                foo: () => {
+                  return createForwardedSlot('foo', null)
+                },
+              },
+              true,
+            )
+            return n2
+          },
+        })
+
+        const App = {
+          setup() {
+            return () =>
+              h(
+                VaporForwardedSlot as any,
+                null,
+                createSlots({ _: 2 /* DYNAMIC */ } as any, [
+                  show.value
+                    ? {
+                        name: 'foo',
+                        fn: () => [h('span', foo.value)],
+                        key: '0',
+                      }
+                    : undefined,
+                ]),
+              )
+          },
+        }
+
+        const root = document.createElement('div')
+        createApp(App).use(vaporInteropPlugin).mount(root)
+        expect(root.innerHTML).toBe('<span>foo</span>')
+
+        foo.value = 'bar'
+        await nextTick()
+        expect(root.innerHTML).toBe('<span>bar</span>')
+
+        show.value = false
+        await nextTick()
+        expect(root.innerHTML).toBe('<div>vdom fallback</div>')
+
+        show.value = true
+        await nextTick()
+        expect(root.innerHTML).toBe('<span>bar</span>')
+      })
+
+      test('vdom slot > vapor forwarded slot (multiple) > vdom forwarded slot > vdom slot', async () => {
+        const foo = ref('foo')
+        const show = ref(true)
+
+        const VdomSlot = {
+          render(this: any) {
+            return renderSlot(this.$slots, 'foo', {}, () => [
+              h('div', 'fallback'),
+            ])
+          },
+        }
+
+        const VdomForwardedSlot = {
+          render(this: any) {
+            return h(VdomSlot, null, {
+              foo: () => [renderSlot(this.$slots, 'foo')],
+              _: 3 /* FORWARDED */,
+            })
+          },
+        }
+
+        const VaporForwardedSlot2 = defineVaporComponent({
+          setup() {
+            const createForwardedSlot = forwardedSlotCreator()
+            const n2 = createComponent(
+              VdomForwardedSlot as any,
+              null,
+              {
+                foo: () => {
+                  return createForwardedSlot('foo', null)
+                },
+              },
+              true,
+            )
+            return n2
+          },
+        })
+
+        const VaporForwardedSlot1 = defineVaporComponent({
+          setup() {
+            const createForwardedSlot = forwardedSlotCreator()
+            const n2 = createComponent(
+              VaporForwardedSlot2,
+              null,
+              {
+                foo: () => {
+                  return createForwardedSlot('foo', null)
+                },
+              },
+              true,
+            )
+            return n2
+          },
+        })
+
+        const VaporForwardedSlot = defineVaporComponent({
+          setup() {
+            const createForwardedSlot = forwardedSlotCreator()
+            const n2 = createComponent(
+              VaporForwardedSlot1,
+              null,
+              {
+                foo: () => {
+                  return createForwardedSlot('foo', null)
+                },
+              },
+              true,
+            )
+            return n2
+          },
+        })
+
+        const App = {
+          setup() {
+            return () =>
+              h(
+                VaporForwardedSlot as any,
+                null,
+                createSlots({ _: 2 /* DYNAMIC */ } as any, [
+                  show.value
+                    ? {
+                        name: 'foo',
+                        fn: () => [h('span', foo.value)],
+                        key: '0',
+                      }
+                    : undefined,
+                ]),
+              )
+          },
+        }
+
+        const root = document.createElement('div')
+        createApp(App).use(vaporInteropPlugin).mount(root)
+        expect(root.innerHTML).toBe('<span>foo</span><!--slot--><!--slot-->')
+
+        foo.value = 'bar'
+        await nextTick()
+        expect(root.innerHTML).toBe('<span>bar</span><!--slot--><!--slot-->')
+
+        show.value = false
+        await nextTick()
+        expect(root.innerHTML).toBe('<!--slot--><!--slot--><div>fallback</div>')
+
+        show.value = true
+        await nextTick()
+        expect(root.innerHTML).toBe('<!--slot--><!--slot--><span>bar</span>')
+      })
+
+      test('vdom slot > vapor forwarded slot (multiple) > vdom forwarded slot(with fallback) > vdom slot', async () => {
+        const foo = ref('foo')
+        const show = ref(true)
+
+        const VdomSlot = {
+          render(this: any) {
+            return renderSlot(this.$slots, 'foo', {}, () => [
+              h('div', 'fallback'),
+            ])
+          },
+        }
+
+        const VdomForwardedSlotWithFallback = {
+          render(this: any) {
+            return h(VdomSlot, null, {
+              foo: () => [
+                renderSlot(this.$slots, 'foo', {}, () => [
+                  h('div', 'vdom fallback'),
+                ]),
+              ],
+              _: 3 /* FORWARDED */,
+            })
+          },
+        }
+
+        const VaporForwardedSlot2 = defineVaporComponent({
+          setup() {
+            const createForwardedSlot = forwardedSlotCreator()
+            const n2 = createComponent(
+              VdomForwardedSlotWithFallback as any,
+              null,
+              {
+                foo: () => {
+                  return createForwardedSlot('foo', null)
+                },
+              },
+              true,
+            )
+            return n2
+          },
+        })
+
+        const VaporForwardedSlot1 = defineVaporComponent({
+          setup() {
+            const createForwardedSlot = forwardedSlotCreator()
+            const n2 = createComponent(
+              VaporForwardedSlot2,
+              null,
+              {
+                foo: () => {
+                  return createForwardedSlot('foo', null)
+                },
+              },
+              true,
+            )
+            return n2
+          },
+        })
+
+        const VaporForwardedSlot = defineVaporComponent({
+          setup() {
+            const createForwardedSlot = forwardedSlotCreator()
+            const n2 = createComponent(
+              VaporForwardedSlot1,
+              null,
+              {
+                foo: () => {
+                  return createForwardedSlot('foo', null)
+                },
+              },
+              true,
+            )
+            return n2
+          },
+        })
+
+        const App = {
+          setup() {
+            return () =>
+              h(
+                VaporForwardedSlot as any,
+                null,
+                createSlots({ _: 2 /* DYNAMIC */ } as any, [
+                  show.value
+                    ? {
+                        name: 'foo',
+                        fn: () => [h('span', foo.value)],
+                        key: '0',
+                      }
+                    : undefined,
+                ]),
+              )
+          },
+        }
+
+        const root = document.createElement('div')
+        createApp(App).use(vaporInteropPlugin).mount(root)
+        expect(root.innerHTML).toBe('<span>foo</span><!--slot--><!--slot-->')
+
+        foo.value = 'bar'
+        await nextTick()
+        expect(root.innerHTML).toBe('<span>bar</span><!--slot--><!--slot-->')
+
+        show.value = false
+        await nextTick()
+        expect(root.innerHTML).toBe(
+          '<!--slot--><!--slot--><div>vdom fallback</div>',
+        )
+
+        show.value = true
+        await nextTick()
+        expect(root.innerHTML).toBe('<!--slot--><!--slot--><span>bar</span>')
+      })
+
+      test('vdom slot > vdom forwarded slot > vapor slot', async () => {
+        const foo = ref('foo')
+        const show = ref(true)
+
+        const VaporSlot = defineVaporComponent({
+          setup() {
+            const n0 = createSlot('foo', null, () => {
+              const n2 = template('<div>fallback</div>')()
+              return n2
+            })
+            return n0
+          },
+        })
+
+        const VdomForwardedSlot = {
+          render(this: any) {
+            return h(VaporSlot as any, null, {
+              foo: () => [renderSlot(this.$slots, 'foo')],
+              _: 3 /* FORWARDED */,
+            })
+          },
+        }
+
+        const App = {
+          setup() {
+            return () =>
+              h(
+                VdomForwardedSlot,
+                null,
+                createSlots({ _: 2 /* DYNAMIC */ } as any, [
+                  show.value
+                    ? {
+                        name: 'foo',
+                        fn: () => [h('span', foo.value)],
+                        key: '0',
+                      }
+                    : undefined,
+                ]),
+              )
+          },
+        }
+
+        const root = document.createElement('div')
+        createApp(App).use(vaporInteropPlugin).mount(root)
+        expect(root.innerHTML).toBe('<span>foo</span>')
+
+        foo.value = 'bar'
+        await nextTick()
+        expect(root.innerHTML).toBe('<span>bar</span>')
+
+        show.value = false
+        await nextTick()
+        expect(root.innerHTML).toBe('<div>fallback</div>')
+
+        show.value = true
+        await nextTick()
+        expect(root.innerHTML).toBe('<span>bar</span>')
+      })
+
+      test('vdom slot > vdom forwarded slot > vapor forwarded slot > vapor slot', async () => {
+        const foo = ref('foo')
+        const show = ref(true)
+
+        const VaporSlot = defineVaporComponent({
+          setup() {
+            const n0 = createSlot('foo', null, () => {
+              const n2 = template('<div>fallback</div>')()
+              return n2
+            })
+            return n0
+          },
+        })
+
+        const VaporForwardedSlot = defineVaporComponent({
+          setup() {
+            const createForwardedSlot = forwardedSlotCreator()
+            const n2 = createComponent(
+              VaporSlot as any,
+              null,
+              {
+                foo: () => {
+                  return createForwardedSlot('foo', null)
+                },
+              },
+              true,
+            )
+            return n2
+          },
+        })
+
+        const VdomForwardedSlot = {
+          render(this: any) {
+            return h(VaporForwardedSlot as any, null, {
+              foo: () => [renderSlot(this.$slots, 'foo')],
+              _: 3 /* FORWARDED */,
+            })
+          },
+        }
+
+        const App = {
+          setup() {
+            return () =>
+              h(
+                VdomForwardedSlot,
+                null,
+                createSlots({ _: 2 /* DYNAMIC */ } as any, [
+                  show.value
+                    ? {
+                        name: 'foo',
+                        fn: () => [h('span', foo.value)],
+                        key: '0',
+                      }
+                    : undefined,
+                ]),
+              )
+          },
+        }
+
+        const root = document.createElement('div')
+        createApp(App).use(vaporInteropPlugin).mount(root)
+        expect(root.innerHTML).toBe('<span>foo</span><!--slot-->')
+
+        foo.value = 'bar'
+        await nextTick()
+        expect(root.innerHTML).toBe('<span>bar</span><!--slot-->')
+
+        show.value = false
+        await nextTick()
+        expect(root.innerHTML).toBe('<!--slot--><div>fallback</div>')
+
+        show.value = true
+        await nextTick()
+        expect(root.innerHTML).toBe('<!--slot--><span>bar</span>')
+      })
+
+      test('vdom slot > vdom forwarded slot (multiple) > vapor forwarded slot > vdom slot', async () => {
+        const foo = ref('foo')
+        const show = ref(true)
+
+        const VaporSlot = defineVaporComponent({
+          setup() {
+            const n0 = createSlot('foo', null, () => {
+              const n2 = template('<div>fallback</div>')()
+              return n2
+            })
+            return n0
+          },
+        })
+
+        const VaporForwardedSlot = defineVaporComponent({
+          setup() {
+            const createForwardedSlot = forwardedSlotCreator()
+            const n2 = createComponent(
+              VaporSlot as any,
+              null,
+              {
+                foo: () => {
+                  return createForwardedSlot('foo', null)
+                },
+              },
+              true,
+            )
+            return n2
+          },
+        })
+
+        const VdomForwardedSlot2 = {
+          render(this: any) {
+            return h(VaporForwardedSlot as any, null, {
+              foo: () => [renderSlot(this.$slots, 'foo')],
+              _: 3 /* FORWARDED */,
+            })
+          },
+        }
+
+        const VdomForwardedSlot1 = {
+          render(this: any) {
+            return h(VdomForwardedSlot2, null, {
+              foo: () => [renderSlot(this.$slots, 'foo')],
+              _: 3 /* FORWARDED */,
+            })
+          },
+        }
+
+        const VdomForwardedSlot = {
+          render(this: any) {
+            return h(VdomForwardedSlot1, null, {
+              foo: () => [renderSlot(this.$slots, 'foo')],
+              _: 3 /* FORWARDED */,
+            })
+          },
+        }
+
+        const App = {
+          setup() {
+            return () =>
+              h(
+                VdomForwardedSlot,
+                null,
+                createSlots({ _: 2 /* DYNAMIC */ } as any, [
+                  show.value
+                    ? {
+                        name: 'foo',
+                        fn: () => [h('span', foo.value)],
+                        key: '0',
+                      }
+                    : undefined,
+                ]),
+              )
+          },
+        }
+
+        const root = document.createElement('div')
+        createApp(App).use(vaporInteropPlugin).mount(root)
+        expect(root.innerHTML).toBe('<span>foo</span><!--slot-->')
+
+        foo.value = 'bar'
+        await nextTick()
+        expect(root.innerHTML).toBe('<span>bar</span><!--slot-->')
+
+        show.value = false
+        await nextTick()
+        expect(root.innerHTML).toBe('<!--slot--><div>fallback</div>')
+
+        show.value = true
+        await nextTick()
+        expect(root.innerHTML).toBe('<!--slot--><span>bar</span>')
+      })
+
+      test('vdom slot > vdom forwarded slot (multiple) > vapor forwarded slot(with fallback) > vdom slot', async () => {
+        const foo = ref('foo')
+        const show = ref(true)
+
+        const VaporSlot = defineVaporComponent({
+          setup() {
+            const n0 = createSlot('foo', null, () => {
+              const n2 = template('<div>fallback</div>')()
+              return n2
+            })
+            return n0
+          },
+        })
+
+        const VaporForwardedSlot = defineVaporComponent({
+          setup() {
+            const createForwardedSlot = forwardedSlotCreator()
+            const n2 = createComponent(
+              VaporSlot as any,
+              null,
+              {
+                foo: () => {
+                  return createForwardedSlot('foo', null, () => {
+                    const n2 = template('<div>vapor fallback</div>')()
+                    return n2
+                  })
+                },
+              },
+              true,
+            )
+            return n2
+          },
+        })
+
+        const VdomForwardedSlot2 = {
+          render(this: any) {
+            return h(VaporForwardedSlot as any, null, {
+              foo: () => [renderSlot(this.$slots, 'foo')],
+              _: 3 /* FORWARDED */,
+            })
+          },
+        }
+
+        const VdomForwardedSlot1 = {
+          render(this: any) {
+            return h(VdomForwardedSlot2, null, {
+              foo: () => [renderSlot(this.$slots, 'foo')],
+              _: 3 /* FORWARDED */,
+            })
+          },
+        }
+
+        const VdomForwardedSlot = {
+          render(this: any) {
+            return h(VdomForwardedSlot1, null, {
+              foo: () => [renderSlot(this.$slots, 'foo')],
+              _: 3 /* FORWARDED */,
+            })
+          },
+        }
+
+        const App = {
+          setup() {
+            return () =>
+              h(
+                VdomForwardedSlot,
+                null,
+                createSlots({ _: 2 /* DYNAMIC */ } as any, [
+                  show.value
+                    ? {
+                        name: 'foo',
+                        fn: () => [h('span', foo.value)],
+                        key: '0',
+                      }
+                    : undefined,
+                ]),
+              )
+          },
+        }
+
+        const root = document.createElement('div')
+        createApp(App).use(vaporInteropPlugin).mount(root)
+        expect(root.innerHTML).toBe('<span>foo</span><!--slot-->')
+
+        foo.value = 'bar'
+        await nextTick()
+        expect(root.innerHTML).toBe('<span>bar</span><!--slot-->')
+
+        show.value = false
+        await nextTick()
+        expect(root.innerHTML).toBe('<!--slot--><div>vapor fallback</div>')
+
+        show.value = true
+        await nextTick()
+        expect(root.innerHTML).toBe('<!--slot--><span>bar</span>')
+      })
+
+      test('vdom slot > vapor forwarded slot > vapor forwarded slot > vdom slot', async () => {
+        const foo = ref('foo')
+        const show = ref(true)
+
+        const VdomSlot = {
+          render(this: any) {
+            return renderSlot(this.$slots, 'foo', {}, () => [
+              h('div', 'fallback'),
+            ])
+          },
+        }
+
+        const VaporForwardedSlot2 = defineVaporComponent({
+          setup() {
+            const createForwardedSlot = forwardedSlotCreator()
+            const n2 = createComponent(
+              VdomSlot as any,
+              null,
+              {
+                foo: () => {
+                  return createForwardedSlot('foo', null)
+                },
+              },
+              true,
+            )
+            return n2
+          },
+        })
+
+        const VaporForwardedSlot1 = defineVaporComponent({
+          setup() {
+            const createForwardedSlot = forwardedSlotCreator()
+            const n2 = createComponent(
+              VaporForwardedSlot2,
+              null,
+              {
+                foo: () => {
+                  return createForwardedSlot('foo', null)
+                },
+              },
+              true,
+            )
+            return n2
+          },
+        })
+
+        const App = {
+          setup() {
+            return () =>
+              h(
+                VaporForwardedSlot1 as any,
+                null,
+                createSlots({ _: 2 /* DYNAMIC */ } as any, [
+                  show.value
+                    ? {
+                        name: 'foo',
+                        fn: () => [h('span', foo.value)],
+                        key: '0',
+                      }
+                    : undefined,
+                ]),
+              )
+          },
+        }
+
+        const root = document.createElement('div')
+        createApp(App).use(vaporInteropPlugin).mount(root)
+        expect(root.innerHTML).toBe('<span>foo</span><!--slot-->')
+
+        foo.value = 'bar'
+        await nextTick()
+        expect(root.innerHTML).toBe('<span>bar</span><!--slot-->')
+
+        show.value = false
+        await nextTick()
+        expect(root.innerHTML).toBe('<!--slot--><div>fallback</div>')
+
+        show.value = true
+        await nextTick()
+        expect(root.innerHTML).toBe('<!--slot--><span>bar</span>')
+      })
+
+      test('vdom slot > vapor forwarded slot(with fallback) > vapor forwarded slot > vdom slot', async () => {
+        const foo = ref('foo')
+        const show = ref(true)
+
+        const VdomSlot = {
+          render(this: any) {
+            return renderSlot(this.$slots, 'foo', {}, () => [
+              h('div', 'fallback'),
+            ])
+          },
+        }
+
+        const VaporForwardedSlot2 = defineVaporComponent({
+          setup() {
+            const createForwardedSlot = forwardedSlotCreator()
+            const n2 = createComponent(
+              VdomSlot as any,
+              null,
+              {
+                foo: () => {
+                  return createForwardedSlot('foo', null)
+                },
+              },
+              true,
+            )
+            return n2
+          },
+        })
+
+        const VaporForwardedSlot1WithFallback = defineVaporComponent({
+          setup() {
+            const createForwardedSlot = forwardedSlotCreator()
+            const n2 = createComponent(
+              VaporForwardedSlot2,
+              null,
+              {
+                foo: () => {
+                  return createForwardedSlot('foo', null, () => {
+                    const n2 = template('<div>vapor1 fallback</div>')()
+                    return n2
+                  })
+                },
+              },
+              true,
+            )
+            return n2
+          },
+        })
+
+        const App = {
+          setup() {
+            return () =>
+              h(
+                VaporForwardedSlot1WithFallback as any,
+                null,
+                createSlots({ _: 2 /* DYNAMIC */ } as any, [
+                  show.value
+                    ? {
+                        name: 'foo',
+                        fn: () => [h('span', foo.value)],
+                        key: '0',
+                      }
+                    : undefined,
+                ]),
+              )
+          },
+        }
+
+        const root = document.createElement('div')
+        createApp(App).use(vaporInteropPlugin).mount(root)
+        expect(root.innerHTML).toBe('<span>foo</span><!--slot-->')
+
+        foo.value = 'bar'
+        await nextTick()
+        expect(root.innerHTML).toBe('<span>bar</span><!--slot-->')
+
+        show.value = false
+        await nextTick()
+        expect(root.innerHTML).toBe('<!--slot--><div>vapor1 fallback</div>')
+
+        show.value = true
+        await nextTick()
+        expect(root.innerHTML).toBe('<!--slot--><span>bar</span>')
+      })
+
+      test('vdom slot > vapor forwarded slot > vapor forwarded slot(with fallback) > vdom slot', async () => {
+        const foo = ref('foo')
+        const show = ref(true)
+
+        const VdomSlot = {
+          render(this: any) {
+            return renderSlot(this.$slots, 'foo', {}, () => [
+              h('div', 'fallback'),
+            ])
+          },
+        }
+
+        const VaporForwardedSlot2WithFallback = defineVaporComponent({
+          setup() {
+            const createForwardedSlot = forwardedSlotCreator()
+            const n2 = createComponent(
+              VdomSlot as any,
+              null,
+              {
+                foo: () => {
+                  return createForwardedSlot('foo', null, () => {
+                    const n2 = template('<div>vapor2 fallback</div>')()
+                    return n2
+                  })
+                },
+              },
+              true,
+            )
+            return n2
+          },
+        })
+
+        const VaporForwardedSlot1 = defineVaporComponent({
+          setup() {
+            const createForwardedSlot = forwardedSlotCreator()
+            const n2 = createComponent(
+              VaporForwardedSlot2WithFallback,
+              null,
+              {
+                foo: () => {
+                  return createForwardedSlot('foo', null)
+                },
+              },
+              true,
+            )
+            return n2
+          },
+        })
+
+        const App = {
+          setup() {
+            return () =>
+              h(
+                VaporForwardedSlot1 as any,
+                null,
+                createSlots({ _: 2 /* DYNAMIC */ } as any, [
+                  show.value
+                    ? {
+                        name: 'foo',
+                        fn: () => [h('span', foo.value)],
+                        key: '0',
+                      }
+                    : undefined,
+                ]),
+              )
+          },
+        }
+
+        const root = document.createElement('div')
+        createApp(App).use(vaporInteropPlugin).mount(root)
+        expect(root.innerHTML).toBe('<span>foo</span><!--slot-->')
+
+        foo.value = 'bar'
+        await nextTick()
+        expect(root.innerHTML).toBe('<span>bar</span><!--slot-->')
+
+        show.value = false
+        await nextTick()
+        expect(root.innerHTML).toBe('<!--slot--><div>vapor2 fallback</div>')
+
+        show.value = true
+        await nextTick()
+        expect(root.innerHTML).toBe('<!--slot--><span>bar</span>')
+      })
+
+      test('vdom slot > vapor forwarded slot > vapor forwarded slot > vapor slot', async () => {
+        const foo = ref('foo')
+        const show = ref(true)
+
+        const VaporSlot = defineVaporComponent({
+          setup() {
+            const n0 = createSlot('foo', null, () => {
+              const n2 = template('<div>fallback</div>')()
+              return n2
+            })
+            return n0
+          },
+        })
+
+        const VaporForwardedSlot2 = defineVaporComponent({
+          setup() {
+            const createForwardedSlot = forwardedSlotCreator()
+            const n2 = createComponent(
+              VaporSlot,
+              null,
+              {
+                foo: () => {
+                  return createForwardedSlot('foo', null)
+                },
+              },
+              true,
+            )
+            return n2
+          },
+        })
+
+        const VaporForwardedSlot1 = defineVaporComponent({
+          setup() {
+            const createForwardedSlot = forwardedSlotCreator()
+            const n2 = createComponent(
+              VaporForwardedSlot2,
+              null,
+              {
+                foo: () => {
+                  return createForwardedSlot('foo', null)
+                },
+              },
+              true,
+            )
+            return n2
+          },
+        })
+
+        const App = {
+          setup() {
+            return () =>
+              h(
+                VaporForwardedSlot1 as any,
+                null,
+                createSlots({ _: 2 /* DYNAMIC */ } as any, [
+                  show.value
+                    ? {
+                        name: 'foo',
+                        fn: () => [h('span', foo.value)],
+                        key: '0',
+                      }
+                    : undefined,
+                ]),
+              )
+          },
+        }
+
+        const root = document.createElement('div')
+        createApp(App).use(vaporInteropPlugin).mount(root)
+        expect(root.innerHTML).toBe('<span>foo</span><!--slot--><!--slot-->')
+
+        foo.value = 'bar'
+        await nextTick()
+        expect(root.innerHTML).toBe('<span>bar</span><!--slot--><!--slot-->')
+
+        show.value = false
+        await nextTick()
+        expect(root.innerHTML).toBe('<!--slot--><!--slot--><div>fallback</div>')
+
+        show.value = true
+        await nextTick()
+        expect(root.innerHTML).toBe('<!--slot--><!--slot--><span>bar</span>')
+      })
+
+      test('vdom slot > vapor forwarded slot(with fallback) > vapor forwarded slot(with fallback) > vdom slot', async () => {
+        const foo = ref('foo')
+        const show = ref(true)
+
+        const VdomSlot = {
+          render(this: any) {
+            return renderSlot(this.$slots, 'foo', {}, () => [
+              h('div', 'fallback'),
+            ])
+          },
+        }
+
+        const VaporForwardedSlot2WithFallback = defineVaporComponent({
+          setup() {
+            const createForwardedSlot = forwardedSlotCreator()
+            const n2 = createComponent(
+              VdomSlot as any,
+              null,
+              {
+                foo: () => {
+                  return createForwardedSlot('foo', null, () => {
+                    const n2 = template('<div>vapor2 fallback</div>')()
+                    return n2
+                  })
+                },
+              },
+              true,
+            )
+            return n2
+          },
+        })
+
+        const VaporForwardedSlot1WithFallback = defineVaporComponent({
+          setup() {
+            const createForwardedSlot = forwardedSlotCreator()
+            const n2 = createComponent(
+              VaporForwardedSlot2WithFallback,
+              null,
+              {
+                foo: () => {
+                  return createForwardedSlot('foo', null, () => {
+                    const n2 = template('<div>vapor1 fallback</div>')()
+                    return n2
+                  })
+                },
+              },
+              true,
+            )
+            return n2
+          },
+        })
+
+        const App = {
+          setup() {
+            return () =>
+              h(
+                VaporForwardedSlot1WithFallback as any,
+                null,
+                createSlots({ _: 2 /* DYNAMIC */ } as any, [
+                  show.value
+                    ? {
+                        name: 'foo',
+                        fn: () => [h('span', foo.value)],
+                        key: '0',
+                      }
+                    : undefined,
+                ]),
+              )
+          },
+        }
+
+        const root = document.createElement('div')
+        createApp(App).use(vaporInteropPlugin).mount(root)
+        expect(root.innerHTML).toBe('<span>foo</span><!--slot-->')
+
+        foo.value = 'bar'
+        await nextTick()
+        expect(root.innerHTML).toBe('<span>bar</span><!--slot-->')
+
+        show.value = false
+        await nextTick()
+        expect(root.innerHTML).toBe('<!--slot--><div>vapor1 fallback</div>')
+
+        show.value = true
+        await nextTick()
+        expect(root.innerHTML).toBe('<!--slot--><span>bar</span>')
+      })
+
+      test('vdom slot > vapor forwarded slot(with fallback) > vapor forwarded slot(with fallback) > vapor slot', async () => {
+        const foo = ref('foo')
+        const show = ref(true)
+
+        const VaporSlot = defineVaporComponent({
+          setup() {
+            const n0 = createSlot('foo', null, () => {
+              const n2 = template('<div>fallback</div>')()
+              return n2
+            })
+            return n0
+          },
+        })
+
+        const VaporForwardedSlot2WithFallback = defineVaporComponent({
+          setup() {
+            const createForwardedSlot = forwardedSlotCreator()
+            const n2 = createComponent(
+              VaporSlot,
+              null,
+              {
+                foo: () => {
+                  return createForwardedSlot('foo', null, () => {
+                    const n2 = template('<div>vapor2 fallback</div>')()
+                    return n2
+                  })
+                },
+              },
+              true,
+            )
+            return n2
+          },
+        })
+
+        const VaporForwardedSlot1WithFallback = defineVaporComponent({
+          setup() {
+            const createForwardedSlot = forwardedSlotCreator()
+            const n2 = createComponent(
+              VaporForwardedSlot2WithFallback,
+              null,
+              {
+                foo: () => {
+                  return createForwardedSlot('foo', null, () => {
+                    const n2 = template('<div>vapor1 fallback</div>')()
+                    return n2
+                  })
+                },
+              },
+              true,
+            )
+            return n2
+          },
+        })
+
+        const App = {
+          setup() {
+            return () =>
+              h(
+                VaporForwardedSlot1WithFallback as any,
+                null,
+                createSlots({ _: 2 /* DYNAMIC */ } as any, [
+                  show.value
+                    ? {
+                        name: 'foo',
+                        fn: () => [h('span', foo.value)],
+                        key: '0',
+                      }
+                    : undefined,
+                ]),
+              )
+          },
+        }
+
+        const root = document.createElement('div')
+        createApp(App).use(vaporInteropPlugin).mount(root)
+        expect(root.innerHTML).toBe('<span>foo</span><!--slot--><!--slot-->')
+
+        foo.value = 'bar'
+        await nextTick()
+        expect(root.innerHTML).toBe('<span>bar</span><!--slot--><!--slot-->')
+
+        show.value = false
+        await nextTick()
+        expect(root.innerHTML).toBe(
+          '<!--slot--><!--slot--><div>vapor1 fallback</div>',
+        )
+
+        show.value = true
+        await nextTick()
+        expect(root.innerHTML).toBe('<!--slot--><!--slot--><span>bar</span>')
+      })
+
+      test('vdom slot > vdom forwarded slot(with fallback) > vdom forwarded slot(with fallback) > vapor slot', async () => {
+        const foo = ref('foo')
+        const show = ref(true)
+
+        const VaporSlot = defineVaporComponent({
+          setup() {
+            const n0 = createSlot('foo', null, () => {
+              const n2 = template('<div>fallback</div>')()
+              return n2
+            })
+            return n0
+          },
+        })
+
+        const VdomForwardedSlot2WithFallback = {
+          render(this: any) {
+            return h(VaporSlot as any, null, {
+              foo: () => [
+                renderSlot(this.$slots, 'foo', {}, () => [
+                  h('div', 'vdom2 fallback'),
+                ]),
+              ],
+              _: 3 /* FORWARDED */,
+            })
+          },
+        }
+
+        const VdomForwardedSlot1WithFallback = {
+          render(this: any) {
+            return h(VdomForwardedSlot2WithFallback, null, {
+              foo: () => [
+                renderSlot(this.$slots, 'foo', {}, () => [
+                  h('div', 'vdom1 fallback'),
+                ]),
+              ],
+              _: 3 /* FORWARDED */,
+            })
+          },
+        }
+
+        const App = {
+          setup() {
+            return () =>
+              h(
+                VdomForwardedSlot1WithFallback,
+                null,
+                createSlots({ _: 2 /* DYNAMIC */ } as any, [
+                  show.value
+                    ? {
+                        name: 'foo',
+                        fn: () => [h('span', foo.value)],
+                        key: '0',
+                      }
+                    : undefined,
+                ]),
+              )
+          },
+        }
+
+        const root = document.createElement('div')
+        createApp(App).use(vaporInteropPlugin).mount(root)
+        expect(root.innerHTML).toBe('<span>foo</span>')
+
+        foo.value = 'bar'
+        await nextTick()
+        expect(root.innerHTML).toBe('<span>bar</span>')
+
+        show.value = false
+        await nextTick()
+        expect(root.innerHTML).toBe('<div>vdom1 fallback</div>')
+
+        show.value = true
+        await nextTick()
+        expect(root.innerHTML).toBe('<span>bar</span>')
+      })
+
+      test('vdom slot > vdom forwarded slot(with fallback) > vdom forwarded slot(with fallback) > vdom slot', async () => {
+        const foo = ref('foo')
+        const show = ref(true)
+
+        const VdomSlot = {
+          render(this: any) {
+            return renderSlot(this.$slots, 'foo', {}, () => [
+              h('div', 'fallback'),
+            ])
+          },
+        }
+
+        const VdomForwardedSlot2WithFallback = {
+          render(this: any) {
+            return h(VdomSlot, null, {
+              foo: () => [
+                renderSlot(this.$slots, 'foo', {}, () => [
+                  h('div', 'vdom2 fallback'),
+                ]),
+              ],
+              _: 3 /* FORWARDED */,
+            })
+          },
+        }
+
+        const VdomForwardedSlot1WithFallback = {
+          render(this: any) {
+            return h(VdomForwardedSlot2WithFallback, null, {
+              foo: () => [
+                renderSlot(this.$slots, 'foo', {}, () => [
+                  h('div', 'vdom1 fallback'),
+                ]),
+              ],
+              _: 3 /* FORWARDED */,
+            })
+          },
+        }
+
+        const App = {
+          setup() {
+            return () =>
+              h(
+                VdomForwardedSlot1WithFallback,
+                null,
+                createSlots({ _: 2 /* DYNAMIC */ } as any, [
+                  show.value
+                    ? {
+                        name: 'foo',
+                        fn: () => [h('span', foo.value)],
+                        key: '0',
+                      }
+                    : undefined,
+                ]),
+              )
+          },
+        }
+
+        const root = document.createElement('div')
+        createApp(App).use(vaporInteropPlugin).mount(root)
+        expect(root.innerHTML).toBe('<span>foo</span>')
+
+        foo.value = 'bar'
+        await nextTick()
+        expect(root.innerHTML).toBe('<span>bar</span>')
+
+        show.value = false
+        await nextTick()
+        expect(root.innerHTML).toBe('<div>vdom1 fallback</div>')
+
+        show.value = true
+        await nextTick()
+        expect(root.innerHTML).toBe('<span>bar</span>')
+      })
+
+      test('vdom slot > vdom forwarded slot(with fallback) > vdom forwarded slot(with fallback) (multiple) > vapor slot', async () => {
+        const foo = ref('foo')
+        const show = ref(true)
+
+        const VaporSlot = defineVaporComponent({
+          setup() {
+            const n0 = createSlot('foo', null, () => {
+              const n2 = template('<div>fallback</div>')()
+              return n2
+            })
+            return n0
+          },
+        })
+
+        const VdomForwardedSlot3WithFallback = {
+          render(this: any) {
+            return h(VaporSlot as any, null, {
+              foo: () => [
+                renderSlot(this.$slots, 'foo', {}, () => [
+                  h('div', 'vdom3 fallback'),
+                ]),
+              ],
+              _: 3 /* FORWARDED */,
+            })
+          },
+        }
+
+        const VdomForwardedSlot2WithFallback = {
+          render(this: any) {
+            return h(VdomForwardedSlot3WithFallback, null, {
+              foo: () => [
+                renderSlot(this.$slots, 'foo', {}, () => [
+                  h('div', 'vdom2 fallback'),
+                ]),
+              ],
+              _: 3 /* FORWARDED */,
+            })
+          },
+        }
+
+        const VdomForwardedSlot1WithFallback = {
+          render(this: any) {
+            return h(VdomForwardedSlot2WithFallback, null, {
+              foo: () => [
+                renderSlot(this.$slots, 'foo', {}, () => [
+                  h('div', 'vdom1 fallback'),
+                ]),
+              ],
+              _: 3 /* FORWARDED */,
+            })
+          },
+        }
+
+        const App = {
+          setup() {
+            return () =>
+              h(
+                VdomForwardedSlot1WithFallback,
+                null,
+                createSlots({ _: 2 /* DYNAMIC */ } as any, [
+                  show.value
+                    ? {
+                        name: 'foo',
+                        fn: () => [h('span', foo.value)],
+                        key: '0',
+                      }
+                    : undefined,
+                ]),
+              )
+          },
+        }
+
+        const root = document.createElement('div')
+        createApp(App).use(vaporInteropPlugin).mount(root)
+        expect(root.innerHTML).toBe('<span>foo</span>')
+
+        foo.value = 'bar'
+        await nextTick()
+        expect(root.innerHTML).toBe('<span>bar</span>')
+
+        show.value = false
+        await nextTick()
+        expect(root.innerHTML).toBe('<div>vdom1 fallback</div>')
+
+        show.value = true
+        await nextTick()
+        expect(root.innerHTML).toBe('<span>bar</span>')
+      })
     })
   })
 })
