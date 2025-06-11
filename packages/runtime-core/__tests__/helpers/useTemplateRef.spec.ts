@@ -253,4 +253,65 @@ describe('useTemplateRef', () => {
       __DEV__ = true
     }
   })
+
+  test('should work when used as direct ref value with ref_key and ref_for (compiled in prod mode)', () => {
+    __DEV__ = false
+    try {
+      let tRef: ShallowRef
+      const key = 'refKey'
+      const Comp = {
+        setup() {
+          tRef = useTemplateRef(key)
+        },
+        render() {
+          return h(
+            'div',
+            [1, 2, 3].map(x =>
+              h(
+                'span',
+                { ref: tRef, ref_key: key, ref_for: true },
+                x.toString(),
+              ),
+            ),
+          )
+        },
+      }
+
+      const root = nodeOps.createElement('div')
+      render(h(Comp), root)
+
+      expect('target is readonly').not.toHaveBeenWarned()
+      expect(tRef!.value).toHaveLength(3)
+    } finally {
+      __DEV__ = true
+    }
+  })
+
+  test('should work when used as direct ref value with ref_for but without ref_key (compiled in prod mode)', () => {
+    __DEV__ = false
+    try {
+      let tRef: ShallowRef
+      const Comp = {
+        setup() {
+          tRef = useTemplateRef('refKey')
+        },
+        render() {
+          return h(
+            'div',
+            [1, 2, 3].map(x =>
+              h('span', { ref: tRef, ref_for: true }, x.toString()),
+            ),
+          )
+        },
+      }
+
+      const root = nodeOps.createElement('div')
+      render(h(Comp), root)
+
+      expect('target is readonly').not.toHaveBeenWarned()
+      expect(tRef!.value).toHaveLength(3)
+    } finally {
+      __DEV__ = true
+    }
+  })
 })
