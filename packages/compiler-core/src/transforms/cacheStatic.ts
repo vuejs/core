@@ -12,11 +12,14 @@ import {
   type RootNode,
   type SimpleExpressionNode,
   type SlotFunctionExpression,
+  type SlotsObjectProperty,
   type TemplateChildNode,
   type TemplateNode,
   type TextCallNode,
   type VNodeCall,
   createArrayExpression,
+  createObjectProperty,
+  createSimpleExpression,
   getVNodeBlockHelper,
   getVNodeHelper,
 } from '../ast'
@@ -38,20 +41,19 @@ export function cacheStatic(root: RootNode, context: TransformContext): void {
     context,
     // Root node is unfortunately non-hoistable due to potential parent
     // fallthrough attributes.
-    isSingleElementRoot(root, root.children[0]),
+    !!getSingleElementRoot(root),
   )
 }
 
-export function isSingleElementRoot(
+export function getSingleElementRoot(
   root: RootNode,
-  child: TemplateChildNode,
-): child is PlainElementNode | ComponentNode | TemplateNode {
-  const { children } = root
-  return (
-    children.length === 1 &&
-    child.type === NodeTypes.ELEMENT &&
-    !isSlotOutlet(child)
-  )
+): PlainElementNode | ComponentNode | TemplateNode | null {
+  const children = root.children.filter(x => x.type !== NodeTypes.COMMENT)
+  return children.length === 1 &&
+    children[0].type === NodeTypes.ELEMENT &&
+    !isSlotOutlet(children[0])
+    ? children[0]
+    : null
 }
 
 function walk(
@@ -140,6 +142,7 @@ function walk(
   }
 
   let cachedAsArray = false
+  const slotCacheKeys = []
   if (toCache.length === children.length && node.type === NodeTypes.ELEMENT) {
     if (
       node.tagType === ElementTypes.ELEMENT &&
@@ -163,6 +166,7 @@ function walk(
       // default slot
       const slot = getSlotNode(node.codegenNode, 'default')
       if (slot) {
+        slotCacheKeys.push(context.cached.length)
         slot.returns = getCacheExpression(
           createArrayExpression(slot.returns as TemplateChildNode[]),
         )
@@ -186,6 +190,7 @@ function walk(
         slotName.arg &&
         getSlotNode(parent.codegenNode, slotName.arg)
       if (slot) {
+        slotCacheKeys.push(context.cached.length)
         slot.returns = getCacheExpression(
           createArrayExpression(slot.returns as TemplateChildNode[]),
         )
@@ -196,8 +201,29 @@ function walk(
 
   if (!cachedAsArray) {
     for (const child of toCache) {
+      slotCacheKeys.push(context.cached.length)
       child.codegenNode = context.cache(child.codegenNode!)
     }
+  }
+
+  // put the slot cached keys on the slot object, so that the cache
+  // can be removed when component unmounting to prevent memory leaks
+  if (
+    slotCacheKeys.length &&
+    node.type === NodeTypes.ELEMENT &&
+    node.tagType === ElementTypes.COMPONENT &&
+    node.codegenNode &&
+    node.codegenNode.type === NodeTypes.VNODE_CALL &&
+    node.codegenNode.children &&
+    !isArray(node.codegenNode.children) &&
+    node.codegenNode.children.type === NodeTypes.JS_OBJECT_EXPRESSION
+  ) {
+    node.codegenNode.children.properties.push(
+      createObjectProperty(
+        `__`,
+        createSimpleExpression(JSON.stringify(slotCacheKeys), false),
+      ) as SlotsObjectProperty,
+    )
   }
 
   function getCacheExpression(value: JSChildNode): CacheExpression {
