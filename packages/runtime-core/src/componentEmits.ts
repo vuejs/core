@@ -151,16 +151,12 @@ export function emit(
   }
 
   let args = rawArgs
-  let isModelListener
-  let modifiers
-  if (
-    __COMPAT__ &&
-    (isModelListener = compatModelEventPrefix + event in props)
-  ) {
-    modifiers = props.modelModifiers
-  } else if ((isModelListener = event.startsWith('update:'))) {
-    modifiers = getModelModifiers(props, event.slice(7))
-  }
+  const isCompatModelListener =
+    __COMPAT__ && compatModelEventPrefix + event in props
+  const isModelListener = isCompatModelListener || event.startsWith('update:')
+  const modifiers = isCompatModelListener
+    ? props.modelModifiers
+    : isModelListener && getModelModifiers(props, event.slice(7))
 
   // for v-model update:xxx events, apply modifiers on args
   if (modifiers) {
