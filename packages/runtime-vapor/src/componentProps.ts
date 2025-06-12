@@ -210,7 +210,8 @@ export function hasAttrFromRawProps(rawProps: RawProps, key: string): boolean {
   if (dynamicSources) {
     let i = dynamicSources.length
     while (i--) {
-      if (hasOwn(resolveSource(dynamicSources[i]), key)) {
+      const source = resolveSource(dynamicSources[i])
+      if (source && hasOwn(source, key)) {
         return true
       }
     }
