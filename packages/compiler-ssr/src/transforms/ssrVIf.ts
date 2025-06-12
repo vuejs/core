@@ -14,6 +14,7 @@ import {
   type SSRTransformContext,
   processChildrenAsStatement,
 } from '../ssrCodegenTransform'
+import { IF_ANCHOR_LABEL } from '@vue/shared'
 
 // Plugin for the first transform pass, which simply constructs the AST node
 export const ssrTransformIf: NodeTransform = createStructuralDirectiveTransform(
@@ -74,5 +75,16 @@ function processIfBranch(
     (children.length !== 1 || children[0].type !== NodeTypes.ELEMENT) &&
     // optimize away nested fragments when the only child is a ForNode
     !(children.length === 1 && children[0].type === NodeTypes.FOR)
-  return processChildrenAsStatement(branch, context, needFragmentWrapper)
+  const statement = processChildrenAsStatement(
+    branch,
+    context,
+    needFragmentWrapper,
+  )
+  if (branch.condition) {
+    // v-if/v-else-if anchor for vapor hydration
+    statement.body.push(
+      createCallExpression(`_push`, [`\`<!--${IF_ANCHOR_LABEL}-->\``]),
+    )
+  }
+  return statement
 }

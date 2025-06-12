@@ -77,6 +77,16 @@ export function render(_ctx, $props, $emit, $attrs, $slots) {
 }"
 `;
 
+exports[`compiler: element transform > component > resolve implicitly self-referencing component 1`] = `
+"import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback } from 'vue';
+
+export function render(_ctx) {
+  const _component_Example__self = _resolveComponent("Example", true)
+  const n0 = _createComponentWithFallback(_component_Example__self, null, null, true)
+  return n0
+}"
+`;
+
 exports[`compiler: element transform > component > resolve namespaced component from props bindings (inline) 1`] = `
 "
   const n0 = _createComponent(Foo.Example, null, null, true)

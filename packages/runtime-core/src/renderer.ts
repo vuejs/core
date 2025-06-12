@@ -107,6 +107,7 @@ export interface Renderer<HostElement = RendererElement> {
 
 export interface HydrationRenderer extends Renderer<Element | ShadowRoot> {
   hydrate: RootHydrateFunction
+  hydrateNode: ReturnType<typeof createHydrationFunctions>[1]
 }
 
 export type ElementNamespace = 'svg' | 'mathml' | undefined
@@ -2425,7 +2426,7 @@ function baseCreateRenderer(
   const getNextHostNode: NextFn = vnode => {
     if (vnode.shapeFlag & ShapeFlags.COMPONENT) {
       if ((vnode.type as ConcreteComponent).__vapor) {
-        return hostNextSibling((vnode.component! as any).block)
+        return hostNextSibling(vnode.anchor!)
       }
       return getNextHostNode(vnode.component!.subTree)
     }
@@ -2524,6 +2525,7 @@ function baseCreateRenderer(
   return {
     render,
     hydrate,
+    hydrateNode,
     internals,
     createApp: createAppAPI(
       mountApp,
@@ -2622,7 +2624,7 @@ export function traverseStaticChildren(
 function locateNonHydratedAsyncRoot(
   instance: ComponentInternalInstance,
 ): ComponentInternalInstance | undefined {
-  const subComponent = instance.subTree.component
+  const subComponent = instance.vapor ? null : instance.subTree.component
   if (subComponent) {
     if (subComponent.asyncDep && !subComponent.asyncResolved) {
       return subComponent
@@ -2639,7 +2641,10 @@ export function invalidateMount(hooks: LifecycleHook | undefined): void {
   }
 }
 
-function getVaporInterface(
+/**
+ * @internal
+ */
+export function getVaporInterface(
   instance: ComponentInternalInstance | null,
   vnode: VNode,
 ): VaporInteropInterface {

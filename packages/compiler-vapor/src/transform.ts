@@ -11,6 +11,7 @@ import {
   type TemplateChildNode,
   defaultOnError,
   defaultOnWarn,
+  getSelfName,
   isVSlot,
 } from '@vue/compiler-dom'
 import { EMPTY_OBJ, NOOP, extend, isArray, isString } from '@vue/shared'
@@ -61,6 +62,7 @@ export type StructuralDirectiveTransform = (
 export type TransformOptions = HackOptions<BaseTransformOptions>
 
 export class TransformContext<T extends AllNode = AllNode> {
+  selfName: string | null = null
   parent: TransformContext<RootNode | ElementNode> | null = null
   root: TransformContext<RootNode>
   index: number = 0
@@ -76,6 +78,7 @@ export class TransformContext<T extends AllNode = AllNode> {
 
   inVOnce: boolean = false
   inVFor: number = 0
+  inSlot: boolean = false
 
   comment: CommentNode[] = []
   component: Set<string> = this.ir.component
@@ -92,6 +95,7 @@ export class TransformContext<T extends AllNode = AllNode> {
   ) {
     this.options = extend({}, defaultOptions, options)
     this.root = this as TransformContext<RootNode>
+    if (options.filename) this.selfName = getSelfName(options.filename)
   }
 
   enterBlock(ir: BlockIRNode, isVFor: boolean = false): () => void {
@@ -230,6 +234,7 @@ export function transform(
     directive: new Set(),
     block: newBlock(node),
     hasTemplateRef: false,
+    hasForwardedSlot: false,
   }
 
   const context = new TransformContext(ir, node, options)
