@@ -68,8 +68,10 @@ export function processIf(
         if (
           siblings[i].operation &&
           siblings[i].operation!.type === IRNodeTypes.IF
-        )
+        ) {
           lastIfNode = siblings[i].operation
+          break
+        }
       }
     }
 
