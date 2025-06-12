@@ -1,7 +1,7 @@
 {
   "private": true,
   "version": "3.5.16",
-  "packageManager": "pnpm@10.11.1",
+  "packageManager": "pnpm@10.12.1",
   "type": "module",
   "scripts": {
     "dev": "node scripts/dev.js",
@@ -71,7 +71,7 @@
     "@rollup/plugin-replace": "5.0.4",
     "@swc/core": "^1.11.29",
     "@types/hash-sum": "^1.0.2",
-    "@types/node": "^22.15.29",
+    "@types/node": "^22.15.31",
     "@types/semver": "^7.7.0",
     "@types/serve-handler": "^6.1.4",
     "@vitest/coverage-v8": "^3.1.4",
