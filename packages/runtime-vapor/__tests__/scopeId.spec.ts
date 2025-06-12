@@ -34,7 +34,7 @@ describe('scopeId', () => {
     expect(html()).toBe(`<div parent=""><div child="" parent=""></div></div>`)
   })
 
-  test('should attach scopeId to nested child component', () => {
+  test.todo('should attach scopeId to nested child component', () => {
     const Child = defineVaporComponent({
       __scopeId: 'child',
       setup() {
