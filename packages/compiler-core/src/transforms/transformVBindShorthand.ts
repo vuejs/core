@@ -6,6 +6,7 @@ import {
 } from '../ast'
 import type { NodeTransform } from '../transform'
 import { ErrorCodes, createCompilerError } from '../errors'
+import { validFirstIdentCharRE } from '../utils'
 
 export const transformVBindShorthand: NodeTransform = (node, context) => {
   if (node.type === NodeTypes.ELEMENT) {
@@ -28,7 +29,9 @@ export const transformVBindShorthand: NodeTransform = (node, context) => {
           prop.exp = createSimpleExpression('', true, arg.loc)
         } else {
           const propName = camelize((arg as SimpleExpressionNode).content)
-          prop.exp = createSimpleExpression(propName, false, arg.loc)
+          if (validFirstIdentCharRE.test(propName[0])) {
+            prop.exp = createSimpleExpression(propName, false, arg.loc)
+          }
         }
       }
     }
