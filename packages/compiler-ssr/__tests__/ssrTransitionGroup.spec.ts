@@ -101,6 +101,28 @@ describe('transition-group', () => {
     `)
   })
 
+  test('with dynamic tag shorthand', () => {
+    expect(
+      compile(
+        `<transition-group :tag><div v-for="i in list"/></transition-group>`,
+      ).code,
+    ).toMatchInlineSnapshot(`
+      "const { ssrRenderAttrs: _ssrRenderAttrs, ssrRenderList: _ssrRenderList } = require("vue/server-renderer")
+
+      return function ssrRender(_ctx, _push, _parent, _attrs) {
+        _push(\`<\${
+          _ctx.tag
+        }\${
+          _ssrRenderAttrs(_attrs)
+        }>\`)
+        _ssrRenderList(_ctx.list, (i) => {
+          _push(\`<div></div>\`)
+        })
+        _push(\`</\${_ctx.tag}>\`)
+      }"
+    `)
+  })
+
   test('with multi fragments children', () => {
     expect(
       compile(
