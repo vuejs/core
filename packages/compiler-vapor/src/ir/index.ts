@@ -66,6 +66,7 @@ export interface RootIRNode {
   directive: Set<string>
   block: BlockIRNode
   hasTemplateRef: boolean
+  hasForwardedSlot: boolean
 }
 
 export interface IfIRNode extends BaseIRNode {
@@ -209,6 +210,7 @@ export interface SlotOutletIRNode extends BaseIRNode {
   name: SimpleExpressionNode
   props: IRProps[]
   fallback?: BlockIRNode
+  forwarded?: boolean
   parent?: number
   anchor?: number
 }
