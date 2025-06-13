@@ -1588,13 +1588,14 @@ export function inferRuntimeType(
       case 'TSTypeReference': {
         const resolved = resolveTypeReference(ctx, node, scope)
         if (resolved) {
-          if (resolved.type === 'TSTypeAliasDeclaration') {
-            return inferRuntimeType(
-              ctx,
-              resolved.typeAnnotation,
-              resolved._ownerScope,
-              isKeyOf,
-            )
+          // #13240
+          // Special case for function type aliases to ensure correct runtime behavior
+          // other type aliases still fallback to unknown as before
+          if (
+            resolved.type === 'TSTypeAliasDeclaration' &&
+            resolved.typeAnnotation.type === 'TSFunctionType'
+          ) {
+            return ['Function']
           }
           return inferRuntimeType(ctx, resolved, resolved._ownerScope, isKeyOf)
         }
