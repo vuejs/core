@@ -52,9 +52,13 @@ describe('component: slots', () => {
 
         // Internal compiler markers must still exist but be non-enumerable
         expect(slots).toHaveProperty('_')
-        expect(Object.getOwnPropertyDescriptor(slots, '_')!.enumerable).toBe(false)
+        expect(Object.getOwnPropertyDescriptor(slots, '_')!.enumerable).toBe(
+          false,
+        )
         expect(slots).toHaveProperty('__')
-        expect(Object.getOwnPropertyDescriptor(slots, '__')!.enumerable).toBe(false)
+        expect(Object.getOwnPropertyDescriptor(slots, '__')!.enumerable).toBe(
+          false,
+        )
         return h('div')
       },
     }
