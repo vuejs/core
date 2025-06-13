@@ -173,6 +173,22 @@ export function defineComponent<
     ctx: SetupContext<E, S>,
   ) => RenderFunction | Promise<RenderFunction>,
   options?: Pick<ComponentOptions, 'name' | 'inheritAttrs'> & {
+    props?: (keyof NoInfer<Props>)[]
+    emits?: E | EE[]
+    slots?: S
+  },
+): DefineSetupFnComponent<Props, E, S>
+export function defineComponent<
+  Props extends Record<string, any>,
+  E extends EmitsOptions = {},
+  EE extends string = string,
+  S extends SlotsType = {},
+>(
+  setup: (
+    props: Props,
+    ctx: SetupContext<E, S>,
+  ) => RenderFunction | Promise<RenderFunction>,
+  options?: Pick<ComponentOptions, 'name' | 'inheritAttrs'> & {
     props?: ComponentObjectPropsOptions<Props>
     emits?: E | EE[]
     slots?: S
