@@ -23,7 +23,12 @@ import {
   type SlotBlockIRNode,
   type VaporDirectiveNode,
 } from '../ir'
-import { findDir, resolveExpression } from '../utils'
+import {
+  findDir,
+  findProp,
+  isTransitionNode,
+  resolveExpression,
+} from '../utils'
 
 export const transformVSlot: NodeTransform = (node, context) => {
   if (node.type !== NodeTypes.ELEMENT) return
@@ -72,7 +77,18 @@ function transformComponentSlot(
       !(n.type === NodeTypes.ELEMENT && n.props.some(isVSlot)),
   )
 
-  const [block, onExit] = createSlotBlock(node, dir, context)
+  let slotKey
+  if (isTransitionNode(node)) {
+    const keyProp = findProp(
+      nonSlotTemplateChildren[0] as ElementNode,
+      'key',
+    ) as VaporDirectiveNode
+    if (keyProp) {
+      slotKey = keyProp.exp
+    }
+  }
+
+  const [block, onExit] = createSlotBlock(node, dir, context, slotKey)
 
   const { slots } = context
 
@@ -233,9 +249,14 @@ function createSlotBlock(
   slotNode: ElementNode,
   dir: VaporDirectiveNode | undefined,
   context: TransformContext<ElementNode>,
+  key: SimpleExpressionNode | undefined = undefined,
 ): [SlotBlockIRNode, () => void] {
   const block: SlotBlockIRNode = newBlock(slotNode)
   block.props = dir && dir.exp
+  if (key) {
+    block.key = key
+    block.dynamic.needsKey = true
+  }
   const exitBlock = context.enterBlock(block)
   context.inSlot = true
   return [

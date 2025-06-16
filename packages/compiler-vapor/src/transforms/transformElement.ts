@@ -1,4 +1,3 @@
-import { isValidHTMLNesting } from '@vue/compiler-dom'
 import {
   type AttributeNode,
   type ComponentNode,
@@ -11,6 +10,7 @@ import {
   createCompilerError,
   createSimpleExpression,
   isStaticArgOf,
+  isValidHTMLNesting,
 } from '@vue/compiler-dom'
 import {
   camelize,
@@ -36,7 +36,7 @@ import {
   type VaporDirectiveNode,
 } from '../ir'
 import { EMPTY_EXPRESSION } from './utils'
-import { findProp } from '../utils'
+import { findProp, isBuiltInComponent } from '../utils'
 
 export const isReservedProp: (key: string) => boolean = /*#__PURE__*/ makeMap(
   // the leading comma is intentional so empty string "" is also included
@@ -106,6 +106,12 @@ function transformComponentElement(
     const fromSetup = resolveSetupReference(tag, context)
     if (fromSetup) {
       tag = fromSetup
+      asset = false
+    }
+
+    const builtInTag = isBuiltInComponent(tag)
+    if (builtInTag) {
+      tag = builtInTag
       asset = false
     }
 
@@ -414,7 +420,9 @@ function dedupeProperties(results: DirectiveTransformResult[]): IRProp[] {
     }
     const name = prop.key.content
     const existing = knownProps.get(name)
-    if (existing) {
+    // prop names and event handler names can be the same but serve different purposes
+    // e.g. `:appear="true"` is a prop while `@appear="handler"` is an event handler
+    if (existing && existing.handler === prop.handler) {
       if (name === 'style' || name === 'class') {
         mergePropValues(existing, prop)
       }

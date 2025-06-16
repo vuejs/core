@@ -1,5 +1,5 @@
 import { adoptTemplate, currentHydrationNode, isHydrating } from './hydration'
-import { child, createTextNode } from './node'
+import { child, createElement, createTextNode } from './node'
 
 let t: HTMLTemplateElement
 
@@ -19,7 +19,7 @@ export function template(html: string, root?: boolean) {
       return createTextNode(html)
     }
     if (!node) {
-      t = t || document.createElement('template')
+      t = t || createElement('template')
       t.innerHTML = html
       node = child(t.content)
     }

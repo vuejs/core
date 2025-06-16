@@ -6,6 +6,11 @@ import {
 } from '@vue/shared'
 
 /*! #__NO_SIDE_EFFECTS__ */
+export function createElement(tagName: string): HTMLElement {
+  return document.createElement(tagName)
+}
+
+/*! #__NO_SIDE_EFFECTS__ */
 export function createTextNode(value = ''): Text {
   return document.createTextNode(value)
 }

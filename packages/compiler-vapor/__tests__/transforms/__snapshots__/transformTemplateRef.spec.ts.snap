@@ -43,15 +43,6 @@ export function render(_ctx) {
 }"
 `;
 
-exports[`compiler: template ref transform > static ref (PROD) 1`] = `
-"
-  const _setTemplateRef = _createTemplateRefSetter()
-  const n0 = t0()
-  _setTemplateRef(n0, foo)
-  return n0
-"
-`;
-
 exports[`compiler: template ref transform > static ref (inline mode) 1`] = `
 "
   const _setTemplateRef = _createTemplateRefSetter()
