@@ -11,21 +11,25 @@ import {
   isSymbol,
   objectToString,
 } from './general'
-import { isVNode } from '@vue/runtime-core'
 
 // can't use isRef here since @vue/shared has no deps
 const isRef = (val: any): val is { value: unknown } => {
   return !!(val && val[ReactiveFlags.IS_REF] === true)
 }
 
+const isVNodeLike = (val: unknown): boolean =>
+  !!(val && (val as any).__v_isVNode === true)
 /**
  * For converting {{ interpolation }} values to displayed strings.
  * @private
  */
 export const toDisplayString = (val: unknown): string => {
     // fix: https://github.com/vuejs/core/issues/13481
-    if(isVNode(val)){
-      console.warn('[Vue warn]: {{ interpolation }} values does not support vnode rendering, this is an incorrect usage!');
+    if(isVNodeLike(val)){
+      if(__DEV__){
+        console.warn(   '[Vue warn]: Interpolated value is a VNode – this is unsupported and was ' +
+          +          'likely passed by mistake. Returning an empty string.');
+      }
       return '';
    }
   return isString(val)
