@@ -254,10 +254,12 @@ function createVDOMComponent(
 
   vnode.scopeId = parentInstance.type.__scopeId!
 
-  frag.insert = (parentNode, anchor) => {
+  frag.insert = (parentNode, anchor, transition) => {
     const prev = currentInstance
     simpleSetCurrentInstance(parentInstance)
     if (!isMounted || isHydrating) {
+      if (transition) setVNodeTransitionHooks(vnode, transition)
+
       if (isHydrating) {
         ;(
           vdomHydrateNode ||
@@ -294,10 +296,9 @@ function createVDOMComponent(
       )
     }
 
-    simpleSetCurrentInstance(prev)
-
     // update the fragment nodes
-    frag.nodes = vnode.el as Block
+    frag.nodes = [vnode.el as Node]
+    simpleSetCurrentInstance(prev)
   }
 
   frag.remove = unmount

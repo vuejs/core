@@ -218,7 +218,7 @@ export function insert(
   } else {
     // fragment
     if (block.insert) {
-      block.insert(parent, anchor)
+      block.insert(parent, anchor, (block as TransitionBlock).$transition)
     } else {
       insert(block.nodes, parent, anchor, parentSuspense)
     }
