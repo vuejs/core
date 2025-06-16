@@ -621,10 +621,13 @@ function baseCreateRenderer(
         optimized,
       )
     } else {
-      if (n1.el && (n1.el as VueElement)._isVueCE) {
-        ;(n1.el as VueElement)._beginPatch()
-      }
+      const customElement = !!(n1.el && (n1.el as VueElement)._isVueCE)
+        ? (n1.el as VueElement)
+        : null
       try {
+        if (customElement) {
+          customElement._beginPatch()
+        }
         patchElement(
           n1,
           n2,
@@ -635,8 +638,8 @@ function baseCreateRenderer(
           optimized,
         )
       } finally {
-        if (n1.el && (n1.el as VueElement)._isVueCE) {
-          ;(n1.el as VueElement)._endPatch()
+        if (customElement) {
+          customElement._endPatch()
         }
       }
     }
