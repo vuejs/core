@@ -11,6 +11,7 @@ import {
   isSymbol,
   objectToString,
 } from './general'
+import { isVNode } from '@vue/runtime-core'
 
 // can't use isRef here since @vue/shared has no deps
 const isRef = (val: any): val is { value: unknown } => {
@@ -22,6 +23,11 @@ const isRef = (val: any): val is { value: unknown } => {
  * @private
  */
 export const toDisplayString = (val: unknown): string => {
+    // fix: https://github.com/vuejs/core/issues/13481
+    if(isVNode(val)){
+      console.warn('[Vue warn]: {{ interpolation }} values does not support vnode rendering, this is an incorrect usage!');
+      return '';
+   }
   return isString(val)
     ? val
     : val == null
