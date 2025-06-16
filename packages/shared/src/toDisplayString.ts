@@ -27,8 +27,7 @@ export const toDisplayString = (val: unknown): string => {
     // fix: https://github.com/vuejs/core/issues/13481
     if(isVNodeLike(val)){
       if(__DEV__){
-        console.warn(   '[Vue warn]: Interpolated value is a VNode – this is unsupported and was ' +
-          +          'likely passed by mistake. Returning an empty string.');
+        console.warn('[Vue warn]: Interpolated value is a VNode – this is unsupported and was ' + 'likely passed by mistake. Returning an empty string.');
       }
       return '';
    }
