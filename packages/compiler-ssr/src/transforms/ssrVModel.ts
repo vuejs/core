@@ -65,9 +65,17 @@ export const ssrTransformModel: DirectiveTransform = (dir, node, context) => {
         )
       }
     } else if (plainNode.tag === 'optgroup') {
-      plainNode.children.forEach(option =>
-        processOption(option as PlainElementNode),
-      )
+      plainNode.children.forEach(option => {
+        if (option.type === NodeTypes.ELEMENT) {
+          processOption(option as PlainElementNode)
+        } else if (option.type === NodeTypes.FOR) {
+          option.children.forEach(c => processOption(c as PlainElementNode))
+        } else if (option.type === NodeTypes.IF) {
+          option.branches.forEach(b =>
+            b.children.forEach(c => processOption(c as PlainElementNode)),
+          )
+        }
+      })
     }
   }
 
