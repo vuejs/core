@@ -1,6 +1,6 @@
 {
   "name": "@vue/compiler-sfc",
-  "version": "3.5.13",
+  "version": "3.5.14",
   "description": "@vue/compiler-sfc",
   "main": "dist/compiler-sfc.cjs.js",
   "module": "dist/compiler-sfc.esm-browser.js",
@@ -63,6 +63,6 @@
     "postcss-modules": "^6.0.1",
     "postcss-selector-parser": "^7.1.0",
     "pug": "^3.0.3",
-    "sass": "^1.86.0"
+    "sass": "^1.86.3"
   }
 }

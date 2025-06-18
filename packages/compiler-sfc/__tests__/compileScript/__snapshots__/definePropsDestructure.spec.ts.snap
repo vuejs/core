@@ -196,6 +196,25 @@ return () => {}
 }"
 `;
 
+exports[`sfc reactive props destructure > handle function parameters with same name as destructured props 1`] = `
+"
+export default {
+  setup(__props) {
+
+    
+    function test(value) {
+      try {
+      } catch {
+      }
+    }
+    console.log(__props.value)
+    
+return () => {}
+}
+
+}"
+`;
+
 exports[`sfc reactive props destructure > multi-variable declaration 1`] = `
 "
 export default {

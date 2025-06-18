@@ -17,7 +17,11 @@ import {
 } from '@vue/shared'
 import { warn } from './warning'
 import { isKeepAlive } from './components/KeepAlive'
-import { type ContextualRenderFn, withCtx } from './componentRenderContext'
+import {
+  type ContextualRenderFn,
+  currentRenderingInstance,
+  withCtx,
+} from './componentRenderContext'
 import { isHmrUpdating } from './hmr'
 import { DeprecationTypes, isCompatEnabled } from './compat/compatConfig'
 import { TriggerOpTypes, trigger } from '@vue/reactivity'
@@ -75,6 +79,11 @@ export type RawSlots = {
    * @internal
    */
   _?: SlotFlags
+  /**
+   * cache indexes for slot content
+   * @internal
+   */
+  __?: number[]
 }
 
 const isInternalKey = (key: string) => key[0] === '_' || key === '$stable'
@@ -98,7 +107,8 @@ const normalizeSlot = (
       __DEV__ &&
       currentInstance &&
       !currentInstance.vapor &&
-      (!ctx || ctx.root === (currentInstance as ComponentInternalInstance).root)
+      !(ctx === null && currentRenderingInstance) &&
+      !(ctx && ctx.root !== currentInstance.root)
     ) {
       warn(
         `Slot "${key}" invoked outside of the render function: ` +
@@ -171,7 +181,7 @@ const assignSlots = (
     // when rendering the optimized slots by manually written render function,
     // do not copy the `slots._` compiler flag so that `renderSlot` creates
     // slot Fragment with BAIL patchFlag to force full updates
-    if (optimized || key !== '_') {
+    if (optimized || !isInternalKey(key)) {
       slots[key] = children[key]
     }
   }

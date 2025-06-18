@@ -75,6 +75,17 @@ export function render(_ctx) {
 }"
 `;
 
+exports[`cache multiple access > not cache variable in function expression 1`] = `
+"import { setDynamicProps as _setDynamicProps, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<div></div>", true)
+
+export function render(_ctx) {
+  const n0 = t0()
+  _renderEffect(() => _setDynamicProps(n0, [{ foo: bar => _ctx.foo = bar }], true))
+  return n0
+}"
+`;
+
 exports[`cache multiple access > not cache variable only used in property shorthand 1`] = `
 "import { setStyle as _setStyle, renderEffect as _renderEffect, template as _template } from 'vue';
 const t0 = _template("<div></div>", true)

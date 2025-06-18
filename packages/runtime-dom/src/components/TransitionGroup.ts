@@ -82,6 +82,7 @@ const TransitionGroupImpl: ComponentOptions = /*@__PURE__*/ decorate({
           moveClass,
         )
       ) {
+        prevChildren = []
         return
       }
 
@@ -98,6 +99,7 @@ const TransitionGroupImpl: ComponentOptions = /*@__PURE__*/ decorate({
         const el = c.el as ElementWithTransition
         handleMovedChildren(el, moveClass)
       })
+      prevChildren = []
     })
 
     return () => {

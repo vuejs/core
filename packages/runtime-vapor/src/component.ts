@@ -497,6 +497,14 @@ export function createComponentWithFallback(
     return createComponent(comp, rawProps, rawSlots, isSingleRoot, appContext)
   }
 
+  const _insertionParent = insertionParent
+  const _insertionAnchor = insertionAnchor
+  if (isHydrating) {
+    locateHydrationNode()
+  } else {
+    resetInsertionState()
+  }
+
   const el = createElement(comp)
   // mark single root
   ;(el as any).$root = isSingleRoot
@@ -514,6 +522,10 @@ export function createComponentWithFallback(
     } else {
       insert(getSlot(rawSlots as RawSlots, 'default')!(), el)
     }
+  }
+
+  if (!isHydrating && _insertionParent) {
+    insert(el, _insertionParent, _insertionAnchor)
   }
 
   return el

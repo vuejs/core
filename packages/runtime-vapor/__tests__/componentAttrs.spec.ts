@@ -360,4 +360,43 @@ describe('attribute fallthrough', () => {
     expect(el.getAttribute('aria-x')).toBe(parentVal.value)
     expect(el.getAttribute('aria-y')).toBe(parentVal.value)
   })
+
+  it('empty string should not be passed to classList.add', async () => {
+    const t0 = template('<div>', true /* root */)
+    const Child = defineVaporComponent({
+      setup() {
+        const n = t0() as Element
+        renderEffect(() => {
+          setClass(n, {
+            foo: false,
+          })
+        })
+        return n
+      },
+    })
+
+    const Parent = defineVaporComponent({
+      setup() {
+        return createComponent(
+          Child,
+          {
+            class: () => ({
+              bar: false,
+            }),
+          },
+          null,
+          true,
+        )
+      },
+    })
+
+    const { host } = define({
+      setup() {
+        return createComponent(Parent)
+      },
+    }).render()
+
+    const el = host.children[0]
+    expect(el.classList.length).toBe(0)
+  })
 })
