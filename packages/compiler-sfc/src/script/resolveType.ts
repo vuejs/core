@@ -1033,7 +1033,7 @@ function resolveWithTS(
       function getPattern(base: string, p: string): string {
         return p.startsWith('${configDir}') && major >= 5 && minor >= 5
           ? // ts 5.5+ supports ${configDir} in paths
-            p.replace('${configDir}', dirname(configPath!))
+            normalizePath(p.replace('${configDir}', dirname(configPath!)))
           : joinPaths(base, p)
       }
       // resolve which config matches the current file

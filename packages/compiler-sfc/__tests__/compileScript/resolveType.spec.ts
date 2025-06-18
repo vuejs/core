@@ -1155,6 +1155,45 @@ describe('resolveType', () => {
       expect(deps && [...deps]).toStrictEqual(['/user.ts'])
     })
 
+    // #13484
+    test('ts module resolve w/ project reference & extends & ${configDir}', () => {
+      const files = {
+        '/tsconfig.json': JSON.stringify({
+          files: [],
+          references: [{ path: './tsconfig.app.json' }],
+        }),
+        '/tsconfig.app.json': JSON.stringify({
+          extends: ['./tsconfigs/base.json'],
+        }),
+        '/tsconfigs/base.json': JSON.stringify({
+          compilerOptions: {
+            paths: {
+              '@/*': ['${configDir}/src/*'],
+            },
+          },
+          include: ['${configDir}/src/**/*.ts', '${configDir}/src/**/*.vue'],
+        }),
+        '/src/types.ts':
+          'export type BaseProps = { foo?: string, bar?: string }',
+      }
+
+      const { props, deps } = resolve(
+        `
+        import { BaseProps } from '@/types.ts';
+        defineProps<BaseProps>()
+        `,
+        files,
+        {},
+        '/src/components/Foo.vue',
+      )
+
+      expect(props).toStrictEqual({
+        foo: ['String'],
+        bar: ['String'],
+      })
+      expect(deps && [...deps]).toStrictEqual(['/src/types.ts'])
+    })
+
     test('ts module resolve w/ project reference folder', () => {
       const files = {
         '/tsconfig.json': JSON.stringify({
