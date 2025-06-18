@@ -26,36 +26,10 @@ exports[`compiler: parse > Edge Cases > invalid html 1`] = `
           "ns": 0,
           "props": [],
           "tag": "span",
-          "tagLoc": {
-            "end": {
-              "column": 6,
-              "line": 2,
-              "offset": 11,
-            },
-            "source": "span",
-            "start": {
-              "column": 2,
-              "line": 2,
-              "offset": 7,
-            },
-          },
           "tagType": 0,
           "type": 1,
         },
       ],
-      "closeTagLoc": {
-        "end": {
-          "column": 6,
-          "line": 3,
-          "offset": 18,
-        },
-        "source": "div",
-        "start": {
-          "column": 3,
-          "line": 3,
-          "offset": 15,
-        },
-      },
       "codegenNode": undefined,
       "loc": {
         "end": {
@@ -75,19 +49,6 @@ exports[`compiler: parse > Edge Cases > invalid html 1`] = `
       "ns": 0,
       "props": [],
       "tag": "div",
-      "tagLoc": {
-        "end": {
-          "column": 5,
-          "line": 1,
-          "offset": 4,
-        },
-        "source": "div",
-        "start": {
-          "column": 2,
-          "line": 1,
-          "offset": 1,
-        },
-      },
       "tagType": 0,
       "type": 1,
     },
@@ -205,19 +166,6 @@ exports[`compiler: parse > Edge Cases > self closing multiple tag 1`] = `
         },
       ],
       "tag": "div",
-      "tagLoc": {
-        "end": {
-          "column": 5,
-          "line": 1,
-          "offset": 4,
-        },
-        "source": "div",
-        "start": {
-          "column": 2,
-          "line": 1,
-          "offset": 1,
-        },
-      },
       "tagType": 0,
       "type": 1,
     },
@@ -299,19 +247,6 @@ exports[`compiler: parse > Edge Cases > self closing multiple tag 1`] = `
         },
       ],
       "tag": "p",
-      "tagLoc": {
-        "end": {
-          "column": 3,
-          "line": 2,
-          "offset": 39,
-        },
-        "source": "p",
-        "start": {
-          "column": 2,
-          "line": 2,
-          "offset": 38,
-        },
-      },
       "tagType": 0,
       "type": 1,
     },
@@ -427,19 +362,6 @@ exports[`compiler: parse > Edge Cases > valid html 1`] = `
             },
           ],
           "tag": "p",
-          "tagLoc": {
-            "end": {
-              "column": 5,
-              "line": 2,
-              "offset": 39,
-            },
-            "source": "p",
-            "start": {
-              "column": 4,
-              "line": 2,
-              "offset": 38,
-            },
-          },
           "tagType": 0,
           "type": 1,
         },
@@ -461,19 +383,6 @@ exports[`compiler: parse > Edge Cases > valid html 1`] = `
           "type": 3,
         },
       ],
-      "closeTagLoc": {
-        "end": {
-          "column": 6,
-          "line": 4,
-          "offset": 122,
-        },
-        "source": "div",
-        "start": {
-          "column": 3,
-          "line": 4,
-          "offset": 119,
-        },
-      },
       "codegenNode": undefined,
       "loc": {
         "end": {
@@ -552,19 +461,6 @@ exports[`compiler: parse > Edge Cases > valid html 1`] = `
         },
       ],
       "tag": "div",
-      "tagLoc": {
-        "end": {
-          "column": 5,
-          "line": 1,
-          "offset": 4,
-        },
-        "source": "div",
-        "start": {
-          "column": 2,
-          "line": 1,
-          "offset": 1,
-        },
-      },
       "tagType": 0,
       "type": 1,
     },
@@ -606,19 +502,6 @@ exports[`compiler: parse > Errors > CDATA_IN_HTML_CONTENT > <template><![CDATA[c
   "children": [
     {
       "children": [],
-      "closeTagLoc": {
-        "end": {
-          "column": 38,
-          "line": 1,
-          "offset": 37,
-        },
-        "source": "template",
-        "start": {
-          "column": 30,
-          "line": 1,
-          "offset": 29,
-        },
-      },
       "codegenNode": undefined,
       "loc": {
         "end": {
@@ -636,19 +519,6 @@ exports[`compiler: parse > Errors > CDATA_IN_HTML_CONTENT > <template><![CDATA[c
       "ns": 0,
       "props": [],
       "tag": "template",
-      "tagLoc": {
-        "end": {
-          "column": 10,
-          "line": 1,
-          "offset": 9,
-        },
-        "source": "template",
-        "start": {
-          "column": 2,
-          "line": 1,
-          "offset": 1,
-        },
-      },
       "tagType": 0,
       "type": 1,
     },
@@ -704,19 +574,6 @@ exports[`compiler: parse > Errors > CDATA_IN_HTML_CONTENT > <template><svg><![CD
               "type": 2,
             },
           ],
-          "closeTagLoc": {
-            "end": {
-              "column": 38,
-              "line": 1,
-              "offset": 37,
-            },
-            "source": "svg",
-            "start": {
-              "column": 35,
-              "line": 1,
-              "offset": 34,
-            },
-          },
           "codegenNode": undefined,
           "loc": {
             "end": {
@@ -734,36 +591,10 @@ exports[`compiler: parse > Errors > CDATA_IN_HTML_CONTENT > <template><svg><![CD
           "ns": 1,
           "props": [],
           "tag": "svg",
-          "tagLoc": {
-            "end": {
-              "column": 15,
-              "line": 1,
-              "offset": 14,
-            },
-            "source": "svg",
-            "start": {
-              "column": 12,
-              "line": 1,
-              "offset": 11,
-            },
-          },
           "tagType": 0,
           "type": 1,
         },
       ],
-      "closeTagLoc": {
-        "end": {
-          "column": 49,
-          "line": 1,
-          "offset": 48,
-        },
-        "source": "template",
-        "start": {
-          "column": 41,
-          "line": 1,
-          "offset": 40,
-        },
-      },
       "codegenNode": undefined,
       "loc": {
         "end": {
@@ -781,19 +612,6 @@ exports[`compiler: parse > Errors > CDATA_IN_HTML_CONTENT > <template><svg><![CD
       "ns": 0,
       "props": [],
       "tag": "template",
-      "tagLoc": {
-        "end": {
-          "column": 10,
-          "line": 1,
-          "offset": 9,
-        },
-        "source": "template",
-        "start": {
-          "column": 2,
-          "line": 1,
-          "offset": 1,
-        },
-      },
       "tagType": 0,
       "type": 1,
     },
@@ -831,19 +649,6 @@ exports[`compiler: parse > Errors > DUPLICATE_ATTRIBUTE > <template><div id="" i
       "children": [
         {
           "children": [],
-          "closeTagLoc": {
-            "end": {
-              "column": 33,
-              "line": 1,
-              "offset": 32,
-            },
-            "source": "div",
-            "start": {
-              "column": 30,
-              "line": 1,
-              "offset": 29,
-            },
-          },
           "codegenNode": undefined,
           "loc": {
             "end": {
@@ -956,36 +761,10 @@ exports[`compiler: parse > Errors > DUPLICATE_ATTRIBUTE > <template><div id="" i
             },
           ],
           "tag": "div",
-          "tagLoc": {
-            "end": {
-              "column": 15,
-              "line": 1,
-              "offset": 14,
-            },
-            "source": "div",
-            "start": {
-              "column": 12,
-              "line": 1,
-              "offset": 11,
-            },
-          },
           "tagType": 0,
           "type": 1,
         },
       ],
-      "closeTagLoc": {
-        "end": {
-          "column": 44,
-          "line": 1,
-          "offset": 43,
-        },
-        "source": "template",
-        "start": {
-          "column": 36,
-          "line": 1,
-          "offset": 35,
-        },
-      },
       "codegenNode": undefined,
       "loc": {
         "end": {
@@ -1003,19 +782,6 @@ exports[`compiler: parse > Errors > DUPLICATE_ATTRIBUTE > <template><div id="" i
       "ns": 0,
       "props": [],
       "tag": "template",
-      "tagLoc": {
-        "end": {
-          "column": 10,
-          "line": 1,
-          "offset": 9,
-        },
-        "source": "template",
-        "start": {
-          "column": 2,
-          "line": 1,
-          "offset": 1,
-        },
-      },
       "tagType": 0,
       "type": 1,
     },
@@ -1086,19 +852,6 @@ exports[`compiler: parse > Errors > EOF_BEFORE_TAG_NAME > <template>< 1`] = `
       "ns": 0,
       "props": [],
       "tag": "template",
-      "tagLoc": {
-        "end": {
-          "column": 10,
-          "line": 1,
-          "offset": 9,
-        },
-        "source": "template",
-        "start": {
-          "column": 2,
-          "line": 1,
-          "offset": 1,
-        },
-      },
       "tagType": 0,
       "type": 1,
     },
@@ -1169,19 +922,6 @@ exports[`compiler: parse > Errors > EOF_BEFORE_TAG_NAME > <template></ 1`] = `
       "ns": 0,
       "props": [],
       "tag": "template",
-      "tagLoc": {
-        "end": {
-          "column": 10,
-          "line": 1,
-          "offset": 9,
-        },
-        "source": "template",
-        "start": {
-          "column": 2,
-          "line": 1,
-          "offset": 1,
-        },
-      },
       "tagType": 0,
       "type": 1,
     },
@@ -1236,19 +976,6 @@ exports[`compiler: parse > Errors > EOF_IN_CDATA > <template><svg><![CDATA[ 1`] 
           "ns": 1,
           "props": [],
           "tag": "svg",
-          "tagLoc": {
-            "end": {
-              "column": 15,
-              "line": 1,
-              "offset": 14,
-            },
-            "source": "svg",
-            "start": {
-              "column": 12,
-              "line": 1,
-              "offset": 11,
-            },
-          },
           "tagType": 0,
           "type": 1,
         },
@@ -1270,19 +997,6 @@ exports[`compiler: parse > Errors > EOF_IN_CDATA > <template><svg><![CDATA[ 1`] 
       "ns": 0,
       "props": [],
       "tag": "template",
-      "tagLoc": {
-        "end": {
-          "column": 10,
-          "line": 1,
-          "offset": 9,
-        },
-        "source": "template",
-        "start": {
-          "column": 2,
-          "line": 1,
-          "offset": 1,
-        },
-      },
       "tagType": 0,
       "type": 1,
     },
@@ -1355,19 +1069,6 @@ exports[`compiler: parse > Errors > EOF_IN_CDATA > <template><svg><![CDATA[cdata
           "ns": 1,
           "props": [],
           "tag": "svg",
-          "tagLoc": {
-            "end": {
-              "column": 15,
-              "line": 1,
-              "offset": 14,
-            },
-            "source": "svg",
-            "start": {
-              "column": 12,
-              "line": 1,
-              "offset": 11,
-            },
-          },
           "tagType": 0,
           "type": 1,
         },
@@ -1389,19 +1090,6 @@ exports[`compiler: parse > Errors > EOF_IN_CDATA > <template><svg><![CDATA[cdata
       "ns": 0,
       "props": [],
       "tag": "template",
-      "tagLoc": {
-        "end": {
-          "column": 10,
-          "line": 1,
-          "offset": 9,
-        },
-        "source": "template",
-        "start": {
-          "column": 2,
-          "line": 1,
-          "offset": 1,
-        },
-      },
       "tagType": 0,
       "type": 1,
     },
@@ -1454,19 +1142,6 @@ exports[`compiler: parse > Errors > EOF_IN_COMMENT > <template><!-- 1`] = `
       "ns": 0,
       "props": [],
       "tag": "template",
-      "tagLoc": {
-        "end": {
-          "column": 10,
-          "line": 1,
-          "offset": 9,
-        },
-        "source": "template",
-        "start": {
-          "column": 2,
-          "line": 1,
-          "offset": 1,
-        },
-      },
       "tagType": 0,
       "type": 1,
     },
@@ -1537,19 +1212,6 @@ exports[`compiler: parse > Errors > EOF_IN_COMMENT > <template><!--comment 1`] =
       "ns": 0,
       "props": [],
       "tag": "template",
-      "tagLoc": {
-        "end": {
-          "column": 10,
-          "line": 1,
-          "offset": 9,
-        },
-        "source": "template",
-        "start": {
-          "column": 2,
-          "line": 1,
-          "offset": 1,
-        },
-      },
       "tagType": 0,
       "type": 1,
     },
@@ -1602,19 +1264,6 @@ exports[`compiler: parse > Errors > EOF_IN_TAG > <div></div 1`] = `
       "ns": 0,
       "props": [],
       "tag": "div",
-      "tagLoc": {
-        "end": {
-          "column": 5,
-          "line": 1,
-          "offset": 4,
-        },
-        "source": "div",
-        "start": {
-          "column": 2,
-          "line": 1,
-          "offset": 1,
-        },
-      },
       "tagType": 0,
       "type": 1,
     },
@@ -1667,19 +1316,6 @@ exports[`compiler: parse > Errors > EOF_IN_TAG > <template><div  1`] = `
       "ns": 0,
       "props": [],
       "tag": "template",
-      "tagLoc": {
-        "end": {
-          "column": 10,
-          "line": 1,
-          "offset": 9,
-        },
-        "source": "template",
-        "start": {
-          "column": 2,
-          "line": 1,
-          "offset": 1,
-        },
-      },
       "tagType": 0,
       "type": 1,
     },
@@ -1732,19 +1368,6 @@ exports[`compiler: parse > Errors > EOF_IN_TAG > <template><div 1`] = `
       "ns": 0,
       "props": [],
       "tag": "template",
-      "tagLoc": {
-        "end": {
-          "column": 10,
-          "line": 1,
-          "offset": 9,
-        },
-        "source": "template",
-        "start": {
-          "column": 2,
-          "line": 1,
-          "offset": 1,
-        },
-      },
       "tagType": 0,
       "type": 1,
     },
@@ -1797,19 +1420,6 @@ exports[`compiler: parse > Errors > EOF_IN_TAG > <template><div id  1`] = `
       "ns": 0,
       "props": [],
       "tag": "template",
-      "tagLoc": {
-        "end": {
-          "column": 10,
-          "line": 1,
-          "offset": 9,
-        },
-        "source": "template",
-        "start": {
-          "column": 2,
-          "line": 1,
-          "offset": 1,
-        },
-      },
       "tagType": 0,
       "type": 1,
     },
@@ -1862,19 +1472,6 @@ exports[`compiler: parse > Errors > EOF_IN_TAG > <template><div id = 1`] = `
       "ns": 0,
       "props": [],
       "tag": "template",
-      "tagLoc": {
-        "end": {
-          "column": 10,
-          "line": 1,
-          "offset": 9,
-        },
-        "source": "template",
-        "start": {
-          "column": 2,
-          "line": 1,
-          "offset": 1,
-        },
-      },
       "tagType": 0,
       "type": 1,
     },
@@ -1927,19 +1524,6 @@ exports[`compiler: parse > Errors > EOF_IN_TAG > <template><div id 1`] = `
       "ns": 0,
       "props": [],
       "tag": "template",
-      "tagLoc": {
-        "end": {
-          "column": 10,
-          "line": 1,
-          "offset": 9,
-        },
-        "source": "template",
-        "start": {
-          "column": 2,
-          "line": 1,
-          "offset": 1,
-        },
-      },
       "tagType": 0,
       "type": 1,
     },
@@ -1992,19 +1576,6 @@ exports[`compiler: parse > Errors > EOF_IN_TAG > <template><div id="abc 1`] = `
       "ns": 0,
       "props": [],
       "tag": "template",
-      "tagLoc": {
-        "end": {
-          "column": 10,
-          "line": 1,
-          "offset": 9,
-        },
-        "source": "template",
-        "start": {
-          "column": 2,
-          "line": 1,
-          "offset": 1,
-        },
-      },
       "tagType": 0,
       "type": 1,
     },
@@ -2057,19 +1628,6 @@ exports[`compiler: parse > Errors > EOF_IN_TAG > <template><div id="abc" 1`] = `
       "ns": 0,
       "props": [],
       "tag": "template",
-      "tagLoc": {
-        "end": {
-          "column": 10,
-          "line": 1,
-          "offset": 9,
-        },
-        "source": "template",
-        "start": {
-          "column": 2,
-          "line": 1,
-          "offset": 1,
-        },
-      },
       "tagType": 0,
       "type": 1,
     },
@@ -2140,19 +1698,6 @@ exports[`compiler: parse > Errors > EOF_IN_TAG > <template><div id="abc"/ 1`] = 
       "ns": 0,
       "props": [],
       "tag": "template",
-      "tagLoc": {
-        "end": {
-          "column": 10,
-          "line": 1,
-          "offset": 9,
-        },
-        "source": "template",
-        "start": {
-          "column": 2,
-          "line": 1,
-          "offset": 1,
-        },
-      },
       "tagType": 0,
       "type": 1,
     },
@@ -2205,19 +1750,6 @@ exports[`compiler: parse > Errors > EOF_IN_TAG > <template><div id='abc 1`] = `
       "ns": 0,
       "props": [],
       "tag": "template",
-      "tagLoc": {
-        "end": {
-          "column": 10,
-          "line": 1,
-          "offset": 9,
-        },
-        "source": "template",
-        "start": {
-          "column": 2,
-          "line": 1,
-          "offset": 1,
-        },
-      },
       "tagType": 0,
       "type": 1,
     },
@@ -2270,19 +1802,6 @@ exports[`compiler: parse > Errors > EOF_IN_TAG > <template><div id='abc' 1`] = `
       "ns": 0,
       "props": [],
       "tag": "template",
-      "tagLoc": {
-        "end": {
-          "column": 10,
-          "line": 1,
-          "offset": 9,
-        },
-        "source": "template",
-        "start": {
-          "column": 2,
-          "line": 1,
-          "offset": 1,
-        },
-      },
       "tagType": 0,
       "type": 1,
     },
@@ -2353,19 +1872,6 @@ exports[`compiler: parse > Errors > EOF_IN_TAG > <template><div id='abc'/ 1`] = 
       "ns": 0,
       "props": [],
       "tag": "template",
-      "tagLoc": {
-        "end": {
-          "column": 10,
-          "line": 1,
-          "offset": 9,
-        },
-        "source": "template",
-        "start": {
-          "column": 2,
-          "line": 1,
-          "offset": 1,
-        },
-      },
       "tagType": 0,
       "type": 1,
     },
@@ -2436,19 +1942,6 @@ exports[`compiler: parse > Errors > EOF_IN_TAG > <template><div id=abc / 1`] = `
       "ns": 0,
       "props": [],
       "tag": "template",
-      "tagLoc": {
-        "end": {
-          "column": 10,
-          "line": 1,
-          "offset": 9,
-        },
-        "source": "template",
-        "start": {
-          "column": 2,
-          "line": 1,
-          "offset": 1,
-        },
-      },
       "tagType": 0,
       "type": 1,
     },
@@ -2501,19 +1994,6 @@ exports[`compiler: parse > Errors > EOF_IN_TAG > <template><div id=abc 1`] = `
       "ns": 0,
       "props": [],
       "tag": "template",
-      "tagLoc": {
-        "end": {
-          "column": 10,
-          "line": 1,
-          "offset": 9,
-        },
-        "source": "template",
-        "start": {
-          "column": 2,
-          "line": 1,
-          "offset": 1,
-        },
-      },
       "tagType": 0,
       "type": 1,
     },
@@ -2551,19 +2031,6 @@ exports[`compiler: parse > Errors > MISSING_ATTRIBUTE_VALUE > <template><div id=
       "children": [
         {
           "children": [],
-          "closeTagLoc": {
-            "end": {
-              "column": 27,
-              "line": 1,
-              "offset": 26,
-            },
-            "source": "div",
-            "start": {
-              "column": 24,
-              "line": 1,
-              "offset": 23,
-            },
-          },
           "codegenNode": undefined,
           "loc": {
             "end": {
@@ -2629,36 +2096,10 @@ exports[`compiler: parse > Errors > MISSING_ATTRIBUTE_VALUE > <template><div id=
             },
           ],
           "tag": "div",
-          "tagLoc": {
-            "end": {
-              "column": 15,
-              "line": 1,
-              "offset": 14,
-            },
-            "source": "div",
-            "start": {
-              "column": 12,
-              "line": 1,
-              "offset": 11,
-            },
-          },
           "tagType": 0,
           "type": 1,
         },
       ],
-      "closeTagLoc": {
-        "end": {
-          "column": 38,
-          "line": 1,
-          "offset": 37,
-        },
-        "source": "template",
-        "start": {
-          "column": 30,
-          "line": 1,
-          "offset": 29,
-        },
-      },
       "codegenNode": undefined,
       "loc": {
         "end": {
@@ -2676,19 +2117,6 @@ exports[`compiler: parse > Errors > MISSING_ATTRIBUTE_VALUE > <template><div id=
       "ns": 0,
       "props": [],
       "tag": "template",
-      "tagLoc": {
-        "end": {
-          "column": 10,
-          "line": 1,
-          "offset": 9,
-        },
-        "source": "template",
-        "start": {
-          "column": 2,
-          "line": 1,
-          "offset": 1,
-        },
-      },
       "tagType": 0,
       "type": 1,
     },
@@ -2726,19 +2154,6 @@ exports[`compiler: parse > Errors > MISSING_ATTRIBUTE_VALUE > <template><div id=
       "children": [
         {
           "children": [],
-          "closeTagLoc": {
-            "end": {
-              "column": 26,
-              "line": 1,
-              "offset": 25,
-            },
-            "source": "div",
-            "start": {
-              "column": 23,
-              "line": 1,
-              "offset": 22,
-            },
-          },
           "codegenNode": undefined,
           "loc": {
             "end": {
@@ -2804,36 +2219,10 @@ exports[`compiler: parse > Errors > MISSING_ATTRIBUTE_VALUE > <template><div id=
             },
           ],
           "tag": "div",
-          "tagLoc": {
-            "end": {
-              "column": 15,
-              "line": 1,
-              "offset": 14,
-            },
-            "source": "div",
-            "start": {
-              "column": 12,
-              "line": 1,
-              "offset": 11,
-            },
-          },
           "tagType": 0,
           "type": 1,
         },
       ],
-      "closeTagLoc": {
-        "end": {
-          "column": 37,
-          "line": 1,
-          "offset": 36,
-        },
-        "source": "template",
-        "start": {
-          "column": 29,
-          "line": 1,
-          "offset": 28,
-        },
-      },
       "codegenNode": undefined,
       "loc": {
         "end": {
@@ -2851,19 +2240,6 @@ exports[`compiler: parse > Errors > MISSING_ATTRIBUTE_VALUE > <template><div id=
       "ns": 0,
       "props": [],
       "tag": "template",
-      "tagLoc": {
-        "end": {
-          "column": 10,
-          "line": 1,
-          "offset": 9,
-        },
-        "source": "template",
-        "start": {
-          "column": 2,
-          "line": 1,
-          "offset": 1,
-        },
-      },
       "tagType": 0,
       "type": 1,
     },
@@ -2901,19 +2277,6 @@ exports[`compiler: parse > Errors > MISSING_ATTRIBUTE_VALUE > <template><div id=
       "children": [
         {
           "children": [],
-          "closeTagLoc": {
-            "end": {
-              "column": 25,
-              "line": 1,
-              "offset": 24,
-            },
-            "source": "div",
-            "start": {
-              "column": 22,
-              "line": 1,
-              "offset": 21,
-            },
-          },
           "codegenNode": undefined,
           "loc": {
             "end": {
@@ -2979,36 +2342,10 @@ exports[`compiler: parse > Errors > MISSING_ATTRIBUTE_VALUE > <template><div id=
             },
           ],
           "tag": "div",
-          "tagLoc": {
-            "end": {
-              "column": 15,
-              "line": 1,
-              "offset": 14,
-            },
-            "source": "div",
-            "start": {
-              "column": 12,
-              "line": 1,
-              "offset": 11,
-            },
-          },
           "tagType": 0,
           "type": 1,
         },
       ],
-      "closeTagLoc": {
-        "end": {
-          "column": 36,
-          "line": 1,
-          "offset": 35,
-        },
-        "source": "template",
-        "start": {
-          "column": 28,
-          "line": 1,
-          "offset": 27,
-        },
-      },
       "codegenNode": undefined,
       "loc": {
         "end": {
@@ -3026,19 +2363,6 @@ exports[`compiler: parse > Errors > MISSING_ATTRIBUTE_VALUE > <template><div id=
       "ns": 0,
       "props": [],
       "tag": "template",
-      "tagLoc": {
-        "end": {
-          "column": 10,
-          "line": 1,
-          "offset": 9,
-        },
-        "source": "template",
-        "start": {
-          "column": 2,
-          "line": 1,
-          "offset": 1,
-        },
-      },
       "tagType": 0,
       "type": 1,
     },
@@ -3074,19 +2398,6 @@ exports[`compiler: parse > Errors > MISSING_END_TAG_NAME > <template></></templa
   "children": [
     {
       "children": [],
-      "closeTagLoc": {
-        "end": {
-          "column": 24,
-          "line": 1,
-          "offset": 23,
-        },
-        "source": "template",
-        "start": {
-          "column": 16,
-          "line": 1,
-          "offset": 15,
-        },
-      },
       "codegenNode": undefined,
       "loc": {
         "end": {
@@ -3104,19 +2415,6 @@ exports[`compiler: parse > Errors > MISSING_END_TAG_NAME > <template></></templa
       "ns": 0,
       "props": [],
       "tag": "template",
-      "tagLoc": {
-        "end": {
-          "column": 10,
-          "line": 1,
-          "offset": 9,
-        },
-        "source": "template",
-        "start": {
-          "column": 2,
-          "line": 1,
-          "offset": 1,
-        },
-      },
       "tagType": 0,
       "type": 1,
     },
@@ -3154,19 +2452,6 @@ exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_ATTRIBUTE_NAME > <te
       "children": [
         {
           "children": [],
-          "closeTagLoc": {
-            "end": {
-              "column": 29,
-              "line": 1,
-              "offset": 28,
-            },
-            "source": "div",
-            "start": {
-              "column": 26,
-              "line": 1,
-              "offset": 25,
-            },
-          },
           "codegenNode": undefined,
           "loc": {
             "end": {
@@ -3232,36 +2517,10 @@ exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_ATTRIBUTE_NAME > <te
             },
           ],
           "tag": "div",
-          "tagLoc": {
-            "end": {
-              "column": 15,
-              "line": 1,
-              "offset": 14,
-            },
-            "source": "div",
-            "start": {
-              "column": 12,
-              "line": 1,
-              "offset": 11,
-            },
-          },
           "tagType": 0,
           "type": 1,
         },
       ],
-      "closeTagLoc": {
-        "end": {
-          "column": 40,
-          "line": 1,
-          "offset": 39,
-        },
-        "source": "template",
-        "start": {
-          "column": 32,
-          "line": 1,
-          "offset": 31,
-        },
-      },
       "codegenNode": undefined,
       "loc": {
         "end": {
@@ -3279,19 +2538,6 @@ exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_ATTRIBUTE_NAME > <te
       "ns": 0,
       "props": [],
       "tag": "template",
-      "tagLoc": {
-        "end": {
-          "column": 10,
-          "line": 1,
-          "offset": 9,
-        },
-        "source": "template",
-        "start": {
-          "column": 2,
-          "line": 1,
-          "offset": 1,
-        },
-      },
       "tagType": 0,
       "type": 1,
     },
@@ -3329,19 +2575,6 @@ exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_ATTRIBUTE_NAME > <te
       "children": [
         {
           "children": [],
-          "closeTagLoc": {
-            "end": {
-              "column": 29,
-              "line": 1,
-              "offset": 28,
-            },
-            "source": "div",
-            "start": {
-              "column": 26,
-              "line": 1,
-              "offset": 25,
-            },
-          },
           "codegenNode": undefined,
           "loc": {
             "end": {
@@ -3407,36 +2640,10 @@ exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_ATTRIBUTE_NAME > <te
             },
           ],
           "tag": "div",
-          "tagLoc": {
-            "end": {
-              "column": 15,
-              "line": 1,
-              "offset": 14,
-            },
-            "source": "div",
-            "start": {
-              "column": 12,
-              "line": 1,
-              "offset": 11,
-            },
-          },
           "tagType": 0,
           "type": 1,
         },
       ],
-      "closeTagLoc": {
-        "end": {
-          "column": 40,
-          "line": 1,
-          "offset": 39,
-        },
-        "source": "template",
-        "start": {
-          "column": 32,
-          "line": 1,
-          "offset": 31,
-        },
-      },
       "codegenNode": undefined,
       "loc": {
         "end": {
@@ -3454,19 +2661,6 @@ exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_ATTRIBUTE_NAME > <te
       "ns": 0,
       "props": [],
       "tag": "template",
-      "tagLoc": {
-        "end": {
-          "column": 10,
-          "line": 1,
-          "offset": 9,
-        },
-        "source": "template",
-        "start": {
-          "column": 2,
-          "line": 1,
-          "offset": 1,
-        },
-      },
       "tagType": 0,
       "type": 1,
     },
@@ -3504,19 +2698,6 @@ exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_ATTRIBUTE_NAME > <te
       "children": [
         {
           "children": [],
-          "closeTagLoc": {
-            "end": {
-              "column": 29,
-              "line": 1,
-              "offset": 28,
-            },
-            "source": "div",
-            "start": {
-              "column": 26,
-              "line": 1,
-              "offset": 25,
-            },
-          },
           "codegenNode": undefined,
           "loc": {
             "end": {
@@ -3582,36 +2763,10 @@ exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_ATTRIBUTE_NAME > <te
             },
           ],
           "tag": "div",
-          "tagLoc": {
-            "end": {
-              "column": 15,
-              "line": 1,
-              "offset": 14,
-            },
-            "source": "div",
-            "start": {
-              "column": 12,
-              "line": 1,
-              "offset": 11,
-            },
-          },
           "tagType": 0,
           "type": 1,
         },
       ],
-      "closeTagLoc": {
-        "end": {
-          "column": 40,
-          "line": 1,
-          "offset": 39,
-        },
-        "source": "template",
-        "start": {
-          "column": 32,
-          "line": 1,
-          "offset": 31,
-        },
-      },
       "codegenNode": undefined,
       "loc": {
         "end": {
@@ -3629,19 +2784,6 @@ exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_ATTRIBUTE_NAME > <te
       "ns": 0,
       "props": [],
       "tag": "template",
-      "tagLoc": {
-        "end": {
-          "column": 10,
-          "line": 1,
-          "offset": 9,
-        },
-        "source": "template",
-        "start": {
-          "column": 2,
-          "line": 1,
-          "offset": 1,
-        },
-      },
       "tagType": 0,
       "type": 1,
     },
@@ -3679,19 +2821,6 @@ exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_UNQUOTED_ATTRIBUTE_V
       "children": [
         {
           "children": [],
-          "closeTagLoc": {
-            "end": {
-              "column": 30,
-              "line": 1,
-              "offset": 29,
-            },
-            "source": "div",
-            "start": {
-              "column": 27,
-              "line": 1,
-              "offset": 26,
-            },
-          },
           "codegenNode": undefined,
           "loc": {
             "end": {
@@ -3757,36 +2886,10 @@ exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_UNQUOTED_ATTRIBUTE_V
             },
           ],
           "tag": "div",
-          "tagLoc": {
-            "end": {
-              "column": 15,
-              "line": 1,
-              "offset": 14,
-            },
-            "source": "div",
-            "start": {
-              "column": 12,
-              "line": 1,
-              "offset": 11,
-            },
-          },
           "tagType": 0,
           "type": 1,
         },
       ],
-      "closeTagLoc": {
-        "end": {
-          "column": 41,
-          "line": 1,
-          "offset": 40,
-        },
-        "source": "template",
-        "start": {
-          "column": 33,
-          "line": 1,
-          "offset": 32,
-        },
-      },
       "codegenNode": undefined,
       "loc": {
         "end": {
@@ -3804,19 +2907,6 @@ exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_UNQUOTED_ATTRIBUTE_V
       "ns": 0,
       "props": [],
       "tag": "template",
-      "tagLoc": {
-        "end": {
-          "column": 10,
-          "line": 1,
-          "offset": 9,
-        },
-        "source": "template",
-        "start": {
-          "column": 2,
-          "line": 1,
-          "offset": 1,
-        },
-      },
       "tagType": 0,
       "type": 1,
     },
@@ -3854,19 +2944,6 @@ exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_UNQUOTED_ATTRIBUTE_V
       "children": [
         {
           "children": [],
-          "closeTagLoc": {
-            "end": {
-              "column": 30,
-              "line": 1,
-              "offset": 29,
-            },
-            "source": "div",
-            "start": {
-              "column": 27,
-              "line": 1,
-              "offset": 26,
-            },
-          },
           "codegenNode": undefined,
           "loc": {
             "end": {
@@ -3932,36 +3009,10 @@ exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_UNQUOTED_ATTRIBUTE_V
             },
           ],
           "tag": "div",
-          "tagLoc": {
-            "end": {
-              "column": 15,
-              "line": 1,
-              "offset": 14,
-            },
-            "source": "div",
-            "start": {
-              "column": 12,
-              "line": 1,
-              "offset": 11,
-            },
-          },
           "tagType": 0,
           "type": 1,
         },
       ],
-      "closeTagLoc": {
-        "end": {
-          "column": 41,
-          "line": 1,
-          "offset": 40,
-        },
-        "source": "template",
-        "start": {
-          "column": 33,
-          "line": 1,
-          "offset": 32,
-        },
-      },
       "codegenNode": undefined,
       "loc": {
         "end": {
@@ -3979,19 +3030,6 @@ exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_UNQUOTED_ATTRIBUTE_V
       "ns": 0,
       "props": [],
       "tag": "template",
-      "tagLoc": {
-        "end": {
-          "column": 10,
-          "line": 1,
-          "offset": 9,
-        },
-        "source": "template",
-        "start": {
-          "column": 2,
-          "line": 1,
-          "offset": 1,
-        },
-      },
       "tagType": 0,
       "type": 1,
     },
@@ -4029,19 +3067,6 @@ exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_UNQUOTED_ATTRIBUTE_V
       "children": [
         {
           "children": [],
-          "closeTagLoc": {
-            "end": {
-              "column": 33,
-              "line": 1,
-              "offset": 32,
-            },
-            "source": "div",
-            "start": {
-              "column": 30,
-              "line": 1,
-              "offset": 29,
-            },
-          },
           "codegenNode": undefined,
           "loc": {
             "end": {
@@ -4107,36 +3132,10 @@ exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_UNQUOTED_ATTRIBUTE_V
             },
           ],
           "tag": "div",
-          "tagLoc": {
-            "end": {
-              "column": 15,
-              "line": 1,
-              "offset": 14,
-            },
-            "source": "div",
-            "start": {
-              "column": 12,
-              "line": 1,
-              "offset": 11,
-            },
-          },
           "tagType": 0,
           "type": 1,
         },
       ],
-      "closeTagLoc": {
-        "end": {
-          "column": 44,
-          "line": 1,
-          "offset": 43,
-        },
-        "source": "template",
-        "start": {
-          "column": 36,
-          "line": 1,
-          "offset": 35,
-        },
-      },
       "codegenNode": undefined,
       "loc": {
         "end": {
@@ -4154,19 +3153,6 @@ exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_UNQUOTED_ATTRIBUTE_V
       "ns": 0,
       "props": [],
       "tag": "template",
-      "tagLoc": {
-        "end": {
-          "column": 10,
-          "line": 1,
-          "offset": 9,
-        },
-        "source": "template",
-        "start": {
-          "column": 2,
-          "line": 1,
-          "offset": 1,
-        },
-      },
       "tagType": 0,
       "type": 1,
     },
@@ -4204,19 +3190,6 @@ exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_UNQUOTED_ATTRIBUTE_V
       "children": [
         {
           "children": [],
-          "closeTagLoc": {
-            "end": {
-              "column": 33,
-              "line": 1,
-              "offset": 32,
-            },
-            "source": "div",
-            "start": {
-              "column": 30,
-              "line": 1,
-              "offset": 29,
-            },
-          },
           "codegenNode": undefined,
           "loc": {
             "end": {
@@ -4282,36 +3255,10 @@ exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_UNQUOTED_ATTRIBUTE_V
             },
           ],
           "tag": "div",
-          "tagLoc": {
-            "end": {
-              "column": 15,
-              "line": 1,
-              "offset": 14,
-            },
-            "source": "div",
-            "start": {
-              "column": 12,
-              "line": 1,
-              "offset": 11,
-            },
-          },
           "tagType": 0,
           "type": 1,
         },
       ],
-      "closeTagLoc": {
-        "end": {
-          "column": 44,
-          "line": 1,
-          "offset": 43,
-        },
-        "source": "template",
-        "start": {
-          "column": 36,
-          "line": 1,
-          "offset": 35,
-        },
-      },
       "codegenNode": undefined,
       "loc": {
         "end": {
@@ -4329,19 +3276,6 @@ exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_UNQUOTED_ATTRIBUTE_V
       "ns": 0,
       "props": [],
       "tag": "template",
-      "tagLoc": {
-        "end": {
-          "column": 10,
-          "line": 1,
-          "offset": 9,
-        },
-        "source": "template",
-        "start": {
-          "column": 2,
-          "line": 1,
-          "offset": 1,
-        },
-      },
       "tagType": 0,
       "type": 1,
     },
@@ -4379,19 +3313,6 @@ exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_UNQUOTED_ATTRIBUTE_V
       "children": [
         {
           "children": [],
-          "closeTagLoc": {
-            "end": {
-              "column": 30,
-              "line": 1,
-              "offset": 29,
-            },
-            "source": "div",
-            "start": {
-              "column": 27,
-              "line": 1,
-              "offset": 26,
-            },
-          },
           "codegenNode": undefined,
           "loc": {
             "end": {
@@ -4457,36 +3378,10 @@ exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_UNQUOTED_ATTRIBUTE_V
             },
           ],
           "tag": "div",
-          "tagLoc": {
-            "end": {
-              "column": 15,
-              "line": 1,
-              "offset": 14,
-            },
-            "source": "div",
-            "start": {
-              "column": 12,
-              "line": 1,
-              "offset": 11,
-            },
-          },
           "tagType": 0,
           "type": 1,
         },
       ],
-      "closeTagLoc": {
-        "end": {
-          "column": 41,
-          "line": 1,
-          "offset": 40,
-        },
-        "source": "template",
-        "start": {
-          "column": 33,
-          "line": 1,
-          "offset": 32,
-        },
-      },
       "codegenNode": undefined,
       "loc": {
         "end": {
@@ -4504,19 +3399,6 @@ exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_UNQUOTED_ATTRIBUTE_V
       "ns": 0,
       "props": [],
       "tag": "template",
-      "tagLoc": {
-        "end": {
-          "column": 10,
-          "line": 1,
-          "offset": 9,
-        },
-        "source": "template",
-        "start": {
-          "column": 2,
-          "line": 1,
-          "offset": 1,
-        },
-      },
       "tagType": 0,
       "type": 1,
     },
@@ -4554,19 +3436,6 @@ exports[`compiler: parse > Errors > UNEXPECTED_EQUALS_SIGN_BEFORE_ATTRIBUTE_NAME
       "children": [
         {
           "children": [],
-          "closeTagLoc": {
-            "end": {
-              "column": 23,
-              "line": 1,
-              "offset": 22,
-            },
-            "source": "div",
-            "start": {
-              "column": 20,
-              "line": 1,
-              "offset": 19,
-            },
-          },
           "codegenNode": undefined,
           "loc": {
             "end": {
@@ -4616,36 +3485,10 @@ exports[`compiler: parse > Errors > UNEXPECTED_EQUALS_SIGN_BEFORE_ATTRIBUTE_NAME
             },
           ],
           "tag": "div",
-          "tagLoc": {
-            "end": {
-              "column": 15,
-              "line": 1,
-              "offset": 14,
-            },
-            "source": "div",
-            "start": {
-              "column": 12,
-              "line": 1,
-              "offset": 11,
-            },
-          },
           "tagType": 0,
           "type": 1,
         },
       ],
-      "closeTagLoc": {
-        "end": {
-          "column": 34,
-          "line": 1,
-          "offset": 33,
-        },
-        "source": "template",
-        "start": {
-          "column": 26,
-          "line": 1,
-          "offset": 25,
-        },
-      },
       "codegenNode": undefined,
       "loc": {
         "end": {
@@ -4663,19 +3506,6 @@ exports[`compiler: parse > Errors > UNEXPECTED_EQUALS_SIGN_BEFORE_ATTRIBUTE_NAME
       "ns": 0,
       "props": [],
       "tag": "template",
-      "tagLoc": {
-        "end": {
-          "column": 10,
-          "line": 1,
-          "offset": 9,
-        },
-        "source": "template",
-        "start": {
-          "column": 2,
-          "line": 1,
-          "offset": 1,
-        },
-      },
       "tagType": 0,
       "type": 1,
     },
@@ -4713,19 +3543,6 @@ exports[`compiler: parse > Errors > UNEXPECTED_EQUALS_SIGN_BEFORE_ATTRIBUTE_NAME
       "children": [
         {
           "children": [],
-          "closeTagLoc": {
-            "end": {
-              "column": 30,
-              "line": 1,
-              "offset": 29,
-            },
-            "source": "div",
-            "start": {
-              "column": 27,
-              "line": 1,
-              "offset": 26,
-            },
-          },
           "codegenNode": undefined,
           "loc": {
             "end": {
@@ -4791,36 +3608,10 @@ exports[`compiler: parse > Errors > UNEXPECTED_EQUALS_SIGN_BEFORE_ATTRIBUTE_NAME
             },
           ],
           "tag": "div",
-          "tagLoc": {
-            "end": {
-              "column": 15,
-              "line": 1,
-              "offset": 14,
-            },
-            "source": "div",
-            "start": {
-              "column": 12,
-              "line": 1,
-              "offset": 11,
-            },
-          },
           "tagType": 0,
           "type": 1,
         },
       ],
-      "closeTagLoc": {
-        "end": {
-          "column": 41,
-          "line": 1,
-          "offset": 40,
-        },
-        "source": "template",
-        "start": {
-          "column": 33,
-          "line": 1,
-          "offset": 32,
-        },
-      },
       "codegenNode": undefined,
       "loc": {
         "end": {
@@ -4838,19 +3629,6 @@ exports[`compiler: parse > Errors > UNEXPECTED_EQUALS_SIGN_BEFORE_ATTRIBUTE_NAME
       "ns": 0,
       "props": [],
       "tag": "template",
-      "tagLoc": {
-        "end": {
-          "column": 10,
-          "line": 1,
-          "offset": 9,
-        },
-        "source": "template",
-        "start": {
-          "column": 2,
-          "line": 1,
-          "offset": 1,
-        },
-      },
       "tagType": 0,
       "type": 1,
     },
@@ -4886,19 +3664,6 @@ exports[`compiler: parse > Errors > UNEXPECTED_QUESTION_MARK_INSTEAD_OF_TAG_NAME
   "children": [
     {
       "children": [],
-      "closeTagLoc": {
-        "end": {
-          "column": 28,
-          "line": 1,
-          "offset": 27,
-        },
-        "source": "template",
-        "start": {
-          "column": 20,
-          "line": 1,
-          "offset": 19,
-        },
-      },
       "codegenNode": undefined,
       "loc": {
         "end": {
@@ -4916,19 +3681,6 @@ exports[`compiler: parse > Errors > UNEXPECTED_QUESTION_MARK_INSTEAD_OF_TAG_NAME
       "ns": 0,
       "props": [],
       "tag": "template",
-      "tagLoc": {
-        "end": {
-          "column": 10,
-          "line": 1,
-          "offset": 9,
-        },
-        "source": "template",
-        "start": {
-          "column": 2,
-          "line": 1,
-          "offset": 1,
-        },
-      },
       "tagType": 0,
       "type": 1,
     },
@@ -4966,19 +3718,6 @@ exports[`compiler: parse > Errors > UNEXPECTED_SOLIDUS_IN_TAG > <template><div a
       "children": [
         {
           "children": [],
-          "closeTagLoc": {
-            "end": {
-              "column": 25,
-              "line": 1,
-              "offset": 24,
-            },
-            "source": "div",
-            "start": {
-              "column": 22,
-              "line": 1,
-              "offset": 21,
-            },
-          },
           "codegenNode": undefined,
           "loc": {
             "end": {
@@ -5059,36 +3798,10 @@ exports[`compiler: parse > Errors > UNEXPECTED_SOLIDUS_IN_TAG > <template><div a
             },
           ],
           "tag": "div",
-          "tagLoc": {
-            "end": {
-              "column": 15,
-              "line": 1,
-              "offset": 14,
-            },
-            "source": "div",
-            "start": {
-              "column": 12,
-              "line": 1,
-              "offset": 11,
-            },
-          },
           "tagType": 0,
           "type": 1,
         },
       ],
-      "closeTagLoc": {
-        "end": {
-          "column": 36,
-          "line": 1,
-          "offset": 35,
-        },
-        "source": "template",
-        "start": {
-          "column": 28,
-          "line": 1,
-          "offset": 27,
-        },
-      },
       "codegenNode": undefined,
       "loc": {
         "end": {
@@ -5106,19 +3819,6 @@ exports[`compiler: parse > Errors > UNEXPECTED_SOLIDUS_IN_TAG > <template><div a
       "ns": 0,
       "props": [],
       "tag": "template",
-      "tagLoc": {
-        "end": {
-          "column": 10,
-          "line": 1,
-          "offset": 9,
-        },
-        "source": "template",
-        "start": {
-          "column": 2,
-          "line": 1,
-          "offset": 1,
-        },
-      },
       "tagType": 0,
       "type": 1,
     },
@@ -5172,19 +3872,6 @@ exports[`compiler: parse > Errors > X_INVALID_END_TAG > <svg><![CDATA[</div>]]><
           "type": 2,
         },
       ],
-      "closeTagLoc": {
-        "end": {
-          "column": 29,
-          "line": 1,
-          "offset": 28,
-        },
-        "source": "svg",
-        "start": {
-          "column": 26,
-          "line": 1,
-          "offset": 25,
-        },
-      },
       "codegenNode": undefined,
       "loc": {
         "end": {
@@ -5202,19 +3889,6 @@ exports[`compiler: parse > Errors > X_INVALID_END_TAG > <svg><![CDATA[</div>]]><
       "ns": 1,
       "props": [],
       "tag": "svg",
-      "tagLoc": {
-        "end": {
-          "column": 5,
-          "line": 1,
-          "offset": 4,
-        },
-        "source": "svg",
-        "start": {
-          "column": 2,
-          "line": 1,
-          "offset": 1,
-        },
-      },
       "tagType": 0,
       "type": 1,
     },
@@ -5268,19 +3942,6 @@ exports[`compiler: parse > Errors > X_INVALID_END_TAG > <svg><!--</div>--></svg>
           "type": 3,
         },
       ],
-      "closeTagLoc": {
-        "end": {
-          "column": 24,
-          "line": 1,
-          "offset": 23,
-        },
-        "source": "svg",
-        "start": {
-          "column": 21,
-          "line": 1,
-          "offset": 20,
-        },
-      },
       "codegenNode": undefined,
       "loc": {
         "end": {
@@ -5298,19 +3959,6 @@ exports[`compiler: parse > Errors > X_INVALID_END_TAG > <svg><!--</div>--></svg>
       "ns": 1,
       "props": [],
       "tag": "svg",
-      "tagLoc": {
-        "end": {
-          "column": 5,
-          "line": 1,
-          "offset": 4,
-        },
-        "source": "svg",
-        "start": {
-          "column": 2,
-          "line": 1,
-          "offset": 1,
-        },
-      },
       "tagType": 0,
       "type": 1,
     },
@@ -5346,19 +3994,6 @@ exports[`compiler: parse > Errors > X_INVALID_END_TAG > <template></div></div></
   "children": [
     {
       "children": [],
-      "closeTagLoc": {
-        "end": {
-          "column": 33,
-          "line": 1,
-          "offset": 32,
-        },
-        "source": "template",
-        "start": {
-          "column": 25,
-          "line": 1,
-          "offset": 24,
-        },
-      },
       "codegenNode": undefined,
       "loc": {
         "end": {
@@ -5376,19 +4011,6 @@ exports[`compiler: parse > Errors > X_INVALID_END_TAG > <template></div></div></
       "ns": 0,
       "props": [],
       "tag": "template",
-      "tagLoc": {
-        "end": {
-          "column": 10,
-          "line": 1,
-          "offset": 9,
-        },
-        "source": "template",
-        "start": {
-          "column": 2,
-          "line": 1,
-          "offset": 1,
-        },
-      },
       "tagType": 0,
       "type": 1,
     },
@@ -5424,19 +4046,6 @@ exports[`compiler: parse > Errors > X_INVALID_END_TAG > <template></div></templa
   "children": [
     {
       "children": [],
-      "closeTagLoc": {
-        "end": {
-          "column": 27,
-          "line": 1,
-          "offset": 26,
-        },
-        "source": "template",
-        "start": {
-          "column": 19,
-          "line": 1,
-          "offset": 18,
-        },
-      },
       "codegenNode": undefined,
       "loc": {
         "end": {
@@ -5454,19 +4063,6 @@ exports[`compiler: parse > Errors > X_INVALID_END_TAG > <template></div></templa
       "ns": 0,
       "props": [],
       "tag": "template",
-      "tagLoc": {
-        "end": {
-          "column": 10,
-          "line": 1,
-          "offset": 9,
-        },
-        "source": "template",
-        "start": {
-          "column": 2,
-          "line": 1,
-          "offset": 1,
-        },
-      },
       "tagType": 0,
       "type": 1,
     },
@@ -5538,19 +4134,6 @@ exports[`compiler: parse > Errors > X_INVALID_END_TAG > <template>{{'</div>'}}</
           "type": 5,
         },
       ],
-      "closeTagLoc": {
-        "end": {
-          "column": 33,
-          "line": 1,
-          "offset": 32,
-        },
-        "source": "template",
-        "start": {
-          "column": 25,
-          "line": 1,
-          "offset": 24,
-        },
-      },
       "codegenNode": undefined,
       "loc": {
         "end": {
@@ -5568,19 +4151,6 @@ exports[`compiler: parse > Errors > X_INVALID_END_TAG > <template>{{'</div>'}}</
       "ns": 0,
       "props": [],
       "tag": "template",
-      "tagLoc": {
-        "end": {
-          "column": 10,
-          "line": 1,
-          "offset": 9,
-        },
-        "source": "template",
-        "start": {
-          "column": 2,
-          "line": 1,
-          "offset": 1,
-        },
-      },
       "tagType": 0,
       "type": 1,
     },
@@ -5651,19 +4221,6 @@ exports[`compiler: parse > Errors > X_INVALID_END_TAG > <template>a </ b</templa
       "ns": 0,
       "props": [],
       "tag": "template",
-      "tagLoc": {
-        "end": {
-          "column": 10,
-          "line": 1,
-          "offset": 9,
-        },
-        "source": "template",
-        "start": {
-          "column": 2,
-          "line": 1,
-          "offset": 1,
-        },
-      },
       "tagType": 0,
       "type": 1,
     },
@@ -5717,19 +4274,6 @@ exports[`compiler: parse > Errors > X_INVALID_END_TAG > <textarea></div></textar
           "type": 2,
         },
       ],
-      "closeTagLoc": {
-        "end": {
-          "column": 27,
-          "line": 1,
-          "offset": 26,
-        },
-        "source": "textarea",
-        "start": {
-          "column": 19,
-          "line": 1,
-          "offset": 18,
-        },
-      },
       "codegenNode": undefined,
       "loc": {
         "end": {
@@ -5747,19 +4291,6 @@ exports[`compiler: parse > Errors > X_INVALID_END_TAG > <textarea></div></textar
       "ns": 0,
       "props": [],
       "tag": "textarea",
-      "tagLoc": {
-        "end": {
-          "column": 10,
-          "line": 1,
-          "offset": 9,
-        },
-        "source": "textarea",
-        "start": {
-          "column": 2,
-          "line": 1,
-          "offset": 1,
-        },
-      },
       "tagType": 0,
       "type": 1,
     },
@@ -5884,19 +4415,6 @@ exports[`compiler: parse > Errors > X_MISSING_DYNAMIC_DIRECTIVE_ARGUMENT_END > <
         },
       ],
       "tag": "div",
-      "tagLoc": {
-        "end": {
-          "column": 5,
-          "line": 1,
-          "offset": 4,
-        },
-        "source": "div",
-        "start": {
-          "column": 2,
-          "line": 1,
-          "offset": 1,
-        },
-      },
       "tagType": 0,
       "type": 1,
     },
@@ -5951,19 +4469,6 @@ exports[`compiler: parse > Errors > X_MISSING_END_TAG > <template><div> 1`] = `
           "ns": 0,
           "props": [],
           "tag": "div",
-          "tagLoc": {
-            "end": {
-              "column": 15,
-              "line": 1,
-              "offset": 14,
-            },
-            "source": "div",
-            "start": {
-              "column": 12,
-              "line": 1,
-              "offset": 11,
-            },
-          },
           "tagType": 0,
           "type": 1,
         },
@@ -5985,19 +4490,6 @@ exports[`compiler: parse > Errors > X_MISSING_END_TAG > <template><div> 1`] = `
       "ns": 0,
       "props": [],
       "tag": "template",
-      "tagLoc": {
-        "end": {
-          "column": 10,
-          "line": 1,
-          "offset": 9,
-        },
-        "source": "template",
-        "start": {
-          "column": 2,
-          "line": 1,
-          "offset": 1,
-        },
-      },
       "tagType": 0,
       "type": 1,
     },
@@ -6052,36 +4544,10 @@ exports[`compiler: parse > Errors > X_MISSING_END_TAG > <template><div></templat
           "ns": 0,
           "props": [],
           "tag": "div",
-          "tagLoc": {
-            "end": {
-              "column": 15,
-              "line": 1,
-              "offset": 14,
-            },
-            "source": "div",
-            "start": {
-              "column": 12,
-              "line": 1,
-              "offset": 11,
-            },
-          },
           "tagType": 0,
           "type": 1,
         },
       ],
-      "closeTagLoc": {
-        "end": {
-          "column": 26,
-          "line": 1,
-          "offset": 25,
-        },
-        "source": "template",
-        "start": {
-          "column": 18,
-          "line": 1,
-          "offset": 17,
-        },
-      },
       "codegenNode": undefined,
       "loc": {
         "end": {
@@ -6099,19 +4565,6 @@ exports[`compiler: parse > Errors > X_MISSING_END_TAG > <template><div></templat
       "ns": 0,
       "props": [],
       "tag": "template",
-      "tagLoc": {
-        "end": {
-          "column": 10,
-          "line": 1,
-          "offset": 9,
-        },
-        "source": "template",
-        "start": {
-          "column": 2,
-          "line": 1,
-          "offset": 1,
-        },
-      },
       "tagType": 0,
       "type": 1,
     },
@@ -6182,19 +4635,6 @@ exports[`compiler: parse > Errors > X_MISSING_INTERPOLATION_END > <div>{{ foo</d
       "ns": 0,
       "props": [],
       "tag": "div",
-      "tagLoc": {
-        "end": {
-          "column": 5,
-          "line": 1,
-          "offset": 4,
-        },
-        "source": "div",
-        "start": {
-          "column": 2,
-          "line": 1,
-          "offset": 1,
-        },
-      },
       "tagType": 0,
       "type": 1,
     },

@@ -130,7 +130,7 @@ export interface BaseElementNode extends Node {
   type: NodeTypes.ELEMENT
   ns: Namespace
   tag: string
-  tagLoc: SourceLocation
+  openTagLoc?: SourceLocation
   closeTagLoc?: SourceLocation
   tagType: ElementTypes
   props: Array<AttributeNode | DirectiveNode>

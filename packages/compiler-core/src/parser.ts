@@ -78,6 +78,7 @@ export const defaultParserOptions: MergedParserOptions = {
   onWarn: defaultOnWarn,
   comments: __DEV__,
   prefixIdentifiers: false,
+  tagLocations: false,
 }
 
 let currentOptions: MergedParserOptions = defaultParserOptions
@@ -140,12 +141,14 @@ const tokenizer = new Tokenizer(stack, {
       type: NodeTypes.ELEMENT,
       tag: name,
       ns: currentOptions.getNamespace(name, stack[0], currentOptions.ns),
-      tagLoc: getLoc(start, end),
       tagType: ElementTypes.ELEMENT, // will be refined on tag close
       props: [],
       children: [],
       loc: getLoc(start - 1, end),
       codegenNode: undefined,
+    }
+    if (currentOptions.tagLocations) {
+      currentOpenTag.openTagLoc = getLoc(start, end)
     }
   },
 
@@ -166,7 +169,7 @@ const tokenizer = new Tokenizer(stack, {
           }
           for (let j = 0; j <= i; j++) {
             const el = stack.shift()!
-            if (j === i) {
+            if (j === i && currentOptions.tagLocations) {
               el.closeTagLoc = getLoc(start, end)
             }
             onCloseTag(el, end, j < i)
@@ -492,7 +495,7 @@ const tokenizer = new Tokenizer(stack, {
 
 // This regex doesn't cover the case if key or index aliases have destructuring,
 // but those do not make sense in the first place, so this works in practice.
-const forIteratorRE = /,([^,\}\]]*)(?:,([^,\}\]]*))?$/
+const forIteratorRE = /,([^,}\]]*)(?:,([^,}\]]*))?$/
 const stripParensRE = /^\(|\)$/g
 
 function parseForExpression(
