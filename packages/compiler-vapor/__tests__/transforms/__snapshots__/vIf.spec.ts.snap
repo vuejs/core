@@ -134,3 +134,29 @@ export function render(_ctx) {
   return n0
 }"
 `;
+
+exports[`compiler: v-if > v-if + v-if / v-else[-if] 1`] = `
+"import { setInsertionState as _setInsertionState, createIf as _createIf, template as _template } from 'vue';
+const t0 = _template("<span>foo</span>")
+const t1 = _template("<span>bar</span>")
+const t2 = _template("<span>baz</span>")
+const t3 = _template("<div></div>", true)
+
+export function render(_ctx) {
+  const n8 = t3()
+  _setInsertionState(n8)
+  const n0 = _createIf(() => (_ctx.foo), () => {
+    const n2 = t0()
+    return n2
+  })
+  _setInsertionState(n8)
+  const n3 = _createIf(() => (_ctx.bar), () => {
+    const n5 = t1()
+    return n5
+  }, () => {
+    const n7 = t2()
+    return n7
+  })
+  return n8
+}"
+`;

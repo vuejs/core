@@ -371,6 +371,17 @@ describe('compiler: transform slot', () => {
     })
   })
 
+  test('slot + v-if / v-else[-if] should not cause error', () => {
+    const { code } = compileWithSlots(
+      `<div>
+        <slot name="foo"></slot>
+        <Foo v-if="true"></Foo>
+        <Bar v-else />
+      </div>`,
+    )
+    expect(code).toMatchSnapshot()
+  })
+
   test('quote slot name', () => {
     const { code } = compileWithSlots(
       `<Comp><template #nav-bar-title-before></template></Comp>`,
