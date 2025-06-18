@@ -24,6 +24,7 @@ import {
   type VaporDirectiveNode,
 } from '../ir'
 import { findDir, resolveExpression } from '../utils'
+import { seen } from './transformText'
 
 export const transformVSlot: NodeTransform = (node, context) => {
   if (node.type !== NodeTypes.ELEMENT) return
@@ -68,16 +69,18 @@ function transformComponentSlot(
   const arg = dir && dir.arg
 
   // whitespace: 'preserve'
-  let indexes: number[] = []
-  const nonSlotTemplateChildren = children.filter((n, i) => {
+  const emptyTextNodes: TemplateChildNode[] = []
+  const nonSlotTemplateChildren = children.filter(n => {
     if (isNonWhitespaceContent(n)) {
       return !(n.type === NodeTypes.ELEMENT && n.props.some(isVSlot))
     } else {
-      indexes.push(i)
+      emptyTextNodes.push(n)
     }
   })
   if (!nonSlotTemplateChildren.length) {
-    indexes.forEach(i => children.splice(i, 1))
+    emptyTextNodes.forEach(n => {
+      seen.get(context.root)!.add(n)
+    })
   }
 
   const [block, onExit] = createSlotBlock(node, dir, context)

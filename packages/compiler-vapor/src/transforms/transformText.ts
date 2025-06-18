@@ -18,10 +18,10 @@ import {
 } from '../utils'
 
 type TextLike = TextNode | InterpolationNode
-const seen = new WeakMap<
+export const seen: WeakMap<
   TransformContext<RootNode>,
   WeakSet<TemplateChildNode | RootNode>
->()
+> = new WeakMap()
 
 export const transformText: NodeTransform = (node, context) => {
   if (!seen.has(context.root)) seen.set(context.root, new WeakSet())
