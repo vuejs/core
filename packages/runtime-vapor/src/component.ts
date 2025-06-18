@@ -58,8 +58,12 @@ import {
 } from './componentSlots'
 import { hmrReload, hmrRerender } from './hmr'
 import { isHydrating, locateHydrationNode } from './dom/hydration'
-import { insertionAnchor, insertionParent } from './insertionState'
 import { normalizeNode } from './dom/node'
+import {
+  insertionAnchor,
+  insertionParent,
+  resetInsertionState,
+} from './insertionState'
 
 export { currentInstance } from '@vue/runtime-dom'
 
@@ -142,6 +146,8 @@ export function createComponent(
   const _insertionAnchor = insertionAnchor
   if (isHydrating) {
     locateHydrationNode()
+  } else {
+    resetInsertionState()
   }
 
   const isFnComponent = isFunction(component)

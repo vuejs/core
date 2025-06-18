@@ -44,7 +44,7 @@ export function genOperationWithInsertionState(
 ): CodeFragment[] {
   const [frag, push] = buildCodeFragment()
   if (isBlockOperation(oper) && oper.parent) {
-    push(...genInsertionstate(oper, context))
+    push(...genInsertionState(oper, context))
   }
   push(...genOperation(oper, context))
   return frag
@@ -157,7 +157,7 @@ export function genEffect(
   return frag
 }
 
-function genInsertionstate(
+function genInsertionState(
   operation: InsertionStateTypes,
   context: CodegenContext,
 ): CodeFragment[] {
