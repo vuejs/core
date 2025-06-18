@@ -1030,12 +1030,11 @@ function resolveWithTS(
       matchedConfig = configs[0]
     } else {
       const [major, minor] = ts.versionMajorMinor.split('.').map(Number)
-      function getPattern(base: string, p: string): string {
-        const supportsConfigDir =
-          major > 5 || (major === 5 && minor >= 5)
+      const getPattern = (base: string, p: string) => {
+        // ts 5.5+ supports ${configDir} in paths
+        const supportsConfigDir = major > 5 || (major === 5 && minor >= 5)
         return p.startsWith('${configDir}') && supportsConfigDir
-          ? // ts 5.5+ supports ${configDir} in paths
-            normalizePath(p.replace('${configDir}', dirname(configPath!)))
+          ? normalizePath(p.replace('${configDir}', dirname(configPath!)))
           : joinPaths(base, p)
       }
       // resolve which config matches the current file
