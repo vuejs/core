@@ -1031,7 +1031,9 @@ function resolveWithTS(
     } else {
       const [major, minor] = ts.versionMajorMinor.split('.').map(Number)
       function getPattern(base: string, p: string): string {
-        return p.startsWith('${configDir}') && major >= 5 && minor >= 5
+        const supportsConfigDir =
+          major > 5 || (major === 5 && minor >= 5)
+        return p.startsWith('${configDir}') && supportsConfigDir
           ? // ts 5.5+ supports ${configDir} in paths
             normalizePath(p.replace('${configDir}', dirname(configPath!)))
           : joinPaths(base, p)
