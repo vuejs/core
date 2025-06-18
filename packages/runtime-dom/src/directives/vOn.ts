@@ -52,21 +52,24 @@ const modifierGuards: Record<
 export const withModifiers = <
   T extends (event: Event, ...args: unknown[]) => any,
 >(
-  fn: T & { _withMods?: { [key: string]: T } },
+  fn: T & { _withMods?: Map<string, T> },
   modifiers: VOnModifiers[],
 ): T => {
-  const cache = fn._withMods || (fn._withMods = {})
+  const cache = fn._withMods || (fn._withMods = new Map())
   const cacheKey = modifiers.join('.')
-  return (
-    cache[cacheKey] ||
-    (cache[cacheKey] = ((event, ...args) => {
-      for (let i = 0; i < modifiers.length; i++) {
-        const guard = modifierGuards[modifiers[i] as ModifierGuards]
-        if (guard && guard(event, modifiers)) return
-      }
-      return fn(event, ...args)
-    }) as T)
-  )
+  const cached = cache.get(cacheKey)
+  if (cached) {
+    return cached
+  }
+  const modifier = ((event, ...args) => {
+    for (let i = 0; i < modifiers.length; i++) {
+      const guard = modifierGuards[modifiers[i] as ModifierGuards]
+      if (guard && guard(event, modifiers)) return
+    }
+    return fn(event, ...args)
+  }) as T
+  cache.set(cacheKey, modifier)
+  return modifier
 }
 
 // Kept for 2.x compat.
@@ -88,7 +91,7 @@ const keyNames: Record<
  * @private
  */
 export const withKeys = <T extends (event: KeyboardEvent) => any>(
-  fn: T & { _withKeys?: { [k: string]: T } },
+  fn: T & { _withKeys?: Map<string, T> },
   modifiers: string[],
 ): T => {
   let globalKeyCodes: LegacyConfig['keyCodes']
@@ -110,54 +113,60 @@ export const withKeys = <T extends (event: KeyboardEvent) => any>(
     }
   }
 
-  const cache: { [k: string]: T } = fn._withKeys || (fn._withKeys = {})
+  const cache: Map<string, T> = fn._withKeys || (fn._withKeys = new Map())
   const cacheKey = modifiers.join('.')
 
-  return (
-    cache[cacheKey] ||
-    (cache[cacheKey] = (event => {
-      if (!('key' in event)) {
-        return
-      }
+  const cached = cache.get(cacheKey)
+  if (cached) {
+    return cached
+  }
 
-      const eventKey = hyphenate(event.key)
+  const withKey = (event => {
+    if (!('key' in event)) {
+      return
+    }
+
+    const eventKey = hyphenate(event.key)
+    if (
+      modifiers.some(
+        k =>
+          k === eventKey ||
+          keyNames[k as unknown as CompatModifiers] === eventKey,
+      )
+    ) {
+      return fn(event)
+    }
+
+    if (__COMPAT__) {
+      const keyCode = String(event.keyCode)
       if (
-        modifiers.some(
-          k =>
-            k === eventKey ||
-            keyNames[k as unknown as CompatModifiers] === eventKey,
-        )
+        compatUtils.isCompatEnabled(
+          DeprecationTypes.V_ON_KEYCODE_MODIFIER,
+          instance,
+        ) &&
+        modifiers.some(mod => mod == keyCode)
       ) {
         return fn(event)
       }
-
-      if (__COMPAT__) {
-        const keyCode = String(event.keyCode)
-        if (
-          compatUtils.isCompatEnabled(
-            DeprecationTypes.V_ON_KEYCODE_MODIFIER,
-            instance,
-          ) &&
-          modifiers.some(mod => mod == keyCode)
-        ) {
-          return fn(event)
-        }
-        if (globalKeyCodes) {
-          for (const mod of modifiers) {
-            const codes = globalKeyCodes[mod]
-            if (codes) {
-              const matches = isArray(codes)
-                ? codes.some(code => String(code) === keyCode)
-                : String(codes) === keyCode
-              if (matches) {
-                return fn(event)
-              }
+      if (globalKeyCodes) {
+        for (const mod of modifiers) {
+          const codes = globalKeyCodes[mod]
+          if (codes) {
+            const matches = isArray(codes)
+              ? codes.some(code => String(code) === keyCode)
+              : String(codes) === keyCode
+            if (matches) {
+              return fn(event)
             }
           }
         }
       }
-    }) as T)
-  )
+    }
+  }) as T
+
+  cache.set(cacheKey, withKey)
+
+  return withKey
 }
 
 export type VOnDirective = Directive<any, any, VOnModifiers>
