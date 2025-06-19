@@ -898,4 +898,21 @@ describe('component props', () => {
     await nextTick()
     expect(props).not.toHaveProperty('onEvent')
   })
+
+  // #11880
+  test('merged props order', async () => {
+    const Child = defineComponent({
+      props: ['fooBar'],
+      template: `<div>{{ fooBar }}</div>`,
+    })
+
+    const Comp = defineComponent({
+      components: { Child },
+      template: `<Child :foo-bar="1" v-bind="{ fooBar: 2, 'foo-bar': 3 }"/>`,
+    })
+
+    const root = document.createElement('div')
+    domRender(h(Comp), root)
+    expect(root.innerHTML).toBe('<div>3</div>')
+  })
 })
