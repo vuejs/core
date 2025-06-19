@@ -54,6 +54,14 @@ describe('v-html', () => {
     expect(code).matchSnapshot()
   })
 
+  test('work with dynamic component', () => {
+    const { code } = compileWithVHtml(
+      `<component :is="'button'" v-html="foo"/>`,
+    )
+    expect(code).matchSnapshot()
+    expect(code).contains('setHtml(n0.nodes, _ctx.foo))')
+  })
+
   test('should raise error and ignore children when v-html is present', () => {
     const onError = vi.fn()
     const { code, ir, helpers } = compileWithVHtml(

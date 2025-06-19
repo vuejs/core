@@ -33,3 +33,13 @@ export function render(_ctx) {
   return n0
 }"
 `;
+
+exports[`v-text > work with dynamic component 1`] = `
+"import { createDynamicComponent as _createDynamicComponent, toDisplayString as _toDisplayString, setElementText as _setElementText, renderEffect as _renderEffect } from 'vue';
+
+export function render(_ctx) {
+  const n0 = _createDynamicComponent(() => ('button'), null, null, true)
+  _renderEffect(() => _setElementText(n0.nodes, _toDisplayString(_ctx.foo), true))
+  return n0
+}"
+`;

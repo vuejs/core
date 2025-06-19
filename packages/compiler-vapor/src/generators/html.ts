@@ -7,10 +7,21 @@ export function genSetHtml(
   oper: SetHtmlIRNode,
   context: CodegenContext,
 ): CodeFragment[] {
-  const { helper } = context
+  const {
+    helper,
+    block: { dynamicComponents },
+  } = context
+
+  const isDynamicComponent = dynamicComponents.includes(oper.element)
   const { value, element } = oper
   return [
     NEWLINE,
-    ...genCall(helper('setHtml'), `n${element}`, genExpression(value, context)),
+    ...genCall(
+      helper('setHtml'),
+      // if the element is a dynamic component (VaporFragment)
+      // it should set html to the VaporFragment's nodes
+      `n${element}${isDynamicComponent ? '.nodes' : ''}`,
+      genExpression(value, context),
+    ),
   ]
 }

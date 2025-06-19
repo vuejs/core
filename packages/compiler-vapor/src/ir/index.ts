@@ -49,6 +49,7 @@ export interface BlockIRNode extends BaseIRNode {
   type: IRNodeTypes.BLOCK
   node: RootNode | TemplateChildNode
   dynamic: IRDynamicInfo
+  dynamicComponents: number[]
   tempId: number
   effect: IREffect[]
   operation: OperationNode[]

@@ -22,6 +22,7 @@ export {
   setProp,
   setDOMProp,
   setDynamicProps,
+  setElementText,
 } from './dom/prop'
 export { on, delegate, delegateEvents, setDynamicEvents } from './dom/event'
 export { createIf } from './apiCreateIf'
