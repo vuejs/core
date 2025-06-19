@@ -194,7 +194,7 @@ export function applyTransitionHooks(
   if (fallthroughAttrs && instance.hasFallthrough) {
     // mark single root
     ;(child as any).$root = true
-    applyFallthroughProps(child, instance.attrs)
+    renderEffect(() => applyFallthroughProps(child, instance.attrs))
   }
 
   return resolvedHooks

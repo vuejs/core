@@ -270,7 +270,7 @@ export function createComponent(
   ) {
     const el = getRootElement(instance)
     if (el) {
-      applyFallthroughProps(el, instance.attrs)
+      renderEffect(() => applyFallthroughProps(el, instance.attrs))
     }
   }
 
@@ -297,11 +297,9 @@ export function applyFallthroughProps(
   block: Block,
   attrs: Record<string, any>,
 ): void {
-  renderEffect(() => {
-    isApplyingFallthroughProps = true
-    setDynamicProps(block as Element, [attrs])
-    isApplyingFallthroughProps = false
-  })
+  isApplyingFallthroughProps = true
+  setDynamicProps(block as Element, [attrs])
+  isApplyingFallthroughProps = false
 }
 
 /**
