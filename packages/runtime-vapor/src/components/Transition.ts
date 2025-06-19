@@ -74,6 +74,9 @@ export const VaporTransition: FunctionalVaporComponent = /*@__PURE__*/ decorate(
         const resolvedAttrs = extend({}, attrs)
         const child = findTransitionBlock(children)
         if (child) {
+          // mark single root
+          ;(child as any).$root = true
+
           applyFallthroughProps(child, resolvedAttrs)
           // ensure fallthrough attrs are not happened again in
           // applyTransitionHooks
