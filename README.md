@@ -35,6 +35,7 @@ Please make sure to respect issue requirements and use [the new issue helper](ht
 ## Stay In Touch
 
 - [X](https://x.com/vuejs)
+- [Bluesky](https://bsky.app/profile/vuejs.org)
 - [Blog](https://blog.vuejs.org/)
 - [Job Board](https://vuejobs.com/?ref=vuejs)
 
