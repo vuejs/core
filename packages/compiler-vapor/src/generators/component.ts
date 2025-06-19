@@ -61,12 +61,16 @@ export function genCreateComponent(
     },
     [],
   )
+
+  const isDynamicComponent = operation.dynamic && !operation.dynamic.isStatic
+  if (isDynamicComponent) context.block.dynamicComponents.push(operation.id)
+
   return [
     NEWLINE,
     ...inlineHandlers,
     `const n${operation.id} = `,
     ...genCall(
-      operation.dynamic && !operation.dynamic.isStatic
+      isDynamicComponent
         ? helper('createDynamicComponent')
         : operation.asset
           ? helper('createComponentWithFallback')
