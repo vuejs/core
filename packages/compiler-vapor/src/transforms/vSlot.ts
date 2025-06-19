@@ -24,7 +24,7 @@ import {
   type VaporDirectiveNode,
 } from '../ir'
 import { findDir, resolveExpression } from '../utils'
-import { seen } from './transformText'
+import { markNonTemplate } from './transformText'
 
 export const transformVSlot: NodeTransform = (node, context) => {
   if (node.type !== NodeTypes.ELEMENT) return
@@ -79,7 +79,7 @@ function transformComponentSlot(
   })
   if (!nonSlotTemplateChildren.length) {
     emptyTextNodes.forEach(n => {
-      seen.get(context.root)!.add(n)
+      markNonTemplate(n, context)
     })
   }
 
