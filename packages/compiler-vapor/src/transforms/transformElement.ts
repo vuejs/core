@@ -132,6 +132,13 @@ function transformComponentElement(
     }
 
     if (asset) {
+      // self referencing component (inferred from filename)
+      if (context.selfName && capitalize(camelize(tag)) === context.selfName) {
+        // generators/block.ts has special check for __self postfix when generating
+        // component imports, which will pass additional `maybeSelfReference` flag
+        // to `resolveComponent`.
+        tag += `__self`
+      }
       context.component.add(tag)
     }
   }
