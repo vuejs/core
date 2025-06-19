@@ -119,6 +119,12 @@ const normalizeSlot = (
   }, ctx) as Slot
   // NOT a compiled slot
   ;(normalized as ContextualRenderFn)._c = false
+  if (__COMPAT__) {
+    // Preserve non-scoped slot flag (can be set in `convertLegacySlots`)
+    ;(normalized as ContextualRenderFn)._ns = (
+      rawSlot as ContextualRenderFn
+    )._ns
+  }
   return normalized
 }
 
@@ -168,6 +174,9 @@ const normalizeVNodeSlots = (
   }
   const normalized = normalizeSlotValue(children)
   instance.slots.default = () => normalized
+  if (__COMPAT__) {
+    ;(instance.slots.default as ContextualRenderFn)._ns = true
+  }
 }
 
 const assignSlots = (
