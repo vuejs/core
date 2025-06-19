@@ -153,6 +153,7 @@ export const VaporTransitionGroup: ObjectVaporComponent = decorate({
       insert(slottedBlock, container)
       // fallthrough attrs
       if (instance!.hasFallthrough) {
+        ;(container as any).$root = true
         renderEffect(() => applyFallthroughProps(container, instance!.attrs))
       }
       return container

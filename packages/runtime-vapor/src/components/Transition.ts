@@ -192,6 +192,8 @@ export function applyTransitionHooks(
 
   // fallthrough attrs
   if (fallthroughAttrs && instance.hasFallthrough) {
+    // mark single root
+    ;(child as any).$root = true
     applyFallthroughProps(child, instance.attrs)
   }
 
