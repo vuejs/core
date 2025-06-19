@@ -4,12 +4,18 @@
 // ./rendererAttrsFallthrough.spec.ts.
 
 import {
+  createApp,
+  h,
   isEmitListener,
   nextTick,
   onBeforeUnmount,
   toHandlers,
 } from '@vue/runtime-dom'
-import { createComponent, defineVaporComponent } from '../src'
+import {
+  createComponent,
+  defineVaporComponent,
+  vaporInteropPlugin,
+} from '../src'
 import { makeRender } from './_utils'
 
 const define = makeRender()
@@ -423,5 +429,30 @@ describe('component: emit', () => {
     app.unmount()
     await nextTick()
     expect(fn).not.toHaveBeenCalled()
+  })
+})
+
+describe('vdom interop', () => {
+  test('vdom parent > vapor child', () => {
+    const VaporChild = defineVaporComponent({
+      emits: ['click'],
+      setup(_, { emit }) {
+        emit('click')
+        return []
+      },
+    })
+
+    const fn = vi.fn()
+    const App = {
+      setup() {
+        return () => h(VaporChild as any, { onClick: fn })
+      },
+    }
+
+    const root = document.createElement('div')
+    createApp(App).use(vaporInteropPlugin).mount(root)
+
+    // fn should be called once
+    expect(fn).toHaveBeenCalledTimes(1)
   })
 })
