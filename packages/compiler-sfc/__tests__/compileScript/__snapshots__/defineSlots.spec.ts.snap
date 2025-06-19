@@ -9,7 +9,7 @@ export default /*@__PURE__*/_defineComponent({
 
       const slots = _useSlots()
       
-return { slots }
+return { get slots() { return slots }, set slots(v) { throw new Error('Assignment to constant variable.') } }
 }
 
 })"
@@ -24,7 +24,7 @@ export default {
 
       const slots = _useSlots()
       
-return { slots }
+return { get slots() { return slots }, set slots(v) { throw new Error('Assignment to constant variable.') } }
 }
 
 }"
