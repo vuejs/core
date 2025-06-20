@@ -570,3 +570,7 @@ export { performTransitionEnter, performTransitionLeave } from './renderer'
  * @internal
  */
 export { ensureVaporSlotFallback } from './helpers/renderSlot'
+/**
+ * @internal
+ */
+export { createInternalObject } from './internalObject'

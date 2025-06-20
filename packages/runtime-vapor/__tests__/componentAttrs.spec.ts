@@ -1,4 +1,11 @@
-import { type Ref, nextTick, ref } from '@vue/runtime-dom'
+import {
+  type Ref,
+  createApp,
+  defineComponent,
+  h,
+  nextTick,
+  ref,
+} from '@vue/runtime-dom'
 import {
   createComponent,
   createDynamicComponent,
@@ -10,6 +17,7 @@ import {
   setProp,
   setStyle,
   template,
+  vaporInteropPlugin,
 } from '../src'
 import { makeRender } from './_utils'
 import { stringifyStyle } from '@vue/shared'
@@ -398,5 +406,43 @@ describe('attribute fallthrough', () => {
 
     const el = host.children[0]
     expect(el.classList.length).toBe(0)
+  })
+
+  it('should not fallthrough emit handlers to vdom child', () => {
+    const VDomChild = defineComponent({
+      emits: ['click'],
+      setup(_, { emit }) {
+        return () => h('button', { onClick: () => emit('click') }, 'click me')
+      },
+    })
+
+    const fn = vi.fn()
+    const VaporChild = defineVaporComponent({
+      emits: ['click'],
+      setup() {
+        return createComponent(
+          VDomChild as any,
+          { onClick: () => fn },
+          null,
+          true,
+        )
+      },
+    })
+
+    const App = {
+      setup() {
+        return () => h(VaporChild as any)
+      },
+    }
+
+    const root = document.createElement('div')
+    createApp(App).use(vaporInteropPlugin).mount(root)
+
+    expect(root.innerHTML).toBe('<button>click me</button>')
+    const button = root.querySelector('button')!
+    button.dispatchEvent(new Event('click'))
+
+    // fn should be called once
+    expect(fn).toHaveBeenCalledTimes(1)
   })
 })

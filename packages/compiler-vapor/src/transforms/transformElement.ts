@@ -44,6 +44,8 @@ export const isReservedProp: (key: string) => boolean = /*#__PURE__*/ makeMap(
 )
 
 export const transformElement: NodeTransform = (node, context) => {
+  let effectIndex = context.block.effect.length
+  const getEffectIndex = () => effectIndex++
   return function postTransformElement() {
     ;({ node } = context)
     if (
@@ -62,6 +64,7 @@ export const transformElement: NodeTransform = (node, context) => {
       context as TransformContext<ElementNode>,
       isComponent,
       isDynamicComponent,
+      getEffectIndex,
     )
 
     let { parent } = context
@@ -78,13 +81,23 @@ export const transformElement: NodeTransform = (node, context) => {
       parent.node.children.filter(child => child.type !== NodeTypes.COMMENT)
         .length === 1
 
-    ;(isComponent ? transformComponentElement : transformNativeElement)(
-      node as any,
-      propsResult,
-      singleRoot,
-      context as TransformContext<ElementNode>,
-      isDynamicComponent,
-    )
+    if (isComponent) {
+      transformComponentElement(
+        node as ComponentNode,
+        propsResult,
+        singleRoot,
+        context,
+        isDynamicComponent,
+      )
+    } else {
+      transformNativeElement(
+        node as PlainElementNode,
+        propsResult,
+        singleRoot,
+        context,
+        getEffectIndex,
+      )
+    }
   }
 }
 
@@ -143,7 +156,7 @@ function transformComponentElement(
     tag,
     props: propsResult[0] ? propsResult[1] : [propsResult[1]],
     asset,
-    root: singleRoot,
+    root: singleRoot && !context.inVFor,
     slots: [...context.slots],
     once: context.inVOnce,
     dynamic: dynamicComponent,
@@ -189,7 +202,8 @@ function transformNativeElement(
   node: PlainElementNode,
   propsResult: PropsResult,
   singleRoot: boolean,
-  context: TransformContext<ElementNode>,
+  context: TransformContext,
+  getEffectIndex: () => number,
 ) {
   const { tag } = node
   const { scopeId } = context.options
@@ -202,12 +216,16 @@ function transformNativeElement(
   const dynamicProps: string[] = []
   if (propsResult[0] /* dynamic props */) {
     const [, dynamicArgs, expressions] = propsResult
-    context.registerEffect(expressions, {
-      type: IRNodeTypes.SET_DYNAMIC_PROPS,
-      element: context.reference(),
-      props: dynamicArgs,
-      root: singleRoot,
-    })
+    context.registerEffect(
+      expressions,
+      {
+        type: IRNodeTypes.SET_DYNAMIC_PROPS,
+        element: context.reference(),
+        props: dynamicArgs,
+        root: singleRoot,
+      },
+      getEffectIndex,
+    )
   } else {
     for (const prop of propsResult[1]) {
       const { key, values } = prop
@@ -216,13 +234,17 @@ function transformNativeElement(
         if (values[0].content) template += `="${values[0].content}"`
       } else {
         dynamicProps.push(key.content)
-        context.registerEffect(values, {
-          type: IRNodeTypes.SET_PROP,
-          element: context.reference(),
-          prop,
-          root: singleRoot,
-          tag,
-        })
+        context.registerEffect(
+          values,
+          {
+            type: IRNodeTypes.SET_PROP,
+            element: context.reference(),
+            prop,
+            root: singleRoot,
+            tag,
+          },
+          getEffectIndex,
+        )
       }
     }
   }
@@ -259,6 +281,7 @@ export function buildProps(
   context: TransformContext<ElementNode>,
   isComponent: boolean,
   isDynamicComponent?: boolean,
+  getEffectIndex?: () => number,
 ): PropsResult {
   const props = node.props as (VaporDirectiveNode | AttributeNode)[]
   if (props.length === 0) return [false, []]
@@ -305,12 +328,12 @@ export function buildProps(
           } else {
             context.registerEffect(
               [prop.exp],
-
               {
                 type: IRNodeTypes.SET_DYNAMIC_EVENTS,
                 element: context.reference(),
                 event: prop.exp,
               },
+              getEffectIndex,
             )
           }
         } else {

@@ -55,7 +55,6 @@ export function render(_ctx) {
     const _foo = _ctx.foo
     const _bar = _ctx.bar
     const _foo_bar_baz = _foo[_bar(_ctx.baz)]
-    
     _setProp(n0, "id", _foo_bar_baz)
     _setProp(n1, "id", _foo_bar_baz)
     _setProp(n2, "id", _bar() + _foo)
@@ -107,7 +106,6 @@ export function render(_ctx) {
   _renderEffect(() => {
     const _obj = _ctx.obj
     const _obj_foo_baz_obj_bar = _obj['foo']['baz'] + _obj.bar
-    
     _setProp(n0, "id", _obj_foo_baz_obj_bar)
     _setProp(n1, "id", _obj_foo_baz_obj_bar)
   })
@@ -126,7 +124,6 @@ export function render(_ctx) {
   _renderEffect(() => {
     const _foo = _ctx.foo
     const _foo_bar = _foo + _ctx.bar
-    
     _setProp(n0, "id", _foo_bar)
     _setProp(n1, "id", _foo_bar)
     _setProp(n2, "id", _foo + _foo_bar)
@@ -144,7 +141,6 @@ export function render(_ctx) {
   const n1 = t0()
   _renderEffect(() => {
     const _foo_bar = _ctx.foo + _ctx.bar
-    
     _setProp(n0, "id", _foo_bar)
     _setProp(n1, "id", _foo_bar)
   })
@@ -177,7 +173,6 @@ export function render(_ctx) {
   const n1 = t0()
   _renderEffect(() => {
     const _foo = _ctx.foo
-    
     _setClass(n0, _foo)
     _setClass(n1, _foo)
   })
@@ -498,15 +493,13 @@ export function render(_ctx) {
     _setAttr(n0, "form", _ctx.form)
     _setAttr(n1, "list", _ctx.list)
     _setAttr(n2, "type", _ctx.type)
-    
     _setAttr(n3, "width", _width)
-    _setAttr(n4, "width", _width)
-    _setAttr(n5, "width", _width)
-    _setAttr(n6, "width", _width)
-    
     _setAttr(n3, "height", _height)
+    _setAttr(n4, "width", _width)
     _setAttr(n4, "height", _height)
+    _setAttr(n5, "width", _width)
     _setAttr(n5, "height", _height)
+    _setAttr(n6, "width", _width)
     _setAttr(n6, "height", _height)
   })
   return [n0, n1, n2, n3, n4, n5, n6]

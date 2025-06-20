@@ -13,11 +13,13 @@ import {
   type TransitionHooks,
   type VNode,
   type VaporInteropInterface,
+  createInternalObject,
   createVNode,
   currentInstance,
   ensureHydrationRenderer,
   ensureRenderer,
   ensureVaporSlotFallback,
+  isEmitListener,
   isVNode,
   onScopeDispose,
   renderSlot,
@@ -238,7 +240,14 @@ function createVDOMComponent(
     //
     // Without reactivity, Vue will warn in DEV about non-reactive watch sources
     instance.props = shallowReactive(wrapper.props)
-    instance.attrs = wrapper.attrs
+
+    const attrs = (instance.attrs = createInternalObject())
+    for (const key in wrapper.attrs) {
+      if (!isEmitListener(instance.emitsOptions, key)) {
+        attrs[key] = wrapper.attrs[key]
+      }
+    }
+
     instance.slots =
       wrapper.slots === EMPTY_OBJ
         ? EMPTY_OBJ

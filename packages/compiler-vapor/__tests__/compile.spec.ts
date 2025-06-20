@@ -237,4 +237,29 @@ describe('compile', () => {
       expect(code).toMatchSnapshot()
     })
   })
+
+  describe('execution order', () => {
+    test('basic', () => {
+      const code = compile(`<div :id="foo">{{ bar }}</div>`)
+      expect(code).matchSnapshot()
+      expect(code).contains(
+        `_setProp(n0, "id", _ctx.foo)
+    _setText(x0, _toDisplayString(_ctx.bar))`,
+      )
+    })
+    test('with v-once', () => {
+      const code = compile(
+        `<div>
+          <span v-once>{{ foo }}</span>
+          {{ bar }}<br>
+          {{ baz }}
+        </div>`,
+      )
+      expect(code).matchSnapshot()
+      expect(code).contains(
+        `_setText(n1, " " + _toDisplayString(_ctx.bar))
+    _setText(n2, " " + _toDisplayString(_ctx.baz))`,
+      )
+    })
+  })
 })

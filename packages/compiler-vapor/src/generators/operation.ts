@@ -99,10 +99,8 @@ export function genEffects(
   effects: IREffect[],
   context: CodegenContext,
 ): CodeFragment[] {
-  const {
-    helper,
-    block: { expressions },
-  } = context
+  const { helper } = context
+  const expressions = effects.flatMap(effect => effect.expressions)
   const [frag, push, unshift] = buildCodeFragment()
   let operationsCount = 0
   const { ids, frag: declarationFrags } = processExpressions(

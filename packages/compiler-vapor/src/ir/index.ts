@@ -54,7 +54,6 @@ export interface BlockIRNode extends BaseIRNode {
   tempId: number
   effect: IREffect[]
   operation: OperationNode[]
-  expressions: SimpleExpressionNode[]
   returns: number[]
   hasDeferredVShow: boolean
 }
