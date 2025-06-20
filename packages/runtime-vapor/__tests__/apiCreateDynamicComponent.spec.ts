@@ -1,8 +1,11 @@
-import { shallowRef } from '@vue/reactivity'
-import { nextTick } from '@vue/runtime-dom'
+import { ref, shallowRef } from '@vue/reactivity'
+import { nextTick, resolveDynamicComponent } from '@vue/runtime-dom'
 import {
+  createComponentWithFallback,
   createDynamicComponent,
   defineVaporComponent,
+  renderEffect,
+  setHtml,
   setInsertionState,
   template,
 } from '../src'
@@ -58,6 +61,24 @@ describe('api: createDynamicComponent', () => {
     val.value = 'baz'
     await nextTick()
     expect(html()).toBe('<baz></baz><!--dynamic-component-->')
+  })
+
+  test('render fallback with insertionState', async () => {
+    const { html, mount } = define({
+      setup() {
+        const html = ref('hi')
+        const n1 = template('<div></div>', true)() as any
+        setInsertionState(n1)
+        const n0 = createComponentWithFallback(
+          resolveDynamicComponent('button') as any,
+        ) as any
+        renderEffect(() => setHtml(n0, html.value))
+        return n1
+      },
+    }).create()
+
+    mount()
+    expect(html()).toBe('<div><button>hi</button></div>')
   })
 
   test('switch dynamic component children', async () => {

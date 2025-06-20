@@ -8,7 +8,6 @@ import {
 import { createComment, createTextNode } from './dom/node'
 import { EffectScope, pauseTracking, resetTracking } from '@vue/reactivity'
 import { isHydrating } from './dom/hydration'
-import { insertionAnchor, insertionParent } from './insertionState'
 
 export type Block =
   | Node
@@ -48,9 +47,6 @@ export class DynamicFragment extends VaporFragment {
     }
     this.current = key
 
-    const _insertionParent = insertionParent
-    const _insertionAnchor = insertionAnchor
-
     pauseTracking()
     const parent = this.anchor.parentNode
 
@@ -65,8 +61,6 @@ export class DynamicFragment extends VaporFragment {
       this.nodes = this.scope.run(render) || []
       if (parent) {
         insert(this.nodes, parent, this.anchor)
-      } else if (!isHydrating && _insertionParent) {
-        insert(this.anchor, _insertionParent, _insertionAnchor)
       }
     } else {
       this.scope = undefined

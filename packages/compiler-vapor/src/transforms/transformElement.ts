@@ -119,6 +119,13 @@ function transformComponentElement(
     }
 
     if (asset) {
+      // self referencing component (inferred from filename)
+      if (context.selfName && capitalize(camelize(tag)) === context.selfName) {
+        // generators/block.ts has special check for __self postfix when generating
+        // component imports, which will pass additional `maybeSelfReference` flag
+        // to `resolveComponent`.
+        tag += `__self`
+      }
       context.component.add(tag)
     }
   }
@@ -130,7 +137,7 @@ function transformComponentElement(
     tag,
     props: propsResult[0] ? propsResult[1] : [propsResult[1]],
     asset,
-    root: singleRoot,
+    root: singleRoot && !context.inVFor,
     slots: [...context.slots],
     once: context.inVOnce,
     dynamic: dynamicComponent,

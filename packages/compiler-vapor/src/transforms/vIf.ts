@@ -65,7 +65,13 @@ export function processIf(
     if (siblings) {
       let i = siblings.length
       while (i--) {
-        if (siblings[i].operation) lastIfNode = siblings[i].operation
+        if (
+          siblings[i].operation &&
+          siblings[i].operation!.type === IRNodeTypes.IF
+        ) {
+          lastIfNode = siblings[i].operation
+          break
+        }
       }
     }
 
