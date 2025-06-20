@@ -1,0 +1,49 @@
+{
+  "name": "@vue/compiler-vapor",
+  "version": "3.5.13",
+  "description": "@vue/compiler-vapor",
+  "main": "dist/compiler-vapor.cjs.js",
+  "module": "dist/compiler-vapor.esm-bundler.js",
+  "types": "dist/compiler-vapor.d.ts",
+  "files": [
+    "dist"
+  ],
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/compiler-vapor.d.ts",
+      "node": "./dist/compiler-vapor.cjs.js",
+      "module": "./dist/compiler-vapor.esm-browser.js",
+      "import": "./dist/compiler-vapor.esm-browser.js",
+      "require": "./dist/compiler-vapor.cjs.js"
+    },
+    "./*": "./*"
+  },
+  "buildOptions": {
+    "formats": [
+      "cjs",
+      "esm-browser"
+    ],
+    "prod": false,
+    "enableNonBrowserBranches": true
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vuejs/core.git",
+    "directory": "packages/compiler-vapor"
+  },
+  "keywords": [
+    "vue"
+  ],
+  "author": "Evan You",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/vuejs/core/issues"
+  },
+  "homepage": "https://github.com/vuejs/core/tree/main/packages/compiler-vapor#readme",
+  "dependencies": {
+    "@vue/compiler-dom": "workspace:*",
+    "@vue/shared": "workspace:*",
+    "source-map-js": "catalog:"
+  }
+}

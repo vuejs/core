@@ -290,27 +290,39 @@ This is made possible via several configurations:
 
 ```mermaid
   flowchart LR
+    vue["vue"]
     compiler-sfc["@vue/compiler-sfc"]
     compiler-dom["@vue/compiler-dom"]
+    compiler-vapor["@vue/compiler-vapor"]
     compiler-core["@vue/compiler-core"]
-    vue["vue"]
     runtime-dom["@vue/runtime-dom"]
+    runtime-vapor["@vue/runtime-vapor"]
     runtime-core["@vue/runtime-core"]
     reactivity["@vue/reactivity"]
 
     subgraph "Runtime Packages"
       runtime-dom --> runtime-core
+      runtime-vapor --> runtime-core
       runtime-core --> reactivity
     end
 
     subgraph "Compiler Packages"
       compiler-sfc --> compiler-core
       compiler-sfc --> compiler-dom
+      compiler-sfc --> compiler-vapor
       compiler-dom --> compiler-core
+      compiler-vapor --> compiler-core
     end
 
+    vue --> compiler-sfc
     vue ---> compiler-dom
     vue --> runtime-dom
+    vue --> compiler-vapor
+    vue --> runtime-vapor
+
+    %% Highlight class
+    classDef highlight stroke:#35eb9a,stroke-width:3px;
+    class compiler-vapor,runtime-vapor highlight;
 ```
 
 There are some rules to follow when importing across package boundaries:

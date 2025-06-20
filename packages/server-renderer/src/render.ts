@@ -172,7 +172,7 @@ function renderComponentSubTree(
         if (parent && parent.subTree && parent.subTree === cur.vnode) {
           // parent is a non-SSR compiled component and is rendering this
           // component as root. inherit its scopeId if present.
-          cur = parent
+          cur = parent as ComponentInternalInstance
         } else {
           break
         }
@@ -314,7 +314,7 @@ function renderElementVNode(
     if (curVnode.scopeId) {
       openTag += ` ${curVnode.scopeId}`
     }
-    curParent = curParent.parent
+    curParent = curParent.parent as ComponentInternalInstance
   }
   if (slotScopeId) {
     openTag += ` ${slotScopeId}`
