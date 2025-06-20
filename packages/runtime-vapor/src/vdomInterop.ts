@@ -10,9 +10,11 @@ import {
   type VNode,
   type VNodeNormalizedRef,
   type VaporInteropInterface,
+  createInternalObject,
   createVNode,
   currentInstance,
   ensureRenderer,
+  isEmitListener,
   normalizeRef,
   onScopeDispose,
   renderSlot,
@@ -174,7 +176,14 @@ function createVDOMComponent(
   // overwrite how the vdom instance handles props
   vnode.vi = (instance: ComponentInternalInstance) => {
     instance.props = wrapper.props
-    instance.attrs = wrapper.attrs
+
+    const attrs = (instance.attrs = createInternalObject())
+    for (const key in wrapper.attrs) {
+      if (!isEmitListener(instance.emitsOptions, key)) {
+        attrs[key] = wrapper.attrs[key]
+      }
+    }
+
     instance.slots =
       wrapper.slots === EMPTY_OBJ
         ? EMPTY_OBJ

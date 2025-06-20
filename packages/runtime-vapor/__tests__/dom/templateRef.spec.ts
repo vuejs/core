@@ -1,10 +1,13 @@
 import type { NodeRef } from '../../src/apiTemplateRef'
 import {
+  child,
   createComponent,
+  createDynamicComponent,
   createFor,
   createIf,
   createSlot,
   createTemplateRefSetter,
+  defineVaporComponent,
   delegateEvents,
   insert,
   renderEffect,
@@ -20,7 +23,8 @@ import {
   useTemplateRef,
   watchEffect,
 } from '@vue/runtime-dom'
-import { setElementText } from '../../src/dom/prop'
+import { setElementText, setText } from '../../src/dom/prop'
+import type { VaporComponent } from '../../src/component'
 
 const define = makeRender()
 
@@ -675,6 +679,39 @@ describe('api: template ref', () => {
 
     render()
     expect(r!.value).toBe(n)
+  })
+
+  test('work with dynamic component', async () => {
+    const Child = defineVaporComponent({
+      setup(_, { expose }) {
+        const msg = ref('one')
+        expose({ setMsg: (m: string) => (msg.value = m) })
+        const n0 = template(`<div> </div>`)() as any
+        const x0 = child(n0) as any
+        renderEffect(() => setText(x0, msg.value))
+        return n0
+      },
+    })
+
+    const views: Record<string, VaporComponent> = { child: Child }
+    const view = ref('child')
+    const refKey = ref<any>(null)
+
+    const { html } = define({
+      setup() {
+        const setRef = createTemplateRefSetter()
+        const n0 = createDynamicComponent(() => views[view.value]) as any
+        setRef(n0, refKey)
+        return n0
+      },
+    }).render()
+
+    expect(html()).toBe('<div>one</div><!--dynamic-component-->')
+    expect(refKey.value).toBeDefined()
+
+    refKey.value.setMsg('changed')
+    await nextTick()
+    expect(html()).toBe('<div>changed</div><!--dynamic-component-->')
   })
 
   // TODO: can not reproduce in Vapor

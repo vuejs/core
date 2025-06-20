@@ -565,3 +565,7 @@ export { setRef } from './rendererTemplateRef'
  * @internal
  */
 export { type VNodeNormalizedRef, normalizeRef } from './vnode'
+/**
+ * @internal
+ */
+export { createInternalObject } from './internalObject'
