@@ -21,7 +21,7 @@ import {
   isString,
   remove,
 } from '@vue/shared'
-import type { DynamicFragment } from './block'
+import { DynamicFragment } from './block'
 
 export type NodeRef = string | Ref | ((ref: Element) => void)
 export type RefEl = Element | VaporComponentInstance
@@ -65,9 +65,7 @@ export function setRef(
   }
 
   const setupState: any = __DEV__ ? instance.setupState || {} : null
-  const refValue = isVaporComp
-    ? getExposed(el as VaporComponentInstance) || el
-    : el
+  const refValue = getRefValue(el)
 
   const refs =
     instance.refs === EMPTY_OBJ ? (instance.refs = {}) : instance.refs
@@ -160,4 +158,13 @@ export function setRef(
     }
   }
   return ref
+}
+
+const getRefValue = (el: RefEl) => {
+  if (isVaporComponent(el)) {
+    return getExposed(el) || el
+  } else if (el instanceof DynamicFragment) {
+    return getRefValue(el.nodes as RefEl)
+  }
+  return el
 }
