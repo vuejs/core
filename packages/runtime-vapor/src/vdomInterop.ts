@@ -4,14 +4,20 @@ import {
   type ConcreteComponent,
   MoveType,
   type Plugin,
+  type RendererElement,
   type RendererInternals,
+  type RendererNode,
   type ShallowRef,
   type Slots,
   type VNode,
   type VaporInteropInterface,
+  createInternalObject,
   createVNode,
   currentInstance,
   ensureRenderer,
+  ensureVaporSlotFallback,
+  isEmitListener,
+  isVNode,
   onScopeDispose,
   renderSlot,
   shallowRef,
@@ -28,13 +34,13 @@ import {
 } from './component'
 import {
   type Block,
+  DynamicFragment,
   VaporFragment,
   insert,
   isFragment,
-  isValidBlock,
   remove,
 } from './block'
-import { EMPTY_OBJ, extend, isFunction } from '@vue/shared'
+import { EMPTY_OBJ, extend, isArray, isFunction } from '@vue/shared'
 import { type RawProps, rawPropsProxyHandlers } from './componentProps'
 import type { RawSlots, VaporSlot } from './componentSlots'
 import { renderEffect } from './renderEffect'
@@ -99,15 +105,28 @@ const vaporInteropImpl: Omit<
   slot(n1: VNode, n2: VNode, container, anchor) {
     if (!n1) {
       // mount
-      const selfAnchor = (n2.el = n2.anchor = createTextNode())
-      insert(selfAnchor, container, anchor)
+      let selfAnchor: Node | undefined
       const { slot, fallback } = n2.vs!
       const propsRef = (n2.vs!.ref = shallowRef(n2.props))
       const slotBlock = slot(new Proxy(propsRef, vaporSlotPropsProxyHandler))
-      // TODO fallback for slot with v-if content
-      // fallback is a vnode slot function here, and slotBlock, if a DynamicFragment,
-      // expects a Vapor BlockFn as fallback
-      fallback
+      // forwarded vdom slot without its own fallback, use the fallback provided by
+      // the slot outlet
+      if (slotBlock instanceof DynamicFragment) {
+        // vapor slot's nodes is a forwarded vdom slot
+        let nodes = slotBlock.nodes
+        while (isFragment(nodes)) {
+          ensureVDOMSlotFallback(nodes, fallback)
+          nodes = nodes.nodes
+        }
+        // use fragment's anchor when possible
+        selfAnchor = slotBlock.anchor
+      } else if (isFragment(slotBlock)) {
+        ensureVDOMSlotFallback(slotBlock, fallback)
+        selfAnchor = slotBlock.anchor!
+      }
+
+      if (!selfAnchor) selfAnchor = createTextNode()
+      insert((n2.el = n2.anchor = selfAnchor), container, anchor)
       insert((n2.vb = slotBlock), container, selfAnchor)
     } else {
       // update
@@ -171,7 +190,14 @@ function createVDOMComponent(
   // overwrite how the vdom instance handles props
   vnode.vi = (instance: ComponentInternalInstance) => {
     instance.props = wrapper.props
-    instance.attrs = wrapper.attrs
+
+    const attrs = (instance.attrs = createInternalObject())
+    for (const key in wrapper.attrs) {
+      if (!isEmitListener(instance.emitsOptions, key)) {
+        attrs[key] = wrapper.attrs[key]
+      }
+    }
+
     instance.slots =
       wrapper.slots === EMPTY_OBJ
         ? EMPTY_OBJ
@@ -236,51 +262,56 @@ function renderVDOMSlot(
   let fallbackNodes: Block | undefined
   let oldVNode: VNode | null = null
 
+  frag.fallback = fallback
   frag.insert = (parentNode, anchor) => {
     if (!isMounted) {
       renderEffect(() => {
-        const vnode = renderSlot(
-          slotsRef.value,
-          isFunction(name) ? name() : name,
-          props,
-        )
-        let isValidSlotContent
-        let children = vnode.children as any[]
+        let vnode: VNode | undefined
+        let isValidSlot = false
+        // only render slot if rawSlots is defined and slot nodes are not empty
+        // otherwise, render fallback
+        if (slotsRef.value) {
+          vnode = renderSlot(
+            slotsRef.value,
+            isFunction(name) ? name() : name,
+            props,
+          )
 
-        // TODO add tests
-        // handle forwarded vapor slot
-        let vaporSlot
-        if (children.length === 1 && (vaporSlot = children[0].vs)) {
-          const block = vaporSlot.slot(props)
-          isValidSlotContent =
-            isValidBlock(block) ||
-            // if block is a vapor fragment with insert, it indicates a forwarded VDOM slot
-            (isFragment(block) && block.insert)
+          let children = vnode.children as any[]
+          // handle forwarded vapor slot without its own fallback
+          // use the fallback provided by the slot outlet
+          ensureVaporSlotFallback(children, fallback as any)
+          isValidSlot = children.length > 0
         }
-        // vnode children
-        else {
-          isValidSlotContent = children.length > 0
-        }
-        if (isValidSlotContent) {
+
+        if (isValidSlot) {
           if (fallbackNodes) {
             remove(fallbackNodes, parentNode)
             fallbackNodes = undefined
           }
           internals.p(
             oldVNode,
-            vnode,
+            vnode!,
             parentNode,
             anchor,
             parentComponent as any,
           )
-          oldVNode = vnode
+          oldVNode = vnode!
         } else {
+          // for forwarded slot without its own fallback, use the fallback
+          // provided by the slot outlet.
+          // re-fetch `frag.fallback` as it may have been updated at `createSlot`
+          fallback = frag.fallback
           if (fallback && !fallbackNodes) {
             // mount fallback
             if (oldVNode) {
               internals.um(oldVNode, parentComponent as any, null, true)
             }
-            insert((fallbackNodes = fallback(props)), parentNode, anchor)
+            insert(
+              (fallbackNodes = fallback(internals, parentComponent)),
+              parentNode,
+              anchor,
+            )
           }
           oldVNode = null
         }
@@ -322,3 +353,37 @@ export const vaporInteropPlugin: Plugin = app => {
     return mount(...args)
   }) satisfies App['mount']
 }
+
+function ensureVDOMSlotFallback(block: VaporFragment, fallback?: () => any) {
+  if (block.insert && !block.fallback && fallback) {
+    block.fallback = createFallback(fallback)
+  }
+}
+
+const createFallback =
+  (fallback: () => any) =>
+  (
+    internals: RendererInternals<RendererNode, RendererElement>,
+    parentComponent: ComponentInternalInstance | null,
+  ) => {
+    const fallbackNodes = fallback()
+
+    // vnode slot, wrap it as a VaporFragment
+    if (isArray(fallbackNodes) && fallbackNodes.every(isVNode)) {
+      const frag = new VaporFragment([])
+      frag.insert = (parentNode, anchor) => {
+        fallbackNodes.forEach(vnode => {
+          internals.p(null, vnode, parentNode, anchor, parentComponent)
+        })
+      }
+      frag.remove = parentNode => {
+        fallbackNodes.forEach(vnode => {
+          internals.um(vnode, parentComponent, null, true)
+        })
+      }
+      return frag
+    }
+
+    // vapor slot
+    return fallbackNodes as Block
+  }

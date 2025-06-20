@@ -3,14 +3,20 @@ import {
   type Block,
   type BlockFn,
   DynamicFragment,
+  type VaporFragment,
   insert,
+  isFragment,
   setScopeId,
 } from './block'
 import { rawPropsProxyHandlers } from './componentProps'
 import { currentInstance, isRef } from '@vue/runtime-dom'
 import type { LooseRawProps, VaporComponentInstance } from './component'
 import { renderEffect } from './renderEffect'
-import { insertionAnchor, insertionParent } from './insertionState'
+import {
+  insertionAnchor,
+  insertionParent,
+  resetInsertionState,
+} from './insertionState'
 import { isHydrating, locateHydrationNode } from './dom/hydration'
 
 export type RawSlots = Record<string, VaporSlot> & {
@@ -113,6 +119,8 @@ export function createSlot(
   const _insertionAnchor = insertionAnchor
   if (isHydrating) {
     locateHydrationNode()
+  } else {
+    resetInsertionState()
   }
 
   const instance = i || (currentInstance as VaporComponentInstance)
@@ -144,8 +152,27 @@ export function createSlot(
             (slot._bound = () => {
               const slotContent = slot(slotProps)
               if (slotContent instanceof DynamicFragment) {
-                slotContent.fallback = fallback
+                let nodes = slotContent.nodes
+                if (
+                  (slotContent.fallback = fallback) &&
+                  isArray(nodes) &&
+                  nodes.length === 0
+                ) {
+                  // use fallback if the slot content is invalid
+                  slotContent.update(fallback)
+                } else {
+                  while (isFragment(nodes)) {
+                    ensureVaporSlotFallback(nodes, fallback)
+                    nodes = nodes.nodes
+                  }
+                }
               }
+              // forwarded vdom slot, if there is no fallback provide, try use the fallback
+              // provided by the slot outlet.
+              else if (isFragment(slotContent)) {
+                ensureVaporSlotFallback(slotContent, fallback)
+              }
+
               return slotContent
             }),
         )
@@ -184,5 +211,14 @@ function hasForwardedSlot(block: Block): block is DynamicFragment {
     return block.some(isForwardedSlot)
   } else {
     return isForwardedSlot(block)
+  }
+}
+
+function ensureVaporSlotFallback(
+  block: VaporFragment,
+  fallback?: VaporSlot,
+): void {
+  if (block.insert && !block.fallback && fallback) {
+    block.fallback = fallback
   }
 }
