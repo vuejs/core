@@ -1,6 +1,6 @@
 import { IF_ANCHOR_LABEL } from '@vue/shared'
 import { type Block, type BlockFn, DynamicFragment, insert } from './block'
-import { isHydrating } from './dom/hydration'
+import { isHydrating, locateHydrationNode } from './dom/hydration'
 import {
   insertionAnchor,
   insertionParent,
@@ -16,7 +16,11 @@ export function createIf(
 ): Block {
   const _insertionParent = insertionParent
   const _insertionAnchor = insertionAnchor
-  if (!isHydrating) resetInsertionState()
+  if (isHydrating) {
+    locateHydrationNode(true)
+  } else {
+    resetInsertionState()
+  }
 
   let frag: Block
   if (once) {
