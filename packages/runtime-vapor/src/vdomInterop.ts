@@ -259,7 +259,7 @@ function createVDOMComponent(
     internals.umt(vnode.component!, null, !!parentNode)
   }
 
-  vnode.scopeId = parentInstance.type.__scopeId!
+  vnode.scopeId = parentInstance && parentInstance.type.__scopeId!
 
   frag.insert = (parentNode, anchor, transition) => {
     const prev = currentInstance

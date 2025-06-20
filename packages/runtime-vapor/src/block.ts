@@ -198,7 +198,7 @@ export function insert(
         performTransitionEnter(
           block,
           (block as TransitionBlock).$transition as TransitionHooks,
-          () => parent.insertBefore(block, anchor),
+          () => parent.insertBefore(block, anchor as Node),
           parentSuspense,
         )
       } else {
