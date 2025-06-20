@@ -83,7 +83,11 @@ describe('compiler: template ref transform', () => {
 
   test('function ref', () => {
     const { ir, code } = compileWithTransformRef(
-      `<div :ref="bar => foo = bar" />`,
+      `<div :ref="bar => {
+        foo.value = bar
+        ;({ baz } = bar)
+        console.log(foo.value, baz)
+      }" />`,
     )
     expect(ir.block.dynamic.children[0]).toMatchObject({
       id: 0,
@@ -103,7 +107,6 @@ describe('compiler: template ref transform', () => {
             type: IRNodeTypes.SET_TEMPLATE_REF,
             element: 0,
             value: {
-              content: 'bar => foo = bar',
               isStatic: false,
             },
           },
@@ -112,7 +115,11 @@ describe('compiler: template ref transform', () => {
     ])
     expect(code).toMatchSnapshot()
     expect(code).contains('const _setTemplateRef = _createTemplateRefSetter()')
-    expect(code).contains('_setTemplateRef(n0, bar => _ctx.foo = bar, r0)')
+    expect(code).contains(`_setTemplateRef(n0, bar => {
+        _foo.value = bar
+        ;({ baz: _ctx.baz } = bar)
+        console.log(_foo.value, _ctx.baz)
+      }, r0)`)
   })
 
   test('ref + v-if', () => {
