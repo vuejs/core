@@ -575,3 +575,7 @@ export {
  * @internal
  */
 export { devtoolsComponentAdded } from './devtools'
+/**
+ * @internal
+ */
+export { createInternalObject } from './internalObject'
