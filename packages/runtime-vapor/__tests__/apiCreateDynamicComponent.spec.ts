@@ -3,6 +3,7 @@ import { nextTick, resolveDynamicComponent } from '@vue/runtime-dom'
 import {
   createComponentWithFallback,
   createDynamicComponent,
+  defineVaporComponent,
   renderEffect,
   setHtml,
   setInsertionState,
@@ -78,5 +79,35 @@ describe('api: createDynamicComponent', () => {
 
     mount()
     expect(html()).toBe('<div><button>hi</button></div>')
+  })
+
+  test('switch dynamic component children', async () => {
+    const CompA = defineVaporComponent({
+      setup() {
+        return template('<div>A</div>')()
+      },
+    })
+    const CompB = defineVaporComponent({
+      setup() {
+        return template('<div>B</div>')()
+      },
+    })
+
+    const current = shallowRef(CompA)
+    const { html } = define({
+      setup() {
+        const t1 = template('<div></div>')
+        const n2 = t1() as any
+        setInsertionState(n2)
+        createDynamicComponent(() => current.value)
+        return n2
+      },
+    }).render()
+
+    expect(html()).toBe('<div><div>A</div><!--dynamic-component--></div>')
+
+    current.value = CompB
+    await nextTick()
+    expect(html()).toBe('<div><div>B</div><!--dynamic-component--></div>')
   })
 })
