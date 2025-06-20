@@ -13,6 +13,26 @@ export function render(_ctx) {
 }"
 `;
 
+exports[`compiler: template ref transform > function ref 1`] = `
+"import { createTemplateRefSetter as _createTemplateRefSetter, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<div></div>", true)
+
+export function render(_ctx) {
+  const _setTemplateRef = _createTemplateRefSetter()
+  const n0 = t0()
+  let r0
+  _renderEffect(() => {
+    const _foo = _ctx.foo
+    r0 = _setTemplateRef(n0, bar => {
+        _foo.value = bar
+        ;({ baz: _ctx.baz } = bar)
+        console.log(_foo.value, _ctx.baz)
+      }, r0)
+  })
+  return n0
+}"
+`;
+
 exports[`compiler: template ref transform > ref + v-for 1`] = `
 "import { createTemplateRefSetter as _createTemplateRefSetter, createFor as _createFor, template as _template } from 'vue';
 const t0 = _template("<div></div>", true)

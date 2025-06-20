@@ -219,7 +219,7 @@ describe('renderer: VaporTeleport', () => {
       mount(root)
 
       expect(root.innerHTML).toBe(
-        '<div><!--teleport--><div>teleported</div><div>root</div></div>',
+        '<div><div>teleported</div><!--teleport--><div>root</div></div>',
       )
       expect(target.innerHTML).toBe('')
 
@@ -241,7 +241,7 @@ describe('renderer: VaporTeleport', () => {
       })
 
       expect(root.innerHTML).toBe(
-        '<div><!--teleport--><div>teleported</div><div>root 2</div></div>',
+        '<div><div>teleported</div><!--teleport--><div>root 2</div></div>',
       )
       expect(target.innerHTML).toBe('')
 
@@ -820,6 +820,7 @@ function runSharedTests(deferMode: boolean): void {
             default: () => child1.value,
           },
         )
+        setInsertionState(n0 as any)
         createComponent(
           VaporTeleport,
           {

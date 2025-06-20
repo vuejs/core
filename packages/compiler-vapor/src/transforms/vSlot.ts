@@ -8,7 +8,7 @@ import {
   createCompilerError,
   isTemplateNode,
   isVSlot,
-} from '@vue/compiler-core'
+} from '@vue/compiler-dom'
 import type { NodeTransform, TransformContext } from '../transform'
 import { newBlock } from './utils'
 import {
@@ -24,6 +24,7 @@ import {
   type VaporDirectiveNode,
 } from '../ir'
 import { findDir, resolveExpression } from '../utils'
+import { markNonTemplate } from './transformText'
 
 export const transformVSlot: NodeTransform = (node, context) => {
   if (node.type !== NodeTypes.ELEMENT) return
@@ -66,11 +67,21 @@ function transformComponentSlot(
 ) {
   const { children } = node
   const arg = dir && dir.arg
-  const nonSlotTemplateChildren = children.filter(
-    n =>
-      isNonWhitespaceContent(node) &&
-      !(n.type === NodeTypes.ELEMENT && n.props.some(isVSlot)),
-  )
+
+  // whitespace: 'preserve'
+  const emptyTextNodes: TemplateChildNode[] = []
+  const nonSlotTemplateChildren = children.filter(n => {
+    if (isNonWhitespaceContent(n)) {
+      return !(n.type === NodeTypes.ELEMENT && n.props.some(isVSlot))
+    } else {
+      emptyTextNodes.push(n)
+    }
+  })
+  if (!nonSlotTemplateChildren.length) {
+    emptyTextNodes.forEach(n => {
+      markNonTemplate(n, context)
+    })
+  }
 
   const [block, onExit] = createSlotBlock(node, dir, context)
 

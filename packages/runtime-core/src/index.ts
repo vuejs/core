@@ -565,3 +565,7 @@ export {
   isTeleportDisabled,
   isTeleportDeferred,
 } from './components/Teleport'
+/**
+ * @internal
+ */
+export { createInternalObject } from './internalObject'
