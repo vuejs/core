@@ -49,7 +49,7 @@ export function genCreateComponent(
   const { helper } = context
 
   const tag = genTag()
-  const { root, props, slots, once } = operation
+  const { root, props, slots, once, scopeId } = operation
   const rawSlots = genRawSlots(slots, context)
   const [ids, handlers] = processInlineHandlers(props, context)
   const rawProps = context.withId(() => genRawProps(props, context), ids)
@@ -80,6 +80,7 @@ export function genCreateComponent(
       rawSlots,
       root ? 'true' : false,
       once && 'true',
+      scopeId && JSON.stringify(scopeId),
     ),
     ...genDirectivesForElement(operation.id, context),
   ]

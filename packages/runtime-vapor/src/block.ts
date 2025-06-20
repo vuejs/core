@@ -1,7 +1,6 @@
 import { isArray } from '@vue/shared'
 import {
   type VaporComponentInstance,
-  currentInstance,
   isVaporComponent,
   mountComponent,
   unmountComponent,
@@ -11,11 +10,9 @@ import { EffectScope, pauseTracking, resetTracking } from '@vue/reactivity'
 import {
   currentHydrationNode,
   isComment,
-  isHydrating,
   locateHydrationNode,
   locateVaporFragmentAnchor,
 } from './dom/hydration'
-import { queuePostFlushCb } from '@vue/runtime-dom'
 import {
   type TransitionHooks,
   type TransitionProps,
@@ -32,6 +29,8 @@ export interface TransitionOptions {
   $key?: any
   $transition?: VaporTransitionHooks
 }
+import { isHydrating } from './dom/hydration'
+import { getInheritedScopeIds } from '@vue/runtime-dom'
 
 export interface VaporTransitionHooks extends TransitionHooks {
   state: TransitionState
@@ -73,6 +72,12 @@ export class DynamicFragment extends VaporFragment {
   anchor!: Node
   scope: EffectScope | undefined
   current?: BlockFn
+  fallback?: BlockFn
+  /**
+   * slot only
+   * indicates forwarded slot
+   */
+  forwarded?: boolean
 
   constructor(anchorLabel?: string) {
     super([])
@@ -290,56 +295,40 @@ export function normalizeBlock(block: Block): Node[] {
   return nodes
 }
 
-export function setScopeId(block: Block, scopeId?: string): void {
-  if (block instanceof Node) {
-    if (scopeId && block instanceof Element) {
-      block.setAttribute(scopeId, '')
-    }
+export function setScopeId(block: Block, scopeId: string): void {
+  if (block instanceof Element) {
+    block.setAttribute(scopeId, '')
   } else if (isVaporComponent(block)) {
-    setComponentScopeId(block, scopeId, true)
+    setScopeId(block.block, scopeId)
   } else if (isArray(block)) {
     for (const b of block) {
       setScopeId(b, scopeId)
     }
-  } else {
+  } else if (isFragment(block)) {
     setScopeId(block.nodes, scopeId)
   }
 }
 
-export function setComponentScopeId(
-  instance: VaporComponentInstance,
-  scopeId: string | undefined = currentInstance
-    ? currentInstance.type.__scopeId
-    : undefined,
-  immediate: boolean = false,
-): void {
-  function doSet() {
-    if (scopeId) {
-      setScopeId(instance.block, scopeId)
-    }
-    // inherit scopeId from parent component. this requires initial rendering
-    // to be finished, due to `parent.block` is null during initial rendering
-    const parent = instance.parent
-    if (parent && parent.type.__scopeId) {
-      // vapor parent
-      if (
-        parent.vapor &&
-        (parent as VaporComponentInstance).block === instance
-      ) {
-        setScopeId(instance.block, parent.type.__scopeId)
-      }
-      // vdom parent
-      else if (
-        parent.subTree &&
-        (parent.subTree.component as any) === instance
-      ) {
-        setScopeId(instance.block, parent.vnode!.scopeId!)
-      }
-    }
+export function setComponentScopeId(instance: VaporComponentInstance): void {
+  const parent = instance.parent
+  if (!parent) return
+  if (isArray(instance.block) && instance.block.length > 1) return
+
+  const scopeId = parent.type.__scopeId
+  if (scopeId) {
+    setScopeId(instance.block, scopeId)
   }
-  if (immediate) {
-    doSet()
-  } else {
-    queuePostFlushCb(doSet)
+
+  // inherit scopeId from vdom parent
+  if (
+    parent.subTree &&
+    (parent.subTree.component as any) === instance &&
+    parent.vnode!.scopeId
+  ) {
+    setScopeId(instance.block, parent.vnode!.scopeId)
+    const scopeIds = getInheritedScopeIds(parent.vnode!, parent.parent)
+    for (const id of scopeIds) {
+      setScopeId(instance.block, id)
+    }
   }
 }

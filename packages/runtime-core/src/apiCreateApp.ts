@@ -192,7 +192,12 @@ export interface VaporInteropInterface {
   ): void
   hydrate(node: Node, fn: () => void): void
 
-  vdomMount: (component: ConcreteComponent, props?: any, slots?: any) => any
+  vdomMount: (
+    component: ConcreteComponent,
+    props?: any,
+    slots?: any,
+    scopeId?: string,
+  ) => any
   vdomUnmount: UnmountComponentFn
   vdomSlot: (
     slots: any,

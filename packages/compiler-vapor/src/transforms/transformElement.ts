@@ -159,6 +159,7 @@ function transformComponentElement(
     root: singleRoot && !context.inVFor,
     slots: [...context.slots],
     once: context.inVOnce,
+    scopeId: context.inSlot ? context.options.scopeId : undefined,
     dynamic: dynamicComponent,
   }
   context.slots = []

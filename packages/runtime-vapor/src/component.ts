@@ -147,6 +147,8 @@ export function createComponent(
   rawProps?: LooseRawProps | null,
   rawSlots?: LooseRawSlots | null,
   isSingleRoot?: boolean,
+  once?: boolean, // TODO once support
+  scopeId?: string,
   appContext: GenericAppContext = (currentInstance &&
     currentInstance.appContext) ||
     emptyContext,
@@ -165,6 +167,7 @@ export function createComponent(
       component as any,
       rawProps,
       rawSlots,
+      scopeId,
     )
 
     // `frag.insert` handles both hydration and mounting
@@ -284,10 +287,11 @@ export function createComponent(
 
   onScopeDispose(() => unmountComponent(instance), true)
 
+  if (scopeId) setScopeId(instance.block, scopeId)
+
   if (!isHydrating && _insertionParent) {
     mountComponent(instance, _insertionParent, _insertionAnchor)
   }
-
   return instance
 }
 
@@ -489,10 +493,20 @@ export function createComponentWithFallback(
   rawProps?: LooseRawProps | null,
   rawSlots?: LooseRawSlots | null,
   isSingleRoot?: boolean,
+  once?: boolean,
+  scopeId?: string,
   appContext?: GenericAppContext,
 ): HTMLElement | VaporComponentInstance {
   if (!isString(comp)) {
-    return createComponent(comp, rawProps, rawSlots, isSingleRoot, appContext)
+    return createComponent(
+      comp,
+      rawProps,
+      rawSlots,
+      isSingleRoot,
+      once,
+      scopeId,
+      appContext,
+    )
   }
 
   const _insertionParent = insertionParent
@@ -507,7 +521,9 @@ export function createComponentWithFallback(
   // mark single root
   ;(el as any).$root = isSingleRoot
 
-  setScopeId(el, currentInstance ? currentInstance.type.__scopeId : undefined)
+  scopeId = scopeId || currentInstance!.type.__scopeId
+  if (scopeId) setScopeId(el, scopeId)
+
   if (rawProps) {
     renderEffect(() => {
       setDynamicProps(el, [resolveDynamicProps(rawProps as RawProps)])

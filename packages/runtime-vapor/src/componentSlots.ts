@@ -13,6 +13,7 @@ import {
   type VaporFragment,
   insert,
   isFragment,
+  setScopeId,
 } from './block'
 import { rawPropsProxyHandlers } from './componentProps'
 import { currentInstance, isRef } from '@vue/runtime-dom'
@@ -197,6 +198,12 @@ export function createSlot(
     }
   }
 
+  if (i) fragment.forwarded = true
+  if (i || !hasForwardedSlot(fragment.nodes)) {
+    const scopeId = instance!.type.__scopeId
+    if (scopeId) setScopeId(fragment, `${scopeId}-s`)
+  }
+
   if (
     _insertionParent &&
     (!isHydrating ||
@@ -207,6 +214,18 @@ export function createSlot(
   }
 
   return fragment
+}
+
+function isForwardedSlot(block: Block): block is DynamicFragment {
+  return block instanceof DynamicFragment && !!block.forwarded
+}
+
+function hasForwardedSlot(block: Block): block is DynamicFragment {
+  if (isArray(block)) {
+    return block.some(isForwardedSlot)
+  } else {
+    return isForwardedSlot(block)
+  }
 }
 
 function ensureVaporSlotFallback(

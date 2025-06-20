@@ -215,6 +215,7 @@ function createVDOMComponent(
   component: ConcreteComponent,
   rawProps?: LooseRawProps | null,
   rawSlots?: LooseRawSlots | null,
+  scopeId?: string,
 ): VaporFragment {
   const frag = new VaporFragment([])
   const vnode = createVNode(
