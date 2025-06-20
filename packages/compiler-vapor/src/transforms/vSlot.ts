@@ -8,7 +8,7 @@ import {
   createCompilerError,
   isTemplateNode,
   isVSlot,
-} from '@vue/compiler-core'
+} from '@vue/compiler-dom'
 import type { NodeTransform, TransformContext } from '../transform'
 import { newBlock } from './utils'
 import {

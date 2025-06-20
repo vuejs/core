@@ -10,7 +10,7 @@ import {
   transformVOnce,
   transformVText,
 } from '../../src'
-import { NodeTypes } from '@vue/compiler-core'
+import { NodeTypes } from '@vue/compiler-dom'
 
 const compileWithVIf = makeCompile({
   nodeTransforms: [

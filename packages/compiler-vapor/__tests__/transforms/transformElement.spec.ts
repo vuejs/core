@@ -13,7 +13,7 @@ import {
   type BindingMetadata,
   BindingTypes,
   NodeTypes,
-} from '@vue/compiler-core'
+} from '@vue/compiler-dom'
 
 const compileWithElementTransform = makeCompile({
   nodeTransforms: [
