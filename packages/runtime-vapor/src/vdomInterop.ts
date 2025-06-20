@@ -138,16 +138,10 @@ const vaporInteropImpl: Omit<
   slot(n1: VNode, n2: VNode, container, anchor) {
     if (!n1) {
       // mount
-      const selfAnchor = (n2.el = n2.anchor = createTextNode())
-      insert(selfAnchor, container, anchor)
+      let selfAnchor: Node | undefined
       const { slot, fallback } = n2.vs!
       const propsRef = (n2.vs!.ref = shallowRef(n2.props))
       const slotBlock = slot(new Proxy(propsRef, vaporSlotPropsProxyHandler))
-      // TODO fallback for slot with v-if content
-      // fallback is a vnode slot function here, and slotBlock, if a DynamicFragment,
-      // expects a Vapor BlockFn as fallback
-      // fallback
-
       // forwarded vdom slot without its own fallback, use the fallback provided by
       // the slot outlet
       if (slotBlock instanceof DynamicFragment) {
@@ -157,11 +151,15 @@ const vaporInteropImpl: Omit<
           ensureVDOMSlotFallback(nodes, fallback)
           nodes = nodes.nodes
         }
+        // use fragment's anchor when possible
+        selfAnchor = slotBlock.anchor
       } else if (isFragment(slotBlock)) {
         ensureVDOMSlotFallback(slotBlock, fallback)
+        selfAnchor = slotBlock.anchor!
       }
 
-      // TODO use fragment's anchor as selfAnchor?
+      if (!selfAnchor) selfAnchor = createTextNode()
+      insert((n2.el = n2.anchor = selfAnchor), container, anchor)
       insert((n2.vb = slotBlock), container, selfAnchor)
     } else {
       // update

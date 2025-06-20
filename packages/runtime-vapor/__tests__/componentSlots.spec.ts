@@ -796,7 +796,7 @@ describe('component: slots', () => {
 
         show.value = false
         await nextTick()
-        expect(root.innerHTML).toBe('<!--slot--><div>fallback</div>')
+        expect(root.innerHTML).toBe('<div>fallback</div><!--slot-->')
       })
 
       test('vdom slot > vapor forwarded slot(with fallback) > vapor slot', async () => {
@@ -820,7 +820,7 @@ describe('component: slots', () => {
 
         show.value = false
         await nextTick()
-        expect(root.innerHTML).toBe('<!--slot--><div>forwarded fallback</div>')
+        expect(root.innerHTML).toBe('<div>forwarded fallback</div><!--slot-->')
       })
 
       test('vdom slot > vapor forwarded slot > vdom slot', async () => {
@@ -1083,11 +1083,11 @@ describe('component: slots', () => {
 
         show.value = false
         await nextTick()
-        expect(root.innerHTML).toBe('<!--slot--><!--slot--><div>fallback</div>')
+        expect(root.innerHTML).toBe('<div>fallback</div><!--slot--><!--slot-->')
 
         show.value = true
         await nextTick()
-        expect(root.innerHTML).toBe('<!--slot--><!--slot--><span>bar</span>')
+        expect(root.innerHTML).toBe('<span>bar</span><!--slot--><!--slot-->')
       })
 
       test('vdom slot > vapor forwarded slot (multiple) > vdom forwarded slot(with fallback) > vdom slot', async () => {
@@ -1116,12 +1116,12 @@ describe('component: slots', () => {
         show.value = false
         await nextTick()
         expect(root.innerHTML).toBe(
-          '<!--slot--><!--slot--><div>vdom fallback</div>',
+          '<div>vdom fallback</div><!--slot--><!--slot-->',
         )
 
         show.value = true
         await nextTick()
-        expect(root.innerHTML).toBe('<!--slot--><!--slot--><span>bar</span>')
+        expect(root.innerHTML).toBe('<span>bar</span><!--slot--><!--slot-->')
       })
 
       test('vdom slot > vdom forwarded slot > vapor slot', async () => {
@@ -1168,11 +1168,11 @@ describe('component: slots', () => {
 
         show.value = false
         await nextTick()
-        expect(root.innerHTML).toBe('<!--slot--><div>fallback</div>')
+        expect(root.innerHTML).toBe('<div>fallback</div><!--slot-->')
 
         show.value = true
         await nextTick()
-        expect(root.innerHTML).toBe('<!--slot--><span>bar</span>')
+        expect(root.innerHTML).toBe('<span>bar</span><!--slot-->')
       })
 
       test('vdom slot > vdom forwarded slot (multiple) > vapor forwarded slot > vdom slot', async () => {
@@ -1197,11 +1197,11 @@ describe('component: slots', () => {
 
         show.value = false
         await nextTick()
-        expect(root.innerHTML).toBe('<!--slot--><div>fallback</div>')
+        expect(root.innerHTML).toBe('<div>fallback</div><!--slot-->')
 
         show.value = true
         await nextTick()
-        expect(root.innerHTML).toBe('<!--slot--><span>bar</span>')
+        expect(root.innerHTML).toBe('<span>bar</span><!--slot-->')
       })
 
       test('vdom slot > vdom forwarded slot (multiple) > vapor forwarded slot(with fallback) > vdom slot', async () => {
@@ -1229,11 +1229,11 @@ describe('component: slots', () => {
 
         show.value = false
         await nextTick()
-        expect(root.innerHTML).toBe('<!--slot--><div>vapor fallback</div>')
+        expect(root.innerHTML).toBe('<div>vapor fallback</div><!--slot-->')
 
         show.value = true
         await nextTick()
-        expect(root.innerHTML).toBe('<!--slot--><span>bar</span>')
+        expect(root.innerHTML).toBe('<span>bar</span><!--slot-->')
       })
 
       test('vdom slot > vapor forwarded slot > vapor forwarded slot > vdom slot', async () => {
@@ -1257,11 +1257,11 @@ describe('component: slots', () => {
 
         show.value = false
         await nextTick()
-        expect(root.innerHTML).toBe('<!--slot--><div>fallback</div>')
+        expect(root.innerHTML).toBe('<div>fallback</div><!--slot-->')
 
         show.value = true
         await nextTick()
-        expect(root.innerHTML).toBe('<!--slot--><span>bar</span>')
+        expect(root.innerHTML).toBe('<span>bar</span><!--slot-->')
       })
 
       test('vdom slot > vapor forwarded slot(with fallback) > vapor forwarded slot > vdom slot', async () => {
@@ -1286,11 +1286,11 @@ describe('component: slots', () => {
 
         show.value = false
         await nextTick()
-        expect(root.innerHTML).toBe('<!--slot--><div>vapor1 fallback</div>')
+        expect(root.innerHTML).toBe('<div>vapor1 fallback</div><!--slot-->')
 
         show.value = true
         await nextTick()
-        expect(root.innerHTML).toBe('<!--slot--><span>bar</span>')
+        expect(root.innerHTML).toBe('<span>bar</span><!--slot-->')
       })
 
       test('vdom slot > vapor forwarded slot > vapor forwarded slot(with fallback) > vdom slot', async () => {
@@ -1317,11 +1317,11 @@ describe('component: slots', () => {
 
         show.value = false
         await nextTick()
-        expect(root.innerHTML).toBe('<!--slot--><div>vapor2 fallback</div>')
+        expect(root.innerHTML).toBe('<div>vapor2 fallback</div><!--slot-->')
 
         show.value = true
         await nextTick()
-        expect(root.innerHTML).toBe('<!--slot--><span>bar</span>')
+        expect(root.innerHTML).toBe('<span>bar</span><!--slot-->')
       })
 
       test('vdom slot > vapor forwarded slot > vapor forwarded slot > vapor slot', async () => {
@@ -1344,11 +1344,11 @@ describe('component: slots', () => {
 
         show.value = false
         await nextTick()
-        expect(root.innerHTML).toBe('<!--slot--><!--slot--><div>fallback</div>')
+        expect(root.innerHTML).toBe('<div>fallback</div><!--slot--><!--slot-->')
 
         show.value = true
         await nextTick()
-        expect(root.innerHTML).toBe('<!--slot--><!--slot--><span>bar</span>')
+        expect(root.innerHTML).toBe('<span>bar</span><!--slot--><!--slot-->')
       })
 
       test('vdom slot > vapor forwarded slot(with fallback) > vapor forwarded slot(with fallback) > vdom slot', async () => {
@@ -1376,11 +1376,11 @@ describe('component: slots', () => {
 
         show.value = false
         await nextTick()
-        expect(root.innerHTML).toBe('<!--slot--><div>vapor1 fallback</div>')
+        expect(root.innerHTML).toBe('<div>vapor1 fallback</div><!--slot-->')
 
         show.value = true
         await nextTick()
-        expect(root.innerHTML).toBe('<!--slot--><span>bar</span>')
+        expect(root.innerHTML).toBe('<span>bar</span><!--slot-->')
       })
 
       test('vdom slot > vapor forwarded slot(with fallback) > vapor forwarded slot(with fallback) > vapor slot', async () => {
@@ -1409,12 +1409,12 @@ describe('component: slots', () => {
         show.value = false
         await nextTick()
         expect(root.innerHTML).toBe(
-          '<!--slot--><!--slot--><div>vapor1 fallback</div>',
+          '<div>vapor1 fallback</div><!--slot--><!--slot-->',
         )
 
         show.value = true
         await nextTick()
-        expect(root.innerHTML).toBe('<!--slot--><!--slot--><span>bar</span>')
+        expect(root.innerHTML).toBe('<span>bar</span><!--slot--><!--slot-->')
       })
 
       test('vdom slot > vdom forwarded slot(with fallback) > vdom forwarded slot(with fallback) > vapor slot', async () => {

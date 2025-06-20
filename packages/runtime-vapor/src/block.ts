@@ -216,13 +216,16 @@ export function insert(
       insert(b, parent, anchor)
     }
   } else {
+    if (block.anchor) {
+      insert(block.anchor, parent, anchor)
+      anchor = block.anchor
+    }
     // fragment
     if (block.insert) {
       block.insert(parent, anchor, (block as TransitionBlock).$transition)
     } else {
       insert(block.nodes, parent, anchor, parentSuspense)
     }
-    if (block.anchor) insert(block.anchor, parent, anchor)
   }
 }
 
