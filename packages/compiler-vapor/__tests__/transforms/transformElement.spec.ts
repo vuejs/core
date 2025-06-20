@@ -12,7 +12,7 @@ import {
   type BindingMetadata,
   BindingTypes,
   NodeTypes,
-} from '@vue/compiler-core'
+} from '@vue/compiler-dom'
 
 const compileWithElementTransform = makeCompile({
   nodeTransforms: [transformElement, transformChildren, transformText],
@@ -875,6 +875,78 @@ describe('compiler: element transform', () => {
           key: { content: 'baz' },
           values: [{ content: 'qux' }],
         },
+      ],
+    })
+  })
+
+  test('component event with keys modifier', () => {
+    const { code, ir } = compileWithElementTransform(
+      `<Foo @keyup.enter="bar" />`,
+    )
+    expect(code).toMatchSnapshot()
+    expect(ir.block.dynamic.children[0].operation).toMatchObject({
+      type: IRNodeTypes.CREATE_COMPONENT_NODE,
+      tag: 'Foo',
+      props: [
+        [
+          {
+            key: { content: 'keyup' },
+            handler: true,
+            handlerModifiers: {
+              keys: ['enter'],
+              nonKeys: [],
+              options: [],
+            },
+          },
+        ],
+      ],
+    })
+  })
+
+  test('component event with nonKeys modifier', () => {
+    const { code, ir } = compileWithElementTransform(
+      `<Foo @foo.stop.prevent="bar" />`,
+    )
+    expect(code).toMatchSnapshot()
+    expect(ir.block.dynamic.children[0].operation).toMatchObject({
+      type: IRNodeTypes.CREATE_COMPONENT_NODE,
+      tag: 'Foo',
+      props: [
+        [
+          {
+            key: { content: 'foo' },
+            handler: true,
+            handlerModifiers: {
+              keys: [],
+              nonKeys: ['stop', 'prevent'],
+              options: [],
+            },
+          },
+        ],
+      ],
+    })
+  })
+
+  test('component event with multiple modifiers and event options', () => {
+    const { code, ir } = compileWithElementTransform(
+      `<Foo @foo.enter.stop.prevent.capture.once="bar" />`,
+    )
+    expect(code).toMatchSnapshot()
+    expect(ir.block.dynamic.children[0].operation).toMatchObject({
+      type: IRNodeTypes.CREATE_COMPONENT_NODE,
+      tag: 'Foo',
+      props: [
+        [
+          {
+            key: { content: 'foo' },
+            handler: true,
+            handlerModifiers: {
+              keys: ['enter'],
+              nonKeys: ['stop', 'prevent'],
+              options: ['capture', 'once'],
+            },
+          },
+        ],
       ],
     })
   })
