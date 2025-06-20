@@ -16,6 +16,8 @@ export function createDynamicComponent(
   rawProps?: RawProps | null,
   rawSlots?: RawSlots | null,
   isSingleRoot?: boolean,
+  once?: boolean,
+  scopeId?: string,
 ): VaporFragment {
   const _insertionParent = insertionParent
   const _insertionAnchor = insertionAnchor
@@ -38,6 +40,8 @@ export function createDynamicComponent(
           rawProps,
           rawSlots,
           isSingleRoot,
+          once,
+          scopeId,
         ),
       value,
     )
