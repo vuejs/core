@@ -59,9 +59,7 @@ export class DynamicFragment extends VaporFragment {
     if (render) {
       this.scope = new EffectScope()
       this.nodes = this.scope.run(render) || []
-      if (parent) {
-        insert(this.nodes, parent, this.anchor)
-      }
+      if (parent) insert(this.nodes, parent, this.anchor)
     } else {
       this.scope = undefined
       this.nodes = []
