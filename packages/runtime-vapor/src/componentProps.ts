@@ -186,7 +186,7 @@ export function getAttrFromRawProps(rawProps: RawProps, key: string): unknown {
       source = dynamicSources[i]
       isDynamic = isFunction(source)
       source = isDynamic ? (source as Function)() : source
-      if (hasOwn(source, key)) {
+      if (source && hasOwn(source, key)) {
         const value = isDynamic ? source[key] : source[key]()
         if (merged) {
           merged.push(value)
