@@ -560,4 +560,12 @@ export { initFeatureFlags } from './featureFlags'
 /**
  * @internal
  */
+export {
+  resolveTarget as resolveTeleportTarget,
+  isTeleportDisabled,
+  isTeleportDeferred,
+} from './components/Teleport'
+/**
+ * @internal
+ */
 export { createInternalObject } from './internalObject'
