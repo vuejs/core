@@ -14,10 +14,13 @@ import {
   currentInstance,
   ensureRenderer,
   isEmitListener,
+  isKeepAlive,
   onScopeDispose,
   renderSlot,
   shallowRef,
   simpleSetCurrentInstance,
+  activate as vdomActivate,
+  deactivate as vdomDeactivate,
 } from '@vue/runtime-dom'
 import {
   type LooseRawProps,
@@ -29,12 +32,24 @@ import {
   unmountComponent,
 } from './component'
 import { type Block, VaporFragment, insert, remove } from './block'
-import { EMPTY_OBJ, extend, isFunction } from '@vue/shared'
+import {
+  EMPTY_OBJ,
+  ShapeFlags,
+  extend,
+  isFunction,
+  isReservedProp,
+} from '@vue/shared'
 import { type RawProps, rawPropsProxyHandlers } from './componentProps'
 import type { RawSlots, VaporSlot } from './componentSlots'
 import { renderEffect } from './renderEffect'
 import { createTextNode } from './dom/node'
 import { optimizePropertyLookup } from './dom/prop'
+import {
+  type KeepAliveInstance,
+  activate,
+  deactivate,
+} from './components/KeepAlive'
+import type { KeepAliveContext } from 'packages/runtime-core/src/components/KeepAlive'
 
 // mounting vapor components and slots in vdom
 const vaporInteropImpl: Omit<
@@ -47,7 +62,15 @@ const vaporInteropImpl: Omit<
     const prev = currentInstance
     simpleSetCurrentInstance(parentComponent)
 
-    const propsRef = shallowRef(vnode.props)
+    // filter out reserved props
+    const props: VNode['props'] = {}
+    for (const key in vnode.props) {
+      if (!isReservedProp(key)) {
+        props[key] = vnode.props[key]
+      }
+    }
+
+    const propsRef = shallowRef(props)
     const slotsRef = shallowRef(vnode.children)
 
     // @ts-expect-error
@@ -62,6 +85,8 @@ const vaporInteropImpl: Omit<
     ))
     instance.rawPropsRef = propsRef
     instance.rawSlotsRef = slotsRef
+    // copy the shape flag from the vdom component if inside a keep-alive
+    if (isKeepAlive(parentComponent)) instance.shapeFlag = vnode.shapeFlag
     mountComponent(instance, container, selfAnchor)
     simpleSetCurrentInstance(prev)
     return instance
@@ -114,6 +139,23 @@ const vaporInteropImpl: Omit<
   move(vnode, container, anchor) {
     insert(vnode.vb || (vnode.component as any), container, anchor)
     insert(vnode.anchor as any, container, anchor)
+  },
+
+  activate(vnode, container, anchor, parentComponent) {
+    const cached = (parentComponent.ctx as KeepAliveContext).getCachedComponent(
+      vnode,
+    )
+
+    vnode.el = cached.el
+    vnode.component = cached.component
+    vnode.anchor = cached.anchor
+    activate(vnode.component as any, container, anchor)
+    insert(vnode.anchor as any, container, anchor)
+  },
+
+  deactivate(vnode, container) {
+    deactivate(vnode.component as any, container)
+    insert(vnode.anchor as any, container)
   },
 }
 
@@ -181,10 +223,33 @@ function createVDOMComponent(
   let isMounted = false
   const parentInstance = currentInstance as VaporComponentInstance
   const unmount = (parentNode?: ParentNode) => {
+    if (vnode.shapeFlag & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE) {
+      vdomDeactivate(
+        vnode,
+        (parentInstance as KeepAliveInstance).getStorageContainer(),
+        internals,
+        parentInstance as any,
+        null,
+      )
+      return
+    }
     internals.umt(vnode.component!, null, !!parentNode)
   }
 
   frag.insert = (parentNode, anchor) => {
+    if (vnode.shapeFlag & ShapeFlags.COMPONENT_KEPT_ALIVE) {
+      vdomActivate(
+        vnode,
+        parentNode,
+        anchor,
+        internals,
+        parentInstance as any,
+        null,
+        undefined,
+        false,
+      )
+      return
+    }
     if (!isMounted) {
       internals.mt(
         vnode,
@@ -210,6 +275,7 @@ function createVDOMComponent(
   }
 
   frag.remove = unmount
+  frag.nodes = vnode as any
 
   return frag
 }
