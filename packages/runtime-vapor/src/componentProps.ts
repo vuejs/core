@@ -21,6 +21,7 @@ import {
   validateProps,
   warn,
 } from '@vue/runtime-dom'
+import { ReactiveFlags } from '@vue/reactivity'
 import { normalizeEmitsOptions } from './componentEmits'
 import { renderEffect } from './renderEffect'
 import { pauseTracking, resetTracking } from '@vue/reactivity'
@@ -65,6 +66,9 @@ export function getPropsProxyHandlers(
     : YES
 
   const getProp = (instance: VaporComponentInstance, key: string | symbol) => {
+    // this enables direct watching of props and prevents `Invalid watch source` DEV warnings.
+    if (key === ReactiveFlags.IS_REACTIVE) return true
+
     if (!isProp(key)) return
     const rawProps = instance.rawProps
     const dynamicSources = rawProps.$

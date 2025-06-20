@@ -123,6 +123,18 @@ export function render(_ctx, $props, $emit, $attrs, $slots) {
 }"
 `;
 
+exports[`v-on > expression with type 1`] = `
+"import { delegateEvents as _delegateEvents, template as _template } from 'vue';
+const t0 = _template("<div></div>", true)
+_delegateEvents("click")
+
+export function render(_ctx, $props, $emit, $attrs, $slots) {
+  const n0 = t0()
+  n0.$evtclick = e => _ctx.handleClick(e)
+  return n0
+}"
+`;
+
 exports[`v-on > function expression w/ prefixIdentifiers: true 1`] = `
 "import { delegateEvents as _delegateEvents, template as _template } from 'vue';
 const t0 = _template("<div></div>", true)
