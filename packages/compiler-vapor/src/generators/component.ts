@@ -34,7 +34,7 @@ import {
   isMemberExpression,
   toValidAssetId,
   walkIdentifiers,
-} from '@vue/compiler-core'
+} from '@vue/compiler-dom'
 import { genEventHandler } from './event'
 import { genDirectiveModifiers, genDirectivesForElement } from './directive'
 import { genBlock } from './block'
@@ -53,6 +53,7 @@ export function genCreateComponent(
   const rawSlots = genRawSlots(slots, context)
   const [ids, handlers] = processInlineHandlers(props, context)
   const rawProps = context.withId(() => genRawProps(props, context), ids)
+
   const inlineHandlers: CodeFragment[] = handlers.reduce<CodeFragment[]>(
     (acc, { name, value }: InlineHandler) => {
       const handler = genEventHandler(context, value, undefined, false)

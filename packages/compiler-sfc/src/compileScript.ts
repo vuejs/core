@@ -175,6 +175,7 @@ export function compileScript(
   const scriptLang = script && script.lang
   const scriptSetupLang = scriptSetup && scriptSetup.lang
   const vapor = sfc.vapor || options.vapor
+  const ssr = options.templateOptions?.ssr
 
   if (!scriptSetup) {
     if (!script) {
@@ -749,7 +750,7 @@ export function compileScript(
   if (
     sfc.cssVars.length &&
     // no need to do this when targeting SSR
-    !options.templateOptions?.ssr
+    !ssr
   ) {
     ctx.helperImports.add(CSS_VARS_HELPER)
     ctx.helperImports.add('unref')
@@ -859,7 +860,7 @@ export function compileScript(
   } else {
     // inline mode
     if (sfc.template && !sfc.template.src) {
-      if (options.templateOptions && options.templateOptions.ssr) {
+      if (ssr) {
         hasInlinedSsrRenderFn = true
       }
       // inline render function mode - we are going to compile the template and
@@ -933,7 +934,7 @@ export function compileScript(
     ctx.s.appendRight(
       endOffset,
       // vapor mode generates its own return when inlined
-      `\n${vapor ? `` : `return `}${returned}\n}\n\n`,
+      `\n${vapor && !ssr ? `` : `return `}${returned}\n}\n\n`,
     )
   }
 
@@ -1119,6 +1120,7 @@ function walkDeclaration(
                 m === userImportAliases['shallowRef'] ||
                 m === userImportAliases['customRef'] ||
                 m === userImportAliases['toRef'] ||
+                m === userImportAliases['useTemplateRef'] ||
                 m === DEFINE_MODEL,
             )
           ) {

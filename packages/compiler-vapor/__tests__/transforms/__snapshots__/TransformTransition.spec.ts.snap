@@ -33,7 +33,7 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: transition > the v-if/else-if/else branches in Transition should ignore comments 1`] = `
-"import { VaporTransition as _VaporTransition, createIf as _createIf, prepend as _prepend, createComponent as _createComponent, template as _template } from 'vue';
+"import { VaporTransition as _VaporTransition, setInsertionState as _setInsertionState, createIf as _createIf, createComponent as _createComponent, template as _template } from 'vue';
 const t0 = _template("<div>hey</div>")
 const t1 = _template("<p></p>")
 const t2 = _template("<div></div>")
@@ -51,6 +51,7 @@ export function render(_ctx) {
         return n5
       }, () => {
         const n14 = t2()
+        _setInsertionState(n14, 0)
         const n9 = _createIf(() => (_ctx.c), () => {
           const n11 = t1()
           return n11
@@ -58,7 +59,6 @@ export function render(_ctx) {
           const n13 = t1()
           return n13
         })
-        _prepend(n14, n9)
         n14.$key = 14
         return n14
       }))

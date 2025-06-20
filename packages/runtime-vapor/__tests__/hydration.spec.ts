@@ -1,165 +1,294 @@
-// import { type SSRContext, renderToString } from '@vue/server-renderer'
-import { createVaporSSRApp, renderEffect, setText, template } from '../src'
+import { createVaporSSRApp, delegateEvents } from '../src'
 import { nextTick, ref } from '@vue/runtime-dom'
+import { compileScript, parse } from '@vue/compiler-sfc'
+import * as runtimeVapor from '../src'
+import * as runtimeDom from '@vue/runtime-dom'
+import * as VueServerRenderer from '@vue/server-renderer'
 
-function mountWithHydration(html: string, setup: () => any) {
-  const container = document.createElement('div')
-  container.innerHTML = html
-  const app = createVaporSSRApp({
-    setup,
-  })
-  app.mount(container)
-  return {
-    container,
+const Vue = { ...runtimeDom, ...runtimeVapor }
+
+function compile(
+  sfc: string,
+  data: runtimeDom.Ref<any>,
+  components: Record<string, any> = {},
+  ssr = false,
+) {
+  if (!sfc.includes(`<script`)) {
+    sfc =
+      `<script vapor>const data = _data; const components = _components;</script>` +
+      sfc
   }
+  const descriptor = parse(sfc).descriptor
+
+  const script = compileScript(descriptor, {
+    id: 'x',
+    isProd: true,
+    inlineTemplate: true,
+    genDefaultAs: '__sfc__',
+    vapor: true,
+    templateOptions: {
+      ssr,
+    },
+  })
+
+  const code =
+    script.content
+      .replace(/\bimport {/g, 'const {')
+      .replace(/ as _/g, ': _')
+      .replace(/} from ['"]vue['"]/g, `} = Vue`)
+      .replace(/} from "vue\/server-renderer"/g, '} = VueServerRenderer') +
+    '\nreturn __sfc__'
+
+  return new Function('Vue', 'VueServerRenderer', '_data', '_components', code)(
+    Vue,
+    VueServerRenderer,
+    data,
+    components,
+  )
 }
 
-// const triggerEvent = (type: string, el: Element) => {
-//   const event = new Event(type)
-//   el.dispatchEvent(event)
-// }
+async function testHydration(
+  code: string,
+  components: Record<string, string> = {},
+) {
+  const data = ref('foo')
+  const ssrComponents: any = {}
+  const clientComponents: any = {}
+  for (const key in components) {
+    clientComponents[key] = compile(components[key], data, clientComponents)
+    ssrComponents[key] = compile(components[key], data, ssrComponents, true)
+  }
 
-describe('SSR hydration', () => {
+  const serverComp = compile(code, data, ssrComponents, true)
+  const html = await VueServerRenderer.renderToString(
+    runtimeDom.createSSRApp(serverComp),
+  )
+  const container = document.createElement('div')
+  document.body.appendChild(container)
+  container.innerHTML = html
+
+  const clientComp = compile(code, data, clientComponents)
+  const app = createVaporSSRApp(clientComp)
+  app.mount(container)
+  return { data, container }
+}
+
+const triggerEvent = (type: string, el: Element) => {
+  const event = new Event(type, { bubbles: true })
+  el.dispatchEvent(event)
+}
+
+describe('Vapor Mode hydration', () => {
+  delegateEvents('click')
+
   beforeEach(() => {
     document.body.innerHTML = ''
   })
 
-  test('text', async () => {
-    const msg = ref('foo')
-    const t = template(' ')
-    const { container } = mountWithHydration('foo', () => {
-      const n = t()
-      renderEffect(() => setText(n as Text, msg.value))
-      return n
-    })
-    expect(container.textContent).toBe('foo')
-    msg.value = 'bar'
+  test('root text', async () => {
+    const { data, container } = await testHydration(`
+      <template>{{ data }}</template>
+    `)
+    expect(container.innerHTML).toMatchInlineSnapshot(`"foo"`)
+
+    data.value = 'bar'
     await nextTick()
-    expect(container.textContent).toBe('bar')
+    expect(container.innerHTML).toMatchInlineSnapshot(`"bar"`)
   })
 
-  test('empty text', async () => {
-    const t0 = template('<div></div>', true)
-    const { container } = mountWithHydration('<div></div>', () => t0())
-    expect(container.innerHTML).toBe('<div></div>')
-    expect(`Hydration children mismatch in <div>`).not.toHaveBeenWarned()
-  })
-
-  test('comment', () => {
-    const t0 = template('<!---->')
-    const { container } = mountWithHydration('<!---->', () => t0())
+  test('root comment', async () => {
+    const { container } = await testHydration(`
+      <template><!----></template>
+    `)
     expect(container.innerHTML).toBe('<!---->')
     expect(`Hydration children mismatch in <div>`).not.toHaveBeenWarned()
   })
 
-  // test('static before text', () => {
-  //   const t0 = template(' A ')
-  //   const t1 = template('<span>foo bar</span>')
-  //   const t2 = template(' ')
-  //   const msg = ref('hello')
-  //   const { container } = mountWithHydration(
-  //     ' A <span>foo bar</span>hello',
-  //     () => {
-  //       const n0 = t0()
-  //       const n1 = t1()
-  //       const n2 = t2()
-  //       const n3 = createTextNode()
-  //       renderEffect(() => setText(n3, toDisplayString(msg.value)))
-  //       return [n0, n1, n2, n3]
-  //     },
-  //   )
-  // })
+  test('root with mixed element and text', async () => {
+    const { container, data } = await testHydration(`
+      <template> A<span>{{ data }}</span>{{ data }}</template>
+    `)
+    expect(container.innerHTML).toMatchInlineSnapshot(
+      `"<!--[--> A<span>foo</span>foo<!--]-->"`,
+    )
 
-  // test('static (multiple elements)', () => {
-  //   const staticContent = '<div></div><span>hello</span>'
-  //   const html = `<div><div>hi</div>` + staticContent + `<div>ho</div></div>`
+    data.value = 'bar'
+    await nextTick()
+    expect(container.innerHTML).toMatchInlineSnapshot(
+      `"<!--[--> A<span>bar</span>bar<!--]-->"`,
+    )
+  })
 
-  //   const n1 = h('div', 'hi')
-  //   const s = createStaticVNode('', 2)
-  //   const n2 = h('div', 'ho')
+  test('empty element', async () => {
+    const { container } = await testHydration(`
+      <template><div/></template>
+    `)
+    expect(container.innerHTML).toBe('<div></div>')
+    expect(`Hydration children mismatch in <div>`).not.toHaveBeenWarned()
+  })
 
-  //   const { container } = mountWithHydration(html, () => h('div', [n1, s, n2]))
+  test('element with binding and text children', async () => {
+    const { container, data } = await testHydration(`
+      <template><div :class="data">{{ data }}</div></template>
+    `)
+    expect(container.innerHTML).toMatchInlineSnapshot(
+      `"<div class="foo">foo</div>"`,
+    )
 
-  //   const div = container.firstChild!
+    data.value = 'bar'
+    await nextTick()
+    expect(container.innerHTML).toMatchInlineSnapshot(
+      `"<div class="bar">bar</div>"`,
+    )
+  })
 
-  //   expect(n1.el).toBe(div.firstChild)
-  //   expect(n2.el).toBe(div.lastChild)
-  //   expect(s.el).toBe(div.childNodes[1])
-  //   expect(s.anchor).toBe(div.childNodes[2])
-  //   expect(s.children).toBe(staticContent)
-  // })
+  test('element with elements children', async () => {
+    const { container } = await testHydration(`
+      <template>
+        <div>
+          <span>{{ data }}</span>
+          <span :class="data" @click="data = 'bar'"/>
+        </div>
+      </template>
+    `)
+    expect(container.innerHTML).toMatchInlineSnapshot(
+      `"<div><span>foo</span><span class="foo"></span></div>"`,
+    )
 
-  // // #6008
-  // test('static (with text node as starting node)', () => {
-  //   const html = ` A <span>foo</span> B`
-  //   const { vnode, container } = mountWithHydration(html, () =>
-  //     createStaticVNode(` A <span>foo</span> B`, 3),
-  //   )
-  //   expect(vnode.el).toBe(container.firstChild)
-  //   expect(vnode.anchor).toBe(container.lastChild)
-  //   expect(`Hydration node mismatch`).not.toHaveBeenWarned()
-  // })
+    // event handler
+    triggerEvent('click', container.querySelector('.foo')!)
 
-  // test('static with content adoption', () => {
-  //   const html = ` A <span>foo</span> B`
-  //   const { vnode, container } = mountWithHydration(html, () =>
-  //     createStaticVNode(``, 3),
-  //   )
-  //   expect(vnode.el).toBe(container.firstChild)
-  //   expect(vnode.anchor).toBe(container.lastChild)
-  //   expect(vnode.children).toBe(html)
-  //   expect(`Hydration node mismatch`).not.toHaveBeenWarned()
-  // })
+    await nextTick()
+    expect(container.innerHTML).toMatchInlineSnapshot(
+      `"<div><span>bar</span><span class="bar"></span></div>"`,
+    )
+  })
 
-  // test('element with text children', async () => {
-  //   const msg = ref('foo')
-  //   const { vnode, container } = mountWithHydration(
-  //     '<div class="foo">foo</div>',
-  //     () => h('div', { class: msg.value }, msg.value),
-  //   )
-  //   expect(vnode.el).toBe(container.firstChild)
-  //   expect(container.firstChild!.textContent).toBe('foo')
-  //   msg.value = 'bar'
-  //   await nextTick()
-  //   expect(container.innerHTML).toBe(`<div class="bar">bar</div>`)
-  // })
+  test('basic component', async () => {
+    const { container, data } = await testHydration(
+      `
+      <template><div><span></span><components.Child/></div></template>
+      `,
+      { Child: `<template>{{ data }}</template>` },
+    )
+    expect(container.innerHTML).toMatchInlineSnapshot(
+      `"<div><span></span>foo</div>"`,
+    )
 
-  // // #7285
-  // test('element with multiple continuous text vnodes', async () => {
-  //   // should no mismatch warning
-  //   const { container } = mountWithHydration('<div>foo0o</div>', () =>
-  //     h('div', ['fo', createTextVNode('o'), 0, 'o']),
-  //   )
-  //   expect(container.textContent).toBe('foo0o')
-  // })
+    data.value = 'bar'
+    await nextTick()
+    expect(container.innerHTML).toMatchInlineSnapshot(
+      `"<div><span></span>bar</div>"`,
+    )
+  })
 
-  // test('element with elements children', async () => {
-  //   const msg = ref('foo')
-  //   const fn = vi.fn()
-  //   const { vnode, container } = mountWithHydration(
-  //     '<div><span>foo</span><span class="foo"></span></div>',
-  //     () =>
-  //       h('div', [
-  //         h('span', msg.value),
-  //         h('span', { class: msg.value, onClick: fn }),
-  //       ]),
-  //   )
-  //   expect(vnode.el).toBe(container.firstChild)
-  //   expect((vnode.children as VNode[])[0].el).toBe(
-  //     container.firstChild!.childNodes[0],
-  //   )
-  //   expect((vnode.children as VNode[])[1].el).toBe(
-  //     container.firstChild!.childNodes[1],
-  //   )
+  test('fragment component', async () => {
+    const { container, data } = await testHydration(
+      `
+      <template><div><span></span><components.Child/></div></template>
+      `,
+      { Child: `<template><div>{{ data }}</div>-{{ data }}-</template>` },
+    )
+    expect(container.innerHTML).toMatchInlineSnapshot(
+      `"<div><span></span><!--[--><div>foo</div>-foo-<!--]--></div>"`,
+    )
 
-  //   // event handler
-  //   triggerEvent('click', vnode.el.querySelector('.foo')!)
-  //   expect(fn).toHaveBeenCalled()
+    data.value = 'bar'
+    await nextTick()
+    expect(container.innerHTML).toMatchInlineSnapshot(
+      `"<div><span></span><!--[--><div>bar</div>-bar-<!--]--></div>"`,
+    )
+  })
 
-  //   msg.value = 'bar'
-  //   await nextTick()
-  //   expect(vnode.el.innerHTML).toBe(`<span>bar</span><span class="bar"></span>`)
-  // })
+  test('fragment component with prepend', async () => {
+    const { container, data } = await testHydration(
+      `
+      <template><div><components.Child/><span></span></div></template>
+      `,
+      { Child: `<template><div>{{ data }}</div>-{{ data }}-</template>` },
+    )
+    expect(container.innerHTML).toMatchInlineSnapshot(
+      `"<div><!--[--><div>foo</div>-foo-<!--]--><span></span></div>"`,
+    )
+
+    data.value = 'bar'
+    await nextTick()
+    expect(container.innerHTML).toMatchInlineSnapshot(
+      `"<div><!--[--><div>bar</div>-bar-<!--]--><span></span></div>"`,
+    )
+  })
+
+  test('nested fragment components', async () => {
+    const { container, data } = await testHydration(
+      `
+      <template><div><components.Parent/><span></span></div></template>
+      `,
+      {
+        Parent: `<template><div/><components.Child/><div/></template>`,
+        Child: `<template><div>{{ data }}</div>-{{ data }}-</template>`,
+      },
+    )
+    expect(container.innerHTML).toMatchInlineSnapshot(
+      `"<div><!--[--><div></div><!--[--><div>foo</div>-foo-<!--]--><div></div><!--]--><span></span></div>"`,
+    )
+
+    data.value = 'bar'
+    await nextTick()
+    expect(container.innerHTML).toMatchInlineSnapshot(
+      `"<div><!--[--><div></div><!--[--><div>bar</div>-bar-<!--]--><div></div><!--]--><span></span></div>"`,
+    )
+  })
+
+  // problem is the <!> placeholder does not exist in SSR output
+  test.todo('component with anchor insertion', async () => {
+    const { container, data } = await testHydration(
+      `
+      <template>
+        <div>
+          <span/>
+          <components.Child/>
+          <span/>
+        </div>
+      </template>
+      `,
+      {
+        Child: `<template>{{ data }}</template>`,
+      },
+    )
+    expect(container.innerHTML).toMatchInlineSnapshot()
+
+    data.value = 'bar'
+    await nextTick()
+    expect(container.innerHTML).toMatchInlineSnapshot()
+  })
+
+  test.todo('consecutive component with anchor insertion', async () => {
+    const { container, data } = await testHydration(
+      `<template>
+        <div>
+          <span/>
+          <components.Child/>
+          <components.Child/>
+          <span/>
+        </div>
+      </template>
+      `,
+      {
+        Child: `<template>{{ data }}</template>`,
+      },
+    )
+    expect(container.innerHTML).toMatchInlineSnapshot()
+
+    data.value = 'bar'
+    await nextTick()
+    expect(container.innerHTML).toMatchInlineSnapshot()
+  })
+
+  test.todo('if')
+
+  test.todo('for')
+
+  test.todo('slots')
 
   // test('element with ref', () => {
   //   const el = ref()
@@ -168,329 +297,6 @@ describe('SSR hydration', () => {
   //   )
   //   expect(vnode.el).toBe(container.firstChild)
   //   expect(el.value).toBe(vnode.el)
-  // })
-
-  // test('Fragment', async () => {
-  //   const msg = ref('foo')
-  //   const fn = vi.fn()
-  //   const { vnode, container } = mountWithHydration(
-  //     '<div><!--[--><span>foo</span><!--[--><span class="foo"></span><!--]--><!--]--></div>',
-  //     () =>
-  //       h('div', [
-  //         [
-  //           h('span', msg.value),
-  //           [h('span', { class: msg.value, onClick: fn })],
-  //         ],
-  //       ]),
-  //   )
-  //   expect(vnode.el).toBe(container.firstChild)
-
-  //   expect(vnode.el.innerHTML).toBe(
-  //     `<!--[--><span>foo</span><!--[--><span class="foo"></span><!--]--><!--]-->`,
-  //   )
-
-  //   // start fragment 1
-  //   const fragment1 = (vnode.children as VNode[])[0]
-  //   expect(fragment1.el).toBe(vnode.el.childNodes[0])
-  //   const fragment1Children = fragment1.children as VNode[]
-
-  //   // first <span>
-  //   expect(fragment1Children[0].el!.tagName).toBe('SPAN')
-  //   expect(fragment1Children[0].el).toBe(vnode.el.childNodes[1])
-
-  //   // start fragment 2
-  //   const fragment2 = fragment1Children[1]
-  //   expect(fragment2.el).toBe(vnode.el.childNodes[2])
-  //   const fragment2Children = fragment2.children as VNode[]
-
-  //   // second <span>
-  //   expect(fragment2Children[0].el!.tagName).toBe('SPAN')
-  //   expect(fragment2Children[0].el).toBe(vnode.el.childNodes[3])
-
-  //   // end fragment 2
-  //   expect(fragment2.anchor).toBe(vnode.el.childNodes[4])
-
-  //   // end fragment 1
-  //   expect(fragment1.anchor).toBe(vnode.el.childNodes[5])
-
-  //   // event handler
-  //   triggerEvent('click', vnode.el.querySelector('.foo')!)
-  //   expect(fn).toHaveBeenCalled()
-
-  //   msg.value = 'bar'
-  //   await nextTick()
-  //   expect(vnode.el.innerHTML).toBe(
-  //     `<!--[--><span>bar</span><!--[--><span class="bar"></span><!--]--><!--]-->`,
-  //   )
-  // })
-
-  // // #7285
-  // test('Fragment (multiple continuous text vnodes)', async () => {
-  //   // should no mismatch warning
-  //   const { container } = mountWithHydration('<!--[-->fooo<!--]-->', () => [
-  //     'fo',
-  //     createTextVNode('o'),
-  //     'o',
-  //   ])
-  //   expect(container.textContent).toBe('fooo')
-  // })
-
-  // test('Teleport', async () => {
-  //   const msg = ref('foo')
-  //   const fn = vi.fn()
-  //   const teleportContainer = document.createElement('div')
-  //   teleportContainer.id = 'teleport'
-  //   teleportContainer.innerHTML = `<!--teleport start anchor--><span>foo</span><span class="foo"></span><!--teleport anchor-->`
-  //   document.body.appendChild(teleportContainer)
-
-  //   const { vnode, container } = mountWithHydration(
-  //     '<!--teleport start--><!--teleport end-->',
-  //     () =>
-  //       h(Teleport, { to: '#teleport' }, [
-  //         h('span', msg.value),
-  //         h('span', { class: msg.value, onClick: fn }),
-  //       ]),
-  //   )
-
-  //   expect(vnode.el).toBe(container.firstChild)
-  //   expect(vnode.anchor).toBe(container.lastChild)
-
-  //   expect(vnode.target).toBe(teleportContainer)
-  //   expect(vnode.targetStart).toBe(teleportContainer.childNodes[0])
-  //   expect((vnode.children as VNode[])[0].el).toBe(
-  //     teleportContainer.childNodes[1],
-  //   )
-  //   expect((vnode.children as VNode[])[1].el).toBe(
-  //     teleportContainer.childNodes[2],
-  //   )
-  //   expect(vnode.targetAnchor).toBe(teleportContainer.childNodes[3])
-
-  //   // event handler
-  //   triggerEvent('click', teleportContainer.querySelector('.foo')!)
-  //   expect(fn).toHaveBeenCalled()
-
-  //   msg.value = 'bar'
-  //   await nextTick()
-  //   expect(teleportContainer.innerHTML).toBe(
-  //     `<!--teleport start anchor--><span>bar</span><span class="bar"></span><!--teleport anchor-->`,
-  //   )
-  // })
-
-  // test('Teleport (multiple + integration)', async () => {
-  //   const msg = ref('foo')
-  //   const fn1 = vi.fn()
-  //   const fn2 = vi.fn()
-
-  //   const Comp = () => [
-  //     h(Teleport, { to: '#teleport2' }, [
-  //       h('span', msg.value),
-  //       h('span', { class: msg.value, onClick: fn1 }),
-  //     ]),
-  //     h(Teleport, { to: '#teleport2' }, [
-  //       h('span', msg.value + '2'),
-  //       h('span', { class: msg.value + '2', onClick: fn2 }),
-  //     ]),
-  //   ]
-
-  //   const teleportContainer = document.createElement('div')
-  //   teleportContainer.id = 'teleport2'
-  //   const ctx: SSRContext = {}
-  //   const mainHtml = await renderToString(h(Comp), ctx)
-  //   expect(mainHtml).toMatchInlineSnapshot(
-  //     `"<!--[--><!--teleport start--><!--teleport end--><!--teleport start--><!--teleport end--><!--]-->"`,
-  //   )
-
-  //   const teleportHtml = ctx.teleports!['#teleport2']
-  //   expect(teleportHtml).toMatchInlineSnapshot(
-  //     `"<!--teleport start anchor--><span>foo</span><span class="foo"></span><!--teleport anchor--><!--teleport start anchor--><span>foo2</span><span class="foo2"></span><!--teleport anchor-->"`,
-  //   )
-
-  //   teleportContainer.innerHTML = teleportHtml
-  //   document.body.appendChild(teleportContainer)
-
-  //   const { vnode, container } = mountWithHydration(mainHtml, Comp)
-  //   expect(vnode.el).toBe(container.firstChild)
-  //   const teleportVnode1 = (vnode.children as VNode[])[0]
-  //   const teleportVnode2 = (vnode.children as VNode[])[1]
-  //   expect(teleportVnode1.el).toBe(container.childNodes[1])
-  //   expect(teleportVnode1.anchor).toBe(container.childNodes[2])
-  //   expect(teleportVnode2.el).toBe(container.childNodes[3])
-  //   expect(teleportVnode2.anchor).toBe(container.childNodes[4])
-
-  //   expect(teleportVnode1.target).toBe(teleportContainer)
-  //   expect(teleportVnode1.targetStart).toBe(teleportContainer.childNodes[0])
-  //   expect((teleportVnode1 as any).children[0].el).toBe(
-  //     teleportContainer.childNodes[1],
-  //   )
-  //   expect(teleportVnode1.targetAnchor).toBe(teleportContainer.childNodes[3])
-
-  //   expect(teleportVnode2.target).toBe(teleportContainer)
-  //   expect(teleportVnode2.targetStart).toBe(teleportContainer.childNodes[4])
-  //   expect((teleportVnode2 as any).children[0].el).toBe(
-  //     teleportContainer.childNodes[5],
-  //   )
-  //   expect(teleportVnode2.targetAnchor).toBe(teleportContainer.childNodes[7])
-
-  //   // // event handler
-  //   triggerEvent('click', teleportContainer.querySelector('.foo')!)
-  //   expect(fn1).toHaveBeenCalled()
-
-  //   triggerEvent('click', teleportContainer.querySelector('.foo2')!)
-  //   expect(fn2).toHaveBeenCalled()
-
-  //   msg.value = 'bar'
-  //   await nextTick()
-  //   expect(teleportContainer.innerHTML).toMatchInlineSnapshot(
-  //     `"<!--teleport start anchor--><span>bar</span><span class="bar"></span><!--teleport anchor--><!--teleport start anchor--><span>bar2</span><span class="bar2"></span><!--teleport anchor-->"`,
-  //   )
-  // })
-
-  // test('Teleport (disabled)', async () => {
-  //   const msg = ref('foo')
-  //   const fn1 = vi.fn()
-  //   const fn2 = vi.fn()
-
-  //   const Comp = () => [
-  //     h('div', 'foo'),
-  //     h(Teleport, { to: '#teleport3', disabled: true }, [
-  //       h('span', msg.value),
-  //       h('span', { class: msg.value, onClick: fn1 }),
-  //     ]),
-  //     h('div', { class: msg.value + '2', onClick: fn2 }, 'bar'),
-  //   ]
-
-  //   const teleportContainer = document.createElement('div')
-  //   teleportContainer.id = 'teleport3'
-  //   const ctx: SSRContext = {}
-  //   const mainHtml = await renderToString(h(Comp), ctx)
-  //   expect(mainHtml).toMatchInlineSnapshot(
-  //     `"<!--[--><div>foo</div><!--teleport start--><span>foo</span><span class="foo"></span><!--teleport end--><div class="foo2">bar</div><!--]-->"`,
-  //   )
-
-  //   const teleportHtml = ctx.teleports!['#teleport3']
-  //   expect(teleportHtml).toMatchInlineSnapshot(
-  //     `"<!--teleport start anchor--><!--teleport anchor-->"`,
-  //   )
-
-  //   teleportContainer.innerHTML = teleportHtml
-  //   document.body.appendChild(teleportContainer)
-
-  //   const { vnode, container } = mountWithHydration(mainHtml, Comp)
-  //   expect(vnode.el).toBe(container.firstChild)
-  //   const children = vnode.children as VNode[]
-
-  //   expect(children[0].el).toBe(container.childNodes[1])
-
-  //   const teleportVnode = children[1]
-  //   expect(teleportVnode.el).toBe(container.childNodes[2])
-  //   expect((teleportVnode.children as VNode[])[0].el).toBe(
-  //     container.childNodes[3],
-  //   )
-  //   expect((teleportVnode.children as VNode[])[1].el).toBe(
-  //     container.childNodes[4],
-  //   )
-  //   expect(teleportVnode.anchor).toBe(container.childNodes[5])
-  //   expect(children[2].el).toBe(container.childNodes[6])
-
-  //   expect(teleportVnode.target).toBe(teleportContainer)
-  //   expect(teleportVnode.targetStart).toBe(teleportContainer.childNodes[0])
-  //   expect(teleportVnode.targetAnchor).toBe(teleportContainer.childNodes[1])
-
-  //   // // event handler
-  //   triggerEvent('click', container.querySelector('.foo')!)
-  //   expect(fn1).toHaveBeenCalled()
-
-  //   triggerEvent('click', container.querySelector('.foo2')!)
-  //   expect(fn2).toHaveBeenCalled()
-
-  //   msg.value = 'bar'
-  //   await nextTick()
-  //   expect(container.innerHTML).toMatchInlineSnapshot(
-  //     `"<!--[--><div>foo</div><!--teleport start--><span>bar</span><span class="bar"></span><!--teleport end--><div class="bar2">bar</div><!--]-->"`,
-  //   )
-  // })
-
-  // // #6152
-  // test('Teleport (disabled + as component root)', () => {
-  //   const { container } = mountWithHydration(
-  //     '<!--[--><div>Parent fragment</div><!--teleport start--><div>Teleport content</div><!--teleport end--><!--]-->',
-  //     () => [
-  //       h('div', 'Parent fragment'),
-  //       h(() =>
-  //         h(Teleport, { to: 'body', disabled: true }, [
-  //           h('div', 'Teleport content'),
-  //         ]),
-  //       ),
-  //     ],
-  //   )
-  //   expect(document.body.innerHTML).toBe('')
-  //   expect(container.innerHTML).toBe(
-  //     '<!--[--><div>Parent fragment</div><!--teleport start--><div>Teleport content</div><!--teleport end--><!--]-->',
-  //   )
-  //   expect(
-  //     `Hydration completed but contains mismatches.`,
-  //   ).not.toHaveBeenWarned()
-  // })
-
-  // test('Teleport (as component root)', () => {
-  //   const teleportContainer = document.createElement('div')
-  //   teleportContainer.id = 'teleport4'
-  //   teleportContainer.innerHTML = `<!--teleport start anchor-->hello<!--teleport anchor-->`
-  //   document.body.appendChild(teleportContainer)
-
-  //   const wrapper = {
-  //     render() {
-  //       return h(Teleport, { to: '#teleport4' }, ['hello'])
-  //     },
-  //   }
-
-  //   const { vnode, container } = mountWithHydration(
-  //     '<div><!--teleport start--><!--teleport end--><div></div></div>',
-  //     () => h('div', [h(wrapper), h('div')]),
-  //   )
-  //   expect(vnode.el).toBe(container.firstChild)
-  //   // component el
-  //   const wrapperVNode = (vnode as any).children[0]
-  //   const tpStart = container.firstChild?.firstChild
-  //   const tpEnd = tpStart?.nextSibling
-  //   expect(wrapperVNode.el).toBe(tpStart)
-  //   expect(wrapperVNode.component.subTree.el).toBe(tpStart)
-  //   expect(wrapperVNode.component.subTree.anchor).toBe(tpEnd)
-  //   // next node hydrate properly
-  //   const nextVNode = (vnode as any).children[1]
-  //   expect(nextVNode.el).toBe(container.firstChild?.lastChild)
-  // })
-
-  // test('Teleport (nested)', () => {
-  //   const teleportContainer = document.createElement('div')
-  //   teleportContainer.id = 'teleport5'
-  //   teleportContainer.innerHTML = `<!--teleport start anchor--><div><!--teleport start--><!--teleport end--></div><!--teleport anchor--><!--teleport start anchor--><div>child</div><!--teleport anchor-->`
-  //   document.body.appendChild(teleportContainer)
-
-  //   const { vnode, container } = mountWithHydration(
-  //     '<!--teleport start--><!--teleport end-->',
-  //     () =>
-  //       h(Teleport, { to: '#teleport5' }, [
-  //         h('div', [h(Teleport, { to: '#teleport5' }, [h('div', 'child')])]),
-  //       ]),
-  //   )
-
-  //   expect(vnode.el).toBe(container.firstChild)
-  //   expect(vnode.anchor).toBe(container.lastChild)
-
-  //   const childDivVNode = (vnode as any).children[0]
-  //   const div = teleportContainer.childNodes[1]
-  //   expect(childDivVNode.el).toBe(div)
-  //   expect(vnode.targetAnchor).toBe(div?.nextSibling)
-
-  //   const childTeleportVNode = childDivVNode.children[0]
-  //   expect(childTeleportVNode.el).toBe(div?.firstChild)
-  //   expect(childTeleportVNode.anchor).toBe(div?.lastChild)
-
-  //   expect(childTeleportVNode.targetAnchor).toBe(teleportContainer.lastChild)
-  //   expect(childTeleportVNode.children[0].el).toBe(
-  //     teleportContainer.lastChild?.previousSibling,
-  //   )
   // })
 
   // test('with data-allow-mismatch component when using onServerPrefetch', async () => {
@@ -530,178 +336,6 @@ describe('SSR hydration', () => {
   //   expect(container.innerHTML).toBe(
   //     '<span data-allow-mismatch=""><!--v-if--></span>',
   //   )
-  // })
-
-  // test('Teleport unmount (full integration)', async () => {
-  //   const Comp1 = {
-  //     template: `
-  //       <Teleport to="#target">
-  //         <span>Teleported Comp1</span>
-  //       </Teleport>
-  //     `,
-  //   }
-  //   const Comp2 = {
-  //     template: `
-  //       <div>Comp2</div>
-  //     `,
-  //   }
-
-  //   const toggle = ref(true)
-  //   const App = {
-  //     template: `
-  //       <div>
-  //         <Comp1 v-if="toggle"/>
-  //         <Comp2 v-else/>
-  //       </div>
-  //     `,
-  //     components: {
-  //       Comp1,
-  //       Comp2,
-  //     },
-  //     setup() {
-  //       return { toggle }
-  //     },
-  //   }
-
-  //   const container = document.createElement('div')
-  //   const teleportContainer = document.createElement('div')
-  //   teleportContainer.id = 'target'
-  //   document.body.appendChild(teleportContainer)
-
-  //   // server render
-  //   const ctx: SSRContext = {}
-  //   container.innerHTML = await renderToString(h(App), ctx)
-  //   expect(container.innerHTML).toBe(
-  //     '<div><!--teleport start--><!--teleport end--></div>',
-  //   )
-  //   teleportContainer.innerHTML = ctx.teleports!['#target']
-
-  //   // hydrate
-  //   createSSRApp(App).mount(container)
-  //   expect(container.innerHTML).toBe(
-  //     '<div><!--teleport start--><!--teleport end--></div>',
-  //   )
-  //   expect(teleportContainer.innerHTML).toBe(
-  //     '<!--teleport start anchor--><span>Teleported Comp1</span><!--teleport anchor-->',
-  //   )
-  //   expect(`Hydration children mismatch`).not.toHaveBeenWarned()
-
-  //   toggle.value = false
-  //   await nextTick()
-  //   expect(container.innerHTML).toBe('<div><div>Comp2</div></div>')
-  //   expect(teleportContainer.innerHTML).toBe('')
-  // })
-
-  // test('Teleport unmount (mismatch + full integration)', async () => {
-  //   const Comp1 = {
-  //     template: `
-  //       <Teleport to="#target">
-  //         <span>Teleported Comp1</span>
-  //       </Teleport>
-  //     `,
-  //   }
-  //   const Comp2 = {
-  //     template: `
-  //       <div>Comp2</div>
-  //     `,
-  //   }
-
-  //   const toggle = ref(true)
-  //   const App = {
-  //     template: `
-  //       <div>
-  //         <Comp1 v-if="toggle"/>
-  //         <Comp2 v-else/>
-  //       </div>
-  //     `,
-  //     components: {
-  //       Comp1,
-  //       Comp2,
-  //     },
-  //     setup() {
-  //       return { toggle }
-  //     },
-  //   }
-
-  //   const container = document.createElement('div')
-  //   const teleportContainer = document.createElement('div')
-  //   teleportContainer.id = 'target'
-  //   document.body.appendChild(teleportContainer)
-
-  //   // server render
-  //   container.innerHTML = await renderToString(h(App))
-  //   expect(container.innerHTML).toBe(
-  //     '<div><!--teleport start--><!--teleport end--></div>',
-  //   )
-  //   expect(teleportContainer.innerHTML).toBe('')
-
-  //   // hydrate
-  //   createSSRApp(App).mount(container)
-  //   expect(container.innerHTML).toBe(
-  //     '<div><!--teleport start--><!--teleport end--></div>',
-  //   )
-  //   expect(teleportContainer.innerHTML).toBe('<span>Teleported Comp1</span>')
-  //   expect(`Hydration children mismatch`).toHaveBeenWarned()
-
-  //   toggle.value = false
-  //   await nextTick()
-  //   expect(container.innerHTML).toBe('<div><div>Comp2</div></div>')
-  //   expect(teleportContainer.innerHTML).toBe('')
-  // })
-
-  // test('Teleport target change (mismatch + full integration)', async () => {
-  //   const target = ref('#target1')
-  //   const Comp = {
-  //     template: `
-  //       <Teleport :to="target">
-  //         <span>Teleported</span>
-  //       </Teleport>
-  //     `,
-  //     setup() {
-  //       return { target }
-  //     },
-  //   }
-
-  //   const App = {
-  //     template: `
-  //       <div>
-  //         <Comp />
-  //       </div>
-  //     `,
-  //     components: {
-  //       Comp,
-  //     },
-  //   }
-
-  //   const container = document.createElement('div')
-  //   const teleportContainer1 = document.createElement('div')
-  //   teleportContainer1.id = 'target1'
-  //   const teleportContainer2 = document.createElement('div')
-  //   teleportContainer2.id = 'target2'
-  //   document.body.appendChild(teleportContainer1)
-  //   document.body.appendChild(teleportContainer2)
-
-  //   // server render
-  //   container.innerHTML = await renderToString(h(App))
-  //   expect(container.innerHTML).toBe(
-  //     '<div><!--teleport start--><!--teleport end--></div>',
-  //   )
-  //   expect(teleportContainer1.innerHTML).toBe('')
-  //   expect(teleportContainer2.innerHTML).toBe('')
-
-  //   // hydrate
-  //   createSSRApp(App).mount(container)
-  //   expect(container.innerHTML).toBe(
-  //     '<div><!--teleport start--><!--teleport end--></div>',
-  //   )
-  //   expect(teleportContainer1.innerHTML).toBe('<span>Teleported</span>')
-  //   expect(teleportContainer2.innerHTML).toBe('')
-  //   expect(`Hydration children mismatch`).toHaveBeenWarned()
-
-  //   target.value = '#target2'
-  //   await nextTick()
-  //   expect(teleportContainer1.innerHTML).toBe('')
-  //   expect(teleportContainer2.innerHTML).toBe('<span>Teleported</span>')
   // })
 
   // // compile SSR + client render fn from the same template & hydrate
@@ -851,164 +485,6 @@ describe('SSR hydration', () => {
   //   // parent blur event
   //   triggerEvent('blur', container.querySelector('.parent-click')!)
   //   expect(handler).toHaveBeenCalled()
-  // })
-
-  // test('Suspense', async () => {
-  //   const AsyncChild = {
-  //     async setup() {
-  //       const count = ref(0)
-  //       return () =>
-  //         h(
-  //           'span',
-  //           {
-  //             onClick: () => {
-  //               count.value++
-  //             },
-  //           },
-  //           count.value,
-  //         )
-  //     },
-  //   }
-  //   const { vnode, container } = mountWithHydration('<span>0</span>', () =>
-  //     h(Suspense, () => h(AsyncChild)),
-  //   )
-  //   expect(vnode.el).toBe(container.firstChild)
-  //   // wait for hydration to finish
-  //   await new Promise(r => setTimeout(r))
-  //   triggerEvent('click', container.querySelector('span')!)
-  //   await nextTick()
-  //   expect(container.innerHTML).toBe(`<span>1</span>`)
-  // })
-
-  // // #6638
-  // test('Suspense + async component', async () => {
-  //   let isSuspenseResolved = false
-  //   let isSuspenseResolvedInChild: any
-  //   const AsyncChild = defineAsyncComponent(() =>
-  //     Promise.resolve(
-  //       defineComponent({
-  //         setup() {
-  //           isSuspenseResolvedInChild = isSuspenseResolved
-  //           const count = ref(0)
-  //           return () =>
-  //             h(
-  //               'span',
-  //               {
-  //                 onClick: () => {
-  //                   count.value++
-  //                 },
-  //               },
-  //               count.value,
-  //             )
-  //         },
-  //       }),
-  //     ),
-  //   )
-  //   const { vnode, container } = mountWithHydration('<span>0</span>', () =>
-  //     h(
-  //       Suspense,
-  //       {
-  //         onResolve() {
-  //           isSuspenseResolved = true
-  //         },
-  //       },
-  //       () => h(AsyncChild),
-  //     ),
-  //   )
-  //   expect(vnode.el).toBe(container.firstChild)
-  //   // wait for hydration to finish
-  //   await new Promise(r => setTimeout(r))
-
-  //   expect(isSuspenseResolvedInChild).toBe(false)
-  //   expect(isSuspenseResolved).toBe(true)
-
-  //   // assert interaction
-  //   triggerEvent('click', container.querySelector('span')!)
-  //   await nextTick()
-  //   expect(container.innerHTML).toBe(`<span>1</span>`)
-  // })
-
-  // test('Suspense (full integration)', async () => {
-  //   const mountedCalls: number[] = []
-  //   const asyncDeps: Promise<any>[] = []
-
-  //   const AsyncChild = defineComponent({
-  //     props: ['n'],
-  //     async setup(props) {
-  //       const count = ref(props.n)
-  //       onMounted(() => {
-  //         mountedCalls.push(props.n)
-  //       })
-  //       const p = new Promise(r => setTimeout(r, props.n * 10))
-  //       asyncDeps.push(p)
-  //       await p
-  //       return () =>
-  //         h(
-  //           'span',
-  //           {
-  //             onClick: () => {
-  //               count.value++
-  //             },
-  //           },
-  //           count.value,
-  //         )
-  //     },
-  //   })
-
-  //   const done = vi.fn()
-  //   const App = {
-  //     template: `
-  //     <Suspense @resolve="done">
-  //       <div>
-  //         <AsyncChild :n="1" />
-  //         <AsyncChild :n="2" />
-  //       </div>
-  //     </Suspense>`,
-  //     components: {
-  //       AsyncChild,
-  //     },
-  //     methods: {
-  //       done,
-  //     },
-  //   }
-
-  //   const container = document.createElement('div')
-  //   // server render
-  //   container.innerHTML = await renderToString(h(App))
-  //   expect(container.innerHTML).toMatchInlineSnapshot(
-  //     `"<div><span>1</span><span>2</span></div>"`,
-  //   )
-  //   // reset asyncDeps from ssr
-  //   asyncDeps.length = 0
-  //   // hydrate
-  //   createSSRApp(App).mount(container)
-
-  //   expect(mountedCalls.length).toBe(0)
-  //   expect(asyncDeps.length).toBe(2)
-
-  //   // wait for hydration to complete
-  //   await Promise.all(asyncDeps)
-  //   await new Promise(r => setTimeout(r))
-
-  //   // should flush buffered effects
-  //   expect(mountedCalls).toMatchObject([1, 2])
-  //   expect(container.innerHTML).toMatch(
-  //     `<div><span>1</span><span>2</span></div>`,
-  //   )
-
-  //   const span1 = container.querySelector('span')!
-  //   triggerEvent('click', span1)
-  //   await nextTick()
-  //   expect(container.innerHTML).toMatch(
-  //     `<div><span>2</span><span>2</span></div>`,
-  //   )
-
-  //   const span2 = span1.nextSibling as Element
-  //   triggerEvent('click', span2)
-  //   await nextTick()
-  //   expect(container.innerHTML).toMatch(
-  //     `<div><span>2</span><span>3</span></div>`,
-  //   )
   // })
 
   // test('async component', async () => {
@@ -2311,4 +1787,7 @@ describe('SSR hydration', () => {
   //     expect(`Hydration attribute mismatch`).not.toHaveBeenWarned()
   //   })
   // })
+
+  test.todo('Teleport')
+  test.todo('Suspense')
 })

@@ -81,15 +81,56 @@ describe('compiler: template ref transform', () => {
     expect(code).contains('_setTemplateRef(n0, _ctx.foo, r0)')
   })
 
+  test('function ref', () => {
+    const { ir, code } = compileWithTransformRef(
+      `<div :ref="bar => {
+        foo.value = bar
+        ;({ baz } = bar)
+        console.log(foo.value, baz)
+      }" />`,
+    )
+    expect(ir.block.dynamic.children[0]).toMatchObject({
+      id: 0,
+      flags: DynamicFlag.REFERENCED,
+    })
+    expect(ir.template).toEqual(['<div></div>'])
+    expect(ir.block.operation).toMatchObject([
+      {
+        type: IRNodeTypes.DECLARE_OLD_REF,
+        id: 0,
+      },
+    ])
+    expect(ir.block.effect).toMatchObject([
+      {
+        operations: [
+          {
+            type: IRNodeTypes.SET_TEMPLATE_REF,
+            element: 0,
+            value: {
+              isStatic: false,
+            },
+          },
+        ],
+      },
+    ])
+    expect(code).toMatchSnapshot()
+    expect(code).contains('const _setTemplateRef = _createTemplateRefSetter()')
+    expect(code).contains(`_setTemplateRef(n0, bar => {
+        _foo.value = bar
+        ;({ baz: _ctx.baz } = bar)
+        console.log(_foo.value, _ctx.baz)
+      }, r0)`)
+  })
+
   test('ref + v-if', () => {
     const { ir, code } = compileWithTransformRef(
       `<div ref="foo" v-if="true" />`,
     )
 
-    expect(ir.block.operation).lengthOf(1)
-    expect(ir.block.operation[0].type).toBe(IRNodeTypes.IF)
+    const op = ir.block.dynamic.children[0].operation as IfIRNode
+    expect(op.type).toBe(IRNodeTypes.IF)
 
-    const { positive } = ir.block.operation[0] as IfIRNode
+    const { positive } = op
     expect(positive.operation).toMatchObject([
       {
         type: IRNodeTypes.SET_TEMPLATE_REF,
@@ -111,7 +152,7 @@ describe('compiler: template ref transform', () => {
       `<div ref="foo" v-for="item in [1,2,3]" />`,
     )
 
-    const { render } = ir.block.operation[0] as ForIRNode
+    const { render } = ir.block.dynamic.children[0].operation as ForIRNode
     expect(render.operation).toMatchObject([
       {
         type: IRNodeTypes.SET_TEMPLATE_REF,

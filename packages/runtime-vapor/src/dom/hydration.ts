@@ -1,3 +1,10 @@
+import { warn } from '@vue/runtime-dom'
+import {
+  insertionAnchor,
+  insertionParent,
+  resetInsertionState,
+  setInsertionState,
+} from '../insertionState'
 import { child, next } from './node'
 
 export let isHydrating = false
@@ -10,31 +17,29 @@ export function setCurrentHydrationNode(node: Node | null): void {
 let isOptimized = false
 
 export function withHydration(container: ParentNode, fn: () => void): void {
-  adoptHydrationNode = adoptHydrationNodeImpl
+  adoptTemplate = adoptTemplateImpl
+  locateHydrationNode = locateHydrationNodeImpl
   if (!isOptimized) {
     // optimize anchor cache lookup
-    const proto = Comment.prototype as any
-    proto.$p = proto.$e = undefined
+    ;(Comment.prototype as any).$fs = undefined
     isOptimized = true
   }
   isHydrating = true
-  currentHydrationNode = child(container)
+  setInsertionState(container, 0)
   const res = fn()
-  isHydrating = false
+  resetInsertionState()
   currentHydrationNode = null
+  isHydrating = false
   return res
 }
 
-export let adoptHydrationNode: (
-  node: Node | null,
-  template?: string,
-) => Node | null
+export let adoptTemplate: (node: Node, template: string) => Node | null
+export let locateHydrationNode: () => void
 
 type Anchor = Comment & {
-  // previous open anchor
-  $p?: Anchor
-  // matching end anchor
-  $e?: Anchor
+  // cached matching fragment start to avoid repeated traversal
+  // on nested fragments
+  $fs?: Anchor
 }
 
 const isComment = (node: Node, data: string): node is Anchor =>
@@ -44,82 +49,81 @@ const isComment = (node: Node, data: string): node is Anchor =>
  * Locate the first non-fragment-comment node and locate the next node
  * while handling potential fragments.
  */
-function adoptHydrationNodeImpl(
-  node: Node | null,
-  template?: string,
-): Node | null {
-  if (!isHydrating || !node) {
-    return node
+function adoptTemplateImpl(node: Node, template: string): Node | null {
+  if (!(template[0] === '<' && template[1] === '!')) {
+    while (node.nodeType === 8) node = next(node)
   }
 
-  let adopted: Node | undefined
-  let end: Node | undefined | null
-
-  if (template) {
-    if (template[0] !== '<' && template[1] !== '!') {
-      while (node.nodeType === 8) node = next(node)
-    }
-    adopted = end = node
-  } else if (isComment(node, '[')) {
-    // fragment
-    let start = node
-    let cur: Node = node
-    let fragmentDepth = 1
-    // previously recorded fragment end
-    if (!end && node.$e) {
-      end = node.$e
-    }
-    while (true) {
-      cur = next(cur)
-      if (isComment(cur, '[')) {
-        // previously recorded fragment end
-        if (!end && node.$e) {
-          end = node.$e
-        }
-        fragmentDepth++
-        cur.$p = start
-        start = cur
-      } else if (isComment(cur, ']')) {
-        fragmentDepth--
-        // record fragment end on start node for later traversal
-        start.$e = cur
-        start = start.$p!
-        if (!fragmentDepth) {
-          // fragment end
-          end = cur
-          break
-        }
-      } else if (!adopted) {
-        adopted = cur
-        if (end) {
-          break
-        }
-      }
-    }
-    if (!adopted) {
-      throw new Error('hydration mismatch')
-    }
-  } else {
-    adopted = end = node
-  }
-
-  if (__DEV__ && template) {
-    const type = adopted.nodeType
+  if (__DEV__) {
+    const type = node.nodeType
     if (
       (type === 8 && !template.startsWith('<!')) ||
       (type === 1 &&
-        !template.startsWith(
-          `<` + (adopted as Element).tagName.toLowerCase(),
-        )) ||
+        !template.startsWith(`<` + (node as Element).tagName.toLowerCase())) ||
       (type === 3 &&
         template.trim() &&
-        !template.startsWith((adopted as Text).data))
+        !template.startsWith((node as Text).data))
     ) {
       // TODO recover and provide more info
-      throw new Error('hydration mismatch!')
+      warn(`adopted: `, node)
+      warn(`template: ${template}`)
+      warn('hydration mismatch!')
     }
   }
 
-  currentHydrationNode = next(end!)
-  return adopted
+  currentHydrationNode = next(node)
+  return node
+}
+
+function locateHydrationNodeImpl() {
+  let node: Node | null
+
+  // prepend / firstChild
+  if (insertionAnchor === 0) {
+    node = child(insertionParent!)
+  } else {
+    node = insertionAnchor
+      ? insertionAnchor.previousSibling
+      : insertionParent
+        ? insertionParent.lastChild
+        : currentHydrationNode
+
+    if (node && isComment(node, ']')) {
+      // fragment backward search
+      if (node.$fs) {
+        // already cached matching fragment start
+        node = node.$fs
+      } else {
+        let cur: Node | null = node
+        let curFragEnd = node
+        let fragDepth = 0
+        node = null
+        while (cur) {
+          cur = cur.previousSibling
+          if (cur) {
+            if (isComment(cur, '[')) {
+              curFragEnd.$fs = cur
+              if (!fragDepth) {
+                node = cur
+                break
+              } else {
+                fragDepth--
+              }
+            } else if (isComment(cur, ']')) {
+              curFragEnd = cur
+              fragDepth++
+            }
+          }
+        }
+      }
+    }
+  }
+
+  if (__DEV__ && !node) {
+    // TODO more info
+    warn('Hydration mismatch in ', insertionParent)
+  }
+
+  resetInsertionState()
+  currentHydrationNode = node
 }

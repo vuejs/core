@@ -1,5 +1,5 @@
 /* eslint-disable */
-// Ported from https://github.com/stackblitz/alien-signals/blob/v1.0.4/src/system.ts
+// Ported from https://github.com/stackblitz/alien-signals/blob/v1.0.13/src/system.ts
 import type { ComputedRefImpl as Computed } from './computed.js'
 import type { ReactiveEffect as Effect } from './effect.js'
 
@@ -32,9 +32,16 @@ export const enum SubscriberFlags {
   Propagated = Dirty | PendingComputed,
 }
 
+interface OneWayLink<T> {
+  target: T
+  linked: OneWayLink<T> | undefined
+}
+
+const notifyBuffer: (Effect | undefined)[] = []
+
 let batchDepth = 0
-let queuedEffects: Effect | undefined
-let queuedEffectsTail: Effect | undefined
+let notifyIndex = 0
+let notifyBufferLength = 0
 
 export function startBatch(): void {
   ++batchDepth
@@ -67,80 +74,81 @@ export function link(dep: Dependency, sub: Subscriber): Link | undefined {
   return linkNewDep(dep, sub, nextDep, currentDep)
 }
 
-export function propagate(link: Link): void {
+export function propagate(current: Link): void {
+  let next = current.nextSub
+  let branchs: OneWayLink<Link | undefined> | undefined
+  let branchDepth = 0
   let targetFlag = SubscriberFlags.Dirty
-  let subs = link
-  let stack = 0
 
   top: do {
-    const sub = link.sub
+    const sub = current.sub
     const subFlags = sub.flags
 
+    let shouldNotify = false
+
     if (
-      (!(
+      !(
         subFlags &
         (SubscriberFlags.Tracking |
           SubscriberFlags.Recursed |
           SubscriberFlags.Propagated)
-      ) &&
-        ((sub.flags = subFlags | targetFlag), true)) ||
-      (subFlags & SubscriberFlags.Recursed &&
-        !(subFlags & SubscriberFlags.Tracking) &&
-        ((sub.flags = (subFlags & ~SubscriberFlags.Recursed) | targetFlag),
-        true)) ||
-      (!(subFlags & SubscriberFlags.Propagated) &&
-        isValidLink(link, sub) &&
-        ((sub.flags = subFlags | SubscriberFlags.Recursed | targetFlag),
-        (sub as Dependency).subs !== undefined))
+      )
     ) {
+      sub.flags = subFlags | targetFlag
+      shouldNotify = true
+    } else if (
+      subFlags & SubscriberFlags.Recursed &&
+      !(subFlags & SubscriberFlags.Tracking)
+    ) {
+      sub.flags = (subFlags & ~SubscriberFlags.Recursed) | targetFlag
+      shouldNotify = true
+    } else if (
+      !(subFlags & SubscriberFlags.Propagated) &&
+      isValidLink(current, sub)
+    ) {
+      sub.flags = subFlags | SubscriberFlags.Recursed | targetFlag
+      shouldNotify = (sub as Dependency).subs !== undefined
+    }
+
+    if (shouldNotify) {
       const subSubs = (sub as Dependency).subs
       if (subSubs !== undefined) {
+        current = subSubs
         if (subSubs.nextSub !== undefined) {
-          subSubs.prevSub = subs
-          link = subs = subSubs
-          targetFlag = SubscriberFlags.PendingComputed
-          ++stack
-        } else {
-          link = subSubs
-          targetFlag = SubscriberFlags.PendingComputed
+          branchs = { target: next, linked: branchs }
+          ++branchDepth
+          next = current.nextSub
         }
+        targetFlag = SubscriberFlags.PendingComputed
         continue
       }
       if (subFlags & SubscriberFlags.Effect) {
-        if (queuedEffectsTail !== undefined) {
-          queuedEffectsTail.depsTail!.nextDep = sub.deps
-        } else {
-          queuedEffects = sub as Effect
-        }
-        queuedEffectsTail = sub as Effect
+        notifyBuffer[notifyBufferLength++] = sub as Effect
       }
     } else if (!(subFlags & (SubscriberFlags.Tracking | targetFlag))) {
       sub.flags = subFlags | targetFlag
     } else if (
       !(subFlags & targetFlag) &&
       subFlags & SubscriberFlags.Propagated &&
-      isValidLink(link, sub)
+      isValidLink(current, sub)
     ) {
       sub.flags = subFlags | targetFlag
     }
 
-    if ((link = subs.nextSub!) !== undefined) {
-      subs = link
-      targetFlag = stack
+    if ((current = next!) !== undefined) {
+      next = current.nextSub
+      targetFlag = branchDepth
         ? SubscriberFlags.PendingComputed
         : SubscriberFlags.Dirty
       continue
     }
 
-    while (stack) {
-      --stack
-      const dep = subs.dep
-      const depSubs = dep.subs!
-      subs = depSubs.prevSub!
-      depSubs.prevSub = undefined
-      if ((link = subs.nextSub!) !== undefined) {
-        subs = link
-        targetFlag = stack
+    while (branchDepth--) {
+      current = branchs!.target!
+      branchs = branchs!.linked
+      if (current !== undefined) {
+        next = current.nextSub
+        targetFlag = branchDepth
           ? SubscriberFlags.PendingComputed
           : SubscriberFlags.Dirty
         continue top
@@ -194,35 +202,26 @@ export function processComputedUpdate(
   computed: Computed,
   flags: SubscriberFlags,
 ): void {
-  if (
-    flags & SubscriberFlags.Dirty ||
-    (checkDirty(computed.deps!)
-      ? true
-      : ((computed.flags = flags & ~SubscriberFlags.PendingComputed), false))
-  ) {
+  if (flags & SubscriberFlags.Dirty || checkDirty(computed.deps!)) {
     if (computed.update()) {
       const subs = computed.subs
       if (subs !== undefined) {
         shallowPropagate(subs)
       }
     }
+  } else {
+    computed.flags = flags & ~SubscriberFlags.PendingComputed
   }
 }
 
 export function processEffectNotifications(): void {
-  while (queuedEffects !== undefined) {
-    const effect = queuedEffects
-    const depsTail = effect.depsTail!
-    const queuedNext = depsTail.nextDep
-    if (queuedNext !== undefined) {
-      depsTail.nextDep = undefined
-      queuedEffects = queuedNext.sub as Effect
-    } else {
-      queuedEffects = undefined
-      queuedEffectsTail = undefined
-    }
+  while (notifyIndex < notifyBufferLength) {
+    const effect = notifyBuffer[notifyIndex]!
+    notifyBuffer[notifyIndex++] = undefined
     effect.notify()
   }
+  notifyIndex = 0
+  notifyBufferLength = 0
 }
 
 function linkNewDep(
@@ -259,15 +258,18 @@ function linkNewDep(
   return newLink
 }
 
-function checkDirty(link: Link): boolean {
-  let stack = 0
+function checkDirty(current: Link): boolean {
+  let prevLinks: OneWayLink<Link> | undefined
+  let checkDepth = 0
   let dirty: boolean
 
   top: do {
     dirty = false
-    const dep = link.dep
+    const dep = current.dep
 
-    if ('flags' in dep) {
+    if (current.sub.flags & SubscriberFlags.Dirty) {
+      dirty = true
+    } else if ('flags' in dep) {
       const depFlags = dep.flags
       if (
         (depFlags & (SubscriberFlags.Computed | SubscriberFlags.Dirty)) ===
@@ -285,58 +287,49 @@ function checkDirty(link: Link): boolean {
           (SubscriberFlags.Computed | SubscriberFlags.PendingComputed)) ===
         (SubscriberFlags.Computed | SubscriberFlags.PendingComputed)
       ) {
-        const depSubs = dep.subs!
-        if (depSubs.nextSub !== undefined) {
-          depSubs.prevSub = link
+        if (current.nextSub !== undefined || current.prevSub !== undefined) {
+          prevLinks = { target: current, linked: prevLinks }
         }
-        link = dep.deps!
-        ++stack
+        current = dep.deps!
+        ++checkDepth
         continue
       }
     }
 
-    if (!dirty && link.nextDep !== undefined) {
-      link = link.nextDep
+    if (!dirty && current.nextDep !== undefined) {
+      current = current.nextDep
       continue
     }
 
-    if (stack) {
-      let sub = link.sub as Computed
-      do {
-        --stack
-        const subSubs = sub.subs!
-
-        if (dirty) {
-          if (sub.update()) {
-            if ((link = subSubs.prevSub!) !== undefined) {
-              subSubs.prevSub = undefined
-              shallowPropagate(subSubs)
-              sub = link.sub as Computed
-            } else {
-              sub = subSubs.sub as Computed
-            }
-            continue
+    while (checkDepth) {
+      --checkDepth
+      const sub = current.sub as Computed
+      const firstSub = sub.subs!
+      if (dirty) {
+        if (sub.update()) {
+          if (firstSub.nextSub !== undefined) {
+            current = prevLinks!.target
+            prevLinks = prevLinks!.linked
+            shallowPropagate(firstSub)
+          } else {
+            current = firstSub
           }
-        } else {
-          sub.flags &= ~SubscriberFlags.PendingComputed
+          continue
         }
-
-        if ((link = subSubs.prevSub!) !== undefined) {
-          subSubs.prevSub = undefined
-          if (link.nextDep !== undefined) {
-            link = link.nextDep
-            continue top
-          }
-          sub = link.sub as Computed
-        } else {
-          if ((link = subSubs.nextDep!) !== undefined) {
-            continue top
-          }
-          sub = subSubs.sub as Computed
-        }
-
-        dirty = false
-      } while (stack)
+      } else {
+        sub.flags &= ~SubscriberFlags.PendingComputed
+      }
+      if (firstSub.nextSub !== undefined) {
+        current = prevLinks!.target
+        prevLinks = prevLinks!.linked
+      } else {
+        current = firstSub
+      }
+      if (current.nextDep !== undefined) {
+        current = current.nextDep
+        continue top
+      }
+      dirty = false
     }
 
     return dirty
