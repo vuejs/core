@@ -137,7 +137,7 @@ function transformComponentElement(
     tag,
     props: propsResult[0] ? propsResult[1] : [propsResult[1]],
     asset,
-    root: singleRoot,
+    root: singleRoot && !context.inVFor,
     slots: [...context.slots],
     once: context.inVOnce,
     dynamic: dynamicComponent,
